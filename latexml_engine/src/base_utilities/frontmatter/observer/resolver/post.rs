@@ -851,6 +851,64 @@ impl Resolver {
   /// affiliations, 0909.2782) —, nor one a block read already (`Bob\footnotemark\footnotetext{…}` inside the
   /// `\author`: the note beside the name).
   pub(super) fn answer_note_texts(&mut self) {
+    // (an unmarked `\thanks` of a live name under a class printing no note mark: the block's, `Resolver::keep_note`)
+    for (source, owner) in std::mem::take(&mut self.block_thanks) {
+      if self.replaced.contains(&owner) {
+        continue;
+      }
+      let notes = &mut self.out.creators[owner].notes;
+      if let Some(at) = notes.iter().position(|a| a.source == Some(source)) {
+        let assoc = notes.remove(at);
+        let rule = s!("{} owner:block", assoc.rule);
+        self.attach(None, Assoc { rule, ..assoc }, true);
+      }
+    }
+    // (first a block's own footnote texts, by the footnote number a name's `\footnotemark` shows — TeX's pairing,
+    // latex.ltx `\@xfootnotemark`/`\@xfootnotenext`, as Perl's `relocateFootnote` fills each mark of the note's `mark`
+    // (latex_constructs.pool.ltxml:498-517): a `\footnotetext` prints no mark of its own, so it is its marks' names'
+    // alone, each a copy — lni's `\footnotetext[1]{Fraunhofer …}` under `Müssig\footnotemark[1] \and
+    // Wappler\footnotemark[1]`, all three texts on the last name before (2407.04435); OXIDIZED_DESIGN_DIVERGENCES #1058.
+    // A `\thanks` stays its own name's: a name's `\footnotemark` of its number is filled with it where it prints,
+    // `insert::link_marked_notes`)
+    for ((index, span), number, owner) in std::mem::take(&mut self.numbered_notes) {
+      let mut carriers: Vec<usize> = Vec::new();
+      for &(c, _, n) in &self.fn_requests {
+        if n == Some(number)
+          && self.out.creators[c].source == index
+          && !self.replaced.contains(&c)
+          && !carriers.contains(&c)
+        {
+          carriers.push(c);
+        }
+      }
+      if carriers.is_empty() {
+        continue;
+      }
+      let source = Some((index, span));
+      let held = match owner {
+        Some(at) => &mut self.out.creators[at].notes,
+        None => &mut self.out.block,
+      };
+      let Some(at) = held.iter().position(|a| a.source == source) else {
+        continue;
+      };
+      let assoc = if owner.is_none_or(|o| !carriers.contains(&o)) {
+        held.remove(at)
+      } else {
+        held[at].clone()
+      };
+      for c in carriers {
+        if self.out.creators[c]
+          .notes
+          .iter()
+          .any(|a| a.source == source)
+        {
+          continue;
+        }
+        let rule = s!("{} note:footnote-number", assoc.rule);
+        self.attach(Some(c), Assoc { rule, ..assoc.clone() }, true);
+      }
+    }
     let folded = |text: &str| -> String {
       text
         .chars()
@@ -877,8 +935,8 @@ impl Resolver {
     let mut marks: Vec<(usize, String)> = self
       .fn_requests
       .iter()
-      .filter(|(c, _)| !self.replaced.contains(c))
-      .map(|(c, label)| (*c, mark_key(label)))
+      .filter(|(c, ..)| !self.replaced.contains(c))
+      .map(|(c, label, _)| (*c, mark_key(label)))
       .collect();
     marks.sort_by_key(|(c, _)| *c);
     let mut read: Vec<String> = self
@@ -1222,7 +1280,7 @@ impl Resolver {
             let by_footnote = self
               .fn_requests
               .iter()
-              .filter(|(o, r)| *o == c && label_matches(r, label))
+              .filter(|(o, r, _)| *o == c && label_matches(r, label))
               .count();
             asked > by_footnote
           })
@@ -1249,7 +1307,7 @@ impl Resolver {
             let by_footnote = self
               .fn_requests
               .iter()
-              .filter(|(c, r)| *c == owner && label_matches(r, label))
+              .filter(|(c, r, _)| *c == owner && label_matches(r, label))
               .count();
             asked > by_footnote
           })
@@ -1544,7 +1602,10 @@ impl Resolver {
           && self.out.creators[owner].requests.iter().any(|r| {
             labels.iter().any(|l| label_matches(r, l))
               && !self.out.creators[owner].class_requests.contains(r)
-              && !self.fn_requests.iter().any(|(c, q)| *c == owner && q == r)
+              && !self
+                .fn_requests
+                .iter()
+                .any(|(c, q, _)| *c == owner && q == r)
           });
         // (a `\ref` key's owner says so already, `api:ref-label`)
         if by_hand && !assoc.rule.contains("ruling1:") && !assoc.rule.contains("api:ref-label") {

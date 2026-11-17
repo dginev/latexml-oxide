@@ -1,0 +1,26 @@
+% mechanism: a mark's number given in the title block keys a note and prints its glyph only where the title's footnote
+%   counter is TeX's here (`latex_constructs::title_numbers_faithful`: article's family, a binding declaring its title's
+%   marks). aa's `\thanks` steps no counter here, so `\samethanks` (`\footnotemark[\value{footnote}]`) read 0 and wrote
+%   the mark "0": now no number and no glyph, the mark lost and counted (one Warning); the PDF's shared ⋆ waits on row R
+%   MARKNUMKEY (the class's counter emulated)
+% witness: 2606.31244 (aa: `Xiaoting Fu \inst{2}\fnmsep\samethanks` after `Yang Chen \inst{1}\fnmsep\thanks{Corresponding
+%   authors}`)
+% oracle:  pdflatex (aa.cls v9.1 as 2606.31244 ships it; aa.cls is not in TeX Live) 0 errors: "Ann Able1,⋆ , Bob
+%   Baker2,⋆ , and Cat Cole1", one foot "⋆ Corresponding authors"
+% engines: rust MARKKEY1 501703917a8 = 0 errors 0 Warnings; Bob's mark "0" (shown on the page once a holder shows it)
+% expect:  0 errors 1 Warning (unanswered_mark_lost); XML Bob Baker ; footnotemark[]= (no mark); HTML Ann Able | under:
+%   Corresponding authors / Bob Baker / Cat Cole
+% status:  RED (501703917a8) -> GREEN (perfect_kernel_batchmarkkey1::a_number_the_title_counter_cannot_give_keys_nothing)
+% preload: ar5iv.sty
+\documentclass{aa}
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\fnmsep\thanks{Corresponding authors}
+  \and Bob Baker\inst{2}\fnmsep\samethanks
+  \and Cat Cole\inst{1}}
+\institute{Univ A, Town A \and Univ B, Town B}
+\abstract{Abs.}
+\maketitle
+Text.
+\end{document}

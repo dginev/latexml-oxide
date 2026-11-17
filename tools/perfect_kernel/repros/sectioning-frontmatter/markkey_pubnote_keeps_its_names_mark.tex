@@ -1,0 +1,19 @@
+% mechanism: a name's unlinked mark always shows (MARKKEY1d's fail-safe, OD #1059; DG 2026-11-16, "hide only when
+%   certain"): here its legend is IEEEtran's journal `\thanks`, a publication note at the block (OD #1058) whose ∗ the
+%   XML does not keep, so Bob's typed ∗, printed once, shows
+% witness: 1409.7582 (`Xiamu Niu$^{\ast}$` beside three IEEEtran `\thanks`), 2405.20046
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker∗, Cat Cole", the foot "A. Able, B. Baker and C. Cole are with Univ A,
+%   Town A." and "Corresponding author: B. Baker (bob@a.edu)."
+% engines: rust MARKKEY1 501703917a8 = 0 errors 0 Warnings; Bob's ∗ hidden
+% expect:  0 errors 0 Warnings; XML Bob Baker ; footnotemark[*]=; HTML Ann Able / Bob Baker ; * plain / Cat Cole
+% status:  RED (501703917a8) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_beside_a_legend_that_lost_its_glyph)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker$^{\ast}$, Cat Cole
+\thanks{A. Able, B. Baker and C. Cole are with Univ A, Town A.}
+\thanks{Corresponding author: B. Baker (bob@a.edu).}}
+\maketitle
+Text.
+\end{document}

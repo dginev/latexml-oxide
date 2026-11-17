@@ -1511,7 +1511,7 @@ impl Resolver {
     let mut grade_at: Option<(usize, usize, usize)> = None;
     let mut waiting: Vec<String> = Vec::new();
     // (of them, the labels a `\footnotemark` printed: `fn_requests`)
-    let mut waiting_fn: Vec<String> = Vec::new();
+    let mut waiting_fn: Vec<(String, Option<i64>)> = Vec::new();
     // (and those the class's own request command made: `class_requests`)
     let mut waiting_class: Vec<String> = Vec::new();
     let mut waiting_parted: Vec<String> = Vec::new();
@@ -1872,9 +1872,11 @@ impl Resolver {
             last_covered = covered;
             uncovered = made.len();
           }
-          self
-            .fn_requests
-            .extend(std::mem::take(&mut waiting_fn).into_iter().map(|l| (c, l)));
+          self.fn_requests.extend(
+            std::mem::take(&mut waiting_fn)
+              .into_iter()
+              .map(|(l, n)| (c, l, n)),
+          );
           self.out.creators[c].class_requests.extend(
             std::mem::take(&mut waiting_class)
               .into_iter()
@@ -1957,7 +1959,7 @@ impl Resolver {
           }
           if to_next {
             if footnote {
-              waiting_fn.extend(labels.iter().cloned());
+              waiting_fn.extend(labels.iter().map(|l| (l.clone(), event.number)));
             }
             if class {
               waiting_class.extend(labels.iter().cloned());
@@ -1967,7 +1969,7 @@ impl Resolver {
             if footnote {
               self
                 .fn_requests
-                .extend(labels.iter().map(|l| (c, l.clone())));
+                .extend(labels.iter().map(|l| (c, l.clone(), event.number)));
             }
             if class {
               self.out.creators[c]
@@ -2046,7 +2048,7 @@ impl Resolver {
       self.out.creators[c].requests.extend(waiting);
       self
         .fn_requests
-        .extend(waiting_fn.into_iter().map(|l| (c, l)));
+        .extend(waiting_fn.into_iter().map(|(l, n)| (c, l, n)));
       self.out.creators[c].class_requests.extend(waiting_class);
       self
         .parted

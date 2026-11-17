@@ -100,7 +100,8 @@ fn a_paragraph_in_a_box_keeps_a_contacts_markup() {
         &["Team X: Ann Able", "mark=1", "email=team@x.org"],
         // (the `\footnotemark`'s note beside the name, FN1; its tags' text was in the name on int157a. MARKBIND:
         // mnras's own `\@fnsymbol` marks the title, so Bob's `\footnotemark[1]` is the ⋆ of Cy's `\thanks` and a copy
-        // of it, as pdflatex prints "Bob Baker2⋆ , Cy Cole3⋆", where both were "1")
+        // of it, as pdflatex prints "Bob Baker2⋆ , Cy Cole3⋆", where both were "1"; MARKKEY1: by its number, a copy of
+        // that note, OD #1058)
         &["Bob Baker", "mark=2", "mark=⋆"],
         &["Cy Cole", "mark=3", "mark=⋆"],
       ]),

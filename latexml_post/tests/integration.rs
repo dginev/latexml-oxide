@@ -890,8 +890,9 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
 /// order, with no space before the first (OXIDIZED_DESIGN_DIVERGENCES #1052). A mark-only note (`role="footnotemark"`)
 /// is its mark alone, with no empty "footnotemark: " pop-up: linked, and classed `ltx_note_shared` as a shared note's
 /// repeat is, when its mark names one note of the block (Rae's `¶`, a `\footnotemark` leftover with Perl's tags, makes
-/// Quinn's one-author note shared); otherwise the plain glyph (0801.1438's affiliation letters `a`, `c`; Sam's `1`,
-/// `2`, which the stylesheets part with a comma). Shapes: 0801.1438 under PURE (Kardoš: mark-only `a`, then the `*`
+/// Quinn's one-author note shared); otherwise the plain glyph (0801.1438's affiliation letters `a`; Sam's `1`, Tia's
+/// too), printed once or not (Sereni's `c`, Pat's `b`, Sam's `2`): the XML cannot prove a glyph prints once (DG
+/// 2026-11-16, "hide only when certain", OD #1059). Shapes: 0801.1438 under PURE (Kardoš: mark-only `a`, then the `*`
 /// note he shares with Miškuf, the PDF's "Kardošᵃ*"; base: "Kardoš* a", the mark-only note outside the wrapper after a
 /// space, with an empty pop-up); a one-author note before a mark (Pat); a mark before the ORCID badge (Tia, order
 /// kept); a name with no marks (Uma, unchanged).
@@ -948,7 +949,8 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
 </document>"#;
   // Before: each mark-only note outside the wrapper, after the name's line break, with an empty "footnotemark: "
   // pop-up (Kardoš "* a", Pat's `b` under his note, Tia's `1` after her badge); Quinn's note one author's, with Rae's
-  // `¶` unlinked. Uma's element is the base's.
+  // `¶` unlinked. Uma's element is the base's. Sereni's `c`, Pat's `b` and Sam's `2`, each printed once, show (OD
+  // #1059's fail-safe: every unlinked mark shows).
   let html = authors_html(MARKS);
   assert_eq!(html, [concat!(
     r##"<div class="ltx_authors">"##,

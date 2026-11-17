@@ -300,6 +300,10 @@ pub(crate) const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[
   ("_unsplit", ""),
   ("_withsup", ""),
   ("_zone", ""),
+  // MARKKEY1 (OD #1058): the footnote number a note stands for (`latex_constructs::FOOTNOTE_VALUE`, as the kernel's
+  // notes record theirs) and a footnote text no carrier prints but by that mark (`insert::FOOTNOTE_TEXT`)
+  ("_fnvalue", ""),
+  ("_fntext", ""),
 ];
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
@@ -418,6 +422,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   for (key, vtype) in FRONTMATTER_INTERNAL_KEYS {
     DefKeyVal!("Frontmatter", key, vtype);
   }
+  // the mark a creator's note prints: the note's own `mark` attribute (Perl's `ltx:note` schema), a note call of the
+  // frontmatter emitter (`emit::note_call`, OD #1053); declared, as the internal keys are
+  DefKeyVal!("Frontmatter", "mark", "");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never

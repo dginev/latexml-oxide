@@ -1,0 +1,29 @@
+% mechanism: a `\footnotemark` after a name's comma and its labels is the nearer name's by the glue printed past the
+%   comma's ink (the mark ledger: a comma glued to the name's run keeps the name as the stretch's opening, DG
+%   2026-11-16 COMMAMARK), and the writer writes it on that name (`emit` past the comma, the labels left to the
+%   requests): the body's `\footnotetext[n]` (in an `\fnsymbol` group, 1111.1979's `\symbolfootnote`) fills it
+% witness: 1111.1979 (`Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$ Michael R. Vanner,…`); 1912.01737, 1811.08622
+% oracle:  pdflatex 0 errors: "Igor Pikovski,1,2∗ Michael R. Vanner,1,2 Markus Aspelmeyer,1,2 M. S. Kim,3† Caslav
+%   Brukner2,4"; DG on 1111.1979's PDF: every mark is its left name's
+% engines: rust c755ca27e5f = 0 errors 1 Warning ("lost: *, †"), Igor and Kim no note; perl 0.8.8 = Igor's note on
+%   Michael's personname, Kim's on Caslav's
+% expect:  0 errors 0 warnings; Igor footnote[*]=Electronic address: igor@x.org, Kim footnote[†]=Electronic address:
+%   kim@x.org; the affiliations by their labels
+% status:  RED (c755ca27e5f) -> GREEN (perfect_kernel_batchmarkkey1::a_mark_after_a_names_comma_is_the_nearer_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$ Michael R. Vanner,$^{1, 2}$  Markus Aspelmeyer,$^{1, 2}$ M. S. Kim,$^{3}$\footnotemark $\, \,$ Caslav Brukner$^{2,4}$ \\
+\\
+\normalsize{$^{1}$ Univ A,}\\
+\normalsize{$^{2}$ Univ B,}\\
+\normalsize{$^{3}$ Univ C,}\\
+\normalsize{$^{4}$ Univ D.}
+}
+\date{}
+\begin{document}
+\maketitle
+{\def\thefootnote{\fnsymbol{footnote}}\footnotetext[1]{Electronic address: igor@x.org}}
+{\def\thefootnote{\fnsymbol{footnote}}\footnotetext[2]{Electronic address: kim@x.org}}
+Text.
+\end{document}

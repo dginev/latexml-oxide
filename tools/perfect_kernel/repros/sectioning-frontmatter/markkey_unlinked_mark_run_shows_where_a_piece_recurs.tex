@@ -1,0 +1,18 @@
+% mechanism: a name's printed run of marks that links to no note (`$^{1,2}$`, a mark-only note "1,2") shows on the page,
+%   as Bob's "3", printed once, does: every unlinked mark shows (MARKKEY1d's fail-safe, OD #1059; DG 2026-11-16, "hide
+%   only when certain"; until 12178547059 the run showed where a piece recurred and Bob's 3 hid). The XML keeps both
+%   mark-only notes
+% witness: 1304.5040 (`Bernt \O ksendal$^{1,2}$ \and Agn\`es Sulem$^{3,4}$` with `\footnotetext[1]`… outside `\author`),
+%   1202.2889
+% oracle:  pdflatex 0 errors: "Ann Able1,2 Bob Baker3", the body's "Text.1 More.2" with footnotes 1 and 2
+% engines: rust c755ca27e5f = 0 errors; both marks shown plain; perl 0.8.8 = both marks inside the personnames
+% expect:  0 errors 0 warnings; XML Ann footnotemark[1,2], Bob footnotemark[3]; HTML Ann "1,2 plain", Bob "3 plain"
+% status:  RED (MARKKEY1c, the whole run compared) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_always_shows)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$ \and Bob Baker$^{3}$}
+\maketitle
+Text.\footnote{Body one.} More.\footnote{Body two.}
+\end{document}

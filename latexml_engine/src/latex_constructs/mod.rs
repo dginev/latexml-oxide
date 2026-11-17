@@ -27,7 +27,7 @@ use latexml_core::{
 ///**********************************************************************
 use crate::base_utilities::{
   FrontmatterAnchor, already_reported, begin_deposit_insert, begin_deposit_provenance,
-  end_deposit_insert, end_deposit_provenance, mark_preamble_residue, place_frontmatter,
+  end_deposit_insert, end_deposit_provenance, mark_preamble_residue, one_note, place_frontmatter,
   remove_frontmatter_marks, tag_forms,
 };
 use crate::{
@@ -1009,11 +1009,45 @@ pub(crate) fn footnote_pairing(
   };
   if let Some(value) = value {
     props.insert("fnvalue", Stored::String(pin(value.to_string())));
+    // (a number the source gives as such, `[2]`, which a frontmatter note of that number answers — Perl's tag, its
+    // `mark`: `insert::link_marked_notes`; not one read off a counter, `[\value{footnote}]`, as it stands here)
+    if given.is_some() && !number.from_counter {
+      props.insert("fngiven", Stored::String(pin("true")));
+    }
   }
   if number.from_counter && lookup_bool("lx_title_resets_footnotes") {
     props.insert("fncounted", Stored::String(pin("true")));
   }
+  // (a number read off the counter in the title block, `\samethanks`' `[\value{footnote}]`, where the counter is not TeX's
+  // here is no number and prints no glyph: aa's and llncs's `\thanks` step nothing here, so it read 0, 2606.31244,
+  // 2306.03360)
+  if given.is_some() && number.from_counter && in_title_field() && !title_numbers_faithful() {
+    props.remove("mark");
+    props.remove("tags");
+    props.remove("fnvalue");
+    props.insert("markunknown", Stored::String(pin("true")));
+  }
   Ok(())
+}
+
+/// Is the title block's footnote counter TeX's here, so a number a mark reads off it, or names a `\thanks` by, is the
+/// one TeX's names: the class's notes step it as its `\maketitle` digests them (`lx_title_counts_footnotes`, article's family,
+/// [`declare_fnsymbol_title_block`]) or a binding declares its title's marks ([`title_marks_declared`]), or one declares
+/// the counter so ([`declare_title_numbers_faithful`])? Elsewhere (aa, llncs, an
+/// unbound class, whose title `\thanks` the reading does not count) such a number keys nothing (MARKKEY1c, the
+/// meta-review: "0" and wrong links; OXIDIZED_DESIGN_DIVERGENCES #1058).
+pub fn title_numbers_faithful() -> bool {
+  lookup_bool("lx_title_counts_footnotes")
+    || lookup_bool(TITLE_NUMBERS_FAITHFUL)
+    || title_marks_declared()
+}
+
+const TITLE_NUMBERS_FAITHFUL: &str = "lx_title_numbers_faithful";
+
+/// A binding declares its title block's footnote counter TeX's here though its notes step none there
+/// ([`title_numbers_faithful`]): its class's title steps none either (IEEEtran's `\maketitle` empties `\footnotemark`).
+pub fn declare_title_numbers_faithful() {
+  assign_value(TITLE_NUMBERS_FAITHFUL, true, Some(Scope::Global));
 }
 
 pub fn make_note_tags(
@@ -1086,6 +1120,8 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
   if let Some(caps) = NOTE_TEXT_END.captures(&node.get_attribute("role").unwrap_or_default()) {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
     let mut paired = false;
+    // (the marks of one text in creators: one note, OD #1059 — `crate::base_utilities::one_note`)
+    let mut filled: Vec<Node> = Vec::new();
     if let Some(mark) = node.get_attribute("mark") {
       let key = mark.replace(' ', "");
       // (a name's mark the frontmatter set after it, `_namemark`, is no `\footnotemark`: a body `\footnotetext[2]` is
@@ -1101,6 +1137,7 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
           continue;
         }
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
+        filled.push(marknote);
         paired = true;
       }
     }
@@ -1116,8 +1153,14 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
           continue;
         }
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
+        filled.push(marknote);
       }
     }
+    let in_creators: Vec<Node> = filled
+      .into_iter()
+      .filter(|n| n.get_parent().is_some_and(|p| p.get_name() == "creator"))
+      .collect();
+    one_note(document, &in_creators)?;
   } else if let Some(caps) = NOTE_MARK_END.captures(&node.get_attribute("role").unwrap_or_default())
   {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
@@ -1155,7 +1198,10 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
 }
 
 /// The bookkeeping attribute holding the footnote counter value a note stands for (`footnote_pairing`).
-const FOOTNOTE_VALUE: &str = "_fnvalue";
+pub const FOOTNOTE_VALUE: &str = "_fnvalue";
+
+/// The bookkeeping attribute of a note given its number as such (`footnote_pairing`).
+pub const FOOTNOTE_GIVEN: &str = "_fngiven";
 
 /// The bookkeeping attribute of a note numbered from the footnote counter in a class that sets the counter back after
 /// its `\maketitle` (`footnote_pairing`).

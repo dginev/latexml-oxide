@@ -1541,6 +1541,24 @@ impl Resolver {
       .next()
       .unwrap_or("thanks")
       .to_string();
+    // (a `\thanks` of a class whose title prints no note mark is the paper's note, not the name's it follows, where Perl
+    // and the base hung it: IEEEtran's `\maketitle` empties `\thefootnote` and `\footnotemark`, IEEEtran.cls:4756-4758,
+    // so the note names no author — kept at the block's level once its name is known printed, `answer_note_texts`: the
+    // title's publication note (the Asilomar/NSF note of 1510.02728) or a nameless creator holding it (1502.05943,
+    // 1609.09226); DG 2026-11-16, a divergence from Perl's placement)
+    if !self.notes_marked
+      && role == "thanks"
+      && let Some(at) = owner
+    {
+      self.block_thanks.push(((index, note.span), at));
+    }
+    // (a footnote text's number, which a `\footnotemark` of the block showing the same number answers: TeX pairs a mark
+    // and its text by number, `answer_note_texts`)
+    if let Some(number) = note.number.filter(|_| role == "footnotetext") {
+      self
+        .numbered_notes
+        .push(((index, note.span), number, owner));
+    }
     let rule = rule.to_string();
     self.attach(
       owner,

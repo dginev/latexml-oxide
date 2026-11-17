@@ -2255,7 +2255,9 @@ fn ieee_compsoc_names_continue_past_a_break() {
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan\u{a0}Doe</personname></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve\u{a0}Elm</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Fay\u{a0}Fox</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able, B. Baker and C. Cole are with Univ A. F. Fox is with Univ B.</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Fay\u{a0}Fox</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+      // (MARKKEY1: IEEEtran's unmarked `\thanks` is the block's, not the last author's, OD #1058 — the block's creator)
+      "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able, B. Baker and C. Cole are with Univ A. F. Fox is with Univ B.</note></creator>",
     ],
   );
 }

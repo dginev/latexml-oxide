@@ -3071,7 +3071,7 @@ mod browser_render_fmmarks {
     &'static [&'static str],
   );
 
-  const ROWS: [Row; 6] = [
+  const ROWS: [Row; 7] = [
     (
       "a shared legend note (2407.07614's shape)",
       repro!("author_block_symbol_legend_note_mark_not_in_its_text"),
@@ -3096,9 +3096,16 @@ mod browser_render_fmmarks {
       &[],
     ),
     (
-      "two marks on one name",
+      // (bare marks printed once, over the name alone: shown, the XML cannot prove a glyph prints once, OD #1059)
+      "two unlinked marks on one name, both shown",
       repro!("ne2h_marks_run_carried_back_whole"),
-      &[("Ann Able", "*"), ("Ann Able", "\u{2020}")],
+      &[("Ann Able", "*"), ("Ann Able", "†")],
+      &[],
+    ),
+    (
+      "a shared unmarked note under the page's generated mark (OD #1059)",
+      repro!("markkey_footnotemark_shares_a_thanks_by_number_unbound_class"),
+      &[("Ann Able", "[a]"), ("Bob Baker", "[a]")],
       &[],
     ),
     (

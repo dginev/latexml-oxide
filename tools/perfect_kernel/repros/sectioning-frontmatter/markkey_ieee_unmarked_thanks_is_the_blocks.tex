@@ -1,0 +1,22 @@
+% mechanism: IEEEtran's `\maketitle` prints no `\thanks` mark (IEEEtran.cls:4756-4758 `\def\thefootnote{}`,
+%   `\def\footnotemark{}`, `\let\@makefnmark\relax`), so a `\thanks` names no author: an unmarked `\thanks` is the
+%   paper's note (funding, "manuscript received"), not the author's it follows, where Perl hung it: kept at the block's
+%   level — the title's publication note, or a nameless creator holding it (1502.05943) — (`resolver::keep_note` under
+%   `Policy::unmarked_notes`; the emitter's block publication note) — a divergence from Perl's placement (DG 2026-11-16)
+% witness: 1510.02728 (the Asilomar/NSF `\thanks` after `Azadeh~Vosoughi,~\IEEEmembership{…}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE, Bob Baker, Fellow, IEEE", the note at the page's foot with no
+%   mark
+% engines: rust c755ca27e5f = 0 errors; the note a thanks note of Bob Baker; perl 0.8.8 = a thanks contact of Bob Baker
+% expect:  0 errors 0 warnings; no note on either creator; the document's pubnote role=thanks "Manuscript received May 1,
+%   2026. This work was supported by the NSF."
+% status:  RED (c755ca27e5f) -> GREEN (perfect_kernel_batchmarkkey1::an_ieee_unmarked_thanks_is_the_blocks)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able,~\IEEEmembership{Member,~IEEE,}
+        Bob~Baker,~\IEEEmembership{Fellow,~IEEE}%
+\thanks{Manuscript received May 1, 2026. This work was supported by the NSF.}}
+\maketitle
+Text.
+\end{document}

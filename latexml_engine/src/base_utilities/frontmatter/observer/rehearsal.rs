@@ -228,8 +228,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // words' spaces, which math mode skipped ("Thefirsttwoauthorscontributedequally").
   DefConstructor!("\\lx@fm@obs@note []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
   DefConstructor!("\\lx@fm@obs@fnnote []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
-  // `\footnotetext`: the text of a mark printed elsewhere, no step
-  DefConstructor!("\\lx@fm@obs@notetext []{}", "", bounded => true, mode => "text");
+  // `\footnotetext`: the text of a mark printed elsewhere, no step; its `number` the note's, `[<n>]` or the counter's
+  // value (latex.ltx `\@xfootnotenext`, `\footnotetext` sets `\@thefnmark` from `\c@footnote` as it stands)
+  DefConstructor!("\\lx@fm@obs@notetext []{}", "", bounded => true, mode => "text", properties => sub[args] {
+    Ok(match note_number(args.first().and_then(|a| a.as_ref())) {
+      Some(value) => stored_map!("fnvalue" => Stored::String(pin(value.to_string()))),
+      None => SymHashMap::default(),
+    })
+  });
   // `\footnotemark[<n>]` prints `\thefootnote` at <n> (latex.ltx `\@xfootnotemark`), a bare `\footnotemark` at the
   // counter's next value (`\stepcounter\@mpfn`): its `printed` property is that print, made with the counter set in a
   // group of its own, to <n> or to its value at the rehearsal's start plus the steps the block made up to it, so the
@@ -288,7 +294,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // (read quietly too: a bare `\footnotemark` under a class whose `\@fnsymbol` reads `\thefootnote` must not end the
     // block's rehearsal — review revfms2a2_7 finding 4, jpconf.cls:153)
     let printed = note_mark_quietly(value)?;
-    Ok(stored_map!("printed" => Stored::String(pin(&printed))))
+    Ok(stored_map!("printed" => Stored::String(pin(&printed)), "fnvalue" => Stored::String(pin(value.to_string()))))
   });
   // the marks the kernel `\maketitle` prints (latex.ltx/article.cls `\renewcommand\thefootnote{\@fnsymbol\c@footnote}`),
   // unless a binding declares its title's own (`TITLE_FOOTNOTE_HOOK`)
@@ -380,24 +386,34 @@ fn note_step(note: Token, number: Option<Tokens>) -> Result<Tokens> {
   Ok(Tokens::new(out))
 }
 
-/// The properties of a note's constructor: the mark it shows on the name.
+/// The properties of a note's constructor: the mark it shows on the name, and the note's number (`Event::number`).
 fn note_properties(number: Option<&Digested>) -> Result<SymHashMap<Stored>> {
-  let given = number.map(|number| {
+  let Some(value) = note_number(number) else {
     let mut text = String::new();
-    ink_text(number, &mut text);
-    text.trim().to_string()
-  });
-  let value = match given {
-    Some(text) => match text.parse::<i64>() {
-      Ok(value) => value,
-      Err(_) => return Ok(stored_map!("printed" => Stored::String(pin(&text)))),
-    },
-    None => FOOTNOTE_BASE
-      .with(Cell::get)
-      .saturating_add(FOOTNOTE_STEPS.with(Cell::get)),
+    number.inspect(|number| ink_text(number, &mut text));
+    return Ok(stored_map!("printed" => Stored::String(pin(text.trim()))));
   };
   let printed = note_mark_quietly(value)?;
-  Ok(stored_map!("printed" => Stored::String(pin(&printed))))
+  Ok(
+    stored_map!("printed" => Stored::String(pin(&printed)), "fnvalue" => Stored::String(pin(value.to_string()))),
+  )
+}
+
+/// The footnote number a note stands for: its given `[<n>]`, else the counter's value at its step (`None`: a given
+/// argument that is no number, TeX's "Missing number").
+fn note_number(number: Option<&Digested>) -> Option<i64> {
+  match number {
+    Some(number) => {
+      let mut text = String::new();
+      ink_text(number, &mut text);
+      text.trim().parse::<i64>().ok()
+    },
+    None => Some(
+      FOOTNOTE_BASE
+        .with(Cell::get)
+        .saturating_add(FOOTNOTE_STEPS.with(Cell::get)),
+    ),
+  }
 }
 
 /// The footnote mark `\thefootnote` prints with the counter at `value`, in a group of its own (the rehearsal steps

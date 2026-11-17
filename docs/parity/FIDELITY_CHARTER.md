@@ -156,7 +156,16 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   name's note is that name's (1911.13299; a mark alone on its own line after `\\` stays an orphan, 2026-11-09). A mark
   or note between two names is the nearer name's by the glue TeX prints, a tie the next name's; one a fill or other ink
   leaves undecided is a counted loss, never a guess; an orphan bare mark keeps its footnote step, its glyph counted
-  lost (DG 2026-11-16, OD #1057).
+  lost (DG 2026-11-16, OD #1057); a mark glued past a name's comma and labels is measured from the comma's ink
+  (COMMAMARK, 1111.1979). **Marks pair by number** (DG 2026-11-16, MARKKEY; OD #1058): a name's footnote mark answers
+  the note its number names, as TeX pairs them — a `\footnotetext[n]` in the author block is the note of each name
+  showing n (2407.04435), a name's given `\footnotemark[n]` a copy of its block's note n —, never a glyph alone where a
+  number decides; IEEEtran's unmarked `\thanks` is the block's, not the last author's (1510.02728). **One note, many
+  copies** (OD #1059): the copies of a shared note are one note (`idref` to the first, never its text); a shared
+  unmarked note prints once under a mark the page invents (`[a]`, `[b]`…, class `ltx_mark_generated`) — bindings set
+  only the glyph their class prints, the engine none, the XSLT alone invents. **No dangling marks, hidden only when
+  certain** (DG 2026-11-16): the XML cannot prove a glyph prints once (its legend may sit in a body line, the `\date`,
+  a cell), so a name's mark that links to no note shows on the page (OD #1059; 2006.10886).
 - **The frontmatter exit bar's two rulings** (2026-10-29): a family deferred with its witnesses in
   `DEFERRED_FAMILIES.md` (hand-typeset title pages, ifacconf's `{frontmatter}` box, names stacked under names, …) is
   excluded from the readability bar — its witnesses stay recorded for later work, not dropped; and the archival tier's
