@@ -19916,7 +19916,17 @@ the block's EDGE PROOF: the block's first piece precedes its first name and no p
 piece between two names is the next name's (2406.12338's `\thanks{…} {Carla Schenker,} \thanks{…} {Xiulin Wang,}`,
 "∗Carla Schenker, †Xiulin Wang"; math0606768's `\thanks{a} Ann, \thanks{b} Bob`; 1511.05393, 0906.1223). A block with
 pieces at both edges mixes the conventions: its pieces between names keep the default, counted by an
-`Info:frontmatter:mark_convention`, never the next name. The measure (the 30k census): 96.9 % of 54,559 name-line runs
+`Info:frontmatter:mark_convention`, never the next name. DG's refinements of 2026-11-17 (revWRONGFIXb): **S1** a note
+GLUED to the name before it (no space between, its comma's too) is evidence of the after-the-name convention, so such
+a block is MIXED, default plus Info — only whether a space is present is read, never its width (`\thanks{Equal} Ann
+Able\thanks{ann@} Bob Baker\thanks{bob@} Carl Cole`, "∗ / Ann Able†Bob Baker‡Carl Cole": Ann ∗ †, Bob ‡); **S2** the
+proof's first piece must sit in the first name's own stretch, the first name of the names' line — the line holding
+the first piece between two names —, so a mark before a line above it, maybe an affiliation's, proves nothing
+(`\footnotemark[1]University of X\\ Ann Able \thanks{ann@} Bob Baker`: Ann's); **S3** a piece between two names
+whose KEY (its footnote number) the name before already carries is not given to that name again but left to the next
+name, with the pieces after it on its stretch — a name printing the same key twice contradicts itself (`Ann
+Able\footnotemark[2] \quad \footnotemark[2]Bob Baker`, "Ann Able† †Bob Baker": one † each); one glued to the piece of
+its key prints over it once and stays (`\footnotemark[1]\thanks{…}`, 2103.01544). The measure (the 30k census): 96.9 % of 54,559 name-line runs
 are the name before's, and every note tie read by hand was, save the prefix-convention papers. Past a name with no
 name after it on its line (a separator, `\\`, the block's end) a piece is that name's (1911.13299's `\
 \footnotemark[3]\and`). A comma glued to a name is its ink, a piece past it the name's (`Igor Pikovski,$^{1, 2
@@ -19972,16 +19982,18 @@ name's run opens the stretch at that name — and written on its name past the c
 requests (#1058's batch); one set off from the comma by a space is undecided unless the block's edge proof holds
 (2406.12338; llncs's `Ann Able,\n\inst{1}\thanks{…} Bob`, Ann's by adjacency).
 **Witnesses.** 1911.13299, 2412.20504 (green before and after), 1703.08733 (its separator's shape); the FMRG suite's
-spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`, XML and HTML: its `ne2j_*`
+spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores`, XML and HTML: its `ne2j_*`
 rows the writers' runs and the separator's place in the run; the formula comma itself reaches the name's tokens and
 is dropped after them with no Warning, pre-existing, row R SEPRUN).
 **Guards**: `perfect_kernel_batchne2::{a_mark_beside_spacing_is_the_nearer_names,
 a_note_beside_spacing_goes_to_the_nearer_name, a_mark_nearer_the_next_name_moves_alone,
 a_mark_a_name_follows_past_spacing_is_not_carried_back, a_mark_on_no_name_keeps_its_footnote_step,
-a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`,
-`perfect_kernel_batchwrongfix::{a_note_before_a_name_is_that_names, a_note_between_two_names_is_the_name_befores}`;
-the unit tests `resolver::mark_ledger::tests::{a_piece_between_two_names_is_the_name_befores,
-the_edge_proof_gives_the_pieces_between_two_names_to_the_name_after}`.
+a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores`
+(S3: `ne2f_mark_of_a_key_the_name_before_carries_is_the_next_names`, `ne2f_mark_of_a_key_an_earlier_name_carries_stays_the_name_befores`,
+`ne2j_math_comma_between_marks_nearer_next`), `perfect_kernel_batchwrongfix::{a_note_before_a_name_is_that_names
+(S1, S2), a_note_between_two_names_is_the_name_befores}`; the unit tests
+`resolver::mark_ledger::tests::{a_piece_between_two_names_is_the_name_befores,
+the_edge_proof_gives_the_pieces_between_two_names_to_the_name_after, a_key_the_name_before_carries_goes_to_the_next_name}`.
 ---
 
 ### 1058. A footnote mark answers its note by the number it shows, never by its glyph alone (DG 2026-11-16, MARKKEY)
