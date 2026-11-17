@@ -475,7 +475,7 @@ pub struct State {
   /// ([`let_i`]): a `\let` copies another name's definition, so the name a binding gave it is no longer on the object
   /// (`owned_by_the_semantic_layer`; aas_support_sty.rs's `\let\subjectheadings\keywords`).
   pub binding_lets:            rustc_hash::FxHashSet<SymStr>,
-  /// The names a lock's refusal record was written for ([`note_redefined`], [`carry_refusal_records`]): a
+  /// The names a lock's refusal record was written for ([`note_redefined`], `carry_refusal_records`): a
   /// document's `\let` reads the records only of these.
   pub refused_names:           rustc_hash::FxHashSet<SymStr>,
   /// The frontmatter setters whose calls are observed ([`crate::definition::origin::watch_setter_calls`]).
