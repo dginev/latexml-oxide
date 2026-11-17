@@ -260,7 +260,7 @@ compiled binding is never displaced by raw mode.
 | `ws-procs9x6` | `.cls` | contributed | *alias of* `ws-rv9x6.cls` |
 | `ws-rv9x6` | `.cls` | contributed |  |
 
-## Packages (670)
+## Packages (680)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -268,6 +268,7 @@ compiled binding is never displaced by raw mode.
 | `a4` | `.sty` | ported |  |
 | `a4wide` | `.sty` | ported |  |
 | `aa_support` | `.sty` | ported |  |
+| `aaai` | `.sty` | contributed |  |
 | `aas2pp4` | `.sty` | beyond Perl | *alias of* `aaspp.sty` |
 | `aas_macros` | `.sty` | ported |  |
 | `aas_support` | `.sty` | ported |  |
@@ -277,6 +278,7 @@ compiled binding is never displaced by raw mode.
 | `aastex` | `.sty` | ported |  |
 | `abntex2cite` | `.sty` | contributed, raw + overrides |  |
 | `accents` | `.sty` | ported |  |
+| `acl` | `.sty` | contributed |  |
 | `acronym` | `.sty` | ported |  |
 | `actuarialangle` | `.sty` | ported, raw + overrides |  |
 | `adjmulticol` | `.sty` | beyond Perl |  |
@@ -410,6 +412,7 @@ compiled binding is never displaced by raw mode.
 | `cmpj2` | `.sty` | beyond Perl, raw + overrides |  |
 | `cmpj3` | `.sty` | beyond Perl, raw + overrides |  |
 | `codehigh` | `.sty` | beyond Perl, raw + overrides |  |
+| `coling` | `.sty` | contributed | *alias of* `acl.sty` |
 | `collcell` | `.sty` | contributed |  |
 | `colm` | `.sty` | contributed | *alias of* `colm2025_conference.sty`; Stub for colm2025_conference.sty (COLM 2025 conference template), and the COLM family binding: registered also as `colm`, which the versioned fallback reaches from colm2024_conference, colm2024_arxiv … |
 | `colm2025_conference` | `.sty` | contributed | Stub for colm2025_conference.sty (COLM 2025 conference template), and the COLM family binding: registered also as `colm`, which the versioned fallback reaches from colm2024_conference, colm2024_arxiv … |
@@ -419,6 +422,7 @@ compiled binding is never displaced by raw mode.
 | `commath` | `.sty` | contributed, raw + overrides |  |
 | `comment` | `.sty` | ported |  |
 | `concmath` | `.sty` | ported |  |
+| `conll` | `.sty` | contributed | *alias of* `acl.sty` |
 | `constants` | `.sty` | beyond Perl | No-op stub for constants.sty. |
 | `courier` | `.sty` | ported |  |
 | `cprotect` | `.sty` | contributed |  |
@@ -456,12 +460,15 @@ compiled binding is never displaced by raw mode.
 | `doi` | `.sty` | ported, raw + overrides |  |
 | `doublespace` | `.sty` | ported |  |
 | `dsfont` | `.sty` | ported |  |
+| `eacl` | `.sty` | contributed | *alias of* `acl.sty` |
 | `ed` | `.sty` | ported, raw + overrides |  |
 | `ellipsis` | `.sty` | ported |  |
 | `elsart` | `.sty` | ported |  |
 | `elsart_support` | `.sty` | ported |  |
 | `elsart_support_core` | `.sty` | ported |  |
 | `emlines` | `.sty` | contributed |  |
+| `emnlp` | `.sty` | contributed | *alias of* `acl.sty` |
+| `emnlp-ijcnlp` | `.sty` | contributed | *alias of* `acl.sty` |
 | `empheq` | `.sty` | ported |  |
 | `emulateapj` | `.sty` | ported |  |
 | `emulateapj5` | `.sty` | ported |  |
@@ -675,6 +682,8 @@ compiled binding is never displaced by raw mode.
 | `multicol` | `.sty` | ported |  |
 | `multido` | `.sty` | ported |  |
 | `multirow` | `.sty` | ported |  |
+| `naacl` | `.sty` | contributed | *alias of* `acl.sty` |
+| `naaclhlt` | `.sty` | contributed | *alias of* `acl.sty` |
 | `nag` | `.sty` | contributed |  |
 | `nameref` | `.sty` | ported |  |
 | `natbib` | `.sty` | ported |  |
@@ -845,6 +854,7 @@ compiled binding is never displaced by raw mode.
 | `tabularray` | `.sty` | contributed |  |
 | `tabularx` | `.sty` | ported |  |
 | `tabulary` | `.sty` | ported |  |
+| `tacl` | `.sty` | contributed | *alias of* `acl.sty` |
 | `tagpdf` | `.sty` | contributed |  |
 | `tagpdf-base` | `.sty` | beyond Perl, raw + overrides |  |
 | `tcolorbox` | `.sty` | ported, raw + overrides |  |

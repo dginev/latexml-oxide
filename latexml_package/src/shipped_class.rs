@@ -209,7 +209,7 @@ pub fn require_shipped_packages(ext: &str, family: &[&str]) -> Result<bool> {
   Ok(!request.is_empty() && require_dependencies_only(&request, ext, family))
 }
 
-/// A stand-in binding reads the paper's copy of the package it answers ([`stand_in_request`]) raw, as pdflatex loads it
+/// A stand-in binding reads the paper's copy of the package it answers (`stand_in_request`) raw, as pdflatex loads it
 /// (acl_sty, aaai_sty); `false` when the source has none, which the raw load reports as the loader does.
 pub fn input_shipped_package() -> Result<bool> {
   let request = stand_in_request()?;
