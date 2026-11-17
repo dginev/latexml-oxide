@@ -244,7 +244,7 @@ const TITLE_MARK_LINES: &[(&str, &str)] = &[
 
 /// A stand-in binding declares the title marks its paper's copy prints ([`shipped_copy_text`];
 /// `latex_constructs::declare_package_title_marks`) where the copy carries one of its style's `\thefootnote` lines
-/// ([`TITLE_MARK_LINES`]); a copy with none, or with two that disagree, leaves them unknown: no glyph (DG 2026-11-17).
+/// (`TITLE_MARK_LINES`); a copy with none, or with two that disagree, leaves them unknown: no glyph (DG 2026-11-17).
 /// Whether it declared.
 pub fn declare_shipped_copy_title_marks(ext: &str) -> Result<bool> {
   let Some(text) = shipped_copy_text(ext)? else {
