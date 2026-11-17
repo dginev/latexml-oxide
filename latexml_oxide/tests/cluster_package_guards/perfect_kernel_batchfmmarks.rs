@@ -2766,6 +2766,21 @@ const REVTEX: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
+    repro:      "fmmarks_revtex42_aps_galley_prints_the_letter",
+    tex:        repro!("fmmarks_revtex42_aps_galley_prints_the_letter"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnote[b]=Present address: Lab C. | affiliation=Univ A"#,
+      r#"Bob Baker | thanks=Bob note. ; affiliation=Univ B"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Present address: Lab C."#,
+      r#"Bob Baker"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
     repro:      "fmmarks_revtex41_aip_shared_thanks_letters",
     tex:        repro!("fmmarks_revtex41_aip_shared_thanks_letters"),
     warnings:   0,
@@ -3106,6 +3121,42 @@ const CLASS: &[Row] = &[
     moves:      r#""#,
     page:       &[
       r#"Ann Able | under: E-mail: ann@x.org"#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_mnras_no_maketitle_footnotetext",
+    tex:        repro!("fmmarks_mnras_no_maketitle_footnotetext"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A"#,
+      r#"Bob Baker ; footnote[2]=Bob text. | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker | under: Bob text."#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_article_no_maketitle_footnotetext_red",
+    tex:        repro!("fmmarks_article_no_maketitle_footnotetext_red"),
+    warnings:   0,
+    creators:   &[r#"Ann Able"#, r#"Bob Baker ; footnote[2]=Bob text."#],
+    moves:      r#"row R NOMTHOOK (proposed: the title hook applied only where a `\maketitle` digests the field; written †)"#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker | under: Bob text."#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_report_titlepage_marks_in_force",
+    tex:        repro!("fmmarks_report_titlepage_marks_in_force"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[2]=Ann note."#,
+      r#"Bob Baker ; thanks[3]=Bob note."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
       r#"Bob Baker | under: Bob note."#,
     ],
     page_moves: r#""#,

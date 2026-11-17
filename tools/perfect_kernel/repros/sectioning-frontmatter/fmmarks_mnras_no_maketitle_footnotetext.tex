@@ -1,0 +1,18 @@
+% mechanism: mnras with no `\maketitle`: the fallback flush places the title block, which pdflatex never prints, so the
+%   title hook (`latex_constructs::declare_title_marks_in_force`) is let only as a `\maketitle` begins
+%   (`\lx@maketitle@begin`), never at load; a name's `\footnotemark[2]` answered by a body `\footnotetext[2]` after
+%   the first `\section` (`\fixfootnotes`, arabic) is marked 2 by the `\thefootnote` in force, not the class's †
+% witness:  review revMARKBINDb B1 (p/mn_nomt2.tex; p/mn_nomt.tex and p/mn_nomt3.tex the same), MARKBINDc item 1
+% oracle:   pdflatex 0 errors; "1 INTRODUCTION", "Body1", "2 Bob text.", "1 Body note." (no title, no author block)
+% engines:  rust MARKBINDb (2aa35bbd553) = 0 errors, 0 Warnings; Bob's note †; MARKBINDb0 (4f169bcbe69) 2
+% expect:   0 errors, 0 Warnings; Bob's note 2, the body's note 1
+% status:   RED (MARKBINDb) -> GREEN (MARKBINDc; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{mnras}
+\title{A Title}
+\author[A. Able et al.]{Ann Able and Bob Baker\footnotemark[2]\\ Univ A}
+\begin{document}
+\section{Introduction}
+\footnotetext[2]{Bob text.}
+Body\footnote{Body note.}.
+\end{document}

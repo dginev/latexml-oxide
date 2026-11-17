@@ -1624,9 +1624,11 @@ fn every_shape_of_a_key_is_seen() {
 }
 
 /// A string constant naming an internal key (`const LINE_FIRST: &str = "_linefirst"`) that a literal sets as a keyval
-/// (`s!("{kinded_keys},{LINE_FIRST}=true")`; an XPath's `@{X}=` reads an attribute) reaches a `Frontmatter` KeyVals, so
-/// the key is declared — in `FRONTMATTER_INTERNAL_KEYS`, a `DefKeyVal!` or Perl's — or every paper that writes it
-/// reports an unknown key (`_linefirst`, review revMARKBIND).
+/// (`s!("{kinded_keys},{LINE_FIRST}=true")`, or as a format's positional argument, a path's last segment:
+/// `s!("…,{}={{true}}", insert::ROW_SHARED)`; an XPath's `@{X}=` reads an attribute) reaches a `Frontmatter` KeyVals,
+/// so the key is declared — in `FRONTMATTER_INTERNAL_KEYS`, a `DefKeyVal!` or Perl's — or every paper that writes it
+/// reports an unknown key (`_linefirst`, review revMARKBIND). Not seen: a key spelled in no constant, or one a string is
+/// built from piece by piece (`push_str`).
 #[test]
 fn every_internal_key_a_keyval_sets_is_declared() {
   let constant =
@@ -1662,6 +1664,9 @@ fn every_internal_key_a_keyval_sets_is_declared() {
           .insert(short.clone());
       }
     }
+    for name in positional_keyval_sets(&source) {
+      uses.entry(name).or_default().insert(short.clone());
+    }
   }
   let declared: std::collections::BTreeSet<&str> = speech
     .keys
@@ -1679,8 +1684,15 @@ fn every_internal_key_a_keyval_sets_is_declared() {
         .map(move |key| (name, key, files))
     })
     .collect();
-  // (the reader sees the shapes: a format's open set, a set after a comma, a set on its own)
-  for name in ["CUT_LIST", "LINE_FIRST", "NAME_PRINTED"] {
+  // (a positional key read by its place, a path's last segment, an XPath's `@{}=` not a key)
+  assert_eq!(
+    positional_keyval_sets(&lex_rust(
+      r#"s!("a={{{x}}},{}={{true}},@{}=1", insert::ROW_SHARED, OTHER)"#
+    )),
+    ["ROW_SHARED"]
+  );
+  // (the reader sees the shapes: a format's open set, a set after a comma, a set on its own, a positional one)
+  for name in ["CUT_LIST", "LINE_FIRST", "NAME_PRINTED", "ROW_SHARED"] {
     assert!(
       set_keys.iter().any(|(set, ..)| set.as_str() == name),
       "{name} is no longer read as a keyval's key: {set_keys:?}"
@@ -1695,6 +1707,64 @@ fn every_internal_key_a_keyval_sets_is_declared() {
     undeclared.is_empty(),
     "an internal key a keyval sets, undeclared (add it to `frontmatter_api::FRONTMATTER_INTERNAL_KEYS`): {undeclared:?}"
   );
+}
+
+/// The constants a format call (`s!`, `format!`) passes as a positional argument whose `{}` opens a keyval's key in
+/// its literal (`{}=`, not an XPath's `@{}=`): `s!("label={{{label}}},{}={{true}}", ROW_SHARED)` sets `ROW_SHARED`, and
+/// `insert::ROW_SHARED` is the constant of its last segment.
+fn positional_keyval_sets(source: &RustSource) -> Vec<String> {
+  let call = Regex::new(r#"\b(?:s|format)!\(\s*"([0-9]+)"\s*,"#).expect("the regex");
+  let constant =
+    Regex::new(r"^(?:[A-Za-z_][A-Za-z_0-9]*::)*([A-Z][A-Z_0-9]*)$").expect("the regex");
+  let mut names = Vec::new();
+  for found in call.captures_iter(&source.code) {
+    let literal: Vec<char> = source.literals[found[1].parse::<usize>().expect("an index")]
+      .chars()
+      .collect();
+    // (the positional `{}` that set a key: their index among the literal's positional arguments)
+    let (mut keyed, mut positional, mut i) = (Vec::new(), 0, 0);
+    while i < literal.len() {
+      match (literal[i], literal.get(i + 1)) {
+        ('{', Some('{')) | ('}', Some('}')) => i += 2,
+        ('{', Some('}')) => {
+          if literal.get(i + 2) == Some(&'=') && (i == 0 || literal[i - 1] != '@') {
+            keyed.push(positional);
+          }
+          positional += 1;
+          i += 2;
+        },
+        _ => i += 1,
+      }
+    }
+    if keyed.is_empty() {
+      continue;
+    }
+    // (the call's arguments after the literal, split at its top-level commas)
+    let (mut depth, mut arguments, mut current) = (0usize, Vec::new(), String::new());
+    for c in source.code[found.get(0).expect("the match").end()..].chars() {
+      match c {
+        '(' | '[' | '{' => depth += 1,
+        ')' | ']' | '}' if depth == 0 => break,
+        ')' | ']' | '}' => depth -= 1,
+        ',' if depth == 0 => {
+          arguments.push(std::mem::take(&mut current));
+          continue;
+        },
+        _ => {},
+      }
+      current.push(c);
+    }
+    arguments.push(current);
+    for index in keyed {
+      if let Some(name) = arguments
+        .get(index)
+        .and_then(|argument| constant.captures(argument.trim()))
+      {
+        names.push(name[1].to_string());
+      }
+    }
+  }
+  names
 }
 
 /// Token-spelling reads per area, and in the listed bindings: `bin/tokreads.py`'s count of the removal study plus the shapes

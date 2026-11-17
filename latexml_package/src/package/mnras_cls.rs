@@ -56,8 +56,9 @@ LoadDefinitions!({
 \def\section{\if@firstsection\fixfootnotes\@firstsectionfalse\fi\lx@mnras@section}");
   // Its `\maketitle` (:1055-1071) prints the `\thefootnote` in force, the title hook (`latex_constructs::
   // TITLE_THEFOOTNOTE`): "Ann Able⋆", a name's `\footnotemark[2]` and its `\footnotetext[2]` after it "†" (2509.04573's
-  // `\footnotemark[3]` "‡"), a preamble's `\arabic` "1", footmisc's "∗" (1905.08754). Its `\thanks` is LaTeX's, and it
-  // sets the counter back to none, so a note before the first `\section` counts on: ⋆ for the title, † next.
+  // `\footnotemark[3]` "‡"), a preamble's `\arabic` "1", footmisc's "∗" (1905.08754); with no `\maketitle`, none
+  // (pdflatex prints no title). Its `\thanks` is LaTeX's, and its `\maketitle` does not set the counter back, so a
+  // note before the first `\section` counts on: ⋆ for the title, † next.
   engine::latex_constructs::declare_title_marks_in_force()?;
   engine::latex_constructs::declare_title_footnote_counting(false)?;
   // mnras.cls:1349-1354: with `usedcolumn`, the class's column types on dcolumn's `D` (mn2e_support loads dcolumn).

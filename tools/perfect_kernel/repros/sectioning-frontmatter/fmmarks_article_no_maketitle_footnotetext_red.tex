@@ -1,0 +1,18 @@
+% mechanism: article with no `\maketitle`: the fallback flush places the title block, which pdflatex never prints, but
+%   the title hook article.cls declares at load (`\@fnsymbol\c@footnote`, `declare_fnsymbol_title_block`) marks the
+%   name's `\footnotemark[2]`, so the body's `\footnotetext[2]` it answers is written †, where pdflatex prints 2
+% witness:  review revMARKBINDb B1 (p/art_nomt.tex), pre-existing (MARKBINDb0 4f169bcbe69 the same)
+% oracle:   pdflatex 0 errors; "1 Introduction", "Body1", "2 Bob text.", "1 Body note." (no title, no author block)
+% engines:  rust MARKBINDc = 0 errors, 0 Warnings; Bob's note †
+% expect:   0 errors, 0 Warnings; Bob's note 2, the body's note 1
+% status:   RED (row R NOMTHOOK, proposed: the title hook applied only where a `\maketitle` digests the field,
+%   `lx_frontmatter_explicit`; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able \and Bob Baker\footnotemark[2]}
+\begin{document}
+\section{Introduction}
+\footnotetext[2]{Bob text.}
+Body\footnote{Body note.}.
+\end{document}

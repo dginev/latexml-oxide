@@ -978,8 +978,10 @@ pub(crate) fn selected_journal(post: &str) -> Result<(String, String)> {
   Ok((society, journal))
 }
 
-/// REVTeX 4.1/4.2's title marks (`post` "4-1" or "4-2"), after its options: the aip/sor letters and the title hook,
-/// the minipage letters or none in the two-column grid (`twocolumn`, `reprint`, `lengthcheck`). OD #1060.
+/// REVTeX 4.1/4.2's title marks (`post` "4-1" or "4-2"), after its options: the aip/sor letters (pdflatex
+/// `[altaffilsymbol,aip]` "Ann Able1, a)": the option does not undo them) and the title hook, the minipage letters or
+/// none in the two-column grid (`twocolumn`, `reprint`, `lengthcheck`; 1807.01940 and 2301.00155 print no mark for a
+/// name's `\footnotemark[1]`). OD #1060.
 pub(crate) fn declare_revtex41_title_marks(post: &str) -> Result<()> {
   if !(is_document_class("revtex4-1") || is_document_class("revtex4-2")) {
     return Ok(());
@@ -988,8 +990,9 @@ pub(crate) fn declare_revtex41_title_marks(post: &str) -> Result<()> {
   if matches!(society.as_str(), "aip" | "sor") {
     assign_value("revtex@altaffilletter", true, Some(Scope::Global));
   }
+  // (`galley` is `onecolumn`, revtex4-2.cls:6025-6026)
   let grid = matches!(
-    last_class_option(&["twocolumn", "onecolumn", "reprint", "lengthcheck"]),
+    last_class_option(&["twocolumn", "onecolumn", "reprint", "lengthcheck", "galley"]),
     Some("twocolumn" | "reprint" | "lengthcheck")
   );
   if grid {

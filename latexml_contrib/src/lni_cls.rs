@@ -49,7 +49,8 @@ LoadDefinitions!({
 });
 
 /// Whether the class's own `\maketitle`, which the lock refused (`\lx@dropped@maketitle`), sets the footnote counter back
-/// to 0 (`\setcounter{footnote}{0}`).
+/// to 0: v0.5's copy's own `\setcounter{footnote}{0}` (its :116), read as spelled; a copy writing `\c@footnote\z@` is
+/// missed, its body notes counting on.
 fn maketitle_resets_footnotes() -> bool {
   lookup_definition(&T_CS!("\\lx@dropped@maketitle"))
     .ok()

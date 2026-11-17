@@ -724,11 +724,11 @@ const BOUND_WHEN_DEFINED: &[(&str, &str, bool)] = &[
 /// The hook a binding declares its title's footnote marks with — the kernel's own, `\lx@title@thefootnote`
 /// (`latex_constructs::TITLE_THEFOOTNOTE`), which also marks the notes the title block prints: defined, the
 /// rehearsal's `\thefootnote` is it (what a bare `\footnotemark` in the block prints); undefined, the kernel
-/// `\maketitle`'s `\@fnsymbol\c@footnote`. Article, report and book define it (`declare_fnsymbol_title_block`); a class
-/// numbering its title's marks otherwise defines it — revtex4-2.cls:3040-3041 `\frontmatter@thefootnote` is
-/// `\@fnsymbol` by default and `\@alph` only under its `altaffilletter` option (:5978 `\@booleanfalse
-/// \altaffilletter@sw`), so a revtex binding would `\def\lx@title@thefootnote{\frontmatter@thefootnote}`. Guards
-/// `perfect_kernel_batchfms2a1::title_footnote_hook_overrides_fnsymbol`,
+/// `\maketitle`'s `\@fnsymbol\c@footnote`. Article, report and book define it (`declare_fnsymbol_title_block`; their
+/// title page the `\thefootnote` in force as the `\maketitle` begins); a class numbering its title's marks otherwise
+/// defines it — revtex4-2.cls:3040-3041 `\frontmatter@thefootnote` is `\@fnsymbol` by default and `\@alph` only
+/// under its `altaffilletter` option (:5978 `\@booleanfalse\altaffilletter@sw`), so a revtex binding would
+/// `\def\lx@title@thefootnote{\frontmatter@thefootnote}`. Guards `perfect_kernel_batchfms2a1::title_footnote_hook_overrides_fnsymbol`,
 /// `perfect_kernel_batch78o::declared_title_thefootnote_prints_the_marks_the_observer_labels`.
 const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 
