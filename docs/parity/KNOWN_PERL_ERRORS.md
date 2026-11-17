@@ -21875,9 +21875,11 @@ never prints. Minimal trigger (pdflatex 0 errors: the footnote "{ann, bob}@x.org
 % Perl: <span class="ltx_note ltx_role_footnotetext"><sup class="ltx_note_mark">†</sup>… footnotetext: {ann, bob}@x.org
 ```
 
-Rust: such a note in the frontmatter shows its content with no glyph (OXIDIZED_DESIGN_DIVERGENCES #1063, #990 for the
-creators'); 2506.06941, 2602.04557, 2405.13379, 2603.01467. Guards
-`perfect_kernel_batchinvdag::{an_unmarked_document_level_note_is_a_block_line, an_unmarked_note_in_a_field_is_inline}`.
+Rust: such a note in a frontmatter field, or of the document's own level where its role is one the PDF prints in the
+title block or as a footnote, shows its content with no glyph (OXIDIZED_DESIGN_DIVERGENCES #1063, #990 for the
+creators'); a running head, the publication's metadata and a note in a title keep Perl's rendering. 2506.06941,
+2602.04557, 2405.13379, 2603.01467. Guards `perfect_kernel_batchinvdag::{an_unmarked_document_level_note_is_a_block_line,
+an_unmarked_note_in_a_field_is_inline, a_document_level_note_shows_once_where_the_pdf_prints_it}`.
 
 ## 1285. icml_support drops the names' `\icmlsetsymbol` marks and the notice
 

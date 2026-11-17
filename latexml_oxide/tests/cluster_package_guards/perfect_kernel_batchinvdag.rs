@@ -1,9 +1,11 @@
 //! Red/green guards for batch INVDAG: the frontmatter never invents a glyph (DG 2026-11-16). A frontmatter note outside
-//! the creators with no mark prints none — a block line at the document's level, inline in a field (`LaTeXML-meta-xhtml.xsl`,
-//! OXIDIZED_DESIGN_DIVERGENCES #1063, #990's rule extended); icml's `\icmlsetsymbol` labels show their symbol on the
-//! names. A label authblk prints on a name that no `\affil` explains shows on the name as its mark
-//! (`Policy::labels_print`, OXIDIZED_DESIGN_DIVERGENCES #1064, #1059's rule). Witnesses 2602.04557, 2405.13379,
-//! 2506.06941, 2603.01467, 2606.00446.
+//! the creators with no mark that the PDF prints shows its text with none — a line at the document's level (the roles
+//! of `f:document-note-shown`, once per role and text), inline in a field; a running head, the publication's metadata
+//! and a note in a title keep Perl's note (`LaTeXML-meta-xhtml.xsl`, OXIDIZED_DESIGN_DIVERGENCES #1063, #990's rule
+//! extended); icml's `\icmlsetsymbol` labels show their symbol on the names. A label authblk prints on a name that no
+//! `\affil` explains shows on the name as its mark (`Policy::labels_print`, OXIDIZED_DESIGN_DIVERGENCES #1064, #1059's
+//! rule). Witnesses 2602.04557, 2405.13379, 2506.06941, 2603.01467, 2606.00446, 2606.17809, 1710.08165, 2412.01641,
+//! 1212.5729, 2402.05011.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 
 use super::{
@@ -56,7 +58,8 @@ fn html_element<'a>(html: &'a str, open: &str) -> &'a str {
 
 /// icml's notice (`\printAffiliationsAndNotice{\icmlEqualContribution}`), a note of the document's own level with no mark
 /// (2602.04557; pdflatex prints it as a footnote with no mark, `\let\thefootnote\relax`, icml2026.sty:521): a block line,
-/// `div.ltx_note_unmarked` after Perl's "affiliationnotice: " label, its `*` (icml2026.sty:502) kept, no `†`; the equal authors' names show the `*` their
+/// `div.ltx_note_unmarked` with no "role: " label (none printed), its `*` (icml2026.sty:502) kept, no `†`; the equal
+/// authors' names show the `*` their
 /// `\icmlsetsymbol` label prints (icml2026.sty:446-458), a mark of the creator, not of its name, so Ann's e-mail is
 /// still hers where Cy Able shares her surname (1904.07793: a `*` in the name lost Xiaosen Wang's), Cy none. The block
 /// path of the unmarked-note template;
@@ -82,7 +85,7 @@ fn an_unmarked_document_level_note_is_a_block_line() {
   let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
   assert_eq!(
     html_element(&html, "<div id=\"id3\""),
-    r#"<div id="id3" class="ltx_note ltx_role_affiliationnotice ltx_note_unmarked"><span class="ltx_note_type">affiliationnotice: </span><sup id="id3.1" class="ltx_sup">*</sup>Equal contribution</div>"#
+    r#"<div id="id3" class="ltx_note ltx_role_affiliationnotice ltx_note_unmarked"><sup id="id3.1" class="ltx_sup">*</sup>Equal contribution</div>"#
   );
   // (the page's marks are the two names' `*`, no `†` anywhere and nothing hidden behind a mark)
   assert_eq!(html.matches("ltx_note_mark").count(), 2, "{html}");
@@ -105,13 +108,7 @@ fn an_unmarked_note_in_a_field_is_inline() {
     r#"<p id="abstract1.1" class="ltx_p">An abstract.
 <span id="footnotex1" class="ltx_note ltx_role_footnotetext ltx_note_unmarked">{ann, bob}@x.org</span></p>"#
   );
-  // (the whitespace between its tags folded)
-  let body_note = html_element(&html, "<span id=\"footnote1\"")
-    .split_whitespace()
-    .collect::<Vec<_>>()
-    .join(" ")
-    .replace("> <", "><")
-    .replace("> ", ">");
+  let body_note = folded(html_element(&html, "<span id=\"footnote1\""));
   assert_eq!(
     body_note,
     r#"<span id="footnote1" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup><span class="ltx_tag ltx_tag_note">1</span>A body note.</span></span></span>"#
@@ -217,4 +214,96 @@ Text.
     row(&["Cat Cole", "mark=†", "affiliation=Univ A"]),
     row(&["mark=†"]),
   ]);
+  // (each name's `†` a link to the legend's note: Pollner's in 2606.17809)
+  let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
+  for id in ["id1", "id3"] {
+    assert_eq!(
+      html_element(&html, &format!("<span id=\"{id}\"")),
+      format!(
+        r##"<span id="{id}" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">†</a></sup></span>"##
+      )
+    );
+  }
+}
+
+/// A note of the document's own level with no mark shows as a line only where its role is one the PDF prints in the
+/// title block or as a footnote (`f:document-note-shown`, OXIDIZED_DESIGN_DIVERGENCES #1063): emulateapj's running
+/// heads (`\lefthead`, `\righthead`, printed in no title block, emulateapj.cls:368-369) keep Perl's hidden note — jmlr's
+/// "heading:", "volume: LEAVE UNSET" lines of 1710.08165, 2310.01426 —; and of two of one role and one text, one line
+/// shows, the second only its id (2412.01641's `\equalcont` under two names, 2511.18287). Repros
+/// sectioning-frontmatter/fm_document_level_running_heads_keep_the_hidden_note, fm_document_level_repeated_note_shows_once.
+#[test]
+fn a_document_level_note_shows_once_where_the_pdf_prints_it() {
+  let xml = convert_clean(repro!(
+    "fm_document_level_running_heads_keep_the_hidden_note"
+  ));
+  let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
+  assert!(!html.contains("ltx_note_unmarked"), "{html}");
+  assert_eq!(
+    folded(html_element(&html, "<span id=\"id1\"")),
+    r##"<span id="id1" class="ltx_note ltx_role_lefthead"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">lefthead: </span>Able and Baker</span></span></span>"##
+  );
+  assert_eq!(
+    folded(html_element(&html, "<span id=\"id2\"")),
+    r##"<span id="id2" class="ltx_note ltx_role_righthead"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">righthead: </span>A Short Title</span></span></span>"##
+  );
+  let xml = convert_clean(repro!("fm_document_level_repeated_note_shows_once"));
+  assert_eq!(xml.matches("Equal contribution.").count(), 2, "{xml}");
+  let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
+  assert_eq!(html.matches("Equal contribution.").count(), 1, "{html}");
+  assert_eq!(
+    html_element(&html, "<div id=\"footnotex1\""),
+    r##"<div id="footnotex1" class="ltx_note ltx_role_footnotetext ltx_note_unmarked">Equal contribution.</div>"##
+  );
+  assert_eq!(
+    html_element(&html, "<span id=\"footnotex2\""),
+    r##"<span id="footnotex2"></span>"##
+  );
+  assert!(!html.contains("ltx_note_mark"), "{html}");
+}
+
+/// A note with no mark in a title — the document's (1212.5729's `\title{…\let\thefootnote\relax\footnotetext{…}}`), a
+/// section's, a theorem's (review p2's `\blfootnote`) — keeps Perl's note: `ltx:title` is also a heading of the body, so
+/// the field rule of OXIDIZED_DESIGN_DIVERGENCES #1063 reaches no title (1110.0973, 2406.09922, 2512.05521 put the note's
+/// text in the `<h1>`). Repro sectioning-frontmatter/fm_note_in_a_heading_keeps_its_dagger.
+#[test]
+fn a_note_in_a_heading_keeps_perls_note() {
+  let xml = convert_clean(repro!("fm_note_in_a_heading_keeps_its_dagger"));
+  let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
+  assert!(!html.contains("ltx_note_unmarked"), "{html}");
+  assert_eq!(
+    folded(html_element(&html, "<h1")),
+    r##"<h1 class="ltx_title ltx_title_document">A Title<span id="footnotex1" class="ltx_note ltx_role_footnotetext"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">footnotetext: </span>We thank the referees.</span></span></span></h1>"##
+  );
+  assert_eq!(
+    folded(html_element(&html, "<h2")),
+    r##"<h2 class="ltx_title ltx_title_section"><span class="ltx_tag ltx_tag_section">1 </span>Results<span id="footnote1" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup>Joint work with C. Doe.</span></span></span></h2>"##
+  );
+  assert_eq!(
+    folded(html_element(&html, "<h6")),
+    r##"<h6 class="ltx_title ltx_runin ltx_title_theorem"><span class="ltx_tag ltx_tag_theorem"><span id="Thmthm1.1" class="ltx_text ltx_font_bold">Theorem 1</span></span><span id="Thmthm1.2" class="ltx_text ltx_font_bold">(Main<span id="footnote0a" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span id="footnote0a.2" class="ltx_text ltx_font_medium">Due to Euler.</span></span></span></span>)</span></h6>"##
+  );
+}
+
+/// icml's notice markers printing a dagger (`\icmlProjectLead`, `\icmlEqualSeniorContribution`,
+/// `\icmlEqualContributionAndSenior`, `\airesident`) print `\textdagger`, as the papers' `\dag` (2402.05011's
+/// icml2024.sty:526): a `\char` of U+2020 printed nothing, "Equal contribution, Project lead". Repro
+/// sectioning-frontmatter/icml_notice_dagger_markers_print_their_dagger.
+#[test]
+fn icml_notice_daggers_print() {
+  let xml = convert_clean(repro!("icml_notice_dagger_markers_print_their_dagger"));
+  assert_eq!(
+    html_element(&xml, "<note role=\"affiliationnotice\""),
+    r##"<note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>Equal contribution, <sup xml:id="id3.2">†</sup>Project lead</note>"##
+  );
+}
+
+/// `element` with the whitespace between its tags folded.
+fn folded(element: &str) -> String {
+  element
+    .split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ")
+    .replace("> <", "><")
+    .replace("> ", ">")
 }

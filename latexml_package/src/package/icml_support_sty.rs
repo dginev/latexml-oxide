@@ -238,14 +238,16 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   DefMacro!("\\icmlEqualAdvising", "Equal advising");
   // ICML 2025: extended marker for joint first + senior authorship.
   // Witness: 2503.15703 (icml2025.sty L534).
+  // The dagger of this and the markers below is `\textdagger`, as the papers' own `\dag`: a `\char` of U+2020 is no
+  // slot of the text font and printed nothing (2402.05011's "Project lead", whose names show `†`).
   DefMacro!("\\icmlEqualContributionAndSenior",
     "\\textsuperscript{*}Equal contribution, \
-     \\textsuperscript{\\char`\u{2020}}Equal senior authorship");
+     \\textsuperscript{\\textdagger}Equal senior authorship");
   // ICML 2024 introduced `\icmlEqualSeniorContribution` — senior-only
   // joint authorship marker (no joint-first). Witness 2305.xxxxx in
   // wp4 (2 papers in stage 1).
   DefMacro!("\\icmlEqualSeniorContribution",
-    "\\textsuperscript{\\char`\u{2020}}Equal senior contribution");
+    "\\textsuperscript{\\textdagger}Equal senior contribution");
   // Some paper-bundled icml*.sty templates add author-status markers
   // beyond the kernel `\icmlEqualContribution`. The most common is
   // `\icmlIntershipWork`, an internship-affiliation annotation passed
@@ -274,7 +276,7 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   // preserved notice arg expands the undefined CS. Generic fallback
   // (program unknowable from the binding). Witness 1902.09574.
   DefMacro!("\\airesident",
-    "\\textsuperscript{\\char`\u{2020}}Work completed as part of an AI Residency");
+    "\\textsuperscript{\\textdagger}Work completed as part of an AI Residency");
   // \icmlOutsideContribution — paper-bundled marker noting that the
   // contribution was made outside the author's primary affiliation.
   // Witness 2310.14751.
@@ -296,9 +298,9 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   DefMacro!("\\icmlEqualwork",
     "\\textsuperscript{*}Joint work");
   // \icmlProjectLead — paper-bundled project-lead marker.
-  // Witness 2402.04924 (icml2024.sty L535).
+  // Witness 2402.04924 (icml2024.sty L535), 2402.05011 (icml2024.sty:526 `\textsuperscript{\dag}Project lead,`).
   DefMacro!("\\icmlProjectLead",
-    "\\textsuperscript{\\char`\u{2020}}Project lead");
+    "\\textsuperscript{\\textdagger}Project lead");
   // Every icml20xx.sty sends the keywords only to the PDF metadata (icml2018.sty:530-541 … icml2026.sty:546-550
   // `\ifdefined\nohyperref\else\ifdefined\hypersetup\hypersetup{pdfkeywords={#1}}\fi\fi`; the printed "Keywords:" line is
   // commented out in each), which hyperref_sty.rs writes as RDFa (`dcterms:subject`), not a displayed keywords block
