@@ -20628,6 +20628,26 @@ construction only). **Guards**: `cluster_package_guards::perfect_kernel_batchiee
 `sectioning-frontmatter/ieee_thanks_*`, the specials and label forms in `ieee_thanks_address_specials_and_labels`);
 `perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned.
 
+### 1073. spconf's and the INTERSPEECH20xx styles' `\address` goes under the names (DG 2026-11-17; SPCONF)
+
+**Perl.** No spconf or INTERSPEECH20xx binding: the raw `.sty` stashes `\@address` and article's `\maketitle` prints
+nothing of it.
+**Rust.** DG 2026-11-17: affiliations and addresses show under the author's name, as spconf.sty:165 and
+INTERSPEECH2021.sty:162-164 print them. spconf's `\address` (spconf_sty.rs; INTERSPEECH2021-2023.sty load it) reads as
+Interspeech.cls's (interspeech_cls.rs): a block led by a label is `\lx@add@affiliations`, each `$^n$` line the
+affiliation of the names showing mark n; an unmarked block `\lx@add@affiliation[annotate=all]`, every author's.
+Not done (row R): the `\email` line (spconf and Interspeech.cls) stays its `ltx:note[role=email]`. The class's
+address-list route (`\lx@add@contact@list`, `owner=sequence`, jheppub's) places spelled addresses (2405.13379's four,
+2401.07506's `\{zithas, harshay, tvprabs\}@iisc.ac.in`, 2603.01467's two) but leaves an unplaced one on a nameless
+author-block creator, where this line's fail-safe is the note, and its order step placed no unspelled address third
+of three (`zz@a.org`, jheppub alike). A mark carried by two lines (1309.1501's `$^1$` IBM line and `$^1$` e-mail line)
+keeps its `<sup>` in the affiliation, the e-mail line taken as an affiliation line.
+**Witnesses.** 2405.13379, 1309.1501 (`\nameplus`).
+**Guards.** `cluster_package_guards::perfect_kernel_batchspconf::*` (repros
+`package-bindings/spconf_marked_address_lines_under_the_names`, `spconf_unmarked_address_is_every_authors`);
+repinned, the unmarked `\address` now every author's affiliation: `perfect_kernel_batchfmmarks`'s row
+`presbx_spconf_empty_thefootnote_prints_no_mark`, `perfect_kernel_batchwrongfix::a_symbol_no_name_prints_stays_the_notes_text`.
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

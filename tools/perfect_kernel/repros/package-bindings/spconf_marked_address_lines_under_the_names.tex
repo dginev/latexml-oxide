@@ -1,0 +1,23 @@
+% mechanism: spconf's `\address` is the block spconf.sty:165 (INTERSPEECH2021.sty:162-164) prints under `\name`: a
+%   `$^n$` line is the affiliation of the names showing mark n (`\lx@add@affiliations`, as Interspeech.cls's
+%   `\address`); the `\email` line stays its note (its routing is row R) (OD #1073)
+% witness: 2405.13379 (INTERSPEECH2021.sty: KTH for Cumbal, Moell, Engwall; Heriot-Watt for Lopes; four addresses)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2405.13379's INTERSPEECH2021.sty) 0 errors: "Ann Able1, Bob Baker2, Cy Coe1",
+%   "1Univ A, Land A", "2Univ B, Land B", "ann.able@a.org, bb@b.org, cy.coe@a.org"
+% engines: INTFMrel4 (208b29241bb): an address note and an e-mail note after the abstract, no creator contact
+% expect:  0 errors, 0 warnings; Ann Able and Cy Coe: Univ A, Land A; Bob Baker: Univ B, Land B; no address note; the
+%   e-mail note whole
+% status:  RED (INTFMrel4) -> GREEN (SPCONF; guard perfect_kernel_batchspconf)
+\documentclass{article}
+\usepackage{INTERSPEECH2021}
+\title{Title}
+\name{Ann Able$^1$, Bob Baker$^2$, Cy Coe$^1$}
+\address{$^1$Univ A, Land A\\ $^2$Univ B, Land B}
+\email{ann.able@a.org, bb@b.org, cy.coe@a.org}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

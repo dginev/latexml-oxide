@@ -1,0 +1,18 @@
+% mechanism: spconf's `\address` (OD #1073): an unmarked block is every author's (`\lx@add@affiliation[annotate=all]`,
+%   as Interspeech.cls's, 2401.07506); the `\email` stays the e-mail note, whole
+% witness: 2405.13379 (the marked shape); 2401.07506 (Interspeech.cls, an unmarked block)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2405.13379's INTERSPEECH2021.sty) 0 errors: "Ann Able, Bob Baker", "Univ A, Land
+%   A", "info@lab.org"
+% engines: INTFMrel4 (208b29241bb): address and e-mail notes
+% expect:  0 errors, 0 warnings; both creators with Univ A, Land A; info@lab.org the e-mail note, once
+% status:  GREEN (SPCONF; guard perfect_kernel_batchspconf)
+\documentclass{article}
+\usepackage{INTERSPEECH2021}
+\title{Title}
+\name{Ann Able, Bob Baker}
+\address{Univ A, Land A}
+\email{info@lab.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

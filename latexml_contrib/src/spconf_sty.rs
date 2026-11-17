@@ -9,7 +9,7 @@
 //! article's structural `\maketitle` never emits them → zero creators (witness
 //! 2309.14838, 2405.13379, 2605.10272). Route `\name` through the standard
 //! author machinery so the comma/superscript-marked list becomes structured
-//! creators, and keep `\address`/`\email` as frontmatter.
+//! creators; its `\address` lines are their affiliations (OD #1073), its `\email` a frontmatter note.
 //!
 //! The same file's `keywords` block (the "Index Terms" list) is a bare
 //! `\def\keywords`/`\def\endkeywords` pair, so `\begin{keywords}` found no
@@ -38,12 +38,22 @@ LoadDefinitions!({
   // keeps LaTeXML's, marks a `\thanks` with none, `\def\thefootnote{}` (2110.09738, 2303.02025, 1812.01220): the stand-in
   // copy read after this binding.
   declare_package_title_marks("", BoundMaketitle::Copy(next_copy_provides_id()))?;
-  // `\address{affils}` — the (superscript-numbered) affiliation block. Preserve
-  // as a frontmatter note so the numbered institutions are kept.
-  DefMacro!(
-    "\\address{}",
-    "\\lx@add@frontmatter{ltx:note}[role=address]{#1}"
-  );
+  // `\address{affils}` — the affiliation block spconf.sty:165 and INTERSPEECH2021.sty:162-164 print under the names:
+  // read as Interspeech.cls's (`interspeech_cls.rs`), each `$^n$` line the affiliation of the names showing mark n
+  // (`\lx@add@affiliations`), an unmarked block every author's (2405.13379, OD #1073).
+  DefMacro!("\\address{}", sub[(block)] {
+    let mut entry = if leads_with_label(&block, "spconf address")? {
+      vec![T_CS!("\\lx@add@affiliations")]
+    } else {
+      TokenizeInternal!("\\lx@add@affiliation[annotate=all]").unlist()
+    };
+    entry.push(T_BEGIN!());
+    entry.extend(block.unlist());
+    entry.push(T_END!());
+    Ok(Tokens::new(entry))
+  });
+  // `\email{…}` stays the e-mail note: a class's address list (`\lx@add@contact@list`) leaves an address it cannot
+  // place on a nameless author-block creator, where this line's fail-safe is the note, whole (OD #1073, row R).
   DefMacro!(
     "\\email{}",
     "\\lx@add@frontmatter{ltx:note}[role=email]{#1}"
