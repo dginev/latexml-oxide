@@ -261,7 +261,7 @@ compiled binding is never displaced by raw mode.
 | `ws-procs9x6` | `.cls` | contributed | *alias of* `ws-rv9x6.cls` |
 | `ws-rv9x6` | `.cls` | contributed |  |
 
-## Packages (686)
+## Packages (687)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -778,6 +778,7 @@ compiled binding is never displaced by raw mode.
 | `pxfonts` | `.sty` | ported |  |
 | `quotchap` | `.sty` | contributed, raw + overrides |  |
 | `ragged2e` | `.sty` | ported |  |
+| `ragslab` | `.sty` | contributed |  |
 | `rccol` | `.sty` | contributed, raw + overrides |  |
 | `refcount` | `.sty` | ported, raw + overrides |  |
 | `refstyle` | `.sty` | contributed, raw + overrides |  |
