@@ -527,6 +527,8 @@ pub fn digest_front_matter() -> Result<()> {
   // (what the abstract's command form added before this flush is no longer in Perl's queue: [`COMMAND_FORM`])
   let flushes = lookup_int(FRONTMATTER_FLUSHES);
   assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
+  // (the title marks of the `\maketitle` that runs, read where no binding declared them, before the rehearsal binds them)
+  crate::latex_constructs::read_title_marks_in_force();
   // The frontmatter observer's rehearsal of the author blocks, whose reading the emitter writes from at this flush
   // (OXIDIZED_DESIGN_DIVERGENCES #837, #980), and the undefined commands its rehearsals held an Error for.
   let held_undefined = read_at_flush()?;

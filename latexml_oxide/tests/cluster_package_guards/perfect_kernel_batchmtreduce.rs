@@ -403,6 +403,236 @@ const BINDINGS: &[Row] = &[
 #[test]
 fn package_title_marks_are_their_binding_s() { assert_green(BINDINGS); }
 
+/// MTREDUCEE: the kernel reads, where no binding declares them, the marks that hold where the names print
+/// (`latex_constructs::kernel_title_marks`, revMTREDUCEd), each row a way they are not the body's `\fnsymbol` line, so
+/// no glyph and no link: a definition whose group closes before `\@maketitle` (a brace group; `\begingroup`), the
+/// `\@maketitle` in force setting its own `\arabic` before `\@author`, a body calling neither (B1); a fixed-glyph macro,
+/// which stays a binding's (`\newcommand` `*` and `x`, `\def`, `\def\thefootnote`; B2); `\@author` before a `\@title`
+/// holding a note (S1); a redefined `\thanks` and a `\let\thefootnote` (S2); a second `\maketitle`, the read ending
+/// with the first (S3); IEEEtran, whose title notes step no counter here (N1). Each probe pdflatex-checked.
+const KERNEL_READ: &[Row] = &[
+  Row {
+    repro:      "mtreducee_own_maketitle_fnsymbol_in_a_closed_brace_group_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_fnsymbol_in_a_closed_brace_group_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_fnsymbol_in_a_closed_begingroup_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_fnsymbol_in_a_closed_begingroup_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_inner_maketitle_arabic_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_inner_maketitle_arabic_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_without_maketitle_or_author_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_without_maketitle_or_author_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_fixed_glyph_macro_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_fixed_glyph_macro_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_fixed_letter_macro_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_fixed_letter_macro_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_fixed_letter_def_macro_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_fixed_letter_def_macro_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_def_thefootnote_fixed_letter_macro_prints_no_glyph",
+    tex:        repro!(
+      "mtreducee_own_maketitle_def_thefootnote_fixed_letter_macro_prints_no_glyph"
+    ),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_author_before_noted_title_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_author_before_noted_title_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[†]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; † plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_redefined_thanks_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_redefined_thanks_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_own_maketitle_let_thefootnote_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_let_thefootnote_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
+      r#"Cy Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  // (1 Warning: the first block's names, which the second `\title` and `\author` replace, missing from the placed
+  // frontmatter and counted — the base's too)
+  Row {
+    repro:      "mtreducee_own_maketitle_second_run_prints_no_glyph",
+    tex:        repro!("mtreducee_own_maketitle_second_run_prints_no_glyph"),
+    warnings:   1,
+    creators:   &[
+      r#"Dan Dee ; thanks[]=Univ D."#,
+      r#"Eve Eck ; thanks[]=Univ E."#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Dan Dee | under: Univ D."#, r#"Eve Eck | under: Univ E."#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducee_ieeetran_own_maketitle_prints_no_glyph",
+    tex:        repro!("mtreducee_ieeetran_own_maketitle_prints_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able"#,
+      r#"Bob Baker"#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole ; * plain"#],
+    page_moves: r#""#,
+  },
+];
+
+/// The kernel reads only what holds where the names print: else no glyph, no link.
+#[test]
+fn kernel_read_marks_are_what_holds_where_the_names_print() { assert_green(KERNEL_READ); }
+
 /// A stand-in copy loaded from a subdirectory (`\usepackage{sub/neurips_2022}`; 44 of 120 NeurIPS papers) declares its
 /// marks as one beside the document does: the binding looks the copy up by its basename, as it is recorded (the
 /// fixture is neurips_2022.sty itself, comments stripped: a minimal stand-in is no stood-in file and is never read)

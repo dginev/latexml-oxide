@@ -1715,6 +1715,8 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\lx@maketitle@cleanup", sub[_args] {
     // (this title page's readings, and the `\@author` prefix `\lx@author@tail` kept for them: `title_page_reading`)
     title_page_reading::end_title_page_epoch();
+    // (the title marks the kernel read off this `\maketitle` end with it)
+    end_title_marks_read();
     if !lookup_bool("\\maketitle:redefined") {
       for cs in ["\\maketitle", "\\title", "\\author", "\\date"] {
         let_i(&T_CS!(cs), &T_CS!("\\relax"), Some(Scope::Global));

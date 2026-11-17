@@ -1,0 +1,19 @@
+% mechanism: the kernel's read of the title marks of the `\maketitle` that runs (`latex_constructs::kernel_title_marks`,
+%   revMTREDUCEd B1): a body calling neither `\@maketitle` nor `\@author` (its own `\my@head` prints the names) has no point the names print at: no read
+% witness:  revMTREDUCEd probe n1
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1 Bob Baker2 Cy Cole∗"; foot "∗ Univ A." "† Univ B."
+% engines:  rust MTREDUCEd = Ann ∗, Bob †; INTFMfinal = no glyph
+% expect:   0 errors, 0 Warnings; no glyph, each note under its name, the typed mark linking nothing
+% status:   RED (MTREDUCEd) -> GREEN (MTREDUCEE: perfect_kernel_batchmtreduce::kernel_read_marks_are_what_holds_where_the_names_print)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\my@head{\begin{center}{\LARGE\@title\par}{\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}}
+\renewcommand\maketitle{\par\begingroup\my@head\renewcommand\thefootnote{\fnsymbol{footnote}}\@thanks\endgroup\setcounter{footnote}{0}}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{Univ A.} \and Bob Baker\thanks{Univ B.} \and Cy Cole$^{*}$}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

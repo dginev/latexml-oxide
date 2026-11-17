@@ -1,0 +1,19 @@
+% mechanism: the kernel's read of the title marks of the `\maketitle` that runs (`latex_constructs::kernel_title_marks`,
+%   revMTREDUCEd B1): the `\@maketitle` in force sets its own `\thefootnote` (`\arabic`) before `\@author`, which wins over the outer `\fnsymbol`
+% witness:  revMTREDUCEd probe m1
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1 Bob Baker2 Cy Cole∗"; foot "∗ Univ A." "† Univ B." (`\@thanks` after the group, under the outer line)
+% engines:  rust MTREDUCEd = Ann ∗, Bob †; INTFMfinal = no glyph
+% expect:   0 errors, 0 Warnings; no glyph, each note under its name, the typed mark linking nothing
+% status:   RED (MTREDUCEd) -> GREEN (MTREDUCEE: perfect_kernel_batchmtreduce::kernel_read_marks_are_what_holds_where_the_names_print)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\par\begingroup\renewcommand\thefootnote{\fnsymbol{footnote}}\@maketitle\@thanks\endgroup\setcounter{footnote}{0}}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\renewcommand\thefootnote{\arabic{footnote}}{\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{Univ A.} \and Bob Baker\thanks{Univ B.} \and Cy Cole$^{*}$}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

@@ -19704,13 +19704,22 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `\lx@package@loaded@raw`, which a binding's own read skips: usenix2019_v3.sty's `\abstract` heading under babel's
   `\abstractname` was a nameless creator's note, 2301.04841). Any other `\maketitle` that runs — the document's, a
   package's no binding declares, a renamed copy's, an unbound class's own, an option file's its class loads (11lomcon.sty,
-  hep-ph0312288) — has the marks its body sets, read the same way where no binding declared them
-  (`latex_constructs::read_title_marks_in_force`, once per `\maketitle`, as the title's fields are digested and as a
-  frontmatter flush begins; DG 2026-11-17, after INTCHECK found the reduction lost the links of names typing the glyph in
-  37 papers: 2404.01413's colm2024 copy, its ‡ links; 2510.09942's renamed neurips copy; 1503.02531's nips14submit_e.sty,
-  "Vinyals$^\dagger$"; 2509.10105's vv2.sty, its `\footnotemark[1]`; ltexpprt.sty; 1511.03137, 2011.13149, 2406.07546,
-  2506.19073, 2507.08794, 1501.06614, 2011.09192). Read only where the title block's notes step the footnote counter as
-  TeX's `\thanks` does (`lx_title_counts_footnotes`, `declare_title_numbers_faithful`): a raw class's do not here, and its
+  hep-ph0312288) — has the marks its body sets where no binding declared them
+  (`latex_constructs::read_title_marks_in_force`; DG 2026-11-17, after INTCHECK found the reduction lost the links of
+  names typing the glyph in 37 papers: 2404.01413's colm2024 copy, its ‡ links; 2510.09942's renamed neurips copy;
+  1503.02531's nips14submit_e.sty, "Vinyals$^\dagger$"; 2509.10105's vv2.sty, its `\footnotemark[1]`; ltexpprt.sty;
+  1511.03137, 2011.13149, 2406.07546, 2506.19073, 2507.08794, 1501.06614, 2011.09192), read for what holds where the
+  names print (`kernel_title_marks`, revMTREDUCEd): its `\fnsymbol` lines alone, a fixed-glyph macro staying a binding's
+  (aaai's `\fndag`); the body up to its first `\@maketitle` or `\@author` (neither, none read), then the `\@maketitle`
+  in force up to its `\@author`, whose own different `\thefootnote` wins (pdflatex "Ann1" under its `\arabic`: none).
+  None also where the definition's group closes before the names print (`{\renewcommand\thefootnote{…}}`), where
+  `\thefootnote` is `\let`, where `\thanks`, `\footnotemark`, `\@thefnmark` or an `\@makefnmark` printing no
+  `\@thefnmark` is redefined first, and where the title holds a note and `\@author` comes before `\@title` (the reading
+  counts the title's note first). Read once, before the flush's rehearsal binds the marks (read after it, the
+  rehearsal's marks were the class hook's, not the read ones), and ended with the kernel `\maketitle` that read it: a
+  second `\maketitle` prints none (pdflatex's second block counts from ∗ again, the count here does not). Read only
+  where the title block's notes step the footnote counter as TeX's `\thanks` does (`lx_title_counts_footnotes`; not
+  IEEEtran's, which declares its numbers faithful though its `\maketitle` empties `\footnotemark`): a raw class's do not here, and its
   title's `\thanks` would shift every author's glyph (siamart's "Title∗ … Ann†", the count here ∗: 2107.07572,
   2509.14771, 2108.06375, 2301.12996, 2112.13097; aiaa-tc's "Ann*, Bob†", 1505.07844's class, lost with them: row R
   MTREDUCE-RAWCLASS; `mtreduced_raw_class_title_thanks_marks_unknown`). None read, the marks are unknown: no glyph, each

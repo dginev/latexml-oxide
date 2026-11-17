@@ -1,0 +1,19 @@
+% mechanism: the kernel's read of the title marks of the `\maketitle` that runs (`latex_constructs::kernel_title_marks`,
+%   revMTREDUCEd N1): IEEEtran's title notes step no counter here (it declares its numbers faithful, `declare_title_numbers_faithful`): the kernel reads only where they step (`lx_title_counts_footnotes`)
+% witness:  revMTREDUCEd probe ie1
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able* Bob Baker† Cy Cole∗"; foot "* Univ A." "† Univ B."
+% engines:  rust MTREDUCEd = no glyph (the gate passed, the read declared nothing the IEEEtran notes show); INTFMfinal = no glyph
+% expect:   0 errors, 0 Warnings; no glyph, each note under its name, the typed mark linking nothing
+% status:   GREEN (MTREDUCEd and MTREDUCEE; a pin of the narrowed gate) (MTREDUCEE: perfect_kernel_batchmtreduce::kernel_read_marks_are_what_holds_where_the_names_print)
+% preload:  ar5iv.sty
+\documentclass{IEEEtran}
+\makeatletter
+\renewcommand\maketitle{\par\begingroup\renewcommand\thefootnote{\fnsymbol{footnote}}\@maketitle\@thanks\endgroup\setcounter{footnote}{0}}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}{\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{Univ A.} \and Bob Baker\thanks{Univ B.} \and Cy Cole$^{*}$}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
