@@ -5099,14 +5099,20 @@ pub(in crate::base_utilities) const NAME_MARK: &str = "\\lx@frontmatter@namemark
 /// by its number: OXIDIZED_DESIGN_DIVERGENCES #968); an asterisk requested in text `*` (`in_text`), in math `∗`; else
 /// [`unanswered_mark_text`]'s; none for a label only a picture prints (`pictured`: the picture is no part of the name —
 /// the TikZ ORCID icon's "iD", `\inst{1\myorcid{…}}`, review rev92b_r3 S1). [`settle_name_marks`] reads them. None
-/// while the observer rehearses a block.
+/// while the observer rehearses a block, nor outside a creator.
 pub(in crate::base_utilities) fn request_marks(
   labels: &[String],
   pictured: &[String],
   in_text: bool,
   shown: Option<String>,
 ) -> Result<Vec<Digested>> {
-  if rehearsal::rehearsing() {
+  // (only on a creator being digested, as `\lx@frontmatter@symbolmark`'s: a contact's stub, `role=pending`, labels its
+  // own content, and outside an entry nothing is requested)
+  let mut on_creator = false;
+  with_pending_entry_attr(|attr| {
+    on_creator = attr.get("role").map(String::as_str) != Some("pending");
+  });
+  if rehearsal::rehearsing() || !on_creator {
     return Ok(Vec::new());
   }
   let mut marks = Vec::new();

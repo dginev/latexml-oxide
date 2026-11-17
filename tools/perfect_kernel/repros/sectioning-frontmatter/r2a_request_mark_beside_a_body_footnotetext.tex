@@ -1,0 +1,22 @@
+% mechanism: a name's request leaves its mark where it printed (`\lx@frontmatter@namemark`, OD #1061); a body
+%   `\footnotetext[n]` digested before `\maketitle` is no text of that mark (`relocate_footnote`), so the settle step
+%   that drops or shows the mark never takes the footnote with it
+% witness:  2210.05617, 1304.5040, 1812.11634 (MARKKEY R2a A/B: every such footnote text lost, 0 Warnings)
+% oracle:   pdflatex 0 errors; "Ann Able1 and Bob Baker2, 3", footnotes "1 Univ A, City A.", "2 Univ B, City B.",
+%   "3 Authors in alphabetical order."
+% engines:  rust R2Abase 14e92b291ab = 0 errors, 0 Warnings, the three footnote texts kept; rust R2A 3a3b10991a5 =
+%   0 errors, 0 Warnings, the three footnote texts lost
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[1]= / Bob Baker ; footnotemark[2,3]=; the three body
+%   footnote texts kept (role footnotetext, marks 1, 2, 3)
+% status:   GREEN (perfect_kernel_batchr2a::a_request_mark_takes_no_body_footnote_text)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2,}$ $^3$}
+\footnotetext[1]{Univ A, City A.}
+\footnotetext[2]{Univ B, City B.}
+\footnotetext[3]{Authors in alphabetical order.}
+\maketitle
+Text.
+\end{document}

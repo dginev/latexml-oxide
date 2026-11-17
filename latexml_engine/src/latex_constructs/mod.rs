@@ -1171,6 +1171,9 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
       .collect();
     one_note(document, &in_creators)?;
   } else if let Some(caps) = NOTE_MARK_END.captures(&node.get_attribute("role").unwrap_or_default())
+    // (nor is the mark a name's request leaves where it printed, `\lx@frontmatter@namemark`: a body `\footnotetext[1]`
+    // is not its text — 1304.5040, 2210.05617, 1812.11634 lost theirs to the settle step, OD #1061)
+    && node.get_attribute("_namemark").is_none()
   {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
     let mut paired = false;

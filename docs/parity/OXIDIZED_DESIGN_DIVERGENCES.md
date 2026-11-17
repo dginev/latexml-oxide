@@ -20113,7 +20113,9 @@ creator requesting it (Base_Utility.pool.ltxml:880-901). A label no entry answer
 **Rust.** The request still records Perl's label, and leaves the mark it printed where it printed it: a mark-only note
 keyed by the labels it requests (`\lx@frontmatter@namemark`, `insert::NAME_MARK`; `insert::request_marks`) — its glyph as
 printed (a reference mark's symbol, 2408.02464; a text `*` as `*`, a math one `∗`), none for a label only a picture
-prints (rev92b_r3 S1). The frontmatter emitter, which writes a name without the marks it requests, leaves each one so
+prints (rev92b_r3 S1); only on a creator being digested, never in the rehearsal. It is no `\footnotemark`: the kernel's
+footnote pairing (`relocate_footnote`) gives it no body `\footnotetext` of its glyph (2210.05617, 1304.5040,
+1812.11634, whose texts it took and the settle step dropped before the A/B caught it). The frontmatter emitter, which writes a name without the marks it requests, leaves each one so
 after the name's item (`emit::left_marks`; a glued mark parted into requests one mark of all its pieces, shown whole:
 BESIII's "50A,50C", 1705.11109). One step after `relocate_annotations`, `insert::settle_name_marks`, pairs the marks
 by key: a mark goes where an entry answers one of its labels (the labels the entries carry, `answered_labels`), where
@@ -20127,7 +20129,8 @@ pass to set after the name (#1055); one of no known glyph is counted lost (`unan
 (`perfect_kernel_batchfmmarks`), `perfect_kernel_batchcl8::a_sublettered_used_mark_is_written_whole`,
 `perfect_kernel_batch108a`, `perfect_kernel_batchpure`, `perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`
 (a mark the name shows inside a formula is not repeated), `perfect_kernel_batch78f::llncs_comma_before_inst_is_the_name_before`
-(a kept `\inst` the emitter answered by its item).
+(a kept `\inst` the emitter answered by its item), `perfect_kernel_batchr2a::a_request_mark_takes_no_body_footnote_text`
+(repro `r2a_request_mark_beside_a_body_footnotetext`).
 
 ### 1062. The reading keeps one record per mark a name prints; its requests, its class's requests, its footnote marks and its notes' marks are views of it (MARKKEY R2a)
 
