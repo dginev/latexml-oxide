@@ -199,8 +199,9 @@ fn thanks_inside_inst_is_the_authors_note() {
     creators(&xml),
     owned(&[
       &["Ann Able", "affiliation=University of X"],
-      &["Bob Bell", "affiliation=University of Y"],
-      &["Cat Cole", "affiliation=University of Y"],
+      // (the notes marked ⋆ ⋆⋆, llncs's `\@fnsymbol`: pdflatex "Bob Bell2,⋆", "Cat Cole2,⋆⋆"; LLNCSMARKS)
+      &["Bob Bell", "mark=⋆", "affiliation=University of Y"],
+      &["Cat Cole", "mark=⋆⋆", "affiliation=University of Y"],
     ])
   );
   for (author, note) in [

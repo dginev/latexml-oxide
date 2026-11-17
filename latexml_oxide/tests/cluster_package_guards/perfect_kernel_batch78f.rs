@@ -120,8 +120,8 @@ fn iopart_ead_goes_to_the_author_it_spells() {
 
 /// An `\inst` after a comma stands on the name before it (llncs.cls:894-896 `\unskip$^{#1}$`, `\unskip$^,$`), with
 /// the space after the comma or without: Ann Able keeps her institutes and her note, Bob Baker his, no nameless
-/// creator. Red (int47a): Ann bare, Bob with Ann's note and Inst A, Inst B, Inst C on a nameless creator. Witness
-/// 2401.16957 (aa). Repro sectioning-frontmatter/llncs_comma_before_inst_is_the_name_before.
+/// creator; her note marked ⋆, llncs's `\@fnsymbol` (pdflatex "Ann Able,1,2⋆"; LLNCSMARKS). Red (int47a): Ann bare, Bob
+/// with Ann's note and Inst A, Inst B, Inst C on a nameless creator. Witness 2401.16957 (aa). Repro sectioning-frontmatter/llncs_comma_before_inst_is_the_name_before.
 #[test]
 fn llncs_comma_before_inst_is_the_name_before() {
   let xml = convert_repro!("llncs_comma_before_inst_is_the_name_before.tex");
@@ -131,7 +131,7 @@ fn llncs_comma_before_inst_is_the_name_before() {
       true,
       "Ann Able",
       &format!(
-        r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Email: ann@x.org</note> {} {}"#,
+        r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="⋆" role="thanks" xml:id="id1">Email: ann@x.org</note> {} {}"#,
         inst("Inst A"),
         inst("Inst B")
       )

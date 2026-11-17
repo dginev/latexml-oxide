@@ -143,8 +143,10 @@ fn a_clean_block_counts_nothing() {
   for (tex, expected) in [
     (repro!("emit_content_a_clean_block_counts_nothing"), vec![
       row(&["Ann Able", "affiliation=Univ A, Town", "email=ann@a.org"]),
+      // (Bob's note marked ⋆, llncs's `\@fnsymbol`: pdflatex "Bob Baker1,2⋆"; LLNCSMARKS)
       row(&[
         "Bob Baker",
+        "mark=⋆",
         "affiliation=Univ A, Town",
         "affiliation=Univ B, City",
       ]),

@@ -2109,7 +2109,8 @@ fn toc_copy_keeps_its_language() {
 }
 
 /// 63l: `\fnmsep` between an author's marks leaves no comma in the name once the marks become a link and a note
-/// (astro-ph0001054, astro-ph0611016). Repro sectioning-frontmatter/author_fnmsep_leaves_no_comma.
+/// (astro-ph0001054, astro-ph0611016); the notes marked ⋆ ⋆⋆, llncs's `\@fnsymbol` (pdflatex "U. Hopp1,⋆ and D. Engels2,⋆⋆";
+/// LLNCSMARKS). Repro sectioning-frontmatter/author_fnmsep_leaves_no_comma.
 #[test]
 fn author_fnmsep_leaves_no_comma() {
   assert_creators(
@@ -2117,8 +2118,8 @@ fn author_fnmsep_leaves_no_comma() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_fnmsep_leaves_no_comma.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>U.\u{a0}Hopp</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Visiting astronomer</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Engels</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Fellow<sup xml:id=\"id2.1\"><text font=\"italic\" xml:id=\"id2.1.1\">,</text></sup> of X</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">B</contact></creator>",
+      "<creator role=\"author\"><personname>U.\u{a0}Hopp</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"⋆\" role=\"thanks\" xml:id=\"id1\">Visiting astronomer</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Engels</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"⋆⋆\" role=\"thanks\" xml:id=\"id2\">Fellow<sup xml:id=\"id2.1\"><text font=\"italic\" xml:id=\"id2.1.1\">,</text></sup> of X</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">B</contact></creator>",
     ],
   );
 }

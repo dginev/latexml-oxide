@@ -1,0 +1,21 @@
+% mechanism: llncs's `\author` replaces the block before it (`\gdef\@author`), but the frontmatter's reading still
+%   rehearses the replaced block and carries its `\thanks`' footnote steps into the block that prints, shifting its marks
+%   (row R AUTHRESET, the engine's). The binding reads the replaced names where `\maketitle` sets the block
+%   (llncs_cls.rs `\lx@llncs@title@scan`) and withdraws its title marks where they step: the names' `\thanks` unmarked
+% witness:  revLLNCSb item 1 (probe d2_auth2_plain)
+% oracle:   pdflatex 0 errors; "Ann Able⋆ and Bob Baker⋆⋆", footnotes "⋆ Ann note.", "⋆⋆ Bob note.", "Body1"
+% engines:  rust LLNCSb (0c2719152f0) = 0 errors, 0 Warnings; Ann ⋆⋆, Bob ⋆⋆⋆ (shifted); LLNCSc = both unmarked
+% expect:   0 errors, 0 Warnings; Ann ⋆, Bob ⋆⋆
+% status:   RED (row R AUTHRESET; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red;
+%   the withdrawal perfect_kernel_batchllncs::a_replaced_author_withdraws_the_title_marks)
+% moves:    XML row R AUTHRESET
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\title{A Title}
+\author{Ann Able\thanks{Ann note.}}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}}
+\institute{Lab A}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

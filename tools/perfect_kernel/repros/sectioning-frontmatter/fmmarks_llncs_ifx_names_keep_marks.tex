@@ -1,0 +1,18 @@
+% mechanism: the idiom `\ifx\Anonymous\undefined…\else…\fi` in an llncs `\author`: the two tokens `\ifx` compares run
+%   nothing, so the binding's scan of the names (llncs_cls.rs `steps_footnotes`) skips them and the title marks stay
+%   declared
+% witness:  revLLNCSb item 2 (probe x2_ifx)
+% oracle:   pdflatex 0 errors; "Ann Able⋆ and Bob Baker⋆⋆", footnotes "⋆ Ann note.", "⋆⋆ Bob note.", "Body1"
+% engines:  rust LLNCSb (0c2719152f0) = 0 errors, 1 Warning; both thanks unmarked (withdrawn); LLNCSc = ⋆, ⋆⋆. The
+%   Warning is the emitter's (the names written as plain text), pre-existing
+% expect:   0 errors, 1 Warning; Ann ⋆, Bob ⋆⋆
+% status:   GREEN (LLNCSc; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\title{A Title}
+\author{\ifx\Anonymous\undefined Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}\else Anonymous\fi}
+\institute{Lab A}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

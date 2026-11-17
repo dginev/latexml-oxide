@@ -492,6 +492,8 @@ mod perfect_kernel_batchio3b;
 mod perfect_kernel_batchkb1;
 mod perfect_kernel_batchkb2;
 mod perfect_kernel_batchkey1;
+/// LLNCSMARKS: llncs's own `\@fnsymbol` (⋆ ⋆⋆ …), its title block's marks and the body's `\fnsymbol`; OD #1060.
+mod perfect_kernel_batchllncs;
 mod perfect_kernel_batchlo1;
 mod perfect_kernel_batchlo2;
 mod perfect_kernel_batchlo3;

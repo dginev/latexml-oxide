@@ -1,0 +1,19 @@
+% mechanism: article's `\author` replaces the block before it (latex.ltx `\gdef\@author`), but the frontmatter's reading
+%   rehearses the replaced block too (`observer/reading.rs` `read_pending`) and carries its footnote steps (a `\thanks`
+%   and a bare `\footnotemark`) into the printed block: the names' ∗ † written ‡ §. Engine-side; llncs withdraws its
+%   own marks for the shape (fmmarks_llncs_replaced_author_mark_red)
+% witness:  revLLNCSb item 1 (probe a5_article_authreset)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker†", footnotes "∗ Ann note.", "† Bob note.", "Body1"
+% engines:  rust LLNCSb (0c2719152f0) = 0 errors, 0 Warnings; Ann ‡, Bob §; LLNCSc the same
+% expect:   0 errors, 0 Warnings; Ann ∗, Bob †
+% status:   RED (row R AUTHRESET; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% moves:    XML row R AUTHRESET
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\protect\footnotemark}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

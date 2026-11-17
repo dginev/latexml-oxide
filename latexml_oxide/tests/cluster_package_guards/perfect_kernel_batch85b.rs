@@ -324,14 +324,20 @@ fn llncs_listed_local_parts_keep_their_braces() {
 #[test]
 fn llncs_corresponding_author_takes_the_left_address() {
   let tex = repro!("llncs_corresponding_author_takes_the_left_address.tex");
+  // (Ann's `\thanks` marked ⋆, llncs's `\@fnsymbol`: pdflatex "Ann Able⋆ and Bob Baker"; LLNCSMARKS)
   assert_creators(tex, &[
-    &["Ann Able", "affiliation=Univ X", "email=zz@x.edu"],
+    &["Ann Able", "mark=⋆", "affiliation=Univ X", "email=zz@x.edu"],
     &["Bob Baker", "affiliation=Univ X"],
   ]);
   let owned = tex.replace(r"\email{zz@x.edu}", r"\email{zz@x.edu, able@x.edu}");
   assert_ne!(owned, tex);
   assert_creators(&owned, &[
-    &["Ann Able", "affiliation=Univ X", "email=able@x.edu"],
+    &[
+      "Ann Able",
+      "mark=⋆",
+      "affiliation=Univ X",
+      "email=able@x.edu",
+    ],
     &["Bob Baker", "affiliation=Univ X"],
     &["email=zz@x.edu"],
   ]);

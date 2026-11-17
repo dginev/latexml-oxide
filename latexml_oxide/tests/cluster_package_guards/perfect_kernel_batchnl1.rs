@@ -373,6 +373,7 @@ fn a_mark_separator_or_a_number_inside_a_remark_parts_no_run() {
     vec![
       "Ann Able",
       "collaboration=(for the ATLAS Collaboration)",
+      "mark=⋆",
       "affiliation=U",
     ],
     vec!["Bob Baker", "affiliation=U"],

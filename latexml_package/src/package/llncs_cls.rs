@@ -87,12 +87,76 @@ LoadDefinitions!({
 
   //======================================================================
   // Frontmatter
+  // llncs.cls:889-892 (v2.10-v2.26 alike): the class's own `\@fnsymbol`, ⋆ ⋆⋆ ⋆⋆⋆ † ‡ § ¶ ‖ ** †† ‡‡ (`\fnsymbol`
+  // prints it in the body), in which its `\maketitle` marks the title block's notes, setting `\thefootnote` itself
+  // (:935; a preamble `\thefootnote` does not reach them): the title hook (`latex_constructs::TITLE_THEFOOTNOTE`). The
+  // glyphs in text as the kernel's `\@fnsymbol` sets them (sect08.rs), so a note's `mark` is the character (the class's
+  // `\ensuremath`). Perl's llncs.cls.ltxml leaves `\thanks` unmarked. Witnesses 1005.4552, 2607.06919, 2004.01997.
+  // (it reverts as itself: a reversion `\ensuremath{\star}` is re-digested as math where a shared note's tags are
+  // made, which its page prints as "⋆ ⋆\star", 2404.09857; row R LLNCSSTARTEX)
+  DefPrimitive!("\\lx@llncs@star", "\u{22C6}");
+  RawTeX!(r"\def\@fnsymbol#1{\ifcase#1\or\TextOrMath\lx@llncs@star\star
+\or\TextOrMath{\lx@llncs@star\lx@llncs@star}{\star\star}\or
+\TextOrMath{\lx@llncs@star\lx@llncs@star\lx@llncs@star}{\star\star\star}\or\TextOrMath\textdagger\dagger
+\or\TextOrMath\textdaggerdbl\ddagger\or\TextOrMath\textsection\mathsection\or\TextOrMath\textparagraph\mathparagraph
+\or\TextOrMath\textbardbl\|\or\TextOrMath{\textasteriskcentered\textasteriskcentered}{**}\or
+\TextOrMath{\textdagger\textdagger}{\dagger\dagger}\or\TextOrMath{\textdaggerdbl\textdaggerdbl}{\ddagger\ddagger}\else
+\@ctrerr\fi}
+\def\fnsymbol#1{\expandafter\@fnsymbol\csname c@#1\endcsname}");
+  // (the class's `\maketitle` sets the counter to 0 before the block and its `\thanks` step it, the title's first:
+  // "A Title⋆", "Ann Able1⋆⋆"; :932, latex.ltx `\thanks`. After the block it sets it to `\fnnstart` (:1003), the number
+  // of institutes `\institutename` counted when two or more, else 0 (:870-886, `\lx@llncs@institute@dispatch`): under
+  // three institutes 1005.4552's body notes are 4 to 15. Only as the document's class, whose `\maketitle` this is)
+  // `\lx@llncs@title@scan`, where `\maketitle` sets the block (`\lx@maketitle@begin`), the document's macros defined as
+  // pdflatex reads them there (one defined after `\author`): the marks are withdrawn where the counter steps where the
+  // block's rehearsal cannot count it — the last `\author`'s names, `\@maketitle`'s counting pass (`thanks` gobbled);
+  // a replaced `\author`'s, whose notes the rehearsal still steps (pdflatex "Ann⋆ Bob⋆⋆", ours ⋆⋆ ⋆⋆⋆; row R AUTHRESET);
+  // the last `\subtitle`'s (below). Withdrawn, the names' marks are unknown (`lx_title_footnote_own_marks`: no glyph, a
+  // lost one counted), not shifted
+  DefPrimitive!("\\lx@llncs@title@scan", {
+    let mut steps = false;
+    for (key, thanks_gobbled) in [
+      ("lx_llncs_author_names", true),
+      ("lx_llncs_author_replaced", false),
+      ("lx_llncs_subtitle", false),
+    ] {
+      if let Some(tokens) = lookup_tokens(key) {
+        steps = steps || steps_footnotes(&tokens, thanks_gobbled)?;
+        assign_value(key, Stored::None, Some(Scope::Global));
+      }
+    }
+    declare_title_marks(!steps)?;
+  });
+  if is_document_class("llncs") {
+    declare_title_marks(true)?;
+    AddToMacro!("\\lx@maketitle@begin", "\\lx@llncs@title@scan\\setcounter{footnote}{0}");
+    // (a copy the paper ships from before `\fnnstart` sets 0 there: v2.4-v2.10, 5 of 592 copies sampled; 1508.06013's
+    // v2.6, its body notes from 1)
+    if crate::shipped_class::shipped_class_text("llncs")?
+      .is_some_and(|text| !crate::shipped_class::class_code_contains(&text, "\\fnnstart"))
+    {
+      AddToMacro!("\\lx@maketitle@body", "\\setcounter{footnote}{0}");
+    } else {
+      AddToMacro!("\\lx@maketitle@body", "\\setcounter{footnote}{\\fnnstart}");
+    }
+  }
   // llncs.cls:250-253: the matter commands switch the page numbering (Roman, then arabic).
   DefMacro!("\\frontmatter", "\\pagenumbering{Roman}");
 
   // llncs.cls:862, :915 `\def\subtitle#1{\gdef\@subtitle{#1}}`: the subtitle a paper's own title code tests
-  // (2112.05140, 2208.01633 `\if!\@subtitle!`).
-  DefMacro!("\\subtitle{}", "\\gdef\\@subtitle{#1}\\lx@add@subtitle{#1}");
+  // (2112.05140, 2208.01633 `\if!\@subtitle!`). `\@maketitle` prints it after the title, before the names (:1023-1027),
+  // so a note in it steps the counter ahead of theirs ("Sub⋆", "Ann Able⋆⋆"), which the title block's rehearsal does not
+  // count: the marks are withdrawn for it (`\lx@llncs@title@scan`; 1307.2669's subtitle `\thanks`)
+  DefMacro!("\\subtitle{}", sub[(body)] {
+    if is_document_class("llncs") {
+      assign_value("lx_llncs_subtitle", Stored::Tokens(body.clone()), Some(Scope::Global));
+    }
+    let mut out = vec![T_CS!("\\gdef"), T_CS!("\\@subtitle"), T_BEGIN!()];
+    out.extend(body.unlist_ref().iter().copied());
+    out.push(T_END!());
+    out.extend(Invocation!(T_CS!("\\lx@add@subtitle"), vec![None, Some(body)]).unlist());
+    Ok(Tokens::new(out))
+  });
   Let!("\\@subtitle", "\\@empty");
   // llncs.cls:870-885 `\institutename` sets the `\institute` list under the title, which papers' own title code calls
   // (2112.05140, 2208.01633 `{\small\institutename}`): the institutes are the frontmatter's affiliations here, so it
@@ -133,6 +197,20 @@ LoadDefinitions!({
   // a later `\author` without one gives the store back to the outer calls).
   DefMacro!("\\author{}", sub[(body)] {
     let (names, institutes) = take_institutes(&body);
+    // (llncs.cls:1028-1029: `\@maketitle` sets `\@author` once in a box to count the names, its `\thanks` gobbled,
+    // before printing it, so a step of the footnote counter there runs twice and shifts the names' marks: pdflatex
+    // "Ann Able⋆⋆ and Bob Baker⋆⋆⋆" for `Ann Able\thanks{…} \and Bob Baker\protect\footnotemark`, "Ann Able, Bob Baker⋆ ⋆"
+    // for cr7c_split_corresponding_left_address's `\addtocounter{footnote}{-1}`: the title marks withdrawn there, none
+    // written for a `\thanks` or a mark, `\lx@llncs@title@scan`; the names it replaces are read there too)
+    if is_document_class("llncs") {
+      if let Some(before) = lookup_tokens("lx_llncs_author_names") {
+        let mut replaced = lookup_tokens("lx_llncs_author_replaced").unwrap_or_default().unlist();
+        replaced.push(T_CS!("\\relax"));
+        replaced.extend(before.unlist());
+        assign_value("lx_llncs_author_replaced", Stored::Tokens(Tokens::new(replaced)), Some(Scope::Global));
+      }
+      assign_value("lx_llncs_author_names", Stored::Tokens(names.clone()), Some(Scope::Global));
+    }
     let mut out = mouth::tokenize_internal("\\lx@clear@creators[role=author]").unlist();
     // (a list whose authors carry `\inst` marks is split at its `\and`s and `\\`s, each piece a block, as before:
     // `Guang Yang\inst{1}\and \\ Binwei Yang\inst{2}`, 1902.08498 — cut first at the kernel's `\and` by meaning, a
@@ -223,14 +301,20 @@ LoadDefinitions!({
     // shape (a): one `labelseq` contact per piece, numbered in order as `\institutename`'s `\and` numbers them — one
     // piece too where an `\and` the cut leaves whole stands inside a group, `\institute{{\small Univ A \and Univ B}}`,
     // or a box, `\mbox{(North \and South)}`, which `\institutename` numbers all the same, as the split of it made it
-    // (the query at every level; unread, the spelling)
-    let numbered = pieces.len() > 1
-      || match argument_separators_at_every_level(&body)? {
-        Some(separators) => !separators.is_empty(),
-        None => body.unlist_ref().contains(&T_CS!("\\and")),
-      };
-    if numbered {
-      return Ok(split_calls(&TokenizeInternal!("\\lx@llncs@affiliation"), pieces));
+    // (the query at every level, which counts the top level's too; unread, the spelling). Never fewer than the pieces:
+    // `\institute{Univ A \and {Univ B \and Univ C}}` is three, "Body4" (revLLNCSb g1)
+    let separators = match argument_separators_at_every_level(&body)? {
+      Some(separators) => separators.len(),
+      None => body.unlist_ref().iter().filter(|t| **t == T_CS!("\\and")).count(),
+    };
+    let institutes = pieces.len().max(1 + separators);
+    // (`\institutename` counts them, `\fnnstart` when two or more, 0 for one: the footnote counter after the title
+    // block, llncs.cls:877-881, :1003; 1005.4552's three, its body notes 4 to 15)
+    let fnnstart = if institutes > 1 { institutes } else { 0 };
+    let mut out = mouth::tokenize_internal(TeXString::assembled(s!(r"\gdef\fnnstart{{{fnnstart}}}"))).unlist();
+    if institutes > 1 {
+      out.extend(split_calls(&TokenizeInternal!("\\lx@llncs@affiliation"), pieces).unlist());
+      return Ok(Tokens::new(out));
     }
     // The marks \lx@add@affiliations keys its superscript-label branch on, as printed (2608.21425's `\affmark{1}`);
     // where an entry starts inside an environment the list opens, its tokens', as its cutter reads it (revP4b4a2 B3).
@@ -242,14 +326,13 @@ LoadDefinitions!({
     };
     if marked {
       // shape (c): lazy superscript-labeled block
-      Ok(Invocation!(T_CS!("\\lx@llncs@institute@sup"), vec![Some(body)]))
+      out.extend(Invocation!(T_CS!("\\lx@llncs@institute@sup"), vec![Some(body)]).unlist());
     } else if body.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE) {
       // shape (b): one institute
-      Ok(Invocation!(T_CS!("\\lx@llncs@institute@sole"), vec![Some(body)]))
-    } else {
-      // (an empty `\institute{}` stays none: the `\inst` marks it answers no one stay shown, 2407.13764)
-      Ok(Tokens!())
+      out.extend(Invocation!(T_CS!("\\lx@llncs@institute@sole"), vec![Some(body)]).unlist());
     }
+    // (an empty `\institute{}` stays none: the `\inst` marks it answers no one stay shown, 2407.13764)
+    Ok(Tokens::new(out))
   });
   DefMacro!("\\lx@llncs@affiliation{}", "\\lx@add@affiliation[labelseq={affiliation}]{#1}");
   // llncs.cls:868-886: one institute (`\c@@inst=1`, no `\and` in it) is printed under the names unnumbered, every
@@ -551,6 +634,7 @@ LoadDefinitions!({
 
   DefRegister!("\\fnindent" => Dimension::new(0));
   DefMacro!("\\fnmsep", "${}^{,}$");
+  // (the institutes' count, `\lx@llncs@institute@dispatch`, which llncs.cls:879-881 sets in `\institutename`)
   DefMacro!("\\fnnstart", "0");
 
   def_macro_noop("\\calctocindent")?;
@@ -615,6 +699,161 @@ LoadDefinitions!({
 \def\proofname{Beweis}\def\propertyname{Eigenschaft}\def\questionname{Frage}\def\remarkname{Anmerkung}\def\seename{siehe}%
 \def\solutionname{L\"osung}\def\tablename{Tabelle}}"#);
 });
+
+/// The class's title marks declared through the title hook (`latex_constructs::TITLE_THEFOOTNOTE`), its `\@fnsymbol`
+/// of the counter, or withdrawn (`\lx@llncs@title@scan`): none, the names' marks unknown.
+fn declare_title_marks(declared: bool) -> Result<()> {
+  let hook = T_CS!(engine::latex_constructs::TITLE_THEFOOTNOTE);
+  assign_value(
+    "lx_title_footnote_own_marks",
+    !declared,
+    Some(Scope::Global),
+  );
+  if declared {
+    def_macro(
+      hook,
+      None,
+      TokenizeInternal!(r"\@fnsymbol\c@footnote"),
+      Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..Default::default()
+      }),
+    )?;
+  } else {
+    let_i(&hook, &T_CS!("\\@undefined"), Some(Scope::Global));
+  }
+  assign_value("lx_title_counts_footnotes", declared, Some(Scope::Global));
+  Ok(())
+}
+
+/// Does `tokens` step the footnote counter: a `\footnotemark` or `\footnote` given no `[number]`, an `\addtocounter`,
+/// `\setcounter`, `\stepcounter` or `\refstepcounter` of `{footnote}` — each by meaning, a `\let` copy too — or a
+/// `\thanks`, unless `thanks_gobbled` (llncs.cls:1028-1029's counting pass `\def\thanks##1{}`: the token spelled
+/// `\thanks` is gobbled there with its argument, a `\let` copy of it is not). A macro the document or a file it loaded
+/// (a raw-loaded package's too) defined is read in its body, as its call runs it (`\newcommand\fm{\footnotemark}`,
+/// `\DeclareRobustCommand`'s inner `\fm␣`), a few levels deep; past them, a command undefined here or a document macro
+/// with no token body is unsure, and read as a step (DG 2026-11-16: a wrong glyph is worse than none; so a tikz ORCID
+/// logo's `\draw`, defined only in its `tikzpicture`, withdraws 2009.11534's correct ⋆, row R LLNCSUNSURE). What runs
+/// nothing is no step: the tokens `\ifdefined` and `\ifx` test (`\ifdefined\Anonymous…\else…\fi`, 2509.14694), and
+/// `\undefined`, `\@undefined`. A given number steps nothing: `\samethanks`'s `\footnotemark[\value{footnote}]`
+/// (2007.09127, 2108.01436).
+fn steps_footnotes(tokens: &Tokens, thanks_gobbled: bool) -> Result<bool> {
+  let meaning = |cs: &str| lookup_definition(&T_CS!(cs));
+  let mut scan = StepScan {
+    thanks_gobbled,
+    tests: vec![(meaning("\\ifdefined")?, 1), (meaning("\\ifx")?, 2)],
+    thanks: meaning("\\thanks")?,
+    marks: vec![meaning("\\footnotemark")?, meaning("\\footnote")?],
+    counters: vec![
+      meaning("\\addtocounter")?,
+      meaning("\\setcounter")?,
+      meaning("\\stepcounter")?,
+      meaning("\\refstepcounter")?,
+    ],
+    read: Vec::new(),
+  };
+  scan.steps(tokens.unlist_ref(), 0)
+}
+
+/// How deep [`steps_footnotes`] reads a document's macros, and how many it reads.
+const STEP_SCAN_DEPTH: usize = 4;
+const STEP_SCAN_MACROS: usize = 32;
+
+/// [`steps_footnotes`]'s meanings and the macros it has read.
+struct StepScan {
+  thanks_gobbled: bool,
+  /// the conditionals testing tokens without running them, and how many each tests
+  tests:          Vec<(Option<Rc<dyn Definition>>, usize)>,
+  thanks:         Option<Rc<dyn Definition>>,
+  marks:          Vec<Option<Rc<dyn Definition>>>,
+  counters:       Vec<Option<Rc<dyn Definition>>>,
+  read:           Vec<Token>,
+}
+
+impl StepScan {
+  fn steps(&mut self, v: &[Token], depth: usize) -> Result<bool> {
+    let next = |from: usize| (from..v.len()).find(|&i| v[i].get_catcode() != Catcode::SPACE);
+    // (the end of the group opening at `open`)
+    let close = |open: usize| {
+      let mut depth = 0usize;
+      (open..v.len())
+        .find(|&i| {
+          match v[i].get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => depth = depth.saturating_sub(1),
+            _ => {},
+          }
+          depth == 0
+        })
+        .unwrap_or(v.len())
+    };
+    let mut at = 0;
+    while at < v.len() {
+      let t = v[at];
+      if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+        at += 1;
+        continue;
+      }
+      let defn = lookup_definition(&t)?;
+      let is = |known: &Option<Rc<dyn Definition>>| match (&defn, known) {
+        (Some(a), Some(b)) => Rc::ptr_eq(a, b),
+        _ => false,
+      };
+      if let Some(&(_, tested)) = self.tests.iter().find(|(test, _)| is(test)) {
+        // (the tested tokens, past the spaces before each)
+        for _ in 0..tested {
+          at = next(at + 1).unwrap_or(v.len());
+        }
+      } else if t == T_CS!("\\undefined") || t == T_CS!("\\@undefined") {
+        // (undefined on purpose, to be tested: `\ifx\Anonymous\undefined`)
+      } else if t == T_CS!("\\thanks") && self.thanks_gobbled {
+        if let Some(arg) = next(at + 1).filter(|&arg| v[arg].get_catcode() == Catcode::BEGIN) {
+          at = close(arg);
+        }
+      } else if t == T_CS!("\\thanks") || is(&self.thanks) {
+        return Ok(true);
+      } else if t == T_CS!("\\footnotemark")
+        || t == T_CS!("\\footnote")
+        || self.marks.iter().any(is)
+      {
+        if next(at + 1).is_none_or(|arg| v[arg] != T_OTHER!("[")) {
+          return Ok(true);
+        }
+      } else if self.counters.iter().any(is) {
+        if let Some(arg) = next(at + 1).filter(|&arg| v[arg].get_catcode() == Catcode::BEGIN) {
+          let end = close(arg);
+          if Tokens::new(v[arg + 1..end.min(v.len())].to_vec())
+            .to_string()
+            .trim()
+            == "footnote"
+          {
+            return Ok(true);
+          }
+        }
+      } else if let Some(defn) = defn.as_ref().filter(|d| !d.get_origin().is_latexml_owned()) {
+        // (a document's or a loaded file's macro: its body, once)
+        if !self.read.contains(&t) {
+          if depth >= STEP_SCAN_DEPTH || self.read.len() >= STEP_SCAN_MACROS {
+            return Ok(true);
+          }
+          self.read.push(t);
+          match defn.get_expansion() {
+            Some(ExpansionBody::Tokens(body)) => {
+              if self.steps(body.unlist_ref(), depth + 1)? {
+                return Ok(true);
+              }
+            },
+            _ => return Ok(true),
+          }
+        }
+      } else if defn.is_none() {
+        return Ok(true);
+      }
+      at += 1;
+    }
+    Ok(false)
+  }
+}
 
 /// `body` without its top-level `\institute{…}` calls, and the calls.
 fn take_institutes(body: &Tokens) -> (Tokens, Vec<Token>) {
