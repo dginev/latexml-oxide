@@ -609,14 +609,14 @@ fn the_mark_components_only_shrink() {
     "lx_frontmatter_marks_listed",
     "lx_title_marks_zero_width",
   ];
-  // (MARKKEY R2a: `whole_marks` folded into `marks`, the one record, OD #1062)
+  // (MARKKEY R2a: `whole_marks` folded into `marks`, the one record, OD #1062; R2Ab: `thenote_requests` a view of it,
+  // `RCreator::thenote_requests`)
   const RCREATOR_MARK_VECTORS: &[&str] = &["marks", "notes"];
   const RESOLVER_MARK_VECTORS: &[&str] = &[
     "title_fn_marks",
     "block_markers",
     "by_mark",
     "marked_entries",
-    "thenote_requests",
     "note_links",
     "note_legends",
     "note_texts",
