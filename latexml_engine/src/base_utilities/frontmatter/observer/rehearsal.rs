@@ -87,7 +87,8 @@ fn cell_ends() {
 fn note_text(step: i32) { NOTE_TEXT.with(|depth| depth.set((depth.get() + step).max(0))); }
 
 /// The footnote number a rehearsal's notes reached so far: `\c@footnote` at its start and the steps its notes made
-/// (`FOOTNOTE_STEPS`, the counter itself unstepped); `None` outside a rehearsal (`\lx@title@note@number`).
+/// (`FOOTNOTE_STEPS`, the counter itself unstepped); `None` outside a rehearsal
+/// (`latex_constructs::title_note_number`).
 pub fn rehearsal_footnote_value() -> Option<i64> {
   rehearsing().then(|| {
     FOOTNOTE_BASE

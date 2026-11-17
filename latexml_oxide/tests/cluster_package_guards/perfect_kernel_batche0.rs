@@ -3238,7 +3238,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/rewrite/declare.rs", 7),
   // (PRESBX +2: `note_redefined` records the file whose load made a refused definition, `\@currname.\@currext`, as
   // LaTeX names it; a read of LaTeX's own record, no decision on a spelling)
-  ("latexml_core/src/state.rs", 162),
+  // (PRESBXb +2: `carry_refusal_records` reads a lock record's refused body by its `\lx@dropped@<cs>` name and the
+  // meaning a `\let` copies, TeX's own record of the meaning; review revPRESBX B1)
+  ("latexml_core/src/state.rs", 164),
   ("latexml_core/src/stomach.rs", 84),
   // (MEMB, -1: `be_absorbed` reads its text through `arena::with`, not `get_string()`)
   ("latexml_core/src/tbox.rs", 2),
@@ -3265,7 +3267,10 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (PRESBX +22: `maketitle_marks` reads what a refused `\maketitle` assigns, an assignment's target being a name —
   // `\thefootnote`, `\@makefnmark`, a note command — and the commands a title's marks depend on, named once in
   // `NOTE_COMMANDS` and `MARK_COMMANDS`; the assignment primitives and the call of the class's `\maketitle` by meaning)
-  ("latexml_engine/src/latex_constructs/mod.rs", 186),
+  // (PRESBXb +10: `touches_marks` proves "no mark" over a macro body it does not run — its assignments' targets and
+  // sources, an `\@makefnmark`'s body, `\begin{<env>}`'s begin code, the definition origin of an author's macro —
+  // as `body_steps` reads the assignments; review revPRESBX B4, S1)
+  ("latexml_engine/src/latex_constructs/mod.rs", 196),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
   ("latexml_engine/src/latex_constructs/sect02.rs", 7),

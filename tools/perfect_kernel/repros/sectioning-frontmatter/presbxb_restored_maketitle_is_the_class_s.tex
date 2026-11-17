@@ -1,0 +1,22 @@
+% mechanism: a document's `\let` carries the lock's refusal record with the meaning (state.rs `carry_refusal_records`):
+%   `\let\stdmaketitle\maketitle`, a refused `\renewcommand{\maketitle}`, then `\let\maketitle\stdmaketitle` gives
+%   `\maketitle` the class's meaning again, so its marks are the class's (`latex_constructs::maketitle_marks`)
+% witness:  2509.02894 (pbalm-main.tex:3, :176, :362; pdflatex "Adeoye† Latafat† Bemporad†"); review revPRESBX B1
+%   (p/restore.tex)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗"; foot "∗ First note."
+% engines:  rust PRESBX (b85b844eb81) = 0 errors, 0 Warnings; Ann and Bob thanks[1] (the stale refused body read)
+% expect:   0 errors, 0 Warnings; Ann thanks[∗], Bob the same note's copy marked ∗
+% status:   RED (PRESBX) -> GREEN (PRESBXb: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\let\stdmaketitle\maketitle
+\renewcommand{\maketitle}{\bgroup\begin{center}\textbf{\Large\@title}\par\textbf{\@author}\end{center}\egroup}
+\let\maketitle\stdmaketitle
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\footnotemark[1]}
+\begin{document}
+\maketitle
+Body.
+\end{document}

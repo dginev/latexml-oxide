@@ -5,7 +5,8 @@
 %   Jena "†" for their shared "equal contribution"; written ∗)
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able†, Bob Baker†, Cy Cole∗"; foot "† equal
 %   contribution", "∗ cy@a.org"
-% engines:  rust PRESBX = 0 errors, 0 Warnings; Ann and Bob thanks[∗]
+% engines:  rust PRESBX = 0 errors, 0 Warnings; Ann and Bob thanks[∗]; PRESBXb none (the fail-safe: a document's
+%   `\@fnsymbol` makes the pass's glyph unknown, `shared_notes::number_footnote_parts`)
 % expect:   0 errors, 0 Warnings; Ann and Bob thanks[†]
 % status:   XML RED (row R PRESBX/fnsymbol: the pass's glyphs, from the document's `\@fnsymbol`)
 % moves:    XML row R PRESBX

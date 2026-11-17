@@ -1,0 +1,31 @@
+% mechanism: AAAI's `\equalcontrib` after a name the author ends with "." makes one note and its mark once per name:
+%   the emitter digests the name after the period with the one before's `\equalcontrib` (the segment ". Cy Cole…"), and
+%   a name digested again carries a kind's mark once (sect05.rs `aaai_note`)
+% witness:  2509.03329 (aaai25.sty, `Bernal…\equalcontrib.` then `Raigoso…\equalcontrib,`: "Robles∗ Bernal∗ Raigoso∗";
+%   PRESBX gave Raigoso two ∗ notes); review revPRESBX B3 (a/a7.tex)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗, Bob Baker∗. Cy Cole∗, Dee Dunn"; foot
+%   "∗These authors contributed equally." once
+% engines:  rust PRESBX (b85b844eb81) = 0 errors, 2 Warnings; Cy two copies of the note; PRESBXbase2 (14e92b291ab) =
+%   0 errors, 3 Warnings; Ann ∗, Bob †, Cy ‡ (three notes)
+% expect:   0 errors, 1 Warning (the emitter writes the stub's note text as plain text, "note no argument"); Ann, Bob,
+%   Cy each one copy of "These authors contributed equally." marked ∗
+% status:   RED (PRESBX) -> GREEN (PRESBXb: perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{presbxaaaidot.sty}
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newcounter{eqfn}\setcounter{eqfn}{0}%
+  \vbox{\let\footnote\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{eqfn}{\value{footnote}}\else\footnotemark[\value{eqfn}]\fi}%
+    \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{presbxaaaidot}
+\title{A Title}
+\author{Ann Able\equalcontrib, Bob Baker\equalcontrib. Cy Cole\equalcontrib, Dee Dunn}
+\begin{document}
+\maketitle
+Body.
+\end{document}

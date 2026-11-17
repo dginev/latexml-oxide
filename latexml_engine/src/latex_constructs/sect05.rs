@@ -1103,10 +1103,7 @@ pub(crate) fn load() -> Result<()> {
   // kernel stubs (`DefinitionOrigin::Stub`), so the document's or a raw class's own `\newcommand` still defines them
   // (copernicus.cls:1673 `\newcommand\equalcontrib[1]`, its equal-contribution note on the affiliations).
   // As AAAI's (aaai22.sty:66-73, aaai25.sty:81-88, aaai2026.sty:79-86, aaai2027.sty:139-155): the first use makes the
-  // note, a later one repeats its mark, `\footnotemark[<n>]` (the `\setcounter{eqfn}{\value{footnote}}` after the
-  // first), one note its carriers share (2501.02471 "Liu∗, Luo∗, Zhong∗, Pan†"; 2508.07026, whose `\footnotemark[2]`
-  // marks the second note). (aaai2027's `\ifaaai@corrmulti` "authors" is set only in its `\sbox` trial, where
-  // `\footnote` is `\relax` and the number stays 0, so the note reads "Corresponding author." for any count.)
+  // note, a later one its `\footnotemark[<n>]` (2501.02471, 2508.07026, 2509.03329; `aaai_note`, OD #1053).
   use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
   AAAI_FIRST_NOTES.with(|notes| notes.borrow_mut().clear());
   DefMacro!("\\lx@aaai@note{}{}", sub[(key, text)] { aaai_note(&key.to_string(), text) });
@@ -5593,12 +5590,9 @@ thread_local! {
   static AAAI_FIRST_NOTES: RefCell<Vec<(String, u16, i64)>> = const { RefCell::new(Vec::new()) };
 }
 
-/// `\lx@aaai@note{<kind>}{<text>}`: the note `<text>` at the kind's first use, `\footnotemark[<n>]` after it. The first
-/// use is told by its position in the author field, not by the order the field is digested in: the frontmatter's
-/// rehearsal digests the block whole, in order (its assignments undone), and the conversion then writes the first use's
-/// note from it and digests each later name again, its command with no position (`emit`): a use with no position
-/// where the counter has passed the first's number (its name stepped it) is a later one, which reads that number as
-/// the rehearsal counted it; one before it (the block digested whole) is the first.
+/// `\lx@aaai@note{<kind>}{<text>}`: the note `<text>` at the kind's first use, `\footnotemark[<n>]` after it. The rehearsal
+/// tells the first by its position in the field (`Token::prov`); a use digested with none (a name the emitter digests
+/// again, an `\affiliations` field) is a later one once the kind's note is made (OD #1053).
 fn aaai_note(kind: &str, text: Tokens) -> Result<Tokens> {
   let field = get_current_token().map_or(0, |t| t.prov);
   let now = title_note_number()?;
@@ -5606,17 +5600,19 @@ fn aaai_note(kind: &str, text: Tokens) -> Result<Tokens> {
     notes
       .borrow()
       .iter()
-      .find(|(k, at, number)| {
-        k == kind
-          && (if field == 0 {
-            now >= *number
-          } else {
-            *at != 0 && *at < field
-          })
-      })
+      .find(|(k, at, _)| k == kind && (field == 0 || (*at != 0 && *at < field)))
       .map(|(_, _, number)| *number)
   });
   if let Some(number) = first {
+    // (a name digested again carries the kind's mark once: a segment that also holds the name before's,
+    // `Bernal\equalcontrib. Raigoso\equalcontrib`, 2509.03329)
+    let marked = s!("lx_aaai_marked@{kind}");
+    if field == 0 && rehearsal_footnote_value().is_none() {
+      if lookup_bool(&marked) {
+        return Ok(Tokens::new(Vec::new()));
+      }
+      assign_value(&marked, true, None);
+    }
     let mut mark = vec![T_CS!("\\footnotemark"), T_OTHER!("[")];
     mark.extend(Explode!(number));
     mark.push(T_OTHER!("]"));
