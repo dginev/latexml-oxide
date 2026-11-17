@@ -749,9 +749,10 @@ fn frontmatter_ieee_authorblock() {
 }
 
 /// A trailing `\thanks` after a comma-split IEEEtran author list is kept, its content never dropped with a coalesced
-/// empty creator (OXIDIZED_DESIGN #156). IEEEtran prints no `\thanks` mark and hangs every one on the last author
-/// (IEEEtran.cls:4756-4758), so the unmarked note is the block's publication note, not Vosoughi's (DG 2026-11-16,
-/// MARKKEY1, OD #1058; it was moved to the last real author before). Witness arXiv 1510.02728.
+/// empty creator (OXIDIZED_DESIGN #156). IEEEtran's `\maketitle` empties `\thefootnote` and `\footnotemark`
+/// (IEEEtran.cls:4756-4758): the note prints no mark and names no author, so it is the block's publication note, not
+/// Vosoughi's, the name it follows (DG 2026-11-16, MARKKEY1, OD #1058; it was moved to the last real author before).
+/// Witness arXiv 1510.02728.
 #[test]
 fn cluster_author_thanks_note_survives_empty_creator() {
   let x = convert_to_xml("tests/cluster_regressions/author_thanks_trailing_coalesce.tex");

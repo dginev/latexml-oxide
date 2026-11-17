@@ -1,6 +1,7 @@
 % mechanism: IEEEtran's `\maketitle` prints no `\thanks` mark (IEEEtran.cls:4756-4758 `\def\thefootnote{}`,
-%   `\let\@makefnmark\relax`) and hangs every `\thanks` on the last author, so an unmarked `\thanks` is the paper's
-%   note (funding, "manuscript received"), not that author's: kept at the block's level (`resolver::keep_note` under
+%   `\def\footnotemark{}`, `\let\@makefnmark\relax`), so a `\thanks` names no author: an unmarked `\thanks` is the
+%   paper's note (funding, "manuscript received"), not the author's it follows, where Perl hung it: kept at the block's
+%   level — the title's publication note, or a nameless creator holding it (1502.05943) — (`resolver::keep_note` under
 %   `Policy::unmarked_notes`; the emitter's block publication note) — a divergence from Perl's placement (DG 2026-11-16)
 % witness: 1510.02728 (the Asilomar/NSF `\thanks` after `Azadeh~Vosoughi,~\IEEEmembership{…}`)
 % oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE, Bob Baker, Fellow, IEEE", the note at the page's foot with no

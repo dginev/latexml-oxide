@@ -1,0 +1,18 @@
+% mechanism: no dangling mark (OD #1059) counts the tags of notes and creators only: a section's number is no mark,
+%   so names' marks printed once over them alone stay hidden however many sections the paper numbers
+% witness: synthetic (revMARKKEY1 S1: with `\section*` the same marks hid)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker3", sections "1 One", "2 Two", "3 Three"; no note prints 1 or 3
+% engines: rust MARKKEY1 a427f6c06e0 = 0 errors 0 Warnings; Ann's 1 and Bob's 3 shown (section tags counted)
+% expect:  0 errors 0 Warnings; XML Ann Able ; footnotemark[1]= / Bob Baker ; footnotemark[3]=; HTML Ann Able / Bob
+%   Baker
+% status:  RED (a427f6c06e0) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_only_where_its_glyph_recurs)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{3}$}
+\maketitle
+\section{One} A.
+\section{Two} B.
+\section{Three} C.
+\end{document}

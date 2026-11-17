@@ -374,6 +374,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefPrimitive!("\\lx@title@footnote@step", sub[_args] {
     if title_note_steps() {
       step_counter("footnote", false)?;
+      // (a title's or date's note: its number, which a name's `\footnotemark[n]` may name, `insert::link_marked_notes`)
+      if matches!(lookup_string("lx_frontmatter_item").as_str(), "ltx:title" | "ltx:date") {
+        let value = counter_value("footnote")?.value_of();
+        let values = lookup_string(TITLE_NOTE_VALUES);
+        let values = if values.is_empty() { value.to_string() } else { s!("{values},{value}") };
+        assign_value(TITLE_NOTE_VALUES, values, Some(Scope::Global));
+      }
     }
     Ok(())
   });
@@ -1010,6 +1017,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
   Ok(())
 }
+
+/// The footnote numbers of the title's and the date's notes, as `\lx@title@footnote@step` stepped them (`1,4`): their
+/// pubnote prints no mark here, so a name's `\footnotemark[n]` naming one is answered by a note the page does not mark
+/// (`insert::link_marked_notes`).
+pub(in crate::base_utilities) const TITLE_NOTE_VALUES: &str = "lx_title_note_values";
 
 /// `\lx@title@thanks` and `\lx@title@footnote` (`footnote`): the note's call, marked where its title marks it.
 fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> {

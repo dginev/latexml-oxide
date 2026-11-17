@@ -2,8 +2,9 @@
 
 use super::*;
 use crate::{
-  base_utilities::defs::frontmatter_api::{
-    CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY,
+  base_utilities::defs::{
+    frontmatter_api::{CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
+    frontmatter_fields::TITLE_NOTE_VALUES,
   },
   latex_constructs::{FOOTNOTE_GIVEN, FOOTNOTE_VALUE},
 };
@@ -878,9 +879,10 @@ fn drop_linking_marks(document: &mut Document) -> Result<()> {
 }
 
 /// The Link step (OD #1053, #1058): a mark alone on a name becomes a full copy of the note it marks, as Perl's
-/// `relocateFootnote_aux` fills a mark (latex_constructs.pool.ltxml:518-527) — the note of its author block standing for
-/// the footnote number the mark shows (`_fnvalue`: TeX pairs a mark and its note by number, latex.ltx
-/// `\@xfootnotemark`), else the one printing its glyph. 1911.13299, 2502.19103; scrartcl's `Ann\thanks{Equal} \and
+/// `relocateFootnote_aux` fills a mark (latex_constructs.pool.ltxml:518-527) — the note of a creator of the same parent
+/// standing for the footnote number the mark shows (`_fnvalue`: TeX pairs a mark and its note by number, latex.ltx
+/// `\@xfootnotemark`), else the one printing its glyph; a number naming the title's or date's note leaves the mark alone,
+/// classed `ltx_mark_titlenote` (OD #1059). 1911.13299, 2502.19103; scrartcl's `Ann\thanks{Equal} \and
 /// Bob\footnotemark[1]`, whose `\thanks` prints a glyph no binding knows.
 fn link_marked_notes(document: &mut Document) -> Result<()> {
   let notes = document.findnodes("//ltx:creator/ltx:note[not(@role='footnotemark')]", None);
@@ -941,14 +943,22 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
     {
       continue;
     }
-    // (in its own author block, as Perl's `relocateFootnote` pairs a mark with its text: a note of another block
-    // printing the same glyph is another note)
-    let Some(paired) = notes
-      .iter()
-      .filter(in_block)
-      .find(numbered)
-      .or_else(|| notes.iter().filter(in_block).find(same))
-    else {
+    // (among the notes of creators of the same parent — the document's, every block's —, by its number, else its glyph)
+    let by_number = notes.iter().filter(in_block).find(numbered);
+    // (a number naming a title's or date's note, a pubnote the page prints with no mark: the mark is that note's,
+    // shown as printed, `ltx_mark_titlenote` — "A Title∗ … Cy Cole∗", fmmarks_title_thanks_then_author_marks_link)
+    if by_number.is_none()
+      && key.is_some()
+      && number.as_ref().is_some_and(|number| {
+        lookup_string(TITLE_NOTE_VALUES)
+          .split(',')
+          .any(|value| value == number)
+      })
+    {
+      document.add_class(&mut mark_note, "ltx_mark_titlenote")?;
+      continue;
+    }
+    let Some(paired) = by_number.or_else(|| notes.iter().filter(in_block).find(same)) else {
       continue;
     };
     // (a mark its command prints by the counter stays so on the copy, acmart's `\authornotemark[n]`; one linked by its

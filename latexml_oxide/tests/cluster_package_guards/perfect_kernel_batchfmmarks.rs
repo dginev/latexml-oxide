@@ -1419,7 +1419,11 @@ const LINK: &[Row] = &[
       r#"Bob Baker ; footnotemark[*]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able ; † plain", "Bob Baker", "margin: Note X."],
+    page:       &[
+      "Ann Able ; † plain",
+      "Bob Baker ; * plain",
+      "margin: Note X.",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -1553,7 +1557,7 @@ const LINK: &[Row] = &[
     page:       &[
       "Ann Able ; †→note",
       "Bob Baker ; †→note",
-      "Cy Cole",
+      "Cy Cole ; * plain",
       "margin: Equal contribution.",
     ],
     page_moves: r#""#,
@@ -1571,7 +1575,7 @@ const LINK: &[Row] = &[
     page:       &[
       "Ann Able ; ‡→note",
       "Bob Baker ; ‡→note",
-      "Cy Cole",
+      "Cy Cole ; * plain",
       "margin: Equal contribution.",
     ],
     page_moves: r#""#,

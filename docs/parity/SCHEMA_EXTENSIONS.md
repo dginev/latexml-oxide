@@ -55,7 +55,8 @@ reported for the main session). 10 goldens carry it (for example `latexml_oxide/
 
 **S13, `ltx:note` gets `IDREF.attributes`.** A note several authors share is copied onto each (Perl's
 `relocateAnnotations` and `relocateFootnote` clone it). The copies are one note: each later copy's `idref` names the
-first copy's `xml:id`, so a renderer prints it once and links the others to it, by identity, never by comparing texts
+`xml:id` of the copy first in document order, so a renderer prints it once and links the others to it, by identity,
+never by comparing texts
 (DG 2026-11-16, issue #893 Option A; OD #1059). No new names: a proposal only adds `note` to the elements that refer to
 another. jing checks the `idref` as `xsd:IDREF` (it must name an id in the document). Guard:
 `perfect_kernel_batchmarkkey1::a_note_several_names_carry_is_one_note`.

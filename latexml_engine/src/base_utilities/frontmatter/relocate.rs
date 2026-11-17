@@ -361,8 +361,9 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
       };
       if let Some(targets) = targets {
         placed.push(note.clone());
-        // (the copies one note makes, one per carrier: one note, its first copy's `xml:id` the `idref` of the others —
-        // the identity the page prints a shared note once by, never its text, OD #1059; DG 2026-11-16, #893 Option A)
+        // (the copies one note makes, one per carrier: one note, the `xml:id` of its copy first in document order the
+        // `idref` of the others — the identity the page prints a shared note once by, never its text, OD #1059; DG
+        // 2026-11-16, #893 Option A)
         let mut copies: Vec<Node> = Vec::new();
         for target in targets {
           // (nor twice under two labels: an entry marked with several labels is one copy a label — OSA's
@@ -2270,21 +2271,25 @@ fn copy_text(note: &Node) -> String {
     .to_string()
 }
 
-/// Mark the copies of one note its carriers hold as one note (DG 2026-11-16, #893 Option A; OD #1059): the first copy's
-/// `xml:id`, made where it has none, the `idref` of each other — the identity the page prints a shared note once by,
-/// never its text. Copies of a note already one keep its first copy (`idref` read through). Fewer than two: nothing.
+/// Mark the copies of one note its carriers hold as one note (DG 2026-11-16, #893 Option A; OD #1059): the `xml:id` of
+/// the copy first in document order, made where it has none, the `idref` of each other — the identity the page prints a
+/// shared note once by, never its text. Copies of a note already one keep its first copy (`idref` read through). Fewer
+/// than two: nothing.
 pub fn one_note(document: &mut Document, copies: &[Node]) -> Result<()> {
-  let [first, rest @ ..] = copies else {
-    return Ok(());
-  };
-  if rest.is_empty() {
+  if copies.len() < 2 {
     return Ok(());
   }
   let xml_id = |node: &Node| node.get_attribute_ns("id", XML_NS);
-  let id = match first.get_attribute("idref") {
+  let id = match copies.iter().find_map(|copy| copy.get_attribute("idref")) {
     Some(id) => id,
     None => {
-      let mut first = first.clone();
+      let mut first = copies
+        .iter()
+        .fold(
+          &copies[0],
+          |first, copy| if precedes(copy, first) { copy } else { first },
+        )
+        .clone();
       document.generate_id(&mut first, "")?;
       match xml_id(&first) {
         Some(id) => id,
@@ -2292,12 +2297,28 @@ pub fn one_note(document: &mut Document, copies: &[Node]) -> Result<()> {
       }
     },
   };
-  for copy in rest {
+  for copy in copies {
     if xml_id(copy).as_deref() != Some(id.as_str()) {
       document.set_attribute(&mut copy.clone(), "idref", &id)?;
     }
   }
   Ok(())
+}
+
+/// Whether `a` comes before `b` in document order (an ancestor before its descendants).
+fn precedes(a: &Node, b: &Node) -> bool {
+  let path = |node: &Node| {
+    let mut path: Vec<Node> = std::iter::successors(Some(node.clone()), Node::get_parent).collect();
+    path.reverse();
+    path
+  };
+  let (a, b) = (path(a), path(b));
+  let shared = a.iter().zip(&b).take_while(|(x, y)| x == y).count();
+  match (a.get(shared), b.get(shared)) {
+    (Some(x), Some(y)) => node_precedes(x, y),
+    (None, Some(_)) => true,
+    _ => false,
+  }
 }
 
 #[cfg(test)]

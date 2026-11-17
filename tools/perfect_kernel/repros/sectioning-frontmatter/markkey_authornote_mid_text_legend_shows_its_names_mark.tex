@@ -1,0 +1,25 @@
+% mechanism: no dangling mark (OD #1059) reads a formula of the glyph alone anywhere inside a note: acmart's one
+%   `\authornote` holds a second legend after `\\`, `$\dagger$ Cat Cole is the corresponding author`, so Cat's
+%   mark-only † shows (`f:printed-glyph`, the formula's one token in its XMath or its MathML)
+% witness: 2012.13912 (`Xiaojiang Peng$^{\dagger,2}$`, `\authornote{… \\ $\dagger$ Xiaojiang Peng is the corresponding
+%   author. …}`)
+% oracle:  pdflatex 0 errors: "Ann Able∗ , Bob Baker∗ , Cat Cole†∗", footnotes "∗ Ann Able and Bob Baker contributed
+%   equally." and "† Cat Cole is the corresponding author."
+% engines: rust MARKKEY1 a427f6c06e0 = 0 errors 0 Warnings; Cat's † hidden (only the note's opening text read)
+% expect:  0 errors 0 Warnings; HTML Ann Able ; *→note / Bob Baker ; *→note / Cat Cole ; † plain, then the
+%   `\authornote` (acmart prints it on the last author, where the note stays)
+% status:  RED (a427f6c06e0) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_where_its_glyph_prints)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\settopmatter{printacmref=false}
+\setcopyright{none}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\begin{document}
+\title{T}
+\author{Ann Able$^{*}$, Bob Baker$^{*}$, Cat Cole$^{\dagger}$}
+\authornote{Ann Able and Bob Baker contributed equally. \\
+$\dagger$ Cat Cole is the corresponding author.}
+\affiliation{\institution{Univ A}\country{Land}}
+\maketitle
+Text.
+\end{document}

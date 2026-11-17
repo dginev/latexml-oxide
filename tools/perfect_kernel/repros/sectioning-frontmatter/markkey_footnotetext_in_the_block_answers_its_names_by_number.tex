@@ -6,8 +6,9 @@
 %   name is the name's (the mark ledger, COMMAMARK)
 % witness: 2407.04435 (lni; `Daniel Müssig\footnotemark[1] \and … Steve Lenk\footnotemark[1]\textsuperscript{,}\footnotemark[2]
 %   \and Jörg Lässig\footnotemark[3]` with the three `\footnotetext[n]` inside `\author`)
-% oracle:  pdflatex 0 errors: "Ann Able∗ Bob Baker∗ Cat Cole,∗† Dan Dorn‡", footnotes "∗ Univ A, Town A", "† Univ B,
-%   Town B", "‡ Univ C, Town C" once each
+% oracle:  pdflatex 0 errors: "Ann Able∗ Bob Baker∗ Cat Cole,∗† Dan Dorn‡"; article's `\@author` tabular drops the
+%   three `\footnotetext` (a footnote in a tabular is lost), which the witness's lni prints, "∗ Univ A, Town A",
+%   "† Univ B, Town B", "‡ Univ C, Town C" once each: the texts are kept, as the witness prints them
 % engines: rust c755ca27e5f = 0 errors 1 Warning ("lost: †"); every text a thanks note of Dan Dorn, no mark; Ann, Bob and Cat
 %   mark-only `*`; perl 0.8.8 = 0 errors; each mark filled by number (`mark="1"`), the names in one personname
 % expect:  0 errors 0 warnings; Ann, Bob and Cat carry thanks[*]=Univ A (one note: idref), Cat thanks[†]=Univ B, Dan

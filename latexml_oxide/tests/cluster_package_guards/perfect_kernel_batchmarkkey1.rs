@@ -7,7 +7,8 @@
 //! (`relocate::one_note` at `relocate_annotations`, the kernel's `relocate_footnote` and the Link step), and on the page
 //! a shared unmarked note under a generated `[a]`, an unlinked name mark shown only where its glyph recurs
 //! (`LaTeXML-meta-xhtml.xsl`) — OD #1059. Rows assert the pdflatex oracle in the FMRG suite's two layers
-//! (`perfect_kernel_batchfmmarks::Row`). Witnesses 2407.04435, 1111.1979, 2006.10886, 1510.02728, 1108.5155.
+//! (`perfect_kernel_batchfmmarks::Row`). Witnesses 2407.04435, 1111.1979, 2006.10886, 1510.02728, 1108.5155,
+//! 2508.05506, 2012.13912, 1503.07953.
 use latexml::util::test::convert_with_setup_then;
 
 use super::perfect_kernel_batchfmmarks::{Row, assert_green};
@@ -83,8 +84,9 @@ fn pairs(rows: &[(&str, &str)]) -> Vec<(String, String)> {
 /// text on the last name before; Cat's mark after `\textsuperscript{,}`, lost before with a Warning, is the comma's name's);
 /// a `\footnotemark[1]` beside another name's `\thanks` is filled with it by number where no binding knows the glyph
 /// scrartcl prints, the shared unmarked note printed once under a generated `[a]` (the advisor's ADVGEN I-3 probe:
-/// Bob kept a mark-only "1", no copy). Distinct paths: the reading's footnote-text pairing and the Link step's
-/// number pairing.
+/// Bob kept a mark-only "1", no copy); a `\footnotemark[2]` naming the date's `\thanks` by number is that note's mark,
+/// shown though the date's publication note prints none (`ltx_mark_titlenote`; revMARKKEY1 B2: hidden before).
+/// Distinct paths: the reading's footnote-text pairing, the Link step's number pairing and its title-note number.
 #[test]
 fn a_numbered_mark_answers_its_note_by_number() {
   assert_green(&[
@@ -105,6 +107,22 @@ fn a_numbered_mark_answers_its_note_by_number() {
         "Cat Cole ; *→note ; † plain",
         "Dan Dorn ; ‡ plain",
         "margin: Univ A, Town A ; Univ B, Town B ; Univ C, Town C",
+      ],
+      page_moves: "",
+    },
+    Row {
+      repro:      "markkey_footnotemark_names_the_dates_thanks",
+      tex:        repro!("markkey_footnotemark_names_the_dates_thanks"),
+      warnings:   0,
+      creators:   &[
+        "Ann Able ; footnotemark[†]=",
+        "Bob Baker ; thanks[*]=Univ B.",
+      ],
+      moves:      "",
+      page:       &[
+        "Ann Able ; † plain",
+        "Bob Baker ; * plain",
+        "margin: Univ B.",
       ],
       page_moves: "",
     },
@@ -169,9 +187,10 @@ fn a_mark_after_a_names_comma_is_the_nearer_names() {
   }]);
 }
 
-/// IEEEtran prints no `\thanks` mark and hangs every `\thanks` on the last author (IEEEtran.cls:4756-4758), so an unmarked
-/// `\thanks` is the paper's note, kept at the block's level — the title's publication note — not under the last name,
-/// where it read as that author's affiliation (DG 2026-11-16; 1510.02728). A divergence from Perl's placement.
+/// IEEEtran's `\maketitle` empties `\thefootnote` and `\footnotemark` (IEEEtran.cls:4756-4758): a `\thanks` prints no
+/// mark and names no author, so an unmarked `\thanks` is the paper's note, kept at the block's level — here the title's
+/// publication note — not under the name it follows, where Perl and the base hung it and it read as that author's
+/// affiliation (DG 2026-11-16; 1510.02728). A divergence from Perl's placement.
 #[test]
 fn an_ieee_unmarked_thanks_is_the_blocks() {
   let tex = repro!("markkey_ieee_unmarked_thanks_is_the_blocks");
@@ -199,7 +218,8 @@ fn an_ieee_unmarked_thanks_is_the_blocks() {
 /// No dangling mark (DG 2026-11-16, 2006.10886, and its document-wide refinement): a name's mark that links to no note
 /// shows only where its glyph prints anywhere else in the document — Ann's ∗, the body footnote's mark too —, and is
 /// hidden where it prints once, over its name alone (Bob's †). A printed run counts per piece: Ann's `$^{1,2}$` shows,
-/// the body's footnote marks 1 and 2 printing its pieces (1304.5040), Bob's 3 hides. The XML keeps every mark-only note.
+/// the body's footnote marks 1 and 2 printing its pieces (1304.5040), Bob's 3 hides. A section's number is no mark
+/// (revMARKKEY1 S1: three numbered sections showed Ann's 1 and Bob's 3). The XML keeps every mark-only note.
 #[test]
 fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
   assert_green(&[Row {
@@ -215,6 +235,18 @@ fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
     page_moves: "",
   }]);
   assert_green(&[Row {
+    repro:      "markkey_section_numbers_are_no_name_marks",
+    tex:        repro!("markkey_section_numbers_are_no_name_marks"),
+    warnings:   0,
+    creators:   &[
+      "Ann Able ; footnotemark[1]=",
+      "Bob Baker ; footnotemark[3]=",
+    ],
+    moves:      "",
+    page:       &["Ann Able", "Bob Baker"],
+    page_moves: "",
+  }]);
+  assert_green(&[Row {
     repro:      "markkey_unlinked_name_mark_shows_only_where_its_glyph_recurs",
     tex:        repro!("markkey_unlinked_name_mark_shows_only_where_its_glyph_recurs"),
     warnings:   0,
@@ -226,6 +258,61 @@ fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
     page:       &["Ann Able ; * plain", "Bob Baker"],
     page_moves: "",
   }]);
+}
+
+/// The glyphs printed elsewhere that a name's unlinked mark is shown by (revMARKKEY1 B1; OD #1059, `f:printed-glyph`):
+/// a body footnote opening with a formula of the glyph alone, its tags left out (2508.05506's `\blfootnote{$\dagger$
+/// …}`); a formula of the glyph alone inside a note, past its opening (2012.13912's acmart `\authornote{… \\ $\dagger$
+/// … is the corresponding author}`); and a note with no known mark on the name, whose glyph it may be (1503.07953's
+/// `\altaffiltext{*}{Corresponding author}`, its label's glyph not kept). Each was hidden before.
+#[test]
+fn an_unlinked_mark_shows_where_its_glyph_prints() {
+  assert_green(&[
+    Row {
+      repro:      "markkey_blfootnote_dagger_legend_shows_its_names_mark",
+      tex:        repro!("markkey_blfootnote_dagger_legend_shows_its_names_mark"),
+      warnings:   0,
+      creators:   &["Ann Able", "Bob Baker ; footnotemark[†]="],
+      moves:      "",
+      page:       &["Ann Able", "Bob Baker ; † plain"],
+      page_moves: "",
+    },
+    Row {
+      repro:      "markkey_authornote_mid_text_legend_shows_its_names_mark",
+      tex:        repro!("markkey_authornote_mid_text_legend_shows_its_names_mark"),
+      warnings:   0,
+      creators:   &[
+        "Ann Able ; footnotemark[*]= | affiliation=Univ A , Land",
+        "Bob Baker ; footnotemark[*]= | affiliation=Univ A , Land",
+        "Cat Cole ; footnotemark[†]= ; thanks[*]=Ann Able and Bob Baker contributed equally. † Cat Cole is the \
+         corresponding author. | affiliation=Univ A , Land",
+      ],
+      moves:      "",
+      page:       &[
+        "Ann Able ; *→note",
+        "Bob Baker ; *→note",
+        "Cat Cole ; † plain ; *→note",
+        "margin: Ann Able and Bob Baker contributed equally. † Cat Cole is the corresponding author.",
+      ],
+      page_moves: "",
+    },
+    Row {
+      repro:      "markkey_altaffiltext_star_shows_its_names_mark",
+      tex:        repro!("markkey_altaffiltext_star_shows_its_names_mark"),
+      warnings:   0,
+      creators:   &[
+        "Ann Able | affiliation=Univ A, Town A",
+        "Bob Baker ; footnotemark[*]= ; thanks[]=Corresponding author | affiliation=Univ A, Town A ; \
+         email=bob@a.edu",
+      ],
+      moves:      "",
+      page:       &[
+        "Ann Able",
+        "Bob Baker ; * plain | under: Corresponding author",
+      ],
+      page_moves: "",
+    },
+  ]);
 }
 
 /// One `\footnotetext[1]` the kernel's `relocate_footnote` fills into two names' `\footnotemark[1]` (Perl's
@@ -253,6 +340,11 @@ fn a_note_several_names_carry_is_one_note() {
     page_moves: "",
   }]);
   assert_eq!(copies(tex), pairs(&[("Bob Baker", "Ann Able")]));
+  // (the copy first in document order holds the id, the paired note later: revMARKKEY1 NIT, Ann's copy named Bob's)
+  assert_eq!(
+    copies(repro!("markkey_mark_before_its_note_is_the_first_copy")),
+    pairs(&[("Bob Baker", "Ann Able")])
+  );
 }
 
 /// The source files of `dir` (relative to the workspace), recursively, with their text up to a `#[cfg(test)]` and no line
@@ -288,9 +380,11 @@ fn code_of(dir: &str) -> Vec<(String, String)> {
 }
 
 /// The mark components may only shrink (ADVARCH, 2026-11-16; MARKKEY K5 retires the glyph joins): the call sites of
-/// `mark_form(` (the glyph key every glyph-equality join reads), the `_mark…`/`_refmark…` attribute names, and the mark
-/// vectors of the reading's `RCreator` and `Resolver` (fields whose name says `mark`). A raised count is a new join or a
-/// new mark store: the batch states why and the review reads it; a fallen one lowers its pin.
+/// `mark_form(` (the glyph key every glyph-equality join reads), the `_mark…`/`_refmark…` attribute names, the number
+/// keys' `_fn…` attribute names, the state keys of marks and notes (`lx_…mark…`, `lx_…note…`), and the vectors of the
+/// reading's `RCreator` and `Resolver` whose name says `mark`, or `note`, `thanks` or `fn_` (the number keys' stores,
+/// MARKKEY round 1: `numbered_notes`, `block_thanks`). A raised count is a new join or a new store: the batch states why
+/// and the review reads it; a fallen one lowers its pin.
 #[test]
 fn the_mark_components_only_shrink() {
   const MARK_FORM_CALLS: usize = 30;
@@ -306,13 +400,48 @@ fn the_mark_components_only_shrink() {
     "_refmark",
     "_refmarkshown",
   ];
-  const RCREATOR_MARK_VECTORS: &[&str] = &["whole_marks"];
+  const FOOTNOTE_NUMBER_ATTRIBUTES: &[&str] = &[
+    "_fncounted",
+    "_fngiven",
+    "_fnmark",
+    "_fnpart",
+    "_fntext",
+    "_fnvalue",
+  ];
+  const MARK_STATE_KEYS: &[&str] = &[
+    "lx_acm_author_notes",
+    "lx_acm_title_notes",
+    "lx_address_mark",
+    "lx_affiliation_mark_shown",
+    "lx_affiliation_mark_shown_with_names",
+    "lx_fm_footnote_marks",
+    "lx_fm_list_note_",
+    "lx_fm_list_notes",
+    "lx_fm_mark_led_names_counted",
+    "lx_frontmatter_entry_mark",
+    "lx_frontmatter_requested_marks",
+    "lx_late_abstract_mark_pending",
+    "lx_late_abstract_marks",
+    "lx_store_label_noted_",
+    "lx_title_counts_footnotes",
+    "lx_title_footnote_given_marks_only",
+    "lx_title_footnote_own_marks",
+    "lx_title_note_values",
+  ];
+  const RCREATOR_MARK_VECTORS: &[&str] = &["whole_marks", "notes"];
   const RESOLVER_MARK_VECTORS: &[&str] = &[
     "title_fn_marks",
     "block_markers",
     "note_marks",
     "by_mark",
     "marked_entries",
+    "thenote_requests",
+    "note_links",
+    "note_legends",
+    "fn_requests",
+    "note_texts",
+    "numbered_notes",
+    "block_thanks",
   ];
   let sources: Vec<(String, String)> = code_of("latexml_engine/src")
     .into_iter()
@@ -345,6 +474,37 @@ fn the_mark_components_only_shrink() {
     .filter(|a| !MARK_ATTRIBUTES.contains(&a.as_str()))
     .collect();
   assert!(new.is_empty(), "new `_mark…` attributes: {new:?}");
+  // (the number keys' attributes, `"_fn…"`, and the state keys of marks and notes, `"lx_…"`)
+  let names = |prefix: &str, keep: &dyn Fn(&str) -> bool| -> Vec<String> {
+    let quoted = format!("\"{prefix}");
+    let mut names: Vec<String> = sources
+      .iter()
+      .flat_map(|(_, code)| code.split(quoted.as_str()).skip(1))
+      .map(|rest| {
+        rest
+          .chars()
+          .take_while(|c| c.is_ascii_lowercase() || *c == '_')
+          .collect::<String>()
+      })
+      .filter(|name| !name.is_empty() && keep(name))
+      .map(|name| format!("{prefix}{name}"))
+      .collect();
+    names.sort();
+    names.dedup();
+    names
+  };
+  let new: Vec<String> = names("_fn", &|_| true)
+    .into_iter()
+    .filter(|a| !FOOTNOTE_NUMBER_ATTRIBUTES.contains(&a.as_str()))
+    .collect();
+  assert!(new.is_empty(), "new `_fn…` attributes: {new:?}");
+  let new: Vec<String> = names("lx_", &|name| {
+    name.contains("mark") || name.contains("note")
+  })
+  .into_iter()
+  .filter(|key| !MARK_STATE_KEYS.contains(&key.as_str()))
+  .collect();
+  assert!(new.is_empty(), "new state keys of marks or notes: {new:?}");
   let resolver = std::fs::read_to_string(
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
       .join("../latexml_engine/src/base_utilities/frontmatter/observer/resolver/mod.rs"),
@@ -359,7 +519,12 @@ fn the_mark_components_only_shrink() {
       .lines()
       .filter_map(|line| {
         let (field, ty) = line.trim().trim_start_matches("pub ").split_once(':')?;
-        (field.contains("mark") && ty.contains("Vec")).then(|| field.trim().to_string())
+        let field = field.trim();
+        (["mark", "note", "thanks", "fn_"]
+          .iter()
+          .any(|word| field.contains(word))
+          && ty.contains("Vec"))
+        .then(|| field.to_string())
       })
       .collect()
   };

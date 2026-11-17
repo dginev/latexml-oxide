@@ -1,0 +1,18 @@
+% mechanism: a name's `\footnotemark[n]` naming the date's `\thanks` by its number (`\lx@title@footnote@step` records
+%   the title's and date's note numbers) is that note's mark, which the page prints nowhere else — the date's publication
+%   note has no mark —, so it shows, class `ltx_mark_titlenote` (`insert::link_marked_notes`, OD #1059)
+% witness: synthetic (revMARKKEY1 B2's sibling: the title's `\thanks`, fmmarks_title_thanks_then_author_marks_link)
+% oracle:  pdflatex 0 errors: "Ann Able† Bob Baker∗", "May 1, 2026†", footnotes "∗ Univ B.", "† Draft."
+% engines: rust MARKKEY1 a427f6c06e0 = 0 errors 0 Warnings; Ann's † hidden
+% expect:  0 errors 0 Warnings; XML Ann Able ; footnotemark[†]= / Bob Baker ; thanks[*]=Univ B.; HTML Ann Able ; †
+%   plain / Bob Baker ; * plain
+% status:  RED (a427f6c06e0) -> GREEN (perfect_kernel_batchmarkkey1::a_numbered_mark_answers_its_note_by_number)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\footnotemark[2] \and Bob Baker\thanks{Univ B.}}
+\date{May 1, 2026\thanks{Draft.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

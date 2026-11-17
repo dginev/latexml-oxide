@@ -1,0 +1,20 @@
+% mechanism: no dangling mark (OD #1059) reads every glyph the document prints: a formula of the glyph alone in a body
+%   footnote, whose text (its tags left out) opens with it — the `\blfootnote` idiom, a footnote with an empty mark
+%   — prints the name's † elsewhere, so the name's mark-only † shows (`f:printed-glyph`)
+% witness: 2508.05506 (`Maria Parelli$^{3,\dagger}$` with `\blfootnote{$\dagger$ Prior to joining …}`)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker†", the footnote "† Prior to joining Univ A, Bob was with Univ B."
+% engines: rust MARKKEY1 a427f6c06e0 = 0 errors 0 Warnings; Bob's † hidden (the note's text read through its tags,
+%   "footnote …")
+% expect:  0 errors 0 Warnings; XML Bob Baker ; footnotemark[†]=; HTML Ann Able / Bob Baker ; † plain
+% status:  RED (a427f6c06e0) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_where_its_glyph_prints)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\blfootnote[1]{\begingroup\renewcommand\thefootnote{}\footnote{#1}\addtocounter{footnote}{-1}\endgroup}
+\title{T}
+\author{Ann Able \and Bob Baker$^{\dagger}$}
+\date{}
+\begin{document}
+\maketitle
+\blfootnote{$\dagger$ Prior to joining Univ A, Bob was with Univ B.}
+Text.
+\end{document}
