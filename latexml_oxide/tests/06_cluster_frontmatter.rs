@@ -748,10 +748,10 @@ fn frontmatter_ieee_authorblock() {
   );
 }
 
-/// A trailing `\thanks` after a comma-split IEEEtran author list strands its marked
-/// `<ltx:note role="thanks">` on a nameless creator; `coalesce_empty_creators` must MOVE
-/// the note to the last real author (as it does for contacts) so the content is not
-/// dropped. Regression guard for OXIDIZED_DESIGN #156. Witness arXiv 1510.02728.
+/// A trailing `\thanks` after a comma-split IEEEtran author list is kept, its content never dropped with a coalesced
+/// empty creator (OXIDIZED_DESIGN #156). IEEEtran prints no `\thanks` mark and hangs every one on the last author
+/// (IEEEtran.cls:4756-4758), so the unmarked note is the block's publication note, not Vosoughi's (DG 2026-11-16,
+/// MARKKEY1, OD #1058; it was moved to the last real author before). Witness arXiv 1510.02728.
 #[test]
 fn cluster_author_thanks_note_survives_empty_creator() {
   let x = convert_to_xml("tests/cluster_regressions/author_thanks_trailing_coalesce.tex");
@@ -759,16 +759,14 @@ fn cluster_author_thanks_note_survives_empty_creator() {
     x.contains("supported by NSF"),
     "the trailing \\thanks content was dropped with the coalesced empty creator:\n{x}"
   );
-  // The note lands on the last real author (Vosoughi), not a nameless creator.
-  let vosoughi_has_note = x.split("<creator").skip(1).any(|seg| {
+  // The note is the block's publication note, on no author.
+  let on_an_author = x.split("<creator").skip(1).any(|seg| {
     let block = seg.split("</creator>").next().unwrap_or("");
-    block.contains("Vosoughi")
-      && block.contains("ltx_thanks_funding")
-      && block.contains("role=\"thanks\"")
+    block.contains("supported by NSF")
   });
   assert!(
-    vosoughi_has_note,
-    "the \\thanks note did not move to the last real creator:\n{x}"
+    !on_an_author && x.contains("<pubnote role=\"thanks\">"),
+    "the \\thanks note is not the block's publication note:\n{x}"
   );
   // No nameless creator survives.
   assert!(
@@ -1658,9 +1656,8 @@ fn frontmatter_author_lines_783() {
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact \
        role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>"
         .to_string(),
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname><note \
-       class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able is with Univ \
-       A.</note></creator>"
+      // (MARKKEY1: IEEEtran's unmarked `\thanks` is the block's publication note, not the last author's, OD #1058)
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname></creator>"
         .to_string(),
     ]),
     // (a `\footnote` is the marked `\thanks` note it is in article's title, OD #1053 — Perl's role=note contact where the
