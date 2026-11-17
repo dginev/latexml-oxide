@@ -53,11 +53,11 @@ use crate::{
           ApiCall, AuthorBlock, MarkLedEntry, Unsaid, annotated_parent, content_text,
           field_stamped, symbol,
         },
-        policy::TitleMarks,
+        policy::{self, TitleMarks},
         reading::{UNFOLD_LEVELS, unfold_held_names},
         rehearsal::{Rehearsal, rehearse},
         resolver::{
-          BlockCheck, LostInk, MarkLedger, NameMark, RCreator, RuleDrop, Side, Written,
+          BlockCheck, LostInk, MarkBy, MarkLedger, NameMark, RCreator, RuleDrop, Side, Written,
           check_blocks, contact_parts, creator_call, creator_call_level, creator_call_pieces,
           is_creator_call, labelseq_pieces, merged_names, note_shows, own_email_label,
           printed_email_label, read_events, shares_the_row, split_pieces, split_pieces_as,
@@ -6315,17 +6315,29 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           .get_or_init(|| marks.map_or_else(Vec::new, |marks| marks.unwritten_after(&name_runs, i)))
           .contains(request)
     };
-    for mark in c.marks.iter().filter(|mark| {
+    // (a label its binding prints as written after the name, authblk's `\author[1,*,§]`: one the binding found no line
+    // explains requests the mark it prints, which `insert::settle_name_marks` shows on the name unless an entry answers
+    // it — `Policy::labels_print`, `policy::declare_unexplained_name_labels`; 2606.00446, 2606.17809)
+    let labels_print = with_ledger(|ledger| match ledger.entries().get(c.source) {
+      Some(Entry::Author(block)) => policy::policy_for(&block.binding, block.hook).labels_print,
+      _ => false,
+    });
+    for mark in c.marks.iter().filter(|mark| mark.requests()) {
       let request = &mark.label;
-      mark.requests()
-        && (!keeps || own_inst(request) || unprinted(request))
-        && !own.contains(request)
-    }) {
-      let request = &mark.label;
-      // (a key's value is tokenized: a request spelled with a command, `\\author[a,b\\thanks{…}]`'s, 2207.11842, is no label)
+      if labels_print
+        && mark.by == MarkBy::Class
+        && let Some(glyph) = policy::unexplained_name_label(request)
+      {
+        annotations[i].extend(clean_frontmatter_labels(&glyph, "affiliation"));
+        continue;
+      }
+      if (keeps && !own_inst(request) && !unprinted(request)) || own.contains(request) {
+        continue;
+      }
+      // (a key's value is tokenized: a request spelled with a command, `\author[a,b\thanks{…}]`'s, 2207.11842, is no label)
       if !answered.contains(request) && !no_label(request) {
         let labels = clean_frontmatter_labels(request, "affiliation");
-        // (its mark, left where the name printed it — not an `\\inst` the name's own tokens request, which leaves its own)
+        // (its mark, left where the name printed it — not an `\inst` the name's own tokens request, which leaves its own)
         if !own_inst(request) {
           left_mark(&mut marks_left[i], mark, &labels);
         }
