@@ -429,16 +429,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("tmlr", "sty", iclr_sty::load_definitions),
   ("corl", "sty", iclr_sty::load_definitions),
   ("nips", "sty", iclr_sty::load_definitions),
-  // (NIPS 2007-2015's styles, whose names no fallback strips: 1503.02531's nips14submit_e.sty)
-  ("nips07submit_e", "sty", iclr_sty::load_definitions),
-  ("nips08submit_e", "sty", iclr_sty::load_definitions),
-  ("nips09submit_e", "sty", iclr_sty::load_definitions),
-  ("nips10submit_e", "sty", iclr_sty::load_definitions),
-  ("nips11submit_e", "sty", iclr_sty::load_definitions),
-  ("nips12submit_e", "sty", iclr_sty::load_definitions),
-  ("nips13submit_e", "sty", iclr_sty::load_definitions),
-  ("nips14submit_e", "sty", iclr_sty::load_definitions),
-  ("nips15submit_e", "sty", iclr_sty::load_definitions),
   // USENIX's styles (usenix_sty.rs): usenix.sty and the versions the fallback strips to it.
   ("usenix", "sty", usenix_sty::load_definitions),
   (

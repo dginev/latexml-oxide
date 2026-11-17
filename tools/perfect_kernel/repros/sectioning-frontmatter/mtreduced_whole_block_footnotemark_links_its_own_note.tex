@@ -1,17 +1,15 @@
-% mechanism: a `\footnotemark[1]` whose glyph is unknown here (a style no binding answers) and whose note no number
-%   pairs it with (a block written whole: its `\thanks` notes carry no footnote number) is dropped, counted by a
-%   Warning (`insert::count_unknown_marks`): never an empty mark, which shows and links nothing
+% mechanism: the title marks of the `\maketitle` that runs, where no binding declares them, read off its body
+%   (`latex_constructs::read_title_marks_in_force`, DG 2026-11-17): a renamed style's `\fnsymbol` line gives the names'
+%   ∗, so a `\footnotemark[1]` beside its own creator's `\thanks` in a block written whole keeps its glyph and its link
 % witness:  2509.10105 (vv2.sty, a renamed NeurIPS 2024 style: the author tabular written whole as one creator,
 %   "Young-rok Cha\thanks{Equal contribution} & Jeongho Ju\equalcontrib", `\equalcontrib` `\footnotemark[1]`;
 %   revMTREDUCEc S2); the style a minimal stand-in of vv2.sty:227-247
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Dee Dunn Bob Baker∗ Fay Fox"; foot "∗Equal
 %   contribution" once
-% engines:  rust MTREDUCEc (b0a97003fa4) and INTFMfinal (d9b4c025647) = 0 errors, 2 Warnings, Bob's mark an empty
-%   element linking nothing; WRONGFIXc = the mark ∗ linked to the note (the static reader's glyph)
-% expect:   0 errors, 2 Warnings (the block written whole; the mark dropped); one creator, its note unmarked, no
-%   empty mark
-% status:   RED (INTFMfinal) -> GREEN (MTREDUCEd: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s);
-%   the link itself waits on numbered notes in a block written whole (row R)
+% engines:  rust MTREDUCEc (b0a97003fa4) and INTFMfinal (d9b4c025647) = 0 errors, 2 Warnings, the note unmarked,
+%   Bob's mark an empty element linking nothing; WRONGFIXc = the mark ∗ linked to the note (the static reader)
+% expect:   0 errors, 1 Warning (the block written whole); the note ∗, Bob's mark ∗ linked to it
+% status:   RED (INTFMfinal) -> GREEN (MTREDUCEd: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
 % preload:  ar5iv.sty
 \begin{filecontents*}[overwrite]{vv2.sty}
 \ProvidesPackage{vv2}[2024/03/31 NeurIPS 2024 submission/camera-ready style file]

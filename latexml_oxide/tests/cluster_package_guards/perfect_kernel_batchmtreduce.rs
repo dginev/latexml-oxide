@@ -40,9 +40,10 @@ macro_rules! repro {
 /// macro read off the refused body (aaai2026.sty's `\fndag`, 2511.07192), an `\AtBeginDocument` body whose line the
 /// binding does not know (acl, `\arabic`). MTREDUCEd: only a line before the body's first `\@maketitle` decides, so one
 /// after it leaves the names unmarked (`[a]` for a shared note) and a reset after `\endgroup` keeps the marks; a line
-/// under a conditional decides nothing (revMTREDUCEc S1, P1); a mark of unknown glyph no note pairs with is dropped and
-/// counted, never an empty mark (2509.10105, S2); NIPS 2007-2015's styles bound by name, a typed `$^\dagger$` linked
-/// (1503.02531).
+/// under a conditional decides nothing (revMTREDUCEc S1, P1); and where no binding declares them, the marks of the
+/// `\maketitle` that runs are read off its body the same way (DG 2026-11-17, `latex_constructs::read_title_marks_in_force`):
+/// a renamed copy's (2509.10105's vv2.sty, its `\footnotemark[1]` linked again), an unbound package's (1503.02531's
+/// nips14submit_e.sty, ltexpprt.sty), their typed marks linked.
 const BINDINGS: &[Row] = &[
   Row {
     repro:      "mtreduce_acl_maketitle_at_begin_document_reads_the_document_s_fnsymbol",
@@ -331,12 +332,17 @@ const BINDINGS: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
-    repro:      "mtreduced_whole_block_footnotemark_of_unknown_glyph_is_dropped",
-    tex:        repro!("mtreduced_whole_block_footnotemark_of_unknown_glyph_is_dropped"),
-    warnings:   2,
-    creators:   &[r#"Ann Able Bob Baker Dee Dunn Fay Fox ; thanks[]=Equal contribution"#],
+    repro:      "mtreduced_whole_block_footnotemark_links_its_own_note",
+    tex:        repro!("mtreduced_whole_block_footnotemark_links_its_own_note"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able Bob Baker Dee Dunn Fay Fox ; footnotemark[*]= ; thanks[*]=Equal contribution"#,
+    ],
     moves:      r#""#,
-    page:       &[r#"Ann Able Bob Baker Dee Dunn Fay Fox | under: Equal contribution"#],
+    page:       &[
+      r#"Ann Able Bob Baker Dee Dunn Fay Fox ; *→note ; * plain"#,
+      r#"margin: Equal contribution"#,
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -354,6 +360,24 @@ const BINDINGS: &[Row] = &[
       r#"Bob Baker ; †→note"#,
       r#"Cy Cole"#,
       r#"margin: Also at X. ; Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreduced_raw_copy_maketitle_typed_star_links_its_thanks",
+    tex:        repro!("mtreduced_raw_copy_maketitle_typed_star_links_its_thanks"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Karlsruhe Institute of Technology."#,
+      r#"Bob Baker ; footnotemark[*]="#,
+      r#"Cy Cole ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole ; *→note"#,
+      r#"margin: Karlsruhe Institute of Technology."#,
     ],
     page_moves: r#""#,
   },

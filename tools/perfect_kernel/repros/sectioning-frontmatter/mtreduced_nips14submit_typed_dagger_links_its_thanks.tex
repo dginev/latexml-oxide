@@ -1,6 +1,6 @@
-% mechanism: the nips binding (latexml_contrib iclr_sty.rs) answers NIPS 2007-2015's styles by name
-%   (nips14submit_e.sty: no versioned fallback strips it), reads the copy raw and declares the marks its `\maketitle`
-%   body sets (`shipped_class::input_shipped_package_title_marks`): a name's typed `$^\dagger$` is the † note's mark
+% mechanism: the title marks of the `\maketitle` that runs, where no binding declares them, read off its body
+%   (`latex_constructs::read_title_marks_in_force`, DG 2026-11-17): nips14submit_e.sty, which no binding answers, sets
+%   `\fnsymbol` before `\@maketitle`, so a name's typed `$^\dagger$` is the † note's mark
 % witness:  1503.02531 (nips14submit_e.sty: "Geoffrey Hinton∗†", "Oriol Vinyals†", foot "∗Also affiliated with the
 %   University of Toronto …", "†Equal contribution."; int sandbox run 390); the style a minimal stand-in of
 %   nips14submit_e.sty:65-79

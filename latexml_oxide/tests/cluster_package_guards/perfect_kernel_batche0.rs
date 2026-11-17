@@ -3278,7 +3278,10 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (MTREDUCE -24, DG 2026-11-17 maketitle reduce: the static reader's name lists, `touches_marks` and
   // `steps_footnotes_before_title` deleted; what stays reads only whether the class's `\maketitle` runs, by meaning,
   // and the assignment primitives that are no call)
-  ("latexml_engine/src/latex_constructs/mod.rs", 179),
+  // (MTREDUCEd, DG 2026-11-17: the `\maketitle` body reader moved here from latexml_package's shipped_class.rs, as the
+  // kernel reads whichever `\maketitle` runs; its definers and counter steps are matched by meaning, the names only
+  // their lookup keys, and `\thefootnote`, `\@maketitle`, `\@author` are the definition's target and the names' cut)
+  ("latexml_engine/src/latex_constructs/mod.rs", 199),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
   ("latexml_engine/src/latex_constructs/sect02.rs", 7),

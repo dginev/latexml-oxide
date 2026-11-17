@@ -2,8 +2,9 @@
 //! `mn2e_cls`).
 use latexml_core::definition::origin::ProvideOnlyGuard;
 
+pub use crate::engine::latex_constructs::{FNSYMBOL_TITLE_MARKS, TitleMarkLine};
 use crate::{
-  engine::latex_constructs::{BoundMaketitle, declare_package_title_marks},
+  engine::latex_constructs::{BoundMaketitle, body_title_marks, declare_package_title_marks},
   prelude::*,
 };
 
@@ -229,17 +230,6 @@ pub fn input_shipped_package() -> Result<bool> {
   Ok(shipped)
 }
 
-/// A `\thefootnote` a style's `\maketitle` sets, as its versions write the argument (whitespace aside), and the title
-/// marks it prints ([`input_shipped_package_title_marks`]).
-pub type TitleMarkLine = (&'static str, &'static str);
-
-/// `\def\thefootnote{\fnsymbol{footnote}}`, in either spelling (latex.ltx `\fnsymbol#1` is
-/// `\expandafter\@fnsymbol\csname c@#1\endcsname`): the document's `\@fnsymbol` of the counter (revMTREDUCEc S3).
-pub const FNSYMBOL_TITLE_MARKS: &[TitleMarkLine] = &[
-  (r"\fnsymbol{footnote}", r"\@fnsymbol\c@footnote"),
-  (r"\@fnsymbol\c@footnote", r"\@fnsymbol\c@footnote"),
-];
-
 /// A stand-in binding reads its paper's copy raw ([`input_shipped_package`]) and declares the title marks the copy's
 /// `\maketitle` sets ([`read_copy_title_marks`]).
 pub fn input_shipped_package_title_marks(lines: &'static [TitleMarkLine]) -> Result<bool> {
@@ -346,119 +336,6 @@ fn declare_body_title_marks(
   Ok(())
 }
 
-/// The title marks a `\maketitle` body sets, by its `\thefootnote` definitions (`\def`, `\renewcommand`, …): a line of
-/// the binding's (`lines`), or a macro whose body is a fixed glyph (aaai2026.sty:135 `\def\thefootnote{\fndag}`, :210
-/// `\def\fndag{†}`, 2511.07192); none where it sets no `\thefootnote` before the names print, another, one under a
-/// conditional, or two that disagree.
-fn body_title_marks(body: &Tokens, lines: &[(&str, &str)]) -> Option<String> {
-  const DEFINERS: &[&str] = &[
-    "\\def",
-    "\\gdef",
-    "\\edef",
-    "\\xdef",
-    "\\renewcommand",
-    "\\newcommand",
-    "\\providecommand",
-  ];
-  let squeeze = |text: &str| {
-    text
-      .chars()
-      .filter(|c| !c.is_whitespace())
-      .collect::<String>()
-  };
-  let tokens = body.unlist_ref();
-  let is = |i: usize, catcode: Catcode| tokens.get(i).is_some_and(|t| t.get_catcode() == catcode);
-  let space = |i: usize| is(i, Catcode::SPACE);
-  let mut found: Vec<String> = Vec::new();
-  let mut open_conditionals = 0i32;
-  for (at, token) in tokens.iter().enumerate() {
-    // (only a definition before the names print decides: one after `\@maketitle` sets the notes `\@thanks` prints,
-    // not the names' marks, revMTREDUCEc S1)
-    if token.with_cs_name(|name| name == "\\@maketitle" || name == "\\@author") {
-      break;
-    }
-    match lookup_conditional(token) {
-      Some(ConditionalType::If) => open_conditionals += 1,
-      Some(ConditionalType::Fi) => open_conditionals -= 1,
-      _ => {},
-    }
-    if !token.with_cs_name(|name| name == "\\thefootnote") {
-      continue;
-    }
-    // (one under a conditional may not be taken: `\if@nipssym\renewcommand{\thefootnote}{…}\fi`, revMTREDUCEc P1)
-    if open_conditionals > 0 {
-      return None;
-    }
-    // (`\def\thefootnote` or `\renewcommand{\thefootnote}`, a `*` aside)
-    let braced = at > 0 && is(at - 1, Catcode::BEGIN);
-    let mut before = if braced {
-      at.checked_sub(2)
-    } else {
-      at.checked_sub(1)
-    };
-    if before.is_some_and(|i| tokens[i].with_str(|s| s == "*")) {
-      before = before.and_then(|i| i.checked_sub(1));
-    }
-    if !before.is_some_and(|i| tokens[i].with_cs_name(|name| DEFINERS.contains(&name))) {
-      continue;
-    }
-    let mut i = at + 1;
-    if braced {
-      if !is(i, Catcode::END) {
-        continue;
-      }
-      i += 1;
-    }
-    while space(i) {
-      i += 1;
-    }
-    if !is(i, Catcode::BEGIN) {
-      return None;
-    }
-    let (mut depth, start) = (0usize, i + 1);
-    let end = tokens[i..].iter().position(|t| {
-      match t.get_catcode() {
-        Catcode::BEGIN => depth += 1,
-        Catcode::END => depth -= 1,
-        _ => {},
-      }
-      depth == 0
-    })?
-      + i;
-    let argument = &tokens[start..end];
-    let text = squeeze(&Tokens::new(argument.to_vec()).to_string());
-    let marks = match lines.iter().find(|(line, _)| squeeze(line) == text) {
-      Some((_, marks)) => marks.to_string(),
-      None => fixed_glyph_macro(argument)?,
-    };
-    found.push(marks);
-  }
-  found.dedup();
-  (found.len() == 1).then(|| found.remove(0))
-}
-
-/// `argument` is one macro of no parameters whose body is characters alone, a fixed glyph: its name.
-fn fixed_glyph_macro(argument: &[Token]) -> Option<String> {
-  let [macro_token] = argument else {
-    return None;
-  };
-  let definition = lookup_definition(macro_token).ok().flatten()?;
-  let Some(ExpansionBody::Tokens(body)) = definition.get_expansion() else {
-    return None;
-  };
-  let glyph = body.unlist_ref();
-  (definition
-    .get_parameters()
-    .is_none_or(|parameters| parameters.get_parameters().is_empty())
-    && !glyph.is_empty()
-    && glyph.iter().all(|t| {
-      matches!(
-        t.get_catcode(),
-        Catcode::LETTER | Catcode::OTHER | Catcode::ACTIVE
-      )
-    }))
-  .then(|| macro_token.with_cs_name(|name| name.to_string()))
-}
 /// The file a stand-in binding answers, as the paper asked for it: the request a versioned fallback answers with
 /// this binding (`fallback_request` while its `fallback_target` is the load's `\@currname`), else `\@currname`.
 fn stand_in_request() -> Result<String> {

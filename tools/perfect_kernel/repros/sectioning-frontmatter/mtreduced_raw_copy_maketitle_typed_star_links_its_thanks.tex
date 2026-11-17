@@ -1,0 +1,46 @@
+% mechanism: the title marks of the `\maketitle` that runs, where no binding declares them, read off its body
+%   (`latex_constructs::read_title_marks_in_force`, DG 2026-11-17): ltexpprt.sty's `\renewcommand\thefootnote
+%   {\@fnsymbol\c@footnote}` before `\@maketitle` gives Ann's note ∗, so the ∗ the co-authors type links to it
+% witness:  INTCHECK's probe ltexstar (ltexpprt.sty, SIAM proceedings); 2404.01413 (colm2024 copy, its ‡ links),
+%   2510.09942 (a renamed neurips copy), 1511.03137, 2011.13149, 2406.07546, 2506.19073, 2507.08794, 1501.06614,
+%   2011.09192; the style a minimal stand-in of ltexpprt.sty:304-328
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗ Cy Cole∗"; foot "∗ Karlsruhe
+%   Institute of Technology."
+% engines:  rust WRONGFIXc = Ann's note ∗, the typed ∗s linking nothing; CONNFIXc = the ∗s linked; MTREDUCEc and
+%   INTFMfinal (d9b4c025647) = the note unmarked, no link
+% expect:   0 errors, 0 Warnings; Ann's note ∗; Bob's and Cy's ∗ linked to it
+% status:   RED (INTFMfinal) -> GREEN (MTREDUCEd: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{ltexpprt.sty}
+\renewcommand\maketitle{\par
+  \begingroup
+    \renewcommand\thefootnote{\@fnsymbol\c@footnote}%
+    \def\@makefnmark{\rlap{\@textsuperscript{\normalfont\@thefnmark}}}%
+    \if@twocolumn
+      \ifnum \col@number=\@ne
+        \@maketitle
+      \else
+        \twocolumn[\@maketitle]%
+      \fi
+    \else
+      \newpage
+      \@maketitle
+    \fi
+    \thispagestyle{empty}\@thanks
+  \endgroup
+  \setcounter{footnote}{0}%
+  \global\let\thanks\relax
+  \global\let\maketitle\relax}
+\end{filecontents*}
+\documentclass[twoside,leqno,twocolumn]{article}
+\usepackage{ltexpprt}
+\title{A Title}
+\author{Ann Able\thanks{Karlsruhe Institute of Technology.}
+\and
+Bob Baker$^*$
+\and
+Cy Cole$^*$}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
