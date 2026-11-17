@@ -559,7 +559,8 @@ fn code_of(dir: &str) -> Vec<(String, String)> {
 /// and the review reads it; a fallen one lowers its pin.
 #[test]
 fn the_mark_components_only_shrink() {
-  const MARK_FORM_CALLS: usize = 30;
+  // (MARKKEY R2a 30 -> 28: PURE's `refmark_glyphs`, its two `mark_form(` keys of `_refmarkshown`, deleted)
+  const MARK_FORM_CALLS: usize = 28;
   const MARK_ATTRIBUTES: &[&str] = &[
     "_mark",
     "_markfromcounter",
