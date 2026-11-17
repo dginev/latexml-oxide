@@ -1,0 +1,16 @@
+% mechanism: the marks on one name in the order the PDF prints them: a name's own `\thanks` then a `\footnotemark[1]`
+%   print "†,∗"; we write the copy of note 1 first (row R MARKORDER)
+% witness:  none (review revPRESBX S2, a/g1.tex; AAAI's `Bob\corresponding\equalcontrib` likewise, pre-existing)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗, Bob Baker†,∗ Cy Cole†"
+% engines:  rust PRESBXbase2 (14e92b291ab), PRESBXb = 0 errors, 0 Warnings; Bob thanks[∗] then thanks[†]
+% expect:   0 errors, 0 Warnings; Bob thanks[†] then the copy marked ∗
+% status:   RED (row R MARKORDER)
+% moves:    XML row R MARKORDER
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able\thanks{Equal.}, Bob Baker\thanks{Corresponding.}\footnotemark[1], Cy Cole\footnotemark[2]}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -4,11 +4,11 @@
 %   `\maketitle␣`)
 % witness:  review revMARKSAFEc (p/robwrap_art.tex)
 % oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker†", footnotes "∗ First note.", "† Second note."
-% engines:  rust MARKBIND = 0 errors, 0 Warnings; both notes unmarked (the wrapper not seen: marks unknown)
+% engines:  rust PRESBXb = 0 errors, 0 Warnings; ∗ †; MARKBIND = 0 errors, 0 Warnings; both notes unmarked (the wrapper not seen: marks unknown)
 % expect:   0 errors, 0 Warnings; Ann's thanks ∗, Bob's †
-% status:   XML RED (row R SHAUTO/T1); HTML GREEN (an unmarked one-author note prints under its name;
-%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
-% moves:    XML row R SHAUTO/T1
+% status:   XML RED (row R SHAUTO/T1) -> GREEN (PRESBXb: the merge of PRESBX's `latex_constructs::maketitle_marks`, which
+%   reads the wrapper by meaning to any depth it reads); HTML GREEN (the one-line card: each mark shown, the notes in the
+%   margin; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload:  ar5iv.sty
 \documentclass{article}
 \let\oldmt\maketitle

@@ -1,0 +1,18 @@
+% mechanism: the emitter cuts a name list at ". " so that the segment of the name after the period starts with the mark
+%   before it: `Bob Baker\footnotemark[1]. Cy Cole` gives Cy a copy of note 1, which pdflatex prints on Bob alone — a
+%   silent mis-link (no diagnostic); AAAI's `\equalcontrib` takes the base's path where it meets the shape (`AAAI_DOTTED`)
+% witness:  none (review revPRESBXb P2, p/d1.tex; pre-existing on PRESBXbase2; 2509.03329's `\equalcontrib.` the AAAI
+%   form)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗, Bob Baker∗. Cy Cole, Dee Dunn"; foot "∗ Equal."
+% engines:  rust PRESBXbase2 (14e92b291ab), PRESBXb, PRESBXc = 0 errors, 0 Warnings; Ann, Bob and Cy each thanks[∗]
+% expect:   0 errors, 0 Warnings; Ann thanks[∗], Bob its copy, Cy and Dee nothing
+% status:   RED (row R DOTCUT)
+% moves:    XML, HTML row R DOTCUT
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able\thanks{Equal.}, Bob Baker\footnotemark[1]. Cy Cole, Dee Dunn}
+\begin{document}
+\maketitle
+Body.
+\end{document}

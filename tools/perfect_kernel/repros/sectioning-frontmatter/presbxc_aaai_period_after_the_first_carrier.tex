@@ -1,0 +1,31 @@
+% mechanism: AAAI's `\equalcontrib` on the first name followed by "." (sect05.rs `aaai_note`, `AAAI_DOTTED`; the
+%   fail-safe): every use is a note of its own, so no name's note is lost to the emitter's cut at ". "
+% witness:  none (review revPRESBXb BL1, a/c7.tex and a/c6.tex on aaai25.sty)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗. Bob Baker∗, Cy Cole"; foot
+%   "∗These authors contributed equally." once
+% engines:  rust PRESBXbase2 (14e92b291ab) = 0 errors, 2 Warnings; Ann thanks[∗], Bob thanks[†]; PRESBXb
+%   (300685cb312) = Ann nothing, Bob a bare footnote mark (the note's text lost)
+% expect:   the fail-safe: 0 errors, 2 Warnings; Ann thanks[∗], Bob thanks[†] (the base's output; the glyph † is row R
+%   AAAIDOT)
+% status:   RED (PRESBXb) -> GREEN fail-safe, XML and HTML RED against the PDF (PRESBXc:
+%   perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% moves:    XML, HTML row R AAAIDOT
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{presbxcaaaitwo.sty}
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newcounter{eqfn}\setcounter{eqfn}{0}%
+  \vbox{\let\footnote\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{eqfn}{\value{footnote}}\else\footnotemark[\value{eqfn}]\fi}%
+    \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{presbxcaaaitwo}
+\title{A Title}
+\author{Ann Able\equalcontrib. Bob Baker\equalcontrib, Cy Cole}
+\begin{document}
+\maketitle
+Body.
+\end{document}

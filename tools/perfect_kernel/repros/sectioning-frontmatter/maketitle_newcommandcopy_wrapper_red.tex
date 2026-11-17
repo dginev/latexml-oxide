@@ -5,8 +5,9 @@
 % engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 0 Warnings; notes unmarked (fail-safe), HTML "†" on both;
 %   MARKSAFEb: unmarked, no glyph, each text under its name
 % expect:   0 errors, 0 Warnings; notes marked ∗ and †
-% status:   RED (row R SHAUTO/T1: the marks a `\maketitle` prints, from a replay of the one in force)
-% moves:    row R SHAUTO
+% status:   RED (row R SHAUTO/T1) -> GREEN (PRESBX: the wrapper reaches the class's `\maketitle` through the copy's
+%   body, `latex_constructs::reaches_class_maketitle`; perfect_kernel_batchfmmarks::
+%   notes_are_marked_only_where_the_class_prints_marks)
 % preload:  ar5iv.sty
 \documentclass{article}
 \NewCommandCopy\oldmt\maketitle\RenewDocumentCommand\maketitle{}{\oldmt\thispagestyle{empty}}

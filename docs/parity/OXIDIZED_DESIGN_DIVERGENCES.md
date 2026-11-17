@@ -19649,19 +19649,41 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
 - *Fail-safes* (DG 2026-11-16: "a wrong glyph is worse than none; unbound classes get no automatic mark until T1
   measures the real glyph"). The lock records whose code it refused a `\maketitle` from (`state::note_redefined`):
   `\maketitle:redefined@class` while a class file loads (the packages it loads included), `\maketitle:redefined@document`
-  otherwise (the document's, a package's it loads). The class's marks hold only where its own `\maketitle` runs
-  (`latex_constructs::class_maketitle_in_force`): the document took none over, or its redefinition calls the class's by
-  meaning (`\let\oldmt\maketitle \renewcommand\maketitle{\oldmt…}`, whose page pdflatex prints as the plain
-  document's: review revMARKSAFEb B1, mnras, IEEEtran, llncs). A body that names `\maketitle` at all counts as one, its
-  `\global\let\maketitle\relax` included: an ACL copy's whole `\maketitle` keeps the class's ∗ † (2502.19103), and so,
-  wrongly, does a document's own article-like `\maketitle` that prints none (`\let\@makefnmark\relax`; repro
-  `fmmarks_own_maketitle_relax_red`, row R SHAUTO/T1). Another document `\maketitle` prints marks unknown here
-  (`\def\thefootnote{\arabic{footnote}}`: 1, 2). The class file's own drop is the class's: a binding that reads its raw
+  otherwise (the document's, a package's it loads); `\maketitle`'s record, the one read, follows the meaning through
+  the document's `\let` (`state::carry_refusal_records`): a copy taken after a refusal holds the refused body, a restore
+  (`\let\maketitle\stdmaketitle` after a refused `\renewcommand`, 2509.02894) gives the class's back. No other name's
+  record moves (the kernel's `\global\let\thanks\relax` keeps `\lx@dropped@thanks`; repro
+  `presbxc_refusal_record_follows_maketitle_only`). A file's `\let` onto a refused `\maketitle` (a package's restore)
+  leaves its marks unknown: the refused body forgotten, the document's record kept (`carry_document_refusal_records`;
+  not a class's replayed body, `lx_depositing_class_maketitle`/`lx_replaying_class_setter`). The class's marks hold only where its own `\maketitle` runs
+  (`latex_constructs::maketitle_marks`, `MaketitleMarks::Class`): the document took none over, or its redefinition
+  calls the class's by meaning, itself or through the macros it calls (`\let\oldmt\maketitle
+  \renewcommand\maketitle{\oldmt…}`, a `\NewCommandCopy` copy, whose page pdflatex prints as the plain document's:
+  review revMARKSAFEb B1, mnras, IEEEtran, llncs); an assignment's target or source is no call (a closing
+  `\global\let\maketitle\relax`). Another `\maketitle` — the document's, a package's, an option file's its class loads
+  (11lomcon.sty, hep-ph0312288), a stand-in copy's (`state::copy_provides_maketitle`: spconf.sty) — prints the marks
+  its own body sets before it prints the title (`\@maketitle`, `\@thanks`, `\@author`; PRESBX): its `\thefootnote`
+  (`\def\thefootnote{}`, none: spconf.sty:147-149, 2110.09738, 2303.02025, 1812.01220; `\fnsymbol`: aaai25.sty:56,
+  ACL's, 2502.19103 unchanged; `\@arabic`: lni.cls:477), its `\fnsymbol{<counter>}` read as TeX expands it,
+  `\@fnsymbol\c@<counter>` (latex.ltx:10205), so the document's `\@fnsymbol` holds (acl2019.sty:37, 1905.10033: † ‡;
+  the kernel `\fnsymbol` is Perl's fixed table), and an `\@makefnmark` that prints nothing (`\let\@makefnmark\relax`:
+  none, repro `fmmarks_own_maketitle_relax_red`; a `\let` to a macro is read by its body, one printing `\@thefnmark`
+  the mark, one read neither way unknown). A body proven to touch no mark prints them under the `\thefootnote` in force
+  (11lomcon.sty:20-27 under :61's `\alph`: "a", "b"): it sets no mark or note command and `\let`s none from one, runs
+  no mark command (an environment's begin code included, `\begin{minipage}`), makes no assignment read cannot follow
+  (`\csname`, `\@namedef`, an `\expandafter` before an assignment), and each author macro it calls is read, three
+  deep (`MAKETITLE_DEPTH`; one deeper is unread, no proof; LaTeXML's own macros are read for their mark commands
+  alone); the body itself runs no note command (one in a macro it calls is the names': 11lomcon's `\@aabuffer`). Any
+  other is unknown here, as is one that redefines a note command, makes a footnote (`\footnote`, `\footnotemark`,
+  `\thanks`) or sets the footnote counter (`\setcounter`, `\addtocounter`, `\stepcounter`, `\refstepcounter`,
+  `\c@footnote`; `\setcounter{footnote}{0}` aside) before the title (`steps_footnotes_before_title`; review revPRESBXb
+  BL2: `\footnote{Preprint…}` first prints "Ann†"). The rehearsal labels its marks the same way
+  (`latex_constructs::enter_maketitle_marks`). The class file's own drop is the class's: a binding that reads its raw
   class and declares its marks keeps them (lni.cls:475-477 arabic, `lni_cls.rs`: 2407.04435's 1, 1, 1,2, 3). Under a
   class no binding declares the marks of, the class file's own `\maketitle` is unknown too (`title_marks_unknown`:
   `\maketitle:redefined@class`; an unbound class's, scrartcl's `\fnsymbol`, where Perl's number key wrote
   `\footnotemark[1]` "1", the advisor's I-3; geophysics's, 2006.10886, 2403.07393; a bound class's own `\maketitle`,
-  elsarticle's or llncs's, keeps Perl's marks), and so is a document's that is no wrapper of it. So no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
+  elsarticle's or llncs's, keeps Perl's marks). So no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
   `\footnotetext` of a title field (`drop_unknown_title_mark`: no `mark`, no tags, its text paired by the counter value
   `_fnvalue`) and no acmart `\authornote` (`acm_note_mark`) carries one — unless the document set `\thefootnote` itself
   in the field since it began (aiaa-tc's `\thanksibid{2}`, `\renewcommand\thefootnote{\fnsymbol{aiaa@cthanks}}
@@ -19686,7 +19708,8 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   \and Bob\thanks{…}}` "Ann Able1 Bob Baker†" (review revMARKSAFE S1); one in the preamble the class's `\maketitle`
   overrides (∗, †). titling's `\thanksmarkseries{<series>}` sets the class's declared marks to `\@nameuse{<series>}
   {footnote}` (titling.sty:60-61, :121, :145; Perl a no-op): `arabic` prints 1, 2; its `\symbolthanksmark` passes
-  `\fnsymbol` (:62), which pdflatex errs on, a no-op here. A mark alone keeps its glyph in `mark` only
+  `\fnsymbol` (:62), which pdflatex errs on, a no-op here. REVTeX's numbering pass (#1054) writes no glyph where the
+  document or a package defines `\@fnsymbol` (its table's would be wrong: 2603.18989), the mark unknown and counted. A mark alone keeps its glyph in `mark` only
   (`link_marked_notes`): 2607.15705's `\authornotemark[2]` that no note answers held "†" as its text too. A label
   authblk prints on a name (`\AB@authnote`, authblk.sty:120-133) that no `\affil` prints before its line is a mark the
   frontmatter places nowhere, counted at `\maketitle` (`authblk_sty::count_lost_labels`, one Warning listing them:
@@ -19700,9 +19723,12 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   tried and dropped: a macro-held label (`\author[\udem]`), a legend under several labels (`\affil[1,2]`) and a
   single-carrier note contact (jheppub's `\note[*]`) answer a request with no label the XML keeps.
 Open: a class with no binding writes no automatic mark — scrartcl prints ∗ — since only a binding declares its title's
-marks, nor does a document's own `\maketitle`, nor a `\NewCommandCopy` wrapper of the class's (no `\let` copy the
-by-meaning test sees, `maketitle_newcommandcopy_wrapper_red`); the measured glyph (T1: the title-page replay,
-`latex_constructs::sect05` `title_page_replay_tokens`, run on a sentinel `\thanks`) would give all three (row R SHAUTO).
+marks, nor does a document's own `\maketitle` whose marks its body does not set (a macro it calls sets them); the
+measured glyph (T1: the title-page replay, `latex_constructs::sect05` `title_page_replay_tokens`, run on a sentinel
+`\thanks`) would give both (row R SHAUTO). REVTeX's pass under a document's `\@fnsymbol` writes none where pdflatex
+prints that macro's glyph (2603.18989, repro `presbx_revtex_document_fnsymbol_red`, row R PRESBX/fnsymbol). The marks
+on one name follow the notes' order, not the PDF's (`Bob\thanks{…}\footnotemark[1]` prints "†,∗"; repro
+`presbxb_mark_order_on_one_name_red`, row R MARKORDER).
 A name's `\footnotemark[n]` under them finds its note by no glyph: number keys are row R MARKKEY. A `&` cell end is not
 read by the rehearsal (only `\and` and `\\`). The
 hand-typed legend marks and the Link step are generic already (scrartcl and OmniBus rows of
@@ -19729,8 +19755,34 @@ marksafe_unbound_class_footnotemark_given_number_unknown, marksafe_unbound_class
 marksafe_thefootnote_set_in_a_cell_holds_there, marksafe_thefootnote_set_in_a_cell_thanks,
 marksafe_thefootnote_set_in_a_cell_ends_at_its_line, authblk_macro_label_is_its_printed_text}.tex`); the suite's rows
 `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks` (with
-`marksafe_own_maketitle_copy_marks_unknown`, `marksafe_unbound_class_name_footnote_unknown`, and RED
-`maketitle_newcommandcopy_wrapper_red`).
+`marksafe_own_maketitle_copy_marks_unknown`, `marksafe_unbound_class_name_footnote_unknown`,
+`maketitle_newcommandcopy_wrapper_red`, `fmmarks_own_maketitle_relax_red`, and PRESBX's
+`presbx_spconf_empty_thefootnote_prints_no_mark`, `presbx_package_maketitle_renewed_thefootnote`,
+`presbx_lomcon_style_option_alph_marks`, PRESBXb's `presbxb_restored_maketitle_is_the_class_s`,
+`presbxb_restored_maketitle_is_the_saved_one`, `presbxb_restored_maketitle_at_begin_document`,
+`presbxb_maketitle_fnsymbol_reads_the_document_s`, `presbxb_maketitle_csname_thefootnote_marks_unknown`,
+`presbxb_maketitle_deep_thefootnote_marks_unknown`, `presbxb_maketitle_let_makefnmark_reads_its_source`, PRESBXc's
+fail-safes `presbxc_maketitle_footnote_before_the_title`, `presbxc_package_maketitle_footnote_in_force`,
+`presbxc_maketitle_setcounter_footnote_before_the_title`, `presbxc_package_restores_refused_maketitle` (each with a RED
+twin against the PDF, row R SHAUTO/T1), `presbxc_maketitle_setcounter_footnote_zero_keeps_its_marks`,
+`presbxc_package_copies_refused_maketitle_keeps_it`; RED `presbxb_mark_order_on_one_name_red`,
+`presbxc_wrapper_of_a_copy_after_refusal_red`) and `perfect_kernel_batchpresbxc::a_let_carries_only_the_maketitle_refusal_record`;
+AAAI's once-made notes (`latex_constructs::sect05` `\lx@aaai@note`: the first use's note, a later use its
+`\footnotemark[<n>]`; the rehearsal tells the first by its field position, and a use digested with none — the emitter's
+second digest of a name, an `\affiliations` field — is a later one once the kind's note is made, its mark once per name)
+in `a_mark_on_a_name_is_a_copy_of_its_note` (`presbx_aaai_equalcontrib_repeats_its_mark`,
+`presbx_aaai_equalcontrib_then_footnotemark`, `presbx_aaai2027_corresponding_repeats_its_mark`: 2501.02471, 2508.07026).
+A use followed by "." makes every use of the document `\thanks{<text>}`, the reading before the first-use one
+(`AAAI_DOTTED`, the fail-safe): the emitter's cut at ". " gives the next name the use before it, which linked a name
+carrying no mark (review revPRESBXb BL1, c1) or lost a note's text (c6, c7); 2509.03329's `Bernal…\equalcontrib.` is
+written so, Robles ∗, Bernal †, Raigoso ‡ where pdflatex prints ∗ ∗ ∗ (rows `presbxb_aaai_equalcontrib_after_a_period`,
+`presbxc_aaai_period_after_a_carriers_mark`, `presbxc_aaai_period_after_the_first_carrier`, each with a RED twin, row R
+AAAIDOT; the generic cut RED `presbxc_dotcut_footnotemark_after_a_period_red`, row R DOTCUT). The AAAI stubs live in
+the kernel (sect05.rs), not a binding: aaai22-aaai2027.sty load on `\documentclass{article}` and have none, and their
+note record is a thread-local (`AAAI_FIRST_NOTES`, `AAAI_DOTTED`) since the rehearsal undoes every assignment. RED
+`presbx_revtex_document_fnsymbol_red` in `revtex_marks_follow_its_numbering`; RED
+`perfect_kernel_batchpresbxc::a_maketitle_s_own_note_carries_its_printed_mark_red` (a `\maketitle`'s own `\footnote`
+before the title written ‡ where pdflatex prints ∗, row R PRESBX/ownnote).
 
 ### 1054. A title-page list's text is a note at the title block; a footnote text several names share under one mark is their marked note (SHREST)
 

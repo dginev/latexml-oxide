@@ -1,0 +1,19 @@
+% mechanism: a document's `\maketitle` that assigns where it cannot be read here (`\expandafter\def\csname
+%   thefootnote\endcsname`, likewise `\@namedef{thefootnote}`) has unknown marks: written with none, each note under its
+%   name (`latex_constructs::touches_marks`; the fail-safe, DG 2026-11-16: no glyph rather than a wrong one)
+% witness:  none (review revPRESBX B4, p/csname.tex, p/namedef.tex)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker†"
+% engines:  rust PRESBX (b85b844eb81) = 0 errors, 0 Warnings; thanks[1], thanks[2] (the `\thefootnote` in force)
+% expect:   0 errors, 0 Warnings; both notes unmarked
+% status:   RED (PRESBX) -> GREEN fail-safe (PRESBXb: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\begingroup\expandafter\def\csname thefootnote\endcsname{\fnsymbol{footnote}}\begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}
