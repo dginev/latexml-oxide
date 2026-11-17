@@ -1,0 +1,19 @@
+% mechanism: an `\fnref` in the body, after the class printed the names (elsarticle.cls:159-165, :256-265), sets an
+%   `\@fnmark` no name prints: the note is the block's
+% witness: revELSARTc r13 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa"; footnote "1 Foot one"
+% engines: rust ELSARTc (8756e486ffb): Alice Foot one; INTFMfinal: right, 1 Warning
+% expect:  0 errors 0 Warnings; Foot one the block's
+% status:  RED (ELSARTc) -> GREEN (ELSARTd) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}
+\author[l1]{Bob Two}
+\fntext[f1]{Foot one}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x\fnref{f1}
+\end{document}

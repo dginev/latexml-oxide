@@ -1,0 +1,19 @@
+% mechanism: `\fntext[a,b]` labels its note `X@a,b` (elsarticle.cls:167-171), which no `\fnref` reaches (`\fnmark`
+%   splits its keys, :159-163): a note on no name; its deferred label is defined for its whole key (`marked_note_text`)
+% witness: revELSARTc r07c (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa , Carol Threea"; footnote "1 Foot ab"
+% engines: rust ELSARTc (8756e486ffb): Bob Foot ab (an undefined label: an unlabelled contact); INTFMfinal: the expected
+% expect:  0 errors 0 Warnings; Foot ab the block's
+% status:  RED (ELSARTc) -> GREEN (ELSARTd) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}
+\author[l1]{Bob Two}
+\fntext[a,b]{Foot ab}
+\author[l1]{Carol Three}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x\end{document}

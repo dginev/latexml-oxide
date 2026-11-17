@@ -3113,7 +3113,11 @@ mod browser_render_fmmarks {
     (
       "twelve names on two lines (2602.18802's shape)",
       repro!("fmmarks_many_names_two_legend_marks"),
-      &[("Ann Able", "\u{2217}"), ("Bob Baker", "\u{2217}"), ("Dan Dorn", "\u{2020}")],
+      &[
+        ("Ann Able", "\u{2217}"),
+        ("Bob Baker", "\u{2217}"),
+        ("Dan Dorn", "\u{2020}"),
+      ],
       &["Ann Able", "Dan Dorn"],
     ),
     (

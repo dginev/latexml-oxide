@@ -1,0 +1,20 @@
+% mechanism: a `\corref` read after `\maketitle`, where the class printed the names (elsarticle.cls:805, :256-265),
+%   marks no name, and the binding's first-name label is frozen there (`els_names_printed`); but a sole author takes the
+%   block's orphaned note (relocate.rs, Perl's sole-author rule), so Alice still carries it. With two authors the note is
+%   the block's (the same freeze)
+% witness: revELSARTc r03 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea"; footnote "∗ Corr one" (no ∗ on the name)
+% engines: rust INTFMfinal, ELSARTc, ELSARTd: Alice Corr one
+% expect:  0 errors 0 Warnings; Corr one the block's
+% status:  RED (row R ELSSOLE) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\title{T}
+\author[l1]{Alice One}
+\cortext[c1]{Corr one}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\maketitle
+\corref{c1}
+x
+\end{document}

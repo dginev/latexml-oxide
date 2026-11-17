@@ -2,7 +2,8 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use super::elsart_support_core_sty::{
   ELS_AUTHOR_KEYS, ELS_CORREF_KEYS, ELS_CORTEXT_KEYS, ELS_FNTEXT_KEYS, ELS_NOTE_LABELS,
-  ELS_PLACE_KEYS, els_carriers, els_outside_mark, record_els_keys, recorded_els_key,
+  ELS_PLACE_KEYS, els_carriers, els_label_key, els_names_printed, els_outside_mark, els_settle_key,
+  els_warn_pending_lists, record_els_keys, recorded_els_key,
 };
 use crate::{engine::base_utilities::reading_author_fields, prelude::*};
 
@@ -119,9 +120,14 @@ LoadDefinitions!({
   // each `\footnotetext` a note on the document (`\lx@frontmatter@footnotes`); a correspondence item's `\elsLabel{cor1}`
   // the `cor:cor1` its names request (`\lx@fm@list@label`, OD #1054).
   RawTeX!(r"\let\@cormark\@empty\let\@cornotes\@empty\def\elsaddress{}
-\def\lx@els@print@lists{\lx@frontmatter@footnotes{\elsaddress}\lx@frontmatter@footnotes{\def\lx@els@label@prefix{cor}\@cornotes}\global\let\elsaddress\@empty\global\let\@cornotes\@empty}
+\def\lx@els@print@lists{\lx@els@names@printed\lx@frontmatter@footnotes{\elsaddress}\lx@frontmatter@footnotes{\def\lx@els@label@prefix{cor}\@cornotes}\global\let\elsaddress\@empty\global\let\@cornotes\@empty}
 \def\lx@els@end@frontmatter{\lx@els@print@lists\lx@note@title@page}");
   Let!("\\end{frontmatter}", "\\lx@els@end@frontmatter");
+  // (there the names print, the first one's marks read, `els_names_printed`; with no print, the key lists are warned
+  // of at the end)
+  DefPrimitive!("\\lx@els@names@printed", { els_names_printed(); });
+  DefPrimitive!("\\lx@els@warn@mark@lists", { els_warn_pending_lists(); });
+  at_end_document(TokenizeInternal!(r"\lx@els@warn@mark@lists"))?;
   AddToMacro!("\\lx@maketitle@body", "\\lx@els@print@lists");
   // elsarticle.cls:656-668: a labelled `\address[a]{…}` goes to the address list under the names (`\elsaddress`), an
   // unlabelled one into the names list itself (`\@address` into `\elsauthors`), printed with the names, above every
@@ -298,9 +304,9 @@ LoadDefinitions!({
       _ => n.to_string(),
     };
     if let Some(key) = &key {
-      let mut marks = lookup_string("@elsarticle@fnmarks");
-      marks.push_str(&s!("{}={mark};", key.to_string().trim()));
-      assign_value("@elsarticle@fnmarks", Stored::String(pin(&marks)), Scope::Global);
+      let name = els_fn_marks(&key.to_string());
+      let marks = lookup_string(&name);
+      assign_value(&name, Stored::String(pin(s!("{marks};{mark};"))), Scope::Global);
     }
     Ok(marked_note_text(&s!("fn"), "note", Some(mark), key, text))
   });
@@ -326,11 +332,10 @@ LoadDefinitions!({
     let star = || ["∗", "∗∗"].get(n.wrapping_sub(1)).map(|mark| (*mark).to_string());
     // (the number another mark of the same name prints too, an `\fntext`'s or a numbered address's: the ∗ the footnote
     // prints, :181-185 — two notes never share a mark)
-    let fn_marks = lookup_string("@elsarticle@fnmarks");
     let numbered = lookup_bool("@elsarticle@numafflabel");
     let collides = els_carriers(&key).iter().flatten().any(|other| {
       *other != key.trim()
-        && (fn_marks.split(';').any(|e| e.split_once('=') == Some((other.as_str(), n.to_string().as_str())))
+        && (lookup_string(&els_fn_marks(other)).contains(&s!(";{n};"))
           || (numbered && recorded_els_key(ELS_PLACE_KEYS, other)))
     });
     // (a note no name reaches prints its ∗ on none: no mark, OD #1067)
@@ -506,9 +511,10 @@ fn marked_note_text(
   text: Tokens,
 ) -> Tokens {
   let key = key.map(|key| key.to_string()).unwrap_or_default();
-  // (a plain key's label is settled once the entries are read, `els_settle_note_labels`)
-  let label = if els_plain_key(&key) {
-    els_settle_note_labels();
+  // (a plain key's label is settled as the entries are read, `els_settle_note_labels`: its own here, so every label
+  // the notes request is defined)
+  let label = if els_plain_key(&key) && !reading_author_fields() {
+    els_settle_key(&key);
     s!("{LABEL_REF}{{{}}}", els_note_ref(prefix, &key))
   } else {
     els_note_label(prefix, &key)
@@ -557,7 +563,7 @@ fn els_note_shadowed(kind: &str, key: &str) -> bool {
   match (kind, els_key_entry(key)) {
     (_, Some(ElsEntry::Place)) => true,
     ("cor", Some(ElsEntry::Footnote)) => {
-      !recorded_els_key(ELS_CORREF_KEYS, key) && !els_outside_mark("cor").iter().any(|k| k == key)
+      !recorded_els_key(ELS_CORREF_KEYS, key) && els_outside_mark("cor").trim() != key
     },
     _ => false,
   }
@@ -569,7 +575,7 @@ fn els_note_label(kind: &str, key: &str) -> String {
   if els_note_shadowed(kind, key) {
     s!("{kind}@{}", key.trim())
   } else {
-    s!("{kind}:{}", key.trim())
+    s!("{kind}:{}", els_label_key(key))
   }
 }
 
@@ -582,19 +588,20 @@ fn els_plain_key(key: &str) -> bool {
 /// The deferred label (`\lx@label@ref`) of the note of kind `kind` (`cor`, `fn`) keyed `key`.
 fn els_note_ref(kind: &str, key: &str) -> String { s!("els@note@{kind}@{}", key.trim()) }
 
-/// Record each note's label ([`els_note_label`]) as its deferred label, read at the flush: the entry a key names is the
-/// one whose `\elsLabel` the .aux wrote last (elsarticle.cls:126-131), whatever the order the document gives them in, so
-/// a note read before the entry its key names is decided as one read after it (1711.08299; OD #1067).
-pub(super) fn els_settle_note_labels() {
-  if !lookup_bool(ELS_NOTE_LABELS) || reading_author_fields() {
+/// Record the label ([`els_note_label`]) of each note keyed `key` as its deferred label, read at the flush: the entry a
+/// key names is the one whose `\elsLabel` the .aux wrote last (elsarticle.cls:126-131), whatever the order the document
+/// gives them in, so a note read before the entry its key names is decided as one read after it (1711.08299; OD
+/// #1067). Settled for each key as it is read (`els_settle_key`).
+pub(super) fn els_settle_note_labels(key: &str) {
+  if !lookup_bool(ELS_NOTE_LABELS) || reading_author_fields() || !els_plain_key(key) {
     return;
   }
   for (kind, list) in [("cor", ELS_CORTEXT_KEYS), ("fn", ELS_FNTEXT_KEYS)] {
-    for key in lookup_string(list)
-      .split(',')
-      .filter(|key| els_plain_key(key))
-    {
+    if recorded_els_key(list, key) {
       set_label_ref(&els_note_ref(kind, key), &els_note_label(kind, key));
     }
   }
 }
+
+/// The global value holding the marks the `\fntext`s keyed `key` print (`;<mark>;` each).
+fn els_fn_marks(key: &str) -> String { s!("@elsarticle@fnmarks@{}", key.trim()) }

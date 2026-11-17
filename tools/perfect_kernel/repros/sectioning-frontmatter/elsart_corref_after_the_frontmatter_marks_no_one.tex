@@ -1,0 +1,20 @@
+% mechanism: a `\corref` read after `\end{frontmatter}`, where the class has printed the names (elsarticle.cls:1303,
+%   :256-265), marks no name: its note is the block's
+% witness: revELSARTc r09 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa"; footnote "∗ Corr one"
+% engines: rust ELSARTc (8756e486ffb): Alice Corr one; INTFMfinal: right, 1 Warning
+% expect:  0 errors 0 Warnings; Corr one the block's
+% status:  RED (ELSARTc) -> GREEN (ELSARTd) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}
+\author[l1]{Bob Two}
+\cortext[c1]{Corr one}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+\corref{c1}
+x
+\end{document}

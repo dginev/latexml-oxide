@@ -4143,6 +4143,134 @@ const CLASS: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
+    repro:      "elsart_corref_after_the_frontmatter_keeps_the_printed_mark",
+    tex:        repro!("elsart_corref_after_the_frontmatter_keeps_the_printed_mark"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | correspondent=Corr one ; affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=Corr two"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_corref_after_the_frontmatter_marks_no_one",
+    tex:        repro!("elsart_corref_after_the_frontmatter_marks_no_one"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=Corr one"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_fnref_in_the_body_marks_no_name",
+    tex:        repro!("elsart_fnref_in_the_body_marks_no_name"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | note=Foot one"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_second_frontmatter_keeps_the_first_printed_mark",
+    tex:        repro!("elsart_second_frontmatter_keeps_the_first_printed_mark"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | correspondent=Corr one ; affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=Corr two"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_corref_of_a_comma_key_marks_the_first_author",
+    tex:        repro!("elsart_corref_of_a_comma_key_marks_the_first_author"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | correspondent=Corr ab ; affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_corref_of_a_comma_key_in_a_name_marks_it",
+    tex:        repro!("elsart_corref_of_a_comma_key_in_a_name_marks_it"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#"Bob Two | correspondent=Corr ab ; affiliation=Some University, X, Y"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_fntext_of_a_comma_key_is_no_names",
+    tex:        repro!("elsart_fntext_of_a_comma_key_is_no_names"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#"Carol Three | affiliation=Some University, X, Y"#,
+      r#" | note=Foot ab"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#"Carol Three"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_corref_with_a_trailing_comma_marks_no_one",
+    tex:        repro!("elsart_corref_with_a_trailing_comma_marks_no_one"),
+    warnings:   1,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=Corr one"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_corref_after_maketitle_sole_author_red",
+    tex:        repro!("elsart_corref_after_maketitle_sole_author_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#" | correspondent=Corr one"#,
+    ],
+    moves:      r#"row R ELSSOLE (a sole author takes the block's orphaned note, relocate.rs' sole-author rule: Alice carries Corr one)"#,
+    page:       &[r#"Alice One"#, r#""#],
+    page_moves: r#"row R ELSSOLE"#,
+  },
+  Row {
+    repro:      "elsart_corref_in_a_name_names_the_cortext_an_fntext_shadows_red",
+    tex:        repro!("elsart_corref_in_a_name_names_the_cortext_an_fntext_shadows_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#"Bob Two | correspondent=Corr k ; affiliation=Some University, X, Y"#,
+      r#" | note=Foot k"#,
+    ],
+    moves:      r#"row R ELSFNFALLBACK (relocate.rs' prefix-stripped fallback reads Bob's `cor:k` as `k`: Bob carries the `\fntext` too)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#"row R ELSFNFALLBACK"#,
+  },
+  Row {
     repro:      "fmmarks_own_maketitle_relax_red",
     tex:        repro!("fmmarks_own_maketitle_relax_red"),
     warnings:   0,
@@ -5403,7 +5531,8 @@ const CLASS: &[Row] = &[
 /// An elsarticle key names one entry, every route to a note reaches it — a key and a `\corref`/`\fnref` both, in either
 /// order; the outside `\corref`/`\fnref` read last the first author's, wherever it is read; one in its own group, or a
 /// note whose key another entry takes, in either order, no name's (ELSART, OD #1067: 1501.03323, 1909.01114, 1711.08299);
-/// a `\cormark` outside a name, or a key list, no name's (ELSARTb, ELSARTc).
+/// a `\cormark` outside a name, or a key list, no name's (ELSARTb, ELSARTc); a mark read after the names print
+/// (`\end{frontmatter}`, `\maketitle`) none, and a `\corref` key with a comma one key where an entry has it (ELSARTd).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
 /// achemso's pieces no author holds at `\begin{document}` (a CLASS row asserts only the creators): each is one

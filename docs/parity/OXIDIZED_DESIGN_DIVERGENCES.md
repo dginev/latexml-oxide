@@ -20399,7 +20399,8 @@ key loses it as soon as another name `\corref`s it; a note sharing an address's 
 address; an outside `\corref` requests on no entry and the note is orphaned.
 **Rust.** The binding gives the routes one label per key (`\lx@els@author`, elsart_support_core_sty.rs); what TeX decides
 only when the names print, or from the .aux of the run before, is a deferred label (`\lx@label@ref`, as cas's), settled
-as each input it depends on is read and resolved at the flush (`els_settle_marks`):
+for the key just read (`els_settle_key`: its notes' labels, and the first name's marks, constant work per input) and
+resolved at the flush:
 - every route of a key takes the form the key was first read by (`els_route`): the bare key after an `\author[…]` list,
   `cor:k`/`fn:k` after a `\corref`/`\fnref`. A later `\author[…]` key is annotated `cor:k`; a later `\corref{k}` in a
   name is dropped and its name annotated `k` — so all names reaching a note meet it, in either order;
@@ -20408,17 +20409,28 @@ as each input it depends on is read and resolved at the flush (`els_settle_marks
   sets `\@corref`/`\@fnmark` again, while `\cormark[k]` prints its ∗ where it is read and sets neither (:174-176), so
   outside a name it marks no name, and in the first name it prints beside the outside mark. The first name requests
   `\lx@label@ref{els@first@cor}`/`{els@first@fn}` unless its own `\corref`/`\fnref`/`\fnmark` replaces it;
+- the names print at `\end{frontmatter}` and `\maketitle` (:1303, :805), each clearing `\@corref`/`\@fnmark` after the
+  first (:264-265): there the first name's labels are frozen (`\lx@els@names@printed`, `els_names_printed`), so a mark
+  read later — after the frontmatter, in the body, in a second `frontmatter` — moves no name, and its note is the
+  block's. A second `frontmatter` reprints the whole names list with the marks set since; one creator list keeps the
+  first print;
 - a note's label is settled likewise (elsarticle_cls.rs `els_settle_note_labels`): `cor:k`/`fn:k`, or, where its key
   names another entry (an address, an `\fntext` over a `\cortext`), `cor@k`/`fn@k`, which no name requests and no
   fallback strips to the key — the block's note, as the PDF links it to no name (1711.08299), whichever is read first.
-  A key that would not read back as written (a space, a brace, a control sequence) is labelled where it is read;
-- a key list in `\corref`/`\cormark` prints no mark (`\elsRef{c1,c2}` is 0): no annotation, its notes the block's, a
-  Warning (`elsarticle_mark_list`);
+  A note defines its own deferred label where it is read, so every label a note requests is defined; a key that would
+  not read back as written (a space, a brace, a control sequence) is labelled where it is read;
+- `\corref`/`\cormark` look their argument up whole (`X@<arg>`, no `\@for`: :174-176, :188-190), and `\fntext`,
+  `\cortext` and the addresses label theirs whole: a key with a comma is one key where an entry has it (its comma
+  spelled `‚` in the label, `els_label_key`, as labels are comma lists), and a key list otherwise (`\corref{c1,c2}`,
+  `\corref{c1,}`: `\elsRef` is 0) — no mark, no annotation, its notes the block's, a Warning (`elsarticle_mark_list`),
+  decided where the names print (or at the document's end), once the keys are read. `\fnref`/`\fnmark` split their
+  keys (`\@for`, :159-163), so an `\fntext[a,b]` is no name's;
 - a `\cortext` both routes reach is marked ∗, the note's own print (the names print "1" and ∗ for it), as WRONGFIX's
   collision fallback; one no name reaches has no mark.
 Settled dead-ends: a peek after the first name's call (stopped at a `\par`, an `\ead`); a fail-safe moving notes to the
 block with a Warning (a note read before the moving mark kept a wrong name); a literal label the first name always
-held (parted into pieces by the reading, or `unanswered_mark_lost` on every paper).
+held (parted into pieces by the reading, or `unanswered_mark_lost` on every paper); re-settling every note's label on
+each input (quadratic: 15.6 s against 1.0 s at 1000 authors, revELSARTc S2).
 The binding's `\author` stays elsart_support_core's: the reading takes a binding's author conventions from the binding
 that defines the macro calling `\lx@add@authors@append` (`policy_for`), and an `\author` redefined by elsarticle_cls.rs
 read 1108.0201's `\address[*]` as the corresponding author's.
@@ -20427,7 +20439,8 @@ author's, the block's before), 1909.01114 (`{\corref{cor1}}`: the block's, as pd
 ELSROUTE's mixed routes (0 of 906 census elsarticle papers).
 **Guards**: the FMRG `CLASS` rows `elsart_*` (`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`:
 ELSARTb `\cormark` outside a name; ELSARTc an outside mark after a later name in either kind and order, after a note it
-moves, past a `\par` or an `\ead`, a note read before the entry its key names, a key list in or outside a name),
+moves, past a `\par` or an `\ead`, a note read before the entry its key names, a key list in or outside a name;
+ELSARTd a mark after the frontmatter or in the body, a second `frontmatter`, keys with a comma, `\corref{c1,}`),
 `perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route` (the shared-key row).
 
 ---
