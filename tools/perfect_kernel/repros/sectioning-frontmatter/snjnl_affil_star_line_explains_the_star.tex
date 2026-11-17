@@ -1,0 +1,26 @@
+% mechanism: a starred name's printed `*` (2412.01641's sn-jnl.cls:510-511) is explained by an `\affil[*]{…}` line,
+%   which prints its label `*` before the text (:561-566, `\@@address`'s `\textsuperscript{#1}`): the star's label is
+%   the line's, `*`, as an `\author[*]`'s would be
+% witness:  2305.11920 (`\author*[5,2]{… Vagovi\v{c}}`, `\affil[*]{Corresponding author: … patrik.vagovic@cfel.de}`)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able1* and Bob Baker1", "1Univ A.",
+%   "*Corresponding author: Ann Able, ann@a.org."
+% engines:  rust 2d21be273f3 = the line Ann's, 1 Warning (the `*` counted lost); rust 554dcc12e27 (SNJNLb's first
+%   commit) = the line a creator of its own, Ann's `*` shown; rust SNJNLb = the line Ann's, no Warning
+% expect:   0 errors 0 Warnings; Ann's contacts "Univ A", "Corresponding author: Ann Able", ann@a.org; no `*` shown
+%   apart from its line
+% status:   RED (554dcc12e27) -> GREEN XML, HTML (SNJNLb;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}
+\author[1]{\fnm{Bob} \sur{Baker}}
+\affil[1]{\orgname{Univ A}}
+\affil[*]{Corresponding author: \fnm{Ann} \sur{Able}, ann@a.org}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

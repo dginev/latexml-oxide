@@ -21970,24 +21970,28 @@ outside: its text is the one printed, its glyph too late to print.
 
 **Rust.** The binding collapsed the star and wrote each note as a detached `ltx:note` per call, its text twice and no
 mark on any name (12 of 21 marked sn-jnl creators of the 3,000-paper dev sample lost). It now translates the class's
-commands into the frontmatter API's keys and lets the engine place them. Each name ends with a marks macro
-(`\lx@sn@marks@<n>`) holding its requests, `\lx@sn@request{star}` for a starred name and `\lx@sn@request{<command>}`
-for each note after it; as `\maketitle` begins (`\lx@maketitle@begin`, ahead of the flush) `print_notes` queues each
-note once, labelled `sn:<kind>`, and makes the requests it answers (`\lx@request@frontmatter@annotation[sn]{…}`), so the
-relocation's copies are one note (`idref`, #1059), printed once on the page. The starred names' note is
-`[label={sn:star},role=correspondent]` in the copy's words where the class prints the line, marked `*` where the last
-`\author` has labels and the copy prints the `*` (2209.11450's prints `{}`), else unmarked; a printed `*` with no line
-is shown on the name (`Policy::labels_print`, `declare_unexplained_name_labels`, #1064; 2509.19318). Each author note
+commands into the frontmatter API's keys and lets the engine place them. A starred name has the label `*` in its
+`annotations`, as an `\author[*]` would, so an `\affil[*]` line answers it as well (2305.11920's "*Corresponding
+author: …"); each name ends with a marks macro (`\lx@sn@marks@<n>`) that the notes after it fill with their requests
+(`\lx@request@frontmatter@annotation[sn]{<command>}`). The names' requests are made at the call, since a section before
+`\maketitle` flushes the names early (2510.03878). As `\maketitle` begins (`\lx@maketitle@begin`, ahead of the flush)
+`print_notes` makes the class's print-time decisions and queues each note once, labelled, so the relocation's copies
+are one note (`idref`, #1059), printed once on the page: the correspondent note `[label={*},role=correspondent]` in the
+copy's words where the class prints the line (those after its `{\ifnum\aucount>1*\fi}`: "Corresponding author(s).",
+2606.20205's "Correspondence:"), marked `*` where the last `\author` has labels and the copy prints the
+`*` (2209.11450's prints `{}`), else unmarked; a printed `*` that no line explains is shown on the name
+(`Policy::labels_print`, `declare_unexplained_name_labels`, #1064; 2509.19318). Each author note
 given is `[label={sn:<command>},mark=<glyph>]` with its last text — a name's own call's (`inner_notes`, whose call
 then emits nothing) — and the glyph its copy appends, read as printed (`printed_label_pieces`: † for `\equalcont`, `*`
 in 2501.01157's, ‡ for `\intern`/`\equalsup`, § in 2307.08214's, `\textsuperscript{\dag}` †; † with no copy); a glyph
-printing no one mark links nothing, with a Warning. A copy whose command appends nothing (2209.11450's `\equalcont`)
+printing no one mark leaves the note unmarked, with a Warning. A copy whose command appends nothing (2209.11450's `\equalcont`)
 marks no name: its note is the document's, as is one given before any name. With no `\maketitle` (no title block) the
-notes given are the document's, unmarked (`\lx@sn@fallback@notes` ahead of `\lx@frontmatter@fallback`). An `\email`
+notes given are the document's, unmarked (`\lx@sn@fallback@notes` ahead of `\lx@frontmatter@fallback`, once, the
+record kept for a `\maketitle` after a section). An `\email`
 inside a name runs as the names print, under the last author's star (2312.03687). E-mails and affiliations stay their
 authors' contacts, the labels kept as their keys where the last `\author` has none. **Residual.** An ORCID link ending a
 name is followed by the marks macro, so the engine reads it as a mark, not the name's link (row R ORCIDNAME; repro
 `snjnl_orcid_superscript_link_in_name_red`). Witnesses 2412.01641, 2603.01834, 2312.03687, 2512.07346, 2401.11721,
-2509.19318. **Guards**: the `snjnl_*` rows of `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`,
+2509.19318, 2305.11920, 2510.03878, 2304.08265 (an unlabelled last `\author`: no `*` printed). **Guards**: the `snjnl_*` rows of `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`,
 `perfect_kernel_batch67z::{snjnl_author_notes, snjnl_notes_take_the_copys_default,
 snjnl_notes_marking_no_name_are_the_documents, snjnl_copy_that_marks_no_name, sn_jnl_class_commands}`.

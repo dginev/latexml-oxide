@@ -4395,6 +4395,36 @@ const CLASS: &[Row] = &[
     page:       &[r#"Ann Able ; * plain"#, r#"Bob Baker"#],
     page_moves: r#""#,
   },
+  // (the printed `*` is the label `*`, which an `\affil[*]` line answers: 2305.11920)
+  Row {
+    repro:      "snjnl_affil_star_line_explains_the_star",
+    tex:        repro!("snjnl_affil_star_line_explains_the_star"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; affiliation=Corresponding author: Ann Able ; email=ann@a.org"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  // (the names flushed before `\maketitle` by a section: the star's label is the name's own, 2510.03878)
+  Row {
+    repro:      "snjnl_section_before_maketitle_keeps_the_star_note",
+    tex:        repro!("snjnl_section_before_maketitle_keeps_the_star_note"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker"#,
+      r#"margin: Corresponding author(s)."#,
+    ],
+    page_moves: r#""#,
+  },
   // (a note inside a name runs last as the names print: its text the one printed, revSNJNL B2)
   Row {
     repro:      "snjnl_note_inside_a_name_text_wins",
