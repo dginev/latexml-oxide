@@ -674,7 +674,7 @@ fn mark_creator_notes(document: &mut Document) -> Result<()> {
       Some(mark) if mark_form(&mark) == mark_form(&printed) => {},
       // (a label its name prints: IEEEtran's `\thanks{$^{*}$Equal contribution}`, 2312.10807 — a footnote symbol no name
       // prints is no mark of the note's, the text's own: INTERSPEECH2022.sty's `\thanks` prints none on the name, its
-      // legend "∗ We will release …", 2204.08920)
+      // legend "∗ We will release …", 2204.08920; 2405.05531)
       None
         if note.get_attribute("role").as_deref() == Some("thanks")
           && name_marks(document, &note).contains(&mark_form(&printed)) =>
@@ -837,10 +837,13 @@ fn name_marks(document: &mut Document, note: &Node) -> Vec<String> {
           .collect::<Vec<_>>()
       }),
   );
+  // (its requests' keys, not its own sequence label nor its items': `author:1` is no mark "1" it prints — the first
+  // author's `\thanks{\IEEEauthorrefmark{1}…}` was marked "∗" by it, 2405.05531)
   let requests = creator.get_attribute("_annotations").unwrap_or_default();
   marks.extend(
     requests
       .split(',')
+      .filter(|label| !label.starts_with("author:") && !label.starts_with("item:"))
       .map(|label| mark_form(label.split_once(':').map_or(label, |(_, key)| key))),
   );
   marks

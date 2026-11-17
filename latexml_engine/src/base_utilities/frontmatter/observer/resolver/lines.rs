@@ -1934,9 +1934,9 @@ impl Resolver {
           // (on a line its marks lead, a mark after a separator leads the next name, an `\inst` after a comma too, glued
           // to the mark before it or not: `\inst{1}Ann Able, \inst{2}Bob Baker`; IEEEtran's `*Ann
           // Able\IEEEauthorrefmark{2},\n*Bob Baker`, 2609.16600 — `names_led_by_marks`)
-          // (a `\footnotemark` beside spacing goes where the mark ledger puts it, the nearer name by the glue printed:
-          // `Ann Able \qquad \footnotemark[2] \ Bob Baker`, Bob's — DG ruling 2026-11-16; one it leaves undecided is
-          // no name's, the writer's counted loss: OD #1057)
+          // (a `\footnotemark` beside spacing goes where the mark ledger puts it, the name before save at a line's start
+          // or under the block's edge proof: `Ann Able \qquad \footnotemark[2] \ Bob Baker`, Ann's — DG 2026-11-17; one
+          // it leaves undecided is no name's, the writer's counted loss: OD #1057)
           let to_next = match self.mark_ledger.record_of(event.span).map(|r| r.side) {
             Some(Some(side)) => side == Side::After,
             Some(None) => {

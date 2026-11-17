@@ -278,8 +278,8 @@ impl Lexer {
         event.line_first = !self.line_inked;
         self.line_inked = true;
       },
-      // (a note's mark set off by a space from the ink or separator before it, as a Mark's: the mark ledger's `Alice One,
-      // \thanks{…}Bob Two`, Bob's — 2406.12338)
+      // (a note's mark set off by a space from the ink or separator before it, as a Mark's: read by the mark ledger past a
+      // separator only — 2406.12338)
       EventKind::Note => {
         event.space_before = self.gap_items > 0;
         self.flush_gap();

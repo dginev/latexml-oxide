@@ -66,8 +66,17 @@ LoadDefinitions!({
     record_els_keys(ELS_PLACE_KEYS, std::iter::once(key.to_string().as_str()));
   });
   DefPrimitive!("\\lx@els@record@author{}{}", sub[(keys, name)] {
-    record_els_keys(ELS_AUTHOR_KEYS, keys.to_string().split(','));
-    record_els_keys(ELS_CORREF_KEYS, corref_keys(&name).iter().map(String::as_str));
+    let keys = keys.to_string();
+    record_els_keys(ELS_AUTHOR_KEYS, keys.split(','));
+    let tokens = name.unlist_ref();
+    record_els_keys(ELS_CORREF_KEYS, keys_in(tokens, &T_CS!("\\corref"), &T_CS!("\\cormark")).iter().map(String::as_str));
+    // (each author's keys, the `\fnref`s of its name among them: the marks it prints side by side)
+    let mut carried: Vec<String> = keys.split(',').map(|k| k.trim().to_string()).collect();
+    carried.extend(keys_in(tokens, &T_CS!("\\fnref"), &T_CS!("\\fnmark")));
+    let mut carriers = lookup_string(ELS_CARRIERS);
+    carriers.push_str(&carried.join(","));
+    carriers.push(';');
+    assign_value(ELS_CARRIERS, Stored::String(pin(&carriers)), Scope::Global);
   });
 
   // (elsarticle puts an `\address` into the author list after the authors before it, elsarticle.cls:665-668, and an
@@ -572,6 +581,23 @@ pub(crate) const ELS_AUTHOR_KEYS: &str = "@elsarticle@authorkeys";
 pub(crate) const ELS_CORREF_KEYS: &str = "@elsarticle@correfs";
 /// The global value holding the keys `\address[…]`/`\affiliation[…]` label (comma-separated).
 pub(crate) const ELS_PLACE_KEYS: &str = "@elsarticle@placekeys";
+/// The global value holding each author's keys, its `\author[…]` list and its name's `\fnref`s (each list ended by `;`).
+pub(crate) const ELS_CARRIERS: &str = "@elsarticle@carriers";
+
+/// The keys of the authors whose `\author[…]` list holds `key`, each author's in its own list.
+pub(crate) fn els_carriers(key: &str) -> Vec<Vec<String>> {
+  let key = key.trim();
+  lookup_string(ELS_CARRIERS)
+    .split(';')
+    .map(|keys| {
+      keys
+        .split(',')
+        .map(|k| k.trim().to_string())
+        .collect::<Vec<_>>()
+    })
+    .filter(|keys| keys.iter().any(|k| k == key))
+    .collect()
+}
 
 /// Add each of `keys` (trimmed, non-empty) to the comma list kept in the global value `list`.
 pub(crate) fn record_els_keys<'a>(list: &str, keys: impl Iterator<Item = &'a str>) {
@@ -593,14 +619,14 @@ pub(crate) fn recorded_els_key(list: &str, key: &str) -> bool {
   lookup_string(list).split(',').any(|k| k == key)
 }
 
-/// The keys `\corref{<key>}` and `\cormark[<key>]` name in `name`, an `\author`'s argument.
-fn corref_keys(name: &Tokens) -> Vec<String> {
-  let tokens = name.unlist_ref();
+/// The keys `<braced>{<keys>}` and `<bracketed>[<keys>]` name in `tokens`, an `\author`'s argument (`\corref` and
+/// `\cormark`, `\fnref` and `\fnmark`), each comma-separated list split.
+fn keys_in(tokens: &[Token], braced: &Token, bracketed: &Token) -> Vec<String> {
   let mut keys = Vec::new();
   for (at, t) in tokens.iter().enumerate() {
-    let (open, close) = if *t == T_CS!("\\corref") {
+    let (open, close) = if t == braced {
       (Catcode::BEGIN, Catcode::END)
-    } else if *t == T_CS!("\\cormark") {
+    } else if t == bracketed {
       (Catcode::OTHER, Catcode::OTHER)
     } else {
       continue;
@@ -626,7 +652,14 @@ fn corref_keys(name: &Tokens) -> Vec<String> {
       })
       .cloned()
       .collect();
-    keys.push(Tokens::new(key).to_string().trim().to_string());
+    let key = Tokens::new(key).to_string();
+    keys.extend(
+      key
+        .split(',')
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .map(String::from),
+    );
   }
   keys
 }

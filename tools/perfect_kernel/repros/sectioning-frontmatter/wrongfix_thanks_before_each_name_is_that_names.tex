@@ -1,7 +1,6 @@
-% mechanism: a note set off by a space from the separator before it and glued to the name after it is that name's
-%   (`resolver::mark_ledger`: past a separator, before a name, the pieces past the stretch's widest glue; at a line's
-%   start, the first name's; the lexer records the spaces around a note as a Mark's). article.cls:206 `\rlap`s the
-%   mark into the space before the next name
+% mechanism: a note before a name is that name's under the block's edge proof (`resolver::mark_ledger`): its first
+%   note precedes its first name and none follows its last (DG 2026-11-17: otherwise the default, the name before).
+%   article.cls:206 `\rlap`s the mark into the space before the next name
 % witness: 2406.12338 (article, `\author{\thanks{…}Carla Schenker, \thanks{…}Xiulin Wang, …}`)
 % oracle:  pdflatex 0 errors: "∗Alice One, †Bob Two, ‡Carol Three", footnotes "∗ Alice note." "† Bob note." "‡ Carol note."
 % engines: perl: one creator, all three notes. rust 139d1d2fa08: each name given the next name's note (Alice two, Carol none)

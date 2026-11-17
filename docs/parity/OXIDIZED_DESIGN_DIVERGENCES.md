@@ -19627,7 +19627,10 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   superscript or mark formula (`$^{*}$`, `fm_read_formula`) is its mark where it has none and its name prints it
   (`name_marks`: the personname's superscripts, its mark-only notes, its requests — IEEEtran's `\thanks{$^{*}$Equal
   contribution}`, 2312.10807; never `\thanks{$^{3}$He detectors…}`'s isotope, nor a footnote symbol no name prints:
-  INTERSPEECH2022.sty's `\thanks` prints no mark, its legend "∗ We will release …" the text's own, 2204.08920), and is
+  INTERSPEECH2022.sty's `\thanks` prints no mark, its legend "∗ We will release …" the text's own, 2204.08920; the
+  creator's own sequence label `author:N` and its items' `item:` labels no request it prints, 2405.05531's
+  `\thanks{\IEEEauthorrefmark{1}…}` under an unmarked name; a name's `\IEEEauthorrefmark{1}` the reading linked to the
+  note leaves no trace the rule reads, so 2603.19188's note keeps "∗" as its text, on both names, row R), and is
   taken out where it repeats the one it has (a legend line's
   `$^*$Equal contribution`, 2407.07614, 2105.14239) — either only where a space or a letter follows it
   (`words_follow`): article's `\thanks{$^*$-algebras are her field.}` prints "∗∗-algebras", the class's mark then the
@@ -19811,7 +19814,10 @@ Warning; elsarticle's `\fntext`/`\cortext` and REVTeX's `\thanks` are a contact 
   ∗ and ∗∗ where its names reach it by `\corref` (:188-190), its `cnote` number where they list its key in
   `\author[…]` (`\elsRef{key}`, :181-185, :251-256: "Yanzeng Lid,b,1", 2512.04868) — the reading gives it to the
   `\corref` names when there are any (`label_owners`' exact tier), so the binding decides where the note is digested,
-  every `\author` read (`\lx@els@cormark`, from the keys and `\corref`/`\cormark` keys each `\author` names). Two or
+  every `\author` read (`\lx@els@cormark`, from the keys and `\corref`/`\cormark` keys each `\author` names). Where
+  that number is another mark of the same name's too — an `\fntext` key's `fnote` number, listed or `\fnref`ed, or any
+  address key under numbered addresses (`numafflabel`, `reversenotenum`) — the note takes the ∗/∗∗ its footnote prints
+  (:181-185): a generated or derived mark never collides (DG; `\author[a,c1,f1]` prints "a,1,1", revWRONGFIX S1). Two or
   more creators carrying one mark and text make each copy their note, `role=thanks`, with
   `mark` (`shared_notes::kind_shared_marked_contacts`, keyed on mark and text alone); a single carrier's stays its
   contact, shown under its name. 29 elsarticle papers of the 30k sample share one (1002.2661, 1312.0669).
@@ -19898,31 +19904,33 @@ through the `ltx_annotated_personname` wrapper (REND2's XSLT); no template rende
 `perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname`; 287 older guards repinned to the name alone,
 their rows listing each note's `mark` (`perfect_kernel_batch84b::creators`).
 
-### 1057. A mark or note printed beside spacing between two names is the nearer name's by TeX's glue; a bare mark no name writes keeps its footnote step (DG 2026-11-16, SHGNEXT)
+### 1057. A mark or note printed beside spacing between two names is the name's before it, the name's after only at a line's or cell's start or under the block's edge proof; a bare mark no name writes keeps its footnote step (DG 2026-11-17, superseding 2026-11-16's glue rule; SHGNEXT, WRONGFIX)
 
-**Rule.** A `\footnotemark` or a note printed between two names belongs to the nearer one, measured by the glue TeX sets
-between the inks, a tie going to the following name (DG 2026-11-16). The marks and notes between two names on a line
-are parted at the widest glue among them: a mark is as near a name as the widest blank on the way to it, so `Ann (27pt)
-∗ (6.7pt) † (23.5pt) Bob` gives both to Bob, `Ann (7.8) ∗ (73.8) † (11.9) Bob` parts the run and `Ann (7.8) ∗ (23.1) Bob
-(27.3) † (4.0) Carl` gives ∗ to Ann and † to Carl. Past a name with no name after it on its line (a separator, `\\`, the
-block's end) they are that name's (1911.13299's `\ \footnotemark[3]\and`); opening a cell (`\and`, `&`, an alignment's
-cell) or at a line's start (the block's, a `\\`'s) they are the next name's; past a separator (a comma, the word "and")
-before a name, set off from the separator by the stretch's strictly widest glue, the next name's (`Alice One,
-\thanks{…}Bob Two`, article's mark `\rlap`ped into the space before Bob: "∗Alice One, †Bob Two", 2406.12338), as near
-the separator as the name, the next name's only where every piece the block decided is (2406.12338's `\thanks{…}
-{Carla Schenker,} \thanks{…} {Xiulin Wang,}`, its first note before the first name), else undecided, the name's
-before by the reading's adjacency (hep-th9401012's `Kei-Ichi Kondo, \thanks{…} Takuya Iizuka, … Eiji Tanaka \thanks{…}
-and`; 1503.08342, 2404.02593: the same print, each note its name's before); glued to the separator, undecided (llncs's
-`Ann Able,\inst{1}\fnmsep\inst{2}\thanks{…} Bob`, Ann's). A fill's width is the line's (its natural width at a `tabular` row that sets the
-column, else wider): it decides only where its natural width and any wider part the run alike, so a mark glued to the
-next name is that name's past `\hfill`, and `Ann Able \hfill \footnotemark[2] \quad Bob Baker` is undecided. Other ink
-glued to a name is that name's, a formula's separator glued between two marks their run's (`\footnotemark[1]$^,$
-\footnotemark[2]`, 1703.08733); set apart from both names beside a mark (an ORCID, a `\cite`, a formula's mark) it
-leaves the run undecided, and so does glue nowhere or two fills: an undecided mark is the counted loss (a wrong glyph
-is worse than none). A bare `\footnotemark` no name writes (one on the line a `\\` opens: no name's, ruling 4) keeps its
-footnote step where it prints, its glyph counted lost, so the marks after it print theirs. The title's
-`\@makefnmark` is an `\rlap` (article.cls:206): a mark's ink lies over the glue after it, so its distance to the next
-name is read from where it starts, as the print shows it (review revSHGNEXT's a05).
+**Rule.** DG 2026-11-17: "nearly all notes attach on the right side of an author name and on the left side of an
+affiliation name." A `\footnotemark` or a note printed between two names belongs to the name BEFORE it, whatever the
+glue TeX sets around it: no glue widths are compared and no fill is measured, and a mark glued to the next name proves
+nothing (0902.3369's `C. Gruppioni $^{15}$B. Vila-Vilaró,$^{16}$`). It belongs to the name AFTER it only (a) opening a
+line (the block's, a `\\`'s) or a cell (`\and`, `&`, an alignment's cell), where no name stands before it, or (b) under
+the block's EDGE PROOF: the block's first piece precedes its first name and no piece follows its last name — then every
+piece between two names is the next name's (2406.12338's `\thanks{…} {Carla Schenker,} \thanks{…} {Xiulin Wang,}`,
+"∗Carla Schenker, †Xiulin Wang"; math0606768's `\thanks{a} Ann, \thanks{b} Bob`; 1511.05393, 0906.1223). A block with
+pieces at both edges mixes the conventions: its pieces between names keep the default, counted by an
+`Info:frontmatter:mark_convention`, never the next name. The measure (the 30k census): 96.9 % of 54,559 name-line runs
+are the name before's, and every note tie read by hand was, save the prefix-convention papers. Past a name with no
+name after it on its line (a separator, `\\`, the block's end) a piece is that name's (1911.13299's `\
+\footnotemark[3]\and`). A comma glued to a name is its ink, a piece past it the name's (`Igor Pikovski,$^{1, 2
+}$\footnotemark $\, \,$ Michael`, COMMAMARK 1111.1979; MNRAS's `Ann Able,$^{1}$⏎\thanks{e-mail}⏎Bob`); one set off
+from a separator by a space is undecided where no edge proof holds — a note the name's before by the reading's
+adjacency, a lone text `\footnotemark` the counted loss (`Alice One, \footnotemark Bob Two`, printed "Alice One, ∗Bob
+Two", one Warning). So `Ann Able \thanks{…}⏎Bob Baker` and `Ann Able\,\thanks{…}⏎Bob` are Ann's, though article's
+`\rlap` prints the mark against Bob — the e-mail inside names the owner (revWRONGFIX B1: 1405.7029, 2109.12466,
+1811.10030, 2605.31402, 1412.3142, 1705.11098, 1711.04571, 2002.10402; hep-th9401012, 2101.04647 the name before's),
+and a `\\` line opening with a mark proves nothing for the names line above it (`Ann Able, \thanks{A} Bob Baker\\
+\footnotemark[1]University`, Ann's: revWRONGFIX S2). A binding may declare its class's left-side convention (the micro
+layer, through the API); none does yet. A bare `\footnotemark` no name writes (one on the line a `\\` opens: no name's,
+ruling 4) keeps its footnote step where it prints, its glyph counted lost, so the marks after it print theirs. Typed
+labels are not the ledger's: `lines::names_led_by_marks` reads a line its marks lead, `mark_goes_next` a typed mark
+past a separator by the source's spacing (open: converge it on this rule, WRONGFIXb's report).
 **Perl.** The mark stays in the personname of the `\and` segment it is typed in (Base_Utility.pool.ltxml's creator per
 `\and`), its owner the source's order; no glue is read.
 **Rust.** `resolver::mark_ledger` reads a block's events once (`Resolver::block`, the whole block, before an IJCAI
@@ -19935,7 +19943,9 @@ reader's `mark_goes_next` reads only marks the ledger holds no record of) — an
 carries the previous name's pieces past its run (over spacing, font changes and the
 pieces alone: an item the reading writes apart, an affiliation's contact before the mark, stops it) and writes the next
 name's before its text in print order — a mark's own balanced tokens in a group of their own, cut from the previous
-name's run where a group took them, a note's footnote step where it prints. Every writer of a mark's tokens (the
+name's run where a group took them, a note's footnote step where it prints. A later name's run takes nothing an
+earlier name wrote (`written_before`): a mark glued to Bob and given Ann, `Ann Able \quad \footnotemark[2]Bob Baker`,
+whose span runs into Bob's, is written once, on Ann (WRONGFIXb; the first cut wrote † on both). Every writer of a mark's tokens (the
 next name's prefix, the pieces past a name, a dropped bare mark's step) takes them from the mark's own first token
 (`emit::own_span`): an event's span starts where the box before it began — the `\qquad` before it, the mark before
 it —, so each is cut at the end of the piece or spacing read before it and of the run written before it, a mark the
@@ -19952,18 +19962,14 @@ with a name after it keeps the whole block: the reading takes such a cell for a 
 The writer's check for dropped marks runs after `names_overlap` and `declaration_reads_past`: a block where a mark drops
 and the reading reads past a declaration is written as Perl splits it (`fallback::perl_author_calls`, each mark in its
 piece, no loss counted), where before the dropped mark wrote it whole (Perl's tabular branch).
-**Residuals.** The 0pt fill of a single-row author `tabular` (article.cls:181-183 sets `\@author` in `\begin{tabular}[t]{c}`
-per `\and`) needs the class's own `\maketitle` known to be in force: until then such a fill is undecided
-(`fmmarks_mark_then_hfill_before_next_red`, `ne2g_mark_past_hfill_undecided`). A mark beside an ORCID, a `\cite` or a
-formula's mark apart from both names stays undecided (`ne2g_mark_then_orcid_nearer_next`,
-`fmmarks_mark_then_cite_nearer_next_red`, `ne2g_mark_then_superscript_nearer_next`). A note records the single spaces
-around it as a mark does (`space_before`/`space_after`, the lexer). A cell an `\and` opens with a mark before
+**Residuals.** A note records the single spaces around it as a mark does (`space_before`/`space_after`, the lexer), read
+by `overprints` and a glued comma's test, never to part names. A cell an `\and` opens with a mark before
 its name is read as a labelled line (`ne2i_bare_mark_opening_a_cell_writes_the_block_whole`; given its number, Bob an
 affiliation as at the base). A mark glued past a name's comma and its labels (`Igor Pikovski,$^{1, 2}$\footnotemark $\, \,$ Michael`,
 1111.1979; 1912.01737, 1811.08622: COMMAMARK, DG 2026-11-16) is measured from the comma's ink — the comma glued to the
 name's run opens the stretch at that name — and written on its name past the comma, the labels left to the reading's
-requests (#1058's batch); one set off from the comma by a space is the next name's (2406.12338), unless other ink set
-apart from both names stands with it (llncs's `Ann Able,\n\inst{1}\thanks{…} Bob`, undecided).
+requests (#1058's batch); one set off from the comma by a space is undecided unless the block's edge proof holds
+(2406.12338; llncs's `Ann Able,\n\inst{1}\thanks{…} Bob`, Ann's by adjacency).
 **Witnesses.** 1911.13299, 2412.20504 (green before and after), 1703.08733 (its separator's shape); the FMRG suite's
 spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`, XML and HTML: its `ne2j_*`
 rows the writers' runs and the separator's place in the run; the formula comma itself reaches the name's tokens and
@@ -19972,8 +19978,9 @@ is dropped after them with no Warning, pre-existing, row R SEPRUN).
 a_note_beside_spacing_goes_to_the_nearer_name, a_mark_nearer_the_next_name_moves_alone,
 a_mark_a_name_follows_past_spacing_is_not_carried_back, a_mark_on_no_name_keeps_its_footnote_step,
 a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`,
-`perfect_kernel_batchwrongfix::a_note_before_a_name_is_that_names`;
-the unit test `resolver::mark_ledger::tests::a_run_between_two_names_is_parted_at_its_widest_glue`.
+`perfect_kernel_batchwrongfix::{a_note_before_a_name_is_that_names, a_note_between_two_names_is_the_name_befores}`;
+the unit tests `resolver::mark_ledger::tests::{a_piece_between_two_names_is_the_name_befores,
+the_edge_proof_gives_the_pieces_between_two_names_to_the_name_after}`.
 ---
 
 ### 1058. A footnote mark answers its note by the number it shows, never by its glyph alone (DG 2026-11-16, MARKKEY)

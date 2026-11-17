@@ -1,6 +1,7 @@
-//! The mark ledger: the name each `\footnotemark` or note printed beside spacing goes to, the nearer by TeX's glue, a tie
-//! the next's, read once per block for the reading and the writer (OXIDIZED_DESIGN_DIVERGENCES #1057; 2412.20504,
-//! 1911.13299, 1807.02791, 1703.08733, 1111.1979).
+//! The mark ledger: the name each `\footnotemark` or note printed beside spacing goes to — the name before it, at a line's
+//! or cell's start the name after, between two names the name after where the block's edge proof holds (DG 2026-11-17)
+//! —, read once per block for the reading and the writer (OXIDIZED_DESIGN_DIVERGENCES #1057; 2412.20504, 1911.13299,
+//! 1807.02791, 1703.08733, 1111.1979).
 
 use super::*;
 
@@ -100,7 +101,9 @@ enum Opening {
   Name(usize),
   /// a cell (`\and`, `&`): no name before it on its line
   Cell,
-  /// a line's start (the block's, a `\\`'s): no name before it on its line
+  /// the block's start
+  Start,
+  /// a `\\`'s line start: no name before it on its line
   Line,
   /// anything else: a comma, the word "and", other ink
   Other,
@@ -122,9 +125,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
   events: &[Event],
 ) -> MarkLedger {
   let mut ledger = MarkLedger::default();
-  let mut opening = Opening::Line;
-  // (the records past a separator as near the next name as the separator, which the block's convention decides)
-  let mut ties: Vec<usize> = Vec::new();
+  let mut opening = Opening::Start;
+  // (the records between two names, which the block's edge proof gives the name after)
+  let mut between: Vec<usize> = Vec::new();
   // (the stretch's pieces: (place, movable), the glue before each, the glue since the last ink)
   let mut pieces: Vec<(usize, bool)> = Vec::new();
   let mut glues: Vec<Reach> = Vec::new();
@@ -153,7 +156,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
         glues.push(glue);
         decide(
           &mut ledger,
-          &mut ties,
+          &mut between,
           events,
           opening,
           None,
@@ -174,7 +177,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
         glues.push(glue);
         decide(
           &mut ledger,
-          &mut ties,
+          &mut between,
           events,
           opening,
           Some(k),
@@ -207,10 +210,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
           (glue, gap_seen, space_after) = (Reach::NONE, false, false);
           continue;
         }
-        // (a comma glued to a name's run is that name's ink: what follows is measured from it, the nearer name by the
-        // glue past it — `Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$ Michael`, Igor's (DG 2026-11-16, COMMAMARK:
-        // 1111.1979, 1912.01737, 1811.08622); `Lenk\footnotemark[1]\textsuperscript{,}\footnotemark[2] \and`, Lenk's
-        // (2407.04435))
+        // (a comma glued to a name's run is that name's ink: what follows it is that name's — `Igor Pikovski,$^{1, 2
+        // }$\footnotemark $\, \,$ Michael`, Igor's (COMMAMARK: 1111.1979, 1912.01737, 1811.08622);
+        // `Lenk\footnotemark[1]\textsuperscript{,}\footnotemark[2] \and`, Lenk's (2407.04435))
         let name_ink = matches!(opening, Opening::Name(_))
           && *kind == SepKind::Comma
           && !space_after
@@ -218,7 +220,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
           && glues.iter().all(|g| g.width == 0.0 && !g.fill);
         decide(
           &mut ledger,
-          &mut ties,
+          &mut between,
           events,
           opening,
           None,
@@ -238,7 +240,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
         glues.push(glue);
         decide(
           &mut ledger,
-          &mut ties,
+          &mut between,
           events,
           opening,
           None,
@@ -255,24 +257,38 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
   glues.push(glue);
   decide(
     &mut ledger,
-    &mut ties,
+    &mut between,
     events,
     opening,
     None,
     &pieces,
     &glues,
   );
-  // (a tie past a separator is the next name's where the block sets its pieces before their names, every piece the
-  // ledger decided the next name's: 2406.12338's `\thanks{…} {Carla Schenker,} \thanks{…} {Xiulin Wang,}`, its first
-  // note at the block's start; where any is the name's before, as hep-th9401012's `Eiji Tanaka \thanks{…} and`, it stays
-  // undecided, the name's before by the reading's adjacency — `Kei-Ichi Kondo, \thanks{…} Takuya Iizuka`)
-  let decided = ledger.records.iter().filter_map(|r| r.side);
-  if !ties.is_empty()
-    && decided.clone().next().is_some()
-    && decided.into_iter().all(|side| side == Side::After)
+  // (the edge proof: the block's first piece before its first name and none after its last, every piece between two
+  // names is the name's after — 2406.12338, math0606768, 1511.05393, 0906.1223; both edges, the default, counted)
+  let names: Vec<usize> = (0..events.len())
+    .filter(|&k| events[k].kind == EventKind::Name && !norm(&events[k].text).is_empty())
+    .collect();
+  let pieces: Vec<usize> = (0..events.len()).filter(|&k| movable(&events[k])).collect();
+  if let (Some(&first_name), Some(&last_name), Some(&first), Some(&last)) =
+    (names.first(), names.last(), pieces.first(), pieces.last())
+    && first < first_name
+    && !between.is_empty()
   {
-    for &at in &ties {
-      ledger.records[at].side = Some(Side::After);
+    if last < last_name {
+      for &at in &between {
+        ledger.records[at].side = Some(Side::After);
+      }
+    } else {
+      Info!(
+        "frontmatter",
+        "mark_convention",
+        s!(
+          "An author block sets notes both before its first name and after its last: {} between two names given the \
+           name before",
+          between.len()
+        )
+      );
     }
   }
   // (the block's decided sides beside its undecided marks: what a block's convention would decide, measured — MARKKEY K8)
@@ -293,7 +309,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
 /// end), `glues[i]` the glue before piece `i` and its last the glue out to `next`'s ink.
 fn decide(
   ledger: &mut MarkLedger,
-  ties: &mut Vec<usize>,
+  between: &mut Vec<usize>,
   events: &[Event],
   opening: Opening,
   next: Option<usize>,
@@ -307,85 +323,12 @@ fn decide(
     Opening::Name(at) => Some(at),
     _ => None,
   };
-  // (other ink glued to a name is that name's — `Ann Able$^{1}$ \qquad \footnotemark[2]`, `\ $^{b}$Bob`; set apart from
-  // both it is no movable piece's to cross)
-  let glued_before = glues
-    .iter()
-    .take_while(|g| g.width == 0.0 && !g.fill)
-    .count();
-  let glued_after = glues
-    .iter()
-    .rev()
-    .take_while(|g| g.width == 0.0 && !g.fill)
-    .count();
-  let glued_to_next = |i: usize| next.is_some() && i + glued_after >= pieces.len();
-  // (a formula's separator glued between two movable pieces is ink of their run: `\footnotemark[1]$^,$\footnotemark[2]`,
-  // 1703.08733)
-  let in_run = |i: usize| {
-    events[pieces[i].0].role.as_deref() == Some("math")
-      && matches!(events[pieces[i].0].kind, EventKind::Sep(_))
-      && i > 0
-      && pieces.get(i + 1).is_some_and(|&(_, movable)| movable)
-      && pieces[i - 1].1
-      && [glues[i], glues[i + 1]]
-        .iter()
-        .all(|g| g.width == 0.0 && !g.fill)
-  };
-  let stray = pieces
-    .iter()
-    .enumerate()
-    .any(|(i, &(_, movable))| !movable && i >= glued_before && !glued_to_next(i) && !in_run(i));
-  // (the place of the widest glue, the first of equal ones: a tie the next name's; with the run's one fill read at its
-  // natural width and at any wider, `None` where the two differ)
-  let parted_at = || {
-    let widest = |fill_wins: bool| {
-      let width = |g: &Reach| {
-        if fill_wins && g.fill {
-          f64::INFINITY
-        } else {
-          g.width
-        }
-      };
-      let max = glues.iter().map(width).fold(0.0, f64::max);
-      (max > 0.0)
-        .then(|| glues.iter().position(|g| width(g) == max))
-        .flatten()
-    };
-    match glues.iter().filter(|g| g.fill).count() {
-      0 => widest(false),
-      1 => widest(false).filter(|&at| Some(at) == widest(true)),
-      _ => None,
-    }
-  };
-  let side_from =
-    |part: Option<usize>, i: usize| part.map(|p| if i < p { Side::Before } else { Side::After });
-  let mut tie = false;
-  let part = match (before, next) {
-    _ if stray => None,
-    (Some(_), Some(_)) => parted_at(),
-    // (past a name, no name after it on the line: all the name's)
-    (Some(_), None) => Some(pieces.len()),
-    // (in a cell an `\and` or `&` opens, before its name: all that name's)
-    (None, Some(_)) if opening == Opening::Cell => Some(0),
-    // (at a line's start, before its first name: that name's)
-    (None, Some(_)) if opening == Opening::Line => Some(0),
-    // (past a separator, before a name: set off from the separator by the stretch's widest glue, the name's — `Alice One,
-    // \thanks{…}Bob Two`, the mark `\rlap`ped into the space before Bob (article.cls:206), 2406.12338 —; as near the
-    // separator, the block's convention's (`ties`); glued to it, undecided: llncs's `Ann
-    // Able,\inst{1}\fnmsep\inst{2}\thanks{…} Bob`, Ann's)
-    (None, Some(_)) if opening == Opening::Other => match parted_at() {
-      Some(0)
-        if glues[1..]
-          .iter()
-          .all(|g| !g.fill && g.width < glues[0].width) =>
-      {
-        Some(0)
-      },
-      Some(0) => {
-        tie = true;
-        None
-      },
-      _ => None,
+  // (DG 2026-11-17: "nearly all notes attach on the right side of an author name and on the left side of an affiliation
+  // name" — between two names the name's before, whatever the glue; at a line's or cell's start the name's after)
+  let side = match (before, next) {
+    (Some(_), _) => Some(Side::Before),
+    (None, Some(_)) if matches!(opening, Opening::Start | Opening::Line | Opening::Cell) => {
+      Some(Side::After)
     },
     _ => None,
   };
@@ -393,8 +336,8 @@ fn decide(
     if !movable {
       continue;
     }
-    if tie {
-      ties.push(ledger.records.len());
+    if next.is_some() && matches!(opening, Opening::Name(_) | Opening::Other) {
+      between.push(ledger.records.len());
     }
     let reach = |range: &[Reach]| range.iter().copied().fold(Reach::NONE, Reach::widest);
     ledger.records.push(MarkRecord {
@@ -402,7 +345,7 @@ fn decide(
       span: events[at].span,
       before: before.map(|b| (b, reach(&glues[..=i]))),
       after: next.map(|n| (n, reach(&glues[i + 1..]))),
-      side: side_from(part, i),
+      side,
     });
   }
 }
@@ -489,7 +432,7 @@ mod tests {
 
   /// A mark set with no glue on a zero-width title mark of its glyph prints over it (article.cls:206): `Ann
   /// Able\thanks{…}$^{*}$` (revPUREd P2), `\footnotemark[1]\thanks{…}` (2103.01544); not after an inked mark
-  /// (`$^{*}$\thanks{…}`), past a space, of another glyph, or where the title's marks take width.
+  /// (`$^{*}$\thanks{…}`), past a space (a note's own too), of another glyph, or where the title's marks take width.
   #[test]
   fn a_mark_glued_on_a_zero_width_title_mark_of_its_glyph_overprints_it() {
     let note = |glyph: &str| {
@@ -519,7 +462,15 @@ mod tests {
       overprints(&[ann.clone(), footnotemark.clone(), note("*")], true),
       vec![((3, 4), "*".to_string())]
     );
+    // (a note's own spaces, recorded by the lexer: `\thanks{…} $^{*}$`, `$^{*}$ \thanks{…}` print apart — WRONGFIXb)
+    let spaced = |before: bool, after: bool| {
+      let mut e = note("∗");
+      (e.space_before, e.space_after) = (before, after);
+      e
+    };
     for none in [
+      vec![ann.clone(), spaced(false, true), typed("∗", false)],
+      vec![ann.clone(), footnotemark.clone(), spaced(true, false)],
       vec![ann.clone(), typed("∗", false), note("∗")],
       vec![ann.clone(), note("∗"), typed("∗", true)],
       vec![ann.clone(), note("∗"), typed("†", false)],
@@ -534,14 +485,38 @@ mod tests {
     mark_ledger(events).records.iter().map(|r| r.side).collect()
   }
 
-  /// The widest glue parts a run between two names: each mark the nearer name's, a tie the next name's, a fill
-  /// deciding only where its width cannot change the part.
+  fn note(space_before: bool, space_after: bool) -> Event {
+    let mut e = Event::new(EventKind::Note);
+    e.role = Some("thanks".to_string());
+    (e.space_before, e.space_after) = (space_before, space_after);
+    e
+  }
+
+  /// Between two names a mark or note is the name's before, whatever the glue (DG 2026-11-17, superseding the nearer
+  /// name by the glue of 2026-11-16): a wider blank before it, a tie, a fill, glued to the next name, beside an ORCID, a
+  /// note's own spaces (`Ann Able \thanks{…}⏎Bob Baker`, revWRONGFIX B1: 1405.7029, 2109.12466, 1811.10030, 2605.31402,
+  /// 1412.3142, 1705.11098, 1711.04571, 2002.10402; hep-th9401012, 2101.04647). Past a separator set off from it by a
+  /// space it stays undecided, the reading's adjacency the name's before, a bare mark the counted loss.
   #[test]
-  fn a_run_between_two_names_is_parted_at_its_widest_glue() {
+  fn a_piece_between_two_names_is_the_name_befores() {
     use Side::*;
     let (ann, bob) = (name("Ann Able"), name("Bob Baker"));
-    // (Ann (7.8) ∗ (73.8) † (11.9) Bob: parted)
-    let split = [
+    let mut orcid = Event::new(EventKind::Contact);
+    orcid.role = Some("orcid".to_string());
+    for run in [
+      vec![gap(2.7, false), mark(), gap(0.67, false)],
+      vec![gap(1.33, false), mark(), gap(1.33, false)],
+      vec![gap(0.67, true), mark()],
+      vec![gap(2.33, false), mark(), gap(0.33, false), orcid],
+      vec![note(true, true)],
+    ] {
+      let mut events = vec![ann.clone()];
+      events.extend(run);
+      events.push(bob.clone());
+      assert_eq!(sides(&events), [Some(Before)], "{events:?}");
+    }
+    // (two pieces: both the name's before)
+    let two = [
       ann.clone(),
       gap(0.78, false),
       mark(),
@@ -550,180 +525,91 @@ mod tests {
       gap(1.2, false),
       bob.clone(),
     ];
-    assert_eq!(sides(&split), [Some(Before), Some(After)]);
-    // (Ann (27) ∗ (6.7) † (23.5) Bob: both Bob's)
-    let wider_before = [
-      ann.clone(),
-      gap(2.7, false),
-      mark(),
-      gap(0.67, false),
-      mark(),
-      gap(2.35, false),
-      bob.clone(),
-    ];
-    assert_eq!(sides(&wider_before), [Some(After), Some(After)]);
-    // (a tie: the next name's)
-    let tie = [
-      ann.clone(),
-      gap(1.33, false),
-      mark(),
-      gap(1.33, false),
-      bob.clone(),
-    ];
-    assert_eq!(sides(&tie), [Some(After)]);
-    // (a fill before a mark glued to Bob: Bob's whatever its width; before a mark nearer Ann at its natural width:
-    // undecided)
-    let glued = [ann.clone(), gap(0.67, true), mark(), bob.clone()];
-    assert_eq!(sides(&glued), [Some(After)]);
-    let fill = [
-      ann.clone(),
-      gap(0.67, true),
-      mark(),
-      gap(1.33, false),
-      bob.clone(),
-    ];
-    assert_eq!(sides(&fill), [None]);
+    assert_eq!(sides(&two), [Some(Before), Some(Before)]);
     // (no name after it on its line: the name's)
     let mut past = vec![ann.clone(), gap(1.33, false), mark(), gap(1.33, false)];
     past.push(Event::new(EventKind::Sep(SepKind::And("\\and"))));
     past.push(bob.clone());
     assert_eq!(sides(&past), [Some(Before)]);
-    // (a formula's comma glued between two marks is ink of their run, 1703.08733's shape; glued after the run alone, it
-    // is other ink apart from both names: undecided)
-    let mut comma = Event::new(EventKind::Sep(SepKind::Comma));
-    comma.role = Some("math".to_string());
-    let between = [
-      ann.clone(),
-      gap(2.33, false),
-      mark(),
-      comma.clone(),
-      mark(),
-      gap(0.67, false),
-      bob.clone(),
-    ];
-    assert_eq!(sides(&between), [Some(After), Some(After)]);
-    let after = [
-      ann.clone(),
-      gap(2.33, false),
-      mark(),
-      comma,
-      gap(0.67, false),
-      bob.clone(),
-    ];
-    assert_eq!(sides(&after), [None]);
-    // (an ORCID apart from both names: undecided)
-    let mut orcid = Event::new(EventKind::Contact);
-    orcid.role = Some("orcid".to_string());
-    let other = [
-      ann,
-      gap(2.33, false),
-      mark(),
-      gap(0.33, false),
-      orcid,
-      gap(0.33, false),
-      bob,
-    ];
-    assert_eq!(sides(&other), [None]);
-  }
-
-  /// A comma glued to a name's run is its ink: a mark glued past it, its labels before, is measured from it — the nearer
-  /// name by the glue, `Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$ Michael`, Igor's (DG 2026-11-16, COMMAMARK:
-  /// 1111.1979) —, and one with no name after it on its line is the name's (`Lenk\footnotemark[1]\textsuperscript{,}
-  /// \footnotemark[2] \and`, 2407.04435); one set off from the comma by a space and glued to the next name is that
-  /// name's (2406.12338), as near both the block's convention's, glued to the comma or beside other ink set apart from
-  /// both undecided (llncs's `Ann Able,\n\inst{1}\thanks{…} Bob Baker`).
-  #[test]
-  fn a_mark_glued_past_a_names_comma_is_measured_from_the_comma() {
-    use Side::*;
-    let (igor, michael) = (name("Igor Pikovski"), name("Michael Vanner"));
+    // (a comma glued to the name is its ink: past it, the name's — `Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$
+    // Michael`, COMMAMARK 1111.1979; MNRAS's `Ann Able,$^{1}$⏎\thanks{…}⏎Bob`)
     let comma = Event::new(EventKind::Sep(SepKind::Comma));
     let mut labels = Event::new(EventKind::Mark);
     labels.role = Some("math".to_string());
     let glued = [
-      igor.clone(),
+      ann.clone(),
       comma.clone(),
       labels.clone(),
       mark(),
       gap(1.0, false),
-      michael.clone(),
+      bob.clone(),
     ];
     assert_eq!(sides(&glued), [Some(Before)]);
-    let mut last = vec![igor.clone(), comma.clone(), mark()];
-    last.push(Event::new(EventKind::Sep(SepKind::And("\\and"))));
-    last.push(michael.clone());
-    assert_eq!(sides(&last), [Some(Before)]);
-    // (a space after the comma and one after the mark: as near the comma as the next name, undecided where the block
-    // decides nothing else; glued to the next name, its — the `\rlap`ped mark printed into the space before it,
-    // article.cls:206, 2406.12338)
-    let spaced = [
-      igor.clone(),
+    let mnras = [
+      ann.clone(),
       comma.clone(),
-      gap(0.33, false),
-      mark(),
-      gap(0.33, false),
-      michael.clone(),
+      labels,
+      note(true, true),
+      bob.clone(),
     ];
-    assert_eq!(sides(&spaced), [None]);
-    let glued_next = [
-      igor.clone(),
-      comma.clone(),
-      gap(0.33, false),
-      mark(),
-      michael.clone(),
+    assert_eq!(sides(&mnras), [Some(Before)]);
+    // (set off from the comma, glued to the next name or not: undecided — `Alice One, \footnotemark Bob Two`)
+    for run in [vec![gap(0.33, false), mark()], vec![note(true, true)]] {
+      let mut events = vec![ann.clone(), comma.clone()];
+      events.extend(run);
+      events.push(bob.clone());
+      assert_eq!(sides(&events), [None], "{events:?}");
+    }
+  }
+
+  /// At a line's or a cell's start, no name before it, a piece is the name's after; between two names, the name's after
+  /// only under the block's edge proof — its first piece before its first name and none after its last (2406.12338's
+  /// `\thanks{…} {Carla Schenker,} \thanks{…} {Xiulin Wang,}`, math0606768, 1511.05393, 0906.1223). A block with pieces
+  /// at both edges mixes the conventions: the default. A `\\` line opening with a mark, maybe an affiliation's, proves
+  /// nothing (revWRONGFIX S2).
+  #[test]
+  fn the_edge_proof_gives_the_pieces_between_two_names_to_the_name_after() {
+    use Side::*;
+    let (ann, bob) = (name("Ann Able"), name("Bob Baker"));
+    let comma = Event::new(EventKind::Sep(SepKind::Comma));
+    assert_eq!(sides(&[mark(), ann.clone()]), [Some(After)]);
+    let mut cell = vec![
+      ann.clone(),
+      Event::new(EventKind::Sep(SepKind::And("\\and"))),
     ];
-    assert_eq!(sides(&glued_next), [Some(After)]);
-    // (the block's convention decides a tie: its pieces before their names, the next name's — 2406.12338's
-    // `\thanks{…} {Carla Schenker,} \thanks{…} {Xiulin Wang,}` —; one after its name, the name's before, undecided —
-    // hep-th9401012's `Kei-Ichi Kondo, \thanks{…} Takuya Iizuka, … Eiji Tanaka \thanks{…} and`)
+    cell.extend([mark(), bob.clone()]);
+    assert_eq!(sides(&cell), [Some(After)]);
+    // (the proof: past a spaced comma and glued to a name's comma alike)
     let prefix = [
-      mark(),
-      gap(0.33, false),
-      igor.clone(),
+      note(false, true),
+      ann.clone(),
       comma.clone(),
-      gap(0.33, false),
-      mark(),
-      gap(0.33, false),
-      michael.clone(),
+      note(true, true),
+      bob.clone(),
     ];
     assert_eq!(sides(&prefix), [Some(After), Some(After)]);
-    let mut suffix = vec![
-      igor,
-      comma,
-      gap(0.33, false),
-      mark(),
-      gap(0.33, false),
-      michael,
-      gap(0.33, false),
-      mark(),
-    ];
-    suffix.push(Event::new(EventKind::Sep(SepKind::Word("and".to_string()))));
-    suffix.push(name("Cat Cole"));
-    assert_eq!(sides(&suffix), [None, Some(Before)]);
-    // (an `\inst` set apart from both names before the mark: undecided, as before)
-    let mut inst = Event::new(EventKind::Mark);
-    inst.role = Some("inst".to_string());
-    let llncs = [
-      name("Ann Able"),
-      Event::new(EventKind::Sep(SepKind::Comma)),
-      gap(0.33, false),
-      inst,
-      mark(),
-      gap(0.33, false),
-      name("Bob Baker"),
-    ];
-    assert_eq!(sides(&llncs), [None]);
-    // (glued to the separator, its glue after it: undecided — llncs's `\inst{2}\thanks{…}` after `\fnmsep`)
     let glued = [
-      name("Ann Able"),
-      Event::new(EventKind::Sep(SepKind::Comma)),
-      gap(0.33, false),
-      Event::new(EventKind::Sep(SepKind::Comma)),
-      mark(),
-      gap(0.33, false),
-      name("Bob Baker"),
+      note(false, false),
+      ann.clone(),
+      comma.clone(),
+      note(false, false),
+      bob.clone(),
     ];
-    assert_eq!(sides(&glued), [None]);
-    // (at the block's start: the first name's)
-    assert_eq!(sides(&[mark(), name("Ann Able")]), [Some(After)]);
+    assert_eq!(sides(&glued), [Some(After), Some(After)]);
+    // (an affiliation line after the names, its own start: the proof holds)
+    let mut lines = prefix.to_vec();
+    lines.push(Event::new(EventKind::Break));
+    lines.extend([mark(), name("University of Somewhere")]);
+    assert_eq!(sides(&lines), [Some(After), Some(After), Some(After)]);
+    // (both edges: the default)
+    let mut mixed = prefix.to_vec();
+    mixed.push(note(true, false));
+    assert_eq!(sides(&mixed), [Some(After), None, Some(Before)]);
+    // (no piece before the first name: the default, a line start after it proving nothing — `Ann Able, \thanks{A} Bob
+    // Baker\\ \footnotemark[1]University`)
+    let mut affil = vec![ann.clone(), comma.clone(), note(true, true), bob.clone()];
+    affil.push(Event::new(EventKind::Break));
+    affil.extend([mark(), name("University of Somewhere")]);
+    assert_eq!(sides(&affil), [None, Some(After)]);
   }
 }
