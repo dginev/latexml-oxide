@@ -1652,11 +1652,11 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
     let mut filled: Vec<Node> = Vec::new();
     if let Some(mark) = node.get_attribute("mark") {
       let key = mark.replace(' ', "");
-      // (a name's mark the frontmatter set after it, `_namemark`, is no `\footnotemark`: a body `\footnotetext[2]` is
-      // not its text, 2208.09944)
+      // (a name's mark the frontmatter set after it, `_namemark`, or a request left, `_namekeys`, is no `\footnotemark`:
+      // a body `\footnotetext[2]` is not its text, 2208.09944; 1304.5040, 2210.05617, 1812.11634)
       for mut marknote in document.findnodes(
         &format!(
-          ".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}'][not(@_namemark)]"
+          ".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}'][not(@_namemark)][not(@_namekeys)]"
         ),
         None,
       ) {
@@ -1692,7 +1692,7 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
   } else if let Some(caps) = NOTE_MARK_END.captures(&node.get_attribute("role").unwrap_or_default())
     // (nor is the mark a name's request leaves where it printed, `\lx@frontmatter@namemark`: a body `\footnotetext[1]`
     // is not its text — 1304.5040, 2210.05617, 1812.11634 lost theirs to the settle step, OD #1061)
-    && node.get_attribute("_namemark").is_none()
+    && node.get_attribute("_namekeys").is_none()
   {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
     let mut paired = false;

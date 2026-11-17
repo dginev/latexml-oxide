@@ -261,7 +261,7 @@ fn a_bracket_after_a_mark_is_the_names() {
 /// from its mark, whose formula's `$` the group closing after it left unbalanced, so the cut declined and the joined
 /// contact stayed — Ann Able and Cid Cole held "Univ X 2 Univ Y", Bob Baker nothing (2308.11662). The mark `2` the cut
 /// answered is no longer shown on Bob Baker's and Cid Cole's names (`hide_answered_marks`: today's showed it for no
-/// entry of its own, `show_unanswered_marks`; pdflatex prints "Bob Baker2" over "2 Univ Y", the mark the entry's label
+/// entry of its own, `settle_name_marks`; pdflatex prints "Bob Baker2" over "2 Univ Y", the mark the entry's label
 /// — review rev94a r2 S3, as Ann Able's `1` was always taken).
 #[test]
 fn two_marked_groups_on_a_line_are_cut() {

@@ -4131,7 +4131,7 @@ fn author_mark_comma_in_math() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_comma_in_math.tex"
   );
   assert_eq!(creators_63x(tex), vec![
-    // (the `\dagger` nothing answers stays shown, as printed: 65e `show_unanswered_marks`)
+    // (the `\dagger` nothing answers stays shown, as printed: 65e `settle_name_marks`)
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"†\" role=\"footnotemark\" xml:id=\"id1\"/>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
   ]);

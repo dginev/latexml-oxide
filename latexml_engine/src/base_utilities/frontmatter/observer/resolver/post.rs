@@ -351,8 +351,7 @@ impl Resolver {
     for (c, number) in note.run_of {
       self.out.creators[c]
         .marks
-        .push(NameMark::new(number.to_string(), MarkBy::Call, None));
-      self.thenote_requests.push((c, number.to_string()));
+        .push(NameMark::new(number.to_string(), MarkBy::TheNote, None));
     }
     for (number, tag) in note.affils {
       let mut moved: Option<Assoc> = None;
@@ -1536,10 +1535,7 @@ impl Resolver {
       };
       for owner in owners {
         // (an owner found by the number authblk printed on it: ruling 1 on that mark)
-        let by_thenote = self
-          .thenote_requests
-          .iter()
-          .any(|(c, r)| *c == owner && labels.contains(r));
+        let by_thenote = self.out.creators[owner].thenote_requests(&labels);
         let mut assoc = assoc.clone();
         if by_thenote && !assoc.rule.contains("ruling1:") {
           assoc.rule.push_str(" ruling1:thenote");

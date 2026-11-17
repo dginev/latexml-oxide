@@ -137,7 +137,7 @@ pub(in crate::base_utilities) fn lift_notes_beside(
   let contact = node.get_name() == "contact";
   // (a mark a request left stays where it printed, for the settle step: `insert::settle_name_marks`)
   for mut note in document.findnodes(
-    ".//ltx:note[not(ancestor::ltx:note)][not(@_namemark)]",
+    ".//ltx:note[not(ancestor::ltx:note)][not(@_namekeys)]",
     Some(node),
   ) {
     // (a mark alone that leads a contact is the mark the reading paired the entry by, `mark:footnote`; `insert` drops it
@@ -1195,11 +1195,7 @@ pub fn authors_show_marks() -> Result<bool> {
             creators
               .iter()
               .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
-              .any(|c| {
-                c.attr
-                  .get(REQUESTED)
-                  .is_some_and(|marks| !marks.trim().is_empty())
-              })
+              .any(|c| c.attr.contains_key(REQUESTED))
           })
         },
         _ => false,

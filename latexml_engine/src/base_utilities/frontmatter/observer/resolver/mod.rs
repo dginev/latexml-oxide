@@ -554,8 +554,6 @@ struct Resolver {
   order:              Vec<Vec<(bool, usize)>>,
   /// authblk's notes (`Policy::thenote`): the state its `\author` and `\affil` keep
   thenote:            TheNote,
-  /// the requests authblk's printed `\AB@thenote` made (creator, label): what ruling 1 reads off the PDF's marks
-  thenote_requests:   Vec<(usize, String)>,
   /// the labels the title's marks request (aastex's `\title{…\altaffilmark{1}}`): an entry they alone ask for is the
   /// title's note
   title_requests:     Vec<String>,
@@ -727,7 +725,6 @@ impl Resolver {
         newaffil: true,
         ..TheNote::default()
       },
-      thenote_requests:   Vec::new(),
       title_requests:     Vec::new(),
       title_fn_marks:     Vec::new(),
       epoch_of:           Vec::new(),

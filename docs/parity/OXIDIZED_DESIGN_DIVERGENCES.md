@@ -16583,7 +16583,8 @@ ruling 2026-10-29; `archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md` "Stages
   it (review rev92b_r3 S1: a TikZ ORCID icon's node text "iD" in `$^{1,\href{…}{\orcidicon}}$` and llncs
   `\inst{1\myorcid{…}}` was shown as a mark; Perl shows nothing). The rule is per request: a label the name also
   requests outside a picture (its own mark, with its glyph) is shown, `Ann Able$^{\circled{b}}$$^{b}$` or `\inst{\circled{b}}\inst{b}`
-  in either order (review rev92b_r4 B1, where the picture's hid it). The observer's mark reader
+  in either order: the picture's mark, dropped unshown, takes no label (review rev92b_r4 B1, where the picture's hid
+  it; revR2A B1, `perfect_kernel_batchr2a::a_picture_mark_takes_no_label_from_the_plain_mark_after_it`). The observer's mark reader
   (`events::script_ink`) reads a script so too. Review rev92b_r2: dropping every combining mark read `x̄` as `x` (a
   wrong owner), and reading a picture as no text lost a circled letter's label. Review rev92b_r1 B1: `$^{1\,2}$`
   printed one label `1_2`, which nothing answered and `unanswered_mark_text` showed none of — each such mark lost
@@ -20163,18 +20164,23 @@ internal_frontmatter_keys_are_declared, mnras_title_notes_step_the_counter}`,
 label on the creator (`_annotations`) and prints nothing; `relocateAnnotations` clones the labelled entry onto each
 creator requesting it (Base_Utility.pool.ltxml:880-901). A label no entry answers is lost with its mark.
 **Rust.** The request still records Perl's label, and leaves the mark it printed where it printed it: a mark-only note
-keyed by the labels it requests (`\lx@frontmatter@namemark`, `insert::NAME_MARK`; `insert::request_marks`) — its glyph as
-printed (a reference mark's symbol, 2408.02464; a text `*` as `*`, a math one `∗`), none for a label only a picture
-prints (rev92b_r3 S1); only on a creator being digested, never in the rehearsal. It is no `\footnotemark`: the kernel's
+keyed by the labels it requests (`\lx@frontmatter@namemark`, `insert::NAME_MARK`, its labels in `_namekeys` — PURE's
+mark-only note is `_namemark`; `insert::request_marks`) — its glyph as printed (a reference mark's symbol, 2408.02464; a
+text `*` as `*`, a math one `∗`), none for a label only a picture prints (rev92b_r3 S1); only on a creator being
+digested, never in the rehearsal. It prints nothing, as Perl's request, and is no part of the math it is read in: there
+it waits for the math to close (`\aftergroup`), so `$\star^{1}$`'s `tex` and MathML `alttext` stay `\star` and
+`$^{2}_{x}$` keeps its script's own empty base (revR2A B2). It is no `\footnotemark`: the kernel's
 footnote pairing (`relocate_footnote`) gives it no body `\footnotetext` of its glyph (2210.05617, 1304.5040,
 1812.11634, whose texts it took and the settle step dropped before the A/B caught it). The frontmatter emitter, which writes a name without the marks it requests, leaves each one so
 after the name's item (`emit::left_marks`; a glued mark parted into requests one mark of all its pieces, shown whole:
 BESIII's "50A,50C", 1705.11109). One step after `relocate_annotations`, `insert::settle_name_marks`, pairs the marks
 by key: a mark goes where an entry answers one of its labels (the labels the entries carry, `answered_labels`), where
 the author's contact answers its symbol (`_answers`), where the entry requests none of its labels (the emitter wrote
-the answering item under its own `item:` label), where the name shows its glyph already, or as a second of one label;
-the rest show as the superscripts they printed, in place (2610.07087's `$^{1*}$`: 1 before the ∗), for the pure-name
-pass to set after the name (#1055); one of no known glyph is counted lost (`unanswered_mark_lost`). A binding's
+the answering item under its own `item:` label), where the name shows its glyph already, or as a second of one label
+(a picture's mark, dropped unshown, takes no label: the label's plain mark after it shows, revR2A B1); the rest show as
+the superscripts they printed, in place where only marks follow them in the name (2610.07087's `$^{1*}$`: 1 before the
+∗), else after the name, joined, as the base did (`ends_name`: `Bob Baker$^{2}$$^{3}$ \\ Univ.\ of C`, revR2A S1),
+for the pure-name pass to set after the name (#1055); one of no known glyph is counted lost (`unanswered_mark_lost`). A binding's
 `annotations=` request (authblk's `\author[1,*]`), which leaves no mark, shows after the name as before. Replaces
 `show_unanswered_marks`, `unanswered_sup` and the creator side-tables `_textmarks`, `_plainmarks`, `_picturemarks`
 (one `_requested` flag: whether the entry shows marks) and `_refmarkshown`. **Guards**: the FMRG suite
@@ -20182,7 +20188,11 @@ pass to set after the name (#1055); one of no known glyph is counted lost (`unan
 `perfect_kernel_batch108a`, `perfect_kernel_batchpure`, `perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`
 (a mark the name shows inside a formula is not repeated), `perfect_kernel_batch78f::llncs_comma_before_inst_is_the_name_before`
 (a kept `\inst` the emitter answered by its item), `perfect_kernel_batchr2a::a_request_mark_takes_no_body_footnote_text`
-(repro `r2a_request_mark_beside_a_body_footnotetext`).
+(repro `r2a_request_mark_beside_a_body_footnotetext`), and on the footnote-counter decline path
+`perfect_kernel_batchr2a::a_picture_mark_takes_no_label_from_the_plain_mark_after_it`,
+`a_request_mark_read_in_math_waits_out_the_math`, `a_mark_before_a_name_line_shows_after_the_name`. **Open (R2b, first
+item):** the glyph a mark shows is not on its `NameMark` (#1062): `request_marks` and `emit::left_mark` each compute
+it.
 
 ### 1062. The reading keeps one record per mark a name prints; its requests, its class's requests, its footnote marks and its notes' marks are views of it (MARKKEY R2a)
 
@@ -20194,16 +20204,17 @@ glued mark it was parted from — and kept each fact in a store of its own, reco
 often than by a footnote"). One `NameMark` per label a mark requests (`resolver/name_marks.rs`) replaces them, made where
 the names line reads the mark (`lines.rs`), the API's creator call (`api.rs`), authblk's `\AB@thenote` number
 (`post.rs`) and a note's own mark (`blocks.rs`): `label`, `number`, `span`, `by` (`MarkBy`: hand, class, footnote, note,
-call; `origin()` inked or implied, DG 2026-11-16), `whole`, `parted`, and SEPb's observer records, `sep_before` (a comma
+call, thenote; `origin()` inked or implied, DG 2026-11-16), `whole`, `parted`, and SEPb's observer records, `sep_before` (a comma
 printed before it in its run, a formula's comma `\endnotemark[1]$^,$\endnotemark[2]` included, 1703.08733; every mark
 after a name's first where the binding declares its class lists them, `declare_marks_listed`: elsarticle.cls:250-262,
 2605.13555) and `overprint` (TeX prints it over the zero-width title mark before it, of its glyph:
 `mark_ledger::overprints`, article.cls:206's `\rlap`, `latex_constructs::TITLE_MARKS_ZERO_WIDTH`; 2012.08663,
 2103.01544). The old stores are views: `RCreator::requests`, `class_requests`, `asks_not_by_footnote` (the count
-arithmetic), `parted`, `Resolver::footnote_marks`. Parting a glued mark parts its record, each piece keeping how it
+arithmetic), `parted`, `Resolver::footnote_marks`, `RCreator::thenote_requests` (authblk's printed `\AB@thenote`
+number, ruling 1's reading of it). Parting a glued mark parts its record, each piece keeping how it
 printed (a class's `\inst{12}` parted under entries 1 and 2 is the class's request of each). The emitter reads the
 record's `whole` for the mark it leaves (#1061). Not yet read: `sep_before`, `overprint` and `origin` (the page's
-separators, overprints and implied glyphs: row R MARKKEY-R2b). **Guards**: the FMRG suite and the resolver's guards
+separators, overprints and implied glyphs: row R MARKKEY-R2b); `mark_ledger::overprints` is not run until then. **Guards**: the FMRG suite and the resolver's guards
 unchanged; `perfect_kernel_batchmarkkey1::the_mark_components_only_shrink` (`whole_marks`, `fn_requests`, `note_marks`
 gone, `marks` the one record; the two state keys SEPb's records read, `lx_frontmatter_marks_listed` and
 `lx_title_marks_zero_width`, raised with this reason); unit test

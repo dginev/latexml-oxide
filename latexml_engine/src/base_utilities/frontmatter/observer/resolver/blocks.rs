@@ -195,11 +195,8 @@ impl Resolver {
     // and the addresses as an affiliation, 2501.02356)
     // (the mark ledger reads the whole block, as the writer writes it: one decision for both, `Resolved::mark_ledgers`)
     let all = read_events(events);
+    // (the overprints, `mark_ledger::overprints`, are read once R2b's display reads `NameMark::overprint`; revR2A NIT)
     self.mark_ledger = mark_ledger(&all);
-    self.mark_ledger.overprints = mark_ledger::overprints(
-      &all,
-      lookup_bool(crate::latex_constructs::TITLE_MARKS_ZERO_WIDTH),
-    );
     self
       .out
       .mark_ledgers

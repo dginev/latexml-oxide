@@ -1,0 +1,21 @@
+% mechanism: a name's picture mark (`$^{\circled{b}}$`, its label `b` known, its glyph not) is dropped from the name and
+%   takes no label, so the plain mark of that label after it (`$^{b}$`) still shows (`insert::settle_name_marks`); on the
+%   footnote-counter decline path (`\footremember`'s `\newcounter`), where the settle step shows every unanswered mark
+% witness:  review revR2A B1 (probe p23); sibling p20 (r2a_picture_mark_in_a_glued_run_before_its_plain_mark)
+% oracle:   pdflatex 0 errors; "Ann Able ⓑ b∗ Bob Baker c ⓒ" (pdftotext "Ann Able b b∗ Bob Bakerc c"), footnote
+%   "∗ Zebra University."
+% engines:  rust R2Abase 14e92b291ab = Ann's b and Bob's c kept; rust R2A 1012ac10283 = Ann's b lost, 0 new Warnings
+% expect:   0 errors, 1 Warning (the decline); Ann Able ; footnotemark[b] ; thanks[*]=Zebra University. / Bob Baker ;
+%   footnotemark[c]
+% status:   GREEN (perfect_kernel_batchr2a::a_picture_mark_takes_no_label_from_the_plain_mark_after_it)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\newcommand\circled[1]{\tikz[baseline=(c.base)]\node[circle,draw,inner sep=0.5pt](c){#1};}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{\circled{b}}$$^{b}$\footremember{zz}{Zebra University.} \and Bob Baker$^{c}$$^{\circled{c}}$}
+\begin{document}
+\maketitle
+Body.
+\end{document}

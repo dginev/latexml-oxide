@@ -19,8 +19,10 @@ pub enum MarkBy {
   /// a note's own mark on the name it is beside (`\thanks`, `\footnote`): no request, its note answers it (an entry led
   /// by the same `\footnotemark` is that note's print: `answer_pending`, 1607.07280)
   Note,
-  /// no mark printed: a creator call's own label (`\lx@add@creator[annotations={ed}]`), authblk's `\AB@thenote` number
+  /// no mark printed: a creator call's own label (`\lx@add@creator[annotations={ed}]`)
   Call,
+  /// authblk's `\AB@thenote` number, printed by the class once every call is read (`Resolver::thenote_finish`)
+  TheNote,
 }
 
 /// Whether a mark's glyph is inked in the source or implied by a counter ([`NameMark::origin`]; DG 2026-11-16: an inked
@@ -77,7 +79,7 @@ impl NameMark {
   pub fn origin(&self) -> MarkOrigin {
     match self.by {
       MarkBy::Hand | MarkBy::Class => MarkOrigin::Inked,
-      MarkBy::Footnote | MarkBy::Note | MarkBy::Call => MarkOrigin::Implied,
+      MarkBy::Footnote | MarkBy::Note | MarkBy::Call | MarkBy::TheNote => MarkOrigin::Implied,
     }
   }
 
@@ -114,6 +116,14 @@ impl RCreator {
       .marks
       .iter()
       .any(|m| m.requests() && m.by != MarkBy::Footnote && label_matches(&m.label, label))
+  }
+
+  /// Whether authblk's `\AB@thenote` number it shows is one of `labels` (ruling 1 on that mark).
+  pub fn thenote_requests(&self, labels: &[String]) -> bool {
+    self
+      .marks
+      .iter()
+      .any(|m| m.by == MarkBy::TheNote && labels.contains(&m.label))
   }
 
   /// Whether a mark it was parted into requests a label `matches` accepts (ruling 1 on that mark).

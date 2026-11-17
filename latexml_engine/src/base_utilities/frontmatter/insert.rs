@@ -4857,16 +4857,9 @@ fn answered_labels(document: &mut Document) -> HashSet<String> {
   answered
 }
 
-/// The settle step (OXIDIZED_DESIGN_DIVERGENCES #1061): each mark a name's request left where it printed ([`request_marks`])
-/// goes where an entry answers its label — the entry, which [`relocate_annotations`] placed by that label, prints it —,
-/// where the author's contact it placed answers its symbol (`_answers`: `$^\dagger$baker@y.edu`, `answered_symbol_key`;
-/// one the author's e-mail shows as well stays, as printed: 1910.00401), and where the name shows its label already. The
-/// rest show as the superscripts they printed, in place (`Ann Able$^*$ and Bob Bee$^1$` with no `$^1$` line;
-/// `$^{1*}$`'s 1 before the ∗, 2610.07087; 2408.02464's `Gus Gray\IEEEauthorrefmark{1}` "Gus Gray∗"), which
-/// [`keep_personnames_pure`] sets after the name; a mark of no known glyph is counted lost. Perl drops them all
-/// (repro sectioning-frontmatter/author_unmatched_numeric_mark). A request a binding's `annotations=` made leaves no mark
-/// (authblk's `\author[1,*]`): shown after the name, where its glyph is known and the name shows it nowhere.
-/// `answered` holds the labels the entries carry ([`answered_labels`]).
+/// The settle step (OXIDIZED_DESIGN_DIVERGENCES #1061): each mark a name's request left ([`request_marks`]) is dropped where
+/// an entry answers its label, the author's contact its symbol or the name shows it already; the rest show as printed,
+/// and a binding's requests, which leave no mark, after the name. `answered`: the entries' labels ([`answered_labels`]).
 fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Result<()> {
   let is_answered = |label: &str| {
     answered.contains(label)
@@ -4875,7 +4868,7 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
         .is_some_and(|mark| answered.contains(mark))
   };
   for mark in document.findnodes(
-    ".//ltx:note[@_namemark][not(ancestor::ltx:personname/parent::ltx:creator)]",
+    ".//ltx:note[@_namekeys][not(ancestor::ltx:personname/parent::ltx:creator)]",
     None,
   ) {
     document.remove_node(mark);
@@ -4885,7 +4878,7 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
   for creator in document.findnodes(".//ltx:creator[@_annotations]", None) {
     let annotations = creator.get_attribute("_annotations").unwrap_or_default();
     let requested: Vec<&str> = annotations.split(',').collect();
-    let keyed = document.findnodes("ltx:personname//ltx:note[@_namemark]", Some(&creator));
+    let keyed = document.findnodes("ltx:personname//ltx:note[@_namekeys]", Some(&creator));
     if keyed.is_empty()
       && !requested
         .iter()
@@ -4919,14 +4912,15 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
         || (!text.chars().all(char::is_alphanumeric)
           && sups.iter().any(|sup| sup.contains(&unify(text))))
     };
-    let mut seen: Vec<String> = Vec::new();
+    // (`seen`: the labels a mark shown or dropped took; `pictured`: those only a picture printed so far)
+    let (mut seen, mut pictured): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
+    let mut marks: Vec<String> = Vec::new();
     for mut node in keyed {
       // (the labels it requests: one, or a glued mark's pieces, shown whole while one is open)
-      let keys = node.get_attribute("_namemark").unwrap_or_default();
+      let keys = node.get_attribute("_namekeys").unwrap_or_default();
       let labels: Vec<&str> = keys.split(',').collect();
       let glyph = node.get_attribute("mark").unwrap_or_default();
       let again = labels.iter().all(|label| seen.iter().any(|s| s == label));
-      seen.extend(labels.iter().map(|label| label.to_string()));
       // (a mark whose labels the entry requests none of is none of its requests: the frontmatter emitter wrote the item
       // that answers it under a label of its own, `item:…`)
       if again
@@ -4934,14 +4928,27 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
         || !labels.iter().any(|label| requested.contains(label))
         || shows(&glyph)
       {
+        seen.extend(labels.iter().map(|label| label.to_string()));
         document.remove_node(node);
         continue;
       }
-      // (none for a label only a picture prints, whose glyph is known: no mark of the name, review rev92b_r3 S1)
+      // (none for a label only a picture prints, whose glyph is known: no mark of the name, review rev92b_r3 S1; it takes
+      // no label, so the label's plain mark after it shows — `$^{\circled{b}}$$^{b}$`, revR2A B1)
       if glyph.is_empty() {
         let mark = labels[0].strip_prefix("affiliation:").unwrap_or(labels[0]);
-        if unanswered_mark_text(mark).is_none() {
+        if unanswered_mark_text(mark).is_none() && !pictured.iter().any(|p| p == labels[0]) {
           lost.push(mark.to_string());
+        }
+        pictured.extend(labels.iter().map(|label| label.to_string()));
+        document.remove_node(node);
+        continue;
+      }
+      seen.extend(labels.iter().map(|label| label.to_string()));
+      // (in place where only marks follow it; one before more of the name — a `\\` line — shows after the name, as the
+      // binding's do: revR2A S1)
+      if !ends_name(&node) {
+        if !marks.contains(&glyph) {
+          marks.push(glyph);
         }
         document.remove_node(node);
         continue;
@@ -4955,12 +4962,11 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
       document.remove_node(node);
     }
     // (a binding's requests, which leave no mark: each shown once, after the name)
-    let mut marks: Vec<String> = Vec::new();
     for label in requested {
       let Some(mark) = label.strip_prefix("affiliation:") else {
         continue;
       };
-      if seen.iter().any(|s| s == label) || !open(label) {
+      if seen.iter().chain(&pictured).any(|s| s == label) || !open(label) {
         continue;
       }
       seen.push(label.to_string());
@@ -4986,6 +4992,25 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
   }
   count_lost_marks(document, &lost);
   Ok(())
+}
+
+/// Whether only marks follow `node` in its name (`ltx:sup`, `ltx:note`, space): the name's last mark run.
+fn ends_name(node: &Node) -> bool {
+  let mark = |n: &Node| match n.get_type() {
+    Some(NodeType::ElementNode) => matches!(n.get_name().as_str(), "sup" | "note"),
+    Some(NodeType::TextNode) => n.get_content().trim().is_empty(),
+    _ => true,
+  };
+  let mut at = node.clone();
+  loop {
+    if !std::iter::successors(at.get_next_sibling(), Node::get_next_sibling).all(|n| mark(&n)) {
+      return false;
+    }
+    match at.get_parent() {
+      Some(parent) if parent.get_name() != "personname" => at = parent,
+      _ => return true,
+    }
+  }
 }
 
 /// Count each mark [`settle_name_marks`] could not show and no name shows: a printed mark lost is never silent
@@ -5048,24 +5073,17 @@ fn lost_mark_as_written(mark: &str) -> String {
   }
 }
 
-/// The labels a printed mark of a frontmatter entry requested (a name's `$^{1}$`, `\inst{1}`; [`add_annotation_labels`]),
-/// as against those its keyvals gave: whether the entry shows marks (`authors_show_marks`, the Kind steps' runs).
+/// Set on a frontmatter entry a printed mark of which requested a label (a name's `$^{1}$`, `\inst{1}`;
+/// [`add_annotation_labels`]), as against those its keyvals gave: whether the entry shows marks (`authors_show_marks`, the
+/// Kind steps' runs).
 pub(in crate::base_utilities) const REQUESTED: &str = "_requested";
 
 /// Add `label` (comma separated), the labels a printed mark requests, to the requests of the frontmatter entry being
-/// digested (`_annotations`) and to its printed requests ([`REQUESTED`]).
+/// digested (`_annotations`), flagging it [`REQUESTED`].
 pub(in crate::base_utilities) fn add_annotation_labels(label: String) {
   with_pending_entry_attr(move |attr| {
-    let printed: Vec<&str> = label.split(',').filter(|key| !key.is_empty()).collect();
-    if !printed.is_empty() {
-      let mut requested = attr.get(REQUESTED).cloned().unwrap_or_default();
-      for key in printed {
-        if !requested.is_empty() {
-          requested.push(',');
-        }
-        requested.push_str(key);
-      }
-      attr.insert(REQUESTED.to_string(), requested);
+    if label.split(',').any(|key| !key.is_empty()) {
+      attr.insert(REQUESTED.to_string(), "true".to_string());
     }
     let labels = attr.get("_annotations").cloned().unwrap_or_default();
     // (an annotation being digested — a contact's stub, `role=pending` — whose label is the mark its content requests

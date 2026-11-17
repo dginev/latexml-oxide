@@ -332,6 +332,10 @@ fn decide(
 /// the page shows that glyph once. A mark set after an inked one stands beside it (`Wei Fan$^{*}$\thanks{…}` "∗∗"),
 /// and a mark of another glyph is ink of its own. Decided on the glue the ledger reads (a `Gap`, an interword space);
 /// the glyphs compared as one asterisk.
+#[cfg_attr(
+  not(test),
+  allow(dead_code, reason = "no reader until MARKKEY R2b's display (OD #1062)")
+)]
 pub(in crate::base_utilities::frontmatter::observer) fn overprints(
   events: &[Event],
   zero_width: bool,

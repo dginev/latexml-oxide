@@ -548,11 +548,21 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // OXIDIZED_DESIGN #52; witness arXiv:2506.06941 (Mirzadeh's `$^{*}$`).
   DefConstructor!("\\lx@frontmatter@keepsup{}", "<ltx:sup>#1</ltx:sup>", mode => "text");
   // Rust-only: the mark a name's request leaves where it printed (`insert::request_marks`, OD #1061): a mark-only note keyed
-  // by the label it requests, its glyph as printed, empty for one no glyph is known of. The settle step drops it where an
-  // entry answers the label and shows the rest where they printed (`insert::settle_name_marks`).
+  // by the label it requests, its glyph as printed, empty for one no glyph is known of; the settle step drops or shows it
+  // (`insert::settle_name_marks`). It prints nothing, as Perl's request (Base_Utility.pool.ltxml:552, :729-732), and
+  // waits out the math it was read in (`\aftergroup`): `$\star^{1}$`'s tex stays `\star` (revR2A B2).
+  DefPrimitive!("\\lx@frontmatter@namemark Semiverbatim Semiverbatim", sub[(keys, glyph)] {
+    if lookup_bool("IN_MATH") {
+      push_value("afterGroup", Invocation!(T_CS!(NAME_MARK), vec![Some(keys), Some(glyph)]))?;
+      return Ok(Vec::new());
+    }
+    Ok(vec![digest(Invocation!(T_CS!("\\lx@frontmatter@namemark@note"), vec![Some(keys), Some(glyph)]))?])
+  });
+  // (`_namekeys`: the labels it requests; PURE's mark-only note is `_namemark`)
   DefConstructor!(
-    "\\lx@frontmatter@namemark Semiverbatim Semiverbatim",
-    "<ltx:note role='footnotemark' _namemark='#1' mark='#2'/>"
+    "\\lx@frontmatter@namemark@note Semiverbatim Semiverbatim",
+    "<ltx:note role='footnotemark' _namekeys='#1' mark='#2'/>",
+    reversion => ""
   );
   // A footnote-symbol author mark (`$^{*}$`, `\inst{\dagger}`), shown by `\lx@frontmatter@keepsup`, also requests
   // the affiliation of its symbol, as a lettered mark does: a list labelling an entry with it (informs4's
