@@ -1023,12 +1023,6 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // emitter's)
   ("_merged_checked= base_utilities/defs/author_macros.rs", 1),
   ("_net= frontmatter_stores.rs", 1),
-  // (CL8, 0 -> 1: the whole printed mark a glued sub-lettered request was parted from, `whole_marks_key` — Perl's own
-  // `_refmarkshown` display, written by the emitter as `author_macros.rs` writes it; 1705.11109)
-  (
-    "_refmarkshown= base_utilities/frontmatter/observer/emitter/emit.rs",
-    1,
-  ),
   ("_scopebegin= package/pgfsys_latexml_def.rs", 1),
   ("_sequence= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_share= cas_dc_cls.rs", 1),
@@ -1180,6 +1174,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // and tex_box.rs as the kernel's own)
   ("const _skip_after_para tex_paragraph.rs", 1),
   ("const _skip_before_para tex_paragraph.rs", 1),
+  // (MARKKEY R2a, 0 -> 1, raised with its reason: a flag, set on an entry a printed mark of which requested a label,
+  // `insert::REQUESTED`, in place of the three side-tables `_plainmarks`, `_textmarks`, `_picturemarks` the deleted
+  // `show_unanswered_marks` read, which the run walks and `authors_show_marks` still ask: whether the entry shows marks;
+  // OD #1061)
+  ("const _requested base_utilities/frontmatter/insert.rs", 1),
   ("const _source base_utilities/frontmatter/insert.rs", 1),
   // (Z18o2, raised with its reason: the reading's stopgap fact of an entry (`resolver::RUN_LEFTOVER`, an `annotate=new`
   // walk reaching only authors that held the role, no group in print of their own), on the entry the emitter writes, which
@@ -1291,10 +1290,6 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   (
-    "declared _refmarkshown base_utilities/defs/frontmatter_api.rs",
-    1,
-  ),
-  (
     "declared _sequence base_utilities/defs/frontmatter_api.rs",
     1,
   ),
@@ -1337,14 +1332,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("insert _qname package/axodraw_sty.rs", 1),
-  (
-    "insert _refmarkshown base_utilities/defs/author_macros.rs",
-    1,
-  ),
   ("insert _role base_utilities/defs/frontmatter_api.rs", 1),
   ("insert _scopebegin package/pgfsys_latexml_def.rs", 3),
   ("insert _split_ref package/amsmath_sty.rs", 1),
-  ("insert _textmarks base_utilities/frontmatter/insert.rs", 1),
   ("insert _xmkey package/amsmath_sty.rs", 1),
   ("owner= base_utilities/defs/author_macros.rs", 1),
   ("owner= base_utilities/defs/frontmatter_fields.rs", 4),
@@ -2587,7 +2577,6 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   // (SHRESTb: the marks of a class's front-matter footnotes, numbered in print order on the placed creators — a mark,
   // `_fnmark` or a thanks note's `mark`, no owner moved)
   ("number_footnote_parts", PassMay::ChangeText),
-  ("count_lost_marks", PassMay::ChangeNothing),
   ("join_split_address_contacts", PassMay::ChangeText),
   ("kind_address_lines", PassMay::ChangeKind),
   ("link_entry_addresses", PassMay::OwnerDebt),

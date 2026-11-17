@@ -1,0 +1,22 @@
+% mechanism: a name's unanswered marks printed before more of the name (a `\\` line) show after the name, joined, as the
+%   binding's requests do (`insert::settle_name_marks`' `ends_name`), so the pure-name cut sets them after it; a mark in
+%   the name's last mark run stays where it printed
+% witness:  review revR2A S1 (probe p21)
+% oracle:   pdflatex 0 errors; "Ann Able1,∗*∗ Bob Baker23∗", "1 Dept. of B", "Univ. of C", footnotes "∗ Zebra
+%   University.", "2 Two text.", "3 Three text."
+% engines:  rust R2Abase 14e92b291ab = Bob Baker<break/>Univ. of C, footnotemark "2,3" after; rust R2A 1012ac10283 =
+%   `<sup>2</sup><sup>3</sup>` inside the name before `<break/>`
+% expect:   0 errors, 1 Warning (the decline); Bob Baker<break/>Univ. of C ; footnotemark[2,3] ; thanks[*] (Ann's,
+%   idref); Ann's first printed asterisk (math ∗) shown once (row R MARKKEY-P1: the second, text *, is hidden)
+% status:   GREEN (perfect_kernel_batchr2a::a_mark_before_a_name_line_shows_after_the_name)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{1,*}$\textsuperscript{*}\footremember{zz}{Zebra University.} \\ $^{1}$Dept.\ of B \and Bob Baker$^{2}$$^{3}$\footnotemark[1] \\ Univ.\ of C}
+\begin{document}
+\footnotetext[2]{Two text.}
+\maketitle
+\footnotetext[3]{Three text.}
+Body.
+\end{document}

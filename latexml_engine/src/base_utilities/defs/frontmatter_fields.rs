@@ -666,7 +666,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let (value, answers) = match placed_contact_owner(&mark, &content, weak_mark)? {
       ContactOwner::Mark(label) => (label, None),
       // (placed by a footnote-symbol mark its author requests: the contact answers that mark on that author,
-      // `show_unanswered_marks`)
+      // `settle_name_marks`)
       ContactOwner::Author(author) => (s!("author:{author}"), answered_symbol_key(mark.unlist_ref())),
       ContactOwner::Block if owner_first => (s!("author:{}", frontmatter_group_first()), None),
       ContactOwner::Block => (s!("addresses:block"), None),

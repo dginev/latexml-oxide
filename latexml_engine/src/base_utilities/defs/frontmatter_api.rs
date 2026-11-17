@@ -293,7 +293,6 @@ pub(crate) const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[
   ("_merged_checked", ""),
   ("_nameprinted", ""),
   ("_placedbymark", ""),
-  ("_refmarkshown", ""),
   ("_sequence", ""),
   ("_store", ""),
   ("_unmarked", ""),
@@ -1257,7 +1256,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
             let has_role_key = s!("_has{role}");
             // (a parent has the role already when it has such a contact; in a run, also when a mark of its own is
             // answered by a mark-picked contact of the role (`_bymark`, `\lx@affiliation@withsup`; or one its printed
-            // mark labels, `_plainmarks`/`_picturemarks`, as `marked_at` below reads it — a class's in-place
+            // mark labels, `insert::REQUESTED`, as `marked_at` below reads it — a class's in-place
             // `\affil{$^1$Univ A}`, so `\author{ANN ABLE$^1$ and BOB BAKER \affil{$^1$Univ A} \affil{Univ B}}` gives
             // Univ B to Bob Baker alone, as the observer's `Resolver::record_run`, review rev94a r7 SF2) — one deferred
             // until the labels are compared, or one this flush digests later (`lx_frontmatter_offered_labels`) — which
@@ -1273,7 +1272,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
                 .iter()
                 .filter(|e| {
                   e.attr.get("role").map(String::as_str) == Some("pending")
-                    && ["_bymark", "_plainmarks", "_picturemarks"]
+                    && ["_bymark", REQUESTED]
                       .iter()
                       .any(|key| e.attr.contains_key(*key))
                     && matches!(e.content.first(),
@@ -1294,7 +1293,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
               Vec::new()
             };
             // (nor is an author made before a deferred contact of the role a printed mark labels (`_bymark`, or the
-            // marks it requested, `_plainmarks`/`_picturemarks`) new: the contact waits for its label, so its owner
+            // marks it requested, `_requested`) new: the contact waits for its label, so its owner
             // holds no role yet — a class's in-place `\affil` in `\author{ANN ABLE$^1$ \affil{$^1$Univ A} BOB BAKER
             // \affil{Univ B}}` gave Ann Univ B too, IEEEtran's `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}` gave
             // the author above it the next block's `\IEEEauthorblockA{Univ Y}` (`annotate=new`; review rev94a r6 B1, the
@@ -1307,7 +1306,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
                 .iter()
                 .rposition(|e| {
                   e.attr.get("role").map(String::as_str) == Some("pending")
-                    && ["_bymark", "_plainmarks", "_picturemarks"]
+                    && ["_bymark", REQUESTED]
                       .iter()
                       .any(|key| e.attr.contains_key(*key))
                     && matches!(e.content.first(),
@@ -1433,10 +1432,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let (label, pictured) = frontmatter_label_request(
       &label,
       if prefix.is_empty() { "LABEL" } else { &prefix })?;
-    add_annotation_labels(label.join(","), false, pictured);
+    add_annotation_labels(label.join(","));
+    // (a mark command sets its mark in math, `\def\inst#1{\unskip$^{#1}$}` llncs.cls:894, whatever mode it is read in)
+    let marks = request_marks(&label, &pictured, false, None)?;
     if let Some(notes) = notes {
       unread(notes);
     }
+    Ok(marks)
   });
 
   // \lx@set@frontmatter@label Internal to digesting annotation contents.

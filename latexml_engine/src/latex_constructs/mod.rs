@@ -570,6 +570,11 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
   // (its `\thanks` steps the counter under a title page too, and its `\maketitle` sets it back: article.cls:173, :190,
   // :223, :241, latex.ltx:17215)
   declare_title_footnote_counting(true)?;
+  // (its title marks take no width, `\def\@makefnmark{\rlap{…}}` in the same branch, article.cls:206, report.cls:212,
+  // book.cls:218 — siamltex's, `None`, keep latex.ltx's `\hbox`: the frontmatter's overprints, `mark_ledger::overprints`)
+  if titlepage == Some(false) {
+    assign_value(TITLE_MARKS_ZERO_WIDTH, true, Some(Scope::Global));
+  }
   // (a title page sets no `\thefootnote`, report.cls:176-198: it prints the one in force, which a package may have set
   // (titling's `\thanksmarkseries`) or emptied; no hook, no mark: row R TITLEPAGEMARKS, 1501.00599, 1110.6706)
   if titlepage != Some(true) {
@@ -585,6 +590,10 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
   }
   Ok(())
 }
+
+/// The state key under which [`declare_fnsymbol_title_block`] records that the document class's title prints its
+/// footnote marks in no width (article.cls:206's `\rlap`): a mark set right after one prints on top of it.
+pub const TITLE_MARKS_ZERO_WIDTH: &str = "lx_title_marks_zero_width";
 
 /// A class's title block whose `\thanks` is LaTeX's, `\footnotemark` and its text (latex.ltx:17215): each note of the
 /// title, an author or the date steps the footnote counter as the `\maketitle` digests it (`lx_title_counts_footnotes`,
@@ -1643,11 +1652,11 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
     let mut filled: Vec<Node> = Vec::new();
     if let Some(mark) = node.get_attribute("mark") {
       let key = mark.replace(' ', "");
-      // (a name's mark the frontmatter set after it, `_namemark`, is no `\footnotemark`: a body `\footnotetext[2]` is
-      // not its text, 2208.09944)
+      // (a name's mark the frontmatter set after it, `_namemark`, or a request left, `_namekeys`, is no `\footnotemark`:
+      // a body `\footnotetext[2]` is not its text, 2208.09944; 1304.5040, 2210.05617, 1812.11634)
       for mut marknote in document.findnodes(
         &format!(
-          ".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}'][not(@_namemark)]"
+          ".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}'][not(@_namemark)][not(@_namekeys)]"
         ),
         None,
       ) {
@@ -1681,6 +1690,9 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
       .collect();
     one_note(document, &in_creators)?;
   } else if let Some(caps) = NOTE_MARK_END.captures(&node.get_attribute("role").unwrap_or_default())
+    // (nor is the mark a name's request leaves where it printed, `\lx@frontmatter@namemark`: a body `\footnotetext[1]`
+    // is not its text — 1304.5040, 2210.05617, 1812.11634 lost theirs to the settle step, OD #1061)
+    && node.get_attribute("_namekeys").is_none()
   {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
     let mut paired = false;

@@ -87,7 +87,7 @@ fn resolved_tuples(resolved: &FmResolved) -> Vec<String> {
     out.push(format!(
       "C {} [{}] | {}",
       c.name,
-      c.requests.join(","),
+      c.requests().cloned().collect::<Vec<_>>().join(","),
       c.rule
     ));
     for a in &c.affiliations {

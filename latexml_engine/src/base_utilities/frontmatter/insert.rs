@@ -97,13 +97,12 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   let answered = answered_labels(document);
   relocate_annotations(document)?;
   link_entry_addresses(document, None)?;
-  let unshown_marks = show_unanswered_marks(document, &answered)?;
+  settle_name_marks(document, &answered)?;
   drop_empty_contacts(document)?;
   drop_repeated_orcids(document);
   // (a class's front-matter footnotes, numbered on the placed creators as their binding wrote them, before a later step
   // makes a note of an e-mail's label: OD #1054)
   number_footnote_parts(document)?;
-  count_lost_marks(document, &unshown_marks);
   // (an entry's line of addresses, read once every route has placed the entry and the observer's writing is done: its
   // addresses the entry's e-mails, placed by the Link step; OD #966)
   join_split_address_contacts(document)?;
@@ -4858,195 +4857,166 @@ fn answered_labels(document: &mut Document) -> HashSet<String> {
   answered
 }
 
-/// An author's affiliation mark that no entry answers stays in the name, as LaTeX prints it (`Ann Able$^*$ and Bob
-/// Bee$^1$` with no `$^1$` line; `Gus Gray\IEEEauthorrefmark{1}` whose legend is a `\thanks`, 2408.02464): read as
-/// a request, it was taken out of the name to link an affiliation that is not there. A mark the name already shows
-/// is not repeated. (Perl drops it too; repro sectioning-frontmatter/author_unmatched_numeric_mark.) The last step,
-/// `keep_personnames_pure`, sets it after the name as a mark-only note (PURE).
-///
-/// Returns the marks it could not show ([`unanswered_mark_text`]: a composite label), for [`count_lost_marks`].
-fn show_unanswered_marks(
-  document: &mut Document,
-  answered: &HashSet<String>,
-) -> Result<Vec<String>> {
-  let mut unshown: Vec<String> = Vec::new();
+/// The settle step (OXIDIZED_DESIGN_DIVERGENCES #1061): each mark a name's request left ([`request_marks`]) is dropped where
+/// an entry answers its label, the author's contact its symbol or the name shows it already; the rest show as printed,
+/// and a binding's requests, which leave no mark, after the name. `answered`: the entries' labels ([`answered_labels`]).
+fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Result<()> {
+  let is_answered = |label: &str| {
+    answered.contains(label)
+      || label
+        .strip_prefix("affiliation:")
+        .is_some_and(|mark| answered.contains(mark))
+  };
+  for mark in document.findnodes(
+    ".//ltx:note[@_namekeys][not(ancestor::ltx:personname/parent::ltx:creator)]",
+    None,
+  ) {
+    document.remove_node(mark);
+  }
+  let unify = |text: &str| text.replace('\u{2217}', "*");
+  let mut lost: Vec<String> = Vec::new();
   for creator in document.findnodes(".//ltx:creator[@_annotations]", None) {
-    // (what the author's entries answer and what its name shows, read where a request no entry answers asks: most
-    // authors have none)
-    let mut answered_here: Option<Vec<String>> = None;
-    let mut shown: Option<(Vec<String>, Vec<String>)> = None;
-    let text_marks: Vec<String> = creator
-      .get_attribute("_textmarks")
-      .unwrap_or_default()
-      .split(',')
-      .map(str::to_string)
+    let annotations = creator.get_attribute("_annotations").unwrap_or_default();
+    let requested: Vec<&str> = annotations.split(',').collect();
+    let keyed = document.findnodes("ltx:personname//ltx:note[@_namekeys]", Some(&creator));
+    if keyed.is_empty()
+      && !requested
+        .iter()
+        .any(|label| label.starts_with("affiliation:"))
+    {
+      continue;
+    }
+    let answered_here: Vec<String> = document
+      .findnodes(".//*[@_answers]", Some(&creator))
+      .iter()
+      .flat_map(|node| {
+        let answers = node.get_attribute("_answers").unwrap_or_default();
+        answers.split(',').map(str::to_string).collect::<Vec<_>>()
+      })
       .collect();
-    let picture_marks = creator.get_attribute("_picturemarks").unwrap_or_default();
-    let plain_marks = creator.get_attribute("_plainmarks").unwrap_or_default();
+    // (an open label: no entry answers it, nor this author's contact its symbol)
+    let open = |label: &str| {
+      let mark = label.strip_prefix("affiliation:").unwrap_or(label);
+      !is_answered(label) && !symbol_mark_key(mark).is_some_and(|key| answered_here.contains(&key))
+    };
+    // (what the name shows already, a mark of its own: not repeated — a `$^*$` its class keeps also requests,
+    // `\lx@frontmatter@symbolmark`; `*` and `∗` are one mark)
+    let shown = shown_marks(document, &creator);
+    let sups: Vec<String> = document
+      .findnodes("ltx:personname//ltx:sup", Some(&creator))
+      .iter()
+      .map(|sup| unify(&sup.get_content()))
+      .collect();
+    let shows = |text: &str| {
+      shown.iter().any(|mark| mark == text)
+        || (!text.chars().all(char::is_alphanumeric)
+          && sups.iter().any(|sup| sup.contains(&unify(text))))
+    };
+    // (`seen`: the labels a mark shown or dropped took; `unshowable`: those only a glyph-less mark printed so far)
+    let (mut seen, mut unshowable): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
     let mut marks: Vec<String> = Vec::new();
-    // (a mark written before a symbol the name shows in a superscript of its own, the symbol's place among the labels and
-    // the symbol: it prints there, `$^{1*}$`, as its requests were made in the order written, 2610.07087 — after the
-    // name's last text, it read `∗1`)
-    let mut before_symbol: Vec<(String, usize, String)> = Vec::new();
-    let labels = creator.get_attribute("_annotations").unwrap_or_default();
-    let labels: Vec<&str> = labels.split(',').collect();
-    for (at, label) in labels.iter().copied().enumerate() {
+    for mut node in keyed {
+      // (the labels it requests: one, or a glued mark's pieces, shown whole while one is open)
+      let keys = node.get_attribute("_namekeys").unwrap_or_default();
+      let labels: Vec<&str> = keys.split(',').collect();
+      let glyph = node.get_attribute("mark").unwrap_or_default();
+      let again = labels.iter().all(|label| seen.iter().any(|s| s == label));
+      // (a mark whose labels the entry requests none of is none of its requests: the frontmatter emitter wrote the item
+      // that answers it under a label of its own, `item:…`)
+      if again
+        || !labels.iter().any(|label| open(label))
+        || !labels.iter().any(|label| requested.contains(label))
+        || shows(&glyph)
+      {
+        seen.extend(labels.iter().map(|label| label.to_string()));
+        document.remove_node(node);
+        continue;
+      }
+      // (a glyph-less mark shows none: a picture's, review rev92b_r3 S1, or a fuzzy label's, counted lost once. It takes
+      // no label, so the label's plain mark after it shows — `$^{\circled{b}}$$^{b}$`, revR2A B1)
+      if glyph.is_empty() {
+        let mark = labels[0].strip_prefix("affiliation:").unwrap_or(labels[0]);
+        if unanswered_mark_text(mark).is_none() && !unshowable.iter().any(|p| p == labels[0]) {
+          lost.push(mark.to_string());
+        }
+        unshowable.extend(labels.iter().map(|label| label.to_string()));
+        document.remove_node(node);
+        continue;
+      }
+      seen.extend(labels.iter().map(|label| label.to_string()));
+      // (in place where only marks follow it; one before more of the name — a `\\` line — shows after the name, as the
+      // binding's do: revR2A S1; and every one after it, in print order: `Bob Baker$^{a}$ Jr.$^{b}$`, revR2Ab B-2)
+      if !marks.is_empty() || !ends_name(&node) {
+        if !marks.contains(&glyph) {
+          marks.push(glyph);
+        }
+        document.remove_node(node);
+        continue;
+      }
+      let mut sup = Node::new("sup", None, document.get_document())?;
+      if let Some(namespace) = node.get_namespace() {
+        let _ = sup.set_namespace(&namespace);
+      }
+      sup.append_text(&glyph)?;
+      node.add_prev_sibling(&mut sup)?;
+      document.remove_node(node);
+    }
+    // (a binding's requests, which leave no mark: each shown once, after the name)
+    for label in requested {
       let Some(mark) = label.strip_prefix("affiliation:") else {
         continue;
       };
-      if answered.contains(label) || answered.contains(mark) {
+      if seen.iter().chain(&unshowable).any(|s| s == label) || !open(label) {
         continue;
       }
-      // (a label only a picture prints is no mark of the name: the picture is dropped from it, and its text with it —
-      // the TikZ ORCID icon's "iD", `\inst{1\myorcid{…}}`; review rev92b_r3 S1, as rounds 1-2 and Perl showed nothing.
-      // Per request: a label the name also requests outside a picture is shown, `Ann Able$^{\circled{b}}$$^{b}$`'s b,
-      // in either order — review rev92b_r4 B1, where the picture's hid it)
-      if picture_marks.split(',').any(|m| m == label) && !plain_marks.split(',').any(|m| m == label)
-      {
-        continue;
-      }
-      // (an author reference mark prints its symbol, keyed by its number: `_refmarkshown`, the request's)
-      let refmark = creator
-        .get_attribute("_refmarkshown")
-        .unwrap_or_default()
-        .split(';')
-        .find_map(|pair| {
-          pair
-            .split_once('=')
-            .filter(|(key, _)| *key == label)
-            .map(|(_, shown)| shown.to_string())
-        });
-      let Some(mut text) = refmark.or_else(|| unanswered_mark_text(mark)) else {
-        unshown.push(mark.to_string());
-        continue;
-      };
-      // (the glyph follows the mark's mode: a `*` requested in text is `*`, in math `∗`)
-      if mark == "*" && text_marks.iter().any(|m| m == label) {
-        text = "*".to_string();
-      }
-      // (a symbol mark nothing answers is shown too — 1807.01584, 1805.02699, 2203.01270 — except one that placed one of
-      // this author's contacts and was dropped from it, `$^\dagger$baker@y.edu`: answered on this author only,
-      // `answered_symbol_key`; one the author's email shows as well stays on the name too, as printed: 1910.00401)
-      let answered_here = answered_here.get_or_insert_with(|| {
-        document
-          .findnodes(".//*[@_answers]", Some(&creator))
-          .iter()
-          .flat_map(|node| {
-            node
-              .get_attribute("_answers")
-              .unwrap_or_default()
-              .split(',')
-              .map(str::to_string)
-              .collect::<Vec<_>>()
-          })
-          .collect()
-      });
-      if symbol_mark_key(mark).is_some_and(|key| answered_here.contains(&key)) {
-        continue;
-      }
-      let (shown, shown_sups) = shown.get_or_insert_with(|| {
-        let sups = document
-          .findnodes("ltx:personname//ltx:sup", Some(&creator))
-          .iter()
-          .map(|sup| sup.get_content())
-          .collect();
-        (shown_marks(document, &creator), sups)
-      });
-      // (a symbol the name shows in a superscript of its own is shown: a `$^*$`, `\lx@frontmatter@keepsup`, also
-      // requests; `*` and `∗` are one mark)
-      let unify = |text: &str| text.replace('\u{2217}', "*");
-      let symbol_shown = !text.chars().all(char::is_alphanumeric)
-        && shown_sups
-          .iter()
-          .any(|sup| unify(sup).contains(&unify(&text)));
-      if symbol_shown || shown.contains(&text) || marks.contains(&text) {
-        continue;
-      }
-      let symbol = labels[at + 1..]
-        .iter()
-        .enumerate()
-        .find_map(|(after, later)| {
-          let later = later.strip_prefix("affiliation:")?;
-          let later = unanswered_mark_text(later).unwrap_or_else(|| later.to_string());
-          (!later.chars().all(char::is_alphanumeric)
-            && shown_sups.iter().any(|sup| unify(sup) == unify(&later)))
-          .then_some((at + 1 + after, later))
-        });
-      match (symbol, before_symbol.last_mut()) {
-        // (a list before one symbol prints as one, `$^{1,2*}$`)
-        (Some((place, _)), Some((list, of, _))) if *of == place => {
-          list.push(',');
-          list.push_str(&text);
-        },
-        // (and one after an earlier symbol with the comma it prints after it, `1∗,2∗`)
-        (Some((place, symbol)), before) => {
-          let text = if before.is_some() {
-            s!(",{text}")
-          } else {
-            text
-          };
-          before_symbol.push((text, place, symbol));
-        },
-        (None, _) => marks.push(text),
+      seen.push(label.to_string());
+      match unanswered_mark_text(mark) {
+        Some(text) if shows(&text) || marks.contains(&text) => {},
+        Some(text) => marks.push(text),
+        None => lost.push(mark.to_string()),
       }
     }
-    if marks.is_empty() && before_symbol.is_empty() {
-      continue;
-    }
-    let Some(mut personname) = document
+    if let Some(mut personname) = document
       .findnodes("ltx:personname", Some(&creator))
       .into_iter()
       .next()
-    else {
-      continue;
-    };
-    let name_sups = document.findnodes("ltx:personname//ltx:sup", Some(&creator));
-    let symbol_at = |place: usize, glyph: &str| {
-      // (the same symbol again is the next of its superscripts, `$^{1*,2*}$`)
-      labels[..place]
-        .iter()
-        .filter(|label| {
-          label.strip_prefix("affiliation:").is_some_and(|label| {
-            unanswered_mark_text(label)
-              .unwrap_or_else(|| label.to_string())
-              .replace('\u{2217}', "*")
-              == glyph
-          })
-        })
-        .count()
-    };
-    // (a run after a symbol prints the comma after it, `$^{1*,2,3}$` as `1∗,2,3`, 2609.14365)
-    let after_symbol = !before_symbol.is_empty();
-    for (text, place, symbol) in before_symbol {
-      let glyph = symbol.replace('\u{2217}', "*");
-      let mut sup = unanswered_sup(document, &personname, &text)?;
-      match name_sups
-        .iter()
-        .filter(|node| node.get_content().replace('\u{2217}', "*") == glyph)
-        .nth(symbol_at(place, &glyph))
-      {
-        Some(node) => {
-          let mut node = node.clone();
-          node.add_prev_sibling(&mut sup)?;
-        },
-        None => personname.add_child(&mut sup)?,
+      && !marks.is_empty()
+    {
+      let mut sup = Node::new("sup", None, document.get_document())?;
+      if let Some(namespace) = personname.get_namespace() {
+        let _ = sup.set_namespace(&namespace);
       }
-    }
-    if !marks.is_empty() {
-      let text = marks.join(",");
-      let text = if after_symbol { s!(",{text}") } else { text };
-      let mut sup = unanswered_sup(document, &personname, &text)?;
+      sup.append_text(&marks.join(","))?;
       personname.add_child(&mut sup)?;
     }
   }
-  Ok(unshown)
+  count_lost_marks(document, &lost);
+  Ok(())
 }
 
-/// Count, once the observer's writer has written the names, each mark [`show_unanswered_marks`] could not show and nothing
-/// shows since: a printed mark lost is never silent (`$^{a-b}$`, `$^{0.8}$`). Only a number or letter with a character no
-/// mark is made of beside it: a run of symbols or a number glued to one (`$^{**}$`, `$^{*\dag}$`, `\inst{1*}`) is requested
-/// or parted piece by piece, and a label keyed by a macro's spelling, or what prints between `\ref`s (`--`), says nothing
-/// of what prints.
+/// Whether only marks follow `node` in its name (`ltx:sup`, `ltx:note`, space): the name's last mark run.
+fn ends_name(node: &Node) -> bool {
+  let mark = |n: &Node| match n.get_type() {
+    Some(NodeType::ElementNode) => matches!(n.get_name().as_str(), "sup" | "note"),
+    Some(NodeType::TextNode) => n.get_content().trim().is_empty(),
+    _ => true,
+  };
+  let mut at = node.clone();
+  loop {
+    if !std::iter::successors(at.get_next_sibling(), Node::get_next_sibling).all(|n| mark(&n)) {
+      return false;
+    }
+    match at.get_parent() {
+      Some(parent) if parent.get_name() != "personname" => at = parent,
+      _ => return true,
+    }
+  }
+}
+
+/// Count each mark [`settle_name_marks`] could not show and no name shows: a printed mark lost is never silent
+/// (`$^{a-b}$`, `$^{0.8}$`). Only a number or letter with a character no mark is made of beside it: a run of symbols or a
+/// number glued to one (`$^{**}$`, `$^{*\dag}$`, `\inst{1*}`) is requested or parted piece by piece, and a label keyed by
+/// a macro's spelling, or what prints between `\ref`s (`--`), says nothing of what prints.
 fn count_lost_marks(document: &mut Document, unshown: &[String]) {
   let composite = |mark: &&String| {
     !mark.starts_with('\\')
@@ -5103,52 +5073,18 @@ fn lost_mark_as_written(mark: &str) -> String {
   }
 }
 
-/// The `ltx:sup` showing `text`, marks no entry answers ([`show_unanswered_marks`]), for `personname`; marked as shown
-/// for no entry: the observer's writer takes from it the marks an item it writes answers (review rev94a r2 S3).
-fn unanswered_sup(document: &Document, personname: &Node, text: &str) -> Result<Node> {
-  let mut sup = Node::new("sup", None, document.get_document())?;
-  if let Some(namespace) = personname.get_namespace() {
-    let _ = sup.set_namespace(&namespace);
-  }
-  sup.append_text(text)?;
-  sup.set_attribute("_unanswered", "true")?;
-  Ok(sup)
-}
+/// Set on a frontmatter entry a printed mark of which requested a label (a name's `$^{1}$`, `\inst{1}`;
+/// [`add_annotation_labels`]), as against those its keyvals gave: whether the entry shows marks (`authors_show_marks`, the
+/// Kind steps' runs).
+pub(in crate::base_utilities) const REQUESTED: &str = "_requested";
 
-/// Add `label` (comma separated) to the requests of the frontmatter entry being digested (`_annotations`), and, for a
-/// superscript requested in text (`\textsuperscript{1,*}`, not `$^{1,*}$`: `superscript`), to its text-mode marks
-/// (`_textmarks`): such a `*` prints as `*`, a math one as `∗` (`show_unanswered_marks`). A mark command (`\inst`,
-/// `\IEEEauthorrefmark`) sets its mark in math (llncs.cls `\def\inst#1{\unskip$^{#1}$}`), whatever mode it is read in.
-/// The labels only a picture prints (`pictured`, [`frontmatter_label_request`]) are its picture marks
-/// (`_picturemarks`), the others its plain marks (`_plainmarks`): a picture mark the entry never requests plainly is
-/// never shown unanswered.
-pub(in crate::base_utilities) fn add_annotation_labels(
-  label: String,
-  superscript: bool,
-  pictured: Vec<String>,
-) {
-  let in_text = superscript && !lookup_bool("IN_MATH");
+/// Add `label` (comma separated), the labels a printed mark requests, to the requests of the frontmatter entry being
+/// digested (`_annotations`), flagging it [`REQUESTED`].
+pub(in crate::base_utilities) fn add_annotation_labels(label: String) {
   with_pending_entry_attr(move |attr| {
-    let mut append = |key: &str, new: &mut dyn Iterator<Item = &str>| {
-      let mut marks = attr.get(key).cloned().unwrap_or_default();
-      let before = marks.len();
-      for mark in new {
-        if !marks.is_empty() {
-          marks.push(',');
-        }
-        marks.push_str(mark);
-      }
-      if marks.len() != before {
-        attr.insert(key.to_string(), marks);
-      }
-    };
-    append("_picturemarks", &mut pictured.iter().map(String::as_str));
-    append(
-      "_plainmarks",
-      &mut label
-        .split(',')
-        .filter(|key| !key.is_empty() && !pictured.iter().any(|p| p == key)),
-    );
+    if label.split(',').any(|key| !key.is_empty()) {
+      attr.insert(REQUESTED.to_string(), "true".to_string());
+    }
     let labels = attr.get("_annotations").cloned().unwrap_or_default();
     // (an annotation being digested — a contact's stub, `role=pending` — whose label is the mark its content requests
     // again is that one label: the relocation reads a stub's labels as one key, so `affiliation:1,affiliation:1` was no
@@ -5169,16 +5105,51 @@ pub(in crate::base_utilities) fn add_annotation_labels(
     };
     DebugFeature!("frontmatter", "FRONT add annotation label {label}");
     attr.insert("_annotations".to_string(), newval);
-    if in_text && !label.is_empty() {
-      let text_marks = attr.get("_textmarks").cloned().unwrap_or_default();
-      let newval = if text_marks.is_empty() {
-        label.clone()
-      } else {
-        s!("{text_marks},{label}")
-      };
-      attr.insert("_textmarks".to_string(), newval);
-    }
   });
+}
+
+/// The mark a name's request leaves where it printed, a mark-only note keyed by the labels it requests
+/// (`author_macros.rs`; OD #1061): [`request_marks`]', the frontmatter emitter's, read by [`settle_name_marks`].
+pub(in crate::base_utilities) const NAME_MARK: &str = "\\lx@frontmatter@namemark";
+
+/// The marks a name's request leaves where it printed ([`NAME_MARK`], OD #1061), one per affiliation label
+/// of `labels`, keyed by it, with the glyph it prints: `shown`, an author reference mark's symbol, for the first (keyed
+/// by its number: OXIDIZED_DESIGN_DIVERGENCES #968); an asterisk requested in text `*` (`in_text`), in math `∗`; else
+/// [`unanswered_mark_text`]'s; none for a label only a picture prints (`pictured`: the picture is no part of the name —
+/// the TikZ ORCID icon's "iD", `\inst{1\myorcid{…}}`, review rev92b_r3 S1). [`settle_name_marks`] reads them. None
+/// while the observer rehearses a block, nor outside a creator.
+pub(in crate::base_utilities) fn request_marks(
+  labels: &[String],
+  pictured: &[String],
+  in_text: bool,
+  shown: Option<String>,
+) -> Result<Vec<Digested>> {
+  // (only on a creator being digested, as `\lx@frontmatter@symbolmark`'s: a contact's stub, `role=pending`, labels its
+  // own content, and outside an entry nothing is requested)
+  let mut on_creator = false;
+  with_pending_entry_attr(|attr| {
+    on_creator = attr.get("role").map(String::as_str) != Some("pending");
+  });
+  if rehearsal::rehearsing() || !on_creator {
+    return Ok(Vec::new());
+  }
+  let mut marks = Vec::new();
+  for (at, label) in labels.iter().enumerate() {
+    let Some(mark) = label.strip_prefix("affiliation:") else {
+      continue;
+    };
+    let glyph = match &shown {
+      _ if pictured.contains(label) => String::new(),
+      Some(shown) if at == 0 => shown.clone(),
+      _ if mark == "*" && in_text => "*".to_string(),
+      _ => unanswered_mark_text(mark).unwrap_or_default(),
+    };
+    marks.push(digest(Invocation!(T_CS!(NAME_MARK), vec![
+      Some(Tokens::new(ExplodeText!(label))),
+      Some(Tokens::new(ExplodeText!(&glyph)))
+    ]))?);
+  }
+  Ok(marks)
 }
 
 /// How an unanswered affiliation mark prints: a number or letter as it is, a superscript footnote symbol (`$^{\dag}$`,
@@ -5195,7 +5166,7 @@ pub(in crate::base_utilities) fn unanswered_mark_text(mark: &str) -> Option<Stri
   let glyph = match mark {
     "\\dag" | "\\dagger" => "\u{2020}",
     "\\ddag" | "\\ddagger" => "\u{2021}",
-    // (pdflatex sets a math `*` as `∗`; one requested in text stays `*`, `show_unanswered_marks`)
+    // (pdflatex sets a math `*` as `∗`; one requested in text stays `*`, [`request_marks`])
     "\\ast" | "*" => "\u{2217}",
     "\\star" => "\u{22C6}",
     "\\S" => "\u{A7}",

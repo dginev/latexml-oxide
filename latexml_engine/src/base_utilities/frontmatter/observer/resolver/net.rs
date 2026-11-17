@@ -121,7 +121,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn uncoordinated_marks(
         labels.insert(label);
         held.insert(label);
       }
-      for request in &c.requests {
+      for request in c.requests() {
         requested.insert(request);
         if leads.matches(request) && !labels.matches(request) {
           failed.insert(request.clone());

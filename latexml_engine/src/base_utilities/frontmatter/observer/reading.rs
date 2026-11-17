@@ -961,7 +961,7 @@ fn json_resolved(out: &mut String, resolved: &Resolved) {
     out.push_str("{\"name\":");
     json_str(out, &creator.name);
     out.push_str(",\"requests\":[");
-    for (j, request) in creator.requests.iter().enumerate() {
+    for (j, request) in creator.requests().enumerate() {
       if j > 0 {
         out.push(',');
       }

@@ -1,0 +1,15 @@
+% mechanism: as r2a_name_marks_around_more_of_the_name_keep_print_order, the last mark before a `\footnotemark[1]`
+% witness:  review revR2Ab B-2 (probe u02)
+% oracle:   pdflatex 0 errors; "Ann Able1∗ Bob Baker2 Jr.3∗"
+% engines:  rust R2Ab 2ab6945b9d5 = footnotemark[3,2]; rust PRESBXc = footnotemark[2,3]
+% expect:   0 errors, 1 Warning (the decline); Bob Baker Jr. ; footnotemark[2,3] ; the thanks note again
+% status:   GREEN (perfect_kernel_batchr2a::name_marks_around_more_of_the_name_keep_print_order)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{1}$\footremember{zz}{Zebra University.} \and Bob Baker$^{2}$ Jr.$^{3}$\footnotemark[1]}
+\begin{document}
+\maketitle
+Body.
+\end{document}

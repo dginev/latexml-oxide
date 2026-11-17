@@ -161,8 +161,8 @@ pub struct Policy {
   pub keyed_labels:      bool,
   /// a call's own labels (`annotations=` of `\author[1,*,\S]`) print after the name as written (authblk.sty:120-133
   /// `\AB@authnote`): one the binding found no line of its own explains ([`declare_unexplained_name_labels`]) is shown on
-  /// the name as the mark it prints (`insert::show_unanswered_marks`; 2606.00446, its `§` legend in the
-  /// `\date`); elsewhere a call's own labels are keys
+  /// the name as the mark it prints, unless an entry answers it (`insert::settle_name_marks`, a binding's request;
+  /// 2606.00446, its `§` legend in the `\date`); elsewhere a call's own labels are keys
   pub labels_print:      bool,
   /// the commands that part a block's lines or columns whatever they print here, as the class's title page does, each declared by
   /// the binding owning the `\author` they stand in: OmniBus's no-op `\alignauthor` a column (inst_support_sty.rs; what sig-alternate.cls,

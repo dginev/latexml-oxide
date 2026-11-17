@@ -40,7 +40,9 @@ use crate::{
         PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
         tabular_juggles_in_a_whole_block, whole_block_author,
       },
-      insert::{FOOTNOTE_TEXT, MARK_FROM_COUNTER, MARK_IN_TEXT, MARK_UNKNOWN, NAME_PRINTED},
+      insert::{
+        FOOTNOTE_TEXT, MARK_FROM_COUNTER, MARK_IN_TEXT, MARK_UNKNOWN, NAME_MARK, NAME_PRINTED,
+      },
       observer::{
         events::{
           self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration,
@@ -55,11 +57,11 @@ use crate::{
         reading::{UNFOLD_LEVELS, unfold_held_names},
         rehearsal::{Rehearsal, rehearse},
         resolver::{
-          BlockCheck, LostInk, MarkLedger, RCreator, RuleDrop, Side, Written, check_blocks,
-          contact_parts, creator_call, creator_call_level, creator_call_pieces, is_creator_call,
-          labelseq_pieces, merged_names, note_shows, own_email_label, printed_email_label,
-          read_events, shares_the_row, split_pieces, split_pieces_as, uncoordinated_marks,
-          words_of,
+          BlockCheck, LostInk, MarkBy, MarkLedger, NameMark, RCreator, RuleDrop, Side, Written,
+          check_blocks, contact_parts, creator_call, creator_call_level, creator_call_pieces,
+          is_creator_call, labelseq_pieces, merged_names, note_shows, own_email_label,
+          printed_email_label, read_events, shares_the_row, split_pieces, split_pieces_as,
+          uncoordinated_marks, words_of,
         },
       },
       place::DEFERRED_TO_FLUSH_END,
@@ -176,30 +178,39 @@ fn annotations_key(labels: &str) -> Vec<Token> {
   key
 }
 
-/// The key `_refmarkshown={…}` (`insert::show_unanswered_marks`' printed text of a request) for each of `labels` a glued
-/// mark was parted into ([`RCreator::whole_marks`]): a piece no entry answers shows the whole mark, as printed —
-/// BESIII's `$^{50A,50C}$` stays "50A,50C" beside its entry 50, never "A,C" (1705.11109, 1507.02068, 2204.09614); empty
-/// where none is.
-fn whole_marks_key(c: &RCreator, labels: &[String]) -> Vec<Token> {
-  let shown: Vec<String> = c
-    .whole_marks
-    .iter()
-    .flat_map(|(piece, whole)| {
-      clean_frontmatter_labels(piece, "affiliation")
-        .into_iter()
-        .filter(|label| labels.contains(label))
-        .map(move |label| s!("{label}={whole}"))
-    })
-    .collect();
-  if shown.is_empty() {
-    return Vec::new();
+/// Records `mark`, printed on a name its written name leaves out, with the `labels` it requests: the glyph it printed —
+/// a glued mark parted into requests its whole ([`NameMark::whole`]), BESIII's `$^{50A,50C}$` "50A,50C" beside its entry
+/// 50, never "A,C" (1705.11109, 1507.02068, 2204.09614), one mark for all its pieces; else the label's glyph
+/// (`insert::unanswered_mark_text`).
+fn left_mark(left: &mut Vec<(Vec<String>, String)>, mark: &NameMark, labels: &[String]) {
+  match &mark.whole {
+    Some(whole) => match left.iter_mut().find(|(_, glyph)| glyph == whole) {
+      Some((pieces, _)) => pieces.extend(labels.iter().cloned()),
+      None => left.push((labels.to_vec(), whole.clone())),
+    },
+    None => {
+      for label in labels {
+        let mark = label.strip_prefix("affiliation:").unwrap_or(label);
+        left.push((
+          vec![label.clone()],
+          unanswered_mark_text(mark).unwrap_or_default(),
+        ));
+      }
+    },
   }
-  let mut key = vec![T_OTHER!(",")];
-  key.extend(key_tokens("_refmarkshown="));
-  key.push(T_BEGIN!());
-  key.extend(ExplodeText!(&shown.join(";")));
-  key.push(T_END!());
-  key
+}
+
+/// The marks a written name leaves out ([`left_mark`]), each where its name ends, keyed by the labels it requests
+/// (`\lx@frontmatter@namemark`, OD #1061): `insert::settle_name_marks` drops those an entry answers.
+fn left_marks(left: &[(Vec<String>, String)]) -> Vec<Token> {
+  left
+    .iter()
+    .flat_map(|(labels, glyph)| {
+      let labels: Vec<Token> = ExplodeText!(&labels.join(",")).into_iter().collect();
+      let glyph: Vec<Token> = ExplodeText!(glyph).into_iter().collect();
+      cs_group(NAME_MARK, &[&labels, &glyph])
+    })
+    .collect()
 }
 
 /// The key `_corresponding=true` on a creator the reading marks the corresponding author ([`RCreator::corresponding`]), which
@@ -1697,7 +1708,7 @@ fn requested_symbols(owners: &[Owner], creators: &[RCreator]) -> Vec<String> {
   let requests = |owner: &Owner| match owner {
     Owner::Creator(i) => creators
       .get(*i)
-      .map(|c| c.requests.clone())
+      .map(|c| c.requests().cloned().collect::<Vec<_>>())
       .unwrap_or_default(),
     Owner::Block => Vec::new(),
   };
@@ -6205,6 +6216,9 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   let fresh_owner = |owner: &Owner| matches!(owner, Owner::Creator(i) if is_fresh[*i]);
   let mut annotations: Vec<Vec<String>> = vec![Vec::new(); resolved.creators.len()];
+  // (the marks each name printed that its written name leaves out, each with the labels it requests and its glyph:
+  // `left_marks`)
+  let mut marks_left: Vec<Vec<(Vec<String>, String)>> = vec![Vec::new(); resolved.creators.len()];
   let mut calls: Vec<(String, &Item)> = Vec::new();
   let mut block_pubnotes: Vec<Vec<Token>> = Vec::new();
   for (n, item) in items.iter().enumerate() {
@@ -6235,7 +6249,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       calls.push((label, item));
     }
   }
-  // (a request no item answers stays a request, which shows it: `show_unanswered_marks`)
+  // (a request no item answers stays a request, its mark left on the name: `left_marks`, `insert::settle_name_marks`)
   let answered: BTreeSet<String> = resolved
     .creators
     .iter()
@@ -6269,7 +6283,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     // where Bob's `\\inst{1*}` requests `*`, 2407.13764)
     let inst_marks = inst_marks.get(&c.source).map_or(&[][..], Vec::as_slice);
     let own_inst =
-      |request: &String| inst_marks.contains(request) && c.class_requests.contains(request);
+      |request: &String| inst_marks.contains(request) && c.class_requests().any(|q| q == request);
     // (a creator call's own labels, which its keys write, print nothing: `creator_keys`)
     let own = creator_call_of(c)
       .map(|call| call.labels())
@@ -6287,8 +6301,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .map(|(runs, marks)| marks.marks_in(runs))
       .unwrap_or_default();
     shown_labels.extend(
-      c.requests
-        .iter()
+      c.requests()
         .filter(|request| !own.contains(request) && printed.contains(request))
         .flat_map(|request| clean_frontmatter_labels(request, "affiliation")),
     );
@@ -6303,38 +6316,32 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           .contains(request)
     };
     // (a label its binding prints as written after the name, authblk's `\author[1,*,§]`: one the binding found no line
-    // explains is a request of the mark it prints, shown on the name — `Policy::labels_print`,
-    // `policy::declare_unexplained_name_labels`; 2606.00446)
+    // explains requests the mark it prints, which `insert::settle_name_marks` shows on the name unless an entry answers
+    // it — `Policy::labels_print`, `policy::declare_unexplained_name_labels`; 2606.00446, 2606.17809)
     let labels_print = with_ledger(|ledger| match ledger.entries().get(c.source) {
       Some(Entry::Author(block)) => policy::policy_for(&block.binding, block.hook).labels_print,
       _ => false,
     });
-    for request in &c.requests {
-      if labels_print && c.class_requests.contains(request) {
-        // (unless an entry of this creator's answers it: a line's leading mark gives its note to some of the names
-        // printing it, 2606.17809's `\affil[ ]{\textsuperscript{\textdagger}Contributed equally…}` to Csabai alone,
-        // Pollner's `†` shown, linked to that note)
-        if let Some(mark) = policy::unexplained_name_label(request) {
-          let answered_here = c
-            .affiliations
-            .iter()
-            .chain(&c.contacts)
-            .chain(&c.notes)
-            .filter_map(|a| a.label.as_deref())
-            .flat_map(|label| mark_labels(label.rsplit(':').next().unwrap_or(label)))
-            .any(|label| label == *request || label == mark);
-          if !answered_here {
-            annotations[i].extend(clean_frontmatter_labels(&mark, "affiliation"));
-          }
-        }
-      } else if !answered.contains(request)
-        && (!keeps || own_inst(request) || unprinted(request))
-        && !own.contains(request)
-        // (a key's value is tokenized: a request spelled with a command, `\author[a,b\thanks{…}]`'s, 2207.11842, is no
-        // label)
-        && !no_label(request)
+    for mark in c.marks.iter().filter(|mark| mark.requests()) {
+      let request = &mark.label;
+      if labels_print
+        && mark.by == MarkBy::Class
+        && let Some(glyph) = policy::unexplained_name_label(request)
       {
-        annotations[i].extend(clean_frontmatter_labels(request, "affiliation"));
+        annotations[i].extend(clean_frontmatter_labels(&glyph, "affiliation"));
+        continue;
+      }
+      if (keeps && !own_inst(request) && !unprinted(request)) || own.contains(request) {
+        continue;
+      }
+      // (a key's value is tokenized: a request spelled with a command, `\author[a,b\thanks{…}]`'s, 2207.11842, is no label)
+      if !answered.contains(request) && !no_label(request) {
+        let labels = clean_frontmatter_labels(request, "affiliation");
+        // (its mark, left where the name printed it — not an `\inst` the name's own tokens request, which leaves its own)
+        if !own_inst(request) {
+          left_mark(&mut marks_left[i], mark, &labels);
+        }
+        annotations[i].extend(labels);
       }
     }
   }
@@ -6379,7 +6386,6 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     }
     creator_end.insert(c.source, out.len() + 1);
     let mut keys = annotations_key(&annotations[i].join(","));
-    keys.extend(whole_marks_key(c, &annotations[i]));
     // (kept whole on purpose, as a tabular block is: no merge to flag beside its Warning, `flag_merged_creators`)
     let written = || {
       if split.contains(&c.source) {
@@ -6454,15 +6460,13 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           .flat_map(|(_, tokens)| tokens.iter().copied())
       };
       let mut content: Vec<Token> = step(false).collect();
-      content.extend(cs_group("\\lx@personname", &[&cs_group(
-        "\\lx@author@withinst",
-        &[&item],
-      )]));
+      let mut name = cs_group("\\lx@author@withinst", &[&item]);
+      name.extend(left_marks(&marks_left[i]));
+      content.extend(cs_group("\\lx@personname", &[&name]));
       content.extend(step(true));
       let mut head = vec![add_now()];
       head.extend(cs_group_args(&["ltx:creator"]));
       let mut keys = creator_keys(c, &annotations[i]);
-      keys.extend(whole_marks_key(c, &annotations[i]));
       keys.extend(corresponding_key(c));
       with_key_tokens(head, keys, &content)
     });
