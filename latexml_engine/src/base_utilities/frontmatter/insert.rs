@@ -4912,8 +4912,8 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
         || (!text.chars().all(char::is_alphanumeric)
           && sups.iter().any(|sup| sup.contains(&unify(text))))
     };
-    // (`seen`: the labels a mark shown or dropped took; `pictured`: those only a picture printed so far)
-    let (mut seen, mut pictured): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
+    // (`seen`: the labels a mark shown or dropped took; `unshowable`: those only a glyph-less mark printed so far)
+    let (mut seen, mut unshowable): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
     let mut marks: Vec<String> = Vec::new();
     for mut node in keyed {
       // (the labels it requests: one, or a glued mark's pieces, shown whole while one is open)
@@ -4932,21 +4932,21 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
         document.remove_node(node);
         continue;
       }
-      // (none for a label only a picture prints, whose glyph is known: no mark of the name, review rev92b_r3 S1; it takes
+      // (a glyph-less mark shows none: a picture's, review rev92b_r3 S1, or a fuzzy label's, counted lost once. It takes
       // no label, so the label's plain mark after it shows — `$^{\circled{b}}$$^{b}$`, revR2A B1)
       if glyph.is_empty() {
         let mark = labels[0].strip_prefix("affiliation:").unwrap_or(labels[0]);
-        if unanswered_mark_text(mark).is_none() && !pictured.iter().any(|p| p == labels[0]) {
+        if unanswered_mark_text(mark).is_none() && !unshowable.iter().any(|p| p == labels[0]) {
           lost.push(mark.to_string());
         }
-        pictured.extend(labels.iter().map(|label| label.to_string()));
+        unshowable.extend(labels.iter().map(|label| label.to_string()));
         document.remove_node(node);
         continue;
       }
       seen.extend(labels.iter().map(|label| label.to_string()));
       // (in place where only marks follow it; one before more of the name — a `\\` line — shows after the name, as the
-      // binding's do: revR2A S1)
-      if !ends_name(&node) {
+      // binding's do: revR2A S1; and every one after it, in print order: `Bob Baker$^{a}$ Jr.$^{b}$`, revR2Ab B-2)
+      if !marks.is_empty() || !ends_name(&node) {
         if !marks.contains(&glyph) {
           marks.push(glyph);
         }
@@ -4966,7 +4966,7 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
       let Some(mark) = label.strip_prefix("affiliation:") else {
         continue;
       };
-      if seen.iter().chain(&pictured).any(|s| s == label) || !open(label) {
+      if seen.iter().chain(&unshowable).any(|s| s == label) || !open(label) {
         continue;
       }
       seen.push(label.to_string());

@@ -1171,8 +1171,8 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // and tex_box.rs as the kernel's own)
   ("const _skip_after_para tex_paragraph.rs", 1),
   ("const _skip_before_para tex_paragraph.rs", 1),
-  // (MARKKEY R2a, 0 -> 1, raised with its reason: the labels a printed mark of an entry requested, `insert::REQUESTED`,
-  // one flag in place of the three side-tables `_plainmarks`, `_textmarks`, `_picturemarks` the deleted
+  // (MARKKEY R2a, 0 -> 1, raised with its reason: a flag, set on an entry a printed mark of which requested a label,
+  // `insert::REQUESTED`, in place of the three side-tables `_plainmarks`, `_textmarks`, `_picturemarks` the deleted
   // `show_unanswered_marks` read, which the run walks and `authors_show_marks` still ask: whether the entry shows marks;
   // OD #1061)
   ("const _requested base_utilities/frontmatter/insert.rs", 1),

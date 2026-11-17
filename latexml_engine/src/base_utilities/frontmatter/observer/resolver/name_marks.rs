@@ -55,7 +55,8 @@ pub struct NameMark {
   /// ([`MARKS_LISTED`]: elsarticle, 2605.13555)
   pub sep_before: bool,
   /// printed on top of the zero-width title mark before it, of its glyph (`mark_ledger::overprints`: 2012.08663,
-  /// 2103.01544): TeX shows the glyph once
+  /// 2103.01544): TeX shows the glyph once. Unset until MARKKEY R2b, whose display fills `MarkLedger::overprints`
+  /// (always false now)
   pub overprint:  bool,
 }
 

@@ -1,0 +1,16 @@
+% mechanism: as r2a_request_mark_in_an_aligned_cell, in an `array` cell and in a `matrix` cell with a cell after it
+% witness:  review revR2Ab B-1 (probe q07)
+% oracle:   pdflatex 0 errors; "Ann Able 1 ∗ Bob Baker2 x"
+% engines:  rust R2Ab 2ab6945b9d5 = 9 Errors; rust PRESBXc = footnotemark[1], footnotemark[2]
+% expect:   0 errors; Ann Able <empty array> ; footnotemark[1] ; Bob Baker <matrix of x> ; footnotemark[2]
+% status:   GREEN (perfect_kernel_batchr2a::a_request_mark_in_a_math_cell_leaves_no_mark)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$\begin{array}{c}^{1}\end{array}$\footremember{zz}{Zebra University.} \and Bob Baker$\begin{matrix}^{2}&x\end{matrix}$}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -4,7 +4,9 @@
 //! `\footnotetext` of its glyph (witnesses 2210.05617, 1304.5040, 1812.11634). The record and the settle step are guarded
 //! by the FMRG suite (`perfect_kernel_batchfmmarks`), unchanged. Round R2Ab (review revR2A): three paths of the settle step
 //! on the footnote-counter decline path (`\footremember`'s `\newcounter`), where it shows every unanswered mark — a
-//! picture mark before the label's plain one, a mark read in math, a mark before a `\\` line — one guard each.
+//! picture mark before the label's plain one, a mark read in math, a mark before a `\\` line — one guard each. Round
+//! R2Ac (review revR2Ab): a mark read in a math alignment cell, whose `\aftergroup` runs inside the cell (the
+//! namemark primitive), and the order of a name's marks shown after it (the settle step) — one guard each.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 
 use super::perfect_kernel_batchfmmarks::{creator_lines, page_of};
@@ -160,6 +162,91 @@ fn a_mark_before_a_name_line_shows_after_the_name() {
     ),
     format!(
       r#"<creator {AND} role="author"><personname>Bob Baker<break/>Univ. of C</personname><note mark="2,3" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" idref="id1" mark="*" role="thanks">Zebra University.</note></creator>"#
+    ),
+  ]);
+}
+
+/// A name's request read in a math alignment cell (`aligned`, `array` rows, `array` and `matrix` cells) leaves no mark
+/// there: the cell runs its `\aftergroup` inside the cell, where the mark, still in math, queued itself again past the
+/// column. The settle step shows the label after the name, as a binding's request. Red on 2ab6945b9d5: "affiliation : 11"
+/// read as math in a new cell, an empty footnotemark note, 4 Errors in the array rows and 9 in the matrix (review
+/// revR2Ab B-1).
+#[test]
+fn a_request_mark_in_a_math_cell_leaves_no_mark() {
+  let thanks = r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">Zebra University.</note>"#;
+  let bob = |mark: &str| {
+    format!(
+      r#"<creator {AND} role="author"><personname>Bob Baker</personname><note mark="{mark}" role="footnotemark"/></creator>"#
+    )
+  };
+  let tags = regex::Regex::new(r"<[^>]*>").unwrap();
+  let clean = |xml: &str| {
+    let page = page_of(xml);
+    let text = tags.replace_all(&page, "");
+    assert!(!xml.contains("lx@") && !page.contains("lx@"), "{page}");
+    assert!(!text.contains("affiliation"), "{text}");
+  };
+  let (log, xml) = convert(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/r2a_request_mark_in_an_aligned_cell.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_eq!(creators_whole(&xml), [
+    format!(
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="1" role="footnotemark"/>{thanks}</creator>"#
+    ),
+    bob("2"),
+  ]);
+  clean(&xml);
+  let (log, xml) = convert(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/r2a_request_marks_in_array_rows.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_eq!(creators_whole(&xml), [
+    format!(
+      r#"<creator role="author"><personname>Ann Able <Math mode="inline" tex="\begin{{array}}[]{{c}}\\&#10;\end{{array}}" text="Array[[]]"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell/></XMRow></XMArray></XMath></Math></personname><note mark="1,2" role="footnotemark"/>{thanks}</creator>"#
+    ),
+    bob("3"),
+  ]);
+  clean(&xml);
+  let (log, xml) = convert(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/r2a_request_marks_in_array_and_matrix_cells.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_eq!(creators_whole(&xml), [
+    format!(
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="1" role="footnotemark"/>{thanks}</creator>"#
+    ),
+    format!(
+      r#"<creator {AND} role="author"><personname>Bob Baker<Math mode="inline" tex="\begin{{matrix}}&amp;x\end{{matrix}}" text="matrix@(Array[[, x]])"><XMath><XMDual><XMApp><XMTok meaning="matrix"/><XMRef idref="m2.1"/></XMApp><XMArray><XMRow><XMCell/><XMCell align="center"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMCell></XMRow></XMArray></XMDual></XMath></Math></personname><note mark="2" role="footnotemark"/></creator>"#
+    ),
+  ]);
+  clean(&xml);
+}
+
+/// A name's unanswered mark printed before more of the name shows after it, and every mark after it joins it in print
+/// order: `Bob Baker$^{a}$ Jr.$^{b}$` "a,b", and before a `\footnotemark[1]` "2,3". Red on 2ab6945b9d5: "b,a" and "3,2",
+/// the name's last mark set in place before the earlier one appended (review revR2Ab B-2).
+#[test]
+fn name_marks_around_more_of_the_name_keep_print_order() {
+  let ann = r#"<creator role="author"><personname>Ann Able</personname><note mark="1" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">Zebra University.</note></creator>"#;
+  let (log, xml) = convert(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/r2a_name_marks_around_more_of_the_name_keep_print_order.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(creators_whole(&xml), [
+    ann.to_string(),
+    format!(
+      r#"<creator {AND} role="author"><personname>Bob Baker Jr.</personname><note mark="a,b" role="footnotemark"/></creator>"#
+    ),
+  ]);
+  let (log, xml) = convert(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/r2a_name_marks_around_more_of_the_name_before_a_footnotemark.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(creators_whole(&xml), [
+    ann.to_string(),
+    format!(
+      r#"<creator {AND} role="author"><personname>Bob Baker Jr.</personname><note mark="2,3" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" idref="id1" mark="*" role="thanks">Zebra University.</note></creator>"#
     ),
   ]);
 }

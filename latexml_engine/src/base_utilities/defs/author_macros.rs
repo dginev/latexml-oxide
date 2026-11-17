@@ -550,9 +550,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Rust-only: the mark a name's request leaves where it printed (`insert::request_marks`, OD #1061): a mark-only note keyed
   // by the label it requests, its glyph as printed, empty for one no glyph is known of; the settle step drops or shows it
   // (`insert::settle_name_marks`). It prints nothing, as Perl's request (Base_Utility.pool.ltxml:552, :729-732), and
-  // waits out the math it was read in (`\aftergroup`): `$\star^{1}$`'s tex stays `\star` (revR2A B2).
+  // waits out the math it was read in (`\aftergroup`): `$\star^{1}$`'s tex stays `\star` (revR2A B2). Not in a math
+  // cell, whose `\aftergroup` runs inside the cell and would queue it past the column (revR2Ab B-1,
+  // `$\begin{aligned}^{1}\end{aligned}$`): no mark there, the settle step shows the label after the name.
   DefPrimitive!("\\lx@frontmatter@namemark Semiverbatim Semiverbatim", sub[(keys, glyph)] {
     if lookup_bool("IN_MATH") {
+      if is_value_bound("alignCellGroup", Some(0)) {
+        return Ok(Vec::new());
+      }
       push_value("afterGroup", Invocation!(T_CS!(NAME_MARK), vec![Some(keys), Some(glyph)]))?;
       return Ok(Vec::new());
     }

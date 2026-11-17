@@ -20169,7 +20169,9 @@ mark-only note is `_namemark`; `insert::request_marks`) — its glyph as printed
 text `*` as `*`, a math one `∗`), none for a label only a picture prints (rev92b_r3 S1); only on a creator being
 digested, never in the rehearsal. It prints nothing, as Perl's request, and is no part of the math it is read in: there
 it waits for the math to close (`\aftergroup`), so `$\star^{1}$`'s `tex` and MathML `alttext` stay `\star` and
-`$^{2}_{x}$` keeps its script's own empty base (revR2A B2). It is no `\footnotemark`: the kernel's
+`$^{2}_{x}$` keeps its script's own empty base (revR2A B2) — except in a math alignment cell, whose `\aftergroup` runs
+inside the cell and would queue it past the column (`$\begin{aligned}^{1}\end{aligned}$` showed "affiliation : 11",
+revR2Ab B-1): there it leaves no mark, and the settle step shows the label after the name as a binding's request. It is no `\footnotemark`: the kernel's
 footnote pairing (`relocate_footnote`) gives it no body `\footnotetext` of its glyph (2210.05617, 1304.5040,
 1812.11634, whose texts it took and the settle step dropped before the A/B caught it). The frontmatter emitter, which writes a name without the marks it requests, leaves each one so
 after the name's item (`emit::left_marks`; a glued mark parted into requests one mark of all its pieces, shown whole:
@@ -20179,7 +20181,8 @@ the author's contact answers its symbol (`_answers`), where the entry requests n
 the answering item under its own `item:` label), where the name shows its glyph already, or as a second of one label
 (a picture's mark, dropped unshown, takes no label: the label's plain mark after it shows, revR2A B1); the rest show as
 the superscripts they printed, in place where only marks follow them in the name (2610.07087's `$^{1*}$`: 1 before the
-∗), else after the name, joined, as the base did (`ends_name`: `Bob Baker$^{2}$$^{3}$ \\ Univ.\ of C`, revR2A S1),
+∗), else after the name, joined in print order with every mark after it, as the base did (`ends_name`:
+`Bob Baker$^{2}$$^{3}$ \\ Univ.\ of C`, revR2A S1; `Bob Baker$^{a}$ Jr.$^{b}$` "a,b", revR2Ab B-2),
 for the pure-name pass to set after the name (#1055); one of no known glyph is counted lost (`unanswered_mark_lost`). A binding's
 `annotations=` request (authblk's `\author[1,*]`), which leaves no mark, shows after the name as before. Replaces
 `show_unanswered_marks`, `unanswered_sup` and the creator side-tables `_textmarks`, `_plainmarks`, `_picturemarks`
@@ -20190,7 +20193,8 @@ for the pure-name pass to set after the name (#1055); one of no known glyph is c
 (a kept `\inst` the emitter answered by its item), `perfect_kernel_batchr2a::a_request_mark_takes_no_body_footnote_text`
 (repro `r2a_request_mark_beside_a_body_footnotetext`), and on the footnote-counter decline path
 `perfect_kernel_batchr2a::a_picture_mark_takes_no_label_from_the_plain_mark_after_it`,
-`a_request_mark_read_in_math_waits_out_the_math`, `a_mark_before_a_name_line_shows_after_the_name`. **Open (R2b, first
+`a_request_mark_read_in_math_waits_out_the_math`, `a_mark_before_a_name_line_shows_after_the_name`,
+`a_request_mark_in_a_math_cell_leaves_no_mark`, `name_marks_around_more_of_the_name_keep_print_order`. **Open (R2b, first
 item):** the glyph a mark shows is not on its `NameMark` (#1062): `request_marks` and `emit::left_mark` each compute
 it.
 

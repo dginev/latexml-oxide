@@ -658,7 +658,9 @@ impl Resolver {
       for mark in marks {
         let b = bare(&mark.label);
         let prefix = &mark.label[..mark.label.len() - b.len()];
+        // (authblk's `\AB@thenote` number is the class's counter, never glued: kept whole, as the store before it was)
         if mark.requests()
+          && mark.by != MarkBy::TheNote
           && !special(&mark.label)
           && let Some(parts) = glued_request_parts(&b, &entry_labels)
         {
