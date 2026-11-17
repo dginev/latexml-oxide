@@ -96,7 +96,7 @@
                   [@role='footnote' or @role='footnotetext' or @role='thanks' or @role='affiliationnotice'
                    or @role='address' or @role='affiliation' or @role='email' or @role='corresponding'
                    or @role='correspondence' or @role='authorinfo' or @role='equal-contributors' or @role='funding'
-                   or @role='highlights' or @role='graphicalabstract']"
+                   or @role='highlights' or @role='graphicalabstract' or @role='url']"
            use="concat(@role,'&#x9;',normalize-space(.))"/>
   <xsl:template match="ltx:document/ltx:note[key('f:document-note-shown',concat(@role,'&#x9;',normalize-space(.)))]
                        [not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]" priority="0.5">

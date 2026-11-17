@@ -298,6 +298,17 @@ fn icml_notice_daggers_print() {
   );
 }
 
+/// An `\icmlsetsymbol` glyph holding a TeX special (`\%`) is not re-tokenized as a mark-only note, where it commented out
+/// the note's markup (101 Errors, a creator lost; revINVDAGb B1): it prints in the name, both creators kept. Repro
+/// sectioning-frontmatter/icml_symbol_with_a_tex_special_prints_in_the_name.
+#[test]
+fn an_icml_symbol_with_a_tex_special_prints_in_the_name() {
+  let xml = convert_clean(repro!("icml_symbol_with_a_tex_special_prints_in_the_name"));
+  assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
+  assert!(xml.contains("Cy Dee"), "{xml}");
+  assert!(!xml.contains("role=\"footnotemark\" mark=\"%\""), "{xml}");
+}
+
 /// `element` with the whitespace between its tags folded.
 fn folded(element: &str) -> String {
   element

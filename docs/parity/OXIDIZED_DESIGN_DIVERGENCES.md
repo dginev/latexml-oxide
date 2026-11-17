@@ -20238,19 +20238,24 @@ behind it (`ltx_note_content`, shown on hovering the mark, after its "role: " la
   text the PDF prints in the title block or as a footnote — `footnote`, `footnotetext`, `thanks`, `affiliationnotice`,
   `address`, `affiliation`, `email`, `corresponding`, `correspondence`, `authorinfo`, `equal-contributors`, `funding`,
   and elsarticle's `highlights` and `graphicalabstract`, printed on the pages before the title (2510.16146,
-  2303.00352) — keyed by role and text. Such a note, `ltx:document/ltx:note` with no mark, is a line of its own
+  2303.00352), and a `url` the block prints as a contact line (SIGMA's `URL:` line, 1707.09748; hidden it left an
+  invented `†` beside the author's real `†`, revINVDAGb S2) — keyed by role and text. Such a note, `ltx:document/ltx:note` with no mark, is a line of its own
   (`f:blockelement($context,'div')` of class `ltx_note_unmarked`, the creators' `unmarked-note`); a later note of the
   same role and text shows only its id (2412.01641's sn-jnl `\equalcont` under two names, 2511.18287's `\footnotetext`
   after the paper's and the supplement's titles). Every other role keeps Perl's hidden note: jmlr's heading and short
   headings (1710.08165, 2311.01695, 2412.18293, 2511.10879), a volume (2310.01426, 2311.11099), a workshop
-  (2110.12052), a title mark (2505.23112), running heads (2302.03012, 1709.08471), an editor, a URL, the dates.
+  (2110.12052), a title mark (2505.23112), running heads (2302.03012, 1709.08471), an editor, and the dates — which some
+  classes do print in the block or a sidebar (SIGMA's `Received`, MDPI's `received`/`accepted`, 1707.09748,
+  2302.03012) but are publication metadata in others: row R DOCROLES, behind a role census.
 - In a field — the date, the abstract, the keywords, the classification, a publication note, a creator's entry — such
   a note is an inline `span.ltx_note_unmarked` (a markless `\footnotetext` in the abstract, 2506.06941). Not in a title:
   `ltx:title`, `ltx:subtitle` and `ltx:toctitle` are also a section's, a theorem's or a float's, whose notes are body
   notes (1110.0973, 1212.5729, 2406.09922, 2512.05521 and the repro `fm_note_in_a_heading_keeps_its_dagger` keep
   Perl's note in the heading).
 - `LaTeXML.css` sets every `ltx_note_unmarked` holding no picture as a line of its own, 90 % (the creators' rule of
-  #990, unscoped).
+  #990, unscoped), except inside a paragraph, where it stays inline (`.ltx_p > .ltx_note_unmarked`: a field note
+  mid-sentence must not split it, revINVDAGb S1). An icml symbol with a TeX special (`\%`, `\#`) prints in the name, not
+  as a mark-only note (re-tokenized it lost a creator, revINVDAGb B1; no such symbol in ~1,000 sampled uses).
 - icml (`icml_support_sty.rs`): the notice's markers print their dagger as `\textdagger`, as the papers' `\dag`
   (`\icmlProjectLead`, `\icmlEqualSeniorContribution`, `\icmlEqualContributionAndSenior`, `\airesident`; a `\char` of
   U+2020 printed nothing: 2402.05011);

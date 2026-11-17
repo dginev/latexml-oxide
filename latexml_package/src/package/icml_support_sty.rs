@@ -116,7 +116,9 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
       let glyph = match meaning {
         Stored::Expandable(d) => match d.get_expansion() {
           Some(ExpansionBody::Tokens(body)) => match printed_label_pieces(body)?.as_slice() {
-            [mark] => Some(mark.clone()),
+            // (a glyph re-tokenized below must carry no TeX special: `\icmlsetsymbol{equal}{\%}` commented out the rest
+            // and lost a creator, revINVDAGb B1; such a symbol prints in the name instead)
+            [mark] if !mark.chars().any(|c| "#%{}\\~^_&$".contains(c)) => Some(mark.clone()),
             _ => None,
           },
           _ => None,

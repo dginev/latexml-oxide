@@ -828,6 +828,8 @@ cite                 { font-style: normal; }
    unknown, or which prints none, shows none; with no mark to hover, its text is a line of its own (under an author's
    name, in the abstract, at the document's level: 2602.04557, 2405.13379, 2506.06941), a picture inline. */
 .ltx_note_unmarked:not(:has(img, svg)) { display:block; font-size:90%; }
+/* (inside a paragraph it stays inline: a field note mid-sentence must not split the sentence, revINVDAGb S1) */
+.ltx_p > .ltx_note_unmarked { display:inline; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname:has(> .ltx_note) { display:flow-root; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note { display:inline; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note .ltx_note_content {
