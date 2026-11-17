@@ -1,0 +1,18 @@
+% mechanism: a footnote the counter steps to 0 or below in the title block prints no glyph, counted by a Warning: the
+%   class's title notes we do not step, so `\addtocounter{footnote}{-2}\footnotemark` reached -1 where TeX's counter
+%   is 1 (`latex_constructs::footnote_pairing`; DG 2026-11-17: a wrong or invented glyph is worse than none)
+% witness: 1910.09525 (PoS: `Teseo San José,\addtocounter{footnote}{-2}\footnotemark` after Marco's `\thanks` and
+%   `\footnote`, "-1" on Teseo, pdflatex ∗)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker," (IEEEtran's `\maketitle` empties `\footnotemark`, IEEEtran.cls:4757)
+% engines: rust e7653fa3761 = 0 errors, 0 Warnings, Bob's mark "-1"; Perl "-1" too (its `\thanks` steps no counter;
+%   the mark a creator of its own)
+% expect:  0 errors, 1 Warning (the mark lost, `unanswered_mark_lost`); Bob's mark-only note with no mark
+% status:  RED (e7653fa3761) -> GREEN (WRONGFIXc; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\title{T}
+\author{Ann Able\thanks{Note A.}\footnote{Note B.} \and Bob Baker,\addtocounter{footnote}{-2}\footnotemark}
+\begin{document}
+\maketitle
+Body.
+\end{document}

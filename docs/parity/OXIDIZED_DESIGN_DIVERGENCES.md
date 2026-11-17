@@ -20015,7 +20015,10 @@ stays a mark-only note.
   date note the reading does not count came first (`frontmatter_fields::TITLE_NOTE_VALUES`' `?`, set at
   `\lx@title@footnote@step`): past llncs's `\title{T\thanks{…}}` Cat's `\footnotemark[2]` took Bob's note where llncs
   prints Ann's ⋆⋆, and now takes none — a wrong link worse than none (MARKKEY1c; row R MARKNUMKEY: the class counters
-  emulated, the PDF's shared ⋆ and the given number's glyph);
+  emulated, the PDF's shared ⋆ and the given number's glyph). A note the counter steps to 0 or below in the title
+  block prints no glyph and keys nothing either, its value ours, not TeX's (`footnote_pairing`): PoS's
+  `Teseo,\addtocounter{footnote}{-2}\footnotemark` after notes we do not step read "-1" where pdflatex prints ∗
+  (1910.09525; DG 2026-11-17: a wrong or invented glyph is worse than none);
 - IEEEtran's unmarked `\thanks` (its `\maketitle` empties `\thefootnote` and `\footnotemark`, IEEEtran.cls:4756-4758:
   the note prints no mark and names no author) is the block's, not the name's it follows, where Perl and the base hung
   it: the title's publication note (1510.02728), or a nameless `<creator>` holding it where the block keeps it among
@@ -20023,10 +20026,12 @@ stays a mark-only note.
 A known association whose glyph is unknown writes no glyph (#990's `_markunknown`, an Info); the page invents one only
 for a note several names share (#1059).
 **Witnesses.** 2407.04435, 1510.02728, 1111.1979 (its comma marks, #1057), 1912.01737, 1811.08622, 2606.31244,
-2306.03360.
+2306.03360, 1910.09525.
 **Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number,
 an_ieee_unmarked_thanks_is_the_blocks, a_mark_after_a_names_comma_is_the_nearer_names,
-a_number_the_title_counter_cannot_give_keys_nothing, the_mark_components_only_shrink}`; `observer::resolver::mark_ledger::tests::a_mark_glued_past_a_names_comma_is_measured_from_the_comma`.
+a_number_the_title_counter_cannot_give_keys_nothing, the_mark_components_only_shrink}`;
+`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks` (row
+`wrongfix_title_footnotemark_counter_below_one_prints_no_glyph`); `observer::resolver::mark_ledger::tests::a_mark_glued_past_a_names_comma_is_measured_from_the_comma`.
 
 ---
 

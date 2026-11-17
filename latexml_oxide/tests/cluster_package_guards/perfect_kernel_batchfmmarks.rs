@@ -3455,6 +3455,17 @@ const CLASS: &[Row] = &[
     page:       &["Ann Able", "Bob Baker[1]"],
     page_moves: r#"row R IEEEFNMARK (we print a superscript 1, TeX a literal [1]; pre-existing)"#,
   },
+  // (a mark the counter steps to 0 or below in the title block, its glyph invented: "-1" before, 1910.09525's PoS shape;
+  // no glyph and one Warning, DG 2026-11-17)
+  Row {
+    repro:      "wrongfix_title_footnotemark_counter_below_one_prints_no_glyph",
+    tex:        repro!("wrongfix_title_footnotemark_counter_below_one_prints_no_glyph"),
+    warnings:   1,
+    creators:   &["Ann Able", "Bob Baker ; footnotemark[]="],
+    moves:      r#""#,
+    page:       &["Ann Able", "Bob Baker"],
+    page_moves: r#""#,
+  },
   Row {
     repro:      "markkey_samethanks_under_elsarticle_red",
     tex:        repro!("markkey_samethanks_under_elsarticle_red"),
@@ -4210,7 +4221,8 @@ const CLASS: &[Row] = &[
 /// unknown here (an unbound class's, a document's own `\maketitle`'s) is no glyph on the page, the text under its name
 /// (revMARKSAFE B1, ADVGEN I-3), a document's wrapper of the class's `\maketitle` changes nothing (revMARKSAFEb B1), and
 /// an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1); a `\maketitle` that makes a footnote or
-/// sets the footnote counter before its title, or one a package's `\let` restores, has unknown marks (revPRESBXb BL2, BL3).
+/// sets the footnote counter before its title, or one a package's `\let` restores, has unknown marks (revPRESBXb BL2, BL3);
+/// a mark the counter steps to 0 or below in the title block prints none (1910.09525, WRONGFIXc).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
 /// The known gaps of [`notes_are_marked_only_where_the_class_prints_marks`].
