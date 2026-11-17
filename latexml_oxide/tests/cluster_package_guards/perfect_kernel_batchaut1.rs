@@ -122,12 +122,13 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
       repro:    repro!("sectioning-frontmatter/cl9_shared_macro_note_and_marks"),
       files:    &[],
       // (scrartcl's own `\maketitle` prints the bare `\footnotemark`s † and ‡, no "1" and "2": their glyph unknown here,
-      // written with none, and their notes never placed, each counted — MARKSAFEb, `insert::count_unknown_marks`)
+      // their notes never placed, each mark dropped and counted — MARKSAFEb, `insert::count_unknown_marks`; never an
+      // empty mark, revMTREDUCEc S2)
       counts:   (0, 2),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname><text fontsize="91%">Ann Able</text></personname><note role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text fontsize="91%">Univ X.</text></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname><text fontsize="91%">Bob Baker</text></personname><note role="footnotemark"/><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
+        r#"<creator role="author"><personname><text fontsize="91%">Ann Able</text></personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text fontsize="91%">Univ X.</text></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname><text fontsize="91%">Bob Baker</text></personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
       ]),
     },
     // (a kept mark past a gap or a comma shown as a request; the glued ones' italic is RED

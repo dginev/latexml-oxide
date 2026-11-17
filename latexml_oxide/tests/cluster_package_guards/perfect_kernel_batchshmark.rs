@@ -606,7 +606,7 @@ Body.
   );
 }
 
-/// A name's mark the class sets apart, which no reading knows, is written with none (`latex_constructs::
+/// A name's mark the class sets apart, which no reading knows, is written with none, its empty note dropped (`latex_constructs::
 /// drop_unknown_title_mark`): REVTeX 4.1/4.2 set a name's `\footnotemark` in their minipage letters ("Ann Ablea",
 /// revtex4-2.cls:2555-2557, `lx_title_footnote_own_marks`), bare or given its number, its text after `\maketitle` paired
 /// by the counter. Distinct from the class's gate: the class's `\maketitle` runs, its name marks are another series.
@@ -618,22 +618,17 @@ fn a_names_mark_revtex_sets_apart_is_unknown() {
     1,
   );
   assert_eq!(notes_in(&xml), [
-    row(&["Ann Able", "footnotemark[]="]),
+    row(&["Ann Able"]),
     row(&["Bob Baker"]),
     row(&["Cy Cole"]),
   ]);
-  // (and on the page no glyph: not the XSLT's `†`, revMARKSAFE B1 — the unmarked mark-only note shows nothing)
+  // (and on the page no glyph: not the XSLT's `†`, revMARKSAFE B1 — the mark-only note dropped, never an empty mark,
+  // revMTREDUCEc S2)
   assert_eq!(
     page_lines(&page_of(&xml)),
     (row(&["Ann Able", "Bob Baker", "Cy Cole"]), Vec::new())
   );
-  assert_eq!(
-    xml
-      .matches(r#"<note role="footnotemark" xml:id="footnote1"/>"#)
-      .count(),
-    1,
-    "{xml}"
-  );
+  assert_eq!(xml.matches(r#"role="footnotemark""#).count(), 0, "{xml}");
   // (pdflatex: "Ann Ablea", the footnote "1 Note A.")
   assert_eq!(
     marked_notes(
