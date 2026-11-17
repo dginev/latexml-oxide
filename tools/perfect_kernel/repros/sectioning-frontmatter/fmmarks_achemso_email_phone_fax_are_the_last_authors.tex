@@ -6,9 +6,9 @@
 %   email=bob@x.org; ACHEMSO = 0 errors, 1 Warning; XML Ann Able | email=ann_able@x.org ; phone=+1 555 0100 ;
 %   fax=+1 555 0101 ; affiliation=Univ A / Bob Baker | email=bob@x.org ; phone=+1 555 0200 ; affiliation=Univ
 %   A
-% expect:   0 errors, 1 Warning; XML Ann Able | email=ann_able@x.org ; phone=+1 555 0100 ; fax=+1 555 0101 ;
-%   affiliation=Univ A / Bob Baker | email=bob@x.org ; phone=+1 555 0200 ; affiliation=Univ A; HTML Ann Able
-%   / Bob Baker (the guard's XML and HTML lines)
+% expect:   0 errors, 1 Warning; XML Ann Able | affiliation=Univ A ; email=ann_able@x.org ; phone=+1 555 0100 ; fax=+1
+%   555 0101 / Bob Baker | affiliation=Univ A ; email=bob@x.org ; phone=+1 555 0200; HTML Ann Able / Bob Baker (the
+%   guard's XML and HTML lines)
 % status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
 %   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload: ar5iv.sty

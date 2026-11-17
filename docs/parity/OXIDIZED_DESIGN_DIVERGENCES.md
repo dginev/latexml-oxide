@@ -21964,28 +21964,35 @@ last stepped, and its text repeating an earlier one's is that number (`\acs@affi
 An `\affiliation` right after another reaches no author: a new text is listed with a mark no name carries, a repeated
 one is nothing. `\alsoaffiliation` adds a number to the last author (:428-467); a new one steps the counter, so it is
 also every waiting author's. `\altaffiliation` is the last author's, a second one replacing the first (`\xdef`,
-:468-485); `\email`, `\phone` and `\fax` are the last author's (:513-539). One before any `\author` is the class's
-Warning and is dropped (:376-378). The `[short]` form is stored in `\@affil@<n>` for `\acs@affil@list`, which nothing
-in the class calls: only the full text prints.
+:468-485); `\email`, `\phone` and `\fax` are the last author's, a second one replacing the first (`\gdef`, :513-539),
+and an author's phone and fax print only beside its e-mail (`\acs@number@list`, :971-1001). One before any `\author` is
+the class's Warning and is dropped (:376-378). The `[short]` form is stored in `\@affil@<n>` for `\acs@affil@list`,
+which nothing in the class calls: only the full text prints.
 
 **Rust.** The binding wrote every affiliation as a detached `ltx:note` (48 of 48 creators of the 3,000-paper dev sample
 lost theirs). Now `\author` is the API's per-author block (`\lx@add@authors@append`, as revtex's and amsart's), and the
 binding keeps the class's numbering (`\acs@affil@ifdup`, `\acs@alsoaffil@find`, `\acs@altaffil@ifdup` as the class has
 them, and a count of waiting authors) to hand each piece to the API with the authors it reaches:
-`\lx@add@affiliation[annotate=new]` for the waiting authors (`annotate=<n>`, the last n, where one of them already
-holds an `\alsoaffiliation`), `annotate=1` for an `\alsoaffiliation` of the last author (not a second copy of one it
-has), `\lx@add@email`, `\lx@add@contact[role=phone]`, `[role=fax]` for the last author, and `\lx@add@altaffiliation`
-for the last author's last `\altaffiliation`, given at the next `\author` or `\begin{document}`. Each piece is one
-contact per author, even where the PDF prints its mark twice (`Bob Baker,†,†`). A piece no author holds at
-`\begin{document}` (an affiliation that reached no author and that no later author repeats, a replaced
-`\altaffiliation`) is a detached `ltx:note`, as the class lists it with a mark no name carries; a piece before any
-`\author` is the class's Warning and is kept as a detached note (FIDELITY_CHARTER §2). The binding states only the
-class's rule; the engine places the contacts and splits an `\email` list by the authors its addresses spell (the
-charter's ownership by evidence; 2406.15944). **Open (row R ACHEMSO-CALLS):** `annotate=1` is the last creator, so an
-`\alsoaffiliation` after an `\author` naming two people (`\author{Ann Able and Bob Baker}`, one author of the class)
-reaches the last name only; no census paper has the shape. Witnesses 2605.10968, 2306.05209 (affiliations detached
+`\lx@add@affiliation[annotate=new]` for the waiting authors (`annotate=<n>`, the last n, where one of them already holds
+an `\alsoaffiliation`), `annotate=1` for an `\alsoaffiliation` of the last author (not a second copy of one it has),
+and, at the next `\author` or `\begin{document}`, the last author's last `\altaffiliation`, `\email`, `\phone` and
+`\fax` in that order (`\lx@add@altaffiliation`, `\lx@add@email`, `\lx@add@contact[role=phone]`, `[role=fax]`; the order
+the PDF prints them after the affiliations, FIDELITY_CHARTER R8), a phone or fax only to an author with an e-mail
+(revACHEMSO S2). Each piece is one contact per author, even where the PDF prints its mark twice (`Bob Baker,†,†`). A
+piece no author holds at `\begin{document}` (an affiliation that reached no author and that no later author repeats, a
+replaced `\altaffiliation`, once however many authors replaced it: revACHEMSO B1) is a detached `ltx:note`, as the class
+lists it with a mark no name carries; a replaced `\email`, `\phone` or `\fax`, and a phone or fax of an author with no
+e-mail, which the class does not print, and a piece before any `\author`, the class's Warning, are kept as detached
+notes (FIDELITY_CHARTER §2). The binding states only the class's rule; the engine places the contacts and splits an
+`\email` list by the authors its addresses spell (the charter's ownership by evidence; 2406.15944). **Open (row R
+ACHEMSO-CALLS):** `annotate=1` is the last creator, so an `\alsoaffiliation` after an `\author` naming two people
+(`\author{Ann Able and Bob Baker}`, one author of the class) reaches the last name only; no census paper has the shape.
+**Open (row R ACHEMSO-ORDER):** a waiting author's pieces given before the next `\author` precede the affiliation that
+reaches it after it (`\author{A}\altaffiliation{P}\author{B}\affiliation{X}`: A's "P" before "X"), where the PDF lists X
+first (revACHEMSO q14): the API writes to the last author only. Witnesses 2605.10968, 2306.05209 (affiliations detached
 before), 2107.00078, 2512.17659, 2510.00865 (an affiliation right after another), 1910.14165 (a second
 `\altaffiliation`). **Guards**: the `fmmarks_achemso_*` rows of
 `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks` (and its `_red` twin),
-`perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes`;
+`perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes` (with
+`fmmarks_achemso_replaced_altaffiliation_is_one_note`, `fmmarks_achemso_second_email_phone_fax_replace_the_first`);
 `perfect_kernel_batch65m::file_arguments_are_not_typeset` (the e-mail repro's affiliation is its author's).

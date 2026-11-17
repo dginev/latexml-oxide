@@ -69,15 +69,8 @@ LoadDefinitions!({
 \newcommand*\schemename{Scheme}\newcommand*\chartname{Chart}\newcommand*\graphname{Graph}"
   );
 
-  // achemso.cls:331-539: each `\author` adds an author, who waits for the next affiliation the class numbers
-  // (`\@author@affil@<n>`, :340-343); an `\affiliation` is every waiting author's, a repeated text the earlier number
-  // (`\acs@affil@swap`, :359-427), so one right after another reaches no author; `\alsoaffiliation` is the last
-  // author's, a new one also the waiting authors' (:428-458); `\altaffiliation` the last author's, a second one
-  // replacing the first (`\xdef`, :468-485: it is given at the next `\author`);
-  // `\email`, `\phone`, `\fax` the last author's (:513-539). The class's numbering hands each piece to the API: the
-  // waiting ones `annotate=new` (the last n where one of them holds an `\alsoaffiliation` already), the last one
-  // `annotate=1`. A piece no author holds at `\begin{document}` is kept unlinked, as the class lists it with a mark no
-  // name carries (OXIDIZED_DESIGN #1065). Witnesses 2605.10968, 2306.05209, 2107.00078, 2512.17659, 2510.00865.
+  // achemso.cls:331-539, :921-1001: each piece goes to the authors the class numbers it for (OXIDIZED_DESIGN #1065).
+  // Witnesses 2605.10968, 2306.05209, 2107.00078, 2512.17659, 2510.00865, 1910.14165.
   RawTeX!(
     r"\newcount\acs@author@cnt\newcount\acs@affil@cnt\newcount\lx@acs@waiting\def\lx@acs@last{}\newif\iflx@acs@held
 \newcount\acs@affil@alt@cnt\def\lx@acs@alt{}\newcount\lx@acs@alt@n\newif\iflx@acs@body
@@ -130,35 +123,44 @@ LoadDefinitions!({
 \def\lx@acs@note#1#2{\@add@frontmatter{ltx:note}[role=#2]{#1}}
 \def\lx@acs@leftover#1#2#3#4{\@for\lx@acs@n:=#1\do{\ifx\lx@acs@n\@empty\else
   \expandafter\ifx\csname #2\lx@acs@n\endcsname\relax\@tempcnta\lx@acs@n\relax\expandafter\expandafter\expandafter
-    \lx@acs@note\expandafter\expandafter\expandafter{\csname #3\@roman\@tempcnta\endcsname}{#4}\fi\fi}}
-\AtBeginDocument{\lx@acs@alt@flush\global\lx@acs@bodytrue
+    \lx@acs@note\expandafter\expandafter\expandafter{\csname #3\@roman\@tempcnta\endcsname}{#4}%
+    \expandafter\gdef\csname #2\lx@acs@n\endcsname{}\fi\fi}}
+\def\lx@acs@email{}\def\lx@acs@phone{}\def\lx@acs@fax{}\def\lx@acs@dropped{}
+\def\lx@acs@email@add{\lx@add@email}\def\lx@acs@phone@add{\lx@add@contact[role=phone,name={Phone:~}]}
+\def\lx@acs@fax@add{\lx@add@contact[role=fax,name={Fax:~}]}
+\def\lx@acs@drop#1#2{\expandafter\g@addto@macro\expandafter\lx@acs@dropped\expandafter{\expandafter
+  \lx@acs@note\expandafter{#1}{#2}}}
+\def\lx@acs@keep#1#2#3{\ifx#1\@empty\else\lx@acs@drop#1{#2}\fi\gdef#1{#3}}
+\def\lx@acs@put#1#2{\ifx#1\@empty\else\ifx\lx@acs@email\@empty\lx@acs@drop#1{#2}\else
+  \expandafter\lx@acs@put@\csname lx@acs@#2@add\expandafter\endcsname\expandafter{#1}\fi\fi}
+\def\lx@acs@put@#1#2{#1{#2}}
+\def\lx@acs@contacts@flush{\lx@acs@put\lx@acs@email{email}\lx@acs@put\lx@acs@phone{phone}\lx@acs@put\lx@acs@fax{fax}%
+  \global\let\lx@acs@email\@empty\global\let\lx@acs@phone\@empty\global\let\lx@acs@fax\@empty}
+\AtBeginDocument{\lx@acs@alt@flush\lx@acs@contacts@flush\global\lx@acs@bodytrue
   \lx@acs@leftover\lx@acs@orphans{lx@acs@given@}{@address@}{affiliation}%
-  \lx@acs@leftover\lx@acs@altorphans{lx@acs@altgiven@}{@altaffil@}{altaffiliation}}
-\def\lx@acs@contact#1#2#3#4{\ifnum\acs@author@cnt>\z@#3{#4}\else\lx@acs@noauthor{#1}{#2}{#4}\fi}"
+  \lx@acs@leftover\lx@acs@altorphans{lx@acs@altgiven@}{@altaffil@}{altaffiliation}%
+  \lx@acs@dropped\global\let\lx@acs@dropped\@empty}
+\def\lx@acs@contact#1#2#3{\ifnum\acs@author@cnt>\z@\iflx@acs@body\csname lx@acs@#2@add\endcsname{#3}\else
+    \expandafter\lx@acs@keep\csname lx@acs@#2\endcsname{#2}{#3}\fi
+  \else\lx@acs@noauthor{#1}{#2}{#3}\fi}"
   );
   DefMacro!(
     "\\author{}",
-    "\\lx@acs@alt@flush\\global\\advance\\acs@author@cnt\\@ne\\global\\advance\\lx@acs@waiting\\@ne\\gdef\\lx@acs@last{}\\lx@add@authors@append{#1}"
+    "\\lx@acs@alt@flush\\lx@acs@contacts@flush\\global\\advance\\acs@author@cnt\\@ne\\global\\advance\\lx@acs@waiting\\@ne\\gdef\\lx@acs@last{}\\lx@add@authors@append{#1}"
   );
   DefMacro!("\\affiliation[]{}", "\\lx@acs@affiliation{#2}");
   DefMacro!("\\alsoaffiliation[]{}", "\\lx@acs@alsoaffiliation{#2}");
   DefMacro!("\\altaffiliation{}", "\\lx@acs@altaffiliation{#1}");
-  // (labelled as the class lists them, `\MakeUppercase#1: `, :998)
-  DefMacro!(
-    "\\phone{}",
-    "\\lx@acs@contact{Phone number}{phone}{\\lx@add@contact[role=phone,name={Phone:~}]}{#1}"
-  );
-  DefMacro!(
-    "\\fax{}",
-    "\\lx@acs@contact{Fax number}{fax}{\\lx@add@contact[role=fax,name={Fax:~}]}{#1}"
-  );
+  // (labelled as the class lists them, `\MakeUppercase#1: `, :998; written at the author's end, :976-980)
+  DefMacro!("\\phone{}", "\\lx@acs@contact{Phone number}{phone}{#1}");
+  DefMacro!("\\fax{}", "\\lx@acs@contact{Fax number}{fax}{#1}");
   // `\email` stores the address for the author's footnote (`\@email@<n>`, :513-520): an address, read as the other
   // classes' are (`\lx@address@textfont`, revtex4_support_sty.rs), so `ranojoy_bose@apple.com` is no subscript
   // ("Script _ can only appear in math mode", 1803.03591; OXIDIZED_DESIGN #551). Guard
   // `perfect_kernel_batch65m::file_arguments_are_not_typeset`.
   DefMacro!(
     "\\email Semiverbatim",
-    "\\lx@acs@contact{E-mail}{email}{\\lx@add@email}{\\lx@address@textfont{#1}}"
+    "\\lx@acs@contact{E-mail}{email}{\\lx@address@textfont{#1}}"
   );
   // achemso.cls:1115-1124: `suppinfo` is an environment that opens an unnumbered "Supporting Information Available"
   // section (`\acs@section*{\suppinfoname}`), not a one-argument frontmatter command — which took the `\begin` of

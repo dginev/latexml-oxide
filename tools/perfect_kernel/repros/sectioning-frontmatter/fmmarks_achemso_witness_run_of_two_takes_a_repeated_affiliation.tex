@@ -7,10 +7,10 @@
 %   Cole / Dan Dorn; ACHEMSO = 0 errors, 1 Warning; XML Ann Able | email=ann@x.org ; affiliation=Univ A, Town
 %   ; affiliation=Inst Q, Town / Bob Baker | affiliation=Univ A, Town ; affiliation=Inst Q, Town ;
 %   affiliation=Inst K, Town / Cy Cole | affiliation=Inst Q, Town / Dan Dorn | affiliation=Inst Q, Town
-% expect:   0 errors, 1 Warning; XML Ann Able | email=ann@x.org ; affiliation=Univ A, Town ; affiliation=Inst Q, Town
-%   / Bob Baker | affiliation=Univ A, Town ; affiliation=Inst Q, Town ; affiliation=Inst K, Town / Cy Cole |
-%   affiliation=Inst Q, Town / Dan Dorn | affiliation=Inst Q, Town; HTML Ann Able / Bob Baker / Cy Cole / Dan
-%   Dorn (the guard's XML and HTML lines)
+% expect:   0 errors, 1 Warning; XML Ann Able | affiliation=Univ A, Town ; affiliation=Inst Q, Town ; email=ann@x.org /
+%   Bob Baker | affiliation=Univ A, Town ; affiliation=Inst Q, Town ; affiliation=Inst K, Town / Cy Cole |
+%   affiliation=Inst Q, Town / Dan Dorn | affiliation=Inst Q, Town; HTML Ann Able / Bob Baker / Cy Cole / Dan Dorn (the
+%   guard's XML and HTML lines)
 % status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
 %   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload: ar5iv.sty
