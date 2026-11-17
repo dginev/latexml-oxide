@@ -1,8 +1,9 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use super::elsart_support_core_sty::{
-  ELS_AUTHOR_KEYS, ELS_CORREF_KEYS, ELS_CORTEXT_KEYS, ELS_FNTEXT_KEYS, ELS_PLACE_KEYS,
-  els_carriers, els_outside_mark, record_els_keys, recorded_els_key,
+  ELS_AUTHOR_KEYS, ELS_CORREF_KEYS, ELS_CORTEXT_KEYS, ELS_FNTEXT_KEYS, ELS_NOTE_LABELS,
+  ELS_PLACE_KEYS, els_carriers, els_first_note_label, els_outside_mark, record_els_keys,
+  recorded_els_key,
 };
 use crate::prelude::*;
 
@@ -105,6 +106,7 @@ LoadDefinitions!({
   // leaves it at OT1; divergence from Perl.
   RequirePackage!("fontenc", options => vec!["T1".to_string()]);
   RequirePackage!("elsart_support_core");
+  assign_value(ELS_NOTE_LABELS, true, Scope::Global);
   // elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`: the class prints its title page at
   // `\end{frontmatter}`, where the core's empty primitive runs no `\maketitle` of ours. The print is noted there for the
   // title-page check (`\lx@note@title@page`, when no `\maketitle` noted one; nothing typeset), so a word the document
@@ -349,7 +351,8 @@ LoadDefinitions!({
       mouth::tokenize_internal(TeXString::assembled(s!("\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}")))
     }))
   });
-  DefMacro!("\\cormark[]", "\\corref{#1}");
+  // (`\cormark[k]` prints its ∗ where it is read and sets no `\@corref`, :178-180: outside a name it marks no name)
+  DefMacro!("\\cormark[]", "\\lx@els@record@cormark{#1}\\lx@request@frontmatter@annotation[cor]{#1}");
   DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
   // The 2020+ copies' `\newpageafter{title|author|abstract}` (16 of 35 sampled), a page break in the title block: a
   // guess a paper's own definition replaces.
@@ -557,12 +560,13 @@ fn els_note_shadowed(kind: &str, key: &str) -> bool {
 
 /// A `\cortext`'s or `\fntext`'s label as it is read (the Frontmatter reading pairs the queued labels): its key's,
 /// `cor:<key>`/`fn:<key>`, or, where the key already names another entry, none a name reaches — no `:`, so Perl's
-/// prefix-stripped fallback (`relocate_annotations`) finds no name listing the key. A note read before the entry its key
-/// names stays its key's names' (row R ELSKEYORDER).
+/// prefix-stripped fallback (`relocate_annotations`) finds no name listing the key; where a later outside mark moved the
+/// first name's, as [`els_first_note_label`] gives it. A note read before the entry its key names stays its key's names'
+/// (row R ELSKEYORDER).
 fn els_note_label(kind: &str, key: &str) -> String {
   if els_note_shadowed(kind, key) {
     s!("{kind}@{}", key.trim())
   } else {
-    s!("{kind}:{}", key.trim())
+    els_first_note_label(kind, key).unwrap_or_else(|| s!("{kind}:{}", key.trim()))
   }
 }

@@ -1,0 +1,19 @@
+% mechanism: `\cormark[k]` before the names prints its ∗ there and sets no `\@corref` (elsarticle.cls:178-180): no name
+%   shows the note's mark
+% witness: revELSART pA2 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: a lone "∗" above "T"; "Alice One,a , Bob Twoa"; footnote "∗ Corresponding author"
+% engines: rust WRONGFIXc: the note the block's; ELSART (3bbd4e67ccf): Alice's (read as `\corref`)
+% expect:  0 errors 0 Warnings; the correspondence note the block's (the lone ∗ not kept)
+% status:  RED (ELSART) -> GREEN (ELSARTb) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\cormark[cor]
+\author[l1]{Alice One}
+\author[l1]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[cor]{Corresponding author}
+\end{frontmatter}
+x\end{document}

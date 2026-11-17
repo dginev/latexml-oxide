@@ -20364,9 +20364,17 @@ the Frontmatter reading pairs the queued labels, so nothing is decided later):
 - every route of a key takes the form the key was first read by (`els_route`): the bare key after an `\author[…]` list,
   `cor:k`/`fn:k` after a `\corref`/`\fnref`. A later `\author[…]` key is annotated `cor:k`; a later `\corref{k}` in a
   name is dropped and its name annotated `k` — so all names reaching a note meet it, in either order;
-- the first name is annotated with the outside marks read before it or right after its call (past spaces:
-  the witnesses' shape); its own `\corref`/`\fnref` replaces them, as the class's. One read after a later name stays the
-  block's (row R ELSOUTSIDE);
+- the first name shows the outside mark read last before the names print: an outside `\corref`/`\fnref`/`\fnmark` sets
+  `\@corref`/`\@fnmark` again, while `\cormark[k]` prints its ∗ where it is read and sets neither (:178-180), so outside a
+  name it marks no name, and in the first name it prints beside the outside mark. The first name is annotated with the
+  outside marks read before it or right after its call (past spaces: the witnesses' shape); its own `\corref`/`\fnref`/
+  `\fnmark` replaces them. One read after the call moves the mark, which the queued annotations cannot follow
+  (fail-safe, row R ELSOUTSIDE): each note it moves to or from is the block's (`els_first_note_label`: the one the
+  first name took and no longer shows labelled `cor@k`/`fn@k`) unless another name reaches its key, with a Warning each;
+  a note read before the mark keeps its label, with a Warning. Following it needs an engine call that re-annotates a
+  queued creator (its queue entry and the reading's ledger record); a label the first name always held for the register
+  was tried and dropped — an unanswered request is parted into glued pieces (`cor` answered a note keyed `cor`) or, as
+  `ref:@corref`, warns `unanswered_mark_lost` on every paper;
 - a note whose key already names another entry when it is read is labelled `cor@k`/`fn@k` (elsarticle_cls.rs
   `els_note_label`), which no name requests and no fallback strips to the key: the block's note, as the PDF links it to
   no name (1711.08299). A note read before the entry its key names keeps `cor:k` (row R ELSKEYORDER);
@@ -20379,7 +20387,9 @@ read 1108.0201's `\address[*]` as the corresponding author's.
 author's, the block's before), 1909.01114 (`{\corref{cor1}}`: the block's, as pdflatex links it to no name), 1711.08299;
 ELSROUTE's mixed routes (0 of 906 census elsarticle papers).
 **Guards**: the FMRG `CLASS` rows `elsart_*` (`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`
-and its `_red` twin), `perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route` (the shared-key row).
+and its `_red` twin; ELSARTb: `\cormark` outside a name, and as RED rows an outside mark after a later name in either kind
+and order), `perfect_kernel_batchfmmarks::elsarticle_outside_marks_after_the_first_name_warn` (the fail-safe's notes and
+Warnings), `perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route` (the shared-key row).
 
 ---
 

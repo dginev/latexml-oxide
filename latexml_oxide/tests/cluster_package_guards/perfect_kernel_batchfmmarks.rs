@@ -3566,7 +3566,7 @@ const CLASS: &[Row] = &[
       r#"Bob Two | affiliation=Some University, X, Y"#,
       r#"Carol Three | affiliation=Some University, X, Y"#,
     ],
-    moves:      r#"row R ELSOUTSIDE (a `\corref` read after a later name than the first: the binding sees the outside marks read before the first name or right after its call; the note the block's)"#,
+    moves:      r#"row R ELSOUTSIDE (a `\corref` read after a later name than the first: the note the block's, a Warning)"#,
     page:       &[r#"Alice One"#, r#"Bob Two"#, r#"Carol Three"#],
     page_moves: r#"row R ELSOUTSIDE (the block's line)"#,
   },
@@ -3592,7 +3592,7 @@ const CLASS: &[Row] = &[
       r#"Carol Three | affiliation=Some University, X, Y"#,
       r#" | note=Note two"#,
     ],
-    moves:      r#"row R ELSOUTSIDE (the outside `\corref` read after the second name: the correspondence note the block's)"#,
+    moves:      r#"row R ELSOUTSIDE (the outside `\corref` read after the second name: the correspondence note the block's, a Warning)"#,
     page:       &[r#"Alice One"#, r#"Bob Two"#, r#"Carol Three"#, r#""#],
     page_moves: r#""#,
   },
@@ -3607,6 +3607,108 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_corref_after_a_later_name_replaces_the_first_authors",
+    tex:        repro!("elsart_corref_after_a_later_name_replaces_the_first_authors"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y ; correspondent=Second corresponding"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=First corresponding"#,
+    ],
+    moves:      r#"row R ELSOUTSIDE (an outside `\corref` read after the first name's call: its queued annotations cannot follow, both notes the block's, a Warning each)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_fnref_after_a_later_name_replaces_the_first_authors",
+    tex:        repro!("elsart_fnref_after_a_later_name_replaces_the_first_authors"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y ; note=Note two"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | note=Note one"#,
+    ],
+    moves:      r#"row R ELSOUTSIDE (an outside `\fnref` read after the first name's call: both notes the block's, a Warning each)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_corref_before_the_names_yields_to_a_later_one",
+    tex:        repro!("elsart_corref_before_the_names_yields_to_a_later_one"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y ; correspondent=Second corresponding"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=First corresponding"#,
+    ],
+    moves:      r#"row R ELSOUTSIDE (the later outside `\corref` moves the first name's mark: both notes the block's, a Warning each)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_cormark_after_a_name_marks_no_one",
+    tex:        repro!("elsart_cormark_after_a_name_marks_no_one"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=Corresponding author"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_cormark_before_the_names_marks_no_one",
+    tex:        repro!("elsart_cormark_before_the_names_marks_no_one"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=Corresponding author"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_cormark_in_the_first_name_prints_beside_the_outside_corref",
+    tex:        repro!("elsart_cormark_in_the_first_name_prints_beside_the_outside_corref"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y ; correspondent=First corresponding ; correspondent=Second corresponding"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+    ],
+    moves:      r#"row R ELSOUTSIDE (the outside `\corref` after a later name: c2's note the block's, a Warning)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#],
+    page_moves: r#"row R ELSOUTSIDE (the block's line)"#,
+  },
+  Row {
+    repro:      "elsart_corref_after_the_note_it_moves_warns",
+    tex:        repro!("elsart_corref_after_the_note_it_moves_warns"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y ; correspondent=Second corresponding"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=First corresponding"#,
+    ],
+    moves:      r#"row R ELSOUTSIDE (a note read before the outside mark that moves the first name's keeps its label: Alice c1's, c2's the block's, a Warning each)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_cortext_before_the_names_keeps_the_first_authors_corref",
+    tex:        repro!("elsart_cortext_before_the_names_keeps_the_first_authors_corref"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | correspondent=First corresponding ; affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#],
     page_moves: r#""#,
   },
   Row {
@@ -4534,7 +4636,8 @@ const CLASS: &[Row] = &[
 /// them for, its generated marks no ink of ours (ACHEMSO, OXIDIZED_DESIGN_DIVERGENCES #1065; 2605.10968, 2306.05209).
 /// An elsarticle key names one entry, every route to a note reaches it — a key and a `\corref`/`\fnref` both, in either
 /// order; a `\corref` read before the first name or right after its call the first author's; one in its own group, or a
-/// note whose key another entry takes, no name's (ELSART, OD #1067: 1501.03323, 1909.01114, 1711.08299).
+/// note whose key another entry takes, no name's (ELSART, OD #1067: 1501.03323, 1909.01114, 1711.08299); a `\cormark`
+/// outside a name no name's (ELSARTb).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
 /// achemso's pieces no author holds at `\begin{document}` (a CLASS row asserts only the creators): each is one
@@ -4612,6 +4715,71 @@ fn achemso_pieces_no_author_holds_are_unlinked_notes() {
 #[test]
 #[ignore = "RED: the row R lines its rows name"]
 fn notes_are_marked_only_where_the_class_prints_marks_red() { assert_red_layers_now_green(CLASS); }
+
+/// The fail-safe of row R ELSOUTSIDE (ELSARTb, OD #1067): an outside `\corref`/`\fnref` read after the first name's call
+/// sets the class's `\@corref`/`\@fnmark` again, which the first name prints (elsarticle.cls:159-165, :188-190, :256-264);
+/// its queued annotations cannot follow, so each note the mark moves to or from is the block's (one read before the
+/// mark keeps its label), a Warning each. Its CLASS rows pin the PDF's reading as RED; this pins what is written now:
+/// both kinds, the first name's own `\cormark` beside it, a note read before the mark, a first name that took none.
+#[test]
+fn elsarticle_outside_marks_after_the_first_name_warn() {
+  for (tex, warnings, creators) in [
+    (
+      repro!("elsart_corref_after_a_later_name_replaces_the_first_authors"),
+      2,
+      &[
+        r#"Alice One | affiliation=Some University, X, Y"#,
+        r#"Bob Two | affiliation=Some University, X, Y"#,
+        r#" | correspondent=First corresponding ; correspondent=Second corresponding"#,
+      ][..],
+    ),
+    (
+      repro!("elsart_fnref_after_a_later_name_replaces_the_first_authors"),
+      2,
+      &[
+        r#"Alice One | affiliation=Some University, X, Y"#,
+        r#"Bob Two | affiliation=Some University, X, Y"#,
+        r#" | note=Note one ; note=Note two"#,
+      ][..],
+    ),
+    (
+      repro!("elsart_cormark_in_the_first_name_prints_beside_the_outside_corref"),
+      1,
+      &[
+        r#"Alice One | affiliation=Some University, X, Y ; correspondent=First corresponding"#,
+        r#"Bob Two | affiliation=Some University, X, Y"#,
+        r#" | correspondent=Second corresponding"#,
+      ][..],
+    ),
+    (
+      repro!("elsart_corref_after_the_note_it_moves_warns"),
+      2,
+      &[
+        r#"Alice One | correspondent=First corresponding ; affiliation=Some University, X, Y"#,
+        r#"Bob Two | affiliation=Some University, X, Y"#,
+        r#" | correspondent=Second corresponding"#,
+      ][..],
+    ),
+    (
+      repro!("elsart_corref_outside_a_name_marks_the_first_author"),
+      1,
+      &[
+        r#"Alice One | affiliation=Some University, X, Y"#,
+        r#"Bob Two | affiliation=Some University, X, Y"#,
+        r#"Carol Three | affiliation=Some University, X, Y"#,
+        r#" | correspondent=Corresponding author"#,
+      ][..],
+    ),
+  ] {
+    let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{log}"
+    );
+    assert_eq!(creator_lines(&xml), creators);
+  }
+}
 
 /// Core documents the reviews of REND2 wrote by hand, through `LaTeXML-html5.xsl` alone: a letter, digit or Greek
 /// mark-only note links to no other author's note of the same glyph and promotes none to the margin (revREND2 p1, the

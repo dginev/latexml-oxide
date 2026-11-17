@@ -7,8 +7,9 @@
 % engines: rust b842de7fc4c and ELSART: the note the block's (a nameless creator); ELSART gives it the first author
 %   where the `\corref` is read before the first name or right after its call (the witnesses' shape)
 % expect:  0 errors 0 Warnings; Alice One the correspondence note
-% status:  RED (b842de7fc4c) -> RED (ELSART; row R ELSOUTSIDE)
-%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% status:  RED (b842de7fc4c) -> RED (ELSART; row R ELSOUTSIDE) -> RED (ELSARTb: the note the block's, with a Warning)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red;
+%   elsarticle_outside_marks_after_the_first_name_warn pins the fail-safe)
 % preload: ar5iv.sty
 \documentclass[preprint]{elsarticle}
 \begin{document}

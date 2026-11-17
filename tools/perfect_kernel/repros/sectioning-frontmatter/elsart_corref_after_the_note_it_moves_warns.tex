@@ -1,0 +1,22 @@
+% mechanism: the binding labels a note where it is read; a later outside `\corref` that moves the first name's mark
+%   (elsarticle.cls:188-190, :256-264) after the note it moves from was read cannot relabel it: a Warning, the note kept
+% witness: revELSART B1's fail-safe (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗∗, Bob Twoa"; footnotes "∗ First corresponding",
+%   "∗∗ Second corresponding"
+% engines: rust ELSART (3bbd4e67ccf): Alice c1's note, c2's the block's, no Warning; ELSARTb: the same, 2 Warnings
+% expect:  0 errors 0 Warnings; Alice One the second note, the first the block's (now 2 Warnings, the fail-safe)
+% status:  RED (ELSART) -> RED (ELSARTb; row R ELSOUTSIDE: the fail-safe, Alice c1's note as read, c2's the block's, a Warning each)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red;
+%   elsarticle_outside_marks_after_the_first_name_warn pins the fail-safe)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}\corref{c1}
+\cortext[c1]{First corresponding}
+\author[l1]{Bob Two}\corref{c2}
+\cortext[c2]{Second corresponding}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x\end{document}

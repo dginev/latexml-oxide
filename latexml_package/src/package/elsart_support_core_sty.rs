@@ -1,7 +1,7 @@
 //! elsart_support_core.sty — Elsevier journal article support (core)
 //! Perl: elsart_support_core.sty.ltxml — 191 lines
 //! Shared by elsart.cls and elsarticle.cls
-use crate::prelude::*;
+use crate::{engine::base_utilities::reading_author_fields, prelude::*};
 
 /// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own): the kernel's reading,
@@ -60,14 +60,9 @@ LoadDefinitions!({
   // which depends on the route its names reach it by: `\lx@els@cormark`, 2512.04868)
   DefMacro!("\\author OptionalSemiverbatim {}",
     "\\lx@els@record@author{#1}{#2}\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@els@author{#1}{#2}");
-  // elsarticle.cls:126-131, :250-265: one key space, `X@<key>`; `\author[<keys>]` prints `\elsRef{<key>}`, the entry whose
-  // `\elsLabel` was written last (elsarticle_cls.rs `els_key_entry`); `\corref`/`\fnref` name a `\cortext`/`\fntext`. A `\corref` or
-  // `\fnref` outside every name sets `\@corref`/`\@fnmark` where it is read; the first name printed shows it unless it
-  // sets its own (:159-165, :188-190, :256-264). Each route is given the label form the key was first read by
-  // ([`els_route`]: the bare key, `cor:<key>`, `fn:<key>`), so every name reaching a note meets it — Perl's prefix-stripped
-  // fallback stops at an exact label (`\author[l1,cor]{Alice}` beside `\author[l1]{Bob\corref{cor}}` gave Bob alone the
-  // note); the first name takes the outside marks read before it or right after its call (1501.03323, 1508.05262,
-  // 2201.04925, 2606.17032, 2606.22682; OXIDIZED_DESIGN_DIVERGENCES #1067).
+  // elsarticle.cls:126-131, :159-165, :188-190, :250-265: every route to a key gets the label form it was first read by
+  // (`els_route`); the first name shows the outside mark read last (`ELS_FIRST`; 1501.03323, 1508.05262; OD #1067).
+  // (keep in elsart_support_core: `policy_for` takes its conventions from here, OD #1067)
   DefMacro!("\\lx@els@author{}{}", sub[(keys, name)] {
     let listed: Vec<String> =
       keys.to_string().split(',').map(str::trim).filter(|k| !k.is_empty()).map(String::from).collect();
@@ -95,17 +90,20 @@ LoadDefinitions!({
       spans.iter().flat_map(|(_, refs)| refs).for_each(|key| set_els_route(key, kind));
     }
     if first {
-      // (the outside marks read before the first name, or right after its call: the class's `\@corref`/`\@fnmark`)
+      // (the outside marks read before it or right after its call; a later one, `els_first_note_label`)
       let ahead = peek_outside_marks()?;
+      let mut took = String::new();
       for (kind, own) in [("cor", &correfs), ("fn", &fnrefs)] {
-        if !own.is_empty() {
+        // (its own `\corref`/`\fnref` replaces the outside mark; its own `\cormark` prints beside it, :178-180)
+        if own.iter().any(|(span, _)| kind == "fn" || tokens[span.start] == T_CS!("\\corref")) {
           continue;
         }
         let read = ahead.iter().rev().find(|(k, _)| *k == kind).map(|(_, keys)| keys.clone());
-        for key in read.unwrap_or_else(|| els_outside_mark(kind)) {
-          labels.push(els_route_label(&key, kind));
-        }
+        let read = read.unwrap_or_else(|| els_outside_mark(kind));
+        labels.extend(read.iter().map(|key| els_route_label(key, kind)));
+        took.push_str(&s!("{kind}={};", read.join(",")));
       }
+      assign_value(ELS_FIRST, Stored::String(pin(&took)), Scope::Global);
     }
     let named: Vec<Token> = tokens
       .iter()
@@ -139,7 +137,7 @@ LoadDefinitions!({
     let fnrefs = keys_in(tokens, &T_CS!("\\fnref"), &T_CS!("\\fnmark"));
     let keys: Vec<&str> = keys.split(',').map(str::trim).filter(|k| !k.is_empty()).collect();
     let mut authors = lookup_string(ELS_AUTHORS);
-    authors.push_str(&s!("{}|{};", keys.join(","), fnrefs.join(",")));
+    authors.push_str(&s!("{}|{}|{};", keys.join(","), fnrefs.join(","), correfs.join(",")));
     assign_value(ELS_AUTHORS, Stored::String(pin(&authors)), Scope::Global);
     assign_value(ELS_NAMES_LEVEL, i64::try_from(get_frame_depth()).unwrap_or(0), Scope::Global);
   });
@@ -181,9 +179,13 @@ LoadDefinitions!({
   // (an outside one recorded with the group level it is read at, for elsarticle's first name: `ELS_OUTSIDE`)
   DefMacro!("\\corref{}",     "\\lx@els@record@corref{#1}\\lx@request@frontmatter@annotation[cor]{#1}");
   DefPrimitive!("\\lx@els@record@corref{}", sub[(key)] {
-    record_els_keys(ELS_CORREF_KEYS, std::iter::once(key.to_string().as_str()));
+    record_els_cor_key(&key.to_string());
     record_els_mark("cor", &key.to_string());
-    set_els_route(&key.to_string(), "cor");
+  });
+  // (elsarticle's `\cormark[k]` records the key alone: it prints its ∗ where it is read and sets no `\@corref`
+  // (elsarticle.cls:178-180), so one outside a name marks no name)
+  DefPrimitive!("\\lx@els@record@cormark{}", sub[(key)] {
+    record_els_cor_key(&key.to_string());
   });
   DefMacro!("\\corauthref{}", "\\lx@request@frontmatter@annotation[corauth]{#1}");
   DefMacro!("\\fnref{}",      "\\lx@els@record@fnref{#1}\\lx@request@frontmatter@annotation[fn]{#1}");
@@ -654,8 +656,8 @@ pub(crate) const ELS_AUTHOR_KEYS: &str = "@elsarticle@authorkeys";
 pub(crate) const ELS_CORREF_KEYS: &str = "@elsarticle@correfs";
 /// The global value holding the keys `\address[…]`/`\affiliation[…]` label (comma-separated).
 pub(crate) const ELS_PLACE_KEYS: &str = "@elsarticle@placekeys";
-/// The global value holding each author's `\author[…]` keys and its name's `\fnref` keys, in reading order
-/// (`<keys>|<fnrefs>;` each).
+/// The global value holding each author's `\author[…]` keys and its name's `\fnref` and `\corref` keys, in reading order
+/// (`<keys>|<fnrefs>|<correfs>;` each).
 pub(crate) const ELS_AUTHORS: &str = "@elsarticle@authors";
 /// The global value holding the group level the `\author` calls are read at.
 pub(crate) const ELS_NAMES_LEVEL: &str = "@elsarticle@nameslevel";
@@ -695,8 +697,9 @@ pub(crate) const ELS_FNTEXT_KEYS: &str = "@elsarticle@fntextkeys";
 
 /// An `\author` call as [`ELS_AUTHORS`] records it.
 pub(crate) struct ElsAuthor {
-  pub keys:   Vec<String>,
-  pub fnrefs: Vec<String>,
+  pub keys:    Vec<String>,
+  pub fnrefs:  Vec<String>,
+  pub correfs: Vec<String>,
 }
 
 /// The `\author` calls read so far, in order.
@@ -715,7 +718,11 @@ pub(crate) fn els_authors() -> Vec<ElsAuthor> {
     .map(|entry| {
       let mut parts = entry.split('|');
       let mut next = || list(parts.next().unwrap_or_default());
-      ElsAuthor { keys: next(), fnrefs: next() }
+      ElsAuthor {
+        keys:    next(),
+        fnrefs:  next(),
+        correfs: next(),
+      }
     })
     .collect()
 }
@@ -739,6 +746,7 @@ pub(crate) fn els_carriers(key: &str) -> Vec<Vec<String>> {
 
 /// Record a `\corref` (`kind` "cor") or `\fnref` ("fn") as read, with its group level ([`ELS_OUTSIDE`]).
 fn record_els_mark(kind: &str, keys: &str) {
+  warn_moved_notes(kind, keys);
   let mut marks = lookup_string(ELS_OUTSIDE);
   marks.push_str(&s!("{kind}:{}:{};", get_frame_depth(), keys.trim()));
   assign_value(ELS_OUTSIDE, Stored::String(pin(&marks)), Scope::Global);
@@ -764,6 +772,131 @@ pub(crate) fn els_outside_mark(kind: &str) -> Vec<String> {
         .collect()
     })
     .unwrap_or_default()
+}
+
+/// The global value holding, for each kind (`cor`, `fn`) the first name sets no mark of itself, the outside keys it took
+/// at its call (`<kind>=<keys>;`): the class's `\@corref`/`\@fnmark` as then read ([`els_first_note_label`]).
+pub(crate) const ELS_FIRST: &str = "@elsarticle@first";
+/// The global value holding the notes [`els_first_note_label`] found moved where they were read (`<kind>:<key>`, comma-separated).
+const ELS_MOVED: &str = "@elsarticle@movednotes";
+/// The global flag elsarticle sets: its `\cortext`/`\fntext` label their notes by [`els_first_note_label`] too.
+pub(crate) const ELS_NOTE_LABELS: &str = "@elsarticle@notelabels";
+
+/// The outside keys of kind `kind` the first name took at its call, or `None` where it sets its own (or none is read).
+fn els_first_took(kind: &str) -> Option<Vec<String>> {
+  lookup_string(ELS_FIRST).split(';').find_map(|entry| {
+    let (k, keys) = entry.split_once('=')?;
+    (k == kind).then(|| {
+      keys
+        .split(',')
+        .filter(|k| !k.is_empty())
+        .map(String::from)
+        .collect()
+    })
+  })
+}
+
+/// Whether the outside mark the first name shows now (the last read, [`els_outside_mark`]) differs from the one it took
+/// on `key`: the first name holds `key`'s route label and no longer shows it, or shows it without holding it.
+fn els_first_moved(kind: &str, key: &str, shown: &[String]) -> bool {
+  els_first_took(kind)
+    .is_some_and(|took| took.iter().any(|k| k == key) != shown.iter().any(|k| k == key))
+}
+
+/// The label of elsarticle's note of kind `kind` keyed `key` where an outside mark read after the first name's call moved
+/// its mark (elsarticle.cls:159-165, :188-190, :256-264): the first name's annotations are queued, so the note it took
+/// and no longer shows is the block's, `<kind>@<key>`, and the one it now shows stays its key's (the block's where no
+/// other name reaches it) — a Warning, the PDF's mark on the first name lost (fail-safe, OD #1067). `None`: unmoved.
+pub(crate) fn els_first_note_label(kind: &str, key: &str) -> Option<String> {
+  let key = key.trim();
+  let shown = els_outside_mark(kind);
+  if key.is_empty() || !els_first_moved(kind, key, &shown) {
+    return None;
+  }
+  let elsewhere = els_authors().iter().any(|author| {
+    let refs = if kind == "cor" {
+      &author.correfs
+    } else {
+      &author.fnrefs
+    };
+    author.keys.iter().chain(refs).any(|k| k == key)
+  });
+  let shows = shown.iter().any(|k| k == key);
+  record_els_keys(ELS_MOVED, std::iter::once(s!("{kind}:{key}").as_str()));
+  Warn!(
+    "frontmatter",
+    "elsarticle_outside_mark",
+    s!(
+      "elsarticle: an outside mark read after the first author's call moved its mark {} the note {kind}:{key}; the note is {}",
+      if shows { "to" } else { "from" },
+      if elsewhere {
+        "kept on the names listing its key"
+      } else {
+        "the block's, its mark on the first author lost"
+      }
+    )
+  );
+  (!shows && !elsewhere).then(|| s!("{kind}@{key}"))
+}
+
+/// Before an outside `\corref`/`\fnref` read at the names' level after the first name is recorded: a note read already
+/// whose first-name mark it moves keeps the label it was given where it was read, with a Warning (not the one the first
+/// name took right after its call).
+fn warn_moved_notes(kind: &str, keys: &str) {
+  if !lookup_bool(ELS_NOTE_LABELS)
+    || reading_author_fields()
+    || i64::try_from(get_frame_depth()).ok() != Some(lookup_int(ELS_NAMES_LEVEL))
+  {
+    return;
+  }
+  let Some(took) = els_first_took(kind) else {
+    return;
+  };
+  let notes = if kind == "cor" {
+    ELS_CORTEXT_KEYS
+  } else {
+    ELS_FNTEXT_KEYS
+  };
+  let after: Vec<String> = keys
+    .split(',')
+    .map(str::trim)
+    .filter(|k| !k.is_empty())
+    .map(String::from)
+    .collect();
+  // (a note read already whose label the move would now decide otherwise than it was decided where it was read)
+  let before = els_outside_mark(kind);
+  let mut moved: Vec<&String> = before
+    .iter()
+    .chain(&after)
+    .chain(&took)
+    .filter(|k| recorded_els_key(notes, k))
+    .filter(|k| {
+      recorded_els_key(ELS_MOVED, &s!("{kind}:{k}")) != (took.contains(k) != after.contains(k))
+    })
+    .collect();
+  moved.sort_unstable();
+  moved.dedup();
+  if !moved.is_empty() {
+    Warn!(
+      "frontmatter",
+      "elsarticle_outside_mark",
+      s!(
+        "elsarticle: an outside \\{} read after the note(s) {} moves the first author's mark, which the note keeps as read",
+        if kind == "cor" { "corref" } else { "fnref" },
+        moved
+          .iter()
+          .map(|k| k.as_str())
+          .collect::<Vec<_>>()
+          .join(", ")
+      )
+    );
+  }
+}
+
+/// Record a key a `\corref`/`\cormark` names, and its route ([`els_route`]).
+fn record_els_cor_key(key: &str) {
+  record_els_keys(ELS_CORREF_KEYS, std::iter::once(key));
+  set_els_route(key, "cor");
 }
 
 /// Add each of `keys` (trimmed, non-empty) to the comma list kept in the global value `list`.
@@ -860,9 +993,8 @@ fn els_route_label(key: &str, kind: &str) -> String {
   }
 }
 
-/// The `\corref{…}`/`\cormark[…]` and `\fnref{…}`/`\fnmark[…]` right after an `\author` call (past spaces; not past an
-/// `\ead`, whose Semiverbatim address a read ahead would tokenize too early), each kind with its keys, left in the input: the first name's outside marks (1501.03323's
-/// `\author[kaust1]{Ihab Sraj} \corref{cor1}`).
+/// The `\corref{…}`, `\fnref{…}` and `\fnmark[…]` right after an `\author` call (past spaces, not an `\ead`'s Semiverbatim),
+/// each kind with its keys, left in the input: the first name's outside marks (1501.03323; OD #1067).
 fn peek_outside_marks() -> Result<Vec<(&'static str, Vec<String>)>> {
   let mut read: Vec<Token> = Vec::new();
   let mut marks = Vec::new();
@@ -894,7 +1026,7 @@ fn peek_outside_marks() -> Result<Vec<(&'static str, Vec<String>)>> {
   };
   while let Some(t) = read_token()? {
     read.push(t);
-    let kind = if t == T_CS!("\\corref") || t == T_CS!("\\cormark") {
+    let kind = if t == T_CS!("\\corref") {
       "cor"
     } else if t == T_CS!("\\fnref") || t == T_CS!("\\fnmark") {
       "fn"
@@ -903,7 +1035,7 @@ fn peek_outside_marks() -> Result<Vec<(&'static str, Vec<String>)>> {
     } else {
       break;
     };
-    let bracketed = t == T_CS!("\\cormark") || t == T_CS!("\\fnmark");
+    let bracketed = t == T_CS!("\\fnmark");
     let keys = if bracketed {
       argument(&mut read, "[", "]")?
     } else {
