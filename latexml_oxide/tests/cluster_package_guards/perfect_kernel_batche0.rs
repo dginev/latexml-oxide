@@ -1957,8 +1957,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (DATELEG, 37 -> 51, OD #1071, DG 2026-11-17 "now, before the PR": `date_legend.rs` reads the `\date` store's lines at
   // `\maketitle`, before the flush, with the frontmatter API's own line readers — the line breaks, a `\today`, a leading
   // label (`leading_line_label`), an e-mail line — as the Cut reads an `\affiliation` list; the date is a store, which no
-  // rehearsal reads. Pending the main session: rehearse the store and read its events instead)
-  ("frontmatter (rest)", 51),
+  // rehearsal reads. Pending the main session: rehearse the store and read its events instead; +1, 51 -> 52, the void
+  // date's dropped words named to the title-page check, `visible_name_text`)
+  ("frontmatter (rest)", 52),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of
