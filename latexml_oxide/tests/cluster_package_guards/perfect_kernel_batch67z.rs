@@ -517,7 +517,8 @@ fn snjnl_notes_before_a_section_and_maketitle_print_once() {
 
 /// 2501.01157's copy appends a math `$^{*}$` for `\equalcont` (:587), printing ∗, beside the starred names' text `*`
 /// (:513): two marks of two notes, which never answer each other (revSNJNLb S3). With a corresponding line Ann carries
-/// both notes; with none her `*` shows (written ∗: row R SNJNLSTARGLYPH), her note's ∗ answering it no more.
+/// both notes; with none her `*` shows (written ∗: row R SNJNLSTARGLYPH), her note's ∗ answering it no more (a declared
+/// label, `ltx_note_label`, which the page's fold never links: OD #1068).
 #[test]
 fn snjnl_math_star_note_is_not_the_class_star() {
   let copy = (
@@ -535,7 +536,7 @@ fn snjnl_math_star_note_is_not_the_class_star() {
       include_str!(
         "../../../tools/perfect_kernel/repros/class-bindings/snjnl_v2501/snjnl_math_star_note_beside_a_shown_star.tex"
       ),
-      r#"<creator role="author"> <personname>Ann Able</personname> <note mark="∗" role="footnotemark" xml:id="id2"/> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note mark="∗" role="equal-contributors" xml:id="id1">Equal work.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note idref="id1" mark="∗" role="equal-contributors" xml:id="id3">Equal work.</note> </creator>"#,
+      r#"<creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_label" mark="∗" role="footnotemark" xml:id="id2"/> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note mark="∗" role="equal-contributors" xml:id="id1">Equal work.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note idref="id1" mark="∗" role="equal-contributors" xml:id="id3">Equal work.</note> </creator>"#,
     ),
   ] {
     let (log, xml) = convert_files_with(repro, &[copy], Some("ar5iv.sty"));
