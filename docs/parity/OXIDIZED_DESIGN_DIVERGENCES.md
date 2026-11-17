@@ -19935,8 +19935,8 @@ stays a mark-only note.
   empties `\footnotemark`, IEEEtran.cls:4756-4758). Elsewhere (aa's and llncs's `\thanks` step nothing here) it read 0
   and wrote "0" (2606.31244, 2306.03360): now no number and no glyph, the mark lost and counted
   (`unanswered_mark_lost`). A given number names an author's `\thanks` by the reading's count, TeX's unless a title or
-  date note the reading does not count came first (a `\thanks`'s publication note, or a note inside the title or the
-  date, `insert::link_marked_notes`): past llncs's `\title{T\thanks{…}}` Cat's `\footnotemark[2]` took Bob's note where llncs
+  date note the reading does not count came first (`frontmatter_fields::TITLE_NOTE_VALUES`' `?`, set at
+  `\lx@title@footnote@step`): past llncs's `\title{T\thanks{…}}` Cat's `\footnotemark[2]` took Bob's note where llncs
   prints Ann's ⋆⋆, and now takes none — a wrong link worse than none (MARKKEY1c; row R MARKNUMKEY: the class counters
   emulated, the PDF's shared ⋆ and the given number's glyph);
 - IEEEtran's unmarked `\thanks` (its `\maketitle` empties `\thefootnote` and `\footnotemark`, IEEEtran.cls:4756-4758:

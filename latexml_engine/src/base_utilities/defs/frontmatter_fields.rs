@@ -372,15 +372,19 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // KNOWN_PERL_ERRORS #1060, OXIDIZED_DESIGN_DIVERGENCES #851). A flush without `\maketitle` typesets no title, and
   // steps nothing.
   DefPrimitive!("\\lx@title@footnote@step", sub[_args] {
-    if title_note_steps() {
+    let titles = matches!(lookup_string("lx_frontmatter_item").as_str(), "ltx:title" | "ltx:date");
+    // (a title's or date's note: its number, which a name's `\footnotemark[n]` may name, `insert::link_marked_notes`;
+    // `?` for one TeX counts and the reading does not, which leaves the authors' numbers off by it, MARKKEY1c)
+    let value = if title_note_steps() {
       step_counter("footnote", false)?;
-      // (a title's or date's note: its number, which a name's `\footnotemark[n]` may name, `insert::link_marked_notes`)
-      if matches!(lookup_string("lx_frontmatter_item").as_str(), "ltx:title" | "ltx:date") {
-        let value = counter_value("footnote")?.value_of();
-        let values = lookup_string(TITLE_NOTE_VALUES);
-        let values = if values.is_empty() { value.to_string() } else { s!("{values},{value}") };
-        assign_value(TITLE_NOTE_VALUES, values, Some(Scope::Global));
-      }
+      titles.then(|| counter_value("footnote").map(|count| count.value_of().to_string())).transpose()?
+    } else {
+      titles.then(|| "?".to_string())
+    };
+    if let Some(value) = value {
+      let values = lookup_string(TITLE_NOTE_VALUES);
+      let values = if values.is_empty() { value } else { s!("{values},{value}") };
+      assign_value(TITLE_NOTE_VALUES, values, Some(Scope::Global));
     }
     Ok(())
   });
@@ -1020,7 +1024,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 
 /// The footnote numbers of the title's and the date's notes, as `\lx@title@footnote@step` stepped them (`1,4`): their
 /// pubnote prints no mark here, so a name's `\footnotemark[n]` naming one is answered by a note the page does not mark
-/// (`insert::link_marked_notes`).
+/// (`insert::link_marked_notes`). `?` for one its class's notes step no counter for here (llncs's `\title{T\thanks{…}}`):
+/// the reading's count of the authors' notes is then not TeX's.
 pub(in crate::base_utilities) const TITLE_NOTE_VALUES: &str = "lx_title_note_values";
 
 /// `\lx@title@thanks` and `\lx@title@footnote` (`footnote`): the note's call, marked where its title marks it.

@@ -886,15 +886,12 @@ fn drop_linking_marks(document: &mut Document) -> Result<()> {
 /// Bob\footnotemark[1]`, whose `\thanks` prints a glyph no binding knows.
 fn link_marked_notes(document: &mut Document) -> Result<()> {
   let notes = document.findnodes("//ltx:creator/ltx:note[not(@role='footnotemark')]", None);
-  // (the reading's count of the authors' notes is TeX's unless the title or the date made a note it does not count: a
-  // `\thanks`'s publication note, or a note inside the title or the date — llncs's `\title{T\thanks{…}}`, MARKKEY1c)
+  // (the reading's count of the authors' notes is TeX's unless the title or the date made a note it does not count,
+  // `TITLE_NOTE_VALUES`' `?` — llncs's `\title{T\thanks{…}}`, MARKKEY1c)
   let faithful = title_numbers_faithful()
-    || document
-      .findnodes(
-        "//ltx:title//ltx:note | //ltx:date//ltx:note | //ltx:pubnote[@role='thanks']",
-        None,
-      )
-      .is_empty();
+    || !lookup_string(TITLE_NOTE_VALUES)
+      .split(',')
+      .any(|value| value == "?");
   // (a mark-only note with no `mark` too: its glyph unknown here, its number known — scrartcl's `Bob\footnotemark[1]`)
   for mut mark_note in document.findnodes("//ltx:creator/ltx:note[@role='footnotemark']", None) {
     let creator = mark_note.get_parent();
