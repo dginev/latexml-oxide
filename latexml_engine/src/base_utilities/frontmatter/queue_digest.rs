@@ -135,7 +135,11 @@ pub(in crate::base_utilities) fn lift_notes_beside(
   }
   let mut anchor = node.clone();
   let contact = node.get_name() == "contact";
-  for mut note in document.findnodes(".//ltx:note[not(ancestor::ltx:note)]", Some(node)) {
+  // (a mark a request left stays where it printed, for the settle step: `insert::settle_name_marks`)
+  for mut note in document.findnodes(
+    ".//ltx:note[not(ancestor::ltx:note)][not(@_namemark)]",
+    Some(node),
+  ) {
     // (a mark alone that leads a contact is the mark the reading paired the entry by, `mark:footnote`; `insert` drops it
     // where a note carries its mark: revtex's `\affiliation{\footnotemark[1]Univ A}`, 1607.07280 — DG ruling 3, no
     // institution marks)
@@ -390,8 +394,8 @@ pub fn printed_label_pieces(operand: &Tokens) -> Result<Vec<String>> {
 }
 
 /// The label keys of a mark's operand ([`frontmatter_label_keys`]), and those of them only a picture's text prints
-/// ([`PrintedLabel::outside_pictures`]): a request nothing answers is shown in the name (`insert::
-/// show_unanswered_marks`), but not one a picture prints — the picture is no part of the name, and its text alone is
+/// ([`PrintedLabel::outside_pictures`]): a request nothing answers is shown in the name (`insert::settle_name_marks`),
+/// but not one a picture prints — the picture is no part of the name, and its text alone is
 /// no mark (the TikZ ORCID icon's "iD" in `$^{1,\href{…}{\orcidicon}}$`, review rev92b_r3 S1), while it may answer a
 /// label still (a circled `a`'s `a`, `\inst{\circled{1}}`'s 1).
 pub(in crate::base_utilities) fn frontmatter_label_request(
@@ -1192,13 +1196,9 @@ pub fn authors_show_marks() -> Result<bool> {
               .iter()
               .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
               .any(|c| {
-                ["_plainmarks", "_textmarks", "_picturemarks"]
-                  .iter()
-                  .any(|attr| {
-                    c.attr
-                      .get(*attr)
-                      .is_some_and(|marks| !marks.trim().is_empty())
-                  })
+                c.attr
+                  .get(REQUESTED)
+                  .is_some_and(|marks| !marks.trim().is_empty())
               })
           })
         },

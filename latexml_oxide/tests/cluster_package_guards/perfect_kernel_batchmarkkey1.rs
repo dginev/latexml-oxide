@@ -570,7 +570,6 @@ fn the_mark_components_only_shrink() {
     "_markshown",
     "_markunknown",
     "_refmark",
-    "_refmarkshown",
   ];
   const FOOTNOTE_NUMBER_ATTRIBUTES: &[&str] = &[
     "_fncounted",

@@ -16579,10 +16579,10 @@ ruling 2026-10-29; `archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md` "Stages
   data, colours and transforms are no label, a circled `a` (`\tikz…\node[circle,draw](c){a};`) is `a`; LaTeX's
   `picture` environment is read as any material (`\put(0,0){c}`'s `c`). A label only a pgf picture's text prints may
   answer a line (a circled `a`, `\inst{\circled{1}}`'s 1) but is never shown unanswered (`queue_digest::
-  frontmatter_label_request`, the creator's `_picturemarks`): the picture is dropped from the name, and its text with
+  frontmatter_label_request`; its request leaves a mark of no glyph, #1061): the picture is dropped from the name, and its text with
   it (review rev92b_r3 S1: a TikZ ORCID icon's node text "iD" in `$^{1,\href{…}{\orcidicon}}$` and llncs
   `\inst{1\myorcid{…}}` was shown as a mark; Perl shows nothing). The rule is per request: a label the name also
-  requests outside a picture (`_plainmarks`) is shown, `Ann Able$^{\circled{b}}$$^{b}$` or `\inst{\circled{b}}\inst{b}`
+  requests outside a picture (its own mark, with its glyph) is shown, `Ann Able$^{\circled{b}}$$^{b}$` or `\inst{\circled{b}}\inst{b}`
   in either order (review rev92b_r4 B1, where the picture's hid it). The observer's mark reader
   (`events::script_ink`) reads a script so too. Review rev92b_r2: dropping every combining mark read `x̄` as `x` (a
   wrong owner), and reading a picture as no text lost a circled letter's label. Review rev92b_r1 B1: `$^{1\,2}$`
@@ -17676,8 +17676,8 @@ superscript holding it by the number (`_refmark`): the readers of the marks a na
 `insert::author_mark_keys`, the legend Kind step's) read it by its number as its label is — a footnote symbol is no
 label mark there (`printed_marks`), so keyed by the symbol a block marked with these alone lost every pairing (A/B
 probe: 2311.03600's names, 2205.00125's correspondence line). Within one kind the symbols and numbers are one to one,
-so such a block pairs as before and prints as IEEEtran does; a request nothing answers shows the symbol
-(`_refmarkshown`, 2408.02464); a legend line it labels is its carriers' note marked with the symbol (`‡`, 2410.12184,
+so such a block pairs as before and prints as IEEEtran does; a request nothing answers shows the symbol (the mark its
+request leaves, #1061; 2408.02464); a legend line it labels is its carriers' note marked with the symbol (`‡`, 2410.12184,
 2205.00125, 2504.18719, 2507.23474, 2603.14786). Where a reference mark shares its number with a mark of another form
 that labels a line (`\thanks{$^1$TUM}`, `\IEEEauthorblockA{$^{1}$Univ}`), the class's `\author` writes each reference
 mark as the superscript symbol it prints (`printed_refmarks`), so the block reads as one labelled by numbers and
@@ -19810,8 +19810,8 @@ or for a symbol its text's head (`\thanks{*Equal Contribution}`, 1904.03977), cu
 wrapper it leaves empty (`\textsf{$^{\diamond}$ }…`); a letter or number opening the text is the note's word, never a
 copy (`\thanks{a visitor …}`). A contact the creator holds keyed by it — its labels, or the superscript its text opens
 with, inside its font wrappers too — consumes it (ruling 3: 0707.3527, 2011.00594). A note or a contact answers one
-printed mark, across every run of the name: a contact's keys that print one mark — a reference mark's number and the
-glyph it shows (`_refmarkshown`), `1` and `∗` under `∗Univ A` — are spent together (`\IEEEauthorrefmark{1}$^{*}$` over
+printed mark, across every run of the name: a contact's keys that print one mark — its label and the superscript it
+opens with, `1` and `∗` under `∗Univ A` — are spent together (`\IEEEauthorrefmark{1}$^{*}$` over
 `∗Univ A` prints "∗∗": the second ∗ stays; so does it where an ORCID icon, a graphic or a formula parts the two,
 `Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}`, pure_name_orcid_between_typed_star_and_refmark). An author
 reference mark is keyed by its number too,
@@ -20104,6 +20104,31 @@ internal_frontmatter_keys_are_declared, mnras_title_notes_step_the_counter}`,
 `perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral` (mnras's and llncs's plain notes) and
 `::a_thanks_note_carries_the_mark_its_title_prints` (no mark on a title page),
 `perfect_kernel_batche0::{the_frontmatter_api_stays_perls, every_internal_key_a_keyval_sets_is_declared}`.
+
+### 1061. A name's request leaves its mark where it printed, keyed by its label; one settle step after the relocation drops the marks an entry answers (MARKKEY R2a)
+
+**Perl.** `\lx@request@frontmatter@annotation` (and the `^`/`\textsuperscript` of `\lx@author@withsup`) records the
+label on the creator (`_annotations`) and prints nothing; `relocateAnnotations` clones the labelled entry onto each
+creator requesting it (Base_Utility.pool.ltxml:880-901). A label no entry answers is lost with its mark.
+**Rust.** The request still records Perl's label, and leaves the mark it printed where it printed it: a mark-only note
+keyed by the labels it requests (`\lx@frontmatter@namemark`, `insert::NAME_MARK`; `insert::request_marks`) — its glyph as
+printed (a reference mark's symbol, 2408.02464; a text `*` as `*`, a math one `∗`), none for a label only a picture
+prints (rev92b_r3 S1). The frontmatter emitter, which writes a name without the marks it requests, leaves each one so
+after the name's item (`emit::left_marks`; a glued mark parted into requests one mark of all its pieces, shown whole:
+BESIII's "50A,50C", 1705.11109). One step after `relocate_annotations`, `insert::settle_name_marks`, pairs the marks
+by key: a mark goes where an entry answers one of its labels (the labels the entries carry, `answered_labels`), where
+the author's contact answers its symbol (`_answers`), where the entry requests none of its labels (the emitter wrote
+the answering item under its own `item:` label), where the name shows its glyph already, or as a second of one label;
+the rest show as the superscripts they printed, in place (2610.07087's `$^{1*}$`: 1 before the ∗), for the pure-name
+pass to set after the name (#1055); one of no known glyph is counted lost (`unanswered_mark_lost`). A binding's
+`annotations=` request (authblk's `\author[1,*]`), which leaves no mark, shows after the name as before. Replaces
+`show_unanswered_marks`, `unanswered_sup` and the creator side-tables `_textmarks`, `_plainmarks`, `_picturemarks`
+(one `_requested` flag: whether the entry shows marks) and `_refmarkshown`. **Guards**: the FMRG suite
+(`perfect_kernel_batchfmmarks`), `perfect_kernel_batchcl8::a_sublettered_used_mark_is_written_whole`,
+`perfect_kernel_batch108a`, `perfect_kernel_batchpure`, `perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`
+(a mark the name shows inside a formula is not repeated), `perfect_kernel_batch78f::llncs_comma_before_inst_is_the_name_before`
+(a kept `\inst` the emitter answered by its item).
+
 ---
 
 ## TeX-source fidelity family (TEXSRC)

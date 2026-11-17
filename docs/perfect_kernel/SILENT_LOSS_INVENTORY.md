@@ -112,7 +112,7 @@ do not block the E/F rerun.
 
 - an author's mark is shown after its ORCID link: `\author{A$^{1}$\orcidlink{…} and B$^2$\orcidlink{…}}` (2405.16615, authblk; the article `\author` the same) gives "A[iD]1" where pdflatex prints "A1[iD]"
 - State:
-  - open (77n r1 review finding 2; RED repro sectioning-frontmatter/author_mark_before_orcid_link): a split name's marks are read as affiliation requests (`\lx@sup@request@affiliation`) and an unanswered one is appended to the personname (`show_unanswered_marks`);
+  - open (77n r1 review finding 2; RED repro sectioning-frontmatter/author_mark_before_orcid_link): a split name's marks are read as affiliation requests (`\lx@sup@request@affiliation`) and an unanswered one stays in the personname where it printed (`settle_name_marks`, OD #1061);
   - keeping its place needs a slot where the request was read (after the math it sits in: `\aftergroup`), filled or removed at insertion, without spending an `xml:id`
 
 ### a split name's mark that a line or other text follows
