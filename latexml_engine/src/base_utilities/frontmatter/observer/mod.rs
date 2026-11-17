@@ -93,6 +93,8 @@ pub use rehearsal::{reading_author_fields, rehearsal_footnote_value, rehearsing_
 pub(in crate::base_utilities) use resolver::owners::*;
 // (for the guards, which resolve a block's input again)
 pub use resolver::{Input as FmInput, Resolved as FmResolved, resolve as fm_resolve};
+// (a binding's declaration of how its class prints a name's marks, `elsarticle_cls.rs`)
+pub use resolver::{MARKS_LISTED, declare_marks_listed};
 pub use separators::{
   ArgSeparator as FmArgSeparator, SepMeaning as FmSepMeaning, argument_separators,
   argument_separators_at_every_level, kernel_separator_runs, split_at_kernel_separators,

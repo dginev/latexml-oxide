@@ -69,38 +69,30 @@ pub struct Assoc {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RCreator {
   /// the name without its marks (ruling 1's fuzzy label)
-  pub name:           String,
-  /// the marks shown on it, its requests
-  pub requests:       Vec<String>,
+  pub name:          String,
+  /// the marks printed on it, each the label it requests and how it printed ([`NameMark`]): its requests, its class's
+  /// requests, its footnote marks and its notes' marks are views of them ([`RCreator::requests`])
+  pub marks:         Vec<NameMark>,
   /// how the name was split out
-  pub rule:           String,
+  pub rule:          String,
   /// the reading's joins of runs a separator parts into this one name, as `rule` tags them ([`NameJoin`]; the separator
   /// check reads them, `net::merged_names`)
-  pub joins:          Vec<NameJoin>,
+  pub joins:         Vec<NameJoin>,
   /// the ledger index of its block (or API call)
-  pub source:         usize,
+  pub source:        usize,
   /// the role of the creator call in its block that printed it, its Name's (`Event::role`: PoS's `\speaker`, `speaker`);
   /// none for a name the block itself printed (an author's)
-  pub role:           Option<String>,
+  pub role:          Option<String>,
   /// that call, its place among its block's (`Event::creator_call`): the keyvals the emitter writes on it
-  pub call:           Option<u16>,
-  pub affiliations:   Vec<Assoc>,
-  pub contacts:       Vec<Assoc>,
-  pub notes:          Vec<Assoc>,
-  /// each request a glued mark of letters and digits was parted into, with that mark as printed (`part_glued_labels`):
-  /// a piece no entry answers shows the whole mark, never the piece alone — BESIII's `$^{50A,50C}$` under entries
-  /// numbered 1 to 54 requests entry 50 and prints "50A,50C", not "A,C" (1705.11109, 1507.02068, 2204.09614)
-  pub whole_marks:    Vec<(String, String)>,
-  /// the requests the class's own request command made: a Mark of llncs's and aa's `\inst` (role `inst`), a binding's
-  /// `\lx@request@frontmatter@annotation` (`request`), an `annotations=` list — not a mark printed by hand (`$^{1}$`,
-  /// `\textsuperscript{1}`, a paper's mark macro, a `*` after the `\inst`), which `answer_pending`'s `by_hand` reads off
-  /// the rest (a `_share=authors` entry only the class's `\inst{n}` picks; the emitter's kept `\inst` marks)
-  pub class_requests: Vec<String>,
+  pub call:          Option<u16>,
+  pub affiliations:  Vec<Assoc>,
+  pub contacts:      Vec<Assoc>,
+  pub notes:         Vec<Assoc>,
   /// whether the reading marks them the corresponding author, by a note or a legend ([`Resolver::corresponding`]'s one
   /// fact): the emitter writes it on their creator as the transient `_corresponding`, which the Link step of an entry's
   /// addresses reads for the one address left of several carriers (`insert::link_entry_addresses`; dropped at output,
   /// as every `_` attribute is; repro llncs_legend_corresponding_author_takes_the_left_address)
-  pub corresponding:  bool,
+  pub corresponding: bool,
 }
 
 /// A rule of the reading joining runs a separator parts into one name (`lines.rs`, `blocks.rs`), each its tag in the
@@ -276,6 +268,8 @@ mod blocks;
 mod labels;
 mod lines;
 mod mark_ledger;
+mod name_marks;
+pub use name_marks::{MARKS_LISTED, MarkBy, NameMark, declare_marks_listed};
 mod net;
 // (the old reader's owner logic, moved unchanged by the plan's row "Knowledge in, driver out, one pass"; re-exported by `observer/mod.rs`)
 pub(in crate::base_utilities) mod owners;
@@ -560,8 +554,6 @@ struct Resolver {
   order:              Vec<Vec<(bool, usize)>>,
   /// authblk's notes (`Policy::thenote`): the state its `\author` and `\affil` keep
   thenote:            TheNote,
-  /// the requests authblk's printed `\AB@thenote` made (creator, label): what ruling 1 reads off the PDF's marks
-  thenote_requests:   Vec<(usize, String)>,
   /// the labels the title's marks request (aastex's `\title{…\altaffilmark{1}}`): an entry they alone ask for is the
   /// title's note
   title_requests:     Vec<String>,
@@ -596,17 +588,12 @@ struct Resolver {
   /// the e-mails inside an unlabelled affiliation-kind entry an API call made, with the entry's carriers — placed with
   /// the labelled entries' (`answer_inner_emails`), the entries printing the same addresses together (OD #956)
   entry_emails:       Vec<(Vec<usize>, Assoc, bool)>,
-  /// the marks a name's notes show on it (creator, label: `Ann\footnote[1]{…}` shows `∗`), what an entry led by the
-  /// same `\footnotemark` answers (`answer_pending`; 1607.07280)
-  note_marks:         Vec<(usize, String)>,
   /// whether the block being read prints its notes' marks (`Policy::unmarked_notes`)
   notes_marked:       bool,
   /// the legends of the contact commands' notes (`Event::note_mark`, a call's `_mark` key), in call order: each mark,
   /// whether it is the footnote counter's number, and whether its text names the corresponding author — what the
   /// authors writing that mark on their names carry (`Resolver::corresponding`; with the emitter's switch on alone)
   note_legends:       Vec<(String, bool, bool)>,
-  /// the requests a glued mark was parted into (creator, request), `part_glued_labels`
-  parted:             Vec<(usize, String)>,
   /// the pending entries (their place in `pending`) whose label was a compound of distinct footnote symbols parted
   /// (`$^{\dagger\ddagger}$ Project lead`): the names carrying all of them (`part_glued_labels`, `answer_pending`)
   compound:           Vec<usize>,
@@ -634,11 +621,6 @@ struct Resolver {
   /// per role, the creators made when the last two contact calls of it were read, the counts apart (earlier, later): the
   /// names printed since the role's last call before the newest name are one group in print ([`Resolver::print_group`])
   role_reads:         HashMap<String, (usize, usize)>,
-  /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
-  /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
-  /// — with the footnote number the mark stands for (`Event::number`), what TeX pairs a mark and its note by: a note of
-  /// the same block and number answers it (`answer_note_texts`)
-  fn_requests:        Vec<(usize, String, Option<i64>)>,
   /// the block's `\footnotetext` notes kept with the footnote number they stand for (source, number, owner):
   /// the names whose `\footnotemark` shows that number carry them (`answer_note_texts`)
   numbered_notes:     Vec<(Source, i64, Option<usize>)>,
@@ -743,7 +725,6 @@ impl Resolver {
         newaffil: true,
         ..TheNote::default()
       },
-      thenote_requests:   Vec::new(),
       title_requests:     Vec::new(),
       title_fn_marks:     Vec::new(),
       epoch_of:           Vec::new(),
@@ -757,10 +738,8 @@ impl Resolver {
       document_emails:    Vec::new(),
       listed_emails:      Vec::new(),
       entry_emails:       Vec::new(),
-      note_marks:         Vec::new(),
       notes_marked:       true,
       note_legends:       Vec::new(),
-      parted:             Vec::new(),
       compound:           Vec::new(),
       splitting:          false,
       led_line:           None,
@@ -771,7 +750,6 @@ impl Resolver {
       by_mark:            Vec::new(),
       stopgap:            Vec::new(),
       role_reads:         HashMap::default(),
-      fn_requests:        Vec::new(),
       numbered_notes:     Vec::new(),
       block_thanks:       Vec::new(),
       outside_labels:     Vec::new(),
@@ -794,7 +772,7 @@ impl Resolver {
     name: String,
     rule: &str,
     source: usize,
-    requests: Vec<String>,
+    marks: Vec<NameMark>,
     group: usize,
   ) -> usize {
     // (a resolved name is its printed text, its spaces collapsed: a visible glyph printing no letter or digit stays — a
@@ -804,7 +782,7 @@ impl Resolver {
     let name = name.split_whitespace().collect::<Vec<_>>().join(" ");
     self.out.creators.push(RCreator {
       name,
-      requests,
+      marks,
       rule: rule.to_string(),
       source,
       ..RCreator::default()
@@ -1055,7 +1033,7 @@ impl Resolver {
       .iter()
       .copied()
       .filter(|&c| {
-        creators[c].requests.iter().any(|request| {
+        creators[c].requests().any(|request| {
           star.contains(request) && !legends.iter().any(|(label, _)| label == request)
         })
       })
@@ -1147,7 +1125,7 @@ impl Resolver {
       .iter()
       .chain(creator.contacts.iter().filter(|a| a.role == "note"));
     own.any(says)
-      || creator.requests.iter().any(|request| {
+      || creator.requests().any(|request| {
         legends
           .iter()
           .any(|(label, says)| *says && label == request)
@@ -1605,7 +1583,10 @@ mod tests {
   fn creator(name: &str, requests: &[&str]) -> RCreator {
     RCreator {
       name: name.into(),
-      requests: requests.iter().map(|r| r.to_string()).collect(),
+      marks: requests
+        .iter()
+        .map(|r| NameMark::new(r.to_string(), MarkBy::Hand, None))
+        .collect(),
       ..RCreator::default()
     }
   }

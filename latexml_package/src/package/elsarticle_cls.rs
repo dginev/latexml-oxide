@@ -8,6 +8,9 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: elsarticle.cls.ltxml
+  // (a name's marks print as one list, a comma between each two: elsarticle.cls:250-262 `\sep`, :159-163 `\comma`;
+  // 2605.13555's `\fnref{fn2,fn3}`, the reading's mark record, OXIDIZED_DESIGN_DIVERGENCES #1062)
+  declare_marks_listed();
   // Generally ignorable options (the size options pass to article below, as elsarticle.cls:113 passes every option it
   // does not declare: `[12pt]` 390pt, `\@ptsize` 2)
   for option in [

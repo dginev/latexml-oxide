@@ -1,7 +1,7 @@
 % mechanism: a `\footnotemark[1]` inside an author's math mark (`$^{1\footnotemark[1]}$`) prints the label and the note's
 %   mark; the author block read `1\footnotemark[1]` as one label and printed nothing. `notes_out_of_marks` takes the mark
 %   out after the label. Residual (order): an unanswered label's superscript is made at the end of the name
-%   (`show_unanswered_marks`), so it follows the note mark; pdflatex prints "Ann Alpha1∗".
+%   (`settle_name_marks`), so it follows the note mark; pdflatex prints "Ann Alpha1∗".
 % witness: 2403.04164 (`$^{1\footnotemark[1]}$`, `$^{4,5\footnotemark[2]}$`); 2203.10085, 2402.13113
 % oracle:  pdflatex 0 errors; "Ann Alpha1∗ , Bob Beta2∗ , Cy Gamma1,∗", one footnote "∗ These authors contributed equally."
 % engines: perl: the marks dropped, no note; rust int59a: Ann and Bob no mark, Cy "1", no note

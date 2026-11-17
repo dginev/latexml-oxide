@@ -345,39 +345,27 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     // (keyed by the operand's printed text: refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES #919)
     let (label, pictured) = frontmatter_label_request(&operand, "affiliation")?;
-    // (a requested asterisk shows as it prints: one requested in text is `*` — `show_unanswered_marks`' text marks —
-    // unless the operand prints another form, which its key reads `*` too: icrc2009's `\IEEEauthorrefmark{1}` sets the
-    // math `∗`, 0909.3754, 0912.0896, 2609.25589; `one_asterisk`, review rev100a B1)
-    let in_text =
-      !(label.iter().any(|l| l == "affiliation:*") && prints_another_asterisk(&operand)?);
+    // (a requested asterisk shows as it prints: one requested in text is `*` unless the operand prints another form,
+    // which its key reads `*` too: icrc2009's `\IEEEauthorrefmark{1}` sets the math `∗`, 0909.3754, 0912.0896,
+    // 2609.25589; `one_asterisk`, review rev100a B1)
+    let in_text = !lookup_bool("IN_MATH")
+      && !(label.iter().any(|l| l == "affiliation:*") && prints_another_asterisk(&operand)?);
     // (an author reference mark keys by its number and prints its symbol, which a request nothing answers shows:
     // 2408.02464's `Gus Gray\IEEEauthorrefmark{1}` stays "Gus Gray∗"; OXIDIZED_DESIGN_DIVERGENCES #968)
     let mut shown = None;
     if let [first, rest @ ..] = operand.unlist_ref().as_slice()
       && *first == T_CS!("\\lx@author@refmark@printed")
-      && let Some(key) = label.first()
     {
       let mut symbol = vec![T_CS!("\\lx@author@refmark@symbol")];
       symbol.extend_from_slice(rest);
-      if let Some(printed) = printed_label(&Tokens::new(symbol))? {
-        shown = Some(s!("{key}={}", printed.text));
-      }
+      shown = printed_label(&Tokens::new(symbol))?.map(|printed| printed.text);
     }
-    add_annotation_labels(label.join(","), in_text, pictured);
-    if let Some(shown) = shown {
-      with_pending_entry_attr(move |attr| {
-        let mut all = attr.get("_refmarkshown").cloned().unwrap_or_default();
-        if !all.is_empty() {
-          all.push(';');
-        }
-        all.push_str(&shown);
-        attr.insert("_refmarkshown".to_string(), all);
-      });
-    }
+    add_annotation_labels(label.join(","));
+    let marks = request_marks(&label, &pictured, in_text, shown)?;
     if let Some(notes) = notes {
       unread(notes);
     }
-    Ok(Vec::new())
+    Ok(marks)
   });
   DefPrimitive!(T_CS!("\\lx@sup@setlabel@affiliation"), None, {
     // (whether the operand is a group, `^{1}`, or a token, `^*`: a shown mark is read again as it was written, so it
@@ -559,6 +547,28 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // `\textsuperscript` but under a name the hijack does not touch.
   // OXIDIZED_DESIGN #52; witness arXiv:2506.06941 (Mirzadeh's `$^{*}$`).
   DefConstructor!("\\lx@frontmatter@keepsup{}", "<ltx:sup>#1</ltx:sup>", mode => "text");
+  // Rust-only: the mark a name's request leaves where it printed (`insert::request_marks`, OD #1061): a mark-only note keyed
+  // by the label it requests, its glyph as printed, empty for one no glyph is known of; the settle step drops or shows it
+  // (`insert::settle_name_marks`). It prints nothing, as Perl's request (Base_Utility.pool.ltxml:552, :729-732), and
+  // waits out the math it was read in (`\aftergroup`): `$\star^{1}$`'s tex stays `\star` (revR2A B2). Not in a math
+  // cell, whose `\aftergroup` runs inside the cell and would queue it past the column (revR2Ab B-1,
+  // `$\begin{aligned}^{1}\end{aligned}$`): no mark there, the settle step shows the label after the name.
+  DefPrimitive!("\\lx@frontmatter@namemark Semiverbatim Semiverbatim", sub[(keys, glyph)] {
+    if lookup_bool("IN_MATH") {
+      if is_value_bound("alignCellGroup", Some(0)) {
+        return Ok(Vec::new());
+      }
+      push_value("afterGroup", Invocation!(T_CS!(NAME_MARK), vec![Some(keys), Some(glyph)]))?;
+      return Ok(Vec::new());
+    }
+    Ok(vec![digest(Invocation!(T_CS!("\\lx@frontmatter@namemark@note"), vec![Some(keys), Some(glyph)]))?])
+  });
+  // (`_namekeys`: the labels it requests; PURE's mark-only note is `_namemark`)
+  DefConstructor!(
+    "\\lx@frontmatter@namemark@note Semiverbatim Semiverbatim",
+    "<ltx:note role='footnotemark' _namekeys='#1' mark='#2'/>",
+    reversion => ""
+  );
   // A footnote-symbol author mark (`$^{*}$`, `\inst{\dagger}`), shown by `\lx@frontmatter@keepsup`, also requests
   // the affiliation of its symbol, as a lettered mark does: a list labelling an entry with it (informs4's
   // `\AFF{$^*$Corresponding author}`, 2609.38842) gives that entry to its authors; a request nothing answers is not

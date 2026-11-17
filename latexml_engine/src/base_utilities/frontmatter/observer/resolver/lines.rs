@@ -1524,12 +1524,11 @@ impl Resolver {
     let mut last_sep: Option<&Event> = None;
     // (the membership contact a grade after a name's comma made: its creator, the event, the contact)
     let mut grade_at: Option<(usize, usize, usize)> = None;
-    let mut waiting: Vec<String> = Vec::new();
-    // (of them, the labels a `\footnotemark` printed: `fn_requests`)
-    let mut waiting_fn: Vec<(String, Option<i64>)> = Vec::new();
-    // (and those the class's own request command made: `class_requests`)
-    let mut waiting_class: Vec<String> = Vec::new();
-    let mut waiting_parted: Vec<String> = Vec::new();
+    // (the marks waiting for the next name, [`NameMark`]; whether a formula's comma followed the last mark read, and the
+    // name it went to — `None` for the next, `Some(None)` no mark —, which the mark after goes on with)
+    let mut waiting: Vec<NameMark> = Vec::new();
+    let mut run_comma = false;
+    let mut last_run: Option<Option<usize>> = None;
     let mut waiting_notes: Vec<&Event> = Vec::new();
     // the mark before, where it ends in the source and whether it went to the next name
     let mut last_mark: Option<(u16, bool)> = None;
@@ -1565,6 +1564,18 @@ impl Resolver {
       return NamesLine { creators: made };
     }
     for (i, event) in events.iter().enumerate() {
+      // (a run of marks goes on over a formula's comma after its last mark, `\endnotemark[1]$^,$\endnotemark[2]`,
+      // 1703.08733; anything else between two marks ends it)
+      let run_before = if event.kind == EventKind::Mark {
+        last_run.take()
+      } else {
+        None
+      };
+      if is_math_comma(event) && last_run.is_some() {
+        run_comma = true;
+      } else if event.kind != EventKind::Mark {
+        (last_run, run_comma) = (None, false);
+      }
       match &event.kind {
         EventKind::Name if !event.text.chars().any(char::is_alphanumeric) => {},
         // (a mark printed as text after a name is its request, no name: `A.P.~Orlov$^1$, 2,` — the "2" a mark the
@@ -1579,9 +1590,11 @@ impl Resolver {
             && event.text.len() <= 6 =>
         {
           let c = *made.last().expect("a name");
-          self.out.creators[c]
-            .requests
-            .extend(mark_labels(&event.text));
+          self.out.creators[c].marks.extend(
+            mark_labels(&event.text)
+              .into_iter()
+              .map(|label| NameMark::new(label, MarkBy::Hand, event.span)),
+          );
           last_sep = None;
         },
         // (a gap the command printing the ink on both its sides made, inside its expansion, is no space the source put
@@ -1865,7 +1878,19 @@ impl Resolver {
             .and_then(|k| self.call_labels.get(usize::from(k)))
             .cloned()
             .unwrap_or_default();
-          let requests = [std::mem::take(&mut waiting), block_requests.to_vec(), own].concat();
+          let marks: Vec<NameMark> = std::mem::take(&mut waiting)
+            .into_iter()
+            .chain(
+              block_requests
+                .iter()
+                .map(|label| NameMark::new(label.clone(), MarkBy::Class, None)),
+            )
+            .chain(
+              own
+                .into_iter()
+                .map(|label| NameMark::new(label, MarkBy::Call, None)),
+            )
+            .collect();
           // (a name and the collaboration it speaks for: `Bob Baker for the ATLAS Collaboration`, the name's alone — not a
           // heading before a colon, `JLQCD Collaboration: S.~Aoki$^1$` (hep-lat0212039), which the reading cannot tell
           // from one inside a box today's keeps whole, `\parbox{\textwidth}{\Large{ MAGIC Collaboration: K.~Abe$^{1}$, …}}`
@@ -1877,7 +1902,7 @@ impl Resolver {
           let name = remark
             .as_ref()
             .map_or_else(|| event.text.clone(), |(name, _)| name.clone());
-          let c = self.new_creator(name, split_rule(last_sep), index, requests, group);
+          let c = self.new_creator(name, split_rule(last_sep), index, marks, group);
           self.out.creators[c].role.clone_from(&event.role);
           self.out.creators[c].call = event.creator_call;
           made.push(c);
@@ -1887,21 +1912,6 @@ impl Resolver {
             last_covered = covered;
             uncovered = made.len();
           }
-          self.fn_requests.extend(
-            std::mem::take(&mut waiting_fn)
-              .into_iter()
-              .map(|(l, n)| (c, l, n)),
-          );
-          self.out.creators[c].class_requests.extend(
-            std::mem::take(&mut waiting_class)
-              .into_iter()
-              .chain(block_requests.iter().cloned()),
-          );
-          self.parted.extend(
-            std::mem::take(&mut waiting_parted)
-              .into_iter()
-              .map(|l| (c, l)),
-          );
           for note in std::mem::take(&mut waiting_notes) {
             self.note(index, note, Some(c), "note:adjacent");
           }
@@ -1959,39 +1969,43 @@ impl Resolver {
           } else {
             glued_symbol_parts(event.label.as_deref().unwrap_or(""))
           };
-          if !parted.is_empty() {
-            let owner = if to_next { None } else { made.last().copied() };
-            if let Some(c) = owner {
-              self.parted.extend(parted.into_iter().map(|l| (c, l)));
-            } else {
-              waiting_parted.extend(parted);
-            }
-          }
-          let class = is_class_request(event);
           // (a mark on a collaboration is no name's: `… and LHD experimental group$^{2}$`, 1711.07097)
           if after_collaboration && !to_next {
             continue;
           }
+          let by = if footnote {
+            MarkBy::Footnote
+          } else if is_class_request(event) {
+            MarkBy::Class
+          } else {
+            MarkBy::Hand
+          };
+          let target = if to_next { None } else { made.last().copied() };
+          // (a comma printed before it: inside its own run, `$^{1,*}$`; a formula's comma after the mark before, which
+          // the run goes on over; every mark after a name's first where the class lists them)
+          let listed = lookup_bool(MARKS_LISTED);
+          let mut held = match target {
+            Some(c) => !self.out.creators[c].marks.is_empty(),
+            None => !waiting.is_empty(),
+          };
+          let mut comma = run_before == Some(target) && run_comma;
+          let overprint = self.mark_ledger.overprint_of(event.span).is_some();
+          let mut marks: Vec<NameMark> = Vec::with_capacity(labels.len());
+          for label in labels {
+            let mut mark = NameMark::new(label, by, event.span);
+            mark.number = event.number.filter(|_| footnote);
+            mark.parted = parted.contains(&mark.label);
+            mark.sep_before = comma || (listed && held);
+            mark.overprint = overprint;
+            marks.push(mark);
+            comma = event.text.contains(',');
+            held = true;
+          }
+          (last_run, run_comma) = (Some(target), false);
           if to_next {
-            if footnote {
-              waiting_fn.extend(labels.iter().map(|l| (l.clone(), event.number)));
-            }
-            if class {
-              waiting_class.extend(labels.iter().cloned());
-            }
-            waiting.extend(labels);
-          } else if let Some(&c) = made.last() {
-            if footnote {
-              self
-                .fn_requests
-                .extend(labels.iter().map(|l| (c, l.clone(), event.number)));
-            }
-            if class {
-              self.out.creators[c]
-                .class_requests
-                .extend(labels.iter().cloned());
-            }
-            self.out.creators[c].requests.extend(labels);
+            waiting.extend(marks);
+          } else if let Some(c) = target {
+            self.out.creators[c].marks.extend(marks);
             if after_comma {
               let rule = if inst && policy.inst_after_comma {
                 "mark:inst-after-comma"
@@ -2057,17 +2071,8 @@ impl Resolver {
       let covered = made[from.min(made.len())..].to_vec();
       self.collaboration(index, first.span, &covered, &text);
     }
-    if !waiting.is_empty()
-      && let Some(&c) = made.last()
-    {
-      self.out.creators[c].requests.extend(waiting);
-      self
-        .fn_requests
-        .extend(waiting_fn.into_iter().map(|(l, n)| (c, l, n)));
-      self.out.creators[c].class_requests.extend(waiting_class);
-      self
-        .parted
-        .extend(waiting_parted.into_iter().map(|l| (c, l)));
+    if let Some(&c) = made.last() {
+      self.out.creators[c].marks.extend(waiting);
     }
     NamesLine { creators: made }
   }
@@ -2106,4 +2111,9 @@ impl Resolver {
       );
     }
   }
+}
+
+/// Whether `event` is a formula's comma (`$^,$`), printed between two marks as their separator.
+fn is_math_comma(event: &Event) -> bool {
+  event.kind == EventKind::Sep(SepKind::Comma) && event.role.as_deref() == Some("math")
 }

@@ -197,7 +197,7 @@ fn a_mark_that_stays_lost_is_counted() {
 }
 
 /// A star glued in math shows the `∗` it prints, in text the `*`, each mid-list in its place, the marks answered or not;
-/// 2505.11121, 2609.14365. Distinct: `keepsup_in_math`, `GluedPart`, the comma of `show_unanswered_marks`.
+/// 2505.11121, 2609.14365. Distinct: `keepsup_in_math`, `GluedPart`, the comma of `settle_name_marks`.
 /// Beside a second symbol too: `$^{2,1*\dagger}$` prints `∗†` (2404.16821, 2505.17017, 2609.38428, 2610.31762; rev108a3 B1).
 #[test]
 fn a_glued_star_beside_a_second_symbol_prints_as_written() {

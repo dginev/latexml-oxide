@@ -1,0 +1,17 @@
+% mechanism: as r2a_request_mark_in_math_prints_nothing_there, before a `\\` line: the mark after the math shows after
+%   the name's line (`ends_name`), as the base's did
+% witness:  review revR2A B2 (probe p24)
+% oracle:   pdflatex 0 errors; "Ann Able1∗ Bob Baker⋆2", "1 Dept. of B", "Univ. of C"
+% engines:  rust R2Abase 14e92b291ab = tex "\star", footnotemark 2 after the name; rust R2A 1012ac10283 = tex
+%   "\star\lx@frontmatter@namemark{affiliation:2}{2}", `<sup>2</sup>` inside the name before its line
+% expect:   0 errors, 1 Warning (the decline); Bob Baker<Math tex="\star"/><break/>Univ. of C ; footnotemark[2]
+% status:   GREEN (perfect_kernel_batchr2a::a_request_mark_read_in_math_waits_out_the_math)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{1}$\footremember{zz}{Zebra University.} \\ $^{1}$Dept.\ of B \and Bob Baker$\star^{2}$ \\ Univ.\ of C}
+\begin{document}
+\maketitle
+Body.
+\end{document}

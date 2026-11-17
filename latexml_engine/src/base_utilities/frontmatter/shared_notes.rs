@@ -277,7 +277,7 @@ fn leading_mark(node: &Node) -> Option<(Node, String)> {
 /// A title-page list's note its leading mark gave to the names showing it ([`LIST_MARK`], `\lx@fm@list@note`: 2606.06621's
 /// `$^\ddagger$ These authors contributed equally` under `Windt$^\ddagger$`) shows that mark as its `mark`: the mark goes
 /// from its text, with the space after it (the mark rule, FIDELITY_CHARTER §4), and from its holder's name, as a name's
-/// mark a legend answers does (`show_unanswered_marks`). A name's superscript of other marks too (`$^{1,\ddagger}$`)
+/// mark a legend answers does (`settle_name_marks`). A name's superscript of other marks too (`$^{1,\ddagger}$`)
 /// stays.
 pub(super) fn show_list_note_marks(document: &mut Document) -> Result<()> {
   let key = |mark: &str| mark.trim().replace('∗', "*");

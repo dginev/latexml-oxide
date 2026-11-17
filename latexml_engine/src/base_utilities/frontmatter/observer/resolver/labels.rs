@@ -195,7 +195,7 @@ pub(super) fn label_owners(creators: &[RCreator], live: &[usize], label: &str) -
   }
   let find = |matches: &dyn Fn(&str) -> bool| -> Vec<usize> {
     (0..creators.len())
-      .filter(|&c| creators[c].requests.iter().any(|r| matches(r)))
+      .filter(|&c| creators[c].requests().any(|r| matches(r)))
       .collect()
   };
   let bare = unprefixed(label);
