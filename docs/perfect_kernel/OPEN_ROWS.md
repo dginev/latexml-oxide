@@ -767,7 +767,7 @@ improvements in scope, high-difficulty recovery deferred with witnesses (`../par
 
 | # | Row | Status |
 |---|---|---|
-| — | `$^{*}$` the kernel shows itself (keepsup, an e-mail line) keeps ASCII `*` where pdflatex prints `∗`; `show_unanswered_marks` (base_utilities/frontmatter/insert.rs). Witness 1910.00401 (probe hb) | open (from 65e; digest FM-1) |
+| — | `$^{*}$` the kernel shows itself (keepsup, an e-mail line) keeps ASCII `*` where pdflatex prints `∗`; `settle_name_marks` (base_utilities/frontmatter/insert.rs, OD #1061). Witness 1910.00401 (probe hb) | open (from 65e; digest FM-1) |
 | — | titling `\theauthor` empty under llncs, acmart, elsarticle, svjour3, aastex: their `\author` stores no `\@author` and calls no slot. RED `package-bindings/titling_setter_llncs` | open (from 65z; digest FM-2) |
 | — | authblk internals papers' `\affil` copies read are not kept (`\AB@las`, `\AB@au@str`, `\AB@thenote`), and an `\affil` copy's extra text (an `\email` written to `\AB@affillist`) is not in the frontmatter | open (from 65z; digest FM-3) |
 | — | IEEEtran author pre-scan: the empty affiliation contacts (2606.17718; `ieeetran_authorrowbreak_leaves_no_empty_affiliation`) are dropped since 83b (an empty contact is no contact); still RED `sectioning-frontmatter/authblk_ieeemembership_after_comma_affiliation_twice` (IEEEtran + authblk) | open, part fixed 83b (from 66f, 62zt, 62zk; digest FM-4) |

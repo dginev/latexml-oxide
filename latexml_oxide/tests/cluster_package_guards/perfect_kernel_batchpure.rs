@@ -220,7 +220,7 @@ fn a_mark_only_note_takes_no_body_footnotetext() {
 
 /// 2508.13181's `Dominik Loroch\IEEEauthorrefmark{2}\IEEEauthorrefmark{1}\textsuperscript{\textsection}` over held
 /// affiliations 2 and 1 and a body `\footnotetext` marked §: a reference mark's number keys only the glyph it printed
-/// (`_refmarkshown`), so † and ∗ are consumed by their affiliations and the § is a mark-only note after the name, paired
+/// (its superscript's `_refmark`), so † and ∗ are consumed by their affiliations and the § is a mark-only note after the name, paired
 /// with no body footnote. Red (int/frontmatter fd43c364eb6, revPURE B1): the run's numbers keyed the §, lost.
 #[test]
 fn a_reference_marks_number_keys_only_its_own_glyph() {

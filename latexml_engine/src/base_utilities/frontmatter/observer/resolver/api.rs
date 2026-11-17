@@ -200,8 +200,7 @@ impl Resolver {
         let answered = |c: usize| {
           !legend
             && self.out.creators[c]
-              .requests
-              .iter()
+              .requests()
               .any(|r| answering.contains(r))
         };
         let (mut run, mut passed) = (Vec::new(), Vec::new());
@@ -481,40 +480,32 @@ impl Resolver {
       // {\usebox{\orcid} Nils~Bochow}`, 2507.22485)
       // (its `annotations=`, and the marks its name shows — ruling 1: `\author{Ann Able$^{1}$}` under acmart requests
       // 1, as a block's names line reads it; 2202.06129's shape)
-      let requests: Vec<String> = attr_value(attrs, "annotations")
-        .map(|l| {
-          l.split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect::<Vec<_>>()
-        })
-        .unwrap_or_default()
+      // (the class's own: its `annotations=` and the marks its request commands made)
+      let marks: Vec<NameMark> = attr_value(attrs, "annotations")
         .into_iter()
+        .flat_map(|l| l.split(','))
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|label| NameMark::new(label.to_string(), MarkBy::Class, None))
         .chain(
           events
             .iter()
             .filter(|e| e.kind == EventKind::Mark)
-            .flat_map(|e| mark_labels(e.label.as_deref().unwrap_or(""))),
+            .flat_map(|e| {
+              let by = if is_class_request(e) {
+                MarkBy::Class
+              } else {
+                MarkBy::Hand
+              };
+              mark_labels(e.label.as_deref().unwrap_or(""))
+                .into_iter()
+                .map(move |label| NameMark::new(label, by, e.span))
+            }),
         )
         .collect();
       if !text.is_empty() {
         let start = self.out.creators.len();
-        // (the class's own: its `annotations=` and the marks its request commands made)
-        let class: Vec<String> = attr_value(attrs, "annotations")
-          .into_iter()
-          .flat_map(|l| l.split(','))
-          .map(str::trim)
-          .filter(|s| !s.is_empty())
-          .map(str::to_string)
-          .chain(
-            events
-              .iter()
-              .filter(|e| e.kind == EventKind::Mark && is_class_request(e))
-              .flat_map(|e| mark_labels(e.label.as_deref().unwrap_or(""))),
-          )
-          .collect();
-        let made = self.new_creator(text, "api:creator", index, requests, index);
-        self.out.creators[made].class_requests = class;
+        let made = self.new_creator(text, "api:creator", index, marks, index);
         // (the call's nested notes are its creator's: Perl's `\lx@add@author[]{}` digests the whole call into its
         // `ltx:creator`, `{\lx@personname{#2}}` — "the name can contain much more than just the name"
         // (Base_Utility.pool.ltxml:585-589) —, so a `\thanks` there is a note of that creator; the reading attaches
@@ -688,7 +679,7 @@ impl Resolver {
         && cleaned != labels
         && cleaned
           .iter()
-          .all(|l| self.out.creators.iter().any(|c| c.requests.contains(l)))
+          .all(|l| self.out.creators.iter().any(|c| c.requests_label(l)))
       {
         labels = cleaned;
       }
@@ -1384,7 +1375,7 @@ fn warn_whole_entry_of_keyed_parts(index: usize, keys: &[String], creators: &[RC
   distinct.sort_unstable();
   distinct.dedup();
   let partial = |c: &RCreator| {
-    let asks = |key: &&str| c.requests.iter().any(|r| r == key);
+    let asks = |key: &&str| c.requests().any(|r| r == key);
     distinct.iter().any(asks) && !distinct.iter().all(asks)
   };
   if distinct.len() < 2 || !creators.iter().any(partial) {

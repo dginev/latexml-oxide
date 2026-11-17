@@ -1,0 +1,16 @@
+% mechanism: a name's unanswered mark before more of the name shows after the name, and every mark after it joins it in
+%   print order: `Bob Baker$^{a}$ Jr.$^{b}$` "a,b" (`settle_name_marks`)
+% witness:  review revR2Ab B-2 (probe v04)
+% oracle:   pdflatex 0 errors; "Ann Able1∗ Bob Bakera Jr.b"
+% engines:  rust R2Ab 2ab6945b9d5 = footnotemark[b,a]; rust PRESBXc = footnotemark[a,b]
+% expect:   0 errors, 1 Warning (the decline); Bob Baker Jr. ; footnotemark[a,b]
+% status:   GREEN (perfect_kernel_batchr2a::name_marks_around_more_of_the_name_keep_print_order)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{1}$\footremember{zz}{Zebra University.} \and Bob Baker$^{a}$ Jr.$^{b}$}
+\begin{document}
+\maketitle
+Body.
+\end{document}

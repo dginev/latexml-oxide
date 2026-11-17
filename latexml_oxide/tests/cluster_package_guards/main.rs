@@ -628,6 +628,8 @@ mod perfect_kernel_batchqab57;
 /// QAB8 (QA26): the glue between two paragraphs is `--ltx-skip-before` on the second; OD #1050.
 mod perfect_kernel_batchqab8;
 mod perfect_kernel_batchr1;
+/// R2A: a name's request leaves its mark where it printed; one settle step pairs it by key; OD #1061, #1062.
+mod perfect_kernel_batchr2a;
 /// RA0: a title-code definee declared with no parameters (`\newcommand`'s `[0]`) is taken by the name it follows;
 /// OD #983.
 mod perfect_kernel_batchra0;

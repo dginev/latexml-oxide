@@ -100,7 +100,7 @@ Stays on tokens (argument passing, or a text rule on ink): `email_addresses`, `r
 | `owner` | No | `sequence` = `labelseq=author` (L489, L409); `first` = `label=author:1`; the flush's "unless proved" dies with the old engine |
 | `mark`, `_mark`, `_marks`, `_unmarked`, `_bymark`, `_answers`, `_entry`, `_linemark`, `_linelist`, `_linefirst`, `_linklabel`, `_seqlabel`, `_sequence` | No | `label=`, `annotations=`, `labelseq=` |
 | `_share`, `_group`, `_grouped` | No | `annotate=all`, `annotate=N` (L516-520) |
-| `_labelprints`, `_printedlabel`, `_markshown`, `_linemarkshown`, `_refmarkshown`, `_textmarks`, `_entrysymbol`, `_withsup`, `_markpiece`, `_kinded` | No key | The mark stays in the content; the keys die |
+| `_labelprints`, `_printedlabel`, `_markshown`, `_linemarkshown`, `_entrysymbol`, `_withsup`, `_markpiece`, `_kinded` | No key | The mark stays in the content; the keys die (`_refmarkshown`, `_textmarks` died in MARKKEY R2a: a request leaves its mark where it printed, OD #1061) |
 | `_command_form` | No | Perl's `\lx@add@abstract` (L612) vs `\lx@begin@abstract` (L621) |
 | `_store`, `_released_store`, `_net`, `_unsplit`, `_cutlist`, `_queued`, `_late`, `_late_mark`, `_latecall`, `_zone`, `_printedbefore`, `_mergednames`, `_for`, `_source` | No | Die with the stores, the Cut and relocation |
 | `_deposit`, `_inserted`, `_titlepage`, `_preamble`, `_paragraph_break` | Not API | Flow state; out of the pin or die |
@@ -451,6 +451,17 @@ The 2026-11-01 design study's picture, line counts as of then; "Where it stands"
     - a collaboration covers its `\and` group since the last one, or a heading covers the names after it.
   - **4. The block,** kept once at block level (#159; the 2026-11-01 boxed-block ruling).
   - **Order within a creator:** print order.
+- **The mark record (MARKKEY R2a, ADVARCH; OD #1061, #1062).** Each mark a name prints is one `NameMark` of the
+  reading (`observer/resolver/name_marks.rs`), made where the names line reads it: the label it requests, the footnote
+  number it shows, what printed it (`MarkBy`: by hand, the class's command, a `\footnotemark`, a note's own mark, a call's
+  label, authblk's `\AB@thenote` number; inked or implied), the glued mark it was parted from, the comma printed before it and whether TeX prints it over
+  the title mark before it. A creator's requests, its class's, its footnote marks, its parted labels and its notes' marks
+  are views of it, never parallel stores. In the DOM a mark is keyed by its label where it printed — the API request
+  primitive's (`\lx@frontmatter@namemark`) or the emitter's for a name it writes without its marks — and one settle step
+  after `relocateAnnotations` (`insert::settle_name_marks`) drops each mark an entry answers by that key; the rest are the
+  marks the page shows. Next (R2b): the mark's glyph on the record (today `request_marks` and `emit::left_mark` each
+  compute it); the emitter writes names pure and the record is the only carrier; one leading-mark reader; one
+  title-mark channel; the record's answer and separator read by the page.
 - **What a binding declares:** only what printing cannot tell. That is the rehearsal vocabulary
   (`observer/rehearsal.rs:244-277`), `email_in_place`, `title_marks`, section markers, the `Policy` block conventions,
   and a per-command `annotate=`. Nothing for steps 1, 2 or 4.

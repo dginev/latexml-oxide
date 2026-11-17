@@ -40,21 +40,14 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
       if groups.is_empty() {
         continue;
       }
-      // (each contact's keys, each with the mark it prints — a reference mark's number its glyph, `1` and `∗` one mark;
-      // a note or a contact answers one mark printed on the name, [`Answerer`]: `\IEEEauthorrefmark{1}$^{*}$` over
-      // `∗Univ A` prints two ∗, one the contact's)
-      let shown = refmark_glyphs(&creator);
+      // (each contact's keys, each the mark it prints; a note or a contact answers one mark printed on the name,
+      // [`Answerer`]: `\IEEEauthorrefmark{1}$^{*}$` over `∗Univ A` prints two ∗, one the contact's)
       let held: Vec<Vec<(String, String)>> = children_named(&creator, "contact")
         .iter()
         .map(|contact| {
           contact_keys(contact)
             .into_iter()
-            .map(|key| {
-              let printed = shown
-                .get(&key)
-                .map_or_else(|| key.clone(), |glyph| mark_form(glyph));
-              (key, printed)
-            })
+            .map(|key| (key.clone(), key))
             .collect()
         })
         .collect();
@@ -71,10 +64,7 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
       let mut refmarks: Vec<(String, String)> = groups
         .iter()
         .flat_map(|group| &group.refmarks)
-        .filter_map(|(number, sole)| {
-          let glyph = shown.get(number).or(sole.as_ref())?;
-          Some((number.clone(), mark_form(glyph)))
-        })
+        .filter_map(|(number, sole)| Some((number.clone(), mark_form(sole.as_ref()?))))
         .collect();
       for group in groups {
         let printed = group.printed.trim().to_string();
@@ -294,22 +284,6 @@ fn contact_keys(contact: &Node) -> Vec<String> {
   keys.sort();
   keys.dedup();
   keys
-}
-
-/// The glyph each author reference mark of `creator` prints, by its number ([`mark_form`]): the requests' `_refmarkshown`
-/// (`affiliation:1=∗;affiliation:2=†`, `author_macros.rs`' `\lx@sup@request@affiliation`), as
-/// `insert::show_unanswered_marks` reads it.
-fn refmark_glyphs(creator: &Node) -> HashMap<String, String> {
-  creator
-    .get_attribute("_refmarkshown")
-    .unwrap_or_default()
-    .split(';')
-    .filter_map(|pair| {
-      let (label, glyph) = pair.split_once('=')?;
-      let number = label.strip_prefix("affiliation:").unwrap_or(label);
-      Some((mark_form(number), glyph.to_string()))
-    })
-    .collect()
 }
 
 /// The marks of a printed mark run, in order: its items at commas and spaces, out of their brackets (`(a,b,∗)`), each

@@ -560,7 +560,8 @@ fn code_of(dir: &str) -> Vec<(String, String)> {
 /// and the review reads it; a fallen one lowers its pin.
 #[test]
 fn the_mark_components_only_shrink() {
-  const MARK_FORM_CALLS: usize = 30;
+  // (MARKKEY R2a 30 -> 28: PURE's `refmark_glyphs`, its two `mark_form(` keys of `_refmarkshown`, deleted)
+  const MARK_FORM_CALLS: usize = 28;
   const MARK_ATTRIBUTES: &[&str] = &[
     "_mark",
     "_markfromcounter",
@@ -571,7 +572,6 @@ fn the_mark_components_only_shrink() {
     "_markshown",
     "_markunknown",
     "_refmark",
-    "_refmarkshown",
   ];
   const FOOTNOTE_NUMBER_ATTRIBUTES: &[&str] = &[
     "_fncounted",
@@ -604,18 +604,21 @@ fn the_mark_components_only_shrink() {
     "lx_title_note_values",
     // (MARKBIND, OD #1060: a class binding's title block resets the footnote counter)
     "lx_title_resets_footnotes",
+    // (MARKKEY R2a, SEPb's observer side folded into the mark record, OD #1062: elsarticle prints a name's marks as
+    // one list; article's title marks take no width, a mark glued on one prints over it)
+    "lx_frontmatter_marks_listed",
+    "lx_title_marks_zero_width",
   ];
-  const RCREATOR_MARK_VECTORS: &[&str] = &["whole_marks", "notes"];
+  // (MARKKEY R2a: `whole_marks` folded into `marks`, the one record, OD #1062; R2Ab: `thenote_requests` a view of it,
+  // `RCreator::thenote_requests`)
+  const RCREATOR_MARK_VECTORS: &[&str] = &["marks", "notes"];
   const RESOLVER_MARK_VECTORS: &[&str] = &[
     "title_fn_marks",
     "block_markers",
-    "note_marks",
     "by_mark",
     "marked_entries",
-    "thenote_requests",
     "note_links",
     "note_legends",
-    "fn_requests",
     "note_texts",
     "numbered_notes",
     "block_thanks",

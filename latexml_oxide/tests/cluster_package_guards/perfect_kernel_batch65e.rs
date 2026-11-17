@@ -244,7 +244,7 @@ fn siamltex_theorems_numbered_within_section() {
 }
 
 /// ptephy: a superscript symbol mark no affiliation answers (`$^{\dag}$`) stays shown on its name
-/// (`show_unanswered_marks`, base_utilities.rs), and the lines after the author list's first `\\` are its legends,
+/// (`insert::settle_name_marks`), and the lines after the author list's first `\\` are its legends,
 /// document notes with their marks, not one more creator (2203.01270). Repro
 /// class-bindings/ptephy_symbol_marks_and_legend_lines.
 #[test]
@@ -316,7 +316,7 @@ fn ptephy_name_lines_after_break_stay_names() {
 }
 
 /// A symbol mark nothing answers is shown on every author carrying it; a contact or note the author holds for another
-/// reason answers nothing (`show_unanswered_marks`). Repro sectioning-frontmatter/symbol_mark_shown_on_each_author.
+/// reason answers nothing (`settle_name_marks`). Repro sectioning-frontmatter/symbol_mark_shown_on_each_author.
 #[test]
 fn symbol_mark_shown_on_each_author() {
   let xml = convert_clean(include_str!(

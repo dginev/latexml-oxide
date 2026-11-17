@@ -12823,7 +12823,7 @@ Fixed in Rust (64a):
 - A name's command argument without letters of any script (`\orcidicon{0000-0001-8953-1075}`, 2104.02493) is no name
   text in the kernel author splitter (63z8 had read its digits as a name, joining the names around it).
 - An author mark nothing answers — no entry labelled by it, no affiliation printing it (`_bymark`: llncs's
-  `$^{1,3}$ Univ A` answers an `\inst{3}`) — stays in the name, as LaTeX prints it (`show_unanswered_marks`; repro
+  `$^{1,3}$ Univ A` answers an `\inst{3}`) — stays in the name, as LaTeX prints it (`settle_name_marks`, OD #1061; repro
   sectioning-frontmatter/author_unmatched_numeric_mark, RED since 63x); since 65e a superscript footnote symbol too
   (`$^{\dag}$`, `$^{*}$`, which label affiliations as marks), shown as its glyph (`unanswered_mark_text`;
   2203.01270, class-bindings/ptephy_symbol_marks_and_legend_lines), unless the mark placed one of that author's
