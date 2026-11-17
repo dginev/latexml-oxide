@@ -1,0 +1,20 @@
+% mechanism: an outside `\fnref` sets the class's `\@fnmark` again (elsarticle.cls:159-165), read only when the first name
+%   prints (:256-264): the first author shows the last one read, f2's 2, even where f1's note was read before it — the
+%   binding settles the first name's mark at the flush (`\lx@label@ref`, `els_settle_marks`), not where a note is read
+% witness: revELSARTb q14 (synthetic; the `\fnref` twin of elsart_corref_after_a_read_note_moves_the_first_authors_mark)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,2 , Bob Twoa"; footnotes "1 One", "2 Two"
+% engines: rust WRONGFIXc: both notes the block's; INTFMfinal (ELSARTb): Alice "One", "Two" the block's, 2 Warnings
+% expect:  0 errors 0 Warnings; Alice One the "Two" note, "One" the block's
+% status:  RED (INTFMfinal) -> GREEN (ELSARTc) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}\fnref{f1}
+\fntext[f1]{One}
+\author[l1]{Bob Two}\fnref{f2}
+\fntext[f2]{Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x\end{document}

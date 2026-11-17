@@ -1,0 +1,20 @@
+% mechanism: `\corref{c1,c2}` sets `\@corref` to `\elsRef{c1,c2}`'s case, 0 — no ∗ (elsarticle.cls:188-190): the
+%   first name prints its separator alone and the notes mark no name; the binding requests no annotation, with a Warning
+% witness: revELSARTb P1 (synthetic; the `\corref` sibling of q8)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,, Bob Twoa"; footnotes "∗ First corresponding",
+%   "∗∗ Second corresponding"
+% engines: rust WRONGFIXc and INTFMfinal: Alice carries both notes
+% expect:  0 errors 1 Warning (elsarticle_mark_list); both notes the block's
+% status:  RED (INTFMfinal) -> GREEN (ELSARTc) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One\corref{c1,c2}}
+\author[l1]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[c1]{First corresponding}
+\cortext[c2]{Second corresponding}
+\end{frontmatter}
+x\end{document}

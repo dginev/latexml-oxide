@@ -1,0 +1,23 @@
+% mechanism: a later outside `\corref` sets `\@corref` again (elsarticle.cls:188-190) and the first name shows it only
+%   when the names print (:256-264), so it moves the first name's mark even from a note read before it: the binding
+%   settles the first name's mark at the flush (`\lx@label@ref`, `els_settle_marks`), not where the note is read
+% witness: revELSART B1, revELSARTb F1 q17 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗∗, Bob Twoa"; footnotes "∗ First corresponding",
+%   "∗∗ Second corresponding"
+% engines: rust ELSART (3bbd4e67ccf): Alice c1's note, c2's the block's, no Warning; ELSARTb: the same, 2 Warnings
+%   ELSARTc: Alice c2's note, c1's the block's, 0 Warnings
+% expect:  0 errors 0 Warnings; Alice One the second note, the first the block's
+% status:  RED (ELSART) -> RED (ELSARTb: the fail-safe, Alice c1's note as read, 2 Warnings) -> GREEN (ELSARTc: the first name's mark settled at the flush, `els_settle_marks`)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}\corref{c1}
+\cortext[c1]{First corresponding}
+\author[l1]{Bob Two}\corref{c2}
+\cortext[c2]{Second corresponding}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x\end{document}

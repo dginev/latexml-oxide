@@ -1,15 +1,15 @@
 % mechanism: a `\corref` outside every `\author`'s argument sets the class's `\@corref` (elsarticle.cls:188-190) at once,
 %   and the first name printed shows it (:261, then `\global\let\@corref\@empty`, :264): the first author carries the
-%   note — the binding annotates the first name with it where it is read before that name or right after its call
+%   note — the binding settles the first name's mark at the flush, wherever the `\corref` is read
 % witness: 1501.03323 (`\author[kaust1]{Ihab Sraj} \corref{cor1}`), 1508.05262, 2201.04925 (each the first author's;
 %   the note had gone to the block); here after the second name
 % oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗, Bob Twoa , Carol Threea"; footnote "∗ Corresponding author"
 % engines: rust b842de7fc4c and ELSART: the note the block's (a nameless creator); ELSART gives it the first author
 %   where the `\corref` is read before the first name or right after its call (the witnesses' shape)
+%   ELSARTc: Alice One the note, 0 Warnings
 % expect:  0 errors 0 Warnings; Alice One the correspondence note
-% status:  RED (b842de7fc4c) -> RED (ELSART; row R ELSOUTSIDE) -> RED (ELSARTb: the note the block's, with a Warning)
-%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red;
-%   elsarticle_outside_marks_after_the_first_name_warn pins the fail-safe)
+% status:  RED (b842de7fc4c) -> RED (ELSART; row R ELSOUTSIDE) -> RED (ELSARTb: the block's, a Warning) -> GREEN (ELSARTc: the first name's mark settled at the flush, `els_settle_marks`)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload: ar5iv.sty
 \documentclass[preprint]{elsarticle}
 \begin{document}

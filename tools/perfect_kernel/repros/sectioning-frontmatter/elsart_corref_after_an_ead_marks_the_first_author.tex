@@ -1,0 +1,20 @@
+% mechanism: an outside `\corref` after the first name's `\ead` sets `\@corref` for the first name printed
+%   (elsarticle.cls:188-190, :256-264): the first author shows its ∗
+% witness: revELSARTb q25 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗, Bob Twoa"; footnotes "∗ Corresponding author",
+%   "Email address: a@x.org (Alice One)"
+% engines: rust WRONGFIXc and INTFMfinal: the note the block's (INTFMfinal with a Warning: its read-ahead stopped at `\ead`)
+% expect:  0 errors 0 Warnings; Alice One the e-mail and the correspondence note
+% status:  RED (INTFMfinal) -> GREEN (ELSARTc) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}
+\ead{a@x.org}\corref{cor1}
+\author[l1]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[cor1]{Corresponding author}
+\end{frontmatter}
+x\end{document}

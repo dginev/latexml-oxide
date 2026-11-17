@@ -20397,37 +20397,38 @@ first name printed shows it unless that name sets its own (:159-165, :188-190, :
 prefix-stripped key only where no exact label is requested (Base_Utility.pool.ltxml:899-900): a name listing a note's
 key loses it as soon as another name `\corref`s it; a note sharing an address's key goes to every name listing the
 address; an outside `\corref` requests on no entry and the note is orphaned.
-**Rust.** The binding gives the routes one label per key, where they are read (`\lx@els@author`, elsart_support_core_sty.rs;
-the Frontmatter reading pairs the queued labels, so nothing is decided later):
+**Rust.** The binding gives the routes one label per key (`\lx@els@author`, elsart_support_core_sty.rs); what TeX decides
+only when the names print, or from the .aux of the run before, is a deferred label (`\lx@label@ref`, as cas's), settled
+as each input it depends on is read and resolved at the flush (`els_settle_marks`):
 - every route of a key takes the form the key was first read by (`els_route`): the bare key after an `\author[…]` list,
   `cor:k`/`fn:k` after a `\corref`/`\fnref`. A later `\author[…]` key is annotated `cor:k`; a later `\corref{k}` in a
   name is dropped and its name annotated `k` — so all names reaching a note meet it, in either order;
-- the first name shows the outside mark read last before the names print: an outside `\corref`/`\fnref`/`\fnmark` sets
-  `\@corref`/`\@fnmark` again, while `\cormark[k]` prints its ∗ where it is read and sets neither (:178-180), so outside a
-  name it marks no name, and in the first name it prints beside the outside mark. The first name is annotated with the
-  outside marks read before it or right after its call (past spaces: the witnesses' shape); its own `\corref`/`\fnref`/
-  `\fnmark` replaces them. One read after the call moves the mark, which the queued annotations cannot follow
-  (fail-safe, row R ELSOUTSIDE): each note it moves to or from is the block's (`els_first_note_label`: the one the
-  first name took and no longer shows labelled `cor@k`/`fn@k`) unless another name reaches its key, with a Warning each;
-  a note read before the mark keeps its label, with a Warning. Following it needs an engine call that re-annotates a
-  queued creator (its queue entry and the reading's ledger record); a label the first name always held for the register
-  was tried and dropped — an unanswered request is parted into glued pieces (`cor` answered a note keyed `cor`) or, as
-  `ref:@corref`, warns `unanswered_mark_lost` on every paper;
-- a note whose key already names another entry when it is read is labelled `cor@k`/`fn@k` (elsarticle_cls.rs
-  `els_note_label`), which no name requests and no fallback strips to the key: the block's note, as the PDF links it to
-  no name (1711.08299). A note read before the entry its key names keeps `cor:k` (row R ELSKEYORDER);
+- the first name shows the outside mark read last at the names' level, wherever it is read (before the names, after a
+  later name, past a `\par` or an `\ead`, after the note it moves to or from): an outside `\corref`/`\fnref`/`\fnmark`
+  sets `\@corref`/`\@fnmark` again, while `\cormark[k]` prints its ∗ where it is read and sets neither (:174-176), so
+  outside a name it marks no name, and in the first name it prints beside the outside mark. The first name requests
+  `\lx@label@ref{els@first@cor}`/`{els@first@fn}` unless its own `\corref`/`\fnref`/`\fnmark` replaces it;
+- a note's label is settled likewise (elsarticle_cls.rs `els_settle_note_labels`): `cor:k`/`fn:k`, or, where its key
+  names another entry (an address, an `\fntext` over a `\cortext`), `cor@k`/`fn@k`, which no name requests and no
+  fallback strips to the key — the block's note, as the PDF links it to no name (1711.08299), whichever is read first.
+  A key that would not read back as written (a space, a brace, a control sequence) is labelled where it is read;
+- a key list in `\corref`/`\cormark` prints no mark (`\elsRef{c1,c2}` is 0): no annotation, its notes the block's, a
+  Warning (`elsarticle_mark_list`);
 - a `\cortext` both routes reach is marked ∗, the note's own print (the names print "1" and ∗ for it), as WRONGFIX's
   collision fallback; one no name reaches has no mark.
+Settled dead-ends: a peek after the first name's call (stopped at a `\par`, an `\ead`); a fail-safe moving notes to the
+block with a Warning (a note read before the moving mark kept a wrong name); a literal label the first name always
+held (parted into pieces by the reading, or `unanswered_mark_lost` on every paper).
 The binding's `\author` stays elsart_support_core's: the reading takes a binding's author conventions from the binding
 that defines the macro calling `\lx@add@authors@append` (`policy_for`), and an `\author` redefined by elsarticle_cls.rs
 read 1108.0201's `\address[*]` as the corresponding author's.
 **Witnesses.** 1501.03323, 1508.05262, 2201.04925, 2606.17032, 2606.22682 (`\author[…]{…}\corref{…}`: the first
 author's, the block's before), 1909.01114 (`{\corref{cor1}}`: the block's, as pdflatex links it to no name), 1711.08299;
 ELSROUTE's mixed routes (0 of 906 census elsarticle papers).
-**Guards**: the FMRG `CLASS` rows `elsart_*` (`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`
-and its `_red` twin; ELSARTb: `\cormark` outside a name, and as RED rows an outside mark after a later name in either kind
-and order), `perfect_kernel_batchfmmarks::elsarticle_outside_marks_after_the_first_name_warn` (the fail-safe's notes and
-Warnings), `perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route` (the shared-key row).
+**Guards**: the FMRG `CLASS` rows `elsart_*` (`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`:
+ELSARTb `\cormark` outside a name; ELSARTc an outside mark after a later name in either kind and order, after a note it
+moves, past a `\par` or an `\ead`, a note read before the entry its key names, a key list in or outside a name),
+`perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route` (the shared-key row).
 
 ---
 
