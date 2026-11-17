@@ -1,0 +1,21 @@
+% mechanism: mnras.cls's `\maketitle` (:1056-1071) sets no `\thefootnote`: it prints the one in force, a preamble's
+%   `\renewcommand{\thefootnote}{\arabic{footnote}}` included, so the title hook is that one as the `\maketitle`
+%   begins (`latex_constructs::declare_title_marks_in_force`, mnras_cls.rs), not the class's `\@fnsymbol`
+% witness:  review revMARKBIND (p/mn_arabic.tex), MARKBINDb item 1
+% oracle:   pdflatex 0 errors; "Ann Able,1 1 Bob Baker2 2" (the affiliation label, then the `\thanks` mark), body
+%   "Body1" with "1 Body note." (the class's `\maketitle` prints no `\@thanks`)
+% engines:  rust MARKBIND (ff2497f5a77) = 0 errors, 0 Warnings; Ann's thanks ⋆, Bob's † (the class's symbols)
+% expect:   0 errors, 0 Warnings; Ann's thanks 1, Bob's 2, the body's note 1
+% status:   RED (MARKBIND) -> GREEN (MARKBINDb; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{mnras}
+\renewcommand{\thefootnote}{\arabic{footnote}}
+\title{A Title}
+\author[A. Able et al.]{Ann Able,$^{1}$\thanks{E-mail: ann@x.org} Bob Baker$^{2}$\thanks{Bob note.}
+\\ $^{1}$Univ A, Town\\ $^{2}$Univ B, City}
+\begin{document}
+\maketitle
+\begin{abstract}Abs.\end{abstract}
+\section{Introduction}
+Body\footnote{Body note.}.
+\end{document}

@@ -1,8 +1,8 @@
 //! Red/green guards for MARKBIND (DG 2026-11-16, "bindings compute, the XSLT invents"): a class binding computes the
 //! glyph its class prints and the counter its commands step. mnras's and REVTeX's society marks are rows of
 //! `perfect_kernel_batchfmmarks`; here lni's (a TeX Live class that changed its `\author` between versions, so each guard
-//! is skipped, visibly, where TeX Live's lni.cls is not the v2.0 one built on authblk) and the Frontmatter keys the
-//! engine declares (witnesses 2407.04435, 2412.04178).
+//! is skipped, visibly, where TeX Live's lni.cls is not the v2.0 one built on authblk), mnras's footnote counting, and
+//! the Frontmatter keys the engine declares (witnesses 2407.04435, 2412.04178).
 use latexml::util::test::{convert_with_setup_then, error_count, kpse_has, warning_count};
 
 use super::{perfect_kernel_batch84b::text, perfect_kernel_batchshmark::notes_in};
@@ -51,6 +51,67 @@ fn lni_affil_sets_the_footnote_counter() {
   assert_eq!(notes_in(&xml), [
     vec!["Ann Able".to_string(), "thanks[3]=Note A.".to_string()],
     vec!["Bob Baker".to_string()],
+  ]);
+  // (the `\thanks` steps the counter, which lni's `\maketitle` does not set back: the body's note is 4, review revMARKBIND)
+  assert_eq!(all_notes(&xml), [
+    "thanks[3]=Note A.",
+    "footnote[4]=Body note."
+  ]);
+}
+
+/// Every note of the document in order, `role[mark]=text`, its `<tags>` left out.
+fn all_notes(xml: &str) -> Vec<String> {
+  let mut out = Vec::new();
+  let mut rest = xml;
+  while let Some(at) = rest.find("<note ") {
+    let note = &rest[at..];
+    let open_end = note.find('>').expect("note tag");
+    let attribute = |name: &str| {
+      note[..open_end]
+        .split(&format!(" {name}=\""))
+        .nth(1)
+        .and_then(|m| m.split('"').next())
+        .unwrap_or("")
+        .to_string()
+    };
+    let close = note.find("</note>").expect("closed note");
+    let mut body = note[open_end + 1..close].to_string();
+    if let (Some(from), Some(to)) = (body.find("<tags>"), body.find("</tags>")) {
+      body.replace_range(from..to + "</tags>".len(), "");
+    }
+    out.push(format!(
+      "{}[{}]={}",
+      attribute("role"),
+      attribute("mark"),
+      text(&body)
+    ));
+    rest = &note[close..];
+  }
+  out
+}
+
+/// mnras's `\thanks` steps the footnote counter and its `\maketitle` does not set it back: the notes before the first
+/// `\section` count on in the class's symbols, ⋆ † ‡, and that `\section` (starred) numbers them in arabic from 1, a later
+/// `\section` and the appendix counting on (review revMARKBIND p/mn_ids.tex, p/mn_nosec.tex; mnras.cls:736-737,
+/// :1056-1071, :1517-1523). Distinct from `perfect_kernel_batchfmmarks`'s mnras rows (the title's marks): the body's
+/// notes, on both sides of the switch.
+#[test]
+fn mnras_title_notes_step_the_counter() {
+  let (log, xml, ()) = convert_with_setup_then(
+    repro!("fmmarks_mnras_title_notes_step_the_counter"),
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(all_notes(&xml), [
+    "thanks[⋆]=E-mail: ann@x.org",
+    "footnote[†]=Abs note.",
+    "footnote[‡]=Pre note.",
+    "footnote[1]=Body note A.",
+    "footnote[2]=Body note B.",
+    "footnote[3]=Body note C.",
+    "footnote[4]=App note.",
   ]);
 }
 

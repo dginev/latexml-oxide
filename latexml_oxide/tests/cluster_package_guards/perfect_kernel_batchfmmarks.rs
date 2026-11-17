@@ -2736,6 +2736,36 @@ const REVTEX: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
+    repro:      "fmmarks_revtex42_aip_reprint_grid_prints_no_mark",
+    tex:        repro!("fmmarks_revtex42_aip_reprint_grid_prints_no_mark"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnote[]=Present address: Lab C. | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ B"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Present address: Lab C."#,
+      r#"Bob Baker"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_revtex42_sor_lengthcheck_grid_prints_no_mark",
+    tex:        repro!("fmmarks_revtex42_sor_lengthcheck_grid_prints_no_mark"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnote[]=Present address: Lab C. | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ B"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Present address: Lab C."#,
+      r#"Bob Baker"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
     repro:      "fmmarks_revtex41_aip_shared_thanks_letters",
     tex:        repro!("fmmarks_revtex41_aip_shared_thanks_letters"),
     warnings:   0,
@@ -3062,6 +3092,36 @@ const CLASS: &[Row] = &[
     page:       &[
       r#"Ann Able | under: E-mail: ann@x.org"#,
       r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_mnras_title_marks_follow_thefootnote_in_force",
+    tex:        repro!("fmmarks_mnras_title_marks_follow_thefootnote_in_force"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[1]=E-mail: ann@x.org | affiliation=Univ A, Town"#,
+      r#"Bob Baker ; thanks[2]=Bob note. | affiliation=Univ B, City"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: E-mail: ann@x.org"#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_mnras_late_maketitle_red",
+    tex:        repro!("fmmarks_mnras_late_maketitle_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[2]=E-mail: ann@x.org | affiliation=Univ A"#,
+      r#"Bob Baker ; thanks[3]=Second. | affiliation=Univ A"#,
+    ],
+    moves:      r#"row R MNLATE (proposed: a `\maketitle` after the fallback flush digests nothing, so its notes neither mark nor step)"#,
+    page:       &[
+      r#"Ann Able | under: E-mail: ann@x.org"#,
+      r#"Bob Baker | under: Second."#,
     ],
     page_moves: r#""#,
   },

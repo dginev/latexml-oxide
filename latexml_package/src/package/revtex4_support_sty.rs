@@ -978,15 +978,8 @@ pub(crate) fn selected_journal(post: &str) -> Result<(String, String)> {
   Ok((society, journal))
 }
 
-/// REVTeX 4.1/4.2's title marks (`post` "4-1" or "4-2"), after its options. The society file's letters for
-/// `\frontmatter@thefootnote` (`\thanks`, `\altaffiliation`, `\email`): aip4-2.rtx:282, sor4-2.rtx:245, aip4-1.rtx:205
-/// `\@booleantrue\altaffilletter@sw`, which an `altaffilsymbol` given does not undo (pdflatex: `[altaffilsymbol,aip]`
-/// "Ann Able1, a)"). And the title hook (`latex_constructs::TITLE_THEFOOTNOTE`): a `\footnotemark` or `\footnotetext`
-/// in the title block prints the minipage letters (revtex4-2.cls:2710-2714 `\thempfn`, :487-491 `\@alph\c@mpfootnote`),
-/// or nothing in the two-column grid (:7413-7418 `\ltx@no@footnote`, which `twocolumn` and `reprint` set, :5896-6001;
-/// 1807.01940 and 2301.00155 print no mark for `\author{Hao Zhang\footnotemark[1]}`). A society whose journal file may
-/// take the grid back (aip4-2.rtx:691, sor4-2.rtx:717) keeps the hook it had. A name's own marks stay unknown
-/// (`lx_title_footnote_own_marks`, row R REVNAMEMARK).
+/// REVTeX 4.1/4.2's title marks (`post` "4-1" or "4-2"), after its options: the aip/sor letters and the title hook,
+/// the minipage letters or none in the two-column grid (`twocolumn`, `reprint`, `lengthcheck`). OD #1060.
 pub(crate) fn declare_revtex41_title_marks(post: &str) -> Result<()> {
   if !(is_document_class("revtex4-1") || is_document_class("revtex4-2")) {
     return Ok(());
@@ -996,13 +989,13 @@ pub(crate) fn declare_revtex41_title_marks(post: &str) -> Result<()> {
     assign_value("revtex@altaffilletter", true, Some(Scope::Global));
   }
   let grid = matches!(
-    last_class_option(&["twocolumn", "onecolumn", "reprint"]),
-    Some("twocolumn" | "reprint")
+    last_class_option(&["twocolumn", "onecolumn", "reprint", "lengthcheck"]),
+    Some("twocolumn" | "reprint" | "lengthcheck")
   );
-  if !grid {
-    DefMacro!("\\lx@title@thefootnote", "\\@alph\\c@footnote");
-  } else if matches!(society.as_str(), "aps" | "aapm" | "apsrmp") {
+  if grid {
     DefMacro!("\\lx@title@thefootnote", "");
+  } else {
+    DefMacro!("\\lx@title@thefootnote", "\\@alph\\c@footnote");
   }
   Ok(())
 }

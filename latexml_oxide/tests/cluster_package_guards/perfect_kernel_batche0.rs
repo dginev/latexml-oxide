@@ -1242,6 +1242,12 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("declared _kinded base_utilities/defs/frontmatter_api.rs", 1),
+  // (MARKBINDb: kind.rs's `{LINE_FIRST}=true` on an IEEE block's leading e-mail line, the one constant a keyval sets that
+  // the list lacked; `every_internal_key_a_keyval_sets_is_declared`)
+  (
+    "declared _linefirst base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
   ("declared _mark base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared _markintext base_utilities/defs/frontmatter_api.rs",
@@ -1615,6 +1621,80 @@ fn every_shape_of_a_key_is_seen() {
     &mut names,
   );
   assert_eq!(names.names, ["lx@add@foo"]);
+}
+
+/// A string constant naming an internal key (`const LINE_FIRST: &str = "_linefirst"`) that a literal sets as a keyval
+/// (`s!("{kinded_keys},{LINE_FIRST}=true")`; an XPath's `@{X}=` reads an attribute) reaches a `Frontmatter` KeyVals, so
+/// the key is declared — in `FRONTMATTER_INTERNAL_KEYS`, a `DefKeyVal!` or Perl's — or every paper that writes it
+/// reports an unknown key (`_linefirst`, review revMARKBIND).
+#[test]
+fn every_internal_key_a_keyval_sets_is_declared() {
+  let constant =
+    Regex::new(r#"\bconst ([A-Z][A-Z_0-9]*): &(?:'static )?str = "([0-9]+)""#).expect("the regex");
+  let set = Regex::new(r"(?:^|[^@])\{([A-Z][A-Z_0-9]*)\}=").expect("the regex");
+  let mut keys: BTreeMap<String, std::collections::BTreeSet<String>> = BTreeMap::new();
+  let mut uses: BTreeMap<String, std::collections::BTreeSet<String>> = BTreeMap::new();
+  let mut speech = ApiSpeech::default();
+  for file in API_SPEAKERS
+    .iter()
+    .flat_map(|crate_src| rust_files(crate_src))
+  {
+    let short = file
+      .split_once("/src/")
+      .map_or(file.as_str(), |(_, inner)| inner)
+      .to_string();
+    let source = read_rust(&file);
+    read_api_speech(&source, &short, &mut speech);
+    for found in constant.captures_iter(&source.code) {
+      let value = &source.literals[found[2].parse::<usize>().expect("an index")];
+      if value.starts_with('_') {
+        keys
+          .entry(found[1].to_string())
+          .or_default()
+          .insert(value.clone());
+      }
+    }
+    for literal in &source.literals {
+      for found in set.captures_iter(literal) {
+        uses
+          .entry(found[1].to_string())
+          .or_default()
+          .insert(short.clone());
+      }
+    }
+  }
+  let declared: std::collections::BTreeSet<&str> = speech
+    .keys
+    .keys()
+    .filter_map(|row| row.strip_prefix("declared ")?.split(' ').next())
+    .chain(PERL_DECLARED_KEYS.iter().copied())
+    .collect();
+  let set_keys: Vec<(&String, &String, &std::collections::BTreeSet<String>)> = uses
+    .iter()
+    .flat_map(|(name, files)| {
+      keys
+        .get(name)
+        .into_iter()
+        .flatten()
+        .map(move |key| (name, key, files))
+    })
+    .collect();
+  // (the reader sees the shapes: a format's open set, a set after a comma, a set on its own)
+  for name in ["CUT_LIST", "LINE_FIRST", "NAME_PRINTED"] {
+    assert!(
+      set_keys.iter().any(|(set, ..)| set.as_str() == name),
+      "{name} is no longer read as a keyval's key: {set_keys:?}"
+    );
+  }
+  let undeclared: Vec<String> = set_keys
+    .iter()
+    .filter(|(_, key, _)| !declared.contains(key.as_str()))
+    .map(|(name, key, files)| format!("{name} = {key:?} set in {files:?}"))
+    .collect();
+  assert!(
+    undeclared.is_empty(),
+    "an internal key a keyval sets, undeclared (add it to `frontmatter_api::FRONTMATTER_INTERNAL_KEYS`): {undeclared:?}"
+  );
 }
 
 /// Token-spelling reads per area, and in the listed bindings: `bin/tokreads.py`'s count of the removal study plus the shapes

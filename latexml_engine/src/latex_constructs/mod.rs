@@ -531,7 +531,8 @@ pub fn is_document_class(class: &str) -> bool { lookup_string("lx@document@class
 /// marks of the notes made in the title, the authors and the date are it (`enter_title_footnotes`), and so are the
 /// frontmatter observer's Mark labels (`observer/rehearsal.rs` `TITLE_FOOTNOTE_HOOK`, OXIDIZED_DESIGN_DIVERGENCES #837,
 /// #851). Article, report and book declare it `\@fnsymbol\c@footnote` (`declare_fnsymbol_title_block`); a class
-/// numbering its title's marks otherwise defines its own (revtex4-2.cls:3040-3041 `\frontmatter@thefootnote`). Guard
+/// numbering its title's marks otherwise defines its own (revtex4-2.cls:3040-3041 `\frontmatter@thefootnote`), or takes
+/// the one in force (mnras, [`declare_title_marks_in_force`]). Guard
 /// `perfect_kernel_batch78o::declared_title_thefootnote_prints_the_marks_the_observer_labels`.
 pub const TITLE_THEFOOTNOTE: &str = "\\lx@title@thefootnote";
 
@@ -565,8 +566,9 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
   if !is_document_class(class) {
     return Ok(());
   }
-  // (its `\thanks` steps the counter under a title page too: article.cls:173, :241, latex.ltx:17215)
-  assign_value("lx_title_counts_footnotes", true, Some(Scope::Global));
+  // (its `\thanks` steps the counter under a title page too, and its `\maketitle` sets it back: article.cls:173, :190,
+  // :223, :241, latex.ltx:17215)
+  declare_title_footnote_counting(true)?;
   if titlepage != Some(true) {
     def_macro(
       T_CS!(TITLE_THEFOOTNOTE),
@@ -578,7 +580,36 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
       }),
     )?;
   }
-  AddToMacro!("\\lx@maketitle@body", "\\setcounter{footnote}{0}");
+  Ok(())
+}
+
+/// A class's title block whose `\thanks` is LaTeX's, `\footnotemark` and its text (latex.ltx:17215): each note of the
+/// title, an author or the date steps the footnote counter as the `\maketitle` digests it (`lx_title_counts_footnotes`,
+/// `\lx@title@footnote@step`); where `resets`, the `\maketitle` sets it back to 0 after (article.cls:190, :223), so the
+/// body's notes count from 1 and a note's side of the reset decides its pairing (`lx_title_resets_footnotes`,
+/// [`footnote_pairing`]). mnras's and lni's `\maketitle` keep counting (mnras.cls:1050-1071, lni.cls:478-497).
+pub fn declare_title_footnote_counting(resets: bool) -> Result<()> {
+  assign_value("lx_title_counts_footnotes", true, Some(Scope::Global));
+  if resets {
+    assign_value("lx_title_resets_footnotes", true, Some(Scope::Global));
+    AddToMacro!("\\lx@maketitle@body", "\\setcounter{footnote}{0}");
+  }
+  Ok(())
+}
+
+/// The title hook ([`TITLE_THEFOOTNOTE`]) of a class whose `\maketitle` prints the `\thefootnote` in force, setting none
+/// (mnras.cls:1050-1071): that one as the `\maketitle` begins (`\lx@maketitle@begin`), a preamble's `\renewcommand
+/// \thefootnote{\arabic{footnote}}` included; a `\let`, as `enter_title_footnotes` lets `\thefootnote` to the hook.
+pub fn declare_title_marks_in_force() -> Result<()> {
+  let_i(
+    &T_CS!(TITLE_THEFOOTNOTE),
+    &T_CS!("\\thefootnote"),
+    Some(Scope::Global),
+  );
+  AddToMacro!(
+    "\\lx@maketitle@begin",
+    "\\global\\let\\lx@title@thefootnote\\thefootnote"
+  );
   Ok(())
 }
 
@@ -958,7 +989,7 @@ fn footnote_number_digits(given: &Digested) -> Result<Option<Tokens>> {
 /// A footnote's bookkeeping for `relocate_footnote`, kept on the note: the value of the footnote counter it stands for
 /// (`_fnvalue`: its `[<n>]`'s number, or the counter as it stepped or stands) — none for a minipage's notes, which
 /// count apart, and any other type —, and, in a class that sets the counter back after its `\maketitle`
-/// (`lx_title_counts_footnotes`, `declare_fnsymbol_title_block`), whether its number is the counter's (`_fncounted`,
+/// (`lx_title_resets_footnotes`, [`declare_title_footnote_counting`]), whether its number is the counter's (`_fncounted`,
 /// `FootnoteNumber::from_counter`): such a note in the title block has the title's count, one after it the body's,
 /// which counts from 1 again (`same_count`).
 pub(crate) fn footnote_pairing(
@@ -980,7 +1011,7 @@ pub(crate) fn footnote_pairing(
   if let Some(value) = value {
     props.insert("fnvalue", Stored::String(pin(value.to_string())));
   }
-  if number.from_counter && lookup_bool("lx_title_counts_footnotes") {
+  if number.from_counter && lookup_bool("lx_title_resets_footnotes") {
     props.insert("fncounted", Stored::String(pin("true")));
   }
   Ok(())

@@ -19908,33 +19908,51 @@ the unit test `resolver::mark_ledger::tests::a_run_between_two_names_is_parted_a
 nothing (the engine's fail-safe, OD #1053, writes no glyph).
 **Perl.** mnras.cls.ltxml keeps arabic footnote marks; revtex4.cls.ltxml follows no society file; there is no lni binding.
 **Rust.**
-- mnras (mnras_cls.rs): the class's own `\@fnsymbol` (⋆ † ‡ § ¶ ‖ ⋆⋆ …, mnras.cls:1502-1508) for `\thefootnote` and
-  the title hook, up to the first `\section`, whose `\fixfootnotes` numbers them in arabic from 1 (:736-737,
-  :1517-1523). A name's `\thanks` is ⋆, a `\footnotemark[2]` and the `\footnotetext[2]` after `\maketitle` †; a body
-  note past the first section 1. A package that sets `\@fnsymbol` after the class (footmisc) is followed: 1905.08754
-  "Copeland,1 ∗". 2509.04573's `\footnotemark[3]` on Cegla is Mortier's ‡ "UKRI Future Leaders Fellow", as pdflatex prints.
+- mnras (mnras_cls.rs): the class's own `\@fnsymbol` (⋆ † ‡ § ¶ ‖ ⋆⋆ …, mnras.cls:1502-1508) for `\thefootnote`,
+  up to the first `\section`, whose `\fixfootnotes` numbers them in arabic from 1 (:736-737, :1517-1523). Its
+  `\maketitle` (:1056-1071) sets no `\thefootnote`, so the title hook is the one in force as the `\maketitle` begins
+  (`latex_constructs::declare_title_marks_in_force`, a `\let` in `\lx@maketitle@begin`): a preamble's
+  `\renewcommand{\thefootnote}{\arabic{footnote}}` prints "Ann Able,1 1", a package that sets `\@fnsymbol` after the
+  class (footmisc) is followed (1905.08754 "Copeland,1 ∗"). Its `\thanks` is LaTeX's and its `\maketitle` sets the
+  counter back to none (`latex_constructs::declare_title_footnote_counting(false)`): a name's `\thanks` is ⋆, a note
+  before the first `\section` counts on (†, ‡), one after it from 1. A `\footnotemark[2]` and the `\footnotetext[2]`
+  after `\maketitle` are †; 2509.04573's `\footnotemark[3]` on Cegla is Mortier's ‡ "UKRI Future Leaders Fellow", as
+  pdflatex prints.
+- The two counting facts a title block's class states apart (`declare_title_footnote_counting`): its notes step the
+  footnote counter (`lx_title_counts_footnotes`, read by `\lx@title@footnote@step` and the title's rehearsal), and its
+  `\maketitle` sets the counter back to 0 (`lx_title_resets_footnotes`, read by the note pairing's `_fncounted`;
+  article, report, book and siamltex only, `declare_fnsymbol_title_block`).
 - REVTeX 4.1/4.2 (`revtex4_support_sty::declare_revtex41_title_marks`): the `aip` and `sor` society files mark the front
   matter's footnotes in letters (aip4-2.rtx:282, sor4-2.rtx:245, aip4-1.rtx:205), which `altaffilsymbol` does not undo
   (pdflatex); 2603.05387 "Yiming Xing,1, 2, a)". The title hook is the title block's minipage letters
-  (revtex4-2.cls:2710-2714, :487-491), or empty in the two-column grid `twocolumn`/`reprint` set (:7413-7418
-  `\ltx@no@footnote`: 1807.01940 and 2301.00155 print no mark for a name's `\footnotemark[1]`), not where an aip or
-  sor journal file may take the grid back. A name's own marks stay unknown (`lx_title_footnote_own_marks`, row R
-  REVNAMEMARK).
+  (revtex4-2.cls:2710-2714, :487-491), or empty in the two-column grid `twocolumn`, `reprint` and `lengthcheck` set
+  (:7413-7418 `\ltx@no@footnote`, :6044-6047: 1807.01940 and 2301.00155 print no mark for a name's
+  `\footnotemark[1]`), in every society and journal: pdflatex prints none for `[aip,jcp,reprint]`, `[aip,cp,reprint]`,
+  `[aip,jmp,reprint]` and `[sor,jor,reprint]`, whose journal files leave two columns (aip4-2.rtx:691, :826,
+  sor4-2.rtx:717). A name's own marks stay unknown (`lx_title_footnote_own_marks`, row R REVNAMEMARK).
 - lni (lni_cls.rs): the authblk-era `\affil[n]` sets the footnote counter to n (lni.cls:463, v1.10's :468), so a title
-  `\thanks` and the body's notes number after the last label (2508.02300's first body note 7, was 1); an `\author`
+  `\thanks` and the body's notes number after the last label (2508.02300's first body note 7, was 1); the `\thanks`
+  steps the counter, which only v0.5's article-based `\maketitle` sets back (its `:116`; v1.7's and v2.0's do not,
+  lni.cls:478-513), read from the class's own `\maketitle`: a body note after a v2.0 title's `\thanks` 3 is 4; an `\author`
   written for lni v1 (`\author[running names]{names}`, no braced e-mail and ORCID after it) is the kernel's
   `\author[short]{names}` (2407.04435: no authblk labels of its running names, no stray `\startpage` argument).
-- The engine's own Frontmatter keys (`_markshown`, `_cutlist`, `_kinded`, … 31) are declared in one list,
+- The engine's own Frontmatter keys (`_markshown`, `_cutlist`, `_kinded`, `_linefirst`, … 32) are declared in one list,
   `frontmatter_api::FRONTMATTER_INTERNAL_KEYS`, so their use reports no `Info:undefined`, while a key the list lacks
-  still does; `perfect_kernel_batche0` pins each.
-**Residuals.** A REVTeX name's `\footnotemark[n]` letter (row R REVNAMEMARK); llncs's ⋆ ⋆⋆ (row R LLNCSMARKS); the
+  still does; `perfect_kernel_batche0` pins each, and fails on a string constant naming a `_key` that a literal sets as
+  a keyval (`{LINE_FIRST}=true`) while no list declares it.
+**Residuals.** A REVTeX name's `\footnotemark[n]` letter (row R REVNAMEMARK); llncs's ⋆ ⋆⋆ (row R LLNCSMARKS); a
+`\maketitle` after the first `\section`, whose fallback flush placed the title unmarked and stepped nothing (row R
+MNLATE: mnras "Ann Able2 and Bob Baker3", "Text4"; we write them unmarked and "Text" 2); the
 ACM SIG classes' `\titlenote` and jasatex's `\pacs`, raw classes with no binding (row R TITLENOTELAST, JASAPACS).
 **Guards**: `perfect_kernel_batchfmmarks::{notes_are_marked_only_where_the_class_prints_marks,
 revtex_marks_follow_its_numbering}` (rows `fmmarks_mnras_title_marks_are_the_class_symbols`,
-`fmmarks_revtex42_aip_shared_thanks_letters`, `fmmarks_revtex41_aip_shared_thanks_letters`),
+`fmmarks_mnras_title_marks_follow_thefootnote_in_force`, `fmmarks_revtex42_aip_shared_thanks_letters`,
+`fmmarks_revtex41_aip_shared_thanks_letters`, `fmmarks_revtex42_aip_reprint_grid_prints_no_mark`,
+`fmmarks_revtex42_sor_lengthcheck_grid_prints_no_mark`; RED `fmmarks_mnras_late_maketitle_red`),
 `perfect_kernel_batchmarkbind::{lni_affil_sets_the_footnote_counter, lni_v1_author_is_the_kernels,
-internal_frontmatter_keys_are_declared}`, `perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral`
-(mnras's plain notes), `perfect_kernel_batche0::the_frontmatter_api_stays_perls`.
+internal_frontmatter_keys_are_declared, mnras_title_notes_step_the_counter}`, `perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral`
+(mnras's plain notes), `perfect_kernel_batche0::{the_frontmatter_api_stays_perls,
+every_internal_key_a_keyval_sets_is_declared}`.
 ---
 
 ## TeX-source fidelity family (TEXSRC)

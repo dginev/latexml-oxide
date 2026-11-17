@@ -18,6 +18,12 @@ LoadDefinitions!({
   // {\@arabic\c@footnote}`, v0.5's :89-93; 2407.04435 "1, 1, 1,2, 3", 1705.02823, 1705.08889)
   if lookup_bool("\\maketitle:redefined@class") {
     DefMacro!("\\lx@title@thefootnote", "\\@arabic\\c@footnote");
+    // (its `\thanks` LaTeX's, each stepping the counter; set back after the title only by a `\maketitle` that says so,
+    // v0.5's, article's copy (:116), not v1.7's or v2.0's (lni.cls:478-513): a body note after a v2.0 title's
+    // `\thanks` 3 is 4)
+    latexml_package::engine::latex_constructs::declare_title_footnote_counting(
+      maketitle_resets_footnotes(),
+    )?;
   }
   // (the class read raw by this binding is a raw class to K11, its title-page stores rerouted at the end of the class
   // load: lni.cls `\subtitle`; the binding's `\author`/`\affil` below stay its own)
@@ -41,3 +47,18 @@ LoadDefinitions!({
     );
   }
 });
+
+/// Whether the class's own `\maketitle`, which the lock refused (`\lx@dropped@maketitle`), sets the footnote counter back
+/// to 0 (`\setcounter{footnote}{0}`).
+fn maketitle_resets_footnotes() -> bool {
+  lookup_definition(&T_CS!("\\lx@dropped@maketitle"))
+    .ok()
+    .flatten()
+    .is_some_and(|definition| match definition.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body
+        .to_string()
+        .replace(' ', "")
+        .contains("\\setcounter{footnote}{0}"),
+      _ => false,
+    })
+}

@@ -275,14 +275,16 @@ pub(crate) const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[
   ("_share", ""),
   ("_rowshared", ""),
   // what the engine writes on a queued entry and reads where it is placed (insert.rs, place.rs, relocate.rs,
-  // `frontmatter_api::cut`, `shared_notes::FOOTNOTE_PART`, the emitter, the resolver's api.rs), and what the bindings
-  // pass (REVTeX's `_grouped`, `_unsplit`, `_zone`; aa's and elsarticle's `_zone`; llncs's `_markpiece`; jheppub's `_mark`)
+  // `frontmatter_api::cut` and `::kind`, `shared_notes::FOOTNOTE_PART`, the emitter, the resolver's api.rs), and what the
+  // bindings pass (REVTeX's `_grouped`, `_unsplit`, `_zone`; aa's and elsarticle's `_zone`; llncs's `_markpiece`;
+  // jheppub's `_mark`)
   ("_answers", ""),
   ("_cutlist", ""),
   ("_fnpart", ""),
   ("_group", ""),
   ("_grouped", ""),
   ("_kinded", ""),
+  ("_linefirst", ""),
   ("_mark", ""),
   ("_markintext", ""),
   ("_markpiece", ""),

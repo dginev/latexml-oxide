@@ -1,0 +1,27 @@
+% mechanism: mnras's `\thanks` is LaTeX's (`\footnotemark` and its text, latex.ltx:17215), so each steps the footnote
+%   counter, and its `\maketitle` (:1056-1071) sets it back to none: the notes before the first `\section` count on in
+%   the class's `\@fnsymbol` (⋆ † ‡), and that `\section` (a starred one too, :736-737) numbers them in arabic from 1
+%   (`\fixfootnotes`, :1517-1523); a later `\section` and the appendix go on counting
+%   (`latex_constructs::declare_title_footnote_counting(false)`, mnras_cls.rs)
+% witness:  review revMARKBIND (p/mn_ids.tex, p/mn_nosec.tex), MARKBINDb items 2 and 5
+% oracle:   pdflatex 0 errors; "Ann Able⋆", "Abs†.", "Pre‡.", "INTRO", "Body1 and2", "1 TWO", "More3",
+%   "APPENDIX A: APP", "App4"
+% engines:  rust MARKBIND (ff2497f5a77) = 0 errors, 0 Warnings; Ann's thanks ⋆, the abstract's note ⋆ (no step), Pre †
+% expect:   0 errors, 0 Warnings; Ann's thanks ⋆, the abstract's note †, Pre ‡, then 1, 2, 3, 4
+% status:   RED (MARKBIND) -> GREEN (MARKBINDb; perfect_kernel_batchmarkbind::mnras_title_notes_step_the_counter)
+% preload:  ar5iv.sty
+\documentclass{mnras}
+\title{A Title}
+\author[A. Able]{Ann Able\thanks{E-mail: ann@x.org}\\ Univ A}
+\begin{document}
+\maketitle
+\begin{abstract}Abs\footnote{Abs note.}.\end{abstract}
+Pre\footnote{Pre note.}.
+\section*{Intro}
+Body\footnote{Body note A.} and\footnote{Body note B.}.
+\section{Two}
+More\footnote{Body note C.}.
+\appendix
+\section{App}
+App\footnote{App note.}.
+\end{document}
