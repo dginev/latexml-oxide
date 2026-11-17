@@ -840,11 +840,11 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id1"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks ltx_note_unmarked">An unmarked note.</span></span>"##,
+      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id1"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content" style="anchor-name:--ltx-note-id5"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks ltx_note_unmarked">An unmarked note.</span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Dee Dunn</span><span id="id8" class="ltx_note ltx_note_frontmatter ltx_thanks_contribution ltx_role_thanks"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed to the theory.</span></span></span></span></span>"##,
+      r##"<span class="ltx_personname">Dee Dunn</span><span id="id8" class="ltx_note ltx_note_frontmatter ltx_thanks_contribution ltx_role_thanks"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content" style="anchor-name:--ltx-note-id8"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed to the theory.</span></span></span></span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
@@ -1230,4 +1230,37 @@ fn a_shared_notes_copies_anchor_at_the_note_alone() {
     ),
     "a one-author note names no anchor: {html}"
   );
+}
+
+/// REVCSSHL (at integration): a mark-only note in the same creator as the note its glyph names
+/// (`Alice\thanks{Corresponding author.}\footnotemark[1]`) carries a copy whose `position-anchor` names that note, so the
+/// note's content box must carry the anchor though it is no shared note; else the copy, its anchor missing, showed at its
+/// own place under the name, highlighted, on wide screens. Every `position-anchor` names an `anchor-name` of the page.
+#[test]
+fn a_copys_anchor_is_always_on_the_page() {
+  const NOTES: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="Document">
+  <title>Anchors</title>
+  <creator role="author">
+    <personname>Alice Able</personname>
+    <note class="ltx_note_frontmatter" mark="*" role="thanks" xml:id="id1" fragid="id1">Corresponding author.</note>
+    <note mark="*" role="footnotemark" xml:id="id2" fragid="id2"><tags><tag>*</tag></tags></note>
+  </creator>
+  <creator role="author">
+    <personname>Bob Baker</personname>
+  </creator>
+</document>"#;
+  let html = authors_html(NOTES).concat();
+  let styles: Vec<&str> = html
+    .split(" style=\"")
+    .skip(1)
+    .map(|rest| rest.split('"').next().unwrap())
+    .collect();
+  let named: Vec<&str> = styles.iter().filter_map(|s| s.strip_prefix("anchor-name:")).collect();
+  let wanted: Vec<&str> = styles.iter().filter_map(|s| s.strip_prefix("position-anchor:")).collect();
+  assert!(!wanted.is_empty(), "the mark-only note carries a copy naming the note: {html}");
+  for name in &wanted {
+    assert!(named.contains(name), "{name} names no anchor on the page: {html}");
+  }
 }

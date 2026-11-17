@@ -222,8 +222,12 @@
                           and not(key('f:glyph-elsewhere',substring-after($by_mark,'&#x9;')))"/>
     <xsl:choose>
       <xsl:when test="count($copies) = 1 and not($marked_elsewhere)">
+        <!-- (anchored where a mark-only note of the block carries its glyph: that mark's copy may name this note, even
+             in the same creator — `\thanks{…}\footnotemark[1]` — so the copy's position-anchor always has its anchor;
+             an unused name is inert. REVCSSHL, OD #1075) -->
         <xsl:call-template name="note">
           <xsl:with-param name="context" select="$context"/>
+          <xsl:with-param name="anchor" select="boolean(key('f:creator-mark-only',$by_mark))"/>
         </xsl:call-template>
       </xsl:when>
       <xsl:when test="generate-id() = generate-id($copies[1])">

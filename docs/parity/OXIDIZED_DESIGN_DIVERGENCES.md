@@ -20641,7 +20641,7 @@ its outer box, whose stylesheet `anchor-name: --ltx-margin-note` builds the stac
 is escaped (`f:note-anchor`). ar5iv-css (wide + `@supports (anchor-name)` block) lays a copy whose mark is hovered,
 tapped or focused over its note, at the anchor's top, left and width, in the highlight colour, `position: fixed` (laid
 out last, so a note later in the page than its copies is an acceptable anchor too: a legend note on a later name,
-2012.13912, 2606.17809); a copy with no anchor stays hidden, and nothing changes on narrow screens or without anchor
+2012.13912, 2606.17809); a copy that names no anchor stays hidden (and every copy that names one finds it: a plain note a mark-only note of the block shares the glyph of carries its anchor too, `a_copys_anchor_is_always_on_the_page`, REVCSSHL), and nothing changes on narrow screens or without anchor
 positioning. Copies keep `aria-hidden` and no ids; LaTeXML.css needs nothing (its classic pop-ups ignore the styles).
 Checked in Chrome at 1800 px (also scrolled) and 375 px on every mark of 15 papers with shared notes (1706.03762,
 2407.07614, 2606.00446 among them). **Guards**:
