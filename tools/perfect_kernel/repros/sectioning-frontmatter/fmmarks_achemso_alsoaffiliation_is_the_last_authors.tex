@@ -1,0 +1,24 @@
+% mechanism: achemso `\alsoaffiliation` adds an affiliation to the last author, a repeated text the earlier one
+% witness:  the class rule (achemso.cls:428-458); 2306.05209 (Bert\'e, Maier), 2605.10968
+% oracle:   pdflatex 0 errors; "Ann Able†,‡ and Bob Baker∗,‡,¶", "†Univ A", "‡Univ B", "¶Univ C", "E-mail: bob@x.org"
+% engines:  rust int/frontmatter 3b420685f89 = 0 errors, 1 Warning; XML Ann Able / Bob Baker | email=bob@x.org;
+%   ACHEMSO = 0 errors, 1 Warning; XML Ann Able | affiliation=Univ A ; affiliation=Univ B / Bob Baker |
+%   affiliation=Univ B ; affiliation=Univ C ; email=bob@x.org
+% expect:   0 errors, 1 Warning; XML Ann Able | affiliation=Univ A ; affiliation=Univ B / Bob Baker |
+%   affiliation=Univ B ; affiliation=Univ C ; email=bob@x.org; HTML Ann Able / Bob Baker (the guard's XML and
+%   HTML lines)
+% status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\affiliation{Univ A}
+\alsoaffiliation{Univ B}
+\author{Bob Baker}
+\affiliation{Univ B}
+\alsoaffiliation[C]{Univ C}
+\email{bob@x.org}
+\title{Title}
+\begin{document}
+Text.
+\end{document}

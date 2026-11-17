@@ -1,0 +1,34 @@
+% mechanism: achemso: a piece no author holds at `\begin{document}` is an unlinked note, as the class lists it with a
+%   mark no name carries: an `\affiliation` right after another that no later author repeats (Univ C), a replaced
+%   `\altaffiliation` (Lab X); one a later author repeats is that author's alone (Univ B), no note
+% witness:  2512.17659 (Muthyala's second `\affiliation`, Sorourifar's later), 2510.00865 (Nakazawa's second), 2107.00078
+%   (Majumdar's second, no one's), 1910.14165 (a replaced `\altaffiliation`)
+% oracle:   pdflatex 0 errors; "Ann Able,†,∥ Bob Baker,∗,‡ and Cy Cole†", "†Univ A", "‡Univ B", "¶Univ C", "§Lab X",
+%   "∥Lab Y", "E-mail: bob@x.org"
+% engines:  rust int/frontmatter 3b420685f89 = 0 errors, 1 Warning; XML Ann Able / Bob Baker | email=bob@x.org / Cy
+%   Cole; ACHEMSO = 0 errors, 1 Warning; XML Ann Able | affiliation=Univ A ; altaffiliation=Lab Y / Bob Baker
+%   | email=bob@x.org ; affiliation=Univ B / Cy Cole | affiliation=Univ A
+% expect:   0 errors, 1 Warning; XML Ann Able | affiliation=Univ A ; altaffiliation=Lab Y / Bob Baker |
+%   email=bob@x.org ; affiliation=Univ B / Cy Cole | affiliation=Univ A; HTML Ann Able / Bob Baker / Cy Cole
+%   (the guard's XML and HTML lines)
+%   and the notes outside the creators affiliation=Univ C, altaffiliation=Lab X
+%   (perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes)
+% status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\affiliation{Univ A}
+\affiliation{Univ B}
+\altaffiliation{Lab X}
+\altaffiliation{Lab Y}
+\author{Bob Baker}
+\email{bob@x.org}
+\affiliation{Univ B}
+\author{Cy Cole}
+\affiliation{Univ A}
+\affiliation{Univ C}
+\title{Title}
+\begin{document}
+Text.
+\end{document}

@@ -4107,6 +4107,158 @@ const CLASS: &[Row] = &[
     ],
     page_moves: r#"row R PRESBX/copywrap (∗, † shown)"#,
   },
+  Row {
+    repro:      "fmmarks_achemso_affiliation_reaches_the_waiting_authors",
+    tex:        repro!("fmmarks_achemso_affiliation_reaches_the_waiting_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A"#,
+      r#"Bob Baker | email=bob@x.org ; affiliation=Univ A"#,
+      r#"Cy Cole | affiliation=Univ B, Town"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_repeated_affiliation_text_is_one_affiliation",
+    tex:        repro!("fmmarks_achemso_repeated_affiliation_text_is_one_affiliation"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ B"#,
+      r#"Cy Cole | affiliation=Univ A ; email=cy@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_alsoaffiliation_is_the_last_authors",
+    tex:        repro!("fmmarks_achemso_alsoaffiliation_is_the_last_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; affiliation=Univ B"#,
+      r#"Bob Baker | affiliation=Univ B ; affiliation=Univ C ; email=bob@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_altaffiliation_is_the_last_authors",
+    tex:        repro!("fmmarks_achemso_altaffiliation_is_the_last_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; altaffiliation=Current address: Lab C"#,
+      r#"Bob Baker | email=bob@x.org ; affiliation=Univ A"#,
+      r#"Cy Cole | affiliation=Univ B ; altaffiliation=Current address: Lab D"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_email_phone_fax_are_the_last_authors",
+    tex:        repro!("fmmarks_achemso_email_phone_fax_are_the_last_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | email=ann_able@x.org ; phone=+1 555 0100 ; fax=+1 555 0101 ; affiliation=Univ A"#,
+      r#"Bob Baker | email=bob@x.org ; phone=+1 555 0200 ; affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_affiliation_after_affiliation_reaches_no_author",
+    tex:        repro!("fmmarks_achemso_affiliation_after_affiliation_reaches_no_author"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+      r#"Cy Cole | email=cy@x.org ; affiliation=Univ C"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_new_alsoaffiliation_is_the_waiting_authors",
+    tex:        repro!("fmmarks_achemso_new_alsoaffiliation_is_the_waiting_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ B"#,
+      r#"Bob Baker | affiliation=Univ B"#,
+      r#"Cy Cole | affiliation=Univ A"#,
+      r#"Dan Dorn | email=dan@x.org ; affiliation=Univ C"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#, r#"Dan Dorn"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_pieces_before_any_author_warn",
+    tex:        repro!("fmmarks_achemso_pieces_before_any_author_warn"),
+    warnings:   3,
+    creators:   &[r#"Ann Able | email=ann@x.org ; affiliation=Univ A"#],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_witness_run_of_two_takes_a_repeated_affiliation",
+    tex:        repro!("fmmarks_achemso_witness_run_of_two_takes_a_repeated_affiliation"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | email=ann@x.org ; affiliation=Univ A, Town ; affiliation=Inst Q, Town"#,
+      r#"Bob Baker | affiliation=Univ A, Town ; affiliation=Inst Q, Town ; affiliation=Inst K, Town"#,
+      r#"Cy Cole | affiliation=Inst Q, Town"#,
+      r#"Dan Dorn | affiliation=Inst Q, Town"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#, r#"Dan Dorn"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_pieces_no_author_holds_stay_unlinked",
+    tex:        repro!("fmmarks_achemso_pieces_no_author_holds_stay_unlinked"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; altaffiliation=Lab Y"#,
+      r#"Bob Baker | email=bob@x.org ; affiliation=Univ B"#,
+      r#"Cy Cole | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_email_list_addresses_go_to_the_authors_they_spell",
+    tex:        repro!("fmmarks_achemso_email_list_addresses_go_to_the_authors_they_spell"),
+    warnings:   2,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; email=ann.able@x.org"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+      r#"Cy Cole | email=cy.cole@x.org ; affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_alsoaffiliation_after_a_two_name_author_red",
+    tex:        repro!("fmmarks_achemso_alsoaffiliation_after_a_two_name_author_red"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; affiliation=Univ C"#,
+      r#"Bob Baker | affiliation=Univ A ; affiliation=Univ C"#,
+      r#"Cy Cole | email=cy@x.org ; affiliation=Univ B"#,
+    ],
+    moves:      r#"row R ACHEMSO-CALLS (the API's annotate counts creators, not author calls: an \alsoaffiliation after a two-name \author reaches its last name only)"#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
 ];
 /// Class-printed marks against none: a note carries a mark only where its class prints one (IEEEtran and ieeeconf none,
 /// 2606.00397, 1510.02728), a symbol opening its text that is the text's own stays text (review revSHMARK S2), and
@@ -4115,8 +4267,63 @@ const CLASS: &[Row] = &[
 /// (revMARKSAFE B1, ADVGEN I-3), a document's wrapper of the class's `\maketitle` changes nothing (revMARKSAFEb B1), and
 /// an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1); a `\maketitle` that makes a footnote or
 /// sets the footnote counter before its title, or one a package's `\let` restores, has unknown marks (revPRESBXb BL2, BL3).
+/// achemso's affiliations, e-mails, phones, faxes and alternative affiliations are under the authors the class numbers
+/// them for, its generated marks no ink of ours (ACHEMSO, OXIDIZED_DESIGN_DIVERGENCES #1065; 2605.10968, 2306.05209).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
+/// achemso's pieces no author holds at `\begin{document}` (a CLASS row asserts only the creators): each is one
+/// document-level note, as the class lists it with a mark no name carries; one a later author repeats is no note, and
+/// one before any `\author` is the class's Warning and kept (ACHEMSO, OXIDIZED_DESIGN_DIVERGENCES #1065; 2512.17659,
+/// 2510.00865, 2107.00078, 1910.14165).
+#[test]
+fn achemso_pieces_no_author_holds_are_unlinked_notes() {
+  for (tex, warnings, notes) in [
+    (
+      repro!("fmmarks_achemso_pieces_no_author_holds_stay_unlinked"),
+      1,
+      &["affiliation=Univ C", "altaffiliation=Lab X"][..],
+    ),
+    (
+      repro!("fmmarks_achemso_affiliation_after_affiliation_reaches_no_author"),
+      1,
+      &["affiliation=Univ B"][..],
+    ),
+    (
+      repro!("fmmarks_achemso_pieces_before_any_author_warn"),
+      3,
+      &["affiliation=Univ Z", "email=z@x.org"][..],
+    ),
+  ] {
+    let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+    // (the notes outside every creator, `role=text` in document order)
+    let mut outside = xml.clone();
+    while let (Some(from), Some(to)) = (outside.find("<creator "), outside.find("</creator>")) {
+      outside.replace_range(from..to + "</creator>".len(), "");
+    }
+    let found: Vec<String> = outside
+      .match_indices("<note ")
+      .map(|(at, _)| {
+        let tag_end = at + outside[at..].find('>').expect("start tag");
+        let close = at + outside[at..].find("</note>").expect("closed note");
+        format!(
+          "{}={}",
+          attribute(&outside[at..tag_end], "role"),
+          text(&outside[tag_end + 1..close])
+        )
+      })
+      .collect();
+    assert_eq!(
+      (error_count(&log), warning_count(&log), found),
+      (
+        0,
+        warnings,
+        notes.iter().map(ToString::to_string).collect::<Vec<_>>()
+      ),
+      "{xml}"
+    );
+  }
+}
+
 /// The known gaps of [`notes_are_marked_only_where_the_class_prints_marks`].
 #[test]
 #[ignore = "RED: the row R lines its rows name"]

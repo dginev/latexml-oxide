@@ -1,0 +1,28 @@
+% mechanism: achemso `\email`, `\phone`, `\fax` are the last author's; the class lists them after the affiliations
+% witness:  the class rule (achemso.cls:513-539, :921-990); 1303.7348, 1507.07021, 2510.00865
+% oracle:   pdflatex 0 errors; "Ann Able∗ and Bob Baker∗", "Univ A", "E-mail: ann able@x.org; bob@x.org", "Phone: +1 555 0100; +1 555 0200.
+%   Fax: +1 555 0101"
+% engines:  rust int/frontmatter 3b420685f89 = 0 errors, 1 Warning; XML Ann Able | email=ann_able@x.org / Bob Baker |
+%   email=bob@x.org; ACHEMSO = 0 errors, 1 Warning; XML Ann Able | email=ann_able@x.org ; phone=+1 555 0100 ;
+%   fax=+1 555 0101 ; affiliation=Univ A / Bob Baker | email=bob@x.org ; phone=+1 555 0200 ; affiliation=Univ
+%   A
+% expect:   0 errors, 1 Warning; XML Ann Able | email=ann_able@x.org ; phone=+1 555 0100 ; fax=+1 555 0101 ;
+%   affiliation=Univ A / Bob Baker | email=bob@x.org ; phone=+1 555 0200 ; affiliation=Univ A; HTML Ann Able
+%   / Bob Baker (the guard's XML and HTML lines)
+% status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\email{ann_able@x.org}
+\phone{+1 555 0100}
+\fax{+1 555 0101}
+\affiliation{Univ A}
+\author{Bob Baker}
+\email{bob@x.org}
+\phone{+1 555 0200}
+\affiliation{Univ A}
+\title{Title}
+\begin{document}
+Text.
+\end{document}

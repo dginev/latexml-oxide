@@ -1,0 +1,25 @@
+% mechanism: achemso `\affiliation` is every author's since the class last numbered an affiliation; its
+%   `[short]` form is not printed
+% witness:  the class rule (achemso.cls:336-343, :359-379); 2605.10968's `\author{Raymond Vermeulen}\author{Henri Ervasti}
+%   \affiliation{QuTech…}`
+% oracle:   pdflatex 0 errors; "Ann Able,† Bob Baker,∗,† and Cy Cole‡", "†Univ A", "‡Univ B, Town", "E-mail: bob@x.org"
+% engines:  rust int/frontmatter 3b420685f89 = 0 errors, 1 Warning; XML Ann Able / Bob Baker | email=bob@x.org / Cy
+%   Cole; ACHEMSO = 0 errors, 1 Warning; XML Ann Able | affiliation=Univ A / Bob Baker | email=bob@x.org ;
+%   affiliation=Univ A / Cy Cole | affiliation=Univ B, Town
+% expect:   0 errors, 1 Warning; XML Ann Able | affiliation=Univ A / Bob Baker | email=bob@x.org ; affiliation=Univ A
+%   / Cy Cole | affiliation=Univ B, Town; HTML Ann Able / Bob Baker / Cy Cole (the guard's XML and HTML
+%   lines)
+% status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\author{Bob Baker}
+\email{bob@x.org}
+\affiliation{Univ A}
+\author{Cy Cole}
+\affiliation[B]{Univ B, Town}
+\title{Title}
+\begin{document}
+Text.
+\end{document}
