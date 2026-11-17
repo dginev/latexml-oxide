@@ -1,0 +1,18 @@
+% mechanism: a symbol typed at the start of a thanks note no name prints is the note's text, not its mark
+%   (`insert::mark_creator_notes`: the body's leading mark is taken only where the creator shows it, its personname's
+%   superscripts, its mark notes or its requests — `name_marks`)
+% witness: 2204.08920 (INTERSPEECH2022.sty:27-28, :184 `\def\thanks#1{\gdef\thefootnote{}\@@savethanks{#1}}`, its
+%   `\maketitle` `\def\thefootnote{}`); INTERSPEECH2022.sty beside it is that style's title code, the copy read after
+%   the stand-in binding
+% oracle:  pdflatex 0 errors: "Alice One, Bob Two" with no mark; the footnote "∗ We will release the code."
+% engines: perl: no creator. rust 139d1d2fa08: Bob's note mark="∗" (no name prints it), its "∗" taken from the text
+% expect:  0 errors 0 Warnings; Alice One; Bob Two thanks[]=∗ We will release the code.
+% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::a_symbol_no_name_prints_stays_the_notes_text)
+% preload: ar5iv.sty
+\documentclass[a4paper]{article}
+\usepackage{INTERSPEECH2022}
+\title{T}
+\name{Alice One, Bob Two \thanks{$^*$ We will release the code.}}
+\address{Some University}
+\email{a@b.c}
+\begin{document}\maketitle\end{document}

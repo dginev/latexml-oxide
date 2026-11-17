@@ -1030,6 +1030,8 @@ fn block_names(
       *printed_at.entry(e.span).or_default() += 1;
     }
     type Taken = (Vec<Token>, (usize, usize), Vec<(usize, usize)>, Vec<usize>);
+    // (what the names before wrote, their runs and the pieces past them: a later name's run takes none of it again)
+    let mut written_before: Vec<(usize, usize)> = Vec::new();
     let mut name_tokens = |from: usize, to: usize| -> Option<Taken> {
       // (several events of one span: a macro the reading did not unfold printed them, one with parameters or a class's
       // (`reading::unfold_held_names`); `\\author{\\authorBlock}`, 2604.09547, is unfolded since AUT1)
@@ -1114,7 +1116,7 @@ fn block_names(
         |e: &Event| matches!(e.kind, EventKind::Sep(_)) && e.role.as_deref() == Some("math");
       let past_note = |e: &&Event| beside(e) || e.kind == EventKind::Note || math_sep(e);
       // (and past the marks and notes the mark ledger gives this name past spacing, up to those it gives the next name
-      // (`resolver::mark_ledger`: the nearer name by the glue printed, a tie the next's — DG rulings 2026-11-16): Perl's
+      // (`resolver::mark_ledger`: the name before, save a line's start or the block's edge proof — DG 2026-11-17): Perl's
       // personname keeps them — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali Farhadi \ \footnotemark[3]`,
       // 1911.13299; `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`, 2412.20504. One on
       // the line a `\\` opens is no name's; one in a formula is written with the formula whole, a note in it twice —
@@ -1152,10 +1154,25 @@ fn block_names(
         .collect();
       let first_after = next_pieces.first().copied().unwrap_or(read.len());
       // (cut from this name's run where its balance took them: `{Ann Able \qquad \footnotemark[2]} \ \textsc{Bob Baker}`)
-      let cuts: Vec<(usize, usize)> = next_pieces
+      let mut cuts: Vec<(usize, usize)> = next_pieces
         .iter()
         .filter_map(|&at| mark_run(&read[at]))
         .collect();
+      // (and what the name before wrote inside this name's span: a piece glued to it, `Ann Able \quad
+      // \footnotemark[2]Bob Baker`, Ann's by the ledger's default (DG 2026-11-17), the span running into Bob's)
+      if let Some((s, t)) = found[from]
+        .1
+        .span
+        .zip(found[to].1.span)
+        .and_then(|(a, b)| Some((at(a.0)?, at(b.1)?)))
+      {
+        cuts.extend(
+          written_before
+            .iter()
+            .map(|&(cs, ct)| (cs.max(s), ct.min(t)))
+            .filter(|&(cs, ct)| cs < ct),
+        );
+      }
       let glued_end = (after_name..first_after)
         .find(|&i| !past_note(&&read[i]))
         .unwrap_or(first_after);
@@ -1413,6 +1430,8 @@ fn block_names(
       } else {
         out.extend(apart);
       }
+      written_before.push((run_from, run_to.max(written_to)));
+      written_before.extend(apart_runs.iter().copied());
       Some((out, (run_from, run_to), apart_runs, stepped))
     };
     // (each name the Name events from the last one on spell, joined)

@@ -1,0 +1,12 @@
+% mechanism: a mark character in text inside a bracket the name's run opened is the bracket's ink, as a comma there is
+%   (`events::lexer::ink`); the ")" after it stays the name's
+% witness: 1107.2497 (revtex4, `\author{H. Chen (<GB2312 陈欢>), …}` read without the CJK package as "³»¶": its ¶ a mark)
+% oracle:  pdflatex 0 errors: "H. Chen (x¶), M. Baldo"
+% engines: perl: "H. Chen (x¶)", "M. Baldo". rust 139d1d2fa08: "H. Chen (x" with a mark-only note ¶, the ")" lost
+% expect:  0 errors 0 Warnings; H. Chen (x¶); M. Baldo
+% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::a_mark_character_inside_a_names_bracket_is_its_text)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{H. Chen (x\P), M. Baldo}
+\begin{document}\maketitle\end{document}
