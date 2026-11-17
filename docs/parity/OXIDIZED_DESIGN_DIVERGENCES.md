@@ -20648,14 +20648,17 @@ print them elsewhere: tac's `\address`/`\eaddress` (tac.cls:611-614 `\AtEndDocum
 `\affiliation` (a `\footnotetext[0]`, sagej.cls:266-268; 1910.13936), elsarticle's `\emailauthor`/`\urlauthor` (the first
 page's footnote, elsarticle.cls:211-235), ejpecp's `\EMAIL` (in the authors' footnotes; 1406.5876, 1904.07135), wiley's
 `corremail` (beside the abstract, wiley-article.cls:416-433; 1808.01384), ieeetaes's `\authoraddress` (a first-page
-footnote). spconf's `\email` note (1806.02523, 2001.10603, 2103.15467) and Interspeech's fallback e-mail note
-(2603.01467, 2405.13379) are declared with the SPCONF rewrite of those bindings. The XML's elements and text are unchanged, the generated `xml:id`s follow the new document order.
+footnote). spconf's fallback `\address` note (spconf.sty:161-166 sets `\@name \\ \@address` in the title tabular;
+1806.02523, 2001.10603, 2103.15467, whose e-mails sit inside `\address`: spconf.sty has no `\email`) and the e-mail note of
+INTERSPEECH20xx.sty (:164) and Interspeech.cls (:376; 2405.13379, 2603.01467) are declared with the SPCONF rewrite of
+those bindings — the address with the e-mail, as a block's notes printed together are declared together (REVBLOCKPLACEb). The XML's elements and text are unchanged, the generated `xml:id`s follow the new document order.
 Offered to Perl as a patch. **Guards**: `cluster_package_guards::perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names`
 (repros `sectioning-frontmatter/block_contact_note_{before_abstract,without_creators}`) and
 `::an_undeclared_note_keeps_perls_place` (`tac_block_note_keeps_its_place`); repinned, the PDF's order:
 `perfect_kernel_batch64qa::mdpi_history_is_frontmatter`, `perfect_kernel_batch67z::oup_authoring_template_class_commands`,
 `perfect_kernel_batch92e::mdpi_corres_label_only_note_is_kept` (the address note first); the pass classed `Place` in
 `perfect_kernel_batche0::PASSES_AFTER_THE_EMITTER`.
+
 ### 1075. A shared note's other marks highlight its margin note on wide screens (DG 2026-11-17; CSSHL)
 
 **Perl.** No shared-note copies (#1052 is ours): each author's copy of a note is its own pop-up.
