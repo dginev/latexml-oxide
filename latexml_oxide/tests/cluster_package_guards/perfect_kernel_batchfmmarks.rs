@@ -1456,7 +1456,43 @@ const LINK: &[Row] = &[
     ],
     page_moves: r#"row R AUTHBLKSTAR (authblk keeps a typed ∗ in the name, `\lx@frontmatter@keepsup`, beside the copy of the note it requests: two marks)"#,
   },
-  // (a typed ∗ whose legend is the `\date` links to no `\thanks`: the fold's legend exclusion is the whole document's)
+  // (a typed ∗ whose legend is the `\date` links to no `\thanks`: the fold's legend exclusion is the title page's)
+  Row {
+    repro:      "author_typed_star_legend_in_a_title_tabular_links_nothing",
+    tex:        repro!("author_typed_star_legend_in_a_title_tabular_links_nothing"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker ; footnotemark[*]="#,
+      r#"Cy Cole ; thanks[*]=Corresponding author: cy@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; * plain"#,
+      r#"Cy Cole ; * plain"#,
+      r#"margin: Corresponding author: cy@x.org"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "author_typed_star_legend_in_a_date_thanks_links_nothing",
+    tex:        repro!("author_typed_star_legend_in_a_date_thanks_links_nothing"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker ; footnotemark[*]="#,
+      r#"Cy Cole ; thanks[*]=Corresponding author, cy@x.org."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; * plain"#,
+      r#"Cy Cole ; * plain"#,
+      r#"margin: Corresponding author, cy@x.org."#,
+    ],
+    page_moves: r#""#,
+  },
   Row {
     repro:      "author_typed_star_legend_in_the_date_links_nothing",
     tex:        repro!("author_typed_star_legend_in_the_date_links_nothing"),

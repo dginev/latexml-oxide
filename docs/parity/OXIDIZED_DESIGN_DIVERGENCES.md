@@ -20376,7 +20376,7 @@ typing its symbol (Bob's and Cy's affiliation "Equal contribution" in the ADVR2 
 **Rust.** `observer/resolver/post.rs` `answer_pending`: for a footnote-led or symbol-labelled entry, a creator whose
 note's mark (`MarkBy::Note`) requests the label owns it when it shows no request of its own and no name inks the symbol
 (`NameMark::origin`, `MarkOrigin::Inked`); a creator whose note the entry was read from (the entry's source span inside
-the note mark's, same block) owns it always.
+the note mark's, same block) owns it whenever that note prints the legend's symbol (a `\thanks` printing another counter glyph is not yet kept by its author: revCONNFIXb b6, row R OWNLEGGLYPH).
 **Witnesses.** 1608.06509 (the note-mark fallback), 2406.01694, 1904.09324 ("Yinhan Liu∗", his `\thanks` the
 equal-contribution legend), 2204.06136 (ieeeconf: Krstic's `\thanks`, the ∗ legend and the authors' e-mails); ADVR2
 finding 4 (synthetic).

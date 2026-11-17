@@ -163,7 +163,8 @@
            match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))"/>
   <!-- The same notes by block and mark alone, and the linkable mark-only notes (a symbol, or Perl's tagged leftover),
-       ∗ folded to *: a mark-only note links to the one note its mark names (OD #1052, R22; 1705.05427, 1903.10478). -->
+       ∗ folded to *: a mark-only note links to the one note its mark names (OD #1052, R22; 1705.05427, 1903.10478,
+       1610.06031, 0801.1438, 2406.11149). -->
   <xsl:key name="f:creator-note-by-mark"
            match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
@@ -179,7 +180,8 @@
                   translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
                             '&#x2217;','*'))"/>
   <!-- A glyph the title page prints outside the author blocks (no section, float or table holds it; ∗ folded to *): a
-       note's mark (`$\ast$` too), the symbol a note, the date, a title or a paragraph opens with; a mark of it links
+       note's mark (`$\ast$` too), the symbol a note, a publication note, the date, a title, a paragraph or a table cell
+       opens with (revCONNFIXb s4, b3); a mark of it links
        nowhere (OD #1052; revCONNFIX p1, p3-p5, q4, q5; a body footnote or a table's `*` line not, 2008.06630, 2406.07029). -->
   <xsl:key name="f:glyph-elsewhere"
            match="ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part
@@ -192,7 +194,8 @@
                                    or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
            use="'*'"/>
   <xsl:key name="f:glyph-elsewhere"
-           match="*[self::ltx:note or self::ltx:date or self::ltx:title or self::ltx:subtitle or self::ltx:p]
+           match="*[self::ltx:note or self::ltx:pubnote or self::ltx:date or self::ltx:title or self::ltx:subtitle or self::ltx:p
+                     or self::ltx:td]
                    [not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part
                                    or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index
                                    or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
