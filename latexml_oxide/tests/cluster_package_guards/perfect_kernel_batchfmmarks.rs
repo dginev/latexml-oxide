@@ -3195,6 +3195,96 @@ const CLASS: &[Row] = &[
     page_moves: r#"row R LLNCSINSTTWICE (Lab A's mark ⋆⋆⋆)"#,
   },
   Row {
+    repro:      "fmmarks_llncs_replaced_author_steps_red",
+    tex:        repro!("fmmarks_llncs_replaced_author_steps_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[⋆]=Ann note. | affiliation=Lab A"#,
+      r#"Bob Baker ; thanks[⋆⋆]=Bob note. | affiliation=Lab A"#,
+    ],
+    moves:      r#"row R AUTHRESET (the reading's rehearsal steps the replaced `\author`'s notes; the binding withdraws its marks, the names' thanks unmarked; LLNCSb wrote ⋆⋆ ⋆⋆⋆)"#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_llncs_replaced_author_mark_red",
+    tex:        repro!("fmmarks_llncs_replaced_author_mark_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[⋆]=Ann note. | affiliation=Lab A"#,
+      r#"Bob Baker ; thanks[⋆⋆]=Bob note. | affiliation=Lab A"#,
+    ],
+    moves:      r#"row R AUTHRESET (as fmmarks_llncs_replaced_author_steps_red, two steps carried; LLNCSb wrote ⋆⋆⋆ †)"#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_article_replaced_author_steps_red",
+    tex:        repro!("fmmarks_article_replaced_author_steps_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Ann note."#,
+      r#"Bob Baker ; thanks[†]=Bob note."#,
+    ],
+    moves:      r#"row R AUTHRESET (the reading's rehearsal steps the replaced `\author`'s notes: ‡ § written)"#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_llncs_ifdefined_names_keep_marks",
+    tex:        repro!("fmmarks_llncs_ifdefined_names_keep_marks"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able ; thanks[⋆]=Ann note. | affiliation=Lab A"#,
+      r#"Bob Baker ; thanks[⋆⋆]=Bob note. | affiliation=Lab A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_llncs_ifx_names_keep_marks",
+    tex:        repro!("fmmarks_llncs_ifx_names_keep_marks"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able ; thanks[⋆]=Ann note. | affiliation=Lab A"#,
+      r#"Bob Baker ; thanks[⋆⋆]=Bob note. | affiliation=Lab A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_llncs_names_macro_defined_later",
+    tex:        repro!("fmmarks_llncs_names_macro_defined_later"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[⋆]=Ann note. | affiliation=Lab A"#,
+      r#"Bob Baker ; footnotemark[c]= ; thanks[⋆⋆]=Bob note. | affiliation=Lab A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
+      r#"Bob Baker ; c plain | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
     repro:      "fmmarks_llncs_title_note_counts_first",
     tex:        repro!("fmmarks_llncs_title_note_counts_first"),
     warnings:   0,

@@ -107,27 +107,29 @@ LoadDefinitions!({
   // "A Title⋆", "Ann Able1⋆⋆"; :932, latex.ltx `\thanks`. After the block it sets it to `\fnnstart` (:1003), the number
   // of institutes `\institutename` counted when two or more, else 0 (:870-886, `\lx@llncs@institute@dispatch`): under
   // three institutes 1005.4552's body notes are 4 to 15. Only as the document's class, whose `\maketitle` this is)
-  // `\lx@llncs@title@marks{author|subtitle}{0|1}`: whether `\author`, or `\subtitle`, steps the counter where the
-  // rehearsal of the title block cannot count it (below); either one withdraws the marks, the names' then unknown
-  // (`lx_title_footnote_own_marks`: no glyph, a lost one counted), not shifted
-  DefPrimitive!("\\lx@llncs@title@marks{}{}", sub[(part, steps)] {
-    let hook = T_CS!(engine::latex_constructs::TITLE_THEFOOTNOTE);
-    assign_value(&s!("lx_llncs_{}_steps", part.to_string()), steps.to_string() == "1", Some(Scope::Global));
-    let declared = !lookup_bool("lx_llncs_author_steps") && !lookup_bool("lx_llncs_subtitle_steps");
-    assign_value("lx_title_footnote_own_marks", !declared, Some(Scope::Global));
-    if declared {
-      def_macro(hook, None, TokenizeInternal!(r"\@fnsymbol\c@footnote"), Some(ExpandableOptions {
-        scope: Some(Scope::Global),
-        ..Default::default()
-      }))?;
-    } else {
-      let_i(&hook, &T_CS!("\\@undefined"), Some(Scope::Global));
+  // `\lx@llncs@title@scan`, where `\maketitle` sets the block (`\lx@maketitle@begin`), the document's macros defined as
+  // pdflatex reads them there (one defined after `\author`): the marks are withdrawn where the counter steps where the
+  // block's rehearsal cannot count it — the last `\author`'s names, `\@maketitle`'s counting pass (`thanks` gobbled);
+  // a replaced `\author`'s, whose notes the rehearsal still steps (pdflatex "Ann⋆ Bob⋆⋆", ours ⋆⋆ ⋆⋆⋆; row R AUTHRESET);
+  // the last `\subtitle`'s (below). Withdrawn, the names' marks are unknown (`lx_title_footnote_own_marks`: no glyph, a
+  // lost one counted), not shifted
+  DefPrimitive!("\\lx@llncs@title@scan", {
+    let mut steps = false;
+    for (key, thanks_gobbled) in [
+      ("lx_llncs_author_names", true),
+      ("lx_llncs_author_replaced", false),
+      ("lx_llncs_subtitle", false),
+    ] {
+      if let Some(tokens) = lookup_tokens(key) {
+        steps = steps || steps_footnotes(&tokens, thanks_gobbled)?;
+        assign_value(key, Stored::None, Some(Scope::Global));
+      }
     }
-    assign_value("lx_title_counts_footnotes", declared, Some(Scope::Global));
+    declare_title_marks(!steps)?;
   });
   if is_document_class("llncs") {
-    Digest!("\\lx@llncs@title@marks{author}{0}")?;
-    AddToMacro!("\\lx@maketitle@begin", "\\setcounter{footnote}{0}");
+    declare_title_marks(true)?;
+    AddToMacro!("\\lx@maketitle@begin", "\\lx@llncs@title@scan\\setcounter{footnote}{0}");
     // (a copy the paper ships from before `\fnnstart` sets 0 there: v2.4-v2.10, 5 of 592 copies sampled; 1508.06013's
     // v2.6, its body notes from 1)
     if crate::shipped_class::shipped_class_text("llncs")?
@@ -144,18 +146,12 @@ LoadDefinitions!({
   // llncs.cls:862, :915 `\def\subtitle#1{\gdef\@subtitle{#1}}`: the subtitle a paper's own title code tests
   // (2112.05140, 2208.01633 `\if!\@subtitle!`). `\@maketitle` prints it after the title, before the names (:1023-1027),
   // so a note in it steps the counter ahead of theirs ("Sub⋆", "Ann Able⋆⋆"), which the title block's rehearsal does not
-  // count: the marks are withdrawn for it (`\lx@llncs@title@marks`; 1307.2669's subtitle `\thanks`)
+  // count: the marks are withdrawn for it (`\lx@llncs@title@scan`; 1307.2669's subtitle `\thanks`)
   DefMacro!("\\subtitle{}", sub[(body)] {
-    let mut out = if is_document_class("llncs") {
-      let steps = if steps_footnotes(&body, false)? { "1" } else { "0" };
-      Invocation!(T_CS!("\\lx@llncs@title@marks"), vec![
-        Some(TokenizeInternal!("subtitle")),
-        Some(Tokens!(T_OTHER!(steps))),
-      ]).unlist()
-    } else {
-      Vec::new()
-    };
-    out.extend([T_CS!("\\gdef"), T_CS!("\\@subtitle"), T_BEGIN!()]);
+    if is_document_class("llncs") {
+      assign_value("lx_llncs_subtitle", Stored::Tokens(body.clone()), Some(Scope::Global));
+    }
+    let mut out = vec![T_CS!("\\gdef"), T_CS!("\\@subtitle"), T_BEGIN!()];
     out.extend(body.unlist_ref().iter().copied());
     out.push(T_END!());
     out.extend(Invocation!(T_CS!("\\lx@add@subtitle"), vec![None, Some(body)]).unlist());
@@ -205,17 +201,17 @@ LoadDefinitions!({
     // before printing it, so a step of the footnote counter there runs twice and shifts the names' marks: pdflatex
     // "Ann Able⋆⋆ and Bob Baker⋆⋆⋆" for `Ann Able\thanks{…} \and Bob Baker\protect\footnotemark`, "Ann Able, Bob Baker⋆ ⋆"
     // for cr7c_split_corresponding_left_address's `\addtocounter{footnote}{-1}`: the title marks withdrawn there, none
-    // written for a `\thanks` or a mark)
-    let mut out = if is_document_class("llncs") {
-      let steps = if steps_footnotes(&names, true)? { "1" } else { "0" };
-      Invocation!(T_CS!("\\lx@llncs@title@marks"), vec![
-        Some(TokenizeInternal!("author")),
-        Some(Tokens!(T_OTHER!(steps))),
-      ]).unlist()
-    } else {
-      Vec::new()
-    };
-    out.extend(mouth::tokenize_internal("\\lx@clear@creators[role=author]").unlist());
+    // written for a `\thanks` or a mark, `\lx@llncs@title@scan`; the names it replaces are read there too)
+    if is_document_class("llncs") {
+      if let Some(before) = lookup_tokens("lx_llncs_author_names") {
+        let mut replaced = lookup_tokens("lx_llncs_author_replaced").unwrap_or_default().unlist();
+        replaced.push(T_CS!("\\relax"));
+        replaced.extend(before.unlist());
+        assign_value("lx_llncs_author_replaced", Stored::Tokens(Tokens::new(replaced)), Some(Scope::Global));
+      }
+      assign_value("lx_llncs_author_names", Stored::Tokens(names.clone()), Some(Scope::Global));
+    }
+    let mut out = mouth::tokenize_internal("\\lx@clear@creators[role=author]").unlist();
     // (a list whose authors carry `\inst` marks is split at its `\and`s and `\\`s, each piece a block, as before:
     // `Guang Yang\inst{1}\and \\ Binwei Yang\inst{2}`, 1902.08498 — cut first at the kernel's `\and` by meaning, a
     // macro holding only the separator among them, Option C P2-3, OXIDIZED_DESIGN_DIVERGENCES #995. Not yet one block
@@ -305,15 +301,13 @@ LoadDefinitions!({
     // shape (a): one `labelseq` contact per piece, numbered in order as `\institutename`'s `\and` numbers them — one
     // piece too where an `\and` the cut leaves whole stands inside a group, `\institute{{\small Univ A \and Univ B}}`,
     // or a box, `\mbox{(North \and South)}`, which `\institutename` numbers all the same, as the split of it made it
-    // (the query at every level; unread, the spelling)
-    let institutes = if pieces.len() > 1 {
-      pieces.len()
-    } else {
-      1 + match argument_separators_at_every_level(&body)? {
-        Some(separators) => separators.len(),
-        None => body.unlist_ref().iter().filter(|t| **t == T_CS!("\\and")).count(),
-      }
+    // (the query at every level, which counts the top level's too; unread, the spelling). Never fewer than the pieces:
+    // `\institute{Univ A \and {Univ B \and Univ C}}` is three, "Body4" (revLLNCSb g1)
+    let separators = match argument_separators_at_every_level(&body)? {
+      Some(separators) => separators.len(),
+      None => body.unlist_ref().iter().filter(|t| **t == T_CS!("\\and")).count(),
     };
+    let institutes = pieces.len().max(1 + separators);
     // (`\institutename` counts them, `\fnnstart` when two or more, 0 for one: the footnote counter after the title
     // block, llncs.cls:877-881, :1003; 1005.4552's three, its body notes 4 to 15)
     let fnnstart = if institutes > 1 { institutes } else { 0 };
@@ -706,18 +700,48 @@ LoadDefinitions!({
 \def\solutionname{L\"osung}\def\tablename{Tabelle}}"#);
 });
 
+/// The class's title marks declared through the title hook (`latex_constructs::TITLE_THEFOOTNOTE`), its `\@fnsymbol`
+/// of the counter, or withdrawn (`\lx@llncs@title@scan`): none, the names' marks unknown.
+fn declare_title_marks(declared: bool) -> Result<()> {
+  let hook = T_CS!(engine::latex_constructs::TITLE_THEFOOTNOTE);
+  assign_value(
+    "lx_title_footnote_own_marks",
+    !declared,
+    Some(Scope::Global),
+  );
+  if declared {
+    def_macro(
+      hook,
+      None,
+      TokenizeInternal!(r"\@fnsymbol\c@footnote"),
+      Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..Default::default()
+      }),
+    )?;
+  } else {
+    let_i(&hook, &T_CS!("\\@undefined"), Some(Scope::Global));
+  }
+  assign_value("lx_title_counts_footnotes", declared, Some(Scope::Global));
+  Ok(())
+}
+
 /// Does `tokens` step the footnote counter: a `\footnotemark` or `\footnote` given no `[number]`, an `\addtocounter`,
 /// `\setcounter`, `\stepcounter` or `\refstepcounter` of `{footnote}` — each by meaning, a `\let` copy too — or a
 /// `\thanks`, unless `thanks_gobbled` (llncs.cls:1028-1029's counting pass `\def\thanks##1{}`: the token spelled
 /// `\thanks` is gobbled there with its argument, a `\let` copy of it is not). A macro the document or a file it loaded
-/// defined is read in its body, as its call runs it (`\newcommand\fm{\footnotemark}`, `\DeclareRobustCommand`'s inner
-/// `\fm␣`), a few levels deep; past them, a command undefined here or a document macro with no token body is unsure, and
-/// read as a step (DG 2026-11-16: a wrong glyph is worse than none). A given number steps nothing: `\samethanks`'s
-/// `\footnotemark[\value{footnote}]` (2007.09127, 2108.01436).
+/// (a raw-loaded package's too) defined is read in its body, as its call runs it (`\newcommand\fm{\footnotemark}`,
+/// `\DeclareRobustCommand`'s inner `\fm␣`), a few levels deep; past them, a command undefined here or a document macro
+/// with no token body is unsure, and read as a step (DG 2026-11-16: a wrong glyph is worse than none; so a tikz ORCID
+/// logo's `\draw`, defined only in its `tikzpicture`, withdraws 2009.11534's correct ⋆, row R LLNCSUNSURE). What runs
+/// nothing is no step: the tokens `\ifdefined` and `\ifx` test (`\ifdefined\Anonymous…\else…\fi`, 2509.14694), and
+/// `\undefined`, `\@undefined`. A given number steps nothing: `\samethanks`'s `\footnotemark[\value{footnote}]`
+/// (2007.09127, 2108.01436).
 fn steps_footnotes(tokens: &Tokens, thanks_gobbled: bool) -> Result<bool> {
   let meaning = |cs: &str| lookup_definition(&T_CS!(cs));
   let mut scan = StepScan {
     thanks_gobbled,
+    tests: vec![(meaning("\\ifdefined")?, 1), (meaning("\\ifx")?, 2)],
     thanks: meaning("\\thanks")?,
     marks: vec![meaning("\\footnotemark")?, meaning("\\footnote")?],
     counters: vec![
@@ -738,6 +762,8 @@ const STEP_SCAN_MACROS: usize = 32;
 /// [`steps_footnotes`]'s meanings and the macros it has read.
 struct StepScan {
   thanks_gobbled: bool,
+  /// the conditionals testing tokens without running them, and how many each tests
+  tests:          Vec<(Option<Rc<dyn Definition>>, usize)>,
   thanks:         Option<Rc<dyn Definition>>,
   marks:          Vec<Option<Rc<dyn Definition>>>,
   counters:       Vec<Option<Rc<dyn Definition>>>,
@@ -773,7 +799,14 @@ impl StepScan {
         (Some(a), Some(b)) => Rc::ptr_eq(a, b),
         _ => false,
       };
-      if t == T_CS!("\\thanks") && self.thanks_gobbled {
+      if let Some(&(_, tested)) = self.tests.iter().find(|(test, _)| is(test)) {
+        // (the tested tokens, past the spaces before each)
+        for _ in 0..tested {
+          at = next(at + 1).unwrap_or(v.len());
+        }
+      } else if t == T_CS!("\\undefined") || t == T_CS!("\\@undefined") {
+        // (undefined on purpose, to be tested: `\ifx\Anonymous\undefined`)
+      } else if t == T_CS!("\\thanks") && self.thanks_gobbled {
         if let Some(arg) = next(at + 1).filter(|&arg| v[arg].get_catcode() == Catcode::BEGIN) {
           at = close(arg);
         }

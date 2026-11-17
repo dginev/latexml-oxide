@@ -19934,38 +19934,51 @@ llncs.cls.ltxml writes a name's `\thanks` as an unmarked contact.
   `\renewcommand\thefootnote{\arabic{footnote}}` still prints ⋆ ⋆⋆ there; it sets the counter to 0 before the block
   (:932) and each `\thanks` steps it, the title's first: "A Title⋆", "Ann Able1⋆⋆", the fourth †. The `\inst` marks
   stay digits. After the block it sets the counter to `\fnnstart` (:1003), the institutes `\institutename` counted at
-  its `\and`s when two or more, else 0 (:877-881): the binding sets it where it parts the `\institute` list, so
+  its `\and`s when two or more, else 0 (:877-881): the binding sets it where it parts the `\institute` list (the
+  pieces or the `\and`s it runs at every level, whichever are more: `Univ A \and {Univ B \and Univ C}` is three), so
   1005.4552's three institutes number its body notes 4 to 15 (was 1 to 12), "Body3" under two; a copy the paper ships
   from before `\fnnstart` (v2.4-v2.10, 5 of 592 copies sampled) sets 0 there, as 1508.06013's v2.6 prints its body
   notes from 1 (`shipped_class_text`). Only as the document's class. The marks are withdrawn (none declared, the names' marks unknown: `lx_title_footnote_own_marks`, so a
   mark-only note on a name is written with no glyph and counted by a Warning, OD #1053) where the counter steps where
-  the block's rehearsal cannot count it: an `\author` that steps it outside its `\thanks` (a `\footnotemark` or
-  `\footnote`, `\addtocounter{footnote}`), which `\@maketitle`'s counting pass of `\@author` (:1028-1029, `\thanks`
-  gobbled) runs twice (pdflatex "Ann Able⋆⋆ and Bob Baker⋆⋆⋆"; row R LLNCSTWICE) — read by meaning (a `\let` copy, a
-  `\let` copy of `\thanks`, which the pass does not gobble) and in the bodies of the document's macros
-  (`\newcommand\fm{\footnotemark}`, `\DeclareRobustCommand`'s inner `\fm␣`), four levels deep; an undefined command
-  or one past that is read as a step —, and a `\subtitle` with a note, printed between the title and the names
-  (:1023-1027: "Sub⋆", "Ann Able⋆⋆"; row R LLNCSSUBTITLE).
+  the block's rehearsal cannot count it, read where `\maketitle` sets the block (`\lx@llncs@title@scan` at
+  `\lx@maketitle@begin`: a macro defined after the `\author` as pdflatex reads it): the last `\author` stepping it
+  outside its `\thanks` (a `\footnotemark` or `\footnote`, `\addtocounter{footnote}`), which `\@maketitle`'s
+  counting pass of `\@author` (:1028-1029, `\thanks` gobbled) runs twice (pdflatex "Ann Able⋆⋆ and Bob Baker⋆⋆⋆"; row
+  R LLNCSTWICE) — read by meaning (a `\let` copy, a `\let` copy of `\thanks`, which the pass does not gobble) and in
+  the bodies of the macros the document or a file it loaded defines, a raw-loaded package's too
+  (`\newcommand\fm{\footnotemark}`, `\DeclareRobustCommand`'s inner `\fm␣`), four levels deep; the tokens
+  `\ifdefined` and `\ifx` test run nothing (`\ifdefined\Anonymous…\else…\fi`, 2509.14694), nor do `\undefined`,
+  `\@undefined`; any other undefined command or one past the depth is read as a step (2009.11534's tikz ORCID logo,
+  its `\draw` defined only in the `tikzpicture`: its correct ⋆ withdrawn, row R LLNCSUNSURE) —; an `\author` it
+  replaced that steps it, `\thanks` included, whose notes the reading's rehearsal still steps (pdflatex "Ann⋆
+  Bob⋆⋆", ours ⋆⋆ ⋆⋆⋆; row R AUTHRESET, article's ‡ § for ∗ † too); and a `\subtitle` with a note, printed between
+  the title and the names (:1023-1027: "Sub⋆", "Ann Able⋆⋆"; row R LLNCSSUBTITLE).
 - The engine's own Frontmatter keys (`_markshown`, `_cutlist`, `_kinded`, … 31) are declared in one list,
   `frontmatter_api::FRONTMATTER_INTERNAL_KEYS`, so their use reports no `Info:undefined`, while a key the list lacks
   still does; `perfect_kernel_batche0` pins each.
 **Residuals.** A REVTeX name's `\footnotemark[n]` letter (row R REVNAMEMARK); llncs's counting passes of `\@author`
-and `\@institute` (an institute's bare `\footnotemark` "Lab A†", ours ⋆⋆⋆), a subtitle's note, `\fnsymbol` past 11
-(5 Errors, pdflatex 2: the note's tags re-expand `\thefootnote`), the ⋆'s internal reversion (row R LLNCSTWICE,
-LLNCSINSTTWICE, LLNCSSUBTITLE, LLNCSFNSYM11, LLNCSSTARTEX, proposed); the ACM SIG classes' `\titlenote` and jasatex's `\pacs`, raw classes with no
-binding (row R TITLENOTELAST, JASAPACS).
+and `\@institute` (an institute's bare `\footnotemark` "Lab A†", ours ⋆⋆⋆; withdrawn it would be the body's "1", a
+contact's note not under the names' fail-safe), a subtitle's note, a replaced `\author`'s, an unsure command,
+`\fnsymbol` past 11 (5 Errors, pdflatex 2: the note's tags re-expand `\thefootnote`), the ⋆'s internal reversion, a
+second `\maketitle` (`\clearheadinfo` empties the institutes, `\fnnstart` 0: pdflatex's body note 1, ours 4) (row R
+LLNCSTWICE, LLNCSINSTTWICE, LLNCSSUBTITLE, AUTHRESET, LLNCSUNSURE, LLNCSFNSYM11, LLNCSSTARTEX, LLNCSMT2, proposed);
+the ACM SIG classes' `\titlenote` and jasatex's `\pacs`, raw classes with no binding (row R TITLENOTELAST,
+JASAPACS).
 **Guards**: `perfect_kernel_batchfmmarks::{notes_are_marked_only_where_the_class_prints_marks,
 revtex_marks_follow_its_numbering}` (rows `fmmarks_mnras_title_marks_are_the_class_symbols`,
 `fmmarks_revtex42_aip_shared_thanks_letters`, `fmmarks_revtex41_aip_shared_thanks_letters`,
 `fmmarks_llncs_title_marks_are_the_class_symbols`, `fmmarks_llncs_title_note_counts_first`,
-`fmmarks_llncs_preamble_thefootnote_is_not_the_titles`; RED `fmmarks_llncs_counting_pass_steps_twice_red`,
-`fmmarks_llncs_names_macro_steps_twice_red`, `fmmarks_llncs_subtitle_note_counts_first_red`,
-`fmmarks_llncs_institute_mark_steps_twice_red`; catalog `llncs_fnsymbol_past_eleven_red`,
+`fmmarks_llncs_preamble_thefootnote_is_not_the_titles`, `fmmarks_llncs_ifdefined_names_keep_marks`,
+`fmmarks_llncs_ifx_names_keep_marks`, `fmmarks_llncs_names_macro_defined_later`; RED
+`fmmarks_llncs_counting_pass_steps_twice_red`, `fmmarks_llncs_names_macro_steps_twice_red`,
+`fmmarks_llncs_subtitle_note_counts_first_red`, `fmmarks_llncs_institute_mark_steps_twice_red`,
+`fmmarks_llncs_replaced_author_steps_red`, `fmmarks_llncs_replaced_author_mark_red`,
+`fmmarks_article_replaced_author_steps_red`; catalog `llncs_fnsymbol_past_eleven_red`,
 `llncs_fnsymbol_star_reverts_internal_red`),
 `perfect_kernel_batchcr7::a_split_gives_the_corresponding_author_the_left_address` (none declared),
 `perfect_kernel_batchllncs::{body_fnsymbol_is_the_class_s, the_title_counts_its_notes_from_zero,
 a_note_in_the_subtitle_withdraws_the_title_marks, a_names_macro_that_steps_withdraws_the_title_marks,
-the_body_s_notes_count_after_the_institutes}`,
+a_replaced_author_withdraws_the_title_marks, the_body_s_notes_count_after_the_institutes}`,
 `perfect_kernel_batchmarkbind::{lni_affil_sets_the_footnote_counter, lni_v1_author_is_the_kernels,
 internal_frontmatter_keys_are_declared}`, `perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral`
 (mnras's and llncs's plain notes), `perfect_kernel_batche0::the_frontmatter_api_stays_perls`.

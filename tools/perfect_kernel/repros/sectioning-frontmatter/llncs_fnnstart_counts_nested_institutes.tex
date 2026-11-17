@@ -1,0 +1,18 @@
+% mechanism: llncs.cls's `\institutename` counts the institutes at every `\and` it runs (llncs.cls:877-881), one in a
+%   group too, and `\maketitle` sets the footnote counter after the block to that count (`\fnnstart`, :1003): two
+%   pieces at the top level, one holding a second `\and`, are three. The binding counts the larger of the pieces and
+%   the separators at every level (llncs_cls.rs `\lx@llncs@institute@dispatch`)
+% witness:  revLLNCSb item 3 (probes g1_mixed, g2_mixedmacro)
+% oracle:   pdflatex 0 errors; "Ann Able1⋆, Bob Baker2, and Cy Cole3", "Body4 and more5"
+% engines:  rust LLNCSb (0c2719152f0) = 0 errors, 0 Warnings; the body's notes 3, 4; LLNCSc = 4, 5
+% expect:   0 errors, 0 Warnings; Ann ⋆, the body's notes 4, 5
+% status:   GREEN (LLNCSc; perfect_kernel_batchllncs::the_body_s_notes_count_after_the_institutes)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\title{A Title}
+\author{Ann Able\inst{1}\thanks{Ann note.} \and Bob Baker\inst{2} \and Cy Cole\inst{3}}
+\institute{Lab A \and {Lab B \and Lab C}}
+\begin{document}
+\maketitle
+Body\footnote{Body note.} and more\footnote{More note.}.
+\end{document}

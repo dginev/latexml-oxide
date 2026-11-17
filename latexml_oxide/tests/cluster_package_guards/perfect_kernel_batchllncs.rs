@@ -115,8 +115,9 @@ fn body_marks(xml: &str) -> Vec<String> {
 /// llncs.cls:1023-1027 prints `\@subtitle` between the title and the names, so its `\thanks` steps the counter ahead of
 /// theirs ("Sub⋆", "Ann Able⋆⋆"), which the title block's rehearsal does not count: a subtitle with a note, before or
 /// after the `\author`, withdraws the title marks (the names' thanks unmarked, not the mis-linked ⋆ ⋆⋆ of LLNCSMARKS,
-/// revLLNCS B1), and one with none keeps them. Distinct: the `\subtitle` path of `\lx@llncs@title@marks` and its two
-/// parts' flags. The oracle's ⋆⋆ ⋆⋆⋆ are the RED row `fmmarks_llncs_subtitle_note_counts_first_red`.
+/// revLLNCS B1), and one with none keeps them; the subtitle's own note is written unmarked, its text whole. Distinct: the
+/// `\subtitle` path of `\lx@llncs@title@scan`. The oracle's ⋆⋆ ⋆⋆⋆ are the RED row
+/// `fmmarks_llncs_subtitle_note_counts_first_red`.
 #[test]
 fn a_note_in_the_subtitle_withdraws_the_title_marks() {
   let after = r"\documentclass{llncs}
@@ -138,18 +139,22 @@ Body\footnote{Body note.}.
     "Ann Able ; thanks[⋆]=Ann note. | affiliation=Lab A",
     "Bob Baker ; thanks[⋆⋆]=Bob note. | affiliation=Lab A",
   ];
-  for (tex, creators) in [
+  let sub_note = r#"<pubnote role="thanks">Sub note.</pubnote>"#;
+  for (tex, creators, notes) in [
     (
       repro!("fmmarks_llncs_subtitle_note_counts_first_red"),
       withdrawn,
+      1,
     ),
-    (after, withdrawn),
-    (plain.as_str(), kept),
+    (after, withdrawn, 1),
+    (plain.as_str(), kept, 0),
   ] {
     let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     assert_eq!(creator_lines(&xml), creators, "{tex}");
     assert_eq!(body_marks(&xml), ["1"], "{tex}");
+    assert_eq!(xml.matches("<pubnote").count(), notes, "{xml}");
+    assert_eq!(xml.matches(sub_note).count(), notes, "{xml}");
   }
 }
 
@@ -230,26 +235,65 @@ fn a_names_macro_that_steps_withdraws_the_title_marks() {
   }
 }
 
+/// A later `\author` replaces the block before it (llncs.cls `\gdef\@author`), but the frontmatter's reading still
+/// rehearses the replaced block and carries its footnote steps into the printed one (row R AUTHRESET, the engine's:
+/// pdflatex "Ann Able⋆ and Bob Baker⋆⋆", LLNCSb ⋆⋆ ⋆⋆⋆ for one replaced `\thanks`, ⋆⋆⋆ † for a `\thanks` and a bare
+/// `\footnotemark`): the binding reads the replaced names at `\maketitle` and withdraws its marks where they step, the
+/// names' thanks unmarked (revLLNCSb item 1); a replaced template that steps nothing keeps them. Distinct: the
+/// replaced names' path of `\lx@llncs@title@scan`, read with `\thanks` (the rehearsal steps it).
+#[test]
+fn a_replaced_author_withdraws_the_title_marks() {
+  let template = repro!("fmmarks_llncs_replaced_author_steps_red").replace(
+    r"\author{Ann Able\thanks{Ann note.}}",
+    r"\author{First Author\inst{1}}",
+  );
+  assert!(template.contains("First Author"), "{template}");
+  let withdrawn = [
+    "Ann Able ; thanks[]=Ann note. | affiliation=Lab A",
+    "Bob Baker ; thanks[]=Bob note. | affiliation=Lab A",
+  ];
+  let kept = [
+    "Ann Able ; thanks[⋆]=Ann note. | affiliation=Lab A",
+    "Bob Baker ; thanks[⋆⋆]=Bob note. | affiliation=Lab A",
+  ];
+  for (tex, creators) in [
+    (repro!("fmmarks_llncs_replaced_author_steps_red"), withdrawn),
+    (repro!("fmmarks_llncs_replaced_author_mark_red"), withdrawn),
+    (template.as_str(), kept),
+  ] {
+    let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(creator_lines(&xml), creators, "{tex}");
+    assert_eq!(body_marks(&xml), ["1"], "{tex}");
+  }
+}
+
 /// llncs.cls:1003 sets the footnote counter after the title block to `\fnnstart`, the institutes `\institutename`
 /// counted at its `\and`s when two or more (:877-881): under three (one in a group) the body's notes are 4 and 5, as
 /// pdflatex prints them (1005.4552's three: its body notes 4 to 15; was 1 and 2). A copy of the class the paper ships
 /// from before `\fnnstart` (v2.4-v2.10) sets 0 there: 1508.06013's v2.6 prints its body notes from 1 (here a copy
-/// without it, `shipped_class_text`). Distinct: the counter after the block (`\lx@llncs@institute@dispatch`'s
-/// `\fnnstart`), where the other guards' one institute gives 0.
+/// without it, `shipped_class_text`). Two pieces, the second holding an `\and` in a group, are three institutes too,
+/// "Body4" (revLLNCSb item 3, was 3: the pieces counted where the list parts). Distinct: the counter after the block
+/// (`\lx@llncs@institute@dispatch`'s `\fnnstart`), where the other guards' one institute gives 0.
 #[test]
 fn the_body_s_notes_count_after_the_institutes() {
   let tex = repro!("llncs_fnnstart_counts_the_institutes");
   let old_copy =
     "\\NeedsTeXFormat{LaTeX2e}\n\\ProvidesClass{llncs}[1999/04/27 v2.6]\n\\LoadClass{article}\n";
-  for (log, xml, body) in [
-    {
-      let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
-      (log, xml, ["4", "5"])
-    },
-    {
-      let (log, xml) = convert_files_with(tex, &[("llncs.cls", old_copy)], Some("ar5iv.sty"));
-      (log, xml, ["1", "2"])
-    },
+  let converted = |tex: &str| {
+    let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+    (log, xml)
+  };
+  for ((log, xml), body) in [
+    (converted(tex), ["4", "5"]),
+    (
+      convert_files_with(tex, &[("llncs.cls", old_copy)], Some("ar5iv.sty")),
+      ["1", "2"],
+    ),
+    (
+      converted(repro!("llncs_fnnstart_counts_nested_institutes")),
+      ["4", "5"],
+    ),
   ] {
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     assert_eq!(creator_lines(&xml), [

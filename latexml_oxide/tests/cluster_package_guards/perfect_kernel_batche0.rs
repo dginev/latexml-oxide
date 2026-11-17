@@ -1855,7 +1855,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // copy it does not, and the `\subtitle`'s; the `\institute` count's spelled `\and`s where no rehearsal reads them,
   // `\fnnstart`, and whether the paper's shipped copy has `\fnnstart` (v2.4-v2.10 do not). Each decides only the
   // class's own glyph or counter, no owner or content)
-  ("llncs_cls.rs", 51),
+  // (LLNCSc 51 -> 52, a raised pin: the scan's spelled `\undefined`, `\@undefined`, undefined on purpose so with no
+  // meaning to read, which an `\ifx` tests and nothing runs; it decides only the class's own glyph)
+  ("llncs_cls.rs", 52),
   ("osa_journal_sty.rs", 77),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
   ("owners", 14),
