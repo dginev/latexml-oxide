@@ -1291,7 +1291,7 @@ fn text_glyph(t: &Token) -> Option<Token> {
 
 /// The glyph a math symbol prints: the text of the one box a math primitive without arguments makes (`\sim` "∼",
 /// `def_math_primitive`), which reads the current font and changes nothing. `None` for any other command.
-fn math_symbol_glyph(t: &Token) -> Option<String> {
+pub fn math_symbol_glyph(t: &Token) -> Option<String> {
   let Ok(Some(Stored::MathPrimitive(math))) = lookup_definition_stored(t) else {
     return None;
   };
