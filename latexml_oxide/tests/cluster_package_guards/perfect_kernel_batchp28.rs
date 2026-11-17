@@ -55,7 +55,8 @@ fn ieee_grids_read_by_rows_and_lists_keep_their_order() {
 
 /// A body with no names block and no document macro takes the plain route, each grade its author's: a pin. A names list
 /// held in a document macro is read as it prints (RED on int158a: the grade lost, each name written as plain text with
-/// a Warning; green on int168a too, the grade the reading's contact since P5a, OD #1016).
+/// a Warning; green on int168a too, the grade the reading's contact since P5a, OD #1016). Its "A. Able is with Univ A."
+/// note is Ann Able's affiliation since IEEEROUTE (OD #1072), no longer the title's.
 #[test]
 fn ieee_plain_route_reads_names_and_grades() {
   assert_eq!(
@@ -63,7 +64,7 @@ fn ieee_plain_route_reads_names_and_grades() {
       repro!("ieeetran_author_plain_route_reads_names_and_grades"),
       0
     ),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact role="membership">Member, IEEE</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <creator before=" " role="author"> <personname>Cy Coe</personname> <contact role="membership">Fellow, IEEE</contact> </creator> <pubnote role="thanks">A. Able is with Univ A.</pubnote> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact role="membership">Member, IEEE</contact> <contact name="Affiliation: " role="affiliation">Univ A.</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <creator before=" " role="author"> <personname>Cy Coe</personname> <contact role="membership">Fellow, IEEE</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted_any(repro!("ieeetran_author_plain_route_names_in_a_macro"), 0),

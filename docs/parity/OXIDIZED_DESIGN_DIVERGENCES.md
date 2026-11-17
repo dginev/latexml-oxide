@@ -22249,3 +22249,25 @@ over its `\date`/`\correspondence`/`\code` calls; pdflatex reads them inside it,
 the paragraph end as a trailing newline. Witness 2610.22523. **Guard**:
 `06_cluster_frontmatter::frontmatter_ragslab_marks_link_affiliations` (repro `stand-in-copies/ragslab`, the real copy
 less its comment lines).
+
+### 1072. IEEEtran's block notes routed by kind: "<names> is/are with …" under the names (DG 2026-11-17; IEEEROUTE)
+
+**Perl.** IEEEtran.cls.ltxml keeps every `\thanks` of `\author{…}` a note of the title; the class prints them as
+unmarked footnotes (IEEEtran.cls:4756-4758 `\def\thefootnote{}`, `\let\@makefnmark\relax`), and the IEEE journal
+template writes the authors' affiliations and e-mails there ("B. Cheng and Z. Li are with …, China. E-mail:
+\{bincheng,zhongkli\}@pku.edu.cn"). In 1 % of arXiv those notes are the authors' only affiliations and addresses.
+
+**Rust.** DG 2026-11-17: affiliations and addresses show under the author, other metadata stays a note. In a plain
+`\author` whose names print no mark (no `\IEEEauthorrefmark`, superscript, math or `\footnotemark`),
+`route_author_thanks` (ieeetran_cls.rs; ieeeconf.cls loads it) reads each top-level `\thanks`: a sentence "<names>
+is/are [also|now|currently] with <affiliation>[, (E-mail: <addresses>)]" becomes `\lx@add@contact[role=affiliation]`
+of each named author and `[role=email]` for each address (a `{a,b}@d` list split, an address to the author whose
+surname its local part spells, else in order: `FmEmailOwner::SpelledElseOrder`'s rule), placed after that author's name
+and grade, before the notes; a note "Corresponding author: <name>" (or "… is <name>") becomes that author's
+`role=correspondent` contact, its text whole. A name matches an author by surname (the author's last word) and first
+initial; several sentences of one note route each. Fail-safe: a note with a sentence whose names match no author, or
+more than one, or whose e-mail tail prints more than addresses, stays the title's whole (today's output); text before
+the first such sentence stays the title's note; funding, "Manuscript received …" and others are untouched. The dropped
+words are the routing keys alone ("<names> is with", "E-mail:"). Witnesses 2003.11216, 2206.13704, 1207.6084.
+**Guards**: `cluster_package_guards::perfect_kernel_batchieeeroute::*` (repros
+`sectioning-frontmatter/ieee_thanks_*`); `perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned.

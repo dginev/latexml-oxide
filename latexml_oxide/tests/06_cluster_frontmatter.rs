@@ -1769,8 +1769,10 @@ fn frontmatter_author_lines_783() {
     ]),
     // (a name ends the printed line: the grade beside a name the line after `\\` opens takes no class)
     ("names_continue", repro!("names_continue"), 0, vec![
+      // (its "A. Able is with Univ A." note her affiliation, IEEEtran's block notes routed by kind, OD #1072)
       "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact \
-       role=\"membership\">Member,\u{a0}IEEE</contact></creator>"
+       role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\">Univ A.</contact></creator>"
         .to_string(),
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact \
        role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>"

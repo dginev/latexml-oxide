@@ -1195,11 +1195,12 @@ fn class_author_route(body: Tokens) -> Result<Tokens> {
   } else {
     (
       T_CS!("\\lx@IEEE@author@plain"),
-      if ours {
-        Tokens::new(without_stop_after_grade(body.unlist())?)
+      // (its block notes routed by kind: `route_author_thanks`)
+      Tokens::new(route_author_thanks(if ours {
+        without_stop_after_grade(body.unlist())?
       } else {
-        body
-      },
+        body.unlist()
+      })),
     )
   };
   Ok(Invocation!(target, vec![Some(body)]))
@@ -2454,4 +2455,481 @@ fn class_membership() -> Result<bool> {
         if body.unlist_ref().first() == Some(&T_CS!("\\lx@IEEE@grade")))
     }),
   )
+}
+
+/// The IEEE journal template's block notes routed by kind (DG 2026-11-17, OXIDIZED_DESIGN_DIVERGENCES #1072): in a plain
+/// `\author{…}` whose names print no mark, a `\thanks` sentence "<names> is/are with <affiliation>[. E-mail: <addresses>]"
+/// becomes the affiliation and e-mail contacts of the authors it names, and a note "Corresponding author: <name>" that
+/// author's correspondence, each placed after the name (as an `\IEEEmembership` grade is); every other note (funding,
+/// "Manuscript received …") stays the title's. A note naming no author, or one ambiguously, or printing more than the
+/// reading accounts for, stays whole (2003.11216, 2206.13704, 1207.6084). The class prints them as unmarked footnotes
+/// (IEEEtran.cls:4756-4758), whose text names the authors.
+fn route_author_thanks(body: Vec<Token>) -> Vec<Token> {
+  let thanks = T_CS!("\\thanks");
+  // (a body whose names print marks pairs its notes by them, the frontmatter reader's: left alone)
+  let marked = body.iter().any(|t| {
+    t.get_catcode() == Catcode::MATH
+      || [
+        T_CS!("\\IEEEauthorrefmark"),
+        T_CS!("\\textsuperscript"),
+        T_CS!("\\footnotemark"),
+        T_CS!("\\footnote"),
+        T_CS!("\\IEEEauthorblockN"),
+      ]
+      .contains(t)
+  });
+  if marked || !body.contains(&thanks) {
+    return body;
+  }
+  // Each top-level `\thanks{…}`: (command, end after its group), and the names' units
+  let mut notes: Vec<(usize, usize)> = Vec::new();
+  let mut depth = 0;
+  let mut i = 0;
+  while i < body.len() {
+    if depth == 0 && body[i] == thanks {
+      let open = i
+        + 1
+        + body[i + 1..]
+          .iter()
+          .take_while(|t| **t == T_SPACE!())
+          .count();
+      if body
+        .get(open)
+        .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+      {
+        return body;
+      }
+      let end = group_end(&body, open);
+      notes.push((i, end));
+      i = end;
+      continue;
+    }
+    depth = brace_level(depth, &body[i]);
+    i += 1;
+  }
+  let names = author_units(&body, &notes);
+  if names.is_empty() {
+    return body;
+  }
+  // (each note's replacement, and the contacts each name gains)
+  let mut replaced: Vec<Option<Vec<Token>>> = vec![None; notes.len()];
+  let mut gained: Vec<Vec<Token>> = vec![Vec::new(); names.len()];
+  for (n, &(start, end)) in notes.iter().enumerate() {
+    let open = start
+      + 1
+      + body[start + 1..]
+        .iter()
+        .take_while(|t| **t == T_SPACE!())
+        .count();
+    let note = &body[open + 1..end - 1];
+    if let Some((kept, contacts)) = route_note(note, &names) {
+      replaced[n] = Some(if kept.is_empty() {
+        Vec::new()
+      } else {
+        let mut call = vec![thanks, T_BEGIN!()];
+        call.extend(kept);
+        call.push(T_END!());
+        call
+      });
+      for (owner, contact) in contacts {
+        gained[owner].extend(contact);
+      }
+    }
+  }
+  if replaced.iter().all(Option::is_none) {
+    return body;
+  }
+  let mut out = Vec::with_capacity(body.len());
+  for (at, token) in body.iter().enumerate() {
+    for (unit, name) in names.iter().enumerate() {
+      if name.insert_at == at {
+        out.extend(gained[unit].iter().copied());
+      }
+    }
+    if let Some(n) = notes.iter().position(|&(s, e)| s <= at && at < e)
+      && let Some(call) = &replaced[n]
+    {
+      if notes[n].0 == at {
+        out.extend(call.iter().copied());
+      }
+      continue;
+    }
+    out.push(*token);
+  }
+  for (unit, name) in names.iter().enumerate() {
+    if name.insert_at >= body.len() {
+      out.extend(gained[unit].iter().copied());
+    }
+  }
+  out
+}
+
+/// The index just past the group opening at `open`.
+fn group_end(tokens: &[Token], open: usize) -> usize {
+  let mut depth = 0;
+  for (at, t) in tokens.iter().enumerate().skip(open) {
+    depth = brace_level(depth, t);
+    if depth == 0 {
+      return at + 1;
+    }
+  }
+  tokens.len()
+}
+
+/// An author of a plain `\author` body, as [`route_author_thanks`] reads it: its printed words, and where the contacts a
+/// note gives it go — after its name and grade, before the notes that follow them.
+struct AuthorUnit {
+  words:     Vec<String>,
+  insert_at: usize,
+}
+
+/// The authors of a plain body (`notes` skipped): its top-level pieces between `,`, `\and`, `\\` and the word "and"; a
+/// piece printing no letter (`~\IEEEmembership{Member,~IEEE}`) goes with the name before it.
+fn author_units(body: &[Token], notes: &[(usize, usize)]) -> Vec<AuthorUnit> {
+  let grade = T_CS!("\\IEEEmembership");
+  let mut units: Vec<AuthorUnit> = Vec::new();
+  let mut words = String::new();
+  // (the piece's first note, before which its contacts go)
+  let mut first_note: Option<usize> = None;
+  let mut depth = 0;
+  let flush = |words: &mut String, end: usize, units: &mut Vec<AuthorUnit>| {
+    let piece: Vec<String> = words.split_whitespace().map(str::to_string).collect();
+    words.clear();
+    if piece.iter().any(|w| w.chars().any(char::is_alphabetic)) {
+      units.push(AuthorUnit {
+        words:     piece,
+        insert_at: end,
+      });
+    } else if let Some(last) = units.last_mut() {
+      last.insert_at = end;
+    }
+  };
+  let letter = |k: usize, c: &str| {
+    body
+      .get(k)
+      .is_some_and(|t| t.get_catcode() == Catcode::LETTER && t.with_str(|s| s == c))
+  };
+  let spacing = |k: Option<&Token>| k.is_none_or(|t| *t == T_SPACE!() || *t == T_ACTIVE!('~'));
+  let and_at = |at: usize| {
+    at > 0
+      && letter(at, "a")
+      && letter(at + 1, "n")
+      && letter(at + 2, "d")
+      && spacing(body.get(at - 1))
+      && spacing(body.get(at + 3))
+  };
+  let mut at = 0;
+  while at < body.len() {
+    if let Some(&(_, end)) = notes.iter().find(|&&(s, _)| s == at) {
+      first_note.get_or_insert(at);
+      at = end;
+      continue;
+    }
+    let t = &body[at];
+    if depth == 0 && *t == grade {
+      let open = at
+        + 1
+        + body[at + 1..]
+          .iter()
+          .take_while(|t| **t == T_SPACE!())
+          .count();
+      at = if body
+        .get(open)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      {
+        group_end(body, open)
+      } else {
+        open
+      };
+      continue;
+    }
+    let word_and = depth == 0 && and_at(at);
+    if depth == 0
+      && (word_and || *t == T_OTHER!(",") || *t == T_CS!("\\and") || *t == T_CS!("\\\\"))
+    {
+      flush(&mut words, first_note.take().unwrap_or(at), &mut units);
+      at += if word_and { 3 } else { 1 };
+      continue;
+    }
+    depth = brace_level(depth, t);
+    match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => t.with_str(|s| words.push_str(s)),
+      Catcode::SPACE | Catcode::ACTIVE => words.push(' '),
+      _ => {},
+    }
+    at += 1;
+  }
+  flush(&mut words, first_note.unwrap_or(body.len()), &mut units);
+  units
+}
+
+/// A note's printed text, spaces collapsed, each byte's token and brace depth beside it (`\{`, `\}`, `\_` their
+/// characters, `~` and `\\` a space, other commands nothing).
+fn note_text(note: &[Token]) -> (String, Vec<(usize, i32)>) {
+  let mut text = String::new();
+  let mut at_byte: Vec<(usize, i32)> = Vec::new();
+  let mut depth = 0;
+  for (at, t) in note.iter().enumerate() {
+    let piece: Option<String> = match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => Some(t.with_str(str::to_string)),
+      Catcode::SPACE | Catcode::ACTIVE => Some(s!(" ")),
+      Catcode::CS => t.with_str(|s| match s {
+        "\\{" | "\\textbraceleft" | "\\lbrace" => Some("{".to_string()),
+        "\\}" | "\\textbraceright" | "\\rbrace" => Some("}".to_string()),
+        "\\_" | "\\textunderscore" => Some(s!("_")),
+        "\\\\" | "\\newline" | "\\par" | "\\ " => Some(s!(" ")),
+        _ => None,
+      }),
+      _ => None,
+    };
+    let inner = depth;
+    depth = brace_level(depth, t);
+    if let Some(piece) = piece {
+      for c in piece.chars() {
+        let c = if c.is_whitespace() { ' ' } else { c };
+        if c == ' ' && (text.is_empty() || text.ends_with(' ')) {
+          continue;
+        }
+        text.push(c);
+        at_byte.extend(std::iter::repeat_n((at, inner), c.len_utf8()));
+      }
+    }
+  }
+  (text, at_byte)
+}
+
+/// The authors a list of names in a note's sentence names ("B. Cheng and Z. Li", "X. Wang", "Bin Cheng, Xiangke Wang,
+/// and Zhongkui Li"), each one author's alone: its surname that author's last word, its first initial that author's
+/// first word's (case aside). None where a name matches no author, or more than one.
+fn named_authors(list: &str, names: &[AuthorUnit]) -> Option<Vec<usize>> {
+  static SPLIT_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r",?\s+and\s+|\s*,\s*").unwrap());
+  let fold = |w: &str| -> String {
+    w.chars()
+      .filter(|c| c.is_alphabetic())
+      .flat_map(char::to_lowercase)
+      .collect()
+  };
+  let mut owners = Vec::new();
+  for name in SPLIT_RX.split(list.trim()) {
+    let words: Vec<&str> = name.split_whitespace().collect();
+    let (surname, given) = words.split_last()?;
+    let surname = fold(surname);
+    let initial = given.first().and_then(|w| fold(w).chars().next());
+    let matches: Vec<usize> = names
+      .iter()
+      .enumerate()
+      .filter(|(_, unit)| {
+        let (Some(last), Some(first)) = (unit.words.last(), unit.words.first()) else {
+          return false;
+        };
+        unit.words.len() >= 2
+          && fold(last) == surname
+          && initial.is_none_or(|i| fold(first).starts_with(i))
+      })
+      .map(|(at, _)| at)
+      .collect();
+    let [owner] = matches[..] else {
+      return None;
+    };
+    if owners.contains(&owner) {
+      return None;
+    }
+    owners.push(owner);
+  }
+  Some(owners)
+}
+
+/// The tokens of `note` printing its text's bytes `from..to`, spaces trimmed, its groups whole: None where the span
+/// starts inside a group.
+fn note_span(
+  note: &[Token],
+  text: &str,
+  at_byte: &[(usize, i32)],
+  from: usize,
+  to: usize,
+) -> Option<Vec<Token>> {
+  let piece = &text[from..to];
+  let from = from + (piece.len() - piece.trim_start().len());
+  let to = from + piece.trim().len();
+  if from >= to {
+    return Some(Vec::new());
+  }
+  let (start, depth) = at_byte[from];
+  if depth != 0 {
+    return None;
+  }
+  let mut end = at_byte[to - 1].0 + 1;
+  let mut level = note[start..end].iter().fold(0, brace_level);
+  while level > 0 && end < note.len() {
+    level = brace_level(level, &note[end]);
+    end += 1;
+  }
+  (level == 0).then(|| note[start..end].to_vec())
+}
+
+/// The addresses an e-mail line prints (`{bincheng,zhongkli}@pku.edu.cn` one per local part), None where it prints
+/// more than addresses and the words between them.
+fn email_line_addresses(line: &str) -> Option<Vec<String>> {
+  static LIST_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"\{([^{}@]+)\}\s*@\s*([A-Za-z0-9][A-Za-z0-9.\-]*[A-Za-z0-9])").unwrap()
+  });
+  static ONE_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"[A-Za-z0-9][A-Za-z0-9._%+\-]*@[A-Za-z0-9][A-Za-z0-9.\-]*[A-Za-z0-9]").unwrap()
+  });
+  static REST_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"^(?:[\s,;.{}()]|\band\b)*$").unwrap());
+  let mut addresses = Vec::new();
+  let rest = LIST_RX.replace_all(line, |c: &regex::Captures| {
+    for local in c[1].split(',') {
+      addresses.push(s!("{}@{}", local.trim(), &c[2]));
+    }
+    " "
+  });
+  let rest = ONE_RX.replace_all(&rest, |c: &regex::Captures| {
+    addresses.push(c[0].to_string());
+    " "
+  });
+  (REST_RX.is_match(&rest)
+    && !addresses.is_empty()
+    && addresses.iter().all(|a| !a.starts_with('@')))
+  .then_some(addresses)
+}
+
+/// A contact a note gives an author: the author's place among the names, and the `\lx@add@contact` call.
+type RoutedContact = (usize, Vec<Token>);
+
+/// One `\thanks` of the author block routed (`route_author_thanks`): the text it keeps as the title's note, and each
+/// contact with the author it goes to. None where it routes nothing.
+fn route_note(note: &[Token], names: &[AuthorUnit]) -> Option<(Vec<Token>, Vec<RoutedContact>)> {
+  const NAME: &str = r"\p{Lu}[\p{L}'’.\-]*(?: \p{Lu}[\p{L}'’.\-]*)*";
+  static CLAUSE_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(&s!(
+      r"^((?:{NAME})(?:(?:,? and |, )(?:{NAME}))*) (?:is|are)(?: also| now| currently| presently)? with "
+    ))
+    .unwrap()
+  });
+  static CORRESPONDING_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(&s!(r"^(?i:corresponding author)(?::| is) ({NAME})\.?$")).unwrap()
+  });
+  static EMAIL_LABEL_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"(?i)\(?\s*\be-?mails?\s*:\s*").unwrap());
+  let contact = |role: &str, content: Vec<Token>| -> Vec<Token> {
+    let mut call = vec![T_CS!("\\lx@add@contact"), T_OTHER!("[")];
+    call.extend(ExplodeText!(s!("role={role}")));
+    call.push(T_OTHER!("]"));
+    call.push(T_BEGIN!());
+    call.extend(content);
+    call.push(T_END!());
+    call
+  };
+  let (text, at_byte) = note_text(note);
+  let trimmed = text.trim();
+  // (a note naming the corresponding author: that author's, whole)
+  if let Some(c) = CORRESPONDING_RX.captures(trimmed) {
+    let [owner] = named_authors(&c[1], names)?[..] else {
+      return None;
+    };
+    // (its text whole, under no added label: `name={}`)
+    let mut call = contact("correspondent", note.to_vec());
+    let close = call.iter().position(|t| *t == T_OTHER!("]")).unwrap_or(2);
+    call.splice(
+      close..close,
+      ExplodeText!(",name=")
+        .into_iter()
+        .chain([T_BEGIN!(), T_END!()]),
+    );
+    return Some((Vec::new(), vec![(owner, call)]));
+  }
+  // (each sentence opening "<names> is/are with": where it starts, where its affiliation starts, its authors)
+  let mut clauses: Vec<(usize, usize, Vec<usize>)> = Vec::new();
+  let starts = std::iter::once(0).chain(
+    text
+      .match_indices(['.', ';'])
+      .map(|(at, _)| at + 1)
+      .filter(|&at| text[at..].starts_with(' '))
+      .map(|at| at + 1),
+  );
+  for start in starts {
+    if clauses.last().is_some_and(|&(_, with, _)| start < with) {
+      continue;
+    }
+    if let Some(c) = CLAUSE_RX.captures(&text[start..]) {
+      // (one sentence naming no author, or one ambiguously, keeps the whole note)
+      let owners = named_authors(&c[1], names)?;
+      clauses.push((start, start + c[0].len(), owners));
+    }
+  }
+  if clauses.is_empty() {
+    return None;
+  }
+  let kept = note_span(note, &text, &at_byte, 0, clauses[0].0)?;
+  let mut contacts = Vec::new();
+  for (k, (_, with, owners)) in clauses.iter().enumerate() {
+    let end = clauses.get(k + 1).map_or(text.len(), |c| c.0);
+    let label = EMAIL_LABEL_RX.find(&text[*with..end]);
+    // (up to its e-mail label, the list's comma or parenthesis before it aside: `…, Japan, (e-mail: …)`, 2206.13704)
+    let affiliation_end = label.map_or(end, |m| {
+      with
+        + text[*with..with + m.start()]
+          .trim_end_matches([' ', ',', ';', '('])
+          .len()
+    });
+    let affiliation = note_span(note, &text, &at_byte, *with, affiliation_end)?;
+    if affiliation.is_empty() {
+      return None;
+    }
+    for &owner in owners {
+      contacts.push((owner, contact("affiliation", affiliation.clone())));
+    }
+    let Some(label) = label else {
+      continue;
+    };
+    let addresses = email_line_addresses(&text[with + label.end()..end])?;
+    // (each address to the author it spells, the others in order: FmEmailOwner::SpelledElseOrder)
+    let local = |a: &str| a.split('@').next().unwrap_or("").to_lowercase();
+    let spelled: Vec<Option<usize>> = addresses
+      .iter()
+      .map(|a| {
+        let spellers: Vec<usize> = owners
+          .iter()
+          .copied()
+          .filter(|&o| {
+            names[o]
+              .words
+              .last()
+              .map(|w| {
+                w.chars()
+                  .filter(|c| c.is_alphabetic())
+                  .flat_map(char::to_lowercase)
+                  .collect::<String>()
+              })
+              .is_some_and(|surname| surname.len() >= 2 && local(a).contains(&surname))
+          })
+          .collect();
+        match spellers[..] {
+          [one] => Some(one),
+          _ => None,
+        }
+      })
+      .collect();
+    let mut free: Vec<usize> = owners
+      .iter()
+      .copied()
+      .filter(|o| !spelled.contains(&Some(*o)))
+      .collect();
+    let unspelled = spelled.iter().filter(|s| s.is_none()).count();
+    if unspelled > 0 && unspelled != free.len() && owners.len() > 1 {
+      return None;
+    }
+    for (address, spelled) in addresses.iter().zip(spelled) {
+      let owner = match spelled {
+        Some(owner) => owner,
+        None if owners.len() == 1 => owners[0],
+        None => free.remove(0),
+      };
+      contacts.push((owner, contact("email", ExplodeText!(address))));
+    }
+  }
+  Some((kept, contacts))
 }

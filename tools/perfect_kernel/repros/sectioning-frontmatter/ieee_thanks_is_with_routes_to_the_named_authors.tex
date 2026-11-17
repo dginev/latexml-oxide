@@ -1,0 +1,24 @@
+% mechanism: IEEEtran's block notes routed by kind (`route_author_thanks`, ieeetran_cls.rs; OD #1072): a `\thanks`
+%   "<names> is/are with <affiliation>. E-mail: <addresses>" gives the named authors (initials and surname) the
+%   affiliation and their e-mails (a brace list split, each to the author it spells); "Corresponding author: <name>"
+%   that author's correspondence; the funding note stays the title's
+% witness: 2003.11216 (the shape); 1207.6084, 2206.13704
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: three names, four unmarked notes at the first page's foot
+% engines: MTREDUCEd: every note a title pubnote, no author with an affiliation
+% expect:  0 errors, 0 warnings; Ann Able and Cy Coe with Univ A and their e-mails, Bob Baker with Univ B and his,
+%   Cy Coe the correspondent; the funding note a pubnote
+% status:  GREEN (IEEEROUTE; guard perfect_kernel_batchieeeroute)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{Routed Notes}
+\author{Ann~Able, Bob Baker,~\IEEEmembership{Senior Member,~IEEE},
+        and~Cy~Coe,~\IEEEmembership{Member,~IEEE}%
+\thanks{This work was supported in part by the Science Fund under grant 42.}
+\thanks{A. Able and C. Coe are with the Laboratory of Things, Univ A, Town 100871, Land.
+E-mail: \tt \{aable,ccoe\}@unia.edu}
+\thanks{B. Baker is with the College of Stuff, Univ B, City, Land.
+E-mail: {\tt bbaker@unib.edu}}
+\thanks{Corresponding author: Cy Coe.}}
+\maketitle
+Body.
+\end{document}
