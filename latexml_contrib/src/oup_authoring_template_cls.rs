@@ -94,10 +94,9 @@ LoadDefinitions!({
     "\\editor{}",
     "\\@add@frontmatter{ltx:note}[role=editor]{#1}"
   );
-  DefMacro!(
-    "\\address[]{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#2}"
-  );
+  // oup-authoring-template.cls:1137-1142 `\address` collects `\@address`, :1494 prints it under the names (2512.03760):
+  // OD #1074.
+  DefMacro!("\\address[]{}", "\\lx@names@note{address}{#2}");
   // oup-authoring-template.cls:39 `\newif\if@numbib \@numbibtrue` (2407.13283's copy; TL 2025's :39 the same), the
   // numbered-references switch a paper sets (3 papers of the inventory).
   RawTeX!(r"\newif\if@numbib\@numbibtrue");

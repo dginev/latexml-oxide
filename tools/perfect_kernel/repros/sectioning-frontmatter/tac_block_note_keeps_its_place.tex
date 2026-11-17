@@ -1,0 +1,22 @@
+% mechanism: a note its binding does not declare printed under the names keeps Perl's place after the abstract: tac's
+%   `\address`, which tac.cls:611-614 prints `\AtEndDocument` (`insert::place_block_notes`, OXIDIZED_DESIGN_DIVERGENCES
+%   #1074; Perl Base_Utility.pool.ltxml:793-795, :836)
+% witness: 1504.03886 (tac); the footnote-shaped sibling 1910.13936 (sagej `\affiliation`, sagej.cls:266-268)
+% oracle:  pdflatex 0 errors (with tac.cls from 1504.03886): "T / Ann Able / Abstract. Abstract text. / 1 S / Body. /
+%          Univ X, Town"
+% engines: rust dbaea4ca220 (BLOCKPLACE round 1): the note before the abstract; BLOCKPLACEb: after it, Perl's place
+% expect:  0 errors 0 Warnings; root order title, creator, abstract, note[role=address]
+% status:  RED (dbaea4ca220) -> GREEN (perfect_kernel_batchblockplace::an_undeclared_note_keeps_perls_place)
+% preload: ar5iv.sty
+\documentclass{tac}
+\title{T}
+\author{Ann Able}
+\address{Univ X, Town}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{S}
+Body.
+\end{document}

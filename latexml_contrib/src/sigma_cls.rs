@@ -47,14 +47,13 @@ LoadDefinitions!({
     "\\AuthorNameForHeading{}",
     "\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}"
   );
-  DefMacro!(
-    "\\Address{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#1}"
-  );
-  DefMacro!("\\EmailD{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  // sigma.cls:75-85 (0803.4168's copy): `\Address`, `\Email…` and `\URLaddress…` print their line where they stand, under
+  // the `\Author` line, before the abstract: `\lx@names@note`, OD #1074.
+  DefMacro!("\\Address{}", "\\lx@names@note{address}{#1}");
+  DefMacro!("\\EmailD{}", "\\lx@names@note{email}{#1}");
   // \Email{addr} — alternate variant in newer sigma.cls templates.
   // Witness 2306.12539, 2307.06355 (both fail with undefined:\\Email).
-  DefMacro!("\\Email{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  DefMacro!("\\Email{}", "\\lx@names@note{email}{#1}");
   // sigma.cls:77-83 (0705.3628's v3.0 and 1404.0720's v1.7 copies; v1.8, 2609.01661, keeps `\EmailD`, `\URLaddress`,
   // `\URLaddressD`): the e-mail and URL lines under a doubly marked (`DD`) or a starred (`Marked`) author, each printing
   // nothing for an empty argument (`\ifthenelse{\equal{#1}{}}{}{…}`; 66 papers of the inventory with `\EmailDD`
@@ -62,7 +61,7 @@ LoadDefinitions!({
   // written inside `\EmailD` (sigma.cls:80 of 2609.01661; 2 of the 211 sampled copies), defined where the paper's copy
   // has it, so a paper whose copy does not can define its own.
   RawTeX!(
-    r"\def\lx@sigma@contact#1#2{\def\lx@sigma@arg{#2}\ifx\lx@sigma@arg\@empty\else\@add@frontmatter{ltx:note}[role=#1]{#2}\fi}
+    r"\def\lx@sigma@contact#1#2{\def\lx@sigma@arg{#2}\ifx\lx@sigma@arg\@empty\else\lx@names@note{#1}{#2}\fi}
 \def\EmailDD{\lx@sigma@contact{email}}\def\EmailMarked{\lx@sigma@contact{email}}
 \def\URLaddressDD{\lx@sigma@contact{url}}\def\URLaddressMarked{\lx@sigma@contact{url}}"
   );
@@ -73,15 +72,9 @@ LoadDefinitions!({
   {
     RawTeX!(r"\def\mail#1{\href{mailto:#1}{#1}}");
   }
-  DefMacro!(
-    "\\URLaddressD{}",
-    "\\@add@frontmatter{ltx:note}[role=url]{#1}"
-  );
+  DefMacro!("\\URLaddressD{}", "\\lx@names@note{url}{#1}");
   // \URLaddress{url} — newer sigma.cls variant (without trailing D).
-  DefMacro!(
-    "\\URLaddress{}",
-    "\\@add@frontmatter{ltx:note}[role=url]{#1}"
-  );
+  DefMacro!("\\URLaddress{}", "\\lx@names@note{url}{#1}");
   DefMacro!(
     "\\ArticleDates{}",
     "\\@add@frontmatter{ltx:note}[role=dates]{#1}"
