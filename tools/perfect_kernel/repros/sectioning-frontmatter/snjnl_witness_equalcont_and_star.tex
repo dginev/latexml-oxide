@@ -1,0 +1,31 @@
+% mechanism: 2412.01641's author block: two `\equalcont` names (†, one note), a starred name with its e-mail (*, the
+%   corresponding line), labels naming several affiliations (2412.01641's sn-jnl.cls:487-596, :742-756)
+% witness:  2412.01641
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able1,2†, Bob Baker1,3†, Cat Cole3* and Dan Dorn1,3,4",
+%   "1Univ A.", "2Univ B.", "3Univ C.", "4Univ D.", "*Corresponding author(s). E-mail(s): cat@c.org;",
+%   "Contributing authors: ann@a.org; bob@b.org; dan@d.org;", "†These authors contributed equally to this work."
+% engines:  rust 3b420685f89 = 0 errors; no mark on any name, the equal-contribution text twice at the document,
+%   no "Corresponding author"
+% expect:   0 errors 0 Warnings; Ann and Bob one note †, Cat the note *, every e-mail and affiliation its author's
+% status:   RED (3b420685f89) -> GREEN XML GREEN, HTML GREEN (SNJNL;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author[1,2]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\equalcont{These authors contributed equally to this work.}
+\author[1,3]{\fnm{Bob} \sur{Baker}}\email{bob@b.org}
+\equalcont{These authors contributed equally to this work.}
+\author*[3]{\fnm{Cat} \sur{Cole}}\email{cat@c.org}
+\author[1,3,4]{\fnm{Dan} \sur{Dorn}}\email{dan@d.org}
+\affil[1]{\orgdiv{Dept A}, \orgname{Univ A}, \orgaddress{\city{Town A}, \country{China}}}
+\affil[2]{\orgname{Univ B}}
+\affil[3]{\orgname{Univ C}}
+\affil[4]{\orgname{Univ D}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

@@ -1001,6 +1001,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // (icml's `\icmlsetsymbol` label on a name: the symbol a mark-only note of the creator, as acmart's `\authornotemark`,
   // not a superscript in the name, whose `fuzzy:` label `\icmlcorrespondingauthor` must spell — 1904.07793; OD #1063)
   ("[mark] package/icml_support_sty.rs", 1),
+  // (SNJNL: the glyph sn-jnl's `\author*` and author notes print on the names, the `ltx:note` schema attribute, on the
+  // one labelled note each queues, as acmart's; OD #1066)
+  ("[mark] sn_jnl_cls.rs", 1),
   ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
   // (P28m3: a new key, distinct from `\lx@sup@setlabel@affiliation`'s `_bymark` (revP28m3): the mark an address under a
   // marked affiliation was placed by, for a names call the reading parts; 2510.10414)

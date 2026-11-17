@@ -1,0 +1,24 @@
+% mechanism: a typed `$^{*}$` in a starred name prints beside the class's `*` (2412.01641's sn-jnl.cls:510); our
+%   correspondent note's `*` answers the typed one (both key `*`), so its ink is lost. Bob's typed † beside
+%   `\equalcont`'s †, the note marked by its command (`MARK_FROM_COUNTER`), shows (SNJNLc)
+% witness:  review probe typedstar (revSNJNLb S2); 2307.08813, 2606.21772 (typed `*`, unlinked)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able∗1* and Bob Baker†1†", "1 Univ A.",
+%   "*Corresponding author(s). E-mail(s): ann@a.org;", "† Equal."
+% engines:  rust SNJNLb 2f983570f17 = Ann's ∗ and Bob's typed † lost; rust SNJNLc = Ann's ∗ lost, Bob's † shown
+% expect:   0 errors 0 Warnings; Ann's typed ∗ shown beside her note's `*`
+% status:   RED XML (row R SNJNLTYPEDFOLD; perfect_kernel_batchfmmarks::
+%   notes_are_marked_only_where_the_class_prints_marks_red)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able$^{*}$}}\email{ann@a.org}
+\author[1]{\fnm{Bob} \sur{Baker$^{\dagger}$}}
+\equalcont{Equal.}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

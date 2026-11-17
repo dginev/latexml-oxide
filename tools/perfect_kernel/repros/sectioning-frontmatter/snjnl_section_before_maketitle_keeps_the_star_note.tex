@@ -1,0 +1,27 @@
+% mechanism: a sectioning command before `\maketitle` (in 2510.03878 inside its `\abstract{…}`) runs the kernel's
+%   fallback flush (`\@startsection@hook`), so the names are digested before the class's notes are queued: the
+%   star's label and the notes' requests are the names' own at the call, only the notes are queued at `\maketitle`
+%   (2412.01641's sn-jnl.cls:510-511, :749-751)
+% witness:  2510.03878 (`\subsection*{Aims}` … in its `\abstract`, `\author*[1]{… \sur{George}\orcidlink{…}}\email{…}`)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Preface", then "Ann Able1* and Bob Baker1", "1Univ A.",
+%   "*Corresponding author(s). E-mail(s): ann@a.org;" (the `\subsection*` in 2510.03878's
+%   `\abstract{…}` gives our Error `Attempt to close a group`, base and head alike: this shape has none)
+% engines:  rust 2d21be273f3 = Ann's correspondent note, mark *; rust 554dcc12e27 (SNJNLb's first commit) = no note
+%   (the requests made at the print came after the names); rust SNJNLb = Ann's note, mark *
+% expect:   0 errors 0 Warnings; Ann's correspondent note "Corresponding author(s).", mark *
+% status:   RED (554dcc12e27) -> GREEN XML, HTML (SNJNLb;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\author[1]{\fnm{Bob} \sur{Baker}}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\section*{Preface}A preface.
+\maketitle
+Text.
+\end{document}

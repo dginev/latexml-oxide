@@ -22,3 +22,18 @@
 \def\@interntxt{}% 
 \def\interntxt#1{\gdef\@interntxt{#1}}\interntxt{Work done as an intern at Westlake University.}%
 \newcommand{\intern}[1][\@interntxt]{\gdef\@interntext{#1}\g@addto@macro\artauthors{$^{\ddagger}$}\global\interntrue}%
+% and 2606.24824's :506-516, a starred name's `*` after its labels, and :764-766, the corresponding line.
+\newcommand{\@@corrauthor}[2][]{\def\@authfrstarg{#1}\@corauemailtrue\advance\corraucount by 1%
+\g@addto@macro\artauthors{%
+    \global\@auemailtrue%
+    \Authorfont%
+    \def\baselinestretch{1}%
+    \authorsep{#2}\unskip\ifx\@authfrstarg\empty\else\textsuperscript{\smash{{%
+      \@for\@@affmark:=#1\do{\edef\affnum{\@ifundefined{X@\@@affmark}{\@@affmark}{\jmkRef{\@@affmark}}}%
+     \unskip\sep\affnum\let\sep=,}}}{*}\hskip-1pt}\fi\unskip%
+    \def\authorsep{\au@and~}%%%
+    \global\let\sep\@empty\global\let\@corref\@empty%
+}}%
+	\ifnum\emailcnt>0\relax%
+           \ifx\corrauthemail\@empty\else{\ifnum\aucount>1*\fi}%
+	   Corresponding author(s). E-mail(s): \corrauthemail\par\fi%

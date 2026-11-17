@@ -1,0 +1,21 @@
+% mechanism: a labelled starred name under an unlabelled last `\author` prints neither its label nor its `*`
+%   (2412.01641's sn-jnl.cls:498, :510); its typed † prints (inside `\fnm`), answered by no line
+% witness:  review sibling of 2606.13079 (revSNJNLb B1, probe tl8)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Bob Baker† and Cat Cole", "1 Univ A." (no ∗)
+% engines:  rust SNJNLb 2f983570f17 = Bob's `footnotemark[∗,†]`; rust SNJNLc = `footnotemark[†]`
+% expect:   0 errors 1 Warning (Bob's name written as its plain text); Bob's † shown plain, no ∗
+% status:   RED (SNJNLb) -> GREEN XML, HTML (SNJNLc;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Bob Baker$^{\dag}$}}
+\author{\fnm{Cat} \sur{Cole}}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

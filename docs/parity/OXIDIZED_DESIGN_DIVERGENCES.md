@@ -19902,8 +19902,8 @@ mark is `<note role="footnotemark" mark="…"/>` right after the name (0801.1438
 glyph the typed one too — a note its own command marks (`_markfromcounter`, `insert::MARK_FROM_COUNTER`: the title's
 footnote counter, set by `\lx@title@thanks` and the emitter's note call; REVTeX's numbered footnotes,
 `number_footnote_parts` and `kind_shared_marked_contacts`; acmart's `\authornote`, acmart.cls:2237, and
-`\authornotemark[n]`, :2897, whose flag the Link step's copy of the note keeps — a copy linked by its glyph has none)
-answers no typed glyph, so `Ann Able*\thanks{…}` keeps both marks of "*∗" (INTREC2, the PURE × SHMARK merge) and
+`\authornotemark[n]`, :2897, whose flag the Link step's copy of the note keeps — a copy linked by its glyph has none;
+sn-jnl's author notes, #1066) answers no typed glyph, so `Ann Able*\thanks{…}` keeps both marks of "*∗" (INTREC2, the PURE × SHMARK merge) and
 acmart's `Ann Able$^{*}$\authornote{…}` and `Bob Baker$^{*}$\authornotemark[1]` both of "∗∗"
 (pure_name_acmart_authornotemark_beside_a_typed_star). Kept in
 the name: superscripts that are name ink (`M\textsuperscript{c}Kernan`, `1\textsuperscript{st}`, an isotope prescript),
@@ -20357,6 +20357,7 @@ explains that the reading places elsewhere (`\affil[$\dag$]{…}` under `\author
 `fmmarks_authblk_double_star_label_and_date_note_red` (`perfect_kernel_batchfmmarks`).
 
 ### 1065. → Bindings beyond Perl's tree: achemso.cls (`achemso_cls.rs`)
+### 1066. → Bindings beyond Perl's tree: sn-jnl.cls (`sn_jnl_cls.rs`)
 
 ### 1068. A symbol legend under the names is the names' that ink its symbol; a note's mark carries it only where none does, or where the legend is that note (DG 2026-11-17; CONNFIX)
 
@@ -22051,3 +22052,52 @@ before), 2107.00078, 2512.17659, 2510.00865 (an affiliation right after another)
 `perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes` (with
 `fmmarks_achemso_replaced_altaffiliation_is_one_note`, `fmmarks_achemso_second_email_phone_fax_replace_the_first`);
 `perfect_kernel_batch65m::file_arguments_are_not_typeset` (the e-mail repro's affiliation is its author's).
+
+#### 1066. sn-jnl's `\author*` star and its author notes' glyphs mark one note each, which every name carrying the mark shares (Perl: no binding; OmniBus)
+
+sn-jnl.cls (2412.01641's copy; the census's 165 copies alike) prints `\author*[labels]{name}` as the name with its
+labels and a `*` in one superscript (:487-516). Whether they print is decided as the names print, from the LAST
+`\author`: its test `\ifx\@authfrstarg\empty` (:498, :510) sits inside `\g@addto@macro\artauthors`, so where the last
+call has labels every name prints its labels and each starred name its `*`, a starred unlabelled one too; where it
+has none no name prints either. The `\email` after a starred name joins the corresponding list (`\if@corauemail`,
+:535-546), which `\@maketitle` prints once, "*Corresponding author(s). E-mail(s): …" (:749-751). An author note
+(`\equalcont{text}`, :584-586; some copies' `\intern`, `\equalsup`, `\equaladv`, `\equalcontribution`) stores its text
+and appends its glyph (`\g@addto@macro\artauthors{$^{\dagger}$}`) after the names printed so far; `\@maketitle` prints
+the last text once, under the addresses (:754). A note given inside a name runs as the names print, after every note
+outside: its text is the one printed, its glyph too late to print.
+
+**Rust.** The binding collapsed the star and wrote each note as a detached `ltx:note` per call, its text twice and no
+mark on any name (12 of 21 marked sn-jnl creators of the 3,000-paper dev sample lost). It now translates the class's
+commands into the frontmatter API's keys and lets the engine place them. A starred name has the label `*` in its
+`annotations`, as an `\author[*]` would, so an `\affil[*]` line answers it as well (2305.11920's "*Corresponding
+author: …"); each name ends with a marks macro (`\lx@sn@marks@<n>`) that the notes after it fill with their requests
+(`\lx@request@frontmatter@annotation[sn]{<command>}`). The names' requests are made at the call, since a section before
+`\maketitle` flushes the names early (2510.03878). As `\maketitle` begins (`\lx@maketitle@begin`, ahead of the flush)
+`print_notes` makes the class's print-time decisions and queues each note once, labelled, so the relocation's copies
+are one note (`idref`, #1059), printed once on the page: the correspondent note `[label={*},role=correspondent]` in the
+copy's words where the class prints the line (those after its `{\ifnum\aucount>1*\fi}`: "Corresponding author(s).",
+2606.20205's "Correspondence:"), marked `*` where the last `\author` has labels and the copy prints the
+`*` (2209.11450's prints `{}`), else unmarked; a printed `*` that no line explains is shown on the name
+(`Policy::labels_print`, `declare_unexplained_name_labels`, #1064; 2509.19318), and one the class prints no `*` for
+(an unlabelled last `\author`, or `{}`) with no line is declared printing nothing, so the name shows none (2606.13079's
+`\author*[]{\fnm{Geng Hong$^{\dag}$}}`). Each author note
+given is `[label={sn:<command>},mark=<glyph>]` with its last text — a name's own call's (`inner_notes`, whose call
+then emits nothing) — and the glyph its copy appends, read as printed (`printed_label_pieces`: † for `\equalcont`, ∗ for 2501.01157's math
+`$^{*}$`, distinct from the starred names' text `*`, ‡ for `\intern`/`\equalsup`, § in 2307.08214's,
+`\textsuperscript{\dag}` †; † with no copy), flagged as its command's (`_markfromcounter`, which the emitter's
+rekeying keeps), so it answers no glyph typed on a name nor the star's; a glyph printing no one mark leaves the note
+unmarked, with a Warning. A copy whose command appends nothing (2209.11450's `\equalcont`)
+marks no name: its note is the document's, as is one given before any name. With no `\maketitle` (no title block) the
+notes given are the document's, unmarked, queued at the document's end (`\lx@sn@fallback@notes` first in
+`@at@end@document`), never at a section's fallback flush, which a `\maketitle` may follow (each note printed twice); a
+note given after a section digested the names marks none of them: the document's, unmarked (row R SNJNLAFTERSEC). An `\email`
+inside a name runs as the names print, under the last author's star (2312.03687). E-mails and affiliations stay their
+authors' contacts, the labels kept as their keys where the last `\author` has none. **Residual.** An ORCID link ending a
+name is followed by the marks macro, so the engine reads it as a mark, not the name's link (row R ORCIDNAME; repro
+`snjnl_orcid_superscript_link_in_name_red`). Two starred names before a section share no note (two `correspondent` notes, no `idref`: row R
+SNJNLSPLIT, 2101.04281); a typed mark is folded into the class's identical mark on the same name (row R SNJNLTYPEDFOLD);
+a shown `*` is written ∗ (row R SNJNLSTARGLYPH). Witnesses 2412.01641, 2603.01834, 2312.03687, 2512.07346, 2401.11721,
+2509.19318, 2305.11920, 2510.03878, 2304.08265 (an unlabelled last `\author`: no `*` printed), 2606.13079, 2501.01157. **Guards**: the `snjnl_*` rows of `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`,
+`perfect_kernel_batch67z::{snjnl_author_notes, snjnl_notes_take_the_copys_default,
+snjnl_notes_marking_no_name_are_the_documents, snjnl_notes_before_a_section_and_maketitle_print_once,
+snjnl_math_star_note_is_not_the_class_star, snjnl_copy_that_marks_no_name, sn_jnl_class_commands}`.

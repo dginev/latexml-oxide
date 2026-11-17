@@ -4671,6 +4671,341 @@ const CLASS: &[Row] = &[
     page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
     page_moves: r#""#,
   },
+  // sn-jnl (SNJNL): `\equalcont`'s † and `\author*`'s * are the marks of one note each, printed once (2412.01641's
+  // sn-jnl.cls:487-596, :742-756; sn_jnl_cls.rs)
+  Row {
+    repro:      "snjnl_equalcont_marks_its_authors_one_note",
+    tex:        repro!("snjnl_equalcont_marks_its_authors_one_note"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; equal-contributors[†]=These authors contributed equally to this work. | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker ; equal-contributors[†]=These authors contributed equally to this work. | email=bob@b.org ; affiliation=Univ A ; affiliation=Univ B"#,
+      r#"Cat Cole | affiliation=Univ B"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; †→note"#,
+      r#"Bob Baker ; †→note"#,
+      r#"Cat Cole"#,
+      r#"margin: These authors contributed equally to this work."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_corresponding_star_is_one_note",
+    tex:        repro!("snjnl_corresponding_star_is_one_note"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker | email=bob@b.org ; affiliation=Univ A"#,
+      r#"Cat Cole ; correspondent[*]=Corresponding author(s). | email=cat@c.org ; affiliation=Univ B"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker"#,
+      r#"Cat Cole ; *→note"#,
+      r#"margin: Corresponding author(s)."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_affil_labels_several_per_name",
+    tex:        repro!("snjnl_affil_labels_several_per_name"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; affiliation=Univ C"#,
+      r#"Bob Baker | affiliation=Univ B"#,
+      r#"Cat Cole | affiliation=Univ A ; affiliation=Univ B ; affiliation=Univ C"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cat Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_witness_equalcont_and_star",
+    tex:        repro!("snjnl_witness_equalcont_and_star"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; equal-contributors[†]=These authors contributed equally to this work. | email=ann@a.org ; affiliation=Dept A, Univ A, Town A, China ; affiliation=Univ B"#,
+      r#"Bob Baker ; equal-contributors[†]=These authors contributed equally to this work. | email=bob@b.org ; affiliation=Dept A, Univ A, Town A, China ; affiliation=Univ C"#,
+      r#"Cat Cole ; correspondent[*]=Corresponding author(s). | email=cat@c.org ; affiliation=Univ C"#,
+      r#"Dan Dorn | email=dan@d.org ; affiliation=Dept A, Univ A, Town A, China ; affiliation=Univ C ; affiliation=Univ D"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; †→note"#,
+      r#"Bob Baker ; †→note"#,
+      r#"Cat Cole ; * plain"#,
+      r#"Dan Dorn"#,
+      r#"margin: Corresponding author(s). ; These authors contributed equally to this work."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_witness_star_and_starred_affil",
+    tex:        repro!("snjnl_witness_star_and_starred_affil"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). | email=ann@a.org ; affiliation=Dept A, Univ A, Town, 02139, MA, USA"#,
+      r#"Bob Baker | affiliation=Dept A, Univ A, Town, 02139, MA, USA"#,
+      r#"Cat Cole | affiliation=Dept A, Univ A, Town, 02139, MA, USA"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker"#,
+      r#"Cat Cole"#,
+      r#"margin: Corresponding author(s)."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_equalcont_last_text_and_email_in_name",
+    tex:        repro!("snjnl_equalcont_last_text_and_email_in_name"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; equal-contributors[†]=Equal contribution. | affiliation=Univ A"#,
+      r#"Bob Baker ; correspondent[*]=Corresponding author(s). ; equal-contributors[†]=Equal contribution. | email=bob@b.org ; affiliation=Univ A"#,
+      r#"Cat Cole ; correspondent[*]=Corresponding author(s). ; equal-contributors[†]=Equal contribution. | email=cat@c.org ; affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; †→note"#,
+      r#"Bob Baker ; *→note ; †→note"#,
+      r#"Cat Cole ; *→note ; †→note"#,
+      r#"margin: Corresponding author(s). ; Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_starred_names_without_email",
+    tex:        repro!("snjnl_starred_names_without_email"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]= | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+      r#"Cat Cole ; footnotemark[*]= | affiliation=Univ B"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker"#,
+      r#"Cat Cole ; * plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_sole_starred_author_without_labels",
+    tex:        repro!("snjnl_sole_starred_author_without_labels"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[]=Corresponding author(s). | email=ann@a.org ; affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able | under: Corresponding author(s)."#],
+    page_moves: r#""#,
+  },
+  // (the labels and the `*` print as the names print, under the last `\author`'s labels, :498, :510: revSNJNL B1)
+  Row {
+    repro:      "snjnl_last_author_unlabelled_prints_no_star",
+    tex:        repro!("snjnl_last_author_unlabelled_prints_no_star"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[]=Corresponding author(s). | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker | email=bob@b.org ; affiliation=Univ A"#,
+      r#"Cat Cole"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Corresponding author(s)."#,
+      r#"Bob Baker"#,
+      r#"Cat Cole"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_unlabelled_star_under_labelled_last_prints_star",
+    tex:        repro!("snjnl_unlabelled_star_under_labelled_last_prints_star"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). | email=ann@a.org"#,
+      r#"Bob Baker | email=bob@b.org ; affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker"#,
+      r#"margin: Corresponding author(s)."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_unlabelled_star_without_line_shows",
+    tex:        repro!("snjnl_unlabelled_star_without_line_shows"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker | email=bob@b.org ; affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; * plain"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  // (the printed `*` is the label `*`, which an `\affil[*]` line answers: 2305.11920)
+  Row {
+    repro:      "snjnl_affil_star_line_explains_the_star",
+    tex:        repro!("snjnl_affil_star_line_explains_the_star"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; affiliation=Corresponding author: Ann Able ; email=ann@a.org"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  // (the names flushed before `\maketitle` by a section: the star's label is the name's own, 2510.03878)
+  Row {
+    repro:      "snjnl_section_before_maketitle_keeps_the_star_note",
+    tex:        repro!("snjnl_section_before_maketitle_keeps_the_star_note"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker"#,
+      r#"margin: Corresponding author(s)."#,
+    ],
+    page_moves: r#""#,
+  },
+  // (an unlabelled last `\author` prints no `*`: a starred name's unanswered `*` label shows nothing, 2606.13079;
+  // revSNJNLb B1)
+  Row {
+    repro:      "snjnl_unprinted_star_on_a_name_written_as_text",
+    tex:        repro!("snjnl_unprinted_star_on_a_name_written_as_text"),
+    warnings:   2,
+    creators:   &[
+      r#"Ann Able | affiliation=† Univ A"#,
+      r#"Bob Baker | affiliation=† Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_labelled_star_typed_dagger_under_unlabelled_last",
+    tex:        repro!("snjnl_labelled_star_typed_dagger_under_unlabelled_last"),
+    warnings:   1,
+    creators:   &[
+      r#"Bob Baker ; footnotemark[†]= | affiliation=Univ A"#,
+      r#"Cat Cole"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Bob Baker ; † plain"#, r#"Cat Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_star_shapes_under_unlabelled_last_print_no_star",
+    tex:        repro!("snjnl_star_shapes_under_unlabelled_last_print_no_star"),
+    warnings:   2,
+    creators:   &[
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
+      r#"Cat Cole ; footnotemark[†]= | affiliation=Univ A"#,
+      r#"Dan Dorn"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; † plain"#,
+      r#"Bob Baker"#,
+      r#"Cat Cole ; † plain"#,
+      r#"Dan Dorn"#,
+    ],
+    page_moves: r#""#,
+  },
+  // (a section before `\maketitle` digests the names; the notes are queued at `\maketitle` alone, the document's end
+  // without one: revSNJNLb B2)
+  Row {
+    repro:      "snjnl_note_before_section_and_maketitle_prints_once",
+    tex:        repro!("snjnl_note_before_section_and_maketitle_prints_once"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). ; equal-contributors[†]=Outer. | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain ; † plain"#,
+      r#"Bob Baker"#,
+      r#"margin: Corresponding author(s). ; Outer."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_note_inside_a_name_before_section_and_maketitle_prints_once",
+    tex:        repro!("snjnl_note_inside_a_name_before_section_and_maketitle_prints_once"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_note_between_section_and_maketitle_red",
+    tex:        repro!("snjnl_note_between_section_and_maketitle_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker ; equal-contributors[†]=Between. | affiliation=Univ A"#,
+    ],
+    moves:      r#"row R SNJNLAFTERSEC (a note after a section's flush marks no name: the document's, unmarked, as the base)"#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; † plain"#,
+      r#"margin: Corresponding author(s). ; Between."#,
+    ],
+    page_moves: r#"row R SNJNLAFTERSEC (Bob's † not shown)"#,
+  },
+  Row {
+    repro:      "snjnl_typed_star_beside_the_class_star_red",
+    tex:        repro!("snjnl_typed_star_beside_the_class_star_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). ; footnotemark[*]= | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker ; equal-contributors[†]=Equal. ; footnotemark[†]= | affiliation=Univ A"#,
+    ],
+    moves:      r#"row R SNJNLTYPEDFOLD (a typed mark is folded into the class's identical mark on the same name: Ann's typed ∗ lost)"#,
+    page:       &[
+      r#"Ann Able ; * plain ; * plain"#,
+      r#"Bob Baker ; † plain ; †→note"#,
+      r#"margin: Corresponding author(s). ; Equal."#,
+    ],
+    page_moves: r#"row R SNJNLTYPEDFOLD (Ann's typed ∗ lost); row R MARKORDER (Bob's typed † prints before the class's)"#,
+  },
+  // (a note inside a name runs last as the names print: its text the one printed, revSNJNL B2)
+  Row {
+    repro:      "snjnl_note_inside_a_name_text_wins",
+    tex:        repro!("snjnl_note_inside_a_name_text_wins"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; equal-contributors[†]=Second text. | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; † plain"#,
+      r#"Bob Baker"#,
+      r#"margin: Second text."#,
+    ],
+    page_moves: r#""#,
+  },
 ];
 /// Class-printed marks against none: a note carries a mark only where its class prints one (IEEEtran and ieeeconf none,
 /// 2606.00397, 1510.02728), a symbol opening its text that is the text's own stays text (review revSHMARK S2), and

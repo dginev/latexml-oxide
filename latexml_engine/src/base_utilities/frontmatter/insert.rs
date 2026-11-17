@@ -705,8 +705,9 @@ pub(in crate::base_utilities) const MARK_IN_TEXT: &str = "_markintext";
 /// Able*\thanks{…}` printing "*∗" (`pure_names::answer`). Set by `\lx@title@thanks` (the title's footnote counter,
 /// `\@fnsymbol` at article.cls:205) and the emitter's note call, `number_footnote_parts` and `kind_shared_marked_contacts`
 /// (REVTeX's numbered front-matter footnotes), acmart's `\authornote` (acmart.cls:2237) and `\authornotemark[n]` (:2897),
-/// kept on the copy `link_marked_notes` makes of the latter. Finalize drops it with the other `_` attributes. Internal,
-/// no binding surface: `pub` only for acmart's binding.
+/// kept on the copy `link_marked_notes` makes of the latter, and sn-jnl's author notes (`\equalcont`, OD #1066), which the
+/// emitter's rekeying keeps (`routing_key`). Finalize drops it with the other `_` attributes. Internal, no binding
+/// surface: `pub` only for acmart's and sn-jnl's bindings.
 #[doc(hidden)]
 pub const MARK_FROM_COUNTER: &str = "_markfromcounter";
 

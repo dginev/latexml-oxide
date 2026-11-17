@@ -1,0 +1,26 @@
+% mechanism: `\@maketitle` prints `\@equalconttext` once, the text of the LAST `\equalcont` (2412.01641's
+%   sn-jnl.cls:586, a `\gdef`; :754), so an empty first one marks its name † all the same; an `\email` inside a
+%   starred name runs as `\artauthors` prints, under the last author's star (:535-546 `\if@corauemail`), so it is a
+%   corresponding address
+% witness:  2312.03687 (`\author*[1]{… \email{…}}\equalcont{}`, the last `\equalcont{Equal contribution; …}`),
+%   2512.07346 (`\equalcont{}` then `\equalcont{These authors contributed equally to this work.}`)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able1†, Bob Baker1*†, Cat Cole1*†", "1Univ A.",
+%   "*Corresponding author(s). E-mail(s): bob@b.org; cat@c.org;", "†Equal contribution."
+% engines:  rust 3b420685f89 = 0 errors; three document notes (two empty), no mark on any name
+% expect:   0 errors 0 Warnings; Ann, Bob and Cat one note "Equal contribution." under †, Bob and Cat one note *
+% status:   RED (3b420685f89) -> GREEN XML GREEN, HTML GREEN (SNJNL;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author[1]{\fnm{Ann} \sur{Able}}\equalcont{}
+\author*[1]{\fnm{Bob} \sur{Baker} \email{bob@b.org}}\equalcont{}
+\author*[1]{\fnm{Cat} \sur{Cole} \email{cat@c.org}}\equalcont{Equal contribution.}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

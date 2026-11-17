@@ -1,0 +1,26 @@
+% mechanism: with no `\email` the class prints no corresponding line (2412.01641's sn-jnl.cls:749-751, under
+%   `\ifnum\emailcnt>0`), yet a starred name with labels still prints its `*` (:510-511): a mark no note explains
+% witness:  2509.19318 (two starred names, no e-mail)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able1*, Bob Baker1 and Cat Cole2*", "1Univ A.",
+%   "2Univ B.", and nothing more
+% engines:  rust 3b420685f89 = 0 errors 0 Warnings; no `*`; rust SNJNL = 0 errors, 1 Warning
+%   (`unanswered_mark_lost`, the two `*` counted), no `*`; rust SNJNLb = the two `*` shown, 0 Warnings
+% expect:   0 errors 0 Warnings; no note invented; the two `*` shown plain on their names (every unlinked mark shows,
+%   OD #1059; `declare_unexplained_name_labels`, OD #1064)
+% status:   RED (SNJNL, row R SNJNLSTAR) -> GREEN XML, HTML (SNJNLb;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}
+\author[1]{\fnm{Bob} \sur{Baker}}
+\author*[2]{\fnm{Cat} \sur{Cole}}
+\affil[1]{\orgname{Univ A}}
+\affil[2]{\orgname{Univ B}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}
