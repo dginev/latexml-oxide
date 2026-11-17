@@ -1,0 +1,24 @@
+% mechanism: achemso: an affiliation or e-mail before any `\author` is the class's Warning and no author's; the text is
+%   kept (FIDELITY_CHARTER §2)
+% witness:  the class rule (achemso.cls:376-378, :517-519)
+% oracle:   pdflatex 0 errors; "Ann Able∗", "Univ A", "E-mail: ann@x.org"; log "Class achemso Warning: Affiliation with no author",
+%   "Class achemso Warning: E-mail with no author"
+% engines:  rust int/frontmatter 3b420685f89 = 0 errors, 1 Warning; XML Ann Able | email=ann@x.org ; email=z@x.org;
+%   ACHEMSO = 0 errors, 3 Warnings; XML Ann Able | email=ann@x.org ; affiliation=Univ A
+% expect:   0 errors, 3 Warnings; XML Ann Able | affiliation=Univ A ; email=ann@x.org; HTML Ann Able (the guard's XML
+%   and HTML lines)
+%   and the notes outside the creators affiliation=Univ Z, email=z@x.org
+%   (perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes)
+% status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\affiliation{Univ Z}
+\email{z@x.org}
+\author{Ann Able}
+\email{ann@x.org}
+\affiliation{Univ A}
+\title{Title}
+\begin{document}
+Text.
+\end{document}

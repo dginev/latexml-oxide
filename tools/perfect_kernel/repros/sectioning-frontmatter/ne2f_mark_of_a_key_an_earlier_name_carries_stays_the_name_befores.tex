@@ -1,0 +1,13 @@
+% mechanism: as ne2f_mark_of_a_key_the_name_before_carries_is_the_next_names, the key carried by an earlier name, not
+%   the name before: the mark glued to Bob is Bob's, a copy of Ann's note (DG 2026-11-17 S3)
+% witness: revWRONGFIXb s08 (synthetic)
+% oracle:  pdflatex 0 errors: "Ann Able∗ Bob Baker∗ Carl Cole"; footnote "∗ Equal contribution."
+% engines: rust REGFIX: Bob a mark-only note; WRONGFIXc b842de7fc4c: as expected
+% expect:  0 errors 0 Warnings; Ann Able thanks[*]=Equal contribution.; Bob Baker thanks[*]=Equal contribution.; Carl
+%   Cole
+% status:  GREEN (b842de7fc4c; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \quad Bob Baker\footnotemark[1] \quad Carl Cole}
+\begin{document}\maketitle Body.\end{document}

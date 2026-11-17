@@ -42,7 +42,7 @@ compiled binding is never displaced by raw mode.
 | `aastex631` | `.cls` | ported | *alias of* `aastex.cls` |
 | `aastex7` | `.cls` | ported | *alias of* `aastex.cls` |
 | `aastex70` | `.cls` | ported | *alias of* `aastex.cls` |
-| `achemso` | `.cls` | contributed | Stub for achemso.cls (ACS chemistry journals). |
+| `achemso` | `.cls` | contributed |  |
 | `acmart` | `.cls` | ported |  |
 | `aero` | `.cls` | contributed, raw + overrides |  |
 | `agujournal2019` | `.cls` | contributed | Stub for agujournal2019.cls (AGU journal template). |

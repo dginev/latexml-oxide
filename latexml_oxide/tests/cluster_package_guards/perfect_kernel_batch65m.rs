@@ -210,7 +210,9 @@ fn file_arguments_are_not_typeset() {
     &xml,
     "creator",
     &[],
-    "<creator role=\"author\"><personname>Ranojoy Bose</personname><contact name=\"Email:\u{a0}\" role=\"email\">ranojoy_bose@apple.com</contact></creator>",
+    // (the affiliation is the author's, as achemso.cls:336-379 numbers it, before the e-mail as the PDF prints them:
+    // OXIDIZED_DESIGN #1065)
+    "<creator role=\"author\"><personname>Ranojoy Bose</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Apple</contact><contact name=\"Email:\u{a0}\" role=\"email\">ranojoy_bose@apple.com</contact></creator>",
   );
   assert!(!xml.contains("<note role=\"email\""), "{xml}");
 }

@@ -17,7 +17,8 @@
 //!   `note role="footnotemark"` (answered by no note of the block; a title's note is the title's);
 //! - a `\footnotemark`/`\samethanks`/`\authornotemark` on a name is a copy of the note it marks (Perl's
 //!   `relocateFootnote_aux`, latex_constructs.pool.ltxml:518-527);
-//! - a mark between two names is the nearer one's by the printed gaps, a tie the next name's; one followed by a
+//! - a mark between two names is the name before's, the next name's only at a line's or cell's start, under the block's
+//!   edge proof, or where the name before carries its key already (DG 2026-11-17, OD #1057); one followed by a
 //!   separator, `\\` or the block's end is carried back; one alone on the line after `\\` is no name's (ruling 4);
 //! - on the page a shared note prints once, in the margin, its mark on every carrying name; a marked note of one name
 //!   prints under it with no mark on LaTeXML.css's card (a multi-line block, or a creator showing author lines alone),
@@ -2023,7 +2024,7 @@ fn a_mark_on_a_name_is_a_copy_of_its_note() { assert_green(LINK); }
 #[ignore = "RED: the row R lines its rows name"]
 fn a_mark_on_a_name_is_a_copy_of_its_note_red() { assert_red_layers_now_green(LINK); }
 
-/// The rows of [`a_mark_past_spacing_is_the_nearer_names`] and its `_red` twin.
+/// The rows of [`a_mark_past_spacing_is_the_name_befores`] and its `_red` twin.
 const SPACING: &[Row] = &[
   Row {
     repro:      "ne2e_mark_past_spacing_is_its_names",
@@ -2060,7 +2061,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // the mark as printed, no Warning (the mark ledger writes the prefix Bob's: SHGNEXT, OD #1057)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2e_prefix_mark_past_spacing_before_and",
@@ -2182,7 +2182,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2e_prefix_mark_past_hfill",
     tex:        repro!("ne2e_prefix_mark_past_hfill"),
@@ -2201,10 +2200,9 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
-    repro:      "ne2f_bare_mark_nearer_next_past_quads",
-    tex:        repro!("ne2f_bare_mark_nearer_next_past_quads"),
+    repro:      "ne2f_bare_mark_past_quads_is_the_name_befores",
+    tex:        repro!("ne2f_bare_mark_past_quads_is_the_name_befores"),
     warnings:   0,
     creators:   &[
       r#"Ann Able ; footnotemark[†]= ; thanks[*]=X"#,
@@ -2220,10 +2218,9 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
-    repro:      "ne2f_mark_and_note_nearer_next",
-    tex:        repro!("ne2f_mark_and_note_nearer_next"),
+    repro:      "ne2f_mark_and_note_past_qquad_are_the_name_befores",
+    tex:        repro!("ne2f_mark_and_note_past_qquad_are_the_name_befores"),
     warnings:   0,
     creators:   &[
       r#"Ann Able ; footnotemark[†]= ; thanks[*]=X ; thanks[‡]=Y"#,
@@ -2241,10 +2238,9 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
-    repro:      "ne2f_mark_nearer_next_past_qquad",
-    tex:        repro!("ne2f_mark_nearer_next_past_qquad"),
+    repro:      "ne2f_mark_past_qquad_is_the_name_befores",
+    tex:        repro!("ne2f_mark_past_qquad_is_the_name_befores"),
     warnings:   0,
     creators:   &[
       r#"Ann Able ; footnotemark[†]="#,
@@ -2257,10 +2253,9 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
-    repro:      "ne2f_mark_nearer_next_past_quads",
-    tex:        repro!("ne2f_mark_nearer_next_past_quads"),
+    repro:      "ne2f_mark_past_quads_is_the_name_befores",
+    tex:        repro!("ne2f_mark_past_quads_is_the_name_befores"),
     warnings:   0,
     creators:   &[
       r#"Ann Able ; footnotemark[†]="#,
@@ -2273,10 +2268,9 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
-    repro:      "ne2f_mark_nearer_next_past_ties",
-    tex:        repro!("ne2f_mark_nearer_next_past_ties"),
+    repro:      "ne2f_mark_past_ties_is_the_name_befores",
+    tex:        repro!("ne2f_mark_past_ties_is_the_name_befores"),
     warnings:   0,
     creators:   &[
       r#"Ann Able ; footnotemark[†]="#,
@@ -2288,7 +2282,6 @@ const SPACING: &[Row] = &[
     page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2g_mark_in_group_with_previous_name",
@@ -2305,7 +2298,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2g_mark_in_its_own_group",
     tex:        repro!("ne2g_mark_in_its_own_group"),
@@ -2320,7 +2312,6 @@ const SPACING: &[Row] = &[
     page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2f_marks_wider_after_and_tied",
@@ -2350,7 +2341,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2g_mark_then_orcid_nearer_next",
     tex:        repro!("ne2g_mark_then_orcid_nearer_next"),
@@ -2364,7 +2354,6 @@ const SPACING: &[Row] = &[
     page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2g_mark_then_superscript_nearer_next",
@@ -2383,7 +2372,6 @@ const SPACING: &[Row] = &[
     ],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2h_marks_run_parted_at_its_widest_gap",
@@ -2404,7 +2392,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2h_marks_run_wider_before_goes_to_the_next_name",
     tex:        repro!("ne2h_marks_run_wider_before_goes_to_the_next_name"),
@@ -2424,7 +2411,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_bare_prefix_mark_after_quad_red",
     tex:        repro!("fmmarks_bare_prefix_mark_after_quad_red"),
@@ -2443,7 +2429,6 @@ const SPACING: &[Row] = &[
     ],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_gap_mark_then_thanks_red",
@@ -2465,7 +2450,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_gap_thanks_then_mark_red",
     tex:        repro!("fmmarks_gap_thanks_then_mark_red"),
@@ -2486,7 +2470,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_after_wide_hspace_nearer_next_red",
     tex:        repro!("fmmarks_mark_after_wide_hspace_nearer_next_red"),
@@ -2501,7 +2484,6 @@ const SPACING: &[Row] = &[
     page:       &[r#"Ann Able ; * plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_and_note_floating_between_names_red",
@@ -2522,7 +2504,6 @@ const SPACING: &[Row] = &[
     ],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_between_interword_spaces_red",
@@ -2553,7 +2534,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_nearer_next_bold_name_red",
     tex:        repro!("fmmarks_mark_nearer_next_bold_name_red"),
@@ -2569,7 +2549,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_cite_nearer_next_red",
     tex:        repro!("fmmarks_mark_then_cite_nearer_next_red"),
@@ -2583,7 +2562,6 @@ const SPACING: &[Row] = &[
     page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_footnotetext_nearer_next_red",
@@ -2604,7 +2582,6 @@ const SPACING: &[Row] = &[
     page_moves: "",
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_hfill_before_next_red",
     tex:        repro!("fmmarks_mark_then_hfill_before_next_red"),
@@ -2614,7 +2591,6 @@ const SPACING: &[Row] = &[
     page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_superscript_label_of_next_red",
@@ -2633,7 +2609,6 @@ const SPACING: &[Row] = &[
     ],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_thanks_before_next_name_red",
@@ -2655,7 +2630,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_marks_run_split_by_wide_space_red",
     tex:        repro!("fmmarks_marks_run_split_by_wide_space_red"),
@@ -2674,7 +2648,6 @@ const SPACING: &[Row] = &[
     ],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_marks_three_names_one_line_red",
@@ -2729,7 +2702,6 @@ const SPACING: &[Row] = &[
   // the marks a writer writes each from its own first token, never the one before it again (review revSHGNEXT B1, P1:
   // a mark's event span starts where the box before it began)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2j_two_marks_glued_nearer_next",
     tex:        repro!("ne2j_two_marks_glued_nearer_next"),
@@ -2748,7 +2720,6 @@ const SPACING: &[Row] = &[
     ],
     page_moves: r#""#,
   },
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2j_three_marks_glued_nearer_next",
@@ -2809,7 +2780,6 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2j_macro_marks_nearer_next",
     tex:        repro!("ne2j_macro_marks_nearer_next"),
@@ -2829,37 +2799,72 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // a formula's comma glued between two marks is ink of their run (revSHGNEXT S1; 1703.08733's shape)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
-  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned, DG 2026-11-17 S3: Ann's `\thanks` carries key 1 already, so the `\footnotemark[1]` past the `\qquad` and
+  // its run are Bob's, as pdflatex prints "∗,†" over his name — Ann ∗ ∗ † before, from the default alone)
   Row {
     repro:      "ne2j_math_comma_between_marks_nearer_next",
     tex:        repro!("ne2j_math_comma_between_marks_nearer_next"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able ; footnotemark[*]= ; footnotemark[†]= ; thanks[*]=X"#,
-      r#"Bob Baker"#,
+      r#"Ann Able ; thanks[*]=X"#,
+      r#"Bob Baker ; footnotemark[†]= ; thanks[*]=X"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      r#"Ann Able ; *→note ; † plain ; * plain"#,
-      r#"Bob Baker"#,
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note ; † plain"#,
       r#"Carl Cole"#,
       r#"margin: X"#,
     ],
     page_moves: r#""#,
   },
+  // a mark whose key the name before carries already is the next name's (DG 2026-11-17 S3); distinct from the key an
+  // earlier name carries, which leaves a mark glued to its name that name's (s08)
+  Row {
+    repro:      "ne2f_mark_of_a_key_the_name_before_carries_is_the_next_names",
+    tex:        repro!("ne2f_mark_of_a_key_the_name_before_carries_is_the_next_names"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnote[†]=Two."#,
+      r#"Bob Baker ; footnote[†]=Two."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; †→note"#,
+      r#"Bob Baker ; †→note"#,
+      r#"margin: Two."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "ne2f_mark_of_a_key_an_earlier_name_carries_stays_the_name_befores",
+    tex:        repro!("ne2f_mark_of_a_key_an_earlier_name_carries_stays_the_name_befores"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Equal contribution."#,
+      r#"Bob Baker ; thanks[*]=Equal contribution."#,
+      r#"Carl Cole"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Carl Cole"#,
+      r#"margin: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
 ];
-/// Marks after spacing (ruling 4 and the nearer-name rule): a mark spacing parts from the names is the nearer name's by
-/// the printed gaps (a tie the next's); followed by a separator, `\\` or the block's end it is carried back (1911.13299,
-/// 2412.20504, 1807.02791; every revSHGIVEN probe).
+/// Marks after spacing (ruling 4 and DG 2026-11-17): a mark spacing parts from the names is the name before's, whatever
+/// the glue, the next name's where the name before carries its key already (S3); followed by a separator, `\\` or the
+/// block's end it is carried back (1911.13299, 2412.20504, 1807.02791; every revSHGIVEN probe).
 #[test]
-fn a_mark_past_spacing_is_the_nearer_names() { assert_green(SPACING); }
-/// The known gaps of [`a_mark_past_spacing_is_the_nearer_names`].
+fn a_mark_past_spacing_is_the_name_befores() { assert_green(SPACING); }
+/// The known gaps of [`a_mark_past_spacing_is_the_name_befores`].
 #[test]
 #[ignore = "RED: the row R lines its rows name"]
-fn a_mark_past_spacing_is_the_nearer_names_red() { assert_red_layers_now_green(SPACING); }
+fn a_mark_past_spacing_is_the_name_befores_red() { assert_red_layers_now_green(SPACING); }
 
 /// The rows of [`revtex_marks_follow_its_numbering`] and its `_red` twin.
 const REVTEX: &[Row] = &[
@@ -4306,6 +4311,182 @@ const CLASS: &[Row] = &[
     ],
     page_moves: r#"row R PRESBX/copywrap (∗, † shown)"#,
   },
+  Row {
+    repro:      "fmmarks_achemso_affiliation_reaches_the_waiting_authors",
+    tex:        repro!("fmmarks_achemso_affiliation_reaches_the_waiting_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A ; email=bob@x.org"#,
+      r#"Cy Cole | affiliation=Univ B, Town"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_repeated_affiliation_text_is_one_affiliation",
+    tex:        repro!("fmmarks_achemso_repeated_affiliation_text_is_one_affiliation"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ B"#,
+      r#"Cy Cole | affiliation=Univ A ; email=cy@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_alsoaffiliation_is_the_last_authors",
+    tex:        repro!("fmmarks_achemso_alsoaffiliation_is_the_last_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; affiliation=Univ B"#,
+      r#"Bob Baker | affiliation=Univ B ; affiliation=Univ C ; email=bob@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_altaffiliation_is_the_last_authors",
+    tex:        repro!("fmmarks_achemso_altaffiliation_is_the_last_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; altaffiliation=Current address: Lab C"#,
+      r#"Bob Baker | affiliation=Univ A ; email=bob@x.org"#,
+      r#"Cy Cole | affiliation=Univ B ; altaffiliation=Current address: Lab D"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_email_phone_fax_are_the_last_authors",
+    tex:        repro!("fmmarks_achemso_email_phone_fax_are_the_last_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; email=ann_able@x.org ; phone=+1 555 0100 ; fax=+1 555 0101"#,
+      r#"Bob Baker | affiliation=Univ A ; email=bob@x.org ; phone=+1 555 0200"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_affiliation_after_affiliation_reaches_no_author",
+    tex:        repro!("fmmarks_achemso_affiliation_after_affiliation_reaches_no_author"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+      r#"Cy Cole | affiliation=Univ C ; email=cy@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_new_alsoaffiliation_is_the_waiting_authors",
+    tex:        repro!("fmmarks_achemso_new_alsoaffiliation_is_the_waiting_authors"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ B"#,
+      r#"Bob Baker | affiliation=Univ B"#,
+      r#"Cy Cole | affiliation=Univ A"#,
+      r#"Dan Dorn | affiliation=Univ C ; email=dan@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#, r#"Dan Dorn"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_pieces_before_any_author_warn",
+    tex:        repro!("fmmarks_achemso_pieces_before_any_author_warn"),
+    warnings:   3,
+    creators:   &[r#"Ann Able | affiliation=Univ A ; email=ann@x.org"#],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_witness_run_of_two_takes_a_repeated_affiliation",
+    tex:        repro!("fmmarks_achemso_witness_run_of_two_takes_a_repeated_affiliation"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A, Town ; affiliation=Inst Q, Town ; email=ann@x.org"#,
+      r#"Bob Baker | affiliation=Univ A, Town ; affiliation=Inst Q, Town ; affiliation=Inst K, Town"#,
+      r#"Cy Cole | affiliation=Inst Q, Town"#,
+      r#"Dan Dorn | affiliation=Inst Q, Town"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#, r#"Dan Dorn"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_pieces_no_author_holds_stay_unlinked",
+    tex:        repro!("fmmarks_achemso_pieces_no_author_holds_stay_unlinked"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; altaffiliation=Lab Y"#,
+      r#"Bob Baker | affiliation=Univ B ; email=bob@x.org"#,
+      r#"Cy Cole | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_email_list_addresses_go_to_the_authors_they_spell",
+    tex:        repro!("fmmarks_achemso_email_list_addresses_go_to_the_authors_they_spell"),
+    warnings:   2,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; email=ann.able@x.org"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+      r#"Cy Cole | affiliation=Univ A ; email=cy.cole@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_replaced_altaffiliation_is_one_note",
+    tex:        repro!("fmmarks_achemso_replaced_altaffiliation_is_one_note"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ X ; altaffiliation=Now at Q ; email=ann@x.edu"#,
+      r#"Bob Baker | affiliation=Univ Y ; altaffiliation=Now at R"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_second_email_phone_fax_replace_the_first",
+    tex:        repro!("fmmarks_achemso_second_email_phone_fax_replace_the_first"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ X ; email=ann2@y.edu ; phone=456 ; fax=789"#,
+      r#"Bob Baker | affiliation=Univ X"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_achemso_alsoaffiliation_after_a_two_name_author_red",
+    tex:        repro!("fmmarks_achemso_alsoaffiliation_after_a_two_name_author_red"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A ; affiliation=Univ C"#,
+      r#"Bob Baker | affiliation=Univ A ; affiliation=Univ C"#,
+      r#"Cy Cole | affiliation=Univ B ; email=cy@x.org"#,
+    ],
+    moves:      r#"row R ACHEMSO-CALLS (the API's annotate counts creators, not author calls: an \alsoaffiliation after a two-name \author reaches its last name only)"#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#, r#"Cy Cole"#],
+    page_moves: r#""#,
+  },
 ];
 /// Class-printed marks against none: a note carries a mark only where its class prints one (IEEEtran and ieeeconf none,
 /// 2606.00397, 1510.02728), a symbol opening its text that is the text's own stays text (review revSHMARK S2), and
@@ -4315,8 +4496,81 @@ const CLASS: &[Row] = &[
 /// an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1); a `\maketitle` that makes a footnote or
 /// sets the footnote counter before its title, or one a package's `\let` restores, has unknown marks (revPRESBXb BL2, BL3);
 /// a mark the counter steps to 0 or below in the title block prints none (1910.09525, WRONGFIXc).
+/// achemso's affiliations, e-mails, phones, faxes and alternative affiliations are under the authors the class numbers
+/// them for, its generated marks no ink of ours (ACHEMSO, OXIDIZED_DESIGN_DIVERGENCES #1065; 2605.10968, 2306.05209).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
+/// achemso's pieces no author holds at `\begin{document}` (a CLASS row asserts only the creators): each is one
+/// document-level note, as the class lists it with a mark no name carries, once however many authors replaced it
+/// (revACHEMSO B1); one a later author repeats is no note, and one before any `\author` is the class's Warning and
+/// kept; a replaced `\email`, `\phone` or `\fax`, and a phone or fax of an author with no e-mail, which the class does
+/// not print, are kept as notes (revACHEMSO S2) (ACHEMSO, OXIDIZED_DESIGN_DIVERGENCES #1065; 2512.17659, 2510.00865,
+/// 2107.00078, 1910.14165).
+#[test]
+fn achemso_pieces_no_author_holds_are_unlinked_notes() {
+  for (tex, warnings, notes) in [
+    (
+      repro!("fmmarks_achemso_pieces_no_author_holds_stay_unlinked"),
+      1,
+      &["affiliation=Univ C", "altaffiliation=Lab X"][..],
+    ),
+    (
+      repro!("fmmarks_achemso_affiliation_after_affiliation_reaches_no_author"),
+      1,
+      &["affiliation=Univ B"][..],
+    ),
+    (
+      repro!("fmmarks_achemso_pieces_before_any_author_warn"),
+      3,
+      &["affiliation=Univ Z", "email=z@x.org"][..],
+    ),
+    (
+      repro!("fmmarks_achemso_replaced_altaffiliation_is_one_note"),
+      1,
+      &["altaffiliation=Now at P"][..],
+    ),
+    (
+      repro!("fmmarks_achemso_second_email_phone_fax_replace_the_first"),
+      1,
+      &["email=ann@x.edu", "phone=123", "phone=555"][..],
+    ),
+    // (a repeated identical contact replaces nothing: no duplicate note, 2203.15022; revACHEMSOb B1)
+    (
+      repro!("fmmarks_achemso_repeated_contact_is_one_contact"),
+      1,
+      &[][..],
+    ),
+  ] {
+    let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+    // (the notes outside every creator, `role=text` in document order)
+    let mut outside = xml.clone();
+    while let (Some(from), Some(to)) = (outside.find("<creator "), outside.find("</creator>")) {
+      outside.replace_range(from..to + "</creator>".len(), "");
+    }
+    let found: Vec<String> = outside
+      .match_indices("<note ")
+      .map(|(at, _)| {
+        let tag_end = at + outside[at..].find('>').expect("start tag");
+        let close = at + outside[at..].find("</note>").expect("closed note");
+        format!(
+          "{}={}",
+          attribute(&outside[at..tag_end], "role"),
+          text(&outside[tag_end + 1..close])
+        )
+      })
+      .collect();
+    assert_eq!(
+      (error_count(&log), warning_count(&log), found),
+      (
+        0,
+        warnings,
+        notes.iter().map(ToString::to_string).collect::<Vec<_>>()
+      ),
+      "{xml}"
+    );
+  }
+}
+
 /// The known gaps of [`notes_are_marked_only_where_the_class_prints_marks`].
 #[test]
 #[ignore = "RED: the row R lines its rows name"]
