@@ -852,12 +852,12 @@ impl Resolver {
   /// `\author`: the note beside the name).
   pub(super) fn answer_note_texts(&mut self) {
     // (an unmarked `\thanks` of a live name under a class printing no note mark: the block's, `Resolver::keep_note`)
-    for (index, span, owner) in std::mem::take(&mut self.block_thanks) {
+    for (source, owner) in std::mem::take(&mut self.block_thanks) {
       if self.replaced.contains(&owner) {
         continue;
       }
       let notes = &mut self.out.creators[owner].notes;
-      if let Some(at) = notes.iter().position(|a| a.source == Some((index, span))) {
+      if let Some(at) = notes.iter().position(|a| a.source == Some(source)) {
         let assoc = notes.remove(at);
         let rule = s!("{} owner:block", assoc.rule);
         self.attach(None, Assoc { rule, ..assoc }, true);
@@ -870,7 +870,7 @@ impl Resolver {
     // Wappler\footnotemark[1]`, all three texts on the last name before (2407.04435); OXIDIZED_DESIGN_DIVERGENCES #1058.
     // A `\thanks` stays its own name's: a name's `\footnotemark` of its number is filled with it where it prints,
     // `insert::link_marked_notes`)
-    for (index, number, span, owner) in std::mem::take(&mut self.numbered_notes) {
+    for ((index, span), number, owner) in std::mem::take(&mut self.numbered_notes) {
       let mut carriers: Vec<usize> = Vec::new();
       for &(c, _, n) in &self.fn_requests {
         if n == Some(number)

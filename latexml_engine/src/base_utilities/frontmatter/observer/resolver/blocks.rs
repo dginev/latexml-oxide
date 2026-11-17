@@ -1549,12 +1549,14 @@ impl Resolver {
       && role == "thanks"
       && let Some(at) = owner
     {
-      self.block_thanks.push((index, note.span, at));
+      self.block_thanks.push(((index, note.span), at));
     }
     // (a footnote text's number, which a `\footnotemark` of the block showing the same number answers: TeX pairs a mark
     // and its text by number, `answer_note_texts`)
     if let Some(number) = note.number.filter(|_| role == "footnotetext") {
-      self.numbered_notes.push((index, number, note.span, owner));
+      self
+        .numbered_notes
+        .push(((index, note.span), number, owner));
     }
     let rule = rule.to_string();
     self.attach(

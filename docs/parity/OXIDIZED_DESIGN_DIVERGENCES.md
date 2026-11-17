@@ -19546,12 +19546,14 @@ f:shared-creator-note`). The first copy of a group of two or more renders in ful
 `ltx_note_shared`; each later copy is `span.ltx_note.ltx_role_footnotemark.ltx_note_shared` holding only its mark,
 linked to the first copy's id. `LaTeXML-structure-xhtml.xsl` puts every marked note in `span.ltx_annotated_personname`
 after the name, in document order with an ORCID badge, and there the name drops its trailing newline, so no line breaks
-between a name and its mark; unmarked notes (an empty `@mark` too) follow the name as before. A personname holds the
+between a name and its mark; unmarked notes (an empty `@mark` too) follow the name as before — one several authors
+share, known by its copies' `idref` (#1059), prints once under a generated `[a]` in the wrapper. A personname holds the
 name alone (DG 2026-11-16), so the wrapper takes every marked note of any role, mark-only `role="footnotemark"` notes
 too (PURE's unanswered marks, Perl's `\footnotemark` leftovers): each renders as its `sup.ltx_note_mark` alone, no empty
 "footnotemark: " pop-up, linked and classed `ltx_note_shared` only when its mark is a symbol (no Latin or Greek letter, no digit)
 or Perl's tagged leftover (`f:creator-mark-only`) and names one author's note of the block (`xsl:key
-f:creator-note-by-mark`, every candidate a copy of one note), else the plain glyph (Perl's tag, else `@mark`): a letter
+f:creator-note-by-mark`, every candidate a copy of one note), else the plain glyph (Perl's tag, else `@mark`) — shown
+only where it prints elsewhere in the document, no dangling mark (#1059): a letter
 or digit is as often an affiliation label as a footnote number, and a wrong link is worse than none (review revREND2: a
 mark-only `1` linked another author's own footnote `1`). Such a linkable mark-only note pointing at a one-author note
 makes it shared, so it prints in the margin with its mark. LaTeXML.css (local delta after the ORCID wrapper rules): a name with notes is set as text; where the author's
@@ -19953,10 +19955,12 @@ the first copy's `xml:id` is the `idref` of each other (DG 2026-11-16, issue #89
   or digit) —, each other copy that mark linked to it (`LaTeXML-meta-xhtml.xsl`, key `f:note-copies`). A one-carrier
   unmarked note stays under its name, no glyph (#990). The engine never invents a glyph.
 - *No dangling mark*: a mark-only note that links to no note on the page shows its glyph only where the same glyph
-  (asterisks folded) prints anywhere else in the document — another name's mark, a frontmatter note, legend or
-  superscript, a body footnote's mark —; printed once, over its name alone, it shows nothing (its id stays; the XML
-  keeps it): 2006.10886, whose geophysics `\address{\footnotemark[1]{…}}` the class never prints in `paper` mode.
-**Witnesses.** 2407.04435 (one note, three carriers), 2006.10886, 1108.5155, 1404.2124.
+  (asterisks folded; a printed run `1,2` or `1*` by each of its pieces, 1304.5040) prints anywhere else in the
+  document — another name's mark, a note's mark or tag, a superscript, the text a note, contact or publication note
+  opens with (a legend's `$*$Xiang Wang is the corresponding author`, 2010.10783) —; printed once,
+  over its name alone, it shows nothing (its id stays; the XML keeps it): 2006.10886, whose geophysics
+  `\address{\footnotemark[1]{…}}` the class never prints in `paper` mode.
+**Witnesses.** 2407.04435 (one note, three carriers), 2006.10886, 1304.5040, 1108.5155, 1404.2124.
 **Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number, a_note_several_names_carry_is_one_note,
 an_unlinked_mark_shows_only_where_its_glyph_recurs}`; the FMRG suite's page layer (`perfect_kernel_batchfmmarks`).
 

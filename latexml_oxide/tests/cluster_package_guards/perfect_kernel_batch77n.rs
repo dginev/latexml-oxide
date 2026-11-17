@@ -37,14 +37,7 @@ macro_rules! convert_repro {
   }};
 }
 
-/// A `\thanks` note as the frontmatter writes it.
-fn thanks(class: &str, id: &str, text: &str) -> String {
-  format!(
-    r#"<note class="ltx_note_frontmatter ltx_thanks_{class}" role="thanks" xml:id="{id}">{text}</note>"#
-  )
-}
-
-/// A thanks note carrying the mark its title block prints (`thanks`'s, with `mark`: OD #1053).
+/// A `\thanks` note as the frontmatter writes it, carrying the mark its title block prints (`mark`: OD #1053).
 fn marked_thanks(class: &str, mark: &str, id: &str, text: &str) -> String {
   format!(
     r#"<note class="ltx_note_frontmatter ltx_thanks_{class}" mark="{mark}" role="thanks" xml:id="{id}">{text}</note>"#

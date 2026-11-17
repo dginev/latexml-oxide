@@ -762,7 +762,7 @@ pub(in crate::base_utilities) fn count_unknown_marks(document: &mut Document) {
 
 /// The bookkeeping attribute of a creator's note that is a `\footnotetext` the reading gave the names showing its number
 /// (`resolver::answer_note_texts`): no carrier prints it but by its `\footnotemark`, which is the copy's own mark
-/// ([`link_marked_notes`]; OD #1058). Internal, dropped at output.
+/// (`link_marked_notes`; OD #1058). Internal, dropped at output.
 pub const FOOTNOTE_TEXT: &str = "_fntext";
 
 /// The bare copy of its mark a note's text opens with, taken out where the mark was read off it ([`MARK_IN_TEXT`]):

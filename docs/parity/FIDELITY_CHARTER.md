@@ -164,8 +164,8 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   copies** (OD #1059): the copies of a shared note are one note (`idref` to the first, never its text); a shared
   unmarked note prints once under a mark the page invents (`[a]`, `[b]`…, class `ltx_mark_generated`) — bindings set
   only the glyph their class prints, the engine none, the XSLT alone invents. **No dangling marks:** a name's mark that
-  links to no note shows only where its glyph (asterisks folded) prints elsewhere in the document; printed once, over
-  its name alone, it is hidden on the page and kept in the XML (2006.10886).
+  links to no note shows only where its glyph (asterisks folded; a printed run by any of its pieces) prints elsewhere
+  in the document; printed once, over its name alone, it is hidden on the page and kept in the XML (2006.10886).
 - **The frontmatter exit bar's two rulings** (2026-10-29): a family deferred with its witnesses in
   `DEFERRED_FAMILIES.md` (hand-typeset title pages, ifacconf's `{frontmatter}` box, names stacked under names, …) is
   excluded from the readability bar — its witnesses stay recorded for later work, not dropped; and the archival tier's

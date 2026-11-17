@@ -198,9 +198,22 @@ fn an_ieee_unmarked_thanks_is_the_blocks() {
 
 /// No dangling mark (DG 2026-11-16, 2006.10886, and its document-wide refinement): a name's mark that links to no note
 /// shows only where its glyph prints anywhere else in the document — Ann's ∗, the body footnote's mark too —, and is
-/// hidden where it prints once, over its name alone (Bob's †). The XML keeps both mark-only notes.
+/// hidden where it prints once, over its name alone (Bob's †). A printed run counts per piece: Ann's `$^{1,2}$` shows,
+/// the body's footnote marks 1 and 2 printing its pieces (1304.5040), Bob's 3 hides. The XML keeps every mark-only note.
 #[test]
 fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
+  assert_green(&[Row {
+    repro:      "markkey_unlinked_mark_run_shows_where_a_piece_recurs",
+    tex:        repro!("markkey_unlinked_mark_run_shows_where_a_piece_recurs"),
+    warnings:   0,
+    creators:   &[
+      "Ann Able ; footnotemark[1,2]=",
+      "Bob Baker ; footnotemark[3]=",
+    ],
+    moves:      "",
+    page:       &["Ann Able ; 1,2 plain", "Bob Baker"],
+    page_moves: "",
+  }]);
   assert_green(&[Row {
     repro:      "markkey_unlinked_name_mark_shows_only_where_its_glyph_recurs",
     tex:        repro!("markkey_unlinked_name_mark_shows_only_where_its_glyph_recurs"),

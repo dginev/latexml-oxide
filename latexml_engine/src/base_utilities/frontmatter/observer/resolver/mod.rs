@@ -639,12 +639,12 @@ struct Resolver {
   /// — with the footnote number the mark stands for (`Event::number`), what TeX pairs a mark and its note by: a note of
   /// the same block and number answers it (`answer_note_texts`)
   fn_requests:        Vec<(usize, String, Option<i64>)>,
-  /// the block's `\footnotetext` notes kept with the footnote number they stand for (ledger index, number, span, owner):
+  /// the block's `\footnotetext` notes kept with the footnote number they stand for (source, number, owner):
   /// the names whose `\footnotemark` shows that number carry them (`answer_note_texts`)
-  numbered_notes:     Vec<(usize, i64, Option<(u16, u16)>, Option<usize>)>,
+  numbered_notes:     Vec<(Source, i64, Option<usize>)>,
   /// the unmarked `\thanks` of a class whose title prints no note mark (`Policy::unmarked_notes`), each with its owner
-  /// (ledger index, span, owner): the block's, once the owner is known live (`answer_note_texts`)
-  block_thanks:       Vec<(usize, Option<(u16, u16)>, usize)>,
+  /// (source, owner): the block's, once the owner is known live (`answer_note_texts`)
+  block_thanks:       Vec<(Source, usize)>,
   /// the labels the affiliation calls made apart from the blocks set ([`affiliation_set_labels`]): what a block's
   /// mark-led names request (`names_led_by_marks`)
   outside_labels:     Vec<String>,
