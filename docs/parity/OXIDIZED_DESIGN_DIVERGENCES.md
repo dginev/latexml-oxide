@@ -22262,12 +22262,19 @@ template writes the authors' affiliations and e-mails there ("B. Cheng and Z. Li
 `route_author_thanks` (ieeetran_cls.rs; ieeeconf.cls loads it) reads each top-level `\thanks`: a sentence "<names>
 is/are [also|now|currently] with <affiliation>[, (E-mail: <addresses>)]" becomes `\lx@add@contact[role=affiliation]`
 of each named author and `[role=email]` for each address (a `{a,b}@d` list split, an address to the author whose
-surname its local part spells, else in order: `FmEmailOwner::SpelledElseOrder`'s rule), placed after that author's name
-and grade, before the notes; a note "Corresponding author: <name>" (or "… is <name>") becomes that author's
+surname its local part spells, else in order: `FmEmailOwner::SpelledElseOrder`'s rule), placed right after that
+author's name piece — after its grade where the grade follows the name's comma, before it where the name's comma sits
+inside the grade's braces (`Ann Able,~\IEEEmembership{Member, IEEE,}`, 2106.02811), never past a blank line or `\\`; a note "Corresponding author: <name>" (or "… is <name>") becomes that author's
 `role=correspondent` contact, its text whole. A name matches an author by surname (the author's last word) and first
-initial; several sentences of one note route each. Fail-safe: a note with a sentence whose names match no author, or
-more than one, or whose e-mail tail prints more than addresses, stays the title's whole (today's output); text before
-the first such sentence stays the title's note; funding, "Manuscript received …" and others are untouched. The dropped
-words are the routing keys alone ("<names> is with", "E-mail:"). Witnesses 2003.11216, 2206.13704, 1207.6084.
-**Guards**: `cluster_package_guards::perfect_kernel_batchieeeroute::*` (repros
+initial; several sentences of one note route each. A sentence starts at the note's start or after a '.' or ';' that ends no initial
+("C.", "J.-L.", "D.S."); its affiliation is one sentence (to ". " before a capital, after no initial), followed by at
+most an e-mail tail: labelled ("E-mail:", "(e-mail:", "Email:", "E-mail addresses:", "Contact email:") or a bare run of
+addresses (`{\tt \{a,b\}@d}`, "(x@y)": 1903.07552, 2109.04749, 1805.07098). Fail-safe — the note stays the title's
+whole (today's output): a sentence whose names match no author or more than one; anything but an e-mail tail after the
+affiliation sentence (a funding sentence: 1901.06512, 2003.04031, 2008.12874, 2007.06695); an affiliation still
+holding '@' (`\href{mailto:…}{…}` lists, 2608.15977) or a second "is/are/was with" or ". <Capital>" (names after an
+initial). Text before the first such sentence stays the title's note. Funding sentences are never routed or cut; the
+words dropped are the routing keys ("<names> is with") and the e-mail labels, whose addresses each print in a contact. Witnesses 2003.11216, 2206.13704, 1207.6084.
+Not done: a post-digestion check that each routed contact sits on its own creator (placement is by
+construction only). **Guards**: `cluster_package_guards::perfect_kernel_batchieeeroute::*` (repros
 `sectioning-frontmatter/ieee_thanks_*`); `perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned.

@@ -1,0 +1,18 @@
+% mechanism: IEEEtran's block-note routing (`route_author_thanks`, OD #1072): an affiliation is one sentence, then at
+%   most an e-mail tail; any other sentence after it (funding) keeps the note the title's, whole
+% witness: 1901.06512, 2003.04031, 2008.12874, 2007.06695 (a funding sentence after the affiliation)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: three names, three unmarked notes
+% engines: IEEEROUTE (68a4d6b3fad): the funding sentences copied into Ann's and Bob's affiliations
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker with no contact, their notes pubnotes whole; Cy Coe with Univ C,
+%   Land. and cc@c.org
+% status:  GREEN (IEEEROUTEb; guard perfect_kernel_batchieeeroute)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{Funding}
+\author{Ann~Able, Bob~Baker, and Cy~Coe%
+\thanks{A. Able is with Univ A, Town. This work was supported by the Science Fund under grant 42.}
+\thanks{B. Baker is with Univ B, City (e-mail: bb@b.org). This work was supported by the Arts Fund.}
+\thanks{C. Coe is with Univ C, Land. E-mail: cc@c.org}}
+\maketitle
+Body.
+\end{document}

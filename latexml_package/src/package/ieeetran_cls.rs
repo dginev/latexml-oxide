@@ -2589,8 +2589,10 @@ fn author_units(body: &[Token], notes: &[(usize, usize)]) -> Vec<AuthorUnit> {
   let grade = T_CS!("\\IEEEmembership");
   let mut units: Vec<AuthorUnit> = Vec::new();
   let mut words = String::new();
-  // (the piece's first note, before which its contacts go)
+  // (the piece's first note, before which its contacts go, and the end of what it printed last: a contact goes right
+  // after its name and grade, never past a blank line or a `\\` to the next line's name, 2106.02811)
   let mut first_note: Option<usize> = None;
+  let mut printed_end = 0;
   let mut depth = 0;
   let flush = |words: &mut String, end: usize, units: &mut Vec<AuthorUnit>| {
     let piece: Vec<String> = words.split_whitespace().map(str::to_string).collect();
@@ -2641,17 +2643,25 @@ fn author_units(body: &[Token], notes: &[(usize, usize)]) -> Vec<AuthorUnit> {
       } else {
         open
       };
+      printed_end = at;
       continue;
     }
     let word_and = depth == 0 && and_at(at);
     if depth == 0
       && (word_and || *t == T_OTHER!(",") || *t == T_CS!("\\and") || *t == T_CS!("\\\\"))
     {
-      flush(&mut words, first_note.take().unwrap_or(at), &mut units);
+      flush(
+        &mut words,
+        first_note.take().unwrap_or(at).min(printed_end),
+        &mut units,
+      );
       at += if word_and { 3 } else { 1 };
       continue;
     }
     depth = brace_level(depth, t);
+    if *t != T_SPACE!() && *t != T_CS!("\\par") {
+      printed_end = at + 1;
+    }
     match t.get_catcode() {
       Catcode::LETTER | Catcode::OTHER => t.with_str(|s| words.push_str(s)),
       Catcode::SPACE | Catcode::ACTIVE => words.push(' '),
@@ -2659,7 +2669,11 @@ fn author_units(body: &[Token], notes: &[(usize, usize)]) -> Vec<AuthorUnit> {
     }
     at += 1;
   }
-  flush(&mut words, first_note.unwrap_or(body.len()), &mut units);
+  flush(
+    &mut words,
+    first_note.unwrap_or(body.len()).min(printed_end),
+    &mut units,
+  );
   units
 }
 
@@ -2796,6 +2810,68 @@ fn email_line_addresses(line: &str) -> Option<Vec<String>> {
   .then_some(addresses)
 }
 
+/// The e-mail label of an IEEE note ("E-mail:", "(e-mail:", "Email:", "E-mail addresses:", "Contact email:").
+static EMAIL_LABEL_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  Regex::new(r"(?i)\(?\s*(?:contact\s+)?\be-?mail(?:s|\s+address(?:es)?)?\s*:\s*").unwrap()
+});
+
+/// Does `before` (a note's text up to a '.') end in an initial ("C", "J.-L", "D.S")?
+fn ends_initial(before: &str) -> bool {
+  static INITIAL_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"(?:^|[\s(])\p{Lu}(?:\.-?\p{Lu})*$").unwrap());
+  INITIAL_RX.is_match(before)
+}
+
+/// The affiliation of a "<names> is/are with" sentence, read from `segment` (its text up to the next such sentence or
+/// the note's end): its length, and the addresses of the e-mail tail after it. An affiliation is one sentence, ending
+/// at ". " before a capital that ends no initial; after it, only an e-mail tail, labelled ("E-mail: …", "(e-mail: …)")
+/// or a bare run of addresses (2608.15977, 1805.07098). None for anything else (a funding sentence: 1901.06512,
+/// 2003.04031, 2008.12874, 2007.06695), so the note stays whole.
+fn affiliation_and_addresses(segment: &str) -> Option<(usize, Vec<String>)> {
+  let boundary = segment
+    .match_indices(". ")
+    .find(|&(at, _)| {
+      !ends_initial(&segment[..at])
+        && segment[at + 2..]
+          .chars()
+          .next()
+          .is_some_and(char::is_uppercase)
+    })
+    .map(|(at, _)| at + 1);
+  let (sentence, rest) = segment.split_at(boundary.unwrap_or(segment.len()));
+  // (the sentence's own tail: its label, or its trailing run of addresses)
+  let trim = |end: usize| sentence[..end].trim_end_matches([' ', ',', ';', '(']).len();
+  let (end, mut addresses) = if let Some(label) = EMAIL_LABEL_RX.find(sentence) {
+    (
+      trim(label.start()),
+      email_line_addresses(&sentence[label.end()..])?,
+    )
+  } else if let Some(run) = sentence.find('@').and_then(|first| {
+    (0..first)
+      .filter(|&p| {
+        sentence.is_char_boundary(p)
+          && (p == 0 || sentence[..p].ends_with(' ') || sentence[p..].starts_with(['(', '{']))
+          && !sentence[p..].starts_with("and ")
+      })
+      .find_map(|p| Some((p, email_line_addresses(&sentence[p..])?)))
+  }) {
+    (trim(run.0), run.1)
+  } else {
+    (sentence.len(), Vec::new())
+  };
+  let rest = rest.trim();
+  if !rest.is_empty() {
+    if !addresses.is_empty() {
+      return None;
+    }
+    addresses = match EMAIL_LABEL_RX.find(rest) {
+      Some(label) if label.start() == 0 => email_line_addresses(&rest[label.end()..])?,
+      _ => email_line_addresses(rest)?,
+    };
+  }
+  Some((end, addresses))
+}
+
 /// A contact a note gives an author: the author's place among the names, and the `\lx@add@contact` call.
 type RoutedContact = (usize, Vec<Token>);
 
@@ -2812,8 +2888,11 @@ fn route_note(note: &[Token], names: &[AuthorUnit]) -> Option<(Vec<Token>, Vec<R
   static CORRESPONDING_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
     Regex::new(&s!(r"^(?i:corresponding author)(?::| is) ({NAME})\.?$")).unwrap()
   });
-  static EMAIL_LABEL_RX: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"(?i)\(?\s*\be-?mails?\s*:\s*").unwrap());
+  static ANOTHER_CLAUSE_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\b(?:is|are|was|were)(?: \w+)? with\b").unwrap());
+  // (a second sentence an initial hid: "Building C. This work …")
+  static SENTENCE_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\. \p{Lu}").unwrap());
   let contact = |role: &str, content: Vec<Token>| -> Vec<Token> {
     let mut call = vec![T_CS!("\\lx@add@contact"), T_OTHER!("[")];
     call.extend(ExplodeText!(s!("role={role}")));
@@ -2841,11 +2920,13 @@ fn route_note(note: &[Token], names: &[AuthorUnit]) -> Option<(Vec<Token>, Vec<R
     );
     return Some((Vec::new(), vec![(owner, call)]));
   }
-  // (each sentence opening "<names> is/are with": where it starts, where its affiliation starts, its authors)
+  // (each sentence opening "<names> is/are with": where it starts, where its affiliation starts, its authors; a sentence
+  // starts after a '.' or ';' ending no initial: "J.-L. Dupont", "C. Coe" are inside a sentence)
   let mut clauses: Vec<(usize, usize, Vec<usize>)> = Vec::new();
   let starts = std::iter::once(0).chain(
     text
       .match_indices(['.', ';'])
+      .filter(|&(at, p)| p == ";" || !ends_initial(&text[..at]))
       .map(|(at, _)| at + 1)
       .filter(|&at| text[at..].starts_with(' '))
       .map(|at| at + 1),
@@ -2867,14 +2948,13 @@ fn route_note(note: &[Token], names: &[AuthorUnit]) -> Option<(Vec<Token>, Vec<R
   let mut contacts = Vec::new();
   for (k, (_, with, owners)) in clauses.iter().enumerate() {
     let end = clauses.get(k + 1).map_or(text.len(), |c| c.0);
-    let label = EMAIL_LABEL_RX.find(&text[*with..end]);
-    // (up to its e-mail label, the list's comma or parenthesis before it aside: `…, Japan, (e-mail: …)`, 2206.13704)
-    let affiliation_end = label.map_or(end, |m| {
-      with
-        + text[*with..with + m.start()]
-          .trim_end_matches([' ', ',', ';', '('])
-          .len()
-    });
+    let (affiliation_end, addresses) = affiliation_and_addresses(&text[*with..end])?;
+    let affiliation_end = with + affiliation_end;
+    // (fail-safe: an address left inside the affiliation, or a sentence naming more authors in it)
+    let read = &text[*with..affiliation_end];
+    if read.contains('@') || ANOTHER_CLAUSE_RX.is_match(read) || SENTENCE_RX.is_match(read) {
+      return None;
+    }
     let affiliation = note_span(note, &text, &at_byte, *with, affiliation_end)?;
     if affiliation.is_empty() {
       return None;
@@ -2882,10 +2962,6 @@ fn route_note(note: &[Token], names: &[AuthorUnit]) -> Option<(Vec<Token>, Vec<R
     for &owner in owners {
       contacts.push((owner, contact("affiliation", affiliation.clone())));
     }
-    let Some(label) = label else {
-      continue;
-    };
-    let addresses = email_line_addresses(&text[with + label.end()..end])?;
     // (each address to the author it spells, the others in order: FmEmailOwner::SpelledElseOrder)
     let local = |a: &str| a.split('@').next().unwrap_or("").to_lowercase();
     let spelled: Vec<Option<usize>> = addresses
