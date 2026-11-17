@@ -1,0 +1,32 @@
+% mechanism: AAAI's `\equalcontrib` makes its note once (aaai2026.sty:79-86), so a later `\thanks` is the second note
+%   and a `\footnotemark[2]` answers it: the kernel stub (sect05.rs) counts its note once, so the given mark pairs with
+%   the note the PDF prints under it
+% witness:  2508.07026 (aaai2026.sty: Pan, Jiang "∗", Wang, Liu "†" "Corresponding authors."; written Pan ∗, Jiang †,
+%   Wang ‡, and Liu's `\footnotemark[2]` paired with Jiang's "These authors contributed equally."); the style a minimal
+%   stand-in
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗, Bob Baker∗, Cy Cole†, Dee Dunn†"; foot
+%   "∗These authors contributed equally.", "†Corresponding authors."
+% engines:  rust PRESBXbase (d45633020ab) = 0 errors, 2 Warnings; Ann ∗, Bob †, Cy ‡, Dee a copy of Bob's †; PRESBX =
+%   0 errors, 1 Warning (the emitter's "note no argument")
+% expect:   0 errors, 1 Warning; Ann and Bob a copy of one note marked ∗, Cy and Dee a copy of "Corresponding
+%   authors." marked †
+% status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{presbxaaaib.sty}
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newcounter{eqfn}\setcounter{eqfn}{0}%
+  \vbox{\let\footnote\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{eqfn}{\value{footnote}}\else\footnotemark[\value{eqfn}]\fi}%
+    \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{presbxaaaib}
+\title{A Title}
+\author{Ann Able\equalcontrib, Bob Baker\equalcontrib, Cy Cole\thanks{Corresponding authors.}, Dee Dunn\footnotemark[2]}
+\begin{document}
+\maketitle
+Body.
+\end{document}

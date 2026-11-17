@@ -148,6 +148,13 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
       .collect()
   };
   let (grouped, last) = (numbers(false), numbers(true));
+  // (a document's or package's own `\@fnsymbol` prints glyphs not this table's, 2603.18989's †: none written, the mark
+  // unknown, `insert::count_unknown_marks`)
+  let own_fnsymbol = style != "alph"
+    && lookup_definition(&T_CS!("\\@fnsymbol"))
+      .ok()
+      .flatten()
+      .is_some_and(|d| !d.get_origin().is_latexml_owned());
   for ((entry, ..), footnote) in parts.iter().zip(&footnotes) {
     let mut entry = entry.clone();
     let n = grouped[footnote];
@@ -163,6 +170,12 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
         .get(n - 1)
         .map(|mark| (*mark).to_string()),
     };
+    if own_fnsymbol {
+      if entry.get_name() == "note" {
+        entry.set_attribute(MARK_UNKNOWN, "true")?;
+      }
+      continue;
+    }
     // (a thanks note its mark, a contact the mark the Kind step reads)
     if let Some(mark) = mark {
       if entry.get_name() == "note" {

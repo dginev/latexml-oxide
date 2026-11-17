@@ -409,17 +409,21 @@ fn an_unlinked_mark_shows_beside_a_legend_that_lost_its_glyph() {
 #[test]
 fn a_number_the_title_counter_cannot_give_keys_nothing() {
   {
-    let tex = repro!("markkey_samethanks_under_aa_names_no_number");
-    let creators = [
-      "Ann Able ; thanks[]=Corresponding authors | affiliation=Univ A, Town A",
-      "Bob Baker ; footnotemark[]= | affiliation=Univ B, Town B",
-      "Cat Cole | affiliation=Univ A, Town A",
-    ];
-    let page = [
-      "Ann Able | under: Corresponding authors",
-      "Bob Baker",
-      "Cat Cole",
-    ];
+    let (tex, creators, page) = (
+      repro!("markkey_samethanks_under_aa_names_no_number"),
+      [
+        "Ann Able ; thanks[]=Corresponding authors | affiliation=Univ A, Town A",
+        "Bob Baker ; footnotemark[]= | affiliation=Univ B, Town B",
+        "Cat Cole | affiliation=Univ A, Town A",
+      ]
+      .as_slice(),
+      [
+        "Ann Able | under: Corresponding authors",
+        "Bob Baker",
+        "Cat Cole",
+      ]
+      .as_slice(),
+    );
     let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
     assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
     assert_eq!(creator_lines(&xml), creators);
@@ -578,6 +582,8 @@ fn the_mark_components_only_shrink() {
     "_fnvalue",
   ];
   const MARK_STATE_KEYS: &[&str] = &[
+    // (PRESBXb: AAAI's `\equalcontrib` mark once per name digested again, group-local; sect05.rs `aaai_note`)
+    "lx_aaai_marked",
     "lx_acm_author_notes",
     "lx_acm_title_notes",
     "lx_address_mark",

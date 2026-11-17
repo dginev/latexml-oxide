@@ -1,0 +1,21 @@
+% mechanism: a redefinition of `\maketitle` and its restore inside `\AtBeginDocument` (the document's origin): the
+%   restore clears the refusal record (state.rs `carry_refusal_records`), the class's marks hold
+% witness:  none (sibling of 2509.02894: review revPRESBX B1, "a redefinition inside `\AtBeginDocument` followed by a
+%   restore")
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker†"
+% engines:  rust PRESBX (b85b844eb81) = 0 errors, 0 Warnings; thanks[1], thanks[2]
+% expect:   0 errors, 0 Warnings; Ann thanks[∗], Bob thanks[†]
+% status:   RED (PRESBX) -> GREEN (PRESBXb: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\let\stdmaketitle\maketitle
+\AtBeginDocument{\renewcommand{\maketitle}{\bgroup\begin{center}\textbf{\Large\@title}\par
+  \textbf{\@author}\end{center}\egroup}\let\maketitle\stdmaketitle}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: a package's `\let` that copies a refused `\maketitle` (its source, not its target) changes no record:
+%   the document's refused body still gives the marks (`\alph`: a, b; state.rs `carry_document_refusal_records`)
+% witness:  none (the counter-case of review revPRESBXb BL3's fail-safe)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Ablea Bob Bakerb"; foot "a First note." "b Second note."
+% engines:  rust PRESBXbase2 (14e92b291ab) = 0 errors, 0 Warnings; both notes unmarked; PRESBXb (300685cb312) = Ann
+%   thanks[a], Bob thanks[b]
+% expect:   0 errors, 0 Warnings; Ann thanks[a], Bob thanks[b]
+% status:   GREEN (PRESBXc: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{presbxccopy.sty}
+\let\pkgsavedmt\maketitle
+\end{filecontents*}
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\begingroup\def\thefootnote{\alph{footnote}}\begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\makeatother
+\usepackage{presbxccopy}
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

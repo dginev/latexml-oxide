@@ -1,0 +1,27 @@
+% mechanism: a package's `\let` onto a refused `\maketitle` (a restore at a file's origin) leaves the title's marks
+%   unknown here: the refused body forgotten, the document's record kept (state.rs `carry_document_refusal_records`;
+%   the fail-safe); a class's replayed body, which clears its own name, is not one
+% witness:  none (review revPRESBXb BL3, p/b1g.tex; sibling `\global\let`, b1i)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker†"; foot "∗ First note." "† Second note."
+% engines:  rust PRESBXbase2 (14e92b291ab) = 0 errors, 0 Warnings; both notes unmarked; PRESBXb (300685cb312) = Ann
+%   thanks[a], Bob thanks[b] (the refused body's `\alph`, which the package's restore replaced)
+% expect:   the fail-safe: 0 errors, 0 Warnings; both notes unmarked, each under its name
+% status:   RED (PRESBXb) -> GREEN fail-safe, XML and HTML RED against the PDF (PRESBXc:
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% moves:    XML, HTML row R SHAUTO/T1
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{presbxcrestore.sty}
+\let\maketitle\stdmt
+\end{filecontents*}
+\documentclass{article}
+\makeatletter
+\let\stdmt\maketitle
+\renewcommand\maketitle{\begingroup\def\thefootnote{\alph{footnote}}\begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\makeatother
+\usepackage{presbxcrestore}
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

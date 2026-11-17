@@ -24,8 +24,13 @@ LoadDefinitions!({
   // individual creators and links their affiliation superscripts.
   DefMacro!("\\name{}", "\\author{#1}");
   // spconf.sty:181 `\def\sthanks#1{\gdef\thefootnote{\fnsymbol{footnote}}\@@savethanks{#1}}`: a `\thanks` marked
-  // with a symbol, after a name in `\name` (45 2609 papers, 2609.05884, 2609.09883).
-  DefMacro!("\\sthanks{}", "\\thanks{#1}");
+  // with a symbol, after a name in `\name` (45 2609 papers, 2609.05884, 2609.09883; "Sangyoun Lee∗", 2208.01916),
+  // where spconf's `\maketitle` marks a `\thanks` with none (`\def\thefootnote{}`, :147). Set in the name's field only:
+  // its `\maketitle` sets `\thefootnote` back to `\arabic` after the title (:158).
+  DefMacro!(
+    "\\sthanks{}",
+    "\\def\\thefootnote{\\fnsymbol{footnote}}\\thanks{#1}"
+  );
   // `\address{affils}` — the (superscript-numbered) affiliation block. Preserve
   // as a frontmatter note so the numbered institutions are kept.
   DefMacro!(
