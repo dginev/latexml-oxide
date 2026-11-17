@@ -1257,10 +1257,22 @@ fn a_copys_anchor_is_always_on_the_page() {
     .skip(1)
     .map(|rest| rest.split('"').next().unwrap())
     .collect();
-  let named: Vec<&str> = styles.iter().filter_map(|s| s.strip_prefix("anchor-name:")).collect();
-  let wanted: Vec<&str> = styles.iter().filter_map(|s| s.strip_prefix("position-anchor:")).collect();
-  assert!(!wanted.is_empty(), "the mark-only note carries a copy naming the note: {html}");
+  let named: Vec<&str> = styles
+    .iter()
+    .filter_map(|s| s.strip_prefix("anchor-name:"))
+    .collect();
+  let wanted: Vec<&str> = styles
+    .iter()
+    .filter_map(|s| s.strip_prefix("position-anchor:"))
+    .collect();
+  assert!(
+    !wanted.is_empty(),
+    "the mark-only note carries a copy naming the note: {html}"
+  );
   for name in &wanted {
-    assert!(named.contains(name), "{name} names no anchor on the page: {html}");
+    assert!(
+      named.contains(name),
+      "{name} names no anchor on the page: {html}"
+    );
   }
 }
