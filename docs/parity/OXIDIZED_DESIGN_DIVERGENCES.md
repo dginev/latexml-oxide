@@ -19925,29 +19925,47 @@ llncs.cls.ltxml writes a name's `\thanks` as an unmarked contact.
   `\thanks` and the body's notes number after the last label (2508.02300's first body note 7, was 1); an `\author`
   written for lni v1 (`\author[running names]{names}`, no braced e-mail and ORCID after it) is the kernel's
   `\author[short]{names}` (2407.04435: no authblk labels of its running names, no stray `\startpage` argument).
-- llncs (llncs_cls.rs, LLNCSMARKS): the class's own `\@fnsymbol` (⋆ ⋆⋆ ⋆⋆⋆ † ‡ § ¶ ‖ ∗∗ †† ‡‡, llncs.cls:889-892,
-  every copy sampled v2.17-v2.26) for `\fnsymbol` and the title hook. The class's `\maketitle` sets `\thefootnote` to
-  it itself (:935), so a preamble `\renewcommand\thefootnote{\arabic{footnote}}` still prints ⋆ ⋆⋆ there; it sets the
-  counter to 0 before the block (:932) and each `\thanks` steps it, the title's first: "A Title⋆", "Ann Able1⋆⋆", the
-  fourth †. The `\inst` marks stay digits. Only as the document's class, and not for an `\author` that steps the
-  counter outside its `\thanks` (a bare `\footnotemark` or `\footnote`, `\addtocounter{footnote}`): `\@maketitle` sets
-  `\@author` once in a box to count the names (:1028-1029), so such a step runs twice and shifts the names' marks
-  (pdflatex "Ann Able⋆⋆ and Bob Baker⋆⋆⋆"); there the binding declares none (row R LLNCSTWICE). Not ported: :1003's
-  reset after the block to the number of institutes (`\fnnstart`), by which pdflatex numbers the body's first note 3
-  under two institutes and 1005.4552's (three) 4 to 15 (ours 1, 1 to 12, as before); ours resets to 0.
+- llncs (llncs_cls.rs, LLNCSMARKS): the class's own `\@fnsymbol` (⋆ ⋆⋆ ⋆⋆⋆ † ‡ § ¶ ‖ ** †† ‡‡, llncs.cls:889-892;
+  515 shipped copies v2.10-v2.26, identical `\@fnsymbol`) for `\fnsymbol` and the title hook: the binding's
+  `\fnsymbol` is `\@fnsymbol` of the counter, over the kernel's radix `\fnsymbol` (#221). The text ⋆ is a binding
+  primitive, `\lx@llncs@star`, which reverts as itself (as `\ensuremath{\star}`, a shared note's re-digested tags are
+  math, printed "⋆ ⋆\star", 2404.09857; row R LLNCSSTARTEX); the ninth is ASCII "**" (`\textasteriskcentered`, as the
+  kernel's and Perl's), pdflatex's math ∗∗. The class's `\maketitle` sets `\thefootnote` to it itself (:935), so a preamble
+  `\renewcommand\thefootnote{\arabic{footnote}}` still prints ⋆ ⋆⋆ there; it sets the counter to 0 before the block
+  (:932) and each `\thanks` steps it, the title's first: "A Title⋆", "Ann Able1⋆⋆", the fourth †. The `\inst` marks
+  stay digits. After the block it sets the counter to `\fnnstart` (:1003), the institutes `\institutename` counted at
+  its `\and`s when two or more, else 0 (:877-881): the binding sets it where it parts the `\institute` list, so
+  1005.4552's three institutes number its body notes 4 to 15 (was 1 to 12), "Body3" under two; a copy the paper ships
+  from before `\fnnstart` (v2.4-v2.10, 5 of 592 copies sampled) sets 0 there, as 1508.06013's v2.6 prints its body
+  notes from 1 (`shipped_class_text`). Only as the document's class. The marks are withdrawn (none declared, the names' marks unknown: `lx_title_footnote_own_marks`, so a
+  mark-only note on a name is written with no glyph and counted by a Warning, OD #1053) where the counter steps where
+  the block's rehearsal cannot count it: an `\author` that steps it outside its `\thanks` (a `\footnotemark` or
+  `\footnote`, `\addtocounter{footnote}`), which `\@maketitle`'s counting pass of `\@author` (:1028-1029, `\thanks`
+  gobbled) runs twice (pdflatex "Ann Able⋆⋆ and Bob Baker⋆⋆⋆"; row R LLNCSTWICE) — read by meaning (a `\let` copy, a
+  `\let` copy of `\thanks`, which the pass does not gobble) and in the bodies of the document's macros
+  (`\newcommand\fm{\footnotemark}`, `\DeclareRobustCommand`'s inner `\fm␣`), four levels deep; an undefined command
+  or one past that is read as a step —, and a `\subtitle` with a note, printed between the title and the names
+  (:1023-1027: "Sub⋆", "Ann Able⋆⋆"; row R LLNCSSUBTITLE).
 - The engine's own Frontmatter keys (`_markshown`, `_cutlist`, `_kinded`, … 31) are declared in one list,
   `frontmatter_api::FRONTMATTER_INTERNAL_KEYS`, so their use reports no `Info:undefined`, while a key the list lacks
   still does; `perfect_kernel_batche0` pins each.
-**Residuals.** A REVTeX name's `\footnotemark[n]` letter (row R REVNAMEMARK); llncs's `\fnnstart` and its counting pass
-(row R LLNCSFNSTART, LLNCSTWICE, proposed); the ACM SIG classes' `\titlenote` and jasatex's `\pacs`, raw classes with no
+**Residuals.** A REVTeX name's `\footnotemark[n]` letter (row R REVNAMEMARK); llncs's counting passes of `\@author`
+and `\@institute` (an institute's bare `\footnotemark` "Lab A†", ours ⋆⋆⋆), a subtitle's note, `\fnsymbol` past 11
+(5 Errors, pdflatex 2: the note's tags re-expand `\thefootnote`), the ⋆'s internal reversion (row R LLNCSTWICE,
+LLNCSINSTTWICE, LLNCSSUBTITLE, LLNCSFNSYM11, LLNCSSTARTEX, proposed); the ACM SIG classes' `\titlenote` and jasatex's `\pacs`, raw classes with no
 binding (row R TITLENOTELAST, JASAPACS).
 **Guards**: `perfect_kernel_batchfmmarks::{notes_are_marked_only_where_the_class_prints_marks,
 revtex_marks_follow_its_numbering}` (rows `fmmarks_mnras_title_marks_are_the_class_symbols`,
 `fmmarks_revtex42_aip_shared_thanks_letters`, `fmmarks_revtex41_aip_shared_thanks_letters`,
 `fmmarks_llncs_title_marks_are_the_class_symbols`, `fmmarks_llncs_title_note_counts_first`,
-`fmmarks_llncs_preamble_thefootnote_is_not_the_titles`; RED `fmmarks_llncs_counting_pass_steps_twice_red`),
+`fmmarks_llncs_preamble_thefootnote_is_not_the_titles`; RED `fmmarks_llncs_counting_pass_steps_twice_red`,
+`fmmarks_llncs_names_macro_steps_twice_red`, `fmmarks_llncs_subtitle_note_counts_first_red`,
+`fmmarks_llncs_institute_mark_steps_twice_red`; catalog `llncs_fnsymbol_past_eleven_red`,
+`llncs_fnsymbol_star_reverts_internal_red`),
 `perfect_kernel_batchcr7::a_split_gives_the_corresponding_author_the_left_address` (none declared),
-`perfect_kernel_batchllncs::{body_fnsymbol_is_the_class_s, the_title_counts_its_notes_from_zero}`,
+`perfect_kernel_batchllncs::{body_fnsymbol_is_the_class_s, the_title_counts_its_notes_from_zero,
+a_note_in_the_subtitle_withdraws_the_title_marks, a_names_macro_that_steps_withdraws_the_title_marks,
+the_body_s_notes_count_after_the_institutes}`,
 `perfect_kernel_batchmarkbind::{lni_affil_sets_the_footnote_counter, lni_v1_author_is_the_kernels,
 internal_frontmatter_keys_are_declared}`, `perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral`
 (mnras's and llncs's plain notes), `perfect_kernel_batche0::the_frontmatter_api_stays_perls`.

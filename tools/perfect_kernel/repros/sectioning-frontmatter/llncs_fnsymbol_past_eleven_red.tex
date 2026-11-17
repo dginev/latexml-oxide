@@ -1,0 +1,15 @@
+% mechanism: llncs.cls's `\@fnsymbol` (llncs.cls:889-892) ends at 11 with `\@ctrerr`: a note past it is LaTeX's "Counter
+%   too large" once where its mark is set (pdflatex 2 errors: the mark and the note's text). The binding's `\@fnsymbol`
+%   (llncs_cls.rs) errs at each re-expansion of `\thefootnote` for the note's tags (mark, refnum, typerefnum)
+% witness:  revLLNCS S2 (probe over)
+% oracle:   pdflatex 2 errors (Counter too large); "X." and the note's text
+% engines:  rust LLNCSMARKS (8ea66f196ea) and LLNCSb = 5 errors; Perl 0.8.8: the kernel's `\fnsymbol`
+% expect:   2 errors
+% status:   RED (row R LLNCSFNSYM11, post-release; catalog only)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\renewcommand\thefootnote{\fnsymbol{footnote}}
+\begin{document}
+\setcounter{footnote}{11}
+X\footnote{twelve}.
+\end{document}

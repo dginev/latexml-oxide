@@ -1851,7 +1851,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (LLNCSMARKS 31 -> 44, a raised pin: `steps_footnotes` mirrors llncs.cls's counting pass of `\@author` (:1028-1029,
   // `\thanks` gobbled) to withdraw the binding's own title marks where a counter step runs twice; it decides no owner or
   // content, only that no glyph is written)
-  ("llncs_cls.rs", 44),
+  // (LLNCSb 44 -> 51, a raised pin: the same scan by meaning, the spelled `\thanks` the pass gobbles told from a `\let`
+  // copy it does not, and the `\subtitle`'s; the `\institute` count's spelled `\and`s where no rehearsal reads them,
+  // `\fnnstart`, and whether the paper's shipped copy has `\fnnstart` (v2.4-v2.10 do not). Each decides only the
+  // class's own glyph or counter, no owner or content)
+  ("llncs_cls.rs", 51),
   ("osa_journal_sty.rs", 77),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
   ("owners", 14),

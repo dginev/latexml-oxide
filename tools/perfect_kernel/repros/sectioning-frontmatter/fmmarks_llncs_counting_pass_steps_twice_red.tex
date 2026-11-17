@@ -1,11 +1,13 @@
 % mechanism: llncs.cls's `\@maketitle` sets `\@author` once in a box to count the names, its `\thanks` gobbled
 %   (llncs.cls:1028-1029), before printing it: a step of the footnote counter in the block (a bare `\footnotemark` or
 %   `\footnote`, `\addtocounter{footnote}`) runs twice, and the names' marks shift by it. The binding withdraws its
-%   title marks for such a block (llncs_cls.rs `steps_footnotes`), so the `\thanks` is written unmarked
+%   title marks for such a block (llncs_cls.rs `steps_footnotes`), so the `\thanks` is written unmarked and the
+%   mark with no glyph
 % witness:  LLNCSMARKS (perfect_kernel_batchcr7's cr7c_split_corresponding_left_address: "Ann Able, Bob Baker⋆ ⋆")
 % oracle:   pdflatex 0 errors; "Ann Able⋆⋆ and Bob Baker⋆⋆⋆", footnote "⋆⋆ Ann note." (Bob's mark answered by none)
 % engines:  rust MARKBIND (ff2497f5a77) and LLNCSMARKS = 0 errors, 0 Warnings; Ann's thanks unmarked, Bob's mark "1"
-%   (the body's `\thefootnote`, a wrong glyph kept from before)
+%   (the body's `\thefootnote`, a wrong glyph kept from before); LLNCSb = 0 errors, 1 Warning (unanswered_mark_lost),
+%   Bob's mark none (the names' marks unknown, `lx_title_footnote_own_marks`)
 % expect:   0 errors, 0 Warnings; Ann's thanks ⋆⋆, Bob's mark ⋆⋆⋆
 % status:   RED (row R LLNCSTWICE, proposed; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
 % moves:    XML, HTML row R LLNCSTWICE

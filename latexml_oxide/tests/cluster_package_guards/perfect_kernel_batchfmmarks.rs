@@ -86,7 +86,7 @@ fn folded(mark: &str) -> String { mark.replace('\u{2217}', "*") }
 
 /// Each creator of `xml`: `name ; note ; note | contact ; contact`, a note `role[mark]=text` (the notes sorted), a
 /// contact `role=text` (in order); an element inside another is its parent's text.
-fn creator_lines(xml: &str) -> Vec<String> {
+pub(super) fn creator_lines(xml: &str) -> Vec<String> {
   xml
     .match_indices("<creator ")
     .map(|(start, _)| {
@@ -3148,9 +3148,51 @@ const CLASS: &[Row] = &[
       r#"Ann Able ; thanks[⋆⋆]=Ann note. | affiliation=Lab A"#,
       r#"Bob Baker ; footnotemark[⋆⋆⋆]= | affiliation=Lab A"#,
     ],
-    moves:      r#"row R LLNCSTWICE (proposed: llncs's counting pass of `\@author` steps a bare `\footnotemark` twice; the binding withdraws its marks: Ann's thanks unmarked, Bob's mark the body's "1")"#,
+    moves:      r#"row R LLNCSTWICE (proposed: llncs's counting pass of `\@author` steps a bare `\footnotemark` twice; the binding withdraws its marks: Ann's thanks unmarked, Bob's mark none, a Warning; LLNCSMARKS wrote the body's "1")"#,
     page:       &[r#"Ann Able | under: Ann note."#, r#"Bob Baker ; ⋆⋆⋆ plain"#],
-    page_moves: r#"row R LLNCSTWICE (Bob's mark "1")"#,
+    page_moves: r#"row R LLNCSTWICE (Bob's mark none)"#,
+  },
+  Row {
+    repro:      "fmmarks_llncs_names_macro_steps_twice_red",
+    tex:        repro!("fmmarks_llncs_names_macro_steps_twice_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[⋆⋆]=Ann note. | affiliation=Lab A"#,
+      r#"Bob Baker ; footnotemark[⋆⋆⋆]= | affiliation=Lab A"#,
+    ],
+    moves:      r#"row R LLNCSTWICE (proposed: the binding withdraws its marks for a macro holding `\footnotemark`, read by meaning: Ann's thanks unmarked, Bob's mark none, a Warning)"#,
+    page:       &[r#"Ann Able | under: Ann note."#, r#"Bob Baker ; ⋆⋆⋆ plain"#],
+    page_moves: r#"row R LLNCSTWICE (Bob's mark none)"#,
+  },
+  Row {
+    repro:      "fmmarks_llncs_subtitle_note_counts_first_red",
+    tex:        repro!("fmmarks_llncs_subtitle_note_counts_first_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[⋆⋆]=Ann note. | affiliation=Lab A"#,
+      r#"Bob Baker ; thanks[⋆⋆⋆]=Bob note. | affiliation=Lab A"#,
+    ],
+    moves:      r#"row R LLNCSSUBTITLE (proposed: the title block's rehearsal counts no `\subtitle` note; the binding withdraws its marks, the names' thanks unmarked)"#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_llncs_institute_mark_steps_twice_red",
+    tex:        repro!("fmmarks_llncs_institute_mark_steps_twice_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[†]= ; thanks[⋆]=Ann note. | affiliation=Lab A"#,
+      r#"Bob Baker ; thanks[⋆⋆]=Bob note. | affiliation=Lab B"#,
+    ],
+    moves:      r#"row R LLNCSINSTTWICE (proposed: `\institutename`'s counting pass steps an institute's bare `\footnotemark` twice, llncs.cls:877; ours counts it once, ⋆⋆⋆)"#,
+    page:       &[
+      r#"Ann Able ; † plain | under: Ann note."#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#"row R LLNCSINSTTWICE (Lab A's mark ⋆⋆⋆)"#,
   },
   Row {
     repro:      "fmmarks_llncs_title_note_counts_first",
