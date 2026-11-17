@@ -1,0 +1,24 @@
+% mechanism: no dangling mark (OD #1059): an `\altaffiltext{*}{Corresponding author; …}` (aas_support's
+%   `\lx@add@contact[…,label={altaffil:*}]`) answers Bob's typed `$^{*}$`, but the Kind steps make a correspondence note
+%   of it with no mark (the label's glyph not kept: ALTAFFILMARK), so the XML prints ∗ once; a name carrying a note with
+%   no known mark keeps its mark, which may be that note's
+%   [MARKKEY1d: every unlinked name mark now shows, OD #1059's fail-safe; the glyph search above decides nothing]
+% witness: 1503.07953 (emulateapj, `Lucas M.~Macri$^{*}$` with `\altaffiltext{*}{Corresponding author; …}`)
+% oracle:  pdflatex 0 errors: "Ann Able & Bob Baker∗", the footnote "* Corresponding author; bob@a.edu"
+% engines: rust MARKKEY1 a427f6c06e0 = 0 errors 0 Warnings; Bob's ∗ hidden; int 4f169bcbe69 showed it
+% expect:  0 errors 0 Warnings; XML Bob Baker ; footnotemark[*]= ; thanks[]=Corresponding author | … email; HTML Bob
+%   Baker ; * plain, his note under him
+% status:  RED (a427f6c06e0) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_beside_its_legend)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able \& Bob Baker$^{*}$}
+\affil{Univ A, Town A}
+\altaffiltext{*}{Corresponding author; {\tt bob@a.edu}}
+\begin{abstract}
+A.
+\end{abstract}
+\section{One}
+Text.
+\end{document}

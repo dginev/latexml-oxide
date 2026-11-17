@@ -115,6 +115,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
   let mut glue = Reach::NONE;
   let mut gap_seen = false;
   let mut space_after = false;
+  // (a comma glued to a name's run, read as its ink: the name opens what follows only when its first piece is glued to
+  // the comma too — a mark set off from the comma by a space is between the comma and the next name, as before)
+  let mut past_comma = false;
   // (a single interword space no Gap event holds, the lexer's `space_before`/`space_after`: its width, `\fontdimen2`
   // of cmr10, 1/3 em)
   let hidden = |glue: &mut Reach, gap_seen: bool, space: bool| {
@@ -134,6 +137,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
         glues.push(glue);
         decide(&mut ledger, events, opening, None, &pieces, &glues);
         opening = Opening::Cell;
+        past_comma = false;
         (pieces, glues, glue, gap_seen, space_after) =
           (Vec::new(), Vec::new(), Reach::NONE, false, false);
       },
@@ -146,6 +150,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
         glues.push(glue);
         decide(&mut ledger, events, opening, Some(k), &pieces, &glues);
         opening = Opening::Name(k);
+        past_comma = false;
         (pieces, glues, glue, gap_seen, space_after) =
           (Vec::new(), Vec::new(), Reach::NONE, false, false);
       },
@@ -155,6 +160,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
       | EventKind::Layout
       | EventKind::Name => {
         hidden(&mut glue, gap_seen, space_after || e.space_before);
+        if std::mem::take(&mut past_comma) && (glue.width != 0.0 || glue.fill) {
+          opening = Opening::Other;
+        }
         glues.push(glue);
         pieces.push((k, movable(e)));
         (glue, gap_seen, space_after) = (Reach::NONE, false, e.space_after);
@@ -167,8 +175,19 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
           (glue, gap_seen, space_after) = (Reach::NONE, false, false);
           continue;
         }
+        // (a comma glued to a name's run is that name's ink: what follows is measured from it, the nearer name by the
+        // glue past it — `Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$ Michael`, Igor's (DG 2026-11-16, COMMAMARK:
+        // 1111.1979, 1912.01737, 1811.08622); `Lenk\footnotemark[1]\textsuperscript{,}\footnotemark[2] \and`, Lenk's
+        // (2407.04435))
+        let name_ink = matches!(opening, Opening::Name(_))
+          && *kind == SepKind::Comma
+          && !space_after
+          && !e.space_before
+          && glues.iter().all(|g| g.width == 0.0 && !g.fill);
         decide(&mut ledger, events, opening, None, &pieces, &glues);
+        past_comma = name_ink;
         opening = match kind {
+          _ if name_ink => opening,
           SepKind::And(_) | SepKind::Column(_) => Opening::Cell,
           _ => Opening::Other,
         };
@@ -179,6 +198,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
         glues.push(glue);
         decide(&mut ledger, events, opening, None, &pieces, &glues);
         opening = Opening::Other;
+        past_comma = false;
         (pieces, glues, glue, gap_seen, space_after) =
           (Vec::new(), Vec::new(), Reach::NONE, false, false);
       },
@@ -186,6 +206,17 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
   }
   glues.push(glue);
   decide(&mut ledger, events, opening, None, &pieces, &glues);
+  // (the block's decided sides beside its undecided marks: what a block's convention would decide, measured — MARKKEY K8)
+  if ledger.records.iter().any(|r| r.side.is_none()) {
+    let count = |side: Option<Side>| ledger.records.iter().filter(|r| r.side == side).count();
+    DebugFeature!(
+      "frontmatter_ledger",
+      "FRONT mark ledger: {} before, {} after, {} undecided",
+      count(Some(Side::Before)),
+      count(Some(Side::After)),
+      count(None)
+    );
+  }
   ledger
 }
 
@@ -396,5 +427,42 @@ mod tests {
       bob,
     ];
     assert_eq!(sides(&other), [None]);
+  }
+
+  /// A comma glued to a name's run is its ink: a mark glued past it, its labels before, is measured from it — the nearer
+  /// name by the glue, `Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$ Michael`, Igor's (DG 2026-11-16, COMMAMARK:
+  /// 1111.1979) —, and one with no name after it on its line is the name's (`Lenk\footnotemark[1]\textsuperscript{,}
+  /// \footnotemark[2] \and`, 2407.04435); one set off from the comma by a space stays between it and the next name
+  /// (llncs's `Ann Able,\n\inst{1}\thanks{…} Bob Baker`).
+  #[test]
+  fn a_mark_glued_past_a_names_comma_is_measured_from_the_comma() {
+    use Side::*;
+    let (igor, michael) = (name("Igor Pikovski"), name("Michael Vanner"));
+    let comma = Event::new(EventKind::Sep(SepKind::Comma));
+    let mut labels = Event::new(EventKind::Mark);
+    labels.role = Some("math".to_string());
+    let glued = [
+      igor.clone(),
+      comma.clone(),
+      labels.clone(),
+      mark(),
+      gap(1.0, false),
+      michael.clone(),
+    ];
+    assert_eq!(sides(&glued), [Some(Before)]);
+    let mut last = vec![igor.clone(), comma.clone(), mark()];
+    last.push(Event::new(EventKind::Sep(SepKind::And("\\and"))));
+    last.push(michael.clone());
+    assert_eq!(sides(&last), [Some(Before)]);
+    // (a space after the comma: no name opens the stretch, as before)
+    let spaced = [
+      igor,
+      comma,
+      gap(0.33, false),
+      mark(),
+      gap(0.33, false),
+      michael,
+    ];
+    assert_eq!(sides(&spaced), [None]);
   }
 }

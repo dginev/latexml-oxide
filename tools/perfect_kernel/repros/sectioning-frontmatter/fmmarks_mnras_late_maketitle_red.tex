@@ -1,0 +1,18 @@
+% mechanism: a `\maketitle` after the first `\section`: the fallback flush at that `\section` placed the title block,
+%   unmarked (no `\maketitle` digested it), and the late `\maketitle` digests nothing, so its `\thanks` neither mark
+%   nor step; pdflatex prints them in the arabic `\fixfootnotes` set, 2 and 3, and the next body note 4
+% witness:  review revMARKBIND (p/mn_late.tex), MARKBINDb item 2 (pre-existing at MARKBINDb0)
+% oracle:   pdflatex 0 errors; "Body1", then the title "Ann Able2 and Bob Baker3", "Text4"
+% engines:  rust MARKBINDb = 0 errors, 0 Warnings; Ann's and Bob's thanks unmarked, "Text" 2
+% expect:   0 errors, 0 Warnings; Ann's thanks 2, Bob's 3, Text 4
+% status:   RED (row R MNLATE, proposed; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% preload:  ar5iv.sty
+\documentclass{mnras}
+\title{A Title}
+\author[A. Able]{Ann Able\thanks{E-mail: ann@x.org} and Bob Baker\thanks{Second.}\\ Univ A}
+\begin{document}
+\section{Intro}
+Body\footnote{Body note A.}.
+\maketitle
+Text\footnote{Body note B.}.
+\end{document}

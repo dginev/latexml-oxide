@@ -60,7 +60,6 @@ fn a_written_membership_grade_is_the_authors_contact() {
       r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> "#,
       r#"<creator before=" " role="author"> <personname>Cat Cole</personname> "#,
       r#"<contact role="membership"><text font="italic" xml:id="id1">Fellow, IEEE</text></contact> "#,
-      r#"<note class="ltx_note_frontmatter ltx_thanks_funding" role="thanks" xml:id="id2">Funded.</note> "#,
       r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> </creator>"#,
     )
   );

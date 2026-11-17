@@ -764,15 +764,17 @@
            the author-notes group. html_feedback #6571, #4958, #4930, #1211. -->
       <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN #156, #1052): the name is the name alone, so every marked note, of any
            role, follows it here in document order with the badge, its mark on the name (0801.1438). -->
+      <!-- (a shared unmarked note too, one copy carrying the page's generated mark: OXIDIZED_DESIGN_DIVERGENCES #1059) -->
       <xsl:variable name="annotations"
-                    select="ltx:contact[@role='orcid'] | ltx:note[normalize-space(@mark)]"/>
+                    select="ltx:contact[@role='orcid'] | ltx:note[normalize-space(@mark) or @idref or key('f:note-copies',@xml:id)]"/>
       <xsl:choose>
         <xsl:when test="$annotations">
           <xsl:element name="span" namespace="{$html_ns}">
             <xsl:attribute name="class">ltx_annotated_personname</xsl:attribute>
             <xsl:apply-templates select="ltx:personname">
               <xsl:with-param name="context" select="$innercontext"/>
-              <xsl:with-param name="trailing_newline" select="not(ltx:note[normalize-space(@mark)])"/>
+              <xsl:with-param name="trailing_newline"
+                              select="not(ltx:note[normalize-space(@mark) or @idref or key('f:note-copies',@xml:id)])"/>
             </xsl:apply-templates>
             <xsl:apply-templates select="$annotations">
               <xsl:with-param name="context" select="$innercontext"/>
@@ -785,7 +787,7 @@
           </xsl:apply-templates>
         </xsl:otherwise>
       </xsl:choose>
-      <xsl:apply-templates select="ltx:note[not(normalize-space(@mark))]">
+      <xsl:apply-templates select="ltx:note[not(normalize-space(@mark) or @idref or key('f:note-copies',@xml:id))]">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
       <!-- the author's metadata: hidden RDFa spans (span.ltx_rdf), OXIDIZED_DESIGN #479 -->

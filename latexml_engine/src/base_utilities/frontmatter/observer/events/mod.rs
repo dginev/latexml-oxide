@@ -333,6 +333,10 @@ pub struct Event {
   /// its `\thanks[<n>]` or `\footnote[<n>]` shows the mark of its given `<n>`, whatever the counter the block steps (1607.07280). Not in a
   /// dump: only the emitter reads it (`emitter::emit::mark_dropped`, `emitter::emit::shown_mark`)
   pub given_number:   bool,
+  /// a footnote Mark's or a Note's (`\footnotemark`, `\thanks`, `\footnote`, `\footnotetext`): the footnote number it
+  /// stands for, its given `[<n>]` or the counter's value at its step (the rehearsal's `number`) — what TeX pairs a mark
+  /// and its note by (latex.ltx `\@xfootnotemark`, `\@xfootnotenext`), never the glyph it prints. Not in a dump
+  pub number:         Option<i64>,
   /// a Name's: the block's creator call that printed it, its place among the rehearsal's (`creator_roles`;
   /// `ledger::Outcome::Events::creators`). Not in a dump: only the emitter reads it
   pub creator_call:   Option<u16>,
@@ -436,6 +440,7 @@ impl Event {
       marks: None,
       footnote: false,
       given_number: false,
+      number: None,
       creator_call: None,
       note_mark: None,
       body: Vec::new(),
@@ -463,6 +468,15 @@ fn is_symbol_label(text: &str) -> bool {
 /// `\footnotemark` is one whatever it printed: its text is the `\thefootnote` it prints (the `printed` property of
 /// `rehearsal::load`'s `\lx@fm@obs@fnmark`), empty where that failed (`\@fnsymbol` past 9, "Counter too
 /// large").
+/// The footnote number the rehearsal recorded on a note's or a footnote mark's whatsit, `fnvalue` as the kernel's notes
+/// record theirs (`latex_constructs::footnote_pairing`; `Event::number`).
+fn stored_number(w: &Whatsit) -> Option<i64> {
+  match w.get_property("fnvalue").as_deref() {
+    Some(Stored::String(number)) => to_string(*number).parse().ok(),
+    _ => None,
+  }
+}
+
 fn mark_event(text: String, role: &str) -> Option<Event> {
   if text.is_empty() && role != "footnotemark" {
     return None;
@@ -1367,6 +1381,7 @@ impl Walker {
         note.footnote = cs.ends_with("fnnote");
         // (`\footnote[<n>]`: the mark it shows is <n>'s, `Event::given_number`)
         note.given_number = w.get_arg(1).is_some();
+        note.number = stored_number(w);
         if let Some(body) = w.get_arg(2) {
           note.inkless = leaves_no_ink(body);
           let (events, formulas, inks) = lex_body_with_inks(body);
@@ -1447,6 +1462,7 @@ impl Walker {
         if let Some(mut mark) = mark_event(printed, "footnotemark") {
           // (its optional argument, `\footnotemark[<n>]`: a mark that steps no counter, `Event::given_number`)
           mark.given_number = w.get_arg(1).is_some();
+          mark.number = stored_number(w);
           self.event(mark, d, nest);
         }
       },

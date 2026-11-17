@@ -66,8 +66,7 @@ fn a_notes_footnote_step_runs_where_it_prints() {
        xml:id=\"id1\"",
       "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"†\" role=\"thanks\" \
        xml:id=\"id2\"",
-      "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
-       xml:id=\"footnote1\"",
+      "<note class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" xml:id=\"footnote1\"",
     ],
     "{xml}"
   );
@@ -158,12 +157,11 @@ fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
   // (every note kept, each mark as pdflatex prints it: Ann's footnotemark †, Carl's *; each creator's in order, Ann's mark
   // and thanks, Bob's two thanks, Carl's mark)
   let (mark_ann, mark_carl) = (
-    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"†\" role=\"thanks\" \
-     xml:id=\"footnote2\"",
-    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
-     xml:id=\"footnote1\"",
+    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"†\" role=\"thanks\" xml:id=\"footnote2\"",
+    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" xml:id=\"footnote1\"",
   );
-  // (each `\thanks` with the mark pdflatex prints for it, OD #1053)
+  // (each `\thanks` with the mark pdflatex prints for it, OD #1053; Ann's copy of Bob's † the first in document order,
+  // whose id Bob's names, OD #1059; revMARKKEY1 NIT: Bob's held it before)
   let thanks = |n: u8, mark: &str| {
     format!(
       r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="{mark}" role="thanks" xml:id="id{n}""#
@@ -173,7 +171,8 @@ fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
     mark_ann.to_string(),
     thanks(1, "*"),
     thanks(2, "‡"),
-    thanks(3, "†"),
+    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"footnote2\" mark=\"†\" role=\"thanks\" xml:id=\"id3\""
+      .to_string(),
     mark_carl.to_string(),
   ];
   assert_eq!(notes, expected, "{xml}");
@@ -274,7 +273,8 @@ fn a_mark_after_its_names_note_stays_with_it() {
       vec![
         mark("*", "footnotex1"),
         thanks("*", "id1"),
-        thanks("*", "footnotex2"),
+        // (one note with Ann's, `idref`: OD #1059)
+        thanks("*", "footnotex2").replacen(" mark=", r#" idref="id1" mark="#, 1),
         thanks("†", "id2"),
       ],
     ),
@@ -288,7 +288,8 @@ fn a_mark_after_its_names_note_stays_with_it() {
       vec![
         mark("†", "footnote2"),
         thanks("*", "id1"),
-        thanks("*", "footnotex1"),
+        // (one note with Ann's, `idref`: OD #1059)
+        thanks("*", "footnotex1").replacen(" mark=", r#" idref="id1" mark="#, 1),
         thanks("‡", "id2"),
         mark("§", "footnote4"),
       ],
@@ -328,7 +329,7 @@ fn a_mark_after_its_names_note_stays_with_it() {
     marks_by_creator(&xml),
     [
       vec![mark("†", "footnote2"), thanks("*", "id1")],
-      vec![thanks("*", "footnotex1")],
+      vec![thanks("*", "footnotex1").replacen(" mark=", r#" idref="id1" mark="#, 1)],
       vec![mark("†", "footnotex2")],
       vec![mark("‡", "footnote3")],
     ],
@@ -385,8 +386,8 @@ fn a_mark_on_no_name_keeps_its_footnote_step() {
 /// SHGIVEN (DG ruling 2026-11-16, 4, refining the 2026-11-09 one): a given mark only spacing parts from its name is that
 /// name's, as pdflatex prints it and Perl keeps it — 1911.13299's `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, its
 /// four marks lost with a Warning ("lost: †, ‡, ‡, ‡"), now each on its name with no Warning (asserted first), each a
-/// copy of the note it marks (SHMARK's Link step, OD #1053; pin updated at the merge); a given mark past a name's comma
-/// (the rows after) is still no name's, its loss counted.
+/// copy of the note it marks (SHMARK's Link step, OD #1053; pin updated at the merge); a given mark glued past a name's
+/// comma (the rows after) is that name's since MARKKEY1 (COMMAMARK, OD #1057, #1058), its loss gone.
 /// SHGNEXT (row R SHGIVENNEXT): the block dropping a bare mark is no longer written whole (its third row; pin updated).
 #[test]
 fn a_given_mark_on_no_name_keeps_the_creators() {
@@ -415,50 +416,38 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
     row(&["Cat Cole", "thanks[†]=Univ A", "thanks[‡]=Univ B"]),
     row(&["Dan Dorn", "thanks[‡]=Univ B"]),
   ]);
+  // (MARKKEY1, COMMAMARK — DG 2026-11-16: a mark glued past a name's comma and its label is the left name's, measured
+  // from the comma's ink, 1912.01737, 1811.08622 — no longer lost: Bob's `\samethanks[1]` and Carl's `\footnotemark[1]`
+  // are copies of Ann's note 1, OD #1058; the counted loss is gone)
   let expected = vec![
     row(&["Ann Able", "mark=*", "affiliation=Univ A"]),
-    row(&["Bob Baker", "affiliation=Univ A"]),
-    row(&["Carl Cole", "affiliation=Univ B"]),
+    row(&["Bob Baker", "mark=*", "affiliation=Univ A"]),
+    row(&["Carl Cole", "mark=*", "affiliation=Univ B"]),
     row(&["Dan Dory", "affiliation=Univ B"]),
   ];
-  // (the `\thanks` note with its mark, OD #1053; the lost given marks are SHGIVEN's)
-  let marks = vec![
-    r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1""#,
-  ];
   let (log, xml) = run(repro!("ne2d_given_mark_dropped_keeps_the_creators"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert!(
-    log.contains("writes 2 footnote mark(s) of its author block given their number (a note's, written already) on no name and no item; lost: *, *"),
-    "{log}"
-  );
-
-  assert_eq!(creators(&xml), expected);
-  assert_eq!(footnotemarks(&xml), marks, "{xml}");
-  assert_eq!(
-    xml
-      .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks""#)
-      .count(),
-    1,
-    "{xml}"
-  );
-
-  // (a bare `\footnotemark` dropped too: its step kept, Dan's own mark ‡; Bob's ∗ and Carl's † counted lost)
-  let (log, xml) = run(repro!("ne2d_given_and_fresh_mark_dropped"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert!(
-    log.contains(
-      "writes 2 footnote mark(s) of its author block on no name and no item, those given their number (a note's, \
-       written already), the others' footnote steps kept where they print; lost: *, †"
-    ),
-    "{log}"
-  );
-  let mut expected = expected;
-  expected[3].insert(1, "mark=‡".to_string());
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), expected);
   assert_eq!(notes_in(&xml), [
     row(&["Ann Able", "thanks[*]=Univ X."]),
-    row(&["Bob Baker"]),
-    row(&["Carl Cole"]),
+    row(&["Bob Baker", "thanks[*]=Univ X."]),
+    row(&["Carl Cole", "thanks[*]=Univ X."]),
+    row(&["Dan Dory"]),
+  ]);
+
+  // (a bare `\footnotemark` past a comma too: Carl's †, Dan's own ‡, each a mark-only note on its name, its step kept)
+  let (log, xml) = run(repro!("ne2d_given_and_fresh_mark_dropped"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "mark=*", "affiliation=Univ A"]),
+    row(&["Bob Baker", "mark=*", "affiliation=Univ A"]),
+    row(&["Carl Cole", "mark=†", "affiliation=Univ B"]),
+    row(&["Dan Dory", "mark=‡", "affiliation=Univ B"]),
+  ]);
+  assert_eq!(notes_in(&xml), [
+    row(&["Ann Able", "thanks[*]=Univ X."]),
+    row(&["Bob Baker", "thanks[*]=Univ X."]),
+    row(&["Carl Cole", "footnotemark[†]="]),
     row(&["Dan Dory", "footnotemark[‡]="]),
   ]);
 }

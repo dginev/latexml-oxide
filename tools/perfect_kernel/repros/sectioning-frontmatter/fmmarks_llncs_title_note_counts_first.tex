@@ -1,0 +1,19 @@
+% mechanism: llncs.cls's `\maketitle` sets the footnote counter to 0 (llncs.cls:932) and marks the block's `\thanks`
+%   in its `\@fnsymbol` (:889, :935), the title's first, then the names', then the institute's: the fourth is †
+%   (llncs_cls.rs, the title hook and `lx_title_counts_footnotes`); one institute (`\fnnstart` 0, :879), so the body's
+%   notes count from 1, and the body's `\fnsymbol` is the class's
+% witness:  LLNCSMARKS (the sibling of fmmarks_llncs_title_marks_are_the_class_symbols with `\inst` marks: the split path)
+% oracle:   pdflatex 0 errors; "A Title⋆", "Ann Able1⋆⋆, Bob Baker1⋆⋆⋆, and Cy Cole1†", "Lab A‡", "Body1 and ⋆."
+% engines:  rust MARKBIND (ff2497f5a77) = 0 errors, 0 Warnings; the names' thanks unmarked, the body's "*"; Perl 0.8.8:
+%   each thanks an unmarked contact, the body's "*"
+% expect:   0 errors, 0 Warnings; Ann ⋆⋆, Bob ⋆⋆⋆, Cy †, the body's note 1 and "⋆"
+% status:   GREEN (LLNCSMARKS; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\title{A Title\thanks{Title note.}}
+\author{Ann Able\inst{1}\thanks{Ann note.} \and Bob Baker\inst{1}\thanks{Bob note.} \and Cy Cole\inst{1}\thanks{Cy note.}}
+\institute{Lab A\thanks{Lab note.}}
+\begin{document}
+\maketitle
+Body\footnote{Body note.} and \fnsymbol{footnote}.
+\end{document}

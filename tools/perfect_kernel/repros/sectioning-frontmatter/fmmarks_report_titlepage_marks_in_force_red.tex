@@ -1,0 +1,21 @@
+% mechanism: report's title page (`titlepage`, report's and book's default and an option of article, report.cls:176-198)
+%   sets no `\thefootnote`: its `\maketitle` prints the one in force, arabic, its `\thanks` stepping the counter, which
+%   it sets back to 0 after; `declare_fnsymbol_title_block` declares no title hook there and the observer reads no
+%   `Body` marks, so the notes are written unmarked (the fail-safe: a wrong glyph is worse than none)
+% witness:  review revMARKBINDb TITLEPAGEMARKS (p/rep_thanks.tex; p/art_tp.tex `[titlepage]{article}` the same);
+%   1501.00599 (report, "Muhyiddin Izadi1"), 1110.6706, 1812.06706, 2009.14742, quant-ph0207054
+% oracle:   pdflatex 0 errors; "A Title1", "Ann Able2 Bob Baker3", "1 Title note.", "2 Ann note.", "3 Bob note.", then
+%   "Body1" with "1 Body note."
+% engines:  rust MARKBINDd = 0 errors, 0 Warnings; Ann's and Bob's thanks unmarked (MARKBINDc's 2, 3 withdrawn with
+%   its in-force hook, which gave titling's `\thanksmarkseries{fnsymbol}` arabic: review revMARKBINDc)
+% expect:   0 errors, 0 Warnings; Ann's thanks 2, Bob's 3, the body's note 1
+% status:   RED (row R TITLEPAGEMARKS; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% preload:  ar5iv.sty
+\documentclass{report}
+\title{A Title\thanks{Title note.}}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}}
+\begin{document}
+\maketitle
+\chapter{One}
+Body\footnote{Body note.}.
+\end{document}

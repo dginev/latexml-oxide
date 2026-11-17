@@ -19546,12 +19546,14 @@ f:shared-creator-note`). The first copy of a group of two or more renders in ful
 `ltx_note_shared`; each later copy is `span.ltx_note.ltx_role_footnotemark.ltx_note_shared` holding only its mark,
 linked to the first copy's id. `LaTeXML-structure-xhtml.xsl` puts every marked note in `span.ltx_annotated_personname`
 after the name, in document order with an ORCID badge, and there the name drops its trailing newline, so no line breaks
-between a name and its mark; unmarked notes (an empty `@mark` too) follow the name as before. A personname holds the
+between a name and its mark; unmarked notes (an empty `@mark` too) follow the name as before — one several authors
+share, known by its copies' `idref` (#1059), prints once under a generated `[a]` in the wrapper. A personname holds the
 name alone (DG 2026-11-16), so the wrapper takes every marked note of any role, mark-only `role="footnotemark"` notes
 too (PURE's unanswered marks, Perl's `\footnotemark` leftovers): each renders as its `sup.ltx_note_mark` alone, no empty
 "footnotemark: " pop-up, linked and classed `ltx_note_shared` only when its mark is a symbol (no Latin or Greek letter, no digit)
 or Perl's tagged leftover (`f:creator-mark-only`) and names one author's note of the block (`xsl:key
-f:creator-note-by-mark`, every candidate a copy of one note), else the plain glyph (Perl's tag, else `@mark`): a letter
+f:creator-note-by-mark`, every candidate a copy of one note), else the plain glyph (Perl's tag, else `@mark`), shown
+though it links nothing (#1059): a letter
 or digit is as often an affiliation label as a footnote number, and a wrong link is worse than none (review revREND2: a
 mark-only `1` linked another author's own footnote `1`). Such a linkable mark-only note pointing at a one-author note
 makes it shared, so it prints in the margin with its mark. LaTeXML.css (local delta after the ORCID wrapper rules): a name with notes is set as text; where the author's
@@ -19617,7 +19619,8 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   (acmart.cls:1727, :2237, :2245-2247; a `\titlenote` in the `\title` argument is digested at the flush, after: not
   counted, 0 of popSHARED's 30 `\authornotemark` papers), `\authornotemark[n]` a mark-only note of mark n (:1733-1738,
   :2897). A title page's marks
-  (`titlepage`: the body's arabic ones) are none (the observer reads no `TitleMarks::Body` marks); IEEEtran's `\thanks`
+  (`titlepage`: the `\thefootnote` in force) are none (the observer reads no `TitleMarks::Body` marks; row R
+  TITLEPAGEMARKS); IEEEtran's `\thanks`
   prints none (IEEEtran.cls:4757-4758).
 - *The mark rule's pass* (`insert::mark_creator_notes`, once every route has placed the notes): a thanks note's leading
   superscript or mark formula (`$^{*}$`, `fm_read_formula`) is its mark where it has none and the superscript is a
@@ -19633,10 +19636,12 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   marks"). A superscript of several marks (`$^{1,*}$`) or of more than three characters is no mark. The rules hold on
   every class, bound or raw (review revSHMARK S2).
 - *The Link step* (`insert::link_marked_notes`): a mark-only note (`role="footnotemark"`, its text its tags or its mark)
-  on a name whose mark another creator's note carries (label keys: `*` = `∗`) becomes a full copy of that note — its
-  role, class, mark and content, its own id kept, as `relocateFootnote_aux` fills a mark: a document's `\samethanks[1]`
-  (2502.19103), 1911.13299's `\footnotemark[1]`, acmart's `\authornotemark[1]`. A mark its own creator's note carries,
-  or no creator's note (a title's `\thanks`, a later `\footnotetext`), stays as Perl leaves it.
+  on a name becomes a full copy of the note of its author block standing for the number it was given (`_fnvalue` with
+  `_fngiven`, #1058), else of the one carrying its glyph (label keys: `*` = `∗`; the block's notes only) — its role,
+  class, mark and content, its own id kept, as `relocateFootnote_aux` fills a mark: a document's `\samethanks[1]`
+  (2502.19103), 1911.13299's `\footnotemark[1]`, acmart's `\authornotemark[1]`, scrartcl's `Bob\footnotemark[1]`
+  beside `Ann\thanks{…}`. A mark its own creator's note carries, or no note of its block (a title's `\thanks`, a later
+  `\footnotetext`), stays as Perl leaves it.
 - *No affiliation-linking mark*: a mark-only `\footnotemark` that leads an affiliation (`queue_digest::LEADS_CONTACT`,
   set by `lift_notes_beside`), which the reading paired the entry by (`resolver/blocks.rs` `mark:footnote`), is removed
   where a note of a creator carries its mark or its creator's name holds the same mark (1607.07280's REVTeX
@@ -19901,8 +19906,10 @@ formula's mark apart from both names stays undecided (`ne2g_mark_then_orcid_near
 `fmmarks_mark_then_cite_nearer_next_red`, `ne2g_mark_then_superscript_nearer_next`). A single space before or after a
 note prints no `space_before` event: a run with no other glue is undecided. A cell an `\and` opens with a mark before
 its name is read as a labelled line (`ne2i_bare_mark_opening_a_cell_writes_the_block_whole`; given its number, Bob an
-affiliation as at the base). A mark after a name's comma and its label (`Igor Pikovski,$^{1, 2}$\footnotemark`,
-1111.1979: COMMAMARK) is undecided: its names now split, its glyph counted lost.
+affiliation as at the base). A mark glued past a name's comma and its labels (`Igor Pikovski,$^{1, 2}$\footnotemark $\, \,$ Michael`,
+1111.1979; 1912.01737, 1811.08622: COMMAMARK, DG 2026-11-16) is measured from the comma's ink — the comma glued to the
+name's run opens the stretch at that name — and written on its name past the comma, the labels left to the reading's
+requests (#1058's batch); one set off from the comma by a space stays undecided (llncs's `Ann Able,\n\inst{1}…`).
 **Witnesses.** 1911.13299, 2412.20504 (green before and after), 1703.08733 (its separator's shape); the FMRG suite's
 spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`, XML and HTML: its `ne2j_*`
 rows the writers' runs and the separator's place in the run; the formula comma itself reaches the name's tokens and
@@ -19912,6 +19919,204 @@ a_note_beside_spacing_goes_to_the_nearer_name, a_mark_nearer_the_next_name_moves
 a_mark_a_name_follows_past_spacing_is_not_carried_back, a_mark_on_no_name_keeps_its_footnote_step,
 a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`;
 the unit test `resolver::mark_ledger::tests::a_run_between_two_names_is_parted_at_its_widest_glue`.
+---
+
+### 1058. A footnote mark answers its note by the number it shows, never by its glyph alone (DG 2026-11-16, MARKKEY)
+
+**Rule.** TeX pairs a mark and its note by number: `\thanks` is `\footnotemark` plus `\footnotetext` of the counter's
+value (latex.ltx:17215-17218), `\footnotemark[n]` and `\footnotetext[n]` set it locally (`\@xfootnotemark`,
+`\@xfootnotenext`, :17678-17683). The frontmatter pairs a name's footnote mark with its note the same way.
+**Perl.** `relocateFootnote` (latex_constructs.pool.ltxml:498-527) pairs a `\footnotemark[n]` and a `\footnotetext[n]` by
+their `mark`, which for a given number is the number itself (`makeNoteTags`, :444-459): by number. Its title notes are
+contacts with no mark (Base_Utility.pool.ltxml:661-664), so a name's `\footnotemark[1]` beside another name's `\thanks`
+stays a mark-only note.
+**Rust.** Our `mark` is the glyph printed, so the number rides beside it:
+- the rehearsal records each footnote mark's and note's number as the kernel's notes do theirs (`fnvalue`: its given
+  `[n]`, else the counter's value at its step; `observer::rehearsal`), read into `Event::number`;
+- a `\footnotetext[n]` written inside `\author` is the note of every name of its block whose `\footnotemark[n]` shows n
+  (`resolver::answer_note_texts`), each a copy through the item's `annotations` (`relocateAnnotations`), marked with the
+  glyph that mark prints where the class's title marks are known (`emit` `note_call`; `_fnvalue`, `_fntext`), the
+  name's mark-only note then its own mark (`insert::link_marked_notes`): 2407.04435's lni block, Müssig {1}, Wappler
+  {1}, Lenk {1,2}, Lässig {3}, where every text had sat on the last name;
+- a name's `\footnotemark[n]` given its number as such (the kernel's `_fngiven`; not `[\value{footnote}]`, nor a bare
+  mark, whose counter as digested is not the one TeX printed — aiaa-tc's `\thanksibid{2}`, 1505.07844) is filled with
+  the note of its block standing for n (`insert::link_marked_notes`), the glyph join only its fallback, in the block:
+  scrartcl's `Ann\thanks{Equal} \and Bob\footnotemark[1]`, whose glyph no binding knows, Bob now the note's carrier;
+- a number read off the counter in the title block (`\samethanks`' `[\value{footnote}]`) keys a note and prints its
+  glyph only where that counter is TeX's here (`latex_constructs::title_numbers_faithful`: the class's notes step it as
+  its `\maketitle` digests them, `lx_title_counts_footnotes` — article's family —, a binding declares its title's marks
+  (a binding that defines `\lx@title@thefootnote`, `title_marks_declared`) or its counter,
+  `declare_title_numbers_faithful` — IEEEtran, whose `\maketitle` empties `\footnotemark`, IEEEtran.cls:4756-4758). Elsewhere (aa's and llncs's `\thanks` step nothing here) it read 0
+  and wrote "0" (2606.31244, 2306.03360): now no number and no glyph, the mark lost and counted
+  (`unanswered_mark_lost`). A given number names an author's `\thanks` by the reading's count, TeX's unless a title or
+  date note the reading does not count came first (`frontmatter_fields::TITLE_NOTE_VALUES`' `?`, set at
+  `\lx@title@footnote@step`): past llncs's `\title{T\thanks{…}}` Cat's `\footnotemark[2]` took Bob's note where llncs
+  prints Ann's ⋆⋆, and now takes none — a wrong link worse than none (MARKKEY1c; row R MARKNUMKEY: the class counters
+  emulated, the PDF's shared ⋆ and the given number's glyph);
+- IEEEtran's unmarked `\thanks` (its `\maketitle` empties `\thefootnote` and `\footnotemark`, IEEEtran.cls:4756-4758:
+  the note prints no mark and names no author) is the block's, not the name's it follows, where Perl and the base hung
+  it: the title's publication note (1510.02728), or a nameless `<creator>` holding it where the block keeps it among
+  the names (1502.05943, 1609.09226).
+A known association whose glyph is unknown writes no glyph (#990's `_markunknown`, an Info); the page invents one only
+for a note several names share (#1059).
+**Witnesses.** 2407.04435, 1510.02728, 1111.1979 (its comma marks, #1057), 1912.01737, 1811.08622, 2606.31244,
+2306.03360.
+**Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number,
+an_ieee_unmarked_thanks_is_the_blocks, a_mark_after_a_names_comma_is_the_nearer_names,
+a_number_the_title_counter_cannot_give_keys_nothing, the_mark_components_only_shrink}`; `observer::resolver::mark_ledger::tests::a_mark_glued_past_a_names_comma_is_measured_from_the_comma`.
+
+---
+
+### 1059. The copies of one note are one note, `idref` to the first; the page invents a mark only for a shared unmarked note, and shows every unlinked mark (DG 2026-11-16)
+
+**Rule.** The XML keeps a copy of a shared note on every carrier (#1052, Perl's model); those copies are one note:
+the `xml:id` of the copy first in document order is the `idref` of each other (DG 2026-11-16, issue #893 Option A; `ltx:note` takes
+`IDREF.attributes`, SCHEMA_EXTENSIONS S13). The page knows a shared note by that identity, never by its text.
+**Perl.** No identity: each copy is a note of its own, printed in full.
+**Rust.**
+- *Identity* (`relocate::one_note`): stamped at every clone site — `relocate_annotations` (an item several names
+  request), the kernel's `relocate_footnote` (one `\footnotetext` filling several names' marks, creators only) and the
+  Link step (#1058).
+- *A shared unmarked note* (no `mark`: its class prints none, or its glyph is unknown here) prints once, at its first
+  copy, under a mark the page invents so the reader can tell whom it is about — `[a]`, `[b]`, … in document order,
+  class `ltx_mark_generated`, a bracketed letter the document prints nowhere (`f:printed-glyph`; never `\@fnsymbol`, never a bare letter
+  or digit) —, each other copy that mark linked to it (`LaTeXML-meta-xhtml.xsl`, key `f:note-copies`). A one-carrier
+  unmarked note stays under its name, no glyph (#990). The engine never invents a glyph.
+- *An unlinked mark shows* (DG 2026-11-16, "hide only when certain"): a mark-only note that links to no note on the
+  page shows its glyph, plain, though no other print of it is found. The XML cannot make a hide certain: a legend
+  often sits where the frontmatter does not see it, and pdflatex prints the glyph twice — a body line's
+  `$\dagger$ Corresponding author.`, a `\date{\dag\ …}`, a plain-text `*` or a digit run on a line, a tabular cell
+  (review revMARKKEY1c probes h1-h5; repro `markkey_unlinked_mark_legend_on_a_body_line_shows`) — or keeps it with its
+  glyph lost (row R MARKGLYPHLOST: an author-line contact's consumed label, 1302.0490, astro-ph0703204; a correspondence
+  or e-mail contact with its symbol cut, 2409.11508, 2609.33801; icml's empty `<sup/>`, 2402.05011; a
+  `mark="$\star$"`, 2412.05831; a legend after a `<break/>`, 2311.11099). The hide this replaces (a glyph printed once,
+  over its name alone, hidden: 2006.10886, whose geophysics `\address{\footnotemark[1]{…}}` the class never prints in
+  `paper` mode) fired on 0 of the 983 papers of the MARKKEY union, and on synthetic shapes whose PDF prints the glyph
+  twice. The papers whose marks it showed by a print it found or beside a possible legend show as before (1304.5040,
+  2110.12052, 2302.11378, 2012.13912, 2508.05506, 2010.10783; 1409.7582, 2004.11818, 2105.02711). The glyph key
+  `f:printed-glyph` remains `[a]`'s. A mark whose given number names a title's or date's note is classed
+  `ltx_mark_titlenote` (`insert::link_marked_notes`: "A Title∗ … Cy Cole∗", the number `\lx@title@footnote@step`
+  recorded).
+**Witnesses.** 2407.04435 (one note, three carriers), 2006.10886, 1304.5040, 1108.5155, 1404.2124, 2508.05506,
+2012.13912, 1503.07953, 2311.11099, 2412.05831, 1409.7582.
+**Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number, a_note_several_names_carry_is_one_note,
+an_unlinked_mark_always_shows, an_unlinked_mark_shows_beside_its_legend,
+an_unlinked_mark_shows_beside_a_legend_that_lost_its_glyph}`; the FMRG suite's page
+layer (`perfect_kernel_batchfmmarks`).
+
+### 1060. A class binding computes the title marks and the footnote steps its class prints (DG 2026-11-16, "bindings compute, the XSLT invents"; MARKBIND)
+
+**Rule.** A binding declares the glyph its class's title block prints, through the title hook
+(`latex_constructs::TITLE_THEFOOTNOTE`), and the footnote steps its commands make; where it is not sure it declares
+nothing (the engine's fail-safe, OD #1053, writes no glyph).
+**Perl.** mnras.cls.ltxml keeps arabic footnote marks; revtex4.cls.ltxml follows no society file; there is no lni binding;
+llncs.cls.ltxml writes a name's `\thanks` as an unmarked contact.
+**Rust.**
+- mnras (mnras_cls.rs): the class's own `\@fnsymbol` (⋆ † ‡ § ¶ ‖ ⋆⋆ …, mnras.cls:1502-1508) for `\thefootnote`,
+  up to the first `\section`, whose `\fixfootnotes` numbers them in arabic from 1 (:736-737, :1517-1523). Its
+  `\maketitle` (:1055-1071) sets no `\thefootnote`, so the title hook is the one in force as the `\maketitle` begins
+  (`latex_constructs::declare_title_marks_in_force`, a `\let` in `\lx@maketitle@begin`), and only then: with no
+  `\maketitle` (no title printed) the fallback flush's name marks are the body's, a `\footnotemark[2]` answered by a
+  `\footnotetext[2]` after the first `\section` 2 (pdflatex "2 Bob text."); a preamble's
+  `\renewcommand{\thefootnote}{\arabic{footnote}}` prints "Ann Able,1 1", a package that sets `\@fnsymbol` after the
+  class (footmisc) is followed (1905.08754 "Copeland,1 ∗"). Its `\thanks` is LaTeX's and its `\maketitle` does not
+  set the counter back (`latex_constructs::declare_title_footnote_counting(false)`): a name's `\thanks` is ⋆, a note
+  before the first `\section` counts on (†, ‡), one after it from 1. A `\footnotemark[2]` and the `\footnotetext[2]`
+  after `\maketitle` are †; 2509.04573's `\footnotemark[3]` on Cegla is Mortier's ‡ "UKRI Future Leaders Fellow", as
+  pdflatex prints.
+- The two counting facts a title block's class states apart (`declare_title_footnote_counting`): its notes step the
+  footnote counter (`lx_title_counts_footnotes`, read by `\lx@title@footnote@step` and the title's rehearsal), and its
+  `\maketitle` sets the counter back to 0 (`lx_title_resets_footnotes`, read by the note pairing's `_fncounted`;
+  article, report, book, their copies extarticle, extreport and extbook, and siamltex only,
+  `declare_fnsymbol_title_block`).
+- REVTeX 4.1/4.2 (`revtex4_support_sty::declare_revtex41_title_marks`): the `aip` and `sor` society files mark the front
+  matter's footnotes in letters (aip4-2.rtx:282, sor4-2.rtx:245, aip4-1.rtx:205), which `altaffilsymbol` does not undo
+  (pdflatex); 2603.05387 "Yiming Xing,1, 2, a)". The title hook is the title block's minipage letters
+  (revtex4-2.cls:2710-2714, :487-491), or empty in the two-column grid `twocolumn`, `reprint` and `lengthcheck` set
+  (:7413-7418 `\ltx@no@footnote`, :6044-6047: 1807.01940 and 2301.00155 print no mark for a name's
+  `\footnotemark[1]`), in every society and journal: pdflatex prints none for `[aip,jcp,reprint]`, `[aip,cp,reprint]`,
+  `[aip,jmp,reprint]` and `[sor,jor,reprint]`. The cp, jmp and jor journal files go single-column
+  (`\@booleanfalse\twocolumn@sw`, aip4-2.rtx:691, :826, sor4-2.rtx:717), yet pdflatex still prints no mark there;
+  `galley` is `onecolumn` (revtex4-2.cls:6025-6026, revtex4-1.cls:6004-6005), and `[aps,reprint,galley]` prints the
+  letter "b". A name's own marks stay unknown (`lx_title_footnote_own_marks`, row R REVNAMEMARK).
+- lni (lni_cls.rs): the authblk-era `\affil[n]` sets the footnote counter to n (lni.cls:463, v1.10's :468), so a title
+  `\thanks` and the body's notes number after the last label (2508.02300's first body note 7, was 1); the `\thanks`
+  steps the counter, which only v0.5's article-based `\maketitle` sets back (its `:116`; v1.7's and v2.0's do not,
+  lni.cls:475-514), read from the class's own `\maketitle`: a body note after a v2.0 title's `\thanks` 3 is 4; an `\author`
+  written for lni v1 (`\author[running names]{names}`, no braced e-mail and ORCID after it) is the kernel's
+  `\author[short]{names}` (2407.04435: no authblk labels of its running names, no stray `\startpage` argument).
+- llncs (llncs_cls.rs, LLNCSMARKS): the class's own `\@fnsymbol` (⋆ ⋆⋆ ⋆⋆⋆ † ‡ § ¶ ‖ ** †† ‡‡, llncs.cls:889-892;
+  515 shipped copies v2.10-v2.26, identical `\@fnsymbol`) for `\fnsymbol` and the title hook: the binding's
+  `\fnsymbol` is `\@fnsymbol` of the counter, over the kernel's radix `\fnsymbol` (#221). The text ⋆ is a binding
+  primitive, `\lx@llncs@star`, which reverts as itself (as `\ensuremath{\star}`, a shared note's re-digested tags are
+  math, printed "⋆ ⋆\star", 2404.09857; row R LLNCSSTARTEX); the ninth is ASCII "**" (`\textasteriskcentered`, as the
+  kernel's and Perl's), pdflatex's math ∗∗. The class's `\maketitle` sets `\thefootnote` to it itself (:935), so a preamble
+  `\renewcommand\thefootnote{\arabic{footnote}}` still prints ⋆ ⋆⋆ there; it sets the counter to 0 before the block
+  (:932) and each `\thanks` steps it, the title's first: "A Title⋆", "Ann Able1⋆⋆", the fourth †. The `\inst` marks
+  stay digits. After the block it sets the counter to `\fnnstart` (:1003), the institutes `\institutename` counted at
+  its `\and`s when two or more, else 0 (:877-881): the binding sets it where it parts the `\institute` list (the
+  pieces or the `\and`s it runs at every level, whichever are more: `Univ A \and {Univ B \and Univ C}` is three), so
+  1005.4552's three institutes number its body notes 4 to 15 (was 1 to 12), "Body3" under two; a copy the paper ships
+  from before `\fnnstart` (v2.4-v2.10, 5 of 592 copies sampled) sets 0 there, as 1508.06013's v2.6 prints its body
+  notes from 1 (`shipped_class_text`). Only as the document's class. The marks are withdrawn (none declared, the names' marks unknown: `lx_title_footnote_own_marks`, so a
+  mark-only note on a name is written with no glyph and counted by a Warning, OD #1053) where the counter steps where
+  the block's rehearsal cannot count it, read where `\maketitle` sets the block (`\lx@llncs@title@scan` at
+  `\lx@maketitle@begin`: a macro defined after the `\author` as pdflatex reads it): the last `\author` stepping it
+  outside its `\thanks` (a `\footnotemark` or `\footnote`, `\addtocounter{footnote}`), which `\@maketitle`'s
+  counting pass of `\@author` (:1028-1029, `\thanks` gobbled) runs twice (pdflatex "Ann Able⋆⋆ and Bob Baker⋆⋆⋆"; row
+  R LLNCSTWICE) — read by meaning (a `\let` copy, a `\let` copy of `\thanks`, which the pass does not gobble) and in
+  the bodies of the macros the document or a file it loaded defines, a raw-loaded package's too
+  (`\newcommand\fm{\footnotemark}`, `\DeclareRobustCommand`'s inner `\fm␣`), four levels deep; the tokens
+  `\ifdefined` and `\ifx` test run nothing (`\ifdefined\Anonymous…\else…\fi`, 2509.14694), nor do `\undefined`,
+  `\@undefined`; any other undefined command or one past the depth is read as a step (2009.11534's tikz ORCID logo,
+  its `\draw` defined only in the `tikzpicture`: its correct ⋆ withdrawn, row R LLNCSUNSURE) —; an `\author` it
+  replaced that steps it, `\thanks` included, whose notes the reading's rehearsal still steps (pdflatex "Ann⋆
+  Bob⋆⋆", ours ⋆⋆ ⋆⋆⋆; row R AUTHRESET, article's ‡ § for ∗ † too); and a `\subtitle` with a note, printed between
+  the title and the names (:1023-1027: "Sub⋆", "Ann Able⋆⋆"; row R LLNCSSUBTITLE).
+- The engine's own Frontmatter keys (`_markshown`, `_cutlist`, `_kinded`, `_linefirst`, `_fnvalue`, … 34) are declared in one list,
+  `frontmatter_api::FRONTMATTER_INTERNAL_KEYS`, so their use reports no `Info:undefined`, while a key the list lacks
+  still does; `perfect_kernel_batche0` pins each, and fails on a string constant naming a `_key` that a literal sets as
+  a keyval (`{LINE_FIRST}=true`, or a format's positional argument, a path's last segment: `s!("…,{}={{true}}",
+  insert::ROW_SHARED)`) while no list declares it; a key built piece by piece (`push_str`) is not seen.
+**Residuals.** A REVTeX name's `\footnotemark[n]` letter (row R REVNAMEMARK); llncs's counting passes of `\@author`
+and `\@institute` (an institute's bare `\footnotemark` "Lab A†", ours ⋆⋆⋆; withdrawn it would be the body's "1", a
+contact's note not under the names' fail-safe), a subtitle's note, a replaced `\author`'s, an unsure command,
+`\fnsymbol` past 11 (5 Errors, pdflatex 2: the note's tags re-expand `\thefootnote`), the ⋆'s internal reversion, a
+second `\maketitle` (`\clearheadinfo` empties the institutes, `\fnnstart` 0: pdflatex's body note 1, ours 4) (row R
+LLNCSTWICE, LLNCSINSTTWICE, LLNCSSUBTITLE, AUTHRESET, LLNCSUNSURE, LLNCSFNSYM11, LLNCSSTARTEX, LLNCSMT2, proposed); a
+`\maketitle` after the first `\section`, whose fallback flush placed the title unmarked and stepped nothing (row R
+MNLATE: mnras "Ann Able2 and Bob Baker3", "Text4"; we write them unmarked and "Text" 2); article with no
+`\maketitle`, whose load-time hook marks a name's `\footnotemark[2]` † where pdflatex's body `\footnotetext[2]` is 2
+(row R NOMTHOOK); the title page of article, report and book (`titlepage`, report's and book's default;
+report.cls:176-198), which sets no `\thefootnote` and prints the one in force — arabic (pdflatex "A Title1 / Ann Able2
+Bob Baker3"; 1501.00599, 1110.6706, 1812.06706, 2009.14742, quant-ph0207054), titling's `\thanksmarkseries` (∗ †,
+i ii), none under an emptied `\@makefnmark` — where we write no mark (the fail-safe; row R TITLEPAGEMARKS); the ACM
+SIG classes' `\titlenote` and jasatex's `\pacs`, raw classes with no binding (row R TITLENOTELAST, JASAPACS).
+**Guards**: `perfect_kernel_batchfmmarks::{notes_are_marked_only_where_the_class_prints_marks,
+revtex_marks_follow_its_numbering}` (rows `fmmarks_mnras_title_marks_are_the_class_symbols`,
+`fmmarks_mnras_title_marks_follow_thefootnote_in_force`, `fmmarks_revtex42_aip_shared_thanks_letters`,
+`fmmarks_revtex41_aip_shared_thanks_letters`, `fmmarks_revtex42_aip_reprint_grid_prints_no_mark`,
+`fmmarks_revtex42_sor_lengthcheck_grid_prints_no_mark`, `fmmarks_revtex42_aps_galley_prints_the_letter`,
+`fmmarks_mnras_no_maketitle_footnotetext`, `fmmarks_report_titlepage_empty_makefnmark`,
+`fmmarks_llncs_title_marks_are_the_class_symbols`, `fmmarks_llncs_title_note_counts_first`,
+`fmmarks_llncs_preamble_thefootnote_is_not_the_titles`, `fmmarks_llncs_ifdefined_names_keep_marks`,
+`fmmarks_llncs_ifx_names_keep_marks`, `fmmarks_llncs_names_macro_defined_later`; RED
+`fmmarks_mnras_late_maketitle_red`, `fmmarks_article_no_maketitle_footnotetext_red`,
+`fmmarks_report_titlepage_marks_in_force_red`, `fmmarks_report_titling_fnsymbol_titlepage_red`,
+`fmmarks_llncs_counting_pass_steps_twice_red`, `fmmarks_llncs_names_macro_steps_twice_red`,
+`fmmarks_llncs_subtitle_note_counts_first_red`, `fmmarks_llncs_institute_mark_steps_twice_red`,
+`fmmarks_llncs_replaced_author_steps_red`, `fmmarks_llncs_replaced_author_mark_red`,
+`fmmarks_article_replaced_author_steps_red`; catalog `llncs_fnsymbol_past_eleven_red`,
+`llncs_fnsymbol_star_reverts_internal_red`),
+`perfect_kernel_batchcr7::a_split_gives_the_corresponding_author_the_left_address` (none declared),
+`perfect_kernel_batchllncs::{body_fnsymbol_is_the_class_s, the_title_counts_its_notes_from_zero,
+a_note_in_the_subtitle_withdraws_the_title_marks, a_names_macro_that_steps_withdraws_the_title_marks,
+a_replaced_author_withdraws_the_title_marks, the_body_s_notes_count_after_the_institutes}`,
+`perfect_kernel_batchmarkbind::{lni_affil_sets_the_footnote_counter, lni_v1_author_is_the_kernels,
+internal_frontmatter_keys_are_declared, mnras_title_notes_step_the_counter}`,
+`perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral` (mnras's and llncs's plain notes) and
+`::a_thanks_note_carries_the_mark_its_title_prints` (no mark on a title page),
+`perfect_kernel_batche0::{the_frontmatter_api_stays_perls, every_internal_key_a_keyval_sets_is_declared}`.
 ---
 
 ## TeX-source fidelity family (TEXSRC)

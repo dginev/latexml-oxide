@@ -184,11 +184,7 @@ Text.
     ),
     [
       row(&["Ann Able"]),
-      row(&[
-        "Bob Baker",
-        "thanks[]=This work was funded by X.",
-        "thanks[*]=Corresponding author."
-      ]),
+      row(&["Bob Baker", "thanks[*]=Corresponding author."]),
     ]
   );
   // (a leading symbol that is the note's words, not a copy of its mark: a formula `-` follows, a bare `*` the class's ∗
@@ -206,20 +202,18 @@ Text.
   }
   assert_eq!(
     marked_notes(repro!("ieee_thanks_leading_label_is_no_mark"), 0),
-    [
-      row(&["Ann Able", "thanks[]=3 He detectors were funded by X."]),
-      row(&["Bob Baker", "thanks[]=* marks the starred items below."]),
-    ]
+    [row(&["Ann Able"]), row(&["Bob Baker"]),]
   );
 }
 
 /// The marks a title block prints for its notes: article's `\@fnsymbol` on each `\thanks`, an author's `\footnote` the
 /// `\thanks` it is there (article.cls:241), counted after the title's own `\thanks` (article.cls:203-214 sets the title
 /// first: the reading's `rehearse_title_first`), so a `\footnotemark[1]` beside a name is the title's note — no
-/// creator's, it stays the mark it is; under `titlepage` the body's arabic marks, which the observer does not read: no
-/// mark, nor under a class whose `\maketitle` prints none (IEEEtran), nor on a REVTeX 4.1/4.2 name's `\footnote`, set
-/// in the class's own letters (2301.00220), nor on a REVTeX 4.0 one given no number, at a counter the reading does not
-/// count (review revSHMARKb). Distinct from the Link step's guard: the mark each note is written with.
+/// creator's, it stays the mark it is; under `titlepage` the `\thefootnote` in force (pdflatex "Ann Able1 Bob Baker2"),
+/// which the observer does not read: no mark (the fail-safe, row R TITLEPAGEMARKS), nor under a class whose
+/// `\maketitle` prints none (IEEEtran), nor on a REVTeX 4.1/4.2 name's `\footnote`, set in the class's own letters
+/// (2301.00220), nor on a REVTeX 4.0 one given no number, at a counter the reading does not count (review revSHMARKb).
+/// Distinct from the Link step's guard: the mark each note is written with.
 #[test]
 fn a_thanks_note_carries_the_mark_its_title_prints() {
   assert_eq!(
@@ -339,10 +333,7 @@ Text.
 \end{document}",
       0
     ),
-    [
-      row(&["Ann Able"]),
-      row(&["Bob Baker", "thanks[]=This work was funded by X."]),
-    ]
+    [row(&["Ann Able"]), row(&["Bob Baker"]),]
   );
 }
 
@@ -685,7 +676,8 @@ fn a_mark_whose_glyph_is_unknown_prints_none() {
     );
     let html = page_of(&xml);
     let block = &html[html.find("ltx_authors").expect("an author block")..];
-    assert!(!block.contains("ltx_note_mark"), "{html}");
+    // (no glyph the class would print; a shared unmarked note's page-made `[a]` is no class glyph, OD #1059)
+    assert!(!block.contains("class=\"ltx_note_mark\""), "{html}");
     (log, notes_in(&xml), page_lines(&html))
   };
   let (log, notes, page) = case(repro!("marksafe_unbound_class_thanks_print_no_glyph"), 0);
@@ -707,25 +699,25 @@ fn a_mark_whose_glyph_is_unknown_prints_none() {
     ),
     "{log}"
   );
+  // (MARKKEY1: Bob's `\footnotemark[1]` is the note its number names, Ann's `\thanks`, now Bob's copy too — no lost mark,
+  // the shared unmarked note once under the page's `[a]`, OD #1058, #1059; it was a counted loss)
   let (log, notes, page) = case(
     repro!("marksafe_unbound_class_footnotemark_given_number_unknown"),
-    1,
+    0,
   );
-  assert!(
-    log.contains(
-      "Warning:frontmatter:unanswered_mark_lost A footnote mark on an author's name whose note cannot be identified, \
-       its glyph unknown here, is written with none"
-    ),
-    "{log}"
-  );
+  assert!(!log.contains("unanswered_mark_lost"), "{log}");
   assert_eq!(notes, [
     row(&["Ann Able", "thanks[]=Equal contribution."]),
-    row(&["Bob Baker", "footnotemark[]="]),
+    row(&["Bob Baker", "thanks[]=Equal contribution."]),
   ]);
   assert_eq!(
     page,
     (
-      row(&["Ann Able | under: Equal contribution.", "Bob Baker"]),
+      row(&[
+        "Ann Able ; [a]→note",
+        "Bob Baker ; [a]→note",
+        "margin: Equal contribution."
+      ]),
       Vec::new()
     )
   );
@@ -763,10 +755,12 @@ fn a_mark_whose_glyph_is_unknown_prints_none() {
   assert_eq!(
     page,
     (
+      // (MARKKEY1: the two copies are one note, `idref`, printed once under the page's `[a]`, OD #1059)
       row(&[
-        "Ann Able | under: Equal contribution.",
-        "Bob Baker | under: Equal contribution.",
-        "Cy Cole | under: Cy note."
+        "Ann Able ; [a]→note",
+        "Bob Baker ; [a]→note",
+        "Cy Cole | under: Cy note.",
+        "margin: Equal contribution."
       ]),
       Vec::new()
     )
@@ -775,7 +769,7 @@ fn a_mark_whose_glyph_is_unknown_prints_none() {
 
 /// A document's wrapper of its class's `\maketitle` by meaning (`\let\oldmt\maketitle \renewcommand\maketitle{\oldmt}`)
 /// runs the class's title page, which pdflatex prints as the plain document's: the output, the page and the log's counts
-/// are the plain document's, under a class whose binding declares no title marks (mnras, IEEEtran, llncs). Only the class
+/// are the plain document's, under a class binding (mnras, IEEEtran, llncs). Only the class
 /// file's own drop of `\maketitle` makes its marks unknown (`\maketitle:redefined@class`, `state::note_redefined`;
 /// review revMARKSAFEb B1). Distinct from the class's gate: who redefined `\maketitle`, not which class.
 #[test]
@@ -800,6 +794,20 @@ fn a_wrapper_of_the_class_maketitle_is_neutral() {
     assert_eq!((&notes, &page), (&plain_notes, &plain_page), "{wrapped}");
     // (the whole document alike)
     assert_eq!(xml, plain_xml);
+    if wrapped.contains("{mnras}") {
+      // (mnras's own `\@fnsymbol`, ⋆ †: the `\footnotemark[n]` and the body's `\footnotetext[n]` one note; MARKBIND)
+      assert_eq!(plain_notes, [
+        row(&["Ann Able", "footnote[⋆]=Ann note."]),
+        row(&["Bob Baker", "footnote[†]=Bob note."])
+      ]);
+    }
+    if wrapped.contains("{llncs}") {
+      // (llncs's own `\@fnsymbol`, ⋆ ⋆⋆, llncs.cls:889, :935: llncs_cls.rs's title hook; LLNCSMARKS)
+      assert_eq!(plain_notes, [
+        row(&["Ann Able", "thanks[⋆]=Ann note."]),
+        row(&["Bob Baker", "thanks[⋆⋆]=Bob note."])
+      ]);
+    }
     if wrapped.contains("IEEEtran") {
       // (Ann's `\footnote` IEEEtran's contact, Perl's; Bob's mark kept, no Warning)
       assert_eq!(notes, [

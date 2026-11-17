@@ -1,0 +1,17 @@
+% mechanism: llncs.cls's `\@fnsymbol` (llncs.cls:889-892) prints `\ensuremath{\star}`; the binding sets the text ⋆ as a
+%   primitive, `\lx@llncs@star` (llncs_cls.rs), so a note's `mark` is the character, and the primitive reverts as
+%   itself: `tex=` shows the internal name. Its reversion `\ensuremath{\star}` was tried (LLNCSb): where a shared title
+%   note's tags are made its reversion is re-digested, as math, and the page prints the mark "⋆ ⋆\star" (2404.09857's
+%   `\footnotetext[1]` under `\renewcommand{\thefootnote}{\fnsymbol{footnote}}`)
+% witness:  revLLNCS S1; 2404.09857
+% oracle:   pdflatex 0 errors; "Star a⋆."
+% engines:  rust LLNCSMARKS (8ea66f196ea) and LLNCSb = 0 errors; tex="a^{\mbox{\lx@llncs@star}}"; Perl 0.8.8: the
+%   kernel's `\fnsymbol`, "∗"
+% expect:   0 errors; tex="a^{\mbox{\ensuremath{\star}}}", the page's marks "⋆"
+% status:   RED (row R LLNCSSTARTEX, post-release; catalog only)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\setcounter{footnote}{1}
+Star $a^{\mbox{\fnsymbol{footnote}}}$.
+\end{document}

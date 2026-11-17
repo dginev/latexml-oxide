@@ -1,0 +1,18 @@
+% mechanism: llncs.cls's `\maketitle` sets the footnote counter after the title block to `\fnnstart` (llncs.cls:1003),
+%   the number of institutes `\institutename` counts at its `\and`s when two or more, else 0 (:877-881): under three
+%   institutes the body's first note is 4. The binding sets `\fnnstart` where it parts the list
+%   (llncs_cls.rs `\lx@llncs@institute@dispatch`), one in a group too (`{Lab C}`)
+% witness:  1005.4552 (three institutes: its body notes 4 to 15); revLLNCS P1 (probe twoinst, "Body3")
+% oracle:   pdflatex 0 errors; "Ann Able1⋆, Bob Baker2, and Cy Cole3", "Body4 and more5"
+% engines:  rust LLNCSMARKS (8ea66f196ea) = 0 errors, 0 Warnings; the body's notes 1, 2; Perl 0.8.8: 1, 2
+% expect:   0 errors, 0 Warnings; Ann ⋆, the body's notes 4, 5
+% status:   GREEN (LLNCSb; perfect_kernel_batchllncs::the_body_s_notes_count_after_the_institutes)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\title{A Title}
+\author{Ann Able\inst{1}\thanks{Ann note.} \and Bob Baker\inst{2} \and Cy Cole\inst{3}}
+\institute{Lab A \and Lab B \and {Lab C}}
+\begin{document}
+\maketitle
+Body\footnote{Body note.} and more\footnote{More note.}.
+\end{document}

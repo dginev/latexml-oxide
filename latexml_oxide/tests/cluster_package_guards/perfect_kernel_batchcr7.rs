@@ -390,12 +390,10 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
        mark=\"*\" role=\"thanks\" xml:id=\"id1\">The University</note></creator>"
         .to_string(),
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note \
-       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"footnotex1\">The \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" xml:id=\"footnotex1\">The \
        University</note></creator>"
         .to_string(),
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three</personname><note \
-       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"footnotex2\">The \
-       University</note></creator>"
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" xml:id=\"footnotex2\">The University</note></creator>"
         .to_string(),
     ]),
     (repro!("footnoterecall_two_authors_control"), 1, true, &[
@@ -403,7 +401,7 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
        mark=\"*\" role=\"thanks\" xml:id=\"id1\">X</note></creator>"
         .to_string(),
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B</personname><note \
-       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" \
        xml:id=\"footnotex1\">X</note></creator>"
         .to_string(),
     ]),
@@ -442,7 +440,7 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
        mark=\"*\" role=\"thanks\" xml:id=\"id1\">The University</note></creator>"
         .to_string(),
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note \
-       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"footnotex1\">The \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" xml:id=\"footnotex1\">The \
        University</note></creator>"
         .to_string(),
     ]),

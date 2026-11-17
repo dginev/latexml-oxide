@@ -365,15 +365,26 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     r"\lx@frontmatter@marksep\lx@saved@fnsep"
   );
 
-  // A note the title block of a class whose `\thanks` is `\footnotemark` and its text makes (article, report, book:
-  // `lx_title_counts_footnotes`, latex_constructs `declare_fnsymbol_title_block`) steps the footnote counter, as the
+  // A note the title block of a class whose `\thanks` is `\footnotemark` and its text makes (article, report, book,
+  // mnras, lni: `lx_title_counts_footnotes`, latex_constructs `declare_title_footnote_counting`) steps the footnote counter, as the
   // `\maketitle` digests it (`lx_frontmatter_explicit`): `\thanks` and `\footnote` in the title, an author or the date
   // (`lx_frontmatter_item`), so a `\footnotemark[\arabic{footnote}]` after one prints its mark (2201.11183, 2111.13260;
   // KNOWN_PERL_ERRORS #1060, OXIDIZED_DESIGN_DIVERGENCES #851). A flush without `\maketitle` typesets no title, and
   // steps nothing.
   DefPrimitive!("\\lx@title@footnote@step", sub[_args] {
-    if title_note_steps() {
+    let titles = matches!(lookup_string("lx_frontmatter_item").as_str(), "ltx:title" | "ltx:date");
+    // (a title's or date's note: its number, which a name's `\footnotemark[n]` may name, `insert::link_marked_notes`;
+    // `?` for one TeX counts and the reading does not, which leaves the authors' numbers off by it, MARKKEY1c)
+    let value = if title_note_steps() {
       step_counter("footnote", false)?;
+      titles.then(|| counter_value("footnote").map(|count| count.value_of().to_string())).transpose()?
+    } else {
+      titles.then(|| "?".to_string())
+    };
+    if let Some(value) = value {
+      let values = lookup_string(TITLE_NOTE_VALUES);
+      let values = if values.is_empty() { value } else { s!("{values},{value}") };
+      assign_value(TITLE_NOTE_VALUES, values, Some(Scope::Global));
     }
     Ok(())
   });
@@ -1017,6 +1028,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   Ok(())
 }
 
+/// The footnote numbers of the title's and the date's notes, as `\lx@title@footnote@step` stepped them (`1,4`): their
+/// pubnote prints no mark here, so a name's `\footnotemark[n]` naming one is answered by a note the page does not mark
+/// (`insert::link_marked_notes`). `?` for one its class's notes step no counter for here (llncs's `\title{T\thanks{…}}`):
+/// the reading's count of the authors' notes is then not TeX's.
+pub(in crate::base_utilities) const TITLE_NOTE_VALUES: &str = "lx_title_note_values";
+
 /// `\lx@title@thanks` and `\lx@title@footnote` (`footnote`): the note's call, marked where its title marks it.
 fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> {
   // (the counter's mark after the step, never a given number's: `\footnote[2]` is not marked so here; `\thefootnote`, the
@@ -1066,7 +1083,7 @@ fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> 
 pub(in crate::base_utilities) const TITLE_MARK_STEP: &str = "\\lx@title@mark@step";
 
 /// Whether a note made in the title block steps the footnote counter there (`\lx@title@footnote@step`): the class's
-/// title marks its notes (`lx_title_counts_footnotes`, `latex_constructs::declare_fnsymbol_title_block`) and its
+/// title marks its notes (`lx_title_counts_footnotes`, `latex_constructs::declare_title_footnote_counting`) and its
 /// `\maketitle` digests the field (`lx_frontmatter_explicit`) — the title, an author or the date.
 fn title_note_steps() -> bool {
   lookup_bool("lx_title_counts_footnotes")

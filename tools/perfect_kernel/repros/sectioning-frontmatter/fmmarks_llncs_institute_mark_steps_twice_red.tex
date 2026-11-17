@@ -1,0 +1,21 @@
+% mechanism: llncs.cls's `\institutename` sets `\@institute` once in a box to count the institutes, its `\thanks`
+%   gobbled (llncs.cls:877), before printing it: a bare `\footnotemark` in an institute steps the footnote counter in
+%   both runs, so its printed mark is the counter's after two steps (the names' ⋆ ⋆⋆, then 3 and 4: †); the
+%   institute's `\thanks` after it is ‡. The binding counts the institute's mark once
+% witness:  revLLNCS S3 (probe c_instfm, here with `\inst` marks)
+% oracle:   pdflatex 0 errors; "Ann Able1⋆ and Bob Baker2⋆⋆", "1 Lab A†", "2 Lab B‡", footnotes "⋆ Ann note.",
+%   "⋆⋆ Bob note.", "‡ Lab B note.", "Body3"
+% engines:  rust LLNCSMARKS (8ea66f196ea) = 0 errors, 0 Warnings; Lab A's mark ⋆⋆⋆ (MARKBIND's "1"), the body's
+%   note 1; LLNCSb = the same mark, the body's note 3
+% expect:   0 errors, 0 Warnings; Lab A's mark †
+% status:   RED (row R LLNCSINSTTWICE, proposed; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% moves:    XML row R LLNCSINSTTWICE
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\title{A Title}
+\author{Ann Able\inst{1}\thanks{Ann note.} \and Bob Baker\inst{2}\thanks{Bob note.}}
+\institute{Lab A\footnotemark \and Lab B\thanks{Lab B note.}}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

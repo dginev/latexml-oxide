@@ -1,0 +1,19 @@
+% mechanism: no dangling mark (OD #1059): a legend printed bracketed, `$^{(1)}$Univ A` in `\date`, prints the name's
+%   `$^{(1)}$`, whose mark-only note keeps the glyph out of its brackets (`1`): the page indexes a bracketed superscript,
+%   tag or mark by its glyph out of its brackets too (`f:printed-glyph`)
+%   [MARKKEY1d: every unlinked name mark now shows, OD #1059's fail-safe; the glyph search above decides nothing]
+% witness: 2302.11378 (`Gerry Tonkin-Hill$^{(2),(3)}$` over `\date{… $^{(2)}$ Parasites and Microbes …}`)
+% oracle:  pdflatex 0 errors: "Ann Able(1) Bob Baker(2)", the date "(1) Univ A, Town A", "(2) Univ B, Town B"
+% engines: rust MARKKEY1 a427f6c06e0 = 0 errors 0 Warnings; both marks shown only by chance (none here; with
+%   numbered sections their tags), hidden once section numbers stop counting (revMARKKEY1 S1)
+% expect:  0 errors 0 Warnings; HTML Ann Able ; 1 plain / Bob Baker ; 2 plain
+% status:  RED (a427f6c06e0) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_beside_its_legend)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{(1)}$ \and Bob Baker$^{(2)}$}
+\date{$^{(1)}$Univ A, Town A \\ $^{(2)}$Univ B, Town B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

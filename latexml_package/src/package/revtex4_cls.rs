@@ -193,6 +193,9 @@ LoadDefinitions!({
     assign_value("lx_title_footnote_own_marks", true, Some(Scope::Global));
   }
   RequirePackage!("revtex4_support");
+  if !revtex4_0 {
+    revtex4_support_sty::declare_revtex41_title_marks("4-2")?;
+  }
   switch_off_author_block_after_maketitle()?;
   define_frontmatter_note_lists()?;
   // revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's

@@ -636,7 +636,15 @@ struct Resolver {
   role_reads:         HashMap<String, (usize, usize)>,
   /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
   /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
-  fn_requests:        Vec<(usize, String)>,
+  /// — with the footnote number the mark stands for (`Event::number`), what TeX pairs a mark and its note by: a note of
+  /// the same block and number answers it (`answer_note_texts`)
+  fn_requests:        Vec<(usize, String, Option<i64>)>,
+  /// the block's `\footnotetext` notes kept with the footnote number they stand for (source, number, owner):
+  /// the names whose `\footnotemark` shows that number carry them (`answer_note_texts`)
+  numbered_notes:     Vec<(Source, i64, Option<usize>)>,
+  /// the unmarked `\thanks` of a class whose title prints no note mark (`Policy::unmarked_notes`), each with its owner
+  /// (source, owner): the block's, once the owner is known live (`answer_note_texts`)
+  block_thanks:       Vec<(Source, usize)>,
   /// the labels the affiliation calls made apart from the blocks set ([`affiliation_set_labels`]): what a block's
   /// mark-led names request (`names_led_by_marks`)
   outside_labels:     Vec<String>,
@@ -764,6 +772,8 @@ impl Resolver {
       stopgap:            Vec::new(),
       role_reads:         HashMap::default(),
       fn_requests:        Vec::new(),
+      numbered_notes:     Vec::new(),
+      block_thanks:       Vec::new(),
       outside_labels:     Vec::new(),
       marks_lead:         false,
       mark_ledger:        MarkLedger::default(),

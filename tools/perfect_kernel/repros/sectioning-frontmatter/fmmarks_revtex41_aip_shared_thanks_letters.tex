@@ -1,0 +1,24 @@
+% mechanism: REVTeX 4.1's `aip` society file marks the front matter's footnotes in letters (aip4-1.rtx:205
+%   `\@booleantrue\altaffilletter@sw`, revtex4-1.cls:3019-3020 `\frontmatter@thefootnote`): the binding follows the
+%   society (`revtex4_support_sty::declare_revtex41_title_marks`), so the note two names share is marked "a"
+% witness:  MARKBIND REVLETTERS (aip4-2.rtx:282, sor4-2.rtx:245)
+% oracle:   pdflatex 0 errors; "Ann Able,1 Bob Baker,2, a) and Cy Cole2, a)", footnote "a) Equal contribution."
+% engines:  rust MARKBINDb0 (int/frontmatter 4f169bcbe69) = 0 errors, 0 Warnings; the shared note marked ∗
+% expect:   0 errors, 0 Warnings; Bob's and Cy's thanks marked "a" (the class's ")" is its `\frontmatter@makefnmark`)
+% status:   GREEN (MARKBIND; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% preload:  ar5iv.sty
+\documentclass[aip,jcp,preprint]{revtex4-1}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\affiliation{Univ A}
+\author{Bob Baker}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\author{Cy Cole}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

@@ -2,8 +2,10 @@ use crate::prelude::*;
 
 /// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
-/// report: its title page (`titlepage`, its default) prints the notes in the body's arabic numbers; without one
-/// (`notitlepage`) the kernel declares the title hook (`declare_fnsymbol_title_block`), which wins
+/// report: its title page (`titlepage`, its default; report.cls:176-198) sets no `\thefootnote`: it prints the notes'
+/// marks in the one in force (arabic, titling's `\thanksmarkseries`, none under an emptied `\@makefnmark`), which the
+/// observer does not read (`Body`): we write no mark there (row R TITLEPAGEMARKS); without one (`notitlepage`) the
+/// kernel declares the title hook (`declare_fnsymbol_title_block`), which wins
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "report",
   binding: "report.cls",

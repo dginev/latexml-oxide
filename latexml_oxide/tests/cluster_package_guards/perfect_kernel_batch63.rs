@@ -2109,7 +2109,8 @@ fn toc_copy_keeps_its_language() {
 }
 
 /// 63l: `\fnmsep` between an author's marks leaves no comma in the name once the marks become a link and a note
-/// (astro-ph0001054, astro-ph0611016). Repro sectioning-frontmatter/author_fnmsep_leaves_no_comma.
+/// (astro-ph0001054, astro-ph0611016); the notes marked ⋆ ⋆⋆, llncs's `\@fnsymbol` (pdflatex "U. Hopp1,⋆ and D. Engels2,⋆⋆";
+/// LLNCSMARKS). Repro sectioning-frontmatter/author_fnmsep_leaves_no_comma.
 #[test]
 fn author_fnmsep_leaves_no_comma() {
   assert_creators(
@@ -2117,8 +2118,8 @@ fn author_fnmsep_leaves_no_comma() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_fnmsep_leaves_no_comma.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>U.\u{a0}Hopp</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Visiting astronomer</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Engels</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Fellow<sup xml:id=\"id2.1\"><text font=\"italic\" xml:id=\"id2.1.1\">,</text></sup> of X</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">B</contact></creator>",
+      "<creator role=\"author\"><personname>U.\u{a0}Hopp</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"⋆\" role=\"thanks\" xml:id=\"id1\">Visiting astronomer</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Engels</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"⋆⋆\" role=\"thanks\" xml:id=\"id2\">Fellow<sup xml:id=\"id2.1\"><text font=\"italic\" xml:id=\"id2.1.1\">,</text></sup> of X</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">B</contact></creator>",
     ],
   );
 }
@@ -2254,7 +2255,9 @@ fn ieee_compsoc_names_continue_past_a_break() {
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan\u{a0}Doe</personname></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve\u{a0}Elm</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Fay\u{a0}Fox</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able, B. Baker and C. Cole are with Univ A. F. Fox is with Univ B.</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Fay\u{a0}Fox</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+      // (MARKKEY1: IEEEtran's unmarked `\thanks` is the block's, not the last author's, OD #1058 — the block's creator)
+      "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able, B. Baker and C. Cole are with Univ A. F. Fox is with Univ B.</note></creator>",
     ],
   );
 }

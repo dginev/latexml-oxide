@@ -36,6 +36,31 @@ LoadDefinitions!({
   // label is then typeset only by a `\cite` (sect11.rs `\lx@bibitem`; 1805.00040). Perl's mnras.cls.ltxml leaves the
   // kernel's `[#1]`.
   RawTeX!(r"\def\@biblabel#1{}");
+  // mnras.cls:1502-1508 (v3.0's :1492-1498): the footnotes marked in the class's own `\@fnsymbol`, ⋆ † ‡ § ¶ ‖ ⋆⋆ …,
+  // up to the first `\section`, whose `\fixfootnotes` (:736-737, :1517-1523) numbers them in arabic from 1. Perl's
+  // mnras.cls.ltxml keeps arabic marks. (the glyphs in text as the kernel's `\@fnsymbol` sets them, sect08.rs, so a
+  // note's `mark` is the character)
+  DefPrimitive!("\\lx@mnras@star", "\u{22C6}");
+  RawTeX!(r"\def\@fnsymbol#1{\ifcase#1\or\TextOrMath\lx@mnras@star\star\or\TextOrMath\textdagger\dagger
+\or\TextOrMath\textdaggerdbl\ddagger\or\TextOrMath\textsection\mathsection\or\TextOrMath\textparagraph\mathparagraph
+\or\TextOrMath\textbardbl\|\or\TextOrMath{\lx@mnras@star\lx@mnras@star}{\star\star}\or
+\TextOrMath{\textdagger\textdagger}{\dagger\dagger}\or\TextOrMath{\textdaggerdbl\textdaggerdbl}{\ddagger\ddagger}\or
+\TextOrMath{\textsection\textsection}{\mathsection\mathsection}\or
+\TextOrMath{\textparagraph\textparagraph}{\mathparagraph\mathparagraph}\or\TextOrMath{\textbardbl\textbardbl}{\|\|}\else
+***\fi}
+\def\fnsymbol#1{\expandafter\@fnsymbol\csname c@#1\endcsname}
+\renewcommand\thefootnote{\fnsymbol{footnote}}
+\def\fixfootnotes{\renewcommand\thefootnote{\arabic{footnote}}\setcounter{footnote}{0}}
+\newif\if@firstsection\@firstsectiontrue
+\let\lx@mnras@section\section
+\def\section{\if@firstsection\fixfootnotes\@firstsectionfalse\fi\lx@mnras@section}");
+  // Its `\maketitle` (:1055-1071) prints the `\thefootnote` in force, the title hook (`latex_constructs::
+  // TITLE_THEFOOTNOTE`): "Ann Able⋆", a name's `\footnotemark[2]` and its `\footnotetext[2]` after it "†" (2509.04573's
+  // `\footnotemark[3]` "‡"), a preamble's `\arabic` "1", footmisc's "∗" (1905.08754); with no `\maketitle`, none
+  // (pdflatex prints no title). Its `\thanks` is LaTeX's, and its `\maketitle` does not set the counter back, so a
+  // note before the first `\section` counts on: ⋆ for the title, † next.
+  engine::latex_constructs::declare_title_marks_in_force()?;
+  engine::latex_constructs::declare_title_footnote_counting(false)?;
   // mnras.cls:1349-1354: with `usedcolumn`, the class's column types on dcolumn's `D` (mn2e_support loads dcolumn).
   if lookup_int("@usedcolumn") != 0 {
     RawTeX!(r"\newcolumntype{d}[1]{D{.}{.}{#1}}\newcolumntype{.}{D{.}{.}{-1}}\newcolumntype{,}{D{,}{,}{2}}");

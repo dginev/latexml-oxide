@@ -40,7 +40,7 @@ use crate::{
         PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
         tabular_juggles_in_a_whole_block, whole_block_author,
       },
-      insert::{MARK_FROM_COUNTER, MARK_IN_TEXT, MARK_UNKNOWN, NAME_PRINTED},
+      insert::{FOOTNOTE_TEXT, MARK_FROM_COUNTER, MARK_IN_TEXT, MARK_UNKNOWN, NAME_PRINTED},
       observer::{
         events::{
           self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration,
@@ -66,7 +66,7 @@ use crate::{
       relocate::{BLOCK_ZONE, FOOTER_ZONE},
     },
   },
-  latex_constructs::{TITLE_CELL_DECLARED, TITLE_CELL_ENTER},
+  latex_constructs::{FOOTNOTE_VALUE, TITLE_CELL_DECLARED, TITLE_CELL_ENTER},
 };
 
 /// The State value saying a flush emitted: the ledger's
@@ -1167,6 +1167,10 @@ fn block_names(
             matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
               || e.kind == EventKind::Layout
               || past.iter().any(|r| r.at == glued_end + k)
+              // (past the comma the ledger reads as the name's ink, and the labels after it, which the reading's
+              // requests answer: `Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$ Michael`, 1111.1979)
+              || e.kind == EventKind::Sep(SepKind::Comma)
+              || e.kind == EventKind::Mark
           })
         });
       let scan_end = carried
@@ -1190,8 +1194,15 @@ fn block_names(
       let mut seps: Vec<(usize, usize)> = Vec::new();
       // (where the last piece written ends)
       let mut done = 0;
+      let comma = (after_name..scan_end).find(|&k| read[k].kind == EventKind::Sep(SepKind::Comma));
       for k in after_name..scan_end {
         let e = &read[k];
+        // (past a comma, only the pieces the ledger gives the name, each its own run: the comma and the labels between
+        // are no part of the name, its requests answering the labels — COMMAMARK, 1111.1979, OD #1057)
+        let past_comma = comma.is_some_and(|c| k > c);
+        if past_comma && !past.iter().any(|r| r.at == k) {
+          continue;
+        }
         if e.kind == EventKind::Note {
           if steps_counter(e)
             && let Some(s) = e.span.and_then(|span| at(span.0))
@@ -1241,8 +1252,9 @@ fn block_names(
               && in_a_group(field.tokens, name_from, s) == name_from,
           )
         };
-        if enclosing.contains(&span)
-          || (marks && passed.is_empty() && stepped.is_empty() && past_group() != Some(true))
+        if !past_comma
+          && (enclosing.contains(&span)
+            || (marks && passed.is_empty() && stepped.is_empty() && past_group() != Some(true)))
         {
           grown.1 = grown.1.max(t);
           done = t;
@@ -1604,7 +1616,7 @@ fn by_text(why: Option<&str>, text: &str) -> Vec<Token> {
 fn note_call(
   footnote: bool,
   given: bool,
-  mark: Option<&str>,
+  (mark, number): (Option<&str>, Option<(i64, bool)>),
   from: MarkFrom,
   label: &str,
   content: Vec<Token>,
@@ -1632,6 +1644,13 @@ fn note_call(
       s!("mark={{{mark}}},{from}")
     },
   );
+  // (the footnote number it stands for, which a name's `\footnotemark` of that number on its carrier is its mark of, and
+  // whether it is a `\footnotetext`, which no carrier prints but by that mark: `insert::link_marked_notes`, OD #1058)
+  let marked = match number {
+    Some((number, false)) => s!("{marked}{FOOTNOTE_VALUE}={number},"),
+    Some((number, true)) => s!("{marked}{FOOTNOTE_VALUE}={number},{FOOTNOTE_TEXT}=true,"),
+    None => marked,
+  };
   if footnote && mark.is_none() {
     let given = if given {
       s!(",{FOOTNOTE_PART}={GIVEN_PART}")
@@ -2437,7 +2456,7 @@ fn item_call(
     return Ok(note_call(
       false,
       false,
-      Some(mark),
+      (Some(mark), None),
       from,
       label,
       call.content.unlist_ref().to_vec(),
@@ -2523,7 +2542,7 @@ fn item_call(
       note_call(
         false,
         false,
-        None,
+        (None, None),
         MarkFrom::Legend,
         label,
         content.to_vec(),
@@ -2612,21 +2631,50 @@ fn item_call(
         && let Some((footnote, given)) = footnote
       {
         let content = argument;
-        // (or the symbol its text opens with bare that its names show)
-        let (mark, from) = event_at(
+        // (or the symbol its text opens with bare that its names show; a `\footnotetext`, which prints no mark of its
+        // own, the mark its names' `\footnotemark` of its number prints, where the class's title marks are known —
+        // `resolver::answer_note_texts` gives it to them by that number, 2407.04435; OD #1058)
+        let (mark, from, number, text_only) = event_at(
           index,
           span,
           |e| e.kind == EventKind::Note,
-          |e| match shown_mark(e) {
-            Some(mark) => (Some(mark), MarkFrom::Counter),
-            None => (requested_mark(e, requested), MarkFrom::Text),
+          |e| {
+            let text_only = e
+              .role
+              .as_deref()
+              .is_some_and(|r| r.starts_with("footnotetext"));
+            let (mark, from) = match shown_mark(e) {
+              Some(mark) => (Some(mark), MarkFrom::Counter),
+              None if text_only => (None, MarkFrom::Counter),
+              None => (requested_mark(e, requested), MarkFrom::Text),
+            };
+            (mark, from, e.number, text_only)
           },
         )
         .unwrap_or_default();
+        let mark = match number {
+          Some(number) if text_only && title_notes_print_marks(false, true) => {
+            with_block(index, None, |_, events| {
+              events
+                .iter()
+                .find(|m| {
+                  m.kind == EventKind::Mark
+                    && m.number == Some(number)
+                    && m
+                      .role
+                      .as_deref()
+                      .is_some_and(|r| r.starts_with("footnotemark"))
+                })
+                .map(|m| m.text.trim().to_string())
+                .filter(|m| !m.is_empty())
+            })
+          },
+          _ => mark,
+        };
         return Ok(note_call(
           footnote,
           given,
-          mark.as_deref(),
+          (mark.as_deref(), number.map(|n| (n, text_only))),
           from,
           label,
           content.unwrap_or_else(|| by_text(Some("note no argument"), &assoc.text)),
@@ -2938,7 +2986,7 @@ fn item_call(
         return Ok(note_call(
           false,
           false,
-          legend,
+          (legend, None),
           MarkFrom::Text,
           label,
           tokens,
@@ -2978,7 +3026,7 @@ fn item_call(
         return Ok(note_call(
           footnote,
           given,
-          mark.as_deref(),
+          (mark.as_deref(), None),
           MarkFrom::Counter,
           label,
           argument,
@@ -3827,7 +3875,15 @@ fn items_to_emit<'a>(
       Owner::Creator(i) => owners[i].as_str(),
       Owner::Block => "block",
     };
-    let id = s!("{id}|{:?}|{}", key.0, key.1);
+    let mut id = s!("{id}|{:?}|{}", key.0, key.1);
+    // (two notes of the block printing one text are two notes, each written: IEEEtran's `\thanks{ORCID: \href{…0001}{profile}}`
+    // and `\thanks{ORCID: \href{…0002}{profile}}` at the block's level, OD #1058 — the second lost before its words)
+    if owner == Owner::Block
+      && key.0 == Kind::Note
+      && let Some((index, span)) = source
+    {
+      id = s!("{id}|{index}|{span:?}");
+    }
     // (a call a flush took from the queue and digests as it stands is off the queue: [`take_digested`])
     let taken = source
       .is_some_and(|(index, _)| lookup_mapping(EMITTED_ITEMS, &s!("taken|{index}")).is_some());

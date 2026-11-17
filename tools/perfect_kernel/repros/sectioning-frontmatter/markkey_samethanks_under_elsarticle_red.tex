@@ -1,0 +1,23 @@
+% mechanism: a number a name's mark reads off the title block's footnote counter (`\samethanks`'
+%   `[\value{footnote}]`) keys a note and prints a glyph only where that counter is TeX's here
+%   (`latex_constructs::title_numbers_faithful`); elsarticle's `\fnref` steps none here, so Bob's mark has no number
+%   and no glyph, lost and counted by one Warning, where elsarticle prints the 1 of Ann's `\fnref` (row R MARKNUMKEY:
+%   the class's counter emulated)
+% witness: review revMARKKEY1c S2 (p/st_elsarticle.tex)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Brown1", the foot "1 Equal contribution.", the body's "Body text2"
+% engines: rust MARKKEY1c 12178547059 = 0 errors 1 Warning (unanswered_mark_lost); Bob's mark-only note with no glyph
+% expect:  0 errors 0 Warnings; XML Bob Brown ; footnotemark[1]=; HTML Bob Brown ; 1 plain
+% status:  RED (12178547059; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% moves:   XML and HTML row R MARKNUMKEY
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\newcommand{\samethanks}[1][\value{footnote}]{\footnotemark[#1]}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author{Ann Able\fnref{f1}}
+\author{Bob Brown\samethanks}
+\fntext[f1]{Equal contribution.}
+\end{frontmatter}
+Body text\footnote{A body note.}.
+\end{document}

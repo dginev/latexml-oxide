@@ -1,0 +1,20 @@
+% mechanism: a names macro defined after the `\author` that calls it, before `\maketitle`: pdflatex reads it where
+%   `\maketitle` sets the block, and so does the binding's scan (llncs_cls.rs `\lx@llncs@title@scan`, at
+%   `\lx@maketitle@begin`): it steps nothing, so the title marks stay declared (read at the `\author`, undefined, it was
+%   a step)
+% witness:  revLLNCSb item 2 (probe w7_later)
+% oracle:   pdflatex 0 errors; "Ann Able⋆ and Bob Baker⋆⋆c", footnotes "⋆ Ann note.", "⋆⋆ Bob note.", "Body1"
+% engines:  rust LLNCSb (0c2719152f0) = 0 errors, 0 Warnings; both thanks unmarked (withdrawn), the "c" a mark-only
+%   note; LLNCSc = ⋆, ⋆⋆
+% expect:   0 errors, 0 Warnings; Ann ⋆, Bob ⋆⋆ and his "c"
+% status:   GREEN (LLNCSc; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\title{A Title}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}\corr}
+\newcommand\corr{\textsuperscript{c}}
+\institute{Lab A}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

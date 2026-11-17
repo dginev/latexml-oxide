@@ -6,8 +6,10 @@
 % oracle:   pdflatex 0 errors; "Ann Able Bob Baker" with no marks, footnotes "First note.", "Second note." unmarked
 % engines:  rust MARKSAFEb de9ad33fd3d = 0 errors, 0 Warnings; thanks[*], thanks[†]
 % expect:   0 errors, 0 Warnings; both notes unmarked; HTML each text under its name, no glyph
-% status:   XML RED (row R SHAUTO/T1) -> GREEN (PRESBX); HTML GREEN (a one-author marked note prints under its name with
-%   no glyph; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% status:   XML RED (row R SHAUTO/T1) -> GREEN (PRESBX, `latex_constructs::maketitle_marks`); HTML RED: the page model
+%   reads each note under its name, while LaTeXML.css's one-line layout shows the written ∗ †
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% moves:    HTML row R SHAUTO/T1
 % preload:  ar5iv.sty
 \documentclass{article}
 \makeatletter
