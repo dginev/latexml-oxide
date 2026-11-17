@@ -6,7 +6,9 @@
 //! `\author{\name Foo \email a@b.c \\ \addr Place}` parses cleanly.
 use latexml_package::{
   prelude::*,
-  shipped_class::{class_code, declare_shipped_copy_title_marks, shipped_copy_text},
+  shipped_class::{
+    FNSYMBOL_TITLE_MARKS, class_code, declare_stand_in_copy_title_marks, shipped_copy_text,
+  },
 };
 
 LoadDefinitions!({
@@ -159,10 +161,9 @@ LoadDefinitions!({
 \newtheorem{conjecture}[theorem]{Conjecture}
 \newtheorem{axiom}[theorem]{Axiom}"
   );
-  // The marks the paper's copy's `\maketitle` prints, the copy read after this binding as its stand-in's
-  // (jmlr2e.sty:253-255 `\def\thefootnote{\fnsymbol{footnote}}`, all 71 census copies): the document's `\@fnsymbol`
-  // (2509.13653, 2511.10879; MTREDUCEb).
-  declare_shipped_copy_title_marks("sty")?;
+  // The marks the `\maketitle` of the paper's copy, read after this binding as its stand-in's, sets (jmlr2e.sty:253-255;
+  // 2509.13653, 2511.10879).
+  declare_stand_in_copy_title_marks(&[FNSYMBOL_TITLE_MARKS])?;
 });
 
 /// The heading a jmlr2e.sty copy's `\acks` prints: the text of its bold group, `\long\def\acks#1{\vskip 0.3in\noindent

@@ -1,6 +1,6 @@
 % mechanism: the PRIMEarxiv binding (latexml_contrib primearxiv_sty.rs), reading the paper's copy raw where raw style
 %   loading is on, declares the document's `\@fnsymbol` where the copy's `\maketitle` carries PRIMEarxiv.sty:176-179
-%   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+%   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (`shipped_class::read_copy_title_marks`, by its `\maketitle` body)
 % witness:  2509.03066 (PRIMEarxiv.sty: "∗" "corresponding author"); 2204.09716, 2509.09724, 2509.15844; the style a
 %   minimal stand-in of PRIMEarxiv.sty:175-195, :211-230
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker"; foot "∗corresponding author"

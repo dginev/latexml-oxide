@@ -1,5 +1,5 @@
 % mechanism: the acl binding (latexml_contrib acl_sty.rs) reads the paper's acl.sty raw and declares its title marks,
-%   `\@fnsymbol\c@footnote` (`latex_constructs::declare_package_title_marks`); acl.sty:147-150 defines its
+%   `\@fnsymbol\c@footnote` (`shipped_class::input_shipped_package_title_marks`); acl.sty:147-150 defines its
 %   `\maketitle` in `\AtBeginDocument` code, `\def\thefootnote{\fnsymbol{footnote}}`, which the lock refuses there:
 %   the binding answers for that one too, and the marks read the document's `\@fnsymbol` (acl2019.sty:37's, 1905.10033)
 % witness:  2502.19103 (acl.sty: "Siwei Wu∗, Yizhi Li∗", "Chenghua Lin†"); 1905.10033 ("Zhaojiang Lin†"); the style a

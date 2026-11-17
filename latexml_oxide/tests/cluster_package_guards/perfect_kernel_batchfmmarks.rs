@@ -1920,11 +1920,90 @@ const LINK: &[Row] = &[
     ],
     page_moves: r#""#,
   },
+  Row {
+    repro:      "mtreducec_own_maketitle_samethanks_links_by_number",
+    tex:        repro!("mtreducec_own_maketitle_samethanks_links_by_number"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Equal contribution."#,
+      r#"Bob Baker ; thanks[]=Equal contribution."#,
+      r#"Cy Cole ; thanks[]=Corresponding: cy@x.org"#,
+      r#"Dee Dunn ; thanks[]=Equal contribution."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; [a]→note"#,
+      r#"Bob Baker ; [a]→note"#,
+      r#"Cy Cole | under: Corresponding: cy@x.org"#,
+      r#"Dee Dunn ; [a]→note"#,
+      r#"margin: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducec_own_maketitle_counter_expressions_link_by_number",
+    tex:        repro!("mtreducec_own_maketitle_counter_expressions_link_by_number"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Equal contribution."#,
+      r#"Bob Baker ; thanks[]=Equal contribution."#,
+      r#"Cy Cole ; thanks[]=Corresponding: cy@x.org"#,
+      r#"Dee Dunn ; thanks[]=Equal contribution."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; [a]→note"#,
+      r#"Bob Baker ; [a]→note"#,
+      r#"Cy Cole | under: Corresponding: cy@x.org"#,
+      r#"Dee Dunn ; [a]→note"#,
+      r#"margin: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducec_package_maketitle_samethanks_links_by_number",
+    tex:        repro!("mtreducec_package_maketitle_samethanks_links_by_number"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Equal contribution."#,
+      r#"Bob Baker ; thanks[]=Equal contribution."#,
+      r#"Cy Cole ; thanks[]=Corresponding: cy@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; [a]→note"#,
+      r#"Bob Baker ; [a]→note"#,
+      r#"Cy Cole | under: Corresponding: cy@x.org"#,
+      r#"margin: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducec_own_maketitle_typed_mark_links_red",
+    tex:        repro!("mtreducec_own_maketitle_typed_mark_links_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[1]=Equal contribution."#,
+      r#"Bob Baker ; thanks[1]=Equal contribution."#,
+      r#"Cy Cole ; thanks[2]=Corresponding: cy@x.org"#,
+    ],
+    moves:      r#"row R MTREDUCE-TYPED (a mark the author types under a `\maketitle` whose glyph is unknown here links nothing: the glyph the `\thanks` prints is unknown, so the typed 1 names no note; formerly the static reader's `\arabic`)"#,
+    page:       &[
+      r#"Ann Able ; 1→note"#,
+      r#"Bob Baker ; 1→note"#,
+      r#"Cy Cole ; 2 plain"#,
+      r#"margin: Corresponding: cy@x.org ; Equal contribution."#,
+    ],
+    page_moves: r#"row R MTREDUCE-TYPED (Bob's typed 1 links nothing)"#,
+  },
 ];
 /// Links: a `\footnotemark[n]`, `\samethanks[n]` or `\authornotemark[n]` on a name is a copy of the note it marks, its
 /// mark as the class numbers it after the title's notes; a reference into a copied note still resolves (2502.19103,
 /// 1911.13299, 1706.03762, 2607.15705, 2203.12881, 1803.03669; revSHMARK p1, p2, p9; revREND2b p2); AAAI's
-/// `\equalcontrib` followed by "." makes each use a note of its own, the fail-safe (revPRESBXb BL1, 2509.03329).
+/// `\equalcontrib` followed by "." makes each use a note of its own, the fail-safe (revPRESBXb BL1, 2509.03329); a mark
+/// whose number the title block reads off the counter (`\samethanks`' `[\value{footnote}]`, `[\arabic{footnote}]`,
+/// `[\numexpr…]`) links by it where the count is TeX's, the glyph unknown under the document's or a package's own
+/// `\maketitle` (revMTREDUCE B2).
 #[test]
 fn a_mark_on_a_name_is_a_copy_of_its_note() { assert_green(LINK); }
 /// The known gaps of [`a_mark_on_a_name_is_a_copy_of_its_note`].

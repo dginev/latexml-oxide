@@ -1,7 +1,7 @@
 % mechanism: the arxiv binding (latexml_contrib arxiv_sty.rs), reading the paper's copy raw where raw style loading is
 %   on, declares the document's `\@fnsymbol` where the copy's `\maketitle` carries arxiv.sty:174-177
 %   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (George Kour's template; 304 of the census's 308 copies, the
-%   rest no `\maketitle` or none of the line: marks unknown) (`shipped_class::declare_shipped_copy_title_marks`)
+%   rest no `\maketitle` or none of the line: marks unknown) (`shipped_class::read_copy_title_marks`, by its `\maketitle` body)
 % witness:  2509.16272 (arxiv.sty: "∗" "Github link: …"); 2509.00704, 2304.04746, 2509.23472 (an ICLR copy renamed
 %   arxiv.sty, :61-63 `\def\thefootnote{\fnsymbol{footnote}}`); the style a minimal stand-in of arxiv.sty:173-193
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗"; foot "∗Equal contribution."

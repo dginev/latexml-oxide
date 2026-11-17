@@ -1,6 +1,6 @@
 % mechanism: the siamproceedings binding (latexml_contrib siamproceedings_sty.rs) reads the paper's copy raw and
 %   declares the document's `\@fnsymbol` where the copy's `\maketitle` carries siamproceedings.sty:187-189
-%   `\renewcommand\thefootnote{\@fnsymbol\c@footnote}` (`shipped_class::declare_shipped_copy_title_marks`), the
+%   `\renewcommand\thefootnote{\@fnsymbol\c@footnote}` (`shipped_class::input_shipped_package_title_marks`, by its `\maketitle` body), the
 %   `\maketitle` of a document without `titlepage` (:153 `\if@titlepage`)
 % witness:  2509.02371 (siamproceedings.sty: "∗", "†", "‡" on three authors' affiliations); 2509.13490; the style a
 %   minimal stand-in of siamproceedings.sty:153-215

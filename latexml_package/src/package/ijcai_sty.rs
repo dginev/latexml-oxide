@@ -46,8 +46,7 @@ LoadDefinitions!({
   // still gets the same split via the `\lx@add@authors` marker-branch.
   // Affiliations are `\\`-separated; the `\emails` list is placed as a class's address list (OD #908).
   DefMacro!("\\author{}", "\\lx@ijcai@authorsplit#1\\affiliations\\done");
-  // The marks the copy's `\maketitle` prints, read after this binding as its stand-in's (ijcai13.sty … ijcai26.sty
-  // `\def\thefootnote{\fnsymbol{footnote}}`, ijcai19.sty:103): `\@fnsymbol\c@footnote` (1905.01044, 2312.13223;
-  // MTREDUCE).
-  engine::latex_constructs::declare_package_title_marks(r"\@fnsymbol\c@footnote", false)?;
+  // The marks the `\maketitle` of the paper's copy, read after this binding as its stand-in's, sets (ijcai19.sty:103;
+  // 1905.01044, 2312.13223).
+  crate::shipped_class::declare_stand_in_copy_title_marks(&[crate::shipped_class::FNSYMBOL_TITLE_MARKS])?;
 });

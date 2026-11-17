@@ -1,7 +1,7 @@
 % mechanism: the iclr binding answers CoRL's styles (latexml_contrib iclr_sty.rs; the versioned fallback strips corl_2025
 %   to corl; corl_2024.sty:5 "heavily inspired by the NeurIPS, ICML, ICLR … templates"): it reads the paper's copy raw
 %   and declares the document's `\@fnsymbol` where the copy's `\maketitle` carries corl_2025.sty:343-346
-%   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+%   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (`shipped_class::input_shipped_package_title_marks`, by its `\maketitle` body)
 % witness:  2509.00328 (corl_2025.sty: two authors "∗" "Equal contribution. Correspondence to: …"); 2407.15815
 %   (corl_2024), 2509.14688, 2606.00985 (corl_2026); the style a minimal stand-in of corl_2025.sty:342-361
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗"; foot "∗Equal contribution.

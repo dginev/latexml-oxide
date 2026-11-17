@@ -1,6 +1,6 @@
 % mechanism: the iclr binding answers tmlr.sty (latexml_contrib iclr_sty.rs; TMLR's style is ICLR's, tmlr.sty:1-3):
 %   it reads the paper's copy raw and declares the document's `\@fnsymbol` where the copy's `\maketitle` carries
-%   tmlr.sty:71-73 `\def\thefootnote{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+%   tmlr.sty:71-73 `\def\thefootnote{\fnsymbol{footnote}}` (`shipped_class::input_shipped_package_title_marks`, by its `\maketitle` body)
 % witness:  2502.12413 (tmlr.sty: three authors "∗" "Equal contribution."); 2509.01621, 2509.17971; the style a minimal
 %   stand-in of tmlr.sty:71-84
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker†"; foot "∗First note.",

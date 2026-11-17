@@ -1,7 +1,7 @@
 % mechanism: the usenix binding (latexml_contrib usenix_sty.rs; the versioned fallback strips usenix-2020-09 and
 %   usenix2019_v3 to usenix) reads the paper's copy raw and declares the document's `\@fnsymbol` where the copy's
 %   `\maketitle` carries usenix-2020-09.sty:83-85 `\renewcommand\thefootnote{\fnsymbol{footnote}}`
-%   (`shipped_class::declare_shipped_copy_title_marks`); its raw read takes the loader's step after a raw package
+%   (`shipped_class::input_shipped_package_title_marks`, by its `\maketitle` body); its raw read takes the loader's step after a raw package
 %   (`shipped_class::input_shipped_package`, `\lx@package@loaded@raw`), so the copy's `\abstract` heading
 %   (usenix2019_v3.sty:114-117), its `\abstractname` babel's, is no creator's note
 % witness:  2509.03117 (usenix.sty: Yiming Li "∗" "Corresponding Author: …"); 1110.1687; 2301.04841 (usenix2019_v3.sty,

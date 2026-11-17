@@ -1,6 +1,6 @@
 % mechanism: the jmlr2e binding (latexml_contrib jmlr2e_sty.rs) stands in for jmlr2e.sty, the paper's copy read after
 %   it (OD #731); it declares the document's `\@fnsymbol` where that copy's `\maketitle` carries jmlr2e.sty:253-255
-%   `\def\thefootnote{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+%   `\def\thefootnote{\fnsymbol{footnote}}` (`shipped_class::declare_stand_in_copy_title_marks`, by its `\maketitle` body)
 % witness:  2509.13653 (jmlr2e.sty: "∗" "Corresponding author."); 2511.10879; the style a minimal stand-in of
 %   jmlr2e.sty:253-261 with a `\ProvidesPackage` line
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ and Bob Baker"; foot "∗Corresponding author."

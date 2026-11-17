@@ -778,7 +778,8 @@ fn title_marks_hook() -> bool { has_meaning(&T_CS!(TITLE_THEFOOTNOTE)) }
 
 /// The refused `\maketitle` a binding answers for ([`declare_package_title_marks`]).
 const BOUND_MAKETITLE: &str = "\\lx@title@bound@maketitle";
-/// A binding answers for the `\maketitle` of a stand-in copy read after it ([`declare_package_title_marks`]).
+/// The number of the stand-in copy whose `\maketitle` a binding answers for (`state::new_copy_provides_record`;
+/// [`declare_package_title_marks`]).
 const COPY_MAKETITLE_BOUND: &str = "lx_title_copy_maketitle_bound";
 
 /// Does the class's own `\maketitle` run? The class's unless a lock refused another's that does not call it by meaning
@@ -814,8 +815,8 @@ pub fn class_maketitle_in_force() -> bool {
       (body.clone(), file)
     },
     None => match copy_provides_maketitle() {
-      Some(_) if lookup_bool(COPY_MAKETITLE_BOUND) => return true,
-      Some((file, body)) => (body, file),
+      Some((id, ..)) if lookup_int(COPY_MAKETITLE_BOUND) == i64::from(id) => return true,
+      Some((_, file, body)) => (body, file),
       None => return !document,
     },
   };
@@ -830,12 +831,18 @@ pub fn class_maketitle_in_force() -> bool {
     )
 }
 
-/// A binding answers for the `\maketitle` of the package it loads, whose title marks are `marks` (the title hook,
-/// [`TITLE_THEFOOTNOTE`]): the one the lock refused as the binding read the package, or a stand-in copy's read after
-/// it, or, `at_begin_document`, the one the package's own `\AtBeginDocument` code defines (acl.sty:147-148, 2502.19103)
-/// ([`class_maketitle_in_force`]). A later `\maketitle` of the document's is not the package's. Called after the
-/// package's load.
-pub fn declare_package_title_marks(marks: &str, at_begin_document: bool) -> Result<()> {
+/// Which `\maketitle` a binding's title marks are ([`declare_package_title_marks`]).
+pub enum BoundMaketitle {
+  /// The one the lock refused last (`\lx@dropped@maketitle`): its package's, as the binding read it raw.
+  Refused,
+  /// The one of the stand-in copy numbered so (`state::new_copy_provides_record`).
+  Copy(u32),
+}
+
+/// A binding answers for its package's `\maketitle` (`bound`), whose title marks are `marks` (the title hook,
+/// [`TITLE_THEFOOTNOTE`]); any other `\maketitle`, a later one of the document's or another copy's, is not its
+/// ([`class_maketitle_in_force`]; revMTREDUCE S4).
+pub fn declare_package_title_marks(marks: &str, bound: BoundMaketitle) -> Result<()> {
   def_macro(
     T_CS!(TITLE_THEFOOTNOTE),
     None,
@@ -845,17 +852,16 @@ pub fn declare_package_title_marks(marks: &str, at_begin_document: bool) -> Resu
       ..Default::default()
     }),
   )?;
-  if lookup_bool("\\maketitle:redefined@document") {
-    let_i(
+  match bound {
+    BoundMaketitle::Refused => let_i(
       &T_CS!(BOUND_MAKETITLE),
       &T_CS!("\\lx@dropped@maketitle"),
       Some(Scope::Global),
-    );
-  } else if at_begin_document {
-    // (its `\AtBeginDocument` code runs ahead of this, registered as the package was read)
-    RawTeX!(r"\AtBeginDocument{\global\let\lx@title@bound@maketitle\lx@dropped@maketitle}");
+    ),
+    BoundMaketitle::Copy(id) => {
+      assign_value(COPY_MAKETITLE_BOUND, i64::from(id), Some(Scope::Global))
+    },
   }
-  assign_value(COPY_MAKETITLE_BOUND, true, Some(Scope::Global));
   Ok(())
 }
 
@@ -1197,8 +1203,9 @@ pub(crate) fn footnote_pairing(
   if let Some(value) = value {
     props.insert("fnvalue", Stored::String(pin(value.to_string())));
     // (a number the source gives as such, `[2]`, which a frontmatter note of that number answers — Perl's tag, its
-    // `mark`: `insert::link_marked_notes`; not one read off a counter, `[\value{footnote}]`, as it stands here)
-    if given.is_some() && !number.from_counter {
+    // `mark`: `insert::link_marked_notes`; one read off the counter, `[\value{footnote}]`, only in the title block where
+    // the count is TeX's: `\samethanks` under a `\maketitle` whose glyph is unknown here, revMTREDUCE B2)
+    if given.is_some() && (!number.from_counter || (in_title_field() && title_numbers_faithful())) {
       props.insert("fngiven", Stored::String(pin("true")));
     }
   }

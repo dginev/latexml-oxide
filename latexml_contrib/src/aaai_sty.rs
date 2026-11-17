@@ -1,27 +1,15 @@
-//! aaai.sty and its years — the AAAI conference styles over `\documentclass{article}` (aaai.sty, aaai16-aaai25.sty,
-//! aaai2026.sty, aaai2027.sty; the versioned fallback strips each to `aaai`). The paper's copy is read raw; the binding
-//! says which marks the copy's `\maketitle` prints, which the lock refused (aaai25.sty:55-58
-//! `\def\thefootnote{\fnsymbol{footnote}}`, the document's `\@fnsymbol` of the counter), and gives the author marks
-//! the copy defines only inside its `\@maketitle` (aaai22.sty:66-73, aaai25.sty:81-88, aaai2026.sty:79-86,
-//! aaai2027.sty:139-155, 180-194), which an `\author` read before `\maketitle` met undefined (2103.05277, 2111.06599,
-//! 2006.08767; 2609.00420 and 222 more AAAI-27 papers in 2609). Formerly kernel stubs (sect05.rs; before that
-//! omnibus_cls.rs, 3f40bf8211).
+//! aaai.sty and its years (aaai16-aaai2027, the versioned fallback strips each to `aaai`): the paper's copy read raw, the
+//! marks its `\maketitle` sets declared, the author notes only its `\@maketitle` defines (2501.02471, 2511.07192; OD #1053).
 use std::cell::{Cell, RefCell};
 
 use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
 use latexml_package::{
-  engine::{
-    base_utilities::rehearsal_footnote_value,
-    latex_constructs::{declare_package_title_marks, title_note_number},
-  },
+  engine::{base_utilities::rehearsal_footnote_value, latex_constructs::title_note_number},
   prelude::*,
-  shipped_class::input_shipped_package,
+  shipped_class::{FNSYMBOL_TITLE_MARKS, input_shipped_package_title_marks},
 };
 
 LoadDefinitions!({
-  if input_shipped_package()? {
-    declare_package_title_marks(r"\@fnsymbol\c@footnote", false)?;
-  }
   // As AAAI's: each prints its footnote once, "These authors contributed equally." and "Corresponding author.", the
   // first use making the note, a later one its `\footnotemark[<n>]` (2501.02471, 2508.07026, 2511.17927, 2511.15266,
   // 2511.15807; `aaai_note`, OD #1053); in a document where a use is followed by ".", each use its own note
@@ -50,6 +38,8 @@ LoadDefinitions!({
     );
     Ok(())
   })?;
+  // (after the stubs: a copy's own `\equalcontrib` replaces them, revMTREDUCE S3)
+  input_shipped_package_title_marks(&[FNSYMBOL_TITLE_MARKS])?;
 });
 
 thread_local! {

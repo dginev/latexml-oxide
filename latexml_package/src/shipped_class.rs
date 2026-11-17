@@ -2,7 +2,10 @@
 //! `mn2e_cls`).
 use latexml_core::definition::origin::ProvideOnlyGuard;
 
-use crate::prelude::*;
+use crate::{
+  engine::latex_constructs::{BoundMaketitle, declare_package_title_marks},
+  prelude::*,
+};
 
 /// The class file in the paper's source that the family binding `binding` interprets: the class the document asked for
 /// when the loader answered it with this binding, else the binding's own name; `None` when the source does not have it.
@@ -226,49 +229,210 @@ pub fn input_shipped_package() -> Result<bool> {
   Ok(shipped)
 }
 
-/// The `\thefootnote` lines the styles' `\maketitle`s set, as their versions write them (whitespace and the braces of
-/// `\renewcommand{\thefootnote}` aside), and the title marks each prints ([`declare_shipped_copy_title_marks`]).
-const TITLE_MARK_LINES: &[(&str, &str)] = &[
-  // nips_2017.sty:249 and its descendants (iclr2026_conference.sty:63, tmlr.sty:73, corl_2025.sty:346), jmlr2e.sty:255,
-  // arxiv.sty:177, PRIMEarxiv.sty:179, usenix.sty:85 — every census copy of each that has a `\maketitle`
-  (
-    r"\thefootnote{\fnsymbol{footnote}}",
-    r"\@fnsymbol\c@footnote",
-  ),
-  // siamproceedings.sty:189
-  (
-    r"\thefootnote{\@fnsymbol\c@footnote}",
-    r"\@fnsymbol\c@footnote",
-  ),
-];
+/// A `\thefootnote` a style's `\maketitle` sets, as its versions write the argument (whitespace aside), and the title
+/// marks it prints ([`input_shipped_package_title_marks`]).
+pub type TitleMarkLine = (&'static str, &'static str);
 
-/// A stand-in binding declares the title marks its paper's copy prints ([`shipped_copy_text`];
-/// `latex_constructs::declare_package_title_marks`) where the copy carries one of its style's `\thefootnote` lines
-/// (`TITLE_MARK_LINES`); a copy with none, or with two that disagree, leaves them unknown: no glyph (DG 2026-11-17).
-/// Whether it declared.
-pub fn declare_shipped_copy_title_marks(ext: &str) -> Result<bool> {
-  let Some(text) = shipped_copy_text(ext)? else {
-    return Ok(false);
-  };
-  let code = class_code(&text)
-    .chars()
-    .filter(|c| !c.is_whitespace())
-    .collect::<String>()
-    .replace(r"{\thefootnote}", r"\thefootnote");
-  let mut marks = TITLE_MARK_LINES
-    .iter()
-    .filter(|(line, _)| code.contains(line))
-    .map(|(_, marks)| *marks);
-  let Some(first) = marks.next() else {
-    return Ok(false);
-  };
-  if marks.any(|other| other != first) {
-    return Ok(false);
-  }
-  engine::latex_constructs::declare_package_title_marks(first, false)?;
-  Ok(true)
+/// `\def\thefootnote{\fnsymbol{footnote}}`: the document's `\@fnsymbol` of the counter (latex.ltx `\fnsymbol`).
+pub const FNSYMBOL_TITLE_MARKS: TitleMarkLine = (r"\fnsymbol{footnote}", r"\@fnsymbol\c@footnote");
+
+/// A stand-in binding reads its paper's copy raw ([`input_shipped_package`]) and declares the title marks the copy's
+/// `\maketitle` sets ([`read_copy_title_marks`]).
+pub fn input_shipped_package_title_marks(lines: &'static [TitleMarkLine]) -> Result<bool> {
+  read_copy_title_marks(lines, input_shipped_package)
 }
 
+/// A binding's raw read of its copy (`read`), then the marks the copy's `\maketitle` sets, by the body TeX records
+/// (DG 2026-11-17; revMTREDUCE B1, S2): the one the lock refused as `read` ran, else at `\begin{document}` the one the
+/// copy's own `\AtBeginDocument` code defines (acl.sty:147-150) or its stand-in copy's ([`declare_stand_in_copy_title_marks`]).
+pub fn read_copy_title_marks(
+  lines: &'static [TitleMarkLine],
+  read: impl FnOnce() -> Result<bool>,
+) -> Result<bool> {
+  let before = refused_maketitle();
+  // (runs ahead of the copy's own `\AtBeginDocument` code, registered as it is read)
+  RawTeX!(r"\AtBeginDocument{\global\let\lx@title@copy@before\lx@dropped@maketitle}");
+  let shipped = read()?;
+  match refused_maketitle() {
+    Some(now) if !before.is_some_and(|before| Rc::ptr_eq(&before, &now)) => {
+      declare_body_title_marks(&now, lines, BoundMaketitle::Refused)?;
+    },
+    _ if shipped => declare_stand_in_copy_title_marks(lines)?,
+    _ => {},
+  }
+  Ok(shipped)
+}
+
+/// A binding declares the title marks of its stand-in copy's `\maketitle`, read after it (`content::read_stand_in_copy`:
+/// jmlr2e, neurips, ijcai), or of one the copy's `\AtBeginDocument` code defines: at `\begin{document}`, by the body TeX
+/// records ([`read_copy_title_marks`]). The lines wait in the state, under the copy's file, with the number its stand-in
+/// copy gets.
+pub fn declare_stand_in_copy_title_marks(lines: &'static [TitleMarkLine]) -> Result<()> {
+  let file = s!("{}.sty", stand_in_request()?);
+  let mut record = next_copy_provides_id().to_string();
+  for (line, marks) in lines {
+    record.push_str(&s!("\n{line}\t{marks}"));
+  }
+  assign_value(
+    &s!("{COPY_TITLE_LINES}{file}"),
+    Stored::String(pin(&record)),
+    Some(Scope::Global),
+  );
+  DefMacro!("\\lx@title@copy@marks{}", sub[(file)] {
+    declare_copy_title_marks_at_begin_document(&file.to_string())?;
+    Ok(Tokens::new(Vec::new()))
+  });
+  RawTeX!(&s!(r"\AtBeginDocument{{\lx@title@copy@marks{{{file}}}}}"));
+  Ok(())
+}
+
+/// The state key of a copy's title-mark lines ([`declare_stand_in_copy_title_marks`]), its file after it.
+const COPY_TITLE_LINES: &str = "lx_title_copy_lines:";
+
+/// `\lx@title@copy@marks{<file>}` at `\begin{document}` ([`declare_stand_in_copy_title_marks`]): the `\maketitle` the
+/// copy's `\AtBeginDocument` code defined, which the lock refused there (since `\lx@title@copy@before`), else its stand-in
+/// copy's.
+fn declare_copy_title_marks_at_begin_document(file: &str) -> Result<()> {
+  let record = lookup_string(&s!("{COPY_TITLE_LINES}{file}"));
+  let mut rows = record.lines();
+  let from = rows
+    .next()
+    .and_then(|id| id.parse::<u32>().ok())
+    .unwrap_or(1);
+  let lines: Vec<(&str, &str)> = rows.filter_map(|row| row.split_once('\t')).collect();
+  let before = lookup_definition(&T_CS!("\\lx@title@copy@before"))?;
+  match refused_maketitle() {
+    Some(now) if !before.is_some_and(|before| Rc::ptr_eq(&before, &now)) => {
+      declare_body_title_marks(&now, &lines, BoundMaketitle::Refused)
+    },
+    _ => match copy_provides_maketitle_of(file, from) {
+      Some((id, body)) => match body_title_marks(&body, &lines) {
+        Some(marks) => declare_package_title_marks(&marks, BoundMaketitle::Copy(id)),
+        None => Ok(()),
+      },
+      None => Ok(()),
+    },
+  }
+}
+
+/// The `\maketitle` the lock refused last (`\lx@dropped@maketitle`, state.rs `note_redefined`).
+fn refused_maketitle() -> Option<Rc<dyn Definition>> {
+  lookup_definition(&T_CS!("\\lx@dropped@maketitle"))
+    .ok()
+    .flatten()
+}
+
+/// Declare the title marks the refused `\maketitle` `definition` sets ([`body_title_marks`]), if any.
+fn declare_body_title_marks(
+  definition: &Rc<dyn Definition>,
+  lines: &[(&str, &str)],
+  bound: BoundMaketitle,
+) -> Result<()> {
+  if let Some(ExpansionBody::Tokens(body)) = definition.get_expansion()
+    && let Some(marks) = body_title_marks(body, lines)
+  {
+    declare_package_title_marks(&marks, bound)?;
+  }
+  Ok(())
+}
+
+/// The title marks a `\maketitle` body sets, by its `\thefootnote` definitions (`\def`, `\renewcommand`, …): a line of
+/// the binding's (`lines`), or a macro whose body is a fixed glyph (aaai2026.sty:135 `\def\thefootnote{\fndag}`, :210
+/// `\def\fndag{†}`, 2511.07192); none where it sets no `\thefootnote`, another, or two that disagree.
+fn body_title_marks(body: &Tokens, lines: &[(&str, &str)]) -> Option<String> {
+  const DEFINERS: &[&str] = &[
+    "\\def",
+    "\\gdef",
+    "\\edef",
+    "\\xdef",
+    "\\renewcommand",
+    "\\newcommand",
+    "\\providecommand",
+  ];
+  let squeeze = |text: &str| {
+    text
+      .chars()
+      .filter(|c| !c.is_whitespace())
+      .collect::<String>()
+  };
+  let tokens = body.unlist_ref();
+  let is = |i: usize, catcode: Catcode| tokens.get(i).is_some_and(|t| t.get_catcode() == catcode);
+  let space = |i: usize| is(i, Catcode::SPACE);
+  let mut found: Vec<String> = Vec::new();
+  for (at, token) in tokens.iter().enumerate() {
+    if !token.with_cs_name(|name| name == "\\thefootnote") {
+      continue;
+    }
+    // (`\def\thefootnote` or `\renewcommand{\thefootnote}`, a `*` aside)
+    let braced = at > 0 && is(at - 1, Catcode::BEGIN);
+    let mut before = if braced {
+      at.checked_sub(2)
+    } else {
+      at.checked_sub(1)
+    };
+    if before.is_some_and(|i| tokens[i].with_str(|s| s == "*")) {
+      before = before.and_then(|i| i.checked_sub(1));
+    }
+    if !before.is_some_and(|i| tokens[i].with_cs_name(|name| DEFINERS.contains(&name))) {
+      continue;
+    }
+    let mut i = at + 1;
+    if braced {
+      if !is(i, Catcode::END) {
+        continue;
+      }
+      i += 1;
+    }
+    while space(i) {
+      i += 1;
+    }
+    if !is(i, Catcode::BEGIN) {
+      return None;
+    }
+    let (mut depth, start) = (0usize, i + 1);
+    let end = tokens[i..].iter().position(|t| {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
+      depth == 0
+    })?
+      + i;
+    let argument = &tokens[start..end];
+    let text = squeeze(&Tokens::new(argument.to_vec()).to_string());
+    let marks = match lines.iter().find(|(line, _)| squeeze(line) == text) {
+      Some((_, marks)) => marks.to_string(),
+      None => fixed_glyph_macro(argument)?,
+    };
+    found.push(marks);
+  }
+  found.dedup();
+  (found.len() == 1).then(|| found.remove(0))
+}
+
+/// `argument` is one macro of no parameters whose body is characters alone, a fixed glyph: its name.
+fn fixed_glyph_macro(argument: &[Token]) -> Option<String> {
+  let [macro_token] = argument else {
+    return None;
+  };
+  let definition = lookup_definition(macro_token).ok().flatten()?;
+  let Some(ExpansionBody::Tokens(body)) = definition.get_expansion() else {
+    return None;
+  };
+  let glyph = body.unlist_ref();
+  (definition
+    .get_parameters()
+    .is_none_or(|parameters| parameters.get_parameters().is_empty())
+    && !glyph.is_empty()
+    && glyph.iter().all(|t| {
+      matches!(
+        t.get_catcode(),
+        Catcode::LETTER | Catcode::OTHER | Catcode::ACTIVE
+      )
+    }))
+  .then(|| macro_token.with_cs_name(|name| name.to_string()))
+}
 /// The file a stand-in binding answers, as the paper asked for it: the request a versioned fallback answers with
 /// this binding (`fallback_request` while its `fallback_target` is the load's `\@currname`), else `\@currname`.
 fn stand_in_request() -> Result<String> {

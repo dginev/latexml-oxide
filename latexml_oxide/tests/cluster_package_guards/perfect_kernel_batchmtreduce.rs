@@ -29,12 +29,14 @@ macro_rules! repro {
 /// One row per binding path: acl.sty's `\maketitle` defined in its `\AtBeginDocument` code, captured there (the AAAI
 /// rows of the FMRG suite capture the one the package's load defines), its marks the document's `\@fnsymbol`
 /// (2502.19103, 1905.10033); AAAI's `\equalcontrib` from its binding across ";", " and " and a `\\` line end (2501.02471).
-/// MTREDUCEb, one row per style family whose binding declares the marks its copy's `\maketitle` line shows
-/// (`shipped_class::declare_shipped_copy_title_marks`): the NIPS style's descendants ICLR (2303.07937), TMLR
+/// MTREDUCEb, one row per style family whose binding declares the marks its copy's `\maketitle` body sets
+/// (`shipped_class::read_copy_title_marks`): the NIPS style's descendants ICLR (2303.07937), TMLR
 /// (2502.12413), CoRL (2509.00328) and NIPS 2016-2018 (1706.03762), USENIX (2509.03117; its raw read takes the loader's
 /// step after a raw package, so the copy's `\abstract` heading is no creator, 2301.04841) and siamproceedings
 /// (2509.02371), each a new binding reading its copy raw; jmlr2e's stand-in copy read after its binding (2509.13653); the arxiv and PRIMEarxiv bindings' raw reads (2509.16272, 2509.03066); gtpart without its class,
-/// whose metadata setters print nothing (1108.0474).
+/// whose metadata setters print nothing (1108.0474). MTREDUCEc, the body's line decides, one row per path: a fixed-glyph
+/// macro read off the refused body (aaai2026.sty's `\fndag`, 2511.07192), a stand-in copy's body setting none
+/// (2305.15254's neurips_2022.sty), an `\AtBeginDocument` body whose line the binding does not know (acl, `\arabic`).
 const BINDINGS: &[Row] = &[
   Row {
     repro:      "mtreduce_acl_maketitle_at_begin_document_reads_the_document_s_fnsymbol",
@@ -232,6 +234,52 @@ const BINDINGS: &[Row] = &[
     creators:   &[r#"Ann Able | address=University of Somewhere ; email=ann@x.org"#],
     moves:      r#""#,
     page:       &[r#"Ann Able"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducec_aaai_copy_fndag_line_prints_its_glyph",
+    tex:        repro!("mtreducec_aaai_copy_fndag_line_prints_its_glyph"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able ; thanks[†]=These authors contributed equally."#,
+      r#"Bob Baker ; thanks[†]=These authors contributed equally."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; †→note"#,
+      r#"Bob Baker ; †→note"#,
+      r#"margin: These authors contributed equally."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducec_neurips_commented_maketitle_line_prints_no_marks",
+    tex:        repro!("mtreducec_neurips_commented_maketitle_line_prints_no_marks"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Equal contribution."#,
+      r#"Bob Baker ; thanks[]=Corresponding: bob@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Equal contribution."#,
+      r#"Bob Baker | under: Corresponding: bob@x.org"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreducec_acl_begin_document_maketitle_arabic_prints_no_marks",
+    tex:        repro!("mtreducec_acl_begin_document_maketitle_arabic_prints_no_marks"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=First note."#,
+      r#"Bob Baker ; thanks[]=Second note."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
+    ],
     page_moves: r#""#,
   },
 ];

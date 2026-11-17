@@ -1,0 +1,36 @@
+% mechanism: the neurips binding (latexml_package neurips_sty.rs) declares the marks its stand-in copy's `\maketitle`
+%   sets, read off the body the copy defines (`shipped_class::declare_stand_in_copy_title_marks`); a copy whose
+%   `\maketitle` sets no `\thefootnote` (2305.15254's neurips_2022.sty:228-246, its lines commented out) declares none:
+%   no glyph
+% witness:  2305.15254 (neurips_2022.sty and neurips_2022_ml4ps.sty, `\maketitle` emptied: no title, no note printed);
+%   the style a minimal stand-in of neurips_2022.sty:226-246; the review's probe n2 (revMTREDUCE B1)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): no title block, no note, "Body."
+% engines:  rust WRONGFIXc (the static reader) = 0 errors, 0 Warnings, each note unmarked; MTREDUCEb (the binding's
+%   `\fnsymbol` declared whatever the copy's line) = Ann's note ∗, Bob's †, glyphs the PDF never prints
+% expect:   0 errors, 0 Warnings; each note under its name, unmarked
+% status:   GREEN (MTREDUCEc: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{neurips_2022.sty}
+\ProvidesPackage{neurips_2022}[2022/05/09 NeurIPS 2022]
+\providecommand{\maketitle}{}
+\renewcommand{\maketitle}{%
+  % \par
+  % \begingroup
+  %   \renewcommand{\thefootnote}{\fnsymbol{footnote}}
+  %   \@maketitle
+  %   \@thanks
+  % \endgroup
+  \let\maketitle\relax
+  \let\thanks\relax
+}
+\providecommand{\And}{}
+\renewcommand{\And}{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}\ignorespaces}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{neurips_2022}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \And Bob Baker\thanks{Corresponding: bob@x.org}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

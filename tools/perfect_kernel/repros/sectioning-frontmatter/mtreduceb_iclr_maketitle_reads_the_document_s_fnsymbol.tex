@@ -1,7 +1,7 @@
 % mechanism: the iclr binding (latexml_contrib iclr_sty.rs; the versioned fallback strips iclr2026_conference to iclr)
-%   reads the paper's copy raw and declares its title marks (`latex_constructs::declare_package_title_marks`), the
+%   reads the paper's copy raw and declares its title marks (`shipped_class::input_shipped_package_title_marks`), the
 %   document's `\@fnsymbol` where the copy's `\maketitle` carries iclr2026_conference.sty:61-63
-%   `\def\thefootnote{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+%   `\def\thefootnote{\fnsymbol{footnote}}` (`shipped_class::input_shipped_package_title_marks`, by its `\maketitle` body)
 % witness:  2303.07937 (iclr2024_conference.sty: Seo, Jang, Kwak "∗" "Equal contribution.", Kim "†"); 2509.00544,
 %   2510.05056 (iclr2026_conference.sty); the style a minimal stand-in of iclr2026_conference.sty:61-74, :83-92
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗ Cy Cole†"; foot "∗Equal

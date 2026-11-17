@@ -1,7 +1,7 @@
 % mechanism: the iclr binding answers NIPS's 2016-2018 styles (latexml_contrib iclr_sty.rs; the versioned fallback
 %   strips nips_2017 to nips; ICLR's style is NIPS's, iclr2020_conference.sty:2): it reads the paper's copy raw and
 %   declares the document's `\@fnsymbol` where the copy's `\maketitle` carries nips_2017.sty:246-249
-%   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+%   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (`shipped_class::input_shipped_package_title_marks`, by its `\maketitle` body)
 % witness:  1706.03762 (nips_2017.sty: eight authors "∗" "Equal contribution. …", two "†" "Work performed while at
 %   Google Brain.", one "‡"); the style a minimal stand-in of nips_2017.sty:245-265, :282-307
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗ Cy Cole†"; foot "∗Equal

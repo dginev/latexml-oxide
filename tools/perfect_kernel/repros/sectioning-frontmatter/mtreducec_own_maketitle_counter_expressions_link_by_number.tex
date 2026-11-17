@@ -1,0 +1,25 @@
+% mechanism: the siblings of `\footnotemark[\value{footnote}]` (mtreducec_own_maketitle_samethanks_links_by_number):
+%   `[\arabic{footnote}]` and `[\numexpr\value{footnote}-1\relax]`, each a number read off the footnote counter, name
+%   their note by it under a `\maketitle` whose glyph is unknown here (`footnote_pairing`, `insert::link_marked_notes`)
+% witness:  the review's sibling list (revMTREDUCE B2); `[\numexpr\value{footnote}-1]` of 2210.14698
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗ Cy Cole† Dee Dunn∗"; foot
+%   "∗ Equal contribution.", "† Corresponding: cy@x.org"
+% engines:  rust WRONGFIXc (the static reader) = 0 errors, 0 Warnings; Bob and Dee a copy of Ann's note, all ∗;
+%   MTREDUCEb = no glyph, Bob and Dee empty marks linking nothing
+% expect:   0 errors, 0 Warnings; Bob and Dee each a copy of Ann's note, no glyph (unknown); Cy's note his own
+% status:   GREEN (MTREDUCEc: perfect_kernel_batchfmmarks::marks_link_to_their_notes)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\par\begingroup
+ \renewcommand\thefootnote{\fnsymbol{footnote}}%
+ \begin{center}{\LARGE\@title\par}\vskip 1em
+ {\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}
+ \@thanks\endgroup\setcounter{footnote}{0}}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker\footnotemark[\arabic{footnote}] \and Cy Cole\thanks{Corresponding: cy@x.org} \and Dee Dunn\footnotemark[\numexpr\value{footnote}-1\relax]}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
