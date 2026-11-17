@@ -1,0 +1,19 @@
+% mechanism: a name's mark that links to no note always shows on the page (MARKKEY1d's fail-safe, OD #1059; DG
+%   2026-11-16, "hide only when certain"): its legend may sit where the frontmatter does not see it, here a body line,
+%   so the XML cannot prove the glyph prints once (the same shape: a `\date{\dag\ …}`, a tabular cell, a plain-text `*`)
+% witness: review revMARKKEY1c h1 (p/h1_body_math_dagger.tex; h2-h5 the date, plain-text, centered and tabular shapes)
+% oracle:  pdflatex 0 errors: "Ann Able† Bob Baker", the body line "† Corresponding author."
+% engines: rust MARKKEY1c 12178547059 = 0 errors 0 Warnings; Ann's † hidden
+% expect:  0 errors 0 Warnings; XML Ann Able ; footnotemark[†]=; HTML Ann Able ; † plain / Bob Baker
+% status:  RED (12178547059) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_always_shows)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\dagger}$ \and Bob Baker}
+\date{}
+\maketitle
+\noindent $\dagger$ Corresponding author.
+
+Text.
+\end{document}

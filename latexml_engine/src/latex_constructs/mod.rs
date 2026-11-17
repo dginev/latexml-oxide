@@ -1002,8 +1002,8 @@ pub(crate) fn footnote_pairing(
 
 /// Is the title block's footnote counter TeX's here, so a number a mark reads off it, or names a `\thanks` by, is the
 /// one TeX's names: the class's notes step it as its `\maketitle` digests them (`lx_title_counts_footnotes`, article's family,
-/// [`declare_fnsymbol_title_block`]) or a binding declares its title's marks ([`title_marks_declared`]: REVTeX, lni,
-/// emulateapj, titling), or one declares the counter so ([`declare_title_numbers_faithful`])? Elsewhere (aa, llncs, an
+/// [`declare_fnsymbol_title_block`]) or a binding declares its title's marks ([`title_marks_declared`]), or one declares
+/// the counter so ([`declare_title_numbers_faithful`])? Elsewhere (aa, llncs, an
 /// unbound class, whose title `\thanks` the reading does not count) such a number keys nothing (MARKKEY1c, the
 /// meta-review: "0" and wrong links; OXIDIZED_DESIGN_DIVERGENCES #1058).
 pub fn title_numbers_faithful() -> bool {

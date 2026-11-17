@@ -164,17 +164,11 @@
   <!-- A creator's mark-only note is its mark alone, with no empty "footnotemark: " pop-up: linked, and shared, when it
        is an author's linkable mark (f:creator-mark-only) and its mark names one author's note in the block; else the
        plain glyph. Its glyph is note-mark's (Perl's tag, else @mark). -->
-  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1059): no dangling mark (DG 2026-11-16, 2006.10886), hidden
-       only when certain (DG 2026-11-16): a mark-only note that links to no note on the page hides only where the
-       document has nothing that could hold its legend (f:legend-holder: the XML often drops a legend's glyph, 2311.11099,
-       2402.05011, 1302.0490) and its glyph (each piece of a printed run, `1,2`) prints nowhere else (f:printed-glyph)
-       and it names no title's or date's note, whose mark the page does not print (class ltx_mark_titlenote, set by its
-       given number: `\footnotemark[1]` under `\title{T\thanks{…}}`). Hidden, its id stays; the XML keeps the note. -->
-  <xsl:variable name="f:legend-holder"
-                select="boolean(//ltx:contact[normalize-space(.)] | //ltx:pubnote[normalize-space(.)]
-                                | //ltx:note[not(@role='footnotemark')][normalize-space(.)]
-                                            [@role='footnotetext'
-                                             or not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])])"/>
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1059): a mark-only note that links to no note on the page
+       still shows its glyph (DG 2026-11-16, "hide only when certain"; 2006.10886's once-printed mark): the XML cannot
+       prove the glyph prints once, its legend often where the frontmatter does not see it (a body line, the \date, a
+       tabular cell, plain-text \dag or *), kept with its glyph lost (2311.11099, 2402.05011, 1302.0490) or inside
+       another name's run (2110.12052). -->
   <xsl:template match="ltx:creator/ltx:note[@role='footnotemark'][normalize-space(@mark)]">
     <xsl:variable name="by_mark" select="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
     <xsl:variable name="notes"
@@ -189,39 +183,16 @@
         <xsl:otherwise><xsl:value-of select="@mark"/></xsl:otherwise>
       </xsl:choose>
     </xsl:variable>
-    <xsl:variable name="pieces">
-      <xsl:call-template name="f:glyph-pieces">
-        <xsl:with-param name="glyph" select="normalize-space($glyph)"/>
+    <xsl:element name="span" namespace="{$html_ns}">
+      <xsl:call-template name="add_id"/>
+      <xsl:call-template name="add_attributes">
+        <xsl:with-param name="extra_classes"><xsl:if test="$target">ltx_note_shared</xsl:if></xsl:with-param>
       </xsl:call-template>
-    </xsl:variable>
-    <xsl:variable name="elsewhere">
-      <xsl:call-template name="f:glyph-elsewhere">
-        <xsl:with-param name="pieces" select="string($pieces)"/>
-        <xsl:with-param name="me" select="generate-id()"/>
+      <xsl:call-template name="creator-note-mark">
+        <xsl:with-param name="target" select="$target"/>
+        <xsl:with-param name="glyph" select="$glyph"/>
       </xsl:call-template>
-    </xsl:variable>
-    <xsl:choose>
-      <xsl:when test="not($target) and not($f:legend-holder) and not(string($elsewhere))
-                      and not(contains(concat(' ',@class,' '),' ltx_mark_titlenote '))">
-        <xsl:if test="@xml:id">
-          <xsl:element name="span" namespace="{$html_ns}">
-            <xsl:call-template name="add_id"/>
-          </xsl:element>
-        </xsl:if>
-      </xsl:when>
-      <xsl:otherwise>
-        <xsl:element name="span" namespace="{$html_ns}">
-          <xsl:call-template name="add_id"/>
-          <xsl:call-template name="add_attributes">
-            <xsl:with-param name="extra_classes"><xsl:if test="$target">ltx_note_shared</xsl:if></xsl:with-param>
-          </xsl:call-template>
-          <xsl:call-template name="creator-note-mark">
-            <xsl:with-param name="target" select="$target"/>
-            <xsl:with-param name="glyph" select="$glyph"/>
-          </xsl:call-template>
-        </xsl:element>
-      </xsl:otherwise>
-    </xsl:choose>
+    </xsl:element>
   </xsl:template>
 
   <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1059): a note several authors carry is one note, the xml:id
@@ -266,38 +237,12 @@
     </xsl:choose>
   </xsl:template>
 
-  <!-- The pieces of a mark's printed glyph, each followed by a comma: a run of letters or digits one piece, each other
-       character one (`1*` is 1 and *, `a,b` a and b), the separators of a run or range (`,` `-` `–`) and spaces none. -->
-  <xsl:template name="f:glyph-pieces">
-    <xsl:param name="glyph"/>
-    <xsl:param name="run" select="''"/>
-    <xsl:variable name="alnum"
-                  select="'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρςστυφχψω'"/>
-    <xsl:variable name="c" select="substring($glyph,1,1)"/>
-    <xsl:choose>
-      <xsl:when test="$glyph = ''"><xsl:if test="$run != ''"><xsl:value-of select="concat($run,',')"/></xsl:if></xsl:when>
-      <xsl:when test="translate($c,$alnum,'') = ''">
-        <xsl:call-template name="f:glyph-pieces">
-          <xsl:with-param name="glyph" select="substring($glyph,2)"/>
-          <xsl:with-param name="run" select="concat($run,$c)"/>
-        </xsl:call-template>
-      </xsl:when>
-      <xsl:otherwise>
-        <xsl:if test="$run != ''"><xsl:value-of select="concat($run,',')"/></xsl:if>
-        <xsl:if test="not(contains(', -&#x2013;',$c))"><xsl:value-of select="concat($c,',')"/></xsl:if>
-        <xsl:call-template name="f:glyph-pieces">
-          <xsl:with-param name="glyph" select="substring($glyph,2)"/>
-        </xsl:call-template>
-      </xsl:otherwise>
-    </xsl:choose>
-  </xsl:template>
-
   <!-- Each glyph the document prints, asterisks folded (* = ∗), by the element printing it: a note's mark; a note's or
        creator's printed tag (not a section's number); a superscript; a formula of the glyph alone inside a note,
        contact or publication note (2012.13912's `\authornote{… \\ $\dagger$ Xiaojiang Peng is …}`, 2508.05506's
        `\blfootnote{$\dagger$ Prior to joining …}`); the symbol, or the run of letters or digits, that a note, contact or
        publication note opens with, its tags left out (a legend's `$*$Xiang Wang is the corresponding author`,
-       2010.10783). -->
+       2010.10783). A generated mark is a glyph none of these prints (f:generated-mark). -->
   <xsl:key name="f:printed-glyph" match="ltx:note[normalize-space(@mark)]"
            use="translate(normalize-space(@mark),'&#x2217;','*')"/>
   <xsl:key name="f:printed-glyph" match="ltx:tag[not(@role)][ancestor::ltx:note or ancestor::ltx:creator] | ltx:sup"
@@ -333,29 +278,6 @@
                   substring(concat(translate(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),
                                              '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρςστυφχψω',''),
                                    '|'),1,1))"/>
-
-  <!-- "yes" where a piece of a mark's glyph ($pieces, `f:glyph-pieces`) prints elsewhere in the document
-       (f:printed-glyph), or in another name's mark run (`Dhami$^{1,3}$` prints the 1 of `Zečević$^{1}$`, 2110.12052):
-       anywhere but in the mark-only note $me itself. -->
-  <xsl:template name="f:glyph-elsewhere">
-    <xsl:param name="pieces"/>
-    <xsl:param name="me"/>
-    <xsl:variable name="piece" select="translate(normalize-space(substring-before($pieces,',')),'&#x2217;','*')"/>
-    <xsl:choose>
-      <xsl:when test="not(contains($pieces,','))"/>
-      <xsl:when test="$piece != ''
-                      and (key('f:printed-glyph',$piece)[not(ancestor-or-self::ltx:note[generate-id() = $me])]
-                           or //ltx:creator/ltx:note[@role='footnotemark'][generate-id() != $me]
-                                [contains(concat(',',translate(normalize-space(@mark),'-&#x2013;&#x2217; ',',,*'),','),
-                                          concat(',',$piece,','))])">yes</xsl:when>
-      <xsl:otherwise>
-        <xsl:call-template name="f:glyph-elsewhere">
-          <xsl:with-param name="pieces" select="substring-after($pieces,',')"/>
-          <xsl:with-param name="me" select="$me"/>
-        </xsl:call-template>
-      </xsl:otherwise>
-    </xsl:choose>
-  </xsl:template>
 
   <!-- The $n-th bracketed letter the document prints nowhere (f:printed-glyph: no note's mark or tag, no superscript):
        [a], [b], … -->

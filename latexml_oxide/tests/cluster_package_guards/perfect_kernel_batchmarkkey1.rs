@@ -5,8 +5,8 @@
 //! `_fnvalue`) — OD #1058; a mark glued past a name's comma measured from the comma (`resolver::mark_ledger`, COMMAMARK);
 //! IEEEtran's unmarked `\thanks` kept at the block's level (`resolver::keep_note`); one note's copies marked as one
 //! (`relocate::one_note` at `relocate_annotations`, the kernel's `relocate_footnote` and the Link step), and on the page
-//! a shared unmarked note under a generated `[a]`, an unlinked name mark shown only where its glyph recurs
-//! (`LaTeXML-meta-xhtml.xsl`) — OD #1059. Rows assert the pdflatex oracle in the FMRG suite's two layers
+//! a shared unmarked note under a generated `[a]` and every unlinked name mark shown (`LaTeXML-meta-xhtml.xsl`) — OD
+//! #1059. Rows assert the pdflatex oracle in the FMRG suite's two layers
 //! (`perfect_kernel_batchfmmarks::Row`). Witnesses 2407.04435, 1111.1979, 2006.10886, 1510.02728, 1108.5155,
 //! 2508.05506, 2012.13912, 1503.07953.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
@@ -215,13 +215,15 @@ fn an_ieee_unmarked_thanks_is_the_blocks() {
   );
 }
 
-/// No dangling mark (DG 2026-11-16, 2006.10886, and its document-wide refinement): a name's mark that links to no note
-/// shows only where its glyph prints anywhere else in the document — Ann's ∗, the body footnote's mark too —, and is
-/// hidden where it prints once, over its name alone (Bob's †). A printed run counts per piece: Ann's `$^{1,2}$` shows,
-/// the body's footnote marks 1 and 2 printing its pieces (1304.5040), Bob's 3 hides. A section's number is no mark
-/// (revMARKKEY1 S1: three numbered sections showed Ann's 1 and Bob's 3). The XML keeps every mark-only note.
+/// A name's mark that links to no note always shows (MARKKEY1d's fail-safe, OD #1059; DG 2026-11-16, "hide only when
+/// certain"): the XML cannot prove a glyph prints once, its legend often where the frontmatter does not see it — a body
+/// line's `$\dagger$ Corresponding author.`, which pdflatex prints with Ann's † (revMARKKEY1c h1; the `\date`, a cell,
+/// a plain-text `*` alike). Each row hid a mark before, its glyph found nowhere else: Bob's 3 past Ann's run `$^{1,2}$`
+/// (1304.5040), Ann's 1 and Bob's 3 over numbered sections (revMARKKEY1 S1), Bob's † beside Ann's recurring ∗
+/// (2006.10886, its geophysics `\address{\footnotemark[1]{…}}` printed nowhere in `paper` mode). The XML keeps every
+/// mark-only note.
 #[test]
-fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
+fn an_unlinked_mark_always_shows() {
   assert_green(&[Row {
     repro:      "markkey_unlinked_mark_run_shows_where_a_piece_recurs",
     tex:        repro!("markkey_unlinked_mark_run_shows_where_a_piece_recurs"),
@@ -231,7 +233,7 @@ fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
       "Bob Baker ; footnotemark[3]=",
     ],
     moves:      "",
-    page:       &["Ann Able ; 1,2 plain", "Bob Baker"],
+    page:       &["Ann Able ; 1,2 plain", "Bob Baker ; 3 plain"],
     page_moves: "",
   }]);
   assert_green(&[Row {
@@ -243,31 +245,40 @@ fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
       "Bob Baker ; footnotemark[3]=",
     ],
     moves:      "",
-    page:       &["Ann Able", "Bob Baker"],
+    page:       &["Ann Able ; 1 plain", "Bob Baker ; 3 plain"],
     page_moves: "",
   }]);
   assert_green(&[Row {
-    repro:      "markkey_unlinked_name_mark_shows_only_where_its_glyph_recurs",
-    tex:        repro!("markkey_unlinked_name_mark_shows_only_where_its_glyph_recurs"),
+    repro:      "markkey_unlinked_name_mark_always_shows",
+    tex:        repro!("markkey_unlinked_name_mark_always_shows"),
     warnings:   0,
     creators:   &[
       "Ann Able ; footnotemark[*]=",
       "Bob Baker ; footnotemark[†]=",
     ],
     moves:      "",
-    page:       &["Ann Able ; * plain", "Bob Baker"],
+    page:       &["Ann Able ; * plain", "Bob Baker ; † plain"],
+    page_moves: "",
+  }]);
+  assert_green(&[Row {
+    repro:      "markkey_unlinked_mark_legend_on_a_body_line_shows",
+    tex:        repro!("markkey_unlinked_mark_legend_on_a_body_line_shows"),
+    warnings:   0,
+    creators:   &["Ann Able ; footnotemark[†]=", "Bob Baker"],
+    moves:      "",
+    page:       &["Ann Able ; † plain", "Bob Baker"],
     page_moves: "",
   }]);
 }
 
-/// The glyphs printed elsewhere that a name's unlinked mark is shown by (revMARKKEY1 B1; OD #1059, `f:printed-glyph`):
-/// a body footnote opening with a formula of the glyph alone, its tags left out (2508.05506's `\blfootnote{$\dagger$
-/// …}`); a formula of the glyph alone inside a note, past its opening (2012.13912's acmart `\authornote{… \\ $\dagger$
-/// … is the corresponding author}`); and a note with no known mark on the name, whose glyph it may be (1503.07953's
-/// `\altaffiltext{*}{Corresponding author}`, its label's glyph not kept); a legend printed bracketed (2302.11378's
-/// `$^{(2)}$` legends in `\date`); and a piece of another name's mark run (2110.12052). Each was hidden before.
+/// An unlinked name mark shows beside its legend printed elsewhere (revMARKKEY1 B1; OD #1059), each hidden before the
+/// fail-safe (`an_unlinked_mark_always_shows`) where the glyph key missed it: a body footnote opening with a formula of
+/// the glyph alone (2508.05506's `\blfootnote{$\dagger$ …}`); a formula of the glyph alone inside a note, past its
+/// opening (2012.13912's acmart `\authornote{… \\ $\dagger$ … is the corresponding author}`); a note with no known mark
+/// on the name, whose glyph it may be (1503.07953's `\altaffiltext{*}{Corresponding author}`); a legend printed
+/// bracketed (2302.11378's `$^{(2)}$` legends in `\date`); and a piece of another name's mark run (2110.12052).
 #[test]
-fn an_unlinked_mark_shows_where_its_glyph_prints() {
+fn an_unlinked_mark_shows_beside_its_legend() {
   assert_green(&[
     Row {
       repro:      "markkey_blfootnote_dagger_legend_shows_its_names_mark",
@@ -340,15 +351,12 @@ fn an_unlinked_mark_shows_where_its_glyph_prints() {
   ]);
 }
 
-/// An unlinked name mark whose glyph prints nowhere else hides only where the document has nothing that could hold its
-/// legend (DG 2026-11-16, "hide only when certain"; OD #1059, `f:legend-holder`): the XML often drops a legend's glyph
-/// (row R MARKGLYPHLOST: 2311.11099, 2402.05011, 1302.0490 …), so a contact, a publication note or a note with no mark
-/// or written apart from its mark keeps the mark shown. One row per holder, each hidden before: an author-line contact
+/// An unlinked name mark shows beside a legend whose glyph the XML lost (row R MARKGLYPHLOST: 2311.11099, 2402.05011,
+/// 1302.0490 …), each hidden before the fail-safe (`an_unlinked_mark_always_shows`; OD #1059): an author-line contact
 /// whose label the block consumed (1302.0490's `E.Mail :$^1$sidd…`, astro-ph0703204), a `\footnotetext` whose `mark`
-/// is the string `$\star$` (2412.05831), IEEEtran's journal `\thanks` at the block (1409.7582). The hide where nothing
-/// could hold one: `an_unlinked_mark_shows_only_where_its_glyph_recurs` (Bob's †, 2006.10886).
+/// is the string `$\star$` (2412.05831), IEEEtran's journal `\thanks` at the block (1409.7582).
 #[test]
-fn an_unlinked_mark_hides_only_where_nothing_could_hold_its_legend() {
+fn an_unlinked_mark_shows_beside_a_legend_that_lost_its_glyph() {
   assert_green(&[
     Row {
       repro:      "markkey_author_line_label_shows_its_names_mark",

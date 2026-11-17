@@ -25,8 +25,8 @@
 //!   glyph, a mark-only note with no glyph nothing (DG 2026-11-16: no invented glyph, OD #990), a shared unmarked note
 //!   once under the page's generated `[a]` (OD #1059); a mark-only note's mark links only to the one note of the block
 //!   it marks, and only when it is a symbol (a letter, digit or Greek letter stays plain), and one linking nothing shows
-//!   only where its glyph prints elsewhere in the document (DG 2026-11-16, no dangling marks, OD #1059); the marks on a
-//!   name in the order the PDF prints them.
+//!   plain (the XML cannot prove its glyph prints once: DG 2026-11-16, "hide only when certain", OD #1059); the marks on
+//!   a name in the order the PDF prints them.
 //!
 //! RED layers are known gaps, each naming its row R line (or NEITHER: a contradiction with no recorded gap, reported
 //! to the main session); the ignored `_red` tests list what is still red and print the layers now matching their
@@ -1054,7 +1054,8 @@ const PURE: &[Row] = &[
       r#"Bob Bee ; footnotemark[1]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Bee"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain", "Bob Bee ; 1 plain"],
     page_moves: r#""#,
   },
   Row {
@@ -1063,7 +1064,7 @@ const PURE: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[*]="#, r#"Bob Baker | url=†"#],
     moves:      r#""#,
-    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, Bob's url contact can hold a legend)
+    // (the inked mark shows: every unlinked mark does, OD #1059's fail-safe, DG "hide only when certain")
     page:       &["Ann Able ; * plain", "Bob Baker"],
     page_moves: r#""#,
   },
@@ -1175,7 +1176,7 @@ const PURE: &[Row] = &[
       r#"Cy Cole | affiliation=* Univ A"#,
     ],
     moves:      r#""#,
-    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the Univ A affiliation can hold a legend)
+    // (the inked mark shows: every unlinked mark does, OD #1059's fail-safe, DG "hide only when certain")
     page:       &["Ann Able ; * plain", "Bob Baker ; † plain", "Cy Cole"],
     page_moves: r#""#,
   },
@@ -1188,7 +1189,7 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=* Univ A"#,
     ],
     moves:      r#""#,
-    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the Univ A affiliation can hold a legend)
+    // (the inked mark shows: every unlinked mark does, OD #1059's fail-safe, DG "hide only when certain")
     page:       &["Ann Able ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
@@ -1201,7 +1202,7 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=* Univ A"#,
     ],
     moves:      r#""#,
-    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the Univ A affiliation can hold a legend)
+    // (the inked mark shows: every unlinked mark does, OD #1059's fail-safe, DG "hide only when certain")
     page:       &["Ann Able ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
@@ -1227,7 +1228,8 @@ const PURE: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Team C#"#, r#"Bob Baker ; footnotemark[*]="#],
     moves:      r#""#,
-    page:       &["Team C#", "Bob Baker"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Team C#", "Bob Baker ; * plain"],
     page_moves: r#""#,
   },
   Row {
@@ -1239,7 +1241,7 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=Univ J"#,
     ],
     moves:      r#""#,
-    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the affiliations can hold a legend)
+    // (the inked mark shows: every unlinked mark does, OD #1059's fail-safe, DG "hide only when certain")
     page:       &["Ann Able ; 12 plain", "Bob Baker"],
     page_moves: r#""#,
   },
@@ -1461,7 +1463,12 @@ const LINK: &[Row] = &[
       r#"Bob Baker ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able ; * plain", "Bob Baker", "margin: Univ X."],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      "Ann Able ; † plain ; * plain",
+      "Bob Baker ; ‡ plain",
+      "margin: Univ X.",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -1492,10 +1499,11 @@ const LINK: &[Row] = &[
       r#"Carl Cole ; footnotemark[§]="#,
     ],
     moves:      r#""#,
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able ; * plain",
+      "Ann Able ; † plain ; * plain",
       "Bob Baker ; ‡ plain",
-      "Carl Cole",
+      "Carl Cole ; § plain",
       "margin: Univ X. ; Univ Y.",
     ],
     page_moves: r#""#,
@@ -1527,7 +1535,12 @@ const LINK: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able ; * plain", "Bob Baker", "margin: Lead note."],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      "Ann Able ; † plain ; * plain",
+      "Bob Baker",
+      "margin: Lead note.",
+    ],
     page_moves: r#""#,
   },
   // the marks as printed; the Warning is the fail-safe split's (counted, Perl's split)
@@ -1643,7 +1656,7 @@ const LINK: &[Row] = &[
       r#"Cat Cole | email=cat@a.edu ; affiliation=Univ A , Town , Land"#,
     ],
     moves:      r#""#,
-    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, e-mails and an affiliation hold legends)
+    // (the inked mark shows: every unlinked mark does, OD #1059's fail-safe, DG "hide only when certain")
     page:       &[
       "Ann Able ; *→note",
       "Bob Baker ; *→note ; † plain",
@@ -1683,7 +1696,7 @@ const LINK: &[Row] = &[
       r#"Dan Dory ; footnotemark[‡]= | affiliation=Univ B"#,
     ],
     moves:      "",
-    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the Univ A/B lines can hold a legend)
+    // (the inked mark shows: every unlinked mark does, OD #1059's fail-safe, DG "hide only when certain")
     page:       &[
       "Ann Able ; *→note",
       "Bob Baker ; *→note",
@@ -1754,7 +1767,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before as printed once; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain ; † plain", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   // the mark as printed, no Warning (the mark ledger writes the prefix Bob's: SHGNEXT, OD #1057)
@@ -1768,7 +1782,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   // the marks as printed; the one Warning the labels' (the prefix's false "lost: †" gone: SHGNEXT, OD #1057)
@@ -1782,7 +1797,12 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[*]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able ; * plain", "Bob Baker", "Carl Cole ; * plain"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      "Ann Able ; * plain",
+      "Bob Baker ; † plain",
+      "Carl Cole ; * plain",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -1795,7 +1815,13 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole", "margin: X"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      "Ann Able ; * plain",
+      "Bob Baker ; † plain",
+      "Carl Cole ; ‡ plain",
+      "margin: X",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -1808,7 +1834,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; † plain", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1817,7 +1844,8 @@ const SPACING: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[*]="#, r#"Bob Baker"#],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1829,7 +1857,7 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, Ann's Univ A line can hold a legend)
+    // (the inked mark shows: every unlinked mark does, OD #1059's fail-safe, DG "hide only when certain")
     page:       &["Ann Able ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
@@ -1842,7 +1870,7 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, Ann's Univ A line can hold a legend)
+    // (the inked mark shows: every unlinked mark does, OD #1059's fail-safe, DG "hide only when certain")
     page:       &["Ann Able ; * plain ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
@@ -1855,7 +1883,12 @@ const SPACING: &[Row] = &[
       r#"Bob Baker ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able ; * plain", "Bob Baker", "margin: Univ X."],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      "Ann Able ; * plain",
+      "Bob Baker ; ‡ plain",
+      "margin: Univ X.",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -1867,7 +1900,8 @@ const SPACING: &[Row] = &[
       r#"Bob Baker ; footnotemark[†]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able ; * plain", "Bob Baker", "margin: X"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain", "Bob Baker ; † plain", "margin: X"],
     page_moves: r#""#,
   },
   Row {
@@ -1879,7 +1913,12 @@ const SPACING: &[Row] = &[
       r#"Bob Baker ; footnotemark[†]= ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able ; * plain", "Bob Baker", "margin: X"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      "Ann Able ; * plain",
+      "Bob Baker ; † plain ; ‡ plain",
+      "margin: X",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -1892,9 +1931,10 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
       "Ann Able ; * plain",
-      "Bob Baker ; ‡ plain",
+      "Bob Baker ; † plain ; ‡ plain",
       "Carl Cole",
       "margin: X ; Y",
     ],
@@ -1910,7 +1950,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1923,7 +1964,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1936,7 +1978,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1949,7 +1992,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1962,7 +2006,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1975,7 +2020,12 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      "Ann Able ; * plain ; † plain",
+      "Bob Baker",
+      "Carl Cole ; ‡ plain",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -2027,7 +2077,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2040,7 +2091,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; * plain ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2053,7 +2105,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[†]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; * plain", "Carl Cole ; † plain"],
     page_moves: r#""#,
   },
   Row {
@@ -2066,9 +2119,10 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
       "Ann Able",
-      "Bob Baker ; * plain",
+      "Bob Baker ; † plain ; * plain",
       "Carl Cole",
       "margin: Ann note",
     ],
@@ -2084,9 +2138,10 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
       "Ann Able",
-      "Bob Baker ; * plain",
+      "Bob Baker ; † plain ; * plain",
       "Carl Cole",
       "margin: Ann note",
     ],
@@ -2102,7 +2157,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; * plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2115,9 +2171,10 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
       "Ann Able ; * plain",
-      "Bob Baker ; ‡ plain",
+      "Bob Baker ; † plain ; ‡ plain",
       "Carl Cole",
       "margin: Ann note body ; Floating body",
     ],
@@ -2133,7 +2190,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2146,7 +2204,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2159,7 +2218,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2229,9 +2289,10 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
       "Ann Able",
-      "Bob Baker ; * plain",
+      "Bob Baker ; † plain ; * plain",
       "Carl Cole",
       "margin: Bob note",
     ],
@@ -2247,7 +2308,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain", "Bob Baker ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2260,7 +2322,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[†]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain", "Bob Baker", "Carl Cole ; † plain"],
     page_moves: r#""#,
   },
   Row {
@@ -2281,7 +2344,8 @@ const SPACING: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able"#, r#"Bob Baker ; footnotemark[†]="#],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; † plain"],
     page_moves: r#""#,
   },
   Row {
@@ -2290,7 +2354,8 @@ const SPACING: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[1]= ; footnotemark[2]="#],
     moves:      r#""#,
-    page:       &["Ann Able"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; 1 plain ; 2 plain"],
     page_moves: r#""#,
   },
   // the marks a writer writes each from its own first token, never the one before it again (review revSHGNEXT B1, P1:
@@ -2305,7 +2370,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; * plain ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2318,7 +2384,12 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      "Ann Able",
+      "Bob Baker ; * plain ; † plain ; ‡ plain",
+      "Carl Cole",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -2330,7 +2401,8 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -2342,7 +2414,8 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -2355,7 +2428,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able ; * plain ; † plain", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2368,7 +2442,8 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &["Ann Able", "Bob Baker ; * plain ; † plain", "Carl Cole"],
     page_moves: r#""#,
   },
   // a formula's comma glued between two marks is ink of their run (revSHGNEXT S1; 1703.08733's shape)
@@ -2382,9 +2457,10 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
       "Ann Able ; *→note",
-      "Bob Baker ; *→note",
+      "Bob Baker ; *→note ; † plain",
       "Carl Cole",
       "margin: X",
     ],
@@ -2932,7 +3008,12 @@ const CLASS: &[Row] = &[
       r#"Cy Cole ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker", "Cy Cole"],
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      "Ann Able ; * plain",
+      "Bob Baker ; 2 plain",
+      "Cy Cole ; ‡ plain",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -2975,9 +3056,21 @@ const CLASS: &[Row] = &[
     warnings:   0,
     creators:   &["Ann Able", "Bob Baker ; footnotemark[1]="],
     moves:      r#""#,
-    // (MARKKEY1c, DG "hide only when certain": the inked 1 shows, Ann's unmarked note can hold a legend)
-    page:       &["Ann Able", "Bob Baker ; 1 plain"],
-    page_moves: r#""#,
+    // (IEEEtran's `\maketitle` empties `\footnotemark`, so TeX prints Bob's `[1]` as text, "Bob Baker[1]")
+    page:       &["Ann Able", "Bob Baker[1]"],
+    page_moves: r#"row R IEEEFNMARK (we print a superscript 1, TeX a literal [1]; pre-existing)"#,
+  },
+  Row {
+    repro:      "markkey_samethanks_under_elsarticle_red",
+    tex:        repro!("markkey_samethanks_under_elsarticle_red"),
+    warnings:   0,
+    creators:   &[
+      "Ann Able | note=Equal contribution.",
+      "Bob Brown ; footnotemark[1]=",
+    ],
+    moves:      r#"row R MARKNUMKEY (elsarticle's counter not emulated: Bob's `\samethanks` 1 lost, with a Warning)"#,
+    page:       &["Ann Able", "Bob Brown ; 1 plain"],
+    page_moves: r#"row R MARKNUMKEY (Bob's 1 not printed)"#,
   },
   Row {
     repro:      "fmmarks_own_maketitle_relax_red",

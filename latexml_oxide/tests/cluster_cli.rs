@@ -3096,10 +3096,10 @@ mod browser_render_fmmarks {
       &[],
     ),
     (
-      // (bare marks printed once, over the name alone: no dangling mark on the page, DG 2026-11-16, OD #1059)
-      "two dangling marks on one name show none",
+      // (bare marks printed once, over the name alone: shown, the XML cannot prove a glyph prints once, OD #1059)
+      "two unlinked marks on one name, both shown",
       repro!("ne2h_marks_run_carried_back_whole"),
-      &[],
+      &[("Ann Able", "*"), ("Ann Able", "†")],
       &[],
     ),
     (

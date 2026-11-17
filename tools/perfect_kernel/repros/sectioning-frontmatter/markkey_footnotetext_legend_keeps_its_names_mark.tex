@@ -1,12 +1,11 @@
-% mechanism: no dangling mark hides a name's unlinked mark only where the document has nothing that could hold its
-%   legend (DG 2026-11-16, "hide only when certain"; OD #1059, `LaTeXML-meta-xhtml.xsl` `f:legend-holder`): a
-%   `\footnotetext` written apart from its mark holds one, here under `\def\thefootnote{$\star$}`, whose `mark` the XML
-%   keeps as the string `$\star$` (row R MARKGLYPHLOST), so the glyph key finds no other ⋆ and the name's ⋆ shows
+% mechanism: a name's unlinked mark always shows (MARKKEY1d's fail-safe, OD #1059; DG 2026-11-16, "hide only when
+%   certain"): here its legend is a `\footnotetext` under `\def\thefootnote{$\star$}`, whose `mark` the XML keeps as
+%   the string `$\star$` (row R MARKGLYPHLOST), so no other ⋆ is found, and the name's ⋆ shows
 % witness: 2412.05831 (`Shanti Stewart$ ^{1, {\star}} $` with `\def\thefootnote{$ \star $}\footnotetext{Work done …}`)
 % oracle:  pdflatex 0 errors: "Ann Able⋆ Bob Baker", the foot "⋆ Work done during an internship at Lab B."
 % engines: rust MARKKEY1 501703917a8 = 0 errors 0 Warnings; Ann's ⋆ hidden
 % expect:  0 errors 0 Warnings; XML Ann Able ; footnotemark[⋆]=; HTML Ann Able ; ⋆ plain / Bob Baker
-% status:  RED (501703917a8) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_hides_only_where_nothing_could_hold_its_legend)
+% status:  RED (501703917a8) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_beside_a_legend_that_lost_its_glyph)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}
