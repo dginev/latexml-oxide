@@ -1,0 +1,38 @@
+% mechanism: the iclr binding answers CoRL's styles (latexml_contrib iclr_sty.rs; the versioned fallback strips corl_2025
+%   to corl; corl_2024.sty:5 "heavily inspired by the NeurIPS, ICML, ICLR … templates"): it reads the paper's copy raw
+%   and declares the document's `\@fnsymbol` where the copy's `\maketitle` carries corl_2025.sty:343-346
+%   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (`shipped_class::input_shipped_package_title_marks`, by its `\maketitle` body)
+% witness:  2509.00328 (corl_2025.sty: two authors "∗" "Equal contribution. Correspondence to: …"); 2407.15815
+%   (corl_2024), 2509.14688, 2606.00985 (corl_2026); the style a minimal stand-in of corl_2025.sty:342-361
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗"; foot "∗Equal contribution.
+%   Correspondence to: ann@x.org"
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 0 Warnings, the marks (the static reader); MTREDUCE (7608026a189):
+%   the note unmarked
+% expect:   0 errors, 0 Warnings; Ann and Bob a copy of one note marked ∗
+% status:   GREEN (MTREDUCEb: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{corl_2025.sty}
+\providecommand{\maketitle}{}
+\renewcommand{\maketitle}{%
+  \par
+  \begingroup
+    \renewcommand{\thefootnote}{\fnsymbol{footnote}}
+    \renewcommand{\@makefnmark}{\hbox to \z@{$^{\@thefnmark}$\hss}}
+    \@maketitle
+    \@thanks
+  \endgroup
+  \let\maketitle\relax
+  \let\thanks\relax
+}
+\renewcommand{\@maketitle}{\vbox{\hsize\textwidth\centering{\LARGE\bf \@title\par}
+  \def\And{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}\bf\ignorespaces}%
+  \begin{tabular}[t]{c}\bf\@author\end{tabular}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{corl_2025}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution. Correspondence to: ann@x.org} \And Bob Baker\footnotemark[1]}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -29,7 +29,10 @@
 //!
 //! Witnesses: 2605.02338 (`arxiv.sty` + `\keywords{a \and b \and c}`),
 //! 2605.10111 (the `PRIMEarxiv.sty` fork — see `primearxiv_sty.rs`).
-use latexml_package::prelude::*;
+use latexml_package::{
+  prelude::*,
+  shipped_class::{FNSYMBOL_TITLE_MARKS, read_copy_title_marks},
+};
 
 /// arxiv.sty L44-47, verbatim. `\keywordname` differs between the upstream
 /// file and its PRIMEarxiv fork, so it is passed in. Kept as raw TeX (not
@@ -62,8 +65,12 @@ pub(crate) fn define_bare_fallbacks(keywordname: &str) -> Result<()> {
 
 LoadDefinitions!({
   if lookup_bool("INCLUDE_STYLES") {
-    // Raw style loading is on: the paper's own arxiv.sty is authoritative.
-    InputDefinitions!("arxiv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+    // Raw style loading is on: the paper's own arxiv.sty is authoritative; the marks its `\maketitle` sets declared
+    // (arxiv.sty:174-177; 2509.16272, 2509.00704, 2304.04746).
+    read_copy_title_marks(&[FNSYMBOL_TITLE_MARKS], || {
+      InputDefinitions!("arxiv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+      Ok(true)
+    })?;
   } else {
     define_bare_fallbacks(r"{\bfseries \emph{Keywords}}")?;
   }

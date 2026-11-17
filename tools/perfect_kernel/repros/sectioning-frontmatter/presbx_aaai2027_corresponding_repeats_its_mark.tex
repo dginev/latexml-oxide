@@ -10,7 +10,7 @@
 %   contributed equally." marked †, Ann and Cy a copy of "Corresponding author." marked ‡
 % status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
 % preload:  ar5iv.sty
-\begin{filecontents*}[overwrite]{presbxaaaic.sty}
+\begin{filecontents*}[overwrite]{aaai2027.sty}
 \def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
   \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
   \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
@@ -31,7 +31,7 @@
     \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
 \end{filecontents*}
 \documentclass{article}
-\usepackage{presbxaaaic}
+\usepackage{aaai2027}
 \title{A Title\thanks{Title note.}}
 \author{Ann Able\equalcontrib\corresponding, Bob Baker\equalcontrib, Cy Cole\corresponding}
 \begin{document}

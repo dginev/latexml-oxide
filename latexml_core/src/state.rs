@@ -2498,15 +2498,33 @@ pub fn note_copy_provides_title_page(token: &Token, body: &Tokens) {
   }
 }
 
-/// The latest stand-in copy's own `\maketitle` body ([`note_copy_provides_title_page`]), with the copy's file: the
-/// `\maketitle` pdflatex runs where the binding keeps LaTeXML's (spconf.sty's, 2110.09738; latexml_engine
-/// `latex_constructs::maketitle_marks`).
-pub fn copy_provides_maketitle() -> Option<(String, Tokens)> {
+/// The latest stand-in copy's own `\maketitle` body ([`note_copy_provides_title_page`]), with the copy's number
+/// ([`new_copy_provides_record`]) and file: the `\maketitle` pdflatex runs where the binding keeps LaTeXML's (spconf.sty's,
+/// 2110.09738; latexml_engine `latex_constructs::class_maketitle_in_force`).
+pub fn copy_provides_maketitle() -> Option<(u32, String, Tokens)> {
   state!()
     .copy_provides_copies
     .iter()
+    .enumerate()
     .rev()
-    .find_map(|copy| copy.maketitle.clone().map(|body| (copy.file.clone(), body)))
+    .find_map(|(index, copy)| {
+      (copy.maketitle.clone()).map(|body| (index as u32 + 1, copy.file.clone(), body))
+    })
+}
+
+/// The number the next stand-in copy gets ([`new_copy_provides_record`]).
+pub fn next_copy_provides_id() -> u32 { state!().copy_provides_copies.len() as u32 + 1 }
+
+/// The `\maketitle` body ([`note_copy_provides_title_page`]) of the first stand-in copy of `file` numbered `from` or
+/// later, with its number.
+pub fn copy_provides_maketitle_of(file: &str, from: u32) -> Option<(u32, Tokens)> {
+  state!()
+    .copy_provides_copies
+    .iter()
+    .enumerate()
+    .skip(from.saturating_sub(1) as usize)
+    .find(|(_, copy)| copy.file == file)
+    .and_then(|(index, copy)| copy.maketitle.clone().map(|body| (index as u32 + 1, body)))
 }
 
 /// What [`watch_meanings`]' selection says of a name.
@@ -7836,7 +7854,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   let _ = after_assignment();
 }
 /// [`carry_refusal_records`] for the document's own `\let`s of `\maketitle`, the records' one reader
-/// (`latex_constructs::maketitle_marks`; the kernel's `\global\let\thanks\relax` keeps `\lx@dropped@thanks`). A file's
+/// (`latex_constructs::class_maketitle_in_force`; the kernel's `\global\let\thanks\relax` keeps `\lx@dropped@thanks`). A file's
 /// `\let` onto a refused `\maketitle` (a package's restore, review revPRESBXb BL3) leaves its marks unknown: the refused
 /// body forgotten, the document's record kept. Not a class's replayed body, which clears its own name as it runs
 /// (`\global\let\maketitle\relax`).

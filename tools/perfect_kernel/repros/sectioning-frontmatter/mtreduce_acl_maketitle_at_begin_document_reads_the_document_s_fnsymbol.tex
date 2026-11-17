@@ -1,0 +1,31 @@
+% mechanism: the acl binding (latexml_contrib acl_sty.rs) reads the paper's acl.sty raw and declares its title marks,
+%   `\@fnsymbol\c@footnote` (`shipped_class::input_shipped_package_title_marks`); acl.sty:147-150 defines its
+%   `\maketitle` in `\AtBeginDocument` code, `\def\thefootnote{\fnsymbol{footnote}}`, which the lock refuses there:
+%   the binding answers for that one too, and the marks read the document's `\@fnsymbol` (acl2019.sty:37's, 1905.10033)
+% witness:  2502.19103 (acl.sty: "Siwei Wu∗, Yizhi Li∗", "Chenghua Lin†"); 1905.10033 ("Zhaojiang Lin†"); the style a
+%   minimal stand-in of acl.sty:147-155
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able†, Bob Baker‡"; foot "† First note.",
+%   "‡ Second note."
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 0 Warnings; Ann thanks[†], Bob thanks[‡] (the static reader);
+%   MTREDUCE without the binding: both unmarked
+% expect:   0 errors, 0 Warnings; Ann's note marked †, Bob's ‡; HTML each mark plain, the texts in the margin
+% status:   GREEN (MTREDUCE: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{acl.sty}
+\AtBeginDocument{%
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}}
+\def\@maketitle{\vbox{\hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\begin{tabular}[t]{c}\@author\end{tabular}\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{acl}
+\makeatletter
+\def\@fnsymbol#1{\ensuremath{\ifcase#1\or \dagger\or \ddagger\or \mathsection\else\@ctrerr\fi}}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

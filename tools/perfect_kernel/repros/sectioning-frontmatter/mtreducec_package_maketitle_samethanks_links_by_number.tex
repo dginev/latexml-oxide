@@ -1,0 +1,27 @@
+% mechanism: a package with no binding redefines `\maketitle` (its marks unknown here); a mark whose number the
+%   source reads off the footnote counter (`\samethanks`) still names its note by that number
+%   (`footnote_pairing`, `insert::link_marked_notes`), as under the document's own `\maketitle`
+% witness:  the review's sibling list (revMTREDUCE B2: a local `.sty` `\maketitle` with no binding)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗ Cy Cole†"; foot "∗ Equal
+%   contribution.", "† Corresponding: cy@x.org"
+% engines:  rust WRONGFIXc (the static reader) = 0 errors, 0 Warnings; Bob a copy of Ann's note, both ∗; MTREDUCEb = no
+%   glyph, Bob an empty mark linking nothing
+% expect:   0 errors, 0 Warnings; Bob a copy of Ann's note, no glyph (unknown); Cy's note his own
+% status:   GREEN (MTREDUCEc: perfect_kernel_batchfmmarks::marks_link_to_their_notes)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{mytitle.sty}
+\renewcommand\maketitle{\par\begingroup
+ \renewcommand\thefootnote{\fnsymbol{footnote}}%
+ \begin{center}{\LARGE\@title\par}\vskip 1em
+ {\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}
+ \@thanks\endgroup\setcounter{footnote}{0}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{mytitle}
+\newcommand\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker\samethanks \and Cy Cole\thanks{Corresponding: cy@x.org}}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

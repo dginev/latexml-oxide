@@ -1,10 +1,12 @@
 % mechanism: a `\let` copy taken after a refused redefinition holds that redefinition, as TeX's does: restored over a
-%   later one, the first one's marks hold (state.rs `carry_refusal_records`, `latex_constructs::maketitle_marks`)
+%   later one, the first one's marks hold (state.rs `carry_refusal_records`, `latex_constructs::class_maketitle_in_force`)
 % witness:  none (sibling of 2509.02894: review revPRESBX B1, "`\let\maketitle\oldmt` after a `\renewcommand`")
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Ablea Bob Bakerb"; foot "a First note." "b Second note."
 % engines:  rust PRESBX (b85b844eb81) = 0 errors, 0 Warnings; thanks[∗], thanks[†] (the later redefinition's)
 % expect:   0 errors, 0 Warnings; Ann thanks[a], Bob thanks[b]
 % status:   RED (PRESBX) -> GREEN (PRESBXb: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+%   -> RED again (MTREDUCE, DG 2026-11-17 maketitle reduce: a `\maketitle` not the class's and no binding's has
+%   unknown marks, `latex_constructs::class_maketitle_in_force`; no glyph, each note under its name; row R MTREDUCE)
 % preload:  ar5iv.sty
 \documentclass{article}
 \makeatletter

@@ -1,0 +1,49 @@
+% mechanism: the usenix binding (latexml_contrib usenix_sty.rs; the versioned fallback strips usenix-2020-09 and
+%   usenix2019_v3 to usenix) reads the paper's copy raw and declares the document's `\@fnsymbol` where the copy's
+%   `\maketitle` carries usenix-2020-09.sty:83-85 `\renewcommand\thefootnote{\fnsymbol{footnote}}`
+%   (`shipped_class::input_shipped_package_title_marks`, by its `\maketitle` body); its raw read takes the loader's step after a raw package
+%   (`shipped_class::input_shipped_package`, `\lx@package@loaded@raw`), so the copy's `\abstract` heading
+%   (usenix2019_v3.sty:114-117), its `\abstractname` babel's, is no creator's note
+% witness:  2509.03117 (usenix.sty: Yiming Li "∗" "Corresponding Author: …"); 1110.1687; 2301.04841 (usenix2019_v3.sty,
+%   the `\abstract` heading); the style a minimal stand-in of usenix.sty:83-98, :100-110, :120-123
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able, Bob Baker∗, Cy Cole"; a bold centred "Abstract",
+%   "An abstract."; foot "∗Corresponding Author: Bob Baker (bob@y.org)."
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 0 Warnings, the mark (the static reader); MTREDUCE (7608026a189):
+%   the note unmarked; MTREDUCEb without the raw-package step: a fourth, nameless creator with the note "Abstract"
+% expect:   0 errors, 0 Warnings; Bob's note marked ∗, three creators
+% status:   GREEN (MTREDUCEb: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{usenix-2020-09.sty}
+\def\maketitle{\par
+ \begingroup
+   \renewcommand\thefootnote{\fnsymbol{footnote}}%
+   \def\@makefnmark{\hbox to\z@{$\m@th^{\@thefnmark}$\hss}}%
+   \if@twocolumn
+     \twocolumn[\@maketitle]%
+     \else \newpage
+     \global\@topnum\z@
+     \@maketitle \fi\@thanks
+ \endgroup
+ \setcounter{footnote}{0}%
+ \let\maketitle\relax
+ \let\@maketitle\relax
+ \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newpage\begin{center}{\Large\bf \@title \par}\vskip 0.375in
+  {\large\it\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}\par}
+\def\abstract{\begin{center}%
+{\large\bf \abstractname\vspace{-.5em}\vspace{\z@}}%
+\end{center}}
+\def\endabstract{}
+\end{filecontents*}
+\documentclass[twocolumn]{article}
+\usepackage{usenix-2020-09}
+\usepackage[english]{babel}
+\title{A Title}
+\author{Ann Able, Bob Baker\thanks{Corresponding Author: Bob Baker (bob@y.org).}, Cy Cole}
+\begin{document}
+\maketitle
+\begin{abstract}
+An abstract.
+\end{abstract}
+Body.
+\end{document}

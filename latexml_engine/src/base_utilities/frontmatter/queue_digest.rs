@@ -22,7 +22,7 @@ pub(in crate::base_utilities) fn digest_frontmatter_item(
   // (frontmatter_stores.rs `refused_environment_definition`: vmsta.cls's `\author` and its `\fnm`)
   assign_value("lx_frontmatter_item", tag.to_string(), Some(Scope::Local));
   if class_marks {
-    crate::latex_constructs::enter_title_footnotes()?;
+    crate::latex_constructs::enter_title_footnotes();
   }
   // (a name's own cell's `\thefootnote`, which a declaration the flush ran ahead of the names set: 1807.02791; the field's
   // own kept)

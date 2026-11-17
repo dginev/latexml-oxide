@@ -11,12 +11,19 @@
 //! as [`crate::arxiv_sty`] — see that module's header. Witness 2605.10111
 //! (`\keywords{...}` at templateArxiv.tex L54); same-host Perl reports the
 //! identical single `undefined:\keywords`.
-use latexml_package::prelude::*;
+use latexml_package::{
+  prelude::*,
+  shipped_class::{FNSYMBOL_TITLE_MARKS, read_copy_title_marks},
+};
 
 LoadDefinitions!({
   if lookup_bool("INCLUDE_STYLES") {
-    // Raw style loading is on: the paper's own PRIMEarxiv.sty is authoritative.
-    InputDefinitions!("PRIMEarxiv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+    // Raw style loading is on: the paper's own PRIMEarxiv.sty is authoritative; the marks its `\maketitle` sets
+    // declared (PRIMEarxiv.sty:176-179; 2509.03066, 2204.09716).
+    read_copy_title_marks(&[FNSYMBOL_TITLE_MARKS], || {
+      InputDefinitions!("PRIMEarxiv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+      Ok(true)
+    })?;
   } else {
     // PRIMEarxiv.sty drops arxiv.sty's `\headeright` / `\undertitle` /
     // `\shorttitle` (L27-32 of the upstream file), so only the keyword

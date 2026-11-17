@@ -527,6 +527,8 @@ mod perfect_kernel_batchmem1;
 /// MLN1: names led by their marks read as names (`names_led_by_marks`); OD #1019.
 mod perfect_kernel_batchmln1;
 mod perfect_kernel_batchmml2;
+/// MTREDUCE: the kernel asks only whether the class's `\maketitle` runs; a package's prints its binding's marks.
+mod perfect_kernel_batchmtreduce;
 mod perfect_kernel_batchn1;
 mod perfect_kernel_batchn2;
 mod perfect_kernel_batchn2r2;

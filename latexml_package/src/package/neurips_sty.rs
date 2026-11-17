@@ -264,4 +264,7 @@ LoadDefinitions!({
 \@ifundefined{problem}{\lx@guess@newtheorem{problem}[theorem]{Problem}}{}%
 \@ifundefined{result}{\lx@guess@newtheorem{result}[theorem]{Result}}{}}"
   );
+  // The marks the `\maketitle` of the paper's copy, read after this binding as its stand-in's, sets (neurips_2019.sty:266-269
+  // … neurips_2025.sty:228-231; 2201.13329, 2204.03458; none for 2305.15254's, whose line is commented out).
+  crate::shipped_class::declare_stand_in_copy_title_marks(&[crate::shipped_class::FNSYMBOL_TITLE_MARKS])?;
 });

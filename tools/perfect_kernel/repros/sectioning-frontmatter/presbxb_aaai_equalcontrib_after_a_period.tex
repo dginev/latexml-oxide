@@ -1,6 +1,6 @@
 % mechanism: AAAI's `\equalcontrib` after a name the author ends with "." makes one note and its mark once per name:
 %   the emitter digests the name after the period with the one before's `\equalcontrib` (the segment ". Cy Cole…"), and
-%   a name digested again carries a kind's mark once (sect05.rs `aaai_note`)
+%   a name digested again carries a kind's mark once (aaai_sty.rs `aaai_note`)
 % witness:  2509.03329 (aaai25.sty, `Bernal…\equalcontrib.` then `Raigoso…\equalcontrib,`: "Robles∗ Bernal∗ Raigoso∗";
 %   PRESBX gave Raigoso two ∗ notes); review revPRESBX B3 (a/a7.tex)
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗, Bob Baker∗. Cy Cole∗, Dee Dunn"; foot
@@ -14,7 +14,7 @@
 %   Ann ∗, Bob †, Cy ‡, the base's; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
 % moves:    XML, HTML row R AAAIDOT
 % preload:  ar5iv.sty
-\begin{filecontents*}[overwrite]{presbxaaaidot.sty}
+\begin{filecontents*}[overwrite]{aaai22.sty}
 \def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
   \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
   \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
@@ -25,7 +25,7 @@
     \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
 \end{filecontents*}
 \documentclass{article}
-\usepackage{presbxaaaidot}
+\usepackage{aaai22}
 \title{A Title}
 \author{Ann Able\equalcontrib, Bob Baker\equalcontrib. Cy Cole\equalcontrib, Dee Dunn}
 \begin{document}
