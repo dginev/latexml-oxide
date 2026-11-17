@@ -563,13 +563,12 @@ pub(in crate::base_utilities) fn address_block_legend_calls() -> Result<Vec<Toke
 /// The calls of an `\address` block printed under the names, only when every line is placed (OD #1073; the review's
 /// fail-safe, all or nothing): with a queued author; a block with no mark under names showing none every author's
 /// affiliation (`\lx@add@affiliation[annotate=all]`, 2405.13379, 2401.07506); a block led by a label whose every line
-/// is led by a label a queued name shows or continues such a line, `\lx@add@affiliations`'s (2603.01467); in either,
-/// each line of e-mail addresses its owners' by [`listed_address_owners`], every address one. Else `None`: trailing
+/// is led by a label a queued name shows or continues such a line, `\lx@add@affiliations`'s (1707.04373); no line of
+/// e-mail addresses in either. Else `None`: trailing
 /// marks (2407.15458, 2401.06806, 2211.09383), an unmarked block under marked names (2509.13723), a label no name shows
 /// (2203.05882), no queued author (1909.01754), an address no rule places (2102.09114, 2407.20176, 1802.09371).
 fn address_block_calls(block: &Tokens) -> Result<Option<Vec<Token>>> {
-  let names = queued_position_names()?;
-  if names.is_empty() {
+  if queued_position_names()?.is_empty() {
     return Ok(None);
   }
   // (a name's mark is a label: a footnote symbol, `\sthanks`'s ∗, labels no line)
@@ -585,27 +584,20 @@ fn address_block_calls(block: &Tokens) -> Result<Option<Vec<Token>>> {
   } else {
     return Ok(None);
   };
-  let (prefix, body) = unwrapped(strip_linebreak_options(block.clone()).unlist());
+  let (_, body) = unwrapped(strip_linebreak_options(block.clone()).unlist());
   let body = wrapped_lines_as_lines(&Tokens::new(body.clone())).map_or(body, Tokens::unlist);
-  let lines = date_lines(&body);
-  let keys: Vec<NameKeys> = names
-    .iter()
-    .map(|name| printed_name_keys(name, None))
-    .collect::<Result<_>>()?;
-  let mut kept: Vec<Token> = prefix;
-  let mut emails: Vec<Token> = Vec::new();
   let mut in_run = false;
-  let mut kept_lines = 0usize;
-  for (delimiter, line) in lines {
+  for (_, line) in date_lines(&body) {
     match line_kind(&line, &[])? {
-      Line::Addresses(label, addresses) => {
-        if listed_address_owners(&addresses, &keys).contains(&None) {
-          return Ok(None);
-        }
-        emails.extend(address_calls(label.as_ref(), &addresses, &keys)?);
-        in_run = false;
-        continue;
-      },
+      // (an e-mail line keeps the note whole: placed by `listed_address_owners`, 1802.09371's `aline.roumy@` under the
+      // names "Aline", "Roumy" landed on a nameless creator; row R)
+      Line::Addresses(..) => return Ok(None),
+      // (a number the line opens with, typed and no mark, continues a labelled line: a street number, 1707.04373's
+      // "453 F. Paul Anderson Tower")
+      Line::Kept(_)
+        if in_run
+          && !line.iter().any(is_author_mark)
+          && leading_line_label(&Tokens::new(line.clone())).is_some() => {},
       Line::Kept(_) => return Ok(None),
       Line::Labelled(..) if labelled => in_run = true,
       Line::Labelled(..) => return Ok(None),
@@ -613,30 +605,15 @@ fn address_block_calls(block: &Tokens) -> Result<Option<Vec<Token>>> {
       Line::Text(_) | Line::Date if !labelled || in_run => {},
       Line::Text(_) | Line::Date => return Ok(None),
     }
-    if kept_lines > 0 {
-      kept.extend(delimiter);
-    }
-    kept.extend(line);
-    kept_lines += 1;
   }
   let mut calls = if labelled {
     vec![T_CS!("\\lx@add@affiliations")]
   } else {
     mouth::tokenize_internal("\\lx@add@affiliation[annotate=all]").unlist()
   };
-  if emails.is_empty() {
-    // (the block untouched where no address line is cut out of it)
-    calls.push(T_BEGIN!());
-    calls.extend(block.unlist_ref().iter().copied());
-    calls.push(T_END!());
-  } else if prints_nothing(&Tokens::new(kept.clone())) {
-    calls.clear();
-  } else {
-    calls.push(T_BEGIN!());
-    calls.extend(kept);
-    calls.push(T_END!());
-  }
-  calls.extend(emails);
+  calls.push(T_BEGIN!());
+  calls.extend(block.unlist_ref().iter().copied());
+  calls.push(T_END!());
   Ok(Some(calls))
 }
 

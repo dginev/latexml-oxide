@@ -20639,8 +20639,8 @@ INTERSPEECH2021-2023.sty load it) is `\lx@address@block`: queued as its `ltx:not
 author, a block holding no mark (`^`, `\textsuperscript`) under names showing no label mark is
 `\lx@add@affiliation[annotate=all]`, every author's; a block led by a label whose every line is led by a label a
 queued name shows, or continues such a line, is `\lx@add@affiliations`, each `$^n$` line the affiliation of the names
-showing mark n; a line of e-mail addresses in either is cut out and placed by `listed_address_owners`, every address
-needing an owner. Anything else keeps the note whole, with `Info:frontmatter:address`: trailing marks (2407.15458,
+showing mark n (a line opening with a typed number, no mark, continues a labelled line: 1707.04373's street number);
+no line of e-mail addresses in either. Anything else keeps the note whole, with `Info:frontmatter:address`: trailing marks (2407.15458,
 2401.06806, 2211.09383), an unmarked block under marked names (2509.13723), a label no name shows (2203.05882), no
 queued author (1909.01754, names in a raw `\def\@name`), an address no rule places (2102.09114, 2407.20176,
 1802.09371). (2) Interspeech.cls's `\email` line, read after every author is
@@ -20653,7 +20653,8 @@ Not done (row R): spconf's `\email` stays its note — its authors (`\name` → 
 `\maketitle` (`\lx@author@tail`), after it, and no binding hook runs between the queue and the flush. Interspeech.cls's
 `\address` keeps its own `leads_with_label` choice: read by `address_block_calls` at its `\lx@is@decide`, its key-marked
 names (`\name[affiliation=1]{…}{…}`, 2406.11727) request labels the line reader does not see, so the marked block would
-stay whole. Under `\nameplus` (1309.1501) a `<sup>` mark stays in two affiliations (the cause is not established).
+stay whole. An e-mail line in the block keeps the note whole: `listed_address_owners` placed 1802.09371's `aline.roumy@`
+under the names "Aline", "Roumy" on a nameless creator. Under `\nameplus` (1309.1501) a `<sup>` mark stays in two affiliations (the cause is not established).
 **Witnesses.** 2405.13379, 1309.1501 (`\nameplus`); 2603.01467, 2401.07506, 2406.11727 (Interspeech.cls e-mails).
 **Guards.** `cluster_package_guards::perfect_kernel_batchspconf::*` (repros
 `package-bindings/spconf_marked_address_lines_under_the_names`, `spconf_unmarked_address_is_every_authors`,
