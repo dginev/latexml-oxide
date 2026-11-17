@@ -1,0 +1,19 @@
+% mechanism: the kernel's read of the title marks of the `\maketitle` that runs (`latex_constructs::kernel_title_marks`,
+%   revMTREDUCEd B2): `\renewcommand\thefootnote{\mysym}`, `\newcommand\mysym{*}`: the kernel reads the `\fnsymbol` lines alone, a fixed-glyph macro staying a binding's
+% witness:  revMTREDUCEd probe c1
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able* Bob Baker* Cy Cole∗"; foot "* Univ A." "* Univ B."
+% engines:  rust MTREDUCEd = Ann ∗, Bob † (the fnsymbol sequence: the rehearsal bound the class hook, read before the kernel's read); INTFMfinal = no glyph
+% expect:   0 errors, 0 Warnings; no glyph, each note under its name, the typed mark linking nothing
+% status:   RED (MTREDUCEd) -> GREEN (MTREDUCEE: perfect_kernel_batchmtreduce::kernel_read_marks_are_what_holds_where_the_names_print)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\newcommand\mysym{*}
+\renewcommand\maketitle{\par\begingroup\renewcommand\thefootnote{\mysym}\@maketitle\@thanks\endgroup\setcounter{footnote}{0}}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{Univ A.} \and Bob Baker\thanks{Univ B.} \and Cy Cole$^{*}$}
+\begin{document}
+\maketitle
+Body text.
+\end{document}
