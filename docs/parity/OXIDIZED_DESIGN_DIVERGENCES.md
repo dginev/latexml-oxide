@@ -20634,22 +20634,31 @@ construction only). **Guards**: `cluster_package_guards::perfect_kernel_batchiee
 article's `\maketitle` prints neither.
 **Rust.** DG 2026-11-17: affiliations and addresses show under the author's name, as spconf.sty:165,
 INTERSPEECH2021.sty:162-164 and Interspeech2024.cls:265 print them. (1) spconf's `\address` (spconf_sty.rs;
-INTERSPEECH2021-2023.sty load it) reads as Interspeech.cls's (interspeech_cls.rs): a block led by a label is
-`\lx@add@affiliations`, each `$^n$` line the affiliation of the names showing mark n; an unmarked block
-`\lx@add@affiliation[annotate=all]`, every author's. (2) Interspeech.cls's `\email` line, read after every author is
+INTERSPEECH2021-2023.sty load it) is `\lx@address@block`: queued as its `ltx:note[role=address]` and read at
+`\maketitle` (`\lx@date@legend`, the names queued; `date_legend::address_block_calls`), all or nothing: with a queued
+author, a block holding no mark (`^`, `\textsuperscript`) under names showing no label mark is
+`\lx@add@affiliation[annotate=all]`, every author's; a block led by a label whose every line is led by a label a
+queued name shows, or continues such a line, is `\lx@add@affiliations`, each `$^n$` line the affiliation of the names
+showing mark n; a line of e-mail addresses in either is cut out and placed by `listed_address_owners`, every address
+needing an owner. Anything else keeps the note whole, with `Info:frontmatter:address`: trailing marks (2407.15458,
+2401.06806, 2211.09383), an unmarked block under marked names (2509.13723), a label no name shows (2203.05882), no
+queued author (1909.01754, names in a raw `\def\@name`), an address no rule places (2102.09114, 2407.20176,
+1802.09371). (2) Interspeech.cls's `\email` line, read after every author is
 added (`\lx@is@frontmatter@add`), is `\lx@email@line@owned{\lx@is@email@note}{line}` (author_macros.rs;
 `date_legend::listed_email_calls`): the addresses `email_addresses` reads, each its owner's by #1071's
 `listed_address_owners` (the author it spells, else the n-th author's in a list of one per author) as
 `\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=email,label={author:N}]`; a line with an address no rule
 places, or no plain address list, stays the `ltx:note[role=email]`, whole.
 Not done (row R): spconf's `\email` stays its note — its authors (`\name` → `\author`) are queued only inside
-`\maketitle` (`\lx@author@tail`), after it, and no binding hook runs between the queue and the flush. A marked address
-line no name shows (2203.05882's `$^{23}$`) or an address in the block no rule places (2102.09114's `ngyuzh@`,
-2407.20176's `jih150@`) lands on a nameless author-block creator, as under Interspeech.cls's `\address`. A mark carried
-by two lines (1309.1501's `$^1$` IBM line and `$^1$` e-mail line) keeps its `<sup>` in the affiliation.
+`\maketitle` (`\lx@author@tail`), after it, and no binding hook runs between the queue and the flush. Interspeech.cls's
+`\address` keeps its own `leads_with_label` choice: read by `address_block_calls` at its `\lx@is@decide`, its key-marked
+names (`\name[affiliation=1]{…}{…}`, 2406.11727) request labels the line reader does not see, so the marked block would
+stay whole. Under `\nameplus` (1309.1501) a `<sup>` mark stays in two affiliations (the cause is not established).
 **Witnesses.** 2405.13379, 1309.1501 (`\nameplus`); 2603.01467, 2401.07506, 2406.11727 (Interspeech.cls e-mails).
 **Guards.** `cluster_package_guards::perfect_kernel_batchspconf::*` (repros
 `package-bindings/spconf_marked_address_lines_under_the_names`, `spconf_unmarked_address_is_every_authors`,
+`spconf_trailing_marks_keep_the_address_note`, `spconf_unshown_label_keeps_the_address_note`,
+`spconf_address_email_line_by_place`,
 `sectioning-frontmatter/interspeech_email_line_to_its_authors`, `interspeech_email_line_not_wholly_placed_stays_the_note`);
 repinned to the new output: `perfect_kernel_batchfmmarks`'s row `presbx_spconf_empty_thefootnote_prints_no_mark` and
 `perfect_kernel_batchwrongfix::a_symbol_no_name_prints_stays_the_notes_text` (the unmarked `\address` every author's

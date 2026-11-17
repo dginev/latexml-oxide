@@ -1,7 +1,8 @@
 //! Guards for batch SPCONF (OXIDIZED_DESIGN_DIVERGENCES #1073): spconf's and the INTERSPEECH20xx styles' `\address`,
 //! printed under the names (spconf.sty:165, INTERSPEECH2021.sty:162-164), is the authors' affiliations, read as
 //! Interspeech.cls's: each `$^n$` line the affiliation of the names showing mark n, an unmarked block every author's
-//! (2405.13379). The `\email` line stays its note (row R).
+//! (2405.13379). spconf's `\email` line stays its note (row R); a block not wholly placed stays the address note
+//! (`address_block_calls`).
 use latexml::util::test::assert_element;
 
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
@@ -138,5 +139,52 @@ fn interspeech_email_line_not_wholly_placed_stays_the_note() {
     "note",
     &[],
     "<note role=\"email\" xml:id=\"id1\">info@lab.org, cy@dee.org</note>",
+  );
+}
+
+/// The address note of `tex`, whole, with no affiliation or e-mail contact and no nameless creator (the fail-safe of
+/// `address_block_calls`).
+fn assert_address_note_whole(tex: &str, note: &str) {
+  let xml = convert_clean(tex);
+  assert_element(&xml, "note", &["role=\"address\""], note);
+  assert_eq!(xml.matches("role=\"affiliation\"").count(), 0, "{xml}");
+  assert_eq!(xml.matches("role=\"email\"").count(), 0, "{xml}");
+  assert_eq!(
+    xml.matches("<creator role=\"author\"><contact").count(),
+    0,
+    "{xml}"
+  );
+}
+
+/// Trailing marks under marked names place no line: the note whole (SPCONF round 1: the block every author's, marks
+/// and all). 2407.15458, 2401.06806, 2211.09383, 2509.13723.
+#[test]
+fn spconf_trailing_marks_keep_the_address_note() {
+  assert_address_note_whole(
+    repro!("spconf_trailing_marks_keep_the_address_note"),
+    "<note role=\"address\" xml:id=\"id4\">Univ A<sup xml:id=\"id4.1\">1</sup>, Univ B<sup \
+     xml:id=\"id4.2\">2</sup>, Univ C<sup xml:id=\"id4.3\">3</sup></note>",
+  );
+}
+
+/// A label no queued name shows: the note whole (SPCONF round 1: "Univ B" on a nameless creator). 2203.05882,
+/// 1909.01754.
+#[test]
+fn spconf_unshown_label_keeps_the_address_note() {
+  assert_address_note_whole(
+    repro!("spconf_unshown_label_keeps_the_address_note"),
+    "<note role=\"address\" xml:id=\"id4\"><sup xml:id=\"id4.1\">1</sup>Univ A<break/><sup \
+     xml:id=\"id4.2\"><text font=\"italic\" xml:id=\"id4.2.1\">23</text></sup>Univ B</note>",
+  );
+}
+
+/// An e-mail line in the block that is not placed: the note whole, no nameless creator. 2407.20176, 2102.09114,
+/// 1802.09371.
+#[test]
+fn spconf_unplaced_address_email_keeps_the_address_note() {
+  assert_address_note_whole(
+    repro!("spconf_address_email_line_by_place"),
+    "<note role=\"address\" xml:id=\"id3\"><sup xml:id=\"id3.1\">1</sup>Univ A<break/><sup \
+     xml:id=\"id3.2\">2</sup>Univ B<break/>xq1@a.org, zz7@b.org</note>",
   );
 }

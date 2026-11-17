@@ -39,19 +39,13 @@ LoadDefinitions!({
   // copy read after this binding.
   declare_package_title_marks("", BoundMaketitle::Copy(next_copy_provides_id()))?;
   // `\address{affils}` — the affiliation block spconf.sty:165 and INTERSPEECH2021.sty:162-164 print under the names:
-  // read as Interspeech.cls's (`interspeech_cls.rs`), each `$^n$` line the affiliation of the names showing mark n
-  // (`\lx@add@affiliations`), an unmarked block every author's (2405.13379, OD #1073).
-  DefMacro!("\\address{}", sub[(block)] {
-    let mut entry = if leads_with_label(&block, "spconf address")? {
-      vec![T_CS!("\\lx@add@affiliations")]
-    } else {
-      TokenizeInternal!("\\lx@add@affiliation[annotate=all]").unlist()
-    };
-    entry.push(T_BEGIN!());
-    entry.extend(block.unlist());
-    entry.push(T_END!());
-    Ok(Tokens::new(entry))
-  });
+  // queued as its note and read at `\maketitle` (`\lx@address@block`), as Interspeech.cls's: each `$^n$` line the
+  // affiliation of the names showing mark n, an unmarked block under unmarked names every author's (2405.13379); a
+  // line no rule places keeps the note whole (2407.15458, 2203.05882, 1909.01754; OD #1073).
+  DefMacro!(
+    "\\address{}",
+    "\\lx@address@block{\\lx@add@frontmatter{ltx:note}[role=address]}{#1}"
+  );
   // `\email{…}` stays the e-mail note: its authors are queued only as `\maketitle` runs, after it, so the e-mail line's
   // owner rule (`\lx@email@line@owned`, Interspeech.cls's) has no names to read here (OD #1073, row R).
   DefMacro!(
