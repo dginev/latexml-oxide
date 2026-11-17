@@ -558,21 +558,24 @@ fn a_mark_beside_spacing_is_the_nearer_names() {
   };
   for (tex, expected) in [
     (
-      repro!("ne2f_mark_nearer_next_past_qquad"),
+      repro!("ne2f_mark_past_qquad_is_the_name_befores"),
       three(&["†"], &[], &[]),
     ),
     (
-      repro!("ne2f_mark_nearer_next_past_ties"),
+      repro!("ne2f_mark_past_ties_is_the_name_befores"),
       three(&["†"], &[], &[]),
     ),
     (
-      repro!("ne2f_mark_nearer_next_past_quads"),
+      repro!("ne2f_mark_past_quads_is_the_name_befores"),
       three(&["†"], &[], &[]),
     ),
-    (repro!("ne2f_bare_mark_nearer_next_past_quads"), vec![
-      row(&["Ann Able", "footnotemark[†]=", "thanks[*]=X"]),
-      row(&["Bob Baker", "footnotemark[‡]="]),
-    ]),
+    (
+      repro!("ne2f_bare_mark_past_quads_is_the_name_befores"),
+      vec![
+        row(&["Ann Able", "footnotemark[†]=", "thanks[*]=X"]),
+        row(&["Bob Baker", "footnotemark[‡]="]),
+      ],
+    ),
     (
       repro!("ne2f_marks_wider_after_and_tied"),
       three(&["*", "†"], &["‡"], &[]),
@@ -635,11 +638,14 @@ fn a_mark_beside_spacing_is_the_nearer_names() {
 #[test]
 fn a_note_beside_spacing_goes_to_the_nearer_name() {
   for (tex, expected) in [
-    (repro!("ne2f_mark_and_note_nearer_next"), vec![
-      row(&["Ann Able", "footnotemark[†]=", "thanks[*]=X", "thanks[‡]=Y"]),
-      row(&["Bob Baker"]),
-      row(&["Carl Cole"]),
-    ]),
+    (
+      repro!("ne2f_mark_and_note_past_qquad_are_the_name_befores"),
+      vec![
+        row(&["Ann Able", "footnotemark[†]=", "thanks[*]=X", "thanks[‡]=Y"]),
+        row(&["Bob Baker"]),
+        row(&["Carl Cole"]),
+      ],
+    ),
     (repro!("fmmarks_gap_mark_then_thanks_red"), vec![
       row(&["Ann Able", "footnotemark[†]=", "thanks[*]=Ann note"]),
       row(&["Bob Baker"]),

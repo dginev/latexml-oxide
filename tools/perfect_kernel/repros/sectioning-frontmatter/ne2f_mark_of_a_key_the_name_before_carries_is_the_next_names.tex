@@ -1,0 +1,13 @@
+% mechanism: a mark between two names whose key (the footnote number) the name before carries already is not that
+%   name's again — a name printing one key twice contradicts itself — but the next name's (`resolver::mark_ledger`,
+%   DG 2026-11-17 S3)
+% witness: revWRONGFIXb S3 (synthetic)
+% oracle:  pdflatex 0 errors: "Ann Able† †Bob Baker"; footnote "2 Two."
+% engines: rust REGFIX: one † on each name (1 Warning); WRONGFIXc b842de7fc4c: both † on Ann, two copies of Two.
+% expect:  0 errors 0 Warnings; Ann Able footnote[†]=Two.; Bob Baker footnote[†]=Two.
+% status:  RED (b842de7fc4c) -> GREEN (perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able\footnotemark[2] \quad \footnotemark[2]Bob Baker}
+\begin{document}\maketitle \footnotetext[2]{Two.} Body.\end{document}

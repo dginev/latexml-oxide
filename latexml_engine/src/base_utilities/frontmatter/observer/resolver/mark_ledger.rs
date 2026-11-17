@@ -1,7 +1,7 @@
 //! The mark ledger: the name each `\footnotemark` or note printed beside spacing goes to — the name before it, at a line's
-//! or cell's start the name after, between two names the name after where the block's edge proof holds (DG 2026-11-17)
-//! —, read once per block for the reading and the writer (OXIDIZED_DESIGN_DIVERGENCES #1057; 2412.20504, 1911.13299,
-//! 1807.02791, 1703.08733, 1111.1979).
+//! or cell's start the name after, between two names the name after where the block's edge proof holds or the name before
+//! carries its key already (DG 2026-11-17) —, read once per block for the reading and the writer
+//! (OXIDIZED_DESIGN_DIVERGENCES #1057; 2412.20504, 1911.13299, 1807.02791, 1703.08733, 1111.1979).
 
 use super::*;
 
@@ -14,21 +14,27 @@ pub(in crate::base_utilities::frontmatter::observer) enum Side {
   After,
 }
 
-/// The glue on one side of a mark out to a name's ink: its natural width (em of the box's font) and whether a fill
-/// stretches it.
+/// The glue on one side of a mark out to a name's ink: its natural width (em of the box's font), whether a fill
+/// stretches it, and whether there is any (a Gap or an interword space, whatever its width).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(in crate::base_utilities::frontmatter::observer) struct Reach {
   pub width: f64,
   pub fill:  bool,
+  pub space: bool,
 }
 
 impl Reach {
-  const NONE: Reach = Reach { width: 0.0, fill: false };
+  const NONE: Reach = Reach {
+    width: 0.0,
+    fill:  false,
+    space: false,
+  };
 
   fn widest(self, other: Reach) -> Reach {
     Reach {
       width: self.width.max(other.width),
       fill:  self.fill || other.fill,
+      space: self.space || other.space,
     }
   }
 }
@@ -46,6 +52,17 @@ pub(in crate::base_utilities::frontmatter::observer) struct MarkRecord {
   pub after:  Option<(usize, Reach)>,
   /// `None`: undecided
   pub side:   Option<Side>,
+}
+
+impl MarkRecord {
+  /// Whether its decided side gives it to the Name event at `name`.
+  fn goes_to(&self, name: usize) -> bool {
+    match self.side {
+      Some(Side::Before) => self.before.is_some_and(|(at, _)| at == name),
+      Some(Side::After) => self.after.is_some_and(|(at, _)| at == name),
+      None => false,
+    }
+  }
 }
 
 /// The ledger of a block's marks and notes set beside spacing ([`mark_ledger`]).
@@ -140,6 +157,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
   // (a single interword space no Gap event holds, the lexer's `space_before`/`space_after`: its width, `\fontdimen2`
   // of cmr10, 1/3 em)
   let hidden = |glue: &mut Reach, gap_seen: bool, space: bool| {
+    glue.space |= space;
     if !gap_seen && space {
       glue.width += 1.0 / 3.0;
     }
@@ -149,6 +167,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
       EventKind::Sep(SepKind::Gap { width, fill, .. }) => {
         glue.width += width;
         glue.fill |= fill;
+        glue.space = true;
         gap_seen = true;
       },
       // (an alignment's cell opens as `&` does: `\begin{tabular}{cc}Ann Able & \footnotemark[2]Bob Baker`)
@@ -265,30 +284,68 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
     &glues,
   );
   // (the edge proof: the block's first piece before its first name and none after its last, every piece between two
-  // names is the name's after — 2406.12338, math0606768, 1511.05393, 0906.1223; both edges, the default, counted)
-  let names: Vec<usize> = (0..events.len())
-    .filter(|&k| events[k].kind == EventKind::Name && !norm(&events[k].text).is_empty())
-    .collect();
-  let pieces: Vec<usize> = (0..events.len()).filter(|&k| movable(&events[k])).collect();
-  if let (Some(&first_name), Some(&last_name), Some(&first), Some(&last)) =
-    (names.first(), names.last(), pieces.first(), pieces.last())
-    && first < first_name
-    && !between.is_empty()
-  {
-    if last < last_name {
-      for &at in &between {
-        ledger.records[at].side = Some(Side::After);
+  // names is the name's after — 2406.12338, math0606768; both edges, the default, counted: 1511.05393, 0906.1223. DG
+  // 2026-11-17: the first piece sits in the stretch of the first name of the names' line, not before a line above it,
+  // maybe an affiliation's (S2); a piece glued to the name before it, no space between, proves the other side (S1))
+  let is_name = |k: usize| events[k].kind == EventKind::Name && !norm(&events[k].text).is_empty();
+  let last_name = (0..events.len()).rev().find(|&k| is_name(k));
+  let last_piece = (0..events.len()).rev().find(|&k| movable(&events[k]));
+  if let Some(&first_between) = between.first() {
+    let at = ledger.records[first_between].at;
+    let line = events[..at]
+      .iter()
+      .rposition(|e| e.kind == EventKind::Break)
+      .map_or(0, |k| k + 1);
+    let line_name = (line..events.len()).find(|&k| is_name(k));
+    if ledger.records[0].after.map(|(name, _)| name) == line_name {
+      let glued = ledger
+        .records
+        .iter()
+        .any(|r| r.before.is_some_and(|(_, reach)| !reach.space));
+      if last_piece < last_name && !glued {
+        for &at in &between {
+          ledger.records[at].side = Some(Side::After);
+        }
+      } else {
+        Info!(
+          "frontmatter",
+          "mark_convention",
+          s!(
+            "An author block sets notes both before its names and after them: {} between two names given the name \
+             before",
+            between.len()
+          )
+        );
       }
-    } else {
-      Info!(
-        "frontmatter",
-        "mark_convention",
-        s!(
-          "An author block sets notes both before its first name and after its last: {} between two names given the \
-           name before",
-          between.len()
-        )
-      );
+    }
+  }
+  // (DG 2026-11-17 S3: a piece between two names whose key, its footnote number, the name before carries already is the
+  // next name's, with the pieces after it on its stretch — a name printing one key twice contradicts itself: `Ann
+  // Able\footnotemark[2] \quad \footnotemark[2]Bob Baker`, "Ann Able† †Bob Baker". One glued to the piece of its key
+  // prints over it, once: `\footnotemark[1]\thanks{…}`, 2103.01544)
+  let apart = |from: usize, to: usize| {
+    events[from].space_after
+      || events[to].space_before
+      || events[from + 1..to]
+        .iter()
+        .any(|e| matches!(e.kind, EventKind::Sep(_)) || e.space_before || e.space_after)
+  };
+  for &i in &between {
+    let r = &ledger.records[i];
+    let (Some(Side::Before), Some((name, _)), Some(key)) = (r.side, r.before, events[r.at].number)
+    else {
+      continue;
+    };
+    let carried = ledger.records[..i]
+      .iter()
+      .rfind(|o| o.goes_to(name) && events[o.at].number == Some(key));
+    if carried.is_some_and(|o| apart(o.at, r.at)) {
+      let next = r.after.map(|(at, _)| at);
+      for o in &mut ledger.records[i..] {
+        if o.before.map(|(at, _)| at) == Some(name) && o.after.map(|(at, _)| at) == next {
+          o.side = Some(Side::After);
+        }
+      }
     }
   }
   // (the block's decided sides beside its undecided marks: what a block's convention would decide, measured — MARKKEY K8)
@@ -588,6 +645,8 @@ mod tests {
       bob.clone(),
     ];
     assert_eq!(sides(&prefix), [Some(After), Some(After)]);
+    // (re-pinned, DG 2026-11-17 S1: a note glued to the name before it, its comma's or its own, is the after-the-name
+    // convention's evidence — the block mixes the two, the default; After, After before)
     let glued = [
       note(false, false),
       ann.clone(),
@@ -595,7 +654,17 @@ mod tests {
       note(false, false),
       bob.clone(),
     ];
-    assert_eq!(sides(&glued), [Some(After), Some(After)]);
+    assert_eq!(sides(&glued), [Some(After), Some(Before)]);
+    let carl = name("Carl Cole");
+    let suffixes = [
+      note(false, true),
+      ann.clone(),
+      note(false, true),
+      bob.clone(),
+      note(false, true),
+      carl.clone(),
+    ];
+    assert_eq!(sides(&suffixes), [Some(After), Some(Before), Some(Before)]);
     // (an affiliation line after the names, its own start: the proof holds)
     let mut lines = prefix.to_vec();
     lines.push(Event::new(EventKind::Break));
@@ -611,5 +680,72 @@ mod tests {
     affil.push(Event::new(EventKind::Break));
     affil.extend([mark(), name("University of Somewhere")]);
     assert_eq!(sides(&affil), [None, Some(After)]);
+    // (DG 2026-11-17 S2: the first piece sits in the stretch of the first name of the names' line, not before a line
+    // above it, maybe an affiliation's — `\footnotemark[1]University of X\\ Ann Able \thanks{…} Bob Baker`)
+    let mut above = vec![mark(), name("University of X")];
+    above.push(Event::new(EventKind::Break));
+    above.extend([ann.clone(), note(true, true), bob.clone()]);
+    assert_eq!(sides(&above), [Some(After), Some(Before)]);
+    // (the names' line its own start's: the proof holds — `University of X\\ \thanks{A}Ann, \thanks{B}Bob`)
+    let mut below = vec![name("University of X"), Event::new(EventKind::Break)];
+    below.extend(prefix.iter().cloned());
+    assert_eq!(sides(&below), [Some(After), Some(After)]);
+  }
+
+  /// A piece between two names whose key, the footnote number, the name before carries already is not that name's again
+  /// — a name printing one key twice contradicts itself — but the next name's, with the pieces after it on the stretch
+  /// (DG 2026-11-17 S3: `Ann Able\footnotemark[2] \quad \footnotemark[2]Bob Baker`, "Ann Able† †Bob Baker"). Another
+  /// key stays the name before's (`Ann Able\thanks{…} \quad Bob Baker\footnotemark[1]`, the mark Bob's own).
+  #[test]
+  fn a_key_the_name_before_carries_goes_to_the_next_name() {
+    use Side::*;
+    let (ann, bob) = (name("Ann Able"), name("Bob Baker"));
+    let keyed = |number: i64, space_before: bool| {
+      let mut e = mark();
+      (e.number, e.space_before) = (Some(number), space_before);
+      e
+    };
+    let repeat = [
+      ann.clone(),
+      keyed(2, false),
+      gap(1.333, false),
+      keyed(2, true),
+      bob.clone(),
+    ];
+    assert_eq!(sides(&repeat), [Some(Before), Some(After)]);
+    let then = [
+      ann.clone(),
+      keyed(2, false),
+      gap(1.333, false),
+      keyed(2, true),
+      keyed(3, false),
+      bob.clone(),
+    ];
+    assert_eq!(sides(&then), [Some(Before), Some(After), Some(After)]);
+    let other = [
+      ann.clone(),
+      keyed(1, false),
+      gap(1.333, false),
+      keyed(2, true),
+      bob.clone(),
+    ];
+    assert_eq!(sides(&other), [Some(Before), Some(Before)]);
+    // (glued to the piece before it, the repeat prints over it, once: `\footnotemark[1]\thanks{…}`, 2103.01544)
+    let over = [
+      ann.clone(),
+      keyed(1, false),
+      keyed(1, false),
+      gap(1.333, false),
+      bob.clone(),
+    ];
+    assert_eq!(sides(&over), [Some(Before), Some(Before)]);
+    let spaced_over = [
+      ann.clone(),
+      keyed(1, true),
+      keyed(1, false),
+      gap(1.333, false),
+      bob.clone(),
+    ];
+    assert_eq!(sides(&spaced_over), [Some(Before), Some(Before)]);
   }
 }

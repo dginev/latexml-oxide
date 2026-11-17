@@ -1,0 +1,13 @@
+% mechanism: the edge proof's first piece must sit in the stretch of the first name of the names' line: a mark opening
+%   a line above it, maybe an affiliation's, proves nothing for the notes between the names (DG 2026-11-17 S2; the
+%   symmetric of wrongfix_affiliation_line_mark_proves_no_left_side)
+% witness: revWRONGFIXb S2 (synthetic)
+% oracle:  pdflatex 0 errors: "∗University of X / Ann Able ∗Bob Baker"; footnote "∗ ann@a.org"
+% engines: rust REGFIX: as expected; WRONGFIXc b842de7fc4c: ann@ and University of X given Bob
+% expect:  0 errors 0 Warnings; Ann Able thanks=ann@a.org, affiliation University of X; Bob Baker
+% status:  RED (b842de7fc4c) -> GREEN (perfect_kernel_batchwrongfix::a_note_before_a_name_is_that_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{\footnotemark[1]University of X\\ Ann Able \thanks{ann@a.org} Bob Baker}
+\begin{document}\maketitle Body.\end{document}
