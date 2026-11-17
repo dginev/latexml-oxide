@@ -56,8 +56,28 @@ LoadDefinitions!({
   // (elsarticle prints the argument as written, so a name list in one `\author{Ann Able, Bob Baker}` is several people:
   // read as the per-author classes read theirs, each name given the marks; Perl's elsart_support_core.sty.ltxml:35-36
   // makes one creator. 2511.07560, 2401.02456)
+  // (the keys an author lists and the `\corref`/`\cormark` keys its name holds, recorded for elsarticle's `\cortext` mark,
+  // which depends on the route its names reach it by: `\lx@els@cormark`, 2512.04868)
   DefMacro!("\\author OptionalSemiverbatim {}",
-    "\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@add@authors@append[annotations={#1}]{#2}");
+    "\\lx@els@record@author{#1}{#2}\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@add@authors@append[annotations={#1}]{#2}");
+  // (and the keys an `\address`/`\affiliation` labels: a key a note's text shares prints whichever `\elsLabel` wrote
+  // it last, elsarticle.cls:126-131 — 1711.08299's `\cortext[a]` beside `\address[a]`, its names printing "a")
+  DefPrimitive!("\\lx@els@record@place{}", sub[(key)] {
+    record_els_keys(ELS_PLACE_KEYS, std::iter::once(key.to_string().as_str()));
+  });
+  DefPrimitive!("\\lx@els@record@author{}{}", sub[(keys, name)] {
+    let keys = keys.to_string();
+    record_els_keys(ELS_AUTHOR_KEYS, keys.split(','));
+    let tokens = name.unlist_ref();
+    record_els_keys(ELS_CORREF_KEYS, keys_in(tokens, &T_CS!("\\corref"), &T_CS!("\\cormark")).iter().map(String::as_str));
+    // (each author's keys, the `\fnref`s of its name among them: the marks it prints side by side)
+    let mut carried: Vec<String> = keys.split(',').map(|k| k.trim().to_string()).collect();
+    carried.extend(keys_in(tokens, &T_CS!("\\fnref"), &T_CS!("\\fnmark")));
+    let mut carriers = lookup_string(ELS_CARRIERS);
+    carriers.push_str(&carried.join(","));
+    carriers.push(';');
+    assign_value(ELS_CARRIERS, Stored::String(pin(&carriers)), Scope::Global);
+  });
 
   // (elsarticle puts an `\address` into the author list after the authors before it, elsarticle.cls:665-668, and an
   // `\affiliation` into the address list after all of them, :647-653; with no labels to link them, an unlabelled one is
@@ -67,10 +87,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@els@shared",
     "\\ifdefined\\lx@els@labelled\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi");
   DefMacro!("\\address OptionalSemiverbatim {}",
-    "\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}{\\lx@add@contact[label={#1},role=address,annotate=run]}{#2}");
+    "\\lx@els@record@place{#1}\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}{\\lx@add@contact[label={#1},role=address,annotate=run]}{#2}");
   // \affiliation[label]{text-OR-keyvals} !!  (Perl PR #2767)
   DefMacro!("\\affiliation OptionalSemiverbatim {}",
-    "\\lx@els@shared{\\lx@add@contact[label={#1},role=affiliation]}\
+    "\\lx@els@record@place{#1}\\lx@els@shared{\\lx@add@contact[label={#1},role=affiliation]}\
      {\\lx@add@contact[label={#1},role=affiliation,annotate=run]}{\\lx@els@parse@affiliation{#2}}");
 
   // The affiliation as the class prints it from its `stm/affiliation` keys ([`stm_affiliation`]).
@@ -92,7 +112,11 @@ LoadDefinitions!({
   // The \<XXX>ref forms are used within the \author text to anchor the connection
   // the \<XXX>text forms supply the text (& and role) for the contact that will be attached.
   DefMacro!("\\thanksref{}",  "\\lx@request@frontmatter@annotation[thanks]{#1}");
-  DefMacro!("\\corref{}",     "\\lx@request@frontmatter@annotation[cor]{#1}");
+  // (a `\corref` outside an `\author`'s name recorded where it is read, one inside it by `\lx@els@record@author`)
+  DefMacro!("\\corref{}",     "\\lx@els@record@corref{#1}\\lx@request@frontmatter@annotation[cor]{#1}");
+  DefPrimitive!("\\lx@els@record@corref{}", sub[(key)] {
+    record_els_keys(ELS_CORREF_KEYS, std::iter::once(key.to_string().as_str()));
+  });
   DefMacro!("\\corauthref{}", "\\lx@request@frontmatter@annotation[corauth]{#1}");
   DefMacro!("\\fnref{}",      "\\lx@request@frontmatter@annotation[fn]{#1}");
   DefMacro!("\\tnoteref{}",   "\\lx@request@frontmatter@annotation[tnote]{#1}"); // Possibly for title, not author?
@@ -549,4 +573,93 @@ pub fn define_keyword_markup() -> Result<()> {
   DefMacro!("\\@JEL XUntil:\\@keyword@cut", "\\lx@add@classification[scheme=JEL,name={JEL:~}]{#1}");
   DefMacro!("\\@UK XUntil:\\@keyword@cut", "\\lx@add@classification[scheme=UK,name={UK:~}]{#1}");
   Ok(())
+}
+
+/// The global value holding the keys `\author[…]` calls list (comma-separated).
+pub(crate) const ELS_AUTHOR_KEYS: &str = "@elsarticle@authorkeys";
+/// The global value holding the keys `\corref`/`\cormark` name (comma-separated).
+pub(crate) const ELS_CORREF_KEYS: &str = "@elsarticle@correfs";
+/// The global value holding the keys `\address[…]`/`\affiliation[…]` label (comma-separated).
+pub(crate) const ELS_PLACE_KEYS: &str = "@elsarticle@placekeys";
+/// The global value holding each author's keys, its `\author[…]` list and its name's `\fnref`s (each list ended by `;`).
+pub(crate) const ELS_CARRIERS: &str = "@elsarticle@carriers";
+
+/// The keys of the authors whose `\author[…]` list holds `key`, each author's in its own list.
+pub(crate) fn els_carriers(key: &str) -> Vec<Vec<String>> {
+  let key = key.trim();
+  lookup_string(ELS_CARRIERS)
+    .split(';')
+    .map(|keys| {
+      keys
+        .split(',')
+        .map(|k| k.trim().to_string())
+        .collect::<Vec<_>>()
+    })
+    .filter(|keys| keys.iter().any(|k| k == key))
+    .collect()
+}
+
+/// Add each of `keys` (trimmed, non-empty) to the comma list kept in the global value `list`.
+pub(crate) fn record_els_keys<'a>(list: &str, keys: impl Iterator<Item = &'a str>) {
+  let mut recorded = lookup_string(list);
+  for key in keys.map(str::trim).filter(|key| !key.is_empty()) {
+    if !recorded.split(',').any(|k| k == key) {
+      if !recorded.is_empty() {
+        recorded.push(',');
+      }
+      recorded.push_str(key);
+    }
+  }
+  assign_value(list, Stored::String(pin(&recorded)), Scope::Global);
+}
+
+/// Whether the comma list kept in the global value `list` holds `key`.
+pub(crate) fn recorded_els_key(list: &str, key: &str) -> bool {
+  let key = key.trim();
+  lookup_string(list).split(',').any(|k| k == key)
+}
+
+/// The keys `<braced>{<keys>}` and `<bracketed>[<keys>]` name in `tokens`, an `\author`'s argument (`\corref` and
+/// `\cormark`, `\fnref` and `\fnmark`), each comma-separated list split.
+fn keys_in(tokens: &[Token], braced: &Token, bracketed: &Token) -> Vec<String> {
+  let mut keys = Vec::new();
+  for (at, t) in tokens.iter().enumerate() {
+    let (open, close) = if t == braced {
+      (Catcode::BEGIN, Catcode::END)
+    } else if t == bracketed {
+      (Catcode::OTHER, Catcode::OTHER)
+    } else {
+      continue;
+    };
+    let mut rest = tokens[at + 1..]
+      .iter()
+      .skip_while(|t| t.get_catcode() == Catcode::SPACE);
+    if !rest
+      .next()
+      .is_some_and(|t| t.get_catcode() == open && (open == Catcode::BEGIN || t.to_string() == "["))
+    {
+      continue;
+    }
+    let mut depth = 0;
+    let key: Vec<Token> = rest
+      .take_while(|t| {
+        depth += t.group_step();
+        if close == Catcode::END {
+          depth >= 0
+        } else {
+          !(depth == 0 && t.to_string() == "]")
+        }
+      })
+      .cloned()
+      .collect();
+    let key = Tokens::new(key).to_string();
+    keys.extend(
+      key
+        .split(',')
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .map(String::from),
+    );
+  }
+  keys
 }

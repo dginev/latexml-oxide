@@ -14,6 +14,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "authblk.sty",
   thenote: true,
   state_counter: Some("Maxaffil"),
+  labels_print: true,
   title_page: FmTitlePageDecl {
     author: FmAuthorPage::Block,
     ..FM_KERNEL_CONVENTIONS.title_page
@@ -358,6 +359,19 @@ pub fn define_author_and_affil() -> Result<()> {
     let mut state = vec![T_CS!("\\lx@AB@author@state"), T_BEGIN!()];
     if let Some(label) = label.as_ref() {
       note_labels(NAME_LABELS, label)?;
+      // (each piece printing one mark, by its spelling in the call, which the writer requests it by: `count_lost_labels`;
+      // not one of several words, `\author[1 2]`, which the writer reads apart, 1909.01989)
+      for (_, piece) in split_tokens_delimited(label.clone(), vec![T_OTHER!(",").into()]) {
+        let spelling = piece.to_string();
+        if spelling.trim().contains(char::is_whitespace) {
+          continue;
+        }
+        if let [mark] = printed_label_pieces(&piece)?.as_slice() {
+          let mut kept = lookup_string(NAME_LABEL_MARKS);
+          kept.push_str(&s!("{spelling}\u{2}{mark}\u{1}"));
+          assign_value(NAME_LABEL_MARKS, Stored::String(pin(&kept)), Some(Scope::Global));
+        }
+      }
       state.extend(label.unlist_ref().iter().copied());
     }
     state.push(T_END!());
@@ -458,6 +472,9 @@ pub fn define_author_and_affil() -> Result<()> {
 /// The labels of the names (`\author[1,*,\S]`'s pieces) and of the lines (`\affil[*]`'s) given so far, each piece once,
 /// `\u{1}` apart; and whether an `\affil` came unlabelled, numbered by authblk's counter (`\AB@thenote`).
 const NAME_LABELS: &str = "lx_AB_name_labels";
+/// The names' label pieces that print one mark (`§`, `\S`, `$\dagger$`, a document's macro printing one), each its
+/// spelling and the mark it prints, `\u{2}` between them and `\u{1}` after each.
+const NAME_LABEL_MARKS: &str = "lx_AB_name_label_marks";
 const LINE_LABELS: &str = "lx_AB_line_labels";
 const LINE_UNLABELLED: &str = "lx_AB_line_unlabelled";
 
@@ -489,30 +506,47 @@ fn note_labels(key: &str, label: &Tokens) -> Result<()> {
 }
 
 /// authblk prints each name's labels (`\AB@authnote`, authblk.sty:120-133) and each line's before it
-/// (`\AB@affilnote`, :142); a name's label no line prints is a mark the frontmatter places nowhere, counted (FIDELITY_CHARTER:
-/// no silent loss): 2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains ("Ann Able1,*,§"). Not where
-/// an `\affil` is unlabelled, as its number (`\AB@thenote`) may answer one; read at `\maketitle`, then cleared.
+/// (`\AB@affilnote`, :142); a name's label no line prints is declared to the writer, which shows the mark it prints on the
+/// name (`declare_unexplained_name_labels`, `Policy::labels_print`: 2606.00446's `\author[1,*,\S]`, whose `§` only the
+/// `\date` line explains, "Ann Able1,*,§"), but one no piece prints alone (`$^{1,2}$`'s, a piece printing two marks) the
+/// frontmatter places nowhere, counted (FIDELITY_CHARTER: no silent loss). Not where an `\affil` is unlabelled, as its
+/// number (`\AB@thenote`) may answer one; read at `\maketitle`, before the flush, then cleared.
 fn count_lost_labels() {
   let names = lookup_string(NAME_LABELS);
   let lines = lookup_string(LINE_LABELS);
+  let marks = lookup_string(NAME_LABEL_MARKS);
+  let mut shown: Vec<(String, String)> = Vec::new();
   if !names.is_empty() && !lookup_bool(LINE_UNLABELLED) {
-    let lost: Vec<&str> = names
+    let mut lost: Vec<&str> = Vec::new();
+    for label in names
       .split('\u{1}')
       .filter(|label| !lines.split('\u{1}').any(|line| line == *label))
-      .collect();
+    {
+      let spellings: Vec<(String, String)> = marks
+        .split('\u{1}')
+        .filter_map(|entry| entry.split_once('\u{2}'))
+        .filter(|(_, mark)| mark == &label)
+        .map(|(spelling, mark)| (spelling.to_string(), mark.to_string()))
+        .collect();
+      if spellings.is_empty() {
+        lost.push(label);
+      }
+      shown.extend(spellings);
+    }
     if !lost.is_empty() {
       Warn!(
         "frontmatter",
         "unanswered_mark_lost",
         s!(
-          "authblk prints {} label(s) of the names no \\affil explains, written on no name: {}",
+          "authblk prints {} label(s) of the names no \\affil explains that no name can show: {}",
           lost.len(),
           lost.join(", ")
         )
       );
     }
   }
-  for key in [NAME_LABELS, LINE_LABELS] {
+  declare_unexplained_name_labels(&shown);
+  for key in [NAME_LABELS, NAME_LABEL_MARKS, LINE_LABELS] {
     assign_value(key, Stored::String(pin("")), Some(Scope::Global));
   }
   assign_value(LINE_UNLABELLED, false, Some(Scope::Global));

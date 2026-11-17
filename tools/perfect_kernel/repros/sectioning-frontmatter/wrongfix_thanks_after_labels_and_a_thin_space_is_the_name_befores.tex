@@ -1,0 +1,17 @@
+% mechanism: a note between two names on a line is the name's before, whatever spaces (or `\,`) set it off — no glue
+%   width is compared (`resolver::mark_ledger`, DG 2026-11-17: notes attach on an author name's right, the next name's
+%   only at a line's or cell's start or under the block's edge proof)
+% witness: 1705.11098, 1711.04571 (`Name$^{1,2}$\,\thanks{…}⏎Next`)
+% oracle:  pdflatex 0 errors: "Ann Able1,2 ∗Bob Baker3 †" (the `\rlap`ped mark printed against Bob); footnotes "∗ ann@x.org" "† bob@x.org"
+% engines: rust 97dcff7ca34 (WRONGFIX): Ann's note given to Bob; 139d1d2fa08: each note its own name's
+% expect:  0 errors 0 Warnings; each e-mail note on its owner
+% status:  RED (97dcff7ca34) -> GREEN (perfect_kernel_batchwrongfix::a_note_between_two_names_is_the_name_befores)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$\,\thanks{ann@x.org}
+Bob Baker$^{3}$\,\thanks{bob@x.org}}
+\maketitle
+x
+\end{document}

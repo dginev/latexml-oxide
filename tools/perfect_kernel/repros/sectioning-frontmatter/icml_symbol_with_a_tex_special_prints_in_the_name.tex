@@ -1,0 +1,24 @@
+% mechanism: an `\icmlsetsymbol` glyph re-tokenized as a mark-only note must carry no TeX special: `\%` commented out the
+%   rest of the note's markup ("Fell off end expecting ]", 101 Errors, a creator lost) and `\#` reached the Stomach as a
+%   parameter; such a symbol prints in the name instead (the fail-safe, revINVDAGb B1)
+% witness:  none (~1,000 sampled `\icmlsetsymbol` uses, none with `#`/`%`); 2402.05011's icml2024 shape
+% oracle:   pdflatex 0 errors; "Ann Able % 1 Cy Dee 1", the notice "%Equal contribution …"
+% engines:  rust INVDAGb 4971ad2291b = 101 Errors, one creator; base R2Ac 0 Errors
+% expect:   0 errors; both creators; Ann's `%` printed with her name (no mark-only note)
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage[accepted]{icml2024}
+\begin{document}
+\twocolumn[
+\icmltitle{A Title}
+\icmlsetsymbol{equal}{\%}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Cy Dee}{a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+]
+\printAffiliationsAndNotice{\icmlEqualContribution}
+Body.
+\end{document}

@@ -998,6 +998,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // `\lx@note` writes too, latex_constructs.pool.ltxml:461 — OD #1053, the mark rule)
   ("[mark] package/acmart_cls.rs", 1),
   ("[mark] package/iopart_support_sty.rs", 1),
+  // (icml's `\icmlsetsymbol` label on a name: the symbol a mark-only note of the creator, as acmart's `\authornotemark`,
+  // not a superscript in the name, whose `fuzzy:` label `\icmlcorrespondingauthor` must spell — 1904.07793; OD #1063)
+  ("[mark] package/icml_support_sty.rs", 1),
   // (SNJNL: the glyph sn-jnl's `\author*` and author notes print on the names, the `ltx:note` schema attribute, on the
   // one labelled note each queues, as acmart's; OD #1066)
   ("[mark] sn_jnl_cls.rs", 1),

@@ -1,0 +1,19 @@
+% mechanism: as wrongfix_mark_char_inside_a_names_bracket_is_ink, with the GB2312 bytes of a CJK name (B3 C2 BB B6, the
+%   name in Chinese) inside the bracket, decoded here as superscript three, a right guillemet and a pilcrow: the CJK
+%   package's GB decoding is not bound (latexml_contrib cjk_sty.rs passes the bytes through; Perl raises an Error), so
+%   the name keeps them as text, the pilcrow no mark (row R CJKGB). This file is GB2312, not UTF-8.
+% witness: 1107.2497
+% oracle:  pdflatex (CJK, gbsn) 0 errors: "H. Chen (<the two hanzi>), M. Baldo"
+% engines: rust 139d1d2fa08: "H. Chen (" and two bytes, then a mark-only note (the pilcrow); the ")" lost
+% expect:  0 errors 0 Warnings; "H. Chen (" the three characters ")"; M. Baldo; no mark
+% status:  catalog (the lexer path is guarded by wrongfix_mark_char_inside_a_names_bracket_is_ink)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{CJK}
+\begin{document}
+\begin{CJK*}{GB}{gbsn}
+\title{T}
+\author{H. Chen (³Â»¶), M. Baldo}
+\maketitle
+\end{CJK*}
+\end{document}

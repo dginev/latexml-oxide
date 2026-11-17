@@ -842,25 +842,21 @@ fn lni_prints_its_own_arabic_title_marks() {
   ]);
 }
 
-/// A label authblk prints on a name that no `\affil` prints is a mark the frontmatter places nowhere, counted
-/// (`authblk_sty::count_lost_labels`; FIDELITY_CHARTER: no silent loss): `\author[1,*,\S]` whose `\S` only the `\date`
-/// line explains (2606.00446; pdflatex "Ann Able1,*,§"), one Warning; its answered `*` a note of each carrier. Both
-/// sides are read as printed (`printed_label_pieces`), so a label a macro prints is the line's (`\author[\affA]`).
+/// A label authblk prints on a name that no `\affil` prints shows on the name as its mark, a mark-only note with no
+/// Warning (OD #1064; was one Warning and no mark, MARKSAFE): `\author[1,*,\S]` whose `\S` only the `\date` line
+/// explains (2606.00446; pdflatex "Ann Able1,*,§"); its answered `*` a note of each carrier. Both sides are read as
+/// printed (`printed_label_pieces`), so a label a macro prints is the line's (`\author[\affA]`); one no mark is read
+/// from is counted (`perfect_kernel_batchinvdag::an_authblk_label_no_affil_explains_shows_on_its_name`).
 #[test]
-fn a_class_label_no_entry_answers_is_counted() {
+fn a_class_label_no_entry_answers_shows_on_its_name() {
   let tex = repro!("fmmarks_authblk_double_star_label_and_date_note_red");
   let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert!(
-    log.contains(
-      "Warning:frontmatter:unanswered_mark_lost authblk prints 1 label(s) of the names no \\affil explains, \
-       written on no name: §"
-    ),
-    "{log}"
-  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!log.contains("unanswered_mark_lost"), "{log}");
   assert_eq!(notes_in(&xml), [
     row(&[
       "Ann Able",
+      "footnotemark[§]=",
       "thanks[*]=These authors contributed equally to this work."
     ]),
     row(&[
@@ -870,7 +866,7 @@ fn a_class_label_no_entry_answers_is_counted() {
     row(&["Cat Cole"]),
   ]);
   assert_eq!(creators(&xml), [
-    row(&["Ann Able", "affiliation=Univ A, Town", "mark=*"]),
+    row(&["Ann Able", "mark=§", "affiliation=Univ A, Town", "mark=*"]),
     row(&["Bob Baker", "affiliation=Univ A, Town", "mark=*"]),
     row(&[
       "Cat Cole",

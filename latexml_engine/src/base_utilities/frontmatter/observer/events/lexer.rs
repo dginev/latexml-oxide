@@ -278,7 +278,14 @@ impl Lexer {
         event.line_first = !self.line_inked;
         self.line_inked = true;
       },
-      EventKind::Contact | EventKind::Note => {
+      // (a note's mark set off by a space from the ink or separator before it, as a Mark's: read by the mark ledger past a
+      // separator only — 2406.12338)
+      EventKind::Note => {
+        event.space_before = self.gap_items > 0;
+        self.flush_gap();
+        self.line_inked = true;
+      },
+      EventKind::Contact => {
         self.flush_gap();
         self.line_inked = true;
       },
@@ -314,7 +321,12 @@ impl Lexer {
         self.symbol_span = join_span(self.symbol_span, span);
         continue;
       }
-      if is_mark_char(c) {
+      // (inside a bracket the name's run opened, a mark character in text after other ink is the bracket's text, as a
+      // comma there is: `H. Chen (x\P)` prints "H. Chen (x¶)", no mark — 1107.2497's mis-decoded GB2312 name; a bracket
+      // of marks alone is a mark, `Silvio Franz(*)`, `(\ddag) Deceased`: cond-mat9805088, 1406.2912)
+      if is_mark_char(c)
+        && !(formula.is_none() && self.open > self.run_open && self.bracket_holds_text())
+      {
         self.flush_run();
         if self.symbol.is_empty() {
           self.symbol_space = self.gap_items > 0;
@@ -363,10 +375,11 @@ impl Lexer {
         continue;
       }
       if self.gap_items > 0 {
-        // (a printed space between a mark and the ink after it: `space_after`)
+        // (a printed space between a mark or a note and the ink after it: `space_after` — llncs's `\thanks{…} Bob`, the
+        // mark ledger's glue past the note)
         if self.run.is_empty()
           && let Some(last) = self.events.last_mut()
-          && last.kind == EventKind::Mark
+          && matches!(last.kind, EventKind::Mark | EventKind::Note)
         {
           last.space_after = true;
         }
@@ -404,6 +417,19 @@ impl Lexer {
       self.run.push((c, span));
       self.run_own.push(own);
     }
+  }
+
+  /// Whether the run's innermost open bracket holds printed text other than marks so far.
+  fn bracket_holds_text(&self) -> bool {
+    self
+      .run
+      .iter()
+      .rposition(|(c, _)| matches!(c, '(' | '['))
+      .is_some_and(|at| {
+        self.run[at + 1..]
+          .iter()
+          .any(|(c, _)| !c.is_whitespace() && !is_mark_char(*c))
+      })
   }
 
   /// Whether the run so far is no whole name: one word at most, or words ending in an initial (`N. B.`, `V.G.`, `J.-P.`,

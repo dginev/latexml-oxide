@@ -1,0 +1,20 @@
+% mechanism: two notes of the document's own level with no mark, of one role and one text, show one line
+%   (`f:document-note-shown`, keyed by role and text); the second keeps its id
+% witness:  2412.01641 (sn-jnl's `\equalcont{These authors contributed equally to this work.}` under two names),
+%   2511.18287 (the same `\footnotetext` after the paper's and the supplement's titles)
+% oracle:   pdflatex 0 errors; "A Title", "Ann Able Bob Baker", "Body text."; the page's foot prints "Equal
+%   contribution." twice, one page holding both
+% engines:  rust INVDAG = two "Equal contribution." lines at the document's top (2026-11-17)
+% expect:   0 errors, 0 warnings; one div.ltx_note_unmarked "Equal contribution."; no ltx_note_mark
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able \and Bob Baker}
+\date{}
+\begin{document}
+\maketitle
+\begingroup\renewcommand\thefootnote{}\footnotetext{Equal contribution.}\addtocounter{footnote}{-1}\endgroup
+\begingroup\renewcommand\thefootnote{}\footnotetext{Equal contribution.}\addtocounter{footnote}{-1}\endgroup
+Body text.
+\end{document}

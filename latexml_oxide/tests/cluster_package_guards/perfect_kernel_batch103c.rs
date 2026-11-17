@@ -146,11 +146,12 @@ fn institutions_named_with_legend_words_stay_affiliations() {
 /// behind its mark, and a label no name prints is a mark the page never shows; review rev103c2 B-A): icml's
 /// `\icmlaffiliation{intern}{Work done during an internship}`, a key icml prints as the affiliation's number
 /// (2106.09776), and svjour3's `\institute{… \and B. Baker (corresponding author, \email{…}) \and …}`, labelled by its
-/// place, a number neither svjour3 nor svjour_blank prints (1507.04774).
+/// place, a number neither svjour3 nor svjour_blank prints (1507.04774). The `equal` label's `*` shows on both names and
+/// opens the notice, as pdflatex prints them (OD #1063).
 #[test]
 fn a_legend_whose_label_prints_no_mark_stays_an_affiliation() {
   assert_eq!(
     converted(repro!("legend_kind_icml_keyed_legend_stays"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Work done during an internship</contact> <contact name="Correspondence to: " role="email">ann@a.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <note role="affiliationnotice" xml:id="id1">Equal contribution</note> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note mark="*" role="footnotemark" xml:id="id1"/> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Work done during an internship</contact> <contact name="Correspondence to: " role="email">ann@a.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note mark="*" role="footnotemark" xml:id="id2"/> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>Equal contribution</note> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
