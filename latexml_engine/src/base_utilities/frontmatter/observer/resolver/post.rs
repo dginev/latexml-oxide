@@ -1244,7 +1244,17 @@ impl Resolver {
       // symbols are their labels, 1608.06509; a name showing its own marks keeps them as its requests, and its note's mark
       // is the note's — `Pramod Shukla$^\dagger$\footnote{E-mail…}` prints "Shukla†∗", the ∗ its e-mail's, not the
       // `{^\ast}` affiliation Swagata Bera shows, 2406.01694)
-      if footnote_led || symbol_labelled {
+      // (and only where no name inks the symbol: a typed `$^{*}$` is the line's request, the same glyph of a `\thanks`
+      // that note's — `Zed Zorn\thanks{Work done at X.} \and Bob Baker$^{*}$ \and Cy Cole$^{*}$\\ $^*$Equal
+      // contribution` is Bob's and Cy's, as Perl places it; NameMark::origin, DG 2026-11-16 inked/implied)
+      let inked = || {
+        self.out.creators.iter().any(|creator| {
+          creator.marks.iter().any(|m| {
+            m.origin() == MarkOrigin::Inked && labels.iter().any(|l| label_matches(&m.label, l))
+          })
+        })
+      };
+      if footnote_led || (symbol_labelled && !inked()) {
         for (c, creator) in self.out.creators.iter().enumerate() {
           let carries = footnote_led || creator.requests_nothing();
           let shows = creator

@@ -114,17 +114,29 @@
            use="concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))"/>
   <!-- The same notes by block and mark alone, and the mark-only notes (role="footnotemark": a mark printed on a name
        that no note of its own answers, an affiliation letter, an unpaired \footnotemark; 0801.1438) by block and
-       mark. A mark-only note links to the note its mark names in the block (one note, however many copies), which it
-       then makes shared, but only a symbol mark or Perl's tagged leftover: a letter (Latin or Greek) or digit is as
-       often an affiliation label, and a wrong link is worse than none (revREND2). -->
+       mark, asterisks folded as f:printed-glyph folds them (\thanks's mark is `*`, a typed `$^*$` is ∗; 1705.05427,
+       1903.10478). A mark-only note links to the note its mark names in the block (one note, however many copies),
+       which it then makes shared, but only a symbol mark or Perl's tagged leftover: a letter (Latin or Greek) or digit
+       is as often an affiliation label, and a wrong link is worse than none (revREND2). The fold links a typed ∗ to a
+       counter's * across names only: a name carrying that note that shows the other form alone too prints two marks,
+       two notes (`Ann Able$^{*}$\thanks{…}`, 2406.11149's shape; acmart's `Bob Baker$^{*}$` with
+       `\authornotemark[1]`), where one form twice is one note repeated (`Ann\thanks{…}\footnotemark[1]`, 1610.06031). -->
   <xsl:key name="f:creator-note-by-mark"
            match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
-           use="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
+           use="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
   <xsl:key name="f:creator-mark-only"
            match="ltx:creator[@role='author']/ltx:note[@role='footnotemark'][normalize-space(@mark)]
                   [ltx:tags or translate(normalize-space(@mark),'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρςστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ','')
                                = normalize-space(@mark)]"
-           use="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
+           use="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
+  <!-- An author's note by block and the character its text opens with: a note of another mark opening with a mark's
+       glyph is that mark's legend, so the mark links to no other note (`Chi Huang$^\ast$\thanks{$^\ast$ Corresponding
+       author, …}` beside `Rong Yang\thanks{Email: …}`, 2607.28158). -->
+  <xsl:key name="f:creator-note-opening"
+           match="ltx:creator[@role='author']/ltx:note[not(@role='footnotemark')]"
+           use="concat(generate-id(../..),'&#x9;',
+                  translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
+                            '&#x2217;','*'))"/>
 
   <xsl:template
       match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]">
@@ -132,10 +144,14 @@
     <xsl:variable name="copies"
                   select="key('f:shared-creator-note',
                               concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.)))"/>
-    <xsl:variable name="by_mark" select="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
+    <xsl:variable name="by_mark"
+                  select="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
     <xsl:variable name="marked_elsewhere"
                   select="key('f:creator-mark-only',$by_mark)[count(.. | current()/..) = 2]
-                          and count(key('f:creator-note-by-mark',$by_mark)) = count($copies)"/>
+                          and count(key('f:creator-note-by-mark',$by_mark)) = count($copies)
+                          and not(key('f:creator-mark-only',$by_mark)[normalize-space(@mark) != normalize-space(current()/@mark)]
+                                  /parent::*[count(. | $copies/..) = count($copies/..)])
+                          and not(key('f:creator-note-opening',$by_mark)[count(. | $copies) != count($copies)])"/>
     <xsl:choose>
       <xsl:when test="count($copies) = 1 and not($marked_elsewhere)">
         <xsl:call-template name="note">
@@ -170,13 +186,17 @@
        tabular cell, plain-text \dag or *), kept with its glyph lost (2311.11099, 2402.05011, 1302.0490) or inside
        another name's run (2110.12052). -->
   <xsl:template match="ltx:creator/ltx:note[@role='footnotemark'][normalize-space(@mark)]">
-    <xsl:variable name="by_mark" select="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
+    <xsl:variable name="by_mark"
+                  select="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
     <xsl:variable name="notes"
                   select="key('f:creator-note-by-mark',$by_mark)[count(key('f:creator-mark-only',$by_mark) | current())
                                                                  = count(key('f:creator-mark-only',$by_mark))]"/>
     <xsl:variable name="target"
                   select="$notes[1][count($notes) = count(key('f:shared-creator-note',
-                            concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))))]"/>
+                            concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))))]
+                          [not(key('f:creator-mark-only',$by_mark)[normalize-space(@mark) != normalize-space($notes[1]/@mark)]
+                                    /parent::*[count(. | $notes/..) = count($notes/..)])]
+                          [not(key('f:creator-note-opening',$by_mark)[count(. | $notes) != count($notes)])]"/>
     <xsl:variable name="glyph">
       <xsl:choose>
         <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="ltx:tags/ltx:tag[not(@role)]"/></xsl:when>

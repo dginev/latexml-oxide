@@ -19553,7 +19553,9 @@ name alone (DG 2026-11-16), so the wrapper takes every marked note of any role, 
 too (PURE's unanswered marks, Perl's `\footnotemark` leftovers): each renders as its `sup.ltx_note_mark` alone, no empty
 "footnotemark: " pop-up, linked and classed `ltx_note_shared` only when its mark is a symbol (no Latin or Greek letter, no digit)
 or Perl's tagged leftover (`f:creator-mark-only`) and names one author's note of the block (`xsl:key
-f:creator-note-by-mark`, every candidate a copy of one note), else the plain glyph (Perl's tag, else `@mark`), shown
+f:creator-note-by-mark`, every candidate a copy of one note; both keys fold a typed ∗ into `\@fnsymbol`'s `*`, 1705.05427,
+except where a carrier of the note shows the other form alone too, two marks; never where another note of the block opens
+with the glyph, its legend: 2607.28158, `f:creator-note-opening`), else the plain glyph (Perl's tag, else `@mark`), shown
 though it links nothing (#1059): a letter
 or digit is as often an affiliation label as a footnote number, and a wrong link is worse than none (review revREND2: a
 mark-only `1` linked another author's own footnote `1`). Such a linkable mark-only note pointing at a one-author note
@@ -19982,6 +19984,8 @@ stays a mark-only note.
   mark, whose counter as digested is not the one TeX printed — aiaa-tc's `\thanksibid{2}`, 1505.07844) is filled with
   the note of its block standing for n (`insert::link_marked_notes`), the glyph join only its fallback, in the block:
   scrartcl's `Ann\thanks{Equal} \and Bob\footnotemark[1]`, whose glyph no binding knows, Bob now the note's carrier;
+  among the notes printing its glyph the one of its counter's number goes first, so `\samethanks` beside a typed legend
+  of the same ∗ copies the `\thanks` it repeats, not the legend (`author_samethanks_beside_typed_star_legend`);
 - a number read off the counter in the title block (`\samethanks`' `[\value{footnote}]`) keys a note and prints its
   glyph only where that counter is TeX's here (`latex_constructs::title_numbers_faithful`: the class's notes step it as
   its `\maketitle` digests them, `lx_title_counts_footnotes` — article's family —, a binding declares its title's marks

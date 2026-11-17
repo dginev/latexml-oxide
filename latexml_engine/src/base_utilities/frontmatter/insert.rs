@@ -965,7 +965,17 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
       document.add_class(&mut mark_note, "ltx_mark_titlenote")?;
       continue;
     }
-    let Some(paired) = by_number.or_else(|| notes.iter().filter(in_block).find(same)) else {
+    // (among the notes printing its glyph, the one its counter's number names first: a `\footnotemark` read off the
+    // counter, `\samethanks`' `[\value{footnote}]`, is a footnote's mark, not a typed legend's copy of the same glyph —
+    // `Zed$^{*}$, Ann\thanks{Corresponding author.}, Cy\samethanks \\ $^*$Equal contribution`, ADVR2 finding 5)
+    let by_glyph = || {
+      let mut glyphs = notes.iter().filter(in_block).filter(same);
+      let counted = glyphs
+        .clone()
+        .find(|note| value.is_some() && note.get_attribute(FOOTNOTE_VALUE) == value);
+      counted.or_else(|| glyphs.next())
+    };
+    let Some(paired) = by_number.or_else(by_glyph) else {
       continue;
     };
     // (a mark its command prints by the counter stays so on the copy, acmart's `\authornotemark[n]`; one linked by its

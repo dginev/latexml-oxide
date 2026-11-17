@@ -269,7 +269,7 @@ mod labels;
 mod lines;
 mod mark_ledger;
 mod name_marks;
-pub use name_marks::{MARKS_LISTED, MarkBy, NameMark, declare_marks_listed};
+pub use name_marks::{MARKS_LISTED, MarkBy, MarkOrigin, NameMark, declare_marks_listed};
 mod net;
 // (the old reader's owner logic, moved unchanged by the plan's row "Knowledge in, driver out, one pass"; re-exported by `observer/mod.rs`)
 pub(in crate::base_utilities) mod owners;

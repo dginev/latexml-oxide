@@ -624,6 +624,25 @@ fn assert_red_layers_now_green(rows: &[Row]) {
 
 /// The rows of [`shared_notes_are_a_marked_copy_per_carrier`] and its `_red` twin.
 const SHARED: &[Row] = &[
+  // (a symbol legend is the names' that type it, not a `\thanks` of the same glyph on another name; ADVR2 finding 4)
+  Row {
+    repro:      "author_typed_star_legend_is_the_typing_names",
+    tex:        repro!("author_typed_star_legend_is_the_typing_names"),
+    warnings:   0,
+    creators:   &[
+      r#"Zed Zorn ; thanks[*]=Work done at X."#,
+      r#"Bob Baker ; thanks[*]=Equal contribution"#,
+      r#"Cy Cole ; thanks[*]=Equal contribution"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Zed Zorn ; * plain"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole ; *→note"#,
+      r#"margin: Equal contribution ; Work done at X."#,
+    ],
+    page_moves: r#""#,
+  },
   Row {
     repro:      "authblk_symbol_legend_shared_note_copies_carry_the_mark",
     tex:        repro!("authblk_symbol_legend_shared_note_copies_carry_the_mark"),
@@ -1343,6 +1362,61 @@ fn name_marks_live_outside_the_personname_red() { assert_red_layers_now_green(PU
 
 /// The rows of [`a_mark_on_a_name_is_a_copy_of_its_note`] and its `_red` twin.
 const LINK: &[Row] = &[
+  // (a typed `$^*$` links to the `\thanks` printing the same ∗, its mark `*`: the page's keys fold them; 1705.05427)
+  Row {
+    repro:      "author_typed_star_links_the_thanks_note",
+    tex:        repro!("author_typed_star_links_the_thanks_note"),
+    warnings:   0,
+    creators:   &[
+      r#"Kareem Amin ; thanks[*]=Equal contribution."#,
+      r#"Nan Jiang ; footnotemark[*]="#,
+      r#"Dee Dorn"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Kareem Amin ; *→note"#,
+      r#"Nan Jiang ; *→note"#,
+      r#"Dee Dorn"#,
+      r#"margin: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  // (a typed `$^\ast$` whose legend opens the name's own `\thanks` links to no other name's ∗ note; 2607.28158)
+  Row {
+    repro:      "author_typed_star_legend_in_own_thanks_links_nothing",
+    tex:        repro!("author_typed_star_legend_in_own_thanks_links_nothing"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Email: ann@x.org | affiliation=Univ A"#,
+      r#"Bob Baker ; footnotemark[*]= ; thanks[†]=∗ Corresponding author. | affiliation=Univ B"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; * plain ; † plain"#,
+      r#"margin: Email: ann@x.org ; ∗ Corresponding author."#,
+    ],
+    page_moves: r#""#,
+  },
+  // (a `\samethanks` beside a typed legend of its glyph is a copy of the footnote its number names; ADVR2 finding 5)
+  Row {
+    repro:      "author_samethanks_beside_typed_star_legend",
+    tex:        repro!("author_samethanks_beside_typed_star_legend"),
+    warnings:   0,
+    creators:   &[
+      r#"Zed Zorn ; thanks[*]=Equal contribution"#,
+      r#"Ann Abel ; thanks[*]=Corresponding author."#,
+      r#"Cy Cole ; thanks[*]=Corresponding author."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Zed Zorn ; * plain"#,
+      r#"Ann Abel ; *→note"#,
+      r#"Cy Cole ; *→note"#,
+      r#"margin: Corresponding author. ; Equal contribution"#,
+    ],
+    page_moves: r#""#,
+  },
   Row {
     repro:      "author_samethanks_is_a_copy_of_the_marked_note",
     tex:        repro!("author_samethanks_is_a_copy_of_the_marked_note"),
