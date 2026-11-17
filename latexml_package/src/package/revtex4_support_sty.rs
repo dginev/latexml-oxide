@@ -990,7 +990,7 @@ pub(crate) fn declare_revtex41_title_marks(post: &str) -> Result<()> {
   if matches!(society.as_str(), "aip" | "sor") {
     assign_value("revtex@altaffilletter", true, Some(Scope::Global));
   }
-  // (`galley` is `onecolumn`, revtex4-2.cls:6025-6026)
+  // (`galley` is `onecolumn`, revtex4-2.cls:6025-6026, revtex4-1.cls:6004-6005)
   let grid = matches!(
     last_class_option(&["twocolumn", "onecolumn", "reprint", "lengthcheck", "galley"]),
     Some("twocolumn" | "reprint" | "lengthcheck")

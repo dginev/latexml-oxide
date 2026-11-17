@@ -1,0 +1,17 @@
+% mechanism: report's title page (`titlepage`, its default, report.cls:176-198) with `\@makefnmark` emptied: the
+%   `\thanks` notes print no mark, at the names or before the note texts; the title page's notes stay unmarked, and the
+%   post-release title-page hook (row R TITLEPAGEMARKS) must keep them so, never an invented 1, 2
+% witness:  review revMARKBINDc (p/t17_report_nofnmark.tex; MARKBINDc wrote 1, 2)
+% oracle:   pdflatex 0 errors; "Ann Able Bob Baker" (no marks), "Ann note.", "Bob note."
+% engines:  rust MARKBINDd = 0 errors, 0 Warnings; both thanks unmarked
+% expect:   0 errors, 0 Warnings; both thanks unmarked
+% status:   GREEN (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{report}
+\makeatletter\renewcommand\@makefnmark{}\makeatother
+\title{A Title}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

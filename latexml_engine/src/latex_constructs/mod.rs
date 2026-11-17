@@ -530,9 +530,10 @@ pub fn is_document_class(class: &str) -> bool { lookup_string("lx@document@class
 /// The title block's own `\thefootnote`, the one hook a binding declares its title's footnote marks with: defined, the
 /// marks of the notes made in the title, the authors and the date are it (`enter_title_footnotes`), and so are the
 /// frontmatter observer's Mark labels (`observer/rehearsal.rs` `TITLE_FOOTNOTE_HOOK`, OXIDIZED_DESIGN_DIVERGENCES #837,
-/// #851). Article, report and book declare it `\@fnsymbol\c@footnote` (`declare_fnsymbol_title_block`), their title
-/// page the one in force; a class numbering its title's marks otherwise defines its own (revtex4-2.cls:3040-3041
-/// `\frontmatter@thefootnote`), or takes the one in force (mnras, [`declare_title_marks_in_force`]). Guard
+/// #851). Article, report and book declare it `\@fnsymbol\c@footnote` (`declare_fnsymbol_title_block`), not on their
+/// title page (no mark there, row R TITLEPAGEMARKS); a class numbering its title's marks otherwise defines its own
+/// (revtex4-2.cls:3040-3041 `\frontmatter@thefootnote`), or takes the one in force (mnras,
+/// [`declare_title_marks_in_force`]). Guard
 /// `perfect_kernel_batch78o::declared_title_thefootnote_prints_the_marks_the_observer_labels`.
 pub const TITLE_THEFOOTNOTE: &str = "\\lx@title@thefootnote";
 
@@ -569,11 +570,9 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
   // (its `\thanks` steps the counter under a title page too, and its `\maketitle` sets it back: article.cls:173, :190,
   // :223, :241, latex.ltx:17215)
   declare_title_footnote_counting(true)?;
-  if titlepage == Some(true) {
-    // (its title page sets no `\thefootnote`: the `\maketitle` prints the one in force, arabic by default; report.cls:176-198,
-    // book.cls:182-204, article.cls:170-192; 1501.00599 "Muhyiddin Izadi1")
-    declare_title_marks_in_force()?;
-  } else {
+  // (a title page sets no `\thefootnote`, report.cls:176-198: it prints the one in force, which a package may have set
+  // (titling's `\thanksmarkseries`) or emptied; no hook, no mark: row R TITLEPAGEMARKS, 1501.00599, 1110.6706)
+  if titlepage != Some(true) {
     def_macro(
       T_CS!(TITLE_THEFOOTNOTE),
       None,
@@ -602,7 +601,7 @@ pub fn declare_title_footnote_counting(resets: bool) -> Result<()> {
 }
 
 /// The title hook ([`TITLE_THEFOOTNOTE`]) of a class whose `\maketitle` prints the `\thefootnote` in force, setting none
-/// (mnras.cls:1055-1071, a title page): that one as the `\maketitle` begins (`\lx@maketitle@begin`), a preamble's
+/// (mnras.cls:1055-1071): that one as the `\maketitle` begins (`\lx@maketitle@begin`), a preamble's
 /// `\renewcommand\thefootnote{\arabic{footnote}}` included; a `\let`, as `enter_title_footnotes` lets `\thefootnote` to
 /// the hook. Not before: with no `\maketitle`, which prints no title, a fallback flush's marks are the body's.
 pub fn declare_title_marks_in_force() -> Result<()> {

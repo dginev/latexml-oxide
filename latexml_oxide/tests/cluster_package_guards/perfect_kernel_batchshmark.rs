@@ -216,10 +216,11 @@ Text.
 /// The marks a title block prints for its notes: article's `\@fnsymbol` on each `\thanks`, an author's `\footnote` the
 /// `\thanks` it is there (article.cls:241), counted after the title's own `\thanks` (article.cls:203-214 sets the title
 /// first: the reading's `rehearse_title_first`), so a `\footnotemark[1]` beside a name is the title's note — no
-/// creator's, it stays the mark it is; under `titlepage` the `\thefootnote` in force, arabic (pdflatex "Ann Able1 Bob
-/// Baker2", review revMARKBINDb TITLEPAGEMARKS); no mark under a class whose `\maketitle` prints none (IEEEtran), nor on
-/// a REVTeX 4.1/4.2 name's `\footnote`, set in the class's own letters (2301.00220), nor on a REVTeX 4.0 one given no
-/// number, at a counter the reading does not count (review revSHMARKb). Distinct from the Link step's guard: the mark each note is written with.
+/// creator's, it stays the mark it is; under `titlepage` the `\thefootnote` in force (pdflatex "Ann Able1 Bob Baker2"),
+/// which the observer does not read: no mark (the fail-safe, row R TITLEPAGEMARKS), nor under a class whose
+/// `\maketitle` prints none (IEEEtran), nor on a REVTeX 4.1/4.2 name's `\footnote`, set in the class's own letters
+/// (2301.00220), nor on a REVTeX 4.0 one given no number, at a counter the reading does not count (review revSHMARKb).
+/// Distinct from the Link step's guard: the mark each note is written with.
 #[test]
 fn a_thanks_note_carries_the_mark_its_title_prints() {
   assert_eq!(
@@ -241,8 +242,8 @@ fn a_thanks_note_carries_the_mark_its_title_prints() {
       0
     ),
     [
-      row(&["Ann Able", "thanks[1]=Note X."]),
-      row(&["Bob Baker", "thanks[2]=Note Y."]),
+      row(&["Ann Able", "thanks[]=Note X."]),
+      row(&["Bob Baker", "thanks[]=Note Y."]),
     ]
   );
   // (REVTeX 4.1/4.2 set a name's `\footnote` in their minipage letters, or drop it under revtex4-2's `reprint`, not in

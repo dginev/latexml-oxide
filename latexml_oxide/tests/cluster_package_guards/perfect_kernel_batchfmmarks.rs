@@ -3147,12 +3147,42 @@ const CLASS: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
-    repro:      "fmmarks_report_titlepage_marks_in_force",
-    tex:        repro!("fmmarks_report_titlepage_marks_in_force"),
+    repro:      "fmmarks_report_titlepage_marks_in_force_red",
+    tex:        repro!("fmmarks_report_titlepage_marks_in_force_red"),
     warnings:   0,
     creators:   &[
       r#"Ann Able ; thanks[2]=Ann note."#,
       r#"Bob Baker ; thanks[3]=Bob note."#,
+    ],
+    moves:      r#"row R TITLEPAGEMARKS (a title page declares no hook: written unmarked, the fail-safe)"#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_report_titling_fnsymbol_titlepage_red",
+    tex:        repro!("fmmarks_report_titling_fnsymbol_titlepage_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Ann note."#,
+      r#"Bob Baker ; thanks[†]=Bob note."#,
+    ],
+    moves:      r#"row R TITLEPAGEMARKS (titling's series, set as its `\maketitle` begins: written unmarked, the fail-safe)"#,
+    page:       &[
+      r#"Ann Able | under: Ann note."#,
+      r#"Bob Baker | under: Bob note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_report_titlepage_empty_makefnmark",
+    tex:        repro!("fmmarks_report_titlepage_empty_makefnmark"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Ann note."#,
+      r#"Bob Baker ; thanks[]=Bob note."#,
     ],
     moves:      r#""#,
     page:       &[
