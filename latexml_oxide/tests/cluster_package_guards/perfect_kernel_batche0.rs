@@ -3240,7 +3240,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // LaTeX names it; a read of LaTeX's own record, no decision on a spelling)
   // (PRESBXb +2: `carry_refusal_records` reads a lock record's refused body by its `\lx@dropped@<cs>` name and the
   // meaning a `\let` copies, TeX's own record of the meaning; review revPRESBX B1)
-  ("latexml_core/src/state.rs", 164),
+  // (PRESBXc +1: `carry_document_refusal_records` carries the records of `\maketitle` alone, their one reader's name
+  // and the records' key; review revPRESBXb S1, BL3)
+  ("latexml_core/src/state.rs", 165),
   ("latexml_core/src/stomach.rs", 84),
   // (MEMB, -1: `be_absorbed` reads its text through `arena::with`, not `get_string()`)
   ("latexml_core/src/tbox.rs", 2),
@@ -3270,13 +3272,17 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (PRESBXb +10: `touches_marks` proves "no mark" over a macro body it does not run — its assignments' targets and
   // sources, an `\@makefnmark`'s body, `\begin{<env>}`'s begin code, the definition origin of an author's macro —
   // as `body_steps` reads the assignments; review revPRESBX B4, S1)
-  ("latexml_engine/src/latex_constructs/mod.rs", 196),
+  // (PRESBXc +7: `steps_footnotes_before_title` reads the same unrun body for the footnotes and counter steps it makes
+  // before the title — `\footnote`, `\footnotemark`, `\thanks`, `\c@footnote`, the four counter commands on `footnote`;
+  // review revPRESBXb BL2)
+  ("latexml_engine/src/latex_constructs/mod.rs", 203),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
   ("latexml_engine/src/latex_constructs/sect02.rs", 7),
   ("latexml_engine/src/latex_constructs/sect04.rs", 4),
   // (PRESBX +1: AAAI's repeated mark, `aaai_note`'s `\footnotemark[<n>]`, a construction)
-  ("latexml_engine/src/latex_constructs/sect05.rs", 267),
+  // (PRESBXc +1: `aaai_note` peeks the "." the emitter cuts a name list at, a character; review revPRESBXb BL1)
+  ("latexml_engine/src/latex_constructs/sect05.rs", 268),
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),
   ("latexml_engine/src/latex_constructs/sect07.rs", 29),
   // (QAB57, 69 -> 70: `assign_meaning` clearing an environment OmniBus guessed, a write the `meaning(` pattern counts)

@@ -612,6 +612,8 @@ mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
 mod perfect_kernel_batchpc3;
+/// PRESBXc: the fail-safes of the title's marks; the lock's refusal record follows a `\let` of `\maketitle` alone.
+mod perfect_kernel_batchpresbxc;
 mod perfect_kernel_batchpsf1;
 /// PURE: a personname holds the name alone; every mark on it is its note's `mark`, consumed by the contact it labels, or
 /// a mark-only note after it (DG 2026-11-16).

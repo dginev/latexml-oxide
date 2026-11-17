@@ -1783,7 +1783,7 @@ const LINK: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
-    repro:      "presbxb_aaai_equalcontrib_after_a_period",
+    repro:      "presbxb_aaai_equalcontrib_after_a_period (PDF)",
     tex:        repro!("presbxb_aaai_equalcontrib_after_a_period"),
     warnings:   1,
     creators:   &[
@@ -1792,7 +1792,7 @@ const LINK: &[Row] = &[
       r#"Cy Cole ; thanks[*]=These authors contributed equally."#,
       r#"Dee Dunn"#,
     ],
-    moves:      r#""#,
+    moves:      r#"row R AAAIDOT (the fail-safe after a ".": each use its own note, the base's glyphs †, ‡)"#,
     page:       &[
       r#"Ann Able ; *→note"#,
       r#"Bob Baker ; *→note"#,
@@ -1800,12 +1800,130 @@ const LINK: &[Row] = &[
       r#"Dee Dunn"#,
       r#"margin: These authors contributed equally."#,
     ],
+    page_moves: r#"row R AAAIDOT (each use its own note: Bob's † plain)"#,
+  },
+  // (the fail-safe twins: the base's output, every use after a "." a note of its own)
+  Row {
+    repro:      "presbxb_aaai_equalcontrib_after_a_period",
+    tex:        repro!("presbxb_aaai_equalcontrib_after_a_period"),
+    warnings:   3,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=These authors contributed equally."#,
+      r#"Bob Baker ; thanks[†]=These authors contributed equally."#,
+      r#"Cy Cole ; thanks[‡]=These authors contributed equally."#,
+      r#"Dee Dunn"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; † plain"#,
+      r#"Cy Cole ; ‡ plain"#,
+      r#"Dee Dunn"#,
+      r#"margin: These authors contributed equally. ; These authors contributed equally. ; These authors contributed equally."#,
+    ],
     page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbxc_aaai_period_after_a_carriers_mark (PDF)",
+    tex:        repro!("presbxc_aaai_period_after_a_carriers_mark"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=These authors contributed equally."#,
+      r#"Bob Baker ; thanks[*]=These authors contributed equally."#,
+      r#"Cy Cole"#,
+      r#"Dee Dunn"#,
+    ],
+    moves:      r#"row R AAAIDOT (the fail-safe after a ".": each use its own note, the base's glyphs †, ‡)"#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole"#,
+      r#"Dee Dunn"#,
+      r#"margin: These authors contributed equally."#,
+    ],
+    page_moves: r#"row R AAAIDOT (each use its own note: Bob's † plain)"#,
+  },
+  Row {
+    repro:      "presbxc_aaai_period_after_a_carriers_mark",
+    tex:        repro!("presbxc_aaai_period_after_a_carriers_mark"),
+    warnings:   2,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=These authors contributed equally."#,
+      r#"Bob Baker ; thanks[†]=These authors contributed equally."#,
+      r#"Cy Cole"#,
+      r#"Dee Dunn"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; † plain"#,
+      r#"Cy Cole"#,
+      r#"Dee Dunn"#,
+      r#"margin: These authors contributed equally. ; These authors contributed equally."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbxc_aaai_period_after_the_first_carrier (PDF)",
+    tex:        repro!("presbxc_aaai_period_after_the_first_carrier"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=These authors contributed equally."#,
+      r#"Bob Baker ; thanks[*]=These authors contributed equally."#,
+      r#"Cy Cole"#,
+    ],
+    moves:      r#"row R AAAIDOT (the fail-safe after a ".": each use its own note, the base's glyphs †, ‡)"#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole"#,
+      r#"margin: These authors contributed equally."#,
+    ],
+    page_moves: r#"row R AAAIDOT (each use its own note: Bob's † plain)"#,
+  },
+  Row {
+    repro:      "presbxc_aaai_period_after_the_first_carrier",
+    tex:        repro!("presbxc_aaai_period_after_the_first_carrier"),
+    warnings:   2,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=These authors contributed equally."#,
+      r#"Bob Baker ; thanks[†]=These authors contributed equally."#,
+      r#"Cy Cole"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; † plain"#,
+      r#"Cy Cole"#,
+      r#"margin: These authors contributed equally. ; These authors contributed equally."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbxc_dotcut_footnotemark_after_a_period_red",
+    tex:        repro!("presbxc_dotcut_footnotemark_after_a_period_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Equal."#,
+      r#"Bob Baker ; thanks[*]=Equal."#,
+      r#"Cy Cole"#,
+      r#"Dee Dunn"#,
+    ],
+    moves:      r#"row R DOTCUT (the segment after ". " starts with Bob's mark: Cy a copy of note 1, silent)"#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole"#,
+      r#"Dee Dunn"#,
+      r#"margin: Equal."#,
+    ],
+    page_moves: r#"row R DOTCUT (Cy shows Bob's mark)"#,
   },
 ];
 /// Links: a `\footnotemark[n]`, `\samethanks[n]` or `\authornotemark[n]` on a name is a copy of the note it marks, its
 /// mark as the class numbers it after the title's notes; a reference into a copied note still resolves (2502.19103,
-/// 1911.13299, 1706.03762, 2607.15705, 2203.12881, 1803.03669; revSHMARK p1, p2, p9; revREND2b p2).
+/// 1911.13299, 1706.03762, 2607.15705, 2203.12881, 1803.03669; revSHMARK p1, p2, p9; revREND2b p2); AAAI's
+/// `\equalcontrib` followed by "." makes each use a note of its own, the fail-safe (revPRESBXb BL1, 2509.03329).
 #[test]
 fn a_mark_on_a_name_is_a_copy_of_its_note() { assert_green(LINK); }
 /// The known gaps of [`a_mark_on_a_name_is_a_copy_of_its_note`].
@@ -3817,13 +3935,186 @@ const CLASS: &[Row] = &[
     ],
     page_moves: r#"row R MARKORDER (Bob's ∗ shown before his †)"#,
   },
+  Row {
+    repro:      "presbxc_maketitle_footnote_before_the_title (PDF)",
+    tex:        repro!("presbxc_maketitle_footnote_before_the_title"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[†]=First note."#,
+      r#"Bob Baker ; thanks[‡]=Second note."#,
+    ],
+    moves:      r#"row R SHAUTO/T1 (unknown here, the fail-safe writes no glyph)"#,
+    page:       &[
+      r#"Ann Able ; † plain"#,
+      r#"Bob Baker ; ‡ plain"#,
+      r#"margin: First note. ; Second note."#,
+    ],
+    page_moves: r#"row R SHAUTO/T1 (no glyph shown)"#,
+  },
+  Row {
+    repro:      "presbxc_maketitle_footnote_before_the_title",
+    tex:        repro!("presbxc_maketitle_footnote_before_the_title"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=First note."#,
+      r#"Bob Baker ; thanks[]=Second note."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbxc_package_maketitle_footnote_in_force (PDF)",
+    tex:        repro!("presbxc_package_maketitle_footnote_in_force"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[†]=First note."#,
+      r#"Bob Baker ; thanks[‡]=Second note."#,
+    ],
+    moves:      r#"row R SHAUTO/T1 (unknown here, the fail-safe writes no glyph)"#,
+    page:       &[
+      r#"Ann Able ; † plain"#,
+      r#"Bob Baker ; ‡ plain"#,
+      r#"margin: First note. ; Second note."#,
+    ],
+    page_moves: r#"row R SHAUTO/T1 (no glyph shown)"#,
+  },
+  Row {
+    repro:      "presbxc_package_maketitle_footnote_in_force",
+    tex:        repro!("presbxc_package_maketitle_footnote_in_force"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=First note."#,
+      r#"Bob Baker ; thanks[]=Second note."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbxc_maketitle_setcounter_footnote_before_the_title (PDF)",
+    tex:        repro!("presbxc_maketitle_setcounter_footnote_before_the_title"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[‡]=First note."#,
+      r#"Bob Baker ; thanks[§]=Second note."#,
+    ],
+    moves:      r#"row R SHAUTO/T1 (unknown here, the fail-safe writes no glyph)"#,
+    page:       &[
+      r#"Ann Able ; ‡ plain"#,
+      r#"Bob Baker ; § plain"#,
+      r#"margin: First note. ; Second note."#,
+    ],
+    page_moves: r#"row R SHAUTO/T1 (no glyph shown)"#,
+  },
+  Row {
+    repro:      "presbxc_maketitle_setcounter_footnote_before_the_title",
+    tex:        repro!("presbxc_maketitle_setcounter_footnote_before_the_title"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=First note."#,
+      r#"Bob Baker ; thanks[]=Second note."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbxc_package_restores_refused_maketitle (PDF)",
+    tex:        repro!("presbxc_package_restores_refused_maketitle"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=First note."#,
+      r#"Bob Baker ; thanks[†]=Second note."#,
+    ],
+    moves:      r#"row R SHAUTO/T1 (unknown here, the fail-safe writes no glyph)"#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; † plain"#,
+      r#"margin: First note. ; Second note."#,
+    ],
+    page_moves: r#"row R SHAUTO/T1 (no glyph shown)"#,
+  },
+  Row {
+    repro:      "presbxc_package_restores_refused_maketitle",
+    tex:        repro!("presbxc_package_restores_refused_maketitle"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=First note."#,
+      r#"Bob Baker ; thanks[]=Second note."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbxc_maketitle_setcounter_footnote_zero_keeps_its_marks",
+    tex:        repro!("presbxc_maketitle_setcounter_footnote_zero_keeps_its_marks"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=First note."#,
+      r#"Bob Baker ; thanks[†]=Second note."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; † plain"#,
+      r#"margin: First note. ; Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbxc_package_copies_refused_maketitle_keeps_it",
+    tex:        repro!("presbxc_package_copies_refused_maketitle_keeps_it"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[a]=First note."#,
+      r#"Bob Baker ; thanks[b]=Second note."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; a plain"#,
+      r#"Bob Baker ; b plain"#,
+      r#"margin: First note. ; Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbxc_wrapper_of_a_copy_after_refusal_red",
+    tex:        repro!("presbxc_wrapper_of_a_copy_after_refusal_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[a]=First note."#,
+      r#"Bob Baker ; thanks[b]=Second note."#,
+    ],
+    moves:      r#"row R PRESBX/copywrap (the wrapper of a copy taken after the refusal read as the class's: ∗, †)"#,
+    page:       &[
+      r#"Ann Able ; a plain"#,
+      r#"Bob Baker ; b plain"#,
+      r#"margin: First note. ; Second note."#,
+    ],
+    page_moves: r#"row R PRESBX/copywrap (∗, † shown)"#,
+  },
 ];
 /// Class-printed marks against none: a note carries a mark only where its class prints one (IEEEtran and ieeeconf none,
 /// 2606.00397, 1510.02728), a symbol opening its text that is the text's own stays text (review revSHMARK S2), and
 /// unmarked notes alike in text but not in their links or math all print (review revREND2b, the reverted dedupe); a mark
 /// unknown here (an unbound class's, a document's own `\maketitle`'s) is no glyph on the page, the text under its name
 /// (revMARKSAFE B1, ADVGEN I-3), a document's wrapper of the class's `\maketitle` changes nothing (revMARKSAFEb B1), and
-/// an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1).
+/// an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1); a `\maketitle` that makes a footnote or
+/// sets the footnote counter before its title, or one a package's `\let` restores, has unknown marks (revPRESBXb BL2, BL3).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
 /// The known gaps of [`notes_are_marked_only_where_the_class_prints_marks`].

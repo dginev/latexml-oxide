@@ -1103,9 +1103,11 @@ pub(crate) fn load() -> Result<()> {
   // kernel stubs (`DefinitionOrigin::Stub`), so the document's or a raw class's own `\newcommand` still defines them
   // (copernicus.cls:1673 `\newcommand\equalcontrib[1]`, its equal-contribution note on the affiliations).
   // As AAAI's (aaai22.sty:66-73, aaai25.sty:81-88, aaai2026.sty:79-86, aaai2027.sty:139-155): the first use makes the
-  // note, a later one its `\footnotemark[<n>]` (2501.02471, 2508.07026, 2509.03329; `aaai_note`, OD #1053).
+  // note, a later one its `\footnotemark[<n>]` (2501.02471, 2508.07026; `aaai_note`, OD #1053); in a document where a
+  // use is followed by ".", each use its own note (2509.03329).
   use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
   AAAI_FIRST_NOTES.with(|notes| notes.borrow_mut().clear());
+  AAAI_DOTTED.set(false);
   DefMacro!("\\lx@aaai@note{}{}", sub[(key, text)] { aaai_note(&key.to_string(), text) });
   DefMacro!("\\lx@aaai@noted{}{}{}", sub[(key, field, before)] {
     let number = |tokens: &Tokens| tokens.to_string().trim().parse::<i64>().unwrap_or(0);
@@ -5588,12 +5590,26 @@ thread_local! {
   /// AAAI's notes made once (`\equalcontrib`, `\corresponding`): each kind's first use, by its position in the author
   /// field (`Token::prov`, 0 for none), and the footnote number its note took ([`aaai_note`]).
   static AAAI_FIRST_NOTES: RefCell<Vec<(String, u16, i64)>> = const { RefCell::new(Vec::new()) };
+  /// A use followed by "." was read ([`aaai_note`]): the emitter's cut at ". " gives the next name the use before it,
+  /// so every use is then a note of its own, as before the first-use reading (c1/c6/c7 of review revPRESBXb, 2509.03329).
+  static AAAI_DOTTED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 /// `\lx@aaai@note{<kind>}{<text>}`: the note `<text>` at the kind's first use, `\footnotemark[<n>]` after it. The rehearsal
 /// tells the first by its position in the field (`Token::prov`); a use digested with none (a name the emitter digests
 /// again, an `\affiliations` field) is a later one once the kind's note is made (OD #1053).
+/// Once a use is followed by "." ([`AAAI_DOTTED`]), every use is `\thanks{<text>}`.
 fn aaai_note(kind: &str, text: Tokens) -> Result<Tokens> {
+  let dotted =
+    peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "."));
+  if dotted || AAAI_DOTTED.get() {
+    // (the fail-safe: no note lost and no name given another's mark; each name's note marked as its own)
+    AAAI_DOTTED.set(true);
+    let mut note = vec![T_CS!("\\thanks"), T_BEGIN!()];
+    note.extend(text.unlist());
+    note.push(T_END!());
+    return Ok(Tokens::new(note));
+  }
   let field = get_current_token().map_or(0, |t| t.prov);
   let now = title_note_number()?;
   let first = AAAI_FIRST_NOTES.with(|notes| {

@@ -792,6 +792,7 @@ pub(crate) enum MaketitleMarks {
 }
 
 /// The `\thefootnote` a `\maketitle` sets ([`MaketitleMarks::Own`]): a macro's expansion, or a `\let` copy.
+#[derive(Clone)]
 pub(crate) enum OwnMarks {
   Def(Tokens),
   Let(Token),
@@ -857,6 +858,7 @@ pub(crate) fn enter_maketitle_marks() -> Result<bool> {
 
 /// A step of a macro body, as [`body_steps`] reads it: an assignment (its target, and the `\def`'s or command's body or
 /// the `\let`'s source it sets), or any other token.
+#[derive(Clone)]
 enum BodyStep {
   Set(Option<Token>, Option<OwnMarks>),
   Token(Token),
@@ -1078,6 +1080,9 @@ fn touches_marks(
   {
     return true;
   }
+  // (a note command the refused body itself runs steps the counter; one in a macro it calls, 11lomcon's `\@aabuffer`
+  // of `\thanks`, is the names')
+  let top = author && depth == MAKETITLE_DEPTH;
   let steps = body_steps(body);
   steps.iter().enumerate().any(|(at, step)| match step {
     BodyStep::Set(target, value) => {
@@ -1109,6 +1114,7 @@ fn touches_marks(
         .flatten();
       [Some(*t), env].into_iter().flatten().any(|t| {
         named(&t, &MARK_COMMANDS)
+          || (top && named(&t, &NOTE_COMMANDS))
           || (!named(&t, &NOTE_COMMANDS)
             && seen.insert(t.get_cs_name())
             && lookup_definition(&t).ok().flatten().is_some_and(|d| {
@@ -1128,10 +1134,64 @@ fn touches_marks(
   })
 }
 
+/// Does the step at `at` of a `\maketitle` body ([`body_steps`]) make a footnote or set its counter: `\footnote`,
+/// `\footnotemark`, `\thanks`, `\c@footnote`, a counter command on `footnote` (`\setcounter{footnote}{0}` aside)? Before
+/// the title, its marks are then unknown here (review revPRESBXb BL2: `\footnote{Preprint…}` first, pdflatex "Ann†").
+fn steps_footnotes_before_title(steps: &[BodyStep], at: usize) -> bool {
+  let named = |t: &Token, names: &[&str]| t.with_cs_name(|name| names.contains(&name));
+  // (the text of the group opening at step `from`, and the step past it)
+  let group = |from: usize| -> Option<(String, usize)> {
+    let mut text = String::new();
+    match steps.get(from)? {
+      BodyStep::Token(open) if open.get_catcode() == Catcode::BEGIN => {},
+      _ => return None,
+    }
+    for (i, step) in steps.iter().enumerate().skip(from + 1) {
+      match step {
+        BodyStep::Token(t) if t.get_catcode() == Catcode::END => return Some((text, i + 1)),
+        BodyStep::Token(t) if matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) => {
+          text.push_str(&t.to_string());
+        },
+        BodyStep::Token(t) if t.get_catcode() == Catcode::SPACE => {},
+        _ => return None,
+      }
+    }
+    None
+  };
+  let BodyStep::Token(t) = &steps[at] else {
+    return false;
+  };
+  if named(t, &[
+    "\\footnote",
+    "\\footnotemark",
+    "\\thanks",
+    "\\c@footnote",
+  ]) {
+    return true;
+  }
+  if !named(t, &[
+    "\\setcounter",
+    "\\addtocounter",
+    "\\stepcounter",
+    "\\refstepcounter",
+  ]) {
+    return false;
+  }
+  match group(at + 1) {
+    Some((counter, next)) if counter == "footnote" => {
+      !(named(t, &["\\setcounter"]) && group(next).is_some_and(|(value, _)| value == "0"))
+    },
+    Some(_) => false,
+    // (a counter named by a macro, not read here)
+    None => true,
+  }
+}
+
 /// What a refused `\maketitle`'s `body` does with its title's marks: the class's where it calls the class's
 /// ([`reaches_class_maketitle`]); else what it sets before it prints the title (`\thefootnote`: spconf.sty:147-149's none,
-/// 2110.09738; `\@makefnmark`), or the `\thefootnote` in force where it provably touches no mark ([`touches_marks`]:
-/// 11lomcon.sty, hep-ph0312288); else unknown. OD #1053.
+/// 2110.09738, 2303.02025, 1812.01220; `\@makefnmark`), or the `\thefootnote` in force where it provably touches no mark
+/// ([`touches_marks`]: 11lomcon.sty, hep-ph0312288); else unknown, as where it makes a footnote or sets the footnote
+/// counter before the title ([`steps_footnotes_before_title`]). OD #1053.
 fn refused_maketitle_marks(body: &[Token], class: &Rc<dyn Definition>) -> MaketitleMarks {
   if reaches_class_maketitle(
     body,
@@ -1158,7 +1218,11 @@ fn refused_maketitle_marks(body: &[Token], class: &Rc<dyn Definition>) -> Maketi
         .then_some(true)
     }
   };
-  for step in body_steps(body) {
+  let steps = body_steps(body);
+  for (at, step) in steps.iter().cloned().enumerate() {
+    if steps_footnotes_before_title(&steps, at) {
+      return MaketitleMarks::Unknown;
+    }
     match step {
       BodyStep::Set(Some(target), value) if named(&target, &["\\thefootnote"]) => own = value,
       // (a `\let` to another macro read by its body, `\let\@makefnmark\my@mark`)

@@ -1,0 +1,22 @@
+% mechanism: a document's wrapper `\renewcommand\maketitle{\oldmt}` of a copy `\let\oldmt\maketitle` taken after its
+%   own refused `\renewcommand`: TeX's copy holds the document's title page (`\alph`), which the wrapper runs; we read
+%   the wrapper as a call of the class's `\maketitle` (the lock kept the class's meaning, which `\oldmt` copied)
+% witness:  none (review revPRESBXb P1, p/b1a.tex; pre-existing on PRESBXbase2)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Ablea Bob Bakerb"; foot "a First note." "b Second note."
+% engines:  rust PRESBXbase2 (14e92b291ab), PRESBXb, PRESBXc = 0 errors, 0 Warnings; Ann thanks[∗], Bob thanks[†]
+% expect:   0 errors, 0 Warnings; Ann thanks[a], Bob thanks[b] (or, as a fail-safe, both unmarked)
+% status:   RED (row R PRESBX/copywrap)
+% moves:    XML, HTML row R PRESBX/copywrap
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\begingroup\def\thefootnote{\alph{footnote}}\begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\let\oldmt\maketitle
+\renewcommand\maketitle{\oldmt}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

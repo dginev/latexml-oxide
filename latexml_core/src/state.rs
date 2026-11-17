@@ -7835,14 +7835,42 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   assign_meaning(token1, meaning, scope);
   let _ = after_assignment();
 }
-/// [`carry_refusal_records`] for the document's own `\let`s (a class's replayed body, read at the file's origin,
-/// clears its own name as it runs: `\global\let\maketitle\relax`).
+/// [`carry_refusal_records`] for the document's own `\let`s of `\maketitle`, the records' one reader
+/// (`latex_constructs::maketitle_marks`; the kernel's `\global\let\thanks\relax` keeps `\lx@dropped@thanks`). A file's
+/// `\let` onto a refused `\maketitle` (a package's restore, review revPRESBXb BL3) leaves its marks unknown: the refused
+/// body forgotten, the document's record kept. Not a class's replayed body, which clears its own name as it runs
+/// (`\global\let\maketitle\relax`).
 fn carry_document_refusal_records(token1: &Token, token2: &Token, scope: Option<Scope>) {
-  if !state!().refused_names.is_empty()
-    && crate::definition::origin::current_origin()
-      == crate::definition::origin::DefinitionOrigin::Document
-  {
-    carry_refusal_records(token1, token2, scope);
+  use crate::definition::origin::{DefinitionOrigin, current_origin};
+  let maketitle = |t: &Token| t.with_cs_name(|cs| cs == "\\maketitle");
+  if state!().refused_names.is_empty() || !(maketitle(token1) || maketitle(token2)) {
+    return;
+  }
+  match current_origin() {
+    DefinitionOrigin::Document => carry_refusal_records(token1, token2, scope),
+    DefinitionOrigin::File
+      if maketitle(token1)
+        && !lookup_bool("lx_depositing_class_maketitle")
+        && !lookup_bool("lx_replaying_class_setter")
+        && ["@document", "@class"]
+          .iter()
+          .any(|suffix| lookup_bool(&s!("\\maketitle:redefined{suffix}"))) =>
+    {
+      let mut state = state_mut!();
+      state.assign_internal(
+        TableName::Value,
+        arena::pin("\\maketitle:redefined@document"),
+        Stored::Bool(true),
+        scope,
+      );
+      state.assign_internal(
+        TableName::Meaning,
+        arena::pin("\\lx@dropped@maketitle"),
+        Stored::None,
+        scope,
+      );
+    },
+    _ => {},
   }
 }
 /// `XEquals` check for two token arguments

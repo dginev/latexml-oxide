@@ -9,7 +9,10 @@
 %   0 errors, 3 Warnings; Ann ∗, Bob †, Cy ‡ (three notes)
 % expect:   0 errors, 1 Warning (the emitter writes the stub's note text as plain text, "note no argument"); Ann, Bob,
 %   Cy each one copy of "These authors contributed equally." marked ∗
-% status:   RED (PRESBX) -> GREEN (PRESBXb: perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% status:   RED (PRESBX) -> GREEN (PRESBXb) -> GREEN fail-safe, XML and HTML RED against the PDF (PRESBXc: a use
+%   followed by "." makes every use a note of its own, `AAAI_DOTTED`, after review revPRESBXb BL1; 0 errors, 3 Warnings,
+%   Ann ∗, Bob †, Cy ‡, the base's; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% moves:    XML, HTML row R AAAIDOT
 % preload:  ar5iv.sty
 \begin{filecontents*}[overwrite]{presbxaaaidot.sty}
 \def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
