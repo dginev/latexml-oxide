@@ -560,10 +560,10 @@ fn address_calls(
 
 /// A note the PDF prints with no mark, in the abstract, whose text is e-mail addresses alone (an e-mail label before
 /// them aside, a braced group of local parts written out): the authors' e-mail contacts, each the author it spells
-/// ([`spelled_owners`]; a `\date` line of addresses also takes the list's order, [`listed_address_owners`]) (OXIDIZED_DESIGN_DIVERGENCES #1071; 2506.06941's
-/// `\footnotetext{\{p\_shojaee, imirzadeh, …\}@apple.com}` after `\maketitle`, an unmarked footnote line under the
-/// abstract). Only where every address spells its author: else the note stays as it is, with an Info. Run as the note closes
-/// (`ltx:note`'s `after_close`), after `relocate_footnote`, so a text a mark pairs with is no longer here.
+/// (`spelled_owners`; a `\date` line of addresses also takes the list's order, `listed_address_owners`), OD #1071
+/// (2506.06941's `\footnotetext{\{p\_shojaee, imirzadeh, …\}@apple.com}` after `\maketitle`, an unmarked footnote line
+/// under the abstract). Only where every address spells its author: else the note stays as it is, with an Info. Run as
+/// the note closes (`ltx:note`'s `after_close`), after `relocate_footnote`, so a text a mark pairs with is no longer here.
 pub fn address_note_contacts(document: &mut Document, node: &mut Node) -> Result<()> {
   // (not as a frontmatter flush digests it or places it: a frontmatter entry is the flush's)
   // (an abstract the insertion places is the body's: its notes are read; any other entry is the flush's)
