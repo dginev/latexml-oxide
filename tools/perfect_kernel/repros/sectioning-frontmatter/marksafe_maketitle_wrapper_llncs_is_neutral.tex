@@ -1,0 +1,19 @@
+% mechanism: a by-meaning wrapper of llncs's `\maketitle` is the class's title page: the output and the log's counts are
+%   the plain document's (the wrapper lines removed), no `unknown_mark` Info (`\maketitle:redefined@class`, OD #1053)
+% witness:  review revMARKSAFEb B1 (p/llplain.tex, p/llwrap.tex)
+% oracle:   pdflatex 0 errors; plain and wrapped pages identical: "Ann Able⋆ and Bob Baker⋆⋆", "Lab A",
+%   footnotes "⋆ Ann note.", "⋆⋆ Bob note."
+% engines:  rust MARKSAFEb de9ad33fd3d = 0 errors, 0 Warnings; XML identical, wrapped 1 `unknown_mark` Info
+% expect:   0 errors, 0 Warnings, no `unknown_mark` Info; wrapped output identical to plain (XML and HTML)
+% status:   GREEN (MARKSAFEc: perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\let\oldmt\maketitle
+\renewcommand\maketitle{\oldmt}
+\title{A Title}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}}
+\institute{Lab A}
+\begin{document}
+\maketitle
+Body.
+\end{document}

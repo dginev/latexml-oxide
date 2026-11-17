@@ -1113,6 +1113,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _markfromcounter base_utilities/frontmatter/insert.rs",
     1,
   ),
+  // (MARKSAFEb, 0 -> 1, raised with its reason: a creator's note written with no mark because the mark its title prints is
+  // unknown here (an unbound class's or a document's own `\maketitle`, REVTeX's name letters), counted at the document's
+  // end — a Warning where its note never came, an Info where it is placed (DG 2026-11-16); Perl's API has no key for
+  // "the glyph is unknown"; internal, never written out: OD #1053)
+  ("const _markunknown base_utilities/frontmatter/insert.rs", 1),
   // (SHREST, 0 -> 1, raised with its reason: the mark a class prints for a creator's footnote text, elsarticle's `\fntext`
   // number, REVTeX's joined footnote's symbol, on the contact its binding makes — a contact has no `mark` in the schema —,
   // read where two creators hold it to make it their marked note, OD #1054; internal, never written out)
@@ -1182,6 +1187,22 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "declared _labelprints base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  // (MARKSAFEc, review revMARKSAFEb N1: keys the engine and bindings already pass, declared as `_corresponding` is, so
+  // their use reports no unknown key on every paper that writes one: `_markunknown`, `_markfromcounter` (a creator's
+  // note's flags), `_share`, `_rowshared` (a contact several names share))
+  (
+    "declared _markfromcounter base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _markunknown base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _rowshared base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _share base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared _blockcreator base_utilities/defs/frontmatter_api.rs",
     1,
@@ -2992,7 +3013,7 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),
   ("latexml_engine/src/latex_constructs/sect07.rs", 29),
   // (QAB57, 69 -> 70: `assign_meaning` clearing an environment OmniBus guessed, a write the `meaning(` pattern counts)
-  ("latexml_engine/src/latex_constructs/sect08.rs", 70),
+  ("latexml_engine/src/latex_constructs/sect08.rs", 69),
   ("latexml_engine/src/latex_constructs/sect09.rs", 1),
   ("latexml_engine/src/latex_constructs/sect10.rs", 3),
   ("latexml_engine/src/latex_constructs/sect11.rs", 28),

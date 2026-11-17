@@ -3049,7 +3049,8 @@ mod browser_render_fmmarks {
   //! mark, note body, contact) drawn over another; every shown mark on its name's last line, touching the name or the
   //! mark before it; every shown note body under its own name and inside its column; at either width no horizontal
   //! overflow of the block. A one-author note in a one-line block keeps its mark and pop-up in LaTeXML.css (OD #1052),
-  //! so its body is not shown. Opt-in and LOCAL like the guards above.
+  //! so its body is not shown; an unmarked note shows no mark and its text, a line under its name (OD #990). Opt-in and
+  //! LOCAL like the guards above.
 
   macro_rules! repro {
     ($name:literal) => {
@@ -3070,7 +3071,7 @@ mod browser_render_fmmarks {
     &'static [&'static str],
   );
 
-  const ROWS: [Row; 5] = [
+  const ROWS: [Row; 6] = [
     (
       "a shared legend note (2407.07614's shape)",
       repro!("author_block_symbol_legend_note_mark_not_in_its_text"),
@@ -3105,6 +3106,12 @@ mod browser_render_fmmarks {
       repro!("fmmarks_many_names_two_legend_marks"),
       &[("Ann Able", "\u{2217}"), ("Bob Baker", "\u{2217}")],
       &["Ann Able", "Dan Dorn"],
+    ),
+    (
+      "unmarked notes, their glyph unknown (an unbound class's `\\thanks`, OD #990)",
+      repro!("marksafe_unbound_class_thanks_print_no_glyph"),
+      &[],
+      &["Ann Able", "Bob Baker"],
     ),
   ];
 

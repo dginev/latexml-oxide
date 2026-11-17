@@ -4,21 +4,19 @@
 %   `\date{\textsuperscript{§}Email: …}`)
 % oracle:   pdflatex 0 errors; "Ann Able1,*,§, Bob Baker1,*, and Cat Cole1,**", "*These authors contributed equally…",
 %   "**Present address: Lab B, City", "§Email: ann@a.edu" (the date)
-% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[*]=These authors
-%   contributed equally to this work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors
-%   contributed equally to this work. | affiliation=Univ A, Town / Cat Cole | affiliation=Univ A, Town ;
-%   affiliation=Present address: Lab B, City; HTML Ann Able ; *→note / Bob Baker ; *→note / Cat Cole / margin:
-%   These authors contributed equally to this work.
-% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[§]= ; thanks[*]=These authors contributed equally to
-%   this work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors contributed equally to this
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[*]=These authors contributed equally
+%   to this work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors contributed equally to this
 %   work. | affiliation=Univ A, Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab
-%   B, City; HTML Ann Able ; *→note ; § plain / Bob Baker ; *→note / Cat Cole / margin: These authors
-%   contributed equally to this work. (the guard's XML and HTML lines)
-% moves:    XML MARKSAFE (NEITHER in phase 1: the `§` label no `\affil` answers is dropped with no Warning; a
-%   mark-only note); HTML the XML layer's: MARKSAFE (NEITHER in phase 1: the `§` label no `\affil` answers is
-%   dropped with no Warning; a mark-only note)
-% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
-%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier and _red)
+%   B, City
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[§]= ; thanks[*]=These authors contributed equally to this
+%   work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors contributed equally to this work. |
+%   affiliation=Univ A, Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab B, City
+%   (guard canon: name ; note role[mark]=text, sorted | contacts)
+% moves:    NEITHER: reported to main (the `§` label no `\affil` answers is dropped with no Warning)
+% status:   RED (NEITHER: no recorded gap, reported to main) (INTREC 3af622aca64;
+%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier_red); MARKSAFE counts the lost `§` (1
+%   Warning, `authblk_sty::count_lost_labels`; perfect_kernel_batchshmark::a_class_label_no_entry_answers_is_counted),
+%   the mark-only note still RED
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{authblk}

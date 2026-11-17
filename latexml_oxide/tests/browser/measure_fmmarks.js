@@ -57,7 +57,8 @@ const pw = require('playwright-core');
                 onLine: m.top < last.bottom && m.bottom > last.top });
               prevRight = m.right;
             }
-            const content = note.querySelector('.ltx_note_content');
+            // (an unmarked note, OD #990, is its text alone: no mark, no pop-up)
+            const content = note.querySelector('.ltx_note_content') || (note.classList.contains('ltx_note_unmarked') ? note : null);
             if (shown(content)) {
               const b = R(content);
               const col = R(c);

@@ -8,13 +8,15 @@
 %   footnotemark[*]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ B,
 %   City / Cat Cole | email=cat@a.edu ; affiliation=Univ A, Town; HTML Ann Able ; * plain / Bob Baker ; *
 %   plain / Cat Cole
-% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= | altaffiliation=These authors contribute equally to
-%   this work. ; affiliation=Univ A, Town / Bob Baker ; footnotemark[*]= | altaffiliation=These authors
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[a]= | altaffiliation=These authors contribute equally to
+%   this work. ; affiliation=Univ A, Town / Bob Baker ; footnotemark[a]= | altaffiliation=These authors
 %   contribute equally to this work. ; affiliation=Univ B, City / Cat Cole | email=cat@a.edu ;
-%   affiliation=Univ A, Town; HTML Ann Able ; * plain / Bob Baker ; * plain / Cat Cole (the guard's XML and
-%   HTML lines)
-% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
-%   perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+%   affiliation=Univ A, Town; HTML Ann Able ; a plain / Bob Baker ; a plain / Cat Cole (the guard's XML and
+%   HTML lines; the name's `\footnotemark[1]` prints "a", the ∗ is the altaffiliation's: the int 10997fdf9a0 lines
+%   matched it by glyph)
+% status:   GREEN (int/frontmatter 10997fdf9a0) -> RED XML, HTML (MARKSAFE writes the name's mark none: REVTeX
+%   4.1/4.2 set it in their minipage letters, unknown here, `latex_constructs::drop_unknown_title_mark`; row R
+%   REVLETTERS; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering_red)
 % preload: ar5iv.sty
 \documentclass[aps,prb,superscriptaddress]{revtex4-1}
 \renewcommand{\thefootnote}{\alph{footnote}}

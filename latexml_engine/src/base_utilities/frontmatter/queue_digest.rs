@@ -15,10 +15,18 @@ pub(in crate::base_utilities) fn digest_frontmatter_item(
   tag: &str,
   item: Tokens,
 ) -> Result<Digested> {
+  // (the title block's `\thefootnote`, as the class's `\maketitle` sets it before the field)
+  let class_marks = crate::latex_constructs::title_field_footnotes(tag);
   bgroup();
   // the field being made, for the commands a class's own setter of it defines for its argument
   // (frontmatter_stores.rs `refused_environment_definition`: vmsta.cls's `\author` and its `\fnm`)
   assign_value("lx_frontmatter_item", tag.to_string(), Some(Scope::Local));
+  if class_marks {
+    crate::latex_constructs::enter_title_footnotes();
+  }
+  // (a name's own cell's `\thefootnote`, which a declaration the flush ran ahead of the names set: 1807.02791; the field's
+  // own kept)
+  crate::latex_constructs::enter_title_cell(tag);
   // the counter step in scope as the item starts, which a `\label` naming a step of its own does not name
   // (`\lx@set@frontmatter@label`)
   assign_value(
@@ -361,6 +369,24 @@ pub(in crate::base_utilities) fn frontmatter_label_keys(
   prefix: &str,
 ) -> Result<Vec<String>> {
   Ok(frontmatter_label_request(operand, prefix)?.0)
+}
+
+/// The labels a mark's operand prints, each comma piece whole: `printed_label`'s text, else its spelling, read by
+/// `clean_frontmatter_labels` and compared as marks are (`insert::mark_form`: no math shift, one asterisk). One key for
+/// both sides of a label match a binding counts: authblk's `\author[\affA]` with `\newcommand\affA{1}` prints 1, as
+/// its `\affil[1]` does (review revMARKSAFE S3; `frontmatter_label_keys` parts the pieces further).
+pub fn printed_label_pieces(operand: &Tokens) -> Result<Vec<String>> {
+  let text = match printed_label(operand)? {
+    Some(printed) => printed.text,
+    None => operand.to_string(),
+  };
+  Ok(
+    clean_frontmatter_labels(&text, "")
+      .iter()
+      .map(|label| mark_form(label))
+      .filter(|label| !label.is_empty())
+      .collect(),
+  )
 }
 
 /// The label keys of a mark's operand ([`frontmatter_label_keys`]), and those of them only a picture's text prints

@@ -1,0 +1,17 @@
+% mechanism: a document's own copy of article's `\maketitle` prints `\fnsymbol` marks the engine cannot know: notes
+%   unmarked (the fail-safe), no glyph on the page, each text under its name
+% witness:  review revMARKSAFE B1 (p/owncopy.tex)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker†", footnotes "∗ First note.", "† Second note."
+% engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 0 Warnings; notes unmarked; HTML "†" on both names
+% expect:   0 errors, 0 Warnings, 1 Info; notes unmarked; HTML no glyph, each text under its name
+% status:   RED -> GREEN HTML (MARKSAFEb: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks);
+%   ∗ and † RED (row R SHAUTO)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter\renewcommand\maketitle{\par\begingroup\renewcommand\thefootnote{\@fnsymbol\c@footnote}\def\@makefnmark{\rlap{\@textsuperscript{\normalfont\@thefnmark}}}\newpage\global\@topnum\z@\@maketitle\thispagestyle{empty}\@thanks\endgroup\setcounter{footnote}{0}}\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

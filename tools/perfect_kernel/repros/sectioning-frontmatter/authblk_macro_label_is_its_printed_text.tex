@@ -1,0 +1,19 @@
+% mechanism: authblk's lost-label count compares the labels as printed, both sides by one key (`printed_label_pieces`):
+%   `\author[\affA]` with `\newcommand\affA{1}` is `\affil[1]`'s label
+% witness:  review revMARKSAFE S3 (p/ab_macro.tex)
+% oracle:   pdflatex 0 errors; "Ann Able1", "1 Univ A"
+% engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 1 Warning (a false "label no \affil explains: \affA")
+% expect:   0 errors, 0 Warnings; Ann Able with the affiliation Univ A
+% status:   RED -> GREEN (MARKSAFEb: perfect_kernel_batchshmark::a_class_label_no_entry_answers_is_counted)
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\newcommand\affA{1}
+\author[\affA]{Ann Able}
+\affil[1]{Univ A}
+\title{T}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

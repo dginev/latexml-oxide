@@ -384,6 +384,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Rust-only: an entry its run's stopgap alone gave its carriers, which the frontmatter emitter writes and the Link step
   // of an entry's addresses reads ([`STOPGAP_ENTRY`]). Declared, as `_corresponding` is.
   DefKeyVal!("Frontmatter", "_stopgap", "");
+  // Rust-only, declared as `_corresponding` is: a creator's note marked from the counter or with its mark unknown
+  // (`insert::MARK_FROM_COUNTER`, `MARK_UNKNOWN`), and a contact several names share (`_share`, `insert::ROW_SHARED`).
+  DefKeyVal!("Frontmatter", "_markfromcounter", "");
+  DefKeyVal!("Frontmatter", "_markunknown", "");
+  DefKeyVal!("Frontmatter", "_share", "");
+  DefKeyVal!("Frontmatter", "_rowshared", "");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never

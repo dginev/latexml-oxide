@@ -3,15 +3,14 @@
 % witness:  1807.02791 (`\renewcommand{\thefootnote}{\arabic{footnote}}` in `\author`, `Andrea
 %   Roccaverde⏎\footnotemark[1]\,\,\,\,\footnotemark[2]`)
 % oracle:   pdflatex 0 errors; "Ann Able 1 2"
-% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= ;
-%   footnotemark[†]=; HTML Ann Able ; * plain ; † plain
-% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[1]= ; footnotemark[2]=; HTML Ann Able ; 1 plain ; 2
-%   plain (the guard's XML and HTML lines)
-% moves:    XML MARKSAFE (NEITHER in phase 1: `\thefootnote` set arabic inside `\author`; the marks written * and †,
-%   not the printed 1 and 2); HTML the XML layer's: MARKSAFE (NEITHER in phase 1: `\thefootnote` set arabic
-%   inside `\author`; the marks written * and †, not the printed 1 and 2)
-% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
-%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[*]= ; footnotemark[†]=
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[1]= ; footnotemark[2]= (guard canon: name ; note
+%   role[mark]=text, sorted | contacts)
+% moves:    NEITHER: reported to main (the marks written * and †, not the printed 1 and 2)
+% status:   RED (NEITHER: no recorded gap, reported to main) (INTREC 3af622aca64;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names_red) -> GREEN (MARKSAFE: the author block's
+%   `\thefootnote` holds for its name, `latex_constructs::title_field_footnotes`;
+%   perfect_kernel_batchshmark::a_thefootnote_the_author_block_sets_holds_for_its_name)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

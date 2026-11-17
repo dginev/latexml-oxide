@@ -1,0 +1,18 @@
+% mechanism: an unbound class's name `\footnotemark[n]` answered by `\footnotetext[n]` after `\maketitle`: no glyph
+%   (pdflatex prints ∗ and † on the names, 1 and 2 at the notes), the text paired by the number, an Info
+% witness:  sibling of review revMARKSAFE / ADVGEN I-3
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker†", footnotes "1 Note A.", "2 Note B."
+% engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 0 Warnings; notes mark="1", mark="2"; HTML "1", "2"
+% expect:   0 errors, 0 Warnings, 1 Info; notes unmarked with their texts; HTML no glyph, each text under its name
+% status:   RED -> GREEN (MARKSAFEb: perfect_kernel_batchshmark::a_mark_whose_glyph_is_unknown_prints_none); ∗ and † RED
+%   (row R SHAUTO)
+% preload:  ar5iv.sty
+\documentclass{scrartcl}
+\title{T}
+\author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[2]}
+\date{}
+\begin{document}
+\maketitle
+\footnotetext[1]{Note A.}\footnotetext[2]{Note B.}
+Body.
+\end{document}

@@ -700,6 +700,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // that it lost is counted (`title_page_check`; FIDELITY_CHARTER §4). A check: it writes nothing. Rust-only.
   Tag!("ltx:document", after_close_late => sub[document, _root] {
     check_title_page_words(document)?;
+    // (the authors' notes whose glyph is unknown, their texts all placed by now: OD #1053)
+    count_unknown_marks(document);
   });
 
   // A `\maketitle` that typesets authors an `\author` set after the last flush replaces

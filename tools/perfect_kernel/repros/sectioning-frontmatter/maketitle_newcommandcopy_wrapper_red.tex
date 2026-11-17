@@ -1,0 +1,18 @@
+% mechanism: a `\NewCommandCopy` wrapper of the class's `\maketitle` prints the class's marks, which the by-meaning
+%   detection (`latex_constructs::class_maketitle_in_force`) does not see (the copy is no `\let` of the class's)
+% witness:  review revMARKSAFE S2 (p/cmdcopy.tex)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker†", footnotes "∗ First note.", "† Second note."
+% engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 0 Warnings; notes unmarked (fail-safe), HTML "†" on both;
+%   MARKSAFEb: unmarked, no glyph, each text under its name
+% expect:   0 errors, 0 Warnings; notes marked ∗ and †
+% status:   RED (row R SHAUTO/T1: the marks a `\maketitle` prints, from a replay of the one in force)
+% moves:    row R SHAUTO
+% preload:  ar5iv.sty
+\documentclass{article}
+\NewCommandCopy\oldmt\maketitle\RenewDocumentCommand\maketitle{}{\oldmt\thispagestyle{empty}}
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

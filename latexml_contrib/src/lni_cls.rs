@@ -12,6 +12,11 @@ use latexml_package::{package::authblk_sty::define_author_and_affil, prelude::*}
 
 LoadDefinitions!({
   InputDefinitions!("lni", noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  // (the title's marks lni's own `\maketitle` prints, every version's: lni.cls:475-477 `\renewcommand\thefootnote
+  // {\@arabic\c@footnote}`, v0.5's :89-93; 2407.04435 "1, 1, 1,2, 3", 1705.02823, 1705.08889)
+  if lookup_bool("\\maketitle:redefined@class") {
+    DefMacro!("\\lx@title@thefootnote", "\\@arabic\\c@footnote");
+  }
   // (the class read raw by this binding is a raw class to K11, its title-page stores rerouted at the end of the class
   // load: lni.cls `\subtitle`; the binding's `\author`/`\affil` below stay its own)
   if package_loaded("authblk") {
