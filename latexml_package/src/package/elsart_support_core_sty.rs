@@ -56,8 +56,19 @@ LoadDefinitions!({
   // (elsarticle prints the argument as written, so a name list in one `\author{Ann Able, Bob Baker}` is several people:
   // read as the per-author classes read theirs, each name given the marks; Perl's elsart_support_core.sty.ltxml:35-36
   // makes one creator. 2511.07560, 2401.02456)
+  // (the keys an author lists and the `\corref`/`\cormark` keys its name holds, recorded for elsarticle's `\cortext` mark,
+  // which depends on the route its names reach it by: `\lx@els@cormark`, 2512.04868)
   DefMacro!("\\author OptionalSemiverbatim {}",
-    "\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@add@authors@append[annotations={#1}]{#2}");
+    "\\lx@els@record@author{#1}{#2}\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@add@authors@append[annotations={#1}]{#2}");
+  // (and the keys an `\address`/`\affiliation` labels: a key a note's text shares prints whichever `\elsLabel` wrote
+  // it last, elsarticle.cls:126-131 — 1711.08299's `\cortext[a]` beside `\address[a]`, its names printing "a")
+  DefPrimitive!("\\lx@els@record@place{}", sub[(key)] {
+    record_els_keys(ELS_PLACE_KEYS, std::iter::once(key.to_string().as_str()));
+  });
+  DefPrimitive!("\\lx@els@record@author{}{}", sub[(keys, name)] {
+    record_els_keys(ELS_AUTHOR_KEYS, keys.to_string().split(','));
+    record_els_keys(ELS_CORREF_KEYS, corref_keys(&name).iter().map(String::as_str));
+  });
 
   // (elsarticle puts an `\address` into the author list after the authors before it, elsarticle.cls:665-668, and an
   // `\affiliation` into the address list after all of them, :647-653; with no labels to link them, an unlabelled one is
@@ -67,10 +78,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@els@shared",
     "\\ifdefined\\lx@els@labelled\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi");
   DefMacro!("\\address OptionalSemiverbatim {}",
-    "\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}{\\lx@add@contact[label={#1},role=address,annotate=run]}{#2}");
+    "\\lx@els@record@place{#1}\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}{\\lx@add@contact[label={#1},role=address,annotate=run]}{#2}");
   // \affiliation[label]{text-OR-keyvals} !!  (Perl PR #2767)
   DefMacro!("\\affiliation OptionalSemiverbatim {}",
-    "\\lx@els@shared{\\lx@add@contact[label={#1},role=affiliation]}\
+    "\\lx@els@record@place{#1}\\lx@els@shared{\\lx@add@contact[label={#1},role=affiliation]}\
      {\\lx@add@contact[label={#1},role=affiliation,annotate=run]}{\\lx@els@parse@affiliation{#2}}");
 
   // The affiliation as the class prints it from its `stm/affiliation` keys ([`stm_affiliation`]).
@@ -92,7 +103,11 @@ LoadDefinitions!({
   // The \<XXX>ref forms are used within the \author text to anchor the connection
   // the \<XXX>text forms supply the text (& and role) for the contact that will be attached.
   DefMacro!("\\thanksref{}",  "\\lx@request@frontmatter@annotation[thanks]{#1}");
-  DefMacro!("\\corref{}",     "\\lx@request@frontmatter@annotation[cor]{#1}");
+  // (a `\corref` outside an `\author`'s name recorded where it is read, one inside it by `\lx@els@record@author`)
+  DefMacro!("\\corref{}",     "\\lx@els@record@corref{#1}\\lx@request@frontmatter@annotation[cor]{#1}");
+  DefPrimitive!("\\lx@els@record@corref{}", sub[(key)] {
+    record_els_keys(ELS_CORREF_KEYS, std::iter::once(key.to_string().as_str()));
+  });
   DefMacro!("\\corauthref{}", "\\lx@request@frontmatter@annotation[corauth]{#1}");
   DefMacro!("\\fnref{}",      "\\lx@request@frontmatter@annotation[fn]{#1}");
   DefMacro!("\\tnoteref{}",   "\\lx@request@frontmatter@annotation[tnote]{#1}"); // Possibly for title, not author?
@@ -549,4 +564,69 @@ pub fn define_keyword_markup() -> Result<()> {
   DefMacro!("\\@JEL XUntil:\\@keyword@cut", "\\lx@add@classification[scheme=JEL,name={JEL:~}]{#1}");
   DefMacro!("\\@UK XUntil:\\@keyword@cut", "\\lx@add@classification[scheme=UK,name={UK:~}]{#1}");
   Ok(())
+}
+
+/// The global value holding the keys `\author[…]` calls list (comma-separated).
+pub(crate) const ELS_AUTHOR_KEYS: &str = "@elsarticle@authorkeys";
+/// The global value holding the keys `\corref`/`\cormark` name (comma-separated).
+pub(crate) const ELS_CORREF_KEYS: &str = "@elsarticle@correfs";
+/// The global value holding the keys `\address[…]`/`\affiliation[…]` label (comma-separated).
+pub(crate) const ELS_PLACE_KEYS: &str = "@elsarticle@placekeys";
+
+/// Add each of `keys` (trimmed, non-empty) to the comma list kept in the global value `list`.
+pub(crate) fn record_els_keys<'a>(list: &str, keys: impl Iterator<Item = &'a str>) {
+  let mut recorded = lookup_string(list);
+  for key in keys.map(str::trim).filter(|key| !key.is_empty()) {
+    if !recorded.split(',').any(|k| k == key) {
+      if !recorded.is_empty() {
+        recorded.push(',');
+      }
+      recorded.push_str(key);
+    }
+  }
+  assign_value(list, Stored::String(pin(&recorded)), Scope::Global);
+}
+
+/// Whether the comma list kept in the global value `list` holds `key`.
+pub(crate) fn recorded_els_key(list: &str, key: &str) -> bool {
+  let key = key.trim();
+  lookup_string(list).split(',').any(|k| k == key)
+}
+
+/// The keys `\corref{<key>}` and `\cormark[<key>]` name in `name`, an `\author`'s argument.
+fn corref_keys(name: &Tokens) -> Vec<String> {
+  let tokens = name.unlist_ref();
+  let mut keys = Vec::new();
+  for (at, t) in tokens.iter().enumerate() {
+    let (open, close) = if *t == T_CS!("\\corref") {
+      (Catcode::BEGIN, Catcode::END)
+    } else if *t == T_CS!("\\cormark") {
+      (Catcode::OTHER, Catcode::OTHER)
+    } else {
+      continue;
+    };
+    let mut rest = tokens[at + 1..]
+      .iter()
+      .skip_while(|t| t.get_catcode() == Catcode::SPACE);
+    if !rest
+      .next()
+      .is_some_and(|t| t.get_catcode() == open && (open == Catcode::BEGIN || t.to_string() == "["))
+    {
+      continue;
+    }
+    let mut depth = 0;
+    let key: Vec<Token> = rest
+      .take_while(|t| {
+        depth += t.group_step();
+        if close == Catcode::END {
+          depth >= 0
+        } else {
+          !(depth == 0 && t.to_string() == "]")
+        }
+      })
+      .cloned()
+      .collect();
+    keys.push(Tokens::new(key).to_string().trim().to_string());
+  }
+  keys
 }

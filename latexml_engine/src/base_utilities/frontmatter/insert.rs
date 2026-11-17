@@ -673,11 +673,12 @@ fn mark_creator_notes(document: &mut Document) -> Result<()> {
     }
     match note.get_attribute("mark") {
       Some(mark) if mark_form(&mark) == mark_form(&printed) => {},
-      // (a footnote symbol, or a label its name prints: IEEEtran's `\thanks{$^{*}$Equal contribution}`, 2312.10807)
+      // (a label its name prints: IEEEtran's `\thanks{$^{*}$Equal contribution}`, 2312.10807 — a footnote symbol no name
+      // prints is no mark of the note's, the text's own: INTERSPEECH2022.sty's `\thanks` prints none on the name, its
+      // legend "∗ We will release …", 2204.08920)
       None
         if note.get_attribute("role").as_deref() == Some("thanks")
-          && (printed.chars().all(events::is_fnsymbol)
-            || name_marks(document, &note).contains(&mark_form(&printed))) =>
+          && name_marks(document, &note).contains(&mark_form(&printed)) =>
       {
         document.set_attribute(&mut note, "mark", &printed)?;
       },
@@ -823,6 +824,20 @@ fn name_marks(document: &mut Document, note: &Node) -> Vec<String> {
         .collect::<Vec<_>>()
     })
     .collect();
+  // (and its mark notes', the marks a name shows apart from its text: `Youjun Chen$^{\ast,1}$`, 2602.18802)
+  marks.extend(
+    document
+      .findnodes("ltx:note[@role='footnotemark'][@mark]", Some(&creator))
+      .iter()
+      .flat_map(|mark| {
+        mark
+          .get_attribute("mark")
+          .unwrap_or_default()
+          .split(',')
+          .map(mark_form)
+          .collect::<Vec<_>>()
+      }),
+  );
   let requests = creator.get_attribute("_annotations").unwrap_or_default();
   marks.extend(
     requests

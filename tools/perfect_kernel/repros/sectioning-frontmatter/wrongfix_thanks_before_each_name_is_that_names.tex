@@ -1,0 +1,15 @@
+% mechanism: a note set off by a space from the separator before it and glued to the name after it is that name's
+%   (`resolver::mark_ledger`: past a separator, before a name, the pieces past the stretch's widest glue; at a line's
+%   start, the first name's; the lexer records the spaces around a note as a Mark's). article.cls:206 `\rlap`s the
+%   mark into the space before the next name
+% witness: 2406.12338 (article, `\author{\thanks{…}Carla Schenker, \thanks{…}Xiulin Wang, …}`)
+% oracle:  pdflatex 0 errors: "∗Alice One, †Bob Two, ‡Carol Three", footnotes "∗ Alice note." "† Bob note." "‡ Carol note."
+% engines: perl: one creator, all three notes. rust 139d1d2fa08: each name given the next name's note (Alice two, Carol none)
+% expect:  0 errors 0 Warnings; Alice One thanks[*]=Alice note.; Bob Two thanks[†]=Bob note.; Carol Three
+%   thanks[‡]=Carol note.
+% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::a_note_before_a_name_is_that_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{\thanks{Alice note.}Alice One, \thanks{Bob note.}Bob Two, \thanks{Carol note.}Carol Three}
+\begin{document}\maketitle\end{document}

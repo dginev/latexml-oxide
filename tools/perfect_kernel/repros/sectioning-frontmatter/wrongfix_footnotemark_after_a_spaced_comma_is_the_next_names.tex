@@ -1,0 +1,13 @@
+% mechanism: a text `\footnotemark` set off by a space from the comma before it and glued to the next name (the space
+%   after a control word is skipped) is the next name's (`resolver::mark_ledger`, past a separator before a name) — the
+%   Mark path of the note rule
+% witness: 2406.12338's sibling (review of WRONGFIX)
+% oracle:  pdflatex 0 errors: "Alice One, ∗Bob Two" (the `\rlap`ped mark in the space before Bob)
+% engines: rust 139d1d2fa08: the mark undecided, dropped, a Warning
+% expect:  0 errors 0 Warnings; Alice One; Bob Two footnotemark[*]=
+% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::a_note_before_a_name_is_that_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Alice One, \footnotemark Bob Two}
+\begin{document}\maketitle\end{document}

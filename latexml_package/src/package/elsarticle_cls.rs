@@ -1,5 +1,8 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
+use super::elsart_support_core_sty::{
+  ELS_AUTHOR_KEYS, ELS_CORREF_KEYS, ELS_PLACE_KEYS, recorded_els_key,
+};
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -115,7 +118,7 @@ LoadDefinitions!({
   // labelled one — its print zone the names' (`_zone=names`, OXIDIZED_DESIGN_DIVERGENCES #954; 1710.03753, where the
   // unlabelled `University of North Dakota` went after the labelled department); the core's `\address` otherwise.
   DefMacro!("\\address OptionalSemiverbatim {}",
-    "\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
+    "\\lx@els@record@place{#1}\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
      {\\lx@els@shared{\\lx@add@contact[label={},role=address,_zone=names]}\
        {\\lx@add@contact[label={},role=address,annotate=run,_zone=names]}}\
      {\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}\
@@ -283,11 +286,34 @@ LoadDefinitions!({
     };
     Ok(marked_note_text(&s!("fn"), "note", Some(mark), key, text))
   });
+  // A `\cortext` note's mark is its carriers' route (2512.04868, 1308.5495): `\corref` prints ∗ or ∗∗ (:188-190), an `\author[<key>]`
+  // key `\elsRef{<key>}`, the `cnote` number `\refstepcounter` labelled it with (:181-185, :251-256). The reading gives
+  // the note to the `\corref` names when there are any, else to the names listing its key (`label_owners`), so its mark
+  // is decided where it is digested, every author read, from the keys elsart_support_core's `\author` and `\corref`
+  // record: `\lx@els@cormark`.
   DefMacro!("\\cortext OptionalSemiverbatim {}", sub[(key, text)] {
     let n = lookup_int("@elsarticle@cnote") + 1;
     assign_value("@elsarticle@cnote", n, Scope::Global);
-    let mark = ["∗", "∗∗"].get(usize::try_from(n - 1).unwrap_or(usize::MAX)).map(|mark| (*mark).to_string());
-    Ok(marked_note_text(&s!("cor"), "correspondent", mark, key, text))
+    let mark = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@els@cormark{{{}}}{{{n}}}",
+      key.as_ref().map(ToString::to_string).unwrap_or_default()
+    )));
+    let mut marked = mark.unlist();
+    marked.extend(text.unlist());
+    Ok(marked_note_text(&s!("cor"), "correspondent", None, key, Tokens::new(marked)))
+  });
+  DefMacro!("\\lx@els@cormark Semiverbatim {}", sub[(key, n)] {
+    let key = key.to_string();
+    let n = n.to_string().trim().parse::<usize>().unwrap_or(0);
+    let mark = if recorded_els_key(ELS_AUTHOR_KEYS, &key) && !recorded_els_key(ELS_CORREF_KEYS, &key) {
+      // (a key an address shares prints the label written last, not known here: none)
+      (!recorded_els_key(ELS_PLACE_KEYS, &key)).then(|| n.to_string())
+    } else {
+      ["∗", "∗∗"].get(n.wrapping_sub(1)).map(|mark| (*mark).to_string())
+    };
+    Ok(mark.map_or_else(Tokens::default, |mark| {
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}")))
+    }))
   });
   DefMacro!("\\cormark[]", "\\corref{#1}");
   DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");

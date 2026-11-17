@@ -837,8 +837,8 @@ fn marked_blocks_restored_read_as_printed() {
 ///   (`Ohio State`): the REDs;
 /// - 65a's ASCE grade (`asce_membership_grade_qualifies_the_name_red`) and 65e's symbol mark shown by its e-mail
 ///   (`symbol_mark_shown_by_its_email_red`): each creator's contacts; the grade in the name and the lost `∗`: the REDs;
-/// - 84a's prefix notes (`author_prefix_notes_then_space_separate_names_red`): the names, Ann's own note; the notes one
-///   author off: the RED;
+/// - 84a's prefix notes (`author_prefix_notes_then_space_separate_names_red`): the names, Ann's own note; each note its
+///   own name's since WRONGFIX (`perfect_kernel_batchwrongfix::a_note_before_a_name_is_that_names`);
 /// - 97b's separators and e-mail piece (`author_marked_list_keeps_its_printed_separators_red`,
 ///   `author_marked_email_piece_is_no_person_red`): the names, marks and affiliations; the lost separators, the missing
 ///   merge report: the REDs;

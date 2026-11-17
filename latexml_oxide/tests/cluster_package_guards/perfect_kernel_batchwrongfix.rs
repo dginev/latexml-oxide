@@ -1,0 +1,208 @@
+//! WRONGFIX (DG 2026-11-16: wrong, invented or mis-linked marks are zero-tolerance, a wrong glyph worse than none): four
+//! marks the 3,000-paper dev sample showed wrong, one test per code path, each row asserting its repro's pdflatex oracle
+//! in the FMRG suite's two layers (`perfect_kernel_batchfmmarks::Row`): a note before a name is that name's
+//! (`resolver::mark_ledger`, 2406.12338); a symbol typed at the head of a thanks note no name prints is its text
+//! (`insert::mark_creator_notes`, 2204.08920); a mark character inside a name's bracket is the name's ink
+//! (`events::lexer::ink`, `resolver::lines::joined_single_name`, 1107.2497); an elsarticle `\cortext` is marked by its
+//! carriers' route (`elsarticle_cls`'s `\lx@els@cormark`, 2512.04868, 1308.5495).
+use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
+
+use super::perfect_kernel_batchfmmarks::{Row, assert_green, creator_lines, page_lines, page_of};
+
+macro_rules! repro {
+  ($name:literal) => {
+    include_str!(concat!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+      $name,
+      ".tex"
+    ))
+  };
+}
+
+/// A note set off by a space from the separator before it is the next name's, as article's `\rlap`ped mark prints it in
+/// the space before that name (article.cls:206): `\thanks{…}Bob Two` after `Alice One, ` (2406.12338, each name given
+/// the next name's note before), braced with its comma or not; and a text `\footnotemark` so set (the Mark path, dropped
+/// with a Warning before). Distinct paths: the Note event's `space_before` past a glued comma, and the Mark event.
+#[test]
+fn a_note_before_a_name_is_that_names() {
+  assert_green(&[
+    Row {
+      repro:      "wrongfix_thanks_before_each_name_is_that_names",
+      tex:        repro!("wrongfix_thanks_before_each_name_is_that_names"),
+      warnings:   0,
+      creators:   &[
+        "Alice One ; thanks[*]=Alice note.",
+        "Bob Two ; thanks[†]=Bob note.",
+        "Carol Three ; thanks[‡]=Carol note.",
+      ],
+      moves:      "",
+      page:       &[
+        "Alice One ; * plain",
+        "Bob Two ; † plain",
+        "Carol Three ; ‡ plain",
+        "margin: Alice note. ; Bob note. ; Carol note.",
+      ],
+      page_moves: "",
+    },
+    Row {
+      repro:      "wrongfix_thanks_before_each_braced_name_is_that_names",
+      tex:        repro!("wrongfix_thanks_before_each_braced_name_is_that_names"),
+      warnings:   0,
+      creators:   &[
+        "Alice One ; thanks[*]=Alice note.",
+        "Bob Two ; thanks[†]=Bob note.",
+        "Carol Three ; thanks[‡]=Carol note.",
+      ],
+      moves:      "",
+      page:       &[
+        "Alice One ; * plain",
+        "Bob Two ; † plain",
+        "Carol Three ; ‡ plain",
+        "margin: Alice note. ; Bob note. ; Carol note.",
+      ],
+      page_moves: "",
+    },
+    Row {
+      repro:      "wrongfix_footnotemark_after_a_spaced_comma_is_the_next_names",
+      tex:        repro!("wrongfix_footnotemark_after_a_spaced_comma_is_the_next_names"),
+      warnings:   0,
+      creators:   &["Alice One", "Bob Two ; footnotemark[*]="],
+      moves:      "",
+      page:       &["Alice One", "Bob Two ; * plain"],
+      page_moves: "",
+    },
+  ]);
+}
+
+/// A symbol typed at the head of a thanks note is the note's mark only where its creator shows that mark: under
+/// INTERSPEECH2022.sty's `\thanks`, which prints none on the name (`\gdef\thefootnote{}`, :184), the body's `$^*$`
+/// stays its text, as the legend prints it "∗ We will release …" (2204.08920; Bob's note was given the mark ∗ no name
+/// prints). The style's title code is the repro's `INTERSPEECH2022.sty`, written beside it as a paper ships it (the copy
+/// read after the stand-in binding).
+#[test]
+fn a_symbol_no_name_prints_stays_the_notes_text() {
+  let sty =
+    include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/INTERSPEECH2022.sty");
+  let (log, xml, page) = convert_files_with_setup_then(
+    repro!("wrongfix_unmarked_thanks_keeps_its_typed_symbol"),
+    &[("INTERSPEECH2022.sty", sty)],
+    Some("ar5iv.sty"),
+    || {},
+    |xml| page_lines(&page_of(xml)),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creator_lines(&xml), [
+    "Alice One",
+    "Bob Two ; thanks[]=∗ We will release the code."
+  ]);
+  let (lines, problems): (Vec<String>, Vec<String>) = page;
+  assert!(problems.is_empty(), "{problems:?}");
+  assert_eq!(lines, [
+    "Alice One",
+    "Bob Two | under: ∗ We will release the code."
+  ]);
+}
+
+/// A mark character in text inside a bracket the name's run opened is the bracket's ink: `H. Chen (x\P)` is the name
+/// "H. Chen (x¶)", its ")" kept, no mark (1107.2497's GB2312 name read as "³»¶" without the CJK package, its ¶ a mark-only
+/// note and the ")" lost before); and in revtex's names line such a name counts by its name before the bracket, so the
+/// list is four names, not one (`joined_single_name`; one creator and two Warnings before, with any bracket).
+#[test]
+fn a_mark_character_inside_a_names_bracket_is_its_text() {
+  assert_green(&[
+    Row {
+      repro:      "wrongfix_mark_char_inside_a_names_bracket_is_ink",
+      tex:        repro!("wrongfix_mark_char_inside_a_names_bracket_is_ink"),
+      warnings:   0,
+      creators:   &["H. Chen (x¶)", "M. Baldo"],
+      moves:      "",
+      page:       &["H. Chen (x¶)", "M. Baldo"],
+      page_moves: "",
+    },
+    Row {
+      repro:      "wrongfix_revtex_name_list_with_a_bracket_remark",
+      tex:        repro!("wrongfix_revtex_name_list_with_a_bracket_remark"),
+      warnings:   0,
+      creators:   &[
+        "H. Chen (x¶) | affiliation=INFN",
+        "M. Baldo | affiliation=INFN",
+        "G. F. Burgio | affiliation=INFN",
+        "H.-J. Schulze | affiliation=INFN",
+      ],
+      moves:      "",
+      page:       &["H. Chen (x¶)", "M. Baldo", "G. F. Burgio", "H.-J. Schulze"],
+      page_moves: "",
+    },
+  ]);
+}
+
+/// An elsarticle `\cortext` note is marked by its carriers' route: names listing its key in `\author[…]` print the `cnote`
+/// number (elsarticle.cls:181-185, :251-256), "1" — 2512.04868's two names both marked ∗ before —, whether the
+/// `\cortext` comes after the authors or before them, and nothing where an `\address` shares the key, its letter printed
+/// instead (:126-131, 1711.08299); names reaching it by `\corref` print ∗ (:188-190, 1308.5495). Distinct: the key
+/// route, its decision deferred past the authors, the key an address shares, and the `\corref` route.
+#[test]
+fn an_elsarticle_cortext_is_marked_by_its_route() {
+  assert_green(&[
+    Row {
+      repro:      "wrongfix_elsarticle_cortext_key_prints_its_number",
+      tex:        repro!("wrongfix_elsarticle_cortext_key_prints_its_number"),
+      warnings:   0,
+      creators:   &[
+        "Alice One ; thanks[1]=Corresponding author | affiliation=Some University, X, Y",
+        "Bob Two ; thanks[1]=Corresponding author | affiliation=Some University, X, Y",
+      ],
+      moves:      "",
+      page:       &[
+        "Alice One ; 1→note",
+        "Bob Two ; 1→note",
+        "margin: Corresponding author",
+      ],
+      page_moves: "",
+    },
+    Row {
+      repro:      "wrongfix_elsarticle_cortext_before_its_keyed_authors",
+      tex:        repro!("wrongfix_elsarticle_cortext_before_its_keyed_authors"),
+      warnings:   0,
+      creators:   &[
+        "Alice One ; thanks[1]=Corresponding author | affiliation=Some University, X, Y",
+        "Bob Two ; thanks[1]=Corresponding author | affiliation=Some University, X, Y",
+      ],
+      moves:      "",
+      page:       &[
+        "Alice One ; 1→note",
+        "Bob Two ; 1→note",
+        "margin: Corresponding author",
+      ],
+      page_moves: "",
+    },
+    Row {
+      repro:      "wrongfix_elsarticle_cortext_key_shared_with_an_address",
+      tex:        repro!("wrongfix_elsarticle_cortext_key_shared_with_an_address"),
+      warnings:   0,
+      creators:   &[
+        "Alice One | address=Some University ; correspondent=Corresponding author",
+        "Bob Two | address=Some University ; correspondent=Corresponding author",
+      ],
+      moves:      "",
+      page:       &["Alice One", "Bob Two"],
+      page_moves: "",
+    },
+    Row {
+      repro:      "wrongfix_elsarticle_corref_shared_stays_star",
+      tex:        repro!("wrongfix_elsarticle_corref_shared_stays_star"),
+      warnings:   0,
+      creators:   &[
+        "Alice One ; thanks[*]=Corresponding author | affiliation=Some University, X, Y",
+        "Bob Two ; thanks[*]=Corresponding author | affiliation=Some University, X, Y",
+      ],
+      moves:      "",
+      page:       &[
+        "Alice One ; *→note",
+        "Bob Two ; *→note",
+        "margin: Corresponding author",
+      ],
+      page_moves: "",
+    },
+  ]);
+}

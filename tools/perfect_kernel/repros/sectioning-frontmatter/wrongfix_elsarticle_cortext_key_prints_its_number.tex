@@ -1,0 +1,19 @@
+% mechanism: a `\cortext` note reached through the names' `\author[…]` keys is marked by the `cnote` number each key
+%   prints (elsarticle.cls:251-256 `\elsRef{key}`, :181-185 `\refstepcounter{cnote}`), not the ∗ only `\corref` prints
+%   (:188-190): the binding's `\lx@els@cormark`, decided where the note is digested
+% witness: 2512.04868 (`\author[label4,label2,cor]{Yanzeng Li}`, `\author[label1,cor]{Xinchi Li}`, `\cortext[cor]{…}`)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,1 , Bob Twoa,1"; footnote "∗ Corresponding author"
+% engines: rust 139d1d2fa08: both notes mark="∗"
+% expect:  0 errors 0 Warnings; Alice One thanks[1]=Corresponding author | affiliation; Bob Two the same
+% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1,cor]{Alice One}
+\author[l1,cor]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[cor]{Corresponding author}
+\end{frontmatter}
+\end{document}

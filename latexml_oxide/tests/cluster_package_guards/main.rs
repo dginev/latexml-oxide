@@ -673,6 +673,9 @@ mod perfect_kernel_batchw3rd;
 mod perfect_kernel_batchw3rg;
 /// W4: colortbl's `\arrayrulecolor` colours each border side as the rule is drawn (#773); OD #1025.
 mod perfect_kernel_batchw4;
+/// WRONGFIX: four wrong, invented or mis-linked frontmatter marks (a note before a name, a typed symbol no name prints,
+/// a mark character inside a name's bracket, an elsarticle `\cortext` reached through `\author[…]` keys).
+mod perfect_kernel_batchwrongfix;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz18c;

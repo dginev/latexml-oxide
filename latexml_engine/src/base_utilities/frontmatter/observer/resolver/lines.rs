@@ -992,7 +992,22 @@ pub(super) fn joined_single_name(events: Vec<Event>) -> Vec<Event> {
   }
   let refs: Vec<&Event> = events[first..=last].iter().collect();
   let text = events_text(&refs);
-  if name_count(&text) >= 2 {
+  // (a piece counts by its name before a bracketed remark: revtex's `\author{H. Chen (陈欢), M. Baldo, …}`, the name in
+  // its own script, 1107.2497)
+  let bare = || {
+    let bare: Vec<Event> = refs
+      .iter()
+      .map(|e| match name_before_remark(&e.text) {
+        Some(name) if e.kind == EventKind::Name => Event {
+          text: name.to_string(),
+          ..(*e).clone()
+        },
+        _ => (*e).clone(),
+      })
+      .collect();
+    events_text(&bare.iter().collect::<Vec<_>>())
+  };
+  if name_count(&text) >= 2 || name_count(&bare()) >= 2 {
     return events;
   }
   let joined = Event {

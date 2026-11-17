@@ -88,7 +88,9 @@ enum Opening {
   Name(usize),
   /// a cell (`\and`, `&`): no name before it on its line
   Cell,
-  /// anything else: a line's start, a comma, the word "and", other ink
+  /// a line's start (the block's, a `\\`'s): no name before it on its line
+  Line,
+  /// anything else: a comma, the word "and", other ink
   Other,
 }
 
@@ -108,7 +110,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
   events: &[Event],
 ) -> MarkLedger {
   let mut ledger = MarkLedger::default();
-  let mut opening = Opening::Other;
+  let mut opening = Opening::Line;
+  // (the records past a separator as near the next name as the separator, which the block's convention decides)
+  let mut ties: Vec<usize> = Vec::new();
   // (the stretch's pieces: (place, movable), the glue before each, the glue since the last ink)
   let mut pieces: Vec<(usize, bool)> = Vec::new();
   let mut glues: Vec<Reach> = Vec::new();
@@ -135,7 +139,15 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
       // (an alignment's cell opens as `&` does: `\begin{tabular}{cc}Ann Able & \footnotemark[2]Bob Baker`)
       EventKind::Layout if e.role.as_deref() == Some("cell") => {
         glues.push(glue);
-        decide(&mut ledger, events, opening, None, &pieces, &glues);
+        decide(
+          &mut ledger,
+          &mut ties,
+          events,
+          opening,
+          None,
+          &pieces,
+          &glues,
+        );
         opening = Opening::Cell;
         past_comma = false;
         (pieces, glues, glue, gap_seen, space_after) =
@@ -148,7 +160,15 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
       EventKind::Name if !norm(&e.text).is_empty() => {
         hidden(&mut glue, gap_seen, space_after);
         glues.push(glue);
-        decide(&mut ledger, events, opening, Some(k), &pieces, &glues);
+        decide(
+          &mut ledger,
+          &mut ties,
+          events,
+          opening,
+          Some(k),
+          &pieces,
+          &glues,
+        );
         opening = Opening::Name(k);
         past_comma = false;
         (pieces, glues, glue, gap_seen, space_after) =
@@ -184,7 +204,15 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
           && !space_after
           && !e.space_before
           && glues.iter().all(|g| g.width == 0.0 && !g.fill);
-        decide(&mut ledger, events, opening, None, &pieces, &glues);
+        decide(
+          &mut ledger,
+          &mut ties,
+          events,
+          opening,
+          None,
+          &pieces,
+          &glues,
+        );
         past_comma = name_ink;
         opening = match kind {
           _ if name_ink => opening,
@@ -196,8 +224,16 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
       },
       EventKind::Break => {
         glues.push(glue);
-        decide(&mut ledger, events, opening, None, &pieces, &glues);
-        opening = Opening::Other;
+        decide(
+          &mut ledger,
+          &mut ties,
+          events,
+          opening,
+          None,
+          &pieces,
+          &glues,
+        );
+        opening = Opening::Line;
         past_comma = false;
         (pieces, glues, glue, gap_seen, space_after) =
           (Vec::new(), Vec::new(), Reach::NONE, false, false);
@@ -205,7 +241,28 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
     }
   }
   glues.push(glue);
-  decide(&mut ledger, events, opening, None, &pieces, &glues);
+  decide(
+    &mut ledger,
+    &mut ties,
+    events,
+    opening,
+    None,
+    &pieces,
+    &glues,
+  );
+  // (a tie past a separator is the next name's where the block sets its pieces before their names, every piece the
+  // ledger decided the next name's: 2406.12338's `\thanks{…} {Carla Schenker,} \thanks{…} {Xiulin Wang,}`, its first
+  // note at the block's start; where any is the name's before, as hep-th9401012's `Eiji Tanaka \thanks{…} and`, it stays
+  // undecided, the name's before by the reading's adjacency — `Kei-Ichi Kondo, \thanks{…} Takuya Iizuka`)
+  let decided = ledger.records.iter().filter_map(|r| r.side);
+  if !ties.is_empty()
+    && decided.clone().next().is_some()
+    && decided.into_iter().all(|side| side == Side::After)
+  {
+    for &at in &ties {
+      ledger.records[at].side = Some(Side::After);
+    }
+  }
   // (the block's decided sides beside its undecided marks: what a block's convention would decide, measured — MARKKEY K8)
   if ledger.records.iter().any(|r| r.side.is_none()) {
     let count = |side: Option<Side>| ledger.records.iter().filter(|r| r.side == side).count();
@@ -224,6 +281,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn mark_ledger(
 /// end), `glues[i]` the glue before piece `i` and its last the glue out to `next`'s ink.
 fn decide(
   ledger: &mut MarkLedger,
+  ties: &mut Vec<usize>,
   events: &[Event],
   opening: Opening,
   next: Option<usize>,
@@ -289,6 +347,7 @@ fn decide(
   };
   let side_from =
     |part: Option<usize>, i: usize| part.map(|p| if i < p { Side::Before } else { Side::After });
+  let mut tie = false;
   let part = match (before, next) {
     _ if stray => None,
     (Some(_), Some(_)) => parted_at(),
@@ -296,11 +355,34 @@ fn decide(
     (Some(_), None) => Some(pieces.len()),
     // (in a cell an `\and` or `&` opens, before its name: all that name's)
     (None, Some(_)) if opening == Opening::Cell => Some(0),
+    // (at a line's start, before its first name: that name's)
+    (None, Some(_)) if opening == Opening::Line => Some(0),
+    // (past a separator, before a name: set off from the separator by the stretch's widest glue, the name's — `Alice One,
+    // \thanks{…}Bob Two`, the mark `\rlap`ped into the space before Bob (article.cls:206), 2406.12338 —; as near the
+    // separator, the block's convention's (`ties`); glued to it, undecided: llncs's `Ann
+    // Able,\inst{1}\fnmsep\inst{2}\thanks{…} Bob`, Ann's)
+    (None, Some(_)) if opening == Opening::Other => match parted_at() {
+      Some(0)
+        if glues[1..]
+          .iter()
+          .all(|g| !g.fill && g.width < glues[0].width) =>
+      {
+        Some(0)
+      },
+      Some(0) => {
+        tie = true;
+        None
+      },
+      _ => None,
+    },
     _ => None,
   };
   for (i, &(at, movable)) in pieces.iter().enumerate() {
     if !movable {
       continue;
+    }
+    if tie {
+      ties.push(ledger.records.len());
     }
     let reach = |range: &[Reach]| range.iter().copied().fold(Reach::NONE, Reach::widest);
     ledger.records.push(MarkRecord {
@@ -432,8 +514,9 @@ mod tests {
   /// A comma glued to a name's run is its ink: a mark glued past it, its labels before, is measured from it — the nearer
   /// name by the glue, `Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$ Michael`, Igor's (DG 2026-11-16, COMMAMARK:
   /// 1111.1979) —, and one with no name after it on its line is the name's (`Lenk\footnotemark[1]\textsuperscript{,}
-  /// \footnotemark[2] \and`, 2407.04435); one set off from the comma by a space stays between it and the next name
-  /// (llncs's `Ann Able,\n\inst{1}\thanks{…} Bob Baker`).
+  /// \footnotemark[2] \and`, 2407.04435); one set off from the comma by a space and glued to the next name is that
+  /// name's (2406.12338), as near both the block's convention's, glued to the comma or beside other ink set apart from
+  /// both undecided (llncs's `Ann Able,\n\inst{1}\thanks{…} Bob Baker`).
   #[test]
   fn a_mark_glued_past_a_names_comma_is_measured_from_the_comma() {
     use Side::*;
@@ -454,15 +537,78 @@ mod tests {
     last.push(Event::new(EventKind::Sep(SepKind::And("\\and"))));
     last.push(michael.clone());
     assert_eq!(sides(&last), [Some(Before)]);
-    // (a space after the comma: no name opens the stretch, as before)
+    // (a space after the comma and one after the mark: as near the comma as the next name, undecided where the block
+    // decides nothing else; glued to the next name, its — the `\rlap`ped mark printed into the space before it,
+    // article.cls:206, 2406.12338)
     let spaced = [
+      igor.clone(),
+      comma.clone(),
+      gap(0.33, false),
+      mark(),
+      gap(0.33, false),
+      michael.clone(),
+    ];
+    assert_eq!(sides(&spaced), [None]);
+    let glued_next = [
+      igor.clone(),
+      comma.clone(),
+      gap(0.33, false),
+      mark(),
+      michael.clone(),
+    ];
+    assert_eq!(sides(&glued_next), [Some(After)]);
+    // (the block's convention decides a tie: its pieces before their names, the next name's — 2406.12338's
+    // `\thanks{…} {Carla Schenker,} \thanks{…} {Xiulin Wang,}` —; one after its name, the name's before, undecided —
+    // hep-th9401012's `Kei-Ichi Kondo, \thanks{…} Takuya Iizuka, … Eiji Tanaka \thanks{…} and`)
+    let prefix = [
+      mark(),
+      gap(0.33, false),
+      igor.clone(),
+      comma.clone(),
+      gap(0.33, false),
+      mark(),
+      gap(0.33, false),
+      michael.clone(),
+    ];
+    assert_eq!(sides(&prefix), [Some(After), Some(After)]);
+    let mut suffix = vec![
       igor,
       comma,
       gap(0.33, false),
       mark(),
       gap(0.33, false),
       michael,
+      gap(0.33, false),
+      mark(),
     ];
-    assert_eq!(sides(&spaced), [None]);
+    suffix.push(Event::new(EventKind::Sep(SepKind::Word("and".to_string()))));
+    suffix.push(name("Cat Cole"));
+    assert_eq!(sides(&suffix), [None, Some(Before)]);
+    // (an `\inst` set apart from both names before the mark: undecided, as before)
+    let mut inst = Event::new(EventKind::Mark);
+    inst.role = Some("inst".to_string());
+    let llncs = [
+      name("Ann Able"),
+      Event::new(EventKind::Sep(SepKind::Comma)),
+      gap(0.33, false),
+      inst,
+      mark(),
+      gap(0.33, false),
+      name("Bob Baker"),
+    ];
+    assert_eq!(sides(&llncs), [None]);
+    // (glued to the separator, its glue after it: undecided — llncs's `\inst{2}\thanks{…}` after `\fnmsep`)
+    let glued = [
+      name("Ann Able"),
+      Event::new(EventKind::Sep(SepKind::Comma)),
+      gap(0.33, false),
+      Event::new(EventKind::Sep(SepKind::Comma)),
+      mark(),
+      gap(0.33, false),
+      name("Bob Baker"),
+    ];
+    assert_eq!(sides(&glued), [None]);
+    // (at the block's start: the first name's)
+    assert_eq!(sides(&[mark(), name("Ann Able")]), [Some(After)]);
   }
 }
