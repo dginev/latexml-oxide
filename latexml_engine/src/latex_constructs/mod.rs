@@ -733,7 +733,7 @@ fn in_title_field() -> bool {
 }
 
 /// Does the title block print marks known here: its class's ([`TITLE_THEFOOTNOTE`], where the class's own `\maketitle`
-/// is in force), or the ones the `\maketitle` in force prints ([`maketitle_marks`])? A wrong glyph is worse than none
+/// is in force), or the ones the `\maketitle` in force prints (`maketitle_marks`)? A wrong glyph is worse than none
 /// (DG 2026-11-16; OXIDIZED_DESIGN_DIVERGENCES #1053).
 pub fn title_marks_declared() -> bool {
   match maketitle_marks() {
@@ -746,7 +746,7 @@ pub fn title_marks_declared() -> bool {
 /// Does a binding declare its title's marks ([`TITLE_THEFOOTNOTE`] defined)?
 fn title_marks_hook() -> bool { has_meaning(&T_CS!(TITLE_THEFOOTNOTE)) }
 
-/// Is the `\maketitle` that runs the class's own ([`maketitle_marks`])?
+/// Is the `\maketitle` that runs the class's own (`maketitle_marks`)?
 pub fn class_maketitle_in_force() -> bool { matches!(maketitle_marks(), MaketitleMarks::Class) }
 
 /// The marks of the title's notes, as the `\maketitle` in force prints them ([`maketitle_marks`]).
@@ -1093,7 +1093,7 @@ fn refused_maketitle_marks(body: &[Token], class: &Rc<dyn Definition>) -> Maketi
   }
 }
 
-/// Are the marks the title prints unknown here, for a name's notes (`name`) or any other's ([`maketitle_marks`])? Where
+/// Are the marks the title prints unknown here, for a name's notes (`name`) or any other's (`maketitle_marks`)? Where
 /// another `\maketitle` than the class's runs and its marks are unknown, or are its own but not counted here (not
 /// article's title block, `lx_title_counts_footnotes`); where no binding declares the class's own and the class file's
 /// own `\maketitle` runs (`\maketitle:redefined@class`, state.rs: an unbound class's, scrartcl's prints `\fnsymbol`
