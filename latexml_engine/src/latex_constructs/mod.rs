@@ -794,7 +794,7 @@ const COPY_MAKETITLE_BOUND: &str = "lx_title_copy_maketitle_bound";
 /// (`\maketitle:redefined@…`, `\lx@dropped@maketitle`, state.rs; a stand-in copy's, `copy_provides_maketitle`): a
 /// document's, a package's, an option file's (11lomcon.sty, hep-ph0312288); the class file's own is the class's
 /// (lni.cls), and so is a package's whose binding declares its marks ([`declare_package_title_marks`]: spconf, acl,
-/// aaai). Any other's marks are its body's where they read ([`read_title_marks_in_force`]), else unknown: no glyph, its
+/// aaai). Any other's marks are its body's where they read (`read_title_marks_in_force`), else unknown: no glyph, its
 /// notes kept under their names (DG 2026-11-17).
 pub fn class_maketitle_in_force() -> bool {
   let document = lookup_bool("\\maketitle:redefined@document");
