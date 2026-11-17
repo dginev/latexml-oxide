@@ -1,0 +1,17 @@
+% mechanism: under a binding numbering its unlabelled names (authblk), a date line every name's typed mark requests is
+%   read: its owners are exactly the names requesting it
+% witness:  2208.04109 (`\author{Nirmali Roy$^1$, Anuradha Jha$^{2^*}$}`, `\date{$^{1,2}$Indian Institute …}`)
+% oracle:   pdflatex 0 errors; "Ann Able1, Bob Baker2", "1,2 Univ A, Town"
+% engines:  rust INTFMfinal = the date holds the line. Perl: the text is the date
+% expect:   0 errors, 0 Warnings; Univ A, Town on both names, no date (OD #1071)
+% status:   GREEN (DATELEGb; the control of the authblk fail-safe)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^{2}$}
+\date{$^{1,2}$Univ A, Town}
+\maketitle
+Body.
+\end{document}

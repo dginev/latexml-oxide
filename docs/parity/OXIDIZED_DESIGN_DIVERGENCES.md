@@ -20488,10 +20488,11 @@ continuation, every author's affiliation; a line of e-mail addresses alone (an "
 `{a, b}@x` list written out) each address's owner's. A date anything is taken from is void (DG 2026-11-17, "null and
 void"): no `ltx:date`, its leftover — a `\today`, a date string — dropped and named once,
 `Info:frontmatter:date_void`. A date with a line no rule reads (a label no name prints, a mark inside a line, text
-naming no institution, a binding's label keyed by a document macro, an address among other text) is the date, whole,
+naming no institution, a binding's label keyed by a document macro, an address among text that is no e-mail label or
+beside an `@` no address holds) is the date, whole,
 with an Info: nothing of it is taken. So is one whose lines' owners may not be the names they read as: typed labels
 under a binding numbering its unlabelled names (`thenote`, authblk's `\AB@thenote`: label 1 is every such name's;
-2307.00092, 2412.00057, 2404.15649), and a date line with only unlabelled text beside it (a remark, not a legend:
+2307.00092, 2412.00057, 2404.15649) unless every name's typed numbers are the line's (2208.04109's `$^{1,2}$`), and a date line with only unlabelled text beside it (a remark, not a legend:
 2601.19933's research-program line, cs0703003's report number). amsart's "Date:" footnote, REVTeX's "Dated:", mnras, IEEEtran, elsarticle, acmart, llncs, raw classes and a
 document's own `\@maketitle` keep their date. (2) An unmarked body note (a `\footnotetext` under an empty
 `\thefootnote`, a `\blfootnote`) in the abstract whose text is e-mail addresses alone, each spelling its author, is
@@ -20518,7 +20519,8 @@ route (`address_note_contacts`) reads the note's text without its tags and takes
 author (`spelled_owners`). It runs as the body note closes (`ltx:note`'s `after_close`, after `relocate_footnote`), never
 on a note a frontmatter flush digests or `insert_frontmatter` places (`FRONTMATTER_INSERTING`). The `\date` reader reads
 tokens, as the API's Cut does (the store is no rehearsed block): `perfect_kernel_batche0`'s `frontmatter (rest)` pin
-37 -> 52 (51 the line readers, +1 the void date's words named to the title-page check).
+37 -> 53 (51 the line readers, +1 the void date's words named to the title-page check, +1 the `@` signs the
+address-among-text fail-safe counts on the tokens).
 **Witnesses.** 1512.01686, 2003.11862, 2412.00057, 2108.10662, 1802.01334, 2305.08521, 2511.18126, 2401.15728,
 2303.16540, 0907.1199, 0806.4361, 1506.06444, 0912.1999, 2507.03628 (`\date`); 2606.00446 (authblk `§`); 2506.06941
 (the `\footnotetext` address list); 2508.05506, 1507.08926 (`\blfootnote{$\dagger$ …}`, a legend note, open);

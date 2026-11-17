@@ -1959,7 +1959,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // label (`leading_line_label`), an e-mail line — as the Cut reads an `\affiliation` list; the date is a store, which no
   // rehearsal reads. Pending the main session: rehearse the store and read its events instead; +1, 51 -> 52, the void
   // date's dropped words named to the title-page check, `visible_name_text`)
-  ("frontmatter (rest)", 52),
+  // (DATELEGb, 52 -> 53: the date line's `@` signs counted on its tokens, as the readers' text drops a styled one —
+  // `\textbf{@} gaborit@kth.se`, 1801.04802 — the address-among-text fail-safe; the relocated legend note cut read XML)
+  ("frontmatter (rest)", 53),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of

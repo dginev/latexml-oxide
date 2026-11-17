@@ -78,18 +78,52 @@ pub(in crate::base_utilities) fn date_legend_calls() -> Result<Vec<Token>> {
     return Ok(Vec::new());
   }
   // Fail-safes: the date stays whole (DG 2026-11-17: all or nothing) where a line's owners may not be the names it
-  // reads them as. (1) A binding numbering its unlabelled names (`thenote`, authblk's `\AB@thenote`) gives a typed
-  // label's line to names typing no such mark (2307.00092, 2412.00057, 2404.15649); a binding's declared spelling is
-  // keyed apart. (2) A date with a date's line whose only other lines are unlabelled text holds a remark, not a
-  // legend (2601.19933's "Part of the … research program", cs0703003's report number).
-  let numbered = policy::policy_for(
+  // reads them as. (1) A binding numbering its unlabelled names (`thenote`: authblk.sty:115-117's `\AB@thenote`, the
+  // `affil` counter) gives a typed label's line to every name its number is, typing that mark or not (2307.00092,
+  // 2412.00057, 2404.15649): a line a number labels is read only where every name requests it, its owners then exactly
+  // them (2208.04109's `$^{1,2}$`); a binding's declared spelling is keyed apart. (2) A date with a date's line whose only
+  // other lines are unlabelled text holds a remark, not a legend (2601.19933's "Part of the … research program",
+  // cs0703003's report number).
+  let mut numbered = false;
+  if policy::policy_for(
     &ledger::policy_binding(&ledger::author_binding()),
     "\\lx@add@creator",
   )
   .thenote
-    && kinds
-      .iter()
-      .any(|kind| matches!(kind, Line::Labelled(_, None, _)));
+  {
+    for kind in &kinds {
+      if let Line::Labelled(printed, None, _) = kind {
+        let keys = printed_label_keys(printed, "affiliation");
+        // (the number is `\arabic{affil}`: a symbol label, `*`, is no name's by number)
+        let is_number = |key: &String| {
+          key
+            .strip_prefix("affiliation:")
+            .is_some_and(|label| !label.is_empty() && label.chars().all(|c| c.is_ascii_digit()))
+        };
+        // (the names whose typed marks request it, by the numbers they type — the queue's requests hold the binding's
+        // numbers too, and a queued entry may hold several names, `Ann Able$^{1}$, Bob Baker$^{2}$`: a position is the
+        // line's only where every number it types is one of the line's, and it types one)
+        if keys.iter().any(is_number) {
+          numbered |= queued_author_marks()?.iter().any(|marks| {
+            let numbers: Vec<Vec<String>> = marks
+              .iter()
+              .map(|mark| {
+                requested_label_keys(mark)
+                  .into_iter()
+                  .filter(is_number)
+                  .collect()
+              })
+              .filter(|numbers: &Vec<String>| !numbers.is_empty())
+              .collect();
+            numbers.is_empty()
+              || numbers
+                .iter()
+                .any(|numbers| !numbers.iter().any(|key| keys.contains(key)))
+          });
+        }
+      }
+    }
+  }
   let remark = kinds.contains(&Line::Date)
     && !kinds
       .iter()
@@ -383,9 +417,16 @@ fn line_kind(line: &[Token], declared: &[(String, String)]) -> Result<Line> {
   if let Some(addresses) = email_addresses(&rest) {
     return Ok(Line::Addresses(label, addresses));
   }
-  // (an address among other text, `\textbf{@} gaborit@kth.se` (1801.04802): no reader parts the two, and a run would
-  // take both as its affiliation's)
-  if !resolver::addresses_in(&text).is_empty() {
+  // (an address among text that is no e-mail label, `\textbf{@} gaborit@kth.se` (1801.04802), `bartosz@\{cs.uni.wroc.pl,
+  // tu-dresden.de\}` (2108.05680): a run would take both as its affiliation's, which cuts only the addresses; a wrapped
+  // address line, `\small{Emails: a@x, b@y}` (1601.01378), continues its run, whose contact cuts it)
+  let addresses = resolver::addresses_in(&text);
+  // (an `@` the line prints that no address holds: the readers' text drops a styled one, so counted on the tokens)
+  let at_signs = line
+    .iter()
+    .filter(|t| matches!(t.get_catcode(), Catcode::OTHER | Catcode::LETTER) && t.to_string() == "@")
+    .count();
+  if !addresses.is_empty() && (!resolver::only_addresses(&text) || at_signs > addresses.len()) {
     return Ok(Line::Kept("an address among other text"));
   }
   let affiliation = reads_as_affiliation(&tokens);

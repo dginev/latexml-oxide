@@ -5386,6 +5386,18 @@ const CLASS: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
+    repro:      "date_legend_authblk_every_name_typed",
+    tex:        repro!("date_legend_authblk_every_name_typed"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A, Town"#,
+      r#"Bob Baker | affiliation=Univ A, Town"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
     repro:      "date_legend_unrequested_label_stays",
     tex:        repro!("date_legend_unrequested_label_stays"),
     warnings:   0,
