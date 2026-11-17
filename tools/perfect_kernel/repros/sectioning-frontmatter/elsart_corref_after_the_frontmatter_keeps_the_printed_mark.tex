@@ -1,0 +1,22 @@
+% mechanism: the class prints the names at `\end{frontmatter}` and clears `\@corref` after the first (elsarticle.cls:1303,
+%   :256-265): a `\corref` read after it sets a mark no name prints — the first name keeps the mark it printed
+%   (`\lx@els@names@printed` freezes the first name's labels there)
+% witness: revELSARTc r14 (synthetic; the outside route of 1501.03323, 1508.05262)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗, Bob Twoa"; footnotes "∗ Corr one", "∗∗ Corr two"
+% engines: rust ELSARTc (8756e486ffb): Alice Corr two, Corr one the block's; INTFMfinal: right, 1 Warning
+% expect:  0 errors 0 Warnings; Alice One Corr one, Corr two the block's
+% status:  RED (ELSARTc) -> GREEN (ELSARTd) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}\corref{c1}
+\author[l1]{Bob Two}
+\cortext[c1]{Corr one}
+\cortext[c2]{Corr two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+\corref{c2}
+x
+\end{document}

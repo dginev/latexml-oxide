@@ -19686,8 +19686,13 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `declare_stand_in_copy_title_marks`; revMTREDUCE B1, S2): a `\thefootnote` definition there that is one of the
   binding's lines (`FNSYMBOL_TITLE_MARKS`, `\fnsymbol{footnote}`: the document's `\@fnsymbol` of the counter), or one
   macro whose body is a fixed glyph, that glyph (aaai2026.sty:135 `\def\thefootnote{\fndag}`, :210 `\def\fndag{†}`,
-  2511.07192 "Kejiang Chen1†, Weiming Zhang1†"); none, another, or two that disagree declare nothing, no glyph
-  (2305.15254's neurips_2022.sty, its line commented out; an acl copy's `\arabic` line). The bindings: `acl_sty.rs` and
+  2511.07192 "Kejiang Chen1†, Weiming Zhang1†"); only a definition before the body's first `\@maketitle` or `\@author`
+  decides (one after it sets the notes `\@thanks` prints, not the names' marks: pdflatex's "Ann1" over "∗Equal
+  contribution", and a reset after `\endgroup` is not theirs; revMTREDUCEc S1), and none where a call before it steps or
+  sets the footnote counter (`\footnote{…}`, `\setcounter{footnote}{2}` first, pdflatex "Ann†"; by meaning, a reset
+  to 0 aside; revPRESBXb BL2) (`latex_constructs::body_title_marks`); none, another, one under a conditional
+  (`\if@x\renewcommand{\thefootnote}{…}\fi`, whose branch is not read here; P1), or two that disagree declare nothing,
+  no glyph (2305.15254's neurips_2022.sty, its line commented out; an acl copy's `\arabic` line). The bindings: `acl_sty.rs` and
   `aaai_sty.rs` (2502.19103, acl2019.sty:37 1905.10033: † ‡; aaai25.sty:56), the NeurIPS and IJCAI stand-in copies
   (`neurips_sty.rs`, neurips_2019-2025.sty; `ijcai_sty.rs`, ijcai13-26.sty), the NIPS style's descendants
   (`iclr_sty.rs` reading ICLR's, TMLR's, CoRL's and NIPS 2016-2018's copies raw: iclr2026_conference.sty:61-63,
@@ -19697,22 +19702,40 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   (arxiv.sty:174-177, 2509.16272; PRIMEarxiv.sty:176-179, 2509.03066; jmlr2e.sty:253-255, 2509.13653). A stand-in's raw
   read is the loader's, the step after a raw package included (`shipped_class::input_shipped_package` runs
   `\lx@package@loaded@raw`, which a binding's own read skips: usenix2019_v3.sty's `\abstract` heading under babel's
-  `\abstractname` was a nameless creator's note, 2301.04841). Any other `\maketitle` — the document's, a package's no
-  binding declares, an option file's its class loads (11lomcon.sty, hep-ph0312288: its refusal is the class's,
-  `\maketitle:redefined@class`, which a declaration does not bind; row R MTREDUCE) — has marks unknown here: no glyph,
-  each note under its name (DG 2026-11-17, "reduce before the run": the kernel reads no `\maketitle` body for its marks;
-  PRESBX's reader of the body's `\thefootnote`, `\@makefnmark`, untouched marks and footnote steps before the title is
-  gone, a correct glyph lost in the papers it served, its connections kept). A mark whose number the title block reads
+  `\abstractname` was a nameless creator's note, 2301.04841). Any other `\maketitle` that runs — the document's, a
+  package's no binding declares, a renamed copy's, an unbound class's own, an option file's its class loads (11lomcon.sty,
+  hep-ph0312288) — has the marks its body sets where no binding declared them
+  (`latex_constructs::read_title_marks_in_force`; DG 2026-11-17, after INTCHECK found the reduction lost the links of
+  names typing the glyph in 37 papers: 2404.01413's colm2024 copy, its ‡ links; 2510.09942's renamed neurips copy;
+  1503.02531's nips14submit_e.sty, "Vinyals$^\dagger$"; 2509.10105's vv2.sty, its `\footnotemark[1]`; ltexpprt.sty;
+  1511.03137, 2011.13149, 2406.07546, 2506.19073, 2507.08794, 1501.06614, 2011.09192), read for what holds where the
+  names print (`kernel_title_marks`, revMTREDUCEd): its `\fnsymbol` lines alone, a fixed-glyph macro staying a binding's
+  (aaai's `\fndag`); the body up to its first `\@maketitle` or `\@author` (neither, none read), then the `\@maketitle`
+  in force up to its `\@author`, whose own different `\thefootnote` wins (pdflatex "Ann1" under its `\arabic`: none).
+  None also where the definition's group closes before the names print (`{\renewcommand\thefootnote{…}}`), where
+  `\thefootnote` is `\let`, where `\thanks`, `\footnotemark`, `\@thefnmark` or an `\@makefnmark` printing no
+  `\@thefnmark` is redefined first, and where the title holds a note and `\@author` comes before `\@title` (the reading
+  counts the title's note first). Read once, before the flush's rehearsal binds the marks (read after it, the
+  rehearsal's marks were the class hook's, not the read ones), and ended with the kernel `\maketitle` that read it: a
+  second `\maketitle` prints none (pdflatex's second block counts from ∗ again, the count here does not). Read only
+  where the title block's notes step the footnote counter as TeX's `\thanks` does (`lx_title_counts_footnotes`; not
+  IEEEtran's, which declares its numbers faithful though its `\maketitle` empties `\footnotemark`): a raw class's do not here, and its
+  title's `\thanks` would shift every author's glyph (siamart's "Title∗ … Ann†", the count here ∗: 2107.07572,
+  2509.14771, 2108.06375, 2301.12996, 2112.13097; aiaa-tc's "Ann*, Bob†", 1505.07844's class, lost with them: row R
+  MTREDUCE-RAWCLASS; `mtreduced_raw_class_title_thanks_marks_unknown`). None read, the marks are unknown: no glyph, each
+  note under its name.
+  PRESBX's static whole-copy reader (`\@makefnmark`, untouched marks) stays gone. A `\maketitle` a file assigns by
+  `\let` (`\let\maketitle\nips@maketitle`) is no refused one and is not read (the review's probe c3). A mark whose number the title block reads
   off the counter (`\samethanks`' `\footnotemark[\value{footnote}]`, `[\arabic{footnote}]`, `[\numexpr…]`) names its
   note by that number wherever the count is TeX's (`title_numbers_faithful`; `footnote_pairing` sets `_fngiven`), so it
-  links with the glyph unknown (revMTREDUCE B2). Lost with the reader, its glyph and one link: a mark the author types
-  under such a `\maketitle` (`Bob$^{1}$` beside an `\arabic` `\thanks`) links nothing, the note's glyph unknown (row R
-  MTREDUCE-TYPED, revMTREDUCE S1). The class file's own drop is the class's: a binding that reads its raw
+  links with the glyph unknown (revMTREDUCE B2). Still lost, its glyph and one link: a mark the author types under a
+  `\maketitle` whose line is no known one (`Bob$^{1}$` beside an `\arabic` `\thanks`) links nothing, the note's glyph
+  unknown (row R MTREDUCE-TYPED, revMTREDUCE S1). The class file's own drop is the class's: a binding that reads its raw
   class and declares its marks keeps them (lni.cls:475-477 arabic, `lni_cls.rs`: 2407.04435's 1, 1, 1,2, 3). Under a
-  class no binding declares the marks of, the class file's own `\maketitle` is unknown too (`title_marks_unknown`:
-  `\maketitle:redefined@class`; an unbound class's, scrartcl's `\fnsymbol`, where Perl's number key wrote
-  `\footnotemark[1]` "1", the advisor's I-3; geophysics's, 2006.10886, 2403.07393; a bound class's own `\maketitle`,
-  elsarticle's or llncs's, keeps Perl's marks). So no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
+  class no binding declares the marks of, the class file's own `\maketitle` is unknown, its title notes stepping no
+  counter here (`title_marks_unknown`: `\maketitle:redefined@class`; aiaa-tc's `\fnsymbol`, "Ann Able*, Bob Baker†";
+  scrartcl's, where Perl's number key wrote `\footnotemark[1]` "1", the advisor's I-3; geophysics's, 2006.10886,
+  2403.07393; a bound class's own `\maketitle`, elsarticle's or llncs's, keeps Perl's marks). So no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
   `\footnotetext` of a title field (`drop_unknown_title_mark`: no `mark`, no tags, its text paired by the counter value
   `_fnvalue`) and no acmart `\authornote` (`acm_note_mark`) carries one — unless the document set `\thefootnote` itself
   in the field since it began (aiaa-tc's `\thanksibid{2}`, `\renewcommand\thefootnote{\fnsymbol{aiaa@cthanks}}
@@ -19722,7 +19745,10 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `\footnotetext[n]` paired by the number), one Info counting each source note once (two names' `\footnotemark[1]` and
   one `\footnotetext[1]` are one note; review revMARKSAFEb N2), DG 2026-11-16: the association known, the glyph not; its note
   never placed (a `\footnotemark[1]` whose note no number key names yet, row R MARKKEY; a bare one nothing answers), a
-  Warning each (`frontmatter`/`unanswered_mark_lost`, as `count_lost_marks` counts). The XSLT shows no glyph for it
+  Warning each (`frontmatter`/`unanswered_mark_lost`, as `count_lost_marks` counts), its empty mark-only note dropped,
+  never an element showing and linking nothing (scrartcl's bare `\footnotemark`s, REVTeX's minipage letters; revMTREDUCEc
+  S2: 2509.10105's `Ju\footnotemark[1]`, in a block written whole whose `\thanks` notes carry no number to pair it by,
+  was one until its renamed copy's `\maketitle` was read). The XSLT shows no glyph for it
   (#990). A field's `\thefootnote` is set as the field begins, as the class's `\maketitle` sets it before `\@author`
   expands (`title_field_footnotes`, `enter_title_footnotes`; before, every note set it again): a redefinition in the field
   holds after it. One an author block's cell makes holds in that cell alone, which `\and`, `\\` and `&` end
@@ -19816,8 +19842,10 @@ corresponding authors.", is not read: row R AAAI-REWORD), and their note record 
 undoes every assignment. The rows MTREDUCE turned RED (the static reader's glyphs, a correct glyph lost and the note
 kept under its name) carry row R MTREDUCE; `perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s` pins
 acl.sty's `\AtBeginDocument` `\maketitle` under the document's `\@fnsymbol` (and its `\arabic` sibling, no glyph),
-AAAI's marks across ";", " and " and `\\`, aaai2026.sty's `\fndag`, 2305.15254's commented line (no glyph), and a row per
-family the MTREDUCEb bindings declare (`siamproceedings_titlepage_declares_no_marks` its `titlepage` fail-safe); the
+AAAI's marks across ";", " and " and `\\`, aaai2026.sty's `\fndag`, the read cut at `\@maketitle`, a conditional's
+line (no glyph), the marks of an unbound or renamed copy's `\maketitle` (2509.10105, 1503.02531, ltexpprt.sty), and a row per
+family the MTREDUCEb bindings declare (2305.15254's commented line, no glyph,
+`a_stand_in_copy_setting_no_marks_declares_none`) (`siamproceedings_titlepage_declares_no_marks` its `titlepage` fail-safe); the
 counter-read number links are rows of `perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note`
 (`mtreducec_*`, the typed mark's RED). gtpart.cls's metadata setters print nothing (gtpart.cls:573-600; `gtpart_cls.rs`, the class
 read raw, else OmniBus and the setters: 1108.0474's `\corresponding{}` — the corresponding editor's, beside
@@ -20399,7 +20427,8 @@ key loses it as soon as another name `\corref`s it; a note sharing an address's 
 address; an outside `\corref` requests on no entry and the note is orphaned.
 **Rust.** The binding gives the routes one label per key (`\lx@els@author`, elsart_support_core_sty.rs); what TeX decides
 only when the names print, or from the .aux of the run before, is a deferred label (`\lx@label@ref`, as cas's), settled
-as each input it depends on is read and resolved at the flush (`els_settle_marks`):
+for the key just read (`els_settle_key`: its notes' labels, and the first name's marks, constant work per input) and
+resolved at the flush:
 - every route of a key takes the form the key was first read by (`els_route`): the bare key after an `\author[…]` list,
   `cor:k`/`fn:k` after a `\corref`/`\fnref`. A later `\author[…]` key is annotated `cor:k`; a later `\corref{k}` in a
   name is dropped and its name annotated `k` — so all names reaching a note meet it, in either order;
@@ -20408,17 +20437,28 @@ as each input it depends on is read and resolved at the flush (`els_settle_marks
   sets `\@corref`/`\@fnmark` again, while `\cormark[k]` prints its ∗ where it is read and sets neither (:174-176), so
   outside a name it marks no name, and in the first name it prints beside the outside mark. The first name requests
   `\lx@label@ref{els@first@cor}`/`{els@first@fn}` unless its own `\corref`/`\fnref`/`\fnmark` replaces it;
+- the names print at `\end{frontmatter}` and `\maketitle` (:1303, :805), each clearing `\@corref`/`\@fnmark` after the
+  first (:264-265): there the first name's labels are frozen (`\lx@els@names@printed`, `els_names_printed`), so a mark
+  read later — after the frontmatter, in the body, in a second `frontmatter` — moves no name, and its note is the
+  block's. A second `frontmatter` reprints the whole names list with the marks set since; one creator list keeps the
+  first print;
 - a note's label is settled likewise (elsarticle_cls.rs `els_settle_note_labels`): `cor:k`/`fn:k`, or, where its key
   names another entry (an address, an `\fntext` over a `\cortext`), `cor@k`/`fn@k`, which no name requests and no
   fallback strips to the key — the block's note, as the PDF links it to no name (1711.08299), whichever is read first.
-  A key that would not read back as written (a space, a brace, a control sequence) is labelled where it is read;
-- a key list in `\corref`/`\cormark` prints no mark (`\elsRef{c1,c2}` is 0): no annotation, its notes the block's, a
-  Warning (`elsarticle_mark_list`);
+  A note defines its own deferred label where it is read, so every label a note requests is defined; a key that would
+  not read back as written (a space, a brace, a control sequence) is labelled where it is read;
+- `\corref`/`\cormark` look their argument up whole (`X@<arg>`, no `\@for`: :174-176, :188-190), and `\fntext`,
+  `\cortext` and the addresses label theirs whole: a key with a comma is one key where an entry has it (its comma
+  spelled `‚` in the label, `els_label_key`, as labels are comma lists), and a key list otherwise (`\corref{c1,c2}`,
+  `\corref{c1,}`: `\elsRef` is 0) — no mark, no annotation, its notes the block's, a Warning (`elsarticle_mark_list`),
+  decided where the names print (or at the document's end), once the keys are read. `\fnref`/`\fnmark` split their
+  keys (`\@for`, :159-163), so an `\fntext[a,b]` is no name's;
 - a `\cortext` both routes reach is marked ∗, the note's own print (the names print "1" and ∗ for it), as WRONGFIX's
   collision fallback; one no name reaches has no mark.
 Settled dead-ends: a peek after the first name's call (stopped at a `\par`, an `\ead`); a fail-safe moving notes to the
 block with a Warning (a note read before the moving mark kept a wrong name); a literal label the first name always
-held (parted into pieces by the reading, or `unanswered_mark_lost` on every paper).
+held (parted into pieces by the reading, or `unanswered_mark_lost` on every paper); re-settling every note's label on
+each input (quadratic: 15.6 s against 1.0 s at 1000 authors, revELSARTc S2).
 The binding's `\author` stays elsart_support_core's: the reading takes a binding's author conventions from the binding
 that defines the macro calling `\lx@add@authors@append` (`policy_for`), and an `\author` redefined by elsarticle_cls.rs
 read 1108.0201's `\address[*]` as the corresponding author's.
@@ -20427,7 +20467,8 @@ author's, the block's before), 1909.01114 (`{\corref{cor1}}`: the block's, as pd
 ELSROUTE's mixed routes (0 of 906 census elsarticle papers).
 **Guards**: the FMRG `CLASS` rows `elsart_*` (`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`:
 ELSARTb `\cormark` outside a name; ELSARTc an outside mark after a later name in either kind and order, after a note it
-moves, past a `\par` or an `\ead`, a note read before the entry its key names, a key list in or outside a name),
+moves, past a `\par` or an `\ead`, a note read before the entry its key names, a key list in or outside a name;
+ELSARTd a mark after the frontmatter or in the body, a second `frontmatter`, keys with a comma, `\corref{c1,}`),
 `perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route` (the shared-key row).
 
 ---

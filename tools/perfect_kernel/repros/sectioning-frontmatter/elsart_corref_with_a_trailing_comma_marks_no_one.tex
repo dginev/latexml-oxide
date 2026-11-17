@@ -1,0 +1,19 @@
+% mechanism: `\corref{c1,}` looks up `X@c1,` (elsarticle.cls:188-190), which no entry writes: case 0, no ∗ (the
+%   name prints its comma separator alone). A key list (its whole names no entry): no mark, no link, a Warning
+% witness: revELSARTc r08 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa,"; footnote "∗ Corr one"
+% engines: rust ELSARTc (8756e486ffb) and INTFMfinal: Bob Corr one, 0 Warnings
+% expect:  0 errors 1 Warning (elsarticle_mark_list); Corr one the block's
+% status:  RED (ELSARTc) -> GREEN (ELSARTd) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}
+\author[l1]{Bob Two\corref{c1,}}
+\cortext[c1]{Corr one}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x
+\end{document}

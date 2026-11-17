@@ -1,0 +1,23 @@
+% mechanism: `\fntext[k]` and `\cortext[k]` share a key, so `X@k` is the footnote's number (elsarticle.cls:126-131,
+%   :766-778), 1; Bob's `\corref{k}` prints `\ifcase 1` = ∗ (:188-190), the correspondence note's mark: Bob the
+%   `\cortext`, the `\fntext` no name's. The `\corref` read in a name after both notes re-settles the `\cortext`'s label
+%   (`els_note_shadowed`, `\lx@els@record@author`), so Bob has it; but relocate.rs' prefix-stripped fallback reads Bob's
+%   `cor:k` as `k` and gives him the `\fntext`'s `fn:k` too (Perl's fallback, Base_Utility.pool.ltxml:899-900)
+% witness: ELSARTd (synthetic; the sibling of `elsart_key_of_a_cortext_and_an_fntext_names_the_fntext`)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa,∗"; footnotes "∗ Corr k", "1 Foot k"
+% engines: rust INTFMfinal: Bob Foot k, Corr k the block's; ELSARTc, ELSARTd: Bob both
+% expect:  0 errors 0 Warnings; Bob Two Corr k, Foot k the block's
+% status:  RED (row R ELSFNFALLBACK) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\fntext[k]{Foot k}
+\cortext[k]{Corr k}
+\author[l1]{Alice One}
+\author[l1]{Bob Two\corref{k}}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x
+\end{document}
