@@ -733,7 +733,7 @@ fn authors_html(xml: &str) -> Vec<String> {
 /// A note several authors share prints once (OXIDIZED_DESIGN_DIVERGENCES #1052; DG's rulings of 2026-11-16). The XML
 /// keeps a full copy on every carrier, each with its `mark` (Perl's model); the HTML prints the first copy in full,
 /// classed `ltx_note_shared`, and every later copy of the same block, role, mark and text (spacing aside) as a mark
-/// linked to it. Every marked note sits after its name in `ltx_annotated_personname`, with no space between the two.
+/// linked to it, carrying its pop-up hidden (`ltx_note_copy`, DG 2026-11-17). Every marked note sits after its name in `ltx_annotated_personname`, with no space between the two.
 /// A note of one author (Bob's †, under his name with no mark in ar5iv.css), a shared mark of another role or text (Cy's
 /// footnote, Dee's note) render as before; an unmarked note (Cy's, Lou's IEEEtran-style "Manuscript received", 1510.02728;
 /// Hal's and Ivy's empty-mark images) is its text after the wrapper, no glyph (OD #990, DG 2026-11-16); Perl's leftover
@@ -816,6 +816,7 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
   // Before: every copy printed in full with its own mark (2606.00446's note twice, 2407.07614's three times each),
   // the marks of the notes after the name's own line; Eve's block (a part's own authors) is keyed apart. Before this
   // round: Gus's note a mark linking to Ed's, which is not on the page; Ivy's two images marks linking to Hal's, lost.
+  // Before SHCOPY (DG 2026-11-17): each linked mark its glyph alone, with no hidden copy of the note to pop up.
   let html = authors_html(NOTES);
   assert_eq!(html, [
     concat!(
@@ -835,11 +836,11 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_contact ltx_role_orcid"><a href="https://orcid.org/0000-0002-7315-0515" title="" class="ltx_ref ltx_orcid">iD</a>"##,
       "\n",
-      r##"</span><span id="id2" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup></span><span id="id3" class="ltx_note ltx_note_frontmatter ltx_thanks_correspondence ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Corresponding author.</span></span></span></span></span>"##,
+      r##"</span><span id="id2" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span><span id="id3" class="ltx_note ltx_note_frontmatter ltx_thanks_correspondence ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Corresponding author.</span></span></span></span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks ltx_note_unmarked">An unmarked note.</span></span>"##,
+      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks ltx_note_unmarked">An unmarked note.</span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
@@ -869,7 +870,7 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Ned Nash</span><span id="id19" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id18">∗</a></sup></span></span></span></div>"##,
+      r##"<span class="ltx_personname">Ned Nash</span><span id="id19" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id18">∗</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">∗</sup><span class="ltx_note_type">thanks: </span><span class="ltx_text" style="font-size:90%;">Equal contribution</span></span></span></span></span></span></div>"##,
     ),
     concat!(
       r##"<div class="ltx_authors">"##,
@@ -880,7 +881,7 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Fay Ford</span><span id="id10" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id9">*</a></sup></span></span></span></div>"##,
+      r##"<span class="ltx_personname">Fay Ford</span><span id="id10" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id9">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span></span></span></div>"##,
     ),
   ]);
 }
@@ -950,7 +951,7 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
   // Before: each mark-only note outside the wrapper, after the name's line break, with an empty "footnotemark: "
   // pop-up (Kardoš "* a", Pat's `b` under his note, Tia's `1` after her badge); Quinn's note one author's, with Rae's
   // `¶` unlinked. Uma's element is the base's. Sereni's `c`, Pat's `b` and Sam's `2`, each printed once, show (OD
-  // #1059's fail-safe: every unlinked mark shows).
+  // #1059's fail-safe: every unlinked mark shows). Before SHCOPY: Miškuf's and Rae's linked marks with no hidden copy.
   let html = authors_html(MARKS);
   assert_eq!(html, [concat!(
     r##"<div class="ltx_authors">"##,
@@ -965,7 +966,7 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Jozef Miškuf</span><span id="id3" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id2">*</a></sup></span></span></span>"##,
+    r##"<span class="ltx_personname">Jozef Miškuf</span><span id="id3" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id2">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>Supported by grant APVT-20-004104.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
@@ -985,7 +986,7 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Rae Reed</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id7">¶</a></sup></span></span></span>"##,
+    r##"<span class="ltx_personname">Rae Reed</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id7">¶</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">¶</sup><span class="ltx_note_type">thanks: </span>Corresponding authors.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
@@ -1057,6 +1058,7 @@ fn a_letter_or_digit_mark_names_no_other_authors_note() {
   </creator>
 </document>"#;
   // Before (revREND2's p1.xml): Ann's and Cy's notes classed ltx_note_shared, Bob's `1` and Dee's `a` links to them.
+  // Before SHCOPY: Fay's linked `2` with no hidden copy of Eve's note.
   let html = authors_html(MARKS);
   assert_eq!(html, [concat!(
     r##"<div class="ltx_authors">"##,
@@ -1083,7 +1085,7 @@ fn a_letter_or_digit_mark_names_no_other_authors_note() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Fay Ford</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">2</a></sup></span></span></span>"##,
+    r##"<span class="ltx_personname">Fay Ford</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">2</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Eve's footnote, which Fay's mark repeats.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
@@ -1093,4 +1095,81 @@ fn a_letter_or_digit_mark_names_no_other_authors_note() {
     "\n",
     r##"<span class="ltx_personname">Hu Hale</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">α</sup></span></span></span></div>"##,
   ),]);
+}
+
+/// Every other mark of a shared note carries the note's pop-up, hidden (DG 2026-11-17, "Copy in HTML only"; OD #1052):
+/// `span.ltx_note_outer.ltx_note_copy`, `aria-hidden`, so the mark pops it up where the first copy is out of sight
+/// (narrow screens; 2407.07614, 2606.00446, 1706.03762, 2506.06941). The copy holds no id (the note's own, its math's,
+/// its text's) and its links leave the tab order; the mark keeps its link. One shape per branch: a marked copy of the same
+/// text (Bob's `*`), a mark-only `\footnotemark` leftover naming the note (Cy's `†`, 1706.03762's shape), a shared
+/// unmarked note's generated `[a]` (Dee's and Eve's, OD #1059: the copy `idref`s the note).
+#[test]
+fn a_shared_notes_other_marks_carry_its_hidden_copy() {
+  const COPIES: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:m="http://www.w3.org/1998/Math/MathML" xml:id="Document">
+  <title>Copies</title>
+  <creator role="author">
+    <personname>Ann Able</personname>
+    <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id1" fragid="id1">Equal, <text font="italic" xml:id="id1.t1" fragid="id1.t1">see</text> <Math mode="inline" tex="x" text="x" xml:id="id1.m1" fragid="id1.m1"><m:math display="inline" alttext="x" id="id1.m1.m"><m:mi>x</m:mi></m:math></Math>.</note>
+    <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id2" fragid="id2">Mail <ref href="mailto:ann@a.edu">ann@a.edu</ref>.</note>
+  </creator>
+  <creator role="author">
+    <personname>Bob Baker</personname>
+    <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id3" fragid="id3">Equal, <text font="italic" xml:id="id3.t1" fragid="id3.t1">see</text> <Math mode="inline" tex="x" text="x" xml:id="id3.m1" fragid="id3.m1"><m:math display="inline" alttext="x" id="id3.m1.m"><m:mi>x</m:mi></m:math></Math>.</note>
+  </creator>
+  <creator role="author">
+    <personname>Cy Cole</personname>
+    <note mark="†" role="footnotemark" xml:id="footnotex1" fragid="footnotex1"><tags><tag>†</tag><tag role="refnum">†</tag></tags></note>
+  </creator>
+  <creator role="author">
+    <personname>Dee Dunn</personname>
+    <note class="ltx_note_frontmatter ltx_thanks_funding" role="thanks" xml:id="id4" fragid="id4">Funded by <ref href="https://x.org/">X</ref>.</note>
+  </creator>
+  <creator role="author">
+    <personname>Eve Ennis</personname>
+    <note class="ltx_note_frontmatter ltx_thanks_funding" role="thanks" idref="id4" xml:id="id5" fragid="id5">Funded by <ref href="https://x.org/">X</ref>.</note>
+  </creator>
+</document>"#;
+  // Before: each copy its mark alone, `<sup class="ltx_note_mark"><a href="#id1">*</a></sup>`, and on a narrow screen
+  // only the first copy's mark opened the note.
+  let html = authors_html(COPIES).concat();
+  let copies: Vec<&str> = html
+    .match_indices(r#"<span class="ltx_note_outer ltx_note_copy""#)
+    .map(|(at, _)| {
+      let end = at + html[at..].find("</span></span>").expect("its end") + "</span></span>".len();
+      &html[at..end]
+    })
+    .collect();
+  assert_eq!(copies, [
+    r##"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>Equal, <span class="ltx_text ltx_font_italic">see</span> <math class="ltx_Math" display="inline" alttext="x"><mi>x</mi></math>.</span></span>"##,
+    r##"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Mail <a href="mailto:ann@a.edu" title="" class="ltx_ref" tabindex="-1">ann@a.edu</a>.</span></span>"##,
+    r##"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark ltx_mark_generated">[a]</sup><span class="ltx_note_type">thanks: </span>Funded by <a href="https://x.org/" title="" class="ltx_ref" tabindex="-1">X</a>.</span></span>"##,
+  ]);
+  // Each mark keeps its link to the note; every id is once, the copies' content holding none (Ann's math and text keep
+  // theirs).
+  for (mark, target) in [("*", "id1"), ("†", "id2"), ("[a]", "id4")] {
+    assert!(
+      html.contains(&format!(
+        r##"<a href="#{target}">{mark}</a></sup><span class="ltx_note_outer ltx_note_copy""##
+      )),
+      "{mark}'s copy lost its link to #{target}: {html}"
+    );
+  }
+  let mut ids: Vec<&str> = html
+    .split(" id=\"")
+    .skip(1)
+    .map(|rest| rest.split('"').next().unwrap())
+    .collect();
+  ids.sort_unstable();
+  assert_eq!(ids, [
+    "footnotex1",
+    "id1",
+    "id1.m1.m",
+    "id1.t1",
+    "id2",
+    "id3",
+    "id4",
+    "id5"
+  ]);
 }

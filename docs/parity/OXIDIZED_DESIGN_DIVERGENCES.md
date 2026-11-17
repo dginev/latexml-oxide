@@ -19580,6 +19580,13 @@ none overlaps whatever its height. Phones, and browsers without anchor positioni
 first author and an unmarked one after its author's lines, start-aligned as a note. A block with a note under a name
 aligns its names on one baseline, as the PDF's top-aligned author tabulars do. It replaces 0.9.3's fixed 10rem slots,
 which overlapped (1706.03762).
+*Copies on the page* (DG 2026-11-17, "Copy in HTML only"): the XML keeps one note, its copies `idref` it (#1059); every
+linked mark of it — a later copy, a mark-only note naming it, a generated `[a]` — also carries the note's pop-up,
+`span.ltx_note_outer.ltx_note_copy` with `aria-hidden="true"` (`f:note-copy`, the note's own `note-outer`), every `id`
+inside it dropped and every link or control `tabindex="-1"`, so on a narrow screen each mark pops the note up, not only
+the first. Text extractors drop `.ltx_note_copy` (it holds a repeat; `textContent` ignores `aria-hidden`). LaTeXML.css
+shows a copy only as its classic hover pop-up, never floated under the name on the card; ar5iv-css shows it on its mark
+below 96rem (#69's pop-up rule, the copy past the footnotemark's `!important` hide) and never on wide screens.
 **Witnesses.** 2606.00446 (authblk `\affil[*]`: two copies, one printed); 2407.07614 (the legend line's `*` and `+`,
 three copies each, one printed each; `†` one author's, under the name); 2606.00397 (ieeeconf: `\maketitle` empties `\thefootnote`, ieeeconf.cls:3592, so no `\thanks` gets an automatic
 mark; the correspondence note's `*` is the authors' own text on the name and the note, so it is Murali Babu's marked
@@ -19589,7 +19596,10 @@ unmarked Asilomar/NSF note in the margin, not under Azadeh Vosoughi's name, wher
 `a` before the `*` note Kardoš shares with Miškuf: "Kardošᵃ*" as the PDF prints, was "Kardoš* a"). **Guards**:
 `integration::a_shared_author_note_prints_once_and_its_repeats_are_linked_marks`,
 `integration::a_pure_name_carries_every_mark_after_it_in_order`,
-`integration::a_letter_or_digit_mark_names_no_other_authors_note` (latexml_post),
+`integration::a_letter_or_digit_mark_names_no_other_authors_note`,
+`integration::a_shared_notes_other_marks_carry_its_hidden_copy` (latexml_post),
+`perfect_kernel_batchshcopy::a_shared_note_is_one_note_in_the_xml_and_each_mark_pops_it_up` (the FMRG page layer checks
+each linked mark's copy: `perfect_kernel_batchfmmarks::page_lines`), `cluster_cli::browser_render_fmmarks` (local),
 `xslt::witnessed_css_delta::shared_author_note_delta_stays_present`,
 `cluster_cli::browser_render_author_lines::a_shared_note_prints_once_under_its_first_author` (local).
 

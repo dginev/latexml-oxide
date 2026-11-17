@@ -18,8 +18,9 @@
     xmlns:ltx   = "http://dlmf.nist.gov/LaTeXML"
     xmlns:f     = "http://dlmf.nist.gov/LaTeXML/functions"
     xmlns:m     = "http://www.w3.org/1998/Math/MathML"
-    extension-element-prefixes="f"
-    exclude-result-prefixes = "ltx f m">
+    xmlns:exsl  = "http://exslt.org/common"
+    extension-element-prefixes="f exsl"
+    exclude-result-prefixes = "ltx f m exsl">
 
   <!-- ======================================================================
        Typically invisible meta elements
@@ -239,6 +240,9 @@
             <xsl:with-param name="target" select="$copies[1]"/>
             <xsl:with-param name="glyph" select="string(@mark)"/>
           </xsl:call-template>
+          <xsl:call-template name="f:note-copy">
+            <xsl:with-param name="target" select="$copies[1]"/>
+          </xsl:call-template>
         </xsl:element>
       </xsl:otherwise>
     </xsl:choose>
@@ -282,6 +286,11 @@
         <xsl:with-param name="target" select="$target"/>
         <xsl:with-param name="glyph" select="$glyph"/>
       </xsl:call-template>
+      <xsl:if test="$target">
+        <xsl:call-template name="f:note-copy">
+          <xsl:with-param name="target" select="$target"/>
+        </xsl:call-template>
+      </xsl:if>
     </xsl:element>
   </xsl:template>
 
@@ -321,6 +330,10 @@
             <xsl:with-param name="target" select="$first"/>
             <xsl:with-param name="glyph" select="string($glyph)"/>
             <xsl:with-param name="generated" select="true()"/>
+          </xsl:call-template>
+          <xsl:call-template name="f:note-copy">
+            <xsl:with-param name="target" select="$first"/>
+            <xsl:with-param name="glyph" select="string($glyph)"/>
           </xsl:call-template>
         </xsl:element>
       </xsl:otherwise>
@@ -431,30 +444,78 @@
         <xsl:with-param name="context" select="$innercontext"/>
         <xsl:with-param name="glyph" select="$glyph"/>
       </xsl:call-template>
+      <xsl:call-template name="note-outer">
+        <xsl:with-param name="context" select="$innercontext"/>
+        <xsl:with-param name="glyph" select="$glyph"/>
+      </xsl:call-template>
+    </xsl:element>
+  </xsl:template>
+
+  <!-- A note's pop-up: its mark, its type and its content. -->
+  <xsl:template name="note-outer">
+    <xsl:param name="context"/>
+    <xsl:param name="glyph" select="''"/>
+    <xsl:element name="span" namespace="{$html_ns}">
+      <xsl:attribute name="class">ltx_note_outer</xsl:attribute>
       <xsl:element name="span" namespace="{$html_ns}">
-        <xsl:attribute name="class">ltx_note_outer</xsl:attribute>
-        <xsl:element name="span" namespace="{$html_ns}">
-          <xsl:attribute name="class">ltx_note_content</xsl:attribute>
-          <xsl:call-template name="note-mark">
-            <xsl:with-param name="context" select="$innercontext"/>
-            <xsl:with-param name="glyph" select="$glyph"/>
-          </xsl:call-template>
-          <xsl:if test="not(@role = 'footnote')">
-            <xsl:element name="span" namespace="{$html_ns}">
-              <xsl:attribute name="class">ltx_note_type</xsl:attribute>
-              <xsl:value-of select="@role"/>
-              <xsl:text>: </xsl:text>
-            </xsl:element>
-          </xsl:if>
-          <xsl:apply-templates>
-            <xsl:with-param name="context" select="$innercontext"/>
-          </xsl:apply-templates>
-          <xsl:apply-templates select="." mode="end">
-            <xsl:with-param name="context" select="$innercontext"/>
-          </xsl:apply-templates>
-        </xsl:element>
+        <xsl:attribute name="class">ltx_note_content</xsl:attribute>
+        <xsl:call-template name="note-mark">
+          <xsl:with-param name="context" select="$context"/>
+          <xsl:with-param name="glyph" select="$glyph"/>
+        </xsl:call-template>
+        <xsl:if test="not(@role = 'footnote')">
+          <xsl:element name="span" namespace="{$html_ns}">
+            <xsl:attribute name="class">ltx_note_type</xsl:attribute>
+            <xsl:value-of select="@role"/>
+            <xsl:text>: </xsl:text>
+          </xsl:element>
+        </xsl:if>
+        <xsl:apply-templates>
+          <xsl:with-param name="context" select="$context"/>
+        </xsl:apply-templates>
+        <xsl:apply-templates select="." mode="end">
+          <xsl:with-param name="context" select="$context"/>
+        </xsl:apply-templates>
       </xsl:element>
     </xsl:element>
+  </xsl:template>
+
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1052, DG 2026-11-17 "Copy in HTML only"): a shared note's
+       other mark carries the $target note's pop-up too, hidden (class ltx_note_copy, aria-hidden), so its mark pops it
+       up where the first is out of sight (narrow screens: 2407.07614, 2606.00446, 1706.03762, 2506.06941). The XML
+       keeps one note; the copy holds no id, and its links are out of the tab order. -->
+  <xsl:template name="f:note-copy">
+    <xsl:param name="target"/>
+    <xsl:param name="glyph" select="''"/>
+    <xsl:variable name="outer">
+      <xsl:for-each select="$target[1]">
+        <xsl:call-template name="note-outer">
+          <xsl:with-param name="context" select="'inline'"/>
+          <xsl:with-param name="glyph" select="$glyph"/>
+        </xsl:call-template>
+      </xsl:for-each>
+    </xsl:variable>
+    <xsl:apply-templates select="exsl:node-set($outer)/*" mode="f:note-copy"/>
+  </xsl:template>
+  <xsl:template match="*" mode="f:note-copy">
+    <xsl:copy>
+      <xsl:copy-of select="@*[not(local-name() = 'id' or local-name() = 'tabindex')]"/>
+      <xsl:if test="not(parent::*)">
+        <xsl:attribute name="class">ltx_note_outer ltx_note_copy</xsl:attribute>
+        <xsl:attribute name="aria-hidden">true</xsl:attribute>
+      </xsl:if>
+      <xsl:if test="@tabindex or (local-name() = 'a' and @href) or (local-name() = 'area' and @href)
+                    or self::*[local-name() = 'button' or local-name() = 'input' or local-name() = 'select'
+                               or local-name() = 'textarea' or local-name() = 'summary' or local-name() = 'iframe'
+                               or local-name() = 'object' or local-name() = 'embed']
+                    or ((local-name() = 'audio' or local-name() = 'video') and @controls)">
+        <xsl:attribute name="tabindex">-1</xsl:attribute>
+      </xsl:if>
+      <xsl:apply-templates mode="f:note-copy"/>
+    </xsl:copy>
+  </xsl:template>
+  <xsl:template match="text() | comment() | processing-instruction()" mode="f:note-copy">
+    <xsl:copy/>
   </xsl:template>
 
   <xsl:preserve-space elements="ltx:note-mark"/>

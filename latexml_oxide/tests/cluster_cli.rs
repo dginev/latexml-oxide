@@ -3049,8 +3049,10 @@ mod browser_render_fmmarks {
   //! mark, note body, contact) drawn over another; every shown mark on its name's last line, touching the name or the
   //! mark before it; every shown note body under its own name and inside its column; at either width no horizontal
   //! overflow of the block. A one-author note in a one-line block keeps its mark and pop-up in LaTeXML.css (OD #1052),
-  //! so its body is not shown; an unmarked note shows no mark and its text, a line under its name (OD #990). Opt-in and
-  //! LOCAL like the guards above.
+  //! so its body is not shown; an unmarked note shows no mark and its text, a line under its name (OD #990). A shared
+  //! note's other mark carries the note hidden (`ltx_note_copy`, DG 2026-11-17): never shown at rest, shown inside the
+  //! viewport while its mark is hovered (LaTeXML.css's classic pop-up, at 1280, 375 and 1800 px). Opt-in and LOCAL like
+  //! the guards above.
 
   macro_rules! repro {
     ($name:literal) => {
@@ -3062,13 +3064,14 @@ mod browser_render_fmmarks {
     };
   }
 
-  /// A row: its label, its document, the marks shown on names in order as (name, mark), and the names a shown body
-  /// prints under.
+  /// A row: its label, its document, the marks shown on names in order as (name, mark), the names a shown body
+  /// prints under, and the marks carrying a hidden copy of their note as (name, mark).
   type Row = (
     &'static str,
     &'static str,
     &'static [(&'static str, &'static str)],
     &'static [&'static str],
+    &'static [(&'static str, &'static str)],
   );
 
   const ROWS: [Row; 7] = [
@@ -3077,6 +3080,7 @@ mod browser_render_fmmarks {
       repro!("author_block_symbol_legend_note_mark_not_in_its_text"),
       &[("Ann Able", "\u{2217}"), ("Bob Baker", "\u{2217}")],
       &["Ann Able"],
+      &[("Bob Baker", "\u{2217}")],
     ),
     (
       "a long shared note, two names with a note of their own (1706.03762's shape)",
@@ -3090,11 +3094,13 @@ mod browser_render_fmmarks {
         ("Dan Dorn", "\u{2021}"),
       ],
       &["Ann Able", "Cat Cole", "Dan Dorn"],
+      &[("Bob Baker", "*"), ("Cat Cole", "*"), ("Dan Dorn", "*")],
     ),
     (
       "one author's note",
       repro!("author_footnote_is_the_marked_thanks_note"),
       &[("Ann Able", "*")],
+      &[],
       &[],
     ),
     (
@@ -3103,12 +3109,14 @@ mod browser_render_fmmarks {
       repro!("ne2h_marks_run_carried_back_whole"),
       &[("Ann Able", "*"), ("Ann Able", "†")],
       &[],
+      &[],
     ),
     (
       "a shared unmarked note under the page's generated mark (OD #1059)",
       repro!("markkey_footnotemark_shares_a_thanks_by_number_unbound_class"),
       &[("Ann Able", "[a]"), ("Bob Baker", "[a]")],
       &[],
+      &[("Bob Baker", "[a]")],
     ),
     (
       "twelve names on two lines (2602.18802's shape)",
@@ -3119,18 +3127,20 @@ mod browser_render_fmmarks {
         ("Dan Dorn", "\u{2020}"),
       ],
       &["Ann Able", "Dan Dorn"],
+      &[("Bob Baker", "\u{2217}")],
     ),
     (
       "unmarked notes, their glyph unknown (an unbound class's `\\thanks`, OD #990)",
       repro!("marksafe_unbound_class_thanks_print_no_glyph"),
       &[],
       &["Ann Able", "Bob Baker"],
+      &[],
     ),
   ];
 
   #[test]
   fn author_block_marks_and_notes_lay_out_as_printed() {
-    for (row, doc, marks, bodies) in ROWS {
+    for (row, doc, marks, bodies, copies) in ROWS {
       let Some(stdout) =
         super::browser_harness::render_and_measure("FMRG", doc, "measure_fmmarks.js")
       else {
@@ -3177,6 +3187,29 @@ mod browser_render_fmmarks {
           assert!(
             body["underName"] == true && body["inColumn"] == true,
             "{row} ({key}) a body not under its name: {stdout}"
+          );
+        }
+        // Before (MTREDUCEd): a copy's mark only linked to the first; nothing to pop up.
+        let carried: Vec<(String, String)> = run["copies"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .map(|c| {
+            (
+              c["name"].as_str().unwrap().to_string(),
+              c["mark"].as_str().unwrap().to_string(),
+            )
+          })
+          .collect();
+        let want: Vec<(String, String)> = copies
+          .iter()
+          .map(|(n, m)| ((*n).to_string(), (*m).to_string()))
+          .collect();
+        assert_eq!(carried, want, "{row} ({key}) copies: {stdout}");
+        for copy in run["copies"].as_array().unwrap() {
+          assert!(
+            copy["rest"] == false && copy["hover"] == true && copy["inView"] == true,
+            "{row} ({key}) a copy shown at rest, or not popped up in view on its mark: {stdout}"
           );
         }
       }

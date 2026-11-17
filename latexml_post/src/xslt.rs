@@ -1427,19 +1427,21 @@ mod witnessed_css_delta {
     // unmarked note is no one author's (IEEEtran's \thanks, 1510.02728): no rule shows it under the name. A pure name's
     // mark-only note (ltx_role_footnotemark, 0801.1438) shows its mark there too; a body under the name floats, so the
     // marks after it stay on the name's line; consecutive marks are parted by a comma. The browser half is
-    // `cluster_cli::browser_render_author_lines`.
+    // `cluster_cli::browser_render_author_lines`. A shared note's other marks carry a hidden copy of it
+    // (`ltx_note_copy`, DG 2026-11-17), which the card never floats under the name: its classic pop-up alone shows it.
     const CARD: &str = ".ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(\
                         .ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks)))";
     let card = format!(":is({CARD}, .ltx_authors_multiline .ltx_creator)");
     let lines = format!("{card} .ltx_annotated_personname > .ltx_note");
+    let body = ".ltx_note_outer:not(.ltx_note_copy)";
     let css = bundled_latexml_css();
     for rule in [
       ".ltx_annotated_personname:has(> .ltx_note) { display:inline; }".to_string(),
       ".ltx_note_shared > .ltx_note_mark > a { color:inherit; text-decoration:none; }".to_string(),
       format!("{lines} {{ display:inline; }}"),
-      format!("{lines} .ltx_note_content {{\n    display:block; position:static; float:inline-start; clear:both; width:100%;"),
-      format!("{lines} .ltx_note_content .ltx_note_mark {{ position:static; }}"),
-      format!("{lines} .ltx_note_type {{ display:none; }}"),
+      format!("{lines} > {body} .ltx_note_content {{\n    display:block; position:static; float:inline-start; clear:both; width:100%;"),
+      format!("{lines} > {body} .ltx_note_content .ltx_note_mark {{ position:static; }}"),
+      format!("{lines} > {body} .ltx_note_type {{ display:none; }}"),
       ".ltx_annotated_personname > .ltx_note:has(~ .ltx_note) > .ltx_note_mark::after { content:\",\"; }".to_string(),
     ] {
       assert!(
