@@ -1,0 +1,21 @@
+% mechanism: REVTeX 4.2's `lengthcheck` option runs `reprint` (revtex4-2.cls:6044-6047; revtex4-1.cls:6023-6026), so
+%   its title block is in the two-column grid and prints no footnote mark (`\ltx@no@footnote`, :7413-7418)
+%   (`revtex4_support_sty::declare_revtex41_title_marks`)
+% witness:  review revMARKBIND item 3 (the grid test lacked `lengthcheck`), MARKBINDb
+% oracle:   pdflatex 0 errors; "Ann Able1 and Bob Baker2", "1)", "2)", "Univ A", "Univ B", no "b)"
+% engines:  rust MARKBIND (ff2497f5a77) = 0 errors, 0 Warnings; the affiliation's note marked "b"
+% expect:   0 errors, 0 Warnings; the note kept, unmarked
+% status:   RED (MARKBIND) -> GREEN (MARKBINDb; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% preload:  ar5iv.sty
+\documentclass[sor,lengthcheck]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\affiliation{\footnotemark[2]Univ A}
+\author{Bob Baker}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+\footnotetext[2]{Present address: Lab C.}
+Body.
+\end{document}

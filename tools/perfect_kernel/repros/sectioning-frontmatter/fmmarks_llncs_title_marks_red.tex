@@ -1,0 +1,17 @@
+% mechanism: llncs.cls's `\maketitle` marks the title's notes in its own `\@fnsymbol` (⋆, ⋆⋆, ⋆⋆⋆, llncs.cls:889,
+%   :935); the llncs binding declares no title marks, so its `\thanks` are written unmarked (the fail-safe)
+% witness:  MARKBIND N1 (the plain side of marksafe_maketitle_wrapper_llncs_is_neutral)
+% oracle:   pdflatex 0 errors; "Ann Able⋆ and Bob Baker⋆⋆", footnotes "⋆ Ann note.", "⋆⋆ Bob note."
+% engines:  rust MARKBIND = 0 errors, 0 Warnings; both thanks unmarked
+% expect:   0 errors, 0 Warnings; Ann's thanks ⋆, Bob's ⋆⋆ (llncs_cls.rs declaring its title hook, as mnras_cls.rs does)
+% status:   RED (row R LLNCSMARKS, proposed; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% moves:    XML row R LLNCSMARKS
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\title{A Title}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}}
+\institute{Lab A}
+\begin{document}
+\maketitle
+Body.
+\end{document}

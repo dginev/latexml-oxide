@@ -16,7 +16,8 @@
 %   matched it by glyph)
 % status:   GREEN (int/frontmatter 10997fdf9a0) -> RED XML, HTML (MARKSAFE writes the name's mark none: REVTeX
 %   4.1/4.2 set it in their minipage letters, unknown here, `latex_constructs::drop_unknown_title_mark`; row R
-%   REVLETTERS; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering_red)
+%   REVNAMEMARK — MARKBIND made the title hook these letters, a binding's part, but the engine's fail-safe for a name
+%   under `lx_title_footnote_own_marks` still writes none; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering_red)
 % preload: ar5iv.sty
 \documentclass[aps,prb,superscriptaddress]{revtex4-1}
 \renewcommand{\thefootnote}{\alph{footnote}}

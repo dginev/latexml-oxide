@@ -1,0 +1,23 @@
+% mechanism: REVTeX 4.2's title block in the two-column grid (`reprint`, :5896-5900) prints no footnote mark
+%   (`\ltx@no@footnote`, :7413-7418) whatever the society: aip's letters (aip4-2.rtx:282) are its `\thanks` marks, not
+%   the grid's, so the affiliation's `\footnotemark[2]` prints none (`revtex4_support_sty::declare_revtex41_title_marks`)
+% witness:  review revMARKBIND (rv3/aip_reprint.tex), MARKBINDb item 3; pdflatex prints none for `[aip,cp,reprint]`,
+%   `[aip,jmp,reprint]`, `[sor,jor,reprint]` and `[aip,jcp,lengthcheck]` either
+% oracle:   pdflatex 0 errors; "Ann Able1 and Bob Baker2", "1)", "2)", "Univ A", "Univ B", no "b)" (the note's text is
+%   not printed)
+% engines:  rust MARKBIND (ff2497f5a77) = 0 errors, 0 Warnings; the affiliation's note marked "b"
+% expect:   0 errors, 0 Warnings; the note kept, unmarked
+% status:   RED (MARKBIND) -> GREEN (MARKBINDb; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% preload:  ar5iv.sty
+\documentclass[aip,jcp,reprint]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\affiliation{\footnotemark[2]Univ A}
+\author{Bob Baker}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+\footnotetext[2]{Present address: Lab C.}
+Body.
+\end{document}

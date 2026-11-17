@@ -1,0 +1,19 @@
+% mechanism: a wrapper of the class's `\maketitle` two macros deep (`\let\oldmt\maketitle
+%   \newcommand\mymt{\oldmt\thispagestyle{empty}}\renewcommand\maketitle{\mymt}`) is the class's title page; the
+%   by-meaning test reads one level (`latex_constructs::class_maketitle_in_force`)
+% witness:  review revMARKSAFEc (p/twolev_art.tex)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker†", footnotes "∗ First note.", "† Second note."
+% engines:  rust MARKBIND = 0 errors, 0 Warnings; both notes unmarked
+% expect:   0 errors, 0 Warnings; Ann's thanks ∗, Bob's †
+% status:   XML RED (row R SHAUTO/T1); HTML GREEN (an unmarked one-author note prints under its name;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% moves:    XML row R SHAUTO/T1
+% preload:  ar5iv.sty
+\documentclass{article}
+\let\oldmt\maketitle\newcommand\mymt{\oldmt\thispagestyle{empty}}\renewcommand\maketitle{\mymt}
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

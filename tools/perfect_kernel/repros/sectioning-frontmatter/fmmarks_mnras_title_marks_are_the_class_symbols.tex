@@ -1,0 +1,21 @@
+% mechanism: mnras.cls marks its footnotes in its own `\@fnsymbol` (⋆ † ‡ § ¶ ‖ ⋆⋆ …, mnras.cls:1502-1508) up to the
+%   first `\section`, whose `\fixfootnotes` numbers them in arabic from 1 (:736-737, :1517-1523): the title's `\thanks`
+%   and a name's `\footnotemark[2]` with its `\footnotetext[2]` after `\maketitle` are ⋆ and †, the body's note after
+%   the section 1 (mnras_cls.rs, the title hook)
+% witness:  review revMARKSAFEb (p/e_mnras_plain.tex), MARKBIND MNRASFN
+% oracle:   pdflatex 0 errors; "Ann Able,1⋆ Bob Baker2 †", footnote "† Bob note.", body "Body1" with "1 Body note."
+% engines:  rust MARKBINDb0 (int/frontmatter 4f169bcbe69) = 0 errors, 0 Warnings; Ann's thanks unmarked, Bob's
+%   footnote marked 2; Perl: arabic marks (its mnras.cls.ltxml keeps `\thefootnote`)
+% expect:   0 errors, 0 Warnings; Ann's thanks ⋆ (her contact), Bob's footnote †, the body's note 1
+% status:   GREEN (MARKBIND; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{mnras}
+\title{A Title}
+\author[A. Able et al.]{Ann Able,$^{1}$\thanks{E-mail: ann@x.org} Bob Baker$^{2}$\footnotemark[2]
+\\ $^{1}$Univ A, Town\\ $^{2}$Univ B, City}
+\begin{document}
+\maketitle
+\footnotetext[2]{Bob note.}
+\section{Introduction}
+Body\footnote{Body note.}.
+\end{document}

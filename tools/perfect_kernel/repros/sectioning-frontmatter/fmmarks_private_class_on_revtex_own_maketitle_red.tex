@@ -1,0 +1,25 @@
+% mechanism: a private class on a bound one (`\LoadClass[nofootinbib]{revtex4-2}`) with its own `\maketitle` that
+%   numbers the title's notes in arabic: the revtex binding's title marks (`\@fnsymbol`) are not this class's
+% witness:  review revMARKSAFEc (p/myrev_doc.tex, p/myrev.cls; the class written by `{filecontents}` here)
+% oracle:   pdflatex 0 errors; "Ann Able1 and Bob Baker2", footnotes "1 First note.", "2 Second note."
+% engines:  rust MARKBIND = 0 errors; the notes marked ∗ †
+% expect:   0 errors, 0 Warnings; Ann's thanks 1, Bob's 2 (or none, unknown)
+% status:   RED (row R SHAUTO/T1; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% moves:    XML, HTML row R SHAUTO/T1
+% preload:  ar5iv.sty
+\begin{filecontents}[force]{myrev.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{myrev}
+\LoadClass[nofootinbib]{revtex4-2}
+\let\my@thanks\@empty
+\renewcommand\maketitle{\begingroup\renewcommand\thefootnote{\arabic{footnote}}%
+ \def\thanks##1{\footnotemark\protected@xdef\my@thanks{\my@thanks\protect\footnotetext[\the\c@footnote]{##1}}}%
+ \begin{center}\@myauthor\end{center}\my@thanks\endgroup}
+\renewcommand\author[1]{\gdef\@myauthor{#1}}
+\end{filecontents}
+\documentclass{myrev}
+\author{Ann Able\thanks{First note.} and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}
