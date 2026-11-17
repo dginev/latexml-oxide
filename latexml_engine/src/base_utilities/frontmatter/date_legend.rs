@@ -158,6 +158,9 @@ pub(in crate::base_utilities) fn date_legend_calls() -> Result<Vec<Token>> {
   // (a date its structured lines were taken from is void, DG 2026-11-17: no date, its leftover — a `\today`, a date
   // string — dropped, named once)
   if !prints_nothing(&Tokens::new(void.clone())) {
+    // (named here, so the title-page check counts none of its words again: a ruled discard, no loss)
+    let words: Vec<String> = net_content_words(&visible_name_text(&void));
+    note_net_counted(&words);
     Info!("frontmatter", "date_void", s!("{}", Tokens::new(void)));
   }
   with_value_mut("frontmatter_raw", |v| {
