@@ -1697,7 +1697,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@maketitle@begin", "");
   DefMacro!(
     "\\lx@maketitle@body",
-    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@text@before@title\lx@maketitle@twocolumn\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
+    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@date@legend\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@text@before@title\lx@maketitle@twocolumn\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters
@@ -5260,7 +5260,7 @@ pub(crate) fn title_page_mark(definition: &Rc<dyn Definition>) -> Option<char> {
 }
 
 /// Does [`title_page_print_tokens`] run the class's own refused `\maketitle` ([`title_page_replay_tokens`])?
-fn replays_class_maketitle() -> bool {
+pub(crate) fn replays_class_maketitle() -> bool {
   !lookup_bool("lx_depositing_class_maketitle") && title_page_replay_tokens(&[]).is_some()
 }
 

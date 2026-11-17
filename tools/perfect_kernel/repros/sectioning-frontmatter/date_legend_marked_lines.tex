@@ -1,0 +1,15 @@
+% mechanism: a `\date` article prints under the names whose lines their marks label (1512.01686, 2003.11862, 2412.00057)
+% oracle:   pdflatex 0 errors; "Ann Able1 Bob Baker2", then the date: "1 Dept A, Univ X", "2 Dept B, Univ Y, bob@y.org"
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the date holds both lines, each name a mark-only note. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; Ann's affiliation Dept A; Bob's Dept B and his e-mail; no date; the marks consumed (OD #1071)
+% status:   RED (3d4c847f02c) -> GREEN (DATELEG)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able$^1$ \and Bob Baker$^2$}
+\title{T}
+\date{$^1$Dept A, Univ X\\ $^2$Dept B, Univ Y, bob@y.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

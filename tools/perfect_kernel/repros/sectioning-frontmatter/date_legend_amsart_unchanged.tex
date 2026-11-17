@@ -1,0 +1,15 @@
+% mechanism: control: amsart prints the date as a "Date:" footnote, not under the names
+% oracle:   pdflatex 0 errors; "ANN ABLE1 AND BOB BAKER2", the footnote "Date: 1 Dept A, Univ X 2 Dept B, Univ Y."
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the date holds both lines. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; unchanged: the class prints no date under the names (OD #1071)
+% status:   GREEN (control)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\author{Ann Able$^1$}\author{Bob Baker$^2$}
+\title{T}
+\date{$^1$Dept A, Univ X\\ $^2$Dept B, Univ Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

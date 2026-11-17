@@ -1,0 +1,15 @@
+% mechanism: an unlabelled address in the date under two names (0806.4361, 1506.06444, quant-ph0301088)
+% oracle:   pdflatex 0 errors; "Ann Able Bob Baker", then "Department of Physics", "University of X, Town" centred under both
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the date holds the address. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; the address (both lines) every author's affiliation; no date (OD #1071)
+% status:   RED (3d4c847f02c) -> GREEN (DATELEG)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able \and Bob Baker}
+\title{T}
+\date{Department of Physics\\ University of X, Town}
+\begin{document}
+\maketitle
+Text.
+\end{document}

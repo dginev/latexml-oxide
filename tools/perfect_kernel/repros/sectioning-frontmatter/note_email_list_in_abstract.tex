@@ -1,0 +1,17 @@
+% mechanism: 2506.06941: `\footnotetext{\{p\_shojaee, …\}@apple.com}` in the abstract under `\fnsymbol`, an unmarked footnote line
+% oracle:   pdflatex 0 errors; "Parshin Shojaee … Mehrdad Farajtabar", the abstract, the footnote line "{p shojaee, imirzadeh, …}@apple.com" with no mark
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the note stays in the abstract, run on after its text; no creator holds an address. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; each address its author's e-mail (spelled), the note gone (OD #1071)
+% status:   RED (3d4c847f02c) -> GREEN (DATELEG)
+% preload: ar5iv.sty
+\documentclass{article}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\author{Parshin Shojaee \and Iman Mirzadeh \and Keivan Alizadeh \and Maxwell Horton \and Samy Bengio \and Mehrdad Farajtabar}
+\title{T}
+\date{}
+\begin{document}
+\maketitle
+\begin{abstract}Abstract.\footnotetext{\{p\_shojaee, imirzadeh, kalizadehvahid, mchorton, bengio, farajtabar\}@apple.com}\end{abstract}
+Text.
+\end{document}

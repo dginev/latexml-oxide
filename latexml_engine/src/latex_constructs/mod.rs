@@ -1468,6 +1468,175 @@ fn title_block_partner(document: &mut Document, node: &Node) -> &'static str {
   }
 }
 
+/// The symbols a legend note may open with, as a name's typed mark prints them (`$^*$` "∗", `*`, `\dag` "†"): the
+/// footnote symbols of `\@fnsymbol` and the asterisk forms; `∗` and `*` are one mark (OD #1052).
+const LEGEND_GLYPHS: &str = "*\u{2217}\u{2020}\u{2021}\u{a7}\u{b6}\u{2016}\u{22c6}\u{2605}";
+
+/// An unmarked note outside the creators whose text opens with a symbol G the names show as a mark of their own and no
+/// other note of the block carries is those names' shared note, its mark G, the G taken out of its text
+/// (OXIDIZED_DESIGN_DIVERGENCES #1071; DG 2026-11-17): a `\footnotetext{$^*$Equal contribution}` with no printed mark
+/// under `Ann Able$^*$`, 2508.05506's `\blfootnote{$\dagger$ …}`. Each carrier's mark-only note (`role=footnotemark`, the
+/// pure-name pass's) takes the text as a `\footnotemark` takes its `\footnotetext` ([`relocate_footnote_aux`]), a
+/// `\thanks` of the name, the copies one note (`crate::base_utilities::one_note`). A G no name shows, one another note
+/// carries, or a note printing a second legend symbol leaves the note as it is; so does a frontmatter entry a flush
+/// digests and places (icml's `\printAffiliationsAndNotice{\icmlEqualContribution}`, 2602.04557: row R, OD #1071).
+pub fn relocate_legend_note(document: &mut Document, node: &mut Node) -> Result<()> {
+  // (an abstract the insertion places is the body's: its notes are read; any other entry is the flush's)
+  if lookup_bool("lx_frontmatter_flushing")
+    || (lookup_bool(FRONTMATTER_INSERTING)
+      && document
+        .findnodes("ancestor::ltx:abstract", Some(node))
+        .is_empty())
+  {
+    return Ok(());
+  }
+  let role = node.get_attribute("role").unwrap_or_default();
+  if role.is_empty()
+    || NOTE_MARK_END.is_match(&role)
+    || node
+      .get_attribute("mark")
+      .is_some_and(|mark| !mark.trim().is_empty())
+    || node.get_parent().is_none()
+    || !document
+      .findnodes("ancestor::ltx:creator", Some(node))
+      .is_empty()
+  {
+    return Ok(());
+  }
+  let fold = |text: &str| text.trim().replace('\u{2217}', "*");
+  // (its opening glyph: a superscript holding it alone, or the text's first character)
+  let first = node.get_child_nodes().into_iter().find(|child| {
+    !(child.is_text_node() && child.get_content().trim().is_empty()) && child.get_name() != "tags"
+  });
+  let Some(mut first) = first else {
+    return Ok(());
+  };
+  let glyph = if first.is_text_node() {
+    first
+      .get_content()
+      .trim_start()
+      .chars()
+      .next()
+      .map(String::from)
+  } else if matches!(first.get_name().as_str(), "sup" | "Math") {
+    Some(first.get_content().trim().to_string())
+  } else {
+    None
+  };
+  let Some(glyph) =
+    glyph.filter(|g| g.chars().count() == 1 && g.chars().all(|c| LEGEND_GLYPHS.contains(c)))
+  else {
+    return Ok(());
+  };
+  // (a notice of several legends, `*Equal contribution, †Project lead`, is no one mark's note: it stays)
+  if node
+    .get_content()
+    .chars()
+    .filter(|c| LEGEND_GLYPHS.contains(*c))
+    .count()
+    > 1
+  {
+    return Ok(());
+  }
+  let key = fold(&glyph);
+  let mut carriers: Vec<Node> = document
+    .findnodes("//ltx:creator/ltx:note[@role='footnotemark'][@mark]", None)
+    .into_iter()
+    .filter(|mark| mark.get_attribute("mark").is_some_and(|m| fold(&m) == key))
+    .collect();
+  // (a name still showing it typed or requesting it, before the settle and pure-name passes take it out — an abstract
+  // the same insertion places: a note of the creator, marked so, which those passes then take the mark as, OD #1055,
+  // #1061)
+  let typed: Vec<Node> = document
+    .findnodes("//ltx:creator[ltx:personname]", None)
+    .into_iter()
+    .filter(|creator| {
+      !carriers
+        .iter()
+        .any(|mark| mark.get_parent().as_ref() == Some(creator))
+        && (document
+          .findnodes(
+            "ltx:personname//*[self::ltx:sup or self::ltx:Math]",
+            Some(creator),
+          )
+          .iter()
+          .any(|ink| fold(&ink.get_content()) == key)
+          || document
+            .findnodes("ltx:personname//ltx:note[@mark]", Some(creator))
+            .iter()
+            .any(|request| {
+              request
+                .get_attribute("mark")
+                .is_some_and(|m| fold(&m) == key)
+            }))
+    })
+    .collect();
+  let taken = document
+    .findnodes(
+      "//ltx:creator//ltx:note[@mark] | //ltx:title//ltx:note[@mark]",
+      None,
+    )
+    .into_iter()
+    .any(|note| {
+      note.get_attribute("role").as_deref() != Some("footnotemark")
+        && note.get_attribute("mark").is_some_and(|m| fold(&m) == key)
+    });
+  if (carriers.is_empty() && typed.is_empty()) || taken {
+    return Ok(());
+  }
+  // (the glyph out of the text: the superscript, or the character and the spaces after it)
+  if first.is_text_node() {
+    let text = first.get_content();
+    let rest = text.trim_start();
+    let rest = rest[rest.chars().next().map_or(0, char::len_utf8)..].trim_start();
+    first.set_content(rest).ok();
+  } else {
+    let next = first.get_next_sibling();
+    document.remove_node(first);
+    if let Some(mut next) = next.filter(Node::is_text_node) {
+      let text = next.get_content();
+      next.set_content(text.trim_start()).ok();
+    }
+  }
+  // (a footnote of a name is its `\thanks`, as latex.ltx's title block makes one; a binding's own role stays)
+  let notetype = if matches!(role.as_str(), "footnote" | "footnotetext") {
+    "thanks".to_string()
+  } else {
+    role.clone()
+  };
+  for creator in typed {
+    let saved = document.get_node().clone();
+    document.set_node(&creator);
+    let mut attributes = HashMap::default();
+    attributes.insert("mark".to_string(), glyph.clone());
+    let mut mark = document.open_element("ltx:note", Some(attributes), None)?;
+    document.close_element("ltx:note")?;
+    document.set_node(&saved);
+    mark.unlink_node();
+    let mut creator = creator.clone();
+    creator.add_child(&mut mark).ok();
+    carriers.push(mark);
+  }
+  for carrier in &carriers {
+    let mut carrier = carrier.clone();
+    // (its text, not the body footnote's number tags: the PDF prints it with no mark of its own)
+    let text: Vec<Node> = node
+      .get_child_nodes()
+      .into_iter()
+      .filter(|child| child.get_name() != "tags")
+      .collect();
+    document.append_clone(&mut carrier, text)?;
+    document.set_attribute(&mut carrier, "role", &notetype)?;
+    carrier.remove_attribute("_namemark").ok();
+    if carrier.get_attribute("class").as_deref() == Some("ltx_note_label") {
+      carrier.remove_attribute("class").ok();
+    }
+  }
+  one_note(document, &carriers)?;
+  document.safe_unlink(node.clone());
+  Ok(())
+}
+
 fn relocate_footnote_aux(
   document: &mut Document,
   notetype: &str,
@@ -9454,8 +9623,9 @@ pub use sect05::note_title_page_part;
 pub(crate) use sect05::{
   SpeculativeRun, assigned_parts_holding, class_author_reader_body, is_latex_maketitle,
   keep_class_author_reader, maketitle_is_kernels, own_maketitle, replay_class_begin_code,
-  speculative_word_run, tail_reads_ahead, title_page_deposit_tokens, title_page_mark,
-  title_page_print_tokens, title_page_probe_run, title_page_reading, title_page_replay_tokens,
+  replays_class_maketitle, speculative_word_run, tail_reads_ahead, title_page_deposit_tokens,
+  title_page_mark, title_page_print_tokens, title_page_probe_run, title_page_reading,
+  title_page_replay_tokens,
 };
 mod reference_math_slots;
 mod sect06;

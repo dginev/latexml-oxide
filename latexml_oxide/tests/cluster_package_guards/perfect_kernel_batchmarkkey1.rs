@@ -275,8 +275,10 @@ fn an_unlinked_mark_always_shows() {
 /// fail-safe (`an_unlinked_mark_always_shows`) where the glyph key missed it: a body footnote opening with a formula of
 /// the glyph alone (2508.05506's `\blfootnote{$\dagger$ …}`); a formula of the glyph alone inside a note, past its
 /// opening (2012.13912's acmart `\authornote{… \\ $\dagger$ … is the corresponding author}`); a note with no known mark
-/// on the name, whose glyph it may be (1503.07953's `\altaffiltext{*}{Corresponding author}`); a legend printed
-/// bracketed (2302.11378's `$^{(2)}$` legends in `\date`); and a piece of another name's mark run (2110.12052).
+/// on the name, whose glyph it may be (1503.07953's `\altaffiltext{*}{Corresponding author}`); and a piece of another
+/// name's mark run (2110.12052). Since DATELEG (OD #1071) the first is the name's note (the legend opening with the
+/// mark it shows), and a legend printed bracketed in the `\date` the class prints under the names (2302.11378's
+/// `$^{(2)}$`) is their affiliation, the marks consumed.
 #[test]
 fn an_unlinked_mark_shows_beside_its_legend() {
   assert_green(&[
@@ -284,9 +286,16 @@ fn an_unlinked_mark_shows_beside_its_legend() {
       repro:      "markkey_blfootnote_dagger_legend_shows_its_names_mark",
       tex:        repro!("markkey_blfootnote_dagger_legend_shows_its_names_mark"),
       warnings:   0,
-      creators:   &["Ann Able", "Bob Baker ; footnotemark[†]="],
+      creators:   &[
+        "Ann Able",
+        "Bob Baker ; thanks[†]=Prior to joining Univ A, Bob was with Univ B.",
+      ],
       moves:      "",
-      page:       &["Ann Able", "Bob Baker ; † plain"],
+      page:       &[
+        "Ann Able",
+        "Bob Baker ; † plain",
+        "margin: Prior to joining Univ A, Bob was with Univ B.",
+      ],
       page_moves: "",
     },
     Row {
@@ -329,11 +338,11 @@ fn an_unlinked_mark_shows_beside_its_legend() {
       tex:        repro!("markkey_bracketed_legend_shows_its_names_mark"),
       warnings:   0,
       creators:   &[
-        "Ann Able ; footnotemark[1]=",
-        "Bob Baker ; footnotemark[2]=",
+        "Ann Able | affiliation=Univ A, Town A",
+        "Bob Baker | affiliation=Univ B, Town B",
       ],
       moves:      "",
-      page:       &["Ann Able ; 1 plain", "Bob Baker ; 2 plain"],
+      page:       &["Ann Able", "Bob Baker"],
       page_moves: "",
     },
     Row {

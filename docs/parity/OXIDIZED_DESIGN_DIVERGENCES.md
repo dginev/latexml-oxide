@@ -19741,7 +19741,8 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   document or a package defines `\@fnsymbol` (its table's would be wrong: 2603.18989), the mark unknown and counted. A mark alone keeps its glyph in `mark` only
   (`link_marked_notes`): 2607.15705's `\authornotemark[2]` that no note answers held "†" as its text too. A label
   authblk prints on a name (`\AB@authnote`, authblk.sty:120-133) that no `\affil` prints before its line shows on the
-  name as its mark (#1064: 2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains); one spelled so
+  name as its mark (#1064: 2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains, which #1071 reads
+  as its line); one spelled so
   that no mark is read from it (a document's macro) is placed nowhere, counted at `\maketitle`
   (`authblk_sty::count_lost_labels`, one Warning listing them; not where an `\affil` is unlabelled, its `\AB@thenote`
   number possibly the answer). Both sides are read by one key, the text the label prints
@@ -20375,7 +20376,8 @@ explains that the reading places elsewhere (`\affil[$\dag$]{…}` under `\author
 1604.01848, 1406.4648, 2201.10988, 2408.08006, 2606.27030, 2609.08556) shows no mark, as before.
 **Residual.** The shown mark follows the name before the notes the labels answer ("Ann Able§,*" where pdflatex prints
 "1,*,§").
-**Witnesses.** 2606.00446 (`\author[1,*,§]{Jared Benson}`, its `§` legend in `\date`: 1 Warning before, 0 now),
+**Witnesses.** 2606.00446 (`\author[1,*,§]{Jared Benson}`, its `§` legend in `\date`: 1 Warning before, 0 now; the
+`\date` line explains it since #1071, Jared Benson's e-mail),
 2309.17420 (`\affil[1]` given twice, the names' 2 shown), 2606.17809.
 **Guards**: `perfect_kernel_batchinvdag::an_authblk_label_no_affil_explains_shows_on_its_name`,
 `perfect_kernel_batchshmark::a_class_label_no_entry_answers_shows_on_its_name`, the FMRG row
@@ -20473,6 +20475,57 @@ handle (its contacts print under the name) and its title-notes handle follows. R
 carries the mark the PDF prints (1612.03574's title ∗) and an unmarked one shows its text (#1063), so the title's
 handle goes once title notes record their marks. Guards `latexml_post` `xslt::witnessed_css_delta::{css_draws_no_footnote_mark_glyph,
 title_pubnote_content_stays_collapsed}`.
+
+### 1071. A `\date` the class prints under the authors that holds the block's labelled lines is their contacts, not a date; an unmarked note of the authors' e-mails or of a mark they show is theirs (DG 2026-11-17; DATELEG)
+
+**Rule.** Connections are the value: a line printed under the names that a name's mark labels is that name's, wherever
+the class prints it. (1) article, report, book, extsizes' and KOMA's title pages print `\@date` right under the author
+tabular (article.cls:180-185, 240-250; `TitlePageDecl::date_under_author`, the kernel's declaration); there the date's
+lines (parted at `\\`, `\newline`, `\par`, `\break`, `\quad`) are read as lines under every name: a line a label leads
+(`$^1$`, `${}^{1}$`, `\textsuperscript{a}`, `$^\dag$`, a bare `*`/`\dag`, a typed `1)`) that a name requests, with the
+unlabelled lines continuing it, is the contact that label's line is; an unlabelled line naming an institution, with its
+continuation, every author's affiliation; a line of e-mail addresses alone (an "E-mail:" label naming each, a
+`{a, b}@x` list written out) each address's owner's. A date anything is taken from is void (DG 2026-11-17, "null and
+void"): no `ltx:date`, its leftover — a `\today`, a date string — dropped and named once,
+`Info:frontmatter:date_void`. A date with a line no rule reads (a label no name prints, a mark inside a line, text
+naming no institution, a binding's label keyed by a document macro) is the date, whole, with an Info: nothing of it is
+taken. amsart's "Date:" footnote, REVTeX's "Dated:", mnras, IEEEtran, elsarticle, acmart, llncs, raw classes and a
+document's own `\@maketitle` keep their date. (2) An unmarked body note (a `\footnotetext` under an empty
+`\thefootnote`, a `\blfootnote`) in the abstract whose text is e-mail addresses alone is the authors' e-mail
+contacts; an unmarked body note outside the creators opening with a symbol G (∗ = *) that names show as their own mark,
+no other note of the block printing G and no second legend symbol in it, is those names' shared `\thanks`, marked G, G
+out of its text. Every address and every word lands once; a note not wholly taken stays as it is (an Info). A
+frontmatter entry a flush places (icml's `\printAffiliationsAndNotice{\icmlEqualContribution}`, 2602.04557; MRM's
+`\corres{*…}`) is not read here: an ownership rule after the emitter is fenced (`perfect_kernel_batche0`), so it waits
+for the resolver (row R).
+**Perl.** The date is `\lx@add@date[role=creation]{#1}` (latex_constructs.pool.ltxml:1073-1076): `<date>` holds the
+lines, the names' marks unanswered; a note stays where it stands.
+**Rust.** `frontmatter/date_legend.rs`: `\lx@date@legend` in `\maketitle` after `\lx@author@tail`, before the flush,
+reads the `\@date` store the queued kernel date holds (`date_legend_calls`) with the API's line readers
+(`leading_line_label`, `email_line_label`/`email_addresses`, `reads_as_affiliation`); a labelled line becomes authblk's
+call shape, `\lx@add@contact[role=affiliation,annotate=1,label={…},_labelprints=true]`, which the relocation pairs with
+the names' requests (`printed_label_keys`, as `queue_reading::author_marks` keys them) and the Kind step cuts (an
+e-mail in the line, a legend's note); a label a `labels_print` binding declared unexplained (authblk's
+`\author[1,*,\S]`) is explained (`policy::explain_name_labels`) and keyed by its spelling. An unlabelled affiliation is
+`\lx@add@contact[role=affiliation,annotate=all]`. Addresses go by `place::listed_address_owners`, the rule
+`sequenced_contact_labels` places a class's address list by (`EmailOwner::SpelledElseOrder`: the author spelled, else
+the author at its place in a list of one address per author, else the block's, `label=addresses:block`); the note
+route (`address_note_contacts`) takes a note only when every address has an author. `latex_constructs::relocate_legend_note` pairs a legend
+note with the names' mark-only notes (`role=footnotemark`) as a `\footnotemark` takes its text, one note
+(`one_note`). Both run as the body note closes (`ltx:note`'s `after_close`, after `relocate_footnote`), never on a note
+a frontmatter flush digests or `insert_frontmatter` places (`FRONTMATTER_INSERTING`). The `\date` reader reads tokens,
+as the API's Cut does (the store is no rehearsed block): `perfect_kernel_batche0`'s `frontmatter (rest)` pin 37 -> 51.
+**Witnesses.** 1512.01686, 2003.11862, 2412.00057, 2108.10662, 1802.01334, 2305.08521, 2511.18126, 2401.15728,
+2303.16540, 0907.1199, 0806.4361, 1506.06444, 0912.1999, 2507.03628 (`\date`); 2606.00446 (authblk `§`); 2506.06941
+(the `\footnotetext` address list); 2508.05506 (`\blfootnote{$\dagger$ …}`); 2302.11378 (`$^{(2)}$` legends in
+`\date`); 2602.04557 (icml's notice, open).
+**Guards.** The CLASS rows `date_legend_*`, `note_email_list_in_abstract`, `note_star_legend_in_abstract`,
+(`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`), the MARKKEY rows
+`markkey_blfootnote_dagger_legend_shows_its_names_mark`, `markkey_bracketed_legend_shows_its_names_mark`
+(`perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_beside_its_legend`, repinned),
+the SHARED row `fmmarks_authblk_double_star_label_and_date_note_red` (green), the LINK row
+`author_typed_star_legend_in_the_date_links_nothing` (the date's ∗ legend is Ann's and Bob's note);
+`perfect_kernel_batchdateleg` (the `date_void` and stays-the-date Infos, the note fail-safe).
 
 ---
 

@@ -1,0 +1,15 @@
+% mechanism: `\textsuperscript{1}` and `$^\dag$` labels in a `\small` date (2511.18126, 2108.10662, 1609.09771)
+% oracle:   pdflatex 0 errors; "Ann Able1 Bob Baker†", "1 Dept A, Univ X", "† Dept B, Univ Y"
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the date holds both lines. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; Ann's Dept A, Bob's Dept B, in the date's size; no date (OD #1071)
+% status:   RED (3d4c847f02c) -> GREEN (DATELEG)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able\textsuperscript{1} \and Bob Baker$^\dag$}
+\title{T}
+\date{\small \textsuperscript{1}Dept A, Univ X\\ $^\dag$Dept B, Univ Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

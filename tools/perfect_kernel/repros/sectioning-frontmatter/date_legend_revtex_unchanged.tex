@@ -1,0 +1,16 @@
+% mechanism: control: REVTeX prints "(Dated: …)" (a `\\` in it is a pdflatex error there)
+% oracle:   pdflatex 0 errors; "Ann Able1 and Bob Baker2", "(Dated: 1 Dept A, Univ X)"
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the date. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; unchanged (OD #1071)
+% status:   GREEN (control)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$}
+\author{Bob Baker$^2$}
+\date{$^1$Dept A, Univ X}
+\maketitle
+Text.
+\end{document}

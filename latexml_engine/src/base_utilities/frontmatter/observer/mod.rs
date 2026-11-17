@@ -73,6 +73,7 @@ pub(in crate::base_utilities) use ledger::{
 };
 pub use ledger::{
   author_tail_declared as fm_author_tail_declared, class_maketitle_runs as fm_class_maketitle_runs,
+  class_prints_date_under_authors as fm_class_prints_date_under_authors,
   class_prints_title_at_setters as fm_class_prints_title_at_setters, note_binding_load,
   record_note_text as fm_record_note_text, record_switched_off_call as fm_record_switched_off_call,
 };
