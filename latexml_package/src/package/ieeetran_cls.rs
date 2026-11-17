@@ -192,6 +192,9 @@ LoadDefinitions!({
 
   // Load article as base
   LoadClass!("article");
+  // (its `\maketitle` empties `\footnotemark`, IEEEtran.cls:4756-4758, so its `\thanks` steps no counter in the title, as
+  // its notes step none here: a name's `\footnotemark[1]` keeps its number and glyph, MARKKEY1c)
+  engine::latex_constructs::declare_title_numbers_faithful();
   // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): IEEEtran.cls's
   // (:1734-1811), as pdflatex gives it — 516pt (43pc) in two 252pt columns (`\columnsep` 1pc); compsoc's 7in + 12bp,
   // 517.935pt in two of 252.945pt (12bp apart), and with `conference` the paper less 1.5in (`\IEEEsettextwidth{0.75in}

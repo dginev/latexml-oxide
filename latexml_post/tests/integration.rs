@@ -949,7 +949,8 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
 </document>"#;
   // Before: each mark-only note outside the wrapper, after the name's line break, with an empty "footnotemark: "
   // pop-up (Kardoš "* a", Pat's `b` under his note, Tia's `1` after her badge); Quinn's note one author's, with Rae's
-  // `¶` unlinked. Uma's element is the base's.
+  // `¶` unlinked. Uma's element is the base's. Sereni's `c`, Pat's `b` and Sam's `2`, each printed once, show: the
+  // document's affiliations could hold their legends (MARKKEY1c, DG 2026-11-16 "hide only when certain", OD #1059).
   let html = authors_html(MARKS);
   assert_eq!(html, [concat!(
     r##"<div class="ltx_authors">"##,
@@ -968,11 +969,11 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Jean-Sébastien Sereni</span><span id="id5" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_type">thanks: </span>Supported by the European project Aeolus.</span></span></span></span></span>"##,
+    r##"<span class="ltx_personname">Jean-Sébastien Sereni</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">c</sup></span><span id="id5" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_type">thanks: </span>Supported by the European project Aeolus.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Pat Price</span><span id="id6" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks"><sup class="ltx_note_mark">§</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">§</sup><span class="ltx_note_type">thanks: </span>On leave from Univ. of B.</span></span></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
+    r##"<span class="ltx_personname">Pat Price</span><span id="id6" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks"><sup class="ltx_note_mark">§</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">§</sup><span class="ltx_note_type">thanks: </span>On leave from Univ. of B.</span></span></span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">b</sup></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
     "\n",
     r##"<span class="ltx_contact ltx_author_line ltx_role_affiliation">Univ. of P"##,
     "\n",
@@ -988,7 +989,7 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Sam Stone</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">1</sup></span></span></span>"##,
+    r##"<span class="ltx_personname">Sam Stone</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">1</sup></span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">2</sup></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",

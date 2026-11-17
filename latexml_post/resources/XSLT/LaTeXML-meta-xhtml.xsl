@@ -164,16 +164,17 @@
   <!-- A creator's mark-only note is its mark alone, with no empty "footnotemark: " pop-up: linked, and shared, when it
        is an author's linkable mark (f:creator-mark-only) and its mark names one author's note in the block; else the
        plain glyph. Its glyph is note-mark's (Perl's tag, else @mark). -->
-  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1059): no dangling mark (DG 2026-11-16, 2006.10886). A
-       mark-only note that links to no note on the page shows its glyph only where the same glyph (each piece of a
-       printed run, `1,2`) prints elsewhere in the document (f:printed-glyph), as it was likely meant as connected; or
-       where it names a title's or date's note, whose mark the page does not print (class ltx_mark_titlenote, set by
-       its given number: `\footnotemark[1]` under `\title{T\thanks{…}}`); or where its name carries a note with no
-       known mark, which may print that glyph (1503.07953's `\altaffiltext{*}{Corresponding author}`). Open: a legend
-       whose glyph the XML drops (an author-line contact's consumed label, 1302.0490; an e-mail or correspondence contact
-       with its symbol cut) leaves the mark hidden though the PDF prints it twice.
-       Else its glyph, printed once over its name alone, connects nothing and shows nothing (its id stays; the XML
-       keeps the note). -->
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1059): no dangling mark (DG 2026-11-16, 2006.10886), hidden
+       only when certain (DG 2026-11-16): a mark-only note that links to no note on the page hides only where the
+       document has nothing that could hold its legend (f:legend-holder: the XML often drops a legend's glyph, 2311.11099,
+       2402.05011, 1302.0490) and its glyph (each piece of a printed run, `1,2`) prints nowhere else (f:printed-glyph)
+       and it names no title's or date's note, whose mark the page does not print (class ltx_mark_titlenote, set by its
+       given number: `\footnotemark[1]` under `\title{T\thanks{…}}`). Hidden, its id stays; the XML keeps the note. -->
+  <xsl:variable name="f:legend-holder"
+                select="boolean(//ltx:contact[normalize-space(.)] | //ltx:pubnote[normalize-space(.)]
+                                | //ltx:note[not(@role='footnotemark')][normalize-space(.)]
+                                            [@role='footnotetext'
+                                             or not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])])"/>
   <xsl:template match="ltx:creator/ltx:note[@role='footnotemark'][normalize-space(@mark)]">
     <xsl:variable name="by_mark" select="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
     <xsl:variable name="notes"
@@ -200,10 +201,8 @@
       </xsl:call-template>
     </xsl:variable>
     <xsl:choose>
-      <xsl:when test="not($target) and not(string($elsewhere))
-                      and not(contains(concat(' ',@class,' '),' ltx_mark_titlenote '))
-                      and not(../ltx:note[not(@role='footnotemark')][not(normalize-space(@mark))]
-                                         [not(ltx:tags/ltx:tag[not(@role)])][normalize-space(.)])">
+      <xsl:when test="not($target) and not($f:legend-holder) and not(string($elsewhere))
+                      and not(contains(concat(' ',@class,' '),' ltx_mark_titlenote '))">
         <xsl:if test="@xml:id">
           <xsl:element name="span" namespace="{$html_ns}">
             <xsl:call-template name="add_id"/>

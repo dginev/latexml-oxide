@@ -1,0 +1,20 @@
+% mechanism: a name's `\footnotemark[n]` takes the `\thanks` the reading numbers n (`insert::link_marked_notes`) only
+%   where the title's footnote counter is TeX's here (`latex_constructs::title_numbers_faithful`): llncs counts the
+%   title's `\thanks` (⋆) before the authors', which the reading does not, so Cat's [2] took Bob's note (the reading's 2)
+%   where llncs prints Ann's ⋆⋆ — a wrong link; now it takes none, its mark left alone. Its glyph "2" (llncs prints ⋆⋆)
+%   and the link to Ann's note wait on row R MARKNUMKEY (the class's counter emulated)
+% witness: 2306.03360 (llncs, `\samethanks`), the meta-review's number-key finding (MARKKEY1c)
+% oracle:  pdflatex 0 errors: "T⋆", "Ann Able⋆⋆ , Bob Baker⋆⋆⋆ , and Cat Cole⋆⋆", feet "⋆ Supported by Fund F.",
+%   "⋆⋆ Univ A.", "⋆⋆⋆ Univ B."
+% engines: rust MARKKEY1 501703917a8 = 0 errors 0 Warnings; Cat carries a copy of Bob's "Univ B." (idref Bob's)
+% expect:  0 errors 0 Warnings; XML Cat Cole ; footnotemark[2]= (no copy); HTML RED (row R MARKNUMKEY: "2" shown)
+% status:  RED (501703917a8) -> GREEN in XML (perfect_kernel_batchmarkkey1::a_number_the_title_counter_cannot_give_keys_nothing)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T\thanks{Supported by Fund F.}}
+\author{Ann Able\thanks{Univ A.} \and Bob Baker\thanks{Univ B.} \and Cat Cole\protect\footnotemark[2]}
+\institute{Univ A, Town A}
+\maketitle
+Text.
+\end{document}

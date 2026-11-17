@@ -19928,16 +19928,28 @@ stays a mark-only note.
   mark, whose counter as digested is not the one TeX printed — aiaa-tc's `\thanksibid{2}`, 1505.07844) is filled with
   the note of its block standing for n (`insert::link_marked_notes`), the glyph join only its fallback, in the block:
   scrartcl's `Ann\thanks{Equal} \and Bob\footnotemark[1]`, whose glyph no binding knows, Bob now the note's carrier;
+- a number read off the counter in the title block (`\samethanks`' `[\value{footnote}]`) keys a note and prints its
+  glyph only where that counter is TeX's here (`latex_constructs::title_numbers_faithful`: the class's notes step it as
+  its `\maketitle` digests them, `lx_title_counts_footnotes` — article's family —, a binding declares its title's marks
+  — REVTeX, lni, emulateapj, titling — or its counter, `declare_title_numbers_faithful` — IEEEtran, whose `\maketitle`
+  empties `\footnotemark`, IEEEtran.cls:4756-4758). Elsewhere (aa's and llncs's `\thanks` step nothing here) it read 0
+  and wrote "0" (2606.31244, 2306.03360): now no number and no glyph, the mark lost and counted
+  (`unanswered_mark_lost`). A given number names an author's `\thanks` by the reading's count, TeX's unless a title or
+  date note the reading does not count came first (a `\thanks`'s publication note, or a note inside the title or the
+  date, `insert::link_marked_notes`): past llncs's `\title{T\thanks{…}}` Cat's `\footnotemark[2]` took Bob's note where llncs
+  prints Ann's ⋆⋆, and now takes none — a wrong link worse than none (MARKKEY1c; row R MARKNUMKEY: the class counters
+  emulated, the PDF's shared ⋆ and the given number's glyph);
 - IEEEtran's unmarked `\thanks` (its `\maketitle` empties `\thefootnote` and `\footnotemark`, IEEEtran.cls:4756-4758:
   the note prints no mark and names no author) is the block's, not the name's it follows, where Perl and the base hung
   it: the title's publication note (1510.02728), or a nameless `<creator>` holding it where the block keeps it among
   the names (1502.05943, 1609.09226).
 A known association whose glyph is unknown writes no glyph (#990's `_markunknown`, an Info); the page invents one only
 for a note several names share (#1059).
-**Witnesses.** 2407.04435, 1510.02728, 1111.1979 (its comma marks, #1057), 1912.01737, 1811.08622.
+**Witnesses.** 2407.04435, 1510.02728, 1111.1979 (its comma marks, #1057), 1912.01737, 1811.08622, 2606.31244,
+2306.03360.
 **Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number,
 an_ieee_unmarked_thanks_is_the_blocks, a_mark_after_a_names_comma_is_the_nearer_names,
-the_mark_components_only_shrink}`; `observer::resolver::mark_ledger::tests::a_mark_glued_past_a_names_comma_is_measured_from_the_comma`.
+a_number_the_title_counter_cannot_give_keys_nothing, the_mark_components_only_shrink}`; `observer::resolver::mark_ledger::tests::a_mark_glued_past_a_names_comma_is_measured_from_the_comma`.
 
 ---
 
@@ -19956,27 +19968,30 @@ the `xml:id` of the copy first in document order is the `idref` of each other (D
   class `ltx_mark_generated`, a bracketed letter the document prints nowhere (`f:printed-glyph`; never `\@fnsymbol`, never a bare letter
   or digit) —, each other copy that mark linked to it (`LaTeXML-meta-xhtml.xsl`, key `f:note-copies`). A one-carrier
   unmarked note stays under its name, no glyph (#990). The engine never invents a glyph.
-- *No dangling mark*: a mark-only note that links to no note on the page shows its glyph only where the same glyph
-  (asterisks folded; a printed run `1,2` or `1*` by each of its pieces, 1304.5040) prints elsewhere in the document,
-  as the key `f:printed-glyph` reads it: any note's `mark`; the untyped `tag` of a note or creator (not a section's
-  number); any superscript (a bracketed one, mark or tag by its glyph out of its brackets too: 2302.11378's `\date`
-  legends `$^{(2)}$`); a formula of the glyph alone anywhere inside a note, contact or publication note
-  (2012.13912's `\authornote{… \\ $\dagger$ Xiaojiang Peng is …}`, 2508.05506's `\blfootnote{$\dagger$ …}`); the
-  symbol, or the run of letters or digits, that a note's, contact's or publication note's text opens with, its tags
-  left out (a legend's `$*$Xiang Wang is the corresponding author`, 2010.10783); and each piece of another name's mark
-  run (`Dhami$^{1,3}$` prints the 1 of `Zečević$^{1}$`, 2110.12052). It shows too where its given number
-  names a title's or date's note, whose publication note prints no mark here (class `ltx_mark_titlenote`,
-  `insert::link_marked_notes`: "A Title∗ … Cy Cole∗", the number `\lx@title@footnote@step` recorded), and where its
-  name carries a note with no known mark, which may print that glyph (1503.07953's `\altaffiltext{*}{Corresponding
-  author}`). Printed once, over its name alone, it shows nothing (its id stays; the XML keeps it): 2006.10886, whose
-  geophysics `\address{\footnotemark[1]{…}}` the class never prints in `paper` mode. Open (row R): a legend whose glyph
-  the XML drops (an author-line contact's consumed label, 1302.0490's `E.Mail :$^1$sidd…`, astro-ph0703204; a
-  correspondence or e-mail contact with its symbol cut; icml's empty `<sup/>`; a `mark="$\star$"`; a legend after a
-  `<break/>`) leaves its name's mark hidden though the PDF prints it twice.
+- *No dangling mark*, hidden only when certain (DG 2026-11-16): a mark-only note that links to no note on the page
+  hides only where the document has nothing that could hold its legend — no contact, no publication note, no note with
+  no mark or written apart from its mark (`\footnotetext`), `f:legend-holder` — and its glyph prints nowhere else. The
+  XML often drops a legend's glyph (row R MARKGLYPHLOST: an author-line contact's consumed label, 1302.0490's
+  `E.Mail :$^1$sidd…`, astro-ph0703204; a correspondence or e-mail contact with its symbol cut, 2409.11508, 2609.33801;
+  icml's empty `<sup/>`, 2402.05011; a `mark="$\star$"`, 2412.05831; a legend after a `<break/>`, 2311.11099), so a
+  holder keeps the mark shown though its legend is not found. The glyph (asterisks folded; a printed run `1,2` or `1*`
+  by each of its pieces, 1304.5040) prints elsewhere as the key `f:printed-glyph` reads it: any note's `mark`; the
+  untyped `tag` of a note or creator (not a section's number); any superscript (a bracketed one, mark or tag by its
+  glyph out of its brackets too: 2302.11378's `\date` legends `$^{(2)}$`); a formula of the glyph alone anywhere inside
+  a note, contact or publication note (2012.13912's `\authornote{… \\ $\dagger$ Xiaojiang Peng is …}`, 2508.05506's
+  `\blfootnote{$\dagger$ …}`); the symbol, or the run of letters or digits, that a note's, contact's or publication
+  note's text opens with, its tags left out (a legend's `$*$Xiang Wang is the corresponding author`, 2010.10783); and
+  each piece of another name's mark run (`Dhami$^{1,3}$` prints the 1 of `Zečević$^{1}$`, 2110.12052). It shows too
+  where its given number names a title's or date's note, whose publication note prints no mark here (class
+  `ltx_mark_titlenote`, `insert::link_marked_notes`: "A Title∗ … Cy Cole∗", the number `\lx@title@footnote@step`
+  recorded). Else, printed once over its name alone with nothing to hold a legend, it shows nothing (its id stays; the
+  XML keeps it): 2006.10886, whose geophysics `\address{\footnotemark[1]{…}}` the class never prints in `paper` mode.
+  A mark printed once beside a holder now shows (1409.7582, 2004.11818, 2105.02711: the PDF inks it, its legend absent).
 **Witnesses.** 2407.04435 (one note, three carriers), 2006.10886, 1304.5040, 1108.5155, 1404.2124, 2508.05506,
-2012.13912, 1503.07953.
+2012.13912, 1503.07953, 2311.11099, 2412.05831, 1409.7582.
 **Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number, a_note_several_names_carry_is_one_note,
-an_unlinked_mark_shows_only_where_its_glyph_recurs, an_unlinked_mark_shows_where_its_glyph_prints}`; the FMRG suite's page
+an_unlinked_mark_shows_only_where_its_glyph_recurs, an_unlinked_mark_shows_where_its_glyph_prints,
+an_unlinked_mark_hides_only_where_nothing_could_hold_its_legend}`; the FMRG suite's page
 layer (`perfect_kernel_batchfmmarks`).
 
 ---

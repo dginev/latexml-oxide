@@ -1,0 +1,18 @@
+% mechanism: as markkey_samethanks_under_aa_names_no_number under llncs, whose `\thanks` steps no counter here either:
+%   `\samethanks` read 0 and wrote "0"; now no number, no glyph, the mark lost and counted (row R MARKNUMKEY)
+% witness: 2306.03360 (llncs: `Minting Pan\thanks{Equal contribution. …} \and Yitao Zheng\samethanks`)
+% oracle:  pdflatex 0 errors: "Ann Able⋆ , Bob Baker⋆ , and Cat Cole", one foot "⋆ Equal contribution."
+% engines: rust MARKKEY1 501703917a8 = 0 errors 0 Warnings; Bob's mark "0"
+% expect:  0 errors 1 Warning (unanswered_mark_lost); XML Bob Baker ; footnotemark[]= (no mark); HTML Ann Able | under:
+%   Equal contribution. / Bob Baker / Cat Cole
+% status:  RED (501703917a8) -> GREEN (perfect_kernel_batchmarkkey1::a_number_the_title_counter_cannot_give_keys_nothing)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker\samethanks \and Cat Cole}
+\institute{Univ A, Town A}
+\maketitle
+Text.
+\end{document}

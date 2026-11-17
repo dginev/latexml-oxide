@@ -9,9 +9,9 @@
 //! (`LaTeXML-meta-xhtml.xsl`) — OD #1059. Rows assert the pdflatex oracle in the FMRG suite's two layers
 //! (`perfect_kernel_batchfmmarks::Row`). Witnesses 2407.04435, 1111.1979, 2006.10886, 1510.02728, 1108.5155,
 //! 2508.05506, 2012.13912, 1503.07953.
-use latexml::util::test::convert_with_setup_then;
+use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 
-use super::perfect_kernel_batchfmmarks::{Row, assert_green};
+use super::perfect_kernel_batchfmmarks::{Row, assert_green, creator_lines, page_lines, page_of};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -265,9 +265,7 @@ fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
 /// …}`); a formula of the glyph alone inside a note, past its opening (2012.13912's acmart `\authornote{… \\ $\dagger$
 /// … is the corresponding author}`); and a note with no known mark on the name, whose glyph it may be (1503.07953's
 /// `\altaffiltext{*}{Corresponding author}`, its label's glyph not kept); a legend printed bracketed (2302.11378's
-/// `$^{(2)}$` legends in `\date`); and a piece of another name's mark run (2110.12052). Each was hidden before. RED: a
-/// label on a name holding a contact its block's lines gave it, the label consumed (1302.0490's `E.Mail :$^1$sidd…`;
-/// row R MARKGLYPHLOST: the page cannot tell it from a mark printed once beside an author line).
+/// `$^{(2)}$` legends in `\date`); and a piece of another name's mark run (2110.12052). Each was hidden before.
 #[test]
 fn an_unlinked_mark_shows_where_its_glyph_prints() {
   assert_green(&[
@@ -339,6 +337,19 @@ fn an_unlinked_mark_shows_where_its_glyph_prints() {
       page:       &["Ann Able ; 1,3 plain", "Bob Baker ; 1 plain"],
       page_moves: "",
     },
+  ]);
+}
+
+/// An unlinked name mark whose glyph prints nowhere else hides only where the document has nothing that could hold its
+/// legend (DG 2026-11-16, "hide only when certain"; OD #1059, `f:legend-holder`): the XML often drops a legend's glyph
+/// (row R MARKGLYPHLOST: 2311.11099, 2402.05011, 1302.0490 …), so a contact, a publication note or a note with no mark
+/// or written apart from its mark keeps the mark shown. One row per holder, each hidden before: an author-line contact
+/// whose label the block consumed (1302.0490's `E.Mail :$^1$sidd…`, astro-ph0703204), a `\footnotetext` whose `mark`
+/// is the string `$\star$` (2412.05831), IEEEtran's journal `\thanks` at the block (1409.7582). The hide where nothing
+/// could hold one: `an_unlinked_mark_shows_only_where_its_glyph_recurs` (Bob's †, 2006.10886).
+#[test]
+fn an_unlinked_mark_hides_only_where_nothing_could_hold_its_legend() {
+  assert_green(&[
     Row {
       repro:      "markkey_author_line_label_shows_its_names_mark",
       tex:        repro!("markkey_author_line_label_shows_its_names_mark"),
@@ -354,8 +365,90 @@ fn an_unlinked_mark_shows_where_its_glyph_prints() {
         "Bob Baker ; 2 plain",
         "Cat Cole ; 3 plain",
       ],
-      page_moves: "row R MARKGLYPHLOST (a legend's glyph the XML drops: the author-line contact's consumed label)",
+      page_moves: "",
     },
+    Row {
+      repro:      "markkey_footnotetext_legend_keeps_its_names_mark",
+      tex:        repro!("markkey_footnotetext_legend_keeps_its_names_mark"),
+      warnings:   0,
+      creators:   &["Ann Able ; footnotemark[⋆]=", "Bob Baker"],
+      moves:      "",
+      page:       &["Ann Able ; ⋆ plain", "Bob Baker"],
+      page_moves: "",
+    },
+    Row {
+      repro:      "markkey_pubnote_keeps_its_names_mark",
+      tex:        repro!("markkey_pubnote_keeps_its_names_mark"),
+      warnings:   0,
+      creators:   &["Ann Able", "Bob Baker ; footnotemark[*]=", "Cat Cole"],
+      moves:      "",
+      page:       &["Ann Able", "Bob Baker ; * plain", "Cat Cole"],
+      page_moves: "",
+    },
+  ]);
+}
+
+/// A number a name's mark reads off the title block's footnote counter (`\samethanks`' `[\value{footnote}]`) keys a note
+/// and prints a glyph only where that counter is TeX's here (`latex_constructs::title_numbers_faithful`: article's
+/// family, a binding declaring its title's marks or its counter): aa's and llncs's `\thanks` step no counter here, so
+/// `\samethanks` read 0 and wrote the mark "0" (2606.31244, 2306.03360). A given number names an author's `\thanks` by
+/// the reading's count unless an uncounted title or date note came first (llncs's `\title{T\thanks{…}}`: Cat's `[2]` took
+/// Bob's note where llncs prints Ann's). The fail-safe, not the PDF (its shared ⋆ / ⋆⋆ waits on row R MARKNUMKEY): no
+/// number, no glyph, the mark lost and counted by one Warning, the note under its own author; or no link. Distinct
+/// paths: a number read off the counter (`FootnoteNumber::from_counter`) and one given as such
+/// (`insert::link_marked_notes`).
+#[test]
+fn a_number_the_title_counter_cannot_give_keys_nothing() {
+  for (tex, creators, page) in [
+    (
+      repro!("markkey_samethanks_under_aa_names_no_number"),
+      [
+        "Ann Able ; thanks[]=Corresponding authors | affiliation=Univ A, Town A",
+        "Bob Baker ; footnotemark[]= | affiliation=Univ B, Town B",
+        "Cat Cole | affiliation=Univ A, Town A",
+      ]
+      .as_slice(),
+      [
+        "Ann Able | under: Corresponding authors",
+        "Bob Baker",
+        "Cat Cole",
+      ]
+      .as_slice(),
+    ),
+    (
+      repro!("markkey_samethanks_under_llncs_names_no_number"),
+      &[
+        "Ann Able ; thanks[]=Equal contribution. | affiliation=Univ A, Town A",
+        "Bob Baker ; footnotemark[]= | affiliation=Univ A, Town A",
+        "Cat Cole | affiliation=Univ A, Town A",
+      ],
+      &[
+        "Ann Able | under: Equal contribution.",
+        "Bob Baker",
+        "Cat Cole",
+      ],
+    ),
+  ] {
+    let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+    assert_eq!(creator_lines(&xml), creators);
+    assert_eq!(
+      page_lines(&page_of(&xml)),
+      (page.iter().map(ToString::to_string).collect(), Vec::new())
+    );
+  }
+  // (the XML alone: its page shows the "2" llncs prints ⋆⋆, row R MARKNUMKEY)
+  let (log, xml, ()) = convert_with_setup_then(
+    repro!("markkey_given_number_past_llncs_title_thanks_takes_no_note"),
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creator_lines(&xml), [
+    "Ann Able ; thanks[]=Univ A. | affiliation=Univ A, Town A",
+    "Bob Baker ; thanks[]=Univ B. | affiliation=Univ A, Town A",
+    "Cat Cole ; footnotemark[2]= | affiliation=Univ A, Town A",
   ]);
 }
 

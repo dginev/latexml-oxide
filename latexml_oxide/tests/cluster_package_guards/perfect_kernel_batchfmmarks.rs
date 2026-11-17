@@ -89,7 +89,7 @@ fn folded(mark: &str) -> String { mark.replace('\u{2217}', "*") }
 
 /// Each creator of `xml`: `name ; note ; note | contact ; contact`, a note `role[mark]=text` (the notes sorted), a
 /// contact `role=text` (in order); an element inside another is its parent's text.
-fn creator_lines(xml: &str) -> Vec<String> {
+pub(super) fn creator_lines(xml: &str) -> Vec<String> {
   xml
     .match_indices("<creator ")
     .map(|(start, _)| {
@@ -1063,7 +1063,8 @@ const PURE: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[*]="#, r#"Bob Baker | url=†"#],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, Bob's url contact can hold a legend)
+    page:       &["Ann Able ; * plain", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1174,7 +1175,8 @@ const PURE: &[Row] = &[
       r#"Cy Cole | affiliation=* Univ A"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able ; * plain", "Bob Baker", "Cy Cole"],
+    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the Univ A affiliation can hold a legend)
+    page:       &["Ann Able ; * plain", "Bob Baker ; † plain", "Cy Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1186,7 +1188,8 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=* Univ A"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the Univ A affiliation can hold a legend)
+    page:       &["Ann Able ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1198,7 +1201,8 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=* Univ A"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the Univ A affiliation can hold a legend)
+    page:       &["Ann Able ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1235,7 +1239,8 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=Univ J"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the affiliations can hold a legend)
+    page:       &["Ann Able ; 12 plain", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1638,9 +1643,10 @@ const LINK: &[Row] = &[
       r#"Cat Cole | email=cat@a.edu ; affiliation=Univ A , Town , Land"#,
     ],
     moves:      r#""#,
+    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, e-mails and an affiliation hold legends)
     page:       &[
       "Ann Able ; *→note",
-      "Bob Baker ; *→note",
+      "Bob Baker ; *→note ; † plain",
       "Cat Cole",
       "margin: Ann Able and Bob Baker contributed equally.",
     ],
@@ -1677,11 +1683,12 @@ const LINK: &[Row] = &[
       r#"Dan Dory ; footnotemark[‡]= | affiliation=Univ B"#,
     ],
     moves:      "",
+    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, the Univ A/B lines can hold a legend)
     page:       &[
       "Ann Able ; *→note",
       "Bob Baker ; *→note",
-      "Carl Cole",
-      "Dan Dory",
+      "Carl Cole ; † plain",
+      "Dan Dory ; ‡ plain",
       "margin: Univ X.",
     ],
     page_moves: "",
@@ -1822,7 +1829,8 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, Ann's Univ A line can hold a legend)
+    page:       &["Ann Able ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1834,7 +1842,8 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1c, DG "hide only when certain": the inked mark shows, Ann's Univ A line can hold a legend)
+    page:       &["Ann Able ; * plain ; † plain", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -2966,7 +2975,8 @@ const CLASS: &[Row] = &[
     warnings:   0,
     creators:   &["Ann Able", "Bob Baker ; footnotemark[1]="],
     moves:      r#""#,
-    page:       &["Ann Able", "Bob Baker"],
+    // (MARKKEY1c, DG "hide only when certain": the inked 1 shows, Ann's unmarked note can hold a legend)
+    page:       &["Ann Able", "Bob Baker ; 1 plain"],
     page_moves: r#""#,
   },
   Row {

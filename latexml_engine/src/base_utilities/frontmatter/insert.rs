@@ -6,7 +6,7 @@ use crate::{
     frontmatter_api::{CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
     frontmatter_fields::TITLE_NOTE_VALUES,
   },
-  latex_constructs::{FOOTNOTE_GIVEN, FOOTNOTE_VALUE},
+  latex_constructs::{FOOTNOTE_GIVEN, FOOTNOTE_VALUE, title_numbers_faithful},
 };
 
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
@@ -886,6 +886,15 @@ fn drop_linking_marks(document: &mut Document) -> Result<()> {
 /// Bob\footnotemark[1]`, whose `\thanks` prints a glyph no binding knows.
 fn link_marked_notes(document: &mut Document) -> Result<()> {
   let notes = document.findnodes("//ltx:creator/ltx:note[not(@role='footnotemark')]", None);
+  // (the reading's count of the authors' notes is TeX's unless the title or the date made a note it does not count: a
+  // `\thanks`'s publication note, or a note inside the title or the date — llncs's `\title{T\thanks{…}}`, MARKKEY1c)
+  let faithful = title_numbers_faithful()
+    || document
+      .findnodes(
+        "//ltx:title//ltx:note | //ltx:date//ltx:note | //ltx:pubnote[@role='thanks']",
+        None,
+      )
+      .is_empty();
   // (a mark-only note with no `mark` too: its glyph unknown here, its number known — scrartcl's `Bob\footnotemark[1]`)
   for mut mark_note in document.findnodes("//ltx:creator/ltx:note[@role='footnotemark']", None) {
     let creator = mark_note.get_parent();
@@ -893,11 +902,13 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
     let in_block = |note: &&Node| note.get_parent().and_then(|c| c.get_parent()) == block;
     let own = |note: &&Node| note.get_parent() == creator;
     // (its number where the source gives it as such, `\footnotemark[1]`: a bare mark's counter, as digested here, is
-    // not the one TeX printed — aiaa-tc's `\thanksibid{2}` prints `\fnsymbol` of a counter of its own, 1505.07844)
+    // not the one TeX printed — aiaa-tc's `\thanksibid{2}` prints `\fnsymbol` of a counter of its own, 1505.07844; and
+    // only where the reading's count is TeX's: llncs's uncounted title `\thanks` shifts every author's number, a wrong
+    // link worse than none, MARKKEY1c)
     let value = mark_note.get_attribute(FOOTNOTE_VALUE);
     let number = value
       .clone()
-      .filter(|_| mark_note.get_attribute(FOOTNOTE_GIVEN).is_some());
+      .filter(|_| mark_note.get_attribute(FOOTNOTE_GIVEN).is_some() && faithful);
     let numbered = |note: &&Node| number.is_some() && note.get_attribute(FOOTNOTE_VALUE) == number;
     // (a footnote text the reading gave the creator by that number is the mark's own note, the mark-only note its mark:
     // lni's `Müssig\footnotemark[1]` under `\footnotetext[1]{…}` in `\author`, 2407.04435,
