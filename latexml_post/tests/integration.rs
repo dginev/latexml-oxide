@@ -824,7 +824,7 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Ann Able</span><span id="id1" class="ltx_note ltx_note_frontmatter ltx_thanks_contribution ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
+      r##"<span class="ltx_personname">Ann Able</span><span id="id1" class="ltx_note ltx_note_frontmatter ltx_thanks_contribution ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content" style="anchor-name:--ltx-note-id1"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
       "\n",
       r##"<span class="ltx_contact ltx_role_affiliation">Univ. of A"##,
       "\n",
@@ -836,11 +836,11 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_contact ltx_role_orcid"><a href="https://orcid.org/0000-0002-7315-0515" title="" class="ltx_ref ltx_orcid">iD</a>"##,
       "\n",
-      r##"</span><span id="id2" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span><span id="id3" class="ltx_note ltx_note_frontmatter ltx_thanks_correspondence ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Corresponding author.</span></span></span></span></span>"##,
+      r##"</span><span id="id2" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id1"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span><span id="id3" class="ltx_note ltx_note_frontmatter ltx_thanks_correspondence ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Corresponding author.</span></span></span></span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks ltx_note_unmarked">An unmarked note.</span></span>"##,
+      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id1"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks ltx_note_unmarked">An unmarked note.</span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
@@ -866,22 +866,22 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Max Moss</span><span id="id18" class="ltx_note ltx_note_frontmatter ltx_thanks_contribution ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">∗</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">∗</sup><span class="ltx_note_type">thanks: </span><span class="ltx_text" style="font-size:90%;">Equal contribution</span></span></span></span></span></span>"##,
+      r##"<span class="ltx_personname">Max Moss</span><span id="id18" class="ltx_note ltx_note_frontmatter ltx_thanks_contribution ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">∗</sup><span class="ltx_note_outer"><span class="ltx_note_content" style="anchor-name:--ltx-note-id18"><sup class="ltx_note_mark">∗</sup><span class="ltx_note_type">thanks: </span><span class="ltx_text" style="font-size:90%;">Equal contribution</span></span></span></span></span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Ned Nash</span><span id="id19" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id18">∗</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">∗</sup><span class="ltx_note_type">thanks: </span><span class="ltx_text" style="font-size:90%;">Equal contribution</span></span></span></span></span></span></div>"##,
+      r##"<span class="ltx_personname">Ned Nash</span><span id="id19" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id18">∗</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id18"><span class="ltx_note_content"><sup class="ltx_note_mark">∗</sup><span class="ltx_note_type">thanks: </span><span class="ltx_text" style="font-size:90%;">Equal contribution</span></span></span></span></span></span></div>"##,
     ),
     concat!(
       r##"<div class="ltx_authors">"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Eve Ennis</span><span id="id9" class="ltx_note ltx_note_frontmatter ltx_thanks_contribution ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span></span></span>"##,
+      r##"<span class="ltx_personname">Eve Ennis</span><span id="id9" class="ltx_note ltx_note_frontmatter ltx_thanks_contribution ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content" style="anchor-name:--ltx-note-id9"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span></span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Fay Ford</span><span id="id10" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id9">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span></span></span></div>"##,
+      r##"<span class="ltx_personname">Fay Ford</span><span id="id10" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id9">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id9"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>These authors contributed equally.</span></span></span></span></span></div>"##,
     ),
   ]);
 }
@@ -958,7 +958,7 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">František Kardoš</span><span id="id1" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span><span id="id2" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>Supported by grant APVT-20-004104.</span></span></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
+    r##"<span class="ltx_personname">František Kardoš</span><span id="id1" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span><span id="id2" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content" style="anchor-name:--ltx-note-id2"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>Supported by grant APVT-20-004104.</span></span></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
     "\n",
     r##"<span class="ltx_contact ltx_role_affiliation">Institute of Mathematics, Košice"##,
     "\n",
@@ -966,7 +966,7 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Jozef Miškuf</span><span id="id3" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id2">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>Supported by grant APVT-20-004104.</span></span></span></span></span>"##,
+    r##"<span class="ltx_personname">Jozef Miškuf</span><span id="id3" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id2">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id2"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>Supported by grant APVT-20-004104.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
@@ -982,11 +982,11 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Quinn Quist</span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_correspondence ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">¶</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">¶</sup><span class="ltx_note_type">thanks: </span>Corresponding authors.</span></span></span></span></span>"##,
+    r##"<span class="ltx_personname">Quinn Quist</span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_correspondence ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">¶</sup><span class="ltx_note_outer"><span class="ltx_note_content" style="anchor-name:--ltx-note-id7"><sup class="ltx_note_mark">¶</sup><span class="ltx_note_type">thanks: </span>Corresponding authors.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Rae Reed</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id7">¶</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">¶</sup><span class="ltx_note_type">thanks: </span>Corresponding authors.</span></span></span></span></span>"##,
+    r##"<span class="ltx_personname">Rae Reed</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id7">¶</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id7"><span class="ltx_note_content"><sup class="ltx_note_mark">¶</sup><span class="ltx_note_type">thanks: </span>Corresponding authors.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
@@ -1081,11 +1081,11 @@ fn a_letter_or_digit_mark_names_no_other_authors_note() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Eve Ennis</span><span id="id4" class="ltx_note ltx_role_footnote ltx_note_shared"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Eve's footnote, which Fay's mark repeats.</span></span></span></span></span>"##,
+    r##"<span class="ltx_personname">Eve Ennis</span><span id="id4" class="ltx_note ltx_role_footnote ltx_note_shared"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content" style="anchor-name:--ltx-note-id4"><sup class="ltx_note_mark">2</sup>Eve's footnote, which Fay's mark repeats.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Fay Ford</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">2</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Eve's footnote, which Fay's mark repeats.</span></span></span></span></span>"##,
+    r##"<span class="ltx_personname">Fay Ford</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">2</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id4"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Eve's footnote, which Fay's mark repeats.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
@@ -1142,9 +1142,9 @@ fn a_shared_notes_other_marks_carry_its_hidden_copy() {
     })
     .collect();
   assert_eq!(copies, [
-    r##"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>Equal, <span class="ltx_text ltx_font_italic">see</span> <math class="ltx_Math" display="inline" alttext="x"><mi>x</mi></math>.</span></span>"##,
-    r##"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Mail <a href="mailto:ann@a.edu" title="" class="ltx_ref" tabindex="-1">ann@a.edu</a>.</span></span>"##,
-    r##"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark ltx_mark_generated">[a]</sup><span class="ltx_note_type">thanks: </span>Funded by <a href="https://x.org/" title="" class="ltx_ref" tabindex="-1">X</a>.</span></span>"##,
+    r##"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id1"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>Equal, <span class="ltx_text ltx_font_italic">see</span> <math class="ltx_Math" display="inline" alttext="x"><mi>x</mi></math>.</span></span>"##,
+    r##"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id2"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Mail <a href="mailto:ann@a.edu" title="" class="ltx_ref" tabindex="-1">ann@a.edu</a>.</span></span>"##,
+    r##"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id4"><span class="ltx_note_content"><sup class="ltx_note_mark ltx_mark_generated">[a]</sup><span class="ltx_note_type">thanks: </span>Funded by <a href="https://x.org/" title="" class="ltx_ref" tabindex="-1">X</a>.</span></span>"##,
   ]);
   // Each mark keeps its link to the note; every id is once, the copies' content holding none (Ann's math and text keep
   // theirs).
@@ -1172,4 +1172,62 @@ fn a_shared_notes_other_marks_carry_its_hidden_copy() {
     "id4",
     "id5"
   ]);
+}
+
+/// On wide screens a shared note's other mark lays its hidden copy over the note in the margin, so it highlights the
+/// note as the first mark does (OD #1075, DG 2026-11-17; 1706.03762, 2407.07614, 2606.00446): the shared note's
+/// content box, and only it, names the anchor (`anchor-name`, not on its outer box, whose stylesheet anchor builds the
+/// margin stack), and each copy positions at it (`position-anchor`). A one-author note names none; the anchor is a CSS
+/// dashed ident, the `.` of an id escaped.
+#[test]
+fn a_shared_notes_copies_anchor_at_the_note_alone() {
+  const NOTES: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="Document">
+  <title>Anchors</title>
+  <creator role="author">
+    <personname>Ann Able</personname>
+    <note class="ltx_note_frontmatter" mark="*" role="thanks" xml:id="S1.n1" fragid="S1.n1">Equal contribution.</note>
+    <note class="ltx_note_frontmatter" mark="†" role="thanks" xml:id="S1.n2" fragid="S1.n2">Ann's own note.</note>
+  </creator>
+  <creator role="author">
+    <personname>Bob Baker</personname>
+    <note class="ltx_note_frontmatter" mark="*" role="thanks" xml:id="S1.n3" fragid="S1.n3">Equal contribution.</note>
+  </creator>
+  <creator role="author">
+    <personname>Cy Cole</personname>
+    <note class="ltx_note_frontmatter" mark="*" role="thanks" xml:id="S1.n4" fragid="S1.n4">Equal contribution.</note>
+  </creator>
+</document>"#;
+  let html = authors_html(NOTES).concat();
+  let styles: Vec<&str> = html
+    .split(" style=\"")
+    .skip(1)
+    .map(|rest| rest.split('"').next().unwrap())
+    .collect();
+  assert_eq!(styles, [
+    r"anchor-name:--ltx-note-S1\.n1",
+    r"position-anchor:--ltx-note-S1\.n1",
+    r"position-anchor:--ltx-note-S1\.n1",
+  ]);
+  assert!(
+    html.contains(
+      r##"<span id="S1.n1" class="ltx_note ltx_note_frontmatter ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content" style="anchor-name:--ltx-note-S1\.n1">"##
+    ),
+    "the shared note's content box lost its anchor: {html}"
+  );
+  for id in ["S1.n3", "S1.n4"] {
+    assert!(
+      html.contains(&format!(
+        r##"<span id="{id}" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#S1.n1">*</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-S1\.n1"><span class="ltx_note_content">"##
+      )),
+      "{id}'s copy lost its anchor: {html}"
+    );
+  }
+  assert!(
+    html.contains(
+      r##"<span id="S1.n2" class="ltx_note ltx_note_frontmatter ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup"##
+    ),
+    "a one-author note names no anchor: {html}"
+  );
 }
