@@ -1525,17 +1525,47 @@ mod witnessed_css_delta {
     // halves so a re-vanilla / cleanup sweep cannot silently drop the collapse.
     let css = bundled_latexml_css();
     assert!(
-      css.contains(".ltx_pubnotes:before") && css.contains(r#"content:"\002020""#),
-      "the title-footnote MARK rule (.ltx_pubnotes:before dagger) is missing from \
-       LaTeXML.css (arXiv/html_feedback#6888)",
+      css.contains(".ltx_pubnotes:before {\n    content:\"\\24D8\""),
+      "the title-footnote handle rule (.ltx_pubnotes:before, ⓘ since OXIDIZED_DESIGN_DIVERGENCES #1069) is missing \
+       from LaTeXML.css (arXiv/html_feedback#6888)",
     );
     assert!(
       css.contains(".ltx_pubnotes .ltx_pubnotes_content")
         && css.contains("visibility:hidden; opacity:0"),
       "the title-footnote CONTENT-hidden rule (.ltx_pubnotes .ltx_pubnotes_content \
        {{ visibility:hidden }}) is missing from LaTeXML.css: the `\\thanks` text would \
-       render inline in the title instead of collapsing to the dagger \
+       render inline in the title instead of collapsing to its handle \
        (arXiv/html_feedback#6888)",
     );
+  }
+
+  #[test]
+  fn css_draws_no_footnote_mark_glyph() {
+    // DG 2026-11-17 (OXIDIZED_DESIGN_DIVERGENCES #1069): the page carries every mark the PDF prints, and a generated
+    // mark only where it prints none, unique against them; a glyph the stylesheet draws is neither, so it is never one
+    // of the marks' glyphs. The hover handles for an author's hidden contacts and for the title notes draw ⓘ (Perl:
+    // `*` and `†`, which read as a second mark beside a printed one: 2606.00446's "Park**", 2605.10496's title †).
+    let css = bundled_latexml_css();
+    for glyph in [
+      "*", "\\2217", "∗", "\\002020", "\\2020", "†", "\\2021", "‡", "\\00A7", "§", "\\00B6", "¶",
+      "\\2016", "‖",
+    ] {
+      for spaced in ["", " "] {
+        let rule = format!("content:{spaced}\"{glyph}\"");
+        assert!(
+          !css.contains(&rule),
+          "LaTeXML.css draws the footnote-mark glyph `{rule}`"
+        );
+      }
+    }
+    for handle in [
+      ".ltx_author_notes:before {\n    content:\"\\24D8\"",
+      ".ltx_pubnotes:before {\n    content:\"\\24D8\"",
+    ] {
+      assert!(
+        css.contains(handle),
+        "LaTeXML.css lacks the ⓘ hover handle `{handle}`"
+      );
+    }
   }
 }

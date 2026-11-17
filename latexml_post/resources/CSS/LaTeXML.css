@@ -73,8 +73,11 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_author_before,
 .ltx_author_after { display:inline;}
 .ltx_author_notes { display:inline-block; }
+/* latexml-oxide local delta (OXIDIZED_DESIGN_DIVERGENCES #1069, DG 2026-11-17): a hover handle is no footnote mark,
+   so it draws none of their glyphs; the page carries the marks the PDF prints (Perl: "*", which read as a second mark
+   beside a printed one, 2606.00446's "Park**"). */
 .ltx_author_notes:before {
-    content:"*"; color:blue;
+    content:"\24D8"; color:blue;
     font-size:80%; vertical-align:super; }
 .ltx_author_notes .ltx_author_notes_content {
     visibility:hidden; opacity:0; transition: opacity 0.3s;
@@ -129,8 +132,9 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
     padding:0.3rem; font-size:1rem; }
 .ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))):has(.ltx_author_line) .ltx_author_line .ltx_contact_name { display:none; }
 
+/* (the title notes' handle too, #1069; Perl: "†", 2605.10496's title † beside a printed †) */
 .ltx_pubnotes:before {
-    content:"\002020"; color:blue;
+    content:"\24D8"; color:blue;
     font-size:80%; vertical-align:super; }
 .ltx_pubnotes        { display:inline-block; }
 .ltx_pubnotes .ltx_pubnotes_content {

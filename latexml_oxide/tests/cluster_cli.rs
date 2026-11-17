@@ -3000,8 +3000,8 @@ mod browser_render_author_lines {
     };
     for (key, run) in creators(&stdout) {
       assert_eq!(
-        run[0]["star"], "\"*\"",
-        "the pop-up is gone ({key}): {stdout}"
+        run[0]["star"], "\"ⓘ\"",
+        "the pop-up's handle is gone, or is a footnote-mark glyph again (OD #1069) ({key}): {stdout}"
       );
       assert!(
         run[0]["contacts"]

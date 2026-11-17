@@ -20459,6 +20459,23 @@ finding 4 (synthetic).
 
 ---
 
+### 1069. A hover handle the base stylesheet draws is no footnote mark: an author's hidden contacts and the title notes show ⓘ (DG 2026-11-17)
+
+**Rule.** The page carries every mark the PDF prints (#1053), and a generated mark only where it prints none, unique
+against them (#1059); a glyph the stylesheet draws is neither, so it never takes a mark's glyph. A hover handle — the
+one-line author block's handle to an author's hidden contacts, the title's handle to its notes — draws ⓘ (U+24D8),
+outside the mark vocabulary (∗ † ‡ § ¶ ‖, digits, letters).
+**Perl.** `LaTeXML.css` draws `.ltx_author_notes:before { content:"*" }` and `.ltx_pubnotes:before { content:"\002020" }`
+in blue: beside the marks the page now prints they read as a second mark — 2606.00446's "Sanghyeok Park\*\*" and
+"Jared Benson§,\*\*", 2605.10496's title † beside the authors' printed †.
+**Rust.** `LaTeXML.css` draws `"\24D8"` for both handles (local delta, its comments); ar5iv-css draws no author-notes
+handle (its contacts print under the name) and its title-notes handle follows. Residual, row R PUBNOTEMARK: a title note
+carries the mark the PDF prints (1612.03574's title ∗) and an unmarked one shows its text (#1063), so the title's
+handle goes once title notes record their marks. Guards `latexml_post` `xslt::witnessed_css_delta::{css_draws_no_footnote_mark_glyph,
+title_pubnote_content_stays_collapsed}`.
+
+---
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a
