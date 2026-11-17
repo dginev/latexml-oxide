@@ -19,7 +19,7 @@ LoadDefinitions!({
   if lookup_bool("\\maketitle:redefined@class") {
     DefMacro!("\\lx@title@thefootnote", "\\@arabic\\c@footnote");
     // (its `\thanks` LaTeX's, each stepping the counter; set back after the title only by a `\maketitle` that says so,
-    // v0.5's, article's copy (:116), not v1.7's or v2.0's (lni.cls:478-513): a body note after a v2.0 title's
+    // v0.5's, article's copy (:116), not v1.7's or v2.0's (lni.cls:475-514): a body note after a v2.0 title's
     // `\thanks` 3 is 4)
     latexml_package::engine::latex_constructs::declare_title_footnote_counting(
       maketitle_resets_footnotes(),

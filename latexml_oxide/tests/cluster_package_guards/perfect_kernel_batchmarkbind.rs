@@ -93,7 +93,7 @@ fn all_notes(xml: &str) -> Vec<String> {
 /// mnras's `\thanks` steps the footnote counter and its `\maketitle` does not set it back: the notes before the first
 /// `\section` count on in the class's symbols, ⋆ † ‡, and that `\section` (starred) numbers them in arabic from 1, a later
 /// `\section` and the appendix counting on (review revMARKBIND p/mn_ids.tex, p/mn_nosec.tex; mnras.cls:736-737,
-/// :1056-1071, :1517-1523). Distinct from `perfect_kernel_batchfmmarks`'s mnras rows (the title's marks): the body's
+/// :1055-1071, :1517-1523). Distinct from `perfect_kernel_batchfmmarks`'s mnras rows (the title's marks): the body's
 /// notes, on both sides of the switch.
 #[test]
 fn mnras_title_notes_step_the_counter() {

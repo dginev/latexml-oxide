@@ -19910,7 +19910,7 @@ nothing (the engine's fail-safe, OD #1053, writes no glyph).
 **Rust.**
 - mnras (mnras_cls.rs): the class's own `\@fnsymbol` (⋆ † ‡ § ¶ ‖ ⋆⋆ …, mnras.cls:1502-1508) for `\thefootnote`,
   up to the first `\section`, whose `\fixfootnotes` numbers them in arabic from 1 (:736-737, :1517-1523). Its
-  `\maketitle` (:1056-1071) sets no `\thefootnote`, so the title hook is the one in force as the `\maketitle` begins
+  `\maketitle` (:1055-1071) sets no `\thefootnote`, so the title hook is the one in force as the `\maketitle` begins
   (`latex_constructs::declare_title_marks_in_force`, a `\let` in `\lx@maketitle@begin`): a preamble's
   `\renewcommand{\thefootnote}{\arabic{footnote}}` prints "Ann Able,1 1", a package that sets `\@fnsymbol` after the
   class (footmisc) is followed (1905.08754 "Copeland,1 ∗"). Its `\thanks` is LaTeX's and its `\maketitle` sets the
@@ -19933,7 +19933,7 @@ nothing (the engine's fail-safe, OD #1053, writes no glyph).
 - lni (lni_cls.rs): the authblk-era `\affil[n]` sets the footnote counter to n (lni.cls:463, v1.10's :468), so a title
   `\thanks` and the body's notes number after the last label (2508.02300's first body note 7, was 1); the `\thanks`
   steps the counter, which only v0.5's article-based `\maketitle` sets back (its `:116`; v1.7's and v2.0's do not,
-  lni.cls:478-513), read from the class's own `\maketitle`: a body note after a v2.0 title's `\thanks` 3 is 4; an `\author`
+  lni.cls:475-514), read from the class's own `\maketitle`: a body note after a v2.0 title's `\thanks` 3 is 4; an `\author`
   written for lni v1 (`\author[running names]{names}`, no braced e-mail and ORCID after it) is the kernel's
   `\author[short]{names}` (2407.04435: no authblk labels of its running names, no stray `\startpage` argument).
 - The engine's own Frontmatter keys (`_markshown`, `_cutlist`, `_kinded`, `_linefirst`, … 32) are declared in one list,

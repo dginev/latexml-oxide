@@ -587,7 +587,7 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
 /// title, an author or the date steps the footnote counter as the `\maketitle` digests it (`lx_title_counts_footnotes`,
 /// `\lx@title@footnote@step`); where `resets`, the `\maketitle` sets it back to 0 after (article.cls:190, :223), so the
 /// body's notes count from 1 and a note's side of the reset decides its pairing (`lx_title_resets_footnotes`,
-/// [`footnote_pairing`]). mnras's and lni's `\maketitle` keep counting (mnras.cls:1050-1071, lni.cls:478-497).
+/// `footnote_pairing`). mnras's and lni's `\maketitle` keep counting (mnras.cls:1055-1071, lni.cls:475-514).
 pub fn declare_title_footnote_counting(resets: bool) -> Result<()> {
   assign_value("lx_title_counts_footnotes", true, Some(Scope::Global));
   if resets {
@@ -598,7 +598,7 @@ pub fn declare_title_footnote_counting(resets: bool) -> Result<()> {
 }
 
 /// The title hook ([`TITLE_THEFOOTNOTE`]) of a class whose `\maketitle` prints the `\thefootnote` in force, setting none
-/// (mnras.cls:1050-1071): that one as the `\maketitle` begins (`\lx@maketitle@begin`), a preamble's `\renewcommand
+/// (mnras.cls:1055-1071): that one as the `\maketitle` begins (`\lx@maketitle@begin`), a preamble's `\renewcommand
 /// \thefootnote{\arabic{footnote}}` included; a `\let`, as `enter_title_footnotes` lets `\thefootnote` to the hook.
 pub fn declare_title_marks_in_force() -> Result<()> {
   let_i(
