@@ -5,8 +5,11 @@
 % oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa"; "a Some University"; footnote "∗ Corresponding author"
 % engines: rust 139d1d2fa08 (the shape without `\affiliation`, 1711.08299): every name's note marked ∗. rust WRONGFIX
 %   before the place keys: marked "1"
-% expect:  0 errors 0 Warnings; Alice One and Bob Two each the address and an unmarked correspondent contact
-% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route)
+%   ELSART b842de7fc4c: Alice and Bob each an unmarked correspondent contact — a link the PDF does not print
+% expect:  0 errors 0 Warnings; Alice One and Bob Two each the address; the correspondence note the block's (no name
+%   prints its ∗; ELSART, OXIDIZED_DESIGN_DIVERGENCES #1067)
+% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route);
+%   expectation revised by ELSART
 % preload: ar5iv.sty
 \documentclass[preprint]{elsarticle}
 \begin{document}

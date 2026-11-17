@@ -1,0 +1,20 @@
+% mechanism: every `\corref` outside the names sets the class's `\@corref` again (elsarticle.cls:188-190), read only when
+%   the first name prints (:256-264): the last one read wins — the first author shows c2's ∗∗, c1's note marks no name
+% witness: revELSART pD (synthetic; the outside route of 1501.03323, 1508.05262)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗∗, Bob Twoa"; footnotes "∗ First corresponding",
+%   "∗∗ Second corresponding"
+% engines: rust ELSART (3bbd4e67ccf): Alice c1's note, c2's the block's
+% expect:  0 errors 0 Warnings; Alice One the second note, the first the block's
+% status:  RED (ELSART) -> GREEN (ELSARTb) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}\corref{c1}
+\author[l1]{Bob Two}\corref{c2}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[c1]{First corresponding}
+\cortext[c2]{Second corresponding}
+\end{frontmatter}
+x\end{document}

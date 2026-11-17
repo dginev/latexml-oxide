@@ -1,0 +1,25 @@
+% mechanism: an `\fnref` outside the names sets `\@fnmark` (elsarticle.cls:159-165) for the first name printed, whose own
+%   `\fnref` replaces it as that name prints (:256-260): the outside note is no name's; the outside `\corref` the first
+%   author's
+% witness: 1501.03323's shape (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,1,∗, Bob Twoa , Carol Threea"; footnotes "∗ Corresponding author",
+%   "1 Note one", "2 Note two"
+% engines: rust b842de7fc4c and ELSART: Alice "Note one"; the correspondence note and "Note two" the block's
+% expect:  0 errors 0 Warnings; Alice One "Note one" and the correspondence note; "Note two" the block's
+% status:  RED (b842de7fc4c) -> RED (ELSART; row R ELSOUTSIDE) -> RED (ELSARTb: the correspondence note the block's,
+%   with a Warning) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One\fnref{f1}}
+\author[l1]{Bob Two}
+\corref{cor}\fnref{f2}
+\author[l1]{Carol Three}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[cor]{Corresponding author}
+\fntext[f1]{Note one}
+\fntext[f2]{Note two}
+\end{frontmatter}
+x\end{document}

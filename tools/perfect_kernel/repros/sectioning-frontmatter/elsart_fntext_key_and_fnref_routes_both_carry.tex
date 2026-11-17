@@ -1,0 +1,18 @@
+% mechanism: one elsarticle `\fntext` reached by an `\author[…]` key (Alice) and an `\fnref` (Bob): both print the
+%   `fnote` number (elsarticle.cls:159-163, :251-259) and carry the one note (`els_route`)
+% witness: ELSROUTE's `\fntext` sibling (2511.04560, 2105.03995, 1906.04269 list `\fntext` keys in `\author[…]`)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,1 , Bob Twoa,1"; footnote "1 Equal contribution"
+% engines: rust b842de7fc4c: Bob alone carries the note
+% expect:  0 errors 0 Warnings; Alice One and Bob Two each a copy of the one note, marked 1
+% status:  RED (b842de7fc4c) -> GREEN (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1,eq]{Alice One}
+\author[l1]{Bob Two\fnref{eq}}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\fntext[eq]{Equal contribution}
+\end{frontmatter}
+x\end{document}

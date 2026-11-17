@@ -1,0 +1,20 @@
+% mechanism: as elsart_corref_outside_a_name_marks_the_first_author, the `\corref` before every `\author`; another
+%   name's own `\fnref` keeps its note
+% witness: 1501.03323's shape (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗, Bob Twoa,1"; footnotes "∗ Corresponding author", "1 Visiting"
+% engines: rust b842de7fc4c: the correspondence note the block's
+% expect:  0 errors 0 Warnings; Alice One the correspondence note, Bob Two the "Visiting" note
+% status:  RED (b842de7fc4c) -> GREEN (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\corref{cor}
+\author[l1]{Alice One}
+\author[l1]{Bob Two\fnref{f1}}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[cor]{Corresponding author}
+\fntext[f1]{Visiting}
+\end{frontmatter}
+x\end{document}
