@@ -1,0 +1,34 @@
+% mechanism: a frontmatter note outside the creators with no mark (icml's `\printAffiliationsAndNotice`, a note of the
+%   document's own level): no invented dagger; its content a block line. icml's `\icmlsetsymbol` labels print their
+%   symbol on the names (icml2026.sty:446-458), which the notice's `\icmlEqualContribution` (:502) explains; a mark
+%   of the creator, not of its name, which `\icmlcorrespondingauthor` spells (Cy Able shares Ann's surname: 1904.07793)
+% witness:  2602.04557 (icml2026: `\icmlauthor{Eliezer Shlomi}{equal,technion}`, `\printAffiliationsAndNotice
+%   {\icmlEqualContribution}`); siblings 2405.13379, 2603.01467 (Interspeech's `\address`/`\email` notes)
+% oracle:   pdflatex (with 2602.04557's icml2026.sty) 0 errors; "Ann Able * 1 Bob Baker * 1 Cy Able 1", the notice a
+%   footnote with no mark (`\let\thefootnote\relax`, icml2026.sty:521) "*Equal contribution 1 Univ A. Correspondence
+%   to: Ann Able <ann@x.org>."
+% engines:  rust PRESBXc = the notice `†`-marked, its `*` and the names' `*` lost; perl = the notice gobbled
+%   (icml_support.sty.ltxml:52), no `*` (2026-11-17)
+% expect:   0 errors, 0 warnings; Ann Able (and her e-mail) and Bob Baker each a mark-only `*`; the notice a
+%   div.ltx_note_unmarked "*Equal contribution", no ltx_note_mark on the page but the names' two
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage[accepted]{icml2026}
+\begin{document}
+\twocolumn[\icmltitle{A Title}
+\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker}{equal,a}
+\icmlauthor{Cy Able}{a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@x.org}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution}
+\begin{abstract}
+An abstract.
+\end{abstract}
+Body text.
+\end{document}

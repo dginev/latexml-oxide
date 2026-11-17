@@ -21857,3 +21857,50 @@ runs it where the class prints it — a `\footnotetext` becomes a pubnote, the f
 2605.28175, 2606.06621, 2606.23853); other text is a note at the title block, of the names whose mark it opens with
 (OD #1054). Guards `perfect_kernel_batchregbind::bindings_print_the_title_page_lists_their_files_print`,
 `perfect_kernel_batchshrest::{a_lists_plain_text_is_the_blocks_note, a_list_led_by_the_names_mark_is_their_marked_note}`.
+
+## 1284. The HTML invents a dagger for a frontmatter note with no mark
+
+`LaTeXML-meta-xhtml.xsl`'s `note-mark` writes `&#x2020;` for any `ltx:note` with neither `@mark` nor an untyped tag, and
+`LaTeXML.css` hides the note's content until the mark is hovered. A frontmatter note that prints no mark — a
+`\footnotetext` whose `\thefootnote` is empty, a binding's note of the document's own level — then shows a `†` the PDF
+never prints. Minimal trigger (pdflatex 0 errors: the footnote "{ann, bob}@x.org" with no mark):
+
+```latex
+\documentclass{article}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\title{A Title}\author{Ann Able}\date{}
+\begin{document}\maketitle
+\begin{abstract}An abstract.\footnotetext{\{ann, bob\}@x.org}\end{abstract}
+\end{document}
+% Perl: <span class="ltx_note ltx_role_footnotetext"><sup class="ltx_note_mark">†</sup>… footnotetext: {ann, bob}@x.org
+```
+
+Rust: such a note in a frontmatter field, or of the document's own level where its role is one the PDF prints in the
+title block or as a footnote, shows its content with no glyph (OXIDIZED_DESIGN_DIVERGENCES #1063, #990 for the
+creators'); a running head, the publication's metadata and a note in a title keep Perl's rendering. 2506.06941,
+2602.04557, 2405.13379, 2603.01467. Guards `perfect_kernel_batchinvdag::{an_unmarked_document_level_note_is_a_block_line,
+an_unmarked_note_in_a_field_is_inline, a_document_level_note_shows_once_where_the_pdf_prints_it}`.
+
+## 1285. icml_support drops the names' `\icmlsetsymbol` marks and the notice
+
+icml_support.sty.ltxml:37 `\icmlsetsymbol{}{}` and :52 `\printAffiliationsAndNotice{}` expand to nothing, and :53
+`\icmlEqualContribution` is "Equal contribution": icml20xx.sty prints a `\icmlsetsymbol` label's symbol after each name
+carrying it (icml2026.sty:446-458) and the notice "*Equal contribution 1 …" under the first column (:519-531, :502).
+Minimal trigger (pdflatex with the paper's icml2026.sty, 0 errors: "Ann Able * 1", the footnote "*Equal contribution 1
+Univ A."):
+
+```latex
+\documentclass{article}\usepackage[accepted]{icml2026}
+\begin{document}
+\twocolumn[\icmltitle{A Title}\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}\icmlauthor{Ann Able}{equal,a}\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}]
+\printAffiliationsAndNotice{\icmlEqualContribution}
+Body.
+\end{document}
+% Perl: Ann Able, Affiliation: Univ A; no `*`, no notice
+```
+
+Rust: the notice is a note of the document (its `*` kept), each symbol label a mark-only note of its creator
+(OXIDIZED_DESIGN_DIVERGENCES #1063); 2602.04557. Guard
+`perfect_kernel_batchinvdag::an_unmarked_document_level_note_is_a_block_line`.

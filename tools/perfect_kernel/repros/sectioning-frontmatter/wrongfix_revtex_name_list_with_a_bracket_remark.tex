@@ -1,0 +1,17 @@
+% mechanism: a per-author class's names line counts a name before its bracketed remark as a name
+%   (`resolver::lines::joined_single_name`, `name_before_remark`): revtex's `\author{H. Chen (…), M. Baldo, …}` is four
+%   names, not one (the shape 1107.2497 takes once its ¶ is ink)
+% witness: 1107.2497 (revtex4)
+% oracle:  pdflatex 0 errors: "H. Chen (x¶), M. Baldo, G. F. Burgio, and H.-J. Schulze" over "INFN"
+% engines: rust 139d1d2fa08: `(xy)` in place of `(x\P)` one creator of the four names, two Warnings (the safety net, a
+%   name its events don't spell)
+% expect:  0 errors 0 Warnings; H. Chen (x¶); M. Baldo; G. F. Burgio; H.-J. Schulze, each affiliation INFN
+% status:  RED (139d1d2fa08 with `(xy)`) -> GREEN (perfect_kernel_batchwrongfix::a_mark_character_inside_a_names_bracket_is_its_text)
+% preload: ar5iv.sty
+\documentclass[aps,prc]{revtex4}
+\begin{document}
+\title{T}
+\author{H. Chen (x\P), M. Baldo, G. F. Burgio, and H.-J. Schulze}
+\affiliation{INFN}
+\maketitle
+\end{document}

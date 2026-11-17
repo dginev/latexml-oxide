@@ -1,0 +1,16 @@
+% mechanism: a text `\footnotemark` set off by a space from the comma before it and glued to the next name (the space
+%   after a control word is skipped) proves nothing about the side: past a separator the default is the name before
+%   (DG 2026-11-17: marks sit on an author name's right; no glue width flips that), so the ledger leaves it undecided
+%   and the writer counts the mark it places on no name (`resolver::mark_ledger`)
+% witness: 2406.12338's sibling (review of WRONGFIX)
+% oracle:  pdflatex 0 errors: "Alice One, ∗Bob Two" (the `\rlap`ped mark in the space before Bob)
+% engines: rust 139d1d2fa08: the mark undecided, dropped, a Warning; 97dcff7ca34 (WRONGFIX): Bob's by the glue;
+%   WRONGFIXb: as 139d1d2fa08
+% expect:  0 errors 1 Warning (the mark placed on no name); never Bob's
+% status:  RED (139d1d2fa08) -> GREEN (97dcff7ca34) -> RED, the default not yet placing it on Alice (WRONGFIXb;
+%   perfect_kernel_batchwrongfix::a_note_before_a_name_is_that_names pins it off Bob)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Alice One, \footnotemark Bob Two}
+\begin{document}\maketitle\end{document}

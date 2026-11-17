@@ -1,5 +1,8 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
+use super::elsart_support_core_sty::{
+  ELS_AUTHOR_KEYS, ELS_CORREF_KEYS, ELS_PLACE_KEYS, els_carriers, recorded_els_key,
+};
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -11,7 +14,7 @@ LoadDefinitions!({
   // Generally ignorable options (the size options pass to article below, as elsarticle.cls:113 passes every option it
   // does not declare: `[12pt]` 390pt, `\@ptsize` 2)
   for option in [
-    "endfloat", "endfloats", "numafflabel",
+    "endfloat", "endfloats",
     "oneside", "twoside", "onecolumn", "twocolumn",
     "lefttitle", "centertitle",
     "symbold", "ussrhead", "nameyear",
@@ -19,8 +22,13 @@ LoadDefinitions!({
   {
     DeclareOption!(*option, None);
   }
-  // elsarticle.cls:106-109: `reversenotenum` numbers the `\fntext` notes by letter (`\thefnote`, below)
-  DeclareOption!("reversenotenum", { assign_value("@elsarticle@reversenotenum", true, Scope::Global); });
+  // elsarticle.cls:106-109: `reversenotenum` numbers the `\fntext` notes by letter (`\thefnote`, below) and, as
+  // `numafflabel` (:100-101), the addresses by number (`\lx@els@cormark`)
+  DeclareOption!("reversenotenum", {
+    assign_value("@elsarticle@reversenotenum", true, Scope::Global);
+    assign_value("@elsarticle@numafflabel", true, Scope::Global);
+  });
+  DeclareOption!("numafflabel", { assign_value("@elsarticle@numafflabel", true, Scope::Global); });
   // elsarticle.cls defines `\newif\ifpreprint`, set by its options (true for `preprint` and `review`, false for
   // `final` and the journal layouts) and true by default (`\ExecuteOptions{…,preprint,…}`, elsarticle.cls:112).
   // Journal styles test it (ycviu.sty:60, 298); without it they saw an undefined CS and cascaded (2311.04591).
@@ -118,7 +126,7 @@ LoadDefinitions!({
   // labelled one — its print zone the names' (`_zone=names`, OXIDIZED_DESIGN_DIVERGENCES #954; 1710.03753, where the
   // unlabelled `University of North Dakota` went after the labelled department); the core's `\address` otherwise.
   DefMacro!("\\address OptionalSemiverbatim {}",
-    "\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
+    "\\lx@els@record@place{#1}\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
      {\\lx@els@shared{\\lx@add@contact[label={},role=address,_zone=names]}\
        {\\lx@add@contact[label={},role=address,annotate=run,_zone=names]}}\
      {\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}\
@@ -284,13 +292,52 @@ LoadDefinitions!({
       Ok(n @ 1..=26) if lookup_bool("@elsarticle@reversenotenum") => char::from(b'a' + n - 1).to_string(),
       _ => n.to_string(),
     };
+    if let Some(key) = &key {
+      let mut marks = lookup_string("@elsarticle@fnmarks");
+      marks.push_str(&s!("{}={mark};", key.to_string().trim()));
+      assign_value("@elsarticle@fnmarks", Stored::String(pin(&marks)), Scope::Global);
+    }
     Ok(marked_note_text(&s!("fn"), "note", Some(mark), key, text))
   });
+  // A `\cortext` note's mark is its carriers' route, decided once every author is read (`\lx@els@cormark`; 2512.04868,
+  // 1308.5495; OD #1053): `\corref` prints ∗/∗∗ (:188-190), an `\author[<key>]` key the `cnote` number (:181-185, :251-256).
   DefMacro!("\\cortext OptionalSemiverbatim {}", sub[(key, text)] {
     let n = lookup_int("@elsarticle@cnote") + 1;
     assign_value("@elsarticle@cnote", n, Scope::Global);
-    let mark = ["∗", "∗∗"].get(usize::try_from(n - 1).unwrap_or(usize::MAX)).map(|mark| (*mark).to_string());
-    Ok(marked_note_text(&s!("cor"), "correspondent", mark, key, text))
+    let mark = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@els@cormark{{{}}}{{{n}}}",
+      key.as_ref().map(ToString::to_string).unwrap_or_default()
+    )));
+    let mut marked = mark.unlist();
+    marked.extend(text.unlist());
+    Ok(marked_note_text(&s!("cor"), "correspondent", None, key, Tokens::new(marked)))
+  });
+  DefMacro!("\\lx@els@cormark Semiverbatim {}", sub[(key, n)] {
+    let key = key.to_string();
+    let n = n.to_string().trim().parse::<usize>().unwrap_or(0);
+    let star = || ["∗", "∗∗"].get(n.wrapping_sub(1)).map(|mark| (*mark).to_string());
+    // (the number another mark of the same name prints too, an `\fntext`'s or a numbered address's: the ∗ the footnote
+    // prints, :181-185 — two notes never share a mark)
+    let fn_marks = lookup_string("@elsarticle@fnmarks");
+    let numbered = lookup_bool("@elsarticle@numafflabel");
+    let collides = els_carriers(&key).iter().flatten().any(|other| {
+      *other != key.trim()
+        && (fn_marks.split(';').any(|e| e.split_once('=') == Some((other.as_str(), n.to_string().as_str())))
+          || (numbered && recorded_els_key(ELS_PLACE_KEYS, other)))
+    });
+    let mark = if recorded_els_key(ELS_AUTHOR_KEYS, &key) && !recorded_els_key(ELS_CORREF_KEYS, &key) {
+      // (a key an address shares prints the label written last, not known here: none)
+      match () {
+        _ if recorded_els_key(ELS_PLACE_KEYS, &key) => None,
+        _ if collides => star(),
+        _ => Some(n.to_string()),
+      }
+    } else {
+      star()
+    };
+    Ok(mark.map_or_else(Tokens::default, |mark| {
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}")))
+    }))
   });
   DefMacro!("\\cormark[]", "\\corref{#1}");
   DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");

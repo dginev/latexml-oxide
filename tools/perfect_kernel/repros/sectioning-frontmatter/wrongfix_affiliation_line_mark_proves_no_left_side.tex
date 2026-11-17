@@ -1,0 +1,12 @@
+% mechanism: a `\\` line opening with a mark proves no left-side convention for the notes past a separator before it:
+%   the line may be an affiliation's, and only the block's edges prove one (`mark_ledger`'s edge proof: its first piece
+%   before its first name), so `Ann Able, \thanks{…} Bob Baker` keeps the note on the name before
+% witness: revWRONGFIX S2 (synthetic)
+% oracle:  pdflatex 0 errors: "Ann Able, ∗ Bob Baker" over "1University of Somewhere"; footnote "∗ Note A."
+% engines: rust 97dcff7ca34 (WRONGFIX): Note A given to Bob; 139d1d2fa08: Ann's
+% expect:  0 errors; Ann Able thanks=Note A.
+% status:  RED (97dcff7ca34) -> GREEN (perfect_kernel_batchwrongfix::a_note_before_a_name_is_that_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able, \thanks{Note A.} Bob Baker\\ \footnotemark[1]University of Somewhere}
+\title{T}\begin{document}\maketitle x\end{document}

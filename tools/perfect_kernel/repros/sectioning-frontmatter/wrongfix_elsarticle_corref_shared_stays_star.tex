@@ -1,0 +1,18 @@
+% mechanism: a `\cortext` note reached through `\corref` is marked ∗ (elsarticle.cls:188-190): the `\corref` route of
+%   `\lx@els@cormark`
+% witness: 1308.5495 (`\corref{cor1}`), 2512.04868's sibling
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗, Bob Twoa,∗"; footnote "∗ Corresponding author"
+% engines: rust 139d1d2fa08: the same (∗)
+% expect:  0 errors 0 Warnings; Alice One thanks[*]=Corresponding author | affiliation; Bob Two the same
+% status:  GREEN (139d1d2fa08) (perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One\corref{cor}}
+\author[l1]{Bob Two\corref{cor}}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[cor]{Corresponding author}
+\end{frontmatter}
+\end{document}

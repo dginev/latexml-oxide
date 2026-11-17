@@ -1,0 +1,20 @@
+% mechanism: an elsarticle `\cortext` reached by `\author[…]` keys prints the `cnote` number on the name; where another
+%   mark of the same name prints that number too (an `\fntext` key's `fnote` number), two notes would share a mark: the
+%   note takes the ∗ the footnote itself prints (elsarticle.cls:181-185) — `\lx@els@cormark`
+% witness: revWRONGFIX S1 (synthetic; 2512.04868's key route)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,1,1 , Bob Twoa,1,1"; footnotes "∗ Cor C" "1 Footnote F"
+% engines: rust 97dcff7ca34 (WRONGFIX): both notes marked "1"; 139d1d2fa08: "1" and "∗"
+% expect:  0 errors 0 Warnings; each name: the footnote marked 1, the corresponding note marked ∗
+% status:  RED (97dcff7ca34) -> GREEN (perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[a,c1,f1]{Alice One}
+\author[a,c1,f1]{Bob Two}
+\address[a]{Some University}
+\fntext[f1]{Footnote F}
+\cortext[c1]{Cor C}
+\end{frontmatter}
+x\end{document}

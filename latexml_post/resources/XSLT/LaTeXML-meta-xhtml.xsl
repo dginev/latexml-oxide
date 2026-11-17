@@ -76,16 +76,66 @@
         </xsl:if>
       </xsl:when>
       <xsl:otherwise>
-        <xsl:call-template name="unmarked-creator-note">
+        <xsl:call-template name="unmarked-note">
           <xsl:with-param name="context" select="$context"/>
         </xsl:call-template>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
 
-  <xsl:template name="unmarked-creator-note">
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1063): #990's rule beyond the creators, for the notes the PDF
+       prints with no mark in the title block or as a footnote. The roles of a note of the document's own level that
+       do: a note's text (icml's notice, 2602.04557; a markless \footnotetext, 2511.18287), an address, an e-mail, a
+       correspondence or funding line (Interspeech's \address and \email, 2405.13379, 2603.01467), elsarticle's
+       highlights and graphical abstract, printed before the title (2510.16146, 2303.00352). Each shows as a line of its
+       own, once per role and text (sn-jnl's \equalcont under each name, 2412.01641; a note with no text, a picture, is
+       never a repeat). Every other role, a running head or the publication's metadata (jmlr's heading, 1710.08165; a
+       volume; a short title), the PDF prints in no title block: Perl's hidden note. Keyed by role and text. -->
+  <xsl:key name="f:document-note-shown"
+           match="ltx:document/ltx:note[not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]
+                  [@role='footnote' or @role='footnotetext' or @role='thanks' or @role='affiliationnotice'
+                   or @role='address' or @role='affiliation' or @role='email' or @role='corresponding'
+                   or @role='correspondence' or @role='authorinfo' or @role='equal-contributors' or @role='funding'
+                   or @role='highlights' or @role='graphicalabstract' or @role='url']"
+           use="concat(@role,'&#x9;',normalize-space(.))"/>
+  <xsl:template match="ltx:document/ltx:note[key('f:document-note-shown',concat(@role,'&#x9;',normalize-space(.)))]
+                       [not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]" priority="0.5">
     <xsl:param name="context"/>
-    <xsl:element name="span" namespace="{$html_ns}">
+    <xsl:choose>
+      <xsl:when test="not(normalize-space(.))
+                      or generate-id() = generate-id(key('f:document-note-shown',concat(@role,'&#x9;',normalize-space(.)))[1])">
+        <xsl:call-template name="unmarked-note">
+          <xsl:with-param name="context" select="$context"/>
+          <xsl:with-param name="element" select="f:blockelement($context,'div')"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:when test="@xml:id">
+        <xsl:element name="span" namespace="{$html_ns}">
+          <xsl:call-template name="add_id"/>
+        </xsl:element>
+      </xsl:when>
+    </xsl:choose>
+  </xsl:template>
+
+  <!-- SURPASS (OXIDIZED_DESIGN_DIVERGENCES #1063): a note with no mark inside a frontmatter field, the date, the abstract,
+       the keywords, the classification, a publication note, a creator's entry, shows its text, inline in a paragraph (a
+       markless \footnotetext in the abstract, 2506.06941). Not in a title: ltx:title is also a section's, a theorem's or a
+       float's, whose notes keep Perl's dagger (body notes, numbered by the counter). -->
+  <xsl:template match="ltx:note[not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]
+                               [ancestor::ltx:date or ancestor::ltx:abstract or ancestor::ltx:keywords
+                                or ancestor::ltx:classification or ancestor::ltx:pubnote or ancestor::ltx:creator]"
+                priority="0.5">
+    <xsl:param name="context"/>
+    <xsl:call-template name="unmarked-note">
+      <xsl:with-param name="context" select="$context"/>
+      <xsl:with-param name="element" select="f:blockelement($context,'div')"/>
+    </xsl:call-template>
+  </xsl:template>
+
+  <xsl:template name="unmarked-note">
+    <xsl:param name="context"/>
+    <xsl:param name="element" select="'span'"/>
+    <xsl:element name="{$element}" namespace="{$html_ns}">
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
       <xsl:call-template name="add_id"/>
       <xsl:call-template name="add_attributes">

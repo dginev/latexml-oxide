@@ -1,0 +1,23 @@
+% mechanism: the siblings of an unmarked frontmatter note that make no unmarked note: a `\footnote` in `\date` (a
+%   publication note) and a `\thanks` in the abstract after `\maketitle` (article.cls's `\maketitle` lets `\thanks` be
+%   `\relax`, so its text prints in place): no glyph invented on either
+% witness:  (synthetic; the brief INVDAG's siblings of 2602.04557, 2506.06941)
+% oracle:   pdflatex 0 errors; "June 2026∗", the footnote "∗ Email: ann@x.org"; the abstract "An abstract.Supported by
+%   the NSF."
+% engines:  rust PRESBXc = the date's note a pubnote "Email: ann@x.org" (its ∗ not shown), the thanks text inline;
+%   no dagger (2026-11-17)
+% expect:   0 errors, 0 warnings; no ltx_note_mark on the page; the pubnote "Email: ann@x.org"; the abstract
+%   "An abstract.Supported by the NSF."
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able}
+\date{June 2026\footnote{Email: ann@x.org}}
+\begin{document}
+\maketitle
+\begin{abstract}
+An abstract.\thanks{Supported by the NSF.}
+\end{abstract}
+Body text.
+\end{document}

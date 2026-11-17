@@ -1,0 +1,18 @@
+% mechanism: as wrongfix_elsarticle_cortext_key_prints_its_number, the `\cortext` before the `\author` calls naming its
+%   key: the mark is decided when the note is digested, every author read
+% witness: 2512.04868's shape (review of WRONGFIX)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,1 , Bob Twoa,1"; footnote "∗ Corresponding author"
+% engines: rust 139d1d2fa08: both notes mark="∗"
+% expect:  0 errors 0 Warnings; Alice One thanks[1]=Corresponding author | affiliation; Bob Two the same
+% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\cortext[cor]{Corresponding author}
+\author[l1,cor]{Alice One}
+\author[l1,cor]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+\end{document}

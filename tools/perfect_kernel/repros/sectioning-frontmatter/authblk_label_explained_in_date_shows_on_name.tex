@@ -1,0 +1,25 @@
+% mechanism: a label authblk prints on a name (`\AB@authnote`, authblk.sty:120-133) that no `\affil` explains shows on
+%   the name as the mark it prints, a mark-only note (`Policy::labels_print`): a literal `§`, a math `$\dagger$`, a
+%   document's macro printing `‡`
+% witness:  2606.00446 (`\author[1,*,§]{Jared Benson}`, its `§` legend in `\date{\textsuperscript{§}Email: …}`)
+% oracle:   pdflatex 0 errors; "Ann Able1,§ , Bob Baker1,† , Cat Cole1,‡ , and Dan Dee1", "1 Univ A", "§ Email:
+%   ann@x.org † Now at Lab B ‡ Now at Lab C" (the date)
+% engines:  rust PRESBXc = no mark shown, 1 Warning (unanswered_mark_lost: §, †, ‡); perl = none shown (2026-11-17)
+% expect:   0 errors, 0 warnings; Ann Able: Univ A, mark-only `§`; Bob Baker: Univ A, mark-only `†`; Cat Cole: Univ A,
+%   mark-only `‡`; Dan Dee: Univ A
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\newcommand\myD{\ddag}
+\title{T}
+\author[1,§]{Ann Able}
+\author[1,$\dagger$]{Bob Baker}
+\author[1,\myD]{Cat Cole}
+\author[1]{Dan Dee}
+\affil[1]{Univ A}
+\date{\textsuperscript{§}Email: ann@x.org \quad $^\dagger$Now at Lab B \quad $^\ddag$Now at Lab C}
+\begin{document}
+\maketitle
+Text.
+\end{document}
