@@ -1,0 +1,26 @@
+% mechanism: a frontmatter note with no mark inside a field (a `\footnotetext` in the abstract under a `\fnsymbol`
+%   `\thefootnote` whose counter is 0 after `\maketitle`: pdflatex prints no mark): no invented dagger; its content
+%   inline, class ltx_note_unmarked. A body footnote keeps its counter mark.
+% witness:  2506.06941 (`\footnotetext{\{p\_shojaee, …\}@apple.com}` at the end of its abstract)
+% oracle:   pdflatex 0 errors; the abstract "An abstract.", the footnote "{ann, bob}@x.org" with no mark, "Body
+%   text.1" and footnote "1 A body note."
+% engines:  rust PRESBXc = the abstract's note `†`-marked, its content hidden behind the mark; perl = the same `†`
+%   (LaTeXML-meta-xhtml.xsl note-mark's fallback) (2026-11-17)
+% expect:   0 errors, 0 warnings; the abstract's note a span.ltx_note_unmarked "{ann, bob}@x.org", no mark; the body
+%   footnote marked 1
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\title{A Title}
+\author{Ann Able}
+\date{}
+\begin{document}
+\maketitle
+\begin{abstract}
+An abstract.
+\footnotetext{\{ann, bob\}@x.org}
+\end{abstract}
+\renewcommand{\thefootnote}{\arabic{footnote}}
+Body text.\footnote{A body note.}
+\end{document}

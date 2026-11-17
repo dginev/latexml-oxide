@@ -19624,9 +19624,14 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   TITLEPAGEMARKS); IEEEtran's `\thanks`
   prints none (IEEEtran.cls:4757-4758).
 - *The mark rule's pass* (`insert::mark_creator_notes`, once every route has placed the notes): a thanks note's leading
-  superscript or mark formula (`$^{*}$`, `fm_read_formula`) is its mark where it has none and the superscript is a
-  footnote symbol or a label its name prints (`name_marks`: IEEEtran's `\thanks{$^{*}$Equal contribution}`, 2312.10807 —
-  never `\thanks{$^{3}$He detectors…}`'s isotope), and is taken out where it repeats the one it has (a legend line's
+  superscript or mark formula (`$^{*}$`, `fm_read_formula`) is its mark where it has none and its name prints it
+  (`name_marks`: the personname's superscripts, its mark-only notes, its requests — IEEEtran's `\thanks{$^{*}$Equal
+  contribution}`, 2312.10807; never `\thanks{$^{3}$He detectors…}`'s isotope, nor a footnote symbol no name prints:
+  INTERSPEECH2022.sty's `\thanks` prints no mark, its legend "∗ We will release …" the text's own, 2204.08920; the
+  creator's own sequence label `author:N` and its items' `item:` labels no request it prints, 2405.05531's
+  `\thanks{\IEEEauthorrefmark{1}…}` under an unmarked name; a name's `\IEEEauthorrefmark{1}` the reading linked to the
+  note leaves no trace the rule reads, so 2603.19188's note keeps "∗" as its text, on both names, row R), and is
+  taken out where it repeats the one it has (a legend line's
   `$^*$Equal contribution`, 2407.07614, 2105.14239) — either only where a space or a letter follows it
   (`words_follow`): article's `\thanks{$^*$-algebras are her field.}` prints "∗∗-algebras", the class's mark then the
   text's, and keeps its formula. A leading bare copy goes only where the emitter read the mark off it
@@ -19716,10 +19721,11 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `\fnsymbol` (:62), which pdflatex errs on, a no-op here. REVTeX's numbering pass (#1054) writes no glyph where the
   document or a package defines `\@fnsymbol` (its table's would be wrong: 2603.18989), the mark unknown and counted. A mark alone keeps its glyph in `mark` only
   (`link_marked_notes`): 2607.15705's `\authornotemark[2]` that no note answers held "†" as its text too. A label
-  authblk prints on a name (`\AB@authnote`, authblk.sty:120-133) that no `\affil` prints before its line is a mark the
-  frontmatter places nowhere, counted at `\maketitle` (`authblk_sty::count_lost_labels`, one Warning listing them:
-  2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains; not where an `\affil` is unlabelled, its
-  `\AB@thenote` number possibly the answer). Both sides are read by one key, the text the label prints
+  authblk prints on a name (`\AB@authnote`, authblk.sty:120-133) that no `\affil` prints before its line shows on the
+  name as its mark (#1064: 2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains); one spelled so
+  that no mark is read from it (a document's macro) is placed nowhere, counted at `\maketitle`
+  (`authblk_sty::count_lost_labels`, one Warning listing them; not where an `\affil` is unlabelled, its `\AB@thenote`
+  number possibly the answer). Both sides are read by one key, the text the label prints
   (`queue_digest::printed_label_pieces`: `printed_label`'s digested text, compared as `insert::mark_form` compares
   marks): `\author[\affA]` with `\newcommand\affA{1}` is `\affil[1]`'s (review revMARKSAFE S3), `\affil[$\dag$]` answers
   `\author[\dag]` (2201.10988), the line's label read as authblk.sty:148 reads it, not verbatim (`\affil[$^1$]` answers
@@ -19752,7 +19758,7 @@ revtex42_name_footnote_is_its_note_contact, thanks_leading_symbol_text_is_no_mar
 `perfect_kernel_batchsbx1::sandbox_2605_rows` (the collaboration's marked note, whole); the fail-safes
 `perfect_kernel_batchshmark::{marks_only_where_the_classs_maketitle_runs,
 a_thefootnote_the_author_block_sets_holds_for_its_name, a_names_mark_revtex_sets_apart_is_unknown,
-a_mark_whose_glyph_is_unknown_prints_none, a_class_label_no_entry_answers_is_counted}` and the mark-alone row of
+a_mark_whose_glyph_is_unknown_prints_none, a_class_label_no_entry_answers_shows_on_its_name}` and the mark-alone row of
 `a_mark_on_a_name_is_a_copy_of_the_note_it_marks` (repros `sectioning-frontmatter/{maketitle_redefined_prints_no_marks_red,
 titling_thanksmarkseries_marks_red, fmmarks_single_name_marks_after_newline_thin_spaces_red,
 revtex_name_footnotemark_leaves_the_marks_unknown, fmmarks_acmart_authornotemark_without_its_note_red,
@@ -19818,7 +19824,14 @@ Warning; elsarticle's `\fntext`/`\cortext` and REVTeX's `\thanks` are a contact 
   (`\elsaddress`'s preprint box) stays the block's.
 - *Footnote texts with printed marks*: a binding marks a creator's contact with the mark its class prints (`_fnmark`):
   elsarticle's `\fntext` its `\thefnote` (a number, a letter under `reversenotenum`; elsarticle.cls:157-171), `\cortext`
-  ∗ and ∗∗ (:178-189). Two or more creators carrying one mark and text make each copy their note, `role=thanks`, with
+  ∗ and ∗∗ where its names reach it by `\corref` (:188-190), its `cnote` number where they list its key in
+  `\author[…]` (`\elsRef{key}`, :181-185, :251-256: "Yanzeng Lid,b,1", 2512.04868) — the reading gives it to the
+  `\corref` names when there are any (`label_owners`' exact tier), so the binding decides where the note is digested,
+  every `\author` read (`\lx@els@cormark`, from the keys and `\corref`/`\cormark` keys each `\author` names). Where
+  that number is another mark of the same name's too — an `\fntext` key's `fnote` number, listed or `\fnref`ed, or any
+  address key under numbered addresses (`numafflabel`, `reversenotenum`) — the note takes the ∗/∗∗ its footnote prints
+  (:181-185): a generated or derived mark never collides (DG; `\author[a,c1,f1]` prints "a,1,1", revWRONGFIX S1). Two or
+  more creators carrying one mark and text make each copy their note, `role=thanks`, with
   `mark` (`shared_notes::kind_shared_marked_contacts`, keyed on mark and text alone); a single carrier's stays its
   contact, shown under its name. 29 elsarticle papers of the 30k sample share one (1002.2661, 1312.0669).
 - *REVTeX's front-matter footnotes* (revtex4-2.cls:2404-2495; revtex4, revtex4-1 alike): an `\email`, `\homepage`,
@@ -19904,24 +19917,43 @@ through the `ltx_annotated_personname` wrapper (REND2's XSLT); no template rende
 `perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname`; 287 older guards repinned to the name alone,
 their rows listing each note's `mark` (`perfect_kernel_batch84b::creators`).
 
-### 1057. A mark or note printed beside spacing between two names is the nearer name's by TeX's glue; a bare mark no name writes keeps its footnote step (DG 2026-11-16, SHGNEXT)
+### 1057. A mark or note printed beside spacing between two names is the name's before it, the name's after only at a line's or cell's start or under the block's edge proof; a bare mark no name writes keeps its footnote step (DG 2026-11-17, superseding 2026-11-16's glue rule; SHGNEXT, WRONGFIX)
 
-**Rule.** A `\footnotemark` or a note printed between two names belongs to the nearer one, measured by the glue TeX sets
-between the inks, a tie going to the following name (DG 2026-11-16). The marks and notes between two names on a line
-are parted at the widest glue among them: a mark is as near a name as the widest blank on the way to it, so `Ann (27pt)
-∗ (6.7pt) † (23.5pt) Bob` gives both to Bob, `Ann (7.8) ∗ (73.8) † (11.9) Bob` parts the run and `Ann (7.8) ∗ (23.1) Bob
-(27.3) † (4.0) Carl` gives ∗ to Ann and † to Carl. Past a name with no name after it on its line (a separator, `\\`, the
-block's end) they are that name's (1911.13299's `\ \footnotemark[3]\and`); opening a cell (`\and`, `&`, an alignment's
-cell) they are the next name's. A fill's width is the line's (its natural width at a `tabular` row that sets the
-column, else wider): it decides only where its natural width and any wider part the run alike, so a mark glued to the
-next name is that name's past `\hfill`, and `Ann Able \hfill \footnotemark[2] \quad Bob Baker` is undecided. Other ink
-glued to a name is that name's, a formula's separator glued between two marks their run's (`\footnotemark[1]$^,$
-\footnotemark[2]`, 1703.08733); set apart from both names beside a mark (an ORCID, a `\cite`, a formula's mark) it
-leaves the run undecided, and so does glue nowhere or two fills: an undecided mark is the counted loss (a wrong glyph
-is worse than none). A bare `\footnotemark` no name writes (one on the line a `\\` opens: no name's, ruling 4) keeps its
-footnote step where it prints, its glyph counted lost, so the marks after it print theirs. The title's
-`\@makefnmark` is an `\rlap` (article.cls:206): a mark's ink lies over the glue after it, so its distance to the next
-name is read from where it starts, as the print shows it (review revSHGNEXT's a05).
+**Rule.** DG 2026-11-17: "nearly all notes attach on the right side of an author name and on the left side of an
+affiliation name." A `\footnotemark` or a note printed between two names belongs to the name BEFORE it, whatever the
+glue TeX sets around it: no glue widths are compared and no fill is measured, and a mark glued to the next name proves
+nothing (0902.3369's `C. Gruppioni $^{15}$B. Vila-Vilaró,$^{16}$`). It belongs to the name AFTER it only (a) opening a
+line (the block's, a `\\`'s) or a cell (`\and`, `&`, an alignment's cell), where no name stands before it, or (b) under
+the block's EDGE PROOF: the block's first piece precedes its first name and no piece follows its last name — then every
+piece between two names is the next name's (2406.12338's `\thanks{…} {Carla Schenker,} \thanks{…} {Xiulin Wang,}`,
+"∗Carla Schenker, †Xiulin Wang"; math0606768's `\thanks{a} Ann, \thanks{b} Bob`; 1511.05393, 0906.1223). A block with
+pieces at both edges mixes the conventions: its pieces between names keep the default, counted by an
+`Info:frontmatter:mark_convention`, never the next name. DG's refinements of 2026-11-17 (revWRONGFIXb): **S1** a note
+GLUED to the name before it (no space between, its comma's too) is evidence of the after-the-name convention, so such
+a block is MIXED, default plus Info — only whether a space is present is read, never its width (`\thanks{Equal} Ann
+Able\thanks{ann@} Bob Baker\thanks{bob@} Carl Cole`, "∗ / Ann Able†Bob Baker‡Carl Cole": Ann ∗ †, Bob ‡); **S2** the
+proof's first piece must sit in the first name's own stretch, the first name of the names' line — the line holding
+the first piece between two names —, so a mark before a line above it, maybe an affiliation's, proves nothing
+(`\footnotemark[1]University of X\\ Ann Able \thanks{ann@} Bob Baker`: Ann's); **S3** a piece between two names
+whose KEY (its footnote number) the name before already carries is not given to that name again but left to the next
+name, with the pieces after it on its stretch — a name printing the same key twice contradicts itself (`Ann
+Able\footnotemark[2] \quad \footnotemark[2]Bob Baker`, "Ann Able† †Bob Baker": one † each); one glued to the piece of
+its key prints over it once and stays (`\footnotemark[1]\thanks{…}`, 2103.01544). The measure (the 30k census): 96.9 % of 54,559 name-line runs
+are the name before's, and every note tie read by hand was, save the prefix-convention papers. Past a name with no
+name after it on its line (a separator, `\\`, the block's end) a piece is that name's (1911.13299's `\
+\footnotemark[3]\and`). A comma glued to a name is its ink, a piece past it the name's (`Igor Pikovski,$^{1, 2
+}$\footnotemark $\, \,$ Michael`, COMMAMARK 1111.1979; MNRAS's `Ann Able,$^{1}$⏎\thanks{e-mail}⏎Bob`); one set off
+from a separator by a space is undecided where no edge proof holds — a note the name's before by the reading's
+adjacency, a lone text `\footnotemark` the counted loss (`Alice One, \footnotemark Bob Two`, printed "Alice One, ∗Bob
+Two", one Warning). So `Ann Able \thanks{…}⏎Bob Baker` and `Ann Able\,\thanks{…}⏎Bob` are Ann's, though article's
+`\rlap` prints the mark against Bob — the e-mail inside names the owner (revWRONGFIX B1: 1405.7029, 2109.12466,
+1811.10030, 2605.31402, 1412.3142, 1705.11098, 1711.04571, 2002.10402; hep-th9401012, 2101.04647 the name before's),
+and a `\\` line opening with a mark proves nothing for the names line above it (`Ann Able, \thanks{A} Bob Baker\\
+\footnotemark[1]University`, Ann's: revWRONGFIX S2). A binding may declare its class's left-side convention (the micro
+layer, through the API); none does yet. A bare `\footnotemark` no name writes (one on the line a `\\` opens: no name's,
+ruling 4) keeps its footnote step where it prints, its glyph counted lost, so the marks after it print theirs. Typed
+labels are not the ledger's: `lines::names_led_by_marks` reads a line its marks lead, `mark_goes_next` a typed mark
+past a separator by the source's spacing (open: converge it on this rule, WRONGFIXb's report).
 **Perl.** The mark stays in the personname of the `\and` segment it is typed in (Base_Utility.pool.ltxml's creator per
 `\and`), its owner the source's order; no glue is read.
 **Rust.** `resolver::mark_ledger` reads a block's events once (`Resolver::block`, the whole block, before an IJCAI
@@ -19934,7 +19966,9 @@ reader's `mark_goes_next` reads only marks the ledger holds no record of) — an
 carries the previous name's pieces past its run (over spacing, font changes and the
 pieces alone: an item the reading writes apart, an affiliation's contact before the mark, stops it) and writes the next
 name's before its text in print order — a mark's own balanced tokens in a group of their own, cut from the previous
-name's run where a group took them, a note's footnote step where it prints. Every writer of a mark's tokens (the
+name's run where a group took them, a note's footnote step where it prints. A later name's run takes nothing an
+earlier name wrote (`written_before`): a mark glued to Bob and given Ann, `Ann Able \quad \footnotemark[2]Bob Baker`,
+whose span runs into Bob's, is written once, on Ann (WRONGFIXb; the first cut wrote † on both). Every writer of a mark's tokens (the
 next name's prefix, the pieces past a name, a dropped bare mark's step) takes them from the mark's own first token
 (`emit::own_span`): an event's span starts where the box before it began — the `\qquad` before it, the mark before
 it —, so each is cut at the end of the piece or spacing read before it and of the run written before it, a mark the
@@ -19951,26 +19985,27 @@ with a name after it keeps the whole block: the reading takes such a cell for a 
 The writer's check for dropped marks runs after `names_overlap` and `declaration_reads_past`: a block where a mark drops
 and the reading reads past a declaration is written as Perl splits it (`fallback::perl_author_calls`, each mark in its
 piece, no loss counted), where before the dropped mark wrote it whole (Perl's tabular branch).
-**Residuals.** The 0pt fill of a single-row author `tabular` (article.cls:181-183 sets `\@author` in `\begin{tabular}[t]{c}`
-per `\and`) needs the class's own `\maketitle` known to be in force: until then such a fill is undecided
-(`fmmarks_mark_then_hfill_before_next_red`, `ne2g_mark_past_hfill_undecided`). A mark beside an ORCID, a `\cite` or a
-formula's mark apart from both names stays undecided (`ne2g_mark_then_orcid_nearer_next`,
-`fmmarks_mark_then_cite_nearer_next_red`, `ne2g_mark_then_superscript_nearer_next`). A single space before or after a
-note prints no `space_before` event: a run with no other glue is undecided. A cell an `\and` opens with a mark before
+**Residuals.** A note records the single spaces around it as a mark does (`space_before`/`space_after`, the lexer), read
+by `overprints` and a glued comma's test, never to part names. A cell an `\and` opens with a mark before
 its name is read as a labelled line (`ne2i_bare_mark_opening_a_cell_writes_the_block_whole`; given its number, Bob an
 affiliation as at the base). A mark glued past a name's comma and its labels (`Igor Pikovski,$^{1, 2}$\footnotemark $\, \,$ Michael`,
 1111.1979; 1912.01737, 1811.08622: COMMAMARK, DG 2026-11-16) is measured from the comma's ink — the comma glued to the
 name's run opens the stretch at that name — and written on its name past the comma, the labels left to the reading's
-requests (#1058's batch); one set off from the comma by a space stays undecided (llncs's `Ann Able,\n\inst{1}…`).
+requests (#1058's batch); one set off from the comma by a space is undecided unless the block's edge proof holds
+(2406.12338; llncs's `Ann Able,\n\inst{1}\thanks{…} Bob`, Ann's by adjacency).
 **Witnesses.** 1911.13299, 2412.20504 (green before and after), 1703.08733 (its separator's shape); the FMRG suite's
-spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`, XML and HTML: its `ne2j_*`
+spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores`, XML and HTML: its `ne2j_*`
 rows the writers' runs and the separator's place in the run; the formula comma itself reaches the name's tokens and
 is dropped after them with no Warning, pre-existing, row R SEPRUN).
 **Guards**: `perfect_kernel_batchne2::{a_mark_beside_spacing_is_the_nearer_names,
 a_note_beside_spacing_goes_to_the_nearer_name, a_mark_nearer_the_next_name_moves_alone,
 a_mark_a_name_follows_past_spacing_is_not_carried_back, a_mark_on_no_name_keeps_its_footnote_step,
-a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`;
-the unit test `resolver::mark_ledger::tests::a_run_between_two_names_is_parted_at_its_widest_glue`.
+a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores`
+(S3: `ne2f_mark_of_a_key_the_name_before_carries_is_the_next_names`, `ne2f_mark_of_a_key_an_earlier_name_carries_stays_the_name_befores`,
+`ne2j_math_comma_between_marks_nearer_next`), `perfect_kernel_batchwrongfix::{a_note_before_a_name_is_that_names
+(S1, S2), a_note_between_two_names_is_the_name_befores}`; the unit tests
+`resolver::mark_ledger::tests::{a_piece_between_two_names_is_the_name_befores,
+the_edge_proof_gives_the_pieces_between_two_names_to_the_name_after, a_key_the_name_before_carries_goes_to_the_next_name}`.
 ---
 
 ### 1058. A footnote mark answers its note by the number it shows, never by its glyph alone (DG 2026-11-16, MARKKEY)
@@ -20004,7 +20039,10 @@ stays a mark-only note.
   date note the reading does not count came first (`frontmatter_fields::TITLE_NOTE_VALUES`' `?`, set at
   `\lx@title@footnote@step`): past llncs's `\title{T\thanks{…}}` Cat's `\footnotemark[2]` took Bob's note where llncs
   prints Ann's ⋆⋆, and now takes none — a wrong link worse than none (MARKKEY1c; row R MARKNUMKEY: the class counters
-  emulated, the PDF's shared ⋆ and the given number's glyph);
+  emulated, the PDF's shared ⋆ and the given number's glyph). A note the counter steps to 0 or below in the title
+  block prints no glyph and keys nothing either, its value ours, not TeX's (`footnote_pairing`): PoS's
+  `Teseo,\addtocounter{footnote}{-2}\footnotemark` after notes we do not step read "-1" where pdflatex prints ∗
+  (1910.09525; DG 2026-11-17: a wrong or invented glyph is worse than none);
 - IEEEtran's unmarked `\thanks` (its `\maketitle` empties `\thefootnote` and `\footnotemark`, IEEEtran.cls:4756-4758:
   the note prints no mark and names no author) is the block's, not the name's it follows, where Perl and the base hung
   it: the title's publication note (1510.02728), or a nameless `<creator>` holding it where the block keeps it among
@@ -20012,10 +20050,12 @@ stays a mark-only note.
 A known association whose glyph is unknown writes no glyph (#990's `_markunknown`, an Info); the page invents one only
 for a note several names share (#1059).
 **Witnesses.** 2407.04435, 1510.02728, 1111.1979 (its comma marks, #1057), 1912.01737, 1811.08622, 2606.31244,
-2306.03360.
+2306.03360, 1910.09525.
 **Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number,
 an_ieee_unmarked_thanks_is_the_blocks, a_mark_after_a_names_comma_is_the_nearer_names,
-a_number_the_title_counter_cannot_give_keys_nothing, the_mark_components_only_shrink}`; `observer::resolver::mark_ledger::tests::a_mark_glued_past_a_names_comma_is_measured_from_the_comma`.
+a_number_the_title_counter_cannot_give_keys_nothing, the_mark_components_only_shrink}`;
+`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks` (row
+`wrongfix_title_footnotemark_counter_below_one_prints_no_glyph`); `observer::resolver::mark_ledger::tests::a_mark_glued_past_a_names_comma_is_measured_from_the_comma`.
 
 ---
 
@@ -20236,6 +20276,86 @@ gone, `marks` the one record; the two state keys SEPb's records read, `lx_frontm
 `lx_title_marks_zero_width`, raised with this reason); unit test
 `mark_ledger::tests::a_mark_glued_on_a_zero_width_title_mark_of_its_glyph_overprints_it`.
 
+### 1063. A frontmatter note with no mark that the PDF prints shows its text, no glyph: a line at the document's level, inline in a field (DG 2026-11-16; INVDAG)
+
+**Rule.** #990's rule beyond the creators: a frontmatter note with no `mark` and no untyped tag that the PDF prints in
+the title block or as a footnote shows its text with no invented glyph and no "role: " label (DG 2026-11-16: a wrong or
+invented glyph is worse than none). A note the PDF prints in no title block (a running head, the publication's
+metadata) and a note in a title keep Perl's rendering.
+**Perl.** `LaTeXML-meta-xhtml.xsl`'s `note-mark` falls back to `†` for a note with no `@mark` and hides the content
+behind it (`ltx_note_content`, shown on hovering the mark, after its "role: " label).
+**Rust.**
+- `LaTeXML-meta-xhtml.xsl`, the document's level: the key `f:document-note-shown` names the roles shown, those whose
+  text the PDF prints in the title block or as a footnote — `footnote`, `footnotetext`, `thanks`, `affiliationnotice`,
+  `address`, `affiliation`, `email`, `corresponding`, `correspondence`, `authorinfo`, `equal-contributors`, `funding`,
+  and elsarticle's `highlights` and `graphicalabstract`, printed on the pages before the title (2510.16146,
+  2303.00352), and a `url` the block prints as a contact line (SIGMA's `URL:` line, 1707.09748; hidden it left an
+  invented `†` beside the author's real `†`, revINVDAGb S2) — keyed by role and text. Such a note, `ltx:document/ltx:note` with no mark, is a line of its own
+  (`f:blockelement($context,'div')` of class `ltx_note_unmarked`, the creators' `unmarked-note`); a later note of the
+  same role and text shows only its id (2412.01641's sn-jnl `\equalcont` under two names, 2511.18287's `\footnotetext`
+  after the paper's and the supplement's titles). Every other role keeps Perl's hidden note: jmlr's heading and short
+  headings (1710.08165, 2311.01695, 2412.18293, 2511.10879), a volume (2310.01426, 2311.11099), a workshop
+  (2110.12052), a title mark (2505.23112), running heads (2302.03012, 1709.08471), an editor, and the dates — which some
+  classes do print in the block or a sidebar (SIGMA's `Received`, MDPI's `received`/`accepted`, 1707.09748,
+  2302.03012) but are publication metadata in others: row R DOCROLES, behind a role census.
+- In a field — the date, the abstract, the keywords, the classification, a publication note, a creator's entry — such
+  a note is an inline `span.ltx_note_unmarked` (a markless `\footnotetext` in the abstract, 2506.06941). Not in a title:
+  `ltx:title`, `ltx:subtitle` and `ltx:toctitle` are also a section's, a theorem's or a float's, whose notes are body
+  notes (1110.0973, 1212.5729, 2406.09922, 2512.05521 and the repro `fm_note_in_a_heading_keeps_its_dagger` keep
+  Perl's note in the heading).
+- `LaTeXML.css` sets every `ltx_note_unmarked` holding no picture as a line of its own, 90 % (the creators' rule of
+  #990, unscoped), except inside a paragraph, where it stays inline (`.ltx_p > .ltx_note_unmarked`: a field note
+  mid-sentence must not split it, revINVDAGb S1). An icml symbol with a TeX special (`\%`, `\#`) prints in the name, not
+  as a mark-only note (re-tokenized it lost a creator, revINVDAGb B1; no such symbol in ~1,000 sampled uses).
+- icml (`icml_support_sty.rs`): the notice's markers print their dagger as `\textdagger`, as the papers' `\dag`
+  (`\icmlProjectLead`, `\icmlEqualSeniorContribution`, `\icmlEqualContributionAndSenior`, `\airesident`; a `\char` of
+  U+2020 printed nothing: 2402.05011);
+  `\icmlEqualContribution` is `\textsuperscript{*}Equal contribution`, as every
+  icml20xx.sty from 2017 prints it (icml2026.sty:502); `\icmlsetsymbol{name}{sym}` also defines the real
+  `\@icmlsymbol<name>` (:465-467), and `\icmlauthor{name}{labels}` gives each label naming one a mark-only note of the
+  creator (`\lx@annotate@frontmatter{ltx:creator}{ltx:note}[role=footnotemark,mark=…]`, as acmart's
+  `\authornotemark`), the symbol icml2026.sty:446-458 prints after the name. Not a superscript in the name: the
+  creator's `fuzzy:` label is its personname's text, and `\icmlcorrespondingauthor{Xiaosen Wang}` then went to the
+  block where another author shares the surname (1904.07793, 2306.11128). The mark is the symbol's printed text
+  (`printed_label_pieces`: `$^\dagger$` prints †, 2106.04060); a symbol printing no one mark prints in the name.
+**Witnesses.** 2602.04557 (icml2026's notice "*Equal contribution", `†` before), 2405.13379 and 2603.01467
+(Interspeech's `\address`/`\email` notes), 2506.06941 (a `\footnotetext` in the abstract under `\fnsymbol`, the counter 0:
+pdflatex prints no mark), 2402.05011 (icml's "†Project lead").
+**Guards**: `perfect_kernel_batchinvdag::{an_unmarked_document_level_note_is_a_block_line,
+an_unmarked_note_in_a_field_is_inline, a_date_note_and_an_abstract_thanks_invent_no_glyph,
+a_document_level_note_shows_once_where_the_pdf_prints_it, a_note_in_a_heading_keeps_perls_note,
+icml_notice_daggers_print}`.
+
+### 1064. A label authblk prints on a name that no `\affil` explains shows on the name as its mark (DG 2026-11-16; INVDAG)
+
+**Rule.** #1059's "every unlinked name mark shows": authblk prints every label of `\author[1,*,§]` after the name
+(`\AB@authnote`, authblk.sty:120-133); one no `\affil` line prints shows on its name as a mark-only note, its glyph the
+one printed, and costs no Warning. Only a label no piece prints alone is placed nowhere and counted.
+**Perl.** authblk.sty.ltxml requests the labels as annotations; one no entry answers is dropped silently.
+**Rust.** authblk's `\author[…]` records each label piece printing one mark (`printed_label_pieces`), by its spelling in
+the call; at `\maketitle` `count_lost_labels` compares the names' and the lines' labels as printed and declares each
+piece no line's label explains, spelling and mark (`declare_unexplained_name_labels`); a label no piece of one word
+prints alone (`$^{2,3}$`, which the writer parts at its comma; `\author[1 2]`, 1909.01989) it counts
+(`unanswered_mark_lost`). The writer requests the declared mark for a class mark (`MarkBy::Class`) of a creator whose
+block's conventions say its labels print (`Policy::labels_print`, declared by authblk), and `insert::settle_name_marks`
+shows it as a binding's request (its `_answers` and the entries' labels decide), the pure-name pass setting it after
+the name as a mark-only note: `§`, `\S`, `$\dagger$`, a document's macro printing one; a line's
+leading mark placed apart from a name printing it leaves that name's mark shown, linked to its note (2606.17809's
+`\affil[ ]{\textsuperscript{\textdagger}Contributed equally…}`: Csabai's note, Pollner's `†` shown, its Warning gone; the
+block's note in the repro `authblk_label_legend_line_marks_show`). The writer compares spellings without braces and
+spaces (the reading's request of `\textsuperscript{\textdagger}` lost its closing brace). A label a line's label
+explains that the reading places elsewhere (`\affil[$\dag$]{…}` under `\author[$\dag$]`, its affiliation the block's:
+1604.01848, 1406.4648, 2201.10988, 2408.08006, 2606.27030, 2609.08556) shows no mark, as before.
+**Residual.** The shown mark follows the name before the notes the labels answer ("Ann Able§,*" where pdflatex prints
+"1,*,§").
+**Witnesses.** 2606.00446 (`\author[1,*,§]{Jared Benson}`, its `§` legend in `\date`: 1 Warning before, 0 now),
+2309.17420 (`\affil[1]` given twice, the names' 2 shown), 2606.17809.
+**Guards**: `perfect_kernel_batchinvdag::an_authblk_label_no_affil_explains_shows_on_its_name`,
+`perfect_kernel_batchshmark::a_class_label_no_entry_answers_shows_on_its_name`, the FMRG row
+`fmmarks_authblk_double_star_label_and_date_note_red` (`perfect_kernel_batchfmmarks`).
+
+### 1065. → Bindings beyond Perl's tree: achemso.cls (`achemso_cls.rs`)
+
 ---
 
 ## TeX-source fidelity family (TEXSRC)
@@ -20376,6 +20496,7 @@ until they move into the binding module's `//!` doc comment (a code PR; this PR 
 | fcs.cls, dgruyter.sty | `fcs_cls.rs`, `dgruyter_sty.rs` | fcs's and dgruyter's `\author*[labels]` mark the corresponding author and request its labelled affiliations (Perl: no fcs or dgruyter author binding, the authors mangled) | #905 |
 | just.cls | `cpc_hepnp_cls.rs` | just.cls (Chinese Physics C's cpc-hepnp.cls under the PhiPsi15 name) has a binding: its `\email` is the author's e-mail and its `\address` after `\maketitle` the names' affiliations; cpc-hepnp itself waits for 91c (Perl: no binding; through OmniBus the list is one address of the last author) | #912 |
 | keytheorems.sty | `keytheorems_sty.rs` | A tcolorbox keytheorem's head is its theorem's `ltx:title` (pdflatex: the box's title) | #975 |
+| achemso.cls | `achemso_cls.rs` | achemso's affiliations, e-mails, phones, faxes and alternative affiliations are under the authors the class numbers them for (Perl: no binding; OmniBus) | #1065 |
 
 #### 77. `silence.sty` and the bundled `arxiv.sty` family get bindings Perl does not have
 
@@ -21858,3 +21979,47 @@ keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for
 binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
 the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
 `perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.
+
+#### 1065. achemso's affiliations, e-mails, phones, faxes and alternative affiliations are under the authors the class numbers them for (Perl: no binding; OmniBus)
+
+achemso.cls (TL 2025) numbers its affiliations as they come: each `\author` waits for the next number
+(`\@author@affil@<n>` = `\acs@affil@cnt`+1, :336-345), so an `\affiliation` is every author's given since the counter
+last stepped, and its text repeating an earlier one's is that number (`\acs@affil@ifdup`/`\acs@affil@swap`, :359-427).
+An `\affiliation` right after another reaches no author: a new text is listed with a mark no name carries, a repeated
+one is nothing. `\alsoaffiliation` adds a number to the last author (:428-467); a new one steps the counter, so it is
+also every waiting author's. `\altaffiliation` is the last author's, a second one replacing the first (`\xdef`,
+:468-485); `\email`, `\phone` and `\fax` are the last author's, a second one replacing the first (`\gdef`, :513-539),
+and an author's phone and fax print only beside its e-mail (`\acs@number@list`, :971-1001); an identical repeat replaces
+nothing (2203.15022 gives its `\email` twice; revACHEMSOb B1). They are `\@onlypreamble` (:346, :521, :530, :539): in the
+body pdflatex errs and prints the text inline, and the binding attaches them at once (no Error raised; row R
+ACHEMSO-BODY). One before any `\author` is
+the class's Warning and is dropped (:376-378). The `[short]` form is stored in `\@affil@<n>` for `\acs@affil@list`,
+which nothing in the class calls: only the full text prints.
+
+**Rust.** The binding wrote every affiliation as a detached `ltx:note` (48 of 48 creators of the 3,000-paper dev sample
+lost theirs). Now `\author` is the API's per-author block (`\lx@add@authors@append`, as revtex's and amsart's), and the
+binding keeps the class's numbering (`\acs@affil@ifdup`, `\acs@alsoaffil@find`, `\acs@altaffil@ifdup` as the class has
+them, and a count of waiting authors) to hand each piece to the API with the authors it reaches:
+`\lx@add@affiliation[annotate=new]` for the waiting authors (`annotate=<n>`, the last n, where one of them already holds
+an `\alsoaffiliation`), `annotate=1` for an `\alsoaffiliation` of the last author (not a second copy of one it has),
+and, at the next `\author` or `\begin{document}`, the last author's last `\altaffiliation`, `\email`, `\phone` and
+`\fax` in that order (`\lx@add@altaffiliation`, `\lx@add@email`, `\lx@add@contact[role=phone]`, `[role=fax]`; the order
+the PDF prints them after the affiliations, FIDELITY_CHARTER R8), a phone or fax only to an author with an e-mail
+(revACHEMSO S2). Each piece is one contact per author, even where the PDF prints its mark twice (`Bob Baker,†,†`). A
+piece no author holds at `\begin{document}` (an affiliation that reached no author and that no later author repeats, a
+replaced `\altaffiliation`, once however many authors replaced it: revACHEMSO B1) is a detached `ltx:note`, as the class
+lists it with a mark no name carries; a replaced `\email`, `\phone` or `\fax`, and a phone or fax of an author with no
+e-mail, which the class does not print, and a piece before any `\author`, the class's Warning, are kept as detached
+notes (FIDELITY_CHARTER §2). The binding states only the class's rule; the engine places the contacts and splits an
+`\email` list by the authors its addresses spell (the charter's ownership by evidence; 2406.15944). **Open (row R
+ACHEMSO-CALLS):** `annotate=1` is the last creator, so an `\alsoaffiliation` after an `\author` naming two people
+(`\author{Ann Able and Bob Baker}`, one author of the class) reaches the last name only; no census paper has the shape.
+**Open (row R ACHEMSO-ORDER):** a waiting author's pieces given before the next `\author` precede the affiliation that
+reaches it after it (`\author{A}\altaffiliation{P}\author{B}\affiliation{X}`: A's "P" before "X"), where the PDF lists X
+first (revACHEMSO q14): the API writes to the last author only. Witnesses 2605.10968, 2306.05209 (affiliations detached
+before), 2107.00078, 2512.17659, 2510.00865 (an affiliation right after another), 1910.14165 (a second
+`\altaffiliation`). **Guards**: the `fmmarks_achemso_*` rows of
+`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks` (and its `_red` twin),
+`perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes` (with
+`fmmarks_achemso_replaced_altaffiliation_is_one_note`, `fmmarks_achemso_second_email_phone_fax_replace_the_first`);
+`perfect_kernel_batch65m::file_arguments_are_not_typeset` (the e-mail repro's affiliation is its author's).

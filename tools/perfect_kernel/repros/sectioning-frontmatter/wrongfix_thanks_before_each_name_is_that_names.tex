@@ -1,0 +1,14 @@
+% mechanism: a note before a name is that name's under the block's edge proof (`resolver::mark_ledger`): its first
+%   note precedes its first name and none follows its last (DG 2026-11-17: otherwise the default, the name before).
+%   article.cls:206 `\rlap`s the mark into the space before the next name
+% witness: 2406.12338 (article, `\author{\thanks{…}Carla Schenker, \thanks{…}Xiulin Wang, …}`)
+% oracle:  pdflatex 0 errors: "∗Alice One, †Bob Two, ‡Carol Three", footnotes "∗ Alice note." "† Bob note." "‡ Carol note."
+% engines: perl: one creator, all three notes. rust 139d1d2fa08: each name given the next name's note (Alice two, Carol none)
+% expect:  0 errors 0 Warnings; Alice One thanks[*]=Alice note.; Bob Two thanks[†]=Bob note.; Carol Three
+%   thanks[‡]=Carol note.
+% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::a_note_before_a_name_is_that_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{\thanks{Alice note.}Alice One, \thanks{Bob note.}Bob Two, \thanks{Carol note.}Carol Three}
+\begin{document}\maketitle\end{document}

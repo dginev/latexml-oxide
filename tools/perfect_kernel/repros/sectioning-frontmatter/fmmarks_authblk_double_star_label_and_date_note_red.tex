@@ -12,11 +12,10 @@
 %   work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors contributed equally to this work. |
 %   affiliation=Univ A, Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab B, City
 %   (guard canon: name ; note role[mark]=text, sorted | contacts)
-% moves:    NEITHER: reported to main (the `§` label no `\affil` answers is dropped with no Warning)
-% status:   RED (NEITHER: no recorded gap, reported to main) (INTREC 3af622aca64;
-%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier_red); MARKSAFE counts the lost `§` (1
-%   Warning, `authblk_sty::count_lost_labels`; perfect_kernel_batchshmark::a_class_label_no_entry_answers_is_counted),
-%   the mark-only note still RED
+% moves:    MARKSAFE counted the lost `§` (1 Warning); INVDAG (OD #1064) shows it on the name, a mark-only note, no
+%   Warning (perfect_kernel_batchshmark::a_class_label_no_entry_answers_shows_on_its_name); the page's mark order stays
+%   row R MARKORDER ("Ann Able ; § plain ; *→note", pdflatex "1,*,§")
+% status:   GREEN (XML; the page layer RED: MARKORDER, perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier_red)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{authblk}

@@ -1,0 +1,22 @@
+% mechanism: a thanks note led by `\IEEEauthorrefmark{1}` whose names print `\IEEEauthorrefmark{1}` is marked ∗ on each
+%   copy. The reading links the names' reference mark to the note (its `item:` label) and drops it from the names, so the
+%   mark rule (`insert::mark_creator_notes`: a symbol at a note's head is its mark only where its creator shows it) no
+%   longer sees it: the note keeps "∗" as its text, unmarked (WRONGFIX; R2Ac marked it by the any-footnote-symbol arm)
+% witness: 2603.19188 (IEEEtran journal, `Huiwen Yan\IEEEauthorrefmark{1} and Mushuang Liu\IEEEauthorrefmark{1}` over
+%   `\thanks{\IEEEauthorrefmark{1} H. Yan and M. Liu are with …}`); 2405.05531 (the note's mark on no name)
+% oracle:  pdflatex 0 errors: "Ann Able∗ and Bob Baker∗"; footnote "∗ A. Able and B. Baker are with Univ A." (IEEEtran's
+%   `\thanks` prints no mark of its own)
+% engines: rust 97dcff7ca34 (WRONGFIX), WRONGFIXb: the note unmarked, "∗" its text, on both creators; R2Ac: mark ∗ on both
+% expect:  0 errors 0 Warnings; Ann Able and Bob Baker each thanks[∗]= the note
+% status:  RED (WRONGFIX, WRONGFIXb): a glyph loss, the note still each name's; no guard (row R, WRONGFIXb's report)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able\IEEEauthorrefmark{1} and Bob Baker\IEEEauthorrefmark{1}
+
+\thanks{\IEEEauthorrefmark{1} A. Able and B. Baker are with Univ A.}
+}
+\maketitle
+x
+\end{document}

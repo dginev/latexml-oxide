@@ -53,11 +53,11 @@ use crate::{
           ApiCall, AuthorBlock, MarkLedEntry, Unsaid, annotated_parent, content_text,
           field_stamped, symbol,
         },
-        policy::TitleMarks,
+        policy::{self, TitleMarks},
         reading::{UNFOLD_LEVELS, unfold_held_names},
         rehearsal::{Rehearsal, rehearse},
         resolver::{
-          BlockCheck, LostInk, MarkLedger, NameMark, RCreator, RuleDrop, Side, Written,
+          BlockCheck, LostInk, MarkBy, MarkLedger, NameMark, RCreator, RuleDrop, Side, Written,
           check_blocks, contact_parts, creator_call, creator_call_level, creator_call_pieces,
           is_creator_call, labelseq_pieces, merged_names, note_shows, own_email_label,
           printed_email_label, read_events, shares_the_row, split_pieces, split_pieces_as,
@@ -1030,6 +1030,8 @@ fn block_names(
       *printed_at.entry(e.span).or_default() += 1;
     }
     type Taken = (Vec<Token>, (usize, usize), Vec<(usize, usize)>, Vec<usize>);
+    // (what the names before wrote, their runs and the pieces past them: a later name's run takes none of it again)
+    let mut written_before: Vec<(usize, usize)> = Vec::new();
     let mut name_tokens = |from: usize, to: usize| -> Option<Taken> {
       // (several events of one span: a macro the reading did not unfold printed them, one with parameters or a class's
       // (`reading::unfold_held_names`); `\\author{\\authorBlock}`, 2604.09547, is unfolded since AUT1)
@@ -1114,7 +1116,7 @@ fn block_names(
         |e: &Event| matches!(e.kind, EventKind::Sep(_)) && e.role.as_deref() == Some("math");
       let past_note = |e: &&Event| beside(e) || e.kind == EventKind::Note || math_sep(e);
       // (and past the marks and notes the mark ledger gives this name past spacing, up to those it gives the next name
-      // (`resolver::mark_ledger`: the nearer name by the glue printed, a tie the next's — DG rulings 2026-11-16): Perl's
+      // (`resolver::mark_ledger`: the name before, save a line's start or the block's edge proof — DG 2026-11-17): Perl's
       // personname keeps them — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali Farhadi \ \footnotemark[3]`,
       // 1911.13299; `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`, 2412.20504. One on
       // the line a `\\` opens is no name's; one in a formula is written with the formula whole, a note in it twice —
@@ -1152,10 +1154,25 @@ fn block_names(
         .collect();
       let first_after = next_pieces.first().copied().unwrap_or(read.len());
       // (cut from this name's run where its balance took them: `{Ann Able \qquad \footnotemark[2]} \ \textsc{Bob Baker}`)
-      let cuts: Vec<(usize, usize)> = next_pieces
+      let mut cuts: Vec<(usize, usize)> = next_pieces
         .iter()
         .filter_map(|&at| mark_run(&read[at]))
         .collect();
+      // (and what the name before wrote inside this name's span: a piece glued to it, `Ann Able \quad
+      // \footnotemark[2]Bob Baker`, Ann's by the ledger's default (DG 2026-11-17), the span running into Bob's)
+      if let Some((s, t)) = found[from]
+        .1
+        .span
+        .zip(found[to].1.span)
+        .and_then(|(a, b)| Some((at(a.0)?, at(b.1)?)))
+      {
+        cuts.extend(
+          written_before
+            .iter()
+            .map(|&(cs, ct)| (cs.max(s), ct.min(t)))
+            .filter(|&(cs, ct)| cs < ct),
+        );
+      }
       let glued_end = (after_name..first_after)
         .find(|&i| !past_note(&&read[i]))
         .unwrap_or(first_after);
@@ -1413,6 +1430,8 @@ fn block_names(
       } else {
         out.extend(apart);
       }
+      written_before.push((run_from, run_to.max(written_to)));
+      written_before.extend(apart_runs.iter().copied());
       Some((out, (run_from, run_to), apart_runs, stepped))
     };
     // (each name the Name events from the last one on spell, joined)
@@ -6315,17 +6334,29 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           .get_or_init(|| marks.map_or_else(Vec::new, |marks| marks.unwritten_after(&name_runs, i)))
           .contains(request)
     };
-    for mark in c.marks.iter().filter(|mark| {
+    // (a label its binding prints as written after the name, authblk's `\author[1,*,§]`: one the binding found no line
+    // explains requests the mark it prints, which `insert::settle_name_marks` shows on the name unless an entry answers
+    // it — `Policy::labels_print`, `policy::declare_unexplained_name_labels`; 2606.00446, 2606.17809)
+    let labels_print = with_ledger(|ledger| match ledger.entries().get(c.source) {
+      Some(Entry::Author(block)) => policy::policy_for(&block.binding, block.hook).labels_print,
+      _ => false,
+    });
+    for mark in c.marks.iter().filter(|mark| mark.requests()) {
       let request = &mark.label;
-      mark.requests()
-        && (!keeps || own_inst(request) || unprinted(request))
-        && !own.contains(request)
-    }) {
-      let request = &mark.label;
-      // (a key's value is tokenized: a request spelled with a command, `\\author[a,b\\thanks{…}]`'s, 2207.11842, is no label)
+      if labels_print
+        && mark.by == MarkBy::Class
+        && let Some(glyph) = policy::unexplained_name_label(request)
+      {
+        annotations[i].extend(clean_frontmatter_labels(&glyph, "affiliation"));
+        continue;
+      }
+      if (keeps && !own_inst(request) && !unprinted(request)) || own.contains(request) {
+        continue;
+      }
+      // (a key's value is tokenized: a request spelled with a command, `\author[a,b\thanks{…}]`'s, 2207.11842, is no label)
       if !answered.contains(request) && !no_label(request) {
         let labels = clean_frontmatter_labels(request, "affiliation");
-        // (its mark, left where the name printed it — not an `\\inst` the name's own tokens request, which leaves its own)
+        // (its mark, left where the name printed it — not an `\inst` the name's own tokens request, which leaves its own)
         if !own_inst(request) {
           left_mark(&mut marks_left[i], mark, &labels);
         }

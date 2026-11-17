@@ -1,0 +1,26 @@
+% mechanism: a note with no mark in a title (`ltx:title` is a section's, a theorem's, the document's) keeps Perl's
+%   rendering: the field rule of OD #1063 (an unmarked note's text inline) reaches no title, so the headings read as
+%   the base's
+% witness:  1110.0973 (elsart3p `\thanksref` in the title), 1212.5729 (`\title{…\let\thefootnote\relax\footnotetext{…}}`),
+%   2406.09922, 2512.05521; the review probe p2 (a section's and a theorem's `\blfootnote`)
+% oracle:   pdflatex 0 errors; "A Title", "Ann Able", "1 Results", "Theorem 1 (Main) A statement.", the
+%   footnotes "We thank the referees.", "Joint work with C. Doe.", "A body unmarked note." with no mark
+% engines:  rust INVDAG = the note's text a span inside the h1, the h2, the theorem's h6 ("(Main / Due to Euler. / )")
+%   (2026-11-17)
+% expect:   0 errors, 0 warnings; no ltx_note_unmarked on the page; every heading's note an ltx_note with its mark
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\newcommand\blfootnote[1]{{\renewcommand\thefootnote{}\footnote{#1}\addtocounter{footnote}{-1}}}
+\newtheorem{thm}{Theorem}
+\title{A Title\let\thefootnote\relax\footnotetext{We thank the referees.}}
+\author{Ann Able}
+\date{}
+\begin{document}
+\maketitle
+\section{Results\protect\blfootnote{Joint work with C. Doe.}}
+Some text.\blfootnote{A body unmarked note.}
+\begin{thm}[Main\blfootnote{Due to Euler.}]
+A statement.
+\end{thm}
+\end{document}
