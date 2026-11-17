@@ -1,4 +1,5 @@
 //! Stub for sn-jnl.cls (Springer Nature journal class).
+use latexml_engine::base_utilities::MARK_FROM_COUNTER;
 use latexml_package::prelude::*;
 
 use crate::shipped_class::{
@@ -405,11 +406,20 @@ LoadDefinitions!({
   );
   DefMacro!("\\lx@sn@print@notes", sub[()] { Ok(print_notes()) });
   AddToMacro!("\\lx@maketitle@begin", "\\lx@sn@print@notes");
-  // (with no `\maketitle` pdflatex prints no title block: the notes given are the document's, unmarked)
+  // (with no `\maketitle` pdflatex prints no title block: the notes given are the document's, unmarked, queued at the
+  // document's end, ahead of the kernel's last fallback flush; not at a section, which a later `\maketitle` follows)
   DefMacro!("\\lx@sn@fallback@notes", sub[()] { Ok(fallback_notes()) });
+  unshift_value("@at@end@document", vec![Tokens!(T_CS!(
+    "\\lx@sn@fallback@notes"
+  ))]);
+  // (a section's fallback flush digests the names written so far: a note after it marks none of them)
+  DefPrimitive!("\\lx@sn@names@flushed", sub[()] {
+    assign_value(FLUSHED, true, Scope::Global);
+    Ok(Vec::new())
+  });
   RawTeX!(
     r"\let\lx@sn@kernel@fallback\lx@frontmatter@fallback
-\def\lx@frontmatter@fallback{\lx@sn@fallback@notes\lx@sn@kernel@fallback}"
+\def\lx@frontmatter@fallback{\lx@sn@names@flushed\lx@sn@kernel@fallback}"
   );
   // The switches the notes set, which papers set themselves (`\equalconttrue`, 2 papers), and
   // `\presentaddresstxt{label}`, the heading of `\presentaddress` (2 papers; 2603.28334's copy :572-576).
@@ -519,8 +529,8 @@ const STARRED_NAMES: &str = "lx@sn@starred@names";
 const CORRESPONDING_EMAIL: &str = "lx@sn@corresponding@email";
 /// Whether a name holds an `\email`, which runs as the names print, under the last `\author`'s star.
 const NAME_EMAIL: &str = "lx@sn@name@email";
-/// Whether the kernel's fallback flush has queued the notes given (`fallback_notes`).
-const FALLBACK_QUEUED: &str = "lx@sn@fallback@queued";
+/// Whether the kernel's fallback flush (a section before `\maketitle`) has digested the names since the last `\author`.
+const FLUSHED: &str = "lx@sn@flushed";
 /// Whether an `\affil[*]` line explains the starred names' `*`.
 const AFFIL_STAR: &str = "lx@sn@affil@star";
 /// The corresponding line's words, the copy's.
@@ -559,6 +569,7 @@ fn author_call(starred: bool, labels: Option<Tokens>, name: &Tokens) -> Tokens {
   assign_value(AUTHORS, n, Scope::Global);
   assign_value(STARRED, starred, Scope::Global);
   assign_value(PRINTED, false, Scope::Global);
+  assign_value(FLUSHED, false, Scope::Global);
   let mut annotations = labels.map(Tokens::unlist).unwrap_or_default();
   assign_value(LAST_LABELLED, !annotations.is_empty(), Scope::Global);
   let name = name.unlist_ref();
@@ -658,8 +669,9 @@ fn note_argument(command: &str, rest: &[Token]) -> Vec<Token> {
 }
 
 /// An author note's text stored and its switch set, as the class's command does; the names written so far end with
-/// its request (the class's `\g@addto@macro\artauthors{$^{\dagger}$}`). Before any name, none; inside a name, run as
-/// the names print, its text already queued (`inner_notes`); else, after the print, the document's note.
+/// its request (the class's `\g@addto@macro\artauthors{$^{\dagger}$}`). Before any name, or after a section digested
+/// them, none; inside a name, run as the names print, its text already queued (`inner_notes`); else, after the print,
+/// the document's note.
 fn author_note(command: &str, text: Tokens) -> Tokens {
   let Some(&(_, store, switch, role)) = AUTHOR_NOTES.iter().find(|note| note.0 == command) else {
     return Tokens::new(Vec::new());
@@ -681,7 +693,8 @@ fn author_note(command: &str, text: Tokens) -> Tokens {
   call.push(T_END!());
   call.extend(tokenized(&s!("\\global\\{switch}true")));
   let n = lookup_int(AUTHORS);
-  if n > 0 && lookup_bool(&s!("lx@sn@marked@{command}")) {
+  // (after a section's flush the names are digested: the note is the document's, unmarked, revSNJNLb B2)
+  if n > 0 && lookup_bool(&s!("lx@sn@marked@{command}")) && !lookup_bool(FLUSHED) {
     assign_value(&s!("lx@sn@requested@{command}"), true, Scope::Global);
     call.extend([
       T_CS!("\\g@addto@macro"),
@@ -700,8 +713,8 @@ fn author_note(command: &str, text: Tokens) -> Tokens {
 /// names carrying it request. The starred names (label `*`) share the correspondent note where the class prints the
 /// line (an `\email` after a starred name, or in a name printed under a starred last author; :535-546), marked `*` where
 /// the last `\author` has labels (:498, :510); a printed `*` that neither it nor an `\affil[*]` line explains shows on
-/// the name (`declare_unexplained_name_labels`, 2509.19318). Then each author note given, with its last text and the
-/// glyph the copy appends; one given before any name is the document's.
+/// the name (`declare_unexplained_name_labels`, 2509.19318), an unprinted one nothing (2606.13079). Then each author note
+/// given, with its last text and the glyph the copy appends; one given before any name is the document's.
 fn print_notes() -> Tokens {
   let mut tex = String::new();
   let starred = lookup_int(STARRED_NAMES);
@@ -715,10 +728,12 @@ fn print_notes() -> Tokens {
       "*",
       "correspondent",
       star_prints.then_some("*"),
+      false,
       &text,
     ));
-  } else if starred > 0 && star_prints && !lookup_bool(AFFIL_STAR) {
-    shown.push((s!("*"), s!("*")));
+  } else if starred > 0 && !lookup_bool(AFFIL_STAR) {
+    // (one the class prints no `*` for, under an unlabelled last `\author` or a copy's `{}`, prints nothing: 2606.13079)
+    shown.push((s!("*"), if star_prints { s!("*") } else { s!("") }));
   }
   declare_unexplained_name_labels(&shown);
   for &(command, store, _, role) in &AUTHOR_NOTES {
@@ -739,18 +754,20 @@ fn print_notes() -> Tokens {
       s!("\\{store}")
     };
     if requested {
+      // (its command prints the glyph after the names: no glyph typed on a name, nor the star's, is it — revSNJNLb S3)
       let glyph = note_glyph(command);
       tex.push_str(&creators_note(
         &s!("sn:{command}"),
         role,
         glyph.as_deref(),
+        true,
         &text,
       ));
     } else {
       tex.push_str(&s!("\\@add@frontmatter{{ltx:note}}[role={role}]{{{text}}}"));
     }
   }
-  for key in [CORRESPONDING_EMAIL, NAME_EMAIL, AFFIL_STAR, FALLBACK_QUEUED] {
+  for key in [CORRESPONDING_EMAIL, NAME_EMAIL, AFFIL_STAR] {
     assign_value(key, false, Scope::Global);
   }
   assign_value(STARRED_NAMES, 0i64, Scope::Global);
@@ -759,26 +776,38 @@ fn print_notes() -> Tokens {
 }
 
 /// The creators' note `text` labelled `label`, which the names requesting it carry (`\lx@annotate@frontmatter`), with
-/// the `mark` it prints, if any.
-fn creators_note(label: &str, role: &str, mark: Option<&str>, text: &str) -> String {
+/// the `mark` it prints, if any, flagged as its command's (`by_command`: `MARK_FROM_COUNTER`).
+fn creators_note(
+  label: &str,
+  role: &str,
+  mark: Option<&str>,
+  by_command: bool,
+  text: &str,
+) -> String {
   match mark {
-    Some(mark) => s!(
-      "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[label={{{label}}},role={role},mark={mark}]{{{text}}}"
-    ),
+    Some(mark) => {
+      let flag = if by_command {
+        s!(",{MARK_FROM_COUNTER}=true")
+      } else {
+        String::new()
+      };
+      s!(
+        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[label={{{label}}},role={role},mark={{{mark}}}{flag}]{{{text}}}"
+      )
+    },
     None => s!(
       "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[label={{{label}}},role={role}]{{{text}}}"
     ),
   }
 }
 
-/// With no `\maketitle` yet, at the kernel's fallback flush (a section, the document's end), pdflatex prints no title
-/// block: each note given is the document's, unmarked, queued once. The record stays for a `\maketitle` after a starred
-/// section (2510.03878's `\subsection*` in its `\abstract`), whose flush supersedes the fallback's.
+/// With no `\maketitle` by the document's end, pdflatex prints no title block: each note given is the document's,
+/// unmarked, queued once. Not at a section's fallback flush, which a `\maketitle` may follow (2510.03878's
+/// `\subsection*` in its `\abstract`): that queues the notes, and the section's copy printed them twice (revSNJNLb B2).
 fn fallback_notes() -> Tokens {
-  if lookup_bool(PRINTED) || lookup_bool(FALLBACK_QUEUED) {
+  if lookup_bool(PRINTED) {
     return Tokens::new(Vec::new());
   }
-  assign_value(FALLBACK_QUEUED, true, Scope::Global);
   let mut tex = String::new();
   for &(command, store, _, role) in &AUTHOR_NOTES {
     let inside = lookup_int(&s!("lx@sn@inside@{command}")) > 0;
@@ -800,6 +829,12 @@ fn note_glyph(command: &str) -> Option<String> {
   let mark = lookup_string(&s!("lx@sn@mark@{command}"));
   let pieces = printed_label_pieces(&Tokens::new(tokenized(&mark))).unwrap_or_default();
   if let [glyph] = pieces.as_slice() {
+    // (the pieces key every asterisk `*`: a math one, or `\textasteriskcentered`, prints ∗, which the starred names'
+    // text `*` is not — 2501.01157's `$^{*}$`, its "1*∗" two marks, revSNJNLb S3)
+    let math = ["$", "\\ast", "\\textasteriskcentered"];
+    if glyph == "*" && math.iter().any(|m| mark.contains(m)) {
+      return Some(s!("\u{2217}"));
+    }
     return Some(glyph.clone());
   }
   Warn!(

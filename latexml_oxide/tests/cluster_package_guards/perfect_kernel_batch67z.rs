@@ -454,6 +454,96 @@ fn snjnl_notes_marking_no_name_are_the_documents() {
       assert!(xml.contains(&element), "{element}: {xml}");
     }
     assert_eq!(xml.matches("<note ").count(), 1, "{xml}");
+    assert_eq!(xml.matches(text).count(), 1, "{text}: {xml}");
+  }
+}
+
+/// sn-jnl's notes with a section before `\maketitle`, whose fallback flush digests the names: the class prints the notes
+/// once, at `\maketitle` (2412.01641's sn-jnl.cls:749-756), so the binding queues them there alone, never at the section
+/// (revSNJNLb B2: the section's copy printed each twice; 2510.03878's `\subsection*` in its `\abstract`). A note given
+/// after the section marks no name the section wrote: the document's, unmarked (row R SNJNLAFTERSEC).
+#[test]
+fn snjnl_notes_before_a_section_and_maketitle_print_once() {
+  let ann_star = r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email">ann@a.org</contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note mark="*" role="correspondent" xml:id="id1">Corresponding author(s).</note>"#;
+  let bob = r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#;
+  for (repro, elements, text, notes) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/snjnl_note_before_section_and_maketitle_prints_once.tex"
+      ),
+      vec![format!(
+        r#"{ann_star} <note mark="†" role="equal-contributors" xml:id="id2">Outer.</note> </creator> {bob}"#
+      )],
+      "Outer.",
+      2,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/snjnl_note_inside_a_name_before_section_and_maketitle_prints_once.tex"
+      ),
+      vec![
+        format!(
+          r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> {bob}"#
+        ),
+        format!(
+          r#"</abstract> <note role="equal-contributors" xml:id="id1">Inside only.</note> <section"#
+        ),
+      ],
+      "Inside only.",
+      1,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/snjnl_note_between_section_and_maketitle_red.tex"
+      ),
+      vec![
+        format!("{ann_star} </creator> {bob}"),
+        format!(
+          r#"</abstract> <note role="equal-contributors" xml:id="id2">Between.</note> <section"#
+        ),
+      ],
+      "Between.",
+      2,
+    ),
+  ] {
+    let (log, xml) = convert_with(repro, Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let xml = squash(&xml);
+    for element in elements {
+      assert!(xml.contains(&element), "{element}: {xml}");
+    }
+    assert_eq!(xml.matches(text).count(), 1, "{text}: {xml}");
+    assert_eq!(xml.matches("<note ").count(), notes, "{xml}");
+  }
+}
+
+/// 2501.01157's copy appends a math `$^{*}$` for `\equalcont` (:587), printing ∗, beside the starred names' text `*`
+/// (:513): two marks of two notes, which never answer each other (revSNJNLb S3). With a corresponding line Ann carries
+/// both notes; with none her `*` shows (written ∗: row R SNJNLSTARGLYPH), her note's ∗ answering it no more.
+#[test]
+fn snjnl_math_star_note_is_not_the_class_star() {
+  let copy = (
+    "sn-jnl.cls",
+    include_str!("../../../tools/perfect_kernel/repros/class-bindings/snjnl_v2501/sn-jnl.cls"),
+  );
+  for (repro, creators) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/class-bindings/snjnl_v2501/snjnl_math_star_note_beside_the_class_star.tex"
+      ),
+      r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email">ann@a.org</contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note mark="*" role="correspondent" xml:id="id1">Corresponding author(s).</note> <note mark="∗" role="equal-contributors" xml:id="id2">Equal work.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email">bob@b.org</contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note idref="id2" mark="∗" role="equal-contributors" xml:id="id3">Equal work.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Email: " role="email">cat@c.org</contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note idref="id1" mark="*" role="correspondent" xml:id="id4">Corresponding author(s).</note> </creator>"#,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/class-bindings/snjnl_v2501/snjnl_math_star_note_beside_a_shown_star.tex"
+      ),
+      r#"<creator role="author"> <personname>Ann Able</personname> <note mark="∗" role="footnotemark" xml:id="id2"/> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note mark="∗" role="equal-contributors" xml:id="id1">Equal work.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note idref="id1" mark="∗" role="equal-contributors" xml:id="id3">Equal work.</note> </creator>"#,
+    ),
+  ] {
+    let (log, xml) = convert_files_with(repro, &[copy], Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let xml = squash(&xml);
+    assert!(xml.contains(creators), "{creators}: {xml}");
   }
 }
 

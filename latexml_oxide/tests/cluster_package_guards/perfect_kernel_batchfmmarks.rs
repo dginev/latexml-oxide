@@ -4606,6 +4606,113 @@ const CLASS: &[Row] = &[
     ],
     page_moves: r#""#,
   },
+  // (an unlabelled last `\author` prints no `*`: a starred name's unanswered `*` label shows nothing, 2606.13079;
+  // revSNJNLb B1)
+  Row {
+    repro:      "snjnl_unprinted_star_on_a_name_written_as_text",
+    tex:        repro!("snjnl_unprinted_star_on_a_name_written_as_text"),
+    warnings:   2,
+    creators:   &[
+      r#"Ann Able | affiliation=† Univ A"#,
+      r#"Bob Baker | affiliation=† Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_labelled_star_typed_dagger_under_unlabelled_last",
+    tex:        repro!("snjnl_labelled_star_typed_dagger_under_unlabelled_last"),
+    warnings:   1,
+    creators:   &[
+      r#"Bob Baker ; footnotemark[†]= | affiliation=Univ A"#,
+      r#"Cat Cole"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Bob Baker ; † plain"#, r#"Cat Cole"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_star_shapes_under_unlabelled_last_print_no_star",
+    tex:        repro!("snjnl_star_shapes_under_unlabelled_last_print_no_star"),
+    warnings:   2,
+    creators:   &[
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
+      r#"Cat Cole ; footnotemark[†]= | affiliation=Univ A"#,
+      r#"Dan Dorn"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; † plain"#,
+      r#"Bob Baker"#,
+      r#"Cat Cole ; † plain"#,
+      r#"Dan Dorn"#,
+    ],
+    page_moves: r#""#,
+  },
+  // (a section before `\maketitle` digests the names; the notes are queued at `\maketitle` alone, the document's end
+  // without one: revSNJNLb B2)
+  Row {
+    repro:      "snjnl_note_before_section_and_maketitle_prints_once",
+    tex:        repro!("snjnl_note_before_section_and_maketitle_prints_once"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). ; equal-contributors[†]=Outer. | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain ; † plain"#,
+      r#"Bob Baker"#,
+      r#"margin: Corresponding author(s). ; Outer."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_note_inside_a_name_before_section_and_maketitle_prints_once",
+    tex:        repro!("snjnl_note_inside_a_name_before_section_and_maketitle_prints_once"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_note_between_section_and_maketitle_red",
+    tex:        repro!("snjnl_note_between_section_and_maketitle_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker ; equal-contributors[†]=Between. | affiliation=Univ A"#,
+    ],
+    moves:      r#"row R SNJNLAFTERSEC (a note after a section's flush marks no name: the document's, unmarked, as the base)"#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; † plain"#,
+      r#"margin: Corresponding author(s). ; Between."#,
+    ],
+    page_moves: r#"row R SNJNLAFTERSEC (Bob's † not shown)"#,
+  },
+  Row {
+    repro:      "snjnl_typed_star_beside_the_class_star_red",
+    tex:        repro!("snjnl_typed_star_beside_the_class_star_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). ; footnotemark[*]= | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker ; equal-contributors[†]=Equal. ; footnotemark[†]= | affiliation=Univ A"#,
+    ],
+    moves:      r#"row R SNJNLTYPEDFOLD (a typed mark is folded into the class's identical mark on the same name: Ann's typed ∗ lost)"#,
+    page:       &[
+      r#"Ann Able ; * plain ; * plain"#,
+      r#"Bob Baker ; † plain ; †→note"#,
+      r#"margin: Corresponding author(s). ; Equal."#,
+    ],
+    page_moves: r#"row R SNJNLTYPEDFOLD (Ann's typed ∗ lost); row R MARKORDER (Bob's typed † prints before the class's)"#,
+  },
   // (a note inside a name runs last as the names print: its text the one printed, revSNJNL B2)
   Row {
     repro:      "snjnl_note_inside_a_name_text_wins",

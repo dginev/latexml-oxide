@@ -1,0 +1,23 @@
+% mechanism: two starred names with a section before `\maketitle`: the class prints one corresponding line for both
+%   (2412.01641's sn-jnl.cls:749-751); the names, digested at the section, each take a correspondent note of their own
+% witness:  2101.04281 (`\author*[1]` twice, `\subsubsection*{Purpose}` in its `\abstract` before `\maketitle`)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Pre", then "Ann Able1* and Bob Baker1*", "1 Univ A.",
+%   "*Corresponding author(s). E-mail(s): ann@a.org; bob@b.org;"
+% engines:  rust SNJNLb 2f983570f17, SNJNLc = two independent `correspondent[*]` notes (marks right)
+% expect:   0 errors 0 Warnings; one correspondent note, Bob's a copy of Ann's (`idref`)
+% status:   RED (row R SNJNLSPLIT); catalog only, no guard: the FMRG rows' layers match (a creator's notes by text, the
+%   page prints the body once), only the copies' missing `idref` shows the split
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\author*[1]{\fnm{Bob} \sur{Baker}}\email{bob@b.org}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\section*{Pre}
+\maketitle
+Text.
+\end{document}

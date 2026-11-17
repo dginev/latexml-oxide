@@ -1,0 +1,24 @@
+% mechanism: a note given inside a name runs as the names print, after the class's marks (the document's note); with
+%   a section before `\maketitle` the binding queued it at the section and again at `\maketitle`
+% witness:  review sibling of 2510.03878 (revSNJNLb B2, probe secinner)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Pre", then "Ann Able1 and Bob Baker1", "1 Univ A.",
+%   "† Inside only." (once, no name marked)
+% engines:  rust SNJNLb 2f983570f17 = "Inside only." twice at the document's level; rust SNJNLc = once
+% expect:   0 errors 0 Warnings; one document note "Inside only."
+% status:   RED (SNJNLb) -> GREEN XML, HTML (SNJNLc;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks,
+%   perfect_kernel_batch67z::snjnl_notes_before_a_section_and_maketitle_print_once)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author[1]{\fnm{Ann} \sur{Able}\equalcont{Inside only.}}
+\author[1]{\fnm{Bob} \sur{Baker}}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\section*{Pre}
+\maketitle
+Text.
+\end{document}
