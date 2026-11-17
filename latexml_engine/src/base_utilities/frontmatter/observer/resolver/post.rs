@@ -1250,7 +1250,8 @@ impl Resolver {
       let inked = || {
         self.out.creators.iter().any(|creator| {
           creator.marks.iter().any(|m| {
-            m.origin() == MarkOrigin::Inked && labels.iter().any(|l| label_matches(&m.label, l))
+            m.origin() == name_marks::MarkOrigin::Inked
+              && labels.iter().any(|l| label_matches(&m.label, l))
           })
         })
       };
