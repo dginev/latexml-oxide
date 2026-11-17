@@ -24,8 +24,11 @@ macro_rules! repro {
 /// name, none after its last: `\thanks{…}Alice One, \thanks{…}Bob Two` (2406.12338, math0606768: each name given the
 /// next name's note before), braced with its comma or not. No proof, the default, never the next name: a lone text
 /// `\footnotemark` past a spaced comma (undecided, its Warning), and a `\\` line opening with a mark, maybe an
-/// affiliation's (revWRONGFIX S2). Distinct paths: a note past a spaced comma, past a glued one, the Mark event, and a
-/// line start that proves nothing.
+/// affiliation's (revWRONGFIX S2). DG 2026-11-17's refinements: the first piece sits in the stretch of the first name
+/// of the names' line, so a mark before a line above it proves nothing (S2); a note glued to the name before it, or to
+/// its comma, is the after-the-name convention's evidence, the block mixed and the default kept (S1). Distinct paths: a
+/// note past a spaced comma, past a glued one, the Mark event, a line start after the names and one before them that
+/// prove nothing, and a glued note past the name and past its comma.
 #[test]
 fn a_note_before_a_name_is_that_names() {
   assert_green(&[
@@ -85,6 +88,55 @@ fn a_note_before_a_name_is_that_names() {
       ],
       moves:      "",
       page:       &["Ann Able | under: Note A.", "Bob Baker"],
+      page_moves: "",
+    },
+    Row {
+      repro:      "wrongfix_mark_before_a_line_above_the_names_proves_no_left_side",
+      tex:        repro!("wrongfix_mark_before_a_line_above_the_names_proves_no_left_side"),
+      warnings:   0,
+      // (the line's `\footnotemark[1]` prints ann@'s ∗: the affiliation follows it)
+      creators:   &[
+        "Ann Able ; thanks[*]=ann@a.org | affiliation=University of X",
+        "Bob Baker",
+      ],
+      moves:      "",
+      page:       &["Ann Able ; * plain", "Bob Baker", "margin: ann@a.org"],
+      page_moves: "",
+    },
+    Row {
+      repro:      "wrongfix_note_glued_after_a_name_mixes_the_conventions",
+      tex:        repro!("wrongfix_note_glued_after_a_name_mixes_the_conventions"),
+      warnings:   0,
+      creators:   &[
+        "Ann Able ; thanks[*]=These authors contributed equally. ; thanks[†]=ann@a.org",
+        "Bob Baker ; thanks[‡]=bob@b.org",
+        "Carl Cole",
+      ],
+      moves:      "",
+      page:       &[
+        "Ann Able ; * plain ; † plain",
+        "Bob Baker ; ‡ plain",
+        "Carl Cole",
+        "margin: These authors contributed equally. ; ann@a.org ; bob@b.org",
+      ],
+      page_moves: "",
+    },
+    Row {
+      repro:      "wrongfix_note_glued_after_a_names_comma_mixes_the_conventions",
+      tex:        repro!("wrongfix_note_glued_after_a_names_comma_mixes_the_conventions"),
+      warnings:   0,
+      creators:   &[
+        "Ann Able ; thanks[*]=These authors contributed equally. ; thanks[†]=ann@a.org",
+        "Bob Baker ; thanks[‡]=bob@b.org",
+        "Carl Cole",
+      ],
+      moves:      "",
+      page:       &[
+        "Ann Able ; * plain ; † plain",
+        "Bob Baker ; ‡ plain",
+        "Carl Cole",
+        "margin: These authors contributed equally. ; ann@a.org ; bob@b.org",
+      ],
       page_moves: "",
     },
   ]);

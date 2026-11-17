@@ -19916,7 +19916,17 @@ the block's EDGE PROOF: the block's first piece precedes its first name and no p
 piece between two names is the next name's (2406.12338's `\thanks{…} {Carla Schenker,} \thanks{…} {Xiulin Wang,}`,
 "∗Carla Schenker, †Xiulin Wang"; math0606768's `\thanks{a} Ann, \thanks{b} Bob`; 1511.05393, 0906.1223). A block with
 pieces at both edges mixes the conventions: its pieces between names keep the default, counted by an
-`Info:frontmatter:mark_convention`, never the next name. The measure (the 30k census): 96.9 % of 54,559 name-line runs
+`Info:frontmatter:mark_convention`, never the next name. DG's refinements of 2026-11-17 (revWRONGFIXb): **S1** a note
+GLUED to the name before it (no space between, its comma's too) is evidence of the after-the-name convention, so such
+a block is MIXED, default plus Info — only whether a space is present is read, never its width (`\thanks{Equal} Ann
+Able\thanks{ann@} Bob Baker\thanks{bob@} Carl Cole`, "∗ / Ann Able†Bob Baker‡Carl Cole": Ann ∗ †, Bob ‡); **S2** the
+proof's first piece must sit in the first name's own stretch, the first name of the names' line — the line holding
+the first piece between two names —, so a mark before a line above it, maybe an affiliation's, proves nothing
+(`\footnotemark[1]University of X\\ Ann Able \thanks{ann@} Bob Baker`: Ann's); **S3** a piece between two names
+whose KEY (its footnote number) the name before already carries is not given to that name again but left to the next
+name, with the pieces after it on its stretch — a name printing the same key twice contradicts itself (`Ann
+Able\footnotemark[2] \quad \footnotemark[2]Bob Baker`, "Ann Able† †Bob Baker": one † each); one glued to the piece of
+its key prints over it once and stays (`\footnotemark[1]\thanks{…}`, 2103.01544). The measure (the 30k census): 96.9 % of 54,559 name-line runs
 are the name before's, and every note tie read by hand was, save the prefix-convention papers. Past a name with no
 name after it on its line (a separator, `\\`, the block's end) a piece is that name's (1911.13299's `\
 \footnotemark[3]\and`). A comma glued to a name is its ink, a piece past it the name's (`Igor Pikovski,$^{1, 2
@@ -19972,16 +19982,18 @@ name's run opens the stretch at that name — and written on its name past the c
 requests (#1058's batch); one set off from the comma by a space is undecided unless the block's edge proof holds
 (2406.12338; llncs's `Ann Able,\n\inst{1}\thanks{…} Bob`, Ann's by adjacency).
 **Witnesses.** 1911.13299, 2412.20504 (green before and after), 1703.08733 (its separator's shape); the FMRG suite's
-spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`, XML and HTML: its `ne2j_*`
+spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores`, XML and HTML: its `ne2j_*`
 rows the writers' runs and the separator's place in the run; the formula comma itself reaches the name's tokens and
 is dropped after them with no Warning, pre-existing, row R SEPRUN).
 **Guards**: `perfect_kernel_batchne2::{a_mark_beside_spacing_is_the_nearer_names,
 a_note_beside_spacing_goes_to_the_nearer_name, a_mark_nearer_the_next_name_moves_alone,
 a_mark_a_name_follows_past_spacing_is_not_carried_back, a_mark_on_no_name_keeps_its_footnote_step,
-a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`,
-`perfect_kernel_batchwrongfix::{a_note_before_a_name_is_that_names, a_note_between_two_names_is_the_name_befores}`;
-the unit tests `resolver::mark_ledger::tests::{a_piece_between_two_names_is_the_name_befores,
-the_edge_proof_gives_the_pieces_between_two_names_to_the_name_after}`.
+a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores`
+(S3: `ne2f_mark_of_a_key_the_name_before_carries_is_the_next_names`, `ne2f_mark_of_a_key_an_earlier_name_carries_stays_the_name_befores`,
+`ne2j_math_comma_between_marks_nearer_next`), `perfect_kernel_batchwrongfix::{a_note_before_a_name_is_that_names
+(S1, S2), a_note_between_two_names_is_the_name_befores}`; the unit tests
+`resolver::mark_ledger::tests::{a_piece_between_two_names_is_the_name_befores,
+the_edge_proof_gives_the_pieces_between_two_names_to_the_name_after, a_key_the_name_before_carries_goes_to_the_next_name}`.
 ---
 
 ### 1058. A footnote mark answers its note by the number it shows, never by its glyph alone (DG 2026-11-16, MARKKEY)
@@ -20330,6 +20342,7 @@ explains that the reading places elsewhere (`\affil[$\dag$]{…}` under `\author
 `perfect_kernel_batchshmark::a_class_label_no_entry_answers_shows_on_its_name`, the FMRG row
 `fmmarks_authblk_double_star_label_and_date_note_red` (`perfect_kernel_batchfmmarks`).
 
+### 1065. → Bindings beyond Perl's tree: achemso.cls (`achemso_cls.rs`)
 ### 1066. → Bindings beyond Perl's tree: sn-jnl.cls (`sn_jnl_cls.rs`)
 
 ---
@@ -20472,6 +20485,7 @@ until they move into the binding module's `//!` doc comment (a code PR; this PR 
 | fcs.cls, dgruyter.sty | `fcs_cls.rs`, `dgruyter_sty.rs` | fcs's and dgruyter's `\author*[labels]` mark the corresponding author and request its labelled affiliations (Perl: no fcs or dgruyter author binding, the authors mangled) | #905 |
 | just.cls | `cpc_hepnp_cls.rs` | just.cls (Chinese Physics C's cpc-hepnp.cls under the PhiPsi15 name) has a binding: its `\email` is the author's e-mail and its `\address` after `\maketitle` the names' affiliations; cpc-hepnp itself waits for 91c (Perl: no binding; through OmniBus the list is one address of the last author) | #912 |
 | keytheorems.sty | `keytheorems_sty.rs` | A tcolorbox keytheorem's head is its theorem's `ltx:title` (pdflatex: the box's title) | #975 |
+| achemso.cls | `achemso_cls.rs` | achemso's affiliations, e-mails, phones, faxes and alternative affiliations are under the authors the class numbers them for (Perl: no binding; OmniBus) | #1065 |
 
 #### 77. `silence.sty` and the bundled `arxiv.sty` family get bindings Perl does not have
 
@@ -21954,6 +21968,50 @@ keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for
 binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
 the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
 `perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.
+
+#### 1065. achemso's affiliations, e-mails, phones, faxes and alternative affiliations are under the authors the class numbers them for (Perl: no binding; OmniBus)
+
+achemso.cls (TL 2025) numbers its affiliations as they come: each `\author` waits for the next number
+(`\@author@affil@<n>` = `\acs@affil@cnt`+1, :336-345), so an `\affiliation` is every author's given since the counter
+last stepped, and its text repeating an earlier one's is that number (`\acs@affil@ifdup`/`\acs@affil@swap`, :359-427).
+An `\affiliation` right after another reaches no author: a new text is listed with a mark no name carries, a repeated
+one is nothing. `\alsoaffiliation` adds a number to the last author (:428-467); a new one steps the counter, so it is
+also every waiting author's. `\altaffiliation` is the last author's, a second one replacing the first (`\xdef`,
+:468-485); `\email`, `\phone` and `\fax` are the last author's, a second one replacing the first (`\gdef`, :513-539),
+and an author's phone and fax print only beside its e-mail (`\acs@number@list`, :971-1001); an identical repeat replaces
+nothing (2203.15022 gives its `\email` twice; revACHEMSOb B1). They are `\@onlypreamble` (:346, :521, :530, :539): in the
+body pdflatex errs and prints the text inline, and the binding attaches them at once (no Error raised; row R
+ACHEMSO-BODY). One before any `\author` is
+the class's Warning and is dropped (:376-378). The `[short]` form is stored in `\@affil@<n>` for `\acs@affil@list`,
+which nothing in the class calls: only the full text prints.
+
+**Rust.** The binding wrote every affiliation as a detached `ltx:note` (48 of 48 creators of the 3,000-paper dev sample
+lost theirs). Now `\author` is the API's per-author block (`\lx@add@authors@append`, as revtex's and amsart's), and the
+binding keeps the class's numbering (`\acs@affil@ifdup`, `\acs@alsoaffil@find`, `\acs@altaffil@ifdup` as the class has
+them, and a count of waiting authors) to hand each piece to the API with the authors it reaches:
+`\lx@add@affiliation[annotate=new]` for the waiting authors (`annotate=<n>`, the last n, where one of them already holds
+an `\alsoaffiliation`), `annotate=1` for an `\alsoaffiliation` of the last author (not a second copy of one it has),
+and, at the next `\author` or `\begin{document}`, the last author's last `\altaffiliation`, `\email`, `\phone` and
+`\fax` in that order (`\lx@add@altaffiliation`, `\lx@add@email`, `\lx@add@contact[role=phone]`, `[role=fax]`; the order
+the PDF prints them after the affiliations, FIDELITY_CHARTER R8), a phone or fax only to an author with an e-mail
+(revACHEMSO S2). Each piece is one contact per author, even where the PDF prints its mark twice (`Bob Baker,†,†`). A
+piece no author holds at `\begin{document}` (an affiliation that reached no author and that no later author repeats, a
+replaced `\altaffiliation`, once however many authors replaced it: revACHEMSO B1) is a detached `ltx:note`, as the class
+lists it with a mark no name carries; a replaced `\email`, `\phone` or `\fax`, and a phone or fax of an author with no
+e-mail, which the class does not print, and a piece before any `\author`, the class's Warning, are kept as detached
+notes (FIDELITY_CHARTER §2). The binding states only the class's rule; the engine places the contacts and splits an
+`\email` list by the authors its addresses spell (the charter's ownership by evidence; 2406.15944). **Open (row R
+ACHEMSO-CALLS):** `annotate=1` is the last creator, so an `\alsoaffiliation` after an `\author` naming two people
+(`\author{Ann Able and Bob Baker}`, one author of the class) reaches the last name only; no census paper has the shape.
+**Open (row R ACHEMSO-ORDER):** a waiting author's pieces given before the next `\author` precede the affiliation that
+reaches it after it (`\author{A}\altaffiliation{P}\author{B}\affiliation{X}`: A's "P" before "X"), where the PDF lists X
+first (revACHEMSO q14): the API writes to the last author only. Witnesses 2605.10968, 2306.05209 (affiliations detached
+before), 2107.00078, 2512.17659, 2510.00865 (an affiliation right after another), 1910.14165 (a second
+`\altaffiliation`). **Guards**: the `fmmarks_achemso_*` rows of
+`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks` (and its `_red` twin),
+`perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes` (with
+`fmmarks_achemso_replaced_altaffiliation_is_one_note`, `fmmarks_achemso_second_email_phone_fax_replace_the_first`);
+`perfect_kernel_batch65m::file_arguments_are_not_typeset` (the e-mail repro's affiliation is its author's).
 
 #### 1066. sn-jnl's `\author*` star and its author notes' glyphs mark one note each, which every name carrying the mark shares (Perl: no binding; OmniBus)
 

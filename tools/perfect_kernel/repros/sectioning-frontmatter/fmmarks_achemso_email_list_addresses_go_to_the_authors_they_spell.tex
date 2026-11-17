@@ -1,0 +1,28 @@
+% mechanism: achemso's `\author` is a per-author block of the API (`\lx@add@authors@append`): an `\email` listing
+%   several addresses goes to the authors the addresses spell (FIDELITY_CHARTER §2, ownership by evidence)
+% witness:  2406.15944 (`\email{heindelj@lbl.gov, thg@berkeley.edu}` under Teresa Head-Gordon: Joseph P. Heindel's
+%   address moved to him at the base, stayed hers once the affiliations were contacts and `\author` no block)
+% oracle:   pdflatex 0 errors; "Ann Able, Bob Baker, and Cy Cole∗", "Univ A", "E-mail: ann.able@x.org,cy.cole@x.org";
+%   the spelled owners by the charter (the class's ∗ is Cy Cole's)
+% engines:  rust int/frontmatter 3b420685f89 = 0 errors, 2 Warnings; XML Ann Able | email=ann.able@x.org / Bob Baker
+%   / Cy Cole | email=cy.cole@x.org; ACHEMSO = 0 errors, 2 Warnings; XML Ann Able | affiliation=Univ A ;
+%   email=ann.able@x.org / Bob Baker | affiliation=Univ A / Cy Cole | email=cy.cole@x.org ; affiliation=Univ
+%   A
+% expect:   0 errors, 2 Warnings; XML Ann Able | affiliation=Univ A ; email=ann.able@x.org / Bob Baker |
+%   affiliation=Univ A / Cy Cole | affiliation=Univ A ; email=cy.cole@x.org; HTML Ann Able / Bob Baker / Cy Cole (the
+%   guard's XML and HTML lines)
+% status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\affiliation{Univ A}
+\author{Bob Baker}
+\affiliation{Univ A}
+\author{Cy Cole}
+\email{ann.able@x.org, cy.cole@x.org}
+\affiliation{Univ A}
+\title{Title}
+\begin{document}
+Text.
+\end{document}

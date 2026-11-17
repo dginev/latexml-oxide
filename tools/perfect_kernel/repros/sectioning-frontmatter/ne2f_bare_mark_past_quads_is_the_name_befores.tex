@@ -1,0 +1,21 @@
+% mechanism: as ne2f_mark_past_qquad_is_the_name_befores, a bare `\footnotemark` past Ann's note, Bob's own glued mark
+%   after his name: the bare mark is the name's before, Ann's, its step written where it prints, so Bob's own mark
+%   prints ‡
+% witness: none (review revSHGIVENb's p8gapgap)
+% oracle:  pdflatex 0 errors; "Ann Able∗   † / Bob Baker‡" (pdftotext -bbox: 11.4pt before †, 7.9pt after; TeX's glue
+%   ` \quad` 13.3pt, `\quad` 10pt); the print ambiguous, the default decides
+% engines: rust REGFIX: 0 errors, 1 Warning, the block written whole; SHGIVENb 80ffc5f84b4: 0 errors, † on Ann; SHGNEXT:
+%   † on Bob (nearer by glue); perl 0.8.8: 0 errors; Ann, the mark a creator of its own, Bob with his mark
+% expect:  0 errors, 0 Warnings; Ann with her note ∗ and †, Bob ‡
+% status:  GREEN, the name before (WRONGFIXb e7653fa3761; the nearer name by glue before it, SHGNEXT):
+%   perfect_kernel_batchne2::a_mark_beside_spacing_is_the_nearer_names; the FMRG suite, XML and HTML:
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{X} \quad \footnotemark \quad Bob Baker\footnotemark}
+\date{}
+\maketitle
+Text.
+\end{document}

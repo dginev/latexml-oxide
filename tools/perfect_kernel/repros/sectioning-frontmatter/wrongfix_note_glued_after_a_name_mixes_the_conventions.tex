@@ -1,0 +1,15 @@
+% mechanism: a note glued to the name before it (no space between) is the after-the-name convention's evidence: a block
+%   that also sets a note before its first name mixes the two, so its pieces between names keep the default, the name
+%   before (`resolver::mark_ledger`'s edge proof, DG 2026-11-17 S1; presence of a space read, never its width)
+% witness: revWRONGFIXb S1 (synthetic)
+% oracle:  pdflatex 0 errors: "∗ / Ann Able†Bob Baker‡Carl Cole"; footnotes "∗ These authors contributed equally."
+%   "† ann@a.org" "‡ bob@b.org"
+% engines: rust REGFIX: as expected; WRONGFIXc b842de7fc4c: Bob given ann@, Carl bob@ (the edge proof held)
+% expect:  0 errors 0 Warnings; Ann Able thanks[*]=These authors contributed equally. thanks[†]=ann@a.org; Bob Baker
+%   thanks[‡]=bob@b.org; Carl Cole
+% status:  RED (b842de7fc4c) -> GREEN (perfect_kernel_batchwrongfix::a_note_before_a_name_is_that_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{\thanks{These authors contributed equally.} Ann Able\thanks{ann@a.org} Bob Baker\thanks{bob@b.org} Carl Cole}
+\begin{document}\maketitle Body.\end{document}
