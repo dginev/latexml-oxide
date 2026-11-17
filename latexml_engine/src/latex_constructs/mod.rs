@@ -1293,7 +1293,7 @@ pub(crate) fn read_title_marks_in_force() -> bool {
   declare_package_title_marks(&marks, bound).is_ok()
 }
 
-/// As the kernel's `\maketitle` ends (`\lx@maketitle@cleanup`), the marks it read ([`read_title_marks_in_force`]) end
+/// As the kernel's `\maketitle` ends (`\lx@maketitle@cleanup`), the marks it read (`read_title_marks_in_force`) end
 /// with it and no later one is read: the count a second `\maketitle` prints is not the one here (two2: pdflatex's second
 /// block "Dan∗ Eve†", the count here ‡ §; revMTREDUCEd S3).
 pub fn end_title_marks_read() {

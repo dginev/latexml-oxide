@@ -607,6 +607,10 @@ fn the_mark_components_only_shrink() {
     // (MARKKEY R2a, SEPb's observer side folded into the mark record, OD #1062: elsarticle prints a name's marks as
     // one list; article's title marks take no width, a mark glued on one prints over it)
     "lx_frontmatter_marks_listed",
+    // (MTREDUCEE, accepted by DG 2026-11-17 for the release, row R RATCHET-MTRE: the kernel's \maketitle read once —
+    // `end_title_marks_read` — and the marks it declared; to fold into one record)
+    "lx_title_marks_read_closed",
+    "lx_title_marks_read_declared",
     "lx_title_marks_zero_width",
   ];
   // (MARKKEY R2a: `whole_marks` folded into `marks`, the one record, OD #1062; R2Ab: `thenote_requests` a view of it,
