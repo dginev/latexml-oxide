@@ -1,0 +1,21 @@
+% mechanism: no dangling mark (OD #1059): the author block's lines give each name its e-mail by the label the line
+%   prints (`E.Mail :$^1$ann@a.edu`), the label consumed (the contact keeps no glyph, class `ltx_author_line`), the name's
+%   mark a mark-only note: a label of letters or digits on a name holding a contact its block's lines gave it shows
+% witness: 1302.0490 (IEEEtran, `Siddhartha Satpathi$^1$ …` over `E.Mail :$^1$sidd.piku@gmail.com, …`), astro-ph0703204
+%   (jaa, `Niruj R. Mohan$^4$` over `$^4$ Sterrewacht, Leiden`)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 and Cat Cole 3", "E.Mail :1 ann@a.edu, 2 bob@a.edu, 3 cat@a.edu"
+% engines: rust MARKKEY1 a427f6c06e0 = 0 errors 2 Warnings (the line's markup written as plain text); the marks hidden
+% expect:  0 errors 2 Warnings; HTML Ann Able ; 1 plain / Bob Baker ; 2 plain / Cat Cole ; 3 plain
+% status:  RED (a427f6c06e0) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_where_its_glyph_prints)
+% preload: ar5iv.sty
+\documentclass[10pt,twocolumn]{IEEEtran}
+\title{T}
+\author{{Ann Able$^1$, Bob Baker$^2$ and Cat Cole $^3$ }\\
+Department of Physics\\
+Univ A, Town A\\
+E.Mail :$^1$ann@a.edu, $^2$bob@a.edu,
+ $^3$cat@a.edu}
+\begin{document}
+\maketitle
+Text.
+\end{document}

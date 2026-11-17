@@ -264,7 +264,9 @@ fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
 /// a body footnote opening with a formula of the glyph alone, its tags left out (2508.05506's `\blfootnote{$\dagger$
 /// …}`); a formula of the glyph alone inside a note, past its opening (2012.13912's acmart `\authornote{… \\ $\dagger$
 /// … is the corresponding author}`); and a note with no known mark on the name, whose glyph it may be (1503.07953's
-/// `\altaffiltext{*}{Corresponding author}`, its label's glyph not kept). Each was hidden before.
+/// `\altaffiltext{*}{Corresponding author}`, its label's glyph not kept); a legend printed bracketed (2302.11378's
+/// `$^{(2)}$` legends in `\date`); a piece of another name's mark run (2110.12052); and a label on a name holding a
+/// contact its block's lines gave it, the label consumed (1302.0490's `E.Mail :$^1$sidd…`). Each was hidden before.
 #[test]
 fn an_unlinked_mark_shows_where_its_glyph_prints() {
   assert_green(&[
@@ -309,6 +311,47 @@ fn an_unlinked_mark_shows_where_its_glyph_prints() {
       page:       &[
         "Ann Able",
         "Bob Baker ; * plain | under: Corresponding author",
+      ],
+      page_moves: "",
+    },
+    Row {
+      repro:      "markkey_bracketed_legend_shows_its_names_mark",
+      tex:        repro!("markkey_bracketed_legend_shows_its_names_mark"),
+      warnings:   0,
+      creators:   &[
+        "Ann Able ; footnotemark[1]=",
+        "Bob Baker ; footnotemark[2]=",
+      ],
+      moves:      "",
+      page:       &["Ann Able ; 1 plain", "Bob Baker ; 2 plain"],
+      page_moves: "",
+    },
+    Row {
+      repro:      "markkey_mark_in_another_names_run_shows",
+      tex:        repro!("markkey_mark_in_another_names_run_shows"),
+      warnings:   0,
+      creators:   &[
+        "Ann Able ; footnotemark[1,3]=",
+        "Bob Baker ; footnotemark[1]=",
+      ],
+      moves:      "",
+      page:       &["Ann Able ; 1,3 plain", "Bob Baker ; 1 plain"],
+      page_moves: "",
+    },
+    Row {
+      repro:      "markkey_author_line_label_shows_its_names_mark",
+      tex:        repro!("markkey_author_line_label_shows_its_names_mark"),
+      warnings:   2,
+      creators:   &[
+        "Ann Able ; footnotemark[1]= | affiliation=Department of Physics Univ A, Town A ; email=ann@a.edu",
+        "Bob Baker ; footnotemark[2]= | affiliation=Department of Physics Univ A, Town A ; email=bob@a.edu",
+        "Cat Cole ; footnotemark[3]= | affiliation=Department of Physics Univ A, Town A ; email=cat@a.edu",
+      ],
+      moves:      "NEITHER (the e-mail line's label E.Mail kept in the affiliation, the line written as plain text with 2 Warnings; pre-existing)",
+      page:       &[
+        "Ann Able ; 1 plain",
+        "Bob Baker ; 2 plain",
+        "Cat Cole ; 3 plain",
       ],
       page_moves: "",
     },

@@ -168,10 +168,13 @@
        mark-only note that links to no note on the page shows its glyph only where the same glyph (each piece of a
        printed run, `1,2`) prints elsewhere in the document (f:printed-glyph), as it was likely meant as connected; or
        where it names a title's or date's note, whose mark the page does not print (class ltx_mark_titlenote, set by
-       its given number: `\footnotemark[1]` under `\title{T\thanks{…}}`); or where its name carries a note printed with
-       no known mark, which may be that glyph's (1503.07953's `\altaffiltext{*}{Corresponding author}`). Else its
-       glyph, printed once over its name alone, connects nothing and shows nothing (its id stays; the XML keeps the
-       note). -->
+       its given number: `\footnotemark[1]` under `\title{T\thanks{…}}`); or where its name carries what may print it,
+       its glyph lost to the XML: a note with no known mark (1503.07953's `\altaffiltext{*}{Corresponding author}`), or,
+       for a label of letters or digits, a contact the author block's lines gave it (class ltx_author_line: the legend
+       `$^4$ Sterrewacht, Leiden` read as the name's affiliation, its label consumed, astro-ph0703204; 1302.0490's
+       `$^1$sidd…@gmail.com`).
+       Else its glyph, printed once over its name alone, connects nothing and shows nothing (its id stays; the XML
+       keeps the note). -->
   <xsl:template match="ltx:creator/ltx:note[@role='footnotemark'][normalize-space(@mark)]">
     <xsl:variable name="by_mark" select="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
     <xsl:variable name="notes"
@@ -201,7 +204,9 @@
       <xsl:when test="not($target) and not(string($elsewhere))
                       and not(contains(concat(' ',@class,' '),' ltx_mark_titlenote '))
                       and not(../ltx:note[not(@role='footnotemark')][not(normalize-space(@mark))]
-                                         [not(ltx:tags/ltx:tag[not(@role)])][normalize-space(.)])">
+                                         [not(ltx:tags/ltx:tag[not(@role)])][normalize-space(.)])
+                      and not(../ltx:contact[contains(concat(' ',@class,' '),' ltx_author_line ')]
+                              and translate($glyph,'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ, ','') = '')">
         <xsl:if test="@xml:id">
           <xsl:element name="span" namespace="{$html_ns}">
             <xsl:call-template name="add_id"/>
@@ -301,6 +306,13 @@
            use="translate(normalize-space(@mark),'&#x2217;','*')"/>
   <xsl:key name="f:printed-glyph" match="ltx:tag[not(@role)][ancestor::ltx:note or ancestor::ltx:creator] | ltx:sup"
            use="translate(normalize-space(.),'&#x2217;','*')"/>
+  <!-- (a bracketed one by its glyph out of its brackets too, as a name's mark run keeps its pieces: the legend
+       `$^{(2)}$ Parasites and Microbes` prints the 2 of `Tonkin-Hill$^{(2),(3)}$`, 2302.11378) -->
+  <xsl:key name="f:printed-glyph"
+           match="ltx:note[contains(@mark,'(') or contains(@mark,'[')]/@mark
+                  | ltx:tag[not(@role)][ancestor::ltx:note or ancestor::ltx:creator][contains(.,'(') or contains(.,'[')]
+                  | ltx:sup[contains(.,'(') or contains(.,'[')]"
+           use="translate(normalize-space(.),'&#x2217;()[]','*')"/>
   <!-- (a formula's one token, in its XMath or its MathML, whichever the post-processing kept) -->
   <xsl:key name="f:printed-glyph"
            match="ltx:XMTok[ancestor::ltx:Math[ancestor::ltx:note or ancestor::ltx:contact or ancestor::ltx:pubnote]
@@ -327,7 +339,8 @@
                                    '|'),1,1))"/>
 
   <!-- "yes" where a piece of a mark's glyph ($pieces, `f:glyph-pieces`) prints elsewhere in the document
-       (f:printed-glyph): anywhere but in the mark-only note $me itself. -->
+       (f:printed-glyph), or in another name's mark run (`Dhami$^{1,3}$` prints the 1 of `Zečević$^{1}$`, 2110.12052):
+       anywhere but in the mark-only note $me itself. -->
   <xsl:template name="f:glyph-elsewhere">
     <xsl:param name="pieces"/>
     <xsl:param name="me"/>
@@ -335,7 +348,10 @@
     <xsl:choose>
       <xsl:when test="not(contains($pieces,','))"/>
       <xsl:when test="$piece != ''
-                      and key('f:printed-glyph',$piece)[not(ancestor-or-self::ltx:note[generate-id() = $me])]">yes</xsl:when>
+                      and (key('f:printed-glyph',$piece)[not(ancestor-or-self::ltx:note[generate-id() = $me])]
+                           or //ltx:creator/ltx:note[@role='footnotemark'][generate-id() != $me]
+                                [contains(concat(',',translate(normalize-space(@mark),'-&#x2013;&#x2217; ',',,*'),','),
+                                          concat(',',$piece,','))])">yes</xsl:when>
       <xsl:otherwise>
         <xsl:call-template name="f:glyph-elsewhere">
           <xsl:with-param name="pieces" select="substring-after($pieces,',')"/>

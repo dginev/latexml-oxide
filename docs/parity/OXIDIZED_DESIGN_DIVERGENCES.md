@@ -19959,15 +19959,21 @@ the `xml:id` of the copy first in document order is the `idref` of each other (D
 - *No dangling mark*: a mark-only note that links to no note on the page shows its glyph only where the same glyph
   (asterisks folded; a printed run `1,2` or `1*` by each of its pieces, 1304.5040) prints elsewhere in the document,
   as the key `f:printed-glyph` reads it: any note's `mark`; the untyped `tag` of a note or creator (not a section's
-  number); any superscript; a formula of the glyph alone anywhere inside a note, contact or publication note
+  number); any superscript (a bracketed one, mark or tag by its glyph out of its brackets too: 2302.11378's `\date`
+  legends `$^{(2)}$`); a formula of the glyph alone anywhere inside a note, contact or publication note
   (2012.13912's `\authornote{… \\ $\dagger$ Xiaojiang Peng is …}`, 2508.05506's `\blfootnote{$\dagger$ …}`); the
   symbol, or the run of letters or digits, that a note's, contact's or publication note's text opens with, its tags
-  left out (a legend's `$*$Xiang Wang is the corresponding author`, 2010.10783). It shows too where its given number
+  left out (a legend's `$*$Xiang Wang is the corresponding author`, 2010.10783); and each piece of another name's mark
+  run (`Dhami$^{1,3}$` prints the 1 of `Zečević$^{1}$`, 2110.12052). It shows too where its given number
   names a title's or date's note, whose publication note prints no mark here (class `ltx_mark_titlenote`,
   `insert::link_marked_notes`: "A Title∗ … Cy Cole∗", the number `\lx@title@footnote@step` recorded), and where its
-  name carries a note with no known mark, which may print that glyph (1503.07953's `\altaffiltext{*}{Corresponding
-  author}`, a note with no mark). Printed once, over its name alone, it shows nothing (its id stays; the XML keeps
-  it): 2006.10886, whose geophysics `\address{\footnotemark[1]{…}}` the class never prints in `paper` mode.
+  name carries what may print it, the glyph lost to the XML: a note with no known mark (1503.07953's
+  `\altaffiltext{*}{Corresponding author}`), or, for a label of letters or digits, a contact its block's lines gave it
+  (class `ltx_author_line`, the label consumed: 1302.0490's `E.Mail :$^1$sidd…`, astro-ph0703204). Printed once, over
+  its name alone, it shows nothing (its id stays; the XML keeps it): 2006.10886, whose geophysics
+  `\address{\footnotemark[1]{…}}` the class never prints in `paper` mode. Open (row R): a legend whose glyph the XML
+  drops elsewhere (a correspondence or e-mail contact with its symbol cut, icml's empty `<sup/>`, a `mark="$\star$"`,
+  a legend after a `<break/>`) leaves its name's mark hidden though the PDF prints it twice.
 **Witnesses.** 2407.04435 (one note, three carriers), 2006.10886, 1304.5040, 1108.5155, 1404.2124, 2508.05506,
 2012.13912, 1503.07953.
 **Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number, a_note_several_names_carry_is_one_note,
