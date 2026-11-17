@@ -3,8 +3,10 @@
 % witness: revELSART pD2 (synthetic)
 % oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,2 , Bob Twoa"; footnotes "1 Note one", "2 Note two"
 % engines: rust ELSART (3bbd4e67ccf): Alice "Note one", "Note two" the block's
+%   ELSARTb: both notes the block's, 2 Warnings; ELSARTc: Alice "Note two", 0 Warnings
 % expect:  0 errors 0 Warnings; Alice One "Note two", "Note one" the block's
-% status:  RED (ELSART) -> GREEN (ELSARTb) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% status:  RED (ELSART) -> RED (ELSARTb: both notes the block's, a Warning each) -> GREEN (ELSARTc: the first name's mark settled at the flush, `els_settle_marks`)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload: ar5iv.sty
 \documentclass[preprint]{elsarticle}
 \begin{document}

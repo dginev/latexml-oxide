@@ -5,9 +5,10 @@
 % oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,1 , Bob Twoa"; footnotes "∗ Corresponding author",
 %   "1 Equal contribution"
 % engines: rust b842de7fc4c and ELSART: Alice carries both notes (an `\fntext` read first: the `\cortext` the block's)
+%   ELSARTc: Alice the "Equal contribution" note, the correspondence note the block's
 % expect:  0 errors 0 Warnings; Alice One the "Equal contribution" note, marked 1; the correspondence note the block's
-% status:  RED (b842de7fc4c) -> RED (ELSART: the `\cortext` read before the `\fntext`; row R ELSKEYORDER)
-%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% status:  RED (b842de7fc4c) -> RED (ELSART: the `\cortext` read before the `\fntext`; row R ELSKEYORDER) -> GREEN (ELSARTc: each note's label settled at the flush, `els_settle_note_labels`)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload: ar5iv.sty
 \documentclass[preprint]{elsarticle}
 \begin{document}

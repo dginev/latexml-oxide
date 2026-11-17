@@ -2,10 +2,9 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use super::elsart_support_core_sty::{
   ELS_AUTHOR_KEYS, ELS_CORREF_KEYS, ELS_CORTEXT_KEYS, ELS_FNTEXT_KEYS, ELS_NOTE_LABELS,
-  ELS_PLACE_KEYS, els_carriers, els_first_note_label, els_outside_mark, record_els_keys,
-  recorded_els_key,
+  ELS_PLACE_KEYS, els_carriers, els_outside_mark, record_els_keys, recorded_els_key,
 };
-use crate::prelude::*;
+use crate::{engine::base_utilities::reading_author_fields, prelude::*};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -351,8 +350,8 @@ LoadDefinitions!({
       mouth::tokenize_internal(TeXString::assembled(s!("\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}")))
     }))
   });
-  // (`\cormark[k]` prints its ∗ where it is read and sets no `\@corref`, :178-180: outside a name it marks no name)
-  DefMacro!("\\cormark[]", "\\lx@els@record@cormark{#1}\\lx@request@frontmatter@annotation[cor]{#1}");
+  // (`\cormark[k]` prints its ∗ where it is read and sets no `\@corref`, :174-176: outside a name it marks no name)
+  DefMacro!("\\cormark[]", "\\lx@els@record@cormark{#1}\\lx@els@request{cor}{#1}");
   DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
   // The 2020+ copies' `\newpageafter{title|author|abstract}` (16 of 35 sampled), a page break in the title block: a
   // guess a paper's own definition replaces.
@@ -507,7 +506,13 @@ fn marked_note_text(
   text: Tokens,
 ) -> Tokens {
   let key = key.map(|key| key.to_string()).unwrap_or_default();
-  let label = els_note_label(prefix, &key);
+  // (a plain key's label is settled once the entries are read, `els_settle_note_labels`)
+  let label = if els_plain_key(&key) {
+    els_settle_note_labels();
+    s!("{LABEL_REF}{{{}}}", els_note_ref(prefix, &key))
+  } else {
+    els_note_label(prefix, &key)
+  };
   let mark = mark
     .map(|mark| s!("\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}"))
     .unwrap_or_default();
@@ -558,15 +563,38 @@ fn els_note_shadowed(kind: &str, key: &str) -> bool {
   }
 }
 
-/// A `\cortext`'s or `\fntext`'s label as it is read (the Frontmatter reading pairs the queued labels): its key's,
-/// `cor:<key>`/`fn:<key>`, or, where the key already names another entry, none a name reaches — no `:`, so Perl's
-/// prefix-stripped fallback (`relocate_annotations`) finds no name listing the key; where a later outside mark moved the
-/// first name's, as [`els_first_note_label`] gives it. A note read before the entry its key names stays its key's names'
-/// (row R ELSKEYORDER).
+/// A `\cortext`'s or `\fntext`'s label: its key's, `cor:<key>`/`fn:<key>`, or, where the key names another entry, none a
+/// name reaches — no `:`, so Perl's prefix-stripped fallback (`relocate_annotations`) finds no name listing the key.
 fn els_note_label(kind: &str, key: &str) -> String {
   if els_note_shadowed(kind, key) {
     s!("{kind}@{}", key.trim())
   } else {
-    els_first_note_label(kind, key).unwrap_or_else(|| s!("{kind}:{}", key.trim()))
+    s!("{kind}:{}", key.trim())
+  }
+}
+
+/// Whether `key` reads back as written in a deferred label ([`els_note_ref`]): no space, brace or control sequence.
+fn els_plain_key(key: &str) -> bool {
+  let key = key.trim();
+  !key.is_empty() && !key.contains(|c: char| c.is_whitespace() || "\\{}%#".contains(c))
+}
+
+/// The deferred label (`\lx@label@ref`) of the note of kind `kind` (`cor`, `fn`) keyed `key`.
+fn els_note_ref(kind: &str, key: &str) -> String { s!("els@note@{kind}@{}", key.trim()) }
+
+/// Record each note's label ([`els_note_label`]) as its deferred label, read at the flush: the entry a key names is the
+/// one whose `\elsLabel` the .aux wrote last (elsarticle.cls:126-131), whatever the order the document gives them in, so
+/// a note read before the entry its key names is decided as one read after it (1711.08299; OD #1067).
+pub(super) fn els_settle_note_labels() {
+  if !lookup_bool(ELS_NOTE_LABELS) || reading_author_fields() {
+    return;
+  }
+  for (kind, list) in [("cor", ELS_CORTEXT_KEYS), ("fn", ELS_FNTEXT_KEYS)] {
+    for key in lookup_string(list)
+      .split(',')
+      .filter(|key| els_plain_key(key))
+    {
+      set_label_ref(&els_note_ref(kind, key), &els_note_label(kind, key));
+    }
   }
 }

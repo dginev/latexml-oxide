@@ -4,8 +4,10 @@
 % oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗∗, Bob Twoa"; footnotes "∗ First corresponding",
 %   "∗∗ Second corresponding"
 % engines: rust ELSART (3bbd4e67ccf): Alice c1's note, c2's the block's
+%   ELSARTb: both notes the block's, 2 Warnings; ELSARTc: Alice the second note, 0 Warnings
 % expect:  0 errors 0 Warnings; Alice One the second note, the first the block's
-% status:  RED (ELSART) -> GREEN (ELSARTb) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% status:  RED (ELSART) -> RED (ELSARTb: both notes the block's, a Warning each) -> GREEN (ELSARTc: the first name's mark settled at the flush, `els_settle_marks`)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload: ar5iv.sty
 \documentclass[preprint]{elsarticle}
 \begin{document}

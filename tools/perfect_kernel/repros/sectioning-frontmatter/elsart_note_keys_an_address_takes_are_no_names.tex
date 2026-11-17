@@ -6,9 +6,10 @@
 % oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa,b"; footnotes "∗ Corresponding author", "1 Visiting"
 % engines: rust b842de7fc4c and ELSART: Alice and Bob each an unmarked correspondent contact, Bob the "Visiting" note
 %   too; ELSART with the addresses read first (1711.08299's order): the block's
+%   ELSARTc: both notes the block's, the addresses read after them
 % expect:  0 errors 0 Warnings; Alice One the address, Bob Two both addresses; the two notes the block's
-% status:  RED (b842de7fc4c) -> RED (ELSART: the notes read before the addresses keep their labels; row R ELSKEYORDER)
-%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% status:  RED (b842de7fc4c) -> RED (ELSART: the notes read before the addresses keep their labels; row R ELSKEYORDER) -> GREEN (ELSARTc: each note's label settled at the flush, `els_settle_note_labels`)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload: ar5iv.sty
 \documentclass[preprint]{elsarticle}
 \begin{document}
