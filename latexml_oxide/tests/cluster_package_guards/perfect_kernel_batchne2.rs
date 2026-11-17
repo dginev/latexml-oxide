@@ -157,11 +157,11 @@ fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
   // (every note kept, each mark as pdflatex prints it: Ann's footnotemark †, Carl's *; each creator's in order, Ann's mark
   // and thanks, Bob's two thanks, Carl's mark)
   let (mark_ann, mark_carl) = (
-    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"†\" role=\"thanks\" xml:id=\"footnote2\"",
-    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id2\" mark=\"*\" role=\"thanks\" xml:id=\"footnote1\"",
+    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"†\" role=\"thanks\" xml:id=\"footnote2\"",
+    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" xml:id=\"footnote1\"",
   );
-  // (each `\thanks` with the mark pdflatex prints for it, OD #1053; Bob's † the first copy of the note Ann's mark copies,
-  // its id made with the copies', OD #1059)
+  // (each `\thanks` with the mark pdflatex prints for it, OD #1053; Ann's copy of Bob's † the first in document order,
+  // whose id Bob's names, OD #1059; revMARKKEY1 NIT: Bob's held it before)
   let thanks = |n: u8, mark: &str| {
     format!(
       r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="{mark}" role="thanks" xml:id="id{n}""#
@@ -169,9 +169,10 @@ fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
   };
   let expected = vec![
     mark_ann.to_string(),
-    thanks(2, "*"),
-    thanks(3, "‡"),
-    thanks(1, "†"),
+    thanks(1, "*"),
+    thanks(2, "‡"),
+    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"footnote2\" mark=\"†\" role=\"thanks\" xml:id=\"id3\""
+      .to_string(),
     mark_carl.to_string(),
   ];
   assert_eq!(notes, expected, "{xml}");

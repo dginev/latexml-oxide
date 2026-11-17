@@ -265,8 +265,9 @@ fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
 /// …}`); a formula of the glyph alone inside a note, past its opening (2012.13912's acmart `\authornote{… \\ $\dagger$
 /// … is the corresponding author}`); and a note with no known mark on the name, whose glyph it may be (1503.07953's
 /// `\altaffiltext{*}{Corresponding author}`, its label's glyph not kept); a legend printed bracketed (2302.11378's
-/// `$^{(2)}$` legends in `\date`); a piece of another name's mark run (2110.12052); and a label on a name holding a
-/// contact its block's lines gave it, the label consumed (1302.0490's `E.Mail :$^1$sidd…`). Each was hidden before.
+/// `$^{(2)}$` legends in `\date`); and a piece of another name's mark run (2110.12052). Each was hidden before. RED: a
+/// label on a name holding a contact its block's lines gave it, the label consumed (1302.0490's `E.Mail :$^1$sidd…`;
+/// row R MARKGLYPHLOST: the page cannot tell it from a mark printed once beside an author line).
 #[test]
 fn an_unlinked_mark_shows_where_its_glyph_prints() {
   assert_green(&[
@@ -353,7 +354,7 @@ fn an_unlinked_mark_shows_where_its_glyph_prints() {
         "Bob Baker ; 2 plain",
         "Cat Cole ; 3 plain",
       ],
-      page_moves: "",
+      page_moves: "row R MARKGLYPHLOST (a legend's glyph the XML drops: the author-line contact's consumed label)",
     },
   ]);
 }

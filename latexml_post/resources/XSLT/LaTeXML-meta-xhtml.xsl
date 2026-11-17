@@ -168,11 +168,10 @@
        mark-only note that links to no note on the page shows its glyph only where the same glyph (each piece of a
        printed run, `1,2`) prints elsewhere in the document (f:printed-glyph), as it was likely meant as connected; or
        where it names a title's or date's note, whose mark the page does not print (class ltx_mark_titlenote, set by
-       its given number: `\footnotemark[1]` under `\title{T\thanks{…}}`); or where its name carries what may print it,
-       its glyph lost to the XML: a note with no known mark (1503.07953's `\altaffiltext{*}{Corresponding author}`), or,
-       for a label of letters or digits, a contact the author block's lines gave it (class ltx_author_line: the legend
-       `$^4$ Sterrewacht, Leiden` read as the name's affiliation, its label consumed, astro-ph0703204; 1302.0490's
-       `$^1$sidd…@gmail.com`).
+       its given number: `\footnotemark[1]` under `\title{T\thanks{…}}`); or where its name carries a note with no
+       known mark, which may print that glyph (1503.07953's `\altaffiltext{*}{Corresponding author}`). Open: a legend
+       whose glyph the XML drops (an author-line contact's consumed label, 1302.0490; an e-mail or correspondence contact
+       with its symbol cut) leaves the mark hidden though the PDF prints it twice.
        Else its glyph, printed once over its name alone, connects nothing and shows nothing (its id stays; the XML
        keeps the note). -->
   <xsl:template match="ltx:creator/ltx:note[@role='footnotemark'][normalize-space(@mark)]">
@@ -204,9 +203,7 @@
       <xsl:when test="not($target) and not(string($elsewhere))
                       and not(contains(concat(' ',@class,' '),' ltx_mark_titlenote '))
                       and not(../ltx:note[not(@role='footnotemark')][not(normalize-space(@mark))]
-                                         [not(ltx:tags/ltx:tag[not(@role)])][normalize-space(.)])
-                      and not(../ltx:contact[contains(concat(' ',@class,' '),' ltx_author_line ')]
-                              and translate($glyph,'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ, ','') = '')">
+                                         [not(ltx:tags/ltx:tag[not(@role)])][normalize-space(.)])">
         <xsl:if test="@xml:id">
           <xsl:element name="span" namespace="{$html_ns}">
             <xsl:call-template name="add_id"/>
