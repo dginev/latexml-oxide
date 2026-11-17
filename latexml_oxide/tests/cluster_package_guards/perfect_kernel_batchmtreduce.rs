@@ -43,7 +43,8 @@ macro_rules! repro {
 /// under a conditional decides nothing (revMTREDUCEc S1, P1); and where no binding declares them, the marks of the
 /// `\maketitle` that runs are read off its body the same way (DG 2026-11-17, `latex_constructs::read_title_marks_in_force`):
 /// a renamed copy's (2509.10105's vv2.sty, its `\footnotemark[1]` linked again), an unbound package's (1503.02531's
-/// nips14submit_e.sty, ltexpprt.sty), their typed marks linked.
+/// nips14submit_e.sty, ltexpprt.sty), their typed marks linked; not under a raw class, whose title notes step no counter
+/// here (siamart's, 2107.07572: no glyph).
 const BINDINGS: &[Row] = &[
   Row {
     repro:      "mtreduce_acl_maketitle_at_begin_document_reads_the_document_s_fnsymbol",
@@ -378,6 +379,21 @@ const BINDINGS: &[Row] = &[
       r#"Bob Baker ; *→note"#,
       r#"Cy Cole ; *→note"#,
       r#"margin: Karlsruhe Institute of Technology."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreduced_raw_class_title_thanks_marks_unknown",
+    tex:        repro!("mtreduced_raw_class_title_thanks_marks_unknown"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Univ A."#,
+      r#"Bob Baker ; thanks[]=Univ B."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Univ A."#,
+      r#"Bob Baker | under: Univ B."#,
     ],
     page_moves: r#""#,
   },

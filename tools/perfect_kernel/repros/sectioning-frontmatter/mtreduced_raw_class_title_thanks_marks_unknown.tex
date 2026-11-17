@@ -1,0 +1,33 @@
+% mechanism: the title marks of the `\maketitle` that runs are read off its body only where the title block's notes
+%   step the footnote counter as TeX's `\thanks` does (`latex_constructs::read_title_marks_in_force`): a raw class's
+%   do not here, so its glyphs, counted from the authors' notes alone, would miss the title's `\thanks` — no glyph
+% witness:  2107.07572 (siamart190516.cls: "…Residual Networks∗", "Alena Kopaničáková†, Rolf Krause†"), 2509.14771,
+%   2108.06375, 2301.12996, 2112.13097 (siamonline); 1612.03574, 1907.00545, 1910.10841, 2509.07974 (the raw-class
+%   papers the ungated reader changed, MTREDUCEd's A/B); the class a minimal stand-in of siamart190516.cls:445-466
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title∗", "Ann Able† Bob Baker‡"; foot "∗Submitted.",
+%   "†Univ A.", "‡Univ B."
+% engines:  rust INTFMfinal (d9b4c025647) = 0 errors, 0 Warnings, every note unmarked; the ungated reader (MTREDUCEd,
+%   ad59e059fb1) = Ann ∗, Bob †, glyphs pdflatex does not print there
+% expect:   0 errors, 0 Warnings; each author's note unmarked, under its name (row R MTREDUCE-RAWCLASS: the PDF's † ‡)
+% status:   GREEN fail-safe (MTREDUCEd: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{mysiam.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{mysiam}[2019/05/16 a SIAM-like class]
+\LoadClass{article}
+\renewcommand\maketitle{\par
+  \begingroup
+    \renewcommand{\thefootnote}{\fnsymbol{footnote}}%
+    \@maketitle
+    \@thanks
+  \endgroup
+  \setcounter{footnote}{0}%
+  \let\maketitle\relax\let\@maketitle\relax}
+\end{filecontents*}
+\documentclass{mysiam}
+\title{A Title\thanks{Submitted.}}
+\author{Ann Able\thanks{Univ A.} \and Bob Baker\thanks{Univ B.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1041,8 +1041,15 @@ fn fixed_glyph_macro(argument: &[Token]) -> Option<String> {
 /// its copy's ([`body_title_marks`]): the document's own, a package's no binding answers, a renamed copy's, an unbound
 /// class's (DG 2026-11-17: the reduction lost the links of names typing the glyph, `Bob$^*$` under a copy's `\maketitle`
 /// that sets `\fnsymbol` — 2404.01413's colm2024, 2510.09942's renamed neurips, ltexpprt.sty; INTCHECK's 37 papers).
-/// None read leaves them unknown. Declared once per `\maketitle` ([`READ_MAKETITLE`]); whether it declared any.
+/// None read leaves them unknown, as do a title block whose notes the count here does not step as TeX does. Declared once
+/// per `\maketitle` ([`READ_MAKETITLE`]); whether it declared any.
 fn read_title_marks_in_force() -> bool {
+  // (only where the title block's notes step the footnote counter as TeX's `\thanks` does: a raw class's do not here,
+  // so a glyph read off its count would be wrong — siamart's `\title{…\thanks{…}}` prints "Ann†", the count here ∗;
+  // 2107.07572, 2509.14771)
+  if !(lookup_bool("lx_title_counts_footnotes") || lookup_bool(TITLE_NUMBERS_FAITHFUL)) {
+    return false;
+  }
   let definition = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
   let (body, bound) = match refused_maketitle() {
     Some(dropped) => {

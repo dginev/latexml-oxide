@@ -32,14 +32,15 @@ fn run(tex: &str) -> (String, String) {
 /// The mark is the call with its argument now (`content::arguments_end`), the creators off's.
 /// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
 /// `</personname>`, so the name reads without its tags; pin updated (the note's move only). MTREDUCEd: aiaa-tc's own
-/// `\maketitle`, read where no binding declares its marks, sets `\fnsymbol`: Ann's ∗ and Bob's †, as pdflatex prints.
+/// `\maketitle` sets `\fnsymbol`, but a raw class's title notes step no counter here, so its marks stay unknown
+/// (`latex_constructs::read_title_marks_in_force`); pdflatex's Ann ∗ and Bob † wait on row R MTREDUCE-RAWCLASS.
 #[test]
 fn a_mark_macro_is_written_with_its_arguments() {
   let (log, xml) = run(repro!("ne6_mark_macro_arguments"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
-    row(&["Ann Able", "mark=*", "affiliation=Princeton University"]),
-    row(&["Bob Baker", "mark=†", "affiliation=Princeton University"]),
+    row(&["Ann Able", "affiliation=Princeton University"]),
+    row(&["Bob Baker", "affiliation=Princeton University"]),
     row(&["Carl Cole", "mark=†", "affiliation=Princeton University"]),
   ]);
 }

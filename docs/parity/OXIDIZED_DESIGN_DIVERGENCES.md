@@ -19709,7 +19709,12 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   frontmatter flush begins; DG 2026-11-17, after INTCHECK found the reduction lost the links of names typing the glyph in
   37 papers: 2404.01413's colm2024 copy, its ‡ links; 2510.09942's renamed neurips copy; 1503.02531's nips14submit_e.sty,
   "Vinyals$^\dagger$"; 2509.10105's vv2.sty, its `\footnotemark[1]`; ltexpprt.sty; 1511.03137, 2011.13149, 2406.07546,
-  2506.19073, 2507.08794, 1501.06614, 2011.09192). None read, the marks are unknown: no glyph, each note under its name.
+  2506.19073, 2507.08794, 1501.06614, 2011.09192). Read only where the title block's notes step the footnote counter as
+  TeX's `\thanks` does (`lx_title_counts_footnotes`, `declare_title_numbers_faithful`): a raw class's do not here, and its
+  title's `\thanks` would shift every author's glyph (siamart's "Title∗ … Ann†", the count here ∗: 2107.07572,
+  2509.14771, 2108.06375, 2301.12996, 2112.13097; aiaa-tc's "Ann*, Bob†", 1505.07844's class, lost with them: row R
+  MTREDUCE-RAWCLASS; `mtreduced_raw_class_title_thanks_marks_unknown`). None read, the marks are unknown: no glyph, each
+  note under its name.
   PRESBX's static whole-copy reader (`\@makefnmark`, untouched marks) stays gone. A `\maketitle` a file assigns by
   `\let` (`\let\maketitle\nips@maketitle`) is no refused one and is not read (the review's probe c3). A mark whose number the title block reads
   off the counter (`\samethanks`' `\footnotemark[\value{footnote}]`, `[\arabic{footnote}]`, `[\numexpr…]`) names its
@@ -19718,8 +19723,8 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `\maketitle` whose line is no known one (`Bob$^{1}$` beside an `\arabic` `\thanks`) links nothing, the note's glyph
   unknown (row R MTREDUCE-TYPED, revMTREDUCE S1). The class file's own drop is the class's: a binding that reads its raw
   class and declares its marks keeps them (lni.cls:475-477 arabic, `lni_cls.rs`: 2407.04435's 1, 1, 1,2, 3). Under a
-  class no binding declares the marks of, the class file's own `\maketitle` is read as above, unknown where its body
-  gives none (`title_marks_unknown`: `\maketitle:redefined@class`; aiaa-tc's `\fnsymbol`, "Ann Able*, Bob Baker†";
+  class no binding declares the marks of, the class file's own `\maketitle` is unknown, its title notes stepping no
+  counter here (`title_marks_unknown`: `\maketitle:redefined@class`; aiaa-tc's `\fnsymbol`, "Ann Able*, Bob Baker†";
   scrartcl's, where Perl's number key wrote `\footnotemark[1]` "1", the advisor's I-3; geophysics's, 2006.10886,
   2403.07393; a bound class's own `\maketitle`, elsarticle's or llncs's, keeps Perl's marks). So no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
   `\footnotetext` of a title field (`drop_unknown_title_mark`: no `mark`, no tags, its text paired by the counter value
