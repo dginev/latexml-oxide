@@ -485,9 +485,8 @@ fn snjnl_notes_before_a_section_and_maketitle_print_once() {
         format!(
           r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> {bob}"#
         ),
-        format!(
-          r#"</abstract> <note role="equal-contributors" xml:id="id1">Inside only.</note> <section"#
-        ),
+        r#"</abstract> <note role="equal-contributors" xml:id="id1">Inside only.</note> <section"#
+          .to_string(),
       ],
       "Inside only.",
       1,
@@ -498,9 +497,8 @@ fn snjnl_notes_before_a_section_and_maketitle_print_once() {
       ),
       vec![
         format!("{ann_star} </creator> {bob}"),
-        format!(
-          r#"</abstract> <note role="equal-contributors" xml:id="id2">Between.</note> <section"#
-        ),
+        r#"</abstract> <note role="equal-contributors" xml:id="id2">Between.</note> <section"#
+          .to_string(),
       ],
       "Between.",
       2,
