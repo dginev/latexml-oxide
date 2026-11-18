@@ -30,6 +30,23 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The TeX Live package set the macOS jobs install with TeX-Live/setup-texlive-action — the same list
+# as .github/workflows/windows-ci-manual-trigger.yml (which mirrors the Linux job's apt list). Keep
+# the two in step; a change here also changes the action's cache key.
+env:
+  TEXLIVE_PACKAGES: >-
+    scheme-medium
+    collection-latexextra
+    collection-mathscience
+    collection-bibtexextra
+    collection-publishers
+    collection-fontsextra
+    collection-langgerman
+    collection-langfrench
+    collection-langgreek
+    collection-langcyrillic
+    dvipng
+
 jobs:
   # Path gate. Emits two booleans the expensive jobs branch on, so that a PR
   # only pays for what its diff can actually affect. The `main`-push run
@@ -485,18 +502,26 @@ jobs:
         shell: bash
         run: bash tools/test_skip_summary.sh
 
-  # macOS mirror of the Linux job above (issue #217). Same `ci` profile,
-  # same make-formats → build → run flow; only the platform deps differ:
-  # Homebrew instead of apt, and NO mold (the .cargo/config.toml
-  # `-fuse-ld=mold` rustflags are gated to x86_64-linux, so the
-  # aarch64-darwin link uses the system linker — we simply don't set the
-  # mold RUSTFLAGS here). Uses Homebrew's `texlive`, which ships
-  # libkpathsea + kpathsea.pc, so the in-process linked kpathsea backend is
-  # exercised end-to-end. (MacTeX/BasicTeX's subprocess-`kpsewhich` fallback
-  # is documented in docs/BUILDING.md but not gated here — it lacks the package set
-  # the full suite needs.)
-  macos:
-    name: latexml-oxide CI (macOS shard ${{ matrix.shard }}/4)
+  # macOS mirror of the Linux job above (issue #217): the same `ci` profile and
+  # make-formats → build → test flow; only the platform deps differ (Homebrew
+  # libxml2/libxslt, no mold: the .cargo/config.toml `-fuse-ld=mold` rustflags
+  # are gated to x86_64-linux). It is split into ONE build job and four test
+  # shards that run from its nextest archive, because macOS jobs are the
+  # scarce resource: the account runs at most 5 at once, and when every shard
+  # built for itself (~5 min Homebrew `texlive` + 11-15 min compile per shard)
+  # a run took ~2 runner-hours, so concurrent runs queued for up to 2.5 h
+  # (2026-11-15..18: 152 macOS runner-hours; 132 of the 138 waits over 15 min
+  # had all 5 slots held by our own jobs).
+  #
+  # TeX Live comes from TeX-Live/setup-texlive-action (cached, the Windows
+  # workflow's package set: TEXLIVE_PACKAGES above), and libkpathsea is built
+  # from source and linked STATICALLY (tools/build_static_kpathsea.sh, as the
+  # macOS release leg does), so the in-process kpathsea backend is still the
+  # one exercised — now the shipped one — and no shard needs Homebrew's texlive.
+  # (MacTeX/BasicTeX's subprocess-`kpsewhich` fallback is documented in
+  # docs/BUILDING.md but not gated here.)
+  macos-build:
+    name: latexml-oxide CI (macOS build)
     needs: changes
     # macOS is the slow leg and its unique value is the platform-dependent
     # surface (`changes.macos`: libxml2/libxslt parsing and XSLT, #292; the OS
@@ -504,7 +529,8 @@ jobs:
     # labelled `ci:macos`; on a `main` push run it for ANY code change — that
     # post-merge run is the net that catches a macOS regression a PR's narrow
     # filter let through; and always on the nightly `schedule` and a manual
-    # `workflow_dispatch`. Docs-only diffs skip it on PRs and pushes.
+    # `workflow_dispatch`. Docs-only diffs skip it on PRs and pushes. The test
+    # shards below run exactly when this job succeeds.
     if: >-
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
@@ -514,31 +540,35 @@ jobs:
         contains(github.event.pull_request.labels.*.name, 'ci:macos')))
     runs-on: macos-15
     # 3 vCPU / 7 GB RAM — tighter than the 16 GB Linux runner, so the same
-    # RAM-tuned `ci` profile + jobs=2 apply; the cold build dominates, so
-    # allow more wall-clock than the Linux leg.
-    timeout-minutes: 120
-    # Sharded like the Linux leg, and this is where it pays most: macOS was the
-    # gating job at ~47 min, of which 29.4 min was the sequential test step.
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
+    # RAM-tuned `ci` profile + jobs=2 apply; a cold build dominates.
+    timeout-minutes: 90
     env:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
     steps:
+      - uses: actions/checkout@v6
       # libxml2 + libxslt are keg-only on Homebrew; install them and surface
       # their pkgconfig dirs so the libxml/libxslt build scripts find them.
+      # No auto-update: the build and the shards then install the runner
+      # image's same formula versions, so the shards' dylibs match the link.
       - name: install dependencies
         run: |
           command -v pkg-config >/dev/null || brew install pkgconf
-          brew install libxml2 libxslt texlive jing-trang
+          brew install libxml2 libxslt
       - name: surface keg-only pkg-config paths
         run: |
           echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v6
+      - name: install TeX Live
+        uses: TeX-Live/setup-texlive-action@v4
+        with:
+          packages: ${{ env.TEXLIVE_PACKAGES }}
+      # Sets KPATHSEA_LIB_DIR + KPATHSEA_STATIC for the build below.
+      - name: build static libkpathsea from source
+        run: bash tools/build_static_kpathsea.sh
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
@@ -571,16 +601,67 @@ jobs:
         run: tools/make_formats.sh
       - name: install cargo-nextest
         uses: taiki-e/install-action@nextest
+      # One compile for all four shards: the archive holds every test binary,
+      # the workspace binaries the tests spawn and the build-script outputs.
+      - name: archive test binaries
+        run: cargo nextest archive --cargo-profile ci --workspace --archive-file nextest-macos.tar.zst
+      - name: archive size
+        run: ls -la nextest-macos.tar.zst
+      - uses: actions/upload-artifact@v5
+        with:
+          name: macos-test-archive
+          path: |
+            nextest-macos.tar.zst
+            resources/dumps
+          retention-days: 1
+          # The archive is already zstd; a re-run of this job replaces it.
+          compression-level: 0
+          overwrite: true
+          if-no-files-found: error
 
-      - name: build test binaries
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --no-run
+  macos:
+    name: latexml-oxide CI (macOS shard ${{ matrix.shard }}/4)
+    needs: [changes, macos-build]
+    runs-on: macos-15
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      RUST_BACKTRACE: "1"
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+    steps:
+      - uses: actions/checkout@v6
+      # Runtime only: the test binaries load libxml2/libxslt from Homebrew's
+      # keg (the same prefix on every runner); jing-trang for the schema guards.
+      - name: install dependencies
+        run: brew install libxml2 libxslt jing-trang
+      # The same package set as macos-build, so this restores the cache that
+      # job saved: the tree its dumps were stamped against.
+      - name: install TeX Live
+        uses: TeX-Live/setup-texlive-action@v4
+        with:
+          packages: ${{ env.TEXLIVE_PACKAGES }}
+      - uses: actions/download-artifact@v6
+        with:
+          name: macos-test-archive
+          path: .
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@nextest
       - name: run tests
-        # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
-        # selects the NEXTEST profile (.config/nextest.toml). They are
-        # different knobs that happen to share a name.
+        # The archive keeps the build's Cargo profile. It is extracted into the
+        # workspace, so `target/` sits at the build job's absolute path, the
+        # one each test's compile-time `env!("CARGO_BIN_EXE_…")` names.
+        # `--profile ci` selects the NEXTEST profile (.config/nextest.toml).
         env:
           LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/4
+        run: >-
+          cargo nextest run --archive-file nextest-macos.tar.zst
+          --extract-to "$GITHUB_WORKSPACE" --extract-overwrite
+          --workspace-remap "$GITHUB_WORKSPACE"
+          --profile ci --partition hash:${{ matrix.shard }}/4
 
       - name: skipped tests (requirements not met)
         # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
@@ -599,14 +680,14 @@ jobs:
   # repo-settings change that must land WITH this workflow.
   ci-success:
     name: CI success
-    needs: [changes, lint, miri, asan, test, macos]
+    needs: [changes, lint, miri, asan, test, macos-build, macos]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: verify no required job failed
         run: |
-          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.asan.result }} ${{ needs.test.result }} ${{ needs.macos.result }}'
+          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.asan.result }} ${{ needs.test.result }} ${{ needs.macos-build.result }} ${{ needs.macos.result }}'
           echo "upstream job results: $results"
           for r in $results; do
             case "$r" in
