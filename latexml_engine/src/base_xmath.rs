@@ -5,14 +5,14 @@ use std::collections::hash_map::Entry;
 
 use crate::prelude::*;
 
-static NAMED_SPACE_CHARS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+static NAMED_SPACE_CHARS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
   static_map!("negthinspace" => "", "thinspace" => "\u{2009}",
     "medspace" => "\u{2005}", "thickspace" => "\u{2004}", "space" => " ")
 });
-static DECIMAL_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
+static DECIMAL_SEP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(
   || static_map!("en" => ".", "de" => ",", "fr" => ",", "nl" => ",", "pt" => ",", "es" => ","),
 );
-static THOUSANDS_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
+static THOUSANDS_SEP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(
   || static_map!("en" => ",", "de" => ".", "fr" => ".", "nl" => ".", "pt" => ".", "es" => "."),
 );
 
@@ -1845,8 +1845,8 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   // `.mf`, collapsing every `.mf` id under one key (last-write-wins).
   // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
   // S3.E22 align/equation cluster (cloned to MathFork main branch).
-  static TRAILING_NUM_RE: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap());
+  static TRAILING_NUM_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap());
   let trailing_num_re = &*TRAILING_NUM_RE;
   let mut id_by_suffix: HashMap<String, String> = HashMap::default();
   for id in &all_ids {

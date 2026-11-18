@@ -1,6 +1,5 @@
-use std::{borrow::Cow, collections::VecDeque, path::Path, rc::Rc};
+use std::{borrow::Cow, collections::VecDeque, path::Path, rc::Rc, sync::LazyLock};
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -32,7 +31,7 @@ use crate::{
   util::pathname::{self, PathnameFindOptions},
 };
 
-static QUOTE_WRAPPED: Lazy<Regex> = Lazy::new(|| Regex::new("^\"(.+)\"$").unwrap());
+static QUOTE_WRAPPED: LazyLock<Regex> = LazyLock::new(|| Regex::new("^\"(.+)\"$").unwrap());
 
 /// Maximum nesting depth for package/class loading to prevent infinite recursion.
 /// Perl LaTeXML has no explicit limit but rarely exceeds 20 levels in practice.
@@ -2885,7 +2884,7 @@ fn file_declaration(text: &str) -> Option<(&'static str, String)> {
 /// — a code line of it alone, outside any brace group — where TeX stops reading the file: a declaration in the
 /// documentation after it (a `.dtx`-style trailer) is not the file's (77w review 8).
 fn file_declarations(text: &str) -> Vec<(&'static str, String)> {
-  static PROVIDES: Lazy<Regex> = Lazy::new(|| {
+  static PROVIDES: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\\Provides(?:Expl)?(Class|Package|File)\s*\{\s*([^}\s]+)\s*\}").unwrap()
   });
   let expansion = |name: &str| {
@@ -2958,7 +2957,7 @@ fn file_declarations(text: &str) -> Vec<(&'static str, String)> {
 /// that only shares the name is not read either: hep-ph9609379's diagrams.sty (fifteen `\special` PostScript macros,
 /// one of them `\diagram`), 2411.02780's equations.sty (`\ProvidesPackage{annotate-equations}`). Logged at Info.
 fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
-  static DEFINED: Lazy<Regex> = Lazy::new(|| {
+  static DEFINED: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
       r"\\(?:[egx]?def|let|(?:re|provide)?newcommand\*?|DeclareRobustCommand\*?|(?:New|Renew|Provide|Declare)DocumentCommand|newif|chardef|mathchardef|newlength|newcount|newdimen|newskip|newtoks|newbox)\s*\{?\s*(\\[A-Za-z]+)(?:[^A-Za-z@]|$)|\\(?:(?:re)?newenvironment\*?|(?:New|Renew|Provide|Declare)DocumentEnvironment)\s*\{([A-Za-z]+)\}|\\newtheorem\*?\s*\{([A-Za-z]+)\}|\\newcounter\s*\{([A-Za-z]+)\}",
     )
@@ -4189,10 +4188,9 @@ pub fn require_package_with_options(name: &str) -> Result<()> {
 /// A comma-separated argument declares several resources at once, as biblatex
 /// allows.
 fn scan_bib_resources(code: &str) -> Vec<String> {
-  use once_cell::sync::Lazy;
   use regex::Regex;
-  static BIBRES_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\addbibresource\s*(?:\[[^\]]*\])?\s*\{([^\}]*)\}").unwrap());
+  static BIBRES_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\addbibresource\s*(?:\[[^\]]*\])?\s*\{([^\}]*)\}").unwrap());
   let mut out = Vec::new();
   for cap in BIBRES_RE.captures_iter(code) {
     for part in cap[1].split(',') {
@@ -4285,7 +4283,6 @@ pub fn require_dependencies_only(file: &str, ext_type: &str, only: &[&str]) -> b
 /// [`require_dependencies_except`] / [`require_dependencies_only`]: scan `file` and load the classes and packages
 /// it names for which `keep` holds; `false` when there is no file to scan.
 fn require_dependencies_filtered(file: &str, ext_type: &str, keep: &dyn Fn(&str) -> bool) -> bool {
-  use once_cell::sync::Lazy;
   use regex::Regex;
 
   // Rust-only re-entrancy guard. Perl avoids this case by other means
@@ -4323,7 +4320,7 @@ fn require_dependencies_filtered(file: &str, ext_type: &str, keep: &dyn Fn(&str)
   // A comment on a last line without its newline is one too (Perl's pattern keeps it): a `{filecontents}` copy is
   // stored without that newline, so an edited-out `%\RequirePackage{algorithmic}` ending one was loaded (batch 67l,
   // repro icml_style_copy_without_algorithmic.tex).
-  static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*(?:\n|$)").unwrap());
+  static COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"%[^\n]*(?:\n|$)").unwrap());
   // `comment`-package block: `\begin{comment}…\end{comment}` is a verbatim-SKIP
   // environment, so a `\usepackage`/`\RequirePackage` inside it is NEVER loaded
   // by LaTeX. The dep-scan must not anticipate it. Same "more-robust than Perl"
@@ -4333,22 +4330,22 @@ fn require_dependencies_filtered(file: &str, ext_type: &str, keep: &dyn Fn(&str)
   // hyperref" `\AtBeginDocument` order-check (hyperref appears loaded though the
   // author commented it out). `comment` doesn't nest, so a non-greedy match to
   // the first `\end{comment}` is correct.
-  static COMMENT_ENV_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?s)\\begin\s*\{comment\}.*?\\end\s*\{comment\}").unwrap());
+  static COMMENT_ENV_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?s)\\begin\s*\{comment\}.*?\\end\s*\{comment\}").unwrap());
   // Perl L2777-2779 runs two separate substitutions, in this order:
   // first `\RequirePackage`, then `\usepackage`. Use two regexes so that
   // collected order matches Perl's call order to `$collect`.
-  static REQ_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\RequirePackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
-  static USE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\usepackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
-  static CLS_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
+  static REQ_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\RequirePackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
+  static USE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\usepackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
+  static CLS_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
   // Matches a `\newcommand`/`\def`-family DEFINITION HEADER ending exactly at a
   // `{` — i.e. the brace that follows opens the macro BODY. Used to detect a
   // `\usepackage` that lives in a deferred macro body (loads only when the
   // macro is later expanded) vs one inside a load-time conditional.
-  static DEF_BODY_HEADER_RE: Lazy<Regex> = Lazy::new(|| {
+  static DEF_BODY_HEADER_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
       r"(?s)(?:\\(?:re|provide)?newcommand|\\DeclareRobustCommand)\*?\s*(?:\{\s*\\[A-Za-z@]+\s*\}|\\[A-Za-z@]+)\s*(?:\[[^\]]*\]\s*)*$|\\[egx]?def\s*\\[A-Za-z@]+[^{}]*$",
     )
@@ -4359,16 +4356,16 @@ fn require_dependencies_filtered(file: &str, ext_type: &str, keep: &dyn Fn(&str)
   // is only truly deferred if `\<m>` is never invoked; the AMS-class idiom
   // `\def\@tempa{\RequirePackage{amsmath}}…\@tempa` invokes it immediately and
   // so DOES load P (witness ijnam.cls → amsmath → `{aligned}`, 1911.03415).
-  static DEF_NAME_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?s)\\[egx]?def\s*\\([A-Za-z@]+)[^{}]*$").unwrap());
+  static DEF_NAME_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?s)\\[egx]?def\s*\\([A-Za-z@]+)[^{}]*$").unwrap());
   // A require inside a `\DeclareOption{<opt>}{…}` (or `\DeclareOption*{…}`)
   // code-arm is CONDITIONAL on the option being selected (resolved later by
   // `\ProcessOptions`), so the dep-scan must not eagerly load it. Matches when a
   // group's preceding window ends at `…\DeclareOption{<opt>}` / `…\DeclareOption*`
   // — i.e. the `{` it precedes opens the option's code arm. (Does NOT match
   // `\DeclareOptionX`/`\ExecuteOptions`/`\ProcessOptions`.)
-  static DECLARE_OPTION_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?s)\\DeclareOption\*?\s*(?:\{[^{}]*\})?\s*$").unwrap());
+  static DECLARE_OPTION_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?s)\\DeclareOption\*?\s*(?:\{[^{}]*\})?\s*$").unwrap());
 
   // Perl L2761: `FindFile($file, type => $type, noltxml => 1)`. `$file`
   // is BARE — `FindFile` glues on `.$type` itself per L2073-2076.
@@ -4551,14 +4548,14 @@ fn require_dependencies_filtered(file: &str, ext_type: &str, keep: &dyn Fn(&str)
   // `top_level` skip below, so it never entered the conflicting set at all. Perl
   // has no such gate (L2767-2774 is a plain dedup); the def-body `top_level` skip
   // plus the executed-set gate cover the legitimate cases faithfully.
-  static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
+  static OPT_SPLIT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s*,\s*").unwrap());
   // Perl Package.pm:2806/2810 `options => [split(/\s*,\s*/, $options)]`. An option naming a
   // macro undefined at the scan (easychair.cls:365 `\LoadClass[\@PaperFormat,…]{article}`)
   // names the scanned file's own definitions, which never run (the file is not executed,
   // OmniBus stands in): Perl keeps it an inert string, where the loaded class's option
   // processing here expands it, "undefined" for each. An option whose macros are defined
   // (`headheight=\baselineskip`) passes. Witnesses 2011.11995, 2211.09353, 2607.12736.
-  static OPTION_CS: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\([A-Za-z@]+|.)").unwrap());
+  static OPTION_CS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\([A-Za-z@]+|.)").unwrap());
   let scanned_options = |raw_opts: &Option<String>| -> Vec<String> {
     raw_opts
       .as_deref()
@@ -5263,16 +5260,16 @@ pub fn binding_counts_as_file(file: &str) -> bool {
 }
 
 /// Suffixes with separator (Perl @find_fallback_suffixes).
-static FALLBACK_SUFFIX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+static FALLBACK_SUFFIX: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"(?i)[._-](arx|arxiv|conference|workshop|tmp|alternate|preprint|fixed|[vV]?[-_.\d]+|old|new|final|clean|mine|priv|rev|mod|modified|edited|custom|altered|rtx)$").unwrap()
 });
 /// Glued suffixes without separator.
-static FALLBACK_GLUED: std::sync::LazyLock<Regex> =
-  std::sync::LazyLock::new(|| Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$").unwrap());
+static FALLBACK_GLUED: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$").unwrap());
 /// Prefixes. Perl Package.pm L2182: `^((?:rw|my|preprint)[-_.]?)` — separator is OPTIONAL, so `mysvjour3` strips to
 /// `svjour3` (not just `mysvjour`). Caught on arxiv 1206.0536 (\documentclass{mysvjour3}).
-static FALLBACK_PREFIX: std::sync::LazyLock<Regex> =
-  std::sync::LazyLock::new(|| Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)").unwrap());
+static FALLBACK_PREFIX: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)").unwrap());
 
 /// Perl Package.pm L2141-2210: FindFile_fallback
 /// Pure-check variant of [`find_file_fallback`]: strips the same

@@ -84,10 +84,9 @@ pub mod watchdog;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
 
-use std::{borrow::Cow, fmt, rc::Rc};
+use std::{borrow::Cow, fmt, rc::Rc, sync::LazyLock};
 
 use libxml::tree::Node;
-use once_cell::sync::Lazy;
 /// Initialize libxml2 for thread safety. Must be called before any libxml2
 /// operations that don't go through `libxml::parser::Parser`. Delegates to
 /// the safe wrapper in rust-libxml, which uses its own `std::sync::Once` to
@@ -210,7 +209,7 @@ use crate::{
   tokens::Tokens,
 };
 
-pub static NO_PROPERTIES: Lazy<HashMap<Stored>> = Lazy::new(HashMap::default);
+pub static NO_PROPERTIES: LazyLock<HashMap<Stored>> = LazyLock::new(HashMap::default);
 
 /// The Core conversion runtime
 pub struct Core {
@@ -263,13 +262,13 @@ impl Core {
   pub fn new(options: CoreOptions) -> Self {
     // Eagerly initialize the engine's `#[thread_local]` roots, LEAVES-FIRST,
     // on THIS thread before any of them is touched re-entrantly. ARENA is the
-    // universal leaf (every root's Lazy initializer interns via arena::pin);
+    // universal leaf (every root's LazyLock initializer interns via arena::pin);
     // the token constants, MODEL, the gullet roots and the STD/STY catcode
     // templates all reach into ARENA (and the gullet/template roots build
     // tokens). Forcing them in dependency order up front — before
     // `set_stomach`/`set_state` below trigger their own initializers, and
     // before expansion lazily touches the gullet/catcode roots mid-run —
-    // guarantees no root's `Lazy` init ever runs another root's init
+    // guarantees no root's `LazyLock` init ever runs another root's init
     // *re-entrantly*. That cross-`#[thread_local]`-during-init pattern is
     // benign on Linux/ELF TLS but is the documented macOS hazard
     // (rust-lang/rust#29594) behind the macOS worker-thread memory

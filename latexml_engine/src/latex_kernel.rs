@@ -72,15 +72,14 @@
 //! no LaTeX to fall back on: a LaTeX kernel command there is undefined, and the
 //! format loads only on a use of one of Perl's triggers.
 
-use std::cell::OnceCell;
+use std::{cell::OnceCell, sync::LazyLock};
 
-use once_cell::sync::Lazy;
 use rustc_hash::FxHashSet;
 
 use crate::prelude::*;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
-static INI_MODE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
+static INI_MODE: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
 
 /// Per-session flag: the kernel autoload has already been attempted.
 ///

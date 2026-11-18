@@ -25,8 +25,9 @@ pub mod cell;
 mod normalize;
 pub mod template;
 
+use std::sync::LazyLock;
+
 use libxml::tree::{Node, NodeType};
-use once_cell::sync::Lazy;
 
 use self::{
   cell::Cell,
@@ -102,7 +103,7 @@ pub type CloseRowFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
 pub type OpenColumnFn = Rc<dyn Fn(&mut Document, HashMap<String, String>) -> Result<Option<Node>>>;
 pub type CloseColumnFn = Rc<dyn Fn(&mut Document) -> Result<Option<Node>>>;
 
-static SINGLE_PUNCT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*[\.,;]\s*$").unwrap());
+static SINGLE_PUNCT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*[\.,;]\s*$").unwrap());
 
 pub struct AlignmentConfig {
   pub template:        Option<Template>,

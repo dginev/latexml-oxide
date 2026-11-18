@@ -466,7 +466,8 @@ fn is_single_cs(v: &Tokens, name: &str) -> bool {
 
 /// `LATEXML_PGFKEYS_TRACE=1`: one stderr line per dispatched key (key, the
 /// case taken) — the bisection aid for a native/raw divergence.
-static TRACE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_PGFKEYS_TRACE").is_some());
+static TRACE: LazyLock<bool> =
+  LazyLock::new(|| std::env::var_os("LATEXML_PGFKEYS_TRACE").is_some());
 
 fn trace(key: &str, what: &str) {
   if *TRACE {

@@ -331,21 +331,19 @@ pub(in crate::base_utilities) fn frontmatter_sup_operand_and_notes()
 
 /// A mark's font switch, no part of it: `$^{\bf{1}}$`, 1109.3726; `\textsuperscript{\normalfont{1},}` inside a bold
 /// name, 2604.24532; Perl strips `\rm` only, Base_Utility.pool.ltxml:365 — OXIDIZED_DESIGN #34.
-pub(in crate::base_utilities) static FONT_SWITCH: std::sync::LazyLock<Regex> =
-  std::sync::LazyLock::new(|| {
-    Regex::new(
+pub(in crate::base_utilities) static FONT_SWITCH: LazyLock<Regex> = LazyLock::new(|| {
+  Regex::new(
     r"\\(?:rm|bf|it|sf|mathbf|mathrm|mathsf|textbf|textrm|textsf|textit|textmd|textup|textnormal|normalfont|upshape|mdseries|bfseries|rmfamily)([^a-zA-Z]|$)",
   )
   .unwrap()
-  });
+});
 
 /// A symbol unit of a mark — a control word or a star — and a mark's operand that is two or more of them alone
 /// (`\spadesuit\heartsuit`; `\dagger*`, `\dagger *`, the r6 re-review's x1, w10, w11), which [`clean_frontmatter_labels`]
 /// reads as a label each when they differ (`**`, a doubled star, stays one).
-static SYMBOL_COMMAND: std::sync::LazyLock<Regex> =
-  std::sync::LazyLock::new(|| Regex::new(r"\\[a-zA-Z]+|\*").unwrap());
-pub(in crate::base_utilities) static SYMBOL_COMMAND_RUN: std::sync::LazyLock<Regex> =
-  std::sync::LazyLock::new(|| Regex::new(r"^(?:(?:\\[a-zA-Z]+|\*)\s*){2,}$").unwrap());
+static SYMBOL_COMMAND: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\[a-zA-Z]+|\*").unwrap());
+pub(in crate::base_utilities) static SYMBOL_COMMAND_RUN: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^(?:(?:\\[a-zA-Z]+|\*)\s*){2,}$").unwrap());
 
 /// The spacing a mark's operand may carry, which prints no label character and parts the labels it stands between as a
 /// comma does: a tie, the control space, the math kerns `\!`, `\,`, `\:`, `\;`, `\>`, and the named spaces
@@ -353,7 +351,7 @@ pub(in crate::base_utilities) static SYMBOL_COMMAND_RUN: std::sync::LazyLock<Reg
 /// symbol, 2403.08629) — written so, or digested, as a class's optional `\author[*\,b,c]{…}` labels reach it: the
 /// no-break space, the thin, medium, thick, en and em spaces (2404.00867's "*\u{2009}b" was one label `*_b`, so Paul J.
 /// Steinhardt lost his affiliation b).
-static SPACING_IN_LABEL: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+static SPACING_IN_LABEL: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(concat!(
     r"~|[\u{00A0}\u{2002}-\u{2009}\u{202F}]|\\[!,:;> ]",
     r"|\\(?:quad|qquad|enspace|enskip|thinspace|negthinspace)([^a-zA-Z]|$)"

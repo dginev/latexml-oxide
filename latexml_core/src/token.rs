@@ -1,6 +1,4 @@
-use std::{borrow::Cow, fmt, fmt::Display, rc::Rc};
-
-use once_cell::sync::Lazy;
+use std::{borrow::Cow, fmt, fmt::Display, rc::Rc, sync::LazyLock};
 
 use crate::{
   Digested,
@@ -420,7 +418,7 @@ pub fn noexpand_family(shadowed: &Token) -> Token {
 
 /// constant for a BEGIN "{" token
 #[thread_local]
-pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_BEGIN: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("{"),
   code: Catcode::BEGIN,
   prov: 0,
@@ -429,7 +427,7 @@ pub static TOKEN_BEGIN: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for an END "}" token
 #[thread_local]
-pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_END: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("}"),
   code: Catcode::END,
   prov: 0,
@@ -438,7 +436,7 @@ pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for a MATH "$" token
 #[thread_local]
-pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_MATH: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("$"),
   code: Catcode::MATH,
   prov: 0,
@@ -447,7 +445,7 @@ pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for an ALIGN "&" token
 #[thread_local]
-pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_ALIGN: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("&"),
   code: Catcode::ALIGN,
   prov: 0,
@@ -456,7 +454,7 @@ pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for a PARAM "#" token
 #[thread_local]
-pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_PARAM: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("#"),
   code: Catcode::PARAM,
   prov: 0,
@@ -465,7 +463,7 @@ pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for a SUPER "^" token
 #[thread_local]
-pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_SUPER: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("^"),
   code: Catcode::SUPER,
   prov: 0,
@@ -474,7 +472,7 @@ pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for a SUB "_" token
 #[thread_local]
-pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_SUB: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("_"),
   code: Catcode::SUB,
   prov: 0,
@@ -483,7 +481,7 @@ pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for a SPACE " " token
 #[thread_local]
-pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_SPACE: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static(" "),
   code: Catcode::SPACE,
   prov: 0,
@@ -492,7 +490,7 @@ pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for a CR "\n" token
 #[thread_local]
-pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_CR: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("\n"),
   code: Catcode::SPACE,
   prov: 0,
@@ -501,7 +499,7 @@ pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for T_CS("\relax")
 #[thread_local]
-pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_RELAX: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("\\relax"),
   code: Catcode::CS,
   prov: 0,
@@ -510,7 +508,7 @@ pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for T_CS("\expandafter")
 #[thread_local]
-pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_EXPANDAFTER: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("\\expandafter"),
   code: Catcode::CS,
   prov: 0,
@@ -519,7 +517,7 @@ pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
 });
 /// constant for T_CS("\endcsname")
 #[thread_local]
-pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
+pub static TOKEN_ENDCSNAME: LazyLock<Token> = LazyLock::new(|| Token {
   text: arena::pin_static("\\endcsname"),
   code: Catcode::CS,
   prov: 0,
@@ -528,7 +526,7 @@ pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
 });
 
 /// Eagerly initialize this thread's pre-built `#[thread_local]` token
-/// constants. Each one's `Lazy` initializer interns its control-sequence
+/// constants. Each one's `LazyLock` initializer interns its control-sequence
 /// name via `arena::pin_static`, so they must be forced AFTER
 /// [`arena::force_init`](crate::common::arena::force_init) and before any
 /// code accesses them during another root's initialization — otherwise the
@@ -536,18 +534,18 @@ pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
 /// root's init, the macOS `#[thread_local]` hazard (rust-lang/rust#29594,
 /// issue #217). No behavioral change on Linux.
 pub(crate) fn force_init() {
-  Lazy::force(&TOKEN_BEGIN);
-  Lazy::force(&TOKEN_END);
-  Lazy::force(&TOKEN_MATH);
-  Lazy::force(&TOKEN_ALIGN);
-  Lazy::force(&TOKEN_PARAM);
-  Lazy::force(&TOKEN_SUPER);
-  Lazy::force(&TOKEN_SUB);
-  Lazy::force(&TOKEN_SPACE);
-  Lazy::force(&TOKEN_CR);
-  Lazy::force(&TOKEN_RELAX);
-  Lazy::force(&TOKEN_EXPANDAFTER);
-  Lazy::force(&TOKEN_ENDCSNAME);
+  LazyLock::force(&TOKEN_BEGIN);
+  LazyLock::force(&TOKEN_END);
+  LazyLock::force(&TOKEN_MATH);
+  LazyLock::force(&TOKEN_ALIGN);
+  LazyLock::force(&TOKEN_PARAM);
+  LazyLock::force(&TOKEN_SUPER);
+  LazyLock::force(&TOKEN_SUB);
+  LazyLock::force(&TOKEN_SPACE);
+  LazyLock::force(&TOKEN_CR);
+  LazyLock::force(&TOKEN_RELAX);
+  LazyLock::force(&TOKEN_EXPANDAFTER);
+  LazyLock::force(&TOKEN_ENDCSNAME);
 }
 
 #[macro_export]

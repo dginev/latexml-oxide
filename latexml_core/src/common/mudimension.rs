@@ -1,6 +1,5 @@
-use std::fmt;
+use std::{fmt, sync::LazyLock};
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use super::dimension::fixedformat;
@@ -10,7 +9,7 @@ use crate::{
   definition::register::RegisterType,
 };
 
-static MUDIM_SPEC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap());
+static MUDIM_SPEC_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap());
 
 #[derive(Debug, Copy, Clone, PartialEq, Default, Eq)]
 pub struct MuDimension(pub i64);

@@ -2,10 +2,10 @@ use std::{
   cell::RefCell,
   fs::File,
   io::{BufRead, BufReader},
+  sync::LazyLock,
 };
 
 use libxml::{readonly::RoNode, tree::Node};
-use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
 
@@ -27,15 +27,17 @@ use crate::{
 pub const LTX_NAMESPACE: &str = "http://dlmf.nist.gov/LaTeXML";
 pub type IndirectModel = SymHashMap<SymHashMap<SymStr>>;
 
-static PREFIXED_LOCALNAME_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^:]+):(.+)$").unwrap());
-static TAG_MODEL_LINE_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
+static PREFIXED_LOCALNAME_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^([^:]+):(.+)$").unwrap());
+static TAG_MODEL_LINE_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
 // Mirrors Perl Model.pm L149: `m/^([^:=]+):=\(?([^)]*?)\)?$/` — the
 // `\(?…\)?` pair strips the surrounding parens from
 // `classname:=(elt1,elt2,...)` so the elements split cleanly.
-static CLASS_MODEL_LINE_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^([^:=]+):=\(?([^)]*?)\)?$").unwrap());
-static NAMESPACE_MODEL_LINE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
+static CLASS_MODEL_LINE_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^([^:=]+):=\(?([^)]*?)\)?$").unwrap());
+static NAMESPACE_MODEL_LINE_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 
 #[derive(Default, Debug)]
 pub struct TagFrame {
@@ -43,7 +45,7 @@ pub struct TagFrame {
   attributes: HashSet<SymStr>,
 }
 
-static DEFAULT_TAG_FRAME: Lazy<TagFrame> = Lazy::new(TagFrame::default);
+static DEFAULT_TAG_FRAME: LazyLock<TagFrame> = LazyLock::new(TagFrame::default);
 
 #[derive(Default, Debug)]
 pub struct Model {
@@ -64,7 +66,7 @@ pub struct Model {
 }
 
 #[thread_local]
-pub static MODEL: Lazy<RefCell<Model>> = Lazy::new(|| RefCell::new(Model::new()));
+pub static MODEL: LazyLock<RefCell<Model>> = LazyLock::new(|| RefCell::new(Model::new()));
 
 macro_rules! model {
   () => {
@@ -82,16 +84,16 @@ pub fn initialize_model() {
   *global_model = Model::new();
 }
 
-/// Eagerly initialize this thread's `#[thread_local]` `MODEL` Lazy.
+/// Eagerly initialize this thread's `#[thread_local]` `MODEL` LazyLock.
 ///
 /// `Model::new()` interns the `xml` namespace prefix/URI via `arena::pin`,
-/// so its `Lazy` initializer reaches into the `ARENA` thread-local. Forcing
+/// so its `LazyLock` initializer reaches into the `ARENA` thread-local. Forcing
 /// it at conversion entry — *after* [`arena::force_init`](crate::common::arena::force_init)
 /// and before `STATE`/`STOMACH` are built — keeps that init from running
 /// re-entrantly from within another root's initialization, the macOS
 /// `#[thread_local]` hazard behind issue #217. No behavioral change on
 /// Linux (a later `set_model` for a schema-driven model still replaces it).
-pub(crate) fn force_init() { Lazy::force(&MODEL); }
+pub(crate) fn force_init() { LazyLock::force(&MODEL); }
 
 impl Model {
   pub fn new() -> Self {

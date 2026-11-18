@@ -1,6 +1,5 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::LazyLock};
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 use unicode_normalization::UnicodeNormalization;
 use unidecode::unidecode;
@@ -10,8 +9,8 @@ use crate::binding::def::dialect::{
   TRAILING_SLASH_RE,
 };
 
-static TRAILING_PUNCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\.,;]+$").unwrap());
-static NON_ALNUM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^a-zA-Z0-9]").unwrap());
+static TRAILING_PUNCT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[\.,;]+$").unwrap());
+static NON_ALNUM_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^a-zA-Z0-9]").unwrap());
 
 //======================================================================
 // Cleaners

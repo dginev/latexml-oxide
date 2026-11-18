@@ -10,6 +10,11 @@
     `--help` and `docs/USAGE.md` say how a `.rhai` binding is found and how
     `LATEXML_DISABLE_SHELL_ESCAPE` refuses commands. Guard
     `30_script_bindings::a_rhai_diagnostic_names_its_binding_file`.
+
+  - **Dependency cleanup before v0.8.0.** `once_cell`'s `Lazy` is now `std::sync::LazyLock` throughout, and the direct
+    `once_cell` dependency is gone from every crate; `deny.toml`'s advisory notes are corrected. No output change.
+    For a Rust binding crate: `latexml_engine::prelude` now re-exports `LazyLock` in place of `Lazy`.
+
   - **TeX Live's package manuals convert clean (the perfect-kernel campaign).** Every one of the
     1,552 in-scope TeX Live documentation bundles converts with no Error but of a ruled-out
     kind, valid against the schema (or only in a ruled class), at least 95 % word recall against

@@ -578,15 +578,13 @@ pub fn accent_combining_form(w: &Whatsit) -> Option<String> {
 
 /// Whether a character is a format character (Unicode Cf), printing nothing ([`keeps_label_char`]).
 pub fn is_format_char(c: char) -> bool {
-  static FORMAT: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"^\p{Cf}$").unwrap());
+  static FORMAT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\p{Cf}$").unwrap());
   FORMAT.is_match(c.encode_utf8(&mut [0; 4]))
 }
 
 /// Whether a character is a combining mark (Unicode M), printed on the character before it ([`keeps_label_char`]).
 pub fn is_combining_mark(c: char) -> bool {
-  static MARK: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"^\p{M}$").unwrap());
+  static MARK: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\p{M}$").unwrap());
   MARK.is_match(c.encode_utf8(&mut [0; 4]))
 }
 
