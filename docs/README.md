@@ -32,7 +32,7 @@ The live worklists and the ship contract. Read these first when resuming.
 | [`release/RELEASE_CRITERIA.md`](release/RELEASE_CRITERIA.md) | The "what must be true before a public 1.0" contract: gates, binary-size budget, portability, license audit, tail-latency/RSS signals. |
 | [`release/RELEASING.md`](release/RELEASING.md) | Tag-driven release procedure; the self-contained-binary requirement. |
 | [`release/CRATES_IO_PUBLISH.md`](release/CRATES_IO_PUBLISH.md) | `cargo publish` + docs.rs + library-use story: bottom-up publish order, open blockers (workspace-`resources/` packaging, `pericortex` git dep), docs.rs metadata, `latexml::api` entrypoint. |
-| [`release/CODE_SIGNING_POLICY.md`](release/CODE_SIGNING_POLICY.md) | Windows code signing through SignPath Foundation: what is signed, roles, privacy, system changes (issue 775). |
+| [`release/CODE_SIGNING_POLICY.md`](release/CODE_SIGNING_POLICY.md) | Windows code signing: status (unsigned; SignPath declined), the Microsoft Store plan, roles, privacy, system changes (issue 775). |
 | [`release/LICENSE_INVENTORY.md`](release/LICENSE_INVENTORY.md) | Living license inventory for the redistributable binary (scopes the CC0 claim). |
 | [`release/SAFETY.md`](release/SAFETY.md) | Threat model and `unsafe` inventory. |
 | [`release/WINDOWS_COMPATIBILITY_PLAN.md`](release/WINDOWS_COMPATIBILITY_PLAN.md) | Windows port — **SHIPPED** (`0.7.4-rc2`, 2026-07-14): MSVC + vcpkg-static toolchain, the bring-up summary and a short REMAINING worklist; the suite on the current TeX Live 2026 (WIN1, #833) is in `archive/SYNC_SESSIONS_2026-11.md`. |

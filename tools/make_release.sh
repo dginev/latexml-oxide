@@ -333,11 +333,13 @@ EOF
     echo "- Windows (x86-64) — \`${RELEASE_WINDOWS_ZIP}\` (unzip; \`latexml_oxide.exe\` is self-contained, no installer)"
   fi
   echo
-  # SignPath Foundation's terms ask the download page to name the signing service (issue 775).
-  cat <<'EOF'
-**Code signing policy:** free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org). Which binaries are signed, and how: [code signing policy](https://github.com/dginev/latexml-oxide/blob/main/docs/release/CODE_SIGNING_POLICY.md).
+  # The Windows binary is unsigned (issue 775; SignPath Foundation declined 2026-11-18): say how to unblock it.
+  if [[ -n "${RELEASE_WINDOWS_ZIP:-}" ]]; then
+    cat <<'EOF'
+**Windows:** the binary is not code-signed, so SmartScreen or Defender may block it; the [installation guide](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md#windows-x86_64) says how to unblock it ([code signing policy](https://github.com/dginev/latexml-oxide/blob/main/docs/release/CODE_SIGNING_POLICY.md)).
 
 EOF
+  fi
 
   # Slice the CHANGELOG section for this version. CHANGELOG entries use
   # `## [VERSION]` headers (CommonMark task-list style — see CHANGELOG.md
