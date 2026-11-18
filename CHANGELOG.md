@@ -4,6 +4,7 @@
 
   - **Dependency cleanup before v0.8.0.** `once_cell`'s `Lazy` is now `std::sync::LazyLock` throughout, and the direct
     `once_cell` dependency is gone from every crate; `deny.toml`'s advisory notes are corrected. No output change.
+    For a Rust binding crate: `latexml_engine::prelude` now re-exports `LazyLock` in place of `Lazy`.
   - **A note several authors share prints once.** The XML keeps a copy of a shared author note
     (an authblk `\affil[*]`, a legend line's `*`) on every author, each with its `mark`, as Perl
     does; the HTML prints the first copy (class `ltx_note_shared`) and, at each other author, its

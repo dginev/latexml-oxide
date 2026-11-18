@@ -2,7 +2,6 @@ use core::ops::{Range, RangeBounds};
 // TODO:
 // use encoding::all::ISO_8859_1;
 // use encoding::{EncoderTrap, Encoding};
-use std::sync::LazyLock;
 use std::{
   collections::VecDeque,
   fmt,
@@ -11,6 +10,7 @@ use std::{
   io::{BufReader, prelude::*},
   rc::Rc,
   str,
+  sync::LazyLock,
 };
 
 use regex::Regex;

@@ -933,7 +933,7 @@ macro_rules! DebugFeature {
   }};
 }
 
-/// Debug-status diagnostics. **LazyLock**: the argument expressions — which at
+/// Debug-status diagnostics. **Lazy**: the argument expressions — which at
 /// several sites build whole `node_to_string` subtree serializations — are
 /// evaluated only when [`debug_record_enabled`] says the record would actually
 /// be logged (2026-08-23 audit, PERFORMANCE.md Open levers P0). The Debug

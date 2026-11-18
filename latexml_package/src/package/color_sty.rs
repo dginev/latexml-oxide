@@ -257,7 +257,7 @@ pub fn lookup_color_obj(name: &str) -> Color {
       })
     },
     _ => {
-      // LazyLock-load the dvips named colors (Blue, Purple, Red, RubineRed, …) on
+      // Lazy-load the dvips named colors (Blue, Purple, Red, RubineRed, …) on
       // first miss. The user's `\usepackage[usenames,dvipsnames]{color}` can be
       // a no-op when `color` was already pulled in WITHOUT those options
       // (hyperref's eager `RequirePackage("color")` for the colorlinks cluster
