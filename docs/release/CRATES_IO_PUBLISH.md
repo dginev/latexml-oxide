@@ -349,7 +349,7 @@ exist, so a release is version bumps under a much looser limit.
        crates.io release is **irreversible** (yankable, never deletable; the version
        number is burned). Flip visibility *before* publishing. The gh-pages
        `documentation` link already serves (200).
-Per release (each box ticked for 0.7.6 on 2026-08-23; re-run them every time):
+Per release (all done for 0.7.6 on 2026-08-23; repeat them every time):
 
 2. Bump every crate changed since the last release and every intra-workspace
    `path`+`version` pin (`RELEASING.md` step 1).
