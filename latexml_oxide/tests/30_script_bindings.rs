@@ -107,7 +107,7 @@ const SAMPLE: &str = r##"
     "^<ltx:note role=\"footnote\" ?#mark(mark=\"#mark\")()>?#prenote(#prenote )()#2</ltx:note>", #{
     mode: "internal_vertical",
     beforeDigest: || neutralize_font(),
-    afterDigest: |whatsit| {
+    afterDigest: |stomach, whatsit| {
       let m = ToString(whatsit.getArg(1));
       if m != "" { whatsit.setProperty("mark", m); }
     }
@@ -117,7 +117,7 @@ const SAMPLE: &str = r##"
   // whatsit's property map from the digested args; the template reads it
   // through a `#cls` hole at attribute position.
   DefConstructor("\\pnote{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
-    properties: |x| #{ cls: "from-" + x }
+    properties: |stomach, x| #{ cls: "from-" + ToString(x) }
   });
 
   // `properties` as a STATIC MAP (Perl `properties => { key => value }`).
@@ -137,7 +137,7 @@ const SAMPLE: &str = r##"
     document.absorbString(t + "/" + all.n);
     document.closeElement("ltx:text");
   }, #{
-    properties: |x| #{ tag: "T-" + x, n: "2" }
+    properties: |stomach, x| #{ tag: "T-" + ToString(x), n: "2" }
   });
 
   // Processing-instruction template (the class/package PI dialect shape).
@@ -175,7 +175,7 @@ const SAMPLE: &str = r##"
   // name='LIT' probe. `class` is universally allowed.)
   DefEnvironment("{biop}{}",
     "<ltx:note role=\"biography\" class=\"#pname\">#body</ltx:note>", #{
-    properties: |a| #{ pname: a }
+    properties: |stomach, a| #{ pname: a }
   });
 
   // Environment, IMPERATIVE form — the {center}-style native shape
@@ -209,7 +209,7 @@ const SAMPLE: &str = r##"
   DefEnvironment("{rproof}[]",
     "<ltx:proof class=\"ltx_proof\"><ltx:title font=\"#font\">#title</ltx:title>#body</ltx:proof>", #{
     mode: "internal_vertical",
-    properties: |args| {
+    properties: |stomach, _opt| {
       let title = DigestText("{\\bfseries Proof:}");
       #{ title: title, font: title }
     }
@@ -225,7 +225,7 @@ const SAMPLE: &str = r##"
   // still exercised (it steps the counter and returns its map).
   NewCounter("rqeq");
   DefConstructor("\\numbered{}", "<ltx:text class=\"eq\">(#refnum) #1</ltx:text>", #{
-    properties: |x| { let m = RefStepCounter("rqeq"); m.refnum = CounterValue("rqeq").to_string(); m },
+    properties: |stomach, x| { let m = RefStepCounter("rqeq"); m.refnum = CounterValue("rqeq").to_string(); m },
     reversion: "\\numbered{#1}"
   });
 
@@ -239,7 +239,7 @@ const SAMPLE: &str = r##"
   // COMPUTES from the numeric args (the dual properties/afterDigest pattern).
   DefConstructor("\\gsbox {Float}{Float} {}",
     "<ltx:inline-block class=\"gs\" xscale=\"#xscale\" yscale=\"#yscale\">#3</ltx:inline-block>", #{
-    properties: |xs, ys, unused_box| #{ xscale: xs, yscale: ys }
+    properties: |stomach, xs, ys, _box| #{ xscale: xs, yscale: ys }
   });
 
   // listings/siunitx-style OptionalKeyVals: the keyval set arrives as the
@@ -1141,7 +1141,7 @@ const THROW_SAMPLE: &str = r##"
   });
   DefConditional("\\ifthrcond", || { throw "conditional boom"; });
   DefConstructor("\\thrprops{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
-    properties: |x| { throw "properties boom"; }
+    properties: |stomach, x| { throw "properties boom"; }
   });
   DefConstructor("\\thrbefore{}", "<ltx:text class=\"thr-before\">#1</ltx:text>", #{
     beforeDigest: || { throw "beforeDigest boom"; }

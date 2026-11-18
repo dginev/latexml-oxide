@@ -56,7 +56,7 @@ and loads it:
 
 ```rust
 // mypkg.sty.rhai  —  note: backslashes are doubled in Rhai strings
-DefMacro("\\greet{}", |name| "Hello, " + name + "!");
+DefMacro("\\greet{}", |gullet, name| "Hello, " + name + "!");
 DefConstructor("\\mytext{}", "<ltx:text class=\"rhai\">#1</ltx:text>");
 ```
 

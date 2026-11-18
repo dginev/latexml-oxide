@@ -202,6 +202,22 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
     "reversion |args|",
     "|whatsit, args| (name each: |whatsit, _x|)",
   ),
+  (
+    "afterDigest |whatsit|",
+    "|stomach, whatsit|, Perl's arguments",
+  ),
+  (
+    "afterDigestBegin |whatsit|",
+    "|stomach, whatsit|, Perl's arguments",
+  ),
+  (
+    "afterDigestBody |whatsit|",
+    "|stomach, whatsit|, Perl's arguments",
+  ),
+  (
+    "properties |args|",
+    "|stomach, args|, each argument as whatsit.getArg gives it (name each: |stomach, _x|)",
+  ),
   ("value == string", "ToString(value) == string"),
   ("() == string", "defined(value) or !!value"),
   (
@@ -226,13 +242,23 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
 /// A value's type as a script author reads it (`Tokens`, `Definition`), not its Rust path.
 pub(super) fn type_label(v: &Dynamic) -> &'static str { user_type_name(v.type_name()) }
 
-/// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement.
+/// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement; the binding is
+/// the running script.
 pub(super) fn warn_deprecated(old: &'static str) {
   let script = CURRENT_SCRIPT.with(|c| {
     c.borrow()
       .last()
       .map_or(0, |(_, ast)| Rc::as_ptr(ast) as usize)
   });
+  warn_deprecated_once(script, old);
+}
+
+/// [`warn_deprecated`] from a trampoline, outside its script's run: the binding is the one the closure belongs to.
+pub(super) fn warn_deprecated_in(ast: &Rc<AST>, old: &'static str) {
+  warn_deprecated_once(Rc::as_ptr(ast) as usize, old);
+}
+
+fn warn_deprecated_once(script: usize, old: &'static str) {
   let first = DEPRECATED_WARNED.with(|w| {
     let mut warned = w.borrow_mut();
     let first = !warned.contains(&(script, old));

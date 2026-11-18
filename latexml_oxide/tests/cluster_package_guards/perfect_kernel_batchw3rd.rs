@@ -228,7 +228,7 @@ fn rhai_thin_wrappers() {
 }
 
 const LXRD2: &str = r#"DefConstructor("\\lxw{}", "<ltx:text class='#c'>#1</ltx:text>", #{
-  afterDigest: |whatsit| whatsit.setProperty("c", "w" + ToString(whatsit.getArg(1)) + (whatsit.getArg(2) == ())),
+  afterDigest: |stomach, whatsit| whatsit.setProperty("c", "w" + ToString(whatsit.getArg(1)) + (whatsit.getArg(2) == ())),
   afterConstruct: |document, whatsit| document.absorbString("/" + whatsit.getProperty("c") + whatsit.getProperties().c)});
 DefMath("\\lxm{}", "M", #{reversion: |whatsit, x| "\\lxm{" + x + ToString(whatsit.getArg(1)) + "}"});
 DefConstructor("\\lxo{}", |document, x, props| {
@@ -263,8 +263,8 @@ $\lxm{b}$
 ";
 
 /// W3RD2a (#716): Perl's forms, each "Function not found" or a wrong arity on a1b6c0b827d (the binding stopped at the
-/// first). p1: a hook receives the whatsit positionally — `afterDigest` as `|whatsit|` (Perl `($stomach, $whatsit)`,
-/// no stomach handle), `afterConstruct` as `|document, whatsit|` (Constructor.pm:139) — with Whatsit.pm's `getArg`
+/// first). p1: a hook receives the whatsit positionally — `afterDigest` as Perl's `($stomach, $whatsit)` (RHAIHOOK;
+/// `|whatsit|` alone was the form here), `afterConstruct` as `|document, whatsit|` (Constructor.pm:139) — with Whatsit.pm's `getArg`
 /// (the digested argument; a missing one `()`), `getProperty`, `getProperties`. p2: a reversion closure is Perl's
 /// `($whatsit, @args)` (Whatsit.pm:121). p3: `openElement` takes attributes and returns the node, `closeElement` the
 /// node closed, `maybeCloseElement` `()` when nothing closes (Document.pm:787-866); a constructor body's trailing
@@ -469,7 +469,7 @@ DefMacro("\\lxz{}", || "Z");
 DefPrimitive("\\lxzp{}", || AssignValue("lx:z", "P", "global"));
 DefMacro("\\lxzv", || LookupValue("lx:z"));
 DefColumnType("Q{}", || "c");
-DefConstructor("\\lxws{}", "<ltx:text class='#c'>#1</ltx:text>", #{afterDigest: |whatsit| whatsit.setProperty("c", "s" + whatsit),
+DefConstructor("\\lxws{}", "<ltx:text class='#c'>#1</ltx:text>", #{afterDigest: |stomach, whatsit| whatsit.setProperty("c", "s" + whatsit),
   afterConstruct: |document, whatsit| document.absorbString("/" + whatsit + ToString(whatsit))});
 DefParameterType("LxN", |gullet| gullet.readArg(), #{nargs: 1});
 DefMacro("\\lxpq LxN", |gullet, a| a);

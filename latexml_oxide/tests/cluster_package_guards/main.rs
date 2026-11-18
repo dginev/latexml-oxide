@@ -660,6 +660,8 @@ mod perfect_kernel_batchregchem;
 mod perfect_kernel_batchregrehearse;
 /// RG1: a `\par` in a text group opened mid-paragraph keeps the paragraph, as Perl's open-brace box.
 mod perfect_kernel_batchrg1;
+/// RHAIHOOK: a Rhai hook body takes Perl's arguments (`|stomach, whatsit|`, `properties: |stomach, x|`).
+mod perfect_kernel_batchrhaihook;
 mod perfect_kernel_batchrv1;
 mod perfect_kernel_batchs5;
 /// SBX1: the 2605/2606 sandbox reruns' regressions — linenoaa's `{multline}`, fairmeta's one `\author{}`, group authors.

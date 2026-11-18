@@ -169,7 +169,7 @@ DefPrimitiveI("\\pL", (), |stomach| List([Box("x"), Box("y")]));
 DefConstructorI("\\cA", "{}", "<ltx:text class='ca'>#1</ltx:text>");
 DefConstructorI(T_CS("\\cB"), (), |document| { document.absorbString("CB"); });
 DefConstructorI("\\cC", "{}", "<ltx:text class='cc'>#1</ltx:text>", #{
-  afterDigest: |whatsit| { AssignValue("lx:shape", whatsit.getFont().getShape(), "global"); }
+  afterDigest: |stomach, whatsit| { AssignValue("lx:shape", whatsit.getFont().getShape(), "global"); }
 });
 DefMacro("\\rows", || {
   let r = [];

@@ -55,7 +55,8 @@ const GROUPS: &[(Option<&str>, &str, &str)] = &[
   (
     Some("Stomach"),
     "`Stomach` methods",
-    "Perl's `$stomach`: the handle a primitive body receives first (Primitive.pm:78).",
+    "Perl's `$stomach`: the handle a primitive body and a `beforeDigest`, `afterDigest` or `properties` hook \
+     receive first (Primitive.pm:47-78, Constructor.pm:99-117).",
   ),
   (
     Some("Font"),
@@ -870,7 +871,9 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "DefConstructor",
     Mirror("DefConstructor", "DefConstructor!"),
     Doc::Rust(
-      "Define a control sequence that constructs XML.",
+      "Define a control sequence that constructs XML. Its hooks take Perl's arguments: `beforeDigest: |stomach|`, \
+       `afterDigest: |stomach, whatsit|`, `properties: |stomach, x|` (each argument as `whatsit.getArg` gives it); \
+       `|whatsit|` and `|x|` are the old forms, Warned `deprecated`.",
       "latexml_core::binding::def::dialect::def_constructor",
     ),
   ),
@@ -878,7 +881,8 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "DefEnvironment",
     Mirror("DefEnvironment", "DefEnvironment!"),
     Doc::Rust(
-      "Define an environment that constructs XML.",
+      "Define an environment that constructs XML. Its hooks take Perl's arguments: `beforeDigest`/`beforeDigestEnd: \
+       |stomach|`, `afterDigestBegin`/`afterDigest`/`afterDigestBody: |stomach, whatsit|`, `properties: |stomach, x|`.",
       "latexml_core::binding::def::dialect::def_environment",
     ),
   ),
@@ -1427,7 +1431,8 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "RefStepCounter",
     Mirror("RefStepCounter", "RefStepCounter!"),
     Doc::Rust(
-      "Step a counter through `\\refstepcounter`'s meaning (`noreset`: directly) and return its `refnum` and `id`.",
+      "Step a counter through `\\refstepcounter`'s meaning (`noreset`: directly) and return its properties, Perl's \
+       `tags` and `id` (Package.pm:780).",
       "latexml_core::binding::counter::dialect::ref_step_counter_by_meaning",
     ),
   ),
