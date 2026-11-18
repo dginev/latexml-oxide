@@ -1,0 +1,11 @@
+% witness: sibling of 2105.01581's panic (a register computed from arguments read without them)
+% oracle:  pdflatex errs too: "You can't use `\fontcharwd' in restricted horizontal mode", "Missing font identifier"
+% engines: rust MAIN911 = Fatal:panic etex.rs:277 (pgfmath's register lookup ran the getter without arguments);
+%          perl: dies in the getter (`%$fontinfo` of undef, eTeX.pool.ltxml:93-99)
+% expect:  no panic; 2 errors (one per coordinate read), 2 warnings
+% status:  RED (MAIN911) -> GREEN (PANIC397)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}\draw (0,0) -- (\fontcharwd\font`m,1pt);\end{tikzpicture}
+\end{document}

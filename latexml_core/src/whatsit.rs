@@ -341,7 +341,19 @@ impl Object for Whatsit {
       && let Some(Stored::Digested(digested)) = self.properties.get("alignment")
       && let DigestedData::Alignment(alignment) = digested.data()
     {
-      return alignment.borrow().revert();
+      // An alignment mid-absorption is mutably borrowed (`Digested::be_absorbed`'s re-entrant guard): a malformed
+      // cell can close a math around it, whose `tex` reverts it (`\ooalign` in a tikz label's math, 1901.06584).
+      // Revert the whatsit as its definition does then.
+      match alignment.try_borrow() {
+        Ok(alignment) => return alignment.revert(),
+        Err(_) => {
+          Warn!(
+            "unexpected",
+            "self_referential_alignment",
+            "Reverting an alignment during its own absorption; its cells are not in the reversion"
+          );
+        },
+      }
     }
     // Find the appropriate reversion spec;
     // content_reversion or presntation_reversion if on dual branch

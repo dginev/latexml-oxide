@@ -238,8 +238,42 @@ LoadDefinitions!({
     if grouped {
       body.push(T_END!());
     }
+    // The before-code takes the author's title, as titlesec's `#4{#8}` does, not the kernel's
+    // `{\lx@format@title@font@@{<sec>}…}` (`\lx@titlesec@title`).
+    let inner_target = s!("\\format@title@@{sec}");
+    def_macro(T_CS!(&inner_target), convert_latex_args(1, None)?, Tokens::new(body), None)?;
     def_macro(T_CS!(&body_target), convert_latex_args(1, None)?,
-      Tokens::new(body), None)?;
+      Tokens!(T_CS!("\\lx@titlesec@title"), T_CS!(&inner_target), T_BEGIN!(), T_PARAM!(), T_OTHER!("1"), T_END!()),
+      None)?;
+  });
+  // `\lx@titlesec@title <body>{<title>}`: `<body>{<title>}` without the kernel's leading
+  // `\lx@format@title@font@@{<sec>}` (`\lx@format@title@@`, tags_refnums.rs), which the body empties anyway (above).
+  // Handed to the before-code, mfirstuc's `\capitalisefmtwords` read that wrapper as a text command and
+  // recursed until the stack overflowed (ccjnl.cls, witnesses 2208.03460, 2208.09785, 2209.08255).
+  DefMacro!("\\lx@titlesec@title Token {}", sub[(body, title)] {
+    let mut tokens = title.clone().strip_braces().unlist();
+    let lead = tokens.iter().take_while(|t| t.get_catcode() == Catcode::SPACE).count();
+    let wrapped = tokens.get(lead) == Some(&T_CS!("\\lx@format@title@font@@"))
+      && tokens.get(lead + 1).is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+    let mut depth = 0usize;
+    let close = tokens.iter().skip(lead + 1).position(|t| {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+      depth == 0
+    });
+    let mut out = vec![body, T_BEGIN!()];
+    match close {
+      Some(close) if wrapped => {
+        tokens.drain(lead..lead + 2 + close);
+        out.extend(tokens);
+      },
+      _ => out.extend(title.unlist()),
+    }
+    out.push(T_END!());
+    Ok(Tokens::new(out))
   });
 
   DefMacro!("\\chaptertitlename",                        "\\chaptername");

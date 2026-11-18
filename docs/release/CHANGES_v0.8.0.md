@@ -43,6 +43,13 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Three crashes of run 397 fixed.** A box width stated through a register read with arguments
+    (`\makebox[1.5\fontcharwd\font`m]{…}`) in a figure of subfigure panels no longer panics: the panel-grid
+    rule skips such registers, and pgfmath errs on one in a coordinate, as TeX does (2105.01581). An
+    alignment whose own cell's malformed math closes the math around it (nested `\ooalign` in a tikz label,
+    1901.06584) is reverted from its definition with a Warning instead of panicking. titlesec's before-code
+    gets the author's title, not the kernel's font wrapper, so ccjnl.cls's `\capitalisefmtwords` no longer
+    overflows the stack (2208.03460, 2208.09785, 2209.08255). Guards `perfect_kernel_batchpanic397`.
   - **A Rhai binding's diagnostic names its `.rhai` file.** A failure while a binding loads is one
     `Error:script:<file>.rhai` (was `Error:unexpected:` with the text twice), located at the line and
     column in that file and then at the `\usepackage`; a body's error and a `Fatal(…)` carry the same
