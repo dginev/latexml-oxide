@@ -20759,6 +20759,30 @@ the same path. The walker's `KEYED_CONSTRUCTORS` row for `\scalebox` is gone (th
 `cluster_package_guards::perfect_kernel_batchmarkscale::scalebox_mark_spells_its_glyph_not_its_scale` (repro
 `sectioning-frontmatter/mark_scalebox_scale_is_no_ink`), `a_scale_factors_tail_is_dropped_with_a_warning`.
 
+### 1078. A `\let` copy of a frontmatter setter taken before the class's refused redefinition is the setter as it stood then (SETCOPY)
+
+**Perl.** No replay of a refused definition (State.pm:502-517), so a copy of the locked `\author` is the binding.
+**TeX.** `\let` freezes the meaning at copy time (tex.web §1221). **Rust before.** The kernel's `\author`/`\title`
+replay the class's refused body by name at call time (`\lx@replay@class@setter`, #482), so a copy taken BEFORE the
+refusal replayed the later class definition too: tocbase.cls:647-677 `\let\orig@author\author`, `\renewcommand\author`
+appending to `\toc@authors`, then `\orig@author{\toc@authors}` made `\toc@authors` contain itself, a box runaway
+(`Fatal:Stomach:Recursion`; 1811.06821, 1811.11810, 1904.05269, 2011.14174 aic.cls; 1905.07135 toc); a `\title`
+copy the same (`Error:recursion:\toc@title`, no title). **Rust.** state.rs `let_i` (`setter_as_copied`): a copy of a
+macro whose body opens with `\lx@sealed@class@call`/`\lx@titlepage@class@call`/`\lx@replay@class@setter{<name>}`,
+taken while `\<name>:redefined` is unset, gets the body wrapped as `\lx@setter@as@copied{<name>}{<body>}`, same
+parameters (one string test on the first token for every other `\let`). That primitive (sect05.rs) digests the body
+with `\lx@dropped@<name>` and `\<name>:redefined{,@class,@document}` hidden (`HiddenRefusal`, restored on drop, error
+too): no replay, `\lx@add@authors@adaptive` replaces (LaTeX's `\gdef\@author`), no sealed-off redirect, no trailing
+surplus read. `x_equals` reads the copy and the setter as one meaning (`\ifx\orig@author\author` true, as in TeX). A
+copy taken after the refusal is unchanged: in TeX it holds the class's definition, which the replay stands for.
+**Residuals.** A copy taken between two refusals replays the second; replays issued from Rust closures (authblk
+`\affil`, authblk_sty.rs:419; the kernel `\abstract`) are not wrapped; `\meaning` of the copy shows the wrapper; a store
+the class's replayed setter changed, handed whole to the copy, reads as no events of the copy's block, so each name is
+written as plain text with a Warning (row R SETCOPY-FLAG; names correct on 1811.06821). **Guards.**
+`cluster_package_guards::perfect_kernel_batchsetcopy::{a_copy_taken_before_the_redefinition_is_the_kernels_setter,
+a_copy_in_an_end_code_takes_the_class_list_once, a_copy_taken_after_the_redefinition_still_replays}` (repros
+`sectioning-frontmatter/setter_copy/`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

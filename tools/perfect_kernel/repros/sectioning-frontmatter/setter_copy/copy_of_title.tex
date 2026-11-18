@@ -1,0 +1,20 @@
+% The same rule for the kernel's `\title`, whose body replays the class's refused `\title` too: a copy taken before the
+% `\renewcommand{\title}` is the kernel's setter.
+% witness: synthetic (sibling of copy_before_redefinition.tex on the `\title` setter)
+% oracle:  pdflatex 0 errors: "My Title / A. Author / Body."
+% engines: rust (main 8b298f9c0d6) = no <title>, 1 Error
+% expect:  0 errors, 0 warnings; title "My Title"
+% guard:   perfect_kernel_batchsetcopy::a_copy_taken_before_the_redefinition_is_the_kernels_setter
+% status:  GREEN (SETCOPY, 2026-11-18)
+\documentclass{article}
+\makeatletter
+\let\orig@title\title
+\renewcommand{\title}[1]{\gdef\toc@title{#1}}
+\makeatother
+\author{A. Author}
+\begin{document}
+\title{My Title}
+\makeatletter\orig@title{\toc@title}\makeatother
+\maketitle
+Body.
+\end{document}

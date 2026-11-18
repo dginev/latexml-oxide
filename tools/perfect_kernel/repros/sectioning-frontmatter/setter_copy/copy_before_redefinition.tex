@@ -1,0 +1,23 @@
+% A `\let` copy of the kernel's `\author` taken BEFORE a `\renewcommand{\author}` is the kernel's setter as it stood
+% then (TeX's `\let`, tex.web §1221): `\orig@author{\toc@authors}` sets `\@author` to the class's store. Ours, where
+% the lock refuses the redefinition and the kernel's `\author` replays it (`\lx@replay@class@setter`, OXIDIZED_DESIGN
+% #482), replayed it through the copy too: `\toc@authors` came to contain itself, a box-list runaway.
+% witness: 1811.06821, 1811.11810, 1904.05269, 2011.14174 (aic.cls), 1905.07135 (toc) — tocbase.cls:647-677
+% oracle:  pdflatex 0 errors: "T / Christian Elbracht / Body."; perl 0 errors, one creator with an empty name
+% engines: rust (main 8b298f9c0d6) = Fatal:Stomach:MemoryBudget box-list runaway, Status 3
+% expect:  0 errors, 0 warnings; one creator, "Christian Elbracht" (ours: "and Christian Elbracht", 1 Warning; row R)
+% guard:   perfect_kernel_batchsetcopy::a_copy_taken_before_the_redefinition_is_the_kernels_setter
+% status:  GREEN except the name (SETCOPY, 2026-11-18; was RED: Fatal)
+\documentclass{article}
+\makeatletter
+\newcommand\toc@authors{}
+\let\orig@author\author
+\renewcommand{\author}[1]{\g@addto@macro\toc@authors{\and #1}}
+\makeatother
+\title{T}
+\begin{document}
+\author{Christian Elbracht}
+\makeatletter\orig@author{\toc@authors}\makeatother
+\maketitle
+Body.
+\end{document}

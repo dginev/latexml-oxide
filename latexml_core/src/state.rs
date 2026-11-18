@@ -7849,10 +7849,88 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
       return;
     }
   }
+  let meaning = setter_as_copied(meaning);
   carry_document_refusal_records(token1, token2, scope);
   assign_meaning(token1, meaning, scope);
   let _ = after_assignment();
 }
+
+/// A `\let` copy of a frontmatter setter that replays the class's refused definition of itself
+/// (`\lx@replay@class@setter{<name>}`, OXIDIZED_DESIGN #482), taken before any was refused (`\<name>:redefined` unset),
+/// is the setter as it stood then, as TeX's `\let` (tex.web §1221) freezes it: its body runs inside
+/// `\lx@setter@as@copied{<name>}{…}`, which hides a later refusal's records. tocbase.cls:647-677 `\let\orig@author
+/// \author` before its `\renewcommand\author`, then `\orig@author{\toc@authors}` (1811.06821, 1811.11810, 1904.05269,
+/// 2011.14174, 1905.07135). OXIDIZED_DESIGN_DIVERGENCES #1078.
+fn setter_as_copied(meaning: Stored) -> Stored {
+  let Stored::Expandable(ref defn) = meaning else {
+    return meaning;
+  };
+  let Some(ExpansionBody::Tokens(ref body)) = defn.expansion else {
+    return meaning;
+  };
+  let tokens = body.unlist_ref();
+  // (the setters' bodies open with their call wrapper or the replay itself; one name test for every other macro)
+  let opens_setter = tokens.first().is_some_and(|t| {
+    t.with_str(|s| {
+      matches!(
+        s,
+        "\\lx@sealed@class@call" | "\\lx@titlepage@class@call" | "\\lx@replay@class@setter"
+      )
+    })
+  });
+  if !opens_setter || tokens.get(1) != Some(&T_BEGIN!()) {
+    return meaning;
+  }
+  let Some(close) = tokens.iter().position(|t| *t == T_END!()) else {
+    return meaning;
+  };
+  let name: String = tokens[2..close]
+    .iter()
+    .map(|t| t.with_str(str::to_string))
+    .collect();
+  if lookup_bool(&s!("\\{name}:redefined"))
+    || !tokens
+      .iter()
+      .any(|t| t.with_str(|s| s == "\\lx@replay@class@setter"))
+  {
+    return meaning;
+  }
+  let mut wrapped = vec![crate::T_CS!("\\lx@setter@as@copied"), T_BEGIN!()];
+  wrapped.extend_from_slice(&tokens[2..close]);
+  wrapped.extend([T_END!(), T_BEGIN!()]);
+  wrapped.extend_from_slice(tokens);
+  wrapped.push(T_END!());
+  let mut copy = (**defn).clone();
+  copy.expansion = Some(ExpansionBody::Tokens(Tokens::new(wrapped)));
+  copy.plan = std::cell::OnceCell::new();
+  copy.stored = std::cell::OnceCell::new();
+  Stored::Expandable(Rc::new(copy))
+}
+
+/// Whether one of two macros is the other's copy as a setter stood ([`setter_as_copied`]): `\ifx` reads them as one
+/// meaning, as TeX's are.
+fn same_copied_setter(def1: &Stored, def2: &Stored) -> bool {
+  let (Stored::Expandable(defn1), Stored::Expandable(defn2)) = (def1, def2) else {
+    return false;
+  };
+  let unwrapped =
+    |outer: &Expandable, inner: &Expandable| match (&outer.expansion, &inner.expansion) {
+      (Some(ExpansionBody::Tokens(outer_body)), Some(ExpansionBody::Tokens(inner_body))) => {
+        let outer_body = outer_body.unlist_ref();
+        let inner_body = inner_body.unlist_ref();
+        outer_body
+          .first()
+          .is_some_and(|t| t.with_str(|s| s == "\\lx@setter@as@copied"))
+          && outer_body.len() > inner_body.len()
+          && outer_body[outer_body.len() - inner_body.len() - 1..outer_body.len() - 1]
+            == *inner_body
+          && outer.paramlist == inner.paramlist
+      },
+      _ => false,
+    };
+  unwrapped(defn1, defn2) || unwrapped(defn2, defn1)
+}
+
 /// [`carry_refusal_records`] for the document's own `\let`s of `\maketitle`, the records' one reader
 /// (`latex_constructs::class_maketitle_in_force`; the kernel's `\global\let\thanks\relax` keeps `\lx@dropped@thanks`). A file's
 /// `\let` onto a refused `\maketitle` (a package's restore, review revPRESBXb BL3) leaves its marks unknown: the refused
@@ -7896,7 +7974,11 @@ pub fn x_equals(token1: &Token, token2: &Token) -> bool {
   let def1_opt = lookup_meaning(token1); // # token, definition object or None
   let def2_opt = lookup_meaning(token2); // ditto
   match (def1_opt, def2_opt) {
-    (Some(def1), Some(def2)) => def1 == def2 || same_robust_body(token1, &def1, token2, &def2),
+    (Some(def1), Some(def2)) => {
+      def1 == def2
+        || same_robust_body(token1, &def1, token2, &def2)
+        || same_copied_setter(&def1, &def2)
+    },
     (None, None) => true, // true if both undefined
     (..) => false,        // False, if only one has 'meaning'
   }
