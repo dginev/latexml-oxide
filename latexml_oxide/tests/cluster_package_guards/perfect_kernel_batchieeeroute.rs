@@ -214,3 +214,34 @@ fn ieee_routed_addresses_keep_their_specials_and_label_forms() {
     "{xml}"
   );
 }
+
+/// IEEEINS: a `\thanks` written after the separator (`Ann Able, \thanks{…} Bob Baker`, its mark after Ann's comma) is
+/// not the next author's first note, so Bob's routed contacts go after his name and grade, not before it onto Ann
+/// (2606.25681). Red (aeda3db4e47): Ann holds Bob's affiliation and e-mail, Bob Cy's, Cy none. Distinct: the
+/// insertion point of a piece opening with a note, past `,`, a grade and the word "and".
+#[test]
+fn ieee_thanks_after_the_comma_stays_the_author_before() {
+  let (log, xml) = run(repro!(
+    "ieee_thanks_after_the_comma_stays_the_author_before"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_creators(&xml, &[
+    &[
+      "Ann Able",
+      "affiliation=Foo University, Bar City.",
+      "email=ann@foo.edu",
+    ],
+    &[
+      "Bob Baker",
+      "membership=Member, IEEE",
+      "affiliation=Baz Institute, Qux.",
+      "email=bob@baz.edu",
+    ],
+    &[
+      "Cy Coe",
+      "affiliation=Quux Lab, Corge.",
+      "email=cy@quux.org",
+    ],
+  ]);
+  assert_eq!(pubnotes(&xml), Vec::<&str>::new(), "{xml}");
+}

@@ -1,0 +1,22 @@
+% mechanism: IEEEtran's block notes routed by kind (`route_author_thanks` / `author_units`, ieeetran_cls.rs; OD #1072):
+%   a `\thanks` written after the separator (`Ann Able, \thanks{…} Bob Baker`) prints its mark after Ann's
+%   comma; it is not the next author's first note, so the contacts a note routes to Bob go after his name (and his
+%   `\IEEEmembership`), never before it onto Ann
+% witness: 2606.25681 (Wang got Sabiston's e-mail, Sabiston Welsh's, Welsh none)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: three names, marks after "Able," "IEEE" and "Coe", three
+%   notes at the first page's foot
+% engines: aeda3db4e47: Ann holds Bob's affiliation and e-mail, Bob Cy's, Cy none
+% expect:  0 errors, 0 warnings; each author with the affiliation and e-mail of the note naming them, in order
+% status:  GREEN (IEEEINS; guard perfect_kernel_batchieeeroute)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{A Title}
+\author{Ann Able, %
+  \thanks{A. Able is with Foo University, Bar City. E-mail: ann@foo.edu}%
+  Bob Baker,~\IEEEmembership{Member,~IEEE} %
+  \thanks{B. Baker is with Baz Institute, Qux. E-mail: bob@baz.edu}%
+  and Cy Coe %
+  \thanks{C. Coe is with Quux Lab, Corge. E-mail: cy@quux.org}}
+\maketitle
+Text.
+\end{document}

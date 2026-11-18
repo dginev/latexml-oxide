@@ -2613,17 +2613,26 @@ fn author_units(body: &[Token], notes: &[(usize, usize)]) -> Vec<AuthorUnit> {
   };
   let spacing = |k: Option<&Token>| k.is_none_or(|t| *t == T_SPACE!() || *t == T_ACTIVE!('~'));
   let and_at = |at: usize| {
-    at > 0
+    // (a note before the word prints nothing: `IEEE} %`, `\thanks{…}%`, ` and Cy Coe` read " and ")
+    let mut prev = at;
+    while let Some(&(start, _)) = notes.iter().find(|&&(_, end)| end == prev) {
+      prev = start;
+    }
+    prev > 0
       && letter(at, "a")
       && letter(at + 1, "n")
       && letter(at + 2, "d")
-      && spacing(body.get(at - 1))
+      && spacing(body.get(prev - 1))
       && spacing(body.get(at + 3))
   };
   let mut at = 0;
   while at < body.len() {
     if let Some(&(_, end)) = notes.iter().find(|&&(s, _)| s == at) {
-      first_note.get_or_insert(at);
+      // (a note before the piece's first letter, `Ann Able, \thanks{…} Bob Baker`, follows the author before: it is
+      // not where the next one's contacts go, 2606.25681)
+      if words.chars().any(char::is_alphabetic) {
+        first_note.get_or_insert(at);
+      }
       at = end;
       continue;
     }

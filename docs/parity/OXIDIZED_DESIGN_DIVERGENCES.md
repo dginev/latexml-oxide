@@ -20609,7 +20609,9 @@ surname its local part spells, else in order: `FmEmailOwner::SpelledElseOrder`'s
 author's name piece — after its grade where the grade follows the name's comma, before it where the name's comma sits
 inside the grade's braces (`Ann Able,~\IEEEmembership{Member, IEEE,}`, 2106.02811) — except the name before a `\\`
 or ending the list, whose contacts follow its grade either way (one paper may show both orders: 2106.02811, pinned by
-`ieee_unlabelled_addresses_route_by_the_name`) — never past a blank line or `\\`; a note "Corresponding author: <name>" (or "… is <name>") becomes that author's
+`ieee_unlabelled_addresses_route_by_the_name`) — never past a blank line or `\\`; a `\thanks` met before a piece's
+first letter (`Ann Able, \thanks{…} Bob Baker`, its mark printed after Ann's comma) is the author's before, so it
+moves no insertion point onto the next name (2606.25681); a note "Corresponding author: <name>" (or "… is <name>") becomes that author's
 `role=correspondent` contact, its text whole. A name matches an author by surname (the author's last word) and first
 initial; several sentences of one note route each. A sentence starts at the note's start or after a '.' or ';' that ends no initial
 ("C.", "J.-L.", "D.S."); its affiliation is one sentence (to ". " before a capital, after no initial), followed by at
@@ -20626,7 +20628,7 @@ words dropped are the routing keys ("<names> is with") and the e-mail labels, wh
 Not done: a post-digestion check that each routed contact sits on its own creator (placement is by
 construction only). **Guards**: `cluster_package_guards::perfect_kernel_batchieeeroute::*` (repros
 `sectioning-frontmatter/ieee_thanks_*`, the specials and label forms in `ieee_thanks_address_specials_and_labels`);
-`perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned.
+`perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned; `ieee_thanks_after_the_comma_stays_the_author_before`.
 
 ### 1073. spconf's `\address` and Interspeech.cls's `\email` line go under the names (DG 2026-11-17; SPCONF)
 
