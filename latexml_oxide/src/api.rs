@@ -21,8 +21,8 @@
 //!
 //! Like the `latexml_oxide` binary, these calls interpret a `.sty`/`.cls` that has no binding raw
 //! (Perl LaTeXML's `--includestyles`) and use the arXiv profile's runaway limits; a caller wanting
-//! Perl LaTeXML's binding-only default builds its own [`Config`] with `include_styles:
-//! Some(false)` (OXIDIZED_DESIGN_DIVERGENCES #1080).
+//! Perl LaTeXML's binding-only default drives a [`Converter`](crate::converter::Converter) with its
+//! own [`Config`] (`include_styles: Some(false)`; OXIDIZED_DESIGN_DIVERGENCES #1080).
 //!
 //! ## Requirements at runtime
 //! Same host dependencies as the binary: a **TeX distribution** on `PATH` for
