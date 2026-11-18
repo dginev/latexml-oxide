@@ -20717,6 +20717,22 @@ Checked in Chrome at 1800 px (also scrolled) and 375 px on every mark of 15 pape
 `latexml_post::integration::a_shared_notes_copies_anchor_at_the_note_alone`; the shared-note pins in
 `integration.rs` (`a_shared_notes_other_marks_carry_its_hidden_copy` and three siblings) repinned with the styles.
 
+### 1076. A quantity argument is no ink: `\scalebox` reads `{Float}[Float]{}` (MARKSCALE)
+
+**Perl.** graphics.sty.ltxml:93 `\Gscale@box {Float} [Float] {}` (`\scalebox` its `Let`); its text readers are the
+XML's. **Rust.** `\scalebox` had drifted to `{} []{}`, and the text readers (util_text.rs `shown_arguments`,
+`first_ink`, the frontmatter's `label_ink` and event walker) printed every argument whose type was not keyvals, a
+position or verbatim — and read a braced `{Float}` as `Plain`. Now `\scalebox` reads Perl's `{Float}[Float]{}`, its
+`xscale`/`yscale` Perl's `floatformat` (0.75, not the old `{:.1}` 0.8); `argument_types` takes a braced or bracketed
+group of one typed parameter by that type (shared by `argument_kinds`, `settings_arguments` and the walker's
+`numeric_arguments`), and `argument_kinds` counts a quantity (`Number`, `Float`, `Dimension`, `Glue`) with keyvals
+and positions: no shown ink. A `\scalebox{0.75}{\Letter}` mark read "0.75🖂", answered by no note and dropped with
+`Warning:frontmatter:unanswered_mark_lost`; `\rotatebox{180}`'s `{Float}` and `\makebox[3cm]`'s `[Dimension]` are
+the same path. The walker's `KEYED_CONSTRUCTORS` row for `\scalebox` is gone (the types say it).
+**Witnesses.** 2606.29928, 2605.23320 (llncs `\corrauth`). **Guard.**
+`cluster_package_guards::perfect_kernel_batchmarkscale::scalebox_mark_spells_its_glyph_not_its_scale` (repro
+`sectioning-frontmatter/mark_scalebox_scale_is_no_ink`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

@@ -2390,7 +2390,7 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (CL8b +2: the arm and the meaning of the rehearsal's own `\lx@fm@obs@emailAdd@own`, a binding's definition, no name a
   // document spells; CMPJ2 +1: the walker's arm for an enumerate item's whatsit, `\enumerate@item@`, its definition's name,
   // no name a document spells — the item's start, `item_led_pieces`, 1212.6367)
-  ("events", 92),
+  ("events", 91),
   // (Z4a, 0 -> 2, ruled at Z4ar2: names two kernel definitions (`\begin`, `\end`), not a token's spelling: an environment step by its
   // meaning, a `\let` copy too, what no frame says for a raw environment)
   ("field_notes", 2),
