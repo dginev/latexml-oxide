@@ -187,10 +187,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt, clippy
+      # Only `main` saves Rust caches (pushes, and the nightly run that picks up
+      # each new nightly); a PR run restores main's and saves nothing. PR saves
+      # were 5.9 of the repo's 10.7 GB (2026-11-18), and at the 10 GB cap
+      # GitHub evicts least-recently-read first: the cache kept ~6 h of
+      # history, so the TeX Live, dumps and vcpkg entries were evicted too.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: lint
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # cargo-machete is installed BEFORE the gate below, which runs it.
       - name: install cargo-machete
         uses: taiki-e/install-action@v2
@@ -259,10 +265,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: miri
+      # Only `main` saves; see the lint job's rust-cache note.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: miri
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: miri (scoped arena UB check)
         run: tools/miri_check.sh
 
@@ -303,10 +311,12 @@ jobs:
           # such PR failed here with `cannot find 'ld'`. The other Linux jobs
           # already install it; the asan job had been the lone omission.
       - uses: dtolnay/rust-toolchain@nightly
+      # Only `main` saves; see the lint job's rust-cache note.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: asan
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # Same dump cache as the Linux `test` job (identical key): the dumps are
       # TL-derived text, independent of the ASAN instrumentation, so the two
       # jobs share one entry and this step is a no-op on the common cache hit.
@@ -442,9 +452,11 @@ jobs:
             texlive-lang-arabic texlive-lang-european texlive-lang-spanish \
             tex-gyre jing mupdf-tools poppler-utils
       - uses: dtolnay/rust-toolchain@nightly
+      # Only `main` saves; see the lint job's rust-cache note.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # Cheap source-level ratchet: ban NEW string-keyed xml: attribute
       # accessors (the libxml namespaced-attribute footgun). Runs before the
       # expensive build so it fails fast. See docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.
@@ -550,8 +562,13 @@ jobs:
         contains(github.event.pull_request.labels.*.name, 'ci:macos')))
     runs-on: macos-15
     # 3 vCPU / 7 GB RAM — tighter than the 16 GB Linux runner, so the same
-    # RAM-tuned `ci` profile + jobs=2 apply; a cold build dominates.
-    timeout-minutes: 90
+    # RAM-tuned `ci` profile + jobs=2 apply. A warm run takes ~25 min; the
+    # limit covers a COLD TeX Live install (no cache for the key: a new TL
+    # year, a TEXLIVE_PACKAGES change, an eviction, main's first run), where
+    # install-tl fetches ~4900 packages one by one: ~1 h on #916's first run.
+    # Timing out would also lose that install: the action saves its cache in a
+    # post step, which a cancelled (timed-out) job does not run.
+    timeout-minutes: 150
     env:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
@@ -595,10 +612,12 @@ jobs:
           echo "KPATHSEA_LIB_DIR=$RUNNER_TEMP/tlsrc/texk/kpathsea/.libs" >> "$GITHUB_ENV"
           echo "KPATHSEA_STATIC=1" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@nightly
+      # Only `main` saves; see the lint job's rust-cache note.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: macos
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # The engine dumps capture kernel state from `--init=plain.tex` /
       # `--init=latex.ltx` — the core + engine layers only. latexml_package is
       # loaded per-document via \usepackage, NOT during init, so package bindings
@@ -683,6 +702,10 @@ jobs:
         # `--profile ci` selects the NEXTEST profile (.config/nextest.toml).
         env:
           LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
+          # Only runs prebuilt binaries: the runner's stable cargo suffices, and
+          # it keeps rustup from fetching rust-toolchain.toml's nightly (plus
+          # rustfmt/clippy/rust-src) in every shard. No test spawns cargo/rustc.
+          RUSTUP_TOOLCHAIN: stable
         run: >-
           cargo nextest run --archive-file nextest-macos.tar.zst
           --extract-to "$GITHUB_WORKSPACE" --extract-overwrite
