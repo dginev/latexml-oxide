@@ -19,6 +19,11 @@
 //! exits (those roots do **not** run destructors on a bare thread exit). The
 //! standard package + contrib binding-dispatch chain is wired for you.
 //!
+//! Like the `latexml_oxide` binary, these calls interpret a `.sty`/`.cls` that has no binding raw
+//! (Perl LaTeXML's `--includestyles`) and use the arXiv profile's runaway limits; a caller wanting
+//! Perl LaTeXML's binding-only default builds its own [`Config`] with `include_styles:
+//! Some(false)` (OXIDIZED_DESIGN_DIVERGENCES #1080).
+//!
 //! ## Requirements at runtime
 //! Same host dependencies as the binary: a **TeX distribution** on `PATH` for
 //! packages/classes/fonts, and (only for figure-bearing HTML) the graphics

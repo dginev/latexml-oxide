@@ -22546,7 +22546,7 @@ sets them (latexml.sty.ltxml:97-108). The arXiv fleet has always run with `--pre
 LSP pass `Config.include_styles = Some(true)` and `Config.if_limit`/`absorb_limit` = ar5iv's values
 (`common::RUNAWAY_IF_LIMIT`, `RUNAWAY_ABSORB_LIMIT`), applied when the session starts and before the preloads
 (`Converter::initialize_session`), so a latexml.sty option still wins. A binding still outranks a raw file
-(`content.rs` `load_package`, `tex_job.rs` `load_class`). The other two limits were already the front ends': the
+(`content.rs` `require_package` / `input_definitions_impl` for packages, `content.rs` `load_class` for classes). The other two limits were already the front ends': the
 5,000,000 pushback cap (CLI and cortex worker threads; now the library's too) and the token budget, whose 20G floor
 (`gullet::DEFAULT_TOKEN_LIMIT`, raised per source byte by `scale_token_limit_to_source` on every file the Mouth opens)
 already lifts ar5iv's 999,999,999 at the first file opened after the preload. ar5iv's other options (`ids`,
