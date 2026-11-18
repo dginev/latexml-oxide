@@ -852,27 +852,25 @@ pub fn initialize_gullet() {
 }
 
 /// Get the current location of input getting read
-pub fn get_locator() -> Locator {
+pub fn get_locator() -> Locator { get_locator_opt().unwrap_or_default() }
+
+/// After Perl's `getLocator` (Gullet.pm:150-162): the innermost mouth with a source, else the first mouth of the
+/// stack; `None` when there is neither (before the first mouth opens, or a sourceless one alone). Perl keeps the
+/// last mouth its walk examined, so a sourceless mouth alone reports its own `String; line …` and an all-sourceless
+/// stack ends on the outermost mouth; here the first case has no `at` line (the binding machinery's mouth, not the
+/// document's, is the only one open) and the second takes the innermost (`front()`), as before. Porting Perl's
+/// walk exactly is a logged follow-up (row R RHAILOCWALK); only the message text differs.
+pub fn get_locator_opt() -> Option<Locator> {
   let gullet = gullet!();
   let mut runtime_opt = gullet.runtime.as_ref();
   let mut mouthstack_iter = gullet.mouthstack.iter();
   while runtime_opt.is_some() && runtime_opt.as_ref().unwrap().mouth.get_source().is_empty() {
     runtime_opt = mouthstack_iter.next();
   }
-  // The free fn stays `-> Locator` ("where the parser is now" — always a real
-  // position during digestion; the workhorse for errors + box creation). A
-  // Mouth's `get_locator` is `Option` (per the `Object` trait) but is always
-  // `Some`, so unwrap to the default only in the no-mouth backup.
-  if let Some(runtime) = runtime_opt {
-    // First exit condition: we found a mouth with a source, and asked it for a locator
-    runtime.mouth.get_locator().unwrap_or_default()
-  } else if let Some(runtime) = gullet.mouthstack.front() {
-    // Backup strategy: return the first locator in the mouthstack:
-    runtime.mouth.get_locator().unwrap_or_default()
-  } else {
-    // Final backup -- the default locator
-    Locator::default()
-  }
+  // A Mouth's `get_locator` is `Option` (per the `Object` trait) but always `Some`.
+  runtime_opt
+    .or_else(|| gullet.mouthstack.front())
+    .and_then(|runtime| runtime.mouth.get_locator())
 }
 
 /// `get_locator`'s accurate-start sibling (§1, docs/performance/SOURCE_PROVENANCE.md): same
@@ -917,6 +915,10 @@ pub fn get_location() -> String {
   let loc = get_locator();
   s!("at {}", loc)
 }
+
+/// [`get_location`] where [`get_locator_opt`] finds a mouth; `None` otherwise (a `--preload`ed binding, the
+/// dump load), where Perl's message has no `at` line (Error.pm:623) instead of `Locator::default`'s Rust file.
+pub fn get_location_opt() -> Option<String> { get_locator_opt().map(|loc| s!("at {}", loc)) }
 
 pub fn mouth_is_open(mouth: &Mouth) -> bool {
   let gullet = gullet!();

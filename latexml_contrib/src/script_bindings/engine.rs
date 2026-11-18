@@ -781,7 +781,9 @@ pub(super) fn make_engine() -> Engine {
   register_string_length::<()>(&mut engine);
   // Perl's `defined($v)`: every value but `()`.
   engine.register_fn("defined", |v: Dynamic| !v.is_unit());
-  engine.register_fn("ToString", |_w: WhatsitProxy| whatsit_string());
+  engine.register_fn("ToString", |ctx: NativeCallContext, _w: WhatsitProxy| {
+    whatsit_string(ctx.call_position())
+  });
   engine.register_fn("ToAttribute", |d: Digested| -> String { d.to_attribute() });
   // Perl's `Box($string, $font, $locator, $tokens, %properties)` (Box.pm:29): a text box, in the current font when
   // `font` is `()`, at the gullet's locator (a script has no locator: `()`), its tokens `T_OTHER($string)` when `()`.
@@ -2034,6 +2036,44 @@ pub(super) fn make_engine() -> Engine {
   );
   engine.register_type_with_name::<StomachHandle>("Stomach");
   engine.register_fn("getGullet", |_s: &mut StomachHandle| GulletHandle);
+  // Perl's group and mode methods (Stomach.pm:338-376, :422-447, :494-563), each returning nothing.
+  type Unit = std::result::Result<(), Box<EvalAltResult>>;
+  engine.register_fn("bgroup", |_s: &mut StomachHandle| {
+    latexml_core::stomach::bgroup()
+  });
+  engine.register_fn("egroup", |_s: &mut StomachHandle| -> Unit {
+    latexml_core::stomach::egroup().map_err(rhai_err)
+  });
+  engine.register_fn("begingroup", |_s: &mut StomachHandle| {
+    latexml_core::stomach::begingroup()
+  });
+  engine.register_fn("endgroup", |_s: &mut StomachHandle| -> Unit {
+    latexml_core::stomach::endgroup().map_err(rhai_err)
+  });
+  engine.register_fn("enterHorizontal", |_s: &mut StomachHandle| {
+    latexml_core::stomach::enter_horizontal()
+  });
+  engine.register_fn("leaveHorizontal", |_s: &mut StomachHandle| -> Unit {
+    latexml_core::stomach::leave_horizontal().map_err(rhai_err)
+  });
+  engine.register_fn("beginMode", |_s: &mut StomachHandle, mode: &str| -> Unit {
+    latexml_core::stomach::begin_mode(mode).map_err(rhai_err)
+  });
+  engine.register_fn(
+    "beginMode",
+    |_s: &mut StomachHandle, mode: &str, noframe: bool| -> Unit {
+      latexml_core::stomach::begin_mode_opt(mode, noframe).map_err(rhai_err)
+    },
+  );
+  engine.register_fn("endMode", |_s: &mut StomachHandle, mode: &str| -> Unit {
+    latexml_core::stomach::end_mode(mode).map_err(rhai_err)
+  });
+  engine.register_fn(
+    "endMode",
+    |_s: &mut StomachHandle, mode: &str, noframe: bool| -> Unit {
+      latexml_core::stomach::end_mode_opt(mode, noframe).map_err(rhai_err)
+    },
+  );
 
   // ── package/class machinery (content.rs, the RequirePackage!/… family) ──
   engine.register_fn(
@@ -2509,12 +2549,15 @@ pub(super) fn make_engine() -> Engine {
   // Any value as its string (Perl's `absorb` of a string; a `GetKeyVal` value, Tokens, a box), `()` as nothing.
   engine.register_fn(
     "absorbString",
-    |_d: &mut DocProxy, s: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
+    |ctx: NativeCallContext,
+     _d: &mut DocProxy,
+     s: Dynamic|
+     -> std::result::Result<(), Box<EvalAltResult>> {
       if s.is_unit() {
         return Ok(());
       }
       let s = if s.is::<WhatsitProxy>() {
-        whatsit_string()?
+        whatsit_string(ctx.call_position())?
       } else {
         dynamic_to_string(s)
       };
@@ -3041,7 +3084,9 @@ pub(super) fn make_engine() -> Engine {
   // In a string the whatsit is Perl's `ToString($whatsit)`, its reversion (Whatsit.pm:163).
   engine.register_fn(
     "to_string",
-    |_w: &mut WhatsitProxy| -> std::result::Result<String, Box<EvalAltResult>> { whatsit_string() },
+    |ctx: NativeCallContext,
+     _w: &mut WhatsitProxy|
+     -> std::result::Result<String, Box<EvalAltResult>> { whatsit_string(ctx.call_position()) },
   );
   // Perl `getProperty($key)` (Whatsit.pm:55): the typed value, `()` when absent.
   engine.register_fn(
@@ -3419,12 +3464,14 @@ fn emit_diag(
   details: Option<String>,
   pos: rhai::Position,
 ) -> RhaiResult<()> {
+  // Every kind is located at the call in its `.rhai` file, then in the TeX source (Fatal adds its own).
+  let located = || with_script_locator(msg, current_script_locator(pos));
   match (kind, details) {
-    (Diag::Warn, Some(d)) => latexml_core::Warn!(cat, obj, msg.to_string(), d),
-    (Diag::Warn, None) => latexml_core::Warn!(cat, obj, msg.to_string()),
-    (Diag::Info, Some(d)) => latexml_core::Info!(cat, obj, msg.to_string(), d),
-    (Diag::Info, None) => latexml_core::Info!(cat, obj, msg.to_string()),
-    (Diag::Error, details) => return script_error(cat, obj, msg, details),
+    (Diag::Warn, Some(d)) => latexml_core::Warn!(cat, obj, located(), d),
+    (Diag::Warn, None) => latexml_core::Warn!(cat, obj, located()),
+    (Diag::Info, Some(d)) => latexml_core::Info!(cat, obj, located(), d),
+    (Diag::Info, None) => latexml_core::Info!(cat, obj, located()),
+    (Diag::Error, details) => return script_error(cat, obj, &located(), details),
     (Diag::Fatal, details) => return script_fatal(cat, obj, msg, details, pos),
   }
   Ok(())
@@ -3473,9 +3520,9 @@ fn script_fatal(
 ) -> RhaiResult<()> {
   use latexml_core::common::error::{ErrorCategory, ErrorTarget};
   let located = format!(
-    "{}\n\t{}",
+    "{}{}",
     with_script_locator(msg, current_script_locator(pos)),
-    latexml_core::gullet::get_location()
+    latexml_core::common::error::location_line()
   );
   let message = match details {
     Some(details) => format!("{located}\n\t{details}"),

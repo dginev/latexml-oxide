@@ -23,7 +23,7 @@ DefMacro("\\emphx{}",  |gullet, x| "\\textit{" + x + "}");       // expands to a
 
 // (a) Template form (the common dialect): an XML string with #1..#9 for args.
 //     Attributes may interpolate #n. Elements use the ltx: namespace.
-DefConstructor("\\mytext{}", "<ltx:text class=\"rhai\">#1</ltx:text>");
+DefConstructor("\\mytext{}", "<ltx:text class=\"rhai\">#1</ltx:text>", #{ enterHorizontal: true });
 DefConstructor("\\boxed{}",  "<ltx:text framed=\"rectangle\">#1</ltx:text>");
 
 // (b) Imperative form: the body receives `document` (Perl's $_[0]) plus each

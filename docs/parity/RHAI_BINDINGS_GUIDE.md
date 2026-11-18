@@ -44,7 +44,7 @@ A binding file is a sequence of calls, read top to bottom when the package loads
 
 ```rhai
 DefMacro("\\hello{}", |gullet, name| Tokens([T_OTHER("("), name, T_OTHER(")")]));
-DefConstructor("\\term{}", "<ltx:text class=\"term\">#1</ltx:text>");
+DefConstructor("\\term{}", "<ltx:text class=\"term\">#1</ltx:text>", #{ enterHorizontal: true });
 ```
 
 - **Backslashes double** in Rhai strings: `"\\hello"`, as in Perl's double-quoted strings (Perl's `'\hello'` single
@@ -97,7 +97,13 @@ parameters it is the older form (arguments only, as strings), which still works 
 `Warning:deprecated` naming the fix; name an unused argument with a leading underscore (`|gullet, _x|`). A macro with
 no parameters takes `|gullet|` and reads its own arguments (`gullet.readArg()`, `gullet.readOptional()`), as Perl's
 `$gullet->readArg`. A primitive's or a parameter type's `afterDigest` receives the stomach alone, as Perl's (there
-is no whatsit).
+is no whatsit). A definition's `beforeDigest` or `afterDigest` hook returns what Perl's does: `()` (end it with
+`return;`), a box (`Digest(…)`) or an array of boxes, which are kept: a `beforeDigest`'s before the command's own
+boxes, an `afterDigest`'s after them, as Perl's. A parameter type's hooks run for effect only; their value is
+ignored, as Perl's. A `properties` map may hold closures
+(`#{ kind: |stomach, x| … }`), each called with the same arguments, as Perl calls a CODE value. The `stomach` handle
+has Perl's `getGullet()`, `bgroup()`, `egroup()`, `begingroup()`, `endgroup()`, `beginMode(mode[, noframe])`,
+`endMode(mode[, noframe])`, `enterHorizontal()` and `leaveHorizontal()`.
 
 ## Truth, `()` and strings
 
@@ -119,7 +125,9 @@ message, details…)` form), with the same severities: a
 A Rhai error in a body (a `throw`, a typo'd function) is reported as an `Error:script:` naming the binding, and that
 binding contributes nothing; the conversion goes on.
 
-Every such record names the `.rhai` file: its first locator is the line and column there, the second the TeX site.
+Every such record names the `.rhai` file: its first locator is the line and column there, the second the TeX site;
+a failure inside script functions then lists each call it passed through (`in call to function 'helper' (line 5,
+position 3)`), innermost first.
 Types read as Rhai's (`string`, `int`, `float`, `bool`, `array`, `map`), so a misspelled or mistyped call reads
 `Function not found: NewCounter (int)`. A failure while the file loads is one `Error:script:<file>.rhai`: a syntax
 error loads nothing; a run error keeps what the statements before it defined and skips the rest, and the package
@@ -141,6 +149,7 @@ Each old name still works this release and Warns `Warning:deprecated` once per b
 | a body naming only its arguments (`\|x\|`) | the Perl form (`\|gullet, x\|`) |
 | a hook naming only its whatsit or arguments (`afterDigest: \|whatsit\|`, `properties: \|x\|`) | the Perl form (`\|stomach, whatsit\|`, `\|stomach, x\|`) |
 | `value == "string"`, `() == ""` | `ToString(value) == "string"`, `defined(value)` / `!!value` |
+| a digest hook or a primitive body ending in a value that is not a box (a string, a number) | `return;` (or the box) |
 | `CounterValue(c) + 1`, `0 < CounterValue(c)`, `roman(CounterValue(c))` (an int before) | `CounterValue(c).valueOf() + 1` — it returns a Number, as Perl's |
 | `document.setAttribute(key, value)` (the current node) | `document.setAttribute(node, key, value)`, e.g. `document.getNode()` |
 | a `DefPrimitive` body whose last value is not a box (`\|\| RefStepCounter("c")`) | end it with `return;`, or return the boxes it should print |
