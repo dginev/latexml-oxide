@@ -175,21 +175,22 @@
     shown under a name. Only an author's copies merge, and never an image-only note. Guards
     `integration::a_shared_author_note_prints_once_and_its_repeats_are_linked_marks`,
     `witnessed_css_delta::shared_author_note_delta_stays_present` (OXIDIZED_DESIGN_DIVERGENCES #1052).
-  - **subcaption papers convert error-free on the current TeX Live 2026, and the suite passes on Windows.**
-    TL 2026's first aid for subcaption v1.6b adds to caption's `\caption@subtypehook`, which the
-    caption binding did not define, so every subcaption paper there (lipics-v2021 among them)
-    logged an `Error:undefined`. The binding now defines it, and entering a sub-type runs it once
-    as caption.sty does: a sub-float, `{subcaptiongroup}`, `\subcaption` or `\phantomsubcaption`,
-    in the sub-type's group, keeping what it typesets. On Windows, an EPUB manifest names a
-    resource in a subdirectory `sub/x.css`, not `sub\x.css`. An image in the working directory is
-    no longer listed twice when the directory's 8.3 short name (`RUNNER~1`) differs from its long
-    name. The Windows full-suite job's test-side portability gaps are closed too (path separators,
-    case-insensitive `kpsewhich` hits, `file:` URLs). Guards
+  - **subcaption papers convert error-free on the current TeX Live 2026.** TL 2026's first aid
+    for subcaption v1.6b adds to caption's `\caption@subtypehook`, which the caption binding did
+    not define, so every subcaption paper there (lipics-v2021 among them) logged an
+    `Error:undefined`. The binding now defines it, and entering a sub-type runs it once as
+    caption.sty does: a sub-float, `{subcaptiongroup}`, `\subcaption` or `\phantomsubcaption`, in
+    the sub-type's group, keeping what it typesets. Guards
     `caption_subtype_hook::{first_aid_adds_to_the_subtype_hook, subtype_hook_runs_inside_the_sub_float,
-    subtype_hook_runs_once_per_sub_type, subtype_hook_material_is_kept}`,
-    `cluster_cli::whatsinout::format_epub_ar5iv_preload_carries_the_css_param`,
+    subtype_hook_runs_once_per_sub_type, subtype_hook_material_is_kept}` (#889).
+  - **The full test suite passes on Windows.** An EPUB manifest names a resource in a
+    subdirectory `sub/x.css`, not `sub\x.css`. An image in the working directory is no longer
+    listed twice when the directory's 8.3 short name (`RUNNER~1`) differs from its long name. The
+    Windows full-suite job's test-side portability gaps are closed too (path separators,
+    case-insensitive `kpsewhich` hits, `file:` URLs); the release workflow runs that suite on
+    every tag. Guards `cluster_cli::whatsinout::format_epub_ar5iv_preload_carries_the_css_param`,
     `perfect_kernel_batch56::eps_bounding_boxes_are_read_as_bytes`
-    (`docs/release/WINDOWS_SUITE_TRIAGE_2026-11-16.md`).
+    (`docs/release/WINDOWS_SUITE_TRIAGE_2026-11-16.md`; #889).
   - **An author's `\\` lines print under the name** (issue 783). `\author{name\\school\\dept}`
     makes each line a contact, which LaTeXML.css showed only in a hover pop-up behind a blue star.
     Each such contact now carries class `ltx_author_line`, and an author whose contacts are all
@@ -603,64 +604,64 @@
     provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
     `script_bindings::tests::let_takes_any_token`.
 
-  - **The Rhai API reference's tables keep their columns.** A description quoting a closure (`|gullet, x|`) split its
-    `API.md` row into extra cells on GitHub; the generator escapes `|` in descriptions too. Guard
-    `script_bindings::tests::api_tables_keep_their_columns`.
-
-  - **Rhai values print as their TeX** (Rhai round H). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
+  - **The Rhai binding API is Perl's binding API.** A runtime binding (`.rhai`, no Rust
+    toolchain, no recompile) writes Perl LaTeXML's Package.pm calls under Perl's names, with Perl's
+    arguments and meanings: typed values (`Number`, `Dimension`, `Glue`, `Token`, `Tokens`, boxes,
+    arrays and maps) both ways, Perl's hook and body arguments, Perl's option tables and
+    diagnostics. The reference (`API.md`), the Perl | Rust | Rhai cheat sheet (`CHEATSHEET.md`),
+    the newcomer's guide (`docs/parity/RHAI_BINDINGS_GUIDE.md`) and the worked examples under
+    `docs/examples/` are generated or checked in CI. The calls whose names or results changed are
+    marked **BREAKING** below with their migration; each old form keeps working in 0.8.0 with a
+    `Warning:deprecated` once per binding load, and is removed in the release after 0.8.0 (#829,
+    #843, #849, #860, #870).
+  - **Rhai values print as their TeX** (#849). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
     and `LookupMeaning!` — a `Definition` handle (which `AssignMeaning` installs) or a Token, `()` when undefined —
-    where it returned the printed string `Stored[??]`; a string comparison keeps working this release with a
-    deprecation Warning. `ToString` of a `Definition` is Perl's (the CS and its parameters, was `DefinitionProxy`),
+    where it returned the printed string `Stored[??]`; a string comparison keeps working in 0.8.0 with a
+    deprecation Warning (removed in the release after 0.8.0). `ToString` of a `Definition` is Perl's (the CS and its parameters, was `DefinitionProxy`),
     `ToString` of an array, and an array in a string, print each Token, Tokens, box and value handle as its TeX (were
     Rust type paths, with math Errors), and `LookupString` (the core `lookup_string` behind `LookupString!`) of a
     stored Token or Tokens is its text (was the Rust Debug form). Guard
-    `perfect_kernel_batchw3rg::rhai_values_print_as_perl`; repros `rhai-bindings/lookupmeaning_is_a_string`,
-    `tostring_array_of_handles`, `lookupstring_of_tokens` turn green.
+    `perfect_kernel_batchw3rg::rhai_values_print_as_perl`.
 
-  - **The Perl binding names Rhai lacked** (Rhai round H, AUDNAME). `DefMacroI`, `DefPrimitiveI` and
+  - **The Perl binding names Rhai lacked** (#849). `DefMacroI`, `DefPrimitiveI` and
     `DefConstructorI` take Perl's I-form arguments (a `Token` or a name read as `coerceCS`, a parameter spec or `()`,
     each body kind, the option map) and lower to the core calls their prototype forms make; `IfCondition`, `Box`,
     `List`, `tokens.unlist`, `token.getCatcode`/`getString`/`getCSName` and `box.getFont`/`whatsit.getFont` are
-    registered. `IfCondition` of a non-conditional reads its Error as Perl's (`got '\relax'`, was `T_CS[\relax]`).
+    registered. `IfCondition` of a non-conditional reads its Error as Perl's (`got '\relax'`).
     Guard `perfect_kernel_batchw3rg::rhai_perl_i_forms_and_accessors`. `IfCondition(cs, [args…])` tests a
     conditional on the given arguments, as Perl's `IfCondition($if, @args)`, and never reads the input (the core
     `if_condition` read an argument-taking conditional's arguments from the document); an argument not given is
     Perl's undef. The I-forms' `coerceCS` takes Tokens as their text, and `\csname X\endcsname` needs Perl's space
     after `\csname`. `SetCondition` of a control sequence that is no conditional errs as Perl's (it `\let` a
     parameterless primitive such as `\relax` to `\iftrue`). `LookupMeaning`'s value keeps `.is_empty()`/`.len()` of
-    the string it was one release, Warned. Guard `perfect_kernel_batchw3rg::rhai_review_rows_round_h`.
+    the string it was in 0.8.0, Warned (removed in the release after 0.8.0). Guard `perfect_kernel_batchw3rg::rhai_review_rows_round_h`.
 
-  - **A Rhai name that is a Perl API name behaves as Perl's** (PR #829 round G). A `DefPrimitive`
+  - **A Rhai name that is a Perl API name behaves as Perl's** (#829). A `DefPrimitive`
     body's returned box, or array of boxes, is the primitive's output, as a Perl primitive's
     (`|| Digest(T_LETTER("A"))` printed nothing before); another returned value is dropped with a
     deprecation Warning (Perl errs on it; end such a body with `return;`). `MergeFont` and every
     `font:` option take all of Font.pm's merge keys — `color`/`background` by name (as
     `LookupColor`), `opacity`, a size name (`large`), `scale`, `forcebold`/`forcefamily`/
     `forceseries`/`forceshape`, `emph` — where all but family/series/shape/size were dropped
-    silently; an unknown key Warns. Perl's `Warn`/`Error`/`Info`/`Fatal(cat, obj, where, msg,
+    silently; an unknown key Warns. A base colour name (`red`) needs no colour package
+    (dvipsnam.def is read only once one defines `\DefineNamedColor`). Perl's `Warn`/`Error`/`Info`/`Fatal(cat, obj, where, msg,
     details…)` form is read when `where` is `()` or a handle. `SetCounter`/`AddToCounter` take a
     Number, `StepCounter` its `noreset`, `PushValue`/`UnshiftValue` up to four values, `Revert` a
     string, `LookupDimension` a Token, Tokens, box or Dimension; `ptValue`/`pxValue` clamp the
-    precision to 0..5; `Number("12abc")` is 12 with Perl's `perl:warn` Warning, where it was an
-    Error and 0. `ExplodeText` (and `roman`, the kernel's `ExplodeText!`) makes only ASCII
+    precision to 0..5. `Number(string)` and the core `Number::from(String)` are one reader,
+    Perl's `int()`: `"1e3"` is 1000, and a string not wholly a number (`"12abc"`) reads its numeric
+    prefix with Perl's `perl:warn` Warning (the core gave 0 silently). `ExplodeText` (and `roman`, the kernel's `ExplodeText!`) makes only ASCII
     letters LETTER, as Perl Token.pm and latex.ltx's `\char@if@alph` (`é` is OTHER).
-    **BREAKING:** `CounterValue` returns a Number (its `+`/`-`/comparisons with an int keep
-    working this release with a deprecation Warning; use `.valueOf()`); `node.getAttribute`
+    **BREAKING:** `CounterValue` returns a Number (its `+`/`-`, comparisons and equality with an
+    int or float, in either order, and `roman`/`Roman` of it keep working in 0.8.0 with a
+    deprecation Warning, removed in the release after 0.8.0; use `.valueOf()`); `node.getAttribute`
     of an absent attribute is `()` (`defined(…)` tests it; `== ""` still holds, Warned);
-    `document.setAttribute(key, value)` is deprecated for Perl's `(node, key, value)`.
-    Guard `cluster_package_guards::perfect_kernel_batchw3rg`.
+    `document.setAttribute(key, value)` is deprecated for Perl's `(node, key, value)`. Each of
+    these deprecated forms works in 0.8.0 with its Warning and is removed in the release after 0.8.0.
+    Guards `cluster_package_guards::perfect_kernel_batchw3rg`,
+    `perfect_kernel_batchw3rg::rhai_perl_names_review_rows`.
 
-  - **Rhai round G review fixes** (PR #829 round H). `int`/float comparisons and equality with a
-    Number, in either order, compare as ints with the deprecation Warning (`0 < CounterValue(c)`
-    was `false` silently), and `roman`/`Roman` take a Number the same way. A `LookupDefinition`
-    handle keeps the definition it found, so `AssignMeaning` after a redefinition installs the old
-    one, as Perl's. A base colour name (`red`) in `MergeFont` or a `font:` option needs no colour
-    package (dvipsnam.def is read only once one defines `\DefineNamedColor`; it was 4 Errors and
-    Black). `Number(string)` and the core `Number::from(String)` are one reader, Perl's `int()`:
-    `"1e3"` is 1000, a string not wholly a number Warns and reads its numeric prefix (the core gave
-    0 silently). Guard `perfect_kernel_batchw3rg::rhai_perl_names_review_rows`.
-
-  - **Rhai Def* option bags follow Perl's option tables** (PR #829 round A). Each of
+  - **BREAKING: Rhai Def* option bags follow Perl's option tables** (#829). Each of
     `DefMacro`, `DefPrimitive`, `DefConstructor`, `DefEnvironment`, `DefMath` and
     `DefConditional` checks its bag against Perl's key table (Package.pm `CheckOptions`);
     a key outside it is one `Error:misdefined` ("… does not accept options:bogusopt"),
@@ -677,7 +678,7 @@
     (`DefConditional("\\iffoo")`, with `SetCondition`); its test receives Tokens.
     Guard `cluster_package_guards::perfect_kernel_batchw3ra`.
 
-  - **BREAKING: Rhai values keep their type both ways** (PR #829 round B). `LookupValue`
+  - **BREAKING: Rhai values keep their type both ways** (#829). `LookupValue`
     and `LookupMapping` return the value as it was stored (a bool, an int, a float,
     `Token`, `Tokens`, a digested handle; a list as an array), where they returned its
     string form; a missing key is `()`, where `LookupMapping` returned `""`. `AssignValue`
@@ -693,7 +694,7 @@
     `readUntil`, `readOptional`, `readToken`, `skipSpaces`).
   - **A Rhai macro or reversion closure may return a `Token` or `Tokens`**, as a Perl macro
     sub returns tokens; it expanded to the type's name (`Token`) before.
-  - **Rhai argument shapes as Perl's:** `Digest` takes a string (TeX source), `DigestText`
+  - **BREAKING: Rhai argument shapes as Perl's:** `Digest` takes a string (TeX source), `DigestText`
     a `Token` or `Tokens`; `AssignCatcode` takes a scope; `LookupCatcode` of a character the
     table does not hold is `()` (Perl undef), where it was 12.
   - **New Rhai calls:** `LookupMathcode`/`AssignMathcode`, `LookupSFcode`/`AssignSFcode`,
@@ -704,7 +705,7 @@
   - **Rhai diagnostics as Perl's:** `Fatal(cat, obj, msg)` logs `Fatal:<cat>:<obj>`, where it
     logged `Fatal:Internal:Unexpected` (#792); `Warn`/`Error`/`Info`/`Fatal` take Perl's
     trailing details (a string or an array of strings, one line each).
-  - **Rhai options Perl accepts, honoured** (PR #829 round D): `Tag`'s `afterOpen`/`afterClose`
+  - **Rhai options Perl accepts, honoured** (#829): `Tag`'s `afterOpen`/`afterClose`
     hooks (and `:early`/`:late`; another key is an Error); `NewCounter`'s `idprefix`/`idwithin`/
     `nested`; `RequirePackage`/`LoadClass` option maps (`options`, `type`, `notex`, `after`,
     `withoptions`, …; `LoadClass`'s `notex`/`searchpaths_only` reach no class-load option yet
@@ -722,13 +723,13 @@
     `PushValue`): `let o = LookupValue(k); o.push(x); AssignValue(k, o)` round-trips, where
     the array was stored as its printed text. A `Token`/`Tokens` given where a string is
     read (a `properties` value, an option) is its ToString, as Perl's (`\foo bar` reads
-    `\foobar`), where it was the Rust type name (revW3e).
-  - **New Rhai calls, thin wrappers over the macros' core calls** (PR #829 round D1b):
+    `\foobar`), where it was the Rust type name.
+  - **New Rhai calls, thin wrappers over the macros' core calls** (#829):
     `Invocation`, `AddToMacro`, `DeclareFontMap`/`DeclareFontMapMultichar`, `LoadPool`,
     `IsEmpty`, `DigestIf`, `ProcessKeyOptions`, `LookupRegisterOrDefault`, `FindFile`, `Input`,
     `CleanLabel`/`CleanID`, `SetCounter`, `roman`/`Roman`, `UTF`, `Explode`/`ExplodeText`,
     `BeginItemize`, `Equals`, with Perl's argument forms.
-  - **BREAKING: Rhai hooks take Perl's arguments, and the #716 renames** (PR #829 round D2a). A hook
+  - **BREAKING: Rhai hooks take Perl's arguments, and the #716 renames** (#829). A hook
     receives the whatsit as Perl passes it: `afterDigest: |whatsit|`, `beforeConstruct`/`afterConstruct:
     |document, whatsit|`, a sizer `|whatsit|`, and a reversion closure `|whatsit, arg1, …|` — **a reversion
     written `|arg1, …|` must add the leading `whatsit`**. The whatsit has Whatsit.pm's `getArg(n)` (the
@@ -736,8 +737,9 @@
     any value)`. A constructor body receives Perl's `%props` as a trailing map (`|document, x, props|`).
     `openElement` takes an attribute map and returns the new node; `closeElement` and `maybeCloseElement`
     return the node closed, or `()`. `DefAccent` takes Perl's options map (`#{below: true}`; it checks no key,
-    as Perl's). `AssignValue(k, 7)` reads back through `LookupNumber`. These old names stay
-    for one release as aliases, each logging `Warning:deprecated:<name>` once per binding load:
+    as Perl's). `AssignValue(k, 7)` reads back through `LookupNumber`. These old names stay in
+    0.8.0 as aliases, each logging `Warning:deprecated:<name>` once per binding load, and are
+    removed in the release after 0.8.0:
 
     | old | use |
     |---|---|
@@ -753,11 +755,11 @@
 
     Guards `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_perl_forms_716,
     rhai_deprecated_aliases_warn_once}`.
-  - **BREAKING: Rhai bodies receive Perl's arguments; `GetKeyVal` returns the value** (PR #829 round D2b). A
+  - **BREAKING: Rhai bodies receive Perl's arguments; `GetKeyVal` returns the value** (#829). A
     `DefMacro` (and `DefColumnType`, `DefConditional` test) closure is Perl's `|gullet, args|`, a `DefPrimitive`
     closure `|stomach, args|` (`stomach.getGullet()`), each argument `Tokens`, a `Token`, a `KeyVals` or `()` for an
     omitted optional. A closure declaring no parameter is Perl's plain `sub {…}`. One declaring no leading handle —
-    1 to as many parameters as the definition's arguments — keeps receiving TeX strings for one release, with
+    1 to as many parameters as the definition's arguments — keeps receiving TeX strings in 0.8.0 (removed in the release after 0.8.0), with
     `Warning:deprecated:DefMacro |args|` (`DefPrimitive |args|`, `DefColumnType |args|`, `reversion |args|`) once per
     binding load; the two forms cannot be told apart by arity, so a Perl-form closure declares its handle and every
     argument, `|gullet, x|` (`|gullet, _x|` where Perl writes `my ($gullet) = @_`); fewer parameters is the old form,
@@ -769,7 +771,7 @@
     `"0"`, `0` false, every Token, Tokens, box, array and map true) or `defined(v)` (Perl's `defined`), and wrap a
     string use in `ToString(…)`; an old test against a string (`v != ""`, `"" != v`) compares the string forms, `()`
     as `""` on either side as Perl's `undef eq ''`, with `Warning:deprecated:value == string` / `() == string` once
-    per load — so `v == ()` is no longer the defined test for a string (`"" == ()` is true). `GetKeyVals` gives those values (a repeated
+    per load (removed in the release after 0.8.0) — so `v == ()` is no longer the defined test for a string (`"" == ()` is true). `GetKeyVals` gives those values (a repeated
     key's as an array).
     `ToString` takes any value; `document.absorbString` takes any value (its string; `()` adds nothing). New
     `DefParameterType(name, |gullet, extra…| …, #{…})` with Perl's `$parameter_options` (`nargs` accepted unread).
@@ -777,7 +779,7 @@
     `DeclareFontMap`'s `*_mathstyle` is a font map, stored as the `Font` (another value Warns unsupported). Guards
     `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_closure_args_and_parameter_types,
     rhai_deprecated_aliases_warn_once}`.
-  - **BREAKING: Rhai registers and values are typed: `Number`, `Dimension`, `Glue`, `MuGlue`** (PR #829 round C).
+  - **BREAKING: Rhai registers and values are typed: `Number`, `Dimension`, `Glue`, `MuGlue`** (#829).
     Perl's constructors (`Dimension("3pt")`, `Dimension(65536)` in sp, `Glue("1pt plus 2fil minus 1pt")`,
     `MuGlue("3mu plus 1mu")`, `Number(5)`) and methods (`valueOf`, `ptValue`, `toString`, `add`, `subtract`,
     `multiply`, `divide`, `negate`, `smaller`, `larger`, Glue's `getStretch`…), Rhai's `+ - * /` and comparisons
@@ -790,25 +792,27 @@
     change: `LookupRegisterOrDefault` gives the typed value (was its TeX string), `LookupValue`/`GetKeyVal` of a
     stored Number, Dimension or Glue the handle (a Number was an int), and a closure's `{Number}`/`{Dimension}`/
     `{Glue}` argument the handle (was its TeX string). Migration: a string use works unchanged (`"" + v`, `${v}`,
-    `ToString(v)`); a test against a string Warns `deprecated` once per load (use `ToString(v) == "3.0pt"`); an
+    `ToString(v)`); a test against a string Warns `deprecated` once per load (use `ToString(v) == "3.0pt"`; the
+    string test is removed in the release after 0.8.0); an
     int use takes `v.valueOf()`. `MuGlue("3mu plus 1mu")` no longer reconverts its stretch as points. Guards
     `cluster_package_guards::perfect_kernel_batchw3rc::{rhai_typed_registers, rhai_typed_registers_error_side}`.
-  - **Rhai registers as Perl's, round C's review** (PR #829 round E). `LookupRegister` of an undefined control
-    sequence now Warns `expected:register` as of a non-register (Package.pm:1365-1367; the `LookupRegister!` macro's
+  - **Rhai registers as Perl's** (#829). `LookupRegister` of an undefined control
+    sequence Warns `expected:register` as of a non-register (Package.pm:1365-1367; the `LookupRegister!` macro's
     lookup); a fresh register's unitless string (`DefRegister("\\c", "5")`) is an Error and 0, where it was silently
     5sp. Glue and MuGlue `+`/`-` are TeX's `\advance` (`Glue - Dimension` keeps the stretch, `MuGlue + MuGlue` keeps
     the higher fill order), where Perl's Glue.pm/MuGlue.pm differ (OXIDIZED_DESIGN_DIVERGENCES #1030).
-  - **The Rhai dialect is documented for newcomers** (PR #829 round E): a guide,
+  - **The Rhai dialect is documented for newcomers** (#829): a guide,
     `docs/parity/RHAI_BINDINGS_GUIDE.md` (loading, values, the Perl closure form, truthiness and `defined`,
     diagnostics, the deprecated-name migration); a three-column cheat sheet, `CHEATSHEET.md` beside `API.md`
     (Perl | Rust macro | Rhai, generated from `api_doc.rs` and checked with it, its empty cells listed as the
     dialect's gaps); worked examples under `docs/examples/` that CI converts with no Error or Warning
     (`30_script_bindings::docs_examples_convert_clean`). `script_bindings_plan.md` keeps the design notes.
-  - **Rhai `AssignMeaning` is Perl's `$STATE->assignMeaning`** (PR #829 round F): `AssignMeaning(token,
+  - **Rhai `AssignMeaning` is Perl's `$STATE->assignMeaning`** (#829): `AssignMeaning(token,
     meaning[, scope])` stores a meaning, a `LookupDefinition` handle, a `Token` (`T_LETTER("a")`, as `\let\x=a`) or
-    `()` (undefined), as the `AssignMeaning!` macro does, where it was a deprecated `Let`. A string meaning, the old
-    `AssignMeaning("\\a", "\\b")`, still lets this release and Warns `deprecated` once per load, naming `Let` and
-    the handle form. Guard `cluster_package_guards::perfect_kernel_batchw3rd::rhai_perl_forms_716` (p5).
+    `()` (undefined), as the `AssignMeaning!` macro does, where it was a deprecated `Let`. A `LookupDefinition`
+    handle keeps the definition it found, so `AssignMeaning` after a redefinition installs the old one, as Perl's.
+    A string meaning, the old `AssignMeaning("\\a", "\\b")`, still lets in 0.8.0 and Warns `deprecated` once per
+    load, naming `Let` and the handle form (removed in the release after 0.8.0). Guard `cluster_package_guards::perfect_kernel_batchw3rd::rhai_perl_forms_716` (p5).
 
   - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
     chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and
@@ -848,8 +852,9 @@
     A cell carries it per side as `cssstyle="border-top-color:#BFBFBF"`, and a
     colour set inside a tabular or array ends with it. Black, and a table without
     `\arrayrulecolor`, add nothing. (Perl ignores it.)
-  - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
-    meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
+  - **BREAKING (library): `post::PostOptions::nodefaultresources` is now `default_resources`,
+    with the meaning inverted.** A caller that sets the old field no longer compiles; set
+    `default_resources: !old_value`. The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
     and the XSLT step still receives its negation as `noresources`, as
     `LaTeXML.pm:584` passes it. The CLI flags `--defaultresources` and
