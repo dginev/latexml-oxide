@@ -73,3 +73,17 @@ fn an_unanswered_line_mark_stays_printed_before_its_address() {
     r#"<title>T</title> <creator role="author"> <personname>Ann Bee</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <contact name="Email: " role="email">ab@x.org</contact> </creator> <creator before=" " role="author"> <personname>Carl Dee</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator role="author"> <contact name="Email: " role="email"><sup xml:id="id1">†</sup>zq@x.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Hello.</p> </para>"#
   );
 }
+
+/// A suffixed printed list, `\{abcde,\,xy\}.nju@gmail.com` under marked names (2609.00833): its local parts
+/// `abcde.nju`, `xy.nju` print nowhere as such, and the address-mark reader stepped by their length into the thin space
+/// `\,` prints — a Fatal panic. Each address is kept once, the block's: no name spells a list's local parts.
+#[test]
+fn a_brace_list_local_part_the_text_does_not_spell() {
+  assert_eq!(
+    converted(
+      repro!("addr_line_brace_list_suffixed_local_part_unspelled"),
+      0
+    ),
+    r#"<title>T</title> <creator role="author"> <personname>Ann Lee</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Nanjing University</contact> </creator> <creator before=" " role="author"> <personname>Bo Wu</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Nanjing University</contact> </creator> <creator role="author"> <contact name="Email: " role="email">abcde.nju@gmail.com</contact> <contact name="Email: " role="email">xy.nju@gmail.com</contact> <contact name="Email: " role="email">cd@nju.edu.cn</contact> <contact name="Email: " role="email">ef@nju.edu.cn</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">x</p> </para>"#
+  );
+}

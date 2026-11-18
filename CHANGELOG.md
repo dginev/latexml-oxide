@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+  - **An author's printed address list no longer crashes the frontmatter reader.** A list whose
+    local parts share a suffix (`\{abcde,\,xy\}.nju@gmail.com`) under marked names made the
+    address-mark reader step by the length of a local part the text does not spell, into the
+    thin space `\,` prints, and panic (2609.00833, a Fatal). It now steps past the next separator
+    only. Guard `perfect_kernel_batch106a::a_brace_list_local_part_the_text_does_not_spell`.
   - **A note several authors share prints once.** The XML keeps a copy of a shared author note
     (an authblk `\affil[*]`, a legend line's `*`) on every author, each with its `mark`, as Perl
     does; the HTML prints the first copy (class `ltx_note_shared`) and, at each other author, its

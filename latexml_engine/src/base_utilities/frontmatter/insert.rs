@@ -4092,15 +4092,25 @@ const LINE_LIST: &str = "_linelist";
 fn address_marks(text: &str, marks: &[(usize, String)], cut: &AddressLineCut) -> Vec<Vec<usize>> {
   let mut places: Vec<usize> = Vec::new();
   let mut from = cut.address_start.min(text.len());
+  let separator = |c: char| c.is_whitespace() || ",;".contains(c);
   for address in &cut.addresses {
     let local = address.split('@').next().unwrap_or_default();
-    let at = text[from..].find(local).map_or(from, |at| from + at);
-    places.push(at);
-    from = at
-      + text[at..]
-        .find(|c: char| c.is_whitespace() || ",;".contains(c))
+    let rest = &text[from..];
+    from = if let Some(at) = rest.find(local).map(|at| from + at) {
+      places.push(at);
+      at + text[at..]
+        .find(separator)
         .unwrap_or(text.len() - at)
-        .max(local.len().min(text.len() - at));
+        .max(local.len())
+    } else {
+      // (a local part the text does not print, a suffixed list's `\{abcde,\,xy\}.nju@…` (2609.00833): placed where the
+      // search stands, the next searched past its separator — never by the absent part's length, which may end
+      // inside a character)
+      places.push(from);
+      rest.find(separator).map_or(text.len(), |sep| {
+        from + sep + rest[sep..].chars().next().map_or(0, char::len_utf8)
+      })
+    };
   }
   let opening = marks
     .first()

@@ -1,0 +1,16 @@
+% witness: synthetic sibling of 2609.00833 (a line mark leading each suffixed brace list)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Lee1 Bo Wu2", "1 Nanjing University", "2 Peking University",
+%          "1{abcde, xy}.nju@gmail.com, 2{cd, ef}.pku@pku.edu.cn"
+% engines: M8B29 = Fatal panic (insert.rs `address_marks`, as 2609.00833); ADDRPANIC = 0 errors, the four addresses
+%          kept once on the block's creator, the marks 1 and 2 not printed (the token-level reader takes no suffixed
+%          list; the control `\{abcde,\,xy\}@…` gives each list to its mark's name)
+% expect:  0 errors, 0 warnings; each list's addresses on the name its leading mark answers, the marks kept
+% status:  RED (the marks and owners; the panic is fixed, guarded by
+%          perfect_kernel_batch106a::a_brace_list_local_part_the_text_does_not_spell)
+\documentclass{article}
+\title{T}
+\author{Ann Lee$^{1}$ \quad Bo Wu$^{2}$ \\ $^1$ Nanjing University \\ $^2$ Peking University \\ $^1$\{abcde,\,xy\}.nju@gmail.com, $^2$\{cd,\,ef\}.pku@pku.edu.cn}
+\begin{document}
+\maketitle
+x
+\end{document}
