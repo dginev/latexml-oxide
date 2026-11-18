@@ -1,0 +1,18 @@
+% mechanism: a text-mode `\phantom`/`\vphantom` starts the paragraph: latex.ltx `\finph@nt` ends
+%   `\leavevmode@ifvmode\box\tw@` (:15617), `\leavevmode@ifvmode` = `\ifvmode\expandafter\indent\fi` (:9433); digested
+%   in vertical mode, the space after it is dropped there (Stomach.pm:249-251). Declaring enterHorizontal fixes the
+%   space but drops a paragraph the phantom alone holds (`\par\phantom{Jb}\par`: an `isSpace` whatsit, which
+%   repack_paragraph / Perl repackHorizontal keeps out of the line; guards batchrg1_group_paragraph_rows,
+%   batchfms1::field_prov_phantom_kept), so it waits for `\phantom`/`\vphantom` to dispatch like `\hphantom`
+% witness: census 7617 papers use a phantom; OXIDIZED_DESIGN_DIVERGENCES #1079
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: each line is indent, an empty box, then " starts here."
+% engines: perl 0.8.8 and rust INLINECTORb: <p><text class="ltx_phantom">Y</text>starts here.</p>
+% expect:  0 errors, 0 warnings; <p><text class="ltx_phantom">Y</text> starts here.</p> (each of the two)
+% status:  RED (perl, INLINECTORb)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\phantom{Y} starts here.
+
+\vphantom{Z} starts here.
+\end{document}

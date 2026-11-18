@@ -943,6 +943,18 @@
     a_restored_setter_takes_a_later_redefinition_afresh, a_restored_setter_drops_the_class_definition,
     a_restore_in_a_group_ends_with_it}`.
 
+  - **A command that sets text at a paragraph's start keeps the space after
+    it.** `\object{M31} is a galaxy.` (aa), `\url{http://x.org} is a site.`
+    (llncs) and an amsppt `\cite` gave `M31is`, `x.orgis`, `[1]is` (as Perl
+    does): the constructor stayed in vertical mode, where the space is dropped.
+    Those bindings, and the others whose text TeX sets there (ams `\URL`,
+    html's `\hyperrefhyper`, `\lxWithClass`, revtex's `\text`, a glyph with no
+    Unicode, a text `\hphantom`), now enter horizontal mode
+    first, Perl's `enterHorizontal`. fancybox's `\shadowbox`, `\doublebox`,
+    `\ovalbox` and `\Ovalbox` also no longer split a paragraph in two
+    (`Mid \doublebox{C} para.`). OXIDIZED_DESIGN_DIVERGENCES #1079; guards
+    `perfect_kernel_batchinlinector`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`

@@ -467,11 +467,13 @@ LoadDefinitions!({
   DefMacro!("\\qed", "\u{220E}");
 
   //======================================================================
-  // Object names — Perl L357-360
+  // Object names — Perl L357-360. The name is text and starts the paragraph (as Perl's aas_support `\objectname`),
+  // so `\object{M31} is` keeps its space (OXIDIZED_DESIGN_DIVERGENCES #1079).
   //======================================================================
 
   DefConstructor!("\\object Semiverbatim",
-    "<ltx:text class='ltx_ast_objectname' _noautoclose='1'>#1</ltx:text>");
+    "<ltx:text class='ltx_ast_objectname' _noautoclose='1'>#1</ltx:text>",
+    enter_horizontal => true);
   def_macro_noop("\\listofobjects")?;
   DefMacro!("\\listobjectname", "List of Objects");
 

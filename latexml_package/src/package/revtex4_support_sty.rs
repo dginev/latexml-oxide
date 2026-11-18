@@ -377,7 +377,7 @@ LoadDefinitions!({
   // digested inside box braces, so the alignment count is raised for it, as amstext_sty.rs `\text`
   // (KNOWN_PERL_ERRORS #931).
   DefConstructor!("\\text{}", "<ltx:text _noautoclose='true'>#1</ltx:text>",
-    mode => "restricted_horizontal", locked => true,
+    mode => "restricted_horizontal", enter_horizontal => true, locked => true,
     before_digest => { increment_align_group_count(); },
     after_digest => { decrement_align_group_count(); });
   // revtex4-2.cls:7547-7585 (revtex4.cls:5992, revtex4-1.cls:7526): REVTeX's `\text` is `\REV@text`, which apsrev's

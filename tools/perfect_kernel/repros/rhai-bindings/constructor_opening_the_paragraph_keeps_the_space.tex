@@ -1,0 +1,15 @@
+% mechanism: a constructor that opens the paragraph keeps the space after it only if it declares enterHorizontal: without
+%   it the constructor is digested in vertical mode, where the space after it is dropped (Stomach.pm:249-251) — so the
+%   space before `\lxb` was lost to `\lxa`, the template constructor opening the paragraph, not to `\lxb` being
+%   imperative (OXIDIZED_DESIGN_DIVERGENCES #1079). `\lxa` declares enterHorizontal; the imperative `\lxb` keeps the space
+%   before it.
+% witness: synthetic (W3RD2a review revW3h; the binding lximp.sty.rhai, lximp.sty.ltxml for Perl, lximp.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "a b"
+% engines: W3 8ee92a55a49 and Perl 0.8.8, `\lxa` without enterHorizontal: <p><text class="a">a</text><text class="b">b</text></p>
+% expect:  0 errors; <p><text class="a">a</text> <text class="b">b</text></p>
+% status:  RED (W3 8ee92a55a49, Perl; as imperative_constructor_drops_space_red) -> GREEN (INLINECTOR, `\lxa` enterHorizontal)
+\documentclass{article}
+\usepackage{lximp}
+\begin{document}
+\lxa{a} \lxb{b}
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: fancybox's `\shadowbox`/`\doublebox`/`\ovalbox`/`\Ovalbox` set their content in an `\hbox` and start the
+%   paragraph (fancybox.sty:60-61 `\hbox{\fbox{#1}}` `\leavevmode\vbox`, :136 `\leavevmode\hbox`, :152 `\fbox`);
+%   Perl's mode => 'internal_vertical' ended the paragraph around the box (begin_mode's leaveHorizontal), so at a
+%   paragraph's start the space after it was dropped and mid-paragraph the paragraph split in two
+% witness: census 232 fancybox papers; OXIDIZED_DESIGN_DIVERGENCES #1079
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A starts here." / "Mid C para." on one line each
+% engines: perl 0.8.8 and rust M8B29: <p><text …>A</text>starts here.</p>; "Mid" and "C para." in two <p>
+% expect:  0 errors, 0 warnings; <p><text …>A</text> starts here.</p>; <p>Mid <text …>C</text> para.</p>
+% status:  RED (M8B29, perl) -> GREEN (INLINECTORb)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{fancybox}
+\begin{document}
+\shadowbox{A} starts here.
+
+Mid \doublebox{C} para.
+
+Mid \ovalbox{E} and \Ovalbox{F} para.
+\end{document}
