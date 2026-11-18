@@ -20793,7 +20793,10 @@ inside a line), csquotes' citation openers (`\mkcitation` opens with `\space`, w
 display-quote opener (`\mkbegdispquote` prints nothing), `\@@generic@caption` (an Error path), `\lx@text@tweaked` (after
 its base glyph), units' `\helper@ams@text` (unused). **Upstream.** Offerable as one Perl patch: add `enterHorizontal => 1` to
 the same constructors in the Perl files named above (aa_support.sty.ltxml:357, llncs.cls.ltxml:68,
-ams_support.sty.ltxml:282, amsppt.sty.ltxml:328, html.sty.ltxml:45, …); Perl's output differs only by the kept space.
+ams_support.sty.ltxml:282, amsppt.sty.ltxml:328, html.sty.ltxml:45, …); Perl's output differs only by the kept space —
+except fancybox's four boxes (fancybox.sty.ltxml:27,30,33,36), which also need `mode => 'restricted_horizontal'` in place
+of `internal_vertical` (with `internal_vertical` the option does nothing), and that patch also stops the paragraph splitting
+around the box (1604.04591).
 Perl's xcolor `\fcolorbox` pairs `enterHorizontal` with `internal_vertical` the same way (xcolor.sty.ltxml:881); ours is
 `restricted_horizontal` already. **Guards.** `cluster_package_guards::perfect_kernel_batchinlinector::{
 aa_object_starts_the_paragraph, llncs_url_starts_the_paragraph, amsppt_cite_starts_the_paragraph,
