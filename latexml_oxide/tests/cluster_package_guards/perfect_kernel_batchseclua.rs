@@ -72,7 +72,8 @@ fn denials(log: &str) -> Vec<&str> {
 }
 
 /// No program runs and no native code loads: `os.execute`/`io.popen` (pcalled, so only the record shows the refusal),
-/// `require` of a network library and of a C module on `./?.so`, `package.loadlib`. Base: `X[768]`, the shell ran.
+/// `require` of a network library and of a C module on `package.cpath` (`./?.so`; `.\?.dll` on Windows),
+/// `package.loadlib`. Base: `X[768]`, the shell ran.
 /// Repro luatex-profile/lua_sandbox_no_programs.
 #[test]
 fn batchseclua_lua_runs_no_program() {
@@ -85,7 +86,9 @@ fn batchseclua_lua_runs_no_program() {
     repro!("luatex-profile", "lua_sandbox_no_programs"),
   )
   .unwrap();
-  std::fs::write(root.path().join("cmod.so"), b"").unwrap();
+  // The C module texlua's own `package.cpath` finds in the job directory: `./?.so`, `.\?.dll` on Windows.
+  let cmod = if cfg!(windows) { "cmod.dll" } else { "cmod.so" };
+  std::fs::write(root.path().join(cmod), b"").unwrap();
   let log = convert_at(root.path(), "t.tex", "t.xml");
   let xml = std::fs::read_to_string(root.path().join("t.xml")).unwrap_or_default();
   assert_eq!(

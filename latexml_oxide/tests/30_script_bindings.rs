@@ -2044,6 +2044,11 @@ fn a_rhai_diagnostic_names_its_binding_file() {
   let command =
     format!(r#"DefMacro("\\dgrun", || {{ let out = Command("{program}").output(); "ran" }});"#);
   let info = format!("Info:script:Command running the external program '{program}'");
+  // The record locates the `.output()` call, whose column follows the program name's length.
+  let output_at = format!(
+    "/dg.sty.rhai; line 1 col {}",
+    command.find("output").unwrap() + 1
+  );
   let rows: &[DiagRow] = &[
     (
       "a misspelled call at load: the statements before it stand, the rest is skipped",
@@ -2100,7 +2105,7 @@ fn a_rhai_diagnostic_names_its_binding_file() {
       &command,
       "X \\dgrun{} Y",
       &info,
-      "/dg.sty.rhai; line 1 col 52",
+      &output_at,
       "\tat t.tex; line 1 col 63 - line 1 col 63",
       (0, 0, 0),
       "X ran Y",
