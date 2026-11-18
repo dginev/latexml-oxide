@@ -581,8 +581,7 @@ fn lst_split(stuff: &Option<Tokens>) -> Vec<String> {
         .map(|t| t.to_string())
         .unwrap_or_default();
       // Strip TeX comments: %...\n
-      static COMMENT_RE: std::sync::LazyLock<Regex> =
-        std::sync::LazyLock::new(|| Regex::new(r"%.*?\n\s*").unwrap());
+      static COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"%.*?\n\s*").unwrap());
       let comment_re = &*COMMENT_RE;
       s = comment_re.replace_all(&s, "").to_string();
       // Strip whitespace
@@ -1212,8 +1211,7 @@ fn lst_add_delimiter(
 
     // Perl: process $style parameter to determine base class name
     // "commentstyle" → "comments", "stringstyle" → "strings", etc.
-    static STYLE_RE: std::sync::LazyLock<Regex> =
-      std::sync::LazyLock::new(|| Regex::new(r"style(\d*)$").unwrap());
+    static STYLE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"style(\d*)$").unwrap());
     let style_re = &*STYLE_RE;
     let base_class = if style_re.is_match(style) {
       style_re.replace(style, "s$1").to_string()
@@ -1897,11 +1895,9 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
   let _ = outer_class;
   let mut prev_listing = String::new();
   // Precompile static regexes
-  static NEWLINE_RE: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"^\s*?\n").unwrap());
+  static NEWLINE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*?\n").unwrap());
   let newline_re = &*NEWLINE_RE;
-  static SPACE_RE: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"^[\t ]+").unwrap());
+  static SPACE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\t ]+").unwrap());
   let space_re = &*SPACE_RE;
 
   while !ctx.listing.is_empty() {

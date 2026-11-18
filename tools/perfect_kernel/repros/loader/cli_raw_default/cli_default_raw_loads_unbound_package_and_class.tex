@@ -1,0 +1,15 @@
+% mechanism: the front ends (CLI, library API, cortex's generic profile) raw-load an unbound .sty/.cls by
+%   default (Config.include_styles = Some(true), OXIDIZED_DESIGN_DIVERGENCES #1080);
+%   --noincludestyles (or --preload=[norawstyles,norawclasses]latexml.sty) restores Perl's default (State INCLUDE_STYLES/INCLUDE_CLASSES off, Perl Core.pm L55-57): a
+%   missing_file warning for the package, the OmniBus fallback for the class.
+% witness: DG 2026-11-18 ruling; the 697-paper arXiv study (error-free 84.5 % -> 95.7 %)
+% oracle:  pdflatex 0 errors: "RAWCLSLOADED RAWSTYLOADED"
+% engines: rust M8B29 (no flags) = "NOCLS NOSTY", 2 warnings (missing_file pkzzzraw, OmniBus pkzzzcls);
+%          perl (no flags): INCLUDE_STYLES/INCLUDE_CLASSES default 0 (Core.pm L55-57), by reading
+% expect:  0 errors, 0 warnings; "RAWCLSLOADED RAWSTYLOADED"; with --noincludestyles "NOCLS NOSTY"
+% status:  RED (M8B29) -> GREEN (RAWDEFW)
+\documentclass{pkzzzcls}
+\usepackage{pkzzzraw}
+\begin{document}
+\ifdefined\rawcls\rawcls\else NOCLS\fi\ \ifdefined\rawpkg\rawpkg\else NOSTY\fi
+\end{document}

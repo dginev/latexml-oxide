@@ -4,9 +4,9 @@ use std::{
   fmt,
   hash::{Hash, Hasher},
   rc::Rc,
+  sync::LazyLock,
 };
 
-use once_cell::sync::Lazy;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
 /// including basic font information, color & background color
@@ -73,13 +73,15 @@ pub const FLAG_FORCE_SERIES: u8 = 0x2;
 pub const FLAG_FORCE_SHAPE: u8 = 0x4;
 pub const FLAG_EMPH: u8 = 0x10;
 
-pub static FONT_TEXT_DEFAULT: Lazy<Font> = Lazy::new(Font::text_default);
-static LATIN_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Latin}&&\pL]$").unwrap());
-static GREEK_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Greek}&&\pL]$").unwrap());
-static UPPER_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{Lu}]$").unwrap());
-static DIGIT_LETTER_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[\p{N}]$").unwrap());
+pub static FONT_TEXT_DEFAULT: LazyLock<Font> = LazyLock::new(Font::text_default);
+static LATIN_LETTER_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^[\p{Latin}&&\pL]$").unwrap());
+static GREEK_LETTER_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^[\p{Greek}&&\pL]$").unwrap());
+static UPPER_LETTER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\p{Lu}]$").unwrap());
+static DIGIT_LETTER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\p{N}]$").unwrap());
 #[rustfmt::skip]
-static FONT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(xylubt|xyluat|xydash|xycmbt|xycmat|xycirc|xybtip|xybsql|xyatip|ul9|ugq|uaq|txtt|txsyb|txsya|txss|txr|txmi|pzd|pzc|pxsyb|pxsya|pxr|pxmi|put|ptm|psy|ppl|pnc|phv|pcr|pbk|pag|msy|msx|msb|msa|manfnt|linew|line|lcirclew|lcircle|futs|futmi|futm|eus|eur|euf|euex|cmvtt|cmtt|cmtl|cmt|cmsy|cmssqi|cmssq|cmss|cmsltt|cmr|cmmib|cmm|cmfr|cmfib|cmex|cmdunh|cmdh|cmu|cmbsy|cmbrs|cmbrm|cmbr|cm|ccy|ccr|ccm|ccitt|bch|bbold|bbmss|bbm)(sbc|sb|mc|m|bx|bm|bc|b|)(sl|sc|n|it|i|csc|)(\d*)$").unwrap());
+static FONT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(xylubt|xyluat|xydash|xycmbt|xycmat|xycirc|xybtip|xybsql|xyatip|ul9|ugq|uaq|txtt|txsyb|txsya|txss|txr|txmi|pzd|pzc|pxsyb|pxsya|pxr|pxmi|put|ptm|psy|ppl|pnc|phv|pcr|pbk|pag|msy|msx|msb|msa|manfnt|linew|line|lcirclew|lcircle|futs|futmi|futm|eus|eur|euf|euex|cmvtt|cmtt|cmtl|cmt|cmsy|cmssqi|cmssq|cmss|cmsltt|cmr|cmmib|cmm|cmfr|cmfib|cmex|cmdunh|cmdh|cmu|cmbsy|cmbrs|cmbrm|cmbr|cm|ccy|ccr|ccm|ccitt|bch|bbold|bbmss|bbm)(sbc|sb|mc|m|bx|bm|bc|b|)(sl|sc|n|it|i|csc|)(\d*)$").unwrap());
 //======================================================================
 // Mappings from various forms of names or component names in TeX
 // Given a font, we'd like to map it to the "logical" names derived from LaTeX,
@@ -91,7 +93,7 @@ static FONT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(xylubt|xyluat|xydash|x
 //   family + series + variant + size
 // NOTE: This probably doesn't really belong in here...
 
-static FONT_FAMILY: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
+static FONT_FAMILY: LazyLock<HashMap<&'static str, Font>> = LazyLock::new(|| {
   raw_map!(
     "cmr"  => fontmap!(family => "serif"),      "cmss"  => fontmap!(family => "sansserif"),
     "cmtt" => fontmap!(family => "typewriter"), "cmvtt" => fontmap!(family => "typewriter"),
@@ -195,7 +197,7 @@ static FONT_FAMILY: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
   )
 });
 /// Maps the "series code" to an abstract font series name
-static FONT_SERIES: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
+static FONT_SERIES: LazyLock<HashMap<&'static str, Font>> = LazyLock::new(|| {
   raw_map!(
     "" => Font::default(), "m" => fontmap!(series => "medium"),
       "mc" => fontmap!(series => "medium"),
@@ -207,7 +209,7 @@ static FONT_SERIES: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
 });
 
 /// Maps the "shape code" to an abstract font shape name.
-static FONT_SHAPE: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
+static FONT_SHAPE: LazyLock<HashMap<&'static str, Font>> = LazyLock::new(|| {
   raw_map!(
     "" => Font::default(), "n" => fontmap!(shape => "upright"),
       "i" => fontmap!(shape => "italic"), "it" => fontmap!(shape => "italic"),
@@ -219,7 +221,7 @@ static FONT_SHAPE: Lazy<HashMap<&'static str, Font>> = Lazy::new(|| {
 /// Symbolic font sizes, relative to the NOMINAL_FONT_SIZE (often 10)
 /// extended logical font sizes, based on nominal document size of 10pts
 /// Possibly should simply use absolute font point sizes, as declared in class...
-static FONT_SIZE: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
+static FONT_SIZE: LazyLock<HashMap<&'static str, f64>> = LazyLock::new(|| {
   raw_map!(
 "tiny"   => 0.5,   "SMALL" => 0.7, "Small" => 0.8,  "small" => 0.9,
 "normal" => 1.0,   "large" => 1.2, "Large" => 1.44, "LARGE" => 1.728,
@@ -227,19 +229,19 @@ static FONT_SIZE: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
 "big"    => 1.2,   "Big"   => 1.6, "bigg" => 2.1, "Bigg" => 2.6)
 });
 
-static SCRIPT_STYLE_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+static SCRIPT_STYLE_MAP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
   raw_map!(
   "display" => "script", "text" => "script",
   "script" => "scriptscript", "scriptscript" => "scriptscript")
 });
 
-static FRAC_STYLE_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+static FRAC_STYLE_MAP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
   raw_map!(
   "display" => "text", "text" => "script",
   "script" => "scriptscript", "scriptscript" => "scriptscript")
 });
 
-static STYLE_SIZE: Lazy<HashMap<&'static str, usize>> = Lazy::new(|| {
+static STYLE_SIZE: LazyLock<HashMap<&'static str, usize>> = LazyLock::new(|| {
   raw_map!(
   "display" => 10, "text" => 10, "script" => 7, "scriptscript" => 5)
 });
@@ -251,16 +253,18 @@ static STYLE_SIZE: Lazy<HashMap<&'static str, usize>> = Lazy::new(|| {
 
 /// A special form of merge when copying/moving nodes to a new context,
 /// particularly math which become scripts or such.
-static MATH_STYLE_STEP: Lazy<HashMap<&'static str, HashMap<&'static str, i32>>> = Lazy::new(|| {
-  raw_map!(
+static MATH_STYLE_STEP: LazyLock<HashMap<&'static str, HashMap<&'static str, i32>>> =
+  LazyLock::new(|| {
+    raw_map!(
   "display" => raw_map!(
     "display" => 0, "text" => 1, "script" => 2, "scriptscript" => 3),
   "text"=> raw_map!("display" => -1, "text" => 0, "script" => 1, "scriptscript" => 2),
   "script"=> raw_map!("display" => -2, "text" => -1, "script" => 0, "scriptscript" => 1),
   "scriptscript" => raw_map!("display" => -3, "text" => -2, "script" => -1, "scriptscript" => 0))
-});
-static STEP_MATH_STYLE: Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> = Lazy::new(|| {
-  raw_map!(
+  });
+static STEP_MATH_STYLE: LazyLock<HashMap<&'static str, HashMap<i32, &'static str>>> =
+  LazyLock::new(|| {
+    raw_map!(
 "display" => raw_map!(-3 => "display", -2 => "display", -1 => "display",
   0 => "display", 1 => "text", 2 => "script", 3 => "scriptscript"),
 "text" => raw_map!(-3 => "display", -2 => "display", -1 => "display",
@@ -269,7 +273,7 @@ static STEP_MATH_STYLE: Lazy<HashMap<&'static str, HashMap<i32, &'static str>>> 
   0 => "script", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"),
 "scriptscript" => raw_map!(-3 => "display", -2 => "text", -1 => "script",
   0 => "scriptscript", 1 => "scriptscript", 2 => "scriptscript", 3 => "scriptscript"))
-});
+  });
 
 /// Map Font (family, series, shape) to a TeX fontname (tfm).
 /// Returns `None` if the combo isn't recognized. Matching on a tuple
@@ -305,7 +309,7 @@ static METRIC_FALLBACKS: [&str; 7] = ["cmr", "cmmi", "cmsy", "cmex", "msam", "ms
 // Math bearing atom types
 // 0=Ord, 1=Op, 2=Bin, 3=Rel, 4=Open, 5=Close, 6=Punct, 7=Inner
 #[rustfmt::skip]
-static MATH_ATOM_TYPE: Lazy<HashMap<&'static str, usize>> = Lazy::new(|| {
+static MATH_ATOM_TYPE: LazyLock<HashMap<&'static str, usize>> = LazyLock::new(|| {
   raw_map!(
     "ID" => 0,
     "BIGOP" => 1, "SUMOP" => 1, "INTOP" => 1, "OPERATOR" => 1, "LIMITOP" => 1, "DIFFOP" => 1,
@@ -1924,8 +1928,7 @@ impl Font {
     // Perl: stack up the multiple lines; mathaxis = size/4.
     let size = self.get_size().unwrap_or_else(defsize) as i64;
     let mathaxis = size * UNITY / 4;
-    static SIZE_TRACE: std::sync::LazyLock<bool> =
-      std::sync::LazyLock::new(|| std::env::var("LXML_SIZE_TRACE").is_ok());
+    static SIZE_TRACE: LazyLock<bool> = LazyLock::new(|| std::env::var("LXML_SIZE_TRACE").is_ok());
     if *SIZE_TRACE {
       eprintln!(
         "SIZE mode={mode_str} vattach={vattach} baseline={} nboxes={} lines={:?}",

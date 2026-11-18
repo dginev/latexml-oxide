@@ -493,6 +493,9 @@ mod perfect_kernel_batchicmlsym;
 /// IEEEROUTE: IEEEtran's block notes routed by kind (`\thanks` "<names> is/are with …"); OD #1072.
 mod perfect_kernel_batchieeeroute;
 mod perfect_kernel_batchimg1;
+/// INLINECTOR: a constructor setting authored text where TeX starts the paragraph enters horizontal mode, so the space
+/// after it is kept (aa `\object`, llncs `\url`, amsppt `\cite`, `\lx@orcidlink`, a Rhai binding); OD #1079.
+mod perfect_kernel_batchinlinector;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
 mod perfect_kernel_batchint23;
@@ -646,6 +649,8 @@ mod perfect_kernel_batchr2a;
 /// RA0: a title-code definee declared with no parameters (`\newcommand`'s `[0]`) is taken by the name it follows;
 /// OD #983.
 mod perfect_kernel_batchra0;
+/// RAWDEFW: the CLI raw-loads unbound packages and classes by default; OD #1080.
+mod perfect_kernel_batchrawdefw;
 /// RB1, RB1c: REVTeX's `\maketitle` switches off an author block the document repeats after it, from its first
 /// `\author` on (revtex4_cls.rs `switch_off_author_block_after_maketitle`).
 mod perfect_kernel_batchrb1;
@@ -660,6 +665,8 @@ mod perfect_kernel_batchregchem;
 mod perfect_kernel_batchregrehearse;
 /// RG1: a `\par` in a text group opened mid-paragraph keeps the paragraph, as Perl's open-brace box.
 mod perfect_kernel_batchrg1;
+/// RHAIHOOK: a Rhai hook body takes Perl's arguments (`|stomach, whatsit|`, `properties: |stomach, x|`).
+mod perfect_kernel_batchrhaihook;
 mod perfect_kernel_batchrv1;
 mod perfect_kernel_batchs5;
 /// SBX1: the 2605/2606 sandbox reruns' regressions — linenoaa's `{multline}`, fairmeta's one `\author{}`, group authors.

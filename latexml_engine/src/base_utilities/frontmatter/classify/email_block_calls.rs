@@ -4,7 +4,7 @@
 use super::*;
 
 /// The phrases by which a note or a line names the corresponding author ([`names_correspondence`]).
-static CORRESPONDENCE_PHRASE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+static CORRESPONDENCE_PHRASE: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(concat!(
     r"corresponding[\s-]+authors?\b",
     r"|correspondence\s*(?::|to\b|should\b|may\b|author|and\s+requests\b)",

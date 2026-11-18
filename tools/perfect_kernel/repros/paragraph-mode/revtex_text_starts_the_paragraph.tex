@@ -1,0 +1,12 @@
+% mechanism: revtex4_support `\text` outside math is revtex's `\REV@text`, an `\mbox` in text mode (as amstext's
+%   `\text`), which starts the paragraph; digested in vertical mode, the space after it was dropped there
+% witness: census 2635 revtex papers use `\text`; OXIDIZED_DESIGN_DIVERGENCES #1079
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A starts here."
+% engines: perl 0.8.8 and rust M8B29: <p>Astarts here.</p>
+% expect:  0 errors, 0 warnings; <p>A starts here.</p>
+% status:  RED (M8B29, perl) -> GREEN (INLINECTOR)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\text{A} starts here.
+\end{document}

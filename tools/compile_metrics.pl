@@ -144,7 +144,7 @@ sub read_tfm {
 
 BEGIN {
   $HEADER = << 'EoHeader';
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use std::collections::HashMap;
 
 pub struct MetricData {
@@ -183,6 +183,6 @@ impl Default for MetricData {
   }
 }
 
-pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| raw_map!(
+pub static STDMETRICS: LazyLock<HashMap<&'static str, MetricData>> = LazyLock::new(|| raw_map!(
 EoHeader
 }

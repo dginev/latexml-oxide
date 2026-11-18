@@ -30,6 +30,7 @@ LoadDefinitions!({
   // was emitted but without a label, so prior the link was inert.
   DefConstructor!("\\hyperrefdef{}{}{} Semiverbatim",
     "<ltx:ref labelref='#label'>#1</ltx:ref>",
+    enter_horizontal => true,
     properties => sub[args] {
       let label_arg = args[3].as_ref().map(ToString::to_string).unwrap_or_default();
       Ok(stored_map!("label" => clean_label(&label_arg, None)))

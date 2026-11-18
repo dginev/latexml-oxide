@@ -23,9 +23,7 @@
 //! The explicit `set_*/expire_*` pairs still exist for cases where
 //! RAII doesn't fit (e.g., cross-function push/pop with different lifetimes).
 
-use std::{cell::RefCell, rc::Rc};
-
-use once_cell::sync::Lazy;
+use std::{cell::RefCell, rc::Rc, sync::LazyLock};
 
 use crate::{
   Digested, alignment::template::Template, definition::conditional::IfFrame, token::Token,
@@ -57,7 +55,8 @@ macro_rules! locals_mut {
 }
 
 #[thread_local]
-static LOCALIZED_VARS: Lazy<RefCell<Localized>> = Lazy::new(|| RefCell::new(Localized::default()));
+static LOCALIZED_VARS: LazyLock<RefCell<Localized>> =
+  LazyLock::new(|| RefCell::new(Localized::default()));
 
 /// Reset all localized variables to their default state.
 /// Must be called between conversion runs to prevent state pollution.
@@ -99,8 +98,8 @@ pub fn get_dual_branch() -> Option<&'static str> { locals!().dual_branch.last().
 /// alignment ledger (tex.web `align_state`) with the current token and a
 /// short backtrace, to bisect a ledger drift (a cell-ending `&`/`\\` is only
 /// recognized at `align_group_count()==0`). Debug aid, off by default.
-static TRACE_ALIGN_STATE: Lazy<bool> =
-  Lazy::new(|| std::env::var("LXML_TRACE_ALIGN_STATE").is_ok());
+static TRACE_ALIGN_STATE: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LXML_TRACE_ALIGN_STATE").is_ok());
 
 fn trace_align_state(what: &str, before: i32, after: i32) {
   if *TRACE_ALIGN_STATE && !locals!().reading_alignment.is_empty() {

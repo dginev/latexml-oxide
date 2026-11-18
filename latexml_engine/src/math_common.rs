@@ -54,7 +54,7 @@ fn def_math_atom(cs: &str, present: &str, role: Option<&str>, meaning: Option<&s
 
 // Match negations of many operators
 // our %NOTS
-static MATH_CHAR_NEGATIONS: Lazy<HashMap<String, &'static str>> = Lazy::new(|| {
+static MATH_CHAR_NEGATIONS: LazyLock<HashMap<String, &'static str>> = LazyLock::new(|| {
   map!("=" => "\u{2260}", "<" => "\u{226E}", ">" => "\u{226F}",
   "\u{2208}" => "\u{2209}",                              //\in=>\notin
   "\u{2264}" => "\u{2270}", "\u{2265}" => "\u{2271}",    // Less eq, greater eq.
@@ -82,7 +82,7 @@ struct DelimCharProps {
 }
 
 /// Char-keyed delimiter map for augmentDelimiterProperties lookup.
-static DELIM_CHAR_MAP: Lazy<HashMap<char, DelimCharProps>> = Lazy::new(|| {
+static DELIM_CHAR_MAP: LazyLock<HashMap<char, DelimCharProps>> = LazyLock::new(|| {
   raw_map!(
     '(' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
       name: None, remove_meaning: false, replace_char: None },
@@ -1131,6 +1131,10 @@ LoadDefinitions!({
     "\\phantom{}",
     "?#isMath(<ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+    // TeX starts the paragraph here (latex.ltx:15617 `\leavevmode@ifvmode\box\tw@`), as `\lx@text@hphantom` does; not
+    // declared: a paragraph holding only this `isSpace` whatsit would be dropped (repack_paragraph, Perl
+    // repackHorizontal), losing `\par\phantom{Jb}\par` (OXIDIZED_DESIGN_DIVERGENCES #1079; RED
+    // paragraph-mode/phantom_starts_the_paragraph).
     properties => { stored_map!("isSpace" => true) },
     after_digest => sub[whatsit] {
       if let Some(arg) = whatsit.get_arg_mut(1) {
@@ -1217,7 +1221,10 @@ LoadDefinitions!({
     "\\lx@text@hphantom{}",
     "<ltx:text class='ltx_phantom'>#1</ltx:text>",
     alias => "\\hphantom",
+    // latex.ltx:15617 `\finph@nt` ends `\leavevmode@ifvmode\box\tw@` (:9433 `\ifvmode\expandafter\indent\fi`): the
+    // phantom starts the paragraph; its `restricted_horizontal` box keeps a paragraph it alone holds (#1079).
     mode => "restricted_horizontal",
+    enter_horizontal => true,
     properties => { stored_map!("isSpace" => true) },
     after_digest => sub[whatsit] {
       if let Some(arg) = whatsit.get_arg_mut(1) {
@@ -1232,6 +1239,7 @@ LoadDefinitions!({
     "\\vphantom{}",
     "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+    // Not `enter_horizontal`, as `\phantom` above.
     properties => { stored_map!("isSpace" => true) },
     // latex.ltx:15613-15617 `\finph@nt`: a `\vphantom` box has its argument's height and depth and no width (`\ifh@`
     // is false); Perl gave it the argument's width too (math_common.pool.ltxml:684-687, KNOWN_PERL_ERRORS #433).

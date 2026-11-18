@@ -20795,6 +20795,53 @@ a_restored_setter_takes_a_later_redefinition_afresh, a_restored_setter_drops_the
 a_restore_in_a_group_ends_with_it}` (repros
 `sectioning-frontmatter/setter_copy/`).
 
+### 1079. A constructor setting authored text starts the paragraph: `enterHorizontal` (maintainer ruling 2026-11-18; INLINECTOR)
+
+**Perl.** A constructor without `enterHorizontal` (or `mode => 'text'`) stays in vertical mode (Package.pm:1453-1475
+`DefConstructorI`); where it opens a paragraph, the space after it is dropped there (Stomach.pm:249-251, tex.web's
+vertical-mode space rule), so `\object{M31} is a galaxy.` (aa) gives `M31</text>is a galaxy.`. **Rust.** Was the same
+(dialect.rs `command_declared_mode`, stomach.rs). TeX starts the paragraph at such a command — its text, a `\mbox`, a
+`\leavevmode` — and keeps the space. **Rule.** A constructor whose output is authored text where TeX starts the
+paragraph declares `enterHorizontal`, Perl's own idiom (`\emph`, latex_constructs.pool.ltxml:419; aas_support's
+`\objectname`, the same construct as aa's `\object`); one that boxes (`\hbox`-like) or is vertical does not, and the kernel
+does not enter automatically (that changes Perl's digestion and cannot see an imperative body). **Given it**: aa_support
+`\object` (Perl :357; aa.cls `\def\object##1{##1}`), llncs `\url` (Perl :68; llncs.cls:899), ams_support `\@ams@url`
+(Perl :282), amsppt `\cite` (Perl :328; amsppt.sty:847 `\rom{[…]}`) and `\@bibitem@field`, html `\hyperrefdef`
+(Perl :45), latexml `\lxWithClass`, revtex4_support `\text` (`\REV@text` is `\mbox` in text, as amstext's `\text`),
+fancybox `\shadowbox`/`\doublebox`/`\ovalbox`/`\Ovalbox` (content in an `\hbox`, fancybox.sty:60, :128, :146; the
+paragraph started at :61 `\leavevmode\vbox`, :136 `\leavevmode\hbox`, :152 `\fbox`: so `restricted_horizontal`
+with `enterHorizontal`, where Perl's `internal_vertical` also ended the paragraph around the box and split
+`Mid \doublebox{C} para.` in two), the kernel's `\lx@text@hphantom`, the text
+branch of `\hphantom` (latex.ltx:15617 `\finph@nt` ends `\leavevmode@ifvmode\box\tw@`, :9433
+`\ifvmode\expandafter\indent\fi`; its `restricted_horizontal` box keeps a paragraph it alone holds) and
+`\lx@text@nounicode` (a glyph). csquotes' quote openers `\ltxml@oqmark@open`, `\ltxml@iqmark@open`,
+`\ltxml@mktextquote@open`, `\ltxml@mkblockquote@aopen` declare it too (a quote mark or the quote text follows, as in
+TeX), with no visible change: the space after the quote already survived. **Not given**: rules and frames (`\hrule`,
+`\htmlrule`, `\lx@algo@rule`, xcolor `\boxframe` = `\hbox` (xcolor.sty:855-857), fancyvrb's frame lines
+(`\hbox to\z@`, fancyvrb.sty:869), framed's title (an `\hbox` in `\TF@Title`'s `\vbox`, framed.sty:267-273)), the
+kernel's `\lx@orcidlink` (orcidlink_sty.rs wraps it in `\leavevmode`; in vertical mode it is reached only as the
+frontmatter contact of `\lx@add@orcid`), `\phantom` and `\vphantom` in text (TeX starts the paragraph there too, but
+these are `isSpace` whatsits of no mode, and `repack_paragraph` (Perl `repackHorizontal`) keeps a paragraph of
+spaces out of the line: `\par\phantom{Jb}\par` would vanish, `batchrg1_group_paragraph_rows`,
+`batchfms1::field_prov_phantom_kept`; RED `paragraph-mode/phantom_starts_the_paragraph`, until they dispatch to a
+`restricted_horizontal` text branch as `\hphantom` does), `\lx@mark@nocite` and cleveref's number mark (print nothing), the algorithmic `\hfill` openers (always
+inside a line), csquotes' citation openers (`\mkcitation` opens with `\space`, which TeX drops in vertical mode) and
+display-quote opener (`\mkbegdispquote` prints nothing), `\@@generic@caption` (an Error path), `\lx@text@tweaked` (after
+its base glyph), units' `\helper@ams@text` (unused). **Upstream.** Offerable as one Perl patch: add `enterHorizontal => 1` to
+the same constructors in the Perl files named above (aa_support.sty.ltxml:357, llncs.cls.ltxml:68,
+ams_support.sty.ltxml:282, amsppt.sty.ltxml:328, html.sty.ltxml:45, …); Perl's output differs only by the kept space —
+except fancybox's four boxes (fancybox.sty.ltxml:27,30,33,36), which also need `mode => 'restricted_horizontal'` in place
+of `internal_vertical` (with `internal_vertical` the option does nothing), and that patch also stops the paragraph splitting
+around the box (1604.04591).
+Perl's xcolor `\fcolorbox` pairs `enterHorizontal` with `internal_vertical` the same way (xcolor.sty.ltxml:881); ours is
+`restricted_horizontal` already. **Guards.** `cluster_package_guards::perfect_kernel_batchinlinector::{
+aa_object_starts_the_paragraph, llncs_url_starts_the_paragraph, amsppt_cite_starts_the_paragraph,
+fancybox_box_starts_the_paragraph, hphantom_starts_the_paragraph, revtex_text_starts_the_paragraph,
+bindings_start_the_paragraph, rhai_constructor_entering_horizontal_keeps_the_space}` (repros
+`paragraph-mode/*_starts_the_paragraph`; `orcidlink_starts_the_paragraph` is a catalog repro, Perl's gap only,
+`rhai-bindings/constructor_opening_the_paragraph_keeps_the_space`, formerly `imperative_constructor_drops_space_red`,
+whose note blamed the imperative `\lxb`).
+
 ### 1081. Untrusted input stays in the job: document Lua is sandboxed; an image copy never leaves `--dest` (SECLUA)
 
 **Perl.** No Lua bridge. `Post/Graphics.pm` L292-300 copies an image to its source-relative path only when
@@ -22628,3 +22675,40 @@ over its `\date`/`\correspondence`/`\code` calls; pdflatex reads them inside it,
 the paragraph end as a trailing newline. Witness 2610.22523. **Guard**:
 `06_cluster_frontmatter::frontmatter_ragslab_marks_link_affiliations` (repro `stand-in-copies/ragslab`, the real copy
 less its comment lines).
+
+#### 1080. The front ends raw-load unbound `.sty`/`.cls` files by default, under ar5iv.sty's runaway limits (Perl: bindings only, no `\if`/absorb limit)
+
+Perl's `latexml` leaves `INCLUDE_STYLES` and `INCLUDE_CLASSES` at 0 unless `--includestyles` is given (Core.pm
+L55-57): a package without a binding is skipped with a missing_file warning, a class without one is served by
+OmniBus. `$LaTeXML::IF_LIMIT` and `$LaTeXML::ABSORB_LIMIT` are unset unless latexml.sty's `iflimit`/`absorblimit`
+sets them (latexml.sty.ltxml:97-108). The arXiv fleet has always run with `--preload=ar5iv.sty`, which passes
+`rawstyles`, `rawclasses`, `tokenlimit=999999999`, `iflimit=48000000`, `absorblimit=1299999` and
+`pushbacklimit=5000000` (`ar5iv_sty.rs`).
+
+**Rust (DG 2026-11-18).** `latexml_oxide`, the library API (`api::library_config`), cortex's generic profile and the
+LSP pass `Config.include_styles = Some(true)`, `Config.absorb_limit` = ar5iv's 1,299,999 and `Config.if_limit` = ten
+times ar5iv's (480,000,000: the `\if` count accumulates over the whole document, and at ar5iv's 48,000,000 the TeX Live
+manual tkz-grapheur-doc-fr lost its last picture and section while the unlimited default converted it; DG 2026-11-18)
+(`common::RUNAWAY_IF_LIMIT`, `RUNAWAY_ABSORB_LIMIT`), applied when the session starts and before the preloads
+(`Converter::initialize_session`), so a latexml.sty option still wins. A binding still outranks a raw file
+(`content.rs` `require_package` / `input_definitions_impl` for packages, `content.rs` `load_class` for classes). The other two limits were already the front ends': the
+5,000,000 pushback cap (CLI and cortex worker threads; now the library's too) and the token budget, whose 20G floor
+(`gullet::DEFAULT_TOKEN_LIMIT`, raised per source byte by `scale_token_limit_to_source` on every file the Mouth opens)
+already lifts ar5iv's 999,999,999 at the first file opened after the preload. ar5iv's other options (`ids`,
+`bibconfig`, `nobreakuntex`, `magnify`, `zoomout`) stay the ar5iv profile's. `Config::default`, `CoreOptions` and
+`State` keep Perl's default, so the in-process harness and an embedder building its own `Config` are unchanged; a
+format build (`--init`) keeps it too, so the dumps stay Perl's. Measured on a stratified 697-paper draw from the
+30k-paper census without the ar5iv preload: error-free 84.5 % → 95.7 %, Fatal papers 2 → 0, errors −71 %, words
++1.0 %, no systematic slowdown; 40 TeX Live manuals error-free 22.5 % → 90 %.
+
+**Restoring Perl** (DG 2026-11-18: no new option in v0.8.0 but the negative of `--includestyles`):
+`--noincludestyles` (the last of the two wins, as `--plane1`/`--noplane1`) or the existing
+`--preload='[norawstyles,norawclasses]latexml.sty'` (latexml.sty.ltxml:77-80) gives bindings-only loading (the
+missing-file warning names `rawstyles`, true in every front end); latexml.sty's `iflimit`, `absorblimit` and `pushbacklimit` set those limits
+(`tokenlimit` is lifted to the 20G floor at the next file opened, as ar5iv's is), and `iflimit=0,absorblimit=0`
+lifts the two — a limit option of 0 now lifts its limit, as Perl's `int(…)` assignment does (the Rust read had
+ignored 0).
+**Guards**: `perfect_kernel_batchrawdefw::{cli_default_raw_loads_unbound_package_and_class,
+cli_noincludestyles_restores_perls_binding_only_loading, latexml_sty_iflimit_overrides_the_front_end_default}` (repro
+`loader/cli_raw_default`); the in-process control
+`rawclasses_binding_precedence_and_no_omnibus::bindingless_class_defaults_to_omnibus_without_rawclasses`.

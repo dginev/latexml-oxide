@@ -228,7 +228,7 @@ fn rhai_thin_wrappers() {
 }
 
 const LXRD2: &str = r#"DefConstructor("\\lxw{}", "<ltx:text class='#c'>#1</ltx:text>", #{
-  afterDigest: |whatsit| whatsit.setProperty("c", "w" + ToString(whatsit.getArg(1)) + (whatsit.getArg(2) == ())),
+  afterDigest: |stomach, whatsit| whatsit.setProperty("c", "w" + ToString(whatsit.getArg(1)) + (whatsit.getArg(2) == ())),
   afterConstruct: |document, whatsit| document.absorbString("/" + whatsit.getProperty("c") + whatsit.getProperties().c)});
 DefMath("\\lxm{}", "M", #{reversion: |whatsit, x| "\\lxm{" + x + ToString(whatsit.getArg(1)) + "}"});
 DefConstructor("\\lxo{}", |document, x, props| {
@@ -263,8 +263,8 @@ $\lxm{b}$
 ";
 
 /// W3RD2a (#716): Perl's forms, each "Function not found" or a wrong arity on a1b6c0b827d (the binding stopped at the
-/// first). p1: a hook receives the whatsit positionally — `afterDigest` as `|whatsit|` (Perl `($stomach, $whatsit)`,
-/// no stomach handle), `afterConstruct` as `|document, whatsit|` (Constructor.pm:139) — with Whatsit.pm's `getArg`
+/// first). p1: a hook receives the whatsit positionally — `afterDigest` as Perl's `($stomach, $whatsit)` (RHAIHOOK;
+/// `|whatsit|` alone was the form here), `afterConstruct` as `|document, whatsit|` (Constructor.pm:139) — with Whatsit.pm's `getArg`
 /// (the digested argument; a missing one `()`), `getProperty`, `getProperties`. p2: a reversion closure is Perl's
 /// `($whatsit, @args)` (Whatsit.pm:121). p3: `openElement` takes attributes and returns the node, `closeElement` the
 /// node closed, `maybeCloseElement` `()` when nothing closes (Document.pm:787-866); a constructor body's trailing
@@ -328,8 +328,9 @@ const LXRD2_OLD_TEX: &str = r"\documentclass{article}
 
 /// W3RD2a: the names #716 replaces stay one release as aliases; each Warns `deprecated` once per binding load, naming
 /// its replacement, however often it runs (here twice), and keeps its old result. `DefAccent` reads no option, as Perl's (TeX_Character.pool.ltxml:92-100). Red on a1b6c0b827d: no
-/// Warning (W=0), and `#{bogus: true}` "Function not found". The space before `\lxb` is dropped as Perl drops it before
-/// an imperative constructor's `openElement` (RED `rhai-bindings/imperative_constructor_drops_space_red.tex`). W3RD2b: a macro
+/// Warning (W=0), and `#{bogus: true}` "Function not found". The space before `\lxb` is dropped as Perl drops it: `\lxa`,
+/// a constructor without enterHorizontal, opens the paragraph in vertical mode, where the space after it is dropped
+/// (OXIDIZED_DESIGN_DIVERGENCES #1079; GREEN `rhai-bindings/constructor_opening_the_paragraph_keeps_the_space.tex`). W3RD2b: a macro
 /// or primitive body declaring 1..=nargs parameters, no leading gullet/stomach, gets its arguments as strings, Warned
 /// with the fix; so does an old-form reversion `|x|` (red on 8ee92a55a49: W=13, the
 /// reversion `tex="\lxor{Whatsit}"`-garbage; on a1b6c0b827d E=1 for `#{bogus: true}`). W3RF: `AssignMeaning` is Perl's
@@ -469,7 +470,7 @@ DefMacro("\\lxz{}", || "Z");
 DefPrimitive("\\lxzp{}", || AssignValue("lx:z", "P", "global"));
 DefMacro("\\lxzv", || LookupValue("lx:z"));
 DefColumnType("Q{}", || "c");
-DefConstructor("\\lxws{}", "<ltx:text class='#c'>#1</ltx:text>", #{afterDigest: |whatsit| whatsit.setProperty("c", "s" + whatsit),
+DefConstructor("\\lxws{}", "<ltx:text class='#c'>#1</ltx:text>", #{afterDigest: |stomach, whatsit| whatsit.setProperty("c", "s" + whatsit),
   afterConstruct: |document, whatsit| document.absorbString("/" + whatsit + ToString(whatsit))});
 DefParameterType("LxN", |gullet| gullet.readArg(), #{nargs: 1});
 DefMacro("\\lxpq LxN", |gullet, a| a);

@@ -45,16 +45,16 @@ use std::{
   cell::RefCell,
   io::{Read, Write},
   path::PathBuf,
+  sync::LazyLock,
 };
 
 use latexml_core::{common::error::emit_warn, util::private_files};
-use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 
 include!(concat!(env!("OUT_DIR"), "/embedded_dumps_manifest.rs"));
 
-static NO_EMBEDDED: Lazy<bool> =
-  Lazy::new(|| std::env::var_os("LATEXML_NO_EMBEDDED_DUMP").is_some());
+static NO_EMBEDDED: LazyLock<bool> =
+  LazyLock::new(|| std::env::var_os("LATEXML_NO_EMBEDDED_DUMP").is_some());
 
 thread_local! {
   /// In-thread dedupe so the same `(year, kind)` is decompressed (or
@@ -78,7 +78,7 @@ thread_local! {
 ///
 /// One per user, and read only when this user wrote it (`private_files`): the temp dir is shared,
 /// and a dump another local user put there first would be loaded as the format.
-static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
+static CACHE_DIR: LazyLock<PathBuf> = LazyLock::new(|| {
   std::env::temp_dir().join(format!(
     "latexml-oxide-dumps-{}-{}",
     EMBEDDED_DUMPS_CONTENT_HASH,

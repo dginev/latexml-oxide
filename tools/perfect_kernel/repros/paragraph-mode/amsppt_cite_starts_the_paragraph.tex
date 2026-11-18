@@ -1,0 +1,12 @@
+% mechanism: amsppt `\cite` (amsppt.sty:847 `\rom{[…]}`) opens the paragraph; without enterHorizontal it was digested
+%   in vertical mode and the space after it was dropped there (Stomach.pm:249-251), gluing the next word to the citation
+% witness: synthetic, amsppt `\cite` at a paragraph's start; OXIDIZED_DESIGN_DIVERGENCES #1079
+% oracle:  amstex (TL 2025 amstex.fmt) 0 errors: "[1] is the reference."
+% engines: perl 0.8.8 and rust M8B29: <p><cite>[<bibref …/>]</cite>is the reference.</p>
+% expect:  0 errors; <p><cite …>[<bibref …/>]</cite> is the reference.</p>
+% status:  RED (M8B29, perl) -> GREEN (INLINECTOR)
+\input amstex
+\documentstyle{amsppt}
+\document
+\cite{1} is the reference.
+\enddocument

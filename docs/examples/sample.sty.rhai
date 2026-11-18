@@ -81,18 +81,18 @@ DefEnvironment("{rquote}", "<ltx:quote class=\"rhai\">#body</ltx:quote>", #{
 // interpolate at attribute position — faithful Perl semantics):
 DefEnvironment("{biop}{}",
   "<ltx:note role=\"biography\" class=\"#pname\">#body</ltx:note>", #{
-  properties: |a| #{ pname: a }
+  properties: |stomach, a| #{ pname: a }
 });
 
 // ── Option bags: hooks, fonts, reversion, sizer ──
 // All Def* forms accept a trailing #{...} of Perl's key => value options. A hook
-// receives the whatsit as Perl passes it: `afterDigest: |whatsit|`, a
-// reversion `|whatsit, arg1, …|`, a sizer `|whatsit|`.
+// receives Perl's arguments: `beforeDigest: |stomach|`, `afterDigest:
+// |stomach, whatsit|`, a reversion `|whatsit, arg1, …|`, a sizer `|whatsit|`.
 DefConstructor("\\fnote{}{}",
   "^<ltx:note role=\"footnote\" ?#mark(mark=\"#mark\")()>#2</ltx:note>", #{
   mode: "internal_vertical",
   beforeDigest: || neutralize_font(),
-  afterDigest: |whatsit| {
+  afterDigest: |stomach, whatsit| {
     let m = ToString(whatsit.getArg(1));
     if m != "" { whatsit.setProperty("mark", m); }
   },
@@ -103,7 +103,7 @@ DefConstructor("\\fnote{}{}",
 // ── Counters & cross-references ──
 NewCounter("exhibit");
 DefConstructor("\\exhibit{}", "<ltx:text class=\"exhibit\" xml:id=\"#id\">#1</ltx:text>", #{
-  properties: |x| RefStepCounter("exhibit")
+  properties: |stomach, x| RefStepCounter("exhibit")
 });
 
 // ── KeyVals ──

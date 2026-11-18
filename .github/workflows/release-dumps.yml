@@ -79,9 +79,10 @@ jobs:
       # fails with `collect2: fatal error: cannot find 'ld'`. This mirrors
       # the proven release.yml apt set (0.6.1 built this way on 22.04).
       - name: install dependencies
+        timeout-minutes: 20
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
+          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends \
             libxml2-dev libxslt1-dev mold
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
@@ -225,8 +226,8 @@ jobs:
           set -u
           cd /work
           # The binary needs libxml2/libxslt runtime libs inside the container.
-          apt-get update
-          apt-get install -y --no-install-recommends libxml2 libxslt1.1 ca-certificates
+          apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
+          apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends libxml2 libxslt1.1 ca-certificates
           chmod +x ./latexml_oxide
 
           # Sanity: the container's TL year must match the matrix year

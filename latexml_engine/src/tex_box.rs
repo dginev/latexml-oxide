@@ -997,9 +997,11 @@ LoadDefinitions!({
   });
   // Perl: DefConstructor('\lx@text@nounicode DefToken',
   //   "<ltx:text _no_autoclose='true' class='ltx_nounicode'>#1</ltx:text>", ...);
+  // It stands for a glyph, which starts the paragraph (OXIDIZED_DESIGN_DIVERGENCES #1079).
   DefConstructor!(
     "\\lx@text@nounicode DefToken",
-    "<ltx:text class='ltx_nounicode'>#1</ltx:text>"
+    "<ltx:text class='ltx_nounicode'>#1</ltx:text>",
+    enter_horizontal => true
   );
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

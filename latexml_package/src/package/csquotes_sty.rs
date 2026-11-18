@@ -130,13 +130,15 @@ LoadDefinitions!({
   // Constructors for quote markers
   DefConstructor!(
     "\\ltxml@oqmark@open",
-    "<ltx:text class='ltx_inline-quote ltx_outerquote' _noautoclose='1'>"
+    "<ltx:text class='ltx_inline-quote ltx_outerquote' _noautoclose='1'>",
+    enter_horizontal => true
   );
   DefConstructor!("\\ltxml@oqmark@close", "</ltx:text>");
 
   DefConstructor!(
     "\\ltxml@iqmark@open",
-    "<ltx:text class='ltx_inline-quote ltx_innerquote' _noautoclose='1'>"
+    "<ltx:text class='ltx_inline-quote ltx_innerquote' _noautoclose='1'>",
+    enter_horizontal => true
   );
   DefConstructor!("\\ltxml@iqmark@close", "</ltx:text>");
 
@@ -233,7 +235,8 @@ LoadDefinitions!({
   );
   DefConstructor!(
     "\\ltxml@mktextquote@open",
-    "<ltx:text class='ltx_textquote' _noautoclose='1'>"
+    "<ltx:text class='ltx_textquote' _noautoclose='1'>",
+    enter_horizontal => true
   );
   DefConstructor!("\\ltxml@mktextquote@close", "</ltx:text>");
 
@@ -274,7 +277,8 @@ LoadDefinitions!({
 
   DefConstructor!(
     "\\ltxml@mkblockquote@aopen",
-    "<ltx:text class='ltx_inline-quote' _noautoclose='1'>"
+    "<ltx:text class='ltx_inline-quote' _noautoclose='1'>",
+    enter_horizontal => true
   );
   DefConstructor!("\\ltxml@mkblockquote@aclose", "</ltx:text>");
 

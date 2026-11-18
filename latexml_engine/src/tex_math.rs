@@ -64,8 +64,8 @@ pub const WRITTEN_COPY: &str = "lx@written@copy";
 /// again here. A `[short]` title or caption is no re-read: it is its own source, digested once, into the list.
 pub const REREAD_COPY: &str = "lx@reread@copy";
 
-static SCRIPT_NAME_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^\\lx@(floating|post)@(subscript|superscript)$").unwrap());
+static SCRIPT_NAME_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^\\lx@(floating|post)@(subscript|superscript)$").unwrap());
 
 /// Remember a "safe" way to test a script Whatsit.
 /// Returns [ (FLOATING|POST) , (SUBSCRIPT|SUPERSCRIPT) ] or nothing
@@ -2584,7 +2584,7 @@ pub struct DelimiterMeta {
   name:       Option<&'static str>,
 }
 /// This duplicates in slightly different way what DefMath has put together.
-pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new(|| {
+pub static DELIMITER_MAP: LazyLock<HashMap<&'static str, DelimiterMeta>> = LazyLock::new(|| {
   raw_map!(
     "(" => DelimiterMeta{char: '(', left_role: "OPEN", right_role: "CLOSE", name:None},
     ")" => DelimiterMeta{char: ')', left_role: "OPEN", right_role: "CLOSE", name:None},

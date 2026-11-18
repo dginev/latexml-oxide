@@ -1,0 +1,12 @@
+% mechanism: aa_support `\object` (aa.cls `\object{#1}` prints its name) opens the paragraph; without enterHorizontal it
+%   was digested in vertical mode and the space after it was dropped there (Stomach.pm:249-251), gluing the next word
+% witness: census 447 aa papers use `\object` (e.g. 1707.06238's class); OXIDIZED_DESIGN_DIVERGENCES #1079
+% oracle:  pdflatex with 1707.06238's aa.cls, 0 errors: "M31 is a galaxy."
+% engines: perl 0.8.8 and rust M8B29: <p><text class="ltx_ast_objectname">M31</text>is a galaxy.</p>
+% expect:  0 errors, 0 warnings; <p><text class="ltx_ast_objectname">M31</text> is a galaxy.</p>
+% status:  RED (M8B29, perl) -> GREEN (INLINECTOR)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\object{M31} is a galaxy.
+\end{document}

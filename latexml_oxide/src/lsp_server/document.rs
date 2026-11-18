@@ -191,7 +191,10 @@ pub(crate) fn make_config(uri: &str) -> Config {
     },
     include_comments:        None,
     strict:                  None,
-    include_styles:          None,
+    // The CLI's defaults (OD #1080); the ar5iv.sty preload sets the same.
+    include_styles:          Some(true),
+    if_limit:                Some(latexml_core::common::RUNAWAY_IF_LIMIT),
+    absorb_limit:            Some(latexml_core::common::RUNAWAY_ABSORB_LIMIT),
     // Math parsing is always ON in the server: the parsed MathML (and its
     // source-mapped tokens) is one of the features this preview showcases, so
     // we deliberately do not expose a disable knob here.

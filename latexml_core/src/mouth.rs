@@ -1,4 +1,7 @@
 use core::ops::{Range, RangeBounds};
+// TODO:
+// use encoding::all::ISO_8859_1;
+// use encoding::{EncoderTrap, Encoding};
 use std::{
   collections::VecDeque,
   fmt,
@@ -7,12 +10,9 @@ use std::{
   io::{BufReader, prelude::*},
   rc::Rc,
   str,
+  sync::LazyLock,
 };
 
-// TODO:
-// use encoding::all::ISO_8859_1;
-// use encoding::{EncoderTrap, Encoding};
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
@@ -29,7 +29,7 @@ use crate::{
   util::pathname,
 };
 
-static TRAILING_SPACE_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new("(?s) +$").unwrap());
+static TRAILING_SPACE_CHARS: LazyLock<Regex> = LazyLock::new(|| Regex::new("(?s) +$").unwrap());
 
 const READLINE_PROGRESS_QUANTUM: usize = 25;
 
@@ -58,9 +58,11 @@ impl FoodType {
   }
 }
 
-static LINEBREAK_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
+static LINEBREAK_REGEX: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"(?s:\r\n?)|(?s:\n)").unwrap());
 // LOWERHEX_REGEX removed — replaced with direct matches!() check in tex_hex_caret path.
-static _SANITIZE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
+static _SANITIZE_LINE_REGEX: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"((\\ )*)\s*$").unwrap());
 
 #[derive(Debug, Default)]
 pub struct MouthOptions {
