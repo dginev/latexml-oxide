@@ -469,11 +469,27 @@ settings.
     ```markdown
     ## [X.Y.Z] (theme summary)
 
-    - …summary of user-visible changes…
+    The highlights since X.Y.(Z-1). Every change … is listed in
+    [`docs/release/CHANGES_vX.Y.Z.md`](docs/release/CHANGES_vX.Y.Z.md).
+
+    ### …
+    - **…headline…** one or two sentences, a measured figure with its basis.
+
+    ### Upgrading from X.Y.(Z-1)
+    - …each default, option, output or API change a user must act on…
     ```
 
-   No date in the heading (the 0.7.x form); rename the `## Unreleased` section
-   to it.
+   No date in the heading (the 0.7.x form). From 0.8.0 on, the section is a curated
+   summary of at most ~100 lines (user 2026-11-18): the headlines of the whole release
+   cycle, read across the commit history and not only the latest `## Unreleased`
+   entries (a long campaign may have merged as one entry), then the upgrade notes.
+   The detailed `## Unreleased` entries the pull requests wrote move, unchanged, into
+   `docs/release/CHANGES_vX.Y.Z.md` (a header, then the list); the per-release files
+   are indexed in `docs/README.md`. A fix landing between the release candidates and
+   the final tag adds its entry at the top of that file's list, and a line to the
+   summary only when it changes a headline or an upgrade note. After the release, a
+   new `## Unreleased` section opens at the top of `CHANGELOG.md` for the next
+   cycle's detailed entries.
 
    `tools/make_release.sh` slices this section (from `^## [X.Y.Z]` to the next
    `## [` heading) into the GitHub release body; an `X.Y.Z-rcN` tag falls back to
