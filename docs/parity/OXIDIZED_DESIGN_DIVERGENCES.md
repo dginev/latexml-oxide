@@ -20543,7 +20543,8 @@ continuation, every author's affiliation; a line of e-mail addresses alone (an "
 void"): no `ltx:date`, its leftover — a `\today`, a date string — dropped and named once,
 `Info:frontmatter:date_void`; a note inside it is no leftover of the date (DATEFOOT): a `\footnotetext` is a title note
 (`ltx:pubnote` role note, as a title-page footnote text is, #1036, no counter step), a `\thanks`/`\footnote` the pubnote a
-date's note digests to (2605.04795's MSC line). A date with a line no rule reads (a label no name prints, a mark inside a line, text
+date's note digests to (2605.04795's MSC line); a note written otherwise than command, optional `[…]`, braced text (an
+unbraced argument, `\thanks\fundnote`) stays in the dropped line, its loss counted by the `unclaimed` Warning (row R). A date with a line no rule reads (a label no name prints, a mark inside a line, text
 naming no institution, a binding's label keyed by a document macro, an address among text that is no e-mail label or
 beside an `@` no address holds) is the date, whole,
 with an Info: nothing of it is taken. So is one whose lines' owners may not be the names they read as: typed labels
