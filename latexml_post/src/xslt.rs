@@ -1541,6 +1541,37 @@ mod witnessed_css_delta {
   }
 
   #[test]
+  fn no_xsl_key_match_has_a_predicated_descendant_step() {
+    // libxslt builds every key at the first key() call, evaluating each `match` as an XPath; libxml2 runs `//X` as
+    // one descendant pass only when X has no predicate, so `…//ltx:p[not(ancestor::…)]` ran once per root child:
+    // O(children × nodes), a 180 s timeout on a document with no section (0707.2621, 0711.3849, 1806.00577; run 397;
+    // WISDOM #105). Keep an exclusion in the key's `use`, not in a predicated `//` step.
+    for (name, xsl) in [(
+      "LaTeXML-meta-xhtml.xsl",
+      include_str!("../resources/XSLT/LaTeXML-meta-xhtml.xsl"),
+    )] {
+      for key in xsl.split("<xsl:key ").skip(1) {
+        let matched = key
+          .split("match=\"")
+          .nth(1)
+          .and_then(|m| m.split('"').next())
+          .unwrap_or("");
+        let flat: String = matched.split_whitespace().collect::<Vec<_>>().join(" ");
+        for step in flat.split("//").skip(1) {
+          let head: String = step
+            .chars()
+            .take_while(|c| !matches!(c, '[' | '|' | '/' | ' '))
+            .collect();
+          assert!(
+            !step[head.len()..].starts_with('['),
+            "{name}: an xsl:key match has the predicated descendant step `//{head}[…]`: {flat}"
+          );
+        }
+      }
+    }
+  }
+
+  #[test]
   fn css_draws_no_footnote_mark_glyph() {
     // DG 2026-11-17 (OXIDIZED_DESIGN_DIVERGENCES #1069): the page carries every mark the PDF prints, and a generated
     // mark only where it prints none, unique against them; a glyph the stylesheet draws is neither, so it is never one

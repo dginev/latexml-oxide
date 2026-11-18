@@ -191,28 +191,17 @@
        note's mark (`$\ast$` too), the symbol a note, a publication note, the date, a title, a paragraph or a table cell
        opens with (revCONNFIXb s4, b3); a mark of it links
        nowhere (OD #1052; revCONNFIX p1, p3-p5, q4, q5; a body footnote or a table's `*` line not, 2008.06630, 2406.07029).
-       (The patterns walk only the root, its children and the subtrees of the children no excluded unit is: libxslt
-       builds every key of a document at the first key() call, and a full-document pattern pass costs 4-8 % of a
-       conversion, 0906.1883, 1607.07280. The node sets are those of `X[not(ancestor::…)]`.) -->
+       (libxslt builds every key of a document at the first key() call, each `match` evaluated as an XPath over the
+       document: docs/parity/WISDOM.md #105. A `//X` step libxml2 runs as one descendant pass only when X has no
+       predicate, so the steps under the root's children carry none and the exclusion sits in `use`, an excluded node
+       keyed under '' that no mark's glyph looks up; with a predicate the pass ran once per root child, O(children ×
+       nodes), and a document with no section — every paragraph a root child — timed out: 0707.2621, 0711.3849,
+       1806.00577, run 397. The node sets are those of `X[not(ancestor::…)]`; 0906.1883, 1607.07280.) -->
   <xsl:key name="f:glyph-elsewhere"
-           match="/ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
-                  |/*/ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
-                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
-                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
-                    //ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
+           match="/ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)] | /*/ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)] | ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
            use="translate(normalize-space(@mark),'&#x2217;$^{} ','*')"/>
   <xsl:key name="f:glyph-elsewhere"
-           match="/ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
-                  |/*/ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
-                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
-                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
-                    //ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
+           match="/ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)] | /*/ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)] | ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
            use="'*'"/>
   <xsl:key name="f:glyph-elsewhere"
            match="/*[self::ltx:note or self::ltx:pubnote or self::ltx:date or self::ltx:title or self::ltx:subtitle or self::ltx:p
@@ -223,33 +212,26 @@
                        or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
                   |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
                        or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
-                    //ltx:note[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                    //ltx:note
                   |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
                        or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
-                    //ltx:pubnote[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                    //ltx:pubnote
                   |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
                        or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
-                    //ltx:date[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                    //ltx:date
                   |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
                        or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
-                    //ltx:title[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                    //ltx:title
                   |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
                        or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
-                    //ltx:subtitle[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                    //ltx:subtitle
                   |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
                        or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
-                    //ltx:p[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                    //ltx:p
                   |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
                        or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
-                    //ltx:td[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
-                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
-           use="translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
+                    //ltx:td"
+           use="translate(substring(normalize-space((self::*[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
                           '&#x2217;','*')"/>
 
   <xsl:template

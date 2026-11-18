@@ -3192,3 +3192,10 @@ contributing `substring(s, 1 div test)` = ''; compute a node set lazily inside t
 lookup) instead of keying it in every document. Prove equivalence by comparing old and new key definitions with
 `use="generate-id()"` on random schema-shaped trees, plus byte-identical HTML on a corpus sample. Result: p90 +8.19 % →
 +0.46 % vs main; the residual is the templates' own work (row R XSLTKEYc).
+
+**Addendum (2026-11-18, run 397).** A `//X` step libxml2 evaluates as one `descendant::X` pass only when X carries
+no predicate; `/*/*[…]//ltx:p[not(ancestor::…)]` instead built `descendant-or-self::node()` per root child and merged
+the sets — O(children × nodes). Restricting a key's walk to the root's children (XSLTKEY round 1) therefore made a
+document with no section (every paragraph a root child) quadratic: 0707.2621 10 s → past 180 s, 3 of the run's first
+56 fatals. Keep `//` steps predicate-free and put the exclusion in `use` (an excluded node keyed under '' that no
+lookup asks for). Guard: `latexml_post::xslt::witnessed_css_delta::no_xsl_key_match_has_a_predicated_descendant_step`.
