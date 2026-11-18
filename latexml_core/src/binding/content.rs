@@ -1036,6 +1036,16 @@ fn input_definitions_impl(
         // resource cap) aborts the conversion; the top level logs it once.
         return Err(e);
       },
+      // (a runtime binding names its own failure: `Error:script:<file>.rhai`, located in that file)
+      Err(e) if matches!(e.target, ErrorTarget::Named(_)) => {
+        Error!(
+          e.target.log_name(),
+          e.category.log_name(),
+          e.message.clone()
+        );
+        assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
+        None
+      },
       Err(e) => {
         Error!(
           "unexpected",

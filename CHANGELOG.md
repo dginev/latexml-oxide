@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+  - **A Rhai binding's diagnostic names its `.rhai` file.** A failure while a binding loads is one
+    `Error:script:<file>.rhai` (was `Error:unexpected:` with the text twice), located at the line and
+    column in that file and then at the `\usepackage`; a body's error and a `Fatal(…)` carry the same
+    locator; types read as Rhai's (`string`, `int`, …). Every `Fatal:` line has one space before its
+    message, as Perl's. Each external program a binding runs is named by an `Info:script:Command` line;
+    `--help` and `docs/USAGE.md` say how a `.rhai` binding is found and how
+    `LATEXML_DISABLE_SHELL_ESCAPE` refuses commands. Guard
+    `30_script_bindings::a_rhai_diagnostic_names_its_binding_file`.
   - **A note several authors share prints once.** The XML keeps a copy of a shared author note
     (an authblk `\affil[*]`, a legend line's `*`) on every author, each with its `mark`, as Perl
     does; the HTML prints the first copy (class `ltx_note_shared`) and, at each other author, its
