@@ -15,19 +15,19 @@ review. Corrected positions are stated, not the original where it was wrong
 
 ## 1. Gates
 
-Numbers are verified current state (2026-05-24) unless marked TODO. The
-`cargo test` / `cargo clippy` rows were re-verified 2026-07-09
-(`public-release-prep-week`); the OS/arch, toolchain, license, and safety rows
-were also refreshed then. `cargo test` and the size row were refreshed
-2026-07-20. The corpus / tail-latency rows still carry their 2026-05-24 values.
+Each row carries the date of its figure. The test count is not copied here (it
+drifts with every PR): the gate is a green `cargo nextest run --workspace` on the
+release commit, and the tag's `ci` and `windows-ci` jobs re-run it on every
+platform before `release` publishes. The corpus / tail-latency rows still carry
+their 2026-05-24 values.
 
 | Gate | Current | Target |
 |---|---|---|
-| `cargo test --tests` | 1617/0/0 (2026-07-20) | green |
+| `cargo nextest run --workspace` | green on the release commit (Linux + macOS via `release.yml` `ci`, Windows via `windows-ci`) | green |
 | `cargo clippy --all-targets` | 0 | 0 |
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
 | Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](../performance/PERFORMANCE.md)); **P50/P90/P99 + RSS dashboard + growth gate built** (`tools/telemetry_dashboard.py`) | §5 — capture a fleet baseline + wire `--gate` into release (absolute red lines gate today) |
-| Binary size (`maxperf`) | **53.5 MB / 17.8 MB tarball** (measured on the shipped 0.7.4 assets, 2026-07-20; ~10 MB of headroom under the 64 MB gate, not the ~19 MB the old 45 MB figure implied) | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
+| Binary size (`maxperf`) | x86_64 Linux tarball **20.7 MB** at 0.7.6 (the GitHub asset size; 17.8 MB at 0.7.4); the stripped binary is checked against the 64 MB gate by both Linux release legs (`release.yml` "binary size budget") | budget + growth alarm — **§2 DONE** (release.yml 64 MB gate) |
 | OS/arch | `x86_64-linux-gnu` + **`aarch64-unknown-linux-gnu`** + `aarch64-apple-darwin` + `x86_64-apple-darwin` + **`x86_64-pc-windows-msvc`** + **GHCR container (amd64/arm64)** | staged ladder — §3 (aarch64-linux + container DONE 2026-07-09; Windows DONE 2026-07-14; next rung: musl) |
 | Toolchain | **nightly**, **deliberately floating** (`rust-toolchain.toml`, 2026-07-03) | keep floating; pin a dated nightly only if release-day reproducibility is needed (#143) |
 | License inventory | **inventoried + gated** ([`LICENSE_INVENTORY.md`](LICENSE_INVENTORY.md)); NOTICE + README + release-workflow wiring landed | **§4/§7 DONE** (F4 landed; F1 pericortex relicensed CC0-1.0, 2026-07-13) |
@@ -53,10 +53,10 @@ fails on budget breach (§7).
 
 ## 3. Portability staging (issues #217, #143)
 
-Current: **four** self-contained published artifacts — `x86_64-linux-gnu`
+Current: **five** self-contained published platform builds — `x86_64-linux-gnu`
 and `aarch64-unknown-linux-gnu` (both Ubuntu 22.04 / glibc 2.35),
-`aarch64-apple-darwin` (macOS Apple Silicon), and `x86_64-apple-darwin`
-(macOS Intel) — each embedding our XSLT/CSS/JS/schema/dumps, host TeX Live +
+`aarch64-apple-darwin` (macOS Apple Silicon), `x86_64-apple-darwin`
+(macOS Intel) and `x86_64-pc-windows-msvc` (stage 5 below) — each embedding our XSLT/CSS/JS/schema/dumps, host TeX Live +
 system libs ([`RELEASING.md`](RELEASING.md) → "Release asset strategy").
 A native binary is never cross-OS (ELF vs Mach-O), so it is one artifact
 per `(OS, arch)` triple, built on its own native runner — not
