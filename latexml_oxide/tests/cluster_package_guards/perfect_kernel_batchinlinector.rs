@@ -1,9 +1,8 @@
 //! INLINECTOR (OXIDIZED_DESIGN_DIVERGENCES #1079): a constructor whose output is authored text where TeX starts the
 //! paragraph declares `enterHorizontal`, so the space after it is kept; digested in vertical mode, the space was dropped
-//! there (Perl Stomach.pm:249-251, which Perl shares). One guard per binding family; each was red on M8B29 (and Perl
-//! 0.8.8): the word after the command glued to it.
+//! there (Perl Stomach.pm:249-251, which Perl shares). One guard per binding family, each red on M8B29 and Perl 0.8.8.
 
-use latexml::util::test::{assert_element, convert_files_with, convert_with, xml_element};
+use latexml::util::test::{assert_element, convert_files_with, convert_with};
 
 use crate::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -56,28 +55,6 @@ fn amsppt_cite_starts_the_paragraph() {
   );
 }
 
-/// The kernel's `\lx@orcidlink` (orcidlink.sty `\orcidlink`: `\href{…}{\mbox{…}}`): the engine-level member. The logo's
-/// SVG between is not this guard's subject; the link's opening and what follows it are.
-#[test]
-fn orcidlink_starts_the_paragraph() {
-  let xml = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/paragraph-mode/orcidlink_starts_the_paragraph.tex"
-  ));
-  let para =
-    xml_element(&xml, "para", &["xml:id=\"p1\""]).unwrap_or_else(|| panic!("no para p1\n{xml}"));
-  assert!(
-    para.starts_with(
-      r#"<para xml:id="p1"><p xml:id="p1.1"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097"><svg:svg"#
-    ),
-    "{para}"
-  );
-  assert!(
-    para.ends_with(r#"</svg:svg></ref> is my iD.</p></para>"#),
-    "{para}"
-  );
-  assert_eq!(para.matches("<p ").count(), 1, "{para}");
-}
-
 /// A Rhai binding declares the option as Perl's does (`#{enterHorizontal: true}`): `\lxa`, a template constructor
 /// opening the paragraph, keeps the space after it, and so the imperative `\lxb` (`openElement`) has its space before
 /// it — the RED `imperative_constructor_drops_space_red` blamed `\lxb`; the space was `\lxa`'s.
@@ -100,5 +77,101 @@ fn rhai_constructor_entering_horizontal_keeps_the_space() {
     "para",
     &["xml:id=\"p1\""],
     r#"<para xml:id="p1"><p><text class="a">a</text> <text class="b">b</text></p></para>"#,
+  );
+}
+
+/// fancybox's boxes set their content in an `\hbox` and start the paragraph (fancybox.sty:60-61, :136, :152): at a
+/// paragraph's start the space after the box is kept, and mid-paragraph the paragraph stays one `<p>` (Perl's
+/// `internal_vertical` ended it around the box).
+#[test]
+fn fancybox_box_starts_the_paragraph() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/paragraph-mode/fancybox_box_starts_the_paragraph.tex"
+  ));
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p xml:id="p1.1"><text cssstyle="border:1px solid black; box-shadow: 5px 5px 10px black;" xml:id="p1.1.1">A</text> starts here.</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p2\""],
+    r#"<para xml:id="p2"><p xml:id="p2.1">Mid <text cssstyle="border:3px double black;" xml:id="p2.1.1">C</text> para.</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p3\""],
+    r#"<para xml:id="p3"><p xml:id="p3.1">Mid <text cssstyle="border:1px solid black;border-radius:5px;" xml:id="p3.1.1">E</text> and <text cssstyle="border:2px solid black;border-radius:5px;" xml:id="p3.1.2">F</text> para.</p></para>"#,
+  );
+}
+
+/// A text `\hphantom` starts the paragraph (latex.ltx:15617 `\leavevmode@ifvmode\box\tw@`), through its text branch
+/// `\lx@text@hphantom`; a paragraph it alone holds stays (its box is `restricted_horizontal`, not a space).
+#[test]
+fn hphantom_starts_the_paragraph() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/paragraph-mode/hphantom_starts_the_paragraph.tex"
+  ));
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p xml:id="p1.1"><text class="ltx_phantom" xml:id="p1.1.1">X</text> starts here.</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p2\""],
+    r#"<para xml:id="p2"><p xml:id="p2.1"><text class="ltx_phantom" xml:id="p2.1.1">Y</text></p></para>"#,
+  );
+}
+
+/// revtex4_support `\text` outside math (`\REV@text`, an `\mbox`; census 2635 revtex papers).
+#[test]
+fn revtex_text_starts_the_paragraph() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/paragraph-mode/revtex_text_starts_the_paragraph.tex"
+  ));
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p xml:id="p1.1"><text xml:id="p1.1.1">A</text> starts here.</p></para>"#,
+  );
+}
+
+/// The remaining families, one paragraph each: ams_support `\URL`, html `\hyperrefdef`, latexml `\lxWithClass`, and
+/// the kernel's `\lx@text@nounicode` (wasysym `\octagon`).
+#[test]
+fn bindings_start_the_paragraph() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/paragraph-mode/bindings_starts_the_paragraph.tex"
+  ));
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"S1.p2\""],
+    r#"<para xml:id="S1.p2"><p xml:id="S1.p2.1"><ref href="http://x.org">http://x.org</ref> is a site.</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"S1.p3\""],
+    r#"<para xml:id="S1.p3"><p xml:id="S1.p3.1"><ref labelref="LABEL:s">link</ref> is a link.</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"S1.p4\""],
+    r#"<para xml:id="S1.p4"><p xml:id="S1.p4.1"><text class="cl" xml:id="S1.p4.1.1">A</text> has a class.</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"S1.p5\""],
+    r#"<para xml:id="S1.p5"><p xml:id="S1.p5.1"><text class="ltx_nounicode" xml:id="S1.p5.1.1">\octagon</text> is a glyph.</p></para>"#,
   );
 }

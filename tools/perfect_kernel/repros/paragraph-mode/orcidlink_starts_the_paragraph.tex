@@ -1,11 +1,12 @@
-% mechanism: the kernel's `\lx@orcidlink` (orcidlink.sty `\orcidlink`: `\href{…}{\mbox{…}}`) opens the paragraph;
-%   without enterHorizontal it was digested in vertical mode and the space after it was dropped there
-%   (Stomach.pm:249-251), gluing the next word to the link
-% witness: synthetic, the engine-level member of OXIDIZED_DESIGN_DIVERGENCES #1079
+% mechanism: orcidlink.sty `\orcidlink` (`\href{…}{\mbox{…}}`) opens the paragraph; Perl's binding digests its
+%   `\lx@orcidlink` in vertical mode and drops the space after it there (Stomach.pm:249-251); ours wraps it in
+%   `\leavevmode` (orcidlink_sty.rs), so Rust never dropped it. Catalog only, no guard (green on M8B29)
+% witness: synthetic; OXIDIZED_DESIGN_DIVERGENCES #1079 (not a member: `\lx@orcidlink` itself is reached in vertical
+%   mode only through the frontmatter contact `\lx@add@orcid`, where the space is not body text)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the iD logo, then " is my iD."
-% engines: perl 0.8.8 and rust M8B29: <p><ref … class="ltx_orcid" …>…</ref>is my iD.</p>
+% engines: perl 0.8.8: <p><ref … class="ltx_orcid" …>…</ref>is my iD.</p>; rust M8B29: … </ref> is my iD.</p>
 % expect:  0 errors, 0 warnings; <p><ref … class="ltx_orcid" …>…</ref> is my iD.</p>
-% status:  RED (M8B29, perl) -> GREEN (INLINECTOR)
+% status:  RED (perl); GREEN (rust, M8B29 and since)
 \documentclass{article}
 \usepackage{orcidlink}
 \begin{document}

@@ -1,0 +1,27 @@
+% mechanism: the bindings whose constructor sets authored text where TeX starts the paragraph declare
+%   enterHorizontal: ams_support `\URL` (`\@ams@url`), html's `\hyperrefhyper` (`\hyperrefdef`), latexml's `\lxWithClass`, and the kernel's
+%   `\lx@text@nounicode` (wasysym's `\octagon`, a glyph with no Unicode); digested in vertical mode, the space after
+%   each was dropped there (Stomach.pm:249-251); directly after the heading the base kept it, hence `Text.` first
+% witness: synthetic, the remaining families of OXIDIZED_DESIGN_DIVERGENCES #1079
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors on this file without html (latex2html's html.sty is not in
+%   TL 2025; its `\hyperref` prints text): each paragraph keeps the space after its first item
+% engines: perl 0.8.8 and rust M8B29: the word after each glued to it
+% expect:  0 errors, 0 warnings; a space after each paragraph's first item
+% status:  RED (M8B29, perl) -> GREEN (INLINECTOR)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{html}
+\usepackage{latexml}
+\usepackage{wasysym}
+\begin{document}
+\section{S}\label{s}
+Text.
+
+\URL{http://x.org} is a site.
+
+\hyperrefhyper{link}{a}{b}{s} is a link.
+
+\lxWithClass{cl}{A} has a class.
+
+\octagon{} is a glyph.
+\end{document}

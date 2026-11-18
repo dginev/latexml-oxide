@@ -20772,20 +20772,34 @@ does not enter automatically (that changes Perl's digestion and cannot see an im
 `\object` (Perl :357; aa.cls `\def\object##1{##1}`), llncs `\url` (Perl :68; llncs.cls:899), ams_support `\@ams@url`
 (Perl :282), amsppt `\cite` (Perl :328; amsppt.sty:847 `\rom{[…]}`) and `\@bibitem@field`, html `\hyperrefdef`
 (Perl :45), latexml `\lxWithClass`, revtex4_support `\text` (`\REV@text` is `\mbox` in text, as amstext's `\text`),
-fancybox `\shadowbox`/`\doublebox`/`\ovalbox`/`\Ovalbox` (fancybox.sty:59-61 `\leavevmode\vbox`), csquotes'
-quote openers `\ltxml@oqmark@open`, `\ltxml@iqmark@open`, `\ltxml@mktextquote@open`, `\ltxml@mkblockquote@aopen` (a
-quote mark or the quote text follows), the kernel's `\lx@orcidlink` (orcidlink.sty `\href{…}{\mbox{…}}`) and
-`\lx@text@nounicode` (a glyph). **Not given**: rules and frames (`\hrule`, `\htmlrule`, `\lx@algo@rule`, xcolor
-`\boxframe` = `\hbox`, fancyvrb's frame, framed's title), `\hphantom` (latex.ltx `\finph@nt` puts a `\box`, no
-`\leavevmode`), `\lx@mark@nocite` and cleveref's number mark (print nothing), the algorithmic `\hfill` openers (always
+fancybox `\shadowbox`/`\doublebox`/`\ovalbox`/`\Ovalbox` (content in an `\hbox`, fancybox.sty:60, :128, :146; the
+paragraph started at :61 `\leavevmode\vbox`, :136 `\leavevmode\hbox`, :152 `\fbox`: so `restricted_horizontal`
+with `enterHorizontal`, where Perl's `internal_vertical` also ended the paragraph around the box and split
+`Mid \doublebox{C} para.` in two), the kernel's `\lx@text@hphantom`, the text
+branch of `\hphantom` (latex.ltx:15617 `\finph@nt` ends `\leavevmode@ifvmode\box\tw@`, :9433
+`\ifvmode\expandafter\indent\fi`; its `restricted_horizontal` box keeps a paragraph it alone holds) and
+`\lx@text@nounicode` (a glyph). csquotes' quote openers `\ltxml@oqmark@open`, `\ltxml@iqmark@open`,
+`\ltxml@mktextquote@open`, `\ltxml@mkblockquote@aopen` declare it too (a quote mark or the quote text follows, as in
+TeX), with no visible change: the space after the quote already survived. **Not given**: rules and frames (`\hrule`,
+`\htmlrule`, `\lx@algo@rule`, xcolor `\boxframe` = `\hbox` (xcolor.sty:855-857), fancyvrb's frame lines
+(`\hbox to\z@`, fancyvrb.sty:869), framed's title (an `\hbox` in `\TF@Title`'s `\vbox`, framed.sty:267-273)), the
+kernel's `\lx@orcidlink` (orcidlink_sty.rs wraps it in `\leavevmode`; in vertical mode it is reached only as the
+frontmatter contact of `\lx@add@orcid`), `\phantom` and `\vphantom` in text (TeX starts the paragraph there too, but
+these are `isSpace` whatsits of no mode, and `repack_paragraph` (Perl `repackHorizontal`) keeps a paragraph of
+spaces out of the line: `\par\phantom{Jb}\par` would vanish, `batchrg1_group_paragraph_rows`,
+`batchfms1::field_prov_phantom_kept`; RED `paragraph-mode/phantom_starts_the_paragraph`, until they dispatch to a
+`restricted_horizontal` text branch as `\hphantom` does), `\lx@mark@nocite` and cleveref's number mark (print nothing), the algorithmic `\hfill` openers (always
 inside a line), csquotes' citation openers (`\mkcitation` opens with `\space`, which TeX drops in vertical mode) and
 display-quote opener (`\mkbegdispquote` prints nothing), `\@@generic@caption` (an Error path), `\lx@text@tweaked` (after
 its base glyph), units' `\helper@ams@text` (unused). **Upstream.** Offerable as one Perl patch: add `enterHorizontal => 1` to
 the same constructors in the Perl files named above (aa_support.sty.ltxml:357, llncs.cls.ltxml:68,
 ams_support.sty.ltxml:282, amsppt.sty.ltxml:328, html.sty.ltxml:45, …); Perl's output differs only by the kept space.
-**Guards.** `cluster_package_guards::perfect_kernel_batchinlinector::{aa_object_starts_the_paragraph,
-llncs_url_starts_the_paragraph, amsppt_cite_starts_the_paragraph, orcidlink_starts_the_paragraph,
-rhai_constructor_entering_horizontal_keeps_the_space}` (repros `paragraph-mode/*_starts_the_paragraph`,
+Perl's xcolor `\fcolorbox` pairs `enterHorizontal` with `internal_vertical` the same way (xcolor.sty.ltxml:881); ours is
+`restricted_horizontal` already. **Guards.** `cluster_package_guards::perfect_kernel_batchinlinector::{
+aa_object_starts_the_paragraph, llncs_url_starts_the_paragraph, amsppt_cite_starts_the_paragraph,
+fancybox_box_starts_the_paragraph, hphantom_starts_the_paragraph, revtex_text_starts_the_paragraph,
+bindings_start_the_paragraph, rhai_constructor_entering_horizontal_keeps_the_space}` (repros
+`paragraph-mode/*_starts_the_paragraph`; `orcidlink_starts_the_paragraph` is a catalog repro, Perl's gap only,
 `rhai-bindings/constructor_opening_the_paragraph_keeps_the_space`, formerly `imperative_constructor_drops_space_red`,
 whose note blamed the imperative `\lxb`).
 

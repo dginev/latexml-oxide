@@ -876,12 +876,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     document.close_element("svg:svg")?;
   });
   // A link to https://orcid.org/<#1> wrapping content #2 (class ltx_orcid). Shared
-  // by \lx@add@orcid and orcidlink.sty's \orcidlink family. Perl orcidlink #2681. It starts the paragraph, as
-  // orcidlink.sty's `\href{…}{\mbox{…}}` does (OXIDIZED_DESIGN_DIVERGENCES #1079).
+  // by \lx@add@orcid and orcidlink.sty's \orcidlink family. Perl orcidlink #2681.
   DefConstructor!(
     "\\lx@orcidlink{}{}",
-    "<ltx:ref title='ORCID #1' class='ltx_orcid' href='https://orcid.org/#1'>#2</ltx:ref>",
-    enter_horizontal => true
+    "<ltx:ref title='ORCID #1' class='ltx_orcid' href='https://orcid.org/#1'>#2</ltx:ref>"
   );
   // The single canonical author-ORCID frontmatter macro: a `ltx:contact[role=orcid]`
   // (consistent with \lx@add@email / \lx@add@affiliation &c.) whose value is the iD

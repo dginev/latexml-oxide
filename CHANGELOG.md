@@ -732,9 +732,11 @@
     (llncs) and an amsppt `\cite` gave `M31is`, `x.orgis`, `[1]is` (as Perl
     does): the constructor stayed in vertical mode, where the space is dropped.
     Those bindings, and the others whose text TeX sets there (ams `\URL`,
-    html's `\hyperref`, `\lxWithClass`, revtex's `\text`, fancybox's boxes,
-    csquotes' quotes, `\orcidlink`), now enter horizontal mode first, Perl's
-    `enterHorizontal`. OXIDIZED_DESIGN_DIVERGENCES #1079; guards
+    html's `\hyperrefhyper`, `\lxWithClass`, revtex's `\text`, a glyph with no
+    Unicode, a text `\hphantom`), now enter horizontal mode
+    first, Perl's `enterHorizontal`. fancybox's `\shadowbox`, `\doublebox`,
+    `\ovalbox` and `\Ovalbox` also no longer split a paragraph in two
+    (`Mid \doublebox{C} para.`). OXIDIZED_DESIGN_DIVERGENCES #1079; guards
     `perfect_kernel_batchinlinector`.
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
