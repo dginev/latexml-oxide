@@ -20759,6 +20759,42 @@ the same path. The walker's `KEYED_CONSTRUCTORS` row for `\scalebox` is gone (th
 `cluster_package_guards::perfect_kernel_batchmarkscale::scalebox_mark_spells_its_glyph_not_its_scale` (repro
 `sectioning-frontmatter/mark_scalebox_scale_is_no_ink`), `a_scale_factors_tail_is_dropped_with_a_warning`.
 
+### 1078. A `\let` copy of a frontmatter setter taken before the class's refused redefinition is the setter as it stood then (SETCOPY)
+
+**Perl.** No replay of a refused definition (State.pm:502-517), so a copy of the locked `\author` is the binding.
+**TeX.** `\let` freezes the meaning at copy time (tex.web §1221). **Rust before.** The kernel's `\author`/`\title`
+replay the class's refused body by name at call time (`\lx@replay@class@setter`, #482), so a copy taken BEFORE the
+refusal replayed the later class definition too: tocbase.cls:647-677 `\let\orig@author\author`, `\renewcommand\author`
+appending to `\toc@authors`, then `\orig@author{\toc@authors}` made `\toc@authors` contain itself, a box runaway
+(`Fatal:Stomach:Recursion`; 1811.06821, 1811.11810, 1904.05269, 2011.14174 aic.cls; 1905.07135, 2311.03341 toc); a `\title`
+copy the same (`Error:recursion:\toc@title`, no title). **Rust.** state.rs `let_i` (`setter_as_copied`): a copy of a
+macro whose body opens with `\lx@sealed@class@call`/`\lx@titlepage@class@call`/`\lx@replay@class@setter{<name>}`,
+taken while `\<name>:redefined` is unset, gets the body wrapped as `\lx@setter@as@copied{<name>}{<body>}`, same
+parameters (one string test on the first token for every other `\let`). That primitive (sect05.rs) digests the body
+with `\lx@dropped@<name>` and `\<name>:redefined{,@class,@document,@nargs,@in,@default}` hidden (`HiddenRefusal`,
+put back on drop, error too; a newer refusal the body made meanwhile stays, the older records it left unset come back,
+as the records only accumulate): no replay, `\lx@add@authors@adaptive` replaces (LaTeX's `\gdef\@author`), no sealed-off redirect, no trailing
+surplus read. `x_equals` reads the copy and the setter as one meaning: `\ifx\orig@author\author` is true, as in TeX,
+only BEFORE the redefinition; after it TeX says false and ours still true (the lock kept the setter). A copy taken
+after the refusal is unchanged: in TeX it holds the class's definition, which the replay stands for. Restoring the
+setter from its copy (`\let\author\orig@author`, `\global\let` too; `restored_setter`) installs the unwrapped body and
+clears the refusal's records in the `\let`'s scope, as in TeX, where the class's definition is gone: a later
+redefinition is refused afresh and replays; a restore inside a group reverts at `\endgroup` (the refused definition and
+its records back), a global redefinition made inside that group survives it (tex.web §283).
+**Residuals.** A copy taken between two refusals replays the second; replays issued from Rust closures (authblk
+`\affil`, authblk_sty.rs:419; the kernel `\abstract`) are not wrapped; `\meaning` of the copy shows the wrapper; a store
+the class's replayed setter changed, handed whole to the copy, reads as no events of the copy's block, so each name is
+written as plain text with a Warning (row R SETCOPY-FLAG; names correct on 1811.06821). A store opening with `\and`
+(`\author{\store}`, no copy at all) invents the word "and" in the name, a kernel defect of the author split (row R
+ANDSTORE, repro `sectioning-frontmatter/and_store/direct_store.tex`), not the copy's. The copy's tests spell the
+engine's macro names as strings (`setter_as_copied`, `frozen_setter_parts`), the kernel token-spelling pins of
+`perfect_kernel_batche0`. **Guards.**
+`cluster_package_guards::perfect_kernel_batchsetcopy::{a_copy_taken_before_the_redefinition_is_the_kernels_setter,
+a_copy_in_an_end_code_takes_the_class_list_once, a_copy_taken_after_the_redefinition_still_replays,
+a_restored_setter_takes_a_later_redefinition_afresh, a_restored_setter_drops_the_class_definition,
+a_restore_in_a_group_ends_with_it}` (repros
+`sectioning-frontmatter/setter_copy/`).
+
 ### 1081. Untrusted input stays in the job: document Lua is sandboxed; an image copy never leaves `--dest` (SECLUA)
 
 **Perl.** No Lua bridge. `Post/Graphics.pm` L292-300 copies an image to its source-relative path only when

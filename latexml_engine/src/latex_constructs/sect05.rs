@@ -1174,6 +1174,13 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\lx@replay@class@setter{}{}{}", sub[(name, opt, arg)] {
     replay_class_setter(&name.to_string(), opt, arg)?;
   });
+  // A `\let` copy of such a setter taken before the class's definition was refused (state.rs `setter_as_copied`):
+  // its body runs as the setter stood then, without that refusal's records — no replay, the authors replaced, no
+  // sealed-off redirect (tocbase.cls:647-677, 1811.06821; OXIDIZED_DESIGN_DIVERGENCES #1078).
+  DefPrimitive!("\\lx@setter@as@copied{}{}", sub[(name, body)] {
+    let _hidden = HiddenRefusal::new(&name.to_string());
+    Ok(vec![digest(body)?])
+  });
   // the end of a replayed setter's body, in its own group: what it first defined there (`replay_class_setter`)
   DefPrimitive!("\\lx@replay@capture", {
     let mut meanings = top_frame_new_meanings();
@@ -3175,6 +3182,58 @@ thread_local! {
 /// 2607.24171). Perl never runs a refused definition (State.pm:502-517).
 fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   replay_dropped_class_code(name, Some((opt, arg)), &[])
+}
+
+/// The records of the class's refused `\<name>` (`\lx@dropped@<name>` and `\<name>:redefined<suffix>`, state.rs
+/// `REFUSAL_RECORD_SUFFIXES`), hidden while a copy of the setter taken before the refusal runs (`\lx@setter@as@copied`)
+/// and put back when it ends, by error too.
+struct HiddenRefusal {
+  name:            String,
+  dropped:         Token,
+  dropped_meaning: Option<Stored>,
+  values:          Vec<(String, Stored)>,
+}
+
+impl HiddenRefusal {
+  fn new(name: &str) -> Self {
+    let dropped = T_CS!(s!("\\lx@dropped@{name}"));
+    let dropped_meaning = lookup_meaning(&dropped);
+    if dropped_meaning.is_some() {
+      assign_meaning(&dropped, Stored::None, Some(Scope::Global));
+    }
+    let mut values = Vec::new();
+    for suffix in REFUSAL_RECORD_SUFFIXES {
+      let key = s!("\\{name}:redefined{suffix}");
+      if let Some(value) = lookup_value(&key).filter(|v| !matches!(v, Stored::None)) {
+        assign_value(&key, Stored::None, Some(Scope::Global));
+        values.push((key, value));
+      }
+    }
+    HiddenRefusal {
+      name: name.to_string(),
+      dropped,
+      dropped_meaning,
+      values,
+    }
+  }
+}
+
+impl Drop for HiddenRefusal {
+  fn drop(&mut self) {
+    // A refusal the body itself made meanwhile is newer and stays, its dropped body with it; the other records only
+    // accumulate (`note_redefined`), so the older ones it left unset come back (an older `@class`, `@default`).
+    let newer = lookup_bool(&s!("\\{}:redefined", self.name));
+    if let Some(meaning) = self.dropped_meaning.take()
+      && !newer
+    {
+      assign_meaning(&self.dropped, meaning, Some(Scope::Global));
+    }
+    for (key, value) in self.values.drain(..) {
+      if !newer || lookup_value(&key).is_none_or(|v| matches!(v, Stored::None)) {
+        assign_value(&key, value, Some(Scope::Global));
+      }
+    }
+  }
 }
 
 /// The refused class environment's begin code (`\lx@dropped@<name>` of no parameters, from the class's

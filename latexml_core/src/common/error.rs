@@ -425,7 +425,7 @@ pub fn note_error_cap(key: &str) {
 pub fn emit_fatal(category: &str, object: &str, message: &str) {
   emit_record(
     LogStatus::Fatal,
-    &format!("Fatal:{category}:{object} "),
+    &format!("Fatal:{category}:{object}"),
     message,
   );
 }
@@ -1383,7 +1383,7 @@ pub enum ErrorTarget {
 
 impl ErrorTarget {
   /// The category slot of a `Fatal:<category>:<object>` line.
-  fn log_name(&self) -> String {
+  pub fn log_name(&self) -> String {
     match self {
       ErrorTarget::Named(name) => name.clone(),
       other => format!("{other:?}"),
@@ -1393,7 +1393,7 @@ impl ErrorTarget {
 
 impl ErrorCategory {
   /// The object slot of a `Fatal:<category>:<object>` line.
-  fn log_name(&self) -> String {
+  pub fn log_name(&self) -> String {
     match self {
       ErrorCategory::Named(name) => name.clone(),
       other => format!("{other:?}"),
@@ -1463,7 +1463,7 @@ impl Error {
     emit_record(
       LogStatus::Fatal,
       &s!(
-        "Fatal:{}:{} ",
+        "Fatal:{}:{}",
         self.target.log_name(),
         self.category.log_name()
       ),
@@ -1761,7 +1761,7 @@ mod tests {
     {
       let inner = IgnoreDiagnosticsScope::new();
       emit_record(LogStatus::Error, "undefined:\\y", "synthetic");
-      emit_record(LogStatus::Fatal, "Fatal:Internal:Unexpected ", "synthetic");
+      emit_record(LogStatus::Fatal, "Fatal:Internal:Unexpected", "synthetic");
       assert_eq!(inner.dropped(), IgnoredRecords { errors: 1, fatals: 1 });
     }
     assert!(

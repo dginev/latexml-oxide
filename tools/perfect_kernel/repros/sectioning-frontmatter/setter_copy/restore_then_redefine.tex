@@ -1,0 +1,23 @@
+% Restoring the setter from its frozen copy (`\let\author\orig@author`) leaves the kernel's own `\author`: in TeX the
+% class's definition is gone, so a second `\renewcommand{\author}` is refused afresh and its body replays
+% (OXIDIZED_DESIGN #482). Round 0 of SETCOPY installed the copy's wrapper on `\author` itself, which hid the second
+% refusal: `\seconddef` stayed undefined, silently.
+% witness: synthetic (review SETCOPY B1; the restore shape of tocbase.cls:647-677, 1811.06821)
+% oracle:  pdflatex 0 errors: "Second: Ann Able."
+% engines: rust (main 8b298f9c0d6) = "Second: Ann Able."; SETCOPY round 0 = "Second: .", 0 E 0 W
+% expect:  0 errors, 0 warnings; "Second: Ann Able."; one creator, Ann Able
+% guard:   perfect_kernel_batchsetcopy::a_restored_setter_takes_a_later_redefinition_afresh
+% status:  GREEN (SETCOPYb, 2026-11-18)
+\documentclass{article}
+\makeatletter
+\let\orig@author\author
+\renewcommand{\author}[1]{\gdef\firstdef{#1}\orig@author{#1}}
+\let\author\orig@author
+\renewcommand{\author}[1]{\gdef\seconddef{#1}\orig@author{#1}}
+\makeatother
+\title{T}
+\begin{document}
+\author{Ann Able}
+\maketitle
+Second: \seconddef.
+\end{document}

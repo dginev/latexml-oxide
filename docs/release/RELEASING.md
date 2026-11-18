@@ -3,8 +3,9 @@
 The release process for latexml-oxide is automated end-to-end: bump the
 version, write the changelog, push a tag. GitHub Actions builds the
 artifacts and publishes them to a new GitHub Release. The Linux assets
-build on `ubuntu-22.04` (glibc 2.35, broadest binary compatibility); the
-macOS asset builds natively on `macos-15` (Apple Silicon).
+build on `ubuntu-22.04` / `ubuntu-22.04-arm` (glibc 2.35, broadest binary
+compatibility); the macOS assets build natively on `macos-15` (Apple Silicon) and
+`macos-15-intel` (Intel); the Windows asset on `windows-latest`.
 
 Currently published platforms: **`x86_64-unknown-linux-gnu`**,
 **`aarch64-unknown-linux-gnu`**, **`aarch64-apple-darwin`** (macOS Apple
@@ -37,7 +38,7 @@ tag X.Y.Z  →  release.yml ─┬─→ GitHub Release (public)
 
 | # | Target | How | Doc |
 |---|---|---|---|
-| 1 | **GitHub Release** (8 assets) | tag push → `release.yml` | this file |
+| 1 | **GitHub Release** (15 assets) | tag push → `release.yml` | this file |
 | 2 | **Container images** (ghcr.io) | **automatic**: `release.yml`'s `containers` job calls `docker.yml` once the Release publishes | "Container images (GHCR)" below |
 | 3 | **Homebrew tap** | manual: `dginev/homebrew-tap` → `./update-formula.sh X.Y.Z`, commit, push | that repo's README |
 | 4 | **crates.io** (8 crates) | manual: `cargo publish --workspace` | [`CRATES_IO_PUBLISH.md`](CRATES_IO_PUBLISH.md) |
@@ -312,8 +313,9 @@ actually works:
 strips quarantine, so a tap install is warning-free by construction — no
 Apple Developer account, no notarization, aligned with the CC0 / public-domain
 posture (a paid Apple identity would contradict the no-strings ethos, and
-Homebrew removes the warning on the channel Mac users actually reach for). Not
-yet published; the per-release `.sha256` sidecars make an auto-bump trivial.
+Homebrew removes the warning on the channel Mac users actually reach for). The
+tap is live (`dginev/homebrew-tap`, formula at 0.7.6); its `./update-formula.sh
+X.Y.Z` reads the per-release `.sha256` sidecars.
 
 The bigger win: for a LaTeX converter the real setup friction is **TeX + the
 graphics toolchain**, not the executable. The formula encodes the small
@@ -327,7 +329,7 @@ redundant copy. A tap lives in its own `dginev/homebrew-tap` repo as
 class LatexmlOxide < Formula
   desc "Rust port of LaTeXML — LaTeX to HTML/XML/MathML"
   homepage "https://github.com/dginev/latexml-oxide"
-  version "0.7.3"                       # bump per release
+  version "0.7.6"                       # bump per release
   license "CC0-1.0"
   # 1:1 with the .deb's graphics Depends (imagemagick, mupdf-tools,
   # poppler-utils, ghostscript, dvisvgm) — all are real homebrew-core formulae.
@@ -454,20 +456,29 @@ settings.
     version = "X.Y.Z"   # was: X.Y.(Z-1)
     ```
 
-   Other workspace crates use their own version cadence and do not need
-   bumping in lockstep.
+   **Bump every sibling crate that changed since the last release too**, with
+   honest 0.x semver (minor = API-affecting, patch = internal-only), and update
+   every intra-workspace `path`+`version` pin (`latexml_oxide` and inter-crate).
+   crates.io is immutable, so an unbumped changed sibling makes `cargo publish
+   --workspace` publish the top crate against stale siblings. `cargo set-version`
+   (cargo-edit) automates the cascade; verify with `cargo metadata` + `cargo check
+   --workspace` (`.claude/skills/next-release/SKILL.md` step 1).
 
 2. **Add a CHANGELOG entry** at the top of `CHANGELOG.md`:
 
     ```markdown
-    ## [X.Y.Z] YYYY-MM-DD
+    ## [X.Y.Z] (theme summary)
 
     - …summary of user-visible changes…
     ```
 
-   `tools/make_release.sh` slices this section into the GitHub release
-   body, falling back to a plain link to the full changelog if the
-   matching header is missing.
+   No date in the heading (the 0.7.x form); rename the `## Unreleased` section
+   to it.
+
+   `tools/make_release.sh` slices this section (from `^## [X.Y.Z]` to the next
+   `## [` heading) into the GitHub release body; an `X.Y.Z-rcN` tag falls back to
+   the `X.Y.Z` section, and a missing section to a plain link to the full
+   changelog.
 
 3. **Sanity-check the release build locally** (catches build-script,
    `cargo-deb` metadata, and embedded-resource regressions before they
@@ -495,26 +506,29 @@ settings.
     RELEASE_TARGET=aarch64-apple-darwin bash tools/make_release.sh
     ```
 
-4. **Commit, tag, push.** Tag format is bare `X.Y.Z` — no `v` prefix —
-   matching the existing tag history.
+4. **PR, merge, tag.** Every repo edit goes through a branch and a PR — never a
+   direct push to `main`. The release-prep PR carries the bumps and the
+   CHANGELOG (first as `X.Y.Z-rcN`; the promotion to `X.Y.Z` is a second, tiny
+   PR that also refreshes the `VERSION=` samples in `docs/INSTALL.md`). Once the
+   PR is merged and green, tag the merged commit. Tag format is bare `X.Y.Z` — no
+   `v` prefix — matching the existing tag history.
 
     ```bash
-    git commit -am "release: X.Y.Z"
-    git tag X.Y.Z
-    git push origin main
+    git tag -a X.Y.Z -m "…" <merged-sha>
     git push origin X.Y.Z
     ```
 
-5. **Watch the workflow.** `Release` on the Actions tab. It runs eight
+5. **Watch the workflow.** `Release` on the Actions tab. It runs ten
    jobs: `dumps` (TL-window generation) → `notices` (assembles THIRD-PARTY-NOTICES
    once, handed to every leg) → `build-macos` (Apple Silicon, `macos-15`) ‖
    `build-macos-intel` (Intel, `macos-15-intel`) ‖ `build-linux-arm64`
    (`ubuntu-22.04-arm`) ‖ `build-windows` (`windows-latest`) ‖ `windows-ci` (the
    full Windows test suite, `windows-ci-manual-trigger.yml` called with
    `require_guards: true`: 3 required shards + 8 `perfect_kernel_*` guard shards,
-   every one must pass) → `release`
-   (Linux x86_64 tarball + `.deb`, then collects every other leg's artifacts and
-   attaches all **eight** assets). The Intel-macOS leg's fat-LTO `maxperf` build on the
+   every one must pass) ‖ `ci` (the full `CI.yml` suite on Linux and macOS,
+   `full: true`) → `release` (Linux x86_64 tarball + `.deb`, then collects every
+   other leg's artifacts and attaches all **15** assets) → `containers` (final
+   tags only; see "Container images (GHCR)"). The Intel-macOS leg's fat-LTO `maxperf` build on the
    slower `macos-15-intel` runner is the long pole (up to ~120 min budget).
 
 6. **Nothing — it auto-publishes.** The workflow publishes a **public**
@@ -544,8 +558,8 @@ settings.
   the broken assets.
 
 * **`make_release.sh` rejects `GITHUB_REF_NAME`-vs-Cargo.toml mismatch.**
-  This means you tagged before bumping. Bump `latexml_oxide/Cargo.toml`,
-  amend the commit (or add a follow-up), and re-tag.
+  This means you tagged before bumping. Delete the tag, land the
+  `latexml_oxide/Cargo.toml` bump by PR, and re-tag the merged commit.
 
 * **`build-macos` OOMs / times out.** The fat-LTO `maxperf` link is the
   RAM peak; the free-tier `macos-15` runner is only 7 GB. If it OOMs,
@@ -564,8 +578,8 @@ settings.
   `tools/make_release.sh` already accepts `RELEASE_TARGET` and derives
   per-OS behavior (strip flags, `.deb` only on Linux, sha256 tool); it
   builds **natively** (no `--target`), so `RELEASE_TARGET` must match the
-  runner's host arch. For a macOS universal binary, add a `macos-13`
-  (Intel) leg and `lipo`-merge its slice with the arm64 slice before
+  runner's host arch. For a macOS universal binary, `lipo`-merge the
+  `build-macos-intel` (`macos-15-intel`) slice with the arm64 slice before
   staging.
 
 * **Skip the .deb**: comment out the `cargo deb …` block in
