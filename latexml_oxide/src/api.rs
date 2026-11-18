@@ -45,6 +45,10 @@ fn library_config(format: OutputFormat) -> Config {
     format,
     bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
+    // The CLI's defaults: raw `.sty`/`.cls` loading and ar5iv.sty's runaway limits (OD #1080).
+    include_styles: Some(true),
+    if_limit: Some(latexml_core::common::RUNAWAY_IF_LIMIT),
+    absorb_limit: Some(latexml_core::common::RUNAWAY_ABSORB_LIMIT),
     ..Config::default()
   }
 }
@@ -56,6 +60,10 @@ fn on_worker<T: Send + 'static>(job: impl FnOnce() -> T + Send + 'static) -> T {
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
+      // The CLI's pushback cap (ar5iv.sty's `pushbacklimit`), on the thread whose gullet converts.
+      if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
+        latexml_core::gullet::set_pushback_limit(Some(5_000_000));
+      }
       let out = job();
       // `#[thread_local]` engine roots don't Drop on thread exit; free the
       // ~110 MiB explicitly so repeated calls don't accumulate.

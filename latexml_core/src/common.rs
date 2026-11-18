@@ -133,10 +133,16 @@ pub struct Config {
   pub include_comments:        Option<bool>,
   /// Strict error-reporting (`--strict`; State `STRICT`, Perl Core.pm L43)
   pub strict:                  Option<bool>,
-  /// Raw-load `.sty` AND `.cls` sources (`--includestyles`). WARNING: one flag
-  /// enables raw TeX loading of both packages and classes — it sets State
-  /// `INCLUDE_STYLES` and `INCLUDE_CLASSES` together (Perl Core.pm L55-57).
+  /// Raw-load `.sty` AND `.cls` sources (`--includestyles`): one flag sets State `INCLUDE_STYLES` and
+  /// `INCLUDE_CLASSES` together (Perl Core.pm L55-57). `None` keeps Perl's default (off); the CLI, the library API
+  /// and cortex's generic profile pass `Some(true)` (OXIDIZED_DESIGN_DIVERGENCES #1080).
   pub include_styles:          Option<bool>,
+  /// Perl `$LaTeXML::IF_LIMIT` / `$LaTeXML::ABSORB_LIMIT` (`latexml.sty.ltxml:100-105`), set when the session
+  /// starts, before the preloads, so a `latexml.sty` `iflimit=`/`absorblimit=` option still wins (0 = unlimited).
+  /// `None` keeps Perl's default (unlimited); the front ends pass ar5iv.sty's values, [`RUNAWAY_IF_LIMIT`] and
+  /// [`RUNAWAY_ABSORB_LIMIT`] (OXIDIZED_DESIGN_DIVERGENCES #1080).
+  pub if_limit:                Option<i64>,
+  pub absorb_limit:            Option<i64>,
   /// Whether to skip math parsing (--nomathparse)
   pub nomathparse:             Option<bool>,
   /// Whether to track + emit source locators (`--source-map`). Off by
@@ -165,6 +171,10 @@ pub struct Config {
   /// conversion's.
   pub source_date_epoch:       Option<i64>,
 }
+/// ar5iv.sty's `iflimit` (`latexml_contrib/src/ar5iv_sty.rs`), the front ends' default `\if` runaway ceiling.
+pub const RUNAWAY_IF_LIMIT: i64 = 48_000_000;
+/// ar5iv.sty's `absorblimit`, the front ends' default ceiling on absorbed boxes.
+pub const RUNAWAY_ABSORB_LIMIT: i64 = 1_299_999;
 impl Default for Config {
   fn default() -> Self {
     Config {
@@ -182,6 +192,8 @@ impl Default for Config {
       include_comments:        None,
       strict:                  None,
       include_styles:          None,
+      if_limit:                None,
+      absorb_limit:            None,
       nomathparse:             None,
       source_map:              None,
       inputencoding:           None,

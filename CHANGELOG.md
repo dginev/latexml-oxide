@@ -900,6 +900,23 @@
     recursed between 1000 and 3000 levels deep now aborts in post-processing, as
     in Perl and in dynamically linked builds. Guard
     `xslt::max_depth_tests::transform_aborts_past_perls_recursion_depth`.
+  - **BREAKING (default): packages and classes without a binding are read raw, under ar5iv's runaway
+    limits.** `latexml_oxide`, the library API (`latexml::api`) and cortex's generic profile now raw-load
+    an unbound `.sty`/`.cls` from the TeX tree, as `--includestyles` (Perl `INCLUDE_STYLES` +
+    `INCLUDE_CLASSES`) did; a compiled binding still wins. They also take ar5iv.sty's limits: 48,000,000
+    conditionals (`iflimit`) and 1,299,999 absorbed boxes (`absorblimit`), beside the existing 5,000,000
+    pushback cap and the source-scaled token budget. Measured on a stratified 697-paper arXiv draw without
+    the ar5iv preload: error-free papers 84.5 % → 95.7 %, Fatal papers 2 → 0, errors −71 %, words +1.0 %,
+    no systematic slowdown; 40 TeX Live manuals error-free 22.5 % → 90 %. Format builds (`--init`)
+    and the in-process `Converter`/`Config::default` keep Perl's default.
+    **To get Perl LaTeXML's behaviour: `--noincludestyles`** (new, the negative of `--includestyles`; the
+    last one wins), or the existing `--preload='[norawstyles,norawclasses]latexml.sty'` — bindings only, an
+    unknown class served by OmniBus; latexml.sty's `iflimit`, `absorblimit` and `pushbacklimit`
+    options set those limits, and `iflimit=0,absorblimit=0` lifts the two (a limit option of 0
+    now lifts it, as in Perl). Guards
+    `perfect_kernel_batchrawdefw::{cli_default_raw_loads_unbound_package_and_class,
+    cli_noincludestyles_restores_perls_binding_only_loading, latexml_sty_iflimit_overrides_the_front_end_default}`
+    (OXIDIZED_DESIGN_DIVERGENCES #1080).
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 

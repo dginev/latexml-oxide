@@ -41,7 +41,9 @@ use std::{process, rc::Rc};
 
 use clap::Parser;
 use latexml::converter::Converter;
-use latexml_core::common::{Config, DataSize, OutputFormat};
+use latexml_core::common::{
+  Config, DataSize, OutputFormat, RUNAWAY_ABSORB_LIMIT, RUNAWAY_IF_LIMIT,
+};
 use pericortex::worker::Worker;
 use tempfile::TempDir;
 
@@ -250,6 +252,9 @@ struct ConversionProfile {
   timeout:           u64,
   /// Resident-memory ceiling in KiB for the shared `Watchdog` (0 = disabled).
   max_rss_kb:        u64,
+  /// Pass the CLI's defaults, raw `.sty`/`.cls` loading and ar5iv.sty's runaway limits, to the core (OD #1080);
+  /// the ar5iv profile leaves them to its ar5iv.sty preload.
+  cli_defaults:      bool,
 }
 
 impl ConversionProfile {
@@ -275,6 +280,7 @@ impl ConversionProfile {
       default_resources: false,
       timeout,
       max_rss_kb: max_rss_mb * 1024,
+      cli_defaults: false,
     }
   }
 
@@ -293,6 +299,7 @@ impl ConversionProfile {
       default_resources: true,
       timeout,
       max_rss_kb: max_rss_mb * 1024,
+      cli_defaults: true,
     }
   }
 }
@@ -377,6 +384,7 @@ impl LatexmlWorker {
     let mut search_paths = vec![source_dir.clone()];
     search_paths.extend(self.search_paths.iter().cloned());
 
+    let cli_defaults = self.profile.cli_defaults;
     let opts = Config {
       verbosity:               self.verbosity,
       format:                  OutputFormat::HTML5,
@@ -391,7 +399,9 @@ impl LatexmlWorker {
       search_paths:            Some(search_paths),
       include_comments:        Some(false),
       strict:                  None,
-      include_styles:          None,
+      include_styles:          cli_defaults.then_some(true),
+      if_limit:                cli_defaults.then_some(RUNAWAY_IF_LIMIT),
+      absorb_limit:            cli_defaults.then_some(RUNAWAY_ABSORB_LIMIT),
       nomathparse:             None,
       // Corpus/parity sweeps never emit locators — keep the zero-cost path.
       source_map:              None,

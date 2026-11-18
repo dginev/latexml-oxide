@@ -646,6 +646,8 @@ mod perfect_kernel_batchr2a;
 /// RA0: a title-code definee declared with no parameters (`\newcommand`'s `[0]`) is taken by the name it follows;
 /// OD #983.
 mod perfect_kernel_batchra0;
+/// RAWDEFW: the CLI raw-loads unbound packages and classes by default; OD #1080.
+mod perfect_kernel_batchrawdefw;
 /// RB1, RB1c: REVTeX's `\maketitle` switches off an author block the document repeats after it, from its first
 /// `\author` on (revtex4_cls.rs `switch_off_author_block_after_maketitle`).
 mod perfect_kernel_batchrb1;

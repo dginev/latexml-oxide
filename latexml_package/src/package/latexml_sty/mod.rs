@@ -723,30 +723,21 @@ LoadDefinitions!({
     }
   }
 
-  // Apply limit options from keyvals (Perl L87-98)
-  if let Some(v) = lookup_value("KV@LTXML@tokenlimit") {
-    let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
-    if limit > 0 {
-      set_token_limit(Some(limit));
-    }
+  // Apply limit options from keyvals (Perl L97-108: `$LaTeXML::…_LIMIT = int(…)`, so 0 lifts a limit; it is how a
+  // user restores Perl's unlimited `\if`/absorb defaults under the front ends' ar5iv values, OD #1080).
+  let limit_of =
+    |key: &str| lookup_value(key).map(|v| v.to_string().trim().parse::<usize>().unwrap_or(0));
+  if let Some(limit) = limit_of("KV@LTXML@tokenlimit") {
+    set_token_limit((limit > 0).then_some(limit));
   }
-  if let Some(v) = lookup_value("KV@LTXML@iflimit") {
-    let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
-    if limit > 0 {
-      set_if_limit(limit as i64);
-    }
+  if let Some(limit) = limit_of("KV@LTXML@iflimit") {
+    set_if_limit(limit as i64);
   }
-  if let Some(v) = lookup_value("KV@LTXML@absorblimit") {
-    let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
-    if limit > 0 {
-      set_absorb_limit(limit as i64);
-    }
+  if let Some(limit) = limit_of("KV@LTXML@absorblimit") {
+    set_absorb_limit(limit as i64);
   }
-  if let Some(v) = lookup_value("KV@LTXML@pushbacklimit") {
-    let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
-    if limit > 0 {
-      set_pushback_limit(Some(limit));
-    }
+  if let Some(limit) = limit_of("KV@LTXML@pushbacklimit") {
+    set_pushback_limit((limit > 0).then_some(limit));
   }
 
   // Perl latexml.sty.ltxml L86-96: \lx@save@parameter{key}{value} records a

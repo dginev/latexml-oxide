@@ -612,6 +612,13 @@ impl Converter {
     // The source bundle's date, ar5iv's archival clock — reset every session, so a persistent worker thread never
     // carries one paper's date into the next.
     state::set_source_date_epoch(self.opts.source_date_epoch);
+    // The front ends' runaway limits, before the preloads so a latexml.sty option overrides them (OD #1080).
+    if let Some(limit) = self.opts.if_limit {
+      state::set_if_limit(limit);
+    }
+    if let Some(limit) = self.opts.absorb_limit {
+      state::set_absorb_limit(limit);
+    }
     // Install the binding-resolution priority chain (rhai > contrib > package)
     // — the single source of resolution policy, shared with the integration-test
     // harness via `install_binding_dispatch`.

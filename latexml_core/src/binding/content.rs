@@ -1487,7 +1487,7 @@ fn input_definitions_impl(
       // it fine, sending a reader hunting a file-resolution bug that does not
       // exist. A diagnostic must not overclaim what it checked.
       let why = if options.notex {
-        "no dispatcher entry, and raw TeX loading is off (enable with --includestyles)"
+        "no dispatcher entry, and raw TeX loading is off (latexml.sty's rawstyles turns it on)"
       } else {
         "no dispatcher entry, and no raw file found on disk"
       };

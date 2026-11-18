@@ -18,7 +18,10 @@ use latexml::{
   converter::Converter,
   streaming_restart::{release_before_rerun, resolve_streaming, restart_budget, restart_watermark},
 };
-use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat, error::emit_info};
+use latexml_core::common::{
+  Config, DataSize, DigestionMode, OutputFormat, RUNAWAY_ABSORB_LIMIT, RUNAWAY_IF_LIMIT,
+  error::emit_info,
+};
 
 /// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
 /// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
@@ -172,15 +175,19 @@ struct Cli {
   #[arg(long)]
   strict: bool,
 
-  /// Raw-load `.sty`/`.cls` sources from the search path instead of relying on
-  /// LaTeXML's own bindings.
-  ///
-  /// WARNING: this enables raw TeX loading for BOTH packages (.sty) AND
-  /// document classes (.cls) at once — a common source of errors, since raw
-  /// class code is unlikely to convert cleanly.
+  /// Raw-load the `.sty` and `.cls` files that have no LaTeXML binding from the
+  /// search path (the default for a document since v0.8.0; bindings still win).
+  /// If both --includestyles and --noincludestyles are given, the last one wins.
   // Perl --includestyles / Core.pm L55-57: sets INCLUDE_STYLES + INCLUDE_CLASSES.
-  #[arg(long)]
+  // Default on, unlike Perl: OXIDIZED_DESIGN_DIVERGENCES #1080.
+  #[arg(long, overrides_with = "noincludestyles")]
   includestyles: bool,
+
+  /// Perl LaTeXML's default: load only LaTeXML's own bindings; a package
+  /// without one is skipped with a missing_file warning, a class falls back to
+  /// OmniBus (as `--preload='[norawstyles,norawclasses]latexml.sty'` does).
+  #[arg(long, overrides_with = "includestyles")]
+  noincludestyles: bool,
 
   /// Reuse an existing `.bbl` file instead of running BibTeX (for arXiv-style
   /// builds that ship their bibliography pre-compiled).
@@ -323,7 +330,8 @@ struct Cli {
   streaming: Option<bool>,
 
   /// Abort after processing this many tokens — guards against runaway macro
-  /// expansion (default: 1G; env `LATEXML_TOKEN_LIMIT`, 0 disables).
+  /// expansion (default: 20G, raised to 1000 per source byte read; env
+  /// `LATEXML_TOKEN_LIMIT`, 0 disables).
   #[arg(long, value_name = "N")]
   token_limit: Option<usize>,
 
@@ -1133,6 +1141,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     _ => DataSize::Document,
   };
 
+  let document = cli.init.is_none();
   let opts = Config {
     verbosity,
     format: OutputFormat::HTML5,
@@ -1151,7 +1160,16 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     include_comments: resolved.include_comments,
     // Perl Core.pm L43: STRICT; L55-57: INCLUDE_STYLES/INCLUDE_CLASSES.
     strict: if cli.strict { Some(true) } else { None },
-    include_styles: if cli.includestyles { Some(true) } else { None },
+    // Raw `.sty`/`.cls` loading and ar5iv.sty's runaway limits are this front end's default for a document
+    // (OD #1080); a format build (`--init`) keeps Perl's, so the dumps stay Perl's. A latexml.sty preload's
+    // `norawstyles`/`norawclasses` and limit options load after and win.
+    include_styles: if document {
+      Some(!cli.noincludestyles)
+    } else {
+      cli.includestyles.then_some(true)
+    },
+    if_limit: document.then_some(RUNAWAY_IF_LIMIT),
+    absorb_limit: document.then_some(RUNAWAY_ABSORB_LIMIT),
     nomathparse: resolved.nomathparse,
     // `--source-map` flag OR `LATEXML_SOURCE_MAP` env enables locator
     // tracking + emission; otherwise leave unset (off). The env reads
