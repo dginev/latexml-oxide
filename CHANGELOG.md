@@ -15,6 +15,12 @@
     `once_cell` dependency is gone from every crate; `deny.toml`'s advisory notes are corrected. No output change.
     For a Rust binding crate: `latexml_engine::prelude` now re-exports `LazyLock` in place of `Lazy`.
 
+  - **An author's printed address list no longer crashes the frontmatter reader.** A list whose
+    local parts share a suffix (`\{abcde,\,xy\}.nju@gmail.com`) under marked names made the
+    address-mark reader step by the length of a local part the text does not spell, into the
+    thin space `\,` prints, and panic (2609.00833, a Fatal). It now steps past the next separator
+    only. Guard `perfect_kernel_batch106a::a_brace_list_local_part_the_text_does_not_spell`.
+
   - **TeX Live's package manuals convert clean (the perfect-kernel campaign).** Every one of the
     1,552 in-scope TeX Live documentation bundles converts with no Error but of a ruled-out
     kind, valid against the schema (or only in a ruled class), at least 95 % word recall against
