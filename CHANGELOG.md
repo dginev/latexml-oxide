@@ -2,6 +2,170 @@
 
 ## Unreleased
 
+  - **TeX Live's package manuals convert clean (the perfect-kernel campaign).** Every one of the
+    1,552 in-scope TeX Live documentation bundles converts with no Error but of a ruled-out
+    kind, valid against the schema (or only in a ruled class), at least 95 % word recall against
+    its source (or a gap classified as no conversion loss) and in under 180 s at 8 GB; of the
+    1,602 manuals, 1,592 convert clean, recall mean 96.89 %, median 99.5 % (closing sweep #186,
+    merged as `6df4632fb1`). The work is kernel fidelity under raw interpretation of the
+    packages' own `.sty`/`.cls` files. Goal bar and basis: `docs/archive/PERFECT_KERNEL_2026-11-13.md`.
+  - **An author mark finds its note by the number it shows.** A footnote mark answers the note
+    that prints the same number, never one that merely shares its glyph, and the class bindings
+    compute the title marks and footnote steps their class prints. A note with no mark shows its
+    text with no invented dagger, and a symbol legend under the names belongs to the names that
+    print its symbol. Guards `perfect_kernel_batchfmmarks::{shared_notes_are_a_marked_copy_per_carrier,
+    a_mark_on_a_name_is_a_copy_of_its_note}`, `perfect_kernel_batchinvdag::a_date_note_and_an_abstract_thanks_invent_no_glyph`
+    (OXIDIZED_DESIGN_DIVERGENCES #990, #1052–#1064, #1068; #895).
+  - **Contacts printed in a title note reach their authors.** IEEEtran/ieeeconf `\thanks` are
+    routed by kind: a note that names authors who "are with …" gives them their affiliation and
+    e-mail, a "Corresponding author: …" note goes to the author it names, and funding or other notes stay
+    title notes. spconf/Interspeech `\address` lines go to the names showing their mark, and Interspeech.cls
+    `\email` lines to the authors their local parts spell. elsarticle keys reach their entries;
+    a `\date` that holds the block's labelled lines becomes their contacts, and its other notes
+    become title notes (2605.04795). Every case the rule cannot place completely keeps the note
+    whole. Guards `perfect_kernel_batchieeeroute::ieee_is_with_notes_route_to_the_named_authors`,
+    `perfect_kernel_batchspconf::{spconf_marked_address_lines_go_under_the_names,
+    interspeech_email_line_goes_to_its_authors}`, `perfect_kernel_batchdateleg::a_date_its_legend_is_taken_from_is_void`
+    (OXIDIZED_DESIGN_DIVERGENCES #1067, #1071–#1073; #895, #897).
+  - **A note the class prints under the names sits before the abstract.** A binding declares
+    such a note (`\lx@names@note`, checked per class against its title page); every undeclared
+    note keeps Perl's place. Guard `perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names`
+    (OXIDIZED_DESIGN_DIVERGENCES #1074; #895).
+  - **A ragslab.sty binding; achemso and sn-jnl print their classes' marks.** ragslab (the
+    FAIR/Meta template's package) prints its names, marked affiliations, contributions, abstract
+    and metadata lines as frontmatter. The achemso and sn-jnl bindings (classes Perl does not
+    ship) follow the same note and mark rules, and a paper's own copy of the class in a
+    subdirectory keeps its title marks. Guard `06_cluster_frontmatter::frontmatter_ragslab_marks_link_affiliations`
+    (OXIDIZED_DESIGN_DIVERGENCES #1065, #1066, #1070; #895).
+  - **Author notes in the margin.** The base stylesheet's hover handles draw ⓘ, never a
+    footnote-mark glyph that collides with printed marks. On wide ar5iv screens marked notes,
+    the title's publication metadata included, stack in the side margin, and a shared note's
+    later marks highlight their margin note; on narrow screens each mark pops up its own copy
+    (OXIDIZED_DESIGN_DIVERGENCES #1069, #1075; ar5iv-css #67–#74; #895).
+  - **Notes a document adds to a class's title-page footnote list print.** acmart, elsarticle,
+    REVTeX, amsaddr and icml keep lists of title-page footnotes (`\g@addto@macro` targets) that
+    the bindings never defined, so a paper's additions were lost. The bindings now define them
+    where the files do, and each list runs where its class prints it, each `\footnotetext` a
+    title note (KNOWN_PERL_ERRORS #1283; 2402.08073's icml "Correspondence to:" line). OmniBus binds
+    `\orcid` (2606.13132), and pdfcomment's binding allocates soulpos's registers. Guards
+    `perfect_kernel_batchregbind::{bindings_define_the_macros_their_files_define,
+    bindings_print_the_title_page_lists_their_files_print}` (#891).
+  - **icml's `\icmlsetsymbol` leaves the command it is named after alone.** It defined
+    `\<name>` as well, so `\icmlsetsymbol{dagger}{$\dagger$}` made `\dagger` call itself; it now
+    defines only `\@icmlsymbol<name>`, as icml2026.sty:465-467 does (2606.08980). Guard
+    `perfect_kernel_batchicmlsym::an_icml_symbol_named_after_a_command_keeps_the_command`
+    (OXIDIZED_DESIGN_DIVERGENCES #1076; #897).
+  - **`\scalebox` reads its factors as numbers** (`{Float}[Float]{}`, as Perl), so a scale
+    prints as given (`0.75`, was `0.8`) and a mark set in `\scalebox{0.75}{\Letter}` spells its
+    glyph, not "0.75✉" (2606.29928, 2605.23320). An empty or zero `[yscale]` falls back to the
+    x-scale. A scale with a tail TeX does not read (old pstricks' `\scalebox{x y}`, cs0606057)
+    drops the tail with a counted Warning. Guards
+    `perfect_kernel_batchmarkscale::{scalebox_mark_spells_its_glyph_not_its_scale,
+    a_scale_factors_tail_is_dropped_with_a_warning}` (OXIDIZED_DESIGN_DIVERGENCES #1077; #897).
+  - **A raw class's labelled title-page field is a publication note.** A store the class's
+    title page prints right after its own label, alone on its line (a "Course:" line), becomes
+    `<ltx:pubnote name="<label>">`, where its text was lost or misplaced. Guard
+    `perfect_kernel_batch77i::offtable_store_typeset_by_the_title_page` (Bruce Miller Q3.13; #884).
+  - **A unit with no title shows its publication notes, subtitle and dates in the HTML.** They
+    were in the XML but rendered only beside a title (shared with Perl,
+    `LaTeXML-structure-xhtml.xsl:480/:751/:790`); a titleless unit's head block now renders
+    them in `maketitle`'s order (2006.12592, 1504.03712, els-mrw's `\articletag` papers).
+    Guard `perfect_kernel_batch61::untitled_head_metadata_reaches_the_html`
+    (OXIDIZED_DESIGN_DIVERGENCES #262; #881).
+  - **llncs and svjour3 keyword lists print their class's separator** (upstream LaTeXML
+    #2263). llncs `\keywords{Alpha \and Beta}` printed "Alpha Beta"; it prints "Alpha · Beta",
+    as llncs.cls:906 defines `\and` there, and svjour3's `\keywords`, `\subclass`, `\PACS`,
+    `\CRclass` and `\JEL` print its `$\cdot$` (2004.08441, 2105.07969). Perl shares the bug
+    (KNOWN_PERL_ERRORS #1272). **apacite's full cites** (upstream #711): `\fullcite`,
+    `\fullciteNP`, `\fullciteA`, `\fullciteauthor`, `\fullciteauthorA`, `\citeauthorNP` and
+    `\shortciteauthorA`, in classic citation mode only, as apacite.sty. Guard
+    `perfect_kernel_batchqa76a::class_keyword_lists_print_their_and` (#871).
+  - **amsppt's heads hold their bodies, its theorem-like blocks take ids, and `\roster` keeps its
+    items.** `\head`, `\subhead`, `\subsubhead` and `\specialhead` open their unit until the next
+    head at their level (Perl amsppt.sty.ltxml:94-140), where each closed after its title;
+    `\proclaim`, `\definition`, `\remark`, `\example` and `\demo` take ids from one `theorem`
+    counter (math9201249: `Thmx1`…`Thmx15`); `\Refs` is back matter. Every `\roster` was an
+    empty list (Perl too, KNOWN_PERL_ERRORS #1270): its items are kept, with amsppt's
+    `\item"label"`/`\item[n]` (53 of 63 census papers recover 1,178 items; math0309287).
+    Guard `perfect_kernel_batchamsppt::amsppt_heads_and_theorems` (KNOWN_PERL_ERRORS #1269,
+    OXIDIZED_DESIGN_DIVERGENCES #456; #868).
+  - **A preamble-only command used in the body raises LaTeX's Error.** `\begin{document}`
+    walks `\@preamblecmds` where latex.ltx does (:9521-9522): each listed command used later
+    gives "LaTeX Error: Can be used only in preamble" as pdflatex, then runs as Perl recovers;
+    before, 6 of them erred and `\documentclass`, `\DeclareTextCommand`, `\listfiles` or a
+    second `\begin{document}` passed silently. A body package's `\@onlypreamble` counts, and
+    nothing errs inside a package load or a standalone/subfiles sub-file's preamble. A missing
+    class's fallback no longer leaves `\@currext` = `cls` in the body. Guard
+    `error_boundary::perfect_kernel_error_boundary` (OXIDIZED_DESIGN_DIVERGENCES #226; Bruce
+    Miller QA90; #867, #884, #891).
+  - **Native pgfmath computes when digested, not inside TeX's optional-space scan.**
+    `\pgfmathparse` and the `\pgfmath<fn>@` functions computed when expanded, so after a unit
+    (`\dd=2pt%⏎\pgfmathparse{\dd+3pt}`) they read the old value: 8.0 for pdflatex's 5.0
+    (tex.web §443-§448). They now define `\pgfmathresult` when digested (2606.14412: 55 Errors →
+    0, its curve where the PDF draws it; arrows.meta Stealth tips in pdflatex's proportions).
+    Perl shares the bug (KNOWN_PERL_ERRORS #1274). Guard
+    `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` (Bruce Miller QA11; #872).
+  - **`\parbox` keeps the page's `\textwidth` and `\columnwidth`.** It set them to the box's
+    width (Perl too, KNOWN_PERL_ERRORS #1273), so `\parbox{0.44\textwidth}{\includegraphics[width=0.44\textwidth]{…}}`
+    gave 66.8pt for pdflatex's 151.8pt (1412.0314, 1711.09469); it sets only `\hsize`,
+    `\linewidth` and `\@totalleftmargin`, as latex.ltx's `\@iiiparbox`. Only floats modelled
+    on `\@xfloat` reset `\hsize`, so a subfloat (subcaption, subfig, subfigure) keeps the
+    enclosing width (2010.06608, 2007.14228). Guard
+    `perfect_kernel_batchqa14a::parbox_sets_only_the_line_width` (Bruce Miller QA14; #873).
+  - **`\leaders` with a rule is the leader itself** (issue 805). `\hrulefill`-style leaders
+    were an `ltx:text` around an `ltx:rule`; they are `<ltx:rule class="ltx_leader">`
+    (`ltx_filled_leader` in a box of known width), as in TeX a rule after `\leaders` is never
+    typeset on its own (tex.web §1078, §1084), and a binding hook that closes the text first
+    no longer raises `Error:malformed:ltx:text` (BookML). Perl shares the defect
+    (KNOWN_PERL_ERRORS #1282). Guard `perfect_kernel_batch58::leaders_rule_keeps_the_paragraph` (#883).
+  - **`\not` moves its operand as Perl does.** A nested `\not` at any depth, and `\not\not=`,
+    give `≠`/`∉` where they gave a bare `／`, a plain `=` and an invisible times, and a
+    cancelled operand keeps its size (1009.4552, 1611.10101, 1701.02906). Guard
+    `perfect_kernel_batchnotcancel::not_cancel_moves_its_operand` (#887).
+  - **fbox and listings frames have their padding; `array[t]`/`array[b]` align by their
+    baseline** (upstream LaTeXML master `0db6f47e`). `\fboxsep` pads `\fcolorbox` and text
+    `\boxed`, a listing frame takes its padding from `framesep`, and `frame=tb` and the other
+    letter forms are drawn (upstream LaTeXML #2820); a `frame=` that names no side draws none, as
+    listings.sty (OXIDIZED_DESIGN_DIVERGENCES #1038). `array[t]`/`[b]` give `<mtable
+    align="baseline1">`/`"baseline-1"` (upstream #2875); `\lozenge` and `\blacklozenge` have
+    pdflatex's width (upstream #2845). A `.zip` destination keeps an existing log, its member named by
+    `--log`, and EPUB keeps its log outside the container (upstream #2855, OXIDIZED_DESIGN_DIVERGENCES
+    #1037). Guards `perfect_kernel_batchups1::{fboxsep_pads_fcolorbox_boxed_and_listing_frames,
+    mtable_align_is_the_first_or_last_baseline, lozenge_widths_are_msam_glyph_widths}` (#845).
+  - **Faster conversions, byte-identical output.** A performance pass: typical arXiv papers
+    take a median 10.4 % fewer instructions (5.8–26.7 %), the issue-790 book 18 % fewer with its
+    peak memory 6.7 → 4.3 GB, and 2308.04512 (447 pages) 16 % fewer; every output file is
+    byte-identical. The levers (one math grammar per streamed conversion, cheaper `\global`
+    undo, shared math subtrees, token-path and XPath allocations) are in
+    `docs/performance/PERFORMANCE.md` (2026-11-15). libxml 0.3.24 and libmarpa-asf-sys 0.3.1
+    from crates.io (#885).
+  - **Large math documents post-process in linear time** (issue 802). Each XMDual collapse
+    renamed its references with a whole-document XPath, quadratic in the number of collapses
+    and failing past libxml2 2.15's 10,000,000-node limit ("XPath evaluation failure", then
+    `Fatal:TooManyErrors`); one idref index now serves every collapse (2,000 collapses:
+    259 → 24 G instructions). Shared with Perl (KNOWN_PERL_ERRORS #1248). Guard
+    `perfect_kernel_batchi802::collapsed_dual_references_take_the_branch_id` (#865).
+  - **A math-parse use-after-free is gone** (issue 790). A discarded math subtree could hold
+    the document's insertion point, so the next formula walked freed memory: the issue's book
+    exited with SIGSEGV. As Perl's `removeNode` (Document.pm:1783-1792), a discard moves the
+    point out first. Guards `02_unit_replace_tree::discard_subtree_keeps_the_insertion_point_out`,
+    `06_cluster_math::cluster_discard_keeps_the_insertion_point_out` (#876).
+  - **`\includegraphics[page=N]` of a vector PDF, N ≥ 2, renders with mutool.** The output was
+    sought under the source page's number while mutool numbers its own output pages from 1, so
+    such a page always fell back to pdftocairo (a different size) and left a stray
+    `.mutool_svg1.svg` in the destination. SVG cache keys are salted once, so every SVG is
+    re-rendered by one converter (2305.12780, 2512.04096). Guards
+    `graphics::tests::vector_svg_of_page_two_is_page_two`,
+    `graphics_cache::tests::svg_keys_are_salted_and_png_keys_are_not` (#886).
+  - **`cortex_worker` leaves no temporary file behind.** Each slot's child runs with its own
+    `TMPDIR` (and ImageMagick's), emptied before every respawn, so a killed conversion's files
+    go with it; the graphics cache removes a failed install's tmp file and prunes old ones.
+    Output is unchanged. Guards `cortex_worker_exit_reports::a_respawned_slot_starts_with_an_empty_tmpdir`,
+    `graphics_cache::tests::{a_failed_install_leaves_neither_tmp_nor_dims,
+    a_prune_reclaims_the_tmp_files_of_killed_installs}` (#888).
+  - **`cortex_worker` built for AVX2 no longer crashes on its first connect.** The bundled
+    libzmq allocated 64-byte-aligned queue chunks with plain `malloc`; `.cargo/config.toml` now
+    passes `-DHAVE_POSIX_MEMALIGN=1 -DZMQ_CACHELINE_SIZE=64` (CorTeX KNOWN_ISSUES L-3; #819).
   - **A note several authors share prints once.** The XML keeps a copy of a shared author note
     (an authblk `\affil[*]`, a legend line's `*`) on every author, each with its `mark`, as Perl
     does; the HTML prints the first copy (class `ltx_note_shared`) and, at each other author, its
