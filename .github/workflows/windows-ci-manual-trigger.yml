@@ -168,16 +168,14 @@ jobs:
 
       - name: TeX Live fingerprint (dump cache key)
         id: tlfp
-        shell: pwsh
-        run: |
-          $banner = pdflatex --version | Select-Object -First 1
-          if ("$banner" -match 'TeX Live ([0-9]{4})') { "year=$($Matches[1])" >> $env:GITHUB_OUTPUT }
+        shell: bash
+        run: bash tools/ci_tex_fingerprint.sh
       - name: cache engine dumps
         id: dumps
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ steps.tlfp.outputs.sources }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         shell: pwsh

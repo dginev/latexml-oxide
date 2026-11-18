@@ -30,9 +30,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
-# The TeX Live package set the macOS jobs install with TeX-Live/setup-texlive-action — the same list
-# as .github/workflows/windows-ci-manual-trigger.yml (which mirrors the Linux job's apt list). Keep
-# the two in step; a change here also changes the action's cache key.
+# The TeX Live package set the macOS jobs install with TeX-Live/setup-texlive-action: the Linux `test`
+# job's apt TeX set as TL collections and packages, so both platforms run (and visibly skip) the same
+# tests. Like the apt set, it leaves out fonts-extra and lang-chinese/korean: the tests that load them
+# declare it with `requires`. The list is also the action's cache key; the build job and the shards
+# share it, so the shards restore the tree the build stamped its dumps against.
 env:
   TEXLIVE_PACKAGES: >-
     scheme-medium
@@ -40,11 +42,18 @@ env:
     collection-mathscience
     collection-bibtexextra
     collection-publishers
-    collection-fontsextra
     collection-langgerman
     collection-langfrench
     collection-langgreek
     collection-langcyrillic
+    collection-plaingeneric
+    tipa
+    collection-pstricks
+    collection-langother
+    collection-langarabic
+    collection-langeuropean
+    collection-langspanish
+    tex-gyre
     dvipng
 
 jobs:
@@ -303,13 +312,13 @@ jobs:
       # jobs share one entry and this step is a no-op on the common cache hit.
       - name: TeX Live fingerprint (dump cache key)
         id: tlfp
-        run: echo "year=$(pdflatex --version 2>/dev/null | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)" >> "$GITHUB_OUTPUT"
+        run: bash tools/ci_tex_fingerprint.sh
       - name: cache engine dumps
         id: dumps
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ steps.tlfp.outputs.sources }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -415,7 +424,7 @@ jobs:
       # jing for the schema guards. texlive-fonts-extra (669 MB), lang-chinese/
       # korean and games stay out: the tests that load them declare it with
       # `requires` and skip visibly (listed after the run). These packages add
-      # no file the dumps read (latex.ltx/expl3), so the dump-cache key stays.
+      # no file the dumps stamp (latex.ltx/expl3/plain.tex), so the dump-cache key stays.
       # mupdf-tools + poppler-utils: the PDF→SVG converters (mutool, pdftocairo)
       # that the latexml_post vector-SVG tests require (LATEXML_SVG_TESTS below).
       # tools/ci_apt_install.sh bounds the download and drops a slow first mirror (checkout precedes it).
@@ -455,20 +464,21 @@ jobs:
       # bust the cache. The dump is thus a deterministic function of
       # latexml_{core,engine,codegen}/src, the init driver
       # (latexml_oxide/src/ini_tex.rs: it sets initex's brace catcodes before
-      # the format is read) + the TeX Live release, so most PRs
+      # the format is read) + the format sources the dump stamps (latex.ltx,
+      # expl3-code.tex, plain.tex: tools/ci_tex_fingerprint.sh), so most PRs
       # (post, math-parser, PACKAGE bindings, tests, docs) skip the ~8-min
       # dump-generation step. Conservative within that set (over-regenerate,
       # never stale; the test suite catches a bad dump). `runner.os` keeps
       # Linux/macOS caches distinct. Bump `v1` if the dump format changes.
       - name: TeX Live fingerprint (dump cache key)
         id: tlfp
-        run: echo "year=$(pdflatex --version 2>/dev/null | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)" >> "$GITHUB_OUTPUT"
+        run: bash tools/ci_tex_fingerprint.sh
       - name: cache engine dumps
         id: dumps
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ steps.tlfp.outputs.sources }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -513,8 +523,8 @@ jobs:
   # (2026-11-15..18: 152 macOS runner-hours; 132 of the 138 waits over 15 min
   # had all 5 slots held by our own jobs).
   #
-  # TeX Live comes from TeX-Live/setup-texlive-action (cached, the Windows
-  # workflow's package set: TEXLIVE_PACKAGES above), and libkpathsea is built
+  # TeX Live comes from TeX-Live/setup-texlive-action (cached; the Linux job's
+  # package set: TEXLIVE_PACKAGES above), and libkpathsea is built
   # from source and linked STATICALLY (tools/build_static_kpathsea.sh, as the
   # macOS release leg does), so the in-process kpathsea backend is still the
   # one exercised — now the shipped one — and no shard needs Homebrew's texlive.
@@ -566,9 +576,24 @@ jobs:
         uses: TeX-Live/setup-texlive-action@v4
         with:
           packages: ${{ env.TEXLIVE_PACKAGES }}
-      # Sets KPATHSEA_LIB_DIR + KPATHSEA_STATIC for the build below.
+      # The static libkpathsea.a is a function of the pinned source ref in its
+      # build script, so it is cached on that script.
+      - name: cache static libkpathsea
+        id: kpse
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/tlsrc/texk/kpathsea/.libs
+          key: kpathsea-static-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build_static_kpathsea.sh') }}
       - name: build static libkpathsea from source
+        if: steps.kpse.outputs.cache-hit != 'true'
+        env:
+          KPSE_SRC_DIR: ${{ runner.temp }}/tlsrc
         run: bash tools/build_static_kpathsea.sh
+      # What the script exports on a build, set here for a cache hit as well.
+      - name: link libkpathsea statically
+        run: |
+          echo "KPATHSEA_LIB_DIR=$RUNNER_TEMP/tlsrc/texk/kpathsea/.libs" >> "$GITHUB_ENV"
+          echo "KPATHSEA_STATIC=1" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
@@ -580,20 +605,21 @@ jobs:
       # are NOT in the base dump and are deliberately EXCLUDED from the key —
       # otherwise the common case (editing a package binding) would needlessly
       # bust the cache. The dump is thus a deterministic function of
-      # latexml_{core,engine,codegen}/src + the TeX Live release, so most PRs
+      # latexml_{core,engine,codegen}/src + the format sources it stamps
+      # (tools/ci_tex_fingerprint.sh), so most PRs
       # (post, math-parser, PACKAGE bindings, tests, docs) skip the ~8-min
       # dump-generation step. Conservative within that set (over-regenerate,
       # never stale; the test suite catches a bad dump). `runner.os` keeps
       # Linux/macOS caches distinct. Bump `v1` if the dump format changes.
       - name: TeX Live fingerprint (dump cache key)
         id: tlfp
-        run: echo "year=$(pdflatex --version 2>/dev/null | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)" >> "$GITHUB_OUTPUT"
+        run: bash tools/ci_tex_fingerprint.sh
       - name: cache engine dumps
         id: dumps
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ steps.tlfp.outputs.sources }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
