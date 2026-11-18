@@ -294,20 +294,24 @@ pub fn replay_captured(d: CapturedDiagnostics) {
     LOG_BUFFER.try_borrow().is_ok(),
     "replay_captured: LOG_BUFFER contended — captured text would be dropped"
   );
-  if !d.log.is_empty()
+  // Not mirrored: a worker thread's own buffer already mirrored this text as it was written
+  // (a render worker *process*'s replayed log, `render_workers.rs`, is not in the mirror).
+  append_logged_text(&d.log);
+  crate::common::error::merge_report_counts(d.counts);
+}
+
+/// Append to the bound log text already logged once (a worker's captured log, a session's log), on a fresh line;
+/// not re-mirrored, as the mirror took it when it was first written.
+pub fn append_logged_text(text: &str) {
+  if !text.is_empty()
     && let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
     && let Some(ref mut log) = *buf
   {
-    // The captured text is already per-record newline-terminated; just make
-    // sure it starts on a fresh line so it can't glue onto an in-flight note.
-    // Not mirrored: a worker thread's own buffer already mirrored this text as it was written
-    // (a render worker *process*'s replayed log, `render_workers.rs`, is not in the mirror).
     if !log.is_empty() && !log.ends_with('\n') {
       log.push('\n');
     }
-    log.push_str(&d.log);
+    log.push_str(text);
   }
-  crate::common::error::merge_report_counts(d.counts);
 }
 
 /// Strip ANSI escape sequences from a string for log file output.

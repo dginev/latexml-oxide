@@ -43,6 +43,20 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Rhai bindings: Perl's hook bodies port 1:1, and every diagnostic is located.** The `Stomach` handle has
+    Perl's `bgroup`, `egroup`, `begingroup`, `endgroup`, `beginMode`, `endMode`, `enterHorizontal` and
+    `leaveHorizontal`. The boxes a definition's `beforeDigest`/`afterDigest` hook returns are kept, as Perl keeps
+    them (were dropped); any other value is dropped with one `Warning:deprecated` per binding load, as a primitive
+    body's; a parameter type's hooks run for effect only, as Perl's.
+    A closure value in a `properties` map is called with `(stomach, args…)`, as Perl calls a CODE value (was
+    printed as `Fnanon…`). A script's `Error()`, `Warn()` and `Info()` name the `.rhai` line and column as its
+    `Fatal()` does; a failure inside script functions lists each call it passed through; a failing `--preload`ed
+    binding is in the conversion's log (was only on stderr), once, and a message logged where no mouth reads a
+    source has no `at locator.rs` line. The README, guide and `docs/examples` inline constructors declare
+    `enterHorizontal: true`, so the space after one that opens a paragraph is kept. Guards
+    `30_script_bindings::{rhai_hooks_port_perls_stomach_methods_and_values, a_rhai_failure_names_its_function_calls,
+    a_failing_preloaded_binding_is_logged, a_rhai_diagnostic_names_its_binding_file}`.
+
   - **Three crashes of run 397 fixed.** A box width stated through a register read with arguments
     (`\makebox[1.5\fontcharwd\font`m]{…}`) in a figure of subfigure panels no longer panics: the panel-grid
     rule skips such registers, and pgfmath errs on one in a coordinate, as TeX does (2105.01581). An
@@ -50,6 +64,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     1901.06584) is reverted from its definition with a Warning instead of panicking. titlesec's before-code
     gets the author's title, not the kernel's font wrapper, so ccjnl.cls's `\capitalisefmtwords` no longer
     overflows the stack (2208.03460, 2208.09785, 2209.08255). Guards `perfect_kernel_batchpanic397`.
+
   - **A Rhai binding's diagnostic names its `.rhai` file.** A failure while a binding loads is one
     `Error:script:<file>.rhai` (was `Error:unexpected:` with the text twice), located at the line and
     column in that file and then at the `\usepackage`; a body's error and a `Fatal(…)` carry the same

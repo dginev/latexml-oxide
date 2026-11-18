@@ -2111,6 +2111,36 @@ fn a_rhai_diagnostic_names_its_binding_file() {
       "X ran Y",
     ),
     (
+      "a script's Error(), located as its Fatal() (RHAIPOL)",
+      "DefPrimitive(\"\\\\dgE\", |stomach| {\n  Error(\"mycat\", \"myobj\", \"my error\");\n  return;\n});",
+      "X \\dgE{} Y",
+      "Error:mycat:myobj my error",
+      "/dg.sty.rhai; line 2 col 3",
+      "\tat t.tex; line 1 col 61 - line 1 col 61",
+      (1, 0, 0),
+      "X  Y",
+    ),
+    (
+      "a script's Warn()",
+      "DefPrimitive(\"\\\\dgW\", |stomach| {\n  Warn(\"mycat\", \"myobj\", \"my warning\");\n  return;\n});",
+      "X \\dgW{} Y",
+      "Warning:mycat:myobj my warning",
+      "/dg.sty.rhai; line 2 col 3",
+      "\tat t.tex; line 1 col 61 - line 1 col 61",
+      (0, 0, 1),
+      "X  Y",
+    ),
+    (
+      "a script's Info()",
+      "DefPrimitive(\"\\\\dgI\", |stomach| {\n  Info(\"mycat\", \"myobj\", \"my note\");\n  return;\n});",
+      "X \\dgI{} Y",
+      "Info:mycat:myobj my note",
+      "/dg.sty.rhai; line 2 col 3",
+      "\tat t.tex; line 1 col 61 - line 1 col 61",
+      (0, 0, 0),
+      "X  Y",
+    ),
+    (
       "a deprecated alias: the file, its call's line unknown",
       "assign_value(\"dgzero\", \"1\");",
       "X Y",
@@ -2150,4 +2180,198 @@ fn a_rhai_diagnostic_names_its_binding_file() {
     }
   }
   assert!(failures.is_empty(), "{failures:#?}");
+}
+
+/// A failure inside script functions names each call it passed through, innermost first, after the two locators
+/// (RHAIPOL): the record is the innermost error, then `in call to function 'helper'` at its call in `outer`, then
+/// `outer` at its call in the body.
+#[test]
+fn a_rhai_failure_names_its_function_calls() {
+  use latexml::util::test::{error_count, warning_count};
+  let rhai = "fn helper(x) {\n  x.nope()\n}\nfn outer(x) {\n  helper(x)\n}\n\
+              DefPrimitive(\"\\\\dgN\", |stomach| {\n  outer(1);\n  return;\n});";
+  let tex = "\\documentclass{article}\\usepackage{dg}\\begin{document}X \\dgN{} Y\\end{document}";
+  let (log, xml) = latexml::util::test::convert_files_with(tex, &[("dg.sty.rhai", rhai)], None);
+  let lines: Vec<&str> = log.lines().collect();
+  let at = lines
+    .iter()
+    .position(|l| *l == "Error:script:primitive \\dgN Function not found: nope (int)")
+    .unwrap_or_else(|| panic!("{log}"));
+  assert!(
+    lines[at + 1].starts_with("\tat ") && lines[at + 1].ends_with("/dg.sty.rhai; line 2 col 5"),
+    "{log}"
+  );
+  assert_eq!(
+    lines[at + 2..at + 5],
+    [
+      "\tat t.tex; line 1 col 61 - line 1 col 61",
+      "\tin call to function 'helper' (line 5, position 3)",
+      "\tin call to function 'outer' (line 8, position 3)",
+    ],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(xml.contains("<p>X  Y</p>"), "{xml}");
+}
+
+/// A `--preload`ed binding that fails is logged as any other Error (RHAIPOL): the record is in the conversion's log,
+/// located in its `.rhai` file and in no TeX source (no mouth is open yet, Perl's Error.pm:623), and what loaded
+/// before the failure stands.
+#[test]
+fn a_failing_preloaded_binding_is_logged() {
+  use latexml::util::test::{error_count, warning_count};
+  // (the preload by its path, as `--preload=<dir>/pbad.sty`: the session loads it before the job's directory is known)
+  let dir = tempfile::tempdir().expect("tempdir");
+  let rhai = "DefMacro(\"\\\\okmac\", \"ok\");\nlet x = undefined_fn(3);";
+  std::fs::write(dir.path().join("pbad.sty.rhai"), rhai).expect("write the binding");
+  let preload = dir.path().join("pbad.sty").to_string_lossy().into_owned();
+  let tex = "\\documentclass{article}\\begin{document}Hello \\okmac.\\end{document}";
+  let (log, xml) = latexml::util::test::convert_files_with(tex, &[], Some(&preload));
+  let lines: Vec<&str> = log.lines().collect();
+  let at = lines
+    .iter()
+    .position(|l| {
+      *l == "Error:script:pbad.sty.rhai Function not found: undefined_fn (int); the rest of the binding is skipped"
+    })
+    .unwrap_or_else(|| panic!("{log}"));
+  assert!(
+    lines[at + 1].starts_with("\tat ") && lines[at + 1].ends_with("/pbad.sty.rhai; line 2 col 9"),
+    "{log}"
+  );
+  assert!(!lines[at + 2].starts_with("\tat "), "{log}");
+  assert!(!log.contains("locator.rs"), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(xml.contains("<p>Hello ok.</p>"), "{xml}");
+}
+
+/// A session's messages logged where no mouth reads a source (`--preload=ar5iv.sty`, as the cortex fleet runs) have
+/// no `at` line (Perl prints the sourceless mouth's own `String; line …` there, Gullet.pm:150-157; we omit it), never
+/// `Locator::default`'s `locator.rs`;
+/// the session block opens the log once, and a clean document stays clean (RHAIPOL review, probe ok5).
+#[test]
+fn a_preloaded_session_invents_no_locator() {
+  use latexml::util::test::{error_count, warning_count};
+  let tex =
+    "\\documentclass{article}\\begin{document}\\section{Intro}Hello $x^2+y$ world.\\end{document}";
+  let (log, xml, _, status) =
+    latexml::util::test::convert_files_with_status(tex, &[], Some("ar5iv.sty"));
+  assert!(!log.contains("locator.rs"), "{log}");
+  assert_eq!(log.matches("Info:kpathsea:backend").count(), 1, "{log}");
+  assert_eq!(
+    (error_count(&log), warning_count(&log), status),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert!(xml.contains("world.</p>"), "{xml}");
+}
+
+/// The cortex log mirror (the crash report's log, `exit_report::claim_task`) holds the session's log once: mirrored as
+/// it was logged, not again when the conversion's log opens with it (RHAIPOL review). The session's line is a
+/// `--preload`ed binding's `Info()`, unique to this test, as other tests' conversions may share the mirror.
+#[test]
+fn the_log_mirror_holds_the_session_log_once() {
+  use std::os::fd::AsRawFd;
+  let dir = tempfile::tempdir().expect("tempdir");
+  let rhai = "Info(\"mirrorprobe\", \"session\", \"preloaded once\");";
+  std::fs::write(dir.path().join("mprobe.sty.rhai"), rhai).expect("write the binding");
+  let preload = dir.path().join("mprobe.sty").to_string_lossy().into_owned();
+  let mirror = std::fs::File::create(dir.path().join("mirror.log")).expect("the mirror file");
+  latexml_core::util::logger::set_log_mirror(Some(mirror.as_raw_fd()), 1 << 30);
+  let tex = "\\documentclass{article}\\begin{document}Hello.\\end{document}";
+  let (log, _) = latexml::util::test::convert_files_with(tex, &[], Some(&preload));
+  latexml_core::util::logger::set_log_mirror(None, 0);
+  let mirrored = std::fs::read_to_string(dir.path().join("mirror.log")).expect("the mirror");
+  assert_eq!(log.matches("Info:mirrorprobe:session").count(), 1, "{log}");
+  assert_eq!(
+    mirrored.matches("Info:mirrorprobe:session").count(),
+    1,
+    "{mirrored}"
+  );
+}
+
+/// A parameter type's `beforeDigest`/`afterDigest` run for effect only, their value ignored (Parameter.pm:133-136),
+/// unlike a definition's: a box is not inserted and a non-box is no Warning (RHAIPOL review, probe pt).
+#[test]
+fn a_parameter_types_hooks_run_for_effect_only() {
+  use latexml::util::test::{error_count, warning_count};
+  let rhai = r##"
+DefParameterType("PTA", |gullet| gullet.readArg(), #{ afterDigest: |stomach| Digest("[ptafter]") });
+DefParameterType("PTB", |gullet| gullet.readArg(), #{ beforeDigest: |stomach| 5, afterDigest: |stomach| 5 });
+DefConstructor("\\pta PTA", "<ltx:text class=\"a\">#1</ltx:text>");
+DefConstructor("\\ptb PTB", "<ltx:text class=\"b\">#1</ltx:text>");
+"##;
+  let tex = "\\documentclass{article}\\usepackage{pt}\\begin{document}A \\pta{x} B \\ptb{y} C.\\end{document}";
+  let (log, xml, _, status) =
+    latexml::util::test::convert_files_with_status(tex, &[("pt.sty.rhai", rhai)], None);
+  assert_eq!(
+    (error_count(&log), warning_count(&log), status),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert!(
+    xml.contains(r#"<p>A <text class="a">x</text> B <text class="b">y</text> C.</p>"#),
+    "{xml}"
+  );
+}
+
+/// Perl's hook bodies port 1:1 (RHAIPOL): the stomach's group, mode and paragraph methods (Stomach.pm:338-447,
+/// :494-563), the boxes a digest hook returns kept after the whatsit or on the list (Primitive.pm:42-54,
+/// Constructor.pm:114-122), and a `properties` map's closure values called with `($stomach, @args)` (Constructor.pm:
+/// 101-104). The paragraphs are Perl 0.8.8's for the same binding in Perl (repro
+/// rhai-bindings/stomach_methods_hook_boxes.tex).
+#[test]
+fn rhai_hooks_port_perls_stomach_methods_and_values() {
+  use latexml::util::test::{assert_element, error_count, warning_count};
+  let rhai = r##"
+DefPrimitive("\\opengrp", |stomach| { stomach.bgroup(); return; });
+DefPrimitive("\\closegrp", |stomach| { stomach.egroup(); return; });
+DefPrimitive("\\startpara", |stomach| { stomach.enterHorizontal(); return; });
+DefPrimitive("\\endpara", |stomach| { stomach.leaveHorizontal(); return; });
+DefPrimitive("\\opensg", |stomach| { stomach.begingroup(); return; });
+DefPrimitive("\\closesg", |stomach| { stomach.endgroup(); return; });
+DefPrimitive("\\openhm", |stomach| { stomach.beginMode("restricted_horizontal"); return; });
+DefPrimitive("\\closehm", |stomach| { stomach.endMode("restricted_horizontal"); return; });
+DefConstructor("\\withpost{}", "<ltx:text class=\"w\">#1</ltx:text>", #{
+  afterDigest: |stomach, whatsit| Digest("[after]")
+});
+DefPrimitive("\\pafter", |stomach| { return; }, #{ afterDigest: |stomach| Digest("[pafter]") });
+DefPrimitive("\\pbefore", |stomach| { return; }, #{ beforeDigest: |stomach| Digest("[pbefore]") });
+DefConstructor("\\pm{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
+  properties: #{ cls: |stomach, x| "c-" + ToString(x) }
+});
+"##;
+  let tex = "\\documentclass{article}\\usepackage{hk}\\begin{document}\n\
+             \\startpara{} kept space.\n\n\
+             A \\opengrp\\bfseries bold\\closegrp{} plain.\n\n\
+             Text\\endpara\\noindent next.\n\n\
+             A \\opensg\\itshape it\\closesg{} up \\openhm\\slshape sl\\closehm{} end.\n\n\
+             A \\withpost{w} B \\pafter C \\pbefore D.\n\n\
+             A \\pm{x} B.\n\\end{document}";
+  let (log, xml) = latexml::util::test::convert_files_with(tex, &[("hk.sty.rhai", rhai)], None);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (id, para) in [
+    ("p1", r#"<para xml:id="p1"><p>kept space.</p></para>"#),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>A <text font="bold">bold</text> plain.</p></para>"#,
+    ),
+    (
+      "p3",
+      r#"<para class="ltx_noindent" xml:id="p3"><p>Text</p><p>next.</p></para>"#,
+    ),
+    (
+      "p4",
+      r#"<para xml:id="p4"><p>A <text font="italic">it</text> up <text font="slanted">sl</text> end.</p></para>"#,
+    ),
+    (
+      "p5",
+      r#"<para xml:id="p5"><p>A <text class="w">w</text>[after] B [pafter]C [pbefore]D.</p></para>"#,
+    ),
+    (
+      "p6",
+      r#"<para xml:id="p6"><p>A <text class="c-x">x</text> B.</p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
 }

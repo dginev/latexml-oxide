@@ -73,7 +73,10 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   custom stylesheet needs LaTeXML.css or ar5iv-css for them; numeric citations carry `ltx_cite_numeric`; a shared
   author note prints once.
 - Rhai bindings: the older hook and argument forms keep working in 0.8.0 with one `Warning:deprecated` per binding
-  load and are removed in the release after 0.8.0; a binding that fails to load is `Error:script:<file>.rhai`.
+  load and are removed in the release after 0.8.0; a binding that fails to load is `Error:script:<file>.rhai`; the
+  boxes a definition's `beforeDigest`/`afterDigest` hook returns are kept, as in Perl (any other value warns).
+- The log opens with the session's own lines (format loading, preloads), as Perl's does, so a failing `--preload` is
+  in the log.
 - Rust library: `AssignRegister!` takes `(cs, value[, scope[, parameters]])`; `PostOptions::nodefaultresources` is
   now `default_resources` (inverted); the prelude exports `LazyLock` in place of `Lazy`.
 
