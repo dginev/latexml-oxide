@@ -317,8 +317,9 @@ const LXRD2_OLD_TEX: &str = r"\documentclass{article}
 
 /// W3RD2a: the names #716 replaces stay one release as aliases; each Warns `deprecated` once per binding load, naming
 /// its replacement, however often it runs (here twice), and keeps its old result. `DefAccent` reads no option, as Perl's (TeX_Character.pool.ltxml:92-100). Red on a1b6c0b827d: no
-/// Warning (W=0), and `#{bogus: true}` "Function not found". The space before `\lxb` is dropped as Perl drops it before
-/// an imperative constructor's `openElement` (RED `rhai-bindings/imperative_constructor_drops_space_red.tex`). W3RD2b: a macro
+/// Warning (W=0), and `#{bogus: true}` "Function not found". The space before `\lxb` is dropped as Perl drops it: `\lxa`,
+/// a constructor without enterHorizontal, opens the paragraph in vertical mode, where the space after it is dropped
+/// (OXIDIZED_DESIGN_DIVERGENCES #1079; GREEN `rhai-bindings/constructor_opening_the_paragraph_keeps_the_space.tex`). W3RD2b: a macro
 /// or primitive body declaring 1..=nargs parameters, no leading gullet/stomach, gets its arguments as strings, Warned
 /// with the fix; so does an old-form reversion `|x|` (red on 8ee92a55a49: W=13, the
 /// reversion `tex="\lxor{Whatsit}"`-garbage; on a1b6c0b827d E=1 for `#{bogus: true}`). W3RF: `AssignMeaning` is Perl's

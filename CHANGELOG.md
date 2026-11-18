@@ -727,6 +727,16 @@
     in Perl and in dynamically linked builds. Guard
     `xslt::max_depth_tests::transform_aborts_past_perls_recursion_depth`.
 
+  - **A command that sets text at a paragraph's start keeps the space after
+    it.** `\object{M31} is a galaxy.` (aa), `\url{http://x.org} is a site.`
+    (llncs) and an amsppt `\cite` gave `M31is`, `x.orgis`, `[1]is` (as Perl
+    does): the constructor stayed in vertical mode, where the space is dropped.
+    Those bindings, and the others whose text TeX sets there (ams `\URL`,
+    html's `\hyperref`, `\lxWithClass`, revtex's `\text`, fancybox's boxes,
+    csquotes' quotes, `\orcidlink`), now enter horizontal mode first, Perl's
+    `enterHorizontal`. OXIDIZED_DESIGN_DIVERGENCES #1079; guards
+    `perfect_kernel_batchinlinector`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`

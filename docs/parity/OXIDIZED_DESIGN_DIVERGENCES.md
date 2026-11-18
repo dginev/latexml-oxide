@@ -20759,6 +20759,36 @@ the same path. The walker's `KEYED_CONSTRUCTORS` row for `\scalebox` is gone (th
 `cluster_package_guards::perfect_kernel_batchmarkscale::scalebox_mark_spells_its_glyph_not_its_scale` (repro
 `sectioning-frontmatter/mark_scalebox_scale_is_no_ink`), `a_scale_factors_tail_is_dropped_with_a_warning`.
 
+### 1079. A constructor setting authored text starts the paragraph: `enterHorizontal` (maintainer ruling 2026-11-18; INLINECTOR)
+
+**Perl.** A constructor without `enterHorizontal` (or `mode => 'text'`) stays in vertical mode (Package.pm:1453-1475
+`DefConstructorI`); where it opens a paragraph, the space after it is dropped there (Stomach.pm:249-251, tex.web's
+vertical-mode space rule), so `\object{M31} is a galaxy.` (aa) gives `M31</text>is a galaxy.`. **Rust.** Was the same
+(dialect.rs `command_declared_mode`, stomach.rs). TeX starts the paragraph at such a command — its text, a `\mbox`, a
+`\leavevmode` — and keeps the space. **Rule.** A constructor whose output is authored text where TeX starts the
+paragraph declares `enterHorizontal`, Perl's own idiom (`\emph`, latex_constructs.pool.ltxml:419; aas_support's
+`\objectname`, the same construct as aa's `\object`); one that boxes (`\hbox`-like) or is vertical does not, and the kernel
+does not enter automatically (that changes Perl's digestion and cannot see an imperative body). **Given it**: aa_support
+`\object` (Perl :357; aa.cls `\def\object##1{##1}`), llncs `\url` (Perl :68; llncs.cls:899), ams_support `\@ams@url`
+(Perl :282), amsppt `\cite` (Perl :328; amsppt.sty:847 `\rom{[…]}`) and `\@bibitem@field`, html `\hyperrefdef`
+(Perl :45), latexml `\lxWithClass`, revtex4_support `\text` (`\REV@text` is `\mbox` in text, as amstext's `\text`),
+fancybox `\shadowbox`/`\doublebox`/`\ovalbox`/`\Ovalbox` (fancybox.sty:59-61 `\leavevmode\vbox`), csquotes'
+quote openers `\ltxml@oqmark@open`, `\ltxml@iqmark@open`, `\ltxml@mktextquote@open`, `\ltxml@mkblockquote@aopen` (a
+quote mark or the quote text follows), the kernel's `\lx@orcidlink` (orcidlink.sty `\href{…}{\mbox{…}}`) and
+`\lx@text@nounicode` (a glyph). **Not given**: rules and frames (`\hrule`, `\htmlrule`, `\lx@algo@rule`, xcolor
+`\boxframe` = `\hbox`, fancyvrb's frame, framed's title), `\hphantom` (latex.ltx `\finph@nt` puts a `\box`, no
+`\leavevmode`), `\lx@mark@nocite` and cleveref's number mark (print nothing), the algorithmic `\hfill` openers (always
+inside a line), csquotes' citation openers (`\mkcitation` opens with `\space`, which TeX drops in vertical mode) and
+display-quote opener (`\mkbegdispquote` prints nothing), `\@@generic@caption` (an Error path), `\lx@text@tweaked` (after
+its base glyph), units' `\helper@ams@text` (unused). **Upstream.** Offerable as one Perl patch: add `enterHorizontal => 1` to
+the same constructors in the Perl files named above (aa_support.sty.ltxml:357, llncs.cls.ltxml:68,
+ams_support.sty.ltxml:282, amsppt.sty.ltxml:328, html.sty.ltxml:45, …); Perl's output differs only by the kept space.
+**Guards.** `cluster_package_guards::perfect_kernel_batchinlinector::{aa_object_starts_the_paragraph,
+llncs_url_starts_the_paragraph, amsppt_cite_starts_the_paragraph, orcidlink_starts_the_paragraph,
+rhai_constructor_entering_horizontal_keeps_the_space}` (repros `paragraph-mode/*_starts_the_paragraph`,
+`rhai-bindings/constructor_opening_the_paragraph_keeps_the_space`, formerly `imperative_constructor_drops_space_red`,
+whose note blamed the imperative `\lxb`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

@@ -474,6 +474,7 @@ LoadDefinitions!({
   DefMacro!("\\URL{}", "\\@ams@url{#1}");
   DefConstructor!("\\@ams@url {}",
     "<ltx:ref href='#href'>#1</ltx:ref>",
+    enter_horizontal => true,
     properties => sub[args] {
       let url_str = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
       Ok(stored_map!("href" => clean_url(&url_str)))

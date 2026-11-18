@@ -1,0 +1,13 @@
+% mechanism: the kernel's `\lx@orcidlink` (orcidlink.sty `\orcidlink`: `\href{…}{\mbox{…}}`) opens the paragraph;
+%   without enterHorizontal it was digested in vertical mode and the space after it was dropped there
+%   (Stomach.pm:249-251), gluing the next word to the link
+% witness: synthetic, the engine-level member of OXIDIZED_DESIGN_DIVERGENCES #1079
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the iD logo, then " is my iD."
+% engines: perl 0.8.8 and rust M8B29: <p><ref … class="ltx_orcid" …>…</ref>is my iD.</p>
+% expect:  0 errors, 0 warnings; <p><ref … class="ltx_orcid" …>…</ref> is my iD.</p>
+% status:  RED (M8B29, perl) -> GREEN (INLINECTOR)
+\documentclass{article}
+\usepackage{orcidlink}
+\begin{document}
+\orcidlink{0000-0002-1825-0097} is my iD.
+\end{document}

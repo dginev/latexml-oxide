@@ -19,19 +19,20 @@ LoadDefinitions!({
   // Perl fancybox.sty.ltxml L25-36: DefConstructor(... mode => 'internal_vertical').
   // The mode declaration was dropped in the Rust stub — add it back so the
   // constructors pair like the Perl originals when they appear in
-  // paragraph-mode contexts.
+  // paragraph-mode contexts. Each starts the paragraph (fancybox.sty `\@shadowbox`: `\leavevmode\vbox`), so the
+  // space after it is kept (OXIDIZED_DESIGN_DIVERGENCES #1079).
   DefConstructor!("\\shadowbox MoveableBox",
     "<ltx:text cssstyle='border:1px solid black; box-shadow: 5px 5px 10px black;'>#1</ltx:text>",
-    mode => "internal_vertical");
+    mode => "internal_vertical", enter_horizontal => true);
   DefConstructor!("\\doublebox MoveableBox",
     "<ltx:text cssstyle='border:3px double black;'>#1</ltx:text>",
-    mode => "internal_vertical");
+    mode => "internal_vertical", enter_horizontal => true);
   DefConstructor!("\\ovalbox MoveableBox",
     "<ltx:text cssstyle='border:1px solid black;border-radius:5px;'>#1</ltx:text>",
-    mode => "internal_vertical");
+    mode => "internal_vertical", enter_horizontal => true);
   DefConstructor!("\\Ovalbox MoveableBox",
     "<ltx:text cssstyle='border:2px solid black;border-radius:5px;'>#1</ltx:text>",
-    mode => "internal_vertical");
+    mode => "internal_vertical", enter_horizontal => true);
 
   // Perl fancybox.sty.ltxml L38-46: {Sbox} stashes its digested body
   // globally under the `Sbox` state value; \TheSbox pops it and
