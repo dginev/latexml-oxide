@@ -61,7 +61,9 @@ intra-workspace `path`+`version` pin (`latexml_oxide` + inter-crate). `cargo set
 
 ### 2. Release-prep PR → RC tag (validation)
 Bump `latexml_oxide/Cargo.toml` to `X.Y.Z-rcN`, add the CHANGELOG window (the 0.7.x line
-uses `## [X.Y.Z] (theme summary)` with **no date**; `make_release.sh` slices on `^## [X.Y.Z]`),
+uses `## [X.Y.Z] (theme summary)` with **no date**; `make_release.sh` slices on `^## [X.Y.Z]`; from 0.8.0 the
+section is a ≤~100-line curated summary and the detailed `## Unreleased` entries move to
+`docs/release/CHANGES_vX.Y.Z.md`, per `docs/release/RELEASING.md` step 2),
 land the subcrate bumps. PR → green CI (validates the pin resolves) → merge → tag `X.Y.Z-rcN`
 → `release.yml` builds a **draft** across all 5 platforms. This is the real risk gate:
 **macOS x86_64 (Intel) fat-LTO is the OOM long pole** — confirm it's green before promoting.

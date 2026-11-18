@@ -31,6 +31,7 @@ The live worklists and the ship contract. Read these first when resuming.
 | [`parity/DEFERRED_FAMILIES.md`](parity/DEFERRED_FAMILIES.md) | Parked deep families (`.bst`, xy-pic, mode-frame, …); several carry explicit "do NOT start". |
 | [`release/RELEASE_CRITERIA.md`](release/RELEASE_CRITERIA.md) | The "what must be true before a public 1.0" contract: gates, binary-size budget, portability, license audit, tail-latency/RSS signals. |
 | [`release/RELEASING.md`](release/RELEASING.md) | Tag-driven release procedure; the self-contained-binary requirement. |
+| [`release/CHANGES_v0.8.0.md`](release/CHANGES_v0.8.0.md) | Every change in 0.8.0 with its guards and design references, and the 198 new bindings; `CHANGELOG.md` holds the release summary. |
 | [`release/CRATES_IO_PUBLISH.md`](release/CRATES_IO_PUBLISH.md) | `cargo publish` + docs.rs + library-use story: bottom-up publish order, the per-release checklist, the resolved blockers and their durable traps (10 MiB cap, never an `-rc`), docs.rs metadata, `latexml::api` entrypoint. |
 | [`release/CODE_SIGNING_POLICY.md`](release/CODE_SIGNING_POLICY.md) | Windows code signing: status (unsigned; SignPath declined), the Microsoft Store plan, roles, privacy, system changes (issue 775). |
 | [`release/LICENSE_INVENTORY.md`](release/LICENSE_INVENTORY.md) | Living license inventory for the redistributable binary (scopes the CC0 claim). |
