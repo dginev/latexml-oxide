@@ -20376,8 +20376,8 @@ behind it (`ltx_note_content`, shown on hovering the mark, after its "role: " la
   (`\icmlProjectLead`, `\icmlEqualSeniorContribution`, `\icmlEqualContributionAndSenior`, `\airesident`; a `\char` of
   U+2020 printed nothing: 2402.05011);
   `\icmlEqualContribution` is `\textsuperscript{*}Equal contribution`, as every
-  icml20xx.sty from 2017 prints it (icml2026.sty:502); `\icmlsetsymbol{name}{sym}` also defines the real
-  `\@icmlsymbol<name>` (:465-467), and `\icmlauthor{name}{labels}` gives each label naming one a mark-only note of the
+  icml20xx.sty from 2017 prints it (icml2026.sty:502); `\icmlsetsymbol{name}{sym}` defines only the real
+  `\@icmlsymbol<name>` (:465-467; #1076), and `\icmlauthor{name}{labels}` gives each label naming one a mark-only note of the
   creator (`\lx@annotate@frontmatter{ltx:creator}{ltx:note}[role=footnotemark,mark=…]`, as acmart's
   `\authornotemark`), the symbol icml2026.sty:446-458 prints after the name. Not a superscript in the name: the
   creator's `fuzzy:` label is its personname's text, and `\icmlcorrespondingauthor{Xiaosen Wang}` then went to the
@@ -20718,6 +20718,18 @@ Checked in Chrome at 1800 px (also scrolled) and 375 px on every mark of 15 pape
 2407.07614, 2606.00446 among them). **Guards**:
 `latexml_post::integration::a_shared_notes_copies_anchor_at_the_note_alone`; the shared-note pins in
 `integration.rs` (`a_shared_notes_other_marks_carry_its_hidden_copy` and three siblings) repinned with the styles.
+
+### 1076. icml's `\icmlsetsymbol` defines only `\@icmlsymbol<name>` (DG 2026-11-18; ICMLSYM)
+
+**Perl.** icml_support.sty.ltxml:37 gobbles `\icmlsetsymbol{}{}` (KNOWN_PERL_ERRORS #1285).
+
+**Rust.** `\icmlsetsymbol{name}{sym}` is `\expandafter\gdef\csname @icmlsymbol#1\endcsname{#2}`, as icml2026.sty:465-467
+(icml2024.sty:489-491) defines it. The binding also defined `\<name>`, which no icml20xx.sty does: with
+`\icmlsetsymbol{dagger}{$\dagger$}` (2606.08980) `\dagger` called itself, and `\icmlauthor`'s trial digestion of the
+label (`printed_label_pieces`) grew the pushback to 5.6 GB before its runaway limit, a Fatal under the worker's memory
+limit. 2310.06430's `\icmlWorkDone` (the reason the extra definition was added) is its copy's own `\newcommand`
+(icml2024.sty:529), which the copy, read as the file the binding stands in for, defines. **Guard**:
+`perfect_kernel_batchicmlsym::an_icml_symbol_named_after_a_command_keeps_the_command`.
 
 ## TeX-source fidelity family (TEXSRC)
 
