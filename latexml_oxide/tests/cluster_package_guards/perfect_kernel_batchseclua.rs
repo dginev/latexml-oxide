@@ -289,44 +289,205 @@ fn batchseclua_lua_interpreter_restarts_and_owns_its_pipe() {
   );
 }
 
-/// A tar source's symbolic and hard links are not unpacked (a warning each): `\input` of a link to a file beside
-/// the archive finds nothing. Base: the link was unpacked and the file beside it read.
+/// A tar source's link is unpacked only when its target, resolved through the links already made, stays inside the
+/// source tree: an internal symbolic link and an internal hard link are read; a symbolic link and a hard link to a file
+/// beside the archive, and a symbolic link through an internal one to `..`, are skipped, a counted Warning each.
+/// Base: every link was skipped, and the warnings went to stderr uncounted.
 #[cfg(unix)]
 #[test]
-fn batchseclua_tar_links_are_not_unpacked() {
+fn batchseclua_tar_links_stay_inside_the_source() {
   let root = tempfile::tempdir().unwrap();
   std::fs::write(root.path().join("beside.tex"), "BESIDEWORD").unwrap();
-  let tex = "\\documentclass{article}\\begin{document}[\\InputIfFileExists{lnk.tex}{}{none}][\\InputIfFileExists{hard.tex}{}{none}]\\end{document}\n";
+  let tex = "\\documentclass{article}\\begin{document}[\\InputIfFileExists{in.tex}{}{none}][\\InputIfFileExists{sub/up.tex}{}{none}][\\InputIfFileExists{hin.tex}{}{none}][\\InputIfFileExists{lnk.tex}{}{none}][\\InputIfFileExists{hard.tex}{}{none}][\\InputIfFileExists{sub/self/esc.tex}{}{none}]\\end{document}\n";
   let mut builder = tar::Builder::new(Vec::new());
-  let mut header = tar::Header::new_gnu();
-  header.set_size(tex.len() as u64);
-  header.set_mode(0o644);
-  header.set_cksum();
-  builder
-    .append_data(&mut header, "t.tex", tex.as_bytes())
-    .unwrap();
-  for (kind, name) in [
-    (tar::EntryType::Symlink, "lnk.tex"),
-    (tar::EntryType::Link, "hard.tex"),
+  for (name, body) in [("t.tex", tex), ("inside.tex", "INSIDEWORD")] {
+    let mut header = tar::Header::new_gnu();
+    header.set_size(body.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+    builder
+      .append_data(&mut header, name, body.as_bytes())
+      .unwrap();
+  }
+  let beside = root.path().join("beside.tex");
+  for (kind, name, target) in [
+    (
+      tar::EntryType::Symlink,
+      "in.tex",
+      PathBuf::from("inside.tex"),
+    ),
+    (
+      tar::EntryType::Symlink,
+      "sub/up.tex",
+      PathBuf::from("../inside.tex"),
+    ),
+    (tar::EntryType::Link, "hin.tex", PathBuf::from("inside.tex")),
+    (tar::EntryType::Symlink, "lnk.tex", beside.clone()),
+    (tar::EntryType::Link, "hard.tex", beside.clone()),
+    (tar::EntryType::Symlink, "sub/self", PathBuf::from("..")),
+    (
+      tar::EntryType::Symlink,
+      "sub/self/esc.tex",
+      PathBuf::from("../beside.tex"),
+    ),
   ] {
     let mut header = tar::Header::new_gnu();
     header.set_entry_type(kind);
     header.set_size(0);
-    builder
-      .append_link(&mut header, name, root.path().join("beside.tex"))
-      .unwrap();
+    builder.append_link(&mut header, name, target).unwrap();
   }
   std::fs::write(root.path().join("p.tar"), builder.into_inner().unwrap()).unwrap();
   let log = convert_at(root.path(), "p.tar", "p.xml");
   let xml = std::fs::read_to_string(root.path().join("p.xml")).unwrap_or_default();
+  let skipped: Vec<&str> = log
+    .lines()
+    .filter_map(|line| line.strip_prefix("Warning:archive:link the archive entry '"))
+    .map(|line| line.split('\'').next().unwrap())
+    .collect();
   assert_eq!(
-    log
-      .lines()
-      .filter(|line| line.starts_with("Warning:archive:link "))
-      .count(),
-    2,
+    skipped,
+    ["hard.tex", "lnk.tex", "sub/self/esc.tex"],
     "{log}"
   );
-  assert!(xml.contains("[none][none]"), "{xml}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
+  assert!(
+    xml.contains("[INSIDEWORD\n][INSIDEWORD\n][INSIDEWORD\n][none][none][none]"),
+    "{xml}"
+  );
   assert!(!xml.contains("BESIDEWORD"), "{xml}");
+}
+
+/// The bridge accepts only frames that carry its nonce and builds them without a metamethod: a string `__tostring`
+/// that fails no longer hides a refusal, lualibs' `inspect` (which held the original `print`) and
+/// `require('texio').write` reach no pipe. Base: the first refusal unreported and the raw `texio` write a broken
+/// frame. Repro luatex-profile/lua_sandbox_frames_authenticated.
+#[test]
+fn batchseclua_lua_frames_are_authenticated() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  let job = root.path().join("job");
+  std::fs::create_dir(&job).unwrap();
+  std::fs::write(
+    job.join("t.tex"),
+    repro!("luatex-profile", "lua_sandbox_frames_authenticated"),
+  )
+  .unwrap();
+  let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
+  let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
+  assert_eq!(
+    denials(&log),
+    ["writing ../escape_a.txt", "writing ../escape_b.txt"],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
+  assert!(xml.contains("[a:true] [b:true] [texio:true]"), "{xml}");
+  assert_eq!(files_below(root.path()), ["job/t.tex", "job/t.xml"]);
+}
+
+/// On Unix a backslash is a filename character: a write to `a\b`, a link the source tree ships pointing beside the
+/// job, is refused (the check no longer reads it as `a/b`). Base: written through the link. Repro
+/// luatex-profile/lua_sandbox_backslash_names.
+#[cfg(unix)]
+#[test]
+fn batchseclua_lua_backslash_names_are_refused() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  let (job, beside) = (root.path().join("job"), root.path().join("beside"));
+  std::fs::create_dir(&job).unwrap();
+  std::fs::create_dir(&beside).unwrap();
+  std::os::unix::fs::symlink(beside.join("t.txt"), job.join("a\\b")).unwrap();
+  std::fs::write(
+    job.join("t.tex"),
+    repro!("luatex-profile", "lua_sandbox_backslash_names"),
+  )
+  .unwrap();
+  let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
+  let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
+  assert_eq!(denials(&log), ["writing a\\b"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(xml.contains("[bs:refused] [plain:ok]"), "{xml}");
+  assert_eq!(
+    std::fs::read_dir(&beside).unwrap().count(),
+    0,
+    "nothing beside the job"
+  );
+}
+
+/// Forty refusals of a 1 MiB name: 20 listed, each name cut at 256 bytes, and one summary Error for the rest; no
+/// Fatal. Base: every refusal carried the whole name (a reviewer's 80 × 50 MB ran the bridge out of memory). Repro
+/// luatex-profile/lua_sandbox_many_refusals.
+#[test]
+fn batchseclua_lua_refusals_are_bounded() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  std::fs::write(
+    root.path().join("t.tex"),
+    repro!("luatex-profile", "lua_sandbox_many_refusals"),
+  )
+  .unwrap();
+  let log = convert_at(root.path(), "t.tex", "t.xml");
+  let xml = std::fs::read_to_string(root.path().join("t.xml")).unwrap_or_default();
+  let refusals: Vec<&str> = log
+    .lines()
+    .filter(|line| line.starts_with("Error:lua:sandbox "))
+    .collect();
+  assert_eq!(refusals.len(), 21, "{log}");
+  assert!(
+    refusals[..20]
+      .iter()
+      .all(|line| line.len() < 512 && line.contains("(1048579 bytes)"))
+  );
+  assert_eq!(
+    refusals[20],
+    "Error:lua:sandbox 20 more calls the sandbox refused in this chunk are not listed"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (21, 0), "{log}");
+  assert!(!log.contains("Fatal:"), "{log}");
+  assert!(xml.contains("[denied:40]"), "{xml}");
+}
+
+/// A chunk spinning in `while true do end` past `--timeout`: the wall-clock exit kills the registered interpreter,
+/// which no longer outlives the conversion (it ran on at 100 % CPU with PPID 1). Repro
+/// luatex-profile/lua_spinning_chunk_ends_with_timeout.
+#[cfg(target_os = "linux")]
+#[test]
+fn batchseclua_lua_interpreter_ends_with_the_timeout() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  std::fs::write(
+    root.path().join("t.tex"),
+    repro!("luatex-profile", "lua_spinning_chunk_ends_with_timeout"),
+  )
+  .unwrap();
+  let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+    .args(["t.tex", "--dest", "t.xml", "--nocomments", "--timeout=20"])
+    .current_dir(root.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  assert!(log.contains("Fatal:timeout:wallclock"), "{log}");
+  let pid = std::fs::read_to_string(root.path().join("texlua.pid")).unwrap();
+  let stat = Path::new("/proc").join(pid.trim()).join("stat");
+  // Killed before the exit; at most a zombie until it is reaped.
+  let running = (0..50).all(|_| {
+    let alive = std::fs::read_to_string(&stat).is_ok_and(|text| {
+      text
+        .rsplit(')')
+        .next()
+        .is_some_and(|rest| !rest.trim_start().starts_with('Z'))
+    });
+    if alive {
+      std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    alive
+  });
+  assert!(!running, "texlua {pid} outlived the conversion");
 }

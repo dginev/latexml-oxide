@@ -1,0 +1,17 @@
+% mechanism: lua_bridge.rs (OXIDIZED_DESIGN_DIVERGENCES #1081): a refusal shows at most 256 bytes of the name, and a
+%   chunk reports 20 refusals one by one, the rest in one summary Error, so the bridge's memory stays bounded.
+% witness: synthetic (security hardening; review round 2 probe o1)
+% oracle:  lualatex refuses nothing here (openout_any=p is a name check); the record's size is what this checks
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% expect:  "[denied:40]"; 21 Errors (lua:sandbox: 20 listed, 1 summary of 20 more)
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\begin{luacode*}
+local long = "../" .. string.rep("a", 1024 * 1024)
+local n = 0
+for i = 1, 40 do if not pcall(io.open, long, "w") then n = n + 1 end end
+tex.sprint("[denied:" .. n .. "]")
+\end{luacode*}
+\end{document}

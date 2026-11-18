@@ -37,16 +37,24 @@ see that section below.
 - **Document Lua is sandboxed** (OXIDIZED_DESIGN_DIVERGENCES #1081). `\directlua`, `\luaexec` and `{luacode}`
   chunks run in `texlua` under TeX's own defaults for untrusted input, set by the bridge's prelude before any
   document chunk: `shell_escape=f` (no program runs, no C module or network library loads) and `openout_any=p`
-  (writes only to a relative path below the job directory, no `..`, no dotfile, no symbolic link on the way). A
-  refused call is an `Error`, reported by the bridge itself: the checks and the protocol pipe use functions held
-  before any document code runs, and a chunk's `print`/`io.write` reach the null device. An interpreter that ends
+  (writes only to a relative path below the job directory, no `..`, no dotfile, no symbolic link on the way; on
+  Unix no `\` in the name). A refused call is an `Error`, reported by the bridge itself: the checks use functions
+  held before any document code runs, and the bridge accepts only frames carrying a nonce the interpreter read
+  before any other code loaded; a chunk's `print`/`io.write`/`texio.write` reach the null device. A chunk lists at
+  most 20 refusals, the rest in one summary `Error`. An interpreter that ends or sends anything but a frame
   mid-chunk is an `Error` (its output is lost); the next chunk starts a fresh one, up to 3 times per conversion.
   Each conversion gets its own interpreter, in its source directory, with an environment reduced to the texmf
-  search, locale, date and temp-dir variables. Not covered: a link created between the check and the write by
-  another process, and kpathsea's own `mktex*` font generation, which a lookup may start as it does under TeX.
-- **Archive sources unpack inside their directory.** A `.tar`/`.tar.gz` entry that is a symbolic or hard link, or
-  whose path would leave the extraction directory, is skipped with a warning; `.zip` extraction creates a link only
-  when its target resolves inside the directory.
+  search, library path, locale, date and temp-dir variables; a timeout or memory exit kills it. Not covered: a link
+  created between the check and the write by another process; kpathsea's own `mktex*` font generation, which a
+  lookup may start as it does under TeX; and reads, which stay open as under TeX (`openin_any=a`), so a chunk can
+  read any file the user can, its own process memory (and so the nonce) included.
+- **Archive sources unpack inside their directory.** A `.tar`/`.tar.gz` symbolic link is made only when its target,
+  resolved through the links already there, stays inside the extraction directory, a hard link only to a file
+  inside it; other links, and entries whose path would leave the directory, are skipped with a counted `Warning`.
+  `.zip` extraction (zip 9.7 or later) creates a link only when its target resolves inside the directory.
+- **Fully untrusted sources belong in a container or VM.** TeX itself, and Perl LaTeXML, can read any file the
+  invoking user can read, and so can a conversion: run sources you do not trust inside a container or virtual
+  machine.
 - **Image copies stay under `--dest`.** A graphic whose source-relative path would leave the destination
   directory is copied under a generated `xN` name inside it (Perl `Post/Graphics.pm`'s `pathname_is_contained`
   fallback).

@@ -35,14 +35,15 @@
 //!
 //! Process shape: one `texlua` child per conversion thread, spawned on first
 //! use with a prelude that loops over length-framed requests on stdin and
-//! answers `OK`/`ERR` length-framed responses on stdout. A std
+//! answers `OK`/`ERR` length-framed responses on stdout, each header carrying
+//! the nonce the bridge sent as the child's first line. A std
 //! `thread_local!` (destructor RUNS at thread exit, unlike `#[thread_local]`)
 //! drops the pipes so the child's `io.read` returns nil and it exits.
 
 use std::{
   cell::RefCell,
   io::{BufRead, BufReader, Write},
-  process::{Child, ChildStdin, ChildStdout, Command, Stdio},
+  process::{ChildStdin, ChildStdout, Command, Stdio},
 };
 
 /// The Lua-side server loop. `tex.print(...)` arguments follow the LuaTeX
@@ -64,6 +65,9 @@ local m_floor, os_exit = math.floor, os.exit
 -- reaches neither (io.stdout, io.write and print are pointed away below).
 local stdin, stdout = io.stdin, io.stdout
 local f_read, f_write, f_flush = stdin.read, stdout.write, stdout.flush
+-- The bridge's first line, read before any other code loads: every frame header carries it, and the bridge rejects
+-- a header without it, so bytes that reach the pipe by any other route are a broken protocol, never a frame.
+local NONCE = f_read(stdin, '*l') or ''
 -- A frame's length is the bytes that reach the pipe: Windows texlua writes
 -- stdout in text mode, each '\n' as '\r\n' (the bridge drops the added '\r').
 local CRLF = s_sub(package.config, 1, 1) == '\\'
@@ -74,9 +78,10 @@ local function wire_len(s)
   end
   return #s
 end
--- One write per frame, so no frame lands inside another.
+-- One write per frame, so no frame lands inside another. Built by concatenation: '%s' would ask the string
+-- metatable's __tostring, which document code can set.
 local function frame(tag, payload)
-  f_write(stdout, s_format('%s %d\n', tag, wire_len(payload)) .. payload)
+  f_write(stdout, tag .. ' ' .. NONCE .. ' ' .. s_format('%d', wire_len(payload)) .. '\n' .. payload)
   f_flush(stdout)
 end
 local buf = {}
@@ -144,6 +149,9 @@ pdf = setmetatable({}, {
 texio = { write = function() end, write_nl = function() end }
 status = setmetatable({}, {__index = function() return 0 end})
 token = token or {}
+-- require('texio') and the like answer the shims, not texlua's originals (whose texio.write reached the pipe).
+package.loaded.texio, package.loaded.pdf, package.loaded.status, package.loaded.token = texio, pdf, status, token
+package.loaded.node = nil
 -- Sandbox (OXIDIZED_DESIGN_DIVERGENCES #1081): document Lua is untrusted input,
 -- held to TeX's defaults for it, shell_escape=f (no process runs) and
 -- openout_any=p (kpathsea's kpse_out_name_ok: a write only to a relative path
@@ -167,10 +175,11 @@ local function denier(what, original)
     deny(what)
   end
 end
--- A name for a refusal message: the document's value is never asked to describe itself.
+-- A name for a refusal message: the document's value is never asked to describe itself, and a long one is cut.
 local function shown(name)
-  if type(name) == 'string' then return name end
-  return '<' .. type(name) .. '>'
+  if type(name) ~= 'string' then return '<' .. type(name) .. '>' end
+  if #name > 256 then return s_sub(name, 1, 256) .. '... (' .. s_format('%d', #name) .. ' bytes)' end
+  return name
 end
 local symlinkattributes = lfs and lfs.symlinkattributes
 -- kpse_out_name_ok under openout_any=p, decided here rather than by texlua's
@@ -178,11 +187,21 @@ local symlinkattributes = lfs and lfs.symlinkattributes
 -- allows anything) and checks only the last component for a dotfile.
 local function out_name_ok(name)
   if type(name) ~= 'string' or name == '' or s_find(name, '\0', 1, true) then return false end
-  local path = s_gsub(name, '\\', '/')
-  if s_sub(path, 1, 1) == '/' or s_find(path, '^%a:') then return false end
+  local path = name
+  if CRLF then
+    -- Windows: '\' separates too; a ':' is a drive or an alternate data stream; '\\?\' and '\\.\' are device paths.
+    if s_find(name, '^[\\/][\\/][%?%.][\\/]') or s_find(name, ':', 1, true) then return false end
+    path = s_gsub(name, '\\', '/')
+  elseif s_find(name, '\\', 1, true) then
+    -- Unix: '\' is a filename character; the name checked must be the name the system opens.
+    return false
+  end
+  if s_sub(path, 1, 1) == '/' then return false end
   local prefix = nil
   for part in s_gmatch(path, '[^/]+') do
     if part == '..' or (s_sub(part, 1, 1) == '.' and part ~= '.' and part ~= '.tex') then return false end
+    -- (Windows drops a component's trailing dots and spaces: 'a.' opens 'a')
+    if CRLF and part ~= '.' and s_find(part, '[%. ]$') then return false end
     -- No component may be a symbolic link: one made by the source tree could point anywhere.
     prefix = prefix and (prefix .. '/' .. part) or part
     if symlinkattributes and symlinkattributes(prefix, 'mode') == 'link' then return false end
@@ -200,7 +219,7 @@ io.open = function(name, mode)
   return io_open(name, mode)
 end
 io.output = function(file)
-  if type(file) == 'string' and not out_name_ok(file) then deny('writing ' .. file) end
+  if type(file) == 'string' and not out_name_ok(file) then deny('writing ' .. shown(file)) end
   return io_output(file)
 end
 if gzip and gzip.open then
@@ -280,7 +299,7 @@ local preload = (package.searchers or package.loaders)[1]
 local searchers = {
   function(name)
     if type(name) == 'string' and is_native(name) then
-      return function() deny('require "' .. name .. '"') end
+      return function() deny('require "' .. shown(name) .. '"') end
     end
     return preload(name)
   end,
@@ -293,10 +312,18 @@ local searchers = {
 package.searchers, package.loaders = searchers, searchers
 searchers[3] = function(name)
   if searchpath(name, c_path) or searchpath(s_match(name, '^[^.]*'), c_path) then
-    return function() deny('loading the C module "' .. name .. '"') end
+    return function() deny('loading the C module "' .. shown(name) .. '"') end
   end
   return "\n\tno C modules (document Lua runs sandboxed)"
 end
+-- The protocol's pipe is the bridge's alone: the document's standard output and
+-- input are the null device (its output reaches TeX through tex.print), set before
+-- lualibs loads, whose helpers keep what they see (inspect keeps print).
+local null_in = io_open(CRLF and 'NUL' or '/dev/null', 'r')
+io_output(io.stderr)
+if null_in then io_input(null_in) end
+io.stdout, io.stdin = io.stderr, null_in
+print = function() end
 -- Rebind require through texlua's built-in kpse so texmf-shipped Lua modules
 -- resolve (newpax, tkz-elements, ...), and load lualibs, which supplies the
 -- 'file'/'string'/'table' library extensions lualatex gets via luaotfload.
@@ -307,19 +334,19 @@ if kpse and kpse.set_program_name then
     -- LuaTeX's own kpse loader reads a dotted name as a path (pgf.gd.trees.library).
     local f = find_file((s_gsub(name, '%.', '/')), 'lua') or find_file(name, 'lua')
     if f then return assert(loadfile_text(f)), f end
-    return "\n\tno texmf module '" .. tostring(name) .. "' (kpse)"
+    return "\n\tno texmf module '" .. shown(name) .. "' (kpse)"
   end)
   pcall(require, 'lualibs')
 end
 -- debug reaches the upvalues the wrappers above hold (the raw io.open, ...).
 debug, package.loaded.debug = nil, nil
--- The protocol's pipe is the bridge's alone: the document's standard output and
--- input are the null device (its output reaches TeX through tex.print).
-local null_in = io_open(CRLF and 'NUL' or '/dev/null', 'r')
-io_output(io.stderr)
-if null_in then io_input(null_in) end
-io.stdout, io.stdin = io.stderr, null_in
-print = function() end
+-- An error value's text, asked of no metamethod (tostring would run the document's __tostring).
+local function error_text(value)
+  local kind = type(value)
+  if kind == 'string' then return value end
+  if kind == 'number' then return s_format('%.14g', value) end
+  return '(error object is a ' .. kind .. ' value)'
+end
 booting = false
 while true do
   local header = f_read(stdin, '*l')
@@ -336,25 +363,25 @@ while true do
     if ok then
       out, tag = t_concat(buf), 'OK'
     else
-      -- (an error value's own __tostring is document code, and may fail too)
-      local shown_ok, text = pcall(tostring, rterr)
-      out, tag = shown_ok and type(text) == 'string' and text or '<error value>', 'ERR'
+      out, tag = error_text(rterr), 'ERR'
     end
   else
-    out, tag = tostring(err), 'ERR'
+    out, tag = error_text(err), 'ERR'
   end
   frame(tag, out)
 end
 "#;
 
 struct LuaProc {
-  // Held so the child is reaped at thread exit (Drop closes stdin → the
-  // prelude's io.read returns nil → texlua exits).
-  child:   Child,
+  /// The child, registered so a timeout or memory exit (which runs no destructor) kills it too; dropping the guard
+  /// kills and reaps it.
+  child:   Option<latexml_core::watchdog::KillOnExit>,
   stdin:   ChildStdin,
   stdout:  BufReader<ChildStdout>,
   /// A private prelude copy (`Prelude::Own`), removed with the process.
   prelude: Option<std::path::PathBuf>,
+  /// This interpreter's frame nonce (`session_nonce`), sent as its first line.
+  nonce:   String,
 }
 
 /// This thread's interpreter for the current conversion (`reset_session` ends it: a persistent worker converts its
@@ -372,6 +399,9 @@ struct LuaSlot {
 const MAX_RESTARTS: u32 = 3;
 /// The longest frame the bridge reads: a length past it is a broken protocol, not output.
 const MAX_FRAME: usize = 64 << 20;
+/// The refusals a chunk reports one by one, by count and by bytes; the rest are counted in one summary Error.
+const MAX_DENIALS: usize = 20;
+const MAX_DENIAL_BYTES: usize = 64 << 10;
 
 thread_local! {
   static LUA: RefCell<LuaSlot> = RefCell::new(LuaSlot::default());
@@ -383,10 +413,8 @@ pub fn reset_session() { LUA.with(|slot| *slot.borrow_mut() = LuaSlot::default()
 
 impl Drop for LuaProc {
   fn drop(&mut self) {
-    // Best-effort: closing stdin (dropped with the struct) ends the loop;
-    // wait() reaps so no zombie outlives the thread.
-    let _ = self.child.kill();
-    let _ = self.child.wait();
+    // The guard kills and reaps the child, so no zombie outlives the thread.
+    drop(self.child.take());
     if let Some(path) = self.prelude.take() {
       let _ = std::fs::remove_file(path);
     }
@@ -466,8 +494,8 @@ fn prelude_file() -> Option<Prelude> {
   Some(Prelude::Own(own))
 }
 
-/// The environment variables the texlua child keeps: the program and library search (`PATH`, Windows' system
-/// ones), kpathsea's (`TEXMF*`, `KPATHSEA*`, the `*INPUTS`/`*FONTS` format paths), the user's home (`TEXMFHOME`), the
+/// The environment variables the texlua child keeps: the program and library search (`PATH`, `LD_LIBRARY_PATH`,
+/// `DYLD_*`, Windows' system ones), kpathsea's (`TEXMF*`, `KPATHSEA*`, the `*INPUTS`/`*FONTS` format paths), the user's home (`TEXMFHOME`), the
 /// locale, the reproducible-date clock and the temp dir.
 fn child_env_allowed(name: &str) -> bool {
   const EXACT: &[&str] = &[
@@ -496,13 +524,36 @@ fn child_env_allowed(name: &str) -> bool {
     "TEXPOOL",
     "TEXPSHEADERS",
     "TEXFONTMAPS",
+    "LD_LIBRARY_PATH",
   ];
   EXACT.contains(&name)
+    || name.starts_with("DYLD_")
     || name.starts_with("LC_")
     || name.starts_with("TEXMF")
     || name.starts_with("KPATHSEA")
     || name.ends_with("INPUTS")
     || name.ends_with("FONTS")
+}
+
+/// A per-interpreter frame nonce: 128 bits of SipHash keyed by the standard library's random `RandomState` keys,
+/// over the pid, the clock and a counter. The prelude reads it before any other code loads; a chunk never sees it.
+fn session_nonce() -> String {
+  use std::hash::{BuildHasher, Hasher};
+  static SPAWNS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+  let state = std::collections::hash_map::RandomState::new();
+  let count = SPAWNS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+  let clock = std::time::SystemTime::now()
+    .duration_since(std::time::UNIX_EPOCH)
+    .map_or(0, |since| since.as_nanos());
+  let word = |half: u64| {
+    let mut hasher = state.build_hasher();
+    hasher.write_u64(half);
+    hasher.write_u32(std::process::id());
+    hasher.write_u128(clock);
+    hasher.write_u64(count);
+    hasher.finish()
+  };
+  format!("{:016x}{:016x}", word(0), word(1))
 }
 
 fn spawn() -> Option<LuaProc> {
@@ -544,12 +595,18 @@ fn spawn() -> Option<LuaProc> {
     }
     return None;
   };
-  Some(LuaProc {
-    child,
+  let mut proc_ = LuaProc {
+    child: Some(latexml_core::watchdog::kill_on_exit(child)),
     stdin,
     stdout: BufReader::new(stdout),
     prelude,
-  })
+    nonce: session_nonce(),
+  };
+  let line = format!("{}\n", proc_.nonce);
+  if proc_.stdin.write_all(line.as_bytes()).is_err() {
+    return None;
+  }
+  Some(proc_)
 }
 
 /// Service one live tex-state query from the Lua side (the mirror half of
@@ -617,8 +674,18 @@ fn service_query(payload: &str) -> String {
 pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<String, String>> {
   let framed = exec_framed(chunk);
   use crate::prelude::*;
-  for denial in framed.denials {
+  for denial in framed.denials.shown {
     Error!("lua", "sandbox", denial);
+  }
+  if framed.denials.more > 0 {
+    Error!(
+      "lua",
+      "sandbox",
+      format!(
+        "{} more calls the sandbox refused in this chunk are not listed",
+        framed.denials.more
+      )
+    );
   }
   if let Some(ended) = framed.ended {
     Error!("lua", "interpreter", ended);
@@ -631,8 +698,44 @@ pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<Strin
 /// that ended during it.
 struct Framed {
   result:  Result<String, String>,
-  denials: Vec<String>,
+  denials: Denials,
   ended:   Option<String>,
+}
+
+/// A chunk's refusals: the first `MAX_DENIALS` (within `MAX_DENIAL_BYTES`) kept, the rest counted.
+#[derive(Default)]
+struct Denials {
+  shown: Vec<String>,
+  bytes: usize,
+  more:  usize,
+}
+
+impl Denials {
+  fn push(&mut self, denial: String) {
+    if self.shown.len() < MAX_DENIALS && self.bytes + denial.len() <= MAX_DENIAL_BYTES {
+      self.bytes += denial.len();
+      self.shown.push(denial);
+    } else {
+      self.more += 1;
+    }
+  }
+}
+
+/// A frame header's tag and length: `<tag> <nonce> <length>`, with this interpreter's nonce (a header without it
+/// came from no prelude frame, OXIDIZED_DESIGN_DIVERGENCES #1081) and a length the bridge reads.
+fn parse_header<'h>(header: &'h str, nonce: &str) -> Result<(&'h str, usize), FrameError> {
+  let mut fields = header.trim_end().splitn(3, ' ');
+  let (tag, sent, len) = (fields.next(), fields.next(), fields.next());
+  match (tag, len.map(str::parse::<usize>)) {
+    (Some(tag), Some(Ok(n))) if sent == Some(nonce) && n <= MAX_FRAME => Ok((tag, n)),
+    _ if sent == Some(nonce) => Err(FrameError::Protocol(format!(
+      "a frame header '{}'",
+      header.trim_end()
+    ))),
+    _ => Err(FrameError::Protocol(
+      "output that is not a frame (no session nonce)".to_string(),
+    )),
+  }
 }
 
 /// Why a frame exchange failed: the pipe (the child ended) or a frame no prelude writes.
@@ -649,7 +752,7 @@ impl From<std::io::Error> for FrameError {
 fn exchange(
   p: &mut LuaProc,
   chunk: &str,
-  denials: &mut Vec<String>,
+  denials: &mut Denials,
 ) -> Result<(bool, String), FrameError> {
   use std::io::Read;
   p.stdin.write_all(format!("{}\n", chunk.len()).as_bytes())?;
@@ -664,19 +767,7 @@ fn exchange(
     if header.is_empty() {
       return Err(FrameError::Io(std::io::ErrorKind::UnexpectedEof.into()));
     }
-    let (tag, len) = header
-      .trim_end()
-      .split_once(' ')
-      .unwrap_or((header.trim_end(), ""));
-    let n: usize = match len.parse() {
-      Ok(n) if n <= MAX_FRAME => n,
-      _ => {
-        return Err(FrameError::Protocol(format!(
-          "a frame header '{}'",
-          header.trim_end()
-        )));
-      },
-    };
+    let (tag, n) = parse_header(&header, &p.nonce)?;
     let mut body = vec![0u8; n];
     p.stdout.read_exact(&mut body)?;
     let mut body = String::from_utf8_lossy(&body).into_owned();
@@ -704,7 +795,7 @@ fn exchange(
 fn exec_framed(chunk: &str) -> Framed {
   let mut framed = Framed {
     result:  Ok(String::new()),
-    denials: Vec::new(),
+    denials: Denials::default(),
     ended:   None,
   };
   // (a speculative run is undone, the interpreter's globals could not be: `\\author{First\\luaexec{n=(n or 0)+1}}`, which a second
@@ -774,6 +865,30 @@ fn exec_framed(chunk: &str) -> Framed {
 #[cfg(test)]
 mod tests {
   fn lua_exec(chunk: &str) -> Result<String, String> { super::exec_framed(chunk).result }
+
+  /// A frame header is accepted only with this interpreter's nonce and a length within `MAX_FRAME`; bytes without
+  /// the nonce (a header a chunk forged, or stray output) are a broken protocol whatever their tag.
+  #[test]
+  fn frame_headers_carry_the_session_nonce() {
+    use super::{FrameError, parse_header};
+    let nonce = super::session_nonce();
+    assert_eq!(nonce.len(), 32);
+    assert_ne!(nonce, super::session_nonce());
+    let accepted = |header: &str| match parse_header(header, &nonce) {
+      Ok((tag, n)) => Some(format!("{tag} {n}")),
+      Err(FrameError::Protocol(_)) => None,
+      Err(FrameError::Io(e)) => panic!("{e}"),
+    };
+    assert_eq!(accepted(&format!("D {nonce} 7\n")).as_deref(), Some("D 7"));
+    assert_eq!(
+      accepted(&format!("OK {nonce} 0\r\n")).as_deref(),
+      Some("OK 0")
+    );
+    assert_eq!(accepted("OK 7\n"), None);
+    assert_eq!(accepted("D 0123456789abcdef0123456789abcdef 7\n"), None);
+    assert_eq!(accepted(&format!("OK {nonce} 99999999999\n")), None);
+    assert_eq!(accepted(&format!("OK {nonce}\n")), None);
+  }
 
   fn texlua_present() -> bool {
     std::process::Command::new("texlua")

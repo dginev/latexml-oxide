@@ -835,6 +835,8 @@ fn install_panic_hook() {
     // Under `panic = "abort"` this panic ends the process: a harness child tells the harness.
     if cfg!(panic = "abort") {
       exit_report::record_panic(&format!("panicked at {loc}: {msg}"));
+      // The abort runs no destructor: a document's texlua would outlive it.
+      latexml_core::watchdog::try_kill_registered_children();
     }
     // Bounded location+message → the per-task failure artifact (parser-safe).
     LAST_PANIC_DETAIL.with(|p| *p.borrow_mut() = Some(format!("panicked at {loc}: {msg}")));

@@ -573,6 +573,25 @@ pub fn initialize_report() {
   // A probing scope that unwound without its restore must not silence the
   // next conversion.
   IGNORE_DIAGNOSTICS.set(false);
+  drop(report);
+  for (target, message) in SESSION_WARNINGS.with(|held| std::mem::take(&mut *held.borrow_mut())) {
+    emit_record(LogStatus::Warning, &target, &message);
+  }
+}
+
+thread_local! {
+  /// Warnings raised on this thread before its conversion's report starts.
+  static SESSION_WARNINGS: RefCell<Vec<(String, String)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// A Warning raised before its conversion's report starts (a source archive is unpacked before the session): held,
+/// then logged and counted by the next [`initialize_report`] on this thread.
+pub fn warn_at_session_start(category: &str, object: &str, message: String) {
+  SESSION_WARNINGS.with(|held| {
+    held
+      .borrow_mut()
+      .push((format!("{category}:{object}"), message))
+  });
 }
 
 /// Clear the arena-`SymStr`-keyed report maps (`undefined`, `missing`). MUST be
