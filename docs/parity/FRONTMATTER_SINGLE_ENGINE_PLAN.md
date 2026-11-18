@@ -50,7 +50,7 @@ math0606768, 2507.23021).
 class or package, numbered, glyph or letter — is a provided mark; authors can force any form, so the types below are
 pairing heuristics, not the principle. The requirement is on the marks the conversion itself generates (the page's
 `[a]`, any fallback glyph): they never equal a provided mark value in the document (`f:generated-mark` against
-`f:printed-glyph`).
+the `printed` node set of `f:generated-mark`, formerly the key `f:printed-glyph`).
 
 **Keys and ink.** A generated mark pairs by number, a typed mark by its printed text; the two cross only (a) where no
 name types the glyph (1608.06509; 4 papers in 30k) or the legend is that note (a name's own `\thanks`, 1904.09324; OD

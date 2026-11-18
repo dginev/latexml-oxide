@@ -158,11 +158,11 @@
   <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1052): a note shared by several authors is copied onto each
        carrier, each copy with its @mark (Perl's model: relocateAnnotations, Base_Utility.pool.ltxml:895-901). The page
        prints it once (DG 2026-11-16, rulings 1-2): the first copy in full, with class ltx_note_shared; every later copy
-       of the same block, role, mark and text is a mark linked to it (2606.00446, 2407.07614, 1706.03762). Only an
-       author's notes render, so only theirs are keyed (an editor's copy first would link to no page element); a note
-       with no mark or no text is never a repeat (two image-only notes are two notes). -->
+       of the same block, role, mark and text is a mark linked to it (2606.00446, 2407.07614, 1706.03762). -->
   <!-- One key for an author's notes, its value one string per lookup kind (libxslt builds every key of a document at the
-       first key() call, each a whole-document pass; 0906.1883, 1607.07280, 2405.13379), each tab-separated:
+       first key() call, each a whole-document pass: docs/parity/WISDOM.md; 0906.1883, 1607.07280, 2405.13379), each
+       tab-separated, the kinds split on U+FDD0 (a noncharacter no mark, text or id holds — never the whitespace default,
+       which would split S's text), a kind whose test fails adding no token (substring(s, 1 div test)):
        S block role mark text - a shared note's copies (only an author's notes render, so only theirs are keyed: an
          editor's copy first would link to no page element; a note with no mark or no text is never a repeat, two
          image-only notes are two notes);

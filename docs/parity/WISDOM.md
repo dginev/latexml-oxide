@@ -3172,3 +3172,23 @@ write into a private directory beside the destination (`create_dir`, not `_all`;
 atomic), take its one file and remove the directory whatever happened. A shared output cache keyed on the inputs hides
 such a miss on a hit, so retire the affected keys with a version salt (`graphics_cache.rs` `SVG_KEY_VERSION`). Guards
 `graphics::tests::vector_svg_of_page_two_is_page_two`, `graphics_cache::tests::svg_keys_are_salted_and_png_keys_are_not`.
+
+## 105. libxslt builds every `xsl:key` of a document at the first `key()` call — a key is a whole-document pass, paid by every document that calls any key
+
+**Fact.** libxslt (`xsltInitAllDocKeys`) indexes all of a stylesheet's keys for a document the first time any `key()` runs,
+evaluating each key's `match` as `//pattern` over every node. A pattern whose first step has a predicate, or a
+`*[self::a or …]` step, runs its predicate on every node visited; a predicate with `count(.//…)` makes the pass
+O(nodes × subtree). So adding keys for a rare feature charges every document that reaches one `key()` call, in proportion
+to document size: the frontmatter campaign's 15 keys (main had 1) cost +7.8 % instructions on 0906.1883 with byte-identical
+HTML and +12 % wall on the large-math 1901.10171 (PERFAUDIT, 2026-11-17), all in the html5 XSLT (`--format=xml` Δ ≈ 0).
+
+**Method.** Isolate the stage first (`--format=xml` vs `html5` instruction counts), then profile the stylesheet alone
+(`xsltproc --profile`, and `perf stat -e instructions:u xsltproc …` on the post-processed XML; the system libxslt's deltas
+are about half the in-binary ones, direction agrees). Fixes that keep node sets exact (XSLTKEY, b3aee99b028): start each
+key at an element name with no predicate, or walk only the region it can match (`/ltx:document/ltx:note`; a key over
+the root's non-excluded children instead of `not(ancestor::…)` on every `ltx:p`); merge lookups into one key whose `use`
+is `str:tokenize` over one prefixed string per lookup kind, split on a noncharacter (U+FDD0), a kind whose test fails
+contributing `substring(s, 1 div test)` = ''; compute a node set lazily inside the one template that needs it (a rare
+lookup) instead of keying it in every document. Prove equivalence by comparing old and new key definitions with
+`use="generate-id()"` on random schema-shaped trees, plus byte-identical HTML on a corpus sample. Result: p90 +8.19 % →
++0.46 % vs main; the residual is the templates' own work (row R XSLTKEYc).

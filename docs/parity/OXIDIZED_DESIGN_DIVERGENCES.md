@@ -19544,7 +19544,7 @@ n authors prints n times.
 not an editor's note, which never renders (its first copy would leave the authors' marks linking to no element), not
 an image-only note (two would merge, the second image lost), not Perl's leftover `role="footnotemark"` notes, which are
 no copies — by the creator's parent block, `@role`, `@mark` and `normalize-space(.)` (`xsl:key
-f:shared-creator-note`). The first copy of a group of two or more renders in full with class
+f:creator-note`, kind S). The first copy of a group of two or more renders in full with class
 `ltx_note_shared`; each later copy is `span.ltx_note.ltx_role_footnotemark.ltx_note_shared` holding only its mark,
 linked to the first copy's id. `LaTeXML-structure-xhtml.xsl` puts every marked note in `span.ltx_annotated_personname`
 after the name, in document order with an ORCID badge, and there the name drops its trailing newline, so no line breaks
@@ -19553,10 +19553,10 @@ share, known by its copies' `idref` (#1059), prints once under a generated `[a]`
 name alone (DG 2026-11-16), so the wrapper takes every marked note of any role, mark-only `role="footnotemark"` notes
 too (PURE's unanswered marks, Perl's `\footnotemark` leftovers): each renders as its `sup.ltx_note_mark` alone, no empty
 "footnotemark: " pop-up, linked and classed `ltx_note_shared` only when its mark is a symbol (no Latin or Greek letter, no digit)
-or Perl's tagged leftover (`f:creator-mark-only`) and names one author's note of the block (`xsl:key
-f:creator-note-by-mark`, every candidate a copy of one note; both keys fold a typed ∗ into `\@fnsymbol`'s `*`, 1705.05427,
+or Perl's tagged leftover (`f:creator-note` kind K) and names one author's note of the block (`xsl:key
+f:creator-note` kind M, every candidate a copy of one note; both keys fold a typed ∗ into `\@fnsymbol`'s `*`, 1705.05427,
 except where a carrier of the note shows the other form alone too, two marks; never where another note of the block opens
-with the glyph, its legend: 2607.28158, `f:creator-note-opening`; never where the title page prints the glyph outside the
+with the glyph, its legend: 2607.28158, `f:creator-note` kind O; never where the title page prints the glyph outside the
 author blocks — a note's mark (a TeX one, `$\ast$`, read as ∗), the symbol a note, the date, a title or a paragraph
 opens with (a legend in `\date`, the abstract or a line after `\maketitle`; a `\footnotetext` there under `\fnsymbol`):
 pdflatex prints the glyph twice, so which note the name's mark names is not certain (`f:glyph-elsewhere`; revCONNFIX
@@ -20135,8 +20135,8 @@ the `xml:id` of the copy first in document order is the `idref` of each other (D
   Link step (#1058).
 - *A shared unmarked note* (no `mark`: its class prints none, or its glyph is unknown here) prints once, at its first
   copy, under a mark the page invents so the reader can tell whom it is about — `[a]`, `[b]`, … in document order,
-  class `ltx_mark_generated`, a bracketed letter the document prints nowhere (`f:printed-glyph`; never `\@fnsymbol`, never a bare letter
-  or digit) —, each other copy that mark linked to it (`LaTeXML-meta-xhtml.xsl`, key `f:note-copies`). A one-carrier
+  class `ltx_mark_generated`, a bracketed letter the document prints nowhere (the `printed` node set of `f:generated-mark`; never `\@fnsymbol`, never a bare letter
+  or digit) —, each other copy that mark linked to it (`LaTeXML-meta-xhtml.xsl`, key `f:creator-note` kind C). A one-carrier
   unmarked note stays under its name, no glyph (#990). The engine never invents a glyph.
 - *An unlinked mark shows* (DG 2026-11-16, "hide only when certain"): a mark-only note that links to no note on the
   page shows its glyph, plain, though no other print of it is found. The XML cannot make a hide certain: a legend
@@ -20150,7 +20150,7 @@ the `xml:id` of the copy first in document order is the `idref` of each other (D
   `paper` mode) fired on 0 of the 983 papers of the MARKKEY union, and on synthetic shapes whose PDF prints the glyph
   twice. The papers whose marks it showed by a print it found or beside a possible legend show as before (1304.5040,
   2110.12052, 2302.11378, 2012.13912, 2508.05506, 2010.10783; 1409.7582, 2004.11818, 2105.02711). The glyph key
-  `f:printed-glyph` remains `[a]`'s. A mark-only note links to a note only where the title page prints its glyph
+  the `printed` node set of `f:generated-mark` remains `[a]`'s (it holds only what a bracketed-letter lookup can hit; a lookup without brackets must bring back the legend-opening and bracket-stripped alternatives of e130fb1c3f4, XSLTKEY). A mark-only note links to a note only where the title page prints its glyph
   nowhere outside the author blocks (#1052, `f:glyph-elsewhere`). A mark whose given number names a title's or date's note is classed
   `ltx_mark_titlenote` (`insert::link_marked_notes`: "A Title∗ … Cy Cole∗", the number `\lx@title@footnote@step`
   recorded).
