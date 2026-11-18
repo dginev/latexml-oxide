@@ -9,7 +9,7 @@
 //! MARKSAFE (DG 2026-11-16, "a wrong glyph is worse than none"): the class's marks only under its own `\maketitle`, a
 //! name's mark the class sets apart none, an author block's `\thefootnote` its name's, a mark alone its glyph in `mark`
 //! only, a printed label no entry answers counted. Witnesses 1807.02791, 2607.15705, 2606.00446.
-use latexml::util::test::{convert_with_setup_then, error_count, kpse_has, warning_count};
+use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 
 use super::{
   perfect_kernel_batch84b::{creators, text},
@@ -819,8 +819,7 @@ fn a_wrapper_of_the_class_maketitle_is_neutral() {
 /// computes its own class's glyph.
 #[test]
 fn lni_prints_its_own_arabic_title_marks() {
-  if !kpse_has("lni.cls") {
-    eprintln!("SKIP: lni.cls is not in this TeX Live");
+  if !super::perfect_kernel_batchmarkbind::lni_installed() {
     return;
   }
   let (log, xml, ()) = convert_with_setup_then(

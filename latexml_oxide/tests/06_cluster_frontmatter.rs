@@ -1538,6 +1538,39 @@ fn frontmatter_fairmeta_author_affiliation_1396() {
 /// of its own (revRAGSLAB B1: relaxing the replay had lost 2610.22523's three logos). Repro stand-in-copies/ragslab.
 #[test]
 fn frontmatter_ragslab_marks_link_affiliations() {
+  // (ragslab.sty's `\RequirePackage`s: a TeX Live without one warns `missing_file` for it — CI's lacked `inter.sty` and
+  // `sourceserifpro.sty` — so the no-Warning guard is skipped there, visibly)
+  const RAGSLAB_REQUIRES: &[&str] = &[
+    "caption.sty",
+    "cleveref.sty",
+    "etoolbox.sty",
+    "fontenc.sty",
+    "fontspec.sty",
+    "geometry.sty",
+    "graphicx.sty",
+    "hyperref.sty",
+    "hyphenat.sty",
+    "iftex.sty",
+    "inter.sty",
+    "microtype.sty",
+    "parskip.sty",
+    "placeins.sty",
+    "setspace.sty",
+    "sourceserifpro.sty",
+    "tcolorbox.sty",
+    "titlesec.sty",
+    "xcolor.sty",
+    "xparse.sty",
+  ];
+  if let Some(missing) = RAGSLAB_REQUIRES
+    .iter()
+    .find(|file| !latexml::util::test::kpse_has(file))
+  {
+    eprintln!(
+      "SKIP frontmatter_ragslab_marks_link_affiliations: {missing} is not in this TeX Live"
+    );
+    return;
+  }
   let (log, xml, ()) = latexml::util::test::convert_bytes_files_then(
     include_bytes!(
       "../../tools/perfect_kernel/repros/stand-in-copies/ragslab/ragslab_marks_link_affiliations.tex"

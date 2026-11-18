@@ -17,9 +17,61 @@ macro_rules! repro {
   };
 }
 
+/// The packages lni.cls v2.0 requires (lni.cls `\RequirePackage`s): a TeX Live without one of them warns `missing_file`
+/// for it, so a guard asserting no Warning is skipped there, visibly (a portable test passes on every TeX Live or is
+/// skipped where its package is absent; CI's lacked `newtxtt.sty`).
+pub(crate) const LNI_REQUIRES: &[&str] = &[
+  "lni.cls",
+  "amsmath.sty",
+  "authblk.sty",
+  "babel.sty",
+  "caption.sty",
+  "cleveref.sty",
+  "cmap.sty",
+  "crop.sty",
+  "csquotes.sty",
+  "enumitem.sty",
+  "eso-pic.sty",
+  "etoolbox.sty",
+  "fancyhdr.sty",
+  "fontenc.sty",
+  "footmisc.sty",
+  "graphicx.sty",
+  "grffile.sty",
+  "hypcap.sty",
+  "hyperref.sty",
+  "iftex.sty",
+  "inputenc.sty",
+  "listings.sty",
+  "mathptmx.sty",
+  "newtxmath.sty",
+  "newtxtext.sty",
+  "newtxtt.sty",
+  "orcidlink.sty",
+  "selnolig.sty",
+  "textcomp.sty",
+  "url.sty",
+  "verbatim.sty",
+  "xspace.sty",
+];
+
+/// Whether lni.cls and every package it requires are in this TeX Live; prints the visible SKIP line when not.
+pub(crate) fn lni_installed() -> bool {
+  match LNI_REQUIRES.iter().find(|file| !kpse_has(file)) {
+    Some(missing) => {
+      eprintln!("SKIP: {missing} (lni.cls or a package it requires) is not in this TeX Live");
+      false
+    },
+    None => true,
+  }
+}
+
 /// Whether TeX Live's lni.cls is v2.0's, built on authblk (`\RequirePackage{authblk}`, lni.cls:362), which lni_cls.rs
 /// binds; an older one keeps LaTeX's `\author`.
 fn lni_on_authblk() -> bool {
+  if !lni_installed() {
+    return false;
+  }
   let found = kpse_has("lni.cls")
     && std::process::Command::new("kpsewhich")
       .arg("lni.cls")
