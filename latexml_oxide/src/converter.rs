@@ -682,11 +682,12 @@ impl Converter {
   }
 
   pub fn bind_log(&mut self) { latexml_core::util::logger::bind_log(); }
-  /// Open the bound log with the session's log (once: a persistent converter's later conversions start clean).
+  /// Open the bound log with the session's log (once: a persistent converter's later conversions start clean);
+  /// the cortex log mirror took it as it was logged.
   fn take_session_log(&mut self) {
     let log = std::mem::take(&mut self.session_log);
     if !log.trim().is_empty() {
-      latexml_core::util::logger::note_to_log(log.trim_end());
+      latexml_core::util::logger::append_logged_text(&format!("{}\n", log.trim_end()));
     }
   }
   pub fn flush_log(&mut self) -> String { latexml_core::util::logger::flush_log() }

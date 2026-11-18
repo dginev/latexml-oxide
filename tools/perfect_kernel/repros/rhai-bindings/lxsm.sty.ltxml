@@ -6,6 +6,10 @@ DefPrimitive('\opengrp', sub { $_[0]->bgroup; return; });
 DefPrimitive('\closegrp', sub { $_[0]->egroup; return; });
 DefPrimitive('\startpara', sub { $_[0]->enterHorizontal; return; });
 DefPrimitive('\endpara', sub { $_[0]->leaveHorizontal; return; });
+DefPrimitive('\opensg', sub { $_[0]->begingroup; return; });
+DefPrimitive('\closesg', sub { $_[0]->endgroup; return; });
+DefPrimitive('\openhm', sub { $_[0]->beginMode('restricted_horizontal'); return; });
+DefPrimitive('\closehm', sub { $_[0]->endMode('restricted_horizontal'); return; });
 DefConstructor('\withpost{}', "<ltx:text class='w'>#1</ltx:text>",
   afterDigest => sub { Digest('[after]'); });
 DefPrimitive('\pafter', sub { return; }, afterDigest => sub { Digest('[pafter]'); });

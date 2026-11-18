@@ -97,9 +97,10 @@ parameters it is the older form (arguments only, as strings), which still works 
 `Warning:deprecated` naming the fix; name an unused argument with a leading underscore (`|gullet, _x|`). A macro with
 no parameters takes `|gullet|` and reads its own arguments (`gullet.readArg()`, `gullet.readOptional()`), as Perl's
 `$gullet->readArg`. A primitive's or a parameter type's `afterDigest` receives the stomach alone, as Perl's (there
-is no whatsit). A `beforeDigest` or `afterDigest` hook returns what Perl's does: `()` (end it with `return;`), a box
-(`Digest(…)`) or an array of boxes, which are kept: a `beforeDigest`'s before the command's own boxes, an
-`afterDigest`'s after them, as Perl's. A `properties` map may hold closures
+is no whatsit). A definition's `beforeDigest` or `afterDigest` hook returns what Perl's does: `()` (end it with
+`return;`), a box (`Digest(…)`) or an array of boxes, which are kept: a `beforeDigest`'s before the command's own
+boxes, an `afterDigest`'s after them, as Perl's. A parameter type's hooks run for effect only; their value is
+ignored, as Perl's. A `properties` map may hold closures
 (`#{ kind: |stomach, x| … }`), each called with the same arguments, as Perl calls a CODE value. The `stomach` handle
 has Perl's `getGullet()`, `bgroup()`, `egroup()`, `begingroup()`, `endgroup()`, `beginMode(mode[, noframe])`,
 `endMode(mode[, noframe])`, `enterHorizontal()` and `leaveHorizontal()`.

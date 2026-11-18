@@ -665,8 +665,8 @@ fn old_digest_hook(hook: &str) -> &'static str {
   }
 }
 
-/// Build a primitive's or a parameter type's `afterDigest` trampoline: the body is Perl's `($stomach)`
-/// (Primitive.pm:79, Parameter.pm:136); there is no whatsit to pass.
+/// Build a primitive's `afterDigest` trampoline: the body is Perl's `($stomach)` (Primitive.pm:79); there is no
+/// whatsit to pass. A parameter type's runs for effect only ([`run_parameter_hook`]).
 pub(super) fn stomach_after_digest_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -693,6 +693,19 @@ pub(super) fn before_digest_trampoline(
       .or_else(|e| contain(hook, e, Dynamic::UNIT))?;
     Ok(returned_boxes(&ast, result, HOOK_NON_BOX))
   })
+}
+
+/// Run a parameter type's `beforeDigest`/`afterDigest` hook (`hook` names it in errors): the body is Perl's
+/// `($stomach)`, run for effect only — its value is ignored (Parameter.pm:133-136), unlike a definition's.
+fn run_parameter_hook(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  fp: &FnPtr,
+  hook: &str,
+) -> Result<Vec<Digested>> {
+  let _: Dynamic = call_deferred_body(engine, ast, fp, (Dynamic::from(StomachHandle),))
+    .or_else(|e| contain(hook, e, Dynamic::UNIT))?;
+  Ok(Vec::new())
 }
 
 /// Which hook list a runtime `LookupDefinition(cs).push*/unshift*` targets (#321).
@@ -884,7 +897,7 @@ fn call_property_closures(
           .chain(args.iter().map(ctor_arg_to_dynamic))
           .collect();
         call_deferred_body(engine, ast, &fp, dyn_args)
-          .or_else(|e| contain(&format!("properties {key}"), e, Dynamic::UNIT))?
+          .or_else(|e| contain("properties", e, Dynamic::UNIT))?
       },
       None => val,
     };
@@ -1929,21 +1942,18 @@ pub(super) fn wire_parameter_type(
       },
       "beforeDigest" => {
         for fp in hooks_of(val).filter_map(|v| v.try_cast::<FnPtr>()) {
-          param.before_digest.push(before_digest_trampoline(
-            fp,
-            engine.clone(),
-            ast.clone(),
-            "beforeDigest",
-          ));
+          let (engine, ast) = (engine.clone(), ast.clone());
+          param.before_digest.push(Rc::new(move || {
+            run_parameter_hook(&engine, &ast, &fp, "beforeDigest")
+          }));
         }
       },
       "afterDigest" => {
         for fp in hooks_of(val).filter_map(|v| v.try_cast::<FnPtr>()) {
-          param.after_digest.push(stomach_after_digest_trampoline(
-            fp,
-            engine.clone(),
-            ast.clone(),
-          ));
+          let (engine, ast) = (engine.clone(), ast.clone());
+          param.after_digest.push(Rc::new(move |_w: &mut Whatsit| {
+            run_parameter_hook(&engine, &ast, &fp, "afterDigest")
+          }));
         }
       },
       _ => {},

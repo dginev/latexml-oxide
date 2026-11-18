@@ -3,6 +3,10 @@ DefPrimitive("\\opengrp", |stomach| { stomach.bgroup(); return; });
 DefPrimitive("\\closegrp", |stomach| { stomach.egroup(); return; });
 DefPrimitive("\\startpara", |stomach| { stomach.enterHorizontal(); return; });
 DefPrimitive("\\endpara", |stomach| { stomach.leaveHorizontal(); return; });
+DefPrimitive("\\opensg", |stomach| { stomach.begingroup(); return; });
+DefPrimitive("\\closesg", |stomach| { stomach.endgroup(); return; });
+DefPrimitive("\\openhm", |stomach| { stomach.beginMode("restricted_horizontal"); return; });
+DefPrimitive("\\closehm", |stomach| { stomach.endMode("restricted_horizontal"); return; });
 // item 4: the boxes a digest hook returns
 DefConstructor("\\withpost{}", "<ltx:text class=\"w\">#1</ltx:text>", #{
   afterDigest: |stomach, whatsit| Digest("[after]")

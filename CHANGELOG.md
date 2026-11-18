@@ -4,13 +4,14 @@
 
   - **Rhai bindings: Perl's hook bodies port 1:1, and every diagnostic is located.** The `Stomach` handle has
     Perl's `bgroup`, `egroup`, `begingroup`, `endgroup`, `beginMode`, `endMode`, `enterHorizontal` and
-    `leaveHorizontal`. The boxes a `beforeDigest`/`afterDigest` hook returns are kept, as Perl keeps them (were
-    dropped); any other value is dropped with one `Warning:deprecated` per binding load, as a primitive body's.
+    `leaveHorizontal`. The boxes a definition's `beforeDigest`/`afterDigest` hook returns are kept, as Perl keeps
+    them (were dropped); any other value is dropped with one `Warning:deprecated` per binding load, as a primitive
+    body's; a parameter type's hooks run for effect only, as Perl's.
     A closure value in a `properties` map is called with `(stomach, args…)`, as Perl calls a CODE value (was
     printed as `Fnanon…`). A script's `Error()`, `Warn()` and `Info()` name the `.rhai` line and column as its
     `Fatal()` does; a failure inside script functions lists each call it passed through; a failing `--preload`ed
-    binding is in the conversion's log (was only on stderr), and a message from before the first source opens
-    has no `at locator.rs` line. The README, guide and `docs/examples` inline constructors declare
+    binding is in the conversion's log (was only on stderr), once, and a message logged where no mouth reads a
+    source has no `at locator.rs` line. The README, guide and `docs/examples` inline constructors declare
     `enterHorizontal: true`, so the space after one that opens a paragraph is kept. Guards
     `30_script_bindings::{rhai_hooks_port_perls_stomach_methods_and_values, a_rhai_failure_names_its_function_calls,
     a_failing_preloaded_binding_is_logged, a_rhai_diagnostic_names_its_binding_file}`.
