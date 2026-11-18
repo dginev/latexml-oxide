@@ -727,6 +727,20 @@
     in Perl and in dynamically linked builds. Guard
     `xslt::max_depth_tests::transform_aborts_past_perls_recursion_depth`.
 
+  - **A class that copies `\author` or `\title` before redefining it no longer loops.** tocbase.cls
+    (shipped with aic.cls and its siblings) does `\let\orig@author\author`, then redefines `\author`
+    to collect the names and calls `\orig@author{\toc@authors}` at `\end{frontmatter}`. The copy
+    replayed the class's later definition, so the author list contained itself
+    (`Fatal:Stomach:Recursion`). A `\let` copy of a frontmatter setter taken before the class
+    redefines it is now the setter as it stood, as in TeX, and restoring the setter from such a copy
+    brings back the kernel's setter in the `\let`'s own scope. Witnesses 1811.06821, 1811.11810,
+    1904.05269, 1905.07135, 2011.14174, 2311.03341, 1808.03157, 1911.12471, 2110.09373, 2110.14889,
+    2204.12683, 2406.17657 (OXIDIZED_DESIGN_DIVERGENCES #1078). Guards
+    `perfect_kernel_batchsetcopy::{a_copy_taken_before_the_redefinition_is_the_kernels_setter,
+    a_copy_in_an_end_code_takes_the_class_list_once, a_copy_taken_after_the_redefinition_still_replays,
+    a_restored_setter_takes_a_later_redefinition_afresh, a_restored_setter_drops_the_class_definition,
+    a_restore_in_a_group_ends_with_it}`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`
