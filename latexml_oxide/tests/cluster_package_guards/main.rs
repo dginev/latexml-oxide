@@ -670,6 +670,9 @@ mod perfect_kernel_batchsbx1;
 /// SEP1: the rehearsal binds a `\let` copy of `\and`, `\\`, `\thanks` or `\footnote` by its meaning, as the command it
 /// copies (`\let\nx\and` parts the names; OD #994).
 mod perfect_kernel_batchsep1;
+/// SETCOPY: a `\let` copy of a locked frontmatter setter taken before the refused redefinition is the setter as it
+/// stood then; OD #1078.
+mod perfect_kernel_batchsetcopy;
 /// SHCOPY: a shared note is one note in the XML; each other mark carries its pop-up hidden in the HTML.
 mod perfect_kernel_batchshcopy;
 /// SHMARK: a creator's note carries the mark it prints, never repeated in its text; a mark on a name is a copy of the

@@ -1,0 +1,23 @@
+% A `\let` copy of `\author` taken AFTER the class's `\renewcommand{\author}` holds the class's definition in TeX; ours,
+% where the lock keeps the kernel's `\author` and replays the refused one (OXIDIZED_DESIGN #482), keeps the copy's
+% replay: the class's counter counts both calls. (TeX makes no creator of the copy's call; ours keeps both.)
+% witness: synthetic (the control of copy_before_redefinition.tex)
+% oracle:  pdflatex 0 errors: "Authors: 2."
+% engines: rust (main 8b298f9c0d6) = "Authors: 2.", creators Ann Able, Bob Baker
+% expect:  0 errors, 0 warnings; "Authors: 2."; creators Ann Able, Bob Baker
+% guard:   perfect_kernel_batchsetcopy::a_copy_taken_after_the_redefinition_still_replays
+% status:  GREEN (pinned)
+\documentclass{article}
+\makeatletter
+\newcounter{nauth}
+\newcommand\toc@authors{}
+\renewcommand{\author}[1]{\stepcounter{nauth}\g@addto@macro\toc@authors{\and #1}}
+\let\after@author\author
+\makeatother
+\title{T}
+\begin{document}
+\makeatletter\after@author{Ann Able}\makeatother
+\author{Bob Baker}
+\maketitle
+Authors: \thenauth.
+\end{document}

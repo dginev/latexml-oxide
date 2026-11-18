@@ -1,0 +1,22 @@
+% A global redefinition inside the group of a local restore (`\begingroup\let\author\orig@author\global\def\author…
+% \endgroup`) survives `\endgroup`, as TeX keeps a global assignment (tex.web §283): its call stores the author
+% ("Second: Ann Able", one creator Ann Able).
+% witness: synthetic (re-review SETCOPYb, a global refusal inside the restore's group)
+% oracle:  pdflatex 0 errors: "Ann Able", "Second: Ann Able."
+% engines: rust (main 8b298f9c0d6) = see guard history; SETCOPY round 1 = see guard history
+% expect:  0 errors, 0 warnings; "Second: Ann Able."; one creator, Ann Able
+% guard:   perfect_kernel_batchsetcopy::a_restore_in_a_group_ends_with_it
+% status:  GREEN (SETCOPYc, 2026-11-18)
+\documentclass{article}
+\makeatletter
+\let\orig@author\author
+\renewcommand{\author}[1]{\gdef\firstdef{#1}\orig@author{#1}}
+\begingroup\let\author\orig@author
+\global\def\author#1{\gdef\seconddef{#1}\orig@author{#1}}\endgroup
+\makeatother
+\title{T}
+\begin{document}
+\author{Ann Able}
+\maketitle
+Second: \seconddef.
+\end{document}
