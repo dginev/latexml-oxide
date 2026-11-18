@@ -395,7 +395,7 @@ fn leading_lsuper(body: Vec<Token>) -> (Option<Vec<Token>>, Vec<Token>) {
   }
   let rest: Vec<Token> = body[rest_at..].to_vec();
   // (spacing alone is no address)
-  static SPACING: Lazy<Regex> = Lazy::new(|| {
+  static SPACING: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
       r"\\(?:[vh]skip\s*[-+]?\s*[0-9.]*\s*(?:pt|em|ex|cm|mm|in|bp|sp|pc|dd|cc|mu)|[vh]space\*?\s*\{[^}]*\}|(?:small|med|big)skip|par)",
     )

@@ -14,11 +14,11 @@
 
 use std::{
   path::{Path, PathBuf},
+  sync::LazyLock,
   time::SystemTime,
 };
 
 use latexml_core::common::error::emit_warn;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashMap;
 
@@ -29,7 +29,7 @@ use rustc_hash::FxHashMap;
 const WALKUP_MAX: usize = 2;
 
 /// `% !TEX root = ../main.tex` (texlab / LaTeX-Workshop magic comment).
-static MAGIC_ROOT: Lazy<Regex> = Lazy::new(|| {
+static MAGIC_ROOT: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"(?mi)^[ \t]*%+[ \t]*!?[ \t]*TEX[ \t]+root[ \t]*=[ \t]*(.+?)[ \t]*$").unwrap()
 });
 

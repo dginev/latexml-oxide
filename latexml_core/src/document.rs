@@ -7,13 +7,13 @@ use std::{
   collections::{BTreeSet, VecDeque},
   fmt::Write as _,
   rc::Rc,
+  sync::LazyLock,
 };
 
 use libxml::{
   readonly::RoNode,
   tree::{Document as XmlDoc, Namespace, Node, NodeType},
 };
-use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -41,11 +41,11 @@ use crate::{
   util::radix::radix_alpha,
 };
 
-static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());
-static ONLY_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+$").unwrap());
-static DASHES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\-\-+").unwrap());
+static HAS_NONSPACE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\S").unwrap());
+static ONLY_SPACE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s+$").unwrap());
+static DASHES_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\-\-+").unwrap());
 
-static NON_MERGEABLE_ATTRIBUTES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+static NON_MERGEABLE_ATTRIBUTES: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
   HashSet::from_iter([
     "about",
     "aboutlabelref",
@@ -66,13 +66,13 @@ static NON_MERGEABLE_ATTRIBUTES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
 });
 // When merging attributes of two nodes, some attributes should be combined
 // Merged space separated
-static MERGE_ATTRIBUTE_SPACEJOIN: Lazy<HashSet<&'static str>> =
-  Lazy::new(|| HashSet::from_iter(["class", "lists", "inlist", "labels"]));
+static MERGE_ATTRIBUTE_SPACEJOIN: LazyLock<HashSet<&'static str>> =
+  LazyLock::new(|| HashSet::from_iter(["class", "lists", "inlist", "labels"]));
 // Merged ";" separated
-static MERGE_ATTRIBUTE_SEMICOLONJOIN: Lazy<HashSet<&'static str>> =
-  Lazy::new(|| HashSet::from_iter(["cssstyle"]));
+static MERGE_ATTRIBUTE_SEMICOLONJOIN: LazyLock<HashSet<&'static str>> =
+  LazyLock::new(|| HashSet::from_iter(["cssstyle"]));
 // Summed lengths
-static MERGE_ATTRIBUTE_SUMLENGTH: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+static MERGE_ATTRIBUTE_SUMLENGTH: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
   HashSet::from_iter([
     "xoffset",
     "yoffset",
@@ -6236,7 +6236,8 @@ impl Document {
     // not Ex<digit>) so declare_test's renamed-id case
     // (`S1.Ex1.m1.1` → `.1a`) stays untouched. canvas papers using
     // `\begin{equation}` produce `E1`/`E2`/... ids.
-    static RE_MATH_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r"^S\d+\.E\d+\.m\d+\.").unwrap());
+    static RE_MATH_ID: LazyLock<Regex> =
+      LazyLock::new(|| Regex::new(r"^S\d+\.E\d+\.m\d+\.").unwrap());
     let xmrefs2 = self.find_elements(|n| is_xmref(n) && n.has_attribute_no_ns("idref"));
     for xmref in xmrefs2 {
       // Skip if already pruned via _split_ref sweep above.
@@ -6340,10 +6341,11 @@ impl Document {
   ) -> Result<()> {
     // Perl: our $content_transfer_overrides = { decl_id, meaning, name, omcd };
     // Perl: our $dual_transfer_overrides = { decl_id, meaning, name, omcd, xml:id, role };
-    static CONTENT_TRANSFER: Lazy<HashSet<&'static str>> =
-      Lazy::new(|| HashSet::from_iter(["decl_id", "meaning", "name", "omcd"]));
-    static DUAL_TRANSFER: Lazy<HashSet<&'static str>> =
-      Lazy::new(|| HashSet::from_iter(["decl_id", "meaning", "name", "omcd", "xml:id", "role"]));
+    static CONTENT_TRANSFER: LazyLock<HashSet<&'static str>> =
+      LazyLock::new(|| HashSet::from_iter(["decl_id", "meaning", "name", "omcd"]));
+    static DUAL_TRANSFER: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+      HashSet::from_iter(["decl_id", "meaning", "name", "omcd", "xml:id", "role"])
+    });
 
     let presentation = match presentation {
       Some(p) => p,

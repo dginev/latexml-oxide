@@ -169,7 +169,6 @@ indexmap = "=2.14.2"
 tempfile = "3"
 log = "0.4"
 libxml = "0.3.24"
-once_cell = "1.17.0"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 glob = { version = "0.3", optional = true }
 roxmltree = { version = "0.21", optional = true }

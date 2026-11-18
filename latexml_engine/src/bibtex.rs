@@ -1114,7 +1114,8 @@ pub fn define_biblatex_fields(declared: Option<&FxHashSet<String>>) -> Result<()
 /// `ENTRY { … }` field list of `<style>.bst`, lowercased, which is what bibtex(1) copies from a `.bib` entry for the
 /// style to print. `None` without a style or a `.bst` on the search path.
 pub fn bst_declared_fields() -> Option<FxHashSet<String>> {
-  static ENTRY: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\bENTRY\s*\{([^}]*)\}").unwrap());
+  static ENTRY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)\bENTRY\s*\{([^}]*)\}").unwrap());
   let style = lookup_string("BIBSTYLE");
   // (`\bibliographystyle{myalpha.bst}`, 2511.23185: kpathsea takes a name already ending in `.bst` as it is)
   let style = style.trim();

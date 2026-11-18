@@ -1186,7 +1186,7 @@ mod tests {
     bind_log();
     emit_record(LogStatus::Warning, "quiet:warn", "muted warning");
     emit_record(LogStatus::Error, "loud:error", "unmutable error");
-    emit_record(LogStatus::Fatal, "Fatal:loud:fatal ", "unmutable fatal");
+    emit_record(LogStatus::Fatal, "Fatal:loud:fatal", "unmutable fatal");
     let captured = flush_log();
 
     set_suppress_log_output(prev);

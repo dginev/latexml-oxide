@@ -158,14 +158,15 @@ enum WidthShape {
 }
 
 fn width_shape(width: &str) -> WidthShape {
-  static DIMENSION: Lazy<Regex> = Lazy::new(|| {
+  static DIMENSION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
       // TeX's unit keywords ignore case (tex.web §407 scan_keyword: `\toprule[1PT]`).
       r"(?i)^\s*[-+\s]*(?:(?:\d+[.,]?\d*|[.,]\d+)\s*(?:true\s*)?(?:pt|pc|in|bp|cm|mm|dd|cc|sp|em|ex|px|nd|nc)|(?:\d+[.,]?\d*|[.,]\d+)?\s*\\[A-Za-z@])",
     )
     .unwrap()
   });
-  static NUMBER: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*[-+\s]*(?:\d|[.,]\d)").unwrap());
+  static NUMBER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\s*[-+\s]*(?:\d|[.,]\d)").unwrap());
   if DIMENSION.is_match(width) {
     WidthShape::Dimension
   } else if NUMBER.is_match(width) {

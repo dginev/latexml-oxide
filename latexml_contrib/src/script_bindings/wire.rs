@@ -42,7 +42,13 @@ pub(super) fn contain<T>(what: &str, e: Box<EvalAltResult>, neutral: T) -> Resul
   if let Some(fatal) = take_raised_fatal(&e) {
     return Err(fatal);
   }
-  latexml_core::Error!("script", what, format!("{e}"));
+  let (text, pos) = describe_failure(&e);
+  let path = failed_body_path(&e);
+  latexml_core::Error!(
+    "script",
+    what,
+    with_script_locator(&text, script_locator(&path, pos))
+  );
   Ok(neutral)
 }
 
@@ -503,27 +509,47 @@ pub(super) fn apply_opts<B: BindingBuilder>(
         // Closure option → typed builder setter (front-end builds the closure).
         match key.as_str() {
           "afterDigest" => {
-            builder =
-              builder.after_digest(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+            builder = builder.after_digest(after_digest_trampoline(
+              fp,
+              engine.clone(),
+              ast.clone(),
+              "afterDigest",
+            ));
           },
           "afterDigestBegin" => {
-            builder =
-              builder.after_digest_begin(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+            builder = builder.after_digest_begin(after_digest_trampoline(
+              fp,
+              engine.clone(),
+              ast.clone(),
+              "afterDigestBegin",
+            ));
           },
           "afterDigestBody" => {
-            builder =
-              builder.after_digest_body(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+            builder = builder.after_digest_body(after_digest_trampoline(
+              fp,
+              engine.clone(),
+              ast.clone(),
+              "afterDigestBody",
+            ));
           },
           "properties" => {
             builder = builder.properties(properties_trampoline(fp, engine.clone(), ast.clone()));
           },
           "beforeDigest" => {
-            builder =
-              builder.before_digest(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+            builder = builder.before_digest(before_digest_trampoline(
+              fp,
+              engine.clone(),
+              ast.clone(),
+              "beforeDigest",
+            ));
           },
           "beforeDigestEnd" => {
-            builder =
-              builder.before_digest_end(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+            builder = builder.before_digest_end(before_digest_trampoline(
+              fp,
+              engine.clone(),
+              ast.clone(),
+              "beforeDigestEnd",
+            ));
           },
           "beforeConstruct" => {
             builder =
@@ -595,33 +621,69 @@ pub(super) fn construction_trampoline(
   )
 }
 
-/// Build an `afterDigest` trampoline: the body receives the whatsit (Perl's `($stomach, $whatsit)`, without the
-/// stomach), published mutable.
+/// Build a constructor's `afterDigest`/`afterDigestBegin`/`afterDigestBody` trampoline (`hook` names it in errors):
+/// the body is Perl's `($stomach, $whatsit)` (Constructor.pm:114-117), the whatsit published mutable. A body declaring
+/// the whatsit alone ([`declares_lead`]) is the old form, given the whatsit, Warned `deprecated` once per binding load.
 pub(super) fn after_digest_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
   ast: Rc<AST>,
+  hook: &'static str,
 ) -> DigestionClosure {
   Rc::new(move |w: &mut Whatsit| -> Result<Vec<Digested>> {
     // RAII pop on every exit incl. panic (review M1).
     let _whatsit_guard = WhatsitCtxGuard::new((w as *mut Whatsit, true));
-    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(WhatsitProxy),))
+    let lead = if declares_lead(&ast, &fp, 1) {
+      Some(Dynamic::from(StomachHandle))
+    } else {
+      warn_deprecated_in(&ast, old_digest_hook(hook));
+      None
+    };
+    let args: Vec<Dynamic> = lead
+      .into_iter()
+      .chain(std::iter::once(Dynamic::from(WhatsitProxy)))
+      .collect();
+    let _: Dynamic =
+      call_deferred_body(&engine, &ast, &fp, args).or_else(|e| contain(hook, e, Dynamic::UNIT))?;
+    Ok(Vec::new())
+  })
+}
+
+/// The [`super::DEPRECATED_ALIASES`] key of a constructor digest hook's old one-argument form.
+fn old_digest_hook(hook: &str) -> &'static str {
+  match hook {
+    "afterDigestBegin" => "afterDigestBegin |whatsit|",
+    "afterDigestBody" => "afterDigestBody |whatsit|",
+    _ => "afterDigest |whatsit|",
+  }
+}
+
+/// Build a primitive's or a parameter type's `afterDigest` trampoline: the body is Perl's `($stomach)`
+/// (Primitive.pm:79, Parameter.pm:136); there is no whatsit to pass.
+pub(super) fn stomach_after_digest_trampoline(
+  fp: FnPtr,
+  engine: Rc<Engine>,
+  ast: Rc<AST>,
+) -> DigestionClosure {
+  Rc::new(move |_w: &mut Whatsit| -> Result<Vec<Digested>> {
+    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(StomachHandle),))
       .or_else(|e| contain("afterDigest", e, Dynamic::UNIT))?;
     Ok(Vec::new())
   })
 }
 
-/// Build a `beforeDigest` trampoline (Perl `beforeDigest => sub {…}`): runs the
-/// parameterless Rhai closure before the constructor's arguments are digested
-/// (state/font side-effects, e.g. `neutralize_font()`); contributes no boxes.
+/// Build a `beforeDigest`/`beforeDigestEnd` trampoline (`hook` names it in errors): the body is Perl's `($stomach)`
+/// (Primitive.pm:47), run before the arguments are digested for its side effects (`neutralize_font()`); it
+/// contributes no boxes. A body declaring no parameter (`|| …`) is Perl's `sub {…}` ignoring `@_`.
 pub(super) fn before_digest_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
   ast: Rc<AST>,
+  hook: &'static str,
 ) -> BeforeDigestClosure {
   Rc::new(move || -> Result<Vec<Digested>> {
-    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, ())
-      .or_else(|e| contain("beforeDigest", e, Dynamic::UNIT))?;
+    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(StomachHandle),))
+      .or_else(|e| contain(hook, e, Dynamic::UNIT))?;
     Ok(Vec::new())
   })
 }
@@ -718,7 +780,7 @@ pub(super) fn push_definition_hook(
   // match arm runs, so the trampoline is moved into it).
   match family {
     HookFamily::BeforeDigest => {
-      let hook = before_digest_trampoline(fp, engine, ast);
+      let hook = before_digest_trampoline(fp, engine, ast, "beforeDigest");
       match stored {
         Stored::Constructor(rc) => {
           let mut d = (*rc).clone();
@@ -739,19 +801,22 @@ pub(super) fn push_definition_hook(
       }
     },
     HookFamily::AfterDigest => {
-      let hook = after_digest_trampoline(fp, engine, ast);
+      // A constructor's hook gets Perl's `($stomach, $whatsit)`, a primitive's `($stomach)`.
       match stored {
         Stored::Constructor(rc) => {
+          let hook = after_digest_trampoline(fp, engine, ast, "afterDigest");
           let mut d = (*rc).clone();
           insert_hook(&mut d.after_digest, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
         Stored::Primitive(rc) => {
+          let hook = stomach_after_digest_trampoline(fp, engine, ast);
           let mut d = (*rc).clone();
           insert_hook(&mut d.after_digest, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
         Stored::MathPrimitive(rc) => {
+          let hook = stomach_after_digest_trampoline(fp, engine, ast);
           let mut d = (*rc).clone();
           insert_hook(&mut d.options.after_digest, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
@@ -782,7 +847,7 @@ pub(super) fn push_definition_hook(
       }
     },
     HookFamily::AfterDigestBody => {
-      let hook = after_digest_trampoline(fp, engine, ast);
+      let hook = after_digest_trampoline(fp, engine, ast, "afterDigestBody");
       match stored {
         Stored::Constructor(rc) => {
           let mut d = (*rc).clone();
@@ -796,10 +861,10 @@ pub(super) fn push_definition_hook(
   Ok(())
 }
 
-/// Build a `properties` trampoline (Perl `properties => sub {…}`): the Rhai
-/// closure receives each digested argument as its TeX-source string (`()` for an
-/// omitted optional) and returns a map; its entries become the whatsit's
-/// properties as string `Stored`s, ready for the template's `#name` holes.
+/// Build a `properties` trampoline (Perl `properties => sub {…}`): the body is Perl's `($stomach, @args)`
+/// (Constructor.pm:99), each argument as `whatsit.getArg` gives it (`()` for an omitted optional), and returns a map
+/// whose entries become the whatsit's properties, for the template's `#name` holes. A body declaring the arguments
+/// alone ([`declares_lead`]) is the old form, given TeX-source strings, Warned `deprecated` once per binding load.
 pub(super) fn properties_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -807,13 +872,20 @@ pub(super) fn properties_trampoline(
 ) -> PropertiesClosure {
   Rc::new(
     move |args: &Vec<Option<Digested>>| -> Result<SymHashMap<Stored>> {
-      let dyn_args: Vec<Dynamic> = args
-        .iter()
-        .map(|a| match a {
-          Some(d) => Dynamic::from(d.untex().unwrap_or_default()),
-          None => Dynamic::UNIT,
-        })
-        .collect();
+      let dyn_args: Vec<Dynamic> = if declares_lead(&ast, &fp, args.len()) {
+        std::iter::once(Dynamic::from(StomachHandle))
+          .chain(args.iter().map(ctor_arg_to_dynamic))
+          .collect()
+      } else {
+        warn_deprecated_in(&ast, "properties |args|");
+        args
+          .iter()
+          .map(|a| match a {
+            Some(d) => Dynamic::from(d.untex().unwrap_or_default()),
+            None => Dynamic::UNIT,
+          })
+          .collect()
+      };
       let ret: Dynamic = call_deferred_body(&engine, &ast, &fp, dyn_args)
         .or_else(|e| contain("properties", e, Dynamic::UNIT))?;
       if ret.is_unit() {
@@ -858,7 +930,7 @@ pub(super) fn dynamic_to_bool(v: &Dynamic) -> bool {
 /// The boxes a primitive's body returns, as Perl's `invoke` keeps them (Primitive.pm:78): a box, an array of boxes,
 /// or `()` for none. Any other value is Perl's "Execution yielded non boxes" Error (Stomach.pm:219-223); for one
 /// release it is dropped with a deprecation Warning, as bodies returned their last value unread before.
-fn primitive_boxes(result: Dynamic) -> Vec<Digested> {
+fn primitive_boxes(ast: &Rc<AST>, result: Dynamic) -> Vec<Digested> {
   let items = if result.is_array() {
     result.cast::<rhai::Array>()
   } else {
@@ -876,7 +948,7 @@ fn primitive_boxes(result: Dynamic) -> Vec<Digested> {
     }
   }
   if non_box {
-    warn_deprecated("DefPrimitive returning a non-box");
+    warn_deprecated_in(ast, "DefPrimitive returning a non-box");
   }
   boxes
 }
@@ -919,7 +991,7 @@ pub(super) fn wire_primitive_i(
       );
       let result: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
         .or_else(|e| contain(&format!("primitive {cs_name}"), e, Dynamic::UNIT))?;
-      Ok(primitive_boxes(result))
+      Ok(primitive_boxes(&ast, result))
     })
   });
   def_primitive(cs, paramlist, closure.map(PrimitiveBody::Closure), options)?;
@@ -999,14 +1071,21 @@ pub(super) fn primitive_options_from_map(
       },
       "beforeDigest" => {
         for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
-          o.before_digest
-            .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+          o.before_digest.push(before_digest_trampoline(
+            fp,
+            engine.clone(),
+            ast.clone(),
+            "beforeDigest",
+          ));
         }
       },
       "afterDigest" => {
         for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
-          o.after_digest
-            .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+          o.after_digest.push(stomach_after_digest_trampoline(
+            fp,
+            engine.clone(),
+            ast.clone(),
+          ));
         }
       },
       _ => {},
@@ -1112,7 +1191,7 @@ fn perl_body_args(
       .chain(args.into_iter().map(arg_value))
       .collect()
   } else {
-    warn_deprecated(what);
+    warn_deprecated_in(ast, what);
     args.into_iter().map(arg_to_dynamic).collect()
   }
 }
@@ -1218,14 +1297,24 @@ pub(super) fn math_options_from_map(
       "rpadding" => o.rpadding = val.as_int().ok().map(|i| i as usize),
       "beforeDigest" => {
         for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
-          o.before_digest
-            .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+          o.before_digest.push(before_digest_trampoline(
+            fp,
+            engine.clone(),
+            ast.clone(),
+            "beforeDigest",
+          ));
         }
       },
+      // `afterDigest` is no simple-token option, so this DefMath is a Constructor (Package.pm:1603-1607,1711) and
+      // its hook takes Perl's `($stomach, $whatsit)` (Constructor.pm:114).
       "afterDigest" => {
         for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
-          o.after_digest
-            .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+          o.after_digest.push(after_digest_trampoline(
+            fp,
+            engine.clone(),
+            ast.clone(),
+            "afterDigest",
+          ));
         }
       },
       _ => {},
@@ -1392,7 +1481,7 @@ pub(super) fn reversion_trampoline(
       let lead = if declares_lead(&ast, &fp, args.len()) {
         Some(Dynamic::from(WhatsitProxy))
       } else {
-        warn_deprecated("reversion |args|");
+        warn_deprecated_in(&ast, "reversion |args|");
         None
       };
       let dyn_args: Vec<Dynamic> = lead
@@ -1794,16 +1883,21 @@ pub(super) fn wire_parameter_type(
       },
       "beforeDigest" => {
         for fp in hooks_of(val).filter_map(|v| v.try_cast::<FnPtr>()) {
-          param
-            .before_digest
-            .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+          param.before_digest.push(before_digest_trampoline(
+            fp,
+            engine.clone(),
+            ast.clone(),
+            "beforeDigest",
+          ));
         }
       },
       "afterDigest" => {
         for fp in hooks_of(val).filter_map(|v| v.try_cast::<FnPtr>()) {
-          param
-            .after_digest
-            .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+          param.after_digest.push(stomach_after_digest_trampoline(
+            fp,
+            engine.clone(),
+            ast.clone(),
+          ));
         }
       },
       _ => {},

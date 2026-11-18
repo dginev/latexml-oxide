@@ -87,13 +87,17 @@ A body is a closure. It receives what Perl's `sub` receives in `@_`, in that ord
 | `DefPrimitive` | `sub { my ($stomach, $x) = @_; … }` | `\|stomach, x\| …` |
 | `DefConstructor` | `sub { my ($document, $x, %props) = @_; … }` | `\|document, x\| …` |
 | `DefParameterType` reader | `sub { my ($gullet) = @_; … }` | `\|gullet\| gullet.readArg()` |
-| `reversion`, `afterDigest`, `sizer` | `sub { my ($whatsit, …) = @_; … }` | `\|whatsit, …\| …` |
+| `reversion`, `sizer` | `sub { my ($whatsit, …) = @_; … }` | `\|whatsit, …\| …` |
+| `beforeDigest`, `beforeDigestEnd` | `sub { my ($stomach) = @_; … }` | `\|stomach\| …` (or `\|\| …`) |
+| `afterDigest`, `afterDigestBegin`, `afterDigestBody` | `sub { my ($stomach, $whatsit) = @_; … }` | `\|stomach, whatsit\| …` |
+| `properties` | `sub { my ($stomach, $x) = @_; … }` | `\|stomach, x\| …` (each argument as `whatsit.getArg` gives it) |
 
 A closure is read as the Perl form when it declares the handle **and** every argument (`|gullet, x|`). With fewer
 parameters it is the older form (arguments only, as strings), which still works this release and Warns
 `Warning:deprecated` naming the fix; name an unused argument with a leading underscore (`|gullet, _x|`). A macro with
 no parameters takes `|gullet|` and reads its own arguments (`gullet.readArg()`, `gullet.readOptional()`), as Perl's
-`$gullet->readArg`. One exception today: a `properties` closure receives the arguments only.
+`$gullet->readArg`. A primitive's or a parameter type's `afterDigest` receives the stomach alone, as Perl's (there
+is no whatsit).
 
 ## Truth, `()` and strings
 
@@ -115,6 +119,13 @@ message, details…)` form), with the same severities: a
 A Rhai error in a body (a `throw`, a typo'd function) is reported as an `Error:script:` naming the binding, and that
 binding contributes nothing; the conversion goes on.
 
+Every such record names the `.rhai` file: its first locator is the line and column there, the second the TeX site.
+Types read as Rhai's (`string`, `int`, `float`, `bool`, `array`, `map`), so a misspelled or mistyped call reads
+`Function not found: NewCounter (int)`. A failure while the file loads is one `Error:script:<file>.rhai`: a syntax
+error loads nothing; a run error keeps what the statements before it defined and skips the rest, and the package
+counts as loaded either way (its raw `.sty`/`.cls` is not read instead). A `Fatal(…)` is located the same way. Each
+external program a binding runs (`Command(…).output()`) is named by an `Info:script:Command` line.
+
 ## Migrating from the deprecated names
 
 Each old name still works this release and Warns `Warning:deprecated` once per binding load, naming its replacement:
@@ -128,6 +139,7 @@ Each old name still works this release and Warns `Warning:deprecated` once per b
 | `document.getProperty(k)` in a constructor body | the body's trailing properties map |
 | `DefAccent(cs, combining, standalone, true)` | `DefAccent(cs, combining, standalone, #{below: true})` |
 | a body naming only its arguments (`\|x\|`) | the Perl form (`\|gullet, x\|`) |
+| a hook naming only its whatsit or arguments (`afterDigest: \|whatsit\|`, `properties: \|x\|`) | the Perl form (`\|stomach, whatsit\|`, `\|stomach, x\|`) |
 | `value == "string"`, `() == ""` | `ToString(value) == "string"`, `defined(value)` / `!!value` |
 | `CounterValue(c) + 1`, `0 < CounterValue(c)`, `roman(CounterValue(c))` (an int before) | `CounterValue(c).valueOf() + 1` — it returns a Number, as Perl's |
 | `document.setAttribute(key, value)` (the current node) | `document.setAttribute(node, key, value)`, e.g. `document.getNode()` |

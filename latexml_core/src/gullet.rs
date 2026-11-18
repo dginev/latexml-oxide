@@ -1,9 +1,9 @@
 use std::{
   cell::{RefCell, RefMut},
   collections::VecDeque,
+  sync::LazyLock,
 };
 
-use once_cell::sync::Lazy;
 use rustc_hash::FxHashSet as HashSet;
 
 // use std::mem;
@@ -52,14 +52,15 @@ fn is_hex_digit(c: char) -> bool { c.is_ascii_digit() || ('A'..='F').contains(&c
 /// concurrent calls (millions/sec across N threads) made the unsafe
 /// concurrent walks visible. The fix is to read the env var ONCE at
 /// static-init time; subsequent checks are a free atomic load.
-pub static TRACE_GROUP_END: Lazy<bool> =
-  Lazy::new(|| std::env::var("LXML_TRACE_GROUP_END").is_ok());
+pub static TRACE_GROUP_END: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LXML_TRACE_GROUP_END").is_ok());
 
 /// Cached `LATEXML_CSNAME_TRACE` flag + the shared lookahead dump used by
 /// both csname-assembly error sites: reads up to 40 tokens, prints them,
 /// and puts them back (a counted-read/retracting-unread round trip — align
 /// ledger symmetric).
-pub static CSNAME_TRACE: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_CSNAME_TRACE").is_ok());
+pub static CSNAME_TRACE: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LATEXML_CSNAME_TRACE").is_ok());
 
 fn csname_trace_lookahead(tag: &str, cs: &str, bad: &Token) -> Result<()> {
   let mut ahead = Vec::new();
@@ -94,7 +95,7 @@ fn special_relax_matches(token: &Token, target: &Token) -> bool {
   token.noexpand_shadowed().as_ref() == Some(target)
 }
 #[thread_local]
-static DEFERRED_COMMANDS: Lazy<HashSet<SymStr>> = Lazy::new(|| {
+static DEFERRED_COMMANDS: LazyLock<HashSet<SymStr>> = LazyLock::new(|| {
   set!(
     pin!("\\the"),
     pin!("\\showthe"),
@@ -105,7 +106,7 @@ static DEFERRED_COMMANDS: Lazy<HashSet<SymStr>> = Lazy::new(|| {
 
 // If it is a column ending token, Returns the token, a keyword and whether it is "hidden"
 #[thread_local]
-static COLUMN_ENDS: Lazy<[(Token, &'static str, bool); 6]> = Lazy::new(|| {
+static COLUMN_ENDS: LazyLock<[(Token, &'static str, bool); 6]> = LazyLock::new(|| {
   [
     // besides T_ALIGN
     (T_CS!("\\cr"), "cr", false),
@@ -539,10 +540,10 @@ fn operand_value(token: &Token, defn: &dyn Definition) -> Option<Tokens> {
 
 /// Hoisted env probe for the LATEXML_DEBUG_FATAL diagnostics (shared seam in
 /// `common::error`; read once so the per-token hot path pays one bool test).
-static DEBUG_FATAL: Lazy<bool> = Lazy::new(debug_fatal_enabled);
+static DEBUG_FATAL: LazyLock<bool> = LazyLock::new(debug_fatal_enabled);
 
 #[thread_local]
-pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
+pub static GULLET: LazyLock<RefCell<Gullet>> = LazyLock::new(|| {
   RefCell::new(Gullet {
     token_limit: default_token_limit(),
     // Explicit: `#[derive(Default)]` would set this to 0 (guard active from the
@@ -562,9 +563,9 @@ pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
 /// another root's init mid-conversion — the macOS `#[thread_local]` hazard
 /// behind issue #217. No behavioral change on Linux.
 pub(crate) fn force_init() {
-  Lazy::force(&DEFERRED_COMMANDS);
-  Lazy::force(&COLUMN_ENDS);
-  Lazy::force(&GULLET);
+  LazyLock::force(&DEFERRED_COMMANDS);
+  LazyLock::force(&COLUMN_ENDS);
+  LazyLock::force(&GULLET);
 }
 
 macro_rules! gullet {
@@ -4184,7 +4185,7 @@ pub fn read_value(value_type: RegisterType) -> Result<RegisterValue> {
     RegisterType::Token => {
       // Perl: readValue('Token') checks for \csname (Gullet.pm line 770-775)
       #[thread_local]
-      static TOKEN_CSNAME: Lazy<Token> = Lazy::new(|| T_CS!("\\csname"));
+      static TOKEN_CSNAME: LazyLock<Token> = LazyLock::new(|| T_CS!("\\csname"));
       let token = read_non_space()?.unwrap_or(*TOKEN_RELAX);
       if token.defined_as(&TOKEN_CSNAME) {
         return Ok(read_cs_name()?.into());

@@ -1,4 +1,4 @@
-static DNIR_REX: Lazy<Regex> = Lazy::new(|| Regex::new("^\\\\((?i)[dnir])").unwrap());
+static DNIR_REX: LazyLock<Regex> = LazyLock::new(|| Regex::new("^\\\\((?i)[dnir])").unwrap());
 
 use crate::prelude::*;
 

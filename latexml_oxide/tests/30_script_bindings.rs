@@ -107,7 +107,7 @@ const SAMPLE: &str = r##"
     "^<ltx:note role=\"footnote\" ?#mark(mark=\"#mark\")()>?#prenote(#prenote )()#2</ltx:note>", #{
     mode: "internal_vertical",
     beforeDigest: || neutralize_font(),
-    afterDigest: |whatsit| {
+    afterDigest: |stomach, whatsit| {
       let m = ToString(whatsit.getArg(1));
       if m != "" { whatsit.setProperty("mark", m); }
     }
@@ -117,7 +117,7 @@ const SAMPLE: &str = r##"
   // whatsit's property map from the digested args; the template reads it
   // through a `#cls` hole at attribute position.
   DefConstructor("\\pnote{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
-    properties: |x| #{ cls: "from-" + x }
+    properties: |stomach, x| #{ cls: "from-" + ToString(x) }
   });
 
   // `properties` as a STATIC MAP (Perl `properties => { key => value }`).
@@ -137,7 +137,7 @@ const SAMPLE: &str = r##"
     document.absorbString(t + "/" + all.n);
     document.closeElement("ltx:text");
   }, #{
-    properties: |x| #{ tag: "T-" + x, n: "2" }
+    properties: |stomach, x| #{ tag: "T-" + ToString(x), n: "2" }
   });
 
   // Processing-instruction template (the class/package PI dialect shape).
@@ -175,7 +175,7 @@ const SAMPLE: &str = r##"
   // name='LIT' probe. `class` is universally allowed.)
   DefEnvironment("{biop}{}",
     "<ltx:note role=\"biography\" class=\"#pname\">#body</ltx:note>", #{
-    properties: |a| #{ pname: a }
+    properties: |stomach, a| #{ pname: a }
   });
 
   // Environment, IMPERATIVE form — the {center}-style native shape
@@ -209,7 +209,7 @@ const SAMPLE: &str = r##"
   DefEnvironment("{rproof}[]",
     "<ltx:proof class=\"ltx_proof\"><ltx:title font=\"#font\">#title</ltx:title>#body</ltx:proof>", #{
     mode: "internal_vertical",
-    properties: |args| {
+    properties: |stomach, _opt| {
       let title = DigestText("{\\bfseries Proof:}");
       #{ title: title, font: title }
     }
@@ -225,7 +225,7 @@ const SAMPLE: &str = r##"
   // still exercised (it steps the counter and returns its map).
   NewCounter("rqeq");
   DefConstructor("\\numbered{}", "<ltx:text class=\"eq\">(#refnum) #1</ltx:text>", #{
-    properties: |x| { let m = RefStepCounter("rqeq"); m.refnum = CounterValue("rqeq").to_string(); m },
+    properties: |stomach, x| { let m = RefStepCounter("rqeq"); m.refnum = CounterValue("rqeq").to_string(); m },
     reversion: "\\numbered{#1}"
   });
 
@@ -239,7 +239,7 @@ const SAMPLE: &str = r##"
   // COMPUTES from the numeric args (the dual properties/afterDigest pattern).
   DefConstructor("\\gsbox {Float}{Float} {}",
     "<ltx:inline-block class=\"gs\" xscale=\"#xscale\" yscale=\"#yscale\">#3</ltx:inline-block>", #{
-    properties: |xs, ys, unused_box| #{ xscale: xs, yscale: ys }
+    properties: |stomach, xs, ys, _box| #{ xscale: xs, yscale: ys }
   });
 
   // listings/siunitx-style OptionalKeyVals: the keyval set arrives as the
@@ -1141,7 +1141,7 @@ const THROW_SAMPLE: &str = r##"
   });
   DefConditional("\\ifthrcond", || { throw "conditional boom"; });
   DefConstructor("\\thrprops{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
-    properties: |x| { throw "properties boom"; }
+    properties: |stomach, x| { throw "properties boom"; }
   });
   DefConstructor("\\thrbefore{}", "<ltx:text class=\"thr-before\">#1</ltx:text>", #{
     beforeDigest: || { throw "beforeDigest boom"; }
@@ -1658,7 +1658,7 @@ fn a_rhai_fatal_is_logged_once() {
         r#"Fatal("unexpected", "Internal", "wftop requires something"); DefMacro("\\wftopmacro", "OK");"#,
       )],
       "Before \\wftopmacro\\ after.",
-      &["Fatal:unexpected:Internal  wftop requires something"],
+      &["Fatal:unexpected:Internal wftop requires something"],
       0,
       0,
       "",
@@ -1671,7 +1671,7 @@ fn a_rhai_fatal_is_logged_once() {
         r#"DefMacro("\\wftopmacro", || { Fatal("unexpected", "Internal", "wfbody gives up"); "X" });"#,
       )],
       "Before \\wftopmacro\\ after.",
-      &["Fatal:unexpected:Internal  wfbody gives up"],
+      &["Fatal:unexpected:Internal wfbody gives up"],
       0,
       0,
       "",
@@ -1703,7 +1703,7 @@ fn a_rhai_fatal_is_logged_once() {
         ),
       ],
       "Before \\wftopmacro\\ after.",
-      &["Fatal:unexpected:Internal  wfinner requires something"],
+      &["Fatal:unexpected:Internal wfinner requires something"],
       0,
       0,
       "",
@@ -1717,7 +1717,7 @@ fn a_rhai_fatal_is_logged_once() {
            DefMacro("\\wfb", || { throw "wfb plain trouble"; "B" });"#,
       )],
       "Before \\wfa\\ middle \\wfb\\ after.",
-      &["Fatal:unexpected:Internal  wfa caught one"],
+      &["Fatal:unexpected:Internal wfa caught one"],
       1,
       0,
       "Before A middle",
@@ -1731,7 +1731,7 @@ fn a_rhai_fatal_is_logged_once() {
            DefConstructor("\\wfc", "<ltx:text class=\"wfc\">C</ltx:text>", #{ afterDigest: || { throw "wfc hook trouble"; } });"#,
       )],
       "Before \\wfa\\ middle \\wfc\\ after.",
-      &["Fatal:unexpected:Internal  wfa gives up"],
+      &["Fatal:unexpected:Internal wfa gives up"],
       1,
       0,
       "Before A middle",
@@ -1749,8 +1749,8 @@ fn a_rhai_fatal_is_logged_once() {
       ],
       "Before \\wftopmacro\\ after.",
       &[
-        "Fatal:unexpected:Internal  wftop caught one",
-        "script-binding run error: Runtime error: wfinner plain trouble",
+        "Fatal:unexpected:Internal wftop caught one",
+        "wfinner plain trouble; the rest of the binding is skipped",
       ],
       0,
       0,
@@ -1764,7 +1764,7 @@ fn a_rhai_fatal_is_logged_once() {
         r#"DefLigature("qq", "Q", #{ fontTest: |font| { Fatal("unexpected", "Internal", "wflig test gives up"); true } });"#,
       )],
       "Before qq after.\\par Second paragraph.",
-      &["Fatal:unexpected:Internal  wflig test gives up"],
+      &["Fatal:unexpected:Internal wflig test gives up"],
       0,
       1,
       "Before qq after.",
@@ -1777,7 +1777,7 @@ fn a_rhai_fatal_is_logged_once() {
         r#"DefLigature("qq", "Q", #{ fontTest: |font| { try { Fatal("unexpected", "Internal", "wflig caught one"); } catch (e) { } true } });"#,
       )],
       "Before qq after.\\par Second qq.",
-      &["Fatal:unexpected:Internal  wflig caught one"],
+      &["Fatal:unexpected:Internal wflig caught one"],
       0,
       0,
       "Second Q.",
@@ -1790,7 +1790,7 @@ fn a_rhai_fatal_is_logged_once() {
         r#"DefRegister("\\wfreg", Dimension("0pt"), #{ setter: |value, scope| { Fatal("unexpected", "Internal", "wfset gives up"); } });"#,
       )],
       "Before \\wfreg=5pt after.",
-      &["Fatal:unexpected:Internal  wfset gives up"],
+      &["Fatal:unexpected:Internal wfset gives up"],
       0,
       0,
       "",
@@ -1803,7 +1803,7 @@ fn a_rhai_fatal_is_logged_once() {
         r#"DefRegister("\\wfreg", Dimension("0pt"), #{ setter: |value, scope| { try { Fatal("unexpected", "Internal", "wfset caught one"); } catch (e) { } } });"#,
       )],
       "Before \\wfreg=5pt after.",
-      &["Fatal:unexpected:Internal  wfset caught one"],
+      &["Fatal:unexpected:Internal wfset caught one"],
       0,
       0,
       "Before after.",
@@ -2021,4 +2021,128 @@ fn package_pm_calls_take_effect_in_a_conversion() {
     &[r#"class="g""#],
     r#"<para class="g" xml:id="p2"><p>T</p><p>body</p></para>"#,
   );
+}
+
+/// A binding's diagnostic names its `.rhai` file once, in a script author's terms (RHAIDIAG): one record per failure
+/// in the `script` category (a load failure's object is the file), Rhai's types as `string`/`int`, the first locator
+/// the `.rhai` line and column, the second the TeX site; a `Fatal()` with one space and both locators; an external
+/// `Command` and a deprecated alias each named once. Rows: (name, the binding, the body, the record's first line, the
+/// `.rhai` locator's tail, the TeX locator, (Error:, Fatal:, Warning:) lines, a text the document keeps).
+#[test]
+fn a_rhai_diagnostic_names_its_binding_file() {
+  type DiagRow<'a> = (
+    &'a str,
+    &'a str,
+    &'a str,
+    &'a str,
+    &'a str,
+    &'a str,
+    (usize, usize, usize),
+    &'a str,
+  );
+  let program = if cfg!(windows) { "cmd" } else { "true" };
+  let command =
+    format!(r#"DefMacro("\\dgrun", || {{ let out = Command("{program}").output(); "ran" }});"#);
+  let info = format!("Info:script:Command running the external program '{program}'");
+  let rows: &[DiagRow] = &[
+    (
+      "a misspelled call at load: the statements before it stand, the rest is skipped",
+      "DefMacro(\"\\\\dgA\", \"A\");\nDefMacr(\"\\\\dgT\", \"x\");\nDefMacro(\"\\\\dgB\", \"B\");",
+      "X\\dgA{} Y",
+      "Error:script:dg.sty.rhai Function not found: DefMacr (string, string); the rest of the binding is skipped",
+      "/dg.sty.rhai; line 2 col 1",
+      "\tat t.tex; line 1 col 45 - line 1 col 45",
+      (1, 0, 0),
+      "XA Y",
+    ),
+    (
+      "a wrong argument type at load",
+      "DefMacro(\"\\\\dgA\", \"A\");\nNewCounter(42);",
+      "X\\dgA{} Y",
+      "Error:script:dg.sty.rhai Function not found: NewCounter (int); the rest of the binding is skipped",
+      "/dg.sty.rhai; line 2 col 1",
+      "\tat t.tex; line 1 col 45 - line 1 col 45",
+      (1, 0, 0),
+      "XA Y",
+    ),
+    (
+      "a syntax error: nothing loads",
+      "DefMacro(\"\\\\dgA\", \"A\");\nDefMacro(\"\\\\dgB\", |gullet| { \"x\" ;\n",
+      "X Y",
+      "Error:script:dg.sty.rhai Syntax error: Expecting '}' to terminate this block; the binding is not loaded",
+      "/dg.sty.rhai; line 3 col 1",
+      "\tat t.tex; line 1 col 45 - line 1 col 45",
+      (1, 0, 0),
+      "X Y",
+    ),
+    (
+      "a body's runtime error, contained",
+      "DefMacro(\"\\\\dgA\", \"A\");\nDefMacro(\"\\\\boom\", |gullet| {\n  throw \"kaboom\";\n});",
+      "X \\boom{} Y\\dgA",
+      "Error:script:macro \\boom Runtime error: kaboom",
+      "/dg.sty.rhai; line 3 col 3",
+      "\tat t.tex; line 1 col 62 - line 1 col 62",
+      (1, 0, 0),
+      "X  YA",
+    ),
+    (
+      "a body's Fatal()",
+      "DefPrimitive(\"\\\\die\", |stomach| {\n  Fatal(\"mycat\", \"myobj\", \"deliberate fatal\");\n});",
+      "X \\die{} after",
+      "Fatal:mycat:myobj deliberate fatal",
+      "/dg.sty.rhai; line 2 col 3",
+      "\tat t.tex; line 1 col 61 - line 1 col 61",
+      (0, 1, 0),
+      "",
+    ),
+    (
+      "an external command",
+      &command,
+      "X \\dgrun{} Y",
+      &info,
+      "/dg.sty.rhai; line 1 col 52",
+      "\tat t.tex; line 1 col 63 - line 1 col 63",
+      (0, 0, 0),
+      "X ran Y",
+    ),
+    (
+      "a deprecated alias: the file, its call's line unknown",
+      "assign_value(\"dgzero\", \"1\");",
+      "X Y",
+      "Warning:deprecated:assign_value assign_value is deprecated; use AssignValue(key, value, \"local\")",
+      "/dg.sty.rhai",
+      "\tat t.tex; line 1 col 45 - line 1 col 45",
+      (0, 0, 1),
+      "X Y",
+    ),
+  ];
+  let mut failures = Vec::new();
+  for (name, rhai, body, first, rhai_at, tex_at, (errors, fatals, warnings), kept) in rows {
+    let tex = format!(
+      "\\documentclass{{article}}\\usepackage{{dg}}\\begin{{document}}{body}\\end{{document}}"
+    );
+    let (log, xml, ..) =
+      latexml::util::test::convert_files_with_status(&tex, &[("dg.sty.rhai", rhai)], None);
+    let lines: Vec<&str> = log.lines().collect();
+    let count = |prefix: &str| lines.iter().filter(|l| l.starts_with(prefix)).count();
+    let at = lines.iter().position(|l| l == first);
+    let located = at.is_some_and(|i| {
+      lines
+        .get(i + 1)
+        .is_some_and(|l| l.starts_with("\tat ") && l.ends_with(rhai_at))
+        && lines.get(i + 2) == Some(tex_at)
+    });
+    let seen = (count("Error:"), count("Fatal:"), count("Warning:"));
+    if count(first) != 1 || !located || seen != (*errors, *fatals, *warnings) || !xml.contains(kept)
+    {
+      failures.push(format!(
+        "{name}: {} records {first:?} (want 1), located {located}, (E, F, W) {seen:?} (want {:?}), keeps {kept:?}: \
+         {}\n{xml}\n{log}",
+        count(first),
+        (errors, fatals, warnings),
+        xml.contains(kept)
+      ));
+    }
+  }
+  assert!(failures.is_empty(), "{failures:#?}");
 }

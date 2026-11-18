@@ -1,6 +1,5 @@
-use std::{cmp::Ordering, fmt};
+use std::{cmp::Ordering, fmt, sync::LazyLock};
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use super::dimension::fixedformat;
@@ -98,12 +97,12 @@ static GLUE_RE_STR: &str = concat!(
   r")?$"
 );
 
-static _NUM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(num_re_str!()).unwrap());
-static UNIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(unit_re_str!()).unwrap());
-static _FILL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(fill_re_str!()).unwrap());
-static _PLUS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(plus_re_str!()).unwrap());
-static _MINUS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(minus_re_str!()).unwrap());
-static GLUE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(GLUE_RE_STR).unwrap());
+static _NUM_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(num_re_str!()).unwrap());
+static UNIT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(unit_re_str!()).unwrap());
+static _FILL_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(fill_re_str!()).unwrap());
+static _PLUS_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(plus_re_str!()).unwrap());
+static _MINUS_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(minus_re_str!()).unwrap());
+static GLUE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(GLUE_RE_STR).unwrap());
 
 /// Whether `spec` is a form Perl's `Glue($spec)`/`MuGlue($spec)` reads (Glue.pm `new`): `$GLUE_re`, or a bare
 /// number of sp; any other string Perl Warns "Missing Glue specification" and reads as 0.

@@ -73,7 +73,7 @@ fn run_init(init: &str) -> (String, String) {
 
 /// Convert `tex` with the CLI binary in a tempdir, with no preload (so a document without `\documentclass` stays plain
 /// TeX), the given `--timeout` and extra child-process environment: a process of its own for the `LATEXML_NODUMP`
-/// caller, as the dump-or-raw `LoadFormat` branch is chosen once per process (a process-once `Lazy`, plain_dump.rs,
+/// caller, as the dump-or-raw `LoadFormat` branch is chosen once per process (a process-once `LazyLock`, plain_dump.rs,
 /// latex.rs). Returns (exit success, ANSI-stripped stderr, XML).
 fn convert_cli(tex: &str, timeout: u32, env: &[(&str, &str)]) -> (bool, String, String) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");

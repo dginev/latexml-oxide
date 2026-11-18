@@ -1,4 +1,5 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
+
 use rustc_hash::FxHashMap as HashMap;
 
 pub struct MetricData {
@@ -59,7 +60,7 @@ impl Default for MetricData {
 #[rustfmt::skip]
 // Each font's `MetricData` is built in its own frame (`metric`), so the table's initializer keeps a small stack frame: inline,
 // the 84 entries shared one 1.7 MB frame (clippy::large_stack_frames), paid by whichever thread first reads the table.
-pub static STDMETRICS: Lazy<HashMap<&'static str, MetricData>> = Lazy::new(|| {
+pub static STDMETRICS: LazyLock<HashMap<&'static str, MetricData>> = LazyLock::new(|| {
   raw_map!(
   "amsa" => metric(|| MetricData {
     quad: 65536.18,
