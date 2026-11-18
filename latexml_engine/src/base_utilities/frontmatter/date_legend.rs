@@ -4,7 +4,8 @@
 //! `\maketitle` (`\lx@date@legend`, after `\lx@author@tail`), before the flush, as the author block's own lines are: each
 //! line a label of the block's names leads is the contact that label's line is, an affiliation line no label leads
 //! every author's, an e-mail line its addresses' owners'. A date anything is taken from is void, its leftover dropped
-//! (`Info:frontmatter:date_void`, DG 2026-11-17); one with a line no rule reads stays whole. Perl: the text is the date.
+//! (`Info:frontmatter:date_void`, DG 2026-11-17), its notes the title's (`taken_notes`, 2605.04795); one with a line no
+//! rule reads stays whole. Perl: the text is the date.
 
 use super::*;
 
@@ -149,6 +150,7 @@ pub(in crate::base_utilities) fn date_legend_calls() -> Result<Vec<Token>> {
     .collect::<Result<_>>()?;
   let mut calls: Vec<Token> = Vec::new();
   let mut void: Vec<Token> = Vec::new();
+  let mut notes: Vec<Token> = Vec::new();
   let mut run: Option<Run> = None;
   let mut explained: Vec<String> = Vec::new();
   let flush = |run: &mut Option<Run>, calls: &mut Vec<Token>| -> Result<()> {
@@ -208,6 +210,8 @@ pub(in crate::base_utilities) fn date_legend_calls() -> Result<Vec<Token>> {
       Line::Text(_) => run = Some((None, line)),
       Line::Date | Line::Kept(_) => {
         flush(&mut run, &mut calls)?;
+        let (line, held) = taken_notes(&line);
+        notes.extend(held);
         if !void.is_empty() {
           void.push(T_SPACE!());
         }
@@ -216,6 +220,7 @@ pub(in crate::base_utilities) fn date_legend_calls() -> Result<Vec<Token>> {
     }
   }
   flush(&mut run, &mut calls)?;
+  calls.extend(notes);
   if !explained.is_empty() {
     policy::explain_name_labels(&explained);
   }
@@ -238,6 +243,60 @@ pub(in crate::base_utilities) fn date_legend_calls() -> Result<Vec<Token>> {
     Tokens::new(calls.clone())
   );
   Ok(calls)
+}
+
+/// A void date line's notes, at any depth, taken out as the title notes they would be outside the date — no leftover of
+/// the date, whose void drops only its own text (2605.04795's `\today\footnotemark[0]\footnotetext[0]{2020 Mathematics
+/// Subject Classification: …}`): `\thanks` and `\footnote` the pubnotes `digestFrontmatterItem` binds them to in a date
+/// (Perl Base_Utility.pool.ltxml:331-332), `\footnotetext` a title-page footnote text's note (`\lx@fm@footnotetext`, OD
+/// #1036) without the counter step LaTeX's `\footnotetext` does not make. Gives the line without them, and the calls.
+fn taken_notes(line: &[Token]) -> (Vec<Token>, Vec<Token>) {
+  let mut rest = Vec::with_capacity(line.len());
+  let mut calls = Vec::new();
+  let mut i = 0;
+  while i < line.len() {
+    let t = line[i];
+    let call = match t {
+      t if t == T_CS!("\\thanks") => "\\lx@add@pubnote@thanks",
+      t if t == T_CS!("\\footnote") => "\\lx@add@pubnote",
+      t if t == T_CS!("\\footnotetext") => "\\lx@add@frontmatter{ltx:pubnote}[role=note,name={}]",
+      _ => {
+        rest.push(t);
+        i += 1;
+        continue;
+      },
+    };
+    // (its `[…]`, a footnote number no pubnote takes, and its braced text; a note not so written stays in the line)
+    let past_spaces = |mut at: usize| {
+      while line.get(at) == Some(&T_SPACE!()) {
+        at += 1;
+      }
+      at
+    };
+    let mut at = past_spaces(i + 1);
+    if line.get(at) == Some(&T_OTHER!("[")) {
+      at = line[at..]
+        .iter()
+        .position(|t| *t == T_OTHER!("]"))
+        .map_or(line.len(), |close| past_spaces(at + close + 1));
+    }
+    let end = skip_group(line, at);
+    if line
+      .get(at)
+      .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+      || line
+        .get(end.wrapping_sub(1))
+        .is_none_or(|t| t.get_catcode() != Catcode::END)
+    {
+      rest.push(t);
+      i += 1;
+      continue;
+    }
+    calls.extend(mouth::tokenize_internal(TeXString::assembled(call.to_string())).unlist());
+    calls.extend_from_slice(&line[at..end]);
+    i = end;
+  }
+  (rest, calls)
 }
 
 /// `tokens` without the group or size environment around all of them, and the switches that open them, which are given

@@ -1,4 +1,4 @@
-use latexml_core::common::{dimension::attribute_format, numeric_ops::kround};
+use latexml_core::common::{dimension::attribute_format, float::floatformat, numeric_ops::kround};
 
 use crate::prelude::*;
 
@@ -242,29 +242,43 @@ LoadDefinitions!({
 
   // == Scaling boxes ==
 
-  // \scalebox{xscale}[yscale]{content}
-  // Perl: DefConstructor('\Gscale@box {Float} [Float] {}', ...)
-  // Perl: graphics_scaledbox_props computes scaled dimensions and translation
-  // Perl: \Gscale@box {Float} [Float] {} — Float parameters format as "3.0" not "3"
-  DefConstructor!("\\scalebox{} []{}", "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
+  // A scale factor, Perl's `Float` read in the factor's own braces, whose rest is dropped with a Warning, as Perl's
+  // forced `closeMouth` drops it silently (Gullet.pm:57-69): not read after the box (OXIDIZED_DESIGN #317), where
+  // TeX's scale arithmetic would not put it either (`\scalebox{1 -1}`: pdflatex "Illegal unit", no output). Dia's
+  // pstricks export writes old pstricks' `\scalebox{1.000000 -1.000000}{label}` (cs0606057).
+  DefParameterType!(GraphixFloat, sub[_inner, _extra] {
+    let factor = read_float()?;
+    if in_braced_read() {
+      drop_argument_tail(&T_CS!("\\scalebox"), take_rest_of_mouth(), "graphics.sty's scale arithmetic errs on it");
+    }
+    factor
+  });
+
+  // \scalebox{xscale}[yscale]{content} — Perl graphics.sty.ltxml:93 `\Gscale@box {Float} [Float] {}`: the scales are
+  // quantities, which no text reader prints (a `\scalebox{0.75}{\Letter}` mark read "0.75🖂", 2606.29928, 2605.23320)
+  DefConstructor!("\\scalebox{GraphixFloat}[GraphixFloat]{}", "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   properties => sub[args] {
-    // Format scales as float (3 → "3.0") to match Perl's Float parameter type
+    // (Perl's Float prints by `floatformat`: 3 → "3.0", 0.75 → "0.75")
     let xs = args[0].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
     let xscale_f: f64 = xs.parse().unwrap_or(1.0);
-    let xscale_str = format!("{:.1}", xscale_f);
+    let xscale_str = floatformat(xscale_f);
+    // (Perl's `$yscale || $xscale`, graphics.sty.ltxml:99: an empty or zero `[yscale]` is the x-scale's; REVMARKSCALE)
     let yscale_f: f64 = args[1]
       .as_ref()
-      .map(|a| a.to_attribute().parse().unwrap_or(xscale_f))
+      .and_then(|a| a.to_attribute().parse::<f64>().ok())
+      .filter(|y| *y != 0.0)
       .unwrap_or(xscale_f);
-    let yscale_str = format!("{:.1}", yscale_f);
+    let yscale_str = floatformat(yscale_f);
     Ok(stored_map!("xscale" => xscale_str, "yscale" => yscale_str))
   },
   after_digest => sub[whatsit] {
     let xscale = whatsit.get_arg(1)
       .map(|a| a.to_attribute().parse::<f64>().unwrap_or(1.0)).unwrap_or(1.0);
     let yscale = whatsit.get_arg(2)
-      .map(|a| a.to_attribute().parse::<f64>().unwrap_or(xscale)).unwrap_or(xscale);
+      .and_then(|a| a.to_attribute().parse::<f64>().ok())
+      .filter(|y| *y != 0.0)
+      .unwrap_or(xscale);
     if let Some(body) = whatsit.get_arg(3) {
       let scaled = scaled_properties(body.clone(), xscale, yscale);
       if let Ok(props) = scaled {

@@ -33,7 +33,8 @@ fn pstricks_keeps_graphics_scalebox() {
     "../../../tools/perfect_kernel/repros/package-bindings/pstricks_keeps_graphics_scalebox.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(xml.contains(r#"\scalebox{1}{$b_{1}$}"#), "{xml}");
+  // (the scale a `{Float}`, reverted as Perl's Float prints it: graphics.sty.ltxml:93, MARKSCALE)
+  assert!(xml.contains(r#"\scalebox{1.0}{$b_{1}$}"#), "{xml}");
   assert!(xml.contains("AFTERWORDS survive."), "{xml}");
 }
 

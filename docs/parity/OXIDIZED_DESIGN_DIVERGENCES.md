@@ -20376,8 +20376,8 @@ behind it (`ltx_note_content`, shown on hovering the mark, after its "role: " la
   (`\icmlProjectLead`, `\icmlEqualSeniorContribution`, `\icmlEqualContributionAndSenior`, `\airesident`; a `\char` of
   U+2020 printed nothing: 2402.05011);
   `\icmlEqualContribution` is `\textsuperscript{*}Equal contribution`, as every
-  icml20xx.sty from 2017 prints it (icml2026.sty:502); `\icmlsetsymbol{name}{sym}` also defines the real
-  `\@icmlsymbol<name>` (:465-467), and `\icmlauthor{name}{labels}` gives each label naming one a mark-only note of the
+  icml20xx.sty from 2017 prints it (icml2026.sty:502); `\icmlsetsymbol{name}{sym}` defines only the real
+  `\@icmlsymbol<name>` (:465-467; #1076), and `\icmlauthor{name}{labels}` gives each label naming one a mark-only note of the
   creator (`\lx@annotate@frontmatter{ltx:creator}{ltx:note}[role=footnotemark,mark=…]`, as acmart's
   `\authornotemark`), the symbol icml2026.sty:446-458 prints after the name. Not a superscript in the name: the
   creator's `fuzzy:` label is its personname's text, and `\icmlcorrespondingauthor{Xiaosen Wang}` then went to the
@@ -20541,7 +20541,10 @@ unlabelled lines continuing it, is the contact that label's line is; an unlabell
 continuation, every author's affiliation; a line of e-mail addresses alone (an "E-mail:" label naming each, a
 `{a, b}@x` list written out) each address's owner's. A date anything is taken from is void (DG 2026-11-17, "null and
 void"): no `ltx:date`, its leftover — a `\today`, a date string — dropped and named once,
-`Info:frontmatter:date_void`. A date with a line no rule reads (a label no name prints, a mark inside a line, text
+`Info:frontmatter:date_void`; a note inside it is no leftover of the date (DATEFOOT): a `\footnotetext` is a title note
+(`ltx:pubnote` role note, as a title-page footnote text is, #1036, no counter step), a `\thanks`/`\footnote` the pubnote a
+date's note digests to (2605.04795's MSC line); a note written otherwise than command, optional `[…]`, braced text (an
+unbraced argument, `\thanks\fundnote`) stays in the dropped line, its loss counted by the `unclaimed` Warning (row R). A date with a line no rule reads (a label no name prints, a mark inside a line, text
 naming no institution, a binding's label keyed by a document macro, an address among text that is no e-mail label or
 beside an `@` no address holds) is the date, whole,
 with an Info: nothing of it is taken. So is one whose lines' owners may not be the names they read as: typed labels
@@ -20574,9 +20577,10 @@ author (`spelled_owners`). It runs as the body note closes (`ltx:note`'s `after_
 on a note a frontmatter flush digests or `insert_frontmatter` places (`FRONTMATTER_INSERTING`). The `\date` reader reads
 tokens, as the API's Cut does (the store is no rehearsed block): `perfect_kernel_batche0`'s `frontmatter (rest)` pin
 37 -> 53 (51 the line readers, +1 the void date's words named to the title-page check, +1 the `@` signs the
-address-among-text fail-safe counts on the tokens).
+address-among-text fail-safe counts on the tokens; 53 -> 61, a void date's notes taken out of its line on the tokens,
+`taken_notes`).
 **Witnesses.** 1512.01686, 2003.11862, 2412.00057, 2108.10662, 1802.01334, 2305.08521, 2511.18126, 2401.15728,
-2303.16540, 0907.1199, 0806.4361, 1506.06444, 0912.1999, 2507.03628 (`\date`); 2606.00446 (authblk `§`); 2506.06941
+2303.16540, 0907.1199, 0806.4361, 1506.06444, 0912.1999, 2507.03628 (`\date`); 2605.04795 (a void date's `\footnotetext`); 2606.00446 (authblk `§`); 2506.06941
 (the `\footnotetext` address list); 2508.05506, 1507.08926 (`\blfootnote{$\dagger$ …}`, a legend note, open);
 2307.00092, 2412.00057, 2404.15649, 2601.19933, cs0703003, 1801.04802 (the fail-safes); 2302.11378 (`$^{(2)}$` legends in
 `\date`); 2602.04557 (icml's notice, open).
@@ -20586,7 +20590,8 @@ address-among-text fail-safe counts on the tokens).
 (`perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_beside_its_legend`, repinned),
 the SHARED row `fmmarks_authblk_double_star_label_and_date_note_red` (green), the LINK row
 `author_typed_star_legend_in_the_date_links_nothing` (the date's ∗ legend is Ann's and Bob's note);
-`perfect_kernel_batchdateleg` (the `date_void` and stays-the-date Infos, the date's fail-safes
+`perfect_kernel_batchdateleg` (the `date_void` and stays-the-date Infos, a void date's notes
+`a_void_dates_notes_are_title_notes`, the date's fail-safes
 `a_date_whose_owners_are_uncertain_stays_whole`, the note fail-safes); `note_star_legend_in_abstract` a RED catalog
 repro.
 
@@ -20609,7 +20614,9 @@ surname its local part spells, else in order: `FmEmailOwner::SpelledElseOrder`'s
 author's name piece — after its grade where the grade follows the name's comma, before it where the name's comma sits
 inside the grade's braces (`Ann Able,~\IEEEmembership{Member, IEEE,}`, 2106.02811) — except the name before a `\\`
 or ending the list, whose contacts follow its grade either way (one paper may show both orders: 2106.02811, pinned by
-`ieee_unlabelled_addresses_route_by_the_name`) — never past a blank line or `\\`; a note "Corresponding author: <name>" (or "… is <name>") becomes that author's
+`ieee_unlabelled_addresses_route_by_the_name`) — never past a blank line or `\\`; a `\thanks` met before a piece's
+first letter (`Ann Able, \thanks{…} Bob Baker`, its mark printed after Ann's comma) moves no insertion point onto the next
+name — its contacts still go to the author it spells (2606.25681, 1105.4002); a note "Corresponding author: <name>" (or "… is <name>") becomes that author's
 `role=correspondent` contact, its text whole. A name matches an author by surname (the author's last word) and first
 initial; several sentences of one note route each. A sentence starts at the note's start or after a '.' or ';' that ends no initial
 ("C.", "J.-L.", "D.S."); its affiliation is one sentence (to ". " before a capital, after no initial), followed by at
@@ -20626,7 +20633,7 @@ words dropped are the routing keys ("<names> is with") and the e-mail labels, wh
 Not done: a post-digestion check that each routed contact sits on its own creator (placement is by
 construction only). **Guards**: `cluster_package_guards::perfect_kernel_batchieeeroute::*` (repros
 `sectioning-frontmatter/ieee_thanks_*`, the specials and label forms in `ieee_thanks_address_specials_and_labels`);
-`perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned.
+`perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned; `ieee_thanks_after_the_comma_stays_the_author_before`.
 
 ### 1073. spconf's `\address` and Interspeech.cls's `\email` line go under the names (DG 2026-11-17; SPCONF)
 
@@ -20716,6 +20723,41 @@ Checked in Chrome at 1800 px (also scrolled) and 375 px on every mark of 15 pape
 2407.07614, 2606.00446 among them). **Guards**:
 `latexml_post::integration::a_shared_notes_copies_anchor_at_the_note_alone`; the shared-note pins in
 `integration.rs` (`a_shared_notes_other_marks_carry_its_hidden_copy` and three siblings) repinned with the styles.
+
+### 1076. icml's `\icmlsetsymbol` defines only `\@icmlsymbol<name>` (2026-11-17; ICMLSYM)
+
+**Perl.** icml_support.sty.ltxml:37 gobbles `\icmlsetsymbol{}{}` (KNOWN_PERL_ERRORS #1285).
+
+**Rust.** `\icmlsetsymbol{name}{sym}` is `\expandafter\gdef\csname @icmlsymbol#1\endcsname{#2}`, as icml2026.sty:465-467
+(icml2024.sty:489-491) defines it. The binding also defined `\<name>`, which no icml20xx.sty does: with
+`\icmlsetsymbol{dagger}{$\dagger$}` (2606.08980) `\dagger` called itself, and `\icmlauthor`'s trial digestion of the
+label (`printed_label_pieces`) grew to 6.2 GB (11.8 s on 2606.08980, 6 cores, `ulimit -v 8912896`) before its runaway limit, a Fatal under the worker's memory
+limit. 2310.06430's `\icmlWorkDone` (the reason the extra definition was added) is its copy's own `\newcommand`
+(icml2024.sty:529), which the copy, read as the file the binding stands in for, defines. **Guard**:
+`perfect_kernel_batchicmlsym::{an_icml_symbol_named_after_a_command_keeps_the_command, an_icml_symbol_leaves_the_command_alone}` (the second a state probe, red on the old shape without its runaway).
+
+### 1077. A quantity argument is no ink: `\scalebox` reads `{Float}[Float]{}` (MARKSCALE)
+
+**Perl.** graphics.sty.ltxml:93 `\Gscale@box {Float} [Float] {}` (`\scalebox` its `Let`); its text readers are the
+XML's. **Rust.** `\scalebox` had drifted to `{} []{}`, and the text readers (util_text.rs `shown_arguments`,
+`first_ink`, the frontmatter's `label_ink` and event walker) printed every argument whose type was not keyvals, a
+position or verbatim — and read a braced `{Float}` as `Plain`. Now `\scalebox` reads Perl's `{Float}[Float]{}` (as
+`GraphixFloat`: a `Float` whose rest in its braces is dropped with `Warning:unexpected`, as Perl's forced
+`closeMouth` drops it silently, Gullet.pm:57-69, not read after the box as #317 hands a tail back — Dia's pstricks
+export's old-pstricks `\scalebox{1.000000 -1.000000}{label}` printed "-1" by every label, cs0606057; TL 2025's pdflatex errs — a Warning, not an Error, by the legacy-TL ruling: the
+input was valid under the pstricks it was written for, `pstricks97.tex:2200` reading `\scalebox{x y}` as two scales,
+while TL 2025's pstricks.sty:98 keeps graphics' version; an empty or zero `[yscale]` is the x-scale's, Perl's
+`$yscale || $xscale` (graphics.sty.ltxml:99); row R PSSCALE honours old pstricks' y-scale),
+its `xscale`/`yscale` and its reversion Perl's `floatformat` (0.75, not the old `{:.1}` 0.8; `\scalebox{.58}`
+reverts as `\scalebox{0.58}`); `argument_types` takes a braced or bracketed
+group of one typed parameter by that type (shared by `argument_kinds`, `settings_arguments` and the walker's
+`numeric_arguments`), and `argument_kinds` counts a quantity (`Number`, `Float`, `Dimension`, `Glue`) with keyvals
+and positions: no shown ink. A `\scalebox{0.75}{\Letter}` mark read "0.75🖂", answered by no note and dropped with
+`Warning:frontmatter:unanswered_mark_lost`; `\rotatebox{180}`'s `{Float}` and `\makebox[3cm]`'s `[Dimension]` are
+the same path. The walker's `KEYED_CONSTRUCTORS` row for `\scalebox` is gone (the types say it).
+**Witnesses.** 2606.29928, 2605.23320 (llncs `\corrauth`). **Guard.**
+`cluster_package_guards::perfect_kernel_batchmarkscale::scalebox_mark_spells_its_glyph_not_its_scale` (repro
+`sectioning-frontmatter/mark_scalebox_scale_is_no_ink`), `a_scale_factors_tail_is_dropped_with_a_warning`.
 
 ## TeX-source fidelity family (TEXSRC)
 

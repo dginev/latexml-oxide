@@ -559,7 +559,7 @@ A drawing.
     "figure",
     &[r#"placement="h""#],
     r#"<figure placement="h" xml:id="fig1">
-    <inline-block depth="13.1pt" height="18.0pt" width="327.8pt" xscale="1.0" xtranslate="-3.3pt" yscale="1.0" ytranslate="0.3pt" xml:id="fig1.1">
+    <inline-block depth="13.1pt" height="18.0pt" width="327.8pt" xscale="0.98" xtranslate="-3.3pt" yscale="0.98" ytranslate="0.3pt" xml:id="fig1.1">
       <figure class="ltx_minipage" inlist="lof" labels="LABEL:fig:a" vattach="middle" width="165.6pt" xml:id="S0.F1">
         <tags>
           <tag>Figure 1</tag>

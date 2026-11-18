@@ -1,0 +1,26 @@
+% mechanism: `\icmlsetsymbol{name}{symbol}` defines only `\@icmlsymbol<name>` (icml2026.sty:465-467, icml2024.sty:489-491),
+%   never `\<name>`: a symbol named after a command (`dagger`, `ddagger`, `star`) leaves that command alone, and the
+%   label prints its symbol on the name as a mark-only note of the creator (icml2026.sty:446-458 `\@pa`)
+% witness:  2606.08980 (`\icmlsetsymbol{dagger}{$\dagger$}`: a self-calling `\dagger`, a 6 GB trial digestion, Fatal
+%   oom under the worker's limit); 2310.06430 (`\icmlWorkDone`, its copy's own `\newcommand`, icml2024.sty:529)
+% oracle:   pdflatex (with 2606.08980's icml2026.sty) 0 errors; "Ann Author 1 †", the notice "1 Some University.
+%   Correspondence to: Ann Author <ann@uni.edu>.", the body "Hello x†."
+% engines:  rust aeda3db4e47 = 6.2 GB / 11.8 s on the witness, the body's `\dagger` a runaway; perl = no `\@icmlsymbol` (2026-11-17)
+% expect:   0 errors, 0 warnings; Ann Author a mark-only `†`, her affiliation and e-mail; the body's x^† intact
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+\begin{document}
+\twocolumn[
+\icmltitle{A Title}
+\icmlsetsymbol{dagger}{$\dagger$}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Author}{uni,dagger}
+\end{icmlauthorlist}
+\icmlaffiliation{uni}{Some University}
+\icmlcorrespondingauthor{Ann Author}{ann@uni.edu}
+]
+\printAffiliationsAndNotice{}
+Hello $x^\dagger$.
+\end{document}

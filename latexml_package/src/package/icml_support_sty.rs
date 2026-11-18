@@ -87,15 +87,10 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   // variant of the title, genuine author metadata.
   DefMacro!("\\icmltitlerunning{}",
     "\\lx@add@frontmatter{ltx:toctitle}{#1}");
-  // \icmlsetsymbol{name}{symbol} — creates `\<name>` macro expanding
-  // to <symbol> for use in author lists. Real icml2024.sty L100-ish:
-  //   `\def\icmlsetsymbol#1#2{\expandafter\def\csname #1\endcsname{#2}}`
-  // Previous stub gobbled both args without defining the CS, breaking
-  // `\icmlauthor{...}{equal,affil,icmlWorkDone}` which later references
-  // `\icmlWorkDone` in `\printAffiliationsAndNotice`. Witness 2310.06430.
-  // The real `\@icmlsymbol<name>` (icml2017.sty on; icml2026.sty:465-467) too, which `\icmlauthor` prints below.
-  DefMacro!("\\icmlsetsymbol{}{}",
-    "\\expandafter\\def\\csname #1\\endcsname{#2}\\expandafter\\gdef\\csname @icmlsymbol#1\\endcsname{#2}");
+  // icml2026.sty:465-467 (icml2024.sty:489-491): only `\@icmlsymbol<name>`, which `\icmlauthor` prints below; a
+  // `\<name>` too made `\icmlsetsymbol{dagger}{$\dagger$}` a self-calling `\dagger` (2606.08980). 2310.06430's
+  // `\icmlWorkDone` is its copy's `\newcommand` (icml2024.sty:529), the copy read as the file this binding stands in for.
+  DefMacro!("\\icmlsetsymbol{}{}", "\\expandafter\\gdef\\csname @icmlsymbol#1\\endcsname{#2}");
 
   DefEnvironment!("{icmlauthorlist}", "#body");
 

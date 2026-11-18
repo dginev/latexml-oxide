@@ -1,0 +1,26 @@
+% mechanism: `\icmlsetsymbol{name}{symbol}` defines only `\@icmlsymbol<name>` (icml2026.sty:465-467): the command named
+%   `dagger` keeps its meaning inside the `\twocolumn[…]` title group, where the old binding's local `\def\dagger`
+%   was in force (a state probe: fails fast on the old shape, no label runaway; REVICMLSYM)
+% witness:  2606.08980 (`\icmlsetsymbol{dagger}{$\dagger$}`)
+% oracle:   pdflatex (with 2606.08980's icml2026.sty) 0 errors; the body "The dagger is kept."
+% engines:  rust aeda3db4e47 = "The dagger is redefined."
+% expect:   0 errors, 0 warnings; the body paragraph "The dagger is kept."
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{icml2026}
+\let\origdagger\dagger
+\begin{document}
+\twocolumn[
+\icmltitle{A Title}
+\icmlsetsymbol{dagger}{$\dagger$}
+\ifx\dagger\origdagger\gdef\daggerstate{kept}\else\gdef\daggerstate{redefined}\fi
+\begin{icmlauthorlist}
+\icmlauthor{Ann Author}{uni}
+\end{icmlauthorlist}
+\icmlaffiliation{uni}{Some University}
+\icmlcorrespondingauthor{Ann Author}{ann@uni.edu}
+]
+\printAffiliationsAndNotice{}
+The dagger is \daggerstate.
+\end{document}

@@ -16,8 +16,9 @@ macro_rules! repro {
 
 /// `\textcircled{\raisebox{-0.9pt}{1}}` is a circled 1 (latex.ltx:10057, a text accent over the typeset argument):
 /// the circle holds the text of a box's one content argument and of a plain formula's body (sect13.rs
-/// `typeset_text`), never the whatsit's reversion; a `\scalebox{.8}{3}`, whose factor is a box argument too, keeps
-/// its source (78l r2, the fail-safe for a whatsit with two box arguments). Red (int49a, and Perl):
+/// `typeset_text`), never the whatsit's reversion; a `\scalebox{.8}{3}` circles its 3 (its factor a `{Float}`, no
+/// shown argument: MARKSCALE, OXIDIZED_DESIGN_DIVERGENCES #1076; was its source under 78l r2's fail-safe for a
+/// whatsit with two box arguments). Red (int49a, and Perl):
 /// "\raisebox{-0.9pt}{1}⃝ and $x$⃝, \scalebox{.8}{3}⃝, \makebox[4.30554pt]{5}⃝". KNOWN_PERL_ERRORS #361. Repro
 /// fonts-nfss/textcircled_of_a_box_circles_its_text.
 #[test]
@@ -27,12 +28,7 @@ fn textcircled_of_a_box_circles_its_text() {
     Some(PRELOAD),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_element(
-    &xml,
-    "p",
-    &[],
-    "<p xml:id=\"p1.1\">① and ⓧ, \\scalebox{.8}{3}⃝, ⑤.</p>",
-  );
+  assert_element(&xml, "p", &[], "<p xml:id=\"p1.1\">① and ⓧ, ③, ⑤.</p>");
 }
 
 /// A `\label` beside the digit typesets nothing of the circle, and an inner font command circles its text

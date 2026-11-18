@@ -489,6 +489,7 @@ mod perfect_kernel_batchgl1;
 mod perfect_kernel_batchhg1;
 mod perfect_kernel_batchi736;
 mod perfect_kernel_batchi802;
+mod perfect_kernel_batchicmlsym;
 /// IEEEROUTE: IEEEtran's block notes routed by kind (`\thanks` "<names> is/are with …"); OD #1072.
 mod perfect_kernel_batchieeeroute;
 mod perfect_kernel_batchimg1;
@@ -522,6 +523,7 @@ mod perfect_kernel_batchmarkbind;
 /// MARKKEY1: frontmatter marks keyed by the footnote number, one note across its copies (`idref`), the page's mark rules;
 /// OD #1058, #1059.
 mod perfect_kernel_batchmarkkey1;
+mod perfect_kernel_batchmarkscale;
 /// MB1: the one label rule of the Kind step's lines — a labelled line named after the class's name of the entry, a
 /// mailbox link line's as an e-mail label's; OD #992.
 mod perfect_kernel_batchmb1;

@@ -4,6 +4,8 @@
 //! what the rows cannot: the Info each ruled discard and each fail-safe names (DG 2026-11-17).
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 
+use super::perfect_kernel_batch84b::creators;
+
 macro_rules! repro {
   ($name:literal) => {
     include_str!(concat!(
@@ -139,5 +141,67 @@ fn a_note_of_addresses_no_author_spells_stays() {
   assert!(
     xml.contains("info@lab.org, press@lab.org, admin@lab.org</note>"),
     "{xml}"
+  );
+}
+
+/// A void date's notes are no leftover of it (DATEFOOT): its `\footnotetext` is a title note, as a title-page footnote
+/// text is (OD #1036), its `\thanks` and `\footnote` (in a group too) the pubnotes a date's notes digest to (Perl
+/// Base_Utility.pool.ltxml:331-332); the date's own leftover (`\today`, the `\footnotemark`) still dropped and named, the
+/// legend still the creators' (2605.04795's MSC line had gone with the date, a Warning). Each text lands once.
+#[test]
+fn a_void_dates_notes_are_title_notes() {
+  let row = |items: &[&str]| items.iter().map(|s| (*s).to_string()).collect::<Vec<_>>();
+  let (log, xml, ()) = convert_with_setup_then(
+    repro!("article_void_date_footnotetext_is_a_title_note"),
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("<date"), "{xml}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "affiliation=Universität Regensburg"]),
+    row(&["Bob Baker", "affiliation=Renyi Institute"]),
+  ]);
+  let msc = r#"<pubnote role="note">2020 <text font="italic" xml:id="id1">Mathematics Subject Classification</text>: 57K10; 57R65, 57R90</pubnote>"#;
+  assert_eq!(xml.matches("<pubnote").count(), 1, "{xml}");
+  assert_eq!(xml.matches(msc).count(), 1, "{xml}");
+  assert_eq!(xml.matches("57K10").count(), 1, "{xml}");
+  assert_eq!(
+    log
+      .matches("Info:frontmatter:date_void \\bigskip\\today\\footnotemark[0]\n")
+      .count(),
+    1,
+    "{log}"
+  );
+  let (log, xml, ()) = convert_with_setup_then(
+    repro!("article_void_date_thanks_and_footnote_are_pubnotes"),
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("<date"), "{xml}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "affiliation=Univ A"]),
+    row(&["Bob Baker", "affiliation=Univ B"]),
+  ]);
+  assert_eq!(xml.matches("<pubnote").count(), 2, "{xml}");
+  assert_eq!(
+    xml
+      .matches(r#"<pubnote role="thanks">Supported by Grant 42.</pubnote>"#)
+      .count(),
+    1,
+    "{xml}"
+  );
+  assert_eq!(
+    xml.matches("<pubnote>Preprint version.</pubnote>").count(),
+    1,
+    "{xml}"
+  );
+  assert_eq!(
+    log.matches("Info:frontmatter:date_void").count(),
+    1,
+    "{log}"
   );
 }
