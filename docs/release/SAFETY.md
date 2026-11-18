@@ -38,9 +38,12 @@ see that section below.
   chunks run in `texlua` under TeX's own defaults for untrusted input, set by the bridge's prelude before any
   document chunk: `shell_escape=f` (no program runs, no C module or network library loads) and `openout_any=p`
   (writes only to a relative path below the job directory, no `..`, no dotfile, no symbolic link on the way; on
-  Unix no `\` in the name). A refused call is an `Error`, reported by the bridge itself: the checks use functions
-  held before any document code runs, and the bridge accepts only frames carrying a nonce the interpreter read
-  before any other code loaded; a chunk's `print`/`io.write`/`texio.write` reach the null device. A chunk lists at
+  Unix no `\` in the name). A refused call never takes effect. Its `Error` is reported on a best-effort basis: the
+  checks use functions held before any document code runs, and the bridge accepts only frames carrying a nonce the
+  interpreter read before any other code loaded, so a refusal record cannot be forged and a chunk's
+  `print`/`io.write`/`texio.write` reach the null device; but a chunk can suppress its OWN record (exhausting its C
+  stack just before the record is written, or reading its own pipe through `/proc/self/fd`), so the record is
+  evidence, not a guarantee — the guarantee is that the call was refused. A chunk lists at
   most 20 refusals, the rest in one summary `Error`. An interpreter that ends or sends anything but a frame
   mid-chunk is an `Error` (its output is lost); the next chunk starts a fresh one, up to 3 times per conversion.
   Each conversion gets its own interpreter, in its source directory, with an environment reduced to the texmf

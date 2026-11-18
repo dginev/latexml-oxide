@@ -729,9 +729,10 @@
 
   - **Untrusted input stays in the job.** Document Lua code could run programs or write files outside the job; it
     is now sandboxed, under TeX's own defaults for untrusted input (no shell escape, paranoid writes, no write through
-    a symbolic link, on Unix no backslash in a written name), each refused call an Error that document code cannot
-    hide (the bridge accepts only frames carrying a per-interpreter nonce; a chunk lists at most 20 refusals, then one
-    summary Error); each conversion has its own interpreter with a reduced environment, restarted (with an Error)
+    a symbolic link, on Unix no backslash in a written name): a refused call never takes effect, and is reported as
+    an Error on a best-effort basis (the bridge accepts only frames carrying a per-interpreter nonce, so a refusal
+    record cannot be forged, but a chunk that exhausts its C stack or reads its own pipe can suppress its own record;
+    a chunk lists at most 20 refusals, then one summary Error); each conversion has its own interpreter with a reduced environment, restarted (with an Error)
     when it ends mid-chunk and killed by a timeout or memory exit. A tar archive's links are unpacked only when
     they resolve inside the source directory, the others skipped with a counted Warning; the `zip` floor is 9.7.0. An image whose path relative to the source leaves the destination directory is copied under a
     generated `xN` name inside it, as Perl does. Guards

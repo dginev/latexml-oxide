@@ -20785,8 +20785,11 @@ nil). Frames are authenticated: the bridge sends a 128-bit nonce (SipHash under 
 header is `<tag> <nonce> <length>`, built by concatenation (a `%s` format would run a string `__tostring` the
 document set); an error value is shown without `tostring`. The bridge reads a frame header of at most 64 bytes and a
 body of at most 64 MiB, only the tags `D`/`Q`/`OK`/`ERR` and only with the nonce, so bytes reaching the pipe by any
-other route are a broken protocol. A chunk that reads its own process memory (`/proc/self/mem` is readable under
-`openin_any=a`) could recover the nonce; what it gains is hiding its refusal records, not the refused call. An
+other route are a broken protocol, so a record cannot be forged. The record itself is best-effort: a chunk can
+suppress its OWN refusal records — by exhausting the C stack just before the record is written (a ~195-deep `pcall`
+nest), by reading its own pipe through `/proc/self/fd/1` and winning the race, or by reading its process memory
+(`/proc/self/mem` is readable under `openin_any=a`) for the nonce. None of these lets the refused call take effect;
+a separate protocol channel (a socket pair, which `/proc/self/fd` cannot reopen) would close the pipe route — row R. An
 interpreter that ends or breaks the protocol mid-chunk is `Error:lua:interpreter` (its output and state are lost) and the next chunk
 starts a fresh one, at most 3 times per conversion. `reset_session` (`Converter::initialize_session`) ends the
 interpreter with its conversion, so a persistent worker's next paper starts with a fresh Lua state in its own

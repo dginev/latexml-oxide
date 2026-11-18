@@ -1,6 +1,7 @@
 % mechanism: lua_bridge.rs frame protocol (OXIDIZED_DESIGN_DIVERGENCES #1081): every frame header carries the nonce
-%   the bridge sent as the interpreter's first line, and is built by concatenation, so a refusal record can be
-%   neither hidden (a failing string __tostring) nor forged (lualibs' inspect, require('texio').write).
+%   the bridge sent as the interpreter's first line, and is built by concatenation, so a refusal record is neither
+%   lost to a failing string __tostring nor forged (lualibs' inspect, require('texio').write). (A chunk can still
+%   suppress its own record by exhausting its C stack or reading its own pipe; the refused call never takes effect.)
 % witness: synthetic (security hardening; review round 2 probes m1, f1, f2)
 % oracle:  lualatex has no such pipe: the sandbox's own record is what this checks
 % engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
