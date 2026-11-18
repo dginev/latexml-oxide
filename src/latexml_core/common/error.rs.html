@@ -425,7 +425,7 @@
 <a href=#425 id=425 data-nosnippet>425</a></span><span class="kw">pub fn </span>emit_fatal(category: <span class="kw-2">&amp;</span>str, object: <span class="kw-2">&amp;</span>str, message: <span class="kw-2">&amp;</span>str) {
 <a href=#426 id=426 data-nosnippet>426</a>  emit_record(
 <a href=#427 id=427 data-nosnippet>427</a>    LogStatus::Fatal,
-<a href=#428 id=428 data-nosnippet>428</a>    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Fatal:{category}:{object} "</span>),
+<a href=#428 id=428 data-nosnippet>428</a>    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Fatal:{category}:{object}"</span>),
 <a href=#429 id=429 data-nosnippet>429</a>    message,
 <a href=#430 id=430 data-nosnippet>430</a>  );
 <a href=#431 id=431 data-nosnippet>431</a>}
@@ -1364,7 +1364,7 @@
 <a href=#1364 id=1364 data-nosnippet>1364</a>
 <a href=#1365 id=1365 data-nosnippet>1365</a><span class="kw">impl </span>ErrorTarget {
 <a href=#1366 id=1366 data-nosnippet>1366</a>  <span class="doccomment">/// The category slot of a `Fatal:&lt;category&gt;:&lt;object&gt;` line.
-<a href=#1367 id=1367 data-nosnippet>1367</a>  </span><span class="kw">fn </span>log_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+<a href=#1367 id=1367 data-nosnippet>1367</a>  </span><span class="kw">pub fn </span>log_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
 <a href=#1368 id=1368 data-nosnippet>1368</a>    <span class="kw">match </span><span class="self">self </span>{
 <a href=#1369 id=1369 data-nosnippet>1369</a>      ErrorTarget::Named(name) =&gt; name.clone(),
 <a href=#1370 id=1370 data-nosnippet>1370</a>      other =&gt; <span class="macro">format!</span>(<span class="string">"{other:?}"</span>),
@@ -1374,7 +1374,7 @@
 <a href=#1374 id=1374 data-nosnippet>1374</a>
 <a href=#1375 id=1375 data-nosnippet>1375</a><span class="kw">impl </span>ErrorCategory {
 <a href=#1376 id=1376 data-nosnippet>1376</a>  <span class="doccomment">/// The object slot of a `Fatal:&lt;category&gt;:&lt;object&gt;` line.
-<a href=#1377 id=1377 data-nosnippet>1377</a>  </span><span class="kw">fn </span>log_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+<a href=#1377 id=1377 data-nosnippet>1377</a>  </span><span class="kw">pub fn </span>log_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
 <a href=#1378 id=1378 data-nosnippet>1378</a>    <span class="kw">match </span><span class="self">self </span>{
 <a href=#1379 id=1379 data-nosnippet>1379</a>      ErrorCategory::Named(name) =&gt; name.clone(),
 <a href=#1380 id=1380 data-nosnippet>1380</a>      other =&gt; <span class="macro">format!</span>(<span class="string">"{other:?}"</span>),
@@ -1444,7 +1444,7 @@
 <a href=#1444 id=1444 data-nosnippet>1444</a>    emit_record(
 <a href=#1445 id=1445 data-nosnippet>1445</a>      LogStatus::Fatal,
 <a href=#1446 id=1446 data-nosnippet>1446</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(
-<a href=#1447 id=1447 data-nosnippet>1447</a>        <span class="string">"Fatal:{}:{} "</span>,
+<a href=#1447 id=1447 data-nosnippet>1447</a>        <span class="string">"Fatal:{}:{}"</span>,
 <a href=#1448 id=1448 data-nosnippet>1448</a>        <span class="self">self</span>.target.log_name(),
 <a href=#1449 id=1449 data-nosnippet>1449</a>        <span class="self">self</span>.category.log_name()
 <a href=#1450 id=1450 data-nosnippet>1450</a>      ),
@@ -1742,7 +1742,7 @@
 <a href=#1742 id=1742 data-nosnippet>1742</a>    {
 <a href=#1743 id=1743 data-nosnippet>1743</a>      <span class="kw">let </span>inner = IgnoreDiagnosticsScope::new();
 <a href=#1744 id=1744 data-nosnippet>1744</a>      emit_record(LogStatus::Error, <span class="string">"undefined:\\y"</span>, <span class="string">"synthetic"</span>);
-<a href=#1745 id=1745 data-nosnippet>1745</a>      emit_record(LogStatus::Fatal, <span class="string">"Fatal:Internal:Unexpected "</span>, <span class="string">"synthetic"</span>);
+<a href=#1745 id=1745 data-nosnippet>1745</a>      emit_record(LogStatus::Fatal, <span class="string">"Fatal:Internal:Unexpected"</span>, <span class="string">"synthetic"</span>);
 <a href=#1746 id=1746 data-nosnippet>1746</a>      <span class="macro">assert_eq!</span>(inner.dropped(), IgnoredRecords { errors: <span class="number">1</span>, fatals: <span class="number">1 </span>});
 <a href=#1747 id=1747 data-nosnippet>1747</a>    }
 <a href=#1748 id=1748 data-nosnippet>1748</a>    <span class="macro">assert!</span>(
