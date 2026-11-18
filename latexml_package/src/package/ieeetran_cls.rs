@@ -2726,8 +2726,7 @@ fn note_text(note: &[Token]) -> (String, Vec<(usize, i32)>) {
 /// and Zhongkui Li"), each one author's alone: its surname that author's last word, its first initial that author's
 /// first word's (case aside). None where a name matches no author, or more than one.
 fn named_authors(list: &str, names: &[AuthorUnit]) -> Option<Vec<usize>> {
-  static SPLIT_RX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r",?\s+and\s+|\s*,\s*").unwrap());
+  static SPLIT_RX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r",?\s+and\s+|\s*,\s*").unwrap());
   let fold = |w: &str| -> String {
     w.chars()
       .filter(|c| c.is_alphabetic())
@@ -2902,14 +2901,12 @@ fn route_note(note: &[Token], names: &[AuthorUnit]) -> Option<(Vec<Token>, Vec<R
     ))
     .unwrap()
   });
-  static CORRESPONDING_RX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(&s!(r"^(?i:corresponding author)(?::| is) ({NAME})\.?$")).unwrap()
-  });
+  static CORRESPONDING_RX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(&s!(r"^(?i:corresponding author)(?::| is) ({NAME})\.?$")).unwrap());
   static ANOTHER_CLAUSE_RX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b(?:is|are|was|were)(?: \w+)? with\b").unwrap());
   // (a second sentence an initial hid: "Building C. This work …")
-  static SENTENCE_RX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\. \p{Lu}").unwrap());
+  static SENTENCE_RX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\. \p{Lu}").unwrap());
   let contact = |role: &str, content: Vec<Token>| -> Vec<Token> {
     let mut call = vec![T_CS!("\\lx@add@contact"), T_OTHER!("[")];
     call.extend(ExplodeText!(s!("role={role}")));

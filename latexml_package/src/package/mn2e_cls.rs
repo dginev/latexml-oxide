@@ -158,9 +158,8 @@ fn shipped_journal_abbreviations(text: &str) -> String {
     .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
     .filter(|name| !name.contains('@'))
     .collect();
-  static LINE_RX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\\(?:newcommand\*?|def|let)\s*\\([A-Za-z@]+)").unwrap()
-  });
+  static LINE_RX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\\(?:newcommand\*?|def|let)\s*\\([A-Za-z@]+)").unwrap());
   let line_rx = &*LINE_RX;
   static INTERNAL_RX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\\([A-Za-z]*@[A-Za-z@]*)").unwrap());
