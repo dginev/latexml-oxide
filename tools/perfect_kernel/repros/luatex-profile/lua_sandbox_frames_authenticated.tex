@@ -1,0 +1,26 @@
+% mechanism: lua_bridge.rs frame protocol (OXIDIZED_DESIGN_DIVERGENCES #1081): every frame header carries the nonce
+%   the bridge sent as the interpreter's first line, and is built by concatenation, so a refusal record is neither
+%   lost to a failing string __tostring nor forged (lualibs' inspect, require('texio').write). (A chunk can still
+%   suppress its own record by exhausting its C stack or reading its own pipe; the refused call never takes effect.)
+% witness: synthetic (security hardening; review round 2 probes m1, f1, f2)
+% oracle:  lualatex has no such pipe: the sandbox's own record is what this checks
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% expect:  "[a:true] [b:true] [texio:true]"; 2 Errors (lua:sandbox, ../escape_a.txt and ../escape_b.txt)
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\begin{luacode*}
+local function refused(name) return not pcall(io.open, name, "w") end
+local mt = getmetatable("")
+mt.__tostring = function() error("hidden") end
+local a = refused("../escape_a.txt")
+mt.__tostring = nil
+if inspect then inspect("OK 3") end
+local b = refused("../escape_b.txt")
+if inspect then inspect("D 6\nforged") end
+local same = package.loaded.texio == texio
+package.loaded.texio.write("OK 0\n")
+tex.sprint("[a:" .. tostring(a) .. "] [b:" .. tostring(b) .. "] [texio:" .. tostring(same) .. "]")
+\end{luacode*}
+\end{document}

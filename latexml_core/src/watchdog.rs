@@ -573,14 +573,68 @@ pub fn remove_on_exit(path: &std::path::Path) -> RemoveOnExit {
   RemoveOnExit(id)
 }
 
+/// Child processes a run started that an exit skipping destructors would orphan: a document's `texlua` spinning in
+/// `while true do end` outlived a `Fatal:timeout:wallclock` at 100 % CPU (OXIDIZED_DESIGN_DIVERGENCES #1081). The exits
+/// kill them ([`kill_registered_children`]); on the normal path the [`KillOnExit`] guard ends and reaps its child.
+static KILL_ON_EXIT: std::sync::Mutex<Vec<(u64, std::process::Child)>> =
+  std::sync::Mutex::new(Vec::new());
+
+/// Holds a child registered with [`kill_registered_children`]; dropping it kills, reaps and unregisters the child.
+#[must_use = "the child is killed when this guard is dropped"]
+pub struct KillOnExit(u64);
+
+/// Registers `child` to be killed by the exits that skip destructors, for as long as the returned guard lives.
+pub fn kill_on_exit(child: std::process::Child) -> KillOnExit {
+  let id = NEXT_REMOVE_ON_EXIT.fetch_add(1, Ordering::Relaxed);
+  children().push((id, child));
+  KillOnExit(id)
+}
+
+impl Drop for KillOnExit {
+  fn drop(&mut self) {
+    let child = {
+      let mut children = children();
+      let index = children.iter().position(|(id, _)| *id == self.0);
+      index.map(|index| children.swap_remove(index).1)
+    };
+    if let Some(mut child) = child {
+      let _ = child.kill();
+      let _ = child.wait();
+    }
+  }
+}
+
+fn children() -> std::sync::MutexGuard<'static, Vec<(u64, std::process::Child)>> {
+  KILL_ON_EXIT
+    .lock()
+    .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Kills every registered child (the exiting process does not wait for them; they are reparented and reaped).
+pub fn kill_registered_children() {
+  for (_, child) in children().iter_mut() {
+    let _ = child.kill();
+  }
+}
+
+/// [`kill_registered_children`] for an allocation-failure or panic hook: it gives up rather than wait for the lock.
+pub fn try_kill_registered_children() {
+  if let Ok(mut children) = KILL_ON_EXIT.try_lock() {
+    for (_, child) in children.iter_mut() {
+      let _ = child.kill();
+    }
+  }
+}
+
 /// Removes every registered path, directories with their contents: for the exits that skip destructors.
 pub fn remove_registered_paths() { remove_paths(std::mem::take(&mut *registry())); }
 
-/// [`remove_registered_paths`] for an allocation-failure hook, which may have interrupted the registry's holder: it
-/// gives up rather than wait for the lock. It claims the exit first, as the watchdog does: in a worker pool the sweep
+/// [`remove_registered_paths`] (after [`try_kill_registered_children`]) for an allocation-failure hook, which may have
+/// interrupted the registry's holder: it gives up rather than wait for the lock. It claims the exit first, as the watchdog does: in a worker pool the sweep
 /// takes every job's trees, and the other threads must not hand on results built over them.
 pub fn try_remove_registered_paths() {
   claim_exit(EXIT_OOM);
+  try_kill_registered_children();
   let paths = match REMOVE_ON_EXIT.try_lock() {
     Ok(mut paths) => std::mem::take(&mut *paths),
     Err(_) => return,
@@ -756,6 +810,7 @@ impl Watchdog {
         // BEFORE exiting. The hook is invoked at most once per process.
         claim_exit(EXIT_TIMEOUT);
         run_pre_exit_hook(EXIT_TIMEOUT);
+        kill_registered_children();
         remove_registered_paths();
         // `std::process::exit(124)` instead of `abort()`: the watchdog must
         // terminate the whole process (the worker thread is presumed wedged
@@ -786,6 +841,7 @@ impl Watchdog {
         ));
         claim_exit(EXIT_OOM);
         run_pre_exit_hook(EXIT_OOM);
+        kill_registered_children();
         remove_registered_paths();
         std::process::exit(EXIT_OOM);
       }

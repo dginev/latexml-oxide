@@ -1,0 +1,17 @@
+% mechanism: lua_bridge.rs prelude sandbox (OXIDIZED_DESIGN_DIVERGENCES #1081): document Lua runs with TeX's
+%   untrusted-input defaults, shell_escape=f — os.execute/io.popen/package.loadlib, a C module and the network
+%   libraries are refused; each refusal is an Error even when the chunk pcalls it.
+% witness: synthetic (security hardening; the luacode/directlua A/B population popSECLUA)
+% oracle:  lualatex --no-shell-escape: os.execute and io.popen return nil (no process runs), "X[nil] Y [none] Z"
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% layout:  an empty cmod.so next to it (the guard writes one: a C module on package.cpath's ./?.so)
+% expect:  "X[nil] Y [none] Z"; 5 Errors (lua:sandbox os.execute, io.popen, require "socket", the C module
+%   "cmod", package.loadlib); no process runs, no library loads
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+X\luaexec{local ok, r = pcall(os.execute, "exit 3") tex.sprint("[" .. tostring(ok and r or nil) .. "]")} Y
+\luaexec{local ok, h = pcall(io.popen, "exit 3") tex.sprint("[" .. (ok and h and "ran" or "none") .. "]")} Z
+\luaexec{pcall(require, "socket") pcall(require, "cmod") pcall(package.loadlib, "./cmod.so", "f")}
+\end{document}

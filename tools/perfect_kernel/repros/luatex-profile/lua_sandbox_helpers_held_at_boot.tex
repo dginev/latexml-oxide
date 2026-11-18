@@ -1,0 +1,32 @@
+% mechanism: lua_bridge.rs prelude sandbox (OXIDIZED_DESIGN_DIVERGENCES #1081): the checks call helpers captured
+%   at boot (string.*, the file handles' C write/read), never a method a document can replace; mplib.new gets a raw
+%   copy of its options carrying the sandbox's file finder.
+% witness: synthetic (security hardening, adversarial review of SECLUA round 0)
+% oracle:  lualatex (openout_any=p): the three writes below are refused whatever the chunk replaced
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% expect:  "[mp:done] [find:refused] [hidden:false]"; 3 Errors (lua:sandbox: the mplib write, ../, os.execute);
+%          nothing written outside the job directory
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\begin{luacode*}
+local mp = mplib.new(setmetatable({ini_version = true}, {__newindex = function() end}))
+mp:execute('write "x" to "../mp_escape.txt"; write EOF to "../mp_escape.txt";')
+mp:finish()
+tex.sprint("[mp:done]")
+local find = string.find
+string.find = function(s, p, ...) if p == "[wa+]" then return nil end return find(s, p, ...) end
+local ok = pcall(io.open, "../find_escape.txt", "w")
+string.find = find
+tex.sprint(" [find:" .. (ok and "opened" or "refused") .. "]")
+local mt = getmetatable(io.stderr)
+local write = mt.write
+mt.write = function(f, s, ...)
+  if type(s) == "string" and s:sub(1, 2) == "D " then return f end
+  return write(f, s, ...)
+end
+tex.sprint(" [hidden:" .. tostring((pcall(os.execute))) .. "]")
+mt.write = write
+\end{luacode*}
+\end{document}

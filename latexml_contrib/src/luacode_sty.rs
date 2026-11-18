@@ -55,7 +55,7 @@ LoadDefinitions!({
     // machinery balances the `\begin` (raw capture ate the whole line), then
     // the chunk's output ABOVE it so the printed tokens are read first.
     unread(Tokenize!(TeXString::assembled(s!("\\end{{{env}}}"))));
-    match latexml_engine::lua_bridge::lua_exec(&chunk) {
+    match latexml_engine::lua_bridge::lua_exec(&chunk)? {
       Ok(out) if !out.is_empty() => {
         unread(Tokenize!(TeXString::assembled(out)));
       },

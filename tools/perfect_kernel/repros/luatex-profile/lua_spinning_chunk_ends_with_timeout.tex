@@ -1,0 +1,20 @@
+% mechanism: latexml_core::watchdog kill_on_exit (OXIDIZED_DESIGN_DIVERGENCES #1081): the wall-clock and memory
+%   exits run no destructor, so they kill the registered texlua; a spinning chunk no longer outlives the conversion.
+% witness: synthetic (review round 2 probes t0/t1: texlua left at 100 % CPU with PPID 1)
+% oracle:  lualatex spins until killed; the conversion's Fatal:timeout is what this checks
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% expect:  Fatal:timeout:wallclock; texlua.pid holds the interpreter's pid, which is gone after the exit
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\begin{luacode*}
+local stat = io.open("/proc/self/stat", "r")
+local pid = stat and stat:read("*n")
+if stat then stat:close() end
+local out = io.open("texlua.pid", "w")
+out:write(tostring(pid))
+out:close()
+while true do end
+\end{luacode*}
+\end{document}

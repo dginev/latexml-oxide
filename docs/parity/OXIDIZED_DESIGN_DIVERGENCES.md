@@ -20842,6 +20842,66 @@ bindings_start_the_paragraph, rhai_constructor_entering_horizontal_keeps_the_spa
 `rhai-bindings/constructor_opening_the_paragraph_keeps_the_space`, formerly `imperative_constructor_drops_space_red`,
 whose note blamed the imperative `\lxb`).
 
+### 1081. Untrusted input stays in the job: document Lua is sandboxed; an image copy never leaves `--dest` (SECLUA)
+
+**Perl.** No Lua bridge. `Post/Graphics.pm` L292-300 copies an image to its source-relative path only when
+`pathname_is_contained` places it under the site directory, else under `generateResourcePathname`'s `xN` name.
+**Rust.** Document Lua code could run programs and write files outside the job; it is now sandboxed. The
+`lua_bridge.rs` prelude holds `\directlua`/`\luaexec`/`{luacode}` chunks to TeX's own defaults for untrusted input,
+applied before any document chunk (texlua's `--safer`/`--shell-escape` do not restrict a script): `shell_escape=f`
+(no process, no C module, no network library) and `openout_any=p` (kpathsea `kpse_out_name_ok`: a write only to a
+relative path with no `..` part and no dotfile), decided by the prelude on every path component, not by texlua's
+`kpse.out_name_ok` (which follows the host's `texmf.cnf` and checks only the last component), and refused through any
+existing symbolic-link component (`lfs.symlinkattributes`), checked on the name the system opens (on Unix a name
+holding `\` is refused, `\` being a filename character there; on Windows `\` separates, and a `:`, a `\\?\`/`\\.\`
+prefix and a component ending in a dot or a space are refused); reads stay open (`openin_any=a`); chunks load as text
+only. Each refused call is `Error:lua:sandbox` (a `D` frame, raised even when the chunk pcalls it) and a Lua error;
+the name shown is cut at 256 bytes, and a chunk lists 20 refusals (64 KiB), the rest in one summary Error.
+Every helper the checks and the frame protocol call (`string.*`, `next`, `type`, the file handles' C
+`read`/`write`/`flush`, `package.searchpath`, `kpse.find_file`, `load`) is a local captured at boot, never a method
+looked up through a table the document can change; `mplib.new` gets a raw copy (`next`) of its options carrying the
+sandbox's finder; every `img` function is refused (texlua has no backend: `img.new`, `img.scan`, `img.write`
+crashed it). Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
+the null device and `print` a no-op, and `package.loaded.texio`/`pdf`/`status`/`token` are the shims (`node` is
+nil). Frames are authenticated: the bridge sends a 128-bit nonce (SipHash under the standard library's random
+`RandomState` keys) as the interpreter's first line, the prelude reads it before any other code loads, and every
+header is `<tag> <nonce> <length>`, built by concatenation (a `%s` format would run a string `__tostring` the
+document set); an error value is shown without `tostring`. The bridge reads a frame header of at most 64 bytes and a
+body of at most 64 MiB, only the tags `D`/`Q`/`OK`/`ERR` and only with the nonce, so bytes reaching the pipe by any
+other route are a broken protocol, so a record cannot be forged. The record itself is best-effort: a chunk can
+suppress its OWN refusal records — by exhausting the C stack just before the record is written (a ~195-deep `pcall`
+nest), by reading its own pipe through `/proc/self/fd/1` and winning the race, or by reading its process memory
+(`/proc/self/mem` is readable under `openin_any=a`) for the nonce. None of these lets the refused call take effect;
+a separate protocol channel (a socket pair, which `/proc/self/fd` cannot reopen) would close the pipe route — row R. An
+interpreter that ends or breaks the protocol mid-chunk is `Error:lua:interpreter` (its output and state are lost) and the next chunk
+starts a fresh one, at most 3 times per conversion. `reset_session` (`Converter::initialize_session`) ends the
+interpreter with its conversion, so a persistent worker's next paper starts with a fresh Lua state in its own
+source directory. The child is registered with the watchdog (`watchdog::kill_on_exit`): the wall-clock and memory
+exits, the binaries' allocation-failure hooks and `cortex_worker`'s `panic = "abort"` hook, which run no
+destructor, kill it, so a chunk spinning
+in `while true do end` no longer outlives the conversion. The child's environment is cleared to an allowlist (`PATH`, `HOME`, `TEXMF*`, `KPATHSEA*`,
+`*INPUTS`, `*FONTS`, the locale, `SOURCE_DATE_EPOCH`, the temp dir, Windows' system variables). lualibs loads
+during the prelude with the originals, its captured functions refusing once documents run. A `.tar`/`.tar.gz`
+source's symbolic link is made, after the other entries, only when its target, resolved one component at a time
+through the links already there, stays inside the extraction directory (zip 9.7's `resolve_enclosed` rule, the
+`zip` floor raised to 9.7.0, which `cortex_worker`'s `ZipArchive::extract` relies on); a hard link only to a file
+inside (`tar`'s check). Other links, and entries whose path would leave the directory, are skipped with a
+`Warning:archive:*`, logged and counted when the conversion's report starts (`error::warn_at_session_start`).
+The CLI's own zip unpacking writes a link entry as a plain file. `graphics.rs`
+`copy_to_destination` follows Perl: a source-relative path that would leave `--dest` (a `..`, root or drive
+component) takes the next free `xN.<ext>`. **Witnesses.** TL manuals ijsra (its class's images reached as
+`../../../tex/latex/…`, written beside `--dest`; now `x1.png`, `x2.png`), newpax (unchanged). **Guards.**
+`cluster_package_guards::perfect_kernel_batchseclua::{batchseclua_lua_runs_no_program,
+batchseclua_lua_writes_stay_in_the_job_directory, batchseclua_image_copy_stays_in_dest,
+batchseclua_sandbox_helpers_are_held_at_boot, batchseclua_lua_writes_follow_no_symlink,
+batchseclua_lua_interpreter_restarts_and_owns_its_pipe, batchseclua_tar_links_stay_inside_the_source,
+batchseclua_lua_frames_are_authenticated, batchseclua_lua_backslash_names_are_refused,
+batchseclua_lua_refusals_are_bounded, batchseclua_lua_interpreter_ends_with_the_timeout}`,
+`lua_bridge::tests::frame_headers_carry_the_session_nonce` (repros
+`luatex-profile/lua_sandbox_{no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
+`luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout}`,
+`loader/image_copy_outside_source_stays_in_dest`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

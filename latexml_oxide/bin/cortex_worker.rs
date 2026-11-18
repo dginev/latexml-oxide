@@ -845,6 +845,8 @@ fn install_panic_hook() {
     // Under `panic = "abort"` this panic ends the process: a harness child tells the harness.
     if cfg!(panic = "abort") {
       exit_report::record_panic(&format!("panicked at {loc}: {msg}"));
+      // The abort runs no destructor: a document's texlua would outlive it.
+      latexml_core::watchdog::try_kill_registered_children();
     }
     // Bounded location+message → the per-task failure artifact (parser-safe).
     LAST_PANIC_DETAIL.with(|p| *p.borrow_mut() = Some(format!("panicked at {loc}: {msg}")));
@@ -1136,12 +1138,10 @@ fn unpack_archive(
   } else if path_str.ends_with(".tar.gz") || path_str.ends_with(".tgz") {
     let file = File::open(archive_path)?;
     let gz = flate2::read::GzDecoder::new(file);
-    let mut archive = tar::Archive::new(gz);
-    archive.unpack(dest)?;
+    latexml::util::unpack_tar(tar::Archive::new(gz), dest)?;
   } else if path_str.ends_with(".tar") {
     let file = File::open(archive_path)?;
-    let mut archive = tar::Archive::new(file);
-    archive.unpack(dest)?;
+    latexml::util::unpack_tar(tar::Archive::new(file), dest)?;
   } else {
     return Err(format!("Unsupported archive format: {}", path_str).into());
   }

@@ -109,7 +109,7 @@ LoadDefinitions!({
       .filter(|t| t != &par)
       .collect();
     let chunk = Tokens::new(kept).to_string();
-    match crate::lua_bridge::lua_exec(&chunk) {
+    match crate::lua_bridge::lua_exec(&chunk)? {
       Ok(out) if out.is_empty() => Tokens!(),
       Ok(out) => Tokenize!(TeXString::assembled(out)),
       Err(msg) => {

@@ -1,0 +1,19 @@
+% mechanism: lua_bridge.rs prelude sandbox (OXIDIZED_DESIGN_DIVERGENCES #1081): on Unix a '\' is a filename
+%   character, so a write name holding one is refused (the name checked must be the name the system opens).
+% witness: synthetic (security hardening; review round 2 probe b1); the guard ships a link named a\b beside the job
+% oracle:  lualatex follows the link (openout_any=p checks names only): a TeX-engine hole the sandbox closes
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% expect:  "[bs:refused] [plain:ok]"; 1 Error (lua:sandbox); nothing written through the link
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\begin{luacode*}
+local function try(name)
+  local ok, f = pcall(io.open, name, "w")
+  if ok and f then f:write("x") f:close() return "ok" end
+  return "refused"
+end
+tex.sprint("[bs:" .. try("a" .. string.char(92) .. "b") .. "] [plain:" .. try("plain.txt") .. "]")
+\end{luacode*}
+\end{document}

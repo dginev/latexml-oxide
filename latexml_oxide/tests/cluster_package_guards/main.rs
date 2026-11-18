@@ -673,6 +673,7 @@ mod perfect_kernel_batchs5;
 mod perfect_kernel_batchsbx1;
 /// SEP1: the rehearsal binds a `\let` copy of `\and`, `\\`, `\thanks` or `\footnote` by its meaning, as the command it
 /// copies (`\let\nx\and` parts the names; OD #994).
+mod perfect_kernel_batchseclua;
 mod perfect_kernel_batchsep1;
 /// SETCOPY: a `\let` copy of a locked frontmatter setter taken before the refused redefinition is the setter as it
 /// stood then; OD #1078.

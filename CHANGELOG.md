@@ -973,6 +973,22 @@
     (`Mid \doublebox{C} para.`). OXIDIZED_DESIGN_DIVERGENCES #1079; guards
     `perfect_kernel_batchinlinector`.
 
+  - **Untrusted input stays in the job.** Document Lua code could run programs or write files outside the job; it
+    is now sandboxed, under TeX's own defaults for untrusted input (no shell escape, paranoid writes, no write through
+    a symbolic link, on Unix no backslash in a written name): a refused call never takes effect, and is reported as
+    an Error on a best-effort basis (the bridge accepts only frames carrying a per-interpreter nonce, so a refusal
+    record cannot be forged, but a chunk that exhausts its C stack or reads its own pipe can suppress its own record;
+    a chunk lists at most 20 refusals, then one summary Error); each conversion has its own interpreter with a reduced environment, restarted (with an Error)
+    when it ends mid-chunk and killed by a timeout or memory exit. A tar archive's links are unpacked only when
+    they resolve inside the source directory, the others skipped with a counted Warning; the `zip` floor is 9.7.0. An image whose path relative to the source leaves the destination directory is copied under a
+    generated `xN` name inside it, as Perl does. Guards
+    `perfect_kernel_batchseclua::{batchseclua_lua_runs_no_program, batchseclua_lua_writes_stay_in_the_job_directory,
+    batchseclua_image_copy_stays_in_dest, batchseclua_sandbox_helpers_are_held_at_boot,
+    batchseclua_lua_writes_follow_no_symlink, batchseclua_lua_interpreter_restarts_and_owns_its_pipe,
+    batchseclua_tar_links_stay_inside_the_source, batchseclua_lua_frames_are_authenticated,
+    batchseclua_lua_backslash_names_are_refused, batchseclua_lua_refusals_are_bounded,
+    batchseclua_lua_interpreter_ends_with_the_timeout}`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`
