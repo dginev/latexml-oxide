@@ -2,17 +2,20 @@
 % then (TeX's `\let`, tex.web §1221): `\orig@author{\toc@authors}` sets `\@author` to the class's store. Ours, where
 % the lock refuses the redefinition and the kernel's `\author` replays it (`\lx@replay@class@setter`, OXIDIZED_DESIGN
 % #482), replayed it through the copy too: `\toc@authors` came to contain itself, a box-list runaway.
-% witness: 1811.06821, 1811.11810, 1904.05269, 2011.14174 (aic.cls), 1905.07135 (toc) — tocbase.cls:647-677
-% oracle:  pdflatex 0 errors: "T / Christian Elbracht / Body."; perl 0 errors, one creator with an empty name
+% The class's setter as tocbase writes it: the first author `\gdef`ed, the next appended after `\and` (a store opening
+% with `\and` is a kernel defect of its own: ../and_store/direct_store.tex, row R ANDSTORE).
+% witness: 1811.06821, 1811.11810, 1904.05269, 2011.14174 (aic.cls), 1905.07135, 2311.03341 (toc) — tocbase.cls:647-677
+% oracle:  pdflatex 0 errors: "T / Christian Elbracht / Body."
 % engines: rust (main 8b298f9c0d6) = Fatal:Stomach:MemoryBudget box-list runaway, Status 3
-% expect:  0 errors, 0 warnings; one creator, "Christian Elbracht" (ours: "and Christian Elbracht", 1 Warning; row R)
+% expect:  0 errors, 0 warnings; one creator, "Christian Elbracht"
 % guard:   perfect_kernel_batchsetcopy::a_copy_taken_before_the_redefinition_is_the_kernels_setter
-% status:  GREEN except the name (SETCOPY, 2026-11-18; was RED: Fatal)
+% status:  GREEN (SETCOPY, 2026-11-18; was RED: Fatal)
 \documentclass{article}
 \makeatletter
-\newcommand\toc@authors{}
+\gdef\toc@authors{}
 \let\orig@author\author
-\renewcommand{\author}[1]{\g@addto@macro\toc@authors{\and #1}}
+\renewcommand{\author}[1]{%
+  \ifx\toc@authors\@empty\gdef\toc@authors{#1}\else\g@addto@macro\toc@authors{\and #1}\fi}
 \makeatother
 \title{T}
 \begin{document}

@@ -4,7 +4,8 @@
 //! replays the refused body nor appends (OXIDIZED_DESIGN_DIVERGENCES #1078). tocbase.cls:647-677 `\let\orig@author
 //! \author` … `\orig@author{\toc@authors}` replayed the class's `\g@addto@macro\toc@authors{\and \toc@authors}` through
 //! the copy, a self-containing list and a Fatal box runaway (1811.06821, 1811.11810, 1904.05269, 2011.14174 aic.cls;
-//! 1905.07135 toc). Repros under `tools/perfect_kernel/repros/sectioning-frontmatter/setter_copy/`.
+//! 1905.07135, 2311.03341 toc). Restoring the setter from its copy (`\let\author\orig@author`) leaves the kernel's own
+//! setter, the refusal's records cleared (review SETCOPY B1). Repros under `tools/perfect_kernel/repros/sectioning-frontmatter/setter_copy/`.
 use super::{
   convert_with,
   perfect_kernel_batch46::{error_count, warning_count},
@@ -22,19 +23,15 @@ macro_rules! repro {
 
 fn names(xml: &str) -> Vec<String> { creators(xml).into_iter().map(|c| c.join(" | ")).collect() }
 
-/// The investigation's minimal repro (red: `Fatal:Stomach:MemoryBudget`, Status 3): one creator, the store's one
-/// author. Residual (row R SETCOPY-FLAG): the store's leading `\and` stays in the name the emitter writes as plain text,
-/// "and Christian Elbracht", with the content check's Warning counting the extra word — a store the class's replayed
-/// setter changed reads as no events of the copy's block. And the `\title` sibling (red: no `<title>` and an Error):
-/// the copy's call sets the title from the class's store, once.
+/// The investigation's minimal repro in tocbase's shape (the first author `\gdef`ed; red: `Fatal:Stomach:MemoryBudget`,
+/// Status 3): one creator, the store's one author. And the `\title` sibling (red: no `<title>` and an Error): the copy's
+/// call sets the title from the class's store, once.
 #[test]
 fn a_copy_taken_before_the_redefinition_is_the_kernels_setter() {
   let (log, xml) = convert_with(repro!("copy_before_redefinition.tex"), Some("ar5iv.sty"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(!log.contains("Fatal:"), "{log}");
-  let creators = names(&xml);
-  assert_eq!(creators.len(), 1, "{creators:?}");
-  assert!(creators[0].ends_with("Christian Elbracht"), "{creators:?}");
+  assert_eq!(names(&xml), ["Christian Elbracht"]);
   let (log, xml) = convert_with(repro!("copy_of_title.tex"), Some("ar5iv.sty"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(xml.matches("<title>").count(), 1, "{xml}");
@@ -63,4 +60,36 @@ fn a_copy_taken_after_the_redefinition_still_replays() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(names(&xml), ["Ann Able", "Bob Baker"]);
   assert!(xml.contains("Authors: 2."), "{xml}");
+}
+
+/// Restoring the setter from its frozen copy (`\let\author\orig@author`, `\global\let\title\orig@title`) leaves the
+/// kernel's own setter, the refusal's records cleared, as in TeX, where the class's definition is gone: a second
+/// redefinition is refused afresh and replays (red on SETCOPY round 0: the copy's wrapper on `\author` itself hid it,
+/// "Second: ." with no diagnostic). Distinct from the guard below: the replay after the restore, not its absence.
+#[test]
+fn a_restored_setter_takes_a_later_redefinition_afresh() {
+  let (log, xml) = convert_with(repro!("restore_then_redefine.tex"), Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(names(&xml), ["Ann Able"]);
+  assert!(xml.contains("Second: Ann Able."), "{xml}");
+  let (log, xml) = convert_with(repro!("restore_then_redefine_title.tex"), Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(xml.matches("<title>").count(), 1, "{xml}");
+  assert!(xml.contains("<title>My Title</title>"), "{xml}");
+  assert!(xml.contains("Second: My Title."), "{xml}");
+}
+
+/// A restore with no later redefinition drops the class's definition: the document's `\author` runs the kernel's setter
+/// alone (red on base: "Calls: 1.", the refused wrapper replayed); restored in an `\AtBeginDocument` hook, the preamble
+/// call ran the wrapper and the document's call replaces the author.
+#[test]
+fn a_restored_setter_drops_the_class_definition() {
+  let (log, xml) = convert_with(repro!("restore_only.tex"), Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(names(&xml), ["Ann Able"]);
+  assert!(xml.contains("Calls: 0."), "{xml}");
+  let (log, xml) = convert_with(repro!("copy_restore_in_class.tex"), Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(names(&xml), ["Bob Baker"]);
+  assert!(xml.contains("Short: Ann Able."), "{xml}");
 }

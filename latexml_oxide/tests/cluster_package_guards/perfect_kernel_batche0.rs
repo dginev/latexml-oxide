@@ -3269,7 +3269,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // and the records' key; review revPRESBXb S1, BL3)
   // (SETCOPY, 165 -> 172: `setter_as_copied` knows a replaying setter by its body's internal call tokens, which are the
   // binding's own names, not the document's, and `same_copied_setter` unwraps the copy's body for `\ifx`)
-  ("latexml_core/src/state.rs", 172),
+  // (SETCOPYb +1: `frozen_setter_parts` knows the copy's own wrapper token, `\lx@setter@as@copied`, so that
+  // `\let\author\orig@author` restores the setter unwrapped; the call parser is shared, `setter_call_name`; review B1)
+  ("latexml_core/src/state.rs", 173),
   ("latexml_core/src/stomach.rs", 84),
   // (MEMB, -1: `be_absorbed` reads its text through `arena::with`, not `get_string()`)
   ("latexml_core/src/tbox.rs", 2),

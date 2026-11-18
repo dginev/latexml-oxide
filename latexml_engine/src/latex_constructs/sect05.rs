@@ -3184,10 +3184,11 @@ fn replay_class_setter(name: &str, opt: Tokens, arg: Tokens) -> Result<()> {
   replay_dropped_class_code(name, Some((opt, arg)), &[])
 }
 
-/// The records of the class's refused `\<name>` (`\lx@dropped@<name>` and `\<name>:redefined{,@class,@document}`,
-/// state.rs), hidden while a copy of the setter taken before the refusal runs (`\lx@setter@as@copied`) and put back
-/// when it ends, by error too.
+/// The records of the class's refused `\<name>` (`\lx@dropped@<name>` and `\<name>:redefined<suffix>`, state.rs
+/// `REFUSAL_RECORD_SUFFIXES`), hidden while a copy of the setter taken before the refusal runs (`\lx@setter@as@copied`)
+/// and put back when it ends, by error too.
 struct HiddenRefusal {
+  name:            String,
   dropped:         Token,
   dropped_meaning: Option<Stored>,
   values:          Vec<(String, Stored)>,
@@ -3201,14 +3202,15 @@ impl HiddenRefusal {
       assign_meaning(&dropped, Stored::None, Some(Scope::Global));
     }
     let mut values = Vec::new();
-    for suffix in ["", "@class", "@document"] {
+    for suffix in REFUSAL_RECORD_SUFFIXES {
       let key = s!("\\{name}:redefined{suffix}");
-      if let Some(value) = lookup_value(&key) {
+      if let Some(value) = lookup_value(&key).filter(|v| !matches!(v, Stored::None)) {
         assign_value(&key, Stored::None, Some(Scope::Global));
         values.push((key, value));
       }
     }
     HiddenRefusal {
+      name: name.to_string(),
       dropped,
       dropped_meaning,
       values,
@@ -3218,6 +3220,10 @@ impl HiddenRefusal {
 
 impl Drop for HiddenRefusal {
   fn drop(&mut self) {
+    // (a refusal the body itself made meanwhile, which records `:redefined` with the rest, is newer and stays)
+    if lookup_bool(&s!("\\{}:redefined", self.name)) {
+      return;
+    }
     if let Some(meaning) = self.dropped_meaning.take() {
       assign_meaning(&self.dropped, meaning, Some(Scope::Global));
     }

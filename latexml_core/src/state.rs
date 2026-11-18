@@ -7849,7 +7849,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
       return;
     }
   }
-  let meaning = setter_as_copied(meaning);
+  let meaning = restored_setter(token1, meaning).unwrap_or_else(setter_as_copied);
   carry_document_refusal_records(token1, token2, scope);
   assign_meaning(token1, meaning, scope);
   let _ = after_assignment();
@@ -7860,7 +7860,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
 /// is the setter as it stood then, as TeX's `\let` (tex.web §1221) freezes it: its body runs inside
 /// `\lx@setter@as@copied{<name>}{…}`, which hides a later refusal's records. tocbase.cls:647-677 `\let\orig@author
 /// \author` before its `\renewcommand\author`, then `\orig@author{\toc@authors}` (1811.06821, 1811.11810, 1904.05269,
-/// 2011.14174, 1905.07135). OXIDIZED_DESIGN_DIVERGENCES #1078.
+/// 2011.14174, 1905.07135, 2311.03341). OXIDIZED_DESIGN_DIVERGENCES #1078.
 fn setter_as_copied(meaning: Stored) -> Stored {
   let Stored::Expandable(ref defn) = meaning else {
     return meaning;
@@ -7878,16 +7878,9 @@ fn setter_as_copied(meaning: Stored) -> Stored {
       )
     })
   });
-  if !opens_setter || tokens.get(1) != Some(&T_BEGIN!()) {
-    return meaning;
-  }
-  let Some(close) = tokens.iter().position(|t| *t == T_END!()) else {
+  let Some((name, close)) = setter_call_name(tokens).filter(|_| opens_setter) else {
     return meaning;
   };
-  let name: String = tokens[2..close]
-    .iter()
-    .map(|t| t.with_str(str::to_string))
-    .collect();
   if lookup_bool(&s!("\\{name}:redefined"))
     || !tokens
       .iter()
@@ -7905,6 +7898,79 @@ fn setter_as_copied(meaning: Stored) -> Stored {
   copy.plan = std::cell::OnceCell::new();
   copy.stored = std::cell::OnceCell::new();
   Stored::Expandable(Rc::new(copy))
+}
+
+/// The per-name records of a lock's refusal of `\<name>` (after `:redefined`, [`note_redefined`],
+/// `install_definition`): what a replay or a locked binding reads of the class's definition (OXIDIZED_DESIGN #482).
+pub const REFUSAL_RECORD_SUFFIXES: [&str; 6] =
+  ["", "@class", "@document", "@nargs", "@in", "@default"];
+
+/// `\let\<name>\<copy>` of a frozen copy of `\<name>` itself ([`setter_as_copied`]) restores the setter: in TeX the
+/// class's definition is gone, so the copy's body is installed unwrapped and the refusal's records are cleared globally
+/// (`\lx@dropped@<name>`, [`REFUSAL_RECORD_SUFFIXES`]); a later refused redefinition records itself again and replays.
+/// Review SETCOPY B1 (`\let\author\orig@author` then a second `\renewcommand\author`). OXIDIZED_DESIGN_DIVERGENCES #1078.
+fn restored_setter(token1: &Token, meaning: Stored) -> std::result::Result<Stored, Stored> {
+  let Some((name, inner)) = frozen_setter_parts(&meaning) else {
+    return Err(meaning);
+  };
+  if !token1.with_cs_name(|cs| cs.strip_prefix('\\') == Some(name.as_str())) {
+    return Err(meaning);
+  }
+  let Stored::Expandable(ref defn) = meaning else {
+    return Err(meaning);
+  };
+  let mut restored = (**defn).clone();
+  restored.expansion = Some(ExpansionBody::Tokens(Tokens::new(inner)));
+  restored.plan = std::cell::OnceCell::new();
+  restored.stored = std::cell::OnceCell::new();
+  let mut state = state_mut!();
+  state.assign_internal(
+    TableName::Meaning,
+    arena::pin(s!("\\lx@dropped@{name}")),
+    Stored::None,
+    Some(Scope::Global),
+  );
+  for suffix in REFUSAL_RECORD_SUFFIXES {
+    state.assign_internal(
+      TableName::Value,
+      arena::pin(s!("\\{name}:redefined{suffix}")),
+      Stored::None,
+      Some(Scope::Global),
+    );
+  }
+  Ok(Stored::Expandable(Rc::new(restored)))
+}
+
+/// The `{<name>}` of a setter call opening a macro body (`\lx@sealed@class@call{author}…`, `\lx@setter@as@copied
+/// {author}{…}`), and the index of its closing brace.
+fn setter_call_name(tokens: &[Token]) -> Option<(String, usize)> {
+  if tokens.get(1) != Some(&T_BEGIN!()) {
+    return None;
+  }
+  let close = tokens.iter().position(|t| *t == T_END!())?;
+  Some((
+    tokens[2..close]
+      .iter()
+      .map(|t| t.with_str(str::to_string))
+      .collect(),
+    close,
+  ))
+}
+
+/// A frozen setter copy's name and its unwrapped body: `\lx@setter@as@copied{<name>}{<body>}` ([`setter_as_copied`]).
+fn frozen_setter_parts(meaning: &Stored) -> Option<(String, Vec<Token>)> {
+  let Stored::Expandable(defn) = meaning else {
+    return None;
+  };
+  let Some(ExpansionBody::Tokens(body)) = &defn.expansion else {
+    return None;
+  };
+  let tokens = body.unlist_ref();
+  if tokens.first() != Some(&crate::T_CS!("\\lx@setter@as@copied")) {
+    return None;
+  }
+  let (name, close) = setter_call_name(tokens)?;
+  Some((name, tokens.get(close + 2..tokens.len() - 1)?.to_vec()))
 }
 
 /// Whether one of two macros is the other's copy as a setter stood ([`setter_as_copied`]): `\ifx` reads them as one
