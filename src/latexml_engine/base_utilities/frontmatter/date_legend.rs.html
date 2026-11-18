@@ -4,778 +4,837 @@
 <a href=#4 id=4 data-nosnippet>4</a>//! `\maketitle` (`\lx@date@legend`, after `\lx@author@tail`), before the flush, as the author block's own lines are: each
 <a href=#5 id=5 data-nosnippet>5</a>//! line a label of the block's names leads is the contact that label's line is, an affiliation line no label leads
 <a href=#6 id=6 data-nosnippet>6</a>//! every author's, an e-mail line its addresses' owners'. A date anything is taken from is void, its leftover dropped
-<a href=#7 id=7 data-nosnippet>7</a>//! (`Info:frontmatter:date_void`, DG 2026-11-17); one with a line no rule reads stays whole. Perl: the text is the date.
-<a href=#8 id=8 data-nosnippet>8</a>
-<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#10 id=10 data-nosnippet>10</a>
-<a href=#11 id=11 data-nosnippet>11</a><span class="doccomment">/// A run of lines one contact call takes: its label (as printed, and the spelling a declared label is keyed by), none
-<a href=#12 id=12 data-nosnippet>12</a>/// for an unlabelled affiliation, and its lines.
-<a href=#13 id=13 data-nosnippet>13</a></span><span class="kw">type </span>Run = (<span class="prelude-ty">Option</span>&lt;(String, <span class="prelude-ty">Option</span>&lt;String&gt;)&gt;, Vec&lt;Token&gt;);
-<a href=#14 id=14 data-nosnippet>14</a>
-<a href=#15 id=15 data-nosnippet>15</a><span class="doccomment">/// What one line of the date is.
-<a href=#16 id=16 data-nosnippet>16</a></span><span class="attr">#[derive(Debug, Clone, PartialEq)]
-<a href=#17 id=17 data-nosnippet>17</a></span><span class="kw">enum </span>Line {
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="doccomment">/// prints nothing
-<a href=#19 id=19 data-nosnippet>19</a>  </span>Blank,
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="doccomment">/// a date's: `\today`, a month's name, a year on a line naming no institution
-<a href=#21 id=21 data-nosnippet>21</a>  </span>Date,
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="doccomment">/// led by a label the names request: the label as printed, the spelling a binding's declared label is keyed by, the
-<a href=#23 id=23 data-nosnippet>23</a>  /// line without its label
-<a href=#24 id=24 data-nosnippet>24</a>  </span>Labelled(String, <span class="prelude-ty">Option</span>&lt;String&gt;, Vec&lt;Token&gt;),
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="doccomment">/// e-mail addresses alone, an e-mail label before them aside: the label, the addresses
-<a href=#26 id=26 data-nosnippet>26</a>  </span>Addresses(<span class="prelude-ty">Option</span>&lt;Tokens&gt;, Vec&lt;String&gt;),
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="doccomment">/// text no label leads, no mark inside it: whether it names an institution ([`reads_as_affiliation`])
-<a href=#28 id=28 data-nosnippet>28</a>  </span>Text(bool),
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="doccomment">/// anything else — a label no name requests, a mark inside the line: the reason, for the Info that the date stays
-<a href=#30 id=30 data-nosnippet>30</a>  </span>Kept(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str),
-<a href=#31 id=31 data-nosnippet>31</a>}
-<a href=#32 id=32 data-nosnippet>32</a>
-<a href=#33 id=33 data-nosnippet>33</a><span class="doccomment">/// `\lx@date@legend`: the calls a date the class prints under the author block makes of its legend lines, the date
-<a href=#34 id=34 data-nosnippet>34</a>/// itself taken off the queue, void (its date lines dropped, named in an Info). Nothing where the class prints the date
-<a href=#35 id=35 data-nosnippet>35</a>/// elsewhere or not at all ([`fm_class_prints_date_under_authors`]), under a title page of the document's or a raw
-<a href=#36 id=36 data-nosnippet>36</a>/// file's own, with no author queued, where no line is a legend's, or where a line is read by no rule; then the date is
-<a href=#37 id=37 data-nosnippet>37</a>/// untouched.
-<a href=#38 id=38 data-nosnippet>38</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>date_legend_calls() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
-<a href=#39 id=39 data-nosnippet>39</a>  <span class="kw">if </span>!fm_class_prints_date_under_authors()
-<a href=#40 id=40 data-nosnippet>40</a>    || <span class="kw">crate</span>::latex_constructs::own_maketitle()
-<a href=#41 id=41 data-nosnippet>41</a>    || <span class="kw">crate</span>::latex_constructs::replays_class_maketitle()
-<a href=#42 id=42 data-nosnippet>42</a>  {
-<a href=#43 id=43 data-nosnippet>43</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#44 id=44 data-nosnippet>44</a>  }
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(store) = <span class="kw">crate</span>::frontmatter_stores::store_value(<span class="string">"date"</span>)<span class="question-mark">? </span><span class="kw">else </span>{
-<a href=#46 id=46 data-nosnippet>46</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#47 id=47 data-nosnippet>47</a>  };
-<a href=#48 id=48 data-nosnippet>48</a>  <span class="comment">// (the kernel `\date`'s entry, its content the store's value: `\lx@add@date@halved`)
-<a href=#49 id=49 data-nosnippet>49</a>  </span><span class="kw">let </span>queued = with_value(<span class="string">"frontmatter_raw"</span>, |v| <span class="kw">match </span>v {
-<a href=#50 id=50 data-nosnippet>50</a>    <span class="prelude-val">Some</span>(Stored::FrontmatterRaw(queue)) =&gt; queue.iter().rposition(|entry| {
-<a href=#51 id=51 data-nosnippet>51</a>      entry.<span class="number">0 </span>== <span class="string">"ltx:date"
-<a href=#52 id=52 data-nosnippet>52</a>        </span>&amp;&amp; entry.<span class="number">1</span>.get(<span class="string">"role"</span>).map(String::as_str) == <span class="prelude-val">Some</span>(<span class="string">"creation"</span>)
-<a href=#53 id=53 data-nosnippet>53</a>        &amp;&amp; last_group(<span class="kw-2">&amp;</span>entry.<span class="number">2</span>) == store
-<a href=#54 id=54 data-nosnippet>54</a>    }),
-<a href=#55 id=55 data-nosnippet>55</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#56 id=56 data-nosnippet>56</a>  });
-<a href=#57 id=57 data-nosnippet>57</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(at) = queued <span class="kw">else </span>{
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#59 id=59 data-nosnippet>59</a>  };
-<a href=#60 id=60 data-nosnippet>60</a>  <span class="kw">let </span>names = queued_position_names()<span class="question-mark">?</span>;
-<a href=#61 id=61 data-nosnippet>61</a>  <span class="kw">if </span>names.is_empty() {
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#63 id=63 data-nosnippet>63</a>  }
-<a href=#64 id=64 data-nosnippet>64</a>  <span class="kw">let </span>(prefix, body) = unwrapped(strip_linebreak_options(store.clone()).unlist());
-<a href=#65 id=65 data-nosnippet>65</a>  <span class="kw">let </span>body = wrapped_lines_as_lines(<span class="kw-2">&amp;</span>Tokens::new(body.clone())).map_or(body, Tokens::unlist);
-<a href=#66 id=66 data-nosnippet>66</a>  <span class="kw">let </span>lines = date_lines(<span class="kw-2">&amp;</span>body);
-<a href=#67 id=67 data-nosnippet>67</a>  <span class="kw">let </span>declared = policy::unexplained_name_label_spellings();
-<a href=#68 id=68 data-nosnippet>68</a>  <span class="kw">let </span><span class="kw-2">mut </span>kinds = Vec::with_capacity(lines.len());
-<a href=#69 id=69 data-nosnippet>69</a>  <span class="kw">for </span>(<span class="kw">_</span>, line) <span class="kw">in </span><span class="kw-2">&amp;</span>lines {
-<a href=#70 id=70 data-nosnippet>70</a>    kinds.push(line_kind(line, <span class="kw-2">&amp;</span>declared)<span class="question-mark">?</span>);
-<a href=#71 id=71 data-nosnippet>71</a>  }
-<a href=#72 id=72 data-nosnippet>72</a>  <span class="kw">if </span>!kinds.iter().any(|kind| {
-<a href=#73 id=73 data-nosnippet>73</a>    <span class="macro">matches!</span>(
-<a href=#74 id=74 data-nosnippet>74</a>      kind,
-<a href=#75 id=75 data-nosnippet>75</a>      Line::Labelled(..) | Line::Addresses(..) | Line::Text(<span class="bool-val">true</span>)
-<a href=#76 id=76 data-nosnippet>76</a>    )
-<a href=#77 id=77 data-nosnippet>77</a>  }) {
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#79 id=79 data-nosnippet>79</a>  }
-<a href=#80 id=80 data-nosnippet>80</a>  <span class="comment">// Fail-safes: the date stays whole (DG 2026-11-17: all or nothing) where a line's owners may not be the names it
-<a href=#81 id=81 data-nosnippet>81</a>  // reads them as. (1) A binding numbering its unlabelled names (`thenote`: authblk.sty:115-117's `\AB@thenote`, the
-<a href=#82 id=82 data-nosnippet>82</a>  // `affil` counter) gives a typed label's line to every name its number is, typing that mark or not (2307.00092,
-<a href=#83 id=83 data-nosnippet>83</a>  // 2412.00057, 2404.15649): a line a number labels is read only where every name requests it, its owners then exactly
-<a href=#84 id=84 data-nosnippet>84</a>  // them (2208.04109's `$^{1,2}$`); a binding's declared spelling is keyed apart. (2) A date with a date's line whose only
-<a href=#85 id=85 data-nosnippet>85</a>  // other lines are unlabelled text holds a remark, not a legend (2601.19933's "Part of the … research program",
-<a href=#86 id=86 data-nosnippet>86</a>  // cs0703003's report number).
-<a href=#87 id=87 data-nosnippet>87</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>numbered = <span class="bool-val">false</span>;
-<a href=#88 id=88 data-nosnippet>88</a>  <span class="kw">if </span>policy::policy_for(
-<a href=#89 id=89 data-nosnippet>89</a>    <span class="kw-2">&amp;</span>ledger::policy_binding(<span class="kw-2">&amp;</span>ledger::author_binding()),
-<a href=#90 id=90 data-nosnippet>90</a>    <span class="string">"\\lx@add@creator"</span>,
-<a href=#91 id=91 data-nosnippet>91</a>  )
-<a href=#92 id=92 data-nosnippet>92</a>  .thenote
-<a href=#93 id=93 data-nosnippet>93</a>  {
-<a href=#94 id=94 data-nosnippet>94</a>    <span class="kw">for </span>kind <span class="kw">in </span><span class="kw-2">&amp;</span>kinds {
-<a href=#95 id=95 data-nosnippet>95</a>      <span class="kw">if let </span>Line::Labelled(printed, <span class="prelude-val">None</span>, <span class="kw">_</span>) = kind {
-<a href=#96 id=96 data-nosnippet>96</a>        <span class="kw">let </span>keys = printed_label_keys(printed, <span class="string">"affiliation"</span>);
-<a href=#97 id=97 data-nosnippet>97</a>        <span class="comment">// (the number is `\arabic{affil}`: a symbol label, `*`, is no name's by number)
-<a href=#98 id=98 data-nosnippet>98</a>        </span><span class="kw">let </span>is_number = |key: <span class="kw-2">&amp;</span>String| {
-<a href=#99 id=99 data-nosnippet>99</a>          key
-<a href=#100 id=100 data-nosnippet>100</a>            .strip_prefix(<span class="string">"affiliation:"</span>)
-<a href=#101 id=101 data-nosnippet>101</a>            .is_some_and(|label| !label.is_empty() &amp;&amp; label.chars().all(|c| c.is_ascii_digit()))
-<a href=#102 id=102 data-nosnippet>102</a>        };
-<a href=#103 id=103 data-nosnippet>103</a>        <span class="comment">// (the names whose typed marks request it, by the numbers they type — the queue's requests hold the binding's
-<a href=#104 id=104 data-nosnippet>104</a>        // numbers too, and a queued entry may hold several names, `Ann Able$^{1}$, Bob Baker$^{2}$`: a position is the
-<a href=#105 id=105 data-nosnippet>105</a>        // line's only where every number it types is one of the line's, and it types one)
-<a href=#106 id=106 data-nosnippet>106</a>        </span><span class="kw">if </span>keys.iter().any(is_number) {
-<a href=#107 id=107 data-nosnippet>107</a>          numbered |= queued_author_marks()<span class="question-mark">?</span>.iter().any(|marks| {
-<a href=#108 id=108 data-nosnippet>108</a>            <span class="kw">let </span>numbers: Vec&lt;Vec&lt;String&gt;&gt; = marks
-<a href=#109 id=109 data-nosnippet>109</a>              .iter()
-<a href=#110 id=110 data-nosnippet>110</a>              .map(|mark| {
-<a href=#111 id=111 data-nosnippet>111</a>                requested_label_keys(mark)
-<a href=#112 id=112 data-nosnippet>112</a>                  .into_iter()
-<a href=#113 id=113 data-nosnippet>113</a>                  .filter(is_number)
-<a href=#114 id=114 data-nosnippet>114</a>                  .collect()
-<a href=#115 id=115 data-nosnippet>115</a>              })
-<a href=#116 id=116 data-nosnippet>116</a>              .filter(|numbers: <span class="kw-2">&amp;</span>Vec&lt;String&gt;| !numbers.is_empty())
-<a href=#117 id=117 data-nosnippet>117</a>              .collect();
-<a href=#118 id=118 data-nosnippet>118</a>            numbers.is_empty()
-<a href=#119 id=119 data-nosnippet>119</a>              || numbers
-<a href=#120 id=120 data-nosnippet>120</a>                .iter()
-<a href=#121 id=121 data-nosnippet>121</a>                .any(|numbers| !numbers.iter().any(|key| keys.contains(key)))
-<a href=#122 id=122 data-nosnippet>122</a>          });
-<a href=#123 id=123 data-nosnippet>123</a>        }
-<a href=#124 id=124 data-nosnippet>124</a>      }
-<a href=#125 id=125 data-nosnippet>125</a>    }
-<a href=#126 id=126 data-nosnippet>126</a>  }
-<a href=#127 id=127 data-nosnippet>127</a>  <span class="kw">let </span>remark = kinds.contains(<span class="kw-2">&amp;</span>Line::Date)
-<a href=#128 id=128 data-nosnippet>128</a>    &amp;&amp; !kinds
-<a href=#129 id=129 data-nosnippet>129</a>      .iter()
-<a href=#130 id=130 data-nosnippet>130</a>      .any(|kind| <span class="macro">matches!</span>(kind, Line::Labelled(..) | Line::Addresses(..)));
-<a href=#131 id=131 data-nosnippet>131</a>  <span class="kw">if </span>numbered || remark {
-<a href=#132 id=132 data-nosnippet>132</a>    <span class="kw">let </span>why = <span class="kw">if </span>numbered {
-<a href=#133 id=133 data-nosnippet>133</a>      <span class="string">"a typed label where the binding numbers the names"
-<a href=#134 id=134 data-nosnippet>134</a>    </span>} <span class="kw">else </span>{
-<a href=#135 id=135 data-nosnippet>135</a>      <span class="string">"a date with unlabelled text"
-<a href=#136 id=136 data-nosnippet>136</a>    </span>};
-<a href=#137 id=137 data-nosnippet>137</a>    <span class="macro">Info!</span>(
-<a href=#138 id=138 data-nosnippet>138</a>      <span class="string">"frontmatter"</span>,
-<a href=#139 id=139 data-nosnippet>139</a>      <span class="string">"date"</span>,
-<a href=#140 id=140 data-nosnippet>140</a>      <span class="macro">s!</span>(<span class="string">"A \\date under the authors stays the date ({why}): {store}"</span>)
-<a href=#141 id=141 data-nosnippet>141</a>    );
-<a href=#142 id=142 data-nosnippet>142</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#143 id=143 data-nosnippet>143</a>  }
-<a href=#144 id=144 data-nosnippet>144</a>  <span class="comment">// The runs: a labelled line with the unlabelled text lines after it (its address continued, as an author block's
-<a href=#145 id=145 data-nosnippet>145</a>  // marked line is, `entry_calls`), an affiliation line with those after it; the lines kept, each with its delimiter.
-<a href=#146 id=146 data-nosnippet>146</a>  </span><span class="kw">let </span>keys: Vec&lt;NameKeys&gt; = names
-<a href=#147 id=147 data-nosnippet>147</a>    .iter()
-<a href=#148 id=148 data-nosnippet>148</a>    .map(|name| printed_name_keys(name, <span class="prelude-val">None</span>))
-<a href=#149 id=149 data-nosnippet>149</a>    .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
-<a href=#150 id=150 data-nosnippet>150</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls: Vec&lt;Token&gt; = Vec::new();
-<a href=#151 id=151 data-nosnippet>151</a>  <span class="kw">let </span><span class="kw-2">mut </span>void: Vec&lt;Token&gt; = Vec::new();
-<a href=#152 id=152 data-nosnippet>152</a>  <span class="kw">let </span><span class="kw-2">mut </span>run: <span class="prelude-ty">Option</span>&lt;Run&gt; = <span class="prelude-val">None</span>;
-<a href=#153 id=153 data-nosnippet>153</a>  <span class="kw">let </span><span class="kw-2">mut </span>explained: Vec&lt;String&gt; = Vec::new();
-<a href=#154 id=154 data-nosnippet>154</a>  <span class="kw">let </span>flush = |run: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;Run&gt;, calls: <span class="kw-2">&amp;mut </span>Vec&lt;Token&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#155 id=155 data-nosnippet>155</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>((label, content)) = run.take() {
-<a href=#156 id=156 data-nosnippet>156</a>      calls.extend(contact_call(label.as_ref(), <span class="kw-2">&amp;</span>prefix, content)<span class="question-mark">?</span>);
-<a href=#157 id=157 data-nosnippet>157</a>    }
-<a href=#158 id=158 data-nosnippet>158</a>    <span class="prelude-val">Ok</span>(())
-<a href=#159 id=159 data-nosnippet>159</a>  };
-<a href=#160 id=160 data-nosnippet>160</a>  <span class="comment">// (the lines no rule reads with confidence: one makes the whole date stay as written — no part of it is taken, the
-<a href=#161 id=161 data-nosnippet>161</a>  // rest kept as a date, DG 2026-11-17)
-<a href=#162 id=162 data-nosnippet>162</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>in_run = <span class="bool-val">false</span>;
-<a href=#163 id=163 data-nosnippet>163</a>  <span class="kw">for </span>kind <span class="kw">in </span><span class="kw-2">&amp;</span>kinds {
-<a href=#164 id=164 data-nosnippet>164</a>    <span class="kw">let </span>why = <span class="kw">match </span>kind {
-<a href=#165 id=165 data-nosnippet>165</a>      Line::Kept(why) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>why),
-<a href=#166 id=166 data-nosnippet>166</a>      Line::Text(<span class="bool-val">false</span>) <span class="kw">if </span>!in_run =&gt; <span class="prelude-val">Some</span>(<span class="string">"no label, no institution"</span>),
-<a href=#167 id=167 data-nosnippet>167</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#168 id=168 data-nosnippet>168</a>    };
-<a href=#169 id=169 data-nosnippet>169</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(why) = why {
-<a href=#170 id=170 data-nosnippet>170</a>      <span class="macro">Info!</span>(
-<a href=#171 id=171 data-nosnippet>171</a>        <span class="string">"frontmatter"</span>,
-<a href=#172 id=172 data-nosnippet>172</a>        <span class="string">"date"</span>,
-<a href=#173 id=173 data-nosnippet>173</a>        <span class="macro">s!</span>(<span class="string">"A \\date under the authors stays the date, a line of it unread ({why}): {store}"</span>)
-<a href=#174 id=174 data-nosnippet>174</a>      );
-<a href=#175 id=175 data-nosnippet>175</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#176 id=176 data-nosnippet>176</a>    }
-<a href=#177 id=177 data-nosnippet>177</a>    in_run = <span class="kw">match </span>kind {
-<a href=#178 id=178 data-nosnippet>178</a>      Line::Labelled(..) | Line::Text(<span class="bool-val">true</span>) =&gt; <span class="bool-val">true</span>,
-<a href=#179 id=179 data-nosnippet>179</a>      Line::Text(<span class="bool-val">false</span>) | Line::Blank =&gt; in_run,
-<a href=#180 id=180 data-nosnippet>180</a>      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-<a href=#181 id=181 data-nosnippet>181</a>    };
-<a href=#182 id=182 data-nosnippet>182</a>  }
-<a href=#183 id=183 data-nosnippet>183</a>  <span class="kw">for </span>((delimiter, line), kind) <span class="kw">in </span>lines.into_iter().zip(kinds) {
-<a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">match </span>kind {
-<a href=#185 id=185 data-nosnippet>185</a>      Line::Blank =&gt; {
-<a href=#186 id=186 data-nosnippet>186</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, content)) = run.as_mut() {
-<a href=#187 id=187 data-nosnippet>187</a>          content.extend(delimiter);
-<a href=#188 id=188 data-nosnippet>188</a>          content.extend(line);
-<a href=#189 id=189 data-nosnippet>189</a>        }
-<a href=#190 id=190 data-nosnippet>190</a>      },
-<a href=#191 id=191 data-nosnippet>191</a>      Line::Labelled(label, spelling, rest) =&gt; {
-<a href=#192 id=192 data-nosnippet>192</a>        flush(<span class="kw-2">&amp;mut </span>run, <span class="kw-2">&amp;mut </span>calls)<span class="question-mark">?</span>;
-<a href=#193 id=193 data-nosnippet>193</a>        <span class="kw">if </span>spelling.is_some() {
-<a href=#194 id=194 data-nosnippet>194</a>          explained.push(label.clone());
-<a href=#195 id=195 data-nosnippet>195</a>        }
-<a href=#196 id=196 data-nosnippet>196</a>        run = <span class="prelude-val">Some</span>((<span class="prelude-val">Some</span>((label, spelling)), rest));
-<a href=#197 id=197 data-nosnippet>197</a>      },
-<a href=#198 id=198 data-nosnippet>198</a>      Line::Text(<span class="kw">_</span>) <span class="kw">if </span>run.is_some() =&gt; {
-<a href=#199 id=199 data-nosnippet>199</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, content)) = run.as_mut() {
-<a href=#200 id=200 data-nosnippet>200</a>          content.extend(delimiter);
-<a href=#201 id=201 data-nosnippet>201</a>          content.extend(line);
-<a href=#202 id=202 data-nosnippet>202</a>        }
-<a href=#203 id=203 data-nosnippet>203</a>      },
-<a href=#204 id=204 data-nosnippet>204</a>      Line::Addresses(label, addresses) =&gt; {
-<a href=#205 id=205 data-nosnippet>205</a>        flush(<span class="kw-2">&amp;mut </span>run, <span class="kw-2">&amp;mut </span>calls)<span class="question-mark">?</span>;
-<a href=#206 id=206 data-nosnippet>206</a>        calls.extend(address_calls(label.as_ref(), <span class="kw-2">&amp;</span>addresses, <span class="kw-2">&amp;</span>keys)<span class="question-mark">?</span>);
-<a href=#207 id=207 data-nosnippet>207</a>      },
-<a href=#208 id=208 data-nosnippet>208</a>      Line::Text(<span class="kw">_</span>) =&gt; run = <span class="prelude-val">Some</span>((<span class="prelude-val">None</span>, line)),
-<a href=#209 id=209 data-nosnippet>209</a>      Line::Date | Line::Kept(<span class="kw">_</span>) =&gt; {
-<a href=#210 id=210 data-nosnippet>210</a>        flush(<span class="kw-2">&amp;mut </span>run, <span class="kw-2">&amp;mut </span>calls)<span class="question-mark">?</span>;
-<a href=#211 id=211 data-nosnippet>211</a>        <span class="kw">if </span>!void.is_empty() {
-<a href=#212 id=212 data-nosnippet>212</a>          void.push(<span class="macro">T_SPACE!</span>());
-<a href=#213 id=213 data-nosnippet>213</a>        }
-<a href=#214 id=214 data-nosnippet>214</a>        void.extend(line.into_iter().skip_while(|t| <span class="kw-2">*</span>t == <span class="macro">T_SPACE!</span>()));
-<a href=#215 id=215 data-nosnippet>215</a>      },
-<a href=#216 id=216 data-nosnippet>216</a>    }
-<a href=#217 id=217 data-nosnippet>217</a>  }
-<a href=#218 id=218 data-nosnippet>218</a>  flush(<span class="kw-2">&amp;mut </span>run, <span class="kw-2">&amp;mut </span>calls)<span class="question-mark">?</span>;
-<a href=#219 id=219 data-nosnippet>219</a>  <span class="kw">if </span>!explained.is_empty() {
-<a href=#220 id=220 data-nosnippet>220</a>    policy::explain_name_labels(<span class="kw-2">&amp;</span>explained);
+<a href=#7 id=7 data-nosnippet>7</a>//! (`Info:frontmatter:date_void`, DG 2026-11-17), its notes the title's (`taken_notes`, 2605.04795); one with a line no
+<a href=#8 id=8 data-nosnippet>8</a>//! rule reads stays whole. Perl: the text is the date.
+<a href=#9 id=9 data-nosnippet>9</a>
+<a href=#10 id=10 data-nosnippet>10</a></span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#11 id=11 data-nosnippet>11</a>
+<a href=#12 id=12 data-nosnippet>12</a><span class="doccomment">/// A run of lines one contact call takes: its label (as printed, and the spelling a declared label is keyed by), none
+<a href=#13 id=13 data-nosnippet>13</a>/// for an unlabelled affiliation, and its lines.
+<a href=#14 id=14 data-nosnippet>14</a></span><span class="kw">type </span>Run = (<span class="prelude-ty">Option</span>&lt;(String, <span class="prelude-ty">Option</span>&lt;String&gt;)&gt;, Vec&lt;Token&gt;);
+<a href=#15 id=15 data-nosnippet>15</a>
+<a href=#16 id=16 data-nosnippet>16</a><span class="doccomment">/// What one line of the date is.
+<a href=#17 id=17 data-nosnippet>17</a></span><span class="attr">#[derive(Debug, Clone, PartialEq)]
+<a href=#18 id=18 data-nosnippet>18</a></span><span class="kw">enum </span>Line {
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="doccomment">/// prints nothing
+<a href=#20 id=20 data-nosnippet>20</a>  </span>Blank,
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="doccomment">/// a date's: `\today`, a month's name, a year on a line naming no institution
+<a href=#22 id=22 data-nosnippet>22</a>  </span>Date,
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="doccomment">/// led by a label the names request: the label as printed, the spelling a binding's declared label is keyed by, the
+<a href=#24 id=24 data-nosnippet>24</a>  /// line without its label
+<a href=#25 id=25 data-nosnippet>25</a>  </span>Labelled(String, <span class="prelude-ty">Option</span>&lt;String&gt;, Vec&lt;Token&gt;),
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="doccomment">/// e-mail addresses alone, an e-mail label before them aside: the label, the addresses
+<a href=#27 id=27 data-nosnippet>27</a>  </span>Addresses(<span class="prelude-ty">Option</span>&lt;Tokens&gt;, Vec&lt;String&gt;),
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="doccomment">/// text no label leads, no mark inside it: whether it names an institution ([`reads_as_affiliation`])
+<a href=#29 id=29 data-nosnippet>29</a>  </span>Text(bool),
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="doccomment">/// anything else — a label no name requests, a mark inside the line: the reason, for the Info that the date stays
+<a href=#31 id=31 data-nosnippet>31</a>  </span>Kept(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str),
+<a href=#32 id=32 data-nosnippet>32</a>}
+<a href=#33 id=33 data-nosnippet>33</a>
+<a href=#34 id=34 data-nosnippet>34</a><span class="doccomment">/// `\lx@date@legend`: the calls a date the class prints under the author block makes of its legend lines, the date
+<a href=#35 id=35 data-nosnippet>35</a>/// itself taken off the queue, void (its date lines dropped, named in an Info). Nothing where the class prints the date
+<a href=#36 id=36 data-nosnippet>36</a>/// elsewhere or not at all ([`fm_class_prints_date_under_authors`]), under a title page of the document's or a raw
+<a href=#37 id=37 data-nosnippet>37</a>/// file's own, with no author queued, where no line is a legend's, or where a line is read by no rule; then the date is
+<a href=#38 id=38 data-nosnippet>38</a>/// untouched.
+<a href=#39 id=39 data-nosnippet>39</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>date_legend_calls() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="kw">if </span>!fm_class_prints_date_under_authors()
+<a href=#41 id=41 data-nosnippet>41</a>    || <span class="kw">crate</span>::latex_constructs::own_maketitle()
+<a href=#42 id=42 data-nosnippet>42</a>    || <span class="kw">crate</span>::latex_constructs::replays_class_maketitle()
+<a href=#43 id=43 data-nosnippet>43</a>  {
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#45 id=45 data-nosnippet>45</a>  }
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(store) = <span class="kw">crate</span>::frontmatter_stores::store_value(<span class="string">"date"</span>)<span class="question-mark">? </span><span class="kw">else </span>{
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#48 id=48 data-nosnippet>48</a>  };
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="comment">// (the kernel `\date`'s entry, its content the store's value: `\lx@add@date@halved`)
+<a href=#50 id=50 data-nosnippet>50</a>  </span><span class="kw">let </span>queued = with_value(<span class="string">"frontmatter_raw"</span>, |v| <span class="kw">match </span>v {
+<a href=#51 id=51 data-nosnippet>51</a>    <span class="prelude-val">Some</span>(Stored::FrontmatterRaw(queue)) =&gt; queue.iter().rposition(|entry| {
+<a href=#52 id=52 data-nosnippet>52</a>      entry.<span class="number">0 </span>== <span class="string">"ltx:date"
+<a href=#53 id=53 data-nosnippet>53</a>        </span>&amp;&amp; entry.<span class="number">1</span>.get(<span class="string">"role"</span>).map(String::as_str) == <span class="prelude-val">Some</span>(<span class="string">"creation"</span>)
+<a href=#54 id=54 data-nosnippet>54</a>        &amp;&amp; last_group(<span class="kw-2">&amp;</span>entry.<span class="number">2</span>) == store
+<a href=#55 id=55 data-nosnippet>55</a>    }),
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#57 id=57 data-nosnippet>57</a>  });
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(at) = queued <span class="kw">else </span>{
+<a href=#59 id=59 data-nosnippet>59</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#60 id=60 data-nosnippet>60</a>  };
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="kw">let </span>names = queued_position_names()<span class="question-mark">?</span>;
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="kw">if </span>names.is_empty() {
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#64 id=64 data-nosnippet>64</a>  }
+<a href=#65 id=65 data-nosnippet>65</a>  <span class="kw">let </span>(prefix, body) = unwrapped(strip_linebreak_options(store.clone()).unlist());
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="kw">let </span>body = wrapped_lines_as_lines(<span class="kw-2">&amp;</span>Tokens::new(body.clone())).map_or(body, Tokens::unlist);
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="kw">let </span>lines = date_lines(<span class="kw-2">&amp;</span>body);
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="kw">let </span>declared = policy::unexplained_name_label_spellings();
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="kw">let </span><span class="kw-2">mut </span>kinds = Vec::with_capacity(lines.len());
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="kw">for </span>(<span class="kw">_</span>, line) <span class="kw">in </span><span class="kw-2">&amp;</span>lines {
+<a href=#71 id=71 data-nosnippet>71</a>    kinds.push(line_kind(line, <span class="kw-2">&amp;</span>declared)<span class="question-mark">?</span>);
+<a href=#72 id=72 data-nosnippet>72</a>  }
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="kw">if </span>!kinds.iter().any(|kind| {
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="macro">matches!</span>(
+<a href=#75 id=75 data-nosnippet>75</a>      kind,
+<a href=#76 id=76 data-nosnippet>76</a>      Line::Labelled(..) | Line::Addresses(..) | Line::Text(<span class="bool-val">true</span>)
+<a href=#77 id=77 data-nosnippet>77</a>    )
+<a href=#78 id=78 data-nosnippet>78</a>  }) {
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#80 id=80 data-nosnippet>80</a>  }
+<a href=#81 id=81 data-nosnippet>81</a>  <span class="comment">// Fail-safes: the date stays whole (DG 2026-11-17: all or nothing) where a line's owners may not be the names it
+<a href=#82 id=82 data-nosnippet>82</a>  // reads them as. (1) A binding numbering its unlabelled names (`thenote`: authblk.sty:115-117's `\AB@thenote`, the
+<a href=#83 id=83 data-nosnippet>83</a>  // `affil` counter) gives a typed label's line to every name its number is, typing that mark or not (2307.00092,
+<a href=#84 id=84 data-nosnippet>84</a>  // 2412.00057, 2404.15649): a line a number labels is read only where every name requests it, its owners then exactly
+<a href=#85 id=85 data-nosnippet>85</a>  // them (2208.04109's `$^{1,2}$`); a binding's declared spelling is keyed apart. (2) A date with a date's line whose only
+<a href=#86 id=86 data-nosnippet>86</a>  // other lines are unlabelled text holds a remark, not a legend (2601.19933's "Part of the … research program",
+<a href=#87 id=87 data-nosnippet>87</a>  // cs0703003's report number).
+<a href=#88 id=88 data-nosnippet>88</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>numbered = <span class="bool-val">false</span>;
+<a href=#89 id=89 data-nosnippet>89</a>  <span class="kw">if </span>policy::policy_for(
+<a href=#90 id=90 data-nosnippet>90</a>    <span class="kw-2">&amp;</span>ledger::policy_binding(<span class="kw-2">&amp;</span>ledger::author_binding()),
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="string">"\\lx@add@creator"</span>,
+<a href=#92 id=92 data-nosnippet>92</a>  )
+<a href=#93 id=93 data-nosnippet>93</a>  .thenote
+<a href=#94 id=94 data-nosnippet>94</a>  {
+<a href=#95 id=95 data-nosnippet>95</a>    <span class="kw">for </span>kind <span class="kw">in </span><span class="kw-2">&amp;</span>kinds {
+<a href=#96 id=96 data-nosnippet>96</a>      <span class="kw">if let </span>Line::Labelled(printed, <span class="prelude-val">None</span>, <span class="kw">_</span>) = kind {
+<a href=#97 id=97 data-nosnippet>97</a>        <span class="kw">let </span>keys = printed_label_keys(printed, <span class="string">"affiliation"</span>);
+<a href=#98 id=98 data-nosnippet>98</a>        <span class="comment">// (the number is `\arabic{affil}`: a symbol label, `*`, is no name's by number)
+<a href=#99 id=99 data-nosnippet>99</a>        </span><span class="kw">let </span>is_number = |key: <span class="kw-2">&amp;</span>String| {
+<a href=#100 id=100 data-nosnippet>100</a>          key
+<a href=#101 id=101 data-nosnippet>101</a>            .strip_prefix(<span class="string">"affiliation:"</span>)
+<a href=#102 id=102 data-nosnippet>102</a>            .is_some_and(|label| !label.is_empty() &amp;&amp; label.chars().all(|c| c.is_ascii_digit()))
+<a href=#103 id=103 data-nosnippet>103</a>        };
+<a href=#104 id=104 data-nosnippet>104</a>        <span class="comment">// (the names whose typed marks request it, by the numbers they type — the queue's requests hold the binding's
+<a href=#105 id=105 data-nosnippet>105</a>        // numbers too, and a queued entry may hold several names, `Ann Able$^{1}$, Bob Baker$^{2}$`: a position is the
+<a href=#106 id=106 data-nosnippet>106</a>        // line's only where every number it types is one of the line's, and it types one)
+<a href=#107 id=107 data-nosnippet>107</a>        </span><span class="kw">if </span>keys.iter().any(is_number) {
+<a href=#108 id=108 data-nosnippet>108</a>          numbered |= queued_author_marks()<span class="question-mark">?</span>.iter().any(|marks| {
+<a href=#109 id=109 data-nosnippet>109</a>            <span class="kw">let </span>numbers: Vec&lt;Vec&lt;String&gt;&gt; = marks
+<a href=#110 id=110 data-nosnippet>110</a>              .iter()
+<a href=#111 id=111 data-nosnippet>111</a>              .map(|mark| {
+<a href=#112 id=112 data-nosnippet>112</a>                requested_label_keys(mark)
+<a href=#113 id=113 data-nosnippet>113</a>                  .into_iter()
+<a href=#114 id=114 data-nosnippet>114</a>                  .filter(is_number)
+<a href=#115 id=115 data-nosnippet>115</a>                  .collect()
+<a href=#116 id=116 data-nosnippet>116</a>              })
+<a href=#117 id=117 data-nosnippet>117</a>              .filter(|numbers: <span class="kw-2">&amp;</span>Vec&lt;String&gt;| !numbers.is_empty())
+<a href=#118 id=118 data-nosnippet>118</a>              .collect();
+<a href=#119 id=119 data-nosnippet>119</a>            numbers.is_empty()
+<a href=#120 id=120 data-nosnippet>120</a>              || numbers
+<a href=#121 id=121 data-nosnippet>121</a>                .iter()
+<a href=#122 id=122 data-nosnippet>122</a>                .any(|numbers| !numbers.iter().any(|key| keys.contains(key)))
+<a href=#123 id=123 data-nosnippet>123</a>          });
+<a href=#124 id=124 data-nosnippet>124</a>        }
+<a href=#125 id=125 data-nosnippet>125</a>      }
+<a href=#126 id=126 data-nosnippet>126</a>    }
+<a href=#127 id=127 data-nosnippet>127</a>  }
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="kw">let </span>remark = kinds.contains(<span class="kw-2">&amp;</span>Line::Date)
+<a href=#129 id=129 data-nosnippet>129</a>    &amp;&amp; !kinds
+<a href=#130 id=130 data-nosnippet>130</a>      .iter()
+<a href=#131 id=131 data-nosnippet>131</a>      .any(|kind| <span class="macro">matches!</span>(kind, Line::Labelled(..) | Line::Addresses(..)));
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="kw">if </span>numbered || remark {
+<a href=#133 id=133 data-nosnippet>133</a>    <span class="kw">let </span>why = <span class="kw">if </span>numbered {
+<a href=#134 id=134 data-nosnippet>134</a>      <span class="string">"a typed label where the binding numbers the names"
+<a href=#135 id=135 data-nosnippet>135</a>    </span>} <span class="kw">else </span>{
+<a href=#136 id=136 data-nosnippet>136</a>      <span class="string">"a date with unlabelled text"
+<a href=#137 id=137 data-nosnippet>137</a>    </span>};
+<a href=#138 id=138 data-nosnippet>138</a>    <span class="macro">Info!</span>(
+<a href=#139 id=139 data-nosnippet>139</a>      <span class="string">"frontmatter"</span>,
+<a href=#140 id=140 data-nosnippet>140</a>      <span class="string">"date"</span>,
+<a href=#141 id=141 data-nosnippet>141</a>      <span class="macro">s!</span>(<span class="string">"A \\date under the authors stays the date ({why}): {store}"</span>)
+<a href=#142 id=142 data-nosnippet>142</a>    );
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#144 id=144 data-nosnippet>144</a>  }
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="comment">// The runs: a labelled line with the unlabelled text lines after it (its address continued, as an author block's
+<a href=#146 id=146 data-nosnippet>146</a>  // marked line is, `entry_calls`), an affiliation line with those after it; the lines kept, each with its delimiter.
+<a href=#147 id=147 data-nosnippet>147</a>  </span><span class="kw">let </span>keys: Vec&lt;NameKeys&gt; = names
+<a href=#148 id=148 data-nosnippet>148</a>    .iter()
+<a href=#149 id=149 data-nosnippet>149</a>    .map(|name| printed_name_keys(name, <span class="prelude-val">None</span>))
+<a href=#150 id=150 data-nosnippet>150</a>    .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
+<a href=#151 id=151 data-nosnippet>151</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls: Vec&lt;Token&gt; = Vec::new();
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="kw">let </span><span class="kw-2">mut </span>void: Vec&lt;Token&gt; = Vec::new();
+<a href=#153 id=153 data-nosnippet>153</a>  <span class="kw">let </span><span class="kw-2">mut </span>notes: Vec&lt;Token&gt; = Vec::new();
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="kw">let </span><span class="kw-2">mut </span>run: <span class="prelude-ty">Option</span>&lt;Run&gt; = <span class="prelude-val">None</span>;
+<a href=#155 id=155 data-nosnippet>155</a>  <span class="kw">let </span><span class="kw-2">mut </span>explained: Vec&lt;String&gt; = Vec::new();
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="kw">let </span>flush = |run: <span class="kw-2">&amp;mut </span><span class="prelude-ty">Option</span>&lt;Run&gt;, calls: <span class="kw-2">&amp;mut </span>Vec&lt;Token&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#157 id=157 data-nosnippet>157</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>((label, content)) = run.take() {
+<a href=#158 id=158 data-nosnippet>158</a>      calls.extend(contact_call(label.as_ref(), <span class="kw-2">&amp;</span>prefix, content)<span class="question-mark">?</span>);
+<a href=#159 id=159 data-nosnippet>159</a>    }
+<a href=#160 id=160 data-nosnippet>160</a>    <span class="prelude-val">Ok</span>(())
+<a href=#161 id=161 data-nosnippet>161</a>  };
+<a href=#162 id=162 data-nosnippet>162</a>  <span class="comment">// (the lines no rule reads with confidence: one makes the whole date stay as written — no part of it is taken, the
+<a href=#163 id=163 data-nosnippet>163</a>  // rest kept as a date, DG 2026-11-17)
+<a href=#164 id=164 data-nosnippet>164</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>in_run = <span class="bool-val">false</span>;
+<a href=#165 id=165 data-nosnippet>165</a>  <span class="kw">for </span>kind <span class="kw">in </span><span class="kw-2">&amp;</span>kinds {
+<a href=#166 id=166 data-nosnippet>166</a>    <span class="kw">let </span>why = <span class="kw">match </span>kind {
+<a href=#167 id=167 data-nosnippet>167</a>      Line::Kept(why) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>why),
+<a href=#168 id=168 data-nosnippet>168</a>      Line::Text(<span class="bool-val">false</span>) <span class="kw">if </span>!in_run =&gt; <span class="prelude-val">Some</span>(<span class="string">"no label, no institution"</span>),
+<a href=#169 id=169 data-nosnippet>169</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#170 id=170 data-nosnippet>170</a>    };
+<a href=#171 id=171 data-nosnippet>171</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(why) = why {
+<a href=#172 id=172 data-nosnippet>172</a>      <span class="macro">Info!</span>(
+<a href=#173 id=173 data-nosnippet>173</a>        <span class="string">"frontmatter"</span>,
+<a href=#174 id=174 data-nosnippet>174</a>        <span class="string">"date"</span>,
+<a href=#175 id=175 data-nosnippet>175</a>        <span class="macro">s!</span>(<span class="string">"A \\date under the authors stays the date, a line of it unread ({why}): {store}"</span>)
+<a href=#176 id=176 data-nosnippet>176</a>      );
+<a href=#177 id=177 data-nosnippet>177</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#178 id=178 data-nosnippet>178</a>    }
+<a href=#179 id=179 data-nosnippet>179</a>    in_run = <span class="kw">match </span>kind {
+<a href=#180 id=180 data-nosnippet>180</a>      Line::Labelled(..) | Line::Text(<span class="bool-val">true</span>) =&gt; <span class="bool-val">true</span>,
+<a href=#181 id=181 data-nosnippet>181</a>      Line::Text(<span class="bool-val">false</span>) | Line::Blank =&gt; in_run,
+<a href=#182 id=182 data-nosnippet>182</a>      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#183 id=183 data-nosnippet>183</a>    };
+<a href=#184 id=184 data-nosnippet>184</a>  }
+<a href=#185 id=185 data-nosnippet>185</a>  <span class="kw">for </span>((delimiter, line), kind) <span class="kw">in </span>lines.into_iter().zip(kinds) {
+<a href=#186 id=186 data-nosnippet>186</a>    <span class="kw">match </span>kind {
+<a href=#187 id=187 data-nosnippet>187</a>      Line::Blank =&gt; {
+<a href=#188 id=188 data-nosnippet>188</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, content)) = run.as_mut() {
+<a href=#189 id=189 data-nosnippet>189</a>          content.extend(delimiter);
+<a href=#190 id=190 data-nosnippet>190</a>          content.extend(line);
+<a href=#191 id=191 data-nosnippet>191</a>        }
+<a href=#192 id=192 data-nosnippet>192</a>      },
+<a href=#193 id=193 data-nosnippet>193</a>      Line::Labelled(label, spelling, rest) =&gt; {
+<a href=#194 id=194 data-nosnippet>194</a>        flush(<span class="kw-2">&amp;mut </span>run, <span class="kw-2">&amp;mut </span>calls)<span class="question-mark">?</span>;
+<a href=#195 id=195 data-nosnippet>195</a>        <span class="kw">if </span>spelling.is_some() {
+<a href=#196 id=196 data-nosnippet>196</a>          explained.push(label.clone());
+<a href=#197 id=197 data-nosnippet>197</a>        }
+<a href=#198 id=198 data-nosnippet>198</a>        run = <span class="prelude-val">Some</span>((<span class="prelude-val">Some</span>((label, spelling)), rest));
+<a href=#199 id=199 data-nosnippet>199</a>      },
+<a href=#200 id=200 data-nosnippet>200</a>      Line::Text(<span class="kw">_</span>) <span class="kw">if </span>run.is_some() =&gt; {
+<a href=#201 id=201 data-nosnippet>201</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, content)) = run.as_mut() {
+<a href=#202 id=202 data-nosnippet>202</a>          content.extend(delimiter);
+<a href=#203 id=203 data-nosnippet>203</a>          content.extend(line);
+<a href=#204 id=204 data-nosnippet>204</a>        }
+<a href=#205 id=205 data-nosnippet>205</a>      },
+<a href=#206 id=206 data-nosnippet>206</a>      Line::Addresses(label, addresses) =&gt; {
+<a href=#207 id=207 data-nosnippet>207</a>        flush(<span class="kw-2">&amp;mut </span>run, <span class="kw-2">&amp;mut </span>calls)<span class="question-mark">?</span>;
+<a href=#208 id=208 data-nosnippet>208</a>        calls.extend(address_calls(label.as_ref(), <span class="kw-2">&amp;</span>addresses, <span class="kw-2">&amp;</span>keys)<span class="question-mark">?</span>);
+<a href=#209 id=209 data-nosnippet>209</a>      },
+<a href=#210 id=210 data-nosnippet>210</a>      Line::Text(<span class="kw">_</span>) =&gt; run = <span class="prelude-val">Some</span>((<span class="prelude-val">None</span>, line)),
+<a href=#211 id=211 data-nosnippet>211</a>      Line::Date | Line::Kept(<span class="kw">_</span>) =&gt; {
+<a href=#212 id=212 data-nosnippet>212</a>        flush(<span class="kw-2">&amp;mut </span>run, <span class="kw-2">&amp;mut </span>calls)<span class="question-mark">?</span>;
+<a href=#213 id=213 data-nosnippet>213</a>        <span class="kw">let </span>(line, held) = taken_notes(<span class="kw-2">&amp;</span>line);
+<a href=#214 id=214 data-nosnippet>214</a>        notes.extend(held);
+<a href=#215 id=215 data-nosnippet>215</a>        <span class="kw">if </span>!void.is_empty() {
+<a href=#216 id=216 data-nosnippet>216</a>          void.push(<span class="macro">T_SPACE!</span>());
+<a href=#217 id=217 data-nosnippet>217</a>        }
+<a href=#218 id=218 data-nosnippet>218</a>        void.extend(line.into_iter().skip_while(|t| <span class="kw-2">*</span>t == <span class="macro">T_SPACE!</span>()));
+<a href=#219 id=219 data-nosnippet>219</a>      },
+<a href=#220 id=220 data-nosnippet>220</a>    }
 <a href=#221 id=221 data-nosnippet>221</a>  }
-<a href=#222 id=222 data-nosnippet>222</a>  <span class="comment">// (a date its structured lines were taken from is void, DG 2026-11-17: no date, its leftover — a `\today`, a date
-<a href=#223 id=223 data-nosnippet>223</a>  // string — dropped, named once)
-<a href=#224 id=224 data-nosnippet>224</a>  </span><span class="kw">if </span>!prints_nothing(<span class="kw-2">&amp;</span>Tokens::new(void.clone())) {
-<a href=#225 id=225 data-nosnippet>225</a>    <span class="comment">// (named here, so the title-page check counts none of its words again: a ruled discard, no loss)
-<a href=#226 id=226 data-nosnippet>226</a>    </span><span class="kw">let </span>words: Vec&lt;String&gt; = net_content_words(<span class="kw-2">&amp;</span>visible_name_text(<span class="kw-2">&amp;</span>void));
-<a href=#227 id=227 data-nosnippet>227</a>    note_net_counted(<span class="kw-2">&amp;</span>words);
-<a href=#228 id=228 data-nosnippet>228</a>    <span class="macro">Info!</span>(<span class="string">"frontmatter"</span>, <span class="string">"date_void"</span>, <span class="macro">s!</span>(<span class="string">"{}"</span>, Tokens::new(void)));
-<a href=#229 id=229 data-nosnippet>229</a>  }
-<a href=#230 id=230 data-nosnippet>230</a>  with_value_mut(<span class="string">"frontmatter_raw"</span>, |v| {
-<a href=#231 id=231 data-nosnippet>231</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::FrontmatterRaw(<span class="kw-2">ref mut </span>queue)) = v {
-<a href=#232 id=232 data-nosnippet>232</a>      queue.remove(at);
-<a href=#233 id=233 data-nosnippet>233</a>    }
-<a href=#234 id=234 data-nosnippet>234</a>  });
-<a href=#235 id=235 data-nosnippet>235</a>  <span class="macro">DebugFeature!</span>(
-<a href=#236 id=236 data-nosnippet>236</a>    <span class="string">"frontmatter"</span>,
-<a href=#237 id=237 data-nosnippet>237</a>    <span class="string">"FRONT the date's legend lines: {}"</span>,
-<a href=#238 id=238 data-nosnippet>238</a>    Tokens::new(calls.clone())
-<a href=#239 id=239 data-nosnippet>239</a>  );
-<a href=#240 id=240 data-nosnippet>240</a>  <span class="prelude-val">Ok</span>(calls)
-<a href=#241 id=241 data-nosnippet>241</a>}
-<a href=#242 id=242 data-nosnippet>242</a>
-<a href=#243 id=243 data-nosnippet>243</a><span class="doccomment">/// `tokens` without the group or size environment around all of them, and the switches that open them, which are given
-<a href=#244 id=244 data-nosnippet>244</a>/// back first (`{\small \it $^1$Univ A \\ $^2$Univ B}`, `\footnotesize $^1$…`).
-<a href=#245 id=245 data-nosnippet>245</a></span><span class="kw">fn </span>unwrapped(<span class="kw-2">mut </span>v: Vec&lt;Token&gt;) -&gt; (Vec&lt;Token&gt;, Vec&lt;Token&gt;) {
-<a href=#246 id=246 data-nosnippet>246</a>  <span class="kw">let </span><span class="kw-2">mut </span>prefix: Vec&lt;Token&gt; = Vec::new();
-<a href=#247 id=247 data-nosnippet>247</a>  <span class="kw">loop </span>{
-<a href=#248 id=248 data-nosnippet>248</a>    <span class="kw">while </span>v.first() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SPACE!</span>()) {
-<a href=#249 id=249 data-nosnippet>249</a>      v.remove(<span class="number">0</span>);
-<a href=#250 id=250 data-nosnippet>250</a>    }
-<a href=#251 id=251 data-nosnippet>251</a>    <span class="kw">while </span>v.last() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SPACE!</span>()) {
-<a href=#252 id=252 data-nosnippet>252</a>      v.pop();
-<a href=#253 id=253 data-nosnippet>253</a>    }
-<a href=#254 id=254 data-nosnippet>254</a>    <span class="kw">if </span>v.first().is_some_and(|t| t.get_catcode() == Catcode::BEGIN) &amp;&amp; skip_group(<span class="kw-2">&amp;</span>v, <span class="number">0</span>) == v.len()
-<a href=#255 id=255 data-nosnippet>255</a>    {
-<a href=#256 id=256 data-nosnippet>256</a>      v = v[<span class="number">1</span>..v.len() - <span class="number">1</span>].to_vec();
-<a href=#257 id=257 data-nosnippet>257</a>      <span class="kw">continue</span>;
-<a href=#258 id=258 data-nosnippet>258</a>    }
-<a href=#259 id=259 data-nosnippet>259</a>    <span class="kw">let </span>lead = leading_unprinted_end(<span class="kw-2">&amp;</span>v);
-<a href=#260 id=260 data-nosnippet>260</a>    <span class="kw">if </span>lead == <span class="number">0 </span>{
-<a href=#261 id=261 data-nosnippet>261</a>      <span class="kw">break</span>;
-<a href=#262 id=262 data-nosnippet>262</a>    }
-<a href=#263 id=263 data-nosnippet>263</a>    prefix.extend(lead_declarations(<span class="kw-2">&amp;</span>v[..lead]));
-<a href=#264 id=264 data-nosnippet>264</a>    v = v[lead..].to_vec();
-<a href=#265 id=265 data-nosnippet>265</a>  }
-<a href=#266 id=266 data-nosnippet>266</a>  (prefix, v)
-<a href=#267 id=267 data-nosnippet>267</a>}
-<a href=#268 id=268 data-nosnippet>268</a>
-<a href=#269 id=269 data-nosnippet>269</a><span class="doccomment">/// The date's lines, each with the line break before it: parted at its top-level `\\` (its `*` too), `\newline`, `\par`,
-<a href=#270 id=270 data-nosnippet>270</a>/// `\break` and `\linebreak` (1801.04802's `\break`), the breaks LaTeX prints there, and at the `\quad`s and `\qquad`s
-<a href=#271 id=271 data-nosnippet>271</a>/// an affiliation list's entries are parted at (`author_affil_splits`: 2606.00446's shape, `\textsuperscript{§}Email: …
-<a href=#272 id=272 data-nosnippet>272</a>/// \quad $^\dagger$Now at Lab B`; 2503.06162's two addresses).
-<a href=#273 id=273 data-nosnippet>273</a></span><span class="kw">fn </span>date_lines(v: <span class="kw-2">&amp;</span>[Token]) -&gt; Vec&lt;(Vec&lt;Token&gt;, Vec&lt;Token&gt;)&gt; {
-<a href=#274 id=274 data-nosnippet>274</a>  <span class="kw">let </span>breaks = [
-<a href=#275 id=275 data-nosnippet>275</a>    <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>),
-<a href=#276 id=276 data-nosnippet>276</a>    <span class="macro">T_CS!</span>(<span class="string">"\\newline"</span>),
-<a href=#277 id=277 data-nosnippet>277</a>    <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>),
-<a href=#278 id=278 data-nosnippet>278</a>    <span class="macro">T_CS!</span>(<span class="string">"\\break"</span>),
-<a href=#279 id=279 data-nosnippet>279</a>    <span class="macro">T_CS!</span>(<span class="string">"\\linebreak"</span>),
-<a href=#280 id=280 data-nosnippet>280</a>    <span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>),
-<a href=#281 id=281 data-nosnippet>281</a>    <span class="macro">T_CS!</span>(<span class="string">"\\qquad"</span>),
-<a href=#282 id=282 data-nosnippet>282</a>  ];
-<a href=#283 id=283 data-nosnippet>283</a>  <span class="kw">let </span><span class="kw-2">mut </span>lines: Vec&lt;(Vec&lt;Token&gt;, Vec&lt;Token&gt;)&gt; = <span class="macro">vec!</span>[(Vec::new(), Vec::new())];
-<a href=#284 id=284 data-nosnippet>284</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0i32</span>;
-<a href=#285 id=285 data-nosnippet>285</a>  <span class="kw">let </span><span class="kw-2">mut </span>at = <span class="number">0</span>;
-<a href=#286 id=286 data-nosnippet>286</a>  <span class="kw">while </span>at &lt; v.len() {
-<a href=#287 id=287 data-nosnippet>287</a>    <span class="kw">let </span>t = v[at];
-<a href=#288 id=288 data-nosnippet>288</a>    depth += t.group_step();
-<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">if </span>depth == <span class="number">0 </span>&amp;&amp; breaks.contains(<span class="kw-2">&amp;</span>t) {
-<a href=#290 id=290 data-nosnippet>290</a>      <span class="kw">let </span><span class="kw-2">mut </span>delimiter = <span class="macro">vec!</span>[t];
-<a href=#291 id=291 data-nosnippet>291</a>      <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>) &amp;&amp; v.get(at + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)) {
-<a href=#292 id=292 data-nosnippet>292</a>        at += <span class="number">1</span>;
-<a href=#293 id=293 data-nosnippet>293</a>        delimiter.push(v[at]);
-<a href=#294 id=294 data-nosnippet>294</a>      }
-<a href=#295 id=295 data-nosnippet>295</a>      lines.push((delimiter, Vec::new()));
-<a href=#296 id=296 data-nosnippet>296</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(last) = lines.last_mut() {
-<a href=#297 id=297 data-nosnippet>297</a>      last.<span class="number">1</span>.push(t);
-<a href=#298 id=298 data-nosnippet>298</a>    }
-<a href=#299 id=299 data-nosnippet>299</a>    at += <span class="number">1</span>;
-<a href=#300 id=300 data-nosnippet>300</a>  }
-<a href=#301 id=301 data-nosnippet>301</a>  lines
-<a href=#302 id=302 data-nosnippet>302</a>}
-<a href=#303 id=303 data-nosnippet>303</a>
-<a href=#304 id=304 data-nosnippet>304</a><span class="doccomment">/// The full English month names a date line prints (and "Sept"), whole words.
-<a href=#305 id=305 data-nosnippet>305</a></span><span class="kw">const </span>MONTHS: [<span class="kw-2">&amp;</span>str; <span class="number">13</span>] = [
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="string">"january"</span>,
-<a href=#307 id=307 data-nosnippet>307</a>  <span class="string">"february"</span>,
-<a href=#308 id=308 data-nosnippet>308</a>  <span class="string">"march"</span>,
-<a href=#309 id=309 data-nosnippet>309</a>  <span class="string">"april"</span>,
-<a href=#310 id=310 data-nosnippet>310</a>  <span class="string">"may"</span>,
-<a href=#311 id=311 data-nosnippet>311</a>  <span class="string">"june"</span>,
-<a href=#312 id=312 data-nosnippet>312</a>  <span class="string">"july"</span>,
-<a href=#313 id=313 data-nosnippet>313</a>  <span class="string">"august"</span>,
-<a href=#314 id=314 data-nosnippet>314</a>  <span class="string">"september"</span>,
-<a href=#315 id=315 data-nosnippet>315</a>  <span class="string">"october"</span>,
-<a href=#316 id=316 data-nosnippet>316</a>  <span class="string">"november"</span>,
-<a href=#317 id=317 data-nosnippet>317</a>  <span class="string">"december"</span>,
-<a href=#318 id=318 data-nosnippet>318</a>  <span class="string">"sept"</span>,
-<a href=#319 id=319 data-nosnippet>319</a>];
-<a href=#320 id=320 data-nosnippet>320</a>
-<a href=#321 id=321 data-nosnippet>321</a><span class="doccomment">/// What `line` is ([`Line`]). `declared`: the labels a binding's names print that no line of its own explains, as
-<a href=#322 id=322 data-nosnippet>322</a>/// (spelling, printed mark).
-<a href=#323 id=323 data-nosnippet>323</a></span><span class="kw">fn </span>line_kind(line: <span class="kw-2">&amp;</span>[Token], declared: <span class="kw-2">&amp;</span>[(String, String)]) -&gt; <span class="prelude-ty">Result</span>&lt;Line&gt; {
-<a href=#324 id=324 data-nosnippet>324</a>  <span class="kw">let </span>tokens = Tokens::new(line.to_vec());
-<a href=#325 id=325 data-nosnippet>325</a>  <span class="kw">if </span>prints_nothing(<span class="kw-2">&amp;</span>tokens) {
-<a href=#326 id=326 data-nosnippet>326</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Blank);
-<a href=#327 id=327 data-nosnippet>327</a>  }
-<a href=#328 id=328 data-nosnippet>328</a>  <span class="kw">if </span>line.iter().any(|t| <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\today"</span>)) {
-<a href=#329 id=329 data-nosnippet>329</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Date);
-<a href=#330 id=330 data-nosnippet>330</a>  }
-<a href=#331 id=331 data-nosnippet>331</a>  <span class="kw">let </span>text = visible_name_text(line);
-<a href=#332 id=332 data-nosnippet>332</a>  <span class="kw">let </span>words: Vec&lt;String&gt; = text
-<a href=#333 id=333 data-nosnippet>333</a>    .split(|c: char| !c.is_alphanumeric())
-<a href=#334 id=334 data-nosnippet>334</a>    .filter(|w| !w.is_empty())
-<a href=#335 id=335 data-nosnippet>335</a>    .map(str::to_lowercase)
-<a href=#336 id=336 data-nosnippet>336</a>    .collect();
-<a href=#337 id=337 data-nosnippet>337</a>  <span class="kw">if </span>words.iter().any(|w| MONTHS.contains(<span class="kw-2">&amp;</span>w.as_str())) {
-<a href=#338 id=338 data-nosnippet>338</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Date);
-<a href=#339 id=339 data-nosnippet>339</a>  }
-<a href=#340 id=340 data-nosnippet>340</a>  <span class="comment">// (a label the line leads with — a superscript, a mark command, a footnote symbol, a number typed by hand:
-<a href=#341 id=341 data-nosnippet>341</a>  // `leading_line_label`, the affiliation lines' one reader)
-<a href=#342 id=342 data-nosnippet>342</a>  </span><span class="kw">let </span>lead = leading_unprinted_end(line);
-<a href=#343 id=343 data-nosnippet>343</a>  <span class="kw">let </span>led = Tokens::new(line[lead..].to_vec());
-<a href=#344 id=344 data-nosnippet>344</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>((label, typed, rest)) = leading_line_label(<span class="kw-2">&amp;</span>led) {
-<a href=#345 id=345 data-nosnippet>345</a>    <span class="comment">// (a number typed by hand, `1) Univ A`, is its label as printed: ruling R2, a label where the names request it)
-<a href=#346 id=346 data-nosnippet>346</a>    </span><span class="kw">let </span>operand = <span class="kw">if </span>typed {
-<a href=#347 id=347 data-nosnippet>347</a>      <span class="prelude-val">Some</span>(<span class="macro">ExplodeText!</span>(label.as_str()))
-<a href=#348 id=348 data-nosnippet>348</a>    } <span class="kw">else </span>{
-<a href=#349 id=349 data-nosnippet>349</a>      leading_operand(<span class="kw-2">&amp;</span>led)
-<a href=#350 id=350 data-nosnippet>350</a>    };
-<a href=#351 id=351 data-nosnippet>351</a>    <span class="kw">let </span>printed = <span class="kw">match </span><span class="kw-2">&amp;</span>operand {
-<a href=#352 id=352 data-nosnippet>352</a>      <span class="prelude-val">Some</span>(operand) =&gt; <span class="kw">match </span>printed_label(<span class="kw-2">&amp;</span>Tokens::new(operand.clone()))<span class="question-mark">? </span>{
-<a href=#353 id=353 data-nosnippet>353</a>        <span class="prelude-val">Some</span>(printed) =&gt; printed.text,
-<a href=#354 id=354 data-nosnippet>354</a>        <span class="prelude-val">None </span>=&gt; mark_spelling_printed(<span class="kw-2">&amp;</span>Tokens::new(operand.clone()).to_string())
-<a href=#355 id=355 data-nosnippet>355</a>          .trim()
-<a href=#356 id=356 data-nosnippet>356</a>          .to_string(),
-<a href=#357 id=357 data-nosnippet>357</a>      },
-<a href=#358 id=358 data-nosnippet>358</a>      <span class="prelude-val">None </span>=&gt; String::new(),
-<a href=#359 id=359 data-nosnippet>359</a>    };
-<a href=#360 id=360 data-nosnippet>360</a>    <span class="kw">if </span>printed.is_empty() {
-<a href=#361 id=361 data-nosnippet>361</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Kept(<span class="string">"a label no reader reads"</span>));
-<a href=#362 id=362 data-nosnippet>362</a>    }
-<a href=#363 id=363 data-nosnippet>363</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>((spelling, <span class="kw">_</span>)) = declared.iter().find(|(<span class="kw">_</span>, mark)| <span class="kw-2">*</span>mark == printed) {
-<a href=#364 id=364 data-nosnippet>364</a>      <span class="comment">// (keyed by its spelling, as the binding's own line is, only a spelling of symbols — `\S`, `$\dagger$` —, which
-<a href=#365 id=365 data-nosnippet>365</a>      // the line keys alike: a document's macro, `\author[1,\myD]`, keys no line of its own either, so the line stays)
-<a href=#366 id=366 data-nosnippet>366</a>      </span><span class="kw">let </span>spelled: Vec&lt;Token&gt; = mouth::tokenize_internal(TeXString::assembled(spelling.clone()))
-<a href=#367 id=367 data-nosnippet>367</a>        .unlist()
-<a href=#368 id=368 data-nosnippet>368</a>        .into_iter()
-<a href=#369 id=369 data-nosnippet>369</a>        .filter(|t| t.get_catcode() != Catcode::MATH)
-<a href=#370 id=370 data-nosnippet>370</a>        .collect();
-<a href=#371 id=371 data-nosnippet>371</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(
-<a href=#372 id=372 data-nosnippet>372</a>        <span class="kw">if </span>is_footnote_symbol_operand(<span class="kw-2">&amp;</span>spelled)
-<a href=#373 id=373 data-nosnippet>373</a>          || !spelled.iter().any(|t| t.get_catcode() == Catcode::CS)
-<a href=#374 id=374 data-nosnippet>374</a>        {
-<a href=#375 id=375 data-nosnippet>375</a>          Line::Labelled(printed, <span class="prelude-val">Some</span>(spelling.clone()), rest.unlist())
-<a href=#376 id=376 data-nosnippet>376</a>        } <span class="kw">else </span>{
-<a href=#377 id=377 data-nosnippet>377</a>          Line::Kept(<span class="string">"a label its binding keys by a macro"</span>)
-<a href=#378 id=378 data-nosnippet>378</a>        },
-<a href=#379 id=379 data-nosnippet>379</a>      );
-<a href=#380 id=380 data-nosnippet>380</a>    }
-<a href=#381 id=381 data-nosnippet>381</a>    <span class="comment">// (keyed as a name's request is, by what it prints: `queue_reading::author_marks`)
-<a href=#382 id=382 data-nosnippet>382</a>    </span><span class="kw">let </span>keys = printed_label_keys(<span class="kw-2">&amp;</span>printed, <span class="string">"affiliation"</span>);
-<a href=#383 id=383 data-nosnippet>383</a>    <span class="kw">let </span><span class="kw-2">mut </span>requested = !keys.is_empty();
-<a href=#384 id=384 data-nosnippet>384</a>    <span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>keys {
-<a href=#385 id=385 data-nosnippet>385</a>      requested &amp;= !queued_label_requesters(key)<span class="question-mark">?</span>.is_empty();
-<a href=#386 id=386 data-nosnippet>386</a>    }
-<a href=#387 id=387 data-nosnippet>387</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="kw">if </span>requested {
-<a href=#388 id=388 data-nosnippet>388</a>      Line::Labelled(printed, <span class="prelude-val">None</span>, rest.unlist())
-<a href=#389 id=389 data-nosnippet>389</a>    } <span class="kw">else </span>{
-<a href=#390 id=390 data-nosnippet>390</a>      Line::Kept(<span class="string">"a label no name requests"</span>)
-<a href=#391 id=391 data-nosnippet>391</a>    });
-<a href=#392 id=392 data-nosnippet>392</a>  }
-<a href=#393 id=393 data-nosnippet>393</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(symbol) = leading_symbol(line) {
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="kw">let </span>printed = <span class="kw">match </span>printed_label(<span class="kw-2">&amp;</span>Tokens::new(<span class="macro">vec!</span>[symbol]))<span class="question-mark">? </span>{
-<a href=#395 id=395 data-nosnippet>395</a>      <span class="prelude-val">Some</span>(printed) =&gt; printed.text,
-<a href=#396 id=396 data-nosnippet>396</a>      <span class="prelude-val">None </span>=&gt; symbol.to_string(),
-<a href=#397 id=397 data-nosnippet>397</a>    };
-<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">let </span>keys = printed_label_keys(<span class="kw-2">&amp;</span>printed, <span class="string">"affiliation"</span>);
-<a href=#399 id=399 data-nosnippet>399</a>    <span class="kw">let </span><span class="kw-2">mut </span>requested = !keys.is_empty();
-<a href=#400 id=400 data-nosnippet>400</a>    <span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>keys {
-<a href=#401 id=401 data-nosnippet>401</a>      requested &amp;= !queued_label_requesters(key)<span class="question-mark">?</span>.is_empty();
-<a href=#402 id=402 data-nosnippet>402</a>    }
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="kw">if </span>requested {
-<a href=#404 id=404 data-nosnippet>404</a>      <span class="kw">let </span>at = line.iter().position(|t| <span class="kw-2">*</span>t == symbol).unwrap_or(<span class="number">0</span>);
-<a href=#405 id=405 data-nosnippet>405</a>      Line::Labelled(printed, <span class="prelude-val">None</span>, line[at + <span class="number">1</span>..].to_vec())
-<a href=#406 id=406 data-nosnippet>406</a>    } <span class="kw">else </span>{
-<a href=#407 id=407 data-nosnippet>407</a>      Line::Kept(<span class="string">"a label no name requests"</span>)
-<a href=#408 id=408 data-nosnippet>408</a>    });
-<a href=#409 id=409 data-nosnippet>409</a>  }
-<a href=#410 id=410 data-nosnippet>410</a>  <span class="kw">if </span>author_mark_position(<span class="kw-2">&amp;</span>tokens).is_some() {
-<a href=#411 id=411 data-nosnippet>411</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Kept(<span class="string">"a mark inside the line"</span>));
-<a href=#412 id=412 data-nosnippet>412</a>  }
-<a href=#413 id=413 data-nosnippet>413</a>  <span class="kw">let </span>(label, rest) = <span class="kw">match </span>email_line_label(<span class="kw-2">&amp;</span>tokens) {
-<a href=#414 id=414 data-nosnippet>414</a>    <span class="prelude-val">Some</span>((label, rest)) =&gt; (<span class="prelude-val">Some</span>(label), rest),
-<a href=#415 id=415 data-nosnippet>415</a>    <span class="prelude-val">None </span>=&gt; (<span class="prelude-val">None</span>, tokens.clone()),
-<a href=#416 id=416 data-nosnippet>416</a>  };
-<a href=#417 id=417 data-nosnippet>417</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(addresses) = email_addresses(<span class="kw-2">&amp;</span>rest) {
-<a href=#418 id=418 data-nosnippet>418</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Addresses(label, addresses));
-<a href=#419 id=419 data-nosnippet>419</a>  }
-<a href=#420 id=420 data-nosnippet>420</a>  <span class="comment">// (an address among text that is no e-mail label, `\textbf{@} gaborit@kth.se` (1801.04802), `bartosz@\{cs.uni.wroc.pl,
-<a href=#421 id=421 data-nosnippet>421</a>  // tu-dresden.de\}` (2108.05680): a run would take both as its affiliation's, which cuts only the addresses; a wrapped
-<a href=#422 id=422 data-nosnippet>422</a>  // address line, `\small{Emails: a@x, b@y}` (1601.01378), continues its run, whose contact cuts it)
-<a href=#423 id=423 data-nosnippet>423</a>  </span><span class="kw">let </span>addresses = resolver::addresses_in(<span class="kw-2">&amp;</span>text);
-<a href=#424 id=424 data-nosnippet>424</a>  <span class="comment">// (an `@` the line prints that no address holds: the readers' text drops a styled one, so counted on the tokens)
-<a href=#425 id=425 data-nosnippet>425</a>  </span><span class="kw">let </span>at_signs = line
-<a href=#426 id=426 data-nosnippet>426</a>    .iter()
-<a href=#427 id=427 data-nosnippet>427</a>    .filter(|t| <span class="macro">matches!</span>(t.get_catcode(), Catcode::OTHER | Catcode::LETTER) &amp;&amp; t.to_string() == <span class="string">"@"</span>)
-<a href=#428 id=428 data-nosnippet>428</a>    .count();
-<a href=#429 id=429 data-nosnippet>429</a>  <span class="kw">if </span>!addresses.is_empty() &amp;&amp; (!resolver::only_addresses(<span class="kw-2">&amp;</span>text) || at_signs &gt; addresses.len()) {
-<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Kept(<span class="string">"an address among other text"</span>));
-<a href=#431 id=431 data-nosnippet>431</a>  }
-<a href=#432 id=432 data-nosnippet>432</a>  <span class="kw">let </span>affiliation = reads_as_affiliation(<span class="kw-2">&amp;</span>tokens);
-<a href=#433 id=433 data-nosnippet>433</a>  <span class="comment">// (a year on a line naming no institution is a date's)
-<a href=#434 id=434 data-nosnippet>434</a>  </span><span class="kw">if </span>!affiliation
-<a href=#435 id=435 data-nosnippet>435</a>    &amp;&amp; words
-<a href=#436 id=436 data-nosnippet>436</a>      .iter()
-<a href=#437 id=437 data-nosnippet>437</a>      .any(|w| w.len() == <span class="number">4 </span>&amp;&amp; <span class="macro">matches!</span>(w.parse::&lt;u32&gt;(), <span class="prelude-val">Ok</span>(<span class="number">1800</span>..=<span class="number">2100</span>)))
-<a href=#438 id=438 data-nosnippet>438</a>  {
-<a href=#439 id=439 data-nosnippet>439</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Date);
-<a href=#440 id=440 data-nosnippet>440</a>  }
-<a href=#441 id=441 data-nosnippet>441</a>  <span class="prelude-val">Ok</span>(Line::Text(affiliation))
-<a href=#442 id=442 data-nosnippet>442</a>}
-<a href=#443 id=443 data-nosnippet>443</a>
-<a href=#444 id=444 data-nosnippet>444</a><span class="doccomment">/// The operand of the superscript or mark command `line` leads with (`$^{1}$`, `\textsuperscript{\S}`, `${}^{1}$`).
-<a href=#445 id=445 data-nosnippet>445</a></span><span class="kw">fn </span>leading_operand(line: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
-<a href=#446 id=446 data-nosnippet>446</a>  <span class="kw">let </span>v = line.unlist_ref();
-<a href=#447 id=447 data-nosnippet>447</a>  <span class="kw">let </span>at = v.iter().position(|t| <span class="kw-2">*</span>t != <span class="macro">T_SPACE!</span>() &amp;&amp; !mark_switch(t))<span class="question-mark">?</span>;
-<a href=#448 id=448 data-nosnippet>448</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>((operand, <span class="kw">_</span>)) = spaced_mark_at(v, at) {
-<a href=#449 id=449 data-nosnippet>449</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(operand);
-<a href=#450 id=450 data-nosnippet>450</a>  }
-<a href=#451 id=451 data-nosnippet>451</a>  <span class="kw">let </span>start = <span class="kw">if </span>v[at].get_catcode() == Catcode::MATH &amp;&amp; v.get(at + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SUPER!</span>()) {
-<a href=#452 id=452 data-nosnippet>452</a>    at + <span class="number">2
-<a href=#453 id=453 data-nosnippet>453</a>  </span>} <span class="kw">else if </span>is_mark_command(<span class="kw-2">&amp;</span>v[at]) {
-<a href=#454 id=454 data-nosnippet>454</a>    at + <span class="number">1
-<a href=#455 id=455 data-nosnippet>455</a>  </span>} <span class="kw">else </span>{
-<a href=#456 id=456 data-nosnippet>456</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#457 id=457 data-nosnippet>457</a>  };
-<a href=#458 id=458 data-nosnippet>458</a>  <span class="kw">let </span>start = start + v[start..].iter().take_while(|t| <span class="kw-2">**</span>t == <span class="macro">T_SPACE!</span>()).count();
-<a href=#459 id=459 data-nosnippet>459</a>  <span class="kw">let </span>end = skip_group(v, start).min(v.len());
-<a href=#460 id=460 data-nosnippet>460</a>  <span class="kw">let </span>operand = <span class="kw-2">&amp;</span>v[start..end];
-<a href=#461 id=461 data-nosnippet>461</a>  <span class="prelude-val">Some</span>(
-<a href=#462 id=462 data-nosnippet>462</a>    <span class="kw">if </span>operand
-<a href=#463 id=463 data-nosnippet>463</a>      .first()
-<a href=#464 id=464 data-nosnippet>464</a>      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
-<a href=#465 id=465 data-nosnippet>465</a>      &amp;&amp; operand.len() &gt;= <span class="number">2
-<a href=#466 id=466 data-nosnippet>466</a>    </span>{
-<a href=#467 id=467 data-nosnippet>467</a>      operand[<span class="number">1</span>..operand.len() - <span class="number">1</span>].to_vec()
-<a href=#468 id=468 data-nosnippet>468</a>    } <span class="kw">else </span>{
-<a href=#469 id=469 data-nosnippet>469</a>      operand.to_vec()
-<a href=#470 id=470 data-nosnippet>470</a>    },
-<a href=#471 id=471 data-nosnippet>471</a>  )
-<a href=#472 id=472 data-nosnippet>472</a>}
-<a href=#473 id=473 data-nosnippet>473</a>
-<a href=#474 id=474 data-nosnippet>474</a><span class="doccomment">/// The footnote symbol `line` leads with in text (`* Corresponding author`, `\dag Univ B`), past spaces, math shifts
-<a href=#475 id=475 data-nosnippet>475</a>/// and braces.
-<a href=#476 id=476 data-nosnippet>476</a></span><span class="kw">fn </span>leading_symbol(line: <span class="kw-2">&amp;</span>[Token]) -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
-<a href=#477 id=477 data-nosnippet>477</a>  line
-<a href=#478 id=478 data-nosnippet>478</a>    .iter()
-<a href=#479 id=479 data-nosnippet>479</a>    .find(|t| {
-<a href=#480 id=480 data-nosnippet>480</a>      !<span class="macro">matches!</span>(
-<a href=#481 id=481 data-nosnippet>481</a>        t.get_catcode(),
-<a href=#482 id=482 data-nosnippet>482</a>        Catcode::SPACE | Catcode::MATH | Catcode::BEGIN | Catcode::END
-<a href=#483 id=483 data-nosnippet>483</a>      )
-<a href=#484 id=484 data-nosnippet>484</a>    })
-<a href=#485 id=485 data-nosnippet>485</a>    .copied()
-<a href=#486 id=486 data-nosnippet>486</a>    .filter(|t| is_footnote_symbol_operand(std::slice::from_ref(t)))
-<a href=#487 id=487 data-nosnippet>487</a>}
-<a href=#488 id=488 data-nosnippet>488</a>
-<a href=#489 id=489 data-nosnippet>489</a><span class="doccomment">/// The contact call of a run: a labelled line (with the lines continuing it) the contact its label's request is answered
-<a href=#490 id=490 data-nosnippet>490</a>/// by, authblk's `\affil[label]` call (`annotate=1,label={…},_labelprints=true`: Perl's labelled contact, which
-<a href=#491 id=491 data-nosnippet>491</a>/// `relocateAnnotations` pairs with the names requesting the label; the label printed with the line, which the Kind step
-<a href=#492 id=492 data-nosnippet>492</a>/// reads a legend by, `insert::kind_legend_contacts`); an affiliation no label leads every author's (`annotate=all`), as the
-<a href=#493 id=493 data-nosnippet>493</a>/// API places a line printed under the whole block. Each in the switches the date's lines were set in.
-<a href=#494 id=494 data-nosnippet>494</a></span><span class="kw">fn </span>contact_call(
-<a href=#495 id=495 data-nosnippet>495</a>  label: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>(String, <span class="prelude-ty">Option</span>&lt;String&gt;)&gt;,
-<a href=#496 id=496 data-nosnippet>496</a>  prefix: <span class="kw-2">&amp;</span>[Token],
-<a href=#497 id=497 data-nosnippet>497</a>  content: Vec&lt;Token&gt;,
-<a href=#498 id=498 data-nosnippet>498</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
-<a href=#499 id=499 data-nosnippet>499</a>  <span class="kw">let </span>keys = <span class="kw">match </span>label {
-<a href=#500 id=500 data-nosnippet>500</a>    <span class="comment">// (a binding's declared label keyed by its spelling in the call, as the binding's own line is: authblk's
-<a href=#501 id=501 data-nosnippet>501</a>    // `\affil[\S]`; a typed mark by what it prints, as the names' requests are)
-<a href=#502 id=502 data-nosnippet>502</a>    </span><span class="prelude-val">Some</span>((printed, spelling)) =&gt; <span class="macro">s!</span>(
-<a href=#503 id=503 data-nosnippet>503</a>      <span class="string">"role=affiliation,annotate=1,label={{{}}},_labelprints=true"</span>,
-<a href=#504 id=504 data-nosnippet>504</a>      spelling.as_deref().unwrap_or(printed)
-<a href=#505 id=505 data-nosnippet>505</a>    ),
-<a href=#506 id=506 data-nosnippet>506</a>    <span class="prelude-val">None </span>=&gt; <span class="macro">s!</span>(<span class="string">"role=affiliation,annotate=all"</span>),
-<a href=#507 id=507 data-nosnippet>507</a>  };
-<a href=#508 id=508 data-nosnippet>508</a>  <span class="kw">let </span><span class="kw-2">mut </span>body = prefix.to_vec();
-<a href=#509 id=509 data-nosnippet>509</a>  body.extend(content);
-<a href=#510 id=510 data-nosnippet>510</a>  <span class="prelude-val">Ok</span>(
-<a href=#511 id=511 data-nosnippet>511</a>    <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@contact"</span>), <span class="macro">vec!</span>[
-<a href=#512 id=512 data-nosnippet>512</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(TeXString::assembled(keys))),
-<a href=#513 id=513 data-nosnippet>513</a>      <span class="prelude-val">Some</span>(Tokens::new(body))
-<a href=#514 id=514 data-nosnippet>514</a>    ])
-<a href=#515 id=515 data-nosnippet>515</a>    .unlist(),
-<a href=#516 id=516 data-nosnippet>516</a>  )
-<a href=#517 id=517 data-nosnippet>517</a>}
-<a href=#518 id=518 data-nosnippet>518</a>
-<a href=#519 id=519 data-nosnippet>519</a><span class="doccomment">/// The state value holding the last `\address` block a class prints under the names (`\lx@address@block`).
-<a href=#520 id=520 data-nosnippet>520</a></span><span class="kw">const </span>ADDRESS_BLOCK: <span class="kw-2">&amp;</span>str = <span class="string">"lx_address_block"</span>;
-<a href=#521 id=521 data-nosnippet>521</a>
-<a href=#522 id=522 data-nosnippet>522</a><span class="doccomment">/// Records `block`, the `\address` block of spconf.sty:165 / INTERSPEECH2021.sty:162-164 / Interspeech.cls :265, whose
-<a href=#523 id=523 data-nosnippet>523</a>/// note `\lx@address@block` queues whole; read at `\maketitle` by [`address_block_legend_calls`] (OD #1073).
-<a href=#524 id=524 data-nosnippet>524</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>note_address_block(block: Tokens) {
-<a href=#525 id=525 data-nosnippet>525</a>  assign_value(ADDRESS_BLOCK, Stored::Tokens(block), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#526 id=526 data-nosnippet>526</a>}
-<a href=#527 id=527 data-nosnippet>527</a>
-<a href=#528 id=528 data-nosnippet>528</a><span class="doccomment">/// `\lx@date@legend`'s part for the recorded `\address` block (OD #1073): its queued note replaced by the calls
-<a href=#529 id=529 data-nosnippet>529</a>/// [`address_block_calls`] gives, when every line is placed; else the note stays, whole, with an Info.
-<a href=#530 id=530 data-nosnippet>530</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>address_block_legend_calls() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
-<a href=#531 id=531 data-nosnippet>531</a>  <span class="kw">let </span>block = <span class="kw">match </span>lookup_value(ADDRESS_BLOCK) {
-<a href=#532 id=532 data-nosnippet>532</a>    <span class="prelude-val">Some</span>(Stored::Tokens(block)) =&gt; block,
-<a href=#533 id=533 data-nosnippet>533</a>    <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new()),
-<a href=#534 id=534 data-nosnippet>534</a>  };
-<a href=#535 id=535 data-nosnippet>535</a>  remove_value(ADDRESS_BLOCK);
-<a href=#536 id=536 data-nosnippet>536</a>  <span class="kw">let </span>queued = with_value(<span class="string">"frontmatter_raw"</span>, |v| <span class="kw">match </span>v {
-<a href=#537 id=537 data-nosnippet>537</a>    <span class="prelude-val">Some</span>(Stored::FrontmatterRaw(queue)) =&gt; queue.iter().rposition(|entry| {
-<a href=#538 id=538 data-nosnippet>538</a>      entry.<span class="number">0 </span>== <span class="string">"ltx:note"
-<a href=#539 id=539 data-nosnippet>539</a>        </span>&amp;&amp; entry.<span class="number">1</span>.get(<span class="string">"role"</span>).map(String::as_str) == <span class="prelude-val">Some</span>(<span class="string">"address"</span>)
-<a href=#540 id=540 data-nosnippet>540</a>        &amp;&amp; (last_group(<span class="kw-2">&amp;</span>entry.<span class="number">2</span>) == block || entry.<span class="number">2 </span>== block)
-<a href=#541 id=541 data-nosnippet>541</a>    }),
-<a href=#542 id=542 data-nosnippet>542</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#543 id=543 data-nosnippet>543</a>  });
-<a href=#544 id=544 data-nosnippet>544</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(at) = queued <span class="kw">else </span>{
-<a href=#545 id=545 data-nosnippet>545</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#546 id=546 data-nosnippet>546</a>  };
-<a href=#547 id=547 data-nosnippet>547</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(calls) = address_block_calls(<span class="kw-2">&amp;</span>block)<span class="question-mark">? </span><span class="kw">else </span>{
-<a href=#548 id=548 data-nosnippet>548</a>    <span class="macro">Info!</span>(
-<a href=#549 id=549 data-nosnippet>549</a>      <span class="string">"frontmatter"</span>,
-<a href=#550 id=550 data-nosnippet>550</a>      <span class="string">"address"</span>,
-<a href=#551 id=551 data-nosnippet>551</a>      <span class="macro">s!</span>(
-<a href=#552 id=552 data-nosnippet>552</a>        <span class="string">"An \\address under the authors stays its note (a line no rule places): {}"</span>,
-<a href=#553 id=553 data-nosnippet>553</a>        <span class="macro">s!</span>(<span class="string">"{block}"</span>)
-<a href=#554 id=554 data-nosnippet>554</a>          .split_whitespace()
-<a href=#555 id=555 data-nosnippet>555</a>          .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-<a href=#556 id=556 data-nosnippet>556</a>          .join(<span class="string">" "</span>)
-<a href=#557 id=557 data-nosnippet>557</a>      )
-<a href=#558 id=558 data-nosnippet>558</a>    );
-<a href=#559 id=559 data-nosnippet>559</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#560 id=560 data-nosnippet>560</a>  };
-<a href=#561 id=561 data-nosnippet>561</a>  with_value_mut(<span class="string">"frontmatter_raw"</span>, |v| {
-<a href=#562 id=562 data-nosnippet>562</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::FrontmatterRaw(<span class="kw-2">ref mut </span>queue)) = v {
-<a href=#563 id=563 data-nosnippet>563</a>      queue.remove(at);
-<a href=#564 id=564 data-nosnippet>564</a>    }
-<a href=#565 id=565 data-nosnippet>565</a>  });
-<a href=#566 id=566 data-nosnippet>566</a>  <span class="prelude-val">Ok</span>(calls)
-<a href=#567 id=567 data-nosnippet>567</a>}
-<a href=#568 id=568 data-nosnippet>568</a>
-<a href=#569 id=569 data-nosnippet>569</a><span class="doccomment">/// The calls of an `\address` block printed under the names, only when every line is placed (OD #1073; the review's
-<a href=#570 id=570 data-nosnippet>570</a>/// fail-safe, all or nothing): with a queued author; a block with no mark under names showing none every author's
-<a href=#571 id=571 data-nosnippet>571</a>/// affiliation (`\lx@add@affiliation[annotate=all]`, 2405.13379, 2401.07506); a block led by a label whose every line
-<a href=#572 id=572 data-nosnippet>572</a>/// is led by a label a queued name shows or continues such a line, `\lx@add@affiliations`'s (1707.04373); no line of
-<a href=#573 id=573 data-nosnippet>573</a>/// e-mail addresses in either. Else `None`: trailing
-<a href=#574 id=574 data-nosnippet>574</a>/// marks (2407.15458, 2401.06806, 2211.09383), an unmarked block under marked names (2509.13723), a label no name shows
-<a href=#575 id=575 data-nosnippet>575</a>/// (2203.05882), no queued author (1909.01754), an address no rule places (2102.09114, 2407.20176, 1802.09371).
-<a href=#576 id=576 data-nosnippet>576</a></span><span class="kw">fn </span>address_block_calls(block: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt;&gt; {
-<a href=#577 id=577 data-nosnippet>577</a>  <span class="kw">if </span>queued_position_names()<span class="question-mark">?</span>.is_empty() {
-<a href=#578 id=578 data-nosnippet>578</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
-<a href=#579 id=579 data-nosnippet>579</a>  }
-<a href=#580 id=580 data-nosnippet>580</a>  <span class="comment">// (a name's mark is a label: a footnote symbol, `\sthanks`'s ∗, labels no line)
-<a href=#581 id=581 data-nosnippet>581</a>  </span><span class="kw">let </span>names_marked = queued_author_marks()<span class="question-mark">?
-<a href=#582 id=582 data-nosnippet>582</a>    </span>.iter()
-<a href=#583 id=583 data-nosnippet>583</a>    .flatten()
-<a href=#584 id=584 data-nosnippet>584</a>    .any(|mark| mark.chars().any(char::is_alphanumeric));
-<a href=#585 id=585 data-nosnippet>585</a>  <span class="kw">let </span>block_marked = block.unlist_ref().iter().any(is_author_mark);
-<a href=#586 id=586 data-nosnippet>586</a>  <span class="kw">let </span>labelled = <span class="kw">if </span>!names_marked &amp;&amp; !block_marked {
-<a href=#587 id=587 data-nosnippet>587</a>    <span class="bool-val">false
-<a href=#588 id=588 data-nosnippet>588</a>  </span>} <span class="kw">else if </span>names_marked &amp;&amp; leads_with_label(block, <span class="string">"address block"</span>)<span class="question-mark">? </span>{
-<a href=#589 id=589 data-nosnippet>589</a>    <span class="bool-val">true
-<a href=#590 id=590 data-nosnippet>590</a>  </span>} <span class="kw">else </span>{
-<a href=#591 id=591 data-nosnippet>591</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
-<a href=#592 id=592 data-nosnippet>592</a>  };
-<a href=#593 id=593 data-nosnippet>593</a>  <span class="kw">let </span>(<span class="kw">_</span>, body) = unwrapped(strip_linebreak_options(block.clone()).unlist());
-<a href=#594 id=594 data-nosnippet>594</a>  <span class="kw">let </span>body = wrapped_lines_as_lines(<span class="kw-2">&amp;</span>Tokens::new(body.clone())).map_or(body, Tokens::unlist);
-<a href=#595 id=595 data-nosnippet>595</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_run = <span class="bool-val">false</span>;
-<a href=#596 id=596 data-nosnippet>596</a>  <span class="kw">for </span>(<span class="kw">_</span>, line) <span class="kw">in </span>date_lines(<span class="kw-2">&amp;</span>body) {
-<a href=#597 id=597 data-nosnippet>597</a>    <span class="kw">match </span>line_kind(<span class="kw-2">&amp;</span>line, <span class="kw-2">&amp;</span>[])<span class="question-mark">? </span>{
-<a href=#598 id=598 data-nosnippet>598</a>      <span class="comment">// (an e-mail line keeps the note whole: placed by `listed_address_owners`, 1802.09371's `aline.roumy@` under the
-<a href=#599 id=599 data-nosnippet>599</a>      // names "Aline", "Roumy" landed on a nameless creator; row R)
-<a href=#600 id=600 data-nosnippet>600</a>      </span>Line::Addresses(..) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-<a href=#601 id=601 data-nosnippet>601</a>      <span class="comment">// (a number the line opens with, typed and no mark, continues a labelled line: a street number, 1707.04373's
-<a href=#602 id=602 data-nosnippet>602</a>      // "453 F. Paul Anderson Tower")
-<a href=#603 id=603 data-nosnippet>603</a>      </span>Line::Kept(<span class="kw">_</span>)
-<a href=#604 id=604 data-nosnippet>604</a>        <span class="kw">if </span>in_run
-<a href=#605 id=605 data-nosnippet>605</a>          &amp;&amp; !line.iter().any(is_author_mark)
-<a href=#606 id=606 data-nosnippet>606</a>          &amp;&amp; leading_line_label(<span class="kw-2">&amp;</span>Tokens::new(line.clone())).is_some() =&gt; {},
-<a href=#607 id=607 data-nosnippet>607</a>      Line::Kept(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-<a href=#608 id=608 data-nosnippet>608</a>      Line::Labelled(..) <span class="kw">if </span>labelled =&gt; in_run = <span class="bool-val">true</span>,
-<a href=#609 id=609 data-nosnippet>609</a>      Line::Labelled(..) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-<a href=#610 id=610 data-nosnippet>610</a>      Line::Blank =&gt; {},
-<a href=#611 id=611 data-nosnippet>611</a>      Line::Text(<span class="kw">_</span>) | Line::Date <span class="kw">if </span>!labelled || in_run =&gt; {},
-<a href=#612 id=612 data-nosnippet>612</a>      Line::Text(<span class="kw">_</span>) | Line::Date =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
-<a href=#613 id=613 data-nosnippet>613</a>    }
-<a href=#614 id=614 data-nosnippet>614</a>  }
-<a href=#615 id=615 data-nosnippet>615</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls = <span class="kw">if </span>labelled {
-<a href=#616 id=616 data-nosnippet>616</a>    <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@affiliations"</span>)]
-<a href=#617 id=617 data-nosnippet>617</a>  } <span class="kw">else </span>{
-<a href=#618 id=618 data-nosnippet>618</a>    mouth::tokenize_internal(<span class="string">"\\lx@add@affiliation[annotate=all]"</span>).unlist()
+<a href=#222 id=222 data-nosnippet>222</a>  flush(<span class="kw-2">&amp;mut </span>run, <span class="kw-2">&amp;mut </span>calls)<span class="question-mark">?</span>;
+<a href=#223 id=223 data-nosnippet>223</a>  calls.extend(notes);
+<a href=#224 id=224 data-nosnippet>224</a>  <span class="kw">if </span>!explained.is_empty() {
+<a href=#225 id=225 data-nosnippet>225</a>    policy::explain_name_labels(<span class="kw-2">&amp;</span>explained);
+<a href=#226 id=226 data-nosnippet>226</a>  }
+<a href=#227 id=227 data-nosnippet>227</a>  <span class="comment">// (a date its structured lines were taken from is void, DG 2026-11-17: no date, its leftover — a `\today`, a date
+<a href=#228 id=228 data-nosnippet>228</a>  // string — dropped, named once)
+<a href=#229 id=229 data-nosnippet>229</a>  </span><span class="kw">if </span>!prints_nothing(<span class="kw-2">&amp;</span>Tokens::new(void.clone())) {
+<a href=#230 id=230 data-nosnippet>230</a>    <span class="comment">// (named here, so the title-page check counts none of its words again: a ruled discard, no loss)
+<a href=#231 id=231 data-nosnippet>231</a>    </span><span class="kw">let </span>words: Vec&lt;String&gt; = net_content_words(<span class="kw-2">&amp;</span>visible_name_text(<span class="kw-2">&amp;</span>void));
+<a href=#232 id=232 data-nosnippet>232</a>    note_net_counted(<span class="kw-2">&amp;</span>words);
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="macro">Info!</span>(<span class="string">"frontmatter"</span>, <span class="string">"date_void"</span>, <span class="macro">s!</span>(<span class="string">"{}"</span>, Tokens::new(void)));
+<a href=#234 id=234 data-nosnippet>234</a>  }
+<a href=#235 id=235 data-nosnippet>235</a>  with_value_mut(<span class="string">"frontmatter_raw"</span>, |v| {
+<a href=#236 id=236 data-nosnippet>236</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::FrontmatterRaw(<span class="kw-2">ref mut </span>queue)) = v {
+<a href=#237 id=237 data-nosnippet>237</a>      queue.remove(at);
+<a href=#238 id=238 data-nosnippet>238</a>    }
+<a href=#239 id=239 data-nosnippet>239</a>  });
+<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">DebugFeature!</span>(
+<a href=#241 id=241 data-nosnippet>241</a>    <span class="string">"frontmatter"</span>,
+<a href=#242 id=242 data-nosnippet>242</a>    <span class="string">"FRONT the date's legend lines: {}"</span>,
+<a href=#243 id=243 data-nosnippet>243</a>    Tokens::new(calls.clone())
+<a href=#244 id=244 data-nosnippet>244</a>  );
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="prelude-val">Ok</span>(calls)
+<a href=#246 id=246 data-nosnippet>246</a>}
+<a href=#247 id=247 data-nosnippet>247</a>
+<a href=#248 id=248 data-nosnippet>248</a><span class="doccomment">/// A void date line's notes, at any depth, taken out as the title notes they would be outside the date — no leftover of
+<a href=#249 id=249 data-nosnippet>249</a>/// the date, whose void drops only its own text (2605.04795's `\today\footnotemark[0]\footnotetext[0]{2020 Mathematics
+<a href=#250 id=250 data-nosnippet>250</a>/// Subject Classification: …}`): `\thanks` and `\footnote` the pubnotes `digestFrontmatterItem` binds them to in a date
+<a href=#251 id=251 data-nosnippet>251</a>/// (Perl Base_Utility.pool.ltxml:331-332), `\footnotetext` a title-page footnote text's note (`\lx@fm@footnotetext`, OD
+<a href=#252 id=252 data-nosnippet>252</a>/// #1036) without the counter step LaTeX's `\footnotetext` does not make. Gives the line without them, and the calls.
+<a href=#253 id=253 data-nosnippet>253</a></span><span class="kw">fn </span>taken_notes(line: <span class="kw-2">&amp;</span>[Token]) -&gt; (Vec&lt;Token&gt;, Vec&lt;Token&gt;) {
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="kw">let </span><span class="kw-2">mut </span>rest = Vec::with_capacity(line.len());
+<a href=#255 id=255 data-nosnippet>255</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls = Vec::new();
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="kw">while </span>i &lt; line.len() {
+<a href=#258 id=258 data-nosnippet>258</a>    <span class="kw">let </span>t = line[i];
+<a href=#259 id=259 data-nosnippet>259</a>    <span class="kw">let </span>call = <span class="kw">match </span>t {
+<a href=#260 id=260 data-nosnippet>260</a>      t <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\thanks"</span>) =&gt; <span class="string">"\\lx@add@pubnote@thanks"</span>,
+<a href=#261 id=261 data-nosnippet>261</a>      t <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\footnote"</span>) =&gt; <span class="string">"\\lx@add@pubnote"</span>,
+<a href=#262 id=262 data-nosnippet>262</a>      t <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\footnotetext"</span>) =&gt; <span class="string">"\\lx@add@frontmatter{ltx:pubnote}[role=note,name={}]"</span>,
+<a href=#263 id=263 data-nosnippet>263</a>      <span class="kw">_ </span>=&gt; {
+<a href=#264 id=264 data-nosnippet>264</a>        rest.push(t);
+<a href=#265 id=265 data-nosnippet>265</a>        i += <span class="number">1</span>;
+<a href=#266 id=266 data-nosnippet>266</a>        <span class="kw">continue</span>;
+<a href=#267 id=267 data-nosnippet>267</a>      },
+<a href=#268 id=268 data-nosnippet>268</a>    };
+<a href=#269 id=269 data-nosnippet>269</a>    <span class="comment">// (its `[…]`, a footnote number no pubnote takes, and its braced text; a note not so written stays in the line)
+<a href=#270 id=270 data-nosnippet>270</a>    </span><span class="kw">let </span>past_spaces = |<span class="kw-2">mut </span>at: usize| {
+<a href=#271 id=271 data-nosnippet>271</a>      <span class="kw">while </span>line.get(at) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SPACE!</span>()) {
+<a href=#272 id=272 data-nosnippet>272</a>        at += <span class="number">1</span>;
+<a href=#273 id=273 data-nosnippet>273</a>      }
+<a href=#274 id=274 data-nosnippet>274</a>      at
+<a href=#275 id=275 data-nosnippet>275</a>    };
+<a href=#276 id=276 data-nosnippet>276</a>    <span class="kw">let </span><span class="kw-2">mut </span>at = past_spaces(i + <span class="number">1</span>);
+<a href=#277 id=277 data-nosnippet>277</a>    <span class="kw">if </span>line.get(at) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"["</span>)) {
+<a href=#278 id=278 data-nosnippet>278</a>      at = line[at..]
+<a href=#279 id=279 data-nosnippet>279</a>        .iter()
+<a href=#280 id=280 data-nosnippet>280</a>        .position(|t| <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>))
+<a href=#281 id=281 data-nosnippet>281</a>        .map_or(line.len(), |close| past_spaces(at + close + <span class="number">1</span>));
+<a href=#282 id=282 data-nosnippet>282</a>    }
+<a href=#283 id=283 data-nosnippet>283</a>    <span class="kw">let </span>end = skip_group(line, at);
+<a href=#284 id=284 data-nosnippet>284</a>    <span class="kw">if </span>line
+<a href=#285 id=285 data-nosnippet>285</a>      .get(at)
+<a href=#286 id=286 data-nosnippet>286</a>      .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+<a href=#287 id=287 data-nosnippet>287</a>      || line
+<a href=#288 id=288 data-nosnippet>288</a>        .get(end.wrapping_sub(<span class="number">1</span>))
+<a href=#289 id=289 data-nosnippet>289</a>        .is_none_or(|t| t.get_catcode() != Catcode::END)
+<a href=#290 id=290 data-nosnippet>290</a>    {
+<a href=#291 id=291 data-nosnippet>291</a>      rest.push(t);
+<a href=#292 id=292 data-nosnippet>292</a>      i += <span class="number">1</span>;
+<a href=#293 id=293 data-nosnippet>293</a>      <span class="kw">continue</span>;
+<a href=#294 id=294 data-nosnippet>294</a>    }
+<a href=#295 id=295 data-nosnippet>295</a>    calls.extend(mouth::tokenize_internal(TeXString::assembled(call.to_string())).unlist());
+<a href=#296 id=296 data-nosnippet>296</a>    calls.extend_from_slice(<span class="kw-2">&amp;</span>line[at..end]);
+<a href=#297 id=297 data-nosnippet>297</a>    i = end;
+<a href=#298 id=298 data-nosnippet>298</a>  }
+<a href=#299 id=299 data-nosnippet>299</a>  (rest, calls)
+<a href=#300 id=300 data-nosnippet>300</a>}
+<a href=#301 id=301 data-nosnippet>301</a>
+<a href=#302 id=302 data-nosnippet>302</a><span class="doccomment">/// `tokens` without the group or size environment around all of them, and the switches that open them, which are given
+<a href=#303 id=303 data-nosnippet>303</a>/// back first (`{\small \it $^1$Univ A \\ $^2$Univ B}`, `\footnotesize $^1$…`).
+<a href=#304 id=304 data-nosnippet>304</a></span><span class="kw">fn </span>unwrapped(<span class="kw-2">mut </span>v: Vec&lt;Token&gt;) -&gt; (Vec&lt;Token&gt;, Vec&lt;Token&gt;) {
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="kw">let </span><span class="kw-2">mut </span>prefix: Vec&lt;Token&gt; = Vec::new();
+<a href=#306 id=306 data-nosnippet>306</a>  <span class="kw">loop </span>{
+<a href=#307 id=307 data-nosnippet>307</a>    <span class="kw">while </span>v.first() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SPACE!</span>()) {
+<a href=#308 id=308 data-nosnippet>308</a>      v.remove(<span class="number">0</span>);
+<a href=#309 id=309 data-nosnippet>309</a>    }
+<a href=#310 id=310 data-nosnippet>310</a>    <span class="kw">while </span>v.last() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SPACE!</span>()) {
+<a href=#311 id=311 data-nosnippet>311</a>      v.pop();
+<a href=#312 id=312 data-nosnippet>312</a>    }
+<a href=#313 id=313 data-nosnippet>313</a>    <span class="kw">if </span>v.first().is_some_and(|t| t.get_catcode() == Catcode::BEGIN) &amp;&amp; skip_group(<span class="kw-2">&amp;</span>v, <span class="number">0</span>) == v.len()
+<a href=#314 id=314 data-nosnippet>314</a>    {
+<a href=#315 id=315 data-nosnippet>315</a>      v = v[<span class="number">1</span>..v.len() - <span class="number">1</span>].to_vec();
+<a href=#316 id=316 data-nosnippet>316</a>      <span class="kw">continue</span>;
+<a href=#317 id=317 data-nosnippet>317</a>    }
+<a href=#318 id=318 data-nosnippet>318</a>    <span class="kw">let </span>lead = leading_unprinted_end(<span class="kw-2">&amp;</span>v);
+<a href=#319 id=319 data-nosnippet>319</a>    <span class="kw">if </span>lead == <span class="number">0 </span>{
+<a href=#320 id=320 data-nosnippet>320</a>      <span class="kw">break</span>;
+<a href=#321 id=321 data-nosnippet>321</a>    }
+<a href=#322 id=322 data-nosnippet>322</a>    prefix.extend(lead_declarations(<span class="kw-2">&amp;</span>v[..lead]));
+<a href=#323 id=323 data-nosnippet>323</a>    v = v[lead..].to_vec();
+<a href=#324 id=324 data-nosnippet>324</a>  }
+<a href=#325 id=325 data-nosnippet>325</a>  (prefix, v)
+<a href=#326 id=326 data-nosnippet>326</a>}
+<a href=#327 id=327 data-nosnippet>327</a>
+<a href=#328 id=328 data-nosnippet>328</a><span class="doccomment">/// The date's lines, each with the line break before it: parted at its top-level `\\` (its `*` too), `\newline`, `\par`,
+<a href=#329 id=329 data-nosnippet>329</a>/// `\break` and `\linebreak` (1801.04802's `\break`), the breaks LaTeX prints there, and at the `\quad`s and `\qquad`s
+<a href=#330 id=330 data-nosnippet>330</a>/// an affiliation list's entries are parted at (`author_affil_splits`: 2606.00446's shape, `\textsuperscript{§}Email: …
+<a href=#331 id=331 data-nosnippet>331</a>/// \quad $^\dagger$Now at Lab B`; 2503.06162's two addresses).
+<a href=#332 id=332 data-nosnippet>332</a></span><span class="kw">fn </span>date_lines(v: <span class="kw-2">&amp;</span>[Token]) -&gt; Vec&lt;(Vec&lt;Token&gt;, Vec&lt;Token&gt;)&gt; {
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="kw">let </span>breaks = [
+<a href=#334 id=334 data-nosnippet>334</a>    <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>),
+<a href=#335 id=335 data-nosnippet>335</a>    <span class="macro">T_CS!</span>(<span class="string">"\\newline"</span>),
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>),
+<a href=#337 id=337 data-nosnippet>337</a>    <span class="macro">T_CS!</span>(<span class="string">"\\break"</span>),
+<a href=#338 id=338 data-nosnippet>338</a>    <span class="macro">T_CS!</span>(<span class="string">"\\linebreak"</span>),
+<a href=#339 id=339 data-nosnippet>339</a>    <span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>),
+<a href=#340 id=340 data-nosnippet>340</a>    <span class="macro">T_CS!</span>(<span class="string">"\\qquad"</span>),
+<a href=#341 id=341 data-nosnippet>341</a>  ];
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="kw">let </span><span class="kw-2">mut </span>lines: Vec&lt;(Vec&lt;Token&gt;, Vec&lt;Token&gt;)&gt; = <span class="macro">vec!</span>[(Vec::new(), Vec::new())];
+<a href=#343 id=343 data-nosnippet>343</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0i32</span>;
+<a href=#344 id=344 data-nosnippet>344</a>  <span class="kw">let </span><span class="kw-2">mut </span>at = <span class="number">0</span>;
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="kw">while </span>at &lt; v.len() {
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="kw">let </span>t = v[at];
+<a href=#347 id=347 data-nosnippet>347</a>    depth += t.group_step();
+<a href=#348 id=348 data-nosnippet>348</a>    <span class="kw">if </span>depth == <span class="number">0 </span>&amp;&amp; breaks.contains(<span class="kw-2">&amp;</span>t) {
+<a href=#349 id=349 data-nosnippet>349</a>      <span class="kw">let </span><span class="kw-2">mut </span>delimiter = <span class="macro">vec!</span>[t];
+<a href=#350 id=350 data-nosnippet>350</a>      <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>) &amp;&amp; v.get(at + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)) {
+<a href=#351 id=351 data-nosnippet>351</a>        at += <span class="number">1</span>;
+<a href=#352 id=352 data-nosnippet>352</a>        delimiter.push(v[at]);
+<a href=#353 id=353 data-nosnippet>353</a>      }
+<a href=#354 id=354 data-nosnippet>354</a>      lines.push((delimiter, Vec::new()));
+<a href=#355 id=355 data-nosnippet>355</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(last) = lines.last_mut() {
+<a href=#356 id=356 data-nosnippet>356</a>      last.<span class="number">1</span>.push(t);
+<a href=#357 id=357 data-nosnippet>357</a>    }
+<a href=#358 id=358 data-nosnippet>358</a>    at += <span class="number">1</span>;
+<a href=#359 id=359 data-nosnippet>359</a>  }
+<a href=#360 id=360 data-nosnippet>360</a>  lines
+<a href=#361 id=361 data-nosnippet>361</a>}
+<a href=#362 id=362 data-nosnippet>362</a>
+<a href=#363 id=363 data-nosnippet>363</a><span class="doccomment">/// The full English month names a date line prints (and "Sept"), whole words.
+<a href=#364 id=364 data-nosnippet>364</a></span><span class="kw">const </span>MONTHS: [<span class="kw-2">&amp;</span>str; <span class="number">13</span>] = [
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="string">"january"</span>,
+<a href=#366 id=366 data-nosnippet>366</a>  <span class="string">"february"</span>,
+<a href=#367 id=367 data-nosnippet>367</a>  <span class="string">"march"</span>,
+<a href=#368 id=368 data-nosnippet>368</a>  <span class="string">"april"</span>,
+<a href=#369 id=369 data-nosnippet>369</a>  <span class="string">"may"</span>,
+<a href=#370 id=370 data-nosnippet>370</a>  <span class="string">"june"</span>,
+<a href=#371 id=371 data-nosnippet>371</a>  <span class="string">"july"</span>,
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="string">"august"</span>,
+<a href=#373 id=373 data-nosnippet>373</a>  <span class="string">"september"</span>,
+<a href=#374 id=374 data-nosnippet>374</a>  <span class="string">"october"</span>,
+<a href=#375 id=375 data-nosnippet>375</a>  <span class="string">"november"</span>,
+<a href=#376 id=376 data-nosnippet>376</a>  <span class="string">"december"</span>,
+<a href=#377 id=377 data-nosnippet>377</a>  <span class="string">"sept"</span>,
+<a href=#378 id=378 data-nosnippet>378</a>];
+<a href=#379 id=379 data-nosnippet>379</a>
+<a href=#380 id=380 data-nosnippet>380</a><span class="doccomment">/// What `line` is ([`Line`]). `declared`: the labels a binding's names print that no line of its own explains, as
+<a href=#381 id=381 data-nosnippet>381</a>/// (spelling, printed mark).
+<a href=#382 id=382 data-nosnippet>382</a></span><span class="kw">fn </span>line_kind(line: <span class="kw-2">&amp;</span>[Token], declared: <span class="kw-2">&amp;</span>[(String, String)]) -&gt; <span class="prelude-ty">Result</span>&lt;Line&gt; {
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="kw">let </span>tokens = Tokens::new(line.to_vec());
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="kw">if </span>prints_nothing(<span class="kw-2">&amp;</span>tokens) {
+<a href=#385 id=385 data-nosnippet>385</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Blank);
+<a href=#386 id=386 data-nosnippet>386</a>  }
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="kw">if </span>line.iter().any(|t| <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\today"</span>)) {
+<a href=#388 id=388 data-nosnippet>388</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Date);
+<a href=#389 id=389 data-nosnippet>389</a>  }
+<a href=#390 id=390 data-nosnippet>390</a>  <span class="kw">let </span>text = visible_name_text(line);
+<a href=#391 id=391 data-nosnippet>391</a>  <span class="kw">let </span>words: Vec&lt;String&gt; = text
+<a href=#392 id=392 data-nosnippet>392</a>    .split(|c: char| !c.is_alphanumeric())
+<a href=#393 id=393 data-nosnippet>393</a>    .filter(|w| !w.is_empty())
+<a href=#394 id=394 data-nosnippet>394</a>    .map(str::to_lowercase)
+<a href=#395 id=395 data-nosnippet>395</a>    .collect();
+<a href=#396 id=396 data-nosnippet>396</a>  <span class="kw">if </span>words.iter().any(|w| MONTHS.contains(<span class="kw-2">&amp;</span>w.as_str())) {
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Date);
+<a href=#398 id=398 data-nosnippet>398</a>  }
+<a href=#399 id=399 data-nosnippet>399</a>  <span class="comment">// (a label the line leads with — a superscript, a mark command, a footnote symbol, a number typed by hand:
+<a href=#400 id=400 data-nosnippet>400</a>  // `leading_line_label`, the affiliation lines' one reader)
+<a href=#401 id=401 data-nosnippet>401</a>  </span><span class="kw">let </span>lead = leading_unprinted_end(line);
+<a href=#402 id=402 data-nosnippet>402</a>  <span class="kw">let </span>led = Tokens::new(line[lead..].to_vec());
+<a href=#403 id=403 data-nosnippet>403</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>((label, typed, rest)) = leading_line_label(<span class="kw-2">&amp;</span>led) {
+<a href=#404 id=404 data-nosnippet>404</a>    <span class="comment">// (a number typed by hand, `1) Univ A`, is its label as printed: ruling R2, a label where the names request it)
+<a href=#405 id=405 data-nosnippet>405</a>    </span><span class="kw">let </span>operand = <span class="kw">if </span>typed {
+<a href=#406 id=406 data-nosnippet>406</a>      <span class="prelude-val">Some</span>(<span class="macro">ExplodeText!</span>(label.as_str()))
+<a href=#407 id=407 data-nosnippet>407</a>    } <span class="kw">else </span>{
+<a href=#408 id=408 data-nosnippet>408</a>      leading_operand(<span class="kw-2">&amp;</span>led)
+<a href=#409 id=409 data-nosnippet>409</a>    };
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="kw">let </span>printed = <span class="kw">match </span><span class="kw-2">&amp;</span>operand {
+<a href=#411 id=411 data-nosnippet>411</a>      <span class="prelude-val">Some</span>(operand) =&gt; <span class="kw">match </span>printed_label(<span class="kw-2">&amp;</span>Tokens::new(operand.clone()))<span class="question-mark">? </span>{
+<a href=#412 id=412 data-nosnippet>412</a>        <span class="prelude-val">Some</span>(printed) =&gt; printed.text,
+<a href=#413 id=413 data-nosnippet>413</a>        <span class="prelude-val">None </span>=&gt; mark_spelling_printed(<span class="kw-2">&amp;</span>Tokens::new(operand.clone()).to_string())
+<a href=#414 id=414 data-nosnippet>414</a>          .trim()
+<a href=#415 id=415 data-nosnippet>415</a>          .to_string(),
+<a href=#416 id=416 data-nosnippet>416</a>      },
+<a href=#417 id=417 data-nosnippet>417</a>      <span class="prelude-val">None </span>=&gt; String::new(),
+<a href=#418 id=418 data-nosnippet>418</a>    };
+<a href=#419 id=419 data-nosnippet>419</a>    <span class="kw">if </span>printed.is_empty() {
+<a href=#420 id=420 data-nosnippet>420</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Kept(<span class="string">"a label no reader reads"</span>));
+<a href=#421 id=421 data-nosnippet>421</a>    }
+<a href=#422 id=422 data-nosnippet>422</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>((spelling, <span class="kw">_</span>)) = declared.iter().find(|(<span class="kw">_</span>, mark)| <span class="kw-2">*</span>mark == printed) {
+<a href=#423 id=423 data-nosnippet>423</a>      <span class="comment">// (keyed by its spelling, as the binding's own line is, only a spelling of symbols — `\S`, `$\dagger$` —, which
+<a href=#424 id=424 data-nosnippet>424</a>      // the line keys alike: a document's macro, `\author[1,\myD]`, keys no line of its own either, so the line stays)
+<a href=#425 id=425 data-nosnippet>425</a>      </span><span class="kw">let </span>spelled: Vec&lt;Token&gt; = mouth::tokenize_internal(TeXString::assembled(spelling.clone()))
+<a href=#426 id=426 data-nosnippet>426</a>        .unlist()
+<a href=#427 id=427 data-nosnippet>427</a>        .into_iter()
+<a href=#428 id=428 data-nosnippet>428</a>        .filter(|t| t.get_catcode() != Catcode::MATH)
+<a href=#429 id=429 data-nosnippet>429</a>        .collect();
+<a href=#430 id=430 data-nosnippet>430</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(
+<a href=#431 id=431 data-nosnippet>431</a>        <span class="kw">if </span>is_footnote_symbol_operand(<span class="kw-2">&amp;</span>spelled)
+<a href=#432 id=432 data-nosnippet>432</a>          || !spelled.iter().any(|t| t.get_catcode() == Catcode::CS)
+<a href=#433 id=433 data-nosnippet>433</a>        {
+<a href=#434 id=434 data-nosnippet>434</a>          Line::Labelled(printed, <span class="prelude-val">Some</span>(spelling.clone()), rest.unlist())
+<a href=#435 id=435 data-nosnippet>435</a>        } <span class="kw">else </span>{
+<a href=#436 id=436 data-nosnippet>436</a>          Line::Kept(<span class="string">"a label its binding keys by a macro"</span>)
+<a href=#437 id=437 data-nosnippet>437</a>        },
+<a href=#438 id=438 data-nosnippet>438</a>      );
+<a href=#439 id=439 data-nosnippet>439</a>    }
+<a href=#440 id=440 data-nosnippet>440</a>    <span class="comment">// (keyed as a name's request is, by what it prints: `queue_reading::author_marks`)
+<a href=#441 id=441 data-nosnippet>441</a>    </span><span class="kw">let </span>keys = printed_label_keys(<span class="kw-2">&amp;</span>printed, <span class="string">"affiliation"</span>);
+<a href=#442 id=442 data-nosnippet>442</a>    <span class="kw">let </span><span class="kw-2">mut </span>requested = !keys.is_empty();
+<a href=#443 id=443 data-nosnippet>443</a>    <span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>keys {
+<a href=#444 id=444 data-nosnippet>444</a>      requested &amp;= !queued_label_requesters(key)<span class="question-mark">?</span>.is_empty();
+<a href=#445 id=445 data-nosnippet>445</a>    }
+<a href=#446 id=446 data-nosnippet>446</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="kw">if </span>requested {
+<a href=#447 id=447 data-nosnippet>447</a>      Line::Labelled(printed, <span class="prelude-val">None</span>, rest.unlist())
+<a href=#448 id=448 data-nosnippet>448</a>    } <span class="kw">else </span>{
+<a href=#449 id=449 data-nosnippet>449</a>      Line::Kept(<span class="string">"a label no name requests"</span>)
+<a href=#450 id=450 data-nosnippet>450</a>    });
+<a href=#451 id=451 data-nosnippet>451</a>  }
+<a href=#452 id=452 data-nosnippet>452</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(symbol) = leading_symbol(line) {
+<a href=#453 id=453 data-nosnippet>453</a>    <span class="kw">let </span>printed = <span class="kw">match </span>printed_label(<span class="kw-2">&amp;</span>Tokens::new(<span class="macro">vec!</span>[symbol]))<span class="question-mark">? </span>{
+<a href=#454 id=454 data-nosnippet>454</a>      <span class="prelude-val">Some</span>(printed) =&gt; printed.text,
+<a href=#455 id=455 data-nosnippet>455</a>      <span class="prelude-val">None </span>=&gt; symbol.to_string(),
+<a href=#456 id=456 data-nosnippet>456</a>    };
+<a href=#457 id=457 data-nosnippet>457</a>    <span class="kw">let </span>keys = printed_label_keys(<span class="kw-2">&amp;</span>printed, <span class="string">"affiliation"</span>);
+<a href=#458 id=458 data-nosnippet>458</a>    <span class="kw">let </span><span class="kw-2">mut </span>requested = !keys.is_empty();
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span>keys {
+<a href=#460 id=460 data-nosnippet>460</a>      requested &amp;= !queued_label_requesters(key)<span class="question-mark">?</span>.is_empty();
+<a href=#461 id=461 data-nosnippet>461</a>    }
+<a href=#462 id=462 data-nosnippet>462</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="kw">if </span>requested {
+<a href=#463 id=463 data-nosnippet>463</a>      <span class="kw">let </span>at = line.iter().position(|t| <span class="kw-2">*</span>t == symbol).unwrap_or(<span class="number">0</span>);
+<a href=#464 id=464 data-nosnippet>464</a>      Line::Labelled(printed, <span class="prelude-val">None</span>, line[at + <span class="number">1</span>..].to_vec())
+<a href=#465 id=465 data-nosnippet>465</a>    } <span class="kw">else </span>{
+<a href=#466 id=466 data-nosnippet>466</a>      Line::Kept(<span class="string">"a label no name requests"</span>)
+<a href=#467 id=467 data-nosnippet>467</a>    });
+<a href=#468 id=468 data-nosnippet>468</a>  }
+<a href=#469 id=469 data-nosnippet>469</a>  <span class="kw">if </span>author_mark_position(<span class="kw-2">&amp;</span>tokens).is_some() {
+<a href=#470 id=470 data-nosnippet>470</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Kept(<span class="string">"a mark inside the line"</span>));
+<a href=#471 id=471 data-nosnippet>471</a>  }
+<a href=#472 id=472 data-nosnippet>472</a>  <span class="kw">let </span>(label, rest) = <span class="kw">match </span>email_line_label(<span class="kw-2">&amp;</span>tokens) {
+<a href=#473 id=473 data-nosnippet>473</a>    <span class="prelude-val">Some</span>((label, rest)) =&gt; (<span class="prelude-val">Some</span>(label), rest),
+<a href=#474 id=474 data-nosnippet>474</a>    <span class="prelude-val">None </span>=&gt; (<span class="prelude-val">None</span>, tokens.clone()),
+<a href=#475 id=475 data-nosnippet>475</a>  };
+<a href=#476 id=476 data-nosnippet>476</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(addresses) = email_addresses(<span class="kw-2">&amp;</span>rest) {
+<a href=#477 id=477 data-nosnippet>477</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Addresses(label, addresses));
+<a href=#478 id=478 data-nosnippet>478</a>  }
+<a href=#479 id=479 data-nosnippet>479</a>  <span class="comment">// (an address among text that is no e-mail label, `\textbf{@} gaborit@kth.se` (1801.04802), `bartosz@\{cs.uni.wroc.pl,
+<a href=#480 id=480 data-nosnippet>480</a>  // tu-dresden.de\}` (2108.05680): a run would take both as its affiliation's, which cuts only the addresses; a wrapped
+<a href=#481 id=481 data-nosnippet>481</a>  // address line, `\small{Emails: a@x, b@y}` (1601.01378), continues its run, whose contact cuts it)
+<a href=#482 id=482 data-nosnippet>482</a>  </span><span class="kw">let </span>addresses = resolver::addresses_in(<span class="kw-2">&amp;</span>text);
+<a href=#483 id=483 data-nosnippet>483</a>  <span class="comment">// (an `@` the line prints that no address holds: the readers' text drops a styled one, so counted on the tokens)
+<a href=#484 id=484 data-nosnippet>484</a>  </span><span class="kw">let </span>at_signs = line
+<a href=#485 id=485 data-nosnippet>485</a>    .iter()
+<a href=#486 id=486 data-nosnippet>486</a>    .filter(|t| <span class="macro">matches!</span>(t.get_catcode(), Catcode::OTHER | Catcode::LETTER) &amp;&amp; t.to_string() == <span class="string">"@"</span>)
+<a href=#487 id=487 data-nosnippet>487</a>    .count();
+<a href=#488 id=488 data-nosnippet>488</a>  <span class="kw">if </span>!addresses.is_empty() &amp;&amp; (!resolver::only_addresses(<span class="kw-2">&amp;</span>text) || at_signs &gt; addresses.len()) {
+<a href=#489 id=489 data-nosnippet>489</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Kept(<span class="string">"an address among other text"</span>));
+<a href=#490 id=490 data-nosnippet>490</a>  }
+<a href=#491 id=491 data-nosnippet>491</a>  <span class="kw">let </span>affiliation = reads_as_affiliation(<span class="kw-2">&amp;</span>tokens);
+<a href=#492 id=492 data-nosnippet>492</a>  <span class="comment">// (a year on a line naming no institution is a date's)
+<a href=#493 id=493 data-nosnippet>493</a>  </span><span class="kw">if </span>!affiliation
+<a href=#494 id=494 data-nosnippet>494</a>    &amp;&amp; words
+<a href=#495 id=495 data-nosnippet>495</a>      .iter()
+<a href=#496 id=496 data-nosnippet>496</a>      .any(|w| w.len() == <span class="number">4 </span>&amp;&amp; <span class="macro">matches!</span>(w.parse::&lt;u32&gt;(), <span class="prelude-val">Ok</span>(<span class="number">1800</span>..=<span class="number">2100</span>)))
+<a href=#497 id=497 data-nosnippet>497</a>  {
+<a href=#498 id=498 data-nosnippet>498</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Line::Date);
+<a href=#499 id=499 data-nosnippet>499</a>  }
+<a href=#500 id=500 data-nosnippet>500</a>  <span class="prelude-val">Ok</span>(Line::Text(affiliation))
+<a href=#501 id=501 data-nosnippet>501</a>}
+<a href=#502 id=502 data-nosnippet>502</a>
+<a href=#503 id=503 data-nosnippet>503</a><span class="doccomment">/// The operand of the superscript or mark command `line` leads with (`$^{1}$`, `\textsuperscript{\S}`, `${}^{1}$`).
+<a href=#504 id=504 data-nosnippet>504</a></span><span class="kw">fn </span>leading_operand(line: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#505 id=505 data-nosnippet>505</a>  <span class="kw">let </span>v = line.unlist_ref();
+<a href=#506 id=506 data-nosnippet>506</a>  <span class="kw">let </span>at = v.iter().position(|t| <span class="kw-2">*</span>t != <span class="macro">T_SPACE!</span>() &amp;&amp; !mark_switch(t))<span class="question-mark">?</span>;
+<a href=#507 id=507 data-nosnippet>507</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>((operand, <span class="kw">_</span>)) = spaced_mark_at(v, at) {
+<a href=#508 id=508 data-nosnippet>508</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(operand);
+<a href=#509 id=509 data-nosnippet>509</a>  }
+<a href=#510 id=510 data-nosnippet>510</a>  <span class="kw">let </span>start = <span class="kw">if </span>v[at].get_catcode() == Catcode::MATH &amp;&amp; v.get(at + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SUPER!</span>()) {
+<a href=#511 id=511 data-nosnippet>511</a>    at + <span class="number">2
+<a href=#512 id=512 data-nosnippet>512</a>  </span>} <span class="kw">else if </span>is_mark_command(<span class="kw-2">&amp;</span>v[at]) {
+<a href=#513 id=513 data-nosnippet>513</a>    at + <span class="number">1
+<a href=#514 id=514 data-nosnippet>514</a>  </span>} <span class="kw">else </span>{
+<a href=#515 id=515 data-nosnippet>515</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#516 id=516 data-nosnippet>516</a>  };
+<a href=#517 id=517 data-nosnippet>517</a>  <span class="kw">let </span>start = start + v[start..].iter().take_while(|t| <span class="kw-2">**</span>t == <span class="macro">T_SPACE!</span>()).count();
+<a href=#518 id=518 data-nosnippet>518</a>  <span class="kw">let </span>end = skip_group(v, start).min(v.len());
+<a href=#519 id=519 data-nosnippet>519</a>  <span class="kw">let </span>operand = <span class="kw-2">&amp;</span>v[start..end];
+<a href=#520 id=520 data-nosnippet>520</a>  <span class="prelude-val">Some</span>(
+<a href=#521 id=521 data-nosnippet>521</a>    <span class="kw">if </span>operand
+<a href=#522 id=522 data-nosnippet>522</a>      .first()
+<a href=#523 id=523 data-nosnippet>523</a>      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+<a href=#524 id=524 data-nosnippet>524</a>      &amp;&amp; operand.len() &gt;= <span class="number">2
+<a href=#525 id=525 data-nosnippet>525</a>    </span>{
+<a href=#526 id=526 data-nosnippet>526</a>      operand[<span class="number">1</span>..operand.len() - <span class="number">1</span>].to_vec()
+<a href=#527 id=527 data-nosnippet>527</a>    } <span class="kw">else </span>{
+<a href=#528 id=528 data-nosnippet>528</a>      operand.to_vec()
+<a href=#529 id=529 data-nosnippet>529</a>    },
+<a href=#530 id=530 data-nosnippet>530</a>  )
+<a href=#531 id=531 data-nosnippet>531</a>}
+<a href=#532 id=532 data-nosnippet>532</a>
+<a href=#533 id=533 data-nosnippet>533</a><span class="doccomment">/// The footnote symbol `line` leads with in text (`* Corresponding author`, `\dag Univ B`), past spaces, math shifts
+<a href=#534 id=534 data-nosnippet>534</a>/// and braces.
+<a href=#535 id=535 data-nosnippet>535</a></span><span class="kw">fn </span>leading_symbol(line: <span class="kw-2">&amp;</span>[Token]) -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
+<a href=#536 id=536 data-nosnippet>536</a>  line
+<a href=#537 id=537 data-nosnippet>537</a>    .iter()
+<a href=#538 id=538 data-nosnippet>538</a>    .find(|t| {
+<a href=#539 id=539 data-nosnippet>539</a>      !<span class="macro">matches!</span>(
+<a href=#540 id=540 data-nosnippet>540</a>        t.get_catcode(),
+<a href=#541 id=541 data-nosnippet>541</a>        Catcode::SPACE | Catcode::MATH | Catcode::BEGIN | Catcode::END
+<a href=#542 id=542 data-nosnippet>542</a>      )
+<a href=#543 id=543 data-nosnippet>543</a>    })
+<a href=#544 id=544 data-nosnippet>544</a>    .copied()
+<a href=#545 id=545 data-nosnippet>545</a>    .filter(|t| is_footnote_symbol_operand(std::slice::from_ref(t)))
+<a href=#546 id=546 data-nosnippet>546</a>}
+<a href=#547 id=547 data-nosnippet>547</a>
+<a href=#548 id=548 data-nosnippet>548</a><span class="doccomment">/// The contact call of a run: a labelled line (with the lines continuing it) the contact its label's request is answered
+<a href=#549 id=549 data-nosnippet>549</a>/// by, authblk's `\affil[label]` call (`annotate=1,label={…},_labelprints=true`: Perl's labelled contact, which
+<a href=#550 id=550 data-nosnippet>550</a>/// `relocateAnnotations` pairs with the names requesting the label; the label printed with the line, which the Kind step
+<a href=#551 id=551 data-nosnippet>551</a>/// reads a legend by, `insert::kind_legend_contacts`); an affiliation no label leads every author's (`annotate=all`), as the
+<a href=#552 id=552 data-nosnippet>552</a>/// API places a line printed under the whole block. Each in the switches the date's lines were set in.
+<a href=#553 id=553 data-nosnippet>553</a></span><span class="kw">fn </span>contact_call(
+<a href=#554 id=554 data-nosnippet>554</a>  label: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>(String, <span class="prelude-ty">Option</span>&lt;String&gt;)&gt;,
+<a href=#555 id=555 data-nosnippet>555</a>  prefix: <span class="kw-2">&amp;</span>[Token],
+<a href=#556 id=556 data-nosnippet>556</a>  content: Vec&lt;Token&gt;,
+<a href=#557 id=557 data-nosnippet>557</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#558 id=558 data-nosnippet>558</a>  <span class="kw">let </span>keys = <span class="kw">match </span>label {
+<a href=#559 id=559 data-nosnippet>559</a>    <span class="comment">// (a binding's declared label keyed by its spelling in the call, as the binding's own line is: authblk's
+<a href=#560 id=560 data-nosnippet>560</a>    // `\affil[\S]`; a typed mark by what it prints, as the names' requests are)
+<a href=#561 id=561 data-nosnippet>561</a>    </span><span class="prelude-val">Some</span>((printed, spelling)) =&gt; <span class="macro">s!</span>(
+<a href=#562 id=562 data-nosnippet>562</a>      <span class="string">"role=affiliation,annotate=1,label={{{}}},_labelprints=true"</span>,
+<a href=#563 id=563 data-nosnippet>563</a>      spelling.as_deref().unwrap_or(printed)
+<a href=#564 id=564 data-nosnippet>564</a>    ),
+<a href=#565 id=565 data-nosnippet>565</a>    <span class="prelude-val">None </span>=&gt; <span class="macro">s!</span>(<span class="string">"role=affiliation,annotate=all"</span>),
+<a href=#566 id=566 data-nosnippet>566</a>  };
+<a href=#567 id=567 data-nosnippet>567</a>  <span class="kw">let </span><span class="kw-2">mut </span>body = prefix.to_vec();
+<a href=#568 id=568 data-nosnippet>568</a>  body.extend(content);
+<a href=#569 id=569 data-nosnippet>569</a>  <span class="prelude-val">Ok</span>(
+<a href=#570 id=570 data-nosnippet>570</a>    <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@contact"</span>), <span class="macro">vec!</span>[
+<a href=#571 id=571 data-nosnippet>571</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(TeXString::assembled(keys))),
+<a href=#572 id=572 data-nosnippet>572</a>      <span class="prelude-val">Some</span>(Tokens::new(body))
+<a href=#573 id=573 data-nosnippet>573</a>    ])
+<a href=#574 id=574 data-nosnippet>574</a>    .unlist(),
+<a href=#575 id=575 data-nosnippet>575</a>  )
+<a href=#576 id=576 data-nosnippet>576</a>}
+<a href=#577 id=577 data-nosnippet>577</a>
+<a href=#578 id=578 data-nosnippet>578</a><span class="doccomment">/// The state value holding the last `\address` block a class prints under the names (`\lx@address@block`).
+<a href=#579 id=579 data-nosnippet>579</a></span><span class="kw">const </span>ADDRESS_BLOCK: <span class="kw-2">&amp;</span>str = <span class="string">"lx_address_block"</span>;
+<a href=#580 id=580 data-nosnippet>580</a>
+<a href=#581 id=581 data-nosnippet>581</a><span class="doccomment">/// Records `block`, the `\address` block of spconf.sty:165 / INTERSPEECH2021.sty:162-164 / Interspeech.cls :265, whose
+<a href=#582 id=582 data-nosnippet>582</a>/// note `\lx@address@block` queues whole; read at `\maketitle` by [`address_block_legend_calls`] (OD #1073).
+<a href=#583 id=583 data-nosnippet>583</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>note_address_block(block: Tokens) {
+<a href=#584 id=584 data-nosnippet>584</a>  assign_value(ADDRESS_BLOCK, Stored::Tokens(block), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#585 id=585 data-nosnippet>585</a>}
+<a href=#586 id=586 data-nosnippet>586</a>
+<a href=#587 id=587 data-nosnippet>587</a><span class="doccomment">/// `\lx@date@legend`'s part for the recorded `\address` block (OD #1073): its queued note replaced by the calls
+<a href=#588 id=588 data-nosnippet>588</a>/// [`address_block_calls`] gives, when every line is placed; else the note stays, whole, with an Info.
+<a href=#589 id=589 data-nosnippet>589</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>address_block_legend_calls() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#590 id=590 data-nosnippet>590</a>  <span class="kw">let </span>block = <span class="kw">match </span>lookup_value(ADDRESS_BLOCK) {
+<a href=#591 id=591 data-nosnippet>591</a>    <span class="prelude-val">Some</span>(Stored::Tokens(block)) =&gt; block,
+<a href=#592 id=592 data-nosnippet>592</a>    <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new()),
+<a href=#593 id=593 data-nosnippet>593</a>  };
+<a href=#594 id=594 data-nosnippet>594</a>  remove_value(ADDRESS_BLOCK);
+<a href=#595 id=595 data-nosnippet>595</a>  <span class="kw">let </span>queued = with_value(<span class="string">"frontmatter_raw"</span>, |v| <span class="kw">match </span>v {
+<a href=#596 id=596 data-nosnippet>596</a>    <span class="prelude-val">Some</span>(Stored::FrontmatterRaw(queue)) =&gt; queue.iter().rposition(|entry| {
+<a href=#597 id=597 data-nosnippet>597</a>      entry.<span class="number">0 </span>== <span class="string">"ltx:note"
+<a href=#598 id=598 data-nosnippet>598</a>        </span>&amp;&amp; entry.<span class="number">1</span>.get(<span class="string">"role"</span>).map(String::as_str) == <span class="prelude-val">Some</span>(<span class="string">"address"</span>)
+<a href=#599 id=599 data-nosnippet>599</a>        &amp;&amp; (last_group(<span class="kw-2">&amp;</span>entry.<span class="number">2</span>) == block || entry.<span class="number">2 </span>== block)
+<a href=#600 id=600 data-nosnippet>600</a>    }),
+<a href=#601 id=601 data-nosnippet>601</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#602 id=602 data-nosnippet>602</a>  });
+<a href=#603 id=603 data-nosnippet>603</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(at) = queued <span class="kw">else </span>{
+<a href=#604 id=604 data-nosnippet>604</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#605 id=605 data-nosnippet>605</a>  };
+<a href=#606 id=606 data-nosnippet>606</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(calls) = address_block_calls(<span class="kw-2">&amp;</span>block)<span class="question-mark">? </span><span class="kw">else </span>{
+<a href=#607 id=607 data-nosnippet>607</a>    <span class="macro">Info!</span>(
+<a href=#608 id=608 data-nosnippet>608</a>      <span class="string">"frontmatter"</span>,
+<a href=#609 id=609 data-nosnippet>609</a>      <span class="string">"address"</span>,
+<a href=#610 id=610 data-nosnippet>610</a>      <span class="macro">s!</span>(
+<a href=#611 id=611 data-nosnippet>611</a>        <span class="string">"An \\address under the authors stays its note (a line no rule places): {}"</span>,
+<a href=#612 id=612 data-nosnippet>612</a>        <span class="macro">s!</span>(<span class="string">"{block}"</span>)
+<a href=#613 id=613 data-nosnippet>613</a>          .split_whitespace()
+<a href=#614 id=614 data-nosnippet>614</a>          .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#615 id=615 data-nosnippet>615</a>          .join(<span class="string">" "</span>)
+<a href=#616 id=616 data-nosnippet>616</a>      )
+<a href=#617 id=617 data-nosnippet>617</a>    );
+<a href=#618 id=618 data-nosnippet>618</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
 <a href=#619 id=619 data-nosnippet>619</a>  };
-<a href=#620 id=620 data-nosnippet>620</a>  calls.push(<span class="macro">T_BEGIN!</span>());
-<a href=#621 id=621 data-nosnippet>621</a>  calls.extend(block.unlist_ref().iter().copied());
-<a href=#622 id=622 data-nosnippet>622</a>  calls.push(<span class="macro">T_END!</span>());
-<a href=#623 id=623 data-nosnippet>623</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(calls))
-<a href=#624 id=624 data-nosnippet>624</a>}
-<a href=#625 id=625 data-nosnippet>625</a>
-<a href=#626 id=626 data-nosnippet>626</a><span class="doccomment">/// The e-mail contacts of a class's e-mail line printed under the names (spconf's and Interspeech.cls's `\email`, OD
-<a href=#627 id=627 data-nosnippet>627</a>/// #1073; 2405.13379): each address its owner's by [`listed_address_owners`], when every address has one among the
-<a href=#628 id=628 data-nosnippet>628</a>/// authors queued so far; else `None`, the line kept whole by the caller.
-<a href=#629 id=629 data-nosnippet>629</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>listed_email_calls(line: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt;&gt; {
-<a href=#630 id=630 data-nosnippet>630</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(addresses) = email_addresses(line) <span class="kw">else </span>{
-<a href=#631 id=631 data-nosnippet>631</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
-<a href=#632 id=632 data-nosnippet>632</a>  };
-<a href=#633 id=633 data-nosnippet>633</a>  <span class="kw">let </span><span class="kw-2">mut </span>keys = Vec::new();
-<a href=#634 id=634 data-nosnippet>634</a>  <span class="kw">for </span>name <span class="kw">in </span>queued_position_names()<span class="question-mark">?</span>.iter() {
-<a href=#635 id=635 data-nosnippet>635</a>    keys.push(printed_name_keys(name, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
-<a href=#636 id=636 data-nosnippet>636</a>  }
-<a href=#637 id=637 data-nosnippet>637</a>  <span class="kw">if </span>keys.is_empty() || listed_address_owners(<span class="kw-2">&amp;</span>addresses, <span class="kw-2">&amp;</span>keys).contains(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>) {
-<a href=#638 id=638 data-nosnippet>638</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
-<a href=#639 id=639 data-nosnippet>639</a>  }
-<a href=#640 id=640 data-nosnippet>640</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(address_calls(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>addresses, <span class="kw-2">&amp;</span>keys)<span class="question-mark">?</span>))
-<a href=#641 id=641 data-nosnippet>641</a>}
-<a href=#642 id=642 data-nosnippet>642</a>
-<a href=#643 id=643 data-nosnippet>643</a><span class="doccomment">/// The e-mail contacts of a line of addresses no label leads, each its owner's by [`listed_address_owners`]: the author
-<a href=#644 id=644 data-nosnippet>644</a>/// it spells, else the author at its place in a list of one address per author, else the author block's. The line's
-<a href=#645 id=645 data-nosnippet>645</a>/// e-mail label names each contact.
-<a href=#646 id=646 data-nosnippet>646</a></span><span class="kw">fn </span>address_calls(
-<a href=#647 id=647 data-nosnippet>647</a>  label: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;,
-<a href=#648 id=648 data-nosnippet>648</a>  addresses: <span class="kw-2">&amp;</span>[String],
-<a href=#649 id=649 data-nosnippet>649</a>  keys: <span class="kw-2">&amp;</span>[NameKeys],
-<a href=#650 id=650 data-nosnippet>650</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
-<a href=#651 id=651 data-nosnippet>651</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls = Vec::new();
-<a href=#652 id=652 data-nosnippet>652</a>  <span class="kw">for </span>(address, owner) <span class="kw">in </span>addresses.iter().zip(listed_address_owners(addresses, keys)) {
-<a href=#653 id=653 data-nosnippet>653</a>    <span class="kw">let </span>owner = owner.map_or_else(|| <span class="macro">s!</span>(<span class="string">"addresses:block"</span>), |at| <span class="macro">s!</span>(<span class="string">"author:{}"</span>, at + <span class="number">1</span>));
-<a href=#654 id=654 data-nosnippet>654</a>    <span class="kw">let </span><span class="kw-2">mut </span>keyvals =
-<a href=#655 id=655 data-nosnippet>655</a>      mouth::tokenize_internal(TeXString::assembled(<span class="macro">s!</span>(<span class="string">"role=email,label={{{owner}}}"</span>))).unlist();
-<a href=#656 id=656 data-nosnippet>656</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = label {
-<a href=#657 id=657 data-nosnippet>657</a>      keyvals.extend(mouth::tokenize_internal(<span class="string">",name="</span>).unlist());
-<a href=#658 id=658 data-nosnippet>658</a>      keyvals.push(<span class="macro">T_BEGIN!</span>());
-<a href=#659 id=659 data-nosnippet>659</a>      keyvals.extend(label.unlist_ref().iter().copied());
-<a href=#660 id=660 data-nosnippet>660</a>      keyvals.push(<span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>));
-<a href=#661 id=661 data-nosnippet>661</a>      keyvals.push(<span class="macro">T_END!</span>());
-<a href=#662 id=662 data-nosnippet>662</a>    }
-<a href=#663 id=663 data-nosnippet>663</a>    calls.extend(
-<a href=#664 id=664 data-nosnippet>664</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
-<a href=#665 id=665 data-nosnippet>665</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
-<a href=#666 id=666 data-nosnippet>666</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
-<a href=#667 id=667 data-nosnippet>667</a>        <span class="prelude-val">Some</span>(Tokens::new(keyvals)),
-<a href=#668 id=668 data-nosnippet>668</a>        <span class="prelude-val">Some</span>(Tokens::new(
-<a href=#669 id=669 data-nosnippet>669</a>          address
-<a href=#670 id=670 data-nosnippet>670</a>            .chars()
-<a href=#671 id=671 data-nosnippet>671</a>            .map(|c| <span class="kw">if </span>c == <span class="string">'_' </span>{
-<a href=#672 id=672 data-nosnippet>672</a>              <span class="macro">T_CS!</span>(<span class="string">"\\_"</span>)
-<a href=#673 id=673 data-nosnippet>673</a>            } <span class="kw">else </span>{
-<a href=#674 id=674 data-nosnippet>674</a>              <span class="macro">T_OTHER!</span>(c.to_string())
-<a href=#675 id=675 data-nosnippet>675</a>            })
-<a href=#676 id=676 data-nosnippet>676</a>            .collect(),
-<a href=#677 id=677 data-nosnippet>677</a>        ))
-<a href=#678 id=678 data-nosnippet>678</a>      ])
-<a href=#679 id=679 data-nosnippet>679</a>      .unlist(),
-<a href=#680 id=680 data-nosnippet>680</a>    );
-<a href=#681 id=681 data-nosnippet>681</a>  }
-<a href=#682 id=682 data-nosnippet>682</a>  <span class="prelude-val">Ok</span>(calls)
+<a href=#620 id=620 data-nosnippet>620</a>  with_value_mut(<span class="string">"frontmatter_raw"</span>, |v| {
+<a href=#621 id=621 data-nosnippet>621</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>Stored::FrontmatterRaw(<span class="kw-2">ref mut </span>queue)) = v {
+<a href=#622 id=622 data-nosnippet>622</a>      queue.remove(at);
+<a href=#623 id=623 data-nosnippet>623</a>    }
+<a href=#624 id=624 data-nosnippet>624</a>  });
+<a href=#625 id=625 data-nosnippet>625</a>  <span class="prelude-val">Ok</span>(calls)
+<a href=#626 id=626 data-nosnippet>626</a>}
+<a href=#627 id=627 data-nosnippet>627</a>
+<a href=#628 id=628 data-nosnippet>628</a><span class="doccomment">/// The calls of an `\address` block printed under the names, only when every line is placed (OD #1073; the review's
+<a href=#629 id=629 data-nosnippet>629</a>/// fail-safe, all or nothing): with a queued author; a block with no mark under names showing none every author's
+<a href=#630 id=630 data-nosnippet>630</a>/// affiliation (`\lx@add@affiliation[annotate=all]`, 2405.13379, 2401.07506); a block led by a label whose every line
+<a href=#631 id=631 data-nosnippet>631</a>/// is led by a label a queued name shows or continues such a line, `\lx@add@affiliations`'s (1707.04373); no line of
+<a href=#632 id=632 data-nosnippet>632</a>/// e-mail addresses in either. Else `None`: trailing
+<a href=#633 id=633 data-nosnippet>633</a>/// marks (2407.15458, 2401.06806, 2211.09383), an unmarked block under marked names (2509.13723), a label no name shows
+<a href=#634 id=634 data-nosnippet>634</a>/// (2203.05882), no queued author (1909.01754), an address no rule places (2102.09114, 2407.20176, 1802.09371).
+<a href=#635 id=635 data-nosnippet>635</a></span><span class="kw">fn </span>address_block_calls(block: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt;&gt; {
+<a href=#636 id=636 data-nosnippet>636</a>  <span class="kw">if </span>queued_position_names()<span class="question-mark">?</span>.is_empty() {
+<a href=#637 id=637 data-nosnippet>637</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#638 id=638 data-nosnippet>638</a>  }
+<a href=#639 id=639 data-nosnippet>639</a>  <span class="comment">// (a name's mark is a label: a footnote symbol, `\sthanks`'s ∗, labels no line)
+<a href=#640 id=640 data-nosnippet>640</a>  </span><span class="kw">let </span>names_marked = queued_author_marks()<span class="question-mark">?
+<a href=#641 id=641 data-nosnippet>641</a>    </span>.iter()
+<a href=#642 id=642 data-nosnippet>642</a>    .flatten()
+<a href=#643 id=643 data-nosnippet>643</a>    .any(|mark| mark.chars().any(char::is_alphanumeric));
+<a href=#644 id=644 data-nosnippet>644</a>  <span class="kw">let </span>block_marked = block.unlist_ref().iter().any(is_author_mark);
+<a href=#645 id=645 data-nosnippet>645</a>  <span class="kw">let </span>labelled = <span class="kw">if </span>!names_marked &amp;&amp; !block_marked {
+<a href=#646 id=646 data-nosnippet>646</a>    <span class="bool-val">false
+<a href=#647 id=647 data-nosnippet>647</a>  </span>} <span class="kw">else if </span>names_marked &amp;&amp; leads_with_label(block, <span class="string">"address block"</span>)<span class="question-mark">? </span>{
+<a href=#648 id=648 data-nosnippet>648</a>    <span class="bool-val">true
+<a href=#649 id=649 data-nosnippet>649</a>  </span>} <span class="kw">else </span>{
+<a href=#650 id=650 data-nosnippet>650</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#651 id=651 data-nosnippet>651</a>  };
+<a href=#652 id=652 data-nosnippet>652</a>  <span class="kw">let </span>(<span class="kw">_</span>, body) = unwrapped(strip_linebreak_options(block.clone()).unlist());
+<a href=#653 id=653 data-nosnippet>653</a>  <span class="kw">let </span>body = wrapped_lines_as_lines(<span class="kw-2">&amp;</span>Tokens::new(body.clone())).map_or(body, Tokens::unlist);
+<a href=#654 id=654 data-nosnippet>654</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_run = <span class="bool-val">false</span>;
+<a href=#655 id=655 data-nosnippet>655</a>  <span class="kw">for </span>(<span class="kw">_</span>, line) <span class="kw">in </span>date_lines(<span class="kw-2">&amp;</span>body) {
+<a href=#656 id=656 data-nosnippet>656</a>    <span class="kw">match </span>line_kind(<span class="kw-2">&amp;</span>line, <span class="kw-2">&amp;</span>[])<span class="question-mark">? </span>{
+<a href=#657 id=657 data-nosnippet>657</a>      <span class="comment">// (an e-mail line keeps the note whole: placed by `listed_address_owners`, 1802.09371's `aline.roumy@` under the
+<a href=#658 id=658 data-nosnippet>658</a>      // names "Aline", "Roumy" landed on a nameless creator; row R)
+<a href=#659 id=659 data-nosnippet>659</a>      </span>Line::Addresses(..) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+<a href=#660 id=660 data-nosnippet>660</a>      <span class="comment">// (a number the line opens with, typed and no mark, continues a labelled line: a street number, 1707.04373's
+<a href=#661 id=661 data-nosnippet>661</a>      // "453 F. Paul Anderson Tower")
+<a href=#662 id=662 data-nosnippet>662</a>      </span>Line::Kept(<span class="kw">_</span>)
+<a href=#663 id=663 data-nosnippet>663</a>        <span class="kw">if </span>in_run
+<a href=#664 id=664 data-nosnippet>664</a>          &amp;&amp; !line.iter().any(is_author_mark)
+<a href=#665 id=665 data-nosnippet>665</a>          &amp;&amp; leading_line_label(<span class="kw-2">&amp;</span>Tokens::new(line.clone())).is_some() =&gt; {},
+<a href=#666 id=666 data-nosnippet>666</a>      Line::Kept(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+<a href=#667 id=667 data-nosnippet>667</a>      Line::Labelled(..) <span class="kw">if </span>labelled =&gt; in_run = <span class="bool-val">true</span>,
+<a href=#668 id=668 data-nosnippet>668</a>      Line::Labelled(..) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+<a href=#669 id=669 data-nosnippet>669</a>      Line::Blank =&gt; {},
+<a href=#670 id=670 data-nosnippet>670</a>      Line::Text(<span class="kw">_</span>) | Line::Date <span class="kw">if </span>!labelled || in_run =&gt; {},
+<a href=#671 id=671 data-nosnippet>671</a>      Line::Text(<span class="kw">_</span>) | Line::Date =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+<a href=#672 id=672 data-nosnippet>672</a>    }
+<a href=#673 id=673 data-nosnippet>673</a>  }
+<a href=#674 id=674 data-nosnippet>674</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls = <span class="kw">if </span>labelled {
+<a href=#675 id=675 data-nosnippet>675</a>    <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@affiliations"</span>)]
+<a href=#676 id=676 data-nosnippet>676</a>  } <span class="kw">else </span>{
+<a href=#677 id=677 data-nosnippet>677</a>    mouth::tokenize_internal(<span class="string">"\\lx@add@affiliation[annotate=all]"</span>).unlist()
+<a href=#678 id=678 data-nosnippet>678</a>  };
+<a href=#679 id=679 data-nosnippet>679</a>  calls.push(<span class="macro">T_BEGIN!</span>());
+<a href=#680 id=680 data-nosnippet>680</a>  calls.extend(block.unlist_ref().iter().copied());
+<a href=#681 id=681 data-nosnippet>681</a>  calls.push(<span class="macro">T_END!</span>());
+<a href=#682 id=682 data-nosnippet>682</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(calls))
 <a href=#683 id=683 data-nosnippet>683</a>}
 <a href=#684 id=684 data-nosnippet>684</a>
-<a href=#685 id=685 data-nosnippet>685</a><span class="doccomment">/// A note the PDF prints with no mark, in the abstract, whose text is e-mail addresses alone (an e-mail label before
-<a href=#686 id=686 data-nosnippet>686</a>/// them aside, a braced group of local parts written out): the authors' e-mail contacts, each the author it spells
-<a href=#687 id=687 data-nosnippet>687</a>/// (`spelled_owners`; a `\date` line of addresses also takes the list's order, `listed_address_owners`), OD #1071
-<a href=#688 id=688 data-nosnippet>688</a>/// (2506.06941's `\footnotetext{\{p\_shojaee, imirzadeh, …\}@apple.com}` after `\maketitle`, an unmarked footnote line
-<a href=#689 id=689 data-nosnippet>689</a>/// under the abstract). Only where every address spells its author: else the note stays as it is, with an Info. Run as
-<a href=#690 id=690 data-nosnippet>690</a>/// the note closes (`ltx:note`'s `after_close`), after `relocate_footnote`, so a text a mark pairs with is no longer here.
-<a href=#691 id=691 data-nosnippet>691</a></span><span class="kw">pub fn </span>address_note_contacts(document: <span class="kw-2">&amp;mut </span>Document, node: <span class="kw-2">&amp;mut </span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#692 id=692 data-nosnippet>692</a>  <span class="comment">// (not as a frontmatter flush digests it or places it: a frontmatter entry is the flush's)
-<a href=#693 id=693 data-nosnippet>693</a>  // (an abstract the insertion places is the body's: its notes are read; any other entry is the flush's)
-<a href=#694 id=694 data-nosnippet>694</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"lx_frontmatter_flushing"</span>)
-<a href=#695 id=695 data-nosnippet>695</a>    || (lookup_bool(FRONTMATTER_INSERTING)
-<a href=#696 id=696 data-nosnippet>696</a>      &amp;&amp; document
-<a href=#697 id=697 data-nosnippet>697</a>        .findnodes(<span class="string">"ancestor::ltx:abstract"</span>, <span class="prelude-val">Some</span>(node))
-<a href=#698 id=698 data-nosnippet>698</a>        .is_empty())
-<a href=#699 id=699 data-nosnippet>699</a>  {
-<a href=#700 id=700 data-nosnippet>700</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#701 id=701 data-nosnippet>701</a>  }
-<a href=#702 id=702 data-nosnippet>702</a>  <span class="kw">let </span>role = node.get_attribute(<span class="string">"role"</span>).unwrap_or_default();
-<a href=#703 id=703 data-nosnippet>703</a>  <span class="kw">if </span>!<span class="macro">matches!</span>(role.as_str(), <span class="string">"footnotetext" </span>| <span class="string">"footnote" </span>| <span class="string">"thanks"</span>)
-<a href=#704 id=704 data-nosnippet>704</a>    || node
-<a href=#705 id=705 data-nosnippet>705</a>      .get_attribute(<span class="string">"mark"</span>)
-<a href=#706 id=706 data-nosnippet>706</a>      .is_some_and(|mark| !mark.trim().is_empty())
-<a href=#707 id=707 data-nosnippet>707</a>    || node.get_parent().is_none()
-<a href=#708 id=708 data-nosnippet>708</a>    || document
-<a href=#709 id=709 data-nosnippet>709</a>      .findnodes(<span class="string">"ancestor::ltx:abstract"</span>, <span class="prelude-val">Some</span>(node))
-<a href=#710 id=710 data-nosnippet>710</a>      .is_empty()
-<a href=#711 id=711 data-nosnippet>711</a>  {
-<a href=#712 id=712 data-nosnippet>712</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#713 id=713 data-nosnippet>713</a>  }
-<a href=#714 id=714 data-nosnippet>714</a>  <span class="comment">// (its text, not the body footnote's number tags: "footnote" glued to the first address, review probe f2)
-<a href=#715 id=715 data-nosnippet>715</a>  </span><span class="kw">let </span>text: String = node
-<a href=#716 id=716 data-nosnippet>716</a>    .get_child_nodes()
-<a href=#717 id=717 data-nosnippet>717</a>    .iter()
-<a href=#718 id=718 data-nosnippet>718</a>    .filter(|child| child.get_name() != <span class="string">"tags"</span>)
-<a href=#719 id=719 data-nosnippet>719</a>    .map(Node::get_content)
-<a href=#720 id=720 data-nosnippet>720</a>    .collect();
-<a href=#721 id=721 data-nosnippet>721</a>  <span class="kw">let </span>addresses = resolver::addresses_in(<span class="kw-2">&amp;</span>text);
-<a href=#722 id=722 data-nosnippet>722</a>  <span class="kw">if </span>addresses.is_empty() || !resolver::only_addresses(<span class="kw-2">&amp;</span>text) {
-<a href=#723 id=723 data-nosnippet>723</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#724 id=724 data-nosnippet>724</a>  }
-<a href=#725 id=725 data-nosnippet>725</a>  <span class="kw">let </span>creators: Vec&lt;Node&gt; =
-<a href=#726 id=726 data-nosnippet>726</a>    document.findnodes(<span class="string">"//ltx:creator[@role='author'][ltx:personname]"</span>, <span class="prelude-val">None</span>);
-<a href=#727 id=727 data-nosnippet>727</a>  <span class="kw">let </span>keys: Vec&lt;NameKeys&gt; = creators
-<a href=#728 id=728 data-nosnippet>728</a>    .iter()
-<a href=#729 id=729 data-nosnippet>729</a>    .map(|creator| {
-<a href=#730 id=730 data-nosnippet>730</a>      <span class="kw">let </span>name = document
-<a href=#731 id=731 data-nosnippet>731</a>        .findnodes(<span class="string">"ltx:personname"</span>, <span class="prelude-val">Some</span>(creator))
-<a href=#732 id=732 data-nosnippet>732</a>        .first()
-<a href=#733 id=733 data-nosnippet>733</a>        .map(Node::get_content)
-<a href=#734 id=734 data-nosnippet>734</a>        .unwrap_or_default();
-<a href=#735 id=735 data-nosnippet>735</a>      NameKeys::of_printed(<span class="kw-2">&amp;</span>name)
-<a href=#736 id=736 data-nosnippet>736</a>    })
-<a href=#737 id=737 data-nosnippet>737</a>    .collect();
-<a href=#738 id=738 data-nosnippet>738</a>  <span class="comment">// (each the author it spells: a note's place among the abstract's notes is no author's order, so no positional
-<a href=#739 id=739 data-nosnippet>739</a>  // guess, as a `\date` line under the names may make — review probe f2)
-<a href=#740 id=740 data-nosnippet>740</a>  </span><span class="kw">let </span>owners: Vec&lt;<span class="prelude-ty">Option</span>&lt;usize&gt;&gt; = addresses
-<a href=#741 id=741 data-nosnippet>741</a>    .iter()
-<a href=#742 id=742 data-nosnippet>742</a>    .map(|address| <span class="kw">match </span>spelled_owners(<span class="kw-2">&amp;</span>keys, address).as_slice() {
-<a href=#743 id=743 data-nosnippet>743</a>      [at] =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>at),
-<a href=#744 id=744 data-nosnippet>744</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#745 id=745 data-nosnippet>745</a>    })
-<a href=#746 id=746 data-nosnippet>746</a>    .collect();
-<a href=#747 id=747 data-nosnippet>747</a>  <span class="kw">if </span>keys.is_empty() || owners.iter().any(Option::is_none) {
-<a href=#748 id=748 data-nosnippet>748</a>    <span class="macro">Info!</span>(
-<a href=#749 id=749 data-nosnippet>749</a>      <span class="string">"frontmatter"</span>,
-<a href=#750 id=750 data-nosnippet>750</a>      <span class="string">"note"</span>,
-<a href=#751 id=751 data-nosnippet>751</a>      <span class="macro">s!</span>(
-<a href=#752 id=752 data-nosnippet>752</a>        <span class="string">"An unmarked note of e-mail addresses stays a note (not every address spells an author): {text}"
-<a href=#753 id=753 data-nosnippet>753</a>      </span>)
-<a href=#754 id=754 data-nosnippet>754</a>    );
-<a href=#755 id=755 data-nosnippet>755</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#756 id=756 data-nosnippet>756</a>  }
-<a href=#757 id=757 data-nosnippet>757</a>  <span class="kw">let </span>name = get_frontmatter_name(<span class="prelude-val">None</span>, <span class="string">"ltx:contact"</span>, <span class="string">"email"</span>)<span class="question-mark">?</span>;
-<a href=#758 id=758 data-nosnippet>758</a>  <span class="kw">let </span>saved = document.get_node().clone();
-<a href=#759 id=759 data-nosnippet>759</a>  <span class="kw">for </span>(address, owner) <span class="kw">in </span>addresses.iter().zip(owners) {
-<a href=#760 id=760 data-nosnippet>760</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(creator) = owner.and_then(|at| creators.get(at)) <span class="kw">else </span>{
-<a href=#761 id=761 data-nosnippet>761</a>      <span class="kw">continue</span>;
-<a href=#762 id=762 data-nosnippet>762</a>    };
-<a href=#763 id=763 data-nosnippet>763</a>    document.set_node(creator);
-<a href=#764 id=764 data-nosnippet>764</a>    <span class="kw">let </span><span class="kw-2">mut </span>attributes = HashMap::default();
-<a href=#765 id=765 data-nosnippet>765</a>    attributes.insert(<span class="string">"role"</span>.to_string(), <span class="string">"email"</span>.to_string());
-<a href=#766 id=766 data-nosnippet>766</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = name.as_ref() {
-<a href=#767 id=767 data-nosnippet>767</a>      attributes.insert(<span class="string">"name"</span>.to_string(), name.clone());
-<a href=#768 id=768 data-nosnippet>768</a>    }
-<a href=#769 id=769 data-nosnippet>769</a>    <span class="kw">let </span><span class="kw-2">mut </span>contact = document.open_element(<span class="string">"ltx:contact"</span>, <span class="prelude-val">Some</span>(attributes), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#770 id=770 data-nosnippet>770</a>    contact.append_text(address).ok();
-<a href=#771 id=771 data-nosnippet>771</a>    document.close_element(<span class="string">"ltx:contact"</span>)<span class="question-mark">?</span>;
-<a href=#772 id=772 data-nosnippet>772</a>    <span class="comment">// (after what the creator holds: its own lines first, as the PDF prints the note under the abstract)
-<a href=#773 id=773 data-nosnippet>773</a>    </span>contact.unlink_node();
-<a href=#774 id=774 data-nosnippet>774</a>    <span class="kw">let </span><span class="kw-2">mut </span>creator = creator.clone();
-<a href=#775 id=775 data-nosnippet>775</a>    creator.add_child(<span class="kw-2">&amp;mut </span>contact).ok();
-<a href=#776 id=776 data-nosnippet>776</a>  }
-<a href=#777 id=777 data-nosnippet>777</a>  document.set_node(<span class="kw-2">&amp;</span>saved);
-<a href=#778 id=778 data-nosnippet>778</a>  document.remove_node(node.clone());
-<a href=#779 id=779 data-nosnippet>779</a>  <span class="prelude-val">Ok</span>(())
-<a href=#780 id=780 data-nosnippet>780</a>}
+<a href=#685 id=685 data-nosnippet>685</a><span class="doccomment">/// The e-mail contacts of a class's e-mail line printed under the names (spconf's and Interspeech.cls's `\email`, OD
+<a href=#686 id=686 data-nosnippet>686</a>/// #1073; 2405.13379): each address its owner's by [`listed_address_owners`], when every address has one among the
+<a href=#687 id=687 data-nosnippet>687</a>/// authors queued so far; else `None`, the line kept whole by the caller.
+<a href=#688 id=688 data-nosnippet>688</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>listed_email_calls(line: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt;&gt; {
+<a href=#689 id=689 data-nosnippet>689</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(addresses) = email_addresses(line) <span class="kw">else </span>{
+<a href=#690 id=690 data-nosnippet>690</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#691 id=691 data-nosnippet>691</a>  };
+<a href=#692 id=692 data-nosnippet>692</a>  <span class="kw">let </span><span class="kw-2">mut </span>keys = Vec::new();
+<a href=#693 id=693 data-nosnippet>693</a>  <span class="kw">for </span>name <span class="kw">in </span>queued_position_names()<span class="question-mark">?</span>.iter() {
+<a href=#694 id=694 data-nosnippet>694</a>    keys.push(printed_name_keys(name, <span class="prelude-val">None</span>)<span class="question-mark">?</span>);
+<a href=#695 id=695 data-nosnippet>695</a>  }
+<a href=#696 id=696 data-nosnippet>696</a>  <span class="kw">if </span>keys.is_empty() || listed_address_owners(<span class="kw-2">&amp;</span>addresses, <span class="kw-2">&amp;</span>keys).contains(<span class="kw-2">&amp;</span><span class="prelude-val">None</span>) {
+<a href=#697 id=697 data-nosnippet>697</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#698 id=698 data-nosnippet>698</a>  }
+<a href=#699 id=699 data-nosnippet>699</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(address_calls(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>addresses, <span class="kw-2">&amp;</span>keys)<span class="question-mark">?</span>))
+<a href=#700 id=700 data-nosnippet>700</a>}
+<a href=#701 id=701 data-nosnippet>701</a>
+<a href=#702 id=702 data-nosnippet>702</a><span class="doccomment">/// The e-mail contacts of a line of addresses no label leads, each its owner's by [`listed_address_owners`]: the author
+<a href=#703 id=703 data-nosnippet>703</a>/// it spells, else the author at its place in a list of one address per author, else the author block's. The line's
+<a href=#704 id=704 data-nosnippet>704</a>/// e-mail label names each contact.
+<a href=#705 id=705 data-nosnippet>705</a></span><span class="kw">fn </span>address_calls(
+<a href=#706 id=706 data-nosnippet>706</a>  label: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;,
+<a href=#707 id=707 data-nosnippet>707</a>  addresses: <span class="kw-2">&amp;</span>[String],
+<a href=#708 id=708 data-nosnippet>708</a>  keys: <span class="kw-2">&amp;</span>[NameKeys],
+<a href=#709 id=709 data-nosnippet>709</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#710 id=710 data-nosnippet>710</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls = Vec::new();
+<a href=#711 id=711 data-nosnippet>711</a>  <span class="kw">for </span>(address, owner) <span class="kw">in </span>addresses.iter().zip(listed_address_owners(addresses, keys)) {
+<a href=#712 id=712 data-nosnippet>712</a>    <span class="kw">let </span>owner = owner.map_or_else(|| <span class="macro">s!</span>(<span class="string">"addresses:block"</span>), |at| <span class="macro">s!</span>(<span class="string">"author:{}"</span>, at + <span class="number">1</span>));
+<a href=#713 id=713 data-nosnippet>713</a>    <span class="kw">let </span><span class="kw-2">mut </span>keyvals =
+<a href=#714 id=714 data-nosnippet>714</a>      mouth::tokenize_internal(TeXString::assembled(<span class="macro">s!</span>(<span class="string">"role=email,label={{{owner}}}"</span>))).unlist();
+<a href=#715 id=715 data-nosnippet>715</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = label {
+<a href=#716 id=716 data-nosnippet>716</a>      keyvals.extend(mouth::tokenize_internal(<span class="string">",name="</span>).unlist());
+<a href=#717 id=717 data-nosnippet>717</a>      keyvals.push(<span class="macro">T_BEGIN!</span>());
+<a href=#718 id=718 data-nosnippet>718</a>      keyvals.extend(label.unlist_ref().iter().copied());
+<a href=#719 id=719 data-nosnippet>719</a>      keyvals.push(<span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>));
+<a href=#720 id=720 data-nosnippet>720</a>      keyvals.push(<span class="macro">T_END!</span>());
+<a href=#721 id=721 data-nosnippet>721</a>    }
+<a href=#722 id=722 data-nosnippet>722</a>    calls.extend(
+<a href=#723 id=723 data-nosnippet>723</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
+<a href=#724 id=724 data-nosnippet>724</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
+<a href=#725 id=725 data-nosnippet>725</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
+<a href=#726 id=726 data-nosnippet>726</a>        <span class="prelude-val">Some</span>(Tokens::new(keyvals)),
+<a href=#727 id=727 data-nosnippet>727</a>        <span class="prelude-val">Some</span>(Tokens::new(
+<a href=#728 id=728 data-nosnippet>728</a>          address
+<a href=#729 id=729 data-nosnippet>729</a>            .chars()
+<a href=#730 id=730 data-nosnippet>730</a>            .map(|c| <span class="kw">if </span>c == <span class="string">'_' </span>{
+<a href=#731 id=731 data-nosnippet>731</a>              <span class="macro">T_CS!</span>(<span class="string">"\\_"</span>)
+<a href=#732 id=732 data-nosnippet>732</a>            } <span class="kw">else </span>{
+<a href=#733 id=733 data-nosnippet>733</a>              <span class="macro">T_OTHER!</span>(c.to_string())
+<a href=#734 id=734 data-nosnippet>734</a>            })
+<a href=#735 id=735 data-nosnippet>735</a>            .collect(),
+<a href=#736 id=736 data-nosnippet>736</a>        ))
+<a href=#737 id=737 data-nosnippet>737</a>      ])
+<a href=#738 id=738 data-nosnippet>738</a>      .unlist(),
+<a href=#739 id=739 data-nosnippet>739</a>    );
+<a href=#740 id=740 data-nosnippet>740</a>  }
+<a href=#741 id=741 data-nosnippet>741</a>  <span class="prelude-val">Ok</span>(calls)
+<a href=#742 id=742 data-nosnippet>742</a>}
+<a href=#743 id=743 data-nosnippet>743</a>
+<a href=#744 id=744 data-nosnippet>744</a><span class="doccomment">/// A note the PDF prints with no mark, in the abstract, whose text is e-mail addresses alone (an e-mail label before
+<a href=#745 id=745 data-nosnippet>745</a>/// them aside, a braced group of local parts written out): the authors' e-mail contacts, each the author it spells
+<a href=#746 id=746 data-nosnippet>746</a>/// (`spelled_owners`; a `\date` line of addresses also takes the list's order, `listed_address_owners`), OD #1071
+<a href=#747 id=747 data-nosnippet>747</a>/// (2506.06941's `\footnotetext{\{p\_shojaee, imirzadeh, …\}@apple.com}` after `\maketitle`, an unmarked footnote line
+<a href=#748 id=748 data-nosnippet>748</a>/// under the abstract). Only where every address spells its author: else the note stays as it is, with an Info. Run as
+<a href=#749 id=749 data-nosnippet>749</a>/// the note closes (`ltx:note`'s `after_close`), after `relocate_footnote`, so a text a mark pairs with is no longer here.
+<a href=#750 id=750 data-nosnippet>750</a></span><span class="kw">pub fn </span>address_note_contacts(document: <span class="kw-2">&amp;mut </span>Document, node: <span class="kw-2">&amp;mut </span>Node) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#751 id=751 data-nosnippet>751</a>  <span class="comment">// (not as a frontmatter flush digests it or places it: a frontmatter entry is the flush's)
+<a href=#752 id=752 data-nosnippet>752</a>  // (an abstract the insertion places is the body's: its notes are read; any other entry is the flush's)
+<a href=#753 id=753 data-nosnippet>753</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"lx_frontmatter_flushing"</span>)
+<a href=#754 id=754 data-nosnippet>754</a>    || (lookup_bool(FRONTMATTER_INSERTING)
+<a href=#755 id=755 data-nosnippet>755</a>      &amp;&amp; document
+<a href=#756 id=756 data-nosnippet>756</a>        .findnodes(<span class="string">"ancestor::ltx:abstract"</span>, <span class="prelude-val">Some</span>(node))
+<a href=#757 id=757 data-nosnippet>757</a>        .is_empty())
+<a href=#758 id=758 data-nosnippet>758</a>  {
+<a href=#759 id=759 data-nosnippet>759</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#760 id=760 data-nosnippet>760</a>  }
+<a href=#761 id=761 data-nosnippet>761</a>  <span class="kw">let </span>role = node.get_attribute(<span class="string">"role"</span>).unwrap_or_default();
+<a href=#762 id=762 data-nosnippet>762</a>  <span class="kw">if </span>!<span class="macro">matches!</span>(role.as_str(), <span class="string">"footnotetext" </span>| <span class="string">"footnote" </span>| <span class="string">"thanks"</span>)
+<a href=#763 id=763 data-nosnippet>763</a>    || node
+<a href=#764 id=764 data-nosnippet>764</a>      .get_attribute(<span class="string">"mark"</span>)
+<a href=#765 id=765 data-nosnippet>765</a>      .is_some_and(|mark| !mark.trim().is_empty())
+<a href=#766 id=766 data-nosnippet>766</a>    || node.get_parent().is_none()
+<a href=#767 id=767 data-nosnippet>767</a>    || document
+<a href=#768 id=768 data-nosnippet>768</a>      .findnodes(<span class="string">"ancestor::ltx:abstract"</span>, <span class="prelude-val">Some</span>(node))
+<a href=#769 id=769 data-nosnippet>769</a>      .is_empty()
+<a href=#770 id=770 data-nosnippet>770</a>  {
+<a href=#771 id=771 data-nosnippet>771</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#772 id=772 data-nosnippet>772</a>  }
+<a href=#773 id=773 data-nosnippet>773</a>  <span class="comment">// (its text, not the body footnote's number tags: "footnote" glued to the first address, review probe f2)
+<a href=#774 id=774 data-nosnippet>774</a>  </span><span class="kw">let </span>text: String = node
+<a href=#775 id=775 data-nosnippet>775</a>    .get_child_nodes()
+<a href=#776 id=776 data-nosnippet>776</a>    .iter()
+<a href=#777 id=777 data-nosnippet>777</a>    .filter(|child| child.get_name() != <span class="string">"tags"</span>)
+<a href=#778 id=778 data-nosnippet>778</a>    .map(Node::get_content)
+<a href=#779 id=779 data-nosnippet>779</a>    .collect();
+<a href=#780 id=780 data-nosnippet>780</a>  <span class="kw">let </span>addresses = resolver::addresses_in(<span class="kw-2">&amp;</span>text);
+<a href=#781 id=781 data-nosnippet>781</a>  <span class="kw">if </span>addresses.is_empty() || !resolver::only_addresses(<span class="kw-2">&amp;</span>text) {
+<a href=#782 id=782 data-nosnippet>782</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#783 id=783 data-nosnippet>783</a>  }
+<a href=#784 id=784 data-nosnippet>784</a>  <span class="kw">let </span>creators: Vec&lt;Node&gt; =
+<a href=#785 id=785 data-nosnippet>785</a>    document.findnodes(<span class="string">"//ltx:creator[@role='author'][ltx:personname]"</span>, <span class="prelude-val">None</span>);
+<a href=#786 id=786 data-nosnippet>786</a>  <span class="kw">let </span>keys: Vec&lt;NameKeys&gt; = creators
+<a href=#787 id=787 data-nosnippet>787</a>    .iter()
+<a href=#788 id=788 data-nosnippet>788</a>    .map(|creator| {
+<a href=#789 id=789 data-nosnippet>789</a>      <span class="kw">let </span>name = document
+<a href=#790 id=790 data-nosnippet>790</a>        .findnodes(<span class="string">"ltx:personname"</span>, <span class="prelude-val">Some</span>(creator))
+<a href=#791 id=791 data-nosnippet>791</a>        .first()
+<a href=#792 id=792 data-nosnippet>792</a>        .map(Node::get_content)
+<a href=#793 id=793 data-nosnippet>793</a>        .unwrap_or_default();
+<a href=#794 id=794 data-nosnippet>794</a>      NameKeys::of_printed(<span class="kw-2">&amp;</span>name)
+<a href=#795 id=795 data-nosnippet>795</a>    })
+<a href=#796 id=796 data-nosnippet>796</a>    .collect();
+<a href=#797 id=797 data-nosnippet>797</a>  <span class="comment">// (each the author it spells: a note's place among the abstract's notes is no author's order, so no positional
+<a href=#798 id=798 data-nosnippet>798</a>  // guess, as a `\date` line under the names may make — review probe f2)
+<a href=#799 id=799 data-nosnippet>799</a>  </span><span class="kw">let </span>owners: Vec&lt;<span class="prelude-ty">Option</span>&lt;usize&gt;&gt; = addresses
+<a href=#800 id=800 data-nosnippet>800</a>    .iter()
+<a href=#801 id=801 data-nosnippet>801</a>    .map(|address| <span class="kw">match </span>spelled_owners(<span class="kw-2">&amp;</span>keys, address).as_slice() {
+<a href=#802 id=802 data-nosnippet>802</a>      [at] =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>at),
+<a href=#803 id=803 data-nosnippet>803</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#804 id=804 data-nosnippet>804</a>    })
+<a href=#805 id=805 data-nosnippet>805</a>    .collect();
+<a href=#806 id=806 data-nosnippet>806</a>  <span class="kw">if </span>keys.is_empty() || owners.iter().any(Option::is_none) {
+<a href=#807 id=807 data-nosnippet>807</a>    <span class="macro">Info!</span>(
+<a href=#808 id=808 data-nosnippet>808</a>      <span class="string">"frontmatter"</span>,
+<a href=#809 id=809 data-nosnippet>809</a>      <span class="string">"note"</span>,
+<a href=#810 id=810 data-nosnippet>810</a>      <span class="macro">s!</span>(
+<a href=#811 id=811 data-nosnippet>811</a>        <span class="string">"An unmarked note of e-mail addresses stays a note (not every address spells an author): {text}"
+<a href=#812 id=812 data-nosnippet>812</a>      </span>)
+<a href=#813 id=813 data-nosnippet>813</a>    );
+<a href=#814 id=814 data-nosnippet>814</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#815 id=815 data-nosnippet>815</a>  }
+<a href=#816 id=816 data-nosnippet>816</a>  <span class="kw">let </span>name = get_frontmatter_name(<span class="prelude-val">None</span>, <span class="string">"ltx:contact"</span>, <span class="string">"email"</span>)<span class="question-mark">?</span>;
+<a href=#817 id=817 data-nosnippet>817</a>  <span class="kw">let </span>saved = document.get_node().clone();
+<a href=#818 id=818 data-nosnippet>818</a>  <span class="kw">for </span>(address, owner) <span class="kw">in </span>addresses.iter().zip(owners) {
+<a href=#819 id=819 data-nosnippet>819</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(creator) = owner.and_then(|at| creators.get(at)) <span class="kw">else </span>{
+<a href=#820 id=820 data-nosnippet>820</a>      <span class="kw">continue</span>;
+<a href=#821 id=821 data-nosnippet>821</a>    };
+<a href=#822 id=822 data-nosnippet>822</a>    document.set_node(creator);
+<a href=#823 id=823 data-nosnippet>823</a>    <span class="kw">let </span><span class="kw-2">mut </span>attributes = HashMap::default();
+<a href=#824 id=824 data-nosnippet>824</a>    attributes.insert(<span class="string">"role"</span>.to_string(), <span class="string">"email"</span>.to_string());
+<a href=#825 id=825 data-nosnippet>825</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = name.as_ref() {
+<a href=#826 id=826 data-nosnippet>826</a>      attributes.insert(<span class="string">"name"</span>.to_string(), name.clone());
+<a href=#827 id=827 data-nosnippet>827</a>    }
+<a href=#828 id=828 data-nosnippet>828</a>    <span class="kw">let </span><span class="kw-2">mut </span>contact = document.open_element(<span class="string">"ltx:contact"</span>, <span class="prelude-val">Some</span>(attributes), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#829 id=829 data-nosnippet>829</a>    contact.append_text(address).ok();
+<a href=#830 id=830 data-nosnippet>830</a>    document.close_element(<span class="string">"ltx:contact"</span>)<span class="question-mark">?</span>;
+<a href=#831 id=831 data-nosnippet>831</a>    <span class="comment">// (after what the creator holds: its own lines first, as the PDF prints the note under the abstract)
+<a href=#832 id=832 data-nosnippet>832</a>    </span>contact.unlink_node();
+<a href=#833 id=833 data-nosnippet>833</a>    <span class="kw">let </span><span class="kw-2">mut </span>creator = creator.clone();
+<a href=#834 id=834 data-nosnippet>834</a>    creator.add_child(<span class="kw-2">&amp;mut </span>contact).ok();
+<a href=#835 id=835 data-nosnippet>835</a>  }
+<a href=#836 id=836 data-nosnippet>836</a>  document.set_node(<span class="kw-2">&amp;</span>saved);
+<a href=#837 id=837 data-nosnippet>837</a>  document.remove_node(node.clone());
+<a href=#838 id=838 data-nosnippet>838</a>  <span class="prelude-val">Ok</span>(())
+<a href=#839 id=839 data-nosnippet>839</a>}
 </code></pre></div></section></main></body></html>
