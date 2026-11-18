@@ -6,12 +6,13 @@
 # NOT part of required CI yet (Phase 4 promotes this into CI.yml once the
 # job is stably green).
 #
-# TWO jobs, three triggers:
+# THREE jobs, three triggers:
 #
-#   `test`  — the full build + suite: MANUAL (`workflow_dispatch`), and called
+#   `build` + `test` — the full suite: MANUAL (`workflow_dispatch`), and called
 #             by release.yml (`workflow_call`) before anything is published.
 #             It installs TeX Live and runs every test, so it stays deliberate.
-#             The suite runs in two parts (DG 2026-11-13). `required` (every
+#             `build` compiles once into a nextest archive; the `test` shards
+#             run from it. The suite runs in two parts (DG 2026-11-13). `required` (every
 #             test but the `perfect_kernel_*` guards, 3 shards) must pass. The
 #             `perfect_kernel_*` guards (8 shards) run in full, but a
 #             dispatch run is green with them failing (`continue-on-error`).
@@ -41,7 +42,7 @@
 # failing to fetch the dead `teatimeguest/setup-texlive-action`, whose account
 # went 404 — fixed by moving to the TeX-Live org, not an access problem.)
 #
-# Mirrors the macos job's flow (deps → dumps → build → test) with the
+# Mirrors CI.yml's macOS flow (deps → dumps → build once → test shards) with the
 # Windows specifics learned during local bring-up (2026-07-12):
 #   * vcpkg static libxml2/libxslt, triplet x64-windows-static-md
 #   * TeX Live via setup-texlive-action (collections mirror the apt list)
@@ -85,36 +86,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  # ONE build for all 11 test shards (#916's macOS design). Each shard used to
+  # pay the whole fixed cost for itself: vcpkg 4-7 min (its cache is evicted
+  # from the over-full repo cache, so libiconv/zlib/libxml2/libxslt build from
+  # source), make formats 5-7 min on a dump-cache miss (all 11 regenerate at
+  # once), and the build 7-13 min, against 4-8 min of tests. Run 44383838311
+  # (2026-11-18): 328 runner-minutes, ~60 of them testing. Now the build job
+  # pays that once and uploads a nextest archive + the dumps; the shards only
+  # restore TeX Live (cached) and run their part from the archive.
+  build:
     # Full suite stays deliberate: a dispatch, or a release's call. Under a
     # call `github.event_name` is the caller's (`push` of a tag), so the
     # call is told apart by its input, which other triggers do not set.
+    # The test shards below run exactly when this job succeeds.
     if: github.event_name == 'workflow_dispatch' || inputs.require_guards
-    # Sharded under nextest like the Linux/macOS legs (CIP0, 2026-11-13): one
-    # `cargo test` job projected ≥ 2 h of test alone against its 120-min
-    # timeout. Each shard pays the fixed cost (vcpkg, TeX Live, dumps,
-    # build) — that fixed cost has no measurement yet: the first dispatch
-    # run is the measurement.
-    name: build + test (x86_64-pc-windows-msvc, ${{ matrix.part }} ${{ matrix.shard }}/${{ matrix.of }})
+    name: build (x86_64-pc-windows-msvc)
     runs-on: windows-latest
+    # Covers a COLD TeX Live install (see CI.yml macos-build): this workflow
+    # runs only on a dispatch or a release, so its TeX Live cache is often
+    # older than the 7 days GitHub keeps an unread entry.
     timeout-minutes: 150
-    # The guards' shards are optional to pass unless the caller requires them.
-    continue-on-error: ${{ matrix.part == 'guards' && !inputs.require_guards }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { part: required, shard: 1, of: 3 }
-          - { part: required, shard: 2, of: 3 }
-          - { part: required, shard: 3, of: 3 }
-          - { part: guards, shard: 1, of: 8 }
-          - { part: guards, shard: 2, of: 8 }
-          - { part: guards, shard: 3, of: 8 }
-          - { part: guards, shard: 4, of: 8 }
-          - { part: guards, shard: 5, of: 8 }
-          - { part: guards, shard: 6, of: 8 }
-          - { part: guards, shard: 7, of: 8 }
-          - { part: guards, shard: 8, of: 8 }
     env:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
@@ -126,10 +117,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
+      # Only `main` saves (CI.yml's lint job explains the cache budget).
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: windows-ci-manual
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cache vcpkg installed tree
         uses: actions/cache@v4
@@ -185,14 +178,104 @@ jobs:
 
       - name: install cargo-nextest
         uses: taiki-e/install-action@nextest
-      - name: build test binaries
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --no-run
+      # One compile for every shard: the archive holds every test binary, the
+      # workspace binaries the tests spawn and the build-script outputs.
+      # libxml2/libxslt are linked statically (the triplet), and the
+      # kpathsea DLL comes from TeX Live's bin dir, which every shard has.
+      - name: archive test binaries
+        run: cargo nextest archive --cargo-profile ci --workspace --archive-file nextest-windows.tar.zst
+      - uses: actions/upload-artifact@v5
+        with:
+          name: windows-test-archive
+          path: |
+            nextest-windows.tar.zst
+            resources/dumps
+          retention-days: 1
+          # The archive is already zstd; a re-run of this job replaces it.
+          compression-level: 0
+          overwrite: true
+          if-no-files-found: error
+
+  test:
+    # Sharded under nextest like the Linux/macOS legs (CIP0, 2026-11-13): one
+    # `cargo test` job projected >= 2 h of test alone against its 120-min
+    # timeout.
+    name: test (x86_64-pc-windows-msvc, ${{ matrix.part }} ${{ matrix.shard }}/${{ matrix.of }})
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 60
+    # The guards' shards are optional to pass unless the caller requires them.
+    continue-on-error: ${{ matrix.part == 'guards' && !inputs.require_guards }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { part: required, shard: 1, of: 3 }
+          - { part: required, shard: 2, of: 3 }
+          - { part: required, shard: 3, of: 3 }
+          - { part: guards, shard: 1, of: 8 }
+          - { part: guards, shard: 2, of: 8 }
+          - { part: guards, shard: 3, of: 8 }
+          - { part: guards, shard: 4, of: 8 }
+          - { part: guards, shard: 5, of: 8 }
+          - { part: guards, shard: 6, of: 8 }
+          - { part: guards, shard: 7, of: 8 }
+          - { part: guards, shard: 8, of: 8 }
+    env:
+      RUST_BACKTRACE: "1"
+    steps:
+      - uses: actions/checkout@v6
+      # The same package set as the build job, so this restores the cache that
+      # job used: the tree its dumps were stamped against.
+      # Collections mirror the ubuntu job's apt list (texlive, latex-extra,
+      # science, bibtex-extra, publishers, lang de/fr/el/ru) — see plan
+      # Phase 4.1. dvipng is NOT in any of these collections (local finding).
+      - name: install TeX Live
+        # `teatimeguest/setup-texlive-action` was the original home; that whole
+        # account is now 404, which made GitHub abort the job at "Getting action
+        # download info" with `Repository access blocked`. The action moved to
+        # the TeX-Live org — same inputs (`packages`/`cache`).
+        uses: TeX-Live/setup-texlive-action@v4
+        with:
+          packages: >-
+            scheme-medium
+            collection-latexextra
+            collection-mathscience
+            collection-bibtexextra
+            collection-publishers
+            collection-fontsextra
+            collection-langgerman
+            collection-langfrench
+            collection-langgreek
+            collection-langcyrillic
+            dvipng
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: windows-test-archive
+          path: .
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@nextest
       - name: run tests
-        # `hash:` assigns each test by its own name, so a filter and a
-        # partition compose: every guard lands in exactly one guards shard.
+        # The archive keeps the build's Cargo profile; it is extracted into the
+        # workspace, so `target/` sits at the build job's absolute path, the one
+        # each test's compile-time `env!("CARGO_BIN_EXE_...")` names. `--profile
+        # ci` selects the NEXTEST profile. `hash:` assigns each test by its own
+        # name, so a filter and a partition compose: every guard lands in
+        # exactly one guards shard.
         env:
           LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace -E '${{ matrix.part == 'guards' && 'test(/^perfect_kernel_/)' || 'not test(/^perfect_kernel_/)' }}' --partition hash:${{ matrix.shard }}/${{ matrix.of }}
+          # Only runs prebuilt binaries: the runner's stable cargo suffices, and
+          # it keeps rustup from fetching rust-toolchain.toml's nightly (plus
+          # rustfmt/clippy/rust-src) in every shard. No test spawns cargo/rustc.
+          RUSTUP_TOOLCHAIN: stable
+        run: >-
+          cargo nextest run --archive-file nextest-windows.tar.zst
+          --extract-to "${{ github.workspace }}" --extract-overwrite
+          --workspace-remap "${{ github.workspace }}"
+          --profile ci
+          -E '${{ matrix.part == 'guards' && 'test(/^perfect_kernel_/)' || 'not test(/^perfect_kernel_/)' }}'
+          --partition hash:${{ matrix.shard }}/${{ matrix.of }}
 
       - name: skipped tests (requirements not met)
         # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
@@ -226,10 +309,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
+      # Only `main` saves (CI.yml's lint job explains the cache budget).
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: windows-check
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: cache vcpkg installed tree
         uses: actions/cache@v4
         with:
