@@ -1143,7 +1143,8 @@ fn unpack_archive(
 /// Faithful port of Perl Pack.pm detect_source / arXiv::FileGuess.
 /// Identical to the find_main_tex in latexml_oxide.rs.
 fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
-  use once_cell::sync::Lazy;
+  use std::sync::LazyLock;
+
   use regex::Regex;
 
   // Phase I.1: Check 00README.json (2025 arXiv format)
@@ -1238,31 +1239,33 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   }
 
   // Regexes for content-based detection (Perl Pack.pm L116-166)
-  static RE_AUTOIGNORE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-ignore").unwrap());
-  static RE_TEXINFO: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\input texinfo").unwrap());
-  static RE_AUTOINCLUDE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-include").unwrap());
-  static RE_FORMAT_HINT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\r?%&(\S+)").unwrap());
-  static RE_DOCCLASS: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
-  static RE_MAYBE_TEX: Lazy<Regex> = Lazy::new(|| {
+  static RE_AUTOIGNORE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"%auto-ignore").unwrap());
+  static RE_TEXINFO: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\input texinfo").unwrap());
+  static RE_AUTOINCLUDE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"%auto-include").unwrap());
+  static RE_FORMAT_HINT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\r?%&(\S+)").unwrap());
+  static RE_DOCCLASS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
+  static RE_MAYBE_TEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)").unwrap()
   });
-  static RE_INPUT_INCLUDE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
-  static RE_END_BYE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
-  static RE_END_BYE2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
-  static RE_BEGIN_DOCUMENT: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\begin\s*\{document\}").unwrap());
-  static RE_MAC_TEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
-  static RE_METAFONT: Lazy<Regex> = Lazy::new(|| Regex::new(r"beginchar\(").unwrap());
-  static RE_BIBTEX: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
-  static RE_UUENCODE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
-  static RE_WITHDRAWN: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
-  static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
+  static RE_INPUT_INCLUDE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
+  static RE_END_BYE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_END_BYE2: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
+  static RE_BEGIN_DOCUMENT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\begin\s*\{document\}").unwrap());
+  static RE_MAC_TEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
+  static RE_METAFONT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"beginchar\(").unwrap());
+  static RE_BIBTEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
+  static RE_UUENCODE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
+  static RE_WITHDRAWN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
+  static RE_AMSTEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^amstex$").unwrap());
   // Perl Pack.pm L128: `s/\%[^\r]*//`. Strip a single `%`-comment, stopping at
   // the next `\r` (or string end). \r-aware so bare-\r-line-ended files (Mac
   // classic) — which Perl reads as one big <$fh> "line" — still expose any
@@ -1270,7 +1273,7 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   // `raw_line.find('%').map(|p| &raw_line[..p])` truncates everything past
   // the first `%`, hiding post-comment `\documentclass` on \r-only files.
   // Witness: cond-mat0002096, 0708.2784 in 100k canvas.
-  static RE_STRIP_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\r]*").unwrap());
+  static RE_STRIP_COMMENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"%[^\r]*").unwrap());
 
   // Score each file: likelihood 0-3 (Perl: Main_TeX_likelihood)
   let mut likelihood: rustc_hash::FxHashMap<PathBuf, f32> = rustc_hash::FxHashMap::default();
@@ -1523,11 +1526,11 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   // unrelated discussion text — without any actual `\includegraphics
   // {file.pdf}` invocation. Strict regex eliminates the false positive
   // and aligns with arXiv::FileGuess.
-  static RE_INCLUDEGRAPHICS_PDF: Lazy<Regex> = Lazy::new(|| {
+  static RE_INCLUDEGRAPHICS_PDF: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?im)^[^%\n\r]*\\includegraphics[^%\n\r]*\.(?:pdf|png|gif|jpg)\s?\}").unwrap()
   });
-  static RE_PDFOUTPUT: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[^%\n\r]*\\pdfoutput(?:\s+)?=(?:\s+)?1").unwrap());
+  static RE_PDFOUTPUT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[^%\n\r]*\\pdfoutput(?:\s+)?=(?:\s+)?1").unwrap());
   if candidates.len() > 1 {
     let pdf_candidates: Vec<PathBuf> = candidates
       .iter()

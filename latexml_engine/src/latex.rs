@@ -1,6 +1,4 @@
-use std::path::Path;
-
-use once_cell::sync::Lazy;
+use std::{path::Path, sync::LazyLock};
 
 ///**********************************************************************
 /// Organized following
@@ -15,10 +13,12 @@ use once_cell::sync::Lazy;
 use crate::prelude::*;
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
-static DUMP_PATH: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_PATH").ok());
-static DUMP_DIR: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
-static INI_MODE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
-static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
+static DUMP_PATH: LazyLock<Option<String>> =
+  LazyLock::new(|| std::env::var("LATEXML_DUMP_PATH").ok());
+static DUMP_DIR: LazyLock<Option<String>> =
+  LazyLock::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
+static INI_MODE: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
+static NODUMP: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
 
 const DEV_DUMPS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/dumps");
 

@@ -11,6 +11,10 @@
     `LATEXML_DISABLE_SHELL_ESCAPE` refuses commands. Guard
     `30_script_bindings::a_rhai_diagnostic_names_its_binding_file`.
 
+  - **Dependency cleanup before v0.8.0.** `once_cell`'s `Lazy` is now `std::sync::LazyLock` throughout, and the direct
+    `once_cell` dependency is gone from every crate; `deny.toml`'s advisory notes are corrected. No output change.
+    For a Rust binding crate: `latexml_engine::prelude` now re-exports `LazyLock` in place of `Lazy`.
+
   - **An author's printed address list no longer crashes the frontmatter reader.** A list whose
     local parts share a suffix (`\{abcde,\,xy\}.nju@gmail.com`) under marked names made the
     address-mark reader step by the length of a local part the text does not spell, into the

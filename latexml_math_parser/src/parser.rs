@@ -5,6 +5,7 @@ use std::{
   hash::{Hash, Hasher},
   io::Cursor,
   rc::Rc,
+  sync::LazyLock,
 };
 
 use latexml_core::{
@@ -21,7 +22,6 @@ use libxml::tree::{Node, NodeType};
 use marpa::{
   lexer::byte_scanner::*, parser::*, thin::Grammar as ThinGrammar, tree_builder::TreeBuilder,
 };
-use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -101,7 +101,7 @@ fn next_formula_ordinal() -> usize {
 /// Fallback table for formulas the Marpa grammar cannot yet parse.
 /// Maps tex attribute → text attribute for known test formulas.
 /// TODO: Remove entries as grammar coverage improves.
-static TEX_TEXT_FALLBACK: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+static TEX_TEXT_FALLBACK: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
   static_map!(
     // amstheorem + latextheorem formulas
     r"ds^{2}=h(z)|dz|^{2}" => "d * s ^ 2 = h * z * (absolute-value@(d * z)) ^ 2",
@@ -141,7 +141,7 @@ static TEX_TEXT_FALLBACK: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
   )
 });
 
-static PREFIX_ALIAS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+static PREFIX_ALIAS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
   static_map!(
     "SUPERSCRIPTOP" => "^",
     "SUBSCRIPTOP" => "_",
@@ -158,32 +158,33 @@ static PREFIX_ALIAS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     "divide" => "/")
 });
 // Put infix, along with `binding power'
-static IS_INFIX: Lazy<HashMap<String, usize>> = Lazy::new(|| {
+static IS_INFIX: LazyLock<HashMap<String, usize>> = LazyLock::new(|| {
   map!(
   "METARELOP" => 1,
   "RELOP"         => 2,    "ARROW"       => 2,
   "ADDOP"         => 10,   "MULOP"       => 100, "FRACOP" => 100,
   "SUPERSCRIPTOP" => 1000, "SUBSCRIPTOP" => 1000)
 });
-static PRE_DIGITS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^pre\d+$").unwrap());
+static PRE_DIGITS_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^pre\d+$").unwrap());
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
 // The math parser's `parse_string` is called per-formula, often hundreds
 // of times per document; the previous per-call `std::env::var(...)`
 // triggered SIGSEGVs in glibc's `__GI_getenv` under concurrent test-
 // thread loads.
-static PARSE_LEXEMES_DBG: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_LEXEMES").is_ok());
-static PARSE_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_PARSE_AUDIT").is_ok());
+static PARSE_LEXEMES_DBG: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LATEXML_PARSE_LEXEMES").is_ok());
+static PARSE_AUDIT: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_PARSE_AUDIT").is_ok());
 // When set, the parser dumps a histogram of semantic-pragma rejection
 // reasons for any formula where 0 trees survive pruning. Used to find
 // over-aggressive pragmas that admit a formula standalone but reject
 // it in document context — see docs/archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md.
-static PARSE_PRUNE_REASONS: Lazy<bool> =
-  Lazy::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
-static PARSE_AMBIGUITY_AUDIT: Lazy<bool> =
-  Lazy::new(|| std::env::var("LATEXML_MATH_AMBIGUITY_AUDIT").is_ok());
-static PARSE_HYBRID_AUDIT_PARITY: Lazy<bool> =
-  Lazy::new(|| std::env::var("LATEXML_MARPA_HYBRID_AUDIT_PARITY").is_ok());
+static PARSE_PRUNE_REASONS: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LATEXML_PARSE_PRUNE_REASONS").is_ok());
+static PARSE_AMBIGUITY_AUDIT: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LATEXML_MATH_AMBIGUITY_AUDIT").is_ok());
+static PARSE_HYBRID_AUDIT_PARITY: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LATEXML_MARPA_HYBRID_AUDIT_PARITY").is_ok());
 // Route `parse_marpa` through one of three paths. See
 // docs/math/MATH_PARSER_AND_ASF.md and marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
 //
@@ -206,11 +207,13 @@ static PARSE_HYBRID_AUDIT_PARITY: Lazy<bool> =
 //     engine-divergence debugging.
 //   * `LATEXML_MARPA_ASF_ONLY=1` → pure ASF (no hybrid dispatch). Useful for measuring ASF-only
 //     cost or debugging ASF behaviour in isolation.
-static PARSE_VIA_LEGACY: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_MARPA_LEGACY").is_ok());
-static PARSE_VIA_ASF_ONLY: Lazy<bool> =
-  Lazy::new(|| !*PARSE_VIA_LEGACY && std::env::var("LATEXML_MARPA_ASF_ONLY").is_ok());
+static PARSE_VIA_LEGACY: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LATEXML_MARPA_LEGACY").is_ok());
+static PARSE_VIA_ASF_ONLY: LazyLock<bool> =
+  LazyLock::new(|| !*PARSE_VIA_LEGACY && std::env::var("LATEXML_MARPA_ASF_ONLY").is_ok());
 // Default = hybrid unless LEGACY or ASF_ONLY is requested.
-static PARSE_VIA_HYBRID: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE_VIA_ASF_ONLY);
+static PARSE_VIA_HYBRID: LazyLock<bool> =
+  LazyLock::new(|| !*PARSE_VIA_LEGACY && !*PARSE_VIA_ASF_ONLY);
 // Large-bocage fallback cap (marpa commit 5f6a19e + perf branch).
 // When the post-recognizer bocage exceeds this many total and-nodes,
 // `parse_hybrid_with_and_node_limit` routes us back through Tree
@@ -239,8 +242,8 @@ static PARSE_VIA_HYBRID: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE
 // through ASF (`ASF_SECOND_CHANCE_*`). Override via
 // `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`; set `=0` (or `none`) to
 // disable the cap and force pure ASF on every ambiguous formula.
-static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> =
-  Lazy::new(
+static HYBRID_AND_NODE_LIMIT: LazyLock<Option<usize>> =
+  LazyLock::new(
     || match std::env::var("LATEXML_MARPA_HYBRID_AND_NODE_LIMIT") {
       Ok(v) => {
         let trimmed = v.trim();
@@ -344,8 +347,8 @@ fn parse_deadline(default: std::time::Duration) -> std::time::Duration {
 // comfortably above genuine math while well below the explosion. Override via
 // `LATEXML_MAX_GRAMMAR_LEXEMES`; set `0`/`none` to disable (full Perl parity,
 // at the risk of the abort). See SYNC_STATUS "FATAL_134 marpa-OOM".
-static MAX_GRAMMAR_LEXEMES: Lazy<Option<usize>> =
-  Lazy::new(|| match std::env::var("LATEXML_MAX_GRAMMAR_LEXEMES") {
+static MAX_GRAMMAR_LEXEMES: LazyLock<Option<usize>> =
+  LazyLock::new(|| match std::env::var("LATEXML_MAX_GRAMMAR_LEXEMES") {
     Ok(v) => {
       let trimmed = v.trim();
       if trimmed == "0" || trimmed.eq_ignore_ascii_case("none") {
@@ -360,7 +363,7 @@ static MAX_GRAMMAR_LEXEMES: Lazy<Option<usize>> =
 // the legacy path — both hybrid and ASF-only flavours go through the
 // ASF traverser at least some of the time. The downstream branch
 // inside `parse_marpa` distinguishes hybrid vs ASF-only further.
-static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY);
+static PARSE_VIA_ASF: LazyLock<bool> = LazyLock::new(|| !*PARSE_VIA_LEGACY);
 
 /// Token-source adapter that counts how many tokens were actually pulled.
 ///
@@ -1191,8 +1194,8 @@ impl MathParser {
     // and redirect those references to point at the script content (first child) instead
     // of the XMApp wrapper. This prevents dangling idrefs when the XMApp is consumed
     // by parsing.
-    static SCRIPT_RE: Lazy<Regex> =
-      Lazy::new(|| Regex::new(r"^(?:PRE|POST|FLOAT)(?:SUB|SUPER)SCRIPT$").unwrap());
+    static SCRIPT_RE: LazyLock<Regex> =
+      LazyLock::new(|| Regex::new(r"^(?:PRE|POST|FLOAT)(?:SUB|SUPER)SCRIPT$").unwrap());
     let apps = document.findnodes(
       "descendant-or-self::*[@xml:id and contains(@role,'SCRIPT')]",
       None,

@@ -1,18 +1,20 @@
+use std::sync::LazyLock;
+
 use latexml_core::{common::error::*, fatal, s};
-use once_cell::sync::Lazy;
 use proc_macro::TokenStream;
 use quote::quote;
 use regex::Regex;
 use syn::DeriveInput;
 
-static TAG_MODEL_LINE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
+static TAG_MODEL_LINE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());
 // Mirrors Perl Model.pm L149: `m/^([^:=]+):=\(?([^)]*?)\)?$/` — the
 // `\(?…\)?` pair strips the surrounding parens from
 // `classname:=(elt1,elt2,...)` so the elements split cleanly.
-static CLASS_MODEL_LINE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^([^:=]+):=\(?([^)]*?)\)?$").unwrap());
-static NAMESPACE_MODEL_LINE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
+static CLASS_MODEL_LINE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^([^:=]+):=\(?([^)]*?)\)?$").unwrap());
+static NAMESPACE_MODEL_LINE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^([^=]+)=(.*?)$").unwrap());
 
 pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
   let name = crate::attr_name_value_str(&input.attrs[0], "name");

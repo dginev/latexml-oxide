@@ -1,6 +1,5 @@
-use std::fmt;
+use std::{fmt, sync::LazyLock};
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::{
@@ -10,7 +9,7 @@ use crate::{
   tokens::{TeXString, Tokens},
 };
 
-static TRAILING_ZEROS: Lazy<Regex> = Lazy::new(|| Regex::new(r"0+$").unwrap());
+static TRAILING_ZEROS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"0+$").unwrap());
 
 //======================================================================
 // Strictly speaking, Float isn't part of TeX, but it's handy.

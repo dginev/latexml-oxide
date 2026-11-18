@@ -4,9 +4,9 @@ use std::{
   collections::VecDeque,
   fmt::{self, Display},
   rc::Rc,
+  sync::LazyLock,
 };
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -50,7 +50,7 @@ use crate::{
 static CODE_TEX_EXT: &str = ".code.tex";
 
 /// regex for *.tex and *.bib
-static TEX_OR_BIB_EXT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.(tex|bib)$").unwrap());
+static TEX_OR_BIB_EXT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\.(tex|bib)$").unwrap());
 /// Used in conversion to scaled points.
 ///
 /// These are the float `sp`-per-unit ratios, kept for *display / scaling*
@@ -58,7 +58,7 @@ static TEX_OR_BIB_EXT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.(tex|bib)$")
 /// **construction** use [`convert_unit_ratio`] + `numeric_ops::fixpoint_unit`
 /// instead — exact integer arithmetic, bit-faithful to TeX (issue #127). Each
 /// value here equals `65536·num/den` of the matching `convert_unit_ratio` entry.
-pub static UNITS: Lazy<HashMap<String, f64>> = Lazy::new(|| {
+pub static UNITS: LazyLock<HashMap<String, f64>> = LazyLock::new(|| {
   map!(
     "pt" => 65536.0,
     "pc" => 12.0 * 65536.0,
@@ -645,21 +645,21 @@ impl Default for State {
 }
 
 #[thread_local]
-static STD_STATE: Lazy<RefCell<State>> = Lazy::new(|| {
+static STD_STATE: LazyLock<RefCell<State>> = LazyLock::new(|| {
   RefCell::new(State::new(StateOptions {
     catcodes: Some(Catcodes::Standard),
     ..StateOptions::default()
   }))
 });
 #[thread_local]
-static STY_STATE: Lazy<RefCell<State>> = Lazy::new(|| {
+static STY_STATE: LazyLock<RefCell<State>> = LazyLock::new(|| {
   RefCell::new(State::new(StateOptions {
     catcodes: Some(Catcodes::Style),
     ..StateOptions::default()
   }))
 });
 #[thread_local]
-static STATE: Lazy<RefCell<State>> = Lazy::new(|| {
+static STATE: LazyLock<RefCell<State>> = LazyLock::new(|| {
   RefCell::new(State::new(StateOptions {
     catcodes: Some(Catcodes::Standard),
     ..StateOptions::default()
@@ -668,7 +668,7 @@ static STATE: Lazy<RefCell<State>> = Lazy::new(|| {
 
 /// Eagerly initialize this thread's `STD_STATE`/`STY_STATE` catcode-regime
 /// templates. They are accessed mid-conversion on catcode switches
-/// (`\makeatletter`, verbatim, …); each one's `Lazy` initializer runs
+/// (`\makeatletter`, verbatim, …); each one's `LazyLock` initializer runs
 /// `State::new`, which interns via the arena. Forcing them at conversion
 /// entry — AFTER [`arena::force_init`](crate::common::arena::force_init) —
 /// keeps them from initializing re-entrantly mid-expansion, the macOS
@@ -676,8 +676,8 @@ static STATE: Lazy<RefCell<State>> = Lazy::new(|| {
 /// already forced by `set_state` in `Core::new`.) No behavioral change on
 /// Linux.
 pub(crate) fn force_init() {
-  Lazy::force(&STD_STATE);
-  Lazy::force(&STY_STATE);
+  LazyLock::force(&STD_STATE);
+  LazyLock::force(&STY_STATE);
 }
 
 macro_rules! state {

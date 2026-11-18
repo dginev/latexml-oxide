@@ -12,12 +12,11 @@
 //! The resulting dump can be loaded at runtime to skip re-processing
 //! the LaTeX kernel on every test run.
 
-use std::path::Path;
-
-use once_cell::sync::Lazy;
+use std::{path::Path, sync::LazyLock};
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
-static INIT_DEBUG: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INIT_DEBUG").is_some());
+static INIT_DEBUG: LazyLock<bool> =
+  LazyLock::new(|| std::env::var_os("LATEXML_INIT_DEBUG").is_some());
 
 use latexml_core::{
   binding::content::{InputDefinitionOptions, input_definitions},

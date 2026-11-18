@@ -1,4 +1,4 @@
-use std::{path::Path, rc::Rc};
+use std::{path::Path, rc::Rc, sync::LazyLock};
 
 // Top-level macro re-exports.
 use latexml_core::{CharToken, Core, Debug, Error, Explode, Fatal, T_CS, T_SPACE, fatal, map, s};
@@ -23,12 +23,12 @@ use latexml_core::{
   util::{pathname, pathname::PathnameFindOptions},
 };
 use latexml_math_parser::MathParser;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
-static LATEXML_DUMP: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP").ok());
+static LATEXML_DUMP: LazyLock<Option<String>> =
+  LazyLock::new(|| std::env::var("LATEXML_DUMP").ok());
 
 /// The latexml-oxide version exposed to bindings as the state value
 /// `LATEXML_VERSION` — the Rust analog of Perl's `$LaTeXML::VERSION`. This is
@@ -51,19 +51,21 @@ use latexml_package::prelude::{
 
 /// Perl `Core.pm` L272 `s/^\[([^\]]*)\]//` — the preload option bracket, which
 /// comes at the *front* of the spec (`[twocolumn,11pt]article.cls`).
-static LATEX_OPTION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\[([^\]]*)\]").unwrap());
+static LATEX_OPTION_REGEX: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^\[([^\]]*)\]").unwrap());
 
 // Regex for parsing DefMathRewrite calls from .latexml files
 // Matches: DefMathRewrite( ... );
-static DEF_MATH_REWRITE_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"(?s)DefMathRewrite\(([^;]+)\);").unwrap());
+static DEF_MATH_REWRITE_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"(?s)DefMathRewrite\(([^;]+)\);").unwrap());
 // Key-value patterns within DefMathRewrite
-static SCOPE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"scope\s*=>\s*'([^']+)'").unwrap());
-static MATCH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"match\s*=>\s*'([^']*)'").unwrap());
-static ROLE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"role\s*=>\s*'([^']+)'").unwrap());
-static NAME_ATTR_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"(?:^|,)\s*name\s*=>\s*'([^']*)'").unwrap());
-static MEANING_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"meaning\s*=>\s*'([^']*)'").unwrap());
+static SCOPE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"scope\s*=>\s*'([^']+)'").unwrap());
+static MATCH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"match\s*=>\s*'([^']*)'").unwrap());
+static ROLE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"role\s*=>\s*'([^']+)'").unwrap());
+static NAME_ATTR_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"(?:^|,)\s*name\s*=>\s*'([^']*)'").unwrap());
+static MEANING_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"meaning\s*=>\s*'([^']*)'").unwrap());
 
 #[derive(Default)]
 pub struct DigestionOptions {

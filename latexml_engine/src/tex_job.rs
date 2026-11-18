@@ -2,8 +2,9 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
+use std::sync::LazyLock;
+
 use chrono::prelude::*;
-use once_cell::sync::Lazy;
 
 use crate::prelude::*;
 
@@ -12,8 +13,8 @@ use crate::prelude::*;
 const LATEX_IX_DEFINITIONS_APPLIED: &str = "lx@latex@ix@definitions@applied";
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
-static SOURCE_DATE_EPOCH: Lazy<Option<String>> =
-  Lazy::new(|| std::env::var("SOURCE_DATE_EPOCH").ok());
+static SOURCE_DATE_EPOCH: LazyLock<Option<String>> =
+  LazyLock::new(|| std::env::var("SOURCE_DATE_EPOCH").ok());
 
 /// `SOURCE_DATE_EPOCH` (Unix seconds), when set and numeric: the reproducible-build clock Perl reads in
 /// TeX_Job.pool.ltxml:42.

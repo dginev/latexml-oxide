@@ -6,7 +6,7 @@ use unicode_normalization::{UnicodeNormalization, char::compose};
 
 use crate::prelude::*;
 
-static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
+static SPACE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s").unwrap());
 
 /// Convert a char-code register argument (`\catcode`, `\lccode`, `\uccode`,
 /// `\sfcode`) to the `char` it keys. LaTeXML is Unicode-aware: a code like

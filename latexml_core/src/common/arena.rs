@@ -18,9 +18,9 @@ use std::{
   hash::BuildHasherDefault,
   ops::Deref,
   rc::Rc,
+  sync::LazyLock,
 };
 
-use once_cell::sync::Lazy;
 use rustc_hash::{FxHashMap, FxHasher};
 use string_interner::{StringInterner, Symbol, backend::BufferBackend};
 
@@ -30,7 +30,7 @@ pub use data::{SymHashMap, SymStr};
 type Interner = StringInterner<BufferBackend, BuildHasherDefault<FxHasher>>;
 
 #[thread_local]
-static ARENA: Lazy<RefCell<Interner>> = Lazy::new(|| {
+static ARENA: LazyLock<RefCell<Interner>> = LazyLock::new(|| {
   // 131,072 = 2^17 — sized to absorb the latex.dump (109,863 entries)
   // plus a typical conversion's content (~15k more), so the hot path
   // hits no reallocation. Profiled 2026-05-12: a representative
@@ -61,7 +61,7 @@ struct Overflow {
 }
 
 #[thread_local]
-static OVERFLOW: Lazy<RefCell<Overflow>> = Lazy::new(Default::default);
+static OVERFLOW: LazyLock<RefCell<Overflow>> = LazyLock::new(Default::default);
 
 /// The overflow page's symbol for `text`, if the page holds it.
 #[inline(never)]
@@ -391,10 +391,10 @@ pub fn reset() {
   *SUFFIXED_KEY.borrow_mut() = String::new();
 }
 
-/// Eagerly initialize this thread's `#[thread_local]` `ARENA` Lazy.
+/// Eagerly initialize this thread's `#[thread_local]` `ARENA` LazyLock.
 ///
 /// `ARENA` is the *leaf* of the engine's thread-local dependency graph:
-/// every other root's `Lazy` initializer interns symbols via [`pin`], so it
+/// every other root's `LazyLock` initializer interns symbols via [`pin`], so it
 /// reaches into `ARENA`. Calling this at conversion entry (see
 /// `Core::new`), before any other root is touched, guarantees those later
 /// initializers find a fully-constructed `ARENA` instead of triggering its
@@ -404,7 +404,7 @@ pub fn reset() {
 /// worker-thread memory corruption in issue #217. `ARENA`'s own initializer
 /// touches no other thread-local, so forcing it first is always safe.
 /// No behavioral change on Linux.
-pub(crate) fn force_init() { Lazy::force(&ARENA); }
+pub(crate) fn force_init() { LazyLock::force(&ARENA); }
 
 #[cfg(test)]
 mod tests {
