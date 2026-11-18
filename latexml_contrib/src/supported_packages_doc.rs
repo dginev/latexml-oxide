@@ -303,11 +303,13 @@ versioned name with no row of its own falls back to the generic row, as Perl's `
 **Anything not listed.** A `<name>.sty.rhai` / `<name>.cls.rhai` runtime binding beside the document (or under
 `--path`) is read first and overrides any row here; one on the TeX tree fills a name no row has
 ([`parity/RHAI_BINDINGS_GUIDE.md`](parity/RHAI_BINDINGS_GUIDE.md)). Otherwise a package with no binding is read raw
-from TeX Live only when raw styles are allowed (`INCLUDE_STYLES`: `--includestyles`, or `latexml.sty`'s `rawstyles`,
-`localrawstyles` for the document's own directory; `--preload=ar5iv.sty` turns on `rawstyles` and `rawclasses`); when
-they are not, it is reported missing, its dependencies on bound packages still loaded. A class with no binding is read
-raw under `INCLUDE_CLASSES` (`rawclasses`, `localrawclasses`, `--includestyles`), else it falls back to OmniBus. A
-compiled binding is never displaced by raw mode.
+from TeX Live when raw styles are allowed (`INCLUDE_STYLES`: the `latexml_oxide` default since v0.8.0, the library
+API's and cortex's too; `latexml.sty`'s `rawstyles`, `localrawstyles` for the document's own directory;
+`--preload=ar5iv.sty` turns on `rawstyles` and `rawclasses`); when they are not (`--noincludestyles` or
+`latexml.sty`'s `norawstyles`, Perl LaTeXML's default), it is reported missing, its dependencies on bound packages
+still loaded. A class with no binding is read raw under `INCLUDE_CLASSES` (the same default, `rawclasses`,
+`localrawclasses`; off under `norawclasses`), else it falls back to OmniBus. A compiled binding is never displaced by
+raw mode.
 ";
 
 /// Render the page.

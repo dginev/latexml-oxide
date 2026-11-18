@@ -31,3 +31,11 @@ at its line in that file. The guide: [`parity/RHAI_BINDINGS_GUIDE.md`](parity/RH
 A binding can run external programs (`Command`); each run is named by an `Info:script:Command` line. Set
 `LATEXML_DISABLE_SHELL_ESCAPE` (any value) to refuse them — required where the input is untrusted, since a `.rhai`
 shipped beside a source loads with it ([`release/SAFETY.md`](release/SAFETY.md)).
+
+**Packages and classes without a LaTeXML binding are read raw** from the TeX tree (and the document's directory), as
+pdflatex reads them; a binding always wins. The runaway limits are 480,000,000 conditionals (ten times ar5iv's, as the count accumulates over a long document) and 1,299,999
+absorbed boxes, a 5,000,000-token pushback, and a token budget of 20G raised with the source size (`--token-limit`).
+To get Perl LaTeXML's behaviour — bindings only, a missing package skipped with a warning, an unknown class served
+by OmniBus — pass `--noincludestyles` (or `--preload='[norawstyles,norawclasses]latexml.sty'`); latexml.sty's `iflimit`, `absorblimit` and
+`pushbacklimit` options set those limits, and `iflimit=0,absorblimit=0` lifts the two Perl leaves
+unset (OXIDIZED_DESIGN_DIVERGENCES #1080).

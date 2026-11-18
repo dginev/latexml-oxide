@@ -68,9 +68,12 @@ for tex in "$dir"/*.tex; do
   expect=$(grep -m1 -oP '^% expect:\s*\K[0-9]+' "$tex" || echo 0)
   preload=$(grep -m1 -oP '^% preload:\s*\K\S+' "$tex" || echo '[rawstyles,rawclasses]latexml.sty')
   # `% preload: none` converts with no preload, as a guard's `convert(tex, false)` does.
+  # Our CLI raw-loads by default (OXIDIZED_DESIGN_DIVERGENCES #1080): `none` passes it
+  # --noincludestyles, Perl's default and the in-process guard's.
   preload_args=(--preload="$preload")
-  [[ $preload == none ]] && preload_args=()
-  ( cd "$dir" && timeout 120 "$BIN" --nocomments --timeout=100 "${preload_args[@]}" \
+  rust_args=("${preload_args[@]}")
+  [[ $preload == none ]] && preload_args=() && rust_args=(--noincludestyles)
+  ( cd "$dir" && timeout 120 "$BIN" --nocomments --timeout=100 "${rust_args[@]}" \
       --dest="$OUT/$name.xml" "$name.tex" >"$OUT/$name.stderr" 2>&1 )
   rust=$(errs "$OUT/$name.stderr")
   # No XML is a failure, never a clean pass (fail toward flagging).

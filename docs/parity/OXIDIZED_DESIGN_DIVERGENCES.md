@@ -22615,3 +22615,40 @@ over its `\date`/`\correspondence`/`\code` calls; pdflatex reads them inside it,
 the paragraph end as a trailing newline. Witness 2610.22523. **Guard**:
 `06_cluster_frontmatter::frontmatter_ragslab_marks_link_affiliations` (repro `stand-in-copies/ragslab`, the real copy
 less its comment lines).
+
+#### 1080. The front ends raw-load unbound `.sty`/`.cls` files by default, under ar5iv.sty's runaway limits (Perl: bindings only, no `\if`/absorb limit)
+
+Perl's `latexml` leaves `INCLUDE_STYLES` and `INCLUDE_CLASSES` at 0 unless `--includestyles` is given (Core.pm
+L55-57): a package without a binding is skipped with a missing_file warning, a class without one is served by
+OmniBus. `$LaTeXML::IF_LIMIT` and `$LaTeXML::ABSORB_LIMIT` are unset unless latexml.sty's `iflimit`/`absorblimit`
+sets them (latexml.sty.ltxml:97-108). The arXiv fleet has always run with `--preload=ar5iv.sty`, which passes
+`rawstyles`, `rawclasses`, `tokenlimit=999999999`, `iflimit=48000000`, `absorblimit=1299999` and
+`pushbacklimit=5000000` (`ar5iv_sty.rs`).
+
+**Rust (DG 2026-11-18).** `latexml_oxide`, the library API (`api::library_config`), cortex's generic profile and the
+LSP pass `Config.include_styles = Some(true)`, `Config.absorb_limit` = ar5iv's 1,299,999 and `Config.if_limit` = ten
+times ar5iv's (480,000,000: the `\if` count accumulates over the whole document, and at ar5iv's 48,000,000 the TeX Live
+manual tkz-grapheur-doc-fr lost its last picture and section while the unlimited default converted it; DG 2026-11-18)
+(`common::RUNAWAY_IF_LIMIT`, `RUNAWAY_ABSORB_LIMIT`), applied when the session starts and before the preloads
+(`Converter::initialize_session`), so a latexml.sty option still wins. A binding still outranks a raw file
+(`content.rs` `require_package` / `input_definitions_impl` for packages, `content.rs` `load_class` for classes). The other two limits were already the front ends': the
+5,000,000 pushback cap (CLI and cortex worker threads; now the library's too) and the token budget, whose 20G floor
+(`gullet::DEFAULT_TOKEN_LIMIT`, raised per source byte by `scale_token_limit_to_source` on every file the Mouth opens)
+already lifts ar5iv's 999,999,999 at the first file opened after the preload. ar5iv's other options (`ids`,
+`bibconfig`, `nobreakuntex`, `magnify`, `zoomout`) stay the ar5iv profile's. `Config::default`, `CoreOptions` and
+`State` keep Perl's default, so the in-process harness and an embedder building its own `Config` are unchanged; a
+format build (`--init`) keeps it too, so the dumps stay Perl's. Measured on a stratified 697-paper draw from the
+30k-paper census without the ar5iv preload: error-free 84.5 % → 95.7 %, Fatal papers 2 → 0, errors −71 %, words
++1.0 %, no systematic slowdown; 40 TeX Live manuals error-free 22.5 % → 90 %.
+
+**Restoring Perl** (DG 2026-11-18: no new option in v0.8.0 but the negative of `--includestyles`):
+`--noincludestyles` (the last of the two wins, as `--plane1`/`--noplane1`) or the existing
+`--preload='[norawstyles,norawclasses]latexml.sty'` (latexml.sty.ltxml:77-80) gives bindings-only loading (the
+missing-file warning names `rawstyles`, true in every front end); latexml.sty's `iflimit`, `absorblimit` and `pushbacklimit` set those limits
+(`tokenlimit` is lifted to the 20G floor at the next file opened, as ar5iv's is), and `iflimit=0,absorblimit=0`
+lifts the two — a limit option of 0 now lifts its limit, as Perl's `int(…)` assignment does (the Rust read had
+ignored 0).
+**Guards**: `perfect_kernel_batchrawdefw::{cli_default_raw_loads_unbound_package_and_class,
+cli_noincludestyles_restores_perls_binding_only_loading, latexml_sty_iflimit_overrides_the_front_end_default}` (repro
+`loader/cli_raw_default`); the in-process control
+`rawclasses_binding_precedence_and_no_omnibus::bindingless_class_defaults_to_omnibus_without_rawclasses`.
