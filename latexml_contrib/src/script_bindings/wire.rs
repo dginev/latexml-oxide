@@ -630,7 +630,7 @@ pub(super) fn after_digest_trampoline(
     let lead = if declares_lead(&ast, &fp, 1) {
       Some(Dynamic::from(StomachHandle))
     } else {
-      warn_deprecated(old_digest_hook(hook));
+      warn_deprecated_in(&ast, old_digest_hook(hook));
       None
     };
     let args: Vec<Dynamic> = lead
@@ -871,7 +871,7 @@ pub(super) fn properties_trampoline(
           .chain(args.iter().map(ctor_arg_to_dynamic))
           .collect()
       } else {
-        warn_deprecated("properties |args|");
+        warn_deprecated_in(&ast, "properties |args|");
         args
           .iter()
           .map(|a| match a {
@@ -924,7 +924,7 @@ pub(super) fn dynamic_to_bool(v: &Dynamic) -> bool {
 /// The boxes a primitive's body returns, as Perl's `invoke` keeps them (Primitive.pm:78): a box, an array of boxes,
 /// or `()` for none. Any other value is Perl's "Execution yielded non boxes" Error (Stomach.pm:219-223); for one
 /// release it is dropped with a deprecation Warning, as bodies returned their last value unread before.
-fn primitive_boxes(result: Dynamic) -> Vec<Digested> {
+fn primitive_boxes(ast: &Rc<AST>, result: Dynamic) -> Vec<Digested> {
   let items = if result.is_array() {
     result.cast::<rhai::Array>()
   } else {
@@ -942,7 +942,7 @@ fn primitive_boxes(result: Dynamic) -> Vec<Digested> {
     }
   }
   if non_box {
-    warn_deprecated("DefPrimitive returning a non-box");
+    warn_deprecated_in(ast, "DefPrimitive returning a non-box");
   }
   boxes
 }
@@ -985,7 +985,7 @@ pub(super) fn wire_primitive_i(
       );
       let result: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
         .or_else(|e| contain(&format!("primitive {cs_name}"), e, Dynamic::UNIT))?;
-      Ok(primitive_boxes(result))
+      Ok(primitive_boxes(&ast, result))
     })
   });
   def_primitive(cs, paramlist, closure.map(PrimitiveBody::Closure), options)?;
@@ -1185,7 +1185,7 @@ fn perl_body_args(
       .chain(args.into_iter().map(arg_value))
       .collect()
   } else {
-    warn_deprecated(what);
+    warn_deprecated_in(ast, what);
     args.into_iter().map(arg_to_dynamic).collect()
   }
 }
@@ -1299,12 +1299,15 @@ pub(super) fn math_options_from_map(
           ));
         }
       },
+      // `afterDigest` is no simple-token option, so this DefMath is a Constructor (Package.pm:1603-1607,1711) and
+      // its hook takes Perl's `($stomach, $whatsit)` (Constructor.pm:114).
       "afterDigest" => {
         for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
-          o.after_digest.push(stomach_after_digest_trampoline(
+          o.after_digest.push(after_digest_trampoline(
             fp,
             engine.clone(),
             ast.clone(),
+            "afterDigest",
           ));
         }
       },
@@ -1472,7 +1475,7 @@ pub(super) fn reversion_trampoline(
       let lead = if declares_lead(&ast, &fp, args.len()) {
         Some(Dynamic::from(WhatsitProxy))
       } else {
-        warn_deprecated("reversion |args|");
+        warn_deprecated_in(&ast, "reversion |args|");
         None
       };
       let dyn_args: Vec<Dynamic> = lead

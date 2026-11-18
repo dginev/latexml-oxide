@@ -440,9 +440,10 @@
     `script_bindings::tests::let_takes_any_token`.
 
   - **Rhai hooks take Perl's arguments.** A `beforeDigest`/`beforeDigestEnd` hook receives the stomach, a
-    constructor's or environment's `afterDigest`/`afterDigestBegin`/`afterDigestBody` hook `|stomach, whatsit|` and a
-    `properties` closure `|stomach, x, …|`, each argument as `whatsit.getArg` gives it (Constructor.pm:99-117); a
-    primitive's or parameter type's `afterDigest` receives the stomach alone, as Perl's. The old forms
+    constructor's, environment's or `DefMath`'s `afterDigest`/`afterDigestBegin`/`afterDigestBody` hook
+    `|stomach, whatsit|` and a `properties` closure `|stomach, x, …|`, each argument as `whatsit.getArg` gives it
+    (Constructor.pm:99-117). A primitive's or parameter type's `afterDigest` now receives the stomach (Perl's argument);
+    a body that called whatsit methods on the dummy it used to get now raises `Error:script`. The old forms
     (`afterDigest: |whatsit|`, `properties: |x|`) keep working this release and Warn `deprecated` once per binding
     load. A failing `afterDigestBegin`/`afterDigestBody`/`beforeDigestEnd` hook names itself in its `Error:script`
     (was "afterDigest"/"beforeDigest"). `RefStepCounter`'s documented result is Perl's `tags` and `id`. Guards

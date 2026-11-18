@@ -1,7 +1,8 @@
 //! RHAIHOOK: a Rhai hook body takes Perl's arguments (DG 2026-11-18, Rhai mature in v0.8.0): `beforeDigest` and
 //! `beforeDigestEnd` `($stomach)`, a constructor's `afterDigest`/`afterDigestBegin`/`afterDigestBody`
 //! `($stomach, $whatsit)`, `properties` `($stomach, @args)` (Constructor.pm:99-117), a primitive's `afterDigest`
-//! `($stomach)` (Primitive.pm:79). The repro `rhai-bindings/afterdigest_stomach_first` (red: `setProperty ((), …)`).
+//! `($stomach)` (Primitive.pm:79), a DefMath's `afterDigest` `($stomach, $whatsit)` (a Constructor: Package.pm:1711).
+//! The repro `rhai-bindings/afterdigest_stomach_first` (red: `setProperty ((), …)`).
 #![cfg(feature = "runtime-bindings")]
 
 use latexml::util::test::{assert_element, convert_files_with};
@@ -26,10 +27,13 @@ DefEnvironment("{hE}{}", "<ltx:text class='#c'>#body</ltx:text>", #{
 DefPrimitive("\\hP", |stomach| { return; }, #{
   afterDigest: |stomach| AssignValue("hk:pad", type_of(stomach), "global")
 });
+DefMath("\\hM{}", "hM", #{
+  afterDigest: |stomach, whatsit| AssignValue("hk:mad", type_of(stomach) + "+" + type_of(whatsit), "global")
+});
 DefConstructor("\\hQ{}", "<ltx:text class='#c'>#1</ltx:text>");
 LookupDefinition("\\hQ").pushAfterDigest(|stomach, whatsit| whatsit.setProperty("c", "q-" + ToString(whatsit.getArg(1))));
 DefMacro("\\hshow", |gullet| ToString(LookupValue("hk:bd")) + " " + ToString(LookupValue("hk:bde")) + " "
-  + ToString(LookupValue("hk:ad")) + " " + ToString(LookupValue("hk:pad")));
+  + ToString(LookupValue("hk:ad")) + " " + ToString(LookupValue("hk:pad")) + " " + ToString(LookupValue("hk:mad")));
 "#;
 
 const LXH_PERL_TEX: &str = r"\documentclass{article}
@@ -37,13 +41,14 @@ const LXH_PERL_TEX: &str = r"\documentclass{article}
 \begin{document}
 A \hA{x} \begin{hE}{y}z\end{hE} \hP\hQ{w}
 
-\hshow
+\setbox0\hbox{$\hM{v}$}\hshow
 \end{document}
 ";
 
 /// The Perl form of every hook option Perl passes a stomach: no deprecation Warning, the whatsit and arguments in
 /// their Perl places. Red on the base: `Error:script:afterDigest Function not found: setProperty ((), …)` for each
-/// two-parameter hook, the `properties` argument in the stomach slot (`class="k--"`).
+/// two-parameter hook, the `properties` argument in the stomach slot (`class="k--"`); round 0 gave DefMath's
+/// `afterDigest` the stomach alone (`Stomach+()`).
 #[test]
 fn rhai_hooks_take_perls_arguments() {
   let (log, xml) = convert_files_with(LXH_PERL_TEX, &[("lxhp.sty.rhai", LXH_PERL)], None);
@@ -59,7 +64,7 @@ fn rhai_hooks_take_perls_arguments() {
     &xml,
     "para",
     &["xml:id=\"p2\""],
-    r#"<para xml:id="p2"><p>Stomach Stomach Stomach+Whatsit Stomach</p></para>"#,
+    r#"<para xml:id="p2"><p>Stomach Stomach Stomach+Whatsit Stomach Stomach+Whatsit</p></para>"#,
   );
 }
 
@@ -76,18 +81,22 @@ DefEnvironment("{eE}", "<ltx:text class='e'>#body</ltx:text>", #{
   afterDigestBody: |stomach, whatsit| { throw "body trouble"; },
   beforeDigestEnd: |stomach| { throw "end trouble"; }
 });
+DefMath("\\oM", "oM", #{ meaning: "om", afterDigest: |whatsit| whatsit.setProperty("role", "FUNCTION") });
 "#;
 
 const LXH_OLD_TEX: &str = r"\documentclass{article}
 \usepackage{lxho}
 \begin{document}
 A \oA{x}\oA{y} \begin{oE}{u}z\end{oE}\begin{oE}{v}t\end{oE} \begin{eE}s\end{eE}
+
+$\oM$
 \end{document}
 ";
 
 /// The old one-parameter forms keep working this release, each Warned `deprecated` once per binding load (four
 /// Warnings for eight calls), naming the Perl form; a failing hook's `Error:script` names that hook (both were
-/// labelled `afterDigest`/`beforeDigest` on the base).
+/// labelled `afterDigest`/`beforeDigest` on the base). DefMath's `|whatsit|` (a Constructor in Perl) gets the whatsit
+/// (round 0: `Error:script … setProperty (Stomach, …)` and `role="UNKNOWN"`).
 #[test]
 fn rhai_old_hook_forms_warn_deprecated_once() {
   let (log, xml) = convert_files_with(LXH_OLD_TEX, &[("lxho.sty.rhai", LXH_OLD)], None);
@@ -104,10 +113,44 @@ fn rhai_old_hook_forms_warn_deprecated_once() {
   }
   assert!(log.contains("Error:script:afterDigestBody"), "{log}");
   assert!(log.contains("Error:script:beforeDigestEnd"), "{log}");
+  assert!(
+    xml.contains(r#"<XMTok meaning="om" role="FUNCTION">oM</XMTok>"#),
+    "{xml}"
+  );
   assert_element(
     &xml,
     "para",
     &["xml:id=\"p1\""],
     r#"<para xml:id="p1"><p>A <text class="a-x-k-x">x</text><text class="a-y-k-y">y</text> <text class="b-u-body">z</text><text class="b-v-body">t</text> <text class="e">s</text></p></para>"#,
+  );
+}
+
+/// Two bindings each using two old forms: each binding Warns each alias once (round 0 keyed a digestion-time
+/// Warning by the running script, none outside a body, so the second binding's was swallowed).
+#[test]
+fn rhai_deprecated_hook_forms_warn_once_per_binding() {
+  let lxa = r#"DefConstructor("\\ta{}", "<ltx:text class='#c'>#1</ltx:text>", #{ afterDigest: |w| w.setProperty("c", "ta") });
+DefMacro("\\ma{}", |x| "MA" + x);"#;
+  let lxb = r#"DefConstructor("\\tb{}", "<ltx:text class='#c'>#1</ltx:text>", #{ afterDigest: |w| w.setProperty("c", "tb") });
+DefMacro("\\mb{}", |x| "MB" + x);"#;
+  let tex = r"\documentclass{article}
+\usepackage{lxa}
+\usepackage{lxb}
+\begin{document}
+\ta{x} \tb{y} \ma{1} \mb{2}
+\end{document}
+";
+  let (log, xml) = convert_files_with(tex, &[("lxa.sty.rhai", lxa), ("lxb.sty.rhai", lxb)], None);
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 4, "{log}");
+  for old in ["afterDigest |whatsit|", "DefMacro |args|"] {
+    let line = format!("Warning:deprecated:{old} {old} is deprecated");
+    assert_eq!(log.matches(&line).count(), 2, "{line}\n{log}");
+  }
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p><text class="ta">x</text><text class="tb">y</text>MA1 MB2</p></para>"#,
   );
 }

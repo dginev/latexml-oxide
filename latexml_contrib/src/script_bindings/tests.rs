@@ -1573,3 +1573,26 @@ fn rhai_relaxngschema_loads_default_ns_schema_with_namespaces() {
   );
   let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// An old-form body Warns `deprecated` once per binding per load, keyed by the binding its closure belongs to, not
+/// the running script (none during digestion): two bindings → two Warnings; a second job on the same thread (a
+/// long-lived worker) reloads them and Warns again.
+#[test]
+fn deprecated_hook_form_warns_once_per_binding_load() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  fresh_state();
+  let scripts = [
+    r#"DefPrimitive("\\dpa{}", |x| { return; });"#,
+    r#"DefPrimitive("\\dpb{}", |x| { return; });"#,
+  ];
+  for job in 0..2 {
+    let warnings = get_status(LogStatus::Warning);
+    for src in scripts {
+      load_script(src).expect("load");
+    }
+    latexml_core::stomach::digest(mouth::tokenize_internal(r"\dpa{1}\dpb{2}\dpa{3}\dpb{4}"))
+      .expect("digest");
+    assert_eq!(get_status(LogStatus::Warning), warnings + 2, "job {job}");
+  }
+  latexml_core::reset_thread_engine();
+}
