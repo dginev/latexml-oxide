@@ -20719,17 +20719,17 @@ Checked in Chrome at 1800 px (also scrolled) and 375 px on every mark of 15 pape
 `latexml_post::integration::a_shared_notes_copies_anchor_at_the_note_alone`; the shared-note pins in
 `integration.rs` (`a_shared_notes_other_marks_carry_its_hidden_copy` and three siblings) repinned with the styles.
 
-### 1076. icml's `\icmlsetsymbol` defines only `\@icmlsymbol<name>` (DG 2026-11-18; ICMLSYM)
+### 1076. icml's `\icmlsetsymbol` defines only `\@icmlsymbol<name>` (2026-11-17; ICMLSYM)
 
 **Perl.** icml_support.sty.ltxml:37 gobbles `\icmlsetsymbol{}{}` (KNOWN_PERL_ERRORS #1285).
 
 **Rust.** `\icmlsetsymbol{name}{sym}` is `\expandafter\gdef\csname @icmlsymbol#1\endcsname{#2}`, as icml2026.sty:465-467
 (icml2024.sty:489-491) defines it. The binding also defined `\<name>`, which no icml20xx.sty does: with
 `\icmlsetsymbol{dagger}{$\dagger$}` (2606.08980) `\dagger` called itself, and `\icmlauthor`'s trial digestion of the
-label (`printed_label_pieces`) grew the pushback to 5.6 GB before its runaway limit, a Fatal under the worker's memory
+label (`printed_label_pieces`) grew to 6.2 GB (11.8 s on 2606.08980, 6 cores, `ulimit -v 8912896`) before its runaway limit, a Fatal under the worker's memory
 limit. 2310.06430's `\icmlWorkDone` (the reason the extra definition was added) is its copy's own `\newcommand`
 (icml2024.sty:529), which the copy, read as the file the binding stands in for, defines. **Guard**:
-`perfect_kernel_batchicmlsym::an_icml_symbol_named_after_a_command_keeps_the_command`.
+`perfect_kernel_batchicmlsym::{an_icml_symbol_named_after_a_command_keeps_the_command, an_icml_symbol_leaves_the_command_alone}` (the second a state probe, red on the old shape without its runaway).
 
 ## TeX-source fidelity family (TEXSRC)
 
