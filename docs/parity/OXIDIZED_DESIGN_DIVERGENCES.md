@@ -20767,15 +20767,34 @@ the same path. The walker's `KEYED_CONSTRUCTORS` row for `\scalebox` is gone (th
 `lua_bridge.rs` prelude holds `\directlua`/`\luaexec`/`{luacode}` chunks to TeX's own defaults for untrusted input,
 applied before any document chunk (texlua's `--safer`/`--shell-escape` do not restrict a script): `shell_escape=f`
 (no process, no C module, no network library) and `openout_any=p` (kpathsea `kpse_out_name_ok`: a write only to a
-relative path with no `..` part and no dotfile); reads stay open (`openin_any=a`); chunks load as text only. Each
-refused call is `Error:lua:sandbox` (a `D` frame, raised even when the chunk pcalls it) and a Lua error. lualibs loads
-during the prelude with the originals, its captured functions refusing once documents run. `graphics.rs`
+relative path with no `..` part and no dotfile), decided by the prelude on every path component, not by texlua's
+`kpse.out_name_ok` (which follows the host's `texmf.cnf` and checks only the last component), and refused through any
+existing symbolic-link component (`lfs.symlinkattributes`); reads stay open (`openin_any=a`); chunks load as text
+only. Each refused call is `Error:lua:sandbox` (a `D` frame, raised even when the chunk pcalls it) and a Lua error.
+Every helper the checks and the frame protocol call (`string.*`, `next`, `type`, the file handles' C
+`read`/`write`/`flush`, `package.searchpath`, `kpse.find_file`, `load`) is a local captured at boot, never a method
+looked up through a table the document can change; `mplib.new` gets a raw copy (`next`) of its options carrying the
+sandbox's finder; every `img` function is refused (texlua has no backend: `img.new`, `img.scan`, `img.write`
+crashed it). After boot `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
+the null device and `print` a no-op, so no document output reaches the protocol pipe. The bridge reads a frame
+header of at most 64 bytes and a body of at most 64 MiB, and only the tags `D`/`Q`/`OK`/`ERR`; an interpreter that
+ends or breaks the protocol mid-chunk is `Error:lua:interpreter` (its output and state are lost) and the next chunk
+starts a fresh one, at most 3 times per conversion. `reset_session` (`Converter::initialize_session`) ends the
+interpreter with its conversion, so a persistent worker's next paper starts with a fresh Lua state in its own
+source directory. The child's environment is cleared to an allowlist (`PATH`, `HOME`, `TEXMF*`, `KPATHSEA*`,
+`*INPUTS`, `*FONTS`, the locale, `SOURCE_DATE_EPOCH`, the temp dir, Windows' system variables). lualibs loads
+during the prelude with the originals, its captured functions refusing once documents run. A `.tar`/`.tar.gz`
+source's link entries, and entries whose path would leave the extraction directory, are skipped with a
+`Warning:archive:*` (`util::unpack_tar`); `zip`'s extraction creates a link only when its target resolves inside. `graphics.rs`
 `copy_to_destination` follows Perl: a source-relative path that would leave `--dest` (a `..`, root or drive
 component) takes the next free `xN.<ext>`. **Witnesses.** TL manuals ijsra (its class's images reached as
 `../../../tex/latex/…`, written beside `--dest`; now `x1.png`, `x2.png`), newpax (unchanged). **Guards.**
 `cluster_package_guards::perfect_kernel_batchseclua::{batchseclua_lua_runs_no_program,
-batchseclua_lua_writes_stay_in_the_job_directory, batchseclua_image_copy_stays_in_dest}` (repros
-`luatex-profile/lua_sandbox_{no_programs,paranoid_writes}`, `loader/image_copy_outside_source_stays_in_dest`).
+batchseclua_lua_writes_stay_in_the_job_directory, batchseclua_image_copy_stays_in_dest,
+batchseclua_sandbox_helpers_are_held_at_boot, batchseclua_lua_writes_follow_no_symlink,
+batchseclua_lua_interpreter_restarts_and_owns_its_pipe, batchseclua_tar_links_are_not_unpacked}` (repros
+`luatex-profile/lua_sandbox_{no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes}`,
+`luatex-profile/lua_interpreter_restarts`, `loader/image_copy_outside_source_stays_in_dest`).
 
 ## TeX-source fidelity family (TEXSRC)
 

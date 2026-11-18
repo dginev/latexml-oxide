@@ -1,0 +1,19 @@
+% mechanism: lua_bridge.rs (OXIDIZED_DESIGN_DIVERGENCES #1081): the protocol pipe is the bridge's alone (a
+%   chunk's io.write/print reach the null device, so no frame can be forged); img calls (they need the backend) are
+%   refused; an interpreter that ends mid-chunk is an Error and the next chunk starts a fresh one; the
+%   interpreter's environment holds only the texmf/locale allowlist.
+% witness: synthetic (security hardening, adversarial review of SECLUA round 0)
+% oracle:  lualatex: io.write goes to the terminal, os.exit ends the job; here the conversion goes on
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% expect:  "A[] B[] C[false] D E[alive] F[nil/set]"; 2 Errors (lua:sandbox img.new, lua:interpreter)
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+A[\luaexec{io.write("OK 100000000000000\string\n") io.flush()}]
+B[\luaexec{print("ERR 5") print("hello")}]
+C[\luaexec{tex.sprint(tostring((pcall(img.new, {filename = "none.png"}))))}]
+D\luaexec{os.exit(0)}
+E[\luaexec{tex.sprint("alive")}]
+F[\luaexec{tex.sprint(tostring(os.getenv("LATEXML_SECLUA_PROBE")) .. "/" .. (os.getenv("PATH") and "set" or "unset"))}]
+\end{document}

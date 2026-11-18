@@ -165,3 +165,168 @@ fn batchseclua_image_copy_stays_in_dest() {
   let html = std::fs::read_to_string(root.path().join("out/d/t.html")).unwrap();
   assert!(html.contains("src=\"x1.png\""), "{html}");
 }
+
+/// The checks hold their helpers from boot: an `mplib` instance whose options table swallows assignments (made
+/// first, in a fresh interpreter: lmplib keeps a finder across instances) still writes through the sandbox's finder; a
+/// replaced `string.find` no longer disables the write check; a file-handle `write` that filters out `D` frames does
+/// not hide a refusal. Base: the two files written outside the job, the `os.execute` refusal unreported. Repro
+/// luatex-profile/lua_sandbox_helpers_held_at_boot.
+#[test]
+fn batchseclua_sandbox_helpers_are_held_at_boot() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  let job = root.path().join("job");
+  std::fs::create_dir(&job).unwrap();
+  std::fs::write(
+    job.join("t.tex"),
+    repro!("luatex-profile", "lua_sandbox_helpers_held_at_boot"),
+  )
+  .unwrap();
+  let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
+  let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
+  assert_eq!(
+    denials(&log),
+    [
+      "writing ../mp_escape.txt",
+      "writing ../find_escape.txt",
+      "os.execute"
+    ],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (3, 0), "{log}");
+  assert!(
+    xml.contains("[mp:done] [find:refused] [hidden:false]"),
+    "{xml}"
+  );
+  assert_eq!(files_below(root.path()), ["job/t.tex", "job/t.xml"]);
+}
+
+/// A write through a symbolic link the source tree ships — a linked directory or a linked file, both pointing beside
+/// the job — is refused; a plain file is written. Base: both written through the links. Repro
+/// luatex-profile/lua_sandbox_no_symlink_writes.
+#[cfg(unix)]
+#[test]
+fn batchseclua_lua_writes_follow_no_symlink() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  let (job, beside) = (root.path().join("job"), root.path().join("beside"));
+  std::fs::create_dir(&job).unwrap();
+  std::fs::create_dir(&beside).unwrap();
+  std::fs::write(beside.join("kept.txt"), "kept").unwrap();
+  std::os::unix::fs::symlink(&beside, job.join("lnkdir")).unwrap();
+  std::os::unix::fs::symlink(beside.join("kept.txt"), job.join("lnkfile")).unwrap();
+  std::fs::write(
+    job.join("t.tex"),
+    repro!("luatex-profile", "lua_sandbox_no_symlink_writes"),
+  )
+  .unwrap();
+  let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
+  let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
+  assert_eq!(
+    denials(&log),
+    ["writing lnkdir/via_dir.txt", "writing lnkfile"],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
+  assert!(
+    xml.contains("[dir:refused] [file:refused] [plain:ok]"),
+    "{xml}"
+  );
+  assert_eq!(
+    std::fs::read_dir(&beside).unwrap().count(),
+    1,
+    "only kept.txt beside the job"
+  );
+  assert_eq!(
+    std::fs::read_to_string(beside.join("kept.txt")).unwrap(),
+    "kept"
+  );
+  assert!(job.join("plain.txt").is_file());
+}
+
+/// The protocol pipe is the bridge's alone: a chunk's `io.write`/`print` of a frame header (a forged 100 TB length,
+/// a forged `ERR`) reach the null device, and the conversion goes on. `img.new` (texlua has no backend; it crashed)
+/// is refused; an `os.exit` ends the interpreter — an Error, its output lost — and the next chunk runs in a fresh one.
+/// The interpreter's environment is the allowlist: a variable outside it reads nil, `PATH` is kept. Base: the forged
+/// length aborted the conversion. Repro luatex-profile/lua_interpreter_restarts.
+#[test]
+fn batchseclua_lua_interpreter_restarts_and_owns_its_pipe() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  std::fs::write(
+    root.path().join("t.tex"),
+    repro!("luatex-profile", "lua_interpreter_restarts"),
+  )
+  .unwrap();
+  let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+    .args(["t.tex", "--dest", "t.xml", "--nocomments", "--timeout=110"])
+    .env("LATEXML_SECLUA_PROBE", "visible")
+    .current_dir(root.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  let xml = std::fs::read_to_string(root.path().join("t.xml")).unwrap_or_default();
+  assert!(output.status.success(), "{log}");
+  assert_eq!(denials(&log), ["img.new"], "{log}");
+  assert_eq!(
+    log
+      .lines()
+      .filter(|line| line.starts_with("Error:lua:interpreter "))
+      .count(),
+    1,
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
+  assert!(
+    xml.contains("A[]\nB[]\nC[false]\nD\nE[alive]\nF[nil/set]"),
+    "{xml}"
+  );
+}
+
+/// A tar source's symbolic and hard links are not unpacked (a warning each): `\input` of a link to a file beside
+/// the archive finds nothing. Base: the link was unpacked and the file beside it read.
+#[cfg(unix)]
+#[test]
+fn batchseclua_tar_links_are_not_unpacked() {
+  let root = tempfile::tempdir().unwrap();
+  std::fs::write(root.path().join("beside.tex"), "BESIDEWORD").unwrap();
+  let tex = "\\documentclass{article}\\begin{document}[\\InputIfFileExists{lnk.tex}{}{none}][\\InputIfFileExists{hard.tex}{}{none}]\\end{document}\n";
+  let mut builder = tar::Builder::new(Vec::new());
+  let mut header = tar::Header::new_gnu();
+  header.set_size(tex.len() as u64);
+  header.set_mode(0o644);
+  header.set_cksum();
+  builder
+    .append_data(&mut header, "t.tex", tex.as_bytes())
+    .unwrap();
+  for (kind, name) in [
+    (tar::EntryType::Symlink, "lnk.tex"),
+    (tar::EntryType::Link, "hard.tex"),
+  ] {
+    let mut header = tar::Header::new_gnu();
+    header.set_entry_type(kind);
+    header.set_size(0);
+    builder
+      .append_link(&mut header, name, root.path().join("beside.tex"))
+      .unwrap();
+  }
+  std::fs::write(root.path().join("p.tar"), builder.into_inner().unwrap()).unwrap();
+  let log = convert_at(root.path(), "p.tar", "p.xml");
+  let xml = std::fs::read_to_string(root.path().join("p.xml")).unwrap_or_default();
+  assert_eq!(
+    log
+      .lines()
+      .filter(|line| line.starts_with("Warning:archive:link "))
+      .count(),
+    2,
+    "{log}"
+  );
+  assert!(xml.contains("[none][none]"), "{xml}");
+  assert!(!xml.contains("BESIDEWORD"), "{xml}");
+}

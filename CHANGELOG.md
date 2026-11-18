@@ -728,11 +728,15 @@
     `xslt::max_depth_tests::transform_aborts_past_perls_recursion_depth`.
 
   - **Untrusted input stays in the job.** Document Lua code could run programs or write files outside the job; it
-    is now sandboxed, under TeX's own defaults for untrusted input (no shell escape, paranoid writes), each refused
-    call an Error. An image whose path relative to the source leaves the destination directory is copied under a
+    is now sandboxed, under TeX's own defaults for untrusted input (no shell escape, paranoid writes, no write through
+    a symbolic link), each refused call an Error that document code cannot hide; each conversion has its own
+    interpreter with a reduced environment, restarted (with an Error) when it ends mid-chunk. Archive entries that
+    are links are not unpacked. An image whose path relative to the source leaves the destination directory is copied under a
     generated `xN` name inside it, as Perl does. Guards
     `perfect_kernel_batchseclua::{batchseclua_lua_runs_no_program, batchseclua_lua_writes_stay_in_the_job_directory,
-    batchseclua_image_copy_stays_in_dest}`.
+    batchseclua_image_copy_stays_in_dest, batchseclua_sandbox_helpers_are_held_at_boot,
+    batchseclua_lua_writes_follow_no_symlink, batchseclua_lua_interpreter_restarts_and_owns_its_pipe,
+    batchseclua_tar_links_are_not_unpacked}`.
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 

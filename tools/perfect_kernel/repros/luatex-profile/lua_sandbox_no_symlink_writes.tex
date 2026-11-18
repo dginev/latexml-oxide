@@ -1,0 +1,19 @@
+% mechanism: lua_bridge.rs prelude sandbox (OXIDIZED_DESIGN_DIVERGENCES #1081): a write is refused when any
+%   existing component of its path is a symbolic link (the source tree may ship one pointing anywhere).
+% witness: synthetic (security hardening); the guard links lnkdir and lnkfile to a directory beside the job
+% oracle:  lualatex follows the links (openout_any=p checks names only): a TeX-engine hole the sandbox closes
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% expect:  "[dir:refused] [file:refused] [plain:ok]"; 2 Errors (lua:sandbox); nothing written through a link
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\begin{luacode*}
+local function try(name)
+  local ok, f = pcall(io.open, name, "w")
+  if ok and f then f:write("x") f:close() return "ok" end
+  return "refused"
+end
+tex.sprint("[dir:" .. try("lnkdir/via_dir.txt") .. "] [file:" .. try("lnkfile") .. "] [plain:" .. try("plain.txt") .. "]")
+\end{luacode*}
+\end{document}

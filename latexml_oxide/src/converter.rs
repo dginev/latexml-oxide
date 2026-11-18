@@ -603,6 +603,8 @@ impl Converter {
     // …and the title-page check's spill notes (OXIDIZED_DESIGN_DIVERGENCES #953)
     latexml_engine::base_utilities::reset_title_page_check();
     latexml_engine::pdftex::reset_pdftex_random();
+    // A paper's Lua interpreter (its globals, its working directory) ends with it, as each LuaTeX job's does.
+    latexml_engine::lua_bridge::reset_session();
     // The main source's kind, for the preloads below and the document's PDF mode
     // (`core_interface::establish_pdf_output_mode`).
     state::set_plain_tex_document(self.compile_route.plain_tex);

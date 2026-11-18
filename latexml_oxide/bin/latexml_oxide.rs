@@ -2154,12 +2154,10 @@ fn unpack_archive_files(
   } else if archive_path.ends_with(".tar.gz") || archive_path.ends_with(".tgz") {
     let file = File::open(archive_path)?;
     let gz = flate2::read::GzDecoder::new(file);
-    let mut archive = tar::Archive::new(gz);
-    archive.unpack(dest)?;
+    latexml::util::unpack_tar(tar::Archive::new(gz), dest)?;
   } else if archive_path.ends_with(".tar") {
     let file = File::open(archive_path)?;
-    let mut archive = tar::Archive::new(file);
-    archive.unpack(dest)?;
+    latexml::util::unpack_tar(tar::Archive::new(file), dest)?;
   } else {
     return Err(format!("Unsupported archive format: {}", archive_path).into());
   }

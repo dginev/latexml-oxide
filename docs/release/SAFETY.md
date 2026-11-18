@@ -37,7 +37,16 @@ see that section below.
 - **Document Lua is sandboxed** (OXIDIZED_DESIGN_DIVERGENCES #1081). `\directlua`, `\luaexec` and `{luacode}`
   chunks run in `texlua` under TeX's own defaults for untrusted input, set by the bridge's prelude before any
   document chunk: `shell_escape=f` (no program runs, no C module or network library loads) and `openout_any=p`
-  (writes only to a relative path below the job directory, no `..`, no dotfile). A refused call is an `Error`.
+  (writes only to a relative path below the job directory, no `..`, no dotfile, no symbolic link on the way). A
+  refused call is an `Error`, reported by the bridge itself: the checks and the protocol pipe use functions held
+  before any document code runs, and a chunk's `print`/`io.write` reach the null device. An interpreter that ends
+  mid-chunk is an `Error` (its output is lost); the next chunk starts a fresh one, up to 3 times per conversion.
+  Each conversion gets its own interpreter, in its source directory, with an environment reduced to the texmf
+  search, locale, date and temp-dir variables. Not covered: a link created between the check and the write by
+  another process, and kpathsea's own `mktex*` font generation, which a lookup may start as it does under TeX.
+- **Archive sources unpack inside their directory.** A `.tar`/`.tar.gz` entry that is a symbolic or hard link, or
+  whose path would leave the extraction directory, is skipped with a warning; `.zip` extraction creates a link only
+  when its target resolves inside the directory.
 - **Image copies stay under `--dest`.** A graphic whose source-relative path would leave the destination
   directory is copied under a generated `xN` name inside it (Perl `Post/Graphics.pm`'s `pathname_is_contained`
   fallback).
