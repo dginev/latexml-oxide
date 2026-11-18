@@ -1,0 +1,19 @@
+% `\author{\store}` whose store opens with `\and` (no setter copy at all): pdflatex sets the one name, the leading
+% `\and` an empty column; ours writes the creator as "and Christian Elbracht", inventing the word "and" (the content
+% check's Warning counts it). A kernel defect of the author split on a macro store, not of the setter copy.
+% witness: synthetic (review SETCOPY S3; tocbase.cls's `\and`-joined list read before its first-author `\gdef`)
+% oracle:  pdflatex 0 errors: "T / Christian Elbracht / Body."
+% engines: rust (main 8b298f9c0d6) = one creator "and Christian Elbracht", 1 Warning; SETCOPYb the same
+% expect:  0 errors, 0 warnings; one creator, "Christian Elbracht"
+% guard:   none (row R ANDSTORE)
+% status:  RED (catalog)
+\documentclass{article}
+\makeatletter
+\newcommand\toc@authors{\and Christian Elbracht}
+\author{\toc@authors}
+\makeatother
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

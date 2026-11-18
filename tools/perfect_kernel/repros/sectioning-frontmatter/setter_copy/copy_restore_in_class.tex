@@ -1,0 +1,22 @@
+% A preamble `\def\author` wrapping the frozen copy, restored at `\begin{document}` (`\AtBeginDocument{\let\author
+% \orig@author}`): the preamble call ran the wrapper, the document's call the kernel's setter alone, which replaces
+% the author ("Short: Ann Able", one creator Bob Baker).
+% witness: synthetic (review SETCOPY, restore in a hook)
+% oracle:  pdflatex 0 errors: "Bob Baker", "Short: Ann Able."
+% engines: rust (main 8b298f9c0d6) = see guard history; SETCOPY round 0 = "Short: Ann Able.", one creator
+% expect:  0 errors, 0 warnings; "Short: Ann Able."; one creator, Bob Baker
+% guard:   perfect_kernel_batchsetcopy::a_restored_setter_drops_the_class_definition
+% status:  GREEN (SETCOPY, 2026-11-18)
+\documentclass{article}
+\makeatletter
+\let\orig@author\author
+\def\author#1{\gdef\short@a{#1}\orig@author{#1}}
+\AtBeginDocument{\let\author\orig@author}
+\makeatother
+\title{T}
+\author{Ann Able}
+\begin{document}
+\author{Bob Baker}
+\maketitle
+Short: \csname short@a\endcsname.
+\end{document}

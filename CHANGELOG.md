@@ -2,6 +2,170 @@
 
 ## Unreleased
 
+  - **TeX Live's package manuals convert clean (the perfect-kernel campaign).** Every one of the
+    1,552 in-scope TeX Live documentation bundles converts with no Error but of a ruled-out
+    kind, valid against the schema (or only in a ruled class), at least 95 % word recall against
+    its source (or a gap classified as no conversion loss) and in under 180 s at 8 GB; of the
+    1,602 manuals, 1,592 convert clean, recall mean 96.89 %, median 99.5 % (closing sweep #186,
+    merged as `6df4632fb1`). The work is kernel fidelity under raw interpretation of the
+    packages' own `.sty`/`.cls` files. Goal bar and basis: `docs/archive/PERFECT_KERNEL_2026-11-13.md`.
+  - **An author mark finds its note by the number it shows.** A footnote mark answers the note
+    that prints the same number, never one that merely shares its glyph, and the class bindings
+    compute the title marks and footnote steps their class prints. A note with no mark shows its
+    text with no invented dagger, and a symbol legend under the names belongs to the names that
+    print its symbol. Guards `perfect_kernel_batchfmmarks::{shared_notes_are_a_marked_copy_per_carrier,
+    a_mark_on_a_name_is_a_copy_of_its_note}`, `perfect_kernel_batchinvdag::a_date_note_and_an_abstract_thanks_invent_no_glyph`
+    (OXIDIZED_DESIGN_DIVERGENCES #990, #1052–#1055, #1057–#1064, #1068; #895).
+  - **Contacts printed in a title note reach their authors.** IEEEtran/ieeeconf `\thanks` are
+    routed by kind: a note that names authors who "are with …" gives them their affiliation and
+    e-mail, a "Corresponding author: …" note goes to the author it names, and funding or other notes stay
+    title notes. spconf/Interspeech `\address` lines go to the names showing their mark, and Interspeech.cls
+    `\email` lines to the authors their local parts spell. elsarticle keys reach their entries;
+    a `\date` that holds the block's labelled lines becomes their contacts, and its other notes
+    become title notes (2605.04795). Every case the rule cannot place completely keeps the note
+    whole. Guards `perfect_kernel_batchieeeroute::ieee_is_with_notes_route_to_the_named_authors`,
+    `perfect_kernel_batchspconf::{spconf_marked_address_lines_go_under_the_names,
+    interspeech_email_line_goes_to_its_authors}`, `perfect_kernel_batchdateleg::a_date_its_legend_is_taken_from_is_void`
+    (OXIDIZED_DESIGN_DIVERGENCES #1067, #1071–#1073; #895, #897).
+  - **A note the class prints under the names sits before the abstract.** A binding declares
+    such a note (`\lx@names@note`, checked per class against its title page); every undeclared
+    note keeps Perl's place. Guard `perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names`
+    (OXIDIZED_DESIGN_DIVERGENCES #1074; #895).
+  - **A ragslab.sty binding; achemso and sn-jnl print their classes' marks.** ragslab (the
+    FAIR/Meta template's package) prints its names, marked affiliations, contributions, abstract
+    and metadata lines as frontmatter. The achemso and sn-jnl bindings (classes Perl does not
+    ship) follow the same note and mark rules, and a paper's own copy of the class in a
+    subdirectory keeps its title marks. Guard `06_cluster_frontmatter::frontmatter_ragslab_marks_link_affiliations`
+    (OXIDIZED_DESIGN_DIVERGENCES #1065, #1066, #1070; #895).
+  - **Author notes in the margin.** The base stylesheet's hover handles draw ⓘ, never a
+    footnote-mark glyph that collides with printed marks. On wide ar5iv screens marked notes,
+    the title's publication metadata included, stack in the side margin, and a shared note's
+    later marks highlight their margin note; on narrow screens each mark pops up its own copy
+    (OXIDIZED_DESIGN_DIVERGENCES #1069, #1075; ar5iv-css #67–#74; #895).
+  - **Notes a document adds to a class's title-page footnote list print.** acmart, elsarticle,
+    REVTeX, amsaddr and icml keep lists of title-page footnotes (`\g@addto@macro` targets) that
+    the bindings never defined, so a paper's additions were lost. The bindings now define them
+    where the files do, and each list runs where its class prints it, each `\footnotetext` a
+    title note (KNOWN_PERL_ERRORS #1283; 2402.08073's icml "Correspondence to:" line). OmniBus binds
+    `\orcid` (2606.13132), and pdfcomment's binding allocates soulpos's registers. Guards
+    `perfect_kernel_batchregbind::{bindings_define_the_macros_their_files_define,
+    bindings_print_the_title_page_lists_their_files_print}` (#891).
+  - **icml's `\icmlsetsymbol` leaves the command it is named after alone.** It defined
+    `\<name>` as well, so `\icmlsetsymbol{dagger}{$\dagger$}` made `\dagger` call itself; it now
+    defines only `\@icmlsymbol<name>`, as icml2026.sty:465-467 does (2606.08980). Guard
+    `perfect_kernel_batchicmlsym::an_icml_symbol_named_after_a_command_keeps_the_command`
+    (OXIDIZED_DESIGN_DIVERGENCES #1076; #897).
+  - **`\scalebox` reads its factors as numbers** (`{Float}[Float]{}`, as Perl), so a scale
+    prints as given (`0.75`, was `0.8`) and a mark set in `\scalebox{0.75}{\Letter}` spells its
+    glyph, not "0.75✉" (2606.29928, 2605.23320). An empty or zero `[yscale]` falls back to the
+    x-scale. A scale with a tail TeX does not read (old pstricks' `\scalebox{x y}`, cs0606057)
+    drops the tail with a counted Warning. Guards
+    `perfect_kernel_batchmarkscale::{scalebox_mark_spells_its_glyph_not_its_scale,
+    a_scale_factors_tail_is_dropped_with_a_warning}` (OXIDIZED_DESIGN_DIVERGENCES #1077; #897).
+  - **A raw class's labelled title-page field is a publication note.** A store the class's
+    title page prints right after its own label, alone on its line (a "Course:" line), becomes
+    `<ltx:pubnote name="<label>">`, where its text was lost or misplaced. Guard
+    `perfect_kernel_batch77i::offtable_store_typeset_by_the_title_page` (Bruce Miller Q3.13; #884).
+  - **A unit with no title shows its publication notes, subtitle and dates in the HTML.** They
+    were in the XML but rendered only beside a title (shared with Perl,
+    `LaTeXML-structure-xhtml.xsl:480/:751/:790`); a titleless unit's head block now renders
+    them in `maketitle`'s order (2006.12592, 1504.03712, els-mrw's `\articletag` papers).
+    Guard `perfect_kernel_batch61::untitled_head_metadata_reaches_the_html`
+    (OXIDIZED_DESIGN_DIVERGENCES #262; #881).
+  - **llncs and svjour3 keyword lists print their class's separator** (upstream LaTeXML
+    #2263). llncs `\keywords{Alpha \and Beta}` printed "Alpha Beta"; it prints "Alpha · Beta",
+    as llncs.cls:906 defines `\and` there, and svjour3's `\keywords`, `\subclass`, `\PACS`,
+    `\CRclass` and `\JEL` print its `$\cdot$` (2004.08441, 2105.07969). Perl shares the bug
+    (KNOWN_PERL_ERRORS #1272). **apacite's full cites** (upstream #711): `\fullcite`,
+    `\fullciteNP`, `\fullciteA`, `\fullciteauthor`, `\fullciteauthorA`, `\citeauthorNP` and
+    `\shortciteauthorA`, in classic citation mode only, as apacite.sty. Guard
+    `perfect_kernel_batchqa76a::class_keyword_lists_print_their_and` (#871).
+  - **amsppt's heads hold their bodies, its theorem-like blocks take ids, and `\roster` keeps its
+    items.** `\head`, `\subhead`, `\subsubhead` and `\specialhead` open their unit until the next
+    head at their level (Perl amsppt.sty.ltxml:94-140), where each closed after its title;
+    `\proclaim`, `\definition`, `\remark`, `\example` and `\demo` take ids from one `theorem`
+    counter (math9201249: `Thmx1`…`Thmx15`); `\Refs` is back matter. Every `\roster` was an
+    empty list (Perl too, KNOWN_PERL_ERRORS #1270): its items are kept, with amsppt's
+    `\item"label"`/`\item[n]` (53 of 63 census papers recover 1,178 items; math0309287).
+    Guard `perfect_kernel_batchamsppt::amsppt_heads_and_theorems` (KNOWN_PERL_ERRORS #1269,
+    OXIDIZED_DESIGN_DIVERGENCES #456; #868).
+  - **A preamble-only command used in the body raises LaTeX's Error.** `\begin{document}`
+    walks `\@preamblecmds` where latex.ltx does (:9521-9522): each listed command used later
+    gives "LaTeX Error: Can be used only in preamble" as pdflatex, then runs as Perl recovers;
+    before, 6 of them erred and `\documentclass`, `\DeclareTextCommand`, `\listfiles` or a
+    second `\begin{document}` passed silently. A body package's `\@onlypreamble` counts, and
+    nothing errs inside a package load or a standalone/subfiles sub-file's preamble. A missing
+    class's fallback no longer leaves `\@currext` = `cls` in the body. Guard
+    `error_boundary::perfect_kernel_error_boundary` (OXIDIZED_DESIGN_DIVERGENCES #226; Bruce
+    Miller QA90; #867, #884, #891).
+  - **Native pgfmath computes when digested, not inside TeX's optional-space scan.**
+    `\pgfmathparse` and the `\pgfmath<fn>@` functions computed when expanded, so after a unit
+    (`\dd=2pt%⏎\pgfmathparse{\dd+3pt}`) they read the old value: 8.0 for pdflatex's 5.0
+    (tex.web §443-§448). They now define `\pgfmathresult` when digested (2606.14412: 55 Errors →
+    0, its curve where the PDF draws it; arrows.meta Stealth tips in pdflatex's proportions).
+    Perl shares the bug (KNOWN_PERL_ERRORS #1274). Guard
+    `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` (Bruce Miller QA11; #872).
+  - **`\parbox` keeps the page's `\textwidth` and `\columnwidth`.** It set them to the box's
+    width (Perl too, KNOWN_PERL_ERRORS #1273), so `\parbox{0.44\textwidth}{\includegraphics[width=0.44\textwidth]{…}}`
+    gave 66.8pt for pdflatex's 151.8pt (1412.0314, 1711.09469); it sets only `\hsize`,
+    `\linewidth` and `\@totalleftmargin`, as latex.ltx's `\@iiiparbox`. Only floats modelled
+    on `\@xfloat` reset `\hsize`, so a subfloat (subcaption, subfig, subfigure) keeps the
+    enclosing width (2010.06608, 2007.14228). Guard
+    `perfect_kernel_batchqa14a::parbox_sets_only_the_line_width` (Bruce Miller QA14; #873).
+  - **`\leaders` with a rule is the leader itself** (issue 805). `\hrulefill`-style leaders
+    were an `ltx:text` around an `ltx:rule`; they are `<ltx:rule class="ltx_leader">`
+    (`ltx_filled_leader` in a box of known width), as in TeX a rule after `\leaders` is never
+    typeset on its own (tex.web §1078, §1084), and a binding hook that closes the text first
+    no longer raises `Error:malformed:ltx:text` (BookML). Perl shares the defect
+    (KNOWN_PERL_ERRORS #1282). Guard `perfect_kernel_batch58::leaders_rule_keeps_the_paragraph` (#883).
+  - **`\not` moves its operand as Perl does.** A nested `\not` at any depth, and `\not\not=`,
+    give `≠`/`∉` where they gave a bare `／`, a plain `=` and an invisible times, and a
+    cancelled operand keeps its size (1009.4552, 1611.10101, 1701.02906). Guard
+    `perfect_kernel_batchnotcancel::not_cancel_moves_its_operand` (#887).
+  - **fbox and listings frames have their padding; `array[t]`/`array[b]` align by their
+    baseline** (upstream LaTeXML master `0db6f47e`). `\fboxsep` pads `\fcolorbox` and text
+    `\boxed`, a listing frame takes its padding from `framesep`, and `frame=tb` and the other
+    letter forms are drawn (upstream LaTeXML #2820); a `frame=` that names no side draws none, as
+    listings.sty (OXIDIZED_DESIGN_DIVERGENCES #1038). `array[t]`/`[b]` give `<mtable
+    align="baseline1">`/`"baseline-1"` (upstream #2875); `\lozenge` and `\blacklozenge` have
+    pdflatex's width (upstream #2845). A `.zip` destination keeps an existing log, its member named by
+    `--log`, and EPUB keeps its log outside the container (upstream #2855, OXIDIZED_DESIGN_DIVERGENCES
+    #1037). Guards `perfect_kernel_batchups1::{fboxsep_pads_fcolorbox_boxed_and_listing_frames,
+    mtable_align_is_the_first_or_last_baseline, lozenge_widths_are_msam_glyph_widths}` (#845).
+  - **Faster conversions, byte-identical output.** A performance pass: typical arXiv papers
+    take a median 10.4 % fewer instructions (5.8–26.7 %), the issue-790 book 18 % fewer with its
+    peak memory 6.7 → 4.3 GB, and 2308.04512 (447 pages) 16 % fewer; every output file is
+    byte-identical. The levers (one math grammar per streamed conversion, cheaper `\global`
+    undo, shared math subtrees, token-path and XPath allocations) are in
+    `docs/performance/PERFORMANCE.md` (2026-11-15). libxml 0.3.24 and libmarpa-asf-sys 0.3.1
+    from crates.io (#885).
+  - **Large math documents post-process in linear time** (issue 802). Each XMDual collapse
+    renamed its references with a whole-document XPath, quadratic in the number of collapses
+    and failing past libxml2 2.15's 10,000,000-node limit ("XPath evaluation failure", then
+    `Fatal:TooManyErrors`); one idref index now serves every collapse (2,000 collapses:
+    259 → 24 G instructions). Shared with Perl (KNOWN_PERL_ERRORS #1248). Guard
+    `perfect_kernel_batchi802::collapsed_dual_references_take_the_branch_id` (#865).
+  - **A math-parse use-after-free is gone** (issue 790). A discarded math subtree could hold
+    the document's insertion point, so the next formula walked freed memory: the issue's book
+    exited with SIGSEGV. As Perl's `removeNode` (Document.pm:1783-1792), a discard moves the
+    point out first. Guards `02_unit_replace_tree::discard_subtree_keeps_the_insertion_point_out`,
+    `06_cluster_math::cluster_discard_keeps_the_insertion_point_out` (#876).
+  - **`\includegraphics[page=N]` of a vector PDF, N ≥ 2, renders with mutool.** The output was
+    sought under the source page's number while mutool numbers its own output pages from 1, so
+    such a page always fell back to pdftocairo (a different size) and left a stray
+    `.mutool_svg1.svg` in the destination. SVG cache keys are salted once, so every SVG is
+    re-rendered by one converter (2305.12780, 2512.04096). Guards
+    `graphics::tests::vector_svg_of_page_two_is_page_two`,
+    `graphics_cache::tests::svg_keys_are_salted_and_png_keys_are_not` (#886).
+  - **`cortex_worker` leaves no temporary file behind.** Each slot's child runs with its own
+    `TMPDIR` (and ImageMagick's), emptied before every respawn, so a killed conversion's files
+    go with it; the graphics cache removes a failed install's tmp file and prunes old ones.
+    Output is unchanged. Guards `cortex_worker_exit_reports::a_respawned_slot_starts_with_an_empty_tmpdir`,
+    `graphics_cache::tests::{a_failed_install_leaves_neither_tmp_nor_dims,
+    a_prune_reclaims_the_tmp_files_of_killed_installs}` (#888).
+  - **`cortex_worker` built for AVX2 no longer crashes on its first connect.** The bundled
+    libzmq allocated 64-byte-aligned queue chunks with plain `malloc`; `.cargo/config.toml` now
+    passes `-DHAVE_POSIX_MEMALIGN=1 -DZMQ_CACHELINE_SIZE=64` (CorTeX KNOWN_ISSUES L-3; #819).
   - **A note several authors share prints once.** The XML keeps a copy of a shared author note
     (an authblk `\affil[*]`, a legend line's `*`) on every author, each with its `mark`, as Perl
     does; the HTML prints the first copy (class `ltx_note_shared`) and, at each other author, its
@@ -11,21 +175,22 @@
     shown under a name. Only an author's copies merge, and never an image-only note. Guards
     `integration::a_shared_author_note_prints_once_and_its_repeats_are_linked_marks`,
     `witnessed_css_delta::shared_author_note_delta_stays_present` (OXIDIZED_DESIGN_DIVERGENCES #1052).
-  - **subcaption papers convert error-free on the current TeX Live 2026, and the suite passes on Windows.**
-    TL 2026's first aid for subcaption v1.6b adds to caption's `\caption@subtypehook`, which the
-    caption binding did not define, so every subcaption paper there (lipics-v2021 among them)
-    logged an `Error:undefined`. The binding now defines it, and entering a sub-type runs it once
-    as caption.sty does: a sub-float, `{subcaptiongroup}`, `\subcaption` or `\phantomsubcaption`,
-    in the sub-type's group, keeping what it typesets. On Windows, an EPUB manifest names a
-    resource in a subdirectory `sub/x.css`, not `sub\x.css`. An image in the working directory is
-    no longer listed twice when the directory's 8.3 short name (`RUNNER~1`) differs from its long
-    name. The Windows full-suite job's test-side portability gaps are closed too (path separators,
-    case-insensitive `kpsewhich` hits, `file:` URLs). Guards
+  - **subcaption papers convert error-free on the current TeX Live 2026.** TL 2026's first aid
+    for subcaption v1.6b adds to caption's `\caption@subtypehook`, which the caption binding did
+    not define, so every subcaption paper there (lipics-v2021 among them) logged an
+    `Error:undefined`. The binding now defines it, and entering a sub-type runs it once as
+    caption.sty does: a sub-float, `{subcaptiongroup}`, `\subcaption` or `\phantomsubcaption`, in
+    the sub-type's group, keeping what it typesets. Guards
     `caption_subtype_hook::{first_aid_adds_to_the_subtype_hook, subtype_hook_runs_inside_the_sub_float,
-    subtype_hook_runs_once_per_sub_type, subtype_hook_material_is_kept}`,
-    `cluster_cli::whatsinout::format_epub_ar5iv_preload_carries_the_css_param`,
+    subtype_hook_runs_once_per_sub_type, subtype_hook_material_is_kept}` (#889).
+  - **The full test suite passes on Windows.** An EPUB manifest names a resource in a
+    subdirectory `sub/x.css`, not `sub\x.css`. An image in the working directory is no longer
+    listed twice when the directory's 8.3 short name (`RUNNER~1`) differs from its long name. The
+    Windows full-suite job's test-side portability gaps are closed too (path separators,
+    case-insensitive `kpsewhich` hits, `file:` URLs); the release workflow runs that suite on
+    every tag. Guards `cluster_cli::whatsinout::format_epub_ar5iv_preload_carries_the_css_param`,
     `perfect_kernel_batch56::eps_bounding_boxes_are_read_as_bytes`
-    (`docs/release/WINDOWS_SUITE_TRIAGE_2026-11-16.md`).
+    (`docs/release/WINDOWS_SUITE_TRIAGE_2026-11-16.md`; #889).
   - **An author's `\\` lines print under the name** (issue 783). `\author{name\\school\\dept}`
     makes each line a contact, which LaTeXML.css showed only in a hover pop-up behind a blue star.
     Each such contact now carries class `ltx_author_line`, and an author whose contacts are all
@@ -40,7 +205,7 @@
     ones. The form is the one the citation printed, after the bibliography is read (a numeric
     `.bbl` under natbib, an entry with no author). Guard `bibref_show::cite_numeric_class_rows`
     (OXIDIZED_DESIGN_DIVERGENCES #307).
-  - **LaTeX's kernel hooks run where LaTeX runs them** (QA47B). Code a document or package adds
+  - **LaTeX's kernel hooks run where LaTeX runs them** (Bruce Miller QA47; #856). Code a document or package adds
     with `\AddToHook` to the hooks of `\end{document}` (`env/document/end`, and the document's own
     code in `enddocument/afterlastpage`, `/afteraux`, `/end`), of `verbatim`/`verbatim*`
     (`env/verbatim/begin|end`), of `\label` (`label`) and of `\include` (`include/before`,
@@ -49,6 +214,17 @@
     `verbatim` in `\@currenvir`, as in LaTeX. The kernel's first aid for the raw cleveref.sty is
     not registered under LaTeXML's cleveref binding, which replaces the code it repairs. Guard
     `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (OXIDIZED_DESIGN_DIVERGENCES #1048).
+  - **The abstract, `\selectfont` and file hooks run too** (Bruce Miller QA47; #869). The
+    abstract runs `env/abstract/begin` and `env/abstract/end` (latex.ltx:15354-15362, :15386),
+    the begin hook before the abstract's name is read, so a hook's `\renewcommand\abstractname`
+    is honoured; `\selectfont` runs its `selectfont` hook (latex.ltx:12580); `file/<name>/before`
+    and `file/<name>/after` run at every `\input` and load, not once. A family register as a font
+    value reads its family, as tex.web §577: `\textfont9=\textfont1` prints pdflatex's "ABCD"
+    where it printed "A1 B1 CD" (2511.21986; KNOWN_PERL_ERRORS #1271, shared with Perl). Guard
+    `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `abstract_env_hooks_run`,
+    `abstract_begin_hook_runs_before_the_name`, `abstract_end_hook_once_in_a_constructor_abstract`,
+    `selectfont_hook_runs`, `file_hooks_run_at_every_input`, `file_hooks_order_around_a_package`,
+    `font_family_register_takes_a_family_font`; OXIDIZED_DESIGN_DIVERGENCES #1048).
   - **The Rhai cheat sheet is a three-way API: Perl | Rust | Rhai, every Perl and Rust cell filled.**
     `CHEATSHEET.md`'s middle column, formerly the compile-time macro alone, names the Rust a compiled
     binding uses for each call: the macro where there is one, then the function, method, type, field or
@@ -81,7 +257,7 @@
     "Missing number" Warning, or lost its title-page block; it now prints "Exam session 2024"
     as pdflatex. Guard `perfect_kernel_batch56::deposit_reads_a_field_as_a_number`
     (OXIDIZED_DESIGN_DIVERGENCES #265).
-  - **A paper's own pre-2.0 `lni.cls` keeps LaTeX's `\author`** (LXAB). The lni binding gave
+  - **A paper's own pre-2.0 `lni.cls` keeps LaTeX's `\author`** (#859). The lni binding gave
     every lni paper the class's 2.0 author command (authblk's four arguments), so a paper
     shipping an older class raised an Error, printed its author block a second time and gained
     an ORCID link it never wrote (2203.09493, 1705.02823, 2210.04484). Guard
@@ -118,7 +294,7 @@
     `\pdfoutput` to 1 or 0 over the mode LaTeXML guesses from the source's cues, e.g.
     `--preload=[nopdfoutput]latexml.sty` for a latex+dvips paper. Default output is unchanged.
     OXIDIZED_DESIGN #1046; guard `perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
-  - **The document body uses LaTeX's initialized hooks** (QA47B). `\begin{document}` now runs
+  - **The document body uses LaTeX's initialized hooks** (Bruce Miller QA47; #862). `\begin{document}` now runs
     lthooks' initialization, as LaTeX does: a body `\UseHook` expands to the hook's code (an
     `\edef` holds the code, not `\hook_use:n`), and code added in the body is built into its hook
     at once. Most documents convert faster (median −6.6 % instructions over 56 papers); acro papers,
@@ -154,7 +330,7 @@
     natively (MathJax 2.1 in Chrome: 53 px against 18). LaTeXML.css now zeroes that margin in
     an equation cell, in a page's table or a minipage's (21 px). Offered upstream. Guard
     `witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
-  - **A `\bigskip`, `\medskip` or `\vspace` between two paragraphs keeps its gap** (QA26). The
+  - **A `\bigskip`, `\medskip` or `\vspace` between two paragraphs keeps its gap** (Bruce Miller QA26; #854). The
     second paragraph carries `cssstyle="--ltx-skip-before:12.0pt"` (consecutive skips add up to their
     net, as in TeX), and LaTeXML.css adds it to the paragraph gap (ar5iv-css mirrors it); Perl drops
     the amount. Not after a heading, across a heading, a float or a sibling environment (theorem, proof), in a
@@ -182,22 +358,16 @@
     figure that draws a raster larger than its own pixels keeps the PNG path, where a
     browser would blur it
     (a 1×1 raster never counts: one pixel cannot blur). Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
-  - **The binding macros mean what Perl's same-named API means** (MACSYNC, AUDMAC). `Digest!` leaves
+  - **The binding macros mean what Perl's same-named API means** (#843). `Digest!` leaves
     the horizontal mode its digestion entered (Package.pm:393-402, through the new `binding_digest`) and `RawTeX!`
-    ends in vertical mode (Package.pm:996). `AssignRegister!` takes Perl's arguments, `(cs, value[, scope[, parameters]])`, `cs` a name
-    or a Token (**API change** for compiled bindings: the third argument was the parameters, now the scope).
+    ends in vertical mode (Package.pm:996). **BREAKING (library):** `AssignRegister!` takes Perl's arguments,
+    `(cs, value[, scope[, parameters]])`, `cs` a name or a Token — the third argument, formerly the
+    parameters, is now the scope.
     `LookupRegister!`, `AssignRegister!` and the core `lookup_register` give Perl's one Warning
     (`The control sequence \X is not a register`, Package.pm:1367-1369); the macros on an undefined cs too
     (`warn_not_register`; the core `lookup_register` stays quiet on an undefined cs, which kernel code probes). `Dimension!` Warns on a spec that is neither a dimension nor a number (the value is
     unchanged, 0). `InstallDefinition!` takes `(definition[, scope])` (it did not compile). `AddToMacro!` on an
     undefined cs is TeX's Error and defines it with the addition, as latex.ltx does (OXIDIZED_DESIGN #1036). Guards `perfect_kernel_batchmacsync::*`.
-  - **An `xleftmargin` Verbatim is indented again, one row per line** (issue 853, a
-    regression of PR #844). The margin, em-space text before each line, took a row of its
-    own above the line: a blank row under every source line (30 px against 15) and no
-    indent. The box around the line is now a flex row, so the margin sits beside it (text
-    40 → 56 px at 1280 px) and an fvextra `breaklines` line still shrinks to the rest.
-    Chrome and Firefox alike; other verbatim renders pixel-identical. The rule is
-    ar5iv-css PR 57's. Guard `browser_render_verbatim_narrow` (opt-in).
   - **The bundled CSS follows upstream LaTeXML master (`0db6f47e`).** A listings line
     number is `user-select: none` (upstream `95a77fc0`, #2850), so copying a numbered
     `lstlisting` copies the code without its numbers; dark mode colours `body`, not
@@ -217,7 +387,8 @@
     numbered indented line's parbox), and a framed verbatim is a block; inline `\verb`
     keeps its spaces and wraps (`pre-wrap`), so a long one no longer widens a narrow page,
     except in a table cell, which stays unwrapped as the cell is. A breaklines line's text
-    wraps and keeps its spaces (`        return   x` had rendered `return x`). Witnesses
+    wraps and keeps its spaces (`        return   x` had rendered `return x`), and an
+    `xleftmargin` Verbatim sets its margin beside each line, one row per line (issue 853). Witnesses
     2605.00468 and 2605.01024 (their lines' total height 41,496 → 13,650 px and
     1,476 → 432 px at 1280 px). Mirrored in ar5iv-css. Guards
     `witnessed_css_delta::verbatim_whitespace_delta_stays_present`,
@@ -454,59 +625,62 @@
     `script_bindings::tests::api_tables_keep_their_columns`.
 
   - **Rhai values print as their TeX** (Rhai round H). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
+  - **The Rhai binding API is Perl's binding API.** A runtime binding (`.rhai`, no Rust
+    toolchain, no recompile) writes Perl LaTeXML's Package.pm calls under Perl's names, with Perl's
+    arguments and meanings: typed values (`Number`, `Dimension`, `Glue`, `Token`, `Tokens`, boxes,
+    arrays and maps) both ways, Perl's hook and body arguments, Perl's option tables and
+    diagnostics. The calls whose names or results changed are marked **BREAKING** below with
+    their migration; where an entry names a deprecated form, that form keeps working in 0.8.0
+    with a `Warning:deprecated` once per binding load and is removed in the release after 0.8.0;
+    the other breaking changes take effect in 0.8.0 (#829, #849, #860, #870).
+  - **Rhai values print as their TeX** (#849). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
     and `LookupMeaning!` — a `Definition` handle (which `AssignMeaning` installs) or a Token, `()` when undefined —
-    where it returned the printed string `Stored[??]`; a string comparison keeps working this release with a
-    deprecation Warning. `ToString` of a `Definition` is Perl's (the CS and its parameters, was `DefinitionProxy`),
+    where it returned the printed string `Stored[??]`; a string comparison keeps working in 0.8.0 with a
+    deprecation Warning (removed in the release after 0.8.0). `ToString` of a `Definition` is Perl's (the CS and its parameters, was `DefinitionProxy`),
     `ToString` of an array, and an array in a string, print each Token, Tokens, box and value handle as its TeX (were
     Rust type paths, with math Errors), and `LookupString` (the core `lookup_string` behind `LookupString!`) of a
     stored Token or Tokens is its text (was the Rust Debug form). Guard
-    `perfect_kernel_batchw3rg::rhai_values_print_as_perl`; repros `rhai-bindings/lookupmeaning_is_a_string`,
-    `tostring_array_of_handles`, `lookupstring_of_tokens` turn green.
+    `perfect_kernel_batchw3rg::rhai_values_print_as_perl`.
 
-  - **The Perl binding names Rhai lacked** (Rhai round H, AUDNAME). `DefMacroI`, `DefPrimitiveI` and
+  - **The Perl binding names Rhai lacked** (#849). `DefMacroI`, `DefPrimitiveI` and
     `DefConstructorI` take Perl's I-form arguments (a `Token` or a name read as `coerceCS`, a parameter spec or `()`,
     each body kind, the option map) and lower to the core calls their prototype forms make; `IfCondition`, `Box`,
     `List`, `tokens.unlist`, `token.getCatcode`/`getString`/`getCSName` and `box.getFont`/`whatsit.getFont` are
-    registered. `IfCondition` of a non-conditional reads its Error as Perl's (`got '\relax'`, was `T_CS[\relax]`).
+    registered. `IfCondition` of a non-conditional reads its Error as Perl's (`got '\relax'`).
     Guard `perfect_kernel_batchw3rg::rhai_perl_i_forms_and_accessors`. `IfCondition(cs, [args…])` tests a
     conditional on the given arguments, as Perl's `IfCondition($if, @args)`, and never reads the input (the core
     `if_condition` read an argument-taking conditional's arguments from the document); an argument not given is
     Perl's undef. The I-forms' `coerceCS` takes Tokens as their text, and `\csname X\endcsname` needs Perl's space
     after `\csname`. `SetCondition` of a control sequence that is no conditional errs as Perl's (it `\let` a
-    parameterless primitive such as `\relax` to `\iftrue`). `LookupMeaning`'s value keeps `.is_empty()`/`.len()` of
-    the string it was one release, Warned. Guard `perfect_kernel_batchw3rg::rhai_review_rows_round_h`.
+    parameterless primitive such as `\relax` to `\iftrue`). `LookupMeaning`'s value keeps, in 0.8.0, the
+    `.is_empty()`/`.len()` of the string it was, Warned (removed in the release after 0.8.0). Guard `perfect_kernel_batchw3rg::rhai_review_rows_round_h`.
 
-  - **A Rhai name that is a Perl API name behaves as Perl's** (PR #829 round G). A `DefPrimitive`
+  - **A Rhai name that is a Perl API name behaves as Perl's** (#829). A `DefPrimitive`
     body's returned box, or array of boxes, is the primitive's output, as a Perl primitive's
     (`|| Digest(T_LETTER("A"))` printed nothing before); another returned value is dropped with a
     deprecation Warning (Perl errs on it; end such a body with `return;`). `MergeFont` and every
     `font:` option take all of Font.pm's merge keys — `color`/`background` by name (as
     `LookupColor`), `opacity`, a size name (`large`), `scale`, `forcebold`/`forcefamily`/
     `forceseries`/`forceshape`, `emph` — where all but family/series/shape/size were dropped
-    silently; an unknown key Warns. Perl's `Warn`/`Error`/`Info`/`Fatal(cat, obj, where, msg,
+    silently; an unknown key Warns. A base colour name (`red`) needs no colour package
+    (dvipsnam.def is read only once one defines `\DefineNamedColor`). Perl's `Warn`/`Error`/`Info`/`Fatal(cat, obj, where, msg,
     details…)` form is read when `where` is `()` or a handle. `SetCounter`/`AddToCounter` take a
     Number, `StepCounter` its `noreset`, `PushValue`/`UnshiftValue` up to four values, `Revert` a
     string, `LookupDimension` a Token, Tokens, box or Dimension; `ptValue`/`pxValue` clamp the
-    precision to 0..5; `Number("12abc")` is 12 with Perl's `perl:warn` Warning, where it was an
-    Error and 0. `ExplodeText` (and `roman`, the kernel's `ExplodeText!`) makes only ASCII
+    precision to 0..5. `Number(string)` and the core `Number::from(String)` are one reader,
+    Perl's `int()`: `"1e3"` is 1000, and a string not wholly a number (`"12abc"`) reads its numeric
+    prefix with Perl's `perl:warn` Warning (the core gave 0 silently). `ExplodeText` (and `roman`, the kernel's `ExplodeText!`) makes only ASCII
     letters LETTER, as Perl Token.pm and latex.ltx's `\char@if@alph` (`é` is OTHER).
-    **BREAKING:** `CounterValue` returns a Number (its `+`/`-`/comparisons with an int keep
-    working this release with a deprecation Warning; use `.valueOf()`); `node.getAttribute`
+    **BREAKING:** `CounterValue` returns a Number (its `+`/`-`, comparisons and equality with an
+    int or float, in either order, and `roman`/`Roman` of it keep working in 0.8.0 with a
+    deprecation Warning, removed in the release after 0.8.0; use `.valueOf()`); `node.getAttribute`
     of an absent attribute is `()` (`defined(…)` tests it; `== ""` still holds, Warned);
-    `document.setAttribute(key, value)` is deprecated for Perl's `(node, key, value)`.
-    Guard `cluster_package_guards::perfect_kernel_batchw3rg`.
+    `document.setAttribute(key, value)` is deprecated for Perl's `(node, key, value)`. Each of
+    these deprecated forms works in 0.8.0 with its Warning and is removed in the release after 0.8.0.
+    Guards `cluster_package_guards::perfect_kernel_batchw3rg`,
+    `perfect_kernel_batchw3rg::rhai_perl_names_review_rows`.
 
-  - **Rhai round G review fixes** (PR #829 round H). `int`/float comparisons and equality with a
-    Number, in either order, compare as ints with the deprecation Warning (`0 < CounterValue(c)`
-    was `false` silently), and `roman`/`Roman` take a Number the same way. A `LookupDefinition`
-    handle keeps the definition it found, so `AssignMeaning` after a redefinition installs the old
-    one, as Perl's. A base colour name (`red`) in `MergeFont` or a `font:` option needs no colour
-    package (dvipsnam.def is read only once one defines `\DefineNamedColor`; it was 4 Errors and
-    Black). `Number(string)` and the core `Number::from(String)` are one reader, Perl's `int()`:
-    `"1e3"` is 1000, a string not wholly a number Warns and reads its numeric prefix (the core gave
-    0 silently). Guard `perfect_kernel_batchw3rg::rhai_perl_names_review_rows`.
-
-  - **Rhai Def* option bags follow Perl's option tables** (PR #829 round A). Each of
+  - **BREAKING: Rhai Def* option bags follow Perl's option tables** (#829). Each of
     `DefMacro`, `DefPrimitive`, `DefConstructor`, `DefEnvironment`, `DefMath` and
     `DefConditional` checks its bag against Perl's key table (Package.pm `CheckOptions`);
     a key outside it is one `Error:misdefined` ("… does not accept options:bogusopt"),
@@ -523,7 +697,7 @@
     (`DefConditional("\\iffoo")`, with `SetCondition`); its test receives Tokens.
     Guard `cluster_package_guards::perfect_kernel_batchw3ra`.
 
-  - **BREAKING: Rhai values keep their type both ways** (PR #829 round B). `LookupValue`
+  - **BREAKING: Rhai values keep their type both ways** (#829). `LookupValue`
     and `LookupMapping` return the value as it was stored (a bool, an int, a float,
     `Token`, `Tokens`, a digested handle; a list as an array), where they returned its
     string form; a missing key is `()`, where `LookupMapping` returned `""`. `AssignValue`
@@ -539,9 +713,10 @@
     `readUntil`, `readOptional`, `readToken`, `skipSpaces`).
   - **A Rhai macro or reversion closure may return a `Token` or `Tokens`**, as a Perl macro
     sub returns tokens; it expanded to the type's name (`Token`) before.
-  - **Rhai argument shapes as Perl's:** `Digest` takes a string (TeX source), `DigestText`
-    a `Token` or `Tokens`; `AssignCatcode` takes a scope; `LookupCatcode` of a character the
-    table does not hold is `()` (Perl undef), where it was 12.
+  - **Rhai argument shapes as Perl's:** `Digest` also takes a string (TeX source), `DigestText`
+    also a `Token` or `Tokens`, and `AssignCatcode` also takes a scope; the 0.7.6 forms are
+    unchanged. **BREAKING:** `LookupCatcode` of a character the table does not hold is `()`
+    (Perl undef), where it was 12.
   - **New Rhai calls:** `LookupMathcode`/`AssignMathcode`, `LookupSFcode`/`AssignSFcode`,
     `LookupLCcode`/`AssignLCcode`, `LookupUCcode`/`AssignUCcode`,
     `LookupDelcode`/`AssignDelcode` (each Assign* with an optional scope), and
@@ -550,7 +725,7 @@
   - **Rhai diagnostics as Perl's:** `Fatal(cat, obj, msg)` logs `Fatal:<cat>:<obj>`, where it
     logged `Fatal:Internal:Unexpected` (#792); `Warn`/`Error`/`Info`/`Fatal` take Perl's
     trailing details (a string or an array of strings, one line each).
-  - **Rhai options Perl accepts, honoured** (PR #829 round D): `Tag`'s `afterOpen`/`afterClose`
+  - **Rhai options Perl accepts, honoured** (#829): `Tag`'s `afterOpen`/`afterClose`
     hooks (and `:early`/`:late`; another key is an Error); `NewCounter`'s `idprefix`/`idwithin`/
     `nested`; `RequirePackage`/`LoadClass` option maps (`options`, `type`, `notex`, `after`,
     `withoptions`, …; `LoadClass`'s `notex`/`searchpaths_only` reach no class-load option yet
@@ -568,13 +743,13 @@
     `PushValue`): `let o = LookupValue(k); o.push(x); AssignValue(k, o)` round-trips, where
     the array was stored as its printed text. A `Token`/`Tokens` given where a string is
     read (a `properties` value, an option) is its ToString, as Perl's (`\foo bar` reads
-    `\foobar`), where it was the Rust type name (revW3e).
-  - **New Rhai calls, thin wrappers over the macros' core calls** (PR #829 round D1b):
+    `\foobar`), where it was the Rust type name.
+  - **New Rhai calls, thin wrappers over the macros' core calls** (#829):
     `Invocation`, `AddToMacro`, `DeclareFontMap`/`DeclareFontMapMultichar`, `LoadPool`,
     `IsEmpty`, `DigestIf`, `ProcessKeyOptions`, `LookupRegisterOrDefault`, `FindFile`, `Input`,
     `CleanLabel`/`CleanID`, `SetCounter`, `roman`/`Roman`, `UTF`, `Explode`/`ExplodeText`,
     `BeginItemize`, `Equals`, with Perl's argument forms.
-  - **BREAKING: Rhai hooks take Perl's arguments, and the #716 renames** (PR #829 round D2a). A hook
+  - **BREAKING: Rhai hooks take Perl's arguments, and the #716 renames** (#829). A hook
     receives the whatsit as Perl passes it: `afterDigest: |whatsit|`, `beforeConstruct`/`afterConstruct:
     |document, whatsit|`, a sizer `|whatsit|`, and a reversion closure `|whatsit, arg1, …|` — **a reversion
     written `|arg1, …|` must add the leading `whatsit`**. The whatsit has Whatsit.pm's `getArg(n)` (the
@@ -582,8 +757,9 @@
     any value)`. A constructor body receives Perl's `%props` as a trailing map (`|document, x, props|`).
     `openElement` takes an attribute map and returns the new node; `closeElement` and `maybeCloseElement`
     return the node closed, or `()`. `DefAccent` takes Perl's options map (`#{below: true}`; it checks no key,
-    as Perl's). `AssignValue(k, 7)` reads back through `LookupNumber`. These old names stay
-    for one release as aliases, each logging `Warning:deprecated:<name>` once per binding load:
+    as Perl's). `AssignValue(k, 7)` reads back through `LookupNumber`. These old names stay in
+    0.8.0 as aliases, each logging `Warning:deprecated:<name>` once per binding load, and are
+    removed in the release after 0.8.0:
 
     | old | use |
     |---|---|
@@ -599,11 +775,11 @@
 
     Guards `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_perl_forms_716,
     rhai_deprecated_aliases_warn_once}`.
-  - **BREAKING: Rhai bodies receive Perl's arguments; `GetKeyVal` returns the value** (PR #829 round D2b). A
+  - **BREAKING: Rhai bodies receive Perl's arguments; `GetKeyVal` returns the value** (#829). A
     `DefMacro` (and `DefColumnType`, `DefConditional` test) closure is Perl's `|gullet, args|`, a `DefPrimitive`
     closure `|stomach, args|` (`stomach.getGullet()`), each argument `Tokens`, a `Token`, a `KeyVals` or `()` for an
     omitted optional. A closure declaring no parameter is Perl's plain `sub {…}`. One declaring no leading handle —
-    1 to as many parameters as the definition's arguments — keeps receiving TeX strings for one release, with
+    1 to as many parameters as the definition's arguments — keeps receiving TeX strings in 0.8.0 (removed in the release after 0.8.0), with
     `Warning:deprecated:DefMacro |args|` (`DefPrimitive |args|`, `DefColumnType |args|`, `reversion |args|`) once per
     binding load; the two forms cannot be told apart by arity, so a Perl-form closure declares its handle and every
     argument, `|gullet, x|` (`|gullet, _x|` where Perl writes `my ($gullet) = @_`); fewer parameters is the old form,
@@ -615,7 +791,7 @@
     `"0"`, `0` false, every Token, Tokens, box, array and map true) or `defined(v)` (Perl's `defined`), and wrap a
     string use in `ToString(…)`; an old test against a string (`v != ""`, `"" != v`) compares the string forms, `()`
     as `""` on either side as Perl's `undef eq ''`, with `Warning:deprecated:value == string` / `() == string` once
-    per load — so `v == ()` is no longer the defined test for a string (`"" == ()` is true). `GetKeyVals` gives those values (a repeated
+    per load (removed in the release after 0.8.0) — so `v == ()` is no longer the defined test for a string (`"" == ()` is true). `GetKeyVals` gives those values (a repeated
     key's as an array).
     `ToString` takes any value; `document.absorbString` takes any value (its string; `()` adds nothing). New
     `DefParameterType(name, |gullet, extra…| …, #{…})` with Perl's `$parameter_options` (`nargs` accepted unread).
@@ -623,7 +799,7 @@
     `DeclareFontMap`'s `*_mathstyle` is a font map, stored as the `Font` (another value Warns unsupported). Guards
     `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_closure_args_and_parameter_types,
     rhai_deprecated_aliases_warn_once}`.
-  - **BREAKING: Rhai registers and values are typed: `Number`, `Dimension`, `Glue`, `MuGlue`** (PR #829 round C).
+  - **BREAKING: Rhai registers and values are typed: `Number`, `Dimension`, `Glue`, `MuGlue`** (#829).
     Perl's constructors (`Dimension("3pt")`, `Dimension(65536)` in sp, `Glue("1pt plus 2fil minus 1pt")`,
     `MuGlue("3mu plus 1mu")`, `Number(5)`) and methods (`valueOf`, `ptValue`, `toString`, `add`, `subtract`,
     `multiply`, `divide`, `negate`, `smaller`, `larger`, Glue's `getStretch`…), Rhai's `+ - * /` and comparisons
@@ -636,25 +812,27 @@
     change: `LookupRegisterOrDefault` gives the typed value (was its TeX string), `LookupValue`/`GetKeyVal` of a
     stored Number, Dimension or Glue the handle (a Number was an int), and a closure's `{Number}`/`{Dimension}`/
     `{Glue}` argument the handle (was its TeX string). Migration: a string use works unchanged (`"" + v`, `${v}`,
-    `ToString(v)`); a test against a string Warns `deprecated` once per load (use `ToString(v) == "3.0pt"`); an
+    `ToString(v)`); a test against a string Warns `deprecated` once per load (use `ToString(v) == "3.0pt"`; the
+    string test is removed in the release after 0.8.0); an
     int use takes `v.valueOf()`. `MuGlue("3mu plus 1mu")` no longer reconverts its stretch as points. Guards
     `cluster_package_guards::perfect_kernel_batchw3rc::{rhai_typed_registers, rhai_typed_registers_error_side}`.
-  - **Rhai registers as Perl's, round C's review** (PR #829 round E). `LookupRegister` of an undefined control
-    sequence now Warns `expected:register` as of a non-register (Package.pm:1365-1367; the `LookupRegister!` macro's
+  - **Rhai registers as Perl's** (#829). `LookupRegister` of an undefined control
+    sequence Warns `expected:register` as of a non-register (Package.pm:1365-1367; the `LookupRegister!` macro's
     lookup); a fresh register's unitless string (`DefRegister("\\c", "5")`) is an Error and 0, where it was silently
     5sp. Glue and MuGlue `+`/`-` are TeX's `\advance` (`Glue - Dimension` keeps the stretch, `MuGlue + MuGlue` keeps
     the higher fill order), where Perl's Glue.pm/MuGlue.pm differ (OXIDIZED_DESIGN_DIVERGENCES #1030).
-  - **The Rhai dialect is documented for newcomers** (PR #829 round E): a guide,
+  - **The Rhai dialect is documented for newcomers** (#829): a guide,
     `docs/parity/RHAI_BINDINGS_GUIDE.md` (loading, values, the Perl closure form, truthiness and `defined`,
     diagnostics, the deprecated-name migration); a three-column cheat sheet, `CHEATSHEET.md` beside `API.md`
     (Perl | Rust macro | Rhai, generated from `api_doc.rs` and checked with it, its empty cells listed as the
     dialect's gaps); worked examples under `docs/examples/` that CI converts with no Error or Warning
     (`30_script_bindings::docs_examples_convert_clean`). `script_bindings_plan.md` keeps the design notes.
-  - **Rhai `AssignMeaning` is Perl's `$STATE->assignMeaning`** (PR #829 round F): `AssignMeaning(token,
+  - **Rhai `AssignMeaning` is Perl's `$STATE->assignMeaning`** (#829): `AssignMeaning(token,
     meaning[, scope])` stores a meaning, a `LookupDefinition` handle, a `Token` (`T_LETTER("a")`, as `\let\x=a`) or
-    `()` (undefined), as the `AssignMeaning!` macro does, where it was a deprecated `Let`. A string meaning, the old
-    `AssignMeaning("\\a", "\\b")`, still lets this release and Warns `deprecated` once per load, naming `Let` and
-    the handle form. Guard `cluster_package_guards::perfect_kernel_batchw3rd::rhai_perl_forms_716` (p5).
+    `()` (undefined), as the `AssignMeaning!` macro does, where it was a deprecated `Let`. A `LookupDefinition`
+    handle keeps the definition it found, so `AssignMeaning` after a redefinition installs the old one, as Perl's.
+    A string meaning, the old `AssignMeaning("\\a", "\\b")`, still lets in 0.8.0 and Warns `deprecated` once per
+    load, naming `Let` and the handle form (removed in the release after 0.8.0). Guard `cluster_package_guards::perfect_kernel_batchw3rd::rhai_perl_forms_716` (p5).
 
   - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
     chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and
@@ -694,8 +872,9 @@
     A cell carries it per side as `cssstyle="border-top-color:#BFBFBF"`, and a
     colour set inside a tabular or array ends with it. Black, and a table without
     `\arrayrulecolor`, add nothing. (Perl ignores it.)
-  - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
-    meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
+  - **BREAKING (library): `post::PostOptions::nodefaultresources` is now `default_resources`,
+    with the meaning inverted.** A caller that sets the old field no longer compiles; set
+    `default_resources: !old_value`. The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
     and the XSLT step still receives its negation as `noresources`, as
     `LaTeXML.pm:584` passes it. The CLI flags `--defaultresources` and
@@ -736,6 +915,20 @@
     recursed between 1000 and 3000 levels deep now aborts in post-processing, as
     in Perl and in dynamically linked builds. Guard
     `xslt::max_depth_tests::transform_aborts_past_perls_recursion_depth`.
+
+  - **A class that copies `\author` or `\title` before redefining it no longer loops.** tocbase.cls
+    (shipped with aic.cls and its siblings) does `\let\orig@author\author`, then redefines `\author`
+    to collect the names and calls `\orig@author{\toc@authors}` at `\end{frontmatter}`. The copy
+    replayed the class's later definition, so the author list contained itself
+    (`Fatal:Stomach:Recursion`). A `\let` copy of a frontmatter setter taken before the class
+    redefines it is now the setter as it stood, as in TeX, and restoring the setter from such a copy
+    brings back the kernel's setter in the `\let`'s own scope. Witnesses 1811.06821, 1811.11810,
+    1904.05269, 1905.07135, 2011.14174, 2311.03341, 1808.03157, 1911.12471, 2110.09373, 2110.14889,
+    2204.12683, 2406.17657 (OXIDIZED_DESIGN_DIVERGENCES #1078). Guards
+    `perfect_kernel_batchsetcopy::{a_copy_taken_before_the_redefinition_is_the_kernels_setter,
+    a_copy_in_an_end_code_takes_the_class_list_once, a_copy_taken_after_the_redefinition_still_replays,
+    a_restored_setter_takes_a_later_redefinition_afresh, a_restored_setter_drops_the_class_definition,
+    a_restore_in_a_group_ends_with_it}`.
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
