@@ -766,7 +766,7 @@
            role, follows it here in document order with the badge, its mark on the name (0801.1438). -->
       <!-- (a shared unmarked note too, one copy carrying the page's generated mark: OXIDIZED_DESIGN_DIVERGENCES #1059) -->
       <xsl:variable name="annotations"
-                    select="ltx:contact[@role='orcid'] | ltx:note[normalize-space(@mark) or @idref or key('f:note-copies',@xml:id)]"/>
+                    select="ltx:contact[@role='orcid'] | ltx:note[normalize-space(@mark) or @idref or key('f:creator-note',concat('C&#x9;',@xml:id))]"/>
       <xsl:choose>
         <xsl:when test="$annotations">
           <xsl:element name="span" namespace="{$html_ns}">
@@ -774,7 +774,7 @@
             <xsl:apply-templates select="ltx:personname">
               <xsl:with-param name="context" select="$innercontext"/>
               <xsl:with-param name="trailing_newline"
-                              select="not(ltx:note[normalize-space(@mark) or @idref or key('f:note-copies',@xml:id)])"/>
+                              select="not(ltx:note[normalize-space(@mark) or @idref or key('f:creator-note',concat('C&#x9;',@xml:id))])"/>
             </xsl:apply-templates>
             <xsl:apply-templates select="$annotations">
               <xsl:with-param name="context" select="$innercontext"/>
@@ -787,7 +787,7 @@
           </xsl:apply-templates>
         </xsl:otherwise>
       </xsl:choose>
-      <xsl:apply-templates select="ltx:note[not(normalize-space(@mark) or @idref or key('f:note-copies',@xml:id))]">
+      <xsl:apply-templates select="ltx:note[not(normalize-space(@mark) or @idref or key('f:creator-note',concat('C&#x9;',@xml:id)))]">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
       <!-- the author's metadata: hidden RDFa spans (span.ltx_rdf), OXIDIZED_DESIGN #479 -->
