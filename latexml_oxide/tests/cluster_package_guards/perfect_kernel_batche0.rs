@@ -3267,7 +3267,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // meaning a `\let` copies, TeX's own record of the meaning; review revPRESBX B1)
   // (PRESBXc +1: `carry_document_refusal_records` carries the records of `\maketitle` alone, their one reader's name
   // and the records' key; review revPRESBXb S1, BL3)
-  ("latexml_core/src/state.rs", 165),
+  // (SETCOPY, 165 -> 172: `setter_as_copied` knows a replaying setter by its body's internal call tokens, which are the
+  // binding's own names, not the document's, and `same_copied_setter` unwraps the copy's body for `\ifx`)
+  ("latexml_core/src/state.rs", 172),
   ("latexml_core/src/stomach.rs", 84),
   // (MEMB, -1: `be_absorbed` reads its text through `arena::with`, not `get_string()`)
   ("latexml_core/src/tbox.rs", 2),
@@ -3317,7 +3319,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (PRESBX +1: AAAI's repeated mark, `aaai_note`'s `\footnotemark[<n>]`, a construction)
   // (PRESBXc +1: `aaai_note` peeks the "." the emitter cuts a name list at, a character; review revPRESBXb BL1)
   // (MTREDUCE -2: both moved with AAAI's notes to their binding, latexml_contrib aaai_sty.rs, DG 2026-11-17)
-  ("latexml_engine/src/latex_constructs/sect05.rs", 266),
+  // (SETCOPY, 266 -> 269: `HiddenRefusal` saves and restores `\lx@dropped@<name>`, a meaning read, which the
+  // pattern counts)
+  ("latexml_engine/src/latex_constructs/sect05.rs", 269),
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),
   ("latexml_engine/src/latex_constructs/sect07.rs", 29),
   // (QAB57, 69 -> 70: `assign_meaning` clearing an environment OmniBus guessed, a write the `meaning(` pattern counts)
