@@ -1,4 +1,5 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
+
 use regex::Regex;
 
 use crate::{
@@ -13,8 +14,8 @@ use crate::{
   tokens::{TeXString, Tokens},
 };
 
-static CSNAME_MACRO_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap());
+static CSNAME_MACRO_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap());
 // Includes `_` (expl3 private/word-internal) and an optional `:<letters>`
 // suffix (expl3 parameter-type sigil) so prototype strings like
 // "\\draw_path_arc:nnn{}{}{}" parse with the entire `\draw_path_arc:nnn`
@@ -24,9 +25,10 @@ static CSNAME_MACRO_RE: Lazy<Regex> =
 // strings bypass the tokenizer, so this is purely a string-parsing
 // concern. Witness: l3draw_sty stubs would previously fail with
 // "Unrecognized parameter type with name '_begin', spec '_begin:'".
-static CS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\\[a-zA-Z@_]+(?::[a-zA-Z]*)?)").unwrap());
-static SINGLE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\\.)").unwrap());
-static ACTIVE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(.)").unwrap());
+static CS_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^(\\[a-zA-Z@_]+(?::[a-zA-Z]*)?)").unwrap());
+static SINGLE_CHAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(\\.)").unwrap());
+static ACTIVE_CHAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(.)").unwrap());
 
 /// If calling at compile-time, pass `None` for state, to avoid initialization.
 pub fn parse_prototype(proto: &str, init_flag: bool) -> Result<(Token, Option<Parameters>)> {

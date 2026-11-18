@@ -1,8 +1,7 @@
-use std::error::Error;
 #[cfg(test)]
 use std::rc::Rc;
+use std::{error::Error, sync::LazyLock};
 
-use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
@@ -1428,7 +1427,7 @@ pub fn name_is_functional_or_id(name: &str) -> bool {
   name.starts_with("ID") || name_is_functional(name)
 }
 
-static _PRAGMATIC_BLOCK_MAP: Lazy<HashMap<char, LetterBlock>> = Lazy::new(|| {
+static _PRAGMATIC_BLOCK_MAP: LazyLock<HashMap<char, LetterBlock>> = LazyLock::new(|| {
   // Generally, we can observe that the latin alphabet shares "intent"
   // in blocks of 3 letters in mathematics, as a fast-and-loose rule of thumb.
   // a-e is an exception as a rather stable 5-letter block with shared utility.

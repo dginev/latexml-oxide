@@ -2726,8 +2726,8 @@ fn note_text(note: &[Token]) -> (String, Vec<(usize, i32)>) {
 /// and Zhongkui Li"), each one author's alone: its surname that author's last word, its first initial that author's
 /// first word's (case aside). None where a name matches no author, or more than one.
 fn named_authors(list: &str, names: &[AuthorUnit]) -> Option<Vec<usize>> {
-  static SPLIT_RX: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r",?\s+and\s+|\s*,\s*").unwrap());
+  static SPLIT_RX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r",?\s+and\s+|\s*,\s*").unwrap());
   let fold = |w: &str| -> String {
     w.chars()
       .filter(|c| c.is_alphabetic())
@@ -2795,14 +2795,14 @@ fn note_span(
 /// The addresses an e-mail line prints (`{bincheng,zhongkli}@pku.edu.cn` one per local part), None where it prints
 /// more than addresses and the words between them.
 fn email_line_addresses(line: &str) -> Option<Vec<String>> {
-  static LIST_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  static LIST_RX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\{([^{}@]+)\}\s*@\s*([A-Za-z0-9][A-Za-z0-9.\-]*[A-Za-z0-9])").unwrap()
   });
-  static ONE_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  static ONE_RX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"[A-Za-z0-9][A-Za-z0-9._%+\-]*@[A-Za-z0-9][A-Za-z0-9.\-]*[A-Za-z0-9]").unwrap()
   });
-  static REST_RX: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"^(?:[\s,;.{}()]|\band\b)*$").unwrap());
+  static REST_RX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:[\s,;.{}()]|\band\b)*$").unwrap());
   let mut addresses = Vec::new();
   let rest = LIST_RX.replace_all(line, |c: &regex::Captures| {
     for local in c[1].split(',') {
@@ -2823,14 +2823,14 @@ fn email_line_addresses(line: &str) -> Option<Vec<String>> {
 /// The e-mail label of an IEEE note ("E-mail:", "(e-mail:", "Email:", "E-mail addresses:", "Contact email:"; its colon
 /// optional: "(email \{a,b\}@ethz.ch)", 2309.06591; a colon or a space after it, so an address's "email.sc.edu" or
 /// "email@" is none). A label word the rest does not follow with addresses keeps the note whole.
-static EMAIL_LABEL_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+static EMAIL_LABEL_RX: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"(?i)\(?\s*(?:contact\s+)?\be-?mail(?:s|\s+address(?:es)?)?(?:\s*:\s*|\s+)").unwrap()
 });
 
 /// Does `before` (a note's text up to a '.') end in an initial ("C", "J.-L", "D.S")?
 fn ends_initial(before: &str) -> bool {
-  static INITIAL_RX: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"(?:^|[\s(])\p{Lu}(?:\.-?\p{Lu})*$").unwrap());
+  static INITIAL_RX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:^|[\s(])\p{Lu}(?:\.-?\p{Lu})*$").unwrap());
   INITIAL_RX.is_match(before)
 }
 
@@ -2896,20 +2896,20 @@ type RoutedContact = (usize, Vec<Token>);
 /// contact with the author it goes to. None where it routes nothing.
 fn route_note(note: &[Token], names: &[AuthorUnit]) -> Option<(Vec<Token>, Vec<RoutedContact>)> {
   const NAME: &str = r"\p{Lu}[\p{L}'’.\-]*(?: \p{Lu}[\p{L}'’.\-]*)*";
-  static CLAUSE_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  static CLAUSE_RX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&s!(
       r"^((?:{NAME})(?:(?:,? and |, )(?:{NAME}))*) (?:is|are)(?: also| now| currently| presently)? with "
     ))
     .unwrap()
   });
-  static CORRESPONDING_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  static CORRESPONDING_RX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&s!(r"^(?i:corresponding author)(?::| is) ({NAME})\.?$")).unwrap()
   });
-  static ANOTHER_CLAUSE_RX: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"\b(?:is|are|was|were)(?: \w+)? with\b").unwrap());
+  static ANOTHER_CLAUSE_RX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\b(?:is|are|was|were)(?: \w+)? with\b").unwrap());
   // (a second sentence an initial hid: "Building C. This work …")
-  static SENTENCE_RX: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"\. \p{Lu}").unwrap());
+  static SENTENCE_RX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\. \p{Lu}").unwrap());
   let contact = |role: &str, content: Vec<Token>| -> Vec<Token> {
     let mut call = vec![T_CS!("\\lx@add@contact"), T_OTHER!("[")];
     call.extend(ExplodeText!(s!("role={role}")));

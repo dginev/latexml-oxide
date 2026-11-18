@@ -3,12 +3,11 @@ use std::sync::Mutex;
 use std::{
   env,
   path::{Path, PathBuf},
-  sync::OnceLock,
+  sync::{LazyLock, OnceLock},
 };
 
 #[cfg(feature = "kpathsea")]
 use kpathsea::Kpaths;
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 /// configuration for filesystem search.
@@ -31,14 +30,14 @@ static LITERAL_PROTOCOL: &str = "literal:";
 static HOME_TILDE: &str = "~";
 // `HOME` first (Unix, and set by some Windows shells), then Windows'
 // native `USERPROFILE`, so `~` expansion works on both platforms.
-static HOME_PATH: Lazy<String> =
-  Lazy::new(
+static HOME_PATH: LazyLock<String> =
+  LazyLock::new(
     || match env::var_os("HOME").or_else(|| env::var_os("USERPROFILE")) {
       Some(val) => val.to_string_lossy().into_owned(),
       _ => s!("~"),
     },
   );
-static PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(https|http|ftp):").unwrap());
+static PROTOCOL_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(https|http|ftp):").unwrap());
 // Match Perl LaTeXML's permissive filename behavior: filenames may
 // contain commas, parens, ampersands, etc. that some user paths legitimately
 // use (e.g. `\input{5-Ack,terms}` resolving to `5-Ack,terms.tex`). Only
@@ -46,10 +45,10 @@ static PROTOCOL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(https|http|ftp):").
 // enable command injection via kpathsea or `\openin`. Driver: 2308.13679
 // `\input{5-Ack,terms}`. Mirrors Perl's missing nasty-check (Perl simply
 // passes filenames to kpathsea without a pre-filter).
-static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r#"[`$;|<>"\x00\n\r]"#).unwrap());
+static PATHNAME_IS_NASTY_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r#"[`$;|<>"\x00\n\r]"#).unwrap());
 // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
-static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
+static URL_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
 // Perl `pathname_is_url` is `$pathname =~ /^($PROTOCOL_RE)/` — the protocol is
 // ANCHORED at the start. The previous `is_url` used `URL_RE` (`^\w+://…`),
 // whose leading `\w+` (which includes `_`) matches a filename PREFIX like
@@ -58,7 +57,8 @@ static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").un
 // `\IfFileExists` took its true branch → the `_` in the key got typeset in
 // text mode ("Script _ can only appear in math mode"; witness 1509.01434).
 // Match Perl: only `http`/`https`/`ftp` followed by `:` at the very start.
-static URL_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:https|http|ftp):").unwrap());
+static URL_PREFIX_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^(?:https|http|ftp):").unwrap());
 
 /// Process-global kpathsea handle (cross-thread shared, NOT
 /// `thread_local!`).
@@ -77,7 +77,7 @@ static URL_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:https|http|ftp
 /// `feedback_no_mutex_use_thread_local` in user memory for the
 /// general rule.
 #[cfg(feature = "kpathsea")]
-static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(select_kpaths()));
+static KPSE: LazyLock<Mutex<Option<Kpaths>>> = LazyLock::new(|| Mutex::new(select_kpaths()));
 
 /// Which kpathsea backend this process resolved. Reported by
 /// [`kpathsea_backend`] so a host-resolution problem is diagnosable from the
@@ -349,7 +349,7 @@ pub fn ambient_kpsewhich_version() -> Option<&'static str> {
 ///
 /// **Concurrency:** safe to invoke on a background thread spawned at
 /// process start **only after [`init_kpathsea`] has run on the spawning
-/// thread** — see there. `KPSE` is process-global (`Lazy<Mutex<…>>`), so
+/// thread** — see there. `KPSE` is process-global (`LazyLock<Mutex<…>>`), so
 /// the init done on a background thread is visible to the main thread.
 /// The Mutex briefly serializes the prewarm against the main thread's
 /// first real lookup, but dump load + arg parsing take >50 ms before
@@ -429,7 +429,7 @@ pub fn prewarm_kpathsea() {}
 /// stays on the [`prewarm_kpathsea`] background thread.
 #[cfg(feature = "kpathsea")]
 pub fn init_kpathsea() {
-  // Forces the `Lazy` (= `select_kpaths()`); the guard is released at once.
+  // Forces the `LazyLock` (= `select_kpaths()`); the guard is released at once.
   drop(
     KPSE
       .lock()
@@ -441,8 +441,8 @@ pub fn init_kpathsea() {
 pub fn init_kpathsea() {}
 
 // Perl: $pathname =~ s|^($PROTOCOL_RE//[^/]*)/|/|
-static CANONICAL_URL_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^((?:https|http|ftp)://[^/]*)").unwrap());
+static CANONICAL_URL_RE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^((?:https|http|ftp)://[^/]*)").unwrap());
 
 // static ref INSTALLDIRS : Vec<String> = match env::current_exe() {
 //     Ok(exe_path) => {

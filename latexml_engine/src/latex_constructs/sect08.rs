@@ -33,7 +33,7 @@ pub(crate) fn load() -> Result<()> {
   // tabbing_bindings() overrides this local to `\@tabbing@accent`.
   // Found in arxiv 1611.05395.
   //
-  // **Lazy-pool-load guard (2026-05-01)**: in Perl, the kernel
+  // **LazyLock-pool-load guard (2026-05-01)**: in Perl, the kernel
   // `\let\a=\@tabacckludge` runs at engine init, BEFORE user TeX.
   // If the user defines `\def\a{\alpha}` in their preamble (a
   // common Greek-letter abbreviation), the user assignment runs

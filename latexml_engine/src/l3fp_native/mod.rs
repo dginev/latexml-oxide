@@ -41,11 +41,11 @@ mod tables;
 use std::{
   cell::{Cell, RefCell},
   collections::HashMap,
+  sync::LazyLock,
 };
 
 use latexml_core::definition::expandable::{SpecialCall, set_native_call};
 use num::{Decline, Fp, Sign, Tag};
-use once_cell::sync::Lazy;
 
 use crate::prelude::*;
 
@@ -88,8 +88,10 @@ fn watched_name(name: &str) -> WatchedName {
   }
 }
 
-static CHECK: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_L3FP_CHECK").as_deref() == Ok("1"));
-static TRACE: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_L3FP_TRACE").as_deref() == Ok("1"));
+static CHECK: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LATEXML_L3FP_CHECK").as_deref() == Ok("1"));
+static TRACE: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LATEXML_L3FP_TRACE").as_deref() == Ok("1"));
 
 thread_local! {
   /// This thread's choice of the native path, consulted before `LATEXML_L3FP_NATIVE`: a test sets it instead of

@@ -3,10 +3,9 @@ use std::{
   cell::{Cell, RefCell},
   collections::VecDeque,
   rc::Rc,
+  sync::LazyLock,
   time::Instant,
 };
-
-use once_cell::sync::Lazy;
 
 use crate::{digested::DigestedData, pin};
 
@@ -16,18 +15,20 @@ use crate::{digested::DigestedData, pin};
 /// concurrent reads from many test threads, manifesting as SIGSEGV
 /// in `__GI_getenv` when running `cargo test --release --tests`.
 /// Sample once at static-init; subsequent reads are an atomic load.
-static TRACE_BOUND_MODE: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_BOUND_MODE").is_ok());
+static TRACE_BOUND_MODE: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LXML_TRACE_BOUND_MODE").is_ok());
 /// `LXML_TRACE_FRAMES=1`: one line per stack-frame push/pop with the depth, the
 /// owning token and (on pop) the bound mode — the save-stack view of a
 /// group/box/mode imbalance.
-pub(crate) static TRACE_FRAMES: Lazy<bool> =
-  Lazy::new(|| std::env::var("LXML_TRACE_FRAMES").is_ok());
+pub(crate) static TRACE_FRAMES: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LXML_TRACE_FRAMES").is_ok());
 /// `LXML_TRACE_TERMINAL=1`: for every bounded body (`digest_next_body` with a
 /// terminal), the terminal, each token the loop reads with the boxing depth,
 /// and the exit — shows which loop actually digests a token (a brace group is
 /// a NESTED body here, so an until-body's terminal inside `{…}` never reaches
 /// the outer loop).
-static TRACE_TERMINAL: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_TERMINAL").is_ok());
+static TRACE_TERMINAL: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LXML_TRACE_TERMINAL").is_ok());
 
 // Conversion timeout: thread-local deadline. When set, digest loops check it.
 thread_local! {
@@ -634,7 +635,7 @@ pub struct Stomach {
 }
 
 #[thread_local]
-pub static STOMACH: Lazy<RefCell<Stomach>> = Lazy::new(|| RefCell::new(Stomach::default()));
+pub static STOMACH: LazyLock<RefCell<Stomach>> = LazyLock::new(|| RefCell::new(Stomach::default()));
 
 // ---- Fragment yield (streaming mode) -------------------------------------
 //

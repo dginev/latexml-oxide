@@ -4,9 +4,8 @@ use std::{
   fmt, io,
   num::{ParseFloatError, ParseIntError},
   result,
+  sync::LazyLock,
 };
-
-use once_cell::sync::Lazy;
 
 use crate::common::arena::SymHashMap;
 
@@ -32,7 +31,8 @@ pub enum LogStatus {
 }
 
 #[thread_local]
-pub static REPORT: Lazy<RefCell<LogState>> = Lazy::new(|| RefCell::new(LogState::default()));
+pub static REPORT: LazyLock<RefCell<LogState>> =
+  LazyLock::new(|| RefCell::new(LogState::default()));
 
 /// Depth of diagnostic-macro emission on this thread (see [`macro_diag_guard`]).
 /// A depth counter, not a bool: `Error!` can raise `Fatal!` inside its own
@@ -552,7 +552,7 @@ pub fn get_status(status: LogStatus) -> usize {
 }
 
 /// One shared probe for the `LATEXML_DEBUG_FATAL` diagnostics (first-fatal
-/// backtrace, gullet pushback dump, recent-token ring). Lazy-cached so hot
+/// backtrace, gullet pushback dump, recent-token ring). LazyLock-cached so hot
 /// paths pay a single bool test, and a single seam if the env contract grows
 /// (PR #249 review P3-13).
 pub fn debug_fatal_enabled() -> bool {
@@ -827,10 +827,10 @@ pub fn merge_report_counts(c: ReportCounts) {
 // bin/latexml_oxide.rs); reads only occur on gated debug paths.
 //======================================================================
 
-static KNOWN_DEBUG_FEATURES: Lazy<std::sync::RwLock<std::collections::BTreeSet<String>>> =
-  Lazy::new(|| std::sync::RwLock::new(std::collections::BTreeSet::new()));
-static ENABLED_DEBUG_FEATURES: Lazy<std::sync::RwLock<rustc_hash::FxHashSet<String>>> =
-  Lazy::new(|| std::sync::RwLock::new(rustc_hash::FxHashSet::default()));
+static KNOWN_DEBUG_FEATURES: LazyLock<std::sync::RwLock<std::collections::BTreeSet<String>>> =
+  LazyLock::new(|| std::sync::RwLock::new(std::collections::BTreeSet::new()));
+static ENABLED_DEBUG_FEATURES: LazyLock<std::sync::RwLock<rustc_hash::FxHashSet<String>>> =
+  LazyLock::new(|| std::sync::RwLock::new(rustc_hash::FxHashSet::default()));
 
 /// Perl: `DebuggableFeature($name)` — register a feature name so it can
 /// be listed/validated for `--debug`.
@@ -933,7 +933,7 @@ macro_rules! DebugFeature {
   }};
 }
 
-/// Debug-status diagnostics. **Lazy**: the argument expressions — which at
+/// Debug-status diagnostics. **LazyLock**: the argument expressions — which at
 /// several sites build whole `node_to_string` subtree serializations — are
 /// evaluated only when [`debug_record_enabled`] says the record would actually
 /// be logged (2026-08-23 audit, PERFORMANCE.md Open levers P0). The Debug

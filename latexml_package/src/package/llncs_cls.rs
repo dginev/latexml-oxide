@@ -254,7 +254,7 @@ LoadDefinitions!({
   //      mislanded on a single creator and left an empty affiliation stub. Its
   //      \email lines are each address its owner's (85b, below), not the brace
   //      list whole on every author, which inheriting "affiliation:1" made it.
-  //  (c) Lazy: ONE block, no \and, hand-typed superscripts ("$^1$..\quad $^2$..")
+  //  (c) LazyLock: ONE block, no \and, hand-typed superscripts ("$^1$..\quad $^2$..")
   //      (witness 2606.19939). Upstream makes a single affiliation = the whole
   //      block attached to every \inst{1} author (duplicating it) while \inst{2}+
   //      get nothing (reproduces identically in Perl LaTeXML 0.8.8). It is the

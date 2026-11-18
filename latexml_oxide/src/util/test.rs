@@ -1,8 +1,10 @@
-use std::{path::PathBuf, sync::Once};
+use std::{
+  path::PathBuf,
+  sync::{LazyLock, Once},
+};
 
 use glob::glob;
 use latexml_core::{Core, CoreOptions, common::BindingDispatcher, document::Document, s};
-use once_cell::sync::Lazy;
 
 use crate::core_interface::DigestionAPI;
 
@@ -15,16 +17,17 @@ pub use requirements::{
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
 // Sampled at static init; subsequent reads are atomic loads.
-static TEST_LOG: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_TEST_LOG").is_ok());
-static SIGSEGV_TRACE: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_SIGSEGV_TRACE").is_ok());
-static SAVE_ACTUAL: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_SAVE_ACTUAL").is_ok());
+static TEST_LOG: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_TEST_LOG").is_ok());
+static SIGSEGV_TRACE: LazyLock<bool> =
+  LazyLock::new(|| std::env::var("LATEXML_SIGSEGV_TRACE").is_ok());
+static SAVE_ACTUAL: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_SAVE_ACTUAL").is_ok());
 /// "Bless" / regenerate mode — the Rust equivalent of Perl's `tools/maketests`.
 /// When `LATEXML_BLESS=1`, a `…_ok` test writes the ACTUAL conversion output to
 /// its golden `.xml` (overwriting it) instead of comparing+asserting. Run via
 /// `tools/maketests.sh` (optionally with a test-name filter). Because it reuses
 /// the exact harness conversion + serialization (`process_texfile`), the
 /// regenerated golden is byte-identical to what the comparison expects.
-static BLESS: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_BLESS").is_ok());
+static BLESS: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_BLESS").is_ok());
 
 pub fn latexml_tests(
   dirpath: &str,

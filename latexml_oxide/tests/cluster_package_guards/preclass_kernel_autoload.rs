@@ -50,7 +50,7 @@ fn convert(tex: &str) -> (bool, String, String) {
 }
 
 /// Convert `tex` in a fresh process under `LATEXML_NODUMP=1`. A process of its own because the dump-or-raw
-/// `LoadFormat` branch is chosen once per process (`LATEXML_NODUMP` is read into process-once `Lazy`s, tex.rs,
+/// `LoadFormat` branch is chosen once per process (`LATEXML_NODUMP` is read into process-once `LazyLock`s, tex.rs,
 /// plain_dump.rs, latex.rs). Returns (exit success, ANSI-stripped stderr, XML — empty if none was written).
 fn convert_nodump(tex: &str) -> (bool, String, String) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");

@@ -20,7 +20,7 @@
 # FLAGS:
 #  -Zmiri-disable-isolation : allow time/getrandom (harmless for these tests)
 #  -Zmiri-ignore-leaks      : the engine's interner is a process-lifetime
-#                             `once_cell::Lazy<RefCell<StringInterner>>` that
+#                             `LazyLock<RefCell<StringInterner>>` that
 #                             never drops BY DESIGN; without this flag Miri
 #                             reports the singleton as a "leak" (not UB).
 #
