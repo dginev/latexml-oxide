@@ -22579,7 +22579,9 @@ sets them (latexml.sty.ltxml:97-108). The arXiv fleet has always run with `--pre
 `pushbacklimit=5000000` (`ar5iv_sty.rs`).
 
 **Rust (DG 2026-11-18).** `latexml_oxide`, the library API (`api::library_config`), cortex's generic profile and the
-LSP pass `Config.include_styles = Some(true)` and `Config.if_limit`/`absorb_limit` = ar5iv's values
+LSP pass `Config.include_styles = Some(true)`, `Config.absorb_limit` = ar5iv's 1,299,999 and `Config.if_limit` = ten
+times ar5iv's (480,000,000: the `\if` count accumulates over the whole document, and at ar5iv's 48,000,000 the TeX Live
+manual tkz-grapheur-doc-fr lost its last picture and section while the unlimited default converted it; DG 2026-11-18)
 (`common::RUNAWAY_IF_LIMIT`, `RUNAWAY_ABSORB_LIMIT`), applied when the session starts and before the preloads
 (`Converter::initialize_session`), so a latexml.sty option still wins. A binding still outranks a raw file
 (`content.rs` `require_package` / `input_definitions_impl` for packages, `content.rs` `load_class` for classes). The other two limits were already the front ends': the

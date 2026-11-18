@@ -139,8 +139,8 @@ pub struct Config {
   pub include_styles:          Option<bool>,
   /// Perl `$LaTeXML::IF_LIMIT` / `$LaTeXML::ABSORB_LIMIT` (`latexml.sty.ltxml:100-105`), set when the session
   /// starts, before the preloads, so a `latexml.sty` `iflimit=`/`absorblimit=` option still wins (0 = unlimited).
-  /// `None` keeps Perl's default (unlimited); the front ends pass ar5iv.sty's values, [`RUNAWAY_IF_LIMIT`] and
-  /// [`RUNAWAY_ABSORB_LIMIT`] (OXIDIZED_DESIGN_DIVERGENCES #1080).
+  /// `None` keeps Perl's default (unlimited); the front ends pass [`RUNAWAY_IF_LIMIT`] (ten times ar5iv.sty's) and
+  /// [`RUNAWAY_ABSORB_LIMIT`] (ar5iv.sty's) (OXIDIZED_DESIGN_DIVERGENCES #1080).
   pub if_limit:                Option<i64>,
   pub absorb_limit:            Option<i64>,
   /// Whether to skip math parsing (--nomathparse)
@@ -171,8 +171,11 @@ pub struct Config {
   /// conversion's.
   pub source_date_epoch:       Option<i64>,
 }
-/// ar5iv.sty's `iflimit` (`latexml_contrib/src/ar5iv_sty.rs`), the front ends' default `\if` runaway ceiling.
-pub const RUNAWAY_IF_LIMIT: i64 = 48_000_000;
+/// The front ends' default `\if` runaway ceiling: ten times ar5iv.sty's `iflimit` (48,000,000,
+/// `latexml_contrib/src/ar5iv_sty.rs`, which the arXiv fleet keeps). The counter accumulates over the whole document, so
+/// a long pgf-heavy manual passes 48M without any runaway (tkz-grapheur-doc-fr lost its last section at 48M; DG
+/// 2026-11-18: "Raise plain default 10×"); the token budget and the timeout still bound a true runaway.
+pub const RUNAWAY_IF_LIMIT: i64 = 480_000_000;
 /// ar5iv.sty's `absorblimit`, the front ends' default ceiling on absorbed boxes.
 pub const RUNAWAY_ABSORB_LIMIT: i64 = 1_299_999;
 impl Default for Config {

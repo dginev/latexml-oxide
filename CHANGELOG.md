@@ -911,8 +911,9 @@
   - **BREAKING (default): packages and classes without a binding are read raw, under ar5iv's runaway
     limits.** `latexml_oxide`, the library API (`latexml::api`) and cortex's generic profile now raw-load
     an unbound `.sty`/`.cls` from the TeX tree, as `--includestyles` (Perl `INCLUDE_STYLES` +
-    `INCLUDE_CLASSES`) did; a compiled binding still wins. They also take ar5iv.sty's limits: 48,000,000
-    conditionals (`iflimit`) and 1,299,999 absorbed boxes (`absorblimit`), beside the existing 5,000,000
+    `INCLUDE_CLASSES`) did; a compiled binding still wins. They also take runaway limits: 480,000,000
+    conditionals (`iflimit`, ten times ar5iv.sty's, since the count accumulates over a long document) and
+    1,299,999 absorbed boxes (`absorblimit`, ar5iv.sty's), beside the existing 5,000,000
     pushback cap and the source-scaled token budget. Measured on a stratified 697-paper arXiv draw without
     the ar5iv preload: error-free papers 84.5 % → 95.7 %, Fatal papers 2 → 0, errors −71 %, words +1.0 %,
     no systematic slowdown; 40 TeX Live manuals error-free 22.5 % → 90 %. Format builds (`--init`)

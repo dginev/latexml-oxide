@@ -33,7 +33,7 @@ A binding can run external programs (`Command`); each run is named by an `Info:s
 shipped beside a source loads with it ([`release/SAFETY.md`](release/SAFETY.md)).
 
 **Packages and classes without a LaTeXML binding are read raw** from the TeX tree (and the document's directory), as
-pdflatex reads them; a binding always wins. The runaway limits are ar5iv's: 48,000,000 conditionals and 1,299,999
+pdflatex reads them; a binding always wins. The runaway limits are 480,000,000 conditionals (ten times ar5iv's, as the count accumulates over a long document) and 1,299,999
 absorbed boxes, a 5,000,000-token pushback, and a token budget of 20G raised with the source size (`--token-limit`).
 To get Perl LaTeXML's behaviour — bindings only, a missing package skipped with a warning, an unknown class served
 by OmniBus — pass `--noincludestyles` (or `--preload='[norawstyles,norawclasses]latexml.sty'`); latexml.sty's `iflimit`, `absorblimit` and
