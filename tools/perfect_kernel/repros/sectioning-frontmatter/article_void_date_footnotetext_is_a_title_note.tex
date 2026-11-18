@@ -1,0 +1,24 @@
+% mechanism: a `\date` under the authors whose legend lines are taken is void, its leftover dropped (OD #1071, DG
+%   2026-11-17); a note inside it is no leftover of the date: `\footnotetext` a title note (role note), as a
+%   title-page footnote text is (OD #1036), `\thanks`/`\footnote` the pubnotes a date's notes digest to (Perl
+%   Base_Utility.pool.ltxml:331-332)
+% witness:  2605.04795 (`\date{$^1$Universität Regensburg \qquad … \\\bigskip\today \footnotemark[0]
+%   \footnotetext[0]{2020 \textit{Mathematics Subject Classification}: 57K10; 57R65, 57R90}}`)
+% oracle:   pdflatex 0 errors; "Ann Able1 Bob Baker2", "1Universität Regensburg 2Renyi Institute", the date, the
+%   footnote "2020 Mathematics Subject Classification: 57K10; 57R65, 57R90"
+% engines:  rust aeda3db4e47 = the footnote text dropped with the void date, 1 Warning (unclaimed: 2020 mathematics
+%   subject classification); perl = the date kept whole as text, its footnote inside it (2026-11-18)
+% expect:   0 errors, 0 warnings; Ann Able: Universität Regensburg; Bob Baker: Renyi Institute; no date; one pubnote
+%   (role note) "2020 Mathematics Subject Classification: 57K10; 57R65, 57R90"
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{Cobordism}
+\author{Ann Able$^1$ \and Bob Baker$^2$}
+\date{$^1$Universit\"at Regensburg \qquad $^2$Renyi Institute\\\bigskip\today
+\footnotemark[0]
+\footnotetext[0]{2020 \textit{Mathematics Subject Classification}: 57K10; 57R65, 57R90}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -20541,7 +20541,9 @@ unlabelled lines continuing it, is the contact that label's line is; an unlabell
 continuation, every author's affiliation; a line of e-mail addresses alone (an "E-mail:" label naming each, a
 `{a, b}@x` list written out) each address's owner's. A date anything is taken from is void (DG 2026-11-17, "null and
 void"): no `ltx:date`, its leftover — a `\today`, a date string — dropped and named once,
-`Info:frontmatter:date_void`. A date with a line no rule reads (a label no name prints, a mark inside a line, text
+`Info:frontmatter:date_void`; a note inside it is no leftover of the date (DATEFOOT): a `\footnotetext` is a title note
+(`ltx:pubnote` role note, as a title-page footnote text is, #1036, no counter step), a `\thanks`/`\footnote` the pubnote a
+date's note digests to (2605.04795's MSC line). A date with a line no rule reads (a label no name prints, a mark inside a line, text
 naming no institution, a binding's label keyed by a document macro, an address among text that is no e-mail label or
 beside an `@` no address holds) is the date, whole,
 with an Info: nothing of it is taken. So is one whose lines' owners may not be the names they read as: typed labels
@@ -20574,9 +20576,10 @@ author (`spelled_owners`). It runs as the body note closes (`ltx:note`'s `after_
 on a note a frontmatter flush digests or `insert_frontmatter` places (`FRONTMATTER_INSERTING`). The `\date` reader reads
 tokens, as the API's Cut does (the store is no rehearsed block): `perfect_kernel_batche0`'s `frontmatter (rest)` pin
 37 -> 53 (51 the line readers, +1 the void date's words named to the title-page check, +1 the `@` signs the
-address-among-text fail-safe counts on the tokens).
+address-among-text fail-safe counts on the tokens; 53 -> 61, a void date's notes taken out of its line on the tokens,
+`taken_notes`).
 **Witnesses.** 1512.01686, 2003.11862, 2412.00057, 2108.10662, 1802.01334, 2305.08521, 2511.18126, 2401.15728,
-2303.16540, 0907.1199, 0806.4361, 1506.06444, 0912.1999, 2507.03628 (`\date`); 2606.00446 (authblk `§`); 2506.06941
+2303.16540, 0907.1199, 0806.4361, 1506.06444, 0912.1999, 2507.03628 (`\date`); 2605.04795 (a void date's `\footnotetext`); 2606.00446 (authblk `§`); 2506.06941
 (the `\footnotetext` address list); 2508.05506, 1507.08926 (`\blfootnote{$\dagger$ …}`, a legend note, open);
 2307.00092, 2412.00057, 2404.15649, 2601.19933, cs0703003, 1801.04802 (the fail-safes); 2302.11378 (`$^{(2)}$` legends in
 `\date`); 2602.04557 (icml's notice, open).
@@ -20586,7 +20589,8 @@ address-among-text fail-safe counts on the tokens).
 (`perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_beside_its_legend`, repinned),
 the SHARED row `fmmarks_authblk_double_star_label_and_date_note_red` (green), the LINK row
 `author_typed_star_legend_in_the_date_links_nothing` (the date's ∗ legend is Ann's and Bob's note);
-`perfect_kernel_batchdateleg` (the `date_void` and stays-the-date Infos, the date's fail-safes
+`perfect_kernel_batchdateleg` (the `date_void` and stays-the-date Infos, a void date's notes
+`a_void_dates_notes_are_title_notes`, the date's fail-safes
 `a_date_whose_owners_are_uncertain_stays_whole`, the note fail-safes); `note_star_legend_in_abstract` a RED catalog
 repro.
 
