@@ -854,8 +854,12 @@ pub fn initialize_gullet() {
 /// Get the current location of input getting read
 pub fn get_locator() -> Locator { get_locator_opt().unwrap_or_default() }
 
-/// Perl's `getLocator` (Gullet.pm:150-162): the innermost mouth with a source, else the first mouth of the
-/// stack; `None` when there is neither (before the first mouth opens, or a sourceless one alone).
+/// After Perl's `getLocator` (Gullet.pm:150-162): the innermost mouth with a source, else the first mouth of the
+/// stack; `None` when there is neither (before the first mouth opens, or a sourceless one alone). Perl keeps the
+/// last mouth its walk examined, so a sourceless mouth alone reports its own `String; line …` and an all-sourceless
+/// stack ends on the outermost mouth; here the first case has no `at` line (the binding machinery's mouth, not the
+/// document's, is the only one open) and the second takes the innermost (`front()`), as before. Porting Perl's
+/// walk exactly is a logged follow-up (row R RHAILOCWALK); only the message text differs.
 pub fn get_locator_opt() -> Option<Locator> {
   let gullet = gullet!();
   let mut runtime_opt = gullet.runtime.as_ref();

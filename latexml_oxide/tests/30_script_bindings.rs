@@ -2240,7 +2240,8 @@ fn a_failing_preloaded_binding_is_logged() {
 }
 
 /// A session's messages logged where no mouth reads a source (`--preload=ar5iv.sty`, as the cortex fleet runs) have
-/// no `at` line, as Perl's `getLocator` is undef there (Gullet.pm:150-162), not `Locator::default`'s `locator.rs`;
+/// no `at` line (Perl prints the sourceless mouth's own `String; line …` there, Gullet.pm:150-157; we omit it), never
+/// `Locator::default`'s `locator.rs`;
 /// the session block opens the log once, and a clean document stays clean (RHAIPOL review, probe ok5).
 #[test]
 fn a_preloaded_session_invents_no_locator() {
