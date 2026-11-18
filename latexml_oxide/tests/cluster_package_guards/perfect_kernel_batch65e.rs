@@ -244,7 +244,7 @@ fn siamltex_theorems_numbered_within_section() {
 }
 
 /// ptephy: a superscript symbol mark no affiliation answers (`$^{\dag}$`) stays shown on its name
-/// (`show_unanswered_marks`, base_utilities.rs), and the lines after the author list's first `\\` are its legends,
+/// (`insert::settle_name_marks`), and the lines after the author list's first `\\` are its legends,
 /// document notes with their marks, not one more creator (2203.01270). Repro
 /// class-bindings/ptephy_symbol_marks_and_legend_lines.
 #[test]
@@ -255,14 +255,14 @@ fn ptephy_symbol_marks_and_legend_lines() {
   ));
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\"><personname>A.\u{a0}One<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">†</text></sup><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>University One, City One</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B.\u{a0}Two<sup xml:id=\"id4\">∗</sup><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">2</text></sup>University Two, City Two</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>C.\u{a0}Three<sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" xml:id=\"id8.1\">2</text></sup>University Two, City Two</contact></creator>",
+    "<creator role=\"author\"><personname>A.\u{a0}One</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id1\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>University One, City One</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B.\u{a0}Two</personname><note mark=\"∗\" role=\"footnotemark\" xml:id=\"id3\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>University Two, City Two</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>C.\u{a0}Three</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup>University Two, City Two</contact></creator>",
   ]);
   // (P4b2b: the ids renumbered after the names' printed marks)
   assert_eq!(bare_elements(&xml, "pubnote"), vec![
-    "<pubnote><sup xml:id=\"id9\"><text font=\"italic\" xml:id=\"id9.1\">∗</text></sup>Deceased, August 2020.</pubnote>",
-    "<pubnote><sup xml:id=\"id10\"><text font=\"italic\" xml:id=\"id10.1\">†</text></sup>Deceased, April 2021.</pubnote>",
+    "<pubnote><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">∗</text></sup>Deceased, August 2020.</pubnote>",
+    "<pubnote><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">†</text></sup>Deceased, April 2021.</pubnote>",
   ]);
 }
 
@@ -307,24 +307,24 @@ fn ptephy_name_lines_after_break_stay_names() {
   ));
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), [
-    "<creator role=\"author\"><personname>A.\u{a0}One<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B.\u{a0}Two<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>C.\u{a0}Three<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">1</text></sup>Univ A</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Four<sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" xml:id=\"id8.1\">2</text></sup>Univ B</contact></creator>",
+    "<creator role=\"author\"><personname>A.\u{a0}One</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B.\u{a0}Two</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Univ B</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>C.\u{a0}Three</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Univ A</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Four</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
   ]);
   assert!(bare_elements(&xml, "pubnote").is_empty(), "{xml}");
 }
 
 /// A symbol mark nothing answers is shown on every author carrying it; a contact or note the author holds for another
-/// reason answers nothing (`show_unanswered_marks`). Repro sectioning-frontmatter/symbol_mark_shown_on_each_author.
+/// reason answers nothing (`settle_name_marks`). Repro sectioning-frontmatter/symbol_mark_shown_on_each_author.
 #[test]
 fn symbol_mark_shown_on_each_author() {
   let xml = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/symbol_mark_shown_on_each_author.tex"
   ));
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\u{2020}</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\">\u{2020}</sup></personname></creator>",
+    "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id1\"/><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id3\"/></creator>",
   ]);
 }
 
@@ -338,12 +338,12 @@ fn ptephy_textsuperscript_legend_line() {
   ));
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\"><personname>A.\u{a0}One<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B.\u{a0}Two<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2,∗</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+    "<creator role=\"author\"><personname>A.\u{a0}One</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B.\u{a0}Two</personname><note mark=\"∗\" role=\"footnotemark\" xml:id=\"id2\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
   ]);
   // (P4b2b: the ids renumbered after the names' printed marks)
   assert_eq!(bare_elements(&xml, "pubnote"), vec![
-    "<pubnote><sup xml:id=\"id5\">*</sup>Deceased.</pubnote>"
+    "<pubnote><sup xml:id=\"id4\">*</sup>Deceased.</pubnote>"
   ]);
 }
 
@@ -359,8 +359,8 @@ fn osa_email_text_command_mark_without_brace() {
   ));
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\"><personname>A. Able<sup xml:id=\"id1\">1,∗</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ X</contact><contact name=\"Email:\u{a0}\" role=\"email\">*able@x.edu</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B. Baker<sup xml:id=\"id3\">1</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">1</sup>Univ X</contact></creator>",
+    "<creator role=\"author\"><personname>A. Able</personname><note mark=\"∗\" role=\"footnotemark\" xml:id=\"id1\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ X</contact><contact name=\"Email:\u{a0}\" role=\"email\">*able@x.edu</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B. Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ X</contact></creator>",
   ]);
 }
 
@@ -467,9 +467,9 @@ fn ptephy_affil_list_goes_to_marked_names() {
   ));
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\"><personname>A.\u{a0}One<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>University One, City One</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B.\u{a0}Two<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2,3</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>University Two, City Two</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">3</text></sup>University Three, City Three</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>C.\u{a0}Three<sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">3</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">3</text></sup>University Three, City Three</contact></creator>",
+    "<creator role=\"author\"><personname>A.\u{a0}One</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>University One, City One</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B.\u{a0}Two</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>University Two, City Two</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">3</text></sup>University Three, City Three</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>C.\u{a0}Three</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">3</text></sup>University Three, City Three</contact></creator>",
   ]);
 }
 

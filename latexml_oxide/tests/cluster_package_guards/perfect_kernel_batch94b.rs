@@ -170,12 +170,12 @@ fn a_raw_class_in_place_address_is_the_api() {
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   let xml: &[&[&str]] = &[
     &[
-      "Ann Able 1",
+      "Ann Able",
       "address=1 Univ A, Town, Country",
       "email=ann@a.edu",
     ],
-    &["Bob Baker 1", "address=1 Univ A, Town, Country"],
-    &["Cy Cole 2", "address=2 Univ B, City, Country"],
+    &["Bob Baker", "address=1 Univ A, Town, Country"],
+    &["Cy Cole", "address=2 Univ B, City, Country"],
   ];
   assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
@@ -200,11 +200,11 @@ fn a_raw_style_buffered_address_is_the_api() {
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   let xml: &[&[&str]] = &[
     &[
-      "Ann Able 1,2",
+      "Ann Able",
       "address=1 Univ A, Town",
       "address=2 Univ B, City",
     ],
-    &["Bob Baker 3", "address=3 Lab C, Place"],
+    &["Bob Baker", "address=3 Lab C, Place"],
   ];
   assert_reading(tex, Some(xml), &[
     "C Ann Able [1,2] | line:names",
@@ -510,8 +510,8 @@ fn an_optional_caption_names_the_line() {
       "email=ann@a.edu",
     ],
     &["Bob Baker", "address=Univ B, City"],
-    &["Cy Cole b", "address=Lab D, Place"],
-    &["Dan Doe a", "address=Lab E, Place"],
+    &["Cy Cole", "mark=b", "address=Lab D, Place"],
+    &["Dan Doe", "mark=a", "address=Lab E, Place"],
   ];
   assert_eq!(default_mode_creators(tex), owned(xml));
   for streaming in [false, true] {
@@ -825,9 +825,12 @@ fn a_line_in_doubt_is_digested_once() {
   let tex = repro!("raw_class_line_in_doubt_is_digested_once.tex");
   assert_written(
     tex,
-    &[&["Ann Able 1"], &["Bob Baker 2"], &["Cy Cole 3"], &[
-      "Dan Doe 4",
-    ]],
+    &[
+      &["Ann Able", "mark=1"],
+      &["Bob Baker", "mark=2"],
+      &["Cy Cole", "mark=3"],
+      &["Dan Doe", "mark=4"],
+    ],
     None,
     Some(
       "( 2 ) Univ B1, City More text. ( 3 ) Lab C2, Place 4 Lab D 1 1 footnote 1 D note. Body 2, .",
@@ -840,7 +843,8 @@ fn a_line_in_doubt_is_digested_once() {
         xml.matches("labels=\"LABEL:lc\"").count(),
         xml.matches("<note ").count()
       ),
-      (1, 1),
+      // (the footnote, and each author's mark nothing answers a mark-only note after the name: PURE)
+      (1, 5),
       "streaming={streaming}"
     );
   }

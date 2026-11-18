@@ -1,0 +1,34 @@
+% witness: synthetic (DG 2026-11-17: a mark past the class's list errs, as pdflatex does)
+% The class beside it is BioMed Central's bmcart.cls (2014/01/24) as 2112.10068 ships it, unmodified (its licence
+% asks a changed copy to be renamed). Its thanksbox, printed at `\end{fmbox}` (:1435-1443 `\auto@set@thanksbox`),
+% prints the corresponding author's mark and "Correspondence: <e-mail>" (:1458-1463 `\printcorrtext`), then each
+% `{artnotes}` note under its mark (:1393-1404); each `\thanksmark` steps `thanks`, whose marks are *, \textdagger,
+% \^{} (:1095-1097), and the names print their notes' marks (`\thanksref`).
+% Three notes after the correspondence's * take †, ^ and the fourth `\csname bmcsymbol@item@4\endcsname`, `\relax`.
+% oracle:  pdflatex 1 error (4 runs): "! Undefined control sequence." at `\end{document}`, the label `n3thanks` writes
+%          `\bmcsymbol@item@4`; "Ann Able1†ˆ and Bob Baker2*†ˆ", "† Equal contributorˆ DeceasedJoint first authors"
+% engines: rust BMCART r1: an Info, the fourth note unmarked; Perl no binding (OmniBus)
+% expect:  1 error 0 warnings; "Equal contributor" under †, "Deceased" under ^, shared; "Joint first authors" Ann's, unmarked
+% status:  RED (BMCART r1) -> GREEN (BMCARTb)
+% preload: ar5iv.sty
+\documentclass{bmcart}
+\begin{document}
+\begin{frontmatter}
+\begin{fmbox}
+\title{The Title}
+\author[addressref={aff1},noteref={n1,n2,n3},email={a@x.org}]{\fnm{Ann} \snm{Able}}
+\author[addressref={aff2},noteref={n1,n2},corref={aff2},email={b@x.org}]{\fnm{Bob} \snm{Baker}}
+\address[id=aff1]{\orgname{Univ A}, \cny{US}}
+\address[id=aff2]{\orgname{Univ B}, \cny{IN}}
+\begin{artnotes}
+\note[id=n1]{Equal contributor}
+\note[id=n2]{Deceased}
+\note[id=n3]{Joint first authors}
+\end{artnotes}
+\end{fmbox}
+\end{frontmatter}
+\section{Intro} Body.
+\begin{backmatter}
+\begin{thebibliography}{1}\bibitem{a} A. Ref.\end{thebibliography}
+\end{backmatter}
+\end{document}

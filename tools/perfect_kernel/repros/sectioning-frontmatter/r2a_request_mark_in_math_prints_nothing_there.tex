@@ -1,0 +1,20 @@
+% mechanism: a name's request read in math (`$\star^{1}$`, `$^{2}_{x}$`) leaves its mark after the math closes
+%   (`\lx@frontmatter@namemark`'s `\aftergroup`) and reverts to nothing, as Perl's request prints nothing
+%   (Base_Utility.pool.ltxml:552, :729-732): the formula's `tex` and MathML `alttext` hold no internal macro, and a
+%   script after the request keeps its own empty base
+% witness:  review revR2A B2 (probes p22, p24); sibling r2a_request_mark_in_math_before_a_name_line
+% oracle:   pdflatex 0 errors; "Ann Able⋆1∗ Bob Baker2x Cat Cole 3", footnote "∗ Zebra University."
+% engines:  rust R2Abase 14e92b291ab = tex "\star", Bob's "<sub>x</sub>" text; rust R2A 1012ac10283 = tex
+%   "\star\lx@frontmatter@namemark{affiliation:1}{1}", Bob's math an empty-base POSTSUBSCRIPT with
+%   tex "\lx@frontmatter@namemark{affiliation:2}{2}_{x}"
+% expect:   0 errors, 3 Warnings (the decline; two content-check counts of "Baker2x", as base); the base's creators
+% status:   GREEN (perfect_kernel_batchr2a::a_request_mark_read_in_math_waits_out_the_math)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$\star^{1}$\footremember{zz}{Zebra University.} \and Bob Baker$^{2}_{x}$ \and Cat Cole$\,^{3}$}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -33,7 +33,7 @@ macro_rules! repro {
 fn qquad_parts_names_each_with_its_note() {
   assert_eq!(
     converted(repro!("authblk_thanks_qquad_parts_names"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Note two.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id3">Note three.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note one.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id2">Note two.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id3">Note three.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -52,11 +52,11 @@ fn qquad_parts_names_without_notes() {
 fn quad_quad_and_hspace_part_names_each_with_its_note() {
   assert_eq!(
     converted(repro!("authblk_thanks_quad_quad_parts_names"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Note two.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id3">Note three.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note one.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id2">Note two.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id3">Note three.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("authblk_thanks_hspace_parts_names"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Note two.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id3">Note three.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note one.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id2">Note two.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id3">Note three.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -66,15 +66,15 @@ fn quad_quad_and_hspace_part_names_each_with_its_note() {
 fn what_parted_or_stayed_whole_before_is_unchanged() {
   assert_eq!(
     converted(repro!("authblk_thanks_and_two_creators"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Note two.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note one.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id2">Note two.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("authblk_two_thanks_one_name"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Note two.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note one.</note> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id2">Note two.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("authblk_comma_in_note_parts_names"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Dept. X, Univ Y.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Note two.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id3">Note three.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Dept. X, Univ Y.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id2">Note two.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id3">Note three.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -87,7 +87,7 @@ fn what_parted_or_stayed_whole_before_is_unchanged() {
 fn a_space_of_one_person_makes_no_second_creator() {
   assert_eq!(
     converted(repro!("authblk_spaces_of_one_person_part_nothing"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Note two.</note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id3">Dept. X Y.</note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id4">Note three.</note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Eve Ede</personname> <note mark="*" role="footnotemark" xml:id="footnotex1"><tags> <tag>*</tag> <tag role="refnum">*</tag> <tag role="typerefnum">footnote *</tag> </tags></note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note one.</note> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id2">Note two.</note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id3">Dept. X Y.</note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="§" role="thanks" xml:id="id4">Note three.</note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Eve Ede</personname> <note class="ltx_note_frontmatter ltx_thanks_note" idref="id1" mark="*" role="thanks" xml:id="footnotex1">Note one.</note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -98,7 +98,7 @@ fn a_space_of_one_person_makes_no_second_creator() {
 fn a_line_under_a_name_is_its_line() {
   assert_eq!(
     converted(repro!("authblk_line_under_name_is_its_line"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept. of Physics</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note one.</note> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept. of Physics</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("authblk_email_line_under_name"), 0),
@@ -112,7 +112,7 @@ fn a_line_under_a_name_is_its_line() {
 fn parted_names_share_the_affil_after_them() {
   assert_eq!(
     converted(repro!("authblk_parted_names_share_the_affil"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note one.</note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note one.</note> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -124,7 +124,7 @@ fn parted_marked_names_ask_their_own_affiliations() {
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(
     converted(repro!("authblk_parted_marked_names_ask_theirs"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup>Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup>Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">2</text></sup>Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -164,7 +164,7 @@ fn the_affil_run_is_every_creator_of_the_call() {
   // (P4b2b: the name's printed mark, `\textsuperscript{*}` an asterisk, as pdflatex prints it)
   assert_eq!(
     converted(repro!("authblk_first_row_keeps_run_affil"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id3"><Math mode="inline" tex="\dagger" text="dagger" xml:id="m1"> <XMath xml:id="m1.1"> <XMTok name="dagger" role="MULOP">†</XMTok> </XMath> </Math></sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note mark="*" role="footnotemark" xml:id="id1"/> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note mark="*" role="footnotemark" xml:id="id2"/> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note mark="†" role="footnotemark" xml:id="id3"/> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -174,7 +174,7 @@ fn the_affil_run_is_every_creator_of_the_call() {
 fn a_glued_mark_in_a_list_or_leading_a_line() {
   assert_eq!(
     converted(repro!("author_glued_mark_in_a_list"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">∗</sup></personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note mark="∗" role="footnotemark" xml:id="id1"/> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -197,7 +197,7 @@ fn a_mark_that_stays_lost_is_counted() {
 }
 
 /// A star glued in math shows the `∗` it prints, in text the `*`, each mid-list in its place, the marks answered or not;
-/// 2505.11121, 2609.14365. Distinct: `keepsup_in_math`, `GluedPart`, the comma of `show_unanswered_marks`.
+/// 2505.11121, 2609.14365. Distinct: `keepsup_in_math`, `GluedPart`, the comma of `settle_name_marks`.
 /// Beside a second symbol too: `$^{2,1*\dagger}$` prints `∗†` (2404.16821, 2505.17017, 2609.38428, 2610.31762; rev108a3 B1).
 #[test]
 fn a_glued_star_beside_a_second_symbol_prints_as_written() {
@@ -258,7 +258,7 @@ fn a_place_under_a_row_institution_stays_with_it() {
       repro!("author_place_under_a_row_institution_stays_with_it"),
       0
     ),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id1">able@x.edu</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup>Corresponding author</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id3">bbaker@y.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id1">able@x.edu</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2">Corresponding author</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id3">bbaker@y.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -289,10 +289,7 @@ fn a_class_store_makes_no_printed_note() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   // (P4b2b: the names' printed marks, as pdflatex prints them; P4f: the store's entries theirs, "1 Univ A", "2 Univ B")
   assert_eq!(creators(&xml), vec![
-    vec!["Ann Able 1".to_string(), "affiliation=1 Univ A".to_string()],
-    vec![
-      "Bob Baker 2".to_string(),
-      "affiliation=2 Univ B".to_string()
-    ],
+    vec!["Ann Able".to_string(), "affiliation=1 Univ A".to_string()],
+    vec!["Bob Baker".to_string(), "affiliation=2 Univ B".to_string()],
   ]);
 }

@@ -1,0 +1,30 @@
+% witness: REVTeX's front-matter footnote numbering (2605.04155's `\equalcontrib` with e-mails; 1308.0465's repeated
+%          `\thanks`): revtex4-2.cls:2120, :2160, :2236 join a `\thanks` or `\email` to the title, author or affiliation last
+%          given, :2446-2450 print a name's own footnote before its joined one, an affiliation's at its line
+% oracle:  pdflatex 0 errors; "Title∗", "Ann Able†‡", "Univ A", "Bob Baker†‡", "Univ B§", footnotes "∗ Title note.",
+%          "† These authors contributed equally.", "‡ Visiting Univ C.", "§ b@x.org"
+% engines: rust=0 (edc515b111f: both shared notes marked ∗ and ‡, the title's and the affiliation's footnotes uncounted)
+%          perl=0 (thanks contacts, no marks; the title's note lost) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann and Bob each with the notes "These authors contributed equally." marked † and "Visiting
+%          Univ C." marked ‡ (OD #1054); Bob with his e-mail; the title's note a thanks contact of the last author (today's
+%          placement)
+% status:  RED (edc515b111f) -> GREEN (SHRESTb)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\makeatletter
+\newcommand{\equalcontrib}{\frontmatter@footnote{These authors contributed equally.}}
+\makeatother
+\begin{document}
+\title{Title}
+\thanks{Title note.}
+\author{Ann Able\equalcontrib}
+\thanks{Visiting Univ C.}
+\affiliation{Univ A}
+\author{Bob Baker\equalcontrib}
+\thanks{Visiting Univ C.}
+\affiliation{Univ B}
+\email{b@x.org}
+\begin{abstract}Abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

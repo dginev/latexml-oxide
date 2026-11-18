@@ -38,7 +38,7 @@ fn ieee_grids_read_by_rows_and_lists_keep_their_order() {
   );
   assert_eq!(
     converted_any(repro!("ieeetran_author_grid_with_marks_and_a_note"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">*</sup>Univ A</contact> <contact name="Email: " role="email">ann@a.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">†</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">†</sup>Univ C</contact> <contact name="Email: " role="email"><inline-block class="ltx_parbox" vattach="middle" width="85.4pt" xml:id="id5"> <p xml:id="id5.1">bob@c.org</p> </inline-block></contact> </creator> <creator before=" " role="author"> <personname>Cy Coe<sup xml:id="id6">†</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7">†</sup>Univ C</contact> <note class="ltx_note_frontmatter ltx_thanks_funding" role="thanks" xml:id="id8">Cy is funded by X.</note> </creator> <creator before=" " role="author"> <personname>Dan Dee<sup xml:id="id9">*</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id10">*</sup>Univ A</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">*</sup>Univ A</contact> <contact name="Email: " role="email">ann@a.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">†</sup>Univ C</contact> <contact name="Email: " role="email"><inline-block class="ltx_parbox" vattach="middle" width="85.4pt" xml:id="id3"> <p xml:id="id3.1">bob@c.org</p> </inline-block></contact> </creator> <creator before=" " role="author"> <personname>Cy Coe</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">†</sup>Univ C</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">*</sup>Univ A</contact> </creator> <pubnote role="thanks">Cy is funded by X.</pubnote> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted_any(repro!("ieeetran_author_blocks_one_row_keep_their_order"), 0),
@@ -55,7 +55,8 @@ fn ieee_grids_read_by_rows_and_lists_keep_their_order() {
 
 /// A body with no names block and no document macro takes the plain route, each grade its author's: a pin. A names list
 /// held in a document macro is read as it prints (RED on int158a: the grade lost, each name written as plain text with
-/// a Warning; green on int168a too, the grade the reading's contact since P5a, OD #1016).
+/// a Warning; green on int168a too, the grade the reading's contact since P5a, OD #1016). Its "A. Able is with Univ A."
+/// note is Ann Able's affiliation since IEEEROUTE (OD #1072), no longer the title's.
 #[test]
 fn ieee_plain_route_reads_names_and_grades() {
   assert_eq!(
@@ -63,7 +64,7 @@ fn ieee_plain_route_reads_names_and_grades() {
       repro!("ieeetran_author_plain_route_reads_names_and_grades"),
       0
     ),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact role="membership">Member, IEEE</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <creator before=" " role="author"> <personname>Cy Coe</personname> <contact role="membership">Fellow, IEEE</contact> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">A. Able is with Univ A.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact role="membership">Member, IEEE</contact> <contact name="Affiliation: " role="affiliation">Univ A.</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <creator before=" " role="author"> <personname>Cy Coe</personname> <contact role="membership">Fellow, IEEE</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted_any(repro!("ieeetran_author_plain_route_names_in_a_macro"), 0),
@@ -163,7 +164,7 @@ fn ieee_author_body_read_at_the_flush() {
 /// addresses no name spells on a nameless creator below the authors).
 #[test]
 fn marked_block_address_goes_to_the_name_showing_the_mark() {
-  let ieee = r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">*</sup>Univ X, C, D</contact> <contact name="Email: " role="email">chteng@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">†</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">†</sup>Univ Y, E, F</contact> <contact name="Email: " role="email">idbj.real@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##;
+  let ieee = r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">*</sup>Univ X, C, D</contact> <contact name="Email: " role="email">chteng@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">†</sup>Univ Y, E, F</contact> <contact name="Email: " role="email">idbj.real@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##;
   assert_eq!(
     converted_any(repro!("ieeetran_author_names_list_marked_block_address"), 0),
     ieee
@@ -180,6 +181,6 @@ fn marked_block_address_goes_to_the_name_showing_the_mark() {
       repro!("revtex_author_names_list_marked_affiliation_address"),
       0
     ),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X, C, D</contact> <contact name="Email: " role="email">chteng@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Y, E, F</contact> <contact name="Email: " role="email">idbj.real@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X, C, D</contact> <contact name="Email: " role="email">chteng@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y, E, F</contact> <contact name="Email: " role="email">idbj.real@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }

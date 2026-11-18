@@ -1,0 +1,24 @@
+% mechanism: a document's `\maketitle` that makes a footnote before it prints the title (`\footnote{…}` first) has
+%   unknown marks here (`latex_constructs::steps_footnotes_before_title`; the fail-safe, DG 2026-11-16: no glyph rather
+%   than a wrong one): the title's notes are written with none
+% witness:  none (review revPRESBXb BL2, p/n1.tex; siblings `\footnotemark`, `\thanks{…}` first, p/n5, p/n10)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "∗ A Title / Ann Able† Bob Baker‡"; foot "∗ Preprint under
+%   review." "† First note." "‡ Second note."
+% engines:  rust PRESBXbase2 (14e92b291ab) = 0 errors, 0 Warnings; both notes unmarked; PRESBXb (300685cb312) = Ann
+%   thanks[∗], Bob thanks[†] (the preprint note's step not counted)
+% expect:   the fail-safe: 0 errors, 0 Warnings; both notes unmarked, each under its name
+% status:   RED (PRESBXb) -> GREEN fail-safe, XML and HTML RED against the PDF (PRESBXc:
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks); the preprint note's own mark
+%   (we write ‡, pdflatex ∗) RED in perfect_kernel_batchpresbxc (row R PRESBX/ownnote)
+% moves:    XML, HTML row R SHAUTO/T1
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\begingroup\def\thefootnote{\fnsymbol{footnote}}\footnote{Preprint under review.}\begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

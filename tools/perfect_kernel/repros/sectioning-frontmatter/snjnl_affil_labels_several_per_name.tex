@@ -1,0 +1,26 @@
+% mechanism: sn-jnl's `\author[1,3]{name}` prints its labels in the name's superscript (2412.01641's sn-jnl.cls:498-500,
+%   `\@for` over the list) and `\affil[n]{text}` prints `^{n}text.` under the names (:588-596): each name's
+%   affiliations are the ones its labels name, in label order
+% witness:  2412.01641 (`[1,2]`, `[1,3]`, `[3]`, `[1,3,4]`)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able1,3, Bob Baker2, Cat Cole1,2,3", "1Univ A.",
+%   "2Univ B.", "3Univ C."
+% engines:  rust 3b420685f89 = 0 errors, each name its affiliations
+% expect:   0 errors 0 Warnings; Ann Univ A and Univ C, Bob Univ B, Cat all three
+% status:   GREEN XML GREEN, HTML GREEN (3b420685f89, a guard of the shape;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author[1,3]{\fnm{Ann} \sur{Able}}
+\author[2]{\fnm{Bob} \sur{Baker}}
+\author[1,2,3]{\fnm{Cat} \sur{Cole}}
+\affil[1]{\orgname{Univ A}}
+\affil[2]{\orgname{Univ B}}
+\affil[3]{\orgname{Univ C}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: a typed ∗ beside a body footnote that prints ∗ links to no `\thanks` printing ∗: two notes print the
+%   glyph (`f:glyph-elsewhere`, a note's mark; OD #1052)
+% witness:  synthetic (revCONNFIX S1 probe p3)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗", footnotes "∗ Supported by grant 42." and "∗ Ann Able passed
+%   away in 2020."
+% engines:  rust CONNFIXb (2bdd7f0f730) = 0 errors, 0 Warnings; HTML Ann's ∗ linked to Bob's note
+% expect:   0 errors, 0 Warnings; Ann's ∗ plain (the guard's XML and HTML lines)
+% status:   RED (CONNFIXb) -> GREEN (CONNFIXc; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Body Footnote}
+\author{Ann Able$^{*}$ \and Bob Baker\thanks{Supported by grant 42.}}
+\begin{document}
+\maketitle
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\footnotetext[1]{Ann Able passed away in 2020.}
+Text.
+\end{document}

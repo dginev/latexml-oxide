@@ -19,7 +19,7 @@ fn nested_names_block_keeps_every_author() {
   assert_eq!(elements(&xml, "creator"), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact role=\"membership\">Member,\u{a0}IEEE</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact role=\"membership\">Senior Member,\u{a0}IEEE</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe</personname>\n    <contact role=\"membership\">Fellow,\u{a0}IEEE</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Zebra funded this.</note>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe</personname>\n    <contact role=\"membership\">Fellow,\u{a0}IEEE</contact>\n  </creator>",
   ]);
 }
 

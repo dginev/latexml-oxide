@@ -65,21 +65,25 @@ pub enum AuthorPage {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TitlePageDecl {
   /// what it prints for the authors
-  pub author:         AuthorPage,
+  pub author:            AuthorPage,
   /// the document classes whose title page sets an `\and` of its own where it prints the authors, each with the line
   /// that sets it (aa.cls:866, svjour3.cls:608): the separator's meaning at the print, which the call site's is not.
   /// Recorded for the separator query (TP2); empty: the meaning the document gives it (article.cls never sets `\and`)
-  pub title_and:      &'static [(&'static str, &'static str)],
+  pub title_and:         &'static [(&'static str, &'static str)],
   /// the document classes (their bindings' file names) whose `\maketitle` runs `\@maketitle` ([`MaketitleRuns`]), each
   /// with the line that shows it: where it runs it, a `\@maketitle` the document or a package defines is the title page
   /// in force, as pdflatex prints it (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953); where it does not, article.cls's stand-in
   /// stands for the class's page, and the declaration ([`Self::author`]) answers. A class no declaration names is
   /// unknown: a document's `\@maketitle` is not taken for its page (`ledger::class_maketitle_runs`)
-  pub maketitle_runs: &'static [(&'static str, MaketitleRuns, &'static str)],
+  pub maketitle_runs:    &'static [(&'static str, MaketitleRuns, &'static str)],
   /// the document classes (their bindings' file names) that print the title and the authors where they are set, their
   /// `\maketitle` printing neither, each with the lines that show it: text set before `\maketitle` follows them there
   /// (`\lx@text@before@title`, QA91)
-  pub setter_print:   &'static [(&'static str, &'static str)],
+  pub setter_print:      &'static [(&'static str, &'static str)],
+  /// the document classes (their bindings' file names) whose title page prints `\@date` right under the author block,
+  /// each with the lines that show it: the date's lines are read as lines under every name (`date_legend`, OD #1071).
+  /// A class no declaration names (amsart's "Date:" footnote, REVTeX's "Dated:", mnras's after the title) keeps its date
+  pub date_under_author: &'static [(&'static str, &'static str)],
 }
 
 /// Whether a class's `\maketitle` runs `\@maketitle` ([`TitlePageDecl::maketitle_runs`]).
@@ -159,6 +163,11 @@ pub struct Policy {
   /// (`annotations=` of `\author[a,b]`) and a mark typed by hand do, the places keys in order spell (0907.5014's
   /// `Denes Molnar$^{a,b}$`)
   pub keyed_labels:      bool,
+  /// a call's own labels (`annotations=` of `\author[1,*,\S]`) print after the name as written (authblk.sty:120-133
+  /// `\AB@authnote`): one the binding found no line of its own explains ([`declare_unexplained_name_labels`]) is shown on
+  /// the name as the mark it prints, unless an entry answers it (`insert::settle_name_marks`, a binding's request;
+  /// 2606.00446, its `§` legend in the `\date`); elsewhere a call's own labels are keys
+  pub labels_print:      bool,
   /// the commands that part a block's lines or columns whatever they print here, as the class's title page does, each declared by
   /// the binding owning the `\author` they stand in: OmniBus's no-op `\alignauthor` a column (inst_support_sty.rs; what sig-alternate.cls,
   /// sigchi.cls print, whose `\alignauthor` read raw is the tabular it makes), ijcai's `\affiliations` and `\emails` a section
@@ -193,14 +202,15 @@ pub const KERNEL: Policy = Policy {
   unmarked_notes:    false,
   email_in_place:    false,
   keyed_labels:      false,
+  labels_print:      false,
   block_breaks:      &[],
   title_page:        TitlePageDecl {
-    author:         AuthorPage::Kernel,
-    title_and:      &[],
+    author:            AuthorPage::Kernel,
+    title_and:         &[],
     // (the standard classes' `\maketitle` runs `\@maketitle` only without `titlepage`, keyed on their `\if@titlepage`:
     // article.cls:50-51 defaults it false, report.cls:50-51 and book.cls:50-51 true; `titlepage`/`notitlepage` set it,
     // article.cls:91-93, report.cls:92-94, book.cls:93-95)
-    maketitle_runs: &[
+    maketitle_runs:    &[
       (
         "article.cls",
         MaketitleRuns::WithoutTitlepage,
@@ -234,7 +244,20 @@ pub const KERNEL: Policy = Policy {
         "extbook.cls:191-276",
       ),
     ],
-    setter_print:   &[],
+    setter_print:      &[],
+    // (`{\large \@date \par}` after the author tabular, in both branches of `\if@titlepage`; KOMA's `\@maketitle`
+    // after `\usekomafont{author}`, TL 2025)
+    date_under_author: &[
+      ("article.cls", "article.cls:180-185, 240-250"),
+      ("report.cls", "report.cls:186-191, 246-256"),
+      ("book.cls", "book.cls:192-197, 252-262"),
+      ("extarticle.cls", "extarticle.cls:207-212, 271-277"),
+      ("extreport.cls", "extreport.cls:214, 279"),
+      ("extbook.cls", "extbook.cls:207, 272"),
+      ("scrartcl.cls", "scrartcl.cls:2896-2903, 3099-3107"),
+      ("scrreprt.cls", "scrreprt.cls:3124, 3328"),
+      ("scrbook.cls", "scrbook.cls:3127"),
+    ],
   },
   cite:              "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
@@ -275,6 +298,75 @@ fn declared(binding: &str) -> Option<Rc<Vec<&'static Policy>>> {
     Some(Stored::Opaque(payload)) => Rc::clone(payload).downcast::<Vec<&'static Policy>>().ok(),
     _ => None,
   })
+}
+
+/// The State value holding the labels a `labels_print` binding's names print that no line of its block explains, each its
+/// spelling in the call (`annotations=`) and the mark it prints, `\u{2}` between them and `\u{1}` after each:
+/// [`declare_unexplained_name_labels`].
+const UNEXPLAINED_NAME_LABELS: &str = "lx_fm_unexplained_name_labels";
+
+/// Declare the labels a binding whose labels print ([`Policy::labels_print`]) found its names print and no line of its own
+/// explains, as (spelling in the call, the mark it prints) — authblk's `count_lost_labels`, read at `\maketitle`, before
+/// the flush: the writer shows the mark on the names requesting it (2606.00446's `§`). Not a label a line explains that the
+/// reading places elsewhere (`\affil[$\dag$]`).
+pub fn declare_unexplained_name_labels(labels: &[(String, String)]) {
+  let value: String = labels
+    .iter()
+    .map(|(spelling, mark)| s!("{}\u{2}{mark}\u{1}", spelling.trim()))
+    .collect();
+  assign_value(
+    UNEXPLAINED_NAME_LABELS,
+    Stored::String(pin(value)),
+    Some(Scope::Global),
+  );
+}
+
+/// The mark a `labels_print` binding declared its names' label spelled `request` prints, where no line explains it
+/// ([`declare_unexplained_name_labels`]). Spellings compare without braces and spaces: the reading's request of
+/// `annotations={…,\textsuperscript{\textdagger}}` lost the brace its group's closed (2606.17809).
+pub(in crate::base_utilities) fn unexplained_name_label(request: &str) -> Option<String> {
+  let bare = |spelling: &str| -> String {
+    spelling
+      .chars()
+      .filter(|c| !matches!(c, '{' | '}') && !c.is_whitespace())
+      .collect()
+  };
+  let request = bare(request);
+  lookup_string(UNEXPLAINED_NAME_LABELS)
+    .split('\u{1}')
+    .filter_map(|entry| entry.split_once('\u{2}'))
+    .find(|(spelling, _)| !request.is_empty() && bare(spelling) == request)
+    .map(|(_, mark)| mark.to_string())
+}
+
+/// The marks a `labels_print` binding declared its names' unexplained labels print ([`declare_unexplained_name_labels`]):
+/// `insert::settle_name_marks` shows them as a binding's labels, no mark a name typed (`insert::LABEL_MARK`).
+pub(in crate::base_utilities) fn unexplained_name_label_marks() -> Vec<String> {
+  lookup_string(UNEXPLAINED_NAME_LABELS)
+    .split('\u{1}')
+    .filter_map(|entry| entry.split_once('\u{2}'))
+    .map(|(_, mark)| mark.to_string())
+    .collect()
+}
+
+/// The labels a `labels_print` binding declared its names print that no line of its own explains
+/// ([`declare_unexplained_name_labels`]), each as (spelling in the call, printed mark).
+pub(in crate::base_utilities) fn unexplained_name_label_spellings() -> Vec<(String, String)> {
+  lookup_string(UNEXPLAINED_NAME_LABELS)
+    .split('\u{1}')
+    .filter_map(|entry| entry.split_once('\u{2}'))
+    .map(|(spelling, mark)| (spelling.to_string(), mark.to_string()))
+    .collect()
+}
+
+/// The declared labels printing `marks` are explained by a line after all (a `\date` line under the names that the
+/// label leads, OD #1071): no longer shown on the names as unexplained, the line's contact answering them.
+pub(in crate::base_utilities) fn explain_name_labels(marks: &[String]) {
+  let left: Vec<(String, String)> = unexplained_name_label_spellings()
+    .into_iter()
+    .filter(|(_, mark)| !marks.contains(mark))
+    .collect();
+  declare_unexplained_name_labels(&left);
 }
 
 /// Declare a binding's frontmatter conventions (the binding's load, before anything else it defines): kept in the
@@ -334,6 +426,19 @@ pub fn declared_setter_print(binding: &str, class: &str) -> bool {
     d.iter().any(|p| {
       p.title_page
         .setter_print
+        .iter()
+        .any(|(name, _)| *name == class)
+    })
+  })
+}
+
+/// Whether `binding` declared that `class` (its binding's file name) prints `\@date` right under the author block
+/// ([`TitlePageDecl::date_under_author`], any of its hooks).
+pub fn declared_date_under_author(binding: &str, class: &str) -> bool {
+  declared(binding).is_some_and(|d| {
+    d.iter().any(|p| {
+      p.title_page
+        .date_under_author
         .iter()
         .any(|(name, _)| *name == class)
     })

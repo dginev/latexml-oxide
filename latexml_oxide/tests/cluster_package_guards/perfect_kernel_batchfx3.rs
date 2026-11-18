@@ -31,7 +31,10 @@ fn held_once(tex: &str, note: &str, address: &str, warnings: usize, whole: &[&st
     (0, warnings),
     "{log}"
   );
-  let want = vec![vec!["Ann Smith".to_string()], vec!["Bob Jones".to_string()]];
+  // (Ann Smith's `\thanks`, its title mark ∗ printed: OD #1053, listed by the row helper)
+  let want = vec![vec!["Ann Smith".to_string(), "mark=*".to_string()], vec![
+    "Bob Jones".to_string(),
+  ]];
   assert_eq!(creators(&xml), want);
   assert_eq!(creators_xml(&xml), whole, "{tex}");
   let written = creators_xml(&xml).concat();
@@ -54,7 +57,7 @@ fn a_mailto_link_in_a_thanks_is_the_notes_alone() {
     "ann@x.org",
     0,
     &[
-      "<creator role=\"author\">\n    <personname>Ann Smith</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\">Corresponding author: <ref class=\"ltx_href\" href=\"mailto:ann@x.org\">ann@x.org</ref></note>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>Ann Smith</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\">Corresponding author: <ref class=\"ltx_href\" href=\"mailto:ann@x.org\">ann@x.org</ref></note>\n  </creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Jones</personname>\n  </creator>",
     ],
   );
@@ -73,7 +76,7 @@ fn an_own_email_call_in_a_thanks_is_the_notes_alone() {
     "ann@x.org",
     0,
     &[
-      "<creator role=\"author\">\n    <personname>Ann Smith</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\">Corresponding author: Ann Smith, Univ A (e-mail:\u{a0}<text font=\"typewriter\">ann@x.org</text>).</note>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>Ann Smith</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\">Corresponding author: Ann Smith, Univ A (e-mail:\u{a0}<text font=\"typewriter\">ann@x.org</text>).</note>\n  </creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Jones</personname>\n  </creator>",
     ],
   );

@@ -1,0 +1,21 @@
+% mechanism: three given `\footnotemark`s glued to each other between two names, nearer the next: each run past the one
+%   written before it, so each mark written once (`emit::own_span`)
+% witness:  none (review revSHGNEXT B1)
+% oracle:   pdflatex 0 errors; "Ann Able (27.3pt) ∗†‡ (7.8pt) Bob Baker Carl Cole" (pdftotext -bbox; the marks over Bob's name)
+% engines:  rust merge 6115962c1de: 0 errors, 0 Warnings, Bob ∗ ∗ † † ‡ (two marks invented); perl 0.8.8: 0 errors,
+%   Bob's personname with marks 1, 2, 3
+% expect:   0 errors, 0 Warnings; XML Bob Baker ; footnotemark[*]= ; footnotemark[†]= ; footnotemark[‡]=; HTML Bob Baker ;
+%   * plain ; † plain ; ‡ plain
+% status:   RED (merge 6115962c1de) ->
+%   GREEN (perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores, XML and HTML)
+% ruling:  DG 2026-11-17 supersedes the nearer-by-glue rule of the expect above: between two names the name before,
+%   the next only at a line's or cell's start or under the block's edge proof (re-pinned, WRONGFIXb)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \qquad \footnotemark[1]\footnotemark[2]\footnotemark[3] \ Bob Baker \and Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

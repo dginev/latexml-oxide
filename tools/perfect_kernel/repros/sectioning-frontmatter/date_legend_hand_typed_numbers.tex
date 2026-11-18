@@ -1,0 +1,15 @@
+% mechanism: labels typed by hand, `1)` (0907.1199; ruling R2)
+% oracle:   pdflatex 0 errors; "Ann Able1 Bob Baker2", "1) Dept A, Univ X", "2) Dept B, Univ Y"
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the date holds both lines. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; Ann's Dept A, Bob's Dept B; no date (OD #1071)
+% status:   RED (3d4c847f02c) -> GREEN (DATELEG)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able$^1$ \and Bob Baker$^2$}
+\title{T}
+\date{1) Dept A, Univ X\\ 2) Dept B, Univ Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

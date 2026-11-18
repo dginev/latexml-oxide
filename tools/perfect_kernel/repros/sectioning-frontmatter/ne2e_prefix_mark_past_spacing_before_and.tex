@@ -1,0 +1,20 @@
+% mechanism: a `\footnotemark` past a spacing run (a Gap) that a name follows is that name's prefix, not the previous
+%   name's: `block_names`' carry past a Gap (ne2e_mark_past_spacing_is_its_names) takes a mark only when what follows its
+%   run of marks and notes is a separator, a `\\` or the block's end (review revSHGIVEN 1)
+% witness: none (synthetic sibling of 1911.13299's `Ali Farhadi \ \footnotemark[3] \and`)
+% oracle:  pdflatex 0 errors; "† / Ann Able   Bob Baker   Carl Cole" (pdftotext; the † over Bob's name)
+% engines: rust REGFIX: 0 errors, Bob †, 1 Warning ("lost: †", an over-count: the prefix is written); SHGIVEN head
+%   6bc78862253: † on Ann and on Bob, 0 Warnings (a mark invented); perl 0.8.8: 0 errors, Bob's prefix mark 2
+% expect:  0 errors; Ann, Bob †, Carl; 0 Warnings (the prefix's false "lost: †" gone with the mark ledger, SHGNEXT)
+% status:  RED (6bc78862253) -> GREEN (perfect_kernel_batchne2::a_mark_a_name_follows_past_spacing_is_not_carried_back)
+% ruling:  DG 2026-11-17 supersedes the nearer-by-glue rule of the expect above: between two names the name before,
+%   the next only at a line's or cell's start or under the block's edge proof (re-pinned, WRONGFIXb)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \quad \footnotemark[2]Bob Baker \and Carl Cole}
+\date{}
+\maketitle
+Text.
+\end{document}

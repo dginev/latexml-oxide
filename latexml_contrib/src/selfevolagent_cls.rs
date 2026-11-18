@@ -47,6 +47,7 @@ LoadDefinitions!({
 
   // Shared "addtolist meta-class" frontmatter routing — see
   // `meta_class::install_meta_class_frontmatter`.
+  crate::meta_class::noop_meta_class_lists()?;
   crate::meta_class::install_meta_class_frontmatter()?;
 
   // Class-specific labeled fields (kept per-class):

@@ -1,0 +1,24 @@
+% mechanism: 2501.01157's copy appends a math `$^{*}$` for `\equalcont` (:587), which prints ∗, beside the starred
+%   names' text `*` (:513, `{*}`): two marks, two notes; the binding keeps the copy's glyph (`note_glyph`)
+% witness:  2501.01157 (its copy; review revSNJNLb S3, probe stareq)
+% oracle:   pdflatex with 2501.01157's sn-jnl.cls 0 errors: "Ann Able1*∗ , Bob Baker1∗ and Cat Cole1*", "1 Univ A.",
+%   "*Corresponding author(s). E-mail(s): ann@a.org; cat@c.org;", "∗ Equal work."
+% engines:  rust SNJNLb 2f983570f17 = both notes marked `*`; rust SNJNLc = correspondent `*`, equal-contributors ∗
+% expect:   0 errors 0 Warnings; Ann's notes marked `*` and ∗, Bob's ∗, Cat's `*`
+% status:   RED (SNJNLb) -> GREEN (SNJNLc, perfect_kernel_batch67z::snjnl_math_star_note_is_not_the_class_star)
+% files:    sn-jnl.cls here, the lines of 2501.01157's copy the binding reads
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\equalcont{Equal work.}
+\author[1]{\fnm{Bob} \sur{Baker}}\email{bob@b.org}
+\equalcont{Equal work.}
+\author*[1]{\fnm{Cat} \sur{Cole}}\email{cat@c.org}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

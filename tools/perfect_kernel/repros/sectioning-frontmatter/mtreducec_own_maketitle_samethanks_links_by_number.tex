@@ -1,0 +1,28 @@
+% mechanism: a mark whose number the source reads off the footnote counter in the title block (`\samethanks` =
+%   `\footnotemark[\value{footnote}]`) names its note by that number wherever the reading's count is TeX's
+%   (`latex_constructs::title_numbers_faithful`; `footnote_pairing` keys it, `insert::link_marked_notes` links it),
+%   so it links under a `\maketitle` whose glyph is unknown here — the document's own (MTREDUCE)
+% witness:  the review's probe own3 (revMTREDUCE B2); the `\samethanks` shape of 2502.19103 and 1911.13299
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗ Cy Cole† Dee Dunn∗"; foot
+%   "∗ Equal contribution.", "† Corresponding: cy@x.org"
+% engines:  rust WRONGFIXc (the static reader) = 0 errors, 0 Warnings; Bob and Dee a copy of Ann's note, all ∗;
+%   MTREDUCEb = no glyph, Dee a copy of Ann's note, Bob an empty mark linking nothing
+% expect:   0 errors, 0 Warnings; Bob and Dee each a copy of Ann's note, all ∗ (the `\maketitle` body read,
+%   MTREDUCEd, DG 2026-11-17); Cy's note his own, †
+% status:   GREEN (MTREDUCEc: perfect_kernel_batchfmmarks::marks_link_to_their_notes)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\par\begingroup
+ \renewcommand\thefootnote{\fnsymbol{footnote}}%
+ \begin{center}{\LARGE\@title\par}\vskip 1em
+ {\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}
+ \@thanks\endgroup\setcounter{footnote}{0}}
+\makeatother
+\newcommand\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker\samethanks \and Cy Cole\thanks{Corresponding: cy@x.org} \and Dee Dunn\footnotemark[1]}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

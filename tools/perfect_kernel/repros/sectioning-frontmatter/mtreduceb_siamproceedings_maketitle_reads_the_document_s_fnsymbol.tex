@@ -1,0 +1,49 @@
+% mechanism: the siamproceedings binding (latexml_contrib siamproceedings_sty.rs) reads the paper's copy raw and
+%   declares the document's `\@fnsymbol` where the copy's `\maketitle` carries siamproceedings.sty:187-189
+%   `\renewcommand\thefootnote{\@fnsymbol\c@footnote}` (`shipped_class::input_shipped_package_title_marks`, by its `\maketitle` body), the
+%   `\maketitle` of a document without `titlepage` (:153 `\if@titlepage`)
+% witness:  2509.02371 (siamproceedings.sty: "∗", "†", "‡" on three authors' affiliations); 2509.13490; the style a
+%   minimal stand-in of siamproceedings.sty:153-215
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker†"; foot "∗Univ A (ann@x.org).",
+%   "†Univ B (bob@y.org)."
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 0 Warnings, the marks (the static reader); MTREDUCE (7608026a189):
+%   both notes unmarked
+% expect:   0 errors, 0 Warnings; Ann's note marked ∗, Bob's †
+% status:   GREEN (MTREDUCEb: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{siamproceedings.sty}
+\if@titlepage
+  \renewcommand\maketitle{\begin{titlepage}%
+  \let\footnotesize\small
+  \let\footnoterule\relax
+  \let \footnote \thanks
+  \begin{center}{\LARGE \@title \par}\vskip 3em{\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}\par
+  \@thanks
+  \end{titlepage}%
+  \setcounter{footnote}{0}%
+  \global\let\thanks\relax
+  \global\let\maketitle\relax}
+\else
+\renewcommand\maketitle{\par
+  \begingroup
+    \renewcommand\thefootnote{\@fnsymbol\c@footnote}%
+    \def\@makefnmark{\rlap{\@textsuperscript{\normalfont\@thefnmark}}}%
+    \newpage
+    \global\@topnum\z@
+    \@maketitle
+    \thispagestyle{plain}\@thanks
+  \endgroup
+  \setcounter{footnote}{0}%
+  \global\let\thanks\relax
+  \global\let\maketitle\relax
+  \global\let\@maketitle\relax}
+\fi
+\end{filecontents*}
+\documentclass[twoside,leqno]{article}
+\usepackage{siamproceedings}
+\title{A Title}
+\author{Ann Able\thanks{Univ A (ann@x.org).} \and Bob Baker\thanks{Univ B (bob@y.org).}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: an author note given before any `\author` appends its glyph to an empty names list (2412.01641's
+%   sn-jnl.cls:586), so it prints before the first name and marks none of them; `\@maketitle` prints its text (:754)
+% witness:  none in the 165 census papers (a sibling of 2412.01641's `\equalcont`)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "†Ann Able1 and Bob Baker1", "1Univ A.", "†Equal before."
+% engines:  rust 3b420685f89 = 0 errors; the document's note; rust SNJNL = the same (no name requests it)
+% expect:   0 errors 0 Warnings; the document's note "Equal before.", no creator's
+% status:   GREEN (SNJNL, perfect_kernel_batch67z::snjnl_notes_marking_no_name_are_the_documents)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\equalcont{Equal before.}
+\author[1]{\fnm{Ann} \sur{Able}}
+\author[1]{\fnm{Bob} \sur{Baker}}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

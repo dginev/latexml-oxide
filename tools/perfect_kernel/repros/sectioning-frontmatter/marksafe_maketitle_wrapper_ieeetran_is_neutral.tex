@@ -1,0 +1,21 @@
+% mechanism: a by-meaning wrapper of IEEEtran's `\maketitle` is the class's title page: Bob's `\footnotemark[1]` keeps
+%   its mark as in the plain document (the wrapper lines removed), no Warning (`\maketitle:redefined@class`, OD #1053)
+% witness:  review revMARKSAFEb B1 (p/d_IEEEtran_plain.tex, p/d_IEEEtran_wrap.tex)
+% oracle:   pdflatex 0 errors; plain and wrapped pages identical: "Ann Able Bob Baker[1]" (IEEEtran's `\maketitle`
+%   empties `\footnotemark`, IEEEtran.cls:4757, so its `[1]` prints as text)
+% engines:  rust MARKSAFEb de9ad33fd3d = 0 errors; plain 0 Warnings, Bob footnotemark[1]; wrapped 1 Warning, Bob's
+%   mark-only note unmarked
+% expect:   0 errors, 0 Warnings; wrapped output identical to plain (XML and HTML); Bob footnotemark[1]
+% status:   GREEN (MARKSAFEc: perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral,
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks); its page RED, pre-existing (row R
+%   IEEEFNMARK: we print a superscript 1 where TeX prints "[1]"; the `_red` twin)
+% preload:  ar5iv.sty
+\documentclass{IEEEtran}
+\let\oldmt\maketitle
+\renewcommand\maketitle{\oldmt}
+\title{A Title}
+\author{Ann Able\footnote{Ann note.} \and Bob Baker\footnotemark[1]}
+\begin{document}
+\maketitle
+Body.
+\end{document}

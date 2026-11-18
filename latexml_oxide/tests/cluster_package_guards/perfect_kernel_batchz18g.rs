@@ -87,12 +87,8 @@ fn llncs_author_url_pieces_are_one_address_line() {
 #[test]
 fn llncs_institute_hand_marks_cut() {
   assert_creators(repro!("llncs_institute_hand_marks_cut.tex"), (0, 0), &[
-    &["Ann Able 1", "affiliation=1 Univ A"],
-    &[
-      "Bob Baker 2,3",
-      "affiliation=2 Univ B",
-      "affiliation=3 Univ C",
-    ],
+    &["Ann Able", "affiliation=1 Univ A"],
+    &["Bob Baker", "affiliation=2 Univ B", "affiliation=3 Univ C"],
   ]);
 }
 
@@ -118,13 +114,19 @@ fn llncs_author_orcid_icon_keeps_the_id() {
 }
 
 /// `\thanks{Univ X, Town. E-mail: \href{mailto:ann.able@x.edu}{\email{ann.able@x.edu}}. Funded by Y.}` under llncs: the
-/// link is the e-mail call it holds, the address Ann Able's e-mail (1004.3134). Red (Z18e): the address lost.
+/// link is the e-mail call it holds, the address Ann Able's e-mail (1004.3134); the note marked ⋆ (pdflatex "Ann Able⋆",
+/// LLNCSMARKS). Red (Z18e): the address lost.
 #[test]
 fn llncs_thanks_link_holding_email_keeps_the_address() {
   let xml = assert_creators(
     repro!("llncs_thanks_link_holding_email_keeps_the_address.tex"),
     (0, 0),
-    &[&["Ann Able", "email=ann.able@x.edu", "affiliation=Univ X"]],
+    &[&[
+      "Ann Able",
+      "mark=⋆",
+      "email=ann.able@x.edu",
+      "affiliation=Univ X",
+    ]],
   );
   // (the note keeps its other words, the link in place)
   assert!(

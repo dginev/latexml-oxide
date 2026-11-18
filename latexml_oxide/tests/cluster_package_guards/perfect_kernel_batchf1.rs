@@ -158,7 +158,7 @@ fn a_link_printing_a_name_is_the_name() {
 #[test]
 fn a_grade_with_a_long_note_is_the_grade() {
   let tex = repro!("emit_a_grade_with_a_long_note_is_the_grade");
-  let grades = [vec!["Ann Able", "membership=Fellow, IEEE"], vec![
+  let grades = [vec!["Ann Able", "membership=Fellow, IEEE", "mark=*"], vec![
     "Bob Baker",
     "membership=Member, IEEE",
   ]];
@@ -166,7 +166,7 @@ fn a_grade_with_a_long_note_is_the_grade() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), grades);
   let ann = &creators_xml(&xml)[0];
-  assert!(ann.contains(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">A. Able is with the Department"#), "{ann}");
+  assert!(ann.contains(r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">A. Able is with the Department"#), "{ann}");
 }
 
 /// A creator call inside a block carries its keyvals as tokens (the rehearsal's `\lx@fm@obs@creator` reads them as the API does,

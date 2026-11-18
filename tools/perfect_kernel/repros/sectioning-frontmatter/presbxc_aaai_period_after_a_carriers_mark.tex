@@ -1,0 +1,33 @@
+% mechanism: AAAI's `\equalcontrib` followed by "." makes every use a note of its own, as before the first-use reading
+%   (aaai_sty.rs `aaai_note`, `AAAI_DOTTED`; the fail-safe): the emitter's cut at ". " gives the next name the mark
+%   before it, so the once-made note's `\footnotemark` linked Cy, who carries no mark
+% witness:  none (review revPRESBXb BL1, a/c1.tex on aaai25.sty; 2509.03329 has the shape); the style a minimal stand-in
+%   of aaai25.sty:81-88
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗, Bob Baker∗. Cy Cole, Dee Dunn"; foot
+%   "∗These authors contributed equally." once
+% engines:  rust PRESBXbase2 (14e92b291ab) = 0 errors, 2 Warnings; Ann thanks[∗], Bob thanks[†] (the base's glyphs);
+%   PRESBXb (300685cb312) = 0 errors, 1 Warning; Cy a copy of the note too (a mark he does not carry)
+% expect:   the fail-safe: 0 errors, 2 Warnings; Ann thanks[∗], Bob thanks[†], Cy and Dee nothing (the base's output;
+%   the glyph † is row R AAAIDOT)
+% status:   RED (PRESBXb) -> GREEN fail-safe, XML and HTML RED against the PDF (PRESBXc:
+%   perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% moves:    XML, HTML row R AAAIDOT
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai23.sty}
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newcounter{eqfn}\setcounter{eqfn}{0}%
+  \vbox{\let\footnote\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{eqfn}{\value{footnote}}\else\footnotemark[\value{eqfn}]\fi}%
+    \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{aaai23}
+\title{A Title}
+\author{Ann Able\equalcontrib, Bob Baker\equalcontrib. Cy Cole, Dee Dunn}
+\begin{document}
+\maketitle
+Body.
+\end{document}

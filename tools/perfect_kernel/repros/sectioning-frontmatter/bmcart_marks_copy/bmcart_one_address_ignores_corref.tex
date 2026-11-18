@@ -1,0 +1,32 @@
+% witness: synthetic (1603.04432, 1905.09519, 2202.10253 have one address and one `corref` author, who is also the
+%          first with an `email`)
+% The class beside it is BioMed Central's bmcart.cls (2014/01/24) as 2112.10068 ships it, unmodified (its licence
+% asks a changed copy to be renamed). Its thanksbox, printed at `\end{fmbox}` (:1435-1443 `\auto@set@thanksbox`),
+% prints the corresponding author's mark and "Correspondence: <e-mail>" (:1458-1463 `\printcorrtext`), then each
+% `{artnotes}` note under its mark (:1393-1404); each `\thanksmark` steps `thanks`, whose marks are *, \textdagger,
+% \^{} (:1095-1097), and the names print their notes' marks (`\thanksref`).
+% With one address the class makes `corref` a key that does nothing (:1066-1074, `num@address` from the aux): the
+% first author with an `email` corresponds, whichever author has `corref`.
+% oracle:  pdflatex 0 errors (4 runs): "Ann Able*† and Bob Baker†", "*Correspondence: a@x.org", "† Equal contributor"
+% engines: rust INTFMfinal 0 errors: the note unmarked under both names, both e-mails "Email:"; Perl no binding
+% expect:  0 errors 0 warnings; the note shared under †; Ann's e-mail named "Correspondence: ", Bob's "Email: "
+% status:  RED (INTFMfinal) -> GREEN (BMCART)
+% preload: ar5iv.sty
+\documentclass{bmcart}
+\begin{document}
+\begin{frontmatter}
+\begin{fmbox}
+\title{The Title}
+\author[addressref={aff1},noteref={n1},email={a@x.org}]{\fnm{Ann} \snm{Able}}
+\author[addressref={aff1},noteref={n1},corref={aff1},email={b@x.org}]{\fnm{Bob} \snm{Baker}}
+\address[id=aff1]{\orgname{Univ A}, \cny{US}}
+\begin{artnotes}
+\note[id=n1]{Equal contributor}
+\end{artnotes}
+\end{fmbox}
+\end{frontmatter}
+\section{Intro} Body.
+\begin{backmatter}
+\begin{thebibliography}{1}\bibitem{a} A. Ref.\end{thebibliography}
+\end{backmatter}
+\end{document}

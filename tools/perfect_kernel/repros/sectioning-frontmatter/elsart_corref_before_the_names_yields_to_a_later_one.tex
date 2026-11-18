@@ -1,0 +1,23 @@
+% mechanism: a `\corref` read before the names sets `\@corref`; one read after a later name sets it again
+%   (elsarticle.cls:188-190), and the first name shows the last (:256-264): c2's ∗∗
+% witness: revELSART pD3 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗∗, Bob Twoa"; footnotes "∗ First corresponding",
+%   "∗∗ Second corresponding"
+% engines: rust ELSART (3bbd4e67ccf): Alice c1's note, c2's the block's
+%   ELSARTb: both notes the block's, 2 Warnings; ELSARTc: Alice the second note, 0 Warnings
+% expect:  0 errors 0 Warnings; Alice One the second note, the first the block's
+% status:  RED (ELSART) -> RED (ELSARTb: both notes the block's, a Warning each) -> GREEN (ELSARTc: the first name's mark settled at the flush, `els_settle_marks`)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\corref{c1}
+\author[l1]{Alice One}
+\author[l1]{Bob Two}\corref{c2}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[c1]{First corresponding}
+\cortext[c2]{Second corresponding}
+\end{frontmatter}
+x\end{document}

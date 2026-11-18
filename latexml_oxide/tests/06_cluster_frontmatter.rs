@@ -513,16 +513,15 @@ fn frontmatter_nested_math_author_marker() {
 #[test]
 fn frontmatter_and_hard_author_boundary() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_and_hard_author_boundary.tex");
-  // (Alice's `$^{1}$`, which no affiliation answers, stays printed in her name, 64a; and so does each name's `\mk`
-  // star, `$^\text{$\star$}$`, keyed by its printed ⋆ since 92b — OXIDIZED_DESIGN_DIVERGENCES #919 — as pdflatex prints
-  // "Alice⋆1", "Bob⋆", "Carol⋆"; its label had been its spelling, which no display table read, so the stars were lost)
-  for name in [
-    "Alice<sup>⋆,1</sup>",
-    "Bob<sup>⋆</sup>",
-    "Carol<sup>⋆</sup>",
-  ] {
+  // (Alice's `$^{1}$`, which no affiliation answers, stays printed after her name, 64a — a mark-only note since PURE,
+  // the personname the name alone; and so does each name's `\mk` star, `$^\text{$\star$}$`, keyed by its printed ⋆
+  // since 92b — OXIDIZED_DESIGN_DIVERGENCES #919 — as pdflatex prints "Alice⋆1", "Bob⋆", "Carol⋆"; its label had been
+  // its spelling, which no display table read, so the stars were lost)
+  for (name, mark) in [("Alice", "⋆,1"), ("Bob", "⋆"), ("Carol", "⋆")] {
     assert!(
-      x.contains(&format!("<personname>{name}</personname>")),
+      x.contains(&format!(
+        "<personname>{name}</personname>\n    <note mark=\"{mark}\" role=\"footnotemark\""
+      )),
       "author {name} must be its own clean creator, not merged:\n{x}"
     );
   }
@@ -683,8 +682,7 @@ fn frontmatter_neurips_author_bold_coherent() {
   assert_eq!(
     shao.as_deref(),
     Some(
-      "before=\" \" role=\"author\"> <personname>Wenqi Shao<sup>∗</sup></personname> <contact class=\"ltx_author_line\" name=\"Affiliation: \" \
-       role=\"affiliation\">OpenGVLab, Shanghai AI Laboratory</contact> </creator>"
+      "before=\" \" role=\"author\"> <personname>Wenqi Shao</personname> <note mark=\"∗\" role=\"footnotemark\"/> <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">OpenGVLab, Shanghai AI Laboratory</contact> </creator>"
     ),
     "Wenqi Shao must show the star and hold affiliation 1:\n{x}"
   );
@@ -750,10 +748,11 @@ fn frontmatter_ieee_authorblock() {
   );
 }
 
-/// A trailing `\thanks` after a comma-split IEEEtran author list strands its marked
-/// `<ltx:note role="thanks">` on a nameless creator; `coalesce_empty_creators` must MOVE
-/// the note to the last real author (as it does for contacts) so the content is not
-/// dropped. Regression guard for OXIDIZED_DESIGN #156. Witness arXiv 1510.02728.
+/// A trailing `\thanks` after a comma-split IEEEtran author list is kept, its content never dropped with a coalesced
+/// empty creator (OXIDIZED_DESIGN #156). IEEEtran's `\maketitle` empties `\thefootnote` and `\footnotemark`
+/// (IEEEtran.cls:4756-4758): the note prints no mark and names no author, so it is the block's publication note, not
+/// Vosoughi's, the name it follows (DG 2026-11-16, MARKKEY1, OD #1058; it was moved to the last real author before).
+/// Witness arXiv 1510.02728.
 #[test]
 fn cluster_author_thanks_note_survives_empty_creator() {
   let x = convert_to_xml("tests/cluster_regressions/author_thanks_trailing_coalesce.tex");
@@ -761,16 +760,14 @@ fn cluster_author_thanks_note_survives_empty_creator() {
     x.contains("supported by NSF"),
     "the trailing \\thanks content was dropped with the coalesced empty creator:\n{x}"
   );
-  // The note lands on the last real author (Vosoughi), not a nameless creator.
-  let vosoughi_has_note = x.split("<creator").skip(1).any(|seg| {
+  // The note is the block's publication note, on no author.
+  let on_an_author = x.split("<creator").skip(1).any(|seg| {
     let block = seg.split("</creator>").next().unwrap_or("");
-    block.contains("Vosoughi")
-      && block.contains("ltx_thanks_funding")
-      && block.contains("role=\"thanks\"")
+    block.contains("supported by NSF")
   });
   assert!(
-    vosoughi_has_note,
-    "the \\thanks note did not move to the last real creator:\n{x}"
+    !on_an_author && x.contains("<pubnote role=\"thanks\">"),
+    "the \\thanks note is not the block's publication note:\n{x}"
   );
   // No nameless creator survives.
   assert!(
@@ -1157,9 +1154,12 @@ fn frontmatter_jmlr_structured_author() {
 #[test]
 fn frontmatter_mrm_author() {
   let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_mrm_author.tex");
+  // (the name alone, its hand-typed `*` the mark-only note right after it: PURE, OD #1055)
   assert!(
-    x.contains("<personname>Jakob Asslander*</personname>"),
-    "MRM author name missing/unstructured:\n{x}"
+    x.contains(
+      "<personname>Jakob Asslander</personname>\n    <note mark=\"*\" role=\"footnotemark\"/>"
+    ),
+    "MRM author name missing/unstructured, or its mark not re-homed after it:\n{x}"
   );
   assert!(
     !x.contains("\\state")
@@ -1529,6 +1529,157 @@ fn frontmatter_fairmeta_author_affiliation_1396() {
   );
 }
 
+/// ragslab.sty, a package on `article` whose title API mirrors fairmeta's, read raw from the paper's copy (the real
+/// file less its comment lines: "Processing definitions …/ragslab.sty" in the log), then the family's frontmatter (OD
+/// #1070): each author has the affiliations its marks cite; the metadata band's lines are the date and publication
+/// notes named by the labels the copy prints; the copy's tcolorbox card is not replayed. Its last affiliation
+/// left open over the metadata calls, as 2610.22523's is: pdflatex reads them inside it. Before: the names alone, the
+/// card a picture after the abstract, its first name dropped. The card's logo strip, printed nowhere else, is a block
+/// of its own (revRAGSLAB B1: relaxing the replay had lost 2610.22523's three logos). Repro stand-in-copies/ragslab.
+#[test]
+fn frontmatter_ragslab_marks_link_affiliations() {
+  // (ragslab.sty's `\RequirePackage`s: a TeX Live without one warns `missing_file` for it — CI's lacked `inter.sty` and
+  // `sourceserifpro.sty` — so the no-Warning guard is skipped there, visibly)
+  const RAGSLAB_REQUIRES: &[&str] = &[
+    "caption.sty",
+    "cleveref.sty",
+    "etoolbox.sty",
+    "fontenc.sty",
+    "fontspec.sty",
+    "geometry.sty",
+    "graphicx.sty",
+    "hyperref.sty",
+    "hyphenat.sty",
+    "iftex.sty",
+    "inter.sty",
+    "microtype.sty",
+    "parskip.sty",
+    "placeins.sty",
+    "setspace.sty",
+    "sourceserifpro.sty",
+    "tcolorbox.sty",
+    "titlesec.sty",
+    "xcolor.sty",
+    "xparse.sty",
+  ];
+  if let Some(missing) = RAGSLAB_REQUIRES
+    .iter()
+    .find(|file| !latexml::util::test::kpse_has(file))
+  {
+    eprintln!(
+      "SKIP frontmatter_ragslab_marks_link_affiliations: {missing} is not in this TeX Live"
+    );
+    return;
+  }
+  let (log, xml, ()) = latexml::util::test::convert_bytes_files_then(
+    include_bytes!(
+      "../../tools/perfect_kernel/repros/stand-in-copies/ragslab/ragslab_marks_link_affiliations.tex"
+    ),
+    &[
+      (
+        "ragslab.sty",
+        include_bytes!("../../tools/perfect_kernel/repros/stand-in-copies/ragslab/ragslab.sty"),
+      ),
+      (
+        "logo.png",
+        include_bytes!("../../tools/perfect_kernel/repros/stand-in-copies/ragslab/logo.png"),
+      ),
+    ],
+    Some("ar5iv.sty"),
+    |_, _| (),
+  );
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log),
+      log.matches("Fatal:").count()
+    ),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert!(
+    log.contains("(Processing definitions ") && log.contains("/ragslab.sty..."),
+    "the copy was not read:\n{log}"
+  );
+  let logos = xml
+    .match_indices("<graphics ")
+    .map(|(at, _)| &xml[at..at + xml[at..].find("/>").map_or(0, |e| e + 2)])
+    .collect::<Vec<_>>();
+  assert_eq!(
+    logos,
+    [
+      "<graphics candidates=\"logo.png\" graphic=\"logo.png\" options=\"height=13.6572pt,keepaspectratio=true\" \
+       xml:id=\"p1.g1\"/>",
+      "<graphics candidates=\"logo.png\" graphic=\"logo.png\" options=\"width=44.10185pt,keepaspectratio=true\" \
+       xml:id=\"p1.g2\"/>",
+    ],
+    "the card's logo strip (\\supportlogo, \\lablogo) is lost:\n{xml}"
+  );
+  let affiliation = |text: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{text}</contact>")
+  };
+  assert_eq!(whole_creators(&xml), [
+    format!(
+      "<creator role=\"author\"><personname>Ann Able</personname>{}{}</creator>",
+      affiliation("Univ A"),
+      affiliation("Lab B")
+    ),
+    format!(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}</creator>",
+      affiliation("Univ A")
+    ),
+    // (the open affiliation's paragraph end is kept as its last character)
+    format!(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cid Cole</personname>{}</creator>",
+      affiliation("Univ C\n")
+    ),
+  ]);
+  for (tag, attrs, expected) in [
+    (
+      "date",
+      &["role=\"creation\""][..],
+      "<date name=\"Date:\" role=\"creation\">May 1, 2026</date>",
+    ),
+    (
+      "abstract",
+      &["xml:id=\"abstract1\""][..],
+      "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">We study shared \
+       structure.</p></abstract>",
+    ),
+    (
+      "pubnote",
+      &["role=\"correspondence\""][..],
+      "<pubnote name=\"Correspondence:\u{a0}\" role=\"correspondence\">Ann Able at <ref class=\"ltx_href\" \
+       font=\"typewriter\" href=\"mailto:ann@a.edu\">ann@a.edu</ref></pubnote>",
+    ),
+    (
+      "pubnote",
+      &["name=\"Project:\u{a0}\""][..],
+      "<pubnote name=\"Project:\u{a0}\" role=\"metadata\"><ref class=\"ltx_url\" font=\"typewriter\" \
+       href=\"https://example.org/p\">https://example.org/p</ref></pubnote>",
+    ),
+    (
+      "pubnote",
+      &["name=\"Code:\u{a0}\""][..],
+      "<pubnote name=\"Code:\u{a0}\" role=\"metadata\"><ref class=\"ltx_url\" font=\"typewriter\" \
+       href=\"https://example.org/c\">https://example.org/c</ref></pubnote>",
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, tag, attrs, expected);
+  }
+  assert_eq!(xml.matches("<pubnote").count(), 3, "{xml}");
+  assert!(!xml.contains("<note"), "{xml}");
+  assert!(
+    !xml.contains("<picture"),
+    "the copy's card was replayed:\n{xml}"
+  );
+  // the copy's `\beginappendix` heading
+  assert!(
+    xml.contains(">Appendix</text></p>") && xml.contains("<appendix "),
+    "{xml}"
+  );
+}
+
 /// 60n: a marker-less `\\`-separated line continues the previous author-block entry with the `\\` kept where it stood
 /// (`<break/>`): Perl (Base_Utility.pool.ltxml:701-703) and Rust welded the two lines' words ("Department of
 /// PhysicsUniversity of Somewhere"; jacow-collaboration). KNOWN_PERL_ERRORS #446. Repro
@@ -1586,7 +1737,7 @@ fn frontmatter_author_lines_783() {
     ("and_thanks_email", repro!("and_thanks_email"), 0, vec![
       format!(
         "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter \
-         ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Supported by X.</note>{L}Univ. of \
+         ltx_thanks_funding\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Supported by X.</note>{L}Univ. of \
          A</contact>{L}Dept. of Physics</contact></creator>"
       ),
       format!(
@@ -1628,7 +1779,7 @@ fn frontmatter_author_lines_783() {
     ("thanks_affiliation", repro!("thanks_affiliation"), 0, vec![
       format!(
         "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter \
-       ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Univ. of A</note>{L}Dept. of B</contact></creator>"
+       ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Univ. of A</note>{L}Dept. of B</contact></creator>"
       ),
     ]),
     ("comma_line", repro!("comma_line"), 0, vec![format!(
@@ -1651,30 +1802,34 @@ fn frontmatter_author_lines_783() {
     ]),
     // (a name ends the printed line: the grade beside a name the line after `\\` opens takes no class)
     ("names_continue", repro!("names_continue"), 0, vec![
+      // (its "A. Able is with Univ A." note her affiliation, IEEEtran's block notes routed by kind, OD #1072)
       "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact \
-       role=\"membership\">Member,\u{a0}IEEE</contact></creator>"
+       role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\">Univ A.</contact></creator>"
         .to_string(),
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact \
        role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>"
         .to_string(),
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname><note \
-       class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able is with Univ \
-       A.</note></creator>"
+      // (MARKKEY1: IEEEtran's unmarked `\thanks` is the block's publication note, not the last author's, OD #1058)
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname></creator>"
         .to_string(),
     ]),
-    // (a `\footnote` is Perl's role=note contact: no class, the line after it still a line; LaTeXML.css exempts it)
+    // (a `\footnote` is the marked `\thanks` note it is in article's title, OD #1053 — Perl's role=note contact where the
+    // title prints no mark; the line after it still a line)
     ("footnote_note", repro!("footnote_note"), 0, vec![
       format!("<creator role=\"author\"><personname>Ann Able</personname>{L}Univ A</contact></creator>"),
       format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
-         name=\"Note:\u{a0}\" role=\"note\">X</contact>{L}Univ B</contact></creator>"
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note \
+         class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">X</note>{L}Univ \
+         B</contact></creator>"
       ),
     ]),
     // (a block the reading declines, written as Perl's `\lx@add@authors` splits it: fallback.rs)
     ("declined_block", repro!("declined_block"), 1, vec![
       format!(
-        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
-         role=\"note\">Zebra University.</contact>{L}Dept. of B</contact></creator>"
+        "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter \
+         ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Zebra University.</note>{L}Dept. of \
+         B</contact></creator>"
       ),
       format!(
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{L}Univ. \

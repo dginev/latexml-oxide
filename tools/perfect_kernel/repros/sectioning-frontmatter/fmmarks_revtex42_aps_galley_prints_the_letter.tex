@@ -1,0 +1,23 @@
+% mechanism: REVTeX 4.2's `galley` is `onecolumn` (revtex4-2.cls:6025-6026): after `reprint` the title block leaves
+%   the two-column grid, so its `\footnotemark[2]` prints the minipage letter (:2710-2714 `\thempfn`), "b"
+%   (`revtex4_support_sty::declare_revtex41_title_marks`)
+% witness:  review revMARKBINDb P2 (p/rv2_aps_reprint_galley.tex), MARKBINDc item 4
+% oracle:   pdflatex 0 errors; "Ann Able", "b", "Univ A", "Bob Baker∗", "Univ B", "∗ Bob note." (the `\footnotetext`
+%   after `\maketitle` is not printed)
+% engines:  rust MARKBINDb (2aa35bbd553) = 0 errors, 0 Warnings; the affiliation's note unmarked
+% expect:   0 errors, 0 Warnings; the affiliation's note b
+% status:   RED (MARKBINDb) -> GREEN (MARKBINDc; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% preload:  ar5iv.sty
+\documentclass[aps,reprint,galley]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\affiliation{\footnotemark[2]Univ A}
+\author{Bob Baker}
+\thanks{Bob note.}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+\footnotetext[2]{Present address: Lab C.}
+Body\footnote{Body note.}.
+\end{document}

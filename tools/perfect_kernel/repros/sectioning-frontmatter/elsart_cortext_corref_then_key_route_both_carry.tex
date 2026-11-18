@@ -1,0 +1,18 @@
+% mechanism: as elsart_cortext_key_and_corref_routes_both_carry, the `\corref` name first: the key route's request is
+%   decided where the names are digested, every route read
+% witness: ELSROUTE (row R; synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗, Bob Twoa,1"; footnote "∗ Corresponding author"
+% engines: rust b842de7fc4c: Alice alone carries the note
+% expect:  0 errors 0 Warnings; Alice One and Bob Two each a copy of the one note, marked ∗
+% status:  RED (b842de7fc4c) -> GREEN (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One\corref{cor}}
+\author[l1,cor]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[cor]{Corresponding author}
+\end{frontmatter}
+x\end{document}

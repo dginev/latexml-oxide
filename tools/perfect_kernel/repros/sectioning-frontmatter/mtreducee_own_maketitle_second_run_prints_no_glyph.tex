@@ -1,0 +1,22 @@
+% mechanism: the kernel's read of the title marks of the `\maketitle` that runs (`latex_constructs::kernel_title_marks`,
+%   revMTREDUCEd S3): a second run of the document's `\maketitle`: the read ends with the first (`end_title_marks_read`), the count here does not restart as TeX's
+% witness:  revMTREDUCEd probe two2
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): second block "Dan Dee∗ Eve Eck†"; foot "∗ Univ D." "† Univ E."
+% engines:  rust MTREDUCEd = Dan ‡, Eve § (the count continued); INTFMfinal = no glyph
+% expect:   0 errors, 1 Warning (the first block's names, lost and counted on the base too); no glyph on Dan's and Eve's notes
+% status:   RED (MTREDUCEd) -> GREEN (MTREDUCEE: perfect_kernel_batchmtreduce::kernel_read_marks_are_what_holds_where_the_names_print)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\par\begingroup\renewcommand\thefootnote{\fnsymbol{footnote}}\@maketitle\@thanks\endgroup\setcounter{footnote}{0}}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{Univ A.} \and Bob Baker\thanks{Univ B.}}
+\begin{document}
+\maketitle
+Body text.
+\title{Second}
+\author{Dan Dee\thanks{Univ D.} \and Eve Eck\thanks{Univ E.}}
+\maketitle
+More.
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: an outside `\corref{c1,c2}` sets `\@corref` for the first name printed (elsarticle.cls:188-190,
+%   :256-264), the key list's case 0 — no ∗: the notes mark no name; the first name's settled mark is none, with a Warning
+% witness: revELSARTb P1 (synthetic; the outside route)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,, Bob Twoa"; footnotes "∗ First corresponding",
+%   "∗∗ Second corresponding"
+% engines: rust WRONGFIXc: both notes the block's; INTFMfinal: Alice carries both
+% expect:  0 errors 1 Warning (elsarticle_mark_list); both notes the block's
+% status:  RED (INTFMfinal) -> GREEN (ELSARTc) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}\corref{c1,c2}
+\author[l1]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[c1]{First corresponding}
+\cortext[c2]{Second corresponding}
+\end{frontmatter}
+x\end{document}

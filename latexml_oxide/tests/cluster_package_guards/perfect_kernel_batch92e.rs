@@ -197,7 +197,7 @@ fn kernel_empty_thanks_leave_no_note() {
     &[],
     r#"<creator role="author">
     <personname>A. Able</personname>
-    <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Univ A</note>
+    <note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id1">Univ A</note>
   </creator>"#,
   );
 }
@@ -217,7 +217,9 @@ fn mdpi_corres_label_only_note_is_kept() {
       &xml[at..at + xml[at..].find("</note>").expect("a closed note") + "</note>".len()]
     })
     .collect();
+  // (the affiliation first: mdpi prints it under the names, before the abstract — BLOCKPLACE, OD #1074)
   assert_eq!(notes, [
+    r#"<note role="address">Univ A</note>"#,
     r#"<note role="volume">1</note>"#,
     r#"<note role="issue">1</note>"#,
     r#"<note role="articlenumber">0</note>"#,
@@ -225,7 +227,6 @@ fn mdpi_corres_label_only_note_is_kept() {
     r#"<note role="copyright-year">2026</note>"#,
     r#"<note role="received">1 June 2026</note>"#,
     r#"<note role="accepted">1 July 2026</note>"#,
-    r#"<note role="address">Univ A</note>"#,
     r#"<note role="corresponding">Correspondence: </note>"#,
   ]);
 }

@@ -25,42 +25,50 @@ use super::{
   repart::{crosses_columns, entry_span, joined_across_cells, prefix_tokens},
   *,
 };
-use crate::base_utilities::{
-  defs::{
-    author_macros::KEPT_WHOLE,
-    frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
-    frontmatter_fields::{orcid_icon_link, under_author_markup},
-  },
-  frontmatter::{
-    classify::shared_call_item,
-    fallback::{
-      PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
-      tabular_juggles_in_a_whole_block, whole_block_author,
-    },
-    insert::NAME_PRINTED,
-    observer::{
-      events::{
-        self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration, inked,
-        lex_with_inks, text_font_command,
-      },
-      field_notes::{EnvironmentStep, FieldCreator, HeldExpansion},
-      ledger::{
-        ApiCall, AuthorBlock, MarkLedEntry, Unsaid, annotated_parent, content_text, field_stamped,
-        symbol,
-      },
-      policy::TitleMarks,
-      reading::{UNFOLD_LEVELS, unfold_held_names},
-      rehearsal::{Rehearsal, rehearse},
-      resolver::{
-        BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
-        creator_call, creator_call_level, creator_call_pieces, is_creator_call, labelseq_pieces,
-        merged_names, own_email_label, printed_email_label, read_events, shares_the_row,
-        split_pieces, split_pieces_as, uncoordinated_marks, words_of,
+use crate::{
+  base_utilities::{
+    defs::{
+      author_macros::KEPT_WHOLE,
+      frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
+      frontmatter_fields::{
+        TITLE_MARK_STEP, orcid_icon_link, title_notes_print_marks, under_author_markup,
       },
     },
-    place::DEFERRED_TO_FLUSH_END,
-    relocate::{BLOCK_ZONE, FOOTER_ZONE},
+    frontmatter::{
+      classify::shared_call_item,
+      fallback::{
+        PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
+        tabular_juggles_in_a_whole_block, whole_block_author,
+      },
+      insert::{
+        FOOTNOTE_TEXT, MARK_FROM_COUNTER, MARK_IN_TEXT, MARK_UNKNOWN, NAME_MARK, NAME_PRINTED,
+      },
+      observer::{
+        events::{
+          self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration,
+          inked, lex_with_inks, text_font_command,
+        },
+        field_notes::{EnvironmentStep, FieldCreator, HeldExpansion},
+        ledger::{
+          ApiCall, AuthorBlock, MarkLedEntry, Unsaid, annotated_parent, content_text,
+          field_stamped, symbol,
+        },
+        policy::{self, TitleMarks},
+        reading::{UNFOLD_LEVELS, unfold_held_names},
+        rehearsal::{Rehearsal, rehearse},
+        resolver::{
+          BlockCheck, LostInk, MarkBy, MarkLedger, NameMark, RCreator, RuleDrop, Side, Written,
+          check_blocks, contact_parts, creator_call, creator_call_level, creator_call_pieces,
+          is_creator_call, labelseq_pieces, merged_names, note_shows, own_email_label,
+          printed_email_label, read_events, shares_the_row, split_pieces, split_pieces_as,
+          uncoordinated_marks, words_of,
+        },
+      },
+      place::DEFERRED_TO_FLUSH_END,
+      relocate::{BLOCK_ZONE, FOOTER_ZONE},
+    },
   },
+  latex_constructs::{FOOTNOTE_VALUE, TITLE_CELL_DECLARED, TITLE_CELL_ENTER},
 };
 
 /// The State value saying a flush emitted: the ledger's
@@ -170,30 +178,39 @@ fn annotations_key(labels: &str) -> Vec<Token> {
   key
 }
 
-/// The key `_refmarkshown={…}` (`insert::show_unanswered_marks`' printed text of a request) for each of `labels` a glued
-/// mark was parted into ([`RCreator::whole_marks`]): a piece no entry answers shows the whole mark, as printed —
-/// BESIII's `$^{50A,50C}$` stays "50A,50C" beside its entry 50, never "A,C" (1705.11109, 1507.02068, 2204.09614); empty
-/// where none is.
-fn whole_marks_key(c: &RCreator, labels: &[String]) -> Vec<Token> {
-  let shown: Vec<String> = c
-    .whole_marks
-    .iter()
-    .flat_map(|(piece, whole)| {
-      clean_frontmatter_labels(piece, "affiliation")
-        .into_iter()
-        .filter(|label| labels.contains(label))
-        .map(move |label| s!("{label}={whole}"))
-    })
-    .collect();
-  if shown.is_empty() {
-    return Vec::new();
+/// Records `mark`, printed on a name its written name leaves out, with the `labels` it requests: the glyph it printed —
+/// a glued mark parted into requests its whole ([`NameMark::whole`]), BESIII's `$^{50A,50C}$` "50A,50C" beside its entry
+/// 50, never "A,C" (1705.11109, 1507.02068, 2204.09614), one mark for all its pieces; else the label's glyph
+/// (`insert::unanswered_mark_text`).
+fn left_mark(left: &mut Vec<(Vec<String>, String)>, mark: &NameMark, labels: &[String]) {
+  match &mark.whole {
+    Some(whole) => match left.iter_mut().find(|(_, glyph)| glyph == whole) {
+      Some((pieces, _)) => pieces.extend(labels.iter().cloned()),
+      None => left.push((labels.to_vec(), whole.clone())),
+    },
+    None => {
+      for label in labels {
+        let mark = label.strip_prefix("affiliation:").unwrap_or(label);
+        left.push((
+          vec![label.clone()],
+          unanswered_mark_text(mark).unwrap_or_default(),
+        ));
+      }
+    },
   }
-  let mut key = vec![T_OTHER!(",")];
-  key.extend(key_tokens("_refmarkshown="));
-  key.push(T_BEGIN!());
-  key.extend(ExplodeText!(&shown.join(";")));
-  key.push(T_END!());
-  key
+}
+
+/// The marks a written name leaves out ([`left_mark`]), each where its name ends, keyed by the labels it requests
+/// (`\lx@frontmatter@namemark`, OD #1061): `insert::settle_name_marks` drops those an entry answers.
+fn left_marks(left: &[(Vec<String>, String)]) -> Vec<Token> {
+  left
+    .iter()
+    .flat_map(|(labels, glyph)| {
+      let labels: Vec<Token> = ExplodeText!(&labels.join(",")).into_iter().collect();
+      let glyph: Vec<Token> = ExplodeText!(glyph).into_iter().collect();
+      cs_group(NAME_MARK, &[&labels, &glyph])
+    })
+    .collect()
 }
 
 /// The key `_corresponding=true` on a creator the reading marks the corresponding author ([`RCreator::corresponding`]), which
@@ -317,7 +334,7 @@ fn cs_group_args(args: &[&str]) -> Vec<Token> {
 }
 
 /// The reading's text as tokens that print it: its specials as their commands (an OTHER `_` in OT1 prints `˙`: 2605.20715).
-pub(super) fn printed_text_tokens(text: &str) -> Vec<Token> {
+pub fn printed_text_tokens(text: &str) -> Vec<Token> {
   let mut out = Vec::new();
   for c in text.chars() {
     match c {
@@ -357,10 +374,15 @@ fn key_list_bounds(v: &[Token]) -> (Option<usize>, Option<usize>) {
 }
 
 /// Whether a queued call's key `key` places it — the keys the reading's own placement replaces: `label`, `labelseq`,
-/// `annotate`, `owner`, `annotations` unless kept, and the internal `_` keys but `_kinded`, `_markshown` (read already)
-/// and, where kept, `_zone` (where it prints).
+/// `annotate`, `owner`, `annotations` unless kept, and the internal `_` keys but `_kinded`, `_markshown` (read already),
+/// `_fnpart` (the footnote it is part of, `FOOTNOTE_PART`), `_markfromcounter` (a mark its command prints, which no glyph
+/// typed on a name is: `MARK_FROM_COUNTER`, sn-jnl's author notes, revSNJNLb S3) and, where kept, `_zone` (where it prints).
 fn routing_key(key: &str, keep_annotations: bool, zone: bool) -> bool {
-  (key.starts_with('_') && !(matches!(key, "_kinded" | "_markshown") || (zone && key == "_zone")))
+  (key.starts_with('_')
+    && !(matches!(
+      key,
+      "_kinded" | "_markshown" | "_fnpart" | MARK_FROM_COUNTER
+    ) || (zone && key == "_zone")))
     || matches!(key, "label" | "labelseq" | "annotate" | "owner")
     || (key == "annotations" && !keep_annotations)
 }
@@ -699,6 +721,42 @@ fn past_option(tokens: &[Token], at: usize) -> usize {
     .map_or(at, |close| at + close + 1)
 }
 
+/// Where the mark `s..t` of `tokens` ends: past its number (a `\footnotemark`'s, past its span: 2209.15209; one whose
+/// span ends on its option's `[`, past a `\protect` before it: `\protect\endnotemark[2]`, 1703.08733) and past the
+/// arguments of a macro printing it, its span the call alone (aiaa-tc's `\thanksibid{2}`, 1505.07844, 1411.3642,
+/// 1602.00849; a preamble's `\footrecall{uva}`, 2503.21719, 2407.13730, 2606.19583: `content::arguments_end`).
+fn mark_end(tokens: &[Token], s: usize, t: usize) -> usize {
+  let t = past_option(tokens, s + 1)
+    .max(past_option(tokens, t.saturating_sub(1)))
+    .max(t);
+  arguments_end(tokens, s, true)
+    .flatten()
+    .map_or(t, |end| end.max(t))
+}
+
+/// The span of a mark, note or formula separator `events[k]` of a block's field from its own first token (`base` the
+/// field's first position): a span starts where the box before it began (the `\qquad` before it, the mark before it),
+/// so it is cut at the end of the piece or spacing read before it and at `done`, where the run written before it ends;
+/// `None` when nothing is left, the piece inside a run written already (review revSHGNEXT B1, P1).
+fn own_span(events: &[Event], k: usize, base: usize, done: usize) -> Option<(usize, usize)> {
+  let at = |p: u16| usize::from(p).checked_sub(base);
+  let (s, t) = events[k].span.and_then(|(s, t)| Some((at(s)?, at(t)?)))?;
+  let before = events[..k]
+    .iter()
+    .rev()
+    .find(|e| {
+      matches!(
+        e.kind,
+        EventKind::Sep(SepKind::Gap { .. }) | EventKind::Mark | EventKind::Note
+      ) || (matches!(e.kind, EventKind::Sep(_)) && e.role.as_deref() == Some("math"))
+    })
+    .and_then(|e| at(e.span?.1))
+    .filter(|&end| end < t)
+    .unwrap_or(0);
+  let s = s.max(before).max(done);
+  (s < t).then_some((s, t))
+}
+
 /// `start`, or the opening brace of the group `start..end` closes where it starts right after that brace, spaces aside: `{\\large
 /// Olga Kichakova}$^{1}$`, its first box's cover from the switch (1208.4825).
 fn in_a_group(tokens: &[Token], start: usize, end: usize) -> usize {
@@ -878,14 +936,16 @@ type BlockName = (
 /// \footnotemark` at the counter's 0, "Counter too large" (1507.05018, 2505.07115); off digests the `\thanks` in its
 /// creator, as LaTeX's `\maketitle` steps it in place. A note a name's run holds is digested in it, its own step there;
 /// a note before a mark its name prints past it is stepped in the name's tokens, before that mark (`stepped`,
-/// [`block_names`]: 1610.06031).
+/// [`block_names`]: 1610.06031). The steps of the bare `\footnotemark`s no name writes (`drops`, each its place and its
+/// tokens: [`mark_dropped`]) go where they print too, among the notes' in print order.
 fn note_steps(
   index: usize,
   runs: &[(usize, (usize, usize))],
   stepped: &BTreeSet<usize>,
   first: usize,
-) -> BTreeMap<(usize, bool), usize> {
-  let mut steps = BTreeMap::new();
+  drops: &[(usize, Vec<Token>)],
+) -> Steps {
+  let mut steps = Steps::new();
   let notes: Vec<usize> = with_block(index, Vec::new(), |block, events| {
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     events
@@ -896,10 +956,11 @@ fn note_steps(
       .filter_map(|e| at(e.span?.0))
       .collect()
   });
-  for at in notes {
-    if stepped.contains(&at) || runs.iter().any(|(_, (from, to))| *from <= at && at < *to) {
-      continue;
-    }
+  let notes = notes
+    .into_iter()
+    .filter(|at| !stepped.contains(at) && !runs.iter().any(|(_, (from, to))| from <= at && at < to))
+    .map(|at| (at, vec![T_CS!(FOOTNOTE_STEP)]));
+  for (at, tokens) in notes.chain(drops.iter().cloned()) {
     // (keyed by the creator and whether the step goes after its name)
     let owner = runs
       .iter()
@@ -907,10 +968,16 @@ fn note_steps(
       .map(|(i, _)| (*i, true))
       .next_back()
       .unwrap_or((first, false));
-    *steps.entry(owner).or_default() += 1;
+    let owned = steps.entry(owner).or_default();
+    owned.push((at, tokens));
+    owned.sort_by_key(|(at, _)| *at);
   }
   steps
 }
+
+/// The footnote counter's steps written beside the names (`note_steps`): per creator and whether after its name, each
+/// step's place in its block and its tokens.
+type Steps = BTreeMap<(usize, bool), Vec<(usize, Vec<Token>)>>;
 
 /// A block's names' tokens: their marks with them where `marks` (a per-author class's block, whose names keep them printed as
 /// Perl does), a `\\footnotemark` (what `relocate_footnote` moves its text to, 2203.12964) and an ORCID written on it, its logo in
@@ -921,6 +988,7 @@ fn note_steps(
 /// in the block: [`note_steps`]).
 fn block_names(
   index: usize,
+  resolved: &Resolved,
   names: &[String],
   marks: bool,
   on_names: &mut BTreeSet<(usize, (u16, u16))>,
@@ -940,6 +1008,9 @@ fn block_names(
       return vec![(None, Vec::new(), None, Vec::new(), Vec::new()); names.len()];
     };
     let read = read_events(events);
+    // (which name each mark and note beside spacing goes to: the reading's decision, `resolver::mark_ledger`)
+    let none = MarkLedger::default();
+    let ledger = resolved.mark_ledgers.get(&index).unwrap_or(&none);
     let found: Vec<(usize, &Event)> = read
       .iter()
       .enumerate()
@@ -963,6 +1034,8 @@ fn block_names(
       *printed_at.entry(e.span).or_default() += 1;
     }
     type Taken = (Vec<Token>, (usize, usize), Vec<(usize, usize)>, Vec<usize>);
+    // (what the names before wrote, their runs and the pieces past them: a later name's run takes none of it again)
+    let mut written_before: Vec<(usize, usize)> = Vec::new();
     let mut name_tokens = |from: usize, to: usize| -> Option<Taken> {
       // (several events of one span: a macro the reading did not unfold printed them, one with parameters or a class's
       // (`reading::unfold_held_names`); `\\author{\\authorBlock}`, 2604.09547, is unfolded since AUT1)
@@ -1046,12 +1119,122 @@ fn block_names(
       let math_sep =
         |e: &Event| matches!(e.kind, EventKind::Sep(_)) && e.role.as_deref() == Some("math");
       let past_note = |e: &&Event| beside(e) || e.kind == EventKind::Note || math_sep(e);
+      // (and past the marks and notes the mark ledger gives this name past spacing, up to those it gives the next name
+      // (`resolver::mark_ledger`: the name before, save a line's start or the block's edge proof — DG 2026-11-17): Perl's
+      // personname keeps them — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali Farhadi \ \footnotemark[3]`,
+      // 1911.13299; `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`, 2412.20504. One on
+      // the line a `\\` opens is no name's; one in a formula is written with the formula whole, a note in it twice —
+      // `Xunzhi Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s)
+      // (its whole span, the spacing before it with it: what a cut or a balance takes; a writer takes `own_run`'s)
+      let mark_run = |e: &Event| -> Option<(usize, usize)> {
+        let span = e.span?;
+        let (s, t) = (at(span.0)?, at(span.1)?);
+        Some((s, mark_end(field.tokens, s, t)))
+      };
+      // (what a writer writes of the piece `read[k]`: [`own_span`]'s, a mark's to its end)
+      let own_run = |k: usize, done: usize| {
+        own_span(&read, k, block.range.0, done).map(|(s, t)| (s, mark_end(field.tokens, s, t)))
+      };
+      // (the tokens from a piece's first to where it ends neither close a group opened before them nor leave one open:
+      // `{Ann Able \qquad \footnotemark[2]} \ Bob`, review revSHGIVENc)
+      let balanced = |(s, t): (usize, usize)| {
+        let depths = field.tokens.get(s..t)?.iter().scan(0, |depth, t| {
+          *depth += t.group_step();
+          Some(*depth)
+        });
+        let (lowest, last) = depths.fold((0, 0), |(lowest, _), d| (lowest.min(d), d));
+        Some(lowest == 0 && last == 0)
+      };
+      let past: Vec<_> = ledger.past(found[to].0).collect();
+      // (the next name's pieces before it, past a cell's opening too: `Ann Able & \footnotemark[2]Bob Baker`)
+      let next_name = (after_name..read.len())
+        .find(|&i| read[i].kind == EventKind::Name)
+        .unwrap_or(read.len());
+      let next_pieces: Vec<usize> = ledger
+        .records
+        .iter()
+        .filter(|r| r.side == Some(Side::After) && (after_name..next_name).contains(&r.at))
+        .map(|r| r.at)
+        .collect();
+      let first_after = next_pieces.first().copied().unwrap_or(read.len());
+      // (cut from this name's run where its balance took them: `{Ann Able \qquad \footnotemark[2]} \ \textsc{Bob Baker}`)
+      let mut cuts: Vec<(usize, usize)> = next_pieces
+        .iter()
+        .filter_map(|&at| mark_run(&read[at]))
+        .collect();
+      // (and what the name before wrote inside this name's span: a piece glued to it, `Ann Able \quad
+      // \footnotemark[2]Bob Baker`, Ann's by the ledger's default (DG 2026-11-17), the span running into Bob's)
+      if let Some((s, t)) = found[from]
+        .1
+        .span
+        .zip(found[to].1.span)
+        .and_then(|(a, b)| Some((at(a.0)?, at(b.1)?)))
+      {
+        cuts.extend(
+          written_before
+            .iter()
+            .map(|&(cs, ct)| (cs.max(s), ct.min(t)))
+            .filter(|&(cs, ct)| cs < ct),
+        );
+      }
+      let glued_end = (after_name..first_after)
+        .find(|&i| !past_note(&&read[i]))
+        .unwrap_or(first_after);
+      let carried = past
+        .iter()
+        .all(|r| r.side.is_some())
+        .then(|| {
+          past
+            .iter()
+            .filter(|r| r.side == Some(Side::Before))
+            .map(|r| r.at)
+            .max()
+        })
+        .flatten()
+        .filter(|&last| last >= glued_end)
+        // (over spacing, the pieces and font changes alone: an item the reading writes apart stops it — `Bob
+        // Baker\affil{2}\comma\corrauth,`, the affiliation's contact before the mark, review of SHGNEXT)
+        .filter(|&last| {
+          read[glued_end..=last].iter().enumerate().all(|(k, e)| {
+            matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+              || e.kind == EventKind::Layout
+              || past.iter().any(|r| r.at == glued_end + k)
+              // (past the comma the ledger reads as the name's ink, and the labels after it, which the reading's
+              // requests answer: `Igor Pikovski,$^{1, 2 }$\footnotemark $\, \,$ Michael`, 1111.1979)
+              || e.kind == EventKind::Sep(SepKind::Comma)
+              || e.kind == EventKind::Mark
+          })
+        });
+      let scan_end = carried
+        .filter(|&last| {
+          // (from the first piece past the glued ones to the last one's end)
+          let from = read[glued_end..=last]
+            .iter()
+            .find(|e| matches!(e.kind, EventKind::Mark | EventKind::Note))
+            .and_then(|e| at(e.span?.0));
+          let to = mark_run(&read[last]).map(|(_, t)| t);
+          from
+            .zip(to)
+            .and_then(|(s, t)| balanced((s, t.max(s))))
+            .unwrap_or(false)
+        })
+        .map_or(glued_end, |last| last + 1);
       let steps_counter = |e: &Event| e.role.as_deref().is_some_and(|r| r.starts_with("thanks"));
       let mut apart: Vec<Token> = Vec::new();
       let mut apart_runs: Vec<(usize, usize)> = Vec::new();
       let (mut passed, mut stepped): (Vec<usize>, Vec<usize>) = (Vec::new(), Vec::new());
       let mut seps: Vec<(usize, usize)> = Vec::new();
-      for e in read[after_name..].iter().take_while(past_note) {
+      // (where the last piece written ends)
+      let mut done = 0;
+      let comma = (after_name..scan_end).find(|&k| read[k].kind == EventKind::Sep(SepKind::Comma));
+      for k in after_name..scan_end {
+        let e = &read[k];
+        // (past a comma, only the pieces the ledger gives the name, each its own run: the comma and the labels between
+        // are no part of the name, its requests answering the labels — COMMAMARK, 1111.1979, OD #1057)
+        let past_comma = comma.is_some_and(|c| k > c);
+        if past_comma && !past.iter().any(|r| r.at == k) {
+          continue;
+        }
         if e.kind == EventKind::Note {
           if steps_counter(e)
             && let Some(s) = e.span.and_then(|span| at(span.0))
@@ -1061,8 +1244,8 @@ fn block_names(
           continue;
         }
         if math_sep(e) {
-          if let Some((s, t)) = e.span.and_then(|(s, t)| Some((at(s)?, at(t)?))) {
-            seps.push((s, t));
+          if let Some(run) = own_span(&read, k, block.range.0, done) {
+            seps.push(run);
           }
           continue;
         }
@@ -1070,18 +1253,12 @@ fn block_names(
           continue;
         }
         let span = e.span?;
-        let (s, t) = (at(span.0)?, at(span.1)?);
-        // (a `\\footnotemark`'s number, past its span: 2209.15209; one whose span ends on its option's `[`, past a
-        // `\\protect` before it: `\\protect\\endnotemark[2]`, 1703.08733)
-        let t = past_option(field.tokens, s + 1)
-          .max(past_option(field.tokens, t.saturating_sub(1)))
-          .max(t);
-        // (a mark a macro prints, its span the call alone, is the call with its arguments: aiaa-tc's `\thanksibid{2}`
-        // (1505.07844, 1411.3642, 1602.00849), a preamble's `\footrecall{uva}` (2503.21719, 2407.13730, 2606.19583) —
-        // the call written without them read the author wrapper's `\let` (`content::arguments_end`))
-        let t = arguments_end(field.tokens, s, true)
-          .flatten()
-          .map_or(t, |end| end.max(t));
+        // (its whole span the run of a name or a piece written before it holds)
+        let cover = mark_run(e)?;
+        let Some((s, t)) = own_run(k, done) else {
+          apart_runs.push(cover);
+          continue;
+        };
         // (a mark past the close of a group of names the name's run opens no part of is the last name's, its own run
         // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — as the old reader's
         // names split, deleted in Z18k2, read it (a wrapper holding names with only marks after it split into them, the
@@ -1107,10 +1284,12 @@ fn block_names(
               && in_a_group(field.tokens, name_from, s) == name_from,
           )
         };
-        if enclosing.contains(&span)
-          || (marks && passed.is_empty() && stepped.is_empty() && past_group() != Some(true))
+        if !past_comma
+          && (enclosing.contains(&span)
+            || (marks && passed.is_empty() && stepped.is_empty() && past_group() != Some(true)))
         {
           grown.1 = grown.1.max(t);
+          done = t;
           seps.clear();
         } else if let Some((tokens, end)) = field.content_of((s, t), 0, s) {
           if e.kind == EventKind::Mark {
@@ -1131,8 +1310,10 @@ fn block_names(
           apart.extend(tokens.unlist());
           // (to where its tokens end: past an undefined command `content::Field::past_held_undefined` grew the piece over,
           // which the scan below then takes no more — `Ann Able\footnotemark\foo{} \and …` wrote `\foo` twice, two
-          // stubs for its one Error, review revERR2c finding 1)
-          apart_runs.push((s, end.max(t)));
+          // stubs for its one Error, review revERR2c finding 1; from its whole span's start, the spacing before it no
+          // one's)
+          apart_runs.push((cover.0.min(s), end.max(t)));
+          done = end.max(t);
         }
         if is_orcid(e) {
           on_names.insert((index, span));
@@ -1143,8 +1324,61 @@ fn block_names(
         events,
         (found[from].1, found[to].1),
         Some(grown),
-        &[],
+        &cuts,
       )?;
+      // (the pieces the mark ledger gives this name from before it, past spacing, written before its text in print order,
+      // a note's footnote step where it prints (its note the reading's item of this name): `Ann Able \qquad
+      // \footnotemark[2] \ Bob Baker`, pdflatex's † over Bob's name; a bare `\footnotemark` keeps its step there, so the
+      // marks after it print theirs. One the name's run holds already is the run's)
+      let mut prefix: Vec<Token> = Vec::new();
+      let (mut done, mut last) = (0, None);
+      for r in ledger.prefix_of(found[from].0) {
+        let e = &read[r.at];
+        let Some(cover) = mark_run(e) else {
+          continue;
+        };
+        // (a glued prefix's span runs into the name's: `\footnotemark[2]Bob Baker`, whose `[2]` the name's cover holds —
+        // written with it, no loss for `mark_dropped` to count)
+        if cover.0 < run_to.max(written_to) && run_from < cover.1 {
+          apart_runs.push(cover);
+          continue;
+        }
+        if e.kind == EventKind::Note {
+          if steps_counter(e) {
+            prefix.push(T_CS!(FOOTNOTE_STEP));
+            stepped.push(cover.0);
+          }
+          last = Some(r.at);
+          continue;
+        }
+        // (a formula's separator between two of them is written before the one after it, as past a name:
+        // `\footnotemark[1]$^,$\footnotemark[2]`, 1703.08733)
+        for j in last.map_or(r.at, |l| l + 1)..r.at {
+          if math_sep(&read[j])
+            && let Some((s, t)) = own_span(&read, j, block.range.0, done)
+            && let Some((sep, end)) = field.content_of((s, t), 0, s)
+          {
+            prefix.extend(sep.unlist());
+            apart_runs.push((s, end.max(t)));
+            done = end.max(t);
+          }
+        }
+        last = Some(r.at);
+        let Some((s, t)) = own_run(r.at, done) else {
+          apart_runs.push(cover);
+          continue;
+        };
+        // (in a group of its own: a switch its group holds stays its own, `{\small\footnotemark[2]} \ \textsc{Bob Baker}`)
+        if balanced((s, t)) == Some(true)
+          && let Some((tokens, end)) = field.content_of((s, t), 0, s)
+        {
+          prefix.push(T_BEGIN!());
+          prefix.extend(tokens.unlist());
+          prefix.push(T_END!());
+          apart_runs.push((cover.0.min(s), end.max(t)));
+          done = end.max(t);
+        }
+      }
       // (a note the name's tokens print is written with it, not again as an item: `\\newcommand{\\ann}{Ann
       // Able\\thanks{…}}`, whose name is the one token `\\ann` — revLO4; a wrapper's note is cut out of the run,
       // `event_run`: P2 B. So is an ORCID link the run prints, the link printing the name (`link_names`): the name's
@@ -1170,9 +1404,8 @@ fn block_names(
       // Leader.}\equalcorres,` (2508.21091), `E.Prandini\from{ins:x}\thanks{…}\ETC,` (1101.4098). The reading's
       // segmentation stays: only what prints nothing joins the name (OXIDIZED_DESIGN_DIVERGENCES #983; repro
       // sectioning-frontmatter/emitter_undefined_command_in_author_errs_once))
-      let next_at = read[after_name..]
-        .iter()
-        .find(|e| !past_note(e))
+      let next_at = read
+        .get(scan_end)
         .and_then(|e| at(e.span?.0))
         .unwrap_or(field.tokens.len());
       let covered = |i: usize| {
@@ -1190,16 +1423,19 @@ fn block_names(
         apart_runs.push((i, i + 1));
       }
       // (a footnote symbol in a kept mark is shown apart from its numbers, `rewrite_symbol_superscripts`'s: 1610.06117)
-      let mut out = if marks {
-        rewrite_symbol_superscripts(Tokens::new(tokens)).unlist()
+      let mut out = prefix;
+      if marks {
+        out.extend(rewrite_symbol_superscripts(Tokens::new(tokens)).unlist());
       } else {
-        tokens
-      };
+        out.extend(tokens);
+      }
       if marks && !apart.is_empty() {
         out.extend(rewrite_symbol_superscripts(Tokens::new(apart)).unlist());
       } else {
         out.extend(apart);
       }
+      written_before.push((run_from, run_to.max(written_to)));
+      written_before.extend(apart_runs.iter().copied());
       Some((out, (run_from, run_to), apart_runs, stepped))
     };
     // (each name the Name events from the last one on spell, joined)
@@ -1405,22 +1641,128 @@ fn by_text(why: Option<&str>, text: &str) -> Vec<Token> {
 }
 
 /// A note's call under `label`, as `\lx@add@thanks` and `\lx@add@note` make it (their `Let`s in an author's content,
-/// `digest_frontmatter_item`), on `@now`: what's inside it is the reading's already. A legend's with the `mark` it prints.
-/// Its footnote step is its creator's, where the note prints ([`note_steps`]).
-fn note_call(footnote: bool, mark: Option<&str>, label: &str, content: Vec<Token>) -> Tokens {
+/// `digest_frontmatter_item`), on `@now`: what's inside it is the reading's already. A legend's with the `mark` it prints,
+/// a note's with the one it shows on its name ([`shown_mark`]), a `\footnote` so marked the `\thanks` note it is there
+/// (`\lx@title@footnote`). Its footnote step is its creator's, where the note prints ([`note_steps`]); an unmarked
+/// `\footnote` `given` its number steps none (`GIVEN_PART`, the front-matter footnotes' count: OD #1054). A mark read off
+/// the text's bare head ([`requested_mark`]) is flagged so (`insert::MARK_IN_TEXT`), for the copy to be taken out there,
+/// one its command prints so (`insert::MARK_FROM_COUNTER`), no typed glyph on the name being it.
+fn note_call(
+  footnote: bool,
+  given: bool,
+  (mark, number): (Option<&str>, Option<(i64, bool)>),
+  from: MarkFrom,
+  label: &str,
+  content: Vec<Token>,
+) -> Tokens {
   let kind = classify_thanks(Tokens::new(content.clone()).untex_string().as_ref());
   let body = cs_group("\\lx@frontmatter@itemonly", &[note_body(Tokens::new(
     content,
   ))
   .unlist_ref()]);
-  let marked = mark.map_or_else(String::new, |mark| s!("mark={{{mark}}},"));
-  if footnote {
-    annotate_now("ltx:contact", &s!("role=note,label={{{label}}}"), &body)
+  let marked = mark.map_or_else(
+    || {
+      // (none where the mark the title prints is unknown here, flagged so: `insert::count_unknown_marks`)
+      if crate::latex_constructs::title_marks_unknown(false) {
+        s!("{MARK_UNKNOWN}=true,")
+      } else {
+        String::new()
+      }
+    },
+    |mark| {
+      let from = match from {
+        MarkFrom::Counter => s!("{MARK_FROM_COUNTER}=true,"),
+        MarkFrom::Legend => String::new(),
+        MarkFrom::Text => s!("{MARK_IN_TEXT}=true,"),
+      };
+      s!("mark={{{mark}}},{from}")
+    },
+  );
+  // (the footnote number it stands for, which a name's `\footnotemark` of that number on its carrier is its mark of, and
+  // whether it is a `\footnotetext`, which no carrier prints but by that mark: `insert::link_marked_notes`, OD #1058)
+  let marked = match number {
+    Some((number, false)) => s!("{marked}{FOOTNOTE_VALUE}={number},"),
+    Some((number, true)) => s!("{marked}{FOOTNOTE_VALUE}={number},{FOOTNOTE_TEXT}=true,"),
+    None => marked,
+  };
+  if footnote && mark.is_none() {
+    let given = if given {
+      s!(",{FOOTNOTE_PART}={GIVEN_PART}")
+    } else {
+      String::new()
+    };
+    annotate_now(
+      "ltx:contact",
+      &s!("role=note,label={{{label}}}{given}"),
+      &body,
+    )
   } else {
     let keys =
       s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind},{marked}label={{{label}}}");
     annotate_now("ltx:note", &keys, &body)
   }
+}
+
+/// Where the `mark` of a note's call ([`note_call`]) comes from.
+#[derive(Clone, Copy, Default)]
+enum MarkFrom {
+  /// The mark its command prints at its step ([`shown_mark`]).
+  #[default]
+  Counter,
+  /// A legend's mark or label, printed apart from its text.
+  Legend,
+  /// The bare symbol its text opens with ([`requested_mark`]).
+  Text,
+}
+
+/// The mark a note event shows on its name (`resolver::note_shows`, the rehearsal's `\thefootnote` at its step), where
+/// its class's title block prints one for it ([`title_notes_print_marks`]): the `\thanks` of article (article.cls:205
+/// `\@fnsymbol\c@footnote`), REVTeX 4.0's name `\footnote` given its number (revtex4.cls:4729
+/// `\frontmatter@thefootnote`). 2502.19103, 1911.13299, 1607.07280 (FIDELITY_CHARTER §4, the mark rule).
+fn shown_mark(note: &Event) -> Option<String> {
+  title_notes_print_marks(note.footnote, note.given_number)
+    .then(|| note_shows(note).map(String::from))
+    .flatten()
+}
+
+/// The footnote symbols every name a note goes to shows (their requests, `RCreator::requests`): a symbol its printed
+/// text opens with bare is among them where the reading placed it by that symbol ([`requested_mark`]).
+fn requested_symbols(owners: &[Owner], creators: &[RCreator]) -> Vec<String> {
+  let requests = |owner: &Owner| match owner {
+    Owner::Creator(i) => creators
+      .get(*i)
+      .map(|c| c.requests().cloned().collect::<Vec<_>>())
+      .unwrap_or_default(),
+    Owner::Block => Vec::new(),
+  };
+  let Some((first, rest)) = owners.split_first() else {
+    return Vec::new();
+  };
+  requests(first)
+    .into_iter()
+    .filter(|r| !r.is_empty() && r.chars().all(events::is_fnsymbol))
+    .filter(|r| rest.iter().all(|owner| requests(owner).contains(r)))
+    .collect()
+}
+
+/// The footnote symbol a note event's text opens with bare (the mark the lexer sets apart at its head, `line_first`), one
+/// its names show (`requested`, [`requested_symbols`]): its mark, the copy in its text taken out at the placing
+/// (`insert::strip_bare_mark`) — ieeeconf's `Murali Babu$^{1}$*` under `\thanks{*Authors to whom correspondence should be
+/// addressed.}` (2606.00397).
+fn requested_mark(note: &Event, requested: &[String]) -> Option<String> {
+  let symbol = note
+    .inner
+    .iter()
+    .find(|m| m.kind == EventKind::Mark && m.line_first)?
+    .text
+    .trim()
+    .to_string();
+  let form = |mark: &str| mark.trim().replace('\u{2217}', "*");
+  (!symbol.is_empty()
+    && symbol.chars().count() <= 3
+    && symbol.chars().all(events::is_fnsymbol)
+    && requested.iter().any(|r| form(r) == form(&symbol)))
+  .then_some(symbol)
 }
 
 /// A picture's note under `label` ([`events::PICTURE_NOTE`]): a plain frontmatter note, role `note`, holding the picture's
@@ -2057,6 +2399,7 @@ fn item_call(
   memo: &mut CallCuts,
   whole: &mut BTreeSet<usize>,
   cuts: &[EntryCut],
+  requested: &[String],
 ) -> Result<Tokens> {
   let role = assoc.role.as_str();
   // (a contact the block prints on a line of its own under the name, Perl's `\\` line (Base_Utility.pool.ltxml:722-726):
@@ -2090,6 +2433,7 @@ fn item_call(
           memo,
           whole,
           std::slice::from_ref(cut),
+          requested,
         )
       },
       || {
@@ -2129,18 +2473,25 @@ fn item_call(
   if role == "legend"
     && let Some((index, None)) = assoc.source
     && let Some(call) = api_call(index)
-    && let Some(mark) = call
+    && let Some((mark, from)) = call
       .events
       .iter()
       .find(|e| e.kind == EventKind::Mark)
-      .map(|e| e.text.as_str())
+      .map(|e| (e.text.as_str(), MarkFrom::Text))
       // (or the label its binding prints: `\\affil[*]{Corresponding author.}`, 2107.01943, 1812.03816)
-      .or(assoc.label.as_deref())
+      .or(
+        assoc
+          .label
+          .as_deref()
+          .map(|label| (label, MarkFrom::Legend)),
+      )
   {
     whole.insert(index);
     return Ok(note_call(
       false,
-      Some(mark),
+      false,
+      (Some(mark), None),
+      from,
       label,
       call.content.unlist_ref().to_vec(),
     ));
@@ -2222,7 +2573,14 @@ fn item_call(
   }
   let wrap = |content: &[Token]| -> Tokens {
     if note {
-      note_call(false, None, label, content.to_vec())
+      note_call(
+        false,
+        false,
+        (None, None),
+        MarkFrom::Legend,
+        label,
+        content.to_vec(),
+      )
     } else if key.0 == Kind::Affiliation {
       kinded_affiliation(&keys, line_class, content)
     } else {
@@ -2290,21 +2648,68 @@ fn item_call(
       let piece = piece.is_some();
       // (never a `\\footnote`'s, which `\\lx@add@note` keeps a note: `\\footnote{\\textsuperscript{1}These authors
       // contributed equally …}`, 2110.12892 — P2 NT)
-      let footnote = event_at(index, span, |e| e.kind == EventKind::Note, |e| e.footnote);
+      let footnote = event_at(
+        index,
+        span,
+        |e| e.kind == EventKind::Note,
+        |e| (e.footnote, given_footnote(e)),
+      );
       let an_entry = key.0 == Kind::Affiliation
         || (role == "legend"
-          && footnote != Some(true)
+          && footnote.is_none_or(|(footnote, _)| !footnote)
           && argument.as_ref().is_some_and(|argument| {
             piece || starts_with_affiliation_mark(&Tokens::new(argument.clone()))
           }));
       if note
         && !an_entry
-        && let Some(footnote) = footnote
+        && let Some((footnote, given)) = footnote
       {
         let content = argument;
+        // (or the symbol its text opens with bare that its names show; a `\footnotetext`, which prints no mark of its
+        // own, the mark its names' `\footnotemark` of its number prints, where the class's title marks are known —
+        // `resolver::answer_note_texts` gives it to them by that number, 2407.04435; OD #1058)
+        let (mark, from, number, text_only) = event_at(
+          index,
+          span,
+          |e| e.kind == EventKind::Note,
+          |e| {
+            let text_only = e
+              .role
+              .as_deref()
+              .is_some_and(|r| r.starts_with("footnotetext"));
+            let (mark, from) = match shown_mark(e) {
+              Some(mark) => (Some(mark), MarkFrom::Counter),
+              None if text_only => (None, MarkFrom::Counter),
+              None => (requested_mark(e, requested), MarkFrom::Text),
+            };
+            (mark, from, e.number, text_only)
+          },
+        )
+        .unwrap_or_default();
+        let mark = match number {
+          Some(number) if text_only && title_notes_print_marks(false, true) => {
+            with_block(index, None, |_, events| {
+              events
+                .iter()
+                .find(|m| {
+                  m.kind == EventKind::Mark
+                    && m.number == Some(number)
+                    && m
+                      .role
+                      .as_deref()
+                      .is_some_and(|r| r.starts_with("footnotemark"))
+                })
+                .map(|m| m.text.trim().to_string())
+                .filter(|m| !m.is_empty())
+            })
+          },
+          _ => mark,
+        };
         return Ok(note_call(
           footnote,
-          None,
+          given,
+          (mark.as_deref(), number.map(|n| (n, text_only))),
+          from,
           label,
           content.unwrap_or_else(|| by_text(Some("note no argument"), &assoc.text)),
         ));
@@ -2609,9 +3014,17 @@ fn item_call(
         return Ok(wrap(&by_text(Some("span no balanced run"), &assoc.text)));
       };
       if note {
+        // (its run grown to the mark: `*equally contributed`, 2609.16600)
         let legend = mark.as_deref().filter(|_| role == "legend");
         let tokens = in_its_font(font, tokens).unlist();
-        return Ok(note_call(false, legend, label, tokens));
+        return Ok(note_call(
+          false,
+          false,
+          (legend, None),
+          MarkFrom::Text,
+          label,
+          tokens,
+        ));
       }
       if key.0 != Kind::Affiliation {
         return Ok(wrap(&tokens));
@@ -2643,8 +3056,15 @@ fn item_call(
       }
       // (a note inside it: its command's argument as written, under the note's own kind, as a block's note — its fonts,
       // links and formulas kept: `\author{Craig Rae\thanks{Note \textit{italic} and $x^2$.}}`, review revG5 3)
-      if note && let Some((footnote, argument)) = call_note(&call, assoc)? {
-        return Ok(note_call(footnote, None, label, argument));
+      if note && let Some((footnote, given, mark, argument)) = call_note(&call, assoc)? {
+        return Ok(note_call(
+          footnote,
+          given,
+          (mark.as_deref(), None),
+          MarkFrom::Counter,
+          label,
+          argument,
+        ));
       }
       let found = match memo.pieces.entry(index) {
         Entry2::Occupied(held) => held.into_mut(),
@@ -2894,9 +3314,14 @@ fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<To
   }
 }
 
-/// The argument of the note command printing `assoc` in `call`'s content (the one by its text, else its only note), and
-/// whether it is a `\\footnote`'s, as [`note_argument`] reads a block's note.
-fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<(bool, Vec<Token>)>> {
+/// A call's note ([`call_note`]): whether it is a `\\footnote`'s, whether one given its number ([`given_footnote`]), the
+/// mark it shows ([`shown_mark`]) and its argument.
+type CallNote = (bool, bool, Option<String>, Vec<Token>);
+
+/// The argument of the note command printing `assoc` in `call`'s content (the one by its text, else its only note),
+/// whether it is a `\\footnote`'s, one given its number, and the mark it shows ([`shown_mark`]), as [`note_argument`]
+/// reads a block's note.
+fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<CallNote>> {
   let Some((events, formulas, environments, _)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(None);
   };
@@ -2929,8 +3354,24 @@ fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<(bool, Vec<Token>)>
     field
       .content_of((start, end), 0, start)
       .and_then(|(tokens, _)| note_argument(&tokens, Some(&note.text)))
-      .map(|argument| (note.footnote, argument)),
+      .map(|argument| {
+        (
+          note.footnote,
+          given_footnote(note),
+          shown_mark(note),
+          argument,
+        )
+      }),
   )
+}
+
+/// Whether a Note event is a `\footnote` given its number (`\footnote[1]{…}`, its role `thanks mark=1 …`: 1607.07280).
+fn given_footnote(note: &Event) -> bool {
+  note.footnote
+    && note
+      .role
+      .as_deref()
+      .is_some_and(|role| role.starts_with("thanks mark="))
 }
 
 /// A call's piece ([`call_pieces`]): its text, and its tokens, `None` where no balanced run holds it.
@@ -3146,17 +3587,74 @@ fn kept_breaks(piece: &[Event]) -> Vec<usize> {
 /// The declarations of the blocks not yet emitted: an entry of their tokens, digested in the flush's group under the author
 /// markup the blocks are digested under (`under_author_markup`), as pdflatex runs them inside the title code's group: a
 /// paper's macro calling a title-code command declares there (`\newcommand\setaff[1]{\instref{#1}\gdef\affA{…}}`, klmm.sty's
-/// `\instref`, 2606.12100), where apart it erred undefined.
-fn declarations<'a>(sources: impl Iterator<Item = &'a usize>) -> Vec<Token> {
+/// `\instref`, 2606.12100), where apart it erred undefined. Each is followed by `\lx@title@cell@declared{<flush>:<creator>}`,
+/// the one name its cell of the `\@author` tabular holds (`<flush>:-` for none, a line's; `<flush>:` for several): a
+/// `\thefootnote` it sets holds in that name's field alone (`latex_constructs::title_cell_declared`); the names so keyed go
+/// in `keyed`.
+fn declarations(
+  by_block: &BTreeMap<usize, Vec<usize>>,
+  name_runs: &BTreeMap<usize, Vec<(usize, usize)>>,
+  keyed: &mut BTreeSet<usize>,
+) -> Vec<Token> {
+  let flush = lookup_int(FRONTMATTER_FLUSHES);
   with_ledger(|ledger| {
     let mut out = Vec::new();
-    for &index in sources {
-      if let Some(Entry::Author(block)) = ledger.entries().get(index)
-        && let Outcome::Events { declarations, .. } = &block.outcome
+    for (&index, members) in by_block {
+      let Some(Entry::Author(block)) = ledger.entries().get(index) else {
+        continue;
+      };
+      let Outcome::Events { events, declarations, .. } = &block.outcome else {
+        continue;
+      };
+      let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+      // (where a cell ends: `\and`, `&` or `\\` outside any container, latex.ltx:17219-17222)
+      let ends: Vec<usize> = events
+        .iter()
+        .filter(|e| {
+          e.nest == 0
+            && matches!(
+              e.kind,
+              EventKind::Break | EventKind::Sep(SepKind::And(_) | SepKind::Column(_))
+            )
+        })
+        .filter_map(|e| at(e.span?.0))
+        .collect();
+      // (the names whose run starts in the cell holding `offset`)
+      let cell_names = |offset: usize| -> Vec<usize> {
+        let from = ends.iter().copied().filter(|&end| end <= offset).max();
+        let to = ends.iter().copied().filter(|&end| end > offset).min();
+        members
+          .iter()
+          .copied()
+          .filter(|i| {
+            name_runs
+              .get(i)
+              .and_then(|runs| runs.first())
+              .is_some_and(|&(start, _)| {
+                from.is_none_or(|from| start > from) && to.is_none_or(|to| start < to)
+              })
+          })
+          .collect()
+      };
+      let spanned: Vec<&Event> = declarations.iter().filter(|e| e.span.is_some()).collect();
+      for (event, span) in spanned
+        .into_iter()
+        .zip(declaration_cuts(block, declarations))
       {
-        for span in declaration_cuts(block, declarations).into_iter().flatten() {
-          out.extend_from_slice(span);
-        }
+        let Some(span) = span else {
+          continue;
+        };
+        out.extend_from_slice(span);
+        let names = event.span.and_then(|(start, _)| at(start)).map(cell_names);
+        let key = match names.as_deref() {
+          Some([name]) => {
+            keyed.insert(*name);
+            s!("{flush}:{name}")
+          },
+          Some([]) => s!("{flush}:-"),
+          _ => s!("{flush}:"),
+        };
+        out.extend(cs_group(TITLE_CELL_DECLARED, &[&internal(&key)]));
       }
     }
     if out.is_empty() {
@@ -3411,7 +3909,15 @@ fn items_to_emit<'a>(
       Owner::Creator(i) => owners[i].as_str(),
       Owner::Block => "block",
     };
-    let id = s!("{id}|{:?}|{}", key.0, key.1);
+    let mut id = s!("{id}|{:?}|{}", key.0, key.1);
+    // (two notes of the block printing one text are two notes, each written: IEEEtran's `\thanks{ORCID: \href{…0001}{profile}}`
+    // and `\thanks{ORCID: \href{…0002}{profile}}` at the block's level, OD #1058 — the second lost before its words)
+    if owner == Owner::Block
+      && key.0 == Kind::Note
+      && let Some((index, span)) = source
+    {
+      id = s!("{id}|{index}|{span:?}");
+    }
     // (a call a flush took from the queue and digests as it stands is off the queue: [`take_digested`])
     let taken = source
       .is_some_and(|(index, _)| lookup_mapping(EMITTED_ITEMS, &s!("taken|{index}")).is_some());
@@ -3677,43 +4183,83 @@ fn unwritten(
   let mut on_names = BTreeSet::new();
   // (the emitter's own reading of the names: its `keeps(source)` is `per_author_marks(source)` for every block it writes
   // names of, cached per flush — review revNE2r2's nit)
-  let written: Vec<(usize, usize)> =
-    block_names(index, &spelled, per_author_marks(index), &mut on_names)
-      .into_iter()
-      .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
-      .collect();
+  let written: Vec<(usize, usize)> = block_names(
+    index,
+    resolved,
+    &spelled,
+    per_author_marks(index),
+    &mut on_names,
+  )
+  .into_iter()
+  .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
+  .collect();
   spans
     .into_iter()
     .filter(|&(s, t)| !written.iter().any(|&(from, to)| from <= s && t <= to))
     .collect()
 }
 
-/// Whether the author block at ledger index `index` prints a `\footnotemark` that neither a name its reading writes nor an
-/// item holds: one past a line break under a name (`Vivek Ramanujan \thanks{…} \\ \footnotemark[2]`, 1911.13299), past
-/// a name's separating comma (`Colin P.~McNally,$^{1}$\footnotemark[…]`, 2101.04763), inside a formula with a note
-/// (`Xunzhi Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633). A dropped mark that steps the counter (a bare
-/// `\footnotemark`, `\stepcounter\@mpfn`) loses its symbol and steps the counter no more, so a later mark prints one
-/// symbol short: the block is written whole, Perl's whole-block creator, its tokens digested in order, with a counted
-/// Warning, once per block over the flushes (review revNE2r2 Q2: never a silent loss). A dropped mark given its number
-/// (`\footnotemark[1]`, a document's `\samethanks[1]`: latex.ltx's `\@xfootnotemark`, `Event::given_number`)
-/// re-references a note written already and moves no later mark: the names are written as read, its loss counted by a
-/// Warning naming it, once per block over the flushes (`D. R. G. Schleicher,$^{1}$\samethanks[1]`, 1912.01737; `Cheng
-/// Xu\textsuperscript{1},\footnotemark[1]`, 1811.08622 — user ruling 2026-11-09: a decline never throws away a right
-/// reading): their printed labels go to `given_lost`, the Warning's ([`warn_given_marks_lost`]) where no other decline
-/// writes the block whole. A mark past its name's note is carried (`block_names`: 1610.06031).
-fn mark_dropped(index: usize, resolved: &Resolved, given_lost: &mut Vec<String>) -> bool {
-  let marks: Vec<(usize, usize, bool, String)> = with_block(index, Vec::new(), |block, events| {
+/// The `\footnotemark`s of block `index` no written name or item holds, each counted lost by [`warn_marks_lost`]: a given
+/// one's label to `given_lost`, a bare one's step kept where it prints (`bare_lost`); `true` where the block is written
+/// whole (OXIDIZED_DESIGN_DIVERGENCES #1057; 2101.04763, 2511.12633, 1912.01737, 1811.08622, 1610.06031, 1911.13299,
+/// 2412.20504, 1807.02791, 1703.08733, 1111.1979).
+fn mark_dropped(
+  index: usize,
+  resolved: &Resolved,
+  given_lost: &mut Vec<String>,
+  bare_lost: &mut Vec<(usize, String, Vec<Token>)>,
+) -> bool {
+  type Dropped = (usize, usize, bool, String, Option<Vec<Token>>);
+  let marks: Vec<Dropped> = with_block(index, Vec::new(), |block, events| {
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    let tokens = block.read_tokens().unlist_ref();
+    // (its tokens with their option and arguments, balanced)
+    let run = |s: usize, t: usize| {
+      let run = tokens.get(s..mark_end(tokens, s, t))?;
+      let mut depth = 0;
+      for token in run {
+        depth += token.group_step();
+        if depth < 0 {
+          return None;
+        }
+      }
+      (depth == 0).then(|| run.to_vec())
+    };
+    // (one leading its line or cell with a name after it, which the reading may read as that line's label — `Ann Able
+    // \and \footnotemark Bob Baker`, Bob an affiliation — keeps no step: the block is written whole)
+    let leads_a_name = |k: usize| {
+      let passed = |e: &&Event| {
+        matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+          || (e.kind == EventKind::Layout && e.role.as_deref() != Some("cell"))
+      };
+      let opens = events[..k]
+        .iter()
+        .rev()
+        .find(|e| !passed(e))
+        .is_none_or(|e| {
+          matches!(
+            e.kind,
+            EventKind::Break
+              | EventKind::Sep(SepKind::And(_) | SepKind::Column(_))
+              | EventKind::Layout
+          )
+        });
+      opens
+        && events[k + 1..]
+          .iter()
+          .find(|e| !(passed(e) || matches!(e.kind, EventKind::Mark | EventKind::Note)))
+          .is_some_and(|e| e.kind == EventKind::Name)
+    };
     events
       .iter()
-      .filter(|e| e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
-      .filter_map(|e| {
-        Some((
-          at(e.span?.0)?,
-          at(e.span?.1)?,
-          e.given_number,
-          e.text.clone(),
-        ))
+      .enumerate()
+      .filter(|(_, e)| e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
+      .filter_map(|(k, e)| {
+        let (s, t) = (at(e.span?.0)?, at(e.span?.1)?);
+        // (its own tokens, not the mark's before it: `own_span`)
+        let own = own_span(events, k, block.range.0, 0).map_or(s, |(own, _)| own);
+        let step = (!leads_a_name(k)).then(|| run(own, t)).flatten();
+        Some((s, t, e.given_number, e.text.clone(), step))
       })
       .collect()
   });
@@ -3730,11 +4276,16 @@ fn mark_dropped(index: usize, resolved: &Resolved, given_lost: &mut Vec<String>)
     .collect();
   let mut on_names = BTreeSet::new();
   // (what the names write, as the emitter reads them — `counter_moved`'s; and what the items hold, each its event's span)
-  let mut written: Vec<(usize, usize)> =
-    block_names(index, &spelled, per_author_marks(index), &mut on_names)
-      .into_iter()
-      .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
-      .collect();
+  let mut written: Vec<(usize, usize)> = block_names(
+    index,
+    resolved,
+    &spelled,
+    per_author_marks(index),
+    &mut on_names,
+  )
+  .into_iter()
+  .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
+  .collect();
   written.extend(
     resolved
       .creators
@@ -3746,42 +4297,52 @@ fn mark_dropped(index: usize, resolved: &Resolved, given_lost: &mut Vec<String>)
         _ => None,
       }),
   );
-  let carried = |&(s, t, ..): &(usize, usize, bool, String)| {
-    written.iter().any(|&(from, to)| from <= s && t <= to)
-  };
-  let dropped: Vec<&(usize, usize, bool, String)> = marks.iter().filter(|m| !carried(m)).collect();
-  if dropped.is_empty() {
-    return false;
+  let carried = |&(s, t, ..): &Dropped| written.iter().any(|&(from, to)| from <= s && t <= to);
+  let dropped: Vec<&Dropped> = marks.iter().filter(|m| !carried(m)).collect();
+  if dropped
+    .iter()
+    .any(|(_, _, given, _, run)| !given && run.is_none())
+  {
+    let once = s!("mark|{index}");
+    if lookup_mapping(EMITTED_ITEMS, &once).is_none() {
+      assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+      Warn!(
+        "unexpected",
+        "frontmatter",
+        "The frontmatter emitter's reading writes a footnote mark of its author block on no name and no item; the \
+         block is written whole, as Perl's whole-block creator"
+      );
+    }
+    return true;
   }
-  if dropped.iter().all(|&&(_, _, given, _)| given) {
-    given_lost.extend(dropped.iter().map(|m| m.3.clone()));
-    return false;
+  for (s, _, given, label, run) in dropped {
+    match run {
+      Some(run) if !given => {
+        let mut step = vec![T_CS!(TITLE_MARK_STEP), T_BEGIN!()];
+        step.extend(run.iter().copied());
+        step.push(T_END!());
+        bare_lost.push((*s, label.clone(), step));
+      },
+      _ => given_lost.push(label.clone()),
+    }
   }
-  let once = s!("mark|{index}");
-  if lookup_mapping(EMITTED_ITEMS, &once).is_none() {
-    assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
-    Warn!(
-      "unexpected",
-      "frontmatter",
-      "The frontmatter emitter's reading writes a footnote mark of its author block on no name and no item; the block \
-       is written whole, as Perl's whole-block creator"
-    );
-  }
-  true
+  false
 }
 
-/// The counted Warning of the footnote marks given their number that the author block at ledger index `index`'s reading,
-/// its names written as read, writes on no name and no item (`lost`, their printed labels: [`mark_dropped`]), once per
-/// block over the flushes: never a silent loss.
-fn warn_given_marks_lost(index: usize, lost: &[String]) {
+/// The counted Warning of the footnote marks the author block at ledger index `index`'s reading, its names written as read,
+/// writes on no name and no item ([`mark_dropped`]): those given their number (`given`, their printed labels: a note's,
+/// written already) and the bare ones whose steps are kept where they print (`bare`), once per block over the flushes:
+/// never a silent loss.
+fn warn_marks_lost(index: usize, given: &[String], bare: &[(usize, String, Vec<Token>)]) {
   let once = s!("markgiven|{index}");
-  if lost.is_empty() || lookup_mapping(EMITTED_ITEMS, &once).is_some() {
+  if (given.is_empty() && bare.is_empty()) || lookup_mapping(EMITTED_ITEMS, &once).is_some() {
     return;
   }
   assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
   // (a mark whose print failed, `\footnotemark[\value{foo}]` of a counter the rehearsal reads no number of: 2101.04763)
-  let labels: Vec<&str> = lost
+  let labels: Vec<&str> = given
     .iter()
+    .chain(bare.iter().map(|(_, label, _)| label))
     .map(|label| {
       if label.is_empty() {
         "a mark printing nothing"
@@ -3790,13 +4351,20 @@ fn warn_given_marks_lost(index: usize, lost: &[String]) {
       }
     })
     .collect();
+  let which = match (given.is_empty(), bare.is_empty()) {
+    (false, true) => "given their number (a note's, written already) on no name and no item",
+    (true, false) => "on no name and no item, their footnote steps kept where they print",
+    _ => {
+      "on no name and no item, those given their number (a note's, written already), the others' footnote steps \
+       kept where they print"
+    },
+  };
   Warn!(
     "unexpected",
     "frontmatter",
     s!(
-      "The frontmatter emitter's reading writes {} footnote mark(s) of its author block given their number (a note's, \
-       written already) on no name and no item; lost: {}",
-      lost.len(),
+      "The frontmatter emitter's reading writes {} footnote mark(s) of its author block {which}; lost: {}",
+      labels.len(),
       labels.join(", ")
     )
   );
@@ -3912,12 +4480,17 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
     return false;
   }
   let mut on_names = BTreeSet::new();
-  let runs: Vec<(usize, usize)> =
-    block_names(index, &spelled, per_author_marks(index), &mut on_names)
-      .into_iter()
-      .filter(|(name, ..)| name.is_some())
-      .filter_map(|(_, _, run, ..)| run)
-      .collect();
+  let runs: Vec<(usize, usize)> = block_names(
+    index,
+    resolved,
+    &spelled,
+    per_author_marks(index),
+    &mut on_names,
+  )
+  .into_iter()
+  .filter(|(name, ..)| name.is_some())
+  .filter_map(|(_, _, run, ..)| run)
+  .collect();
   // (a note two names' runs share: two overlapping runs both holding it — each name's run against the notes, not each two
   // runs against each other)
   let prints_a_note = notes.iter().any(|&(s, t)| {
@@ -5205,21 +5778,27 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   // (a footnote-counter or definition decline writes the block as Perl's `\lx@add@authors` does, split where Perl splits
   // it, its pieces digested in order: `split`, `fallback::perl_author_calls`; the others Perl's tabular branch, whole)
   let mut split: BTreeSet<usize> = BTreeSet::new();
+  // (per block, the footnote steps of the bare `\footnotemark`s no name writes: [`mark_dropped`])
+  let mut drop_steps: BTreeMap<usize, Vec<(usize, Vec<Token>)>> = BTreeMap::new();
   let whole: BTreeSet<usize> = read_blocks
     .into_iter()
     .filter(|&source| {
       let cells = across_cells(source);
       let mut given_lost = Vec::new();
+      let mut bare_lost = Vec::new();
       let (declined, as_perl) = if names_fail(source) || cells {
         (true, false)
       } else if counter_moved(source, resolved) {
         (true, true)
-      } else if mark_dropped(source, resolved, &mut given_lost) || names_overlap(source, resolved) {
+      } else if names_overlap(source, resolved) {
         (true, false)
       } else if declaration_reads_past(source, resolved) {
         (true, true)
       } else {
-        (false, false)
+        (
+          mark_dropped(source, resolved, &mut given_lost, &mut bare_lost),
+          false,
+        )
       };
       let whole = written_whole(source, declined);
       // (the fail-safe: a split stating an owner its marks don't support is the whole block, review revCR7c B1/B2)
@@ -5230,7 +5809,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         warn_across_cells(source);
       }
       if !whole {
-        warn_given_marks_lost(source, &given_lost);
+        warn_marks_lost(source, &given_lost, &bare_lost);
+        drop_steps.insert(
+          source,
+          bare_lost
+            .into_iter()
+            .map(|(at, _, tokens)| (at, tokens))
+            .collect(),
+        );
       }
       warn_queued_unwritten(source, whole);
       whole
@@ -5534,14 +6120,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut name_runs: BTreeMap<usize, Vec<(usize, usize)>> = BTreeMap::new();
   let mut block_runs = BlockNameRuns::new();
   // (the footnote counter's steps of the notes written apart, on the creator where each prints: `note_steps`)
-  let mut steps: BTreeMap<(usize, bool), usize> = BTreeMap::new();
+  let mut steps = Steps::new();
   let mut on_names: BTreeSet<(usize, (u16, u16))> = BTreeSet::new();
   for (&source, members) in &by_block {
     let spelled: Vec<String> = members
       .iter()
       .map(|&i| resolved.creators[i].name.clone())
       .collect();
-    let tokens = block_names(source, &spelled, keeps(source), &mut on_names);
+    let tokens = block_names(source, resolved, &spelled, keeps(source), &mut on_names);
     // (two names written from runs that overlap each print the other's ink: a macro printing both, `\author{\small
     // \myauthors \\ …}` with `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl, each creator written as the
     // macro, a name of two people twice (2 × merged_creators, 1602.03850; cond-mat9310042). Each is its text, counted — where
@@ -5574,7 +6160,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       names.insert(i, (name, cites));
     }
     if let Some(&first) = members.first() {
-      steps.extend(note_steps(source, &runs, &stepped, first));
+      let drops = drop_steps.remove(&source).unwrap_or_default();
+      steps.extend(note_steps(source, &runs, &stepped, first, &drops));
     }
   }
   let without_setters;
@@ -5652,6 +6239,9 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   let fresh_owner = |owner: &Owner| matches!(owner, Owner::Creator(i) if is_fresh[*i]);
   let mut annotations: Vec<Vec<String>> = vec![Vec::new(); resolved.creators.len()];
+  // (the marks each name printed that its written name leaves out, each with the labels it requests and its glyph:
+  // `left_marks`)
+  let mut marks_left: Vec<Vec<(Vec<String>, String)>> = vec![Vec::new(); resolved.creators.len()];
   let mut calls: Vec<(String, &Item)> = Vec::new();
   let mut block_pubnotes: Vec<Vec<Token>> = Vec::new();
   for (n, item) in items.iter().enumerate() {
@@ -5682,7 +6272,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       calls.push((label, item));
     }
   }
-  // (a request no item answers stays a request, which shows it: `show_unanswered_marks`)
+  // (a request no item answers stays a request, its mark left on the name: `left_marks`, `insert::settle_name_marks`)
   let answered: BTreeSet<String> = resolved
     .creators
     .iter()
@@ -5716,7 +6306,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     // where Bob's `\\inst{1*}` requests `*`, 2407.13764)
     let inst_marks = inst_marks.get(&c.source).map_or(&[][..], Vec::as_slice);
     let own_inst =
-      |request: &String| inst_marks.contains(request) && c.class_requests.contains(request);
+      |request: &String| inst_marks.contains(request) && c.class_requests().any(|q| q == request);
     // (a creator call's own labels, which its keys write, print nothing: `creator_keys`)
     let own = creator_call_of(c)
       .map(|call| call.labels())
@@ -5734,8 +6324,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .map(|(runs, marks)| marks.marks_in(runs))
       .unwrap_or_default();
     shown_labels.extend(
-      c.requests
-        .iter()
+      c.requests()
         .filter(|request| !own.contains(request) && printed.contains(request))
         .flat_map(|request| clean_frontmatter_labels(request, "affiliation")),
     );
@@ -5749,12 +6338,33 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           .get_or_init(|| marks.map_or_else(Vec::new, |marks| marks.unwritten_after(&name_runs, i)))
           .contains(request)
     };
-    for request in c.requests.iter().filter(|request| {
-      (!keeps || own_inst(request) || unprinted(request)) && !own.contains(request)
-    }) {
-      // (a key's value is tokenized: a request spelled with a command, `\\author[a,b\\thanks{…}]`'s, 2207.11842, is no label)
+    // (a label its binding prints as written after the name, authblk's `\author[1,*,§]`: one the binding found no line
+    // explains requests the mark it prints, which `insert::settle_name_marks` shows on the name unless an entry answers
+    // it — `Policy::labels_print`, `policy::declare_unexplained_name_labels`; 2606.00446, 2606.17809)
+    let labels_print = with_ledger(|ledger| match ledger.entries().get(c.source) {
+      Some(Entry::Author(block)) => policy::policy_for(&block.binding, block.hook).labels_print,
+      _ => false,
+    });
+    for mark in c.marks.iter().filter(|mark| mark.requests()) {
+      let request = &mark.label;
+      if labels_print
+        && mark.by == MarkBy::Class
+        && let Some(glyph) = policy::unexplained_name_label(request)
+      {
+        annotations[i].extend(clean_frontmatter_labels(&glyph, "affiliation"));
+        continue;
+      }
+      if (keeps && !own_inst(request) && !unprinted(request)) || own.contains(request) {
+        continue;
+      }
+      // (a key's value is tokenized: a request spelled with a command, `\author[a,b\thanks{…}]`'s, 2207.11842, is no label)
       if !answered.contains(request) && !no_label(request) {
-        annotations[i].extend(clean_frontmatter_labels(request, "affiliation"));
+        let labels = clean_frontmatter_labels(request, "affiliation");
+        // (its mark, left where the name printed it — not an `\inst` the name's own tokens request, which leaves its own)
+        if !own_inst(request) {
+          left_mark(&mut marks_left[i], mark, &labels);
+        }
+        annotations[i].extend(labels);
       }
     }
   }
@@ -5778,7 +6388,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut out = before;
   let entry =
     |tag: &str, tokens: Vec<Token>| (tag.to_string(), TagAttrs::default(), Tokens::new(tokens));
-  let decls = declarations(by_block.keys());
+  let mut keyed: BTreeSet<usize> = BTreeSet::new();
+  let decls = declarations(&by_block, &name_runs, &mut keyed);
   if !decls.is_empty() {
     out.push(entry("ltx:emit", decls));
   }
@@ -5788,9 +6399,16 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut call_cuts: BTreeMap<usize, Option<Vec<Tokens>>> = BTreeMap::new();
   for &i in &fresh {
     let c = &resolved.creators[i];
+    // (its cell's `\thefootnote`, which a declaration run ahead of the names set: [`declarations`])
+    if keyed.contains(&i) {
+      let key = s!("{}:{i}", lookup_int(FRONTMATTER_FLUSHES));
+      out.push(entry(
+        "ltx:emit",
+        cs_group(TITLE_CELL_ENTER, &[&internal(&key)]),
+      ));
+    }
     creator_end.insert(c.source, out.len() + 1);
     let mut keys = annotations_key(&annotations[i].join(","));
-    keys.extend(whole_marks_key(c, &annotations[i]));
     // (kept whole on purpose, as a tabular block is: no merge to flag beside its Warning, `flag_merged_creators`)
     let written = || {
       if split.contains(&c.source) {
@@ -5858,21 +6476,20 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       });
       let item = cs_group("\\lx@frontmatter@item", &[&name]);
       let step = |after: bool| {
-        std::iter::repeat_n(
-          T_CS!(FOOTNOTE_STEP),
-          steps.get(&(i, after)).copied().unwrap_or(0),
-        )
+        steps
+          .get(&(i, after))
+          .into_iter()
+          .flatten()
+          .flat_map(|(_, tokens)| tokens.iter().copied())
       };
       let mut content: Vec<Token> = step(false).collect();
-      content.extend(cs_group("\\lx@personname", &[&cs_group(
-        "\\lx@author@withinst",
-        &[&item],
-      )]));
+      let mut name = cs_group("\\lx@author@withinst", &[&item]);
+      name.extend(left_marks(&marks_left[i]));
+      content.extend(cs_group("\\lx@personname", &[&name]));
       content.extend(step(true));
       let mut head = vec![add_now()];
       head.extend(cs_group_args(&["ltx:creator"]));
       let mut keys = creator_keys(c, &annotations[i]);
-      keys.extend(whole_marks_key(c, &annotations[i]));
       keys.extend(corresponding_key(c));
       with_key_tokens(head, keys, &content)
     });
@@ -5921,6 +6538,11 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     if let Some(entry) = labelled_entry(&label, item.assoc) {
       with_ledger(|ledger| ledger.labelled.push(entry));
     }
+    let requested = if item.key.0 == Kind::Note {
+      requested_symbols(&item.owners, &resolved.creators)
+    } else {
+      Vec::new()
+    };
     let tokens = item_call(
       &item.key,
       item.assoc,
@@ -5930,6 +6552,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       &mut memo,
       &mut written,
       &analysis.cuts,
+      &requested,
     )?;
     let tag = if item.key.0 == Kind::Note {
       "ltx:note"

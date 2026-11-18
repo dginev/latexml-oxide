@@ -121,7 +121,7 @@ fn null_cs_optional_internal_keeps_the_line_break() {
 }
 
 /// The comma between two names printed inside the first's ORCID icon link (`\href{…}{\includegraphics{…}, }%`) parts
-/// the names, so each has its own iD, its personname the name and its mark: 103b r2 had made both links the ORCID
+/// the names, so each has its own iD, its personname the name, its mark a mark-only note (PURE): 103b r2 had made both links the ORCID
 /// contacts of one creator "Ann AbleBob Baker", the ", " lost; int130a one creator "Ann Able, Bob Baker" holding both
 /// links (2110.07418); a `;` the split leaves inside the link stays where it prints (`\lx@author@href`'s fail-safe).
 #[test]
@@ -140,6 +140,17 @@ fn orcid_icon_link_closing_with_the_comma_parts_the_names() {
               .find("</personname>")
               .expect("closed personname");
           out.push(text(&creator[at + "<personname>".len()..close]));
+        }
+        // (the mark a mark-only note holds after the name, PURE)
+        for (at, _) in creator.match_indices("<note ") {
+          let tag = &creator[at..at + creator[at..].find('>').expect("note tag")];
+          if let Some(mark) = tag
+            .split(" mark=\"")
+            .nth(1)
+            .and_then(|m| m.split('"').next())
+          {
+            out.push(format!("mark={mark}"));
+          }
         }
         for (at, _) in creator.match_indices("<contact ") {
           let tag = &creator[at..at + creator[at..].find('>').expect("contact tag")];
@@ -166,9 +177,17 @@ fn orcid_icon_link_closing_with_the_comma_parts_the_names() {
     0,
   );
   assert_eq!(creators(&xml), [
-    vec!["Ann Able 1", "orcid=https://orcid.org/0000-0002-1825-0097"],
-    vec!["Bob Baker 2", "orcid=https://orcid.org/0000-0001-5109-3700"],
-    vec!["Carl Cole 1"],
+    vec![
+      "Ann Able",
+      "mark=1",
+      "orcid=https://orcid.org/0000-0002-1825-0097"
+    ],
+    vec![
+      "Bob Baker",
+      "mark=2",
+      "orcid=https://orcid.org/0000-0001-5109-3700"
+    ],
+    vec!["Carl Cole", "mark=1"],
   ]);
   // (the fail-safe: a `;` the split leaves in the link stays where it prints, as `\lx@author@href` makes the contact —
   // int131a: one creator "Ann AbleBob Baker")

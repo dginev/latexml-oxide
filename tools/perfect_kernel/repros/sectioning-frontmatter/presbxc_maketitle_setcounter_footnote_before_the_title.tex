@@ -1,0 +1,22 @@
+% mechanism: a document's `\maketitle` that sets the footnote counter before it prints the title
+%   (`\setcounter{footnote}{2}`; likewise `\addtocounter`, `\stepcounter`, `\c@footnote=`) has unknown marks here
+%   (`latex_constructs::steps_footnotes_before_title`; the fail-safe)
+% witness:  none (review revPRESBXb BL2, p/n4.tex; siblings p/n6-n8)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able‡ Bob Baker§"; foot "‡ First note." "§ Second note."
+% engines:  rust PRESBXbase2 (14e92b291ab) = 0 errors, 0 Warnings; both notes unmarked; PRESBXb (300685cb312) = Ann
+%   thanks[∗], Bob thanks[†]
+% expect:   the fail-safe: 0 errors, 0 Warnings; both notes unmarked, each under its name
+% status:   RED (PRESBXb) -> GREEN fail-safe, XML and HTML RED against the PDF (PRESBXc:
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% moves:    XML, HTML row R SHAUTO/T1
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\begingroup\def\thefootnote{\fnsymbol{footnote}}\setcounter{footnote}{2}\begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

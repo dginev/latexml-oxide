@@ -1,0 +1,17 @@
+% mechanism: under a class whose `\thanks` prints no mark (IEEEtran.cls:4757-4758), a leading superscript is the note's
+%   mark only where it is a footnote symbol or a label its carrier's name prints; `$^{3}$He` is neither, and a bare `*`
+%   no name shows is text (`insert::mark_creator_notes`)
+% witness: review revSHMARK S2 (p3.tex); the lift's witness 2312.10807 (`\thanks{$^{*}$Equal contribution}`)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker", footnotes "3He detectors were funded by X.", "* marks the starred
+%   items below."
+% engines: rust SHMARK = Ann's note mark="3" "He detectors were funded by X."
+% expect:  0 errors 0 warnings; Ann's note, no mark, "3He detectors were funded by X."; Bob's, no mark, "* marks …"
+% status:  RED (SHMARK) -> GREEN (perfect_kernel_batchshmark::a_notes_mark_is_never_in_its_text)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{A Title}
+\author{Ann Able\thanks{$^{3}$He detectors were funded by X.} \and Bob Baker\thanks{* marks the starred items below.}}
+\maketitle
+Body.
+\end{document}

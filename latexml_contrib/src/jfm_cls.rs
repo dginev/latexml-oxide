@@ -303,7 +303,7 @@ LoadDefinitions!({
   // \small \@affiliation \par}`). A list its marks label (`$^1$Institut …, $^2$School of Engineering …` under
   // `Randriamampianina$^1$, Fr\"uh$^2$`; the template's `\aff{1}`) is the names' affiliations, each entry the authors'
   // showing its mark (the frontmatter API's Cut: OXIDIZED_DESIGN_DIVERGENCES #954; census127 witnesses physics0607157,
-  // 1302.1594), a sole entry every author's; an unmarked one stays the note it was.
+  // 1302.1594), a sole entry every author's; an unmarked one stays the note it was, printed under the names (1711.01065).
   DefMacro!("\\affiliation{}", sub[(affiliation)] {
     let marked = leads_with_label(&affiliation, "jfm affiliation")? && queued_authors_marked()?;
     Ok(if marked {
@@ -312,7 +312,7 @@ LoadDefinitions!({
         Some(affiliation)
       ])
     } else {
-      let mut note = mouth::tokenize_internal("\\@add@frontmatter{ltx:note}[role=affiliation]").unlist();
+      let mut note = mouth::tokenize_internal("\\lx@names@note{affiliation}").unlist();
       note.push(T_BEGIN!());
       note.extend(affiliation.unlist());
       note.push(T_END!());

@@ -1,0 +1,22 @@
+% mechanism: as r2a_picture_mark_before_the_plain_mark_of_its_label, the picture inside a glued run (`$^{1,\circled{b}}$`)
+%   and after a plain mark (`$^{2}$$^{\circled{c}}$$^{c}$`), before a `\\` line: the plain b and c show, the name's
+%   marks after its line as the binding's do (`ends_name`)
+% witness:  review revR2A B1 (probe p20)
+% oracle:   pdflatex 0 errors; "Ann Able1, ⓑ b∗ Bob Baker2 ⓒ c" (pdftotext "Ann Able1, b b∗ Bob Baker2 c c"),
+%   "1 Dept. of B", "Univ. of C", footnote "∗ Zebra University."
+% engines:  rust R2Abase 14e92b291ab = Ann's b, Bob's 2,c kept; rust R2A 1012ac10283 = Ann's b and Bob's c lost, Bob's 2
+%   left inside the name before its line, 0 new Warnings
+% expect:   0 errors, 1 Warning (the decline); Ann Able ; footnotemark[b] ; thanks[*] | affiliation=Dept. of B / Bob
+%   Baker<break/>Univ. of C ; footnotemark[2,c]
+% status:   GREEN (perfect_kernel_batchr2a::a_picture_mark_takes_no_label_from_the_plain_mark_after_it)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\newcommand\circled[1]{\tikz[baseline=(c.base)]\node[circle,draw,inner sep=0.5pt](c){#1};}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{1,\circled{b}}$$^{b}$\footremember{zz}{Zebra University.} \\ $^{1}$Dept.\ of B \and Bob Baker$^{2}$$^{\circled{c}}$$^{c}$ \\ Univ.\ of C}
+\begin{document}
+\maketitle
+Body.
+\end{document}

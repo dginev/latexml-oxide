@@ -1,0 +1,22 @@
+% mechanism: `\author*{name}` with no labels prints no superscript, so no `*` (2412.01641's sn-jnl.cls:510, inside
+%   `\ifx\@authfrstarg\empty\else…\fi`), and a sole author's corresponding line prints no `*` either (:750
+%   `\ifnum\aucount>1*\fi`): the line is the author's, unmarked
+% witness:  2111.07730, 2311.06366, 2408.06271 (a sole `\author*{…}`)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able", "Univ A.", "Corresponding author(s).
+%   E-mail(s): ann@a.org;"
+% engines:  rust 3b420685f89 = 0 errors; no "Corresponding author"
+% expect:   0 errors 0 Warnings; Ann's note "Corresponding author(s)." unmarked, under her name
+% status:   RED (3b420685f89) -> GREEN XML GREEN, HTML GREEN (SNJNL;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\affil{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

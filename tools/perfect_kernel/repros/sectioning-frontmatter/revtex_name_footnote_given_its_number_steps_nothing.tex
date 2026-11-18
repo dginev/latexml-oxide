@@ -1,0 +1,23 @@
+% witness: the shape of 1607.07280's `\author{Shun'ya Mizoguchi\footnote[1]{…}}`: a name's `\footnote` given its number
+%          sets the counter in a group of its own (latex.ltx `\@xfootnote`) and steps nothing
+% oracle:  pdflatex 0 errors (revtex4, 4-1 and 4-2 alike); "Ann Ablee", "Univ A", "Bob Baker∗ and Cy Cole∗", "Univ B"
+% engines: rust=0 (SHRESTb: ∗, the footnote never counted) perl=0 (contacts, no marks) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann's note an unmarked contact; Bob and Cy each with the note "Equal contribution."
+%          marked ∗ (OD #1054)
+% status:  GREEN (SHRESTc; the sibling of the counted name footnote, which would mark it †)
+% preload: ar5iv.sty
+\documentclass[aps,prl,preprint]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able\footnote[5]{Visiting Univ C.}}
+\affiliation{Univ A}
+\author{Bob Baker}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\author{Cy Cole}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

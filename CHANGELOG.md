@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+  - **A note several authors share prints once.** The XML keeps a copy of a shared author note
+    (an authblk `\affil[*]`, a legend line's `*`) on every author, each with its `mark`, as Perl
+    does; the HTML prints the first copy (class `ltx_note_shared`) and, at each other author, its
+    mark linked to it. A marked note sits right after its author's name, in
+    `ltx_annotated_personname`. An unmarked author note is no one author's: IEEEtran's `\thanks`
+    prints no mark, so its funding or "manuscript received" note keeps its pop-up and is not
+    shown under a name. Only an author's copies merge, and never an image-only note. Guards
+    `integration::a_shared_author_note_prints_once_and_its_repeats_are_linked_marks`,
+    `witnessed_css_delta::shared_author_note_delta_stays_present` (OXIDIZED_DESIGN_DIVERGENCES #1052).
   - **subcaption papers convert error-free on the current TeX Live 2026, and the suite passes on Windows.**
     TL 2026's first aid for subcaption v1.6b adds to caption's `\caption@subtypehook`, which the
     caption binding did not define, so every subcaption paper there (lipics-v2021 among them)

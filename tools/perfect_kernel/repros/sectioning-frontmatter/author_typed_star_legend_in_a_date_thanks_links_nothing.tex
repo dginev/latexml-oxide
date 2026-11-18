@@ -1,0 +1,17 @@
+% mechanism: a typed ∗ whose legend is a `\thanks` in `\date` (a publication note opening with ∗) links to no
+%   `\thanks` printing ∗: `f:glyph-elsewhere` keys a title-page pubnote's opening glyph too (revCONNFIXb finding 1)
+% witness:  synthetic (revCONNFIXb probe b3)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗ Cy Cole∗", the footnotes "∗ Corresponding author, cy@x.org." and
+%   "†∗Equal contribution."
+% engines:  rust CONNFIXc (8064b35d7cc) = Ann's and Bob's ∗ linked to Cy's note
+% expect:   0 errors, 0 Warnings; Ann's and Bob's ∗ plain
+% status:   RED (CONNFIXc) -> GREEN (integration fix; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Date Legend}
+\author{Ann Able$^*$ \and Bob Baker$^*$ \and Cy Cole\thanks{Corresponding author, cy@x.org.}}
+\date{\today\thanks{$^*$Equal contribution.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

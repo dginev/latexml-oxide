@@ -1,0 +1,18 @@
+% mechanism: the anonymous-submission idiom `\ifdefined\Anonymous…\else…\fi` in an llncs `\author`: the token
+%   `\ifdefined` tests runs nothing, so the binding's scan of the names (llncs_cls.rs `steps_footnotes`) skips it and the
+%   title marks stay declared (an undefined command is otherwise unsure, a step)
+% witness:  revLLNCSb item 2 (probe x1_ifdefined); 2509.14694
+% oracle:   pdflatex 0 errors; "Ann Able⋆ and Bob Baker⋆⋆", footnotes "⋆ Ann note.", "⋆⋆ Bob note.", "Body1"
+% engines:  rust LLNCSb (0c2719152f0) = 0 errors, 1 Warning; both thanks unmarked (withdrawn); LLNCSc = ⋆, ⋆⋆. The
+%   Warning is the emitter's (the names written as plain text, a conditional's markup lost), pre-existing
+% expect:   0 errors, 1 Warning; Ann ⋆, Bob ⋆⋆
+% status:   GREEN (LLNCSc; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\title{A Title}
+\author{\ifdefined\Anonymous Anonymous\else Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}\fi}
+\institute{Lab A}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

@@ -113,7 +113,10 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   (0711.3633, 0809.3090: the holder's given name). A call holding several addresses is not
   that evidence: spelling decides among them, as above (1204.1484: `montaldo@`, `piu@` under Caddeo's call).
 - **The marks shown on a name are its requests for labelled affiliations**; a name's label is the name alone
-  (2026-10-21, rank 93).
+  (2026-10-21, rank 93). `ltx:personname` is pure semantic markup and no mark is lost — one rule (2026-11-16): each mark
+  printed on a name is the `mark` of the note it answers, the label its attached contact consumes (no institution marks
+  for now), or a mark-only note after the name, `<note role="footnotemark" mark="…"/>` (OD #1055). A note whose own
+  command prints its mark (a `\thanks`'s counter) answers no typed glyph: `Ann Able*\thanks{…}` prints both, "*∗".
 - **All asterisks are one label key** (2026-11-02, user: "all asterisks are the same key, they are visually identical
   to readers"): `*`, `\ast`, `\textasteriskcentered`, ∗ U+2217, ⁎ U+204E, ✱ U+2731 and ＊ U+FF0A key the same label, for a
   name's request and a line's label alike (`clean_frontmatter_labels`); the printed glyph stays as written. Labels key by
@@ -126,7 +129,43 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   carriers is every carrier's — the symbol-line rule wins over "not guessed onto an author" there (2026-10-30, "every
   symbol carrier"); one that spells a carrier is that carrier's; and a spelled address beside it does not send the
   unspelled one to the block (`Ann Able$^\dagger$, Cat Cole$^\dagger$ … $^\dagger$\texttt{alpha@x.org,
-  beta@y.org}`: both addresses Ann's and Cat's).
+  beta@y.org}`: both addresses Ann's and Cat's). The legend's symbol is the note's `mark`, not its text (the mark rule).
+- **The mark rule: a creator's note carries the mark it prints, once per carrier** (DG 2026-11-16, rulings 1-3; OD
+  #1053). Every frontmatter note a creator holds whose mark the PDF prints carries it as `mark` — a title block's
+  `\thanks` (article's `\@fnsymbol`, REVTeX's `\frontmatter@thefootnote`; an author's `\footnote` where the class sets
+  it in those marks — article; REVTeX 4.0 only given its number, `\footnote[1]` (1607.07280), as its unnumbered one
+  counts steps of `\thanks`, `\email` and `\altaffiliation` the reading does not — while REVTeX 4.1/4.2's own minipage
+  letters are not written; an unmarked one is Perl's note contact, 2301.00220), acmart's `\authornote`, a legend's symbol (`$^*$Equal contribution`, IEEEtran's
+  `\thanks{$^{*}$…}`, a bare `*` the names show) — and its text never opens with a copy of it. A symbol that is the
+  text's own — a formula or word it heads (`$^*$-algebras`, `$^{3}$He`), a bare `*` beside the class's mark — stays.
+  **A wrong glyph is worse than none** (DG 2026-11-16): a class's automatic mark is written only where its own
+  `\maketitle` runs (a document's, a package's or an unbound class's own prints marks unknown here: scrartcl's
+  `\footnotemark[1]` is no "1"), never for a name's mark the class sets apart (REVTeX 4.1/4.2's letters), unless the
+  document sets `\thefootnote` there itself; a `\renewcommand\thefootnote` in the author block holds in its tabular
+  cell, as in TeX (1807.02791); a mark alone keeps its glyph in `mark` only; where the glyph is unknown and the note
+  known, an Info; a printed mark whose note cannot be identified, or that the conversion loses, is counted, a Warning
+  (2606.00446's `§`). **"One copy" is a page rule:** the XML keeps a full copy of a
+  shared note on every carrier (Perl's `relocateAnnotations`, Base_Utility.pool.ltxml:895-901, and
+  `relocateFootnote`, latex_constructs.pool.ltxml:503-527, both clone), each with the same `mark` and text; a
+  `\footnotemark[n]`, `\samethanks[n]` or `\authornotemark[n]` on a name is such a copy of the note it marks; a mark
+  no creator's note carries stays `role="footnotemark"`, as Perl leaves it. The XSLT prints the note once, at its first
+  carrier, and a linked mark at each other. **Marks follow placement:** a single author's note shows under its author
+  with no mark; a shared note goes to the margin, its mark on every carrying name and with the note; margin notes never
+  overlap. **No institution marks:** an affiliation's leading `\footnotemark`, the mark the names' note pairs it by
+  (1607.07280), is not written; generated per-institution marks are a later feature. A `\ \footnotemark[N]` after a
+  name's note is that name's (1911.13299; a mark alone on its own line after `\\` stays an orphan, 2026-11-09). A mark
+  or note between two names is the nearer name's by the glue TeX prints, a tie the next name's; one a fill or other ink
+  leaves undecided is a counted loss, never a guess; an orphan bare mark keeps its footnote step, its glyph counted
+  lost (DG 2026-11-16, OD #1057); a mark glued past a name's comma and labels is measured from the comma's ink
+  (COMMAMARK, 1111.1979). **Marks pair by number** (DG 2026-11-16, MARKKEY; OD #1058): a name's footnote mark answers
+  the note its number names, as TeX pairs them — a `\footnotetext[n]` in the author block is the note of each name
+  showing n (2407.04435), a name's given `\footnotemark[n]` a copy of its block's note n —, never a glyph alone where a
+  number decides; IEEEtran's unmarked `\thanks` is the block's, not the last author's (1510.02728). **One note, many
+  copies** (OD #1059): the copies of a shared note are one note (`idref` to the first, never its text); a shared
+  unmarked note prints once under a mark the page invents (`[a]`, `[b]`…, class `ltx_mark_generated`) — bindings set
+  only the glyph their class prints, the engine none, the XSLT alone invents. **No dangling marks, hidden only when
+  certain** (DG 2026-11-16): the XML cannot prove a glyph prints once (its legend may sit in a body line, the `\date`,
+  a cell), so a name's mark that links to no note shows on the page (OD #1059; 2006.10886).
 - **The frontmatter exit bar's two rulings** (2026-10-29): a family deferred with its witnesses in
   `DEFERRED_FAMILIES.md` (hand-typeset title pages, ifacconf's `{frontmatter}` box, names stacked under names, …) is
   excluded from the readability bar — its witnesses stay recorded for later work, not dropped; and the archival tier's
@@ -175,10 +214,13 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   block note on no author). A divergence from Perl's placement (OD #989).
 - **"No dagger for unmarked notes"** (user 2026-11-10): an unmarked frontmatter note renders with no dagger — the meta
   XSLT must not invent a † or an anchor for a note with no `@mark`, and since `LaTeXML.css` hides note content until
-  hover, the note shows its content inline, as print does. A divergence from Perl's XSLT (OD #990). Applied to the
-  notes pdflatex prints unmarked where they stand (picture notes: 2404.13552, 2107.13277); a leftover note that stands
-  for a mark pdflatex prints or a line printed elsewhere (a `\titlenote`, `\pacs` codes: 1003.2281, 0803.0204,
-  1009.5642) and a `\thanks` note keep their dagger (OD #990, review revCR8c finding 1).
+  hover, the note shows its content inline, as print does. A divergence from Perl's XSLT (OD #990). First applied to the
+  notes pdflatex prints unmarked where they stand (picture notes: 2404.13552, 2107.13277), a `\thanks` note and a
+  leftover note (`\titlenote`, `\pacs`: 1003.2281, 0803.0204, 1009.5642) keeping their dagger (review revCR8c finding 1);
+  **that carve-out is reversed** (DG 2026-11-16): the frontmatter never prints the XSLT's `†` fallback, an unmarked note
+  of one author shows its text under its name with no glyph (1807.01940's dagger was another author's), and the generic
+  engine never invents a glyph; a binding may write one to keep an association it knows, the XSLT one for a note several
+  authors share unmarked.
 - **The rest of the old engine: "Plan A: move now, reroute in C"** (user 2026-11-10; plan
   `agent_reports/2026-11-10_Z18P_report.md`): only eptcs, omnibus and aas are rerouted inside Z18; everything else
   leaves `author_block/` by a byte-identical move and the module is deleted; authblk, IEEEtran, IJCAI, `@marked`, the

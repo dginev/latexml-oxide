@@ -155,7 +155,10 @@ LoadDefinitions!({
   // joined with an en dash ("[1–3]"; natbib_sty.rs, KNOWN_PERL_ERRORS #1072). Guard
   // `perfect_kernel_batch78j::revtex_citations_sort_and_compress`.
   Digest!("\\PassOptionsToPackage{sort&compress}{natbib}")?;
+  // (a name's `\footnote` in the minipage letters, revtex4-1.cls:466-467, as revtex4_cls.rs's REVTeX 4.2; 2301.00220)
+  assign_value("lx_title_footnote_own_marks", true, Some(Scope::Global));
   RequirePackage!("revtex4_support");
+  revtex4_support_sty::declare_revtex41_title_marks("4-1")?;
   // revtex4-1.cls:2649-2662: an author block repeated after `\maketitle` switched off (`revtex4_cls.rs`).
   revtex4_cls::switch_off_author_block_after_maketitle()?;
   revtex4_cls::define_frontmatter_note_lists()?;

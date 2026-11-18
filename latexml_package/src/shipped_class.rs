@@ -2,7 +2,11 @@
 //! `mn2e_cls`).
 use latexml_core::definition::origin::ProvideOnlyGuard;
 
-use crate::prelude::*;
+pub use crate::engine::latex_constructs::{FNSYMBOL_TITLE_MARKS, TitleMarkLine};
+use crate::{
+  engine::latex_constructs::{BoundMaketitle, body_title_marks, declare_package_title_marks},
+  prelude::*,
+};
 
 /// The class file in the paper's source that the family binding `binding` interprets: the class the document asked for
 /// when the loader answered it with this binding, else the binding's own name; `None` when the source does not have it.
@@ -207,6 +211,129 @@ pub const SUBFIGURE_PACKAGES: &[&str] = &["caption", "subfigure", "subfig", "sub
 pub fn require_shipped_packages(ext: &str, family: &[&str]) -> Result<bool> {
   let request = stand_in_request()?;
   Ok(!request.is_empty() && require_dependencies_only(&request, ext, family))
+}
+
+/// A stand-in binding reads the paper's copy of the package it answers (`stand_in_request`) raw, as pdflatex loads it
+/// (acl_sty, aaai_sty, iclr_sty); `false` when the source has none, which the raw load reports as the loader does.
+/// The read is the loader's: after it, the step the loader takes after any package it reads raw
+/// (`\lx@package@loaded@raw`, which a binding's own read skips) — usenix2019_v3.sty's `\abstract` heading stays out of
+/// the creators (2301.04841).
+pub fn input_shipped_package() -> Result<bool> {
+  let request = stand_in_request()?;
+  let shipped = !request.is_empty() && shipped_file_text(&request, "sty").is_some();
+  InputDefinitions!(&request, noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  if shipped && IsDefined!(&T_CS!("\\lx@package@loaded@raw")) {
+    Digest!(mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@package@loaded@raw{{{request}}}"
+    ))))?;
+  }
+  Ok(shipped)
+}
+
+/// A stand-in binding reads its paper's copy raw ([`input_shipped_package`]) and declares the title marks the copy's
+/// `\maketitle` sets ([`read_copy_title_marks`]).
+pub fn input_shipped_package_title_marks(lines: &'static [TitleMarkLine]) -> Result<bool> {
+  read_copy_title_marks(lines, input_shipped_package)
+}
+
+/// A binding's raw read of its copy (`read`), then the marks the copy's `\maketitle` sets, by the body TeX records
+/// (DG 2026-11-17; revMTREDUCE B1, S2): the one the lock refused as `read` ran, else at `\begin{document}` the one the
+/// copy's own `\AtBeginDocument` code defines (acl.sty:147-150) or its stand-in copy's ([`declare_stand_in_copy_title_marks`]).
+pub fn read_copy_title_marks(
+  lines: &'static [TitleMarkLine],
+  read: impl FnOnce() -> Result<bool>,
+) -> Result<bool> {
+  let before = refused_maketitle();
+  // (runs ahead of the copy's own `\AtBeginDocument` code, registered as it is read)
+  RawTeX!(r"\AtBeginDocument{\global\let\lx@title@copy@before\lx@dropped@maketitle}");
+  let shipped = read()?;
+  match refused_maketitle() {
+    Some(now) if !before.is_some_and(|before| Rc::ptr_eq(&before, &now)) => {
+      declare_body_title_marks(&now, lines, BoundMaketitle::Refused)?;
+    },
+    _ if shipped => declare_stand_in_copy_title_marks(lines)?,
+    _ => {},
+  }
+  Ok(shipped)
+}
+
+/// A binding declares the title marks of its stand-in copy's `\maketitle`, read after it (`content::read_stand_in_copy`:
+/// jmlr2e, neurips, ijcai), or of one the copy's `\AtBeginDocument` code defines: at `\begin{document}`, by the body TeX
+/// records ([`read_copy_title_marks`]). The lines wait in the state, under the copy's file, with the number its stand-in
+/// copy gets.
+pub fn declare_stand_in_copy_title_marks(lines: &'static [TitleMarkLine]) -> Result<()> {
+  // (the copy's record is its file's basename, `content::new_copy_provides_record`: a request from a subdirectory,
+  // `\usepackage{sub/neurips_2022}`, names it by that too — revMTREDUCEc B1, 2210.05974, 2510.04543)
+  let request = stand_in_request()?;
+  let file = s!(
+    "{}.sty",
+    request.rsplit(['/', '\\']).next().unwrap_or(&request)
+  );
+  let mut record = next_copy_provides_id().to_string();
+  for (line, marks) in lines {
+    record.push_str(&s!("\n{line}\t{marks}"));
+  }
+  assign_value(
+    &s!("{COPY_TITLE_LINES}{file}"),
+    Stored::String(pin(&record)),
+    Some(Scope::Global),
+  );
+  DefMacro!("\\lx@title@copy@marks{}", sub[(file)] {
+    declare_copy_title_marks_at_begin_document(&file.to_string())?;
+    Ok(Tokens::new(Vec::new()))
+  });
+  RawTeX!(&s!(r"\AtBeginDocument{{\lx@title@copy@marks{{{file}}}}}"));
+  Ok(())
+}
+
+/// The state key of a copy's title-mark lines ([`declare_stand_in_copy_title_marks`]), its file after it.
+const COPY_TITLE_LINES: &str = "lx_title_copy_lines:";
+
+/// `\lx@title@copy@marks{<file>}` at `\begin{document}` ([`declare_stand_in_copy_title_marks`]): the `\maketitle` the
+/// copy's `\AtBeginDocument` code defined, which the lock refused there (since `\lx@title@copy@before`), else its stand-in
+/// copy's.
+fn declare_copy_title_marks_at_begin_document(file: &str) -> Result<()> {
+  let record = lookup_string(&s!("{COPY_TITLE_LINES}{file}"));
+  let mut rows = record.lines();
+  let from = rows
+    .next()
+    .and_then(|id| id.parse::<u32>().ok())
+    .unwrap_or(1);
+  let lines: Vec<(&str, &str)> = rows.filter_map(|row| row.split_once('\t')).collect();
+  let before = lookup_definition(&T_CS!("\\lx@title@copy@before"))?;
+  match refused_maketitle() {
+    Some(now) if !before.is_some_and(|before| Rc::ptr_eq(&before, &now)) => {
+      declare_body_title_marks(&now, &lines, BoundMaketitle::Refused)
+    },
+    _ => match copy_provides_maketitle_of(file, from) {
+      Some((id, body)) => match body_title_marks(&body, &lines) {
+        Some(marks) => declare_package_title_marks(&marks, BoundMaketitle::Copy(id)),
+        None => Ok(()),
+      },
+      None => Ok(()),
+    },
+  }
+}
+
+/// The `\maketitle` the lock refused last (`\lx@dropped@maketitle`, state.rs `note_redefined`).
+fn refused_maketitle() -> Option<Rc<dyn Definition>> {
+  lookup_definition(&T_CS!("\\lx@dropped@maketitle"))
+    .ok()
+    .flatten()
+}
+
+/// Declare the title marks the refused `\maketitle` `definition` sets ([`body_title_marks`]), if any.
+fn declare_body_title_marks(
+  definition: &Rc<dyn Definition>,
+  lines: &[(&str, &str)],
+  bound: BoundMaketitle,
+) -> Result<()> {
+  if let Some(ExpansionBody::Tokens(body)) = definition.get_expansion()
+    && let Some(marks) = body_title_marks(body, lines)
+  {
+    declare_package_title_marks(&marks, bound)?;
+  }
+  Ok(())
 }
 
 /// The file a stand-in binding answers, as the paper asked for it: the request a versioned fallback answers with

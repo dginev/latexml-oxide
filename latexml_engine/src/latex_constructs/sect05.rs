@@ -1094,20 +1094,6 @@ pub(crate) fn load() -> Result<()> {
     "\\lx@add@date@halved{}",
     r"\lx@add@date[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
-  // Conference-template author marks used inside `\author{…}`: AAAI's aaai22-aaai2027.sty define `\equalcontrib` and
-  // aaai2027.sty:138-155, 180-194 `\corresponding` only inside their `\@maketitle`, where each marks its author and
-  // prints its footnote once ("These authors contributed equally.", "Corresponding author[s]."), so an `\author{…}`
-  // read before `\maketitle` met them undefined (2103.05277, 2111.06599, 2006.08767; 2609.00420 and 222 more AAAI-27
-  // papers in 2609). Kernel-level, since `\documentclass{article}` with `\usepackage{aaai22}` loads no class binding
-  // (formerly in omnibus_cls.rs, 3f40bf8211). Each author carries the note, which the former no-ops dropped. As
-  // kernel stubs (`DefinitionOrigin::Stub`), so the document's or a raw class's own `\newcommand` still defines them
-  // (copernicus.cls:1673 `\newcommand\equalcontrib[1]`, its equal-contribution note on the affiliations).
-  use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
-  with_origin(DefinitionOrigin::Stub, || -> Result<()> {
-    DefMacro!("\\equalcontrib", r"\thanks{These authors contributed equally.}");
-    DefMacro!("\\corresponding", r"\thanks{Corresponding author.}");
-    Ok(())
-  })?;
   // Springer Nature and other templates' marker; sn-jnl's own `\equalcont{<note>}` is its binding's (sn_jnl_cls.rs).
   def_macro_noop("\\equalcont")?;
   // NOTE: a `\person@thanks` constructor used to live here (a port of a since-
@@ -1711,7 +1697,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@maketitle@begin", "");
   DefMacro!(
     "\\lx@maketitle@body",
-    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@text@before@title\lx@maketitle@twocolumn\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
+    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@date@legend\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@text@before@title\lx@maketitle@twocolumn\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters
@@ -1729,6 +1715,8 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\lx@maketitle@cleanup", sub[_args] {
     // (this title page's readings, and the `\@author` prefix `\lx@author@tail` kept for them: `title_page_reading`)
     title_page_reading::end_title_page_epoch();
+    // (the title marks the kernel read off this `\maketitle` end with it)
+    end_title_marks_read();
     if !lookup_bool("\\maketitle:redefined") {
       for cs in ["\\maketitle", "\\title", "\\author", "\\date"] {
         let_i(&T_CS!(cs), &T_CS!("\\relax"), Some(Scope::Global));
@@ -3478,7 +3466,12 @@ fn replay_dropped_class_code(
   let saved_boxes: Vec<Option<Stored>> = boxes.iter().map(|key| lookup_value(key)).collect();
   // …and the lock's own record of the class's definition: a `\let\abstract…` or `\def\author…` the body itself
   // makes is refused again, globally (state.rs), and would replace it.
-  let lock_keys = [s!("\\{name}:redefined"), s!("\\{name}:redefined@nargs")];
+  let lock_keys = [
+    s!("\\{name}:redefined"),
+    s!("\\{name}:redefined@nargs"),
+    s!("\\{name}:redefined@class"),
+    s!("\\{name}:redefined@document"),
+  ];
   let lock_values: Vec<Option<Stored>> = lock_keys.iter().map(|k| lookup_value(k)).collect();
   let dropped_meaning = lookup_meaning(&dropped);
   let depth = get_frame_depth();
@@ -5269,7 +5262,7 @@ pub(crate) fn title_page_mark(definition: &Rc<dyn Definition>) -> Option<char> {
 }
 
 /// Does [`title_page_print_tokens`] run the class's own refused `\maketitle` ([`title_page_replay_tokens`])?
-fn replays_class_maketitle() -> bool {
+pub(crate) fn replays_class_maketitle() -> bool {
   !lookup_bool("lx_depositing_class_maketitle") && title_page_replay_tokens(&[]).is_some()
 }
 

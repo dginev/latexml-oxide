@@ -1,0 +1,40 @@
+% mechanism: aaai2027.sty's `\corresponding` makes its note on first use and repeats its mark after (aaai2027.sty:
+%   147-155, 180-187), as `\equalcontrib` (:139-146); its trial pass in `\sbox` (`\footnote` `\relax`) never steps
+%   the counter, so `\ifaaai@corrmulti` stays false and the note reads "Corresponding author." for several carriers
+% witness:  2609.00420 (aaai2027.sty; 222 AAAI-27 papers in 2609); the style a minimal stand-in of its title code
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title∗", "Ann Able†‡, Bob Baker†, Cy Cole‡"; foot "∗Title
+%   note.", "†These authors contributed equally.", "‡Corresponding author." (the title's note counted before the names':
+%   the repeated mark is the note's number as the conversion counts it, not the rehearsal of the names alone)
+% engines:  rust PRESBXbase (d45633020ab) = 0 errors, 4 Warnings; Ann † ‡, Bob §, Cy ¶ (four notes)
+% expect:   0 errors, 2 Warnings (the emitter's "note no argument", one a kind); Ann and Bob a copy of "These authors
+%   contributed equally." marked †, Ann and Cy a copy of "Corresponding author." marked ‡
+% status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai2027.sty}
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newcounter{aaai@eqfn}\setcounter{aaai@eqfn}{0}%
+  \newcounter{aaai@corrfn}\setcounter{aaai@corrfn}{0}\newif\ifaaai@corrmulti\aaai@corrmultifalse
+  \newsavebox{\titlearea}%
+  \sbox{\titlearea}{\let\footnote\relax\let\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{aaai@eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{aaai@eqfn}{\value{footnote}}\else\footnotemark[\value{aaai@eqfn}]\fi}%
+    \def\corresponding{\ifnum\value{aaai@corrfn}=0 \footnote{Corresponding author.}%
+      \setcounter{aaai@corrfn}{\value{footnote}}\else\footnotemark[\value{aaai@corrfn}]\global\aaai@corrmultitrue\fi}%
+    \vbox{\hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}%
+  \vbox{\let\footnote\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{aaai@eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{aaai@eqfn}{\value{footnote}}\else\footnotemark[\value{aaai@eqfn}]\fi}%
+    \def\corresponding{\ifnum\value{aaai@corrfn}=0 \footnote{Corresponding author\ifaaai@corrmulti{s}\fi.}%
+      \setcounter{aaai@corrfn}{\value{footnote}}\else\footnotemark[\value{aaai@corrfn}]\fi}%
+    \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{aaai2027}
+\title{A Title\thanks{Title note.}}
+\author{Ann Able\equalcontrib\corresponding, Bob Baker\equalcontrib, Cy Cole\corresponding}
+\begin{document}
+\maketitle
+Body.
+\end{document}

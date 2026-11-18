@@ -1,0 +1,20 @@
+% mechanism: a bare `\footnotemark` opening the cell an `\and` opens, a name after it: the mark ledger gives it to Bob,
+%   but the reading takes a cell its mark leads for a labelled line (Bob an affiliation of Ann), so no name writes the
+%   mark; its footnote step is not kept apart (the counter-step rule, OD #1057) where the reading may have misread the
+%   line, and the block is written whole with `mark_dropped`'s Warning (REGFIX's)
+% witness: none (sibling of fmmarks_tabular_cell_bare_prefix_mark_red; review of SHGNEXT's counter-step)
+% oracle:  pdflatex 0 errors; "Ann Able∗ / †Bob Baker" (pdftotext; † over Bob's name), footnote "∗ X"
+% engines: rust REGFIX: 0 errors, 1 Warning, the block written whole; SHGNEXT before the fail-safe: Ann Able with
+%   "Bob Baker" her affiliation, † lost
+% expect:  0 errors, 1 Warning ("…the block is written whole…"); one creator "Ann Able and Bob Baker" with ∗ † and the
+%   note; the ideal (Bob a name with †) waits on the reading of a mark-led cell (SYNC note)
+% status:  GREEN (perfect_kernel_batchne2::a_mark_on_no_name_keeps_its_footnote_step)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{X} \and \footnotemark Bob Baker}
+\date{}
+\maketitle
+Text.
+\end{document}

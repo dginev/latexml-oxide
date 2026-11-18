@@ -1,0 +1,18 @@
+% mechanism: a prescript that is name ink (`$^{3}$He Collaboration`) is no mark: the whole name is kept, its 3 included
+% witness:  revPURE p2_helium
+% oracle:   pdflatex 0 errors; "3He Collaboration"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML  | affiliation=He Collaboration; HTML
+% expect:   0 errors, 0 Warnings; XML 3 He Collaboration; HTML 3 He Collaboration (the guard's XML and HTML lines)
+% moves:    XML row R (PURE residual: `$^{3}$He Collaboration`, the reader splits the name and drops the 3); HTML the
+%   XML layer's: row R (PURE residual: `$^{3}$He Collaboration`, the reader splits the name and drops the 3)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname and _red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{$^{3}$He Collaboration}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

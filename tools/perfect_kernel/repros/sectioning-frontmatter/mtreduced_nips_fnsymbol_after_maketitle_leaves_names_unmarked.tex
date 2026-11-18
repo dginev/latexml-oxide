@@ -1,0 +1,39 @@
+% mechanism: a copy's `\maketitle` body declares the marks the names print by its `\thefootnote` definitions BEFORE
+%   the body's first `\@maketitle` (`shipped_class::body_title_marks`); one after it sets only the notes `\@thanks`
+%   prints, so the names' marks stay unknown: no glyph
+% witness:  the review's probe c2 (revMTREDUCEc S1); the style a stand-in of nips_2017.sty:245-265 with its line moved
+%   after `\@maketitle`
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1 Bob Baker1 Cy Cole2"; foot "∗Equal
+%   contribution.", "†Work at X." (the names print \arabic, the notes \fnsymbol)
+% engines:  rust MTREDUCEc (b0a97003fa4) = 0 errors, 0 Warnings, the names ∗ ∗ †, glyphs they never print;
+%   WRONGFIXc = each note unmarked
+% expect:   0 errors, 0 Warnings; Ann and Bob a copy of one note, Cy's, all unmarked
+% status:   RED (MTREDUCEc) -> GREEN (MTREDUCEd: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{nips_2017.sty}
+\ProvidesPackage{nips_2017}[2017/03/20 NIPS 2017 submission/camera-ready style file]
+\newif\if@nipssym \@nipssymfalse
+\providecommand{\maketitle}{}
+\renewcommand{\maketitle}{%
+  \par
+  \begingroup
+    \thispagestyle{empty}
+    \@maketitle
+    \renewcommand{\thefootnote}{\fnsymbol{footnote}}\@thanks
+  \endgroup
+  \let\maketitle\relax
+  \let\thanks\relax
+}
+\providecommand{\@maketitle}{}
+\renewcommand{\@maketitle}{\vbox{\hsize\textwidth\centering{\LARGE\bf \@title\par}
+  \def\And{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}\bf\rule{\z@}{24\p@}\ignorespaces}%
+  \begin{tabular}[t]{c}\bf\rule{\z@}{24\p@}\@author\end{tabular}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{nips_2017}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \And Bob Baker\footnotemark[1] \And Cy Cole\thanks{Work at X.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

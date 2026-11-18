@@ -47,10 +47,52 @@ pub(in crate::base_utilities) fn read_at_flush() -> Result<HeldUndefined> {
   if rehearsal::rehearsing() {
     return Ok(HeldUndefined::default());
   }
+  rehearse_title_first()?;
   let held = read_pending()?;
   // (the flush empties the frontmatter queue: the calls after it are queued from position 0 again)
   with_ledger(|ledger| ledger.flushes += 1);
   Ok(held)
+}
+
+/// The last title set, rehearsed before the author blocks where the title marks its notes (`lx_title_counts_footnotes`;
+/// article.cls:203-214), so its footnote steps carry into theirs (`rehearsal::footnotes_carried`). OD #1053.
+fn rehearse_title_first() -> Result<()> {
+  if !lookup_bool("lx_title_counts_footnotes") {
+    return Ok(());
+  }
+  let title = with_ledger(|ledger| {
+    ledger
+      .entries()
+      .iter()
+      .enumerate()
+      .rev()
+      .find_map(|(i, entry)| match entry {
+        Entry::Api(call)
+          if call.tag == "ltx:title" && !call.rehearsed && !call.cleared && !call.inside =>
+        {
+          Some((i, call.content.clone()))
+        },
+        _ => None,
+      })
+  });
+  let Some((i, content)) = title.filter(|(_, content)| !content.is_empty()) else {
+    return Ok(());
+  };
+  if let Rehearsal::Done { value, errors, queued, .. } = rehearse_call(
+    &mut CallRehearsals::default(),
+    content,
+    TitleMarks::Fnsymbol,
+  )? {
+    with_ledger(|ledger| {
+      if let Some(Entry::Api(call)) = ledger.entries_mut().get_mut(i) {
+        call.events = value;
+        call.errors = errors;
+        call.queued = queued;
+        call.rehearsed = true;
+      }
+    });
+  }
+  Ok(())
 }
 
 /// How deep a block's macros are unfolded ([`unfold_held_names`]): `\aut` holding `\autA` holding the names.
@@ -919,7 +961,7 @@ fn json_resolved(out: &mut String, resolved: &Resolved) {
     out.push_str("{\"name\":");
     json_str(out, &creator.name);
     out.push_str(",\"requests\":[");
-    for (j, request) in creator.requests.iter().enumerate() {
+    for (j, request) in creator.requests().enumerate() {
       if j > 0 {
         out.push(',');
       }

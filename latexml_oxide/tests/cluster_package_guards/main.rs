@@ -419,6 +419,9 @@ mod perfect_kernel_batch99b;
 mod perfect_kernel_batchamsppt;
 mod perfect_kernel_batchaut1;
 mod perfect_kernel_batchbc1;
+/// BLOCKPLACE: a note its binding declares printed under the names sits there, before the abstract; OD #1074.
+mod perfect_kernel_batchblockplace;
+mod perfect_kernel_batchbmcart;
 mod perfect_kernel_batchc1;
 mod perfect_kernel_batchcau1;
 mod perfect_kernel_batchck2b;
@@ -442,6 +445,9 @@ mod perfect_kernel_batchcr4b;
 mod perfect_kernel_batchcr6;
 mod perfect_kernel_batchcr7;
 mod perfect_kernel_batchcr8;
+/// INVDAG: the frontmatter invents no glyph — an unmarked note outside the creators shows its content with none, an authblk
+/// label no `\affil` explains shows on its name (OD #1063, #1064).
+mod perfect_kernel_batchdateleg;
 mod perfect_kernel_batchdel3;
 mod perfect_kernel_batchdtl1;
 mod perfect_kernel_batche0;
@@ -454,6 +460,9 @@ mod perfect_kernel_batchf1;
 mod perfect_kernel_batchfb2a;
 mod perfect_kernel_batchfb2b2;
 mod perfect_kernel_batchfb2b3;
+/// FMRG: the red/green suite of frontmatter mark association — every witness and reviewer probe of the shared-note
+/// campaign against its pdflatex oracle (DG 2026-11-16).
+mod perfect_kernel_batchfmmarks;
 mod perfect_kernel_batchfmp2;
 mod perfect_kernel_batchfms1;
 mod perfect_kernel_batchfms2a1;
@@ -480,15 +489,20 @@ mod perfect_kernel_batchgl1;
 mod perfect_kernel_batchhg1;
 mod perfect_kernel_batchi736;
 mod perfect_kernel_batchi802;
+/// IEEEROUTE: IEEEtran's block notes routed by kind (`\thanks` "<names> is/are with …"); OD #1072.
+mod perfect_kernel_batchieeeroute;
 mod perfect_kernel_batchimg1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
 mod perfect_kernel_batchint23;
+mod perfect_kernel_batchinvdag;
 mod perfect_kernel_batchio1;
 mod perfect_kernel_batchio3b;
 mod perfect_kernel_batchkb1;
 mod perfect_kernel_batchkb2;
 mod perfect_kernel_batchkey1;
+/// LLNCSMARKS: llncs's own `\@fnsymbol` (⋆ ⋆⋆ …), its title block's marks and the body's `\fnsymbol`; OD #1060.
+mod perfect_kernel_batchllncs;
 mod perfect_kernel_batchlo1;
 mod perfect_kernel_batchlo2;
 mod perfect_kernel_batchlo3;
@@ -502,6 +516,12 @@ mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;
 /// MACSYNC: the binding macros mean what Perl's same-named API means (AUDMAC).
 mod perfect_kernel_batchmacsync;
+/// MARKBIND: class bindings compute their title marks and footnote steps (mnras, lni, REVTeX's aip/sor), the internal
+/// Frontmatter keys declared.
+mod perfect_kernel_batchmarkbind;
+/// MARKKEY1: frontmatter marks keyed by the footnote number, one note across its copies (`idref`), the page's mark rules;
+/// OD #1058, #1059.
+mod perfect_kernel_batchmarkkey1;
 /// MB1: the one label rule of the Kind step's lines — a labelled line named after the class's name of the entry, a
 /// mailbox link line's as an e-mail label's; OD #992.
 mod perfect_kernel_batchmb1;
@@ -513,6 +533,8 @@ mod perfect_kernel_batchmem1;
 /// MLN1: names led by their marks read as names (`names_led_by_marks`); OD #1019.
 mod perfect_kernel_batchmln1;
 mod perfect_kernel_batchmml2;
+/// MTREDUCE: the kernel asks only whether the class's `\maketitle` runs; a package's prints its binding's marks.
+mod perfect_kernel_batchmtreduce;
 mod perfect_kernel_batchn1;
 mod perfect_kernel_batchn2;
 mod perfect_kernel_batchn2r2;
@@ -601,7 +623,12 @@ mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
 mod perfect_kernel_batchpc3;
+/// PRESBXc: the fail-safes of the title's marks; the lock's refusal record follows a `\let` of `\maketitle` alone.
+mod perfect_kernel_batchpresbxc;
 mod perfect_kernel_batchpsf1;
+/// PURE: a personname holds the name alone; every mark on it is its note's `mark`, consumed by the contact it labels, or
+/// a mark-only note after it (DG 2026-11-16).
+mod perfect_kernel_batchpure;
 /// QA14A: a `\parbox` sets `\hsize` and `\linewidth` only, `\textwidth`/`\columnwidth` the page's; KPE #1273.
 mod perfect_kernel_batchqa14a;
 /// QA47A: `\begin{document}` runs the kernel's begin-document lists, so `cmd/<name>/<hook>` hooks patch TeX macros;
@@ -612,6 +639,8 @@ mod perfect_kernel_batchqab57;
 /// QAB8 (QA26): the glue between two paragraphs is `--ltx-skip-before` on the second; OD #1050.
 mod perfect_kernel_batchqab8;
 mod perfect_kernel_batchr1;
+/// R2A: a name's request leaves its mark where it printed; one settle step pairs it by key; OD #1061, #1062.
+mod perfect_kernel_batchr2a;
 /// RA0: a title-code definee declared with no parameters (`\newcommand`'s `[0]`) is taken by the name it follows;
 /// OD #983.
 mod perfect_kernel_batchra0;
@@ -636,6 +665,13 @@ mod perfect_kernel_batchsbx1;
 /// SEP1: the rehearsal binds a `\let` copy of `\and`, `\\`, `\thanks` or `\footnote` by its meaning, as the command it
 /// copies (`\let\nx\and` parts the names; OD #994).
 mod perfect_kernel_batchsep1;
+/// SHCOPY: a shared note is one note in the XML; each other mark carries its pop-up hidden in the HTML.
+mod perfect_kernel_batchshcopy;
+/// SHMARK: a creator's note carries the mark it prints, never repeated in its text; a mark on a name is a copy of the
+/// note it marks; no affiliation-linking mark (DG rulings 1-3 of 2026-11-16, OD #1053).
+mod perfect_kernel_batchshmark;
+mod perfect_kernel_batchshrest;
+mod perfect_kernel_batchspconf;
 /// ST1: RED catalog repros already matching their `expect` on int159a, green rows of two concern tables.
 mod perfect_kernel_batchst1;
 /// ST3: a document converted after others on one thread (a persistent cortex_worker's papers) is the document alone.
@@ -653,6 +689,9 @@ mod perfect_kernel_batchw3rd;
 mod perfect_kernel_batchw3rg;
 /// W4: colortbl's `\arrayrulecolor` colours each border side as the rule is drawn (#773); OD #1025.
 mod perfect_kernel_batchw4;
+/// WRONGFIX: four wrong, invented or mis-linked frontmatter marks (a note before a name, a typed symbol no name prints,
+/// a mark character inside a name's bracket, an elsarticle `\cortext` reached through `\author[…]` keys).
+mod perfect_kernel_batchwrongfix;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz18c;

@@ -15,10 +15,18 @@ pub(in crate::base_utilities) fn digest_frontmatter_item(
   tag: &str,
   item: Tokens,
 ) -> Result<Digested> {
+  // (the title block's `\thefootnote`, as the class's `\maketitle` sets it before the field)
+  let class_marks = crate::latex_constructs::title_field_footnotes(tag);
   bgroup();
   // the field being made, for the commands a class's own setter of it defines for its argument
   // (frontmatter_stores.rs `refused_environment_definition`: vmsta.cls's `\author` and its `\fnm`)
   assign_value("lx_frontmatter_item", tag.to_string(), Some(Scope::Local));
+  if class_marks {
+    crate::latex_constructs::enter_title_footnotes();
+  }
+  // (a name's own cell's `\thefootnote`, which a declaration the flush ran ahead of the names set: 1807.02791; the field's
+  // own kept)
+  crate::latex_constructs::enter_title_cell(tag);
   // the counter step in scope as the item starts, which a `\label` naming a step of its own does not name
   // (`\lx@set@frontmatter@label`)
   assign_value(
@@ -126,7 +134,21 @@ pub(in crate::base_utilities) fn lift_notes_beside(
     return Ok(());
   }
   let mut anchor = node.clone();
-  for mut note in document.findnodes(".//ltx:note[not(ancestor::ltx:note)]", Some(node)) {
+  let contact = node.get_name() == "contact";
+  // (a mark a request left stays where it printed, for the settle step: `insert::settle_name_marks`)
+  for mut note in document.findnodes(
+    ".//ltx:note[not(ancestor::ltx:note)][not(@_namekeys)]",
+    Some(node),
+  ) {
+    // (a mark alone that leads a contact is the mark the reading paired the entry by, `mark:footnote`; `insert` drops it
+    // where a note carries its mark: revtex's `\affiliation{\footnotemark[1]Univ A}`, 1607.07280 — DG ruling 3, no
+    // institution marks)
+    if contact
+      && note.get_attribute("role").as_deref() == Some("footnotemark")
+      && leads(node, &note)
+    {
+      note.set_attribute(LEADS_CONTACT, "true")?;
+    }
     let mut holder = note.get_parent();
     let mut before = note.get_prev_sibling();
     note.unlink();
@@ -145,6 +167,35 @@ pub(in crate::base_utilities) fn lift_notes_beside(
     }
   }
   Ok(())
+}
+
+/// A footnote mark lifted from the head of its contact ([`lift_notes_beside`]): the entry's own mark, which the Link step
+/// drops (`insert::link_marked_notes`).
+pub(in crate::base_utilities) const LEADS_CONTACT: &str = "_leads_contact";
+
+/// Whether nothing printed precedes `target` inside `container` (only spaces, and elements holding nothing else).
+fn leads(container: &Node, target: &Node) -> bool {
+  fn walk(node: &Node, target: &Node) -> Option<bool> {
+    for child in node.get_child_nodes() {
+      if child == *target {
+        return Some(true);
+      }
+      match child.get_type() {
+        Some(NodeType::TextNode) if !child.get_content().trim().is_empty() => return Some(false),
+        Some(NodeType::ElementNode) => {
+          if let Some(found) = walk(&child, target) {
+            return Some(found);
+          }
+          if !child.get_content().trim().is_empty() {
+            return Some(false);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  }
+  walk(container, target).unwrap_or(false)
 }
 
 /// The text a lifted note or wrapper stood between is one text again (`Kent-Andre Mardal\footnotemark[1]
@@ -324,9 +375,27 @@ pub(in crate::base_utilities) fn frontmatter_label_keys(
   Ok(frontmatter_label_request(operand, prefix)?.0)
 }
 
+/// The labels a mark's operand prints, each comma piece whole: `printed_label`'s text, else its spelling, read by
+/// `clean_frontmatter_labels` and compared as marks are (`insert::mark_form`: no math shift, one asterisk). One key for
+/// both sides of a label match a binding counts: authblk's `\author[\affA]` with `\newcommand\affA{1}` prints 1, as
+/// its `\affil[1]` does (review revMARKSAFE S3; `frontmatter_label_keys` parts the pieces further).
+pub fn printed_label_pieces(operand: &Tokens) -> Result<Vec<String>> {
+  let text = match printed_label(operand)? {
+    Some(printed) => printed.text,
+    None => operand.to_string(),
+  };
+  Ok(
+    clean_frontmatter_labels(&text, "")
+      .iter()
+      .map(|label| mark_form(label))
+      .filter(|label| !label.is_empty())
+      .collect(),
+  )
+}
+
 /// The label keys of a mark's operand ([`frontmatter_label_keys`]), and those of them only a picture's text prints
-/// ([`PrintedLabel::outside_pictures`]): a request nothing answers is shown in the name (`insert::
-/// show_unanswered_marks`), but not one a picture prints — the picture is no part of the name, and its text alone is
+/// ([`PrintedLabel::outside_pictures`]): a request nothing answers is shown in the name (`insert::settle_name_marks`),
+/// but not one a picture prints — the picture is no part of the name, and its text alone is
 /// no mark (the TikZ ORCID icon's "iD" in `$^{1,\href{…}{\orcidicon}}$`, review rev92b_r3 S1), while it may answer a
 /// label still (a circled `a`'s `a`, `\inst{\circled{1}}`'s 1).
 pub(in crate::base_utilities) fn frontmatter_label_request(
@@ -1126,15 +1195,7 @@ pub fn authors_show_marks() -> Result<bool> {
             creators
               .iter()
               .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
-              .any(|c| {
-                ["_plainmarks", "_textmarks", "_picturemarks"]
-                  .iter()
-                  .any(|attr| {
-                    c.attr
-                      .get(*attr)
-                      .is_some_and(|marks| !marks.trim().is_empty())
-                  })
-              })
+              .any(|c| c.attr.contains_key(REQUESTED))
           })
         },
         _ => false,

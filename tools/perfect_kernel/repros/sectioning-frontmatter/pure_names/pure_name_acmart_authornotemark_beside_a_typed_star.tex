@@ -1,0 +1,22 @@
+% mechanism: acmart's `\authornotemark[n]` is marked by the footnote counter (`_markfromcounter`), and so is the copy of
+%            the note it marks: a star typed on the name is a mark of its own
+% witness:  revPUREc probe q11 (the `\authornotemark` sibling of pure_name_acmart_authornote_beside_a_typed_star)
+% oracle:   pdflatex 0 errors; "Ann Able∗" and "Bob Baker∗∗" (the typed ∗, then the `\authornotemark[1]`'s ∗), the note
+%           "∗ Equal."
+% engines:  rust fix/pure-names-c 496f6195343 = 0 errors; Bob's typed ∗ lost (the copy's mark answered it)
+% expect:   0 errors, 0 Warnings; the note marked ∗ on both names, a mark-only ∗ after Bob's name
+% status:   RED (fix/pure-names-c 496f6195343) -> GREEN (PUREd; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\authornote{Equal.}
+\affiliation{\institution{Univ A}\country{X}}
+\author{Bob Baker$^{*}$}
+\authornotemark[1]
+\affiliation{\institution{Univ B}\country{X}}
+\maketitle
+Text.
+\end{document}

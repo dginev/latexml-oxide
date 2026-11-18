@@ -1,0 +1,19 @@
+% mechanism: `\cormark[c1,c2]` prints `\elsRef{c1,c2}`, the key list's number, 0 — no ∗ (elsarticle.cls:174-176): the
+%   notes mark no name; the binding requests no annotation, with a Warning (`els_mark_list`)
+% witness: revELSARTb q8 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice One,a , Bob Twoa"; footnotes "∗ First", "∗∗ Second"
+% engines: rust WRONGFIXc and INTFMfinal: Alice carries both notes
+% expect:  0 errors 1 Warning (elsarticle_mark_list); both notes the block's
+% status:  RED (INTFMfinal) -> GREEN (ELSARTc) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One\cormark[c1,c2]}
+\author[l1]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[c1]{First}
+\cortext[c2]{Second}
+\end{frontmatter}
+x\end{document}

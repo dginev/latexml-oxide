@@ -1,0 +1,13 @@
+% witness: math0610203 (`James M\textsuperscript{c}Kernan`), 2211.11758 and 2304.06504 (IEEE conference template's
+%          `1\textsuperscript{st} Siqiao Xue`)
+% oracle:  pdflatex 0 errors: "James McKernan" (c raised), "1st Bob Baker" (st raised)
+% engines: rust REGFIX = the superscripts in the names, as printed
+% expect:  0 errors; a superscript that is the name's own ink stays in the personname, and nothing is added after it
+% status:  GREEN (REGFIX) -> GREEN (PURE), the pass leaves them
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{James M\textsuperscript{c}Kernan \and 1\textsuperscript{st} Bob Baker}
+\maketitle
+x
+\end{document}

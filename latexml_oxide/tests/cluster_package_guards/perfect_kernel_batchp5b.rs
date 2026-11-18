@@ -188,13 +188,15 @@ fn a_framed_collaboration_call_is_the_names_contact() {
       article_and("[ATLAS Collaboration]\\thanks{Funded.}"),
       third_creator(
         "<personname>[ATLAS Collaboration]</personname><note class=\"ltx_note_frontmatter ltx_thanks_funding\" \
-         role=\"thanks\" xml:id=\"id1\">Funded.</note>",
+         mark=\"*\" role=\"thanks\" xml:id=\"id1\">Funded.</note>",
       ),
       (0, 0),
     ),
     (
       article_and("(ATLAS Collaboration)$^{1}$"),
-      third_creator("<personname>(ATLAS Collaboration)<sup xml:id=\"id1\">1</sup></personname>"),
+      third_creator(
+        "<personname>(ATLAS Collaboration)</personname><note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/>",
+      ),
       (0, 0),
     ),
     // ("for" with a note of its own: the names' contact, its note the document's, as on the base)

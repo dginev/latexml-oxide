@@ -49,6 +49,15 @@ fn whole_creators(xml: &str) -> Vec<Vec<String>> {
       for (at, open) in items {
         let kind = &open[1..open.len() - 1];
         let open_end = at + creator[at..].find('>').expect("an open tag");
+        // (a mark-only note, `<note mark="a" role="footnotemark"/>`: its mark, PURE)
+        if creator[..open_end].ends_with('/') {
+          let mark = creator[at..open_end]
+            .split("mark=\"")
+            .nth(1)
+            .and_then(|m| m.split('"').next());
+          out.push(format!("mark={}", mark.unwrap_or("")));
+          continue;
+        }
         let role = creator[at..open_end]
           .split("role=\"")
           .nth(1)
@@ -117,7 +126,7 @@ fn batchmln1_mark_led_names_read_as_names() {
     (
       repro!("article_mark_led_names_and_columns_one_label"),
       (0, 1),
-      &[&["Ann Able 1"], &["Bob Baker 1"]],
+      &[&["Ann Able", "mark=1"], &["Bob Baker", "mark=1"]],
     ),
     (
       repro!("article_mark_led_names_and_columns_sharing_a_label"),
@@ -133,8 +142,8 @@ fn batchmln1_mark_led_names_read_as_names() {
       &["Bob Baker", "affiliation=Inst B"],
     ]),
     (repro!("article_mark_led_names_in_and_columns"), (0, 1), &[
-      &["Ann Able 1"],
-      &["Bob Baker 2"],
+      &["Ann Able", "mark=1"],
+      &["Bob Baker", "mark=2"],
     ]),
     (
       repro!("article_mark_led_names_over_an_affiliation_row"),
@@ -179,12 +188,12 @@ fn batchmln1_mark_led_names_read_as_names() {
         &[
           "Ann Able",
           "affiliation=Inst A",
-          "note:thanks=† Equal contribution",
+          "note:thanks=Equal contribution",
         ],
         &[
           "Bob Baker",
           "affiliation=Inst B",
-          "note:thanks=† Equal contribution",
+          "note:thanks=Equal contribution",
         ],
         &["Cat Cole", "affiliation=Inst B"],
       ],
@@ -212,7 +221,8 @@ fn batchmln1_mark_led_names_read_as_names() {
     ),
     (repro!("pos_mark_led_names_over_address_lines"), (0, 0), &[
       &[
-        "(a)(b) Ann Able",
+        "Ann Able",
+        "mark=(a)(b)",
         "affiliation=Inst A",
         "affiliation=Inst B",
       ],
@@ -260,7 +270,7 @@ fn batchmln1_marked_affiliations_stay_affiliations() {
         &[
           "Ann Able",
           "affiliation=Inst A",
-          "note:thanks=∗ Corresponding author",
+          "note:thanks=Corresponding author",
         ],
         &["Bob Baker", "affiliation=Inst A"],
       ],

@@ -193,11 +193,22 @@ impl Resolver {
     // reads it, its addresses the API's as off's are, so the reading ends there and no entry goes on over it — it
     // continued `$^2$Univ B` onto the e-mail line, and wrote "Univ B" twice (the entry by its text, the split's call)
     // and the addresses as an affiliation, 2501.02356)
+    // (the mark ledger reads the whole block, as the writer writes it: one decision for both, `Resolved::mark_ledgers`)
+    let all = read_events(events);
+    // (the overprints, `mark_ledger::overprints`, are read once R2b's display reads `NameMark::overprint`; revR2A NIT)
+    self.mark_ledger = mark_ledger(&all);
+    self
+      .out
+      .mark_ledgers
+      .insert(index, self.mark_ledger.clone());
+    let cut;
     let events = match address_section(&self.block_markers, events) {
-      Some(end) => &events[..end],
-      None => events,
+      Some(end) => {
+        cut = read_events(&events[..end]);
+        &cut
+      },
+      None => &all,
     };
-    let events = &read_events(events);
     let lines = lines_of(events, and_inline);
     let block_requests: Vec<String> = keyvals
       .and_then(|kv| attr_value(kv, "annotations"))
@@ -360,7 +371,7 @@ impl Resolver {
                     .out
                     .creators
                     .iter()
-                    .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
+                    .any(|c| c.requests().any(|r| label_matches(r, label)))
               })
         });
       if unrequested_glyph && let Some(carried) = carried {
@@ -435,7 +446,10 @@ impl Resolver {
                 link.text.clone(),
                 "line:names link-text",
                 index,
-                block_requests.clone(),
+                block_requests
+                  .iter()
+                  .map(|label| NameMark::new(label.clone(), MarkBy::Class, None))
+                  .collect(),
                 group,
               );
               answered_rows.retain(|c| *c != line.column);
@@ -619,7 +633,7 @@ impl Resolver {
           let shown_elsewhere = |label: &String| {
             self.out.creators[block_creators_start..]
               .iter()
-              .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
+              .any(|c| c.requests().any(|r| label_matches(r, label)))
           };
           if !trailing.is_empty()
             && trailing
@@ -847,12 +861,9 @@ impl Resolver {
           // `\\`-joined contact: `Riemann$^1$, … \\ 1- DESY in Zeuthen \\ Platanenallee 6, …`, 0903.2366, 2303.09899; a
           // footnote symbol is no such mark, `Marciniak$^{*}$ \\ Department … \\ Campus …` stays a contact a line,
           // 0707.1113)
-          let joined = run.iter().any(|&c| {
-            self.out.creators[c]
-              .requests
-              .iter()
-              .any(|r| !is_symbol_label(r))
-          });
+          let joined = run
+            .iter()
+            .any(|&c| self.out.creators[c].requests().any(|r| !is_symbol_label(r)));
           // (an address decides only its own ink, its holder too: a line the row holds whose addresses spell one of the
           // row is that one's e-mail, the line's other text the row's, as the old driver placed it — 2203.10777's
           // `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` under Martin Waltz, written whole with the
@@ -1274,7 +1285,7 @@ impl Resolver {
   /// its text — its e-mails and urls placed once every name is read, to the author they spell (`answer_note_links`); the
   /// note itself, its whole text, unless its contacts emptied it and were all taken out (ruling 4), decided there when
   /// its links may empty it. The mark it shows on the name it is beside, its request of an entry led by the same
-  /// `\footnotemark` (`note_marks`, 1607.07280).
+  /// `\footnotemark` (a [`MarkBy::Note`] record, 1607.07280).
   pub(super) fn note(&mut self, index: usize, note: &Event, owner: Option<usize>, rule: &str) {
     if rule == "note:adjacent"
       && self.notes_marked
@@ -1282,7 +1293,8 @@ impl Resolver {
       && let Some(shows) = note_shows(note)
     {
       for label in mark_labels(shows) {
-        self.note_marks.push((at, label));
+        let mark = NameMark::new(label, MarkBy::Note, note.span);
+        self.out.creators[at].marks.push(mark);
       }
     }
     // (what is left of its text once its contacts are taken out decides only whether they emptied it: the note keeps
@@ -1531,6 +1543,24 @@ impl Resolver {
       .next()
       .unwrap_or("thanks")
       .to_string();
+    // (a `\thanks` of a class whose title prints no note mark is the paper's note, not the name's it follows, where Perl
+    // and the base hung it: IEEEtran's `\maketitle` empties `\thefootnote` and `\footnotemark`, IEEEtran.cls:4756-4758,
+    // so the note names no author — kept at the block's level once its name is known printed, `answer_note_texts`: the
+    // title's publication note (the Asilomar/NSF note of 1510.02728) or a nameless creator holding it (1502.05943,
+    // 1609.09226); DG 2026-11-16, a divergence from Perl's placement)
+    if !self.notes_marked
+      && role == "thanks"
+      && let Some(at) = owner
+    {
+      self.block_thanks.push(((index, note.span), at));
+    }
+    // (a footnote text's number, which a `\footnotemark` of the block showing the same number answers: TeX pairs a mark
+    // and its text by number, `answer_note_texts`)
+    if let Some(number) = note.number.filter(|_| role == "footnotetext") {
+      self
+        .numbered_notes
+        .push(((index, note.span), number, owner));
+    }
     let rule = rule.to_string();
     self.attach(
       owner,

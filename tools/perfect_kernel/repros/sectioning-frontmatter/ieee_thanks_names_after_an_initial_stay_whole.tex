@@ -1,0 +1,20 @@
+% mechanism: IEEEtran's block-note routing (`route_author_thanks`, OD #1072): a "<names> is with" sentence starts only
+%   at the note's start or after a '.' ending no initial, so "and C. Coe is with", "J.-L. Dupont-Moreau are with" and
+%   "Univ D. A. Able was with" are no sentence starts; the sentence they sit in keeps its note whole
+% witness: synthetic (revIEEEROUTE probes p1, p2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: six names, four unmarked notes
+% engines: IEEEROUTE (68a4d6b3fad): "Univ B, and C." Bob's affiliation, "Univ C." Cy's, Univ H Dupont-Moreau's alone
+%   with both addresses, "Univ D. A. Able was with Univ Z." Dan's
+% expect:  0 errors, 0 warnings; Ann Able with Univ A.; no other contact; three pubnotes whole
+% status:  GREEN (IEEEROUTEb; guard perfect_kernel_batchieeeroute)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{Initials}
+\author{Ann~Able, Bob~Baker, Cy~Coe, Dan~Dee, Hans van~Berg, and Jean-Luc~Dupont-Moreau%
+\thanks{B. Baker is with Univ B, and C. Coe is with Univ C.}
+\thanks{D. Dee is with Univ D. A. Able was with Univ Z.}
+\thanks{H. van Berg and J.-L. Dupont-Moreau are with Univ H (e-mail: \{hvb,jldm\}@h.org).}
+\thanks{A. Able is with Univ A.}}
+\maketitle
+Body.
+\end{document}

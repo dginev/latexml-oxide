@@ -1,0 +1,18 @@
+% mechanism: one note's copies are one note, the copy first in document order holding the `xml:id` the others' `idref`
+%   names (`relocate::one_note`, OD #1059): Ann's `\footnotemark[1]`, filled with Bob's later `\thanks` by number, is
+%   the first copy
+% witness: synthetic (revMARKKEY1 NIT: the paired note took the first id)
+% oracle:  pdflatex 0 errors: "Ann Able∗ Bob Baker∗", the footnote "∗ Equal contribution." once
+% engines: rust MARKKEY1 a427f6c06e0 = 0 errors 0 Warnings; Ann's copy `idref` to Bob's note
+% expect:  0 errors 0 Warnings; Bob's copy `idref` to Ann's note; HTML Ann Able ; * plain (the note) / Bob Baker ;
+%   *→note
+% status:  RED (a427f6c06e0) -> GREEN (perfect_kernel_batchmarkkey1::a_note_several_names_carry_is_one_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\footnotemark[1] \and Bob Baker\thanks{Equal contribution.}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

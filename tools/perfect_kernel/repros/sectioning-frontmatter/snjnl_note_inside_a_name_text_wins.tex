@@ -1,0 +1,24 @@
+% mechanism: an author note inside a name runs as `\@maketitle` prints the names (2412.01641's sn-jnl.cls:744), after
+%   every note outside: its `\gdef\@equalconttext` wins the printed text (:754), while its glyph comes too late to
+%   print; the names the outside note marked keep its †
+% witness:  none in the 165 census papers (review revSNJNL B2)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able1† and Bob Baker1", "1Univ A.", "† Second text."
+% engines:  rust 2d21be273f3 = Ann's † linked to "First text." (never printed), "Second text." a detached note;
+%   rust SNJNLb = Ann's † linked to "Second text."
+% expect:   0 errors 0 Warnings; Ann's note "Second text.", mark †; one note
+% status:   RED (2d21be273f3) -> GREEN XML, HTML (SNJNLb;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author[1]{\fnm{Ann} \sur{Able}}
+\equalcont{First text.}
+\author[1]{\fnm{Bob} \sur{Baker}\equalcont{Second text.}}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

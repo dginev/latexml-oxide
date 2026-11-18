@@ -1,0 +1,20 @@
+% mechanism: a name's `\footnotemark[1]` beside another name's `\thanks` (the footnote counter's 1) is a copy of that
+%   note by its number (`resolver::answer_note_texts`, `Event::number`; the item's `annotations` on both carriers,
+%   `relocateAnnotations`); the copies are one note (`xml:id`/`idref`, `relocate::one_note`). scrartcl prints its marks,
+%   ∗, but no binding declares them, so the note has no `mark` (a wrong glyph is worse than none, DG 2026-11-16): the
+%   page prints it once under a generated `[a]` on both names
+% witness: the advisor's ADVGEN I-3 probe (scrartcl `Ann\thanks{Equal} \and Bob\footnotemark[1]`)
+% oracle:  pdflatex 0 errors: "Ann Able∗ Bob Baker∗", footnote "∗ Equal contribution." once
+% engines: rust c755ca27e5f = 0 errors; Ann thanks note (no mark), Bob mark-only `1` (not the PDF's glyph), no copy;
+%   perl 0.8.8 = Ann contact role=thanks, Bob mark-only `1`
+% expect:  0 errors 0 warnings; Ann and Bob carry thanks[]=Equal contribution. (Bob's `idref` Ann's), no mark-only note;
+%   HTML: "[a]" on both names, the body once
+% status:  RED (c755ca27e5f) -> GREEN (perfect_kernel_batchmarkkey1::a_numbered_mark_answers_its_note_by_number)
+% preload: ar5iv.sty
+\documentclass{scrartcl}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker\footnotemark[1]}
+\maketitle
+Text.
+\end{document}

@@ -6,7 +6,10 @@
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
-use super::{perfect_kernel_batch84b::creators, perfect_kernel_batchz4::run};
+use super::{
+  perfect_kernel_batch84b::creators, perfect_kernel_batchshmark::marked_notes,
+  perfect_kernel_batchz4::run,
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -96,15 +99,16 @@ fn a_marked_name_with_an_institution_word_is_a_name() {
     0,
   );
   // (P4c: the list's printed marks shown, as pdflatex prints them — P4S Q1; since AUT1 Ann Able's `∗` too, which no entry
-  // answers and her name's run, ending at the comma before `$^{1,*}$`, does not print: "Ann Able,1,∗" in the PDF)
+  // answers and her name's run, ending at the comma before `$^{1,*}$`, does not print: "Ann Able,1,∗" in the PDF; the
+  // ∗ a mark-only note after the name since PURE)
   let alpha = "affiliation=1 University of Alpha";
   let beta = "affiliation=2 University of Beta";
   assert_eq!(two, [
-    vec!["Ann Able ∗", alpha],
+    vec!["Ann Able", "mark=∗", alpha],
     vec!["Bob Baker", alpha],
     vec!["Gary P. Centers", alpha],
     vec!["Dan Dee", beta],
-    vec!["Eve Eden 1,2", alpha, beta],
+    vec!["Eve Eden", alpha, beta],
   ]);
   let two = both(
     "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, University of \
@@ -151,6 +155,8 @@ fn glued_initials_are_no_surname_before_initials() {
 fn a_collaboration_remark_is_the_names_contact() {
   let tex = repro!("emit_a_collaboration_remark_parted_by_a_note_and_a_box_is_a_contact");
   let two = both(tex, 0);
+  // (REVTeX 4.0's unnumbered name `\footnote`, whose mark counts steps the reading does not: Perl's note contact, no
+  // creator note — OD #1053, review revSHMARKb)
   let want = [vec![
     "Kalanand Mishra",
     "note=Email: k@x.edu",
@@ -158,6 +164,7 @@ fn a_collaboration_remark_is_the_names_contact() {
     "affiliation=Univ A",
   ]];
   assert_eq!(two, want);
+  assert_eq!(marked_notes(tex, 0), [vec!["Kalanand Mishra".to_string()]]);
   let babar = "<contact role=\"collaboration\">(for the <text font=\"slanted\">B<text fontsize=\"90%\">A</text>B<text \
                fontsize=\"90%\">AR</text></text> collaboration)</contact>";
   assert_eq!(collaborations(&run(tex).1), [babar]);
@@ -223,13 +230,15 @@ fn a_remark_after_a_note_keeps_its_own_span() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let want = [vec![
     "Ann Able",
+    "mark=*",
     "collaboration=(for the Atlas Collaboration)",
   ]];
   assert_eq!(creators(&xml), want);
   let atlas = "<contact role=\"collaboration\">(for the <text font=\"smallcaps\">Atlas</text> Collaboration)</contact>";
   assert_eq!(collaborations(&xml), [atlas]);
   // (her thanks note before the collaboration, as the source prints them)
-  let note = xml.find("<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\"");
+  let note =
+    xml.find("<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\"");
   assert!(
     note.is_some_and(|note| collaboration_at(&xml).is_some_and(|c| note < c)),
     "{xml}"
@@ -300,7 +309,11 @@ fn a_comma_a_command_draws_inside_a_name_parts_no_names() {
 fn a_mark_inside_a_remark_goes_onto_the_name() {
   let two = both(repro!("emit_a_mark_inside_a_remark_goes_onto_the_name"), 2);
   let want = [
-    vec!["Ann Able a", "collaboration=(for the ATLAS Collaboration)"],
+    vec![
+      "Ann Able",
+      "mark=a",
+      "collaboration=(for the ATLAS Collaboration)",
+    ],
     vec!["Bob Baker"],
   ];
   assert_eq!(two, want);
@@ -360,6 +373,7 @@ fn a_mark_separator_or_a_number_inside_a_remark_parts_no_run() {
     vec![
       "Ann Able",
       "collaboration=(for the ATLAS Collaboration)",
+      "mark=⋆",
       "affiliation=U",
     ],
     vec!["Bob Baker", "affiliation=U"],

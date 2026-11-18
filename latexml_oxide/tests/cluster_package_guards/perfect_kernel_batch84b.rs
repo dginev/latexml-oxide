@@ -41,7 +41,8 @@ pub(super) fn text(fragment: &str) -> String {
   out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Each creator of `xml`, in order: its personname's text, then each contact as `role=text`.
+/// Each creator of `xml`, in order: its personname's text, then, in document order, each contact as `role=text` and the
+/// `mark` of each note carrying one as `mark=…` — a mark-only note's too, the home of a mark the name printed (PURE).
 pub(super) fn creators(xml: &str) -> Vec<Vec<String>> {
   xml
     .match_indices("<creator ")
@@ -49,16 +50,46 @@ pub(super) fn creators(xml: &str) -> Vec<Vec<String>> {
       let end = start + xml[start..].find("</creator>").expect("closed creator");
       let creator = &xml[start..end];
       let mut out = Vec::new();
+      let mut after_name = 0;
       if let Some(at) = creator.find("<personname>") {
         let close = creator[at..]
           .find("</personname>")
           .expect("closed personname")
           + at;
         out.push(text(&creator[at + "<personname>".len()..close]));
+        after_name = close;
       }
-      for (at, _) in creator.match_indices("<contact ") {
-        let open_end = at + creator[at..].find('>').expect("contact tag");
-        let role = creator[at..open_end]
+      let mut items: Vec<(usize, &str)> = creator
+        .match_indices("<contact ")
+        .chain(
+          creator[after_name..]
+            .match_indices("<note ")
+            .map(|(at, open)| (after_name + at, open)),
+        )
+        .collect();
+      items.sort_unstable();
+      // (a note inside a contact or a note is that element's text)
+      let mut text_until = 0;
+      for (at, open) in items {
+        let open_end = at + creator[at..].find('>').expect("an open tag");
+        let tag = &creator[at..open_end];
+        if open == "<note " {
+          if at < text_until {
+            continue;
+          }
+          if let Some(mark) = tag
+            .split(" mark=\"")
+            .nth(1)
+            .and_then(|m| m.split('"').next())
+          {
+            out.push(format!("mark={mark}"));
+          }
+          if !tag.ends_with('/') {
+            text_until = open_end + creator[open_end..].find("</note>").expect("closed note");
+          }
+          continue;
+        }
+        let role = tag
           .split("role=\"")
           .nth(1)
           .and_then(|r| r.split('"').next())
@@ -68,6 +99,7 @@ pub(super) fn creators(xml: &str) -> Vec<Vec<String>> {
             .find("</contact>")
             .expect("closed contact");
         out.push(format!("{role}={}", text(&creator[open_end + 1..close])));
+        text_until = text_until.max(close);
       }
       out
     })

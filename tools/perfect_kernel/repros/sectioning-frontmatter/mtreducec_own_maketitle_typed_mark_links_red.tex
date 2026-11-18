@@ -1,0 +1,25 @@
+% mechanism: a mark the author types (`$^{1}$`) under the document's own `\maketitle`, whose `\thefootnote` is
+%   `\arabic`: TeX prints the typed "1" beside the first note's "1"; the glyph the `\thanks` prints is unknown here
+%   (MTREDUCE: no reader of an unrun `\maketitle` body), so nothing says the typed 1 is that note's
+% witness:  the review's probe own4 (revMTREDUCE S1); a lost feature of MTREDUCE (OXIDIZED_DESIGN_DIVERGENCES #1053)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1 Bob Baker1 Cy Cole2"; foot "1 Equal
+%   contribution.", "2 Corresponding: cy@x.org"
+% engines:  rust WRONGFIXc (the static reader) = 0 errors; Ann's note 1, Bob's typed mark 1 linked by its glyph,
+%   Cy's 2; MTREDUCEc = the notes unmarked, Bob's typed 1 a mark linking nothing
+% expect:   0 errors, 0 Warnings; Ann's note marked 1, Bob a copy of it, Cy's note marked 2
+% status:   RED (row R MTREDUCE-TYPED: a typed mark under a `\maketitle` whose glyph is unknown links nothing)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\par\begingroup
+ \renewcommand\thefootnote{\arabic{footnote}}%
+ \begin{center}{\LARGE\@title\par}\vskip 1em
+ {\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}
+ \@thanks\endgroup\setcounter{footnote}{0}}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker$^{1}$ \and Cy Cole\thanks{Corresponding: cy@x.org}}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

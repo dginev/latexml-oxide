@@ -1,0 +1,32 @@
+% mechanism: a hand-typed legend line under the names: a `\$` mark (not a footnote symbol) and a bare `*` typed after a
+%   superscript; each legend is the note of every name printing its symbol, its mark out of its text
+% witness:  1910.10432 (`Yunjiao Lu$^{1,2,\$}$`, `Alain Trubuil$^{1}$*`, `\textsuperscript{\$}these authors…`)
+% oracle:   pdflatex 0 errors; "Ann Able1,2,$, Bob Baker1,$, Cat Cole2, Dan Dorn1*", "$these authors contributed
+%   equally…", "*corresponding author"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[$]=these authors
+%   contributed equally to this work | affiliation=Univ A, Town ; affiliation=Univ B, City / Bob Baker ;
+%   thanks[$]=these authors contributed equally to this work | affiliation=Univ A, Town / Cat Cole |
+%   affiliation=Univ B, City / Dan Dorn ; thanks[*]=corresponding author | affiliation=Univ A, Town; HTML Ann
+%   Able ; $→note / Bob Baker ; $→note / Cat Cole / Dan Dorn | under: corresponding author / margin: these
+%   authors contributed equally to this work
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[$]=these authors contributed equally to this work |
+%   affiliation=Univ A, Town ; affiliation=Univ B, City / Bob Baker ; thanks[$]=these authors contributed
+%   equally to this work | affiliation=Univ A, Town / Cat Cole | affiliation=Univ B, City / Dan Dorn ;
+%   thanks[*]=corresponding author | affiliation=Univ A, Town; HTML Ann Able ; $→note / Bob Baker ; $→note /
+%   Cat Cole / Dan Dorn | under: corresponding author / margin: these authors contributed equally to this work
+%   (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1,2,\$}$, Bob Baker$^{1,\$}$, Cat Cole$^{2}$, Dan Dorn$^{1}$* \vspace{0.5cm} \\
+$^{1}$Univ A, Town\\
+$^{2}$Univ B, City \vspace{0.5cm} \\
+\textsuperscript{\$}these authors contributed equally to this work\\
+\textsuperscript{*}corresponding author}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: control: `\date{}` (2,969 census papers)
+% oracle:   pdflatex 0 errors; "Ann Able Bob Baker", no date
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; no date. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; unchanged (OD #1071)
+% status:   GREEN (control)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able \and Bob Baker}
+\title{T}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,44 @@
+% mechanism: the gtpart binding (latexml_contrib gtpart_cls.rs) reads the paper's gtpart.cls raw; a paper without the
+%   class (not in TeX Live) gets OmniBus with the loader's missing-file Warning, and the class's metadata setters,
+%   which print nothing (gtpart.cls:573-600 `\def\corresponding#1{\relax}` … `\def\published#1{\relax}`): the
+%   publication items, `\corresponding` the corresponding editor's (beside `\proposed`, `\seconded`), not an author's
+% witness:  1108.0474, 1201.1579, 1301.0616, 1301.5693, 1410.6974, 1512.00353 (`\documentclass{gtpart}`, no copy, the
+%   template's metadata block left empty: `\corresponding{}`)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape, with 2404.01499's gtpart.cls beside it): "Ann Able" with her
+%   address and e-mail; no metadata item printed
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, invented "Corresponding author." note (the kernel's AAAI stub), the other
+%   setters undefined; MTREDUCE (7608026a189) = `\corresponding` undefined as well
+% expect:   0 errors, 1 Warning (missing_file:gtpart); Ann with her address and e-mail, no note
+% status:   GREEN (MTREDUCEb: perfect_kernel_batchmtreduce::gtpart_metadata_setters_print_nothing)
+% preload:  ar5iv.sty
+\documentclass{gtpart}
+\title{A Title}
+\author{Ann Able}
+\givenname{Ann}
+\surname{Able}
+\address{University of Somewhere}
+\email{ann@x.org}
+\volumenumber{}
+\issuenumber{}
+\publicationyear{}
+\papernumber{}
+\startpage{}
+\endpage{}
+\MR{}
+\Zbl{}
+\published{}
+\publishedonline{}
+\proposed{}
+\seconded{}
+\corresponding{}
+\editor{}
+\version{}
+\arxivreference{}
+\arxivpassword{}
+\begin{document}
+\begin{abstract}
+An abstract.
+\end{abstract}
+\maketitle
+Body.
+\end{document}

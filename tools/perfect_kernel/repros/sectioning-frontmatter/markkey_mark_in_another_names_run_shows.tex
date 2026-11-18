@@ -1,0 +1,18 @@
+% mechanism: no dangling mark (OD #1059): a mark another name prints as a piece of its run is printed elsewhere —
+%   `Ann Able$^{1,3}$` prints the 1 of `Bob Baker$^{1}$` as Bob's 1 prints a piece of Ann's run (`f:glyph-elsewhere`)
+%   [MARKKEY1d: every unlinked name mark now shows, OD #1059's fail-safe; the glyph search above decides nothing]
+% witness: 2110.12052 (`Matej Zečević\textsuperscript{\rm 1}` beside `Devendra Singh Dhami\textsuperscript{\rm 1,3}`),
+%   2108.05462, 2604.02397
+% oracle:  pdflatex 0 errors: "Ann Able1,3 Bob Baker1"
+% engines: rust MARKKEY1 a427f6c06e0 = 0 errors 0 Warnings; Ann's 1,3 shown, Bob's 1 hidden
+% expect:  0 errors 0 Warnings; HTML Ann Able ; 1,3 plain / Bob Baker ; 1 plain
+% status:  RED (a427f6c06e0) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_beside_its_legend)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1,3}$ \and Bob Baker$^{1}$}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

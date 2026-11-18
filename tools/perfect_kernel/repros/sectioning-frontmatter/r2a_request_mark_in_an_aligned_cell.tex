@@ -1,0 +1,19 @@
+% mechanism: a name's request read in a math alignment cell (`aligned`) leaves no mark: the cell runs its `\aftergroup`
+%   inside the cell, where the mark would queue itself past the column; the settle step shows the label after the name
+% witness:  review revR2Ab B-1 (probe w04)
+% oracle:   pdflatex 0 errors; "Ann Able1∗ Bob Baker2"
+% engines:  rust R2Ab 2ab6945b9d5 = "affiliation : 11" in Ann's name (the request read as text in a new cell) and an
+%   empty footnotemark note; rust PRESBXc = Ann Able ; footnotemark[1]
+% expect:   0 errors, 1 Warning (the decline); Ann Able ; footnotemark[1] ; Bob Baker ; footnotemark[2]; no lx@, no
+%   "affiliation" text
+% status:   GREEN (perfect_kernel_batchr2a::a_request_mark_in_a_math_cell_leaves_no_mark)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$\begin{aligned}^{1}\end{aligned}$\footremember{zz}{Zebra University.} \and Bob Baker$^{2}$}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: a package's `\maketitle` that sets no `\thefootnote` but makes a footnote before the title (the "in force"
+%   path, `touches_marks`: a note command the refused body itself runs) has unknown marks here; one in a macro it
+%   calls stays the names' (11lomcon.sty's `\@aabuffer`, hep-ph0312288)
+% witness:  none (review revPRESBXb BL2, p/n2.tex)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "∗ A Title / Ann Able† Bob Baker‡"; foot "∗ Preprint under
+%   review." "† First note." "‡ Second note."
+% engines:  rust PRESBXbase2 (14e92b291ab) = 0 errors, 0 Warnings; both notes unmarked; PRESBXb (300685cb312) = Ann
+%   thanks[∗], Bob thanks[†]
+% expect:   the fail-safe: 0 errors, 0 Warnings; both notes unmarked, each under its name
+% status:   RED (PRESBXb) -> GREEN fail-safe, XML and HTML RED against the PDF (PRESBXc:
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% moves:    XML, HTML row R SHAUTO/T1
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{presbxcprenote.sty}
+\renewcommand\maketitle{\begingroup\footnote{Preprint under review.}\begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{presbxcprenote}
+\makeatletter\def\thefootnote{\fnsymbol{footnote}}\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

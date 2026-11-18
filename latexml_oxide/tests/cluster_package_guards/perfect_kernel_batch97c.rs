@@ -126,7 +126,7 @@ fn llncs_institute_hand_numbered_lines_keep_the_institute_shared() {
     both_ways(repro!("llncs_institute_hand_numbered_lines_shared.tex"), &[
     ]),
     // (P4f: each cut entry shows its mark as the names show theirs — pdflatex "1Lab B, 2Lab C")
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Lab B</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Lab C</contact> </creator>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Lab B</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Lab C</contact> </creator>"#
   );
 }
 

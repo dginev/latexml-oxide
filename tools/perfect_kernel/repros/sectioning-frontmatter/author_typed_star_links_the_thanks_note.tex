@@ -1,0 +1,19 @@
+% mechanism: a `$^*$` typed on a name repeats the ∗ article's `\thanks` prints for another name: the name's mark-only
+%   note links to that note on the page. The `\thanks` note's mark is `*` (`\@fnsymbol`), the typed one U+2217; the
+%   page's linker keys fold the two, as f:printed-glyph does (LaTeXML-meta-xhtml.xsl)
+% witness:  1705.05427 (`Kareem Amin\thanks{Equal contribution.}`, `Nan Jiang$^*$`); 1903.10478 (authblk, the same
+%   shape)
+% oracle:   pdflatex 0 errors; "Kareem Amin∗ Nan Jiang∗ Dee Dorn", the footnote "∗ Equal contribution."
+% engines:  rust R2Ac (int/frontmatter f77c7b5430e) = 0 errors, 0 Warnings; XML Kareem Amin ; thanks[*]=Equal
+%   contribution. / Nan Jiang ; footnotemark[∗] / Dee Dorn; HTML Nan Jiang's ∗ plain (linked to nothing)
+% expect:   0 errors, 0 Warnings; HTML Nan Jiang's ∗ links to Kareem Amin's note, printed once in the margin (the
+%   guard's XML and HTML lines)
+% status:   RED (R2Ac) -> GREEN (CONNFIX; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Star Link}
+\author{Kareem Amin\thanks{Equal contribution.} \and Nan Jiang$^*$ \and Dee Dorn}
+\begin{document}
+\maketitle
+Text.
+\end{document}

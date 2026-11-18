@@ -837,7 +837,7 @@ pub(in crate::base_utilities) fn note_call_end(line: &[Token], i: usize) -> Opti
 /// mark requests affiliation 1, the symbol is shown, as for `$^{1,*}$` (else the one request `affiliation:1*` matched no
 /// affiliation, and affiliation 1 went to no one; authblk's `\author{Ann$^{1*}$}`, 77n r3; the neurips fixture's Wenqi
 /// Shao, 2507.06670). Both are written in the order they print, for an unanswered mark to show there
-/// (`show_unanswered_marks`: 2610.07087's `$^{1*}$`). The symbol is shown as written: a math `*` as `∗`, as the unsplit
+/// (`settle_name_marks`: 2610.07087's `$^{1*}$`). The symbol is shown as written: a math `*` as `∗`, as the unsplit
 /// `$^{1,*}$` keeps it (2210.14772, 2508.09827, 2505.11121; [`keepsup_in_math`]), a text one as `*`.
 ///
 /// NUMERIC/lettered affiliation marks (`$^{1}$`, `\textsuperscript{a}`) are left

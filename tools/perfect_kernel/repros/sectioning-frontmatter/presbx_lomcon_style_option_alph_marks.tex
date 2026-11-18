@@ -1,0 +1,36 @@
+% mechanism: a `\documentstyle` option's `\maketitle` (11lomcon.sty:20-27) prints the author buffer as text and sets no
+%   mark command (nor any macro it calls), so the authors' `\footnote`s print under the `\thefootnote` in force, the
+%   option file's :61 `\def\thefootnote{\alph{footnote}}`, not article's `\@fnsymbol` (`latex_constructs::
+%   class_maketitle_in_force`, `MaketitleMarks::InForce`; the refusal's file, `\maketitle:redefined@in`, is no class file)
+% witness:  hep-ph0312288 (11lomcon.sty: Osipenko "a", Simula "b"; written ∗ †); the style a minimal stand-in
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Ablea, Bob Bakerb, Cy Cole"; foot "a e-mail:
+%   ann@x.org", "b e-mail: bob@y.org"; the body's note "c"
+% engines:  rust PRESBXbase (d45633020ab) = 0 errors, 0 Warnings; Ann thanks[∗], Bob thanks[†], the body's note "a"
+% expect:   0 errors, 0 Warnings; Ann's note marked a, Bob's b; the body's note is written "a" (pre-existing, row R
+%   PRESBX/counter: the article binding's title sets the counter back, which 11lomcon's does not)
+% status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+%   -> RED again (MTREDUCE, DG 2026-11-17 maketitle reduce: a `\maketitle` not the class's and no binding's has
+%   unknown marks, `latex_constructs::class_maketitle_in_force`; no glyph, each note under its name; row R MTREDUCE)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{presbxlom.sty}
+\def\@aabuffer{}
+\def\author #1{\expandafter\def\expandafter\@aabuffer\expandafter{\@aabuffer \small\rm #1\relax \par}}
+\def\address#1{\expandafter\def\expandafter\@aabuffer\expandafter{\@aabuffer \small\it #1\relax \par\vspace{0em}}}
+\def\maketitle{
+\begin{center}
+   {\bf \@title \par}
+   \vskip 1em
+   \@aabuffer\relax
+\end{center} \par
+\gdef\@aabuffer{}
+}
+\def\thefootnote{\alph{footnote}}
+\end{filecontents*}
+\documentstyle[presbxlom]{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able\footnote{e-mail: ann@x.org}, Bob Baker\footnote{e-mail: bob@y.org}, Cy Cole}
+\address{University of Somewhere}
+\maketitle
+Body.\footnote{A body note.}
+\end{document}

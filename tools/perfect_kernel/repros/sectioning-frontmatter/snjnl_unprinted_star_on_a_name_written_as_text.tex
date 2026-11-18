@@ -1,0 +1,24 @@
+% mechanism: under an unlabelled last `\author` the class prints no labels and no `*` (2412.01641's sn-jnl.cls:498,
+%   :510, `\ifx\@authfrstarg\empty`); a starred name written as text (a typed mark inside `\fnm`) with no `\email`
+%   after it has no corresponding line either, so its `*` label is answered by nothing and must not show
+% witness:  2606.13079 (`\author*[]{\fnm{Geng Hong$^{\dag}$}}` ×4 under a starred unlabelled last `\author`: the PDF
+%   prints only † marks)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able† and Bob Baker†", "† Univ A." (no ∗)
+% engines:  rust WRONGFIXc (base) = no ∗; rust SNJNLb 2f983570f17 = Bob's invented `footnotemark[∗]`; rust SNJNLc =
+%   no ∗ (`print_notes` declares the unprinted `*` label as printing nothing)
+% expect:   0 errors 2 Warnings (the names written as their plain text); no ∗ on any name
+% status:   RED (SNJNLb) -> GREEN XML, HTML (SNJNLc, review revSNJNLb B1;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author{\fnm{Ann Able$^{\dag}$}}
+\author*{\fnm{Bob Baker$^{\dag}$}}
+\affil{$^{\dag}$\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

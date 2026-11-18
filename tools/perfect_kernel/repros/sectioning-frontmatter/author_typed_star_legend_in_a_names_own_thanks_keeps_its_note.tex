@@ -1,0 +1,19 @@
+% mechanism: a symbol legend that is a name's own `\thanks` (`Cy Cole\thanks{$^*$The first two authors…}`, the typed
+%   `$^*$` its label) is the note of the names typing ∗ AND of the name whose `\thanks` it is (Perl's association): the
+%   note-mark fallback of resolver/post.rs skips only another note's carrier where a name inks the symbol (OD #1068)
+% witness:  1904.09324 ("Yinhan Liu∗", his `\thanks` the equal-contribution legend), 2204.06136 (ieeeconf, Krstic's
+%   `\thanks` the ∗ legend and his e-mail); revCONNFIX B1 probe i5
+% oracle:   pdflatex 0 errors; "Ann Able∗, Bob Baker∗, and Cy Cole∗", the footnote "∗∗The first two authors
+%   contributed equally. All authors are with Univ X, cy@x.org."
+% engines:  rust CONNFIXb (2bdd7f0f730) = 0 errors, 0 Warnings; XML Cy Cole carries no note, no mark
+% expect:   0 errors, 0 Warnings; the note on all three names, one note on the page (the guard's XML and HTML lines)
+% status:   RED (CONNFIXb) -> GREEN (CONNFIXc; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Own Legend}
+\author{Ann Able$^*$, Bob Baker$^*$, and Cy Cole\thanks{$^*$The first two authors contributed equally. All authors
+are with Univ X, cy@x.org.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

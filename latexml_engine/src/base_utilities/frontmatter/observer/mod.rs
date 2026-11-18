@@ -57,6 +57,8 @@ pub use argument_marks::{
 pub(in crate::base_utilities) use argument_marks::{
   argument_marks_and_name, argument_name_text, count_unread as count_unread_marks,
 };
+// (a binding rebuilding a printed text: its specials as their commands)
+pub use emitter::printed_text_tokens;
 pub(in crate::base_utilities) use emitter::{
   EMITTING, NAMES_SHOWN_LABELS, SETTERS_RECOVERED, block_creator_written, calls::*,
   check_placed_content, emit_commands, emitted, names_show_label, setters_recovered, take_digested,
@@ -73,6 +75,7 @@ pub(in crate::base_utilities) use ledger::{
 };
 pub use ledger::{
   author_tail_declared as fm_author_tail_declared, class_maketitle_runs as fm_class_maketitle_runs,
+  class_prints_date_under_authors as fm_class_prints_date_under_authors,
   class_prints_title_at_setters as fm_class_prints_title_at_setters, note_binding_load,
   record_note_text as fm_record_note_text, record_switched_off_call as fm_record_switched_off_call,
 };
@@ -85,14 +88,17 @@ pub use policy::{
   AuthorPage as FmAuthorPage, EmailOwner as FmEmailOwner, KERNEL as FM_KERNEL_CONVENTIONS,
   MaketitleRuns as FmMaketitleRuns, Policy as FmConventions, TitleMarks as FmTitleMarks,
   TitlePageDecl as FmTitlePageDecl, declare_frontmatter_conventions,
+  declare_unexplained_name_labels,
 };
 pub(in crate::base_utilities) use reading::read_at_flush;
 pub use reading::{fm_reading_json, reset_fm_reading};
-pub use rehearsal::{reading_author_fields, rehearsing_author_fields};
+pub use rehearsal::{reading_author_fields, rehearsal_footnote_value, rehearsing_author_fields};
 // (the old reader's owner logic, moved unchanged, for its callers in `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
 pub(in crate::base_utilities) use resolver::owners::*;
 // (for the guards, which resolve a block's input again)
 pub use resolver::{Input as FmInput, Resolved as FmResolved, resolve as fm_resolve};
+// (a binding's declaration of how its class prints a name's marks, `elsarticle_cls.rs`)
+pub use resolver::{MARKS_LISTED, declare_marks_listed};
 pub use separators::{
   ArgSeparator as FmArgSeparator, SepMeaning as FmSepMeaning, argument_separators,
   argument_separators_at_every_level, kernel_separator_runs, split_at_kernel_separators,

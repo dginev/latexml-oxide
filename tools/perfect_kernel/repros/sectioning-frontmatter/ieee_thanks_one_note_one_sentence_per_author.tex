@@ -1,0 +1,20 @@
+% mechanism: one IEEEtran `\thanks` of one sentence per author, each "<name> is with <affiliation>, (e-mail: <address>)."
+%   routed on its own (`route_author_thanks`, OD #1072); the label's parenthesis and the list comma before it are the
+%   sentence's punctuation, not the affiliation's
+% witness: 2206.13704; 1207.6084 ("(email: a@, b@)", two authors in one sentence)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two names, one unmarked note
+% engines: MTREDUCEd: the note a title pubnote
+% expect:  0 errors, 0 warnings; Ann Able with Univ A and aa@unia.jp, Bob Baker with Univ B and bb@unib.jp; no pubnote
+% status:  GREEN (IEEEROUTE; guard perfect_kernel_batchieeeroute)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{One Note}
+\author{Ann~Able,~\IEEEmembership{Member,~IEEE,}
+	and~Bob~Baker
+\thanks{
+	A. Able is with Graduate School of Science, Univ A, Town 739-8527, Land, (e-mail: aa@unia.jp).
+	B. Baker is with Faculty of Letters, Univ B, City 108-8345, Land, (e-mail: bb@unib.jp).
+}}
+\maketitle
+Body.
+\end{document}

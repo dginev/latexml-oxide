@@ -1,0 +1,27 @@
+% witness: the sibling of revSHRESTb B2: a bare `\footnotemark` in a name steps the counter, a given one
+%          (`\footnotemark[2]`) does not, and its note no longer tells which: the count is unknown, so no mark is written
+%          (the fail-safe: no glyph rather than a wrong one)
+% oracle:  pdflatex 0 errors; "Ann Ablea", "Univ A", "Bob Baker† and Cy Cole†", "Univ B"
+% engines: rust=0 (SHRESTb: Bob's and Cy's note marked ∗, a mark pdflatex never prints) perl=0 (contacts, no marks)
+%          (2026-11-16)
+% expect:  0 errors, 0 warnings; Bob and Cy each with the thanks contact "Equal contribution.", unmarked (OD #1054)
+% status:  RED (SHRESTb) -> GREEN (SHRESTc); Ann's `\footnotemark`: MARKSAFE writes it no mark (REVTeX 4.1/4.2 set a
+%          name's marks in their minipage letters, "a", unknown here: `latex_constructs::drop_unknown_title_mark`;
+%          perfect_kernel_batchshmark::a_names_mark_revtex_sets_apart_is_unknown); the printed "a" stays RED
+%          (row R REVNAMEMARK)
+% preload: ar5iv.sty
+\documentclass[aps,prl,preprint]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able\footnotemark}
+\affiliation{Univ A}
+\author{Bob Baker}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\author{Cy Cole}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

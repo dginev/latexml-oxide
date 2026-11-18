@@ -1419,6 +1419,49 @@ mod witnessed_css_delta {
   }
 
   #[test]
+  fn shared_author_note_delta_stays_present() {
+    // OXIDIZED_DESIGN_DIVERGENCES #1052 (DG's rulings of 2026-11-16): a marked author note follows the name, set as
+    // text; where an author's lines show under the name (the #783 card, ltx_authors_multiline) its marked notes show
+    // there, each headed by its mark, one author's too (DG 2026-11-17, 2506.06941's †; 2606.00446, 2407.07614,
+    // 1706.03762). An
+    // unmarked note is no one author's (IEEEtran's \thanks, 1510.02728): no rule shows it under the name. A pure name's
+    // mark-only note (ltx_role_footnotemark, 0801.1438) shows its mark there too; a body under the name floats, so the
+    // marks after it stay on the name's line; consecutive marks are parted by a comma. The browser half is
+    // `cluster_cli::browser_render_author_lines`. A shared note's other marks carry a hidden copy of it
+    // (`ltx_note_copy`, DG 2026-11-17), which the card never floats under the name: its classic pop-up alone shows it.
+    const CARD: &str = ".ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(\
+                        .ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks)))";
+    let card = format!(":is({CARD}, .ltx_authors_multiline .ltx_creator)");
+    let lines = format!("{card} .ltx_annotated_personname > .ltx_note");
+    let body = ".ltx_note_outer:not(.ltx_note_copy)";
+    let css = bundled_latexml_css();
+    for rule in [
+      ".ltx_annotated_personname:has(> .ltx_note) { display:inline; }".to_string(),
+      ".ltx_note_shared > .ltx_note_mark > a { color:inherit; text-decoration:none; }".to_string(),
+      format!("{lines} {{ display:inline; }}"),
+      format!("{lines} > {body} .ltx_note_content {{\n    display:block; position:static; float:inline-start; clear:both; width:100%;"),
+      format!("{lines} > {body} .ltx_note_content .ltx_note_mark {{ position:static; }}"),
+      format!("{lines} > {body} .ltx_note_type {{ display:none; }}"),
+      ".ltx_annotated_personname > .ltx_note:has(~ .ltx_note) > .ltx_note_mark::after { content:\",\"; }".to_string(),
+    ] {
+      assert!(
+        css.contains("#1052") && css.contains(&rule),
+        "LaTeXML.css lost the shared author note rule `{rule}` (#1052)"
+      );
+    }
+    assert!(
+      !css.contains(&format!(
+        "{lines}:not(.ltx_note_shared):not(.ltx_role_footnotemark) .ltx_note_mark"
+      )),
+      "LaTeXML.css hides a one-author note's mark again (DG 2026-11-17: every marked note shows the mark the PDF prints)"
+    );
+    assert!(
+      !css.contains(&format!("{card} > .ltx_note")),
+      "LaTeXML.css shows an unmarked author note under the name (#1052, 1510.02728)"
+    );
+  }
+
+  #[test]
   fn constrained_equation_overflow_delta_stays_present() {
     let css = bundled_latexml_css();
     assert!(
@@ -1483,17 +1526,47 @@ mod witnessed_css_delta {
     // halves so a re-vanilla / cleanup sweep cannot silently drop the collapse.
     let css = bundled_latexml_css();
     assert!(
-      css.contains(".ltx_pubnotes:before") && css.contains(r#"content:"\002020""#),
-      "the title-footnote MARK rule (.ltx_pubnotes:before dagger) is missing from \
-       LaTeXML.css (arXiv/html_feedback#6888)",
+      css.contains(".ltx_pubnotes:before {\n    content:\"\\24D8\""),
+      "the title-footnote handle rule (.ltx_pubnotes:before, ⓘ since OXIDIZED_DESIGN_DIVERGENCES #1069) is missing \
+       from LaTeXML.css (arXiv/html_feedback#6888)",
     );
     assert!(
       css.contains(".ltx_pubnotes .ltx_pubnotes_content")
         && css.contains("visibility:hidden; opacity:0"),
       "the title-footnote CONTENT-hidden rule (.ltx_pubnotes .ltx_pubnotes_content \
        {{ visibility:hidden }}) is missing from LaTeXML.css: the `\\thanks` text would \
-       render inline in the title instead of collapsing to the dagger \
+       render inline in the title instead of collapsing to its handle \
        (arXiv/html_feedback#6888)",
     );
+  }
+
+  #[test]
+  fn css_draws_no_footnote_mark_glyph() {
+    // DG 2026-11-17 (OXIDIZED_DESIGN_DIVERGENCES #1069): the page carries every mark the PDF prints, and a generated
+    // mark only where it prints none, unique against them; a glyph the stylesheet draws is neither, so it is never one
+    // of the marks' glyphs. The hover handles for an author's hidden contacts and for the title notes draw ⓘ (Perl:
+    // `*` and `†`, which read as a second mark beside a printed one: 2606.00446's "Park**", 2605.10496's title †).
+    let css = bundled_latexml_css();
+    for glyph in [
+      "*", "\\2217", "∗", "\\002020", "\\2020", "†", "\\2021", "‡", "\\00A7", "§", "\\00B6", "¶",
+      "\\2016", "‖",
+    ] {
+      for spaced in ["", " "] {
+        let rule = format!("content:{spaced}\"{glyph}\"");
+        assert!(
+          !css.contains(&rule),
+          "LaTeXML.css draws the footnote-mark glyph `{rule}`"
+        );
+      }
+    }
+    for handle in [
+      ".ltx_author_notes:before {\n    content:\"\\24D8\"",
+      ".ltx_pubnotes:before {\n    content:\"\\24D8\"",
+    ] {
+      assert!(
+        css.contains(handle),
+        "LaTeXML.css lacks the ⓘ hover handle `{handle}`"
+      );
+    }
   }
 }

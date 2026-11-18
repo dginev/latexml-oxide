@@ -1,0 +1,18 @@
+% mechanism: a kernel `\author` block's `$^*$Equal contribution` legend line under two starred names: the emitter's note
+%   (emit.rs `note_call`, legend mark) kept the `$^*$` in its text beside `mark="∗"`; the mark rule takes the copy out
+%   (`insert::mark_creator_notes`), each carrier's copy alike (DG ruling 1 of 2026-11-16)
+% witness: 2606.00446's sibling; 2105.14239 (`$^{*,1}$` names, `$^*$Equal contribution.`)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗, Bob Baker1,∗, Cat Cole1", "1 Univ A, Town", "∗ Equal contribution" once
+% engines: rust REGFIX = 0 errors, Able and Baker each a note mark="∗" reading "∗Equal contribution"; perl 0.8.8 = an
+%   affiliation per carrier
+% expect:  0 errors 0 warnings; Able's and Baker's note mark="∗" reading "Equal contribution"
+% status:  RED (REGFIX) -> GREEN (perfect_kernel_batchshmark::a_notes_mark_is_never_in_its_text)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1,*}$, Bob Baker$^{1,*}$, Cat Cole$^{1}$\\ $^1$Univ A, Town\\ $^*$Equal contribution}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

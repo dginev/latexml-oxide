@@ -30,6 +30,8 @@ mod repart;
 
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
 pub(super) use content::{Field, aligned};
+// (a binding that rebuilds a printed text as tokens, `ieeetran_cls.rs`'s routed addresses)
+pub use emit::printed_text_tokens;
 pub(in crate::base_utilities) use emit::{
   Analysis, EMITTING, NAMES_SHOWN_LABELS, SETTERS_RECOVERED, block_creator_written, emit_commands,
   emitted, names_show_label, setters_recovered, take_digested,

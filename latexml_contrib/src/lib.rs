@@ -37,9 +37,11 @@ pub mod mytemplate_sty;
 // xkvview_sty: consolidated into latexml_package (Perl Package/xkvview.sty.ltxml)
 
 // ar5iv-bindings ports
+pub mod aaai_sty;
 pub mod aamas_cls;
 pub mod abntex2cite_sty;
 pub mod achemso_cls;
+pub mod acl_sty;
 pub mod aero_cls;
 pub mod agujournal2019_cls;
 pub mod aguplus_cls;
@@ -124,13 +126,17 @@ pub mod directory_sty;
 pub mod dmtcs_episciences_cls;
 pub mod doclicense_sty;
 pub mod ecai_cls;
+pub mod gtpart_cls;
 pub mod hld_cls;
+pub mod iclr_sty;
 pub mod imakeidx_sty;
 pub mod jurabib_sty;
 pub mod kluwer_cls;
 pub mod knittingpattern_cls;
 pub mod lni_cls;
 pub mod midl_cls;
+pub mod siamproceedings_sty;
+pub mod usenix_sty;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
 pub mod bfhlayout_sty;
 pub mod brief_cls;
@@ -280,6 +286,7 @@ pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod ptephy_cls;
 pub mod quotchap_sty;
+pub mod ragslab_sty;
 pub mod rasti_cls;
 pub mod rccol_sty;
 pub mod refstyle_sty;
@@ -406,6 +413,31 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // (aistats2012.sty, aistats2014.sty … aistats2027.sty), `aistats2026` by name as before, and the 2010-2011 templates
   // by their own names, which keep a letter after the digits (aistats2e.sty: 1003.0024, 1302.5134, 1302.4922's
   // `format/aistats2e`; its margin variant aistats2eM.sty: 1202.1568).
+  // AAAI's styles (aaai_sty.rs): `aaai` answers aaai.sty and the years the versioned fallback strips to it.
+  ("aaai", "sty", aaai_sty::load_definitions),
+  // ACL's styles (acl_sty.rs), each family by the name the versioned fallback strips its years to.
+  ("acl", "sty", acl_sty::load_definitions),
+  ("coling", "sty", acl_sty::load_definitions),
+  ("conll", "sty", acl_sty::load_definitions),
+  ("eacl", "sty", acl_sty::load_definitions),
+  ("emnlp", "sty", acl_sty::load_definitions),
+  ("emnlp-ijcnlp", "sty", acl_sty::load_definitions),
+  ("naacl", "sty", acl_sty::load_definitions),
+  ("naaclhlt", "sty", acl_sty::load_definitions),
+  ("tacl", "sty", acl_sty::load_definitions),
+  // The NIPS style's descendants (iclr_sty.rs), each family by the name the versioned fallback strips its years to.
+  ("iclr", "sty", iclr_sty::load_definitions),
+  ("tmlr", "sty", iclr_sty::load_definitions),
+  ("corl", "sty", iclr_sty::load_definitions),
+  ("nips", "sty", iclr_sty::load_definitions),
+  // USENIX's styles (usenix_sty.rs): usenix.sty and the versions the fallback strips to it.
+  ("usenix", "sty", usenix_sty::load_definitions),
+  (
+    "siamproceedings",
+    "sty",
+    siamproceedings_sty::load_definitions,
+  ),
+  ("gtpart", "cls", gtpart_cls::load_definitions),
   ("aistats", "sty", aistats_sty::load_definitions),
   ("aistats2026", "sty", aistats_sty::load_definitions),
   ("aistats2e", "sty", aistats_sty::load_definitions),
@@ -758,6 +790,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("elife", "cls", elife_cls::load_definitions),
   ("examdesign", "cls", examdesign_cls::load_definitions),
   ("fairmeta", "cls", fairmeta_cls::load_definitions),
+  // ragslab.sty, a package on `article` whose title API mirrors fairmeta's (ragslab_sty.rs).
+  ("ragslab", "sty", ragslab_sty::load_definitions),
   ("fcs", "cls", fcs_cls::load_definitions),
   ("brief", "cls", brief_cls::load_definitions),
   ("g-brief", "cls", g_brief_cls::load_definitions),

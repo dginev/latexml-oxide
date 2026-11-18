@@ -1,0 +1,21 @@
+% mechanism: `\corref` reads its argument whole (`\elsRef{#1}`, `X@a,b`: no `\@for`, elsarticle.cls:188-190), so
+%   `\corref{a,b}` names `\cortext[a,b]` (whose `\elsLabel{a,b}` writes `X@a,b`) and prints its ∗ on the first name: no
+%   key list, no Warning; the note's label is defined for its whole key (`marked_note_text`)
+% witness: revELSARTc r07b (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗, Bob Twoa"; footnote "∗ Corr ab"
+% engines: rust ELSARTc (8756e486ffb): Bob Corr ab (an undefined label: an unlabelled contact), 1 false Warning;
+%   INTFMfinal: the expected
+% expect:  0 errors 0 Warnings; Alice One Corr ab
+% status:  RED (ELSARTc) -> GREEN (ELSARTd) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}\corref{a,b}
+\author[l1]{Bob Two}
+\cortext[a,b]{Corr ab}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x
+\end{document}

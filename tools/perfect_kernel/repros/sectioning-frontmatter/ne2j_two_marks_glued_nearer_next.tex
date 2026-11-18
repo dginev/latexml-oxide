@@ -1,0 +1,22 @@
+% mechanism: two given `\footnotemark`s glued to each other between two names, nearer the next: each mark's event span
+%   starts where the box before it began (the first's at the `\qquad`, the second's at the first mark), so the prefix
+%   writer wrote each span whole, the first mark twice (`emit::own_span`: each run from its own first token)
+% witness:  none (review revSHGNEXT B1; the shape of 2412.20504's `\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`)
+% oracle:   pdflatex 0 errors; "Ann Able (27.3pt) ∗† (7.8pt) Bob Baker Carl Cole" (pdftotext -bbox; both marks `\rlap`ped at
+%   272.0pt, over Bob's name)
+% engines:  rust merge 6115962c1de: 0 errors, 0 Warnings, Bob ∗ ∗ † (a mark invented); perl 0.8.8: 0 errors, Bob's
+%   personname with marks 1, 2
+% expect:   0 errors, 0 Warnings; XML Bob Baker ; footnotemark[*]= ; footnotemark[†]=; HTML Bob Baker ; * plain ; † plain
+% status:   RED (merge 6115962c1de) ->
+%   GREEN (perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores, XML and HTML)
+% ruling:  DG 2026-11-17 supersedes the nearer-by-glue rule of the expect above: between two names the name before,
+%   the next only at a line's or cell's start or under the block's edge proof (re-pinned, WRONGFIXb)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \qquad \footnotemark[1]\footnotemark[2] \ Bob Baker \and Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

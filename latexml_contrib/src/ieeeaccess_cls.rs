@@ -83,10 +83,8 @@ LoadDefinitions!({
   DefRegister!("\\titlepgskip" => Dimension!("0pt"));
   // Metadata — preserve author values.
   DefMacro!("\\doi{}", "\\@add@frontmatter{ltx:note}[role=doi]{#1}");
-  DefMacro!(
-    "\\address[]{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#2}"
-  );
+  // ieeeaccess.cls:456-457 `\address` numbers the entry, :568 prints it under the names (2006.03169): OD #1074.
+  DefMacro!("\\address[]{}", "\\lx@names@note{address}{#2}");
   DefMacro!(
     "\\tfootnote{}",
     "\\@add@frontmatter{ltx:note}[role=titlenote]{#1}"

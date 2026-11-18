@@ -1,0 +1,25 @@
+% mechanism: a package's own `\maketitle` that sets `\thefootnote` before it prints the title prints that mark: here
+%   `\renewcommand{\thefootnote}{\@arabic\c@footnote}` (lni.cls:475-477's shape) numbers the authors' notes 1, 2
+%   (`latex_constructs::class_maketitle_in_force`, the dropped body's assignment, braced or not)
+% witness:  none (synthetic sibling of 2110.09738's `\def\thefootnote{}`, spconf.sty:148)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1 Bob Baker2", foot "1 Note A." "2 Note B."
+% engines:  rust PRESBXbase (d45633020ab) = 0 errors, 0 Warnings; Ann thanks[∗], Bob thanks[†] (its closing
+%   `\global\let\maketitle\relax` read as a call of the class's)
+% expect:   0 errors, 0 Warnings; Ann thanks[1], Bob thanks[2]
+% status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+%   -> RED again (MTREDUCE, DG 2026-11-17 maketitle reduce: a `\maketitle` not the class's and no binding's has
+%   unknown marks, `latex_constructs::class_maketitle_in_force`; no glyph, each note under its name; row R MTREDUCE)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{presbxarabic.sty}
+\renewcommand\maketitle{\par\begingroup\renewcommand{\thefootnote}{\@arabic\c@footnote}%
+  \newpage\global\@topnum\z@\@maketitle\@thanks\endgroup
+  \setcounter{footnote}{0}\global\let\thanks\relax\global\let\maketitle\relax}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{presbxarabic}
+\title{A Title}
+\author{Ann Able\thanks{Note A.} \and Bob Baker\thanks{Note B.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

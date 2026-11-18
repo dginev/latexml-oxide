@@ -994,7 +994,16 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("[accumulate] package/ieeetran_cls.rs", 1),
   ("[accumulate] package/ims_support_sty.rs", 1),
   ("[mark] lmcs_cls.rs", 1),
+  // (acmart's `\authornote` and `\authornotemark[n]`: the note's printed mark, the `ltx:note` schema attribute Perl's
+  // `\lx@note` writes too, latex_constructs.pool.ltxml:461 — OD #1053, the mark rule)
+  ("[mark] package/acmart_cls.rs", 1),
   ("[mark] package/iopart_support_sty.rs", 1),
+  // (icml's `\icmlsetsymbol` label on a name: the symbol a mark-only note of the creator, as acmart's `\authornotemark`,
+  // not a superscript in the name, whose `fuzzy:` label `\icmlcorrespondingauthor` must spell — 1904.07793; OD #1063)
+  ("[mark] package/icml_support_sty.rs", 1),
+  // (SNJNL: the glyph sn-jnl's `\author*` and author notes print on the names, the `ltx:note` schema attribute, on the
+  // one labelled note each queues, as acmart's; OD #1066)
+  ("[mark] sn_jnl_cls.rs", 1),
   ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
   // (P28m3: a new key, distinct from `\lx@sup@setlabel@affiliation`'s `_bymark` (revP28m3): the mark an address under a
   // marked affiliation was placed by, for a names call the reading parts; 2510.10414)
@@ -1004,6 +1013,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   ("_group= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_grouped= package/revtex4_support_sty.rs", 1),
+  // (DATELEG, OD #1071: a `\date` legend line under the names is called as authblk's `\affil[label]` is, its label printed
+  // with the line, which the Kind step reads a legend by — `$^*$Equal contribution.` the names' note, not an affiliation)
+  ("_labelprints= base_utilities/frontmatter/date_legend.rs", 1),
   ("_labelprints= cas_dc_cls.rs", 1),
   ("_labelprints= package/authblk_sty.rs", 1),
   ("_labelprints= package/jheppub_sty.rs", 1),
@@ -1017,12 +1029,6 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // emitter's)
   ("_merged_checked= base_utilities/defs/author_macros.rs", 1),
   ("_net= frontmatter_stores.rs", 1),
-  // (CL8, 0 -> 1: the whole printed mark a glued sub-lettered request was parted from, `whole_marks_key` — Perl's own
-  // `_refmarkshown` display, written by the emitter as `author_macros.rs` writes it; 1705.11109)
-  (
-    "_refmarkshown= base_utilities/frontmatter/observer/emitter/emit.rs",
-    1,
-  ),
   ("_scopebegin= package/pgfsys_latexml_def.rs", 1),
   ("_sequence= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_share= cas_dc_cls.rs", 1),
@@ -1036,6 +1042,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("_unsplit= frontmatter_stores.rs", 1),
   ("_unsplit= package/revtex4_support_sty.rs", 1),
   ("_withsup= base_utilities/frontmatter/observer/ledger.rs", 2),
+  // (BLOCKPLACE, OD #1074, raised 0 -> 1: `\lx@names@note`, the one declaration of a note its class prints under the
+  // names, which the bindings call instead of each writing `_zone=names`)
+  ("_zone= base_utilities/defs/frontmatter_api.rs", 1),
   ("_zone= package/aa_support_sty.rs", 2),
   ("_zone= package/elsarticle_cls.rs", 2),
   ("_zone= package/revtex4_support_sty.rs", 2),
@@ -1074,6 +1083,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _kinded base_utilities/defs/frontmatter_api.rs", 1),
+  // (CONNFIXb, 0 -> 1, raised with its reason: the superscript `insert::settle_name_marks` shows of a name's binding labels
+  // alone (authblk's `\author[1,*]` no `\affil` explains), which the pure-name pass classes `ltx_note_label` so the page's
+  // ∗/* fold never links it to a `\thanks`; Perl's API has no key for "a binding's label, not typed", Perl drops the
+  // label; internal, never written out: OD #1052, #1064)
+  ("const _labelmark base_utilities/frontmatter/insert.rs", 1),
   // (OD #961's key, with the API that declares it since P2r2, which `author_block/`, `frontmatter/` and the emitter import)
   (
     "const _labelprints base_utilities/defs/frontmatter_api.rs",
@@ -1085,6 +1099,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _latecall base_utilities/frontmatter/insert.rs", 1),
+  // (a mark that led an affiliation, an internal attribute until `insert::drop_linking_marks` drops it: OD #1053)
+  (
+    "const _leads_contact base_utilities/frontmatter/queue_digest.rs",
+    1,
+  ),
   ("const _linefirst base_utilities/frontmatter/insert.rs", 1),
   ("const _linelist base_utilities/frontmatter/insert.rs", 1),
   ("const _linemark base_utilities/frontmatter/insert.rs", 1),
@@ -1093,6 +1112,48 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _linklabel base_utilities/frontmatter/insert.rs", 1),
+  // (SHMARKb, 0 -> 1: a note whose mark the emitter read off the bare symbol its text opens with, the copy
+  // `insert::strip_bare_mark` takes out — never one a class prints beside its own text, review revSHMARK S2. Perl's API
+  // has no key for "the mark is the text's own"; internal, never written out: OD #1053)
+  ("const _markintext base_utilities/frontmatter/insert.rs", 1),
+  // (INTREC2, 0 -> 1, raised with its reason: a note whose mark its own command prints — the title's footnote counter,
+  // REVTeX's numbered footnotes — answers no glyph typed on the name, `Ann Able*\thanks{…}` printing "*∗"
+  // (`pure_names::answer`); Perl's API has no key for it, Perl leaves the marks in the name; internal, never written out:
+  // OD #1055)
+  (
+    "const _markfromcounter base_utilities/frontmatter/insert.rs",
+    1,
+  ),
+  // (MARKSAFEb, 0 -> 1, raised with its reason: a creator's note written with no mark because the mark its title prints is
+  // unknown here (an unbound class's or a document's own `\maketitle`, REVTeX's name letters), counted at the document's
+  // end — a Warning where its note never came, an Info where it is placed (DG 2026-11-16); Perl's API has no key for
+  // "the glyph is unknown"; internal, never written out: OD #1053)
+  ("const _markunknown base_utilities/frontmatter/insert.rs", 1),
+  // (MARKKEY1, 0 -> 1, raised with its reason: a creator's note that is a `\footnotetext` the reading gave the names
+  // showing its number — no carrier prints it but by that `\footnotemark`, the copy's own mark (`link_marked_notes`);
+  // Perl's API has no key for "a footnote text"; internal, never written out: OD #1058)
+  ("const _fntext base_utilities/frontmatter/insert.rs", 1),
+  // (SHREST, 0 -> 1, raised with its reason: the mark a class prints for a creator's footnote text, elsarticle's `\fntext`
+  // number, REVTeX's joined footnote's symbol, on the contact its binding makes — a contact has no `mark` in the schema —,
+  // read where two creators hold it to make it their marked note, OD #1054; internal, never written out)
+  (
+    "const _fnmark base_utilities/frontmatter/shared_notes.rs",
+    1,
+  ),
+  // (SHREST, 0 -> 1, raised with its reason: a title-page list note placed on the names showing its leading mark carries
+  // that mark, to take it from the note's text and the names, as a legend's answered mark goes, OD #1054; Perl's API has
+  // no key for it; internal, never written out)
+  (
+    "const _listmark base_utilities/frontmatter/shared_notes.rs",
+    1,
+  ),
+  // (SHRESTb, 0 -> 1, raised with its reason: the part of a class's front-matter footnote a creator's contact is — REVTeX's
+  // `\@AF@join` of the title, author or affiliation last given, or a name's own —, which `number_footnote_parts` numbers
+  // in print order; Perl's API has no key for it, its binding no marks; internal, never written out, OD #1054)
+  (
+    "const _fnpart base_utilities/frontmatter/shared_notes.rs",
+    1,
+  ),
   // (LO2, 0 -> 1: an emitted entry's first mark read, a fact kept on its pending entry as Perl keeps its labels there
   // (Base_Utility.pool.ltxml:502-508), where LO1 kept a State flag; internal, never written out)
   ("const _markread base_utilities/defs/author_macros.rs", 1),
@@ -1127,6 +1188,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // and tex_box.rs as the kernel's own)
   ("const _skip_after_para tex_paragraph.rs", 1),
   ("const _skip_before_para tex_paragraph.rs", 1),
+  // (MARKKEY R2a, 0 -> 1, raised with its reason: a flag, set on an entry a printed mark of which requested a label,
+  // `insert::REQUESTED`, in place of the three side-tables `_plainmarks`, `_textmarks`, `_picturemarks` the deleted
+  // `show_unanswered_marks` read, which the run walks and `authors_show_marks` still ask: whether the entry shows marks;
+  // OD #1061)
+  ("const _requested base_utilities/frontmatter/insert.rs", 1),
   ("const _source base_utilities/frontmatter/insert.rs", 1),
   // (Z18o2, raised with its reason: the reading's stopgap fact of an entry (`resolver::RUN_LEFTOVER`, an `annotate=new`
   // walk reaching only authors that held the role, no group in print of their own), on the entry the emitter writes, which
@@ -1141,6 +1207,31 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "declared _labelprints base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  // (MARKSAFEc, review revMARKSAFEb N1: keys the engine and bindings already pass, declared as `_corresponding` is, so
+  // their use reports no unknown key on every paper that writes one: `_markunknown`, `_markfromcounter` (a creator's
+  // note's flags), `_share`, `_rowshared` (a contact several names share))
+  (
+    "declared _markfromcounter base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _markunknown base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  // (MARKKEY1, ADVARCH: keys the emitter already passes, declared as `_corresponding` is, so their use reports no unknown
+  // key on every paper that writes one: `mark` (a note's own schema attribute, Perl's `ltx:note`), `_fnvalue` (the
+  // footnote number it stands for, as the kernel's notes record it), `_fntext` (a footnote text); OD #1058)
+  ("declared _fntext base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _fnvalue base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared mark base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _rowshared base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _share base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared _blockcreator base_utilities/defs/frontmatter_api.rs",
     1,
@@ -1161,6 +1252,75 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "declared _stopgap base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  // (MARKBIND FMKEYS, 0 -> 1 each, raised with its reason: the keys the engine and the bindings already pass on a queued
+  // entry, now in the one list `FRONTMATTER_INTERNAL_KEYS` with the ones above, so their use reports no unknown key on
+  // every paper that writes one — `_markshown`, `_cutlist`, `_markintext`, `_kinded` on 420, 324, 104, 98 of the
+  // frontmatter repros — while a key no list declares still reports)
+  (
+    "declared _answers base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _cutlist base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _fnpart base_utilities/defs/frontmatter_api.rs", 1),
+  ("declared _group base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _grouped base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _kinded base_utilities/defs/frontmatter_api.rs", 1),
+  // (MARKBINDb: kind.rs's `{LINE_FIRST}=true` on an IEEE block's leading e-mail line, the one constant a keyval sets that
+  // the list lacked; `every_internal_key_a_keyval_sets_is_declared`)
+  (
+    "declared _linefirst base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _mark base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _markintext base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _markpiece base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _marks base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _markshown base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _merged_checked base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _nameprinted base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _placedbymark base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _sequence base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _store base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _unmarked base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _unsplit base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _withsup base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _zone base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared accumulate base_utilities/defs/frontmatter_api.rs",
     1,
@@ -1186,14 +1346,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("insert _qname package/axodraw_sty.rs", 1),
-  (
-    "insert _refmarkshown base_utilities/defs/author_macros.rs",
-    1,
-  ),
   ("insert _role base_utilities/defs/frontmatter_api.rs", 1),
   ("insert _scopebegin package/pgfsys_latexml_def.rs", 3),
   ("insert _split_ref package/amsmath_sty.rs", 1),
-  ("insert _textmarks base_utilities/frontmatter/insert.rs", 1),
   ("insert _xmkey package/amsmath_sty.rs", 1),
   ("owner= base_utilities/defs/author_macros.rs", 1),
   ("owner= base_utilities/defs/frontmatter_fields.rs", 4),
@@ -1341,6 +1496,19 @@ fn read_api_speech(source: &RustSource, short: &str, speech: &mut ApiSpeech) {
       }
     }
   }
+  // (and each entry of the one list of internal keys the code declares in a loop, `FRONTMATTER_INTERNAL_KEYS`)
+  let listed =
+    Regex::new(r"const FRONTMATTER_INTERNAL_KEYS\b[^=]*=\s*&\[([^\]]*)\]").expect("the regex");
+  let entry = Regex::new(r#"\(\s*"([0-9]+)",\s*"[0-9]+"\s*\)"#).expect("the regex");
+  for list in listed.captures_iter(&source.code) {
+    for found in entry.captures_iter(&list[1]) {
+      let key = literal_of(&found[1]);
+      *speech
+        .keys
+        .entry(format!("declared {key} {short}"))
+        .or_default() += 1;
+    }
+  }
   for found in declared.captures_iter(&source.code) {
     let key = literal_of(&found[2]);
     if literal_of(&found[1]) == "Frontmatter" && !PERL_DECLARED_KEYS.contains(&key) {
@@ -1450,6 +1618,10 @@ fn every_shape_of_a_key_is_seen() {
       r#"DefKeyVal!("Frontmatter", "foo", "")"#,
       "declared foo f.rs",
     ),
+    (
+      r#"const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[("_a", ""), ("_b", "Semiverbatim")];"#,
+      "declared _a f.rs declared _b f.rs",
+    ),
     (r#"T("\\lx@add@contact[role=note,#1]")"#, ""),
     (r#"T("\\lx@add@contact[role={x}]")"#, ""),
     ("// T(\"\\\\lx@add@contact[foo=1]\")", ""),
@@ -1469,6 +1641,150 @@ fn every_shape_of_a_key_is_seen() {
     &mut names,
   );
   assert_eq!(names.names, ["lx@add@foo"]);
+}
+
+/// A string constant naming an internal key (`const LINE_FIRST: &str = "_linefirst"`) that a literal sets as a keyval
+/// (`s!("{kinded_keys},{LINE_FIRST}=true")`, or as a format's positional argument, a path's last segment:
+/// `s!("…,{}={{true}}", insert::ROW_SHARED)`; an XPath's `@{X}=` reads an attribute) reaches a `Frontmatter` KeyVals,
+/// so the key is declared — in `FRONTMATTER_INTERNAL_KEYS`, a `DefKeyVal!` or Perl's — or every paper that writes it
+/// reports an unknown key (`_linefirst`, review revMARKBIND). Not seen: a key spelled in no constant, or one a string is
+/// built from piece by piece (`push_str`).
+#[test]
+fn every_internal_key_a_keyval_sets_is_declared() {
+  let constant =
+    Regex::new(r#"\bconst ([A-Z][A-Z_0-9]*): &(?:'static )?str = "([0-9]+)""#).expect("the regex");
+  let set = Regex::new(r"(?:^|[^@])\{([A-Z][A-Z_0-9]*)\}=").expect("the regex");
+  let mut keys: BTreeMap<String, std::collections::BTreeSet<String>> = BTreeMap::new();
+  let mut uses: BTreeMap<String, std::collections::BTreeSet<String>> = BTreeMap::new();
+  let mut speech = ApiSpeech::default();
+  for file in API_SPEAKERS
+    .iter()
+    .flat_map(|crate_src| rust_files(crate_src))
+  {
+    let short = file
+      .split_once("/src/")
+      .map_or(file.as_str(), |(_, inner)| inner)
+      .to_string();
+    let source = read_rust(&file);
+    read_api_speech(&source, &short, &mut speech);
+    for found in constant.captures_iter(&source.code) {
+      let value = &source.literals[found[2].parse::<usize>().expect("an index")];
+      if value.starts_with('_') {
+        keys
+          .entry(found[1].to_string())
+          .or_default()
+          .insert(value.clone());
+      }
+    }
+    for literal in &source.literals {
+      for found in set.captures_iter(literal) {
+        uses
+          .entry(found[1].to_string())
+          .or_default()
+          .insert(short.clone());
+      }
+    }
+    for name in positional_keyval_sets(&source) {
+      uses.entry(name).or_default().insert(short.clone());
+    }
+  }
+  let declared: std::collections::BTreeSet<&str> = speech
+    .keys
+    .keys()
+    .filter_map(|row| row.strip_prefix("declared ")?.split(' ').next())
+    .chain(PERL_DECLARED_KEYS.iter().copied())
+    .collect();
+  let set_keys: Vec<(&String, &String, &std::collections::BTreeSet<String>)> = uses
+    .iter()
+    .flat_map(|(name, files)| {
+      keys
+        .get(name)
+        .into_iter()
+        .flatten()
+        .map(move |key| (name, key, files))
+    })
+    .collect();
+  // (a positional key read by its place, a path's last segment, an XPath's `@{}=` not a key)
+  assert_eq!(
+    positional_keyval_sets(&lex_rust(
+      r#"s!("a={{{x}}},{}={{true}},@{}=1", insert::ROW_SHARED, OTHER)"#
+    )),
+    ["ROW_SHARED"]
+  );
+  // (the reader sees the shapes: a format's open set, a set after a comma, a set on its own, a positional one)
+  for name in ["CUT_LIST", "LINE_FIRST", "NAME_PRINTED", "ROW_SHARED"] {
+    assert!(
+      set_keys.iter().any(|(set, ..)| set.as_str() == name),
+      "{name} is no longer read as a keyval's key: {set_keys:?}"
+    );
+  }
+  let undeclared: Vec<String> = set_keys
+    .iter()
+    .filter(|(_, key, _)| !declared.contains(key.as_str()))
+    .map(|(name, key, files)| format!("{name} = {key:?} set in {files:?}"))
+    .collect();
+  assert!(
+    undeclared.is_empty(),
+    "an internal key a keyval sets, undeclared (add it to `frontmatter_api::FRONTMATTER_INTERNAL_KEYS`): {undeclared:?}"
+  );
+}
+
+/// The constants a format call (`s!`, `format!`) passes as a positional argument whose `{}` opens a keyval's key in
+/// its literal (`{}=`, not an XPath's `@{}=`): `s!("label={{{label}}},{}={{true}}", ROW_SHARED)` sets `ROW_SHARED`, and
+/// `insert::ROW_SHARED` is the constant of its last segment.
+fn positional_keyval_sets(source: &RustSource) -> Vec<String> {
+  let call = Regex::new(r#"\b(?:s|format)!\(\s*"([0-9]+)"\s*,"#).expect("the regex");
+  let constant =
+    Regex::new(r"^(?:[A-Za-z_][A-Za-z_0-9]*::)*([A-Z][A-Z_0-9]*)$").expect("the regex");
+  let mut names = Vec::new();
+  for found in call.captures_iter(&source.code) {
+    let literal: Vec<char> = source.literals[found[1].parse::<usize>().expect("an index")]
+      .chars()
+      .collect();
+    // (the positional `{}` that set a key: their index among the literal's positional arguments)
+    let (mut keyed, mut positional, mut i) = (Vec::new(), 0, 0);
+    while i < literal.len() {
+      match (literal[i], literal.get(i + 1)) {
+        ('{', Some('{')) | ('}', Some('}')) => i += 2,
+        ('{', Some('}')) => {
+          if literal.get(i + 2) == Some(&'=') && (i == 0 || literal[i - 1] != '@') {
+            keyed.push(positional);
+          }
+          positional += 1;
+          i += 2;
+        },
+        _ => i += 1,
+      }
+    }
+    if keyed.is_empty() {
+      continue;
+    }
+    // (the call's arguments after the literal, split at its top-level commas)
+    let (mut depth, mut arguments, mut current) = (0usize, Vec::new(), String::new());
+    for c in source.code[found.get(0).expect("the match").end()..].chars() {
+      match c {
+        '(' | '[' | '{' => depth += 1,
+        ')' | ']' | '}' if depth == 0 => break,
+        ')' | ']' | '}' => depth -= 1,
+        ',' if depth == 0 => {
+          arguments.push(std::mem::take(&mut current));
+          continue;
+        },
+        _ => {},
+      }
+      current.push(c);
+    }
+    arguments.push(current);
+    for index in keyed {
+      if let Some(name) = arguments
+        .get(index)
+        .and_then(|argument| constant.captures(argument.trim()))
+      {
+        names.push(name[1].to_string());
+      }
+    }
+  }
+  names
 }
 
 /// Token-spelling reads per area, and in the listed bindings: `bin/tokreads.py`'s count of the removal study plus the shapes
@@ -1585,7 +1901,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (CR4b, 28 -> 30: `text_glyph`, a character command in an address's formula prints its character — `$\{a,b\}$@w.edu`
   // the brace list, `p$\_$r` "p_r" (review revCR4 finding 4; OD #972): its table of commands, one row, and the one
   // compare; how an address prints, no owner decided)
-  ("defs/frontmatter_fields", 30),
+  // (SHRESTb, 30 -> 31, raised with its reason: `\lx@fm@list@label` reads the label a title-page list's item sets
+  // (elsarticle's `\elsLabel{cor1}`), a label as Perl's API reads one (ToString), whose names the note goes to; OD #1054)
+  ("defs/frontmatter_fields", 31),
   // (Z18j, 83 -> 95: moved from `author_block` with its code, as that row says)
   // (PB 95 -> 102, PBb 102 -> 100: `names.rs`' definition replay of a class's title code (OD #983) reads the class's macro
   // bodies, TeX definitions no event says. +1 the copy's kept `\@maketitle` read beside the live one (2205.14141); +1 a macro
@@ -1639,7 +1957,14 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P6f2, 35 -> 37: `observer::may_hold_kernel_separator`, the affiliation lines' cost gate before the separator query's
   // rehearsal — a command or active character no spelled separator matches, by meaning: a macro no binding made or a copy
   // of the kernel's `\and`; c1_cost's 200 `\affil`s +2.0 % on P6f without it, revP6f S2)
-  ("frontmatter (rest)", 37),
+  // (DATELEG, 37 -> 51, OD #1071, DG 2026-11-17 "now, before the PR": `date_legend.rs` reads the `\date` store's lines at
+  // `\maketitle`, before the flush, with the frontmatter API's own line readers — the line breaks, a `\today`, a leading
+  // label (`leading_line_label`), an e-mail line — as the Cut reads an `\affiliation` list; the date is a store, which no
+  // rehearsal reads. Pending the main session: rehearse the store and read its events instead; +1, 51 -> 52, the void
+  // date's dropped words named to the title-page check, `visible_name_text`)
+  // (DATELEGb, 52 -> 53: the date line's `@` signs counted on its tokens, as the readers' text drops a styled one —
+  // `\textbf{@} gaborit@kth.se`, 1801.04802 — the address-among-text fail-safe; the relocated legend note cut read XML)
+  ("frontmatter (rest)", 53),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of
@@ -1678,7 +2003,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // block commands, +1), and the table of the structure a document macro's definition may hold
   // (`holds_author_structure`: `\IEEEauthorblockN`, `\and`, `\\`, each read with `defined_as`, +1), which decides the
   // calls `blocks_as_printed` expands; the brace reading moved into one `brace_level`, which `grid_columns` shares (0))
-  ("ieeetran_cls.rs", 104),
+  // (+21, IEEEROUTE: the block notes' "<names> is/are with" sentences read from the `\thanks` text in the binding, as
+  // the brief placed it (OD #1072); the resolver's note event is the principled reader, reported as open; +1,
+  // IEEEROUTEb: a name piece's printed end, skipping spaces and `\par`, where its contacts go, 2106.02811; +1, REVIEEEB:
+  // a routed address rebuilt by `printed_text_tokens`, its `\_` an underscore again, 1808.03708 — a writer, no decision)
+  ("ieeetran_cls.rs", 127),
   ("insert", 14),
   // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
   ("inst_support_sty.rs", 1),
@@ -1700,13 +2029,24 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // no name a document spells; it decides only that the emitter stays out, the output then today's)
   ("ledger", 35),
   // (Z18e 32 -> 31: the unmarked `\author` split `\lx@llncs@author` gone, the block read whole)
-  ("llncs_cls.rs", 31),
+  // (LLNCSMARKS 31 -> 44, a raised pin: `steps_footnotes` mirrors llncs.cls's counting pass of `\@author` (:1028-1029,
+  // `\thanks` gobbled) to withdraw the binding's own title marks where a counter step runs twice; it decides no owner or
+  // content, only that no glyph is written)
+  // (LLNCSb 44 -> 51, a raised pin: the same scan by meaning, the spelled `\thanks` the pass gobbles told from a `\let`
+  // copy it does not, and the `\subtitle`'s; the `\institute` count's spelled `\and`s where no rehearsal reads them,
+  // `\fnnstart`, and whether the paper's shipped copy has `\fnnstart` (v2.4-v2.10 do not). Each decides only the
+  // class's own glyph or counter, no owner or content)
+  // (LLNCSc 51 -> 52, a raised pin: the scan's spelled `\undefined`, `\@undefined`, undefined on purpose so with no
+  // meaning to read, which an `\ifx` tests and nothing runs; it decides only the class's own glyph)
+  ("llncs_cls.rs", 52),
   ("osa_journal_sty.rs", 77),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
   ("owners", 14),
   ("place", 6),
   ("ptephy_cls.rs", 115),
-  ("queue", 1),
+  // (SHRESTb, 1 -> 2, raised with its reason: `with_first_key` finds a queued call's key list, its `[`, to add the key a
+  // binding gives the call it just queued (REVTeX's e-mail's footnote part, `tag_last_queued_contact`); no owner decided)
+  ("queue", 2),
   // (P23e, 16 -> 17, the main session's ruling: `label_ink` tells a note's ink (`\lx@note…`, set at the page's foot) from
   // what prints in place, `printed_ink`'s `outside_notes`; cjaa.cls's `\email` sibling, OD #995)
   ("queue_digest", 17),
@@ -2251,6 +2591,8 @@ enum PassMay {
   ChangeText,
   /// drop an empty or repeated item, or a line of a note
   Drop,
+  /// an item's place among the placed frontmatter, its holder unchanged
+  Place,
   /// **moves items between owners**: a debt, witnesses 2511.18438, 2608.22772
   OwnerDebt,
 }
@@ -2259,7 +2601,9 @@ enum PassMay {
 /// entries are placed (the S2b writer's old spot, deleted in DEL4; its witnesses 2012.14750, 2201.02056, 2606.18623,
 /// 1507.02068). An allow-list and a debt: the three owner-moving ones go before the merge.
 const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
-  ("count_lost_marks", PassMay::ChangeNothing),
+  // (SHRESTb: the marks of a class's front-matter footnotes, numbered in print order on the placed creators — a mark,
+  // `_fnmark` or a thanks note's `mark`, no owner moved)
+  ("number_footnote_parts", PassMay::ChangeText),
   ("join_split_address_contacts", PassMay::ChangeText),
   ("kind_address_lines", PassMay::ChangeKind),
   ("link_entry_addresses", PassMay::OwnerDebt),
@@ -2268,12 +2612,28 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   ("write_role_notes", PassMay::ChangeKind),
   ("show_line_marks", PassMay::ChangeText),
   ("kind_dedication_lines", PassMay::ChangeKind),
+  // (SHREST, OD #1054: a footnote text two creators already hold under one mark, made their note — its kind; a list note's
+  // mark taken from its text and its holder's name, which its `mark` shows — text; the note was placed by its label)
+  ("kind_shared_marked_contacts", PassMay::ChangeKind),
+  ("show_list_note_marks", PassMay::ChangeText),
   ("kind_legend_contacts", PassMay::ChangeKind),
   // (the URL part moves a link to the block: Z9's; the grade part is a kind)
   ("kind_link_and_grade_contacts", PassMay::OwnerDebt),
   ("drop_repeated_contacts", PassMay::Drop),
+  // (the mark rule, OD #1053: a note's mark lifted out of its text or its copy there dropped; an affiliation's linking
+  // mark, repeating a note's, dropped; a mark alone on a name filled with the text of the note it marks, as Perl's
+  // `relocateFootnote` fills one — the name holds it already)
+  ("mark_creator_notes", PassMay::ChangeText),
+  ("drop_linking_marks", PassMay::Drop),
+  ("link_marked_notes", PassMay::ChangeText),
   ("flag_merged_creators", PassMay::ChangeNothing),
   ("keep_unclaimed_net_notes", PassMay::Drop),
+  // (the name alone: a name's marks to its notes' `mark`, consumed by its contacts, or mark-only notes after it — the
+  // creator's own items, no owner moved; PURE)
+  ("keep_personnames_pure", PassMay::ChangeText),
+  // (a note its binding declares printed under the names, moved there, before the abstract: still no creator's;
+  // BLOCKPLACE, OD #1074)
+  ("place_block_notes", PassMay::Place),
   // (the content invariant on the placed output, under `=2`: it counts, N2)
   ("check_placed_content", PassMay::ChangeNothing),
 ];
@@ -2898,7 +3258,13 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/mouth.rs", 46),
   ("latexml_core/src/parameter.rs", 34),
   ("latexml_core/src/rewrite/declare.rs", 7),
-  ("latexml_core/src/state.rs", 160),
+  // (PRESBX +2: `note_redefined` records the file whose load made a refused definition, `\@currname.\@currext`, as
+  // LaTeX names it; a read of LaTeX's own record, no decision on a spelling)
+  // (PRESBXb +2: `carry_refusal_records` reads a lock record's refused body by its `\lx@dropped@<cs>` name and the
+  // meaning a `\let` copies, TeX's own record of the meaning; review revPRESBX B1)
+  // (PRESBXc +1: `carry_document_refusal_records` carries the records of `\maketitle` alone, their one reader's name
+  // and the records' key; review revPRESBXb S1, BL3)
+  ("latexml_core/src/state.rs", 165),
   ("latexml_core/src/stomach.rs", 84),
   // (MEMB, -1: `be_absorbed` reads its text through `arena::with`, not `get_string()`)
   ("latexml_core/src/tbox.rs", 2),
@@ -2922,16 +3288,37 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/latex_bootstrap.rs", 5),
   // REGCDE +1: `disable_preamble_commands`' table of Perl's 7 loaders (latex_constructs.pool.ltxml:155 `onlyPreamble`'s
   // callers), which keep Perl's recovery by DG's ruling (b) of 2026-11-15: Perl's data, by name as Perl's is.
-  ("latexml_engine/src/latex_constructs/mod.rs", 164),
+  // (PRESBX +22: `maketitle_marks` reads what a refused `\maketitle` assigns, an assignment's target being a name —
+  // `\thefootnote`, `\@makefnmark`, a note command — and the commands a title's marks depend on, named once in
+  // `NOTE_COMMANDS` and `MARK_COMMANDS`; the assignment primitives and the call of the class's `\maketitle` by meaning)
+  // (PRESBXb +10: `touches_marks` proves "no mark" over a macro body it does not run — its assignments' targets and
+  // sources, an `\@makefnmark`'s body, `\begin{<env>}`'s begin code, the definition origin of an author's macro —
+  // as `body_steps` reads the assignments; review revPRESBX B4, S1)
+  // (PRESBXc +7: `steps_footnotes_before_title` reads the same unrun body for the footnotes and counter steps it makes
+  // before the title — `\footnote`, `\footnotemark`, `\thanks`, `\c@footnote`, the four counter commands on `footnote`;
+  // review revPRESBXb BL2)
+  // (MTREDUCE -24, DG 2026-11-17 maketitle reduce: the static reader's name lists, `touches_marks` and
+  // `steps_footnotes_before_title` deleted; what stays reads only whether the class's `\maketitle` runs, by meaning,
+  // and the assignment primitives that are no call)
+  // (MTREDUCEd, DG 2026-11-17: the `\maketitle` body reader moved here from latexml_package's shipped_class.rs, as the
+  // kernel reads whichever `\maketitle` runs; its definers and counter steps are matched by meaning, the names only
+  // their lookup keys, and `\thefootnote`, `\@maketitle`, `\@author` are the definition's target and the names' cut)
+  // (MTREDUCEE +20, accepted by DG 2026-11-17 for the release, row R RATCHET-MTRE to lower: `kernel_title_marks`'s
+  // fail-safes read the group, `\let`, `\thanks`/`\footnotemark`/`\@thefnmark` and conditional tokens of the body by
+  // spelling; to move onto meanings)
+  ("latexml_engine/src/latex_constructs/mod.rs", 219),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
   ("latexml_engine/src/latex_constructs/sect02.rs", 7),
   ("latexml_engine/src/latex_constructs/sect04.rs", 4),
+  // (PRESBX +1: AAAI's repeated mark, `aaai_note`'s `\footnotemark[<n>]`, a construction)
+  // (PRESBXc +1: `aaai_note` peeks the "." the emitter cuts a name list at, a character; review revPRESBXb BL1)
+  // (MTREDUCE -2: both moved with AAAI's notes to their binding, latexml_contrib aaai_sty.rs, DG 2026-11-17)
   ("latexml_engine/src/latex_constructs/sect05.rs", 266),
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),
   ("latexml_engine/src/latex_constructs/sect07.rs", 29),
   // (QAB57, 69 -> 70: `assign_meaning` clearing an environment OmniBus guessed, a write the `meaning(` pattern counts)
-  ("latexml_engine/src/latex_constructs/sect08.rs", 70),
+  ("latexml_engine/src/latex_constructs/sect08.rs", 69),
   ("latexml_engine/src/latex_constructs/sect09.rs", 1),
   ("latexml_engine/src/latex_constructs/sect10.rs", 3),
   ("latexml_engine/src/latex_constructs/sect11.rs", 28),

@@ -1,0 +1,16 @@
+% mechanism: a `\thefootnote` declared in Ann's cell ends with it: Bob's `\thanks` is the class's again (the rehearsal's
+%   marks, `rehearsal::end_of_cell`)
+% witness:  the advisor's ADVGEN I-1 probe; review revMARKSAFE p/t3.tex
+% oracle:   pdflatex 0 errors; "Ann Able1 Bob Baker†", footnotes "∗ Note A.", "† Note B."
+% engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 0 Warnings; Ann "1", Bob "2"
+% expect:   0 errors, 0 Warnings; Ann "1", Bob "†"
+% status:   RED -> GREEN (MARKSAFEb: perfect_kernel_batchshmark::a_thefootnote_the_author_block_sets_holds_for_its_name)
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{\renewcommand{\thefootnote}{\arabic{footnote}}Ann Able\thanks{Note A.} \and Bob Baker\thanks{Note B.}}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: as `revtex41_name_footnote_is_its_note_contact`, under revtex4-2: `preprint` prints the minipage letter of
+%   the shared front-matter counter ("Bob Bakerᵇ", the `\thanks` before it ∗), `reprint` prints neither mark nor text.
+%   The name's `\footnote` keeps Perl's `role=note` contact, no mark; the guard runs both options
+% witness: review revSHMARK B1 (r_preprint.tex, r_reprint.tex); 2301.00220
+% oracle:  pdflatex 0 errors: preprint "Ann Able∗", "Bob Bakerb and Cy Cole‡", footnote "b Visiting Univ C."; reprint
+%   "Ann Able∗", "Bob Baker and Cy Cole†", no "Visiting"
+% engines: rust SHMARK = Bob's note mark="*"; REGFIX = Bob's note contact
+% expect:  0 errors 0 warnings; Bob's `role=note` contact "Visiting Univ C.", no creator note
+% status:  RED (SHMARK) -> GREEN (perfect_kernel_batchshmark::a_thanks_note_carries_the_mark_its_title_prints)
+% preload: ar5iv.sty
+\documentclass[aps,prl,preprint]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\thanks{Equal contribution.}
+\affiliation{Univ A}
+\author{Bob Baker\footnote{Visiting Univ C.}}
+\affiliation{Univ B}
+\author{Cy Cole}
+\email{cy@b.edu}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

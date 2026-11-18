@@ -1,0 +1,26 @@
+% mechanism: lni.cls v2.0 (authblk-era) `\affil[n]` ends in `\setcounter{footnote}{n}` (lni.cls:463; v1.10's :468,
+%   2412.04178's copy), so a title `\thanks` is numbered after the last affiliation's label; the binding's `\affil`
+%   (authblk's, `define_author_and_affil`) does the same (lni_cls.rs); its `\thanks` is LaTeX's, stepping the counter,
+%   and its `\maketitle` (:475-514) does not set it back, so the body's first note is 4
+%   (`latex_constructs::declare_title_footnote_counting(false)`)
+% witness:  review revMARKSAFEc (p/lni_aff.tex), DG CASE 1; review revMARKBIND (lni/lnibody.tex: the body note)
+% oracle:   pdflatex 0 errors; "Ann Able3 1 and Bob Baker2", footnotes "1 Lab One, Town,", "2 Lab Two, City,",
+%   "3 Note A.", body "Body4" with "4 Body note."
+% engines:  rust MARKBINDb0 (int/frontmatter 4f169bcbe69) = 0 errors, 0 Warnings; Ann's thanks marked 1 (Lab One's
+%   label); MARKBIND (ff2497f5a77): 3, the body's note 3
+% expect:   0 errors, 0 Warnings; Ann's thanks marked 3, the body's note 4
+% status:   GREEN (MARKBIND; MARKBINDb the body note; perfect_kernel_batchmarkbind::lni_affil_sets_the_footnote_counter)
+% preload:  ar5iv.sty
+\documentclass[english]{lni}
+\title{A Title}
+\author[1]{Ann Able\thanks{Note A.}}{}{}
+\author[2]{Bob Baker}{}{}
+\affil[1]{Lab One\\Town}
+\affil[2]{Lab Two\\City}
+\startpage{1}
+\editor{Ed}
+\booktitle{Book}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

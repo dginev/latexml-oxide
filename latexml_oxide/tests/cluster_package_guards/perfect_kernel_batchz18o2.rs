@@ -37,8 +37,8 @@ fn aastex_email_line_in_its_own_author_group_is_that_groups() {
     "aastex_affil_email_line_continuing_own_author_block_is_its_authors"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_creators(&xml, &[&["Ann Able 1", "affiliation=1 Univ A"], &[
-    "Bob Baker 2",
+  assert_creators(&xml, &[&["Ann Able", "affiliation=1 Univ A"], &[
+    "Bob Baker",
     "affiliation=2 Univ B",
     "email=zz@x.org",
   ]]);
@@ -49,8 +49,8 @@ fn aastex_email_line_in_its_own_author_group_is_that_groups() {
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_creators(&xml, &[
-    &["Ann Able 1", "affiliation=1 Univ A"],
-    &["Bob Baker 1", "affiliation=1 Univ A"],
+    &["Ann Able", "affiliation=1 Univ A"],
+    &["Bob Baker", "affiliation=1 Univ A"],
     &["email=zz@x.org"],
   ]);
   assert_eq!(email_contacts(&xml), [EMAIL], "{xml}");
@@ -66,8 +66,8 @@ fn aastex_unrequested_symbol_line_in_its_own_author_group_is_that_groups() {
     "aastex_affil_unrequested_symbol_line_continuing_own_author_block_is_its_authors"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_creators(&xml, &[&["Ann Able 1", "affiliation=1 Univ A"], &[
-    "Bob Baker 2",
+  assert_creators(&xml, &[&["Ann Able", "affiliation=1 Univ A"], &[
+    "Bob Baker",
     "affiliation=2 Univ B",
     "email=zz@x.org",
   ]]);
@@ -88,8 +88,8 @@ fn aastex_line_address_the_flush_takes_out_follows_the_stopgap() {
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_creators(&xml, &[
-    &["Ann Able 1", "affiliation=1 Univ A"],
-    &["Bob Baker 1", "affiliation=1 Univ A", "affiliation=Univ C"],
+    &["Ann Able", "affiliation=1 Univ A"],
+    &["Bob Baker", "affiliation=1 Univ A", "affiliation=Univ C"],
     &["email=zz@x.org"],
   ]);
   assert_eq!(email_contacts(&xml), [EMAIL], "{xml}");
@@ -98,8 +98,8 @@ fn aastex_line_address_the_flush_takes_out_follows_the_stopgap() {
     "aastex_affil_unmarked_line_address_continuing_own_author_block_is_its_authors"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_creators(&xml, &[&["Ann Able 1", "affiliation=1 Univ A"], &[
-    "Bob Baker 2",
+  assert_creators(&xml, &[&["Ann Able", "affiliation=1 Univ A"], &[
+    "Bob Baker",
     "affiliation=2 Univ B",
     "affiliation=Univ C",
     "email=zz@x.org",

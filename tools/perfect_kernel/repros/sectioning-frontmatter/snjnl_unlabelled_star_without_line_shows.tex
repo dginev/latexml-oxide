@@ -1,0 +1,22 @@
+% mechanism: a starred name with no labels prints `*` under a labelled last `\author` (2412.01641's sn-jnl.cls:510-511);
+%   with no `\email` after it the class prints no corresponding line (:749-751), so no note explains the `*`
+% witness:  none in the 165 census papers (review revSNJNL B1; the labelled shape is 2509.19318's)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able* and Bob Baker1", "1Univ A.",
+%   "Contributing authors: bob@b.org;" (no "Corresponding author")
+% engines:  rust 2d21be273f3 = no `*`, no Warning (lost silently); rust SNJNLb = the `*` shown on Ann's name
+% expect:   0 errors 0 Warnings; Ann's `*` shown plain, no note invented (every unlinked mark shows, OD #1059, #1064)
+% status:   RED (2d21be273f3) -> GREEN XML, HTML (SNJNLb;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*{\fnm{Ann} \sur{Able}}
+\author[1]{\fnm{Bob} \sur{Baker}}\email{bob@b.org}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

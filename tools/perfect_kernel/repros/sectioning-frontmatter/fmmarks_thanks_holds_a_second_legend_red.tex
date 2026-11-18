@@ -1,0 +1,29 @@
+% mechanism: a `\thanks` whose text holds a second legend (`$^{\dagger}$Co-first authors`) that two names' typed `†`
+%   answer: the note keeps its own mark ∗; each typed † stays a mark of its name, outside the personname
+% witness:  2506.02863 (`Helin Wang$^{1\dagger}$\thanks{Corresponding Author. $^{\dagger}$Co-first authors}`, `Jiarui
+%   Hai$^{1\dagger}$`)
+% oracle:   pdflatex 0 errors; "Ann Able1†∗ Bob Baker1† Cat Cole2", one footnote "∗ Corresponding Author. † Co-first
+%   authors"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able † ; thanks[*]=Corresponding Author.
+%   † Co-first authors | affiliation=Univ A / Bob Baker † | affiliation=Univ A / Cat Cole | affiliation=Univ
+%   B; HTML Ann Able † | under: Corresponding Author. † Co-first authors / Bob Baker † / Cat Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[†]= ; thanks[*]=Corresponding Author. † Co-first authors
+%   | affiliation=Univ A / Bob Baker ; footnotemark[†]= | affiliation=Univ A / Cat Cole | affiliation=Univ B;
+%   HTML Ann Able ; † plain | under: Corresponding Author. † Co-first authors / Bob Baker ; † plain / Cat Cole
+%   (the guard's XML and HTML lines)
+% moves:    XML PURE (fix/pure-personname: the marks out of the personname) (PUREb B1: the note keeps its own ∗); HTML
+%   the XML layer's: PURE (fix/pure-personname: the marks out of the personname) (PUREb B1: the note keeps its
+%   own ∗)
+% status:   RED -> GREEN XML GREEN, HTML GREEN (PURE via INTREC2, int/frontmatter 89b55ffa556; was RED at 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier and _red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1\dagger}$\thanks{Corresponding Author. $^{\dagger}$Co-first authors}\quad
+Bob Baker$^{1\dagger}$ \quad Cat Cole$^{2}$ \\
+$^{1}$Univ A \quad $^{2}$Univ B}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,52 @@
+% mechanism: a package's own `\maketitle` that sets `\thefootnote` before it prints the title prints that mark:
+%   spconf.sty:147-149 `\begingroup\def\thefootnote{}` prints no mark, whatever the document's `\thefootnote`
+%   (the spconf binding's declaration since MTREDUCE, `latex_constructs::declare_package_title_marks("")`, which answers
+%   for the stand-in copy's `\maketitle`, `state::copy_provides_maketitle`; PRESBX read the copy's body); its closing
+%   `\let\maketitle\relax` and the `\gdef\thefootnote{\arabic{footnote}}` after its group are no call of
+%   the class's `\maketitle` nor the title's mark. Its `\sthanks` (:181) marks with `\fnsymbol` at the counter (the spconf binding's, latexml_contrib spconf_sty.rs)
+% witness:  2110.09738, 2303.02025, 1812.01220 (spconf.sty: the funding note printed with no mark; written ∗); 2208.01916
+%   (`\sthanks`: "Sangyoun Lee∗"); the style a minimal stand-in of spconf.sty:145-181
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able, Bob Baker, Cy Cole†", no mark on Bob; foot
+%   "∗ Funded by X.", "† Corresponding author. Lab B." (the foot's ∗ is `\sthanks`'s global `\fnsymbol`, in force when
+%   `\@thanks` prints the texts after the names: the name's mark, none, is the note's); a `\newline` in the note's
+%   text ends no cell of the author line (the rehearsal's `cell_ends`, 2208.01916)
+% engines:  rust PRESBXbase (d45633020ab) = 0 errors, 0 Warnings; Bob thanks[∗], Cy thanks[†]
+% expect:   0 errors, 0 Warnings; Bob's note unmarked, Cy's †; HTML each text under its name, no glyph
+% status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks;
+%   MTREDUCE: the binding's declaration)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{spconf.sty}
+\ProvidesPackage{spconf}
+\def\maketitle{\par
+ \begingroup
+ \def\thefootnote{}
+ \def\@makefnmark{\hbox
+ {$^{\@thefnmark}$\hss}}
+ \if@twocolumn
+ \twocolumn[\@maketitle]
+ \else \newpage
+ \global\@topnum\z@ \@maketitle \fi\@thanks
+ \endgroup
+ \setcounter{footnote}{0}
+ \let\maketitle\relax
+ \let\@maketitle\relax
+ \gdef\thefootnote{\arabic{footnote}}\gdef\@@savethanks{}%
+ \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newpage\null\vskip 2em\begin{center}{\large\bf\@title\par}\vskip 1.5em{\large\lineskip .5em
+  \begin{tabular}[t]{c}\@name\\\@address\end{tabular}\par}\end{center}\par\vskip 1.5em}
+\def\name#1{\gdef\@name{{\em #1}\\}}
+\def\address#1{\gdef\@address{#1}}
+\let\@@savethanks\thanks
+\def\thanks#1{\gdef\thefootnote{}\@@savethanks{#1}}
+\def\sthanks#1{\gdef\thefootnote{\fnsymbol{footnote}}\@@savethanks{#1}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{spconf}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\begin{document}
+\title{A Title}
+\name{Ann Able, Bob Baker\thanks{Funded by X.}, Cy Cole\sthanks{Corresponding author. \newline Lab B.}}
+\address{University of Somewhere}
+\maketitle
+Body.
+\end{document}

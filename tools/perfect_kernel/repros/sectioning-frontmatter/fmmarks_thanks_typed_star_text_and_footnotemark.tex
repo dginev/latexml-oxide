@@ -1,0 +1,21 @@
+% mechanism: a `\thanks` whose text opens with a typed `*` under article (which prints its own ∗): the note is marked ∗
+%   and keeps the typed * (the PDF prints "∗ *Equal contribution"); the `\footnotemark[1]` a copy
+% witness:  2203.12881 (`Subhabrata Dutta\thanks{*Equal contribution}`, `Jeevesh Juneja\footnotemark[1]`)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗", footnote "∗ *Equal contribution"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[*]=*Equal contribution |
+%   affiliation=Univ A / Bob Baker ; thanks[*]=*Equal contribution | affiliation=Univ B; HTML Ann Able ;
+%   *→note / Bob Baker ; *→note / margin: *Equal contribution
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[*]=*Equal contribution | affiliation=Univ A / Bob Baker ;
+%   thanks[*]=*Equal contribution | affiliation=Univ B; HTML Ann Able ; *→note / Bob Baker ; *→note / margin:
+%   *Equal contribution (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{*Equal contribution} \\ Univ A \and Bob Baker\footnotemark[1] \\ Univ B}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

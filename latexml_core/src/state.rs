@@ -475,6 +475,9 @@ pub struct State {
   /// ([`let_i`]): a `\let` copies another name's definition, so the name a binding gave it is no longer on the object
   /// (`owned_by_the_semantic_layer`; aas_support_sty.rs's `\let\subjectheadings\keywords`).
   pub binding_lets:            rustc_hash::FxHashSet<SymStr>,
+  /// The names a lock's refusal record was written for ([`note_redefined`], `carry_refusal_records`): a
+  /// document's `\let` reads the records only of these.
+  pub refused_names:           rustc_hash::FxHashSet<SymStr>,
   /// The frontmatter setters whose calls are observed ([`crate::definition::origin::watch_setter_calls`]).
   pub watched_setters:         rustc_hash::FxHashSet<SymStr>,
   /// Which names [`watch_meanings`] watches; `None` once one has changed, or with no watch.
@@ -526,6 +529,8 @@ pub struct CopyProvidesRecord {
   /// The copy's own `\maketitle`/`\@maketitle` bodies, refused or overlaid as they may be
   /// ([`copy_provides_title_pages`]).
   pub title_page:    Vec<Tokens>,
+  /// The copy's own last `\maketitle` body, one of [`Self::title_page`] ([`copy_provides_maketitle`]).
+  pub maketitle:     Option<Tokens>,
   /// The classes the copy's own code loaded (`\LoadClass`, and the classes loaded inside it: [`ClassLoadFrame`]): the
   /// real class has the names they define ([`copy_provides_text_default_clashes`]).
   pub loads_classes: Vec<String>,
@@ -626,6 +631,7 @@ impl Default for State {
       stand_in_load_files:     Vec::new(),
       stand_in_last_files:     Vec::new(),
       binding_lets:            rustc_hash::FxHashSet::default(),
+      refused_names:           rustc_hash::FxHashSet::default(),
       watched_setters:         rustc_hash::FxHashSet::default(),
       meaning_watch:           None,
       watched_meaning_changed: None,
@@ -1886,13 +1892,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     // (a class whose load defines the name the lock kept defines it all the same, as its real file does:
     // `ClassLoadFrame`, `copy_base_class_defines`)
     note_class_load_name(meaning_key(&token));
-    let redefined_key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined")));
-    state_mut!().assign_internal(
-      TableName::Value,
-      redefined_key,
-      Stored::Bool(true),
-      Some(Scope::Global),
-    );
+    note_redefined(&token);
     // …and the dropped setter's SIGNATURE: an argument-taking `\def\abstract#1`
     // (apa7.cls:785, uwthesis.cls:805) means the class reads `{…}` as one
     // pre-tokenized argument stored for later, which the locked binding can
@@ -2492,7 +2492,39 @@ pub fn note_copy_provides_title_page(token: &Token, body: &Tokens) {
   }
   if let Some(copy) = state_mut!().copy_provides_copies.get_mut(id as usize - 1) {
     copy.title_page.push(body.clone());
+    if token.with_cs_name(|name| name == "\\maketitle") {
+      copy.maketitle = Some(body.clone());
+    }
   }
+}
+
+/// The latest stand-in copy's own `\maketitle` body ([`note_copy_provides_title_page`]), with the copy's number
+/// ([`new_copy_provides_record`]) and file: the `\maketitle` pdflatex runs where the binding keeps LaTeXML's (spconf.sty's,
+/// 2110.09738; latexml_engine `latex_constructs::class_maketitle_in_force`).
+pub fn copy_provides_maketitle() -> Option<(u32, String, Tokens)> {
+  state!()
+    .copy_provides_copies
+    .iter()
+    .enumerate()
+    .rev()
+    .find_map(|(index, copy)| {
+      (copy.maketitle.clone()).map(|body| (index as u32 + 1, copy.file.clone(), body))
+    })
+}
+
+/// The number the next stand-in copy gets ([`new_copy_provides_record`]).
+pub fn next_copy_provides_id() -> u32 { state!().copy_provides_copies.len() as u32 + 1 }
+
+/// The `\maketitle` body ([`note_copy_provides_title_page`]) of the first stand-in copy of `file` numbered `from` or
+/// later, with its number.
+pub fn copy_provides_maketitle_of(file: &str, from: u32) -> Option<(u32, Tokens)> {
+  state!()
+    .copy_provides_copies
+    .iter()
+    .enumerate()
+    .skip(from.saturating_sub(1) as usize)
+    .find(|(_, copy)| copy.file == file)
+    .and_then(|(index, copy)| copy.maketitle.clone().map(|body| (index as u32 + 1, body)))
 }
 
 /// What [`watch_meanings`]' selection says of a name.
@@ -3520,6 +3552,107 @@ fn note_class_load_name(key: SymStr) {
     && let Some(record) = state.class_loads.get_mut(class)
   {
     record.names.entry(key).or_insert(None);
+  }
+}
+
+/// A lock dropped a definition of `token`: `<cs>:redefined`, and whose code made it, `<cs>:redefined@class` (a class
+/// file's load, the packages it loads included: [`ClassLoadFrame`]) or `<cs>:redefined@document` (the document's, a
+/// package's it loads). A document's by-meaning wrapper of the class's `\maketitle` (`\let\oldmt\maketitle
+/// \renewcommand\maketitle{\oldmt}`) leaves the class's own title page in force (`latex_constructs::
+/// title_marks_unknown`, OD #1053). A format file's drops (latex.ltx over the plain pool's `\newif`) are neither's.
+pub fn note_redefined(token: &Token) {
+  use crate::definition::origin::{DefinitionOrigin, current_origin};
+  let by = if !state!().class_load_frames.is_empty() {
+    Some("@class")
+  } else if matches!(
+    current_origin(),
+    DefinitionOrigin::File | DefinitionOrigin::Document
+  ) {
+    Some("@document")
+  } else {
+    None
+  };
+  if by.is_some() {
+    state_mut!().refused_names.insert(meaning_key(token));
+  }
+  for suffix in std::iter::once("").chain(by) {
+    let key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined{suffix}")));
+    state_mut!().assign_internal(
+      TableName::Value,
+      key,
+      Stored::Bool(true),
+      Some(Scope::Global),
+    );
+  }
+  // (and the file whose load made it, `\@currname.\@currext` as LaTeX keeps them: a class file's own, or an option file's
+  // its class loads, 11lomcon.sty under `\documentstyle[11lomcon]{article}`, hep-ph0312288)
+  if by.is_some() {
+    let name = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
+      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.to_string(),
+        _ => String::new(),
+      },
+      _ => String::new(),
+    };
+    let file = s!("{}.{}", name("\\@currname"), name("\\@currext"));
+    let key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined@in")));
+    state_mut!().assign_internal(
+      TableName::Value,
+      key,
+      Stored::String(arena::pin(&file)),
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// A document's `\let\token1\token2` gives `token1` the meaning TeX's `\token2` has, which the lock's refusal record
+/// says (`\lx@dropped@<cs>`, `<cs>:redefined@document`/`@class`/`@in`, [`note_redefined`]): `token2`'s records go
+/// with it, and a `token1` refused before takes none (`\let\stdmaketitle\maketitle`, a refused `\renewcommand`, then
+/// `\let\maketitle\stdmaketitle`: the class's again, 2509.02894). `:redefined` itself stays. OD #1053.
+fn carry_refusal_records(token1: &Token, token2: &Token, scope: Option<Scope>) {
+  {
+    let state = state!();
+    if !state.refused_names.contains(&meaning_key(token1))
+      && !state.refused_names.contains(&meaning_key(token2))
+    {
+      return;
+    }
+  }
+  let key = |t: &Token, suffix: &str| arena::pin(t.with_cs_name(|cs| s!("{cs}:redefined{suffix}")));
+  let dropped =
+    |t: &Token| arena::pin(t.with_cs_name(|cs| s!("\\lx@dropped@{}", cs.trim_start_matches('\\'))));
+  let refused =
+    |t: &Token| lookup_bool_sym(key(t, "@document")) || lookup_bool_sym(key(t, "@class"));
+  let dropped_cs =
+    |t: &Token| T_CS!(t.with_cs_name(|cs| s!("\\lx@dropped@{}", cs.trim_start_matches('\\'))));
+  if refused(token2) {
+    let values: Vec<Stored> = ["@document", "@class", "@in"]
+      .iter()
+      .map(|suffix| {
+        state!()
+          .lookup_value_sym(key(token2, suffix))
+          .cloned()
+          .unwrap_or(Stored::Bool(false))
+      })
+      .collect();
+    let body = lookup_meaning(&dropped_cs(token2)).unwrap_or(Stored::None);
+    let mut state = state_mut!();
+    for (suffix, value) in ["@document", "@class", "@in"].into_iter().zip(values) {
+      state.assign_internal(TableName::Value, key(token1, suffix), value, scope);
+    }
+    state.assign_internal(TableName::Meaning, dropped(token1), body, scope);
+    state.refused_names.insert(meaning_key(token1));
+  } else if refused(token1) {
+    let mut state = state_mut!();
+    for suffix in ["@document", "@class"] {
+      state.assign_internal(
+        TableName::Value,
+        key(token1, suffix),
+        Stored::Bool(false),
+        scope,
+      );
+    }
+    state.assign_internal(TableName::Meaning, dropped(token1), Stored::None, scope);
   }
 }
 
@@ -7710,13 +7843,53 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
       }),
     );
     if let Ok(wrapper) = new_wrapper {
+      carry_document_refusal_records(token1, token2, scope);
       install_definition(wrapper, scope);
       let _ = after_assignment();
       return;
     }
   }
+  carry_document_refusal_records(token1, token2, scope);
   assign_meaning(token1, meaning, scope);
   let _ = after_assignment();
+}
+/// [`carry_refusal_records`] for the document's own `\let`s of `\maketitle`, the records' one reader
+/// (`latex_constructs::class_maketitle_in_force`; the kernel's `\global\let\thanks\relax` keeps `\lx@dropped@thanks`). A file's
+/// `\let` onto a refused `\maketitle` (a package's restore, review revPRESBXb BL3) leaves its marks unknown: the refused
+/// body forgotten, the document's record kept. Not a class's replayed body, which clears its own name as it runs
+/// (`\global\let\maketitle\relax`).
+fn carry_document_refusal_records(token1: &Token, token2: &Token, scope: Option<Scope>) {
+  use crate::definition::origin::{DefinitionOrigin, current_origin};
+  let maketitle = |t: &Token| t.with_cs_name(|cs| cs == "\\maketitle");
+  if state!().refused_names.is_empty() || !(maketitle(token1) || maketitle(token2)) {
+    return;
+  }
+  match current_origin() {
+    DefinitionOrigin::Document => carry_refusal_records(token1, token2, scope),
+    DefinitionOrigin::File
+      if maketitle(token1)
+        && !lookup_bool("lx_depositing_class_maketitle")
+        && !lookup_bool("lx_replaying_class_setter")
+        && ["@document", "@class"]
+          .iter()
+          .any(|suffix| lookup_bool(&s!("\\maketitle:redefined{suffix}"))) =>
+    {
+      let mut state = state_mut!();
+      state.assign_internal(
+        TableName::Value,
+        arena::pin("\\maketitle:redefined@document"),
+        Stored::Bool(true),
+        scope,
+      );
+      state.assign_internal(
+        TableName::Meaning,
+        arena::pin("\\lx@dropped@maketitle"),
+        Stored::None,
+        scope,
+      );
+    },
+    _ => {},
+  }
 }
 /// `XEquals` check for two token arguments
 pub fn x_equals(token1: &Token, token2: &Token) -> bool {

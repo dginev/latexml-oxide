@@ -1,21 +1,36 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
-use crate::prelude::*;
+use super::elsart_support_core_sty::{
+  ELS_AUTHOR_KEYS, ELS_CORREF_KEYS, ELS_CORTEXT_KEYS, ELS_FNTEXT_KEYS, ELS_NOTE_LABELS,
+  ELS_PLACE_KEYS, els_carriers, els_label_key, els_names_printed, els_outside_mark, els_settle_key,
+  els_warn_pending_lists, record_els_keys, recorded_els_key,
+};
+use crate::{engine::base_utilities::reading_author_fields, prelude::*};
 
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: elsarticle.cls.ltxml
+  // (a name's marks print as one list, a comma between each two: elsarticle.cls:250-262 `\sep`, :159-163 `\comma`;
+  // 2605.13555's `\fnref{fn2,fn3}`, the reading's mark record, OXIDIZED_DESIGN_DIVERGENCES #1062)
+  declare_marks_listed();
   // Generally ignorable options (the size options pass to article below, as elsarticle.cls:113 passes every option it
   // does not declare: `[12pt]` 390pt, `\@ptsize` 2)
   for option in [
-    "endfloat", "endfloats", "numafflabel",
+    "endfloat", "endfloats",
     "oneside", "twoside", "onecolumn", "twocolumn",
-    "lefttitle", "centertitle", "reversenotenum",
+    "lefttitle", "centertitle",
     "symbold", "ussrhead", "nameyear",
     "doublespacing", "reviewcopy"].iter()
   {
     DeclareOption!(*option, None);
   }
+  // elsarticle.cls:106-109: `reversenotenum` numbers the `\fntext` notes by letter (`\thefnote`, below) and, as
+  // `numafflabel` (:100-101), the addresses by number (`\lx@els@cormark`)
+  DeclareOption!("reversenotenum", {
+    assign_value("@elsarticle@reversenotenum", true, Scope::Global);
+    assign_value("@elsarticle@numafflabel", true, Scope::Global);
+  });
+  DeclareOption!("numafflabel", { assign_value("@elsarticle@numafflabel", true, Scope::Global); });
   // elsarticle.cls defines `\newif\ifpreprint`, set by its options (true for `preprint` and `review`, false for
   // `final` and the journal layouts) and true by default (`\ExecuteOptions{…,preprint,…}`, elsarticle.cls:112).
   // Journal styles test it (ycviu.sty:60, 298); without it they saw an undefined CS and cascaded (2311.04591).
@@ -91,6 +106,7 @@ LoadDefinitions!({
   // leaves it at OT1; divergence from Perl.
   RequirePackage!("fontenc", options => vec!["T1".to_string()]);
   RequirePackage!("elsart_support_core");
+  assign_value(ELS_NOTE_LABELS, true, Scope::Global);
   // elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`: the class prints its title page at
   // `\end{frontmatter}`, where the core's empty primitive runs no `\maketitle` of ours. The print is noted there for the
   // title-page check (`\lx@note@title@page`, when no `\maketitle` noted one; nothing typeset), so a word the document
@@ -101,18 +117,24 @@ LoadDefinitions!({
   // (cnf.sty:585: 2605.08232, 2606.15628) and a document (2605.22682 `\g@addto@macro\elsaddress`) extend (OD #1036).
   // The class's `\maketitle` prints the address list under the names (:806) and the notes at the page foot (:766);
   // here both after the frontmatter, once, where the class prints its title page (`\end{frontmatter}`, `\maketitle`),
-  // each `\footnotetext` a note on the document (`\lx@frontmatter@footnotes`).
+  // each `\footnotetext` a note on the document (`\lx@frontmatter@footnotes`); a correspondence item's `\elsLabel{cor1}`
+  // the `cor:cor1` its names request (`\lx@fm@list@label`, OD #1054).
   RawTeX!(r"\let\@cormark\@empty\let\@cornotes\@empty\def\elsaddress{}
-\def\lx@els@print@lists{\lx@frontmatter@footnotes{\elsaddress\@cornotes}\global\let\elsaddress\@empty\global\let\@cornotes\@empty}
+\def\lx@els@print@lists{\lx@els@names@printed\lx@frontmatter@footnotes{\elsaddress}\lx@frontmatter@footnotes{\def\lx@els@label@prefix{cor}\@cornotes}\global\let\elsaddress\@empty\global\let\@cornotes\@empty}
 \def\lx@els@end@frontmatter{\lx@els@print@lists\lx@note@title@page}");
   Let!("\\end{frontmatter}", "\\lx@els@end@frontmatter");
+  // (there the names print, the first one's marks read, `els_names_printed`; with no print, the key lists are warned
+  // of at the end)
+  DefPrimitive!("\\lx@els@names@printed", { els_names_printed(); });
+  DefPrimitive!("\\lx@els@warn@mark@lists", { els_warn_pending_lists(); });
+  at_end_document(TokenizeInternal!(r"\lx@els@warn@mark@lists"))?;
   AddToMacro!("\\lx@maketitle@body", "\\lx@els@print@lists");
   // elsarticle.cls:656-668: a labelled `\address[a]{…}` goes to the address list under the names (`\elsaddress`), an
   // unlabelled one into the names list itself (`\@address` into `\elsauthors`), printed with the names, above every
   // labelled one — its print zone the names' (`_zone=names`, OXIDIZED_DESIGN_DIVERGENCES #954; 1710.03753, where the
   // unlabelled `University of North Dakota` went after the labelled department); the core's `\address` otherwise.
   DefMacro!("\\address OptionalSemiverbatim {}",
-    "\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
+    "\\lx@els@record@place{#1}\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
      {\\lx@els@shared{\\lx@add@contact[label={},role=address,_zone=names]}\
        {\\lx@add@contact[label={},role=address,annotate=run,_zone=names]}}\
      {\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}\
@@ -268,7 +290,73 @@ LoadDefinitions!({
   // `\nonumnote{<text>}` (:153-155) adds an unnumbered title-page footnote: a note. Perl's elsarticle binding lacks
   // them. Witnesses 2609.13494, 2302.09410, 2106.01129.
   DefMacro!("\\fnmark[]", "\\fnref{#1}");
-  DefMacro!("\\cormark[]", "\\corref{#1}");
+  // elsarticle.cls:157-171, :178-189: `\fntext[<key>]` and `\cortext[<key>]` step `fnote` and `cnote` and print their
+  // text under the mark every `\fnref{<key>}`, `\corref{<key>}` prints: `\thefnote` (a letter under `reversenotenum`),
+  // ∗ and ∗∗ — a note several names share printed once, its mark on each (`kind_shared_marked_contacts`, OD #1054).
+  DefMacro!("\\fntext OptionalSemiverbatim {}", sub[(key, text)] {
+    if let Some(key) = &key {
+      record_els_keys(ELS_FNTEXT_KEYS, std::iter::once(key.to_string().as_str()));
+    }
+    let n = lookup_int("@elsarticle@fnote") + 1;
+    assign_value("@elsarticle@fnote", n, Scope::Global);
+    let mark = match u8::try_from(n) {
+      Ok(n @ 1..=26) if lookup_bool("@elsarticle@reversenotenum") => char::from(b'a' + n - 1).to_string(),
+      _ => n.to_string(),
+    };
+    if let Some(key) = &key {
+      let name = els_fn_marks(&key.to_string());
+      let marks = lookup_string(&name);
+      assign_value(&name, Stored::String(pin(s!("{marks};{mark};"))), Scope::Global);
+    }
+    Ok(marked_note_text(&s!("fn"), "note", Some(mark), key, text))
+  });
+  // A `\cortext` note's mark is its carriers' route, decided once every author is read (`\lx@els@cormark`; 2512.04868,
+  // 1308.5495; OD #1053): `\corref` prints ∗/∗∗ (:188-190), an `\author[<key>]` key the `cnote` number (:181-185, :251-256).
+  DefMacro!("\\cortext OptionalSemiverbatim {}", sub[(key, text)] {
+    if let Some(key) = &key {
+      record_els_keys(ELS_CORTEXT_KEYS, std::iter::once(key.to_string().as_str()));
+    }
+    let n = lookup_int("@elsarticle@cnote") + 1;
+    assign_value("@elsarticle@cnote", n, Scope::Global);
+    let mark = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@els@cormark{{{}}}{{{n}}}",
+      key.as_ref().map(ToString::to_string).unwrap_or_default()
+    )));
+    let mut marked = mark.unlist();
+    marked.extend(text.unlist());
+    Ok(marked_note_text(&s!("cor"), "correspondent", None, key, Tokens::new(marked)))
+  });
+  DefMacro!("\\lx@els@cormark Semiverbatim {}", sub[(key, n)] {
+    let key = key.to_string();
+    let n = n.to_string().trim().parse::<usize>().unwrap_or(0);
+    let star = || ["∗", "∗∗"].get(n.wrapping_sub(1)).map(|mark| (*mark).to_string());
+    // (the number another mark of the same name prints too, an `\fntext`'s or a numbered address's: the ∗ the footnote
+    // prints, :181-185 — two notes never share a mark)
+    let numbered = lookup_bool("@elsarticle@numafflabel");
+    let collides = els_carriers(&key).iter().flatten().any(|other| {
+      *other != key.trim()
+        && (lookup_string(&els_fn_marks(other)).contains(&s!(";{n};"))
+          || (numbered && recorded_els_key(ELS_PLACE_KEYS, other)))
+    });
+    // (a note no name reaches prints its ∗ on none: no mark, OD #1067)
+    let mark = if els_note_shadowed("cor", &key) {
+      None
+    } else if recorded_els_key(ELS_AUTHOR_KEYS, &key) && !recorded_els_key(ELS_CORREF_KEYS, &key) {
+      // (a key an address shares prints the label written last, not known here: none)
+      match () {
+        _ if recorded_els_key(ELS_PLACE_KEYS, &key) => None,
+        _ if collides => star(),
+        _ => Some(n.to_string()),
+      }
+    } else {
+      star()
+    };
+    Ok(mark.map_or_else(Tokens::default, |mark| {
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}")))
+    }))
+  });
+  // (`\cormark[k]` prints its ∗ where it is read and sets no `\@corref`, :174-176: outside a name it marks no name)
+  DefMacro!("\\cormark[]", "\\lx@els@record@cormark{#1}\\lx@els@request{cor}{#1}");
   DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
   // The 2020+ copies' `\newpageafter{title|author|abstract}` (16 of 35 sampled), a page break in the title block: a
   // guess a paper's own definition replaces.
@@ -313,7 +401,7 @@ LoadDefinitions!({
 \newbox\keybox
 \newdimen\Columnwidth
 \Columnwidth=\columnwidth
-\def\elsLabel#1{\@bsphack\protected@write\@auxout{}%
+\def\elsLabel#1{\ifx\lx@els@label@prefix\@undefined\else\lx@fm@list@label{\lx@els@label@prefix:#1}\fi\@bsphack\protected@write\@auxout{}%
          {\string\Newlabel{#1}{\@currentlabel}}\@esphack}
 \def\Newlabel#1#2{\expandafter\xdef\csname X@#1\endcsname{#2}}
 \def\elsRef#1{\@ifundefined{X@#1}{0}{\csname X@#1\endcsname}}
@@ -413,3 +501,107 @@ LoadDefinitions!({
     );
   }
 });
+
+/// The contact of an elsarticle note text (`\fntext`, `\cortext`) its key's names carry, with the mark they print.
+fn marked_note_text(
+  prefix: &str,
+  role: &str,
+  mark: Option<String>,
+  key: Option<Tokens>,
+  text: Tokens,
+) -> Tokens {
+  let key = key.map(|key| key.to_string()).unwrap_or_default();
+  // (a plain key's label is settled as the entries are read, `els_settle_note_labels`: its own here, so every label
+  // the notes request is defined)
+  let label = if els_plain_key(&key) && !reading_author_fields() {
+    els_settle_key(&key);
+    s!("{LABEL_REF}{{{}}}", els_note_ref(prefix, &key))
+  } else {
+    els_note_label(prefix, &key)
+  };
+  let mark = mark
+    .map(|mark| s!("\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}"))
+    .unwrap_or_default();
+  let mut call = mouth::tokenize_internal(TeXString::assembled(s!(
+    "\\lx@add@contact[label={{{label}}},role={role}]{{{mark}"
+  )))
+  .unlist();
+  call.extend(text.unlist());
+  call.push(T_END!());
+  Tokens::new(call)
+}
+
+/// The entry an elsarticle key names, of the ones whose `\elsLabel` writes it ([`els_key_entry`]).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ElsEntry {
+  Place,
+  Footnote,
+  Correspondence,
+}
+
+/// The entry `key` names in elsarticle's one key space: the one whose label the .aux writes last — an `\address`'s or
+/// `\affiliation`'s (at shipout) over an `\fntext`'s over a `\cortext`'s (elsarticle.cls:126-131, :766-778, :1376-1399).
+fn els_key_entry(key: &str) -> Option<ElsEntry> {
+  if recorded_els_key(ELS_PLACE_KEYS, key) {
+    Some(ElsEntry::Place)
+  } else if recorded_els_key(ELS_FNTEXT_KEYS, key) {
+    Some(ElsEntry::Footnote)
+  } else if recorded_els_key(ELS_CORTEXT_KEYS, key) {
+    Some(ElsEntry::Correspondence)
+  } else {
+    None
+  }
+}
+
+/// Whether the `\cortext` (`kind` "cor") or `\fntext` ("fn") keyed `key` is no name's: its key names another entry, and
+/// for a `\cortext` no `\corref` names it (`\corref` prints its ∗ whatever the key's number, elsarticle.cls:188-190).
+fn els_note_shadowed(kind: &str, key: &str) -> bool {
+  let key = key.trim();
+  if key.is_empty() {
+    return false;
+  }
+  match (kind, els_key_entry(key)) {
+    (_, Some(ElsEntry::Place)) => true,
+    ("cor", Some(ElsEntry::Footnote)) => {
+      !recorded_els_key(ELS_CORREF_KEYS, key) && els_outside_mark("cor").trim() != key
+    },
+    _ => false,
+  }
+}
+
+/// A `\cortext`'s or `\fntext`'s label: its key's, `cor:<key>`/`fn:<key>`, or, where the key names another entry, none a
+/// name reaches — no `:`, so Perl's prefix-stripped fallback (`relocate_annotations`) finds no name listing the key.
+fn els_note_label(kind: &str, key: &str) -> String {
+  if els_note_shadowed(kind, key) {
+    s!("{kind}@{}", key.trim())
+  } else {
+    s!("{kind}:{}", els_label_key(key))
+  }
+}
+
+/// Whether `key` reads back as written in a deferred label ([`els_note_ref`]): no space, brace or control sequence.
+fn els_plain_key(key: &str) -> bool {
+  let key = key.trim();
+  !key.is_empty() && !key.contains(|c: char| c.is_whitespace() || "\\{}%#".contains(c))
+}
+
+/// The deferred label (`\lx@label@ref`) of the note of kind `kind` (`cor`, `fn`) keyed `key`.
+fn els_note_ref(kind: &str, key: &str) -> String { s!("els@note@{kind}@{}", key.trim()) }
+
+/// Record the label ([`els_note_label`]) of each note keyed `key` as its deferred label, read at the flush: the entry a
+/// key names is the one whose `\elsLabel` the .aux wrote last (elsarticle.cls:126-131), whatever the order the document
+/// gives them in, so a note read before the entry its key names is decided as one read after it (1711.08299; OD
+/// #1067). Settled for each key as it is read (`els_settle_key`).
+pub(super) fn els_settle_note_labels(key: &str) {
+  if !lookup_bool(ELS_NOTE_LABELS) || reading_author_fields() || !els_plain_key(key) {
+    return;
+  }
+  for (kind, list) in [("cor", ELS_CORTEXT_KEYS), ("fn", ELS_FNTEXT_KEYS)] {
+    if recorded_els_key(list, key) {
+      set_label_ref(&els_note_ref(kind, key), &els_note_label(kind, key));
+    }
+  }
+}
+
+/// The global value holding the marks the `\fntext`s keyed `key` print (`;<mark>;` each).
+fn els_fn_marks(key: &str) -> String { s!("@elsarticle@fnmarks@{}", key.trim()) }

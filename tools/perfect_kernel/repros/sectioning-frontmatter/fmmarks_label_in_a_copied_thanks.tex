@@ -1,0 +1,21 @@
+% mechanism: `\thanks{Equal contribution.\protect\label{fn:eq}}` copied to a second name by `\footnotemark[1]`,
+%   referenced from the body: one printed body, every reference resolving, no id twice
+% witness:  review revREND2b p2 (a `\label` inside a copied note: no reference may lose its target)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗ Cat Cole", "As note ∗ says.", footnote "∗ Equal contribution."
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Equal contribution. /
+%   Bob Baker ; thanks[*]=Equal contribution. / Cat Cole; HTML Ann Able ; *→note / Bob Baker ; *→note / Cat
+%   Cole / margin: Equal contribution.
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Equal contribution. / Bob Baker ; thanks[*]=Equal
+%   contribution. / Cat Cole; HTML Ann Able ; *→note / Bob Baker ; *→note / Cat Cole / margin: Equal
+%   contribution. (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{Equal contribution.\protect\label{fn:eq}} \and Bob Baker\footnotemark[1] \and Cat Cole}
+\date{}
+\begin{document}
+\maketitle
+As note~\ref{fn:eq} says.
+\end{document}

@@ -1,0 +1,27 @@
+% mechanism: a note given after a section's fallback flush digested the names: the class appends its † to the names
+%   it prints at `\maketitle` (2412.01641's sn-jnl.cls:586), but ours were written at the section, so the request
+%   reaches no name; the fail-safe makes the note the document's, unmarked, as the base did
+% witness:  review sibling of 2510.03878 (revSNJNLb B2, "a note given between the section and `\maketitle`")
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Pre", then "Ann Able1* and Bob Baker1†", "1 Univ A.",
+%   "*Corresponding author(s). E-mail(s): ann@a.org;", "† Between."
+% engines:  rust WRONGFIXc (base) = the document's note, unmarked; rust SNJNLb 2f983570f17 = a nameless
+%   `<creator>` holding the marked note; rust SNJNLc = the document's note, unmarked (Bob's † not shown)
+% expect:   0 errors 0 Warnings; Bob's note "Between." marked †
+% status:   RED XML (row R SNJNLAFTERSEC), "Between." once (perfect_kernel_batchfmmarks::
+%   notes_are_marked_only_where_the_class_prints_marks_red, perfect_kernel_batch67z::
+%   snjnl_notes_before_a_section_and_maketitle_print_once)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\author[1]{\fnm{Bob} \sur{Baker}}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\section*{Pre}
+\equalcont{Between.}
+\maketitle
+Text.
+\end{document}

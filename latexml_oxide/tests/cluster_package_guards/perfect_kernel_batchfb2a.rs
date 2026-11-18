@@ -62,10 +62,10 @@ fn a_raw_queued_call_feeds_no_symbol_mark_to_the_reading() {
   assert!(two[0].contains(&affiliation("Univ A")), "{}", two[0]);
   let bob = &two[1];
   for part in [
-    "<personname>Bob Baker<sup>*</sup></personname>",
+    "<personname>Bob Baker</personname>",
     &affiliation("Univ B"),
     "<contact name=\"Email:\u{a0}\" role=\"email\">bob@b.org</contact>",
-    "role=\"thanks\"><sup>*</sup>Corresponding author</note>",
+    "role=\"thanks\">Corresponding author</note>",
   ] {
     assert!(bob.contains(part), "{part} in {bob}");
   }
@@ -154,7 +154,7 @@ fn a_note_in_a_formula_keeps_its_words() {
   );
   assert_eq!(two, vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\">The first two authors contributed equally</note>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"*\" role=\"thanks\">The first two authors contributed equally</note>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
   ]);
 }
 
@@ -376,8 +376,9 @@ fn a_juggle_judges_the_command_between_by_what_it_prints() {
 #[test]
 fn a_team_column_is_no_shared_affiliation() {
   let tex = repro!("author_team_column_is_no_shared_affiliation");
-  let names = vec![vec!["Ann Able 1".to_string()], vec![
-    "Bob Baker 2".to_string(),
+  let names = vec![vec!["Ann Able".to_string(), "mark=1".to_string()], vec![
+    "Bob Baker".to_string(),
+    "mark=2".to_string(),
   ]];
   let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -406,7 +407,8 @@ fn a_team_column_is_no_shared_affiliation() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let mut expected = names;
   expected.push(vec![
-    "Cat Cole 3".to_string(),
+    "Cat Cole".to_string(),
+    "mark=3".to_string(),
     "collaboration=on behalf of the XYZ collaboration".to_string(),
   ]);
   assert_eq!(creators(&xml), expected, "{xml}");

@@ -1,0 +1,27 @@
+% mechanism: IEEEtran journal: four unmarked `\thanks`, two reading "ORCID: profile" with different links, two
+%   "Supported by grant" with `$x^{2}$` and `$x_{2}$`: four notes, all four printed
+% witness:  review revREND2b ieee.tex (the unmarked dedupe that was reverted)
+% oracle:   pdflatex 0 errors; "Ann Able Bob Baker Cy Cole Dee Dunn", footnotes "ORCID: profile" twice, "Supported by
+%   grant x2." and "Supported by grant x2" (sub)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[]=ORCID: profile / Bob
+%   Baker ; thanks[]=ORCID: profile / Cy Cole ; thanks[]=Supported by grant x 2 . / Dee Dunn ;
+%   thanks[]=Supported by grant x 2 .; HTML Ann Able / Bob Baker / Cy Cole / Dee Dunn / margin: ORCID: profile
+%   ; ORCID: profile ; Supported by grant x 2 . ; Supported by grant x 2 .
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[]=ORCID: profile / Bob Baker ; thanks[]=ORCID: profile / Cy
+%   Cole ; thanks[]=Supported by grant x 2 . / Dee Dunn ; thanks[]=Supported by grant x 2 .; HTML Ann Able /
+%   Bob Baker / Cy Cole / Dee Dunn / margin: ORCID: profile ; ORCID: profile ; Supported by grant x 2 . ;
+%   Supported by grant x 2 . (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\usepackage{hyperref}
+\begin{document}
+\title{Unmarked copies}
+\author{Ann Able\thanks{ORCID: \href{https://orcid.org/0000-0001}{profile}}%
+ \and Bob Baker\thanks{ORCID: \href{https://orcid.org/0000-0002}{profile}}%
+ \and Cy Cole\thanks{Supported by grant $x^{2}$.}%
+ \and Dee Dunn\thanks{Supported by grant $x_{2}$.}}
+\maketitle
+Body.
+\end{document}

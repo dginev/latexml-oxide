@@ -1,0 +1,20 @@
+% mechanism: achemso: a repeated IDENTICAL `\email`/`\phone`/`\fax` replaces nothing (the class `\gdef`s the same text and
+%   prints it once): no detached note duplicating the author's contact (revACHEMSOb B1; `\lx@acs@keep` compares)
+% witness:  2203.15022 (`\email{rameshm.thamankar@vit.ac.in}` twice: ACHEMSOb showed the address twice); probe d1
+% oracle:   pdflatex 0 errors; "E-mail: ann@x.org", "Phone: 123" once each
+% engines:  rust ACHEMSOb 16b8af49fd9 = the contacts on Ann plus notes phone=123, email=ann@x.org
+% expect:   0 errors; XML Ann Able | affiliation=Univ A ; email=ann@x.org ; phone=123; no note outside the creators
+%   (perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes)
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\affiliation{Univ A}
+\email{ann@x.org}
+\phone{123}
+\phone{123}
+\email{ann@x.org}
+\title{T}
+\begin{document}
+Body.
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: fail-safe: an unmarked note of addresses in the abstract that no author spells (no positional guess on the
+%   note route), read without the footnote's tags
+% oracle:   pdflatex 0 errors; "Ann Able Bob Baker Cy Cole", the abstract, the footnote "info@lab.org, press@lab.org,
+%   admin@lab.org" with no mark
+% engines:  rust DATELEG (2a8ccf3c9cc) = 0 errors, 1 Warning; "footnoteinfo@lab.org" Ann's, the others by place. Perl:
+%   the note in the abstract
+% expect:   0 errors, 0 Warnings; the note stays in the abstract (an Info), no e-mail on any name (OD #1071)
+% status:   RED (2a8ccf3c9cc) -> GREEN (DATELEGb)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\blfootnote[1]{\begingroup\renewcommand\thefootnote{}\footnote{#1}\addtocounter{footnote}{-1}\endgroup}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Cy Cole}
+\date{}
+\maketitle
+\begin{abstract}
+Text.\blfootnote{info@lab.org, press@lab.org, admin@lab.org}
+\end{abstract}
+Body.
+\end{document}

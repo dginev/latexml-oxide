@@ -1,0 +1,29 @@
+% mechanism: AAAI's `\equalcontrib` (the aaai binding, latexml_contrib aaai_sty.rs, moved out of the kernel): its first
+%   use makes the note, a later one its mark, whatever separates the names — ";", " and ", a `\\` line end — and a
+%   `\thanks` after them is counted after the note (aaai25.sty:81-88)
+% witness:  2501.02471 (aaai25.sty, ",", `\\` line ends: Liu, Luo, Zhong "∗", Pan "†"); the style a minimal stand-in
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗; Bob Baker∗" / "Cy Cole∗ and Dee Dunn†"; foot
+%   "∗ These authors contributed equally." once, "† Corresponding author."
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 1 Warning; the same (the kernel stub)
+% expect:   0 errors, 1 Warning (the emitter writes the stub's note text as plain text); Ann, Bob, Cy each a copy of one
+%   note marked ∗, Dee's † ; HTML the shared note once in the margin, ∗ on each carrier
+% status:   GREEN (MTREDUCE: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newcounter{eqfn}\setcounter{eqfn}{0}%
+  \vbox{\let\footnote\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{eqfn}{\value{footnote}}\else\footnotemark[\value{eqfn}]\fi}%
+    \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\equalcontrib; Bob Baker\equalcontrib\\ Cy Cole\equalcontrib{} and Dee Dunn\thanks{Corresponding author.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

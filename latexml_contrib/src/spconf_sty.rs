@@ -9,14 +9,17 @@
 //! article's structural `\maketitle` never emits them → zero creators (witness
 //! 2309.14838, 2405.13379, 2605.10272). Route `\name` through the standard
 //! author machinery so the comma/superscript-marked list becomes structured
-//! creators, and keep `\address`/`\email` as frontmatter.
+//! creators; its `\address` lines are their affiliations (OD #1073), its `\email` a frontmatter note.
 //!
 //! The same file's `keywords` block (the "Index Terms" list) is a bare
 //! `\def\keywords`/`\def\endkeywords` pair, so `\begin{keywords}` found no
 //! environment at all — the single largest `undefined` cluster in the sandbox
 //! corpora (94 papers in sandbox-arxiv-2605, 49 in 2606; witnesses 2605.00480,
 //! 2605.00698, 2605.00721, 2605.01187). See the `\keywords` binding below.
-use latexml_package::prelude::*;
+use latexml_package::{
+  engine::latex_constructs::{BoundMaketitle, declare_package_title_marks},
+  prelude::*,
+};
 
 LoadDefinitions!({
   // `\name{names}` — the whole author list in one argument. Hand it to `\author`
@@ -24,18 +27,30 @@ LoadDefinitions!({
   // individual creators and links their affiliation superscripts.
   DefMacro!("\\name{}", "\\author{#1}");
   // spconf.sty:181 `\def\sthanks#1{\gdef\thefootnote{\fnsymbol{footnote}}\@@savethanks{#1}}`: a `\thanks` marked
-  // with a symbol, after a name in `\name` (45 2609 papers, 2609.05884, 2609.09883).
-  DefMacro!("\\sthanks{}", "\\thanks{#1}");
-  // `\address{affils}` — the (superscript-numbered) affiliation block. Preserve
-  // as a frontmatter note so the numbered institutions are kept.
+  // with a symbol, after a name in `\name` (45 2609 papers, 2609.05884, 2609.09883; "Sangyoun Lee∗", 2208.01916),
+  // where spconf's `\maketitle` marks a `\thanks` with none (`\def\thefootnote{}`, :147). Set in the name's field only:
+  // its `\maketitle` sets `\thefootnote` back to `\arabic` after the title (:158).
+  DefMacro!(
+    "\\sthanks{}",
+    "\\def\\thefootnote{\\fnsymbol{footnote}}\\thanks{#1}"
+  );
+  // spconf.sty:145-147 (INTERSPEECH2019-2022.sty:140-142 alike): its `\maketitle`, which pdflatex runs where the binding
+  // keeps LaTeXML's, marks a `\thanks` with none, `\def\thefootnote{}` (2110.09738, 2303.02025, 1812.01220): the stand-in
+  // copy read after this binding.
+  declare_package_title_marks("", BoundMaketitle::Copy(next_copy_provides_id()))?;
+  // `\address{affils}` — the affiliation block spconf.sty:165 and INTERSPEECH2021.sty:162-164 print under the names:
+  // queued as its note and read at `\maketitle` (`\lx@address@block`), as Interspeech.cls's: each `$^n$` line the
+  // affiliation of the names showing mark n, an unmarked block under unmarked names every author's (2405.13379); a
+  // line no rule places keeps the note whole (2407.15458, 2203.05882, 1909.01754; OD #1073).
   DefMacro!(
     "\\address{}",
-    "\\lx@add@frontmatter{ltx:note}[role=address]{#1}"
+    "\\lx@address@block{\\lx@names@note{address}}{#1}"
   );
-  DefMacro!(
-    "\\email{}",
-    "\\lx@add@frontmatter{ltx:note}[role=email]{#1}"
-  );
+  // `\email{…}` (INTERSPEECH20xx.sty:173; spconf.sty has none) stays the e-mail note: its authors are queued only as
+  // `\maketitle` runs, after it, so the e-mail line's owner rule (`\lx@email@line@owned`, Interspeech.cls's) has no names
+  // to read here (OD #1073, row R). Printed under the names (INTERSPEECH2021.sty:164), it is declared there with the
+  // address note above, so the two keep the PDF's order (OD #1074, REVBLOCKPLACEb; 2405.13379).
+  DefMacro!("\\email{}", "\\lx@names@note{email}{#1}");
   // `\twoauthors{names1}{affil1}{names2}{affil2}` (spconf.sty L183-190) — the
   // side-by-side two-author title block, typeset as two `tabular`s that
   // overwrite `\@name` and blank `\@address`. Feed the same author machinery

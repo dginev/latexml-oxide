@@ -1,0 +1,24 @@
+% witness: 2606.06621 (arxiv.tex:54-61 `\g@addto@macro\prep@absbox{… $^\ddagger$ These authors contributed equally to this
+%          work. …}` under `\author{Bennet Windt$^\ddagger$}` and `\author{Lorenzo Rossi$^\ddagger$}`): revtex4-2.cls:2648-2652
+%          prints `\prep@absbox` in the title block
+% oracle:  pdflatex 0 errors; "Ann Able‡ and Bob Baker‡", "Univ A", then "‡ These authors contributed equally." above the
+%          abstract
+% engines: rust=0 (60edb5d0e03: the text a body paragraph after the frontmatter, its ‡ a superscript) perl=0 (1 Warning,
+%          `\prep@absbox` not expandable; the text lost) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each with Univ A and the note "These authors contributed equally." marked
+%          ‡ (role thanks, its text without the ‡), the names no longer showing ‡; no body paragraph of it (DG rulings 1-2 of
+%          2026-11-16: a copy on each carrier, each with its mark)
+% status:  RED (60edb5d0e03) -> GREEN (SHREST)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\makeatletter\g@addto@macro\prep@absbox{\vspace{-1.5em}\begin{center}\small $^\ddagger$ These authors contributed equally.\end{center}}\makeatother
+\begin{document}
+\title{Title}
+\author{Ann Able$^\ddagger$}
+\affiliation{Univ A}
+\author{Bob Baker$^\ddagger$}
+\affiliation{Univ A}
+\begin{abstract}Abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

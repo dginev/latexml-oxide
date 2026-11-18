@@ -1,0 +1,33 @@
+% mechanism: revtex4-2: an `\altaffiliation` (∗) then a `\thanks` shared by two names (†): the shared note marked † on
+%   both, the altaffiliation Ann's contact
+% witness:  revSHRESTb u_alt
+% oracle:   pdflatex 0 errors; "Ann Able∗", "Bob Baker† and Cy Cole†"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 1 Warning; XML Ann Able | altaffiliation=Univ B ;
+%   affiliation=Univ A / Bob Baker ; thanks[†]=Equal contribution. | affiliation=Univ B / Cy Cole ;
+%   thanks[†]=Equal contribution. | affiliation=Univ B; HTML Ann Able / Bob Baker ; †→note / Cy Cole ; †→note
+%   / margin: Equal contribution.
+% expect:   0 errors, 0 Warnings; XML Ann Able | altaffiliation=Univ B ; affiliation=Univ A / Bob Baker ;
+%   thanks[†]=Equal contribution. | affiliation=Univ B / Cy Cole ; thanks[†]=Equal contribution. |
+%   affiliation=Univ B; HTML Ann Able / Bob Baker ; †→note / Cy Cole ; †→note / margin: Equal contribution.
+%   (the guard's XML and HTML lines)
+% moves:    XML NEITHER: reported to main (a content-check Warning for "Univ B", printed as Ann's altaffiliation and
+%   the others' affiliation)
+% status:   RED XML RED, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering and _red)
+% preload: ar5iv.sty
+\documentclass[aps,prl,preprint]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\altaffiliation{Univ B}
+\affiliation{Univ A}
+\author{Bob Baker}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\author{Cy Cole}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body\footnote{body note}.
+\end{document}

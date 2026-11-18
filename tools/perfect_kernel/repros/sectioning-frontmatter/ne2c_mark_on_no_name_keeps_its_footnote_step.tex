@@ -1,0 +1,23 @@
+% mechanism: a bare `\footnotemark` an author block prints that no name's reading writes and no item holds (one on the
+%   line a `\\` opens under a name: no name's, DG ruling 2026-11-16, 4) keeps its footnote step where it prints, its
+%   glyph lost and counted (`emit.rs` `mark_dropped`, the counter-step rule of row R SHGIVENNEXT); the block was written
+%   whole, its names clumped into one creator
+% witness: 2101.04763 (a mark past a name's comma), 2511.12633 (a mark in a formula with a note) — review revNE2r2 Q2;
+%   1911.13299 was read as this shape, but its source is `Vivek Ramanujan \thanks{equal contribution} \ \footnotemark[2]`,
+%   a control space, no `\\`: its marks are their names' (DG ruling 2026-11-16, 4; ne2e_mark_past_spacing_is_its_names)
+% oracle:  pdflatex 0 errors; "Ann Able∗ †  Bob Baker‡" (pdftotext; Ann's † on the line under her name)
+% engines: rust off: 0 errors, Ann's † the mark of an affiliation line of hers, Bob ‡; rust =2 (NE2b): 0 errors, 0
+%   warnings, Ann's mark lost, Bob †
+% expect:  0 errors, 1 Warning ("…on no name and no item, their footnote steps kept where they print; lost: †"); Ann
+%   with her note ∗, Bob ‡
+% status:  RED (NE2b; whole block since NE2c) ->
+%   GREEN (perfect_kernel_batchne2::a_mark_on_no_name_keeps_its_footnote_step; the FMRG suite, XML and HTML:
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Univ X.} \\ \footnotemark \and Bob Baker\footnotemark}
+\maketitle
+Text.
+\end{document}

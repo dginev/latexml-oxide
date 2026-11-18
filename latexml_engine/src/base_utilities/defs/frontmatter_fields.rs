@@ -10,7 +10,13 @@ pub(in crate::base_utilities) use names::*;
 
 use crate::base_utilities::{
   defs::frontmatter_api::spacing_formulas_as_space,
-  frontmatter::classify::title_code::{reads_arguments, title_code_author_definitions},
+  frontmatter::{
+    LIST_MARK, MARK_FROM_COUNTER, MARK_UNKNOWN,
+    classify::title_code::{reads_arguments, title_code_author_definitions},
+    observer::events::{
+      self, Event, EventKind, events_text, lex_body_with_inks, lex_events, opening_ink,
+    },
+  },
 };
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
@@ -359,23 +365,48 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     r"\lx@frontmatter@marksep\lx@saved@fnsep"
   );
 
-  // A note the title block of a class whose `\thanks` is `\footnotemark` and its text makes (article, report, book:
-  // `lx_title_counts_footnotes`, latex_constructs `declare_fnsymbol_title_block`) steps the footnote counter, as the
+  // A note the title block of a class whose `\thanks` is `\footnotemark` and its text makes (article, report, book,
+  // mnras, lni: `lx_title_counts_footnotes`, latex_constructs `declare_title_footnote_counting`) steps the footnote counter, as the
   // `\maketitle` digests it (`lx_frontmatter_explicit`): `\thanks` and `\footnote` in the title, an author or the date
   // (`lx_frontmatter_item`), so a `\footnotemark[\arabic{footnote}]` after one prints its mark (2201.11183, 2111.13260;
   // KNOWN_PERL_ERRORS #1060, OXIDIZED_DESIGN_DIVERGENCES #851). A flush without `\maketitle` typesets no title, and
   // steps nothing.
   DefPrimitive!("\\lx@title@footnote@step", sub[_args] {
-    if lookup_bool("lx_title_counts_footnotes")
-      && lookup_bool("lx_frontmatter_explicit")
-      && matches!(
-        lookup_string("lx_frontmatter_item").as_str(),
-        "ltx:creator" | "ltx:title" | "ltx:date"
-      )
-    {
+    let titles = matches!(lookup_string("lx_frontmatter_item").as_str(), "ltx:title" | "ltx:date");
+    // (a title's or date's note: its number, which a name's `\footnotemark[n]` may name, `insert::link_marked_notes`;
+    // `?` for one TeX counts and the reading does not, which leaves the authors' numbers off by it, MARKKEY1c)
+    let value = if title_note_steps() {
       step_counter("footnote", false)?;
+      titles.then(|| counter_value("footnote").map(|count| count.value_of().to_string())).transpose()?
+    } else {
+      titles.then(|| "?".to_string())
+    };
+    if let Some(value) = value {
+      let values = lookup_string(TITLE_NOTE_VALUES);
+      let values = if values.is_empty() { value } else { s!("{values},{value}") };
+      assign_value(TITLE_NOTE_VALUES, values, Some(Scope::Global));
     }
     Ok(())
+  });
+  // The footnote step of a bare mark the title prints that no name writes, its glyph lost and counted: the mark typed
+  // into a box no one uses, so the counter moves as the title's `\footnotemark` moves it (`emit::mark_dropped`, OD #1057).
+  DefMacro!("\\lx@title@mark@step{}", r"{\setbox0\hbox{#1}}");
+  // An author block's `\thefootnote` declaration holds in its cell of the `\@author` tabular (latex.ltx:17219-17222):
+  // the emitter keys each one it runs ahead of the names to its cell's name, `<flush>:<creator>`
+  // (`latex_constructs::title_cell_declared`, `title_cell_enter`; 1807.02791).
+  DefPrimitive!("\\lx@title@cell@declared Semiverbatim", sub[(key)] {
+    crate::latex_constructs::title_cell_declared(&key.to_string());
+  });
+  DefPrimitive!("\\lx@title@cell@enter Semiverbatim", sub[(key)] {
+    crate::latex_constructs::title_cell_enter(&key.to_string());
+  });
+  // A creator's note after its step, marked as its title prints it (`title_notes_print_marks`; article.cls:205, :241);
+  // an unmarked `\footnote` Perl's contact (Base_Utility.pool.ltxml:663). OD #1053; 2502.19103, 1911.13299, 2301.00220.
+  DefPrimitive!("\\lx@title@thanks []{}", sub[(attr, body)] {
+    title_note(false, attr, body)?;
+  });
+  DefPrimitive!("\\lx@title@footnote []{}", sub[(attr, body)] {
+    title_note(true, attr, body)?;
   });
   // A script character an author block's rehearsal read outside math, as a piece of the block holds it
   // (`observer::emitter::content`'s `Field::content_cut`): TeX errs there (Missing $), the digestion's recovery prints the
@@ -404,11 +435,110 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   );
 
   // Rust-only: run a title-page note list where the class prints it (acmart.cls:2245-2247, revtex4-2.cls:3020-3022,
-  // amsaddr.sty:113): footnote texts become notes, the footnote count is restored (OD #1036; 2605.28175, 2402.16516).
+  // amsaddr.sty:113): footnote texts become notes, the footnote count is restored (OD #1036; 2605.28175, 2402.16516);
+  // what else it prints is a note at the title block (`\lx@fm@list@note`).
   DefMacro!(
     "\\lx@frontmatter@footnotes{}",
-    r"\edef\lx@fm@footnote{\the\c@footnote}\begingroup\ifvmode\let\lx@fm@par\par\else\let\lx@fm@par\relax\fi\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext#1\ifhmode\lx@fm@par\fi\endgroup\global\c@footnote\lx@fm@footnote\relax"
+    r"\edef\lx@fm@footnote{\the\c@footnote}\begingroup\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext\lx@fm@list@note{#1}\endgroup\global\c@footnote\lx@fm@footnote\relax"
   );
+  // Rust-only (OD #1054): what a title-page list prints beside its footnote texts is a note at the title block, or, led by
+  // a mark names show and holding no other, those names' note (2606.06621, 2605.22682, 2605.08232).
+  DefPrimitive!("\\lx@fm@list@note{}", sub[(list)] {
+    let mut body = vec![T_CS!("\\vbox"), T_BEGIN!()];
+    body.extend(list.unlist());
+    body.push(T_END!());
+    assign_value(LIST_LABELS, Stored::String(pin("")), Some(Scope::Global));
+    let stuff = digest(Tokens::new(body))?;
+    if leaves_no_ink(&stuff) {
+      return Ok(Vec::new());
+    }
+    // (the mark it opens with, the only one it holds, and the authors a `\maketitle` placed whose names show it)
+    let events = lex_body_with_inks(&stuff).0;
+    let opening: Vec<&Event> = events.iter().collect();
+    let marks = events.iter().filter(|e| e.kind == EventKind::Mark).count();
+    let labels = lookup_string(LIST_LABELS);
+    // (or a footnote symbol not raised, where an item sets a label: cnf.sty's `\noindent$\ast$~…`)
+    let symbol = |e: &Event| {
+      let text = e.text.trim();
+      !labels.is_empty() && !text.is_empty() && text.chars().all(events::is_fnsymbol)
+    };
+    let led = opening_ink(&opening)
+      .filter(|e| (e.kind == EventKind::Mark && marks == 1) || (symbol(e) && marks == 0))
+      .map(|e| e.text.trim().to_string())
+      .filter(|mark| !mark.is_empty() && !mark.contains(','))
+      .map(|mark| {
+        let carriers = creators_showing(&mark, &labels);
+        (mark, carriers)
+      })
+      .filter(|(_, carriers)| !carriers.is_empty());
+    let n = lookup_int("lx_fm_list_notes") + 1;
+    assign_value("lx_fm_list_notes", Stored::Int(n), Some(Scope::Global));
+    assign_value(&s!("lx_fm_list_note_{n}"), Stored::Digested(stuff), Some(Scope::Global));
+    let box_call = s!("\\lx@fm@list@box{{{n}}}");
+    let calls: Vec<(String, String)> = match led {
+      Some((mark, carriers)) => {
+        let kind = classify_thanks(&events_text(&opening));
+        carriers
+          .iter()
+          .map(|carrier| {
+            (
+              s!("role=thanks,label={{{carrier}}}"),
+              s!(
+                "\\lx@fm@entry@attr{{mark}}{{{mark}}}\\lx@fm@entry@attr{{class}}{{ltx_note_frontmatter ltx_thanks_{kind}}}\\lx@fm@entry@attr{{{LIST_MARK}}}{{{mark}}}{box_call}"
+              ),
+            )
+          })
+          .collect()
+      },
+      None => vec![(s!("role=note,label=addresses:block"), box_call)],
+    };
+    let mut out: Vec<Token> = Vec::new();
+    for (keys, content) in calls {
+      out.extend(
+        Invocation!(T_CS!("\\lx@annotate@frontmatter"), vec![
+          Some(mouth::tokenize_internal("ltx:creator")),
+          Some(mouth::tokenize_internal("ltx:note")),
+          Some(mouth::tokenize_internal(TeXString::assembled(keys))),
+          Some(mouth::tokenize_internal(TeXString::assembled(content)))
+        ])
+        .unlist(),
+      );
+    }
+    unread(Tokens::new(out));
+    Ok(Vec::new())
+  });
+  // Rust-only (OD #1054): the attribute `#1` (the note's `mark`, its `class`; a list note's mark, `_listmark`, and a
+  // class's footnote mark, `_fnmark`, read by `shared_notes`' Kind steps) with the value `#2`, set on the frontmatter note or contact it is
+  // digested in — carried in the content, which the frontmatter emitter writes as given where it writes a call's keys
+  // anew. It prints nothing, its arguments no ink.
+  DefConstructor!("\\lx@fm@entry@attr Semiverbatim Semiverbatim", "",
+  after_construct => sub[document, whatsit] {
+    let read = |at: usize| whatsit.get_arg(at).map(|arg| arg.to_string()).unwrap_or_default();
+    let (key, value) = (read(1), read(2));
+    set_entry_attribute(document, key.trim(), value.trim())?;
+  });
+  // Rust-only (OD #1054): the label a list's item sets (`cor:cor1`, elsarticle's `\elsLabel` in cnf.sty's `\@cornotes`),
+  // whose names carry the item, as pdflatex prints its mark on them (2605.08232, 2606.15628).
+  DefPrimitive!("\\lx@fm@list@label{}", sub[(label)] {
+    let labels = s!("{},{}", lookup_string(LIST_LABELS), label.to_string().trim());
+    assign_value(LIST_LABELS, Stored::String(pin(labels)), Some(Scope::Global));
+  });
+  // (the box's list, as `\unvbox` gives it: queued, it is digested where the frontmatter is)
+  DefPrimitive!("\\lx@fm@list@box{}", sub[(n)] {
+    let n = n.to_string();
+    let Some(Stored::Digested(stuff)) = lookup_value(&s!("lx_fm_list_note_{}", n.trim())) else {
+      return Ok(Vec::new());
+    };
+    // (the one item of the list `\lx@fm@list@note` digested is its `\vbox`)
+    let items = stuff.unlist();
+    Ok(match items.as_slice() {
+      [vbox] => match vbox.data() {
+        DigestedData::Whatsit(w) => w.borrow().get_arg(2).map(Digested::unlist).unwrap_or_default(),
+        _ => items,
+      },
+      _ => items,
+    })
+  });
   DefMacro!(
     "\\lx@fm@footnotetext[]{}",
     "\\lx@add@pubnote[role=note,name={}]{#2}"
@@ -536,7 +666,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let (value, answers) = match placed_contact_owner(&mark, &content, weak_mark)? {
       ContactOwner::Mark(label) => (label, None),
       // (placed by a footnote-symbol mark its author requests: the contact answers that mark on that author,
-      // `show_unanswered_marks`)
+      // `settle_name_marks`)
       ContactOwner::Author(author) => (s!("author:{author}"), answered_symbol_key(mark.unlist_ref())),
       ContactOwner::Block if owner_first => (s!("author:{}", frontmatter_group_first()), None),
       ContactOwner::Block => (s!("addresses:block"), None),
@@ -868,38 +998,121 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // best-effort content-kind class `ltx_thanks_<kind>` from `classify_thanks`. Perl
       // keeps the inline contact (SHARED readability gap). Witnesses arXiv 2512.24601
       // (correspondence), 1510.02728 (funding).
-      let kind = classify_thanks(content.clone().untex_string().as_ref());
-      let mut opts = mouth::tokenize_internal(TeXString::assembled(s!(
-        "role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind}"
-      )))
-      .unlist();
-      if let Some(a) = &attr {
-        opts.push(T_OTHER!(","));
-        opts.extend(a.unlist_ref().iter().copied());
-      }
       let mut calls = vec![T_CS!("\\lx@title@footnote@step")];
-      calls.extend(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
-        vec![Some(mouth::tokenize_internal("ltx:creator")),
-             Some(mouth::tokenize_internal("ltx:note")),
-             Some(Tokens::new(opts)), Some(note_body(content))]).unlist());
+      calls.extend(title_note_call(false, attr, note_body(content))?);
       Ok(Tokens::new(calls))
     }
   });
-  // An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515).
+  // An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515). Its keys are the
+  // `\footnote`'s number where the author's `Let` gives one (`\footnote[1]{…}`), a footnote that steps no counter
+  // (`GIVEN_PART`, the front-matter footnotes' count: OD #1054).
   DefMacro!("\\lx@add@note [] {}", sub[(attr, content)] {
-    let mut opts = mouth::tokenize_internal("role=note").unlist();
-    if let Some(a) = &attr {
-      opts.push(T_OTHER!(","));
-      opts.extend(a.unlist_ref().iter().copied());
-    }
+    let attr = attr.map(|a| {
+      let given = !a.clone().untex().contains('=');
+      let mut keys = a.unlist();
+      if given {
+        keys.extend(mouth::tokenize_internal(TeXString::assembled(s!(",{FOOTNOTE_PART}={GIVEN_PART}"))).unlist());
+      }
+      Tokens::new(keys)
+    });
     let mut calls = vec![T_CS!("\\lx@title@footnote@step")];
-    calls.extend(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
-      vec![Some(mouth::tokenize_internal("ltx:creator")),
-           Some(mouth::tokenize_internal("ltx:contact")),
-           Some(Tokens::new(opts)), Some(note_body(content))]).unlist());
+    calls.extend(title_note_call(true, attr, note_body(content))?);
     Ok(Tokens::new(calls))
   });
   Ok(())
+}
+
+/// The footnote numbers of the title's and the date's notes, as `\lx@title@footnote@step` stepped them (`1,4`): their
+/// pubnote prints no mark here, so a name's `\footnotemark[n]` naming one is answered by a note the page does not mark
+/// (`insert::link_marked_notes`). `?` for one its class's notes step no counter for here (llncs's `\title{T\thanks{…}}`):
+/// the reading's count of the authors' notes is then not TeX's.
+pub(in crate::base_utilities) const TITLE_NOTE_VALUES: &str = "lx_title_note_values";
+
+/// `\lx@title@thanks` and `\lx@title@footnote` (`footnote`): the note's call, marked where its title marks it.
+fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> {
+  // (the counter's mark after the step, never a given number's: `\footnote[2]` is not marked so here; `\thefootnote`, the
+  // class's as the field began, `latex_constructs::enter_title_footnotes`, or the field's own: 1807.02791)
+  let mark = if title_note_steps() && title_notes_print_marks(footnote, false) {
+    let mark = digest(Tokens!(T_CS!("\\thefootnote")))?.to_string();
+    Some(mark.trim().to_string()).filter(|mark| !mark.is_empty())
+  } else {
+    None
+  };
+  let (tag, keys) = match mark {
+    None if footnote => ("ltx:contact", s!("role=note")),
+    mark => {
+      let class = classify_thanks(body.clone().untex_string().as_ref());
+      // (none where the mark the title prints is unknown here, flagged so: `insert::count_unknown_marks`)
+      let marked = mark.map_or_else(
+        || {
+          if crate::latex_constructs::title_marks_unknown(false) {
+            s!(",{MARK_UNKNOWN}=true")
+          } else {
+            String::new()
+          }
+        },
+        |mark| s!(",mark={{{mark}}},{MARK_FROM_COUNTER}=true"),
+      );
+      (
+        "ltx:note",
+        s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{class}{marked}"),
+      )
+    },
+  };
+  let mut opts = mouth::tokenize_internal(TeXString::assembled(keys)).unlist();
+  if let Some(a) = &attr {
+    opts.push(T_OTHER!(","));
+    opts.extend(a.unlist_ref().iter().copied());
+  }
+  unread(Invocation!(T_CS!("\\lx@annotate@frontmatter"), vec![
+    Some(mouth::tokenize_internal("ltx:creator")),
+    Some(mouth::tokenize_internal(tag)),
+    Some(Tokens::new(opts)),
+    Some(body)
+  ]));
+  Ok(())
+}
+
+/// The footnote step of a bare mark no name of the title writes (`emit::mark_dropped`): `\lx@title@mark@step{<mark>}`.
+pub(in crate::base_utilities) const TITLE_MARK_STEP: &str = "\\lx@title@mark@step";
+
+/// Whether a note made in the title block steps the footnote counter there (`\lx@title@footnote@step`): the class's
+/// title marks its notes (`lx_title_counts_footnotes`, `latex_constructs::declare_title_footnote_counting`) and its
+/// `\maketitle` digests the field (`lx_frontmatter_explicit`) — the title, an author or the date.
+fn title_note_steps() -> bool {
+  lookup_bool("lx_title_counts_footnotes")
+    && lookup_bool("lx_frontmatter_explicit")
+    && matches!(
+      lookup_string("lx_frontmatter_item").as_str(),
+      "ltx:creator" | "ltx:title" | "ltx:date"
+    )
+}
+
+/// Whether the title block prints its declared mark (`latex_constructs::TITLE_THEFOOTNOTE`) for a note made in it, a
+/// name's `\footnote` (`footnote`) unless the class marks those its own way (`lx_title_footnote_own_marks`), or, given
+/// no number (`given`), at a counter other commands step that the reading does not count
+/// (`lx_title_footnote_given_marks_only`: REVTeX 4.0's `\thanks`, `\email`, `\altaffiliation`). OD #1053. Under a
+/// binding that numbers its front-matter footnotes ([`FOOTNOTE_MARKS`], REVTeX's `\@AF@join`), only a number given in
+/// the source: the rest are that binding's pass's (`number_footnote_parts`, OD #1054), a name's `\thanks` unmarked. Only
+/// under the class's own `\maketitle` ([`title_marks_declared`](crate::latex_constructs::title_marks_declared)): a
+/// document's or a package's prints marks unknown here, none written (`maketitle_redefined_prints_no_marks`).
+pub(in crate::base_utilities) fn title_notes_print_marks(footnote: bool, given: bool) -> bool {
+  lookup_bool("lx_frontmatter_explicit")
+    && (given || lookup_string(FOOTNOTE_MARKS).is_empty())
+    && !(footnote
+      && (lookup_bool("lx_title_footnote_own_marks")
+        || (!given && lookup_bool("lx_title_footnote_given_marks_only"))))
+    && crate::latex_constructs::title_marks_declared()
+}
+
+/// `\lx@title@thanks[attr]{content}`, or `\lx@title@footnote` (`footnote`): a creator's note after its step.
+fn title_note_call(footnote: bool, attr: Option<Tokens>, content: Tokens) -> Result<Vec<Token>> {
+  let cs = if footnote {
+    "\\lx@title@footnote"
+  } else {
+    "\\lx@title@thanks"
+  };
+  Ok(Invocation!(T_CS!(cs), vec![attr, Some(content)]).unlist())
 }
 
 /// The author markup in force for the author content ([`author_markup_begin`]).
@@ -1078,7 +1291,7 @@ fn text_glyph(t: &Token) -> Option<Token> {
 
 /// The glyph a math symbol prints: the text of the one box a math primitive without arguments makes (`\sim` "∼",
 /// `def_math_primitive`), which reads the current font and changes nothing. `None` for any other command.
-fn math_symbol_glyph(t: &Token) -> Option<String> {
+pub fn math_symbol_glyph(t: &Token) -> Option<String> {
   let Ok(Some(Stored::MathPrimitive(math))) = lookup_definition_stored(t) else {
     return None;
   };
@@ -1122,3 +1335,74 @@ pub(in crate::base_utilities) fn orcid_icon_link(id: &str, tokens: &[Token]) -> 
   content.push(T_END!());
   content
 }
+
+/// Sets `key` on the frontmatter note or contact the document is in (`\lx@fm@entry@attr`).
+fn set_entry_attribute(document: &mut Document, key: &str, value: &str) -> Result<()> {
+  if key.is_empty() {
+    return Ok(());
+  }
+  let mut node = Some(document.get_node().clone());
+  while let Some(at) = node.as_ref()
+    && !matches!(
+      at.get_name().as_str(),
+      "note" | "contact" | "creator" | "document"
+    )
+  {
+    node = at.get_parent();
+  }
+  if let Some(mut entry) = node.filter(|at| matches!(at.get_name().as_str(), "note" | "contact")) {
+    document.set_attribute(&mut entry, key, value)?;
+  }
+  Ok(())
+}
+
+/// The list labels its items set (`\lx@fm@list@label`), comma-led.
+const LIST_LABELS: &str = "lx_fm_list_labels";
+
+/// The labels (`author:N`) of the author creators a `\maketitle` placed whose names show `mark` (`Windt$^\ddagger$`, a
+/// mark of a list: `$^{1,\ddagger}$`), as their events read them; none showing it, the one label the list's items set
+/// (`cor:cor1`, which the names requesting it carry).
+fn creators_showing(mark: &str, labels: &str) -> Vec<String> {
+  let showing = creators_where(|creator| {
+    creator.content.iter().any(|part| {
+      matches!(part, TagContent::Box(d) if lex_events(d)
+        .iter()
+        .any(|e| e.kind == EventKind::Mark && e.text.split(',').any(|item| mark_key(item) == mark_key(mark))))
+    })
+  });
+  let labels: Vec<&str> = labels
+    .split(',')
+    .filter(|label| !label.is_empty())
+    .collect();
+  match labels.as_slice() {
+    [label] if showing.is_empty() => vec![(*label).to_string()],
+    _ => showing,
+  }
+}
+
+/// The labels (`author:N`) of the author creators a `\maketitle` placed that `test` takes.
+fn creators_where(test: impl Fn(&TagData) -> bool) -> Vec<String> {
+  with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(frontmatter)) => frontmatter
+      .get("ltx:creator")
+      .map(|creators| {
+        creators
+          .iter()
+          .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
+          .filter(|c| test(c))
+          .filter_map(|c| {
+            c.attr
+              .get("_annotations")?
+              .split(',')
+              .find(|label| label.starts_with("author:"))
+              .map(str::to_string)
+          })
+          .collect()
+      })
+      .unwrap_or_default(),
+    _ => Vec::new(),
+  })
+}
+
+/// A mark as a name shows it and a note carries it: its asterisk forms one.
+fn mark_key(mark: &str) -> String { mark.trim().replace('∗', "*") }

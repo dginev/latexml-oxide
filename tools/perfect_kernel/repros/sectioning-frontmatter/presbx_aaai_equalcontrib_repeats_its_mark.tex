@@ -1,0 +1,30 @@
+% mechanism: AAAI's `\equalcontrib` makes its note on first use and repeats that note's mark after (aaai22.sty:66-73,
+%   aaai25.sty:81-88, aaai2026.sty:79-86 `\ifnum\value{eqfn}=0 \footnote{…}\setcounter{eqfn}{\value{footnote}}\else
+%   \footnotemark[\value{eqfn}]\fi`): the aaai binding (latexml_contrib aaai_sty.rs, MTREDUCE; formerly a kernel stub) does the same, one note shared by its carriers
+% witness:  2501.02471 (aaai25.sty: Luo, Zhong "∗" as Liu, Pan "†"; written † ‡ §); the style a minimal stand-in
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗, Bob Baker∗, Cy Cole∗, Dee Dunn†"; foot
+%   "∗These authors contributed equally." once, "†Corresponding author."
+% engines:  rust PRESBXbase (d45633020ab) = 0 errors, 3 Warnings; Ann ∗, Bob †, Cy ‡ (three notes), Dee §; PRESBX = 0
+%   errors, 1 Warning (the emitter writes the stub's note text as plain text, "note no argument")
+% expect:   0 errors, 1 Warning; Ann, Bob, Cy each a copy of one "These authors contributed equally." marked ∗, Dee
+%   "Corresponding author." marked †; HTML the shared note once in the margin, ∗ on each carrier
+% status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai25.sty}
+\def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newcounter{eqfn}\setcounter{eqfn}{0}%
+  \vbox{\let\footnote\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{eqfn}{\value{footnote}}\else\footnotemark[\value{eqfn}]\fi}%
+    \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{aaai25}
+\title{A Title}
+\author{Ann Able\equalcontrib, Bob Baker\equalcontrib, Cy Cole\equalcontrib, Dee Dunn\thanks{Corresponding author.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

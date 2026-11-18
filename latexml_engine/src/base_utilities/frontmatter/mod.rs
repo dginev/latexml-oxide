@@ -32,5 +32,15 @@ mod cover_order;
 pub use cover_order::*;
 mod relocate;
 pub use relocate::*;
+mod shared_notes;
+pub(in crate::base_utilities) use shared_notes::*;
+pub use shared_notes::{FOOTNOTE_MARKS, FOOTNOTE_PART, GIVEN_PART};
+mod pure_names;
+use pure_names::*;
+mod date_legend;
+pub use date_legend::address_note_contacts;
+pub(in crate::base_utilities) use date_legend::{
+  address_block_legend_calls, date_legend_calls, listed_email_calls, note_address_block,
+};
 pub(in crate::base_utilities) mod observer;
 pub use observer::*;

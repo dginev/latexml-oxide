@@ -1,0 +1,24 @@
+% mechanism: 2603.01834's author block: `\author*[1]` with its e-mail, two more names, and the one address starred
+%   (`\affil*[1]`, 2412.01641's sn-jnl.cls:561-566: `^{1*}text.`, the class's ornament of the corresponding address,
+%   which links nothing more)
+% witness:  2603.01834
+% oracle:   pdflatex with 2603.01834's sn-jnl.cls 0 errors: "Ann Able1*, Bob Baker1 and Cat Cole1", "1*Dept A, Univ A,
+%   Town, 02139, MA, USA.", "*Corresponding author(s). E-mail(s): ann@a.org;"
+% engines:  rust 3b420685f89 = 0 errors; no `*`, no "Corresponding author"
+% expect:   0 errors 0 Warnings; Ann the note "Corresponding author(s)." under *, the address every name's
+% status:   RED (3b420685f89) -> GREEN XML GREEN, HTML GREEN (SNJNL;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2603.01834's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\author[1]{\fnm{Bob} \sur{Baker}}
+\author[1]{\fnm{Cat} \sur{Cole}}
+\affil*[1]{\orgdiv{Dept A}, \orgname{Univ A}, \orgaddress{\city{Town}, \postcode{02139}, \state{MA}, \country{USA}}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

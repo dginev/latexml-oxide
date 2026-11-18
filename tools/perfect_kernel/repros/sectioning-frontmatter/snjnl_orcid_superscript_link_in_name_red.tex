@@ -1,0 +1,23 @@
+% mechanism: a name-final ORCID `\href{…}{\textsuperscript{o}}` is the name's link, an icon and no mark; the engine
+%   reads it as a contact only where nothing follows it inside the name, and sn-jnl's names end with the binding's
+%   marks macro (`\lx@sn@marks@<n>`), so the link is the "something follows" case (Ann's with a space after it too)
+% witness:  none in the 165 census papers (review revSNJNL S2; the shape of 2401.10531's ORCID, not a regression)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Ableo1* and Bob Bakero1", "1Univ A.",
+%   "*Corresponding author(s). E-mail(s): ann@a.org;" (each `o` a link to its ORCID record)
+% engines:  rust R2Ac and SNJNLb = 0 errors, 1 Warning (the `o` missing); each name's href lost, an `o` mark-only note
+%   (`footnotemark`) invented on Ann and Bob
+% expect:   0 errors 0 Warnings; each ORCID link kept on its name (a contact or the name's link), no `o` mark
+% status:   RED (row R ORCIDNAME, an engine gap; no guard)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able\href{https://orcid.org/0000-0001-6294-2915}{\textsuperscript{o}}} }\email{ann@a.org}
+\author[1]{\fnm{Bob} \sur{Baker\href{https://orcid.org/0000-0003-1701-1876}{\textsuperscript{o}}}\relax}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

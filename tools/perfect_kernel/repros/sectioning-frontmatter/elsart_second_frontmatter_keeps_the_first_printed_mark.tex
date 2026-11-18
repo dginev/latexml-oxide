@@ -1,0 +1,24 @@
+% mechanism: two `frontmatter` blocks: the first `\end{frontmatter}` prints Alice with c1's ∗ (elsarticle.cls:1303,
+%   :256-265); the second reprints the whole names list, Alice now with c2's ∗∗ (`\@corref` set again) and Bob. One
+%   creator list holds the first print: Alice Corr one, Corr two the block's (the reprint's mark is not modelled)
+% witness: revELSARTc r02 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: page 1 "Alice Oneb,∗", "∗ Corr one"; page 2 "Alice Oneb,∗∗, Bob Twob",
+%   "∗ Corr one", "∗∗ Corr two"
+% engines: rust ELSARTc (8756e486ffb): Alice Corr two, Corr one the block's; INTFMfinal: the expected, 2 Warnings
+% expect:  0 errors 0 Warnings; Alice One Corr one, Bob Two none, Corr two the block's
+% status:  RED (ELSARTc) -> GREEN (ELSARTd) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}\corref{c1}
+\cortext[c1]{Corr one}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+\begin{frontmatter}
+\author[l1]{Bob Two}\corref{c2}
+\cortext[c2]{Corr two}
+\end{frontmatter}
+x
+\end{document}

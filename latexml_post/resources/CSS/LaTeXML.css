@@ -73,8 +73,11 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_author_before,
 .ltx_author_after { display:inline;}
 .ltx_author_notes { display:inline-block; }
+/* latexml-oxide local delta (OXIDIZED_DESIGN_DIVERGENCES #1069, DG 2026-11-17): a hover handle is no footnote mark,
+   so it draws none of their glyphs; the page carries the marks the PDF prints (Perl: "*", which read as a second mark
+   beside a printed one, 2606.00446's "Park**"). */
 .ltx_author_notes:before {
-    content:"*"; color:blue;
+    content:"\24D8"; color:blue;
     font-size:80%; vertical-align:super; }
 .ltx_author_notes .ltx_author_notes_content {
     visibility:hidden; opacity:0; transition: opacity 0.3s;
@@ -129,8 +132,9 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
     padding:0.3rem; font-size:1rem; }
 .ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))):has(.ltx_author_line) .ltx_author_line .ltx_contact_name { display:none; }
 
+/* (the title notes' handle too, #1069; Perl: "†", 2605.10496's title † beside a printed †) */
 .ltx_pubnotes:before {
-    content:"\002020"; color:blue;
+    content:"\24D8"; color:blue;
     font-size:80%; vertical-align:super; }
 .ltx_pubnotes        { display:inline-block; }
 .ltx_pubnotes .ltx_pubnotes_content {
@@ -820,6 +824,26 @@ cite                 { font-style: normal; }
   display:inline-flex; flex-wrap:wrap; align-items:baseline;
   justify-content:center; column-gap:0.35em; }
 .ltx_annotated_personname > .ltx_personname { min-width:0; }
+/* latexml-oxide local delta (OXIDIZED_DESIGN_DIVERGENCES #1052, DG 2026-11-16): marked notes follow the name, a shared
+   one once; on the card a body floats under it (2606.00446, 2407.07614, 1706.03762, 1510.02728, 0801.1438), every marked
+   note showing its mark on the name and at its head, one author's too (DG 2026-11-17, 2506.06941's "†"). A shared note's
+   other marks carry a hidden copy of it (ltx_note_copy, DG 2026-11-17): only their classic pop-up shows it. */
+.ltx_annotated_personname:has(> .ltx_note) { display:inline; }
+.ltx_note_shared > .ltx_note_mark > a { color:inherit; text-decoration:none; }
+/* latexml-oxide local delta (OXIDIZED_DESIGN_DIVERGENCES #990, #1063; DG 2026-11-16): a frontmatter note whose glyph is
+   unknown, or which prints none, shows none; with no mark to hover, its text is a line of its own (under an author's
+   name, in the abstract, at the document's level: 2602.04557, 2405.13379, 2506.06941), a picture inline. */
+.ltx_note_unmarked:not(:has(img, svg)) { display:block; font-size:90%; }
+/* (inside a paragraph it stays inline: a field note mid-sentence must not split the sentence, revINVDAGb S1) */
+.ltx_p > .ltx_note_unmarked { display:inline; }
+:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname:has(> .ltx_note) { display:flow-root; }
+:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note { display:inline; }
+:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note > .ltx_note_outer:not(.ltx_note_copy) .ltx_note_content {
+    display:block; position:static; float:inline-start; clear:both; width:100%; max-width:none; margin:0.2em 0; padding:0;
+    background:none; border:none; border-radius:0; box-shadow:none; text-align:inherit; }
+:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note > .ltx_note_outer:not(.ltx_note_copy) .ltx_note_content .ltx_note_mark { position:static; }
+:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note > .ltx_note_outer:not(.ltx_note_copy) .ltx_note_type { display:none; }
+.ltx_annotated_personname > .ltx_note:has(~ .ltx_note) > .ltx_note_mark::after { content:","; }
 
 .ltx_overlay {position:relative; }
 .ltx_overlay > span:nth-child(2) {position:absolute; left:0; }

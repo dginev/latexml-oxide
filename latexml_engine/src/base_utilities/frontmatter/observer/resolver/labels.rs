@@ -195,7 +195,7 @@ pub(super) fn label_owners(creators: &[RCreator], live: &[usize], label: &str) -
   }
   let find = |matches: &dyn Fn(&str) -> bool| -> Vec<usize> {
     (0..creators.len())
-      .filter(|&c| creators[c].requests.iter().any(|r| matches(r)))
+      .filter(|&c| creators[c].requests().any(|r| matches(r)))
       .collect()
   };
   let bare = unprefixed(label);
@@ -556,7 +556,7 @@ pub(super) fn is_legend_text(text: &str) -> bool {
 
 /// The mark a Note event shows on its name (`\thanks`/`\footnote`'s `\thefootnote`, the rehearsal's `printed`), as the
 /// lexer writes it last into the note's role (`thanks mark=1 shows=∗`), if one (FM S2a.2 r7, 1607.07280).
-pub(super) fn note_shows(note: &Event) -> Option<&str> {
+pub(in crate::base_utilities::frontmatter::observer) fn note_shows(note: &Event) -> Option<&str> {
   note
     .role
     .as_deref()?

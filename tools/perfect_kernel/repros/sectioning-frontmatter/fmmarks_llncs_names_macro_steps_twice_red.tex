@@ -1,0 +1,23 @@
+% mechanism: llncs.cls's `\@maketitle` sets `\@author` once in a box to count the names, its `\thanks` gobbled
+%   (llncs.cls:1028-1029), before printing it: a document macro holding `\footnotemark` steps the counter in both runs,
+%   as a bare `\footnotemark` does (fmmarks_llncs_counting_pass_steps_twice_red). The binding's scan reads the macro's
+%   body (llncs_cls.rs `steps_footnotes`, by meaning) and withdraws its title marks: Ann's thanks unmarked, Bob's mark
+%   written with no glyph (a Warning counts it)
+% witness:  revLLNCS B2 (probes d_macro, d_macro2)
+% oracle:   pdflatex 0 errors; "Ann Able⋆⋆ and Bob Baker⋆⋆⋆", footnote "⋆⋆ Ann note." (Bob's mark answered by none)
+% engines:  rust LLNCSMARKS (8ea66f196ea) = 0 errors, 0 Warnings; Ann ⋆, Bob ⋆⋆ (wrong glyphs); LLNCSb = 0 errors,
+%   1 Warning (unanswered_mark_lost); Ann's thanks unmarked, Bob's mark none
+% expect:   0 errors, 0 Warnings; Ann's thanks ⋆⋆, Bob's mark ⋆⋆⋆
+% status:   RED (row R LLNCSTWICE, proposed; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red;
+%   the withdrawal perfect_kernel_batchllncs::a_names_macro_that_steps_withdraws_the_title_marks)
+% moves:    XML, HTML row R LLNCSTWICE
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\newcommand\fm{\footnotemark}
+\title{A Title}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\protect\fm}
+\institute{Lab A}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

@@ -7,11 +7,11 @@
   <title>Testing Authors</title>
   <creator role="author">
     <personname>Joe Blow</personname>
-    <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">Somewhere</note>
+    <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks">Somewhere</note>
   </creator>
   <creator before="  " role="author">
     <personname>Fred Head</personname>
-    <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">elsewhere</note>
+    <note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks">elsewhere</note>
   </creator>
   <creator before="  " role="author">
     <personname>Alessio Martini</personname>

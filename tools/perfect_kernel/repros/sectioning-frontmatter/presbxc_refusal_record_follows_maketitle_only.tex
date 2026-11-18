@@ -1,0 +1,33 @@
+% mechanism: the lock's refusal records (`\lx@dropped@<cs>`, `<cs>:redefined@…`) follow a `\let` only for `\maketitle`,
+%   their one reader (state.rs `carry_document_refusal_records`): a `\let` of another refused name at the document's
+%   origin keeps its record, as the kernel's `\maketitle` cleanup `\global\let\thanks\relax` must keep
+%   `\lx@dropped@thanks` and `\let\@maketitle\relax` `\lx@dropped@@maketitle` (title_page_reading.rs,
+%   frontmatter_stores.rs read them after); the raw class's refused `\title` stands for them (no kernel lock refuses
+%   `\thanks` or `\@maketitle` today)
+% witness:  none (review revPRESBXb S1)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Before: lost; lost. … After: lost; lost." (pdflatex keeps no
+%   refusal records; this repro reads LaTeXML's state)
+% engines:  rust PRESBXbase2 (14e92b291ab) = 0 errors, 0 Warnings; "After: kept; kept."; PRESBXb (300685cb312) = "After:
+%   lost; kept." (the document's `\global\let\title\relax` cleared `\lx@dropped@title`)
+% expect:   0 errors, 0 Warnings; "Before: kept; kept." and "After: kept; kept."
+% status:   RED (PRESBXb) -> GREEN (PRESBXc: perfect_kernel_batchpresbxc::a_let_carries_only_the_maketitle_refusal_record)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{presbxcraw.cls}
+\ProvidesClass{presbxcraw}
+\LoadClass{article}
+\renewcommand\title[1]{\gdef\@title{#1}\gdef\mytitle{#1}}
+\long\def\maketitle{\par\begingroup\@maketitle\@thanks\endgroup\setcounter{footnote}{0}\global\let\thanks\relax\global\let\maketitle\relax}
+\end{filecontents*}
+\documentclass{presbxcraw}
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\makeatletter
+Before: \ifdefined\lx@dropped@title kept\else lost\fi; \ifdefined\lx@dropped@maketitle kept\else lost\fi.
+\makeatother
+\maketitle
+\makeatletter
+\global\let\title\relax
+After: \ifdefined\lx@dropped@title kept\else lost\fi; \ifdefined\lx@dropped@maketitle kept\else lost\fi.
+\makeatother
+\end{document}

@@ -183,8 +183,19 @@ LoadDefinitions!({
   // REVTeX 4.0's own rule for printing a `\preprint` (revtex4_support_sty.rs `preprint_printed`).
   if revtex4_0 {
     assign_value("revtex@preprint@v4.0", true, Some(Scope::Global));
+    // A name's `\footnote` prints `\frontmatter@thefootnote` (revtex4.cls:4729) at a counter `\thanks`, `\email` and
+    // `\altaffiliation` step too (`\frontmatter@footnote`, :4558-4583), uncounted here: marked only given its number
+    // (OD #1053; 1607.07280's `\footnote[1]`; review revSHMARKb)
+    assign_value("lx_title_footnote_given_marks_only", true, Some(Scope::Global));
+  } else {
+    // REVTeX 4.2 sets a name's `\footnote` in its minipage letters (revtex4-2.cls:487-488), or drops it under `reprint`,
+    // not in 4.0's `\frontmatter@thefootnote` (revtex4.cls:4726-4729): no title mark (OD #1053; 2301.00220)
+    assign_value("lx_title_footnote_own_marks", true, Some(Scope::Global));
   }
   RequirePackage!("revtex4_support");
+  if !revtex4_0 {
+    revtex4_support_sty::declare_revtex41_title_marks("4-2")?;
+  }
   switch_off_author_block_after_maketitle()?;
   define_frontmatter_note_lists()?;
   // revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
@@ -208,12 +219,13 @@ LoadDefinitions!({
   // REVTeX 4.0 sets an `\email` or `\homepage` address with `\url`, the `\texttt` its `\href` falls back to
   // (revtex4.cls:4476-4493), so its `_` and `~` read as typed (1001.1076 "aiwen_fan@pku.edu.cn"). REVTeX 4.2, which
   // this binding also serves, sets it in the current font (revtex4-2.cls:1980, its `\href` = `\@href`), as
-  // revtex4_support_sty.rs's commands do; `%` other in the address, as `\sanitize@url` makes it (`UrlSemiverbatim`).
+  // revtex4_support_sty.rs's commands do; `%` other in the address, as `\sanitize@url` makes it (`UrlSemiverbatim`); the
+  // footnote part it joins as there (`\lx@revtex@fn@tag`).
   if revtex4_0 {
-    DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
-    DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
-    DefMacro!("\\@email{} Semiverbatim", "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
-    DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag");
+    DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag");
+    DefMacro!("\\@email{} Semiverbatim", "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag");
+    DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag");
   }
 
   // Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.

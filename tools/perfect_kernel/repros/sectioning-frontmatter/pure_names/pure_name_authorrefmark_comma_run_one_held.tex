@@ -1,0 +1,20 @@
+% mechanism: ieeeconf's `\authorrefmark` run parted by `$^,$`, one mark unheld: that mark stays
+% witness:  2011.00594 (ieeeconf, `Yermek Kapushev\authorrefmark{1}$^,$\authorrefmark{2}$^,$\authorrefmark{3}`; here
+%           IEEEtran with ieeeconf's aliases, in every TeX Live)
+% oracle:   pdflatex 0 errors; "Ann Able∗,†, Bob Baker∗" over "∗ Univ A"
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; Ann's † lost
+% expect:   0 errors, 0 Warnings; ∗ consumed by Univ A; Ann's † a mark-only note
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\let\authorblockN\IEEEauthorblockN
+\let\authorblockA\IEEEauthorblockA
+\let\authorrefmark\IEEEauthorrefmark
+\begin{document}
+\title{Title}
+\author{\authorblockN{Ann Able\authorrefmark{1}$^,$\authorrefmark{2}, Bob Baker\authorrefmark{1}}
+\authorblockA{\authorrefmark{1}Univ A}}
+\maketitle
+Text.
+\end{document}

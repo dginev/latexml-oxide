@@ -75,6 +75,28 @@ pub(in crate::base_utilities) fn note_frozen_digest(tag: &str) {
 /// Whether a rehearsal is digesting now (the ledger records nothing of it).
 pub(in crate::base_utilities) fn rehearsing() -> bool { REHEARSING.with(Cell::get) }
 
+/// A cell of the `\@author` tabular the rehearsal reads ends (`\and`, `\\`): unless in a note's text
+/// ([`note_text`]), `latex_constructs::rehearsal_cell_ends`.
+fn cell_ends() {
+  if NOTE_TEXT.with(Cell::get) == 0 {
+    crate::latex_constructs::rehearsal_cell_ends();
+  }
+}
+
+/// A note's text begins (`1`) or ends (`-1`) in the rehearsal ([`cell_ends`]).
+fn note_text(step: i32) { NOTE_TEXT.with(|depth| depth.set((depth.get() + step).max(0))); }
+
+/// The footnote number a rehearsal's notes reached so far: `\c@footnote` at its start and the steps its notes made
+/// (`FOOTNOTE_STEPS`, the counter itself unstepped); `None` outside a rehearsal
+/// (`latex_constructs::title_note_number`).
+pub fn rehearsal_footnote_value() -> Option<i64> {
+  rehearsing().then(|| {
+    FOOTNOTE_BASE
+      .with(Cell::get)
+      .saturating_add(FOOTNOTE_STEPS.with(Cell::get))
+  })
+}
+
 /// Whether the frontmatter's rehearsal is reading the author fields now: where a binding's command whose meaning is a
 /// frontmatter fact makes the reading's event (IEEEtran's `\IEEEmembership`, a Contact the resolver gives the name it follows).
 pub fn rehearsing_author_fields() -> bool { rehearsing() }
@@ -204,10 +226,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (each reverting as the command it is bound for, `alias`: a text made of an argument holding one — an argument read
   // verbatim, svjour3's `\email{yjansson@kth.se \and tony@kth.se}`, 2106.06418; a link's target, lni's `\orcid`,
   // 2106.11154, 1401.5951 — keeps its `\and`, `\\` or `\par`, never the rehearsal's name: review revN2)
-  DefConstructor!("\\lx@fm@obs@and", "", alias => "\\and");
-  DefConstructor!("\\lx@fm@obs@And", "", alias => "\\And");
-  DefConstructor!("\\lx@fm@obs@AND", "", alias => "\\AND");
-  DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "", alias => "\\\\");
+  // (each ends a cell of the `\\@author` tabular, latex.ltx:17219-17222, and with it a `\\thefootnote` set in the cell:
+  // `latex_constructs::rehearsal_cell_ends`)
+  DefConstructor!("\\lx@fm@obs@and", "", alias => "\\and", before_digest => { cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@And", "", alias => "\\And", before_digest => { cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@AND", "", alias => "\\AND", before_digest => { cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "", alias => "\\\\", before_digest => { cell_ends(); });
   // (its own, for the Break to say so; a contact's raw argument holding it reads it as the break it is, `events::raw_lines`:
   // 2106.11154's `\orcid`)
   DefConstructor!("\\lx@fm@obs@par OptionalMatch:* []", "", alias => "\\par");
@@ -224,10 +248,18 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // LaTeX sets a footnote's text in a paragraph of its own): a note set in a formula, `Tianming Wei$^{2,3}\thanks{The
   // first two authors contributed equally}$` (2407.15815; 2603.20851's `$^1\thanks{Corresponding Author}$`), kept its
   // words' spaces, which math mode skipped ("Thefirsttwoauthorscontributedequally").
-  DefConstructor!("\\lx@fm@obs@note []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
-  DefConstructor!("\\lx@fm@obs@fnnote []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
-  // `\footnotetext`: the text of a mark printed elsewhere, no step
-  DefConstructor!("\\lx@fm@obs@notetext []{}", "", bounded => true, mode => "text");
+  // (a `\\` in a note's text, `\sthanks{Corresponding Author. \newline …}` (2208.01916), ends no cell: the text is no part
+  // of the `\@author` tabular, its mark printed after it, `cell_ends`)
+  DefConstructor!("\\lx@fm@obs@note []{}", "", bounded => true, mode => "text", before_digest => { note_text(1); }, after_digest => sub[_whatsit] { note_text(-1); }, properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
+  DefConstructor!("\\lx@fm@obs@fnnote []{}", "", bounded => true, mode => "text", before_digest => { note_text(1); }, after_digest => sub[_whatsit] { note_text(-1); }, properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
+  // `\footnotetext`: the text of a mark printed elsewhere, no step; its `number` the note's, `[<n>]` or the counter's
+  // value (latex.ltx `\@xfootnotenext`, `\footnotetext` sets `\@thefnmark` from `\c@footnote` as it stands)
+  DefConstructor!("\\lx@fm@obs@notetext []{}", "", bounded => true, mode => "text", before_digest => { note_text(1); }, after_digest => sub[_whatsit] { note_text(-1); }, properties => sub[args] {
+    Ok(match note_number(args.first().and_then(|a| a.as_ref())) {
+      Some(value) => stored_map!("fnvalue" => Stored::String(pin(value.to_string()))),
+      None => SymHashMap::default(),
+    })
+  });
   // `\footnotemark[<n>]` prints `\thefootnote` at <n> (latex.ltx `\@xfootnotemark`), a bare `\footnotemark` at the
   // counter's next value (`\stepcounter\@mpfn`): its `printed` property is that print, made with the counter set in a
   // group of its own, to <n> or to its value at the rehearsal's start plus the steps the block made up to it, so the
@@ -286,7 +318,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // (read quietly too: a bare `\footnotemark` under a class whose `\@fnsymbol` reads `\thefootnote` must not end the
     // block's rehearsal — review revfms2a2_7 finding 4, jpconf.cls:153)
     let printed = note_mark_quietly(value)?;
-    Ok(stored_map!("printed" => Stored::String(pin(&printed))))
+    Ok(stored_map!("printed" => Stored::String(pin(&printed)), "fnvalue" => Stored::String(pin(value.to_string()))))
   });
   // the marks the kernel `\maketitle` prints (latex.ltx/article.cls `\renewcommand\thefootnote{\@fnsymbol\c@footnote}`),
   // unless a binding declares its title's own (`TITLE_FOOTNOTE_HOOK`)
@@ -378,24 +410,34 @@ fn note_step(note: Token, number: Option<Tokens>) -> Result<Tokens> {
   Ok(Tokens::new(out))
 }
 
-/// The properties of a note's constructor: the mark it shows on the name.
+/// The properties of a note's constructor: the mark it shows on the name, and the note's number (`Event::number`).
 fn note_properties(number: Option<&Digested>) -> Result<SymHashMap<Stored>> {
-  let given = number.map(|number| {
+  let Some(value) = note_number(number) else {
     let mut text = String::new();
-    ink_text(number, &mut text);
-    text.trim().to_string()
-  });
-  let value = match given {
-    Some(text) => match text.parse::<i64>() {
-      Ok(value) => value,
-      Err(_) => return Ok(stored_map!("printed" => Stored::String(pin(&text)))),
-    },
-    None => FOOTNOTE_BASE
-      .with(Cell::get)
-      .saturating_add(FOOTNOTE_STEPS.with(Cell::get)),
+    number.inspect(|number| ink_text(number, &mut text));
+    return Ok(stored_map!("printed" => Stored::String(pin(text.trim()))));
   };
   let printed = note_mark_quietly(value)?;
-  Ok(stored_map!("printed" => Stored::String(pin(&printed))))
+  Ok(
+    stored_map!("printed" => Stored::String(pin(&printed)), "fnvalue" => Stored::String(pin(value.to_string()))),
+  )
+}
+
+/// The footnote number a note stands for: its given `[<n>]`, else the counter's value at its step (`None`: a given
+/// argument that is no number, TeX's "Missing number").
+fn note_number(number: Option<&Digested>) -> Option<i64> {
+  match number {
+    Some(number) => {
+      let mut text = String::new();
+      ink_text(number, &mut text);
+      text.trim().parse::<i64>().ok()
+    },
+    None => Some(
+      FOOTNOTE_BASE
+        .with(Cell::get)
+        .saturating_add(FOOTNOTE_STEPS.with(Cell::get)),
+    ),
+  }
 }
 
 /// The footnote mark `\thefootnote` prints with the counter at `value`, in a group of its own (the rehearsal steps
@@ -560,6 +602,8 @@ thread_local! {
   /// The footnote steps the block being rehearsed made so far (`\thanks`, `\footnote` and bare `\footnotemark`s),
   /// from 0 at each rehearsal.
   static FOOTNOTE_STEPS: Cell<i64> = const { Cell::new(0) };
+  /// How many notes' texts the rehearsal is inside ([`note_text`]).
+  static NOTE_TEXT: Cell<i32> = const { Cell::new(0) };
   /// `\c@footnote` at the rehearsal's start, and whether the format has it (and `\thefootnote`).
   static FOOTNOTE_BASE: Cell<i64> = const { Cell::new(0) };
   static FOOTNOTE_BASE_DEFINED: Cell<bool> = const { Cell::new(false) };
@@ -722,11 +766,11 @@ const BOUND_WHEN_DEFINED: &[(&str, &str, bool)] = &[
 /// The hook a binding declares its title's footnote marks with — the kernel's own, `\lx@title@thefootnote`
 /// (`latex_constructs::TITLE_THEFOOTNOTE`), which also marks the notes the title block prints: defined, the
 /// rehearsal's `\thefootnote` is it (what a bare `\footnotemark` in the block prints); undefined, the kernel
-/// `\maketitle`'s `\@fnsymbol\c@footnote`. Article, report and book define it (`declare_fnsymbol_title_block`); a class
-/// numbering its title's marks otherwise defines it — revtex4-2.cls:3040-3041 `\frontmatter@thefootnote` is
-/// `\@fnsymbol` by default and `\@alph` only under its `altaffilletter` option (:5978 `\@booleanfalse
-/// \altaffilletter@sw`), so a revtex binding would `\def\lx@title@thefootnote{\frontmatter@thefootnote}`. Guards
-/// `perfect_kernel_batchfms2a1::title_footnote_hook_overrides_fnsymbol`,
+/// `\maketitle`'s `\@fnsymbol\c@footnote`. Article, report and book define it (`declare_fnsymbol_title_block`; not
+/// on their title page, row R TITLEPAGEMARKS); a class numbering its title's marks otherwise defines it —
+/// revtex4-2.cls:3040-3041 `\frontmatter@thefootnote` is `\@fnsymbol` by default and `\@alph` only under its
+/// `altaffilletter` option (:5978 `\@booleanfalse\altaffilletter@sw`), so a revtex binding would
+/// `\def\lx@title@thefootnote{\frontmatter@thefootnote}`. Guards `perfect_kernel_batchfms2a1::title_footnote_hook_overrides_fnsymbol`,
 /// `perfect_kernel_batch78o::declared_title_thefootnote_prints_the_marks_the_observer_labels`.
 const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 
@@ -788,6 +832,8 @@ fn install_event_bindings(
   {
     let_i(&T_CS!(THEFOOTNOTE), &T_CS!("\\lx@fm@obs@thefootnote"), None);
   }
+  crate::latex_constructs::rehearsal_cells_begin();
+  NOTE_TEXT.with(|depth| depth.set(0));
   for (cs, target, needs_argument) in BOUND_WHEN_DEFINED {
     if !block_breaks.iter().any(|(declared, _)| declared == cs)
       && lookup_definition(&T_CS!(*cs))?.is_some_and(|defn| {

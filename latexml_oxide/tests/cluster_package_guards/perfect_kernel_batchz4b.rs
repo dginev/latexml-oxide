@@ -49,17 +49,17 @@ fn the_whole_block_queue_reaches_one() {
   ));
   assert_eq!(creators(&two), [
     vec![
-      "Ann Able 1",
+      "Ann Able",
       "affiliation=1 Univ A, Town",
       "email=ann.able@a.edu"
     ],
     vec![
-      "Bob Baker 2",
+      "Bob Baker",
       "affiliation=2 Univ B, City",
       "email=bob.baker@b.edu"
     ],
     vec![
-      "George K. Tan 2",
+      "George K. Tan",
       "affiliation=2 Univ B, City",
       "email=gkt@b.edu"
     ],

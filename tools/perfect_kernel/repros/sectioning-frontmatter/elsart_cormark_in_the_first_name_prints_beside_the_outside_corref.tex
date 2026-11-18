@@ -1,0 +1,22 @@
+% mechanism: a `\cormark` in the first name prints its ∗ there and leaves `\@corref` alone (elsarticle.cls:174-176), so
+%   an outside `\corref` read after a later name prints beside it (:261): the first author shows both marks
+% witness: revELSART B2's sibling (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice One∗,a,∗∗, Bob Twoa"; footnotes "∗ First corresponding",
+%   "∗∗ Second corresponding"
+% engines: rust ELSART (3bbd4e67ccf): Alice c1's note, c2's the block's
+%   ELSARTb: c2's note the block's, 1 Warning; ELSARTc: Alice both notes, 0 Warnings
+% expect:  0 errors 0 Warnings; Alice One both notes
+% status:  RED (ELSART) -> RED (ELSARTb: c2's note the block's, a Warning) -> GREEN (ELSARTc: the first name's mark settled at the flush, `els_settle_marks`)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One\cormark[c1]}
+\author[l1]{Bob Two}\corref{c2}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[c1]{First corresponding}
+\cortext[c2]{Second corresponding}
+\end{frontmatter}
+x\end{document}

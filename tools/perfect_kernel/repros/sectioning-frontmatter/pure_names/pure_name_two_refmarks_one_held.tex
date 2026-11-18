@@ -1,0 +1,16 @@
+% mechanism: of two author reference marks only one held: the other's glyph stays a mark (its number is no held key)
+% witness:  revPURE probe ieee1
+% oracle:   pdflatex 0 errors; "Ann Able∗†, Bob Baker∗" over "∗ Univ A"
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; Ann's † lost
+% expect:   0 errors, 0 Warnings; ∗ consumed by Univ A; Ann's † a mark-only note
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{Title}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}\IEEEauthorrefmark{2}, Bob Baker\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A}}
+\maketitle
+Text.
+\end{document}

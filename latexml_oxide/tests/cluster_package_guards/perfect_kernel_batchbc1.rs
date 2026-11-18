@@ -97,7 +97,12 @@ fn the_blocks_creator_is_no_parent_by_place() {
         "Lv Tang".to_string(),
         "affiliation=Univ X, Town".to_string()
       ],
-      vec!["Bo Li".to_string(), "affiliation=Univ Y, City".to_string(),],
+      // (Bo Li's note marked ⋆, llncs's `\@fnsymbol`: pdflatex "Bo Li⋆2"; LLNCSMARKS)
+      vec![
+        "Bo Li".to_string(),
+        "mark=⋆".to_string(),
+        "affiliation=Univ Y, City".to_string(),
+      ],
       vec![
         "email=luckybird1994@gmail.com".to_string(),
         "email=libraboli@tencent.com".to_string(),

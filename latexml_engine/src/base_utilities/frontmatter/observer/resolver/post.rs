@@ -349,8 +349,9 @@ impl Resolver {
       return;
     }
     for (c, number) in note.run_of {
-      self.out.creators[c].requests.push(number.to_string());
-      self.thenote_requests.push((c, number.to_string()));
+      self.out.creators[c]
+        .marks
+        .push(NameMark::new(number.to_string(), MarkBy::TheNote, None));
     }
     for (number, tag) in note.affils {
       let mut moved: Option<Assoc> = None;
@@ -482,7 +483,7 @@ impl Resolver {
       .iter()
       .map(|&c| &self.out.creators[c])
       .any(|c| {
-        c.requests.iter().any(|request| {
+        c.requests().any(|request| {
           self
             .pending
             .iter()
@@ -651,43 +652,47 @@ impl Resolver {
       })
       .collect();
     for c in 0..self.out.creators.len() {
-      let requests = std::mem::take(&mut self.out.creators[c].requests);
-      let mut parted: Vec<String> = Vec::new();
+      let marks = std::mem::take(&mut self.out.creators[c].marks);
       let mut parted_any = false;
-      let mut out = Vec::with_capacity(requests.len());
-      for request in requests {
-        let b = bare(&request);
-        let prefix = &request[..request.len() - b.len()];
-        if !special(&request)
+      let mut out = Vec::with_capacity(marks.len());
+      for mark in marks {
+        let b = bare(&mark.label);
+        let prefix = &mark.label[..mark.label.len() - b.len()];
+        // (authblk's `\AB@thenote` number is the class's counter, never glued: kept whole, as the store before it was)
+        if mark.requests()
+          && mark.by != MarkBy::TheNote
+          && !special(&mark.label)
           && let Some(parts) = glued_request_parts(&b, &entry_labels)
         {
-          let parts = sub_labels(parts, &entry_labels, &numbered);
+          // (each a request of its own, the whole as printed with it: a piece no entry answers shows it)
           let alphanumeric = b.chars().all(char::is_alphanumeric);
-          for p in parts {
-            if alphanumeric {
-              self.out.creators[c]
-                .whole_marks
-                .push((s!("{prefix}{p}"), b.clone()));
-            }
-            parted.push(s!("{prefix}{p}"));
-            out.push(s!("{prefix}{p}"));
+          for (k, p) in sub_labels(parts, &entry_labels, &numbered)
+            .into_iter()
+            .enumerate()
+          {
+            out.push(NameMark {
+              label: s!("{prefix}{p}"),
+              whole: alphanumeric.then(|| b.clone()),
+              parted: true,
+              sep_before: mark.sep_before && k == 0,
+              ..mark.clone()
+            });
           }
           parted_any = true;
         } else {
-          out.push(request);
+          out.push(mark);
         }
       }
-      self.out.creators[c].requests = out;
+      self.out.creators[c].marks = out;
       if parted_any && !self.out.creators[c].rule.contains("mark:parted") {
         self.out.creators[c].rule.push_str(" mark:parted");
       }
-      self.parted.extend(parted.into_iter().map(|p| (c, p)));
     }
     let shown: Vec<String> = self
       .out
       .creators
       .iter()
-      .flat_map(|c| c.requests.iter().filter(|r| !special(r)).map(|r| bare(r)))
+      .flat_map(|c| c.requests().filter(|r| !special(r)).map(|r| bare(r)))
       .collect();
     // (an entry's number is never parted: a line's own leading printed number is one label — MNRAS's
     // `$^{15}$The Inter-University Institute …` under names marked up to 18, none marked 15, stays in the block as it
@@ -851,6 +856,64 @@ impl Resolver {
   /// affiliations, 0909.2782) —, nor one a block read already (`Bob\footnotemark\footnotetext{…}` inside the
   /// `\author`: the note beside the name).
   pub(super) fn answer_note_texts(&mut self) {
+    // (an unmarked `\thanks` of a live name under a class printing no note mark: the block's, `Resolver::keep_note`)
+    for (source, owner) in std::mem::take(&mut self.block_thanks) {
+      if self.replaced.contains(&owner) {
+        continue;
+      }
+      let notes = &mut self.out.creators[owner].notes;
+      if let Some(at) = notes.iter().position(|a| a.source == Some(source)) {
+        let assoc = notes.remove(at);
+        let rule = s!("{} owner:block", assoc.rule);
+        self.attach(None, Assoc { rule, ..assoc }, true);
+      }
+    }
+    // (first a block's own footnote texts, by the footnote number a name's `\footnotemark` shows — TeX's pairing,
+    // latex.ltx `\@xfootnotemark`/`\@xfootnotenext`, as Perl's `relocateFootnote` fills each mark of the note's `mark`
+    // (latex_constructs.pool.ltxml:498-517): a `\footnotetext` prints no mark of its own, so it is its marks' names'
+    // alone, each a copy — lni's `\footnotetext[1]{Fraunhofer …}` under `Müssig\footnotemark[1] \and
+    // Wappler\footnotemark[1]`, all three texts on the last name before (2407.04435); OXIDIZED_DESIGN_DIVERGENCES #1058.
+    // A `\thanks` stays its own name's: a name's `\footnotemark` of its number is filled with it where it prints,
+    // `insert::link_marked_notes`)
+    for ((index, span), number, owner) in std::mem::take(&mut self.numbered_notes) {
+      let mut carriers: Vec<usize> = Vec::new();
+      for (c, mark) in self.footnote_marks() {
+        if mark.number == Some(number)
+          && self.out.creators[c].source == index
+          && !self.replaced.contains(&c)
+          && !carriers.contains(&c)
+        {
+          carriers.push(c);
+        }
+      }
+      if carriers.is_empty() {
+        continue;
+      }
+      let source = Some((index, span));
+      let held = match owner {
+        Some(at) => &mut self.out.creators[at].notes,
+        None => &mut self.out.block,
+      };
+      let Some(at) = held.iter().position(|a| a.source == source) else {
+        continue;
+      };
+      let assoc = if owner.is_none_or(|o| !carriers.contains(&o)) {
+        held.remove(at)
+      } else {
+        held[at].clone()
+      };
+      for c in carriers {
+        if self.out.creators[c]
+          .notes
+          .iter()
+          .any(|a| a.source == source)
+        {
+          continue;
+        }
+        let rule = s!("{} note:footnote-number", assoc.rule);
+        self.attach(Some(c), Assoc { rule, ..assoc.clone() }, true);
+      }
+    }
     let folded = |text: &str| -> String {
       text
         .chars()
@@ -874,13 +937,12 @@ impl Resolver {
     // deleted with it, `resolve`: a text built before the names went to the first mark, a replaced creator's, and was
     // lost with it — `\author{A\footnotemark[1]}` twice, `\footnotetext[1]` before `\maketitle`; review revfms2a2_5
     // finding 1, 2510.26354's replacing call)
-    let mut marks: Vec<(usize, String)> = self
-      .fn_requests
-      .iter()
+    let marks: Vec<(usize, String)> = self
+      .footnote_marks()
       .filter(|(c, _)| !self.replaced.contains(c))
-      .map(|(c, label)| (*c, mark_key(label)))
+      .map(|(c, mark)| (c, mark_key(&mark.label)))
       .collect();
-    marks.sort_by_key(|(c, _)| *c);
+    let mut marks = marks;
     let mut read: Vec<String> = self
       .out
       .creators
@@ -944,10 +1006,7 @@ impl Resolver {
       });
       for owner in owners {
         // (a footnote mark the lexer parted from the mark it was glued to: ruling 1's reading, `ruling1:parted`)
-        let parted = resolver
-          .parted
-          .iter()
-          .any(|(c, label)| *c == owner && mark_key(label) == key);
+        let parted = resolver.out.creators[owner].parted(|label| mark_key(label) == key);
         resolver.attach(
           Some(owner),
           Assoc {
@@ -1041,7 +1100,7 @@ impl Resolver {
       .out
       .creators
       .iter()
-      .flat_map(|c| c.requests.iter().filter_map(|r| kind(r)))
+      .flat_map(|c| c.requests().filter_map(|r| kind(r)))
       .collect();
     let live = self.live();
     let mut inner_emails: Vec<(Vec<usize>, Assoc, bool)> = std::mem::take(&mut self.entry_emails);
@@ -1168,8 +1227,7 @@ impl Resolver {
       if self.shared.iter().any(|(p, ..)| *p == at) {
         owners.retain(|&c| {
           self.out.creators[c]
-            .class_requests
-            .iter()
+            .class_requests()
             .any(|q| labels.iter().any(|l| label_matches(q, l)))
         });
       }
@@ -1182,27 +1240,45 @@ impl Resolver {
       let footnote_led = assoc.rule.split_whitespace().any(|t| t == "mark:footnote");
       let symbol_labelled =
         symbol || (!labels.is_empty() && labels.iter().all(|l| is_symbol_label(l)));
-      // (a note's mark carries a symbol line only for a name that shows no mark of its own: there the authors' footnote
-      // symbols are their labels, 1608.06509; a name showing its own marks keeps them as its requests, and its note's mark
-      // is the note's — `Pramod Shukla$^\dagger$\footnote{E-mail…}` prints "Shukla†∗", the ∗ its e-mail's, not the
-      // `{^\ast}` affiliation Swagata Bera shows, 2406.01694)
+      // (a note's mark carries a symbol line for a name showing no mark of its own (1608.06509, 2406.01694), only the
+      // line's own note where a name inks the symbol, its name always (OD #1068; 1904.09324, 2204.06136, ADVR2 4))
+      let inked = || {
+        self.out.creators.iter().any(|creator| {
+          creator.marks.iter().any(|m| {
+            m.origin() == name_marks::MarkOrigin::Inked
+              && labels.iter().any(|l| label_matches(&m.label, l))
+          })
+        })
+      };
       if footnote_led || symbol_labelled {
-        for (c, mark) in &self.note_marks {
-          let carries = footnote_led || self.out.creators[*c].requests.is_empty();
-          if carries && labels.contains(mark) && !owners.contains(c) {
-            owners.push(*c);
+        let any_note = footnote_led || !inked();
+        let is_entry = |c: usize, m: &NameMark| match (assoc.source, m.span) {
+          (Some((block, Some((start, end)))), Some((from, to))) => {
+            self.out.creators[c].source == block && from <= start && end <= to
+          },
+          _ => false,
+        };
+        for (c, creator) in self.out.creators.iter().enumerate() {
+          let note_marks = || {
+            creator
+              .marks
+              .iter()
+              .filter(|m| m.by == MarkBy::Note && labels.contains(&m.label))
+          };
+          let carries = footnote_led || creator.requests_nothing();
+          let own = note_marks().any(|m| is_entry(c, m));
+          if (own || (carries && any_note && note_marks().next().is_some())) && !owners.contains(&c)
+          {
+            owners.push(c);
           }
         }
       }
       // (a compound of footnote symbols parted: the names carrying every one of them)
       if self.compound.contains(&at) {
         owners.retain(|&c| {
-          labels.iter().all(|l| {
-            self.out.creators[c]
-              .requests
-              .iter()
-              .any(|r| label_matches(r, l))
-          })
+          labels
+            .iter()
+            .all(|l| self.out.creators[c].requests().any(|r| label_matches(r, l)))
         });
       }
       // (an entry a key labels that its class never prints answers no footnote's mark, a symbol's neither: elsarticle
@@ -1213,19 +1289,9 @@ impl Resolver {
       // `Denes Molnar$^{a,b}$` under `\address[a]{…}\address[b]{…}` prints "a,b" over "a …", "b …" (0907.5014))
       if self.keyed.contains(&at) {
         owners.retain(|&c| {
-          labels.iter().any(|label| {
-            let asked = self.out.creators[c]
-              .requests
-              .iter()
-              .filter(|r| label_matches(r, label))
-              .count();
-            let by_footnote = self
-              .fn_requests
-              .iter()
-              .filter(|(o, r)| *o == c && label_matches(r, label))
-              .count();
-            asked > by_footnote
-          })
+          labels
+            .iter()
+            .any(|label| self.out.creators[c].asks_not_by_footnote(label))
         });
       }
       owners.sort_unstable();
@@ -1240,19 +1306,9 @@ impl Resolver {
         && !labels.iter().all(|label| label.starts_with("author:"))
       {
         owners.retain(|&owner| {
-          labels.iter().any(|label| {
-            let asked = self.out.creators[owner]
-              .requests
-              .iter()
-              .filter(|r| label_matches(r, label))
-              .count();
-            let by_footnote = self
-              .fn_requests
-              .iter()
-              .filter(|(c, r)| *c == owner && label_matches(r, label))
-              .count();
-            asked > by_footnote
-          })
+          labels
+            .iter()
+            .any(|label| self.out.creators[owner].asks_not_by_footnote(label))
         });
       }
       // (a `fuzzy:<name>` label — svjour's `\institute` entries after `\at`, Perl's fuzzy label of a creator, Tag
@@ -1371,12 +1427,9 @@ impl Resolver {
       if owners.is_empty()
         && symbol_labelled
         && matches!(assoc.role.as_str(), "affiliation" | "address")
-        && !live.iter().any(|&c| {
-          self.out.creators[c]
-            .requests
-            .iter()
-            .any(|r| is_symbol_label(r))
-        })
+        && !live
+          .iter()
+          .any(|&c| self.out.creators[c].requests().any(|r| is_symbol_label(r)))
         && let Some((_, placed)) = self.piled.iter().find(|(p, _)| *p == at)
         && !placed.is_empty()
       {
@@ -1501,19 +1554,14 @@ impl Resolver {
       };
       for owner in owners {
         // (an owner found by the number authblk printed on it: ruling 1 on that mark)
-        let by_thenote = self
-          .thenote_requests
-          .iter()
-          .any(|(c, r)| *c == owner && labels.contains(r));
+        let by_thenote = self.out.creators[owner].thenote_requests(&labels);
         let mut assoc = assoc.clone();
         if by_thenote && !assoc.rule.contains("ruling1:") {
           assoc.rule.push_str(" ruling1:thenote");
         }
         // (an owner found by a request its glued mark was parted into: ruling 1 on that mark)
-        let by_parted = self
-          .parted
-          .iter()
-          .any(|(c, r)| *c == owner && labels.iter().any(|l| label_matches(r, l)));
+        let by_parted =
+          self.out.creators[owner].parted(|r| labels.iter().any(|l| label_matches(r, l)));
         if by_parted && !assoc.rule.contains("ruling1:parted") {
           assoc.rule.push_str(" ruling1:parted");
         }
@@ -1522,8 +1570,7 @@ impl Resolver {
         // \email{…} \label{inst1} \and …}`, whose entry 1 today's left on a nameless creator, 1302.1442, 1707.06238;
         // not the entry's inner e-mail, which its every carrier holding is no reading of the page: the gate study's G3)
         let by_ref = self.out.creators[owner]
-          .requests
-          .iter()
+          .requests()
           .any(|r| r.starts_with("ref:") && labels.contains(r));
         if by_ref
           && !assoc.rule.contains("api:ref-label")
@@ -1541,10 +1588,12 @@ impl Resolver {
         // institute before its line-led split read a contacts line)
         let by_hand = assoc.rule.split_whitespace().next() == Some("api:labelseq")
           && !self.marked_entries.contains(&at)
-          && self.out.creators[owner].requests.iter().any(|r| {
+          && self.out.creators[owner].requests().any(|r| {
             labels.iter().any(|l| label_matches(r, l))
-              && !self.out.creators[owner].class_requests.contains(r)
-              && !self.fn_requests.iter().any(|(c, q)| *c == owner && q == r)
+              && !self.out.creators[owner]
+                .marks
+                .iter()
+                .any(|q| q.label == *r && matches!(q.by, MarkBy::Class | MarkBy::Footnote))
           });
         // (a `\ref` key's owner says so already, `api:ref-label`)
         if by_hand && !assoc.rule.contains("ruling1:") && !assoc.rule.contains("api:ref-label") {
@@ -1627,10 +1676,12 @@ impl Resolver {
     };
     !live.iter().any(|&c| {
       let creator = &self.out.creators[c];
-      creator.class_requests.iter().any(|l| number(l))
+      creator.class_requests().any(|l| number(l))
         || !piece
-          && creator.requests.iter().any(|r| {
-            number(r) && unprefixed(r).unwrap_or(r) != "1" && !creator.class_requests.contains(r)
+          && creator.requests().any(|r| {
+            number(r)
+              && unprefixed(r).unwrap_or(r) != "1"
+              && !creator.class_requests().any(|q| q == r)
           })
     })
   }
@@ -2308,7 +2359,7 @@ fn is_inner_email(assoc: &Assoc) -> bool {
 
 /// The pieces of a glued mark ([`parted_label`]), a letter one of them the numbered entry's own sub-label where the
 /// entry prints that sub-entry itself ([`sub_label`]): the letter piece is then the request `67a` no entry answers, its
-/// mark shown whole beside the entry (`RCreator::whole_marks`), never the entry the letter alone labels. BESIII's
+/// mark shown whole beside the entry (`NameMark::whole`), never the entry the letter alone labels. BESIII's
 /// `$^{67a,67c}$` under `$^{67}$ University of Turin and INFN, (A)University of Turin …; (C)INFN …` beside
 /// `$^{a}$`/`$^{c}$` "Also at Moscow …"/"Also at … Kurchatov …" is entry 67's alone (2201.02056). Where the entry prints
 /// no such sub-entry the letter is the other entry's as before: 1202.2048's `E.~Boger$^{18a}$` is institute 18 and the

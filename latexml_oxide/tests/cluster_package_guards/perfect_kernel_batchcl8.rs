@@ -1,6 +1,6 @@
 //! Guards for CL8 (`agent_reports/2026-11-09_brief_CL8.md`, `…_brief_CL8b.md`; classes C7, C8 and C9 of CL5's `=2`
 //! content losses), each off and at `=2`, one per mechanism:
-//! - C9: a used mark of digits and a sub-letter is written whole (`RCreator::whole_marks` → `_refmarkshown`): BESIII's
+//! - C9: a used mark of digits and a sub-letter is written whole (`NameMark::whole`, the mark the emitter leaves keyed by its pieces, `emit::left_marks`): BESIII's
 //!   "50A,50C" was "A,C" (1705.11109);
 //! - C7: a wrapped `\thanks` whose span's plain argument prints less than the note is written by its text, never the id
 //!   alone (`emit::note_argument`; SCITEPRESS's `\orcidAuthor`, 2608.08994, 2202.03759);
@@ -55,13 +55,13 @@ fn a_sublettered_used_mark_is_written_whole() {
                of Piedmont, Alessandria; (C)INFN, Turin</contact>";
   let expected = [
     format!(
-      "<creator role=\"author\"> <personname>A. Amoroso<sup xml:id=\"id1\">2A,2C</sup></personname> {turin} </creator>"
+      "<creator role=\"author\"> <personname>A. Amoroso</personname> <note mark=\"2A,2C\" role=\"footnotemark\" xml:id=\"id1\"/> {turin} </creator>"
     ),
     "<creator before=\" \" role=\"author\"> <personname>B. Bee</personname> <contact class=\"ltx_author_line\" name=\"Affiliation: \" \
      role=\"affiliation\"> Institute One, City One</contact> </creator>"
       .to_string(),
     format!(
-      "<creator before=\" \" role=\"author\"> <personname>C. Cee<sup xml:id=\"id2\">2B</sup></personname> {turin} \
+      "<creator before=\" \" role=\"author\"> <personname>C. Cee</personname> <note mark=\"2B\" role=\"footnotemark\" xml:id=\"id2\"/> {turin} \
        </creator>"
     ),
   ];
@@ -76,9 +76,9 @@ fn a_sublettered_used_mark_is_written_whole() {
 fn a_wrapped_thanks_note_is_written_whole() {
   let expected = [
     "<creator role=\"author\"> <personname>Ann Able</personname> <note class=\"ltx_note_frontmatter \
-     ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">ORCID https://orcid.org/0000-0001-8817-2744</note> </creator>",
+     ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">ORCID https://orcid.org/0000-0001-8817-2744</note> </creator>",
     "<creator before=\" \" role=\"author\"> <personname>Bob Bee</personname> <note class=\"ltx_note_frontmatter \
-     ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">ORCID https://orcid.org/0000-0002-6100-8255</note> </creator>",
+     ltx_thanks_note\" mark=\"†\" role=\"thanks\" xml:id=\"id2\">ORCID https://orcid.org/0000-0002-6100-8255</note> </creator>",
   ];
   let warnings = 2;
   let (log, xml) = run(repro!("cl8_wrapped_thanks_note_written_whole"));
@@ -182,11 +182,10 @@ fn a_glued_marks_letter_is_never_another_entrys() {
     )
   };
   let expected = vec![
-    creator(
-      "",
-      "A. Amoroso<sup xml:id=\"id1\">2a,2c</sup>",
-      std::slice::from_ref(&turin),
-    ),
+    creator("", "A. Amoroso", &[
+      r#"<note mark="2a,2c" role="footnotemark" xml:id="id1"/>"#.to_string(),
+      turin.clone(),
+    ]),
     creator("before=\" \" ", "B. Bee", &[
       affiliation(" Institute One, City One"),
       affiliation(" Also at the Moscow Institute, Moscow"),
@@ -195,11 +194,10 @@ fn a_glued_marks_letter_is_never_another_entrys() {
       affiliation(" Institute Three, City Three"),
       affiliation(" Also at the Kurchatov Institute, Gatchina"),
     ]),
-    creator(
-      "before=\" \" ",
-      "D. Dee<sup xml:id=\"id2\">2b</sup>",
-      std::slice::from_ref(&turin),
-    ),
+    creator("before=\" \" ", "D. Dee", &[
+      r#"<note mark="2b" role="footnotemark" xml:id="id2"/>"#.to_string(),
+      turin.clone(),
+    ]),
   ];
   let (log, xml) = run(repro!("cl10_sublettered_mark_never_another_entrys"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");

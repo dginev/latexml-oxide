@@ -1,0 +1,19 @@
+% mechanism: two given marks, the second 6em past the first, then `\\`: both carried back (the line end follows the
+%   run)
+% witness:  revSHGIVENe q10
+% oracle:   pdflatex 0 errors; "Ann Able ∗ (73.8pt) †  Bob Baker", "Univ A" under Ann
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= ;
+%   footnotemark[†]= | affiliation=Univ A / Bob Baker; HTML Ann Able ; * plain ; † plain / Bob Baker
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= ; footnotemark[†]= | affiliation=Univ A / Bob Baker;
+%   HTML Ann Able ; * plain ; † plain / Bob Baker (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \ \footnotemark[1] \hspace{6em} \footnotemark[2] \\ Univ A \and Bob Baker}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

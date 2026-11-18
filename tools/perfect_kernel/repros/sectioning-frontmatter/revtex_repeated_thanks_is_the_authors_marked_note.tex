@@ -1,0 +1,32 @@
+% witness: REVTeX's repeated identical `\thanks` (118 of the 30k sample's 351 REVTeX papers with `\thanks` and two or more
+%          authors: 0706.3893 "Deceased", 0804.0875, 1308.0465 "also at J-PARC, Tokai, Japan"): revtex4-2.cls:2404-2421 joins an
+%          author's `\email`, `\homepage`, `\thanks` and `\altaffiliation` into one footnote, :2472-2495 prints a footnote
+%          whose text an earlier author's has once, its mark on both (`\y@match`)
+% oracle:  pdflatex 0 errors; "Ann Able,∗ Bob Baker,† Cat Cole,† and Dan Dole‡", footnotes "∗ a@x.org; These authors
+%          contributed equally.", "† These authors contributed equally.", "‡ Univ B."
+% engines: rust=0 (60edb5d0e03: each name a contact role=thanks, no mark) perl=0 (the same contacts) (2026-11-16)
+% expect:  0 errors, 0 warnings; Bob Baker and Cat Cole each with the note "These authors contributed equally." marked † (role
+%          thanks); Ann Able, whose footnote also holds her e-mail, with her e-mail and her own thanks contact; Dan Dole with
+%          his alternate affiliation; every author with Univ A (DG rulings 1-2 of 2026-11-16)
+% status:  RED (60edb5d0e03) -> GREEN (SHREST)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\email{a@x.org}
+\thanks{These authors contributed equally.}
+\affiliation{Univ A}
+\author{Bob Baker}
+\thanks{These authors contributed equally.}
+\affiliation{Univ A}
+\author{Cat Cole}
+\thanks{These authors contributed equally.}
+\affiliation{Univ A}
+\author{Dan Dole}
+\altaffiliation{Univ B.}
+\affiliation{Univ A}
+\begin{abstract}Abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

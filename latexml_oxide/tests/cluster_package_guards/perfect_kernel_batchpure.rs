@@ -1,0 +1,279 @@
+//! Red/green guards for batch PURE: `ltx:personname` is the name alone (FIDELITY_CHARTER "a name's label is the name
+//! alone"; DG 2026-11-16, purity and no lost mark one rule). `insert.rs`'s last step, `keep_personnames_pure`
+//! (`frontmatter/pure_names.rs`), takes every mark printed on a name out of it: a mark a note of the creator answers is
+//! that note's `mark`, a label of a contact the creator holds is consumed (ruling 3), any other a mark-only note after
+//! the name (`<note role="footnotemark" mark="…"/>`). Each guard converts its repro under
+//! `tools/perfect_kernel/repros/sectioning-frontmatter/pure_names/` and asserts no Error or Warning and every creator
+//! whole (`xml:id`s aside, the space between tags collapsed). Witnesses 0707.3527, 0801.1438, 2406.11149, 2506.02863, 1904.03977,
+//! 2007.16032, math0610203, 2211.11758, 2508.13181.
+use latexml::util::test::{convert_files_with, convert_with};
+
+use super::perfect_kernel_batch46::{error_count, warning_count};
+
+const PRELOAD: &str = "ar5iv.sty";
+
+macro_rules! repro {
+  ($path:literal) => {
+    include_str!(concat!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/pure_names/",
+      $path
+    ))
+  };
+}
+
+/// Each `ltx:creator` element of `xml` whole, in order: its `xml:id`s left out, the space between tags dropped, any other
+/// run of space one.
+fn creators(xml: &str) -> Vec<String> {
+  xml
+    .match_indices("<creator")
+    .map(|(start, _)| {
+      let end =
+        start + xml[start..].find("</creator>").expect("closed creator") + "</creator>".len();
+      let mut element = xml[start..end].to_string();
+      while let Some(at) = element.find(" xml:id=\"") {
+        let close = at
+          + " xml:id=\"".len()
+          + element[at + " xml:id=\"".len()..]
+            .find('"')
+            .expect("closed id");
+        element.replace_range(at..=close, "");
+      }
+      let mut out = String::new();
+      for (index, piece) in element.split('<').enumerate() {
+        if index > 0 {
+          out.push('<');
+        }
+        // (the space a tag ends before the next one opens: the indentation)
+        let piece = match piece.split_once('>') {
+          Some((tag, text)) if text.trim().is_empty() => format!("{tag}>"),
+          _ => piece.to_string(),
+        };
+        out.push_str(&piece);
+      }
+      out.split_whitespace().collect::<Vec<_>>().join(" ")
+    })
+    .collect()
+}
+
+#[track_caller]
+fn assert_creators((log, xml): (String, String), expected: &[&str]) {
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), expected, "{xml}");
+}
+
+/// 0707.3527's iaus `\author[]{M.Das$^1$, …}` over `\affiliation{$^1$Raman Research Institute…}`: the label of an
+/// affiliation each creator holds is consumed (ruling 3), and a mark of the run no contact answers (`Cy Cole$^{1,*}$`'s
+/// ∗) is a mark-only note. Red (REGFIX): `<personname>Ann Able<sup>1</sup></personname>`.
+#[test]
+fn a_label_of_a_held_affiliation_is_consumed() {
+  let run = convert_files_with(
+    repro!("pure_name_iaus_affiliation_label_consumed.tex"),
+    &[("iaus.cls", repro!("iaus.cls"))],
+    Some(PRELOAD),
+  );
+  assert_creators(run, &[
+    r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A, Town A</contact></creator>"#,
+    r#"<creator before=" " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup>2</sup>Univ B, Town B</contact></creator>"#,
+    r#"<creator before=" " role="author"><personname>Cy Cole</personname><note mark="∗" role="footnotemark"/><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A, Town A</contact></creator>"#,
+  ]);
+}
+
+/// `Ann Able$^*$ and Bob Bee$^1$`, nothing answering either mark: each a mark-only note right after the name, never
+/// dropped. Red (REGFIX): `<personname>Bob Bee<sup>1</sup></personname>`.
+#[test]
+fn an_unanswered_mark_is_a_mark_only_note() {
+  assert_creators(
+    convert_with(
+      repro!("pure_name_unanswered_sup_mark_only.tex"),
+      Some(PRELOAD),
+    ),
+    &[
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="∗" role="footnotemark"/></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Bee</personname><note mark="1" role="footnotemark"/></creator>"#,
+    ],
+  );
+}
+
+/// 0801.1438: `Kardo\v s$^{a }$\footnote{…}, …, Mi\v skuf\hskip 1pt$^{a }$\footnotemark[1]`, the affiliations set in a
+/// `center` in the body: each letter a mark-only note right after its name, before the `\footnotemark`'s note, as
+/// printed (`Cy Cole a∗`). Red (REGFIX): `<personname>Ann Able<sup>a</sup></personname>`.
+#[test]
+fn body_affiliation_labels_are_mark_only_notes() {
+  assert_creators(
+    convert_with(
+      repro!("pure_name_body_affiliation_labels_mark_only.tex"),
+      Some(PRELOAD),
+    ),
+    &[
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="*" role="thanks">Ann is supported by grant A.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="b" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="†" role="thanks">Bob is supported by grant B.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Cy Cole</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" idref="id1" mark="*" role="thanks">Ann is supported by grant A.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Dan Dorn</personname><note mark="c" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="‡" role="thanks">Dan is supported by grant D.</note></creator>"#,
+    ],
+  );
+}
+
+/// 2406.11149's `Haoran Li$^{*}$\thanks{\quad Corresponding Author}` (and `Ann Able*\thanks{…}`; 2506.02863): a symbol
+/// typed beside a `\thanks` is no mark of the `\thanks`, which prints its own (pdflatex "Haoran Li∗†"): a mark-only note
+/// after the name, the `\thanks`'s note its own. Red (PURE round 1, revPURE B1): the typed ∗ the note's `mark`. Ann's
+/// row is the same glyph as her `\thanks`'s own counter mark (pdflatex "Ann Able*∗"): still two marks, the counter-marked
+/// note answering no typed glyph (`insert::MARK_FROM_COUNTER`); red on the PURE × SHMARK merge, one mark kept (INTREC2).
+#[test]
+fn a_typed_symbol_beside_a_thanks_is_a_mark_only_note() {
+  assert_creators(
+    convert_with(
+      repro!("pure_name_typed_star_beside_thanks_mark_only.tex"),
+      Some(PRELOAD),
+    ),
+    &[
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="∗" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks">Corresponding author.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="∗" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks"> Corresponding author.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Cy Cole</personname></creator>"#,
+    ],
+  );
+}
+
+/// `Ann Able$^{a}$\thanks{a visitor at the Institute.}` and `Cy Cole$^{1}$\thanks{1 year at Univ C.}`: a letter or a
+/// number opening a note's text is its word, never a copy of the name's mark (only a symbol is, or a superscript): each
+/// mark a mark-only note, each note whole. Red (PURE round 1, revPURE B2): "visitor at the Institute." marked a.
+#[test]
+fn a_notes_opening_word_is_no_copy_of_the_mark() {
+  assert_creators(
+    convert_with(
+      repro!("pure_name_letter_mark_beside_a_note_word.tex"),
+      Some(PRELOAD),
+    ),
+    &[
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">a visitor at the Institute.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks"><sup><text font="italic">b</text></sup>Visitor at the Lab.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Cy Cole</personname><note mark="1" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks">1 year at Univ C.</note></creator>"#,
+    ],
+  );
+}
+
+/// 1904.03977's `\IEEEauthorblockN{Divyam Madaan$^{*}$\thanks{*Equal Contribution}}`: a note opening with the name's
+/// mark takes it as its `mark`, its text without the copy, on each carrier. Red (REGFIX): `Ann Able<sup>*</sup>`, the
+/// note "*Equal contribution." unmarked.
+#[test]
+fn a_legend_note_takes_the_names_mark() {
+  assert_creators(
+    convert_with(
+      repro!("pure_name_legend_note_takes_the_mark.tex"),
+      Some(PRELOAD),
+    ),
+    &[
+      r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">ann@a.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks">Equal contribution.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact><contact name="Email: " role="email">bob@b.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" idref="id1" mark="*" role="thanks">Equal contribution.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Cy Cole</personname><contact name="Affiliation: " role="affiliation">Univ C</contact><contact name="Email: " role="email">cy@c.edu</contact></creator>"#,
+    ],
+  );
+}
+
+/// 2007.16032's svjour3 `Yuan Yuan*` (llncs here, in every TeX Live): a footnote symbol typed at the name's end, in its
+/// text, is cut from it and a mark-only note. Red (REGFIX): `<personname>Bob Baker*</personname>`.
+#[test]
+fn a_hand_typed_symbol_leaves_the_name() {
+  assert_creators(
+    convert_with(
+      repro!("pure_name_hand_typed_symbol_mark_only.tex"),
+      Some(PRELOAD),
+    ),
+    &[
+      r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A, Town A</contact></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="*" role="footnotemark"/><contact name="Affiliation: " role="affiliation">Univ A, Town A</contact></creator>"#,
+    ],
+  );
+}
+
+/// `James M\textsuperscript{c}Kernan` (math0610203) and IEEE's `1\textsuperscript{st} Bob Baker` (2211.11758): a
+/// superscript that is the name's own ink stays, and no note is added. Green before and after.
+#[test]
+fn a_superscript_of_the_name_stays() {
+  assert_creators(
+    convert_with(
+      repro!("pure_name_superscripts_of_the_name_kept.tex"),
+      Some(PRELOAD),
+    ),
+    &[
+      r#"<creator role="author"><personname>James M<sup>c</sup>Kernan</personname></creator>"#,
+      r#"<creator before=" " role="author"><personname>1<sup>st</sup> Bob Baker</personname></creator>"#,
+    ],
+  );
+}
+
+/// 2208.09944: a name's mark-only note is no `\footnotemark` — a body `\footnotetext[2]` of the same mark is not its text
+/// (`relocate_footnote` skips `_namemark`). Red (PURE round 1): each mark-only note took the body footnote's text.
+#[test]
+fn a_mark_only_note_takes_no_body_footnotetext() {
+  let (log, xml) = convert_with(
+    repro!("pure_name_mark_only_note_pairs_no_body_footnotetext.tex"),
+    Some(PRELOAD),
+  );
+  assert_creators((log, xml.clone()), &[
+    r#"<creator role="author"><personname>Ann Able</personname><note mark="1" role="footnotemark"/></creator>"#,
+    r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="2" role="footnotemark"/></creator>"#,
+  ]);
+  for text in ["Body note one.", "Body note two."] {
+    assert_eq!(xml.matches(text).count(), 1, "{xml}");
+  }
+}
+
+/// 2508.13181's `Dominik Loroch\IEEEauthorrefmark{2}\IEEEauthorrefmark{1}\textsuperscript{\textsection}` over held
+/// affiliations 2 and 1 and a body `\footnotetext` marked §: a reference mark's number keys only the glyph it printed
+/// (its superscript's `_refmark`), so † and ∗ are consumed by their affiliations and the § is a mark-only note after the name, paired
+/// with no body footnote. Red (int/frontmatter fd43c364eb6, revPURE B1): the run's numbers keyed the §, lost.
+#[test]
+fn a_reference_marks_number_keys_only_its_own_glyph() {
+  let (log, xml) = convert_with(
+    repro!("pure_name_refmark_beside_a_typed_section_mark.tex"),
+    Some(PRELOAD),
+  );
+  assert_creators((log, xml.clone()), &[
+    r#"<creator role="author"><personname>Ann Able</personname><note mark="§" role="footnotemark"/><contact name="Affiliation: " role="affiliation"><sup>†</sup>Lab B</contact><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#,
+    r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="§" role="footnotemark"/><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#,
+    r#"<creator before=" " role="author"><personname>Cy Cole</personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#,
+  ]);
+  assert_eq!(xml.matches("Equal contribution.").count(), 1, "{xml}");
+}
+
+/// `Ann Able$^{\diamond}$\thanks{\textsf{$^{\diamond}$ }Equal contribution.}` and `Bob Baker$^{a}$\thanks{\textsf{\textsuperscript{a}
+/// }Visiting the Lab.}` (IEEEtran): each note takes its name's mark and its copy is cut with the space after it, which
+/// LaTeXML sets in a font wrapper of its own, the wrapper with it — Ann's by the mark rule (`insert::mark_creator_notes`),
+/// Bob's by the pure pass (`Lead::cut`), one helper (`insert::trim_space_after`). Red (int/frontmatter fd43c364eb6,
+/// revPURE N3): `<text font="sansserif"></text>` before each note's words.
+#[test]
+fn a_copy_cut_from_a_font_wrapper_leaves_no_empty_wrapper() {
+  assert_creators(
+    convert_with(
+      repro!("pure_name_note_copy_in_a_font_wrapper.tex"),
+      Some(PRELOAD),
+    ),
+    &[
+      r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">ann@a.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="⋄" role="thanks">Equal contribution.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact><contact name="Email: " role="email">bob@b.edu</contact><note class="ltx_note_frontmatter ltx_thanks_note" mark="a" role="thanks">Visiting the Lab.</note></creator>"#,
+    ],
+  );
+}
+
+/// orcidlink's icon, as the binding writes it inside a name.
+const ORCID_ICON: &str = r##"<ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097"><svg:svg class="ltx_orcidlogo" height="1em" version="1.1" viewBox="0 0 72 72" width="1em"><svg:path d="M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z" fill="#A6CE39"/><svg:g fill="#FFFFFF" transform="translate(18.868966, 12.910345)"><svg:polygon points="5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878"/><svg:path d="M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z"/><svg:path d="M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z"/></svg:g></svg:svg></ref>"##;
+
+/// `Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}` over `\IEEEauthorrefmark{1}Univ A` (IEEEtran) prints two ∗: the
+/// icon parts them into two runs, and the affiliation, keyed by the number 1 and the ∗ it prints (one mark), answers
+/// one; the other is a mark-only note, paired with no body `\footnotetext` under ∗. Red (fix/pure-names-c
+/// 496f6195343, revPUREc B1′): the affiliation answered both, one ∗ lost.
+#[test]
+fn a_contact_answers_one_printed_mark_across_the_names_runs() {
+  let (log, xml) = convert_with(
+    repro!("pure_name_orcid_between_typed_star_and_refmark.tex"),
+    Some(PRELOAD),
+  );
+  let ann = format!(
+    r#"<creator role="author"><personname>Ann Able{ORCID_ICON}</personname><note mark="*" role="footnotemark"/><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#
+  );
+  assert_creators((log, xml.clone()), &[
+    ann.as_str(),
+    r#"<creator before=" " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#,
+  ]);
+  assert_eq!(xml.matches("Equal.").count(), 1, "{xml}");
+}

@@ -1,0 +1,23 @@
+% mechanism: a `\cortext` key an `\address` shares prints whichever `\elsLabel` wrote it last (elsarticle.cls:126-131;
+%   here the address's letter): the names show no number of the note's, so its key route gives it no mark
+%   (`\lx@els@cormark`, the place keys elsart_support_core's `\address`/`\affiliation` record)
+% witness: 1711.08299 (`\author[a]{I. Mukul}` …, `\address[a]{Weizmann …}`, `\cortext[a]{Corresponding author.}`)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa"; "a Some University"; footnote "∗ Corresponding author"
+% engines: rust 139d1d2fa08 (the shape without `\affiliation`, 1711.08299): every name's note marked ∗. rust WRONGFIX
+%   before the place keys: marked "1"
+%   ELSART b842de7fc4c: Alice and Bob each an unmarked correspondent contact — a link the PDF does not print
+% expect:  0 errors 0 Warnings; Alice One and Bob Two each the address; the correspondence note the block's (no name
+%   prints its ∗; ELSART, OXIDIZED_DESIGN_DIVERGENCES #1067)
+% status:  RED (139d1d2fa08) -> GREEN (perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route);
+%   expectation revised by ELSART
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[a]{Alice One}
+\author[a]{Bob Two}
+\address[a]{Some University}
+\cortext[a]{Corresponding author}
+\end{frontmatter}
+\end{document}

@@ -37,6 +37,11 @@ pub(super) fn creator_notes(tex: &str) -> Vec<Vec<String>> {
           .nth(1)
           .and_then(|m| m.split('"').next())
           .unwrap_or("");
+        // (a mark-only note, `<note mark="a" role="footnotemark"/>`: its mark, PURE)
+        if creator[..open_end].ends_with('/') {
+          out.push(format!("mark={mark}"));
+          continue;
+        }
         let close = open_end + creator[open_end..].find("</note>").expect("closed note");
         out.push(format!(
           "note[{mark}]={}",
@@ -102,7 +107,7 @@ fn an_affiliation_that_is_a_legend_is_its_carriers_note() {
   );
   assert_eq!(
     converted(repro!("legend_kind_ieee_numbered_legend"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup><sup xml:id="id2">‡</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">*</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id4"><sup xml:id="id4.1">‡</sup>These authors contributed equally</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id5">†</sup><sup xml:id="id6">‡</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7">†</sup>Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id8"><sup xml:id="id8.1">‡</sup>These authors contributed equally</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">*</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id2">These authors contributed equally</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">†</sup>Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id4">These authors contributed equally</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 
@@ -114,7 +119,7 @@ fn an_affiliation_that_is_a_legend_is_its_carriers_note() {
 fn a_project_role_or_joint_first_authorship_is_a_contribution_note() {
   assert_eq!(
     converted(repro!("legend_kind_article_author_block_project_lead"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">∗</text></sup>Equal contribution.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup>Equal contribution.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">†</text></sup>Project leader.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1">Equal contribution.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" idref="id1" mark="∗" role="thanks" xml:id="id2">Equal contribution.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3">Project leader.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 
@@ -141,11 +146,12 @@ fn institutions_named_with_legend_words_stay_affiliations() {
 /// behind its mark, and a label no name prints is a mark the page never shows; review rev103c2 B-A): icml's
 /// `\icmlaffiliation{intern}{Work done during an internship}`, a key icml prints as the affiliation's number
 /// (2106.09776), and svjour3's `\institute{… \and B. Baker (corresponding author, \email{…}) \and …}`, labelled by its
-/// place, a number neither svjour3 nor svjour_blank prints (1507.04774).
+/// place, a number neither svjour3 nor svjour_blank prints (1507.04774). The `equal` label's `*` shows on both names and
+/// opens the notice, as pdflatex prints them (OD #1063).
 #[test]
 fn a_legend_whose_label_prints_no_mark_stays_an_affiliation() {
   assert_eq!(
     converted(repro!("legend_kind_icml_keyed_legend_stays"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Work done during an internship</contact> <contact name="Correspondence to: " role="email">ann@a.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <note role="affiliationnotice" xml:id="id1">Equal contribution</note> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note mark="*" role="footnotemark" xml:id="id1"/> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Work done during an internship</contact> <contact name="Correspondence to: " role="email">ann@a.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note mark="*" role="footnotemark" xml:id="id2"/> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <note role="affiliationnotice" xml:id="id3"><sup xml:id="id3.1">*</sup>Equal contribution</note> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }

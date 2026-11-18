@@ -1,0 +1,19 @@
+% mechanism: `\corref{a,b}` in Bob's name reads its argument whole (elsarticle.cls:188-190), naming `\cortext[a,b]`
+%   read after it: Bob's ∗, no key list, no Warning (the list rule is decided once the keys are read)
+% witness: revELSARTc r07 (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa,∗"; footnote "∗ Corr ab"
+% engines: rust ELSARTc (8756e486ffb): Bob Corr ab, 1 false Warning (elsarticle_mark_list); INTFMfinal: the expected
+% expect:  0 errors 0 Warnings; Bob Two Corr ab
+% status:  RED (ELSARTc) -> GREEN (ELSARTd) (perfect_kernel_batchfmmarks CLASS)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}
+\author[l1]{Bob Two\corref{a,b}}
+\cortext[a,b]{Corr ab}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x
+\end{document}

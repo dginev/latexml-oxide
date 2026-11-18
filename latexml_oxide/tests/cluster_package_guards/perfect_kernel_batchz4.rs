@@ -57,15 +57,19 @@ fn the_emit_is_the_old_markup() {
   same_markup(
     repro!("emit_marks_a_per_author_class_keeps_on_its_names"),
     &[
-      r#"<personname>Ann Able<sup><text font="italic">1</text></sup></personname>"#,
+      // (the name alone, its label consumed by the affiliation it holds, PURE)
+      "<personname>Ann Able</personname>",
       // (P4c: the list's printed mark shown, as pdflatex prints it — P4S Q1)
       "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">2</text></sup>Univ B</contact>",
     ],
   );
   same_markup(repro!("emit_marks_a_block_answers_or_shows"), &[
     "<personname>Ann Able</personname>",
-    "<personname>Bob Baker<sup>∗</sup></personname>",
-    "<personname>Cat Cole<sup>3</sup></personname>",
+    // (a mark nothing answers a mark-only note after the name, PURE)
+    "<personname>Bob Baker</personname>",
+    r#"<note mark="∗" role="footnotemark"/>"#,
+    "<personname>Cat Cole</personname>",
+    r#"<note mark="3" role="footnotemark"/>"#,
   ]);
   same_markup(repro!("emit_fonts_a_group_before_a_mark"), &[
     r#"<text fontsize="90%">Univ A, Town</text>"#,
@@ -113,17 +117,20 @@ fn each_call_keeps_its_place_on_its_author() {
 }
 
 /// A `\footnote` and a `\thanks` on a name make what they make in an author's content, told apart by the rehearsal's digested fact (0707.1799).
+/// SHMARK (OD #1053): in article's title a `\footnote` is the `\thanks` it is (article.cls:241), both marked notes with
+/// the marks they print, ∗ and †; under a class whose title prints no mark the `\footnote` stays Perl's note contact
+/// (`\lx@title@footnote`). Pin updated.
 #[test]
 fn a_note_keeps_its_kind() {
   let (log, xml) = run(repro!("emit_notes_a_footnote_and_a_thanks_their_kinds"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let emitted = creators_xml(&xml);
   assert!(
-    emitted[0].contains("<contact name=\"Note:\u{a0}\" role=\"note\">A footnote of Ann.</contact>"),
+    emitted[0].contains(r#"mark="*" role="thanks">A footnote of Ann.</note>"#),
     "{emitted:#?}"
   );
   assert!(
-    emitted[1].contains(r#"role="thanks">Funded by the NSF.</note>"#),
+    emitted[1].contains(r#"mark="†" role="thanks">Funded by the NSF.</note>"#),
     "{emitted:#?}"
   );
 }
@@ -188,7 +195,7 @@ fn the_whole_block_queue_still_reads() {
   let (log, xml) = run(repro!("emit_marks_a_block_answers_or_shows"));
   assert_eq!(error_count(&log), 0, "{log}");
   let names: Vec<String> = creators(&xml).iter().map(|c| c[0].clone()).collect();
-  assert_eq!(names, ["Ann Able", "Bob Baker ∗", "Cat Cole 3"]);
+  assert_eq!(names, ["Ann Able", "Bob Baker", "Cat Cole"]);
 }
 
 /// The shape of `affiliation_cut_environments_by_spelling` each row of [`ENVIRONMENT_ROWS`] replaces.

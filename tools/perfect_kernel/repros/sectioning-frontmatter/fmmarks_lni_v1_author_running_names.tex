@@ -1,0 +1,23 @@
+% mechanism: an `\author` written for lni v1 (`\author[running names]{names}`, v1's `\@dblarg\@@author`) under TeX
+%   Live's lni.cls v2.0 (`\renewcommand\author[4][]`, :384): the binding reads a call with no braced e-mail and ORCID
+%   after it as v1 wrote it, by the kernel's `\author[short]{names}` (lni_cls.rs), not authblk's labels
+% witness:  2407.04435 (`\author[Daniel Müssig \and Markus Wappler \and …]{Daniel Müssig\footnotemark[1] \and …}`)
+% oracle:   lni v1 prints the names "Ann Able and Bob Baker" (the running head the optional argument); TL 2025
+%   pdflatex stops on the call (v2.0 takes `\startpage` and its argument for the e-mail and ORCID): a v1 document
+% engines:  rust MARKBINDb0 (int/frontmatter 4f169bcbe69) = 0 errors, 0 Warnings; the running names read as authblk
+%   labels and `\startpage` as the ORCID, its argument "1" a stray paragraph in the body (2407.04435: "authblk prints 8
+%   label(s) …"); Perl: no lni binding
+% expect:   0 errors, 0 Warnings; two creators, Ann Able and Bob Baker, no contact
+% status:   GREEN (MARKBIND; perfect_kernel_batchmarkbind::lni_v1_author_is_the_kernels)
+% preload:  ar5iv.sty
+\documentclass[english]{lni}
+\title{A Title}
+\author[Ann Able \and Bob Baker]{Ann Able \and Bob Baker}
+
+\startpage{1}
+\editor{Ed}
+\booktitle{Book}
+\begin{document}
+\maketitle
+Body.
+\end{document}

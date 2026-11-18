@@ -1,0 +1,23 @@
+% mechanism: the neurips binding (latexml_package neurips_sty.rs) declares the marks its stand-in copy's `\maketitle`
+%   sets, read off the body the copy defines (`shipped_class::declare_stand_in_copy_title_marks`); a copy whose
+%   `\maketitle` sets no `\thefootnote` (2305.15254's neurips_2022.sty:228-246, its lines commented out) declares none:
+%   no glyph
+% witness:  2305.15254 (neurips_2022.sty and neurips_2022_ml4ps.sty, `\maketitle` emptied: no title, no note printed);
+%   the style is neurips_2022.sty itself (neurips_sub/sub's, comments stripped) with that body commented out as there:
+%   a minimal stand-in defines too few of the binding's public names, is no stood-in file and is never read
+%   (MTREDUCEd); the review's probe n2 (revMTREDUCE B1)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): no title block, no note, "Body text."
+% engines:  rust WRONGFIXc (the static reader) = 0 errors, 0 Warnings, each note unmarked; MTREDUCEb (the binding's
+%   `\fnsymbol` declared whatever the copy's line) = Ann's note ∗, Bob's †, glyphs the PDF never prints
+% expect:   0 errors, 0 Warnings; the copy "read as the file its binding stands in for"; each note under its name,
+%   unmarked
+% status:   GREEN (MTREDUCEd: perfect_kernel_batchmtreduce::a_stand_in_copy_declares_its_marks)
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage[final]{neurips_2022}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \And Bob Baker\thanks{Corresponding: bob@x.org}}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

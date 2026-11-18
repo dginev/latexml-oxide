@@ -90,9 +90,10 @@ const pw = require('playwright-core');
             return {
               name: c.querySelector('.ltx_personname').innerText.trim(),
               star: star === 'none' || star === '""' || star === 'normal' ? 'none' : star,
+              // (a shared note's later copy is a mark only: no content)
               notes: Array.from(c.querySelectorAll('.ltx_note')).map((n) => ({
                 mark: shown(n.querySelector('.ltx_note_mark')),
-                content: shown(n.querySelector('.ltx_note_content')),
+                content: !!n.querySelector('.ltx_note_content') && shown(n.querySelector('.ltx_note_content')),
               })),
               contacts: Array.from(c.querySelectorAll('.ltx_contact')).map((k, j) => ({
                 text: k.innerText.trim(),

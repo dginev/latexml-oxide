@@ -1,0 +1,27 @@
+% mechanism: a section before `\maketitle` runs the kernel's fallback flush (`\@startsection@hook`), which digests the
+%   names; the class prints the notes at `\maketitle` (2412.01641's sn-jnl.cls:749-756), so the binding queues them
+%   there only, and with no `\maketitle` at the document's end (`fallback_notes`), never at the section
+% witness:  review sibling of 2510.03878 (`\subsection*` in its `\abstract`; revSNJNLb B2, probe secouter)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Pre", then "Ann Able1*† and Bob Baker1", "1 Univ A.",
+%   "*Corresponding author(s). E-mail(s): ann@a.org;", "† Outer." (once)
+% engines:  rust SNJNLb 2f983570f17 = Ann's marked note and a second, unmarked "Outer." at the document's level;
+%   rust SNJNLc = Ann's note only
+% expect:   0 errors 0 Warnings; "Outer." once, Ann's note marked †
+% status:   RED (SNJNLb) -> GREEN XML, HTML (SNJNLc;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks,
+%   perfect_kernel_batch67z::snjnl_notes_before_a_section_and_maketitle_print_once)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\equalcont{Outer.}
+\author[1]{\fnm{Bob} \sur{Baker}}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\section*{Pre}
+\maketitle
+Text.
+\end{document}

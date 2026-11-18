@@ -660,6 +660,30 @@ pub fn class_maketitle_runs() -> Option<bool> {
   })
 }
 
+/// Whether the document class's title page prints `\@date` right under the author block, as a binding the class loaded
+/// declares it for the class (`CLASS_BINDINGS`' first; [`policy::TitlePageDecl::date_under_author`]: article's, report's,
+/// book's, extsizes' and KOMA's, the kernel's declaration every binding keeps). `false` with no class binding (a raw
+/// class, whose page is its own) and under the fallback's guess (OmniBus): there the date stays the date (OD #1071).
+pub fn class_prints_date_under_authors() -> bool {
+  if lookup_bool("OmniBus:fallback") {
+    return false;
+  }
+  CLASS_BINDINGS.with(|c| {
+    let c = c.borrow();
+    let Some(class) = c.0.first() else {
+      return false;
+    };
+    c.0
+      .iter()
+      .any(|binding| policy::declared_date_under_author(binding, class))
+      || policy::KERNEL
+        .title_page
+        .date_under_author
+        .iter()
+        .any(|(name, _)| name == class)
+  })
+}
+
 /// Whether the document class's bindings declare that it prints the title and the authors at their setters
 /// ([`policy::TitlePageDecl::setter_print`]: iopart.cls), its `\maketitle` printing neither.
 pub fn class_prints_title_at_setters() -> bool {
@@ -1092,6 +1116,35 @@ pub(in crate::base_utilities) fn record_api_call(
       errors: 0,
       command: Some(command.clone()),
     }));
+  });
+}
+
+/// Adds a key to the recorded call queued at `queue_position` (`queue::tag_last_queued_contact`): `keyval` first in its
+/// command's keys, `pair` last in its attributes.
+pub(in crate::base_utilities) fn add_call_key(queue_position: usize, keyval: &[Token], pair: &str) {
+  with_ledger(|ledger| {
+    let call = ledger
+      .entries_mut()
+      .iter_mut()
+      .rev()
+      .find_map(|entry| match entry {
+        Entry::Api(call) if call.queue_position == queue_position => Some(call),
+        _ => None,
+      });
+    if let Some(call) = call {
+      call.attrs = if call.attrs.is_empty() {
+        pair.to_string()
+      } else {
+        s!("{},{pair}", call.attrs)
+      };
+      if let Some(command) = call
+        .command
+        .as_ref()
+        .and_then(|command| with_first_key(command, keyval))
+      {
+        call.command = Some(command);
+      }
+    }
   });
 }
 

@@ -1,0 +1,19 @@
+% witness: 0707.3527 (iaus.cls: `\author[]{M.Das$^1$, S.S.McGaugh$^2$, …}` over `\affiliation{$^1$Raman Research
+%          Institute…\break $^2$University of Maryland…}`); a mark inside a name: 1,519 of 13,142 names, 397 of 2,922
+%          sample papers, on an older binary
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2, Cy Cole1,∗" over "1Univ A, Town A" / "2Univ B, Town B"
+% engines: rust REGFIX = <personname>Ann Able<sup>1</sup></personname> beside the affiliation `<sup>1</sup>Univ A…`
+%          (the label twice, once inside the name); Perl = the whole author line one creator
+% expect:  0 errors; each name the name alone, its label consumed by the affiliation it holds (DG 2026-11-16,
+%          ruling 3): <personname>Ann Able</personname><contact role="affiliation"><sup>1</sup>Univ A, Town A</contact>;
+%          a mark of the run no contact answers left as a mark-only note (Cy Cole's ∗)
+% status:  RED (REGFIX) -> GREEN (PURE)
+\documentclass{iaus}
+\begin{document}
+\title{T}
+\author[]{Ann Able$^1$, Bob Baker$^2$, Cy Cole$^{1,*}$}
+\affiliation{$^1$Univ A, Town A\break
+$^2$Univ B, Town B}
+\maketitle
+x
+\end{document}

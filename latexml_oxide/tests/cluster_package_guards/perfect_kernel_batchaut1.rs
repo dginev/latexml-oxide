@@ -52,9 +52,9 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup>1,∗</sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob <text font="bold">Baker</text><sup>2</sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Cy Cole<sup>1</sup></personname></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note mark="1,∗" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob <text font="bold">Baker</text></personname><note mark="2" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Cole</personname><note mark="1" role="footnotemark"/></creator>"#,
       ]),
     },
     Row {
@@ -65,7 +65,7 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">Univ A, <text font="typewriter">ann@a.edu</text></note></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">Univ A, <text font="typewriter">ann@a.edu</text></note></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob <emph font="italic">Baker</emph></personname></creator>"#,
       ]),
     },
@@ -79,7 +79,7 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Jingbo Lu</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> University of Electronic Science</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Mu Li</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Harbin Institute of Technology</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Shuhang Gu</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks">Corresponding <text font="bold">author</text>.</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> University of Electronic Science</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" fontsize="90%">gu@gmail.com</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Shuhang Gu</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks">Corresponding <text font="bold">author</text>.</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> University of Electronic Science</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" fontsize="90%">gu@gmail.com</text></contact></creator>"#,
       ]),
     },
     Row {
@@ -121,11 +121,14 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
     Row {
       repro:    repro!("sectioning-frontmatter/cl9_shared_macro_note_and_marks"),
       files:    &[],
-      counts:   (0, 0),
+      // (scrartcl's own `\maketitle` prints the bare `\footnotemark`s † and ‡, no "1" and "2": their glyph unknown here,
+      // their notes never placed, each mark dropped and counted — MARKSAFEb, `insert::count_unknown_marks`; never an
+      // empty mark, revMTREDUCEc S2)
+      counts:   (0, 2),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname><text fontsize="91%">Ann Able</text></personname><note mark="1" role="footnotemark"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags></note><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text fontsize="91%">Univ X.</text></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname><text fontsize="91%">Bob Baker</text></personname><note mark="2" role="footnotemark"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
+        r#"<creator role="author"><personname><text fontsize="91%">Ann Able</text></personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text fontsize="91%">Univ X.</text></note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname><text fontsize="91%">Bob Baker</text></personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="91%"> Univ Z</text></contact></creator>"#,
       ]),
     },
     // (a kept mark past a gap or a comma shown as a request; the glued ones' italic is RED
@@ -138,11 +141,11 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
       counts:   (0, 1),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker <sup><text font="italic">2</text></sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Cy Cole<sup>3</sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Dee Dunn<sup>4</sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Eve Ell<sup><text font="italic">5</text></sup></personname></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note mark="1" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note mark="2" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Cole</personname><note mark="3" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Dee Dunn</personname><note mark="4" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Eve Ell</personname><note mark="5" role="footnotemark"/></creator>"#,
       ]),
     },
   ]);
@@ -165,8 +168,8 @@ fn a_declaration_is_replayed_as_far_as_its_call_read() {
       counts:   (0, 4),
       lines:    &[],
       creators: Creators::Hold(&[
-        r#"Ann Fodor<sup>1</sup></text></personname><contact class="ltx_author_line" name="Email: " role="email">ann@ubb.ro</contact></creator>"#,
-        r#"<personname><text fontsize="120%">Bob Minuta<sup>2</sup></text></personname>"#,
+        r#"Ann Fodor</text></personname><note mark="1" role="footnotemark"/><contact class="ltx_author_line" name="Email: " role="email">ann@ubb.ro</contact></creator>"#,
+        r#"<personname><text fontsize="120%">Bob Minuta</text></personname><note mark="2" role="footnotemark"/>"#,
         r#"href="mailto:bob@ubb.ro">bob@ubb.ro</ref></XMText></XMApp></XMCell></XMRow></XMArray></XMath></Math></contact></creator>"#,
       ]),
     },
@@ -178,7 +181,7 @@ fn a_declaration_is_replayed_as_far_as_its_call_read() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Võ Tiến Phong<sup>1,2</sup></personname></creator>"#,
+        r#"<creator role="author"><personname>Võ Tiến Phong</personname><note mark="1,2" role="footnotemark"/></creator>"#,
       ]),
     },
     Row {
@@ -190,8 +193,8 @@ fn a_declaration_is_replayed_as_far_as_its_call_read() {
       lines:    &["a name its events don't spell"],
       // (the space after "(" is CAU1's too: a residual of the CJK name's plain text)
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Bonny Y. Wang ( 汪玥)<sup>1</sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Leander Thiele<sup>2</sup></personname></creator>"#,
+        r#"<creator role="author"><personname>Bonny Y. Wang ( 汪玥)</personname><note mark="1" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Leander Thiele</personname><note mark="2" role="footnotemark"/></creator>"#,
       ]),
     },
     Row {
@@ -203,7 +206,7 @@ fn a_declaration_is_replayed_as_far_as_its_call_read() {
       lines:    &[],
       // (the italic mark as pinned above: RED `omnibus_author_math_mark_in_the_name_run_is_italic_red`)
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Lee<sup>1</sup></personname></creator>"#,
+        r#"<creator role="author"><personname>Ann Lee</personname><note mark="1" role="footnotemark"/></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob Ray<sup><text font="italic">2</text></sup> (with Ann Lee)</personname></creator>"#,
       ]),
     },
@@ -217,7 +220,7 @@ fn a_declaration_is_replayed_as_far_as_its_call_read() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic">Univ A</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks"><sup>∗</sup>Corresponding author. Email: bob@a.edu</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic">Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks">Corresponding author. Email: bob@a.edu</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic">Univ A</text></contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Cy Cole</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic">Univ B</text></contact></creator>"#,
       ]),
     },

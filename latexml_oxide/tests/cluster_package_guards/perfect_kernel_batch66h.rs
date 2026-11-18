@@ -229,20 +229,45 @@ fn babel_ini_caption_template_needs_fnum() {
   );
 }
 
-/// revtex4-2's `\frontmatter@footnote` as a document calls it for a note on several authors (2605.04155).
+/// revtex4-2's `\frontmatter@footnote` as a document calls it for a note on several authors (2605.04155, its e-mails
+/// too): a name's own footnote numbered before its joined `\email` (revtex4-2.cls:2446-2450), printed once, its mark ∗ on
+/// Ann's and Cat's names, so each copy is their note marked ∗ (OD #1054; ‡, Bob's e-mail's, in edc515b111f).
 #[test]
 fn revtex_frontmatter_footnote_on_two_authors() {
   let (log, xml) = convert_counted(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_frontmatter_footnote_on_two_authors.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let want: Vec<Vec<String>> = [
+    vec![
+      "Ann Author",
+      "mark=∗",
+      "email=a@x.org",
+      "affiliation=Univ A",
+    ],
+    vec!["Bob Author", "email=b@x.org", "affiliation=Univ B"],
+    vec![
+      "Cat Author",
+      "mark=∗",
+      "email=c@x.org",
+      "affiliation=Univ C",
+    ],
+  ]
+  .iter()
+  .map(|c| c.iter().map(|s| (*s).to_string()).collect())
+  .collect();
   assert_eq!(
-    xml
-      .matches(r#"role="thanks">These two authors contributed equally to this work.</contact>"#)
-      .count(),
-    2,
+    super::perfect_kernel_batch84b::creators(&xml),
+    want,
     "{xml}"
   );
+  for id in ["id1", "id2"] {
+    let note = format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="{id}">These two authors contributed equally to this work.</note>"#
+    );
+    assert_eq!(xml.matches(&note).count(), 1, "{note}\n{xml}");
+  }
+  assert_eq!(xml.matches("<note ").count(), 2, "{xml}");
 }
 
 /// float.sty's `\newfloat` is a macro scrhack's floatbytocbasic can patch (2606.04906, 2606.11358).

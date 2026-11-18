@@ -1,0 +1,27 @@
+% mechanism: the acl binding (latexml_contrib acl_sty.rs) declares the marks the copy's `\maketitle` sets, read off the
+%   body the lock refuses in the copy's own `\AtBeginDocument` code (acl.sty:147-150); a line the binding does not know
+%   (here `\def\thefootnote{\arabic{footnote}}`) declares none: no glyph, never acl.sty's `\fnsymbol`
+% witness:  2502.19103, 1905.10033 (acl.sty's line `\def\thefootnote{\fnsymbol{footnote}}`; this one's arabic line is
+%   the review's sibling, revMTREDUCE S2); the style a minimal stand-in of acl.sty:147-155
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1, Bob Baker2"; foot "1 First note.", "2 Second
+%   note."
+% engines:  rust WRONGFIXc (the static reader) = 0 errors, 0 Warnings; Ann's note 1, Bob's 2; MTREDUCEb (the binding's
+%   `\fnsymbol` declared whatever the copy's line) = Ann's ∗, Bob's †, glyphs the PDF does not print
+% expect:   0 errors, 0 Warnings; each note under its name, unmarked
+% status:   GREEN (MTREDUCEc: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{acl.sty}
+\AtBeginDocument{%
+\def\maketitle{\par\begingroup\def\thefootnote{\arabic{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}}
+\def\@maketitle{\vbox{\hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\begin{tabular}[t]{c}\@author\end{tabular}\par}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{acl}
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

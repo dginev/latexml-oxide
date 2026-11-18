@@ -1,0 +1,22 @@
+% mechanism: one elsarticle `\cortext` reached by two routes: Alice lists its key in `\author[…]` (the class prints
+%   `\elsRef{cor}`, the `cnote` number "1", elsarticle.cls:251-259), Bob's name holds `\corref{cor}` (∗, :188-190):
+%   both names carry the one note — the binding gives every route of a key the label form the key was first read by
+%   (`els_route`): Bob's `\corref{cor}` is the key `cor`, as Alice's, where Perl's prefix-stripped fallback stopped at
+%   Bob's exact `cor:cor`
+% witness: ELSROUTE (row R; synthetic, 0 of the 906 census elsarticle papers mix the routes)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,1 , Bob Twoa,∗"; footnote "∗ Corresponding author"
+% engines: rust b842de7fc4c: Bob alone carries the note (Alice's "1" connects nothing)
+% expect:  0 errors 0 Warnings; Alice One and Bob Two each a copy of the one note, marked ∗ (the note's own print:
+%   the names print two marks for it, OD #1067)
+% status:  RED (b842de7fc4c) -> GREEN (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1,cor]{Alice One}
+\author[l1]{Bob Two\corref{cor}}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[cor]{Corresponding author}
+\end{frontmatter}
+x\end{document}

@@ -1,0 +1,18 @@
+% witness: revPURE B2's probe (`Ann Able$^{a}$\thanks{a visitor at the Institute.}`, an `a` affiliation in the body)
+% oracle:  pdflatex 0 errors: "Ann Ablea∗ Bob Bakerb† Cy Cole1‡", footnotes "∗ a visitor at the Institute.",
+%          "† bVisitor at the Lab.", "‡ 1 year at Univ C."
+% engines: rust PURE round 1 = Ann's note "visitor at the Institute." marked a, Cy's "year at Univ C." marked 1 (each
+%          word cut as a copy of the mark); REGFIX = Bob's b already out of his name, the note keeping its ᵇ (the
+%          relocation's, before this pass)
+% expect:  0 errors; each name the name alone; a letter or number opening a note's text is its word, no copy of the mark:
+%          Ann's a and Cy's 1 mark-only notes, their notes whole; Bob's note as REGFIX writes it, no mark-only note
+% status:  RED (PURE round 1) -> GREEN (PUREb)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$\thanks{a visitor at the Institute.} \and Bob Baker$^{b}$\thanks{$^{b}$Visitor at the Lab.}
+\and Cy Cole$^{1}$\thanks{1 year at Univ C.}}
+\date{}
+\maketitle
+$^a$ Univ A.
+\end{document}

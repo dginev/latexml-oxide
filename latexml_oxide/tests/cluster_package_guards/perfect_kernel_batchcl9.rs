@@ -68,23 +68,20 @@ fn overlapping_names_write_the_block_whole_with_its_note() {
 /// FN1 (OD #1001; the user's ruling 2026-11-11, which accepts this shape): a block written whole holds its notes
 /// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move
 /// only; the marks' tags lose the `fontsize="110%"` they had against the name's 91 %, set at the creator's size).
+/// MTREDUCEd: under scrartcl's own `\maketitle` the marks' glyph is unknown and nothing answers them, so each is
+/// dropped and counted, never an empty mark (revMTREDUCEc S2); the note kept.
 #[test]
 fn overlapping_names_keep_the_macros_marks() {
-  let mark = |n: u8| {
-    format!(
-      "<note mark=\"{n}\" role=\"footnotemark\" xml:id=\"footnote{n}\"><tags> <tag>{n}</tag> <tag \
-       role=\"refnum\">{n}</tag> <tag role=\"typerefnum\">footnote {n}</tag> </tags></note>"
-    )
-  };
-  let marks = format!("{} {}", mark(1), mark(2));
+  // (scrartcl's own `\maketitle` prints the bare `\footnotemark`s † and ‡: their glyph unknown here, their notes never
+  // placed, each mark dropped and counted — MARKSAFEb, `insert::count_unknown_marks`; never an empty mark, revMTREDUCEc S2)
   let note = "<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\"><text \
               fontsize=\"91%\" xml:id=\"id2.1\">Univ X.</text></note>";
   let (log, xml) = run(repro!("cl9_shared_parameter_macro_note_and_marks"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
   assert_eq!(log.matches(OVERLAP).count(), 1, "{log}");
   assert_eq!(creator_elements(&xml), [format!(
     "<creator role=\"author\"> <personname><text fontsize=\"91%\" xml:id=\"id1\">Ann Able, Bob Baker<break/>Univ \
-     Z</text></personname> {marks} {note} </creator>"
+     Z</text></personname> {note} </creator>"
   )]);
 }
 
@@ -169,8 +166,8 @@ fn a_sequenced_contact_never_invents_a_creator() {
 #[test]
 fn a_setter_inside_the_author_block_is_counted() {
   let emitted = [
-    "<creator role=\"author\"> <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname> </creator>",
-    "<creator before=\" \" role=\"author\"> <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname> </creator>",
+    "<creator role=\"author\"> <personname>Ann Able</personname> <note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <note mark=\"2\" role=\"footnotemark\" xml:id=\"id2\"/> </creator>",
   ];
   let (log, xml) = run(repro!("cl9_date_inside_author_counted"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");

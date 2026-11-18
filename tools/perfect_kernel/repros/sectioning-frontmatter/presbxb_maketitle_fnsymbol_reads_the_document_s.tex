@@ -1,0 +1,25 @@
+% mechanism: a document's `\maketitle` that sets `\def\thefootnote{\fnsymbol{footnote}}` prints the document's own
+%   `\@fnsymbol`: the replay reads `\fnsymbol{footnote}` as TeX expands it, `\@fnsymbol\c@footnote` (latex.ltx:10205;
+%   `latex_constructs::own_marks_as_tex`), where the kernel `\fnsymbol` is Perl's fixed table
+% witness:  1905.10033 (acl2019.sty:37 `\def\@fnsymbol#1{\ensuremath{\ifcase#1\or \dagger\or \ddagger…`, :392-394;
+%   pdflatex "Lin† Madotto†"); review revPRESBX B2 (p/fnsym.tex)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able† Bob Baker‡"
+% engines:  rust PRESBX (b85b844eb81) = 0 errors, 0 Warnings; thanks[∗], thanks[†]
+% expect:   0 errors, 0 Warnings; Ann thanks[†], Bob thanks[‡]
+% status:   RED (PRESBX) -> GREEN (PRESBXb: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+%   -> RED again (MTREDUCE, DG 2026-11-17 maketitle reduce: a `\maketitle` not the class's and no binding's has
+%   unknown marks, `latex_constructs::class_maketitle_in_force`; no glyph, each note under its name; row R MTREDUCE)
+%   -> GREEN again (MTREDUCEd, DG 2026-11-17: the body of the `\maketitle` that runs read where no binding
+%   declares its marks, `latex_constructs::read_title_marks_in_force`)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\newpage\global\@topnum\z@\@maketitle\@thanks\endgroup\setcounter{footnote}{0}}
+\def\@fnsymbol#1{\ensuremath{\ifcase#1\or\dagger\or\ddagger\or\mathsection\else\@ctrerr\fi}}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

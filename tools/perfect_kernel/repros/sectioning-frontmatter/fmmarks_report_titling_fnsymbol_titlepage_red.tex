@@ -1,0 +1,21 @@
+% mechanism: titling's `\thanksmarkseries{fnsymbol}` on report's title page (`titlepage`, its default,
+%   report.cls:176-198): titling's title-page `\maketitle` sets `\thefootnote` to its series (titling.sty:60-61
+%   `\@bsmarkseries`, run at :121), so the title page prints ∗ †; the title hook, where the post-release fix declares one, has to be
+%   the series titling sets as its `\maketitle` begins (`\lx@maketitle@begin`), never the arabic in force before it
+% witness:  review revMARKBINDc B (p/t1_report_titling_fns.tex; t18 book, t19 `[titlepage]{article}` the same, t20
+%   `\thanksmarkseries{roman}` "Ann Ablei Bob Bakerii")
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker†", "∗ Ann note.", "† Bob note."
+% engines:  rust MARKBINDc (aacff608526) = 0 errors, 0 Warnings; Ann's thanks 1, Bob's 2 (wrong glyph); MARKBINDd
+%   unmarked (the fail-safe)
+% expect:   0 errors, 0 Warnings; Ann's thanks ∗, Bob's †
+% status:   RED (row R TITLEPAGEMARKS; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% preload:  ar5iv.sty
+\documentclass{report}
+\usepackage{titling}
+\thanksmarkseries{fnsymbol}
+\title{A Title}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

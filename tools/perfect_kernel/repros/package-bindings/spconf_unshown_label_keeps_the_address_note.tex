@@ -1,0 +1,17 @@
+% mechanism: spconf's marked `\address` with a line whose label no name shows (`$^{23}$`) is not wholly placed: the
+%   address note stays whole (`address_block_calls`, OD #1073)
+% witness: 2203.05882 (`$^{23}$`); 1909.01754 (no queued author: names in a raw `\def\@name`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, spconf.sty) 0 errors: "Ann Able1, Bob Baker2, Cy Coe3",
+%   "1Univ A", "23Univ B"
+% engines: SPCONF round 1 (d67dbb41d4b): "Univ B" on a nameless author-block creator
+% expect:  0 errors, 0 warnings; the address note whole, no affiliation contact, no nameless creator
+% status:  RED (SPCONF d67dbb41d4b) -> GREEN (SPCONFb; guard perfect_kernel_batchspconf)
+\documentclass{article}
+\usepackage{spconf}
+\title{T}
+\name{Ann Able$^1$, Bob Baker$^2$, Cy Coe$^3$}
+\address{$^1$Univ A\\ $^{23}$Univ B}
+\begin{document}
+\maketitle
+x
+\end{document}

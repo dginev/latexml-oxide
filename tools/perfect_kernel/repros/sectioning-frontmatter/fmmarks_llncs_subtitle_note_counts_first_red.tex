@@ -1,0 +1,24 @@
+% mechanism: llncs.cls's `\@maketitle` prints `\@subtitle` after the title and before `\@author` (llncs.cls:1023-1027),
+%   so a `\thanks` in the subtitle steps the footnote counter ahead of the names' notes, which the title block's
+%   rehearsal (it counts the `\title` alone) does not count. The binding withdraws its title marks for such a subtitle
+%   (llncs_cls.rs `\subtitle`, `steps_footnotes`): the names' `\thanks` are written unmarked, not shifted
+% witness:  revLLNCS B1 (probe c_subtitle)
+% oracle:   pdflatex 0 errors; "Sub⋆", "Ann Able⋆⋆ and Bob Baker⋆⋆⋆", footnotes "⋆ Sub note.", "⋆⋆ Ann note.", "⋆⋆⋆ Bob
+%   note.", "Body1"
+% engines:  rust LLNCSMARKS (8ea66f196ea) = 0 errors, 0 Warnings; Ann ⋆, Bob ⋆⋆ (a mis-link: ⋆ is the subtitle's
+%   note's), the subtitle's note an unmarked pubnote; LLNCSb = the names' thanks unmarked; Perl 0.8.8: each thanks an
+%   unmarked contact
+% expect:   0 errors, 0 Warnings; Ann ⋆⋆, Bob ⋆⋆⋆, the subtitle's note ⋆
+% status:   RED (row R LLNCSSUBTITLE, proposed; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red;
+%   the withdrawal perfect_kernel_batchllncs::a_note_in_the_subtitle_withdraws_the_title_marks)
+% moves:    XML row R LLNCSSUBTITLE
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\subtitle{Sub\thanks{Sub note.}}
+\title{A Title}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}}
+\institute{Lab A}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

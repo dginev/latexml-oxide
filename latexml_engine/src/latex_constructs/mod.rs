@@ -27,7 +27,7 @@ use latexml_core::{
 ///**********************************************************************
 use crate::base_utilities::{
   FrontmatterAnchor, already_reported, begin_deposit_insert, begin_deposit_provenance,
-  end_deposit_insert, end_deposit_provenance, mark_preamble_residue, place_frontmatter,
+  end_deposit_insert, end_deposit_provenance, mark_preamble_residue, one_note, place_frontmatter,
   remove_frontmatter_marks, tag_forms,
 };
 use crate::{
@@ -245,7 +245,7 @@ pub fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   // The document's, and its author's own files' (K22: the author's files outrank our guesses; a raw file the author
   // shipped beside the source, `binding::content::reading_author_file` — 0901.4335's `mn2e_journal_style.sty`): a
   // TeX Live class or package loaded beside OmniBus (apa7.cls) yields to it, as raw files yield to bindings.
-  // A kernel stub (`DefinitionOrigin::Stub`: aaai's `\equalcontrib`, sect05.rs) yields to a raw file's own definition
+  // A stub (`DefinitionOrigin::Stub`: aaai's `\equalcontrib`, latexml_contrib aaai_sty.rs) yields to a raw file's own definition
   // as well, since the real class or style defines the name (copernicus.cls:1673), and so does what a binding borrows
   // from a package the real one does not load (`DefinitionOrigin::Borrowed`, `require_package_borrowed`: in LaTeX the
   // name does not exist) — cc.cls's ccproof.sty:56 `\newenvironment{proof}` after theorem.sty (1507.02955).
@@ -530,8 +530,10 @@ pub fn is_document_class(class: &str) -> bool { lookup_string("lx@document@class
 /// The title block's own `\thefootnote`, the one hook a binding declares its title's footnote marks with: defined, the
 /// marks of the notes made in the title, the authors and the date are it (`enter_title_footnotes`), and so are the
 /// frontmatter observer's Mark labels (`observer/rehearsal.rs` `TITLE_FOOTNOTE_HOOK`, OXIDIZED_DESIGN_DIVERGENCES #837,
-/// #851). Article, report and book declare it `\@fnsymbol\c@footnote` (`declare_fnsymbol_title_block`); a class
-/// numbering its title's marks otherwise defines its own (revtex4-2.cls:3040-3041 `\frontmatter@thefootnote`). Guard
+/// #851). Article, report and book declare it `\@fnsymbol\c@footnote` (`declare_fnsymbol_title_block`), not on their
+/// title page (no mark there, row R TITLEPAGEMARKS); a class numbering its title's marks otherwise defines its own
+/// (revtex4-2.cls:3040-3041 `\frontmatter@thefootnote`), or takes the one in force (mnras,
+/// [`declare_title_marks_in_force`]). Guard
 /// `perfect_kernel_batch78o::declared_title_thefootnote_prints_the_marks_the_observer_labels`.
 pub const TITLE_THEFOOTNOTE: &str = "\\lx@title@thefootnote";
 
@@ -565,8 +567,16 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
   if !is_document_class(class) {
     return Ok(());
   }
-  // (its `\thanks` steps the counter under a title page too: article.cls:173, :241, latex.ltx:17215)
-  assign_value("lx_title_counts_footnotes", true, Some(Scope::Global));
+  // (its `\thanks` steps the counter under a title page too, and its `\maketitle` sets it back: article.cls:173, :190,
+  // :223, :241, latex.ltx:17215)
+  declare_title_footnote_counting(true)?;
+  // (its title marks take no width, `\def\@makefnmark{\rlap{…}}` in the same branch, article.cls:206, report.cls:212,
+  // book.cls:218 — siamltex's, `None`, keep latex.ltx's `\hbox`: the frontmatter's overprints, `mark_ledger::overprints`)
+  if titlepage == Some(false) {
+    assign_value(TITLE_MARKS_ZERO_WIDTH, true, Some(Scope::Global));
+  }
+  // (a title page sets no `\thefootnote`, report.cls:176-198: it prints the one in force, which a package may have set
+  // (titling's `\thanksmarkseries`) or emptied; no hook, no mark: row R TITLEPAGEMARKS, 1501.00599, 1110.6706)
   if titlepage != Some(true) {
     def_macro(
       T_CS!(TITLE_THEFOOTNOTE),
@@ -578,7 +588,36 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
       }),
     )?;
   }
-  AddToMacro!("\\lx@maketitle@body", "\\setcounter{footnote}{0}");
+  Ok(())
+}
+
+/// The state key under which [`declare_fnsymbol_title_block`] records that the document class's title prints its
+/// footnote marks in no width (article.cls:206's `\rlap`): a mark set right after one prints on top of it.
+pub const TITLE_MARKS_ZERO_WIDTH: &str = "lx_title_marks_zero_width";
+
+/// A class's title block whose `\thanks` is LaTeX's, `\footnotemark` and its text (latex.ltx:17215): each note of the
+/// title, an author or the date steps the footnote counter as the `\maketitle` digests it (`lx_title_counts_footnotes`,
+/// `\lx@title@footnote@step`); where `resets`, the `\maketitle` sets it back to 0 after (article.cls:190, :223), so the
+/// body's notes count from 1 and a note's side of the reset decides its pairing (`lx_title_resets_footnotes`,
+/// `footnote_pairing`). mnras's and lni's `\maketitle` keep counting (mnras.cls:1055-1071, lni.cls:475-514).
+pub fn declare_title_footnote_counting(resets: bool) -> Result<()> {
+  assign_value("lx_title_counts_footnotes", true, Some(Scope::Global));
+  if resets {
+    assign_value("lx_title_resets_footnotes", true, Some(Scope::Global));
+    AddToMacro!("\\lx@maketitle@body", "\\setcounter{footnote}{0}");
+  }
+  Ok(())
+}
+
+/// The title hook ([`TITLE_THEFOOTNOTE`]) of a class whose `\maketitle` prints the `\thefootnote` in force, setting none
+/// (mnras.cls:1055-1071): that one as the `\maketitle` begins (`\lx@maketitle@begin`), a preamble's
+/// `\renewcommand\thefootnote{\arabic{footnote}}` included; a `\let`, as `enter_title_footnotes` lets `\thefootnote` to
+/// the hook. Not before: with no `\maketitle`, which prints no title, a fallback flush's marks are the body's.
+pub fn declare_title_marks_in_force() -> Result<()> {
+  AddToMacro!(
+    "\\lx@maketitle@begin",
+    "\\global\\let\\lx@title@thefootnote\\thefootnote"
+  );
   Ok(())
 }
 
@@ -587,22 +626,889 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
 /// (`ledger::class_maketitle_runs`, `MaketitleRuns::WithoutTitlepage`, TP1c).
 pub fn class_titlepage_key(class: &str) -> String { s!("lx_class_titlepage:{class}") }
 
-/// Before a note is made in the title block (a field the frontmatter digests: the title, an author, the date) of a
-/// class whose title marks its notes in a `\thefootnote` of its own ([`TITLE_THEFOOTNOTE`],
-/// `declare_fnsymbol_title_block`): `\thefootnote` is that one for the rest of the field, as in the class's
-/// `\maketitle` group.
-pub(crate) fn enter_title_footnotes() -> Result<()> {
+/// The `\thefootnote` in force as a frontmatter flush began (`place::digest_front_matter`), which an author block's
+/// declarations the flush runs ahead of its names are told against ([`title_cell_declared`]).
+const FLUSH_THEFOOTNOTE: &str = "\\lx@flush@thefootnote";
+/// The name whose field comes next and takes its cell's `\thefootnote` ([`title_cell_enter`]), and whether a
+/// declaration of no known cell redefined it in this flush ([`title_cell_declared`]).
+const CELL_PENDING: &str = "lx_title_cell_pending";
+const CELL_UNKNOWN: &str = "lx_title_cell_unknown";
+
+/// The `\thefootnote` an author block's cell `key` (`<flush>:<creator>`) declared.
+fn cell_thefootnote(key: &str) -> Token { T_CS!(s!("\\lx@title@cell@thefootnote@{key}")) }
+
+/// A frontmatter flush begins: the `\thefootnote` in force kept ([`FLUSH_THEFOOTNOTE`]), no cell's pending (the title
+/// marks of the `\maketitle` in force read before, [`read_title_marks_in_force`]).
+pub(crate) fn begin_title_footnotes() {
+  let_i(
+    &T_CS!(FLUSH_THEFOOTNOTE),
+    &T_CS!("\\thefootnote"),
+    Some(Scope::Global),
+  );
+  assign_value(CELL_PENDING, Stored::String(pin("")), Some(Scope::Global));
+  assign_value(CELL_UNKNOWN, false, Some(Scope::Global));
+}
+
+/// The footnote number the title's notes reached (AAAI's `\lx@aaai@note`, latexml_contrib aaai_sty.rs): `\c@footnote`,
+/// or in the frontmatter's rehearsal, which counts its notes' steps and steps no counter, that count
+/// (`rehearsal_footnote_value`).
+pub fn title_note_number() -> Result<i64> {
+  match rehearsal_footnote_value() {
+    Some(value) => Ok(value),
+    None => Ok(counter_value("footnote")?.value_of()),
+  }
+}
+
+/// Does a field of the title block (`tag`) take the class's `\thefootnote` ([`enter_title_footnotes`]), as its
+/// `\maketitle` sets it before `\@author` expands (article.cls:203-205)? OXIDIZED_DESIGN_DIVERGENCES #1053.
+pub(crate) fn title_field_footnotes(tag: &str) -> bool {
+  matches!(
+    tag,
+    "ltx:creator" | "ltx:title" | "ltx:date" | "ltx:contact"
+  ) && title_marks_declared()
+}
+
+/// As a field of the title block begins, in its group, where it takes the title's marks ([`title_field_footnotes`]):
+/// `\thefootnote` is the class's ([`TITLE_THEFOOTNOTE`]) for the field.
+pub(crate) fn enter_title_footnotes() {
   // (the title block's contacts too — an affiliation, an address: the class prints them inside its title, under the same
   // marks; revtex's `\affiliation{\footnotemark[2]Lab … \footnotetext[2]{\tt volkov@…}}` answers the `\author{Mikhail S.
   // Volkov\footnotemark[2]}` above it with the same †, hep-th0302032)
-  if matches!(
+  let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_THEFOOTNOTE), None);
+}
+
+/// `\lx@title@cell@declared{<flush>:<creator>}`, after an author block's declaration the flush runs ahead of its names
+/// (`emit::declarations`): a `\thefootnote` it redefined holds in its cell of the `\@author` tabular alone, which `\and`,
+/// `\\` and `&` end (latex.ltx:17219-17222) — the name `key` names keeps it ([`title_cell_enter`]; 1807.02791's
+/// `\renewcommand{\thefootnote}{\arabic{footnote}}` before its one name, "1 2"), a cell of several names leaves every
+/// name's mark unknown ([`title_mark_unknown`]), one of no name (a line's, `-`) none, and the flush goes on with the one
+/// before it.
+pub(crate) fn title_cell_declared(key: &str) {
+  let definition = |cs: &Token| lookup_definition(cs).ok().flatten();
+  let thefootnote = T_CS!("\\thefootnote");
+  let (Some(before), Some(now)) = (
+    definition(&T_CS!(FLUSH_THEFOOTNOTE)),
+    definition(&thefootnote),
+  ) else {
+    return;
+  };
+  if Rc::ptr_eq(&before, &now) {
+    return;
+  }
+  // (a cell of several names: which one's, unknown; of none, a line's, which prints no name's mark)
+  if key.ends_with(':') {
+    assign_value(CELL_UNKNOWN, true, Some(Scope::Global));
+  } else if !key.ends_with(":-") {
+    let_i(&cell_thefootnote(key), &thefootnote, Some(Scope::Global));
+  }
+  let_i(&thefootnote, &T_CS!(FLUSH_THEFOOTNOTE), None);
+}
+
+/// `\lx@title@cell@enter{<flush>:<creator>}`, before the field of a name whose cell declared its `\thefootnote`
+/// ([`title_cell_declared`]): the field takes it ([`enter_title_cell`]).
+pub(crate) fn title_cell_enter(key: &str) {
+  assign_value(CELL_PENDING, Stored::String(pin(key)), Some(Scope::Global));
+}
+
+/// The `\thefootnote` a field of the title block began with, before any declaration of its own ([`enter_title_cell`]).
+const FIELD_THEFOOTNOTE: &str = "\\lx@field@thefootnote";
+
+/// As a name's field begins, in its group, after the class's marks ([`enter_title_footnotes`]): its cell's
+/// `\thefootnote` ([`title_cell_enter`]), as TeX sets the declaration after the class's in that cell. The one the field
+/// began with is kept ([`FIELD_THEFOOTNOTE`]): a mark made under another is the document's own ([`title_mark_unknown`]).
+pub(crate) fn enter_title_cell(tag: &str) {
+  let_i(&T_CS!(FIELD_THEFOOTNOTE), &T_CS!("\\thefootnote"), None);
+  if tag != "ltx:creator" {
+    return;
+  }
+  let key = lookup_string(CELL_PENDING);
+  if key.is_empty() {
+    return;
+  }
+  assign_value(CELL_PENDING, Stored::String(pin("")), Some(Scope::Global));
+  let cell = cell_thefootnote(&key);
+  if lookup_definition(&cell).ok().flatten().is_some() {
+    let_i(&T_CS!("\\thefootnote"), &cell, None);
+  }
+}
+
+/// The command after an author block's declaration the flush runs ahead of its names (`title_cell_declared`), and the
+/// one before the field of a name whose cell declared a `\thefootnote` (`title_cell_enter`): `emit::declarations`
+/// writes them.
+pub const TITLE_CELL_DECLARED: &str = "\\lx@title@cell@declared";
+pub const TITLE_CELL_ENTER: &str = "\\lx@title@cell@enter";
+
+/// The title's marks a rehearsal of an author block binds (`rehearsal::install_event_bindings`), which each cell of the
+/// block starts with ([`rehearsal_cell_ends`]).
+const REHEARSAL_CELL_THEFOOTNOTE: &str = "\\lx@fm@obs@cell@thefootnote";
+
+/// A rehearsal's `\thefootnote` is bound: each cell of the block starts with it ([`rehearsal_cell_ends`]).
+pub fn rehearsal_cells_begin() {
+  let_i(
+    &T_CS!(REHEARSAL_CELL_THEFOOTNOTE),
+    &T_CS!("\\thefootnote"),
+    None,
+  );
+}
+
+/// A cell of the `\@author` tabular a rehearsal reads ends (`\and`, `\\`): a `\thefootnote` declared in it ends with it,
+/// as its group does in TeX (latex.ltx:17219-17222): `\author{\renewcommand\thefootnote{\arabic{footnote}}Ann\thanks{…}
+/// \and Bob\thanks{…}}` prints "Ann1 Bob†" (review revMARKSAFE S1).
+pub fn rehearsal_cell_ends() {
+  let cell = T_CS!(REHEARSAL_CELL_THEFOOTNOTE);
+  if lookup_definition(&cell).ok().flatten().is_some() {
+    let_i(&T_CS!("\\thefootnote"), &cell, None);
+  }
+}
+
+/// Is the frontmatter digesting a field of the title block ([`enter_title_footnotes`])?
+fn in_title_field() -> bool {
+  matches!(
     lookup_string("lx_frontmatter_item").as_str(),
     "ltx:creator" | "ltx:title" | "ltx:date" | "ltx:contact"
-  ) && has_meaning(&T_CS!(TITLE_THEFOOTNOTE))
-  {
-    let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_THEFOOTNOTE), None);
+  )
+}
+
+/// Does the title block print marks known here: its class's ([`TITLE_THEFOOTNOTE`]), where the class's own
+/// `\maketitle` runs or a package's a binding answers for ([`class_maketitle_in_force`])? A wrong glyph is worse than
+/// none (DG 2026-11-16; OXIDIZED_DESIGN_DIVERGENCES #1053).
+pub fn title_marks_declared() -> bool {
+  if !(class_maketitle_in_force() && title_marks_hook()) {
+    read_title_marks_in_force();
+  }
+  class_maketitle_in_force() && title_marks_hook()
+}
+
+/// Does a binding declare its title's marks ([`TITLE_THEFOOTNOTE`] defined)?
+fn title_marks_hook() -> bool { has_meaning(&T_CS!(TITLE_THEFOOTNOTE)) }
+
+/// The refused `\maketitle` a binding answers for ([`declare_package_title_marks`]).
+const BOUND_MAKETITLE: &str = "\\lx@title@bound@maketitle";
+/// The number of the stand-in copy whose `\maketitle` a binding answers for (`state::new_copy_provides_record`;
+/// [`declare_package_title_marks`]).
+const COPY_MAKETITLE_BOUND: &str = "lx_title_copy_maketitle_bound";
+
+/// Does the class's own `\maketitle` run? The class's unless a lock refused another's that does not call it by meaning
+/// (`\maketitle:redefined@…`, `\lx@dropped@maketitle`, state.rs; a stand-in copy's, `copy_provides_maketitle`): a
+/// document's, a package's, an option file's (11lomcon.sty, hep-ph0312288); the class file's own is the class's
+/// (lni.cls), and so is a package's whose binding declares its marks ([`declare_package_title_marks`]: spconf, acl,
+/// aaai). Any other's marks are its body's where they read (`read_title_marks_in_force`), else unknown: no glyph, its
+/// notes kept under their names (DG 2026-11-17).
+pub fn class_maketitle_in_force() -> bool {
+  let document = lookup_bool("\\maketitle:redefined@document");
+  let definition = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
+  let Some(class) = definition("\\maketitle") else {
+    return true;
+  };
+  // (the refused one, or a stand-in copy's, which pdflatex runs where the binding keeps LaTeXML's: spconf.sty's,
+  // 2110.09738)
+  let refused = refused_maketitle();
+  let (body, file) = match refused {
+    Some(dropped) => {
+      if definition(BOUND_MAKETITLE).is_some_and(|bound| Rc::ptr_eq(&bound, &dropped)) {
+        return true;
+      }
+      let Some(ExpansionBody::Tokens(body)) = dropped.get_expansion() else {
+        return !document;
+      };
+      // (a document's own is never the class file's, whatever file LaTeX last named)
+      let file = if document {
+        String::new()
+      } else {
+        lookup_string("\\maketitle:redefined@in")
+      };
+      (body.clone(), file)
+    },
+    None => match copy_provides_maketitle() {
+      Some((id, ..)) if lookup_int(COPY_MAKETITLE_BOUND) == i64::from(id) => return true,
+      Some((_, file, body)) => (body, file),
+      None => return !document,
+    },
+  };
+  // (the class file's own, or its copy's)
+  let file = file.rsplit(['/', '\\']).next().unwrap_or_default();
+  file.rsplit_once('.').map_or(file, |(stem, _)| stem) == lookup_string("lx@document@class")
+    || reaches_class_maketitle(
+      body.unlist_ref(),
+      &class,
+      MAKETITLE_DEPTH,
+      &mut rustc_hash::FxHashSet::default(),
+    )
+}
+
+/// The `\maketitle` the lock refused last (state.rs `note_redefined`), where it is the one in force: the document's own or
+/// the class file's (`\maketitle:redefined@document`, `@class`).
+fn refused_maketitle() -> Option<Rc<dyn Definition>> {
+  (lookup_bool("\\maketitle:redefined@document") || lookup_bool("\\maketitle:redefined@class"))
+    .then(|| lookup_definition(&T_CS!(DROPPED_MAKETITLE)).ok().flatten())
+    .flatten()
+}
+
+/// The lock's record of the `\maketitle` it refused last.
+const DROPPED_MAKETITLE: &str = "\\lx@dropped@maketitle";
+
+/// Which `\maketitle` a binding's title marks are ([`declare_package_title_marks`]).
+pub enum BoundMaketitle {
+  /// The one the lock refused last (`\lx@dropped@maketitle`): its package's, as the binding read it raw.
+  Refused,
+  /// The one of the stand-in copy numbered so (`state::new_copy_provides_record`).
+  Copy(u32),
+}
+
+/// A binding answers for its package's `\maketitle` (`bound`), whose title marks are `marks` (the title hook,
+/// [`TITLE_THEFOOTNOTE`]); any other `\maketitle`, a later one of the document's or another copy's, is not its
+/// ([`class_maketitle_in_force`]; revMTREDUCE S4).
+pub fn declare_package_title_marks(marks: &str, bound: BoundMaketitle) -> Result<()> {
+  def_macro(
+    T_CS!(TITLE_THEFOOTNOTE),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(marks.to_string())),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..Default::default()
+    }),
+  )?;
+  match bound {
+    BoundMaketitle::Refused => let_i(
+      &T_CS!(BOUND_MAKETITLE),
+      &T_CS!(DROPPED_MAKETITLE),
+      Some(Scope::Global),
+    ),
+    BoundMaketitle::Copy(id) => {
+      assign_value(COPY_MAKETITLE_BOUND, i64::from(id), Some(Scope::Global))
+    },
   }
   Ok(())
+}
+
+/// A `\thefootnote` a `\maketitle` sets, as its versions write the argument (whitespace aside), and the title marks
+/// it prints ([`body_title_marks`]; a binding's lines, `shipped_class::input_shipped_package_title_marks`).
+pub type TitleMarkLine = (&'static str, &'static str);
+
+/// `\def\thefootnote{\fnsymbol{footnote}}`, in either spelling (latex.ltx `\fnsymbol#1` is
+/// `\expandafter\@fnsymbol\csname c@#1\endcsname`): the document's `\@fnsymbol` of the counter (revMTREDUCEc S3).
+pub const FNSYMBOL_TITLE_MARKS: &[TitleMarkLine] = &[
+  (r"\fnsymbol{footnote}", r"\@fnsymbol\c@footnote"),
+  (r"\@fnsymbol\c@footnote", r"\@fnsymbol\c@footnote"),
+];
+
+/// The title marks a `\maketitle` body sets, by its `\thefootnote` definitions (`\def`, `\renewcommand`, …): a line of
+/// the binding's (`lines`), or a macro whose body is a fixed glyph (aaai2026.sty:135 `\def\thefootnote{\fndag}`, :210
+/// `\def\fndag{†}`, 2511.07192); none where it sets no `\thefootnote` before the names print, another, one under a
+/// conditional, or two that disagree.
+pub fn body_title_marks(body: &Tokens, lines: &[(&str, &str)]) -> Option<String> {
+  let meaning = |t: &Token| lookup_definition(t).ok().flatten();
+  let meanings = |names: &[&str]| -> Vec<Rc<dyn Definition>> {
+    names
+      .iter()
+      .filter_map(|name| meaning(&T_CS!(*name)))
+      .collect()
+  };
+  let means = |set: &[Rc<dyn Definition>], t: &Token| {
+    t.get_catcode() == Catcode::CS
+      && meaning(t).is_some_and(|d| set.iter().any(|s| Rc::ptr_eq(s, &d)))
+  };
+  let definers = meanings(&[DEF_PRIMITIVES, COMMAND_DECLARATIONS].concat());
+  let squeeze = |text: &str| {
+    text
+      .chars()
+      .filter(|c| !c.is_whitespace())
+      .collect::<String>()
+  };
+  let tokens = body.unlist_ref();
+  // (only a definition before the names print decides: one after `\@maketitle` sets the notes `\@thanks` prints, not
+  // the names' marks, revMTREDUCEc S1)
+  let names_at = tokens
+    .iter()
+    .position(|t| t.with_cs_name(|name| name == "\\@maketitle" || name == "\\@author"))
+    .unwrap_or(tokens.len());
+  let tokens = &tokens[..names_at];
+  // (a note or a counter step before the names print moves their marks off the count read here: `\footnote{…}` or
+  // `\setcounter{footnote}{2}` first, pdflatex "Ann†"; the PRESBX fail-safe, revPRESBXb BL2 — a reset to 0 aside)
+  let steps = meanings(&[
+    "\\footnote",
+    "\\footnotemark",
+    "\\thanks",
+    "\\addtocounter",
+    "\\stepcounter",
+    "\\refstepcounter",
+  ]);
+  if body_calls(tokens).iter().any(|t| means(&steps, t)) {
+    return None;
+  }
+  let setcounter = meanings(&["\\setcounter"]);
+  let reset = |at: usize| {
+    let text: String = tokens[at + 1..]
+      .iter()
+      .take(13)
+      .map(|t| t.with_str(ToString::to_string))
+      .collect();
+    text.starts_with("{footnote}{0}")
+  };
+  if (0..tokens.len()).any(|at| means(&setcounter, &tokens[at]) && !reset(at)) {
+    return None;
+  }
+  let is = |i: usize, catcode: Catcode| tokens.get(i).is_some_and(|t| t.get_catcode() == catcode);
+  let space = |i: usize| is(i, Catcode::SPACE);
+  let mut found: Vec<String> = Vec::new();
+  let mut open_conditionals = 0i32;
+  for (at, token) in tokens.iter().enumerate() {
+    match lookup_conditional(token) {
+      Some(ConditionalType::If) => open_conditionals += 1,
+      Some(ConditionalType::Fi) => open_conditionals -= 1,
+      _ => {},
+    }
+    if !token.with_cs_name(|name| name == "\\thefootnote") {
+      continue;
+    }
+    // (one under a conditional may not be taken: `\if@nipssym\renewcommand{\thefootnote}{…}\fi`, revMTREDUCEc P1)
+    if open_conditionals > 0 {
+      return None;
+    }
+    // (`\def\thefootnote` or `\renewcommand{\thefootnote}`, a `*` aside)
+    let braced = at > 0 && is(at - 1, Catcode::BEGIN);
+    let mut before = if braced {
+      at.checked_sub(2)
+    } else {
+      at.checked_sub(1)
+    };
+    if before.is_some_and(|i| tokens[i].with_str(|s| s == "*")) {
+      before = before.and_then(|i| i.checked_sub(1));
+    }
+    if !before.is_some_and(|i| means(&definers, &tokens[i])) {
+      continue;
+    }
+    let mut i = at + 1;
+    if braced {
+      if !is(i, Catcode::END) {
+        continue;
+      }
+      i += 1;
+    }
+    while space(i) {
+      i += 1;
+    }
+    if !is(i, Catcode::BEGIN) {
+      return None;
+    }
+    let (mut depth, start) = (0usize, i + 1);
+    let end = tokens[i..].iter().position(|t| {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
+      depth == 0
+    })?
+      + i;
+    let argument = &tokens[start..end];
+    let text = squeeze(&Tokens::new(argument.to_vec()).to_string());
+    let marks = match lines.iter().find(|(line, _)| squeeze(line) == text) {
+      Some((_, marks)) => marks.to_string(),
+      None => fixed_glyph_macro(argument)?,
+    };
+    found.push(marks);
+  }
+  found.dedup();
+  (found.len() == 1).then(|| found.remove(0))
+}
+
+/// `argument` is one macro of no parameters whose body is characters alone, a fixed glyph: its name.
+fn fixed_glyph_macro(argument: &[Token]) -> Option<String> {
+  let [macro_token] = argument else {
+    return None;
+  };
+  let definition = lookup_definition(macro_token).ok().flatten()?;
+  let Some(ExpansionBody::Tokens(body)) = definition.get_expansion() else {
+    return None;
+  };
+  let glyph = body.unlist_ref();
+  (definition
+    .get_parameters()
+    .is_none_or(|parameters| parameters.get_parameters().is_empty())
+    && !glyph.is_empty()
+    && glyph.iter().all(|t| {
+      matches!(
+        t.get_catcode(),
+        Catcode::LETTER | Catcode::OTHER | Catcode::ACTIVE
+      )
+    }))
+  .then(|| macro_token.with_cs_name(|name| name.to_string()))
+}
+/// The title marks the kernel reads off the `\maketitle` that runs ([`read_title_marks_in_force`]): what holds where
+/// the names print, its `\fnsymbol` lines alone ([`FNSYMBOL_TITLE_MARKS`]; a fixed-glyph macro stays a binding's,
+/// [`body_title_marks`]). The body is read up to its first `\@maketitle` or `\@author`, none where it has neither; then
+/// the `\@maketitle` in force up to its `\@author`, whose own `\thefootnote` wins unless it is the same. None where the
+/// title's note steps the counter after the names (`\@author` read before `\@title`), as the reading counts the title's
+/// first (revMTREDUCEd B1, S1).
+fn kernel_title_marks(body: &Tokens) -> Option<String> {
+  let named = |t: &Token, cs: &str| t.with_cs_name(|name| name == cs);
+  let tokens = body.unlist_ref();
+  let cut = tokens
+    .iter()
+    .position(|t| named(t, "\\@maketitle") || named(t, "\\@author"))?;
+  let MarksRead::Set(marks) = read_marks_part(&tokens[..cut])? else {
+    return None;
+  };
+  let title_before = tokens[..cut].iter().any(|t| named(t, "\\@title"));
+  let mut author_first = !title_before && named(&tokens[cut], "\\@author");
+  let in_force = lookup_definition(&T_CS!("\\@maketitle")).ok().flatten();
+  if named(&tokens[cut], "\\@maketitle")
+    && let Some(ExpansionBody::Tokens(inner)) = in_force.as_ref().and_then(|d| d.get_expansion())
+  {
+    let inner = inner.unlist_ref();
+    let author = inner.iter().position(|t| named(t, "\\@author"));
+    match read_marks_part(&inner[..author.unwrap_or(inner.len())])? {
+      MarksRead::Set(own) if own != marks => return None,
+      _ => {},
+    }
+    author_first =
+      !title_before && author.is_some_and(|at| !inner[..at].iter().any(|t| named(t, "\\@title")));
+  }
+  (!(author_first && title_holds_a_note())).then_some(marks)
+}
+
+/// Does the title (`\@title`, as `\title` stored it) hold a note?
+fn title_holds_a_note() -> bool {
+  let title = lookup_definition(&T_CS!("\\@title")).ok().flatten();
+  match title.as_ref().and_then(|d| d.get_expansion()) {
+    Some(ExpansionBody::Tokens(title)) => title
+      .unlist_ref()
+      .iter()
+      .any(|t| t.with_cs_name(|name| matches!(name, "\\thanks" | "\\footnote" | "\\footnotemark"))),
+    _ => false,
+  }
+}
+
+/// What a part of a `\maketitle` read before its names print sets ([`read_marks_part`]): no `\thefootnote`, or one whose
+/// marks are known.
+enum MarksRead {
+  Unset,
+  Set(String),
+}
+
+/// The `\thefootnote` `tokens` set where they end, read as [`body_title_marks`] does, and None (unknown) also where a
+/// definition's group closes before then (`{\renewcommand\thefootnote{…}}`, `\begingroup … \endgroup`), where it is a
+/// `\let`, or where they redefine what prints the marks (`\thanks`, `\footnotemark`, `\@thefnmark`, an `\@makefnmark`
+/// printing no `\@thefnmark`; revMTREDUCEd B1, S2).
+fn read_marks_part(tokens: &[Token]) -> Option<MarksRead> {
+  let meaning = |t: &Token| lookup_definition(t).ok().flatten();
+  let meanings = |names: &[&str]| -> Vec<Rc<dyn Definition>> {
+    names
+      .iter()
+      .filter_map(|name| meaning(&T_CS!(*name)))
+      .collect()
+  };
+  let means = |set: &[Rc<dyn Definition>], t: &Token| {
+    t.get_catcode() == Catcode::CS
+      && meaning(t).is_some_and(|d| set.iter().any(|s| Rc::ptr_eq(s, &d)))
+  };
+  let named = |t: &Token, cs: &str| t.with_cs_name(|name| name == cs);
+  let steps = meanings(&[
+    "\\footnote",
+    "\\footnotemark",
+    "\\thanks",
+    "\\addtocounter",
+    "\\stepcounter",
+    "\\refstepcounter",
+  ]);
+  if body_calls(tokens).iter().any(|t| means(&steps, t)) {
+    return None;
+  }
+  let setcounter = meanings(&["\\setcounter"]);
+  let reset = |at: usize| {
+    let text: String = tokens[at + 1..]
+      .iter()
+      .take(13)
+      .map(|t| t.with_str(ToString::to_string))
+      .collect();
+    text.starts_with("{footnote}{0}")
+  };
+  let opens = meanings(&["\\begingroup", "\\bgroup", "\\begin"]);
+  let closes = meanings(&["\\endgroup", "\\egroup", "\\end"]);
+  let global = meanings(&["\\global", "\\gdef", "\\xdef"]);
+  let squeeze = |text: &str| {
+    text
+      .chars()
+      .filter(|c| !c.is_whitespace())
+      .collect::<String>()
+  };
+  let (mut depth, mut conditionals) = (0usize, 0i32);
+  // (the group depths of the local `\thefootnote` definitions read, and their marks)
+  let (mut local, mut found) = (Vec::<usize>::new(), Vec::<String>::new());
+  let mut previous: Option<usize> = None;
+  for item in body_items(tokens) {
+    match item {
+      BodyItem::Call(at) => {
+        let t = &tokens[at];
+        if means(&setcounter, t) && !reset(at) {
+          return None;
+        }
+        match lookup_conditional(t) {
+          Some(ConditionalType::If) => conditionals += 1,
+          Some(ConditionalType::Fi) => conditionals -= 1,
+          _ => {},
+        }
+        if t.get_catcode() == Catcode::BEGIN || means(&opens, t) {
+          depth += 1;
+        } else if t.get_catcode() == Catcode::END || means(&closes, t) {
+          depth = depth.saturating_sub(1);
+          if local.iter().any(|&d| d > depth) {
+            return None;
+          }
+        }
+        if t.get_catcode() != Catcode::SPACE {
+          previous = Some(at);
+        }
+      },
+      BodyItem::Assignment { at, end, let_ } => {
+        let Some(target) = tokens[at + 1..end]
+          .iter()
+          .find(|t| t.get_catcode() == Catcode::CS)
+        else {
+          continue;
+        };
+        let target_is = |cs: &str| named(target, cs);
+        // (an `\@makefnmark` printing `\@thefnmark` keeps the glyph: article.cls:206's `\rlap`, a `\let` to such a macro)
+        let prints_the_mark = || {
+          let fnmark = |body: &[Token]| body.iter().any(|t| named(t, "\\@thefnmark"));
+          if !let_ {
+            return fnmark(&tokens[at..end]);
+          }
+          let source = meaning(&tokens[end - 1]);
+          match source.as_ref().and_then(|d| d.get_expansion()) {
+            Some(ExpansionBody::Tokens(source)) => fnmark(source.unlist_ref()),
+            _ => false,
+          }
+        };
+        if ["\\thanks", "\\footnotemark", "\\@thefnmark"]
+          .iter()
+          .any(|cs| target_is(cs))
+          || (target_is("\\@makefnmark") && !prints_the_mark())
+        {
+          return None;
+        }
+        if target_is("\\thefootnote") {
+          if let_ || conditionals > 0 {
+            return None;
+          }
+          // (the argument: the last group of the assignment)
+          let mut open = 0usize;
+          if !tokens[end - 1].get_catcode().eq(&Catcode::END) {
+            return None;
+          }
+          let start = (at..end).rev().find(|&i| {
+            match tokens[i].get_catcode() {
+              Catcode::END => open += 1,
+              Catcode::BEGIN => open -= 1,
+              _ => {},
+            }
+            open == 0
+          })?;
+          let text = squeeze(&Tokens::new(tokens[start + 1..end - 1].to_vec()).to_string());
+          let (_, marks) = FNSYMBOL_TITLE_MARKS
+            .iter()
+            .find(|(line, _)| squeeze(line) == text)?;
+          found.push(marks.to_string());
+          if !(means(&global, &tokens[at]) || previous.is_some_and(|p| means(&global, &tokens[p])))
+          {
+            local.push(depth);
+          }
+        }
+        previous = Some(at);
+      },
+    }
+  }
+  found.dedup();
+  match found.as_slice() {
+    [] => Some(MarksRead::Unset),
+    [marks] => Some(MarksRead::Set(marks.clone())),
+    _ => None,
+  }
+}
+
+/// Where no binding declares them, the title marks of the `\maketitle` that runs, read off its body
+/// ([`kernel_title_marks`]): the document's own, a package's no binding answers, a renamed copy's, an unbound class's
+/// (DG 2026-11-17: the reduction lost the links of names typing the glyph, `Bob$^*$` under a copy's `\maketitle` that
+/// sets `\fnsymbol` — 2404.01413's colm2024, 2510.09942's renamed neurips, ltexpprt.sty; INTCHECK's 37 papers). None
+/// read leaves them unknown, as do a title block whose notes the count here does not step as TeX does, and a later
+/// `\maketitle` ([`end_title_marks_read`]). Read once, before the flush's rehearsal binds the marks
+/// (`place::digest_front_matter`); whether it declared any.
+pub(crate) fn read_title_marks_in_force() -> bool {
+  // (only where the title block's notes step the footnote counter as TeX's `\thanks` does: a raw class's do not here,
+  // so a glyph read off its count would be wrong — siamart's `\title{…\thanks{…}}` prints "Ann†", the count here ∗;
+  // 2107.07572, 2509.14771 — nor IEEEtran's, whose `\maketitle` empties `\footnotemark`, revMTREDUCEd N1)
+  if !lookup_bool("lx_title_counts_footnotes") || lookup_bool(MARKS_READ_CLOSED) {
+    return false;
+  }
+  let definition = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
+  let (body, bound) = match refused_maketitle() {
+    Some(dropped) => {
+      let seen = |cs: &str| definition(cs).is_some_and(|d| Rc::ptr_eq(&d, &dropped));
+      if seen(BOUND_MAKETITLE) || seen(READ_MAKETITLE) {
+        return false;
+      }
+      let_i(
+        &T_CS!(READ_MAKETITLE),
+        &T_CS!(DROPPED_MAKETITLE),
+        Some(Scope::Global),
+      );
+      let Some(ExpansionBody::Tokens(body)) = dropped.get_expansion() else {
+        return false;
+      };
+      (body.clone(), BoundMaketitle::Refused)
+    },
+    None => match copy_provides_maketitle() {
+      Some((id, _, body))
+        if ![
+          lookup_int(COPY_MAKETITLE_BOUND),
+          lookup_int(READ_COPY_MAKETITLE),
+        ]
+        .contains(&i64::from(id)) =>
+      {
+        assign_value(READ_COPY_MAKETITLE, i64::from(id), Some(Scope::Global));
+        (body, BoundMaketitle::Copy(id))
+      },
+      _ => return false,
+    },
+  };
+  let Some(marks) = kernel_title_marks(&body) else {
+    return false;
+  };
+  // (the hook as it was, restored as this `\maketitle` ends)
+  let_i(
+    &T_CS!(HOOK_BEFORE_READ),
+    &T_CS!(TITLE_THEFOOTNOTE),
+    Some(Scope::Global),
+  );
+  let kind = match bound {
+    BoundMaketitle::Refused => "refused",
+    BoundMaketitle::Copy(_) => "copy",
+  };
+  assign_value(
+    MARKS_READ_DECLARED,
+    Stored::String(pin(kind)),
+    Some(Scope::Global),
+  );
+  declare_package_title_marks(&marks, bound).is_ok()
+}
+
+/// As the kernel's `\maketitle` ends (`\lx@maketitle@cleanup`), the marks it read (`read_title_marks_in_force`) end
+/// with it and no later one is read: the count a second `\maketitle` prints is not the one here (two2: pdflatex's second
+/// block "Dan∗ Eve†", the count here ‡ §; revMTREDUCEd S3).
+pub fn end_title_marks_read() {
+  assign_value(MARKS_READ_CLOSED, true, Some(Scope::Global));
+  match lookup_string(MARKS_READ_DECLARED).as_str() {
+    "refused" => let_i(
+      &T_CS!(BOUND_MAKETITLE),
+      &T_CS!("\\relax"),
+      Some(Scope::Global),
+    ),
+    "copy" => assign_value(COPY_MAKETITLE_BOUND, 0i64, Some(Scope::Global)),
+    _ => return,
+  }
+  assign_value(
+    MARKS_READ_DECLARED,
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
+  let_i(
+    &T_CS!(TITLE_THEFOOTNOTE),
+    &T_CS!(HOOK_BEFORE_READ),
+    Some(Scope::Global),
+  );
+}
+
+/// The refused `\maketitle` and the stand-in copy number whose body [`read_title_marks_in_force`] read; whether it
+/// declared their marks, the hook before it did, and whether a `\maketitle` ended ([`end_title_marks_read`]).
+const READ_MAKETITLE: &str = "\\lx@title@read@maketitle";
+const READ_COPY_MAKETITLE: &str = "lx_title_copy_maketitle_read";
+const MARKS_READ_DECLARED: &str = "lx_title_marks_read_declared";
+const HOOK_BEFORE_READ: &str = "\\lx@title@thefootnote@before@read";
+const MARKS_READ_CLOSED: &str = "lx_title_marks_read_closed";
+
+/// How many macros deep [`reaches_class_maketitle`] reads the macros a body calls.
+const MAKETITLE_DEPTH: u8 = 3;
+
+/// TeX's definitions and LaTeX's command declarations, read by meaning ([`body_calls`], [`body_title_marks`]).
+const DEF_PRIMITIVES: &[&str] = &["\\def", "\\gdef", "\\edef", "\\xdef"];
+const COMMAND_DECLARATIONS: &[&str] = &[
+  "\\newcommand",
+  "\\renewcommand",
+  "\\providecommand",
+  "\\DeclareRobustCommand",
+];
+
+/// The tokens of `body` that may be calls: an assignment's target and source, and a definition's body, are none
+/// (`\def`, `\gdef`, `\edef`, `\xdef`, `\let` and LaTeX's command declarations, by meaning).
+fn body_calls(body: &[Token]) -> Vec<Token> {
+  body_items(body)
+    .into_iter()
+    .filter_map(|item| match item {
+      BodyItem::Call(at) => Some(body[at]),
+      BodyItem::Assignment { .. } => None,
+    })
+    .collect()
+}
+
+/// A token of a body that may be a call, or an assignment from its definer (`at`) to past its body or source (`end`),
+/// its target the first control sequence after the definer, a `\let`'s or not (`let_`).
+#[derive(Clone, Copy)]
+enum BodyItem {
+  Call(usize),
+  Assignment {
+    at:   usize,
+    end:  usize,
+    let_: bool,
+  },
+}
+
+/// `body` read as calls and assignments ([`body_calls`], [`read_marks_part`]).
+fn body_items(body: &[Token]) -> Vec<BodyItem> {
+  let meaning = |t: &Token| lookup_definition(t).ok().flatten();
+  let is = |t: &Token, names: &[&str]| {
+    t.get_catcode() == Catcode::CS
+      && meaning(t).is_some_and(|d| {
+        names
+          .iter()
+          .filter_map(|name| meaning(&T_CS!(*name)))
+          .any(|s| Rc::ptr_eq(&s, &d))
+      })
+  };
+  let catcode = |i: usize, c: Catcode| body.get(i).is_some_and(|t| t.get_catcode() == c);
+  let other = |i: usize, text: &str| catcode(i, Catcode::OTHER) && body[i].with_str(|s| s == text);
+  let skip_spaces = |mut i: usize| {
+    while catcode(i, Catcode::SPACE) {
+      i += 1;
+    }
+    i
+  };
+  // (past the balanced group opening at `i`; `None` where none opens there)
+  let group_end = |i: usize| -> Option<usize> {
+    catcode(i, Catcode::BEGIN).then_some(())?;
+    let mut depth = 0usize;
+    for (j, t) in body.iter().enumerate().skip(i) {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            return Some(j + 1);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let mut items = Vec::new();
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    let let_ = is(&t, &["\\let"]);
+    let past = if is(&t, DEF_PRIMITIVES) {
+      (i + 2..body.len())
+        .find(|&j| catcode(j, Catcode::BEGIN))
+        .and_then(group_end)
+    } else if let_ {
+      let mut from = skip_spaces(skip_spaces(i + 1) + 1);
+      if other(from, "=") {
+        from = skip_spaces(from + 1);
+      }
+      (from < body.len()).then_some(from + 1)
+    } else if is(&t, COMMAND_DECLARATIONS) {
+      let mut at = skip_spaces(i + 1);
+      if other(at, "*") {
+        at = skip_spaces(at + 1);
+      }
+      let mut next = group_end(at).unwrap_or(at + 1);
+      // (its optional arguments, `[<n>]` and `[<default>]`)
+      while other(skip_spaces(next), "[") {
+        next = (skip_spaces(next)..body.len())
+          .find(|&j| other(j, "]"))
+          .map_or(body.len(), |j| j + 1);
+      }
+      group_end(skip_spaces(next))
+    } else {
+      None
+    };
+    match past {
+      Some(end) => {
+        items.push(BodyItem::Assignment { at: i, end, let_ });
+        i = end;
+      },
+      None => {
+        items.push(BodyItem::Call(i));
+        i += 1;
+      },
+    }
+  }
+  items
+}
+
+/// Does `body` call the class's `\maketitle` (`class`) by meaning, itself or through the macros it calls
+/// (`\NewCommandCopy\oldmt\maketitle`'s `\oldmt`, whose own body calls the copied one)? An assignment's target or source
+/// is no call (a closing `\let\maketitle\relax`: ACL's, 2502.19103; spconf's). Each macro read once (`seen`).
+fn reaches_class_maketitle(
+  body: &[Token],
+  class: &Rc<dyn Definition>,
+  depth: u8,
+  seen: &mut rustc_hash::FxHashSet<SymStr>,
+) -> bool {
+  body_calls(body).iter().any(|t| {
+    let meaning = lookup_definition(t).ok().flatten();
+    t.get_catcode() == Catcode::CS
+      && (meaning.as_ref().is_some_and(|d| Rc::ptr_eq(d, class))
+        || (depth > 0
+          && seen.insert(t.get_cs_name())
+          && match meaning.as_ref().and_then(|d| d.get_expansion()) {
+            Some(ExpansionBody::Tokens(b)) => {
+              reaches_class_maketitle(b.unlist_ref(), class, depth - 1, seen)
+            },
+            _ => false,
+          }))
+  })
+}
+
+/// Are the marks the title prints unknown here, for a name's notes (`name`) or any other's? Where another `\maketitle`
+/// than the class's runs ([`class_maketitle_in_force`]); where no binding declares the class's own and the class file's
+/// own `\maketitle` runs (`\maketitle:redefined@class`, state.rs: an unbound class's, scrartcl's prints `\fnsymbol`
+/// where Perl's number key read `\footnotemark[1]` "1", the advisor's I-3); and for a name's notes under a class that
+/// sets them apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea",
+/// revtex4-2.cls:2555-2557) or past a `\thefootnote` declared in no known cell (`title_cell_declared`). OD #1053.
+pub fn title_marks_unknown(name: bool) -> bool {
+  let unknown = || {
+    !class_maketitle_in_force()
+      || (!title_marks_hook() && lookup_bool("\\maketitle:redefined@class"))
+  };
+  let unknown = unknown() && (!read_title_marks_in_force() || unknown());
+  unknown || (name && (lookup_bool("lx_title_footnote_own_marks") || lookup_bool(CELL_UNKNOWN)))
+}
+
+/// Is the mark a note made here prints unknown ([`title_marks_unknown`]), in a field of the title block? Not where the
+/// document set `\thefootnote` itself since the field began, its cell's declaration or a macro's (aiaa-tc's
+/// `\thanksibid{2}`, `\renewcommand\thefootnote{\fnsymbol{aiaa@cthanks}}\footnotemark`, "†": 1505.07844), which TeX
+/// prints whatever the `\maketitle`.
+fn title_mark_unknown() -> bool {
+  let definition = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
+  let own = match (definition(FIELD_THEFOOTNOTE), definition("\\thefootnote")) {
+    (Some(field), Some(now)) => !Rc::ptr_eq(&field, &now),
+    _ => false,
+  };
+  in_title_field()
+    && !own
+    && title_marks_unknown(lookup_string("lx_frontmatter_item") == "ltx:creator")
+}
+
+/// A note made where its printed mark is unknown ([`title_mark_unknown`]) keeps none: no `mark`, no tags, flagged so
+/// (`insert::MARK_UNKNOWN`, counted at the document's end); it pairs with its text by the counter value (`_fnvalue`,
+/// [`relocate_footnote`]).
+pub(crate) fn drop_unknown_title_mark(props: &mut SymHashMap<Stored>) {
+  if title_mark_unknown() {
+    props.remove("mark");
+    props.remove("tags");
+    props.insert("markunknown", Stored::String(pin("true")));
+  }
 }
 
 /// A footnote's mark given as `[<n>]`: latex.ltx:17652-17657 `\@xfootnote`, :17678-17682 `\@xfootnotemark` and
@@ -771,7 +1677,7 @@ fn footnote_number_digits(given: &Digested) -> Result<Option<Tokens>> {
 /// A footnote's bookkeeping for `relocate_footnote`, kept on the note: the value of the footnote counter it stands for
 /// (`_fnvalue`: its `[<n>]`'s number, or the counter as it stepped or stands) — none for a minipage's notes, which
 /// count apart, and any other type —, and, in a class that sets the counter back after its `\maketitle`
-/// (`lx_title_counts_footnotes`, `declare_fnsymbol_title_block`), whether its number is the counter's (`_fncounted`,
+/// (`lx_title_resets_footnotes`, [`declare_title_footnote_counting`]), whether its number is the counter's (`_fncounted`,
 /// `FootnoteNumber::from_counter`): such a note in the title block has the title's count, one after it the body's,
 /// which counts from 1 again (`same_count`).
 pub(crate) fn footnote_pairing(
@@ -792,11 +1698,51 @@ pub(crate) fn footnote_pairing(
   };
   if let Some(value) = value {
     props.insert("fnvalue", Stored::String(pin(value.to_string())));
+    // (a number the source gives as such, `[2]`, which a frontmatter note of that number answers — Perl's tag, its
+    // `mark`: `insert::link_marked_notes`; one read off the counter, `[\value{footnote}]`, only in the title block where
+    // the count is TeX's: `\samethanks` under a `\maketitle` whose glyph is unknown here, revMTREDUCE B2)
+    if given.is_some() && (!number.from_counter || (in_title_field() && title_numbers_faithful())) {
+      props.insert("fngiven", Stored::String(pin("true")));
+    }
   }
-  if number.from_counter && lookup_bool("lx_title_counts_footnotes") {
+  if number.from_counter && lookup_bool("lx_title_resets_footnotes") {
     props.insert("fncounted", Stored::String(pin("true")));
   }
+  // (a number read off the counter in the title block, `\samethanks`' `[\value{footnote}]`, where the counter is not TeX's
+  // here is no number and prints no glyph: aa's and llncs's `\thanks` step nothing here, so it read 0, 2606.31244,
+  // 2306.03360)
+  // (nor does a note the counter steps to 0 or below in the title block, its glyph invented: a class's notes we do not
+  // step, then `\addtocounter{footnote}{-2}\footnotemark`, "-1" where pdflatex prints ∗, 1910.09525; DG 2026-11-17)
+  let nonpositive = given.is_none() && in_title_field() && value.is_some_and(|v| v <= 0);
+  if nonpositive
+    || (given.is_some() && number.from_counter && in_title_field() && !title_numbers_faithful())
+  {
+    props.remove("mark");
+    props.remove("tags");
+    props.remove("fnvalue");
+    props.insert("markunknown", Stored::String(pin("true")));
+  }
   Ok(())
+}
+
+/// Is the title block's footnote counter TeX's here, so a number a mark reads off it, or names a `\thanks` by, is the
+/// one TeX's names: the class's notes step it as its `\maketitle` digests them (`lx_title_counts_footnotes`, article's family,
+/// [`declare_fnsymbol_title_block`]) or a binding declares its title's marks ([`title_marks_declared`]), or one declares
+/// the counter so ([`declare_title_numbers_faithful`])? Elsewhere (aa, llncs, an
+/// unbound class, whose title `\thanks` the reading does not count) such a number keys nothing (MARKKEY1c, the
+/// meta-review: "0" and wrong links; OXIDIZED_DESIGN_DIVERGENCES #1058).
+pub fn title_numbers_faithful() -> bool {
+  lookup_bool("lx_title_counts_footnotes")
+    || lookup_bool(TITLE_NUMBERS_FAITHFUL)
+    || title_marks_declared()
+}
+
+const TITLE_NUMBERS_FAITHFUL: &str = "lx_title_numbers_faithful";
+
+/// A binding declares its title block's footnote counter TeX's here though its notes step none there
+/// ([`title_numbers_faithful`]): its class's title steps none either (IEEEtran's `\maketitle` empties `\footnotemark`).
+pub fn declare_title_numbers_faithful() {
+  assign_value(TITLE_NUMBERS_FAITHFUL, true, Some(Scope::Global));
 }
 
 pub fn make_note_tags(
@@ -869,10 +1815,16 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
   if let Some(caps) = NOTE_TEXT_END.captures(&node.get_attribute("role").unwrap_or_default()) {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
     let mut paired = false;
+    // (the marks of one text in creators: one note, OD #1059 — `crate::base_utilities::one_note`)
+    let mut filled: Vec<Node> = Vec::new();
     if let Some(mark) = node.get_attribute("mark") {
       let key = mark.replace(' ', "");
+      // (a name's mark the frontmatter set after it, `_namemark`, or a request left, `_namekeys`, is no `\footnotemark`:
+      // a body `\footnotetext[2]` is not its text, 2208.09944; 1304.5040, 2210.05617, 1812.11634)
       for mut marknote in document.findnodes(
-        &format!(".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}']"),
+        &format!(
+          ".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}'][not(@_namemark)][not(@_namekeys)]"
+        ),
         None,
       ) {
         if is_descendant_or_self(&marknote, node) || !same_count(document, &marknote, node, BY_MARK)
@@ -880,6 +1832,7 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
           continue;
         }
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
+        filled.push(marknote);
         paired = true;
       }
     }
@@ -895,9 +1848,18 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
           continue;
         }
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
+        filled.push(marknote);
       }
     }
+    let in_creators: Vec<Node> = filled
+      .into_iter()
+      .filter(|n| n.get_parent().is_some_and(|p| p.get_name() == "creator"))
+      .collect();
+    one_note(document, &in_creators)?;
   } else if let Some(caps) = NOTE_MARK_END.captures(&node.get_attribute("role").unwrap_or_default())
+    // (nor is the mark a name's request leaves where it printed, `\lx@frontmatter@namemark`: a body `\footnotetext[1]`
+    // is not its text — 1304.5040, 2210.05617, 1812.11634 lost theirs to the settle step, OD #1061)
+    && node.get_attribute("_namekeys").is_none()
   {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
     let mut paired = false;
@@ -934,7 +1896,10 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
 }
 
 /// The bookkeeping attribute holding the footnote counter value a note stands for (`footnote_pairing`).
-const FOOTNOTE_VALUE: &str = "_fnvalue";
+pub const FOOTNOTE_VALUE: &str = "_fnvalue";
+
+/// The bookkeeping attribute of a note given its number as such (`footnote_pairing`).
+pub const FOOTNOTE_GIVEN: &str = "_fngiven";
 
 /// The bookkeeping attribute of a note numbered from the footnote counter in a class that sets the counter back after
 /// its `\maketitle` (`footnote_pairing`).
@@ -8985,8 +9950,9 @@ pub use sect05::note_title_page_part;
 pub(crate) use sect05::{
   SpeculativeRun, assigned_parts_holding, class_author_reader_body, is_latex_maketitle,
   keep_class_author_reader, maketitle_is_kernels, own_maketitle, replay_class_begin_code,
-  speculative_word_run, tail_reads_ahead, title_page_deposit_tokens, title_page_mark,
-  title_page_print_tokens, title_page_probe_run, title_page_reading, title_page_replay_tokens,
+  replays_class_maketitle, speculative_word_run, tail_reads_ahead, title_page_deposit_tokens,
+  title_page_mark, title_page_print_tokens, title_page_probe_run, title_page_reading,
+  title_page_replay_tokens,
 };
 mod reference_math_slots;
 mod sect06;

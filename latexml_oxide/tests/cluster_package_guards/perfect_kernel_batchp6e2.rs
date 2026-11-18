@@ -42,8 +42,9 @@ fn a_shared_block_email_goes_to_the_name_it_spells() {
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_shared_block_email_past_an_authornote_goes_to_the_name_it_spells.tex"
       ),
       vec![
-        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" role=\"note\">Both authors contributed equally.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">X Univ</text>, <text class=\"ltx_affiliation_city\" xml:id=\"id2\">C</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id3\">D</text></contact><contact name=\"email: \" role=\"email\">able@x.org</contact></creator>".to_string(),
-        "<creator before=\" and \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id4\">X Univ</text>, <text class=\"ltx_affiliation_city\" xml:id=\"id5\">C</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id6\">D</text></contact><contact name=\"email: \" role=\"email\">baker@x.org</contact></creator>".to_string(),
+        // (acmart's `\authornote` the author's note with the mark its `\maketitle` prints, OD #1053)
+        "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Both authors contributed equally.</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id2\">X Univ</text>, <text class=\"ltx_affiliation_city\" xml:id=\"id3\">C</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id4\">D</text></contact><contact name=\"email: \" role=\"email\">able@x.org</contact></creator>".to_string(),
+        "<creator before=\" and \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id5\">X Univ</text>, <text class=\"ltx_affiliation_city\" xml:id=\"id6\">C</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id7\">D</text></contact><contact name=\"email: \" role=\"email\">baker@x.org</contact></creator>".to_string(),
       ],
       (0, 0),
     ),

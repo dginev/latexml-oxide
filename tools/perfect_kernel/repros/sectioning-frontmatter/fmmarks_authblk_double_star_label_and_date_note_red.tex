@@ -1,0 +1,33 @@
+% mechanism: authblk labels: `*` a legend shared by two names, `**` a two-character legend, `§` answered only by the
+%   `\date` line
+% witness:  2606.00446 (`\author[1,*,§]{Jared Benson}`, `\affil[**]{Present address…}`,
+%   `\date{\textsuperscript{§}Email: …}`)
+% oracle:   pdflatex 0 errors; "Ann Able1,*,§, Bob Baker1,*, and Cat Cole1,**", "*These authors contributed equally…",
+%   "**Present address: Lab B, City", "§Email: ann@a.edu" (the date)
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[*]=These authors contributed equally
+%   to this work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors contributed equally to this
+%   work. | affiliation=Univ A, Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab
+%   B, City
+% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=These authors contributed equally to this work. | affiliation=Univ
+%   A, Town ; email=ann@a.edu / Bob Baker ; thanks[*]=These authors contributed equally to this work. | affiliation=Univ A,
+%   Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab B, City
+%   (guard canon: name ; note role[mark]=text, sorted | contacts)
+% moves:    MARKSAFE counted the lost `§` (1 Warning); INVDAG (OD #1064) showed it on the name, a mark-only note (row R
+%   MARKORDER on the page); DATELEG (OD #1071) reads the `\date` line the class prints under the names as the legend
+%   of `§`: Ann's e-mail, the `§` its label, no date (the `_red` name kept for the guards citing it)
+% status:   GREEN (DATELEG; XML and page)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\author[1,*,\S]{Ann Able}
+\author[1,*]{Bob Baker}
+\author[1,**]{Cat Cole}
+\affil[1]{Univ A, Town}
+\affil[*]{These authors contributed equally to this work.}
+\affil[**]{Present address: Lab B, City}
+\title{T}
+\date{\textsuperscript{\S}Email: ann@a.edu}
+\begin{document}
+\maketitle
+Text.
+\end{document}

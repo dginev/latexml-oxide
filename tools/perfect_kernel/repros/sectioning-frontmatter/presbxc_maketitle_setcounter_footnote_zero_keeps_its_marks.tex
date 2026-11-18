@@ -1,0 +1,23 @@
+% mechanism: `\setcounter{footnote}{0}` before the title changes no mark: the `\maketitle`'s own `\thefootnote` holds
+%   (`latex_constructs::steps_footnotes_before_title`'s one exemption)
+% witness:  none (sibling of review revPRESBXb BL2, p/n4.tex)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker†"; foot "∗ First note." "† Second note."
+% engines:  rust PRESBXbase2 (14e92b291ab) = 0 errors, 0 Warnings; both notes unmarked; PRESBXb (300685cb312) = Ann
+%   thanks[∗], Bob thanks[†]
+% expect:   0 errors, 0 Warnings; Ann thanks[∗], Bob thanks[†]
+% status:   GREEN (PRESBXc: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+%   -> RED again (MTREDUCE, DG 2026-11-17 maketitle reduce: a `\maketitle` not the class's and no binding's has
+%   unknown marks, `latex_constructs::class_maketitle_in_force`; no glyph, each note under its name; row R MTREDUCE)
+%   -> GREEN again (MTREDUCEd, DG 2026-11-17: the body of the `\maketitle` that runs read where no binding
+%   declares its marks, `latex_constructs::read_title_marks_in_force`)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\begingroup\def\thefootnote{\fnsymbol{footnote}}\setcounter{footnote}{0}\begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

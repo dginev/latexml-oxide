@@ -1,0 +1,34 @@
+% witness: 1902.08707 (`\setattribute{corref}{text}{}` in its preamble: the correspondence prints its mark alone)
+% The class beside it is BioMed Central's bmcart.cls (2014/01/24) as 2112.10068 ships it, unmodified. A paper that
+% empties `\corref@text` (:843) prints no "Correspondence:" (:1458-1463 `\printcorrtext`), so the corresponding
+% author's e-mail keeps its own name; the notes' marks stand (* the correspondence's, † the note's).
+% oracle:  pdflatex 0 errors (4 runs): "Ann Able1†, Bob Baker2† and Cy Cole3*", "* c@x.org", "† Equal contributor"
+% engines: rust INTFMfinal 0 errors: the note unmarked under Ann and Bob, every e-mail "Email:"; BMCART r1 (before the
+%          fix): Cy's e-mail with no name at all; Perl no binding (OmniBus)
+% expect:  0 errors 0 warnings; the note shared under †; every e-mail named "Email: "
+% status:  RED (BMCART r1) -> GREEN (BMCART)
+% preload: ar5iv.sty
+\documentclass{bmcart}
+\makeatletter
+\setattribute{corref}{text}{}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\begin{fmbox}
+\title{The Title}
+\author[addressref={aff1},noteref={n1},email={a@x.org}]{\fnm{Ann} \snm{Able}}
+\author[addressref={aff2},noteref={n1},email={b@x.org}]{\fnm{Bob} \snm{Baker}}
+\author[addressref={aff3},corref={aff3},email={c@x.org}]{\fnm{Cy} \snm{Cole}}
+\address[id=aff1]{\orgname{Univ A}, \cny{US}}
+\address[id=aff2]{\orgname{Univ B}, \cny{IN}}
+\address[id=aff3]{\orgname{Univ C}, \cny{FR}}
+\begin{artnotes}
+\note[id=n1]{Equal contributor}
+\end{artnotes}
+\end{fmbox}
+\end{frontmatter}
+\section{Intro} Body.
+\begin{backmatter}
+\begin{thebibliography}{1}\bibitem{a} A. Ref.\end{thebibliography}
+\end{backmatter}
+\end{document}

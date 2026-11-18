@@ -392,15 +392,17 @@ const ROWS: &[Row] = &[
       (
         "creator",
         &[r#"role="author""#],
+        // (the `\footnote` the marked `\thanks` note it is in article's title, OD #1053)
         "<creator role=\"author\"><personname>A</personname>\
-         <contact name=\"Note:\u{a0}\" role=\"note\">X</contact></creator>",
+         <note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">X</note></creator>",
       ),
       (
         "creator",
         &["before=\"\u{2003}\u{2003}\""],
+        // (B's recalled mark a copy of A's note, the Link step: OD #1053; one note, `idref` A's, OD #1059)
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B</personname>\
-         <note mark=\"*\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags><tag>*</tag><tag role=\"refnum\">*</tag>\
-         <tag role=\"typerefnum\">footnote *</tag></tags></note></creator>",
+         <note class=\"ltx_note_frontmatter ltx_thanks_note\" idref=\"id1\" mark=\"*\" role=\"thanks\" \
+         xml:id=\"footnotex1\">X</note></creator>",
       ),
     ],
   ),

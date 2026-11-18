@@ -1,0 +1,23 @@
+% mechanism: glued digits part into held labels only under single-digit numbering, as the reader parts a request
+%            (`resolver::glued_request_parts`): beside an entry 10, `$^{12}$` is one number, no 1 and 2
+% witness:  revPURE probe ab12 (here with an entry 10); single-digit numbering parts it, 2409.11440 (guard
+%           perfect_kernel_batchhg1, repro class-bindings/acmart_country_glued_mark_requests_each_entry)
+% oracle:   pdflatex 0 errors; "Ann Able12 1,2 and Bob Baker10" over "1 Univ A", "2 Univ B", "10 Univ J"
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; the 12 lost (read as 1 and 2, each consumed)
+% expect:   0 errors, 0 Warnings; Ann's 12 a mark-only note, her affiliations A and B; Bob's J
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1,2]{Ann Able$^{12}$}
+\author[10]{Bob Baker}
+\affil[1]{Univ A}
+\affil[2]{Univ B}
+\affil[10]{Univ J}
+\date{}
+\maketitle
+Text.
+\end{document}

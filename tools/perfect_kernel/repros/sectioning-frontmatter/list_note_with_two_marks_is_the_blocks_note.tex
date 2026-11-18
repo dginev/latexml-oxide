@@ -1,0 +1,21 @@
+% witness: the review revSHREST's S1 probe p2: a title-page list of two legend lines (2606.06621's `\prep@absbox` shape, a
+%          second mark added), revtex4-2.cls:2648-2652 printing it in the title block
+% oracle:  pdflatex 0 errors; "Ann Able† and Bob Baker∗", "Univ A", then "† Equal." and "∗ Corresponding." centred
+% engines: rust=0 (edc515b111f: both lines Ann's † note, classed correspondence; Bob no note) perl=0 (1 Warning,
+%          `\prep@absbox` not expandable; the text lost) (2026-11-16)
+% expect:  0 errors, 0 warnings; one note of the author block holding both lines, each with its mark; the names keep † and ∗
+%          (a list led by one mark is that mark's names' note only when it holds no other: OD #1054)
+% status:  RED (edc515b111f) -> GREEN (SHRESTb)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\makeatletter\g@addto@macro\prep@absbox{\begin{center}$^\dagger$ Equal.\par $^\ast$ Corresponding.\end{center}}\makeatother
+\begin{document}
+\title{Title}
+\author{Ann Able$^\dagger$}
+\affiliation{Univ A}
+\author{Bob Baker$^\ast$}
+\affiliation{Univ A}
+\begin{abstract}Abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

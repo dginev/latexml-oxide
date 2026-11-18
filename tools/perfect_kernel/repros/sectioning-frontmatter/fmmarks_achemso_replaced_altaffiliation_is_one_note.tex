@@ -1,0 +1,30 @@
+% mechanism: achemso: an `\altaffiliation` two authors each replace is one unlinked note, as the class lists it once
+%   with a mark no name carries; the last one each author gives is its own (`\xdef`, achemso.cls:468-485)
+% witness:  revACHEMSO B1 (probe q15); the class rule (achemso.cls:468-512, :887-919); 1910.14165 (a replaced
+%   `\altaffiliation`)
+% oracle:   pdflatex 0 errors; "Ann Able∗,†,§ and Bob Baker‡,∥", "†Univ X", "‡Univ Y", "¶Now at P", "§Now at Q",
+%   "E-mail: ann@x.edu" (Bob's "Now at R" is numbered 3 and not listed: the class lists as many as it has authors)
+% engines:  rust ACHEMSO dd3d7450e54 = 0 errors, 1 Warning; XML Ann Able | affiliation=Univ X ; email=ann@x.edu ;
+%   altaffiliation=Now at Q / Bob Baker | affiliation=Univ Y ; altaffiliation=Now at R; notes outside
+%   altaffiliation=Now at P twice; ACHEMSOb = 0 errors, 1 Warning; the note once
+% expect:   0 errors, 1 Warning; XML Ann Able | affiliation=Univ X ; altaffiliation=Now at Q ; email=ann@x.edu / Bob
+%   Baker | affiliation=Univ Y ; altaffiliation=Now at R; HTML Ann Able / Bob Baker (the guard's XML and HTML lines)
+%   and the note outside the creators altaffiliation=Now at P, once
+%   (perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes)
+% status:   GREEN XML, HTML (ACHEMSOb; RED at dd3d7450e54: the note twice;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\affiliation{Univ X}
+\email{ann@x.edu}
+\altaffiliation{Now at P}
+\altaffiliation{Now at Q}
+\author{Bob Baker}
+\affiliation{Univ Y}
+\altaffiliation{Now at P}
+\altaffiliation{Now at R}
+\title{T}
+\begin{document}
+Body.
+\end{document}

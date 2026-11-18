@@ -1,0 +1,38 @@
+% mechanism: revtex4-1: a name `\footnotemark[1]` beside a shared `\altaffiliation`: the mark kept on each name
+%   (mark-only), the altaffiliation each name's contact
+% witness:  2301.00155 (`\author{Xuan Bu\footnotemark[1]}\altaffiliation{These authors contribute equally…}`, `\alph`
+%   footnotes)
+% oracle:   pdflatex 0 errors; "Ann Ablea,1,∗ Bob Bakera,2,∗ and Cat Cole1,†"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= |
+%   altaffiliation=These authors contribute equally to this work. ; affiliation=Univ A, Town / Bob Baker ;
+%   footnotemark[*]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ B,
+%   City / Cat Cole | email=cat@a.edu ; affiliation=Univ A, Town; HTML Ann Able ; * plain / Bob Baker ; *
+%   plain / Cat Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[a]= | altaffiliation=These authors contribute equally to
+%   this work. ; affiliation=Univ A, Town / Bob Baker ; footnotemark[a]= | altaffiliation=These authors
+%   contribute equally to this work. ; affiliation=Univ B, City / Cat Cole | email=cat@a.edu ;
+%   affiliation=Univ A, Town; HTML Ann Able ; a plain / Bob Baker ; a plain / Cat Cole (the guard's XML and
+%   HTML lines; the name's `\footnotemark[1]` prints "a", the ∗ is the altaffiliation's: the int 10997fdf9a0 lines
+%   matched it by glyph)
+% status:   GREEN (int/frontmatter 10997fdf9a0) -> RED XML, HTML (MARKSAFE writes the name's mark none: REVTeX
+%   4.1/4.2 set it in their minipage letters, unknown here, `latex_constructs::drop_unknown_title_mark`; row R
+%   REVNAMEMARK — MARKBIND made the title hook these letters, a binding's part, but the engine's fail-safe for a name
+%   under `lx_title_footnote_own_marks` still writes none; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering_red)
+% preload: ar5iv.sty
+\documentclass[aps,prb,superscriptaddress]{revtex4-1}
+\renewcommand{\thefootnote}{\alph{footnote}}
+\begin{document}
+\title{T}
+\author{Ann Able\footnotemark[1]}
+\altaffiliation{These authors contribute equally to this work.}
+\affiliation{Univ A, Town}
+\author{Bob Baker\footnotemark[1]}
+\altaffiliation{These authors contribute equally to this work.}
+\affiliation{Univ B, City}
+\author{Cat Cole}
+\email{cat@a.edu}
+\affiliation{Univ A, Town}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

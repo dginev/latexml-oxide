@@ -317,7 +317,8 @@ fn spacing_before_a_mark_parts_the_entries() {
 }
 
 /// Item 3 (nit 7): an API call's attributes are written in source order, each pair as given (`get_pairs`):
-/// `\altaffiliation[Also at ]{…}` is `\lx@add@contact[annotate=new,role=affiliation,name={#1}]`.
+/// `\altaffiliation[Also at ]{…}` is `\lx@add@contact[annotate=new,role=affiliation,name={#1}]`, with the part of the
+/// REVTeX footnote it joins (`_fnpart=join`, the author's: OD #1054).
 #[test]
 fn api_attributes_in_source_order() {
   let tex = revtex(
@@ -332,7 +333,7 @@ fn api_attributes_in_source_order() {
     .collect();
   assert_eq!(attrs, [
     "role=author,annotations=",
-    "role=altaffiliation,name=Also at ",
+    "role=altaffiliation,name=Also at ,_fnpart=join",
     "role=affiliation,annotate=run",
   ]);
 }

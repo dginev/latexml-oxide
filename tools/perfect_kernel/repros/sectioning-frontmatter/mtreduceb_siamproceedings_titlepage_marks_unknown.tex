@@ -1,0 +1,50 @@
+% mechanism: the siamproceedings binding (latexml_contrib siamproceedings_sty.rs) declares no marks under `titlepage`:
+%   the copy's `\maketitle` is then its title page's (siamproceedings.sty:153-176, `\let \footnote \thanks` and no
+%   `\thefootnote` of its own), whose marks the reading does not know (row R TITLEPAGEMARKS): no glyph, each note
+%   under its name, as any `\maketitle` no binding answers for
+% witness:  the sibling of mtreduceb_siamproceedings_maketitle_reads_the_document_s_fnsymbol (2509.02371, 2509.13490
+%   are not `titlepage`); the style a minimal stand-in of siamproceedings.sty:153-215
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): a title page "Ann Able1 Bob Baker2" (the `\thefootnote` in
+%   force, article's `\arabic`); foot "1 Univ A (ann@x.org).", "2 Univ B (bob@y.org)."
+% engines:  rust MTREDUCE (7608026a189) = 0 errors, 0 Warnings; both notes unmarked
+% expect:   0 errors, 0 Warnings; both notes unmarked, each under its name (no glyph is the fail-safe: row R
+%   TITLEPAGEMARKS)
+% status:   RED (row R TITLEPAGEMARKS; the binding's fail-safe guarded by perfect_kernel_batchmtreduce::
+%   package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{siamproceedings.sty}
+\if@titlepage
+  \renewcommand\maketitle{\begin{titlepage}%
+  \let\footnotesize\small
+  \let\footnoterule\relax
+  \let \footnote \thanks
+  \begin{center}{\LARGE \@title \par}\vskip 3em{\large\begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}\par
+  \@thanks
+  \end{titlepage}%
+  \setcounter{footnote}{0}%
+  \global\let\thanks\relax
+  \global\let\maketitle\relax}
+\else
+\renewcommand\maketitle{\par
+  \begingroup
+    \renewcommand\thefootnote{\@fnsymbol\c@footnote}%
+    \def\@makefnmark{\rlap{\@textsuperscript{\normalfont\@thefnmark}}}%
+    \newpage
+    \global\@topnum\z@
+    \@maketitle
+    \thispagestyle{plain}\@thanks
+  \endgroup
+  \setcounter{footnote}{0}%
+  \global\let\thanks\relax
+  \global\let\maketitle\relax
+  \global\let\@maketitle\relax}
+\fi
+\end{filecontents*}
+\documentclass[titlepage]{article}
+\usepackage{siamproceedings}
+\title{A Title}
+\author{Ann Able\thanks{Univ A (ann@x.org).} \and Bob Baker\thanks{Univ B (bob@y.org).}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

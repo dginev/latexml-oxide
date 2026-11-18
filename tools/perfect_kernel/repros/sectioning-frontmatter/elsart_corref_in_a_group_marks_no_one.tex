@@ -1,0 +1,18 @@
+% mechanism: a `\corref` in a brace group of its own sets the class's `\@corref` (an `\edef`, elsarticle.cls:188-190) in
+%   that group alone: no name prints its ∗ and the note is no name's — as before, the block's
+% witness: 1909.01114 (`\author[cttc]{J. Castro}{\corref{cor1}}`, no name marked in the PDF)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa"; footnote "∗ Corresponding author"
+% engines: rust b842de7fc4c: the note the block's
+% expect:  0 errors 0 Warnings; the correspondence note the block's
+% status:  GREEN (b842de7fc4c) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1]{Alice One}
+\author[l1]{Bob Two}{\corref{cor}}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[cor]{Corresponding author}
+\end{frontmatter}
+x\end{document}

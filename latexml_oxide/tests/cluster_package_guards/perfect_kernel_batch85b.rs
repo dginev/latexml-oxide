@@ -96,7 +96,11 @@ fn llncs_sole_institute_is_every_authors() {
 #[test]
 fn llncs_sole_institute_before_the_authors() {
   assert_creators(repro!("llncs_sole_institute_before_the_authors.tex"), &[
-    &["Ann Able *", "affiliation=University of Somewhere, Town"],
+    &[
+      "Ann Able",
+      "mark=*",
+      "affiliation=University of Somewhere, Town",
+    ],
     &["Bob Baker", "affiliation=University of Somewhere, Town"],
     &["email=info@x.edu"],
   ]);
@@ -160,13 +164,10 @@ fn llncs_several_or_empty_institutes_are_not_shared() {
     ]],
   );
   let xml = assert_creators(repro!("llncs_empty_institute_keeps_the_inst_marks.tex"), &[
-    &["Ann Able 1"],
-    &["Bob Baker 2"],
+    &["Ann Able", "mark=1"],
+    &["Bob Baker", "mark=2"],
   ]);
-  assert!(
-    xml.contains("<personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>"),
-    "{xml}"
-  );
+  assert!(xml.contains("<personname>Ann Able</personname>"), "{xml}");
 }
 
 /// Each `\email` call is decided on its own (the old row split's `row_email_calls`, deleted in P27b; the emitter's entry cut since): `\institute{Univ X\\ \email{able@x.edu},
@@ -323,14 +324,20 @@ fn llncs_listed_local_parts_keep_their_braces() {
 #[test]
 fn llncs_corresponding_author_takes_the_left_address() {
   let tex = repro!("llncs_corresponding_author_takes_the_left_address.tex");
+  // (Ann's `\thanks` marked ⋆, llncs's `\@fnsymbol`: pdflatex "Ann Able⋆ and Bob Baker"; LLNCSMARKS)
   assert_creators(tex, &[
-    &["Ann Able", "affiliation=Univ X", "email=zz@x.edu"],
+    &["Ann Able", "mark=⋆", "affiliation=Univ X", "email=zz@x.edu"],
     &["Bob Baker", "affiliation=Univ X"],
   ]);
   let owned = tex.replace(r"\email{zz@x.edu}", r"\email{zz@x.edu, able@x.edu}");
   assert_ne!(owned, tex);
   assert_creators(&owned, &[
-    &["Ann Able", "affiliation=Univ X", "email=able@x.edu"],
+    &[
+      "Ann Able",
+      "mark=⋆",
+      "affiliation=Univ X",
+      "email=able@x.edu",
+    ],
     &["Bob Baker", "affiliation=Univ X"],
     &["email=zz@x.edu"],
   ]);

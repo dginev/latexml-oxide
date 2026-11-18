@@ -5,7 +5,8 @@
 //! `\addtolist` accumulator in the class BODY. An unknown `.cls` body is not
 //! raw-loaded (OmniBus extracts dependencies only), so every one of those is
 //! `Error:undefined` without a binding. Mirrors the shared-helper pattern of
-//! [`crate::discard_env`].
+//! [`crate::discard_env`]. ragslab.sty, a package that mirrors the same API, installs
+//! it after reading its copy raw ([`crate::ragslab_sty`]).
 use latexml_package::{package::authblk_sty::author_names_a_list, prelude::*};
 
 /// Install the identical, order-independent frontmatter routing shared by every
@@ -21,10 +22,6 @@ use latexml_package::{package::authblk_sty::author_names_a_list, prelude::*};
 /// (attribute-safe labels, `fairmeta`) or to note content (arbitrary-markup
 /// labels, `selfevolagent`/`openmoss`).
 pub fn install_meta_class_frontmatter() -> Result<()> {
-  // Accumulator lists → no-ops; the `\@add@frontmatter` sink accumulates.
-  def_macro_noop("\\authorlist")?;
-  def_macro_noop("\\affiliationlist")?;
-  def_macro_noop("\\contributionlist")?;
   // The class's `\author[mark]{name}` / `\affiliation[mark]{inst}` /
   // `\contribution[mark]{text}` link authors to institutions/notes by superscript
   // MARK (`\author[1,2,*]{…}` cites `\affiliation[1]{…}` and `\contribution[*]{…}`).
@@ -56,6 +53,16 @@ pub fn install_meta_class_frontmatter() -> Result<()> {
   DefMacro!("\\abstract{}", "\\lx@add@abstract{#1}");
   DefMacro!("\\email{}", "\\href{mailto:#1}{\\texttt{#1}}");
   DefMacro!("\\beginappendix", "\\appendix");
+  Ok(())
+}
+
+/// The class body's accumulator lists, which `\@add@frontmatter` replaces: no-ops. Only a class that defines them calls
+/// this (fairmeta, selfevolagent, openmoss); a style that only mirrors the API (ragslab's lists are `\reslab@…list`)
+/// leaves the document's own `\authorlist` alone (revRAGSLAB S1).
+pub fn noop_meta_class_lists() -> Result<()> {
+  def_macro_noop("\\authorlist")?;
+  def_macro_noop("\\affiliationlist")?;
+  def_macro_noop("\\contributionlist")?;
   Ok(())
 }
 

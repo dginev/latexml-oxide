@@ -230,6 +230,42 @@ pub(in crate::base_utilities) fn shared_block_email_labels(
 /// The queued entry's respelled e-mail being digested, `address\u{2}author:N` ([`shared_block_email_labels`]), or empty.
 pub(in crate::base_utilities) const ENTRY_RESPELL: &str = "lx_frontmatter_entry_respell";
 
+/// The owners (indices into `keys`, the authors' names in order) of the addresses a printed list gives with no mark of
+/// its own — a `\date` line under the names (`date_legend`), a note the PDF prints with no mark (`address_note_contacts`;
+/// 2506.06941's `\footnotetext{\{p\_shojaee, imirzadeh, …\}@apple.com}`), OD #1071 — by the rule a class's address list
+/// is placed by ([`sequenced_contact_labels`], `EmailOwner::SpelledElseOrder`): each the author it spells, else, in a
+/// list of one address per author that no spelled address contradicts, the author at its place
+/// ([`author_order_step`]); else none, the author block's.
+pub(in crate::base_utilities) fn listed_address_owners(
+  addresses: &[String],
+  keys: &[NameKeys],
+) -> Vec<Option<usize>> {
+  let spelled: Vec<Option<usize>> = addresses
+    .iter()
+    .map(|address| match spelled_owners(keys, address).as_slice() {
+      [at] => Some(*at),
+      _ => None,
+    })
+    .collect();
+  // (each address a place of its own: one printed list is no call per author, so `{ann, bob}@x.org` under one name is
+  // no list of that author's two addresses)
+  let listed: Vec<(i64, Option<usize>)> = spelled
+    .iter()
+    .enumerate()
+    .map(|(at, owner)| (at as i64, *owner))
+    .collect();
+  let places = if keys.is_empty() {
+    None
+  } else {
+    author_order_step(&listed, keys.len())
+  };
+  spelled
+    .iter()
+    .enumerate()
+    .map(|(at, owner)| owner.or_else(|| places.as_ref().map(|places| places[at])))
+    .collect()
+}
+
 /// Step 2 of [`sequenced_contact_labels`], kept apart so a ruling can switch it off in one change: the place (from 0)
 /// of each address of `listed` (its call, its known author) in the authors' order, when the list is one place for
 /// each of `authors` authors and no known author is another than the one at its place; `None` when it is no such list.
@@ -527,6 +563,8 @@ pub fn digest_front_matter() -> Result<()> {
   // (what the abstract's command form added before this flush is no longer in Perl's queue: [`COMMAND_FORM`])
   let flushes = lookup_int(FRONTMATTER_FLUSHES);
   assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
+  // (the title marks of the `\maketitle` that runs, read where no binding declared them, before the rehearsal binds them)
+  crate::latex_constructs::read_title_marks_in_force();
   // The frontmatter observer's rehearsal of the author blocks, whose reading the emitter writes from at this flush
   // (OXIDIZED_DESIGN_DIVERGENCES #837, #980), and the undefined commands its rehearsals held an Error for.
   let held_undefined = read_at_flush()?;
@@ -534,6 +572,8 @@ pub fn digest_front_matter() -> Result<()> {
   // every path out, an `Err` one too)
   let recorder = FlushMeanings::begin();
   bgroup();
+  // (the `\thefootnote` in force, which a title field's marks are told against: `enter_title_footnotes`)
+  crate::latex_constructs::begin_title_footnotes();
   // INTENTIONAL DIVERGENCE from Perl PR #2767 (KNOWN_PERL_ERRORS #30,
   // OXIDIZED_DESIGN): clear the queue BEFORE digesting. Perl digests
   // from the live queue and wipes it after the loop — but when a queued

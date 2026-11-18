@@ -1,0 +1,21 @@
+% mechanism: REVTeX 4.0: two unnumbered `\footnote`s in one name, ∗ and †: each the name's note contact
+% witness:  revSHMARKb r_40two
+% oracle:   pdflatex 0 errors; "Bob Baker∗†", "∗ Visiting Univ C.", "† Second."
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able | affiliation=Univ A / Bob Baker |
+%   note=Visiting Univ C. ; note=Second. ; affiliation=Univ B; HTML Ann Able / Bob Baker
+% expect:   0 errors, 0 Warnings; XML Ann Able | affiliation=Univ A / Bob Baker | note=Visiting Univ C. ; note=Second.
+%   ; affiliation=Univ B; HTML Ann Able / Bob Baker (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% preload: ar5iv.sty
+\documentclass[aps,prl,preprint]{revtex4}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\affiliation{Univ A}
+\author{Bob Baker\footnote{Visiting Univ C.}\footnote{Second.}}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body\footnote{body note}.
+\end{document}

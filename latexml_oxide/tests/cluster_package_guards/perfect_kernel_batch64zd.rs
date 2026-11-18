@@ -299,8 +299,11 @@ fn revtex_marked_author_list_splits_each_name() {
     creators[..3],
     [
       author_with(
-        r#"Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">a</text></sup>"#,
-        &address("Univ X, City")
+        "Ann Able",
+        &format!(
+          r#"<note mark="a" role="footnotemark" xml:id="id1"/>{}"#,
+          address("Univ X, City")
+        )
       ),
       later(author_with(
         r#"Bob Baker<cite class="ltx_citemacro_cite">[<bibref bibrefs="bb" separator="," show="Number" yyseparator=","/>]</cite>"#,
@@ -346,7 +349,8 @@ fn revtex3_section_numbers_as_aps() {
 }
 
 /// Provide-only OmniBus declines what the class defines, also through the bindings it requires: under
-/// `[aps,myjunkx]{revtex}` the live `\author` is the revtex binding's, not inst_support's (review 64zd round 1).
+/// `[aps,myjunkx]{revtex}` the live `\author` is the revtex binding's, not inst_support's (review 64zd round 1); it counts
+/// the footnote the parts after it join for REVTeX's footnote marks (`\lx@revtex@fn@target`, OD #1054).
 #[test]
 fn omnibus_provide_only_keeps_bound_class_commands() {
   let (log, xml) = convert_clean(include_str!(
@@ -360,7 +364,7 @@ fn omnibus_provide_only_keeps_bound_class_commands() {
     &xml,
     "para",
     &[r#"xml:id="p1""#],
-    r#"<para xml:id="p1"><p xml:id="p1.1"><text font="typewriter" xml:id="p1.1.1">macro:#1#2-&gt;\lx@add@authors@append [annotations={#1}]{#2}\lx@author@after {#2}</text></p></para>"#,
+    r#"<para xml:id="p1"><p xml:id="p1.1"><text font="typewriter" xml:id="p1.1.1">macro:#1#2-&gt;\lx@add@authors@append [annotations={#1}]{#2}\lx@author@after {#2}\lx@revtex@fn@target {join}</text></p></para>"#,
   );
 }
 
@@ -613,8 +617,8 @@ fn ws_sprocl_marked_addresses() {
   assert_eq!(
     creators(&xml),
     [
-      "<creator role=\"author\"><personname>A. ABLE<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ X, City</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B. BAKER<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup>Univ Y, Town</contact></creator>",
+      "<creator role=\"author\"><personname>A. ABLE</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup>Univ X, City</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B. BAKER</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">b</text></sup>Univ Y, Town</contact></creator>",
     ],
     "{xml}"
   );

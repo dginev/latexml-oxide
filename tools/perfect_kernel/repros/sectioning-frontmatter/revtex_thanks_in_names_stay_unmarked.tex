@@ -1,0 +1,24 @@
+% witness: a REVTeX `\thanks` inside `\author{…}` (2407.11130's "corresponding author" on Kim and Moon; the shape of
+%          1308.0465's repeated thanks, written in the names): the kernel's name note (`\lx@personname` lets `\thanks` be
+%          `\lx@add@thanks`), which REVTeX neither prints nor counts
+% oracle:  pdflatex 0 errors (revtex4, 4-1 and 4-2 alike); "Ann Able, Bob Baker, and Cat Cole", "Univ A": no mark and no
+%          footnote for a `\thanks` in a name
+% engines: rust=0 (edc515b111f: three unmarked thanks notes; SHRESTb: "Equal." ∗ on Ann and Bob, "Other." †, marks
+%          pdflatex never prints — revSHRESTb B1) perl=0 (the same notes, no marks) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann and Bob each with the note "Equal.", Cat with "Other.", none marked (the content
+%          pdflatex loses kept: OD #1054)
+% status:  RED (SHRESTb) -> GREEN (SHRESTc)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{Title}
+\author{Ann Able\thanks{Equal.}}
+\affiliation{Univ A}
+\author{Bob Baker\thanks{Equal.}}
+\affiliation{Univ A}
+\author{Cat Cole\thanks{Other.}}
+\affiliation{Univ A}
+\begin{abstract}Abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

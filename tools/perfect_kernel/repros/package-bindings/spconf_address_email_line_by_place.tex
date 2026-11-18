@@ -1,0 +1,17 @@
+% mechanism: an e-mail line inside spconf's `\address` block keeps the address note whole (`address_block_calls`): the
+%   listed-address rule put 1802.09371's `aline.roumy@` on a nameless creator (row R); no nameless creator (OD #1073)
+% witness: 2407.20176 (`jih150@` in a 2-for-2 list), 2102.09114 (`ngyuzh@`), 1802.09371
+% oracle:  pdflatex (TL 2025, -no-shell-escape, spconf.sty) 0 errors: "Ann Able1, Bob Baker2", "1Univ A", "2Univ B",
+%   "xq1@a.org, zz7@b.org"
+% engines: SPCONF round 1 (d67dbb41d4b): the addresses on a nameless author-block creator
+% expect:  0 errors, 0 warnings; the address note whole, no affiliation or e-mail contact, no nameless creator
+% status:  RED (SPCONF d67dbb41d4b) -> GREEN (SPCONFb; guard perfect_kernel_batchspconf)
+\documentclass{article}
+\usepackage{spconf}
+\title{T}
+\name{Ann Able$^1$, Bob Baker$^2$}
+\address{$^1$Univ A\\ $^2$Univ B\\ xq1@a.org, zz7@b.org}
+\begin{document}
+\maketitle
+x
+\end{document}

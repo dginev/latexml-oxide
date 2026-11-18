@@ -65,16 +65,16 @@ fn ieee_membership_grade_is_the_readings_contact() {
       &[
         "<creator role=\"author\"><personname>Ann\u{a0}Able</personname></creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy\u{a0}Coe</personname><contact class=\"ltx_author_line\" role=\"membership\">Member,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Funded.</note></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy\u{a0}Coe</personname><contact class=\"ltx_author_line\" role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
       ],
       (0, 0),
     ),
     (
       repro!("ieee_membership_empty_grades_print_nothing"),
       &[
-        "<creator role=\"author\"><personname>Ann\u{a0}Able<sup xml:id=\"id1\">∗</sup></personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker<sup xml:id=\"id2\">∗</sup></personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Coe</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id3\">Notes.</note></creator>",
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><note mark=\"∗\" role=\"footnotemark\" xml:id=\"id1\"/></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><note mark=\"∗\" role=\"footnotemark\" xml:id=\"id2\"/></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Coe</personname></creator>",
       ],
       (0, 0),
     ),
@@ -130,8 +130,8 @@ fn ieee_membership_grade_is_the_readings_contact() {
     (
       repro!("ieee_membership_grade_line_under_an_affiliation"),
       &[
-        "<creator role=\"author\"><personname>Ann\u{a0}Able<sup xml:id=\"id1\">1</sup></personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Note.</note></creator>",
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact></creator>",
       ],
       (0, 0),
     ),
@@ -165,7 +165,8 @@ fn ieee_membership_grade_is_the_readings_contact() {
       repro!("ieee_membership_grade_inside_a_thanks_is_the_notes_text"),
       &[
         "<creator role=\"author\"><personname>Ann Able</personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Ann Able, Senior Member,\u{a0}IEEE, is with Lunar College.</note></creator>",
+        // (MARKKEY1: the unmarked `\thanks` is the block's publication note, OD #1058; its words kept there)
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
       ],
       (0, 0),
     ),

@@ -2875,9 +2875,10 @@ mod browser_render_eqn_tags {
 
 mod browser_render_author_lines {
   //! Issue #783 rendered at 1280/375 px: an author whose contacts are all `\\` lines of the author block shows them
-  //! under the name with no starred pop-up (a `\thanks` keeps its mark, its text in its pop-up; a `\footnote` note
-  //! keeps the star, its text shown on hover, 1112.2930); an author with a class's own `\affiliation` keeps the pop-up.
-  //! On hover no name or contact covers another (two notes, math0111266). Opt-in and LOCAL like the guards above
+  //! under the name with no starred pop-up (a marked `\thanks` or `\footnote` note of one author shows there too, with
+  //! no mark, #1052/#1053; before SHMARK the `\footnote` kept the star, its text shown on hover, 1112.2930); an author
+  //! with a class's own `\affiliation` keeps the pop-up. On hover no name or contact covers another (two notes,
+  //! math0111266). Opt-in and LOCAL like the guards above
   //! (Firefox too with `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::author_line_delta_stays_present`.
 
   const LINES: &str = "\\documentclass{article}\n\\begin{document}\n\\title{Two authors}\n\
@@ -2917,10 +2918,12 @@ mod browser_render_author_lines {
     else {
       return;
     };
-    // Before (Chrome and Firefox, 1280/375): each author a blue `*` whose hover pop-up held its lines.
+    // Before (Chrome and Firefox, 1280/375): each author a blue `*` whose hover pop-up held its lines. Ann's `\thanks`
+    // carries `\@fnsymbol`'s `*` (SHMARK, #1053): one author's marked note, under her name with no mark (#1052). Before
+    // SHMARK it had no `mark`, so it kept its mark and pop-up, as an unmarked note does (1510.02728).
     for (key, run) in creators(&stdout) {
       let expected = serde_json::json!([
-        { "name": "Ann Able", "star": "none", "notes": [{ "mark": true, "content": false }],
+        { "name": "Ann Able", "star": "none", "notes": [{ "mark": true, "content": true }],
           "contacts": [{ "text": "Univ. of A", "visible": true, "belowName": true, "hover": true },
                        { "text": "Dept. of Physics", "visible": true, "belowName": true, "hover": true }],
           "overlaps": [] },
@@ -2931,8 +2934,8 @@ mod browser_render_author_lines {
       ]);
       assert_eq!(run, expected, "the author lines ({key}): {stdout}");
     }
-    // Before (I783E): Bob Baker's note kept "Univ B" behind the star too. (The hidden note is `display:none`, whose
-    // innerText is its text.)
+    // Before (I783E): Bob Baker's note kept "Univ B" behind the star too. His `\footnote` is one author's marked note
+    // (SHMARK, #1053), under his name with no mark (#1052); before SHMARK a `contact role="note"` behind the star.
     let Some(stdout) =
       super::browser_harness::render_and_measure("#783", NOTE, "measure_authors.js")
     else {
@@ -2943,41 +2946,38 @@ mod browser_render_author_lines {
         { "name": "Ann Able", "star": "none", "notes": [],
           "contacts": [{ "text": "Univ A", "visible": true, "belowName": true, "hover": true }],
           "overlaps": [] },
-        { "name": "Bob Baker", "star": "\"*\"", "notes": [],
-          "contacts": [{ "text": "Note:\u{a0}X", "visible": false, "belowName": false, "hover": true },
-                       { "text": "Univ B", "visible": true, "belowName": true, "hover": true }],
+        { "name": "Bob Baker", "star": "none", "notes": [{ "mark": true, "content": true }],
+          "contacts": [{ "text": "Univ B", "visible": true, "belowName": true, "hover": true }],
           "overlaps": [] }
       ]);
       assert_eq!(run, expected, "the note's author ({key}): {stdout}");
     }
     // Before (I783F): each note its own absolute pop-up, so on hover the second note covered the first and both the
-    // lines (Chrome and Firefox, 1280/375); a note beside a `\thanks` or above an e-mail line covered the lines.
+    // lines (Chrome and Firefox, 1280/375); a note beside a `\thanks` or above an e-mail line covered the lines. Since
+    // SHMARK (#1053) each `\thanks` and `\footnote` is Ann's marked note, under her name headed by its mark (#1052;
+    // the mark shown since DG 2026-11-17), so no pop-up remains to cover anything.
     let line = |text: &str| serde_json::json!({ "text": text, "visible": true, "belowName": true, "hover": true });
-    let note = |text: &str| serde_json::json!({ "text": text, "visible": false, "belowName": false, "hover": true });
+    let under = serde_json::json!({ "mark": true, "content": true });
     let bob = serde_json::json!({ "name": "Bob Baker", "star": "none", "notes": [],
       "contacts": [line("Univ. of B")], "overlaps": [] });
     for (label, doc, ann) in [
       (
         "two notes",
         TWO_NOTES,
-        serde_json::json!({ "name": "Ann Able", "star": "\"*\"", "notes": [],
-        "contacts": [note("Note:\u{a0}First note on Ann."), note("Note:\u{a0}Second note on Ann."),
-                     line("Univ. of A"), line("Dept. of Physics")], "overlaps": [] }),
+        serde_json::json!({ "name": "Ann Able", "star": "none", "notes": [under, under],
+        "contacts": [line("Univ. of A"), line("Dept. of Physics")], "overlaps": [] }),
       ),
       (
         "a note beside a \\thanks",
         THANKS_NOTE,
-        serde_json::json!({ "name": "Ann Able", "star": "\"*\"",
-        "notes": [{ "mark": true, "content": false }],
-        "contacts": [note("Note:\u{a0}A note on Ann."), line("Univ. of A"), line("Dept. of Physics")],
-        "overlaps": [] }),
+        serde_json::json!({ "name": "Ann Able", "star": "none", "notes": [under, under],
+        "contacts": [line("Univ. of A"), line("Dept. of Physics")], "overlaps": [] }),
       ),
       (
         "a note beside an e-mail line",
         EMAIL_NOTE,
-        serde_json::json!({ "name": "Ann Able", "star": "\"*\"",
-        "notes": [], "contacts": [note("Note:\u{a0}A note on Ann."), line("Univ. of A"), line("ann@a.edu")],
-        "overlaps": [] }),
+        serde_json::json!({ "name": "Ann Able", "star": "none", "notes": [under],
+        "contacts": [line("Univ. of A"), line("ann@a.edu")], "overlaps": [] }),
       ),
     ] {
       let Some(stdout) =
@@ -3000,8 +3000,8 @@ mod browser_render_author_lines {
     };
     for (key, run) in creators(&stdout) {
       assert_eq!(
-        run[0]["star"], "\"*\"",
-        "the pop-up is gone ({key}): {stdout}"
+        run[0]["star"], "\"ⓘ\"",
+        "the pop-up's handle is gone, or is a footnote-mark glyph again (OD #1069) ({key}): {stdout}"
       );
       assert!(
         run[0]["contacts"]
@@ -3011,6 +3011,208 @@ mod browser_render_author_lines {
           .all(|c| c["visible"] == false),
         "a contact of the pop-up shows ({key}): {stdout}"
       );
+    }
+  }
+
+  /// A note two authors share prints once in the card (#1052, DG's rulings of 2026-11-16): the legend's `∗` note
+  /// under Ann with its mark on her name and at its head, Bob's copy a mark linked to it, no note on Cat (the kernel
+  /// legend line's shape of 2407.07614; 2606.00446 the authblk one).
+  #[test]
+  fn a_shared_note_prints_once_under_its_first_author() {
+    const SHARED: &str = "\\documentclass{article}\n\\title{T}\n\
+       \\author{Ann Able$^{1,*}$, Bob Baker$^{1,*}$, Cat Cole$^{1}$\\\\ $^1$Univ A, Town\\\\ $^*$Equal contribution}\n\
+       \\date{}\n\\begin{document}\n\\maketitle\nText.\n\\end{document}\n";
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#1052", SHARED, "measure_authors.js")
+    else {
+      return;
+    };
+    let line = serde_json::json!({ "text": "Univ A, Town", "visible": true, "belowName": true, "hover": true });
+    // Before: Ann's and Bob's notes each their own `∗` and pop-up, the text twice.
+    for (key, run) in creators(&stdout) {
+      let expected = serde_json::json!([
+        { "name": "Ann Able", "star": "none", "notes": [{ "mark": true, "content": true }],
+          "contacts": [line], "overlaps": [] },
+        { "name": "Bob Baker", "star": "none", "notes": [{ "mark": true, "content": false }],
+          "contacts": [line], "overlaps": [] },
+        { "name": "Cat Cole", "star": "none", "notes": [], "contacts": [line], "overlaps": [] }
+      ]);
+      assert_eq!(run, expected, "the shared note ({key}): {stdout}");
+    }
+  }
+}
+
+mod browser_render_fmmarks {
+  //! FMRG's browser layer (DG 2026-11-16, red/green on both targets): rows of
+  //! `cluster_package_guards::perfect_kernel_batchfmmarks` that stress the author block's CSS, rendered with the
+  //! tree's LaTeXML.css by `tests/browser/measure_fmmarks.js` at 1280 and 375 px. Each asserts: no shown box (name,
+  //! mark, note body, contact) drawn over another; every shown mark on its name's last line, touching the name or the
+  //! mark before it; every shown note body under its own name and inside its column; at either width no horizontal
+  //! overflow of the block. A one-author note in a one-line block keeps its mark and pop-up in LaTeXML.css (OD #1052),
+  //! so its body is not shown; an unmarked note shows no mark and its text, a line under its name (OD #990). A shared
+  //! note's other mark carries the note hidden (`ltx_note_copy`, DG 2026-11-17): never shown at rest, shown inside the
+  //! viewport while its mark is hovered (LaTeXML.css's classic pop-up, at 1280, 375 and 1800 px). Opt-in and LOCAL like
+  //! the guards above.
+
+  macro_rules! repro {
+    ($name:literal) => {
+      include_str!(concat!(
+        "../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+        $name,
+        ".tex"
+      ))
+    };
+  }
+
+  /// A row: its label, its document, the marks shown on names in order as (name, mark), the names a shown body
+  /// prints under, and the marks carrying a hidden copy of their note as (name, mark).
+  type Row = (
+    &'static str,
+    &'static str,
+    &'static [(&'static str, &'static str)],
+    &'static [&'static str],
+    &'static [(&'static str, &'static str)],
+  );
+
+  const ROWS: [Row; 7] = [
+    (
+      "a shared legend note (2407.07614's shape)",
+      repro!("author_block_symbol_legend_note_mark_not_in_its_text"),
+      &[("Ann Able", "\u{2217}"), ("Bob Baker", "\u{2217}")],
+      &["Ann Able"],
+      &[("Bob Baker", "\u{2217}")],
+    ),
+    (
+      "a long shared note, two names with a note of their own (1706.03762's shape)",
+      repro!("fmmarks_long_shared_note_with_second_marks"),
+      &[
+        ("Ann Able", "*"),
+        ("Bob Baker", "*"),
+        ("Cat Cole", "*"),
+        ("Cat Cole", "\u{2020}"),
+        ("Dan Dorn", "*"),
+        ("Dan Dorn", "\u{2021}"),
+      ],
+      &["Ann Able", "Cat Cole", "Dan Dorn"],
+      &[("Bob Baker", "*"), ("Cat Cole", "*"), ("Dan Dorn", "*")],
+    ),
+    (
+      "one author's note",
+      repro!("author_footnote_is_the_marked_thanks_note"),
+      &[("Ann Able", "*")],
+      &[],
+      &[],
+    ),
+    (
+      // (bare marks printed once, over the name alone: shown, the XML cannot prove a glyph prints once, OD #1059)
+      "two unlinked marks on one name, both shown",
+      repro!("ne2h_marks_run_carried_back_whole"),
+      &[("Ann Able", "*"), ("Ann Able", "†")],
+      &[],
+      &[],
+    ),
+    (
+      "a shared unmarked note under the page's generated mark (OD #1059)",
+      repro!("markkey_footnotemark_shares_a_thanks_by_number_unbound_class"),
+      &[("Ann Able", "[a]"), ("Bob Baker", "[a]")],
+      &[],
+      &[("Bob Baker", "[a]")],
+    ),
+    (
+      "twelve names on two lines (2602.18802's shape)",
+      repro!("fmmarks_many_names_two_legend_marks"),
+      &[
+        ("Ann Able", "\u{2217}"),
+        ("Bob Baker", "\u{2217}"),
+        ("Dan Dorn", "\u{2020}"),
+      ],
+      &["Ann Able", "Dan Dorn"],
+      &[("Bob Baker", "\u{2217}")],
+    ),
+    (
+      "unmarked notes, their glyph unknown (an unbound class's `\\thanks`, OD #990)",
+      repro!("marksafe_unbound_class_thanks_print_no_glyph"),
+      &[],
+      &["Ann Able", "Bob Baker"],
+      &[],
+    ),
+  ];
+
+  #[test]
+  fn author_block_marks_and_notes_lay_out_as_printed() {
+    for (row, doc, marks, bodies, copies) in ROWS {
+      let Some(stdout) =
+        super::browser_harness::render_and_measure("FMRG", doc, "measure_fmmarks.js")
+      else {
+        return;
+      };
+      let runs: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+      for (key, run) in runs.as_object().expect("widths") {
+        assert_eq!(run["overflow"], false, "{row} ({key}) overflows: {stdout}");
+        assert_eq!(
+          run["overlaps"],
+          serde_json::json!([]),
+          "{row} ({key}) overlaps: {stdout}"
+        );
+        let shown: Vec<(String, String)> = run["marks"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .map(|m| {
+            (
+              m["name"].as_str().unwrap().to_string(),
+              m["mark"].as_str().unwrap().to_string(),
+            )
+          })
+          .collect();
+        let want: Vec<(String, String)> = marks
+          .iter()
+          .map(|(n, m)| ((*n).to_string(), (*m).to_string()))
+          .collect();
+        assert_eq!(shown, want, "{row} ({key}) marks: {stdout}");
+        for mark in run["marks"].as_array().unwrap() {
+          assert!(
+            mark["onLine"] == true && mark["gap"].as_f64().unwrap().abs() <= 1.0,
+            "{row} ({key}) a mark off its name's line or parted from it: {stdout}"
+          );
+        }
+        let under: Vec<&str> = run["bodies"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .map(|b| b["name"].as_str().unwrap())
+          .collect();
+        assert_eq!(under, bodies, "{row} ({key}) bodies: {stdout}");
+        for body in run["bodies"].as_array().unwrap() {
+          assert!(
+            body["underName"] == true && body["inColumn"] == true,
+            "{row} ({key}) a body not under its name: {stdout}"
+          );
+        }
+        // Before (MTREDUCEd): a copy's mark only linked to the first; nothing to pop up.
+        let carried: Vec<(String, String)> = run["copies"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .map(|c| {
+            (
+              c["name"].as_str().unwrap().to_string(),
+              c["mark"].as_str().unwrap().to_string(),
+            )
+          })
+          .collect();
+        let want: Vec<(String, String)> = copies
+          .iter()
+          .map(|(n, m)| ((*n).to_string(), (*m).to_string()))
+          .collect();
+        assert_eq!(carried, want, "{row} ({key}) copies: {stdout}");
+        for copy in run["copies"].as_array().unwrap() {
+          assert!(
+            copy["rest"] == false && copy["hover"] == true && copy["inView"] == true,
+            "{row} ({key}) a copy shown at rest, or not popped up in view on its mark: {stdout}"
+          );
+        }
+      }
     }
   }
 }

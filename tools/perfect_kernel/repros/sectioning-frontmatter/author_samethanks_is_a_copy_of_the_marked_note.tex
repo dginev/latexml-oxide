@@ -1,0 +1,22 @@
+% mechanism: a document `\samethanks[1]` (= `\footnotemark[1]`) re-marks a `\thanks`: the `\thanks` note carries the
+%   mark its title block prints (`\@fnsymbol\c@footnote`, article.cls:205; the rehearsal's `shows`, emit.rs
+%   `shown_mark`) and the mark on the next name becomes a full copy of it (`insert::link_marked_notes`, as Perl's
+%   `relocateFootnote_aux` fills a mark, latex_constructs.pool.ltxml:518-527)
+% witness: 2502.19103 (acl; `\textbf{Siwei Wu}\textsuperscript{1}\thanks{Equal Contribution.}`, `…\samethanks[1]`)
+% oracle:  pdflatex 0 errors: "Ann Able1∗ Bob Baker1∗ Cat Cole2", "∗ Equal Contribution." once
+% engines: rust REGFIX = 0 errors; Able note role=thanks without mark, Baker footnotemark mark="*"; perl 0.8.8 = Able
+%   contact role=thanks, Baker footnotemark mark="1"
+% expect:  0 errors 0 warnings; Able's and Baker's note mark="*" "Equal Contribution."
+% status:  RED (REGFIX) -> GREEN (perfect_kernel_batchshmark::a_mark_on_a_name_is_a_copy_of_the_note_it_marks)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\title{T}
+\author{\textbf{Ann Able}\textsuperscript{1}\thanks{Equal Contribution.}\quad
+\textbf{Bob Baker}\textsuperscript{1}\samethanks[1]\quad \textbf{Cat Cole}\textsuperscript{2}\\
+\textsuperscript{1}Univ A \quad \textsuperscript{2}Univ B}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

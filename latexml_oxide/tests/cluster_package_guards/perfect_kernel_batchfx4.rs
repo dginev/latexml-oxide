@@ -35,7 +35,7 @@ fn an_orcid_link_printing_the_name_is_written_once() {
     (
       repro!("authblk_orcid_link_wrapping_the_name_written_once"),
       &[
-        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0001-0000-0001\"><text><graphics candidates=\"example-image.png\" graphic=\"example-image\" options=\"scale=0.06\"/></text> Ann Able</ref></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\">ann@x.org</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact>\n  </creator>",
+        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0001-0000-0001\"><text><graphics candidates=\"example-image.png\" graphic=\"example-image\" options=\"scale=0.06\"/></text> Ann Able</ref></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\">ann@x.org</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact>\n  </creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0002-0000-0002\"><text><graphics candidates=\"example-image.png\" graphic=\"example-image\" options=\"scale=0.06\"/></text> Bob Baker</ref></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>",
       ][..],
     ),

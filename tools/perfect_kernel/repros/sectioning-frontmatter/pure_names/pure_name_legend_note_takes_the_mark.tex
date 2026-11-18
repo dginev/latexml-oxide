@@ -1,0 +1,21 @@
+% witness: 1904.03977 (`\IEEEauthorblockN{Divyam Madaan$^{*}$\thanks{*Equal Contribution}}` … `\IEEEauthorblockN{Radhika
+%          Dua$^{*}$}`)
+% oracle:  pdflatex 0 errors: "Ann Able∗ Bob Baker∗ Cy Cole" over "Univ A ann@a.edu" …
+% engines: rust REGFIX = <personname>Ann Able<sup>*</sup></personname> beside the copied note "*Equal contribution."
+% expect:  0 errors; each name the name alone; a note opening with the name's mark takes it as its `mark`, its text
+%          without the copy: <note role="thanks" mark="*">Equal contribution.</note> on both carriers
+% status:  RED (REGFIX) -> GREEN (PURE)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{*}$\thanks{*Equal contribution.}}
+\IEEEauthorblockA{Univ A\\ ann@a.edu}
+\and
+\IEEEauthorblockN{Bob Baker$^{*}$}
+\IEEEauthorblockA{Univ B\\ bob@b.edu}
+\and
+\IEEEauthorblockN{Cy Cole}
+\IEEEauthorblockA{Univ C\\ cy@c.edu}}
+\maketitle
+x
+\end{document}

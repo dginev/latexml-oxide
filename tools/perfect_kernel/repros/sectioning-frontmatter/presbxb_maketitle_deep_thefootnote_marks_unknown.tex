@@ -1,0 +1,19 @@
+% mechanism: a document's `\maketitle` whose macros run deeper than are read (`MAKETITLE_DEPTH`) has unknown marks:
+%   an author's macro left unread is no proof of no mark (`latex_constructs::touches_marks`); written with none
+% witness:  none (review revPRESBX B4, p/deep4.tex: the `\def\thefootnote` four calls deep)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker†"
+% engines:  rust PRESBX (b85b844eb81) = 0 errors, 0 Warnings; thanks[1], thanks[2]
+% expect:   0 errors, 0 Warnings; both notes unmarked
+% status:   RED (PRESBX) -> GREEN fail-safe (PRESBXb: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\aa@{\bb@}\def\bb@{\cc@}\def\cc@{\dd@}\def\dd@{\def\thefootnote{\fnsymbol{footnote}}}
+\renewcommand\maketitle{\begingroup\aa@\begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

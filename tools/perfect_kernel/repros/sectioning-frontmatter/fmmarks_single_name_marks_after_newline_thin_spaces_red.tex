@@ -1,0 +1,25 @@
+% mechanism: the only name, a line end and thin spaces before two given marks, under an arabic `\thefootnote` set
+%   inside `\author`: both its, printed 1 and 2
+% witness:  1807.02791 (`\renewcommand{\thefootnote}{\arabic{footnote}}` in `\author`, `Andrea
+%   Roccaverde⏎\footnotemark[1]\,\,\,\,\footnotemark[2]`)
+% oracle:   pdflatex 0 errors; "Ann Able 1 2"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[*]= ; footnotemark[†]=
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[1]= ; footnotemark[2]= (guard canon: name ; note
+%   role[mark]=text, sorted | contacts)
+% moves:    NEITHER: reported to main (the marks written * and †, not the printed 1 and 2)
+% status:   RED (NEITHER: no recorded gap, reported to main) (INTREC 3af622aca64;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores_red) -> GREEN (MARKSAFE: the author block's
+%   `\thefootnote` holds for its name, `latex_constructs::title_field_footnotes`;
+%   perfect_kernel_batchshmark::a_thefootnote_the_author_block_sets_holds_for_its_name)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{\renewcommand{\thefootnote}{\arabic{footnote}}
+Ann Able
+\footnotemark[1]\,\,\,\,\footnotemark[2]
+}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

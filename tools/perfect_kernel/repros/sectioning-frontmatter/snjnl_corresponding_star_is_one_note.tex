@@ -1,0 +1,26 @@
+% mechanism: sn-jnl's `\author*[labels]{name}` (2412.01641's sn-jnl.cls:505-516) prints `*` after the labels in the
+%   name's superscript and sends the `\email` after it to the corresponding list (:535-546); `\@maketitle` prints
+%   "*Corresponding author(s). E-mail(s): …" once (:749-751, the `*` where there are two authors or more)
+% witness:  2603.01834 (`\author*[1]`), 2401.11721 and 2312.03687 (two starred names)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able1*, Bob Baker1 and Cat Cole2*", "1Univ A.",
+%   "2Univ B.", "*Corresponding author(s). E-mail(s): ann@a.org; cat@c.org;", "Contributing authors: bob@b.org;"
+% engines:  rust 3b420685f89 = 0 errors; no `*`, no "Corresponding author" anywhere
+% expect:   0 errors 0 Warnings; Ann's and Cat's copies of one note "Corresponding author(s).", mark *; every e-mail
+%   its author's contact
+% status:   RED (3b420685f89) -> GREEN XML GREEN, HTML GREEN (SNJNL;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\author[1]{\fnm{Bob} \sur{Baker}}\email{bob@b.org}
+\author*[2]{\fnm{Cat} \sur{Cole}}\email{cat@c.org}
+\affil[1]{\orgname{Univ A}}
+\affil[2]{\orgname{Univ B}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

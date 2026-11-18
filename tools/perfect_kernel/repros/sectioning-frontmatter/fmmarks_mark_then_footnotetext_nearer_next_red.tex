@@ -1,0 +1,24 @@
+% mechanism: a given mark filled at once by `\footnotetext[2]` (which the title block never prints), nearer the next
+%   name: that name's note
+% witness:  revSHGIVENd d10
+% oracle:   pdflatex 0 errors; "Ann Able (27.3pt) † (4.0pt) Bob Baker Carl Cole"; "Bob note" printed nowhere
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 1 Warning; XML Ann Able ; thanks[]=Bob note / Bob Baker /
+%   Carl Cole; HTML Ann Able / Bob Baker / Carl Cole / margin: Bob note
+% expect:   0 errors, 0 Warnings; XML Ann Able / Bob Baker ; thanks[†]=Bob note / Carl Cole; HTML Ann Able / Bob Baker
+%   | under: Bob note / Carl Cole (the guard's XML and HTML lines)
+% moves:    XML row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole
+%   block); HTML the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the
+%   counted loss or the whole block)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores and _red)
+% ruling:  DG 2026-11-17 supersedes the nearer-by-glue rule of the expect above: between two names the name before,
+%   the next only at a line's or cell's start or under the block's edge proof (re-pinned, WRONGFIXb)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \qquad \footnotemark[2]\footnotetext[2]{Bob note} \ Bob Baker \and Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

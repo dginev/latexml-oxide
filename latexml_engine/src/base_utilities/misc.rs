@@ -424,6 +424,8 @@ fn xparse_signature_is_optional(toks: &[Token]) -> bool {
 
 /// An ORCID iD written as its orcid.org address — `https://orcid.org/<iD>`, `http://`, `www.`, or the bare
 /// `orcid.org/<iD>`, a trailing `/` — is the iD; anything else, and an argument holding a macro, is kept as written.
+/// An iD a line end broke (`orcid.org/0000-0002-⏎9546-4195`, 2503.20847) reads without the space TeX makes of it, which
+/// no iD holds ([`is_orcid_form`]).
 pub(super) fn orcid_id(id: Tokens) -> Tokens {
   if id
     .unlist_ref()
@@ -443,23 +445,41 @@ pub(super) fn orcid_id(id: Tokens) -> Tokens {
     }
   }
   rest = rest.strip_prefix("www.").unwrap_or(rest);
-  match rest.strip_prefix("orcid.org/") {
-    Some(r) => {
-      let start = trimmed.len() - r.len();
-      let bare = trimmed[start..].trim_end_matches('/');
-      Tokens::new(
-        bare
-          .chars()
-          .map(|c| {
-            if c == ' ' {
-              T_SPACE!()
-            } else {
-              T_OTHER!(c.to_string())
-            }
-          })
-          .collect(),
-      )
-    },
-    None => id,
-  }
+  let address = rest.strip_prefix("orcid.org/");
+  let bare = match address {
+    Some(r) => trimmed[trimmed.len() - r.len()..].trim_end_matches('/'),
+    None => trimmed,
+  };
+  let compact: String = bare.chars().filter(|c| !c.is_whitespace()).collect();
+  let bare = if compact != bare && is_orcid_form(&compact) {
+    compact.as_str()
+  } else if address.is_some() {
+    bare
+  } else {
+    return id;
+  };
+  Tokens::new(
+    bare
+      .chars()
+      .map(|c| {
+        if c.is_whitespace() {
+          T_SPACE!()
+        } else {
+          T_OTHER!(c.to_string())
+        }
+      })
+      .collect(),
+  )
+}
+
+/// An ORCID iD's form: four groups of four digits parted by hyphens, the last character a check digit or `X`.
+fn is_orcid_form(text: &str) -> bool {
+  let groups: Vec<&str> = text.split('-').collect();
+  groups.len() == 4
+    && groups.iter().all(|group| group.len() == 4)
+    && text
+      .chars()
+      .filter(|c| *c != '-')
+      .enumerate()
+      .all(|(at, c)| c.is_ascii_digit() || (at == 15 && matches!(c, 'X' | 'x')))
 }

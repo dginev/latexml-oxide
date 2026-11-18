@@ -1,0 +1,18 @@
+% mechanism: the carry past spacing decides per RUN (main's SHGIVEN fallback, 2026-11-16): the gap after the run
+%   (` \qquad`, 23.3pt) wider than the one before it (` \ `, 6.7pt) carries the whole run back, both marks Ann's, though
+%   the spacing between them is no narrower than the gap before
+% witness: none (2412.20504's `\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`, a run of two)
+% oracle:  pdflatex 0 errors; "Ann Able ∗ †   Bob Baker   Carl Cole"
+% engines: rust REGFIX: 0 errors, 1 Warning ("lost: *, †"); SHGIVENd 411b4158b63: both marks Bob's prefix; perl 0.8.8:
+%   0 errors
+% expect:  0 errors, 0 warnings; Ann * †, Bob, Carl
+% status:  RED (411b4158b63) -> GREEN (perfect_kernel_batchne2::a_marks_run_is_carried_back_whole_or_left)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \ \footnotemark[1] \ \footnotemark[2] \qquad Bob Baker \and Carl Cole}
+\date{}
+\maketitle
+Text.
+\end{document}

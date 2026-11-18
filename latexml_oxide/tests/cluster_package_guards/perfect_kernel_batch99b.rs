@@ -115,7 +115,7 @@ fn a_run_in_affiliation_setter_line_is_its_marked_authors() {
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(
     converted(repro!("run_in_affiliation_setter_without_a_line_break"), 0),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 
@@ -180,7 +180,7 @@ fn an_and_list_in_a_displaced_store_goes_by_the_class_numbers_or_stays_the_class
       repro!("displaced_lines_a_title_page_separator_numbers_stay_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">2</sup></personname> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1.1">1</text></sup><text fontsize="90%" xml:id="p1.1.2"> </text><text font="italic" fontsize="90%" xml:id="p1.1.3">Univ A, Town</text></p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1"><sup xml:id="p2.1.1"><text font="italic" fontsize="90%" xml:id="p2.1.1.1">2</text></sup><text font="italic" fontsize="90%" xml:id="p2.1.2"> Univ B, City</text></p> </para> <para cssstyle="--ltx-skip-before:10.0pt" xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <note mark="1" role="footnotemark" xml:id="id1"/> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note mark="2" role="footnotemark" xml:id="id2"/> </creator> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text font="italic" fontsize="90%" xml:id="p1.1.1.1">1</text></sup><text fontsize="90%" xml:id="p1.1.2"> </text><text font="italic" fontsize="90%" xml:id="p1.1.3">Univ A, Town</text></p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1"><sup xml:id="p2.1.1"><text font="italic" fontsize="90%" xml:id="p2.1.1.1">2</text></sup><text font="italic" fontsize="90%" xml:id="p2.1.2"> Univ B, City</text></p> </para> <para cssstyle="--ltx-skip-before:10.0pt" xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
   );
 }
 
@@ -196,6 +196,6 @@ fn a_rerouted_setter_inside_a_class_xdef_store_decides_where_it_is_digested() {
       repro!("run_in_email_inside_a_class_xdef_store_stays_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">1</sup></personname> </creator> <para xml:id="p1"> <p align="center" xml:id="p1.1"><text fontsize="90%" xml:id="p1.1.1">email: <ref class="ltx_href" href="mailto:info@univ-a.edu">info@univ-a.edu</ref><break/><sup xml:id="p1.1.1.1">1</sup>Univ A, Town</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <note mark="1" role="footnotemark" xml:id="id1"/> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note mark="1" role="footnotemark" xml:id="id3"/> </creator> <para xml:id="p1"> <p align="center" xml:id="p1.1"><text fontsize="90%" xml:id="p1.1.1">email: <ref class="ltx_href" href="mailto:info@univ-a.edu">info@univ-a.edu</ref><break/><sup xml:id="p1.1.1.1">1</sup>Univ A, Town</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
   );
 }

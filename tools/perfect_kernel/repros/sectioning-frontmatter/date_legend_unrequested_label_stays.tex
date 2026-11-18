@@ -1,0 +1,16 @@
+% mechanism: fail-safe: a date line whose label no name prints
+% oracle:   pdflatex 0 errors; "Ann Able1 Bob Baker2", "1 Dept A, Univ X", "3 Dept C, Univ Z"
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the date holds both lines. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; the date whole, both lines (an Info): a line no rule reads keeps the whole date, none of
+%   it taken (DG 2026-11-17); each name a mark-only note (OD #1071)
+% status:   GREEN (control, the fail-safe)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able$^1$ \and Bob Baker$^2$}
+\title{T}
+\date{$^1$Dept A, Univ X\\ $^3$Dept C, Univ Z}
+\begin{document}
+\maketitle
+Text.
+\end{document}

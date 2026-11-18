@@ -1,0 +1,22 @@
+% mechanism: a given mark then `$^{b}$` glued to the next name: both that name's marks, outside its personname
+% witness:  revSHGIVENc r8supbob (revSHGIVENd e4)
+% oracle:   pdflatex 0 errors; "Ann Able (27.3pt) † (4.0pt) bBob Baker Carl Cole"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 1 Warning; XML Ann Able / Bob Baker b / Carl Cole; HTML Ann
+%   Able / Bob Baker b / Carl Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able / Bob Baker ; footnotemark[b]= ; footnotemark[†]= / Carl Cole; HTML Ann
+%   Able / Bob Baker ; † plain ; b plain / Carl Cole (the guard's XML and HTML lines)
+% moves:    HTML row R MARKORDER (the notes' document order is not the order the PDF prints their marks; DG
+%   2026-11-16: minor, each mark is on its carrier)
+% status:   GREEN XML (the mark ledger, SHGNEXT; promoted at SHGNEXTb), RED HTML (the marks' order);
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_name_befores and _red
+% ruling:  DG 2026-11-17 supersedes the nearer-by-glue rule of the expect above: between two names the name before,
+%   the next only at a line's or cell's start or under the block's edge proof (re-pinned, WRONGFIXb)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \qquad \footnotemark[2] \ $^{b}$Bob Baker \and Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -39,16 +39,16 @@ fn a_paragraph_in_a_box_stays_a_group() {
       "minipage",
       repro!("amsart_dedicatory_box_paragraph_stays_a_group"),
       [
-        r#"<contact role="dedicatory"><sup xml:id="id2">1</sup>Univ X<break/>City Y</contact>"#,
-        r#"<contact role="dedicatory"><sup xml:id="id4">2</sup>Univ Z</contact>"#,
+        r#"<contact role="dedicatory"><sup xml:id="id1">1</sup>Univ X<break/>City Y</contact>"#,
+        r#"<contact role="dedicatory"><sup xml:id="id2">2</sup>Univ Z</contact>"#,
       ],
     ),
     (
       "parbox",
       repro!("amsart_dedicatory_parbox_paragraph_stays_a_group"),
       [
-        r#"<contact role="dedicatory"><sup class="ltx_centering" xml:id="id2">1</sup>Univ X<break class="ltx_centering"/>City Y</contact>"#,
-        r#"<contact role="dedicatory"><sup class="ltx_centering" xml:id="id4">2</sup>Univ Z</contact>"#,
+        r#"<contact role="dedicatory"><sup class="ltx_centering" xml:id="id1">1</sup>Univ X<break class="ltx_centering"/>City Y</contact>"#,
+        r#"<contact role="dedicatory"><sup class="ltx_centering" xml:id="id2">2</sup>Univ Z</contact>"#,
       ],
     ),
   ];
@@ -61,8 +61,8 @@ fn a_paragraph_in_a_box_stays_a_group() {
     );
     assert_eq!(
       creators(&xml),
-      rows(&[&["Ann Able 1", "dedicatory=1 Univ X City Y"], &[
-        "Bob Baker 2",
+      rows(&[&["Ann Able", "dedicatory=1 Univ X City Y"], &[
+        "Bob Baker",
         "dedicatory=2 Univ Z"
       ],]),
       "{name}: {xml}"
@@ -78,7 +78,8 @@ fn a_paragraph_in_a_box_stays_a_group() {
 /// e-mail line's `\texttt` (2402.02104, authblk `{minipage}`) and a `\thanks`'s `\href{mailto:…}` (2601.03873, mnras
 /// `\parbox`; its owner Ann Able is int157a's, the address printed in Cy Cole's footnote — pre-existing, outside this
 /// batch). That row pins a KNOWN-WRONG owner (SILENT_LOSS_INVENTORY "Bundle int158a — the residual"): a change moving
-/// the address to Cy Cole is a fix, not a regression; update the row then.
+/// the address to Cy Cole is a fix, not a regression; update the row then. (Since MARKBIND the `\thanks` holding it is
+/// Cy Cole's ⋆ note, Bob Baker's mark a copy of it; the e-mail contact is still Ann Able's.)
 /// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
 /// `</personname>`, so the name reads without its tags; pin updated (the note's move only).
 #[test]
@@ -88,18 +89,21 @@ fn a_paragraph_in_a_box_keeps_a_contacts_markup() {
       "minipage texttt",
       repro!("authblk_minipage_paragraph_keeps_a_typewriter_email"),
       (0, 0),
-      rows(&[&["Ann Able 1", "email=a@x.org", "affiliation=Univ X"]]),
-      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">a@x.org</text></contact>",
+      rows(&[&["Ann Able", "email=a@x.org", "affiliation=Univ X"]]),
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">a@x.org</text></contact>",
     ),
     (
       "parbox href",
       repro!("mnras_parbox_paragraph_keeps_a_mailto_link"),
       (0, 2),
       rows(&[
-        &["Team X: Ann Able 1", "email=team@x.org"],
-        // (the `\footnotemark`'s note beside the name, FN1; its tags' text was in the name on int157a)
-        &["Bob Baker 2"],
-        &["Cy Cole 3"],
+        &["Team X: Ann Able", "mark=1", "email=team@x.org"],
+        // (the `\footnotemark`'s note beside the name, FN1; its tags' text was in the name on int157a. MARKBIND:
+        // mnras's own `\@fnsymbol` marks the title, so Bob's `\footnotemark[1]` is the ⋆ of Cy's `\thanks` and a copy
+        // of it, as pdflatex prints "Bob Baker2⋆ , Cy Cole3⋆", where both were "1"; MARKKEY1: by its number, a copy of
+        // that note, OD #1058)
+        &["Bob Baker", "mark=2", "mark=⋆"],
+        &["Cy Cole", "mark=3", "mark=⋆"],
       ]),
       "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" href=\"mailto:team@x.org\">team@x.org</ref></contact>",
     ),

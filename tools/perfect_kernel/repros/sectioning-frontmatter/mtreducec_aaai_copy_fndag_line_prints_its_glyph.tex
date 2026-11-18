@@ -1,0 +1,34 @@
+% mechanism: the aaai binding (latexml_contrib aaai_sty.rs) declares the marks its copy's `\maketitle` sets, read off
+%   the body the lock refused (`shipped_class::input_shipped_package_title_marks`): a line it knows
+%   (`\def\thefootnote{\fnsymbol{footnote}}`, aaai25.sty:55-58), or one naming a macro of the copy's whose body is a
+%   fixed glyph (aaai2026.sty:135 `\def\thefootnote{\fndag}`, :210 `\def\fndag{†}`): that glyph; any other, none
+% witness:  2511.07192 (aaai2026.sty: "Kejiang Chen1†, Weiming Zhang1†", foot "† These authors are the corresponding
+%   authors."); the style a minimal stand-in of aaai2026.sty:132-160, :210
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able†, Bob Baker†"; foot "† These authors contributed
+%   equally." once
+% engines:  rust WRONGFIXc (the static reader) = 0 errors, 1 Warning; Ann and Bob a copy of one note marked †;
+%   MTREDUCEb (the binding's `\fnsymbol` declared whatever the copy's line) = the same marked ∗
+% expect:   0 errors, 1 Warning (the binding's `\equalcontrib` stub holds the note's text, no argument the emitter takes
+%   tokens from: written as its plain text, no markup to lose); Ann and Bob a copy of one
+%   note marked †
+% status:   GREEN (MTREDUCEc: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{aaai2026.sty}
+\def\maketitle{\par\begingroup\def\thefootnote{\fndag}\twocolumn[\@maketitle]\@thanks\endgroup
+  \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\newcounter{eqfn}\setcounter{eqfn}{0}%
+  \vbox{\let\footnote\thanks\relax\setcounter{footnote}{0}%
+    \def\equalcontrib{\ifnum\value{eqfn}=0 \footnote{These authors contributed equally.}%
+      \setcounter{eqfn}{\value{footnote}}\else\footnotemark[\value{eqfn}]\fi}%
+    \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
+\def\fndag{†}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{aaai2026}
+\title{A Title}
+\author{Ann Able\equalcontrib, Bob Baker\equalcontrib}
+\begin{document}
+\maketitle
+Body.
+\end{document}

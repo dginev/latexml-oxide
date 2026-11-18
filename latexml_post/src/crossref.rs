@@ -1872,7 +1872,9 @@ impl CrossRef {
     refs.extend(doc.findnodes("//*[@labelref]"));
     for ref_node in &refs {
       let tag = doc.get_qname(ref_node).unwrap_or_default();
-      if tag == "ltx:XMRef" {
+      // (a note's `idref` names the first copy of the note it repeats, OXIDIZED_DESIGN_DIVERGENCES #1059: a copy, no
+      // reference to fill)
+      if tag == "ltx:XMRef" || tag == "ltx:note" {
         continue;
       }
 

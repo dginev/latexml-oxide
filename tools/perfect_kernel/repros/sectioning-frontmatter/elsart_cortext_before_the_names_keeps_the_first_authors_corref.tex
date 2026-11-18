@@ -1,0 +1,19 @@
+% mechanism: a `\cortext` read before the names, then `\corref` right after the first name's call: the class's
+%   `\@corref`, which the first name prints where the names print (elsarticle.cls:188-190, :256-264); the first name's
+%   deferred label (`els@first@cor`, `els_settle_marks`) names the note whenever it was read
+% witness: ELSARTb (synthetic; 1501.03323's outside route with the note first)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,∗, Bob Twoa"; footnote "∗ First corresponding"
+% engines: rust ELSARTb before its moved-note record: the same creators, a false Warning (a fail-safe since removed)
+% expect:  0 errors 0 Warnings; Alice One the correspondence note
+% status:  GREEN (ELSARTb) (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\cortext[c1]{First corresponding}
+\author[l1]{Alice One}\corref{c1}
+\author[l1]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\end{frontmatter}
+x\end{document}

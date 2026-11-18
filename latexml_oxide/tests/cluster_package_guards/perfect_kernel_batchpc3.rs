@@ -36,10 +36,8 @@ fn a_title_code_command_after_an_email_keeps_its_argument() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(!xml.contains("<ERROR"), "{xml}");
   assert_eq!(creator_elements(&xml), [
-    "<creator role=\"author\">\n    <personname>Ann Able<sup>1</sup></personname>\n    <contact \
-     name=\"Email:\u{a0}\" role=\"email\"><sup>*</sup></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob \
-     Baker<sup>2</sup></personname>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"1\" role=\"footnotemark\"/>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><sup>*</sup></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note mark=\"2\" role=\"footnotemark\"/>\n  </creator>",
   ]);
 }
 

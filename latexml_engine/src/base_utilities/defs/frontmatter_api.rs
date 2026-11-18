@@ -252,6 +252,59 @@ const fn same_str(a: &str, b: &str) -> bool {
   true
 }
 
+/// The Frontmatter keys of the engine's and the bindings' own (`_word=`), outside Perl's API, each with its value type:
+/// declared, so their use reports no unknown key (`Info:undefined`), which before changed what a speculative title-page
+/// run read (osajnl's `\vphantom{M}`: 2203.08703, 2206.12157, 2311.18459, 2411.07865; 1512.06325's first paragraph lost
+/// `ltx_noindent`), and an undeclared one still reports, a typo included. One list, pinned key by key in
+/// `perfect_kernel_batche0`'s `API_KEYS_OUTSIDE_PERLS`.
+pub(crate) const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[
+  // the store an unclaimed-text net note was handed on from (frontmatter_stores.rs `hand_net_stores`; OD #953)
+  ("_net", "Semiverbatim"),
+  // a contact whose label its binding prints with the line (authblk's `\affil[x]`, `LABEL_PRINTS`; OD #961)
+  ("_labelprints", ""),
+  // the emitter's: the label that prints (`PRINTED_LABEL`, OD #980), the block's own creator (`BLOCK_CREATOR`), the
+  // corresponding author (`CORRESPONDING`), an entry its run's stopgap alone gave (`STOPGAP_ENTRY`)
+  ("_printedlabel", ""),
+  ("_blockcreator", ""),
+  ("_corresponding", ""),
+  ("_stopgap", ""),
+  // a creator's note marked from the counter or with its mark unknown (`insert::MARK_FROM_COUNTER`, `MARK_UNKNOWN`), and a
+  // contact several names share (`_share`, `insert::ROW_SHARED`)
+  ("_markfromcounter", ""),
+  ("_markunknown", ""),
+  ("_share", ""),
+  ("_rowshared", ""),
+  // what the engine writes on a queued entry and reads where it is placed (insert.rs, place.rs, relocate.rs,
+  // `frontmatter_api::cut` and `::kind`, `shared_notes::FOOTNOTE_PART`, the emitter, the resolver's api.rs), and what the
+  // bindings pass (REVTeX's `_grouped`, `_unsplit`, `_zone`; aa's and elsarticle's `_zone`; llncs's `_markpiece`;
+  // jheppub's `_mark`)
+  ("_answers", ""),
+  ("_cutlist", ""),
+  ("_fnpart", ""),
+  ("_group", ""),
+  ("_grouped", ""),
+  ("_kinded", ""),
+  ("_linefirst", ""),
+  ("_mark", ""),
+  ("_markintext", ""),
+  ("_markpiece", ""),
+  ("_marks", ""),
+  ("_markshown", ""),
+  ("_merged_checked", ""),
+  ("_nameprinted", ""),
+  ("_placedbymark", ""),
+  ("_sequence", ""),
+  ("_store", ""),
+  ("_unmarked", ""),
+  ("_unsplit", ""),
+  ("_withsup", ""),
+  ("_zone", ""),
+  // MARKKEY1 (OD #1058): the footnote number a note stands for (`latex_constructs::FOOTNOTE_VALUE`, as the kernel's
+  // notes record theirs) and a footnote text no carrier prints but by that mark (`insert::FOOTNOTE_TEXT`)
+  ("_fnvalue", ""),
+  ("_fntext", ""),
+];
+
 pub(in crate::base_utilities) fn load() -> Result<()> {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // General support for Front Matter. (PR #2767 rework)
@@ -364,26 +417,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // address's `_` and `~` are characters, not a script and a tie.
   DefKeyVal!("Frontmatter", "property", "Semiverbatim");
   DefKeyVal!("Frontmatter", "content", "Semiverbatim");
-  // Rust-only: the store an unclaimed-text net note was handed on from (frontmatter_stores.rs `hand_net_stores`), read
-  // where the note is placed (insert.rs `keep_unclaimed_net_notes`; OXIDIZED_DESIGN_DIVERGENCES #953).
-  DefKeyVal!("Frontmatter", "_net", "Semiverbatim");
-  // Rust-only: a contact whose label its binding prints with the line (authblk's `\affil[x]`, jheppub's
-  // `\affiliation[x]`, cas's letter: [`LABEL_PRINTS`]), read by the Kind step for a legend (insert.rs
-  // `kind_legend_contacts`; OXIDIZED_DESIGN_DIVERGENCES #961). Declared: an unknown key is reported (`Info:undefined`),
-  // and that report changed what osajnl's speculative title-page run read (its `\vphantom{M}` was lost: 2203.08703,
-  // 2206.12157, 2311.18459, 2411.07865).
-  DefKeyVal!("Frontmatter", "_labelprints", "");
-  // Rust-only: the label that prints, of an entry the frontmatter emitter wrote ([`PRINTED_LABEL`]; OD #980, P2 NT).
-  DefKeyVal!("Frontmatter", "_printedlabel", "");
-  // Rust-only: the author block's own creator, which the frontmatter emitter writes ([`BLOCK_CREATOR`]).
-  DefKeyVal!("Frontmatter", "_blockcreator", "");
-  // Rust-only: a creator the reading marks the corresponding author, which the frontmatter emitter writes and the Link step
-  // of an entry's addresses reads ([`CORRESPONDING`]). Declared, as `_labelprints` is: an unknown key's report
-  // (`Info:undefined`) changed the paragraphs after the title page (1512.06325's first paragraph lost `ltx_noindent`).
-  DefKeyVal!("Frontmatter", "_corresponding", "");
-  // Rust-only: an entry its run's stopgap alone gave its carriers, which the frontmatter emitter writes and the Link step
-  // of an entry's addresses reads ([`STOPGAP_ENTRY`]). Declared, as `_corresponding` is.
-  DefKeyVal!("Frontmatter", "_stopgap", "");
+  // Rust-only: the internal keys, the one list of them ([`FRONTMATTER_INTERNAL_KEYS`])
+  for (key, vtype) in FRONTMATTER_INTERNAL_KEYS {
+    DefKeyVal!("Frontmatter", key, vtype);
+  }
+  // the mark a creator's note prints: the note's own `mark` attribute (Perl's `ltx:note` schema), a note call of the
+  // frontmatter emitter (`emit::note_call`, OD #1053); declared, as the internal keys are
+  DefKeyVal!("Frontmatter", "mark", "");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never
@@ -458,6 +498,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
   // (its queueing meaning, which a block arriving while a flush digests the queue queues with: `\lx@frontmatter@late`)
   Let!("\\lx@frontmatter@queue@add", "\\lx@add@frontmatter");
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1074): `\lx@names@note{<role>}{<text>}`, a frontmatter note its class prints
+  // under the names, where the binding has checked the class does so (`_zone=names`): `insert::place_block_notes`.
+  DefMacro!(
+    "\\lx@names@note{}",
+    "\\lx@add@frontmatter{ltx:note}[role=#1,_zone=names]"
+  );
 
   // Beyond-Perl best-practice API (OXIDIZED_DESIGN #51): open an *empty*
   // frontmatter container element as a deliberate anchor for later annotations
@@ -1216,7 +1262,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
             let has_role_key = s!("_has{role}");
             // (a parent has the role already when it has such a contact; in a run, also when a mark of its own is
             // answered by a mark-picked contact of the role (`_bymark`, `\lx@affiliation@withsup`; or one its printed
-            // mark labels, `_plainmarks`/`_picturemarks`, as `marked_at` below reads it — a class's in-place
+            // mark labels, `insert::REQUESTED`, as `marked_at` below reads it — a class's in-place
             // `\affil{$^1$Univ A}`, so `\author{ANN ABLE$^1$ and BOB BAKER \affil{$^1$Univ A} \affil{Univ B}}` gives
             // Univ B to Bob Baker alone, as the observer's `Resolver::record_run`, review rev94a r7 SF2) — one deferred
             // until the labels are compared, or one this flush digests later (`lx_frontmatter_offered_labels`) — which
@@ -1232,7 +1278,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
                 .iter()
                 .filter(|e| {
                   e.attr.get("role").map(String::as_str) == Some("pending")
-                    && ["_bymark", "_plainmarks", "_picturemarks"]
+                    && ["_bymark", REQUESTED]
                       .iter()
                       .any(|key| e.attr.contains_key(*key))
                     && matches!(e.content.first(),
@@ -1253,7 +1299,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
               Vec::new()
             };
             // (nor is an author made before a deferred contact of the role a printed mark labels (`_bymark`, or the
-            // marks it requested, `_plainmarks`/`_picturemarks`) new: the contact waits for its label, so its owner
+            // marks it requested, `_requested`) new: the contact waits for its label, so its owner
             // holds no role yet — a class's in-place `\affil` in `\author{ANN ABLE$^1$ \affil{$^1$Univ A} BOB BAKER
             // \affil{Univ B}}` gave Ann Univ B too, IEEEtran's `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}` gave
             // the author above it the next block's `\IEEEauthorblockA{Univ Y}` (`annotate=new`; review rev94a r6 B1, the
@@ -1266,7 +1312,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
                 .iter()
                 .rposition(|e| {
                   e.attr.get("role").map(String::as_str) == Some("pending")
-                    && ["_bymark", "_plainmarks", "_picturemarks"]
+                    && ["_bymark", REQUESTED]
                       .iter()
                       .any(|key| e.attr.contains_key(*key))
                     && matches!(e.content.first(),
@@ -1392,10 +1438,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let (label, pictured) = frontmatter_label_request(
       &label,
       if prefix.is_empty() { "LABEL" } else { &prefix })?;
-    add_annotation_labels(label.join(","), false, pictured);
+    add_annotation_labels(label.join(","));
+    // (a mark command sets its mark in math, `\def\inst#1{\unskip$^{#1}$}` llncs.cls:894, whatever mode it is read in)
+    let marks = request_marks(&label, &pictured, false, None)?;
     if let Some(notes) = notes {
       unread(notes);
     }
+    Ok(marks)
   });
 
   // \lx@set@frontmatter@label Internal to digesting annotation contents.

@@ -1,0 +1,23 @@
+% mechanism: a key both a `\cortext` and an `\fntext` label names the `\fntext`: `\printFirstPageNotes` writes the
+%   correspondence notes' labels before the footnotes' (elsarticle.cls:766-778), the last written is `\elsRef`'s
+%   (:126-131); the `\cortext` is no name's (`els_note_label`)
+% witness: ELSROUTE sibling (synthetic)
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea,1 , Bob Twoa"; footnotes "∗ Corresponding author",
+%   "1 Equal contribution"
+% engines: rust b842de7fc4c and ELSART: Alice carries both notes (an `\fntext` read first: the `\cortext` the block's)
+%   ELSARTc: Alice the "Equal contribution" note, the correspondence note the block's
+% expect:  0 errors 0 Warnings; Alice One the "Equal contribution" note, marked 1; the correspondence note the block's
+% status:  RED (b842de7fc4c) -> RED (ELSART: the `\cortext` read before the `\fntext`; row R ELSKEYORDER) -> GREEN (ELSARTc: each note's label settled at the flush, `els_settle_note_labels`)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[l1,x]{Alice One}
+\author[l1]{Bob Two}
+\affiliation[l1]{organization={Some University},city={X},country={Y}}
+\cortext[x]{Corresponding author}
+\fntext[x]{Equal contribution}
+\end{frontmatter}
+x\end{document}

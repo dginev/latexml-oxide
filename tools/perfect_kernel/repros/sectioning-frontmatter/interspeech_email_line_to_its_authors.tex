@@ -1,0 +1,21 @@
+% mechanism: Interspeech.cls's `\email` line under the affiliations (2024 :265) is the authors' e-mails
+%   (`\lx@email@line@owned`, `listed_email_calls`, the rule of OD #1071's address lines): each address the author it
+%   spells, else the n-th author's in a list of one address per author (OD #1073)
+% witness: 2603.01467 (anfengxu@ to Anfeng Xu, yagaur@ to Yashesh Gaur), 2401.07506 (`\{zithas, harshay, tvprabs\}@`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2406.11727's Interspeech2024.cls) 0 errors: "Ada Byron, Bo Li, Cy Dee",
+%   "first@a.org, second@b.org, third@c.org"
+% engines: INTFMrel4 (208b29241bb): an e-mail note, no creator contact
+% expect:  0 errors, 0 warnings; first@a.org Ada's, second@b.org Bo's, third@c.org Cy's (by place); no e-mail note
+% status:  RED (INTFMrel4) -> GREEN (SPCONF; guard perfect_kernel_batchspconf)
+\documentclass{Interspeech2024}
+\interspeechcameraready
+\title{T}
+\name{Ada}{Byron}
+\name{Bo}{Li}
+\name{Cy}{Dee}
+\address{Department A \\ University A, City A}
+\email{first@a.org, second@b.org, third@c.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}
