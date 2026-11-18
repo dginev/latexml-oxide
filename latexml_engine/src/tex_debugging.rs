@@ -1,7 +1,7 @@
 //! TeX Debugging
 //!
 //! Core TeX Implementation for LaTeXML
-static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
+static EXCEPTION_MACRO_NAMES_FOR_MEANING: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(
     r"^\\(?:(?:un)?expanded|detokenize|(?:lx@)?directlua|(?:lx@)?luaescapestring|primitive)$",
   )
@@ -11,8 +11,8 @@ static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
 /// `\meaning` names them, as tex.web §296 `print_meaning` does (`print_cmd_chr`),
 /// while the definition is still the kernel's closure (a `\def\string{…}` is a
 /// macro). Perl prints `macro:#1#2->CODE(0x…)`, a heap address.
-static EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^\\(?:expandafter|noexpand|string|meaning)$").unwrap());
+static EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^\\(?:expandafter|noexpand|string|meaning)$").unwrap());
 /// TeX primitives the kernel implements as macros of its own (tex_math.rs `\over` family, `\overline`,
 /// `\underline`): `\meaning` prints the primitive's name, as tex.web §296 `print_meaning` does for the primitive (and
 /// LaTeX leaves these primitive, but `\underline`, whose `\@@underline` copy is), while the definition is still
@@ -22,14 +22,14 @@ static EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING: Lazy<Regex> =
 /// failed it with "Unable to properly define \@@over; primitive \over no longer primitive", and the class's `\frac`
 /// built on the unsaved `\@@over` lost its fraction (KNOWN_PERL_ERRORS #985). Perl TeX_Debugging.pool.ltxml:125-127
 /// keeps this list for `\expanded`/`\unexpanded`/`\detokenize` ("could be extended further").
-static KERNEL_PRIMITIVE_STANDINS_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
+static KERNEL_PRIMITIVE_STANDINS_FOR_MEANING: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(
     r"^\\(?:over|atop|above|overwithdelims|atopwithdelims|abovewithdelims|overline|underline)$",
   )
   .unwrap()
 });
-static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
-static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
+static LEAD_W_COLON_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(\w+):").unwrap());
+static UNTIL_SPEC: LazyLock<Regex> = LazyLock::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
 
 /// The parameter text of a delimited parameter as TeX prints it (tex.web
 /// §262 `print_cs`): every control word is followed by a space, so

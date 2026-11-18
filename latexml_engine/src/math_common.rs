@@ -54,7 +54,7 @@ fn def_math_atom(cs: &str, present: &str, role: Option<&str>, meaning: Option<&s
 
 // Match negations of many operators
 // our %NOTS
-static MATH_CHAR_NEGATIONS: Lazy<HashMap<String, &'static str>> = Lazy::new(|| {
+static MATH_CHAR_NEGATIONS: LazyLock<HashMap<String, &'static str>> = LazyLock::new(|| {
   map!("=" => "\u{2260}", "<" => "\u{226E}", ">" => "\u{226F}",
   "\u{2208}" => "\u{2209}",                              //\in=>\notin
   "\u{2264}" => "\u{2270}", "\u{2265}" => "\u{2271}",    // Less eq, greater eq.
@@ -82,7 +82,7 @@ struct DelimCharProps {
 }
 
 /// Char-keyed delimiter map for augmentDelimiterProperties lookup.
-static DELIM_CHAR_MAP: Lazy<HashMap<char, DelimCharProps>> = Lazy::new(|| {
+static DELIM_CHAR_MAP: LazyLock<HashMap<char, DelimCharProps>> = LazyLock::new(|| {
   raw_map!(
     '(' => DelimCharProps { left_role: "OPEN", right_role: "CLOSE",
       name: None, remove_meaning: false, replace_char: None },

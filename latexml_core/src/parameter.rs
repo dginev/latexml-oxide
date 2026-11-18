@@ -2,9 +2,9 @@ use std::{
   cell::{Cell, RefCell},
   fmt,
   rc::Rc,
+  sync::LazyLock,
 };
 
-use once_cell::sync::Lazy;
 #[cfg(feature = "codegen")]
 use proc_macro2::TokenStream;
 #[cfg(feature = "codegen")]
@@ -61,10 +61,11 @@ pub type DigestedReversionClosure = Rc<dyn Fn(&Digested) -> Result<Tokens>>;
 /// 887 M token reads per picture; symbolized profile
 /// `~/data/pk_agents/w23/perf_pgf/NOTES.md`), the same trap gullet.rs's
 /// `TRACE_GROUP_END` records. A debug switch set before launch never changes.
-static TRACE_ARGS: Lazy<Option<String>> = Lazy::new(|| std::env::var("LXML_TRACE_ARGS").ok());
+static TRACE_ARGS: LazyLock<Option<String>> =
+  LazyLock::new(|| std::env::var("LXML_TRACE_ARGS").ok());
 
-static LAST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\w$").unwrap());
-static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
+static LAST_WCHAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\w$").unwrap());
+static FIRST_WCHAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\w").unwrap());
 
 #[derive(Clone)]
 pub struct Parameter {
@@ -186,8 +187,8 @@ impl Object for Parameter {
   fn stringify(&self) -> String { arena::to_string(self.spec) }
 }
 
-static OPTIONAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Optional(.+)$").unwrap());
-static SKIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Skip(.+)$").unwrap());
+static OPTIONAL_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^Optional(.+)$").unwrap());
+static SKIP_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^Skip(.+)$").unwrap());
 
 /// A `{}` argument that is exactly one token whose MEANING is `{` (an
 /// implicit begin-group such as `\bgroup`, not a literal brace): the `{}`

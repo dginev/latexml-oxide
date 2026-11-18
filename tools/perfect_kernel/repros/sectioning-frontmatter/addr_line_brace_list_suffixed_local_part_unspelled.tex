@@ -1,0 +1,14 @@
+% witness: 2609.00833 (cortex run 397 Fatal panic/caught: `\{…,\,…\}.nju@gmail.com` under marked names)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Lee1 Bo Wu1", "Nanjing University", "{abcde, xy}.nju@gmail.com, {cd,
+%          ef}@nju.edu.cn" (the `\,` a thin space)
+% engines: M8B29 = Fatal panic (insert.rs `address_marks`: the local part `abcde.nju` the text does not spell moved the
+%          search by its byte length into the thin space U+2009); ADDRPANIC = 0 errors
+% expect:  0 errors, 0 warnings; both names hold Nanjing University and the four addresses, none lost or invented
+% status:  GREEN (ADDRPANIC: perfect_kernel_batch106a::a_brace_list_local_part_the_text_does_not_spell)
+\documentclass{article}
+\title{T}
+\author{Ann Lee$^{1}$ \quad Bo Wu$^{1}$ \\ $^1$ Nanjing University \\ \{abcde,\,xy\}.nju@gmail.com, \{cd,\,ef\}@nju.edu.cn}
+\begin{document}
+\maketitle
+x
+\end{document}

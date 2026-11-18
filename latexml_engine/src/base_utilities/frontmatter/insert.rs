@@ -4088,19 +4088,30 @@ const LINE_LIST: &str = "_linelist";
 /// and before it, else the previous address's — a mark opening the line leads all of it (`$**$ email: cx@…, c\_dee@…`,
 /// gr-qc0207058), one before each address its own (`$^1$a@x, $^2$b@y`, 1706.04764, 2505.11901). Marks following them:
 /// those after the address and before the next. Each address's place is its local part's in `text`, read on from the
-/// addresses' start, past each word read.
+/// addresses' start, past each word read; a local part the text does not spell (a brace list with a suffix,
+/// `\{a,\,b\}.x@…`, 2609.00833) is placed where the reading stands, which then moves past the next separator.
 fn address_marks(text: &str, marks: &[(usize, String)], cut: &AddressLineCut) -> Vec<Vec<usize>> {
   let mut places: Vec<usize> = Vec::new();
   let mut from = cut.address_start.min(text.len());
+  let separator = |c: char| c.is_whitespace() || ",;".contains(c);
   for address in &cut.addresses {
     let local = address.split('@').next().unwrap_or_default();
-    let at = text[from..].find(local).map_or(from, |at| from + at);
-    places.push(at);
-    from = at
-      + text[at..]
-        .find(|c: char| c.is_whitespace() || ",;".contains(c))
+    let rest = &text[from..];
+    from = if let Some(at) = rest.find(local).map(|at| from + at) {
+      places.push(at);
+      at + text[at..]
+        .find(separator)
         .unwrap_or(text.len() - at)
-        .max(local.len().min(text.len() - at));
+        .max(local.len())
+    } else {
+      // (a local part the text does not print, a suffixed list's `\{abcde,\,xy\}.nju@…` (2609.00833): placed where the
+      // search stands, the next searched past its separator — never by the absent part's length, which may end
+      // inside a character)
+      places.push(from);
+      rest.find(separator).map_or(text.len(), |sep| {
+        from + sep + rest[sep..].chars().next().map_or(0, char::len_utf8)
+      })
+    };
   }
   let opening = marks
     .first()

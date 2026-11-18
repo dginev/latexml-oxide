@@ -1474,14 +1474,14 @@ LoadDefinitions!({
   // Semiverbatim catcodes prevent `_`, `/`, `#` in path names from
   // tokenizing as SUB/ACTIVE.
   DefParameterType!(DirectoryList, sub[_inner, _extra] {
-    use once_cell::sync::Lazy;
+    use std::sync::LazyLock;
     use regex::Regex;
-    static SPLIT_RE: Lazy<Regex> =
-      Lazy::new(|| Regex::new(r",|\\par|\n+").unwrap());
-    static TRIM_LEAD: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+").unwrap());
-    static TRIM_TAIL: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+$").unwrap());
-    static STRIP_BRACE: Lazy<Regex> =
-      Lazy::new(|| Regex::new(r"^\s*\{([^\}]*)\}").unwrap());
+    static SPLIT_RE: LazyLock<Regex> =
+      LazyLock::new(|| Regex::new(r",|\\par|\n+").unwrap());
+    static TRIM_LEAD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s+").unwrap());
+    static TRIM_TAIL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+$").unwrap());
+    static STRIP_BRACE: LazyLock<Regex> =
+      LazyLock::new(|| Regex::new(r"^\s*\{([^\}]*)\}").unwrap());
 
     let arg = read_arg(ExpansionLevel::Off)?;
     let arg_string = arg.untex();

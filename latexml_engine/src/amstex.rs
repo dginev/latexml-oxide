@@ -1193,8 +1193,8 @@ fn tie_floated_tags_to_row(document: &mut Document) -> Result<()> {
 /// Whether the AMS-TeX style file at `path` `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`), outside
 /// comments.
 fn inputs_a_style(path: &str) -> bool {
-  static INPUT: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\input\s*\{?\s*([A-Za-z0-9_.-]+)").unwrap());
+  static INPUT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\input\s*\{?\s*([A-Za-z0-9_.-]+)").unwrap());
   let Ok(bytes) = std::fs::read(path) else {
     return false;
   };

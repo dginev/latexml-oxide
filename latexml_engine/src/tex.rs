@@ -1,10 +1,10 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 use crate::prelude::*;
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
-static INI_MODE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
-static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
+static INI_MODE: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
+static NODUMP: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
 
 /// Perl: DefAutoload — define a macro that auto-loads a package on first use.
 /// When the command is first invoked, it loads the specified package (via

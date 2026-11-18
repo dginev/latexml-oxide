@@ -25,9 +25,10 @@
 //! [`crate::dump_paths::detect_ambient_texlive_year`]); fall back to the
 //! most-recent year present at each step.
 
-use std::path::{Path, PathBuf};
-
-use once_cell::sync::Lazy;
+use std::{
+  path::{Path, PathBuf},
+  sync::LazyLock,
+};
 
 use crate::prelude::*;
 
@@ -37,10 +38,11 @@ const DEV_DUMPS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/d
 // `getenv` is unsafe under high-volume concurrent reads (test harness
 // threads) — see WISDOM #56 in user memory and `gullet::TRACE_GROUP_END`
 // for the underlying cause.
-static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
-static PLAIN_DUMP_PATH: Lazy<Option<String>> =
-  Lazy::new(|| std::env::var("LATEXML_PLAIN_DUMP_PATH").ok());
-static DUMP_DIR: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
+static NODUMP: LazyLock<bool> = LazyLock::new(|| std::env::var_os("LATEXML_NODUMP").is_some());
+static PLAIN_DUMP_PATH: LazyLock<Option<String>> =
+  LazyLock::new(|| std::env::var("LATEXML_PLAIN_DUMP_PATH").ok());
+static DUMP_DIR: LazyLock<Option<String>> =
+  LazyLock::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
 
 pub fn load_definitions() -> Result<()> {
   if *NODUMP {

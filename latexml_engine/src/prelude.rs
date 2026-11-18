@@ -1,6 +1,12 @@
 //! Generic support layer for any LaTeXML binding file
 
-pub use std::{borrow::Cow, collections::VecDeque, rc::Rc, str::FromStr, sync::Arc};
+pub use std::{
+  borrow::Cow,
+  collections::VecDeque,
+  rc::Rc,
+  str::FromStr,
+  sync::{Arc, LazyLock},
+};
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------.
@@ -95,7 +101,6 @@ pub use latexml_core::{
 };
 pub use libxml::tree::{Namespace, Node, NodeType};
 pub use log;
-pub use once_cell::sync::Lazy;
 pub use regex::Regex;
 pub use rustc_hash::FxHashMap as HashMap;
 

@@ -42,7 +42,13 @@ pub(super) fn contain<T>(what: &str, e: Box<EvalAltResult>, neutral: T) -> Resul
   if let Some(fatal) = take_raised_fatal(&e) {
     return Err(fatal);
   }
-  latexml_core::Error!("script", what, format!("{e}"));
+  let (text, pos) = describe_failure(&e);
+  let path = failed_body_path(&e);
+  latexml_core::Error!(
+    "script",
+    what,
+    with_script_locator(&text, script_locator(&path, pos))
+  );
   Ok(neutral)
 }
 

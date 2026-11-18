@@ -20,9 +20,11 @@
 //! `Err` arm carries a Perl-canonical `Fatal:invalid:not_tex_source`
 //! style message (matching what the binary printed before this lift).
 
-use std::path::{Path, PathBuf};
+use std::{
+  path::{Path, PathBuf},
+  sync::LazyLock,
+};
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 /// Discover the main `.tex` file inside `dir`, mirroring the binary's
@@ -677,59 +679,63 @@ fn parse_readme_json(dir: &Path) -> Option<String> { parse_readme_json_all(dir).
 
 // ---------------------------------------------------------------------------
 // Pre-compiled regexes used by `find_main_tex`. Parking these as module-
-// level `Lazy<Regex>` keeps a single instance per process and avoids the
+// level `LazyLock<Regex>` keeps a single instance per process and avoids the
 // per-call recompile that nesting them inside the function caused.
 // ---------------------------------------------------------------------------
 
-static RE_AUTOIGNORE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-ignore").unwrap());
-static RE_TEXINFO: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\input texinfo").unwrap());
-static RE_AUTOINCLUDE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%auto-include").unwrap());
-static RE_FORMAT_HINT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\r?%&(\S+)").unwrap());
-static RE_DOCCLASS: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
-static RE_MAYBE_TEX: Lazy<Regex> = Lazy::new(|| {
+static RE_AUTOIGNORE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"%auto-ignore").unwrap());
+static RE_TEXINFO: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\input texinfo").unwrap());
+static RE_AUTOINCLUDE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"%auto-include").unwrap());
+static RE_FORMAT_HINT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\r?%&(\S+)").unwrap());
+static RE_DOCCLASS: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"(?:^|\r)\s*\\document(?:style|class)").unwrap());
+static RE_MAYBE_TEX: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"(?:^|\r)\s*\\(?:font|magnification|input|def|special|baselineskip|begin)").unwrap()
 });
-static RE_INPUT_INCLUDE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
-static RE_END_BYE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
-static RE_END_BYE2: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
-static RE_BEGIN_DOCUMENT: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"\\begin\s*\{document\}").unwrap());
-static RE_MAC_TEX: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
-static RE_METAFONT: Lazy<Regex> = Lazy::new(|| Regex::new(r"beginchar\(").unwrap());
-static RE_BIBTEX: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
-static RE_UUENCODE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
-static RE_WITHDRAWN: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
-static RE_AMSTEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^amstex$").unwrap());
+static RE_INPUT_INCLUDE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"\\(?:input|include)(?:\s+|\{)([^ \}]+)").unwrap());
+static RE_END_BYE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"(?:^|\r)\s*\\(?:end|bye)(?:\s|$)").unwrap());
+static RE_END_BYE2: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"\\(?:end|bye)(?:\s|$)").unwrap());
+static RE_BEGIN_DOCUMENT: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"\\begin\s*\{document\}").unwrap());
+static RE_MAC_TEX: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"\\input *(?:harv|lanl)mac|\\input\s+phyzzx").unwrap());
+static RE_METAFONT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"beginchar\(").unwrap());
+static RE_BIBTEX: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"(?i)(?:^|\r)@(?:book|article|inbook|unpublished)\{").unwrap());
+static RE_UUENCODE: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^begin \d{1,4}\s+\S+\r?$").unwrap());
+static RE_WITHDRAWN: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"paper deliberately replaced by what little").unwrap());
+static RE_AMSTEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^amstex$").unwrap());
 // Perl `heuristic_check_for_pdftex` pdf-include probe: an `\includegraphics`
 // whose argument names a raster/pdf image (case-insensitive), not behind a `%`.
-static RE_PDF_INCLUDE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"(?i)^[^%]*\\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}").unwrap());
+static RE_PDF_INCLUDE: LazyLock<Regex> = LazyLock::new(|| {
+  Regex::new(r"(?i)^[^%]*\\includegraphics[^%]*\.(?:pdf|png|gif|jpg)\s?\}").unwrap()
+});
 // Perl `\pdfoutput(?:\s+)?=(?:\s+)?1` marker, not behind a `%`.
-static RE_PDFOUTPUT: Lazy<Regex> = Lazy::new(|| Regex::new(r"^[^%]*\\pdfoutput\s*=\s*1").unwrap());
+static RE_PDFOUTPUT: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^[^%]*\\pdfoutput\s*=\s*1").unwrap());
 // Supplementary-Material detection (find_top_level_texs). Filename tokens
 // (`paper_SI`, `supplement`, `z_SI_renamed`, `Supplemental_Materials`) — the
 // short `si`/`sm` forms only as delimited tokens so they can't match a substring.
-static RE_SUPP_NAME: Lazy<Regex> = Lazy::new(|| {
+static RE_SUPP_NAME: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"(?i)(^|[_-])(supp(lement(ary|al)?)?|supporting|supplemental|appendix|si|sm)([_-]|$)")
     .unwrap()
 });
 // Supplement `\title` text ("Supplementary Information for …", "SUPPLEMENTAL
 // MATERIALS", "Supporting Information", "Supplemental Materials for:").
-static RE_SUPP_TITLE: Lazy<Regex> = Lazy::new(|| {
+static RE_SUPP_TITLE: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"(?i)(supplement|supporting\s+information|supplemental|appendix)").unwrap()
 });
 // First braced argument of a `\title`/`\icmltitle` (comments already stripped).
-static RE_TITLE_ARG: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"\\(?:icml)?title\s*(?:\[[^\]]*\])?\s*\{([^}]*)").unwrap());
+static RE_TITLE_ARG: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"\\(?:icml)?title\s*(?:\[[^\]]*\])?\s*\{([^}]*)").unwrap());
 // Strip a single `%`-comment, stopping at the next `\r` so bare-`\r`
 // line-ended files (Mac classic) preserve post-comment `\documentclass`.
-static RE_STRIP_COMMENT: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\r]*").unwrap());
+static RE_STRIP_COMMENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"%[^\r]*").unwrap());
 
 #[cfg(test)]
 mod tests {

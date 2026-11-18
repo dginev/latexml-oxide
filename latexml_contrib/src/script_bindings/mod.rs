@@ -111,8 +111,13 @@ thread_local! {
   /// return value).
   static WIRED_COUNT: RefCell<usize> = const { RefCell::new(0) };
 
-  static SCRIPT_CACHE: RefCell<HashMap<String, CachedScript>> =
+  /// Compiled scripts by (`.rhai` path, source): the path is the AST's source, which diagnostics name.
+  static SCRIPT_CACHE: RefCell<HashMap<(String, String), CachedScript>> =
     RefCell::new(HashMap::new());
+
+  /// The body failure [`call_deferred_body`] returned last (its error's address) and the `.rhai` file it came
+  /// from, for the `contain` that reports it.
+  static FAILED_BODY: RefCell<Option<(usize, String)>> = const { RefCell::new(None) };
 
   /// Active-context stack for constructor bodies. Each entry publishes the live
   /// `&mut Document` + props of an in-flight `DefConstructor` call as raw
@@ -235,10 +240,7 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
 ];
 
 /// A value's type as a script author reads it (`Tokens`, `Definition`), not its Rust path.
-pub(super) fn type_label(v: &Dynamic) -> &'static str {
-  let name = v.type_name();
-  name.rsplit("::").next().unwrap_or(name)
-}
+pub(super) fn type_label(v: &Dynamic) -> &'static str { user_type_name(v.type_name()) }
 
 /// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement; the binding is
 /// the running script.
@@ -270,7 +272,13 @@ fn warn_deprecated_once(script: usize, old: &'static str) {
       .iter()
       .find(|(name, _)| *name == old)
       .map_or("", |(_, new)| *new);
-    latexml_core::Warn!("deprecated", old, format!("{old} is deprecated; use {new}"));
+    // (the call's line is not known here: the locator names the binding file)
+    let message = format!("{old} is deprecated; use {new}");
+    latexml_core::Warn!(
+      "deprecated",
+      old,
+      with_script_locator(&message, current_script_locator(rhai::Position::NONE))
+    );
   }
 }
 
@@ -360,7 +368,108 @@ pub(super) fn call_deferred_body<A: rhai::FuncArgs>(
   if let Some(params) = closure_arity(ast, body.fn_name()) {
     args_vec.resize(params.saturating_sub(body.curry().len()), Dynamic::UNIT);
   }
-  body.call::<Dynamic>(engine, ast, args_vec)
+  body.call::<Dynamic>(engine, ast, args_vec).map_err(|e| {
+    let path = ast.source().unwrap_or_default().to_string();
+    FAILED_BODY.with(|f| *f.borrow_mut() = Some((&*e as *const EvalAltResult as usize, path)));
+    e
+  })
+}
+
+/// The `.rhai` file a failure `e` that [`call_deferred_body`] returned came from (empty when unknown).
+pub(super) fn failed_body_path(e: &EvalAltResult) -> String {
+  FAILED_BODY
+    .with(|f| f.borrow_mut().take())
+    .filter(|(addr, _)| *addr == e as *const EvalAltResult as usize)
+    .map(|(_, path)| path)
+    .unwrap_or_default()
+}
+
+/// A type name as a script author reads it: Rhai's own names (`string`, `int`, `float`, `bool`, `array`, `map`,
+/// `Fn`) and ours (`Tokens`, `Node`), never the Rust path or Rhai's internal string trio.
+pub(super) fn user_type_name(name: &str) -> &str {
+  match name.trim() {
+    "&str | ImmutableString | String" | "&str" | "String" | "ImmutableString" | "string" => {
+      "string"
+    },
+    "i64" | "i32" | "INT" | "int" => "int",
+    "f64" | "f32" | "FLOAT" | "float" => "float",
+    "Array" | "array" => "array",
+    "Map" | "map" => "map",
+    "FnPtr" | "Fn" => "Fn",
+    other => other.rsplit("::").next().unwrap_or(other),
+  }
+}
+
+/// A Rhai failure as a binding's author reads it: the innermost error (not the closure-call chain) without Rhai's
+/// ` (line L, position C)` suffix, its types in [`user_type_name`] terms; and where it happened.
+pub(super) fn describe_failure(e: &EvalAltResult) -> (String, rhai::Position) {
+  let inner = e.unwrap_inner();
+  let pos = inner.position();
+  let text = match inner {
+    EvalAltResult::ErrorFunctionNotFound(sig, _) => {
+      let sig = match sig.split_once(" (") {
+        Some((name, args)) => {
+          let args = args.strip_suffix(')').unwrap_or(args);
+          let args: Vec<&str> = if args.is_empty() {
+            Vec::new()
+          } else {
+            args.split(", ").map(user_type_name).collect()
+          };
+          format!("{name} ({})", args.join(", "))
+        },
+        None => sig.clone(),
+      };
+      format!("Function not found: {sig}")
+    },
+    EvalAltResult::ErrorMismatchDataType(want, got, _) => format!(
+      "Data type incorrect: {} (expecting {})",
+      user_type_name(got),
+      user_type_name(want)
+    ),
+    EvalAltResult::ErrorMismatchOutputType(want, got, _) => format!(
+      "Output type incorrect: {} (expecting {})",
+      user_type_name(got),
+      user_type_name(want)
+    ),
+    other => {
+      let text = other.to_string();
+      match text.strip_suffix(&format!(" ({pos})")) {
+        Some(bare) if !pos.is_none() => bare.to_string(),
+        _ => text,
+      }
+    },
+  };
+  (text, pos)
+}
+
+/// A binding file's locator, in the TeX locator's form: `at <path>; line L col C` (`None` without a path).
+pub(super) fn script_locator(path: &str, pos: rhai::Position) -> Option<String> {
+  if path.is_empty() {
+    return None;
+  }
+  Some(match (pos.line(), pos.position()) {
+    (Some(line), Some(col)) => format!("at {path}; line {line} col {col}"),
+    (Some(line), None) => format!("at {path}; line {line}"),
+    _ => format!("at {path}"),
+  })
+}
+
+/// [`script_locator`] in the script now running (a load or a body), at `pos`.
+pub(super) fn current_script_locator(pos: rhai::Position) -> Option<String> {
+  let path = CURRENT_SCRIPT.with(|c| {
+    c.borrow()
+      .last()
+      .and_then(|(_, ast)| ast.source().map(str::to_string))
+  })?;
+  script_locator(&path, pos)
+}
+
+/// `message`, then the `.rhai` locator on its own line when there is one (the TeX locator follows it).
+pub(super) fn with_script_locator(message: &str, locator: Option<String>) -> String {
+  match locator {
+    Some(locator) => format!("{message}\n\t{locator}"),
+    None => message.to_string(),
+  }
 }
 
 /// [`closure_arity`]'s entry: the AST it was read from (held weakly: a dropped script's entry is recomputed) and
@@ -665,7 +774,7 @@ use wire::*;
 /// path is in scope (like reading `.sty` from texmf).
 pub fn load_file(path: &str) -> Result<usize> {
   let src = std::fs::read_to_string(path)?;
-  load_script(&src)
+  load_script_from(&src, path)
 }
 
 /// Load a binding script: compile once (cached by source), then RUN the script
@@ -676,22 +785,40 @@ pub fn load_file(path: &str) -> Result<usize> {
 /// `DefRegister`, …) re-apply on every load — i.e. per conversion, not just
 /// the first one that happened to compile the script. Returns the number of
 /// definitions installed.
-pub fn load_script(src: &str) -> Result<usize> {
+pub fn load_script(src: &str) -> Result<usize> { load_script_from(src, "") }
+
+/// [`load_script`] for the binding file at `path` (empty: an anonymous script), which its diagnostics name.
+///
+/// A failure is one `Error:script:<file>` whose locator is the `.rhai` line: a syntax error loads nothing; a run
+/// error keeps what the statements before it defined and skips the rest (the loader then marks the file loaded, so
+/// its raw `.sty`/`.cls` is not read instead).
+pub fn load_script_from(src: &str, path: &str) -> Result<usize> {
+  let key = (path.to_string(), src.to_string());
   // Fast path: a previously-compiled script with the same source.
-  let cached = SCRIPT_CACHE.with(|c| c.borrow().get(src).cloned());
+  let cached = SCRIPT_CACHE.with(|c| c.borrow().get(&key).cloned());
   let cached = match cached {
     Some(c) => c,
     None => {
       let engine = make_engine();
-      let ast = engine
-        .compile(src)
-        .map_err(|e| Error::from(format!("script-binding compile error: {e}")))?;
+      let mut ast = engine.compile(src).map_err(|e| {
+        let pos = e.position();
+        let text = e.to_string();
+        let text = text.strip_suffix(&format!(" ({pos})")).unwrap_or(&text);
+        load_failure(
+          path,
+          &format!("Syntax error: {text}; the binding is not loaded"),
+          pos,
+        )
+      })?;
+      if !path.is_empty() {
+        ast.set_source(path);
+      }
       let cs = CachedScript {
         engine: Rc::new(engine),
         ast:    Rc::new(ast),
       };
       SCRIPT_CACHE.with(|c| {
-        c.borrow_mut().insert(src.to_string(), cs.clone());
+        c.borrow_mut().insert(key, cs.clone());
       });
       cs
     },
@@ -708,11 +835,34 @@ pub fn load_script(src: &str) -> Result<usize> {
   let run = {
     let _script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
     cached.engine.run_ast(&cached.ast).map_err(|e| {
-      take_raised_fatal(&e).unwrap_or_else(|| Error::from(format!("script-binding run error: {e}")))
+      take_raised_fatal(&e).unwrap_or_else(|| {
+        let (text, pos) = describe_failure(&e);
+        load_failure(
+          path,
+          &format!("{text}; the rest of the binding is skipped"),
+          pos,
+        )
+      })
     })
   };
   run?;
   Ok(WIRED_COUNT.with(|c| *c.borrow()) - before)
+}
+
+/// A binding that failed to load, as `Error:script:<file>` with the `.rhai` locator: an error naming its own
+/// category and object, which the loader logs as spelled (`content::input_definitions`).
+fn load_failure(path: &str, message: &str, pos: rhai::Position) -> Error {
+  use latexml_core::common::error::{ErrorCategory, ErrorData, ErrorTarget};
+  let file = path
+    .rsplit('/')
+    .next()
+    .filter(|f| !f.is_empty())
+    .unwrap_or("binding");
+  Error::from(ErrorData {
+    target:   ErrorTarget::Named("script".to_string()),
+    category: ErrorCategory::Named(file.to_string()),
+    message:  with_script_locator(message, script_locator(path, pos)),
+  })
 }
 
 /// Build a partial `Font` from a Rhai map, Perl Font.pm `merge`'s keys (920-961) — the `fontmap!` analog, shared by

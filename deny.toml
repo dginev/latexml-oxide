@@ -25,15 +25,18 @@ yanked = "deny"
 ignore = [
   # smartstring is UNMAINTAINED (repo archived 2026-05-03), not vulnerable — no
   # CVE, just no upstream maintenance. It is rhai's `ImmutableString` backing
-  # type, a hard transitive dep of rhai 1.25.1 (the latest release), so it cannot
-  # be dropped without dropping rhai. rhai reaches the graph ONLY via the opt-in
-  # `runtime-bindings` feature; the production cortex_worker builds rhai-free, so
-  # smartstring never enters the arXiv-conversion binary. Reviewed 2026-08-12.
+  # type, a hard dep of rhai (still in 1.27.0, the newest release), so it cannot
+  # be dropped without dropping rhai. rhai reaches the graph ONLY via the
+  # `runtime-bindings` feature — on by default, and kept by the distribution binary
+  # (latexml_oxide, built by tools/make_release.sh), so the released binary ships
+  # smartstring; only the production cortex_worker, built `--no-default-features
+  # --features cortex`, is rhai-free. Reviewed 2026-08-12, 2026-11-18.
   "RUSTSEC-2026-0249",
   # chrono is UNMAINTAINED (RUSTSEC-2026-0543, chronotope/chrono#1768; "no safe upgrade"), not vulnerable — no CVE.
   # A direct dependency of latexml and latexml_engine (default-features off, `clock` + `std`): the local date/time for
-  # \today, \time, \pdfcreationdate and the run identity (identity.rs, source_date.rs, tex_job.rs, pdftex.rs).
-  # Replacing it (jiff / time) is its own change, tracked as SYNC_STATUS row R CHRONO. Reviewed 2026-11-17.
+  # \today, \time, \pdfcreationdate and the run identity (identity.rs, source_date.rs, tex_job.rs, pdftex.rs); also
+  # reached through `pericortex` (the `cortex` feature, its logger's `chrono::Local`). The ignore stays for v0.8.0
+  # (DG 2026-11-18); replacing it is SYNC_STATUS row R CHRONO, after the release. Reviewed 2026-11-17, 2026-11-18.
   "RUSTSEC-2026-0543",
 ]
 
