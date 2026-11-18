@@ -37,3 +37,28 @@ fn scalebox_mark_spells_its_glyph_not_its_scale() {
     ]);
   }
 }
+
+/// What follows a scale factor in its braces is dropped, one Warning each, not read after the box: Dia's pstricks export
+/// writes old pstricks' `\scalebox{1.000000 -1.000000}{label}` (cs0606057), whose "-1" printed beside every label once
+/// the factor read as a `Float` (Perl drops it silently, Gullet.pm:57-69; pdflatex errs, "Illegal unit"). Invalid input
+/// on purpose: the two Warnings are the count.
+#[test]
+fn a_scale_factors_tail_is_dropped_with_a_warning() {
+  let (log, xml) = run(
+    r"\documentclass{article}\usepackage{graphicx}\begin{document}A\scalebox{1 -1}{XY}B \scalebox{0.5}[1 -1]{Q}R\end{document}",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_eq!(
+    log
+      .matches("argument of \\scalebox ('-1'); it is dropped")
+      .count(),
+    2,
+    "{log}"
+  );
+  let para = &xml[xml.find("<para").expect("para")..xml.find("</para>").expect("para end")];
+  assert_eq!(
+    super::perfect_kernel_batch84b::text(para),
+    "A XY B Q R",
+    "{para}"
+  );
+}

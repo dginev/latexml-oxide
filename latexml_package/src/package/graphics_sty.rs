@@ -242,9 +242,21 @@ LoadDefinitions!({
 
   // == Scaling boxes ==
 
+  // A scale factor, Perl's `Float` read in the factor's own braces, whose rest is dropped with a Warning, as Perl's
+  // forced `closeMouth` drops it silently (Gullet.pm:57-69): not read after the box (OXIDIZED_DESIGN #317), where
+  // TeX's scale arithmetic would not put it either (`\scalebox{1 -1}`: pdflatex "Illegal unit", no output). Dia's
+  // pstricks export writes old pstricks' `\scalebox{1.000000 -1.000000}{label}` (cs0606057).
+  DefParameterType!(GraphixFloat, sub[_inner, _extra] {
+    let factor = read_float()?;
+    if in_braced_read() {
+      drop_argument_tail(&T_CS!("\\scalebox"), take_rest_of_mouth(), "graphics.sty's scale arithmetic errs on it");
+    }
+    factor
+  });
+
   // \scalebox{xscale}[yscale]{content} — Perl graphics.sty.ltxml:93 `\Gscale@box {Float} [Float] {}`: the scales are
   // quantities, which no text reader prints (a `\scalebox{0.75}{\Letter}` mark read "0.75🖂", 2606.29928, 2605.23320)
-  DefConstructor!("\\scalebox{Float}[Float]{}", "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
+  DefConstructor!("\\scalebox{GraphixFloat}[GraphixFloat]{}", "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   properties => sub[args] {
     // (Perl's Float prints by `floatformat`: 3 → "3.0", 0.75 → "0.75")

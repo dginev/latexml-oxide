@@ -20722,8 +20722,12 @@ Checked in Chrome at 1800 px (also scrolled) and 375 px on every mark of 15 pape
 **Perl.** graphics.sty.ltxml:93 `\Gscale@box {Float} [Float] {}` (`\scalebox` its `Let`); its text readers are the
 XML's. **Rust.** `\scalebox` had drifted to `{} []{}`, and the text readers (util_text.rs `shown_arguments`,
 `first_ink`, the frontmatter's `label_ink` and event walker) printed every argument whose type was not keyvals, a
-position or verbatim — and read a braced `{Float}` as `Plain`. Now `\scalebox` reads Perl's `{Float}[Float]{}`, its
-`xscale`/`yscale` Perl's `floatformat` (0.75, not the old `{:.1}` 0.8); `argument_types` takes a braced or bracketed
+position or verbatim — and read a braced `{Float}` as `Plain`. Now `\scalebox` reads Perl's `{Float}[Float]{}` (as
+`GraphixFloat`: a `Float` whose rest in its braces is dropped with `Warning:unexpected`, as Perl's forced
+`closeMouth` drops it silently, Gullet.pm:57-69, not read after the box as #317 hands a tail back — Dia's pstricks
+export's old-pstricks `\scalebox{1.000000 -1.000000}{label}` printed "-1" by every label, cs0606057; pdflatex errs),
+its `xscale`/`yscale` and its reversion Perl's `floatformat` (0.75, not the old `{:.1}` 0.8; `\scalebox{.58}`
+reverts as `\scalebox{0.58}`); `argument_types` takes a braced or bracketed
 group of one typed parameter by that type (shared by `argument_kinds`, `settings_arguments` and the walker's
 `numeric_arguments`), and `argument_kinds` counts a quantity (`Number`, `Float`, `Dimension`, `Glue`) with keyvals
 and positions: no shown ink. A `\scalebox{0.75}{\Letter}` mark read "0.75🖂", answered by no note and dropped with
@@ -20731,7 +20735,7 @@ and positions: no shown ink. A `\scalebox{0.75}{\Letter}` mark read "0.75🖂", 
 the same path. The walker's `KEYED_CONSTRUCTORS` row for `\scalebox` is gone (the types say it).
 **Witnesses.** 2606.29928, 2605.23320 (llncs `\corrauth`). **Guard.**
 `cluster_package_guards::perfect_kernel_batchmarkscale::scalebox_mark_spells_its_glyph_not_its_scale` (repro
-`sectioning-frontmatter/mark_scalebox_scale_is_no_ink`).
+`sectioning-frontmatter/mark_scalebox_scale_is_no_ink`), `a_scale_factors_tail_is_dropped_with_a_warning`.
 
 ## TeX-source fidelity family (TEXSRC)
 
