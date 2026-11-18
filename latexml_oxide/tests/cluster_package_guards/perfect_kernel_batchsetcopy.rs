@@ -5,7 +5,8 @@
 //! \author` … `\orig@author{\toc@authors}` replayed the class's `\g@addto@macro\toc@authors{\and \toc@authors}` through
 //! the copy, a self-containing list and a Fatal box runaway (1811.06821, 1811.11810, 1904.05269, 2011.14174 aic.cls;
 //! 1905.07135, 2311.03341 toc). Restoring the setter from its copy (`\let\author\orig@author`) leaves the kernel's own
-//! setter, the refusal's records cleared (review SETCOPY B1). Repros under `tools/perfect_kernel/repros/sectioning-frontmatter/setter_copy/`.
+//! setter, the refusal's records cleared in the `\let`'s scope (review SETCOPY B1, re-review SETCOPYb). Repros under
+//! `tools/perfect_kernel/repros/sectioning-frontmatter/setter_copy/`.
 use super::{
   convert_with,
   perfect_kernel_batch46::{error_count, warning_count},
@@ -92,4 +93,23 @@ fn a_restored_setter_drops_the_class_definition() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(names(&xml), ["Bob Baker"]);
   assert!(xml.contains("Short: Ann Able."), "{xml}");
+}
+
+/// A restore is a `\let` of the group it is made in: inside `\begingroup … \endgroup` the refused redefinition and its
+/// records come back at `\endgroup` (red, round 1's global clear: "First: ."), and a global redefinition made inside
+/// that group outlives it (tex.web §283). Distinct from the restores above: the restore's scope, not its effect.
+#[test]
+fn a_restore_in_a_group_ends_with_it() {
+  for (file, store) in [
+    (repro!("local_restore.tex"), "First: Ann Able."),
+    (repro!("global_in_group.tex"), "Second: Ann Able."),
+  ] {
+    let (log, xml) = convert_with(file, Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(names(&xml), ["Ann Able"]);
+    assert!(
+      xml.contains(&format!(r#"<p xml:id="p1.1">{store}</p>"#)),
+      "{xml}"
+    );
+  }
 }

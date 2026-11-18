@@ -3220,15 +3220,18 @@ impl HiddenRefusal {
 
 impl Drop for HiddenRefusal {
   fn drop(&mut self) {
-    // (a refusal the body itself made meanwhile, which records `:redefined` with the rest, is newer and stays)
-    if lookup_bool(&s!("\\{}:redefined", self.name)) {
-      return;
-    }
-    if let Some(meaning) = self.dropped_meaning.take() {
+    // A refusal the body itself made meanwhile is newer and stays, its dropped body with it; the other records only
+    // accumulate (`note_redefined`), so the older ones it left unset come back (an older `@class`, `@default`).
+    let newer = lookup_bool(&s!("\\{}:redefined", self.name));
+    if let Some(meaning) = self.dropped_meaning.take()
+      && !newer
+    {
       assign_meaning(&self.dropped, meaning, Some(Scope::Global));
     }
     for (key, value) in self.values.drain(..) {
-      assign_value(&key, value, Some(Scope::Global));
+      if !newer || lookup_value(&key).is_none_or(|v| matches!(v, Stored::None)) {
+        assign_value(&key, value, Some(Scope::Global));
+      }
     }
   }
 }

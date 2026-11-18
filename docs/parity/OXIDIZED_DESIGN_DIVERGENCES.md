@@ -20772,13 +20772,15 @@ macro whose body opens with `\lx@sealed@class@call`/`\lx@titlepage@class@call`/`
 taken while `\<name>:redefined` is unset, gets the body wrapped as `\lx@setter@as@copied{<name>}{<body>}`, same
 parameters (one string test on the first token for every other `\let`). That primitive (sect05.rs) digests the body
 with `\lx@dropped@<name>` and `\<name>:redefined{,@class,@document,@nargs,@in,@default}` hidden (`HiddenRefusal`,
-put back on drop, error too, unless the body made a newer refusal meanwhile): no replay, `\lx@add@authors@adaptive` replaces (LaTeX's `\gdef\@author`), no sealed-off redirect, no trailing
+put back on drop, error too; a newer refusal the body made meanwhile stays, the older records it left unset come back,
+as the records only accumulate): no replay, `\lx@add@authors@adaptive` replaces (LaTeX's `\gdef\@author`), no sealed-off redirect, no trailing
 surplus read. `x_equals` reads the copy and the setter as one meaning: `\ifx\orig@author\author` is true, as in TeX,
 only BEFORE the redefinition; after it TeX says false and ours still true (the lock kept the setter). A copy taken
 after the refusal is unchanged: in TeX it holds the class's definition, which the replay stands for. Restoring the
 setter from its copy (`\let\author\orig@author`, `\global\let` too; `restored_setter`) installs the unwrapped body and
-clears the refusal's records globally, as in TeX, where the class's definition is gone: a later redefinition is
-refused afresh and replays.
+clears the refusal's records in the `\let`'s scope, as in TeX, where the class's definition is gone: a later
+redefinition is refused afresh and replays; a restore inside a group reverts at `\endgroup` (the refused definition and
+its records back), a global redefinition made inside that group survives it (tex.web §283).
 **Residuals.** A copy taken between two refusals replays the second; replays issued from Rust closures (authblk
 `\affil`, authblk_sty.rs:419; the kernel `\abstract`) are not wrapped; `\meaning` of the copy shows the wrapper; a store
 the class's replayed setter changed, handed whole to the copy, reads as no events of the copy's block, so each name is
@@ -20789,7 +20791,8 @@ engine's macro names as strings (`setter_as_copied`, `frozen_setter_parts`), the
 `perfect_kernel_batche0`. **Guards.**
 `cluster_package_guards::perfect_kernel_batchsetcopy::{a_copy_taken_before_the_redefinition_is_the_kernels_setter,
 a_copy_in_an_end_code_takes_the_class_list_once, a_copy_taken_after_the_redefinition_still_replays,
-a_restored_setter_takes_a_later_redefinition_afresh, a_restored_setter_drops_the_class_definition}` (repros
+a_restored_setter_takes_a_later_redefinition_afresh, a_restored_setter_drops_the_class_definition,
+a_restore_in_a_group_ends_with_it}` (repros
 `sectioning-frontmatter/setter_copy/`).
 
 ## TeX-source fidelity family (TEXSRC)

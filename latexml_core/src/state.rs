@@ -7849,7 +7849,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
       return;
     }
   }
-  let meaning = restored_setter(token1, meaning).unwrap_or_else(setter_as_copied);
+  let meaning = restored_setter(token1, meaning, scope).unwrap_or_else(setter_as_copied);
   carry_document_refusal_records(token1, token2, scope);
   assign_meaning(token1, meaning, scope);
   let _ = after_assignment();
@@ -7906,10 +7906,15 @@ pub const REFUSAL_RECORD_SUFFIXES: [&str; 6] =
   ["", "@class", "@document", "@nargs", "@in", "@default"];
 
 /// `\let\<name>\<copy>` of a frozen copy of `\<name>` itself ([`setter_as_copied`]) restores the setter: in TeX the
-/// class's definition is gone, so the copy's body is installed unwrapped and the refusal's records are cleared globally
-/// (`\lx@dropped@<name>`, [`REFUSAL_RECORD_SUFFIXES`]); a later refused redefinition records itself again and replays.
+/// class's definition is gone, so the copy's body is installed unwrapped and the refusal's records are cleared in the
+/// `\let`'s own scope, as TeX's `\let` (a group's restore reverts at `\endgroup`; `\lx@dropped@<name>`,
+/// [`REFUSAL_RECORD_SUFFIXES`]); a later refused redefinition records itself again and replays.
 /// Review SETCOPY B1 (`\let\author\orig@author` then a second `\renewcommand\author`). OXIDIZED_DESIGN_DIVERGENCES #1078.
-fn restored_setter(token1: &Token, meaning: Stored) -> std::result::Result<Stored, Stored> {
+fn restored_setter(
+  token1: &Token,
+  meaning: Stored,
+  scope: Option<Scope>,
+) -> std::result::Result<Stored, Stored> {
   let Some((name, inner)) = frozen_setter_parts(&meaning) else {
     return Err(meaning);
   };
@@ -7928,14 +7933,14 @@ fn restored_setter(token1: &Token, meaning: Stored) -> std::result::Result<Store
     TableName::Meaning,
     arena::pin(s!("\\lx@dropped@{name}")),
     Stored::None,
-    Some(Scope::Global),
+    scope,
   );
   for suffix in REFUSAL_RECORD_SUFFIXES {
     state.assign_internal(
       TableName::Value,
       arena::pin(s!("\\{name}:redefined{suffix}")),
       Stored::None,
-      Some(Scope::Global),
+      scope,
     );
   }
   Ok(Stored::Expandable(Rc::new(restored)))
