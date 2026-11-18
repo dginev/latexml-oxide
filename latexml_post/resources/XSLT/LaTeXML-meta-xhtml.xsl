@@ -93,7 +93,7 @@
        never a repeat). Every other role, a running head or the publication's metadata (jmlr's heading, 1710.08165; a
        volume; a short title), the PDF prints in no title block: Perl's hidden note. Keyed by role and text. -->
   <xsl:key name="f:document-note-shown"
-           match="ltx:document/ltx:note[not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]
+           match="/ltx:document/ltx:note[not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]
                   [@role='footnote' or @role='footnotetext' or @role='thanks' or @role='affiliationnotice'
                    or @role='address' or @role='affiliation' or @role='email' or @role='corresponding'
                    or @role='correspondence' or @role='authorinfo' or @role='equal-contributors' or @role='funding'
@@ -161,45 +161,87 @@
        author's notes render, so only theirs are keyed (an editor's copy first would link to no page element); a note
        with no mark or no text is never a repeat (two image-only notes are two notes). -->
   <xsl:key name="f:shared-creator-note"
-           match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
+           match="ltx:creator/ltx:note[../@role='author'][normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))"/>
   <!-- The same notes by block and mark alone, and the linkable mark-only notes (a symbol, or Perl's tagged leftover),
        ∗ folded to *: a mark-only note links to the one note its mark names (OD #1052, R22; 1705.05427, 1903.10478,
        1610.06031, 0801.1438, 2406.11149). -->
   <xsl:key name="f:creator-note-by-mark"
-           match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
+           match="ltx:creator/ltx:note[../@role='author'][normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
   <xsl:key name="f:creator-mark-only"
-           match="ltx:creator[@role='author']/ltx:note[@role='footnotemark'][normalize-space(@mark)]
+           match="ltx:creator/ltx:note[../@role='author'][@role='footnotemark'][normalize-space(@mark)]
                   [ltx:tags or translate(normalize-space(@mark),'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρςστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ','')
                                = normalize-space(@mark)]"
            use="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
   <!-- An author's note by block and the character its text opens with: a legend of the glyph (2607.28158). -->
   <xsl:key name="f:creator-note-opening"
-           match="ltx:creator[@role='author']/ltx:note[not(@role='footnotemark')]"
+           match="ltx:creator/ltx:note[../@role='author'][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',
                   translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
                             '&#x2217;','*'))"/>
   <!-- A glyph the title page prints outside the author blocks (no section, float or table holds it; ∗ folded to *): a
        note's mark (`$\ast$` too), the symbol a note, a publication note, the date, a title, a paragraph or a table cell
        opens with (revCONNFIXb s4, b3); a mark of it links
-       nowhere (OD #1052; revCONNFIX p1, p3-p5, q4, q5; a body footnote or a table's `*` line not, 2008.06630, 2406.07029). -->
+       nowhere (OD #1052; revCONNFIX p1, p3-p5, q4, q5; a body footnote or a table's `*` line not, 2008.06630, 2406.07029).
+       (The patterns walk only the root, its children and the subtrees of the children no excluded unit is: libxslt
+       builds every key of a document at the first key() call, and a full-document pattern pass costs 4-8 % of a
+       conversion, 0906.1883, 1607.07280. The node sets are those of `X[not(ancestor::…)]`.) -->
   <xsl:key name="f:glyph-elsewhere"
-           match="ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part
-                                   or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index
-                                   or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
+           match="/ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
+                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
+                    //ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
            use="translate(normalize-space(@mark),'&#x2217;$^{} ','*')"/>
   <xsl:key name="f:glyph-elsewhere"
-           match="ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part
-                                   or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index
-                                   or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
+           match="/ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
+                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
+                    //ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
            use="'*'"/>
   <xsl:key name="f:glyph-elsewhere"
-           match="*[self::ltx:note or self::ltx:pubnote or self::ltx:date or self::ltx:title or self::ltx:subtitle or self::ltx:p
-                     or self::ltx:td]
-                   [not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part
-                                   or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index
-                                   or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
+           match="/*[self::ltx:note or self::ltx:pubnote or self::ltx:date or self::ltx:title or self::ltx:subtitle or self::ltx:p
+                     or self::ltx:td][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[self::ltx:note or self::ltx:pubnote or self::ltx:date or self::ltx:title or self::ltx:subtitle or self::ltx:p
+                     or self::ltx:td][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
+                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
+                    //ltx:note[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
+                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
+                    //ltx:pubnote[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
+                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
+                    //ltx:date[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
+                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
+                    //ltx:title[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
+                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
+                    //ltx:subtitle[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
+                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
+                    //ltx:p[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]
+                  |/*/*[not(self::ltx:creator or self::ltx:section or self::ltx:chapter or self::ltx:part or self::ltx:appendix
+                       or self::ltx:bibliography or self::ltx:index or self::ltx:float or self::ltx:table or self::ltx:figure)]
+                    //ltx:td[not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part or ancestor::ltx:appendix
+                       or ancestor::ltx:bibliography or ancestor::ltx:index or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
            use="translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
                           '&#x2217;','*')"/>
 
@@ -349,44 +391,31 @@
   <!-- Each glyph the document prints, asterisks folded (* = ∗), by the element printing it: a note's mark; a note's or
        creator's printed tag (not a section's number); a superscript; a formula of the glyph alone inside a note,
        contact or publication note (2012.13912's `\authornote{… \\ $\dagger$ Xiaojiang Peng is …}`, 2508.05506's
-       `\blfootnote{$\dagger$ Prior to joining …}`); the symbol, or the run of letters or digits, that a note, contact or
-       publication note opens with, its tags left out (a legend's `$*$Xiang Wang is the corresponding author`,
-       2010.10783). A generated mark is a glyph none of these prints (f:generated-mark). -->
-  <xsl:key name="f:printed-glyph" match="ltx:note[normalize-space(@mark)]"
-           use="translate(normalize-space(@mark),'&#x2217;','*')"/>
-  <xsl:key name="f:printed-glyph" match="ltx:tag[not(@role)][ancestor::ltx:note or ancestor::ltx:creator] | ltx:sup"
+       `\blfootnote{$\dagger$ Prior to joining …}`). A generated mark is a glyph none of these prints (f:generated-mark).
+       Its one lookup asks for a bracketed letter, [a], [b], …, so the glyphs that cannot be one are not indexed: a
+       bracketed mark out of its brackets (the 2 of `Tonkin-Hill$^{(2),(3)}$` that the legend `$^{(2)}$ Parasites and
+       Microbes` prints, 2302.11378), and the one symbol or the run of letters or digits a note, contact or publication
+       note opens with (a legend's `$*$Xiang Wang is the corresponding author`, 2010.10783). (libxslt builds every key
+       of a document at the first key() call: each pattern starts at an element name, a note's mark stands for its
+       note and a formula is reached through its note, so no pass tests every node; 0906.1883, 1607.07280.) -->
+  <xsl:key name="f:printed-glyph"
+           match="ltx:note/@mark[normalize-space()]
+                  |ltx:note//*[self::ltx:tag and not(@role)
+                    or self::ltx:XMTok and ancestor::ltx:Math[ancestor::ltx:note or ancestor::ltx:contact or ancestor::ltx:pubnote][count(.//ltx:XMTok[normalize-space()]) = 1]
+                    or (self::m:mo or self::m:mi or self::m:mn)
+                       and ancestor::ltx:Math[ancestor::ltx:note or ancestor::ltx:contact or ancestor::ltx:pubnote]
+                                        [count(.//m:mo[normalize-space()] | .//m:mi[normalize-space()] | .//m:mn[normalize-space()]) = 1]]
+                  |ltx:contact//*[self::ltx:XMTok and ancestor::ltx:Math[ancestor::ltx:note or ancestor::ltx:contact or ancestor::ltx:pubnote][count(.//ltx:XMTok[normalize-space()]) = 1]
+                    or (self::m:mo or self::m:mi or self::m:mn)
+                       and ancestor::ltx:Math[ancestor::ltx:note or ancestor::ltx:contact or ancestor::ltx:pubnote]
+                                        [count(.//m:mo[normalize-space()] | .//m:mi[normalize-space()] | .//m:mn[normalize-space()]) = 1]]
+                  |ltx:pubnote//*[self::ltx:XMTok and ancestor::ltx:Math[ancestor::ltx:note or ancestor::ltx:contact or ancestor::ltx:pubnote][count(.//ltx:XMTok[normalize-space()]) = 1]
+                    or (self::m:mo or self::m:mi or self::m:mn)
+                       and ancestor::ltx:Math[ancestor::ltx:note or ancestor::ltx:contact or ancestor::ltx:pubnote]
+                                        [count(.//m:mo[normalize-space()] | .//m:mi[normalize-space()] | .//m:mn[normalize-space()]) = 1]]
+                  |ltx:creator//ltx:tag[not(@role)]
+                  |ltx:sup"
            use="translate(normalize-space(.),'&#x2217;','*')"/>
-  <!-- (a bracketed one by its glyph out of its brackets too, as a name's mark run keeps its pieces: the legend
-       `$^{(2)}$ Parasites and Microbes` prints the 2 of `Tonkin-Hill$^{(2),(3)}$`, 2302.11378) -->
-  <xsl:key name="f:printed-glyph"
-           match="ltx:note[contains(@mark,'(') or contains(@mark,'[')]/@mark
-                  | ltx:tag[not(@role)][ancestor::ltx:note or ancestor::ltx:creator][contains(.,'(') or contains(.,'[')]
-                  | ltx:sup[contains(.,'(') or contains(.,'[')]"
-           use="translate(normalize-space(.),'&#x2217;()[]','*')"/>
-  <!-- (a formula's one token, in its XMath or its MathML, whichever the post-processing kept) -->
-  <xsl:key name="f:printed-glyph"
-           match="ltx:XMTok[ancestor::ltx:Math[ancestor::ltx:note or ancestor::ltx:contact or ancestor::ltx:pubnote]
-                                              [count(.//ltx:XMTok[normalize-space()]) = 1]]
-                  | *[self::m:mo or self::m:mi or self::m:mn]
-                     [ancestor::ltx:Math[ancestor::ltx:note or ancestor::ltx:contact or ancestor::ltx:pubnote]
-                                        [count(.//m:mo[normalize-space()] | .//m:mi[normalize-space()]
-                                               | .//m:mn[normalize-space()]) = 1]]"
-           use="translate(normalize-space(.),'&#x2217;','*')"/>
-  <xsl:key name="f:printed-glyph"
-           match="*[self::ltx:note or self::ltx:contact or self::ltx:pubnote]
-                   [translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
-                              '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρςστυφχψω','')]"
-           use="translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
-                          '&#x2217;','*')"/>
-  <xsl:key name="f:printed-glyph"
-           match="*[self::ltx:note or self::ltx:contact or self::ltx:pubnote]
-                   [normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1])]
-                   [not(translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
-                                  '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρςστυφχψω',''))]"
-           use="substring-before(concat(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),'|'),
-                  substring(concat(translate(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),
-                                             '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρςστυφχψω',''),
-                                   '|'),1,1))"/>
 
   <!-- The $n-th bracketed letter the document prints nowhere (f:printed-glyph: no note's mark or tag, no superscript):
        [a], [b], … -->

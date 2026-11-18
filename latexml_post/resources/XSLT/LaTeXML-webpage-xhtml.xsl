@@ -354,8 +354,11 @@
        upstream LaTeXML (output-neutral); candidate to upstream. -->
   <!-- Only the phrases of the document's index (list idx) are keywords: the
        marks and lists of another list - the change history of doc.sty's
-       \changes, list glo (OXIDIZED_DESIGN_DIVERGENCES #318) - are not. -->
-  <xsl:key name="f:indexphrase-by-value" match="ltx:indexphrase[not(ancestor::ltx:indexmark[@inlist and not(contains(concat(' ',normalize-space(@inlist),' '),' idx '))] or ancestor::ltx:index[@lists and not(contains(concat(' ',normalize-space(@lists),' '),' idx '))])]" use="."/>
+       \changes, list glo (OXIDIZED_DESIGN_DIVERGENCES #318) - are not.
+       (`*/`: libxslt walks a key's pattern as `//pattern` when any key() runs,
+       a frontmatter key's too; a first step with no predicate walks elements,
+       not the children of every node.) -->
+  <xsl:key name="f:indexphrase-by-value" match="*/ltx:indexphrase[not(ancestor::ltx:indexmark[@inlist and not(contains(concat(' ',normalize-space(@inlist),' '),' idx '))] or ancestor::ltx:index[@lists and not(contains(concat(' ',normalize-space(@lists),' '),' idx '))])]" use="."/>
 
   <!-- Generate a keywords meta entry for the head; typically from indexphrase's or keywords-->
   <xsl:template match="/" mode="head-keywords">
