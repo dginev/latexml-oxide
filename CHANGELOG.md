@@ -610,21 +610,6 @@
     provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
     `script_bindings::tests::let_takes_any_token`.
 
-  - **Rhai hooks take Perl's arguments.** A `beforeDigest`/`beforeDigestEnd` hook receives the stomach, a
-    constructor's, environment's or `DefMath`'s `afterDigest`/`afterDigestBegin`/`afterDigestBody` hook
-    `|stomach, whatsit|` and a `properties` closure `|stomach, x, …|`, each argument as `whatsit.getArg` gives it
-    (Constructor.pm:99-117). A primitive's or parameter type's `afterDigest` now receives the stomach (Perl's argument);
-    a body that called whatsit methods on the dummy it used to get now raises `Error:script`. The old forms
-    (`afterDigest: |whatsit|`, `properties: |x|`) keep working this release and Warn `deprecated` once per binding
-    load. A failing `afterDigestBegin`/`afterDigestBody`/`beforeDigestEnd` hook names itself in its `Error:script`
-    (was "afterDigest"/"beforeDigest"). `RefStepCounter`'s documented result is Perl's `tags` and `id`. Guards
-    `perfect_kernel_batchrhaihook::*`; repro `rhai-bindings/afterdigest_stomach_first` turns green.
-
-  - **The Rhai API reference's tables keep their columns.** A description quoting a closure (`|gullet, x|`) split its
-    `API.md` row into extra cells on GitHub; the generator escapes `|` in descriptions too. Guard
-    `script_bindings::tests::api_tables_keep_their_columns`.
-
-  - **Rhai values print as their TeX** (Rhai round H). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
   - **The Rhai binding API is Perl's binding API.** A runtime binding (`.rhai`, no Rust
     toolchain, no recompile) writes Perl LaTeXML's Package.pm calls under Perl's names, with Perl's
     arguments and meanings: typed values (`Number`, `Dimension`, `Glue`, `Token`, `Tokens`, boxes,
@@ -633,6 +618,15 @@
     their migration; where an entry names a deprecated form, that form keeps working in 0.8.0
     with a `Warning:deprecated` once per binding load and is removed in the release after 0.8.0;
     the other breaking changes take effect in 0.8.0 (#829, #849, #860, #870).
+  - **Rhai digestion hooks take Perl's arguments.** A `beforeDigest`/`beforeDigestEnd` hook receives the stomach, a
+    constructor's, environment's or `DefMath`'s `afterDigest`/`afterDigestBegin`/`afterDigestBody` hook
+    `|stomach, whatsit|` and a `properties` closure `|stomach, x, …|`, each argument as `whatsit.getArg` gives it
+    (Constructor.pm:99-117). A primitive's or parameter type's `afterDigest` now receives the stomach (Perl's argument);
+    a body that called whatsit methods on the dummy it used to get now raises `Error:script`. The old forms
+    (`afterDigest: |whatsit|`, `properties: |x|`) keep working through 0.8.0 with a `Warning:deprecated` once per
+    binding load and are removed in the release after 0.8.0. A failing `afterDigestBegin`/`afterDigestBody`/`beforeDigestEnd` hook names itself in its `Error:script`
+    (was "afterDigest"/"beforeDigest"). `RefStepCounter`'s documented result is Perl's `tags` and `id`. Guards
+    `perfect_kernel_batchrhaihook::*`; repro `rhai-bindings/afterdigest_stomach_first` turns green.
   - **Rhai values print as their TeX** (#849). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
     and `LookupMeaning!` — a `Definition` handle (which `AssignMeaning` installs) or a Token, `()` when undefined —
     where it returned the printed string `Stored[??]`; a string comparison keeps working in 0.8.0 with a
