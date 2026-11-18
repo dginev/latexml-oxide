@@ -162,7 +162,7 @@ fn self_input_stops_at_the_text_input_level_limit() {
   )]);
   assert_eq!(error_count(&log), 1, "{log}");
   assert!(
-    log.contains("Fatal:Mouth:Recursion  TeX capacity exceeded, sorry [text input levels=15]"),
+    log.contains("Fatal:Mouth:Recursion TeX capacity exceeded, sorry [text input levels=15]"),
     "{log}"
   );
   assert!(
@@ -193,7 +193,7 @@ fn repeated_file_text_is_no_expansion_loop() {
   assert_eq!(error_count(&log), 1, "{log}");
   assert!(
     log.contains(
-      "Fatal:Timeout:Recursion  Infinite expansion loop: a window of 2 token(s) repeated 100+ times"
+      "Fatal:Timeout:Recursion Infinite expansion loop: a window of 2 token(s) repeated 100+ times"
     ),
     "{log}"
   );
@@ -206,7 +206,7 @@ fn repeated_file_text_is_no_expansion_loop() {
   let (log, _xml) = convert_files(&looping, &[]);
   assert_eq!(error_count(&log), 1, "{log}");
   assert!(
-    log.contains("Fatal:Mouth:Recursion  TeX capacity exceeded, sorry [text input levels=15]"),
+    log.contains("Fatal:Mouth:Recursion TeX capacity exceeded, sorry [text input levels=15]"),
     "{log}"
   );
 }

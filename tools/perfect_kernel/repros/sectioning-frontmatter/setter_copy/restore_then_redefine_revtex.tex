@@ -1,0 +1,22 @@
+% A class binding's title setter (`\lx@titlepage@class@call`, revtex4_support_sty.rs; ams, iopart and mn2e share the
+% shape) restored from its frozen copy, then redefined again: the second redefinition is refused afresh and replays.
+% witness: synthetic (review SETCOPY B1, the `\lx@titlepage@class@call` sibling; amsart's `\title[]{}` copy loops in
+% TeX itself, `\@protected@testopt` re-reading `\title`, so revtex4-2 stands for the family)
+% oracle:  pdflatex 0 errors: "My Title / Ann Able / Second: My Title."
+% engines: rust (main 8b298f9c0d6) = "Second: My Title."; SETCOPY round 0 = "Second: .", 0 E 0 W
+% expect:  0 errors, 0 warnings; title "My Title"; "Second: My Title."
+% guard:   none (same code path as restore_then_redefine_title.tex, `restored_setter`; revtex4-2 is not on every TL)
+% status:  GREEN (SETCOPYb, 2026-11-18)
+\documentclass{revtex4-2}
+\makeatletter
+\let\orig@title\title
+\renewcommand{\title}[1]{\gdef\firstdef{#1}\orig@title{#1}}
+\let\title\orig@title
+\renewcommand{\title}[1]{\gdef\seconddef{#1}\orig@title{#1}}
+\makeatother
+\begin{document}
+\title{My Title}
+\author{Ann Able}
+\maketitle
+Second: \seconddef.
+\end{document}

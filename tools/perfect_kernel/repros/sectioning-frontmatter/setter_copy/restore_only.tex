@@ -1,0 +1,21 @@
+% A wrapper redefinition undone by restoring the frozen copy (`\let\author\orig@author`): in TeX the wrapper is gone
+% before `\begin{document}`, so the document's `\author` never counts ("Calls: 0").
+% witness: synthetic (review SETCOPY, restore-only shape)
+% oracle:  pdflatex 0 errors: "Calls: 0."
+% engines: rust (main 8b298f9c0d6) = "Calls: 1." (the refused wrapper replayed); SETCOPY round 0 = "Calls: 0."
+% expect:  0 errors, 0 warnings; "Calls: 0."; one creator, Ann Able
+% guard:   perfect_kernel_batchsetcopy::a_restored_setter_drops_the_class_definition
+% status:  GREEN (SETCOPY, 2026-11-18)
+\documentclass{article}
+\makeatletter
+\newcounter{calls}
+\let\orig@author\author
+\renewcommand{\author}[1]{\stepcounter{calls}\orig@author{#1}}
+\let\author\orig@author
+\makeatother
+\title{T}
+\begin{document}
+\author{Ann Able}
+\maketitle
+Calls: \thecalls.
+\end{document}
