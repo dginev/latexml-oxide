@@ -496,8 +496,15 @@ fn prelude_file() -> Option<Prelude> {
 
 /// The environment variables the texlua child keeps: the program and library search (`PATH`, `LD_LIBRARY_PATH`,
 /// `DYLD_*`, Windows' system ones), kpathsea's (`TEXMF*`, `KPATHSEA*`, the `*INPUTS`/`*FONTS` format paths), the user's home (`TEXMFHOME`), the
-/// locale, the reproducible-date clock and the temp dir.
+/// locale, the reproducible-date clock and the temp dir. Windows' variable names are case-insensitive, and its usual
+/// spellings are mixed-case (`Path`, `SystemRoot`, `windir`), so there a name is matched in upper case.
 fn child_env_allowed(name: &str) -> bool {
+  let name = if cfg!(windows) {
+    std::borrow::Cow::Owned(name.to_ascii_uppercase())
+  } else {
+    std::borrow::Cow::Borrowed(name)
+  };
+  let name = name.as_ref();
   const EXACT: &[&str] = &[
     "PATH",
     "HOME",
@@ -508,10 +515,8 @@ fn child_env_allowed(name: &str) -> bool {
     "TMPDIR",
     "TMP",
     "TEMP",
-    "SystemRoot",
     "SYSTEMROOT",
-    "windir",
-    "SystemDrive",
+    "WINDIR",
     "SYSTEMDRIVE",
     "USERPROFILE",
     "HOMEDRIVE",
@@ -888,6 +893,33 @@ mod tests {
     assert_eq!(accepted("D 0123456789abcdef0123456789abcdef 7\n"), None);
     assert_eq!(accepted(&format!("OK {nonce} 99999999999\n")), None);
     assert_eq!(accepted(&format!("OK {nonce}\n")), None);
+  }
+
+  /// The texlua child's environment allowlist: the search path, kpathsea's and the locale's variables pass, a
+  /// variable outside the list does not; on Windows a name matches in any case (`Path` is PATH there).
+  #[test]
+  fn child_env_allowlist_matches_names_as_the_host_does() {
+    use super::child_env_allowed;
+    for kept in [
+      "PATH",
+      "TEXMFHOME",
+      "KPATHSEA_DEBUG",
+      "BIBINPUTS",
+      "LC_ALL",
+      "SYSTEMROOT",
+    ] {
+      assert!(child_env_allowed(kept), "{kept}");
+    }
+    for dropped in [
+      "LATEXML_SECLUA_PROBE",
+      "AWS_SECRET_ACCESS_KEY",
+      "SSH_AUTH_SOCK",
+    ] {
+      assert!(!child_env_allowed(dropped), "{dropped}");
+    }
+    for spelled in ["Path", "SystemRoot", "windir", "Temp", "TexmfHome"] {
+      assert_eq!(child_env_allowed(spelled), cfg!(windows), "{spelled}");
+    }
   }
 
   fn texlua_present() -> bool {
