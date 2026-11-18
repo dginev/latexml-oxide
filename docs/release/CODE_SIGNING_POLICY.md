@@ -1,16 +1,14 @@
 # Code signing policy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+**Status:** the Windows binary is **not code-signed**. SignPath Foundation declined our application to its free code-signing program for open-source projects (2026-11-18, GitHub issue 775); they suggest applying again once the project is in heavy mainstream use. Paid signing services are out of scope. Until a signed channel exists, the [installation guide](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md) says how to unblock the binary, and each release's `latexml_oxide.exe` is submitted to Microsoft's false-positive analysis.
 
-**Status:** signing is being set up (applied 2026-11-16; GitHub issue 775). The first signed release will be named here.
-Until then, the Windows binary is unsigned; the [installation guide](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md) says how to unblock it.
+**Plan:** a Microsoft Store package (MSIX) in a 0.8.x release. Microsoft signs Store packages when it certifies them, and the package will install a `latexml_oxide` command for any terminal. The unsigned zip stays on the [Releases page](https://github.com/dginev/latexml-oxide/releases). The first signed channel will be named here.
 
-## What is signed
+## What will be signed
 
-- **Signed:** the Windows executable `latexml_oxide.exe`, inside the `latexml-oxide-<version>-x86_64-pc-windows-msvc.zip` asset of each final release on the [Releases page](https://github.com/dginev/latexml-oxide/releases). Release candidates (`-rcN` tags) are not signed.
-- **How it is built:** from this repository's source, by the [`release.yml`](https://github.com/dginev/latexml-oxide/blob/main/.github/workflows/release.yml) GitHub Actions workflow on GitHub-hosted runners. SignPath verifies that origin before it signs.
-- **Approval:** a person approves every signing request by hand.
-- **Only our own binary:** we sign only the executable this project builds. The third-party libraries statically linked into it (libxml2, libxslt, libkpathsea and libmarpa; see [`THIRD-PARTY-NOTICES`](https://github.com/dginev/latexml-oxide/blob/main/THIRD-PARTY-NOTICES)) are compiled from their published sources in that same workflow.
+- **Signed:** `latexml_oxide.exe` inside the Store package, by Microsoft at certification.
+- **How it is built:** from this repository's source, by the [`release.yml`](https://github.com/dginev/latexml-oxide/blob/main/.github/workflows/release.yml) GitHub Actions workflow on GitHub-hosted runners — the same executable as in the Releases zip.
+- **Only our own binary:** the third-party libraries statically linked into it (libxml2, libxslt, libkpathsea and libmarpa; see [`THIRD-PARTY-NOTICES`](https://github.com/dginev/latexml-oxide/blob/main/THIRD-PARTY-NOTICES)) are compiled from their published sources in that same workflow.
 
 ## Team roles
 
@@ -18,9 +16,9 @@ Until then, the Windows binary is unsigned; the [installation guide](https://git
 |---|---|
 | Authors (committers) | [the repository's maintainers](https://github.com/dginev/latexml-oxide/graphs/contributors) with write access: Deyan Ginev |
 | Reviewers | every change lands through a reviewed pull request: Deyan Ginev |
-| Approvers (signing requests) | Deyan Ginev |
+| Publisher (Store submissions) | to be decided with the Store account |
 
-All team members use multi-factor authentication for GitHub and for SignPath.
+All team members use multi-factor authentication for GitHub.
 
 ## Privacy policy
 
@@ -30,7 +28,7 @@ latexml-oxide reads files through the user's own TeX distribution (TeX Live or M
 
 ## System changes
 
-- **No installer.** latexml-oxide is a single executable. Unpacking the zip installs it, and deleting the folder uninstalls it.
+- **No installer.** latexml-oxide is a single executable. Unpacking the zip installs it, and deleting the folder uninstalls it. The planned Store package installs and uninstalls through Windows' own app management.
 - **No system changes.** It does not change the registry, services, environment variables or `PATH`.
 - **What it writes:**
   - the converted output, where the user directs it;
