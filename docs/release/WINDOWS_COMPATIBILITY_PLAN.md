@@ -204,5 +204,7 @@ cold run for a fair Linux-vs-Windows benchmark.
 - Unix-socket LSP transport (`lsp_server/unix.rs`) — `generic.rs` is the Windows
   path.
 - ARM64 Windows, `x86_64-pc-windows-gnu`.
-- Code-signing (record in `RELEASE_CRITERIA.md` if users hit SmartScreen
-  friction).
+- Code-signing: the `.exe` ships **unsigned** (SignPath Foundation declined,
+  2026-11-18, issue 775); a Microsoft Store package (MSIX, signed by Microsoft at
+  certification) is planned for a 0.8.x release. Policy, the unblock steps and the
+  plan: [`CODE_SIGNING_POLICY.md`](CODE_SIGNING_POLICY.md).
