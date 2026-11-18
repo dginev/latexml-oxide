@@ -885,7 +885,8 @@ LoadDefinitions!({
   // wired.
   DefConstructor!(
     "\\lxWithClass Semiverbatim {}",
-    "<ltx:text class='#1'>#2</ltx:text>"
+    "<ltx:text class='#1'>#2</ltx:text>",
+    enter_horizontal => true
   );
 
   DefConstructor!("\\lxFcn{}", "<ltx:XMWrap role='FUNCTION'>#1</ltx:XMWrap>",

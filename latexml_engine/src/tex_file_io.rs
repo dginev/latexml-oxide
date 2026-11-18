@@ -2,9 +2,10 @@
 //!
 //! Core TeX Implementation for LaTeXML
 use crate::prelude::*;
-static PSFILE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\bpsfile=(.+?)(?:\s|\})").unwrap());
+static PSFILE_REGEX: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"\bpsfile=(.+?)(?:\s|\})").unwrap());
 /// A numeric constant a dvips header special defines: `/Ldensity {0.25} def`, `/Tdensity {0.10}def`, `/x 3 def`.
-static PS_HEADER_NUMBER_REGEX: Lazy<Regex> = Lazy::new(|| {
+static PS_HEADER_NUMBER_REGEX: LazyLock<Regex> = LazyLock::new(|| {
   Regex::new(r"/([A-Za-z][A-Za-z0-9_.]*)\s*(?:\{\s*([-+]?(?:\d+\.?\d*|\.\d+))\s*\}\s*|([-+]?(?:\d+\.?\d*|\.\d+))\s+)def\b")
     .unwrap()
 });

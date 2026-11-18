@@ -673,6 +673,7 @@ LoadDefinitions!({
   // Perl L442-445: \@bibitem@field / \@bibitem@tag constructors.
   DefConstructor!("\\@bibitem@field{}{}",
     "<ltx:text class='#class' _noautoclose='1'>#2</ltx:text>",
+    enter_horizontal => true,
     properties => sub [args] {
       let field_name = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
       let class_str = format!("ltx_bib_{}", field_name);
@@ -1184,9 +1185,10 @@ LoadDefinitions!({
   // Perl L335: \cite for plain-AMSTeX documents.
   // amsppt is a plain-TeX style, so the latex cite machinery isn't
   // loaded; this DefConstructor provides the minimal cite→bibref
-  // surface that \Refs/\bibitem pair against.
+  // surface that \Refs/\bibitem pair against. amsppt.sty:847 `\rom{[…]}` is text: it starts the paragraph
+  // (OXIDIZED_DESIGN_DIVERGENCES #1079).
   DefConstructor!("\\cite Semiverbatim",
-    "<ltx:cite>[<ltx:bibref show='refnum' bibrefs='#1'/>]</ltx:cite>");
+    "<ltx:cite>[<ltx:bibref show='refnum' bibrefs='#1'/>]</ltx:cite>", enter_horizontal => true);
 
   // Head-toks and head-skip registers — Perl L44-45, L151-158. Token
   // registers for running-head content; eight length/glue registers

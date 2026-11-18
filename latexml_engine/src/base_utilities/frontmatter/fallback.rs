@@ -427,7 +427,7 @@ pub(in crate::base_utilities) fn linebreak_options_stripped(
 /// spaces) and 2603.20775 (`{\large \bf A \quad B}`), named with the ruling, are that shape.
 pub(in crate::base_utilities) fn normalize_hspace_separators(tokens: Tokens) -> Tokens {
   /// A length written as zero, `0pt`, `0.0mm`, `0`, `\z@`: an `\hspace` of it is no separator.
-  static ZERO_LENGTH: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  static ZERO_LENGTH: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^\s*(?:[+-]?(?:0+(?:\.0*)?|\.0+)\s*(?:pt|mm|cm|in|em|ex|bp|sp|pc|dd|cc|mu)?|\\z@(?:skip)?)\s*$")
       .unwrap()
   });

@@ -119,9 +119,9 @@ Called at the top level of a binding file, or from inside any body.
 | `DefColumnType(string, Fn)` | Define a tabular column type, as its rewrite expansion. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefConditional(string)`<br>`DefConditional(string, (), map)`<br>`DefConditional(string, Fn)`<br>`DefConditional(string, Fn, map)` | Define a conditional control sequence. ([`def_conditional`](latexml_core::binding::def::dialect::def_conditional)) |
 | `DefConditionalI(?, ?, ?)`<br>`DefConditionalI(?, ?, ?, map)` | `DefConditional` with the control sequence and its parameter spec (a string, or `()`) apart; the test a closure or `()` (Package.pm:1194). ([`def_conditional`](latexml_core::binding::def::dialect::def_conditional)) |
-| `DefConstructor(string, Fn)`<br>`DefConstructor(string, Fn, map)`<br>`DefConstructor(string, string)`<br>`DefConstructor(string, string, map)` | Define a control sequence that constructs XML. ([`def_constructor`](latexml_core::binding::def::dialect::def_constructor)) |
+| `DefConstructor(string, Fn)`<br>`DefConstructor(string, Fn, map)`<br>`DefConstructor(string, string)`<br>`DefConstructor(string, string, map)` | Define a control sequence that constructs XML. Its hooks take Perl's arguments: `beforeDigest: \|stomach\|`, `afterDigest: \|stomach, whatsit\|`, `properties: \|stomach, x\|` (each argument as `whatsit.getArg` gives it); `\|whatsit\|` and `\|x\|` are the old forms, Warned `deprecated`. ([`def_constructor`](latexml_core::binding::def::dialect::def_constructor)) |
 | `DefConstructorI(?, ?, ?)`<br>`DefConstructorI(?, ?, ?, map)` | `DefConstructor` for a control sequence in hand: a `Token` or a name (`coerceCS`), a parameter-spec string or `()`, a template string, a closure or `()`, then the option bag. ([`def_constructor`](latexml_core::binding::def::dialect::def_constructor)) |
-| `DefEnvironment(string, Fn)`<br>`DefEnvironment(string, Fn, map)`<br>`DefEnvironment(string, string)`<br>`DefEnvironment(string, string, map)` | Define an environment that constructs XML. ([`def_environment`](latexml_core::binding::def::dialect::def_environment)) |
+| `DefEnvironment(string, Fn)`<br>`DefEnvironment(string, Fn, map)`<br>`DefEnvironment(string, string)`<br>`DefEnvironment(string, string, map)` | Define an environment that constructs XML. Its hooks take Perl's arguments: `beforeDigest`/`beforeDigestEnd: \|stomach\|`, `afterDigestBegin`/`afterDigest`/`afterDigestBody: \|stomach, whatsit\|`, `properties: \|stomach, x\|`. ([`def_environment`](latexml_core::binding::def::dialect::def_environment)) |
 | `DefEnvironmentI(?, ?, ?)`<br>`DefEnvironmentI(?, ?, ?, map)` | `DefEnvironment` with the name and its parameter spec (a string, or `()`) apart (Package.pm:1899). ([`def_environment`](latexml_core::binding::def::dialect::def_environment)) |
 | `DefKeyVal(string, string, string)`<br>`DefKeyVal(string, string, string, string)`<br>`DefKeyVal(string, string, string, string, map)` | Declare one key of a keyval family. ([`define`](latexml_core::keyval::define)) |
 | `DefLigature(string, string)`<br>`DefLigature(string, string, map)` | Register a text ligature pattern; `#{fontTest: \|font\| …}` limits it to the fonts the closure accepts. |
@@ -220,7 +220,7 @@ Called at the top level of a binding file, or from inside any body.
 | `ReadToken() -> ?` | Read the next token, unexpanded; `()` at the end of input. ([`read_token`](latexml_core::gullet::read_token)) |
 | `ReadUntil(?) -> Tokens` | Read a balanced token sequence up to a delimiter (TeX source, `Token` or `Tokens`), as `Tokens`. ([`read_until`](latexml_core::gullet::read_until)) |
 | `RefCurrentID(string) -> map` | Reuse the last id without stepping, when its box was pruned. ([`ref_current_id`](latexml_core::binding::counter::dialect::ref_current_id)) |
-| `RefStepCounter(string) -> map`<br>`RefStepCounter(string, bool) -> map` | Step a counter through `\refstepcounter`'s meaning (`noreset`: directly) and return its `refnum` and `id`. ([`ref_step_counter_by_meaning`](latexml_core::binding::counter::dialect::ref_step_counter_by_meaning)) |
+| `RefStepCounter(string) -> map`<br>`RefStepCounter(string, bool) -> map` | Step a counter through `\refstepcounter`'s meaning (`noreset`: directly) and return its properties, Perl's `tags` and `id` (Package.pm:780). ([`ref_step_counter_by_meaning`](latexml_core::binding::counter::dialect::ref_step_counter_by_meaning)) |
 | `RefStepID(string) -> map` | Step only the uncounter, for an UN-numbered unit; returns the id. ([`ref_step_id`](latexml_core::binding::counter::dialect::ref_step_id)) |
 | `RegisterDocumentNamespace(string, string)` | Bind an OUTPUT-document prefix to a namespace URI. ([`register_document_namespace`](latexml_core::common::model::register_document_namespace)) |
 | `RegisterNamespace(string, string)` | Bind a CODE prefix to a namespace URI. ([`register_namespace`](latexml_core::common::model::register_namespace)) |
@@ -416,7 +416,7 @@ Perl's `$gullet->read…`: the gullet handle a macro body or a parameter-type re
 
 ## `Stomach` methods
 
-Perl's `$stomach`: the handle a primitive body receives first (Primitive.pm:78).
+Perl's `$stomach`: the handle a primitive body and a `beforeDigest`, `afterDigest` or `properties` hook receive first (Primitive.pm:47-78, Constructor.pm:99-117).
 
 1 function, 1 call.
 

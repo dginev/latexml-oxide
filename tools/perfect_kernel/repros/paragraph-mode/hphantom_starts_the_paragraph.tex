@@ -1,0 +1,18 @@
+% mechanism: a text-mode `\hphantom` starts the paragraph: latex.ltx `\finph@nt` ends `\leavevmode@ifvmode\box\tw@`
+%   (:15617), `\leavevmode@ifvmode` = `\ifvmode\expandafter\indent\fi` (:9433); digested in vertical mode, the space
+%   after it was dropped there (Stomach.pm:249-251). A paragraph it alone holds stays (its restricted_horizontal box)
+% witness: census 7617 papers use a phantom; hphantom witnesses 2004.10048, 2508.13557, 2605.21158 unchanged;
+%   OXIDIZED_DESIGN_DIVERGENCES #1079
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: indent, an empty box, " starts here."; then an empty line; "End."
+% engines: perl 0.8.8 and rust M8B29: <p><text class="ltx_phantom">X</text>starts here.</p>
+% expect:  0 errors, 0 warnings; <p><text class="ltx_phantom">X</text> starts here.</p>; the lone phantom's <p> kept
+% status:  RED (M8B29, perl) -> GREEN (INLINECTORb)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\hphantom{X} starts here.
+
+\hphantom{Y}
+
+End.
+\end{document}

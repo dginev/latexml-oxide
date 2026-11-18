@@ -10,6 +10,17 @@
     `--help` and `docs/USAGE.md` say how a `.rhai` binding is found and how
     `LATEXML_DISABLE_SHELL_ESCAPE` refuses commands. Guard
     `30_script_bindings::a_rhai_diagnostic_names_its_binding_file`.
+
+  - **Dependency cleanup before v0.8.0.** `once_cell`'s `Lazy` is now `std::sync::LazyLock` throughout, and the direct
+    `once_cell` dependency is gone from every crate; `deny.toml`'s advisory notes are corrected. No output change.
+    For a Rust binding crate: `latexml_engine::prelude` now re-exports `LazyLock` in place of `Lazy`.
+
+  - **An author's printed address list no longer crashes the frontmatter reader.** A list whose
+    local parts share a suffix (`\{abcde,\,xy\}.nju@gmail.com`) under marked names made the
+    address-mark reader step by the length of a local part the text does not spell, into the
+    thin space `\,` prints, and panic (2609.00833, a Fatal). It now steps past the next separator
+    only. Guard `perfect_kernel_batch106a::a_brace_list_local_part_the_text_does_not_spell`.
+
   - **TeX Live's package manuals convert clean (the perfect-kernel campaign).** Every one of the
     1,552 in-scope TeX Live documentation bundles converts with no Error but of a ruled-out
     kind, valid against the schema (or only in a ruled class), at least 95 % word recall against
@@ -626,6 +637,15 @@
     their migration; where an entry names a deprecated form, that form keeps working in 0.8.0
     with a `Warning:deprecated` once per binding load and is removed in the release after 0.8.0;
     the other breaking changes take effect in 0.8.0 (#829, #849, #860, #870).
+  - **Rhai digestion hooks take Perl's arguments.** A `beforeDigest`/`beforeDigestEnd` hook receives the stomach, a
+    constructor's, environment's or `DefMath`'s `afterDigest`/`afterDigestBegin`/`afterDigestBody` hook
+    `|stomach, whatsit|` and a `properties` closure `|stomach, x, …|`, each argument as `whatsit.getArg` gives it
+    (Constructor.pm:99-117). A primitive's or parameter type's `afterDigest` now receives the stomach (Perl's argument);
+    a body that called whatsit methods on the dummy it used to get now raises `Error:script`. The old forms
+    (`afterDigest: |whatsit|`, `properties: |x|`) keep working through 0.8.0 with a `Warning:deprecated` once per
+    binding load and are removed in the release after 0.8.0. A failing `afterDigestBegin`/`afterDigestBody`/`beforeDigestEnd` hook names itself in its `Error:script`
+    (was "afterDigest"/"beforeDigest"). `RefStepCounter`'s documented result is Perl's `tags` and `id`. Guards
+    `perfect_kernel_batchrhaihook::*`; repro `rhai-bindings/afterdigest_stomach_first` turns green.
   - **Rhai values print as their TeX** (#849). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
     and `LookupMeaning!` — a `Definition` handle (which `AssignMeaning` installs) or a Token, `()` when undefined —
     where it returned the printed string `Stored[??]`; a string comparison keeps working in 0.8.0 with a
@@ -940,6 +960,18 @@
     a_copy_in_an_end_code_takes_the_class_list_once, a_copy_taken_after_the_redefinition_still_replays,
     a_restored_setter_takes_a_later_redefinition_afresh, a_restored_setter_drops_the_class_definition,
     a_restore_in_a_group_ends_with_it}`.
+
+  - **A command that sets text at a paragraph's start keeps the space after
+    it.** `\object{M31} is a galaxy.` (aa), `\url{http://x.org} is a site.`
+    (llncs) and an amsppt `\cite` gave `M31is`, `x.orgis`, `[1]is` (as Perl
+    does): the constructor stayed in vertical mode, where the space is dropped.
+    Those bindings, and the others whose text TeX sets there (ams `\URL`,
+    html's `\hyperrefhyper`, `\lxWithClass`, revtex's `\text`, a glyph with no
+    Unicode, a text `\hphantom`), now enter horizontal mode
+    first, Perl's `enterHorizontal`. fancybox's `\shadowbox`, `\doublebox`,
+    `\ovalbox` and `\Ovalbox` also no longer split a paragraph in two
+    (`Mid \doublebox{C} para.`). OXIDIZED_DESIGN_DIVERGENCES #1079; guards
+    `perfect_kernel_batchinlinector`.
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 

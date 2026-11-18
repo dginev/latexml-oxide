@@ -4,6 +4,8 @@
 //! (Scan → Bibliography → CrossRef → Graphics → Split → MathML → XSLT → HTML5 fixups).
 //! Used by both the `latexml_oxide` binary and the `cortex_worker` binary.
 
+use std::sync::LazyLock;
+
 use latexml_core::{
   Info, Warn,
   common::error::{emit_error, emit_fatal, note_progress},
@@ -15,10 +17,9 @@ use latexml_post::{
   object_db::ObjectDB,
   processor::Processor,
 };
-use once_cell::sync::Lazy;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
-static POST_AUDIT: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
+static POST_AUDIT: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
 
 /// Start an audit timer when `LATEXML_POST_AUDIT` is set. Module-level (not a
 /// closure) so [`render_spilled_page`] — shared by the serial driver and the

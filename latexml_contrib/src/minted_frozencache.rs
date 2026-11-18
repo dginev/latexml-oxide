@@ -93,7 +93,7 @@ fn pygz_char(name: &str) -> Option<&'static str> {
 
 /// Resolve every `\PYGZxx` / `\PYGZxx{}` occurrence in `s` to its literal char.
 fn resolve_pygz(s: &str) -> String {
-  static RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\(PYGZ[a-z][a-z])(\{\})?").unwrap());
+  static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\(PYGZ[a-z][a-z])(\{\})?").unwrap());
   RE.replace_all(s, |c: &regex::Captures| pygz_char(&c[1]).unwrap_or(""))
     .into_owned()
 }
@@ -227,10 +227,10 @@ fn parse_highlight(text: &str) -> Option<Vec<Line>> {
 
 /// Parse `default.style.minted` into a `tokclass → Style` map.
 fn parse_styles(text: &str) -> HashMap<String, Style> {
-  static NAME_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\@namedef\{PYG@tok@([A-Za-z0-9]+)\}").unwrap());
-  static COLOR_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\textcolor\[rgb\]\{([0-9.,]+)\}").unwrap());
+  static NAME_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\@namedef\{PYG@tok@([A-Za-z0-9]+)\}").unwrap());
+  static COLOR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\textcolor\[rgb\]\{([0-9.,]+)\}").unwrap());
   let mut map: HashMap<String, Style> = HashMap::default();
   for line in text.lines() {
     if let Some(caps) = NAME_RE.captures(line) {

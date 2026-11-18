@@ -1,0 +1,11 @@
+% mechanism: llncs `\url` (llncs.cls:899 `\def\url#1{#1}`) opens the paragraph; without enterHorizontal it was digested
+%   in vertical mode and the space after it was dropped there (Stomach.pm:249-251), gluing the next word to the link
+% witness: census 640 llncs papers use `\url`; OXIDIZED_DESIGN_DIVERGENCES #1079
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "http://x.org is a site."
+% engines: perl 0.8.8 and rust M8B29: <p><ref href="http://x.org">http://x.org</ref>is a site.</p>
+% expect:  0 errors, 0 warnings; <p><ref …>http://x.org</ref> is a site.</p>
+% status:  RED (M8B29, perl) -> GREEN (INLINECTOR)
+\documentclass{llncs}
+\begin{document}
+\url{http://x.org} is a site.
+\end{document}

@@ -379,7 +379,8 @@ LoadDefinitions!({
   // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
   // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
 
-  DefConstructor!("\\url Semiverbatim", "<ltx:ref href='#1'>#1</ltx:ref>");
+  // llncs.cls:899 `\def\url#1{#1}`: the URL is text and starts the paragraph (OXIDIZED_DESIGN_DIVERGENCES #1079).
+  DefConstructor!("\\url Semiverbatim", "<ltx:ref href='#1'>#1</ltx:ref>", enter_horizontal => true);
   // llncs.cls:909-911 (v2.21+): the class's begin-document hook defines `\doi`, a link when
   // hyperref is loaded and the bare URL otherwise; splncs04.bst writes `\doi{…}` into the
   // .bbl (2609.04690). The class's link is `\href{URL}{\url{URL}}`, the URL linked to itself:

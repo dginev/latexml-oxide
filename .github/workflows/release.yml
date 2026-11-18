@@ -387,9 +387,10 @@ jobs:
       # Same build-time + smoke-test apt set as the x86_64 `release` leg (TeX
       # Live is needed for the conversion smoke below).
       - name: install dependencies
+        timeout-minutes: 20
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
+          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
             mold \
             dpkg-dev \
@@ -706,9 +707,10 @@ jobs:
       # Runtime + build-time apt deps. Matches CI.yml's set, minus
       # language packs the release build doesn't exercise.
       - name: install dependencies
+        timeout-minutes: 20
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
+          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
             mold \
             dpkg-dev \

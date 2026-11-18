@@ -50,14 +50,14 @@ use crate::{
 // ,amssymb]`). Without leading `\s*` we'd get `"amsmath\n"` and the
 // declared option callback wouldn't fire — silently turning the option
 // into an unused-global.
-static OPTS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
+static OPTS_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s*,\s*").unwrap());
 
 // Perl `\ensuremathfollows` already-math test (latex_constructs.pool.ltxml
 // L2083/L2098): `$MATHENVS = 'displaymath|equation*?|eqnarray*?'` and the guard
 // `$csname !~ /^Math|\(|\[|(?:$MATHENVS)/o`. Kept verbatim (not hand-expanded)
 // so the automath wrapper matches Perl exactly.
-static AUTOMATH_ALREADY_MATH: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^Math|\\\(|\\\[|(?:displaymath|equation*?|eqnarray*?)").unwrap());
+static AUTOMATH_ALREADY_MATH: LazyLock<Regex> =
+  LazyLock::new(|| Regex::new(r"^Math|\\\(|\\\[|(?:displaymath|equation*?|eqnarray*?)").unwrap());
 
 // Perl `\documentclass` (latex_constructs.pool.ltxml L78) wraps the
 // raw option string in `TrimmedCommaList(...)` — i.e. comma-split AND
@@ -94,8 +94,8 @@ fn split_trim_options(s: &str) -> Vec<String> {
   out
 }
 static SEMIVERBATIM_CHARS: [char; 4] = ['%', '\\', '{', '}'];
-static NOTE_TEXT_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)text$").unwrap());
-static NOTE_MARK_END: Lazy<Regex> = Lazy::new(|| Regex::new("^(\\w+?)mark$").unwrap());
+static NOTE_TEXT_END: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(\\w+?)text$").unwrap());
+static NOTE_MARK_END: LazyLock<Regex> = LazyLock::new(|| Regex::new("^(\\w+?)mark$").unwrap());
 
 /// Defensive sanitizer for section-type identifiers (the `{section}` arg of
 /// `\@@numbered@section` etc.). Some upstream paths — notably figure-block +
@@ -5877,8 +5877,8 @@ const LINE_REGISTERS: [&str; 4] = ["\\textwidth", "\\columnwidth", "\\linewidth"
 /// A format is being built (`--init`, a dump): what the panel grid rule records of a document's lengths
 /// (`note_setlength`, `note_length_allocated`) is not recorded, so no dump holds it.
 fn building_a_format() -> bool {
-  static INI_MODE: std::sync::LazyLock<bool> =
-    std::sync::LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
+  static INI_MODE: LazyLock<bool> =
+    LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
   *INI_MODE || crate::dump_paths::building_format()
 }
 

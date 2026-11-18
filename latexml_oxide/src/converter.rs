@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::LazyLock};
 
 use latexml_core::{
   Core, CoreOptions, Debug, Error, Fatal, Info, Note, Warn,
@@ -15,7 +15,6 @@ use latexml_core::{
   },
   telemetry::{self, Phase},
 };
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 use crate::core_interface::DigestionAPI;
@@ -103,11 +102,12 @@ const DVI_DRIVER_OPTIONS: [&str; 15] = [
 /// files its `filecontents` environments write (a shipped `.sty` ends with its own `\endinput`), up to the first
 /// `\endinput` control word (TeX reads no further of the file).
 fn uncommented_code(text: &str) -> String {
-  static FILECONTENTS: Lazy<Regex> = Lazy::new(|| {
+  static FILECONTENTS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?s)\\begin\s*\{\s*filecontents\*?\s*\}.*?\\end\s*\{\s*filecontents\*?\s*\}")
       .unwrap()
   });
-  static ENDINPUT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\endinput(?:[^A-Za-z@]|$)").unwrap());
+  static ENDINPUT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\endinput(?:[^A-Za-z@]|$)").unwrap());
   let mut code = String::with_capacity(text.len());
   for line in text.split(['\n', '\r']) {
     let bytes = line.as_bytes();
@@ -136,7 +136,7 @@ fn uncommented_code(text: &str) -> String {
 /// Whether `code` names a LaTeX document's cue: `\documentclass`, `\documentstyle` or `\begin{document}`, or a
 /// command plain TeX cannot run (`\usepackage`, `\RequirePackage`, `\include`).
 fn has_latex_cue(code: &str) -> bool {
-  static LATEX_CUE: Lazy<Regex> = Lazy::new(|| {
+  static LATEX_CUE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
       r"\\document(?:class|style)|\\begin\s*\{\s*document\s*\}|\\(?:usepackage|RequirePackage|include)(?:[^A-Za-z@]|$)",
     )
@@ -187,15 +187,15 @@ pub struct CompileRoute {
 /// backend options) and whose specials it drops for the other graphics drivers. An unreadable source counts as
 /// LaTeX, PDF.
 fn compile_route(source: &str) -> CompileRoute {
-  static PDFOUTPUT_ONE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\pdfoutput\s*=?\s*1(?:[^0-9]|$)").unwrap());
-  static INPUT: Lazy<Regex> = Lazy::new(|| {
+  static PDFOUTPUT_ONE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\pdfoutput\s*=?\s*1(?:[^0-9]|$)").unwrap());
+  static INPUT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\\(?:input|include)(?:\s*\{\s*([^}]+?)\s*\}|\s+([^\s{}\\]+))").unwrap()
   });
-  static IFFALSE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?s)\\iffalse\b.*?\\(?:else|fi)\b").unwrap());
+  static IFFALSE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?s)\\iffalse\b.*?\\(?:else|fi)\b").unwrap());
   // A followed file's class cue must be one in use, not a dual-mode test (`\ifx\documentclass\undefined`).
-  static CLASS_IN_USE: Lazy<Regex> = Lazy::new(|| {
+  static CLASS_IN_USE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\\document(?:class|style)\s*[\[{]|\\begin\s*\{\s*document\s*\}").unwrap()
   });
   const MAX_INPUT_DEPTH: usize = 3;
@@ -299,12 +299,12 @@ fn compile_route(source: &str) -> CompileRoute {
 /// pstricks only in its `\ifpdf` false branch, its tree's stale PDFs included by nothing.
 fn figure_output_cue(main_code: &str, dir: Option<&std::path::Path>) -> state::FigureOutputCue {
   use state::FigureOutputCue;
-  static IFFALSE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?s)\\iffalse\b.*?\\(?:else|fi)\b").unwrap());
-  static INPUT: Lazy<Regex> = Lazy::new(|| {
+  static IFFALSE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?s)\\iffalse\b.*?\\(?:else|fi)\b").unwrap());
+  static INPUT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\\(?:input|include|subfile)(?:\s*\{\s*([^}]+?)\s*\}|\s+([^\s{}\\]+))").unwrap()
   });
-  static FIGURE: Lazy<Regex> = Lazy::new(|| {
+  static FIGURE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
       r"\\includegraphics\*?\s*(?:<[^>]*>\s*)?(?:\[[^\]]*\]\s*){0,2}\{\s*([^}]+?)\s*\}",
       r"|\\(?:epsfig|psfig)\s*\{[^}]*?\b(?:file|figure)\s*=\s*([^,}\s]+)",
@@ -314,10 +314,10 @@ fn figure_output_cue(main_code: &str, dir: Option<&std::path::Path>) -> state::F
     ))
     .unwrap()
   });
-  static GRAPHICSPATH: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"\\graphicspath\s*\{((?:\s*\{[^{}]*\})+)\s*\}").unwrap());
-  static BRACED: Lazy<Regex> = Lazy::new(|| Regex::new(r"\{([^{}]*)\}").unwrap());
-  static PACKAGES: Lazy<Regex> = Lazy::new(|| {
+  static GRAPHICSPATH: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\graphicspath\s*\{((?:\s*\{[^{}]*\})+)\s*\}").unwrap());
+  static BRACED: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{([^{}]*)\}").unwrap());
+  static PACKAGES: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\]\s*)?\{([^}]*)\}|\\input\s*\{?\s*(pstricks)\b").unwrap()
   });
   const MAX_INPUT_DEPTH: usize = 4;
