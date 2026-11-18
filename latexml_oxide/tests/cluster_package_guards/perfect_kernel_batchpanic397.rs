@@ -68,7 +68,8 @@ fn a_nested_ooalign_in_node_math_reverts() {
     2,
     "{log}"
   );
-  assert!(words(&xml).contains('L'), "{xml}");
+  // The cell is kept where TeX sets it: the inner alignment's own foreignObject.
+  assert!(xml.contains(">L</svg:foreignObject>"), "{xml}");
 }
 
 /// titlesec's before-code takes the author's title (`#4{#8}`), not `{\lx@format@title@font@@{subsection}…}`:
