@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/xslt.rs`."><title>xslt.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (5df8c02af 2026-11-16)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>xslt.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! XSLT transformation processor.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_post/src/xslt.rs`."><title>xslt.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_post" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (59cbdee2e 2026-11-17)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_post/</div>xslt.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! XSLT transformation processor.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Port of `LaTeXML::Post::XSLT`.
 <a href=#4 id=4 data-nosnippet>4</a>//! Applies an XSLT stylesheet to transform the document (e.g., LaTeXML XML → HTML5).
@@ -1419,82 +1419,155 @@
 <a href=#1419 id=1419 data-nosnippet>1419</a>  }
 <a href=#1420 id=1420 data-nosnippet>1420</a>
 <a href=#1421 id=1421 data-nosnippet>1421</a>  <span class="attr">#[test]
-<a href=#1422 id=1422 data-nosnippet>1422</a>  </span><span class="kw">fn </span>constrained_equation_overflow_delta_stays_present() {
-<a href=#1423 id=1423 data-nosnippet>1423</a>    <span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1424 id=1424 data-nosnippet>1424</a>    <span class="macro">assert!</span>(
-<a href=#1425 id=1425 data-nosnippet>1425</a>      css.contains(<span class="string">"#533"</span>)
-<a href=#1426 id=1426 data-nosnippet>1426</a>        &amp;&amp; css.contains(<span class="string">".ltx_inline-block .ltx_eqn_table"</span>)
-<a href=#1427 id=1427 data-nosnippet>1427</a>        &amp;&amp; css.contains(<span class="string">".ltx_td .ltx_eqn_table"</span>)
-<a href=#1428 id=1428 data-nosnippet>1428</a>        &amp;&amp; css.contains(<span class="string">"display:block; overflow-x:auto; max-width:100%;"</span>),
-<a href=#1429 id=1429 data-nosnippet>1429</a>      <span class="string">"the constrained-equation containment delta (issue #533) is missing from LaTeXML.css: \
-<a href=#1430 id=1430 data-nosnippet>1430</a>       display math inside a p{{}} cell / parbox / minipage / table cell would escape its \
-<a href=#1431 id=1431 data-nosnippet>1431</a>       box and scatter across the page instead of scrolling within the cell"</span>,
-<a href=#1432 id=1432 data-nosnippet>1432</a>    );
-<a href=#1433 id=1433 data-nosnippet>1433</a>  }
-<a href=#1434 id=1434 data-nosnippet>1434</a>
-<a href=#1435 id=1435 data-nosnippet>1435</a>  <span class="attr">#[test]
-<a href=#1436 id=1436 data-nosnippet>1436</a>  </span><span class="kw">fn </span>equation_tag_and_mathjax_deltas_stay_present() {
-<a href=#1437 id=1437 data-nosnippet>1437</a>    <span class="comment">// Issues #810 (a one-row equation centred in the full line, its tag beside it: Chrome/Firefox at
-<a href=#1438 id=1438 data-nosnippet>1438</a>    // 375 px, the long `\tag` over its formula -&gt; beside it; multi-row tables keep a tag column) and
-<a href=#1439 id=1439 data-nosnippet>1439</a>    // #475 (MathJax 2.1 offline: consecutive displays 53 -&gt; 21 px apart, native 18, in a table or a
-<a href=#1440 id=1440 data-nosnippet>1440</a>    // minipage); the browser half is `cluster_cli::browser_render_eqn_tags`.
-<a href=#1441 id=1441 data-nosnippet>1441</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1442 id=1442 data-nosnippet>1442</a>    <span class="kw">for </span>(issue, rule) <span class="kw">in </span>[
-<a href=#1443 id=1443 data-nosnippet>1443</a>      (<span class="string">"#810"</span>, <span class="string">".ltx_eqn_eqno { max-width:none; }"</span>),
-<a href=#1444 id=1444 data-nosnippet>1444</a>      (
-<a href=#1445 id=1445 data-nosnippet>1445</a>        <span class="string">"#810"</span>,
-<a href=#1446 id=1446 data-nosnippet>1446</a>        <span class="string">".ltx_equation.ltx_eqn_table &gt; * &gt; .ltx_eqn_row:only-child:has(&gt; .ltx_eqn_center_padleft) {\n  \
-<a href=#1447 id=1447 data-nosnippet>1447</a>         display:grid; grid-template-columns:minmax(2em,1fr) auto 1fr; align-items:center; }"</span>,
-<a href=#1448 id=1448 data-nosnippet>1448</a>      ),
-<a href=#1449 id=1449 data-nosnippet>1449</a>      (
-<a href=#1450 id=1450 data-nosnippet>1450</a>        <span class="string">"#475"</span>,
-<a href=#1451 id=1451 data-nosnippet>1451</a>        <span class="string">".ltx_eqn_table .ltx_eqn_cell &gt; mjx-container[display=\"true\"],\n\
-<a href=#1452 id=1452 data-nosnippet>1452</a>         .ltx_eqn_table .ltx_eqn_cell &gt; .MathJax_Display { margin-top:0; margin-bottom:0; }"</span>,
-<a href=#1453 id=1453 data-nosnippet>1453</a>      ),
-<a href=#1454 id=1454 data-nosnippet>1454</a>    ] {
-<a href=#1455 id=1455 data-nosnippet>1455</a>      <span class="macro">assert!</span>(
-<a href=#1456 id=1456 data-nosnippet>1456</a>        css.contains(issue) &amp;&amp; css.contains(rule),
-<a href=#1457 id=1457 data-nosnippet>1457</a>        <span class="string">"LaTeXML.css lost the issue {issue} rule `{rule}`"
-<a href=#1458 id=1458 data-nosnippet>1458</a>      </span>);
-<a href=#1459 id=1459 data-nosnippet>1459</a>    }
-<a href=#1460 id=1460 data-nosnippet>1460</a>  }
-<a href=#1461 id=1461 data-nosnippet>1461</a>
-<a href=#1462 id=1462 data-nosnippet>1462</a>  <span class="attr">#[test]
-<a href=#1463 id=1463 data-nosnippet>1463</a>  </span><span class="kw">fn </span>framed_verbatim_responsive_delta_stays_present() {
-<a href=#1464 id=1464 data-nosnippet>1464</a>    <span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1465 id=1465 data-nosnippet>1465</a>    <span class="macro">assert!</span>(
-<a href=#1466 id=1466 data-nosnippet>1466</a>      css.contains(<span class="string">"#525"</span>)
-<a href=#1467 id=1467 data-nosnippet>1467</a>        &amp;&amp; css.contains(
-<a href=#1468 id=1468 data-nosnippet>1468</a>          <span class="string">".ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }"
-<a href=#1469 id=1469 data-nosnippet>1469</a>        </span>),
-<a href=#1470 id=1470 data-nosnippet>1470</a>      <span class="string">"the framed-verbatim responsive-containment delta (issue #525) is missing from \
-<a href=#1471 id=1471 data-nosnippet>1471</a>       LaTeXML.css: a fancyvrb frame=single box spans the print \\linewidth and would push \
-<a href=#1472 id=1472 data-nosnippet>1472</a>       its border off-screen and scroll the whole page on a phone"</span>,
-<a href=#1473 id=1473 data-nosnippet>1473</a>    );
-<a href=#1474 id=1474 data-nosnippet>1474</a>  }
-<a href=#1475 id=1475 data-nosnippet>1475</a>
-<a href=#1476 id=1476 data-nosnippet>1476</a>  <span class="attr">#[test]
-<a href=#1477 id=1477 data-nosnippet>1477</a>  </span><span class="kw">fn </span>title_pubnote_content_stays_collapsed() {
-<a href=#1478 id=1478 data-nosnippet>1478</a>    <span class="comment">// arXiv/html_feedback#6888 (+ #6886): a title footnote (`\thanks`/`\titlenote`,
-<a href=#1479 id=1479 data-nosnippet>1479</a>    // role=note/thanks) stays in the `&lt;h1&gt;` as a `.ltx_pubnotes` block. The bundled
-<a href=#1480 id=1480 data-nosnippet>1480</a>    // CSS must render ONLY the dagger MARK and keep the footnote CONTENT hidden by
-<a href=#1481 id=1481 data-nosnippet>1481</a>    // default, so the title text is the sole rendered language — the reporter saw the
-<a href=#1482 id=1482 data-nosnippet>1482</a>    // footnote text rendered inline in the title (an older deployed build). Guard both
-<a href=#1483 id=1483 data-nosnippet>1483</a>    // halves so a re-vanilla / cleanup sweep cannot silently drop the collapse.
+<a href=#1422 id=1422 data-nosnippet>1422</a>  </span><span class="kw">fn </span>shared_author_note_delta_stays_present() {
+<a href=#1423 id=1423 data-nosnippet>1423</a>    <span class="comment">// OXIDIZED_DESIGN_DIVERGENCES #1052 (DG's rulings of 2026-11-16): a marked author note follows the name, set as
+<a href=#1424 id=1424 data-nosnippet>1424</a>    // text; where an author's lines show under the name (the #783 card, ltx_authors_multiline) its marked notes show
+<a href=#1425 id=1425 data-nosnippet>1425</a>    // there, each headed by its mark, one author's too (DG 2026-11-17, 2506.06941's †; 2606.00446, 2407.07614,
+<a href=#1426 id=1426 data-nosnippet>1426</a>    // 1706.03762). An
+<a href=#1427 id=1427 data-nosnippet>1427</a>    // unmarked note is no one author's (IEEEtran's \thanks, 1510.02728): no rule shows it under the name. A pure name's
+<a href=#1428 id=1428 data-nosnippet>1428</a>    // mark-only note (ltx_role_footnotemark, 0801.1438) shows its mark there too; a body under the name floats, so the
+<a href=#1429 id=1429 data-nosnippet>1429</a>    // marks after it stay on the name's line; consecutive marks are parted by a comma. The browser half is
+<a href=#1430 id=1430 data-nosnippet>1430</a>    // `cluster_cli::browser_render_author_lines`. A shared note's other marks carry a hidden copy of it
+<a href=#1431 id=1431 data-nosnippet>1431</a>    // (`ltx_note_copy`, DG 2026-11-17), which the card never floats under the name: its classic pop-up alone shows it.
+<a href=#1432 id=1432 data-nosnippet>1432</a>    </span><span class="kw">const </span>CARD: <span class="kw-2">&amp;</span>str = <span class="string">".ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(\
+<a href=#1433 id=1433 data-nosnippet>1433</a>                        .ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks)))"</span>;
+<a href=#1434 id=1434 data-nosnippet>1434</a>    <span class="kw">let </span>card = <span class="macro">format!</span>(<span class="string">":is({CARD}, .ltx_authors_multiline .ltx_creator)"</span>);
+<a href=#1435 id=1435 data-nosnippet>1435</a>    <span class="kw">let </span>lines = <span class="macro">format!</span>(<span class="string">"{card} .ltx_annotated_personname &gt; .ltx_note"</span>);
+<a href=#1436 id=1436 data-nosnippet>1436</a>    <span class="kw">let </span>body = <span class="string">".ltx_note_outer:not(.ltx_note_copy)"</span>;
+<a href=#1437 id=1437 data-nosnippet>1437</a>    <span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1438 id=1438 data-nosnippet>1438</a>    <span class="kw">for </span>rule <span class="kw">in </span>[
+<a href=#1439 id=1439 data-nosnippet>1439</a>      <span class="string">".ltx_annotated_personname:has(&gt; .ltx_note) { display:inline; }"</span>.to_string(),
+<a href=#1440 id=1440 data-nosnippet>1440</a>      <span class="string">".ltx_note_shared &gt; .ltx_note_mark &gt; a { color:inherit; text-decoration:none; }"</span>.to_string(),
+<a href=#1441 id=1441 data-nosnippet>1441</a>      <span class="macro">format!</span>(<span class="string">"{lines} {{ display:inline; }}"</span>),
+<a href=#1442 id=1442 data-nosnippet>1442</a>      <span class="macro">format!</span>(<span class="string">"{lines} &gt; {body} .ltx_note_content {{\n    display:block; position:static; float:inline-start; clear:both; width:100%;"</span>),
+<a href=#1443 id=1443 data-nosnippet>1443</a>      <span class="macro">format!</span>(<span class="string">"{lines} &gt; {body} .ltx_note_content .ltx_note_mark {{ position:static; }}"</span>),
+<a href=#1444 id=1444 data-nosnippet>1444</a>      <span class="macro">format!</span>(<span class="string">"{lines} &gt; {body} .ltx_note_type {{ display:none; }}"</span>),
+<a href=#1445 id=1445 data-nosnippet>1445</a>      <span class="string">".ltx_annotated_personname &gt; .ltx_note:has(~ .ltx_note) &gt; .ltx_note_mark::after { content:\",\"; }"</span>.to_string(),
+<a href=#1446 id=1446 data-nosnippet>1446</a>    ] {
+<a href=#1447 id=1447 data-nosnippet>1447</a>      <span class="macro">assert!</span>(
+<a href=#1448 id=1448 data-nosnippet>1448</a>        css.contains(<span class="string">"#1052"</span>) &amp;&amp; css.contains(<span class="kw-2">&amp;</span>rule),
+<a href=#1449 id=1449 data-nosnippet>1449</a>        <span class="string">"LaTeXML.css lost the shared author note rule `{rule}` (#1052)"
+<a href=#1450 id=1450 data-nosnippet>1450</a>      </span>);
+<a href=#1451 id=1451 data-nosnippet>1451</a>    }
+<a href=#1452 id=1452 data-nosnippet>1452</a>    <span class="macro">assert!</span>(
+<a href=#1453 id=1453 data-nosnippet>1453</a>      !css.contains(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+<a href=#1454 id=1454 data-nosnippet>1454</a>        <span class="string">"{lines}:not(.ltx_note_shared):not(.ltx_role_footnotemark) .ltx_note_mark"
+<a href=#1455 id=1455 data-nosnippet>1455</a>      </span>)),
+<a href=#1456 id=1456 data-nosnippet>1456</a>      <span class="string">"LaTeXML.css hides a one-author note's mark again (DG 2026-11-17: every marked note shows the mark the PDF prints)"
+<a href=#1457 id=1457 data-nosnippet>1457</a>    </span>);
+<a href=#1458 id=1458 data-nosnippet>1458</a>    <span class="macro">assert!</span>(
+<a href=#1459 id=1459 data-nosnippet>1459</a>      !css.contains(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{card} &gt; .ltx_note"</span>)),
+<a href=#1460 id=1460 data-nosnippet>1460</a>      <span class="string">"LaTeXML.css shows an unmarked author note under the name (#1052, 1510.02728)"
+<a href=#1461 id=1461 data-nosnippet>1461</a>    </span>);
+<a href=#1462 id=1462 data-nosnippet>1462</a>  }
+<a href=#1463 id=1463 data-nosnippet>1463</a>
+<a href=#1464 id=1464 data-nosnippet>1464</a>  <span class="attr">#[test]
+<a href=#1465 id=1465 data-nosnippet>1465</a>  </span><span class="kw">fn </span>constrained_equation_overflow_delta_stays_present() {
+<a href=#1466 id=1466 data-nosnippet>1466</a>    <span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1467 id=1467 data-nosnippet>1467</a>    <span class="macro">assert!</span>(
+<a href=#1468 id=1468 data-nosnippet>1468</a>      css.contains(<span class="string">"#533"</span>)
+<a href=#1469 id=1469 data-nosnippet>1469</a>        &amp;&amp; css.contains(<span class="string">".ltx_inline-block .ltx_eqn_table"</span>)
+<a href=#1470 id=1470 data-nosnippet>1470</a>        &amp;&amp; css.contains(<span class="string">".ltx_td .ltx_eqn_table"</span>)
+<a href=#1471 id=1471 data-nosnippet>1471</a>        &amp;&amp; css.contains(<span class="string">"display:block; overflow-x:auto; max-width:100%;"</span>),
+<a href=#1472 id=1472 data-nosnippet>1472</a>      <span class="string">"the constrained-equation containment delta (issue #533) is missing from LaTeXML.css: \
+<a href=#1473 id=1473 data-nosnippet>1473</a>       display math inside a p{{}} cell / parbox / minipage / table cell would escape its \
+<a href=#1474 id=1474 data-nosnippet>1474</a>       box and scatter across the page instead of scrolling within the cell"</span>,
+<a href=#1475 id=1475 data-nosnippet>1475</a>    );
+<a href=#1476 id=1476 data-nosnippet>1476</a>  }
+<a href=#1477 id=1477 data-nosnippet>1477</a>
+<a href=#1478 id=1478 data-nosnippet>1478</a>  <span class="attr">#[test]
+<a href=#1479 id=1479 data-nosnippet>1479</a>  </span><span class="kw">fn </span>equation_tag_and_mathjax_deltas_stay_present() {
+<a href=#1480 id=1480 data-nosnippet>1480</a>    <span class="comment">// Issues #810 (a one-row equation centred in the full line, its tag beside it: Chrome/Firefox at
+<a href=#1481 id=1481 data-nosnippet>1481</a>    // 375 px, the long `\tag` over its formula -&gt; beside it; multi-row tables keep a tag column) and
+<a href=#1482 id=1482 data-nosnippet>1482</a>    // #475 (MathJax 2.1 offline: consecutive displays 53 -&gt; 21 px apart, native 18, in a table or a
+<a href=#1483 id=1483 data-nosnippet>1483</a>    // minipage); the browser half is `cluster_cli::browser_render_eqn_tags`.
 <a href=#1484 id=1484 data-nosnippet>1484</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1485 id=1485 data-nosnippet>1485</a>    <span class="macro">assert!</span>(
-<a href=#1486 id=1486 data-nosnippet>1486</a>      css.contains(<span class="string">".ltx_pubnotes:before"</span>) &amp;&amp; css.contains(<span class="string">r#"content:"\002020""#</span>),
-<a href=#1487 id=1487 data-nosnippet>1487</a>      <span class="string">"the title-footnote MARK rule (.ltx_pubnotes:before dagger) is missing from \
-<a href=#1488 id=1488 data-nosnippet>1488</a>       LaTeXML.css (arXiv/html_feedback#6888)"</span>,
-<a href=#1489 id=1489 data-nosnippet>1489</a>    );
-<a href=#1490 id=1490 data-nosnippet>1490</a>    <span class="macro">assert!</span>(
-<a href=#1491 id=1491 data-nosnippet>1491</a>      css.contains(<span class="string">".ltx_pubnotes .ltx_pubnotes_content"</span>)
-<a href=#1492 id=1492 data-nosnippet>1492</a>        &amp;&amp; css.contains(<span class="string">"visibility:hidden; opacity:0"</span>),
-<a href=#1493 id=1493 data-nosnippet>1493</a>      <span class="string">"the title-footnote CONTENT-hidden rule (.ltx_pubnotes .ltx_pubnotes_content \
-<a href=#1494 id=1494 data-nosnippet>1494</a>       {{ visibility:hidden }}) is missing from LaTeXML.css: the `\\thanks` text would \
-<a href=#1495 id=1495 data-nosnippet>1495</a>       render inline in the title instead of collapsing to the dagger \
-<a href=#1496 id=1496 data-nosnippet>1496</a>       (arXiv/html_feedback#6888)"</span>,
-<a href=#1497 id=1497 data-nosnippet>1497</a>    );
-<a href=#1498 id=1498 data-nosnippet>1498</a>  }
-<a href=#1499 id=1499 data-nosnippet>1499</a>}
+<a href=#1485 id=1485 data-nosnippet>1485</a>    <span class="kw">for </span>(issue, rule) <span class="kw">in </span>[
+<a href=#1486 id=1486 data-nosnippet>1486</a>      (<span class="string">"#810"</span>, <span class="string">".ltx_eqn_eqno { max-width:none; }"</span>),
+<a href=#1487 id=1487 data-nosnippet>1487</a>      (
+<a href=#1488 id=1488 data-nosnippet>1488</a>        <span class="string">"#810"</span>,
+<a href=#1489 id=1489 data-nosnippet>1489</a>        <span class="string">".ltx_equation.ltx_eqn_table &gt; * &gt; .ltx_eqn_row:only-child:has(&gt; .ltx_eqn_center_padleft) {\n  \
+<a href=#1490 id=1490 data-nosnippet>1490</a>         display:grid; grid-template-columns:minmax(2em,1fr) auto 1fr; align-items:center; }"</span>,
+<a href=#1491 id=1491 data-nosnippet>1491</a>      ),
+<a href=#1492 id=1492 data-nosnippet>1492</a>      (
+<a href=#1493 id=1493 data-nosnippet>1493</a>        <span class="string">"#475"</span>,
+<a href=#1494 id=1494 data-nosnippet>1494</a>        <span class="string">".ltx_eqn_table .ltx_eqn_cell &gt; mjx-container[display=\"true\"],\n\
+<a href=#1495 id=1495 data-nosnippet>1495</a>         .ltx_eqn_table .ltx_eqn_cell &gt; .MathJax_Display { margin-top:0; margin-bottom:0; }"</span>,
+<a href=#1496 id=1496 data-nosnippet>1496</a>      ),
+<a href=#1497 id=1497 data-nosnippet>1497</a>    ] {
+<a href=#1498 id=1498 data-nosnippet>1498</a>      <span class="macro">assert!</span>(
+<a href=#1499 id=1499 data-nosnippet>1499</a>        css.contains(issue) &amp;&amp; css.contains(rule),
+<a href=#1500 id=1500 data-nosnippet>1500</a>        <span class="string">"LaTeXML.css lost the issue {issue} rule `{rule}`"
+<a href=#1501 id=1501 data-nosnippet>1501</a>      </span>);
+<a href=#1502 id=1502 data-nosnippet>1502</a>    }
+<a href=#1503 id=1503 data-nosnippet>1503</a>  }
+<a href=#1504 id=1504 data-nosnippet>1504</a>
+<a href=#1505 id=1505 data-nosnippet>1505</a>  <span class="attr">#[test]
+<a href=#1506 id=1506 data-nosnippet>1506</a>  </span><span class="kw">fn </span>framed_verbatim_responsive_delta_stays_present() {
+<a href=#1507 id=1507 data-nosnippet>1507</a>    <span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1508 id=1508 data-nosnippet>1508</a>    <span class="macro">assert!</span>(
+<a href=#1509 id=1509 data-nosnippet>1509</a>      css.contains(<span class="string">"#525"</span>)
+<a href=#1510 id=1510 data-nosnippet>1510</a>        &amp;&amp; css.contains(
+<a href=#1511 id=1511 data-nosnippet>1511</a>          <span class="string">".ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }"
+<a href=#1512 id=1512 data-nosnippet>1512</a>        </span>),
+<a href=#1513 id=1513 data-nosnippet>1513</a>      <span class="string">"the framed-verbatim responsive-containment delta (issue #525) is missing from \
+<a href=#1514 id=1514 data-nosnippet>1514</a>       LaTeXML.css: a fancyvrb frame=single box spans the print \\linewidth and would push \
+<a href=#1515 id=1515 data-nosnippet>1515</a>       its border off-screen and scroll the whole page on a phone"</span>,
+<a href=#1516 id=1516 data-nosnippet>1516</a>    );
+<a href=#1517 id=1517 data-nosnippet>1517</a>  }
+<a href=#1518 id=1518 data-nosnippet>1518</a>
+<a href=#1519 id=1519 data-nosnippet>1519</a>  <span class="attr">#[test]
+<a href=#1520 id=1520 data-nosnippet>1520</a>  </span><span class="kw">fn </span>title_pubnote_content_stays_collapsed() {
+<a href=#1521 id=1521 data-nosnippet>1521</a>    <span class="comment">// arXiv/html_feedback#6888 (+ #6886): a title footnote (`\thanks`/`\titlenote`,
+<a href=#1522 id=1522 data-nosnippet>1522</a>    // role=note/thanks) stays in the `&lt;h1&gt;` as a `.ltx_pubnotes` block. The bundled
+<a href=#1523 id=1523 data-nosnippet>1523</a>    // CSS must render ONLY the dagger MARK and keep the footnote CONTENT hidden by
+<a href=#1524 id=1524 data-nosnippet>1524</a>    // default, so the title text is the sole rendered language — the reporter saw the
+<a href=#1525 id=1525 data-nosnippet>1525</a>    // footnote text rendered inline in the title (an older deployed build). Guard both
+<a href=#1526 id=1526 data-nosnippet>1526</a>    // halves so a re-vanilla / cleanup sweep cannot silently drop the collapse.
+<a href=#1527 id=1527 data-nosnippet>1527</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1528 id=1528 data-nosnippet>1528</a>    <span class="macro">assert!</span>(
+<a href=#1529 id=1529 data-nosnippet>1529</a>      css.contains(<span class="string">".ltx_pubnotes:before {\n    content:\"\\24D8\""</span>),
+<a href=#1530 id=1530 data-nosnippet>1530</a>      <span class="string">"the title-footnote handle rule (.ltx_pubnotes:before, ⓘ since OXIDIZED_DESIGN_DIVERGENCES #1069) is missing \
+<a href=#1531 id=1531 data-nosnippet>1531</a>       from LaTeXML.css (arXiv/html_feedback#6888)"</span>,
+<a href=#1532 id=1532 data-nosnippet>1532</a>    );
+<a href=#1533 id=1533 data-nosnippet>1533</a>    <span class="macro">assert!</span>(
+<a href=#1534 id=1534 data-nosnippet>1534</a>      css.contains(<span class="string">".ltx_pubnotes .ltx_pubnotes_content"</span>)
+<a href=#1535 id=1535 data-nosnippet>1535</a>        &amp;&amp; css.contains(<span class="string">"visibility:hidden; opacity:0"</span>),
+<a href=#1536 id=1536 data-nosnippet>1536</a>      <span class="string">"the title-footnote CONTENT-hidden rule (.ltx_pubnotes .ltx_pubnotes_content \
+<a href=#1537 id=1537 data-nosnippet>1537</a>       {{ visibility:hidden }}) is missing from LaTeXML.css: the `\\thanks` text would \
+<a href=#1538 id=1538 data-nosnippet>1538</a>       render inline in the title instead of collapsing to its handle \
+<a href=#1539 id=1539 data-nosnippet>1539</a>       (arXiv/html_feedback#6888)"</span>,
+<a href=#1540 id=1540 data-nosnippet>1540</a>    );
+<a href=#1541 id=1541 data-nosnippet>1541</a>  }
+<a href=#1542 id=1542 data-nosnippet>1542</a>
+<a href=#1543 id=1543 data-nosnippet>1543</a>  <span class="attr">#[test]
+<a href=#1544 id=1544 data-nosnippet>1544</a>  </span><span class="kw">fn </span>css_draws_no_footnote_mark_glyph() {
+<a href=#1545 id=1545 data-nosnippet>1545</a>    <span class="comment">// DG 2026-11-17 (OXIDIZED_DESIGN_DIVERGENCES #1069): the page carries every mark the PDF prints, and a generated
+<a href=#1546 id=1546 data-nosnippet>1546</a>    // mark only where it prints none, unique against them; a glyph the stylesheet draws is neither, so it is never one
+<a href=#1547 id=1547 data-nosnippet>1547</a>    // of the marks' glyphs. The hover handles for an author's hidden contacts and for the title notes draw ⓘ (Perl:
+<a href=#1548 id=1548 data-nosnippet>1548</a>    // `*` and `†`, which read as a second mark beside a printed one: 2606.00446's "Park**", 2605.10496's title †).
+<a href=#1549 id=1549 data-nosnippet>1549</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1550 id=1550 data-nosnippet>1550</a>    <span class="kw">for </span>glyph <span class="kw">in </span>[
+<a href=#1551 id=1551 data-nosnippet>1551</a>      <span class="string">"*"</span>, <span class="string">"\\2217"</span>, <span class="string">"∗"</span>, <span class="string">"\\002020"</span>, <span class="string">"\\2020"</span>, <span class="string">"†"</span>, <span class="string">"\\2021"</span>, <span class="string">"‡"</span>, <span class="string">"\\00A7"</span>, <span class="string">"§"</span>, <span class="string">"\\00B6"</span>, <span class="string">"¶"</span>,
+<a href=#1552 id=1552 data-nosnippet>1552</a>      <span class="string">"\\2016"</span>, <span class="string">"‖"</span>,
+<a href=#1553 id=1553 data-nosnippet>1553</a>    ] {
+<a href=#1554 id=1554 data-nosnippet>1554</a>      <span class="kw">for </span>spaced <span class="kw">in </span>[<span class="string">""</span>, <span class="string">" "</span>] {
+<a href=#1555 id=1555 data-nosnippet>1555</a>        <span class="kw">let </span>rule = <span class="macro">format!</span>(<span class="string">"content:{spaced}\"{glyph}\""</span>);
+<a href=#1556 id=1556 data-nosnippet>1556</a>        <span class="macro">assert!</span>(
+<a href=#1557 id=1557 data-nosnippet>1557</a>          !css.contains(<span class="kw-2">&amp;</span>rule),
+<a href=#1558 id=1558 data-nosnippet>1558</a>          <span class="string">"LaTeXML.css draws the footnote-mark glyph `{rule}`"
+<a href=#1559 id=1559 data-nosnippet>1559</a>        </span>);
+<a href=#1560 id=1560 data-nosnippet>1560</a>      }
+<a href=#1561 id=1561 data-nosnippet>1561</a>    }
+<a href=#1562 id=1562 data-nosnippet>1562</a>    <span class="kw">for </span>handle <span class="kw">in </span>[
+<a href=#1563 id=1563 data-nosnippet>1563</a>      <span class="string">".ltx_author_notes:before {\n    content:\"\\24D8\""</span>,
+<a href=#1564 id=1564 data-nosnippet>1564</a>      <span class="string">".ltx_pubnotes:before {\n    content:\"\\24D8\""</span>,
+<a href=#1565 id=1565 data-nosnippet>1565</a>    ] {
+<a href=#1566 id=1566 data-nosnippet>1566</a>      <span class="macro">assert!</span>(
+<a href=#1567 id=1567 data-nosnippet>1567</a>        css.contains(handle),
+<a href=#1568 id=1568 data-nosnippet>1568</a>        <span class="string">"LaTeXML.css lacks the ⓘ hover handle `{handle}`"
+<a href=#1569 id=1569 data-nosnippet>1569</a>      </span>);
+<a href=#1570 id=1570 data-nosnippet>1570</a>    }
+<a href=#1571 id=1571 data-nosnippet>1571</a>  }
+<a href=#1572 id=1572 data-nosnippet>1572</a>}
 </code></pre></div></section></main></body></html>

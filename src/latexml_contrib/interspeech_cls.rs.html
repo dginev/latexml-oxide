@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/interspeech_cls.rs`."><title>interspeech_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (5df8c02af 2026-11-16)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>interspeech_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Interspeech.cls (the ISCA template a paper ships; Interspeech2024.cls and other versioned names fall back here) on
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/interspeech_cls.rs`."><title>interspeech_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (59cbdee2e 2026-11-17)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>interspeech_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Interspeech.cls (the ISCA template a paper ships; Interspeech2024.cls and other versioned names fall back here) on
 <a href=#2 id=2 data-nosnippet>2</a>//! OmniBus: the packages the class requires, its one-author-per-call `\name`/`\author` with keys, its `\address` block
 <a href=#3 id=3 data-nosnippet>3</a>//! or numbered `\affiliation`s, `\email`, and its camera-ready switch, as the frontmatter.
 <a href=#4 id=4 data-nosnippet>4</a>//! Witnesses 2409.08589, 2409.08711, 2605.02715, 2406.11727, 2506.00350.
@@ -177,238 +177,244 @@
 <a href=#177 id=177 data-nosnippet>177</a>    <span class="kw">let </span>form = <span class="kw">if </span>unnumbered { <span class="string">"\\lx@is@affiliation@unnumbered" </span>} <span class="kw">else </span>{ <span class="string">"\\lx@is@affiliation@numbered" </span>};
 <a href=#178 id=178 data-nosnippet>178</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(form), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(department), <span class="prelude-val">Some</span>(institution), <span class="prelude-val">Some</span>(place)]))
 <a href=#179 id=179 data-nosnippet>179</a>  });
-<a href=#180 id=180 data-nosnippet>180</a>  <span class="macro">DefMacro!</span>(
-<a href=#181 id=181 data-nosnippet>181</a>    <span class="string">"\\email{}"</span>,
-<a href=#182 id=182 data-nosnippet>182</a>    <span class="string">"\\lx@is@frontmatter@add{\\@add@frontmatter{ltx:note}[role=email]{#1}}"
-<a href=#183 id=183 data-nosnippet>183</a>  </span>);
-<a href=#184 id=184 data-nosnippet>184</a>  <span class="comment">// INTERSPEECH2023.cls L160: `\def\ninept{\def\baselinestretch{0.95}
-<a href=#185 id=185 data-nosnippet>185</a>  // \let\normalsize\small\normalsize}` — 9-point text mode. Layout
-<a href=#186 id=186 data-nosnippet>186</a>  // adjustment, semantically irrelevant for our XML output. Witness
-<a href=#187 id=187 data-nosnippet>187</a>  // 2312.05730.
-<a href=#188 id=188 data-nosnippet>188</a>  </span>def_macro_noop(<span class="string">"\\ninept"</span>)<span class="question-mark">?</span>;
-<a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">// Vectors and matrices are bold, not arrow-accented (Interspeech.cls:152-153 of 2025, :227-228 of 2026).
-<a href=#190 id=190 data-nosnippet>190</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\vec{}"</span>, <span class="string">"\\ensuremath{\\bm{{#1}}}"</span>);
-<a href=#191 id=191 data-nosnippet>191</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\mat{}"</span>, <span class="string">"\\vec{#1}"</span>);
-<a href=#192 id=192 data-nosnippet>192</a>  <span class="macro">DefMacro!</span>(
-<a href=#193 id=193 data-nosnippet>193</a>    <span class="string">"\\thanks{}"</span>,
-<a href=#194 id=194 data-nosnippet>194</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=thanks]{#1}"
-<a href=#195 id=195 data-nosnippet>195</a>  </span>);
-<a href=#196 id=196 data-nosnippet>196</a>  <span class="macro">DefMacro!</span>(
-<a href=#197 id=197 data-nosnippet>197</a>    <span class="string">"\\keywords{}"</span>,
-<a href=#198 id=198 data-nosnippet>198</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
-<a href=#199 id=199 data-nosnippet>199</a>  </span>);
-<a href=#200 id=200 data-nosnippet>200</a>  <span class="macro">DefMacro!</span>(
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">"\\copyrightnotice{}"</span>,
-<a href=#202 id=202 data-nosnippet>202</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright]{#1}"
-<a href=#203 id=203 data-nosnippet>203</a>  </span>);
-<a href=#204 id=204 data-nosnippet>204</a>});
-<a href=#205 id=205 data-nosnippet>205</a>
-<a href=#206 id=206 data-nosnippet>206</a><span class="doccomment">/// `\name[keys]{First}{Last}` / `\author[keys]{First}{Last}`, or, when no braced family name follows, a whole author
-<a href=#207 id=207 data-nosnippet>207</a>/// list in the one argument, its names marked `$^1$` (2506.00350; the class takes the next token as the family name,
-<a href=#208 id=208 data-nosnippet>208</a>/// and pdflatex prints the list).
-<a href=#209 id=209 data-nosnippet>209</a></span><span class="kw">fn </span>interspeech_author(keys: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, given: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-<a href=#210 id=210 data-nosnippet>210</a>  <span class="kw">let </span>next = read_non_space()<span class="question-mark">?</span>;
-<a href=#211 id=211 data-nosnippet>211</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = next {
-<a href=#212 id=212 data-nosnippet>212</a>    unread_one(token);
-<a href=#213 id=213 data-nosnippet>213</a>  }
-<a href=#214 id=214 data-nosnippet>214</a>  <span class="kw">if </span>next.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
-<a href=#215 id=215 data-nosnippet>215</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@author@named"</span>), <span class="macro">vec!</span>[
-<a href=#216 id=216 data-nosnippet>216</a>      keys,
-<a href=#217 id=217 data-nosnippet>217</a>      <span class="prelude-val">Some</span>(given)
-<a href=#218 id=218 data-nosnippet>218</a>    ]))
-<a href=#219 id=219 data-nosnippet>219</a>  } <span class="kw">else </span>{
-<a href=#220 id=220 data-nosnippet>220</a>    <span class="comment">// (the names' marks link them to the numbered affiliations: `Xixin Wu$^{1,3,*}$`)
-<a href=#221 id=221 data-nosnippet>221</a>    </span><span class="kw">let </span>tokens = given.unlist_ref();
-<a href=#222 id=222 data-nosnippet>222</a>    <span class="kw">let </span>marked = tokens.iter().enumerate().any(|(i, t)| {
-<a href=#223 id=223 data-nosnippet>223</a>      (t.get_catcode() == Catcode::SUPER || <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\textsuperscript"</span>))
-<a href=#224 id=224 data-nosnippet>224</a>        &amp;&amp; tokens[i + <span class="number">1</span>..]
-<a href=#225 id=225 data-nosnippet>225</a>          .iter()
-<a href=#226 id=226 data-nosnippet>226</a>          .find(|t| t.get_catcode() != Catcode::BEGIN &amp;&amp; t.get_catcode() != Catcode::SPACE)
-<a href=#227 id=227 data-nosnippet>227</a>          .is_some_and(|t| {
-<a href=#228 id=228 data-nosnippet>228</a>            t.get_catcode() != Catcode::CS
-<a href=#229 id=229 data-nosnippet>229</a>              &amp;&amp; t.with_str(|text| text.chars().all(char::is_alphanumeric))
-<a href=#230 id=230 data-nosnippet>230</a>          })
-<a href=#231 id=231 data-nosnippet>231</a>    });
-<a href=#232 id=232 data-nosnippet>232</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@author@add"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(<span class="macro">Invocation!</span>(
-<a href=#233 id=233 data-nosnippet>233</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@add@authors"</span>),
-<a href=#234 id=234 data-nosnippet>234</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(given)]
-<a href=#235 id=235 data-nosnippet>235</a>    ))])
-<a href=#236 id=236 data-nosnippet>236</a>    .unlist();
-<a href=#237 id=237 data-nosnippet>237</a>    <span class="kw">if </span>marked {
-<a href=#238 id=238 data-nosnippet>238</a>      out.extend([<span class="macro">T_CS!</span>(<span class="string">"\\global"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\lx@is@markedtrue"</span>)]);
-<a href=#239 id=239 data-nosnippet>239</a>    }
-<a href=#240 id=240 data-nosnippet>240</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
-<a href=#241 id=241 data-nosnippet>241</a>  }
-<a href=#242 id=242 data-nosnippet>242</a>}
-<a href=#243 id=243 data-nosnippet>243</a>
-<a href=#244 id=244 data-nosnippet>244</a><span class="doccomment">/// One author's frontmatter, added when the document begins: the creator with the class's marks — the
-<a href=#245 id=245 data-nosnippet>245</a>/// `affiliation={…}` items, `*` for `equalcontribution`, `**` for `correspondingauthor` — and the ORCID link
-<a href=#246 id=246 data-nosnippet>246</a>/// (Interspeech.cls of 2026 :129-209). A mark the class sets in math (`affiliation={1^\dagger}`, `{1{^\dagger}{^\#}}`,
-<a href=#247 id=247 data-nosnippet>247</a>/// 2406.08931, 2605.04749) is split into its items, a symbol one in math.
-<a href=#248 id=248 data-nosnippet>248</a></span><span class="kw">fn </span>interspeech_author_entry(keys: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, name: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-<a href=#249 id=249 data-nosnippet>249</a>  <span class="kw">let </span><span class="kw-2">mut </span>marks: Vec&lt;Vec&lt;Token&gt;&gt; = Vec::new();
-<a href=#250 id=250 data-nosnippet>250</a>  <span class="kw">let </span><span class="kw-2">mut </span>orcid: <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; = <span class="prelude-val">None</span>;
-<a href=#251 id=251 data-nosnippet>251</a>  <span class="kw">let </span>(<span class="kw-2">mut </span>equal, <span class="kw-2">mut </span>corresponding) = (<span class="bool-val">false</span>, <span class="bool-val">false</span>);
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="kw">for </span>item <span class="kw">in </span>split_top_level(keys.map(Tokens::unlist).unwrap_or_default(), <span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">","</span>)) {
-<a href=#253 id=253 data-nosnippet>253</a>    <span class="kw">let </span>(key, value) = <span class="kw">match </span>item.iter().position(|t| <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"="</span>)) {
-<a href=#254 id=254 data-nosnippet>254</a>      <span class="prelude-val">Some</span>(i) =&gt; (item[..i].to_vec(), <span class="prelude-val">Some</span>(item[i + <span class="number">1</span>..].to_vec())),
-<a href=#255 id=255 data-nosnippet>255</a>      <span class="prelude-val">None </span>=&gt; (item, <span class="prelude-val">None</span>),
-<a href=#256 id=256 data-nosnippet>256</a>    };
-<a href=#257 id=257 data-nosnippet>257</a>    <span class="kw">match </span>Tokens::new(key).to_string().trim() {
-<a href=#258 id=258 data-nosnippet>258</a>      <span class="string">"affiliation" </span>=&gt; marks.extend(mark_items(value.unwrap_or_default())),
-<a href=#259 id=259 data-nosnippet>259</a>      <span class="string">"equalcontribution" </span>=&gt; equal = <span class="bool-val">true</span>,
-<a href=#260 id=260 data-nosnippet>260</a>      <span class="string">"correspondingauthor" </span>=&gt; corresponding = <span class="bool-val">true</span>,
-<a href=#261 id=261 data-nosnippet>261</a>      <span class="string">"orcid" </span>=&gt; orcid = value.map(strip_spaces),
-<a href=#262 id=262 data-nosnippet>262</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#263 id=263 data-nosnippet>263</a>    }
-<a href=#264 id=264 data-nosnippet>264</a>  }
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="comment">// (an author marked only by symbols names no numbered affiliation)
-<a href=#266 id=266 data-nosnippet>266</a>  </span><span class="kw">let </span>marked = marks.iter().any(|mark| {
-<a href=#267 id=267 data-nosnippet>267</a>    mark.iter().all(|t| {
-<a href=#268 id=268 data-nosnippet>268</a>      t.get_catcode() != Catcode::CS &amp;&amp; t.with_str(|text| text.chars().all(char::is_alphanumeric))
-<a href=#269 id=269 data-nosnippet>269</a>    })
-<a href=#270 id=270 data-nosnippet>270</a>  });
-<a href=#271 id=271 data-nosnippet>271</a>  <span class="kw">if </span>equal {
-<a href=#272 id=272 data-nosnippet>272</a>    marks.push(<span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)]);
-<a href=#273 id=273 data-nosnippet>273</a>  }
-<a href=#274 id=274 data-nosnippet>274</a>  <span class="kw">if </span>corresponding {
-<a href=#275 id=275 data-nosnippet>275</a>    marks.push(<span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)]);
-<a href=#276 id=276 data-nosnippet>276</a>  }
-<a href=#277 id=277 data-nosnippet>277</a>  <span class="kw">let </span><span class="kw-2">mut </span>annotations: Vec&lt;Token&gt; = Vec::new();
-<a href=#278 id=278 data-nosnippet>278</a>  <span class="kw">for </span>(i, mark) <span class="kw">in </span>marks.into_iter().enumerate() {
-<a href=#279 id=279 data-nosnippet>279</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
-<a href=#280 id=280 data-nosnippet>280</a>      annotations.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
-<a href=#281 id=281 data-nosnippet>281</a>    }
-<a href=#282 id=282 data-nosnippet>282</a>    <span class="kw">if </span>mark.iter().any(|t| t.get_catcode() == Catcode::CS) {
-<a href=#283 id=283 data-nosnippet>283</a>      annotations.extend([<span class="macro">T_CS!</span>(<span class="string">"\\ensuremath"</span>), <span class="macro">T_BEGIN!</span>()]);
-<a href=#284 id=284 data-nosnippet>284</a>      annotations.extend(mark);
-<a href=#285 id=285 data-nosnippet>285</a>      annotations.push(<span class="macro">T_END!</span>());
-<a href=#286 id=286 data-nosnippet>286</a>    } <span class="kw">else </span>{
-<a href=#287 id=287 data-nosnippet>287</a>      annotations.extend(mark);
-<a href=#288 id=288 data-nosnippet>288</a>    }
-<a href=#289 id=289 data-nosnippet>289</a>  }
-<a href=#290 id=290 data-nosnippet>290</a>  <span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@creator"</span>), <span class="macro">vec!</span>[
-<a href=#291 id=291 data-nosnippet>291</a>    <span class="prelude-val">Some</span>(Tokens::new(annotations)),
-<a href=#292 id=292 data-nosnippet>292</a>    <span class="prelude-val">Some</span>(name)
-<a href=#293 id=293 data-nosnippet>293</a>  ])
-<a href=#294 id=294 data-nosnippet>294</a>  .unlist();
-<a href=#295 id=295 data-nosnippet>295</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(orcid) = orcid {
-<a href=#296 id=296 data-nosnippet>296</a>    entry.extend(
-<a href=#297 id=297 data-nosnippet>297</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@orcid"</span>), <span class="macro">vec!</span>[
-<a href=#298 id=298 data-nosnippet>298</a>        <span class="prelude-val">None</span>,
-<a href=#299 id=299 data-nosnippet>299</a>        <span class="prelude-val">Some</span>(Tokens::new(orcid))
-<a href=#300 id=300 data-nosnippet>300</a>      ])
-<a href=#301 id=301 data-nosnippet>301</a>      .unlist(),
-<a href=#302 id=302 data-nosnippet>302</a>    );
-<a href=#303 id=303 data-nosnippet>303</a>  }
-<a href=#304 id=304 data-nosnippet>304</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@author@add"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::new(entry))]).unlist();
-<a href=#305 id=305 data-nosnippet>305</a>  <span class="kw">if </span>marked {
-<a href=#306 id=306 data-nosnippet>306</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\global"</span>));
-<a href=#307 id=307 data-nosnippet>307</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@markedtrue"</span>));
-<a href=#308 id=308 data-nosnippet>308</a>  }
-<a href=#309 id=309 data-nosnippet>309</a>  <span class="kw">if </span>equal {
-<a href=#310 id=310 data-nosnippet>310</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\global"</span>));
-<a href=#311 id=311 data-nosnippet>311</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@equaltrue"</span>));
-<a href=#312 id=312 data-nosnippet>312</a>  }
-<a href=#313 id=313 data-nosnippet>313</a>  <span class="kw">if </span>corresponding {
-<a href=#314 id=314 data-nosnippet>314</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\global"</span>));
-<a href=#315 id=315 data-nosnippet>315</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@correspondingtrue"</span>));
-<a href=#316 id=316 data-nosnippet>316</a>  }
-<a href=#317 id=317 data-nosnippet>317</a>  <span class="prelude-val">Ok</span>(Tokens::new(out))
-<a href=#318 id=318 data-nosnippet>318</a>}
-<a href=#319 id=319 data-nosnippet>319</a>
-<a href=#320 id=320 data-nosnippet>320</a><span class="doccomment">/// `tokens` split at the top-level `separator`s, each piece without its outer spaces.
-<a href=#321 id=321 data-nosnippet>321</a></span><span class="kw">fn </span>split_top_level(tokens: Vec&lt;Token&gt;, separator: <span class="kw-2">&amp;</span>Token) -&gt; Vec&lt;Vec&lt;Token&gt;&gt; {
-<a href=#322 id=322 data-nosnippet>322</a>  <span class="kw">let </span><span class="kw-2">mut </span>items = <span class="macro">vec!</span>[Vec::new()];
-<a href=#323 id=323 data-nosnippet>323</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0</span>;
-<a href=#324 id=324 data-nosnippet>324</a>  <span class="kw">for </span>token <span class="kw">in </span>tokens {
-<a href=#325 id=325 data-nosnippet>325</a>    <span class="kw">match </span>token.get_catcode() {
-<a href=#326 id=326 data-nosnippet>326</a>      Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
-<a href=#327 id=327 data-nosnippet>327</a>      Catcode::END =&gt; depth -= <span class="number">1</span>,
-<a href=#328 id=328 data-nosnippet>328</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#329 id=329 data-nosnippet>329</a>    }
-<a href=#330 id=330 data-nosnippet>330</a>    <span class="kw">if </span>depth == <span class="number">0 </span>&amp;&amp; token == <span class="kw-2">*</span>separator {
-<a href=#331 id=331 data-nosnippet>331</a>      items.push(Vec::new());
-<a href=#332 id=332 data-nosnippet>332</a>    } <span class="kw">else </span>{
-<a href=#333 id=333 data-nosnippet>333</a>      items.last_mut().unwrap().push(token);
-<a href=#334 id=334 data-nosnippet>334</a>    }
-<a href=#335 id=335 data-nosnippet>335</a>  }
-<a href=#336 id=336 data-nosnippet>336</a>  items
-<a href=#337 id=337 data-nosnippet>337</a>    .into_iter()
-<a href=#338 id=338 data-nosnippet>338</a>    .map(strip_spaces)
-<a href=#339 id=339 data-nosnippet>339</a>    .filter(|item| !item.is_empty())
-<a href=#340 id=340 data-nosnippet>340</a>    .collect()
-<a href=#341 id=341 data-nosnippet>341</a>}
-<a href=#342 id=342 data-nosnippet>342</a>
-<a href=#343 id=343 data-nosnippet>343</a><span class="doccomment">/// `tokens` without leading and trailing spaces, and without one pair of braces around the whole.
-<a href=#344 id=344 data-nosnippet>344</a></span><span class="kw">fn </span>strip_spaces(tokens: Vec&lt;Token&gt;) -&gt; Vec&lt;Token&gt; {
-<a href=#345 id=345 data-nosnippet>345</a>  <span class="kw">let </span>start = tokens
-<a href=#346 id=346 data-nosnippet>346</a>    .iter()
-<a href=#347 id=347 data-nosnippet>347</a>    .position(|t| t.get_catcode() != Catcode::SPACE)
-<a href=#348 id=348 data-nosnippet>348</a>    .unwrap_or(tokens.len());
-<a href=#349 id=349 data-nosnippet>349</a>  <span class="kw">let </span>end = tokens
-<a href=#350 id=350 data-nosnippet>350</a>    .iter()
-<a href=#351 id=351 data-nosnippet>351</a>    .rposition(|t| t.get_catcode() != Catcode::SPACE)
-<a href=#352 id=352 data-nosnippet>352</a>    .map_or(start, |i| i + <span class="number">1</span>);
-<a href=#353 id=353 data-nosnippet>353</a>  <span class="kw">let </span>inner = <span class="kw-2">&amp;</span>tokens[start..end];
-<a href=#354 id=354 data-nosnippet>354</a>  <span class="kw">match </span>inner {
-<a href=#355 id=355 data-nosnippet>355</a>    [open, body @ .., close]
-<a href=#356 id=356 data-nosnippet>356</a>      <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN
-<a href=#357 id=357 data-nosnippet>357</a>        &amp;&amp; close.get_catcode() == Catcode::END
-<a href=#358 id=358 data-nosnippet>358</a>        &amp;&amp; split_top_level_depth_ok(body) =&gt;
-<a href=#359 id=359 data-nosnippet>359</a>    {
-<a href=#360 id=360 data-nosnippet>360</a>      body.to_vec()
-<a href=#361 id=361 data-nosnippet>361</a>    },
-<a href=#362 id=362 data-nosnippet>362</a>    <span class="kw">_ </span>=&gt; inner.to_vec(),
-<a href=#363 id=363 data-nosnippet>363</a>  }
-<a href=#364 id=364 data-nosnippet>364</a>}
-<a href=#365 id=365 data-nosnippet>365</a>
-<a href=#366 id=366 data-nosnippet>366</a><span class="doccomment">/// Whether `body` is balanced on its own (so braces around it enclose all of it).
-<a href=#367 id=367 data-nosnippet>367</a></span><span class="kw">fn </span>split_top_level_depth_ok(body: <span class="kw-2">&amp;</span>[Token]) -&gt; bool {
-<a href=#368 id=368 data-nosnippet>368</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0i32</span>;
-<a href=#369 id=369 data-nosnippet>369</a>  <span class="kw">for </span>t <span class="kw">in </span>body {
-<a href=#370 id=370 data-nosnippet>370</a>    <span class="kw">match </span>t.get_catcode() {
-<a href=#371 id=371 data-nosnippet>371</a>      Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
-<a href=#372 id=372 data-nosnippet>372</a>      Catcode::END =&gt; {
-<a href=#373 id=373 data-nosnippet>373</a>        depth -= <span class="number">1</span>;
-<a href=#374 id=374 data-nosnippet>374</a>        <span class="kw">if </span>depth &lt; <span class="number">0 </span>{
-<a href=#375 id=375 data-nosnippet>375</a>          <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#376 id=376 data-nosnippet>376</a>        }
-<a href=#377 id=377 data-nosnippet>377</a>      },
-<a href=#378 id=378 data-nosnippet>378</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#379 id=379 data-nosnippet>379</a>    }
-<a href=#380 id=380 data-nosnippet>380</a>  }
-<a href=#381 id=381 data-nosnippet>381</a>  depth == <span class="number">0
-<a href=#382 id=382 data-nosnippet>382</a></span>}
-<a href=#383 id=383 data-nosnippet>383</a>
-<a href=#384 id=384 data-nosnippet>384</a><span class="doccomment">/// The marks in an `affiliation` value: its comma-separated items, each script in them (`^\dagger`, `{^\#}`) an item
-<a href=#385 id=385 data-nosnippet>385</a>/// of its own, and a number glued to a symbol two (`1*`, `2\dagger`, `*1`, `\#1`: 2406.07909, 2409.15974): each run
-<a href=#386 id=386 data-nosnippet>386</a>/// of letters and digits, each run of other characters (`**`), each control sequence.
-<a href=#387 id=387 data-nosnippet>387</a></span><span class="kw">fn </span>mark_items(value: Vec&lt;Token&gt;) -&gt; Vec&lt;Vec&lt;Token&gt;&gt; {
-<a href=#388 id=388 data-nosnippet>388</a>  <span class="comment">// 0: letters and digits, 1: other characters, 2: a control sequence (a run of its own)
-<a href=#389 id=389 data-nosnippet>389</a>  </span><span class="kw">let </span>kind = |token: <span class="kw-2">&amp;</span>Token| <span class="kw">match </span>token.get_catcode() {
-<a href=#390 id=390 data-nosnippet>390</a>    Catcode::CS | Catcode::ACTIVE =&gt; <span class="number">2</span>,
-<a href=#391 id=391 data-nosnippet>391</a>    <span class="kw">_ if </span>token.with_str(|text| text.chars().all(char::is_alphanumeric)) =&gt; <span class="number">0</span>,
-<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">_ </span>=&gt; <span class="number">1</span>,
-<a href=#393 id=393 data-nosnippet>393</a>  };
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="kw">let </span><span class="kw-2">mut </span>items: Vec&lt;Vec&lt;Token&gt;&gt; = <span class="macro">vec!</span>[Vec::new()];
-<a href=#395 id=395 data-nosnippet>395</a>  <span class="kw">for </span>token <span class="kw">in </span>strip_spaces(value) {
-<a href=#396 id=396 data-nosnippet>396</a>    <span class="kw">match </span>token.get_catcode() {
-<a href=#397 id=397 data-nosnippet>397</a>      Catcode::BEGIN | Catcode::END | Catcode::MATH =&gt; {},
-<a href=#398 id=398 data-nosnippet>398</a>      Catcode::SUPER | Catcode::SPACE =&gt; items.push(Vec::new()),
-<a href=#399 id=399 data-nosnippet>399</a>      <span class="kw">_ if </span>token == <span class="macro">T_OTHER!</span>(<span class="string">","</span>) =&gt; items.push(Vec::new()),
-<a href=#400 id=400 data-nosnippet>400</a>      <span class="kw">_ </span>=&gt; {
-<a href=#401 id=401 data-nosnippet>401</a>        <span class="kw">let </span>item = items.last_mut().unwrap();
-<a href=#402 id=402 data-nosnippet>402</a>        <span class="kw">if </span>item
-<a href=#403 id=403 data-nosnippet>403</a>          .last()
-<a href=#404 id=404 data-nosnippet>404</a>          .is_some_and(|last| kind(last) != kind(<span class="kw-2">&amp;</span>token) || kind(<span class="kw-2">&amp;</span>token) == <span class="number">2</span>)
-<a href=#405 id=405 data-nosnippet>405</a>        {
-<a href=#406 id=406 data-nosnippet>406</a>          items.push(Vec::new());
-<a href=#407 id=407 data-nosnippet>407</a>        }
-<a href=#408 id=408 data-nosnippet>408</a>        items.last_mut().unwrap().push(token);
-<a href=#409 id=409 data-nosnippet>409</a>      },
-<a href=#410 id=410 data-nosnippet>410</a>    }
-<a href=#411 id=411 data-nosnippet>411</a>  }
-<a href=#412 id=412 data-nosnippet>412</a>  items.into_iter().filter(|item| !item.is_empty()).collect()
-<a href=#413 id=413 data-nosnippet>413</a>}
+<a href=#180 id=180 data-nosnippet>180</a>  <span class="comment">// The e-mail line under the affiliations (2024 :265): each address the author it spells, else the n-th author's in a
+<a href=#181 id=181 data-nosnippet>181</a>  // list of one per author, read after every author is added; a line not wholly placed stays the e-mail note (OD #1073;
+<a href=#182 id=182 data-nosnippet>182</a>  // 2603.01467, 2401.07506).
+<a href=#183 id=183 data-nosnippet>183</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="string">"\\email{}"</span>,
+<a href=#185 id=185 data-nosnippet>185</a>    <span class="string">"\\lx@is@frontmatter@add{\\lx@email@line@owned{\\lx@is@email@note}{#1}}"
+<a href=#186 id=186 data-nosnippet>186</a>  </span>);
+<a href=#187 id=187 data-nosnippet>187</a>  <span class="comment">// (the line no owner rule places wholly stays the e-mail note, printed under the names: Interspeech.cls :376
+<a href=#188 id=188 data-nosnippet>188</a>  // `\anonemail`, OD #1074)
+<a href=#189 id=189 data-nosnippet>189</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@is@email@note{}"</span>, <span class="string">"\\lx@names@note{email}{#1}"</span>);
+<a href=#190 id=190 data-nosnippet>190</a>  <span class="comment">// INTERSPEECH2023.cls L160: `\def\ninept{\def\baselinestretch{0.95}
+<a href=#191 id=191 data-nosnippet>191</a>  // \let\normalsize\small\normalsize}` — 9-point text mode. Layout
+<a href=#192 id=192 data-nosnippet>192</a>  // adjustment, semantically irrelevant for our XML output. Witness
+<a href=#193 id=193 data-nosnippet>193</a>  // 2312.05730.
+<a href=#194 id=194 data-nosnippet>194</a>  </span>def_macro_noop(<span class="string">"\\ninept"</span>)<span class="question-mark">?</span>;
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="comment">// Vectors and matrices are bold, not arrow-accented (Interspeech.cls:152-153 of 2025, :227-228 of 2026).
+<a href=#196 id=196 data-nosnippet>196</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\vec{}"</span>, <span class="string">"\\ensuremath{\\bm{{#1}}}"</span>);
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\mat{}"</span>, <span class="string">"\\vec{#1}"</span>);
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="macro">DefMacro!</span>(
+<a href=#199 id=199 data-nosnippet>199</a>    <span class="string">"\\thanks{}"</span>,
+<a href=#200 id=200 data-nosnippet>200</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=thanks]{#1}"
+<a href=#201 id=201 data-nosnippet>201</a>  </span>);
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="macro">DefMacro!</span>(
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="string">"\\keywords{}"</span>,
+<a href=#204 id=204 data-nosnippet>204</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
+<a href=#205 id=205 data-nosnippet>205</a>  </span>);
+<a href=#206 id=206 data-nosnippet>206</a>  <span class="macro">DefMacro!</span>(
+<a href=#207 id=207 data-nosnippet>207</a>    <span class="string">"\\copyrightnotice{}"</span>,
+<a href=#208 id=208 data-nosnippet>208</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright]{#1}"
+<a href=#209 id=209 data-nosnippet>209</a>  </span>);
+<a href=#210 id=210 data-nosnippet>210</a>});
+<a href=#211 id=211 data-nosnippet>211</a>
+<a href=#212 id=212 data-nosnippet>212</a><span class="doccomment">/// `\name[keys]{First}{Last}` / `\author[keys]{First}{Last}`, or, when no braced family name follows, a whole author
+<a href=#213 id=213 data-nosnippet>213</a>/// list in the one argument, its names marked `$^1$` (2506.00350; the class takes the next token as the family name,
+<a href=#214 id=214 data-nosnippet>214</a>/// and pdflatex prints the list).
+<a href=#215 id=215 data-nosnippet>215</a></span><span class="kw">fn </span>interspeech_author(keys: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, given: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#216 id=216 data-nosnippet>216</a>  <span class="kw">let </span>next = read_non_space()<span class="question-mark">?</span>;
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = next {
+<a href=#218 id=218 data-nosnippet>218</a>    unread_one(token);
+<a href=#219 id=219 data-nosnippet>219</a>  }
+<a href=#220 id=220 data-nosnippet>220</a>  <span class="kw">if </span>next.is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
+<a href=#221 id=221 data-nosnippet>221</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@author@named"</span>), <span class="macro">vec!</span>[
+<a href=#222 id=222 data-nosnippet>222</a>      keys,
+<a href=#223 id=223 data-nosnippet>223</a>      <span class="prelude-val">Some</span>(given)
+<a href=#224 id=224 data-nosnippet>224</a>    ]))
+<a href=#225 id=225 data-nosnippet>225</a>  } <span class="kw">else </span>{
+<a href=#226 id=226 data-nosnippet>226</a>    <span class="comment">// (the names' marks link them to the numbered affiliations: `Xixin Wu$^{1,3,*}$`)
+<a href=#227 id=227 data-nosnippet>227</a>    </span><span class="kw">let </span>tokens = given.unlist_ref();
+<a href=#228 id=228 data-nosnippet>228</a>    <span class="kw">let </span>marked = tokens.iter().enumerate().any(|(i, t)| {
+<a href=#229 id=229 data-nosnippet>229</a>      (t.get_catcode() == Catcode::SUPER || <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\textsuperscript"</span>))
+<a href=#230 id=230 data-nosnippet>230</a>        &amp;&amp; tokens[i + <span class="number">1</span>..]
+<a href=#231 id=231 data-nosnippet>231</a>          .iter()
+<a href=#232 id=232 data-nosnippet>232</a>          .find(|t| t.get_catcode() != Catcode::BEGIN &amp;&amp; t.get_catcode() != Catcode::SPACE)
+<a href=#233 id=233 data-nosnippet>233</a>          .is_some_and(|t| {
+<a href=#234 id=234 data-nosnippet>234</a>            t.get_catcode() != Catcode::CS
+<a href=#235 id=235 data-nosnippet>235</a>              &amp;&amp; t.with_str(|text| text.chars().all(char::is_alphanumeric))
+<a href=#236 id=236 data-nosnippet>236</a>          })
+<a href=#237 id=237 data-nosnippet>237</a>    });
+<a href=#238 id=238 data-nosnippet>238</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@author@add"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(<span class="macro">Invocation!</span>(
+<a href=#239 id=239 data-nosnippet>239</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@add@authors"</span>),
+<a href=#240 id=240 data-nosnippet>240</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(given)]
+<a href=#241 id=241 data-nosnippet>241</a>    ))])
+<a href=#242 id=242 data-nosnippet>242</a>    .unlist();
+<a href=#243 id=243 data-nosnippet>243</a>    <span class="kw">if </span>marked {
+<a href=#244 id=244 data-nosnippet>244</a>      out.extend([<span class="macro">T_CS!</span>(<span class="string">"\\global"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\lx@is@markedtrue"</span>)]);
+<a href=#245 id=245 data-nosnippet>245</a>    }
+<a href=#246 id=246 data-nosnippet>246</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#247 id=247 data-nosnippet>247</a>  }
+<a href=#248 id=248 data-nosnippet>248</a>}
+<a href=#249 id=249 data-nosnippet>249</a>
+<a href=#250 id=250 data-nosnippet>250</a><span class="doccomment">/// One author's frontmatter, added when the document begins: the creator with the class's marks — the
+<a href=#251 id=251 data-nosnippet>251</a>/// `affiliation={…}` items, `*` for `equalcontribution`, `**` for `correspondingauthor` — and the ORCID link
+<a href=#252 id=252 data-nosnippet>252</a>/// (Interspeech.cls of 2026 :129-209). A mark the class sets in math (`affiliation={1^\dagger}`, `{1{^\dagger}{^\#}}`,
+<a href=#253 id=253 data-nosnippet>253</a>/// 2406.08931, 2605.04749) is split into its items, a symbol one in math.
+<a href=#254 id=254 data-nosnippet>254</a></span><span class="kw">fn </span>interspeech_author_entry(keys: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, name: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#255 id=255 data-nosnippet>255</a>  <span class="kw">let </span><span class="kw-2">mut </span>marks: Vec&lt;Vec&lt;Token&gt;&gt; = Vec::new();
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="kw">let </span><span class="kw-2">mut </span>orcid: <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; = <span class="prelude-val">None</span>;
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="kw">let </span>(<span class="kw-2">mut </span>equal, <span class="kw-2">mut </span>corresponding) = (<span class="bool-val">false</span>, <span class="bool-val">false</span>);
+<a href=#258 id=258 data-nosnippet>258</a>  <span class="kw">for </span>item <span class="kw">in </span>split_top_level(keys.map(Tokens::unlist).unwrap_or_default(), <span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">","</span>)) {
+<a href=#259 id=259 data-nosnippet>259</a>    <span class="kw">let </span>(key, value) = <span class="kw">match </span>item.iter().position(|t| <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"="</span>)) {
+<a href=#260 id=260 data-nosnippet>260</a>      <span class="prelude-val">Some</span>(i) =&gt; (item[..i].to_vec(), <span class="prelude-val">Some</span>(item[i + <span class="number">1</span>..].to_vec())),
+<a href=#261 id=261 data-nosnippet>261</a>      <span class="prelude-val">None </span>=&gt; (item, <span class="prelude-val">None</span>),
+<a href=#262 id=262 data-nosnippet>262</a>    };
+<a href=#263 id=263 data-nosnippet>263</a>    <span class="kw">match </span>Tokens::new(key).to_string().trim() {
+<a href=#264 id=264 data-nosnippet>264</a>      <span class="string">"affiliation" </span>=&gt; marks.extend(mark_items(value.unwrap_or_default())),
+<a href=#265 id=265 data-nosnippet>265</a>      <span class="string">"equalcontribution" </span>=&gt; equal = <span class="bool-val">true</span>,
+<a href=#266 id=266 data-nosnippet>266</a>      <span class="string">"correspondingauthor" </span>=&gt; corresponding = <span class="bool-val">true</span>,
+<a href=#267 id=267 data-nosnippet>267</a>      <span class="string">"orcid" </span>=&gt; orcid = value.map(strip_spaces),
+<a href=#268 id=268 data-nosnippet>268</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#269 id=269 data-nosnippet>269</a>    }
+<a href=#270 id=270 data-nosnippet>270</a>  }
+<a href=#271 id=271 data-nosnippet>271</a>  <span class="comment">// (an author marked only by symbols names no numbered affiliation)
+<a href=#272 id=272 data-nosnippet>272</a>  </span><span class="kw">let </span>marked = marks.iter().any(|mark| {
+<a href=#273 id=273 data-nosnippet>273</a>    mark.iter().all(|t| {
+<a href=#274 id=274 data-nosnippet>274</a>      t.get_catcode() != Catcode::CS &amp;&amp; t.with_str(|text| text.chars().all(char::is_alphanumeric))
+<a href=#275 id=275 data-nosnippet>275</a>    })
+<a href=#276 id=276 data-nosnippet>276</a>  });
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="kw">if </span>equal {
+<a href=#278 id=278 data-nosnippet>278</a>    marks.push(<span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)]);
+<a href=#279 id=279 data-nosnippet>279</a>  }
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="kw">if </span>corresponding {
+<a href=#281 id=281 data-nosnippet>281</a>    marks.push(<span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)]);
+<a href=#282 id=282 data-nosnippet>282</a>  }
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="kw">let </span><span class="kw-2">mut </span>annotations: Vec&lt;Token&gt; = Vec::new();
+<a href=#284 id=284 data-nosnippet>284</a>  <span class="kw">for </span>(i, mark) <span class="kw">in </span>marks.into_iter().enumerate() {
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="kw">if </span>i &gt; <span class="number">0 </span>{
+<a href=#286 id=286 data-nosnippet>286</a>      annotations.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
+<a href=#287 id=287 data-nosnippet>287</a>    }
+<a href=#288 id=288 data-nosnippet>288</a>    <span class="kw">if </span>mark.iter().any(|t| t.get_catcode() == Catcode::CS) {
+<a href=#289 id=289 data-nosnippet>289</a>      annotations.extend([<span class="macro">T_CS!</span>(<span class="string">"\\ensuremath"</span>), <span class="macro">T_BEGIN!</span>()]);
+<a href=#290 id=290 data-nosnippet>290</a>      annotations.extend(mark);
+<a href=#291 id=291 data-nosnippet>291</a>      annotations.push(<span class="macro">T_END!</span>());
+<a href=#292 id=292 data-nosnippet>292</a>    } <span class="kw">else </span>{
+<a href=#293 id=293 data-nosnippet>293</a>      annotations.extend(mark);
+<a href=#294 id=294 data-nosnippet>294</a>    }
+<a href=#295 id=295 data-nosnippet>295</a>  }
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="kw">let </span><span class="kw-2">mut </span>entry = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@creator"</span>), <span class="macro">vec!</span>[
+<a href=#297 id=297 data-nosnippet>297</a>    <span class="prelude-val">Some</span>(Tokens::new(annotations)),
+<a href=#298 id=298 data-nosnippet>298</a>    <span class="prelude-val">Some</span>(name)
+<a href=#299 id=299 data-nosnippet>299</a>  ])
+<a href=#300 id=300 data-nosnippet>300</a>  .unlist();
+<a href=#301 id=301 data-nosnippet>301</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(orcid) = orcid {
+<a href=#302 id=302 data-nosnippet>302</a>    entry.extend(
+<a href=#303 id=303 data-nosnippet>303</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@orcid"</span>), <span class="macro">vec!</span>[
+<a href=#304 id=304 data-nosnippet>304</a>        <span class="prelude-val">None</span>,
+<a href=#305 id=305 data-nosnippet>305</a>        <span class="prelude-val">Some</span>(Tokens::new(orcid))
+<a href=#306 id=306 data-nosnippet>306</a>      ])
+<a href=#307 id=307 data-nosnippet>307</a>      .unlist(),
+<a href=#308 id=308 data-nosnippet>308</a>    );
+<a href=#309 id=309 data-nosnippet>309</a>  }
+<a href=#310 id=310 data-nosnippet>310</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@author@add"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(Tokens::new(entry))]).unlist();
+<a href=#311 id=311 data-nosnippet>311</a>  <span class="kw">if </span>marked {
+<a href=#312 id=312 data-nosnippet>312</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\global"</span>));
+<a href=#313 id=313 data-nosnippet>313</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@markedtrue"</span>));
+<a href=#314 id=314 data-nosnippet>314</a>  }
+<a href=#315 id=315 data-nosnippet>315</a>  <span class="kw">if </span>equal {
+<a href=#316 id=316 data-nosnippet>316</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\global"</span>));
+<a href=#317 id=317 data-nosnippet>317</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@equaltrue"</span>));
+<a href=#318 id=318 data-nosnippet>318</a>  }
+<a href=#319 id=319 data-nosnippet>319</a>  <span class="kw">if </span>corresponding {
+<a href=#320 id=320 data-nosnippet>320</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\global"</span>));
+<a href=#321 id=321 data-nosnippet>321</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@is@correspondingtrue"</span>));
+<a href=#322 id=322 data-nosnippet>322</a>  }
+<a href=#323 id=323 data-nosnippet>323</a>  <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#324 id=324 data-nosnippet>324</a>}
+<a href=#325 id=325 data-nosnippet>325</a>
+<a href=#326 id=326 data-nosnippet>326</a><span class="doccomment">/// `tokens` split at the top-level `separator`s, each piece without its outer spaces.
+<a href=#327 id=327 data-nosnippet>327</a></span><span class="kw">fn </span>split_top_level(tokens: Vec&lt;Token&gt;, separator: <span class="kw-2">&amp;</span>Token) -&gt; Vec&lt;Vec&lt;Token&gt;&gt; {
+<a href=#328 id=328 data-nosnippet>328</a>  <span class="kw">let </span><span class="kw-2">mut </span>items = <span class="macro">vec!</span>[Vec::new()];
+<a href=#329 id=329 data-nosnippet>329</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0</span>;
+<a href=#330 id=330 data-nosnippet>330</a>  <span class="kw">for </span>token <span class="kw">in </span>tokens {
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="kw">match </span>token.get_catcode() {
+<a href=#332 id=332 data-nosnippet>332</a>      Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
+<a href=#333 id=333 data-nosnippet>333</a>      Catcode::END =&gt; depth -= <span class="number">1</span>,
+<a href=#334 id=334 data-nosnippet>334</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#335 id=335 data-nosnippet>335</a>    }
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="kw">if </span>depth == <span class="number">0 </span>&amp;&amp; token == <span class="kw-2">*</span>separator {
+<a href=#337 id=337 data-nosnippet>337</a>      items.push(Vec::new());
+<a href=#338 id=338 data-nosnippet>338</a>    } <span class="kw">else </span>{
+<a href=#339 id=339 data-nosnippet>339</a>      items.last_mut().unwrap().push(token);
+<a href=#340 id=340 data-nosnippet>340</a>    }
+<a href=#341 id=341 data-nosnippet>341</a>  }
+<a href=#342 id=342 data-nosnippet>342</a>  items
+<a href=#343 id=343 data-nosnippet>343</a>    .into_iter()
+<a href=#344 id=344 data-nosnippet>344</a>    .map(strip_spaces)
+<a href=#345 id=345 data-nosnippet>345</a>    .filter(|item| !item.is_empty())
+<a href=#346 id=346 data-nosnippet>346</a>    .collect()
+<a href=#347 id=347 data-nosnippet>347</a>}
+<a href=#348 id=348 data-nosnippet>348</a>
+<a href=#349 id=349 data-nosnippet>349</a><span class="doccomment">/// `tokens` without leading and trailing spaces, and without one pair of braces around the whole.
+<a href=#350 id=350 data-nosnippet>350</a></span><span class="kw">fn </span>strip_spaces(tokens: Vec&lt;Token&gt;) -&gt; Vec&lt;Token&gt; {
+<a href=#351 id=351 data-nosnippet>351</a>  <span class="kw">let </span>start = tokens
+<a href=#352 id=352 data-nosnippet>352</a>    .iter()
+<a href=#353 id=353 data-nosnippet>353</a>    .position(|t| t.get_catcode() != Catcode::SPACE)
+<a href=#354 id=354 data-nosnippet>354</a>    .unwrap_or(tokens.len());
+<a href=#355 id=355 data-nosnippet>355</a>  <span class="kw">let </span>end = tokens
+<a href=#356 id=356 data-nosnippet>356</a>    .iter()
+<a href=#357 id=357 data-nosnippet>357</a>    .rposition(|t| t.get_catcode() != Catcode::SPACE)
+<a href=#358 id=358 data-nosnippet>358</a>    .map_or(start, |i| i + <span class="number">1</span>);
+<a href=#359 id=359 data-nosnippet>359</a>  <span class="kw">let </span>inner = <span class="kw-2">&amp;</span>tokens[start..end];
+<a href=#360 id=360 data-nosnippet>360</a>  <span class="kw">match </span>inner {
+<a href=#361 id=361 data-nosnippet>361</a>    [open, body @ .., close]
+<a href=#362 id=362 data-nosnippet>362</a>      <span class="kw">if </span>open.get_catcode() == Catcode::BEGIN
+<a href=#363 id=363 data-nosnippet>363</a>        &amp;&amp; close.get_catcode() == Catcode::END
+<a href=#364 id=364 data-nosnippet>364</a>        &amp;&amp; split_top_level_depth_ok(body) =&gt;
+<a href=#365 id=365 data-nosnippet>365</a>    {
+<a href=#366 id=366 data-nosnippet>366</a>      body.to_vec()
+<a href=#367 id=367 data-nosnippet>367</a>    },
+<a href=#368 id=368 data-nosnippet>368</a>    <span class="kw">_ </span>=&gt; inner.to_vec(),
+<a href=#369 id=369 data-nosnippet>369</a>  }
+<a href=#370 id=370 data-nosnippet>370</a>}
+<a href=#371 id=371 data-nosnippet>371</a>
+<a href=#372 id=372 data-nosnippet>372</a><span class="doccomment">/// Whether `body` is balanced on its own (so braces around it enclose all of it).
+<a href=#373 id=373 data-nosnippet>373</a></span><span class="kw">fn </span>split_top_level_depth_ok(body: <span class="kw-2">&amp;</span>[Token]) -&gt; bool {
+<a href=#374 id=374 data-nosnippet>374</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0i32</span>;
+<a href=#375 id=375 data-nosnippet>375</a>  <span class="kw">for </span>t <span class="kw">in </span>body {
+<a href=#376 id=376 data-nosnippet>376</a>    <span class="kw">match </span>t.get_catcode() {
+<a href=#377 id=377 data-nosnippet>377</a>      Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
+<a href=#378 id=378 data-nosnippet>378</a>      Catcode::END =&gt; {
+<a href=#379 id=379 data-nosnippet>379</a>        depth -= <span class="number">1</span>;
+<a href=#380 id=380 data-nosnippet>380</a>        <span class="kw">if </span>depth &lt; <span class="number">0 </span>{
+<a href=#381 id=381 data-nosnippet>381</a>          <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#382 id=382 data-nosnippet>382</a>        }
+<a href=#383 id=383 data-nosnippet>383</a>      },
+<a href=#384 id=384 data-nosnippet>384</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#385 id=385 data-nosnippet>385</a>    }
+<a href=#386 id=386 data-nosnippet>386</a>  }
+<a href=#387 id=387 data-nosnippet>387</a>  depth == <span class="number">0
+<a href=#388 id=388 data-nosnippet>388</a></span>}
+<a href=#389 id=389 data-nosnippet>389</a>
+<a href=#390 id=390 data-nosnippet>390</a><span class="doccomment">/// The marks in an `affiliation` value: its comma-separated items, each script in them (`^\dagger`, `{^\#}`) an item
+<a href=#391 id=391 data-nosnippet>391</a>/// of its own, and a number glued to a symbol two (`1*`, `2\dagger`, `*1`, `\#1`: 2406.07909, 2409.15974): each run
+<a href=#392 id=392 data-nosnippet>392</a>/// of letters and digits, each run of other characters (`**`), each control sequence.
+<a href=#393 id=393 data-nosnippet>393</a></span><span class="kw">fn </span>mark_items(value: Vec&lt;Token&gt;) -&gt; Vec&lt;Vec&lt;Token&gt;&gt; {
+<a href=#394 id=394 data-nosnippet>394</a>  <span class="comment">// 0: letters and digits, 1: other characters, 2: a control sequence (a run of its own)
+<a href=#395 id=395 data-nosnippet>395</a>  </span><span class="kw">let </span>kind = |token: <span class="kw-2">&amp;</span>Token| <span class="kw">match </span>token.get_catcode() {
+<a href=#396 id=396 data-nosnippet>396</a>    Catcode::CS | Catcode::ACTIVE =&gt; <span class="number">2</span>,
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">_ if </span>token.with_str(|text| text.chars().all(char::is_alphanumeric)) =&gt; <span class="number">0</span>,
+<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">_ </span>=&gt; <span class="number">1</span>,
+<a href=#399 id=399 data-nosnippet>399</a>  };
+<a href=#400 id=400 data-nosnippet>400</a>  <span class="kw">let </span><span class="kw-2">mut </span>items: Vec&lt;Vec&lt;Token&gt;&gt; = <span class="macro">vec!</span>[Vec::new()];
+<a href=#401 id=401 data-nosnippet>401</a>  <span class="kw">for </span>token <span class="kw">in </span>strip_spaces(value) {
+<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw">match </span>token.get_catcode() {
+<a href=#403 id=403 data-nosnippet>403</a>      Catcode::BEGIN | Catcode::END | Catcode::MATH =&gt; {},
+<a href=#404 id=404 data-nosnippet>404</a>      Catcode::SUPER | Catcode::SPACE =&gt; items.push(Vec::new()),
+<a href=#405 id=405 data-nosnippet>405</a>      <span class="kw">_ if </span>token == <span class="macro">T_OTHER!</span>(<span class="string">","</span>) =&gt; items.push(Vec::new()),
+<a href=#406 id=406 data-nosnippet>406</a>      <span class="kw">_ </span>=&gt; {
+<a href=#407 id=407 data-nosnippet>407</a>        <span class="kw">let </span>item = items.last_mut().unwrap();
+<a href=#408 id=408 data-nosnippet>408</a>        <span class="kw">if </span>item
+<a href=#409 id=409 data-nosnippet>409</a>          .last()
+<a href=#410 id=410 data-nosnippet>410</a>          .is_some_and(|last| kind(last) != kind(<span class="kw-2">&amp;</span>token) || kind(<span class="kw-2">&amp;</span>token) == <span class="number">2</span>)
+<a href=#411 id=411 data-nosnippet>411</a>        {
+<a href=#412 id=412 data-nosnippet>412</a>          items.push(Vec::new());
+<a href=#413 id=413 data-nosnippet>413</a>        }
+<a href=#414 id=414 data-nosnippet>414</a>        items.last_mut().unwrap().push(token);
+<a href=#415 id=415 data-nosnippet>415</a>      },
+<a href=#416 id=416 data-nosnippet>416</a>    }
+<a href=#417 id=417 data-nosnippet>417</a>  }
+<a href=#418 id=418 data-nosnippet>418</a>  items.into_iter().filter(|item| !item.is_empty()).collect()
+<a href=#419 id=419 data-nosnippet>419</a>}
 </code></pre></div></section></main></body></html>

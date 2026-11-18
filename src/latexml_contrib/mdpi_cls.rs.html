@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/mdpi_cls.rs`."><title>mdpi_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (5df8c02af 2026-11-16)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>mdpi_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for MDPI journal class (Definitions/mdpi.cls, bundled by users).
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/mdpi_cls.rs`."><title>mdpi_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (59cbdee2e 2026-11-17)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>mdpi_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for MDPI journal class (Definitions/mdpi.cls, bundled by users).
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Real mdpi.cls L20-50 loads article + many packages including hyperref,
 <a href=#4 id=4 data-nosnippet>4</a>//! url, booktabs, ragged2e (for \justify), cleveref (the copies since 2023). Mirror those so
@@ -207,585 +207,581 @@
 <a href=#207 id=207 data-nosnippet>207</a>    <span class="string">"\\firstnote{}"</span>,
 <a href=#208 id=208 data-nosnippet>208</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=firstnote]{#1}"
 <a href=#209 id=209 data-nosnippet>209</a>  </span>);
-<a href=#210 id=210 data-nosnippet>210</a>  <span class="macro">DefMacro!</span>(
-<a href=#211 id=211 data-nosnippet>211</a>    <span class="string">"\\Address{}"</span>,
-<a href=#212 id=212 data-nosnippet>212</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=address]{#1}"
-<a href=#213 id=213 data-nosnippet>213</a>  </span>);
-<a href=#214 id=214 data-nosnippet>214</a>  <span class="macro">DefMacro!</span>(
-<a href=#215 id=215 data-nosnippet>215</a>    <span class="string">"\\AuthorNames{}"</span>,
-<a href=#216 id=216 data-nosnippet>216</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=authornames]{#1}"
-<a href=#217 id=217 data-nosnippet>217</a>  </span>);
-<a href=#218 id=218 data-nosnippet>218</a>  <span class="macro">DefMacro!</span>(
-<a href=#219 id=219 data-nosnippet>219</a>    <span class="string">"\\AuthorCitation{}"</span>,
-<a href=#220 id=220 data-nosnippet>220</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=authorcitation]{#1}"
-<a href=#221 id=221 data-nosnippet>221</a>  </span>);
-<a href=#222 id=222 data-nosnippet>222</a>  <span class="macro">DefMacro!</span>(
-<a href=#223 id=223 data-nosnippet>223</a>    <span class="string">"\\dates{}{}{}"</span>,
-<a href=#224 id=224 data-nosnippet>224</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=dates]{Received: #1 Revised: #2 Accepted: #3}"
-<a href=#225 id=225 data-nosnippet>225</a>  </span>);
-<a href=#226 id=226 data-nosnippet>226</a>  <span class="macro">DefMacro!</span>(
-<a href=#227 id=227 data-nosnippet>227</a>    <span class="string">"\\authorinitials{}"</span>,
-<a href=#228 id=228 data-nosnippet>228</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=authorinitials]{#1}"
-<a href=#229 id=229 data-nosnippet>229</a>  </span>);
-<a href=#230 id=230 data-nosnippet>230</a>  <span class="comment">// Additional MDPI frontmatter macros (mdpi.cls L530+). Witness 2412.13512.
-<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Title{}"</span>, <span class="string">"\\title{#1}"</span>);
-<a href=#232 id=232 data-nosnippet>232</a>  <span class="macro">DefMacro!</span>(
-<a href=#233 id=233 data-nosnippet>233</a>    <span class="string">"\\TitleCitation{}"</span>,
-<a href=#234 id=234 data-nosnippet>234</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=titlecitation]{#1}"
-<a href=#235 id=235 data-nosnippet>235</a>  </span>);
-<a href=#236 id=236 data-nosnippet>236</a>  <span class="comment">// The volume, issue and article number are also kept as the class keeps them (2208.12066's copy :545, :588, :606-612:
-<a href=#237 id=237 data-nosnippet>237</a>  // `\cutdigits` drops leading zeros; a Molbank article number, `M1234`, as given), for its default DOI
-<a href=#238 id=238 data-nosnippet>238</a>  // (`\linksupplementary`).
-<a href=#239 id=239 data-nosnippet>239</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\lx@mdpi@molbank{molbank}"</span>);
-<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">DefMacro!</span>(
-<a href=#241 id=241 data-nosnippet>241</a>    <span class="string">"\\pubvolume{}"</span>,
-<a href=#242 id=242 data-nosnippet>242</a>    <span class="string">"\\gdef\\@pubvolume{\\cutdigits{#1}}\\@add@frontmatter{ltx:note}[role=volume]{#1}"
-<a href=#243 id=243 data-nosnippet>243</a>  </span>);
-<a href=#244 id=244 data-nosnippet>244</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pubyear{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=year]{#1}"</span>);
-<a href=#245 id=245 data-nosnippet>245</a>  <span class="macro">DefMacro!</span>(
-<a href=#246 id=246 data-nosnippet>246</a>    <span class="string">"\\issuenum{}"</span>,
-<a href=#247 id=247 data-nosnippet>247</a>    <span class="string">"\\gdef\\@issuenum{\\cutdigits{#1}}\\@add@frontmatter{ltx:note}[role=issue]{#1}"
-<a href=#248 id=248 data-nosnippet>248</a>  </span>);
-<a href=#249 id=249 data-nosnippet>249</a>  <span class="macro">DefMacro!</span>(
-<a href=#250 id=250 data-nosnippet>250</a>    <span class="string">"\\reftitle{}"</span>,
-<a href=#251 id=251 data-nosnippet>251</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=reftitle]{#1}"
-<a href=#252 id=252 data-nosnippet>252</a>  </span>);
-<a href=#253 id=253 data-nosnippet>253</a>  def_macro_noop(<span class="string">"\\PublishersNote"</span>)<span class="question-mark">?</span>;
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="macro">DefMacro!</span>(
-<a href=#255 id=255 data-nosnippet>255</a>    <span class="string">"\\articlenumber{}"</span>,
-<a href=#256 id=256 data-nosnippet>256</a>    <span class="string">"\\ifx\\@journal\\lx@mdpi@molbank\\gdef\\@articlenumber{#1}\\else\\gdef\\@articlenumber{\\cutdigits{#1}}\\fi\\@add@frontmatter{ltx:note}[role=articlenumber]{#1}"
-<a href=#257 id=257 data-nosnippet>257</a>  </span>);
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="macro">DefMacro!</span>(
-<a href=#259 id=259 data-nosnippet>259</a>    <span class="string">"\\copyrightyear{}"</span>,
-<a href=#260 id=260 data-nosnippet>260</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright-year]{#1}"
-<a href=#261 id=261 data-nosnippet>261</a>  </span>);
-<a href=#262 id=262 data-nosnippet>262</a>  <span class="macro">DefMacro!</span>(
-<a href=#263 id=263 data-nosnippet>263</a>    <span class="string">"\\histreceived{}"</span>,
-<a href=#264 id=264 data-nosnippet>264</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=received]{#1}"
-<a href=#265 id=265 data-nosnippet>265</a>  </span>);
-<a href=#266 id=266 data-nosnippet>266</a>  <span class="macro">DefMacro!</span>(
-<a href=#267 id=267 data-nosnippet>267</a>    <span class="string">"\\histrevised{}"</span>,
-<a href=#268 id=268 data-nosnippet>268</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=revised]{#1}"
-<a href=#269 id=269 data-nosnippet>269</a>  </span>);
-<a href=#270 id=270 data-nosnippet>270</a>  <span class="macro">DefMacro!</span>(
-<a href=#271 id=271 data-nosnippet>271</a>    <span class="string">"\\histaccepted{}"</span>,
-<a href=#272 id=272 data-nosnippet>272</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=accepted]{#1}"
-<a href=#273 id=273 data-nosnippet>273</a>  </span>);
-<a href=#274 id=274 data-nosnippet>274</a>  <span class="macro">DefMacro!</span>(
-<a href=#275 id=275 data-nosnippet>275</a>    <span class="string">"\\historypublished{}"</span>,
-<a href=#276 id=276 data-nosnippet>276</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=published]{#1}"
-<a href=#277 id=277 data-nosnippet>277</a>  </span>);
-<a href=#278 id=278 data-nosnippet>278</a>  <span class="comment">// mdpi.cls:384 `\newcommand{\history}[1]{\gdef\@history{#1}}`: the author's dates, labels and all ("Received: 7
-<a href=#279 id=279 data-nosnippet>279</a>  // October 2020; Accepted: …"), printed under the abstract unless the status is `submit` (mdpi.cls:664-670, 679-685);
-<a href=#280 id=280 data-nosnippet>280</a>  // a later `\history` replaces it (`\gdef`).
-<a href=#281 id=281 data-nosnippet>281</a>  // Witnesses 1003.3225, 1910.14533, 2010.14300, 2109.09102, 2002.09734.
-<a href=#282 id=282 data-nosnippet>282</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#283 id=283 data-nosnippet>283</a>    <span class="string">"\\history{}"</span>,
-<a href=#284 id=284 data-nosnippet>284</a>    <span class="string">"\\ifx\\@status\\lx@mdpi@submit\\else\\lx@clear@frontmatter{ltx:note}[role=history]\\@add@frontmatter{ltx:note}[role=history]{#1}\\fi"
-<a href=#285 id=285 data-nosnippet>285</a>  </span>);
-<a href=#286 id=286 data-nosnippet>286</a>  <span class="comment">// mdpi.cls:295 `\newcommand{\changeurlcolor}[1]{\hypersetup{urlcolor=#1}}` (the class's own title-page DOI links,
-<a href=#287 id=287 data-nosnippet>287</a>  // and papers calling it). Witnesses as for `\history`.
-<a href=#288 id=288 data-nosnippet>288</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\changeurlcolor{}"</span>, <span class="string">"\\hypersetup{urlcolor=#1}"</span>);
-<a href=#289 id=289 data-nosnippet>289</a>  def_macro_noop(<span class="string">"\\SetCaptionDefault"</span>)<span class="question-mark">?</span>;
-<a href=#290 id=290 data-nosnippet>290</a>
-<a href=#291 id=291 data-nosnippet>291</a>  <span class="comment">// Newer mdpi.cls L668-685 — additional date/metadata setters.
-<a href=#292 id=292 data-nosnippet>292</a>  // Witness 2503.11347, 2503.13839 (\daterevised, \datereceived,
-<a href=#293 id=293 data-nosnippet>293</a>  // \dateaccepted).
-<a href=#294 id=294 data-nosnippet>294</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#295 id=295 data-nosnippet>295</a>    <span class="string">"\\datereceived{}"</span>,
-<a href=#296 id=296 data-nosnippet>296</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=received]{#1}"
-<a href=#297 id=297 data-nosnippet>297</a>  </span>);
-<a href=#298 id=298 data-nosnippet>298</a>  <span class="macro">DefMacro!</span>(
-<a href=#299 id=299 data-nosnippet>299</a>    <span class="string">"\\daterevised{}"</span>,
-<a href=#300 id=300 data-nosnippet>300</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=revised]{#1}"
-<a href=#301 id=301 data-nosnippet>301</a>  </span>);
-<a href=#302 id=302 data-nosnippet>302</a>  <span class="macro">DefMacro!</span>(
-<a href=#303 id=303 data-nosnippet>303</a>    <span class="string">"\\dateaccepted{}"</span>,
-<a href=#304 id=304 data-nosnippet>304</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=accepted]{#1}"
-<a href=#305 id=305 data-nosnippet>305</a>  </span>);
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="macro">DefMacro!</span>(
-<a href=#307 id=307 data-nosnippet>307</a>    <span class="string">"\\datepublished{}"</span>,
-<a href=#308 id=308 data-nosnippet>308</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=published]{#1}"
-<a href=#309 id=309 data-nosnippet>309</a>  </span>);
-<a href=#310 id=310 data-nosnippet>310</a>  <span class="macro">DefMacro!</span>(
-<a href=#311 id=311 data-nosnippet>311</a>    <span class="string">"\\datecorrected{}"</span>,
-<a href=#312 id=312 data-nosnippet>312</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corrected]{#1}"
-<a href=#313 id=313 data-nosnippet>313</a>  </span>);
-<a href=#314 id=314 data-nosnippet>314</a>  <span class="macro">DefMacro!</span>(
-<a href=#315 id=315 data-nosnippet>315</a>    <span class="string">"\\dateretracted{}"</span>,
-<a href=#316 id=316 data-nosnippet>316</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=retracted]{#1}"
-<a href=#317 id=317 data-nosnippet>317</a>  </span>);
-<a href=#318 id=318 data-nosnippet>318</a>  <span class="macro">DefMacro!</span>(
-<a href=#319 id=319 data-nosnippet>319</a>    <span class="string">"\\externaleditor{}"</span>,
-<a href=#320 id=320 data-nosnippet>320</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=external-editor]{#1}"
-<a href=#321 id=321 data-nosnippet>321</a>  </span>);
-<a href=#322 id=322 data-nosnippet>322</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\LSID{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=lsid]{#1}"</span>);
-<a href=#323 id=323 data-nosnippet>323</a>  <span class="macro">DefMacro!</span>(
-<a href=#324 id=324 data-nosnippet>324</a>    <span class="string">"\\PACS{}"</span>,
-<a href=#325 id=325 data-nosnippet>325</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}"
-<a href=#326 id=326 data-nosnippet>326</a>  </span>);
-<a href=#327 id=327 data-nosnippet>327</a>  <span class="macro">DefMacro!</span>(
-<a href=#328 id=328 data-nosnippet>328</a>    <span class="string">"\\MSC{}"</span>,
-<a href=#329 id=329 data-nosnippet>329</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=MSC]{#1}"
-<a href=#330 id=330 data-nosnippet>330</a>  </span>);
-<a href=#331 id=331 data-nosnippet>331</a>  <span class="macro">DefMacro!</span>(
-<a href=#332 id=332 data-nosnippet>332</a>    <span class="string">"\\JEL{}"</span>,
-<a href=#333 id=333 data-nosnippet>333</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=JEL]{#1}"
-<a href=#334 id=334 data-nosnippet>334</a>  </span>);
-<a href=#335 id=335 data-nosnippet>335</a>  <span class="macro">DefMacro!</span>(
-<a href=#336 id=336 data-nosnippet>336</a>    <span class="string">"\\keyword{}"</span>,
-<a href=#337 id=337 data-nosnippet>337</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
-<a href=#338 id=338 data-nosnippet>338</a>  </span>);
-<a href=#339 id=339 data-nosnippet>339</a>  <span class="macro">DefMacro!</span>(
-<a href=#340 id=340 data-nosnippet>340</a>    <span class="string">"\\dataset{}"</span>,
-<a href=#341 id=341 data-nosnippet>341</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=dataset]{#1}"
-<a href=#342 id=342 data-nosnippet>342</a>  </span>);
-<a href=#343 id=343 data-nosnippet>343</a>  <span class="macro">DefMacro!</span>(
-<a href=#344 id=344 data-nosnippet>344</a>    <span class="string">"\\datasetlicense{}"</span>,
-<a href=#345 id=345 data-nosnippet>345</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=dataset-license]{#1}"
-<a href=#346 id=346 data-nosnippet>346</a>  </span>);
-<a href=#347 id=347 data-nosnippet>347</a>
-<a href=#348 id=348 data-nosnippet>348</a>  <span class="comment">// Additional newer mdpi.cls macros — preserve content.
-<a href=#349 id=349 data-nosnippet>349</a>  // \Author{name} (capital) is the MDPI variant; route to LaTeX \author.
-<a href=#350 id=350 data-nosnippet>350</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Author{}"</span>, <span class="string">"\\author{#1}"</span>);
-<a href=#351 id=351 data-nosnippet>351</a>  <span class="macro">DefMacro!</span>(
-<a href=#352 id=352 data-nosnippet>352</a>    <span class="string">"\\hreflink{}"</span>,
-<a href=#353 id=353 data-nosnippet>353</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=hreflink]{#1}"
-<a href=#354 id=354 data-nosnippet>354</a>  </span>);
-<a href=#355 id=355 data-nosnippet>355</a>  <span class="comment">// mdpi.cls (2311.18672's 2023 copy :633-635, as since 2018) `\foreach \x in {A, ..., Z}` defines `\orcidA`…`\orcidZ`,
-<a href=#356 id=356 data-nosnippet>356</a>  // the linked ORCID icon after an author's name, of the iD the paper gives `\orcidauthorA`…
-<a href=#357 id=357 data-nosnippet>357</a>  // (`\newcommand{\orcidauthorA}{0000-…}`): the author's ORCID (2311.18672 calls `\orcidG` and `\orcidH`); without
-<a href=#358 id=358 data-nosnippet>358</a>  // its iD, nothing.
-<a href=#359 id=359 data-nosnippet>359</a>  </span><span class="kw">for </span>letter <span class="kw">in </span><span class="string">'A'</span>..=<span class="string">'Z' </span>{
-<a href=#360 id=360 data-nosnippet>360</a>    <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
-<a href=#361 id=361 data-nosnippet>361</a>      <span class="string">"\\def\\orcid{letter}{{\\@ifundefined{{orcidauthor{letter}}}{{}}{{\\expandafter\\lx@add@orcid\\expandafter{{\\orcidauthor{letter}}}}}}}"
-<a href=#362 id=362 data-nosnippet>362</a>    </span>));
-<a href=#363 id=363 data-nosnippet>363</a>  }
-<a href=#364 id=364 data-nosnippet>364</a>  <span class="comment">// \extralength is a length register — define as 0pt.
-<a href=#365 id=365 data-nosnippet>365</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\extralength" </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#366 id=366 data-nosnippet>366</a>  <span class="comment">// \authorcontributions, \funding, \conflictsofinterest,
-<a href=#367 id=367 data-nosnippet>367</a>  // \abbreviations — substantive author-supplied text; render as
-<a href=#368 id=368 data-nosnippet>368</a>  // a named section.
-<a href=#369 id=369 data-nosnippet>369</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#370 id=370 data-nosnippet>370</a>    <span class="string">"\\authorcontributions{}"</span>,
-<a href=#371 id=371 data-nosnippet>371</a>    <span class="string">"\\section*{Author Contributions}#1"
-<a href=#372 id=372 data-nosnippet>372</a>  </span>);
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\funding{}"</span>, <span class="string">"\\section*{Funding}#1"</span>);
-<a href=#374 id=374 data-nosnippet>374</a>  <span class="macro">DefMacro!</span>(
-<a href=#375 id=375 data-nosnippet>375</a>    <span class="string">"\\conflictsofinterest{}"</span>,
-<a href=#376 id=376 data-nosnippet>376</a>    <span class="string">"\\section*{Conflicts of Interest}#1"
-<a href=#377 id=377 data-nosnippet>377</a>  </span>);
-<a href=#378 id=378 data-nosnippet>378</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abbreviations{}{}"</span>, <span class="string">"\\section*{#1}#2"</span>);
-<a href=#379 id=379 data-nosnippet>379</a>  <span class="comment">// Additional MDPI back-matter macros (mdpi.cls L1199-1240). These are
-<a href=#380 id=380 data-nosnippet>380</a>  // simple `\newcommand` stubs in the raw cls but in practice the cls
-<a href=#381 id=381 data-nosnippet>381</a>  // raw-load stops or truncates partway through, leaving these undefined.
-<a href=#382 id=382 data-nosnippet>382</a>  // Defining here ensures the back-matter content is preserved.
-<a href=#383 id=383 data-nosnippet>383</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\supplementary{}"</span>, <span class="string">"\\section*{Supplementary Materials}#1"</span>);
-<a href=#384 id=384 data-nosnippet>384</a>  <span class="macro">DefMacro!</span>(
-<a href=#385 id=385 data-nosnippet>385</a>    <span class="string">"\\institutionalreview{}"</span>,
-<a href=#386 id=386 data-nosnippet>386</a>    <span class="string">"\\section*{Institutional Review Board Statement}#1"
-<a href=#387 id=387 data-nosnippet>387</a>  </span>);
-<a href=#388 id=388 data-nosnippet>388</a>  <span class="macro">DefMacro!</span>(
-<a href=#389 id=389 data-nosnippet>389</a>    <span class="string">"\\informedconsent{}"</span>,
-<a href=#390 id=390 data-nosnippet>390</a>    <span class="string">"\\section*{Informed Consent Statement}#1"
-<a href=#391 id=391 data-nosnippet>391</a>  </span>);
-<a href=#392 id=392 data-nosnippet>392</a>  <span class="macro">DefMacro!</span>(
-<a href=#393 id=393 data-nosnippet>393</a>    <span class="string">"\\dataavailability{}"</span>,
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="string">"\\section*{Data Availability Statement}#1"
-<a href=#395 id=395 data-nosnippet>395</a>  </span>);
-<a href=#396 id=396 data-nosnippet>396</a>  <span class="macro">DefMacro!</span>(
-<a href=#397 id=397 data-nosnippet>397</a>    <span class="string">"\\publicinvolvement{}"</span>,
-<a href=#398 id=398 data-nosnippet>398</a>    <span class="string">"\\section*{Public Involvement Statement}#1"
-<a href=#399 id=399 data-nosnippet>399</a>  </span>);
-<a href=#400 id=400 data-nosnippet>400</a>  <span class="macro">DefMacro!</span>(
-<a href=#401 id=401 data-nosnippet>401</a>    <span class="string">"\\guidelinesstandards{}"</span>,
-<a href=#402 id=402 data-nosnippet>402</a>    <span class="string">"\\section*{Guidelines and Standards Statement}#1"
-<a href=#403 id=403 data-nosnippet>403</a>  </span>);
-<a href=#404 id=404 data-nosnippet>404</a>  <span class="macro">DefMacro!</span>(
-<a href=#405 id=405 data-nosnippet>405</a>    <span class="string">"\\entrylink{}"</span>,
-<a href=#406 id=406 data-nosnippet>406</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=entrylink]{#1}"
-<a href=#407 id=407 data-nosnippet>407</a>  </span>);
-<a href=#408 id=408 data-nosnippet>408</a>  <span class="macro">DefMacro!</span>(
-<a href=#409 id=409 data-nosnippet>409</a>    <span class="string">"\\reviewreports{}"</span>,
-<a href=#410 id=410 data-nosnippet>410</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=reviewreports]{#1}"
-<a href=#411 id=411 data-nosnippet>411</a>  </span>);
-<a href=#412 id=412 data-nosnippet>412</a>  <span class="comment">// \sampleavailability (older mdpi) — sister of \dataavailability.
-<a href=#413 id=413 data-nosnippet>413</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#414 id=414 data-nosnippet>414</a>    <span class="string">"\\sampleavailability{}"</span>,
-<a href=#415 id=415 data-nosnippet>415</a>    <span class="string">"\\section*{Sample Availability}#1"
-<a href=#416 id=416 data-nosnippet>416</a>  </span>);
-<a href=#417 id=417 data-nosnippet>417</a>  <span class="comment">// \patents — research patents declaration.
-<a href=#418 id=418 data-nosnippet>418</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\patents{}"</span>, <span class="string">"\\section*{Patents}#1"</span>);
-<a href=#419 id=419 data-nosnippet>419</a>  <span class="comment">// mdpi.cls (2021+) `\publishersnote`: the "Publisher's Note:" back-matter statement (a version's convenience, as the
-<a href=#420 id=420 data-nosnippet>420</a>  // setters below).
-<a href=#421 id=421 data-nosnippet>421</a>  </span>{
-<a href=#422 id=422 data-nosnippet>422</a>    <span class="kw">let </span>_guess = OriginGuard::new(DefinitionOrigin::Fallback);
-<a href=#423 id=423 data-nosnippet>423</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\publishersnote{}"</span>, <span class="string">"\\section*{Publisher's Note}#1"</span>);
-<a href=#424 id=424 data-nosnippet>424</a>  }
-<a href=#425 id=425 data-nosnippet>425</a>  <span class="comment">// \address[id]{text} — preserve as ltx:note.
-<a href=#426 id=426 data-nosnippet>426</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#427 id=427 data-nosnippet>427</a>    <span class="string">"\\address[]{}"</span>,
-<a href=#428 id=428 data-nosnippet>428</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=address]{#2}"
-<a href=#429 id=429 data-nosnippet>429</a>  </span>);
-<a href=#430 id=430 data-nosnippet>430</a>  <span class="comment">// \natexlab from natbib — emit arg inline (used in \bibitem to mark
-<a href=#431 id=431 data-nosnippet>431</a>  // companion years like (1999a)/(1999b)).
-<a href=#432 id=432 data-nosnippet>432</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\natexlab{}"</span>, <span class="string">"#1"</span>);
-<a href=#433 id=433 data-nosnippet>433</a>  <span class="comment">// \textls (microtype letterspacing) — emit as-is.
-<a href=#434 id=434 data-nosnippet>434</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\textls[]{}"</span>, <span class="string">"#2"</span>);
-<a href=#435 id=435 data-nosnippet>435</a>
-<a href=#436 id=436 data-nosnippet>436</a>  <span class="comment">// \isAPAStyle / \isChicagoStyle — branchers in mdpi.cls L450+ that
-<a href=#437 id=437 data-nosnippet>437</a>  // pick references style based on \@journal. The cls defines them as
-<a href=#438 id=438 data-nosnippet>438</a>  // `\newcommand{\isAPAStyle}{\ifthenelse{...}}` and uses them as
-<a href=#439 id=439 data-nosnippet>439</a>  // `\isAPAStyle{...}{...}`. Stub as content-discarder so the
-<a href=#440 id=440 data-nosnippet>440</a>  // bibliography block doesn't emit an undefined error for every paper
-<a href=#441 id=441 data-nosnippet>441</a>  // shipping a local Definitions/mdpi.cls. Witness 2412.13512, 2503.13839.
-<a href=#442 id=442 data-nosnippet>442</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\isAPAStyle{}{}"</span>, <span class="string">"#2"</span>);
-<a href=#443 id=443 data-nosnippet>443</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\isChicagoStyle{}{}"</span>, <span class="string">"#2"</span>);
-<a href=#444 id=444 data-nosnippet>444</a>  <span class="comment">// mdpi.cls:170-175 `\isPreprints`, the same brancher on `\@journal`
-<a href=#445 id=445 data-nosnippet>445</a>  // (preprints / preprintschicago / preprintsapa): a journal paper takes the
-<a href=#446 id=446 data-nosnippet>446</a>  // second branch (`\isPreprints{\centering}{}`, arXiv 2605.17530).
-<a href=#447 id=447 data-nosnippet>447</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\isPreprints{}{}"</span>, <span class="string">"#2"</span>);
-<a href=#448 id=448 data-nosnippet>448</a>  <span class="comment">// The versions' title-page setters and conveniences (union of 119 sampled copies, 2012-2025; line numbers from
-<a href=#449 id=449 data-nosnippet>449</a>  // 2207.12053's copy). One version defines what another lacks, and a paper whose copy lacks one defines it itself, so
-<a href=#450 id=450 data-nosnippet>450</a>  // they are a fallback's guesses its own definition replaces (`DefinitionOrigin::Fallback`, as jfm_cls.rs). Run 340
-<a href=#451 id=451 data-nosnippet>451</a>  // first errors: `\doinum` 312, `\lastpage` 148, `\secondnote` 145, `\updates` 111, `\orcidicon` 51,
-<a href=#452 id=452 data-nosnippet>452</a>  // `\appendixsections` 42, `\cellWidtha` 31, `\startlandscape` 27, `\conference` 17 (witnesses 2008.03867,
-<a href=#453 id=453 data-nosnippet>453</a>  // 1309.7149, 2103.15665, 2103.03626, 2103.07786, 1904.10935, 2204.11608, 2103.11824, 2008.00705).
-<a href=#454 id=454 data-nosnippet>454</a>  </span>{
-<a href=#455 id=455 data-nosnippet>455</a>    <span class="kw">let </span>_guess = OriginGuard::new(DefinitionOrigin::Fallback);
-<a href=#456 id=456 data-nosnippet>456</a>    <span class="comment">// mdpi.cls:312 (2025) `\isAPAandChicago`, the same brancher for the journals that cite in both styles.
-<a href=#457 id=457 data-nosnippet>457</a>    </span><span class="macro">DefMacro!</span>(<span class="string">"\\isAPAandChicago{}{}"</span>, <span class="string">"#2"</span>);
-<a href=#458 id=458 data-nosnippet>458</a>    <span class="comment">// `\doinum` (:424): the article's DOI, which the journal line prints once the paper is accepted (:446, :646,
-<a href=#459 id=459 data-nosnippet>459</a>    // :667), as `\history` is printed.
-<a href=#460 id=460 data-nosnippet>460</a>    // (and :424 `\gdef\@doinum{#1}`, which `\linksupplementary` reads)
-<a href=#461 id=461 data-nosnippet>461</a>    </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\@doinum{}"</span>);
-<a href=#462 id=462 data-nosnippet>462</a>    <span class="comment">// :482-505 (and :533-541 `\cutdigits`) the padding the default DOI's issue and article number take, `\fourdigits`
-<a href=#463 id=463 data-nosnippet>463</a>    // in the 2016-2018 copies (54 of 319 sampled: 1607.02330, 1810.09793).
-<a href=#464 id=464 data-nosnippet>464</a>    </span><span class="macro">RawTeX!</span>(
-<a href=#465 id=465 data-nosnippet>465</a>      <span class="string">r"\def\cutdigits#1{\ifnum#1&gt;0 \number#1 \else\ifnum#1&lt;10000 \number#1 \else error\fi\fi}
-<a href=#466 id=466 data-nosnippet>466</a>\def\twodigits#1{\ifnum#1&lt;10 0\number#1 \else\number#1 \fi}
-<a href=#467 id=467 data-nosnippet>467</a>\def\fourdigits#1{\ifnum#1&lt;10 000\number#1 \else\ifnum#1&lt;100 00\number#1 \else\ifnum#1&lt;1000 0\number#1 \else
-<a href=#468 id=468 data-nosnippet>468</a>\ifnum#1&lt;10000 \number#1 \else error\fi\fi\fi\fi}
-<a href=#469 id=469 data-nosnippet>469</a>\def\fivedigits#1{\ifnum#1&lt;10 000\number#1 \else\ifnum#1&lt;100 00\number#1 \else\ifnum#1&lt;1000 0\number#1 \else
-<a href=#470 id=470 data-nosnippet>470</a>\ifnum#1&lt;100000 \number#1 \else error\fi\fi\fi\fi}"
+<a href=#210 id=210 data-nosnippet>210</a>  <span class="comment">// mdpi.cls prints the address under the names (1910.13722's copy: :371 `\address` stores `\@address`, :602 sets it
+<a href=#211 id=211 data-nosnippet>211</a>  // in the title block; `\Address` the older copies' name, 2203.09377): `\lx@names@note`, OD #1074.
+<a href=#212 id=212 data-nosnippet>212</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Address{}"</span>, <span class="string">"\\lx@names@note{address}{#1}"</span>);
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">DefMacro!</span>(
+<a href=#214 id=214 data-nosnippet>214</a>    <span class="string">"\\AuthorNames{}"</span>,
+<a href=#215 id=215 data-nosnippet>215</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=authornames]{#1}"
+<a href=#216 id=216 data-nosnippet>216</a>  </span>);
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="macro">DefMacro!</span>(
+<a href=#218 id=218 data-nosnippet>218</a>    <span class="string">"\\AuthorCitation{}"</span>,
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=authorcitation]{#1}"
+<a href=#220 id=220 data-nosnippet>220</a>  </span>);
+<a href=#221 id=221 data-nosnippet>221</a>  <span class="macro">DefMacro!</span>(
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="string">"\\dates{}{}{}"</span>,
+<a href=#223 id=223 data-nosnippet>223</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=dates]{Received: #1 Revised: #2 Accepted: #3}"
+<a href=#224 id=224 data-nosnippet>224</a>  </span>);
+<a href=#225 id=225 data-nosnippet>225</a>  <span class="macro">DefMacro!</span>(
+<a href=#226 id=226 data-nosnippet>226</a>    <span class="string">"\\authorinitials{}"</span>,
+<a href=#227 id=227 data-nosnippet>227</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=authorinitials]{#1}"
+<a href=#228 id=228 data-nosnippet>228</a>  </span>);
+<a href=#229 id=229 data-nosnippet>229</a>  <span class="comment">// Additional MDPI frontmatter macros (mdpi.cls L530+). Witness 2412.13512.
+<a href=#230 id=230 data-nosnippet>230</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Title{}"</span>, <span class="string">"\\title{#1}"</span>);
+<a href=#231 id=231 data-nosnippet>231</a>  <span class="macro">DefMacro!</span>(
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="string">"\\TitleCitation{}"</span>,
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=titlecitation]{#1}"
+<a href=#234 id=234 data-nosnippet>234</a>  </span>);
+<a href=#235 id=235 data-nosnippet>235</a>  <span class="comment">// The volume, issue and article number are also kept as the class keeps them (2208.12066's copy :545, :588, :606-612:
+<a href=#236 id=236 data-nosnippet>236</a>  // `\cutdigits` drops leading zeros; a Molbank article number, `M1234`, as given), for its default DOI
+<a href=#237 id=237 data-nosnippet>237</a>  // (`\linksupplementary`).
+<a href=#238 id=238 data-nosnippet>238</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\lx@mdpi@molbank{molbank}"</span>);
+<a href=#239 id=239 data-nosnippet>239</a>  <span class="macro">DefMacro!</span>(
+<a href=#240 id=240 data-nosnippet>240</a>    <span class="string">"\\pubvolume{}"</span>,
+<a href=#241 id=241 data-nosnippet>241</a>    <span class="string">"\\gdef\\@pubvolume{\\cutdigits{#1}}\\@add@frontmatter{ltx:note}[role=volume]{#1}"
+<a href=#242 id=242 data-nosnippet>242</a>  </span>);
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pubyear{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=year]{#1}"</span>);
+<a href=#244 id=244 data-nosnippet>244</a>  <span class="macro">DefMacro!</span>(
+<a href=#245 id=245 data-nosnippet>245</a>    <span class="string">"\\issuenum{}"</span>,
+<a href=#246 id=246 data-nosnippet>246</a>    <span class="string">"\\gdef\\@issuenum{\\cutdigits{#1}}\\@add@frontmatter{ltx:note}[role=issue]{#1}"
+<a href=#247 id=247 data-nosnippet>247</a>  </span>);
+<a href=#248 id=248 data-nosnippet>248</a>  <span class="macro">DefMacro!</span>(
+<a href=#249 id=249 data-nosnippet>249</a>    <span class="string">"\\reftitle{}"</span>,
+<a href=#250 id=250 data-nosnippet>250</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=reftitle]{#1}"
+<a href=#251 id=251 data-nosnippet>251</a>  </span>);
+<a href=#252 id=252 data-nosnippet>252</a>  def_macro_noop(<span class="string">"\\PublishersNote"</span>)<span class="question-mark">?</span>;
+<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">DefMacro!</span>(
+<a href=#254 id=254 data-nosnippet>254</a>    <span class="string">"\\articlenumber{}"</span>,
+<a href=#255 id=255 data-nosnippet>255</a>    <span class="string">"\\ifx\\@journal\\lx@mdpi@molbank\\gdef\\@articlenumber{#1}\\else\\gdef\\@articlenumber{\\cutdigits{#1}}\\fi\\@add@frontmatter{ltx:note}[role=articlenumber]{#1}"
+<a href=#256 id=256 data-nosnippet>256</a>  </span>);
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="macro">DefMacro!</span>(
+<a href=#258 id=258 data-nosnippet>258</a>    <span class="string">"\\copyrightyear{}"</span>,
+<a href=#259 id=259 data-nosnippet>259</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright-year]{#1}"
+<a href=#260 id=260 data-nosnippet>260</a>  </span>);
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">DefMacro!</span>(
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="string">"\\histreceived{}"</span>,
+<a href=#263 id=263 data-nosnippet>263</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=received]{#1}"
+<a href=#264 id=264 data-nosnippet>264</a>  </span>);
+<a href=#265 id=265 data-nosnippet>265</a>  <span class="macro">DefMacro!</span>(
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="string">"\\histrevised{}"</span>,
+<a href=#267 id=267 data-nosnippet>267</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=revised]{#1}"
+<a href=#268 id=268 data-nosnippet>268</a>  </span>);
+<a href=#269 id=269 data-nosnippet>269</a>  <span class="macro">DefMacro!</span>(
+<a href=#270 id=270 data-nosnippet>270</a>    <span class="string">"\\histaccepted{}"</span>,
+<a href=#271 id=271 data-nosnippet>271</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=accepted]{#1}"
+<a href=#272 id=272 data-nosnippet>272</a>  </span>);
+<a href=#273 id=273 data-nosnippet>273</a>  <span class="macro">DefMacro!</span>(
+<a href=#274 id=274 data-nosnippet>274</a>    <span class="string">"\\historypublished{}"</span>,
+<a href=#275 id=275 data-nosnippet>275</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=published]{#1}"
+<a href=#276 id=276 data-nosnippet>276</a>  </span>);
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="comment">// mdpi.cls:384 `\newcommand{\history}[1]{\gdef\@history{#1}}`: the author's dates, labels and all ("Received: 7
+<a href=#278 id=278 data-nosnippet>278</a>  // October 2020; Accepted: …"), printed under the abstract unless the status is `submit` (mdpi.cls:664-670, 679-685);
+<a href=#279 id=279 data-nosnippet>279</a>  // a later `\history` replaces it (`\gdef`).
+<a href=#280 id=280 data-nosnippet>280</a>  // Witnesses 1003.3225, 1910.14533, 2010.14300, 2109.09102, 2002.09734.
+<a href=#281 id=281 data-nosnippet>281</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#282 id=282 data-nosnippet>282</a>    <span class="string">"\\history{}"</span>,
+<a href=#283 id=283 data-nosnippet>283</a>    <span class="string">"\\ifx\\@status\\lx@mdpi@submit\\else\\lx@clear@frontmatter{ltx:note}[role=history]\\@add@frontmatter{ltx:note}[role=history]{#1}\\fi"
+<a href=#284 id=284 data-nosnippet>284</a>  </span>);
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="comment">// mdpi.cls:295 `\newcommand{\changeurlcolor}[1]{\hypersetup{urlcolor=#1}}` (the class's own title-page DOI links,
+<a href=#286 id=286 data-nosnippet>286</a>  // and papers calling it). Witnesses as for `\history`.
+<a href=#287 id=287 data-nosnippet>287</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\changeurlcolor{}"</span>, <span class="string">"\\hypersetup{urlcolor=#1}"</span>);
+<a href=#288 id=288 data-nosnippet>288</a>  def_macro_noop(<span class="string">"\\SetCaptionDefault"</span>)<span class="question-mark">?</span>;
+<a href=#289 id=289 data-nosnippet>289</a>
+<a href=#290 id=290 data-nosnippet>290</a>  <span class="comment">// Newer mdpi.cls L668-685 — additional date/metadata setters.
+<a href=#291 id=291 data-nosnippet>291</a>  // Witness 2503.11347, 2503.13839 (\daterevised, \datereceived,
+<a href=#292 id=292 data-nosnippet>292</a>  // \dateaccepted).
+<a href=#293 id=293 data-nosnippet>293</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#294 id=294 data-nosnippet>294</a>    <span class="string">"\\datereceived{}"</span>,
+<a href=#295 id=295 data-nosnippet>295</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=received]{#1}"
+<a href=#296 id=296 data-nosnippet>296</a>  </span>);
+<a href=#297 id=297 data-nosnippet>297</a>  <span class="macro">DefMacro!</span>(
+<a href=#298 id=298 data-nosnippet>298</a>    <span class="string">"\\daterevised{}"</span>,
+<a href=#299 id=299 data-nosnippet>299</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=revised]{#1}"
+<a href=#300 id=300 data-nosnippet>300</a>  </span>);
+<a href=#301 id=301 data-nosnippet>301</a>  <span class="macro">DefMacro!</span>(
+<a href=#302 id=302 data-nosnippet>302</a>    <span class="string">"\\dateaccepted{}"</span>,
+<a href=#303 id=303 data-nosnippet>303</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=accepted]{#1}"
+<a href=#304 id=304 data-nosnippet>304</a>  </span>);
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="macro">DefMacro!</span>(
+<a href=#306 id=306 data-nosnippet>306</a>    <span class="string">"\\datepublished{}"</span>,
+<a href=#307 id=307 data-nosnippet>307</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=published]{#1}"
+<a href=#308 id=308 data-nosnippet>308</a>  </span>);
+<a href=#309 id=309 data-nosnippet>309</a>  <span class="macro">DefMacro!</span>(
+<a href=#310 id=310 data-nosnippet>310</a>    <span class="string">"\\datecorrected{}"</span>,
+<a href=#311 id=311 data-nosnippet>311</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corrected]{#1}"
+<a href=#312 id=312 data-nosnippet>312</a>  </span>);
+<a href=#313 id=313 data-nosnippet>313</a>  <span class="macro">DefMacro!</span>(
+<a href=#314 id=314 data-nosnippet>314</a>    <span class="string">"\\dateretracted{}"</span>,
+<a href=#315 id=315 data-nosnippet>315</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=retracted]{#1}"
+<a href=#316 id=316 data-nosnippet>316</a>  </span>);
+<a href=#317 id=317 data-nosnippet>317</a>  <span class="macro">DefMacro!</span>(
+<a href=#318 id=318 data-nosnippet>318</a>    <span class="string">"\\externaleditor{}"</span>,
+<a href=#319 id=319 data-nosnippet>319</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=external-editor]{#1}"
+<a href=#320 id=320 data-nosnippet>320</a>  </span>);
+<a href=#321 id=321 data-nosnippet>321</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\LSID{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=lsid]{#1}"</span>);
+<a href=#322 id=322 data-nosnippet>322</a>  <span class="macro">DefMacro!</span>(
+<a href=#323 id=323 data-nosnippet>323</a>    <span class="string">"\\PACS{}"</span>,
+<a href=#324 id=324 data-nosnippet>324</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}"
+<a href=#325 id=325 data-nosnippet>325</a>  </span>);
+<a href=#326 id=326 data-nosnippet>326</a>  <span class="macro">DefMacro!</span>(
+<a href=#327 id=327 data-nosnippet>327</a>    <span class="string">"\\MSC{}"</span>,
+<a href=#328 id=328 data-nosnippet>328</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=MSC]{#1}"
+<a href=#329 id=329 data-nosnippet>329</a>  </span>);
+<a href=#330 id=330 data-nosnippet>330</a>  <span class="macro">DefMacro!</span>(
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="string">"\\JEL{}"</span>,
+<a href=#332 id=332 data-nosnippet>332</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=JEL]{#1}"
+<a href=#333 id=333 data-nosnippet>333</a>  </span>);
+<a href=#334 id=334 data-nosnippet>334</a>  <span class="macro">DefMacro!</span>(
+<a href=#335 id=335 data-nosnippet>335</a>    <span class="string">"\\keyword{}"</span>,
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
+<a href=#337 id=337 data-nosnippet>337</a>  </span>);
+<a href=#338 id=338 data-nosnippet>338</a>  <span class="macro">DefMacro!</span>(
+<a href=#339 id=339 data-nosnippet>339</a>    <span class="string">"\\dataset{}"</span>,
+<a href=#340 id=340 data-nosnippet>340</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=dataset]{#1}"
+<a href=#341 id=341 data-nosnippet>341</a>  </span>);
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="macro">DefMacro!</span>(
+<a href=#343 id=343 data-nosnippet>343</a>    <span class="string">"\\datasetlicense{}"</span>,
+<a href=#344 id=344 data-nosnippet>344</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=dataset-license]{#1}"
+<a href=#345 id=345 data-nosnippet>345</a>  </span>);
+<a href=#346 id=346 data-nosnippet>346</a>
+<a href=#347 id=347 data-nosnippet>347</a>  <span class="comment">// Additional newer mdpi.cls macros — preserve content.
+<a href=#348 id=348 data-nosnippet>348</a>  // \Author{name} (capital) is the MDPI variant; route to LaTeX \author.
+<a href=#349 id=349 data-nosnippet>349</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Author{}"</span>, <span class="string">"\\author{#1}"</span>);
+<a href=#350 id=350 data-nosnippet>350</a>  <span class="macro">DefMacro!</span>(
+<a href=#351 id=351 data-nosnippet>351</a>    <span class="string">"\\hreflink{}"</span>,
+<a href=#352 id=352 data-nosnippet>352</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=hreflink]{#1}"
+<a href=#353 id=353 data-nosnippet>353</a>  </span>);
+<a href=#354 id=354 data-nosnippet>354</a>  <span class="comment">// mdpi.cls (2311.18672's 2023 copy :633-635, as since 2018) `\foreach \x in {A, ..., Z}` defines `\orcidA`…`\orcidZ`,
+<a href=#355 id=355 data-nosnippet>355</a>  // the linked ORCID icon after an author's name, of the iD the paper gives `\orcidauthorA`…
+<a href=#356 id=356 data-nosnippet>356</a>  // (`\newcommand{\orcidauthorA}{0000-…}`): the author's ORCID (2311.18672 calls `\orcidG` and `\orcidH`); without
+<a href=#357 id=357 data-nosnippet>357</a>  // its iD, nothing.
+<a href=#358 id=358 data-nosnippet>358</a>  </span><span class="kw">for </span>letter <span class="kw">in </span><span class="string">'A'</span>..=<span class="string">'Z' </span>{
+<a href=#359 id=359 data-nosnippet>359</a>    <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+<a href=#360 id=360 data-nosnippet>360</a>      <span class="string">"\\def\\orcid{letter}{{\\@ifundefined{{orcidauthor{letter}}}{{}}{{\\expandafter\\lx@add@orcid\\expandafter{{\\orcidauthor{letter}}}}}}}"
+<a href=#361 id=361 data-nosnippet>361</a>    </span>));
+<a href=#362 id=362 data-nosnippet>362</a>  }
+<a href=#363 id=363 data-nosnippet>363</a>  <span class="comment">// \extralength is a length register — define as 0pt.
+<a href=#364 id=364 data-nosnippet>364</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\extralength" </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="comment">// \authorcontributions, \funding, \conflictsofinterest,
+<a href=#366 id=366 data-nosnippet>366</a>  // \abbreviations — substantive author-supplied text; render as
+<a href=#367 id=367 data-nosnippet>367</a>  // a named section.
+<a href=#368 id=368 data-nosnippet>368</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#369 id=369 data-nosnippet>369</a>    <span class="string">"\\authorcontributions{}"</span>,
+<a href=#370 id=370 data-nosnippet>370</a>    <span class="string">"\\section*{Author Contributions}#1"
+<a href=#371 id=371 data-nosnippet>371</a>  </span>);
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\funding{}"</span>, <span class="string">"\\section*{Funding}#1"</span>);
+<a href=#373 id=373 data-nosnippet>373</a>  <span class="macro">DefMacro!</span>(
+<a href=#374 id=374 data-nosnippet>374</a>    <span class="string">"\\conflictsofinterest{}"</span>,
+<a href=#375 id=375 data-nosnippet>375</a>    <span class="string">"\\section*{Conflicts of Interest}#1"
+<a href=#376 id=376 data-nosnippet>376</a>  </span>);
+<a href=#377 id=377 data-nosnippet>377</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abbreviations{}{}"</span>, <span class="string">"\\section*{#1}#2"</span>);
+<a href=#378 id=378 data-nosnippet>378</a>  <span class="comment">// Additional MDPI back-matter macros (mdpi.cls L1199-1240). These are
+<a href=#379 id=379 data-nosnippet>379</a>  // simple `\newcommand` stubs in the raw cls but in practice the cls
+<a href=#380 id=380 data-nosnippet>380</a>  // raw-load stops or truncates partway through, leaving these undefined.
+<a href=#381 id=381 data-nosnippet>381</a>  // Defining here ensures the back-matter content is preserved.
+<a href=#382 id=382 data-nosnippet>382</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\supplementary{}"</span>, <span class="string">"\\section*{Supplementary Materials}#1"</span>);
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="macro">DefMacro!</span>(
+<a href=#384 id=384 data-nosnippet>384</a>    <span class="string">"\\institutionalreview{}"</span>,
+<a href=#385 id=385 data-nosnippet>385</a>    <span class="string">"\\section*{Institutional Review Board Statement}#1"
+<a href=#386 id=386 data-nosnippet>386</a>  </span>);
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="macro">DefMacro!</span>(
+<a href=#388 id=388 data-nosnippet>388</a>    <span class="string">"\\informedconsent{}"</span>,
+<a href=#389 id=389 data-nosnippet>389</a>    <span class="string">"\\section*{Informed Consent Statement}#1"
+<a href=#390 id=390 data-nosnippet>390</a>  </span>);
+<a href=#391 id=391 data-nosnippet>391</a>  <span class="macro">DefMacro!</span>(
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="string">"\\dataavailability{}"</span>,
+<a href=#393 id=393 data-nosnippet>393</a>    <span class="string">"\\section*{Data Availability Statement}#1"
+<a href=#394 id=394 data-nosnippet>394</a>  </span>);
+<a href=#395 id=395 data-nosnippet>395</a>  <span class="macro">DefMacro!</span>(
+<a href=#396 id=396 data-nosnippet>396</a>    <span class="string">"\\publicinvolvement{}"</span>,
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="string">"\\section*{Public Involvement Statement}#1"
+<a href=#398 id=398 data-nosnippet>398</a>  </span>);
+<a href=#399 id=399 data-nosnippet>399</a>  <span class="macro">DefMacro!</span>(
+<a href=#400 id=400 data-nosnippet>400</a>    <span class="string">"\\guidelinesstandards{}"</span>,
+<a href=#401 id=401 data-nosnippet>401</a>    <span class="string">"\\section*{Guidelines and Standards Statement}#1"
+<a href=#402 id=402 data-nosnippet>402</a>  </span>);
+<a href=#403 id=403 data-nosnippet>403</a>  <span class="macro">DefMacro!</span>(
+<a href=#404 id=404 data-nosnippet>404</a>    <span class="string">"\\entrylink{}"</span>,
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=entrylink]{#1}"
+<a href=#406 id=406 data-nosnippet>406</a>  </span>);
+<a href=#407 id=407 data-nosnippet>407</a>  <span class="macro">DefMacro!</span>(
+<a href=#408 id=408 data-nosnippet>408</a>    <span class="string">"\\reviewreports{}"</span>,
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=reviewreports]{#1}"
+<a href=#410 id=410 data-nosnippet>410</a>  </span>);
+<a href=#411 id=411 data-nosnippet>411</a>  <span class="comment">// \sampleavailability (older mdpi) — sister of \dataavailability.
+<a href=#412 id=412 data-nosnippet>412</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#413 id=413 data-nosnippet>413</a>    <span class="string">"\\sampleavailability{}"</span>,
+<a href=#414 id=414 data-nosnippet>414</a>    <span class="string">"\\section*{Sample Availability}#1"
+<a href=#415 id=415 data-nosnippet>415</a>  </span>);
+<a href=#416 id=416 data-nosnippet>416</a>  <span class="comment">// \patents — research patents declaration.
+<a href=#417 id=417 data-nosnippet>417</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\patents{}"</span>, <span class="string">"\\section*{Patents}#1"</span>);
+<a href=#418 id=418 data-nosnippet>418</a>  <span class="comment">// mdpi.cls (2021+) `\publishersnote`: the "Publisher's Note:" back-matter statement (a version's convenience, as the
+<a href=#419 id=419 data-nosnippet>419</a>  // setters below).
+<a href=#420 id=420 data-nosnippet>420</a>  </span>{
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="kw">let </span>_guess = OriginGuard::new(DefinitionOrigin::Fallback);
+<a href=#422 id=422 data-nosnippet>422</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\publishersnote{}"</span>, <span class="string">"\\section*{Publisher's Note}#1"</span>);
+<a href=#423 id=423 data-nosnippet>423</a>  }
+<a href=#424 id=424 data-nosnippet>424</a>  <span class="comment">// \address[id]{text} — preserve as ltx:note, under the names (mdpi.cls:371, :602; 1910.13722, 2203.09377).
+<a href=#425 id=425 data-nosnippet>425</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\address[]{}"</span>, <span class="string">"\\lx@names@note{address}{#2}"</span>);
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="comment">// \natexlab from natbib — emit arg inline (used in \bibitem to mark
+<a href=#427 id=427 data-nosnippet>427</a>  // companion years like (1999a)/(1999b)).
+<a href=#428 id=428 data-nosnippet>428</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\natexlab{}"</span>, <span class="string">"#1"</span>);
+<a href=#429 id=429 data-nosnippet>429</a>  <span class="comment">// \textls (microtype letterspacing) — emit as-is.
+<a href=#430 id=430 data-nosnippet>430</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\textls[]{}"</span>, <span class="string">"#2"</span>);
+<a href=#431 id=431 data-nosnippet>431</a>
+<a href=#432 id=432 data-nosnippet>432</a>  <span class="comment">// \isAPAStyle / \isChicagoStyle — branchers in mdpi.cls L450+ that
+<a href=#433 id=433 data-nosnippet>433</a>  // pick references style based on \@journal. The cls defines them as
+<a href=#434 id=434 data-nosnippet>434</a>  // `\newcommand{\isAPAStyle}{\ifthenelse{...}}` and uses them as
+<a href=#435 id=435 data-nosnippet>435</a>  // `\isAPAStyle{...}{...}`. Stub as content-discarder so the
+<a href=#436 id=436 data-nosnippet>436</a>  // bibliography block doesn't emit an undefined error for every paper
+<a href=#437 id=437 data-nosnippet>437</a>  // shipping a local Definitions/mdpi.cls. Witness 2412.13512, 2503.13839.
+<a href=#438 id=438 data-nosnippet>438</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\isAPAStyle{}{}"</span>, <span class="string">"#2"</span>);
+<a href=#439 id=439 data-nosnippet>439</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\isChicagoStyle{}{}"</span>, <span class="string">"#2"</span>);
+<a href=#440 id=440 data-nosnippet>440</a>  <span class="comment">// mdpi.cls:170-175 `\isPreprints`, the same brancher on `\@journal`
+<a href=#441 id=441 data-nosnippet>441</a>  // (preprints / preprintschicago / preprintsapa): a journal paper takes the
+<a href=#442 id=442 data-nosnippet>442</a>  // second branch (`\isPreprints{\centering}{}`, arXiv 2605.17530).
+<a href=#443 id=443 data-nosnippet>443</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\isPreprints{}{}"</span>, <span class="string">"#2"</span>);
+<a href=#444 id=444 data-nosnippet>444</a>  <span class="comment">// The versions' title-page setters and conveniences (union of 119 sampled copies, 2012-2025; line numbers from
+<a href=#445 id=445 data-nosnippet>445</a>  // 2207.12053's copy). One version defines what another lacks, and a paper whose copy lacks one defines it itself, so
+<a href=#446 id=446 data-nosnippet>446</a>  // they are a fallback's guesses its own definition replaces (`DefinitionOrigin::Fallback`, as jfm_cls.rs). Run 340
+<a href=#447 id=447 data-nosnippet>447</a>  // first errors: `\doinum` 312, `\lastpage` 148, `\secondnote` 145, `\updates` 111, `\orcidicon` 51,
+<a href=#448 id=448 data-nosnippet>448</a>  // `\appendixsections` 42, `\cellWidtha` 31, `\startlandscape` 27, `\conference` 17 (witnesses 2008.03867,
+<a href=#449 id=449 data-nosnippet>449</a>  // 1309.7149, 2103.15665, 2103.03626, 2103.07786, 1904.10935, 2204.11608, 2103.11824, 2008.00705).
+<a href=#450 id=450 data-nosnippet>450</a>  </span>{
+<a href=#451 id=451 data-nosnippet>451</a>    <span class="kw">let </span>_guess = OriginGuard::new(DefinitionOrigin::Fallback);
+<a href=#452 id=452 data-nosnippet>452</a>    <span class="comment">// mdpi.cls:312 (2025) `\isAPAandChicago`, the same brancher for the journals that cite in both styles.
+<a href=#453 id=453 data-nosnippet>453</a>    </span><span class="macro">DefMacro!</span>(<span class="string">"\\isAPAandChicago{}{}"</span>, <span class="string">"#2"</span>);
+<a href=#454 id=454 data-nosnippet>454</a>    <span class="comment">// `\doinum` (:424): the article's DOI, which the journal line prints once the paper is accepted (:446, :646,
+<a href=#455 id=455 data-nosnippet>455</a>    // :667), as `\history` is printed.
+<a href=#456 id=456 data-nosnippet>456</a>    // (and :424 `\gdef\@doinum{#1}`, which `\linksupplementary` reads)
+<a href=#457 id=457 data-nosnippet>457</a>    </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\@doinum{}"</span>);
+<a href=#458 id=458 data-nosnippet>458</a>    <span class="comment">// :482-505 (and :533-541 `\cutdigits`) the padding the default DOI's issue and article number take, `\fourdigits`
+<a href=#459 id=459 data-nosnippet>459</a>    // in the 2016-2018 copies (54 of 319 sampled: 1607.02330, 1810.09793).
+<a href=#460 id=460 data-nosnippet>460</a>    </span><span class="macro">RawTeX!</span>(
+<a href=#461 id=461 data-nosnippet>461</a>      <span class="string">r"\def\cutdigits#1{\ifnum#1&gt;0 \number#1 \else\ifnum#1&lt;10000 \number#1 \else error\fi\fi}
+<a href=#462 id=462 data-nosnippet>462</a>\def\twodigits#1{\ifnum#1&lt;10 0\number#1 \else\number#1 \fi}
+<a href=#463 id=463 data-nosnippet>463</a>\def\fourdigits#1{\ifnum#1&lt;10 000\number#1 \else\ifnum#1&lt;100 00\number#1 \else\ifnum#1&lt;1000 0\number#1 \else
+<a href=#464 id=464 data-nosnippet>464</a>\ifnum#1&lt;10000 \number#1 \else error\fi\fi\fi\fi}
+<a href=#465 id=465 data-nosnippet>465</a>\def\fivedigits#1{\ifnum#1&lt;10 000\number#1 \else\ifnum#1&lt;100 00\number#1 \else\ifnum#1&lt;1000 0\number#1 \else
+<a href=#466 id=466 data-nosnippet>466</a>\ifnum#1&lt;100000 \number#1 \else error\fi\fi\fi\fi}"
+<a href=#467 id=467 data-nosnippet>467</a>    </span>);
+<a href=#468 id=468 data-nosnippet>468</a>    <span class="macro">DefMacro!</span>(
+<a href=#469 id=469 data-nosnippet>469</a>      <span class="string">"\\doinum{}"</span>,
+<a href=#470 id=470 data-nosnippet>470</a>      <span class="string">"\\gdef\\@doinum{#1}\\ifx\\@status\\lx@mdpi@submit\\else\\@add@frontmatter{ltx:note}[role=doi]{#1}\\fi"
 <a href=#471 id=471 data-nosnippet>471</a>    </span>);
-<a href=#472 id=472 data-nosnippet>472</a>    <span class="macro">DefMacro!</span>(
-<a href=#473 id=473 data-nosnippet>473</a>      <span class="string">"\\doinum{}"</span>,
-<a href=#474 id=474 data-nosnippet>474</a>      <span class="string">"\\gdef\\@doinum{#1}\\ifx\\@status\\lx@mdpi@submit\\else\\@add@frontmatter{ltx:note}[role=doi]{#1}\\fi"
-<a href=#475 id=475 data-nosnippet>475</a>    </span>);
-<a href=#476 id=476 data-nosnippet>476</a>    <span class="comment">// `\secondnote`, `\thirdnote` (:560-563): the author notes after `\firstnote` (:970-980); `\conference` (:521):
-<a href=#477 id=477 data-nosnippet>477</a>    // the note "This paper is an extended version of our paper published in …" (:964-965).
-<a href=#478 id=478 data-nosnippet>478</a>    </span><span class="macro">DefMacro!</span>(
-<a href=#479 id=479 data-nosnippet>479</a>      <span class="string">"\\secondnote{}"</span>,
-<a href=#480 id=480 data-nosnippet>480</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=secondnote]{#1}"
+<a href=#472 id=472 data-nosnippet>472</a>    <span class="comment">// `\secondnote`, `\thirdnote` (:560-563): the author notes after `\firstnote` (:970-980); `\conference` (:521):
+<a href=#473 id=473 data-nosnippet>473</a>    // the note "This paper is an extended version of our paper published in …" (:964-965).
+<a href=#474 id=474 data-nosnippet>474</a>    </span><span class="macro">DefMacro!</span>(
+<a href=#475 id=475 data-nosnippet>475</a>      <span class="string">"\\secondnote{}"</span>,
+<a href=#476 id=476 data-nosnippet>476</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=secondnote]{#1}"
+<a href=#477 id=477 data-nosnippet>477</a>    </span>);
+<a href=#478 id=478 data-nosnippet>478</a>    <span class="macro">DefMacro!</span>(
+<a href=#479 id=479 data-nosnippet>479</a>      <span class="string">"\\thirdnote{}"</span>,
+<a href=#480 id=480 data-nosnippet>480</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=thirdnote]{#1}"
 <a href=#481 id=481 data-nosnippet>481</a>    </span>);
 <a href=#482 id=482 data-nosnippet>482</a>    <span class="macro">DefMacro!</span>(
-<a href=#483 id=483 data-nosnippet>483</a>      <span class="string">"\\thirdnote{}"</span>,
-<a href=#484 id=484 data-nosnippet>484</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=thirdnote]{#1}"
+<a href=#483 id=483 data-nosnippet>483</a>      <span class="string">"\\conference{}"</span>,
+<a href=#484 id=484 data-nosnippet>484</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=conference]{This paper is an extended version of our paper published in #1.}"
 <a href=#485 id=485 data-nosnippet>485</a>    </span>);
-<a href=#486 id=486 data-nosnippet>486</a>    <span class="macro">DefMacro!</span>(
-<a href=#487 id=487 data-nosnippet>487</a>      <span class="string">"\\conference{}"</span>,
-<a href=#488 id=488 data-nosnippet>488</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=conference]{This paper is an extended version of our paper published in #1.}"
-<a href=#489 id=489 data-nosnippet>489</a>    </span>);
-<a href=#490 id=490 data-nosnippet>490</a>    <span class="comment">// `\featuredapplication`, `\simplesumm` (:552-575): the "Featured Application" and "Simple Summary" blocks
-<a href=#491 id=491 data-nosnippet>491</a>    // printed before the abstract (`\abstractkeywords`, :1019-1034). Notes, not abstracts: a paper's `\abstract`
-<a href=#492 id=492 data-nosnippet>492</a>    // replaces every frontmatter abstract (`\lx@add@abstract`).
-<a href=#493 id=493 data-nosnippet>493</a>    </span><span class="macro">DefMacro!</span>(
-<a href=#494 id=494 data-nosnippet>494</a>      <span class="string">"\\featuredapplication{}"</span>,
-<a href=#495 id=495 data-nosnippet>495</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=featuredapplication]{#1}"
+<a href=#486 id=486 data-nosnippet>486</a>    <span class="comment">// `\featuredapplication`, `\simplesumm` (:552-575): the "Featured Application" and "Simple Summary" blocks
+<a href=#487 id=487 data-nosnippet>487</a>    // printed before the abstract (`\abstractkeywords`, :1019-1034). Notes, not abstracts: a paper's `\abstract`
+<a href=#488 id=488 data-nosnippet>488</a>    // replaces every frontmatter abstract (`\lx@add@abstract`).
+<a href=#489 id=489 data-nosnippet>489</a>    </span><span class="macro">DefMacro!</span>(
+<a href=#490 id=490 data-nosnippet>490</a>      <span class="string">"\\featuredapplication{}"</span>,
+<a href=#491 id=491 data-nosnippet>491</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=featuredapplication]{#1}"
+<a href=#492 id=492 data-nosnippet>492</a>    </span>);
+<a href=#493 id=493 data-nosnippet>493</a>    <span class="macro">DefMacro!</span>(
+<a href=#494 id=494 data-nosnippet>494</a>      <span class="string">"\\simplesumm{}"</span>,
+<a href=#495 id=495 data-nosnippet>495</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=simplesummary]{#1}"
 <a href=#496 id=496 data-nosnippet>496</a>    </span>);
-<a href=#497 id=497 data-nosnippet>497</a>    <span class="macro">DefMacro!</span>(
-<a href=#498 id=498 data-nosnippet>498</a>      <span class="string">"\\simplesumm{}"</span>,
-<a href=#499 id=499 data-nosnippet>499</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=simplesummary]{#1}"
-<a href=#500 id=500 data-nosnippet>500</a>    </span>);
-<a href=#501 id=501 data-nosnippet>501</a>    <span class="comment">// `\addhighlights{yes}` (:592-593) only switches the "Highlights" block on: the class prints `\addhighlights`
-<a href=#502 id=502 data-nosnippet>502</a>    // again (:1035-1039), which the paper has redefined to hold the highlights ("redefined in .tex to use itemize").
-<a href=#503 id=503 data-nosnippet>503</a>    // So the block is the paper's own `\addhighlights`, when the switch is set and the paper replaced the setter.
-<a href=#504 id=504 data-nosnippet>504</a>    </span><span class="macro">RawTeX!</span>(
-<a href=#505 id=505 data-nosnippet>505</a>      <span class="string">r"\def\@addhighlights{}
-<a href=#506 id=506 data-nosnippet>506</a>\newcommand\lx@mdpi@addhighlights[1]{\gdef\@addhighlights{#1}}
-<a href=#507 id=507 data-nosnippet>507</a>\let\addhighlights\lx@mdpi@addhighlights
-<a href=#508 id=508 data-nosnippet>508</a>\AtBeginDocument{\ifx\@addhighlights\@empty\else\ifx\addhighlights\lx@mdpi@addhighlights\else
-<a href=#509 id=509 data-nosnippet>509</a>  \@add@frontmatter{ltx:note}[role=highlights]{\addhighlights}\fi\fi}"
-<a href=#510 id=510 data-nosnippet>510</a>    </span>);
-<a href=#511 id=511 data-nosnippet>511</a>    def_macro_noop(<span class="string">"\\abstractkeywords"</span>)<span class="question-mark">?</span>;
-<a href=#512 id=512 data-nosnippet>512</a>    <span class="comment">// The 2012-2015 versions' `\acknowledgements`/`\conflictofinterests` set their argument, the section's title, as a
-<a href=#513 id=513 data-nosnippet>513</a>    // bold paragraph (1307.3961's copy :1466-1473); later versions keep `\conflictofinterests` for compatibility with
-<a href=#514 id=514 data-nosnippet>514</a>    // the statement as its argument under a bold "Conflicts of Interest:" label (43 of the 62 sampled copies that
-<a href=#515 id=515 data-nosnippet>515</a>    // define it; one sets the argument alone). The paper's own copy decides; without one, the label form.
-<a href=#516 id=516 data-nosnippet>516</a>    </span><span class="macro">DefMacro!</span>(<span class="string">"\\acknowledgements{}"</span>, <span class="string">"\\par\\noindent\\textbf{#1}\\par"</span>);
-<a href=#517 id=517 data-nosnippet>517</a>    <span class="kw">let </span>conflicts = <span class="kw">match </span>shipped.as_deref().map(conflict_of_interests_form) {
-<a href=#518 id=518 data-nosnippet>518</a>      <span class="prelude-val">Some</span>(ConflictForm::Title) =&gt; <span class="string">"\\par\\noindent\\textbf{#1}\\par"</span>,
-<a href=#519 id=519 data-nosnippet>519</a>      <span class="prelude-val">Some</span>(ConflictForm::Plain) =&gt; <span class="string">"\\par\\noindent #1\\par"</span>,
-<a href=#520 id=520 data-nosnippet>520</a>      <span class="kw">_ </span>=&gt; <span class="string">"\\par\\noindent\\textbf{Conflicts of Interest:} #1\\par"</span>,
-<a href=#521 id=521 data-nosnippet>521</a>    };
-<a href=#522 id=522 data-nosnippet>522</a>    <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\def\\conflictofinterests#1{{{conflicts}}}"</span>));
-<a href=#523 id=523 data-nosnippet>523</a>    <span class="comment">// Page and layout settings: `\lastpage`, `\continuouspages` (page ranges of the journal line), `\updates` (the
-<a href=#524 id=524 data-nosnippet>524</a>    // check-for-updates logo link, :794), `\longauthorlist`, `\appendixsections`, the ORCID logo `\orcidicon` (an
-<a href=#525 id=525 data-nosnippet>525</a>    // image file the papers' Definitions/ folder holds), `\startlandscape`/`\finishlandscape`, `\widefigure` and
-<a href=#526 id=526 data-nosnippet>526</a>    // `\widetable` (page geometry and caption margins).
-<a href=#527 id=527 data-nosnippet>527</a>    </span><span class="kw">for </span>setter <span class="kw">in </span>[
-<a href=#528 id=528 data-nosnippet>528</a>      <span class="string">"\\lastpage{}"</span>,
-<a href=#529 id=529 data-nosnippet>529</a>      <span class="string">"\\continuouspages{}"</span>,
-<a href=#530 id=530 data-nosnippet>530</a>      <span class="string">"\\updates{}"</span>,
-<a href=#531 id=531 data-nosnippet>531</a>      <span class="string">"\\longauthorlist{}"</span>,
-<a href=#532 id=532 data-nosnippet>532</a>      <span class="string">"\\appendixsections{}"</span>,
-<a href=#533 id=533 data-nosnippet>533</a>    ] {
-<a href=#534 id=534 data-nosnippet>534</a>      def_macro_noop(setter)<span class="question-mark">?</span>;
-<a href=#535 id=535 data-nosnippet>535</a>    }
-<a href=#536 id=536 data-nosnippet>536</a>    <span class="kw">for </span>switch <span class="kw">in </span>[
-<a href=#537 id=537 data-nosnippet>537</a>      <span class="string">"\\orcidicon"</span>,
-<a href=#538 id=538 data-nosnippet>538</a>      <span class="string">"\\startlandscape"</span>,
-<a href=#539 id=539 data-nosnippet>539</a>      <span class="string">"\\finishlandscape"</span>,
-<a href=#540 id=540 data-nosnippet>540</a>      <span class="string">"\\widefigure"</span>,
-<a href=#541 id=541 data-nosnippet>541</a>      <span class="string">"\\widetable"</span>,
-<a href=#542 id=542 data-nosnippet>542</a>    ] {
-<a href=#543 id=543 data-nosnippet>543</a>      def_macro_noop(switch)<span class="question-mark">?</span>;
-<a href=#544 id=544 data-nosnippet>544</a>    }
-<a href=#545 id=545 data-nosnippet>545</a>    <span class="comment">// `\highlighting` (a yellow `\colorbox`), the table column widths `\cellWidtha`…`\cellWidthz` and
-<a href=#546 id=546 data-nosnippet>546</a>    // `\PreserveBackslash` (the XML2PDF column helper).
-<a href=#547 id=547 data-nosnippet>547</a>    </span><span class="macro">DefMacro!</span>(<span class="string">"\\highlighting{}"</span>, <span class="string">"\\colorbox{yellow}{#1}"</span>);
-<a href=#548 id=548 data-nosnippet>548</a>    <span class="kw">for </span>letter <span class="kw">in </span><span class="string">'a'</span>..=<span class="string">'z' </span>{
-<a href=#549 id=549 data-nosnippet>549</a>      <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\newlength{{\\cellWidth{letter}}}"</span>));
-<a href=#550 id=550 data-nosnippet>550</a>    }
-<a href=#551 id=551 data-nosnippet>551</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\newcommand{\PreserveBackslash}[1]{\let\temp=\\#1\let\\=\temp}"</span>);
-<a href=#552 id=552 data-nosnippet>552</a>    <span class="comment">// More of the versions' commands papers call (run 347: 45 mdpi and 31 Definitions/mdpi papers; line numbers from
-<a href=#553 id=553 data-nosnippet>553</a>    // 2404.14200's 2023 copy unless named):
-<a href=#554 id=554 data-nosnippet>554</a>    // - `\conferencetitle{name}` (1708.02914's 2017 copy :781; 23 copies, 18 papers: 1709.06513, 1609.04583), the
-<a href=#555 id=555 data-nosnippet>555</a>    //   conference a proceedings paper was given at, printed in the footer: the conference note;
-<a href=#556 id=556 data-nosnippet>556</a>    // - `\contributed{text}` (2015, 1506.06852's copy :627-628; 7 papers: 1507.03569, 1510.06668), the "These authors
-<a href=#557 id=557 data-nosnippet>557</a>    //   contributed equally" note; `\fourthnote`, `\fifthnote` (:611-614; 1902.06114, 2005.05017), the author notes
-<a href=#558 id=558 data-nosnippet>558</a>    //   after `\thirdnote`; `\emails{…}` (2008, 0912.1688's copy :127, :334 "E-mail: …"), the authors' e-mail;
-<a href=#559 id=559 data-nosnippet>559</a>    // - `\orcidauthorONE{id}`…`\orcidauthorSIX` and `\orcidONE`…`\orcidSIX` (2017, 1708.02914's copy :798-817; 1707.09764,
-<a href=#560 id=560 data-nosnippet>560</a>    //   1709.06453, 1710.03078), an author's ORCID set in the preamble and its linked icon after the name: the author's
-<a href=#561 id=561 data-nosnippet>561</a>    //   ORCID;
-<a href=#562 id=562 data-nosnippet>562</a>    // - `\conflictofinterest{text}` (1911.06360's copy :862, the singular "for book production"; 1710.04728, 1811.06122),
-<a href=#563 id=563 data-nosnippet>563</a>    //   `\useofartificialintelligence{text}` (:1248; 2609.34305), the back matter's labelled statements;
-<a href=#564 id=564 data-nosnippet>564</a>    // - `\linksupplementary{file}` (:1498; 214 copies, 19 papers: 2208.12066, 2311.18672), the link to the article's
-<a href=#565 id=565 data-nosnippet>565</a>    //   supplementary file by its `\doinum`; `\bio{photo}{text}` (:1262; 2107.14152, 2111.02495), an author's
-<a href=#566 id=566 data-nosnippet>566</a>    //   biography beside the photo; `\justifyorcenter{text}` (:1461), a table footnote centred when short (2208.12066);
-<a href=#567 id=567 data-nosnippet>567</a>    // - `\highlight{text}` (2017, 1708.02914's :51; 2111.05917), yellow-boxed as `\highlighting`; `\CorrStatement{yes}`
-<a href=#568 id=568 data-nosnippet>568</a>    //   (:641-642), the switch of the correspondence statement (2409.02954); `\dist` (:828), the notes' hanging indent.
-<a href=#569 id=569 data-nosnippet>569</a>    </span><span class="macro">DefMacro!</span>(
-<a href=#570 id=570 data-nosnippet>570</a>      <span class="string">"\\conferencetitle{}"</span>,
-<a href=#571 id=571 data-nosnippet>571</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=conference]{#1}"
+<a href=#497 id=497 data-nosnippet>497</a>    <span class="comment">// `\addhighlights{yes}` (:592-593) only switches the "Highlights" block on: the class prints `\addhighlights`
+<a href=#498 id=498 data-nosnippet>498</a>    // again (:1035-1039), which the paper has redefined to hold the highlights ("redefined in .tex to use itemize").
+<a href=#499 id=499 data-nosnippet>499</a>    // So the block is the paper's own `\addhighlights`, when the switch is set and the paper replaced the setter.
+<a href=#500 id=500 data-nosnippet>500</a>    </span><span class="macro">RawTeX!</span>(
+<a href=#501 id=501 data-nosnippet>501</a>      <span class="string">r"\def\@addhighlights{}
+<a href=#502 id=502 data-nosnippet>502</a>\newcommand\lx@mdpi@addhighlights[1]{\gdef\@addhighlights{#1}}
+<a href=#503 id=503 data-nosnippet>503</a>\let\addhighlights\lx@mdpi@addhighlights
+<a href=#504 id=504 data-nosnippet>504</a>\AtBeginDocument{\ifx\@addhighlights\@empty\else\ifx\addhighlights\lx@mdpi@addhighlights\else
+<a href=#505 id=505 data-nosnippet>505</a>  \@add@frontmatter{ltx:note}[role=highlights]{\addhighlights}\fi\fi}"
+<a href=#506 id=506 data-nosnippet>506</a>    </span>);
+<a href=#507 id=507 data-nosnippet>507</a>    def_macro_noop(<span class="string">"\\abstractkeywords"</span>)<span class="question-mark">?</span>;
+<a href=#508 id=508 data-nosnippet>508</a>    <span class="comment">// The 2012-2015 versions' `\acknowledgements`/`\conflictofinterests` set their argument, the section's title, as a
+<a href=#509 id=509 data-nosnippet>509</a>    // bold paragraph (1307.3961's copy :1466-1473); later versions keep `\conflictofinterests` for compatibility with
+<a href=#510 id=510 data-nosnippet>510</a>    // the statement as its argument under a bold "Conflicts of Interest:" label (43 of the 62 sampled copies that
+<a href=#511 id=511 data-nosnippet>511</a>    // define it; one sets the argument alone). The paper's own copy decides; without one, the label form.
+<a href=#512 id=512 data-nosnippet>512</a>    </span><span class="macro">DefMacro!</span>(<span class="string">"\\acknowledgements{}"</span>, <span class="string">"\\par\\noindent\\textbf{#1}\\par"</span>);
+<a href=#513 id=513 data-nosnippet>513</a>    <span class="kw">let </span>conflicts = <span class="kw">match </span>shipped.as_deref().map(conflict_of_interests_form) {
+<a href=#514 id=514 data-nosnippet>514</a>      <span class="prelude-val">Some</span>(ConflictForm::Title) =&gt; <span class="string">"\\par\\noindent\\textbf{#1}\\par"</span>,
+<a href=#515 id=515 data-nosnippet>515</a>      <span class="prelude-val">Some</span>(ConflictForm::Plain) =&gt; <span class="string">"\\par\\noindent #1\\par"</span>,
+<a href=#516 id=516 data-nosnippet>516</a>      <span class="kw">_ </span>=&gt; <span class="string">"\\par\\noindent\\textbf{Conflicts of Interest:} #1\\par"</span>,
+<a href=#517 id=517 data-nosnippet>517</a>    };
+<a href=#518 id=518 data-nosnippet>518</a>    <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\def\\conflictofinterests#1{{{conflicts}}}"</span>));
+<a href=#519 id=519 data-nosnippet>519</a>    <span class="comment">// Page and layout settings: `\lastpage`, `\continuouspages` (page ranges of the journal line), `\updates` (the
+<a href=#520 id=520 data-nosnippet>520</a>    // check-for-updates logo link, :794), `\longauthorlist`, `\appendixsections`, the ORCID logo `\orcidicon` (an
+<a href=#521 id=521 data-nosnippet>521</a>    // image file the papers' Definitions/ folder holds), `\startlandscape`/`\finishlandscape`, `\widefigure` and
+<a href=#522 id=522 data-nosnippet>522</a>    // `\widetable` (page geometry and caption margins).
+<a href=#523 id=523 data-nosnippet>523</a>    </span><span class="kw">for </span>setter <span class="kw">in </span>[
+<a href=#524 id=524 data-nosnippet>524</a>      <span class="string">"\\lastpage{}"</span>,
+<a href=#525 id=525 data-nosnippet>525</a>      <span class="string">"\\continuouspages{}"</span>,
+<a href=#526 id=526 data-nosnippet>526</a>      <span class="string">"\\updates{}"</span>,
+<a href=#527 id=527 data-nosnippet>527</a>      <span class="string">"\\longauthorlist{}"</span>,
+<a href=#528 id=528 data-nosnippet>528</a>      <span class="string">"\\appendixsections{}"</span>,
+<a href=#529 id=529 data-nosnippet>529</a>    ] {
+<a href=#530 id=530 data-nosnippet>530</a>      def_macro_noop(setter)<span class="question-mark">?</span>;
+<a href=#531 id=531 data-nosnippet>531</a>    }
+<a href=#532 id=532 data-nosnippet>532</a>    <span class="kw">for </span>switch <span class="kw">in </span>[
+<a href=#533 id=533 data-nosnippet>533</a>      <span class="string">"\\orcidicon"</span>,
+<a href=#534 id=534 data-nosnippet>534</a>      <span class="string">"\\startlandscape"</span>,
+<a href=#535 id=535 data-nosnippet>535</a>      <span class="string">"\\finishlandscape"</span>,
+<a href=#536 id=536 data-nosnippet>536</a>      <span class="string">"\\widefigure"</span>,
+<a href=#537 id=537 data-nosnippet>537</a>      <span class="string">"\\widetable"</span>,
+<a href=#538 id=538 data-nosnippet>538</a>    ] {
+<a href=#539 id=539 data-nosnippet>539</a>      def_macro_noop(switch)<span class="question-mark">?</span>;
+<a href=#540 id=540 data-nosnippet>540</a>    }
+<a href=#541 id=541 data-nosnippet>541</a>    <span class="comment">// `\highlighting` (a yellow `\colorbox`), the table column widths `\cellWidtha`…`\cellWidthz` and
+<a href=#542 id=542 data-nosnippet>542</a>    // `\PreserveBackslash` (the XML2PDF column helper).
+<a href=#543 id=543 data-nosnippet>543</a>    </span><span class="macro">DefMacro!</span>(<span class="string">"\\highlighting{}"</span>, <span class="string">"\\colorbox{yellow}{#1}"</span>);
+<a href=#544 id=544 data-nosnippet>544</a>    <span class="kw">for </span>letter <span class="kw">in </span><span class="string">'a'</span>..=<span class="string">'z' </span>{
+<a href=#545 id=545 data-nosnippet>545</a>      <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\newlength{{\\cellWidth{letter}}}"</span>));
+<a href=#546 id=546 data-nosnippet>546</a>    }
+<a href=#547 id=547 data-nosnippet>547</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\newcommand{\PreserveBackslash}[1]{\let\temp=\\#1\let\\=\temp}"</span>);
+<a href=#548 id=548 data-nosnippet>548</a>    <span class="comment">// More of the versions' commands papers call (run 347: 45 mdpi and 31 Definitions/mdpi papers; line numbers from
+<a href=#549 id=549 data-nosnippet>549</a>    // 2404.14200's 2023 copy unless named):
+<a href=#550 id=550 data-nosnippet>550</a>    // - `\conferencetitle{name}` (1708.02914's 2017 copy :781; 23 copies, 18 papers: 1709.06513, 1609.04583), the
+<a href=#551 id=551 data-nosnippet>551</a>    //   conference a proceedings paper was given at, printed in the footer: the conference note;
+<a href=#552 id=552 data-nosnippet>552</a>    // - `\contributed{text}` (2015, 1506.06852's copy :627-628; 7 papers: 1507.03569, 1510.06668), the "These authors
+<a href=#553 id=553 data-nosnippet>553</a>    //   contributed equally" note; `\fourthnote`, `\fifthnote` (:611-614; 1902.06114, 2005.05017), the author notes
+<a href=#554 id=554 data-nosnippet>554</a>    //   after `\thirdnote`; `\emails{…}` (2008, 0912.1688's copy :127, :334 "E-mail: …"), the authors' e-mail;
+<a href=#555 id=555 data-nosnippet>555</a>    // - `\orcidauthorONE{id}`…`\orcidauthorSIX` and `\orcidONE`…`\orcidSIX` (2017, 1708.02914's copy :798-817; 1707.09764,
+<a href=#556 id=556 data-nosnippet>556</a>    //   1709.06453, 1710.03078), an author's ORCID set in the preamble and its linked icon after the name: the author's
+<a href=#557 id=557 data-nosnippet>557</a>    //   ORCID;
+<a href=#558 id=558 data-nosnippet>558</a>    // - `\conflictofinterest{text}` (1911.06360's copy :862, the singular "for book production"; 1710.04728, 1811.06122),
+<a href=#559 id=559 data-nosnippet>559</a>    //   `\useofartificialintelligence{text}` (:1248; 2609.34305), the back matter's labelled statements;
+<a href=#560 id=560 data-nosnippet>560</a>    // - `\linksupplementary{file}` (:1498; 214 copies, 19 papers: 2208.12066, 2311.18672), the link to the article's
+<a href=#561 id=561 data-nosnippet>561</a>    //   supplementary file by its `\doinum`; `\bio{photo}{text}` (:1262; 2107.14152, 2111.02495), an author's
+<a href=#562 id=562 data-nosnippet>562</a>    //   biography beside the photo; `\justifyorcenter{text}` (:1461), a table footnote centred when short (2208.12066);
+<a href=#563 id=563 data-nosnippet>563</a>    // - `\highlight{text}` (2017, 1708.02914's :51; 2111.05917), yellow-boxed as `\highlighting`; `\CorrStatement{yes}`
+<a href=#564 id=564 data-nosnippet>564</a>    //   (:641-642), the switch of the correspondence statement (2409.02954); `\dist` (:828), the notes' hanging indent.
+<a href=#565 id=565 data-nosnippet>565</a>    </span><span class="macro">DefMacro!</span>(
+<a href=#566 id=566 data-nosnippet>566</a>      <span class="string">"\\conferencetitle{}"</span>,
+<a href=#567 id=567 data-nosnippet>567</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=conference]{#1}"
+<a href=#568 id=568 data-nosnippet>568</a>    </span>);
+<a href=#569 id=569 data-nosnippet>569</a>    <span class="macro">DefMacro!</span>(
+<a href=#570 id=570 data-nosnippet>570</a>      <span class="string">"\\contributed{}"</span>,
+<a href=#571 id=571 data-nosnippet>571</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=contributed]{#1}"
 <a href=#572 id=572 data-nosnippet>572</a>    </span>);
 <a href=#573 id=573 data-nosnippet>573</a>    <span class="macro">DefMacro!</span>(
-<a href=#574 id=574 data-nosnippet>574</a>      <span class="string">"\\contributed{}"</span>,
-<a href=#575 id=575 data-nosnippet>575</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=contributed]{#1}"
+<a href=#574 id=574 data-nosnippet>574</a>      <span class="string">"\\fourthnote{}"</span>,
+<a href=#575 id=575 data-nosnippet>575</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=fourthnote]{#1}"
 <a href=#576 id=576 data-nosnippet>576</a>    </span>);
 <a href=#577 id=577 data-nosnippet>577</a>    <span class="macro">DefMacro!</span>(
-<a href=#578 id=578 data-nosnippet>578</a>      <span class="string">"\\fourthnote{}"</span>,
-<a href=#579 id=579 data-nosnippet>579</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=fourthnote]{#1}"
+<a href=#578 id=578 data-nosnippet>578</a>      <span class="string">"\\fifthnote{}"</span>,
+<a href=#579 id=579 data-nosnippet>579</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=fifthnote]{#1}"
 <a href=#580 id=580 data-nosnippet>580</a>    </span>);
-<a href=#581 id=581 data-nosnippet>581</a>    <span class="macro">DefMacro!</span>(
-<a href=#582 id=582 data-nosnippet>582</a>      <span class="string">"\\fifthnote{}"</span>,
-<a href=#583 id=583 data-nosnippet>583</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=fifthnote]{#1}"
-<a href=#584 id=584 data-nosnippet>584</a>    </span>);
-<a href=#585 id=585 data-nosnippet>585</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\emails{}"</span>, <span class="string">"\\lx@add@email{#1}"</span>);
-<a href=#586 id=586 data-nosnippet>586</a>    <span class="kw">for </span>n <span class="kw">in </span>[<span class="string">"ONE"</span>, <span class="string">"TWO"</span>, <span class="string">"THREE"</span>, <span class="string">"FOUR"</span>, <span class="string">"FIVE"</span>, <span class="string">"SIX"</span>] {
-<a href=#587 id=587 data-nosnippet>587</a>      <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
-<a href=#588 id=588 data-nosnippet>588</a>        <span class="string">"\\def\\@orcidauthor{n}{{}}\\newcommand{{\\orcidauthor{n}}}[1]{{\\gdef\\@orcidauthor{n}{{#1}}}}\\newcommand{{\\orcid{n}}}{{\\expandafter\\lx@add@orcid\\expandafter{{\\@orcidauthor{n}}}}}"
-<a href=#589 id=589 data-nosnippet>589</a>      </span>));
-<a href=#590 id=590 data-nosnippet>590</a>    }
-<a href=#591 id=591 data-nosnippet>591</a>    <span class="macro">RawTeX!</span>(
-<a href=#592 id=592 data-nosnippet>592</a>      <span class="string">r"\newcommand{\conflictofinterest}[1]{\par\noindent\textbf{Conflicts of Interest:} #1\par}
-<a href=#593 id=593 data-nosnippet>593</a>\newcommand{\useofartificialintelligence}[1]{\par\noindent\textbf{Use of Artificial Intelligence:} #1\par}
-<a href=#594 id=594 data-nosnippet>594</a>\newcommand{\bio}[2]{\par\noindent{#1}\ {#2}\par}
-<a href=#595 id=595 data-nosnippet>595</a>\newcommand{\justifyorcenter}[1]{#1}
-<a href=#596 id=596 data-nosnippet>596</a>\newcommand{\highlight}[1]{\colorbox{yellow}{#1}}
-<a href=#597 id=597 data-nosnippet>597</a>\def\@CorrStatement{}\newcommand{\CorrStatement}[1]{\gdef\@CorrStatement{#1}}
-<a href=#598 id=598 data-nosnippet>598</a>\newcommand{\dist}{1.7em}"
-<a href=#599 id=599 data-nosnippet>599</a>    </span>);
-<a href=#600 id=600 data-nosnippet>600</a>    <span class="comment">// `\linksupplementary{file}` (2404.14200's copy :1498, 2208.12066's :1479: `\url{https://www.mdpi.com/article/
-<a href=#601 id=601 data-nosnippet>601</a>    // \@doinum/#1}`; 19 papers, none setting `\doinum`: 2208.12066, 2602.00080, 1901.06933, 2311.18672, 2607.17752): the
-<a href=#602 id=602 data-nosnippet>602</a>    // link under the paper's DOI, else under the default the copy computes at load (`default_doi`, 2208.12066's :523-530
-<a href=#603 id=603 data-nosnippet>603</a>    // `\doinum{10.3390/\@doiabbr\@pubvolume\twodigits\@issuenum\fivedigits\@articlenumber}`, `10.3390/s23001234`), which
-<a href=#604 id=604 data-nosnippet>604</a>    // needs the copy's journal table and the paper's volume, issue and article number. Without them the DOI is unknown:
-<a href=#605 id=605 data-nosnippet>605</a>    // the file's name, and a Warning (pdflatex has the copy, so its DOI is always known).
-<a href=#606 id=606 data-nosnippet>606</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>((article_only, formula)) = shipped.as_deref().and_then(default_doi) {
-<a href=#607 id=607 data-nosnippet>607</a>      <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
-<a href=#608 id=608 data-nosnippet>608</a>        <span class="string">"\\def\\lx@mdpi@doi@default{{{formula}}}\\def\\lx@mdpi@doi@articleonly{{,{},}}"</span>,
-<a href=#609 id=609 data-nosnippet>609</a>        article_only.join(<span class="string">","</span>)
-<a href=#610 id=610 data-nosnippet>610</a>      ));
-<a href=#611 id=611 data-nosnippet>611</a>    }
-<a href=#612 id=612 data-nosnippet>612</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\linksupplementary{}"</span>, sub[(file)] {
-<a href=#613 id=613 data-nosnippet>613</a>      <span class="kw">let </span>file: Tokens = file;
-<a href=#614 id=614 data-nosnippet>614</a>      <span class="kw">let </span>doi = <span class="kw">if </span>macro_text(<span class="string">"\\@doinum"</span>).is_some_and(|doi| !doi.trim().is_empty()) {
-<a href=#615 id=615 data-nosnippet>615</a>        <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@doinum"</span>)))
-<a href=#616 id=616 data-nosnippet>616</a>      } <span class="kw">else </span>{
-<a href=#617 id=617 data-nosnippet>617</a>        default_doi_tokens()
-<a href=#618 id=618 data-nosnippet>618</a>      };
-<a href=#619 id=619 data-nosnippet>619</a>      <span class="prelude-val">Ok</span>(<span class="kw">match </span>doi {
-<a href=#620 id=620 data-nosnippet>620</a>        <span class="prelude-val">Some</span>(doi) =&gt; {
-<a href=#621 id=621 data-nosnippet>621</a>          <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">TokenizeInternal!</span>(<span class="string">r"\edef\lx@mdpi@link{\noexpand\url{https://www.mdpi.com/article/"</span>).unlist();
-<a href=#622 id=622 data-nosnippet>622</a>          out.extend(doi.unlist());
-<a href=#623 id=623 data-nosnippet>623</a>          out.extend(<span class="macro">TokenizeInternal!</span>(<span class="string">r"/\unexpanded{"</span>).unlist());
-<a href=#624 id=624 data-nosnippet>624</a>          out.extend(file.unlist());
-<a href=#625 id=625 data-nosnippet>625</a>          out.extend([<span class="macro">T_END!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@mdpi@link"</span>)]);
-<a href=#626 id=626 data-nosnippet>626</a>          Tokens::new(out)
-<a href=#627 id=627 data-nosnippet>627</a>        },
-<a href=#628 id=628 data-nosnippet>628</a>        <span class="prelude-val">None </span>=&gt; {
-<a href=#629 id=629 data-nosnippet>629</a>          <span class="macro">Warn!</span>(
-<a href=#630 id=630 data-nosnippet>630</a>            <span class="string">"missing"</span>,
-<a href=#631 id=631 data-nosnippet>631</a>            <span class="string">"\\linksupplementary"</span>,
-<a href=#632 id=632 data-nosnippet>632</a>            <span class="macro">s!</span>(
-<a href=#633 id=633 data-nosnippet>633</a>              <span class="string">"The article's DOI is unknown (no \\doinum, nor the class copy's journal table and the paper's volume, issue \
-<a href=#634 id=634 data-nosnippet>634</a>               and article number to compute it), so the supplementary file '{}' is not linked"</span>,
-<a href=#635 id=635 data-nosnippet>635</a>              file.to_string()
-<a href=#636 id=636 data-nosnippet>636</a>            )
-<a href=#637 id=637 data-nosnippet>637</a>          );
-<a href=#638 id=638 data-nosnippet>638</a>          file
-<a href=#639 id=639 data-nosnippet>639</a>        },
-<a href=#640 id=640 data-nosnippet>640</a>      })
-<a href=#641 id=641 data-nosnippet>641</a>    });
-<a href=#642 id=642 data-nosnippet>642</a>  }
-<a href=#643 id=643 data-nosnippet>643</a>  <span class="comment">// The astronomical journal abbreviations some copies paste in (2211.06541, 2212.11355, 2406.01458; 2510.22959's
-<a href=#644 id=644 data-nosnippet>644</a>  // mdpi_mod.cls).
-<a href=#645 id=645 data-nosnippet>645</a>  </span><span class="kw">crate</span>::shipped_class::provide_shipped_aas_macros(<span class="string">"mdpi"</span>)<span class="question-mark">?</span>;
-<a href=#646 id=646 data-nosnippet>646</a>  <span class="comment">// \acknowledgments — newer-mdpi spelling (vs \acknowledgements).
-<a href=#647 id=647 data-nosnippet>647</a>  // Render as structural ltx:acknowledgements so post-processors map it
-<a href=#648 id=648 data-nosnippet>648</a>  // to the canonical role/styling (vs flattening to a generic section).
-<a href=#649 id=649 data-nosnippet>649</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#650 id=650 data-nosnippet>650</a>    <span class="string">"\\acknowledgments{}"</span>,
-<a href=#651 id=651 data-nosnippet>651</a>    <span class="string">"&lt;ltx:acknowledgements&gt;#1&lt;/ltx:acknowledgements&gt;"
-<a href=#652 id=652 data-nosnippet>652</a>  </span>);
-<a href=#653 id=653 data-nosnippet>653</a>  <span class="comment">// \appendixtitles{Yes|No} / \appendixstart — appendix-numbering
-<a href=#654 id=654 data-nosnippet>654</a>  // toggle. No-op (we don't replay mdpi's appendix counter dance).
-<a href=#655 id=655 data-nosnippet>655</a>  </span>def_macro_noop(<span class="string">"\\appendixtitles{}"</span>)<span class="question-mark">?</span>;
-<a href=#656 id=656 data-nosnippet>656</a>  def_macro_noop(<span class="string">"\\appendixstart"</span>)<span class="question-mark">?</span>;
-<a href=#657 id=657 data-nosnippet>657</a>});
-<a href=#658 id=658 data-nosnippet>658</a>
-<a href=#659 id=659 data-nosnippet>659</a><span class="doccomment">/// The journal table the copy `class` (of mdpi.cls) inputs (2208.12066's :74 `\input{Definitions/journalnames}`), if any.
-<a href=#660 id=660 data-nosnippet>660</a></span><span class="kw">fn </span>journal_table_input(class: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#661 id=661 data-nosnippet>661</a>  <span class="kw">let </span>code = <span class="kw">crate</span>::shipped_class::class_code(class);
-<a href=#662 id=662 data-nosnippet>662</a>  code.match_indices(<span class="string">"\\input{"</span>).find_map(|(at, call)| {
-<a href=#663 id=663 data-nosnippet>663</a>    <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>code[at + call.len()..];
-<a href=#664 id=664 data-nosnippet>664</a>    <span class="kw">let </span>name = <span class="kw-2">&amp;</span>rest[..rest.find(<span class="string">'}'</span>)<span class="question-mark">?</span>];
-<a href=#665 id=665 data-nosnippet>665</a>    name
-<a href=#666 id=666 data-nosnippet>666</a>      .contains(<span class="string">"journalnames"</span>)
-<a href=#667 id=667 data-nosnippet>667</a>      .then(|| name.trim().to_string())
-<a href=#668 id=668 data-nosnippet>668</a>  })
-<a href=#669 id=669 data-nosnippet>669</a>}
-<a href=#670 id=670 data-nosnippet>670</a>
-<a href=#671 id=671 data-nosnippet>671</a><span class="doccomment">/// The DOI the copy `class` (of mdpi.cls) gives an article by default: the journals whose DOI is the article number
-<a href=#672 id=672 data-nosnippet>672</a>/// alone (2208.12066's :515-528 `\ifthenelse{\equal{\@journal}{molbank} \OR …}{\doinum{10.3390/\@articlenumber}}`), and
-<a href=#673 id=673 data-nosnippet>673</a>/// every other journal's, the last default `\doinum` (:529), when it is made of the journal's DOI abbreviation, the
-<a href=#674 id=674 data-nosnippet>674</a>/// volume, issue and article number and the class's padding only (6 copies pad with siunitx's `\num`, which no `\edef`
-<a href=#675 id=675 data-nosnippet>675</a>/// expands: none).
-<a href=#676 id=676 data-nosnippet>676</a></span><span class="kw">fn </span>default_doi(class: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;(Vec&lt;String&gt;, String)&gt; {
-<a href=#677 id=677 data-nosnippet>677</a>  <span class="kw">const </span>ARTICLE_ONLY: <span class="kw-2">&amp;</span>str = <span class="string">"10.3390/\\@articlenumber"</span>;
-<a href=#678 id=678 data-nosnippet>678</a>  <span class="kw">const </span>PARTS: [<span class="kw-2">&amp;</span>str; <span class="number">7</span>] = [
-<a href=#679 id=679 data-nosnippet>679</a>    <span class="string">"@doiabbr"</span>,
-<a href=#680 id=680 data-nosnippet>680</a>    <span class="string">"@pubvolume"</span>,
-<a href=#681 id=681 data-nosnippet>681</a>    <span class="string">"@issuenum"</span>,
-<a href=#682 id=682 data-nosnippet>682</a>    <span class="string">"@articlenumber"</span>,
-<a href=#683 id=683 data-nosnippet>683</a>    <span class="string">"twodigits"</span>,
-<a href=#684 id=684 data-nosnippet>684</a>    <span class="string">"fourdigits"</span>,
-<a href=#685 id=685 data-nosnippet>685</a>    <span class="string">"fivedigits"</span>,
-<a href=#686 id=686 data-nosnippet>686</a>  ];
-<a href=#687 id=687 data-nosnippet>687</a>  <span class="kw">let </span>code = <span class="kw">crate</span>::shipped_class::class_code(class);
-<a href=#688 id=688 data-nosnippet>688</a>  <span class="kw">let </span>defaults: Vec&lt;(usize, String)&gt; = code
-<a href=#689 id=689 data-nosnippet>689</a>    .match_indices(<span class="string">"\\doinum{10.3390/"</span>)
-<a href=#690 id=690 data-nosnippet>690</a>    .filter_map(|(at, <span class="kw">_</span>)| {
-<a href=#691 id=691 data-nosnippet>691</a>      <span class="kw">crate</span>::shipped_class::class_code_argument(<span class="kw-2">&amp;</span>code[at..], <span class="string">"\\doinum"</span>)
-<a href=#692 id=692 data-nosnippet>692</a>        .map(|arg| (at, arg.trim().to_string()))
-<a href=#693 id=693 data-nosnippet>693</a>    })
-<a href=#694 id=694 data-nosnippet>694</a>    .collect();
-<a href=#695 id=695 data-nosnippet>695</a>  <span class="kw">let </span>(<span class="kw">_</span>, formula) = defaults.last()<span class="question-mark">?</span>.clone();
-<a href=#696 id=696 data-nosnippet>696</a>  <span class="kw">if </span>formula.contains([<span class="string">'#'</span>, <span class="string">'%'</span>]) {
-<a href=#697 id=697 data-nosnippet>697</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#698 id=698 data-nosnippet>698</a>  }
-<a href=#699 id=699 data-nosnippet>699</a>  <span class="kw">let </span><span class="kw-2">mut </span>rest = formula.as_str();
-<a href=#700 id=700 data-nosnippet>700</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(at) = rest.find([<span class="string">'\\'</span>, <span class="string">'['</span>]) {
-<a href=#701 id=701 data-nosnippet>701</a>    <span class="kw">let </span>after = rest[at..].strip_prefix(<span class="string">'\\'</span>)<span class="question-mark">?</span>;
-<a href=#702 id=702 data-nosnippet>702</a>    <span class="kw">let </span>len = after
-<a href=#703 id=703 data-nosnippet>703</a>      .find(|c: char| !c.is_ascii_alphabetic() &amp;&amp; c != <span class="string">'@'</span>)
-<a href=#704 id=704 data-nosnippet>704</a>      .unwrap_or(after.len());
-<a href=#705 id=705 data-nosnippet>705</a>    <span class="kw">if </span>!PARTS.contains(&amp;&amp;after[..len]) {
-<a href=#706 id=706 data-nosnippet>706</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#707 id=707 data-nosnippet>707</a>    }
-<a href=#708 id=708 data-nosnippet>708</a>    rest = <span class="kw-2">&amp;</span>after[len..];
-<a href=#709 id=709 data-nosnippet>709</a>  }
-<a href=#710 id=710 data-nosnippet>710</a>  <span class="kw">let </span>article_only = <span class="kw">match </span>defaults.as_slice() {
-<a href=#711 id=711 data-nosnippet>711</a>    [(at, first), .., <span class="kw">_</span>] <span class="kw">if </span>first == ARTICLE_ONLY =&gt; {
-<a href=#712 id=712 data-nosnippet>712</a>      <span class="kw">let </span>condition = <span class="kw-2">&amp;</span>code[code[..<span class="kw-2">*</span>at].rfind(<span class="string">"\\ifthenelse"</span>)<span class="question-mark">?</span>..<span class="kw-2">*</span>at];
-<a href=#713 id=713 data-nosnippet>713</a>      condition
-<a href=#714 id=714 data-nosnippet>714</a>        .match_indices(<span class="string">"\\equal{\\@journal}{"</span>)
-<a href=#715 id=715 data-nosnippet>715</a>        .filter_map(|(i, call)| {
-<a href=#716 id=716 data-nosnippet>716</a>          <span class="kw">let </span>name = <span class="kw-2">&amp;</span>condition[i + call.len()..];
-<a href=#717 id=717 data-nosnippet>717</a>          <span class="prelude-val">Some</span>(name[..name.find(<span class="string">'}'</span>)<span class="question-mark">?</span>].trim().to_string())
-<a href=#718 id=718 data-nosnippet>718</a>        })
-<a href=#719 id=719 data-nosnippet>719</a>        .collect()
-<a href=#720 id=720 data-nosnippet>720</a>    },
-<a href=#721 id=721 data-nosnippet>721</a>    <span class="kw">_ </span>=&gt; Vec::new(),
-<a href=#722 id=722 data-nosnippet>722</a>  };
-<a href=#723 id=723 data-nosnippet>723</a>  <span class="prelude-val">Some</span>((article_only, formula))
-<a href=#724 id=724 data-nosnippet>724</a>}
-<a href=#725 id=725 data-nosnippet>725</a>
-<a href=#726 id=726 data-nosnippet>726</a><span class="doccomment">/// The text of the macro `cs`'s expansion (empty for an empty one, `\gdef\@doiabbr{}`: the `preprints` row), if `cs`
-<a href=#727 id=727 data-nosnippet>727</a>/// is defined.
-<a href=#728 id=728 data-nosnippet>728</a></span><span class="kw">fn </span>macro_text(cs: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#729 id=729 data-nosnippet>729</a>  <span class="kw">let </span>defn = lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(cs)).ok()<span class="question-mark">??</span>;
-<a href=#730 id=730 data-nosnippet>730</a>  <span class="prelude-val">Some</span>(<span class="kw">match </span>defn.get_expansion() {
-<a href=#731 id=731 data-nosnippet>731</a>    <span class="prelude-val">Some</span>(ExpansionBody::Tokens(body)) =&gt; body.to_string(),
-<a href=#732 id=732 data-nosnippet>732</a>    <span class="kw">_ </span>=&gt; String::new(),
-<a href=#733 id=733 data-nosnippet>733</a>  })
-<a href=#734 id=734 data-nosnippet>734</a>}
-<a href=#735 id=735 data-nosnippet>735</a>
-<a href=#736 id=736 data-nosnippet>736</a><span class="doccomment">/// The class's default DOI (`default_doi`) for the paper's journal, volume, issue and article number, when the journal
-<a href=#737 id=737 data-nosnippet>737</a>/// table named the journal and each number is one (`\cutdigits` of digits; a Molbank article number as it is): what
-<a href=#738 id=738 data-nosnippet>738</a>/// the class's `\@doinum` expands to.
-<a href=#739 id=739 data-nosnippet>739</a></span><span class="kw">fn </span>default_doi_tokens() -&gt; <span class="prelude-ty">Option</span>&lt;Tokens&gt; {
-<a href=#740 id=740 data-nosnippet>740</a>  <span class="kw">let </span>formula = macro_text(<span class="string">"\\lx@mdpi@doi@default"</span>)<span class="question-mark">?</span>;
-<a href=#741 id=741 data-nosnippet>741</a>  <span class="kw">let </span>article_only = macro_text(<span class="string">"\\@journal"</span>).is_some_and(|journal| {
-<a href=#742 id=742 data-nosnippet>742</a>    macro_text(<span class="string">"\\lx@mdpi@doi@articleonly"</span>)
-<a href=#743 id=743 data-nosnippet>743</a>      .is_some_and(|list| list.contains(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">",{},"</span>, journal.trim())))
-<a href=#744 id=744 data-nosnippet>744</a>  });
-<a href=#745 id=745 data-nosnippet>745</a>  <span class="kw">let </span>number = |cs: <span class="kw-2">&amp;</span>str| {
-<a href=#746 id=746 data-nosnippet>746</a>    macro_text(cs).is_some_and(|text| {
-<a href=#747 id=747 data-nosnippet>747</a>      <span class="kw">let </span>digits: String = text
-<a href=#748 id=748 data-nosnippet>748</a>        .replace(<span class="string">"\\cutdigits"</span>, <span class="string">""</span>)
-<a href=#749 id=749 data-nosnippet>749</a>        .chars()
-<a href=#750 id=750 data-nosnippet>750</a>        .filter(|c| !<span class="macro">matches!</span>(c, <span class="string">'{' </span>| <span class="string">'}'</span>) &amp;&amp; !c.is_whitespace())
-<a href=#751 id=751 data-nosnippet>751</a>        .collect();
-<a href=#752 id=752 data-nosnippet>752</a>      !digits.is_empty() &amp;&amp; digits.bytes().all(|b| b.is_ascii_digit())
-<a href=#753 id=753 data-nosnippet>753</a>    })
-<a href=#754 id=754 data-nosnippet>754</a>  };
-<a href=#755 id=755 data-nosnippet>755</a>  <span class="kw">if </span>article_only {
-<a href=#756 id=756 data-nosnippet>756</a>    <span class="kw">return </span>macro_text(<span class="string">"\\@articlenumber"</span>)
-<a href=#757 id=757 data-nosnippet>757</a>      .is_some_and(|text| !text.trim().is_empty())
-<a href=#758 id=758 data-nosnippet>758</a>      .then(|| <span class="macro">TokenizeInternal!</span>(<span class="string">"10.3390/\\@articlenumber"</span>));
-<a href=#759 id=759 data-nosnippet>759</a>  }
-<a href=#760 id=760 data-nosnippet>760</a>  <span class="kw">let </span>complete = (!formula.contains(<span class="string">"\\@doiabbr"</span>) || macro_text(<span class="string">"\\@doiabbr"</span>).is_some())
-<a href=#761 id=761 data-nosnippet>761</a>    &amp;&amp; [<span class="string">"\\@pubvolume"</span>, <span class="string">"\\@issuenum"</span>, <span class="string">"\\@articlenumber"</span>]
-<a href=#762 id=762 data-nosnippet>762</a>      .iter()
-<a href=#763 id=763 data-nosnippet>763</a>      .all(|cs| !formula.contains(cs) || number(cs));
-<a href=#764 id=764 data-nosnippet>764</a>  complete.then(|| <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@mdpi@doi@default"</span>)))
-<a href=#765 id=765 data-nosnippet>765</a>}
-<a href=#766 id=766 data-nosnippet>766</a>
-<a href=#767 id=767 data-nosnippet>767</a><span class="doccomment">/// How the paper's copy of mdpi.cls sets `\conflictofinterests`'s argument.
-<a href=#768 id=768 data-nosnippet>768</a></span><span class="kw">enum </span>ConflictForm {
-<a href=#769 id=769 data-nosnippet>769</a>  <span class="doccomment">/// The 2012-2015 versions: the argument is the section's title, set bold (`\textbf{#1}`).
-<a href=#770 id=770 data-nosnippet>770</a>  </span>Title,
-<a href=#771 id=771 data-nosnippet>771</a>  <span class="doccomment">/// The later versions: the statement under a bold "Conflicts of Interest:" label.
-<a href=#772 id=772 data-nosnippet>772</a>  </span>Label,
-<a href=#773 id=773 data-nosnippet>773</a>  <span class="doccomment">/// One version: the argument alone.
-<a href=#774 id=774 data-nosnippet>774</a>  </span>Plain,
-<a href=#775 id=775 data-nosnippet>775</a>}
-<a href=#776 id=776 data-nosnippet>776</a>
-<a href=#777 id=777 data-nosnippet>777</a><span class="doccomment">/// The form of the `\conflictofinterests` definition in `class` (a copy of mdpi.cls); the label form when it has none.
-<a href=#778 id=778 data-nosnippet>778</a></span><span class="kw">fn </span>conflict_of_interests_form(class: <span class="kw-2">&amp;</span>str) -&gt; ConflictForm {
-<a href=#779 id=779 data-nosnippet>779</a>  <span class="kw">let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, rest)) = class.split_once(<span class="string">"\\newcommand{\\conflictofinterests}"</span>) <span class="kw">else </span>{
-<a href=#780 id=780 data-nosnippet>780</a>    <span class="kw">return </span>ConflictForm::Label;
-<a href=#781 id=781 data-nosnippet>781</a>  };
-<a href=#782 id=782 data-nosnippet>782</a>  <span class="kw">let </span>body: String = rest.chars().take(<span class="number">300</span>).collect();
-<a href=#783 id=783 data-nosnippet>783</a>  <span class="kw">if </span>body.contains(<span class="string">"Conflicts of Interest:"</span>) {
-<a href=#784 id=784 data-nosnippet>784</a>    ConflictForm::Label
-<a href=#785 id=785 data-nosnippet>785</a>  } <span class="kw">else if </span>body.contains(<span class="string">"\\textbf{#1}"</span>) {
-<a href=#786 id=786 data-nosnippet>786</a>    ConflictForm::Title
-<a href=#787 id=787 data-nosnippet>787</a>  } <span class="kw">else </span>{
-<a href=#788 id=788 data-nosnippet>788</a>    ConflictForm::Plain
-<a href=#789 id=789 data-nosnippet>789</a>  }
-<a href=#790 id=790 data-nosnippet>790</a>}
+<a href=#581 id=581 data-nosnippet>581</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\emails{}"</span>, <span class="string">"\\lx@add@email{#1}"</span>);
+<a href=#582 id=582 data-nosnippet>582</a>    <span class="kw">for </span>n <span class="kw">in </span>[<span class="string">"ONE"</span>, <span class="string">"TWO"</span>, <span class="string">"THREE"</span>, <span class="string">"FOUR"</span>, <span class="string">"FIVE"</span>, <span class="string">"SIX"</span>] {
+<a href=#583 id=583 data-nosnippet>583</a>      <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+<a href=#584 id=584 data-nosnippet>584</a>        <span class="string">"\\def\\@orcidauthor{n}{{}}\\newcommand{{\\orcidauthor{n}}}[1]{{\\gdef\\@orcidauthor{n}{{#1}}}}\\newcommand{{\\orcid{n}}}{{\\expandafter\\lx@add@orcid\\expandafter{{\\@orcidauthor{n}}}}}"
+<a href=#585 id=585 data-nosnippet>585</a>      </span>));
+<a href=#586 id=586 data-nosnippet>586</a>    }
+<a href=#587 id=587 data-nosnippet>587</a>    <span class="macro">RawTeX!</span>(
+<a href=#588 id=588 data-nosnippet>588</a>      <span class="string">r"\newcommand{\conflictofinterest}[1]{\par\noindent\textbf{Conflicts of Interest:} #1\par}
+<a href=#589 id=589 data-nosnippet>589</a>\newcommand{\useofartificialintelligence}[1]{\par\noindent\textbf{Use of Artificial Intelligence:} #1\par}
+<a href=#590 id=590 data-nosnippet>590</a>\newcommand{\bio}[2]{\par\noindent{#1}\ {#2}\par}
+<a href=#591 id=591 data-nosnippet>591</a>\newcommand{\justifyorcenter}[1]{#1}
+<a href=#592 id=592 data-nosnippet>592</a>\newcommand{\highlight}[1]{\colorbox{yellow}{#1}}
+<a href=#593 id=593 data-nosnippet>593</a>\def\@CorrStatement{}\newcommand{\CorrStatement}[1]{\gdef\@CorrStatement{#1}}
+<a href=#594 id=594 data-nosnippet>594</a>\newcommand{\dist}{1.7em}"
+<a href=#595 id=595 data-nosnippet>595</a>    </span>);
+<a href=#596 id=596 data-nosnippet>596</a>    <span class="comment">// `\linksupplementary{file}` (2404.14200's copy :1498, 2208.12066's :1479: `\url{https://www.mdpi.com/article/
+<a href=#597 id=597 data-nosnippet>597</a>    // \@doinum/#1}`; 19 papers, none setting `\doinum`: 2208.12066, 2602.00080, 1901.06933, 2311.18672, 2607.17752): the
+<a href=#598 id=598 data-nosnippet>598</a>    // link under the paper's DOI, else under the default the copy computes at load (`default_doi`, 2208.12066's :523-530
+<a href=#599 id=599 data-nosnippet>599</a>    // `\doinum{10.3390/\@doiabbr\@pubvolume\twodigits\@issuenum\fivedigits\@articlenumber}`, `10.3390/s23001234`), which
+<a href=#600 id=600 data-nosnippet>600</a>    // needs the copy's journal table and the paper's volume, issue and article number. Without them the DOI is unknown:
+<a href=#601 id=601 data-nosnippet>601</a>    // the file's name, and a Warning (pdflatex has the copy, so its DOI is always known).
+<a href=#602 id=602 data-nosnippet>602</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>((article_only, formula)) = shipped.as_deref().and_then(default_doi) {
+<a href=#603 id=603 data-nosnippet>603</a>      <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+<a href=#604 id=604 data-nosnippet>604</a>        <span class="string">"\\def\\lx@mdpi@doi@default{{{formula}}}\\def\\lx@mdpi@doi@articleonly{{,{},}}"</span>,
+<a href=#605 id=605 data-nosnippet>605</a>        article_only.join(<span class="string">","</span>)
+<a href=#606 id=606 data-nosnippet>606</a>      ));
+<a href=#607 id=607 data-nosnippet>607</a>    }
+<a href=#608 id=608 data-nosnippet>608</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\linksupplementary{}"</span>, sub[(file)] {
+<a href=#609 id=609 data-nosnippet>609</a>      <span class="kw">let </span>file: Tokens = file;
+<a href=#610 id=610 data-nosnippet>610</a>      <span class="kw">let </span>doi = <span class="kw">if </span>macro_text(<span class="string">"\\@doinum"</span>).is_some_and(|doi| !doi.trim().is_empty()) {
+<a href=#611 id=611 data-nosnippet>611</a>        <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@doinum"</span>)))
+<a href=#612 id=612 data-nosnippet>612</a>      } <span class="kw">else </span>{
+<a href=#613 id=613 data-nosnippet>613</a>        default_doi_tokens()
+<a href=#614 id=614 data-nosnippet>614</a>      };
+<a href=#615 id=615 data-nosnippet>615</a>      <span class="prelude-val">Ok</span>(<span class="kw">match </span>doi {
+<a href=#616 id=616 data-nosnippet>616</a>        <span class="prelude-val">Some</span>(doi) =&gt; {
+<a href=#617 id=617 data-nosnippet>617</a>          <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">TokenizeInternal!</span>(<span class="string">r"\edef\lx@mdpi@link{\noexpand\url{https://www.mdpi.com/article/"</span>).unlist();
+<a href=#618 id=618 data-nosnippet>618</a>          out.extend(doi.unlist());
+<a href=#619 id=619 data-nosnippet>619</a>          out.extend(<span class="macro">TokenizeInternal!</span>(<span class="string">r"/\unexpanded{"</span>).unlist());
+<a href=#620 id=620 data-nosnippet>620</a>          out.extend(file.unlist());
+<a href=#621 id=621 data-nosnippet>621</a>          out.extend([<span class="macro">T_END!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@mdpi@link"</span>)]);
+<a href=#622 id=622 data-nosnippet>622</a>          Tokens::new(out)
+<a href=#623 id=623 data-nosnippet>623</a>        },
+<a href=#624 id=624 data-nosnippet>624</a>        <span class="prelude-val">None </span>=&gt; {
+<a href=#625 id=625 data-nosnippet>625</a>          <span class="macro">Warn!</span>(
+<a href=#626 id=626 data-nosnippet>626</a>            <span class="string">"missing"</span>,
+<a href=#627 id=627 data-nosnippet>627</a>            <span class="string">"\\linksupplementary"</span>,
+<a href=#628 id=628 data-nosnippet>628</a>            <span class="macro">s!</span>(
+<a href=#629 id=629 data-nosnippet>629</a>              <span class="string">"The article's DOI is unknown (no \\doinum, nor the class copy's journal table and the paper's volume, issue \
+<a href=#630 id=630 data-nosnippet>630</a>               and article number to compute it), so the supplementary file '{}' is not linked"</span>,
+<a href=#631 id=631 data-nosnippet>631</a>              file.to_string()
+<a href=#632 id=632 data-nosnippet>632</a>            )
+<a href=#633 id=633 data-nosnippet>633</a>          );
+<a href=#634 id=634 data-nosnippet>634</a>          file
+<a href=#635 id=635 data-nosnippet>635</a>        },
+<a href=#636 id=636 data-nosnippet>636</a>      })
+<a href=#637 id=637 data-nosnippet>637</a>    });
+<a href=#638 id=638 data-nosnippet>638</a>  }
+<a href=#639 id=639 data-nosnippet>639</a>  <span class="comment">// The astronomical journal abbreviations some copies paste in (2211.06541, 2212.11355, 2406.01458; 2510.22959's
+<a href=#640 id=640 data-nosnippet>640</a>  // mdpi_mod.cls).
+<a href=#641 id=641 data-nosnippet>641</a>  </span><span class="kw">crate</span>::shipped_class::provide_shipped_aas_macros(<span class="string">"mdpi"</span>)<span class="question-mark">?</span>;
+<a href=#642 id=642 data-nosnippet>642</a>  <span class="comment">// \acknowledgments — newer-mdpi spelling (vs \acknowledgements).
+<a href=#643 id=643 data-nosnippet>643</a>  // Render as structural ltx:acknowledgements so post-processors map it
+<a href=#644 id=644 data-nosnippet>644</a>  // to the canonical role/styling (vs flattening to a generic section).
+<a href=#645 id=645 data-nosnippet>645</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#646 id=646 data-nosnippet>646</a>    <span class="string">"\\acknowledgments{}"</span>,
+<a href=#647 id=647 data-nosnippet>647</a>    <span class="string">"&lt;ltx:acknowledgements&gt;#1&lt;/ltx:acknowledgements&gt;"
+<a href=#648 id=648 data-nosnippet>648</a>  </span>);
+<a href=#649 id=649 data-nosnippet>649</a>  <span class="comment">// \appendixtitles{Yes|No} / \appendixstart — appendix-numbering
+<a href=#650 id=650 data-nosnippet>650</a>  // toggle. No-op (we don't replay mdpi's appendix counter dance).
+<a href=#651 id=651 data-nosnippet>651</a>  </span>def_macro_noop(<span class="string">"\\appendixtitles{}"</span>)<span class="question-mark">?</span>;
+<a href=#652 id=652 data-nosnippet>652</a>  def_macro_noop(<span class="string">"\\appendixstart"</span>)<span class="question-mark">?</span>;
+<a href=#653 id=653 data-nosnippet>653</a>});
+<a href=#654 id=654 data-nosnippet>654</a>
+<a href=#655 id=655 data-nosnippet>655</a><span class="doccomment">/// The journal table the copy `class` (of mdpi.cls) inputs (2208.12066's :74 `\input{Definitions/journalnames}`), if any.
+<a href=#656 id=656 data-nosnippet>656</a></span><span class="kw">fn </span>journal_table_input(class: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#657 id=657 data-nosnippet>657</a>  <span class="kw">let </span>code = <span class="kw">crate</span>::shipped_class::class_code(class);
+<a href=#658 id=658 data-nosnippet>658</a>  code.match_indices(<span class="string">"\\input{"</span>).find_map(|(at, call)| {
+<a href=#659 id=659 data-nosnippet>659</a>    <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>code[at + call.len()..];
+<a href=#660 id=660 data-nosnippet>660</a>    <span class="kw">let </span>name = <span class="kw-2">&amp;</span>rest[..rest.find(<span class="string">'}'</span>)<span class="question-mark">?</span>];
+<a href=#661 id=661 data-nosnippet>661</a>    name
+<a href=#662 id=662 data-nosnippet>662</a>      .contains(<span class="string">"journalnames"</span>)
+<a href=#663 id=663 data-nosnippet>663</a>      .then(|| name.trim().to_string())
+<a href=#664 id=664 data-nosnippet>664</a>  })
+<a href=#665 id=665 data-nosnippet>665</a>}
+<a href=#666 id=666 data-nosnippet>666</a>
+<a href=#667 id=667 data-nosnippet>667</a><span class="doccomment">/// The DOI the copy `class` (of mdpi.cls) gives an article by default: the journals whose DOI is the article number
+<a href=#668 id=668 data-nosnippet>668</a>/// alone (2208.12066's :515-528 `\ifthenelse{\equal{\@journal}{molbank} \OR …}{\doinum{10.3390/\@articlenumber}}`), and
+<a href=#669 id=669 data-nosnippet>669</a>/// every other journal's, the last default `\doinum` (:529), when it is made of the journal's DOI abbreviation, the
+<a href=#670 id=670 data-nosnippet>670</a>/// volume, issue and article number and the class's padding only (6 copies pad with siunitx's `\num`, which no `\edef`
+<a href=#671 id=671 data-nosnippet>671</a>/// expands: none).
+<a href=#672 id=672 data-nosnippet>672</a></span><span class="kw">fn </span>default_doi(class: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;(Vec&lt;String&gt;, String)&gt; {
+<a href=#673 id=673 data-nosnippet>673</a>  <span class="kw">const </span>ARTICLE_ONLY: <span class="kw-2">&amp;</span>str = <span class="string">"10.3390/\\@articlenumber"</span>;
+<a href=#674 id=674 data-nosnippet>674</a>  <span class="kw">const </span>PARTS: [<span class="kw-2">&amp;</span>str; <span class="number">7</span>] = [
+<a href=#675 id=675 data-nosnippet>675</a>    <span class="string">"@doiabbr"</span>,
+<a href=#676 id=676 data-nosnippet>676</a>    <span class="string">"@pubvolume"</span>,
+<a href=#677 id=677 data-nosnippet>677</a>    <span class="string">"@issuenum"</span>,
+<a href=#678 id=678 data-nosnippet>678</a>    <span class="string">"@articlenumber"</span>,
+<a href=#679 id=679 data-nosnippet>679</a>    <span class="string">"twodigits"</span>,
+<a href=#680 id=680 data-nosnippet>680</a>    <span class="string">"fourdigits"</span>,
+<a href=#681 id=681 data-nosnippet>681</a>    <span class="string">"fivedigits"</span>,
+<a href=#682 id=682 data-nosnippet>682</a>  ];
+<a href=#683 id=683 data-nosnippet>683</a>  <span class="kw">let </span>code = <span class="kw">crate</span>::shipped_class::class_code(class);
+<a href=#684 id=684 data-nosnippet>684</a>  <span class="kw">let </span>defaults: Vec&lt;(usize, String)&gt; = code
+<a href=#685 id=685 data-nosnippet>685</a>    .match_indices(<span class="string">"\\doinum{10.3390/"</span>)
+<a href=#686 id=686 data-nosnippet>686</a>    .filter_map(|(at, <span class="kw">_</span>)| {
+<a href=#687 id=687 data-nosnippet>687</a>      <span class="kw">crate</span>::shipped_class::class_code_argument(<span class="kw-2">&amp;</span>code[at..], <span class="string">"\\doinum"</span>)
+<a href=#688 id=688 data-nosnippet>688</a>        .map(|arg| (at, arg.trim().to_string()))
+<a href=#689 id=689 data-nosnippet>689</a>    })
+<a href=#690 id=690 data-nosnippet>690</a>    .collect();
+<a href=#691 id=691 data-nosnippet>691</a>  <span class="kw">let </span>(<span class="kw">_</span>, formula) = defaults.last()<span class="question-mark">?</span>.clone();
+<a href=#692 id=692 data-nosnippet>692</a>  <span class="kw">if </span>formula.contains([<span class="string">'#'</span>, <span class="string">'%'</span>]) {
+<a href=#693 id=693 data-nosnippet>693</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#694 id=694 data-nosnippet>694</a>  }
+<a href=#695 id=695 data-nosnippet>695</a>  <span class="kw">let </span><span class="kw-2">mut </span>rest = formula.as_str();
+<a href=#696 id=696 data-nosnippet>696</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(at) = rest.find([<span class="string">'\\'</span>, <span class="string">'['</span>]) {
+<a href=#697 id=697 data-nosnippet>697</a>    <span class="kw">let </span>after = rest[at..].strip_prefix(<span class="string">'\\'</span>)<span class="question-mark">?</span>;
+<a href=#698 id=698 data-nosnippet>698</a>    <span class="kw">let </span>len = after
+<a href=#699 id=699 data-nosnippet>699</a>      .find(|c: char| !c.is_ascii_alphabetic() &amp;&amp; c != <span class="string">'@'</span>)
+<a href=#700 id=700 data-nosnippet>700</a>      .unwrap_or(after.len());
+<a href=#701 id=701 data-nosnippet>701</a>    <span class="kw">if </span>!PARTS.contains(&amp;&amp;after[..len]) {
+<a href=#702 id=702 data-nosnippet>702</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#703 id=703 data-nosnippet>703</a>    }
+<a href=#704 id=704 data-nosnippet>704</a>    rest = <span class="kw-2">&amp;</span>after[len..];
+<a href=#705 id=705 data-nosnippet>705</a>  }
+<a href=#706 id=706 data-nosnippet>706</a>  <span class="kw">let </span>article_only = <span class="kw">match </span>defaults.as_slice() {
+<a href=#707 id=707 data-nosnippet>707</a>    [(at, first), .., <span class="kw">_</span>] <span class="kw">if </span>first == ARTICLE_ONLY =&gt; {
+<a href=#708 id=708 data-nosnippet>708</a>      <span class="kw">let </span>condition = <span class="kw-2">&amp;</span>code[code[..<span class="kw-2">*</span>at].rfind(<span class="string">"\\ifthenelse"</span>)<span class="question-mark">?</span>..<span class="kw-2">*</span>at];
+<a href=#709 id=709 data-nosnippet>709</a>      condition
+<a href=#710 id=710 data-nosnippet>710</a>        .match_indices(<span class="string">"\\equal{\\@journal}{"</span>)
+<a href=#711 id=711 data-nosnippet>711</a>        .filter_map(|(i, call)| {
+<a href=#712 id=712 data-nosnippet>712</a>          <span class="kw">let </span>name = <span class="kw-2">&amp;</span>condition[i + call.len()..];
+<a href=#713 id=713 data-nosnippet>713</a>          <span class="prelude-val">Some</span>(name[..name.find(<span class="string">'}'</span>)<span class="question-mark">?</span>].trim().to_string())
+<a href=#714 id=714 data-nosnippet>714</a>        })
+<a href=#715 id=715 data-nosnippet>715</a>        .collect()
+<a href=#716 id=716 data-nosnippet>716</a>    },
+<a href=#717 id=717 data-nosnippet>717</a>    <span class="kw">_ </span>=&gt; Vec::new(),
+<a href=#718 id=718 data-nosnippet>718</a>  };
+<a href=#719 id=719 data-nosnippet>719</a>  <span class="prelude-val">Some</span>((article_only, formula))
+<a href=#720 id=720 data-nosnippet>720</a>}
+<a href=#721 id=721 data-nosnippet>721</a>
+<a href=#722 id=722 data-nosnippet>722</a><span class="doccomment">/// The text of the macro `cs`'s expansion (empty for an empty one, `\gdef\@doiabbr{}`: the `preprints` row), if `cs`
+<a href=#723 id=723 data-nosnippet>723</a>/// is defined.
+<a href=#724 id=724 data-nosnippet>724</a></span><span class="kw">fn </span>macro_text(cs: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#725 id=725 data-nosnippet>725</a>  <span class="kw">let </span>defn = lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(cs)).ok()<span class="question-mark">??</span>;
+<a href=#726 id=726 data-nosnippet>726</a>  <span class="prelude-val">Some</span>(<span class="kw">match </span>defn.get_expansion() {
+<a href=#727 id=727 data-nosnippet>727</a>    <span class="prelude-val">Some</span>(ExpansionBody::Tokens(body)) =&gt; body.to_string(),
+<a href=#728 id=728 data-nosnippet>728</a>    <span class="kw">_ </span>=&gt; String::new(),
+<a href=#729 id=729 data-nosnippet>729</a>  })
+<a href=#730 id=730 data-nosnippet>730</a>}
+<a href=#731 id=731 data-nosnippet>731</a>
+<a href=#732 id=732 data-nosnippet>732</a><span class="doccomment">/// The class's default DOI (`default_doi`) for the paper's journal, volume, issue and article number, when the journal
+<a href=#733 id=733 data-nosnippet>733</a>/// table named the journal and each number is one (`\cutdigits` of digits; a Molbank article number as it is): what
+<a href=#734 id=734 data-nosnippet>734</a>/// the class's `\@doinum` expands to.
+<a href=#735 id=735 data-nosnippet>735</a></span><span class="kw">fn </span>default_doi_tokens() -&gt; <span class="prelude-ty">Option</span>&lt;Tokens&gt; {
+<a href=#736 id=736 data-nosnippet>736</a>  <span class="kw">let </span>formula = macro_text(<span class="string">"\\lx@mdpi@doi@default"</span>)<span class="question-mark">?</span>;
+<a href=#737 id=737 data-nosnippet>737</a>  <span class="kw">let </span>article_only = macro_text(<span class="string">"\\@journal"</span>).is_some_and(|journal| {
+<a href=#738 id=738 data-nosnippet>738</a>    macro_text(<span class="string">"\\lx@mdpi@doi@articleonly"</span>)
+<a href=#739 id=739 data-nosnippet>739</a>      .is_some_and(|list| list.contains(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">",{},"</span>, journal.trim())))
+<a href=#740 id=740 data-nosnippet>740</a>  });
+<a href=#741 id=741 data-nosnippet>741</a>  <span class="kw">let </span>number = |cs: <span class="kw-2">&amp;</span>str| {
+<a href=#742 id=742 data-nosnippet>742</a>    macro_text(cs).is_some_and(|text| {
+<a href=#743 id=743 data-nosnippet>743</a>      <span class="kw">let </span>digits: String = text
+<a href=#744 id=744 data-nosnippet>744</a>        .replace(<span class="string">"\\cutdigits"</span>, <span class="string">""</span>)
+<a href=#745 id=745 data-nosnippet>745</a>        .chars()
+<a href=#746 id=746 data-nosnippet>746</a>        .filter(|c| !<span class="macro">matches!</span>(c, <span class="string">'{' </span>| <span class="string">'}'</span>) &amp;&amp; !c.is_whitespace())
+<a href=#747 id=747 data-nosnippet>747</a>        .collect();
+<a href=#748 id=748 data-nosnippet>748</a>      !digits.is_empty() &amp;&amp; digits.bytes().all(|b| b.is_ascii_digit())
+<a href=#749 id=749 data-nosnippet>749</a>    })
+<a href=#750 id=750 data-nosnippet>750</a>  };
+<a href=#751 id=751 data-nosnippet>751</a>  <span class="kw">if </span>article_only {
+<a href=#752 id=752 data-nosnippet>752</a>    <span class="kw">return </span>macro_text(<span class="string">"\\@articlenumber"</span>)
+<a href=#753 id=753 data-nosnippet>753</a>      .is_some_and(|text| !text.trim().is_empty())
+<a href=#754 id=754 data-nosnippet>754</a>      .then(|| <span class="macro">TokenizeInternal!</span>(<span class="string">"10.3390/\\@articlenumber"</span>));
+<a href=#755 id=755 data-nosnippet>755</a>  }
+<a href=#756 id=756 data-nosnippet>756</a>  <span class="kw">let </span>complete = (!formula.contains(<span class="string">"\\@doiabbr"</span>) || macro_text(<span class="string">"\\@doiabbr"</span>).is_some())
+<a href=#757 id=757 data-nosnippet>757</a>    &amp;&amp; [<span class="string">"\\@pubvolume"</span>, <span class="string">"\\@issuenum"</span>, <span class="string">"\\@articlenumber"</span>]
+<a href=#758 id=758 data-nosnippet>758</a>      .iter()
+<a href=#759 id=759 data-nosnippet>759</a>      .all(|cs| !formula.contains(cs) || number(cs));
+<a href=#760 id=760 data-nosnippet>760</a>  complete.then(|| <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@mdpi@doi@default"</span>)))
+<a href=#761 id=761 data-nosnippet>761</a>}
+<a href=#762 id=762 data-nosnippet>762</a>
+<a href=#763 id=763 data-nosnippet>763</a><span class="doccomment">/// How the paper's copy of mdpi.cls sets `\conflictofinterests`'s argument.
+<a href=#764 id=764 data-nosnippet>764</a></span><span class="kw">enum </span>ConflictForm {
+<a href=#765 id=765 data-nosnippet>765</a>  <span class="doccomment">/// The 2012-2015 versions: the argument is the section's title, set bold (`\textbf{#1}`).
+<a href=#766 id=766 data-nosnippet>766</a>  </span>Title,
+<a href=#767 id=767 data-nosnippet>767</a>  <span class="doccomment">/// The later versions: the statement under a bold "Conflicts of Interest:" label.
+<a href=#768 id=768 data-nosnippet>768</a>  </span>Label,
+<a href=#769 id=769 data-nosnippet>769</a>  <span class="doccomment">/// One version: the argument alone.
+<a href=#770 id=770 data-nosnippet>770</a>  </span>Plain,
+<a href=#771 id=771 data-nosnippet>771</a>}
+<a href=#772 id=772 data-nosnippet>772</a>
+<a href=#773 id=773 data-nosnippet>773</a><span class="doccomment">/// The form of the `\conflictofinterests` definition in `class` (a copy of mdpi.cls); the label form when it has none.
+<a href=#774 id=774 data-nosnippet>774</a></span><span class="kw">fn </span>conflict_of_interests_form(class: <span class="kw-2">&amp;</span>str) -&gt; ConflictForm {
+<a href=#775 id=775 data-nosnippet>775</a>  <span class="kw">let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, rest)) = class.split_once(<span class="string">"\\newcommand{\\conflictofinterests}"</span>) <span class="kw">else </span>{
+<a href=#776 id=776 data-nosnippet>776</a>    <span class="kw">return </span>ConflictForm::Label;
+<a href=#777 id=777 data-nosnippet>777</a>  };
+<a href=#778 id=778 data-nosnippet>778</a>  <span class="kw">let </span>body: String = rest.chars().take(<span class="number">300</span>).collect();
+<a href=#779 id=779 data-nosnippet>779</a>  <span class="kw">if </span>body.contains(<span class="string">"Conflicts of Interest:"</span>) {
+<a href=#780 id=780 data-nosnippet>780</a>    ConflictForm::Label
+<a href=#781 id=781 data-nosnippet>781</a>  } <span class="kw">else if </span>body.contains(<span class="string">"\\textbf{#1}"</span>) {
+<a href=#782 id=782 data-nosnippet>782</a>    ConflictForm::Title
+<a href=#783 id=783 data-nosnippet>783</a>  } <span class="kw">else </span>{
+<a href=#784 id=784 data-nosnippet>784</a>    ConflictForm::Plain
+<a href=#785 id=785 data-nosnippet>785</a>  }
+<a href=#786 id=786 data-nosnippet>786</a>}
 </code></pre></div></section></main></body></html>

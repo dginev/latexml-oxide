@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["install_meta_class_frontmatter"]};
+window.SIDEBAR_ITEMS = {"fn":["install_meta_class_frontmatter","noop_meta_class_lists"]};

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/revtex4_cls.rs`."><title>revtex4_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (5df8c02af 2026-11-16)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>revtex4_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use crate</span>::{engine::latex_constructs::is_document_class, prelude::<span class="kw-2">*</span>};
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/revtex4_cls.rs`."><title>revtex4_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (59cbdee2e 2026-11-17)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>revtex4_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use crate</span>::{engine::latex_constructs::is_document_class, prelude::<span class="kw-2">*</span>};
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
@@ -183,116 +183,128 @@
 <a href=#183 id=183 data-nosnippet>183</a>  <span class="comment">// REVTeX 4.0's own rule for printing a `\preprint` (revtex4_support_sty.rs `preprint_printed`).
 <a href=#184 id=184 data-nosnippet>184</a>  </span><span class="kw">if </span>revtex4_0 {
 <a href=#185 id=185 data-nosnippet>185</a>    assign_value(<span class="string">"revtex@preprint@v4.0"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#186 id=186 data-nosnippet>186</a>  }
-<a href=#187 id=187 data-nosnippet>187</a>  <span class="macro">RequirePackage!</span>(<span class="string">"revtex4_support"</span>);
-<a href=#188 id=188 data-nosnippet>188</a>  switch_off_author_block_after_maketitle()<span class="question-mark">?</span>;
-<a href=#189 id=189 data-nosnippet>189</a>  define_frontmatter_note_lists()<span class="question-mark">?</span>;
-<a href=#190 id=190 data-nosnippet>190</a>  <span class="comment">// revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
-<a href=#191 id=191 data-nosnippet>191</a>  // (`natbib_sty::natbib_merge_citations`; REVTeX 4.0 does not merge). 1808.00247.
-<a href=#192 id=192 data-nosnippet>192</a>  </span><span class="kw">if </span>!revtex4_0 &amp;&amp; !lookup_bool(<span class="string">"revtex_nomerge"</span>) {
-<a href=#193 id=193 data-nosnippet>193</a>    natbib_sty::natbib_merge_citations(<span class="string">"\\thr@@"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#186 id=186 data-nosnippet>186</a>    <span class="comment">// A name's `\footnote` prints `\frontmatter@thefootnote` (revtex4.cls:4729) at a counter `\thanks`, `\email` and
+<a href=#187 id=187 data-nosnippet>187</a>    // `\altaffiliation` step too (`\frontmatter@footnote`, :4558-4583), uncounted here: marked only given its number
+<a href=#188 id=188 data-nosnippet>188</a>    // (OD #1053; 1607.07280's `\footnote[1]`; review revSHMARKb)
+<a href=#189 id=189 data-nosnippet>189</a>    </span>assign_value(<span class="string">"lx_title_footnote_given_marks_only"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#190 id=190 data-nosnippet>190</a>  } <span class="kw">else </span>{
+<a href=#191 id=191 data-nosnippet>191</a>    <span class="comment">// REVTeX 4.2 sets a name's `\footnote` in its minipage letters (revtex4-2.cls:487-488), or drops it under `reprint`,
+<a href=#192 id=192 data-nosnippet>192</a>    // not in 4.0's `\frontmatter@thefootnote` (revtex4.cls:4726-4729): no title mark (OD #1053; 2301.00220)
+<a href=#193 id=193 data-nosnippet>193</a>    </span>assign_value(<span class="string">"lx_title_footnote_own_marks"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#194 id=194 data-nosnippet>194</a>  }
-<a href=#195 id=195 data-nosnippet>195</a>  revtex4_support_sty::define_section_numbers(<span class="kw">if </span>revtex4_0 { <span class="string">"" </span>} <span class="kw">else </span>{ <span class="string">"4-2" </span>})<span class="question-mark">?</span>;
-<a href=#196 id=196 data-nosnippet>196</a>  revtex4_support_sty::record_implicit_bibstyle(<span class="kw">if </span>revtex4_0 { <span class="string">"" </span>} <span class="kw">else </span>{ <span class="string">"4-2" </span>});
-<a href=#197 id=197 data-nosnippet>197</a>  revtex4_support_sty::retire_option_handlers();
-<a href=#198 id=198 data-nosnippet>198</a>  <span class="kw">if </span>revtex4_0 {
-<a href=#199 id=199 data-nosnippet>199</a>    <span class="comment">// revtex4.cls:4092-4094: REVTeX 4.0 groups the addresses unless an address option said otherwise.
-<a href=#200 id=200 data-nosnippet>200</a>    </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifxundefined\groupauthors@sw{\clo@groupedaddress}{}"</span>);
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="comment">// `\bm` waits for `\begin{document}` (revtex4.cls:6030-6032; 4.2 defines it at load, revtex4-2.cls:7586).
-<a href=#202 id=202 data-nosnippet>202</a>    </span>revtex4_support_sty::defer_bm_to_begin_document()<span class="question-mark">?</span>;
-<a href=#203 id=203 data-nosnippet>203</a>  } <span class="kw">else </span>{
-<a href=#204 id=204 data-nosnippet>204</a>    revtex4_support_sty::define_float_repair()<span class="question-mark">?</span>;
-<a href=#205 id=205 data-nosnippet>205</a>    <span class="comment">// The REVTeX 4.2 internals documents call, `\doi` among them (`define_revtex41_internals`).
-<a href=#206 id=206 data-nosnippet>206</a>    </span>revtex4_support_sty::define_revtex41_internals()<span class="question-mark">?</span>;
-<a href=#207 id=207 data-nosnippet>207</a>  }
-<a href=#208 id=208 data-nosnippet>208</a>  <span class="comment">// REVTeX 4.0 sets an `\email` or `\homepage` address with `\url`, the `\texttt` its `\href` falls back to
-<a href=#209 id=209 data-nosnippet>209</a>  // (revtex4.cls:4476-4493), so its `_` and `~` read as typed (1001.1076 "aiwen_fan@pku.edu.cn"). REVTeX 4.2, which
-<a href=#210 id=210 data-nosnippet>210</a>  // this binding also serves, sets it in the current font (revtex4-2.cls:1980, its `\href` = `\@href`), as
-<a href=#211 id=211 data-nosnippet>211</a>  // revtex4_support_sty.rs's commands do; `%` other in the address, as `\sanitize@url` makes it (`UrlSemiverbatim`).
-<a href=#212 id=212 data-nosnippet>212</a>  </span><span class="kw">if </span>revtex4_0 {
-<a href=#213 id=213 data-nosnippet>213</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\email[Default:\\lx@contact@email@name] UrlSemiverbatim"</span>, <span class="string">"\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}"</span>);
-<a href=#214 id=214 data-nosnippet>214</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim"</span>, <span class="string">"\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}"</span>);
-<a href=#215 id=215 data-nosnippet>215</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\@email{} Semiverbatim"</span>, <span class="string">"\\endgroup\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}"</span>);
-<a href=#216 id=216 data-nosnippet>216</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\@homepage{} Semiverbatim"</span>, <span class="string">"\\endgroup\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}"</span>);
-<a href=#217 id=217 data-nosnippet>217</a>  }
-<a href=#218 id=218 data-nosnippet>218</a>
-<a href=#219 id=219 data-nosnippet>219</a>  <span class="comment">// Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.
-<a href=#220 id=220 data-nosnippet>220</a>  // Load AMS packages BEFORE the `.rty` input — Perl revtex4.cls.ltxml runs
-<a href=#221 id=221 data-nosnippet>221</a>  // `map { RequirePackage($_) } @revtex_toload` (L58) before the L61-62
-<a href=#222 id=222 data-nosnippet>222</a>  // `\jobname.rty` load, so a paper-local `.rty` using an AMS macro (e.g.
-<a href=#223 id=223 data-nosnippet>223</a>  // `\DeclareMathOperator`) finds it defined. Faithful order (sister fix to
-<a href=#224 id=224 data-nosnippet>224</a>  // revtex4_1_cls.rs, witness 1508.02642).
-<a href=#225 id=225 data-nosnippet>225</a>  </span><span class="kw">for </span>pkg <span class="kw">in </span>[<span class="string">"amsfonts"</span>, <span class="string">"amssymb"</span>, <span class="string">"amsmath"</span>].iter() {
-<a href=#226 id=226 data-nosnippet>226</a>    <span class="kw">if </span>lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"revtex_load_{}"</span>, pkg)) {
-<a href=#227 id=227 data-nosnippet>227</a>      <span class="macro">RequirePackage!</span>(<span class="kw-2">*</span>pkg);
-<a href=#228 id=228 data-nosnippet>228</a>    }
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="macro">RequirePackage!</span>(<span class="string">"revtex4_support"</span>);
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="kw">if </span>!revtex4_0 {
+<a href=#197 id=197 data-nosnippet>197</a>    revtex4_support_sty::declare_revtex41_title_marks(<span class="string">"4-2"</span>)<span class="question-mark">?</span>;
+<a href=#198 id=198 data-nosnippet>198</a>  }
+<a href=#199 id=199 data-nosnippet>199</a>  switch_off_author_block_after_maketitle()<span class="question-mark">?</span>;
+<a href=#200 id=200 data-nosnippet>200</a>  define_frontmatter_note_lists()<span class="question-mark">?</span>;
+<a href=#201 id=201 data-nosnippet>201</a>  <span class="comment">// revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
+<a href=#202 id=202 data-nosnippet>202</a>  // (`natbib_sty::natbib_merge_citations`; REVTeX 4.0 does not merge). 1808.00247.
+<a href=#203 id=203 data-nosnippet>203</a>  </span><span class="kw">if </span>!revtex4_0 &amp;&amp; !lookup_bool(<span class="string">"revtex_nomerge"</span>) {
+<a href=#204 id=204 data-nosnippet>204</a>    natbib_sty::natbib_merge_citations(<span class="string">"\\thr@@"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#205 id=205 data-nosnippet>205</a>  }
+<a href=#206 id=206 data-nosnippet>206</a>  revtex4_support_sty::define_section_numbers(<span class="kw">if </span>revtex4_0 { <span class="string">"" </span>} <span class="kw">else </span>{ <span class="string">"4-2" </span>})<span class="question-mark">?</span>;
+<a href=#207 id=207 data-nosnippet>207</a>  revtex4_support_sty::record_implicit_bibstyle(<span class="kw">if </span>revtex4_0 { <span class="string">"" </span>} <span class="kw">else </span>{ <span class="string">"4-2" </span>});
+<a href=#208 id=208 data-nosnippet>208</a>  revtex4_support_sty::retire_option_handlers();
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="kw">if </span>revtex4_0 {
+<a href=#210 id=210 data-nosnippet>210</a>    <span class="comment">// revtex4.cls:4092-4094: REVTeX 4.0 groups the addresses unless an address option said otherwise.
+<a href=#211 id=211 data-nosnippet>211</a>    </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifxundefined\groupauthors@sw{\clo@groupedaddress}{}"</span>);
+<a href=#212 id=212 data-nosnippet>212</a>    <span class="comment">// `\bm` waits for `\begin{document}` (revtex4.cls:6030-6032; 4.2 defines it at load, revtex4-2.cls:7586).
+<a href=#213 id=213 data-nosnippet>213</a>    </span>revtex4_support_sty::defer_bm_to_begin_document()<span class="question-mark">?</span>;
+<a href=#214 id=214 data-nosnippet>214</a>  } <span class="kw">else </span>{
+<a href=#215 id=215 data-nosnippet>215</a>    revtex4_support_sty::define_float_repair()<span class="question-mark">?</span>;
+<a href=#216 id=216 data-nosnippet>216</a>    <span class="comment">// The REVTeX 4.2 internals documents call, `\doi` among them (`define_revtex41_internals`).
+<a href=#217 id=217 data-nosnippet>217</a>    </span>revtex4_support_sty::define_revtex41_internals()<span class="question-mark">?</span>;
+<a href=#218 id=218 data-nosnippet>218</a>  }
+<a href=#219 id=219 data-nosnippet>219</a>  <span class="comment">// REVTeX 4.0 sets an `\email` or `\homepage` address with `\url`, the `\texttt` its `\href` falls back to
+<a href=#220 id=220 data-nosnippet>220</a>  // (revtex4.cls:4476-4493), so its `_` and `~` read as typed (1001.1076 "aiwen_fan@pku.edu.cn"). REVTeX 4.2, which
+<a href=#221 id=221 data-nosnippet>221</a>  // this binding also serves, sets it in the current font (revtex4-2.cls:1980, its `\href` = `\@href`), as
+<a href=#222 id=222 data-nosnippet>222</a>  // revtex4_support_sty.rs's commands do; `%` other in the address, as `\sanitize@url` makes it (`UrlSemiverbatim`); the
+<a href=#223 id=223 data-nosnippet>223</a>  // footnote part it joins as there (`\lx@revtex@fn@tag`).
+<a href=#224 id=224 data-nosnippet>224</a>  </span><span class="kw">if </span>revtex4_0 {
+<a href=#225 id=225 data-nosnippet>225</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\email[Default:\\lx@contact@email@name] UrlSemiverbatim"</span>, <span class="string">"\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag"</span>);
+<a href=#226 id=226 data-nosnippet>226</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim"</span>, <span class="string">"\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag"</span>);
+<a href=#227 id=227 data-nosnippet>227</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\@email{} Semiverbatim"</span>, <span class="string">"\\endgroup\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag"</span>);
+<a href=#228 id=228 data-nosnippet>228</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\@homepage{} Semiverbatim"</span>, <span class="string">"\\endgroup\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag"</span>);
 <a href=#229 id=229 data-nosnippet>229</a>  }
-<a href=#230 id=230 data-nosnippet>230</a>  <span class="kw">if </span>lookup_bool(<span class="string">"revtex_load_graphics"</span>) {
-<a href=#231 id=231 data-nosnippet>231</a>    <span class="macro">RequirePackage!</span>(<span class="string">"graphics"</span>);
-<a href=#232 id=232 data-nosnippet>232</a>  }
-<a href=#233 id=233 data-nosnippet>233</a>  <span class="kw">if </span>lookup_bool(<span class="string">"revtex_linenumbers"</span>) {
-<a href=#234 id=234 data-nosnippet>234</a>    <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@revtex@lineno"</span>, {
-<a href=#235 id=235 data-nosnippet>235</a>      <span class="macro">RequirePackage!</span>(<span class="string">"lineno"</span>);
-<a href=#236 id=236 data-nosnippet>236</a>    });
-<a href=#237 id=237 data-nosnippet>237</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\AtBeginDocument{\lx@revtex@lineno}"</span>);
-<a href=#238 id=238 data-nosnippet>238</a>  }
-<a href=#239 id=239 data-nosnippet>239</a>
-<a href=#240 id=240 data-nosnippet>240</a>  <span class="comment">// Perl revtex4.cls.ltxml L60-62: auto-load `&lt;jobname&gt;.rty` if present.
-<a href=#241 id=241 data-nosnippet>241</a>  // Papers like cond-mat0201306 stash paper-local macros (`\TR`, `\GC`,
-<a href=#242 id=242 data-nosnippet>242</a>  // `\bracketOpen` etc.) in this file via revtex's runtime convention.
-<a href=#243 id=243 data-nosnippet>243</a>  </span><span class="macro">Digest!</span>(<span class="string">"\\InputIfFileExists{\\jobname.rty}{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#244 id=244 data-nosnippet>244</a>});
-<a href=#245 id=245 data-nosnippet>245</a>
-<a href=#246 id=246 data-nosnippet>246</a><span class="doccomment">/// REVTeX's front matter note lists, which a document extends before `\maketitle` (2605.00976, 2606.06621): defined
-<a href=#247 id=247 data-nosnippet>247</a>/// where REVTeX defines them (revtex4-2.cls:2497-2499, :7201) and printed by `\lx@frontmatter@footnotes` (OD #1036).
-<a href=#248 id=248 data-nosnippet>248</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>define_frontmatter_note_lists() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#249 id=249 data-nosnippet>249</a>  <span class="macro">RawTeX!</span>(
-<a href=#250 id=250 data-nosnippet>250</a>    <span class="string">r"\let\mini@notes\@empty\AtBeginDocument{\global\let\@FMN@list\@empty}
-<a href=#251 id=251 data-nosnippet>251</a>\def\lx@revtex@fm@note#1#2{\footnotetext{#2}}\long\def\lx@revtex@@footnotetext#1{\@footnotetext}
-<a href=#252 id=252 data-nosnippet>252</a>\def\lx@revtex@print@notes{\lx@frontmatter@footnotes{\let\@@footnotetext\lx@revtex@@footnotetext
-<a href=#253 id=253 data-nosnippet>253</a>  \ifdefined\prep@absbox\prep@absbox\post@absbox\fi\mini@notes\let\@TBN@opr\lx@revtex@fm@note\@FMN@list}%
-<a href=#254 id=254 data-nosnippet>254</a>  \global\let\@FMN@list\@empty}"
-<a href=#255 id=255 data-nosnippet>255</a>  </span>);
-<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">AddToMacro!</span>(<span class="string">"\\lx@maketitle@body"</span>, <span class="string">"\\lx@revtex@print@notes"</span>);
-<a href=#257 id=257 data-nosnippet>257</a>  <span class="prelude-val">Ok</span>(())
-<a href=#258 id=258 data-nosnippet>258</a>}
-<a href=#259 id=259 data-nosnippet>259</a>
-<a href=#260 id=260 data-nosnippet>260</a><span class="doccomment">/// REVTeX's `\maketitle` switches the author block off (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662,
-<a href=#261 id=261 data-nosnippet>261</a>/// revtex4.cls:4709-4717); ours from a repeated block's first `\author` on, its new words counted (OD #1003: 2401.15572,
-<a href=#262 id=262 data-nosnippet>262</a>/// 1801.07635, 1812.00931, 2510.13035, 2602.09975, 2307.07324, 2001.07542; lone setters kept: 1309.4768, 1106.2389, 2304.09163).
-<a href=#263 id=263 data-nosnippet>263</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>switch_off_author_block_after_maketitle() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#264 id=264 data-nosnippet>264</a>  <span class="comment">// (not AASTeX's, which loads this binding: aastex701.cls:13231-13266 is its own)
-<a href=#265 id=265 data-nosnippet>265</a>  </span><span class="kw">if </span>![<span class="string">"revtex4"</span>, <span class="string">"revtex4-1"</span>, <span class="string">"revtex4-2"</span>]
-<a href=#266 id=266 data-nosnippet>266</a>    .into_iter()
-<a href=#267 id=267 data-nosnippet>267</a>    .any(is_document_class)
-<a href=#268 id=268 data-nosnippet>268</a>  {
-<a href=#269 id=269 data-nosnippet>269</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#270 id=270 data-nosnippet>270</a>  }
-<a href=#271 id=271 data-nosnippet>271</a>  <span class="comment">// (local `\let`s: a repeat's `\author` inside a group, `{\author{Ann}}\email{…}`, switches off only to its end)
-<a href=#272 id=272 data-nosnippet>272</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#273 id=273 data-nosnippet>273</a>    <span class="string">"\\lx@revtex@repeated@author"</span>,
-<a href=#274 id=274 data-nosnippet>274</a>    <span class="string">r"\let\and\relax\let\affiliation\lx@revtex@repeated@gobble\let\email\lx@revtex@repeated@gobble@url\let\thanks\lx@revtex@repeated@gobble\lx@revtex@repeated@gobble"
-<a href=#275 id=275 data-nosnippet>275</a>  </span>);
-<a href=#276 id=276 data-nosnippet>276</a>  <span class="comment">// (the repeat's names and contacts the content check counts: a new word the output lacks warns, 1206.0114, 1903.12442)
-<a href=#277 id=277 data-nosnippet>277</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@revtex@repeated@gobble{}"</span>, sub[(content)] {
-<a href=#278 id=278 data-nosnippet>278</a>    fm_record_switched_off_call(<span class="kw-2">&amp;</span>content);
-<a href=#279 id=279 data-nosnippet>279</a>  });
-<a href=#280 id=280 data-nosnippet>280</a>  <span class="comment">// (`_` and `@` other as the live `\email` reads them, `ann_x@x.org` whole; `%` a comment as under `\@gobble`: revRB1c q2)
-<a href=#281 id=281 data-nosnippet>281</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@revtex@repeated@gobble@url Semiverbatim"</span>, sub[(content)] {
-<a href=#282 id=282 data-nosnippet>282</a>    fm_record_switched_off_call(<span class="kw-2">&amp;</span>content);
-<a href=#283 id=283 data-nosnippet>283</a>  });
-<a href=#284 id=284 data-nosnippet>284</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@revtex@maketitle@setters"</span>, sub[_args] {
-<a href=#285 id=285 data-nosnippet>285</a>    <span class="comment">// (a document's own `\maketitle` or `\frontmatter@maketitle` wins, 2509.25344, 2111.12484; `\title`, `\date` stay
-<a href=#286 id=286 data-nosnippet>286</a>    // the kernel's, 2606.04868; the class's `\let` lets a later `\renewcommand` through, so the locks lift, 2412.14256)
-<a href=#287 id=287 data-nosnippet>287</a>    </span><span class="kw">if </span>!lookup_bool(<span class="string">"\\maketitle:redefined"</span>) &amp;&amp; lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\frontmatter@maketitle"</span>))<span class="question-mark">?</span>.is_none() {
-<a href=#288 id=288 data-nosnippet>288</a>      let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\author"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@revtex@repeated@author"</span>), <span class="prelude-val">None</span>);
-<a href=#289 id=289 data-nosnippet>289</a>      <span class="kw">for </span>cs <span class="kw">in </span>[<span class="string">"\\affiliation"</span>, <span class="string">"\\author"</span>, <span class="string">"\\email"</span>, <span class="string">"\\thanks"</span>] {
-<a href=#290 id=290 data-nosnippet>290</a>        assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{cs}:locked"</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
-<a href=#291 id=291 data-nosnippet>291</a>      }
-<a href=#292 id=292 data-nosnippet>292</a>    }
-<a href=#293 id=293 data-nosnippet>293</a>    <span class="prelude-val">Ok</span>(())
-<a href=#294 id=294 data-nosnippet>294</a>  });
-<a href=#295 id=295 data-nosnippet>295</a>  <span class="macro">AddToMacro!</span>(<span class="string">"\\lx@maketitle@body"</span>, <span class="string">"\\lx@revtex@maketitle@setters"</span>);
-<a href=#296 id=296 data-nosnippet>296</a>  <span class="prelude-val">Ok</span>(())
-<a href=#297 id=297 data-nosnippet>297</a>}
+<a href=#230 id=230 data-nosnippet>230</a>
+<a href=#231 id=231 data-nosnippet>231</a>  <span class="comment">// Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.
+<a href=#232 id=232 data-nosnippet>232</a>  // Load AMS packages BEFORE the `.rty` input — Perl revtex4.cls.ltxml runs
+<a href=#233 id=233 data-nosnippet>233</a>  // `map { RequirePackage($_) } @revtex_toload` (L58) before the L61-62
+<a href=#234 id=234 data-nosnippet>234</a>  // `\jobname.rty` load, so a paper-local `.rty` using an AMS macro (e.g.
+<a href=#235 id=235 data-nosnippet>235</a>  // `\DeclareMathOperator`) finds it defined. Faithful order (sister fix to
+<a href=#236 id=236 data-nosnippet>236</a>  // revtex4_1_cls.rs, witness 1508.02642).
+<a href=#237 id=237 data-nosnippet>237</a>  </span><span class="kw">for </span>pkg <span class="kw">in </span>[<span class="string">"amsfonts"</span>, <span class="string">"amssymb"</span>, <span class="string">"amsmath"</span>].iter() {
+<a href=#238 id=238 data-nosnippet>238</a>    <span class="kw">if </span>lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"revtex_load_{}"</span>, pkg)) {
+<a href=#239 id=239 data-nosnippet>239</a>      <span class="macro">RequirePackage!</span>(<span class="kw-2">*</span>pkg);
+<a href=#240 id=240 data-nosnippet>240</a>    }
+<a href=#241 id=241 data-nosnippet>241</a>  }
+<a href=#242 id=242 data-nosnippet>242</a>  <span class="kw">if </span>lookup_bool(<span class="string">"revtex_load_graphics"</span>) {
+<a href=#243 id=243 data-nosnippet>243</a>    <span class="macro">RequirePackage!</span>(<span class="string">"graphics"</span>);
+<a href=#244 id=244 data-nosnippet>244</a>  }
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="kw">if </span>lookup_bool(<span class="string">"revtex_linenumbers"</span>) {
+<a href=#246 id=246 data-nosnippet>246</a>    <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@revtex@lineno"</span>, {
+<a href=#247 id=247 data-nosnippet>247</a>      <span class="macro">RequirePackage!</span>(<span class="string">"lineno"</span>);
+<a href=#248 id=248 data-nosnippet>248</a>    });
+<a href=#249 id=249 data-nosnippet>249</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\AtBeginDocument{\lx@revtex@lineno}"</span>);
+<a href=#250 id=250 data-nosnippet>250</a>  }
+<a href=#251 id=251 data-nosnippet>251</a>
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="comment">// Perl revtex4.cls.ltxml L60-62: auto-load `&lt;jobname&gt;.rty` if present.
+<a href=#253 id=253 data-nosnippet>253</a>  // Papers like cond-mat0201306 stash paper-local macros (`\TR`, `\GC`,
+<a href=#254 id=254 data-nosnippet>254</a>  // `\bracketOpen` etc.) in this file via revtex's runtime convention.
+<a href=#255 id=255 data-nosnippet>255</a>  </span><span class="macro">Digest!</span>(<span class="string">"\\InputIfFileExists{\\jobname.rty}{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#256 id=256 data-nosnippet>256</a>});
+<a href=#257 id=257 data-nosnippet>257</a>
+<a href=#258 id=258 data-nosnippet>258</a><span class="doccomment">/// REVTeX's front matter note lists, which a document extends before `\maketitle` (2605.00976, 2606.06621): defined
+<a href=#259 id=259 data-nosnippet>259</a>/// where REVTeX defines them (revtex4-2.cls:2497-2499, :7201) and printed by `\lx@frontmatter@footnotes` (OD #1036).
+<a href=#260 id=260 data-nosnippet>260</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>define_frontmatter_note_lists() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">RawTeX!</span>(
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="string">r"\let\mini@notes\@empty\AtBeginDocument{\global\let\@FMN@list\@empty}
+<a href=#263 id=263 data-nosnippet>263</a>\def\lx@revtex@fm@note#1#2{\footnotetext{#2}}\long\def\lx@revtex@@footnotetext#1{\@footnotetext}
+<a href=#264 id=264 data-nosnippet>264</a>\def\lx@revtex@print@notes{\lx@frontmatter@footnotes{\let\@@footnotetext\lx@revtex@@footnotetext
+<a href=#265 id=265 data-nosnippet>265</a>  \ifdefined\prep@absbox\prep@absbox\post@absbox\fi\mini@notes\let\@TBN@opr\lx@revtex@fm@note\@FMN@list}%
+<a href=#266 id=266 data-nosnippet>266</a>  \global\let\@FMN@list\@empty}"
+<a href=#267 id=267 data-nosnippet>267</a>  </span>);
+<a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">AddToMacro!</span>(<span class="string">"\\lx@maketitle@body"</span>, <span class="string">"\\lx@revtex@print@notes"</span>);
+<a href=#269 id=269 data-nosnippet>269</a>  <span class="prelude-val">Ok</span>(())
+<a href=#270 id=270 data-nosnippet>270</a>}
+<a href=#271 id=271 data-nosnippet>271</a>
+<a href=#272 id=272 data-nosnippet>272</a><span class="doccomment">/// REVTeX's `\maketitle` switches the author block off (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662,
+<a href=#273 id=273 data-nosnippet>273</a>/// revtex4.cls:4709-4717); ours from a repeated block's first `\author` on, its new words counted (OD #1003: 2401.15572,
+<a href=#274 id=274 data-nosnippet>274</a>/// 1801.07635, 1812.00931, 2510.13035, 2602.09975, 2307.07324, 2001.07542; lone setters kept: 1309.4768, 1106.2389, 2304.09163).
+<a href=#275 id=275 data-nosnippet>275</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>switch_off_author_block_after_maketitle() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#276 id=276 data-nosnippet>276</a>  <span class="comment">// (not AASTeX's, which loads this binding: aastex701.cls:13231-13266 is its own)
+<a href=#277 id=277 data-nosnippet>277</a>  </span><span class="kw">if </span>![<span class="string">"revtex4"</span>, <span class="string">"revtex4-1"</span>, <span class="string">"revtex4-2"</span>]
+<a href=#278 id=278 data-nosnippet>278</a>    .into_iter()
+<a href=#279 id=279 data-nosnippet>279</a>    .any(is_document_class)
+<a href=#280 id=280 data-nosnippet>280</a>  {
+<a href=#281 id=281 data-nosnippet>281</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#282 id=282 data-nosnippet>282</a>  }
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="comment">// (local `\let`s: a repeat's `\author` inside a group, `{\author{Ann}}\email{…}`, switches off only to its end)
+<a href=#284 id=284 data-nosnippet>284</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="string">"\\lx@revtex@repeated@author"</span>,
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="string">r"\let\and\relax\let\affiliation\lx@revtex@repeated@gobble\let\email\lx@revtex@repeated@gobble@url\let\thanks\lx@revtex@repeated@gobble\lx@revtex@repeated@gobble"
+<a href=#287 id=287 data-nosnippet>287</a>  </span>);
+<a href=#288 id=288 data-nosnippet>288</a>  <span class="comment">// (the repeat's names and contacts the content check counts: a new word the output lacks warns, 1206.0114, 1903.12442)
+<a href=#289 id=289 data-nosnippet>289</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@revtex@repeated@gobble{}"</span>, sub[(content)] {
+<a href=#290 id=290 data-nosnippet>290</a>    fm_record_switched_off_call(<span class="kw-2">&amp;</span>content);
+<a href=#291 id=291 data-nosnippet>291</a>  });
+<a href=#292 id=292 data-nosnippet>292</a>  <span class="comment">// (`_` and `@` other as the live `\email` reads them, `ann_x@x.org` whole; `%` a comment as under `\@gobble`: revRB1c q2)
+<a href=#293 id=293 data-nosnippet>293</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@revtex@repeated@gobble@url Semiverbatim"</span>, sub[(content)] {
+<a href=#294 id=294 data-nosnippet>294</a>    fm_record_switched_off_call(<span class="kw-2">&amp;</span>content);
+<a href=#295 id=295 data-nosnippet>295</a>  });
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@revtex@maketitle@setters"</span>, sub[_args] {
+<a href=#297 id=297 data-nosnippet>297</a>    <span class="comment">// (a document's own `\maketitle` or `\frontmatter@maketitle` wins, 2509.25344, 2111.12484; `\title`, `\date` stay
+<a href=#298 id=298 data-nosnippet>298</a>    // the kernel's, 2606.04868; the class's `\let` lets a later `\renewcommand` through, so the locks lift, 2412.14256)
+<a href=#299 id=299 data-nosnippet>299</a>    </span><span class="kw">if </span>!lookup_bool(<span class="string">"\\maketitle:redefined"</span>) &amp;&amp; lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\frontmatter@maketitle"</span>))<span class="question-mark">?</span>.is_none() {
+<a href=#300 id=300 data-nosnippet>300</a>      let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\author"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@revtex@repeated@author"</span>), <span class="prelude-val">None</span>);
+<a href=#301 id=301 data-nosnippet>301</a>      <span class="kw">for </span>cs <span class="kw">in </span>[<span class="string">"\\affiliation"</span>, <span class="string">"\\author"</span>, <span class="string">"\\email"</span>, <span class="string">"\\thanks"</span>] {
+<a href=#302 id=302 data-nosnippet>302</a>        assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{cs}:locked"</span>), <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#303 id=303 data-nosnippet>303</a>      }
+<a href=#304 id=304 data-nosnippet>304</a>    }
+<a href=#305 id=305 data-nosnippet>305</a>    <span class="prelude-val">Ok</span>(())
+<a href=#306 id=306 data-nosnippet>306</a>  });
+<a href=#307 id=307 data-nosnippet>307</a>  <span class="macro">AddToMacro!</span>(<span class="string">"\\lx@maketitle@body"</span>, <span class="string">"\\lx@revtex@maketitle@setters"</span>);
+<a href=#308 id=308 data-nosnippet>308</a>  <span class="prelude-val">Ok</span>(())
+<a href=#309 id=309 data-nosnippet>309</a>}
 </code></pre></div></section></main></body></html>

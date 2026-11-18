@@ -1,0 +1,317 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/frontmatter/shared_notes.rs`."><title>shared_notes.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (59cbdee2e 2026-11-17)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/frontmatter/</div>shared_notes.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! A note several creators share, as a class prints it once under one mark (DG rulings of 2026-11-16: the XML keeps a
+<a href=#2 id=2 data-nosnippet>2</a>//! full copy on every carrier, each with `mark`; the XSLT prints it once): a class's footnote text two or more names
+<a href=#3 id=3 data-nosnippet>3</a>//! carry under one mark, and the names' own copy of the mark a title-page list's note carries
+<a href=#4 id=4 data-nosnippet>4</a>//! (OXIDIZED_DESIGN_DIVERGENCES #1054).
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a></span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#7 id=7 data-nosnippet>7</a>
+<a href=#8 id=8 data-nosnippet>8</a><span class="doccomment">/// The attribute of a title-page list's note that the names showing its leading mark carry (`\lx@fm@list@note`): that
+<a href=#9 id=9 data-nosnippet>9</a>/// mark.
+<a href=#10 id=10 data-nosnippet>10</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">const </span>LIST_MARK: <span class="kw-2">&amp;</span>str = <span class="string">"_listmark"</span>;
+<a href=#11 id=11 data-nosnippet>11</a><span class="doccomment">/// The attribute of a creator's contact that is a class's footnote text: the mark the class prints for it (elsarticle's
+<a href=#12 id=12 data-nosnippet>12</a>/// `\fntext`, REVTeX's `\thanks`).
+<a href=#13 id=13 data-nosnippet>13</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">const </span>PRINTED_MARK: <span class="kw-2">&amp;</span>str = <span class="string">"_fnmark"</span>;
+<a href=#14 id=14 data-nosnippet>14</a>
+<a href=#15 id=15 data-nosnippet>15</a><span class="doccomment">/// The attribute of a creator's contact that is part of a class's front-matter footnote, which `number_footnote_parts`
+<a href=#16 id=16 data-nosnippet>16</a>/// numbers: `title`, `own`, `join` (the name's joined footnote), `affil:&lt;n&gt;` or [`GIVEN_PART`].
+<a href=#17 id=17 data-nosnippet>17</a></span><span class="kw">pub const </span>FOOTNOTE_PART: <span class="kw-2">&amp;</span>str = <span class="string">"_fnpart"</span>;
+<a href=#18 id=18 data-nosnippet>18</a><span class="doccomment">/// The [`FOOTNOTE_PART`] of a name's `\footnote` given its number (`\footnote[1]{…}`), which steps no counter.
+<a href=#19 id=19 data-nosnippet>19</a></span><span class="kw">pub const </span>GIVEN_PART: <span class="kw-2">&amp;</span>str = <span class="string">"given"</span>;
+<a href=#20 id=20 data-nosnippet>20</a><span class="doccomment">/// How a class that writes [`FOOTNOTE_PART`]s marks its front-matter footnotes: `fnsymbol` or `alph`.
+<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">pub const </span>FOOTNOTE_MARKS: <span class="kw-2">&amp;</span>str = <span class="string">"lx_fm_footnote_marks"</span>;
+<a href=#22 id=22 data-nosnippet>22</a>
+<a href=#23 id=23 data-nosnippet>23</a><span class="doccomment">/// The marks of a class's front-matter footnotes (REVTeX's `\@AF@join`, revtex4-2.cls:2404-2495), numbered as printed:
+<a href=#24 id=24 data-nosnippet>24</a>/// the title's, then each name's own and its joined one, an affiliation's after its group's names or after every name, a
+<a href=#25 id=25 data-nosnippet>25</a>/// text printed before keeping its number (`\y@match`). A `\footnote` in a name steps the counter where the name prints
+<a href=#26 id=26 data-nosnippet>26</a>/// and keeps its contact, unmarked; a `\thanks` there, which REVTeX prints nowhere, takes no number and no mark. A mark
+<a href=#27 id=27 data-nosnippet>27</a>/// only where both affiliation orders agree; none when a footnote's step is unknown — a footnote contact with no part, a
+<a href=#28 id=28 data-nosnippet>28</a>/// name's `\footnotemark`, a part outside the creators (OD #1054).
+<a href=#29 id=29 data-nosnippet>29</a></span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>number_footnote_parts(document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="kw">let </span>style = lookup_string(FOOTNOTE_MARKS);
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="kw">if </span>style.is_empty() {
+<a href=#32 id=32 data-nosnippet>32</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#33 id=33 data-nosnippet>33</a>  }
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="kw">let </span>creators = document.findnodes(<span class="string">"//ltx:creator"</span>, <span class="prelude-val">None</span>);
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="comment">// (each part: its node, its creator, its part, its text — an own part's as printed, a joined one's with its role)
+<a href=#36 id=36 data-nosnippet>36</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>parts: Vec&lt;(Node, usize, String, String)&gt; = Vec::new();
+<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// (a part a route placed outside the creators — a title's or a pubnote's — is a step not counted here)
+<a href=#38 id=38 data-nosnippet>38</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>unknown = !document
+<a href=#39 id=39 data-nosnippet>39</a>    .findnodes(
+<a href=#40 id=40 data-nosnippet>40</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(
+<a href=#41 id=41 data-nosnippet>41</a>        <span class="string">"//*[@{FOOTNOTE_PART} and @{FOOTNOTE_PART}!='{GIVEN_PART}' and not(ancestor::ltx:creator)]"
+<a href=#42 id=42 data-nosnippet>42</a>      </span>),
+<a href=#43 id=43 data-nosnippet>43</a>      <span class="prelude-val">None</span>,
+<a href=#44 id=44 data-nosnippet>44</a>    )
+<a href=#45 id=45 data-nosnippet>45</a>    .is_empty();
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="kw">for </span>(at, creator) <span class="kw">in </span>creators.iter().enumerate() {
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="kw">let </span>entries = document.findnodes(
+<a href=#48 id=48 data-nosnippet>48</a>      <span class="string">"ltx:contact | ltx:note[@role='footnotemark']"</span>,
+<a href=#49 id=49 data-nosnippet>49</a>      <span class="prelude-val">Some</span>(creator),
+<a href=#50 id=50 data-nosnippet>50</a>    );
+<a href=#51 id=51 data-nosnippet>51</a>    <span class="kw">for </span>entry <span class="kw">in </span>entries {
+<a href=#52 id=52 data-nosnippet>52</a>      <span class="kw">let </span>role = entry.get_attribute(<span class="string">"role"</span>).unwrap_or_default();
+<a href=#53 id=53 data-nosnippet>53</a>      <span class="kw">let </span>text = entry
+<a href=#54 id=54 data-nosnippet>54</a>        .get_content()
+<a href=#55 id=55 data-nosnippet>55</a>        .split_whitespace()
+<a href=#56 id=56 data-nosnippet>56</a>        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#57 id=57 data-nosnippet>57</a>        .join(<span class="string">" "</span>);
+<a href=#58 id=58 data-nosnippet>58</a>      <span class="kw">match </span>(entry.get_attribute(FOOTNOTE_PART), role.as_str()) {
+<a href=#59 id=59 data-nosnippet>59</a>        <span class="comment">// (a given number, `\footnote[1]{…}`, steps nothing: 1607.07280)
+<a href=#60 id=60 data-nosnippet>60</a>        </span>(<span class="prelude-val">Some</span>(part), <span class="kw">_</span>) <span class="kw">if </span>part == GIVEN_PART =&gt; {},
+<a href=#61 id=61 data-nosnippet>61</a>        (<span class="prelude-val">Some</span>(part), <span class="kw">_</span>) <span class="kw">if </span>part == <span class="string">"own" </span>=&gt; parts.push((entry, at, part, text)),
+<a href=#62 id=62 data-nosnippet>62</a>        (<span class="prelude-val">Some</span>(part), <span class="kw">_</span>) =&gt; {
+<a href=#63 id=63 data-nosnippet>63</a>          <span class="kw">let </span>name = entry.get_attribute(<span class="string">"name"</span>).unwrap_or_default();
+<a href=#64 id=64 data-nosnippet>64</a>          parts.push((entry, at, part, <span class="macro">s!</span>(<span class="string">"{role}\u{2}{name}\u{2}{text}"</span>)));
+<a href=#65 id=65 data-nosnippet>65</a>        },
+<a href=#66 id=66 data-nosnippet>66</a>        <span class="comment">// (a name's `\footnote`, its own footnote where the name prints, never shared: "Ann Able∗ / Bob Baker† Cy Cole†"
+<a href=#67 id=67 data-nosnippet>67</a>        // in REVTeX 4.0, "Ann Ablea" in 4.2's minipage letters)
+<a href=#68 id=68 data-nosnippet>68</a>        </span>(<span class="prelude-val">None</span>, <span class="string">"note"</span>) =&gt; {
+<a href=#69 id=69 data-nosnippet>69</a>          <span class="kw">let </span>own = <span class="macro">s!</span>(<span class="string">"\u{3}{}"</span>, parts.len());
+<a href=#70 id=70 data-nosnippet>70</a>          parts.push((entry, at, <span class="macro">s!</span>(<span class="string">"own"</span>), own));
+<a href=#71 id=71 data-nosnippet>71</a>        },
+<a href=#72 id=72 data-nosnippet>72</a>        <span class="comment">// (a name's `\footnotemark` steps the counter unless given a number, which its note no longer tells)
+<a href=#73 id=73 data-nosnippet>73</a>        </span>(<span class="prelude-val">None</span>, <span class="string">"footnotemark"</span>) =&gt; unknown = <span class="bool-val">true</span>,
+<a href=#74 id=74 data-nosnippet>74</a>        (<span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; {
+<a href=#75 id=75 data-nosnippet>75</a>          unknown |= <span class="macro">matches!</span>(role.as_str(), <span class="string">"thanks" </span>| <span class="string">"email" </span>| <span class="string">"url" </span>| <span class="string">"altaffiliation"</span>)
+<a href=#76 id=76 data-nosnippet>76</a>        },
+<a href=#77 id=77 data-nosnippet>77</a>      }
+<a href=#78 id=78 data-nosnippet>78</a>    }
+<a href=#79 id=79 data-nosnippet>79</a>  }
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="kw">for </span>(entry, ..) <span class="kw">in </span><span class="kw-2">&amp;mut </span>parts {
+<a href=#81 id=81 data-nosnippet>81</a>    entry.remove_attribute(FOOTNOTE_PART).ok();
+<a href=#82 id=82 data-nosnippet>82</a>  }
+<a href=#83 id=83 data-nosnippet>83</a>  <span class="kw">if </span>unknown || parts.is_empty() {
+<a href=#84 id=84 data-nosnippet>84</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#85 id=85 data-nosnippet>85</a>  }
+<a href=#86 id=86 data-nosnippet>86</a>  <span class="comment">// (each part's footnote: its own text, or its parts' joined in order — the creator's, the title's, the affiliation's)
+<a href=#87 id=87 data-nosnippet>87</a>  </span><span class="kw">let </span>group = |at: usize, part: <span class="kw-2">&amp;</span>str| <span class="kw">match </span>part {
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="string">"title" </span>=&gt; <span class="macro">s!</span>(<span class="string">"title"</span>),
+<a href=#89 id=89 data-nosnippet>89</a>    <span class="kw">_ if </span>part.starts_with(<span class="string">"affil:"</span>) =&gt; part.to_string(),
+<a href=#90 id=90 data-nosnippet>90</a>    <span class="kw">_ </span>=&gt; <span class="macro">s!</span>(<span class="string">"join:{at}"</span>),
+<a href=#91 id=91 data-nosnippet>91</a>  };
+<a href=#92 id=92 data-nosnippet>92</a>  <span class="kw">let </span><span class="kw-2">mut </span>joined: HashMap&lt;String, String&gt; = HashMap::default();
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="kw">for </span>(<span class="kw">_</span>, at, part, text) <span class="kw">in </span>parts.iter().filter(|(<span class="kw">_</span>, <span class="kw">_</span>, part, <span class="kw">_</span>)| part != <span class="string">"own"</span>) {
+<a href=#94 id=94 data-nosnippet>94</a>    <span class="kw">let </span>footnote = joined.entry(group(<span class="kw-2">*</span>at, part)).or_default();
+<a href=#95 id=95 data-nosnippet>95</a>    footnote.push_str(text);
+<a href=#96 id=96 data-nosnippet>96</a>    footnote.push(<span class="string">'\u{1}'</span>);
+<a href=#97 id=97 data-nosnippet>97</a>  }
+<a href=#98 id=98 data-nosnippet>98</a>  <span class="kw">let </span>footnotes: Vec&lt;String&gt; = parts
+<a href=#99 id=99 data-nosnippet>99</a>    .iter()
+<a href=#100 id=100 data-nosnippet>100</a>    .map(|(<span class="kw">_</span>, at, part, text)| <span class="kw">match </span>part.as_str() {
+<a href=#101 id=101 data-nosnippet>101</a>      <span class="string">"own" </span>=&gt; text.clone(),
+<a href=#102 id=102 data-nosnippet>102</a>      <span class="kw">_ </span>=&gt; joined[<span class="kw-2">&amp;</span>group(<span class="kw-2">*</span>at, part)].clone(),
+<a href=#103 id=103 data-nosnippet>103</a>    })
+<a href=#104 id=104 data-nosnippet>104</a>    .collect();
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="comment">// (the printed order: the title's, each name's own then its joined one, an affiliation's after its group's names —
+<a href=#106 id=106 data-nosnippet>106</a>  // its footnote on the group's last name, where `\email` after `\affiliation` puts it — or after every name)
+<a href=#107 id=107 data-nosnippet>107</a>  </span><span class="kw">let </span>numbers = |affiliations_last: bool| -&gt; HashMap&lt;<span class="kw-2">&amp;</span>String, usize&gt; {
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="kw">let </span><span class="kw-2">mut </span>order: Vec&lt;<span class="kw-2">&amp;</span>String&gt; = Vec::new();
+<a href=#109 id=109 data-nosnippet>109</a>    <span class="kw">fn </span>add&lt;<span class="lifetime">'a</span>&gt;(footnote: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>String, order: <span class="kw-2">&amp;mut </span>Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>String&gt;) {
+<a href=#110 id=110 data-nosnippet>110</a>      <span class="kw">if </span>!order.contains(<span class="kw-2">&amp;</span>footnote) {
+<a href=#111 id=111 data-nosnippet>111</a>        order.push(footnote);
+<a href=#112 id=112 data-nosnippet>112</a>      }
+<a href=#113 id=113 data-nosnippet>113</a>    }
+<a href=#114 id=114 data-nosnippet>114</a>    <span class="kw">let </span>of = |which: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(usize, <span class="kw-2">&amp;</span>str) -&gt; bool| -&gt; Vec&lt;<span class="kw-2">&amp;</span>String&gt; {
+<a href=#115 id=115 data-nosnippet>115</a>      parts
+<a href=#116 id=116 data-nosnippet>116</a>        .iter()
+<a href=#117 id=117 data-nosnippet>117</a>        .zip(<span class="kw-2">&amp;</span>footnotes)
+<a href=#118 id=118 data-nosnippet>118</a>        .filter(|((<span class="kw">_</span>, at, part, <span class="kw">_</span>), <span class="kw">_</span>)| which(<span class="kw-2">*</span>at, part))
+<a href=#119 id=119 data-nosnippet>119</a>        .map(|(<span class="kw">_</span>, footnote)| footnote)
+<a href=#120 id=120 data-nosnippet>120</a>        .collect()
+<a href=#121 id=121 data-nosnippet>121</a>    };
+<a href=#122 id=122 data-nosnippet>122</a>    <span class="kw">for </span>footnote <span class="kw">in </span>of(<span class="kw-2">&amp;</span>|<span class="kw">_</span>, part| part == <span class="string">"title"</span>) {
+<a href=#123 id=123 data-nosnippet>123</a>      add(footnote, <span class="kw-2">&amp;mut </span>order);
+<a href=#124 id=124 data-nosnippet>124</a>    }
+<a href=#125 id=125 data-nosnippet>125</a>    <span class="kw">let </span><span class="kw-2">mut </span>affiliations: Vec&lt;<span class="kw-2">&amp;</span>String&gt; = Vec::new();
+<a href=#126 id=126 data-nosnippet>126</a>    <span class="kw">for </span>holder <span class="kw">in </span><span class="number">0</span>..creators.len() {
+<a href=#127 id=127 data-nosnippet>127</a>      <span class="kw">for </span>footnote <span class="kw">in </span>of(<span class="kw-2">&amp;</span>|at, part| at == holder &amp;&amp; part == <span class="string">"own"</span>) {
+<a href=#128 id=128 data-nosnippet>128</a>        add(footnote, <span class="kw-2">&amp;mut </span>order);
+<a href=#129 id=129 data-nosnippet>129</a>      }
+<a href=#130 id=130 data-nosnippet>130</a>      <span class="kw">for </span>footnote <span class="kw">in </span>of(<span class="kw-2">&amp;</span>|at, part| at == holder &amp;&amp; part == <span class="string">"join"</span>) {
+<a href=#131 id=131 data-nosnippet>131</a>        add(footnote, <span class="kw-2">&amp;mut </span>order);
+<a href=#132 id=132 data-nosnippet>132</a>      }
+<a href=#133 id=133 data-nosnippet>133</a>      <span class="kw">for </span>footnote <span class="kw">in </span>of(<span class="kw-2">&amp;</span>|at, part| at == holder &amp;&amp; part.starts_with(<span class="string">"affil:"</span>)) {
+<a href=#134 id=134 data-nosnippet>134</a>        <span class="kw">if </span>affiliations_last {
+<a href=#135 id=135 data-nosnippet>135</a>          add(footnote, <span class="kw-2">&amp;mut </span>affiliations);
+<a href=#136 id=136 data-nosnippet>136</a>        } <span class="kw">else </span>{
+<a href=#137 id=137 data-nosnippet>137</a>          add(footnote, <span class="kw-2">&amp;mut </span>order);
+<a href=#138 id=138 data-nosnippet>138</a>        }
+<a href=#139 id=139 data-nosnippet>139</a>      }
+<a href=#140 id=140 data-nosnippet>140</a>    }
+<a href=#141 id=141 data-nosnippet>141</a>    <span class="kw">for </span>footnote <span class="kw">in </span>affiliations {
+<a href=#142 id=142 data-nosnippet>142</a>      add(footnote, <span class="kw-2">&amp;mut </span>order);
+<a href=#143 id=143 data-nosnippet>143</a>    }
+<a href=#144 id=144 data-nosnippet>144</a>    order
+<a href=#145 id=145 data-nosnippet>145</a>      .into_iter()
+<a href=#146 id=146 data-nosnippet>146</a>      .enumerate()
+<a href=#147 id=147 data-nosnippet>147</a>      .map(|(n, footnote)| (footnote, n + <span class="number">1</span>))
+<a href=#148 id=148 data-nosnippet>148</a>      .collect()
+<a href=#149 id=149 data-nosnippet>149</a>  };
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="kw">let </span>(grouped, last) = (numbers(<span class="bool-val">false</span>), numbers(<span class="bool-val">true</span>));
+<a href=#151 id=151 data-nosnippet>151</a>  <span class="comment">// (a document's or package's own `\@fnsymbol` prints glyphs not this table's, 2603.18989's †: none written, the mark
+<a href=#152 id=152 data-nosnippet>152</a>  // unknown, `insert::count_unknown_marks`)
+<a href=#153 id=153 data-nosnippet>153</a>  </span><span class="kw">let </span>own_fnsymbol = style != <span class="string">"alph"
+<a href=#154 id=154 data-nosnippet>154</a>    </span>&amp;&amp; lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@fnsymbol"</span>))
+<a href=#155 id=155 data-nosnippet>155</a>      .ok()
+<a href=#156 id=156 data-nosnippet>156</a>      .flatten()
+<a href=#157 id=157 data-nosnippet>157</a>      .is_some_and(|d| !d.get_origin().is_latexml_owned());
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="kw">for </span>((entry, ..), footnote) <span class="kw">in </span>parts.iter().zip(<span class="kw-2">&amp;</span>footnotes) {
+<a href=#159 id=159 data-nosnippet>159</a>    <span class="kw">let </span><span class="kw-2">mut </span>entry = entry.clone();
+<a href=#160 id=160 data-nosnippet>160</a>    <span class="kw">let </span>n = grouped[footnote];
+<a href=#161 id=161 data-nosnippet>161</a>    <span class="kw">if </span>entry.get_attribute(<span class="string">"role"</span>).as_deref() != <span class="prelude-val">Some</span>(<span class="string">"thanks"</span>) || n != last[footnote] {
+<a href=#162 id=162 data-nosnippet>162</a>      <span class="kw">continue</span>;
+<a href=#163 id=163 data-nosnippet>163</a>    }
+<a href=#164 id=164 data-nosnippet>164</a>    <span class="kw">let </span>mark = <span class="kw">match </span>style.as_str() {
+<a href=#165 id=165 data-nosnippet>165</a>      <span class="string">"alph" </span>=&gt; u8::try_from(n)
+<a href=#166 id=166 data-nosnippet>166</a>        .ok()
+<a href=#167 id=167 data-nosnippet>167</a>        .filter(|n| (<span class="number">1</span>..=<span class="number">26</span>).contains(n))
+<a href=#168 id=168 data-nosnippet>168</a>        .map(|n| char::from(<span class="string">b'a' </span>+ n - <span class="number">1</span>).to_string()),
+<a href=#169 id=169 data-nosnippet>169</a>      <span class="kw">_ </span>=&gt; [<span class="string">"∗"</span>, <span class="string">"†"</span>, <span class="string">"‡"</span>, <span class="string">"§"</span>, <span class="string">"¶"</span>, <span class="string">"‖"</span>, <span class="string">"∗∗"</span>, <span class="string">"††"</span>, <span class="string">"‡‡"</span>]
+<a href=#170 id=170 data-nosnippet>170</a>        .get(n - <span class="number">1</span>)
+<a href=#171 id=171 data-nosnippet>171</a>        .map(|mark| (<span class="kw-2">*</span>mark).to_string()),
+<a href=#172 id=172 data-nosnippet>172</a>    };
+<a href=#173 id=173 data-nosnippet>173</a>    <span class="kw">if </span>own_fnsymbol {
+<a href=#174 id=174 data-nosnippet>174</a>      <span class="kw">if </span>entry.get_name() == <span class="string">"note" </span>{
+<a href=#175 id=175 data-nosnippet>175</a>        entry.set_attribute(MARK_UNKNOWN, <span class="string">"true"</span>)<span class="question-mark">?</span>;
+<a href=#176 id=176 data-nosnippet>176</a>      }
+<a href=#177 id=177 data-nosnippet>177</a>      <span class="kw">continue</span>;
+<a href=#178 id=178 data-nosnippet>178</a>    }
+<a href=#179 id=179 data-nosnippet>179</a>    <span class="comment">// (a thanks note its mark, a contact the mark the Kind step reads)
+<a href=#180 id=180 data-nosnippet>180</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(mark) = mark {
+<a href=#181 id=181 data-nosnippet>181</a>      <span class="kw">if </span>entry.get_name() == <span class="string">"note" </span>{
+<a href=#182 id=182 data-nosnippet>182</a>        entry.set_attribute(<span class="string">"mark"</span>, <span class="kw-2">&amp;</span>mark)<span class="question-mark">?</span>;
+<a href=#183 id=183 data-nosnippet>183</a>        entry.set_attribute(MARK_FROM_COUNTER, <span class="string">"true"</span>)<span class="question-mark">?</span>;
+<a href=#184 id=184 data-nosnippet>184</a>      } <span class="kw">else </span>{
+<a href=#185 id=185 data-nosnippet>185</a>        entry.set_attribute(PRINTED_MARK, <span class="kw-2">&amp;</span>mark)<span class="question-mark">?</span>;
+<a href=#186 id=186 data-nosnippet>186</a>      }
+<a href=#187 id=187 data-nosnippet>187</a>    }
+<a href=#188 id=188 data-nosnippet>188</a>  }
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="prelude-val">Ok</span>(())
+<a href=#190 id=190 data-nosnippet>190</a>}
+<a href=#191 id=191 data-nosnippet>191</a>
+<a href=#192 id=192 data-nosnippet>192</a><span class="doccomment">/// The Kind step for a class's footnote text that two or more creators carry under one mark ([`PRINTED_MARK`]): an
+<a href=#193 id=193 data-nosnippet>193</a>/// elsarticle `\fntext[eq]{…}` its `\fnref{eq}` gives two names (each copy a contact `relocate_annotations` placed), a
+<a href=#194 id=194 data-nosnippet>194</a>/// REVTeX `\thanks{…}` two names give alike — printed once, its mark on each name (elsarticle.cls:157-171, revtex4-2.cls:2472-2495
+<a href=#195 id=195 data-nosnippet>195</a>/// `\frontmatter@footnote`): each copy the carriers' note with that `mark` (FIDELITY_CHARTER §4, the mark rule). One a
+<a href=#196 id=196 data-nosnippet>196</a>/// single creator carries stays its contact, shown under its name.
+<a href=#197 id=197 data-nosnippet>197</a></span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>kind_shared_marked_contacts(document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="kw">let </span>contacts = document.findnodes(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"//ltx:creator/ltx:contact[@{PRINTED_MARK}]"</span>), <span class="prelude-val">None</span>);
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="kw">if </span>contacts.is_empty() {
+<a href=#200 id=200 data-nosnippet>200</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#201 id=201 data-nosnippet>201</a>  }
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="comment">// (each copy's mark and text; a copy is shared when two creators or more carry its mark and text)
+<a href=#203 id=203 data-nosnippet>203</a>  </span><span class="kw">let </span>read: Vec&lt;(String, String)&gt; = contacts
+<a href=#204 id=204 data-nosnippet>204</a>    .iter()
+<a href=#205 id=205 data-nosnippet>205</a>    .map(|contact| {
+<a href=#206 id=206 data-nosnippet>206</a>      (
+<a href=#207 id=207 data-nosnippet>207</a>        contact.get_attribute(PRINTED_MARK).unwrap_or_default(),
+<a href=#208 id=208 data-nosnippet>208</a>        contact
+<a href=#209 id=209 data-nosnippet>209</a>          .get_content()
+<a href=#210 id=210 data-nosnippet>210</a>          .split_whitespace()
+<a href=#211 id=211 data-nosnippet>211</a>          .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#212 id=212 data-nosnippet>212</a>          .join(<span class="string">" "</span>),
+<a href=#213 id=213 data-nosnippet>213</a>      )
+<a href=#214 id=214 data-nosnippet>214</a>    })
+<a href=#215 id=215 data-nosnippet>215</a>    .collect();
+<a href=#216 id=216 data-nosnippet>216</a>  <span class="kw">let </span><span class="kw-2">mut </span>carriers: HashMap&lt;<span class="kw-2">&amp;</span>(String, String), Vec&lt;Node&gt;&gt; = HashMap::default();
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="kw">for </span>(contact, copy) <span class="kw">in </span>contacts.iter().zip(<span class="kw-2">&amp;</span>read) {
+<a href=#218 id=218 data-nosnippet>218</a>    <span class="kw">let </span>held = carriers.entry(copy).or_default();
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(creator) = contact.get_parent()
+<a href=#220 id=220 data-nosnippet>220</a>      &amp;&amp; !held.contains(<span class="kw-2">&amp;</span>creator)
+<a href=#221 id=221 data-nosnippet>221</a>    {
+<a href=#222 id=222 data-nosnippet>222</a>      held.push(creator);
+<a href=#223 id=223 data-nosnippet>223</a>    }
+<a href=#224 id=224 data-nosnippet>224</a>  }
+<a href=#225 id=225 data-nosnippet>225</a>  <span class="kw">let </span>shared: Vec&lt;bool&gt; = read
+<a href=#226 id=226 data-nosnippet>226</a>    .iter()
+<a href=#227 id=227 data-nosnippet>227</a>    .map(|copy| !copy.<span class="number">0</span>.is_empty() &amp;&amp; carriers[copy].len() &gt;= <span class="number">2</span>)
+<a href=#228 id=228 data-nosnippet>228</a>    .collect();
+<a href=#229 id=229 data-nosnippet>229</a>  <span class="kw">for </span>(at, <span class="kw-2">mut </span>contact) <span class="kw">in </span>contacts.into_iter().enumerate() {
+<a href=#230 id=230 data-nosnippet>230</a>    contact.remove_attribute(PRINTED_MARK).ok();
+<a href=#231 id=231 data-nosnippet>231</a>    <span class="kw">if </span>!shared[at] {
+<a href=#232 id=232 data-nosnippet>232</a>      <span class="kw">continue</span>;
+<a href=#233 id=233 data-nosnippet>233</a>    }
+<a href=#234 id=234 data-nosnippet>234</a>    <span class="kw">let </span>kind = classify_thanks(<span class="kw-2">&amp;</span>read[at].<span class="number">1</span>);
+<a href=#235 id=235 data-nosnippet>235</a>    <span class="kw">let </span><span class="kw-2">mut </span>note = document.rename_node(contact, <span class="string">"ltx:note"</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#236 id=236 data-nosnippet>236</a>    note.remove_attribute(<span class="string">"name"</span>).ok();
+<a href=#237 id=237 data-nosnippet>237</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>note, <span class="string">"role"</span>, <span class="string">"thanks"</span>)<span class="question-mark">?</span>;
+<a href=#238 id=238 data-nosnippet>238</a>    document.set_attribute(
+<a href=#239 id=239 data-nosnippet>239</a>      <span class="kw-2">&amp;mut </span>note,
+<a href=#240 id=240 data-nosnippet>240</a>      <span class="string">"class"</span>,
+<a href=#241 id=241 data-nosnippet>241</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"ltx_note_frontmatter ltx_thanks_{kind}"</span>),
+<a href=#242 id=242 data-nosnippet>242</a>    )<span class="question-mark">?</span>;
+<a href=#243 id=243 data-nosnippet>243</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>note, <span class="string">"mark"</span>, <span class="kw-2">&amp;</span>read[at].<span class="number">0</span>)<span class="question-mark">?</span>;
+<a href=#244 id=244 data-nosnippet>244</a>    note.set_attribute(MARK_FROM_COUNTER, <span class="string">"true"</span>)<span class="question-mark">?</span>;
+<a href=#245 id=245 data-nosnippet>245</a>  }
+<a href=#246 id=246 data-nosnippet>246</a>  <span class="prelude-val">Ok</span>(())
+<a href=#247 id=247 data-nosnippet>247</a>}
+<a href=#248 id=248 data-nosnippet>248</a>
+<a href=#249 id=249 data-nosnippet>249</a><span class="doccomment">/// The superscript (or the formula of one) the text of `node` opens with, past the paragraphs and the font wrappers that
+<a href=#250 id=250 data-nosnippet>250</a>/// open it, and what it prints: `&lt;p align="center"&gt;&lt;sup&gt;‡&lt;/sup&gt; These authors …&lt;/p&gt;`.
+<a href=#251 id=251 data-nosnippet>251</a></span><span class="kw">fn </span>leading_mark(node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Option</span>&lt;(Node, String)&gt; {
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="kw">for </span>child <span class="kw">in </span>node.get_child_nodes() {
+<a href=#253 id=253 data-nosnippet>253</a>    <span class="kw">match </span>child.get_type() {
+<a href=#254 id=254 data-nosnippet>254</a>      <span class="prelude-val">Some</span>(NodeType::TextNode) <span class="kw">if </span>child.get_content().trim().is_empty() =&gt; {},
+<a href=#255 id=255 data-nosnippet>255</a>      <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
+<a href=#256 id=256 data-nosnippet>256</a>        <span class="kw">return match </span>child.get_name().as_str() {
+<a href=#257 id=257 data-nosnippet>257</a>          <span class="string">"sup" </span>=&gt; <span class="prelude-val">Some</span>((child.clone(), child.get_content().trim().to_string())),
+<a href=#258 id=258 data-nosnippet>258</a>          <span class="string">"Math" </span>=&gt; <span class="kw">match </span>fm_read_formula(<span class="kw-2">&amp;</span>child) {
+<a href=#259 id=259 data-nosnippet>259</a>            FmFormulaMarks::Marks(scripts) <span class="kw">if </span>scripts.len() == <span class="number">1 </span>=&gt; {
+<a href=#260 id=260 data-nosnippet>260</a>              <span class="prelude-val">Some</span>((child.clone(), scripts[<span class="number">0</span>].trim().to_string()))
+<a href=#261 id=261 data-nosnippet>261</a>            },
+<a href=#262 id=262 data-nosnippet>262</a>            <span class="comment">// (a footnote symbol set in math, not raised: cnf.sty's `$\ast$~…`)
+<a href=#263 id=263 data-nosnippet>263</a>            </span><span class="kw">_ </span>=&gt; <span class="prelude-val">Some</span>(child.get_content().trim().to_string())
+<a href=#264 id=264 data-nosnippet>264</a>              .filter(|text| !text.is_empty() &amp;&amp; text.chars().all(events::is_fnsymbol))
+<a href=#265 id=265 data-nosnippet>265</a>              .map(|text| (child.clone(), text)),
+<a href=#266 id=266 data-nosnippet>266</a>          },
+<a href=#267 id=267 data-nosnippet>267</a>          <span class="string">"p" </span>| <span class="string">"para" </span>| <span class="string">"text" </span>| <span class="string">"inline-block" </span>| <span class="string">"inline-para" </span>=&gt; leading_mark(<span class="kw-2">&amp;</span>child),
+<a href=#268 id=268 data-nosnippet>268</a>          <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#269 id=269 data-nosnippet>269</a>        };
+<a href=#270 id=270 data-nosnippet>270</a>      },
+<a href=#271 id=271 data-nosnippet>271</a>      <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">None</span>,
+<a href=#272 id=272 data-nosnippet>272</a>    }
+<a href=#273 id=273 data-nosnippet>273</a>  }
+<a href=#274 id=274 data-nosnippet>274</a>  <span class="prelude-val">None
+<a href=#275 id=275 data-nosnippet>275</a></span>}
+<a href=#276 id=276 data-nosnippet>276</a>
+<a href=#277 id=277 data-nosnippet>277</a><span class="doccomment">/// A title-page list's note its leading mark gave to the names showing it ([`LIST_MARK`], `\lx@fm@list@note`: 2606.06621's
+<a href=#278 id=278 data-nosnippet>278</a>/// `$^\ddagger$ These authors contributed equally` under `Windt$^\ddagger$`) shows that mark as its `mark`: the mark goes
+<a href=#279 id=279 data-nosnippet>279</a>/// from its text, with the space after it (the mark rule, FIDELITY_CHARTER §4), and from its holder's name, as a name's
+<a href=#280 id=280 data-nosnippet>280</a>/// mark a legend answers does (`settle_name_marks`). A name's superscript of other marks too (`$^{1,\ddagger}$`)
+<a href=#281 id=281 data-nosnippet>281</a>/// stays.
+<a href=#282 id=282 data-nosnippet>282</a></span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>show_list_note_marks(document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="kw">let </span>key = |mark: <span class="kw-2">&amp;</span>str| mark.trim().replace(<span class="string">'∗'</span>, <span class="string">"*"</span>);
+<a href=#284 id=284 data-nosnippet>284</a>  <span class="kw">for </span><span class="kw-2">mut </span>note <span class="kw">in </span>document.findnodes(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"//ltx:creator/ltx:note[@{LIST_MARK}]"</span>), <span class="prelude-val">None</span>) {
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="kw">let </span>mark = note.get_attribute(LIST_MARK).unwrap_or_default();
+<a href=#286 id=286 data-nosnippet>286</a>    note.remove_attribute(LIST_MARK).ok();
+<a href=#287 id=287 data-nosnippet>287</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>((lead, printed)) = leading_mark(<span class="kw-2">&amp;</span>note)
+<a href=#288 id=288 data-nosnippet>288</a>      &amp;&amp; key(<span class="kw-2">&amp;</span>printed) == key(<span class="kw-2">&amp;</span>mark)
+<a href=#289 id=289 data-nosnippet>289</a>    {
+<a href=#290 id=290 data-nosnippet>290</a>      <span class="comment">// (the space after it: a text node, or the first of the font wrapper after it)
+<a href=#291 id=291 data-nosnippet>291</a>      </span><span class="kw">let </span>next = lead
+<a href=#292 id=292 data-nosnippet>292</a>        .get_next_sibling()
+<a href=#293 id=293 data-nosnippet>293</a>        .and_then(|next| <span class="kw">match </span>next.get_type() {
+<a href=#294 id=294 data-nosnippet>294</a>          <span class="prelude-val">Some</span>(NodeType::TextNode) =&gt; <span class="prelude-val">Some</span>(next),
+<a href=#295 id=295 data-nosnippet>295</a>          <span class="kw">_ if </span>next.get_name() == <span class="string">"text" </span>=&gt; next
+<a href=#296 id=296 data-nosnippet>296</a>            .get_first_child()
+<a href=#297 id=297 data-nosnippet>297</a>            .filter(|n| n.get_type() == <span class="prelude-val">Some</span>(NodeType::TextNode)),
+<a href=#298 id=298 data-nosnippet>298</a>          <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#299 id=299 data-nosnippet>299</a>        });
+<a href=#300 id=300 data-nosnippet>300</a>      document.remove_node(lead);
+<a href=#301 id=301 data-nosnippet>301</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>text) = next {
+<a href=#302 id=302 data-nosnippet>302</a>        <span class="kw">let </span>content = text.get_content();
+<a href=#303 id=303 data-nosnippet>303</a>        text.set_content(content.trim_start())<span class="question-mark">?</span>;
+<a href=#304 id=304 data-nosnippet>304</a>      }
+<a href=#305 id=305 data-nosnippet>305</a>    }
+<a href=#306 id=306 data-nosnippet>306</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(creator) = note.get_parent() <span class="kw">else </span>{
+<a href=#307 id=307 data-nosnippet>307</a>      <span class="kw">continue</span>;
+<a href=#308 id=308 data-nosnippet>308</a>    };
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="kw">for </span>sup <span class="kw">in </span>document.findnodes(<span class="string">"ltx:personname//ltx:sup"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>creator)) {
+<a href=#310 id=310 data-nosnippet>310</a>      <span class="kw">if </span>key(<span class="kw-2">&amp;</span>sup.get_content()) == key(<span class="kw-2">&amp;</span>mark) {
+<a href=#311 id=311 data-nosnippet>311</a>        document.remove_node(sup);
+<a href=#312 id=312 data-nosnippet>312</a>      }
+<a href=#313 id=313 data-nosnippet>313</a>    }
+<a href=#314 id=314 data-nosnippet>314</a>  }
+<a href=#315 id=315 data-nosnippet>315</a>  <span class="prelude-val">Ok</span>(())
+<a href=#316 id=316 data-nosnippet>316</a>}
+</code></pre></div></section></main></body></html>

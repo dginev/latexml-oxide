@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/latex_constructs/sect03.rs`."><title>sect03.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (5df8c02af 2026-11-16)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/latex_constructs/</div>sect03.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! `latex_constructs` section 3: C.3 Sentences and Paragraphs
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/latex_constructs/sect03.rs`."><title>sect03.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (59cbdee2e 2026-11-17)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/latex_constructs/</div>sect03.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! `latex_constructs` section 3: C.3 Sentences and Paragraphs
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
 <a href=#4 id=4 data-nosnippet>4</a>//! definitions run in the original order from `super::load_definitions`.
@@ -185,7 +185,7 @@
 <a href=#185 id=185 data-nosnippet>185</a>  </span>def_macro_noop(<span class="string">"\\lx@note@reset"</span>)<span class="question-mark">?</span>;
 <a href=#186 id=186 data-nosnippet>186</a>  def_macro_noop(<span class="string">"\\ext@footnote"</span>)<span class="question-mark">?</span>;
 <a href=#187 id=187 data-nosnippet>187</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@note[]{} OptionalUndigested {}"</span>,
-<a href=#188 id=188 data-nosnippet>188</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id' inlist='#list'&gt;#tags#4&lt;/ltx:note&gt;"</span>,
+<a href=#188 id=188 data-nosnippet>188</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id' inlist='#list'&gt;#tags#4&lt;/ltx:note&gt;"</span>,
 <a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">// Perl #2798: footnotes are inline blocks — internal_vertical, no leaveHorizontal.
 <a href=#190 id=190 data-nosnippet>190</a>  </span>mode         =&gt; <span class="string">"inline_internal_vertical"</span>,
 <a href=#191 id=191 data-nosnippet>191</a>  sizer        =&gt; sub[whatsit] { note_size_in_line(whatsit) },
@@ -193,18 +193,18 @@
 <a href=#193 id=193 data-nosnippet>193</a>  // line break `\@normalcr` whatever the surrounding `\\` is: a note in a `p` cell or a longtable caption row
 <a href=#194 id=194 data-nosnippet>194</a>  // (2201.11330's `\caption{…}\footnote{… seconds.\\ calls: …}` in {xltabular}) ended the row there, the table lost.
 <a href=#195 id=195 data-nosnippet>195</a>  </span>before_digest =&gt; {
-<a href=#196 id=196 data-nosnippet>196</a>    enter_title_footnotes()<span class="question-mark">?</span>;
-<a href=#197 id=197 data-nosnippet>197</a>    neutralize_font();
-<a href=#198 id=198 data-nosnippet>198</a>    <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\@normalcr"</span>);
-<a href=#199 id=199 data-nosnippet>199</a>    digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@reset"</span>)))<span class="question-mark">?</span>; },
-<a href=#200 id=200 data-nosnippet>200</a>  properties   =&gt; sub [args] {
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="kw">let </span>arg1 = args[<span class="number">0</span>].as_ref();
-<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">let </span>arg2 = args[<span class="number">1</span>].as_ref();
-<a href=#203 id=203 data-nosnippet>203</a>    <span class="kw">let </span>note_type = arg2.map(type_name).unwrap_or_default();
-<a href=#204 id=204 data-nosnippet>204</a>    <span class="kw">let </span>number = given_footnote_number(<span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref())<span class="question-mark">?</span>;
-<a href=#205 id=205 data-nosnippet>205</a>    <span class="kw">let </span>arg3 = footnote_tag(<span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref(), <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
-<a href=#206 id=206 data-nosnippet>206</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = make_note_tags(<span class="kw-2">&amp;</span>note_type, arg1, arg3)<span class="question-mark">?</span>;
-<a href=#207 id=207 data-nosnippet>207</a>    footnote_pairing(<span class="kw-2">&amp;mut </span>props, <span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref(), <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
+<a href=#196 id=196 data-nosnippet>196</a>    neutralize_font();
+<a href=#197 id=197 data-nosnippet>197</a>    <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\@normalcr"</span>);
+<a href=#198 id=198 data-nosnippet>198</a>    digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@reset"</span>)))<span class="question-mark">?</span>; },
+<a href=#199 id=199 data-nosnippet>199</a>  properties   =&gt; sub [args] {
+<a href=#200 id=200 data-nosnippet>200</a>    <span class="kw">let </span>arg1 = args[<span class="number">0</span>].as_ref();
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="kw">let </span>arg2 = args[<span class="number">1</span>].as_ref();
+<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">let </span>note_type = arg2.map(type_name).unwrap_or_default();
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="kw">let </span>number = given_footnote_number(<span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref())<span class="question-mark">?</span>;
+<a href=#204 id=204 data-nosnippet>204</a>    <span class="kw">let </span>arg3 = footnote_tag(<span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref(), <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
+<a href=#205 id=205 data-nosnippet>205</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = make_note_tags(<span class="kw-2">&amp;</span>note_type, arg1, arg3)<span class="question-mark">?</span>;
+<a href=#206 id=206 data-nosnippet>206</a>    footnote_pairing(<span class="kw-2">&amp;mut </span>props, <span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref(), <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
+<a href=#207 id=207 data-nosnippet>207</a>    drop_unknown_title_mark(<span class="kw-2">&amp;mut </span>props);
 <a href=#208 id=208 data-nosnippet>208</a>    props.insert(<span class="string">"list"</span>, digest_text(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ext@{note_type}"</span>))))<span class="question-mark">?</span>.into());
 <a href=#209 id=209 data-nosnippet>209</a>    props.insert(<span class="string">"role"</span>, note_type.into());
 <a href=#210 id=210 data-nosnippet>210</a>    <span class="prelude-val">Ok</span>(props)
@@ -212,13 +212,13 @@
 <a href=#212 id=212 data-nosnippet>212</a>  reversion =&gt; <span class="string">""</span>);
 <a href=#213 id=213 data-nosnippet>213</a>
 <a href=#214 id=214 data-nosnippet>214</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@notemark[]{} OptionalUndigested"</span>,
-<a href=#215 id=215 data-nosnippet>215</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id' inlist='#list'&gt;#tags&lt;/ltx:note&gt;"</span>,
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id' inlist='#list'&gt;#tags&lt;/ltx:note&gt;"</span>,
 <a href=#216 id=216 data-nosnippet>216</a>  mode       =&gt; <span class="string">"text"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>,
 <a href=#217 id=217 data-nosnippet>217</a>  sizer =&gt; sub[whatsit] { note_size_in_line(whatsit) },
-<a href=#218 id=218 data-nosnippet>218</a>  <span class="comment">// In a class's title block the marks are its own (`enter_title_footnotes`); `[&lt;n&gt;]` is `\thefootnote` at `&lt;n&gt;`
-<a href=#219 id=219 data-nosnippet>219</a>  // (`numbered_footnote_mark`, latex.ltx:17678-17682).
-<a href=#220 id=220 data-nosnippet>220</a>  </span>before_digest =&gt; { enter_title_footnotes()<span class="question-mark">?</span>; },
-<a href=#221 id=221 data-nosnippet>221</a>  properties =&gt; sub[args] {
+<a href=#218 id=218 data-nosnippet>218</a>  <span class="comment">// In a class's title block the marks are its own (`enter_title_footnotes`, as the field begins); `[&lt;n&gt;]` is
+<a href=#219 id=219 data-nosnippet>219</a>  // `\thefootnote` at `&lt;n&gt;` (`numbered_footnote_mark`, latex.ltx:17678-17682); an unknown one none
+<a href=#220 id=220 data-nosnippet>220</a>  // (`drop_unknown_title_mark`).
+<a href=#221 id=221 data-nosnippet>221</a>  </span>properties =&gt; sub[args] {
 <a href=#222 id=222 data-nosnippet>222</a>    <span class="kw">let </span>arg1 = args[<span class="number">0</span>].as_ref();
 <a href=#223 id=223 data-nosnippet>223</a>    <span class="kw">let </span>arg2 = args[<span class="number">1</span>].as_ref();
 <a href=#224 id=224 data-nosnippet>224</a>    <span class="kw">let </span>note_type = arg2.map(type_name).unwrap_or_default();
@@ -229,30 +229,30 @@
 <a href=#229 id=229 data-nosnippet>229</a>    };
 <a href=#230 id=230 data-nosnippet>230</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = make_note_tags(<span class="kw-2">&amp;</span>note_type, arg1, arg3)<span class="question-mark">?</span>;
 <a href=#231 id=231 data-nosnippet>231</a>    footnote_pairing(<span class="kw-2">&amp;mut </span>props, <span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref(), <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
-<a href=#232 id=232 data-nosnippet>232</a>    props.insert(<span class="string">"role"</span>, <span class="macro">s!</span>(<span class="string">"{note_type}mark"</span>).into());
-<a href=#233 id=233 data-nosnippet>233</a>    props.insert(<span class="string">"list"</span>, digest_text(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ext@{note_type}"</span>))))<span class="question-mark">?</span>.into());
-<a href=#234 id=234 data-nosnippet>234</a>    <span class="prelude-val">Ok</span>(props)
-<a href=#235 id=235 data-nosnippet>235</a>  },
-<a href=#236 id=236 data-nosnippet>236</a>  reversion =&gt; <span class="string">""</span>);
-<a href=#237 id=237 data-nosnippet>237</a>
-<a href=#238 id=238 data-nosnippet>238</a>  <span class="comment">// `OptionalSemiverbatim` on the first `[]` (the `xml:id`) so a paper
-<a href=#239 id=239 data-nosnippet>239</a>  // writing `\fntext[footnote_label2]{…}` (literal `_` in the label —
-<a href=#240 id=240 data-nosnippet>240</a>  // technically invalid TeX) doesn't blow up with `_ Script outside
-<a href=#241 id=241 data-nosnippet>241</a>  // math` when the digester sees the SUB-catcode `_`. Semiverbatim
-<a href=#242 id=242 data-nosnippet>242</a>  // reads `_` (and `^`, `~`, `&amp;`, `$`, `#`, `'`) as OTHER, so the id
-<a href=#243 id=243 data-nosnippet>243</a>  // is a literal text token list. Paper-quality fix that surpasses
-<a href=#244 id=244 data-nosnippet>244</a>  // Perl LaTeXML (which still reads with default catcodes and errors
-<a href=#245 id=245 data-nosnippet>245</a>  // identically). Witness: 2604.00193 `\fntext[footnote_label2]` —
-<a href=#246 id=246 data-nosnippet>246</a>  // Rust before: 1 error; after: 0 errors. Same pattern surfaces on
-<a href=#247 id=247 data-nosnippet>247</a>  // most of the 79-paper math-mode-first cluster (SHARED-FAILURE
-<a href=#248 id=248 data-nosnippet>248</a>  // classification in SYNC_STATUS — this is the surpass-Perl path).
-<a href=#249 id=249 data-nosnippet>249</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@notetext OptionalSemiverbatim {} OptionalUndigested {}"</span>,
-<a href=#250 id=250 data-nosnippet>250</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id'&gt;#4&lt;/ltx:note&gt;"</span>,
-<a href=#251 id=251 data-nosnippet>251</a>  <span class="comment">// Perl #2798: footnote text is an inline block — internal_vertical, no leaveHorizontal.
-<a href=#252 id=252 data-nosnippet>252</a>  </span>mode       =&gt; <span class="string">"inline_internal_vertical"</span>,
-<a href=#253 id=253 data-nosnippet>253</a>  sizer      =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>(out_of_line_size()) },
-<a href=#254 id=254 data-nosnippet>254</a>  before_digest =&gt; {
-<a href=#255 id=255 data-nosnippet>255</a>    enter_title_footnotes()<span class="question-mark">?</span>;
+<a href=#232 id=232 data-nosnippet>232</a>    drop_unknown_title_mark(<span class="kw-2">&amp;mut </span>props);
+<a href=#233 id=233 data-nosnippet>233</a>    props.insert(<span class="string">"role"</span>, <span class="macro">s!</span>(<span class="string">"{note_type}mark"</span>).into());
+<a href=#234 id=234 data-nosnippet>234</a>    props.insert(<span class="string">"list"</span>, digest_text(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ext@{note_type}"</span>))))<span class="question-mark">?</span>.into());
+<a href=#235 id=235 data-nosnippet>235</a>    <span class="prelude-val">Ok</span>(props)
+<a href=#236 id=236 data-nosnippet>236</a>  },
+<a href=#237 id=237 data-nosnippet>237</a>  reversion =&gt; <span class="string">""</span>);
+<a href=#238 id=238 data-nosnippet>238</a>
+<a href=#239 id=239 data-nosnippet>239</a>  <span class="comment">// `OptionalSemiverbatim` on the first `[]` (the `xml:id`) so a paper
+<a href=#240 id=240 data-nosnippet>240</a>  // writing `\fntext[footnote_label2]{…}` (literal `_` in the label —
+<a href=#241 id=241 data-nosnippet>241</a>  // technically invalid TeX) doesn't blow up with `_ Script outside
+<a href=#242 id=242 data-nosnippet>242</a>  // math` when the digester sees the SUB-catcode `_`. Semiverbatim
+<a href=#243 id=243 data-nosnippet>243</a>  // reads `_` (and `^`, `~`, `&amp;`, `$`, `#`, `'`) as OTHER, so the id
+<a href=#244 id=244 data-nosnippet>244</a>  // is a literal text token list. Paper-quality fix that surpasses
+<a href=#245 id=245 data-nosnippet>245</a>  // Perl LaTeXML (which still reads with default catcodes and errors
+<a href=#246 id=246 data-nosnippet>246</a>  // identically). Witness: 2604.00193 `\fntext[footnote_label2]` —
+<a href=#247 id=247 data-nosnippet>247</a>  // Rust before: 1 error; after: 0 errors. Same pattern surfaces on
+<a href=#248 id=248 data-nosnippet>248</a>  // most of the 79-paper math-mode-first cluster (SHARED-FAILURE
+<a href=#249 id=249 data-nosnippet>249</a>  // classification in SYNC_STATUS — this is the surpass-Perl path).
+<a href=#250 id=250 data-nosnippet>250</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@notetext OptionalSemiverbatim {} OptionalUndigested {}"</span>,
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id'&gt;#4&lt;/ltx:note&gt;"</span>,
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="comment">// Perl #2798: footnote text is an inline block — internal_vertical, no leaveHorizontal.
+<a href=#253 id=253 data-nosnippet>253</a>  </span>mode       =&gt; <span class="string">"inline_internal_vertical"</span>,
+<a href=#254 id=254 data-nosnippet>254</a>  sizer      =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>(out_of_line_size()) },
+<a href=#255 id=255 data-nosnippet>255</a>  before_digest =&gt; {
 <a href=#256 id=256 data-nosnippet>256</a>    <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\@normalcr"</span>); <span class="comment">// (`\@parboxrestore`, as `\lx@note`'s)
 <a href=#257 id=257 data-nosnippet>257</a>    </span>digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@reset"</span>)))<span class="question-mark">?</span>;
 <a href=#258 id=258 data-nosnippet>258</a>  },
@@ -270,128 +270,133 @@
 <a href=#270 id=270 data-nosnippet>270</a>    };
 <a href=#271 id=271 data-nosnippet>271</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = make_note_tags(<span class="kw-2">&amp;</span>note_type, arg1, <span class="prelude-val">Some</span>(arg3_ready))<span class="question-mark">?</span>;
 <a href=#272 id=272 data-nosnippet>272</a>    footnote_pairing(<span class="kw-2">&amp;mut </span>props, <span class="kw-2">&amp;</span>note_type, arg3, <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
-<a href=#273 id=273 data-nosnippet>273</a>    props.insert(<span class="string">"role"</span>, <span class="macro">s!</span>(<span class="string">"{note_type}text"</span>).into());
-<a href=#274 id=274 data-nosnippet>274</a>    <span class="prelude-val">Ok</span>(props)
-<a href=#275 id=275 data-nosnippet>275</a>  },
-<a href=#276 id=276 data-nosnippet>276</a>  <span class="comment">// (the frontmatter observer reads a footnote's text for the `\footnotemark` an author block printed:
-<a href=#277 id=277 data-nosnippet>277</a>  // OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5"; witness 1108.5155, `Name\footnotemark[1]` and a later `\footnotetext`)
-<a href=#278 id=278 data-nosnippet>278</a>  </span>after_digest =&gt; sub[whatsit] {
-<a href=#279 id=279 data-nosnippet>279</a>    fm_record_note_text(whatsit);
-<a href=#280 id=280 data-nosnippet>280</a>  },
-<a href=#281 id=281 data-nosnippet>281</a>  reversion =&gt; <span class="string">""</span>);
-<a href=#282 id=282 data-nosnippet>282</a>
-<a href=#283 id=283 data-nosnippet>283</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@note@live OptionalSemiverbatim {} OptionalUndigested"</span>,
-<a href=#284 id=284 data-nosnippet>284</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id' inlist='#list'&gt;#tags#body&lt;/ltx:note&gt;"</span>,
-<a href=#285 id=285 data-nosnippet>285</a>  sizer =&gt; sub[whatsit] { note_size_in_line(whatsit) },
-<a href=#286 id=286 data-nosnippet>286</a>  before_digest =&gt; {
-<a href=#287 id=287 data-nosnippet>287</a>    neutralize_font();
-<a href=#288 id=288 data-nosnippet>288</a>    begin_mode(<span class="string">"inline_internal_vertical"</span>)<span class="question-mark">?</span>;
-<a href=#289 id=289 data-nosnippet>289</a>    <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\@normalcr"</span>); <span class="comment">// (`\@parboxrestore`, as `\lx@note`'s)
-<a href=#290 id=290 data-nosnippet>290</a>    </span>digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@reset"</span>)))<span class="question-mark">?</span>;
-<a href=#291 id=291 data-nosnippet>291</a>  },
-<a href=#292 id=292 data-nosnippet>292</a>  properties   =&gt; sub [args] {
-<a href=#293 id=293 data-nosnippet>293</a>    <span class="kw">let </span>arg1 = args[<span class="number">0</span>].as_ref();
-<a href=#294 id=294 data-nosnippet>294</a>    <span class="kw">let </span>arg2 = args[<span class="number">1</span>].as_ref();
-<a href=#295 id=295 data-nosnippet>295</a>    <span class="kw">let </span>note_type = arg2.map(type_name).unwrap_or_default();
-<a href=#296 id=296 data-nosnippet>296</a>    <span class="kw">let </span>number = given_footnote_number(<span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref())<span class="question-mark">?</span>;
-<a href=#297 id=297 data-nosnippet>297</a>    <span class="kw">let </span>arg3 = footnote_tag(<span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref(), <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
-<a href=#298 id=298 data-nosnippet>298</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = make_note_tags(<span class="kw-2">&amp;</span>note_type, arg1, arg3)<span class="question-mark">?</span>;
-<a href=#299 id=299 data-nosnippet>299</a>    footnote_pairing(<span class="kw-2">&amp;mut </span>props, <span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref(), <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
-<a href=#300 id=300 data-nosnippet>300</a>    props.insert(<span class="string">"list"</span>, digest_text(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ext@{note_type}"</span>))))<span class="question-mark">?</span>.into());
-<a href=#301 id=301 data-nosnippet>301</a>    props.insert(<span class="string">"role"</span>, note_type.into());
-<a href=#302 id=302 data-nosnippet>302</a>    <span class="prelude-val">Ok</span>(props)
-<a href=#303 id=303 data-nosnippet>303</a>  },
-<a href=#304 id=304 data-nosnippet>304</a>  capture_body =&gt; <span class="bool-val">true</span>,
-<a href=#305 id=305 data-nosnippet>305</a>  reversion =&gt; <span class="string">""</span>);
-<a href=#306 id=306 data-nosnippet>306</a>
-<a href=#307 id=307 data-nosnippet>307</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@notetext@live OptionalSemiverbatim {} OptionalUndigested"</span>,
-<a href=#308 id=308 data-nosnippet>308</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id'&gt;#body&lt;/ltx:note&gt;"</span>,
-<a href=#309 id=309 data-nosnippet>309</a>  sizer =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>(out_of_line_size()) },
-<a href=#310 id=310 data-nosnippet>310</a>  before_digest =&gt; {
-<a href=#311 id=311 data-nosnippet>311</a>    neutralize_font();
-<a href=#312 id=312 data-nosnippet>312</a>    begin_mode(<span class="string">"inline_internal_vertical"</span>)<span class="question-mark">?</span>;
-<a href=#313 id=313 data-nosnippet>313</a>    <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\@normalcr"</span>); <span class="comment">// (`\@parboxrestore`, as `\lx@note`'s)
-<a href=#314 id=314 data-nosnippet>314</a>    </span>digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@reset"</span>)))<span class="question-mark">?</span>;
-<a href=#315 id=315 data-nosnippet>315</a>  },
-<a href=#316 id=316 data-nosnippet>316</a>  properties =&gt; sub [args] {
-<a href=#317 id=317 data-nosnippet>317</a>    <span class="kw">let </span>arg1 = args[<span class="number">0</span>].as_ref();
-<a href=#318 id=318 data-nosnippet>318</a>    <span class="kw">let </span>arg2 = args[<span class="number">1</span>].as_ref();
-<a href=#319 id=319 data-nosnippet>319</a>    <span class="kw">let </span>arg3 = args[<span class="number">2</span>].as_ref();
-<a href=#320 id=320 data-nosnippet>320</a>    <span class="kw">let </span>note_type = arg2.map(type_name).unwrap_or_default();
-<a href=#321 id=321 data-nosnippet>321</a>    <span class="comment">// `\footnotetext[&lt;n&gt;]` is `\thefootnote` at `&lt;n&gt;` (latex.ltx:17694-17699, `numbered_footnote_mark`).
-<a href=#322 id=322 data-nosnippet>322</a>    </span><span class="kw">let </span>number = given_footnote_number(<span class="kw-2">&amp;</span>note_type, arg3)<span class="question-mark">?</span>;
-<a href=#323 id=323 data-nosnippet>323</a>    <span class="kw">let </span>arg3_ready = <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = arg3 { Cow::Owned(numbered_footnote_mark(v, <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>) } <span class="kw">else </span>{
-<a href=#324 id=324 data-nosnippet>324</a>      Cow::Owned(
-<a href=#325 id=325 data-nosnippet>325</a>        digest(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{note_type}"</span>)))<span class="question-mark">?
-<a href=#326 id=326 data-nosnippet>326</a>      </span>)
-<a href=#327 id=327 data-nosnippet>327</a>    };
-<a href=#328 id=328 data-nosnippet>328</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = make_note_tags(<span class="kw-2">&amp;</span>note_type, arg1, <span class="prelude-val">Some</span>(arg3_ready))<span class="question-mark">?</span>;
-<a href=#329 id=329 data-nosnippet>329</a>    footnote_pairing(<span class="kw-2">&amp;mut </span>props, <span class="kw-2">&amp;</span>note_type, arg3, <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
-<a href=#330 id=330 data-nosnippet>330</a>    props.insert(<span class="string">"role"</span>, <span class="macro">s!</span>(<span class="string">"{note_type}text"</span>).into());
-<a href=#331 id=331 data-nosnippet>331</a>    <span class="prelude-val">Ok</span>(props)
-<a href=#332 id=332 data-nosnippet>332</a>  },
-<a href=#333 id=333 data-nosnippet>333</a>  capture_body =&gt; <span class="bool-val">true</span>,
-<a href=#334 id=334 data-nosnippet>334</a>  reversion =&gt; <span class="string">""</span>);
-<a href=#335 id=335 data-nosnippet>335</a>
-<a href=#336 id=336 data-nosnippet>336</a>  <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@live@end"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-<a href=#337 id=337 data-nosnippet>337</a>    before_digest =&gt; {
-<a href=#338 id=338 data-nosnippet>338</a>      end_mode(<span class="string">"inline_internal_vertical"</span>)<span class="question-mark">?</span>;
-<a href=#339 id=339 data-nosnippet>339</a>    });
-<a href=#340 id=340 data-nosnippet>340</a>
-<a href=#341 id=341 data-nosnippet>341</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@note@standard"</span>, <span class="string">"\\lx@note{footnote}"</span>);
-<a href=#342 id=342 data-nosnippet>342</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@notetext@standard"</span>, <span class="string">"\\lx@notetext{footnote}"</span>);
-<a href=#343 id=343 data-nosnippet>343</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@current@footnote"</span>, <span class="string">"\\lx@note@standard"</span>);
-<a href=#344 id=344 data-nosnippet>344</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@current@footnotetext"</span>, <span class="string">"\\lx@notetext@standard"</span>);
-<a href=#345 id=345 data-nosnippet>345</a>
-<a href=#346 id=346 data-nosnippet>346</a>  <span class="comment">// OXIDIZED_DESIGN #192: fancyvrb/fancybox expose the public command; the
-<a href=#347 id=347 data-nosnippet>347</a>  // kernel owns only the locked activation helper so the package surface does
-<a href=#348 id=348 data-nosnippet>348</a>  // not leak into documents that loaded neither package.
-<a href=#349 id=349 data-nosnippet>349</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@temp"</span>, <span class="string">"\\relax"</span>);
-<a href=#350 id=350 data-nosnippet>350</a>
-<a href=#351 id=351 data-nosnippet>351</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@VerbatimFootnotes"</span>,
-<a href=#352 id=352 data-nosnippet>352</a>    <span class="string">"\\let\\lx@current@footnote\\lx@vfootnote\\let\\lx@current@footnotetext\\lx@vfootnotetext"</span>,
-<a href=#353 id=353 data-nosnippet>353</a>    locked =&gt; <span class="bool-val">true</span>);
-<a href=#354 id=354 data-nosnippet>354</a>
-<a href=#355 id=355 data-nosnippet>355</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnote"</span>,
-<a href=#356 id=356 data-nosnippet>356</a>    <span class="string">"\\@ifnextchar[{\\lx@vfootnote@opt}{\\lx@vfootnote@noopt}"</span>);
-<a href=#357 id=357 data-nosnippet>357</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnote@opt[]"</span>,
-<a href=#358 id=358 data-nosnippet>358</a>    <span class="string">"\\lx@note@live{footnote}[#1]\\afterassignment\\lx@vfootnote@start\\let\\lx@temp"</span>);
-<a href=#359 id=359 data-nosnippet>359</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnote@noopt"</span>,
-<a href=#360 id=360 data-nosnippet>360</a>    <span class="string">"\\lx@note@live{footnote}\\afterassignment\\lx@vfootnote@start\\let\\lx@temp"</span>);
-<a href=#361 id=361 data-nosnippet>361</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnote@start"</span>,
-<a href=#362 id=362 data-nosnippet>362</a>    <span class="string">"\\bgroup\\aftergroup\\lx@note@live@end"</span>);
-<a href=#363 id=363 data-nosnippet>363</a>
-<a href=#364 id=364 data-nosnippet>364</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnotetext"</span>,
-<a href=#365 id=365 data-nosnippet>365</a>    <span class="string">"\\@ifnextchar[{\\lx@vfootnotetext@opt}{\\lx@vfootnotetext@noopt}"</span>);
-<a href=#366 id=366 data-nosnippet>366</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnotetext@opt[]"</span>,
-<a href=#367 id=367 data-nosnippet>367</a>    <span class="string">"\\lx@notetext@live{footnote}[#1]\\afterassignment\\lx@vfootnote@start\\let\\lx@temp"</span>);
-<a href=#368 id=368 data-nosnippet>368</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnotetext@noopt"</span>,
-<a href=#369 id=369 data-nosnippet>369</a>    <span class="string">"\\lx@notetext@live{footnote}\\afterassignment\\lx@vfootnote@start\\let\\lx@temp"</span>);
-<a href=#370 id=370 data-nosnippet>370</a>
-<a href=#371 id=371 data-nosnippet>371</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\footnote"</span>, <span class="string">"\\lx@current@footnote"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#372 id=372 data-nosnippet>372</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\footnotemark"</span>,  <span class="string">"\\lx@notemark{footnote}"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\footnotetext"</span>, <span class="string">"\\lx@current@footnotetext"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#374 id=374 data-nosnippet>374</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@footnotetext"</span>, <span class="string">"\\lx@current@footnotetext"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#375 id=375 data-nosnippet>375</a>  <span class="comment">// we don't implement the internals directly, so lock them to the latexml variant
-<a href=#376 id=376 data-nosnippet>376</a>  </span><span class="macro">Let!</span>(<span class="string">"\\@thefnmark"</span>, <span class="string">"\\lx@notemark{footnote}"</span>);
-<a href=#377 id=377 data-nosnippet>377</a>
-<a href=#378 id=378 data-nosnippet>378</a>  <span class="comment">// \@makefntext: article.cls L207/609 wraps the footnote body content
-<a href=#379 id=379 data-nosnippet>379</a>  // (mark + text) for emission inside the footnote area. Packages like
-<a href=#380 id=380 data-nosnippet>380</a>  // babel hyphenrules and class-conditional code reference it before
-<a href=#381 id=381 data-nosnippet>381</a>  // the class loads its definition. Provide a content-preserving stub
-<a href=#382 id=382 data-nosnippet>382</a>  // so the body (#1) is emitted as plain text rather than triggering
-<a href=#383 id=383 data-nosnippet>383</a>  // an undefined-CS error. Witness: 2503.15258 (elsarticle via babel)
-<a href=#384 id=384 data-nosnippet>384</a>  // and 2503.16849 (ieeeconf via babel).
-<a href=#385 id=385 data-nosnippet>385</a>  </span>def_macro_identity(<span class="string">"\\@makefntext{}"</span>)<span class="question-mark">?</span>;
-<a href=#386 id=386 data-nosnippet>386</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@makefnmark"</span>, <span class="string">"\\@thefnmark"</span>);
-<a href=#387 id=387 data-nosnippet>387</a>
-<a href=#388 id=388 data-nosnippet>388</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:emph"</span>, auto_close =&gt; <span class="bool-val">true</span>);
-<a href=#389 id=389 data-nosnippet>389</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:note"</span>, after_close =&gt; sub[doc, node] { relocate_footnote(doc, node)<span class="question-mark">?</span>; });
-<a href=#390 id=390 data-nosnippet>390</a>
-<a href=#391 id=391 data-nosnippet>391</a>  <span class="comment">// Style parameters
-<a href=#392 id=392 data-nosnippet>392</a>  // \footnotesep register lives in `latex_constructs_rust_only.rs` section 8.
-<a href=#393 id=393 data-nosnippet>393</a>  </span>def_primitive_noop(<span class="string">"\\footnoterule"</span>)<span class="question-mark">?</span>;
-<a href=#394 id=394 data-nosnippet>394</a>
-<a href=#395 id=395 data-nosnippet>395</a>  <span class="prelude-val">Ok</span>(())
-<a href=#396 id=396 data-nosnippet>396</a>}
+<a href=#273 id=273 data-nosnippet>273</a>    drop_unknown_title_mark(<span class="kw-2">&amp;mut </span>props);
+<a href=#274 id=274 data-nosnippet>274</a>    props.insert(<span class="string">"role"</span>, <span class="macro">s!</span>(<span class="string">"{note_type}text"</span>).into());
+<a href=#275 id=275 data-nosnippet>275</a>    <span class="prelude-val">Ok</span>(props)
+<a href=#276 id=276 data-nosnippet>276</a>  },
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="comment">// (the frontmatter observer reads a footnote's text for the `\footnotemark` an author block printed:
+<a href=#278 id=278 data-nosnippet>278</a>  // OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5"; witness 1108.5155, `Name\footnotemark[1]` and a later `\footnotetext`)
+<a href=#279 id=279 data-nosnippet>279</a>  </span>after_digest =&gt; sub[whatsit] {
+<a href=#280 id=280 data-nosnippet>280</a>    fm_record_note_text(whatsit);
+<a href=#281 id=281 data-nosnippet>281</a>  },
+<a href=#282 id=282 data-nosnippet>282</a>  reversion =&gt; <span class="string">""</span>);
+<a href=#283 id=283 data-nosnippet>283</a>
+<a href=#284 id=284 data-nosnippet>284</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@note@live OptionalSemiverbatim {} OptionalUndigested"</span>,
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' xml:id='#id' inlist='#list'&gt;#tags#body&lt;/ltx:note&gt;"</span>,
+<a href=#286 id=286 data-nosnippet>286</a>  sizer =&gt; sub[whatsit] { note_size_in_line(whatsit) },
+<a href=#287 id=287 data-nosnippet>287</a>  before_digest =&gt; {
+<a href=#288 id=288 data-nosnippet>288</a>    neutralize_font();
+<a href=#289 id=289 data-nosnippet>289</a>    begin_mode(<span class="string">"inline_internal_vertical"</span>)<span class="question-mark">?</span>;
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\@normalcr"</span>); <span class="comment">// (`\@parboxrestore`, as `\lx@note`'s)
+<a href=#291 id=291 data-nosnippet>291</a>    </span>digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@reset"</span>)))<span class="question-mark">?</span>;
+<a href=#292 id=292 data-nosnippet>292</a>  },
+<a href=#293 id=293 data-nosnippet>293</a>  properties   =&gt; sub [args] {
+<a href=#294 id=294 data-nosnippet>294</a>    <span class="kw">let </span>arg1 = args[<span class="number">0</span>].as_ref();
+<a href=#295 id=295 data-nosnippet>295</a>    <span class="kw">let </span>arg2 = args[<span class="number">1</span>].as_ref();
+<a href=#296 id=296 data-nosnippet>296</a>    <span class="kw">let </span>note_type = arg2.map(type_name).unwrap_or_default();
+<a href=#297 id=297 data-nosnippet>297</a>    <span class="kw">let </span>number = given_footnote_number(<span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref())<span class="question-mark">?</span>;
+<a href=#298 id=298 data-nosnippet>298</a>    <span class="kw">let </span>arg3 = footnote_tag(<span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref(), <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
+<a href=#299 id=299 data-nosnippet>299</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = make_note_tags(<span class="kw-2">&amp;</span>note_type, arg1, arg3)<span class="question-mark">?</span>;
+<a href=#300 id=300 data-nosnippet>300</a>    footnote_pairing(<span class="kw-2">&amp;mut </span>props, <span class="kw-2">&amp;</span>note_type, args[<span class="number">2</span>].as_ref(), <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
+<a href=#301 id=301 data-nosnippet>301</a>    props.insert(<span class="string">"list"</span>, digest_text(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ext@{note_type}"</span>))))<span class="question-mark">?</span>.into());
+<a href=#302 id=302 data-nosnippet>302</a>    props.insert(<span class="string">"role"</span>, note_type.into());
+<a href=#303 id=303 data-nosnippet>303</a>    <span class="prelude-val">Ok</span>(props)
+<a href=#304 id=304 data-nosnippet>304</a>  },
+<a href=#305 id=305 data-nosnippet>305</a>  capture_body =&gt; <span class="bool-val">true</span>,
+<a href=#306 id=306 data-nosnippet>306</a>  reversion =&gt; <span class="string">""</span>);
+<a href=#307 id=307 data-nosnippet>307</a>
+<a href=#308 id=308 data-nosnippet>308</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@notetext@live OptionalSemiverbatim {} OptionalUndigested"</span>,
+<a href=#309 id=309 data-nosnippet>309</a>  <span class="string">"^&lt;ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fngiven='#fngiven' _fncounted='#fncounted' xml:id='#id'&gt;#body&lt;/ltx:note&gt;"</span>,
+<a href=#310 id=310 data-nosnippet>310</a>  sizer =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>(out_of_line_size()) },
+<a href=#311 id=311 data-nosnippet>311</a>  before_digest =&gt; {
+<a href=#312 id=312 data-nosnippet>312</a>    neutralize_font();
+<a href=#313 id=313 data-nosnippet>313</a>    begin_mode(<span class="string">"inline_internal_vertical"</span>)<span class="question-mark">?</span>;
+<a href=#314 id=314 data-nosnippet>314</a>    <span class="macro">Let!</span>(<span class="string">"\\\\"</span>, <span class="string">"\\@normalcr"</span>); <span class="comment">// (`\@parboxrestore`, as `\lx@note`'s)
+<a href=#315 id=315 data-nosnippet>315</a>    </span>digest(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@reset"</span>)))<span class="question-mark">?</span>;
+<a href=#316 id=316 data-nosnippet>316</a>  },
+<a href=#317 id=317 data-nosnippet>317</a>  properties =&gt; sub [args] {
+<a href=#318 id=318 data-nosnippet>318</a>    <span class="kw">let </span>arg1 = args[<span class="number">0</span>].as_ref();
+<a href=#319 id=319 data-nosnippet>319</a>    <span class="kw">let </span>arg2 = args[<span class="number">1</span>].as_ref();
+<a href=#320 id=320 data-nosnippet>320</a>    <span class="kw">let </span>arg3 = args[<span class="number">2</span>].as_ref();
+<a href=#321 id=321 data-nosnippet>321</a>    <span class="kw">let </span>note_type = arg2.map(type_name).unwrap_or_default();
+<a href=#322 id=322 data-nosnippet>322</a>    <span class="comment">// `\footnotetext[&lt;n&gt;]` is `\thefootnote` at `&lt;n&gt;` (latex.ltx:17694-17699, `numbered_footnote_mark`).
+<a href=#323 id=323 data-nosnippet>323</a>    </span><span class="kw">let </span>number = given_footnote_number(<span class="kw-2">&amp;</span>note_type, arg3)<span class="question-mark">?</span>;
+<a href=#324 id=324 data-nosnippet>324</a>    <span class="kw">let </span>arg3_ready = <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = arg3 { Cow::Owned(numbered_footnote_mark(v, <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>) } <span class="kw">else </span>{
+<a href=#325 id=325 data-nosnippet>325</a>      Cow::Owned(
+<a href=#326 id=326 data-nosnippet>326</a>        digest(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{note_type}"</span>)))<span class="question-mark">?
+<a href=#327 id=327 data-nosnippet>327</a>      </span>)
+<a href=#328 id=328 data-nosnippet>328</a>    };
+<a href=#329 id=329 data-nosnippet>329</a>    <span class="kw">let </span><span class="kw-2">mut </span>props = make_note_tags(<span class="kw-2">&amp;</span>note_type, arg1, <span class="prelude-val">Some</span>(arg3_ready))<span class="question-mark">?</span>;
+<a href=#330 id=330 data-nosnippet>330</a>    footnote_pairing(<span class="kw-2">&amp;mut </span>props, <span class="kw-2">&amp;</span>note_type, arg3, <span class="kw-2">&amp;</span>number)<span class="question-mark">?</span>;
+<a href=#331 id=331 data-nosnippet>331</a>    props.insert(<span class="string">"role"</span>, <span class="macro">s!</span>(<span class="string">"{note_type}text"</span>).into());
+<a href=#332 id=332 data-nosnippet>332</a>    <span class="prelude-val">Ok</span>(props)
+<a href=#333 id=333 data-nosnippet>333</a>  },
+<a href=#334 id=334 data-nosnippet>334</a>  capture_body =&gt; <span class="bool-val">true</span>,
+<a href=#335 id=335 data-nosnippet>335</a>  reversion =&gt; <span class="string">""</span>);
+<a href=#336 id=336 data-nosnippet>336</a>
+<a href=#337 id=337 data-nosnippet>337</a>  <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@live@end"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#338 id=338 data-nosnippet>338</a>    before_digest =&gt; {
+<a href=#339 id=339 data-nosnippet>339</a>      end_mode(<span class="string">"inline_internal_vertical"</span>)<span class="question-mark">?</span>;
+<a href=#340 id=340 data-nosnippet>340</a>    });
+<a href=#341 id=341 data-nosnippet>341</a>
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@note@standard"</span>, <span class="string">"\\lx@note{footnote}"</span>);
+<a href=#343 id=343 data-nosnippet>343</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@notetext@standard"</span>, <span class="string">"\\lx@notetext{footnote}"</span>);
+<a href=#344 id=344 data-nosnippet>344</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@current@footnote"</span>, <span class="string">"\\lx@note@standard"</span>);
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@current@footnotetext"</span>, <span class="string">"\\lx@notetext@standard"</span>);
+<a href=#346 id=346 data-nosnippet>346</a>
+<a href=#347 id=347 data-nosnippet>347</a>  <span class="comment">// OXIDIZED_DESIGN #192: fancyvrb/fancybox expose the public command; the
+<a href=#348 id=348 data-nosnippet>348</a>  // kernel owns only the locked activation helper so the package surface does
+<a href=#349 id=349 data-nosnippet>349</a>  // not leak into documents that loaded neither package.
+<a href=#350 id=350 data-nosnippet>350</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@temp"</span>, <span class="string">"\\relax"</span>);
+<a href=#351 id=351 data-nosnippet>351</a>
+<a href=#352 id=352 data-nosnippet>352</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@VerbatimFootnotes"</span>,
+<a href=#353 id=353 data-nosnippet>353</a>    <span class="string">"\\let\\lx@current@footnote\\lx@vfootnote\\let\\lx@current@footnotetext\\lx@vfootnotetext"</span>,
+<a href=#354 id=354 data-nosnippet>354</a>    locked =&gt; <span class="bool-val">true</span>);
+<a href=#355 id=355 data-nosnippet>355</a>
+<a href=#356 id=356 data-nosnippet>356</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnote"</span>,
+<a href=#357 id=357 data-nosnippet>357</a>    <span class="string">"\\@ifnextchar[{\\lx@vfootnote@opt}{\\lx@vfootnote@noopt}"</span>);
+<a href=#358 id=358 data-nosnippet>358</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnote@opt[]"</span>,
+<a href=#359 id=359 data-nosnippet>359</a>    <span class="string">"\\lx@note@live{footnote}[#1]\\afterassignment\\lx@vfootnote@start\\let\\lx@temp"</span>);
+<a href=#360 id=360 data-nosnippet>360</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnote@noopt"</span>,
+<a href=#361 id=361 data-nosnippet>361</a>    <span class="string">"\\lx@note@live{footnote}\\afterassignment\\lx@vfootnote@start\\let\\lx@temp"</span>);
+<a href=#362 id=362 data-nosnippet>362</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnote@start"</span>,
+<a href=#363 id=363 data-nosnippet>363</a>    <span class="string">"\\bgroup\\aftergroup\\lx@note@live@end"</span>);
+<a href=#364 id=364 data-nosnippet>364</a>
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnotetext"</span>,
+<a href=#366 id=366 data-nosnippet>366</a>    <span class="string">"\\@ifnextchar[{\\lx@vfootnotetext@opt}{\\lx@vfootnotetext@noopt}"</span>);
+<a href=#367 id=367 data-nosnippet>367</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnotetext@opt[]"</span>,
+<a href=#368 id=368 data-nosnippet>368</a>    <span class="string">"\\lx@notetext@live{footnote}[#1]\\afterassignment\\lx@vfootnote@start\\let\\lx@temp"</span>);
+<a href=#369 id=369 data-nosnippet>369</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@vfootnotetext@noopt"</span>,
+<a href=#370 id=370 data-nosnippet>370</a>    <span class="string">"\\lx@notetext@live{footnote}\\afterassignment\\lx@vfootnote@start\\let\\lx@temp"</span>);
+<a href=#371 id=371 data-nosnippet>371</a>
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\footnote"</span>, <span class="string">"\\lx@current@footnote"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#373 id=373 data-nosnippet>373</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\footnotemark"</span>,  <span class="string">"\\lx@notemark{footnote}"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#374 id=374 data-nosnippet>374</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\footnotetext"</span>, <span class="string">"\\lx@current@footnotetext"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#375 id=375 data-nosnippet>375</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@footnotetext"</span>, <span class="string">"\\lx@current@footnotetext"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#376 id=376 data-nosnippet>376</a>  <span class="comment">// we don't implement the internals directly, so lock them to the latexml variant
+<a href=#377 id=377 data-nosnippet>377</a>  </span><span class="macro">Let!</span>(<span class="string">"\\@thefnmark"</span>, <span class="string">"\\lx@notemark{footnote}"</span>);
+<a href=#378 id=378 data-nosnippet>378</a>
+<a href=#379 id=379 data-nosnippet>379</a>  <span class="comment">// \@makefntext: article.cls L207/609 wraps the footnote body content
+<a href=#380 id=380 data-nosnippet>380</a>  // (mark + text) for emission inside the footnote area. Packages like
+<a href=#381 id=381 data-nosnippet>381</a>  // babel hyphenrules and class-conditional code reference it before
+<a href=#382 id=382 data-nosnippet>382</a>  // the class loads its definition. Provide a content-preserving stub
+<a href=#383 id=383 data-nosnippet>383</a>  // so the body (#1) is emitted as plain text rather than triggering
+<a href=#384 id=384 data-nosnippet>384</a>  // an undefined-CS error. Witness: 2503.15258 (elsarticle via babel)
+<a href=#385 id=385 data-nosnippet>385</a>  // and 2503.16849 (ieeeconf via babel).
+<a href=#386 id=386 data-nosnippet>386</a>  </span>def_macro_identity(<span class="string">"\\@makefntext{}"</span>)<span class="question-mark">?</span>;
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@makefnmark"</span>, <span class="string">"\\@thefnmark"</span>);
+<a href=#388 id=388 data-nosnippet>388</a>
+<a href=#389 id=389 data-nosnippet>389</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:emph"</span>, auto_close =&gt; <span class="bool-val">true</span>);
+<a href=#390 id=390 data-nosnippet>390</a>  <span class="comment">// (and an unmarked note of e-mail addresses in the abstract, the authors' contacts: OD #1071, 2506.06941)
+<a href=#391 id=391 data-nosnippet>391</a>  </span><span class="macro">Tag!</span>(<span class="string">"ltx:note"</span>, after_close =&gt; sub[doc, node] {
+<a href=#392 id=392 data-nosnippet>392</a>    relocate_footnote(doc, node)<span class="question-mark">?</span>;
+<a href=#393 id=393 data-nosnippet>393</a>    address_note_contacts(doc, node)<span class="question-mark">?</span>;
+<a href=#394 id=394 data-nosnippet>394</a>  });
+<a href=#395 id=395 data-nosnippet>395</a>
+<a href=#396 id=396 data-nosnippet>396</a>  <span class="comment">// Style parameters
+<a href=#397 id=397 data-nosnippet>397</a>  // \footnotesep register lives in `latex_constructs_rust_only.rs` section 8.
+<a href=#398 id=398 data-nosnippet>398</a>  </span>def_primitive_noop(<span class="string">"\\footnoterule"</span>)<span class="question-mark">?</span>;
+<a href=#399 id=399 data-nosnippet>399</a>
+<a href=#400 id=400 data-nosnippet>400</a>  <span class="prelude-val">Ok</span>(())
+<a href=#401 id=401 data-nosnippet>401</a>}
 </code></pre></div></section></main></body></html>
