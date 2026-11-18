@@ -983,8 +983,9 @@ pub(crate) fn printed_properties(w: &Whatsit) -> Vec<Digested> {
 /// verbatim argument (`Semiverbatim`, `Verbatim`, `HyperVerbatim`: a file name, a URL, a label) only when the whatsit
 /// is one that prints it ([`VERBATIM_PRINTERS`]: `\url{…}`, `\nolinkurl{…}`, the arguments its entry names) — never a
 /// reference's or a citation's key (`\ref{\@x}` prints the label's number, review probe `ctx3`), and
-/// `\href{<url>}{<text>}` and `\hypertarget{<name>}{<text>}` print the text —, and never keyvals (options) nor a
-/// position keyword (`Position`, `OptionalPosition`: the `[t]` of `\begin{tabular}[t]`, base_parameter_types.rs). Every
+/// `\href{<url>}{<text>}` and `\hypertarget{<name>}{<text>}` print the text —, and never keyvals (options), a
+/// position keyword (`Position`, `OptionalPosition`: the `[t]` of `\begin{tabular}[t]`, base_parameter_types.rs) nor a
+/// quantity (`\scalebox`'s `{Float}` scale, `\raisebox`'s `{Dimension}`). Every
 /// argument when its parameters cannot be matched to them. Also what `\textcircled` circles (sect13.rs
 /// `typeset_text`).
 pub(crate) fn shown_arguments(w: &Whatsit) -> Vec<bool> {
@@ -1010,23 +1011,34 @@ pub(crate) fn shown_arguments(w: &Whatsit) -> Vec<bool> {
     .collect()
 }
 
-/// Which arguments of the whatsit `w` print no text of their own by their parameter's type, for [`ink_word_text`]: a
-/// quantity (a number, a float, a dimension, a glue) and, when `w` is an environment's (it has a body), a required
-/// argument, which sets the environment up (`{tabular}`'s columns, `{minipage}`'s width, `{CJK}`'s encoding and
-/// font) where an optional one may name it (`{theorem}[Name]`); none when its parameters cannot be matched to them.
-fn settings_arguments(w: &Whatsit) -> Vec<bool> {
-  let types: Vec<SymStr> = w
-    .get_definition()
+/// The type of each argument of the whatsit `w`, by its parameter: a braced or bracketed group of one typed parameter
+/// by that type, as it reads (`\scalebox{Float}[Float]{}`'s scales are `Float`, not `Plain` and `Optional`: Perl
+/// graphics.sty.ltxml:93; their "0.75" read into a `\scalebox{0.75}{\Letter}` mark, 2606.29928, 2605.23320).
+pub(crate) fn argument_types(w: &Whatsit) -> Vec<SymStr> {
+  w.get_definition()
     .get_parameters()
     .map(|params| {
       params
         .get_parameters()
         .iter()
         .filter(|p| !p.novalue)
-        .map(|p| p.name)
+        .map(
+          |p| match p.inner.as_ref().map(|inner| inner.get_parameters()) {
+            Some([typed]) => typed.name,
+            _ => p.name,
+          },
+        )
         .collect()
     })
-    .unwrap_or_default();
+    .unwrap_or_default()
+}
+
+/// Which arguments of the whatsit `w` print no text of their own by their parameter's type, for [`ink_word_text`]: a
+/// quantity (a number, a float, a dimension, a glue) and, when `w` is an environment's (it has a body), a required
+/// argument, which sets the environment up (`{tabular}`'s columns, `{minipage}`'s width, `{CJK}`'s encoding and
+/// font) where an optional one may name it (`{theorem}[Name]`); none when its parameters cannot be matched to them.
+fn settings_arguments(w: &Whatsit) -> Vec<bool> {
+  let types = argument_types(w);
   if types.len() != w.get_args().len() {
     return Vec::new();
   }
@@ -1044,28 +1056,24 @@ fn settings_arguments(w: &Whatsit) -> Vec<bool> {
     .collect()
 }
 
-/// The kind of each argument of the whatsit `w` by its parameter's type — 0: keyvals (options) or a position keyword
-/// (`Position`, `OptionalPosition`), 1: verbatim (`Semiverbatim`, `Verbatim`, `HyperVerbatim`), 2: any other —; none
-/// when its parameters cannot be matched to its arguments ([`shown_arguments`], [`first_ink`]).
+/// The kind of each argument of the whatsit `w` by its parameter's type — 0: keyvals (options), a position keyword
+/// (`Position`, `OptionalPosition`) or a quantity (`Number`, `Float`, `Dimension`, `Glue`: a setting of the box, as
+/// [`settings_arguments`] reads it; `\scalebox{0.75}{\Letter}`'s scale read "0.75🖂" into a mark, 2606.29928,
+/// 2605.23320), 1: verbatim (`Semiverbatim`, `Verbatim`, `HyperVerbatim`), 2: any other —; none when its parameters
+/// cannot be matched to its arguments ([`shown_arguments`], [`first_ink`]).
 fn argument_kinds(w: &Whatsit) -> Option<Vec<u8>> {
-  let types: Vec<SymStr> = w
-    .get_definition()
-    .get_parameters()
-    .map(|params| {
-      params
-        .get_parameters()
-        .iter()
-        .filter(|p| !p.novalue)
-        .map(|p| p.name)
-        .collect()
-    })
-    .unwrap_or_default();
+  let types = argument_types(w);
   (types.len() == w.get_args().len()).then(|| {
     types
       .iter()
       .map(|t| {
         with(*t, |name| {
-          if name.contains("KeyVals") || name.ends_with("Position") {
+          if name.contains("KeyVals")
+            || name.ends_with("Position")
+            || ["Number", "Float", "Dimension", "Glue"]
+              .iter()
+              .any(|kind| name.contains(kind))
+          {
             0
           } else if name.contains("erbatim") {
             1

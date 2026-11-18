@@ -1982,18 +1982,7 @@ impl Walker {
 /// `Glue`, `TempboxaDimension`): settings of the box, never ink. All false when the parameters and the arguments do
 /// not pair up.
 fn numeric_arguments(w: &Whatsit) -> Vec<bool> {
-  let types: Vec<SymStr> = w
-    .get_definition()
-    .get_parameters()
-    .map(|params| {
-      params
-        .get_parameters()
-        .iter()
-        .filter(|p| !p.novalue)
-        .map(|p| p.name)
-        .collect()
-    })
-    .unwrap_or_default();
+  let types = argument_types(w);
   if types.len() != w.get_args().len() {
     return Vec::new();
   }
@@ -2011,15 +2000,13 @@ fn numeric_arguments(w: &Whatsit) -> Vec<bool> {
 
 /// Constructors whose argument is a key the element carries, not ink (`shown_arguments` cannot read a compiled
 /// replacement): acmart's address parts, `\lx@acm@addresspart@{institution}{SAS Institute Inc.}` an
-/// `ltx_affiliation_institution` text of the second (acmart_cls.rs; 1907.07713); `\scalebox`'s scales, `\resizebox`'s
-/// height type and sizes; the frontmatter's position marker `\lx@frontmatter@mark{ltx:abstract}`
-/// (frontmatter_fields.rs), which prints nothing — an abstract begun inside a revtex `\address` read "ltx:abstract" as
-/// an affiliation, cond-mat9801109.
+/// `ltx_affiliation_institution` text of the second (acmart_cls.rs; 1907.07713); `\resizebox`'s height type and sizes
+/// (`\scalebox`'s `{Float}` scales are quantities, which `shown_arguments` skips); the frontmatter's position marker
+/// `\lx@frontmatter@mark{ltx:abstract}` (frontmatter_fields.rs), which prints nothing — an abstract begun inside a
+/// revtex `\address` read "ltx:abstract" as an affiliation, cond-mat9801109.
 const KEYED_CONSTRUCTORS: &[(&str, &[bool])] = &[
   ("\\lx@acm@addresspart@", &[false, true]),
   ("\\lx@frontmatter@mark", &[false]),
-  // (graphics.sty's `\scalebox{h-scale}[v-scale]{text}`, graphics_sty.rs: its scales are plain arguments)
-  ("\\scalebox", &[false, false, true]),
   // (`\resizebox{w}{h}{text}`'s box, graphics_sty.rs `\Gscale@@box{\height}{w}{h}{text}`: its height type and sizes are
   // plain arguments — read as ink, a `\resizebox{0.5\linewidth}{!}` author block's "0pt" was a name, 2107.12423)
   ("\\Gscale@@box", &[false, false, false, true]),

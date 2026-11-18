@@ -1,0 +1,20 @@
+% mechanism: a mark macro boxed by `\scalebox{0.75}{\Letter}` spells only its glyph: the scale is a quantity
+%   (Perl graphics.sty.ltxml:93 `\Gscale@box {Float} [Float] {}`), and quantity arguments are no shown ink
+%   (util_text.rs `argument_kinds`), so the mark reads "🖂" and the `\footnotetext` that spells it answers it.
+% witness: 2606.29928, 2605.23320 (llncs `\newcommand{\corrauth}{\fnmsep\textsuperscript{\scalebox{0.75}{\Letter}}}`)
+% oracle:  pdflatex 0 errors (with llncs.cls): "Ann Able1 and Bob Baker1,✉ / 1 Foo University bob@foo.edu"
+% engines: INTFMrel6 (aeda3db4e47): Warning:frontmatter:unanswered_mark_lost The mark "0.75🖂", the mark dropped
+% expect:  0 errors, 0 warnings; Bob's name keeps the 🖂 mark; both creators affiliated with Foo University
+% guard:   perfect_kernel_batchmarkscale::scalebox_mark_spells_its_glyph_not_its_scale
+% status:  GREEN (MARKSCALE, 2026-11-18; was RED)
+\documentclass{llncs}
+\usepackage{graphicx,marvosym}
+\newcommand{\corrauth}{\fnmsep\textsuperscript{\scalebox{0.75}{\Letter}}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1}\corrauth}
+\institute{Foo University \email{bob@foo.edu}}
+\maketitle
+\footnotetext{\Letter~Corresponding author.}
+Text.
+\end{document}

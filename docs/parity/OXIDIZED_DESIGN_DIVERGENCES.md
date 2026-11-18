@@ -20736,6 +20736,29 @@ limit. 2310.06430's `\icmlWorkDone` (the reason the extra definition was added) 
 (icml2024.sty:529), which the copy, read as the file the binding stands in for, defines. **Guard**:
 `perfect_kernel_batchicmlsym::{an_icml_symbol_named_after_a_command_keeps_the_command, an_icml_symbol_leaves_the_command_alone}` (the second a state probe, red on the old shape without its runaway).
 
+### 1077. A quantity argument is no ink: `\scalebox` reads `{Float}[Float]{}` (MARKSCALE)
+
+**Perl.** graphics.sty.ltxml:93 `\Gscale@box {Float} [Float] {}` (`\scalebox` its `Let`); its text readers are the
+XML's. **Rust.** `\scalebox` had drifted to `{} []{}`, and the text readers (util_text.rs `shown_arguments`,
+`first_ink`, the frontmatter's `label_ink` and event walker) printed every argument whose type was not keyvals, a
+position or verbatim — and read a braced `{Float}` as `Plain`. Now `\scalebox` reads Perl's `{Float}[Float]{}` (as
+`GraphixFloat`: a `Float` whose rest in its braces is dropped with `Warning:unexpected`, as Perl's forced
+`closeMouth` drops it silently, Gullet.pm:57-69, not read after the box as #317 hands a tail back — Dia's pstricks
+export's old-pstricks `\scalebox{1.000000 -1.000000}{label}` printed "-1" by every label, cs0606057; TL 2025's pdflatex errs — a Warning, not an Error, by the legacy-TL ruling: the
+input was valid under the pstricks it was written for, `pstricks97.tex:2200` reading `\scalebox{x y}` as two scales,
+while TL 2025's pstricks.sty:98 keeps graphics' version; an empty or zero `[yscale]` is the x-scale's, Perl's
+`$yscale || $xscale` (graphics.sty.ltxml:99); row R PSSCALE honours old pstricks' y-scale),
+its `xscale`/`yscale` and its reversion Perl's `floatformat` (0.75, not the old `{:.1}` 0.8; `\scalebox{.58}`
+reverts as `\scalebox{0.58}`); `argument_types` takes a braced or bracketed
+group of one typed parameter by that type (shared by `argument_kinds`, `settings_arguments` and the walker's
+`numeric_arguments`), and `argument_kinds` counts a quantity (`Number`, `Float`, `Dimension`, `Glue`) with keyvals
+and positions: no shown ink. A `\scalebox{0.75}{\Letter}` mark read "0.75🖂", answered by no note and dropped with
+`Warning:frontmatter:unanswered_mark_lost`; `\rotatebox{180}`'s `{Float}` and `\makebox[3cm]`'s `[Dimension]` are
+the same path. The walker's `KEYED_CONSTRUCTORS` row for `\scalebox` is gone (the types say it).
+**Witnesses.** 2606.29928, 2605.23320 (llncs `\corrauth`). **Guard.**
+`cluster_package_guards::perfect_kernel_batchmarkscale::scalebox_mark_spells_its_glyph_not_its_scale` (repro
+`sectioning-frontmatter/mark_scalebox_scale_is_no_ink`), `a_scale_factors_tail_is_dropped_with_a_warning`.
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a
