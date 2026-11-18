@@ -15,7 +15,7 @@
     text with no invented dagger, and a symbol legend under the names belongs to the names that
     print its symbol. Guards `perfect_kernel_batchfmmarks::{shared_notes_are_a_marked_copy_per_carrier,
     a_mark_on_a_name_is_a_copy_of_its_note}`, `perfect_kernel_batchinvdag::a_date_note_and_an_abstract_thanks_invent_no_glyph`
-    (OXIDIZED_DESIGN_DIVERGENCES #990, #1052–#1064, #1068; #895).
+    (OXIDIZED_DESIGN_DIVERGENCES #990, #1052–#1055, #1057–#1064, #1068; #895).
   - **Contacts printed in a title note reach their authors.** IEEEtran/ieeeconf `\thanks` are
     routed by kind: a note that names authors who "are with …" gives them their affiliation and
     e-mail, a "Corresponding author: …" note goes to the author it names, and funding or other notes stay
@@ -205,7 +205,7 @@
     ones. The form is the one the citation printed, after the bibliography is read (a numeric
     `.bbl` under natbib, an entry with no author). Guard `bibref_show::cite_numeric_class_rows`
     (OXIDIZED_DESIGN_DIVERGENCES #307).
-  - **LaTeX's kernel hooks run where LaTeX runs them** (QA47B). Code a document or package adds
+  - **LaTeX's kernel hooks run where LaTeX runs them** (Bruce Miller QA47; #856). Code a document or package adds
     with `\AddToHook` to the hooks of `\end{document}` (`env/document/end`, and the document's own
     code in `enddocument/afterlastpage`, `/afteraux`, `/end`), of `verbatim`/`verbatim*`
     (`env/verbatim/begin|end`), of `\label` (`label`) and of `\include` (`include/before`,
@@ -214,6 +214,17 @@
     `verbatim` in `\@currenvir`, as in LaTeX. The kernel's first aid for the raw cleveref.sty is
     not registered under LaTeXML's cleveref binding, which replaces the code it repairs. Guard
     `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (OXIDIZED_DESIGN_DIVERGENCES #1048).
+  - **The abstract, `\selectfont` and file hooks run too** (Bruce Miller QA47; #869). The
+    abstract runs `env/abstract/begin` and `env/abstract/end` (latex.ltx:15354-15362, :15386),
+    the begin hook before the abstract's name is read, so a hook's `\renewcommand\abstractname`
+    is honoured; `\selectfont` runs its `selectfont` hook (latex.ltx:12580); `file/<name>/before`
+    and `file/<name>/after` run at every `\input` and load, not once. A family register as a font
+    value reads its family, as tex.web §577: `\textfont9=\textfont1` prints pdflatex's "ABCD"
+    where it printed "A1 B1 CD" (2511.21986; KNOWN_PERL_ERRORS #1271, shared with Perl). Guard
+    `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `abstract_env_hooks_run`,
+    `abstract_begin_hook_runs_before_the_name`, `abstract_end_hook_once_in_a_constructor_abstract`,
+    `selectfont_hook_runs`, `file_hooks_run_at_every_input`, `file_hooks_order_around_a_package`,
+    `font_family_register_takes_a_family_font`; OXIDIZED_DESIGN_DIVERGENCES #1048).
   - **The Rhai cheat sheet is a three-way API: Perl | Rust | Rhai, every Perl and Rust cell filled.**
     `CHEATSHEET.md`'s middle column, formerly the compile-time macro alone, names the Rust a compiled
     binding uses for each call: the macro where there is one, then the function, method, type, field or
@@ -246,7 +257,7 @@
     "Missing number" Warning, or lost its title-page block; it now prints "Exam session 2024"
     as pdflatex. Guard `perfect_kernel_batch56::deposit_reads_a_field_as_a_number`
     (OXIDIZED_DESIGN_DIVERGENCES #265).
-  - **A paper's own pre-2.0 `lni.cls` keeps LaTeX's `\author`** (LXAB). The lni binding gave
+  - **A paper's own pre-2.0 `lni.cls` keeps LaTeX's `\author`** (#859). The lni binding gave
     every lni paper the class's 2.0 author command (authblk's four arguments), so a paper
     shipping an older class raised an Error, printed its author block a second time and gained
     an ORCID link it never wrote (2203.09493, 1705.02823, 2210.04484). Guard
@@ -283,7 +294,7 @@
     `\pdfoutput` to 1 or 0 over the mode LaTeXML guesses from the source's cues, e.g.
     `--preload=[nopdfoutput]latexml.sty` for a latex+dvips paper. Default output is unchanged.
     OXIDIZED_DESIGN #1046; guard `perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
-  - **The document body uses LaTeX's initialized hooks** (QA47B). `\begin{document}` now runs
+  - **The document body uses LaTeX's initialized hooks** (Bruce Miller QA47; #862). `\begin{document}` now runs
     lthooks' initialization, as LaTeX does: a body `\UseHook` expands to the hook's code (an
     `\edef` holds the code, not `\hook_use:n`), and code added in the body is built into its hook
     at once. Most documents convert faster (median −6.6 % instructions over 56 papers); acro papers,
@@ -319,7 +330,7 @@
     natively (MathJax 2.1 in Chrome: 53 px against 18). LaTeXML.css now zeroes that margin in
     an equation cell, in a page's table or a minipage's (21 px). Offered upstream. Guard
     `witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
-  - **A `\bigskip`, `\medskip` or `\vspace` between two paragraphs keeps its gap** (QA26). The
+  - **A `\bigskip`, `\medskip` or `\vspace` between two paragraphs keeps its gap** (Bruce Miller QA26; #854). The
     second paragraph carries `cssstyle="--ltx-skip-before:12.0pt"` (consecutive skips add up to their
     net, as in TeX), and LaTeXML.css adds it to the paragraph gap (ar5iv-css mirrors it); Perl drops
     the amount. Not after a heading, across a heading, a float or a sibling environment (theorem, proof), in a
@@ -347,22 +358,16 @@
     figure that draws a raster larger than its own pixels keeps the PNG path, where a
     browser would blur it
     (a 1×1 raster never counts: one pixel cannot blur). Guard `graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged`.
-  - **The binding macros mean what Perl's same-named API means** (MACSYNC, AUDMAC). `Digest!` leaves
+  - **The binding macros mean what Perl's same-named API means** (#843). `Digest!` leaves
     the horizontal mode its digestion entered (Package.pm:393-402, through the new `binding_digest`) and `RawTeX!`
-    ends in vertical mode (Package.pm:996). `AssignRegister!` takes Perl's arguments, `(cs, value[, scope[, parameters]])`, `cs` a name
-    or a Token (**API change** for compiled bindings: the third argument was the parameters, now the scope).
+    ends in vertical mode (Package.pm:996). **BREAKING (library):** `AssignRegister!` takes Perl's arguments,
+    `(cs, value[, scope[, parameters]])`, `cs` a name or a Token — the third argument, formerly the
+    parameters, is now the scope.
     `LookupRegister!`, `AssignRegister!` and the core `lookup_register` give Perl's one Warning
     (`The control sequence \X is not a register`, Package.pm:1367-1369); the macros on an undefined cs too
     (`warn_not_register`; the core `lookup_register` stays quiet on an undefined cs, which kernel code probes). `Dimension!` Warns on a spec that is neither a dimension nor a number (the value is
     unchanged, 0). `InstallDefinition!` takes `(definition[, scope])` (it did not compile). `AddToMacro!` on an
     undefined cs is TeX's Error and defines it with the addition, as latex.ltx does (OXIDIZED_DESIGN #1036). Guards `perfect_kernel_batchmacsync::*`.
-  - **An `xleftmargin` Verbatim is indented again, one row per line** (issue 853, a
-    regression of PR #844). The margin, em-space text before each line, took a row of its
-    own above the line: a blank row under every source line (30 px against 15) and no
-    indent. The box around the line is now a flex row, so the margin sits beside it (text
-    40 → 56 px at 1280 px) and an fvextra `breaklines` line still shrinks to the rest.
-    Chrome and Firefox alike; other verbatim renders pixel-identical. The rule is
-    ar5iv-css PR 57's. Guard `browser_render_verbatim_narrow` (opt-in).
   - **The bundled CSS follows upstream LaTeXML master (`0db6f47e`).** A listings line
     number is `user-select: none` (upstream `95a77fc0`, #2850), so copying a numbered
     `lstlisting` copies the code without its numbers; dark mode colours `body`, not
@@ -382,7 +387,8 @@
     numbered indented line's parbox), and a framed verbatim is a block; inline `\verb`
     keeps its spaces and wraps (`pre-wrap`), so a long one no longer widens a narrow page,
     except in a table cell, which stays unwrapped as the cell is. A breaklines line's text
-    wraps and keeps its spaces (`        return   x` had rendered `return x`). Witnesses
+    wraps and keeps its spaces (`        return   x` had rendered `return x`), and an
+    `xleftmargin` Verbatim sets its margin beside each line, one row per line (issue 853). Witnesses
     2605.00468 and 2605.01024 (their lines' total height 41,496 → 13,650 px and
     1,476 → 432 px at 1280 px). Mirrored in ar5iv-css. Guards
     `witnessed_css_delta::verbatim_whitespace_delta_stays_present`,
@@ -608,12 +614,10 @@
     toolchain, no recompile) writes Perl LaTeXML's Package.pm calls under Perl's names, with Perl's
     arguments and meanings: typed values (`Number`, `Dimension`, `Glue`, `Token`, `Tokens`, boxes,
     arrays and maps) both ways, Perl's hook and body arguments, Perl's option tables and
-    diagnostics. The reference (`API.md`), the Perl | Rust | Rhai cheat sheet (`CHEATSHEET.md`),
-    the newcomer's guide (`docs/parity/RHAI_BINDINGS_GUIDE.md`) and the worked examples under
-    `docs/examples/` are generated or checked in CI. The calls whose names or results changed are
-    marked **BREAKING** below with their migration; each old form keeps working in 0.8.0 with a
-    `Warning:deprecated` once per binding load, and is removed in the release after 0.8.0 (#829,
-    #843, #849, #860, #870).
+    diagnostics. The calls whose names or results changed are marked **BREAKING** below with
+    their migration; where an entry names a deprecated form, that form keeps working in 0.8.0
+    with a `Warning:deprecated` once per binding load and is removed in the release after 0.8.0;
+    the other breaking changes take effect in 0.8.0 (#829, #849, #860, #870).
   - **Rhai values print as their TeX** (#849). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
     and `LookupMeaning!` — a `Definition` handle (which `AssignMeaning` installs) or a Token, `()` when undefined —
     where it returned the printed string `Stored[??]`; a string comparison keeps working in 0.8.0 with a
@@ -633,8 +637,8 @@
     `if_condition` read an argument-taking conditional's arguments from the document); an argument not given is
     Perl's undef. The I-forms' `coerceCS` takes Tokens as their text, and `\csname X\endcsname` needs Perl's space
     after `\csname`. `SetCondition` of a control sequence that is no conditional errs as Perl's (it `\let` a
-    parameterless primitive such as `\relax` to `\iftrue`). `LookupMeaning`'s value keeps `.is_empty()`/`.len()` of
-    the string it was in 0.8.0, Warned (removed in the release after 0.8.0). Guard `perfect_kernel_batchw3rg::rhai_review_rows_round_h`.
+    parameterless primitive such as `\relax` to `\iftrue`). `LookupMeaning`'s value keeps, in 0.8.0, the
+    `.is_empty()`/`.len()` of the string it was, Warned (removed in the release after 0.8.0). Guard `perfect_kernel_batchw3rg::rhai_review_rows_round_h`.
 
   - **A Rhai name that is a Perl API name behaves as Perl's** (#829). A `DefPrimitive`
     body's returned box, or array of boxes, is the primitive's output, as a Perl primitive's
@@ -694,9 +698,10 @@
     `readUntil`, `readOptional`, `readToken`, `skipSpaces`).
   - **A Rhai macro or reversion closure may return a `Token` or `Tokens`**, as a Perl macro
     sub returns tokens; it expanded to the type's name (`Token`) before.
-  - **BREAKING: Rhai argument shapes as Perl's:** `Digest` takes a string (TeX source), `DigestText`
-    a `Token` or `Tokens`; `AssignCatcode` takes a scope; `LookupCatcode` of a character the
-    table does not hold is `()` (Perl undef), where it was 12.
+  - **Rhai argument shapes as Perl's:** `Digest` also takes a string (TeX source), `DigestText`
+    also a `Token` or `Tokens`, and `AssignCatcode` also takes a scope; the 0.7.6 forms are
+    unchanged. **BREAKING:** `LookupCatcode` of a character the table does not hold is `()`
+    (Perl undef), where it was 12.
   - **New Rhai calls:** `LookupMathcode`/`AssignMathcode`, `LookupSFcode`/`AssignSFcode`,
     `LookupLCcode`/`AssignLCcode`, `LookupUCcode`/`AssignUCcode`,
     `LookupDelcode`/`AssignDelcode` (each Assign* with an optional scope), and

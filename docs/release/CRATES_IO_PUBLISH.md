@@ -12,9 +12,10 @@ All 8 crates are live on crates.io at the 0.7.6 line — `latexml` **0.7.6**
 `latexml_post` 0.5.0, `latexml_contrib` 0.5.0 (all uploaded 2026-08-23T22:44Z);
 docs.rs built `latexml` 0.7.6. First publication was 0.7.4 on 2026-07-17. Every
 blocker in §2 is resolved: B1, B2, B3a, B3b, B6, B7 done; B4 moot (all 8 names
-are ours); B8 applies only to new names; B5 (no dumps in the crate) is superseded
-in practice — a dumpless install builds the dumps on its first conversion into a
-per-user cache (`docs/INSTALL.md` "From crates.io").
+are ours); B8 applies only to new names. B5 (no dumps in the crate) is superseded
+from 0.8.0: a dumpless install builds the dumps on its first conversion into a
+per-user cache (`LATEXML_FORMAT_CACHE`, `latexml_oxide/src/format_dumps.rs`;
+`docs/INSTALL.md` "From crates.io"); 0.7.6 installs follow §B5.
 
 **Each release is a version bump of every changed crate + `cargo publish
 --workspace`** (`RELEASING.md` step 1, `.claude/skills/next-release/SKILL.md` step
@@ -213,7 +214,7 @@ Only bites when publishing **new** names (a version bump of an existing crate us
 far looser limit), so this is a one-time cost now that all 8 names exist. Recorded
 because a green dry-run makes it look like one `--workspace` invocation suffices.
 
-### B5 — dumps absent from the crates.io crate (accepted; user-fixable in one step)
+### B5 — dumps absent from the crates.io crate (superseded from 0.8.0 by the first-run dump build; 0.7.6 installs: user-fixable in one step)
 The per-TL-year kernel dumps are generated at release time and are large; they
 are **not** shipped in the crates.io tarball. A from-source `cargo install
 latexml` therefore starts **dumpless** → the engine reconstructs kernel state
@@ -306,7 +307,7 @@ prep as too broad to land safely against the release binary at that time.
 ## 5. Publish checklist
 
 Code blockers: **all cleared** (B1, B2, B3a, B3b, B6, B7 done; B4 moot; B5
-superseded by the first-run dump build). Verified 2026-07-17: `cargo test --tests` **1581/0/0**,
+superseded from 0.8.0 by the first-run dump build). Verified 2026-07-17: `cargo test --tests` **1581/0/0**,
 `cargo clippy --workspace --all-targets -- -D warnings` clean, self-containment
 smoke green for both XML and HTML with the whole `resources/` tree moved aside.
 
