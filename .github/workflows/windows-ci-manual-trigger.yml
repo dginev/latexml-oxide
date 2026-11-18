@@ -85,6 +85,16 @@ concurrency:
   group: windows-ci-${{ github.ref }}
   cancel-in-progress: true
 
+# The TeX Live year this workflow tests: a released, supported year, moved only by a deliberate edit
+# (CI.yml's year policy). Without `version` the action installs tlnet's latest, a year the suite may
+# not support yet. No package manager ships a prebuilt TeX Live for Windows, so this is still
+# `install-tl` package by package (~1 h) whenever the action's cache is cold: the key is the year +
+# the package list, and an entry unread for 7 days is evicted. 2026 is the year (and key) the cache
+# already holds. The lasting fix is a prebuilt snapshot per year: WINDOWS_COMPATIBILITY_PLAN.md,
+# "Fast TeX-ecosystem CI install".
+env:
+  TEXLIVE_VERSION: "2026"
+
 jobs:
   # ONE build for all 11 test shards (#916's macOS design). Each shard used to
   # pay the whole fixed cost for itself: vcpkg 4-7 min (its cache is evicted
@@ -146,6 +156,7 @@ jobs:
         # the TeX-Live org — same inputs (`packages`/`cache`).
         uses: TeX-Live/setup-texlive-action@v4
         with:
+          version: ${{ env.TEXLIVE_VERSION }}
           packages: >-
             scheme-medium
             collection-latexextra
@@ -237,6 +248,7 @@ jobs:
         # the TeX-Live org — same inputs (`packages`/`cache`).
         uses: TeX-Live/setup-texlive-action@v4
         with:
+          version: ${{ env.TEXLIVE_VERSION }}
           packages: >-
             scheme-medium
             collection-latexextra

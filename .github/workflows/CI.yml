@@ -30,31 +30,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
-# The TeX Live package set the macOS jobs install with TeX-Live/setup-texlive-action: the Linux `test`
-# job's apt TeX set as TL collections and packages, so both platforms run (and visibly skip) the same
-# tests. Like the apt set, it leaves out fonts-extra and lang-chinese/korean: the tests that load them
-# declare it with `requires`. The list is also the action's cache key; the build job and the shards
-# share it, so the shards restore the tree the build stamped its dumps against.
+# TeX Live in CI is always a RELEASED year the suite supports, never tlnet's latest state: a new year
+# is usually supported a month or more after it ships, and the latest state would fail the suite. Each
+# platform gets a prebuilt tree, never a per-package install (`install-tl` fetches ~4900 packages one
+# at a time: ~1 h, #916's first run):
+#   * Linux: the pinned Ubuntu image's apt TeX Live (ubuntu-26.04 = TL 2025; `test` and `asan`).
+#   * macOS: Homebrew's `texlive` bottle (20260301 = TL 2026), one prebuilt archive. Homebrew moves it
+#     to a new year on its own schedule, so macos-build stops early, naming the year, once it is newer
+#     than TEXLIVE_NEWEST_SUPPORTED (the newest year of the release dump window, release.yml).
+#   * Windows: the Windows workflow pins its own `version`.
 env:
-  TEXLIVE_PACKAGES: >-
-    scheme-medium
-    collection-latexextra
-    collection-mathscience
-    collection-bibtexextra
-    collection-publishers
-    collection-langgerman
-    collection-langfrench
-    collection-langgreek
-    collection-langcyrillic
-    collection-plaingeneric
-    tipa
-    collection-pstricks
-    collection-langother
-    collection-langarabic
-    collection-langeuropean
-    collection-langspanish
-    tex-gyre
-    dvipng
+  TEXLIVE_NEWEST_SUPPORTED: "2026"
 
 jobs:
   # Path gate. Emits two booleans the expensive jobs branch on, so that a PR
@@ -288,7 +274,8 @@ jobs:
     name: asan (memory-safety UB check)
     needs: changes
     if: needs.changes.outputs.not_docs == 'true'
-    runs-on: ubuntu-latest
+    # Pinned with the `test` job: the same apt TeX Live, so the two share one dump cache.
+    runs-on: ubuntu-26.04
     timeout-minutes: 75
     env:
       CARGO_BUILD_JOBS: "2"
@@ -383,7 +370,9 @@ jobs:
     # Full Linux suite on every code change (PR and main push); skipped only
     # for a docs-only diff.
     if: needs.changes.outputs.not_docs == 'true'
-    runs-on: ubuntu-latest
+    # Pinned image: its apt TeX Live is the year this suite tests (26.04 = TL 2025;
+    # see the year policy at the top). `ubuntu-latest` would move it unannounced.
+    runs-on: ubuntu-26.04
     # 75: a shard on a dump-cache miss pays `make formats` (7-11 min) + the
     # build before its ≈ 22-24-min test step; 75 keeps the worst case ≤ 70 %.
     timeout-minutes: 75
@@ -535,11 +524,10 @@ jobs:
   # (2026-11-15..18: 152 macOS runner-hours; 132 of the 138 waits over 15 min
   # had all 5 slots held by our own jobs).
   #
-  # TeX Live comes from TeX-Live/setup-texlive-action (cached; the Linux job's
-  # package set: TEXLIVE_PACKAGES above), and libkpathsea is built
-  # from source and linked STATICALLY (tools/build_static_kpathsea.sh, as the
-  # macOS release leg does), so the in-process kpathsea backend is still the
-  # one exercised — now the shipped one — and no shard needs Homebrew's texlive.
+  # TeX Live is Homebrew's prebuilt `texlive` bottle (see the year policy at
+  # the top). libkpathsea is built from source and linked STATICALLY
+  # (tools/build_static_kpathsea.sh, as the macOS release leg does), so the
+  # in-process kpathsea backend exercised is the shipped one.
   # (MacTeX/BasicTeX's subprocess-`kpsewhich` fallback is documented in
   # docs/BUILDING.md but not gated here.)
   macos-build:
@@ -562,13 +550,8 @@ jobs:
         contains(github.event.pull_request.labels.*.name, 'ci:macos')))
     runs-on: macos-15
     # 3 vCPU / 7 GB RAM — tighter than the 16 GB Linux runner, so the same
-    # RAM-tuned `ci` profile + jobs=2 apply. A warm run takes ~25 min; the
-    # limit covers a COLD TeX Live install (no cache for the key: a new TL
-    # year, a TEXLIVE_PACKAGES change, an eviction, main's first run), where
-    # install-tl fetches ~4900 packages one by one: ~1 h on #916's first run.
-    # Timing out would also lose that install: the action saves its cache in a
-    # post step, which a cancelled (timed-out) job does not run.
-    timeout-minutes: 150
+    # RAM-tuned `ci` profile + jobs=2 apply; a cold build dominates.
+    timeout-minutes: 90
     env:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
@@ -581,18 +564,15 @@ jobs:
       # libxml2 + libxslt are keg-only on Homebrew; install them and surface
       # their pkgconfig dirs so the libxml/libxslt build scripts find them.
       # No auto-update: the build and the shards then install the runner
-      # image's same formula versions, so the shards' dylibs match the link.
+      # image's same formula versions, so the shards' dylibs match the link
+      # and their `texlive` is the tree the dumps below are stamped against.
       - name: install dependencies
         run: |
           command -v pkg-config >/dev/null || brew install pkgconf
-          brew install libxml2 libxslt
+          brew install libxml2 libxslt texlive
       - name: surface keg-only pkg-config paths
         run: |
           echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
-      - name: install TeX Live
-        uses: TeX-Live/setup-texlive-action@v4
-        with:
-          packages: ${{ env.TEXLIVE_PACKAGES }}
       # The static libkpathsea.a is a function of the pinned source ref in its
       # build script, so it is cached on that script.
       - name: cache static libkpathsea
@@ -633,6 +613,17 @@ jobs:
       - name: TeX Live fingerprint (dump cache key)
         id: tlfp
         run: bash tools/ci_tex_fingerprint.sh
+      # Homebrew moves `texlive` to a new year on its own schedule. A year the
+      # suite does not support yet would fail it test by test; stop here instead.
+      - name: TeX Live year is supported
+        env:
+          YEAR: ${{ steps.tlfp.outputs.year }}
+        run: |
+          echo "::notice::macOS tests TeX Live $YEAR (Homebrew $(brew list --versions texlive))"
+          if [[ -z $YEAR || $YEAR -gt $TEXLIVE_NEWEST_SUPPORTED ]]; then
+            echo "::error::Homebrew's texlive is TeX Live '$YEAR', newer than the newest supported year $TEXLIVE_NEWEST_SUPPORTED. Add support for it (dump window, release.yml) and raise TEXLIVE_NEWEST_SUPPORTED in CI.yml."
+            exit 1
+          fi
       - name: cache engine dumps
         id: dumps
         uses: actions/cache@v4
@@ -680,15 +671,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       # Runtime only: the test binaries load libxml2/libxslt from Homebrew's
-      # keg (the same prefix on every runner); jing-trang for the schema guards.
+      # keg (the same prefix on every runner); `texlive` is the build job's
+      # (same image, no auto-update), the tree its dumps are stamped against;
+      # jing-trang for the schema guards.
       - name: install dependencies
-        run: brew install libxml2 libxslt jing-trang
-      # The same package set as macos-build, so this restores the cache that
-      # job saved: the tree its dumps were stamped against.
-      - name: install TeX Live
-        uses: TeX-Live/setup-texlive-action@v4
-        with:
-          packages: ${{ env.TEXLIVE_PACKAGES }}
+        run: brew install libxml2 libxslt texlive jing-trang
       - uses: actions/download-artifact@v6
         with:
           name: macos-test-archive
