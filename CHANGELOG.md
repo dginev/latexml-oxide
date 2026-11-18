@@ -2,9 +2,19 @@
 
 ## Unreleased
 
+  - **A Rhai binding's diagnostic names its `.rhai` file.** A failure while a binding loads is one
+    `Error:script:<file>.rhai` (was `Error:unexpected:` with the text twice), located at the line and
+    column in that file and then at the `\usepackage`; a body's error and a `Fatal(…)` carry the same
+    locator; types read as Rhai's (`string`, `int`, …). Every `Fatal:` line has one space before its
+    message, as Perl's. Each external program a binding runs is named by an `Info:script:Command` line;
+    `--help` and `docs/USAGE.md` say how a `.rhai` binding is found and how
+    `LATEXML_DISABLE_SHELL_ESCAPE` refuses commands. Guard
+    `30_script_bindings::a_rhai_diagnostic_names_its_binding_file`.
+
   - **Dependency cleanup before v0.8.0.** `once_cell`'s `Lazy` is now `std::sync::LazyLock` throughout, and the direct
     `once_cell` dependency is gone from every crate; `deny.toml`'s advisory notes are corrected. No output change.
     For a Rust binding crate: `latexml_engine::prelude` now re-exports `LazyLock` in place of `Lazy`.
+
   - **TeX Live's package manuals convert clean (the perfect-kernel campaign).** Every one of the
     1,552 in-scope TeX Live documentation bundles converts with no Error but of a ruled-out
     kind, valid against the schema (or only in a ruled class), at least 95 % word recall against
@@ -903,6 +913,20 @@
     recursed between 1000 and 3000 levels deep now aborts in post-processing, as
     in Perl and in dynamically linked builds. Guard
     `xslt::max_depth_tests::transform_aborts_past_perls_recursion_depth`.
+
+  - **A class that copies `\author` or `\title` before redefining it no longer loops.** tocbase.cls
+    (shipped with aic.cls and its siblings) does `\let\orig@author\author`, then redefines `\author`
+    to collect the names and calls `\orig@author{\toc@authors}` at `\end{frontmatter}`. The copy
+    replayed the class's later definition, so the author list contained itself
+    (`Fatal:Stomach:Recursion`). A `\let` copy of a frontmatter setter taken before the class
+    redefines it is now the setter as it stood, as in TeX, and restoring the setter from such a copy
+    brings back the kernel's setter in the `\let`'s own scope. Witnesses 1811.06821, 1811.11810,
+    1904.05269, 1905.07135, 2011.14174, 2311.03341, 1808.03157, 1911.12471, 2110.09373, 2110.14889,
+    2204.12683, 2406.17657 (OXIDIZED_DESIGN_DIVERGENCES #1078). Guards
+    `perfect_kernel_batchsetcopy::{a_copy_taken_before_the_redefinition_is_the_kernels_setter,
+    a_copy_in_an_end_code_takes_the_class_list_once, a_copy_taken_after_the_redefinition_still_replays,
+    a_restored_setter_takes_a_later_redefinition_afresh, a_restored_setter_drops_the_class_definition,
+    a_restore_in_a_group_ends_with_it}`.
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 

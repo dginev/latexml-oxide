@@ -4,6 +4,8 @@
 //! registration lowers to the same native function its compile-time macro
 //! does (`setup_binding_language.rs`).
 
+use rhai::NativeCallContext;
+
 use super::*;
 
 /// Build a sandboxed Rhai engine with the binding API registered.
@@ -836,38 +838,69 @@ pub(super) fn make_engine() -> Engine {
   // Diagnostics (Perl Common/Error.pm :271-394): `cat:obj msg`, plus trailing details as strings or an array of
   // strings, one line each. Perl's form `(cat, obj, $where, msg, @details)` is read when `$where` is `()`, a handle,
   // or any 5+-argument call; a string third argument in a 4-argument call stays the message (the older form).
+  // (the call's position locates a Fatal in its `.rhai` file)
   for kind in [Diag::Warn, Diag::Error, Diag::Info, Diag::Fatal] {
     let name = kind.name();
-    engine.register_fn(name, move |cat: &str, obj: &str, msg: &str| {
-      emit_diag(kind, cat, obj, msg, None)
-    });
     engine.register_fn(
       name,
-      move |cat: &str, obj: &str, a3: Dynamic, a4: Dynamic| {
+      move |ctx: NativeCallContext, cat: &str, obj: &str, msg: &str| {
+        emit_diag(kind, cat, obj, msg, None, ctx.call_position())
+      },
+    );
+    engine.register_fn(
+      name,
+      move |ctx: NativeCallContext, cat: &str, obj: &str, a3: Dynamic, a4: Dynamic| {
+        let pos = ctx.call_position();
         if a3.is_string() {
-          emit_diag(kind, cat, obj, &dynamic_to_string(a3), Some(details_of(a4)))
+          emit_diag(
+            kind,
+            cat,
+            obj,
+            &dynamic_to_string(a3),
+            Some(details_of(a4)),
+            pos,
+          )
         } else {
-          emit_diag(kind, cat, obj, &dynamic_to_string(a4), None)
+          emit_diag(kind, cat, obj, &dynamic_to_string(a4), None, pos)
         }
       },
     );
     engine.register_fn(
       name,
-      move |cat: &str, obj: &str, _where: Dynamic, msg: Dynamic, d1: Dynamic| {
+      move |ctx: NativeCallContext,
+            cat: &str,
+            obj: &str,
+            _where: Dynamic,
+            msg: Dynamic,
+            d1: Dynamic| {
         emit_diag(
           kind,
           cat,
           obj,
           &dynamic_to_string(msg),
           Some(details_of(d1)),
+          ctx.call_position(),
         )
       },
     );
     engine.register_fn(
       name,
-      move |cat: &str, obj: &str, _where: Dynamic, msg: Dynamic, d1: Dynamic, d2: Dynamic| {
+      move |ctx: NativeCallContext,
+            cat: &str,
+            obj: &str,
+            _where: Dynamic,
+            msg: Dynamic,
+            d1: Dynamic,
+            d2: Dynamic| {
         let details = format!("{}\n\t{}", details_of(d1), details_of(d2));
-        emit_diag(kind, cat, obj, &dynamic_to_string(msg), Some(details))
+        emit_diag(
+          kind,
+          cat,
+          obj,
+          &dynamic_to_string(msg),
+          Some(details),
+          ctx.call_position(),
+        )
       },
     );
   }
@@ -932,7 +965,9 @@ pub(super) fn make_engine() -> Engine {
   // `io::Result::Err` (catchable with `try`/`catch`).
   engine.register_fn(
     "output",
-    |c: &mut RhaiCommand| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+    |ctx: NativeCallContext,
+     c: &mut RhaiCommand|
+     -> std::result::Result<Dynamic, Box<EvalAltResult>> {
       // Allowed by default (Perl `.ltxml` runs `system()` freely), but BLOCKABLE
       // via `LATEXML_DISABLE_SHELL_ESCAPE` — the opt-out an untrusted-input
       // deployment (e.g. `cortex_worker`) sets, since a `.rhai` beside the
@@ -945,6 +980,15 @@ pub(super) fn make_engine() -> Engine {
           c.program
         )));
       }
+      // (no default change: a binding's external command is named each time it runs)
+      latexml_core::Info!(
+        "script",
+        "Command",
+        with_script_locator(
+          &format!("running the external program '{}'", c.program),
+          current_script_locator(ctx.call_position())
+        )
+      );
       let mut cmd = std::process::Command::new(&c.program);
       cmd.args(&c.args);
       for (k, v) in &c.envs {
@@ -3373,6 +3417,7 @@ fn emit_diag(
   obj: &str,
   msg: &str,
   details: Option<String>,
+  pos: rhai::Position,
 ) -> RhaiResult<()> {
   match (kind, details) {
     (Diag::Warn, Some(d)) => latexml_core::Warn!(cat, obj, msg.to_string(), d),
@@ -3380,7 +3425,7 @@ fn emit_diag(
     (Diag::Info, Some(d)) => latexml_core::Info!(cat, obj, msg.to_string(), d),
     (Diag::Info, None) => latexml_core::Info!(cat, obj, msg.to_string()),
     (Diag::Error, details) => return script_error(cat, obj, msg, details),
-    (Diag::Fatal, details) => return script_fatal(cat, obj, msg, details),
+    (Diag::Fatal, details) => return script_fatal(cat, obj, msg, details, pos),
   }
   Ok(())
 }
@@ -3417,12 +3462,24 @@ pub(super) fn script_error(
   res.map_err(rhai_err)
 }
 
-/// `Fatal(cat, obj, msg[, details])`: logged as `Fatal:<cat>:<obj> <msg>` (Error.pm:271), ending the run (#792).
-fn script_fatal(cat: &str, obj: &str, msg: &str, details: Option<String>) -> RhaiResult<()> {
+/// `Fatal(cat, obj, msg[, details])`: logged as `Fatal:<cat>:<obj> <msg>` (Error.pm:271), ending the run (#792);
+/// located at the call in its `.rhai` file, then in the TeX source, as Perl's Fatal is.
+fn script_fatal(
+  cat: &str,
+  obj: &str,
+  msg: &str,
+  details: Option<String>,
+  pos: rhai::Position,
+) -> RhaiResult<()> {
   use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+  let located = format!(
+    "{}\n\t{}",
+    with_script_locator(msg, current_script_locator(pos)),
+    latexml_core::gullet::get_location()
+  );
   let message = match details {
-    Some(details) => format!("{msg}\n\t{details}"),
-    None => msg.to_string(),
+    Some(details) => format!("{located}\n\t{details}"),
+    None => located,
   };
   let res: Result<()> = (|| {
     latexml_core::Fatal!(

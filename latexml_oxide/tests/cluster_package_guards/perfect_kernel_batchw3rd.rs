@@ -135,8 +135,19 @@ fn rhai_diagnostics_error_side() {
   // `Fatal:Internal:Unexpected  mycat:myobj a fatal`).
   let (log, _) = convert_files_with(LXRD_FATAL_TEX, &[("lxrderr.sty.rhai", LXRD_ERR)], None);
   assert_eq!(error_count(&log), 1, "{log}");
-  // (the core's Fatal header ends in a space, so every Fatal line has two before its message)
-  assert!(log.contains("Fatal:mycat:myobj  a fatal\n\tfd1"), "{log}");
+  // (one space before the message, Perl's; then the `.rhai` and TeX locators, then the details, RHAIDIAG)
+  let fatal = log
+    .lines()
+    .skip_while(|l| !l.starts_with("Fatal:"))
+    .take(4)
+    .collect::<Vec<_>>();
+  assert_eq!(fatal[0], "Fatal:mycat:myobj a fatal", "{log}");
+  assert!(
+    fatal[1].starts_with("\tat ") && fatal[1].ends_with("/lxrderr.sty.rhai; line 4 col 28"),
+    "{log}"
+  );
+  assert!(fatal[2].starts_with("\tat "), "{log}");
+  assert_eq!(fatal[3], "\tfd1", "{log}");
 }
 
 const LXTHIN: &str = r##"RawTeX("\\def\\lxwrap#1{(#1)}\\def\\lxhook{X}\\newcount\\lxc \\lxc=7 \\def\\lxa{A}\\let\\lxb\\lxa");
