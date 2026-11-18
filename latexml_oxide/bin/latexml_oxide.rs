@@ -48,6 +48,16 @@ fn xslt_parameter_arg(param: &str) -> Result<String, String> {
 // `args_override_self`: an option given twice keeps its last value, as GetOpt::Long does (#530).
 #[command(name = "latexml_oxide", version = latexml::identity::VERSION_WITH_REVISION, about)]
 #[command(args_override_self = true)]
+#[cfg_attr(
+  feature = "runtime-bindings",
+  command(
+    after_help = "Bindings: \\usepackage{mypkg} (or --preload=mypkg.sty) loads a runtime binding \
+                        mypkg.sty.rhai (myclass.cls.rhai for a class) found beside the document or on --path, \
+                        before the built-in one; see docs/parity/RHAI_BINDINGS_GUIDE.md. A binding may run external \
+                        programs (each named by an Info line); set LATEXML_DISABLE_SHELL_ESCAPE=1 to refuse them \
+                        (docs/release/SAFETY.md)."
+  )
+)]
 struct Cli {
   /// The TeX/LaTeX source file(s) to convert (overridden by --source). A `.bib`,
   /// a `.zip`/`.tar.gz` archive, or a directory is auto-detected. Several files

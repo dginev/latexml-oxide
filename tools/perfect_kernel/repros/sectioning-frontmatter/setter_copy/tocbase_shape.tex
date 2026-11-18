@@ -1,0 +1,31 @@
+% tocbase.cls's shape (:647-677): `\author[x]{…}` appends each author to `\toc@authors` (`\gdef` the first,
+% `\g@addto@macro` the next), and the end code of the title environment hands the list to the kernel's setter through
+% the copy taken before the redefinition, `\orig@author{\toc@authors}`; copy and redefinition in the begin code, as
+% there. `\ifx` reads the copy as the setter it was copied from ("same").
+% witness: 1811.06821 (aic.cls -> tocbase.cls; three authors)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker Cy Cole", "Body same."
+% engines: rust (main 8b298f9c0d6) = Fatal (box-list runaway); replay alone suppressed: six creators (each twice)
+% expect:  0 errors, 0 warnings; three creators in order, each once; "Body same."
+% guard:   perfect_kernel_batchsetcopy::a_copy_in_an_end_code_takes_the_class_list_once
+% status:  GREEN, 3 plain-text Warnings (row R SETCOPY-FLAG) (SETCOPY, 2026-11-18; was RED: Fatal)
+\documentclass{article}
+\makeatletter
+\newcounter{toc@author}
+\newenvironment{tocentry}{%
+  \let\orig@author\author
+  \xdef\samecheck{\ifx\orig@author\author same\else differ\fi}%
+  \renewcommand{\author}[2][\@empty]{%
+    \stepcounter{toc@author}%
+    \ifnum\value{toc@author}=1 \gdef\toc@authors{##2}%
+    \else\g@addto@macro\toc@authors{\and ##2}\fi}%
+}{\orig@author{\toc@authors}\maketitle}
+\makeatother
+\title{T}
+\begin{document}
+\begin{tocentry}
+\author[a]{Ann Able}
+\author[b]{Bob Baker}
+\author[a]{Cy Cole}
+\end{tocentry}
+Body \samecheck.
+\end{document}

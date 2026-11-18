@@ -1,0 +1,21 @@
+% A restore inside a group (`\begingroup\let\author\orig@author\endgroup`) reverts at `\endgroup`, as TeX's `\let`:
+% the document's redefinition, refused by the lock and replayed, stays in force with its records, and its call stores
+% the author ("First: Ann Able", one creator Ann Able).
+% witness: synthetic (re-review SETCOPYb, the restore's scope)
+% oracle:  pdflatex 0 errors: "Ann Able", "First: Ann Able."
+% engines: rust (main 8b298f9c0d6) = "First: Ann Able."; SETCOPY round 1 = "First: ." (records cleared globally)
+% expect:  0 errors, 0 warnings; "First: Ann Able."; one creator, Ann Able
+% guard:   perfect_kernel_batchsetcopy::a_restore_in_a_group_ends_with_it
+% status:  GREEN (SETCOPYc, 2026-11-18)
+\documentclass{article}
+\makeatletter
+\let\orig@author\author
+\renewcommand{\author}[1]{\gdef\firstdef{#1}\orig@author{#1}}
+\begingroup\let\author\orig@author\endgroup
+\makeatother
+\title{T}
+\begin{document}
+\author{Ann Able}
+\maketitle
+First: \firstdef.
+\end{document}

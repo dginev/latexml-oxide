@@ -1,0 +1,21 @@
+% The `\title` sibling of restore_then_redefine.tex, restored by `\global\let` inside a group: the second
+% `\renewcommand{\title}` is refused afresh and replays.
+% witness: synthetic (review SETCOPY B1, the `\title` and `\global\let` siblings)
+% oracle:  pdflatex 0 errors: "My Title / Ann Able / Second: My Title."
+% engines: rust (main 8b298f9c0d6) = "Second: My Title."
+% expect:  0 errors, 0 warnings; title "My Title"; "Second: My Title."
+% guard:   perfect_kernel_batchsetcopy::a_restored_setter_takes_a_later_redefinition_afresh
+% status:  GREEN (SETCOPYb, 2026-11-18)
+\documentclass{article}
+\makeatletter
+\let\orig@title\title
+\renewcommand{\title}[1]{\gdef\firstdef{#1}\orig@title{#1}}
+\begingroup\global\let\title\orig@title\endgroup
+\renewcommand{\title}[1]{\gdef\seconddef{#1}\orig@title{#1}}
+\makeatother
+\author{Ann Able}
+\begin{document}
+\title{My Title}
+\maketitle
+Second: \seconddef.
+\end{document}

@@ -115,6 +115,13 @@ message, details…)` form), with the same severities: a
 A Rhai error in a body (a `throw`, a typo'd function) is reported as an `Error:script:` naming the binding, and that
 binding contributes nothing; the conversion goes on.
 
+Every such record names the `.rhai` file: its first locator is the line and column there, the second the TeX site.
+Types read as Rhai's (`string`, `int`, `float`, `bool`, `array`, `map`), so a misspelled or mistyped call reads
+`Function not found: NewCounter (int)`. A failure while the file loads is one `Error:script:<file>.rhai`: a syntax
+error loads nothing; a run error keeps what the statements before it defined and skips the rest, and the package
+counts as loaded either way (its raw `.sty`/`.cls` is not read instead). A `Fatal(…)` is located the same way. Each
+external program a binding runs (`Command(…).output()`) is named by an `Info:script:Command` line.
+
 ## Migrating from the deprecated names
 
 Each old name still works this release and Warns `Warning:deprecated` once per binding load, naming its replacement:
