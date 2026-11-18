@@ -554,6 +554,12 @@ fn rhai_closure_args_and_parameter_types() {
     2,
     "{log}"
   );
+  // (located in its `.rhai` file, as every script diagnostic is: RHAIPOL)
+  assert_eq!(
+    log.matches("use whatsit.getArg(n)\n\tat ").count(),
+    2,
+    "{log}"
+  );
   assert!(xml.contains(r#"tex="\lxself{}""#), "{xml}");
   assert!(log.contains("Error:expected:LxReq"), "{log}");
   assert!(

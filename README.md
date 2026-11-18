@@ -57,7 +57,7 @@ and loads it:
 ```rust
 // mypkg.sty.rhai  —  note: backslashes are doubled in Rhai strings
 DefMacro("\\greet{}", |gullet, name| "Hello, " + name + "!");
-DefConstructor("\\mytext{}", "<ltx:text class=\"rhai\">#1</ltx:text>");
+DefConstructor("\\mytext{}", "<ltx:text class=\"rhai\">#1</ltx:text>", #{ enterHorizontal: true });
 ```
 
 Start with the [Rhai guide](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md).

@@ -42,13 +42,12 @@ pub(super) fn contain<T>(what: &str, e: Box<EvalAltResult>, neutral: T) -> Resul
   if let Some(fatal) = take_raised_fatal(&e) {
     return Err(fatal);
   }
-  let (text, pos) = describe_failure(&e);
-  let path = failed_body_path(&e);
-  latexml_core::Error!(
-    "script",
-    what,
-    with_script_locator(&text, script_locator(&path, pos))
-  );
+  let (text, pos, chain) = describe_failure(&e);
+  let located = with_script_locator(&text, script_locator(&failed_body_path(), pos));
+  match chain {
+    Some(chain) => latexml_core::Error!("script", what, located, chain),
+    None => latexml_core::Error!("script", what, located),
+  }
   Ok(neutral)
 }
 
@@ -577,7 +576,15 @@ pub(super) fn apply_opts<B: BindingBuilder>(
         if key.as_str() == "properties" && val.is_map() {
           // Static property map (Perl's `properties => { key => value, … }`).
           let map = val.cast::<Map>();
-          builder = builder.properties(Rc::new(move |_args| Ok(rhai_map_to_props(map.clone()))));
+          let (engine, ast) = (engine.clone(), ast.clone());
+          builder = builder.properties(Rc::new(move |args: &Vec<Option<Digested>>| {
+            Ok(rhai_map_to_props(call_property_closures(
+              &engine,
+              &ast,
+              map.clone(),
+              args,
+            )?))
+          }));
         } else if key.as_str() == "reversion" {
           // A string or Tokens reversion (`reversion => "\\begin{x}#1\\end{x}"`, "" disables).
           builder = builder.reversion(Reversion::Tokens(dynamic_to_tokens(val)));
@@ -643,9 +650,9 @@ pub(super) fn after_digest_trampoline(
       .into_iter()
       .chain(std::iter::once(Dynamic::from(WhatsitProxy)))
       .collect();
-    let _: Dynamic =
+    let result =
       call_deferred_body(&engine, &ast, &fp, args).or_else(|e| contain(hook, e, Dynamic::UNIT))?;
-    Ok(Vec::new())
+    Ok(returned_boxes(&ast, result, HOOK_NON_BOX))
   })
 }
 
@@ -666,15 +673,15 @@ pub(super) fn stomach_after_digest_trampoline(
   ast: Rc<AST>,
 ) -> DigestionClosure {
   Rc::new(move |_w: &mut Whatsit| -> Result<Vec<Digested>> {
-    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(StomachHandle),))
+    let result = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(StomachHandle),))
       .or_else(|e| contain("afterDigest", e, Dynamic::UNIT))?;
-    Ok(Vec::new())
+    Ok(returned_boxes(&ast, result, HOOK_NON_BOX))
   })
 }
 
 /// Build a `beforeDigest`/`beforeDigestEnd` trampoline (`hook` names it in errors): the body is Perl's `($stomach)`
-/// (Primitive.pm:47), run before the arguments are digested for its side effects (`neutralize_font()`); it
-/// contributes no boxes. A body declaring no parameter (`|| …`) is Perl's `sub {…}` ignoring `@_`.
+/// (Primitive.pm:42-47), run before the arguments are digested; the boxes it returns are put on the list. A body
+/// declaring no parameter (`|| …`) is Perl's `sub {…}` ignoring `@_`.
 pub(super) fn before_digest_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -682,9 +689,9 @@ pub(super) fn before_digest_trampoline(
   hook: &'static str,
 ) -> BeforeDigestClosure {
   Rc::new(move || -> Result<Vec<Digested>> {
-    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(StomachHandle),))
+    let result = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(StomachHandle),))
       .or_else(|e| contain(hook, e, Dynamic::UNIT))?;
-    Ok(Vec::new())
+    Ok(returned_boxes(&ast, result, HOOK_NON_BOX))
   })
 }
 
@@ -861,6 +868,31 @@ pub(super) fn push_definition_hook(
   Ok(())
 }
 
+/// A properties map's closure values called with Perl's `($stomach, @args)`, each replaced by what it returns
+/// (Constructor.pm:101-104).
+fn call_property_closures(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  map: Map,
+  args: &[Option<Digested>],
+) -> Result<Map> {
+  let mut props = Map::new();
+  for (key, val) in map {
+    let val = match val.clone().try_cast::<FnPtr>() {
+      Some(fp) => {
+        let dyn_args: Vec<Dynamic> = std::iter::once(Dynamic::from(StomachHandle))
+          .chain(args.iter().map(ctor_arg_to_dynamic))
+          .collect();
+        call_deferred_body(engine, ast, &fp, dyn_args)
+          .or_else(|e| contain(&format!("properties {key}"), e, Dynamic::UNIT))?
+      },
+      None => val,
+    };
+    props.insert(key, val);
+  }
+  Ok(props)
+}
+
 /// Build a `properties` trampoline (Perl `properties => sub {…}`): the body is Perl's `($stomach, @args)`
 /// (Constructor.pm:99), each argument as `whatsit.getArg` gives it (`()` for an omitted optional), and returns a map
 /// whose entries become the whatsit's properties, for the template's `#name` holes. A body declaring the arguments
@@ -891,7 +923,12 @@ pub(super) fn properties_trampoline(
       if ret.is_unit() {
         Ok(SymHashMap::default())
       } else if ret.is_map() {
-        Ok(rhai_map_to_props(ret.cast::<Map>()))
+        Ok(rhai_map_to_props(call_property_closures(
+          &engine,
+          &ast,
+          ret.cast::<Map>(),
+          args,
+        )?))
       } else {
         Err(Error::from(
           "script properties: body must return a map (or unit)",
@@ -927,10 +964,19 @@ pub(super) fn dynamic_to_bool(v: &Dynamic) -> bool {
     .unwrap_or(false)
 }
 
+/// The [`super::DEPRECATED_ALIASES`] key of a digest hook's non-box value.
+const HOOK_NON_BOX: &str = "a digest hook returning a non-box";
+
 /// The boxes a primitive's body returns, as Perl's `invoke` keeps them (Primitive.pm:78): a box, an array of boxes,
 /// or `()` for none. Any other value is Perl's "Execution yielded non boxes" Error (Stomach.pm:219-223); for one
 /// release it is dropped with a deprecation Warning, as bodies returned their last value unread before.
 fn primitive_boxes(ast: &Rc<AST>, result: Dynamic) -> Vec<Digested> {
+  returned_boxes(ast, result, "DefPrimitive returning a non-box")
+}
+
+/// [`primitive_boxes`] for any body whose boxes Perl keeps — a digest hook's too (`executeBeforeDigest`,
+/// `executeAfterDigest`, Primitive.pm:42-54; a constructor's `@post`, Constructor.pm:114-122) — Warning under `old`.
+fn returned_boxes(ast: &Rc<AST>, result: Dynamic, old: &'static str) -> Vec<Digested> {
   let items = if result.is_array() {
     result.cast::<rhai::Array>()
   } else {
@@ -948,7 +994,7 @@ fn primitive_boxes(ast: &Rc<AST>, result: Dynamic) -> Vec<Digested> {
     }
   }
   if non_box {
-    warn_deprecated_in(ast, "DefPrimitive returning a non-box");
+    warn_deprecated_in(ast, old);
   }
   boxes
 }

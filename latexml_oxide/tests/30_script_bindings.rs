@@ -2106,6 +2106,36 @@ fn a_rhai_diagnostic_names_its_binding_file() {
       "X ran Y",
     ),
     (
+      "a script's Error(), located as its Fatal() (RHAIPOL)",
+      "DefPrimitive(\"\\\\dgE\", |stomach| {\n  Error(\"mycat\", \"myobj\", \"my error\");\n  return;\n});",
+      "X \\dgE{} Y",
+      "Error:mycat:myobj my error",
+      "/dg.sty.rhai; line 2 col 3",
+      "\tat t.tex; line 1 col 61 - line 1 col 61",
+      (1, 0, 0),
+      "X  Y",
+    ),
+    (
+      "a script's Warn()",
+      "DefPrimitive(\"\\\\dgW\", |stomach| {\n  Warn(\"mycat\", \"myobj\", \"my warning\");\n  return;\n});",
+      "X \\dgW{} Y",
+      "Warning:mycat:myobj my warning",
+      "/dg.sty.rhai; line 2 col 3",
+      "\tat t.tex; line 1 col 61 - line 1 col 61",
+      (0, 0, 1),
+      "X  Y",
+    ),
+    (
+      "a script's Info()",
+      "DefPrimitive(\"\\\\dgI\", |stomach| {\n  Info(\"mycat\", \"myobj\", \"my note\");\n  return;\n});",
+      "X \\dgI{} Y",
+      "Info:mycat:myobj my note",
+      "/dg.sty.rhai; line 2 col 3",
+      "\tat t.tex; line 1 col 61 - line 1 col 61",
+      (0, 0, 0),
+      "X  Y",
+    ),
+    (
       "a deprecated alias: the file, its call's line unknown",
       "assign_value(\"dgzero\", \"1\");",
       "X Y",
@@ -2145,4 +2175,116 @@ fn a_rhai_diagnostic_names_its_binding_file() {
     }
   }
   assert!(failures.is_empty(), "{failures:#?}");
+}
+
+/// A failure inside script functions names each call it passed through, innermost first, after the two locators
+/// (RHAIPOL): the record is the innermost error, then `in call to function 'helper'` at its call in `outer`, then
+/// `outer` at its call in the body.
+#[test]
+fn a_rhai_failure_names_its_function_calls() {
+  use latexml::util::test::{error_count, warning_count};
+  let rhai = "fn helper(x) {\n  x.nope()\n}\nfn outer(x) {\n  helper(x)\n}\n\
+              DefPrimitive(\"\\\\dgN\", |stomach| {\n  outer(1);\n  return;\n});";
+  let tex = "\\documentclass{article}\\usepackage{dg}\\begin{document}X \\dgN{} Y\\end{document}";
+  let (log, xml) = latexml::util::test::convert_files_with(tex, &[("dg.sty.rhai", rhai)], None);
+  let lines: Vec<&str> = log.lines().collect();
+  let at = lines
+    .iter()
+    .position(|l| *l == "Error:script:primitive \\dgN Function not found: nope (int)")
+    .unwrap_or_else(|| panic!("{log}"));
+  assert!(
+    lines[at + 1].starts_with("\tat ") && lines[at + 1].ends_with("/dg.sty.rhai; line 2 col 5"),
+    "{log}"
+  );
+  assert_eq!(
+    lines[at + 2..at + 5],
+    [
+      "\tat t.tex; line 1 col 61 - line 1 col 61",
+      "\tin call to function 'helper' (line 5, position 3)",
+      "\tin call to function 'outer' (line 8, position 3)",
+    ],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(xml.contains("<p>X  Y</p>"), "{xml}");
+}
+
+/// A `--preload`ed binding that fails is logged as any other Error (RHAIPOL): the record is in the conversion's log,
+/// located in its `.rhai` file and in no TeX source (no mouth is open yet, Perl's Error.pm:623), and what loaded
+/// before the failure stands.
+#[test]
+fn a_failing_preloaded_binding_is_logged() {
+  use latexml::util::test::{error_count, warning_count};
+  // (the preload by its path, as `--preload=<dir>/pbad.sty`: the session loads it before the job's directory is known)
+  let dir = tempfile::tempdir().expect("tempdir");
+  let rhai = "DefMacro(\"\\\\okmac\", \"ok\");\nlet x = undefined_fn(3);";
+  std::fs::write(dir.path().join("pbad.sty.rhai"), rhai).expect("write the binding");
+  let preload = dir.path().join("pbad.sty").to_string_lossy().into_owned();
+  let tex = "\\documentclass{article}\\begin{document}Hello \\okmac.\\end{document}";
+  let (log, xml) = latexml::util::test::convert_files_with(tex, &[], Some(&preload));
+  let lines: Vec<&str> = log.lines().collect();
+  let at = lines
+    .iter()
+    .position(|l| {
+      *l == "Error:script:pbad.sty.rhai Function not found: undefined_fn (int); the rest of the binding is skipped"
+    })
+    .unwrap_or_else(|| panic!("{log}"));
+  assert!(
+    lines[at + 1].starts_with("\tat ") && lines[at + 1].ends_with("/pbad.sty.rhai; line 2 col 9"),
+    "{log}"
+  );
+  assert!(!lines[at + 2].starts_with("\tat "), "{log}");
+  assert!(!log.contains("locator.rs"), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(xml.contains("<p>Hello ok.</p>"), "{xml}");
+}
+
+/// Perl's hook bodies port 1:1 (RHAIPOL): the stomach's group and paragraph methods (Stomach.pm:338-447), the boxes a
+/// digest hook returns kept after the whatsit or on the list (Primitive.pm:42-54, Constructor.pm:114-122), and a
+/// `properties` map's closure values called with `($stomach, @args)` (Constructor.pm:101-104). The paragraphs are
+/// Perl 0.8.8's for the same binding in Perl (repro rhai-bindings/stomach_methods_hook_boxes.tex).
+#[test]
+fn rhai_hooks_port_perls_stomach_methods_and_values() {
+  use latexml::util::test::{assert_element, error_count, warning_count};
+  let rhai = r##"
+DefPrimitive("\\opengrp", |stomach| { stomach.bgroup(); return; });
+DefPrimitive("\\closegrp", |stomach| { stomach.egroup(); return; });
+DefPrimitive("\\startpara", |stomach| { stomach.enterHorizontal(); return; });
+DefPrimitive("\\endpara", |stomach| { stomach.leaveHorizontal(); return; });
+DefConstructor("\\withpost{}", "<ltx:text class=\"w\">#1</ltx:text>", #{
+  afterDigest: |stomach, whatsit| Digest("[after]")
+});
+DefPrimitive("\\pafter", |stomach| { return; }, #{ afterDigest: |stomach| Digest("[pafter]") });
+DefPrimitive("\\pbefore", |stomach| { return; }, #{ beforeDigest: |stomach| Digest("[pbefore]") });
+DefConstructor("\\pm{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
+  properties: #{ cls: |stomach, x| "c-" + ToString(x) }
+});
+"##;
+  let tex = "\\documentclass{article}\\usepackage{hk}\\begin{document}\n\
+             A \\opengrp\\bfseries bold\\closegrp{} plain.\n\n\
+             Text\\endpara\\noindent next.\n\n\
+             A \\withpost{w} B \\pafter C \\pbefore D.\n\n\
+             A \\pm{x} B.\n\\end{document}";
+  let (log, xml) = latexml::util::test::convert_files_with(tex, &[("hk.sty.rhai", rhai)], None);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (id, para) in [
+    (
+      "p1",
+      r#"<para xml:id="p1"><p>A <text font="bold">bold</text> plain.</p></para>"#,
+    ),
+    (
+      "p2",
+      r#"<para class="ltx_noindent" xml:id="p2"><p>Text</p><p>next.</p></para>"#,
+    ),
+    (
+      "p3",
+      r#"<para xml:id="p3"><p>A <text class="w">w</text>[after] B [pafter]C [pbefore]D.</p></para>"#,
+    ),
+    (
+      "p4",
+      r#"<para xml:id="p4"><p>A <text class="c-x">x</text> B.</p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
 }

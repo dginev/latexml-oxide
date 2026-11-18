@@ -1,0 +1,24 @@
+% mechanism: a Rhai hook body ports Perl's 1:1 — the Stomach handle's bgroup/egroup/enterHorizontal/leaveHorizontal
+%   (Stomach.pm:338-447), the boxes a beforeDigest/afterDigest hook returns kept (Primitive.pm:42-54, Constructor.pm:
+%   114-122), a `properties` map's closure values called with ($stomach, @args) (Constructor.pm:101-104).
+% witness: synthetic (RHAIPOL; the binding lxsm.sty.rhai, lxsm.sty.ltxml for Perl, lxsm.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A bold plain." / "Text" "next." / "A w[after] B [pafter]C
+%   [pbefore]D." / "A x B."
+% engines: MAIN911 d4b92733d11: 4 Errors (Function not found: bgroup/egroup/enterHorizontal/leaveHorizontal (Stomach)),
+%   the hook boxes dropped, class="Fnanon…"; Perl 0.8.8: 0 errors, the expected paragraphs
+% expect:  0 errors; <p>A <text font="bold">bold</text> plain.</p>; <p>Text</p><p>next.</p>;
+%   <p>A <text class="w">w</text>[after] B [pafter]C [pbefore]D.</p>; <p>A <text class="c-x">x</text> B.</p>
+% status:  RED (MAIN911) -> GREEN (RHAIPOL); guard 30_script_bindings::rhai_hooks_port_perls_stomach_methods_and_values
+\documentclass{article}
+\usepackage{lxsm}
+\begin{document}
+\startpara{} kept space.
+
+A \opengrp\bfseries bold\closegrp{} plain.
+
+Text\endpara\noindent next.
+
+A \withpost{w} B \pafter C \pbefore D.
+
+A \pm{x} B.
+\end{document}

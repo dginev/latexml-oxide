@@ -1164,13 +1164,20 @@ macro_rules! fatal {
   }};
 }
 
+/// A message's location line, `\n\tat <locator>`; nothing before the first mouth opens (Perl Error.pm:623).
+pub fn location_line() -> String {
+  crate::gullet::get_location_opt()
+    .map(|at| format!("\n\t{at}"))
+    .unwrap_or_default()
+}
+
 #[macro_export]
 macro_rules! generate_message {
   ($message:expr_2021) => {
     format!(
-      "{}\n\t{}\n\tIn {}:{}:{}\n",
+      "{}{}\n\tIn {}:{}:{}\n",
       $message,
-      $crate::gullet::get_location(),
+      $crate::common::error::location_line(),
       file!(),
       line!(),
       column!()
@@ -1178,9 +1185,9 @@ macro_rules! generate_message {
   };
   ($message:expr_2021, $detail:expr_2021) => {
     format!(
-      "{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
+      "{}{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
-      $crate::gullet::get_location(),
+      $crate::common::error::location_line(),
       $detail,
       file!(),
       line!(),
@@ -1189,9 +1196,9 @@ macro_rules! generate_message {
   };
   ($message:expr_2021, $detail:expr_2021, $detail2:expr_2021) => {
     format!(
-      "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
+      "{}{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
-      $crate::gullet::get_location(),
+      $crate::common::error::location_line(),
       $detail,
       $detail2,
       file!(),
@@ -1201,9 +1208,9 @@ macro_rules! generate_message {
   };
   ($message:expr_2021, $detail:expr_2021, $detail2:expr_2021) => {
     format!(
-      "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
+      "{}{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
-      $crate::gullet::get_location(),
+      $crate::common::error::location_line(),
       $detail,
       $detail2,
       file!(),

@@ -115,9 +115,8 @@ thread_local! {
   static SCRIPT_CACHE: RefCell<HashMap<(String, String), CachedScript>> =
     RefCell::new(HashMap::new());
 
-  /// The body failure [`call_deferred_body`] returned last (its error's address) and the `.rhai` file it came
-  /// from, for the `contain` that reports it.
-  static FAILED_BODY: RefCell<Option<(usize, String)>> = const { RefCell::new(None) };
+  /// The `.rhai` file of the body failure [`call_deferred_body`] returned last, for the `contain` that reports it.
+  static FAILED_BODY: RefCell<Option<String>> = const { RefCell::new(None) };
 
   /// Active-context stack for constructor bodies. Each entry publishes the live
   /// `&mut Document` + props of an in-flight `DefConstructor` call as raw
@@ -236,6 +235,10 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
   (
     "DefPrimitive returning a non-box",
     "a box, an array of boxes, or () (end the body with `return;`), as Perl errs on any other value",
+  ),
+  (
+    "a digest hook returning a non-box",
+    "a box, an array of boxes, or () (end the hook with `return;`), as Perl errs on any other value",
   ),
 ];
 
@@ -368,19 +371,18 @@ pub(super) fn call_deferred_body<A: rhai::FuncArgs>(
   if let Some(params) = closure_arity(ast, body.fn_name()) {
     args_vec.resize(params.saturating_sub(body.curry().len()), Dynamic::UNIT);
   }
-  body.call::<Dynamic>(engine, ast, args_vec).map_err(|e| {
-    let path = ast.source().unwrap_or_default().to_string();
-    FAILED_BODY.with(|f| *f.borrow_mut() = Some((&*e as *const EvalAltResult as usize, path)));
-    e
-  })
+  body
+    .call::<Dynamic>(engine, ast, args_vec)
+    .inspect_err(|_| {
+      let path = ast.source().unwrap_or_default().to_string();
+      FAILED_BODY.with(|f| *f.borrow_mut() = Some(path));
+    })
 }
 
-/// The `.rhai` file a failure `e` that [`call_deferred_body`] returned came from (empty when unknown).
-pub(super) fn failed_body_path(e: &EvalAltResult) -> String {
+/// The `.rhai` file the body failure [`call_deferred_body`] returned last came from (empty when unknown).
+pub(super) fn failed_body_path() -> String {
   FAILED_BODY
     .with(|f| f.borrow_mut().take())
-    .filter(|(addr, _)| *addr == e as *const EvalAltResult as usize)
-    .map(|(_, path)| path)
     .unwrap_or_default()
 }
 
@@ -400,9 +402,31 @@ pub(super) fn user_type_name(name: &str) -> &str {
   }
 }
 
-/// A Rhai failure as a binding's author reads it: the innermost error (not the closure-call chain) without Rhai's
-/// ` (line L, position C)` suffix, its types in [`user_type_name`] terms; and where it happened.
-pub(super) fn describe_failure(e: &EvalAltResult) -> (String, rhai::Position) {
+/// The script-function calls a failure `e` passed through, innermost first, one per line, as Rhai prints them
+/// (`in call to function 'helper' (line 5, position 3)`); `None` for a failure in the body itself.
+fn failure_chain(e: &EvalAltResult) -> Option<String> {
+  let mut frames = Vec::new();
+  let mut cur = e;
+  while let EvalAltResult::ErrorInFunctionCall(name, _, inner, pos) = cur {
+    // (a closure frame called from Rust, the body itself, has no call site)
+    if !pos.is_none() {
+      let call = if name.starts_with("anon$") {
+        "in closure call".to_string()
+      } else {
+        format!("in call to function '{name}'")
+      };
+      frames.push(format!("{call} ({pos})"));
+    }
+    cur = inner;
+  }
+  frames.reverse();
+  (!frames.is_empty()).then(|| frames.join("\n\t"))
+}
+
+/// A Rhai failure as a binding's author reads it: the innermost error without Rhai's ` (line L, position C)`
+/// suffix, its types in [`user_type_name`] terms; where it happened; and the function-call chain above it.
+pub(super) fn describe_failure(e: &EvalAltResult) -> (String, rhai::Position, Option<String>) {
+  let chain = failure_chain(e);
   let inner = e.unwrap_inner();
   let pos = inner.position();
   let text = match inner {
@@ -439,7 +463,7 @@ pub(super) fn describe_failure(e: &EvalAltResult) -> (String, rhai::Position) {
       }
     },
   };
-  (text, pos)
+  (text, pos, chain)
 }
 
 /// A binding file's locator, in the TeX locator's form: `at <path>; line L col C` (`None` without a path).
@@ -808,6 +832,7 @@ pub fn load_script_from(src: &str, path: &str) -> Result<usize> {
           path,
           &format!("Syntax error: {text}; the binding is not loaded"),
           pos,
+          None,
         )
       })?;
       if !path.is_empty() {
@@ -836,12 +861,9 @@ pub fn load_script_from(src: &str, path: &str) -> Result<usize> {
     let _script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
     cached.engine.run_ast(&cached.ast).map_err(|e| {
       take_raised_fatal(&e).unwrap_or_else(|| {
-        let (text, pos) = describe_failure(&e);
-        load_failure(
-          path,
-          &format!("{text}; the rest of the binding is skipped"),
-          pos,
-        )
+        let (text, pos, chain) = describe_failure(&e);
+        let text = format!("{text}; the rest of the binding is skipped");
+        load_failure(path, &text, pos, chain)
       })
     })
   };
@@ -851,17 +873,20 @@ pub fn load_script_from(src: &str, path: &str) -> Result<usize> {
 
 /// A binding that failed to load, as `Error:script:<file>` with the `.rhai` locator: an error naming its own
 /// category and object, which the loader logs as spelled (`content::input_definitions`).
-fn load_failure(path: &str, message: &str, pos: rhai::Position) -> Error {
+fn load_failure(path: &str, message: &str, pos: rhai::Position, chain: Option<String>) -> Error {
   use latexml_core::common::error::{ErrorCategory, ErrorData, ErrorTarget};
-  let file = path
-    .rsplit('/')
-    .next()
-    .filter(|f| !f.is_empty())
-    .unwrap_or("binding");
+  let file = std::path::Path::new(path).file_name().map_or_else(
+    || "binding".to_string(),
+    |f| f.to_string_lossy().into_owned(),
+  );
+  let located = with_script_locator(message, script_locator(path, pos));
   Error::from(ErrorData {
     target:   ErrorTarget::Named("script".to_string()),
-    category: ErrorCategory::Named(file.to_string()),
-    message:  with_script_locator(message, script_locator(path, pos)),
+    category: ErrorCategory::Named(file),
+    message:  match chain {
+      Some(chain) => format!("{located}\n\t{chain}"),
+      None => located,
+    },
   })
 }
 
@@ -1169,7 +1194,7 @@ fn dynamic_to_string(d: Dynamic) -> String {
     value
   } else if d.is::<WhatsitProxy>() {
     // (`to_string`, `ToString` and `absorbString` raise its error; see `whatsit_string`)
-    whatsit_string().unwrap_or_default()
+    whatsit_string(rhai::Position::NONE).unwrap_or_default()
   } else if let Some(def) = d.clone().try_cast::<DefinitionProxy>() {
     definition_string(&def)
   } else if d.is_array() {
@@ -1186,20 +1211,23 @@ fn dynamic_to_string(d: Dynamic) -> String {
 
 /// The hook's whatsit as Perl's `ToString($whatsit)`: its reversion (Whatsit.pm:163). Inside that whatsit's own
 /// script reversion, where Perl recurses without end, an Error and `""` (Rhai's `+` would swallow a raised one).
-fn whatsit_string() -> std::result::Result<String, Box<EvalAltResult>> {
+fn whatsit_string(pos: rhai::Position) -> std::result::Result<String, Box<EvalAltResult>> {
   let (ptr, _) = current_whatsit_entry()?;
   if REVERTING.with(|r| r.borrow().contains(&(ptr as usize))) {
-    report_self_reversion().map_err(rhai_err)?;
+    report_self_reversion(pos).map_err(rhai_err)?;
     return Ok(String::new());
   }
   with_whatsit(|w| w.revert().map(|t| t.to_string()).map_err(rhai_err))?
 }
 
-fn report_self_reversion() -> Result<()> {
+fn report_self_reversion(pos: rhai::Position) -> Result<()> {
   latexml_core::Error!(
     "script",
     "reversion",
-    "a reversion's own whatsit in a string reverts it again; use whatsit.getArg(n)"
+    with_script_locator(
+      "a reversion's own whatsit in a string reverts it again; use whatsit.getArg(n)",
+      current_script_locator(pos)
+    )
   );
   Ok(())
 }

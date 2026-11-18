@@ -918,6 +918,16 @@ pub fn get_location() -> String {
   s!("at {}", loc)
 }
 
+/// [`get_location`] when a mouth is open; `None` before the first one (a `--preload`ed binding, the dump load),
+/// where Perl's `getLocator` (Gullet.pm:150-162) is undef and its message has no `at` line (Error.pm:623).
+pub fn get_location_opt() -> Option<String> {
+  let open = {
+    let gullet = gullet!();
+    gullet.runtime.is_some() || !gullet.mouthstack.is_empty()
+  };
+  open.then(get_location)
+}
+
 pub fn mouth_is_open(mouth: &Mouth) -> bool {
   let gullet = gullet!();
   if let Some(ref runtime) = gullet.runtime

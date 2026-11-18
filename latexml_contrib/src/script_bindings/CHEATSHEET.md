@@ -340,7 +340,15 @@ newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-o
 | `$gullet->readToken` | [`read_token`](latexml_core::gullet::read_token) | `gullet.readToken` |
 | `$gullet->readUntil` | [`read_until`](latexml_core::gullet::read_until) | `gullet.readUntil` |
 | `$gullet->skipSpaces` | [`skip_spaces`](latexml_core::gullet::skip_spaces) | `gullet.skipSpaces` |
+| `$stomach->beginMode` | [`begin_mode_opt`](latexml_core::stomach::begin_mode_opt) | `stomach.beginMode` |
+| `$stomach->begingroup` | [`begingroup`](latexml_core::stomach::begingroup) | `stomach.begingroup` |
+| `$stomach->bgroup` | [`bgroup`](latexml_core::stomach::bgroup) | `stomach.bgroup` |
+| `$stomach->egroup` | [`egroup`](latexml_core::stomach::egroup) | `stomach.egroup` |
+| `$stomach->endMode` | [`end_mode_opt`](latexml_core::stomach::end_mode_opt) | `stomach.endMode` |
+| `$stomach->endgroup` | [`endgroup`](latexml_core::stomach::endgroup) | `stomach.endgroup` |
+| `$stomach->enterHorizontal` | [`enter_horizontal`](latexml_core::stomach::enter_horizontal) | `stomach.enterHorizontal` |
 | `$stomach->getGullet` | [`gullet`](latexml_core::gullet) | `stomach.getGullet` |
+| `$stomach->leaveHorizontal` | [`leave_horizontal`](latexml_core::stomach::leave_horizontal) | `stomach.leaveHorizontal` |
 | `$font->getEncoding` | [`Font::get_encoding`](latexml_core::common::font::Font::get_encoding) | `font.getEncoding` |
 | `$font->getFamily` | [`Font::get_family`](latexml_core::common::font::Font::get_family) | `font.getFamily` |
 | `$font->getLanguage` | [`Font::get_language`](latexml_core::common::font::Font::get_language) | `font.getLanguage` |

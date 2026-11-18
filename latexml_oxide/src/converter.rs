@@ -557,6 +557,9 @@ pub struct Converter {
   /// How arXiv compiles the main source ([`Converter::note_main_source`]); a session applies it before its preloads,
   /// and a converter never told its source is a LaTeX, PDF one.
   compile_route: CompileRoute,
+  /// The session's own log (its preloads), which the next conversion's log opens with (Perl's `$$self{log}`,
+  /// LaTeXML.pm:98-137, 154).
+  session_log:   String,
 }
 
 impl Converter {
@@ -584,6 +587,7 @@ impl Converter {
       opts,
       core,
       compile_route: CompileRoute::default(),
+      session_log: String::new(),
     }
   }
 
@@ -596,7 +600,17 @@ impl Converter {
   /// Also records a DVI driver class option. Every caller that prepares a session first tells it its source; a
   /// streaming restart or a supplement is a converter of its own and is told again.
   pub fn note_main_source(&mut self, source: &str) { self.compile_route = compile_route(source); }
+  /// Prepare the session, logging it (a failing `--preload`, the dump loads) into the session log, as Perl's
+  /// `initialize_session` binds the log first (LaTeXML.pm:98).
   pub fn initialize_session(&mut self) -> Result<()> {
+    self.bind_log();
+    let result = self.initialize_session_logged();
+    let log = self.flush_log();
+    self.session_log.push_str(&log);
+    result
+  }
+
+  fn initialize_session_logged(&mut self) -> Result<()> {
     // The engine crate's per-conversion state (the core's is `latexml_core::reset_conversion_state`, run by
     // `initialize_singletons`): the frontmatter observer's ledger (OXIDIZED_DESIGN_DIVERGENCES #837)
     latexml_engine::base_utilities::reset_fm_reading();
@@ -668,6 +682,13 @@ impl Converter {
   }
 
   pub fn bind_log(&mut self) { latexml_core::util::logger::bind_log(); }
+  /// Open the bound log with the session's log (once: a persistent converter's later conversions start clean).
+  fn take_session_log(&mut self) {
+    let log = std::mem::take(&mut self.session_log);
+    if !log.trim().is_empty() {
+      latexml_core::util::logger::note_to_log(log.trim_end());
+    }
+  }
   pub fn flush_log(&mut self) -> String { latexml_core::util::logger::flush_log() }
 
   pub fn convert(mut self, source: String) -> ConversionResponse {
@@ -679,14 +700,17 @@ impl Converter {
       self.note_main_source(&source);
       let _g_bootstrap = telemetry::phase(Phase::Bootstrap);
       if let Err(e) = self.initialize_session() {
-        // We can't initialize, return error:
+        // We can't initialize, return error (in the log, after the session's):
+        self.bind_log();
+        self.take_session_log();
         e.log_fatal();
+        self.session_log = self.flush_log();
       }
       drop(_g_bootstrap);
       if !self.ready {
         return ConversionResponse {
           result:      None,
-          log:         self.flush_log(),
+          log:         std::mem::take(&mut self.session_log),
           status:      s!("Initialization failed."),
           status_code: 3,
         };
@@ -694,6 +718,7 @@ impl Converter {
     }
 
     self.bind_log();
+    self.take_session_log();
     // 1.2 Inform of identity, increase conversion counter. Perl `bin/latexml`
     // L83 logs `Note("$LaTeXML::IDENTITY processing $source")` UNCONDITIONALLY;
     // our banner adds the executable name, git revision and exact start time
@@ -1203,6 +1228,7 @@ impl Converter {
       self.initialize_session()?;
     }
     self.bind_log();
+    self.take_session_log();
     note_format_build_failure();
     // Top-level document load: establish the source context (SOURCEFILE,
     // SOURCEDIRECTORY, SEARCHPATHS, GRAPHICSPATHS, \jobname) so sibling

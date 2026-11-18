@@ -3183,6 +3183,87 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
     Doc::Note("`stomach.getGullet()`: the `Gullet` handle, Perl's `$stomach->getGullet`."),
   ),
   (
+    "Stomach",
+    "bgroup",
+    Mirror("$stomach->bgroup", "latexml_core::stomach::bgroup"),
+    Doc::Rust(
+      "Open a boxing group, as `{` does (Perl's `$stomach->bgroup`).",
+      "latexml_core::stomach::bgroup",
+    ),
+  ),
+  (
+    "Stomach",
+    "egroup",
+    Mirror("$stomach->egroup", "latexml_core::stomach::egroup"),
+    Doc::Rust(
+      "Close a boxing group (an Error when the group is a mode switch or `\\begingroup`'s).",
+      "latexml_core::stomach::egroup",
+    ),
+  ),
+  (
+    "Stomach",
+    "begingroup",
+    Mirror("$stomach->begingroup", "latexml_core::stomach::begingroup"),
+    Doc::Rust(
+      "Open a non-boxing group, as `\\begingroup` does.",
+      "latexml_core::stomach::begingroup",
+    ),
+  ),
+  (
+    "Stomach",
+    "endgroup",
+    Mirror("$stomach->endgroup", "latexml_core::stomach::endgroup"),
+    Doc::Rust(
+      "Close a non-boxing group (an Error when the group is not `\\begingroup`'s).",
+      "latexml_core::stomach::endgroup",
+    ),
+  ),
+  (
+    "Stomach",
+    "enterHorizontal",
+    Mirror(
+      "$stomach->enterHorizontal",
+      "latexml_core::stomach::enter_horizontal",
+    ),
+    Doc::Rust(
+      "Start the paragraph (horizontal mode) when in vertical mode, as TeX's `\\leavevmode`.",
+      "latexml_core::stomach::enter_horizontal",
+    ),
+  ),
+  (
+    "Stomach",
+    "leaveHorizontal",
+    Mirror(
+      "$stomach->leaveHorizontal",
+      "latexml_core::stomach::leave_horizontal",
+    ),
+    Doc::Rust(
+      "End the paragraph when in one (an invisible `\\par`), resuming vertical mode.",
+      "latexml_core::stomach::leave_horizontal",
+    ),
+  ),
+  (
+    "Stomach",
+    "beginMode",
+    Mirror(
+      "$stomach->beginMode",
+      "latexml_core::stomach::begin_mode_opt",
+    ),
+    Doc::Rust(
+      "`beginMode(mode[, noframe])`: switch to `mode` (`\"text\"`, `\"inline_math\"`, …) in a new group (none with `noframe`).",
+      "latexml_core::stomach::begin_mode_opt",
+    ),
+  ),
+  (
+    "Stomach",
+    "endMode",
+    Mirror("$stomach->endMode", "latexml_core::stomach::end_mode_opt"),
+    Doc::Rust(
+      "`endMode(mode[, noframe])`: end `mode`, closing its group (an Error when the group is not that mode's).",
+      "latexml_core::stomach::end_mode_opt",
+    ),
+  ),
+  (
     "Whatsit",
     "to_string",
     Mirror(
