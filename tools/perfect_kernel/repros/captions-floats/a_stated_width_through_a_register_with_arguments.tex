@@ -1,0 +1,19 @@
+% witness: 2105.01581 (`\threeemdashes` = `\makebox[1.5\fontcharwd\font`m]{---}` in a figure of subfigure panels)
+% oracle:  pdflatex 0 errors: "(a) A (b) B Figure 1: C x—y z w v"
+% engines: rust MAIN911 = Fatal:panic etex.rs:277 (the panel-grid rule ran `\fontcharwd`'s getter without its
+%          arguments); perl: no panel-grid rule
+% expect:  0 errors, 0 warnings; both panel captions, the caption and "x—y z w v" kept
+% status:  RED (MAIN911) -> GREEN (PANIC397)
+\documentclass{article}
+\usepackage{graphicx,subcaption}
+\usepackage[margin=1in]{geometry}
+\begin{document}
+\begin{figure}
+\begin{subfigure}[t]{.48\textwidth}\centering\rule{2cm}{1cm}\caption{A}\end{subfigure}
+~
+\begin{subfigure}[t]{.48\textwidth}\centering\rule{2cm}{1cm}\caption{B}\end{subfigure}
+\caption{C}
+{\footnotesize x\makebox[1.5\fontcharwd\font`m]{---}y}
+\makebox[2\dimen0]{z}w\makebox[\fontcharht\font`m]{v}\makebox[\fontdimen6\font]{}
+\end{figure}
+\end{document}

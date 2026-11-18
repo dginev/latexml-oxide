@@ -341,7 +341,22 @@ impl Object for Whatsit {
       && let Some(Stored::Digested(digested)) = self.properties.get("alignment")
       && let DigestedData::Alignment(alignment) = digested.data()
     {
-      return alignment.borrow().revert();
+      // An alignment mid-absorption is mutably borrowed (`Digested::be_absorbed`'s re-entrant guard): a malformed
+      // cell can close a math around it, whose `tex` reverts it (`\ooalign` in a tikz label's math, 1901.06584).
+      // Revert the whatsit as its definition does then. A Warning, not an Error: the cells are in the document (the
+      // absorption above keeps them); only this reversion — the math's `tex`/alttext, once per reversion kind — lacks
+      // them, where Perl's would carry the whole alignment (the faithful repair, releasing the borrow while the cells
+      // are absorbed, is row R C2FAITHFUL).
+      match alignment.try_borrow() {
+        Ok(alignment) => return alignment.revert(),
+        Err(_) => {
+          Warn!(
+            "unexpected",
+            "self_referential_alignment",
+            "Reverting an alignment during its own absorption; its cells are not in the reversion"
+          );
+        },
+      }
     }
     // Find the appropriate reversion spec;
     // content_reversion or presntation_reversion if on dual branch

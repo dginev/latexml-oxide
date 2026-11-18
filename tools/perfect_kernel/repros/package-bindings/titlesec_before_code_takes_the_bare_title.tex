@@ -1,0 +1,12 @@
+% witness: 2208.03460, 2208.09785, 2209.08255 (ccjnl.cls: `\titleformat{…}{…}{…}{…}{\capitalisefmtwords}`)
+% oracle:  pdflatex 0 errors: "0.1 Decoding The Data"
+% engines: rust MAIN911 = stack overflow, rc=134, no log line (mfirstuc read the kernel's
+%          `\lx@format@title@font@@{subsection}` as a text command and recursed); perl: ignores the before-code
+% expect:  0 errors, 0 warnings; the subsection title "0.1 Decoding The Data"
+% status:  RED (MAIN911) -> GREEN (PANIC397)
+\documentclass{article}
+\usepackage{titlesec,mfirstuc}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.5em}{\capitalisefmtwords}
+\begin{document}
+\subsection{decoding the data}
+\end{document}
