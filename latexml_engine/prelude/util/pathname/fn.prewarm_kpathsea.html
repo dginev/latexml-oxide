@@ -12,7 +12,7 @@ guarantees <code>kpathsea_init_format</code> runs for that format type, so
 every subsequent real lookup hits the post-init fast path.</p>
 <p><strong>Concurrency:</strong> safe to invoke on a background thread spawned at
 process start <strong>only after <a href="../../pathname/fn.init_kpathsea.html" title="fn latexml_engine::prelude::pathname::init_kpathsea"><code>init_kpathsea</code></a> has run on the spawning
-thread</strong> — see there. <code>KPSE</code> is process-global (<code>Lazy&lt;Mutex&lt;…&gt;&gt;</code>), so
+thread</strong> — see there. <code>KPSE</code> is process-global (<code>LazyLock&lt;Mutex&lt;…&gt;&gt;</code>), so
 the init done on a background thread is visible to the main thread.
 The Mutex briefly serializes the prewarm against the main thread’s
 first real lookup, but dump load + arg parsing take &gt;50 ms before

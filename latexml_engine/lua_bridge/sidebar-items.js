@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["lua_exec"]};
+window.SIDEBAR_ITEMS = {"fn":["lua_exec","reset_session"]};

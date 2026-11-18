@@ -55,7 +55,7 @@
 <a href=#55 id=55 data-nosnippet>55</a>    // machinery balances the `\begin` (raw capture ate the whole line), then
 <a href=#56 id=56 data-nosnippet>56</a>    // the chunk's output ABOVE it so the printed tokens are read first.
 <a href=#57 id=57 data-nosnippet>57</a>    </span>unread(<span class="macro">Tokenize!</span>(TeXString::assembled(<span class="macro">s!</span>(<span class="string">"\\end{{{env}}}"</span>))));
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="kw">match </span>latexml_engine::lua_bridge::lua_exec(<span class="kw-2">&amp;</span>chunk) {
+<a href=#58 id=58 data-nosnippet>58</a>    <span class="kw">match </span>latexml_engine::lua_bridge::lua_exec(<span class="kw-2">&amp;</span>chunk)<span class="question-mark">? </span>{
 <a href=#59 id=59 data-nosnippet>59</a>      <span class="prelude-val">Ok</span>(out) <span class="kw">if </span>!out.is_empty() =&gt; {
 <a href=#60 id=60 data-nosnippet>60</a>        unread(<span class="macro">Tokenize!</span>(TeXString::assembled(out)));
 <a href=#61 id=61 data-nosnippet>61</a>      },

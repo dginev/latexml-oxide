@@ -50,14 +50,14 @@
 <a href=#50 id=50 data-nosnippet>50</a>// ,amssymb]`). Without leading `\s*` we'd get `"amsmath\n"` and the
 <a href=#51 id=51 data-nosnippet>51</a>// declared option callback wouldn't fire — silently turning the option
 <a href=#52 id=52 data-nosnippet>52</a>// into an unused-global.
-<a href=#53 id=53 data-nosnippet>53</a></span><span class="kw">static </span>OPTS_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\s*,\s*"</span>).unwrap());
+<a href=#53 id=53 data-nosnippet>53</a></span><span class="kw">static </span>OPTS_REGEX: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"\s*,\s*"</span>).unwrap());
 <a href=#54 id=54 data-nosnippet>54</a>
 <a href=#55 id=55 data-nosnippet>55</a><span class="comment">// Perl `\ensuremathfollows` already-math test (latex_constructs.pool.ltxml
 <a href=#56 id=56 data-nosnippet>56</a>// L2083/L2098): `$MATHENVS = 'displaymath|equation*?|eqnarray*?'` and the guard
 <a href=#57 id=57 data-nosnippet>57</a>// `$csname !~ /^Math|\(|\[|(?:$MATHENVS)/o`. Kept verbatim (not hand-expanded)
 <a href=#58 id=58 data-nosnippet>58</a>// so the automath wrapper matches Perl exactly.
-<a href=#59 id=59 data-nosnippet>59</a></span><span class="kw">static </span>AUTOMATH_ALREADY_MATH: Lazy&lt;Regex&gt; =
-<a href=#60 id=60 data-nosnippet>60</a>  Lazy::new(|| Regex::new(<span class="string">r"^Math|\\\(|\\\[|(?:displaymath|equation*?|eqnarray*?)"</span>).unwrap());
+<a href=#59 id=59 data-nosnippet>59</a></span><span class="kw">static </span>AUTOMATH_ALREADY_MATH: LazyLock&lt;Regex&gt; =
+<a href=#60 id=60 data-nosnippet>60</a>  LazyLock::new(|| Regex::new(<span class="string">r"^Math|\\\(|\\\[|(?:displaymath|equation*?|eqnarray*?)"</span>).unwrap());
 <a href=#61 id=61 data-nosnippet>61</a>
 <a href=#62 id=62 data-nosnippet>62</a><span class="comment">// Perl `\documentclass` (latex_constructs.pool.ltxml L78) wraps the
 <a href=#63 id=63 data-nosnippet>63</a>// raw option string in `TrimmedCommaList(...)` — i.e. comma-split AND
@@ -94,8 +94,8 @@
 <a href=#94 id=94 data-nosnippet>94</a>  out
 <a href=#95 id=95 data-nosnippet>95</a>}
 <a href=#96 id=96 data-nosnippet>96</a><span class="kw">static </span>SEMIVERBATIM_CHARS: [char; <span class="number">4</span>] = [<span class="string">'%'</span>, <span class="string">'\\'</span>, <span class="string">'{'</span>, <span class="string">'}'</span>];
-<a href=#97 id=97 data-nosnippet>97</a><span class="kw">static </span>NOTE_TEXT_END: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">"^(\\w+?)text$"</span>).unwrap());
-<a href=#98 id=98 data-nosnippet>98</a><span class="kw">static </span>NOTE_MARK_END: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">"^(\\w+?)mark$"</span>).unwrap());
+<a href=#97 id=97 data-nosnippet>97</a><span class="kw">static </span>NOTE_TEXT_END: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">"^(\\w+?)text$"</span>).unwrap());
+<a href=#98 id=98 data-nosnippet>98</a><span class="kw">static </span>NOTE_MARK_END: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">"^(\\w+?)mark$"</span>).unwrap());
 <a href=#99 id=99 data-nosnippet>99</a>
 <a href=#100 id=100 data-nosnippet>100</a><span class="doccomment">/// Defensive sanitizer for section-type identifiers (the `{section}` arg of
 <a href=#101 id=101 data-nosnippet>101</a>/// `\@@numbered@section` etc.). Some upstream paths — notably figure-block +
@@ -5877,8 +5877,8 @@
 <a href=#5877 id=5877 data-nosnippet>5877</a><span class="doccomment">/// A format is being built (`--init`, a dump): what the panel grid rule records of a document's lengths
 <a href=#5878 id=5878 data-nosnippet>5878</a>/// (`note_setlength`, `note_length_allocated`) is not recorded, so no dump holds it.
 <a href=#5879 id=5879 data-nosnippet>5879</a></span><span class="kw">fn </span>building_a_format() -&gt; bool {
-<a href=#5880 id=5880 data-nosnippet>5880</a>  <span class="kw">static </span>INI_MODE: std::sync::LazyLock&lt;bool&gt; =
-<a href=#5881 id=5881 data-nosnippet>5881</a>    std::sync::LazyLock::new(|| std::env::var_os(<span class="string">"LATEXML_INI_MODE"</span>).is_some());
+<a href=#5880 id=5880 data-nosnippet>5880</a>  <span class="kw">static </span>INI_MODE: LazyLock&lt;bool&gt; =
+<a href=#5881 id=5881 data-nosnippet>5881</a>    LazyLock::new(|| std::env::var_os(<span class="string">"LATEXML_INI_MODE"</span>).is_some());
 <a href=#5882 id=5882 data-nosnippet>5882</a>  <span class="kw-2">*</span>INI_MODE || <span class="kw">crate</span>::dump_paths::building_format()
 <a href=#5883 id=5883 data-nosnippet>5883</a>}
 <a href=#5884 id=5884 data-nosnippet>5884</a>

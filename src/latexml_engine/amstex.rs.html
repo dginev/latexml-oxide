@@ -1193,8 +1193,8 @@
 <a href=#1193 id=1193 data-nosnippet>1193</a><span class="doccomment">/// Whether the AMS-TeX style file at `path` `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`), outside
 <a href=#1194 id=1194 data-nosnippet>1194</a>/// comments.
 <a href=#1195 id=1195 data-nosnippet>1195</a></span><span class="kw">fn </span>inputs_a_style(path: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#1196 id=1196 data-nosnippet>1196</a>  <span class="kw">static </span>INPUT: Lazy&lt;Regex&gt; =
-<a href=#1197 id=1197 data-nosnippet>1197</a>    Lazy::new(|| Regex::new(<span class="string">r"\\input\s*\{?\s*([A-Za-z0-9_.-]+)"</span>).unwrap());
+<a href=#1196 id=1196 data-nosnippet>1196</a>  <span class="kw">static </span>INPUT: LazyLock&lt;Regex&gt; =
+<a href=#1197 id=1197 data-nosnippet>1197</a>    LazyLock::new(|| Regex::new(<span class="string">r"\\input\s*\{?\s*([A-Za-z0-9_.-]+)"</span>).unwrap());
 <a href=#1198 id=1198 data-nosnippet>1198</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(bytes) = std::fs::read(path) <span class="kw">else </span>{
 <a href=#1199 id=1199 data-nosnippet>1199</a>    <span class="kw">return </span><span class="bool-val">false</span>;
 <a href=#1200 id=1200 data-nosnippet>1200</a>  };

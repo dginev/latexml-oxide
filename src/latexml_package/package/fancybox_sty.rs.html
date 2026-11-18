@@ -16,22 +16,22 @@
 <a href=#16 id=16 data-nosnippet>16</a>  <span class="comment">// These could be made to depend on \fboxsep, \fboxrule, \cornersize
 <a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\cornersize OptionalMatch:* {}"</span>, <span class="prelude-val">None</span>);
 <a href=#18 id=18 data-nosnippet>18</a>
-<a href=#19 id=19 data-nosnippet>19</a>  <span class="comment">// Perl fancybox.sty.ltxml L25-36: DefConstructor(... mode =&gt; 'internal_vertical').
-<a href=#20 id=20 data-nosnippet>20</a>  // The mode declaration was dropped in the Rust stub — add it back so the
-<a href=#21 id=21 data-nosnippet>21</a>  // constructors pair like the Perl originals when they appear in
-<a href=#22 id=22 data-nosnippet>22</a>  // paragraph-mode contexts.
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="comment">// Perl fancybox.sty.ltxml L25-36 declares mode =&gt; 'internal_vertical', which ends the paragraph the box sits in
+<a href=#20 id=20 data-nosnippet>20</a>  // (begin_mode). fancybox.sty sets each one's content in an `\hbox` (:60 `\hbox{\fbox{#1}}`, :146 and :128
+<a href=#21 id=21 data-nosnippet>21</a>  // `\hbox{{#1}}`) and starts the paragraph there (:61 `\leavevmode\vbox`, :136 `\leavevmode\hbox`, :152 `\fbox`): a
+<a href=#22 id=22 data-nosnippet>22</a>  // restricted horizontal box entering horizontal mode (OXIDIZED_DESIGN_DIVERGENCES #1079).
 <a href=#23 id=23 data-nosnippet>23</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\shadowbox MoveableBox"</span>,
 <a href=#24 id=24 data-nosnippet>24</a>    <span class="string">"&lt;ltx:text cssstyle='border:1px solid black; box-shadow: 5px 5px 10px black;'&gt;#1&lt;/ltx:text&gt;"</span>,
-<a href=#25 id=25 data-nosnippet>25</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>    mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>);
 <a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\doublebox MoveableBox"</span>,
 <a href=#27 id=27 data-nosnippet>27</a>    <span class="string">"&lt;ltx:text cssstyle='border:3px double black;'&gt;#1&lt;/ltx:text&gt;"</span>,
-<a href=#28 id=28 data-nosnippet>28</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#28 id=28 data-nosnippet>28</a>    mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>);
 <a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ovalbox MoveableBox"</span>,
 <a href=#30 id=30 data-nosnippet>30</a>    <span class="string">"&lt;ltx:text cssstyle='border:1px solid black;border-radius:5px;'&gt;#1&lt;/ltx:text&gt;"</span>,
-<a href=#31 id=31 data-nosnippet>31</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#31 id=31 data-nosnippet>31</a>    mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>);
 <a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\Ovalbox MoveableBox"</span>,
 <a href=#33 id=33 data-nosnippet>33</a>    <span class="string">"&lt;ltx:text cssstyle='border:2px solid black;border-radius:5px;'&gt;#1&lt;/ltx:text&gt;"</span>,
-<a href=#34 id=34 data-nosnippet>34</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#34 id=34 data-nosnippet>34</a>    mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>);
 <a href=#35 id=35 data-nosnippet>35</a>
 <a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">// Perl fancybox.sty.ltxml L38-46: {Sbox} stashes its digested body
 <a href=#37 id=37 data-nosnippet>37</a>  // globally under the `Sbox` state value; \TheSbox pops it and

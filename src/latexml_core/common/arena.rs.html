@@ -18,9 +18,9 @@
 <a href=#18 id=18 data-nosnippet>18</a>  hash::BuildHasherDefault,
 <a href=#19 id=19 data-nosnippet>19</a>  ops::Deref,
 <a href=#20 id=20 data-nosnippet>20</a>  rc::Rc,
-<a href=#21 id=21 data-nosnippet>21</a>};
-<a href=#22 id=22 data-nosnippet>22</a>
-<a href=#23 id=23 data-nosnippet>23</a><span class="kw">use </span>once_cell::sync::Lazy;
+<a href=#21 id=21 data-nosnippet>21</a>  sync::LazyLock,
+<a href=#22 id=22 data-nosnippet>22</a>};
+<a href=#23 id=23 data-nosnippet>23</a>
 <a href=#24 id=24 data-nosnippet>24</a><span class="kw">use </span>rustc_hash::{FxHashMap, FxHasher};
 <a href=#25 id=25 data-nosnippet>25</a><span class="kw">use </span>string_interner::{StringInterner, Symbol, backend::BufferBackend};
 <a href=#26 id=26 data-nosnippet>26</a>
@@ -30,7 +30,7 @@
 <a href=#30 id=30 data-nosnippet>30</a><span class="kw">type </span>Interner = StringInterner&lt;BufferBackend, BuildHasherDefault&lt;FxHasher&gt;&gt;;
 <a href=#31 id=31 data-nosnippet>31</a>
 <a href=#32 id=32 data-nosnippet>32</a><span class="attr">#[thread_local]
-<a href=#33 id=33 data-nosnippet>33</a></span><span class="kw">static </span>ARENA: Lazy&lt;RefCell&lt;Interner&gt;&gt; = Lazy::new(|| {
+<a href=#33 id=33 data-nosnippet>33</a></span><span class="kw">static </span>ARENA: LazyLock&lt;RefCell&lt;Interner&gt;&gt; = LazyLock::new(|| {
 <a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// 131,072 = 2^17 — sized to absorb the latex.dump (109,863 entries)
 <a href=#35 id=35 data-nosnippet>35</a>  // plus a typical conversion's content (~15k more), so the hot path
 <a href=#36 id=36 data-nosnippet>36</a>  // hits no reallocation. Profiled 2026-05-12: a representative
@@ -61,7 +61,7 @@
 <a href=#61 id=61 data-nosnippet>61</a>}
 <a href=#62 id=62 data-nosnippet>62</a>
 <a href=#63 id=63 data-nosnippet>63</a><span class="attr">#[thread_local]
-<a href=#64 id=64 data-nosnippet>64</a></span><span class="kw">static </span>OVERFLOW: Lazy&lt;RefCell&lt;Overflow&gt;&gt; = Lazy::new(Default::default);
+<a href=#64 id=64 data-nosnippet>64</a></span><span class="kw">static </span>OVERFLOW: LazyLock&lt;RefCell&lt;Overflow&gt;&gt; = LazyLock::new(Default::default);
 <a href=#65 id=65 data-nosnippet>65</a>
 <a href=#66 id=66 data-nosnippet>66</a><span class="doccomment">/// The overflow page's symbol for `text`, if the page holds it.
 <a href=#67 id=67 data-nosnippet>67</a></span><span class="attr">#[inline(never)]
@@ -391,10 +391,10 @@
 <a href=#391 id=391 data-nosnippet>391</a>  <span class="kw-2">*</span>SUFFIXED_KEY.borrow_mut() = String::new();
 <a href=#392 id=392 data-nosnippet>392</a>}
 <a href=#393 id=393 data-nosnippet>393</a>
-<a href=#394 id=394 data-nosnippet>394</a><span class="doccomment">/// Eagerly initialize this thread's `#[thread_local]` `ARENA` Lazy.
+<a href=#394 id=394 data-nosnippet>394</a><span class="doccomment">/// Eagerly initialize this thread's `#[thread_local]` `ARENA` LazyLock.
 <a href=#395 id=395 data-nosnippet>395</a>///
 <a href=#396 id=396 data-nosnippet>396</a>/// `ARENA` is the *leaf* of the engine's thread-local dependency graph:
-<a href=#397 id=397 data-nosnippet>397</a>/// every other root's `Lazy` initializer interns symbols via [`pin`], so it
+<a href=#397 id=397 data-nosnippet>397</a>/// every other root's `LazyLock` initializer interns symbols via [`pin`], so it
 <a href=#398 id=398 data-nosnippet>398</a>/// reaches into `ARENA`. Calling this at conversion entry (see
 <a href=#399 id=399 data-nosnippet>399</a>/// `Core::new`), before any other root is touched, guarantees those later
 <a href=#400 id=400 data-nosnippet>400</a>/// initializers find a fully-constructed `ARENA` instead of triggering its
@@ -404,7 +404,7 @@
 <a href=#404 id=404 data-nosnippet>404</a>/// worker-thread memory corruption in issue #217. `ARENA`'s own initializer
 <a href=#405 id=405 data-nosnippet>405</a>/// touches no other thread-local, so forcing it first is always safe.
 <a href=#406 id=406 data-nosnippet>406</a>/// No behavioral change on Linux.
-<a href=#407 id=407 data-nosnippet>407</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>force_init() { Lazy::force(<span class="kw-2">&amp;</span>ARENA); }
+<a href=#407 id=407 data-nosnippet>407</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>force_init() { LazyLock::force(<span class="kw-2">&amp;</span>ARENA); }
 <a href=#408 id=408 data-nosnippet>408</a>
 <a href=#409 id=409 data-nosnippet>409</a><span class="attr">#[cfg(test)]
 <a href=#410 id=410 data-nosnippet>410</a></span><span class="kw">mod </span>tests {

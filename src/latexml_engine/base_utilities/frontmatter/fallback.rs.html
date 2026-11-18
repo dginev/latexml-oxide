@@ -427,7 +427,7 @@
 <a href=#427 id=427 data-nosnippet>427</a>/// spaces) and 2603.20775 (`{\large \bf A \quad B}`), named with the ruling, are that shape.
 <a href=#428 id=428 data-nosnippet>428</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>normalize_hspace_separators(tokens: Tokens) -&gt; Tokens {
 <a href=#429 id=429 data-nosnippet>429</a>  <span class="doccomment">/// A length written as zero, `0pt`, `0.0mm`, `0`, `\z@`: an `\hspace` of it is no separator.
-<a href=#430 id=430 data-nosnippet>430</a>  </span><span class="kw">static </span>ZERO_LENGTH: std::sync::LazyLock&lt;Regex&gt; = std::sync::LazyLock::new(|| {
+<a href=#430 id=430 data-nosnippet>430</a>  </span><span class="kw">static </span>ZERO_LENGTH: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
 <a href=#431 id=431 data-nosnippet>431</a>    Regex::new(<span class="string">r"^\s*(?:[+-]?(?:0+(?:\.0*)?|\.0+)\s*(?:pt|mm|cm|in|em|ex|bp|sp|pc|dd|cc|mu)?|\\z@(?:skip)?)\s*$"</span>)
 <a href=#432 id=432 data-nosnippet>432</a>      .unwrap()
 <a href=#433 id=433 data-nosnippet>433</a>  });

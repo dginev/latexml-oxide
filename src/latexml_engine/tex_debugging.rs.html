@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex_debugging.rs`."><title>tex_debugging.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (59cbdee2e 2026-11-17)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex_debugging.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX Debugging
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Core TeX Implementation for LaTeXML
-<a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">static </span>EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy&lt;Regex&gt; = Lazy::new(|| {
+<a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">static </span>EXCEPTION_MACRO_NAMES_FOR_MEANING: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
 <a href=#5 id=5 data-nosnippet>5</a>  Regex::new(
 <a href=#6 id=6 data-nosnippet>6</a>    <span class="string">r"^\\(?:(?:un)?expanded|detokenize|(?:lx@)?directlua|(?:lx@)?luaescapestring|primitive)$"</span>,
 <a href=#7 id=7 data-nosnippet>7</a>  )
@@ -11,8 +11,8 @@
 <a href=#11 id=11 data-nosnippet>11</a>/// `\meaning` names them, as tex.web §296 `print_meaning` does (`print_cmd_chr`),
 <a href=#12 id=12 data-nosnippet>12</a>/// while the definition is still the kernel's closure (a `\def\string{…}` is a
 <a href=#13 id=13 data-nosnippet>13</a>/// macro). Perl prints `macro:#1#2-&gt;CODE(0x…)`, a heap address.
-<a href=#14 id=14 data-nosnippet>14</a></span><span class="kw">static </span>EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING: Lazy&lt;Regex&gt; =
-<a href=#15 id=15 data-nosnippet>15</a>  Lazy::new(|| Regex::new(<span class="string">r"^\\(?:expandafter|noexpand|string|meaning)$"</span>).unwrap());
+<a href=#14 id=14 data-nosnippet>14</a></span><span class="kw">static </span>EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING: LazyLock&lt;Regex&gt; =
+<a href=#15 id=15 data-nosnippet>15</a>  LazyLock::new(|| Regex::new(<span class="string">r"^\\(?:expandafter|noexpand|string|meaning)$"</span>).unwrap());
 <a href=#16 id=16 data-nosnippet>16</a><span class="doccomment">/// TeX primitives the kernel implements as macros of its own (tex_math.rs `\over` family, `\overline`,
 <a href=#17 id=17 data-nosnippet>17</a>/// `\underline`): `\meaning` prints the primitive's name, as tex.web §296 `print_meaning` does for the primitive (and
 <a href=#18 id=18 data-nosnippet>18</a>/// LaTeX leaves these primitive, but `\underline`, whose `\@@underline` copy is), while the definition is still
@@ -22,14 +22,14 @@
 <a href=#22 id=22 data-nosnippet>22</a>/// failed it with "Unable to properly define \@@over; primitive \over no longer primitive", and the class's `\frac`
 <a href=#23 id=23 data-nosnippet>23</a>/// built on the unsaved `\@@over` lost its fraction (KNOWN_PERL_ERRORS #985). Perl TeX_Debugging.pool.ltxml:125-127
 <a href=#24 id=24 data-nosnippet>24</a>/// keeps this list for `\expanded`/`\unexpanded`/`\detokenize` ("could be extended further").
-<a href=#25 id=25 data-nosnippet>25</a></span><span class="kw">static </span>KERNEL_PRIMITIVE_STANDINS_FOR_MEANING: Lazy&lt;Regex&gt; = Lazy::new(|| {
+<a href=#25 id=25 data-nosnippet>25</a></span><span class="kw">static </span>KERNEL_PRIMITIVE_STANDINS_FOR_MEANING: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
 <a href=#26 id=26 data-nosnippet>26</a>  Regex::new(
 <a href=#27 id=27 data-nosnippet>27</a>    <span class="string">r"^\\(?:over|atop|above|overwithdelims|atopwithdelims|abovewithdelims|overline|underline)$"</span>,
 <a href=#28 id=28 data-nosnippet>28</a>  )
 <a href=#29 id=29 data-nosnippet>29</a>  .unwrap()
 <a href=#30 id=30 data-nosnippet>30</a>});
-<a href=#31 id=31 data-nosnippet>31</a><span class="kw">static </span>LEAD_W_COLON_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^(\w+):"</span>).unwrap());
-<a href=#32 id=32 data-nosnippet>32</a><span class="kw">static </span>UNTIL_SPEC: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">"^\\w?Until(\\w*):"</span>).unwrap());
+<a href=#31 id=31 data-nosnippet>31</a><span class="kw">static </span>LEAD_W_COLON_RE: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"^(\w+):"</span>).unwrap());
+<a href=#32 id=32 data-nosnippet>32</a><span class="kw">static </span>UNTIL_SPEC: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">"^\\w?Until(\\w*):"</span>).unwrap());
 <a href=#33 id=33 data-nosnippet>33</a>
 <a href=#34 id=34 data-nosnippet>34</a><span class="doccomment">/// The parameter text of a delimited parameter as TeX prints it (tex.web
 <a href=#35 id=35 data-nosnippet>35</a>/// §262 `print_cs`): every control word is followed by a space, so

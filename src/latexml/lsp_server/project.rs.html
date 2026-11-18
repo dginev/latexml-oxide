@@ -14,11 +14,11 @@
 <a href=#14 id=14 data-nosnippet>14</a>
 <a href=#15 id=15 data-nosnippet>15</a></span><span class="kw">use </span>std::{
 <a href=#16 id=16 data-nosnippet>16</a>  path::{Path, PathBuf},
-<a href=#17 id=17 data-nosnippet>17</a>  time::SystemTime,
-<a href=#18 id=18 data-nosnippet>18</a>};
-<a href=#19 id=19 data-nosnippet>19</a>
-<a href=#20 id=20 data-nosnippet>20</a><span class="kw">use </span>latexml_core::common::error::emit_warn;
-<a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span>once_cell::sync::Lazy;
+<a href=#17 id=17 data-nosnippet>17</a>  sync::LazyLock,
+<a href=#18 id=18 data-nosnippet>18</a>  time::SystemTime,
+<a href=#19 id=19 data-nosnippet>19</a>};
+<a href=#20 id=20 data-nosnippet>20</a>
+<a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span>latexml_core::common::error::emit_warn;
 <a href=#22 id=22 data-nosnippet>22</a><span class="kw">use </span>regex::Regex;
 <a href=#23 id=23 data-nosnippet>23</a><span class="kw">use </span>rustc_hash::FxHashMap;
 <a href=#24 id=24 data-nosnippet>24</a>
@@ -29,7 +29,7 @@
 <a href=#29 id=29 data-nosnippet>29</a></span><span class="kw">const </span>WALKUP_MAX: usize = <span class="number">2</span>;
 <a href=#30 id=30 data-nosnippet>30</a>
 <a href=#31 id=31 data-nosnippet>31</a><span class="doccomment">/// `% !TEX root = ../main.tex` (texlab / LaTeX-Workshop magic comment).
-<a href=#32 id=32 data-nosnippet>32</a></span><span class="kw">static </span>MAGIC_ROOT: Lazy&lt;Regex&gt; = Lazy::new(|| {
+<a href=#32 id=32 data-nosnippet>32</a></span><span class="kw">static </span>MAGIC_ROOT: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
 <a href=#33 id=33 data-nosnippet>33</a>  Regex::new(<span class="string">r"(?mi)^[ \t]*%+[ \t]*!?[ \t]*TEX[ \t]+root[ \t]*=[ \t]*(.+?)[ \t]*$"</span>).unwrap()
 <a href=#34 id=34 data-nosnippet>34</a>});
 <a href=#35 id=35 data-nosnippet>35</a>

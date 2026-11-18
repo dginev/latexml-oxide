@@ -109,7 +109,7 @@
 <a href=#109 id=109 data-nosnippet>109</a>      .filter(|t| t != <span class="kw-2">&amp;</span>par)
 <a href=#110 id=110 data-nosnippet>110</a>      .collect();
 <a href=#111 id=111 data-nosnippet>111</a>    <span class="kw">let </span>chunk = Tokens::new(kept).to_string();
-<a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">match </span><span class="kw">crate</span>::lua_bridge::lua_exec(<span class="kw-2">&amp;</span>chunk) {
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">match </span><span class="kw">crate</span>::lua_bridge::lua_exec(<span class="kw-2">&amp;</span>chunk)<span class="question-mark">? </span>{
 <a href=#113 id=113 data-nosnippet>113</a>      <span class="prelude-val">Ok</span>(out) <span class="kw">if </span>out.is_empty() =&gt; <span class="macro">Tokens!</span>(),
 <a href=#114 id=114 data-nosnippet>114</a>      <span class="prelude-val">Ok</span>(out) =&gt; <span class="macro">Tokenize!</span>(TeXString::assembled(out)),
 <a href=#115 id=115 data-nosnippet>115</a>      <span class="prelude-val">Err</span>(msg) =&gt; {

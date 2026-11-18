@@ -395,7 +395,7 @@
 <a href=#395 id=395 data-nosnippet>395</a>  }
 <a href=#396 id=396 data-nosnippet>396</a>  <span class="kw">let </span>rest: Vec&lt;Token&gt; = body[rest_at..].to_vec();
 <a href=#397 id=397 data-nosnippet>397</a>  <span class="comment">// (spacing alone is no address)
-<a href=#398 id=398 data-nosnippet>398</a>  </span><span class="kw">static </span>SPACING: Lazy&lt;Regex&gt; = Lazy::new(|| {
+<a href=#398 id=398 data-nosnippet>398</a>  </span><span class="kw">static </span>SPACING: LazyLock&lt;Regex&gt; = LazyLock::new(|| {
 <a href=#399 id=399 data-nosnippet>399</a>    Regex::new(
 <a href=#400 id=400 data-nosnippet>400</a>      <span class="string">r"\\(?:[vh]skip\s*[-+]?\s*[0-9.]*\s*(?:pt|em|ex|cm|mm|in|bp|sp|pc|dd|cc|mu)|[vh]space\*?\s*\{[^}]*\}|(?:small|med|big)skip|par)"</span>,
 <a href=#401 id=401 data-nosnippet>401</a>    )

@@ -4,9 +4,9 @@
 <a href=#4 id=4 data-nosnippet>4</a>  collections::VecDeque,
 <a href=#5 id=5 data-nosnippet>5</a>  fmt::{<span class="self">self</span>, Display},
 <a href=#6 id=6 data-nosnippet>6</a>  rc::Rc,
-<a href=#7 id=7 data-nosnippet>7</a>};
-<a href=#8 id=8 data-nosnippet>8</a>
-<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>once_cell::sync::Lazy;
+<a href=#7 id=7 data-nosnippet>7</a>  sync::LazyLock,
+<a href=#8 id=8 data-nosnippet>8</a>};
+<a href=#9 id=9 data-nosnippet>9</a>
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>regex::Regex;
 <a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>rustc_hash::{FxHashMap <span class="kw">as </span>HashMap, FxHashSet <span class="kw">as </span>HashSet};
 <a href=#12 id=12 data-nosnippet>12</a>
@@ -50,7 +50,7 @@
 <a href=#50 id=50 data-nosnippet>50</a><span class="kw">static </span>CODE_TEX_EXT: <span class="kw-2">&amp;</span>str = <span class="string">".code.tex"</span>;
 <a href=#51 id=51 data-nosnippet>51</a>
 <a href=#52 id=52 data-nosnippet>52</a><span class="doccomment">/// regex for *.tex and *.bib
-<a href=#53 id=53 data-nosnippet>53</a></span><span class="kw">static </span>TEX_OR_BIB_EXT_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\.(tex|bib)$"</span>).unwrap());
+<a href=#53 id=53 data-nosnippet>53</a></span><span class="kw">static </span>TEX_OR_BIB_EXT_RE: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"\.(tex|bib)$"</span>).unwrap());
 <a href=#54 id=54 data-nosnippet>54</a><span class="doccomment">/// Used in conversion to scaled points.
 <a href=#55 id=55 data-nosnippet>55</a>///
 <a href=#56 id=56 data-nosnippet>56</a>/// These are the float `sp`-per-unit ratios, kept for *display / scaling*
@@ -58,7 +58,7 @@
 <a href=#58 id=58 data-nosnippet>58</a>/// **construction** use [`convert_unit_ratio`] + `numeric_ops::fixpoint_unit`
 <a href=#59 id=59 data-nosnippet>59</a>/// instead — exact integer arithmetic, bit-faithful to TeX (issue #127). Each
 <a href=#60 id=60 data-nosnippet>60</a>/// value here equals `65536·num/den` of the matching `convert_unit_ratio` entry.
-<a href=#61 id=61 data-nosnippet>61</a></span><span class="kw">pub static </span>UNITS: Lazy&lt;HashMap&lt;String, f64&gt;&gt; = Lazy::new(|| {
+<a href=#61 id=61 data-nosnippet>61</a></span><span class="kw">pub static </span>UNITS: LazyLock&lt;HashMap&lt;String, f64&gt;&gt; = LazyLock::new(|| {
 <a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">map!</span>(
 <a href=#63 id=63 data-nosnippet>63</a>    <span class="string">"pt" </span>=&gt; <span class="number">65536.0</span>,
 <a href=#64 id=64 data-nosnippet>64</a>    <span class="string">"pc" </span>=&gt; <span class="number">12.0 </span>* <span class="number">65536.0</span>,
@@ -645,21 +645,21 @@
 <a href=#645 id=645 data-nosnippet>645</a>}
 <a href=#646 id=646 data-nosnippet>646</a>
 <a href=#647 id=647 data-nosnippet>647</a><span class="attr">#[thread_local]
-<a href=#648 id=648 data-nosnippet>648</a></span><span class="kw">static </span>STD_STATE: Lazy&lt;RefCell&lt;State&gt;&gt; = Lazy::new(|| {
+<a href=#648 id=648 data-nosnippet>648</a></span><span class="kw">static </span>STD_STATE: LazyLock&lt;RefCell&lt;State&gt;&gt; = LazyLock::new(|| {
 <a href=#649 id=649 data-nosnippet>649</a>  RefCell::new(State::new(StateOptions {
 <a href=#650 id=650 data-nosnippet>650</a>    catcodes: <span class="prelude-val">Some</span>(Catcodes::Standard),
 <a href=#651 id=651 data-nosnippet>651</a>    ..StateOptions::default()
 <a href=#652 id=652 data-nosnippet>652</a>  }))
 <a href=#653 id=653 data-nosnippet>653</a>});
 <a href=#654 id=654 data-nosnippet>654</a><span class="attr">#[thread_local]
-<a href=#655 id=655 data-nosnippet>655</a></span><span class="kw">static </span>STY_STATE: Lazy&lt;RefCell&lt;State&gt;&gt; = Lazy::new(|| {
+<a href=#655 id=655 data-nosnippet>655</a></span><span class="kw">static </span>STY_STATE: LazyLock&lt;RefCell&lt;State&gt;&gt; = LazyLock::new(|| {
 <a href=#656 id=656 data-nosnippet>656</a>  RefCell::new(State::new(StateOptions {
 <a href=#657 id=657 data-nosnippet>657</a>    catcodes: <span class="prelude-val">Some</span>(Catcodes::Style),
 <a href=#658 id=658 data-nosnippet>658</a>    ..StateOptions::default()
 <a href=#659 id=659 data-nosnippet>659</a>  }))
 <a href=#660 id=660 data-nosnippet>660</a>});
 <a href=#661 id=661 data-nosnippet>661</a><span class="attr">#[thread_local]
-<a href=#662 id=662 data-nosnippet>662</a></span><span class="kw">static </span>STATE: Lazy&lt;RefCell&lt;State&gt;&gt; = Lazy::new(|| {
+<a href=#662 id=662 data-nosnippet>662</a></span><span class="kw">static </span>STATE: LazyLock&lt;RefCell&lt;State&gt;&gt; = LazyLock::new(|| {
 <a href=#663 id=663 data-nosnippet>663</a>  RefCell::new(State::new(StateOptions {
 <a href=#664 id=664 data-nosnippet>664</a>    catcodes: <span class="prelude-val">Some</span>(Catcodes::Standard),
 <a href=#665 id=665 data-nosnippet>665</a>    ..StateOptions::default()
@@ -668,7 +668,7 @@
 <a href=#668 id=668 data-nosnippet>668</a>
 <a href=#669 id=669 data-nosnippet>669</a><span class="doccomment">/// Eagerly initialize this thread's `STD_STATE`/`STY_STATE` catcode-regime
 <a href=#670 id=670 data-nosnippet>670</a>/// templates. They are accessed mid-conversion on catcode switches
-<a href=#671 id=671 data-nosnippet>671</a>/// (`\makeatletter`, verbatim, …); each one's `Lazy` initializer runs
+<a href=#671 id=671 data-nosnippet>671</a>/// (`\makeatletter`, verbatim, …); each one's `LazyLock` initializer runs
 <a href=#672 id=672 data-nosnippet>672</a>/// `State::new`, which interns via the arena. Forcing them at conversion
 <a href=#673 id=673 data-nosnippet>673</a>/// entry — AFTER [`arena::force_init`](crate::common::arena::force_init) —
 <a href=#674 id=674 data-nosnippet>674</a>/// keeps them from initializing re-entrantly mid-expansion, the macOS
@@ -676,8 +676,8 @@
 <a href=#676 id=676 data-nosnippet>676</a>/// already forced by `set_state` in `Core::new`.) No behavioral change on
 <a href=#677 id=677 data-nosnippet>677</a>/// Linux.
 <a href=#678 id=678 data-nosnippet>678</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>force_init() {
-<a href=#679 id=679 data-nosnippet>679</a>  Lazy::force(<span class="kw-2">&amp;</span>STD_STATE);
-<a href=#680 id=680 data-nosnippet>680</a>  Lazy::force(<span class="kw-2">&amp;</span>STY_STATE);
+<a href=#679 id=679 data-nosnippet>679</a>  LazyLock::force(<span class="kw-2">&amp;</span>STD_STATE);
+<a href=#680 id=680 data-nosnippet>680</a>  LazyLock::force(<span class="kw-2">&amp;</span>STY_STATE);
 <a href=#681 id=681 data-nosnippet>681</a>}
 <a href=#682 id=682 data-nosnippet>682</a>
 <a href=#683 id=683 data-nosnippet>683</a><span class="macro">macro_rules!</span> state {

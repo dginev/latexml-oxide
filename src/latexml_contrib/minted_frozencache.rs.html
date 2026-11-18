@@ -93,7 +93,7 @@
 <a href=#93 id=93 data-nosnippet>93</a>
 <a href=#94 id=94 data-nosnippet>94</a><span class="doccomment">/// Resolve every `\PYGZxx` / `\PYGZxx{}` occurrence in `s` to its literal char.
 <a href=#95 id=95 data-nosnippet>95</a></span><span class="kw">fn </span>resolve_pygz(s: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#96 id=96 data-nosnippet>96</a>  <span class="kw">static </span>RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"\\(PYGZ[a-z][a-z])(\{\})?"</span>).unwrap());
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="kw">static </span>RE: LazyLock&lt;Regex&gt; = LazyLock::new(|| Regex::new(<span class="string">r"\\(PYGZ[a-z][a-z])(\{\})?"</span>).unwrap());
 <a href=#97 id=97 data-nosnippet>97</a>  RE.replace_all(s, |c: <span class="kw-2">&amp;</span>regex::Captures| pygz_char(<span class="kw-2">&amp;</span>c[<span class="number">1</span>]).unwrap_or(<span class="string">""</span>))
 <a href=#98 id=98 data-nosnippet>98</a>    .into_owned()
 <a href=#99 id=99 data-nosnippet>99</a>}
@@ -227,10 +227,10 @@
 <a href=#227 id=227 data-nosnippet>227</a>
 <a href=#228 id=228 data-nosnippet>228</a><span class="doccomment">/// Parse `default.style.minted` into a `tokclass → Style` map.
 <a href=#229 id=229 data-nosnippet>229</a></span><span class="kw">fn </span>parse_styles(text: <span class="kw-2">&amp;</span>str) -&gt; HashMap&lt;String, Style&gt; {
-<a href=#230 id=230 data-nosnippet>230</a>  <span class="kw">static </span>NAME_RE: Lazy&lt;Regex&gt; =
-<a href=#231 id=231 data-nosnippet>231</a>    Lazy::new(|| Regex::new(<span class="string">r"\\@namedef\{PYG@tok@([A-Za-z0-9]+)\}"</span>).unwrap());
-<a href=#232 id=232 data-nosnippet>232</a>  <span class="kw">static </span>COLOR_RE: Lazy&lt;Regex&gt; =
-<a href=#233 id=233 data-nosnippet>233</a>    Lazy::new(|| Regex::new(<span class="string">r"\\textcolor\[rgb\]\{([0-9.,]+)\}"</span>).unwrap());
+<a href=#230 id=230 data-nosnippet>230</a>  <span class="kw">static </span>NAME_RE: LazyLock&lt;Regex&gt; =
+<a href=#231 id=231 data-nosnippet>231</a>    LazyLock::new(|| Regex::new(<span class="string">r"\\@namedef\{PYG@tok@([A-Za-z0-9]+)\}"</span>).unwrap());
+<a href=#232 id=232 data-nosnippet>232</a>  <span class="kw">static </span>COLOR_RE: LazyLock&lt;Regex&gt; =
+<a href=#233 id=233 data-nosnippet>233</a>    LazyLock::new(|| Regex::new(<span class="string">r"\\textcolor\[rgb\]\{([0-9.,]+)\}"</span>).unwrap());
 <a href=#234 id=234 data-nosnippet>234</a>  <span class="kw">let </span><span class="kw-2">mut </span>map: HashMap&lt;String, Style&gt; = HashMap::default();
 <a href=#235 id=235 data-nosnippet>235</a>  <span class="kw">for </span>line <span class="kw">in </span>text.lines() {
 <a href=#236 id=236 data-nosnippet>236</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = NAME_RE.captures(line) {

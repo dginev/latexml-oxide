@@ -133,143 +133,158 @@
 <a href=#133 id=133 data-nosnippet>133</a>  </span><span class="kw">pub </span>include_comments:        <span class="prelude-ty">Option</span>&lt;bool&gt;,
 <a href=#134 id=134 data-nosnippet>134</a>  <span class="doccomment">/// Strict error-reporting (`--strict`; State `STRICT`, Perl Core.pm L43)
 <a href=#135 id=135 data-nosnippet>135</a>  </span><span class="kw">pub </span>strict:                  <span class="prelude-ty">Option</span>&lt;bool&gt;,
-<a href=#136 id=136 data-nosnippet>136</a>  <span class="doccomment">/// Raw-load `.sty` AND `.cls` sources (`--includestyles`). WARNING: one flag
-<a href=#137 id=137 data-nosnippet>137</a>  /// enables raw TeX loading of both packages and classes — it sets State
-<a href=#138 id=138 data-nosnippet>138</a>  /// `INCLUDE_STYLES` and `INCLUDE_CLASSES` together (Perl Core.pm L55-57).
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="doccomment">/// Raw-load `.sty` AND `.cls` sources (`--includestyles`): one flag sets State `INCLUDE_STYLES` and
+<a href=#137 id=137 data-nosnippet>137</a>  /// `INCLUDE_CLASSES` together (Perl Core.pm L55-57). `None` keeps Perl's default (off); the CLI, the library API
+<a href=#138 id=138 data-nosnippet>138</a>  /// and cortex's generic profile pass `Some(true)` (OXIDIZED_DESIGN_DIVERGENCES #1080).
 <a href=#139 id=139 data-nosnippet>139</a>  </span><span class="kw">pub </span>include_styles:          <span class="prelude-ty">Option</span>&lt;bool&gt;,
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="doccomment">/// Whether to skip math parsing (--nomathparse)
-<a href=#141 id=141 data-nosnippet>141</a>  </span><span class="kw">pub </span>nomathparse:             <span class="prelude-ty">Option</span>&lt;bool&gt;,
-<a href=#142 id=142 data-nosnippet>142</a>  <span class="doccomment">/// Whether to track + emit source locators (`--source-map`). Off by
-<a href=#143 id=143 data-nosnippet>143</a>  /// default; gates both per-token start capture and per-element
-<a href=#144 id=144 data-nosnippet>144</a>  /// `data-sourcepos` stamping. See `docs/performance/SOURCE_PROVENANCE.md`.
-<a href=#145 id=145 data-nosnippet>145</a>  </span><span class="kw">pub </span>source_map:              <span class="prelude-ty">Option</span>&lt;bool&gt;,
-<a href=#146 id=146 data-nosnippet>146</a>  <span class="doccomment">/// Input encoding for translating source bytes to LaTeXML's internal UTF-8
-<a href=#147 id=147 data-nosnippet>147</a>  /// (`--inputencoding`; Perl Config.pm L57, Core.pm L60-61 which assigns
-<a href=#148 id=148 data-nosnippet>148</a>  /// State `PERL_INPUT_ENCODING`, default utf-8). Consumed by the Mouth's
-<a href=#149 id=149 data-nosnippet>149</a>  /// per-line decode; only affects byte→UTF-8 translation, never catcodes
-<a href=#150 id=150 data-nosnippet>150</a>  /// (for those, use the inputenc package). `None` ⇒ the utf-8 default.
-<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="kw">pub </span>inputencoding:           <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#152 id=152 data-nosnippet>152</a>  <span class="doccomment">/// Streaming (fragmented) core conversion: `Some(budget)` interleaves
-<a href=#153 id=153 data-nosnippet>153</a>  /// digest→build in fragments of ~`budget` boxes, spilling closed subtrees
-<a href=#154 id=154 data-nosnippet>154</a>  /// to disk so peak RSS is bounded by fragment size instead of document
-<a href=#155 id=155 data-nosnippet>155</a>  /// size. `None` (default) = the eager path — also the Perl-parity path
-<a href=#156 id=156 data-nosnippet>156</a>  /// (Perl is strictly digest-all→build-all; interleaving is a sanctioned
-<a href=#157 id=157 data-nosnippet>157</a>  /// divergence, activated only by the `--streaming` flag or when the
-<a href=#158 id=158 data-nosnippet>158</a>  /// projected need exceeds the memory cap). The budget is a box count on
-<a href=#159 id=159 data-nosnippet>159</a>  /// the same per-box basis as the box-list guards.
-<a href=#160 id=160 data-nosnippet>160</a>  </span><span class="kw">pub </span>streaming:               <span class="prelude-ty">Option</span>&lt;usize&gt;,
-<a href=#161 id=161 data-nosnippet>161</a>  <span class="doccomment">/// The date of the source (Unix seconds, UTC): the newest modification time among the TeX source files of the
-<a href=#162 id=162 data-nosnippet>162</a>  /// bundle the document came in — an archive's entries, a directory's or a file's mtimes
-<a href=#163 id=163 data-nosnippet>163</a>  /// (`latexml::source_date`). `None` when there is none (stdin, literal input, an archive whose entries carry no
-<a href=#164 id=164 data-nosnippet>164</a>  /// time). ar5iv's archival preload sets the job's clock from it, so `\today` prints the paper's date, never the
-<a href=#165 id=165 data-nosnippet>165</a>  /// conversion's.
-<a href=#166 id=166 data-nosnippet>166</a>  </span><span class="kw">pub </span>source_date_epoch:       <span class="prelude-ty">Option</span>&lt;i64&gt;,
-<a href=#167 id=167 data-nosnippet>167</a>}
-<a href=#168 id=168 data-nosnippet>168</a><span class="kw">impl </span>Default <span class="kw">for </span>Config {
-<a href=#169 id=169 data-nosnippet>169</a>  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-<a href=#170 id=170 data-nosnippet>170</a>    Config {
-<a href=#171 id=171 data-nosnippet>171</a>      verbosity:               <span class="number">1</span>,
-<a href=#172 id=172 data-nosnippet>172</a>      format:                  OutputFormat::XML,
-<a href=#173 id=173 data-nosnippet>173</a>      whatsin:                 DataSize::Document,
-<a href=#174 id=174 data-nosnippet>174</a>      whatsout:                DataSize::Document,
-<a href=#175 id=175 data-nosnippet>175</a>      preamble:                <span class="prelude-val">None</span>,
-<a href=#176 id=176 data-nosnippet>176</a>      postamble:               <span class="prelude-val">None</span>,
-<a href=#177 id=177 data-nosnippet>177</a>      mode:                    <span class="prelude-val">Some</span>(DigestionMode::LaTeX),
-<a href=#178 id=178 data-nosnippet>178</a>      bindings_dispatch:       <span class="prelude-val">None</span>,
-<a href=#179 id=179 data-nosnippet>179</a>      extra_bindings_dispatch: <span class="prelude-val">None</span>,
-<a href=#180 id=180 data-nosnippet>180</a>      preload:                 <span class="prelude-val">None</span>,
-<a href=#181 id=181 data-nosnippet>181</a>      search_paths:            <span class="prelude-val">None</span>,
-<a href=#182 id=182 data-nosnippet>182</a>      include_comments:        <span class="prelude-val">None</span>,
-<a href=#183 id=183 data-nosnippet>183</a>      strict:                  <span class="prelude-val">None</span>,
-<a href=#184 id=184 data-nosnippet>184</a>      include_styles:          <span class="prelude-val">None</span>,
-<a href=#185 id=185 data-nosnippet>185</a>      nomathparse:             <span class="prelude-val">None</span>,
-<a href=#186 id=186 data-nosnippet>186</a>      source_map:              <span class="prelude-val">None</span>,
-<a href=#187 id=187 data-nosnippet>187</a>      inputencoding:           <span class="prelude-val">None</span>,
-<a href=#188 id=188 data-nosnippet>188</a>      streaming:               <span class="prelude-val">None</span>,
-<a href=#189 id=189 data-nosnippet>189</a>      source_date_epoch:       <span class="prelude-val">None</span>,
-<a href=#190 id=190 data-nosnippet>190</a>    }
-<a href=#191 id=191 data-nosnippet>191</a>  }
-<a href=#192 id=192 data-nosnippet>192</a>}
-<a href=#193 id=193 data-nosnippet>193</a>
-<a href=#194 id=194 data-nosnippet>194</a><span class="attr">#[cfg(test)]
-<a href=#195 id=195 data-nosnippet>195</a></span><span class="kw">mod </span>tests {
-<a href=#196 id=196 data-nosnippet>196</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#197 id=197 data-nosnippet>197</a>
-<a href=#198 id=198 data-nosnippet>198</a>  <span class="attr">#[test]
-<a href=#199 id=199 data-nosnippet>199</a>  </span><span class="kw">fn </span>digestion_mode_display() {
-<a href=#200 id=200 data-nosnippet>200</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, DigestionMode::TeX), <span class="string">"TeX"</span>);
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, DigestionMode::LaTeX), <span class="string">"LaTeX"</span>);
-<a href=#202 id=202 data-nosnippet>202</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, DigestionMode::AmSTeX), <span class="string">"AmSTeX"</span>);
-<a href=#203 id=203 data-nosnippet>203</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, DigestionMode::BibTeX), <span class="string">"BibTeX"</span>);
-<a href=#204 id=204 data-nosnippet>204</a>  }
-<a href=#205 id=205 data-nosnippet>205</a>
-<a href=#206 id=206 data-nosnippet>206</a>  <span class="attr">#[test]
-<a href=#207 id=207 data-nosnippet>207</a>  </span><span class="kw">fn </span>digestion_mode_extension() {
-<a href=#208 id=208 data-nosnippet>208</a>    <span class="macro">assert_eq!</span>(DigestionMode::TeX.extension(), <span class="string">"tex"</span>);
-<a href=#209 id=209 data-nosnippet>209</a>    <span class="macro">assert_eq!</span>(DigestionMode::LaTeX.extension(), <span class="string">"tex"</span>);
-<a href=#210 id=210 data-nosnippet>210</a>    <span class="macro">assert_eq!</span>(DigestionMode::AmSTeX.extension(), <span class="string">"tex"</span>);
-<a href=#211 id=211 data-nosnippet>211</a>    <span class="macro">assert_eq!</span>(DigestionMode::BibTeX.extension(), <span class="string">"bib"</span>);
-<a href=#212 id=212 data-nosnippet>212</a>  }
-<a href=#213 id=213 data-nosnippet>213</a>
-<a href=#214 id=214 data-nosnippet>214</a>  <span class="attr">#[test]
-<a href=#215 id=215 data-nosnippet>215</a>  </span><span class="kw">fn </span>config_default_fields() {
-<a href=#216 id=216 data-nosnippet>216</a>    <span class="kw">let </span>c = Config::default();
-<a href=#217 id=217 data-nosnippet>217</a>    <span class="macro">assert_eq!</span>(c.verbosity, <span class="number">1</span>);
-<a href=#218 id=218 data-nosnippet>218</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(c.format, OutputFormat::XML));
-<a href=#219 id=219 data-nosnippet>219</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(c.whatsin, DataSize::Document));
-<a href=#220 id=220 data-nosnippet>220</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(c.whatsout, DataSize::Document));
-<a href=#221 id=221 data-nosnippet>221</a>    <span class="macro">assert!</span>(c.preamble.is_none());
-<a href=#222 id=222 data-nosnippet>222</a>    <span class="macro">assert!</span>(c.postamble.is_none());
-<a href=#223 id=223 data-nosnippet>223</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(c.mode, <span class="prelude-val">Some</span>(DigestionMode::LaTeX)));
-<a href=#224 id=224 data-nosnippet>224</a>    <span class="macro">assert!</span>(c.bindings_dispatch.is_none());
-<a href=#225 id=225 data-nosnippet>225</a>    <span class="macro">assert!</span>(c.extra_bindings_dispatch.is_none());
-<a href=#226 id=226 data-nosnippet>226</a>    <span class="macro">assert!</span>(c.preload.is_none());
-<a href=#227 id=227 data-nosnippet>227</a>    <span class="macro">assert!</span>(c.search_paths.is_none());
-<a href=#228 id=228 data-nosnippet>228</a>    <span class="macro">assert!</span>(c.include_comments.is_none());
-<a href=#229 id=229 data-nosnippet>229</a>    <span class="macro">assert!</span>(c.nomathparse.is_none());
-<a href=#230 id=230 data-nosnippet>230</a>    <span class="macro">assert!</span>(c.source_map.is_none());
-<a href=#231 id=231 data-nosnippet>231</a>  }
-<a href=#232 id=232 data-nosnippet>232</a>
-<a href=#233 id=233 data-nosnippet>233</a>  <span class="attr">#[test]
-<a href=#234 id=234 data-nosnippet>234</a>  </span><span class="kw">fn </span>config_clone_preserves_fields() {
-<a href=#235 id=235 data-nosnippet>235</a>    <span class="kw">let </span>c = Config {
-<a href=#236 id=236 data-nosnippet>236</a>      verbosity: <span class="number">5</span>,
-<a href=#237 id=237 data-nosnippet>237</a>      preload: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">"ar5iv.sty"</span>.to_string()]),
-<a href=#238 id=238 data-nosnippet>238</a>      ..Default::default()
-<a href=#239 id=239 data-nosnippet>239</a>    };
-<a href=#240 id=240 data-nosnippet>240</a>    <span class="kw">let </span>c2 = c.clone();
-<a href=#241 id=241 data-nosnippet>241</a>    <span class="macro">assert_eq!</span>(c2.verbosity, <span class="number">5</span>);
-<a href=#242 id=242 data-nosnippet>242</a>    <span class="macro">assert_eq!</span>(c2.preload.as_ref().unwrap(), <span class="kw-2">&amp;</span><span class="macro">vec!</span>[<span class="string">"ar5iv.sty"</span>.to_string()]);
-<a href=#243 id=243 data-nosnippet>243</a>  }
-<a href=#244 id=244 data-nosnippet>244</a>
-<a href=#245 id=245 data-nosnippet>245</a>  <span class="attr">#[test]
-<a href=#246 id=246 data-nosnippet>246</a>  </span><span class="kw">fn </span>input_format_variants() {
-<a href=#247 id=247 data-nosnippet>247</a>    <span class="comment">// Debug trait at minimum is derived; Clone too.
-<a href=#248 id=248 data-nosnippet>248</a>    </span><span class="kw">let _ </span>= InputFormat::TeX;
-<a href=#249 id=249 data-nosnippet>249</a>    <span class="kw">let _ </span>= InputFormat::Bib;
-<a href=#250 id=250 data-nosnippet>250</a>    <span class="kw">let </span>cloned = InputFormat::TeX.clone();
-<a href=#251 id=251 data-nosnippet>251</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(cloned, InputFormat::TeX));
-<a href=#252 id=252 data-nosnippet>252</a>  }
-<a href=#253 id=253 data-nosnippet>253</a>
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="attr">#[test]
-<a href=#255 id=255 data-nosnippet>255</a>  </span><span class="kw">fn </span>output_format_variants() {
-<a href=#256 id=256 data-nosnippet>256</a>    <span class="kw">let _ </span>= OutputFormat::TeX;
-<a href=#257 id=257 data-nosnippet>257</a>    <span class="kw">let _ </span>= OutputFormat::Box;
-<a href=#258 id=258 data-nosnippet>258</a>    <span class="kw">let _ </span>= OutputFormat::XML;
-<a href=#259 id=259 data-nosnippet>259</a>    <span class="kw">let _ </span>= OutputFormat::HTML5;
-<a href=#260 id=260 data-nosnippet>260</a>    <span class="kw">let _ </span>= OutputFormat::XHTML;
-<a href=#261 id=261 data-nosnippet>261</a>    <span class="kw">let </span>cloned = OutputFormat::XML.clone();
-<a href=#262 id=262 data-nosnippet>262</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(cloned, OutputFormat::XML));
-<a href=#263 id=263 data-nosnippet>263</a>  }
-<a href=#264 id=264 data-nosnippet>264</a>
-<a href=#265 id=265 data-nosnippet>265</a>  <span class="attr">#[test]
-<a href=#266 id=266 data-nosnippet>266</a>  </span><span class="kw">fn </span>data_size_variants() {
-<a href=#267 id=267 data-nosnippet>267</a>    <span class="kw">let _ </span>= DataSize::Math;
-<a href=#268 id=268 data-nosnippet>268</a>    <span class="kw">let _ </span>= DataSize::Fragment;
-<a href=#269 id=269 data-nosnippet>269</a>    <span class="kw">let _ </span>= DataSize::Document;
-<a href=#270 id=270 data-nosnippet>270</a>    <span class="kw">let _ </span>= DataSize::Archive;
-<a href=#271 id=271 data-nosnippet>271</a>    <span class="kw">let </span>cloned = DataSize::Document.clone();
-<a href=#272 id=272 data-nosnippet>272</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(cloned, DataSize::Document));
-<a href=#273 id=273 data-nosnippet>273</a>  }
-<a href=#274 id=274 data-nosnippet>274</a>}
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="doccomment">/// Perl `$LaTeXML::IF_LIMIT` / `$LaTeXML::ABSORB_LIMIT` (`latexml.sty.ltxml:100-105`), set when the session
+<a href=#141 id=141 data-nosnippet>141</a>  /// starts, before the preloads, so a `latexml.sty` `iflimit=`/`absorblimit=` option still wins (0 = unlimited).
+<a href=#142 id=142 data-nosnippet>142</a>  /// `None` keeps Perl's default (unlimited); the front ends pass [`RUNAWAY_IF_LIMIT`] (ten times ar5iv.sty's) and
+<a href=#143 id=143 data-nosnippet>143</a>  /// [`RUNAWAY_ABSORB_LIMIT`] (ar5iv.sty's) (OXIDIZED_DESIGN_DIVERGENCES #1080).
+<a href=#144 id=144 data-nosnippet>144</a>  </span><span class="kw">pub </span>if_limit:                <span class="prelude-ty">Option</span>&lt;i64&gt;,
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="kw">pub </span>absorb_limit:            <span class="prelude-ty">Option</span>&lt;i64&gt;,
+<a href=#146 id=146 data-nosnippet>146</a>  <span class="doccomment">/// Whether to skip math parsing (--nomathparse)
+<a href=#147 id=147 data-nosnippet>147</a>  </span><span class="kw">pub </span>nomathparse:             <span class="prelude-ty">Option</span>&lt;bool&gt;,
+<a href=#148 id=148 data-nosnippet>148</a>  <span class="doccomment">/// Whether to track + emit source locators (`--source-map`). Off by
+<a href=#149 id=149 data-nosnippet>149</a>  /// default; gates both per-token start capture and per-element
+<a href=#150 id=150 data-nosnippet>150</a>  /// `data-sourcepos` stamping. See `docs/performance/SOURCE_PROVENANCE.md`.
+<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="kw">pub </span>source_map:              <span class="prelude-ty">Option</span>&lt;bool&gt;,
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="doccomment">/// Input encoding for translating source bytes to LaTeXML's internal UTF-8
+<a href=#153 id=153 data-nosnippet>153</a>  /// (`--inputencoding`; Perl Config.pm L57, Core.pm L60-61 which assigns
+<a href=#154 id=154 data-nosnippet>154</a>  /// State `PERL_INPUT_ENCODING`, default utf-8). Consumed by the Mouth's
+<a href=#155 id=155 data-nosnippet>155</a>  /// per-line decode; only affects byte→UTF-8 translation, never catcodes
+<a href=#156 id=156 data-nosnippet>156</a>  /// (for those, use the inputenc package). `None` ⇒ the utf-8 default.
+<a href=#157 id=157 data-nosnippet>157</a>  </span><span class="kw">pub </span>inputencoding:           <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="doccomment">/// Streaming (fragmented) core conversion: `Some(budget)` interleaves
+<a href=#159 id=159 data-nosnippet>159</a>  /// digest→build in fragments of ~`budget` boxes, spilling closed subtrees
+<a href=#160 id=160 data-nosnippet>160</a>  /// to disk so peak RSS is bounded by fragment size instead of document
+<a href=#161 id=161 data-nosnippet>161</a>  /// size. `None` (default) = the eager path — also the Perl-parity path
+<a href=#162 id=162 data-nosnippet>162</a>  /// (Perl is strictly digest-all→build-all; interleaving is a sanctioned
+<a href=#163 id=163 data-nosnippet>163</a>  /// divergence, activated only by the `--streaming` flag or when the
+<a href=#164 id=164 data-nosnippet>164</a>  /// projected need exceeds the memory cap). The budget is a box count on
+<a href=#165 id=165 data-nosnippet>165</a>  /// the same per-box basis as the box-list guards.
+<a href=#166 id=166 data-nosnippet>166</a>  </span><span class="kw">pub </span>streaming:               <span class="prelude-ty">Option</span>&lt;usize&gt;,
+<a href=#167 id=167 data-nosnippet>167</a>  <span class="doccomment">/// The date of the source (Unix seconds, UTC): the newest modification time among the TeX source files of the
+<a href=#168 id=168 data-nosnippet>168</a>  /// bundle the document came in — an archive's entries, a directory's or a file's mtimes
+<a href=#169 id=169 data-nosnippet>169</a>  /// (`latexml::source_date`). `None` when there is none (stdin, literal input, an archive whose entries carry no
+<a href=#170 id=170 data-nosnippet>170</a>  /// time). ar5iv's archival preload sets the job's clock from it, so `\today` prints the paper's date, never the
+<a href=#171 id=171 data-nosnippet>171</a>  /// conversion's.
+<a href=#172 id=172 data-nosnippet>172</a>  </span><span class="kw">pub </span>source_date_epoch:       <span class="prelude-ty">Option</span>&lt;i64&gt;,
+<a href=#173 id=173 data-nosnippet>173</a>}
+<a href=#174 id=174 data-nosnippet>174</a><span class="doccomment">/// The front ends' default `\if` runaway ceiling: ten times ar5iv.sty's `iflimit` (48,000,000,
+<a href=#175 id=175 data-nosnippet>175</a>/// `latexml_contrib/src/ar5iv_sty.rs`, which the arXiv fleet keeps). The counter accumulates over the whole document, so
+<a href=#176 id=176 data-nosnippet>176</a>/// a long pgf-heavy manual passes 48M without any runaway (tkz-grapheur-doc-fr lost its last section at 48M; DG
+<a href=#177 id=177 data-nosnippet>177</a>/// 2026-11-18: "Raise plain default 10×"); the token budget and the timeout still bound a true runaway.
+<a href=#178 id=178 data-nosnippet>178</a></span><span class="kw">pub const </span>RUNAWAY_IF_LIMIT: i64 = <span class="number">480_000_000</span>;
+<a href=#179 id=179 data-nosnippet>179</a><span class="doccomment">/// ar5iv.sty's `absorblimit`, the front ends' default ceiling on absorbed boxes.
+<a href=#180 id=180 data-nosnippet>180</a></span><span class="kw">pub const </span>RUNAWAY_ABSORB_LIMIT: i64 = <span class="number">1_299_999</span>;
+<a href=#181 id=181 data-nosnippet>181</a><span class="kw">impl </span>Default <span class="kw">for </span>Config {
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+<a href=#183 id=183 data-nosnippet>183</a>    Config {
+<a href=#184 id=184 data-nosnippet>184</a>      verbosity:               <span class="number">1</span>,
+<a href=#185 id=185 data-nosnippet>185</a>      format:                  OutputFormat::XML,
+<a href=#186 id=186 data-nosnippet>186</a>      whatsin:                 DataSize::Document,
+<a href=#187 id=187 data-nosnippet>187</a>      whatsout:                DataSize::Document,
+<a href=#188 id=188 data-nosnippet>188</a>      preamble:                <span class="prelude-val">None</span>,
+<a href=#189 id=189 data-nosnippet>189</a>      postamble:               <span class="prelude-val">None</span>,
+<a href=#190 id=190 data-nosnippet>190</a>      mode:                    <span class="prelude-val">Some</span>(DigestionMode::LaTeX),
+<a href=#191 id=191 data-nosnippet>191</a>      bindings_dispatch:       <span class="prelude-val">None</span>,
+<a href=#192 id=192 data-nosnippet>192</a>      extra_bindings_dispatch: <span class="prelude-val">None</span>,
+<a href=#193 id=193 data-nosnippet>193</a>      preload:                 <span class="prelude-val">None</span>,
+<a href=#194 id=194 data-nosnippet>194</a>      search_paths:            <span class="prelude-val">None</span>,
+<a href=#195 id=195 data-nosnippet>195</a>      include_comments:        <span class="prelude-val">None</span>,
+<a href=#196 id=196 data-nosnippet>196</a>      strict:                  <span class="prelude-val">None</span>,
+<a href=#197 id=197 data-nosnippet>197</a>      include_styles:          <span class="prelude-val">None</span>,
+<a href=#198 id=198 data-nosnippet>198</a>      if_limit:                <span class="prelude-val">None</span>,
+<a href=#199 id=199 data-nosnippet>199</a>      absorb_limit:            <span class="prelude-val">None</span>,
+<a href=#200 id=200 data-nosnippet>200</a>      nomathparse:             <span class="prelude-val">None</span>,
+<a href=#201 id=201 data-nosnippet>201</a>      source_map:              <span class="prelude-val">None</span>,
+<a href=#202 id=202 data-nosnippet>202</a>      inputencoding:           <span class="prelude-val">None</span>,
+<a href=#203 id=203 data-nosnippet>203</a>      streaming:               <span class="prelude-val">None</span>,
+<a href=#204 id=204 data-nosnippet>204</a>      source_date_epoch:       <span class="prelude-val">None</span>,
+<a href=#205 id=205 data-nosnippet>205</a>    }
+<a href=#206 id=206 data-nosnippet>206</a>  }
+<a href=#207 id=207 data-nosnippet>207</a>}
+<a href=#208 id=208 data-nosnippet>208</a>
+<a href=#209 id=209 data-nosnippet>209</a><span class="attr">#[cfg(test)]
+<a href=#210 id=210 data-nosnippet>210</a></span><span class="kw">mod </span>tests {
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#212 id=212 data-nosnippet>212</a>
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="attr">#[test]
+<a href=#214 id=214 data-nosnippet>214</a>  </span><span class="kw">fn </span>digestion_mode_display() {
+<a href=#215 id=215 data-nosnippet>215</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, DigestionMode::TeX), <span class="string">"TeX"</span>);
+<a href=#216 id=216 data-nosnippet>216</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, DigestionMode::LaTeX), <span class="string">"LaTeX"</span>);
+<a href=#217 id=217 data-nosnippet>217</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, DigestionMode::AmSTeX), <span class="string">"AmSTeX"</span>);
+<a href=#218 id=218 data-nosnippet>218</a>    <span class="macro">assert_eq!</span>(<span class="macro">format!</span>(<span class="string">"{}"</span>, DigestionMode::BibTeX), <span class="string">"BibTeX"</span>);
+<a href=#219 id=219 data-nosnippet>219</a>  }
+<a href=#220 id=220 data-nosnippet>220</a>
+<a href=#221 id=221 data-nosnippet>221</a>  <span class="attr">#[test]
+<a href=#222 id=222 data-nosnippet>222</a>  </span><span class="kw">fn </span>digestion_mode_extension() {
+<a href=#223 id=223 data-nosnippet>223</a>    <span class="macro">assert_eq!</span>(DigestionMode::TeX.extension(), <span class="string">"tex"</span>);
+<a href=#224 id=224 data-nosnippet>224</a>    <span class="macro">assert_eq!</span>(DigestionMode::LaTeX.extension(), <span class="string">"tex"</span>);
+<a href=#225 id=225 data-nosnippet>225</a>    <span class="macro">assert_eq!</span>(DigestionMode::AmSTeX.extension(), <span class="string">"tex"</span>);
+<a href=#226 id=226 data-nosnippet>226</a>    <span class="macro">assert_eq!</span>(DigestionMode::BibTeX.extension(), <span class="string">"bib"</span>);
+<a href=#227 id=227 data-nosnippet>227</a>  }
+<a href=#228 id=228 data-nosnippet>228</a>
+<a href=#229 id=229 data-nosnippet>229</a>  <span class="attr">#[test]
+<a href=#230 id=230 data-nosnippet>230</a>  </span><span class="kw">fn </span>config_default_fields() {
+<a href=#231 id=231 data-nosnippet>231</a>    <span class="kw">let </span>c = Config::default();
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="macro">assert_eq!</span>(c.verbosity, <span class="number">1</span>);
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(c.format, OutputFormat::XML));
+<a href=#234 id=234 data-nosnippet>234</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(c.whatsin, DataSize::Document));
+<a href=#235 id=235 data-nosnippet>235</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(c.whatsout, DataSize::Document));
+<a href=#236 id=236 data-nosnippet>236</a>    <span class="macro">assert!</span>(c.preamble.is_none());
+<a href=#237 id=237 data-nosnippet>237</a>    <span class="macro">assert!</span>(c.postamble.is_none());
+<a href=#238 id=238 data-nosnippet>238</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(c.mode, <span class="prelude-val">Some</span>(DigestionMode::LaTeX)));
+<a href=#239 id=239 data-nosnippet>239</a>    <span class="macro">assert!</span>(c.bindings_dispatch.is_none());
+<a href=#240 id=240 data-nosnippet>240</a>    <span class="macro">assert!</span>(c.extra_bindings_dispatch.is_none());
+<a href=#241 id=241 data-nosnippet>241</a>    <span class="macro">assert!</span>(c.preload.is_none());
+<a href=#242 id=242 data-nosnippet>242</a>    <span class="macro">assert!</span>(c.search_paths.is_none());
+<a href=#243 id=243 data-nosnippet>243</a>    <span class="macro">assert!</span>(c.include_comments.is_none());
+<a href=#244 id=244 data-nosnippet>244</a>    <span class="macro">assert!</span>(c.nomathparse.is_none());
+<a href=#245 id=245 data-nosnippet>245</a>    <span class="macro">assert!</span>(c.source_map.is_none());
+<a href=#246 id=246 data-nosnippet>246</a>  }
+<a href=#247 id=247 data-nosnippet>247</a>
+<a href=#248 id=248 data-nosnippet>248</a>  <span class="attr">#[test]
+<a href=#249 id=249 data-nosnippet>249</a>  </span><span class="kw">fn </span>config_clone_preserves_fields() {
+<a href=#250 id=250 data-nosnippet>250</a>    <span class="kw">let </span>c = Config {
+<a href=#251 id=251 data-nosnippet>251</a>      verbosity: <span class="number">5</span>,
+<a href=#252 id=252 data-nosnippet>252</a>      preload: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="string">"ar5iv.sty"</span>.to_string()]),
+<a href=#253 id=253 data-nosnippet>253</a>      ..Default::default()
+<a href=#254 id=254 data-nosnippet>254</a>    };
+<a href=#255 id=255 data-nosnippet>255</a>    <span class="kw">let </span>c2 = c.clone();
+<a href=#256 id=256 data-nosnippet>256</a>    <span class="macro">assert_eq!</span>(c2.verbosity, <span class="number">5</span>);
+<a href=#257 id=257 data-nosnippet>257</a>    <span class="macro">assert_eq!</span>(c2.preload.as_ref().unwrap(), <span class="kw-2">&amp;</span><span class="macro">vec!</span>[<span class="string">"ar5iv.sty"</span>.to_string()]);
+<a href=#258 id=258 data-nosnippet>258</a>  }
+<a href=#259 id=259 data-nosnippet>259</a>
+<a href=#260 id=260 data-nosnippet>260</a>  <span class="attr">#[test]
+<a href=#261 id=261 data-nosnippet>261</a>  </span><span class="kw">fn </span>input_format_variants() {
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="comment">// Debug trait at minimum is derived; Clone too.
+<a href=#263 id=263 data-nosnippet>263</a>    </span><span class="kw">let _ </span>= InputFormat::TeX;
+<a href=#264 id=264 data-nosnippet>264</a>    <span class="kw">let _ </span>= InputFormat::Bib;
+<a href=#265 id=265 data-nosnippet>265</a>    <span class="kw">let </span>cloned = InputFormat::TeX.clone();
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(cloned, InputFormat::TeX));
+<a href=#267 id=267 data-nosnippet>267</a>  }
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a>  <span class="attr">#[test]
+<a href=#270 id=270 data-nosnippet>270</a>  </span><span class="kw">fn </span>output_format_variants() {
+<a href=#271 id=271 data-nosnippet>271</a>    <span class="kw">let _ </span>= OutputFormat::TeX;
+<a href=#272 id=272 data-nosnippet>272</a>    <span class="kw">let _ </span>= OutputFormat::Box;
+<a href=#273 id=273 data-nosnippet>273</a>    <span class="kw">let _ </span>= OutputFormat::XML;
+<a href=#274 id=274 data-nosnippet>274</a>    <span class="kw">let _ </span>= OutputFormat::HTML5;
+<a href=#275 id=275 data-nosnippet>275</a>    <span class="kw">let _ </span>= OutputFormat::XHTML;
+<a href=#276 id=276 data-nosnippet>276</a>    <span class="kw">let </span>cloned = OutputFormat::XML.clone();
+<a href=#277 id=277 data-nosnippet>277</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(cloned, OutputFormat::XML));
+<a href=#278 id=278 data-nosnippet>278</a>  }
+<a href=#279 id=279 data-nosnippet>279</a>
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="attr">#[test]
+<a href=#281 id=281 data-nosnippet>281</a>  </span><span class="kw">fn </span>data_size_variants() {
+<a href=#282 id=282 data-nosnippet>282</a>    <span class="kw">let _ </span>= DataSize::Math;
+<a href=#283 id=283 data-nosnippet>283</a>    <span class="kw">let _ </span>= DataSize::Fragment;
+<a href=#284 id=284 data-nosnippet>284</a>    <span class="kw">let _ </span>= DataSize::Document;
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="kw">let _ </span>= DataSize::Archive;
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="kw">let </span>cloned = DataSize::Document.clone();
+<a href=#287 id=287 data-nosnippet>287</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(cloned, DataSize::Document));
+<a href=#288 id=288 data-nosnippet>288</a>  }
+<a href=#289 id=289 data-nosnippet>289</a>}
 </code></pre></div></section></main></body></html>

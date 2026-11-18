@@ -5,14 +5,14 @@
 <a href=#5 id=5 data-nosnippet>5</a>
 <a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#7 id=7 data-nosnippet>7</a>
-<a href=#8 id=8 data-nosnippet>8</a><span class="kw">static </span>NAMED_SPACE_CHARS: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;&gt; = Lazy::new(|| {
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">static </span>NAMED_SPACE_CHARS: LazyLock&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;&gt; = LazyLock::new(|| {
 <a href=#9 id=9 data-nosnippet>9</a>  <span class="macro">static_map!</span>(<span class="string">"negthinspace" </span>=&gt; <span class="string">""</span>, <span class="string">"thinspace" </span>=&gt; <span class="string">"\u{2009}"</span>,
 <a href=#10 id=10 data-nosnippet>10</a>    <span class="string">"medspace" </span>=&gt; <span class="string">"\u{2005}"</span>, <span class="string">"thickspace" </span>=&gt; <span class="string">"\u{2004}"</span>, <span class="string">"space" </span>=&gt; <span class="string">" "</span>)
 <a href=#11 id=11 data-nosnippet>11</a>});
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">static </span>DECIMAL_SEP: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;&gt; = Lazy::new(
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">static </span>DECIMAL_SEP: LazyLock&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;&gt; = LazyLock::new(
 <a href=#13 id=13 data-nosnippet>13</a>  || <span class="macro">static_map!</span>(<span class="string">"en" </span>=&gt; <span class="string">"."</span>, <span class="string">"de" </span>=&gt; <span class="string">","</span>, <span class="string">"fr" </span>=&gt; <span class="string">","</span>, <span class="string">"nl" </span>=&gt; <span class="string">","</span>, <span class="string">"pt" </span>=&gt; <span class="string">","</span>, <span class="string">"es" </span>=&gt; <span class="string">","</span>),
 <a href=#14 id=14 data-nosnippet>14</a>);
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">static </span>THOUSANDS_SEP: Lazy&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;&gt; = Lazy::new(
+<a href=#15 id=15 data-nosnippet>15</a><span class="kw">static </span>THOUSANDS_SEP: LazyLock&lt;HashMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;&gt; = LazyLock::new(
 <a href=#16 id=16 data-nosnippet>16</a>  || <span class="macro">static_map!</span>(<span class="string">"en" </span>=&gt; <span class="string">","</span>, <span class="string">"de" </span>=&gt; <span class="string">"."</span>, <span class="string">"fr" </span>=&gt; <span class="string">"."</span>, <span class="string">"nl" </span>=&gt; <span class="string">"."</span>, <span class="string">"pt" </span>=&gt; <span class="string">"."</span>, <span class="string">"es" </span>=&gt; <span class="string">"."</span>),
 <a href=#17 id=17 data-nosnippet>17</a>);
 <a href=#18 id=18 data-nosnippet>18</a>
@@ -1845,8 +1845,8 @@
 <a href=#1845 id=1845 data-nosnippet>1845</a>  // `.mf`, collapsing every `.mf` id under one key (last-write-wins).
 <a href=#1846 id=1846 data-nosnippet>1846</a>  // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
 <a href=#1847 id=1847 data-nosnippet>1847</a>  // S3.E22 align/equation cluster (cloned to MathFork main branch).
-<a href=#1848 id=1848 data-nosnippet>1848</a>  </span><span class="kw">static </span>TRAILING_NUM_RE: std::sync::LazyLock&lt;Regex&gt; =
-<a href=#1849 id=1849 data-nosnippet>1849</a>    std::sync::LazyLock::new(|| Regex::new(<span class="string">r"\.(\d+)(?:\.[A-Za-z]\w*)?$"</span>).unwrap());
+<a href=#1848 id=1848 data-nosnippet>1848</a>  </span><span class="kw">static </span>TRAILING_NUM_RE: LazyLock&lt;Regex&gt; =
+<a href=#1849 id=1849 data-nosnippet>1849</a>    LazyLock::new(|| Regex::new(<span class="string">r"\.(\d+)(?:\.[A-Za-z]\w*)?$"</span>).unwrap());
 <a href=#1850 id=1850 data-nosnippet>1850</a>  <span class="kw">let </span>trailing_num_re = <span class="kw-2">&amp;*</span>TRAILING_NUM_RE;
 <a href=#1851 id=1851 data-nosnippet>1851</a>  <span class="kw">let </span><span class="kw-2">mut </span>id_by_suffix: HashMap&lt;String, String&gt; = HashMap::default();
 <a href=#1852 id=1852 data-nosnippet>1852</a>  <span class="kw">for </span>id <span class="kw">in </span><span class="kw-2">&amp;</span>all_ids {
