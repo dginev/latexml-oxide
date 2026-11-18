@@ -10,10 +10,10 @@ DefConstructor("\\aside{}", |document, x| {
   document.closeElement("ltx:text");
 });
 
-// Properties computed at digestion are named in the template as #name (Perl's properties => sub {...}); the
-// properties closure receives the arguments only (Perl passes the stomach first).
+// Properties computed at digestion are named in the template as #name: the closure is Perl's
+// properties => sub { my ($stomach, $x) = @_; ... }, each argument as whatsit.getArg gives it.
 DefConstructor("\\tagged{}", "<ltx:text class=\"#kind\">#1</ltx:text>", #{
-  properties: |x| #{ kind: "k-" + ToString(x) }
+  properties: |stomach, x| #{ kind: "k-" + ToString(x) }
 });
 
 // An environment: #body is its digested content.

@@ -608,7 +608,7 @@ fn builder_conformance_macro_style_vs_rhai_afterdigest() {
   load_script(
     r#"DefConstructor("\\rfoo{}", "<ltx:text>#1</ltx:text>", #{
            mode: "text",
-           afterDigest: |whatsit| { AssignValue("conf:r", ToString(whatsit.getArg(1)), "global"); }
+           afterDigest: |stomach, whatsit| { AssignValue("conf:r", ToString(whatsit.getArg(1)), "global"); }
          });"#,
   )
   .expect("load");
@@ -719,7 +719,7 @@ fn constructor_options_map_runs_afterdigest() {
   load_script(
     r#"DefConstructor("\\opt{}", "<ltx:text>#1</ltx:text>", #{
            mode: "text",
-           afterDigest: |whatsit| { AssignValue("script:cad", ToString(whatsit.getArg(1)), "global"); }
+           afterDigest: |stomach, whatsit| { AssignValue("script:cad", ToString(whatsit.getArg(1)), "global"); }
          });"#,
   )
   .expect("load");

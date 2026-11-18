@@ -197,6 +197,22 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
     "reversion |args|",
     "|whatsit, args| (name each: |whatsit, _x|)",
   ),
+  (
+    "afterDigest |whatsit|",
+    "|stomach, whatsit|, Perl's arguments",
+  ),
+  (
+    "afterDigestBegin |whatsit|",
+    "|stomach, whatsit|, Perl's arguments",
+  ),
+  (
+    "afterDigestBody |whatsit|",
+    "|stomach, whatsit|, Perl's arguments",
+  ),
+  (
+    "properties |args|",
+    "|stomach, args|, each argument as whatsit.getArg gives it (name each: |stomach, _x|)",
+  ),
   ("value == string", "ToString(value) == string"),
   ("() == string", "defined(value) or !!value"),
   (

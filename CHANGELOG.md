@@ -439,6 +439,15 @@
     provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
     `script_bindings::tests::let_takes_any_token`.
 
+  - **Rhai hooks take Perl's arguments.** A `beforeDigest`/`beforeDigestEnd` hook receives the stomach, a
+    constructor's or environment's `afterDigest`/`afterDigestBegin`/`afterDigestBody` hook `|stomach, whatsit|` and a
+    `properties` closure `|stomach, x, …|`, each argument as `whatsit.getArg` gives it (Constructor.pm:99-117); a
+    primitive's or parameter type's `afterDigest` receives the stomach alone, as Perl's. The old forms
+    (`afterDigest: |whatsit|`, `properties: |x|`) keep working this release and Warn `deprecated` once per binding
+    load. A failing `afterDigestBegin`/`afterDigestBody`/`beforeDigestEnd` hook names itself in its `Error:script`
+    (was "afterDigest"/"beforeDigest"). `RefStepCounter`'s documented result is Perl's `tags` and `id`. Guards
+    `perfect_kernel_batchrhaihook::*`; repro `rhai-bindings/afterdigest_stomach_first` turns green.
+
   - **The Rhai API reference's tables keep their columns.** A description quoting a closure (`|gullet, x|`) split its
     `API.md` row into extra cells on GitHub; the generator escapes `|` in descriptions too. Guard
     `script_bindings::tests::api_tables_keep_their_columns`.
