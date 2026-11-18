@@ -1964,7 +1964,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // date's dropped words named to the title-page check, `visible_name_text`)
   // (DATELEGb, 52 -> 53: the date line's `@` signs counted on its tokens, as the readers' text drops a styled one —
   // `\textbf{@} gaborit@kth.se`, 1801.04802 — the address-among-text fail-safe; the relocated legend note cut read XML)
-  ("frontmatter (rest)", 53),
+  // (DATEFOOT, 53 -> 61, OD #1071: a void date's notes, `\thanks`, `\footnote`, `\footnotetext`, taken out of its dropped
+  // line as title notes (`date_legend::taken_notes`, 2605.04795's MSC line), read on the same store tokens; pending, as
+  // DATELEG's: digest the line in a discarded box with the three let to the pubnote adders, no token read)
+  ("frontmatter (rest)", 61),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of

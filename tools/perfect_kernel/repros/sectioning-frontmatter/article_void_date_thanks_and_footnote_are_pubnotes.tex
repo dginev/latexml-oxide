@@ -1,0 +1,20 @@
+% mechanism: a void `\date` under the authors (OD #1071): its `\thanks` and `\footnote`, at any depth,
+%   are the document's pubnotes, as the date's notes digest (Perl Base_Utility.pool.ltxml:331-332), not
+%   leftovers dropped with it
+% witness:  2605.04795 (the `\footnotetext` sibling: article_void_date_footnotetext_is_a_title_note.tex)
+% oracle:   pdflatex 0 errors; "Ann Able1 Bob Baker2", "1Univ A 2Univ B", the date with marks, footnotes "Supported
+%   by Grant 42." and "Preprint version."
+% engines:  rust aeda3db4e47 = both notes dropped with the void date, 1 Warning (unclaimed); perl = the date kept whole
+%   as text, its thanks a pubnote (2026-11-18)
+% expect:   0 errors, 0 warnings; Ann Able: Univ A; Bob Baker: Univ B; no date; pubnote (role thanks) "Supported by
+%   Grant 42."; pubnote "Preprint version."
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{Cobordism}
+\author{Ann Able$^1$ \and Bob Baker$^2$}
+\date{$^1$Univ A \qquad $^2$Univ B\\ \today\thanks{Supported by Grant 42.} {\small\footnote{Preprint version.}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}
