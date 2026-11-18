@@ -20791,7 +20791,8 @@ interpreter that ends or breaks the protocol mid-chunk is `Error:lua:interpreter
 starts a fresh one, at most 3 times per conversion. `reset_session` (`Converter::initialize_session`) ends the
 interpreter with its conversion, so a persistent worker's next paper starts with a fresh Lua state in its own
 source directory. The child is registered with the watchdog (`watchdog::kill_on_exit`): the wall-clock and memory
-exits and the allocation-failure and `panic = "abort"` hooks, which run no destructor, kill it, so a chunk spinning
+exits, the binaries' allocation-failure hooks and `cortex_worker`'s `panic = "abort"` hook, which run no
+destructor, kill it, so a chunk spinning
 in `while true do end` no longer outlives the conversion. The child's environment is cleared to an allowlist (`PATH`, `HOME`, `TEXMF*`, `KPATHSEA*`,
 `*INPUTS`, `*FONTS`, the locale, `SOURCE_DATE_EPOCH`, the temp dir, Windows' system variables). lualibs loads
 during the prelude with the originals, its captured functions refusing once documents run. A `.tar`/`.tar.gz`
