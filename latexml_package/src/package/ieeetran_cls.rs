@@ -2613,7 +2613,8 @@ fn author_units(body: &[Token], notes: &[(usize, usize)]) -> Vec<AuthorUnit> {
   };
   let spacing = |k: Option<&Token>| k.is_none_or(|t| *t == T_SPACE!() || *t == T_ACTIVE!('~'));
   let and_at = |at: usize| {
-    // (a note before the word prints nothing: `IEEE} %`, `\thanks{…}%`, ` and Cy Coe` read " and ")
+    // (a note before "and" prints nothing, so the space before the note is the word's: `Sidky,  \thanks{…}%` then
+    // `and Xiaochuan Pan` reads " and ", 1105.4002)
     let mut prev = at;
     while let Some(&(start, _)) = notes.iter().find(|&&(_, end)| end == prev) {
       prev = start;

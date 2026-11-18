@@ -20610,8 +20610,8 @@ author's name piece — after its grade where the grade follows the name's comma
 inside the grade's braces (`Ann Able,~\IEEEmembership{Member, IEEE,}`, 2106.02811) — except the name before a `\\`
 or ending the list, whose contacts follow its grade either way (one paper may show both orders: 2106.02811, pinned by
 `ieee_unlabelled_addresses_route_by_the_name`) — never past a blank line or `\\`; a `\thanks` met before a piece's
-first letter (`Ann Able, \thanks{…} Bob Baker`, its mark printed after Ann's comma) is the author's before, so it
-moves no insertion point onto the next name (2606.25681); a note "Corresponding author: <name>" (or "… is <name>") becomes that author's
+first letter (`Ann Able, \thanks{…} Bob Baker`, its mark printed after Ann's comma) moves no insertion point onto the next
+name — its contacts still go to the author it spells (2606.25681, 1105.4002); a note "Corresponding author: <name>" (or "… is <name>") becomes that author's
 `role=correspondent` contact, its text whole. A name matches an author by surname (the author's last word) and first
 initial; several sentences of one note route each. A sentence starts at the note's start or after a '.' or ';' that ends no initial
 ("C.", "J.-L.", "D.S."); its affiliation is one sentence (to ". " before a capital, after no initial), followed by at
