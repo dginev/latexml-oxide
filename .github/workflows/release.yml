@@ -389,8 +389,7 @@ jobs:
       - name: install dependencies
         timeout-minutes: 20
         run: |
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends \
+          tools/ci_apt_install.sh \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
             mold \
             dpkg-dev \
@@ -709,8 +708,7 @@ jobs:
       - name: install dependencies
         timeout-minutes: 20
         run: |
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends \
+          tools/ci_apt_install.sh \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
             mold \
             dpkg-dev \
