@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+  - **A Rhai binding's diagnostic names its `.rhai` file.** A failure while a binding loads is one
+    `Error:script:<file>.rhai` (was `Error:unexpected:` with the text twice), located at the line and
+    column in that file and then at the `\usepackage`; a body's error and a `Fatal(…)` carry the same
+    locator; types read as Rhai's (`string`, `int`, …). Every `Fatal:` line has one space before its
+    message, as Perl's. Each external program a binding runs is named by an `Info:script:Command` line;
+    `--help` and `docs/USAGE.md` say how a `.rhai` binding is found and how
+    `LATEXML_DISABLE_SHELL_ESCAPE` refuses commands. Guard
+    `30_script_bindings::a_rhai_diagnostic_names_its_binding_file`.
   - **TeX Live's package manuals convert clean (the perfect-kernel campaign).** Every one of the
     1,552 in-scope TeX Live documentation bundles converts with no Error but of a ruled-out
     kind, valid against the schema (or only in a ruled class), at least 95 % word recall against
