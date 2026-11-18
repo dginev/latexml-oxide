@@ -1,0 +1,14 @@
+% mechanism: latexml_post graphics.rs copy_to_destination (OXIDIZED_DESIGN_DIVERGENCES #1081; Perl Post/Graphics.pm
+%   L292-300): an image whose path relative to the source leaves it ('..') is copied under a generated xN name
+%   inside --dest, never to <dest>/../..; a contained path keeps its relative name.
+% witness: TL manual ijsra (its class's alertmessage/img/*.png reached as ../../../tex/latex/…)
+% layout:  src/a/b/t.tex (this file, named by its absolute path), src/x/y.png; --dest out/d/t.html
+% oracle:  pdflatex 0 errors (the image found at ../../x/y.png)
+% engines: rust=GREEN perl=GREEN (generateResourcePathname) (2026-11-18)
+% expect:  0 errors; out/d/x1.png written, <img src="x1.png">; nothing written outside out/d
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+Before \includegraphics{../../x/y} after.
+\end{document}

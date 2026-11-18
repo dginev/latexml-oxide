@@ -29,6 +29,10 @@
 //! `file`/`string` extensions lualatex gets via luaotfload), so texmf-shipped
 //! Lua modules (newpax, tkz-elements, …) resolve.
 //!
+//! Document Lua is untrusted input: the prelude sandboxes it to TeX's defaults
+//! (`shell_escape=f`, `openout_any=p`) before any chunk runs, each refusal an
+//! `Error:lua:sandbox` (OXIDIZED_DESIGN_DIVERGENCES #1081).
+//!
 //! Process shape: one `texlua` child per conversion thread, spawned on first
 //! use with a prelude that loops over length-framed requests on stdin and
 //! answers `OK`/`ERR` length-framed responses on stdout. A std
@@ -79,13 +83,15 @@ tex.tprint = function(tbl) for _, v in ipairs(tbl) do emit('', table.unpack(v)) 
 -- tex.count/tex.dimen access round-trips to the Rust State over the pipe as
 -- a framed query ('Q <len>' out, 'A <len>' back). Values follow the LuaTeX
 -- convention: counts are integers, dimens are scaled points.
+-- The pipe ends, held before the sandbox below and the document can touch io.
+local stdin, stdout = io.stdin, io.stdout
 local function query(payload)
-  io.write(string.format('Q %d\n', wire_len(payload)))
-  io.write(payload)
-  io.flush()
-  local header = io.read('*l')
+  stdout:write(string.format('Q %d\n', wire_len(payload)))
+  stdout:write(payload)
+  stdout:flush()
+  local header = stdin:read('*l')
   local n = tonumber(header and header:match('%d+')) or 0
-  return n > 0 and io.read(n) or ''
+  return n > 0 and stdin:read(n) or ''
 end
 local function regtable(kind)
   return setmetatable({}, {
@@ -123,25 +129,156 @@ pdf = setmetatable({}, {
 texio = { write = function() end, write_nl = function() end }
 status = setmetatable({}, {__index = function() return 0 end})
 token = token or {}
+-- Sandbox (OXIDIZED_DESIGN_DIVERGENCES #1081): document Lua is untrusted input,
+-- held to TeX's defaults for it, shell_escape=f (no process runs) and
+-- openout_any=p (kpathsea's kpse_out_name_ok: a write only to a relative path
+-- with no '..' part and no dotfile); reads stay open (openin_any=a). texlua's
+-- --safer/--nosocket/--shell-escape do not restrict a script, so the prelude
+-- does it before any document chunk runs. A denied call reports a 'D' frame (an
+-- Error a pcall cannot swallow) and raises a Lua error.
+-- While the prelude loads lualibs (texmf code, trusted like a format), the
+-- originals still answer; the wrappers it captures deny once the loop starts.
+local booting = true
+local function deny(what)
+  if booting then error(what .. ' is not allowed', 3) end
+  local msg = what .. ' is not allowed (document Lua runs sandboxed: no programs, writes only below the job directory)'
+  stdout:write(string.format('D %d\n', wire_len(msg)))
+  stdout:write(msg)
+  stdout:flush()
+  error(msg, 3)
+end
+local function denier(what, original)
+  return function(...)
+    if booting and original then return original(...) end
+    deny(what)
+  end
+end
+local function out_name_ok(name)
+  if type(name) ~= 'string' or name == '' or name:find('\0', 1, true) then return false end
+  local path = name:gsub('\\', '/')
+  if path:sub(1, 1) == '/' or path:find('^%a:') then return false end
+  for part in path:gmatch('[^/]+') do
+    if part == '..' or (part:sub(1, 1) == '.' and part ~= '.' and part ~= '.tex') then return false end
+  end
+  return true
+end
+local function writes(mode) return type(mode) == 'string' and mode:find('[wa+]') ~= nil end
+for _, name in ipairs({'execute', 'exec', 'spawn', 'kpsepopen', 'remove', 'rename', 'tmpname', 'tmpdir', 'setenv'}) do
+  os[name] = denier('os.' .. name, os[name])
+end
+io.popen = denier('io.popen', io.popen)
+local io_open, io_output = io.open, io.output
+io.open = function(name, mode)
+  if writes(mode) and not out_name_ok(name) then deny('writing ' .. tostring(name)) end
+  return io_open(name, mode)
+end
+io.output = function(file)
+  if type(file) == 'string' and not out_name_ok(file) then deny('writing ' .. file) end
+  return io_output(file)
+end
+if gzip and gzip.open then
+  local gzip_open = gzip.open
+  gzip.open = function(name, mode)
+    if writes(mode) and not out_name_ok(name) then deny('writing ' .. tostring(name)) end
+    return gzip_open(name, mode)
+  end
+end
+if mplib and mplib.new then
+  local mplib_new = mplib.new
+  mplib.new = function(options)
+    options = options or {}
+    local find = options.find_file
+    options.find_file = function(name, mode, kind)
+      local found = name
+      if find then found = find(name, mode, kind) end
+      if writes(mode) and found and not out_name_ok(found) then
+        local msg = 'writing ' .. tostring(found) .. ' is not allowed (document Lua runs sandboxed)'
+        stdout:write(string.format('D %d\n', wire_len(msg)))
+        stdout:write(msg)
+        stdout:flush()
+        return nil
+      end
+      return found
+    end
+    return mplib_new(options)
+  end
+end
+if lfs then
+  local read_only = {attributes = true, currentdir = true, dir = true, isdir = true, isfile = true,
+    readlink = true, shortname = true, symlinkattributes = true}
+  for name, value in pairs(lfs) do
+    if type(value) == 'function' and not read_only[name] then lfs[name] = denier('lfs.' .. name, value) end
+  end
+end
+package.loadlib = denier('package.loadlib', package.loadlib)
+local c_path = package.cpath
+package.cpath = ''
+for _, name in ipairs({'ffi', 'socket', 'mime'}) do _G[name] = nil end
+for _, registry in ipairs({package.loaded, package.preload}) do
+  for name in pairs(registry) do
+    if name == 'ffi' or name:find('^socket') or name:find('^mime') then registry[name] = nil end
+  end
+end
+if lua then lua.getbytecode, lua.setbytecode, lua.bytecode = nil, nil, nil end
+-- Text chunks only: crafted bytecode can break out of any Lua-level sandbox.
+local base_load, base_loadfile = load, loadfile
+-- (an env passed as nil is still an env: forward it only when given)
+load = function(chunk, name, mode, ...)
+  if select('#', ...) > 0 then return base_load(chunk, name, 't', ...) end
+  return base_load(chunk, name, 't')
+end
+loadstring = function(chunk, name) return base_load(chunk, name, 't') end
+loadfile = function(file, mode, ...)
+  if select('#', ...) > 0 then return base_loadfile(file, 't', ...) end
+  return base_loadfile(file, 't')
+end
+dofile = function(file) return assert(loadfile(file))() end
+-- require: the preload table, then Lua files on package.path and (below) the
+-- texmf tree via kpse, all text-only; a C module or a network library is denied.
+local preload = (package.searchers or package.loaders)[1]
+local searchers = {
+  function(name)
+    if name == 'ffi' or name:find('^socket') or name:find('^mime') then
+      return function() deny('require "' .. name .. '"') end
+    end
+    return preload(name)
+  end,
+  function(name)
+    local file, err = package.searchpath(name, package.path)
+    if not file then return err end
+    return assert(loadfile(file)), file
+  end,
+}
+package.searchers, package.loaders = searchers, searchers
+searchers[3] = function(name)
+  if package.searchpath(name, c_path) or package.searchpath(name:match('^[^.]*'), c_path) then
+    return function() deny('loading the C module "' .. name .. '"') end
+  end
+  return "\n\tno C modules (document Lua runs sandboxed)"
+end
 -- Rebind require through texlua's built-in kpse so texmf-shipped Lua modules
 -- resolve (newpax, tkz-elements, ...), and load lualibs, which supplies the
 -- 'file'/'string'/'table' library extensions lualatex gets via luaotfload.
 if kpse and kpse.set_program_name then
   pcall(kpse.set_program_name, 'luatex')
-  table.insert(package.searchers or package.loaders, function(name)
-    local f = kpse.find_file(name, 'lua')
-    if f then return loadfile(f), f end
+  table.insert(searchers, function(name)
+    -- LuaTeX's own kpse loader reads a dotted name as a path (pgf.gd.trees.library).
+    local f = kpse.find_file((name:gsub('%.', '/')), 'lua') or kpse.find_file(name, 'lua')
+    if f then return assert(loadfile(f)), f end
     return "\n\tno texmf module '" .. tostring(name) .. "' (kpse)"
   end)
   pcall(require, 'lualibs')
 end
+-- debug reaches the upvalues the wrappers above hold (the raw io.open, ...).
+debug, package.loaded.debug = nil, nil
+booting = false
 while true do
-  local header = io.read('*l')
+  local header = stdin:read('*l')
   if not header then os.exit(0) end
   local n = tonumber(header)
   if not n then os.exit(1) end
-  local chunk = io.read(n)
-  io.read('*l')
+  local chunk = stdin:read(n)
+  stdin:read('*l')
   buf = {}
   local out, tag
   local f, err = load(chunk)
@@ -155,9 +292,9 @@ while true do
   else
     out, tag = tostring(err), 'ERR'
   end
-  io.write(string.format('%s %d\n', tag, wire_len(out)))
-  io.write(out)
-  io.flush()
+  stdout:write(string.format('%s %d\n', tag, wire_len(out)))
+  stdout:write(out)
+  stdout:flush()
 end
 "#;
 
@@ -366,14 +503,30 @@ fn service_query(payload: &str) -> String {
 /// current catcodes by the caller); `Err(msg)` is a load/runtime Lua error or
 /// bridge unavailability ("texlua not available" exactly once per thread —
 /// callers should degrade to a no-op expansion, matching what the document
-/// would get from a TeX engine without Lua).
-pub fn lua_exec(chunk: &str) -> Result<String, String> {
+/// would get from a TeX engine without Lua). Each call the sandbox refused is
+/// raised as an `Error` (the outer `Err`, should that Error escalate to a Fatal).
+pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<String, String>> {
+  let (result, denials) = exec_framed(chunk);
+  for denial in denials {
+    use crate::prelude::*;
+    Error!("lua", "sandbox", denial);
+  }
+  Ok(result)
+}
+
+/// The chunk's result, and the sandbox's refusals ('D' frames, OXIDIZED_DESIGN_DIVERGENCES #1081) — returned
+/// apart, as a pcall in the chunk can swallow the Lua error, never the record.
+fn exec_framed(chunk: &str) -> (Result<String, String>, Vec<String>) {
   // (a speculative run is undone, the interpreter's globals could not be: `\\author{First\\luaexec{n=(n or 0)+1}}`, which a second
   // `\\author` replaces, left its count for the body's `\\luaexec{tex.print(n or 0)}`, lualatex's 0)
   if latexml_core::gullet::in_speculative_digestion() {
-    return Err("a speculative run evaluates no Lua".to_string());
+    return (
+      Err("a speculative run evaluates no Lua".to_string()),
+      Vec::new(),
+    );
   }
-  LUA.with(|slot| {
+  let mut denials = Vec::new();
+  let result = LUA.with(|slot| {
     let mut slot = slot.borrow_mut();
     let entry = slot.get_or_insert_with(spawn);
     let Some(proc_) = entry.as_mut() else {
@@ -386,7 +539,7 @@ pub fn lua_exec(chunk: &str) -> Result<String, String> {
     } else {
       chunk.into()
     };
-    let do_io = |p: &mut LuaProc| -> std::io::Result<(String, String)> {
+    let mut do_io = |p: &mut LuaProc| -> std::io::Result<(String, String)> {
       p.stdin.write_all(format!("{}\n", chunk.len()).as_bytes())?;
       p.stdin.write_all(chunk.as_bytes())?;
       p.stdin.write_all(b"\n")?;
@@ -406,6 +559,10 @@ pub fn lua_exec(chunk: &str) -> Result<String, String> {
           // Undo the text-mode stdout: drop the `\r` written before each `\n` (a `\r\n` the chunk printed came
           // through as `\r\r\n`, and stays `\r\n`).
           body = body.replace("\r\n", "\n");
+        }
+        if tag == "D" {
+          denials.push(body);
+          continue;
         }
         if tag == "Q" {
           let answer = service_query(&body);
@@ -427,12 +584,13 @@ pub fn lua_exec(chunk: &str) -> Result<String, String> {
         Err(format!("texlua bridge I/O failed: {e}"))
       },
     }
-  })
+  });
+  (result, denials)
 }
 
 #[cfg(test)]
 mod tests {
-  use super::lua_exec;
+  fn lua_exec(chunk: &str) -> Result<String, String> { super::exec_framed(chunk).0 }
 
   fn texlua_present() -> bool {
     std::process::Command::new("texlua")

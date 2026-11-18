@@ -32,6 +32,16 @@ commands via the `Command` API (allowed by default, opt-out
 `LATEXML_DISABLE_SHELL_ESCAPE`) — the runtime-bindings analog of shell-escape;
 see that section below.
 
+## Untrusted input stays in the job
+
+- **Document Lua is sandboxed** (OXIDIZED_DESIGN_DIVERGENCES #1081). `\directlua`, `\luaexec` and `{luacode}`
+  chunks run in `texlua` under TeX's own defaults for untrusted input, set by the bridge's prelude before any
+  document chunk: `shell_escape=f` (no program runs, no C module or network library loads) and `openout_any=p`
+  (writes only to a relative path below the job directory, no `..`, no dotfile). A refused call is an `Error`.
+- **Image copies stay under `--dest`.** A graphic whose source-relative path would leave the destination
+  directory is copied under a generated `xN` name inside it (Perl `Post/Graphics.pm`'s `pathname_is_contained`
+  fallback).
+
 ## `unsafe` budget
 
 Reconciled **2026-07-20**: the project contains **50 `unsafe {}` blocks +

@@ -1,0 +1,19 @@
+% mechanism: lua_bridge.rs prelude sandbox (OXIDIZED_DESIGN_DIVERGENCES #1081): writes follow kpathsea's
+%   openout_any=p (kpse_out_name_ok) — a relative path below the job directory only; '..', an absolute path
+%   and a dotfile are refused (an Error each); reads stay open.
+% witness: synthetic (security hardening); newpax/newpax writes its .newpax next to the manual (allowed)
+% oracle:  lualatex (openout_any=p): io.open("../x","w") etc. fail; "out.txt" is written
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% expect:  "W[ok] R[hello]"; 3 Errors (lua:sandbox ../, absolute, dotfile); only out.txt written
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\begin{luacode*}
+local f = io.open("out.txt", "w") f:write("hello") f:close()
+tex.sprint("W[ok] R[" .. io.open("out.txt"):read("a") .. "]")
+for _, name in ipairs({"../sandbox_escape.txt", "/tmp/sandbox_escape.txt", ".sandbox_escape"}) do
+  pcall(io.open, name, "w")
+end
+\end{luacode*}
+\end{document}

@@ -928,12 +928,44 @@ impl Graphics {
 
   /// Copy a source image to the destination directory, preserving relative paths.
   /// Returns the destination path (relative to dest_dir).
-  fn copy_to_destination(source: &str, source_dir: &str, dest_dir: &str) -> Option<String> {
+  fn copy_to_destination(
+    source: &str,
+    source_dir: &str,
+    dest_dir: &str,
+    used_dests: &mut HashMap<String, String>,
+    resource_counter: &mut u32,
+  ) -> Option<String> {
     // Relativize like Perl's pathname_relative (→ File::Spec->abs2rel): a
     // source OUTSIDE source_dir comes back as `../…`, never the raw absolute
     // path. A bare `strip_prefix` used to leak the absolute path for a graphic
     // reached through `\subimport*{../A/child/}` (issue #698 class).
-    let rel = latexml_core::util::pathname::relative(source, source_dir);
+    let mut rel = latexml_core::util::pathname::relative(source, source_dir);
+    // Perl `Post/Graphics.pm` L298-300: a path that would leave the destination
+    // (`..`, a root or drive) takes a generated `xN` name instead (OXIDIZED_DESIGN_DIVERGENCES #1081).
+    let contained = Path::new(&rel).components().all(|part| {
+      matches!(
+        part,
+        std::path::Component::Normal(_) | std::path::Component::CurDir
+      )
+    });
+    if !contained {
+      let ext = Path::new(source)
+        .extension()
+        .map(|ext| ext.to_string_lossy().into_owned())
+        .unwrap_or_default();
+      rel = loop {
+        *resource_counter += 1;
+        let name = if ext.is_empty() {
+          format!("x{resource_counter}")
+        } else {
+          format!("x{resource_counter}.{ext}")
+        };
+        if let std::collections::hash_map::Entry::Vacant(slot) = used_dests.entry(name.clone()) {
+          slot.insert(source.to_string());
+          break name;
+        }
+      };
+    }
     let rel_path = Path::new(&rel);
 
     // Build absolute destination path
@@ -2923,7 +2955,13 @@ impl Processor for Graphics {
           let rel = if let Some(existing) = copy_dedup.get(&key) {
             existing.clone()
           } else {
-            let rel_opt = Self::copy_to_destination(source, &source_dir, &dest_dir);
+            let rel_opt = Self::copy_to_destination(
+              source,
+              &source_dir,
+              &dest_dir,
+              &mut used_dests,
+              &mut resource_counter,
+            );
             // If the copy itself failed, still emit a RELATIVE URL (abs2rel),
             // never the raw absolute source path (issue #698 class).
             let rel = rel_opt

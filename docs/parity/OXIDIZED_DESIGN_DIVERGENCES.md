@@ -20759,6 +20759,24 @@ the same path. The walker's `KEYED_CONSTRUCTORS` row for `\scalebox` is gone (th
 `cluster_package_guards::perfect_kernel_batchmarkscale::scalebox_mark_spells_its_glyph_not_its_scale` (repro
 `sectioning-frontmatter/mark_scalebox_scale_is_no_ink`), `a_scale_factors_tail_is_dropped_with_a_warning`.
 
+### 1081. Untrusted input stays in the job: document Lua is sandboxed; an image copy never leaves `--dest` (SECLUA)
+
+**Perl.** No Lua bridge. `Post/Graphics.pm` L292-300 copies an image to its source-relative path only when
+`pathname_is_contained` places it under the site directory, else under `generateResourcePathname`'s `xN` name.
+**Rust.** Document Lua code could run programs and write files outside the job; it is now sandboxed. The
+`lua_bridge.rs` prelude holds `\directlua`/`\luaexec`/`{luacode}` chunks to TeX's own defaults for untrusted input,
+applied before any document chunk (texlua's `--safer`/`--shell-escape` do not restrict a script): `shell_escape=f`
+(no process, no C module, no network library) and `openout_any=p` (kpathsea `kpse_out_name_ok`: a write only to a
+relative path with no `..` part and no dotfile); reads stay open (`openin_any=a`); chunks load as text only. Each
+refused call is `Error:lua:sandbox` (a `D` frame, raised even when the chunk pcalls it) and a Lua error. lualibs loads
+during the prelude with the originals, its captured functions refusing once documents run. `graphics.rs`
+`copy_to_destination` follows Perl: a source-relative path that would leave `--dest` (a `..`, root or drive
+component) takes the next free `xN.<ext>`. **Witnesses.** TL manuals ijsra (its class's images reached as
+`../../../tex/latex/…`, written beside `--dest`; now `x1.png`, `x2.png`), newpax (unchanged). **Guards.**
+`cluster_package_guards::perfect_kernel_batchseclua::{batchseclua_lua_runs_no_program,
+batchseclua_lua_writes_stay_in_the_job_directory, batchseclua_image_copy_stays_in_dest}` (repros
+`luatex-profile/lua_sandbox_{no_programs,paranoid_writes}`, `loader/image_copy_outside_source_stays_in_dest`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a
