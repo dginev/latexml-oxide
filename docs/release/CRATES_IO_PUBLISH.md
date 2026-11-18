@@ -5,20 +5,25 @@ docs.rs / library-consumer story. Complements
 [`RELEASING.md`](RELEASING.md) (the GitHub-Release binary flow); this file is
 specifically about **`cargo publish` + docs.rs + library use**.
 
-Status (2026-07-17): ✅ **PUBLISHED.** All 8 crates are live on crates.io —
-`latexml` **0.7.4** (`max_stable_version` 0.7.4, published 2026-07-17T14:44Z),
-`latexml_core` 0.4.0 at 14:20Z, and the six siblings; the repo is **public**.
-B1 (dep versions), B2 (forked git deps → published `marpa-asf` /
-`libmarpa-asf-sys` / `pericortex`), B3a (XSLT/CSS/js → `latexml_post`) and
-**B3b (RelaxNG → `latexml_core`)** are done; B4 verified; B5 (dumpless source
-install) is an accepted, documented limitation.
+Status (as of the 0.7.6 publication, 2026-08-23): ✅ **PUBLISHED, every release.**
+All 8 crates are live on crates.io at the 0.7.6 line — `latexml` **0.7.6**
+(`max_stable_version`), `latexml_core` 0.6.0, `latexml_codegen` 0.4.2,
+`latexml_math_parser` 0.4.1, `latexml_engine` 0.7.0, `latexml_package` 0.7.0,
+`latexml_post` 0.5.0, `latexml_contrib` 0.5.0 (all uploaded 2026-08-23T22:44Z);
+docs.rs built `latexml` 0.7.6. First publication was 0.7.4 on 2026-07-17. Every
+blocker in §2 is resolved: B1, B2, B3a, B3b, B6, B7 done; B4 moot (all 8 names
+are ours); B8 applies only to new names. B5 (no dumps in the crate) is superseded
+from 0.8.0: a dumpless install builds the dumps on its first conversion into a
+per-user cache (`LATEXML_FORMAT_CACHE`, `latexml_oxide/src/format_dumps.rs`;
+`docs/INSTALL.md` "From crates.io"); 0.7.6 installs follow §B5.
 
-**Subsequent releases are just a version bump + `cargo publish --workspace`.**
-The checklist in §5 is retained as the procedure and, more importantly, for the
-durable traps B7/B8 — read those before the next publish. Note the working tree
-is already at `0.7.5-rc1`, and rule 0 below still binds: **never publish an
-`-rc` to crates.io** (it does not become `max_stable_version`, so
-`cargo install latexml` would silently keep resolving to 0.7.4).
+**Each release is a version bump of every changed crate + `cargo publish
+--workspace`** (`RELEASING.md` step 1, `.claude/skills/next-release/SKILL.md` step
+1: crates.io is immutable, so a changed sibling left at its old version publishes
+the top crate against stale siblings). §5 is the per-release checklist; the durable
+traps are B7 (10 MiB cap, real upload only) and rule 0: **never publish an `-rc`**
+(it does not become `max_stable_version`, so `cargo install latexml` would keep
+resolving to the previous stable).
 
 ---
 
@@ -40,9 +45,9 @@ crates.io permanently — **their names must be available too** (reserve them).
 | 8 | `latexml` (`latexml_oxide`) | 0.7.6 | all 7 + `pericortex` |
 
 **Published prerequisites (all on crates.io, deps repointed off git — ✅ DONE):**
-`libmarpa-asf-sys` 0.3.0 → `marpa-asf` 0.4.0 (the dginev/marpa fork; consumed by
+`libmarpa-asf-sys` 0.3.x → `marpa-asf` 0.4.0 (the dginev/marpa fork; consumed by
 `latexml_math_parser` via `marpa = { package = "marpa-asf" }`),
-and `pericortex` 0.2.8 (behind the optional `cortex` feature). crates.io rejects
+and `pericortex` 0.2.8+ (behind the optional `cortex` feature). crates.io rejects
 git deps, so these were hard blockers — see B2.
 
 ---
@@ -134,14 +139,13 @@ Rejected alternatives: a prepublish copy-and-path-rewrite script (fragile — th
 `include_str!` paths are compile-time literal), and per-crate symlinks into
 `../resources` (Windows-hostile, brittle).
 
-### B4 — sub-crate names must be free on crates.io — ✅ VERIFIED FREE (2026-07-17)
+### B4 — sub-crate names must be free on crates.io — ✅ MOOT (all 8 published by dginev since 0.7.4)
 `latexml` is registered to **dginev** (currently 0.0.2 — the placeholder the real
 release overwrites). All 7 siblings checked against the crates.io API and **free**:
 `latexml_core`, `latexml_codegen`, `latexml_math_parser`, `latexml_engine`,
 `latexml_package`, `latexml_post`, `latexml_contrib`. (crates.io normalizes
 `_`/`-`, but the exact `_` names the manifests use are what get reserved.)
-Nothing to pre-reserve — the publish in §5 claims all 7 in one go. Re-check right
-before publishing if any time has passed; a name can be taken by anyone.
+The 0.7.4 publish claimed all 7; there is nothing left to re-check.
 
 ### B6 — `readme` pointed outside the crate dir — ✅ DONE (2026-07-17)
 Found by the first `cargo publish --workspace --dry-run`: `latexml_oxide` declared
@@ -210,7 +214,7 @@ Only bites when publishing **new** names (a version bump of an existing crate us
 far looser limit), so this is a one-time cost now that all 8 names exist. Recorded
 because a green dry-run makes it look like one `--workspace` invocation suffices.
 
-### B5 — dumps absent from the crates.io crate (accepted; user-fixable in one step)
+### B5 — dumps absent from the crates.io crate (superseded from 0.8.0 by the first-run dump build; 0.7.6 installs: user-fixable in one step)
 The per-TL-year kernel dumps are generated at release time and are large; they
 are **not** shipped in the crates.io tarball. A from-source `cargo install
 latexml` therefore starts **dumpless** → the engine reconstructs kernel state
@@ -283,9 +287,8 @@ Each call runs on its own 256 MiB-stack worker thread and frees the
 thread-local engine (`reset_thread_engine`) before the thread exits. For finer
 control (preloads, search paths, `--whatsin`, split, encoding, …) drive
 `latexml::converter::Converter` + `latexml::post` directly. Runtime needs a TeX
-distribution on `PATH` just like the binary. **Note:** downstream use is only
-*functional from crates.io* once **B3** lands (until then the published
-`latexml_post` won't build).
+distribution on `PATH` just like the binary. (B3 landed before the first
+publication, so the published `latexml_post` builds.)
 
 **Drift / unification.** `api` and the binary share the actual engine
 (`Converter` + `post::run_post_processing`) and the per-format stylesheet choice
@@ -303,8 +306,8 @@ prep as too broad to land safely against the release binary at that time.
 
 ## 5. Publish checklist
 
-Code blockers: **all cleared** (B1, B2, B3a, B3b, B6 done; B4 verified free; B5 an
-accepted limitation). Verified 2026-07-17: `cargo test --tests` **1581/0/0**,
+Code blockers: **all cleared** (B1, B2, B3a, B3b, B6, B7 done; B4 moot; B5
+superseded from 0.8.0 by the first-run dump build). Verified 2026-07-17: `cargo test --tests` **1581/0/0**,
 `cargo clippy --workspace --all-targets -- -D warnings` clean, self-containment
 smoke green for both XML and HTML with the whole `resources/` tree moved aside.
 
@@ -326,14 +329,14 @@ cargo publish --workspace               # the real thing
 > point — it was 13.6 MiB against a 10 MiB cap. Both are now fixed/known, but treat
 > a green dry-run as "the *contents* are sound", not "this will go through".
 
-Expect to finish the first-ever publish with per-crate `cargo publish -p <crate>`
-calls as rate-limit tokens refill (B8). That is a one-time cost: all 8 names now
-exist, so subsequent releases are version bumps under a much looser limit.
+The first-ever publish (0.7.4) finished with per-crate `cargo publish -p <crate>`
+calls as rate-limit tokens refilled (B8). That was a one-time cost: all 8 names
+exist, so a release is version bumps under a much looser limit.
 
 0. [x] **Publish a STABLE version, not an `-rc`.** *(Honoured at 0.7.4; the rule
        stands for every future release.)* When this was written crates.io held only
        the placeholders `latexml` **0.0.1 / 0.0.2** (`max_stable_version: 0.0.2`);
-       today it is 0.7.4.
+       it has tracked every stable release since (0.7.6 at the time of writing).
        `cargo install` and `latexml = "0.7"` both **ignore pre-releases**, so
        publishing `0.7.4-rc4` would leave `cargo install latexml` resolving to the
        **0.0.2 placeholder** — while the README shipped inside that very crate tells
@@ -347,8 +350,14 @@ exist, so subsequent releases are version bumps under a much looser limit.
        crates.io release is **irreversible** (yankable, never deletable; the version
        number is burned). Flip visibility *before* publishing. The gh-pages
        `documentation` link already serves (200).
-2. [ ] Re-check **B4** name availability (§B4) — free is not a permanent state.
-3. [ ] `cargo publish --workspace --dry-run` clean.
-4. [ ] `cargo publish --workspace`.
-5. [ ] Confirm docs.rs built `latexml` (the `documentation` link is the fallback).
-6. [ ] README `cargo install latexml` note carries the nightly + build-dep + dumpless caveats (B5).
+Per release (all done for 0.7.6 on 2026-08-23; repeat them every time):
+
+2. Bump every crate changed since the last release and every intra-workspace
+   `path`+`version` pin (`RELEASING.md` step 1).
+3. `cargo publish --workspace --dry-run` clean.
+4. `cargo publish --workspace` (background it: the index waits are long), then
+   confirm each crate's `max_version` against the crates.io API — exit 0 alone is
+   not proof.
+5. Confirm docs.rs built `latexml` (the `documentation` link is the fallback).
+6. The `cargo install latexml` note (`docs/INSTALL.md` "From crates.io") still
+   carries the nightly, build-dependency and first-run dump caveats.
