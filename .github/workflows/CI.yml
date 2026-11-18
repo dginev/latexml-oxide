@@ -152,13 +152,12 @@ jobs:
       RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
       RUST_BACKTRACE: "1"
     steps:
+      - uses: actions/checkout@v6
       - name: install dependencies
         timeout-minutes: 20
         run: |
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends \
+          tools/ci_apt_install.sh \
             libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6 mold
-      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt, clippy
@@ -225,13 +224,12 @@ jobs:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
     steps:
+      - uses: actions/checkout@v6
       - name: install dependencies
         timeout-minutes: 20
         run: |
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends \
+          tools/ci_apt_install.sh \
             libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6
-      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: miri
@@ -264,11 +262,11 @@ jobs:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
     steps:
+      - uses: actions/checkout@v6
       - name: install dependencies
         timeout-minutes: 20
         run: |
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends \
+          tools/ci_apt_install.sh \
             libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6 \
             texlive texlive-latex-extra texlive-science mold
           # `mold` is REQUIRED even though the ASAN test step drops it: the
@@ -278,7 +276,6 @@ jobs:
           # mold absent, collect2 could find neither `ld.mold` nor `ld` and every
           # such PR failed here with `cannot find 'ld'`. The other Linux jobs
           # already install it; the asan job had been the lone omission.
-      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
@@ -392,6 +389,7 @@ jobs:
       RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
       RUST_BACKTRACE: "1"
     steps:
+      - uses: actions/checkout@v6
       # Minimal apt set: only what `make formats` + tests actually need.
       # Removed: imagemagick, inkscape (graphics post-processing —
       # not exercised by the test suite). The second block (≈230 MB) is what the
@@ -403,11 +401,11 @@ jobs:
       # no file the dumps read (latex.ltx/expl3), so the dump-cache key stays.
       # mupdf-tools + poppler-utils: the PDF→SVG converters (mutool, pdftocairo)
       # that the latexml_post vector-SVG tests require (LATEXML_SVG_TESTS below).
+      # tools/ci_apt_install.sh bounds the download and drops a slow first mirror (checkout precedes it).
       - name: install dependencies
         timeout-minutes: 20
         run: |
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 update
-          sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60 install -y --no-install-recommends \
+          tools/ci_apt_install.sh \
             libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6 \
             mold \
             texlive texlive-latex-extra texlive-science \
@@ -417,7 +415,6 @@ jobs:
             texlive-plain-generic tipa texlive-pstricks texlive-lang-other \
             texlive-lang-arabic texlive-lang-european texlive-lang-spanish \
             tex-gyre jing mupdf-tools poppler-utils
-      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:
