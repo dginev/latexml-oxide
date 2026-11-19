@@ -71,26 +71,41 @@ fn aipproc_old_affiliationmark() {
   );
 }
 
-/// elsart.sty (the LaTeX 2.09 style, v2.23, 0805.0525's copy) defines `\if@seceqn`/`\if@secthm` set by its options
-/// (elsart.sty:66-71), as elsart.cls does (`perfect_kernel_batchclustfix::elsart_amsthm_option_is_the_class_switch`);
-/// no `\if@amsthm`. Repro class-bindings/elsart_sty_option_switches.
+/// elsart.sty (the LaTeX 2.09 style, v2.23, 0805.0525's copy) defines `\if@seceqn`, `\if@secthm`, `\if@secfloat`,
+/// `\if@nameyear` set by its options, `secnum` the first three (elsart.sty:66-78), as elsart.cls does
+/// (`perfect_kernel_batchclustfix::elsart_amsthm_option_is_the_class_switch`); no `\if@amsthm`. Repro
+/// class-bindings/elsart_sty_option_switches.
 #[test]
 fn elsart_sty_options_are_its_switches() {
-  let (log, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/class-bindings/elsart_sty_option_switches.tex"
-    ),
-    Some("ar5iv.sty"),
+  let source = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/elsart_sty_option_switches.tex"
   );
+  let (log, xml) = convert_with(source, Some("ar5iv.sty"));
   assert_eq!(counts(&log), (0, 0), "{log}");
-  assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">seceqn none</p>"#);
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p xml:id="p1.1">seceqn none secfloat nameyear</p>"#,
+  );
+  let secnum = source.replace("[seceqn,secfloat,nameyear]", "[secnum]");
+  let (log, xml) = convert_with(&secnum, Some("ar5iv.sty"));
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p xml:id="p1.1">seceqn secthm secfloat none</p>"#,
+  );
 }
 
 /// `\verb` inside a pre-tokenized argument (cond-mat0203143's `\parbox[t]{…}{\verb+ +\\ \includegraphics…}` in a
 /// tabular cell; astro-ph0108286's `\multicolumn`): its frozen delimiter never matches, so TeX ends it at the `}` that
 /// closes the argument, "\verb illegal in argument" (latex.ltx:15485-15499), and typesets the rest. The scan ran past
 /// that `}` to the next line's end and the rest of the table was lost. The `}` of the verb's own group inside the
-/// argument (`{\verb+ + }`) ends it the same way. Repro boxes-groups/verb_in_an_argument_ends_at_its_brace.
+/// argument (`{\verb+ + }`) ends it the same way. (The paper itself is `\documentstyle`, where the verb ends at its
+/// delimiter: `verb_under_documentstyle_reads_to_its_tokenized_delimiter`.) Repro
+/// boxes-groups/verb_in_an_argument_ends_at_its_brace.
 #[test]
 fn verb_in_an_argument_ends_at_its_brace() {
   let (log, xml) = convert_with(
@@ -114,4 +129,35 @@ fn verb_in_an_argument_ends_at_its_brace() {
     r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" xml:id="p1.1.1.1">1)<inline-block class="ltx_parbox" vattach="top" width="85.4pt" xml:id="p1.1.1.1.1"><p xml:id="p1.1.1.1.1.1"><verbatim font="typewriter" xml:id="p1.1.1.1.1.1.1">+<break/><text font="bold" xml:id="p1.1.1.1.1.1.1.1">second</text> line</verbatim></p></inline-block></td></tr><tr xml:id="p1.1.2"><td align="center" xml:id="p1.1.2.1">2)<inline-block class="ltx_parbox" vattach="top" width="85.4pt" xml:id="p1.1.2.1.1"><p xml:id="p1.1.2.1.1.1"><verbatim font="typewriter" xml:id="p1.1.2.1.1.1.1">+</verbatim></p><p xml:id="p1.1.2.1.1.2"><text font="bold" xml:id="p1.1.2.1.1.2.1">third</text> line</p></inline-block></td></tr></tbody></tabular>"#,
   );
   assert!(xml.contains(r#"<p xml:id="p1.2">Then more.</p>"#), "{xml}");
+}
+
+/// Under `\documentstyle`, latex209.def:201-211's `\verb` reads `\@tempa##1#1`, to the delimiter as tokenized: in an
+/// argument it ends at the frozen delimiter with no error (cond-mat0203143's `\parbox`, `{\verb+ + }`; math0303012's
+/// `{\verb|#3|}` in a macro), and the line's end inside it is a space (cs9811025). Distinct from
+/// `verb_in_an_argument_ends_at_its_brace` (the 2e `\verb`, which errs there). Repro
+/// boxes-groups/verb_under_documentstyle_reads_to_its_tokenized_delimiter.
+#[test]
+fn verb_under_documentstyle_reads_to_its_tokenized_delimiter() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/verb_under_documentstyle_reads_to_its_tokenized_delimiter.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" xml:id="p1.1.1.1">1)<inline-block class="ltx_parbox" vattach="top" width="85.4pt" xml:id="p1.1.1.1.1"><p xml:id="p1.1.1.1.1.1"><verbatim font="typewriter" xml:id="p1.1.1.1.1.1.1"></verbatim></p><p xml:id="p1.1.1.1.1.2"><text font="bold" xml:id="p1.1.1.1.1.2.1">second</text> line</p></inline-block></td></tr><tr xml:id="p1.1.2"><td align="center" xml:id="p1.1.2.1">2)<inline-block class="ltx_parbox" vattach="top" width="85.4pt" xml:id="p1.1.2.1.1"><p xml:id="p1.1.2.1.1.1"><verbatim font="typewriter" xml:id="p1.1.2.1.1.1.1"></verbatim><text xml:id="p1.1.2.1.1.1.2"> <break/><text font="bold" xml:id="p1.1.2.1.1.1.2.1">third</text> line</text></p></inline-block></td></tr></tbody></tabular>"#,
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.2\""],
+    "<p xml:id=\"p1.2\"><verbatim font=\"typewriter\" xml:id=\"p1.2.1\">ab cd</verbatim><text \
+     xml:id=\"p1.2.2\"> done\n<verbatim font=\"typewriter\" \
+     xml:id=\"p1.2.2.1\">x y</verbatim> <verbatim font=\"typewriter\" xml:id=\"p1.2.2.2\">h_0 .. \
+     h</verbatim></text></p>",
+  );
 }

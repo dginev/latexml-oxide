@@ -1,17 +1,22 @@
 % witness: none (the elsart.sty sibling of 0708.3431's elsart.cls `(yjsco)` cluster, run 397)
-% oracle:  elsart.sty:66-71 (v2.23, 0805.0525's copy) `\newif\if@seceqn \@seceqnfalse \def\ds@seceqn{\@seceqntrue}`, the
-%          same for `secthm`; no `\if@amsthm`. elsart.sty is not in TeX Live; pdflatex with 0805.0525's copy beside: 0
-%          errors, "seceqn none"
+% oracle:  elsart.sty:66-78 (v2.23, 0805.0525's copy) `\newif\if@seceqn \@seceqnfalse \def\ds@seceqn{\@seceqntrue}`, the
+%          same for `secthm`, `secfloat`, `nameyear`; `\ds@secnum` sets seceqn, secfloat, secthm; no `\if@amsthm`.
+%          elsart.sty is not in TeX Live; pdflatex with 0805.0525's copy and an empty elsart12.sty beside: "seceqn
+%          none secfloat nameyear" (with `[secnum]`: "seceqn secthm secfloat none"); its 8 `!` are the 2.09 style's
+%          counters "already defined" under article, none from the switches
 % engines: rust CLUSTFIX 2 errors (`\if@seceqn`, `\if@secthm` undefined)
-% expect:  0 errors, 0 warnings; "seceqn none"
-% status:  RED (CLUSTFIX) -> GREEN (NEXT397); guard perfect_kernel_batchnext397::elsart_sty_options_are_its_switches
+% expect:  0 errors, 0 warnings; "seceqn none secfloat nameyear"
+% status:  RED (CLUSTFIX; NEXT397 round 0 for secfloat, nameyear) -> GREEN (NEXT397 fix 1); guard
+%          perfect_kernel_batchnext397::elsart_sty_options_are_its_switches
 % preload: ar5iv.sty
 \documentclass{article}
-\usepackage[seceqn]{elsart}
+\usepackage[seceqn,secfloat,nameyear]{elsart}
 \makeatletter
 \if@seceqn\def\eqok{seceqn}\else\def\eqok{none}\fi
 \if@secthm\def\thmok{secthm}\else\def\thmok{none}\fi
+\if@secfloat\def\floatok{secfloat}\else\def\floatok{none}\fi
+\if@nameyear\def\nyok{nameyear}\else\def\nyok{none}\fi
 \makeatother
 \begin{document}
-\eqok\ \thmok
+\eqok\ \thmok\ \floatok\ \nyok
 \end{document}

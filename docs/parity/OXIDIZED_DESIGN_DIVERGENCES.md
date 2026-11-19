@@ -20970,8 +20970,9 @@ elsart.cls (v2.20, 0712.3870's copy) declares them as switches (:34-35, :62-65, 
 errors in Perl and ours, 0 in pdflatex. The binding declares the three switches and its options set them beside the
 values. Guard `perfect_kernel_batchclustfix::elsart_amsthm_option_is_the_class_switch` (repro
 `class-bindings/elsart_amsthm_option_switch`).
-The LaTeX 2.09 elsart.sty (v2.23, 0805.0525's copy; Perl's elsart.sty.ltxml the same values) defines `\if@seceqn` and
-`\if@secthm` set by `\ds@seceqn`/`\ds@secthm` (:66-71) and no `\if@amsthm`; its binding declares those two. Guard
+The LaTeX 2.09 elsart.sty (v2.23, 0805.0525's copy; Perl's elsart.sty.ltxml the same values) defines `\if@seceqn`,
+`\if@secthm`, `\if@secfloat`, `\if@nameyear` set by their options, `\ds@secnum` the first three (:66-78), and no
+`\if@amsthm`; its binding declares those four and its options set them. Guard
 `perfect_kernel_batchnext397::elsart_sty_options_are_its_switches` (repro `class-bindings/elsart_sty_option_switches`).
 
 ### 1085. `\verb` in an argument ends at the argument's closing brace, "\verb illegal in argument" (NEXT397)
@@ -20980,13 +20981,26 @@ latex.ltx:15485-15499: `\verb` opens a group, makes its delimiter active and set
 Inside a pre-tokenized argument the delimiter is frozen "other" and never matches, so the `}` that closes the argument
 closes the verb's group and reports "\verb illegal in argument"; the text after it is typeset. Perl's `readUntil`
 (latex_constructs.pool.ltxml:1797) and our scan read on past that `}`: up to the next line's end in ours ("\verb ended
-by end of line", the bound of `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`), which in a tabular cell lost the rest of the table (cond-mat0203143, 14 errors and its
-three figures; pdflatex 3 "\verb illegal in argument" plus their recovery). `read_verb_invocation` now ends the body at
-a closing-brace token outside the body's own braces, with TeX's Error, and puts the `}` back; under `\dospecials` only
-a pre-tokenized brace has a brace catcode, so a verb read from the file is unchanged. Not covered: an argument a binding
-pushes back without its braces (`\multicolumn`, astro-ph0108286; `\textbf`), where the scan still ends at the line's
-end. Guard `perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace` (repro
-`boxes-groups/verb_in_an_argument_ends_at_its_brace`).
+by end of line", the bound of `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`), which in a tabular cell
+lost the rest of the table (pdflatex on the `\documentclass` repro: 2 "\verb illegal in argument" plus their
+recovery). `read_verb_invocation` now ends the body at a closing-brace token outside the body's own braces, with TeX's
+Error, and puts the `}` back; under `\dospecials` only a pre-tokenized brace has a brace catcode, so a verb read from
+the file is unchanged.
+Under `\documentstyle` (`2.09_COMPATIBILITY`), latex209.def:201-211's `\verb` is `\@sverb#1{\def\@tempa##1#1{…}}`: it
+reads to the delimiter as tokenized, so in an argument it ends there with no error. The kernel `\verb` takes the
+`token_delimited` read tabularx's `\TX@verb` already used (now matching the delimiter as tokenized, any catcode); the
+`}` stop is then only the recovery for a missing delimiter, with TeX's "Argument of \@tempa has an extra }"
+(pdflatex goes on to "Paragraph ended before \@tempa was complete" and loses the argument; ours keeps it). It has no
+`\verb@eol@error`: a line's end inside it is a space (cs9811025 `\verb|h_0` / `.. h_{-m}|`, was "\verb ended by end
+of line"), and only a `\par` ends it, with that "Paragraph ended" Error.
+cond-mat0203143 (`\documentstyle[aps,…]{revtex}`, ver8.tex:716-727) 14 errors → 0, pdflatex under its own
+`\documentstyle` 0 `\verb` errors; math0303012 (gen2.tex:87 `{\verb|#3|}` in the `kentry` rows) 23 `\verb` errors → 0,
+each row's list as pdflatex prints it. Not covered: an argument a binding digests in place or pushes back without its
+braces (`\mbox`, `\multicolumn`, astro-ph0108286; `\textbf`), where the scan still ends at the line's end. Guards
+`perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace`,
+`perfect_kernel_batchnext397::verb_under_documentstyle_reads_to_its_tokenized_delimiter` (repros
+`boxes-groups/verb_in_an_argument_ends_at_its_brace`,
+`boxes-groups/verb_under_documentstyle_reads_to_its_tokenized_delimiter`).
 
 ## TeX-source fidelity family (TEXSRC)
 

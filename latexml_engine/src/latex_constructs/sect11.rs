@@ -2491,7 +2491,11 @@ fn astroncite_from_refused_cite() -> Vec<Token> {
   };
   let defines_astroncite = matches!(full.get_expansion(), Some(ExpansionBody::Tokens(body))
     if body.unlist_ref().starts_with(&[T_CS!("\\def"), astroncite]));
-  if !full.is_expandable() || !defines_astroncite {
+  // A parameterless `\citefull` only: a `#1` would take the `\global` that keeps the definition.
+  let takes_arguments = full
+    .get_parameters()
+    .is_some_and(|p| !p.get_parameters().is_empty());
+  if !full.is_expandable() || takes_arguments || !defines_astroncite {
     return Vec::new();
   }
   TokenizeInternal!(

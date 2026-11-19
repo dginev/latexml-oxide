@@ -1,5 +1,7 @@
 % witness: cond-mat0203143 (ver8.tex:717-728 `\parbox[t]{…}{\verb+ +\\ \includegraphics…}`, and `{{\verb+ + }\\…}`; the
-%          run-397 `unexpected/\verb` cluster)
+%          run-397 `unexpected/\verb` cluster), its shape under `\documentclass`; the paper is `\documentstyle`, where
+%          latex209.def's `\verb` ends at the delimiter (sibling
+%          verb_under_documentstyle_reads_to_its_tokenized_delimiter)
 % oracle:  latex.ltx:15485-15499 `\verb` opens a group with `\aftergroup\verb@balance@group`: pre-tokenized in an
 %          argument its delimiter is never the active one, the `}` that closes the argument ends it with "\verb illegal
 %          in argument", and the rest is typeset. pdflatex: 4 `!` (2 "\verb illegal in argument", the first one's
