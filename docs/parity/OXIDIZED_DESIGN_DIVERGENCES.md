@@ -15716,7 +15716,8 @@ tables only, and IEEEtran's and acmart's not at all (KNOWN_PERL_ERRORS #1140). H
   (`\lx@format@caption@@`), as caption formats them.
 - **A package that makes its captions itself** marks its type (`lx@caption@own@<type>`), which caption then formats
   not at all: algorithm2e's `algorithm` (algorithm2e.sty:2287-2318 `\algocf@makecaption`; 1908.06049, 2205.14076), whose
-  label closes with `\algocf@capseparator` (":", :2285-2289) — unless float.sty made the type (algorithm.sty's
+  label closes with `\algocf@capseparator` (":", :2285-2289; a paper's own 1996-2005 copy, which has none, as that copy
+  prints: ":", or " " under release 1.16's float.sty `ruled`; cs0008002, 0711.3765, `perfect_kernel_batchalgo397`) — unless float.sty made the type (algorithm.sty's
   `\newfloat{algorithm}` beside `[algo2e]`: caption's "Algorithm 1 Leakage Removal", 2204.02306, 1812.03871, 2408.08621).
 - **longtable** keeps its own "Table 1: " (`\lx@longtable@format`) without caption, unless a binding ports its class's or
   package's own `\LT@makecaption` as its table format (`\lx@longtable@classformat`: emulateapj.cls:1303-1313,
@@ -21767,8 +21768,10 @@ content and structure, and departs from forest.sty and pdflatex as follows:
   Inherited `for tree` keylists live on one stack shared by the tree, and the replay stops once
   the budget is spent. Measured needs: forest-doc ≤ 1,206 per node, milsymb 12,534 per tree,
   prooftrees.sty 34,260 per `\forestset`.
-- **Other:** `\forestoption` and its relatives are `\relax`. `\useforestlibrary` records the
-  library (forest.sty:173-177) but loads no library file. The bare `\forest … \endforest` form
+- **Other:** `\forestoption` and its relatives are `\relax`. `\useforestlibrary` loads the
+  library file as forest.sty:167-170 does (`\RequirePackage[<options>]{forest-lib-<name>}`, which
+  records it, :173-177), except `linguistics` and `edges`, which are only recorded (TikZ layout;
+  prooftrees 0.9.2's `ext.tagging` socket, 2606.20837, `perfect_kernel_batchalgo397`). The bare `\forest … \endforest` form
   emits `<ltx:ERROR>` and discards the body; prooftrees and neoschool reach forest this way.
 - **chemnum:** when `\cmpd{x.a}` is a compound's first use, its output is wrapped in
   `xml:id="cmpd.x"`, so a later `\refcmpd{x}` resolves (chemnum.sty:1324, 1358, 1370-1378).

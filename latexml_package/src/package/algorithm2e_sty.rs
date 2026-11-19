@@ -351,6 +351,18 @@ LoadDefinitions!({
   // A type float.sty made first keeps its own (algorithm.sty's `\newfloat{algorithm}` beside `[algo2e]`, whose
   // captions caption formats: caption_sty.rs `caption_format_tokens`). Guards
   // `perfect_kernel_batch78y::{algorithm2e_caption_is_not_caption_s, algorithm2e_caption_closes_with_its_separator}`.
+  // A paper's own older algorithm2e.sty defines neither, and prints the colon: 2004-2005 copies through
+  // `#1\algocf@typo:` in `\algocf@captiontext` (math0511378, math0501346, cs0602002), the 2003/10/10 copies and
+  // releases 2.24-2.37 (which have `\algo@typo`, not `\algocf@typo`) through float.sty's `\floatc@ruled{#1:}`
+  // (0711.3765, math0210133, 1209.3234, 1905.06492, 1006.3191). Two synthetic residuals (no corpus paper): release
+  // 1.16's `ruled` is read at load, so a later `\restylealgo` keeps the load-time separator; a 2003/10/10 copy under
+  // `french` prints `#1:` without its `\algocf@typo` space, we close with it (row R ALGOVINTAGE). Release 1.16 (1996, `\algostyle`; cs0008002, math0201131) captions
+  // through float.sty as is, so its `ruled` prints "Algorithm 1 text"; its `\typo` closes only the title, its name is
+  // `\algorithmname` (`\floatname`). Guards `perfect_kernel_batchalgo397::algorithm2e_1995_*`.
+  RawTeX!(r"\@ifundefined{algorithmcfname}{\def\algorithmcfname{\algorithmname}}{}%
+\@ifundefined{algocf@capseparator}{\def\algocf@capseparator{:}\@ifundefined{algocf@typo}{%
+  \def\reserved@a{ruled}\ifx\algostyle\reserved@a\def\algocf@capseparator{}\fi}{}}{}%
+\@ifundefined{algocf@typo}{\def\algocf@typo{}}{}");
   RawTeX!(r"\@ifundefined{format@title@algorithm}{\long\def\format@title@algorithm#1{%
 \lx@tag[][\algocf@typo\algocf@capseparator\space]{\lx@fnum@@{algorithm}}#1}}{}");
 
