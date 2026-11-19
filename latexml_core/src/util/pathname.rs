@@ -281,10 +281,14 @@ fn path_is_under(path: &str, root: &str) -> bool {
 /// Debian's `/usr` and other yearless layouts return `None`). Shared by the
 /// kpathsea backend agreement probe above; `latexml_engine::dump_paths` keys
 /// its dump-year detection off the same variable.
-#[cfg(feature = "kpathsea")]
-fn ambient_texlive_root() -> Option<&'static str> {
-  static ROOT: OnceLock<Option<String>> = OnceLock::new();
-  ROOT
+/// The ambient `kpsewhich -var-value=SELFAUTOPARENT` output, memoized for the
+/// process so `select_kpaths` and `latexml_engine::dump_paths` share one spawn.
+///
+/// NOT gated on the `kpathsea` feature: it is a plain subprocess probe (no C
+/// library), matching [`ambient_kpsewhich_version`].
+pub fn ambient_kpsewhich_selfautoparent() -> Option<&'static str> {
+  static SELF_AUTO_PARENT: OnceLock<Option<String>> = OnceLock::new();
+  SELF_AUTO_PARENT
     .get_or_init(|| {
       let out = std::process::Command::new("kpsewhich")
         .args(["-var-value=SELFAUTOPARENT"])
@@ -294,13 +298,15 @@ fn ambient_texlive_root() -> Option<&'static str> {
         return None;
       }
       let root = String::from_utf8(out.stdout).ok()?.trim().to_string();
-      if !root.is_empty() && Path::new(&root).join("texmf-dist").is_dir() {
-        Some(root)
-      } else {
-        None
-      }
+      if root.is_empty() { None } else { Some(root) }
     })
     .as_deref()
+}
+
+#[cfg(feature = "kpathsea")]
+fn ambient_texlive_root() -> Option<&'static str> {
+  let root = ambient_kpsewhich_selfautoparent()?;
+  Path::new(root).join("texmf-dist").is_dir().then_some(root)
 }
 
 /// The ambient `kpsewhich --version` banner (full stdout), memoized for the
