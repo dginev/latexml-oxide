@@ -220,10 +220,9 @@ LoadDefinitions!({
     // Guard: `ifnextchar_scans::expandafter_in_a_scan_stops_at_a_peek`.
     // (a family provided on first use, `kernel_autoload::provide_on_first_use`, is expanded once as now defined)
     let mut defn = lookup_expandable(&xtok, None)?;
-    if defn.is_none()
-      && !has_meaning(&xtok)
-      && binding::kernel_autoload::provide_on_first_use(&xtok)?
-    {
+    let mut undefined = defn.is_none() && !has_meaning(&xtok);
+    if undefined && binding::kernel_autoload::provide_on_first_use(&xtok)? {
+      undefined = false;
       defn = lookup_expandable(&xtok, None)?;
     }
     match defn {
@@ -237,7 +236,6 @@ LoadDefinitions!({
         }
       },
       _ => {
-        let undefined = !has_meaning(&xtok);
         if undefined {
           retract_scanned_braces(&skipped);
           // Undefined token is an error, as expansion is expected.

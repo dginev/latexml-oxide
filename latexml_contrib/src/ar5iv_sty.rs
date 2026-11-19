@@ -476,7 +476,7 @@ fn shipout_notes(material: &Tokens) -> (Vec<Token>, Vec<Token>) {
     if noted.contains(token) || *token == first {
       let (start, end) = argument(i + 1);
       notes.push(if *token == first {
-        first.clone()
+        first
       } else {
         T_CS!("\\lx@arxiv@shipout@note")
       });
@@ -487,7 +487,7 @@ fn shipout_notes(material: &Tokens) -> (Vec<Token>, Vec<Token>) {
     if hooks.contains(token) {
       dropped_until = dropped_until.max(argument(i + 1).1);
     } else if i >= dropped_until {
-      rest.push(token.clone());
+      rest.push(*token);
     }
     i += 1;
   }
