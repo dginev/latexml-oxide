@@ -4142,3 +4142,99 @@ mod debug_feature_scope {
     );
   }
 }
+
+mod unicodemath_output {
+  //! `--unicodemath` (Perl `Common/Config.pm` L113-114, `LaTeXML.pm` L544-546): the
+  //! UnicodeMath string of each formula (`LaTeXML::Post::UnicodeMath`, after UTN #28)
+  //! rides in the MathML as a parallel `<annotation>`; `latexmlmath_oxide
+  //! --unicodemath` prints it alone (Perl `bin/latexmlmath` L244-248). Expected strings
+  //! are Perl 0.8.8's on the same input.
+
+  use std::process::Command;
+
+  const DOC: &str = "\\documentclass{article}\n\
+                     \\begin{document}\n\
+                     $a+b^2=\\frac{x}{y}$ and $0$\n\
+                     \\end{document}\n";
+
+  const UNIMATH: &str = "encoding=\"application/x-unicodemath\"";
+
+  fn convert(args: &[&str]) -> String {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("u.tex"), DOC).unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "u.tex",
+        "--format=html5",
+        "--nodefaultresources",
+        "--dest",
+        "u.html",
+      ])
+      .args(args)
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{}",
+      out.status.code(),
+      String::from_utf8_lossy(&out.stderr)
+    );
+    std::fs::read_to_string(work.path().join("u.html")).expect("read u.html")
+  }
+
+  #[test]
+  fn unicodemath_annotates_presentation_mathml() {
+    let html = convert(&["--unicodemath"]);
+    assert!(
+      html.contains(&format!(
+        "<annotation {UNIMATH}>𝑎+𝑏²=𝑥/𝑦</annotation></semantics>"
+      )),
+      "expected the UnicodeMath annotation in the formula's <semantics>:\n{html}"
+    );
+    // Perl drops this one ("0" is false in Perl, KNOWN_PERL_ERRORS #1289).
+    assert!(
+      html.contains(&format!("<annotation {UNIMATH}>0</annotation>")),
+      "expected `$0$` to keep its annotation:\n{html}"
+    );
+    // `--nounicodemath` after it wins (Perl GetOpt::Long, last one given).
+    let html = convert(&["--unicodemath", "--nounicodemath"]);
+    assert!(!html.contains(UNIMATH), "--nounicodemath must win:\n{html}");
+  }
+
+  /// With Content MathML and the TeX annotation too, the secondaries keep Perl's
+  /// order for `--pmml --cmml --unicodemath --mathtex`: content, UnicodeMath, TeX.
+  #[test]
+  fn unicodemath_sits_between_content_mathml_and_tex() {
+    let html = convert(&["--cmml", "--unicodemath", "--mathtex"]);
+    let content = html
+      .find("encoding=\"MathML-Content\"")
+      .expect("content annotation");
+    let unicode = html.find(UNIMATH).expect("UnicodeMath annotation");
+    let tex = html
+      .find("encoding=\"application/x-tex\"")
+      .expect("TeX annotation");
+    assert!(
+      content < unicode && unicode < tex,
+      "expected content, UnicodeMath, TeX in that order:\n{html}"
+    );
+  }
+
+  #[test]
+  fn latexmlmath_prints_unicodemath_as_plain_text() {
+    let out = Command::new(env!("CARGO_BIN_EXE_latexmlmath_oxide"))
+      .args(["--quiet", "--unicodemath", "\\alpha_i\\leq x^2 < a \\& b"])
+      .output()
+      .expect("spawn latexmlmath_oxide");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{}",
+      out.status.code(),
+      String::from_utf8_lossy(&out.stderr)
+    );
+    // The string alone, not MathML, and not XML-escaped: Perl prints
+    // `𝛼_𝑖≤𝑥²&lt;𝑎&amp;𝑏` (KNOWN_PERL_ERRORS #1290).
+    assert_eq!(stdout.trim_end(), "𝛼_𝑖≤𝑥²<𝑎&𝑏", "stdout:\n{stdout}");
+  }
+}

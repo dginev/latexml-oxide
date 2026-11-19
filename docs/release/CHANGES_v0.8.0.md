@@ -43,6 +43,17 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **UnicodeMath output (`--unicodemath`).** Perl's `--unicodemath`/`--nounicodemath` are exposed: each formula's
+    MathML carries an `<annotation encoding="application/x-unicodemath">` (`a+b^2=\frac{x}{y}` gives `𝑎+𝑏²=𝑥/𝑦`),
+    after the Content MathML and before the TeX annotation. As with `--cmml` and `--mathtex`, Presentation MathML stays
+    on in HTML (Perl's `--unicodemath` alone replaces it, and the page then shows the TeX; OXIDIZED_DESIGN #1091);
+    with `--nopmml` and no `--cmml` the string is the only math output, as in Perl. `latexmlmath_oxide --unicodemath`
+    prints the string. The converter now writes scripts as Perl's does: sub/superscript codepoints where every
+    character has one (`∫₀¹`, `𝑎⁻¹`, `𝑥'`), `┬`/`┴` for limits (`∑┬{𝑖=1}┴𝑛`), a prescript before its base. Unlike
+    Perl, the annotation of `$0$` is kept (KNOWN_PERL_ERRORS #1289), `latexmlmath_oxide` does not XML-escape `<` and
+    `&` (#1290), and an nth root reads its degree and radicand in order (#1291). Guards
+    `cluster_cli::unicodemath_output::*`, `unicode_math::tests::*`.
+
   - **Five crash and Fatal roots of the 2026 arXiv run.** A counter whose reset list leads back to it
     (`\newcounter{subsubsection}[subsubsection]`, 2308.05200) is reset once per step, with a Warning (an Error where TeX's
     own lists loop too), instead of a silent stack overflow; an amsrefs list under an active `@` (1810.11524) reads its records instead of looping, the

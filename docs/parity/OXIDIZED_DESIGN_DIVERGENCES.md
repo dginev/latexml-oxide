@@ -21133,6 +21133,23 @@ alpha_label_year_is_bibtex_s, declare_math_alphabet_command_after_a_space,
 urldef_command_with_parameter_text, extractcolorspec_command_after_a_space}` (repros `macro-state/`,
 `index-bib/`, `fonts-nfss/`, `package-bindings/`).
 
+### 1091. HTML keeps Presentation MathML when another math format is named; the others annotate it
+
+**Rule.** For the HTML formats Presentation MathML stays on unless `--nopmml` is given, and `--cmml`, `--unicodemath`
+and `--mathtex` add to it, in that fixed order, as `<m:annotation-xml>`/`<m:annotation>` of one `<m:semantics>`.
+With `--nopmml`, Content MathML is the primary, else UnicodeMath alone (an `ltx:text` per formula, as Perl's).
+
+**Perl.** Config.pm:566-570 defaults `pmml` only when no math format is named, and LaTeXML.pm:504-556 makes the
+first named format the primary, the rest secondaries in command-line order. So `latexmlc --format=html5 --unicodemath`
+(or `--mathtex`) runs that processor alone, and the stylesheet, finding no `m:math`, prints the formula's TeX
+(LaTeXML-math-xhtml.xsl:38-65, `as-TeX`): the requested string never reaches the page. `--cmml` alone gives Content
+MathML, which no browser renders: browsers implement W3C MathML Core, whose elements are presentation markup.
+
+**Rust.** `ResolvedOptions`/`PostOptions::pmml` (`bin/latexml_oxide.rs`) and `post::MathFormats` (shared by the
+page-render workers). `--unicodemath` alone, like `--mathtex`, needs `--nopmml` to get Perl's output.
+**Guards**: `cluster_cli::unicodemath_output::{unicodemath_annotates_presentation_mathml,
+unicodemath_sits_between_content_mathml_and_tex}`.
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

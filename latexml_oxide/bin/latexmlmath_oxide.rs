@@ -24,6 +24,7 @@ Options:
       --pmml, --presentationmathml  Presentation MathML (the default)
       --cmml, --contentmathml       Content MathML
       --xmath, --XMath              LaTeXML's internal <XMath> parse tree
+      --unicodemath                 UnicodeMath, a plain Unicode string (printed last)
   -q, --quiet                       Only warnings and errors; no progress/lexeme notes
   -h, --help                        Print this help
 
@@ -34,6 +35,7 @@ Examples:
   latexmlmath_oxide '1+1=2'
   latexmlmath_oxide 'a^2+b^2=c^2'
   latexmlmath_oxide --cmml '\\frac{a}{b}+c'
+  latexmlmath_oxide --unicodemath '\\alpha_i\\leq x^2'
 
 Convert whole documents with `latexml_oxide` instead.";
 
@@ -133,6 +135,7 @@ fn real_main() -> Result<()> {
     .any(|a| a == "--pmml" || a == "--presentationmathml");
   let cmml_flag = argv.iter().any(|a| a == "--cmml" || a == "--contentmathml");
   let xmath_flag = argv.iter().any(|a| a == "--xmath" || a == "--XMath");
+  let unimath_flag = argv.iter().any(|a| a == "--unicodemath");
   let quiet_flag = argv.iter().any(|a| a == "--quiet" || a == "-q");
   argv.retain(|a| {
     ![
@@ -142,6 +145,7 @@ fn real_main() -> Result<()> {
       "--contentmathml",
       "--xmath",
       "--XMath",
+      "--unicodemath",
       "--quiet",
       "-q",
     ]
@@ -149,7 +153,7 @@ fn real_main() -> Result<()> {
   });
   // Perl L169: `$pmml = '-' unless (defined $mathimage || ... || $xmath || $unimath)` —
   // with no conversion option, presentation MathML on stdout is the default.
-  if !pmml_flag && !cmml_flag && !xmath_flag {
+  if !pmml_flag && !cmml_flag && !xmath_flag && !unimath_flag {
     pmml_flag = true;
   }
 
@@ -219,17 +223,23 @@ fn real_main() -> Result<()> {
         .set_attribute("text", &text_form(&xml_tree, &doc))
         .unwrap();
 
-      if pmml_flag || cmml_flag {
-        // Post-process with MathML
-        let xml_str = doc.get_document().to_string_with_options(SaveOptions {
+      use latexml_post::{
+        document::{PostDocument, PostDocumentOptions},
+        processor::Processor,
+      };
+      // Serialised once, before `--xmath` reparents the XMath out of `doc`: each
+      // format post-processes its own copy (Perl `cloneDoc`, bin/latexmlmath L264-269).
+      let xml_str = (pmml_flag || cmml_flag || unimath_flag).then(|| {
+        doc.get_document().to_string_with_options(SaveOptions {
           format: true,
           ..SaveOptions::default()
-        });
-        use latexml_post::{
-          document::{PostDocument, PostDocumentOptions},
-          processor::Processor,
-        };
-        let post_doc = PostDocument::new_from_string(&xml_str, PostDocumentOptions::default())
+        })
+      });
+      if let Some(xml_str) = xml_str.as_deref()
+        && (pmml_flag || cmml_flag)
+      {
+        // Post-process with MathML
+        let post_doc = PostDocument::new_from_string(xml_str, PostDocumentOptions::default())
           .expect("parse XML for MathML post-processing");
         let mut post = latexml_post::Post::new();
         let mut processors: Vec<Box<dyn Processor>> = Vec::new();
@@ -287,6 +297,40 @@ fn real_main() -> Result<()> {
       if xmath_flag {
         strip_internal_attrs(&mut xmath);
         print_node_defaulted(doc.get_document(), &mut xmath, LATEXML_NS);
+      }
+
+      // UnicodeMath comes last, as in Perl (bin/latexmlmath L244-248): the standalone
+      // processor puts the string in `ltx:Math/ltx:text`, printed as plain text. Perl
+      // prints that text node's XML serialisation, escaping `<` and `&`
+      // (KNOWN_PERL_ERRORS #1290); the string itself is the output here.
+      if let Some(xml_str) = xml_str.as_deref()
+        && unimath_flag
+      {
+        let post_doc = PostDocument::new_from_string(xml_str, PostDocumentOptions::default())
+          .expect("parse XML for UnicodeMath post-processing");
+        let mut processors: Vec<Box<dyn Processor>> =
+          vec![Box::new(latexml_post::unicode_math::UnicodeMath::new())];
+        match latexml_post::Post::new().process_chain(vec![post_doc], &mut processors) {
+          Ok(results) => match results[0].findnodes("//ltx:Math/ltx:text").first() {
+            Some(text) => println!("{}", text.get_content()),
+            None => {
+              Error!(
+                "latexmlmath",
+                "output",
+                "no UnicodeMath produced for the formula"
+              );
+              process::exit(1);
+            },
+          },
+          Err(e) => {
+            latexml_core::common::error::emit_error(
+              "latexmlmath",
+              "postprocess",
+              &format!("UnicodeMath post-processing failed: {e}"),
+            );
+            process::exit(1);
+          },
+        }
       }
     },
     _ => {
