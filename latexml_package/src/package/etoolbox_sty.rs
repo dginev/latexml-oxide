@@ -74,6 +74,57 @@ fn add_to_env_hook(
   ))
 }
 
+/// tex.web's primitive table (its `primitive(…)` calls: the commands, a few parameters riding along, and the font
+/// selector `\nullfont`, §553), less the names latex.ltx makes macros (`\end`, `\input`, `\par`, `\eqno`, `\leqno`,
+/// `\shipout`, `\underline`, `\-`): pdflatex `\meaning` of each. e-TeX's and pdfTeX's own primitives (`\middle`, …)
+/// are not listed (row R ROBUSTIFYERR).
+#[rustfmt::skip]
+const LATEX_PRIMITIVE_COMMANDS: &[&str] = &[
+  "/", "above", "abovedisplayshortskip", "abovewithdelims", "accent", "advance", "afterassignment", "aftergroup",
+  "atop", "atopwithdelims", "batchmode", "begingroup", "belowdisplayshortskip", "box", "catcode", "char", "chardef",
+  "cleaders", "closein", "closeout", "copy", "count", "countdef", "cr", "crcr", "csname", "def", "delcode",
+  "delimiter", "delimitershortfall", "dimen", "dimendef", "discretionary", "displaylimits", "displaystyle",
+  "displaywidowpenalty", "divide", "doublehyphendemerits", "dump", "edef", "else", "endcsname", "endgroup",
+  "endinput", "errmessage", "errorstopmode", "expandafter", "fi", "finalhyphendemerits", "font", "fontname",
+  "futurelet", "gdef", "global", "halign", "hbox", "hfil", "hfill", "hfilneg", "hrule", "hskip", "hss", "hyphenation",
+  "if", "ifcase", "ifcat", "ifdim", "ifeof", "iffalse", "ifhbox", "ifhmode", "ifinner", "ifmmode", "ifnum", "ifodd",
+  "iftrue", "ifvbox", "ifvmode", "ifvoid", "ifx", "ignorespaces", "immediate", "indent", "insert", "jobname", "kern",
+  "lastbox", "lccode", "leaders", "left", "let", "limits", "long", "lower", "lowercase", "mark", "mathaccent",
+  "mathbin", "mathchar", "mathchardef", "mathchoice", "mathclose", "mathcode", "mathinner", "mathop", "mathopen",
+  "mathord", "mathpunct", "mathrel", "meaning", "message", "mkern", "moveleft", "moveright", "mskip", "multiply",
+  "muskip", "muskipdef", "noalign", "noboundary", "noexpand", "noindent", "nolimits", "nonscript", "nonstopmode",
+  "nulldelimiterspace", "nullfont", "number", "omit", "openin", "openout", "or", "outer", "over", "overline", "overwithdelims",
+  "parshape", "patterns", "penalty", "radical", "raise", "read", "relax", "right", "romannumeral", "scriptfont",
+  "scriptscriptfont", "scriptscriptstyle", "scriptstyle", "scrollmode", "setbox", "setlanguage", "sfcode", "show",
+  "showbox", "showlists", "showthe", "skip", "skipdef", "span", "special", "string", "textfont", "textstyle", "the",
+  "toks", "toksdef", "uccode", "unhbox", "unhcopy", "unkern", "unpenalty", "unskip", "unvbox", "unvcopy", "uppercase",
+  "vadjust", "valign", "vbox", "vcenter", "vfil", "vfill", "vfilneg", "vrule", "vskip", "vsplit", "vss", "vtop",
+  "write", "xdef", "xleaders",
+];
+
+/// Is `cs` a binding's native standing in for what is a macro in LaTeX: a closure-bodied macro, a constructor, a
+/// math primitive or a primitive, unless it is a font selector or one of LaTeX's TeX primitives (`\hbox` is a
+/// constructor here)?
+fn native_macro_in_latex(cs: &Token) -> bool {
+  let not_tex_primitive = |name: &Token| {
+    name.with_cs_name(|n| {
+      LATEX_PRIMITIVE_COMMANDS
+        .binary_search(&n.trim_start_matches('\\'))
+        .is_err()
+    })
+  };
+  match lookup_meaning(cs) {
+    Some(Stored::Expandable(e)) => {
+      matches!(e.expansion, Some(ExpansionBody::Closure(_)))
+        && not_tex_primitive(&e.get_cs_or_alias())
+    },
+    Some(Stored::Constructor(c)) => not_tex_primitive(&c.get_cs_or_alias()),
+    Some(Stored::MathPrimitive(m)) => not_tex_primitive(&m.get_cs_or_alias()),
+    Some(Stored::Primitive(p)) => p.font_id.is_none() && not_tex_primitive(&p.get_cs_or_alias()),
+    _ => false,
+  }
+}
+
 LoadDefinitions!({
   // RawTeX! (not TeX!) because \etb@catcodes etc. need @ as letter at runtime.
   // TeX! tokenizes at compile time with @ = OTHER, breaking \etb@catcodes into \etb + @catcodes.
@@ -2150,53 +2201,30 @@ LoadDefinitions!({
   // Witnesses: 2405.19979, 2405.19935 (both tkz-euclide).
   def_macro_noop("\\PatchFailed")?;
 
-  // LaTeXML-only: \robustify must NO-OP on a NATIVE (closure-bodied) binding.
-  // Many LaTeXML commands (e.g. natbib's \cite) are realized as Rust closures,
-  // whose \meaning renders as "...->CODE(<name>)" (Perl's "CODE(0x...)", QA89). etoolbox's \robustify
-  // reconstructs a macro from its \meaning via \scantokens; for a native binding
-  // that yields a broken text-bodied "CODE(<name>)" macro that grabs the wrong
-  // number of args (Perl has the SAME bug — it silently emits the pointer text;
-  // we surfaced it as errors when the mangled \cite swallowed a following
-  // \begin{equation}, witness 2110.11931, mnras templates ship \robustify{\cite}).
-  // Native bindings are already robust, so the faithful behavior is to leave them
-  // untouched. `\lx@ifnativecmd` mirrors etoolbox's own \ifdefmacro \meaning-split
-  // idiom, using "CODE(" as the sentinel. `\lx@ifnativecmdb` adds a second
-  // sentinel "Stored[" — DefMath/constructor natives render that way (e.g.
-  // \bmod = DefMath in math_common.rs, whose real latex.ltx L15556 body IS a
-  // robust macro, so real \robustify succeeds; ours must no-op, not error
-  // "not a macro". Witness yquant-doc.tex L244 `\robustify\bmod`). A
-  // LaTeX-robust command (`\DeclareRobustCommand`, meaning `\protect \cite  `)
-  // is a macro whose body is not native: \robustify then works on its inner
-  // `\cite ` (`\ifdefltxprotect`, etoolbox.sty:1271-1273), which is — the
-  // kernel's `\cite` binding — so the test is made on that inner command too;
-  // without it the rebuilt `\cite` set the literal text "CODE(…)" in place of
-  // the citation and swallowed its key and the next token (arXiv 2210.15126,
-  // wiley-article.cls:774 `\robustify{\cite}`; Perl the same, KNOWN_PERL_ERRORS
-  // #902). Guard: `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`.
+  // LaTeXML-only: `\robustify` of a NATIVE binding is a no-op. In LaTeX every such command is a macro, robust or
+  // not, and etoolbox.sty:1267-1289 rebuilds it from its `\meaning`; ours is a closure, a constructor or a math
+  // primitive, already robust, whose rebuild set the text "CODE(…)" (`\robustify{\cite}`, 2110.11931, mnras), or
+  // stopped at "not a macro" (`\robustify\uline`, `\sum`, `\it`: 1508.06145, 1702.00233; yquant-doc.tex L244
+  // `\robustify\bmod`). A LaTeX-robust command (`\protect \ref  `, `\ifdefltxprotect`, etoolbox.sty:1271-1273)
+  // is tested on its inner `\ref `: the rebuild left `\ref` an undefined `\etb@resrvda` and lost the reference
+  // (wiley-article.cls:771-775 `\robustify{\ref}`/`{\cite}`: 1812.10085, 2210.15126; Perl the same, KNOWN_PERL_ERRORS
+  // #902). A TeX primitive, a register or a chardef keeps etoolbox's Error, as in TeX (`native_macro_in_latex`).
+  // OD #1092. Guards `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`,
+  // `perfect_kernel_batchclustfix3::robustify_of_a_native_binding`.
+  DefMacro!("\\lx@ifnativecmd{}{}{}", sub[(cs, yes, no)] {
+    let native = matches!(cs.unlist_ref().as_slice(), [t] if native_macro_in_latex(t));
+    Ok(if native { yes } else { no })
+  });
   RawTeX!(
     r"
-\newcommand{\lx@ifnativecmd}{}
-\long\edef\lx@ifnativecmd#1{%
-  \noexpand\expandafter\noexpand\lx@etb@ifnativecmd
-  \noexpand\meaning#1\detokenize{CODE(}&}
-\edef\lx@etb@ifnativecmd{%
-  \def\noexpand\lx@etb@ifnativecmd##1\detokenize{CODE(}##2&}
-\lx@etb@ifnativecmd{\notblank{#2}}
-\newcommand{\lx@ifnativecmdb}{}
-\long\edef\lx@ifnativecmdb#1{%
-  \noexpand\expandafter\noexpand\lx@etb@ifnativecmdb
-  \noexpand\meaning#1\detokenize{Stored[}&}
-\edef\lx@etb@ifnativecmdb{%
-  \def\noexpand\lx@etb@ifnativecmdb##1\detokenize{Stored[}##2&}
-\lx@etb@ifnativecmdb{\notblank{#2}}
 \let\lx@saved@robustify\robustify
 \protected\def\robustify#1{%
-  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{%
+  \lx@ifnativecmd{#1}{}{%
     \ifdefltxprotect{#1}%
       {\expandafter\lx@robustify@ltxprotect\csname\expandafter\@gobble\string#1 \endcsname#1}%
-      {\lx@saved@robustify{#1}}}}}
+      {\lx@saved@robustify{#1}}}}
 \def\lx@robustify@ltxprotect#1#2{%
-  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{\lx@saved@robustify{#2}}}}
+  \lx@ifnativecmd{#1}{}{\lx@saved@robustify{#2}}}
 "
   );
 });

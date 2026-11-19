@@ -6040,8 +6040,8 @@ meanings stay apart as their addresses kept them only when both names are letter
 `\__tl_set_rescan:nNN`) prints `CODE(native)`, so two such meanings of the same parameters compare equal; letters
 only, so a `\scantokens` rebuild reads text, no control sequence. The name is the definition's, which can be an
 internal one: `\meaning\multicolumn` prints `CODE(lx@alignment@multicolumn)`, its `\let` target (`tex_debugging.rs`
-`get_cs_name`), as `\meaning\label` prints `\lx@label`. It keeps the `CODE(` that etoolbox_sty's `\lx@ifnativecmd`
-splits on (`\robustify` leaves a native alone), and `\ifx` of two definitions never reads it (#183), so
+`get_cs_name`), as `\meaning\label` prints `\lx@label`. It keeps the `CODE(` (etoolbox_sty's `\lx@ifnativecmd` tests
+the definition itself since OD #1092), and `\ifx` of two definitions never reads it (#183), so
 `\ifpatchable`/`\patchcmd` on a native `\begin` still answer no. Not latex.ltx's body: a `\meaning`→`\scantokens`
 rebuild would then replace the native `\begin` (#183, KNOWN_PERL_ERRORS #147); that is the post-merge macro-faces
 design (QA53).
@@ -16185,8 +16185,8 @@ Trigger: `\usepackage{etoolbox}\robustify{\cite}` and `Text~\cite{k}. More.` wit
 pdflatex 0 errors, "Text [1]. More."; Perl 0.8.8 and Rust before 69b r2 0 errors and "Text CODE(0x…) More." (the
 citation and the "." lost). arXiv 2210.15126 (wiley-article.cls:774 `\robustify{\cite}`, 15 citations).
 
-Rust (69b r2, etoolbox_sty.rs `\robustify`): for a LaTeX-robust command the native test (`\lx@ifnativecmd`,
-`\lx@ifnativecmdb`) is made on its inner command too (`\lx@robustify@ltxprotect`); a document's own
+Rust (69b r2, etoolbox_sty.rs `\robustify`): for a LaTeX-robust command the native test (`\lx@ifnativecmd`, on the
+stored definition since OD #1092) is made on its inner command too (`\lx@robustify@ltxprotect`); a document's own
 `\DeclareRobustCommand` is still robustified. Repro package-bindings/robustify_ltx_protected_native_cite; guard
 `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`.
 
@@ -21229,9 +21229,10 @@ See \cite{x}.
 ```
 
 **Implementation:** `\lx@ifnativecmd` in
-`latexml_package/src/package/etoolbox_sty.rs` mirrors etoolbox's own
-`\ifdefmacro` `\meaning`-split idiom (sentinel `CODE(`); `\robustify` is
-wrapped to no-op on natives and delegate to the original for token macros.
+`latexml_package/src/package/etoolbox_sty.rs` tests the stored definition (a
+closure-bodied macro, a constructor, a math primitive or a primitive that is a
+macro in LaTeX; OD #1092); `\robustify` is wrapped to no-op on natives and
+delegate to the original for token macros.
 
 **Witness:** 2110.11931 (mnras — its template ships `\robustify{\cite}`):
 10 errors → 0, with correct citation output. User-macro robustify

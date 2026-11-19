@@ -423,6 +423,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@mathdisplay@hook", "\\if@fleqn\\lx@math@in@hbox\\fi");
   // amsmath's `{equation}` is its own (amsmath.sty:2913-2932), whatever a class's fleqn.clo made it (fleqn_sty.rs).
   DefMacro!("\\lx@equation@hook", "\\lx@mathdisplay@hook");
+  // DIVERGENCE from Perl (#1091): amsmath.sty:2950-2951, so `\[ … \end{equation*}` and `\begin{equation*} … \]` pair
+  // (witnesses math0306159, math0401181, math0508341). Guard `perfect_kernel_batchclustfix3::amsmath_display_brackets`.
+  DefMacro!("\\[", "\\begin{equation*}", robust => true);
+  DefMacro!("\\]", "\\end{equation*}", robust => true);
   // DIVERGENCE from Perl (#334): amsmath.sty:64 `\newif\if@fleqn` starts
   // false, and amsmath's display environments read only it, so an earlier
   // `fleqn` (article's `fleqn.clo`, fleqn.sty, elsarticle's binding) stops
