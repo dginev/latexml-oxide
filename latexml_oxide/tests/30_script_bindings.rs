@@ -2235,7 +2235,12 @@ fn a_failing_preloaded_binding_is_logged() {
     })
     .unwrap_or_else(|| panic!("{log}"));
   assert!(
-    lines[at + 1].starts_with("\tat ") && lines[at + 1].ends_with("/pbad.sty.rhai; line 2 col 9"),
+    // (the locator spells the preload as it was given, `dir.path().join(..)`, with the host's separator)
+    lines[at + 1].starts_with("\tat ")
+      && lines[at + 1].ends_with(&format!(
+        "{}pbad.sty.rhai; line 2 col 9",
+        std::path::MAIN_SEPARATOR
+      )),
     "{log}"
   );
   assert!(!lines[at + 2].starts_with("\tat "), "{log}");
@@ -2267,7 +2272,9 @@ fn a_preloaded_session_invents_no_locator() {
 
 /// The cortex log mirror (the crash report's log, `exit_report::claim_task`) holds the session's log once: mirrored as
 /// it was logged, not again when the conversion's log opens with it (RHAIPOL review). The session's line is a
-/// `--preload`ed binding's `Info()`, unique to this test, as other tests' conversions may share the mirror.
+/// `--preload`ed binding's `Info()`, unique to this test, as other tests' conversions may share the mirror. Unix only:
+/// the mirror is a raw descriptor that `logger.rs` writes only under `cfg(unix)` (cortex_worker is Unix-only).
+#[cfg(unix)]
 #[test]
 fn the_log_mirror_holds_the_session_log_once() {
   use std::os::fd::AsRawFd;
