@@ -162,79 +162,81 @@
 <a href=#162 id=162 data-nosnippet>162</a>
 <a href=#163 id=163 data-nosnippet>163</a>  <span class="comment">// aipproc.cls:85 (v1.0a, astro-ph0003214's copy) `\newcommand*\affiliation[1]{\def\AIP@affiliation{#1}}`, printed
 <a href=#164 id=164 data-nosnippet>164</a>  // under the authors by its `\maketitle`: the authors' affiliation. Defined where the paper's copy has it; the later
-<a href=#165 id=165 data-nosnippet>165</a>  // classes write it as the `address` key.
-<a href=#166 id=166 data-nosnippet>166</a>  </span><span class="kw">if </span>shipped_class_text(<span class="string">"aipproc"</span>)<span class="question-mark">?
-<a href=#167 id=167 data-nosnippet>167</a>    </span>.as_deref()
-<a href=#168 id=168 data-nosnippet>168</a>    .is_some_and(|text| class_code_contains(text, <span class="string">"\\newcommand*\\affiliation[1]"</span>))
-<a href=#169 id=169 data-nosnippet>169</a>  {
-<a href=#170 id=170 data-nosnippet>170</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\affiliation{}"</span>, <span class="string">"\\lx@add@contact[role=affiliation]{#1}"</span>);
-<a href=#171 id=171 data-nosnippet>171</a>  }
-<a href=#172 id=172 data-nosnippet>172</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywordsname"</span>, <span class="string">"Keywords"</span>);
-<a href=#173 id=173 data-nosnippet>173</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\lx@add@keywords[name={\\keywordsname:~}]{#1}"</span>);
-<a href=#174 id=174 data-nosnippet>174</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\classification{}"</span>, <span class="string">"\\lx@add@classification{#1}"</span>);
-<a href=#175 id=175 data-nosnippet>175</a>  <span class="comment">// aipxfm.sty:266-269 (loaded by aipproc.cls): `\let\pacs\classification`, the REVTeX name the AIP templates keep
-<a href=#176 id=176 data-nosnippet>176</a>  // (cond-mat0701310, 0911.1625).
-<a href=#177 id=177 data-nosnippet>177</a>  </span><span class="macro">Let!</span>(<span class="string">"\\pacs"</span>, <span class="string">"\\classification"</span>);
-<a href=#178 id=178 data-nosnippet>178</a>
-<a href=#179 id=179 data-nosnippet>179</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\received{}"</span>, <span class="string">"\\lx@add@date[role=received]{#1}"</span>);
-<a href=#180 id=180 data-nosnippet>180</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revised{}"</span>, <span class="string">"\\lx@add@date[role=revised]{#1}"</span>);
-<a href=#181 id=181 data-nosnippet>181</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\accepted{}"</span>, <span class="string">"\\lx@add@date[role=accepted]{#1}"</span>);
-<a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\draftdate{}"</span>, <span class="string">"\\lx@add@date[role=draft]{#1}"</span>);
-<a href=#183 id=183 data-nosnippet>183</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\copyrightholder{}"</span>, <span class="string">"\\lx@add@copyrightholder{#1}"</span>);
-<a href=#184 id=184 data-nosnippet>184</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\copyrightyear{}"</span>, <span class="string">"\\lx@add@copyrightyear{#1}"</span>);
-<a href=#185 id=185 data-nosnippet>185</a>
-<a href=#186 id=186 data-nosnippet>186</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{theacknowledgments}"</span>,
-<a href=#187 id=187 data-nosnippet>187</a>    <span class="string">"&lt;ltx:acknowledgements&gt;#body&lt;/ltx:acknowledgements&gt;"</span>);
-<a href=#188 id=188 data-nosnippet>188</a>
-<a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">//======================================================================
-<a href=#190 id=190 data-nosnippet>190</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\eqref Semiverbatim"</span>,
-<a href=#191 id=191 data-nosnippet>191</a>    <span class="string">"(&lt;ltx:ref labelref='#label' _force_font='true'/&gt;)"</span>,
-<a href=#192 id=192 data-nosnippet>192</a>    properties =&gt; sub[args] {
-<a href=#193 id=193 data-nosnippet>193</a>      <span class="macro">unpack_opt_ref!</span>(args =&gt; label_opt);
-<a href=#194 id=194 data-nosnippet>194</a>      <span class="kw">let </span>label = label_opt.as_ref().unwrap().to_string();
-<a href=#195 id=195 data-nosnippet>195</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"label" </span>=&gt; Stored::String(pin(clean_label(<span class="kw-2">&amp;</span>label, <span class="prelude-val">None</span>)))))
-<a href=#196 id=196 data-nosnippet>196</a>    },
-<a href=#197 id=197 data-nosnippet>197</a>    enter_horizontal =&gt; <span class="bool-val">true
-<a href=#198 id=198 data-nosnippet>198</a>  </span>);
-<a href=#199 id=199 data-nosnippet>199</a>
-<a href=#200 id=200 data-nosnippet>200</a>  <span class="comment">//======================================================================
-<a href=#201 id=201 data-nosnippet>201</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\source{}"</span>, <span class="string">"\\lx@note{source}{#1}"</span>);
-<a href=#202 id=202 data-nosnippet>202</a>  def_macro_noop(<span class="string">"\\spaceforfigure{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#203 id=203 data-nosnippet>203</a>
-<a href=#204 id=204 data-nosnippet>204</a>  <span class="comment">// aipproc.cls:668-672 `\multicolumn{#1}{#2}{\AIPtableheadfont\begin{tabular}[#3]{@{}#2@{}}\vrule…#4\unskip\vrule…
-<a href=#205 id=205 data-nosnippet>205</a>  // \end{tabular}}`: `#3` is the head's vertical position (t/c/b), not a width. Perl's `\parbox{#3}{#4}`
-<a href=#206 id=206 data-nosnippet>206</a>  // (aipproc.cls.ltxml:112) set a width of `b`, which calc rejects (calc.sty:144-160, since 56jr: "`b' invalid at this
-<a href=#207 id=207 data-nosnippet>207</a>  // point", ~428 of run 336's papers; KNOWN_PERL_ERRORS #560); the struts and head font are print layout.
-<a href=#208 id=208 data-nosnippet>208</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tablehead{}{}{}{}"</span>, <span class="string">"\\multicolumn{#1}{#2}{\\begin{tabular}[#3]{@{}#2@{}}\\ignorespaces#4\\unskip\\end{tabular}}"</span>);
-<a href=#209 id=209 data-nosnippet>209</a>  <span class="comment">// Perl aipproc.cls.ltxml L101 body references `#1` (the OptionalMatch:*
-<a href=#210 id=210 data-nosnippet>210</a>  // star flag), silently dropping the note content. See
-<a href=#211 id=211 data-nosnippet>211</a>  // docs/parity/KNOWN_PERL_ERRORS.md #16. Rust deliberately indexes `#2` (the
-<a href=#212 id=212 data-nosnippet>212</a>  // content) to match the documented sibling convention from physics.sty.
-<a href=#213 id=213 data-nosnippet>213</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tablenote OptionalMatch:* {}"</span>, <span class="string">"\\footnote{#2}"</span>);
-<a href=#214 id=214 data-nosnippet>214</a>
-<a href=#215 id=215 data-nosnippet>215</a>  <span class="comment">// Perl aipproc.cls.ltxml does NOT define \references — Perl behaves
-<a href=#216 id=216 data-nosnippet>216</a>  // lossy-silent for `\begin{references}…\bibitem` under aipproc
-<a href=#217 id=217 data-nosnippet>217</a>  // (drops the whole bibliography, reports "No obvious problems").
-<a href=#218 id=218 data-nosnippet>218</a>  // Rust's stricter validator surfaces Error:malformed:ltx:bibitem
-<a href=#219 id=219 data-nosnippet>219</a>  // "…isn't allowed in &lt;ltx:section&gt;". Rust-over-Perl improvement:
-<a href=#220 id=220 data-nosnippet>220</a>  // alias to the thebibliography machinery so the content is
-<a href=#221 id=221 data-nosnippet>221</a>  // preserved. Fixes 4 papers in docs/archive/SANDBOX_TRIAGE_2026-05-21.md Class D bibitem-aipproc
-<a href=#222 id=222 data-nosnippet>222</a>  // cluster (astro-ph9711070, cond-mat0109365, nucl-ex9706010,
-<a href=#223 id=223 data-nosnippet>223</a>  // nucl-th0010030). See also the mirror alias in aipproc_sty.rs.
-<a href=#224 id=224 data-nosnippet>224</a>  //
-<a href=#225 id=225 data-nosnippet>225</a>  // CRITICAL: `\reference` is `\let` to `\bibitem` ONLY WITHIN the `references`
-<a href=#226 id=226 data-nosnippet>226</a>  // environment (inside `\references`'s body), NOT globally. Perl leaves
-<a href=#227 id=227 data-nosnippet>227</a>  // `\reference` undefined, so a paper that defines its own
-<a href=#228 id=228 data-nosnippet>228</a>  // `\newcommand{\reference}{...}` (a common math shorthand, e.g.
-<a href=#229 id=229 data-nosnippet>229</a>  // `\newcommand{\reference}{\mathrm{ref}}`) succeeds. A GLOBAL alias here made
-<a href=#230 id=230 data-nosnippet>230</a>  // `\reference` already-defined, so the user `\newcommand` silently failed and
-<a href=#231 id=231 data-nosnippet>231</a>  // `\reference` stayed `\bibitem` — firing a `\bibitem` inside `$…$` math
-<a href=#232 id=232 data-nosnippet>232</a>  // (`$\temp_{\reference}$`) → a `&lt;ltx:bibitem&gt;` in `&lt;ltx:XMArg&gt;` → math-mode
-<a href=#233 id=233 data-nosnippet>233</a>  // leak that swallowed the real bibliography &amp; caption tags. Witness
-<a href=#234 id=234 data-nosnippet>234</a>  // 1701.08966: RUST 102 errors / FATAL_3 → 0 (Perl: 1; surpasses). Scoping to
-<a href=#235 id=235 data-nosnippet>235</a>  // the env keeps the aipproc-bibitem cluster working (those use
-<a href=#236 id=236 data-nosnippet>236</a>  // `\begin{references}\reference{…}`). The `\let` is local to the env group.
-<a href=#237 id=237 data-nosnippet>237</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\references"</span>, <span class="string">"\\let\\reference\\bibitem\\thebibliography{}"</span>);
-<a href=#238 id=238 data-nosnippet>238</a>  <span class="macro">Let!</span>(<span class="string">"\\endreferences"</span>, <span class="string">"\\endthebibliography"</span>);
-<a href=#239 id=239 data-nosnippet>239</a>});
+<a href=#165 id=165 data-nosnippet>165</a>  // classes write it as the `address` key. Beside it, :86 `\newcommand*\affiliationmark[1]{\textsuperscript{#1}}`, the
+<a href=#166 id=166 data-nosnippet>166</a>  // mark pairing an author with an affiliation line (astro-ph0011502's myaipproc.cls).
+<a href=#167 id=167 data-nosnippet>167</a>  </span><span class="kw">if </span>shipped_class_text(<span class="string">"aipproc"</span>)<span class="question-mark">?
+<a href=#168 id=168 data-nosnippet>168</a>    </span>.as_deref()
+<a href=#169 id=169 data-nosnippet>169</a>    .is_some_and(|text| class_code_contains(text, <span class="string">"\\newcommand*\\affiliation[1]"</span>))
+<a href=#170 id=170 data-nosnippet>170</a>  {
+<a href=#171 id=171 data-nosnippet>171</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\affiliation{}"</span>, <span class="string">"\\lx@add@contact[role=affiliation]{#1}"</span>);
+<a href=#172 id=172 data-nosnippet>172</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\affiliationmark{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
+<a href=#173 id=173 data-nosnippet>173</a>  }
+<a href=#174 id=174 data-nosnippet>174</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywordsname"</span>, <span class="string">"Keywords"</span>);
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\lx@add@keywords[name={\\keywordsname:~}]{#1}"</span>);
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\classification{}"</span>, <span class="string">"\\lx@add@classification{#1}"</span>);
+<a href=#177 id=177 data-nosnippet>177</a>  <span class="comment">// aipxfm.sty:266-269 (loaded by aipproc.cls): `\let\pacs\classification`, the REVTeX name the AIP templates keep
+<a href=#178 id=178 data-nosnippet>178</a>  // (cond-mat0701310, 0911.1625).
+<a href=#179 id=179 data-nosnippet>179</a>  </span><span class="macro">Let!</span>(<span class="string">"\\pacs"</span>, <span class="string">"\\classification"</span>);
+<a href=#180 id=180 data-nosnippet>180</a>
+<a href=#181 id=181 data-nosnippet>181</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\received{}"</span>, <span class="string">"\\lx@add@date[role=received]{#1}"</span>);
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revised{}"</span>, <span class="string">"\\lx@add@date[role=revised]{#1}"</span>);
+<a href=#183 id=183 data-nosnippet>183</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\accepted{}"</span>, <span class="string">"\\lx@add@date[role=accepted]{#1}"</span>);
+<a href=#184 id=184 data-nosnippet>184</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\draftdate{}"</span>, <span class="string">"\\lx@add@date[role=draft]{#1}"</span>);
+<a href=#185 id=185 data-nosnippet>185</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\copyrightholder{}"</span>, <span class="string">"\\lx@add@copyrightholder{#1}"</span>);
+<a href=#186 id=186 data-nosnippet>186</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\copyrightyear{}"</span>, <span class="string">"\\lx@add@copyrightyear{#1}"</span>);
+<a href=#187 id=187 data-nosnippet>187</a>
+<a href=#188 id=188 data-nosnippet>188</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{theacknowledgments}"</span>,
+<a href=#189 id=189 data-nosnippet>189</a>    <span class="string">"&lt;ltx:acknowledgements&gt;#body&lt;/ltx:acknowledgements&gt;"</span>);
+<a href=#190 id=190 data-nosnippet>190</a>
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="comment">//======================================================================
+<a href=#192 id=192 data-nosnippet>192</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\eqref Semiverbatim"</span>,
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="string">"(&lt;ltx:ref labelref='#label' _force_font='true'/&gt;)"</span>,
+<a href=#194 id=194 data-nosnippet>194</a>    properties =&gt; sub[args] {
+<a href=#195 id=195 data-nosnippet>195</a>      <span class="macro">unpack_opt_ref!</span>(args =&gt; label_opt);
+<a href=#196 id=196 data-nosnippet>196</a>      <span class="kw">let </span>label = label_opt.as_ref().unwrap().to_string();
+<a href=#197 id=197 data-nosnippet>197</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"label" </span>=&gt; Stored::String(pin(clean_label(<span class="kw-2">&amp;</span>label, <span class="prelude-val">None</span>)))))
+<a href=#198 id=198 data-nosnippet>198</a>    },
+<a href=#199 id=199 data-nosnippet>199</a>    enter_horizontal =&gt; <span class="bool-val">true
+<a href=#200 id=200 data-nosnippet>200</a>  </span>);
+<a href=#201 id=201 data-nosnippet>201</a>
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="comment">//======================================================================
+<a href=#203 id=203 data-nosnippet>203</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\source{}"</span>, <span class="string">"\\lx@note{source}{#1}"</span>);
+<a href=#204 id=204 data-nosnippet>204</a>  def_macro_noop(<span class="string">"\\spaceforfigure{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#205 id=205 data-nosnippet>205</a>
+<a href=#206 id=206 data-nosnippet>206</a>  <span class="comment">// aipproc.cls:668-672 `\multicolumn{#1}{#2}{\AIPtableheadfont\begin{tabular}[#3]{@{}#2@{}}\vrule…#4\unskip\vrule…
+<a href=#207 id=207 data-nosnippet>207</a>  // \end{tabular}}`: `#3` is the head's vertical position (t/c/b), not a width. Perl's `\parbox{#3}{#4}`
+<a href=#208 id=208 data-nosnippet>208</a>  // (aipproc.cls.ltxml:112) set a width of `b`, which calc rejects (calc.sty:144-160, since 56jr: "`b' invalid at this
+<a href=#209 id=209 data-nosnippet>209</a>  // point", ~428 of run 336's papers; KNOWN_PERL_ERRORS #560); the struts and head font are print layout.
+<a href=#210 id=210 data-nosnippet>210</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tablehead{}{}{}{}"</span>, <span class="string">"\\multicolumn{#1}{#2}{\\begin{tabular}[#3]{@{}#2@{}}\\ignorespaces#4\\unskip\\end{tabular}}"</span>);
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="comment">// Perl aipproc.cls.ltxml L101 body references `#1` (the OptionalMatch:*
+<a href=#212 id=212 data-nosnippet>212</a>  // star flag), silently dropping the note content. See
+<a href=#213 id=213 data-nosnippet>213</a>  // docs/parity/KNOWN_PERL_ERRORS.md #16. Rust deliberately indexes `#2` (the
+<a href=#214 id=214 data-nosnippet>214</a>  // content) to match the documented sibling convention from physics.sty.
+<a href=#215 id=215 data-nosnippet>215</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tablenote OptionalMatch:* {}"</span>, <span class="string">"\\footnote{#2}"</span>);
+<a href=#216 id=216 data-nosnippet>216</a>
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="comment">// Perl aipproc.cls.ltxml does NOT define \references — Perl behaves
+<a href=#218 id=218 data-nosnippet>218</a>  // lossy-silent for `\begin{references}…\bibitem` under aipproc
+<a href=#219 id=219 data-nosnippet>219</a>  // (drops the whole bibliography, reports "No obvious problems").
+<a href=#220 id=220 data-nosnippet>220</a>  // Rust's stricter validator surfaces Error:malformed:ltx:bibitem
+<a href=#221 id=221 data-nosnippet>221</a>  // "…isn't allowed in &lt;ltx:section&gt;". Rust-over-Perl improvement:
+<a href=#222 id=222 data-nosnippet>222</a>  // alias to the thebibliography machinery so the content is
+<a href=#223 id=223 data-nosnippet>223</a>  // preserved. Fixes 4 papers in docs/archive/SANDBOX_TRIAGE_2026-05-21.md Class D bibitem-aipproc
+<a href=#224 id=224 data-nosnippet>224</a>  // cluster (astro-ph9711070, cond-mat0109365, nucl-ex9706010,
+<a href=#225 id=225 data-nosnippet>225</a>  // nucl-th0010030). See also the mirror alias in aipproc_sty.rs.
+<a href=#226 id=226 data-nosnippet>226</a>  //
+<a href=#227 id=227 data-nosnippet>227</a>  // CRITICAL: `\reference` is `\let` to `\bibitem` ONLY WITHIN the `references`
+<a href=#228 id=228 data-nosnippet>228</a>  // environment (inside `\references`'s body), NOT globally. Perl leaves
+<a href=#229 id=229 data-nosnippet>229</a>  // `\reference` undefined, so a paper that defines its own
+<a href=#230 id=230 data-nosnippet>230</a>  // `\newcommand{\reference}{...}` (a common math shorthand, e.g.
+<a href=#231 id=231 data-nosnippet>231</a>  // `\newcommand{\reference}{\mathrm{ref}}`) succeeds. A GLOBAL alias here made
+<a href=#232 id=232 data-nosnippet>232</a>  // `\reference` already-defined, so the user `\newcommand` silently failed and
+<a href=#233 id=233 data-nosnippet>233</a>  // `\reference` stayed `\bibitem` — firing a `\bibitem` inside `$…$` math
+<a href=#234 id=234 data-nosnippet>234</a>  // (`$\temp_{\reference}$`) → a `&lt;ltx:bibitem&gt;` in `&lt;ltx:XMArg&gt;` → math-mode
+<a href=#235 id=235 data-nosnippet>235</a>  // leak that swallowed the real bibliography &amp; caption tags. Witness
+<a href=#236 id=236 data-nosnippet>236</a>  // 1701.08966: RUST 102 errors / FATAL_3 → 0 (Perl: 1; surpasses). Scoping to
+<a href=#237 id=237 data-nosnippet>237</a>  // the env keeps the aipproc-bibitem cluster working (those use
+<a href=#238 id=238 data-nosnippet>238</a>  // `\begin{references}\reference{…}`). The `\let` is local to the env group.
+<a href=#239 id=239 data-nosnippet>239</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\references"</span>, <span class="string">"\\let\\reference\\bibitem\\thebibliography{}"</span>);
+<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">Let!</span>(<span class="string">"\\endreferences"</span>, <span class="string">"\\endthebibliography"</span>);
+<a href=#241 id=241 data-nosnippet>241</a>});
 </code></pre></div></section></main></body></html>

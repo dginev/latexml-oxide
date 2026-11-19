@@ -10097,7 +10097,7 @@
 <a href=#10097 id=10097 data-nosnippet>10097</a>});
 <a href=#10098 id=10098 data-nosnippet>10098</a>
 <a href=#10099 id=10099 data-nosnippet>10099</a><span class="doccomment">/// `\verb`'s expansion: the verbatim argument read ([`read_verb_invocation`]) in the hidden group `\verb@egroup`
-<a href=#10100 id=10100 data-nosnippet>10100</a>/// closes. Shared by the kernel `\verb` and tabularx's `\TX@verb` (`token_delimited`).
+<a href=#10100 id=10100 data-nosnippet>10100</a>/// closes. Shared by the kernel `\verb` and tabularx's `\TX@verb` and latex209.def's `\verb` (`token_delimited`).
 <a href=#10101 id=10101 data-nosnippet>10101</a></span><span class="kw">pub fn </span>verb_group(token_delimited: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
 <a href=#10102 id=10102 data-nosnippet>10102</a>  <span class="prelude-val">Ok</span>(<span class="kw">match </span>read_verb_invocation(token_delimited)<span class="question-mark">? </span>{
 <a href=#10103 id=10103 data-nosnippet>10103</a>    <span class="prelude-val">Some</span>(inner) =&gt; {
@@ -10158,126 +10158,211 @@
 <a href=#10158 id=10158 data-nosnippet>10158</a>    // (latex_constructs.pool.ltxml:1797) has no such bound, so an unterminated
 <a href=#10159 id=10159 data-nosnippet>10159</a>    // `\verb v1.1 )` scanned across lines and swallowed a later `{verbatim}`
 <a href=#10160 id=10160 data-nosnippet>10160</a>    // (bigints manual, 10-error cascade; SHARED, pdflatex recovers with one
-<a href=#10161 id=10161 data-nosnippet>10161</a>    // error). Guard: `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`.
-<a href=#10162 id=10162 data-nosnippet>10162</a>    </span>assign_catcode(<span class="string">'\r'</span>, Catcode::ACTIVE, <span class="prelude-val">None</span>);
-<a href=#10163 id=10163 data-nosnippet>10163</a>    <span class="kw">let </span>eol = <span class="macro">T_ACTIVE!</span>(<span class="string">'\r'</span>);
-<a href=#10164 id=10164 data-nosnippet>10164</a>    <span class="kw">let </span>par = <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>);
-<a href=#10165 id=10165 data-nosnippet>10165</a>    <span class="comment">// `token_delimited`: tabularx's `\TX@verb` (tabularx.sty:205-209) ends at the delimiter as it stands, so a
-<a href=#10166 id=10166 data-nosnippet>10166</a>    // `\verb|…|` in an argument read before it (the `|` frozen "other") ends there; the kernel's needs it active.
-<a href=#10167 id=10167 data-nosnippet>10167</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>body = Vec::new();
-<a href=#10168 id=10168 data-nosnippet>10168</a>    <span class="kw">let </span><span class="kw-2">mut </span>terminated = <span class="bool-val">false</span>;
-<a href=#10169 id=10169 data-nosnippet>10169</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = read_token()<span class="question-mark">? </span>{
-<a href=#10170 id=10170 data-nosnippet>10170</a>      <span class="kw">if </span>token == delim
-<a href=#10171 id=10171 data-nosnippet>10171</a>        || (token_delimited
-<a href=#10172 id=10172 data-nosnippet>10172</a>          &amp;&amp; token.get_catcode() == Catcode::OTHER
-<a href=#10173 id=10173 data-nosnippet>10173</a>          &amp;&amp; token.with_str(|s| s.starts_with(init_ch) &amp;&amp; s.chars().count() == <span class="number">1</span>))
-<a href=#10174 id=10174 data-nosnippet>10174</a>      {
-<a href=#10175 id=10175 data-nosnippet>10175</a>        terminated = <span class="bool-val">true</span>;
-<a href=#10176 id=10176 data-nosnippet>10176</a>        <span class="kw">break</span>;
-<a href=#10177 id=10177 data-nosnippet>10177</a>      }
-<a href=#10178 id=10178 data-nosnippet>10178</a>      <span class="kw">if </span>token == eol || token == par {
-<a href=#10179 id=10179 data-nosnippet>10179</a>        <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\verb"</span>, <span class="string">"\\verb ended by end of line"</span>, <span class="string">""</span>);
-<a href=#10180 id=10180 data-nosnippet>10180</a>        terminated = <span class="bool-val">true</span>;
-<a href=#10181 id=10181 data-nosnippet>10181</a>        <span class="kw">break</span>;
-<a href=#10182 id=10182 data-nosnippet>10182</a>      }
-<a href=#10183 id=10183 data-nosnippet>10183</a>      body.push(token);
-<a href=#10184 id=10184 data-nosnippet>10184</a>    }
-<a href=#10185 id=10185 data-nosnippet>10185</a>    <span class="kw">if </span>!terminated {
-<a href=#10186 id=10186 data-nosnippet>10186</a>      <span class="comment">// Perl `Gullet::readUntil` (Core/Gullet.pm:683-685): ran out of tokens
-<a href=#10187 id=10187 data-nosnippet>10187</a>      // before the delimiter — unread everything scanned and return an EMPTY
-<a href=#10188 id=10188 data-nosnippet>10188</a>      // body. That is where a `\verb` inside a pre-tokenized argument
-<a href=#10189 id=10189 data-nosnippet>10189</a>      // (`\footnote{… \verb+x+ …}`) lands: the closing `+` was frozen as OTHER
-<a href=#10190 id=10190 data-nosnippet>10190</a>      // when the argument was read, so the ACTIVE delimiter never matches and
-<a href=#10191 id=10191 data-nosnippet>10191</a>      // the scan hits the end of the argument. Keeping the scanned tokens as
-<a href=#10192 id=10192 data-nosnippet>10192</a>      // the body swallowed the rest of the note (an `&lt;item&gt;` inside
-<a href=#10193 id=10193 data-nosnippet>10193</a>      // `&lt;verbatim&gt;`; platex-tools/plarray.tex:20, RUST-ONLY). Guard:
-<a href=#10194 id=10194 data-nosnippet>10194</a>      // `verb_inside_pretokenized_argument_unreads_instead_of_running_away`.
-<a href=#10195 id=10195 data-nosnippet>10195</a>      </span>unread(Tokens::new(std::mem::take(<span class="kw-2">&amp;mut </span>body)));
-<a href=#10196 id=10196 data-nosnippet>10196</a>    }
-<a href=#10197 id=10197 data-nosnippet>10197</a>    <span class="kw">let </span>body = Tokens::new(body);
-<a href=#10198 id=10198 data-nosnippet>10198</a>    end_semiverbatim()<span class="question-mark">?</span>;
-<a href=#10199 id=10199 data-nosnippet>10199</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::new();
-<a href=#10200 id=10200 data-nosnippet>10200</a>    <span class="kw">if </span>starred {
-<a href=#10201 id=10201 data-nosnippet>10201</a>      result.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@use@visiblespace"</span>));
-<a href=#10202 id=10202 data-nosnippet>10202</a>    }
-<a href=#10203 id=10203 data-nosnippet>10203</a>    result.extend(
-<a href=#10204 id=10204 data-nosnippet>10204</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@internal@verb"</span>), <span class="macro">vec!</span>[
-<a href=#10205 id=10205 data-nosnippet>10205</a>        <span class="kw">if </span>starred {
-<a href=#10206 id=10206 data-nosnippet>10206</a>          <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>))
-<a href=#10207 id=10207 data-nosnippet>10207</a>        } <span class="kw">else </span>{
-<a href=#10208 id=10208 data-nosnippet>10208</a>          <span class="macro">Tokens!</span>()
-<a href=#10209 id=10209 data-nosnippet>10209</a>        },
-<a href=#10210 id=10210 data-nosnippet>10210</a>        <span class="macro">Tokens!</span>(init_token),
-<a href=#10211 id=10211 data-nosnippet>10211</a>        body
-<a href=#10212 id=10212 data-nosnippet>10212</a>      ])
-<a href=#10213 id=10213 data-nosnippet>10213</a>      .unlist(),
-<a href=#10214 id=10214 data-nosnippet>10214</a>    );
-<a href=#10215 id=10215 data-nosnippet>10215</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(result))
-<a href=#10216 id=10216 data-nosnippet>10216</a>  } <span class="kw">else </span>{
-<a href=#10217 id=10217 data-nosnippet>10217</a>    <span class="comment">// typically something read too far got \verb and the content is somewhere else..?
-<a href=#10218 id=10218 data-nosnippet>10218</a>    </span><span class="macro">Error!</span>(
-<a href=#10219 id=10219 data-nosnippet>10219</a>      <span class="string">"expected"</span>,
-<a href=#10220 id=10220 data-nosnippet>10220</a>      <span class="string">"delimiter"</span>,
-<a href=#10221 id=10221 data-nosnippet>10221</a>      <span class="string">"Verbatim argument lost\n Bindings for preceding code is probably broken"
-<a href=#10222 id=10222 data-nosnippet>10222</a>    </span>);
-<a href=#10223 id=10223 data-nosnippet>10223</a>    end_semiverbatim()<span class="question-mark">?</span>;
-<a href=#10224 id=10224 data-nosnippet>10224</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#10225 id=10225 data-nosnippet>10225</a>  }
-<a href=#10226 id=10226 data-nosnippet>10226</a>}
-<a href=#10227 id=10227 data-nosnippet>10227</a>
-<a href=#10228 id=10228 data-nosnippet>10228</a><span class="doccomment">/// True when some open ancestor can hold `qname` (`ltx:caption` /
-<a href=#10229 id=10229 data-nosnippet>10229</a>/// `ltx:toccaption`) — i.e. the caption really is inside a float. The
-<a href=#10230 id=10230 data-nosnippet>10230</a>/// transient capture wrappers (`ltx:_CaptureBlock_`, `insert_block`'s
-<a href=#10231 id=10231 data-nosnippet>10231</a>/// holder for a `{center}` body inside a figure; `ltx:_Capture_`) admit every
-<a href=#10232 id=10232 data-nosnippet>10232</a>/// block element and are unwrapped into their parent afterwards, so they
-<a href=#10233 id=10233 data-nosnippet>10233</a>/// neither count nor stop the walk: a `marginfigure` (`lrbox` + minipage,
-<a href=#10234 id=10234 data-nosnippet>10234</a>/// used from a `\marginpar`) reaches `ltx:note` → `ltx:p` → document and
-<a href=#10235 id=10235 data-nosnippet>10235</a>/// answers no; `{center}` inside `{figure}` reaches the figure. See
-<a href=#10236 id=10236 data-nosnippet>10236</a>/// OXIDIZED_DESIGN #182.
-<a href=#10237 id=10237 data-nosnippet>10237</a></span><span class="kw">fn </span>caption_can_float(document: <span class="kw-2">&amp;</span>Document, qname: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#10238 id=10238 data-nosnippet>10238</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = document.get_element() <span class="kw">else </span>{
-<a href=#10239 id=10239 data-nosnippet>10239</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#10240 id=10240 data-nosnippet>10240</a>  };
-<a href=#10241 id=10241 data-nosnippet>10241</a>  <span class="kw">loop </span>{
-<a href=#10242 id=10242 data-nosnippet>10242</a>    <span class="kw">if </span>!node.get_name().starts_with(<span class="string">'_'</span>) &amp;&amp; document::can_contain(<span class="kw-2">&amp;</span>node, qname) {
-<a href=#10243 id=10243 data-nosnippet>10243</a>      <span class="kw">return </span><span class="bool-val">true</span>;
-<a href=#10244 id=10244 data-nosnippet>10244</a>    }
-<a href=#10245 id=10245 data-nosnippet>10245</a>    <span class="kw">match </span>node.get_parent() {
-<a href=#10246 id=10246 data-nosnippet>10246</a>      <span class="prelude-val">Some</span>(parent) <span class="kw">if </span>parent.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; node = parent,
-<a href=#10247 id=10247 data-nosnippet>10247</a>      <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="bool-val">false</span>,
-<a href=#10248 id=10248 data-nosnippet>10248</a>    }
-<a href=#10249 id=10249 data-nosnippet>10249</a>  }
-<a href=#10250 id=10250 data-nosnippet>10250</a>}
-<a href=#10251 id=10251 data-nosnippet>10251</a>
-<a href=#10252 id=10252 data-nosnippet>10252</a><span class="doccomment">/// Absorb a formatted caption title without its `\lx@tag` pieces — the
-<a href=#10253 id=10253 data-nosnippet>10253</a>/// float's counter label, which only a float's `ltx:caption` may carry
-<a href=#10254 id=10254 data-nosnippet>10254</a>/// (OXIDIZED_DESIGN #182). Lists are walked so a tag nested beside the title
-<a href=#10255 id=10255 data-nosnippet>10255</a>/// text is dropped without losing the text.
-<a href=#10256 id=10256 data-nosnippet>10256</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>absorb_without_tags(document: <span class="kw-2">&amp;mut </span>Document, piece: <span class="kw-2">&amp;</span>Digested) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#10257 id=10257 data-nosnippet>10257</a>  <span class="kw">match </span>piece.data() {
-<a href=#10258 id=10258 data-nosnippet>10258</a>    DigestedData::Whatsit(w) =&gt; {
-<a href=#10259 id=10259 data-nosnippet>10259</a>      <span class="comment">// Exactly the two tag constructors (`\lx@tag`, `\lx@tags`), by
-<a href=#10260 id=10260 data-nosnippet>10260</a>      // identity — not any internal name containing `lx@tag`.
-<a href=#10261 id=10261 data-nosnippet>10261</a>      </span><span class="kw">let </span>is_tag = {
-<a href=#10262 id=10262 data-nosnippet>10262</a>        <span class="kw">let </span>whatsit = w.borrow();
-<a href=#10263 id=10263 data-nosnippet>10263</a>        <span class="kw">let </span>name = whatsit.get_definition().get_cs_name().into_owned();
-<a href=#10264 id=10264 data-nosnippet>10264</a>        name == <span class="string">"\\lx@tag" </span>|| name == <span class="string">"\\lx@tags"
-<a href=#10265 id=10265 data-nosnippet>10265</a>      </span>};
-<a href=#10266 id=10266 data-nosnippet>10266</a>      <span class="kw">if </span>is_tag {
-<a href=#10267 id=10267 data-nosnippet>10267</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#10268 id=10268 data-nosnippet>10268</a>      }
-<a href=#10269 id=10269 data-nosnippet>10269</a>      document.absorb(piece, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#10270 id=10270 data-nosnippet>10270</a>    },
-<a href=#10271 id=10271 data-nosnippet>10271</a>    DigestedData::List(l) =&gt; {
-<a href=#10272 id=10272 data-nosnippet>10272</a>      <span class="kw">let </span>boxes = l.borrow().boxes.clone();
-<a href=#10273 id=10273 data-nosnippet>10273</a>      <span class="kw">for </span>inner <span class="kw">in </span>boxes {
-<a href=#10274 id=10274 data-nosnippet>10274</a>        absorb_without_tags(document, <span class="kw-2">&amp;</span>inner)<span class="question-mark">?</span>;
-<a href=#10275 id=10275 data-nosnippet>10275</a>      }
-<a href=#10276 id=10276 data-nosnippet>10276</a>    },
-<a href=#10277 id=10277 data-nosnippet>10277</a>    <span class="kw">_ </span>=&gt; {
-<a href=#10278 id=10278 data-nosnippet>10278</a>      document.absorb(piece, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#10279 id=10279 data-nosnippet>10279</a>    },
-<a href=#10280 id=10280 data-nosnippet>10280</a>  }
-<a href=#10281 id=10281 data-nosnippet>10281</a>  <span class="prelude-val">Ok</span>(())
-<a href=#10282 id=10282 data-nosnippet>10282</a>}
+<a href=#10161 id=10161 data-nosnippet>10161</a>    // error). Guard: `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`. latex209.def's `\verb` has no
+<a href=#10162 id=10162 data-nosnippet>10162</a>    // such bound: the line's end is a space, and only a `\par` ends it, "Paragraph ended before \@tempa was complete"
+<a href=#10163 id=10163 data-nosnippet>10163</a>    // (cs9811025 `\verb|h_0` / `.. h_{-m}|`).
+<a href=#10164 id=10164 data-nosnippet>10164</a>    </span><span class="kw">if </span>!token_delimited {
+<a href=#10165 id=10165 data-nosnippet>10165</a>      assign_catcode(<span class="string">'\r'</span>, Catcode::ACTIVE, <span class="prelude-val">None</span>);
+<a href=#10166 id=10166 data-nosnippet>10166</a>    }
+<a href=#10167 id=10167 data-nosnippet>10167</a>    <span class="kw">let </span>eol = <span class="macro">T_ACTIVE!</span>(<span class="string">'\r'</span>);
+<a href=#10168 id=10168 data-nosnippet>10168</a>    <span class="kw">let </span>par = <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>);
+<a href=#10169 id=10169 data-nosnippet>10169</a>    <span class="comment">// `token_delimited`: tabularx's `\TX@verb` (tabularx.sty:205-209) and latex209.def's `\@sverb` (:208-211) read a
+<a href=#10170 id=10170 data-nosnippet>10170</a>    // `\@tempa##1#1` argument, ending at the delimiter as it stands, so a `\verb|…|` in an argument read before it
+<a href=#10171 id=10171 data-nosnippet>10171</a>    // (the `|` frozen with its catcode then) ends there; the kernel's needs it active.
+<a href=#10172 id=10172 data-nosnippet>10172</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>body = Vec::new();
+<a href=#10173 id=10173 data-nosnippet>10173</a>    <span class="kw">let </span><span class="kw-2">mut </span>terminated = <span class="bool-val">false</span>;
+<a href=#10174 id=10174 data-nosnippet>10174</a>    <span class="comment">// latex.ltx:15485-15499 `\verb` opens a group whose `\aftergroup\verb@balance@group` reports "\verb illegal in
+<a href=#10175 id=10175 data-nosnippet>10175</a>    // argument" (pre-tokenized, its delimiter is never the active one): the `}` closing the enclosing argument ends it,
+<a href=#10176 id=10176 data-nosnippet>10176</a>    // and what follows is kept. A delimited `\@tempa` (`token_delimited`) meets it only when its delimiter is missing:
+<a href=#10177 id=10177 data-nosnippet>10177</a>    // tex.web §395 "Argument of \@tempa has an extra }". Under `\dospecials` only a pre-tokenized brace has a brace
+<a href=#10178 id=10178 data-nosnippet>10178</a>    // catcode; `depth` counts the body's own (cond-mat0203143's `\parbox` shape; astro-ph0108286's `\multicolumn`, its
+<a href=#10179 id=10179 data-nosnippet>10179</a>    // argument pushed back without braces, still ends at the line's end). Guards
+<a href=#10180 id=10180 data-nosnippet>10180</a>    // `perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace`,
+<a href=#10181 id=10181 data-nosnippet>10181</a>    // `…::verb_under_documentstyle_reads_to_its_tokenized_delimiter`; OXIDIZED_DESIGN_DIVERGENCES #1085.
+<a href=#10182 id=10182 data-nosnippet>10182</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0usize</span>;
+<a href=#10183 id=10183 data-nosnippet>10183</a>    <span class="comment">// Where the delimited read crossed lines' ends (the body's indices): an unterminated read keeps the body up to the
+<a href=#10184 id=10184 data-nosnippet>10184</a>    // first and re-reads the lines after it.
+<a href=#10185 id=10185 data-nosnippet>10185</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>line_ends: Vec&lt;usize&gt; = Vec::new();
+<a href=#10186 id=10186 data-nosnippet>10186</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = read_token()<span class="question-mark">? </span>{
+<a href=#10187 id=10187 data-nosnippet>10187</a>      <span class="kw">match </span>token.get_catcode() {
+<a href=#10188 id=10188 data-nosnippet>10188</a>        Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
+<a href=#10189 id=10189 data-nosnippet>10189</a>        Catcode::END <span class="kw">if </span>depth == <span class="number">0 </span>=&gt; {
+<a href=#10190 id=10190 data-nosnippet>10190</a>          <span class="kw">if </span>token_delimited {
+<a href=#10191 id=10191 data-nosnippet>10191</a>            <span class="macro">Error!</span>(
+<a href=#10192 id=10192 data-nosnippet>10192</a>              <span class="string">"unexpected"</span>,
+<a href=#10193 id=10193 data-nosnippet>10193</a>              <span class="string">"\\verb"</span>,
+<a href=#10194 id=10194 data-nosnippet>10194</a>              <span class="string">"Argument of \\@tempa has an extra }"</span>,
+<a href=#10195 id=10195 data-nosnippet>10195</a>              <span class="string">""
+<a href=#10196 id=10196 data-nosnippet>10196</a>            </span>);
+<a href=#10197 id=10197 data-nosnippet>10197</a>          } <span class="kw">else </span>{
+<a href=#10198 id=10198 data-nosnippet>10198</a>            <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\verb"</span>, <span class="string">"\\verb illegal in argument"</span>, <span class="string">""</span>);
+<a href=#10199 id=10199 data-nosnippet>10199</a>          }
+<a href=#10200 id=10200 data-nosnippet>10200</a>          unread_one(token);
+<a href=#10201 id=10201 data-nosnippet>10201</a>          terminated = <span class="bool-val">true</span>;
+<a href=#10202 id=10202 data-nosnippet>10202</a>          <span class="kw">break</span>;
+<a href=#10203 id=10203 data-nosnippet>10203</a>        },
+<a href=#10204 id=10204 data-nosnippet>10204</a>        Catcode::END =&gt; depth -= <span class="number">1</span>,
+<a href=#10205 id=10205 data-nosnippet>10205</a>        <span class="kw">_ </span>=&gt; {},
+<a href=#10206 id=10206 data-nosnippet>10206</a>      }
+<a href=#10207 id=10207 data-nosnippet>10207</a>      <span class="kw">if </span>token == delim
+<a href=#10208 id=10208 data-nosnippet>10208</a>        || (token_delimited
+<a href=#10209 id=10209 data-nosnippet>10209</a>          &amp;&amp; (token == init_token
+<a href=#10210 id=10210 data-nosnippet>10210</a>            || (token.get_catcode() == Catcode::OTHER
+<a href=#10211 id=10211 data-nosnippet>10211</a>              &amp;&amp; token.with_str(|s| s.starts_with(init_ch) &amp;&amp; s.chars().count() == <span class="number">1</span>))))
+<a href=#10212 id=10212 data-nosnippet>10212</a>      {
+<a href=#10213 id=10213 data-nosnippet>10213</a>        terminated = <span class="bool-val">true</span>;
+<a href=#10214 id=10214 data-nosnippet>10214</a>        <span class="kw">break</span>;
+<a href=#10215 id=10215 data-nosnippet>10215</a>      }
+<a href=#10216 id=10216 data-nosnippet>10216</a>      <span class="kw">if </span>token_delimited &amp;&amp; token == par {
+<a href=#10217 id=10217 data-nosnippet>10217</a>        <span class="macro">Error!</span>(
+<a href=#10218 id=10218 data-nosnippet>10218</a>          <span class="string">"unexpected"</span>,
+<a href=#10219 id=10219 data-nosnippet>10219</a>          <span class="string">"\\verb"</span>,
+<a href=#10220 id=10220 data-nosnippet>10220</a>          <span class="string">"Paragraph ended before \\@tempa was complete"</span>,
+<a href=#10221 id=10221 data-nosnippet>10221</a>          <span class="string">""
+<a href=#10222 id=10222 data-nosnippet>10222</a>        </span>);
+<a href=#10223 id=10223 data-nosnippet>10223</a>        <span class="comment">// tex.web §396 `back_error`: the `\par` is read again, so the paragraph still ends (e2 shape).
+<a href=#10224 id=10224 data-nosnippet>10224</a>        </span>unread_one(token);
+<a href=#10225 id=10225 data-nosnippet>10225</a>        terminated = <span class="bool-val">true</span>;
+<a href=#10226 id=10226 data-nosnippet>10226</a>        <span class="kw">break</span>;
+<a href=#10227 id=10227 data-nosnippet>10227</a>      }
+<a href=#10228 id=10228 data-nosnippet>10228</a>      <span class="kw">if </span>!token_delimited &amp;&amp; (token == eol || token == par) {
+<a href=#10229 id=10229 data-nosnippet>10229</a>        <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\verb"</span>, <span class="string">"\\verb ended by end of line"</span>, <span class="string">""</span>);
+<a href=#10230 id=10230 data-nosnippet>10230</a>        terminated = <span class="bool-val">true</span>;
+<a href=#10231 id=10231 data-nosnippet>10231</a>        <span class="kw">break</span>;
+<a href=#10232 id=10232 data-nosnippet>10232</a>      }
+<a href=#10233 id=10233 data-nosnippet>10233</a>      <span class="comment">// tex.web §347: the line's end the delimited read crosses is a space, char 32, not a newline.
+<a href=#10234 id=10234 data-nosnippet>10234</a>      </span><span class="kw">if </span>token_delimited &amp;&amp; token.get_catcode() == Catcode::SPACE {
+<a href=#10235 id=10235 data-nosnippet>10235</a>        line_ends.push(body.len());
+<a href=#10236 id=10236 data-nosnippet>10236</a>        body.push(<span class="macro">T_SPACE!</span>());
+<a href=#10237 id=10237 data-nosnippet>10237</a>      } <span class="kw">else </span>{
+<a href=#10238 id=10238 data-nosnippet>10238</a>        body.push(token);
+<a href=#10239 id=10239 data-nosnippet>10239</a>      }
+<a href=#10240 id=10240 data-nosnippet>10240</a>    }
+<a href=#10241 id=10241 data-nosnippet>10241</a>    <span class="kw">if </span>!terminated &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>first_end) = line_ends.first() {
+<a href=#10242 id=10242 data-nosnippet>10242</a>      <span class="comment">// tex.web §338 "File ended while scanning use of \@tempa": the delimiter never came. Recover as the line-bounded
+<a href=#10243 id=10243 data-nosnippet>10243</a>      // read did — keep the body up to the first line end and re-read what follows from its spelling, lazily, under
+<a href=#10244 id=10244 data-nosnippet>10244</a>      // the catcodes restored then (`\dospecials` froze it), so `\end{…}` and later cells survive (tabularx cell
+<a href=#10245 id=10245 data-nosnippet>10245</a>      // `\verb|ab &amp; B \\`; `\documentstyle` `Start \verb|abc def`). Guards
+<a href=#10246 id=10246 data-nosnippet>10246</a>      // `perfect_kernel_batchnext397::verb_delimited_unterminated_reports_file_ended`,
+<a href=#10247 id=10247 data-nosnippet>10247</a>      // `…::verb_under_documentstyle_unterminated_recovers`; OXIDIZED_DESIGN_DIVERGENCES #1085.
+<a href=#10248 id=10248 data-nosnippet>10248</a>      </span><span class="macro">Error!</span>(
+<a href=#10249 id=10249 data-nosnippet>10249</a>        <span class="string">"unexpected"</span>,
+<a href=#10250 id=10250 data-nosnippet>10250</a>        <span class="string">"\\verb"</span>,
+<a href=#10251 id=10251 data-nosnippet>10251</a>        <span class="string">"File ended while scanning use of \\@tempa"</span>,
+<a href=#10252 id=10252 data-nosnippet>10252</a>        <span class="string">""
+<a href=#10253 id=10253 data-nosnippet>10253</a>      </span>);
+<a href=#10254 id=10254 data-nosnippet>10254</a>      <span class="kw">let </span>rest = body.split_off(first_end);
+<a href=#10255 id=10255 data-nosnippet>10255</a>      <span class="kw">let </span><span class="kw-2">mut </span>text = String::new();
+<a href=#10256 id=10256 data-nosnippet>10256</a>      <span class="kw">let </span><span class="kw-2">mut </span>from = <span class="number">1</span>;
+<a href=#10257 id=10257 data-nosnippet>10257</a>      <span class="comment">// The crossed line ends become line ends again; two in a row (pre-tokenized spaces) stay a space, never a
+<a href=#10258 id=10258 data-nosnippet>10258</a>      // blank line (`\par`).
+<a href=#10259 id=10259 data-nosnippet>10259</a>      </span><span class="kw">for </span>end <span class="kw">in </span>line_ends[<span class="number">1</span>..].iter().map(|end| end - first_end) {
+<a href=#10260 id=10260 data-nosnippet>10260</a>        text.push_str(<span class="kw-2">&amp;</span>Tokens::new(rest[from..end].to_vec()).untex());
+<a href=#10261 id=10261 data-nosnippet>10261</a>        text.push(<span class="kw">if </span>end == from { <span class="string">' ' </span>} <span class="kw">else </span>{ <span class="string">'\n' </span>});
+<a href=#10262 id=10262 data-nosnippet>10262</a>        from = end + <span class="number">1</span>;
+<a href=#10263 id=10263 data-nosnippet>10263</a>      }
+<a href=#10264 id=10264 data-nosnippet>10264</a>      text.push_str(<span class="kw-2">&amp;</span>Tokens::new(rest[from..].to_vec()).untex());
+<a href=#10265 id=10265 data-nosnippet>10265</a>      <span class="kw">if </span>!text.trim().is_empty() {
+<a href=#10266 id=10266 data-nosnippet>10266</a>        open_mouth(Mouth::new(text.as_str(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>, <span class="bool-val">true</span>);
+<a href=#10267 id=10267 data-nosnippet>10267</a>      }
+<a href=#10268 id=10268 data-nosnippet>10268</a>      terminated = <span class="bool-val">true</span>;
+<a href=#10269 id=10269 data-nosnippet>10269</a>    }
+<a href=#10270 id=10270 data-nosnippet>10270</a>    <span class="kw">if </span>!terminated {
+<a href=#10271 id=10271 data-nosnippet>10271</a>      <span class="comment">// Perl `Gullet::readUntil` (Core/Gullet.pm:683-685): ran out of tokens
+<a href=#10272 id=10272 data-nosnippet>10272</a>      // before the delimiter — unread everything scanned and return an EMPTY
+<a href=#10273 id=10273 data-nosnippet>10273</a>      // body. That is where a `\verb` inside a pre-tokenized argument
+<a href=#10274 id=10274 data-nosnippet>10274</a>      // (`\footnote{… \verb+x+ …}`) lands: the closing `+` was frozen as OTHER
+<a href=#10275 id=10275 data-nosnippet>10275</a>      // when the argument was read, so the ACTIVE delimiter never matches and
+<a href=#10276 id=10276 data-nosnippet>10276</a>      // the scan hits the end of the argument. Keeping the scanned tokens as
+<a href=#10277 id=10277 data-nosnippet>10277</a>      // the body swallowed the rest of the note (an `&lt;item&gt;` inside
+<a href=#10278 id=10278 data-nosnippet>10278</a>      // `&lt;verbatim&gt;`; platex-tools/plarray.tex:20, RUST-ONLY). Guard:
+<a href=#10279 id=10279 data-nosnippet>10279</a>      // `verb_inside_pretokenized_argument_unreads_instead_of_running_away`.
+<a href=#10280 id=10280 data-nosnippet>10280</a>      </span>unread(Tokens::new(std::mem::take(<span class="kw-2">&amp;mut </span>body)));
+<a href=#10281 id=10281 data-nosnippet>10281</a>    }
+<a href=#10282 id=10282 data-nosnippet>10282</a>    <span class="kw">let </span>body = Tokens::new(body);
+<a href=#10283 id=10283 data-nosnippet>10283</a>    end_semiverbatim()<span class="question-mark">?</span>;
+<a href=#10284 id=10284 data-nosnippet>10284</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::new();
+<a href=#10285 id=10285 data-nosnippet>10285</a>    <span class="kw">if </span>starred {
+<a href=#10286 id=10286 data-nosnippet>10286</a>      result.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@use@visiblespace"</span>));
+<a href=#10287 id=10287 data-nosnippet>10287</a>    }
+<a href=#10288 id=10288 data-nosnippet>10288</a>    result.extend(
+<a href=#10289 id=10289 data-nosnippet>10289</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@internal@verb"</span>), <span class="macro">vec!</span>[
+<a href=#10290 id=10290 data-nosnippet>10290</a>        <span class="kw">if </span>starred {
+<a href=#10291 id=10291 data-nosnippet>10291</a>          <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>))
+<a href=#10292 id=10292 data-nosnippet>10292</a>        } <span class="kw">else </span>{
+<a href=#10293 id=10293 data-nosnippet>10293</a>          <span class="macro">Tokens!</span>()
+<a href=#10294 id=10294 data-nosnippet>10294</a>        },
+<a href=#10295 id=10295 data-nosnippet>10295</a>        <span class="macro">Tokens!</span>(init_token),
+<a href=#10296 id=10296 data-nosnippet>10296</a>        body
+<a href=#10297 id=10297 data-nosnippet>10297</a>      ])
+<a href=#10298 id=10298 data-nosnippet>10298</a>      .unlist(),
+<a href=#10299 id=10299 data-nosnippet>10299</a>    );
+<a href=#10300 id=10300 data-nosnippet>10300</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(result))
+<a href=#10301 id=10301 data-nosnippet>10301</a>  } <span class="kw">else </span>{
+<a href=#10302 id=10302 data-nosnippet>10302</a>    <span class="comment">// typically something read too far got \verb and the content is somewhere else..?
+<a href=#10303 id=10303 data-nosnippet>10303</a>    </span><span class="macro">Error!</span>(
+<a href=#10304 id=10304 data-nosnippet>10304</a>      <span class="string">"expected"</span>,
+<a href=#10305 id=10305 data-nosnippet>10305</a>      <span class="string">"delimiter"</span>,
+<a href=#10306 id=10306 data-nosnippet>10306</a>      <span class="string">"Verbatim argument lost\n Bindings for preceding code is probably broken"
+<a href=#10307 id=10307 data-nosnippet>10307</a>    </span>);
+<a href=#10308 id=10308 data-nosnippet>10308</a>    end_semiverbatim()<span class="question-mark">?</span>;
+<a href=#10309 id=10309 data-nosnippet>10309</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+<a href=#10310 id=10310 data-nosnippet>10310</a>  }
+<a href=#10311 id=10311 data-nosnippet>10311</a>}
+<a href=#10312 id=10312 data-nosnippet>10312</a>
+<a href=#10313 id=10313 data-nosnippet>10313</a><span class="doccomment">/// True when some open ancestor can hold `qname` (`ltx:caption` /
+<a href=#10314 id=10314 data-nosnippet>10314</a>/// `ltx:toccaption`) — i.e. the caption really is inside a float. The
+<a href=#10315 id=10315 data-nosnippet>10315</a>/// transient capture wrappers (`ltx:_CaptureBlock_`, `insert_block`'s
+<a href=#10316 id=10316 data-nosnippet>10316</a>/// holder for a `{center}` body inside a figure; `ltx:_Capture_`) admit every
+<a href=#10317 id=10317 data-nosnippet>10317</a>/// block element and are unwrapped into their parent afterwards, so they
+<a href=#10318 id=10318 data-nosnippet>10318</a>/// neither count nor stop the walk: a `marginfigure` (`lrbox` + minipage,
+<a href=#10319 id=10319 data-nosnippet>10319</a>/// used from a `\marginpar`) reaches `ltx:note` → `ltx:p` → document and
+<a href=#10320 id=10320 data-nosnippet>10320</a>/// answers no; `{center}` inside `{figure}` reaches the figure. See
+<a href=#10321 id=10321 data-nosnippet>10321</a>/// OXIDIZED_DESIGN #182.
+<a href=#10322 id=10322 data-nosnippet>10322</a></span><span class="kw">fn </span>caption_can_float(document: <span class="kw-2">&amp;</span>Document, qname: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#10323 id=10323 data-nosnippet>10323</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = document.get_element() <span class="kw">else </span>{
+<a href=#10324 id=10324 data-nosnippet>10324</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#10325 id=10325 data-nosnippet>10325</a>  };
+<a href=#10326 id=10326 data-nosnippet>10326</a>  <span class="kw">loop </span>{
+<a href=#10327 id=10327 data-nosnippet>10327</a>    <span class="kw">if </span>!node.get_name().starts_with(<span class="string">'_'</span>) &amp;&amp; document::can_contain(<span class="kw-2">&amp;</span>node, qname) {
+<a href=#10328 id=10328 data-nosnippet>10328</a>      <span class="kw">return </span><span class="bool-val">true</span>;
+<a href=#10329 id=10329 data-nosnippet>10329</a>    }
+<a href=#10330 id=10330 data-nosnippet>10330</a>    <span class="kw">match </span>node.get_parent() {
+<a href=#10331 id=10331 data-nosnippet>10331</a>      <span class="prelude-val">Some</span>(parent) <span class="kw">if </span>parent.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; node = parent,
+<a href=#10332 id=10332 data-nosnippet>10332</a>      <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="bool-val">false</span>,
+<a href=#10333 id=10333 data-nosnippet>10333</a>    }
+<a href=#10334 id=10334 data-nosnippet>10334</a>  }
+<a href=#10335 id=10335 data-nosnippet>10335</a>}
+<a href=#10336 id=10336 data-nosnippet>10336</a>
+<a href=#10337 id=10337 data-nosnippet>10337</a><span class="doccomment">/// Absorb a formatted caption title without its `\lx@tag` pieces — the
+<a href=#10338 id=10338 data-nosnippet>10338</a>/// float's counter label, which only a float's `ltx:caption` may carry
+<a href=#10339 id=10339 data-nosnippet>10339</a>/// (OXIDIZED_DESIGN #182). Lists are walked so a tag nested beside the title
+<a href=#10340 id=10340 data-nosnippet>10340</a>/// text is dropped without losing the text.
+<a href=#10341 id=10341 data-nosnippet>10341</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>absorb_without_tags(document: <span class="kw-2">&amp;mut </span>Document, piece: <span class="kw-2">&amp;</span>Digested) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#10342 id=10342 data-nosnippet>10342</a>  <span class="kw">match </span>piece.data() {
+<a href=#10343 id=10343 data-nosnippet>10343</a>    DigestedData::Whatsit(w) =&gt; {
+<a href=#10344 id=10344 data-nosnippet>10344</a>      <span class="comment">// Exactly the two tag constructors (`\lx@tag`, `\lx@tags`), by
+<a href=#10345 id=10345 data-nosnippet>10345</a>      // identity — not any internal name containing `lx@tag`.
+<a href=#10346 id=10346 data-nosnippet>10346</a>      </span><span class="kw">let </span>is_tag = {
+<a href=#10347 id=10347 data-nosnippet>10347</a>        <span class="kw">let </span>whatsit = w.borrow();
+<a href=#10348 id=10348 data-nosnippet>10348</a>        <span class="kw">let </span>name = whatsit.get_definition().get_cs_name().into_owned();
+<a href=#10349 id=10349 data-nosnippet>10349</a>        name == <span class="string">"\\lx@tag" </span>|| name == <span class="string">"\\lx@tags"
+<a href=#10350 id=10350 data-nosnippet>10350</a>      </span>};
+<a href=#10351 id=10351 data-nosnippet>10351</a>      <span class="kw">if </span>is_tag {
+<a href=#10352 id=10352 data-nosnippet>10352</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#10353 id=10353 data-nosnippet>10353</a>      }
+<a href=#10354 id=10354 data-nosnippet>10354</a>      document.absorb(piece, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#10355 id=10355 data-nosnippet>10355</a>    },
+<a href=#10356 id=10356 data-nosnippet>10356</a>    DigestedData::List(l) =&gt; {
+<a href=#10357 id=10357 data-nosnippet>10357</a>      <span class="kw">let </span>boxes = l.borrow().boxes.clone();
+<a href=#10358 id=10358 data-nosnippet>10358</a>      <span class="kw">for </span>inner <span class="kw">in </span>boxes {
+<a href=#10359 id=10359 data-nosnippet>10359</a>        absorb_without_tags(document, <span class="kw-2">&amp;</span>inner)<span class="question-mark">?</span>;
+<a href=#10360 id=10360 data-nosnippet>10360</a>      }
+<a href=#10361 id=10361 data-nosnippet>10361</a>    },
+<a href=#10362 id=10362 data-nosnippet>10362</a>    <span class="kw">_ </span>=&gt; {
+<a href=#10363 id=10363 data-nosnippet>10363</a>      document.absorb(piece, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#10364 id=10364 data-nosnippet>10364</a>    },
+<a href=#10365 id=10365 data-nosnippet>10365</a>  }
+<a href=#10366 id=10366 data-nosnippet>10366</a>  <span class="prelude-val">Ok</span>(())
+<a href=#10367 id=10367 data-nosnippet>10367</a>}
 </code></pre></div></section></main></body></html>
