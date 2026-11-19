@@ -532,9 +532,11 @@ pub fn step_counter(ctr: &str, noreset: bool) -> Result<()> {
 
   // and reset any within counters!
   if !noreset && let Some(nested) = lookup_tokens(&s!("\\cl@{ctr}")) {
+    // An id's `UN` counter (`ref_step_id`, a unit beyond secnumdepth) is LaTeXML's alone; TeX steps the others.
+    let tex_step = !ctr.starts_with("UN");
     let mut path = vec![ctr.to_string()];
     for c in nested.unlist() {
-      reset_counter_in_cascade(&c, &mut path)?;
+      reset_counter_in_cascade(&c, &mut path, tex_step)?;
     }
   }
   Ok(())
@@ -1409,14 +1411,20 @@ pub fn ref_current_id(ctype: &str) -> Result<HashMap<Stored>> {
 /// Whether resetting `from` resets `target`: `target` is in `from`'s reset list (`\cl@<from>`), or in the list of a
 /// counter there, and so on.
 pub fn reset_list_reaches(from: &str, target: &str) -> bool {
+  list_reaches(from, target, latexml_reset_list)
+}
+
+/// Whether TeX's lists, the `\cl@<ctr>` macros of `\@elt{<child>}` (latex.ltx `\@addtoreset`), lead from `from` to
+/// `target`: a document's `\def\cl@subsection{}` (AEA.cls:796-799, 2308.05200) empties TeX's list, not LaTeXML's.
+fn tex_reset_list_reaches(from: &str, target: &str) -> bool {
+  list_reaches(from, target, tex_reset_list)
+}
+
+fn list_reaches(from: &str, target: &str, list: fn(&str) -> Vec<String>) -> bool {
   let mut seen: Vec<String> = Vec::new();
   let mut pending = vec![from.to_string()];
   while let Some(ctr) = pending.pop() {
-    let Some(list) = lookup_tokens(&s!("\\cl@{ctr}")) else {
-      continue;
-    };
-    for child in list.unlist() {
-      let name = child.with_str(str::to_string);
+    for name in list(&ctr) {
       if name == target {
         return true;
       }
@@ -1429,22 +1437,83 @@ pub fn reset_list_reaches(from: &str, target: &str) -> bool {
   false
 }
 
-/// Resets the counter `ctr` to zero.
-pub fn reset_counter(ctr: &Token) -> Result<()> { reset_counter_in_cascade(ctr, &mut Vec::new()) }
+fn latexml_reset_list(ctr: &str) -> Vec<String> {
+  lookup_tokens(&s!("\\cl@{ctr}")).map_or_else(Vec::new, |list| {
+    list
+      .unlist()
+      .iter()
+      .map(|t| t.with_str(str::to_string))
+      .collect()
+  })
+}
 
-/// [`reset_counter`] within one cascade: `path` holds the counters stepped or reset on the way to `ctr`.
+/// The `<child>` of each `\@elt{<child>}` in the macro `\cl@<ctr>`.
+fn tex_reset_list(ctr: &str) -> Vec<String> {
+  let Ok(Some(defn)) = lookup_definition(&T_CS!(s!("\\cl@{ctr}"))) else {
+    return Vec::new();
+  };
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return Vec::new();
+  };
+  let mut children = Vec::new();
+  let mut tokens = body.unlist_ref().iter();
+  while let Some(t) = tokens.next() {
+    if t.with_cs_name(|n| n == "\\@elt")
+      && tokens
+        .next()
+        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+    {
+      let child: String = tokens
+        .by_ref()
+        .take_while(|t| t.get_catcode() != Catcode::END)
+        .map(|t| t.with_str(str::to_string))
+        .collect();
+      children.push(child);
+    }
+  }
+  children
+}
+
+/// Resets the counter `ctr` to zero.
+pub fn reset_counter(ctr: &Token) -> Result<()> {
+  reset_counter_in_cascade(ctr, &mut Vec::new(), false)
+}
+
+/// [`reset_counter`] within one cascade: `path` holds the counters stepped or reset on the way to `ctr`, from
+/// `path[0]`, which `tex_step` says TeX steps too (`\stepcounter`), not LaTeXML alone (an id's `UN` counter, a reset).
 /// A cycle of reset lists (`\newcounter{subsubsection}[subsubsection]`, AEA.cls:797, witness 2308.05200; any
 /// `\@addtoreset`/`\numberwithin` chain back to its start) loops in TeX's `\@stpelt` (latex.ltx:10138) and in
 /// Perl's `ResetCounter` (Package.pm:892, deep recursion) once stepped. A counter already on the path is reset, so
-/// it is skipped, with a Warning naming it (once; its `UN` companion, whose list mirrors its own, is not named).
-pub fn reset_counter_in_cascade(ctr: &Token, path: &mut Vec<String>) -> Result<()> {
+/// it is skipped: an Error where TeX's own lists loop from that step ("TeX capacity exceeded"), else a Warning naming
+/// it (each once; its `UN` companion, whose list mirrors its own, is not named).
+pub fn reset_counter_in_cascade(ctr: &Token, path: &mut Vec<String>, tex_step: bool) -> Result<()> {
   let name = ctr.with_str(str::to_string);
   if path.contains(&name) {
-    let warned = s!("lx@counter@reset@cycle@{name}");
-    if !name.starts_with("UN") && lookup_value(&warned).is_none() {
-      assign_value(&warned, Stored::Bool(true), Some(Scope::Global));
-      let message = s!("Counter '{name}' is in a cycle of reset lists; not reset again");
-      Warn!("unexpected", &name, message);
+    if !name.starts_with("UN") {
+      let tex_loops = tex_step
+        && path
+          .first()
+          .is_some_and(|root| *root == name || tex_reset_list_reaches(root, &name))
+        && tex_reset_list_reaches(&name, &name);
+      // One Error, else one Warning, per counter: a Warning after the Error would report the same cycle again.
+      let (erred, warned) = (
+        s!("lx@counter@reset@cycle@error@{name}"),
+        s!("lx@counter@reset@cycle@{name}"),
+      );
+      let flag = if tex_loops {
+        erred.as_str()
+      } else {
+        warned.as_str()
+      };
+      if lookup_value(&erred).is_none() && lookup_value(flag).is_none() {
+        assign_value(flag, Stored::Bool(true), Some(Scope::Global));
+        let message = s!("Counter '{name}' is in a cycle of reset lists; not reset again");
+        if tex_loops {
+          Error!("unexpected", &name, message);
+        } else {
+          Warn!("unexpected", &name, message);
+        }
+      }
     }
     return Ok(());
   }
@@ -1490,7 +1559,7 @@ pub fn reset_counter_in_cascade(ctr: &Token, path: &mut Vec<String>) -> Result<(
   // and reset any within counters!
   if let Some(nested) = lookup_tokens(&s!("\\cl@{ctr}")) {
     for c in nested.unlist() {
-      reset_counter_in_cascade(&c, path)?;
+      reset_counter_in_cascade(&c, path, tex_step)?;
     }
   }
   path.pop();

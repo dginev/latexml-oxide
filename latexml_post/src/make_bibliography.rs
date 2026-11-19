@@ -1141,12 +1141,7 @@ impl MakeBibliography {
       CitationStyle::Alpha => {
         // AY-style: abbreviation from author names + 2-digit year
         let aa = self.make_alpha_label(doc, entry, bibentry);
-        // Perl MakeBibliography.pm:501 `length($yrtext) >= 2 ? substr($yrtext, 2, 2) : $yrtext`, in characters.
-        let yy = if entry.year.chars().count() >= 2 {
-          substr(&entry.year, 2, 2)
-        } else {
-          &entry.year
-        };
+        let yy = alpha_label_year(&entry.year);
         let suffix = entry.suffix.as_deref().unwrap_or("");
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
@@ -1156,7 +1151,7 @@ impl MakeBibliography {
             ("open".to_string(), "[".to_string()),
             ("close".to_string(), "]".to_string()),
           ])),
-          children:   vec![NodeData::Text(format!("{}{}{}", aa, yy, suffix))],
+          children:   vec![NodeData::Text(format!("{aa}{yy}{suffix}"))],
         });
       },
       CitationStyle::AuthorYear => {
@@ -4277,6 +4272,31 @@ fn extract_four_digit_year(text: &str) -> String {
     }
   }
   text.to_string()
+}
+
+/// The year part of an alpha label: alpha.bst:1047 `year field.or.null purify$ #-1 #2 substring$`, the last two
+/// characters of the purified year, as BibTeX labels it (`{99}` → `Knu99`, `{in press}` → `Jonss`, `{1--250, 2023}`
+/// → `23`, 2308.14725). Perl's `substr($yrtext, 2, 2)` (MakeBibliography.pm:501) drops a short year (KNOWN_PERL_ERRORS
+/// #1288). `year` is the date's four-digit year where it has one, as Perl's year tag (:462): a date the `year` field's
+/// `month` extended (`1999-05`), an amsrefs `date={2010nov}` or `{200401}` (2308.14725), and a lettered `{2023a}`.
+fn alpha_label_year(year: &str) -> String {
+  let purified: Vec<char> = purify(year).chars().collect();
+  purified[purified.len().saturating_sub(2)..]
+    .iter()
+    .collect()
+}
+
+/// BibTeX's `purify$` (bibtex.web §431) on digested text: a letter or digit is kept, white space and the
+/// `sep_char`s `-` `~` become a space (as do the dashes and the tie `--`/`~` digest to), any other character goes.
+fn purify(text: &str) -> String {
+  text
+    .chars()
+    .filter_map(|c| match c {
+      c if c.is_alphanumeric() => Some(c),
+      c if c.is_whitespace() || matches!(c, '-' | '~' | '\u{2010}'..='\u{2015}') => Some(' '),
+      _ => None,
+    })
+    .collect()
 }
 
 /// Convert a suffix string back to a counter value.

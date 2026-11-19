@@ -21932,15 +21932,35 @@ Rust: the scaffold mouth reads `@` as data (`mouth::BIB_DATA_LITERALS`, OXIDIZED
 
 `StepCounter` resets the counters in `\cl@<ctr>` through `ResetCounter` (Package.pm:748-751, 883-893), which recurses
 into each one's list with no record of where it has been, so a cycle never ends; LaTeXML steps sectioning counters TeX
-does not step (secnumdepth), so a paper clean in pdflatex reaches it (AEA.cls:797, 2308.05200):
+does not step (secnumdepth) and keeps its reset lists past a `\def\cl@<ctr>{}`, so a paper clean in pdflatex reaches
+it (AEA.cls:796-797, 2308.05200):
 
 ```latex
 \documentclass{article}
-\makeatletter\@addtoreset{subsubsection}{subsubsection}\makeatother
+\makeatletter\let\c@subsubsection\relax\def\cl@subsection{}\makeatother
+\newcounter{subsubsection}[subsubsection]
 \setcounter{secnumdepth}{2}
 \begin{document}\section{A}\subsection{B}\subsubsection{C}Text.\end{document}
 % Perl: Fatal:perl:deep_recursion (ResetCounter, Package.pm:892); pdflatex: "1 A / 1.1 B / C Text."
 ```
 
-Rust: the cascade skips a counter already on its path, with a Warning (OXIDIZED_DESIGN_DIVERGENCES #1090). Guard
-`perfect_kernel_batchcrash397b::counter_in_its_own_reset_list_is_reset_once`.
+Rust: the cascade skips a counter already on its path, with a Warning, or an Error where TeX's own lists loop too
+(OXIDIZED_DESIGN_DIVERGENCES #1090). Guards `perfect_kernel_batchcrash397b::{counter_in_its_own_reset_list_is_reset_once,
+sectioning_step_into_a_reset_cycle_is_an_error}`.
+
+## 1288. The alpha label drops a two- or three-character year
+
+MakeBibliography.pm:501 `length($yrtext) >= 2 ? substr($yrtext, 2, 2) : $yrtext` takes the third and fourth
+characters, so a short year gives no year part. BibTeX's alpha.bst:1047 takes the last two characters of the purified
+year (`purify$ #-1 #2 substring$`):
+
+```latex
+\documentclass{article}
+\begin{document}\cite{k99,k3}\bibliographystyle{alpha}\bibliography{a}\end{document}
+% a.bib: @book{k99, author={Knuth, Donald}, title={T}, publisher={P}, year={99}}
+%        @book{k3, author={Brown, Bob}, title={T}, publisher={P}, year={199}}
+% Perl: [KNU], [BRO9]; BibTeX: [Knu99], [Bro99]
+```
+
+Rust: the year part is BibTeX's (OXIDIZED_DESIGN_DIVERGENCES #1090). Guard
+`perfect_kernel_batchcrash397b::alpha_label_year_is_bibtex_s`.

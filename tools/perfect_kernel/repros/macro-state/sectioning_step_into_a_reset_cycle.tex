@@ -1,0 +1,11 @@
+% witness: the CRASH397B review's probe (2308.05200's cycle, but in TeX's own lists: article's \cl@subsection holds
+%          subsubsection, which \@addtoreset puts in its own list)
+% oracle:  pdflatex stops at \subsection{B}: "TeX capacity exceeded, sorry [grouping levels=255]" (\@stpelt,
+%          latex.ltx:10138); Perl Fatal:perl:deep_recursion (ResetCounter, Package.pm:892)
+% engines: rust main 45de7916eeb = silent stack overflow; CRASH397B round 0 = 0 errors, 1 Warning (the cycle)
+% expect:  1 Error (the cycle, naming subsubsection; TeX's own step loops), 0 Warnings; the three titles in order
+% status:  RED (CRASH397B round 0) -> GREEN (CRASH397B round 1)
+\documentclass{article}
+\makeatletter\@addtoreset{subsubsection}{subsubsection}\makeatother
+\setcounter{secnumdepth}{2}
+\begin{document}\section{A}\subsection{B}\subsubsection{C}Text.\end{document}

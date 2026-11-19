@@ -21081,10 +21081,15 @@ Three run-397 crash and Fatal roots, each fixed as a class in one place.
 **Reset-list cycles.** A counter whose reset list leads back to it (`\newcounter{subsubsection}[subsubsection]`,
 AEA.cls:797, witness 2308.05200; a `\numberwithin`/`\@addtoreset` chain back to its start) loops once it is stepped:
 TeX in `\@stpelt` (latex.ltx:10138, "TeX capacity exceeded [grouping levels=255]"), Perl in `ResetCounter`
-(Package.pm:883-893, `Fatal:perl:deep_recursion`), ours as a silent stack overflow. LaTeXML steps sectioning counters
-where TeX does not (secnumdepth), so the paper is clean in pdflatex. The cascade (`counter::dialect::
+(Package.pm:883-893, `Fatal:perl:deep_recursion`), ours as a silent stack overflow. LaTeXML steps an id counter where
+TeX steps nothing (a unit beyond secnumdepth, `ref_step_id`'s `UN<ctr>`), and its reset lists (the `\cl@<ctr>` values)
+outlive a document's `\def\cl@subsection{}`, so the AEA.cls shape (`\def\cl@subsection{}` +
+`\newcounter{subsubsection}[subsubsection]`) is clean in pdflatex. The cascade (`counter::dialect::
 reset_counter_in_cascade`, from `step_counter` and `reset_counter`) carries the counters on its path and skips one
-already there, with one Warning naming it; a diamond (`UNparagraph` under two parents) is still reset twice, as in Perl.
+already there, once per counter: an Error where TeX loops too (the step is TeX's, not a `UN` counter's or a reset's, and
+TeX's own `\cl@` macro lists lead from it to the cycle: `\@addtoreset{subsubsection}{subsubsection}` under article,
+whose `\cl@subsection` holds subsubsection), else a Warning; a diamond (`UNparagraph` under two parents) is still
+reset twice, as in Perl.
 The document's own `\stepcounter` of such a counter (`\lx@stepcounter@within`, sect08.rs) is TeX's capacity error: an
 Error, and the child leading back is reset once (`reset_list_reaches`). A counter declared within itself builds its id
 without that within (`define_counter_ids`): `\the<ctr>@ID` within `\the<ctr>@ID` expanded to the pushback limit. Open:
@@ -21106,17 +21111,23 @@ inserted", an Error. The bindings had formatted the argument's text into a proto
 2206.00709, 2209.01842; Perl's `T_CS(" \mathcal")` is a junk name and keeps the stock `\mathcal`, as we now do), and
 `\urldef{\wikisurvey2011}` `Fatal:Parameter:Unknown "2011"` (1312.0976; url.sty:185 `\edef#1` defines `\wikisurvey`
 delimited by `2011`, which the paper calls; Perl 1 Error). Users: `\DeclareMathAlphabet`, `\DeclareFixedFont`
-(sect08.rs), `\urldef` (url_sty.rs, with the parameter text), xcolor's `\extractcolorspec`, `\extractcolorspecs`,
+(sect08.rs), `\DeclareOldFontCommand` (sect13.rs), `\DeclareCommandCopy` (latex_constructs_rust_only.rs), `\urldef` (url_sty.rs, with the parameter text), xcolor's `\extractcolorspec`, `\extractcolorspecs`,
 `\convertcolorspec` (the first token, as `\aftergroupdef#2`/`\edef#2`).
 
-The alpha bibliography label's year is sliced by characters (`cleaners::substr`, Perl's `substr`;
-MakeBibliography.pm:501 `length($yrtext) >= 2 ? substr($yrtext, 2, 2)`): `year[2..4]` panicked on `1–250, 2023`
-(2308.14725, 2607.14650). A Rust-only bug, not a divergence; recorded here with its siblings. The Rust `>= 4` bytes
-threshold is now Perl's `>= 2` characters, so a two-character year gives no year digits, as in Perl.
+**The alpha label's year is BibTeX's.** alpha.bst:1047 `year field.or.null purify$ #-1 #2 substring$`: the last two
+characters of the purified year (`make_bibliography::alpha_label_year`; `purify$` keeps letters and digits and turns
+white space, `-` and `~` into spaces): `{99}` gives `Knu99`, `{199}` `Bro99`, `{in press}` `Jonss`, `{1--250, 2023}`
+`DOE23`. The year is the date's four-digit year where it has one, as Perl's year tag (MakeBibliography.pm:462): a
+`year` the `month` field extended (`1999-05`, BibTeX.pool.ltxml:632-637), an amsrefs `date={2010nov}` or `{200401}`
+(2308.14725) keep `10`, `04`; so does a lettered `{2023a}` (`Smi23`, BibTeX `Smi3a`), our suffix disambiguating instead.
+Perl's MakeBibliography.pm:501 `substr($yrtext, 2, 2)` drops a two-
+or three-character year (`[KNU]`; KNOWN_PERL_ERRORS #1288); its `year[2..4]` byte slice panicked on `1–250, 2023`
+(2308.14725, 2607.14650). The name part (`KNU` against BibTeX's `Knu`) is Perl's, unchanged.
 
 **Guards**: `perfect_kernel_batchcrash397b::{counter_in_its_own_reset_list_is_reset_once,
 numberwithin_reset_cycle_terminates, stepcounter_of_a_counter_in_its_own_reset_list_terminates,
-amsrefs_records_under_an_active_at, alpha_label_of_a_non_ascii_year, declare_math_alphabet_command_after_a_space,
+sectioning_step_into_a_reset_cycle_is_an_error, amsrefs_records_under_an_active_at, alpha_label_of_a_non_ascii_year,
+alpha_label_year_is_bibtex_s, declare_math_alphabet_command_after_a_space,
 urldef_command_with_parameter_text, extractcolorspec_command_after_a_space}` (repros `macro-state/`,
 `index-bib/`, `fonts-nfss/`, `package-bindings/`).
 

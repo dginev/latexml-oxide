@@ -50,7 +50,8 @@ fn titles(xml: &str, tag: &str) -> Vec<String> {
 }
 
 /// `\newcounter{subsubsection}[subsubsection]` (AEA.cls:797, witness 2308.05200): LaTeXML's subsection list resets the
-/// counter, which resets itself once, with one Warning naming it (the other is TeX's own "already defined"); its id is
+/// counter, which resets itself once, with one Warning naming it (a Warning: TeX's emptied `\cl@subsection` and its
+/// secnumdepth never step into the loop; the other is TeX's own "already defined"); its id is
 /// not built within itself. Red: a silent stack overflow (`reset_counter` into itself), then a PushbackLimit Fatal (the
 /// id).
 #[test]
@@ -65,6 +66,27 @@ fn counter_in_its_own_reset_list_is_reset_once() {
   assert_eq!(subsubsections.len(), 1, "{xml}");
   assert_eq!(titles(&xml, "subsubsection"), ["C"], "{xml}");
   assert!(text(subsubsections[0]).contains("Text."), "{xml}");
+}
+
+/// The same cycle in TeX's own lists (`\@addtoreset{subsubsection}{subsubsection}` under article, whose
+/// `\cl@subsection` holds subsubsection), reached from subsection's step, which TeX takes too and ends in "TeX capacity
+/// exceeded": an Error, not the Warning of the AEA.cls shape above (whose loop only LaTeXML's lists and id counter
+/// reach); the cascade still ends and the document is kept. Red: a Warning (round 0), a silent stack overflow (base).
+#[test]
+fn sectioning_step_into_a_reset_cycle_is_an_error() {
+  let (log, xml) = run(repro!("macro-state/sectioning_step_into_a_reset_cycle.tex"));
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(
+    log.contains("Counter 'subsubsection' is in a cycle of reset lists"),
+    "{log}"
+  );
+  assert_eq!(titles(&xml, "section"), ["1 A"], "{xml}");
+  assert_eq!(titles(&xml, "subsection"), ["1.1 B"], "{xml}");
+  assert_eq!(titles(&xml, "subsubsection"), ["C"], "{xml}");
+  assert!(
+    text(elements(&xml, "subsubsection")[0]).contains("Text."),
+    "{xml}"
+  );
 }
 
 /// A two-counter cycle through `\numberwithin` (subsubsection in foo's list, foo in subsubsection's), reached from
@@ -118,14 +140,14 @@ fn amsrefs_records_under_an_active_at() {
   );
 }
 
-/// An alpha label of a year whose third byte is inside a character (`1--250, 2023`, 2308.14725, 2607.14650): Perl's
-/// `substr($yrtext, 2, 2)` in characters. Red: Fatal:panic:caught (`year[2..4]`).
+/// An alpha label of a year whose third byte is inside a character (`1--250, 2023`, 2308.14725, 2607.14650): the last
+/// two characters of the purified year, as alpha.bst:1047. Red: Fatal:panic:caught (`year[2..4]`).
 #[test]
 fn alpha_label_of_a_non_ascii_year() {
   let html = html_of(repro!("index-bib/alpha_label_of_a_non_ascii_year.tex"), &[]);
   assert!(
     html.contains(
-      r#"<span class="ltx_tag ltx_bib_abbrv ltx_role_refnum ltx_tag_bibitem">[DOE25]</span>"#
+      r#"<span class="ltx_tag ltx_bib_abbrv ltx_role_refnum ltx_tag_bibitem">[DOE23]</span>"#
     ),
     "{html}"
   );
@@ -179,4 +201,29 @@ fn extractcolorspec_command_after_a_space() {
     .collect::<Vec<_>>()
     .join(" ");
   assert_eq!(words, "Spec rgb1,0,0 end.", "{xml}");
+}
+
+/// alpha.bst:1047's year part, `purify$ #-1 #2 substring$`, on five year shapes (the review's probe): two, three and
+/// four digits, a lettered year, a word. Distinct from the panic guard: the rule itself, where Perl's `substr($yrtext,
+/// 2, 2)` gives `[BRO9]`, `[KNU]` (KNOWN_PERL_ERRORS #1288). `{2023a}` keeps its four-digit year, as the year tag does
+/// (BibTeX: `Smi3a`), so an amsrefs `date={2010nov}` stays `10` (2308.14725). Red: round 0 printed Perl's labels.
+#[test]
+fn alpha_label_year_is_bibtex_s() {
+  let tex = repro!("index-bib/alpha_label_year_is_bibtex_s.tex");
+  let bib: String = tex
+    .lines()
+    .filter_map(|l| l.strip_prefix("%   "))
+    .collect::<Vec<_>>()
+    .join("\n");
+  let html = html_of(tex, &[("a.bib", &bib)]);
+  let labels: Vec<&str> = html
+    .split(r#"ltx_bib_abbrv ltx_role_refnum ltx_tag_bibitem">"#)
+    .skip(1)
+    .filter_map(|s| s.split('<').next())
+    .collect();
+  assert_eq!(
+    labels,
+    ["[BRO99]", "[JONss]", "[KNU99]", "[LAM94]", "[SMI23]"],
+    "{html}"
+  );
 }

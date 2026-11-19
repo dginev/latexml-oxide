@@ -1703,7 +1703,7 @@ pub(crate) fn load() -> Result<()> {
       if name == ctr || reset_list_reaches(&name, &ctr) {
         let message = s!("\\stepcounter{{{ctr}}} resets '{name}', whose reset list leads back to '{ctr}'");
         Error!("unexpected", &ctr, message);
-        reset_counter_in_cascade(&child, &mut vec![ctr.clone()])?;
+        reset_counter_in_cascade(&child, &mut vec![ctr.clone()], false)?;
         continue;
       }
       if !name.starts_with("UN") && counter_is_defined(&s!("UN{name}")) {
