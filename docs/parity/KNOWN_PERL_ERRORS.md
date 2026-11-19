@@ -21966,3 +21966,18 @@ year (`purify$ #-1 #2 substring$`):
 
 Rust: the year part is BibTeX's (OXIDIZED_DESIGN_DIVERGENCES #1090). Guard
 `perfect_kernel_batchcrash397b::alpha_label_year_is_bibtex_s`.
+
+## 1289. An undefined BibTeX macro is an Error where bibtex warns
+
+BibTeX.pm:307-310 raises `Error:unexpected:<name>` for a `.bib` macro that is not defined; bibtex(1) warns ("string name
+… is undefined") and uses the empty string:
+
+```latex
+\documentclass{article}
+\begin{document}\cite{a}\bibliographystyle{plain}\bibliography{m}\end{document}
+% m.bib: @article{a, author={A. Author}, title={Title}, journal={J}, month=june, year=2001}
+% Perl: Error:unexpected:june; bibtex: Warning--string name "june" is undefined
+```
+
+Rust: a Warning, the name kept as the value (OXIDIZED_DESIGN_DIVERGENCES #1095). Guard
+`perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning`.

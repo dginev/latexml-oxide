@@ -276,6 +276,9 @@ pub struct Document {
   /// The construction-time position marks made in this document ([`Document::insert_mark`]), by qualified name, each
   /// once.
   marks_made:                    Vec<String>,
+  /// The back matter floated out of a float or a heading ([`Document::float_backmatter_out_of_container`]): the
+  /// node it was built in, and the insertion point to return to when it closes.
+  floated_backmatter:            Vec<(Node, Node)>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -692,6 +695,7 @@ impl Document {
       field_ink_settled:           false,
       field_box_pending:           false,
       marks_made:                  Vec::new(),
+      floated_backmatter:          Vec::new(),
     }
   }
 
@@ -2088,6 +2092,47 @@ impl Document {
       }
     }
     Ok(true)
+  }
+
+  /// A bibliography begun where neither it nor the unit it stands as can go, inside a float (`ltx:figure`,
+  /// `ltx:table`, `ltx:float`) or a heading (`ltx:title`) as the nearest container that does not auto-close: the
+  /// author's container left open around the back matter (an `\end{table}` commented out, cond-mat0108156; an
+  /// unclosed figure, cond-mat0303649) or LyX's `\subsubsection*{\bibliography{…}}` (hep-ph0004227, 1808.04295). It is
+  /// built in the nearest open ancestor that can hold it (`float_to_element`), after the container, which stays open
+  /// for the rest of its content; [`Document::restore_floated_backmatter`] returns there at its close. A list in a box
+  /// (a minipage, a sidebar's frame) or an abstract is not floated: block-local references, as the PDF sets them
+  /// (2503.17910, 2402.17043, hep-ex0405026). DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1098.
+  pub fn float_backmatter_out_of_container(&mut self, qname: &str) -> Result<bool> {
+    let mut node = Some(self.node.clone());
+    while let Some(current) = node {
+      if current.get_type() == Some(NodeType::ElementNode) && !can_auto_close(&current) {
+        if !with_node_qname(&current, |q| {
+          matches!(q, "ltx:figure" | "ltx:table" | "ltx:float" | "ltx:title")
+        }) {
+          return Ok(false);
+        }
+        break;
+      }
+      node = current.get_parent();
+    }
+    let Some(saved) = self.float_to_element(qname, false)? else {
+      return Ok(false);
+    };
+    let container = self.node.clone();
+    self.floated_backmatter.push((container, saved));
+    Ok(true)
+  }
+
+  /// The close of back matter [`Document::float_backmatter_out_of_container`] floated: back to the point it left.
+  pub fn restore_floated_backmatter(&mut self) {
+    if self
+      .floated_backmatter
+      .last()
+      .is_some_and(|(container, _)| *container == self.node)
+      && let Some((_, saved)) = self.floated_backmatter.pop()
+    {
+      self.set_node(&saved);
+    }
   }
 
   /// Whether a `qname` element is open on the current ancestor chain (a font-switch `ltx:text`
@@ -4387,9 +4432,9 @@ impl Document {
           // the wrapper; a container that cannot auto-close (the note, a constructor's `ltx:text`) keeps it inside.
           // Perl shares every one of these errors (same schema, no such autoOpen). Not inside a frontmatter
           // container (`ltx:abstract`, `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`, `ltx:creator`, or
-          // anything in one): there the "isn't allowed" Error stands, as in Perl, until the frontmatter study is ruled
-          // on (main-session ruling 2026-10-17; guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`); a
-          // kernel table of contents there goes after the container instead (`float_out_of_frontmatter`, OD #753).
+          // anything in one): there the "isn't allowed" Error stands, as in Perl (main-session ruling 2026-10-17), but
+          // for a theorem or proof in an abstract (the next bridge, DG 2026-11-19); a kernel table of contents there
+          // goes after the container instead (`float_out_of_frontmatter`, OD #753).
           // Witnesses 2406.11811, 2103.03402, 0806.0214, 2602.15784, 2301.10544, 1410.7242 (theorem in a quote),
           // 1412.2039, math0603642 (TOC in a quote), 2507.09788, 2307.10959, 2308.06338, 2410.15097, 0804.3724,
           // math0612590 (theorem in a footnote), 1310.0491 (an ltx:text). Guards
@@ -4400,6 +4445,17 @@ impl Document {
             applies:  |_cur, qsym| matches!(qsym, "ltx:theorem" | "ltx:proof" | "ltx:TOC"),
             attrs:    &[],
             holder:   outside_frontmatter_container,
+            close_up: true,
+          },
+          // …and a theorem or proof in an abstract (`ltx:abstract` holds Block.model, no Para.class): the same block,
+          // so the abstract stays whole and the theorem keeps its id, tags and title — real theorems (1908.02189,
+          // amsppt `\proclaim` math0111087) and metadata set as a `\newtheorem*{keywords}` (0804.0728) alike (DG
+          // 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1096). Guard `perfect_kernel_batchplacefix::theorem_in_abstract_stays`.
+          AutoOpenBridge {
+            chain:    &["ltx:inline-logical-block"],
+            applies:  |_cur, qsym| matches!(qsym, "ltx:theorem" | "ltx:proof"),
+            attrs:    &[],
+            holder:   within_abstract,
             close_up: true,
           },
         ];
@@ -8723,6 +8779,27 @@ fn outside_frontmatter_container(node: &Node) -> bool {
     cur = n.get_parent();
   }
   true
+}
+
+/// Whether the nearest frontmatter container around `node` is an `ltx:abstract` (a theorem's bridge there, OD #1096).
+fn within_abstract(node: &Node) -> bool {
+  let mut cur = Some(node.clone());
+  while let Some(n) = cur {
+    if n.get_type() == Some(NodeType::ElementNode) {
+      let kind = with_node_qname(&n, |q| match q {
+        "ltx:abstract" => Some(true),
+        "ltx:acknowledgements" | "ltx:keywords" | "ltx:classification" | "ltx:creator" => {
+          Some(false)
+        },
+        _ => None,
+      });
+      if let Some(inside) = kind {
+        return inside;
+      }
+    }
+    cur = n.get_parent();
+  }
+  false
 }
 
 /// Whether `qname` is one of the sectioning units `\section`…`\subparagraph` open, by name (the auto-open bridges'

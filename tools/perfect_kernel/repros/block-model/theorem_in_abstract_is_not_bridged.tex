@@ -3,9 +3,10 @@
 % oracle:  pdflatex 0 errors; the theorem is set inside the abstract's quotation, the quoted one inside its quote
 % engines: rust 67int18b = 2 ("<ltx:theorem> isn't allowed in <ltx:abstract>", "… in <ltx:quote>"), perl = 2 (same
 %   schema); 69c round 1 = 0 (both wrapped in an `ltx:inline-logical-block`)
-% expect:  2 errors, as base and Perl: no bridge inside a frontmatter container (main-session ruling 2026-10-17, until
-%   the frontmatter study is ruled on)
-% status:  CONTROL (69c round 2: document.rs `outside_frontmatter_container`)
+% expect:  0 errors since PLACEFIX (DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1096): the theorem opens the bridge's
+%   `ltx:inline-logical-block` in the abstract, which holds the quote and its theorem too; until then 2 errors, as Perl
+% status:  GREEN (PLACEFIX; was the CONTROL of 69c round 2, document.rs `outside_frontmatter_container`); guard
+%   `perfect_kernel_batch69c::theorem_in_abstract_is_bridged`
 \documentclass{article}
 \usepackage{amsthm}
 \newtheorem{theorem}{Theorem}

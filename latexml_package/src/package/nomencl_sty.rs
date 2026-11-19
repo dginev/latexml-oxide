@@ -128,19 +128,44 @@ LoadDefinitions!({
     });
   // `\printnomenclature[width]` (:277-282): the list container, titled
   // `\nomname` (:53 and the babel captions :55-175), filled at post.
+  // In a box no glossary can open in — `{framed}`/`{mdframed}` in a `{table*}`, the IEEE nomenclature box of 1410.5511,
+  // 1608.03855, 1704.00503, 1703.01217 — the list stays in the box, as pdflatex prints it there (`\section*` there is
+  // only a bold run-in head): the bold `\nomname` and an `ltx:description` the MakeGlossary post fills
+  // (`class="ltx_nomenclature"`; DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1097). Guard
+  // `perfect_kernel_batchplacefix::nomenclature_in_a_box_stays_in_the_box`.
   DefMacro!("\\printnomenclature", "\\@ifnextchar[{\\lx@printnomenclature}{\\lx@printnomenclature[]}");
-  DefConstructor!("\\lx@printnomenclature[]",
-    "<ltx:glossary xml:id='#id' lists='nomenclature' role='nomenclature'>\
-     <ltx:title>#title</ltx:title></ltx:glossary>",
+  DefConstructor!("\\lx@printnomenclature[]", sub[document, _args, props] {
+    let id = props.get("id").map(|id| id.to_string()).unwrap_or_default();
+    if glossary_reachable(document) {
+      let attrs = string_map!("xml:id" => id, "lists" => "nomenclature", "role" => "nomenclature");
+      document.open_element("ltx:glossary", Some(attrs), None)?;
+      document.open_element("ltx:title", None, None)?;
+      if let Some(title) = props.get("title") {
+        document.absorb_string(&title.to_string(), props)?;
+      }
+      document.close_element("ltx:title")?;
+      document.close_element("ltx:glossary")?;
+    } else {
+      document.open_element("ltx:p", None, None)?;
+      if let Some(Stored::Digested(heading)) = props.get("heading") {
+        document.absorb(heading, None)?;
+      }
+      document.close_element("ltx:p")?;
+      let attrs = string_map!("xml:id" => id, "class" => "ltx_nomenclature");
+      document.open_element("ltx:description", Some(attrs), None)?;
+      document.close_element("ltx:description")?;
+    }
+  },
     properties => sub[_args] {
       // The list is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
       resolve_deferred_prints(Some("nomenclature"))?;
       let title = digest_in_group(T_CS!("\\nomname")).map(|d| d.to_string()).unwrap_or_default();
+      let heading = Digest!("{\\bfseries\\nomname}")?;
       let docid = lookup_value("thedocument@ID")
         .and_then(|v| match v { Stored::String(s) => Some(to_string(s)), _ => None })
         .unwrap_or_default();
       let id = if docid.is_empty() { "glo.nomenclature".to_string() } else { format!("{docid}.glo.nomenclature") };
-      Ok(stored_map!("id" => id, "title" => title))
+      Ok(stored_map!("id" => id, "title" => title, "heading" => heading))
     },
     after_digest => sub[whatsit] {
       note_backmatter_element(whatsit, "ltx:glossary");
@@ -149,3 +174,24 @@ LoadDefinitions!({
       adjust_backmatter_element(doc, whatsit)?;
     });
 });
+
+/// Whether an `ltx:glossary` can go at the insertion point or after closing only elements that auto-close. A box's
+/// capture (`{framed}`, a minipage) takes anything now and is moved into the box's block later: not there.
+fn glossary_reachable(doc: &Document) -> bool {
+  let mut node = Some(doc.get_node().clone());
+  while let Some(current) = node {
+    if current.get_type() == Some(NodeType::ElementNode) {
+      if document::is_capture_block(&current) {
+        return false;
+      }
+      if document::can_contain(&current, "ltx:glossary") {
+        return true;
+      }
+      if !document::can_auto_close(&current) {
+        return false;
+      }
+    }
+    node = current.get_parent();
+  }
+  false
+}

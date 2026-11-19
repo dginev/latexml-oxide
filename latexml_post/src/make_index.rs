@@ -95,6 +95,10 @@ impl IndexTree {
   }
 }
 
+/// The lists MakeIndex fills: an empty index or glossary, and nomencl's list in a box, a `description` (OD #1097).
+pub const PLACEHOLDERS: &str = "//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)] \
+   | //ltx:description[contains(concat(' ', @class, ' '), ' ltx_nomenclature ')][not(ltx:item)]";
+
 /// A glossary entry ready for rendering.
 struct GlossaryEntry {
   /// The entry's key, and its parent's when it is listed under one (glossaries' `parent=`).
@@ -808,6 +812,52 @@ impl MakeIndex {
   }
 }
 
+/// A formatted `ltx:glossaryentry` as an `ltx:item` of a description (its attributes kept): the `label` phrase is the
+/// item's tag, the `definition` phrase its paragraph — the schema holds a `glossarylist` in an `ltx:glossary` only.
+fn glossary_entry_as_item(entry: NodeData) -> NodeData {
+  let NodeData::Element { attributes, children, .. } = entry else {
+    return entry;
+  };
+  let mut item_children = Vec::new();
+  for phrase in children {
+    let NodeData::Element {
+      attributes: phrase_attributes,
+      children: phrase_children,
+      ..
+    } = phrase
+    else {
+      continue;
+    };
+    let role = phrase_attributes
+      .as_ref()
+      .and_then(|a| a.get("role"))
+      .map(String::as_str);
+    let (tag, inner) = match role {
+      Some("label") => ("ltx:tags", "ltx:tag"),
+      _ => ("ltx:para", "ltx:p"),
+    };
+    item_children.push(NodeData::Element {
+      tag:        tag.to_string(),
+      attributes: None,
+      children:   vec![NodeData::Element {
+        tag:        inner.to_string(),
+        attributes: None,
+        children:   phrase_children,
+      }],
+    });
+  }
+  let attributes = attributes.map(|mut a| {
+    a.remove("lists");
+    a.remove("key");
+    a
+  });
+  NodeData::Element {
+    tag: "ltx:item".to_string(),
+    attributes,
+    children: item_children,
+  }
+}
+
 /// Move the entries under `parent` (each level sorted) from `by_parent` to `ordered`, each followed by its own
 /// children; a child's `glossaryentry` is classed `ltx_glossary_level_<depth>`.
 fn place_glossary_children(
@@ -836,9 +886,7 @@ fn place_glossary_children(
 impl Processor for MakeIndex {
   fn get_name(&self) -> &str { &self.name }
 
-  fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
-    doc.findnodes("//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]")
-  }
+  fn to_process(&self, doc: &PostDocument) -> Vec<Node> { doc.findnodes(PLACEHOLDERS) }
 
   fn process(&mut self, mut doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
     for node in &nodes {
@@ -871,6 +919,18 @@ impl Processor for MakeIndex {
           let glist = self.make_glossary_list(&entries);
           let mut node_mut = node.clone();
           doc.add_nodes(&mut node_mut, &[glist]);
+        }
+      } else if tag == "ltx:description" {
+        // nomencl's list in a box no glossary may open in (the binding's `ltx_nomenclature` description, OD #1097): the
+        // same entries, each an item whose tag is the symbol and whose paragraph is the description.
+        let entries = self.get_glossary_entries("nomenclature", &id, true);
+        let glist = self.make_glossary_list(&entries);
+        if let NodeData::Element { children, .. } = glist {
+          let items: Vec<NodeData> = children.into_iter().map(glossary_entry_as_item).collect();
+          if !items.is_empty() {
+            let mut node_mut = node.clone();
+            doc.add_nodes(&mut node_mut, &items);
+          }
         }
       }
     }

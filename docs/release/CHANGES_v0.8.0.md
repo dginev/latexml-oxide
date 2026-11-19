@@ -43,6 +43,11 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Run 397's misplaced elements, as DG ruled 2026-11-19.** An undefined BibTeX macro (`month = june`) is a Warning,
+    as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1095). A theorem or proof in an abstract stays in it, wrapped as in a
+    quote, with its id and title (1908.02189, 0804.0728; #1096). nomencl's list in a framed box keeps its box: a bold
+    heading and the entries as a description (1410.5511; #1097). A bibliography inside a float or a heading argument
+    floats out after it (cond-mat0108156, hep-ph0004227; #1098). Guards `perfect_kernel_batchplacefix::*`.
   - **Four more run-397 Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
     `\end{equation*}` as amsmath.sty:2950-2951 makes them, so a mixed pair (`\[ … \end{equation*}`) no longer errs
     (math0306159, math0401181, math0508341), and a `\tag` in `\[` is printed (2008.12392; OXIDIZED_DESIGN_DIVERGENCES

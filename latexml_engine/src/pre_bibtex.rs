@@ -422,8 +422,8 @@ impl PreBibTeX {
     // command"; :236 "The user's database may override any definition").
     // Perl seeds only its fixed `%default_macros` (BibTeX.pm:34-57) and so
     // raises `undefined` for every abbreviation a journal style supplies;
-    // resolving the style first keeps that Error for the names that really are
-    // undefined. The style's value wins over the default, as in bibtex
+    // resolving the style first keeps the report for the names that really
+    // are undefined. The style's value wins over the default, as in bibtex
     // (IEEEtran.bst:238 `MACRO {jan} {"Jan."}`). A biblatex `.bib` is read by
     // biber, which knows only the month names (Perl's defaults cover them).
     if !me.percent_comments {
@@ -582,38 +582,32 @@ impl PreBibTeX {
   }
 
   /// BibTeX.pm:307-310: an undefined macro is an Error, and the recovery
-  /// leaves the name as-is (bibtex(1) itself warns "string name … is
-  /// undefined" and uses the empty string). The table holds the `.bst`'s
-  /// `MACRO`s (see `new_from_gullet`), so only a name neither the style nor
-  /// the `.bib` defines lands here. Reported for an `@string`/`@preamble` and
-  /// for a digested entry only: Perl reports every entry's, but bibtex reads
-  /// only the cited ones — a 41 MB `crypto.bib` against an older `abbrev3.bib`
-  /// (2606.21799) has a thousand uses in uncited entries, whose Errors tripped
-  /// the too-many-errors Fatal and cost the bibliography 15 of its 22 items.
+  /// leaves the name as-is. bibtex(1) only warns ("Warning--string name
+  /// "june" is undefined") and uses the empty string, so this is a Warning
+  /// with the name kept as the value (OXIDIZED_DESIGN #1095, KNOWN_PERL_ERRORS;
+  /// DG 2026-11-19: `june`, `sept`, … in some 190 run-397 papers). The table
+  /// holds the `.bst`'s `MACRO`s (see `new_from_gullet`), so only a name
+  /// neither the style nor the `.bib` defines lands here. Reported for an
+  /// `@string`/`@preamble` and for a digested entry only: Perl reports every
+  /// entry's, but bibtex reads only the cited ones — a 41 MB `crypto.bib`
+  /// against an older `abbrev3.bib` (2606.21799) has a thousand uses in
+  /// uncited entries.
   fn report_undefined_macro(&self, name: &str, lineno: usize) -> latexml_core::Result<()> {
-    if self.style_known {
-      let message = s!("The BibTeX macro '{name}' is not defined");
-      self.report_at(
-        true,
-        "unexpected",
-        name,
-        &message,
-        lineno,
-        "its name is kept as the value",
-      );
+    let message = if self.style_known {
+      s!("The BibTeX macro '{name}' is not defined")
     } else {
-      let message = s!(
+      s!(
         "The BibTeX macro '{name}' is not defined by the .bib, and the bibliography style that may define it is unknown"
-      );
-      self.report_at(
-        false,
-        "unexpected",
-        name,
-        &message,
-        lineno,
-        "its name is kept as the value",
-      );
-    }
+      )
+    };
+    self.report_at(
+      false,
+      "unexpected",
+      name,
+      &message,
+      lineno,
+      "its name is kept as the value",
+    );
     Ok(())
   }
 

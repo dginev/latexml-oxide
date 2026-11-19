@@ -1,0 +1,14 @@
+% witness: 1410.5511, 1608.03855, 1704.00503, 1703.01217 (IEEE nomenclature box: `{table*}` > `{framed}` >
+%          `\printnomenclature`); run 397's 137-paper glossary cluster, 111 of them this shape (PLACE397 G1)
+% oracle:  pdflatex 0 errors (with makeindex); a framed box at the top holding a bold "Nomenclature" and "Q heat"
+% engines: rust 7ffe5507018 = 1 ("<ltx:glossary> isn't allowed in <ltx:block>"); perl = 1 (scrbase), no list
+% expect:  0 errors, 0 warnings; in the box a bold "Nomenclature" and a description "Q | heat"
+% status:  RED (7ffe5507018) -> GREEN (PLACEFIX; OXIDIZED_DESIGN_DIVERGENCES #1097)
+\documentclass{article}
+\usepackage{nomencl,framed}
+\makenomenclature
+\begin{document}
+\section{Introduction}
+\begin{table}[t]\begin{framed}\printnomenclature\end{framed}\end{table}
+Heat $Q$ flows.\nomenclature{$Q$}{heat}
+\end{document}

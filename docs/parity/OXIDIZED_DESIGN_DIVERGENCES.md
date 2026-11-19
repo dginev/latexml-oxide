@@ -12717,7 +12717,8 @@ Excluded: the frontmatter containers `ltx:abstract`, `ltx:acknowledgements`, `lt
 `ltx:creator`, and anything inside one (document.rs `outside_frontmatter_container`) — a theorem or a TOC in an
 abstract is a frontmatter question (what the abstract's model should hold, whether the block belongs in the
 frontmatter at all) that the pending frontmatter study decides, so there the Perl/base "isn't allowed" Error stands
-(main-session ruling 2026-10-17; guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`).
+(main-session ruling 2026-10-17) — but for a theorem or proof in an abstract, bridged since DG's ruling of 2026-11-19
+(#1096; guard `perfect_kernel_batch69c::theorem_in_abstract_is_bridged`).
 Witnesses 2406.11811 2103.03402 0806.0214 2602.15784 2301.10544 1410.7242 (theorem in a quote), 1412.2039 math0603642
 (TOC in a quote), 2507.09788 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 (theorem in a footnote), 1310.0491
 (an ltx:text). Repros block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards
@@ -21199,6 +21200,63 @@ e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the o
 `perfect_kernel_batchclustfix3::robustify_of_a_native_binding`,
 `perfect_kernel_batch69b::robustify_ltx_protected_native_cite` (repros `package-bindings/robustify_of_a_native_binding`,
 `robustify_of_a_tex_primitive_errs`).
+
+### 1095. An undefined BibTeX macro is a Warning, as bibtex(1) has it (PLACEFIX)
+
+Perl BibTeX.pm:307-310 raises an Error for a `.bib` macro neither the `.bib` nor the defaults define (`month = june`,
+`sept`, `july`; about 190 papers of run 397) and keeps the name as the value. bibtex(1) prints `Warning--string name
+"june" is undefined` and goes on with the empty string. `pre_bibtex.rs` `report_undefined_macro` now warns whether the
+style is known or not (DG 2026-11-19); the name is still kept as the value, so no word is lost. KNOWN_PERL_ERRORS #1289.
+Guard `perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning` (repro `index-bib/bibtex_month_undefined`).
+
+### 1096. A theorem or proof in an abstract stays in it, in an `ltx:inline-logical-block` (PLACEFIX)
+
+`ltx:abstract` holds Block.model, no Para.class, so a `\newtheorem` environment, amsppt's `\proclaim`, plain's, elsart's
+algorithm or a `{proof}` in `{abstract}` erred "<ltx:theorem> isn't allowed in <ltx:abstract>" (Perl the same), the
+content kept in place. Run 397: 86 papers, real theorems (56: 1908.02189, 1604.07743, math0111087) and metadata set as
+`\newtheorem*{keywords}`/`{MSC}`/`{JEL}` (26: 0804.0728, 1405.7144, gr-qc0203098) alike. The auto-open bridge that
+wraps a theorem in a quote or a note (#689) now applies inside an abstract too (`document.rs` `within_abstract`): the
+theorem keeps its id (a `\ref` resolves), tags and title, and the abstract stays one abstract (DG 2026-11-19). The
+schema decided the element: `ltx:para` is Para.class and cannot go in an abstract, `ltx:inline-logical-block` is
+Misc.class with Para.model. No name-matching: a keywords "theorem" is a theorem in the output, as in the PDF. The other
+frontmatter containers (keywords, acknowledgements, classification, creator) keep the Error, and a table of contents
+in an abstract still goes after it (#753). Not covered: an `\abstract{…}` that never ends (math0006149, 1108.5171;
+TeX sets the whole paper in it). Guard `perfect_kernel_batchplacefix::theorem_in_abstract_stays` (repro
+`block-model/theorem_in_abstract_stays`); `perfect_kernel_batch69c::theorem_in_abstract_is_bridged` (was
+`…_is_not_bridged`, the control kept until this ruling).
+
+### 1097. nomencl's list in a box keeps its box (PLACEFIX)
+
+`\printnomenclature` in a `{framed}`/`{mdframed}` inside a `{table*}` (the IEEE nomenclature box: 111 of run 397's 137
+glossary-cluster papers; 1410.5511, 1608.03855, 1704.00503, 1703.01217) built a sectional `ltx:glossary` where no
+glossary may go ("<ltx:glossary> isn't allowed in <ltx:block>"; Perl: no list at all, its raw nomencl stops at
+scrbase). pdflatex prints the list in the box. Where `ltx:glossary` cannot open, the binding (`nomencl_sty.rs`, #234)
+now emits in place a paragraph with the bold `\nomname` and an empty `ltx:description class="ltx_nomenclature"` with
+the glossary's id, which MakeGlossary (`make_index.rs`) fills with the same entries as items: the symbol the item's tag,
+the description its paragraph (DG 2026-11-19). The schema allows a `glossarylist` only in an `ltx:glossary`. At section
+level the list stays the sectional glossary. Residual: a list in `{IEEEkeywords}` or another inline container (G2/G3,
+about 9 papers: 1606.00288, 2111.12783) still errs, a paragraph being no more allowed there. Guard
+`perfect_kernel_batchplacefix::nomenclature_in_a_box_stays_in_the_box` (repro `block-model/nomenclature_in_a_box`).
+
+### 1098. A bibliography inside a float or a heading floats out to the narrative level (PLACEFIX)
+
+A `{thebibliography}` (or `\bibliography`) begun where neither it nor the unit it stands as can go erred "<ltx:
+bibliography> isn't allowed in <ltx:…>". The criterion is the nearest enclosing element that does not auto-close:
+a float (`ltx:figure`, `ltx:table`, `ltx:float`) or a heading (`ltx:title`) is the author's container accidentally
+around the back matter, and the bibliography floats out to the nearest open ancestor that can hold it
+(`Document::float_backmatter_out_of_container`, Perl's `floatToElement`), placed after the container, which stays open
+for the rest of its content; the list's close returns there (`restore_floated_backmatter`). The kernel's
+`{thebibliography}` and `\bibliography` (`adjust_bibliography_element`) and RevTeX 3's, OmniBus's and AASTeX's
+`{references}` (`float_bibliography_out`) share it. Witnesses: cond-mat0108156 (`\end{table}` commented out),
+cond-mat0303649 (an unclosed figure around RevTeX 3's `{references}`), hep-ph0004227 and 1808.04295 (LyX's
+`\subsubsection*{\bibliographystyle{..}\bibliography{..}}`). Residual: cond-mat0108156's `\acknowledgments` in the
+same table keeps its Error (back matter too; row R PLACEACK). A list in a box (an `ltx:block`: a minipage, a framed or
+sidebar frame) or in an abstract does not float: block-local references (2402.17043 and 2502.16577, IEEE CSM sidebars;
+2503.17910, elsarticle's CPC program summary in the abstract; hep-ex0405026, a minipage beside a figure holding the
+conclusions and the references) keep their place and their Error: the schema holds a `biblist` only in an
+`ltx:bibliography`, which is back matter, so a non-sectional in-place list is a schema and MakeBibliography question,
+deferred (row R PLACEB4). DG 2026-11-19. Guard `perfect_kernel_batchplacefix::bibliography_floats_out_of_a_float`
+(repro `block-model/bibliography_floats_out_of_a_float`).
 
 ## TeX-source fidelity family (TEXSRC)
 

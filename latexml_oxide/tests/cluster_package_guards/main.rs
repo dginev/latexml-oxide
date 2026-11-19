@@ -646,6 +646,9 @@ mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
 mod perfect_kernel_batchpc3;
+/// PLACEFIX: run 397's placement rulings — a BibTeX month macro warns, a theorem stays in its abstract, a nomenclature
+/// keeps its box, a bibliography floats out of a float or heading (OD #1095-#1098).
+mod perfect_kernel_batchplacefix;
 /// PRESBXc: the fail-safes of the title's marks; the lock's refusal record follows a `\let` of `\maketitle` alone.
 mod perfect_kernel_batchpresbxc;
 mod perfect_kernel_batchpsf1;
