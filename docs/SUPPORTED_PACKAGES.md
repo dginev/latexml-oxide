@@ -263,7 +263,7 @@ raw mode.
 | `ws-procs9x6` | `.cls` | contributed | *alias of* `ws-rv9x6.cls` |
 | `ws-rv9x6` | `.cls` | contributed |  |
 
-## Packages (687)
+## Packages (688)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -362,6 +362,7 @@ raw mode.
 | `biblatex` | `.sty` | contributed, raw + overrides |  |
 | `bibunits` | `.sty` | ported |  |
 | `bidi` | `.sty` | contributed |  |
+| `bigfoot` | `.sty` | beyond Perl, raw + overrides |  |
 | `bigintcalc` | `.sty` | ported, raw + overrides |  |
 | `bigstrut` | `.sty` | beyond Perl |  |
 | `bitset` | `.sty` | ported, raw + overrides |  |
