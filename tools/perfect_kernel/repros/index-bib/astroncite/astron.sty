@@ -1,0 +1,8 @@
+% astron.sty (Sake J. Hogeveen, 1990; 0812.2799's and 0812.4839's copy), its citation lines; EslabStyle.cls:1442-1445
+% (astro-ph0001290), ISOStyle.cls:1446-1449 (astro-ph0008362) copy them with `##1\ ##2`
+\let\@internalcite\cite
+\def\cite{\@ifstar{\citeyear}{\citefull}}
+\def\citefull{\def\astroncite##1##2{##1, ##2}\@internalcite}
+\def\citeyear{\def\astroncite##1##2{##2}\@internalcite}
+\def\@cite#1#2{(#1\if@tempswa , #2\fi)}
+\def\@biblabel#1{}

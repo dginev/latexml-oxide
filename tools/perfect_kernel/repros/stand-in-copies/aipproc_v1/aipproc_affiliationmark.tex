@@ -1,0 +1,16 @@
+% witness: astro-ph0011502 (myaipproc.cls:86 `\newcommand*\affiliationmark[1]{\textsuperscript{#1}}`, a copy of the 1998
+%          aipproc.cls v1.0a beside `\affiliation`)
+% oracle:  pdflatex with the copy (myaipproc.cls beside): 0 errors, "A. Author^a / ^aDept of Physics"
+% engines: rust CLUSTFIX 1 error (`\affiliationmark` undefined: the renamed copy is not read, `myaipproc` falls back
+%          to the aipproc binding)
+% expect:  0 errors, 0 warnings; the author's and the affiliation's marks superscripts
+% status:  RED (CLUSTFIX) -> GREEN (NEXT397); guard perfect_kernel_batchnext397::aipproc_old_affiliationmark
+% preload: ar5iv.sty
+\documentclass{myaipproc}
+\begin{document}
+\title{Clusters}
+\author{A.~Author\affiliationmark{a}}
+\affiliation{\affiliationmark{a}Dept of Physics}
+\maketitle
+Text.
+\end{document}

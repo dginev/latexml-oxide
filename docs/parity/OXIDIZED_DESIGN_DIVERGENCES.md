@@ -1993,6 +1993,16 @@ class would have printed.
 cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
 
+astron.sty's `\cite` (0812.2799, 0812.4839; copied by EslabStyle.cls:1442-1445 astro-ph0001290, ISOStyle.cls:1446-1449
+astro-ph0008362, and the EAS classes) is `\@ifstar{\citeyear}{\citefull}`, and its `\citefull` =
+`\def\astroncite##1##2{##1, ##2}\@internalcite` is the only definition of the `\astroncite{A}{Y}` that astron.bst writes
+into the `\bibitem` labels. With that `\cite` refused, the labels were `Error:undefined:\astroncite` (Perl and pdflatex
+0). Where the lock refused a `\cite`, `\astroncite` is undefined and `\citefull` opens with `\def\astroncite`, the
+kernel `\cite`'s first call runs the copy's own `\citefull` definition (its `\@internalcite` tail dropped) and keeps it
+global for the deferred labels (`sect11.rs` `astroncite_from_refused_cite`). The full form throughout: the starred
+call's year-only form is the class's label style, which the lock does not keep. Guard
+`perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`).
+
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)
 re-`\edef`/`\let` the target but preserve the original via `\expandonce#2`, so
@@ -20947,6 +20957,9 @@ the binding stands in for (#731): each `\author` was a "Missing keyval arguments
 the copy's defaults are its placeholders that the document's calls replace (`hand_copy_frontmatter_defaults`). One
 binding per class family supports the union of its versions (FIDELITY_CHARTER).
 Guard `perfect_kernel_batchclustfix::aipproc_old_author_affiliation` (repro `stand-in-copies/aipproc_v1`).
+Beside `\affiliation`, the copy's `\newcommand*\affiliationmark[1]{\textsuperscript{#1}}` (:86; astro-ph0011502's
+renamed myaipproc.cls, which the binding answers as a versioned fallback without reading it) is defined under the same
+test. Guard `perfect_kernel_batchnext397::aipproc_old_affiliationmark`.
 
 ### 1084. elsart's options are the class's switches `\if@amsthm`, `\if@seceqn`, `\if@secthm` (CLUSTFIX)
 
@@ -20957,6 +20970,9 @@ elsart.cls (v2.20, 0712.3870's copy) declares them as switches (:34-35, :62-65, 
 errors in Perl and ours, 0 in pdflatex. The binding declares the three switches and its options set them beside the
 values. Guard `perfect_kernel_batchclustfix::elsart_amsthm_option_is_the_class_switch` (repro
 `class-bindings/elsart_amsthm_option_switch`).
+The LaTeX 2.09 elsart.sty (v2.23, 0805.0525's copy; Perl's elsart.sty.ltxml the same values) defines `\if@seceqn` and
+`\if@secthm` set by `\ds@seceqn`/`\ds@secthm` (:66-71) and no `\if@amsthm`; its binding declares those two. Guard
+`perfect_kernel_batchnext397::elsart_sty_options_are_its_switches` (repro `class-bindings/elsart_sty_option_switches`).
 
 ## TeX-source fidelity family (TEXSRC)
 
