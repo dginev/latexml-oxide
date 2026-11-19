@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["define_hyper_anchors","define_hyper_urls","load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["define_autoref","define_autoref_names","define_hyper_anchors","define_hyper_links","define_hyper_targets","define_hyper_urls","define_hypersetup","define_pdfbookmarks","define_texorpdfstring","load_definitions"]};
