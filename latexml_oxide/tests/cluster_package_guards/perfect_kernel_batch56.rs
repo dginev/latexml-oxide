@@ -1428,6 +1428,9 @@ fn newtcbinputlisting_finds_its_file_through_kpathsea() {
 /// its ACTIVE delimiter (the `+` was frozen as OTHER), so Rust's reader ran
 /// to the end of the argument and swallowed the rest of the note — a
 /// `<item>` inside `<verbatim>` (platex-tools/plarray.tex:20, RUST-ONLY).
+/// The note's closing `}` ends TeX's `\verb` group with "\verb illegal in argument" (latex.ltx:15489-15491): one
+/// Error since HARDEN397, by the rule of an Error wherever TeX or Perl errs (DG 2026-11-11); Perl is silent. Repro
+/// boxes-groups/verb_in_a_pretokenized_argument_errs.
 #[test]
 fn verb_inside_pretokenized_argument_unreads_instead_of_running_away() {
   let tex = r"\documentclass{article}
@@ -1443,7 +1446,14 @@ After the footnote, top-level \verb+abc+ works fine.
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
+  assert_eq!(
+    stderr
+      .matches("Error:unexpected:\\verb \\verb illegal in argument")
+      .count(),
+    1,
+    "{stderr}"
+  );
   assert!(!stderr.contains("Warning:"), "{stderr}");
   assert_eq!(xml.matches("<item ").count(), 2, "{xml}");
   // The footnote's `\verb` is an EMPTY verbatim (Perl's shape), not one

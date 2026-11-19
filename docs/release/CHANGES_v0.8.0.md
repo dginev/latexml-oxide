@@ -43,6 +43,18 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **A source archive's link cycle, a recursion through an argument expansion, and `\verb` in a footnote.** A
+    `.tar` source whose links point at its own top (`a -> .`, kept since they stay inside it) hung the search for the
+    main file past `--timeout` (the CLI) or into the fleet's timeout: it walks real directories only now
+    (`main_tex.rs`, `cortex_worker.rs`). A persistent `cortex_worker` thread no longer logs the archive Warnings of a
+    job that failed before its report as the next paper's. An expansion recursing through a balanced read (a macro
+    whose `\@ifundefined` argument expands the macro again; the CCJNL397 shape under mfirstuc) overflowed the
+    conversion thread's stack, SIGABRT with no log; it is counted by the expansion-depth guard and ends in
+    `Fatal:Timeout:Recursion` (TeX: "capacity exceeded"). A `\verb` in an argument digested without its braces
+    (`\footnote{a \verb+x+ b}`) reports TeX's "\verb illegal in argument", as pdflatex does (Perl is silent). Guards
+    `perfect_kernel_batchharden397::*`, `cortex_worker` `archive_tests::*`,
+    `perfect_kernel_batch56::verb_inside_pretokenized_argument_unreads_instead_of_running_away`;
+    OXIDIZED_DESIGN_DIVERGENCES #1085.
   - **astron.sty's author-year labels, the 1998 aipproc's `\affiliationmark`, elsart.sty's switches, `\verb` in an
     argument.** A `\bibitem[\protect\astroncite{A}{Y}]` label under astron.sty or its copies (EslabStyle, ISOStyle,
     EAS), whose `\cite` the locked kernel `\cite` refuses, prints "A, Y" as the copy's `\citefull` defines it (was

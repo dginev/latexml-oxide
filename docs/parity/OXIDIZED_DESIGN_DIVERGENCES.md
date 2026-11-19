@@ -21007,6 +21007,11 @@ braces (`\mbox`, `\multicolumn`, astro-ph0108286; `\textbf`), where the scan sti
 `perfect_kernel_batchnext397::verb_under_documentstyle_reads_to_its_tokenized_delimiter` (repros
 `boxes-groups/verb_in_an_argument_ends_at_its_brace`,
 `boxes-groups/verb_under_documentstyle_reads_to_its_tokenized_delimiter`).
+An argument digested without its braces (`\footnote{a \verb+x+ b}`) gives no `}`: the scan runs out of tokens and
+unreads them, an empty verbatim (Perl's `readUntil`, Core/Gullet.pm:683-685). That path reports TeX's "\verb illegal in
+argument" too (HARDEN397; Perl is silent; pdflatex 3 `!` on the repro, the Error and its recovery). Guard
+`perfect_kernel_batch56::verb_inside_pretokenized_argument_unreads_instead_of_running_away` (repro
+`boxes-groups/verb_in_a_pretokenized_argument_errs`).
 
 ## TeX-source fidelity family (TEXSRC)
 

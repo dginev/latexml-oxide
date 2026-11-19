@@ -10276,7 +10276,20 @@ pub fn read_verb_invocation(token_delimited: bool) -> Result<Option<Vec<Token>>>
       // the scan hits the end of the argument. Keeping the scanned tokens as
       // the body swallowed the rest of the note (an `<item>` inside
       // `<verbatim>`; platex-tools/plarray.tex:20, RUST-ONLY). Guard:
-      // `verb_inside_pretokenized_argument_unreads_instead_of_running_away`.
+      // `verb_inside_pretokenized_argument_unreads_instead_of_running_away`. The argument's closing `}` ends TeX's
+      // `\verb` group there: latex.ltx:15489-15491 `\verb@balance@group`, "\verb illegal in argument" (pdflatex errs
+      // on `\footnote{a \verb+x+ b}`; Perl is silent), as the END arm above reports. Repro
+      // boxes-groups/verb_in_a_pretokenized_argument_errs.
+      if token_delimited {
+        Error!(
+          "unexpected",
+          "\\verb",
+          "Argument of \\@tempa has an extra }",
+          ""
+        );
+      } else {
+        Error!("unexpected", "\\verb", "\\verb illegal in argument", "");
+      }
       unread(Tokens::new(std::mem::take(&mut body)));
     }
     let body = Tokens::new(body);

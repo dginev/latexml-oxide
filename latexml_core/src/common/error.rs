@@ -584,6 +584,10 @@ thread_local! {
   static SESSION_WARNINGS: RefCell<Vec<(String, String)>> = const { RefCell::new(Vec::new()) };
 }
 
+/// Drop the warnings held for a source that never reached its report (its archive unpacked, then its job failed before
+/// the session): a persistent worker's next paper must not log them as its own. Called as each archive is unpacked.
+pub fn clear_session_warnings() { SESSION_WARNINGS.with(|held| held.borrow_mut().clear()) }
+
 /// A Warning raised before its conversion's report starts (a source archive is unpacked before the session): held,
 /// then logged and counted by the next [`initialize_report`] on this thread.
 pub fn warn_at_session_start(category: &str, object: &str, message: String) {
