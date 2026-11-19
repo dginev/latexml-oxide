@@ -353,6 +353,13 @@ pub fn define_counter_ids(
       None => within,
     }
     .to_string();
+    // A counter within itself (`\newcounter{subsubsection}[subsubsection]`, AEA.cls:797, witness 2308.05200) resets
+    // itself (`reset_counter_in_cascade`); its id cannot be built within its own id, which expanded without end.
+    let idwithin = if idwithin == ctr {
+      String::new()
+    } else {
+      idwithin
+    };
 
     let ctr_string = ctr.to_string();
     let thectrid = s!("\\the{}@ID", ctr);

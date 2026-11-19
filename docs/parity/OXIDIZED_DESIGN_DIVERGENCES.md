@@ -21086,7 +21086,10 @@ where TeX does not (secnumdepth), so the paper is clean in pdflatex. The cascade
 reset_counter_in_cascade`, from `step_counter` and `reset_counter`) carries the counters on its path and skips one
 already there, with one Warning naming it; a diamond (`UNparagraph` under two parents) is still reset twice, as in Perl.
 The document's own `\stepcounter` of such a counter (`\lx@stepcounter@within`, sect08.rs) is TeX's capacity error: an
-Error, and the child leading back is reset once (`reset_list_reaches`). Offered to Perl as a path set in `ResetCounter`.
+Error, and the child leading back is reset once (`reset_list_reaches`). A counter declared within itself builds its id
+without that within (`define_counter_ids`): `\the<ctr>@ID` within `\the<ctr>@ID` expanded to the pushback limit. Open:
+a two-counter id cycle (`\numberwithin{section}{equation}` where the class nests equation ids in section's) is still a
+`Fatal:Timeout:PushbackLimit`. Offered to Perl as a path set in `ResetCounter`.
 
 **`@` in the bibliography mouth.** The `with_bib_data_literals` mouth (OD #74) now reads one set,
 `mouth::BIB_DATA_LITERALS` (`% & # @`), as OTHER where the document gave the character a TeX meaning. `@` is new: the

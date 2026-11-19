@@ -49,12 +49,14 @@ fn titles(xml: &str, tag: &str) -> Vec<String> {
     .collect()
 }
 
-/// `\newcounter{subsubsection}[subsubsection]` (AEA.cls:797, witness 2308.05200): sectioning steps the counter, which
-/// resets itself once, with one Warning naming it. Red: a silent stack overflow (`reset_counter` into itself).
+/// `\newcounter{subsubsection}[subsubsection]` (AEA.cls:797, witness 2308.05200): LaTeXML's subsection list resets the
+/// counter, which resets itself once, with one Warning naming it (the other is TeX's own "already defined"); its id is
+/// not built within itself. Red: a silent stack overflow (`reset_counter` into itself), then a PushbackLimit Fatal (the
+/// id).
 #[test]
 fn counter_in_its_own_reset_list_is_reset_once() {
   let (log, xml) = run(repro!("macro-state/counter_in_its_own_reset_list.tex"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
   assert!(
     log.contains("Counter 'subsubsection' is in a cycle of reset lists"),
     "{log}"
@@ -93,7 +95,7 @@ fn stepcounter_of_a_counter_in_its_own_reset_list_terminates() {
     r"Text \stepcounter{subsubsection}\arabic{subsubsection}.",
   );
   let (log, xml) = run(&tex);
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
   assert!(
     text(elements(&xml, "subsubsection")[0]).contains("Text 1."),
     "{xml}"
