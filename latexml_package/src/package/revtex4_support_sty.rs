@@ -214,7 +214,10 @@ LoadDefinitions!({
   DefMacro!("\\abstractname", "Abstract");
 
   DefMacro!("\\pacs{}",     "\\lx@add@classification[scheme=pacs,name={PACS:~}]{#1}");
-  DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
+  // revtex4 only stores `\keywords` (printed under `showkeys` alone), so TeX never expands an elsart-style `\sep` a paper
+  // ported from elsart left in it (cond-mat0309530 manuscript7.tex:46); digested here, it is elsart's separator
+  // (elsart_support_core_sty.rs) where the paper does not define it. OXIDIZED_DESIGN_DIVERGENCES #1089.
+  DefMacro!("\\keywords{}", "\\lx@add@keywords{\\providecommand\\sep{\\unskip,\\space}#1}");
   // `\preprint` stores the number for the title page, which prints it or not by the class family's rule, so the branch
   // is chosen before the argument is read (`preprint_printed`). A printed number is Perl's
   // `\lx@add@pubnote[role=preprint]{#1}` (revtex4_support.sty.ltxml:71), its argument read as TeX reads it (`$`, `~`

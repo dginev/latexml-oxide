@@ -637,16 +637,15 @@ LoadDefinitions!({
   // integration :7424-7438 — raw `\pagenote`-style callers (ucalgmthesis) and
   // nmbib's `\hyper@natlinkstart`. Guard:
   // `perfect_kernel_batch56::hyperref_storage_and_driver_link_internals`.
+  define_hyper_anchors()?;
   RawTeX!(
     r"\def\@linkcolor{red}\def\@anchorcolor{black}\def\@citecolor{green}\def\@filecolor{cyan}
 \def\@urlcolor{magenta}\def\@menucolor{red}\def\@runcolor{\@filecolor}
 \def\@linkbordercolor{1 0 0}\def\@urlbordercolor{0 1 1}\def\@menubordercolor{1 0 0}
 \def\@filebordercolor{0 .5 .5}\def\@runbordercolor{0 .7 .7}\def\@citebordercolor{0 1 0}
 \def\@pdfhighlight{/I}\def\@pdfborder{0 0 0}\let\@pdfborderstyle\@empty
-\@ifundefined{Hy@xspace@end}{\let\Hy@xspace@end\relax}{}
 \let\hyper@linkstart\@gobbletwo \def\hyper@linkend{\Hy@xspace@end}
 \def\hyper@linkfile#1#2#3{#1\Hy@xspace@end}
-\let\hyper@anchor\@gobble \let\hyper@anchorstart\@gobble \def\hyper@anchorend{\Hy@xspace@end}
 \@ifundefined{Hy@backout}{\let\Hy@backout\@gobble}{}
 \def\hyper@natlinkstart#1{\Hy@backout{#1}\hyper@linkstart{cite}{cite.#1}\def\hyper@nat@current{#1}}
 \def\hyper@natlinkend{\hyper@linkend}
@@ -1264,14 +1263,7 @@ LoadDefinitions!({
   def_macro_noop("\\bookmarkdefinestyle{}{}")?;
   def_macro_noop("\\bookmarkget{}")?;
   def_macro_noop("\\BookmarkAtEnd{}")?;
-  // \Hy@raisedlink — hyperref-internal anchor positioning: hyperref.sty:2100-2118 typesets its
-  // argument (raised, outside vertical mode), and the non-PDF drivers `\let\Hy@raisedlink\@empty`
-  // (hdvips.def:40), which leaves the braced argument to run. Either way the argument — an anchor
-  // (`\hyper@@anchor`, `\hypertarget`) — is kept; a no-op swallowing it lost the target of every
-  // back-link to it. Both our and Perl's hyperref bindings lacked the macro. Witnesses:
-  // arXiv:2308.06254v1 (`\Hy@raisedlink{\hypertarget{#1}{}}`, main.tex:1442/:1489; 43 dangling
-  // idrefs), biblatex-chicago cms-noteref-demo (cmsendnotes.sty:214-236 endnote marks, 18).
-  Let!("\\Hy@raisedlink", "\\@empty");
+  // `\Hy@raisedlink`: with the anchor layer above (`define_hyper_anchors`).
 
   //======================================================================
   // 4.1 Replacement macros
@@ -2391,6 +2383,30 @@ fn localized_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
     },
     None => insert_bare_anchor(document, id)?,
   }
+  Ok(())
+}
+
+/// hyperref's no-op anchor layer, which packages call directly once they see hyperref loaded:
+/// - the anchors as `\NoHyper` sets them (hyperref.sty 7.01o :6152-6154): `\hyper@anchor` and `\hyper@anchorstart`
+///   gobble the name, `\hyper@anchorend` is `\Hy@xspace@end` (`\relax` unless xspace's patch set it);
+/// - `\Hy@raisedlink`: hyperref.sty:2100-2118 typesets its argument (raised, outside vertical mode), and the non-PDF
+///   drivers `\let\Hy@raisedlink\@empty` (hdvips.def:40), which leaves the braced argument to run. Either way the
+///   argument — an anchor (`\hyper@@anchor`, `\hypertarget`) — is kept; a no-op swallowing it lost the target of every
+///   back-link to it. Both our and Perl's hyperref bindings lacked the macro. Witnesses: arXiv:2308.06254v1
+///   (`\Hy@raisedlink{\hypertarget{#1}{}}`, main.tex:1442/:1489; 43 dangling idrefs), biblatex-chicago
+///   cms-noteref-demo (cmsendnotes.sty:214-236 endnote marks, 18).
+///
+/// The ar5iv preload's provided `\href` (`ar5iv_sty.rs`, OXIDIZED_DESIGN #588) provides them too: a shipped
+/// algorithm2e.sty 3.6 takes `\@ifundefined{href}` as "no hyperref" and otherwise calls
+/// `\Hy@raisedlink{\hyper@anchorstart{AlgoLine…}\hyper@anchorend}` (its :740-748; cs0602002).
+pub fn define_hyper_anchors() -> Result<()> {
+  if !IsDefined!(&T_CS!("\\Hy@xspace@end")) {
+    Let!("\\Hy@xspace@end", "\\relax");
+  }
+  Let!("\\hyper@anchor", "\\@gobble");
+  Let!("\\hyper@anchorstart", "\\@gobble");
+  DefMacro!("\\hyper@anchorend", "\\Hy@xspace@end");
+  Let!("\\Hy@raisedlink", "\\@empty");
   Ok(())
 }
 
