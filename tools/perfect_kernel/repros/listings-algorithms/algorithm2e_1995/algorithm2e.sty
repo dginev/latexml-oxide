@@ -1,0 +1,23 @@
+% A from-scratch stand-in for algorithm2e.sty release 1.16 (1996/03/14, `\ProvidesPackage{algorithm2e}[1995/12/08]`),
+% which arXiv papers ship (cs0008002, math0201131): the macros its captions need. Its captions are float.sty's
+% (`\newfloat{algocf}` in `\algostyle`, named `\algorithmname`); it has neither `\algorithmcfname`, `\algocf@typo` nor
+% `\algocf@capseparator`, and its `\typo` closes only the title.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{algorithm2e}[1995/12/08]
+\DeclareOption{english}{\def\algorithmname{Algorithm}\def\typo{}}
+\DeclareOption{french}{\def\algorithmname{Algorithm}\def\typo{\ }}
+\DeclareOption{plain}{\def\algostyle{plain}}
+\DeclareOption{boxed}{\def\algostyle{boxed}}
+\DeclareOption{ruled}{\def\algostyle{ruled}}
+\ExecuteOptions{english,plain}
+\ProcessOptions
+\RequirePackage{float}
+\def\beforealgostyle{\float@style}
+\floatstyle{\algostyle}
+\newfloat{algocf}{htbp}{loa}
+\floatstyle{\beforealgostyle}
+\floatname{algocf}{\algorithmname}
+\def\algorithm{\@ifnextchar[{\@algoparam}{\begin{algocf}}}
+\def\@algoparam[#1]{\begin{algocf}[#1]}
+\def\endalgorithm{\end{algocf}}
+\def\;{\par}
