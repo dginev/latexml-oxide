@@ -30,6 +30,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
+# TeX Live in CI is always a RELEASED year the suite supports, never tlnet's latest state: a new year
+# is usually supported a month or more after it ships, and the latest state would fail the suite. Each
+# platform gets a prebuilt tree, never a per-package install (`install-tl` fetches ~4900 packages one
+# at a time: ~1 h, #916's first run):
+#   * Linux: the pinned Ubuntu image's apt TeX Live (ubuntu-26.04 = TL 2025; `test` and `asan`).
+#   * macOS: Homebrew's `texlive` bottle (20260301 = TL 2026), one prebuilt archive. Homebrew moves it
+#     to a new year on its own schedule, so macos-build stops early, naming the year, once it is newer
+#     than TEXLIVE_NEWEST_SUPPORTED (the newest year of the release dump window, release.yml).
+#   * Windows: the Windows workflow pins its own `version`.
+env:
+  TEXLIVE_NEWEST_SUPPORTED: "2026"
+
 jobs:
   # Path gate. Emits two booleans the expensive jobs branch on, so that a PR
   # only pays for what its diff can actually affect. The `main`-push run
@@ -161,10 +173,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt, clippy
+      # Only `main` saves Rust caches (pushes, and the nightly run that picks up
+      # each new nightly); a PR run restores main's and saves nothing. PR saves
+      # were 5.9 of the repo's 10.7 GB (2026-11-18), and at the 10 GB cap
+      # GitHub evicts least-recently-read first: the cache kept ~6 h of
+      # history, so the TeX Live, dumps and vcpkg entries were evicted too.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: lint
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # cargo-machete is installed BEFORE the gate below, which runs it.
       - name: install cargo-machete
         uses: taiki-e/install-action@v2
@@ -233,10 +251,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: miri
+      # Only `main` saves; see the lint job's rust-cache note.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: miri
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: miri (scoped arena UB check)
         run: tools/miri_check.sh
 
@@ -254,7 +274,8 @@ jobs:
     name: asan (memory-safety UB check)
     needs: changes
     if: needs.changes.outputs.not_docs == 'true'
-    runs-on: ubuntu-latest
+    # Pinned with the `test` job: the same apt TeX Live, so the two share one dump cache.
+    runs-on: ubuntu-26.04
     timeout-minutes: 75
     env:
       CARGO_BUILD_JOBS: "2"
@@ -277,22 +298,24 @@ jobs:
           # such PR failed here with `cannot find 'ld'`. The other Linux jobs
           # already install it; the asan job had been the lone omission.
       - uses: dtolnay/rust-toolchain@nightly
+      # Only `main` saves; see the lint job's rust-cache note.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: asan
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # Same dump cache as the Linux `test` job (identical key): the dumps are
       # TL-derived text, independent of the ASAN instrumentation, so the two
       # jobs share one entry and this step is a no-op on the common cache hit.
       - name: TeX Live fingerprint (dump cache key)
         id: tlfp
-        run: echo "year=$(pdflatex --version 2>/dev/null | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)" >> "$GITHUB_OUTPUT"
+        run: bash tools/ci_tex_fingerprint.sh
       - name: cache engine dumps
         id: dumps
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ steps.tlfp.outputs.sources }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -347,7 +370,9 @@ jobs:
     # Full Linux suite on every code change (PR and main push); skipped only
     # for a docs-only diff.
     if: needs.changes.outputs.not_docs == 'true'
-    runs-on: ubuntu-latest
+    # Pinned image: its apt TeX Live is the year this suite tests (26.04 = TL 2025;
+    # see the year policy at the top). `ubuntu-latest` would move it unannounced.
+    runs-on: ubuntu-26.04
     # 75: a shard on a dump-cache miss pays `make formats` (7-11 min) + the
     # build before its ≈ 22-24-min test step; 75 keeps the worst case ≤ 70 %.
     timeout-minutes: 75
@@ -398,7 +423,7 @@ jobs:
       # jing for the schema guards. texlive-fonts-extra (669 MB), lang-chinese/
       # korean and games stay out: the tests that load them declare it with
       # `requires` and skip visibly (listed after the run). These packages add
-      # no file the dumps read (latex.ltx/expl3), so the dump-cache key stays.
+      # no file the dumps stamp (latex.ltx/expl3/plain.tex), so the dump-cache key stays.
       # mupdf-tools + poppler-utils: the PDF→SVG converters (mutool, pdftocairo)
       # that the latexml_post vector-SVG tests require (LATEXML_SVG_TESTS below).
       # tools/ci_apt_install.sh bounds the download and drops a slow first mirror (checkout precedes it).
@@ -416,9 +441,11 @@ jobs:
             texlive-lang-arabic texlive-lang-european texlive-lang-spanish \
             tex-gyre jing mupdf-tools poppler-utils
       - uses: dtolnay/rust-toolchain@nightly
+      # Only `main` saves; see the lint job's rust-cache note.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # Cheap source-level ratchet: ban NEW string-keyed xml: attribute
       # accessors (the libxml namespaced-attribute footgun). Runs before the
       # expensive build so it fails fast. See docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.
@@ -438,20 +465,21 @@ jobs:
       # bust the cache. The dump is thus a deterministic function of
       # latexml_{core,engine,codegen}/src, the init driver
       # (latexml_oxide/src/ini_tex.rs: it sets initex's brace catcodes before
-      # the format is read) + the TeX Live release, so most PRs
+      # the format is read) + the format sources the dump stamps (latex.ltx,
+      # expl3-code.tex, plain.tex: tools/ci_tex_fingerprint.sh), so most PRs
       # (post, math-parser, PACKAGE bindings, tests, docs) skip the ~8-min
       # dump-generation step. Conservative within that set (over-regenerate,
       # never stale; the test suite catches a bad dump). `runner.os` keeps
       # Linux/macOS caches distinct. Bump `v1` if the dump format changes.
       - name: TeX Live fingerprint (dump cache key)
         id: tlfp
-        run: echo "year=$(pdflatex --version 2>/dev/null | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)" >> "$GITHUB_OUTPUT"
+        run: bash tools/ci_tex_fingerprint.sh
       - name: cache engine dumps
         id: dumps
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ steps.tlfp.outputs.sources }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -485,18 +513,25 @@ jobs:
         shell: bash
         run: bash tools/test_skip_summary.sh
 
-  # macOS mirror of the Linux job above (issue #217). Same `ci` profile,
-  # same make-formats → build → run flow; only the platform deps differ:
-  # Homebrew instead of apt, and NO mold (the .cargo/config.toml
-  # `-fuse-ld=mold` rustflags are gated to x86_64-linux, so the
-  # aarch64-darwin link uses the system linker — we simply don't set the
-  # mold RUSTFLAGS here). Uses Homebrew's `texlive`, which ships
-  # libkpathsea + kpathsea.pc, so the in-process linked kpathsea backend is
-  # exercised end-to-end. (MacTeX/BasicTeX's subprocess-`kpsewhich` fallback
-  # is documented in docs/BUILDING.md but not gated here — it lacks the package set
-  # the full suite needs.)
-  macos:
-    name: latexml-oxide CI (macOS shard ${{ matrix.shard }}/4)
+  # macOS mirror of the Linux job above (issue #217): the same `ci` profile and
+  # make-formats → build → test flow; only the platform deps differ (Homebrew
+  # libxml2/libxslt, no mold: the .cargo/config.toml `-fuse-ld=mold` rustflags
+  # are gated to x86_64-linux). It is split into ONE build job and four test
+  # shards that run from its nextest archive, because macOS jobs are the
+  # scarce resource: the account runs at most 5 at once, and when every shard
+  # built for itself (~5 min Homebrew `texlive` + 11-15 min compile per shard)
+  # a run took ~2 runner-hours, so concurrent runs queued for up to 2.5 h
+  # (2026-11-15..18: 152 macOS runner-hours; 132 of the 138 waits over 15 min
+  # had all 5 slots held by our own jobs).
+  #
+  # TeX Live is Homebrew's prebuilt `texlive` bottle (see the year policy at
+  # the top). libkpathsea is built from source and linked STATICALLY
+  # (tools/build_static_kpathsea.sh, as the macOS release leg does), so the
+  # in-process kpathsea backend exercised is the shipped one.
+  # (MacTeX/BasicTeX's subprocess-`kpsewhich` fallback is documented in
+  # docs/BUILDING.md but not gated here.)
+  macos-build:
+    name: latexml-oxide CI (macOS build)
     needs: changes
     # macOS is the slow leg and its unique value is the platform-dependent
     # surface (`changes.macos`: libxml2/libxslt parsing and XSLT, #292; the OS
@@ -504,7 +539,8 @@ jobs:
     # labelled `ci:macos`; on a `main` push run it for ANY code change — that
     # post-merge run is the net that catches a macOS regression a PR's narrow
     # filter let through; and always on the nightly `schedule` and a manual
-    # `workflow_dispatch`. Docs-only diffs skip it on PRs and pushes.
+    # `workflow_dispatch`. Docs-only diffs skip it on PRs and pushes. The test
+    # shards below run exactly when this job succeeds.
     if: >-
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
@@ -514,56 +550,86 @@ jobs:
         contains(github.event.pull_request.labels.*.name, 'ci:macos')))
     runs-on: macos-15
     # 3 vCPU / 7 GB RAM — tighter than the 16 GB Linux runner, so the same
-    # RAM-tuned `ci` profile + jobs=2 apply; the cold build dominates, so
-    # allow more wall-clock than the Linux leg.
-    timeout-minutes: 120
-    # Sharded like the Linux leg, and this is where it pays most: macOS was the
-    # gating job at ~47 min, of which 29.4 min was the sequential test step.
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
+    # RAM-tuned `ci` profile + jobs=2 apply; a cold build dominates.
+    timeout-minutes: 90
     env:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
     steps:
+      - uses: actions/checkout@v6
       # libxml2 + libxslt are keg-only on Homebrew; install them and surface
       # their pkgconfig dirs so the libxml/libxslt build scripts find them.
+      # No auto-update: the build and the shards then install the runner
+      # image's same formula versions, so the shards' dylibs match the link
+      # and their `texlive` is the tree the dumps below are stamped against.
       - name: install dependencies
         run: |
           command -v pkg-config >/dev/null || brew install pkgconf
-          brew install libxml2 libxslt texlive jing-trang
+          brew install libxml2 libxslt texlive
       - name: surface keg-only pkg-config paths
         run: |
           echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v6
+      # The static libkpathsea.a is a function of the pinned source ref in its
+      # build script, so it is cached on that script.
+      - name: cache static libkpathsea
+        id: kpse
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/tlsrc/texk/kpathsea/.libs
+          key: kpathsea-static-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/build_static_kpathsea.sh') }}
+      - name: build static libkpathsea from source
+        if: steps.kpse.outputs.cache-hit != 'true'
+        env:
+          KPSE_SRC_DIR: ${{ runner.temp }}/tlsrc
+        run: bash tools/build_static_kpathsea.sh
+      # What the script exports on a build, set here for a cache hit as well.
+      - name: link libkpathsea statically
+        run: |
+          echo "KPATHSEA_LIB_DIR=$RUNNER_TEMP/tlsrc/texk/kpathsea/.libs" >> "$GITHUB_ENV"
+          echo "KPATHSEA_STATIC=1" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@nightly
+      # Only `main` saves; see the lint job's rust-cache note.
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: macos
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # The engine dumps capture kernel state from `--init=plain.tex` /
       # `--init=latex.ltx` — the core + engine layers only. latexml_package is
       # loaded per-document via \usepackage, NOT during init, so package bindings
       # are NOT in the base dump and are deliberately EXCLUDED from the key —
       # otherwise the common case (editing a package binding) would needlessly
       # bust the cache. The dump is thus a deterministic function of
-      # latexml_{core,engine,codegen}/src + the TeX Live release, so most PRs
+      # latexml_{core,engine,codegen}/src + the format sources it stamps
+      # (tools/ci_tex_fingerprint.sh), so most PRs
       # (post, math-parser, PACKAGE bindings, tests, docs) skip the ~8-min
       # dump-generation step. Conservative within that set (over-regenerate,
       # never stale; the test suite catches a bad dump). `runner.os` keeps
       # Linux/macOS caches distinct. Bump `v1` if the dump format changes.
       - name: TeX Live fingerprint (dump cache key)
         id: tlfp
-        run: echo "year=$(pdflatex --version 2>/dev/null | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)" >> "$GITHUB_OUTPUT"
+        run: bash tools/ci_tex_fingerprint.sh
+      # Homebrew moves `texlive` to a new year on its own schedule. A year the
+      # suite does not support yet would fail it test by test; stop here instead.
+      - name: TeX Live year is supported
+        env:
+          YEAR: ${{ steps.tlfp.outputs.year }}
+        run: |
+          echo "::notice::macOS tests TeX Live $YEAR (Homebrew $(brew list --versions texlive))"
+          if [[ -z $YEAR || $YEAR -gt $TEXLIVE_NEWEST_SUPPORTED ]]; then
+            echo "::error::Homebrew's texlive is TeX Live '$YEAR', newer than the newest supported year $TEXLIVE_NEWEST_SUPPORTED. Add support for it (dump window, release.yml) and raise TEXLIVE_NEWEST_SUPPORTED in CI.yml."
+            exit 1
+          fi
       - name: cache engine dumps
         id: dumps
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ steps.tlfp.outputs.sources }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -571,16 +637,67 @@ jobs:
         run: tools/make_formats.sh
       - name: install cargo-nextest
         uses: taiki-e/install-action@nextest
+      # One compile for all four shards: the archive holds every test binary,
+      # the workspace binaries the tests spawn and the build-script outputs.
+      - name: archive test binaries
+        run: cargo nextest archive --cargo-profile ci --workspace --archive-file nextest-macos.tar.zst
+      - name: archive size
+        run: ls -la nextest-macos.tar.zst
+      - uses: actions/upload-artifact@v5
+        with:
+          name: macos-test-archive
+          path: |
+            nextest-macos.tar.zst
+            resources/dumps
+          retention-days: 1
+          # The archive is already zstd; a re-run of this job replaces it.
+          compression-level: 0
+          overwrite: true
+          if-no-files-found: error
 
-      - name: build test binaries
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --no-run
+  macos:
+    name: latexml-oxide CI (macOS shard ${{ matrix.shard }}/4)
+    needs: [changes, macos-build]
+    runs-on: macos-15
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      RUST_BACKTRACE: "1"
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+    steps:
+      - uses: actions/checkout@v6
+      # Runtime only: the test binaries load libxml2/libxslt from Homebrew's
+      # keg (the same prefix on every runner); `texlive` is the build job's
+      # (same image, no auto-update), the tree its dumps are stamped against;
+      # jing-trang for the schema guards.
+      - name: install dependencies
+        run: brew install libxml2 libxslt texlive jing-trang
+      - uses: actions/download-artifact@v6
+        with:
+          name: macos-test-archive
+          path: .
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@nextest
       - name: run tests
-        # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
-        # selects the NEXTEST profile (.config/nextest.toml). They are
-        # different knobs that happen to share a name.
+        # The archive keeps the build's Cargo profile. It is extracted into the
+        # workspace, so `target/` sits at the build job's absolute path, the
+        # one each test's compile-time `env!("CARGO_BIN_EXE_…")` names.
+        # `--profile ci` selects the NEXTEST profile (.config/nextest.toml).
         env:
           LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/4
+          # Only runs prebuilt binaries: the runner's stable cargo suffices, and
+          # it keeps rustup from fetching rust-toolchain.toml's nightly (plus
+          # rustfmt/clippy/rust-src) in every shard. No test spawns cargo/rustc.
+          RUSTUP_TOOLCHAIN: stable
+        run: >-
+          cargo nextest run --archive-file nextest-macos.tar.zst
+          --extract-to "$GITHUB_WORKSPACE" --extract-overwrite
+          --workspace-remap "$GITHUB_WORKSPACE"
+          --profile ci --partition hash:${{ matrix.shard }}/4
 
       - name: skipped tests (requirements not met)
         # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
@@ -599,14 +716,14 @@ jobs:
   # repo-settings change that must land WITH this workflow.
   ci-success:
     name: CI success
-    needs: [changes, lint, miri, asan, test, macos]
+    needs: [changes, lint, miri, asan, test, macos-build, macos]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: verify no required job failed
         run: |
-          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.asan.result }} ${{ needs.test.result }} ${{ needs.macos.result }}'
+          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.asan.result }} ${{ needs.test.result }} ${{ needs.macos-build.result }} ${{ needs.macos.result }}'
           echo "upstream job results: $results"
           for r in $results; do
             case "$r" in
