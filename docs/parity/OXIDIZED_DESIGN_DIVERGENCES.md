@@ -21133,17 +21133,21 @@ alpha_label_year_is_bibtex_s, declare_math_alphabet_command_after_a_space,
 urldef_command_with_parameter_text, extractcolorspec_command_after_a_space}` (repros `macro-state/`,
 `index-bib/`, `fonts-nfss/`, `package-bindings/`).
 
-### 1091. HTML keeps Presentation MathML when another math format is named; the others annotate it
+### 1091. Presentation MathML stays on when another math format is named; the others annotate it
 
-**Rule.** For the HTML formats Presentation MathML stays on unless `--nopmml` is given, and `--cmml`, `--unicodemath`
-and `--mathtex` add to it, in that fixed order, as `<m:annotation-xml>`/`<m:annotation>` of one `<m:semantics>`.
-With `--nopmml`, Content MathML is the primary, else UnicodeMath alone (an `ltx:text` per formula, as Perl's).
+**Rule.** Wherever Presentation MathML is defaulted on (the HTML formats, `--post`, an XML input) it stays on unless
+`--nopmml` is given, and `--cmml`, `--unicodemath` and `--mathtex` add to it, in that fixed order, as
+`<m:annotation-xml>`/`<m:annotation>` of one `<m:semantics>`. With `--nopmml`, Content MathML is the primary, else
+UnicodeMath alone (an `ltx:text` per formula, as Perl's).
 
 **Perl.** Config.pm:566-570 defaults `pmml` only when no math format is named, and LaTeXML.pm:504-556 makes the
 first named format the primary, the rest secondaries in command-line order. So `latexmlc --format=html5 --unicodemath`
 (or `--mathtex`) runs that processor alone, and the stylesheet, finding no `m:math`, prints the formula's TeX
 (LaTeXML-math-xhtml.xsl:38-65, `as-TeX`): the requested string never reaches the page. `--cmml` alone gives Content
-MathML, which no browser renders: browsers implement W3C MathML Core, whose elements are presentation markup.
+MathML, which no browser renders: W3C MathML Core lists no Content MathML element (§2.1, `apply`/`ci`/`cn` are
+"Unknown MathML elements") and renders only the first child of `<semantics>` (§3.7), so an annotation adds data
+without changing the page. Perl's `--post`/XML-input runs add `pmml` only for HTML/JATS (Config.pm:567-568), so there
+a named format is the primary.
 
 **Rust.** `ResolvedOptions`/`PostOptions::pmml` (`bin/latexml_oxide.rs`) and `post::MathFormats` (shared by the
 page-render workers). `--unicodemath` alone, like `--mathtex`, needs `--nopmml` to get Perl's output.

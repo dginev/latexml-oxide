@@ -21969,7 +21969,8 @@ Rust: the year part is BibTeX's (OXIDIZED_DESIGN_DIVERGENCES #1090). Guard
 ## 1289. A UnicodeMath annotation whose string is `0` is dropped
 
 MathML.pm:128 `elsif (my $string = $$secondary{string})` adds a string secondary only when it is true, and in Perl
-the string `0` is false, so `--unicodemath` gives every formula an `<m:annotation>` except one that reads `0`:
+the string `0` is false, so `--unicodemath` gives every formula an `<m:annotation>` except one that reads `0`; the
+standalone path tests the same way (Post.pm:394), so `--format=xml --unicodemath` leaves `$0$` an empty `<Math/>`:
 
 ```latex
 \documentclass{article}
@@ -21978,7 +21979,7 @@ the string `0` is false, so `--unicodemath` gives every formula an `<m:annotatio
 % Perl: <math …><mn>0</mn></math> and <math …><semantics><mi>x</mi><annotation encoding="application/x-unicodemath">𝑥</annotation></semantics></math>
 ```
 
-Rust: only an empty string is skipped (`MathML::combine_parallel`). Guard
+Rust: only an empty string is skipped, at both sites (`MathML::combine_parallel`, `process_math_node`). Guard
 `cluster_cli::unicodemath_output::unicodemath_annotates_presentation_mathml`.
 
 ## 1290. `latexmlmath --unicodemath` prints the string XML-escaped
@@ -22005,4 +22006,5 @@ latexmlmath --unicodemath=- '\sqrt[3]{x}'
 # Perl: \root 𝑥\of3   (expected ∛𝑥)
 ```
 
-Rust: `unicode_math.rs` reads the degree from the first argument.
+Rust: `unicode_math.rs` reads the degree from the first argument. Guard
+`unicode_math::tests::nth_root_reads_degree_then_radicand`.

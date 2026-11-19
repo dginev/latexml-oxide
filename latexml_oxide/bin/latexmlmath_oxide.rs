@@ -24,7 +24,8 @@ Options:
       --pmml, --presentationmathml  Presentation MathML (the default)
       --cmml, --contentmathml       Content MathML
       --xmath, --XMath              LaTeXML's internal <XMath> parse tree
-      --unicodemath                 UnicodeMath, a plain Unicode string (printed last)
+      --unicodemath[=FILE]          UnicodeMath, a plain Unicode string (printed last;
+                                    written to FILE instead, `-` is stdout)
   -q, --quiet                       Only warnings and errors; no progress/lexeme notes
   -h, --help                        Print this help
 
@@ -41,6 +42,31 @@ Convert whole documents with `latexml_oxide` instead.";
 
 const MATHML_NS: &str = "http://www.w3.org/1998/Math/MathML";
 const LATEXML_NS: &str = "http://dlmf.nist.gov/LaTeXML";
+
+/// Perl `outputText` (bin/latexmlmath L283-300): `-` prints the string and a newline
+/// on stdout; a file gets the string alone, its directory created first.
+fn write_unicodemath(string: &str, dest: Option<&str>) -> Result<()> {
+  match dest {
+    None | Some("-") => println!("{string}"),
+    Some(path) => {
+      let path = std::path::Path::new(path);
+      let written = match path.parent().filter(|d| !d.as_os_str().is_empty()) {
+        Some(dir) => std::fs::create_dir_all(dir).and_then(|()| std::fs::write(path, string)),
+        None => std::fs::write(path, string),
+      };
+      if let Err(e) = written {
+        Error!(
+          "latexmlmath",
+          "output",
+          format!("couldn't write UnicodeMath to {}", path.display()),
+          e
+        );
+        process::exit(1);
+      }
+    },
+  }
+  Ok(())
+}
 
 /// Perl `finalize` (`Core/Document.pm` L452, `$node->removeAttribute($n) if $n =~ /^_/`)
 /// drops every `_`-prefixed helper attribute — the ones holding fonts, source boxes, id
@@ -135,7 +161,13 @@ fn real_main() -> Result<()> {
     .any(|a| a == "--pmml" || a == "--presentationmathml");
   let cmml_flag = argv.iter().any(|a| a == "--cmml" || a == "--contentmathml");
   let xmath_flag = argv.iter().any(|a| a == "--xmath" || a == "--XMath");
-  let unimath_flag = argv.iter().any(|a| a == "--unicodemath");
+  // Perl `unicodemath=s` (bin/latexmlmath L57): `--unicodemath=FILE`, `-` for
+  // stdout; the bare flag is stdout too. The last one given wins (GetOpt::Long).
+  let unimath_dest: Option<String> = argv.iter().rev().find_map(|a| match a.as_str() {
+    "--unicodemath" => Some("-".to_string()),
+    _ => a.strip_prefix("--unicodemath=").map(String::from),
+  });
+  let unimath_flag = unimath_dest.is_some();
   let quiet_flag = argv.iter().any(|a| a == "--quiet" || a == "-q");
   argv.retain(|a| {
     ![
@@ -150,6 +182,7 @@ fn real_main() -> Result<()> {
       "-q",
     ]
     .contains(&a.as_str())
+      && !a.starts_with("--unicodemath=")
   });
   // Perl L169: `$pmml = '-' unless (defined $mathimage || ... || $xmath || $unimath)` —
   // with no conversion option, presentation MathML on stdout is the default.
@@ -312,7 +345,7 @@ fn real_main() -> Result<()> {
           vec![Box::new(latexml_post::unicode_math::UnicodeMath::new())];
         match latexml_post::Post::new().process_chain(vec![post_doc], &mut processors) {
           Ok(results) => match results[0].findnodes("//ltx:Math/ltx:text").first() {
-            Some(text) => println!("{}", text.get_content()),
+            Some(text) => write_unicodemath(&text.get_content(), unimath_dest.as_deref())?,
             None => {
               Error!(
                 "latexmlmath",

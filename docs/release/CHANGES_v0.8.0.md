@@ -51,7 +51,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     prints the string. The converter now writes scripts as Perl's does: sub/superscript codepoints where every
     character has one (`∫₀¹`, `𝑎⁻¹`, `𝑥'`), `┬`/`┴` for limits (`∑┬{𝑖=1}┴𝑛`), a prescript before its base. Unlike
     Perl, the annotation of `$0$` is kept (KNOWN_PERL_ERRORS #1289), `latexmlmath_oxide` does not XML-escape `<` and
-    `&` (#1290), and an nth root reads its degree and radicand in order (#1291). Guards
+    `&` (#1290), and an nth root reads its degree and radicand in order (#1291). The `title=` tooltip of a
+    reference reads a title's math through the same converter, so with or without the flag its scripts now read as
+    Perl's (`1 On 𝑥², 𝑎_{𝑖+1} and ∑_{𝑖=1}^𝑛{𝑦_𝑘}`), and a stored tag reads as its plain text, as Perl's
+    `getTextContent` (`\tag{$\mathrm{P_1}$}` gives `Equation P 1`, as Perl's latexmlpost does). Guards
     `cluster_cli::unicodemath_output::*`, `unicode_math::tests::*`.
 
   - **Five crash and Fatal roots of the 2026 arXiv run.** A counter whose reset list leads back to it

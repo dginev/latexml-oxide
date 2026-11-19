@@ -117,18 +117,9 @@ pub struct PostOptions<'a> {
   pub whatsout:                  latexml_post::extract::Whatsout,
 }
 
-/// The requested math formats, folded into the one math processor of the post chain.
-///
-/// Perl `LaTeXML.pm` L504-556 makes the first requested format the primary and the
-/// rest its parallel secondaries (`setParallel`), in command-line order; here
-/// Presentation MathML is the primary whenever it is on, else Content MathML, with
-/// Content MathML and UnicodeMath the secondaries, in that order (OXIDIZED_DESIGN
-/// #1091), so the result is one `<m:semantics>` with an `<m:annotation-xml>` /
-/// `<m:annotation>` per secondary (an independent pass per format once left the
-/// content tree as an orphan `<apply>` sibling of `<m:semantics>`, rendered as stray
-/// text). UnicodeMath alone is a primary of its own: a plain-text `ltx:text` per
-/// formula. Shared by the in-process renderer and the page-render workers so the two
-/// chains cannot drift.
+/// The requested math formats as the post chain's one math processor: a primary with
+/// its parallel secondaries (Perl `LaTeXML.pm` L504-556, order per OXIDIZED_DESIGN
+/// #1091), shared by the in-process renderer and the page-render workers.
 #[derive(Clone, Copy)]
 pub(crate) struct MathFormats {
   pub pmml:            bool,

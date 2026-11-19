@@ -4220,10 +4220,46 @@ mod unicodemath_output {
     );
   }
 
+  /// A cross-reference's `title=` reads a section title's math as UnicodeMath (Perl
+  /// `CrossRef.pm` L872-873), scripts included: Perl `latexmlc` gives this string
+  /// byte for byte, with or without `--unicodemath`.
+  #[test]
+  fn ref_title_reads_math_scripts_as_unicodemath() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("s.tex"),
+      "\\documentclass{article}\n\\begin{document}\n\
+       \\section{On $x^2$, $a_{i+1}$ and $\\sum_{i=1}^n y_k$}\\label{s}\n\
+       See \\ref{s}.\n\\end{document}\n",
+    )
+    .unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "s.tex",
+        "--format=html5",
+        "--nodefaultresources",
+        "--dest",
+        "s.html",
+      ])
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(
+      out.status.success(),
+      "stderr:\n{}",
+      String::from_utf8_lossy(&out.stderr)
+    );
+    let html = std::fs::read_to_string(work.path().join("s.html")).expect("read s.html");
+    assert!(
+      html.contains("title=\"1 On 𝑥², 𝑎_{𝑖+1} and ∑_{𝑖=1}^𝑛{𝑦_𝑘}\""),
+      "expected Perl's title string:\n{html}"
+    );
+  }
+
   #[test]
   fn latexmlmath_prints_unicodemath_as_plain_text() {
     let out = Command::new(env!("CARGO_BIN_EXE_latexmlmath_oxide"))
-      .args(["--quiet", "--unicodemath", "\\alpha_i\\leq x^2 < a \\& b"])
+      .args(["--quiet", "--unicodemath=-", "\\alpha_i\\leq x^2 < a \\& b"])
       .output()
       .expect("spawn latexmlmath_oxide");
     let stdout = String::from_utf8_lossy(&out.stdout);
