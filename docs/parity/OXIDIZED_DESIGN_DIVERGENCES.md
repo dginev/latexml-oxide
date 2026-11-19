@@ -21045,8 +21045,8 @@ different style, not covered. Guard
 Perl's psfig.sty.ltxml (and our `psfig_sty.rs`) is `RequirePackage('epsfig')` only, and psfig.sty 1.10 (0712.1995's
 copy) has `\def\figurepath{./:}` and `\def\psfigurepath#1{\edef\figurepath{#1:}}` (:122-123), the `:`-separated
 directories `\psfig` searches for its file (:162 `\DoPaths\figurepath`): papers that set it (run 397: ~54;
-cond-mat0010435, cond-mat0012297 `\psfigurepath{.:plot:figure}`) had an undefined-macro Error, the path's text in
-the output, and their figures unresolved (Perl the same error; pdflatex with the shipped psfig.sty 0). The binding
+cond-mat0012297 `\psfigurepath{.:plot:figure}`; cond-mat0010435, whose absolute author paths stay unresolved, loses only the
+Error) had an undefined-macro Error, the path's text in the output, and their figures unresolved (Perl the same error; pdflatex with the shipped psfig.sty 0). The binding
 defines both macros as psfig.sty does and puts each directory on the graphics search path as `\graphicspath` does
 (graphics.sty.ltxml L248-260, `GRAPHICSPATHS`). Guard `perfect_kernel_batchclustfix2::psfigurepath_is_the_graphics_path`
 (repro `package-bindings/psfigurepath`).

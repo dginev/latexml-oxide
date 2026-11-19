@@ -48,9 +48,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     shipped algorithm2e.sty 3.6 that takes it for hyperref numbers its lines without three Errors each (cs0602002); a
     pasj00 paper without the class sets `\timeform{2.5'}` as the class prints it, and has `\emissiontype`, the class's
     abbreviations (`\arcsec`, `\micron`, `\fd`) and `\draft` (astro-ph0201169, astro-ph0204505, 0706.0253); `\psfigurepath{a:b}` puts its directories on the graphics search path, so the
-    figures resolve (cond-mat0010435, cond-mat0012297); an elsart-style `\sep` in revtex4's `\keywords` is elsart's
-    separator (cond-mat0309530). Each was an `Error:undefined` (~230, ~180, ~125 and ~200 papers of the 2026 arXiv
-    run). Guards `perfect_kernel_batchclustfix2::*`; OXIDIZED_DESIGN_DIVERGENCES #1086, #1087, #1088, #1089.
+    figures resolve (cond-mat0012297; cond-mat0010435's absolute author paths lose only the Error); an elsart-style `\sep` in revtex4's `\keywords` is elsart's
+    separator (cond-mat0309530). Each was an `Error:undefined` (an estimated ~230, ~180, ~125 and ~200 papers of the
+    2026 arXiv run). Guards `perfect_kernel_batchclustfix2::*`; OXIDIZED_DESIGN_DIVERGENCES #1086, #1087, #1088, #1089.
   - **astron.sty's author-year labels, the 1998 aipproc's `\affiliationmark`, elsart.sty's switches, `\verb` in an
     argument.** A `\bibitem[\protect\astroncite{A}{Y}]` label under astron.sty or its copies (EslabStyle, ISOStyle,
     EAS), whose `\cite` the locked kernel `\cite` refuses, prints "A, Y" as the copy's `\citefull` defines it (was
