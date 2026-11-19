@@ -3313,7 +3313,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (MTREDUCEE +20, accepted by DG 2026-11-17 for the release, row R RATCHET-MTRE to lower: `kernel_title_marks`'s
   // fail-safes read the group, `\let`, `\thanks`/`\footnotemark`/`\@thefnmark` and conditional tokens of the body by
   // spelling; to move onto meanings)
-  ("latexml_engine/src/latex_constructs/mod.rs", 219),
+  // (NEXT397 +4: `read_verb_invocation` ends a `\verb` in an argument at a `}` outside its body's own braces, by the
+  // tokens' catcodes 1/2 — TeX's own reading of a group's end, not a spelling; OXIDIZED_DESIGN_DIVERGENCES #1085)
+  ("latexml_engine/src/latex_constructs/mod.rs", 223),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
   ("latexml_engine/src/latex_constructs/sect02.rs", 7),

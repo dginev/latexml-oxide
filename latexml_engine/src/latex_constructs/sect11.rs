@@ -2483,8 +2483,7 @@ fn cite_list(key: &str) -> String { s!("b@{key}") }
 /// Guard `perfect_kernel_batchnext397::astroncite_label_under_the_lock`.
 fn astroncite_from_refused_cite() -> Vec<Token> {
   let astroncite = T_CS!("\\astroncite");
-  if lookup_meaning(&astroncite).is_some() || lookup_meaning(&T_CS!("\\lx@dropped@cite")).is_none()
-  {
+  if is_defined_token(&astroncite) || !is_defined_token(&T_CS!("\\lx@dropped@cite")) {
     return Vec::new();
   }
   let Ok(Some(full)) = lookup_definition(&T_CS!("\\citefull")) else {
