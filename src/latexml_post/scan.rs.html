@@ -1260,34 +1260,38 @@
 <a href=#1260 id=1260 data-nosnippet>1260</a>    <span class="prelude-val">Some</span>(NodeType::ElementNode) =&gt; {
 <a href=#1261 id=1261 data-nosnippet>1261</a>      <span class="kw">let </span>name = c.get_name();
 <a href=#1262 id=1262 data-nosnippet>1262</a>      <span class="kw">if </span>name == <span class="string">"tag" </span>{
-<a href=#1263 id=1263 data-nosnippet>1263</a>        <span class="comment">// Honor open/close attributes on &lt;ltx:tag&gt;
-<a href=#1264 id=1264 data-nosnippet>1264</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>result = c.get_attribute(<span class="string">"open"</span>).unwrap_or_default();
-<a href=#1265 id=1265 data-nosnippet>1265</a>        result.push_str(<span class="kw-2">&amp;</span>title_text_content(doc, c));
-<a href=#1266 id=1266 data-nosnippet>1266</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(close) = c.get_attribute(<span class="string">"close"</span>) {
-<a href=#1267 id=1267 data-nosnippet>1267</a>          result.push_str(<span class="kw-2">&amp;</span>close);
-<a href=#1268 id=1268 data-nosnippet>1268</a>        }
-<a href=#1269 id=1269 data-nosnippet>1269</a>        result
-<a href=#1270 id=1270 data-nosnippet>1270</a>      } <span class="kw">else if </span>name == <span class="string">"Math" </span>{
-<a href=#1271 id=1271 data-nosnippet>1271</a>        <span class="comment">// Perl `CrossRef.pm` L872-873: `return unicodemath($doc, $node)` — the
-<a href=#1272 id=1272 data-nosnippet>1272</a>        // presentation branch of the math, in reading order. Without this a
-<a href=#1273 id=1273 data-nosnippet>1273</a>        // math title flattened to its XMApp/XMDual content tree (operator
-<a href=#1274 id=1274 data-nosnippet>1274</a>        // first: `= sin x x`) with every inter-token newline preserved.
-<a href=#1275 id=1275 data-nosnippet>1275</a>        </span><span class="kw">crate</span>::unicode_math::unicodemath(doc, c)
-<a href=#1276 id=1276 data-nosnippet>1276</a>      } <span class="kw">else </span>{
-<a href=#1277 id=1277 data-nosnippet>1277</a>        title_text_content(doc, c)
-<a href=#1278 id=1278 data-nosnippet>1278</a>      }
-<a href=#1279 id=1279 data-nosnippet>1279</a>    },
-<a href=#1280 id=1280 data-nosnippet>1280</a>    <span class="kw">_ </span>=&gt; String::new(),
-<a href=#1281 id=1281 data-nosnippet>1281</a>  }
-<a href=#1282 id=1282 data-nosnippet>1282</a>}
-<a href=#1283 id=1283 data-nosnippet>1283</a>
-<a href=#1284 id=1284 data-nosnippet>1284</a><span class="comment">// NOTE: Perl uses cloneNode(1) for deep DOM copies. Every node stored in the
-<a href=#1285 id=1285 data-nosnippet>1285</a>// ObjectDB is ADOPTED first (`ObjectDB::adopt_xml` — a deep copy into a
-<a href=#1286 id=1286 data-nosnippet>1286</a>// DB-owned document), so stored values live exactly as long as the DB and
-<a href=#1287 id=1287 data-nosnippet>1287</a>// never dangle into a page document that streaming has freed. Consumers still
-<a href=#1288 id=1288 data-nosnippet>1288</a>// deep-copy on materialization (`PostDocument::add_xml_node`, with cross-doc
-<a href=#1289 id=1289 data-nosnippet>1289</a>// namespace reconciliation + xml:id uniquification). Section titles are kept
-<a href=#1290 id=1290 data-nosnippet>1290</a>// as nodes (see `section_handler`); the derived string form is
-<a href=#1291 id=1291 data-nosnippet>1291</a>// `title_text_content`. Index `phrases`/`see_also` values are also stored as
-<a href=#1292 id=1292 data-nosnippet>1292</a>// (adopted) `Value::Xml`.
+<a href=#1263 id=1263 data-nosnippet>1263</a>        <span class="comment">// Honor open/close attributes on &lt;ltx:tag&gt; (Perl `CrossRef.pm` L866-870).
+<a href=#1264 id=1264 data-nosnippet>1264</a>        // Perl reads the tag's `textContent`, a formula's bare tokens with its
+<a href=#1265 id=1265 data-nosnippet>1265</a>        // fonts and scripts dropped (`latexmlc`: `\tag{$\mathrm{P_1}$}` "P1",
+<a href=#1266 id=1266 data-nosnippet>1266</a>        // `^\mathcal{S}` "S"); we read it as the rest of the title, its math as
+<a href=#1267 id=1267 data-nosnippet>1267</a>        // UnicodeMath ("P₁", "^𝒮"). OXIDIZED_DESIGN_DIVERGENCES #1094.
+<a href=#1268 id=1268 data-nosnippet>1268</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>result = c.get_attribute(<span class="string">"open"</span>).unwrap_or_default();
+<a href=#1269 id=1269 data-nosnippet>1269</a>        result.push_str(<span class="kw-2">&amp;</span>title_text_content(doc, c));
+<a href=#1270 id=1270 data-nosnippet>1270</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(close) = c.get_attribute(<span class="string">"close"</span>) {
+<a href=#1271 id=1271 data-nosnippet>1271</a>          result.push_str(<span class="kw-2">&amp;</span>close);
+<a href=#1272 id=1272 data-nosnippet>1272</a>        }
+<a href=#1273 id=1273 data-nosnippet>1273</a>        result
+<a href=#1274 id=1274 data-nosnippet>1274</a>      } <span class="kw">else if </span>name == <span class="string">"Math" </span>{
+<a href=#1275 id=1275 data-nosnippet>1275</a>        <span class="comment">// Perl `CrossRef.pm` L872-873: `return unicodemath($doc, $node)` — the
+<a href=#1276 id=1276 data-nosnippet>1276</a>        // presentation branch of the math, in reading order. Without this a
+<a href=#1277 id=1277 data-nosnippet>1277</a>        // math title flattened to its XMApp/XMDual content tree (operator
+<a href=#1278 id=1278 data-nosnippet>1278</a>        // first: `= sin x x`) with every inter-token newline preserved.
+<a href=#1279 id=1279 data-nosnippet>1279</a>        </span><span class="kw">crate</span>::unicode_math::unicodemath(doc, c)
+<a href=#1280 id=1280 data-nosnippet>1280</a>      } <span class="kw">else </span>{
+<a href=#1281 id=1281 data-nosnippet>1281</a>        title_text_content(doc, c)
+<a href=#1282 id=1282 data-nosnippet>1282</a>      }
+<a href=#1283 id=1283 data-nosnippet>1283</a>    },
+<a href=#1284 id=1284 data-nosnippet>1284</a>    <span class="kw">_ </span>=&gt; String::new(),
+<a href=#1285 id=1285 data-nosnippet>1285</a>  }
+<a href=#1286 id=1286 data-nosnippet>1286</a>}
+<a href=#1287 id=1287 data-nosnippet>1287</a>
+<a href=#1288 id=1288 data-nosnippet>1288</a><span class="comment">// NOTE: Perl uses cloneNode(1) for deep DOM copies. Every node stored in the
+<a href=#1289 id=1289 data-nosnippet>1289</a>// ObjectDB is ADOPTED first (`ObjectDB::adopt_xml` — a deep copy into a
+<a href=#1290 id=1290 data-nosnippet>1290</a>// DB-owned document), so stored values live exactly as long as the DB and
+<a href=#1291 id=1291 data-nosnippet>1291</a>// never dangle into a page document that streaming has freed. Consumers still
+<a href=#1292 id=1292 data-nosnippet>1292</a>// deep-copy on materialization (`PostDocument::add_xml_node`, with cross-doc
+<a href=#1293 id=1293 data-nosnippet>1293</a>// namespace reconciliation + xml:id uniquification). Section titles are kept
+<a href=#1294 id=1294 data-nosnippet>1294</a>// as nodes (see `section_handler`); the derived string form is
+<a href=#1295 id=1295 data-nosnippet>1295</a>// `title_text_content`. Index `phrases`/`see_also` values are also stored as
+<a href=#1296 id=1296 data-nosnippet>1296</a>// (adopted) `Value::Xml`.
 </span></code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["LATEXML_NS","MATHML_NS","USAGE"],"fn":["main","print_node_defaulted","real_main","strip_internal_attrs"],"static":["GLOBAL"]};
+window.SIDEBAR_ITEMS = {"constant":["LATEXML_NS","MATHML_NS","USAGE"],"fn":["main","print_node_defaulted","real_main","strip_internal_attrs","write_unicodemath"],"static":["GLOBAL"]};
