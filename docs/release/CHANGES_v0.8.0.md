@@ -48,7 +48,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     (math0306159, math0401181, math0508341), and a `\tag` in `\[` is printed (2008.12392; OXIDIZED_DESIGN_DIVERGENCES
     #1091). etoolbox's `\robustify` of a command that is a macro in LaTeX and a native binding here (`\ref`, `\uline`,
     `\it`, amsmath's `\sum`, `\uparrow`) leaves it alone: `\robustify{\ref}` had lost every reference (1812.10085),
-    the others errred "not a macro" (1508.06145, 1702.00233); a TeX primitive or a register keeps etoolbox's Error
+    the others erred "not a macro" (1508.06145, 1702.00233); a TeX primitive or a register keeps etoolbox's Error
     (#1092). The native pgfkeys accessors install only over TeX Live's `pgfkeys.code.tex`, so a paper's own pgf 2.00
     copy runs as written (1108.0463: 270 Errors → 1; 1010.2550, 0710.3603). doublespace's `\setstretch`
     (doublespace.sty:66; physics0003041, quant-ph0005132). Guards `perfect_kernel_batchclustfix3::{

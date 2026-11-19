@@ -21172,7 +21172,7 @@ amsmath.sty:2950-2951 `\DeclareRobustCommand{\[}{\begin{equation*}}` and `\Decla
 so under amsmath `\[ … \end{equation*}` and `\begin{equation*} … \]` pair, clean in pdflatex. Perl's amsmath binding
 keeps the kernel's `\[` (latex_constructs.pool.ltxml:2070, sect07.rs), and `\end{equation*}` found no `{equation*}` open
 ("Can't close environment equation*"; run 397: 188 papers, math0306159:811-812, math0401181 n112.ltx:767,
-math0508341); a `\begin{equation*} … \]` ran the kernel's cheap intertext (`\lx@eDM@in@equation`) and errred on its
+math0508341); a `\begin{equation*} … \]` ran the kernel's cheap intertext (`\lx@eDM@in@equation`) and erred on its
 `\end{equation}`. The binding defines both, robust, as amsmath does (`amsmath_sty.rs`); the kernel's stay without
 amsmath. A matched `\[ … \]` gives the same `ltx:equation` as the kernel's `\[` did (the kernel's display and
 `{equation*}` share the numbering and the `\lx@mathdisplay@hook`), except that a `\tag` in it is now printed, as
