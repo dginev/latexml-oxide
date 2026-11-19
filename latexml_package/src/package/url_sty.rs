@@ -201,7 +201,12 @@ LoadDefinitions!({
   // Prior Rust had only one arg `{}` and no unread, so `\urldef\foo{...}`
   // digested whatever followed in the input stream instead of the braced arg.
   DefPrimitive!("\\urldef{}{}", sub[(cmd, start)] {
-    let cmd = cmd.to_string();
+    // url.sty:185 `\edef#1`: the first token is the command, the rest its parameter text (`\urldef{\wikisurvey2011}`
+    // defines `\wikisurvey` delimited by `2011`, which the document's `\wikisurvey2011` then calls; witness 1312.0976).
+    let Some((cs, params)) = defined_cs_with_parameters(&cmd)? else {
+      return Ok(Vec::new());
+    };
+    let cmd = cs.to_string();
     unread(start);
     let expansion : Vec<Digested> = digest_next_body(Some(T_CS!("\\endgroup")))?;
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): what the command prints, as text, kept beside it — a primitive's
@@ -210,7 +215,8 @@ LoadDefinitions!({
     // e-mail line of the row (the reading's, OD #901), not every author's affiliation.
     let text: String = expansion.iter().map(ToString::to_string).collect();
     assign_value(&s!("lx@urldef@text@{cmd}"), url_printed_text(&text), None);
-    DefPrimitive!(&cmd, { Ok(expansion.clone()) });
+    let body = PrimitiveBody::Closure(Rc::new(move |_args: Vec<ArgWrap>| Ok(expansion.clone())));
+    def_primitive(cs, params, Some(body), PrimitiveOptions::default())?;
     Ok(vec![])
   });
 });

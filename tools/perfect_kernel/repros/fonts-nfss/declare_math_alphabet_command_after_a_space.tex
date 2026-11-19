@@ -1,0 +1,10 @@
+% witness: 1810.09714, 1906.05222, 2011.04603, 2206.00709, 2209.01842 (\DeclareMathAlphabet{ \mathcal}{OMS}{zplm}{m}{n})
+% oracle:  pdflatex 0 errors: "Text L end." with a calligraphic L; Perl 0 errors (font="caligraphic")
+% engines: rust main 45de7916eeb = Fatal:Parameter:Unknown "mathcal" (the prototype " \mathcal{}" built from the text)
+% expect:  0 errors; the L in math, calligraphic
+% status:  RED (45de7916eeb) -> GREEN (CRASH397B)
+\documentclass{article}
+\DeclareMathAlphabet{ \mathcal}{OMS}{cmsy}{m}{n}
+\begin{document}
+Text $\mathcal{L}$ end.
+\end{document}

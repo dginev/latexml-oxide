@@ -1,0 +1,11 @@
+% witness: 1312.0976 (\urldef{\wikisurvey2011}\url{...}, then \wikisurvey2011 in the text)
+% oracle:  pdflatex 0 errors: "See https://example.org/a%26b now." (url.sty:185 \edef#1: \survey delimited by 2011)
+% engines: rust main 45de7916eeb = Fatal:Parameter:Unknown "2011"; Perl 1 Error (undefined \survey)
+% expect:  0 errors; the url text in the paragraph
+% status:  RED (45de7916eeb) -> GREEN (CRASH397B)
+\documentclass{article}
+\usepackage{url}
+\urldef{\survey2011}\url{https://example.org/a%26b}
+\begin{document}
+See \survey2011 now.
+\end{document}

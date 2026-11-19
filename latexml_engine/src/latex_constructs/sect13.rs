@@ -1235,9 +1235,10 @@ pub(crate) fn load() -> Result<()> {
   // bare `#3` read the next token as the alphabet's argument (`{\rm LP-HF}` → `\mathrm{L}P-HF`,
   // witnesses jpsj2 cond-mat0510381 and the ptptex/paper/artikel1 classes).
   DefPrimitive!("\\DeclareOldFontCommand{}{}{}", sub[(cmd, font, mathcmd)] {
-    // cmd contains a CS token like \bf; get the first token
-    let cmd_cs = *cmd.unlist_ref().first()
-      .ok_or("DeclareOldFontCommand: expected a CS token")?;
+    // The command (`\bf`) is the argument's first non-space token, as TeX reads `#1` (`defined_cs`).
+    let Some((cmd_cs, _)) = defined_cs(&cmd)? else {
+      return Ok(Vec::new());
+    };
     let mut math = vec![T_CS!("\\lx@math@alphabet@switch"), T_BEGIN!()];
     math.extend(Explode!(cmd_cs.to_string()));
     math.push(T_END!());

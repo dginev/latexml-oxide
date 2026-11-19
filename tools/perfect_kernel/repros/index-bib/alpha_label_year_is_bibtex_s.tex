@@ -1,0 +1,20 @@
+% witness: the CRASH397B review's probe (an alpha label's year, MakeBibliography.pm:501 against alpha.bst:1047)
+% oracle:  pdflatex + bibtex 0 errors: labels [Bro99] [Jonss] [Knu99] [Lam94] [Smi3a] (alpha.bst:1047 `year
+%          field.or.null purify$ #-1 #2 substring$`, the last two characters of the purified year)
+% engines: rust main 45de7916eeb = [BRO] [JON] [KNU99] [LAM94] [SMI23] (bytes 2-4 from four bytes up); CRASH397B round 0
+%          = [BRO9] [JON p] [KNU] [LAM94] [SMI23] (Perl's substr($yrtext, 2, 2)); Perl the same (KNOWN_PERL_ERRORS #1288)
+% expect:  0 errors; year parts 99, ss, 99, 94, 23 (the date's four-digit year where it has one, as Perl's year tag,
+%          so amsrefs dates like 2010nov keep 10 (2308.14725); the name part, KNU against Knu, is Perl's and stays)
+% status:  RED (CRASH397B round 0) -> GREEN (CRASH397B round 1)
+% file a.bib:
+%   @book{k99, author={Knuth, Donald}, title={Two digit}, publisher={P}, year={99}}
+%   @book{k4, author={Lamport, Leslie}, title={Four digit}, publisher={P}, year={1994}}
+%   @book{k2023a, author={Smith, John}, title={Suffix}, publisher={P}, year={2023a}}
+%   @book{kip, author={Jones, Ann}, title={Press}, publisher={P}, year={in press}}
+%   @book{k3, author={Brown, Bob}, title={Three}, publisher={P}, year={199}}
+\documentclass{article}
+\begin{document}
+See \cite{k99,k4,k2023a,kip,k3}.
+\bibliographystyle{alpha}
+\bibliography{a}
+\end{document}

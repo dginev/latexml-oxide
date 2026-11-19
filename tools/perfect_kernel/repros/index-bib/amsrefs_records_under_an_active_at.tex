@@ -1,0 +1,20 @@
+% witness: 1810.11524 (an amsrefs list whose active @ reads @book{...} records into \bib)
+% oracle:  pdflatex 0 errors: "See [1]. References [1] Maple 2017.0, Maplesoft, 2017."
+% engines: rust main 45de7916eeb = Fatal:Timeout:Recursion (the entry scaffold's \csname bib@field@...\endcsname read the
+%          active @, re-entering \bib); Perl 24 Errors (BibTeX.pool.ltxml:166 reads the scaffold under the live catcodes)
+% expect:  0 errors; one bibitem carrying "Maple 2017.0"
+% status:  RED (45de7916eeb) -> GREEN (CRASH397B)
+\documentclass{amsart}
+\usepackage{amsrefs}
+\newenvironment{rezabib}{\bibdiv\biblist\setupbib}{\endbiblist\endbibdiv}
+\def\setupbib{\catcode`@=\active}
+\begingroup\lccode`~=`@
+  \lowercase{\endgroup\def~}#1#{\gatherkey{#1}}
+\def\gatherkey#1#2{\gatherkeyaux{#1}#2\gatherkeyaux}
+\def\gatherkeyaux#1#2,#3\gatherkeyaux{\bib{#2}{#1}{#3}}
+\begin{document}
+See \cite{maple}.
+\begin{rezabib}
+@book{maple, title = {Maple 2017.0}, publisher = {Maplesoft}, year={2017}}
+\end{rezabib}
+\end{document}

@@ -1,0 +1,24 @@
+% witness: 2308.05200's mechanism (a reset list leading back to its counter, reached from a counter TeX steps only
+%          through LaTeXML's own list, as AEA.cls:796-799 leaves it), as a two-counter cycle: \numberwithin puts
+%          subsubsection in foo's list, \@addtoreset foo in subsubsection's
+% oracle:  pdflatex 0 errors: "1 A / 1.1 B / C x" (TeX's \cl@subsection is empty, so it never reaches the cycle;
+%          stepping it would loop in \@stpelt, "TeX capacity exceeded [grouping levels=255]")
+% engines: rust main 45de7916eeb = silent stack overflow (step_counter subsection -> reset subsubsection -> foo -> ...)
+% expect:  0 errors, 1 Warning (the cycle, naming subsubsection); the three titles in order
+% status:  RED (45de7916eeb) -> GREEN (CRASH397B)
+% note:    foo, not equation or section: \numberwithin{section}{equation} also makes LaTeXML's ids cyclic
+%          (\thesection@ID through \theequation@ID, which the class nests in section), a Fatal:Timeout:PushbackLimit
+%          of its own (open)
+\documentclass{article}
+\usepackage{amsmath}
+\newcounter{foo}
+\makeatletter\def\cl@subsection{}\makeatother
+\numberwithin{subsubsection}{foo}
+\makeatletter\@addtoreset{foo}{subsubsection}\makeatother
+\setcounter{secnumdepth}{2}
+\begin{document}
+\section{A}
+\subsection{B}
+\subsubsection{C}
+x
+\end{document}

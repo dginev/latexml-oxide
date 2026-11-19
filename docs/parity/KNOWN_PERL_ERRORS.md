@@ -21904,3 +21904,64 @@ Body.
 Rust: the notice is a note of the document (its `*` kept), each symbol label a mark-only note of its creator
 (OXIDIZED_DESIGN_DIVERGENCES #1063); 2602.04557. Guard
 `perfect_kernel_batchinvdag::an_unmarked_document_level_note_is_a_block_line`.
+
+## 1286. The BibTeX entry scaffold is read under the document's catcodes
+
+`\bibentry@create` (BibTeX.pool.ltxml:135-166) writes `\begin{bib@entry}…`, `\csname bib@field@<type>@<field>\endcsname{…}`
+as text and reads it with `Mouth->new($tex)`, under the live catcode table. A document that made `@` active in its
+bibliography (amsrefs records read through `@book{…}`, 1810.11524) fires its `@` inside the handler names:
+
+```latex
+\documentclass{amsart}\usepackage{amsrefs}
+\newenvironment{rezabib}{\bibdiv\biblist\catcode`@=\active}{\endbiblist\endbibdiv}
+\begingroup\lccode`~=`@\lowercase{\endgroup\def~}#1#{\gatherkey{#1}}
+\def\gatherkey#1#2{\gatherkeyaux{#1}#2\gatherkeyaux}
+\def\gatherkeyaux#1#2,#3\gatherkeyaux{\bib{#2}{#1}{#3}}
+\begin{document}\cite{maple}
+\begin{rezabib}
+@book{maple, title = {Maple 2017.0}, publisher = {Maplesoft}, year={2017}}
+\end{rezabib}
+\end{document}
+% Perl: 24 Errors ("Missing argument Until:,"); pdflatex: "[1] Maple 2017.0, Maplesoft, 2017."
+```
+
+Rust: the scaffold mouth reads `@` as data (`mouth::BIB_DATA_LITERALS`, OXIDIZED_DESIGN_DIVERGENCES #1090). Guard
+`perfect_kernel_batchcrash397b::amsrefs_records_under_an_active_at`.
+
+## 1287. A counter in its own reset list recurses without end
+
+`StepCounter` resets the counters in `\cl@<ctr>` through `ResetCounter` (Package.pm:748-751, 883-893), which recurses
+into each one's list with no record of where it has been, so a cycle never ends; LaTeXML steps sectioning counters TeX
+does not step (secnumdepth) and keeps its reset lists past a `\def\cl@<ctr>{}`, so a paper clean in pdflatex reaches
+it (AEA.cls:800 `\newcounter{subsubsection}[subsubsection]`, 2308.05200; the class defines its own sectioning counters at
+:797-802 — the example below stands in for that with an emptied `\cl@subsection`):
+
+```latex
+\documentclass{article}
+\makeatletter\let\c@subsubsection\relax\def\cl@subsection{}\makeatother
+\newcounter{subsubsection}[subsubsection]
+\setcounter{secnumdepth}{2}
+\begin{document}\section{A}\subsection{B}\subsubsection{C}Text.\end{document}
+% Perl: Fatal:perl:deep_recursion (ResetCounter, Package.pm:892); pdflatex: "1 A / 1.1 B / C Text."
+```
+
+Rust: the cascade skips a counter already on its path, with a Warning, or an Error where TeX's own lists loop too
+(OXIDIZED_DESIGN_DIVERGENCES #1090). Guards `perfect_kernel_batchcrash397b::{counter_in_its_own_reset_list_is_reset_once,
+sectioning_step_into_a_reset_cycle_is_an_error}`.
+
+## 1288. The alpha label drops a two- or three-character year
+
+MakeBibliography.pm:501 `length($yrtext) >= 2 ? substr($yrtext, 2, 2) : $yrtext` takes the third and fourth
+characters, so a short year gives no year part. BibTeX's alpha.bst:1047 takes the last two characters of the purified
+year (`purify$ #-1 #2 substring$`):
+
+```latex
+\documentclass{article}
+\begin{document}\cite{k99,k3}\bibliographystyle{alpha}\bibliography{a}\end{document}
+% a.bib: @book{k99, author={Knuth, Donald}, title={T}, publisher={P}, year={99}}
+%        @book{k3, author={Brown, Bob}, title={T}, publisher={P}, year={199}}
+% Perl: [KNU], [BRO9]; BibTeX: [Knu99], [Bro99]
+```
+
+Rust: the year part is BibTeX's (OXIDIZED_DESIGN_DIVERGENCES #1090). Guard
+`perfect_kernel_batchcrash397b::alpha_label_year_is_bibtex_s`.

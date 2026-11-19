@@ -756,8 +756,11 @@ LoadDefinitions!({
     let_i(&new_tok, &old_tok, None);
   });
   DefPrimitive!("\\DeclareCommandCopy{}{}", sub[(new_arg, old_arg)] {
-    let new_tok = new_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty new arg")?;
-    let old_tok = old_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty old arg")?;
+    // Each command is its argument's first non-space token, as TeX reads `#1` (`defined_cs`).
+    let new_cs = defined_cs(&new_arg)?;
+    let (Some((new_tok, _)), Some((old_tok, _))) = (new_cs, defined_cs(&old_arg)?) else {
+      return Ok(Vec::new());
+    };
     let_i(&new_tok, &old_tok, None);
   });
   def_macro_noop("\\ShowCommand Token")?;

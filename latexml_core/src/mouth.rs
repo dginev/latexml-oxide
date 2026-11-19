@@ -104,8 +104,8 @@ pub struct Mouth {
   /// floor and cheaper than a per-read flag check.
   last_token_start:       (usize, usize),
   foodtype:               FoodType,
-  /// Read `% & #` as ordinary characters — not comment, alignment tab,
-  /// parameter — for this mouth only. Set by `with_bib_data_literals()`; see
+  /// Read [`BIB_DATA_LITERALS`] (`% & # @`) as ordinary characters — not comment, alignment tab,
+  /// parameter, active — for this mouth only. Set by `with_bib_data_literals()`; see
   /// that method for the BibTeX rationale, and for why `_` is NOT here.
   /// Deliberately a per-Mouth field rather than a State catcode assignment: a
   /// nested mouth (a `.sty` raw-load triggered from inside the text) is a
@@ -1157,17 +1157,18 @@ impl Mouth {
   }
 
   /// The catcode this mouth reads `ch` with: the State's, except that a
-  /// [`Self::with_bib_data_literals`] mouth downgrades the four BibTeX-data
-  /// characters to OTHER when — and only when — they still carry their TeX
-  /// meaning.
+  /// [`Self::with_bib_data_literals`] mouth reads each of [`BIB_DATA_LITERALS`]
+  /// as OTHER when — and only when — it carries a TeX meaning (any catcode but
+  /// LETTER or OTHER).
   fn catcode_of(&self, ch: char) -> Catcode {
     let cc = lookup_catcode(ch).unwrap_or(Catcode::OTHER);
-    if !self.bib_data_literals {
-      return cc;
-    }
-    match (cc, ch) {
-      (Catcode::COMMENT, '%') | (Catcode::ALIGN, '&') | (Catcode::PARAM, '#') => Catcode::OTHER,
-      _ => cc,
+    if self.bib_data_literals
+      && BIB_DATA_LITERALS.contains(&ch)
+      && !matches!(cc, Catcode::LETTER | Catcode::OTHER)
+    {
+      Catcode::OTHER
+    } else {
+      cc
     }
   }
 
@@ -1775,6 +1776,13 @@ pub fn tokenize(text: impl Into<TeXString>) -> Tokens {
   use_main_state();
   result
 }
+/// The characters a [`Mouth::with_bib_data_literals`] mouth reads as data: `% & #`, which BibTeX's lexer hands back as
+/// ordinary characters (OXIDIZED_DESIGN #74), and `@`, which the entry scaffold's handler names
+/// (`\csname bib@field@…\endcsname`) carry. A document's active `@` (1810.11524's amsrefs list reads `@book{…}`
+/// records through it) re-entered `\bib` from inside the scaffold without end; Perl, reading the scaffold under the
+/// live catcodes (BibTeX.pool.ltxml:166), errs 24 times.
+pub const BIB_DATA_LITERALS: [char; 4] = ['%', '&', '#', '@'];
+
 /// Tokenize a string under the standard catcode table, reading `% & #` as
 /// ordinary characters rather than comment, alignment tab and parameter.
 ///
