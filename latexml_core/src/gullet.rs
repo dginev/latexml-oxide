@@ -3290,7 +3290,13 @@ pub fn read_balanced_with_close(
                 && (expansion_level == Full || !optional_arg_protected(&defn))
               {
                 local_current_token(token);
-                let mut expansion = defn.invoke(false)?;
+                // A closure that expands its argument (`Expand!`, `\lx@ifundefined`) recurses into this read, past
+                // `read_x_token`'s depth count: count it too, so `\def\x{\@ifundefined{\x}{}{}}` ends in the
+                // recursion Fatal (TeX: "capacity exceeded [input stack size]"), not a stack overflow (CCJNL397).
+                let mut expansion = {
+                  let _depth_guard = ExpandDepthGuard::enter()?;
+                  crate::stack_guard::maybe_grow(|| defn.invoke(false))?
+                };
                 crate::token::inherit_field_prov(token.prov, &mut expansion);
                 if expansion.is_empty() {
                   expire_current_token();

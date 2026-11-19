@@ -1118,6 +1118,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("avant", "sty", package::avant_sty::load_definitions),
   ("bbding", "sty", package::bbding_sty::load_definitions),
   ("beton", "sty", package::beton_sty::load_definitions),
+  ("bigfoot", "sty", package::bigfoot_sty::load_definitions),
   ("bezier", "sty", package::bezier_sty::load_definitions),
   ("bookman", "sty", package::bookman_sty::load_definitions),
   (

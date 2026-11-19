@@ -1,0 +1,17 @@
+% witness: the run-397 NEXT397 review (`Text\footnote{a \verb+x+ b}`); platex-tools/plarray.tex:20 (the footnote shape,
+%          guard perfect_kernel_batch56::verb_inside_pretokenized_argument_unreads_instead_of_running_away)
+% oracle:  latex.ltx:15485-15499 `\verb` opens a group with `\aftergroup\verb@balance@group`: in an argument read
+%          before it, its delimiter is never the active one, and the `}` that closes the argument ends it with
+%          "\verb illegal in argument". pdflatex: 3 `!` ("\verb illegal in argument" and its "Missing } inserted" /
+%          "Extra }" recovery), "Text1 tail." / "1 a x+ b". (`\mbox{\verb|m| after}` errs in pdflatex too, but
+%          ours digests `\mbox`'s argument in place, as Perl does: its `|` is active and no error is raised there.)
+% engines: rust MAIN922 0 errors (the argument is digested without its braces, so the scan runs out of tokens:
+%          Perl's `readUntil` unread, Core/Gullet.pm:683-685, silent as Perl is); Perl 0 errors
+% expect:  1 error "\verb illegal in argument", 0 warnings; the note keeps "x+ b" after an empty verbatim
+% status:  RED (MAIN922) -> GREEN (HARDEN397); guard
+%          perfect_kernel_batch56::verb_inside_pretokenized_argument_unreads_instead_of_running_away (the same path)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text\footnote{a \verb+x+ b} tail.
+\end{document}

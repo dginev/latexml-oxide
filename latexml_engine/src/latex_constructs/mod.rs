@@ -10268,15 +10268,19 @@ pub fn read_verb_invocation(token_delimited: bool) -> Result<Option<Vec<Token>>>
       terminated = true;
     }
     if !terminated {
-      // Perl `Gullet::readUntil` (Core/Gullet.pm:683-685): ran out of tokens
-      // before the delimiter — unread everything scanned and return an EMPTY
-      // body. That is where a `\verb` inside a pre-tokenized argument
-      // (`\footnote{… \verb+x+ …}`) lands: the closing `+` was frozen as OTHER
-      // when the argument was read, so the ACTIVE delimiter never matches and
-      // the scan hits the end of the argument. Keeping the scanned tokens as
-      // the body swallowed the rest of the note (an `<item>` inside
-      // `<verbatim>`; platex-tools/plarray.tex:20, RUST-ONLY). Guard:
-      // `verb_inside_pretokenized_argument_unreads_instead_of_running_away`.
+      // Ran out of tokens (`\footnote{a \verb+x+ b}`, the `+` frozen OTHER): unread them, an empty body (Perl
+      // `Gullet::readUntil`, Core/Gullet.pm:683-685), with TeX's "\verb illegal in argument" (latex.ltx:15489-15491),
+      // OD #1085. Witness platex-tools/plarray.tex:20; repro boxes-groups/verb_in_a_pretokenized_argument_errs.
+      if token_delimited {
+        Error!(
+          "unexpected",
+          "\\verb",
+          "Argument of \\@tempa has an extra }",
+          ""
+        );
+      } else {
+        Error!("unexpected", "\\verb", "\\verb illegal in argument", "");
+      }
       unread(Tokens::new(std::mem::take(&mut body)));
     }
     let body = Tokens::new(body);

@@ -54,7 +54,9 @@ see that section below.
 - **Archive sources unpack inside their directory.** A `.tar`/`.tar.gz` symbolic link is made only when its target,
   resolved through the links already there, stays inside the extraction directory, a hard link only to a file
   inside it; other links, and entries whose path would leave the directory, are skipped with a counted `Warning`.
-  `.zip` extraction (zip 9.7 or later) creates a link only when its target resolves inside the directory.
+  `.zip` extraction (zip 9.7 or later) creates a link only when its target resolves inside the directory. The
+  search for the main file walks real directories only, so a link to a directory above it (`a -> .`) cannot make it
+  cycle; a persistent `cortex_worker` drops the held archive `Warning`s of a job that failed before its report.
 - **Fully untrusted sources belong in a container or VM.** TeX itself, and Perl LaTeXML, can read any file the
   invoking user can read, and so can a conversion: run sources you do not trust inside a container or virtual
   machine.
