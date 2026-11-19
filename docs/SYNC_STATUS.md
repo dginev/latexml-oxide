@@ -412,6 +412,19 @@ Rules that keep this file honest and mergeable:
     with a false `frontmatter:unclaimed` Warning (base glues too; registered in the body it is right) — digest at
     registration only to test for text, emit the tokens; (d) a notice behind a macro of the paper's inside the hook's
     argument (`\AtBeginShipout{\mynotice}`) is not seen by the token scan. Post-release.
+  - ROBUSTIFYERR — (CLUSTFIX3 review, OD #1092; synthetic, no corpus witness) etoolbox's `\robustify` is a no-op where
+    TeX errs "not a macro" on a LaTeX `\mathchardef` that is a `DefMath` here (`\usepackage{etoolbox}\robustify{\alpha}`;
+    `\infty`, `\sum`/`\int` without amsmath) and on e-TeX's/pdfTeX's own primitives (`\middle`): pdflatex 1 Error, base 1,
+    now 0, output unchanged. Fix: add pdflatex's e-TeX/pdfTeX primitive names to `LATEX_PRIMITIVE_COMMANDS`
+    (`etoolbox_sty.rs`, `\meaning`-checked), and keep the Error for a `DefMath` whose LaTeX meaning is `\mathchar"…`
+    (fontmath.ltx), unless amsmath made it a macro. Post-release.
+  - TITLESEC395 — (INTERIM397g) Fatal `Expansion of '\format@title@@}' has unbalanced {}` (1910.11159, 2005.02481,
+    2005.06700; Perl the same, pdflatex clean): `read_arg` (`gullet.rs` ~:4048-4080, Perl Gullet.pm:732-744) accepts a
+    `}` where TeX raises "Argument of \x has an extra }" and drops the call (tex.web §395). Fix: §395's recovery (EASY
+    code, MED risk: every argument read; corpus A/B). Post-release.
+  - HYPERFAMILY — (INTERIM397g, OD #588) one family member's first use defines its whole family (`\phantomsection`
+    then `\providecommand\nameref` is skipped) — arXiv's hyperref build behaves the same; the `ar5iv_sty.rs` comment
+    "what pdflatex without the package sees" overclaims for the family's other names. Doc fix.
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.

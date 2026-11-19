@@ -74,8 +74,10 @@ fn add_to_env_hook(
   ))
 }
 
-/// tex.web's primitive table (its `primitive(…)` calls) without the parameters, less the names latex.ltx makes macros
-/// (`\end`, `\input`, `\par`, `\eqno`, `\leqno`, `\shipout`, `\underline`, `\-`): pdflatex `\meaning` of each.
+/// tex.web's primitive table (its `primitive(…)` calls: the commands, a few parameters riding along, and the font
+/// selector `\nullfont`, §553), less the names latex.ltx makes macros (`\end`, `\input`, `\par`, `\eqno`, `\leqno`,
+/// `\shipout`, `\underline`, `\-`): pdflatex `\meaning` of each. e-TeX's and pdfTeX's own primitives (`\middle`, …)
+/// are not listed (row R ROBUSTIFYERR).
 #[rustfmt::skip]
 const LATEX_PRIMITIVE_COMMANDS: &[&str] = &[
   "/", "above", "abovedisplayshortskip", "abovewithdelims", "accent", "advance", "afterassignment", "aftergroup",
@@ -91,7 +93,7 @@ const LATEX_PRIMITIVE_COMMANDS: &[&str] = &[
   "mathbin", "mathchar", "mathchardef", "mathchoice", "mathclose", "mathcode", "mathinner", "mathop", "mathopen",
   "mathord", "mathpunct", "mathrel", "meaning", "message", "mkern", "moveleft", "moveright", "mskip", "multiply",
   "muskip", "muskipdef", "noalign", "noboundary", "noexpand", "noindent", "nolimits", "nonscript", "nonstopmode",
-  "nulldelimiterspace", "number", "omit", "openin", "openout", "or", "outer", "over", "overline", "overwithdelims",
+  "nulldelimiterspace", "nullfont", "number", "omit", "openin", "openout", "or", "outer", "over", "overline", "overwithdelims",
   "parshape", "patterns", "penalty", "radical", "raise", "read", "relax", "right", "romannumeral", "scriptfont",
   "scriptscriptfont", "scriptscriptstyle", "scriptstyle", "scrollmode", "setbox", "setlanguage", "sfcode", "show",
   "showbox", "showlists", "showthe", "skip", "skipdef", "span", "special", "string", "textfont", "textstyle", "the",
