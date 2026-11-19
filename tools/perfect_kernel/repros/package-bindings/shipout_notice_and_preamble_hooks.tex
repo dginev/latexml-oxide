@@ -1,19 +1,25 @@
 % witness: 2309.06611 (root.tex:113 \AtBeginShipoutNext{\AtBeginShipoutUpperLeft{...}}: the IEEE copyright notice),
 %          2403.15239 (main.tex:60-61, the conference line); a preamble \AtBeginShipout, as lpor2014.cls:2987
-%          (1503.07687) and the A&A/mnras preambles (1601.07542, 1605.02911), beside a body one (review S1)
-% oracle: pdflatex with \usepackage{atbegshi}: "Notice text" at the page's upper left, "Body." 0 errors
+%          (1503.07687) and the A&A/mnras preambles (1601.07542, 1605.02911), beside a body one (review S1);
+%          2302.00362 (root.tex:43 \AtBeginShipoutFirst{\raisebox{0cm}{\parbox{…}{…}}}: "Preprint of the paper which
+%          appeared in: European Conference on Mobile Robots (ECMR) 2021"), a page box's \put in \AtBeginShipoutNext
+% oracle: pdflatex with \usepackage{atbegshi}: "FirstNotice text" above the first page's text, "BoxNotice words" and
+%         "Notice text" off the page's upper left, "Body." 0 errors
 % engines: rust MAIN924 = 3 errors (undefined \AtBeginShipout, \AtBeginShipoutNext, \AtBeginShipoutUpperLeft), no note;
 %          round 1 = 1 error (the preamble use undefined, its stub blocking the body provide), no note; Perl not run
-% expect: 0 Errors, 0 Warnings; one publication note "Notice text" (registered twice); no "X", no "P"
+% expect: 0 Errors, 0 Warnings; three publication notes of their words, "FirstNotice text", "BoxNotice words" and
+%         "Notice text" (registered twice), no picture; no "X", no "P"
 % mechanism: ar5iv.sty preload, provide on first use (DG rulings 2026-11-19; OXIDIZED_DESIGN #588)
-% status: RED (MAIN924, HYPERPROV round 1) -> GREEN (HYPERPROV round 2)
+% status: RED (MAIN924, HYPERPROV round 1; round 2 dropped FirstNotice and BoxNotice) -> GREEN (HYPERPROV round 3)
 % preload: ar5iv.sty
 \documentclass{article}
 \makeatletter
 \def\@copyrightnotice{\AtBeginShipout{\gdef\pre{P}}}
 \@copyrightnotice
 \makeatother
+\AtBeginShipoutFirst{\raisebox{0cm}{\parbox{0.9\textwidth}{\centering FirstNotice text}}}
 \begin{document}
+\AtBeginShipoutNext{\AtBeginShipoutAddToBox{\put(100,-100){BoxNotice words}}}
 \AtBeginShipout{X} Body.
 \AtBeginShipoutNext{\AtBeginShipoutUpperLeft{\put(20,-40){\parbox{5cm}{Notice text}}}}
 \AtBeginShipoutNext{\AtBeginShipoutUpperLeft{\put(20,-40){\parbox{5cm}{Notice text}}}}

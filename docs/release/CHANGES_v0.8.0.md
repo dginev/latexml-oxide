@@ -49,8 +49,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     its `\hypersetup`, `\hyperref`, `\hyperlink`, `\hypertarget`, `\phantomsection`, `\autoref`, `\nameref` and
     `\pdfbookmark` (math0202134, 0807.4242, 0803.2070), and the shipout hooks of the atbegshi that hyperref 6.77a-7.01m
     loaded (`\AtBeginShipout`, `\AtBeginShipoutNext`, `\AtBeginShipoutBox` and their siblings; 1503.07687's class,
-    2309.06611). The hooks print nothing, except a page notice set with `\AtBeginShipoutUpperLeft`, kept once as a
-    publication note (2309.06611's IEEE copyright). Nothing is predefined, a paper's own or loaded definitions win, and
+    2309.06611). The hooks print nothing, except what pdflatex prints on a page (`\AtBeginShipoutUpperLeft`,
+    `\AtBeginShipoutAddToBox`, `\AtBeginShipoutFirst`), kept once as a publication note of its words (2309.06611's IEEE
+    copyright, 2302.00362's conference line). Nothing is predefined, a paper's own or loaded definitions win, and
     nothing changes without the preload. Guards `perfect_kernel_batchhyperprov::*`; OXIDIZED_DESIGN_DIVERGENCES #588.
 
   - **Five crash and Fatal roots of the 2026 arXiv run.** A counter whose reset list leads back to it

@@ -11916,12 +11916,19 @@ full 2026 run by extrapolation, 73 counted so far; hep-th0702068, 0704.3213, hep
 `\hypersetup` with its keys, `\hyperref`, `\hyperlink`, `\hypertarget`, `\phantomsection`, `\autoref` with its tag and
 English names, nameref's `\nameref`, the bookmark commands (math0202134, hep-th0308186, 0807.4242, 0803.2070); and the
 user commands of atbegshi, which hyperref 6.77a (2007-10-29) to 7.01m (2025-05-20) loaded (hyperref ChangeLog.txt
-:1575, :37; atbegshi-ltx.sty :52-71). A target numbered before the first `\autoref` has no autoref tag, so a reference
-back to it shows the title form. The hooks drop their material unrun (page-shipout material has no HTML
-counterpart), except what a page's upper-left picture holds — `\AtBeginShipoutUpperLeft…`, directly or in the
-material of `\AtBeginShipout`, `…Next`, `…First` — which is the paper's page notice and is kept once as a publication
-note (`role=note`, no label), set in the `picture` with `\unitlength` 1pt that atbegshi.sty :487-508 wraps it in:
-2309.06611's IEEE copyright, 2403.15239's conference line. A notice behind a macro of the paper's is not seen.
+:1575, :37; atbegshi-ltx.sty :52-71). A target numbered before the paper's first `\autoref` has no autoref tag (the
+tag formatter is defined at that first use), so a reference back to it shows the target's title, or for an untitled one
+its enclosing unit's (an equation reads as its section's title), not hyperref's "Equation 1": 2 of 74 autorefs on 4
+witnesses (0803.2070 `#Ch0.E1`, 1010.2520 `#S2.SS1`; row R AUTOREFBACK). What pdflatex prints on a page through the
+hooks — a page's upper-left picture (`\AtBeginShipoutUpperLeft…`), its background or foreground box
+(`\AtBeginShipoutAddToBox…`, atbegshi-ltx.sty :59-62), the first page's material (`\AtBeginShipoutFirst`), directly
+or in the material of `\AtBeginShipout`, `…Next` — is the paper's page notice and is kept once as a publication note
+(`role=note`, no label); the rest of the hook material (`\AtBeginShipoutDiscard`, `\setbox\AtBeginShipoutBox…`,
+assignments) is dropped unrun. The note carries the words, not the page geometry: atbegshi's `picture(0,0)` is not set
+up, a `\put(x,y){…}` keeps its `{…}`, material with a picture (a `tikzpicture` overlay) gives its text alone, and
+material printing no text (a rule, an image, 1612.04433's tikz highlighter) makes no note. Witnesses
+2309.06611's IEEE copyright, 2403.15239's conference line, 2302.00362's "Preprint of the paper which appeared in:
+European Conference on Mobile Robots (ECMR) 2021" (printed after an Error before). A notice behind a macro of the paper's is not seen.
 `\AtBeginShipoutBox` is the kernel's `\ShipoutBox`, `\AtBeginShipoutOriginalShipout` is `\shipout`, the
 `\ShipoutBox{Height,Depth,Width}` are 0pt. Preamble uses (85% of the run's `\AtBeginShipout` papers, 97 of 114:
 lpor2014.cls:2987 in 1503.07687, A&A and mnras preambles 1601.07542, 1605.02911) and body uses (1607.05658,

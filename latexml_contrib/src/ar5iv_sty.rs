@@ -330,34 +330,87 @@ const ATBEGSHI_COMMANDS: &[&str] = &[
   "\\ShipoutBoxWidth",
 ];
 
-/// atbegshi's user commands with the shipout they hook into absent. What a page's upper-left picture holds
-/// (`\AtBeginShipoutUpperLeft…`, directly or inside the material of `\AtBeginShipout`, `…Next`, `…First`) is the
-/// paper's page notice — 2309.06611's IEEE copyright, 2403.15239's conference line — and is kept once as a publication
-/// note, set in the `picture` with `\unitlength` 1pt that atbegshi.sty :487-508 wraps it in; the rest of the material
-/// is dropped unrun (page-shipout material has no HTML counterpart). `\AtBeginShipoutBox` is the kernel's
-/// `\ShipoutBox`, `\AtBeginShipoutInit` and `\AtBeginShipoutDiscard` do nothing, the shipout box's dimensions are 0pt.
+/// atbegshi's user commands with the shipout they hook into absent. What pdflatex prints on a page — a page's
+/// upper-left picture (`\AtBeginShipoutUpperLeft…`), its background or foreground box (`\AtBeginShipoutAddToBox…`), the
+/// first page's material (`\AtBeginShipoutFirst`), directly or inside the material of `\AtBeginShipout` and `…Next` — is
+/// the paper's page notice (2309.06611's IEEE copyright, 2403.15239's conference line, 2302.00362's "Preprint of the
+/// paper which appeared in: …") and is kept once as a publication note; the rest of the hook material is dropped
+/// unrun. `\AtBeginShipoutBox` is the kernel's `\ShipoutBox`, `\AtBeginShipoutInit` and `\AtBeginShipoutDiscard` do
+/// nothing, the shipout box's dimensions are 0pt.
 fn define_atbegshi_hooks() -> Result<()> {
   DefMacro!("\\AtBeginShipoutUpperLeft{}", "\\lx@arxiv@shipout@note{#1}");
   DefMacro!(
     "\\AtBeginShipoutUpperLeftForeground{}",
     "\\lx@arxiv@shipout@note{#1}"
   );
-  DefMacro!("\\AtBeginShipout{}", sub[(material)] { Ok(shipout_notes(&material)) });
-  DefMacro!("\\AtBeginShipoutNext{}", sub[(material)] { Ok(shipout_notes(&material)) });
-  DefMacro!("\\AtBeginShipoutFirst{}", sub[(material)] { Ok(shipout_notes(&material)) });
-  def_macro_noop("\\AtBeginShipoutAddToBox{}")?;
-  def_macro_noop("\\AtBeginShipoutAddToBoxForeground{}")?;
-  // repeated material (a hook registered again, or once per page) makes one note
-  DefMacro!("\\lx@arxiv@shipout@note{}", sub[(material)] {
+  DefMacro!("\\AtBeginShipoutAddToBox{}", "\\lx@arxiv@shipout@note{#1}");
+  DefMacro!(
+    "\\AtBeginShipoutAddToBoxForeground{}",
+    "\\lx@arxiv@shipout@note{#1}"
+  );
+  DefMacro!("\\AtBeginShipout{}", sub[(material)] { Ok(Tokens::new(shipout_notes(&material).0)) });
+  DefMacro!("\\AtBeginShipoutNext{}", sub[(material)] { Ok(Tokens::new(shipout_notes(&material).0)) });
+  // (the first page's material is printed itself, beside the notes it holds)
+  DefMacro!("\\AtBeginShipoutFirst{}", sub[(material)] {
+    let (mut notes, rest) = shipout_notes(&material);
+    notes.push(T_CS!("\\lx@arxiv@shipout@note"));
+    notes.push(T_BEGIN!());
+    notes.extend(rest);
+    notes.push(T_END!());
+    Ok(Tokens::new(notes))
+  });
+  // The note carries the words, not the page geometry: the material is set in a group where `\put(x,y){…}` keeps only
+  // its `{…}` (atbegshi's `picture(0,0)` is not set up), and material with a picture (a `tikzpicture` overlay, a
+  // `picture`) gives its text alone. Material printing no text (a rule, an image, 1612.04433's tikz highlighter) and
+  // material already noted (a hook registered again, or once per page) make no note.
+  DefPrimitive!("\\lx@arxiv@shipout@note{}", sub[(material)] {
     let seen = s!("lx@arxiv@shipout@note:{}", material.to_string());
     if lookup_bool(&seen) {
-      return Ok(Tokens!());
+      return Ok(Vec::new());
     }
     AssignValue!(&seen => true, Scope::Global);
-    let mut note = TokenizeInternal!(r"\lx@add@pubnote[role=note,name={}]{\unitlength=1pt\relax\begin{picture}(0,0)").unlist();
-    note.extend(material.unlist());
-    note.extend(TokenizeInternal!(r"\end{picture}}").unlist());
-    Ok(Tokens::new(note))
+    let mut body = TokenizeInternal!(r"\hbox{\unitlength=1pt\relax\let\put\lx@arxiv@shipout@put").unlist();
+    body.extend(material.unlist_ref().iter().cloned());
+    body.push(T_END!());
+    let stuff = digest(Tokens::new(body))?;
+    let mut text = String::new();
+    ink_text_printed(&stuff, &mut text);
+    let words = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if !words.chars().any(char::is_alphanumeric) {
+      return Ok(Vec::new());
+    }
+    let source = material.to_string();
+    let content = if ["\\tikz", "\\pgfpicture", "picture}"].iter().any(|p| source.contains(p)) {
+      ExplodeText!(words)
+    } else {
+      let n = lookup_int("lx_arxiv_shipout_notes") + 1;
+      assign_value("lx_arxiv_shipout_notes", Stored::Int(n), Some(Scope::Global));
+      assign_value(&s!("lx_arxiv_shipout_note_{n}"), Stored::Digested(stuff), Some(Scope::Global));
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@arxiv@shipout@box{{{n}}}"))).unlist()
+    };
+    let mut note = TokenizeInternal!(r"\lx@add@pubnote[role=note,name={}]{").unlist();
+    note.extend(content);
+    note.push(T_END!());
+    unread(Tokens::new(note));
+    Ok(Vec::new())
+  });
+  DefMacro!(
+    "\\lx@arxiv@shipout@put SkipSpaces Match:( Until:, Until:) {}",
+    "#4"
+  );
+  // (the `\hbox` `\lx@arxiv@shipout@note` digested, its list given where the note is digested)
+  DefPrimitive!("\\lx@arxiv@shipout@box{}", sub[(n)] {
+    let Some(Stored::Digested(stuff)) = lookup_value(&s!("lx_arxiv_shipout_note_{}", n.to_string().trim())) else {
+      return Ok(Vec::new());
+    };
+    let items = stuff.unlist();
+    Ok(match items.as_slice() {
+      [hbox] => match hbox.data() {
+        DigestedData::Whatsit(w) => w.borrow().get_arg(2).map(Digested::unlist).unwrap_or_default(),
+        _ => items,
+      },
+      _ => items,
+    })
   });
   Let!("\\AtBeginShipoutInit", "\\@empty");
   Let!("\\AtBeginShipoutDiscard", "\\@empty");
@@ -377,21 +430,21 @@ fn define_atbegshi_hooks() -> Result<()> {
   Ok(())
 }
 
-/// The page notes in a shipout hook's material: a `\lx@arxiv@shipout@note{…}` for the argument of each
-/// `\AtBeginShipoutUpperLeft` / `\AtBeginShipoutUpperLeftForeground` in it, at any depth; nothing else of it.
-fn shipout_notes(material: &Tokens) -> Tokens {
-  let upper_left = [
+/// A shipout hook's material split: the page notes it holds — a `\lx@arxiv@shipout@note{…}` for the argument of each
+/// `\AtBeginShipoutUpperLeft…` / `\AtBeginShipoutAddToBox…` in it at any depth, an `\AtBeginShipoutFirst{…}` for each of
+/// those — and the rest of it, every atbegshi hook taken out with its argument (so nothing is noted twice).
+fn shipout_notes(material: &Tokens) -> (Vec<Token>, Vec<Token>) {
+  let noted = [
     T_CS!("\\AtBeginShipoutUpperLeft"),
     T_CS!("\\AtBeginShipoutUpperLeftForeground"),
+    T_CS!("\\AtBeginShipoutAddToBox"),
+    T_CS!("\\AtBeginShipoutAddToBoxForeground"),
   ];
+  let first = T_CS!("\\AtBeginShipoutFirst");
+  let hooks = [T_CS!("\\AtBeginShipout"), T_CS!("\\AtBeginShipoutNext")];
   let tokens = material.unlist_ref();
-  let mut notes = Vec::new();
-  let mut i = 0;
-  while i < tokens.len() {
-    i += 1;
-    if !upper_left.contains(&tokens[i - 1]) {
-      continue;
-    }
+  // (the end of the argument read from `i`: a balanced group or one token, spaces before it skipped)
+  let argument = |mut i: usize| -> (usize, usize) {
     while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE {
       i += 1;
     }
@@ -412,8 +465,31 @@ fn shipout_notes(material: &Tokens) -> Tokens {
     } else if i < tokens.len() {
       i += 1;
     }
-    notes.push(T_CS!("\\lx@arxiv@shipout@note"));
-    notes.extend_from_slice(&tokens[start..i]);
+    (start, i)
+  };
+  let (mut notes, mut rest) = (Vec::new(), Vec::new());
+  // (the hooks' arguments still open in `rest`: what they hold is dropped from it, their notes kept)
+  let mut dropped_until = 0;
+  let mut i = 0;
+  while i < tokens.len() {
+    let token = &tokens[i];
+    if noted.contains(token) || *token == first {
+      let (start, end) = argument(i + 1);
+      notes.push(if *token == first {
+        first.clone()
+      } else {
+        T_CS!("\\lx@arxiv@shipout@note")
+      });
+      notes.extend_from_slice(&tokens[start..end]);
+      i = end;
+      continue;
+    }
+    if hooks.contains(token) {
+      dropped_until = dropped_until.max(argument(i + 1).1);
+    } else if i >= dropped_until {
+      rest.push(token.clone());
+    }
+    i += 1;
   }
-  Tokens::new(notes)
+  (notes, rest)
 }

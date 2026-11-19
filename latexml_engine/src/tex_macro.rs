@@ -218,7 +218,15 @@ LoadDefinitions!({
     // expansion reaches latex.ltx's unexpandable `\let` head, which ends the
     // scan (`\count@=1\expandafter\empty\@ifstar{7}{5}*` assigns 1, then "7").
     // Guard: `ifnextchar_scans::expandafter_in_a_scan_stops_at_a_peek`.
-    match lookup_expandable(&xtok, None)? {
+    // (a family provided on first use, `kernel_autoload::provide_on_first_use`, is expanded once as now defined)
+    let mut defn = lookup_expandable(&xtok, None)?;
+    if defn.is_none()
+      && !has_meaning(&xtok)
+      && binding::kernel_autoload::provide_on_first_use(&xtok)?
+    {
+      defn = lookup_expandable(&xtok, None)?;
+    }
+    match defn {
       Some(defn) if !scan_stops_at_futurelet_peek(&defn) => {
         local_current_token(xtok);
         let invoked = defn.invoke(true)?;
@@ -230,19 +238,7 @@ LoadDefinitions!({
       },
       _ => {
         let undefined = !has_meaning(&xtok);
-        if undefined && binding::kernel_autoload::provide_on_first_use(&xtok)? {
-          // a family provided on first use (`kernel_autoload::provide_on_first_use`): expanded once as now defined
-          retract_scanned_braces(&skipped);
-          if let Some(defn) = lookup_expandable(&xtok, None)? {
-            local_current_token(xtok);
-            let invoked = defn.invoke(true)?;
-            expire_current_token();
-            skipped.extend(invoked.unlist());
-          } else {
-            retract_scanned_brace(&xtok);
-            skipped.push(xtok);
-          }
-        } else if undefined {
+        if undefined {
           retract_scanned_braces(&skipped);
           // Undefined token is an error, as expansion is expected.
           // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
