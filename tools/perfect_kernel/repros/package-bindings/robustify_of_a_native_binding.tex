@@ -1,0 +1,23 @@
+% etoolbox's `\robustify` of a command that is a macro in LaTeX and a native binding here (a constructor, a math
+% primitive, a primitive): etoolbox.sty:1267-1289 found "not a macro"; `\robustify{\ref}` rebuilt `\ref` from its inner
+% `\ref ` and left it an undefined `\etb@resrvda`, the reference lost.
+% witness: 1812.10085 (wiley-article.cls:771-775 `\robustify{\ref}`), 1508.06145 (`\robustify{\uparrow}{\sum}`),
+%          1702.00233 (`\robustify\it`); run 397: 119 + 69 papers
+% oracle:  pdflatex 0 errors: "1 A" / "See Section 1 here. Text slanted, under and ∑i xi ↑."
+% engines: rust (8c45481) 5 errors ("not a macro" x4, undefined `\etb@resrvda`), "See Section \etb@resrvda s:a"; perl the same shape
+% expect:  0 errors, 0 warnings; `<ref labelref="LABEL:s:a">`, italic "slanted", underlined "under", the math kept
+% guard:   perfect_kernel_batchclustfix3::robustify_of_a_native_binding
+% status:  GREEN (CLUSTFIX3, 2026-11-19; was RED)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{etoolbox}
+\usepackage[normalem]{ulem}
+\robustify{\uparrow}
+\robustify{\sum}
+\robustify\it
+\robustify\uline
+\AtBeginDocument{\robustify{\ref}}
+\begin{document}
+\section{A}\label{s:a}
+See Section~\ref{s:a} here. Text {\it slanted}, \uline{under} and $\sum_i x_i \uparrow$.
+\end{document}

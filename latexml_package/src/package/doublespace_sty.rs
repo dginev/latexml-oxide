@@ -9,4 +9,7 @@ LoadDefinitions!({
   DefEnvironment!("{singlespace}",  "#body", mode => "internal_vertical");
   DefEnvironment!("{doublespace}",  "#body", mode => "internal_vertical");
   DefEnvironment!("{spacing}{}",    "#body", mode => "internal_vertical");
+  // doublespace.sty:66 (the copy quant-ph0004056 ships; TeX Live has none). Witnesses physics0003041,
+  // quant-ph0005132. Guard `perfect_kernel_batchclustfix3::doublespace_setstretch`.
+  DefMacro!("\\setstretch{}", "\\renewcommand{\\baselinestretch}{#1}");
 });

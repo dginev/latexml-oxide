@@ -743,10 +743,17 @@ fn native_enabled() -> bool {
     .unwrap_or_else(|| std::env::var("LATEXML_PGFKEYS_NATIVE").as_deref() != Ok("0"))
 }
 
+/// The natives mirror TeX Live's file, whose one-argument `\pgfkeys@ifcsname` selects with `\pgfkeys@firstoftwo`/
+/// `\pgfkeys@secondoftwo` (pgfkeys.code.tex:27-35). A paper's own pgf 2.0 copy has neither helper and a delimited
+/// `\pgfkeys@ifcsname` (its :29), and keeps its raw code (witnesses 1108.0463, 1010.2550).
+fn loaded_file_has_tl_shape() -> bool {
+  has_meaning(&T_CS!("\\pgfkeys@firstoftwo")) && has_meaning(&T_CS!("\\pgfkeys@secondoftwo"))
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("pgfkeys.code", extension => Some(Cow::Borrowed("tex")), noltxml => true, reloadable => true);
-  if native_enabled() {
+  if native_enabled() && loaded_file_has_tl_shape() {
     // Slice 2's guard: the raw definition of each natively handled handler,
     // as loaded, so a later redefinition is honored.
     for h in NATIVE_HANDLERS {
