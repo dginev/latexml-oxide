@@ -2012,10 +2012,11 @@ refused like any other, so the kernel `\cite` reads `\cite[] Semiverbatim` and t
 math; astro-ph0001290, astro-ph0008362, astro-ph0005563). The kernel `\cite` reads
 `OptionalMatch:*` and drops it, as the natbib binding's `\cite*` does: one
 citation, only the label style differs — the rationale above. latex.ltx's own
-`\cite` has no star (`\cite*{k}` cites `*` there), so a paper with the kernel `\cite`
-alone gets a citation of `k` where pdflatex prints `[?]k`. The classes'
-`\astroncite`, defined only inside their refused `\cite`, stays undefined in a
-`\bibitem[\protect\astroncite{A}{Y}]` label (one Error).
+`\cite` has no star (`\cite*{k}` cites `*` there: latex.ltx writes `\citation{*}`, BibTeX's
+nocite-all, with no warning), so a paper with the kernel `\cite` alone gets a citation of `k`
+where pdflatex (TL 2025) prints `[]k`. The `\astroncite` of astron.sty and the classes that
+copy it (EslabStyle, ISOStyle, EAS; 0812.2799, 0812.4839), defined only inside their refused
+`\cite`, stays undefined in a `\bibitem[\protect\astroncite{A}{Y}]` label (one Error; row R).
 Guard `perfect_kernel_batchclustfix::starred_cite_under_the_lock`.
 
 Guards: `bib_raw_cite_redefinition_is_ignored` (raw redefinition refused) and
