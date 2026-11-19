@@ -1,0 +1,27 @@
+% witness: astro-ph0108490, astro-ph0201077, astro-ph0204110 (pasj00 papers whose source lacks pasj00.cls:
+%          `\SetRunningHead`, `\FigureFile`, `\lesssim` undefined under OmniBus; each figure the error's text)
+% oracle:  pasj00.cls (0704.3654's copy; pasj01.cls of 1505.02769 and pasj02.cls of 2504.06663 alike) :52-54
+%          `\SetRunningHead` stores `\@Author`/`\@runninghead`; :4122-4164 `\FigureFile(w,h){file}` is
+%          `\includegraphics[width=<w>mm,keepaspectratio]{\@figurepath/file}`; :3445-3446 amssymb's `\lesssim`;
+%          :2303, 3433-3444 the solar symbols; :1636-1637 `\yearcite`/`\authorcite`, the year or the author of the
+%          citation. Not in TeX Live: without it pdflatex stops at "File pasj00.cls not found"
+%          (harness limit); with 0704.3654's copy beside it, 0 errors
+% engines: Perl 6 errors on astro-ph0201077; rust MAIN917 4 errors (`\SetRunningHead`, `\FigureFile`, `\lesssim`, `\MO`) and
+%          the figure's graphic `<ERROR>\FigureFile</ERROR>`
+% expect:  0 errors, 1 warning (fig1.eps is absent); the figure holds `<graphics graphic="./fig1.eps">` at 75 mm and its
+%          caption; no running-head text; `\lesssim` and `M_\odot` in the math; `\authorcite`/`\yearcite` citations of
+%          m_89 (astro-ph0108490: an Error per `_` of the key)
+% status:  RED (MAIN917) -> GREEN (CLUSTFIX); guard perfect_kernel_batchclustfix::pasj00_without_its_class_keeps_its_figures
+% preload: ar5iv.sty
+\documentclass{pasj00}
+\begin{document}
+\SetRunningHead{S. Deguchi et al.}{SiO Masers}
+\begin{figure}
+\FigureFile(75mm,180mm){fig1.eps}
+\caption{Spectra.}
+\end{figure}
+with $\lesssim 5\,\MO$ accuracy, as \authorcite{m_89} found (\yearcite{m_89}).
+\begin{thebibliography}{}
+\bibitem[Makishima et al.(1989)]{m_89} Makishima, K., et al.\ 1989
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,18 @@
+% witness: astro-ph0003214 (and the `expected {` cluster of run 397: the 1998-2000 aipproc.cls shipped beside the paper)
+% oracle:  aipproc.cls v1.0a :85 `\newcommand*\affiliation[1]{\def\AIP@affiliation{#1}}`, :88-89 its own defaults
+%          `\author{AUTHOR here}` `\affiliation{AFFILIATION here}`; `\author{name}` is article's. pdflatex with the
+%          witness's copy (or this cut): 0 errors, "Shock Acceleration / Donald C. Ellison / Department of Physics, NCSU"
+% engines: Perl 2 errors (aipproc.cls.ltxml:82 `\author{} RequiredKeyVals`), rust MAIN917 2 errors ("Missing keyval
+%          arguments" at the copy's :89 and the document's `\author`), the affiliation lost
+% expect:  0 errors, 0 warnings; one creator "Donald C. Ellison" with the affiliation contact "Department of Physics, NCSU";
+%          the class's placeholders not shown
+% status:  RED (MAIN917) -> GREEN (CLUSTFIX); guard perfect_kernel_batchclustfix::aipproc_old_author_affiliation
+% preload: ar5iv.sty
+\documentclass{aipproc}
+\begin{document}
+\title{Shock Acceleration}
+\author{Donald C.~Ellison}
+\affiliation{Department of Physics, NCSU}
+\maketitle
+Text.
+\end{document}
