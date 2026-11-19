@@ -418,11 +418,19 @@ Perl's `$gullet->read…`: the gullet handle a macro body or a parameter-type re
 
 Perl's `$stomach`: the handle a primitive body and a `beforeDigest`, `afterDigest` or `properties` hook receive first (Primitive.pm:47-78, Constructor.pm:99-117).
 
-1 function, 1 call.
+9 functions, 11 calls.
 
 | call | documentation |
 |---|---|
+| `beginMode(string)`<br>`beginMode(string, bool)` | `beginMode(mode[, noframe])`: switch to `mode` (`"text"`, `"inline_math"`, …) in a new group (none with `noframe`). ([`begin_mode_opt`](latexml_core::stomach::begin_mode_opt)) |
+| `begingroup()` | Open a non-boxing group, as `\begingroup` does. ([`begingroup`](latexml_core::stomach::begingroup)) |
+| `bgroup()` | Open a boxing group, as `{` does (Perl's `$stomach->bgroup`). ([`bgroup`](latexml_core::stomach::bgroup)) |
+| `egroup()` | Close a boxing group (an Error when the group is a mode switch or `\begingroup`'s). ([`egroup`](latexml_core::stomach::egroup)) |
+| `endMode(string)`<br>`endMode(string, bool)` | `endMode(mode[, noframe])`: end `mode`, closing its group (an Error when the group is not that mode's). ([`end_mode_opt`](latexml_core::stomach::end_mode_opt)) |
+| `endgroup()` | Close a non-boxing group (an Error when the group is not `\begingroup`'s). ([`endgroup`](latexml_core::stomach::endgroup)) |
+| `enterHorizontal()` | Start the paragraph (horizontal mode) when in vertical mode, as TeX's `\leavevmode`. ([`enter_horizontal`](latexml_core::stomach::enter_horizontal)) |
 | `getGullet() -> Gullet` | `stomach.getGullet()`: the `Gullet` handle, Perl's `$stomach->getGullet`. |
+| `leaveHorizontal()` | End the paragraph when in one (an invisible `\par`), resuming vertical mode. ([`leave_horizontal`](latexml_core::stomach::leave_horizontal)) |
 
 ## `Font` methods
 

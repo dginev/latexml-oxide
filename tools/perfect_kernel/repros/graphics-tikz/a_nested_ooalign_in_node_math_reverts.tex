@@ -1,0 +1,14 @@
+% witness: 1901.06584 (`\fakebold` = scalerel's `\ThisStyle{\ooalign{…}}`, nested, in tikzcd arrow labels)
+% oracle:  pdflatex 0 errors
+% engines: rust MAIN911 = Fatal:panic whatsit.rs:344 "RefCell already mutably borrowed": the inner math's malformed
+%          close (svg:g left open in ltx:XMath) closes the outer ltx:Math, whose `tex` reverts the outer `\halign`
+%          while it is absorbed; perl: 2 errors (svg:g in ltx:block), the alignment reverted whole
+% expect:  no panic; 3 errors (the pre-existing malformed recovery), 3 warnings (2 of them the reversion's)
+% status:  RED (MAIN911) -> GREEN (PANIC397)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\node {$\ooalign{$\ooalign{L}$}$};
+\end{tikzpicture}
+\end{document}

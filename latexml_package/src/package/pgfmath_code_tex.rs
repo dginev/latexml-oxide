@@ -455,6 +455,21 @@ fn pgfmath_font() -> Option<Font> {
 /// Look up a TeX register value, return as points, and whether it is a count
 /// Perl: sub pgfmath_register (L487-493)
 fn pgfmath_register_lookup(cs: &str) -> (f64, bool) {
+  // A register computed from arguments (`\fontcharwd\font`m`) is not read here: pdflatex errs on it in a coordinate
+  // too ("You can't use `\fontcharwd' in restricted horizontal mode"), and its getter cannot run without them.
+  if lookup_register_definition(&T_CS!(cs))
+    .is_some_and(|r| r.parameters.is_some() && r.getter.is_some())
+  {
+    let _ = (|| -> Result<()> {
+      Error!(
+        "unexpected",
+        cs,
+        format!("pgfmath cannot read {cs} without its arguments")
+      );
+      Ok(())
+    })();
+    return (0.0, false);
+  }
   match lookup_register(cs, vec![]) {
     Ok(Some(reg)) => match reg {
       RegisterValue::Number(n) => (n.value_of() as f64, true),

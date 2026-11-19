@@ -4,7 +4,8 @@
 % witness: synthetic (security hardening; the luacode/directlua A/B population popSECLUA)
 % oracle:  lualatex --no-shell-escape: os.execute and io.popen return nil (no process runs), "X[nil] Y [none] Z"
 % engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
-% layout:  an empty cmod.so next to it (the guard writes one: a C module on package.cpath's ./?.so)
+% layout:  an empty cmod.so next to it, cmod.dll on Windows (the guard writes it: a C module on package.cpath's
+%   ./?.so, .\?.dll on Windows)
 % expect:  "X[nil] Y [none] Z"; 5 Errors (lua:sandbox os.execute, io.popen, require "socket", the C module
 %   "cmod", package.loadlib); no process runs, no library loads
 % status:  GREEN

@@ -624,6 +624,7 @@ mod perfect_kernel_batchp5c;
 /// in any of its spellings.
 mod perfect_kernel_batchp6b;
 mod perfect_kernel_batchp6e2;
+mod perfect_kernel_batchpanic397;
 mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.

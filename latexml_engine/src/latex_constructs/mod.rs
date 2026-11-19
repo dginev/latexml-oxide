@@ -5933,7 +5933,8 @@ pub fn note_length_allocated(cs: &Token) {
 struct Unevaluable;
 
 /// The length registers the length `tokens` state reads besides the line's (`LINE_REGISTERS`), expanded as their read
-/// expands them (`\newcommand\w{\figw}`).
+/// expands them (`\newcommand\w{\figw}`). Not a register read with arguments (`\fontcharwd\font`m`, `\dimen0`): no
+/// `\setlength` states one, and its getter cannot run without them (2105.01581's `\makebox[1.5\fontcharwd\font`m]`).
 fn stated_length_registers(tokens: &Tokens) -> Vec<Rc<Register>> {
   let _quiet = IgnoreDiagnosticsScope::new();
   begingroup();
@@ -5941,6 +5942,7 @@ fn stated_length_registers(tokens: &Tokens) -> Vec<Rc<Register>> {
     let mut found = Vec::new();
     while let Some(token) = read_x_token(None, false, None)? {
       if let Some(register) = lookup_register_definition(&token)
+        && register.parameters.is_none()
         && matches!(
           register.register_type(),
           Some(RegisterType::Dimension | RegisterType::Glue)
