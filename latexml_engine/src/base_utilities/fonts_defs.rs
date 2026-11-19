@@ -191,7 +191,7 @@ pub fn defined_cs(arg: &Tokens) -> Result<Option<(Token, Tokens)>> {
     .skip_while(|t| t.get_catcode() == Catcode::SPACE);
   match tokens.next() {
     Some(cs) if matches!(cs.get_catcode(), Catcode::CS | Catcode::ACTIVE) => {
-      Ok(Some((cs.clone(), Tokens::new(tokens.cloned().collect()))))
+      Ok(Some((*cs, Tokens::new(tokens.copied().collect()))))
     },
     _ => {
       let message = s!(
