@@ -2103,7 +2103,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("rest /boxes_lists.rs", 0),
   ("rest /defs/mod.rs", 0),
   ("rest /defs/tags_refnums.rs", 0),
-  ("rest /fonts_defs.rs", 12),
+  // (CRASH397B +2: `defined_cs` skips space tokens and takes a CS or active character, by catcode: tex.web §1215's
+  // `get_r_token`, a kernel scan, not a frontmatter decision)
+  ("rest /fonts_defs.rs", 14),
   ("rest /math_cleanup.rs", 0),
   ("rest /misc.rs", 14),
   ("rest /mod.rs", 0),
@@ -3224,7 +3226,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // REGCDE: the walk's `\global\let` (`global_let`: the engine's `assign_meaning`, `lookup_meaning`), no decision.
   ("latexml_core/src/binding/preamble_commands.rs", 2),
   // TABU2b +1: `run_trivlist_hook` names the kernel's own `\lx@trivlist@hook` to read its meaning (empty: skipped).
-  ("latexml_core/src/binding/counter/dialect.rs", 32),
+  // CRASH397B +2: the reset cascade's path and `reset_list_reaches` hold counter NAMES (`\cl@<ctr>` lists, Perl's
+  // `ToString($c)`, Package.pm:891), a state key and no token's spelling.
+  ("latexml_core/src/binding/counter/dialect.rs", 34),
   // QAB1b +2: `hook_has_code` reads lthooks' storage by meaning (`with_macro_body`'s `with_meaning`) where it expanded
   // `\IfHookEmptyTF`, and `\if:w I` (`hook_used_once`) compares the slot's first token with the character `I`; QAB2b -1.
   ("latexml_core/src/binding/def/dialect.rs", 42),
@@ -3258,7 +3262,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/keyval.rs", 1),
   ("latexml_core/src/keyvals.rs", 22),
   // (MEMA, 47 -> 46: `handle_escape` spells the name in a reused buffer instead of `s!("\\{}", ch)`, which counted)
-  ("latexml_core/src/mouth.rs", 46),
+  // (CRASH397B +1: `catcode_of` reads `BIB_DATA_LITERALS` by catcode, as the mouth's other catcode reads do)
+  ("latexml_core/src/mouth.rs", 47),
   ("latexml_core/src/parameter.rs", 34),
   ("latexml_core/src/rewrite/declare.rs", 7),
   // (PRESBX +2: `note_redefined` records the file whose load made a refused definition, `\@currname.\@currext`, as
