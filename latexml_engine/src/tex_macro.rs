@@ -229,7 +229,20 @@ LoadDefinitions!({
         }
       },
       _ => {
-        if !has_meaning(&xtok) {
+        let undefined = !has_meaning(&xtok);
+        if undefined && binding::kernel_autoload::provide_on_first_use(&xtok)? {
+          // a family provided on first use (`kernel_autoload::provide_on_first_use`): expanded once as now defined
+          retract_scanned_braces(&skipped);
+          if let Some(defn) = lookup_expandable(&xtok, None)? {
+            local_current_token(xtok);
+            let invoked = defn.invoke(true)?;
+            expire_current_token();
+            skipped.extend(invoked.unlist());
+          } else {
+            retract_scanned_brace(&xtok);
+            skipped.push(xtok);
+          }
+        } else if undefined {
           retract_scanned_braces(&skipped);
           // Undefined token is an error, as expansion is expected.
           // BUT The unknown token is NOT consumed, (see TeX B book, item 367)

@@ -43,13 +43,15 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
-  - **`\texorpdfstring` and atbegshi's shipout hooks under the ar5iv preload.** arXiv's build loads hyperref into every
-    paper, so the preload provides at `\begin{document}`, where still undefined, hyperref's `\texorpdfstring` (a title
-    keeps its TeX string; the PDF string was printed beside it after an Error, hep-th0702068) and the shipout hooks of
-    the atbegshi that hyperref loaded through 2019 (`\AtBeginShipout`, `\AtBeginShipoutNext`, `\AtBeginShipoutBox`
-    and their siblings), which take their material and print none of it (2309.06611, 1607.05658). A paper's own or
-    loaded definitions win; nothing changes without the preload, and a preamble use of the hooks keeps its Error. Guards
-    `perfect_kernel_batchhyperprov::*`; OXIDIZED_DESIGN_DIVERGENCES #588.
+  - **hyperref's and atbegshi's commands on first use under the ar5iv preload.** arXiv's build loads hyperref into every
+    paper, so the preload provides, the first time a paper uses one while undefined (preamble or body), hyperref's
+    `\texorpdfstring` (a title keeps its TeX string; the PDF string was printed beside it after an Error, hep-th0702068),
+    its `\hypersetup`, `\hyperref`, `\hyperlink`, `\hypertarget`, `\phantomsection`, `\autoref`, `\nameref` and
+    `\pdfbookmark` (math0202134, 0807.4242, 0803.2070), and the shipout hooks of the atbegshi that hyperref 6.77a-7.01m
+    loaded (`\AtBeginShipout`, `\AtBeginShipoutNext`, `\AtBeginShipoutBox` and their siblings; 1503.07687's class,
+    2309.06611). The hooks print nothing, except a page notice set with `\AtBeginShipoutUpperLeft`, kept once as a
+    publication note (2309.06611's IEEE copyright). Nothing is predefined, a paper's own or loaded definitions win, and
+    nothing changes without the preload. Guards `perfect_kernel_batchhyperprov::*`; OXIDIZED_DESIGN_DIVERGENCES #588.
 
   - **Five crash and Fatal roots of the 2026 arXiv run.** A counter whose reset list leads back to it
     (`\newcounter{subsubsection}[subsubsection]`, 2308.05200) is reset once per step, with a Warning (an Error where TeX's

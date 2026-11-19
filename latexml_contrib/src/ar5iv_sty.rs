@@ -146,8 +146,16 @@ LoadDefinitions!({
   // its `{\path{doi:…}}` entries were undefined (2605.07373, 2605.08166, 2605.12003).
   // OXIDIZED_DESIGN #588; guard `perfect_kernel_batch67a`.
   DefPrimitive!("\\lx@arxiv@provide@hyper@urls", {
-    let href = !IsDefined!(&T_CS!("\\href"));
-    let url = !IsDefined!(&T_CS!("\\url"));
+    // a preamble use left an Error's stub, which is no definition of the paper's (the reviewer's S1)
+    let undefined = |cs: &str| {
+      let token = T_CS!(cs);
+      if is_error_stub(&token) {
+        remove_error_stub(&token);
+      }
+      !IsDefined!(&token)
+    };
+    let href = undefined("\\href");
+    let url = undefined("\\url");
     if href || url {
       if !IsDefined!(&T_CS!("\\UrlFont")) {
         DefMacro!("\\UrlFont", "\\lx@fontencoding{ASCII}\\ttfamily");
@@ -170,17 +178,64 @@ LoadDefinitions!({
       }
       RequirePackage!("url");
     }
-    // The rest of arXiv's hyperref a paper relies on unloaded, provide-only too (DG ruling 2026-11-19):
-    // `\texorpdfstring`, which printed both its arguments (hep-th0702068's section titles), and the shipout hooks of
-    // the atbegshi that hyperref loaded through 2019, which have no HTML counterpart (2309.06611, 1607.05658). A
-    // preamble use (lpor2014.cls:2987, 1503.07687) precedes this step and stays undefined (OXIDIZED_DESIGN #588).
-    let _provide_only = definition::origin::ProvideOnlyGuard::new();
-    definition::origin::with_origin(definition::origin::DefinitionOrigin::Binding, || {
-      hyperref_sty::define_texorpdfstring()?;
-      define_atbegshi_hooks()
-    })?;
   });
   at_begin_document(Tokens!(T_CS!("\\lx@arxiv@provide@hyper@urls")))?;
+
+  // The rest of arXiv's hyperref a paper relies on unloaded is provided on first use, provide-only (DG ruling
+  // 2026-11-19): nothing is defined until an undefined name of a family is met, preamble or body, so `\ifdefined`,
+  // `\@ifundefined` and a paper's own `\newcommand` see what pdflatex without the package sees
+  // (`kernel_autoload::name_first_use_provider`). The families: hyperref's `\texorpdfstring`, which printed both its
+  // arguments (hep-th0702068's section titles); hyperref's user commands (math0202134 and hep-th0308186 `\hypersetup`,
+  // 0807.4242 `\hyperlink`/`\hypertarget`, 0803.2070 `\autoref`); and the atbegshi hyperref 6.77a-7.01m loaded
+  // (lpor2014.cls:2987 in 1503.07687, A&A and mnras preambles 1601.07542, 1605.02911; 2309.06611, 1607.05658).
+  // OXIDIZED_DESIGN #588.
+  for (provider, define, names) in [
+    (
+      "\\lx@arxiv@provide@texorpdfstring",
+      hyperref_sty::define_texorpdfstring as fn() -> Result<()>,
+      &["\\texorpdfstring"][..],
+    ),
+    (
+      "\\lx@arxiv@provide@atbegshi",
+      define_atbegshi_hooks,
+      ATBEGSHI_COMMANDS,
+    ),
+    (
+      "\\lx@arxiv@provide@hyperref",
+      define_hyperref_user_commands,
+      HYPERREF_USER_COMMANDS,
+    ),
+  ] {
+    def_macro(
+      T_CS!(provider),
+      None,
+      ExpansionBody::Closure(Rc::new(move |_args| {
+        // arXiv adds hyperref to LaTeX papers only: a plain TeX paper's `\hyperref` stays undefined (hep-th0404136)
+        if !lookup_bool("LaTeX.pool_loaded") {
+          return Ok(Tokens!());
+        }
+        // global, as a package loaded in the preamble: the first use may be inside a group (a section title)
+        let globaldefs = lookup_value("\\globaldefs").unwrap_or(Stored::Number(Number!(0)));
+        assign_value(
+          "\\globaldefs",
+          Stored::Number(Number!(1)),
+          Some(Scope::InPlace),
+        );
+        // inside a provide-only load (a fallback class's own first use) its guard is kept
+        let _provide_only =
+          (!definition::origin::provide_only()).then(definition::origin::ProvideOnlyGuard::new);
+        let defined =
+          definition::origin::with_origin(definition::origin::DefinitionOrigin::Binding, define);
+        assign_value("\\globaldefs", globaldefs, Some(Scope::InPlace));
+        defined?;
+        Ok(Tokens!())
+      })),
+      None,
+    )?;
+    for name in names {
+      binding::kernel_autoload::name_first_use_provider(&T_CS!(*name), T_CS!(provider));
+    }
+  }
 
   // Practical maximum for warnings
   AssignValue!("MAX_WARNINGS" => 10000i64, Scope::Global);
@@ -231,21 +286,79 @@ LoadDefinitions!({
   // we do not emulate it here. See Perl source L45-73 for context.
 });
 
-/// atbegshi's user commands as atbegshi-ltx.sty (2021/01/10 v1.0c, :52-66) defines them, with the shipout they hook
-/// into absent: every hook takes its material and drops it, `\AtBeginShipoutBox` is the kernel's `\ShipoutBox` (a
-/// box register of its own on a format without one), `\AtBeginShipoutInit` and `\AtBeginShipoutDiscard` do nothing.
+/// hyperref's user commands provided on first use (with `\nameref`, from the nameref hyperref loads).
+const HYPERREF_USER_COMMANDS: &[&str] = &[
+  "\\hypersetup",
+  "\\phantomsection",
+  "\\autoref",
+  "\\hyperref",
+  "\\hypertarget",
+  "\\hyperlink",
+  "\\nameref",
+  "\\pdfbookmark",
+  "\\currentpdfbookmark",
+  "\\subpdfbookmark",
+  "\\belowpdfbookmark",
+];
+
+/// The binding's definitions of [`HYPERREF_USER_COMMANDS`], hyperref itself not loaded.
+fn define_hyperref_user_commands() -> Result<()> {
+  hyperref_sty::define_hypersetup()?;
+  hyperref_sty::define_hyper_links()?;
+  hyperref_sty::define_hyper_targets()?;
+  hyperref_sty::define_autoref()?;
+  hyperref_sty::define_autoref_names()?;
+  hyperref_sty::define_pdfbookmarks()?;
+  nameref_sty::define_nameref()
+}
+
+/// atbegshi's user commands (atbegshi-ltx.sty 2021/01/10 v1.0c :52-71), provided on first use.
+const ATBEGSHI_COMMANDS: &[&str] = &[
+  "\\AtBeginShipout",
+  "\\AtBeginShipoutNext",
+  "\\AtBeginShipoutFirst",
+  "\\AtBeginShipoutAddToBox",
+  "\\AtBeginShipoutAddToBoxForeground",
+  "\\AtBeginShipoutUpperLeft",
+  "\\AtBeginShipoutUpperLeftForeground",
+  "\\AtBeginShipoutInit",
+  "\\AtBeginShipoutDiscard",
+  "\\AtBeginShipoutBox",
+  "\\AtBeginShipoutOriginalShipout",
+  "\\ShipoutBoxHeight",
+  "\\ShipoutBoxDepth",
+  "\\ShipoutBoxWidth",
+];
+
+/// atbegshi's user commands with the shipout they hook into absent. What a page's upper-left picture holds
+/// (`\AtBeginShipoutUpperLeft…`, directly or inside the material of `\AtBeginShipout`, `…Next`, `…First`) is the
+/// paper's page notice — 2309.06611's IEEE copyright, 2403.15239's conference line — and is kept once as a publication
+/// note, set in the `picture` with `\unitlength` 1pt that atbegshi.sty :487-508 wraps it in; the rest of the material
+/// is dropped unrun (page-shipout material has no HTML counterpart). `\AtBeginShipoutBox` is the kernel's
+/// `\ShipoutBox`, `\AtBeginShipoutInit` and `\AtBeginShipoutDiscard` do nothing, the shipout box's dimensions are 0pt.
 fn define_atbegshi_hooks() -> Result<()> {
-  for hook in [
-    "\\AtBeginShipout{}",
-    "\\AtBeginShipoutNext{}",
-    "\\AtBeginShipoutFirst{}",
-    "\\AtBeginShipoutAddToBox{}",
-    "\\AtBeginShipoutAddToBoxForeground{}",
-    "\\AtBeginShipoutUpperLeft{}",
+  DefMacro!("\\AtBeginShipoutUpperLeft{}", "\\lx@arxiv@shipout@note{#1}");
+  DefMacro!(
     "\\AtBeginShipoutUpperLeftForeground{}",
-  ] {
-    def_macro_noop(hook)?;
-  }
+    "\\lx@arxiv@shipout@note{#1}"
+  );
+  DefMacro!("\\AtBeginShipout{}", sub[(material)] { Ok(shipout_notes(&material)) });
+  DefMacro!("\\AtBeginShipoutNext{}", sub[(material)] { Ok(shipout_notes(&material)) });
+  DefMacro!("\\AtBeginShipoutFirst{}", sub[(material)] { Ok(shipout_notes(&material)) });
+  def_macro_noop("\\AtBeginShipoutAddToBox{}")?;
+  def_macro_noop("\\AtBeginShipoutAddToBoxForeground{}")?;
+  // repeated material (a hook registered again, or once per page) makes one note
+  DefMacro!("\\lx@arxiv@shipout@note{}", sub[(material)] {
+    let seen = s!("lx@arxiv@shipout@note:{}", material.to_string());
+    if lookup_bool(&seen) {
+      return Ok(Tokens!());
+    }
+    AssignValue!(&seen => true, Scope::Global);
+    let mut note = TokenizeInternal!(r"\lx@add@pubnote[role=note,name={}]{\unitlength=1pt\relax\begin{picture}(0,0)").unlist();
+    note.extend(material.unlist());
+    note.extend(TokenizeInternal!(r"\end{picture}}").unlist());
+    Ok(Tokens::new(note))
+  });
   Let!("\\AtBeginShipoutInit", "\\@empty");
   Let!("\\AtBeginShipoutDiscard", "\\@empty");
   if !IsDefined!(&T_CS!("\\AtBeginShipoutBox")) {
@@ -255,5 +368,52 @@ fn define_atbegshi_hooks() -> Result<()> {
       raw_tex("\\newbox\\AtBeginShipoutBox")?;
     }
   }
+  if IsDefined!(&T_CS!("\\shipout")) {
+    Let!("\\AtBeginShipoutOriginalShipout", "\\shipout");
+  }
+  DefMacro!("\\ShipoutBoxHeight", "0pt");
+  DefMacro!("\\ShipoutBoxDepth", "0pt");
+  DefMacro!("\\ShipoutBoxWidth", "0pt");
   Ok(())
+}
+
+/// The page notes in a shipout hook's material: a `\lx@arxiv@shipout@note{…}` for the argument of each
+/// `\AtBeginShipoutUpperLeft` / `\AtBeginShipoutUpperLeftForeground` in it, at any depth; nothing else of it.
+fn shipout_notes(material: &Tokens) -> Tokens {
+  let upper_left = [
+    T_CS!("\\AtBeginShipoutUpperLeft"),
+    T_CS!("\\AtBeginShipoutUpperLeftForeground"),
+  ];
+  let tokens = material.unlist_ref();
+  let mut notes = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    i += 1;
+    if !upper_left.contains(&tokens[i - 1]) {
+      continue;
+    }
+    while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE {
+      i += 1;
+    }
+    let start = i;
+    if i < tokens.len() && tokens[i].get_catcode() == Catcode::BEGIN {
+      let mut level = 0;
+      while i < tokens.len() {
+        match tokens[i].get_catcode() {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => level -= 1,
+          _ => {},
+        }
+        i += 1;
+        if level == 0 {
+          break;
+        }
+      }
+    } else if i < tokens.len() {
+      i += 1;
+    }
+    notes.push(T_CS!("\\lx@arxiv@shipout@note"));
+    notes.extend_from_slice(&tokens[start..i]);
+  }
+  Tokens::new(notes)
 }

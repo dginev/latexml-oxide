@@ -11904,18 +11904,29 @@ for the names still undefined. An elsarticle-num `.bbl` defines `\path` only whe
 `{\path{doi:…}}` entries were undefined once `\href` was supplied (2605.07373, 2605.08166, 2605.12003). Witnesses
 cond-mat0407333, cs0409028, hep-th0411273, 1001.4826 (`\doi` → `\href`); guards `perfect_kernel_batch67a`.
 
-The same step provides the rest of arXiv's hyperref a paper relies on unloaded (DG ruling 2026-11-19), each name only
-while still undefined, with or without `\href`/`\url`: hyperref's `\texorpdfstring`, which keeps its TeX string and
-drops the PDF string (`hyperref_sty.rs` `define_texorpdfstring`, shared with the binding; ~170 papers of the 2026 run
-printed both after an `undefined` Error, hep-th0702068, 0704.3213, hep-th0210192), and the user commands of the
-atbegshi that hyperref loaded through 2019 (`ar5iv_sty.rs` `define_atbegshi_hooks`, after atbegshi-ltx.sty :52-66):
-`\AtBeginShipout`, `…Next`, `…First`, `…AddToBox`, `…AddToBoxForeground`, `…UpperLeft`, `…UpperLeftForeground`
-take their material and drop it (page-shipout material has no HTML counterpart; 2309.06611's IEEE copyright notice and
-2403.15239's conference line, set on the page by `\AtBeginShipoutUpperLeft…`, are not printed), `\AtBeginShipoutInit`
-and `\AtBeginShipoutDiscard` do nothing, `\AtBeginShipoutBox` is the kernel's `\ShipoutBox`. Body uses lose their
-Errors (2309.06611, 2403.15239, 1607.05658, 1610.04548, 2507.04353); a preamble use (~90% of the run's
-`\AtBeginShipout` papers: lpor2014.cls:2987 in 1503.07687, A&A and mnras papers loading hyperref, 1601.07542,
-1605.02911) comes before the step and keeps its Error. Guards `perfect_kernel_batchhyperprov`.
+The rest of arXiv's hyperref a paper relies on unloaded is provided on first use (DG rulings 2026-11-19): the preload
+names, per family, a provider for each command (`kernel_autoload::name_first_use_provider`), and an undefined name of
+the family met anywhere — executed, expanded, in an `\edef` body, after `\expandafter` — runs the provider once, which
+defines the family globally where still undefined (Binding origin, provide-only), and the name is read again
+(`provide_on_first_use`, asked at every undefined-CS site after the kernel autoload). Nothing is predefined, so
+`\ifdefined`, `\@ifundefined`, `\@ifpackageloaded` and a paper's own `\newcommand` see what pdflatex without the
+package sees; Perl has no such seam. The families, each sharing the binding's definitions: hyperref's
+`\texorpdfstring` (keeps its TeX string; a title printed both strings after an `undefined` Error — ~170 papers of the
+full 2026 run by extrapolation, 73 counted so far; hep-th0702068, 0704.3213, hep-th0210192); hyperref's
+`\hypersetup` with its keys, `\hyperref`, `\hyperlink`, `\hypertarget`, `\phantomsection`, `\autoref` with its tag and
+English names, nameref's `\nameref`, the bookmark commands (math0202134, hep-th0308186, 0807.4242, 0803.2070); and the
+user commands of atbegshi, which hyperref 6.77a (2007-10-29) to 7.01m (2025-05-20) loaded (hyperref ChangeLog.txt
+:1575, :37; atbegshi-ltx.sty :52-71). A target numbered before the first `\autoref` has no autoref tag, so a reference
+back to it shows the title form. The hooks drop their material unrun (page-shipout material has no HTML
+counterpart), except what a page's upper-left picture holds — `\AtBeginShipoutUpperLeft…`, directly or in the
+material of `\AtBeginShipout`, `…Next`, `…First` — which is the paper's page notice and is kept once as a publication
+note (`role=note`, no label), set in the `picture` with `\unitlength` 1pt that atbegshi.sty :487-508 wraps it in:
+2309.06611's IEEE copyright, 2403.15239's conference line. A notice behind a macro of the paper's is not seen.
+`\AtBeginShipoutBox` is the kernel's `\ShipoutBox`, `\AtBeginShipoutOriginalShipout` is `\shipout`, the
+`\ShipoutBox{Height,Depth,Width}` are 0pt. Preamble uses (85% of the run's `\AtBeginShipout` papers, 97 of 114:
+lpor2014.cls:2987 in 1503.07687, A&A and mnras preambles 1601.07542, 1605.02911) and body uses (1607.05658,
+1610.04548, 2507.04353) lose their Errors alike. The `\href`/`\url` step stays at `\begin{document}`; a preamble use
+that left an Error's stub no longer counts as the paper's definition there. Guards `perfect_kernel_batchhyperprov`.
 
 ### 589. → Bindings beyond Perl's tree: diagrams.tex (`diagrams_tex.rs`)
 
