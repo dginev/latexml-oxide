@@ -1,0 +1,15 @@
+% witness: 2308.05200 (packages/AEA.cls:797 \newcounter{subsubsection}[subsubsection], :802 secnumdepth 2)
+% oracle:  pdflatex 0 errors: "1 A / 1.1 B / C Text." (TeX never steps subsubsection at secnumdepth 2; stepping it would
+%          loop in \@stpelt, latex.ltx:10138, "TeX capacity exceeded [grouping levels=255]")
+% engines: rust main 45de7916eeb = silent stack overflow (reset_counter into itself); Perl Fatal:perl:deep_recursion
+%          (ResetCounter, Package.pm:892)
+% expect:  0 errors, 1 Warning (the counter in its own reset list); the subsubsection "C" with its text
+% status:  RED (45de7916eeb) -> GREEN (CRASH397B)
+\documentclass{article}
+\makeatletter\def\cl@subsection{}\@addtoreset{subsubsection}{subsubsection}\makeatother
+\setcounter{secnumdepth}{2}
+\begin{document}
+\section{A}\subsection{B}
+\subsubsection{C}
+Text.
+\end{document}

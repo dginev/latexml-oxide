@@ -1031,8 +1031,10 @@ pub(crate) fn load() -> Result<()> {
   // Without a body, papers like 0706.2748 (`\DeclareFixedFont{\mytabfont}...`)
   // hit "T_CS[\mytabfont] is not defined" when later invoked.
   DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", sub[(cs, _enc, _fam, _ser, _sh, _sz)] {
-    let cs_tok = T_CS!(cs.to_string());
-    def_macro(cs_tok, None, Tokens!(T_CS!("\\relax")), None)?;
+    // latex.ltx:10313 `\let#1\the\font`: the command is the argument's first non-space token.
+    if let Some((cs_tok, _)) = defined_cs(&cs)? {
+      def_macro(cs_tok, None, Tokens!(T_CS!("\\relax")), None)?;
+    }
   });
   def_primitive_noop("\\DeclareErrorFont{}{}{}{}{}")?;
   // Perl makes `\DeclareFontShape` a no-op (latex_constructs.pool.ltxml:2690). Ours is latex.ltx:10279-10305: the
@@ -1104,10 +1106,14 @@ pub(crate) fn load() -> Result<()> {
   // never route through here. Font packages (fouriernc, mathpazo, newtxmath, …)
   // do declare their own.
   DefPrimitive!("\\DeclareMathAlphabet{}{}{}{}{}", sub[(cs, _enc, family, series, shape)] {
-    let cs_tok = T_CS!(cs.to_string());
+    // The command is the argument's first non-space token, as TeX reads `#1` (`\DeclareMathAlphabet{ \mathcal}`,
+    // witnesses 1810.09714, 1906.05222, 2011.04603, 2206.00709, 2209.01842).
+    let Some((cs_tok, _)) = defined_cs(&cs)? else {
+      return Ok(Vec::new());
+    };
     // We won't override this, e.g. \mathrm by fouriernc.sty
     if IsDefined!(&cs_tok) {
-      let csname = cs.to_string();
+      let csname = cs_tok.to_string();
       let message = s!("Ignoring redefinition (\\DeclareMathAlphabet) of '{csname}'");
       Info!("ignore", csname, message);
     } else {
@@ -1689,6 +1695,15 @@ pub(crate) fn load() -> Result<()> {
       previous = name.clone();
       if companion || !counter_is_defined(&name) {
         reset_counter(&child)?;
+        continue;
+      }
+      // A child whose resets lead back to `ctr` steps it again in `\@stpelt` without end, TeX's "capacity exceeded
+      // [grouping levels=255]" (AEA.cls:797, witness 2308.05200): an Error, and the child is reset once instead, as the
+      // sectioning step's cascade does (`step_counter`).
+      if name == ctr || reset_list_reaches(&name, &ctr) {
+        let message = s!("\\stepcounter{{{ctr}}} resets '{name}', whose reset list leads back to '{ctr}'");
+        Error!("unexpected", &ctr, message);
+        reset_counter_in_cascade(&child, &mut vec![ctr.clone()])?;
         continue;
       }
       if !name.starts_with("UN") && counter_is_defined(&s!("UN{name}")) {

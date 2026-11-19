@@ -43,6 +43,15 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Five crash and Fatal roots of the 2026 arXiv run.** A counter whose reset list leads back to it
+    (`\newcounter{subsubsection}[subsubsection]`, 2308.05200) is reset once per step, with a Warning, instead of a silent
+    stack overflow; an amsrefs list under an active `@` (1810.11524) reads its records instead of looping, the
+    bibliography mouth reading `@` as data; an alpha label of a year like `1--250, 2023` no longer panics (2308.14725,
+    2607.14650); `\DeclareMathAlphabet{ \mathcal}` (1810.09714, 1906.05222, 2011.04603, 2206.00709, 2209.01842) and
+    `\urldef{\wikisurvey2011}` (1312.0976) read their command as TeX does, the first token, so they define it instead of
+    a Fatal (xcolor's `\extractcolorspec` and `\DeclareFixedFont` share the reader). Guards
+    `perfect_kernel_batchcrash397b::*`; OXIDIZED_DESIGN_DIVERGENCES #1090.
+
   - **hyperref's anchors under ar5iv's `\href`, PASJ's `\timeform` without its class, psfig's `\psfigurepath`, `\sep`
     in revtex4's `\keywords`.** The `\href` the ar5iv preload provides now brings hyperref's no-op anchor layer, so a
     shipped algorithm2e.sty 3.6 that takes it for hyperref numbers its lines without three Errors each (cs0602002); a

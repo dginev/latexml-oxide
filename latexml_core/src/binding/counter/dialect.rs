@@ -525,8 +525,9 @@ pub fn step_counter(ctr: &str, noreset: bool) -> Result<()> {
 
   // and reset any within counters!
   if !noreset && let Some(nested) = lookup_tokens(&s!("\\cl@{ctr}")) {
+    let mut path = vec![ctr.to_string()];
     for c in nested.unlist() {
-      reset_counter(&c)?;
+      reset_counter_in_cascade(&c, &mut path)?;
     }
   }
   Ok(())
@@ -1398,8 +1399,48 @@ pub fn ref_current_id(ctype: &str) -> Result<HashMap<Stored>> {
   Ok(stored_map!("id" => id))
 }
 
+/// Whether resetting `from` resets `target`: `target` is in `from`'s reset list (`\cl@<from>`), or in the list of a
+/// counter there, and so on.
+pub fn reset_list_reaches(from: &str, target: &str) -> bool {
+  let mut seen: Vec<String> = Vec::new();
+  let mut pending = vec![from.to_string()];
+  while let Some(ctr) = pending.pop() {
+    let Some(list) = lookup_tokens(&s!("\\cl@{ctr}")) else {
+      continue;
+    };
+    for child in list.unlist() {
+      let name = child.with_str(str::to_string);
+      if name == target {
+        return true;
+      }
+      if !seen.contains(&name) {
+        seen.push(name.clone());
+        pending.push(name);
+      }
+    }
+  }
+  false
+}
+
 /// Resets the counter `ctr` to zero.
-pub fn reset_counter(ctr: &Token) -> Result<()> {
+pub fn reset_counter(ctr: &Token) -> Result<()> { reset_counter_in_cascade(ctr, &mut Vec::new()) }
+
+/// [`reset_counter`] within one cascade: `path` holds the counters stepped or reset on the way to `ctr`.
+/// A cycle of reset lists (`\newcounter{subsubsection}[subsubsection]`, AEA.cls:797, witness 2308.05200; any
+/// `\@addtoreset`/`\numberwithin` chain back to its start) loops in TeX's `\@stpelt` (latex.ltx:10138) and in
+/// Perl's `ResetCounter` (Package.pm:892, deep recursion) once stepped. A counter already on the path is reset, so
+/// it is skipped, with a Warning naming it (once; its `UN` companion, whose list mirrors its own, is not named).
+pub fn reset_counter_in_cascade(ctr: &Token, path: &mut Vec<String>) -> Result<()> {
+  let name = ctr.with_str(str::to_string);
+  if path.contains(&name) {
+    let warned = s!("lx@counter@reset@cycle@{name}");
+    if !name.starts_with("UN") && lookup_value(&warned).is_none() {
+      assign_value(&warned, Stored::Bool(true), Some(Scope::Global));
+      let message = s!("Counter '{name}' is in a cycle of reset lists; not reset again");
+      Warn!("unexpected", &name, message);
+    }
+    return Ok(());
+  }
   let (c_ctr, c_un_ctr, ctr_id) =
     ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{ctr}@ID")));
   let exists = |cs: &str| lookup_register(cs, Vec::new()).ok().flatten().is_some();
@@ -1408,6 +1449,7 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
   if ctr.with_str(|cstr| cstr.starts_with("UN")) && !exists(&c_ctr) {
     return Ok(());
   }
+  path.push(name);
   assign_register(
     &c_ctr,
     Number::new(0).into(),
@@ -1441,9 +1483,10 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
   // and reset any within counters!
   if let Some(nested) = lookup_tokens(&s!("\\cl@{ctr}")) {
     for c in nested.unlist() {
-      reset_counter(&c)?;
+      reset_counter_in_cascade(&c, path)?;
     }
   }
+  path.pop();
   Ok(())
 }
 

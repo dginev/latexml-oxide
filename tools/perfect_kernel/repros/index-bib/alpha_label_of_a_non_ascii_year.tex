@@ -1,0 +1,15 @@
+% witness: 2308.14725 (main.bbl:455 date={1--250, 2023}), 2607.14650
+% oracle:  pdflatex 0 errors: "[1] J. Doe, T, J (1)."; Perl latexmlpost 0 errors, label [DOE–2]
+%          (MakeBibliography.pm:501 substr($yrtext, 2, 2), in characters)
+% engines: rust main 45de7916eeb = Fatal:panic:caught (make_bibliography.rs:1145 year[2..4], a byte inside the en dash)
+% expect:  0 errors; the alpha label "[DOE–2]"
+% status:  RED (45de7916eeb) -> GREEN (CRASH397B)
+\documentclass{article}
+\usepackage{amsrefs}
+\begin{document}
+See \cite{k}.
+\bibliographystyle{alpha}
+\begin{bibdiv}\begin{biblist}
+\bib{k}{article}{author={Doe, J.}, title={T}, journal={J}, date={1--250, 2023}}
+\end{biblist}\end{bibdiv}
+\end{document}

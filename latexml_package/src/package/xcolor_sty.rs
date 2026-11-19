@@ -1409,27 +1409,33 @@ LoadDefinitions!({
     }
   );
 
-  // \extractcolorspec{color}{cmd}
+  // \extractcolorspec{color}{cmd}: the command is `cmd`'s first non-space token (xcolor.sty:1032 `\aftergroupdef#2`).
   DefPrimitive!("\\extractcolorspec{}{}", sub[(colordesc, cmd)] {
     let color_str = xc_expand(colordesc)?.to_string();
-    let cmd_str = cmd.to_string();
+    let Some((cmd_cs, _)) = defined_cs(&cmd)? else {
+      return Ok(Vec::new());
+    };
     let color = parse_xcolor(None, &color_str, None);
     let model = color.model();
     let comps: Vec<String> = color.components().iter().map(|c| format!("{}", fixedpt(*c))).collect();
     let value = s!("{{{model}}}{{{}}}", comps.join(","));
-    def_macro(T_CS!(cmd_str), None, Some(ExpansionBody::from(value.as_str())), None)?;
+    def_macro(cmd_cs, None, Some(ExpansionBody::from(value.as_str())), None)?;
     Ok(())
   });
 
   // \extractcolorspecs{color}{modelcmd}{speccmd}
   DefPrimitive!("\\extractcolorspecs{}{}{}", sub[(colordesc, modelcmd, speccmd)] {
     let color_str = xc_expand(colordesc)?.to_string();
-    let modelcmd_str = modelcmd.to_string();
-    let speccmd_str = speccmd.to_string();
+    let Some((modelcmd_cs, _)) = defined_cs(&modelcmd)? else {
+      return Ok(Vec::new());
+    };
+    let Some((speccmd_cs, _)) = defined_cs(&speccmd)? else {
+      return Ok(Vec::new());
+    };
     let color = parse_xcolor(None, &color_str, None);
     let model = color.model();
     let comps: Vec<String> = color.components().iter().map(|c| format!("{}", fixedpt(*c))).collect();
-    def_macro(T_CS!(modelcmd_str), None, Some(ExpansionBody::from(model)), None)?;
+    def_macro(modelcmd_cs, None, Some(ExpansionBody::from(model)), None)?;
     // xcolor.sty:1033-1036 `\extractcolorspecs` stores the BARE spec
     // (`0.5,0.2,0.1`), unlike the singular `\extractcolorspec`, which stores
     // `{model}{spec}`. Perl xcolor.sty.ltxml:808 wraps the plural spec in
@@ -1437,7 +1443,7 @@ LoadDefinitions!({
     // fails to parse (pgfPT.colorSchemes.info, KNOWN_PERL_ERRORS #117). Guard:
     // `perfect_kernel_batch52::extractcolorspecs_plural_is_unbraced`.
     let spec_val = comps.join(",");
-    def_macro(T_CS!(speccmd_str), None, Some(ExpansionBody::from(spec_val.as_str())), None)?;
+    def_macro(speccmd_cs, None, Some(ExpansionBody::from(spec_val.as_str())), None)?;
     Ok(())
   });
 
@@ -1448,7 +1454,9 @@ LoadDefinitions!({
     let model_str = xc_expand(fmodel)?.to_string();
     let spec_str = xc_expand(spec)?.to_string();
     let tomodel_str = xc_expand(tomodel)?.to_string();
-    let cmd_str = cmd.to_string();
+    let Some((cmd_cs, _)) = defined_cs(&cmd)? else {
+      return Ok(Vec::new());
+    };
     let color = parse_xcolor(Some(&model_str), &spec_str, None);
     // Perl: convert to target model and get components in target range
     let comps = color.components_for_model(&tomodel_str);
@@ -1464,7 +1472,7 @@ LoadDefinitions!({
     } else {
       formatted.join(",")
     };
-    def_macro(T_CS!(cmd_str), None, Some(ExpansionBody::from(joined.as_str())), None)?;
+    def_macro(cmd_cs, None, Some(ExpansionBody::from(joined.as_str())), None)?;
     Ok(())
   });
 

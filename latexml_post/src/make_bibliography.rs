@@ -14,7 +14,7 @@
 //! 6. Format each entry into ltx:bibitem with ltx:tags + ltx:bibblock sections
 //! 7. Optionally split by initial letter
 
-use latexml_core::common::xml::name_is;
+use latexml_core::common::{cleaners::substr, xml::name_is};
 use libxml::tree::Node;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -1141,10 +1141,11 @@ impl MakeBibliography {
       CitationStyle::Alpha => {
         // AY-style: abbreviation from author names + 2-digit year
         let aa = self.make_alpha_label(doc, entry, bibentry);
-        let yy = if entry.year.len() >= 4 {
-          entry.year[2..4].to_string()
+        // Perl MakeBibliography.pm:501 `length($yrtext) >= 2 ? substr($yrtext, 2, 2) : $yrtext`, in characters.
+        let yy = if entry.year.chars().count() >= 2 {
+          substr(&entry.year, 2, 2)
         } else {
-          entry.year.clone()
+          &entry.year
         };
         let suffix = entry.suffix.as_deref().unwrap_or("");
         tags.push(NodeData::Element {
@@ -1494,7 +1495,7 @@ impl MakeBibliography {
       }
     } else if !surnames.is_empty() {
       let text = surnames[0].get_content();
-      text.chars().take(3).collect::<String>().to_uppercase()
+      substr(&text, 0, 3).to_uppercase()
     } else {
       entry
         .bib_key
