@@ -43,6 +43,13 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Four class and citation gaps of the arXiv run, an Error per use each.** A pasj00/01/02 paper that does not ship
+    its class keeps the class's own `\SetRunningHead`, `\FigureFile` (its figures were the error's text),
+    `\lesssim`/`\gtrsim`, solar symbols (`\MO`, `\LO`, `\RO`) and `\authorcite`/`\yearcite`
+    (OXIDIZED_DESIGN_DIVERGENCES #1082). The 1998 aipproc.cls's `\author{name}` and `\affiliation{text}` are the
+    author and their affiliation (were a "Missing keyval arguments" error each; #1083). A class's starred `\cite*`
+    (EslabStyle, ISOStyle) is one citation (the `*` was the key; #88). elsart's `amsthm`, `seceqn`, `secthm` options
+    are the class's `\if@…` switches a journal style tests (#1084). Guards `perfect_kernel_batchclustfix::*`.
   - **Rhai bindings: Perl's hook bodies port 1:1, and every diagnostic is located.** The `Stomach` handle has
     Perl's `bgroup`, `egroup`, `begingroup`, `endgroup`, `beginMode`, `endMode`, `enterHorizontal` and
     `leaveHorizontal`. The boxes a definition's `beforeDigest`/`afterDigest` hook returns are kept, as Perl keeps

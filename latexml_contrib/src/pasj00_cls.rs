@@ -15,8 +15,9 @@ use crate::and_by_meaning::and_runs;
 ///   deposit of the rest left an empty "[ Received ; Accepted ]" frame in the body (1505.02769, 2005.13750).
 ///
 /// A paper whose source lacks the class falls to OmniBus, as before the binding, with the class's own `{longtable}`
-/// ([`pasj_unshipped_longtable`]). Either way the frontmatter macros the classes store for `\maketitle` to typeset
-/// (pasj01.cls:84-159) are the frontmatter's: they were lost under OmniBus and raw alike.
+/// ([`pasj_unshipped_longtable`]) and the class's own commands papers call ([`pasj_unshipped_macros`]). Either way the
+/// frontmatter macros the classes store for `\maketitle` to typeset (pasj01.cls:84-159) are the frontmatter's: they were
+/// lost under OmniBus and raw alike.
 pub(crate) fn pasj_class(name: &str) -> Result<()> {
   let shipped = find_file(
     name,
@@ -43,8 +44,50 @@ pub(crate) fn pasj_class(name: &str) -> Result<()> {
   } else {
     LoadClass!("OmniBus");
     pasj_unshipped_longtable()?;
+    pasj_unshipped_macros()?;
   }
   pasj_frontmatter()
+}
+
+/// The class's own commands a paper whose source lacks the class calls, which OmniBus does not define (identical in
+/// pasj00.cls of 0704.3654, pasj01.cls of 1505.02769 and pasj02.cls of 2504.06663):
+/// - `\SetRunningHead` (pasj00.cls:52-54, pasj01.cls:68-70, pasj02.cls:53-55) stores the running head, no content;
+/// - `\FigureFile(w,h){file}` and `\RelativeFigurePath` (pasj00.cls:4122-4164, pasj01.cls:4179-4221,
+///   pasj02.cls:4174-4216): the file, under the figure path, at the width `w` (in mm when it has no unit), through
+///   graphicx's `\includegraphics`; the class's `\vtop` and `\kern` around it are print layout, and its framed
+///   file name for a missing file is the binding's missing-graphic warning;
+/// - amssymb for `\lesssim`/`\gtrsim` (the class's `useamsfonts` branch, pasj00.cls:3445-3446; its other branch
+///   composes the same relations), and the solar symbols `\Sol`, `\solar`, `\MO`, `\LO`, `\RO` (pasj00.cls:2303,
+///   3433-3444) with `\odot`, the glyph the class's `\@solar` takes in script styles;
+/// - `\authorcite` and `\yearcite` (pasj00.cls:1636-1637, pasj01.cls:1704-1705, pasj02.cls:1695-1696), the class's
+///   author-only and year-only citations: natbib's `\citeauthor` and `\citeyear`, which OmniBus autoloads.
+///
+/// Without them astro-ph0108490, astro-ph0201077 and astro-ph0204110 had an undefined-macro error per command, their
+/// figures were the error's text, and each `\authorcite{M31_Makishima}` printed its key with an Error per `_`
+/// (astro-ph0108490). Guard `perfect_kernel_batchclustfix::pasj00_without_its_class_keeps_its_figures`.
+fn pasj_unshipped_macros() -> Result<()> {
+  RequirePackage!("amssymb");
+  RawTeX!(
+    r"\def\SetRunningHead#1#2{\def\@Author{#1}\def\@runninghead{#2}}
+\def\RelativeFigurePath#1{\def\@figurepath{#1}\ifx\@figurepath\@empty\def\@figurepath{.}\fi}
+\RelativeFigurePath{}
+\def\FigureFile{\@ifstar\@FigureFile\@FigureFile}
+\def\@FigureFile(#1,#2)#3{\def\@figfilename{#3}\@onelevel@sanitize\@figfilename\begingroup
+\@defaultunits\@tempdima#1mm\relax\@nnil\@tempdima.35146\@tempdima
+\edef\@tempa{\noexpand\includegraphics[width=\strip@pt\@tempdima mm,keepaspectratio]{\@figurepath/\@figfilename}}%
+\@tempa\endgroup}
+\DeclareRobustCommand*\Sol{\ensuremath{\mathbin{\odot}}}
+\let\solar\Sol
+\DeclareRobustCommand*\MO{\relax\ifmmode\@math@sub@solar{M}\else\@text@sub@solar{M}\fi}
+\let\Mo\MO
+\DeclareRobustCommand*\LO{\relax\ifmmode\@math@sub@solar{L}\else\@text@sub@solar{L}\fi}
+\DeclareRobustCommand*\RO{\relax\ifmmode\@math@sub@solar{R}\else\@text@sub@solar{R}\fi}
+\def\@math@sub@solar#1{{{#1}_{\solar}}}
+\def\@text@sub@solar#1{\ifvmode\leavevmode\fi\hbox{$\m@th{#1}_{\solar}$}}
+\DeclareRobustCommand\authorcite{\citeauthor}
+\DeclareRobustCommand\yearcite{\citeyear}"
+  );
+  Ok(())
 }
 
 /// The class's own `{longtable}`/`{longtable*}` (pasj00.cls:884-916, pasj01.cls:967-1000, pasj02.cls:956-989) for a

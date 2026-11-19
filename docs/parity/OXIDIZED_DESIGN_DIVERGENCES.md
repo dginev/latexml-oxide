@@ -2005,6 +2005,19 @@ scoped unlock window (`state_is_unlocked()`) around JUST the hook's assignment t
 `#2` — `\lx@etb@unlock`/`\lx@etb@relock` in `etoolbox_sty.rs`; a plain
 `\def`/`\renewcommand` from raw source is outside the window and stays refused.
 
+**The star (2026-11-18).** A class whose own `\cite` takes a star for a label style
+(EslabStyle.cls:1443, ISOStyle.cls:1447 `\def\cite{\@ifstar{\citeyear}{\citefull}}`) is
+refused like any other, so the kernel `\cite` reads `\cite[] Semiverbatim` and the
+`*` was the key: a missing citation `*`, then the braced key as text (its `_` out of
+math; astro-ph0001290, astro-ph0008362, astro-ph0005563). The kernel `\cite` reads
+`OptionalMatch:*` and drops it, as the natbib binding's `\cite*` does: one
+citation, only the label style differs — the rationale above. latex.ltx's own
+`\cite` has no star (`\cite*{k}` cites `*` there), so a paper with the kernel `\cite`
+alone gets a citation of `k` where pdflatex prints `[?]k`. The classes'
+`\astroncite`, defined only inside their refused `\cite`, stays undefined in a
+`\bibitem[\protect\astroncite{A}{Y}]` label (one Error).
+Guard `perfect_kernel_batchclustfix::starred_cite_under_the_lock`.
+
 Guards: `bib_raw_cite_redefinition_is_ignored` (raw redefinition refused) and
 `etoolbox_pretocmd_assigns_through_cite_lock` (non-destructive hook allowed).
 
@@ -20901,6 +20914,47 @@ batchseclua_lua_refusals_are_bounded, batchseclua_lua_interpreter_ends_with_the_
 `luatex-profile/lua_sandbox_{no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
 `luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout}`,
 `loader/image_copy_outside_source_stays_in_dest`).
+
+### 1082. A PASJ paper without its class keeps the class's own `\SetRunningHead`, `\FigureFile` and symbols (CLUSTFIX)
+
+pasj00/01/02.cls ship with the paper and are not in TeX Live; a paper whose source lacks the class falls to OmniBus
+(`pasj00_cls.rs` `pasj_class`), which defined neither `\SetRunningHead` nor `\FigureFile` (run 397: 173 and 149
+papers; astro-ph0108490, astro-ph0201077, astro-ph0204110): an Error each, the figure the error's text. Perl has no
+pasj binding (6 errors on astro-ph0201077); pdflatex stops at the missing class. The fallback, as it already does for
+the class's `{longtable}` (`pasj_unshipped_longtable`), defines the class's own commands, identical in pasj00.cls
+(0704.3654's copy), pasj01.cls (1505.02769) and pasj02.cls (2504.06663): `\SetRunningHead` (pasj00.cls:52-54, a
+running head, no content), `\RelativeFigurePath` and `\FigureFile(w,h){file}` (:4122-4164, `\includegraphics` of
+`\@figurepath/file` at width `w` mm, keepaspectratio; the `\vtop` and the missing-file frame are print layout, the
+missing file is graphicx's warning), amssymb for `\lesssim`/`\gtrsim` (the class's `useamsfonts` branch, :3445-3446),
+the solar symbols `\Sol`/`\solar`/`\MO`/`\LO`/`\RO` (:2303, 3433-3444) with `\odot`, the glyph the class's
+`\@solar` takes in script styles, and `\authorcite`/`\yearcite` (:1636-1637) as natbib's `\citeauthor`/`\citeyear`,
+which OmniBus autoloads (astro-ph0108490's 13 `\authorcite{M31_Makishima}` were 13 `_` Errors). Beyond Perl and
+TeX alike (a missing class), as `pasj_unshipped_longtable` is. Guard `perfect_kernel_batchclustfix::pasj00_without_its_class_keeps_its_figures` (repro
+`class-bindings/pasj00_unshipped_figurefile`).
+
+### 1083. aipproc's 1998 interface: `\author{name}` without keyvals, and `\affiliation` (CLUSTFIX)
+
+Perl's aipproc.cls.ltxml:82 (and our binding) read `\author{} RequiredKeyVals`, the interface of aipproc v1.5+
+(`\author{name}{address=…,email=…}`). The 1998 class (v1.0a, shipped by the papers of run 397's `expected {` cluster;
+astro-ph0003214's copy) takes article's `\author{name}` and a separate `\affiliation{text}` (aipproc.cls:85), and its
+own defaults `\author{AUTHOR here}` `\affiliation{AFFILIATION here}` (:88-89) run when the copy is read as the file
+the binding stands in for (#731): each `\author` was a "Missing keyval arguments" Error and the affiliation was lost
+(Perl 2 errors, pdflatex 0). The binding's `\author{}` reads its keyvals only when a `{` follows (past spaces, as
+`\@ifnextchar` reads), so the modern form is unchanged; where the paper's copy defines
+`\newcommand*\affiliation[1]`, `\affiliation{}` is the author's affiliation contact (`\lx@add@contact[role=affiliation]`),
+the copy's defaults are its placeholders that the document's calls replace (`hand_copy_frontmatter_defaults`). One
+binding per class family supports the union of its versions (FIDELITY_CHARTER).
+Guard `perfect_kernel_batchclustfix::aipproc_old_author_affiliation` (repro `stand-in-copies/aipproc_v1`).
+
+### 1084. elsart's options are the class's switches `\if@amsthm`, `\if@seceqn`, `\if@secthm` (CLUSTFIX)
+
+Perl's elsart.cls.ltxml:23-25 (and our binding) store the `amsthm`, `seceqn`, `secthm` options as values only;
+elsart.cls (v2.20, 0712.3870's copy) declares them as switches (:34-35, :62-65, :73-74 `\newif\if@amsthm\@amsthmfalse
+\DeclareOption{amsthm}{\@amsthmtrue}`), which a journal style built on elsart tests: yjsco.sty:98
+`\if@amsthm … \else \PackageError{yjsco}{amsthm option should be used}` (0708.3431; run 397's `(yjsco)` cluster), 2
+errors in Perl and ours, 0 in pdflatex. The binding declares the three switches and its options set them beside the
+values. Guard `perfect_kernel_batchclustfix::elsart_amsthm_option_is_the_class_switch` (repro
+`class-bindings/elsart_amsthm_option_switch`).
 
 ## TeX-source fidelity family (TEXSRC)
 

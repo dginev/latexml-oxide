@@ -30,14 +30,21 @@ LoadDefinitions!({
   RawTeX!(r"\newif\if@symbold\@symboldfalse");
   DeclareOption!("symbold", "\\@symboldtrue");
 
+  // elsart.cls:34-35, :62-65, :73-74 (v2.20, 0712.3870's copy): the options are also the class's switches, which a
+  // journal style built on elsart tests (yjsco.sty:98 `\if@amsthm`, 0708.3431). Guard
+  // `perfect_kernel_batchclustfix::elsart_amsthm_option_is_the_class_switch`.
+  RawTeX!(r"\newif\if@seceqn\@seceqnfalse\newif\if@secthm\@secthmfalse\newif\if@amsthm\@amsthmfalse");
   DeclareOption!("seceqn", {
     AssignValue!("@seceqn" => 1i64);
+    Digest!("\\@seceqntrue")?;
   });
   DeclareOption!("secthm", {
     AssignValue!("@secthm" => 1i64);
+    Digest!("\\@secthmtrue")?;
   });
   DeclareOption!("amsthm", {
     AssignValue!("@amsthm" => 1i64);
+    Digest!("\\@amsthmtrue")?;
   });
 
   // Anything else is for article.

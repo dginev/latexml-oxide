@@ -1,0 +1,18 @@
+% witness: 0708.3431 (yjsco.sty:98 `\if@amsthm … \else \PackageError{yjsco}{amsthm option should be used}`, a journal
+%          style built on elsart; the `(yjsco)` cluster of run 397)
+% oracle:  elsart.cls:73-74 (v2.20, 0712.3870's copy) `\newif\if@amsthm\@amsthmfalse \DeclareOption{amsthm}{\@amsthmtrue}`,
+%          :34-35, :62-65 the same for `seceqn`/`secthm`. elsart.cls is not in TeX Live; pdflatex with 0712.3870's copy: 0
+%          errors, "amsthm seceqn"
+% engines: rust MAIN917 5 errors (`\if@amsthm`, `\if@seceqn`, `\if@secthm` undefined, the style's errors)
+% expect:  0 errors, 0 warnings; "amsthm seceqn"
+% status:  RED (MAIN917) -> GREEN (CLUSTFIX); guard perfect_kernel_batchclustfix::elsart_amsthm_option_is_the_class_switch
+% preload: ar5iv.sty
+\documentclass[amsthm,seceqn]{elsart}
+\makeatletter
+\if@amsthm\def\yjok{amsthm}\else\PackageError{yjsco}{amsthm option should be used}{}\fi
+\if@seceqn\def\yjeq{seceqn}\else\def\yjeq{none}\fi
+\if@secthm\PackageError{yjsco}{secthm not given}{}\fi
+\makeatother
+\begin{document}
+\yjok\ \yjeq
+\end{document}

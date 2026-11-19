@@ -1165,7 +1165,11 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\@@citephrase{}", "<ltx:bibrefphrase>#1</ltx:bibrefphrase>",
     mode => "text", enter_horizontal => true);
 
-  DefMacro!("\\cite[] Semiverbatim", sub[(post_opt, keys)] {
+  // The star is read and dropped, as the natbib binding's `\cite*` keeps one citation: a class's own starred `\cite`
+  // (EslabStyle.cls:1443, ISOStyle.cls:1447 `\def\cite{\@ifstar{\citeyear}{\citefull}}`) differs only in its label
+  // style, and the lock (OXIDIZED_DESIGN_DIVERGENCES #88) refuses it, so the `*` was the key and the braced key text
+  // (astro-ph0001290, astro-ph0008362, astro-ph0005563). Guard `perfect_kernel_batchclustfix::starred_cite_under_the_lock`.
+  DefMacro!("\\cite OptionalMatch:* [] Semiverbatim", sub[(_star, post_opt, keys)] {
     // let style = state::lookup_tokens("CITE_STYLE").unwrap_or(NO_TOKENS);
     let open = lookup_tokens("CITE_OPEN");
     let open = open.unwrap_or(NO_TOKENS);

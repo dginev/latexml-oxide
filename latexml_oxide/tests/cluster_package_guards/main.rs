@@ -433,6 +433,8 @@ mod perfect_kernel_batchcl6;
 mod perfect_kernel_batchcl7;
 mod perfect_kernel_batchcl8;
 mod perfect_kernel_batchcl9;
+/// CLUSTFIX: run-397 binding gaps — pasj00 without its class, the 1998 aipproc, `\cite*` under the lock, elsart's switches.
+mod perfect_kernel_batchclustfix;
 /// CMPJ1: cmpj's `\refaddr` marks resolve as TeX's second run (`cmpj_sty.rs`).
 mod perfect_kernel_batchcmpj1;
 mod perfect_kernel_batchcr10a;
