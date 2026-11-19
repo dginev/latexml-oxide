@@ -1,0 +1,12 @@
+% witness: hep-th0702068 (hyperref commented out at :19; \texorpdfstring in its section titles)
+% oracle: arXiv builds it (its build loads hyperref into every paper); pdflatex alone: ! Undefined control sequence
+% engines: rust MAIN924 = 1 error (\texorpdfstring undefined) and both arguments typeset in the title; Perl not run
+% expect: 0 Errors; the title keeps the TeX string ($E=mc^2$) only, the PDF string is dropped
+% mechanism: ar5iv.sty preload, provide-only at \begin{document} (DG ruling 2026-11-19; OXIDIZED_DESIGN #588)
+% status: RED (MAIN924) -> GREEN (HYPERPROV)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\section{Energy \texorpdfstring{$E=mc^2$}{E=mc2} law}
+Text.
+\end{document}

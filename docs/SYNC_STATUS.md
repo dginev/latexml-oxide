@@ -398,6 +398,20 @@ Rules that keep this file honest and mergeable:
   - DEPS080 — before v0.8.0 (DG 2026-11-17): study `agent_reports/2026-11-18_DEPS080_dependency_review.md` §4-5. DONE (chore/deps080): A2 deny.toml notes (the distribution binary ships rhai/smartstring; chrono is direct and via pericortex), A4 `once_cell` → `std::sync::LazyLock` (direct dep dropped from 5 manifests). LEFT: A1 marpa fork on `bindgen 0.73` or pre-generated bindings, publish libmarpa-asf-sys 0.3.2 (−4-5 build crates); A3 refresh the fleet checkout's stale lock at the next fleet rebuild (clears the libmarpa-asf-sys license-exception warning); A5 clap `default-features = false` (~6 crates; CLI help loses colour and "did you mean" — needs DG); A6 size levers in our code (`build_model` as data, DEP-15 outlining of the top `load_definitions`); CHRONO after v0.8.0; 3
   - XSLTKEYc — (DG 2026-11-17: "Accept, row R") the author-note XSLT still costs 2405.13379 +1.00 % and 1706.03762 +0.59 % instructions vs main (PERFAUDIT basis: REGFIX vs the #895 head, html5 production recipe; 38/40 docs within +0.5 %, median −0.08 %, p90 +0.46 %): the note templates' own work and the per-note `use` of `f:creator-note`, chiefly kind O's scan of a note's text for its opening glyph (about half of 2405.13379's excess is outside the stylesheets). Options: compute a note's opening glyph once when the XML is built (an attribute), or look it up only within the note's own block. Also `f:glyph-elsewhere`'s third key makes 8 walks under the root's non-excluded children (~2M on 1706.03762): lazy like the `printed` node set, since it is read only when a shared mark's glyph may print elsewhere. WISDOM #105 has the method.
   - IEEEROUTE-OWNERCHECK — (revIEEEROUTEb) no post-placement check that each routed IEEE contact sits on its creator (correct by construction today); witness 2106.02811.
+  - AUTOREFBACK — (HYPERPROV, OD #588) under the ar5iv first-use provide, an `\autoref` to a target numbered before the
+    paper's first `\autoref` shows the target's title, or its enclosing unit's (an equation reads as its section's title),
+    not hyperref's "Equation 1": 2 of 74 autorefs on 4 witnesses (0803.2070 `#Ch0.E1`, 1010.2520 `#S2.SS1`). Options: an
+    eager internal tag formatter at preload (an autoref tag on every target of every paper) or a post-processor fallback
+    to `typerefnum`. Post-release.
+  - SHIPOUTNOTE — (HYPERPROV final review; synthetic shapes, no corpus witness — 2309.06611, 2403.15239, 2302.00362 and
+    1612.04433 are right) the page-notice note of `ar5iv_sty.rs` `\lx@arxiv@shipout@note`: (a) material with a picture
+    (a tikz node) is noted from `ink_text_printed`'s font-encoded strings, so `\url{…_…~…}`, `\_`, `\textbackslash`, math
+    and fonts garble — take the text nodes' digested boxes and route on the digested result, not the source test; (b) a
+    picture-mode `\put(20,-30){\makebox(0,0)[l]{…}}` still notes a positioned picture; (c) material registered in the
+    preamble is digested there, so `\AtBeginShipoutFirst{\parbox{12cm}{Pre one\par Pre two}}` reads "Pre onePre two"
+    with a false `frontmatter:unclaimed` Warning (base glues too; registered in the body it is right) — digest at
+    registration only to test for text, emit the tokens; (d) a notice behind a macro of the paper's inside the hook's
+    argument (`\AtBeginShipout{\mynotice}`) is not seen by the token scan. Post-release.
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.

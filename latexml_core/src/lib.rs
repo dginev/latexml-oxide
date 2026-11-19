@@ -192,6 +192,7 @@ pub fn reset_conversion_state() {
   gullet::reset_mouth_closed_errors();
   binding::content::reset_subfile_package_load();
   binding::kernel_autoload::reset_undefined_fallback();
+  binding::kernel_autoload::reset_first_use_providers();
 }
 
 pub use crate::common::error::*;

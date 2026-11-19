@@ -1,0 +1,18 @@
+% witness: math0202134, hep-th0308186 (\hypersetup), 0807.4242 (\hyperlink/\hypertarget/\phantomsection),
+%          0803.2070 (\autoref); no hyperref loaded
+% oracle: arXiv builds them (its build loads hyperref); pdflatex alone: ! Undefined control sequence. With
+%         \usepackage{hyperref}: "See section 2, Two, text, T, L." 0 errors
+% engines: rust MAIN924 and round 1 = 8 errors (each command undefined); Perl not run
+% expect: 0 Errors, 0 Warnings; the binding's references and anchor (autoref, nameref, hyperref[...], hypertarget,
+%         hyperlink)
+% mechanism: ar5iv.sty preload, provide on first use (DG ruling 2026-11-19; OXIDIZED_DESIGN #588)
+% status: RED (MAIN924) -> GREEN (HYPERPROV round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\hypersetup{colorlinks}
+\begin{document}
+\section{One}\phantomsection
+See \autoref{sec:b}, \nameref{sec:b}, \hyperref[sec:b]{text}, \hypertarget{tg}{T}, \hyperlink{tg}{L}.
+\section{Two}\label{sec:b}
+\pdfbookmark[1]{Two}{two}
+\end{document}
