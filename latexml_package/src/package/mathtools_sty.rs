@@ -109,7 +109,7 @@ LoadDefinitions!({
   // They are written in mhsetup's syntax, which the raw mhsetup.sty defines: with no TeX tree to load it
   // from (no `\MHInternalSyntaxOn`), the block was read with document catcodes, an Error per name.
   if IsDefined!(&T_CS!("\\MHInternalSyntaxOn")) {
-  RawTeX!(r"\MHInternalSyntaxOn
+    RawTeX!(r"\MHInternalSyntaxOn
 \MH_new_boolean:n {show_only_refs}
 \MH_new_boolean:n {show_manual_tags}
 \def\MT_showonlyrefs_true:{\MH_set_boolean_T:n {show_only_refs}}

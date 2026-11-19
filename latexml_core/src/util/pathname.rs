@@ -370,7 +370,6 @@ pub fn prewarm_kpathsea() {
   // call coordinate — whichever runs first warms; any other caller blocks here
   // until it completes (guaranteeing warm-before-first-lookup) instead of
   // re-taking the `KPSE` mutex and re-probing 11 sentinels on every session.
-  report_unavailable_kpathsea();
   static PREWARM_ONCE: std::sync::Once = std::sync::Once::new();
   PREWARM_ONCE.call_once(|| {
     let kpse_guard = KPSE.lock().unwrap();
@@ -1220,39 +1219,13 @@ pub fn clear_kpsewhich_memo() {}
 /// on the in-process backend. Results are stable for a fixed texmf tree
 /// (the same assumption kpathsea's own ls-R cache makes); the memo clears
 /// per conversion via `clear_kpsewhich_memo`.
-/// Say so, ONCE, when neither backend could be constructed.
 ///
-/// A host TeX installation is OPTIONAL here — embedded bindings and dumps
-/// convert self-contained documents perfectly well without one — so this is a
-/// warning, not an error. It exists because a silent dead kpathsea is
-/// indistinguishable from a genuinely missing file: every lookup just reports
-/// `Can't find TeX file X`, which sends users (and us — issue #304) hunting
-/// `TEXINPUTS` instead of the resolver that never came up.
-#[cfg(feature = "kpathsea")]
-pub fn report_unavailable_kpathsea() {
-  static ONCE: std::sync::Once = std::sync::Once::new();
-  ONCE.call_once(|| {
-    let (backend, why) = kpathsea_backend();
-    if backend == KpathseaBackend::Unavailable {
-      crate::Warn!(
-        "kpathsea",
-        "unavailable",
-        s!(
-          "No TeX file resolution ({why}): files from a host texmf tree cannot \
-           be found. Embedded bindings still apply."
-        )
-      );
-    }
-  });
-}
-
-/// Without the `kpathsea` feature there is nothing to report at runtime.
-#[cfg(not(feature = "kpathsea"))]
-pub fn report_unavailable_kpathsea() {}
-
+/// With neither backend (no TeX installation) every lookup answers `None`, silently, as Perl's
+/// `pathname_kpsewhich` does without a `kpsewhich` (Pathname.pm:395-403); a TeX installation is optional
+/// here. Each conversion's log names the backend (`Info:kpathsea:backend`, `Converter::initialize_session`),
+/// so a resolver that never came up is not mistaken for a missing file (issue #304).
 #[cfg(feature = "kpathsea")]
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
-  report_unavailable_kpathsea();
   let key = candidates.join("\x1f");
   if let Some(cached) = KPSE_MEMO.with(|m| m.borrow().get(&key).cloned()) {
     return cached;

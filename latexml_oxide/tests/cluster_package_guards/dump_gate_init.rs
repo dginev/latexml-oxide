@@ -332,19 +332,9 @@ fn nodump_latex_branch_converts_healthily() {
     &xml,
     "para",
     &["xml:id=\"p7\""],
-    r#"<para class="ltx_noindent" xml:id="p7">
-    <itemize xml:id="S1.I1">
-      <item xml:id="S1.I1.i1">
-        <tags>
-          <tag>•</tag>
-          <tag role="autoref">item </tag>
-          <tag role="typerefnum">1st item</tag>
-        </tags>
-        <para xml:id="S1.I1.i1.p1"><p>listed</p></para>
-      </item>
-    </itemize>
-    <p>after-the-list</p>
-  </para>"#,
+    "<para class=\"ltx_noindent\" xml:id=\"p7\"><itemize xml:id=\"S1.I1\"><item xml:id=\"S1.I1.i1\"><tags>\
+     <tag>\u{2022}</tag><tag role=\"autoref\">item\u{a0}</tag><tag role=\"typerefnum\">1st item</tag></tags>\
+     <para xml:id=\"S1.I1.i1.p1\"><p>listed</p></para></item></itemize><p>after-the-list</p></para>",
   );
   assert!(
     xml.contains(r#"<p>E:<Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="p8.m1">"#),

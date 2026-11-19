@@ -216,7 +216,6 @@ pub fn autoload_latex_kernel(token: &Token) -> bool {
       return false;
     }
   } else if kernel_catalogue_known() && !token.with_cs_name(latex_kernel_defines) {
-    // With no dump there is no catalogue: the format loads and `has_meaning` below decides (module docs).
     return false;
   }
   // Claim the single attempt BEFORE loading. The pool load runs arbitrary
@@ -226,10 +225,16 @@ pub fn autoload_latex_kernel(token: &Token) -> bool {
   // 2606.21610, see the `def_autoload` closure in `tex.rs`).
   assign_value(AUTOLOAD_ATTEMPTED, true, Some(Scope::Global));
   let cs_name = token.with_cs_name(|cs| cs.to_string());
+  // With no dump there is no catalogue: the format loads and `has_meaning` below decides (module docs).
+  let why = if plain_tex_document() || kernel_catalogue_known() {
+    "is a LaTeX kernel command"
+  } else {
+    "is undefined, and no kernel dump says whether the format defines it"
+  };
   Info!(
     "autoload",
     "LaTeX",
-    s!("{cs_name} is a LaTeX kernel command — loading LaTeX.pool")
+    s!("{cs_name} {why} — loading LaTeX.pool")
   );
   // Hoist whatever the load installs at the current frame up to global: this
   // can fire at any group depth (unlike the eager triggers, which in practice

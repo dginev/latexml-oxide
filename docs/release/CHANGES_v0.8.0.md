@@ -740,8 +740,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `\IfDocumentMetadataTF` (the text after a list, `\stepcounter` and `\ensuremath` were
     lost); the kernel autoload, with no dump to ask, loads the format on the first undefined
     command of a LaTeX document (latexml.sty's `\AddToHook`, an `\IfFileExists` choosing the
-    class); our expl3 extensions, hyperref's document-properties store and mathtools' expl3
-    block wait for an expl3 to extend; and a missing `expl3.sty` is reported. The article now
+    class); our expl3 extensions, hyperref's document-properties store, mathtools' expl3 block
+    and `\DocumentMetadata`'s tagging packages wait for an expl3 to extend, while `\ExplSyntaxOn`
+    without one is expl3's catcode switch (`\usepackage{array}` raised 2 Errors); a missing
+    `expl3.sty` is reported; and, as in Perl, no
+    Warning is raised for the missing resolver itself (the log's `Info:kpathsea:backend` line
+    names it; it was one Warning on every conversion there). The article now
     converts with no Error, and the no-dump body is byte-identical to the dump branch's. A
     new CI job builds and converts it on a runner without TeX Live (`tools/notex_smoke.sh`).
     Guards `dump_gate_init::nodump_latex_branch_converts_healthily`,

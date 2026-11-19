@@ -21172,7 +21172,7 @@ urldef_command_with_parameter_text, extractcolorspec_command_after_a_space}` (re
 latex_base.pool.ltxml is TeX-free: everything its constructs call is in it. It has no kernel autoload, no expl3 layer of
 its own and no document-properties store, so it needs no expl3. **Rust.** Our constructs and bindings call kernel and
 expl3 commands Perl's do not, and on the no-dump branch (`LATEXML_NODUMP=1`, or a binary built where there was no TeX
-Live to make a dump, issue #825's machines) nothing defined them; with no TeX tree either, nothing could load them. A
+Live to make a dump) nothing defined them; with no TeX tree either, nothing could load them. A
 smoke article (amsmath, hyperref, a list, a table) stopped at `Fatal:TooManyErrors` (101 Errors) without TeX Live, and the test suite failed 6397 of 8468 tests there. Now:
 - **The base carries what our constructs call** (`latex_base.rs`, after C.1.3): `\@ignorefalse` (the `\end` epilogue
   reads `\if@ignore`, sect01.rs; latex.ltx:15253), `\@stpelt` (`\lx@stepcounter@within`, sect08.rs; latex.ltx:10138),
@@ -21187,10 +21187,21 @@ smoke article (amsmath, hyperref, a list, a table) stopped at `Fatal:TooManyErro
 - **Our expl3 extensions wait for an expl3** (latex_constructs_rust_only.rs: the backend loader, the
   `\__kernel_chk_if_free_cs:N` override, the Unicode codepoint layer). They run when expl3 is the dump's or `expl3.sty`
   can be found (its `\ExplSyntaxOn` autoload raw-loads it, as before); with neither there is nothing to extend.
-  Likewise hyperref's document-properties store (hyperref_sty.rs) needs `\NewDocumentCommand`, and mathtools' expl3
-  block needs mhsetup's `\MHInternalSyntaxOn`.
+  Likewise hyperref's document-properties store (hyperref_sty.rs) needs `\NewDocumentCommand`, mathtools' expl3
+  block needs mhsetup's `\MHInternalSyntaxOn`, and `\DocumentMetadata` loads the tagging packages (tagpdf, the
+  latex-lab blocks: expl3 code) only over an expl3 layer.
+- **`\ExplSyntaxOn` without expl3 is the catcode switch** (expl3_sty.rs). With no expl3.sty to load, the `expl3`
+  binding defines `\ExplSyntaxOn`/`\ExplSyntaxOff` as expl3-code.tex:245-277 (TL 2025) sets and restores the catcodes
+  and `\endlinechar`, so our bindings' expl3-syntax names read as names (array_sty.rs's `\@@__tbl`: 2 Errors per
+  `\usepackage{array}`). Code that calls expl3 functions still finds them undefined, as Perl does with no expl3.
 - **expl3.sty missing is reported** (expl3_sty.rs): the mute scope of the raw reload (#1027) is opened only when
   `expl3.sty` is found, so its `missing_file` Warning is no longer dropped with it.
+- **No Warning for a missing resolver.** Perl's `pathname_kpsewhich` answers nothing, silently, without a `kpsewhich`
+  (Pathname.pm:395-403). Ours warned `kpathsea:unavailable` once per process (#308), one Warning on every
+  conversion of a machine without TeX Live, whatever the document needed. It is gone; the log's
+  `Info:kpathsea:backend unavailable (…)` line (`Converter::initialize_session`) still names the resolver, so a dead
+  one is not mistaken for a missing file (issue #304). The kpathsea crate's own one-time stderr notice
+  (0.3.4 `lib.rs:433-434`) is outside the log and unchanged.
 
 Where TeX Live is, the dump branch is unchanged (each change sits behind "no catalogue", "no dump-defined name" or
 a found file). **Guards**: `dump_gate_init::nodump_latex_branch_converts_healthily` (the shared NODUMP conversion:

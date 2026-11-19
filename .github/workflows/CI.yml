@@ -260,7 +260,7 @@ jobs:
       - name: miri (scoped arena UB check)
         run: tools/miri_check.sh
 
-  # A machine without TeX Live (issue #825's): the build must not need libkpathsea or kpsewhich
+  # A machine without TeX Live: the build must not need libkpathsea or kpsewhich
   # (.cargo/config.toml's KPATHSEA_SKIP_TOOLCHAIN_CHECK), and with no tree to make a format dump the
   # binary converts on the no-dump branch with its embedded bindings (OXIDIZED_DESIGN_DIVERGENCES
   # #1095). tools/notex_smoke.sh checks the runner has no TeX and that a small article converts with
