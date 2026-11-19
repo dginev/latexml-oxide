@@ -21166,6 +21166,40 @@ alpha_label_year_is_bibtex_s, declare_math_alphabet_command_after_a_space,
 urldef_command_with_parameter_text, extractcolorspec_command_after_a_space}` (repros `macro-state/`,
 `index-bib/`, `fonts-nfss/`, `package-bindings/`).
 
+### 1091. Under amsmath, `\[`/`\]` are `\begin{equation*}`/`\end{equation*}` (CLUSTFIX3)
+
+amsmath.sty:2950-2951 `\DeclareRobustCommand{\[}{\begin{equation*}}` and `\DeclareRobustCommand{\]}{\end{equation*}}`,
+so under amsmath `\[ … \end{equation*}` and `\begin{equation*} … \]` pair, clean in pdflatex. Perl's amsmath binding
+keeps the kernel's `\[` (latex_constructs.pool.ltxml:2070, sect07.rs), and `\end{equation*}` found no `{equation*}` open
+("Can't close environment equation*"; run 397: 188 papers, math0306159:811-812, math0401181 n112.ltx:767,
+math0508341); a `\begin{equation*} … \]` ran the kernel's cheap intertext (`\lx@eDM@in@equation`) and erred on its
+`\end{equation}`. The binding defines both, robust, as amsmath does (`amsmath_sty.rs`); the kernel's stay without
+amsmath. A matched `\[ … \]` gives the same `ltx:equation` as the kernel's `\[` did (the kernel's display and
+`{equation*}` share the numbering and the `\lx@mathdisplay@hook`), except that a `\tag` in it is now printed, as
+pdflatex does, where the kernel's display dropped it without a diagnostic (2008.12392 `\tag*{$(1)_s$}`, 2409.02265,
+1612.02580 `\tag{$*$}`; the ids of later unnumbered displays shift by one). Inside an `{equation}` a `\]` is now amsmath's
+`\end{equation*}`, which pdflatex rejects too ("\begin{equation} ended by \end{equation*}"), not the cheap intertext.
+Guard `perfect_kernel_batchclustfix3::amsmath_display_brackets` (repro
+`ams-internals/amsmath_display_brackets_pair_with_equation_star`).
+
+### 1092. etoolbox's `\robustify` leaves a native binding alone, unless it is a TeX primitive (CLUSTFIX3)
+
+In LaTeX every command `\robustify` meets in practice is a macro (`\ref ` behind `\protect`, amsmath's `\sum`, fontmath's
+`\uparrow`, `\DeclareOldFontCommand`'s `\it`, ulem's `\uline`), and etoolbox.sty:1267-1289 rebuilds it as a
+`\protected` macro. Ours are constructors, math primitives, primitives or closure-bodied macros, already robust:
+etoolbox raised "not a macro" (run 397: 119 papers; 1508.06145, 1702.00233), and `\robustify{\ref}` (wiley-article.cls:
+771-775, 69 papers, 1812.10085) rebuilt `\ref` from its inner `\ref ` into an undefined `\etb@resrvda`, the reference
+lost (Perl the same). `\lx@ifnativecmd` (`etoolbox_sty.rs`) now tests the stored definition, on the command and on
+its LaTeX-robust inner command, where it tested `\meaning` for `CODE(`/`Stored[`; the command is left as it is. A TeX
+primitive in LaTeX (tex.web's primitive table, less the names latex.ltx makes macros: `\par`, `\end`, `\input`,
+`\eqno`, `\leqno`, `\shipout`, `\underline`, `\-`), a register, a chardef or a font selector (`\nullfont`, a
+`\font`) keeps etoolbox's Error, as pdflatex's (`\robustify\hbox`: "not a macro"). Residual (row R ROBUSTIFYERR, no
+corpus witness): a LaTeX `\mathchardef` that is a `DefMath` here (`\alpha`, `\infty`, `\sum` without amsmath) and
+e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the output is unchanged. Guards
+`perfect_kernel_batchclustfix3::robustify_of_a_native_binding`,
+`perfect_kernel_batch69b::robustify_ltx_protected_native_cite` (repros `package-bindings/robustify_of_a_native_binding`,
+`robustify_of_a_tex_primitive_errs`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

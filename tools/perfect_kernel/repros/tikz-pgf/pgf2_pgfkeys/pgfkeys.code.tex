@@ -1,0 +1,20 @@
+% A stand-in for pgf 2.00's pgfkeys.code.tex (shipped by 1108.0463, 1010.2550), reduced to the shape that matters: its
+% :29 `\pgfkeys@ifcsname` is delimited (`#1\endcsname#2\else#3\fi`, or e-TeX's `\ifcsname` itself), and it has no
+% `\pgfkeys@firstoftwo`/`\pgfkeys@secondoftwo` (TeX Live's :27-35). A key is stored as pgf stores it, `\pgfk@<key>/.@cmd`.
+\def\pgfkeys@ifcsname#1\endcsname#2\else#3\fi{\expandafter\ifx\csname#1\endcsname\relax#3\else#2\fi}%
+\ifx\eTeXrevision\undefined\else
+  \expandafter\let\expandafter\pgfkeys@ifcsname\csname ifcsname\endcsname
+\fi
+\def\pgfkeys@empty{}
+\long\def\pgfkeysdef#1#2{%
+  \pgfkeys@ifcsname pgfk@#1/.@cmd\endcsname\else
+    \long\expandafter\def\csname pgfk@#1/.@cmd\endcsname##1\pgfeov{#2}%
+  \fi}
+\long\def\pgfkeys#1{\pgfkeys@parse#1\pgfkeys@nil}
+\long\def\pgfkeys@parse#1=#2\pgfkeys@nil{%
+  \pgfkeys@ifcsname pgfk@#1/.@cmd\endcsname
+    \csname pgfk@#1/.@cmd\endcsname#2\pgfeov
+  \else
+    [unknown #1]%
+  \fi}
+\endinput

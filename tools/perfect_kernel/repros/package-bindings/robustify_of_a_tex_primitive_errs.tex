@@ -1,0 +1,16 @@
+% etoolbox's `\robustify` of a TeX primitive or a register: TeX's "not a macro" Error stays (etoolbox.sty:1289),
+% while a native binding of a LaTeX macro is left alone (robustify_of_a_native_binding.tex).
+% witness: synthetic (the counter-case of 1812.10085, 1508.06145)
+% oracle:  pdflatex 3 errors (etoolbox: "\hbox not a macro", "\relax undefined", "\parindent not a macro"); "Box x."
+% engines: rust (8c45481) 3 errors
+% expect:  3 errors (etoolbox's, as pdflatex's), 0 warnings; "Box x." kept
+% guard:   perfect_kernel_batchclustfix3::robustify_of_a_native_binding
+% status:  GREEN (CLUSTFIX3, 2026-11-19)
+\documentclass{article}
+\usepackage{etoolbox}
+\robustify\hbox
+\robustify\relax
+\robustify\parindent
+\begin{document}
+Box \hbox{x}.
+\end{document}

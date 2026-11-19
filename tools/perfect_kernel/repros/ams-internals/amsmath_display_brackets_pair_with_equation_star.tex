@@ -1,0 +1,23 @@
+% amsmath.sty:2950-2951 makes `\[`/`\]` mean `\begin{equation*}`/`\end{equation*}`, so a mixed pair is legal under
+% amsmath. The binding kept the kernel's `\[` (sect07.rs), and `\end{equation*}` found no `{equation*}` open.
+% witness: math0306159:811-812, math0401181 (n112.ltx:767), math0508341 (run 397: 188 papers)
+% oracle:  pdflatex 0 errors: a+b=c. and more text. / x=y. then text. / p=q. end, and a tag: / r=s (T) / done.
+% engines: rust (8c45481) 2 errors ("Can't close environment equation*", then "equation" from the cheap intertext), and
+%          the `\tag` in `\[` silently dropped (2008.12392, 2409.02265); perl the first error
+% expect:  0 errors, 0 warnings; three unnumbered ltx:equation (a+b=c, x=y, p=q), one tagged (T), the text kept
+% guard:   perfect_kernel_batchclustfix3::amsmath_display_brackets
+% status:  GREEN (CLUSTFIX3, 2026-11-19; was RED)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+We have
+\[ a+b=c .
+\end{equation*}
+and more text.
+\begin{equation*} x=y . \]
+then text.
+\[ p=q . \]
+end, and a tag:
+\[ r=s \tag{T} \]
+done.
+\end{document}
