@@ -106,6 +106,9 @@ LoadDefinitions!({
   // binding's `\lx@ams@cases` that `\MT_start_cases:nnnn` opens; the `\right` closing its `\left` is the cases' own
   // fence there: a null `\right.` goes, the delimiter of an environment `\MT_start_cases:nnnn` read as its right fence
   // goes with it (`\lx@mt@cases@fenced@`), and any other stays, unfenced, after the cases.
+  // They are written in mhsetup's syntax, which the raw mhsetup.sty defines: with no TeX tree to load it
+  // from (no `\MHInternalSyntaxOn`), the block was read with document catcodes, an Error per name.
+  if IsDefined!(&T_CS!("\\MHInternalSyntaxOn")) {
   RawTeX!(r"\MHInternalSyntaxOn
 \MH_new_boolean:n {show_only_refs}
 \MH_new_boolean:n {show_manual_tags}
@@ -135,6 +138,7 @@ LoadDefinitions!({
 \newdimen\l_MT_above_shortintertext_sep
 \newdimen\l_MT_below_shortintertext_sep
 \MHInternalSyntaxOff");
+  }
   // mathtools.sty:995-1008 `\MT_start_cases:nnnn{sep}{lpreamble}{rpreamble}{delim}`, the begin code `\newcases` gives
   // a cases environment, which documents call to redefine one (`\renewcommand{\dcases}{\MT_start_cases:nnnn{\quad}
   // {$\m@th\displaystyle##$\hfil}{$\m@th\displaystyle##$\hfil}{\lbrace}}`: 1906.10268, 2011.05472, 2310.19169,

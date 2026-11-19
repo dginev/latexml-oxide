@@ -21166,6 +21166,37 @@ alpha_label_year_is_bibtex_s, declare_math_alphabet_command_after_a_space,
 urldef_command_with_parameter_text, extractcolorspec_command_after_a_space}` (repros `macro-state/`,
 `index-bib/`, `fonts-nfss/`, `package-bindings/`).
 
+### 1095. Without a format dump (or without TeX Live) the kernel commands our constructs call are in the base, the kernel autoload loads the format to see, and our expl3 extensions wait for an expl3 to extend (NOTEX)
+
+**Perl.** `LoadFormat('latex')` without a dump runs `bootstrap → base → constructs` (Package.pm:2751-2769), and
+latex_base.pool.ltxml is TeX-free: everything its constructs call is in it. It has no kernel autoload, no expl3 layer of
+its own and no document-properties store, so it needs no expl3. **Rust.** Our constructs and bindings call kernel and
+expl3 commands Perl's do not, and on the no-dump branch (`LATEXML_NODUMP=1`, or a binary built where there was no TeX
+Live to make a dump, issue #825's machines) nothing defined them; with no TeX tree either, nothing could load them. A
+smoke article (amsmath, hyperref, a list, a table) stopped at `Fatal:TooManyErrors` (101 Errors) without TeX Live, and the test suite failed 6397 of 8468 tests there. Now:
+- **The base carries what our constructs call** (`latex_base.rs`, after C.1.3): `\@ignorefalse` (the `\end` epilogue
+  reads `\if@ignore`, sect01.rs; latex.ltx:15253), `\@stpelt` (`\lx@stepcounter@within`, sect08.rs; latex.ltx:10138),
+  `\@ensuredmath` (`\@ensuremath`, latex_constructs_rust_only.rs; latex.ltx:15807), and `\IfDocumentMetadataTF`/`T`/`F`
+  as latex.ltx:9167-9169 has them before `\DocumentMetadata` (tikz_sty.rs asks it). The text after a list, a
+  `\stepcounter` and `\ensuremath` are no longer lost; the body is byte-identical to the dump branch's.
+- **The kernel autoload loads the format to see** (`latex_kernel::autoload_latex_kernel`). With no dump there is no
+  catalogue to ask, so in a LaTeX document the first undefined control sequence met before the format loads it, and the
+  post-load `has_meaning` check decides as on the dump branch (KNOWN_PERL_ERRORS entry on `\IfFileExists` before
+  `\documentclass`). latexml.sty's `\AddToHook` (a preload) and an `\IfFileExists` choosing the class were undefined
+  there. A plain TeX document is unchanged: only the Perl trigger list loads the format.
+- **Our expl3 extensions wait for an expl3** (latex_constructs_rust_only.rs: the backend loader, the
+  `\__kernel_chk_if_free_cs:N` override, the Unicode codepoint layer). They run when expl3 is the dump's or `expl3.sty`
+  can be found (its `\ExplSyntaxOn` autoload raw-loads it, as before); with neither there is nothing to extend.
+  Likewise hyperref's document-properties store (hyperref_sty.rs) needs `\NewDocumentCommand`, and mathtools' expl3
+  block needs mhsetup's `\MHInternalSyntaxOn`.
+- **expl3.sty missing is reported** (expl3_sty.rs): the mute scope of the raw reload (#1027) is opened only when
+  `expl3.sty` is found, so its `missing_file` Warning is no longer dropped with it.
+
+Where TeX Live is, the dump branch is unchanged (each change sits behind "no catalogue", "no dump-defined name" or
+a found file). **Guards**: `dump_gate_init::nodump_latex_branch_converts_healthily` (the shared NODUMP conversion:
+`\IfFileExists` before `\documentclass`, hyperref, `\stepcounter`, a list, `\ensuremath`, `\IfDocumentMetadataTF`),
+`preclass_kernel_autoload::latex_route_pre_documentclass_kernel_cs_autoloads` (its dump half).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

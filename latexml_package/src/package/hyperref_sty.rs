@@ -1425,8 +1425,12 @@ LoadDefinitions!({
   // `\g__hyp_documentproperties_prop` into `\l_tmpa_prop` to test for a
   // `pdftitle`; left undefined, the copy made `\l_tmpa_prop` undefined too
   // (DEMO-TUDaReport, once 56he replayed its `\maketitle[1][1]`).
-  RawTeX!(
-    r"\ExplSyntaxOn
+  // The store is ltcmd and expl3, which the kernel dump always has; on the no-dump branch (no dump,
+  // or no TeX tree to build one) neither is loaded, and the block raised 4 undefined-macro Errors, or
+  // 32 with no expl3 to read `\ExplSyntaxOn`. Perl's binding has no store at all.
+  if IsDefined!(&T_CS!("\\NewDocumentCommand")) {
+    RawTeX!(
+      r"\ExplSyntaxOn
 \@ifundefined{AddToDocumentProperties}
   {
    \prop_new:N \g__hyp_documentproperties_prop
@@ -1445,7 +1449,8 @@ LoadDefinitions!({
      }
   }{}
 \ExplSyntaxOff"
-  );
+    );
+  }
 });
 
 /// hyperref's DVI-mode driver options and the driver file each selects (hyperref.sty:2578-2718: `nativepdf`,

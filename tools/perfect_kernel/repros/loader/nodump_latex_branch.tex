@@ -1,21 +1,27 @@
 % witness: issue #651 (a bare \usepackage{fvextra} failed "1 fatal error" without a dump);
 %   issue #719 (user MWE: \parindent=0pt, first paragraph noindent); arXiv 2204.03209,
 %   2205.10749, 2311.06870 (read \CurrentFile under LaTeX); 77g review (\@@underline undefined
-%   without a dump)
-% oracle:  pdflatex 0 errors; no first-line indent; [macro:->][macro:->] same; U:\underline
+%   without a dump); arXiv 2605.25877, 2606.06905 (\IfFileExists choosing the class); a build
+%   without TeX Live (issue #825's sequel: \AddToHook, \if@ignore, \@stpelt, \@ensuredmath,
+%   \IfDocumentMetadataTF and hyperref's \NewDocumentCommand undefined without a dump)
+% oracle:  pdflatex 0 errors; no first-line indent; [macro:->][macro:->] same; U:\underline; S:1;
+%   the list, then after-the-list; E:x^2; no-metadata
 % engines: rust=0 errors, 2 warnings under LATEXML_NODUMP (recursion:LaTeX.pool; expl3:raw-load counting
-%   the 5015 Error records dropped in expl3.sty's raw expl3-code.tex re-load, issue #825) (2026-11-13)
-% expect:  0 errors, 2 warnings; five ltx_noindent paragraphs, the \CurrentFile family empty,
-%   \@@underline the saved \underline (latex.ltx:16368)
+%   the 5015 Error records dropped in expl3.sty's raw expl3-code.tex re-load, issue #825); the body is
+%   byte-identical to the dump branch's (0 errors, 0 warnings) (2026-11-19)
+% expect:  0 errors, 2 warnings; nine ltx_noindent paragraphs as pdflatex prints them, class article
 % status:  GREEN (guard dump_gate_init::nodump_latex_branch_converts_healthily)
-% mechanism: the degraded LoadFormat('latex') branch (bootstrap -> base -> constructs, raw
-%   latex.ltx + expl3-code.tex; CLAUDE.md parity rule 1). Each NODUMP conversion pays that raw
-%   kernel load (~24 s at opt-level 1, minutes at 0), so the three NODUMP guards share this one
-%   document: an expl3 document converts cleanly (#651's symptom), the first paragraph is stamped
-%   ltx_noindent structurally (#719), latex.rs defines the \CurrentFile family empty, and
-%   latex_base.rs saves \@@underline as latex.ltx:16368 does (KNOWN_PERL_ERRORS #987).
-\documentclass[12pt]{article}
+% mechanism: the degraded LoadFormat('latex') branch (bootstrap -> base -> constructs, with
+%   expl3-code.tex raw; CLAUDE.md parity rule 1). Each NODUMP conversion pays that raw load
+%   (~24 s at opt-level 1, minutes at 0), so the NODUMP guards share this one document: an expl3
+%   document converts cleanly (#651's symptom), the first paragraph is stamped ltx_noindent
+%   structurally (#719), latex.rs defines the \CurrentFile family empty, latex_base.rs saves
+%   \@@underline as latex.ltx:16368 does (KNOWN_PERL_ERRORS #987), the kernel autoload loads the
+%   format with no catalogue to ask, and latex_base.rs carries the kernel commands our constructs
+%   call where Perl's do not (OXIDIZED_DESIGN_DIVERGENCES #1095).
+\IfFileExists{ltxo-no-such-class.cls}{\documentclass{ltxo-no-such-class}}{\documentclass[12pt]{article}}
 \usepackage{expl3}
+\usepackage{hyperref}
 \setlength{\parindent}{0pt}
 \begin{document}
 First line
@@ -30,4 +36,13 @@ degraded-body-text
 \makeatletter
 \texttt{U:\meaning\@@underline}
 \makeatother
+
+\stepcounter{section}S:\thesection
+
+\begin{itemize}\item listed\end{itemize}
+after-the-list
+
+E:\ensuremath{x^2}
+
+\IfDocumentMetadataTF{with-metadata}{no-metadata}
 \end{document}

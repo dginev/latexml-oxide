@@ -122,8 +122,10 @@ LoadDefinitions!({
   // about to run will actually `\input expl3-code.tex` (cascade-prone
   // raw load) or short-circuit it (dump path). The guard inside
   // expl3.sty is `\ifx\csname tex_let:D\endcsname\relax {\input ...}`,
-  // so an undefined `\tex_let:D` here ⇒ raw load will fire.
-  let raw_load_will_run = lookup_meaning(&T_CS!("\\tex_let:D")).is_none();
+  // so an undefined `\tex_let:D` here ⇒ raw load will fire. A tree without expl3.sty (no TeX Live at all) loads
+  // nothing, so nothing is muted: its `missing_file` Warning is reported, as Perl reports it.
+  let raw_load_will_run =
+    lookup_meaning(&T_CS!("\\tex_let:D")).is_none() && find_file("expl3.sty", None).is_some();
 
   // In degraded no-dump mode the raw expl3.sty load re-runs expl3-code.tex,
   // whose group-end codepoint block (L33074-33180) trips known raw-load-only

@@ -49,6 +49,16 @@ Live:** a dump is used only with the TeX files it was built from, and without on
 executable — each test binary included — first builds its own format into a per-user
 cache, which is slow.
 
+**Without TeX Live** the build still works: `.cargo/config.toml` sets
+`KPATHSEA_SKIP_TOOLCHAIN_CHECK`, so the `kpathsea` crate builds without finding
+`libkpathsea` or `kpsewhich`. `make_formats` needs TeX Live, though, so such a binary has no
+format dump and converts on the slower no-dump branch (`bootstrap → base → constructs`), with the
+embedded bindings for the packages it knows. It says so once
+(`Warning:kpathsea:unavailable`), and a package without a binding is reported missing. A binary
+built where TeX Live is, with its dumps embedded, runs on a machine without TeX Live on those
+dumps. `cargo install` from crates.io does not read `.cargo/config.toml`; set the variable
+yourself there.
+
 [`cargo-nextest`](https://nexte.st) (`cargo install cargo-nextest`) runs the same suite
 several times faster: `cargo nextest run --workspace`.
 

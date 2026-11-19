@@ -260,6 +260,37 @@ jobs:
       - name: miri (scoped arena UB check)
         run: tools/miri_check.sh
 
+  # A machine without TeX Live (issue #825's): the build must not need libkpathsea or kpsewhich
+  # (.cargo/config.toml's KPATHSEA_SKIP_TOOLCHAIN_CHECK), and with no tree to make a format dump the
+  # binary converts on the no-dump branch with its embedded bindings (OXIDIZED_DESIGN_DIVERGENCES
+  # #1095). tools/notex_smoke.sh checks the runner has no TeX and that a small article converts with
+  # no Error. The test suite needs TeX Live and runs in `test`.
+  notex:
+    name: no TeX Live (build + smoke)
+    needs: changes
+    if: needs.changes.outputs.not_docs == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    env:
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - name: install dependencies (no TeX Live)
+        timeout-minutes: 20
+        run: tools/ci_apt_install.sh pkg-config libxml2-dev libxslt1-dev mold
+      - uses: dtolnay/rust-toolchain@nightly
+      # Only `main` saves; see the lint job's rust-cache note.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: notex
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: build
+        run: cargo build --profile ci --bin latexml_oxide
+      - name: convert without TeX Live
+        run: tools/notex_smoke.sh target/ci/latexml_oxide
+
   # AddressSanitizer lane — the deterministic net for heap memory-safety bugs
   # (use-after-free, double-free, out-of-bounds) that neither the plain Linux
   # suite nor miri catches. glibc TOLERATES a use-after-free that Darwin's
@@ -716,14 +747,14 @@ jobs:
   # repo-settings change that must land WITH this workflow.
   ci-success:
     name: CI success
-    needs: [changes, lint, miri, asan, test, macos-build, macos]
+    needs: [changes, lint, miri, notex, asan, test, macos-build, macos]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: verify no required job failed
         run: |
-          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.asan.result }} ${{ needs.test.result }} ${{ needs.macos-build.result }} ${{ needs.macos.result }}'
+          results='${{ needs.changes.result }} ${{ needs.lint.result }} ${{ needs.miri.result }} ${{ needs.notex.result }} ${{ needs.asan.result }} ${{ needs.test.result }} ${{ needs.macos-build.result }} ${{ needs.macos.result }}'
           echo "upstream job results: $results"
           for r in $results; do
             case "$r" in

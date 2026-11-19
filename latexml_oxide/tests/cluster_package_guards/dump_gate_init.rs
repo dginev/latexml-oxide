@@ -243,8 +243,8 @@ fn current_file_is_defined_empty_under_latex() {
 
 /// The degraded `LoadFormat('latex')` branch (no dump: bootstrap → base →
 /// constructs, CLAUDE.md parity rule 1). Every NODUMP conversion raw-loads
-/// latex.ltx and expl3-code.tex (~24 s in `test`, several times that at
-/// opt-level 0), so the three NODUMP guards share this ONE conversion, with a
+/// expl3-code.tex (~24 s in `ci`, 2.6 min at opt-level 0), so the NODUMP
+/// guards share this ONE conversion, with a
 /// timeout far over the 60 s CLI default (which is calibrated for the dump path)
 /// and under nextest's 20 min terminate-after, so a genuine hang still surfaces:
 /// - issue #651 (witness: a bare `\usepackage{fvextra}` reported "Conversion
@@ -262,7 +262,16 @@ fn current_file_is_defined_empty_under_latex() {
 ///   warns for its `recursion:LaTeX.pool` re-entrance;
 /// - `\@@underline` is latex.ltx:16368's saved `\underline` without a dump too
 ///   (KNOWN_PERL_ERRORS #987; dump half:
-///   `perfect_kernel_batch77g::kernel_primitive_standins_mean_their_primitive`).
+///   `perfect_kernel_batch77g::kernel_primitive_standins_mean_their_primitive`);
+/// - the opening `\IfFileExists` loads the format with no catalogue to ask
+///   (`latex_kernel::autoload_latex_kernel`), and its FALSE branch picks the
+///   class (dump half: `preclass_kernel_autoload::latex_route_pre_documentclass_kernel_cs_autoloads`);
+/// - hyperref's binding loads clean (its document-properties store needs the
+///   dump's `\NewDocumentCommand`), and the kernel commands our constructs call
+///   where Perl's do not are in the base (`latex_base.rs`): `\@stpelt` for
+///   `\stepcounter`, `\if@ignore` for the text after a list, `\@ensuredmath`
+///   for `\ensuremath`, `\IfDocumentMetadataTF` (tikz) — the body is the dump
+///   branch's, byte for byte (OXIDIZED_DESIGN_DIVERGENCES #1095).
 #[test]
 fn nodump_latex_branch_converts_healthily() {
   let tex = include_str!("../../../tools/perfect_kernel/repros/loader/nodump_latex_branch.tex");
@@ -308,6 +317,44 @@ fn nodump_latex_branch_converts_healthily() {
     "para",
     &["xml:id=\"p5\""],
     r#"<para class="ltx_noindent" xml:id="p5"><p><text font="typewriter">U:\underline</text></p></para>"#,
+  );
+  assert!(
+    xml.contains(r#"<?latexml class="article" options="12pt"?>"#),
+    "{xml}"
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p6\""],
+    r#"<para class="ltx_noindent" xml:id="p6"><p>S:1</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p7\""],
+    r#"<para class="ltx_noindent" xml:id="p7">
+    <itemize xml:id="S1.I1">
+      <item xml:id="S1.I1.i1">
+        <tags>
+          <tag>•</tag>
+          <tag role="autoref">item </tag>
+          <tag role="typerefnum">1st item</tag>
+        </tags>
+        <para xml:id="S1.I1.i1.p1"><p>listed</p></para>
+      </item>
+    </itemize>
+    <p>after-the-list</p>
+  </para>"#,
+  );
+  assert!(
+    xml.contains(r#"<p>E:<Math mode="inline" tex="x^{2}" text="x ^ 2" xml:id="p8.m1">"#),
+    "{xml}"
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p9\""],
+    r#"<para class="ltx_noindent" xml:id="p9"><p>no-metadata</p></para>"#,
   );
 }
 

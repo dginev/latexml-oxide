@@ -343,6 +343,24 @@ LoadDefinitions!({
 "
   );
 
+  // Kernel definitions our constructs call where Perl's do not, so Perl's base has no copy: the `\end`
+  // epilogue reads `\if@ignore` (sect01.rs), `\lx@stepcounter@within` calls `\@stpelt` (sect08.rs),
+  // `\@ensuremath` calls `\@ensuredmath` (latex_constructs_rust_only.rs), and tikz/xcolor ask
+  // `\IfDocumentMetadataTF`. The dump carries them from latex.ltx (TL 2025 :15253 `\@ignorefalse`,
+  // :10138, :15807, :9167-9169); without one (no dump, or no TeX tree to build one) they were undefined:
+  // every `\end{itemize}` raised `undefined:\if@ignore`, and a `\stepcounter` printed its `<ERROR>`s in
+  // place of the number.
+  TeX!(
+    r"
+\@ignorefalse
+\def\@stpelt#1{\global\csname c@#1\endcsname \m@ne\stepcounter{#1}}%
+\long\def\@ensuredmath#1{$\relax#1$}
+\let \IfDocumentMetadataTF \@secondoftwo
+\let \IfDocumentMetadataT \@gobble
+\let \IfDocumentMetadataF \@firstofone
+"
+  );
+
   //======================================================================
   // C.3. Sentences and Paragraphs
   // Perl: latex_base.pool.ltxml lines 248-277

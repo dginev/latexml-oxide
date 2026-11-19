@@ -1252,12 +1252,18 @@ LoadDefinitions!({
 \def\ClassNoteNoLine#1#2{\ClassNote{#1}{#2\@gobble}}
 \def\PackageNoteNoLine#1#2{\PackageNote{#1}{#2\@gobble}}"
   );
-  // Begin-document backend loader, see sect02.rs `\document`: expl3.ltx:130's
-  // guard, then blank auto-select in PDF output or `dvips` in DVI output.
-  // `\sys_if_output_pdf:` does not exist before the first `\sys_load_backend:n`
-  // (`\sys_finalize:` creates it), so the gate reads `\pdfoutput` directly.
-  RawTeX!(
-    r"\ExplSyntaxOn
+  // These three blocks extend the expl3 layer: the dump's, or with no dump the one `\ExplSyntaxOn` loads raw
+  // (its `expl3` autoload, tex.rs). With neither a dump nor a TeX tree (a machine without TeX Live) there is no
+  // expl3.sty to load, so `\ExplSyntaxOn` reported it missing and every expl3 command in the blocks undefined.
+  let expl3_layer =
+    IsDefined!(&T_CS!("\\cs_if_exist:NT")) || find_file("expl3.sty", None).is_some();
+  if expl3_layer {
+    // Begin-document backend loader, see sect02.rs `\document`: expl3.ltx:130's
+    // guard, then blank auto-select in PDF output or `dvips` in DVI output.
+    // `\sys_if_output_pdf:` does not exist before the first `\sys_load_backend:n`
+    // (`\sys_finalize:` creates it), so the gate reads `\pdfoutput` directly.
+    RawTeX!(
+      r"\ExplSyntaxOn
 \cs_if_exist:NT \sys_load_backend:n
   {
     \cs_gset_protected:Npn \lx@sys@load@backend
@@ -1273,9 +1279,9 @@ LoadDefinitions!({
       }
   }
 \ExplSyntaxOff"
-  );
-  RawTeX!(
-    r"\ExplSyntaxOn
+    );
+    RawTeX!(
+      r"\ExplSyntaxOn
 \cs_if_exist:NT \__kernel_chk_if_free_cs:N
   {
     \cs_gset_protected:Npn \__kernel_chk_if_free_cs:N #1
@@ -1338,7 +1344,8 @@ LoadDefinitions!({
       }
   }
 \ExplSyntaxOff"
-  );
+    );
+  }
 
   // expl3's Unicode-engine codepoint layer (the `\sys_if_engine_opentype:TF`
   // true branches of expl3-code.tex). The format's l3unicode and l3text are
@@ -1371,8 +1378,9 @@ LoadDefinitions!({
   // 2025's expl3). `\codepoint_str_generate:n` stays the 8-bit one: it only builds the keys of
   // the SpecialCasing tables, written with it when the format was made and
   // read with it now (`ß` → `SS`).
-  RawTeX!(
-    r#"\ExplSyntaxOn
+  if expl3_layer {
+    RawTeX!(
+      r#"\ExplSyntaxOn
 \cs_if_exist:NT \__text_codepoint_process:nN
   {
     \cs_undefine:N \c_max_char_int
@@ -1414,7 +1422,8 @@ LoadDefinitions!({
       }
   }
 \ExplSyntaxOff"#
-  );
+    );
+  }
 
   for name in [
     "physics2.sty",

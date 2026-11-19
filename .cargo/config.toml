@@ -14,6 +14,16 @@ RUST_MIN_STACK = "16777216"
 HOST_CXXFLAGS = "-DHAVE_POSIX_MEMALIGN=1 -DZMQ_CACHELINE_SIZE=64"
 TARGET_CXXFLAGS = "-DHAVE_POSIX_MEMALIGN=1 -DZMQ_CACHELINE_SIZE=64"
 
+# TeX Live is optional for latexml-oxide (`latexml_oxide/build.rs` `probe_texlive`): with no TeX tree a
+# conversion runs on the embedded bindings and dumps, and `latexml_core` says so once
+# (`Warning:kpathsea:unavailable`, util/pathname.rs). The kpathsea crate's build script instead stops the
+# build when it finds neither libkpathsea nor `kpsewhich` (kpathsea 0.3.4 build.rs `require_kpsewhich`), so
+# a machine without TeX could not build at all; this is that crate's own opt-out, as the release workflows'
+# TeX-less legs set it. Where TeX is present it changes nothing: a linked libkpathsea returns before the
+# check, and an unlinked build still finds `kpsewhich` at run time. `cargo install` from crates.io does not
+# read this file.
+KPATHSEA_SKIP_TOOLCHAIN_CHECK = "1"
+
 # For fresh-test (regenerate kernel dump against ambient TeXLive, then test),
 # see `make fresh-test` in the top-level Makefile. Cargo aliases can't chain
 # shell commands, so that orchestration lives in make, not here.

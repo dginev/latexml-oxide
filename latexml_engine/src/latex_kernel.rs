@@ -59,12 +59,16 @@
 //!
 //! `LoadFormat('latex')` has two mutually exclusive branches (CLAUDE.md durable
 //! parity rule 1). On the degraded one — `$LATEXML_NODUMP`, or no dump
-//! reachable at all — there is no key set to test against, so
-//! [`latex_kernel_defines`] is always `false` and this mechanism never fires.
-//! Behaviour there is bit-identical to before: the Perl `TeX.pool` L33-56
-//! trigger list remains the only mechanism — in a plain TeX document, where
-//! those triggers are held undefined ([`LATEX_TRIGGERS`]), it acts on them
-//! alone, as their definitions would.
+//! reachable at all — there is no key set to test against, so in a LaTeX
+//! document the first undefined control sequence met before the format loads
+//! it, and the post-load check decides as on the dump branch: the format either
+//! defined it or it is reported undefined. Without that, every kernel command
+//! a binding or a document uses before `\documentclass` was undefined there:
+//! latexml.sty's `\AddToHook` (a `--preload`), an `\IfFileExists` choosing the
+//! class (2605.25877, 2606.06905). In a plain TeX document, where the Perl
+//! `TeX.pool` L33-56 triggers are held undefined ([`LATEX_TRIGGERS`]), the
+//! mechanism acts on them alone, as their definitions would, with or without a
+//! dump.
 //!
 //! # Plain TeX documents
 //!
@@ -155,6 +159,11 @@ pub fn latex_kernel_defines(cs: &str) -> bool {
   KERNEL_CS.with(|cell| cell.get_or_init(build_kernel_catalogue).contains(cs))
 }
 
+/// Is there a catalogue to ask: a kernel dump that `LaTeX.pool` would load? `false` on the degraded no-dump branch.
+fn kernel_catalogue_known() -> bool {
+  KERNEL_CS.with(|cell| !cell.get_or_init(build_kernel_catalogue).is_empty())
+}
+
 fn build_kernel_catalogue() -> FxHashSet<Box<str>> {
   // Same resolver `latex_dump::load_definitions` uses (env overrides, ambient
   // year, embedded fallback), so the catalogue can never name a CS from a
@@ -206,7 +215,8 @@ pub fn autoload_latex_kernel(token: &Token) -> bool {
     if !token.with_cs_name(|cs| LATEX_TRIGGERS.contains(&cs)) {
       return false;
     }
-  } else if !token.with_cs_name(latex_kernel_defines) {
+  } else if kernel_catalogue_known() && !token.with_cs_name(latex_kernel_defines) {
+    // With no dump there is no catalogue: the format loads and `has_meaning` below decides (module docs).
     return false;
   }
   // Claim the single attempt BEFORE loading. The pool load runs arbitrary

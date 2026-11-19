@@ -3171,13 +3171,16 @@ the two undefined-CS paths (`gullet::read_x_token`, `stomach::
 invoke_token_undefined`) *before* the error is raised: if the ambient kernel
 dump defines the control sequence, load `LaTeX.pool` and retry the token; else
 take the ordinary bounded `Error:undefined` path. Fires at most once per
-session, never during `--init` dump-build, and not at all on the degraded
-no-dump branch of `LoadFormat('latex')`. It also retired the two Rust-only
+session and never during `--init` dump-build. On the degraded no-dump branch of
+`LoadFormat('latex')` there is no catalogue, so the first undefined control
+sequence of a LaTeX document loads the format and the same post-load check
+decides (OXIDIZED_DESIGN_DIVERGENCES #1095). It also retired the two Rust-only
 trigger accretions (`\UseRawInputEncoding`, `\DocumentMetadata`). Guards
 `preclass_iffileexists_test` / `preclass_kernel_cs_test`
-(`latexml_oxide/tests/structure/`) and
-`nodump_leaves_pre_documentclass_kernel_cs_undefined`
-(`latexml_oxide/tests/cluster_package_guards/preclass_kernel_autoload.rs`).
+(`latexml_oxide/tests/structure/`),
+`latex_route_pre_documentclass_kernel_cs_autoloads`
+(`latexml_oxide/tests/cluster_package_guards/preclass_kernel_autoload.rs`) and,
+without a dump, `dump_gate_init::nodump_latex_branch_converts_healthily`.
 
 Candidate to upstream, though not as a straight port: Perl has no dump to use as
 the membership oracle, so the upstream-shaped fix is to extend
