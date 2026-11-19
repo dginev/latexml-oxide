@@ -3228,7 +3228,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // TABU2b +1: `run_trivlist_hook` names the kernel's own `\lx@trivlist@hook` to read its meaning (empty: skipped).
   // CRASH397B +2: the reset cascade's path and `reset_list_reaches` hold counter NAMES (`\cl@<ctr>` lists, Perl's
   // `ToString($c)`, Package.pm:891), a state key and no token's spelling.
-  ("latexml_core/src/binding/counter/dialect.rs", 34),
+  // CRASH397Bb +2: `tex_reset_list` reads TeX's own list, the `\cl@<ctr>` macro's `{<child>}` groups, by their
+  // catcodes 1/2 and the child's name, to tell a reset cycle TeX loops on (an Error) from one only LaTeXML reaches.
+  ("latexml_core/src/binding/counter/dialect.rs", 36),
   // QAB1b +2: `hook_has_code` reads lthooks' storage by meaning (`with_macro_body`'s `with_meaning`) where it expanded
   // `\IfHookEmptyTF`, and `\if:w I` (`hook_used_once`) compares the slot's first token with the character `I`; QAB2b -1.
   ("latexml_core/src/binding/def/dialect.rs", 42),

@@ -1447,7 +1447,8 @@ fn latexml_reset_list(ctr: &str) -> Vec<String> {
   })
 }
 
-/// The `<child>` of each `\@elt{<child>}` in the macro `\cl@<ctr>`.
+/// The `<child>` of each `\@elt{<child>}` in the macro `\cl@<ctr>`: the list's groups, read by their catcodes, as
+/// the `\@elt` before each is whatever the reader `\let` it to.
 fn tex_reset_list(ctr: &str) -> Vec<String> {
   let Ok(Some(defn)) = lookup_definition(&T_CS!(s!("\\cl@{ctr}"))) else {
     return Vec::new();
@@ -1458,11 +1459,7 @@ fn tex_reset_list(ctr: &str) -> Vec<String> {
   let mut children = Vec::new();
   let mut tokens = body.unlist_ref().iter();
   while let Some(t) = tokens.next() {
-    if t.with_cs_name(|n| n == "\\@elt")
-      && tokens
-        .next()
-        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
-    {
+    if t.get_catcode() == Catcode::BEGIN {
       let child: String = tokens
         .by_ref()
         .take_while(|t| t.get_catcode() != Catcode::END)
