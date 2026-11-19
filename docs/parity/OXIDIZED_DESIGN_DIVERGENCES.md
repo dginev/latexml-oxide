@@ -1993,6 +1993,16 @@ class would have printed.
 cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
 
+astron.sty's `\cite` (0812.2799, 0812.4839; copied by EslabStyle.cls:1442-1445 astro-ph0001290, ISOStyle.cls:1446-1449
+astro-ph0008362, and the EAS classes) is `\@ifstar{\citeyear}{\citefull}`, and its `\citefull` =
+`\def\astroncite##1##2{##1, ##2}\@internalcite` is the only definition of the `\astroncite{A}{Y}` that astron.bst writes
+into the `\bibitem` labels. With that `\cite` refused, the labels were `Error:undefined:\astroncite` (Perl and pdflatex
+0). Where the lock refused a `\cite`, `\astroncite` is undefined and `\citefull` opens with `\def\astroncite`, the
+kernel `\cite`'s first call runs the copy's own `\citefull` definition (its `\@internalcite` tail dropped) and keeps it
+global for the deferred labels (`sect11.rs` `astroncite_from_refused_cite`). The full form throughout: the starred
+call's year-only form is the class's label style, which the lock does not keep. Guard
+`perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`).
+
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)
 re-`\edef`/`\let` the target but preserve the original via `\expandonce#2`, so
@@ -20947,6 +20957,9 @@ the binding stands in for (#731): each `\author` was a "Missing keyval arguments
 the copy's defaults are its placeholders that the document's calls replace (`hand_copy_frontmatter_defaults`). One
 binding per class family supports the union of its versions (FIDELITY_CHARTER).
 Guard `perfect_kernel_batchclustfix::aipproc_old_author_affiliation` (repro `stand-in-copies/aipproc_v1`).
+Beside `\affiliation`, the copy's `\newcommand*\affiliationmark[1]{\textsuperscript{#1}}` (:86; astro-ph0011502's
+renamed myaipproc.cls, which the binding answers as a versioned fallback without reading it) is defined under the same
+test. Guard `perfect_kernel_batchnext397::aipproc_old_affiliationmark`.
 
 ### 1084. elsart's options are the class's switches `\if@amsthm`, `\if@seceqn`, `\if@secthm` (CLUSTFIX)
 
@@ -20957,6 +20970,43 @@ elsart.cls (v2.20, 0712.3870's copy) declares them as switches (:34-35, :62-65, 
 errors in Perl and ours, 0 in pdflatex. The binding declares the three switches and its options set them beside the
 values. Guard `perfect_kernel_batchclustfix::elsart_amsthm_option_is_the_class_switch` (repro
 `class-bindings/elsart_amsthm_option_switch`).
+The LaTeX 2.09 elsart.sty (v2.23, 0805.0525's copy; Perl's elsart.sty.ltxml the same values) defines `\if@seceqn`,
+`\if@secthm`, `\if@secfloat`, `\if@nameyear` set by their options, `\ds@secnum` the first three (:66-78), and no
+`\if@amsthm`; its binding declares those four and its options set them. Guard
+`perfect_kernel_batchnext397::elsart_sty_options_are_its_switches` (repro `class-bindings/elsart_sty_option_switches`).
+
+### 1085. `\verb` in an argument ends at the argument's closing brace, "\verb illegal in argument" (NEXT397)
+
+latex.ltx:15485-15499: `\verb` opens a group, makes its delimiter active and sets `\aftergroup\verb@balance@group`.
+Inside a pre-tokenized argument the delimiter is frozen "other" and never matches, so the `}` that closes the argument
+closes the verb's group and reports "\verb illegal in argument"; the text after it is typeset. Perl's `readUntil`
+(latex_constructs.pool.ltxml:1797) and our scan read on past that `}`: up to the next line's end in ours ("\verb ended
+by end of line", the bound of `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`), which in a tabular cell
+lost the rest of the table (pdflatex on the `\documentclass` repro: 2 "\verb illegal in argument" plus their
+recovery). `read_verb_invocation` now ends the body at a closing-brace token outside the body's own braces, with TeX's
+Error, and puts the `}` back; under `\dospecials` only a pre-tokenized brace has a brace catcode, so a verb read from
+the file is unchanged.
+Under `\documentstyle` (`2.09_COMPATIBILITY`), latex209.def:201-211's `\verb` is `\@sverb#1{\def\@tempa##1#1{…}}`: it
+reads to the delimiter as tokenized, so in an argument it ends there with no error. The kernel `\verb` takes the
+`token_delimited` read tabularx's `\TX@verb` already used (now matching the delimiter as tokenized, any catcode); the
+`}` stop is then only the recovery for a missing delimiter, with TeX's "Argument of \@tempa has an extra }"
+(pdflatex goes on to "Paragraph ended before \@tempa was complete" and loses the argument; ours keeps it). It has no
+`\verb@eol@error`: a line's end inside it is a space (cs9811025 `\verb|h_0` / `.. h_{-m}|`, was "\verb ended by end
+of line"), and only a `\par` ends it, with that "Paragraph ended" Error, the `\par` read again (tex.web §396
+`back_error`; the paragraph still ends). Read to the input's end without its delimiter, this read (and tabularx's)
+reports "File ended while scanning use of \@tempa" (tex.web §338) and recovers as the line-bounded read did: the verb
+keeps the body up to the first line end, and what follows is re-read from its spelling under the restored catcodes
+(`\dospecials` froze it), so `\end{document}` and later cells are not lost (was: an empty document, or `\end{document}`
+printed as text, both silent). Guards `perfect_kernel_batchnext397::verb_delimited_unterminated_reports_file_ended`,
+`…::verb_under_documentstyle_unterminated_recovers`.
+cond-mat0203143 (`\documentstyle[aps,…]{revtex}`, ver8.tex:716-727) 14 errors → 0, pdflatex under its own
+`\documentstyle` 0 `\verb` errors; math0303012 (gen2.tex:87 `{\verb|#3|}` in the `kentry` rows) 23 `\verb` errors → 0,
+each row's list as pdflatex prints it. Not covered: an argument a binding digests in place or pushes back without its
+braces (`\mbox`, `\multicolumn`, astro-ph0108286; `\textbf`), where the scan still ends at the line's end. Guards
+`perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace`,
+`perfect_kernel_batchnext397::verb_under_documentstyle_reads_to_its_tokenized_delimiter` (repros
+`boxes-groups/verb_in_an_argument_ends_at_its_brace`,
+`boxes-groups/verb_under_documentstyle_reads_to_its_tokenized_delimiter`).
 
 ## TeX-source fidelity family (TEXSRC)
 

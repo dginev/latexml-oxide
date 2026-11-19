@@ -10097,7 +10097,7 @@ LoadDefinitions!({
 });
 
 /// `\verb`'s expansion: the verbatim argument read ([`read_verb_invocation`]) in the hidden group `\verb@egroup`
-/// closes. Shared by the kernel `\verb` and tabularx's `\TX@verb` (`token_delimited`).
+/// closes. Shared by the kernel `\verb` and tabularx's `\TX@verb` and latex209.def's `\verb` (`token_delimited`).
 pub fn verb_group(token_delimited: bool) -> Result<Tokens> {
   Ok(match read_verb_invocation(token_delimited)? {
     Some(inner) => {
@@ -10158,29 +10158,114 @@ pub fn read_verb_invocation(token_delimited: bool) -> Result<Option<Vec<Token>>>
     // (latex_constructs.pool.ltxml:1797) has no such bound, so an unterminated
     // `\verb v1.1 )` scanned across lines and swallowed a later `{verbatim}`
     // (bigints manual, 10-error cascade; SHARED, pdflatex recovers with one
-    // error). Guard: `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`.
-    assign_catcode('\r', Catcode::ACTIVE, None);
+    // error). Guard: `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`. latex209.def's `\verb` has no
+    // such bound: the line's end is a space, and only a `\par` ends it, "Paragraph ended before \@tempa was complete"
+    // (cs9811025 `\verb|h_0` / `.. h_{-m}|`).
+    if !token_delimited {
+      assign_catcode('\r', Catcode::ACTIVE, None);
+    }
     let eol = T_ACTIVE!('\r');
     let par = T_CS!("\\par");
-    // `token_delimited`: tabularx's `\TX@verb` (tabularx.sty:205-209) ends at the delimiter as it stands, so a
-    // `\verb|…|` in an argument read before it (the `|` frozen "other") ends there; the kernel's needs it active.
+    // `token_delimited`: tabularx's `\TX@verb` (tabularx.sty:205-209) and latex209.def's `\@sverb` (:208-211) read a
+    // `\@tempa##1#1` argument, ending at the delimiter as it stands, so a `\verb|…|` in an argument read before it
+    // (the `|` frozen with its catcode then) ends there; the kernel's needs it active.
     let mut body = Vec::new();
     let mut terminated = false;
+    // latex.ltx:15485-15499 `\verb` opens a group whose `\aftergroup\verb@balance@group` reports "\verb illegal in
+    // argument" (pre-tokenized, its delimiter is never the active one): the `}` closing the enclosing argument ends it,
+    // and what follows is kept. A delimited `\@tempa` (`token_delimited`) meets it only when its delimiter is missing:
+    // tex.web §395 "Argument of \@tempa has an extra }". Under `\dospecials` only a pre-tokenized brace has a brace
+    // catcode; `depth` counts the body's own (cond-mat0203143's `\parbox` shape; astro-ph0108286's `\multicolumn`, its
+    // argument pushed back without braces, still ends at the line's end). Guards
+    // `perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace`,
+    // `…::verb_under_documentstyle_reads_to_its_tokenized_delimiter`; OXIDIZED_DESIGN_DIVERGENCES #1085.
+    let mut depth = 0usize;
+    // Where the delimited read crossed lines' ends (the body's indices): an unterminated read keeps the body up to the
+    // first and re-reads the lines after it.
+    let mut line_ends: Vec<usize> = Vec::new();
     while let Some(token) = read_token()? {
+      match token.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END if depth == 0 => {
+          if token_delimited {
+            Error!(
+              "unexpected",
+              "\\verb",
+              "Argument of \\@tempa has an extra }",
+              ""
+            );
+          } else {
+            Error!("unexpected", "\\verb", "\\verb illegal in argument", "");
+          }
+          unread_one(token);
+          terminated = true;
+          break;
+        },
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
       if token == delim
         || (token_delimited
-          && token.get_catcode() == Catcode::OTHER
-          && token.with_str(|s| s.starts_with(init_ch) && s.chars().count() == 1))
+          && (token == init_token
+            || (token.get_catcode() == Catcode::OTHER
+              && token.with_str(|s| s.starts_with(init_ch) && s.chars().count() == 1))))
       {
         terminated = true;
         break;
       }
-      if token == eol || token == par {
+      if token_delimited && token == par {
+        Error!(
+          "unexpected",
+          "\\verb",
+          "Paragraph ended before \\@tempa was complete",
+          ""
+        );
+        // tex.web §396 `back_error`: the `\par` is read again, so the paragraph still ends (e2 shape).
+        unread_one(token);
+        terminated = true;
+        break;
+      }
+      if !token_delimited && (token == eol || token == par) {
         Error!("unexpected", "\\verb", "\\verb ended by end of line", "");
         terminated = true;
         break;
       }
-      body.push(token);
+      // tex.web §347: the line's end the delimited read crosses is a space, char 32, not a newline.
+      if token_delimited && token.get_catcode() == Catcode::SPACE {
+        line_ends.push(body.len());
+        body.push(T_SPACE!());
+      } else {
+        body.push(token);
+      }
+    }
+    if !terminated && let Some(&first_end) = line_ends.first() {
+      // tex.web §338 "File ended while scanning use of \@tempa": the delimiter never came. Recover as the line-bounded
+      // read did — keep the body up to the first line end and re-read what follows from its spelling, lazily, under
+      // the catcodes restored then (`\dospecials` froze it), so `\end{…}` and later cells survive (tabularx cell
+      // `\verb|ab & B \\`; `\documentstyle` `Start \verb|abc def`). Guards
+      // `perfect_kernel_batchnext397::verb_delimited_unterminated_reports_file_ended`,
+      // `…::verb_under_documentstyle_unterminated_recovers`; OXIDIZED_DESIGN_DIVERGENCES #1085.
+      Error!(
+        "unexpected",
+        "\\verb",
+        "File ended while scanning use of \\@tempa",
+        ""
+      );
+      let rest = body.split_off(first_end);
+      let mut text = String::new();
+      let mut from = 1;
+      // The crossed line ends become line ends again; two in a row (pre-tokenized spaces) stay a space, never a
+      // blank line (`\par`).
+      for end in line_ends[1..].iter().map(|end| end - first_end) {
+        text.push_str(&Tokens::new(rest[from..end].to_vec()).untex());
+        text.push(if end == from { ' ' } else { '\n' });
+        from = end + 1;
+      }
+      text.push_str(&Tokens::new(rest[from..].to_vec()).untex());
+      if !text.trim().is_empty() {
+        open_mouth(Mouth::new(text.as_str(), None)?, true);
+      }
+      terminated = true;
     }
     if !terminated {
       // Perl `Gullet::readUntil` (Core/Gullet.pm:683-685): ran out of tokens

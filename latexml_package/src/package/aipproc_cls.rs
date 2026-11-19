@@ -162,12 +162,14 @@ LoadDefinitions!({
 
   // aipproc.cls:85 (v1.0a, astro-ph0003214's copy) `\newcommand*\affiliation[1]{\def\AIP@affiliation{#1}}`, printed
   // under the authors by its `\maketitle`: the authors' affiliation. Defined where the paper's copy has it; the later
-  // classes write it as the `address` key.
+  // classes write it as the `address` key. Beside it, :86 `\newcommand*\affiliationmark[1]{\textsuperscript{#1}}`, the
+  // mark pairing an author with an affiliation line (astro-ph0011502's myaipproc.cls).
   if shipped_class_text("aipproc")?
     .as_deref()
     .is_some_and(|text| class_code_contains(text, "\\newcommand*\\affiliation[1]"))
   {
     DefMacro!("\\affiliation{}", "\\lx@add@contact[role=affiliation]{#1}");
+    DefMacro!("\\affiliationmark{}", "\\textsuperscript{#1}");
   }
   DefMacro!("\\keywordsname", "Keywords");
   DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordsname:~}]{#1}");
