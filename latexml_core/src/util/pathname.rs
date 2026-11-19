@@ -871,6 +871,144 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
   paths
 }
 
+mod nocase_dir_cache {
+  use std::{
+    cell::RefCell,
+    fs::{self, Metadata},
+    path::{Path, PathBuf},
+    time::SystemTime,
+  };
+
+  use rustc_hash::FxHashMap;
+
+  use super::is_readable_file;
+
+  const MAX_CACHED_DIRS: usize = 256;
+
+  #[derive(Clone, PartialEq, Eq)]
+  struct DirStamp {
+    modified: Option<SystemTime>,
+    #[cfg(unix)]
+    dev:      u64,
+    #[cfg(unix)]
+    ino:      u64,
+    #[cfg(unix)]
+    ctime:    i64,
+    #[cfg(unix)]
+    ctime_ns: i64,
+    #[cfg(unix)]
+    nlink:    u64,
+    #[cfg(not(unix))]
+    len:      u64,
+  }
+
+  impl DirStamp {
+    fn from_meta(m: &Metadata) -> Self {
+      #[cfg(unix)]
+      {
+        use std::os::unix::fs::MetadataExt;
+        Self {
+          modified: m.modified().ok(),
+          dev:      m.dev(),
+          ino:      m.ino(),
+          ctime:    m.ctime(),
+          ctime_ns: m.ctime_nsec(),
+          nlink:    m.nlink(),
+        }
+      }
+      #[cfg(not(unix))]
+      {
+        Self {
+          modified: m.modified().ok(),
+          len:      m.len(),
+        }
+      }
+    }
+  }
+
+  struct DirIndex {
+    stamp:   DirStamp,
+    entries: FxHashMap<String, String>,
+  }
+
+  thread_local! {
+    static CACHE: RefCell<FxHashMap<PathBuf, DirIndex>> = RefCell::new(FxHashMap::default());
+  }
+
+  pub(super) fn clear() { CACHE.with(|cell| cell.borrow_mut().clear()); }
+
+  fn build_index(dir: &Path, stamp: DirStamp) -> Option<DirIndex> {
+    let rd = fs::read_dir(dir).ok()?;
+    let mut entries = FxHashMap::default();
+    for entry in rd.flatten() {
+      let file_name = entry.file_name();
+      let Some(name) = file_name.to_str() else {
+        continue;
+      };
+      // Skip subdirectories without extra `stat` syscalls when `d_type` knows;
+      // follow symlinks via `is_dir()` only when the entry is a symlink or unknown.
+      let is_dir = match entry.file_type() {
+        Ok(ft) if ft.is_dir() => true,
+        Ok(ft) if ft.is_file() => false,
+        _ => entry.path().is_dir(),
+      };
+      if is_dir {
+        continue;
+      }
+      entries
+        .entry(name.to_ascii_lowercase())
+        .or_insert_with(|| name.to_string());
+    }
+    Some(DirIndex { stamp, entries })
+  }
+
+  /// Find a readable non-directory entry in `dir` matching `target`
+  /// ASCII-case-insensitively, using a directory-stamp-validated listing cache
+  /// so repeated missing lookups do not re-read large search directories.
+  pub(super) fn lookup(dir: &Path, target: &str) -> Option<String> {
+    let meta = fs::metadata(dir).ok()?;
+    if !meta.is_dir() {
+      return None;
+    }
+    let stamp = DirStamp::from_meta(&meta);
+    let target_lower = target.to_ascii_lowercase();
+
+    // On non-Unix (no dev/ino), skip caching relative paths in case cwd changes.
+    #[cfg(not(unix))]
+    if !dir.is_absolute() {
+      let idx = build_index(dir, stamp)?;
+      let actual = idx.entries.get(&target_lower)?;
+      let full = dir.join(actual).to_str()?.to_string();
+      return is_readable_file(&full).then_some(full);
+    }
+
+    let matched = CACHE.with(|cell| {
+      let mut cache = cell.borrow_mut();
+      let fresh = cache
+        .get(dir)
+        .is_some_and(|existing| existing.stamp == stamp);
+      if !fresh {
+        let idx = build_index(dir, stamp)?;
+        if cache.len() >= MAX_CACHED_DIRS {
+          cache.clear();
+        }
+        cache.insert(dir.to_path_buf(), idx);
+      }
+      cache
+        .get(dir)
+        .and_then(|idx| idx.entries.get(&target_lower).cloned())
+    })?;
+    let full = dir.join(matched).to_str()?.to_string();
+    is_readable_file(&full).then_some(full)
+  }
+}
+
+/// Drop the thread-local case-insensitive directory listing cache.
+/// Called at each conversion start ([`crate::reset_conversion_state`]) so a
+/// long-lived worker never carries a cached listing across conversions even
+/// within a coarse filesystem mtime tick.
+pub fn clear_nocase_dir_cache() { nocase_dir_cache::clear(); }
+
 /// find the requested `pathname` using the `options` search configuration.
 /// Mirrors Perl `pathname_find` (LaTeXML/Util/Pathname.pm L376-392): directory
 /// search with strict-case match preferred, falling back to a
@@ -908,27 +1046,15 @@ pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
       Some(n) => n,
       None => continue,
     };
-    let entries = match std::fs::read_dir(dir) {
-      Ok(e) => e,
-      Err(_) => continue,
-    };
-    for entry in entries.flatten() {
-      if let Some(name) = entry.file_name().to_str()
-        && name.eq_ignore_ascii_case(target)
-        && !entry.path().is_dir()
-      {
-        return entry.path().to_str().map(String::from);
-      }
+    if let Some(found) = nocase_dir_cache::lookup(dir, target) {
+      return Some(found);
     }
   }
   None
 }
 
 /// A path TeX could open as a file: it exists and is not a directory (kpathsea's `READABLE`).
-pub fn is_readable_file(path: &str) -> bool {
-  let p = Path::new(path);
-  p.exists() && !p.is_dir()
-}
+pub fn is_readable_file(path: &str) -> bool { std::fs::metadata(path).is_ok_and(|m| !m.is_dir()) }
 
 /// transform to a canonical file name, via `Path::file_name`
 pub fn file_name(pathname: &str) -> String {
@@ -1597,5 +1723,60 @@ mod tests {
     // Keep the dotdot assertion loose — the exact patterns are
     // implementation-defined.
     let _ = has_dotdot;
+  }
+
+  #[test]
+  fn nocase_dir_cache_finds_case_mismatch_and_skips_dirs() {
+    let root = pathsearch_tmproot("nocase_cache");
+    std::fs::write(root.join("PASJ95.STY"), "% sty").unwrap();
+    std::fs::create_dir(root.join("INTRO")).unwrap();
+    let root_s = root.to_str().unwrap().replace('\\', "/");
+
+    let opts = || PathnameFindOptions {
+      paths: Some(vec![root_s.clone()]),
+      ..Default::default()
+    };
+
+    // Case-insensitive match hits `PASJ95.STY` on first probe and on cached repeat.
+    let found1 = find("pasj95.sty", opts());
+    let found2 = find("pasj95.sty", opts());
+    assert!(
+      found1.as_deref().is_some_and(|p| p.ends_with("PASJ95.STY")),
+      "expected PASJ95.STY, got {found1:?}"
+    );
+    assert_eq!(found2, found1);
+
+    // Subdirectories are never returned as readable files.
+    assert_eq!(find("intro", opts()), None);
+
+    // Misses stay `None`; per-conversion cache reset immediately exposes newly
+    // created files with zero dependence on filesystem mtime granularity.
+    assert_eq!(find("later.sty", opts()), None);
+    std::fs::write(root.join("LATER.STY"), "% later").unwrap();
+    clear_nocase_dir_cache();
+    let later = find("later.sty", opts());
+    assert!(
+      later.as_deref().is_some_and(|p| p.ends_with("LATER.STY")),
+      "expected LATER.STY after cache clear, got {later:?}"
+    );
+
+    // On Unix, creating a sibling subdirectory increments the parent's `st_nlink`
+    // immediately (even on 1s-resolution filesystems), invalidating `DirStamp`
+    // without calling `clear_nocase_dir_cache()`.
+    #[cfg(unix)]
+    {
+      assert_eq!(find("after_nlink.sty", opts()), None);
+      std::fs::write(root.join("AFTER_NLINK.STY"), "% nlink").unwrap();
+      std::fs::create_dir(root.join("BUMP_NLINK")).unwrap();
+      let after = find("after_nlink.sty", opts());
+      assert!(
+        after
+          .as_deref()
+          .is_some_and(|p| p.ends_with("AFTER_NLINK.STY")),
+        "expected AFTER_NLINK.STY after dir stamp change, got {after:?}"
+      );
+    }
+
+    let _ = std::fs::remove_dir_all(&root);
   }
 }

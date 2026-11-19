@@ -176,8 +176,10 @@ pub fn reset_conversion_state() {
   keyvals::reset_unknown_keys_reported();
   // A speculative scope's log muting (`SuppressLogOutputGuard`) ends with the conversion.
   reset_suppress_log_output();
-  // Lookups memoized per conversion: a cwd-relative kpsewhich miss, an image's size, a font's metrics.
+  // Lookups memoized per conversion: a cwd-relative kpsewhich miss, case-insensitive dir listings,
+  // an image's size, a font's metrics.
   util::pathname::clear_kpsewhich_memo();
+  util::pathname::clear_nocase_dir_cache();
   util::image::clear_image_size_memo();
   common::font::tfm::reset_tfm_cache();
   // The frontmatter fields' provenance (OXIDIZED_DESIGN #715), the files read raw and the stand-in copies'
