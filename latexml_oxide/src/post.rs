@@ -119,7 +119,7 @@ pub struct PostOptions<'a> {
 
 /// The requested math formats as the post chain's one math processor: a primary with
 /// its parallel secondaries (Perl `LaTeXML.pm` L504-556, order per OXIDIZED_DESIGN
-/// #1091), shared by the in-process renderer and the page-render workers.
+/// #1093), shared by the in-process renderer and the page-render workers.
 #[derive(Clone, Copy)]
 pub(crate) struct MathFormats {
   pub pmml:            bool,

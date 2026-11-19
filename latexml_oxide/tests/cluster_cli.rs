@@ -4207,17 +4207,134 @@ mod unicodemath_output {
   #[test]
   fn unicodemath_sits_between_content_mathml_and_tex() {
     let html = convert(&["--cmml", "--unicodemath", "--mathtex"]);
-    let content = html
-      .find("encoding=\"MathML-Content\"")
-      .expect("content annotation");
-    let unicode = html.find(UNIMATH).expect("UnicodeMath annotation");
-    let tex = html
-      .find("encoding=\"application/x-tex\"")
-      .expect("TeX annotation");
+    for semantics in [
+      "<semantics><mrow><mrow><mi>a</mi><mo>+</mo><msup><mi>b</mi><mn>2</mn></msup></mrow><mo>=</mo>\
+       <mfrac><mi>x</mi><mi>y</mi></mfrac></mrow><annotation-xml encoding=\"MathML-Content\"><apply>\
+       <eq></eq><apply><plus></plus><ci>𝑎</ci><apply><csymbol cd=\"ambiguous\">superscript</csymbol>\
+       <ci>𝑏</ci><cn type=\"integer\">2</cn></apply></apply><apply><divide></divide><ci>𝑥</ci>\
+       <ci>𝑦</ci></apply></apply></annotation-xml><annotation encoding=\"application/x-unicodemath\">\
+       𝑎+𝑏²=𝑥/𝑦</annotation><annotation encoding=\"application/x-tex\">a+b^{2}=\\frac{x}{y}\
+       </annotation></semantics>",
+      "<semantics><mn>0</mn><annotation-xml encoding=\"MathML-Content\"><cn type=\"integer\">0</cn>\
+       </annotation-xml><annotation encoding=\"application/x-unicodemath\">0</annotation>\
+       <annotation encoding=\"application/x-tex\">0</annotation></semantics>",
+    ] {
+      assert!(
+        html.contains(semantics),
+        "expected the whole <semantics>\n{semantics}\nin:\n{html}"
+      );
+    }
+  }
+
+  /// A reference to a tagged equation reads the tag's math as the rest of a title is
+  /// read, as UnicodeMath, keeping its scripts and fonts (OXIDIZED_DESIGN_DIVERGENCES
+  /// #1094; Perl's `textContent` gives latexmlc's "⋆⁣⋆", "P1", "TreeSBstatS"). The
+  /// last tag is 2506.17197's shape. cleveref names the type ("Equation"); without it
+  /// an `\eqref` has an empty `title=`, as in Perl. pdflatex: 0 errors.
+  #[test]
+  fn ref_title_reads_a_tags_math_as_unicodemath() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("t.tex"),
+      "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{cleveref}\n\
+       \\newcommand{\\cS}{\\mathcal{S}}\n\
+       \\begin{document}\n\
+       \\begin{equation}a\\tag{$\\star\\star$}\\label{s}\\end{equation}\n\
+       \\begin{equation}b\\tag{$\\mathrm{P_1}$}\\label{p}\\end{equation}\n\
+       \\begin{equation}d\\tag{$\\mathrm{TreeSB}_{\\mathrm{stat}}^\\cS$}\\label{t}\\end{equation}\n\
+       See \\eqref{s}, \\eqref{p}, \\eqref{t}.\n\\end{document}\n",
+    )
+    .unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "t.tex",
+        "--format=html5",
+        "--nodefaultresources",
+        "--dest",
+        "t.html",
+      ])
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "stderr:\n{stderr}");
+    assert!(!stderr.contains("Error:"), "stderr:\n{stderr}");
+    let html = std::fs::read_to_string(work.path().join("t.html")).expect("read t.html");
+    for (id, title) in [
+      ("S0.Ex1", "Equation ⋆\u{2063}⋆"),
+      ("S0.Ex2", "Equation P₁"),
+      ("S0.Ex3", "Equation TreeSBₛₜₐₜ^𝒮"),
+    ] {
+      let link = format!("<a href=\"#{id}\" title=\"{title}\" class=\"ltx_ref\">");
+      assert!(html.contains(&link), "expected {link}\nin:\n{html}");
+    }
+  }
+
+  /// The parallel page render (`LATEXML_RENDER_JOBS`, 64+ pages) builds the math
+  /// processor as the serial path does (`post::MathFormats`): every page it writes is
+  /// the serial run's, UnicodeMath annotations included.
+  #[test]
+  fn unicodemath_through_the_page_render_workers_matches_serial() {
+    let mut tex = String::from("\\documentclass{article}\n\\begin{document}\n");
+    for i in 1..=70 {
+      tex.push_str(&format!("\\section{{S{i}}}\n$x_{{{i}}}^2$\n\n"));
+    }
+    tex.push_str("\\end{document}\n");
+    let run = |jobs: Option<&str>| {
+      let work = tempfile::tempdir().expect("tempdir");
+      std::fs::write(work.path().join("a.tex"), &tex).unwrap();
+      let mut cmd = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"));
+      cmd
+        .args([
+          "a.tex",
+          "--format=html5",
+          "--nodefaultresources",
+          "--unicodemath",
+          "--splitat=section",
+          "--dest=a.html",
+        ])
+        .env_remove("LATEXML_RENDER_JOBS")
+        .current_dir(work.path());
+      if let Some(jobs) = jobs {
+        cmd.env("LATEXML_RENDER_JOBS", jobs);
+      }
+      let out = cmd.output().expect("spawn latexml_oxide");
+      let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+      assert!(out.status.success(), "stderr:\n{stderr}");
+      let mut pages: Vec<(String, String)> = std::fs::read_dir(work.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "html"))
+        .map(|path| {
+          let name = path.file_name().unwrap().to_string_lossy().into_owned();
+          (name, std::fs::read_to_string(&path).unwrap())
+        })
+        .collect();
+      pages.sort();
+      (pages, stderr)
+    };
+    let (serial, _) = run(None);
+    let (parallel, stderr) = run(Some("2"));
     assert!(
-      content < unicode && unicode < tex,
-      "expected content, UnicodeMath, TeX in that order:\n{html}"
+      stderr.contains("parallel page render engaged: 2 worker(s)"),
+      "the worker path must engage:\n{stderr}"
     );
+    let s65 = &serial
+      .iter()
+      .find(|(name, _)| name == "S65.html")
+      .expect("S65.html")
+      .1;
+    assert!(
+      s65.contains(&format!("<annotation {UNIMATH}>𝑥₆₅²</annotation>")),
+      "expected S65's UnicodeMath annotation:\n{s65}"
+    );
+    assert_eq!(serial.len(), parallel.len());
+    for ((name, serial_page), (_, parallel_page)) in serial.iter().zip(&parallel) {
+      assert_eq!(
+        serial_page, parallel_page,
+        "{name} differs between the serial and parallel render"
+      );
+    }
   }
 
   /// A cross-reference's `title=` reads a section title's math as UnicodeMath (Perl

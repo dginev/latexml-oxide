@@ -1260,12 +1260,13 @@ pub(crate) fn title_node_text(doc: &PostDocument, c: &Node) -> String {
     Some(NodeType::ElementNode) => {
       let name = c.get_name();
       if name == "tag" {
-        // Honor open/close attributes on <ltx:tag>, around the tag's plain text
-        // (Perl `CrossRef.pm` L866-870, `$node->textContent`): a formula in a tag
-        // reads as its tokens, `\tag{$\mathrm{P_1}$}` as "P 1" (as Perl's latexmlpost),
-        // not as UnicodeMath.
+        // Honor open/close attributes on <ltx:tag> (Perl `CrossRef.pm` L866-870).
+        // Perl reads the tag's `textContent`, a formula's bare tokens with its
+        // fonts and scripts dropped (`latexmlc`: `\tag{$\mathrm{P_1}$}` "P1",
+        // `^\mathcal{S}` "S"); we read it as the rest of the title, its math as
+        // UnicodeMath ("P₁", "^𝒮"). OXIDIZED_DESIGN_DIVERGENCES #1094.
         let mut result = c.get_attribute("open").unwrap_or_default();
-        result.push_str(&c.get_content());
+        result.push_str(&title_text_content(doc, c));
         if let Some(close) = c.get_attribute("close") {
           result.push_str(&close);
         }
