@@ -94,15 +94,7 @@ fn year_from_kpsewhich_version_banner() -> Option<u32> {
 }
 
 fn year_from_kpsewhich_selfautoparent() -> Option<u32> {
-  let out = std::process::Command::new("kpsewhich")
-    .arg("-var-value=SELFAUTOPARENT")
-    .output()
-    .ok()?;
-  if !out.status.success() {
-    return None;
-  }
-  let s = String::from_utf8(out.stdout).ok()?;
-  let trimmed = s.trim();
+  let trimmed = latexml_core::util::pathname::ambient_kpsewhich_selfautoparent()?;
   let last = Path::new(trimmed).file_name()?.to_str()?;
   parse_year_str(last)
 }
