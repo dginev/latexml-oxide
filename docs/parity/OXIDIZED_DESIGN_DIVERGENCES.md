@@ -21079,7 +21079,8 @@ own: "vortex matter, columnar defects". Guard `perfect_kernel_batchclustfix2::re
 Three run-397 crash and Fatal roots, each fixed as a class in one place.
 
 **Reset-list cycles.** A counter whose reset list leads back to it (`\newcounter{subsubsection}[subsubsection]`,
-AEA.cls:797, witness 2308.05200; a `\numberwithin`/`\@addtoreset` chain back to its start) loops once it is stepped:
+AEA.cls:800, witness 2308.05200 — whose subsubsections lie beyond secnumdepth, so only the id counter cycles and no
+Warning prints; a `\numberwithin`/`\@addtoreset` chain back to its start) loops once it is stepped:
 TeX in `\@stpelt` (latex.ltx:10138, "TeX capacity exceeded [grouping levels=255]"), Perl in `ResetCounter`
 (Package.pm:883-893, `Fatal:perl:deep_recursion`), ours as a silent stack overflow. LaTeXML steps an id counter where
 TeX steps nothing (a unit beyond secnumdepth, `ref_step_id`'s `UN<ctr>`), and its reset lists (the `\cl@<ctr>` values)
@@ -21116,8 +21117,9 @@ delimited by `2011`, which the paper calls; Perl 1 Error). Users: `\DeclareMathA
 
 **The alpha label's year is BibTeX's.** alpha.bst:1047 `year field.or.null purify$ #-1 #2 substring$`: the last two
 characters of the purified year (`make_bibliography::alpha_label_year`; `purify$` keeps letters and digits and turns
-white space, `-` and `~` into spaces): `{99}` gives `Knu99`, `{199}` `Bro99`, `{in press}` `Jonss`, `{1--250, 2023}`
-`DOE23`. The year is the date's four-digit year where it has one, as Perl's year tag (MakeBibliography.pm:462): a
+white space, `-` and `~` into spaces): the year part of `{99}` is `99` (`KNU99`; BibTeX `Knu99`), of `{199}` `99`, of
+`{in press}` `ss`, of `{1--250, 2023}` `23` (`DOE23`). The year is the date's FIRST run of four or more digits where it has one
+(so `{2023/2024}` gives `23`, BibTeX `24`; `{1234--1250, 2023}` `34`, BibTeX `23`; `2001{\'e}` `01`, BibTeX `1e`), as Perl's year tag (MakeBibliography.pm:462): a
 `year` the `month` field extended (`1999-05`, BibTeX.pool.ltxml:632-637), an amsrefs `date={2010nov}` or `{200401}`
 (2308.14725) keep `10`, `04`; so does a lettered `{2023a}` (`Smi23`, BibTeX `Smi3a`), our suffix disambiguating instead.
 Perl's MakeBibliography.pm:501 `substr($yrtext, 2, 2)` drops a two-

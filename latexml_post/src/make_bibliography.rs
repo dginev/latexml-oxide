@@ -4275,7 +4275,7 @@ fn extract_four_digit_year(text: &str) -> String {
 }
 
 /// The year part of an alpha label: alpha.bst:1047 `year field.or.null purify$ #-1 #2 substring$`, the last two
-/// characters of the purified year, as BibTeX labels it (`{99}` → `Knu99`, `{in press}` → `Jonss`, `{1--250, 2023}`
+/// characters of the purified year, as BibTeX labels it (`{99}` → `99`, `{in press}` → `ss`, `{1--250, 2023}`
 /// → `23`, 2308.14725). Perl's `substr($yrtext, 2, 2)` (MakeBibliography.pm:501) drops a short year (KNOWN_PERL_ERRORS
 /// #1288). `year` is the date's four-digit year where it has one, as Perl's year tag (:462): a date the `year` field's
 /// `month` extended (`1999-05`), an amsrefs `date={2010nov}` or `{200401}` (2308.14725), and a lettered `{2023a}`.

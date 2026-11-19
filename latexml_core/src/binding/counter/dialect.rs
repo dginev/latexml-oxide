@@ -353,7 +353,7 @@ pub fn define_counter_ids(
       None => within,
     }
     .to_string();
-    // A counter within itself (`\newcounter{subsubsection}[subsubsection]`, AEA.cls:797, witness 2308.05200) resets
+    // A counter within itself (`\newcounter{subsubsection}[subsubsection]`, AEA.cls:800, witness 2308.05200) resets
     // itself (`reset_counter_in_cascade`); its id cannot be built within its own id, which expanded without end.
     let idwithin = if idwithin == ctr {
       String::new()
@@ -1415,7 +1415,8 @@ pub fn reset_list_reaches(from: &str, target: &str) -> bool {
 }
 
 /// Whether TeX's lists, the `\cl@<ctr>` macros of `\@elt{<child>}` (latex.ltx `\@addtoreset`), lead from `from` to
-/// `target`: a document's `\def\cl@subsection{}` (AEA.cls:796-799, 2308.05200) empties TeX's list, not LaTeXML's.
+/// `target`: a document's `\def\cl@subsection{}` (the stand-in for a class's own sectioning counters, AEA.cls:797-802,
+/// 2308.05200) empties TeX's list, not LaTeXML's.
 fn tex_reset_list_reaches(from: &str, target: &str) -> bool {
   list_reaches(from, target, tex_reset_list)
 }
@@ -1478,7 +1479,7 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
 
 /// [`reset_counter`] within one cascade: `path` holds the counters stepped or reset on the way to `ctr`, from
 /// `path[0]`, which `tex_step` says TeX steps too (`\stepcounter`), not LaTeXML alone (an id's `UN` counter, a reset).
-/// A cycle of reset lists (`\newcounter{subsubsection}[subsubsection]`, AEA.cls:797, witness 2308.05200; any
+/// A cycle of reset lists (`\newcounter{subsubsection}[subsubsection]`, AEA.cls:800, witness 2308.05200; any
 /// `\@addtoreset`/`\numberwithin` chain back to its start) loops in TeX's `\@stpelt` (latex.ltx:10138) and in
 /// Perl's `ResetCounter` (Package.pm:892, deep recursion) once stepped. A counter already on the path is reset, so
 /// it is skipped: an Error where TeX's own lists loop from that step ("TeX capacity exceeded"), else a Warning naming

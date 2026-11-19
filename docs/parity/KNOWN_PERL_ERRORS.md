@@ -21933,7 +21933,8 @@ Rust: the scaffold mouth reads `@` as data (`mouth::BIB_DATA_LITERALS`, OXIDIZED
 `StepCounter` resets the counters in `\cl@<ctr>` through `ResetCounter` (Package.pm:748-751, 883-893), which recurses
 into each one's list with no record of where it has been, so a cycle never ends; LaTeXML steps sectioning counters TeX
 does not step (secnumdepth) and keeps its reset lists past a `\def\cl@<ctr>{}`, so a paper clean in pdflatex reaches
-it (AEA.cls:796-797, 2308.05200):
+it (AEA.cls:800 `\newcounter{subsubsection}[subsubsection]`, 2308.05200; the class defines its own sectioning counters at
+:797-802 — the example below stands in for that with an emptied `\cl@subsection`):
 
 ```latex
 \documentclass{article}
