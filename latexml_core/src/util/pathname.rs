@@ -1738,14 +1738,11 @@ mod tests {
     std::fs::create_dir(root.join("INTRO")).unwrap();
     let root_s = root.to_str().unwrap().replace('\\', "/");
 
-    let opts = || PathnameFindOptions {
-      paths: Some(vec![root_s.clone()]),
-      ..Default::default()
-    };
-
-    // Case-insensitive match hits `PASJ95.STY` on first probe and on cached repeat.
-    let found1 = find("pasj95.sty", opts());
-    let found2 = find("pasj95.sty", opts());
+    // Exercise `nocase_dir_cache::lookup` directly so the cache path is tested
+    // even on case-insensitive filesystems (macOS APFS, Windows) where `find()`
+    // hits Pass 1 before reaching the fallback cache.
+    let found1 = nocase_dir_cache::lookup(&root, "pasj95.sty");
+    let found2 = nocase_dir_cache::lookup(&root, "pasj95.sty");
     assert!(
       found1.as_deref().is_some_and(|p| p.ends_with("PASJ95.STY")),
       "expected PASJ95.STY, got {found1:?}"
@@ -1753,14 +1750,14 @@ mod tests {
     assert_eq!(found2, found1);
 
     // Subdirectories are never returned as readable files.
-    assert_eq!(find("intro", opts()), None);
+    assert_eq!(nocase_dir_cache::lookup(&root, "intro"), None);
 
     // Misses stay `None`; per-conversion cache reset immediately exposes newly
     // created files with zero dependence on filesystem mtime granularity.
-    assert_eq!(find("later.sty", opts()), None);
+    assert_eq!(nocase_dir_cache::lookup(&root, "later.sty"), None);
     std::fs::write(root.join("LATER.STY"), "% later").unwrap();
     clear_nocase_dir_cache();
-    let later = find("later.sty", opts());
+    let later = nocase_dir_cache::lookup(&root, "later.sty");
     assert!(
       later.as_deref().is_some_and(|p| p.ends_with("LATER.STY")),
       "expected LATER.STY after cache clear, got {later:?}"
@@ -1771,10 +1768,10 @@ mod tests {
     // without calling `clear_nocase_dir_cache()`.
     #[cfg(unix)]
     {
-      assert_eq!(find("after_nlink.sty", opts()), None);
+      assert_eq!(nocase_dir_cache::lookup(&root, "after_nlink.sty"), None);
       std::fs::write(root.join("AFTER_NLINK.STY"), "% nlink").unwrap();
       std::fs::create_dir(root.join("BUMP_NLINK")).unwrap();
-      let after = find("after_nlink.sty", opts());
+      let after = nocase_dir_cache::lookup(&root, "after_nlink.sty");
       assert!(
         after
           .as_deref()
@@ -1782,6 +1779,30 @@ mod tests {
         "expected AFTER_NLINK.STY after dir stamp change, got {after:?}"
       );
     }
+
+    // End-to-end `find()`: on case-sensitive filesystems Pass 1 misses and
+    // Pass 2 returns the on-disk casing (`PASJ95.STY`); on case-insensitive
+    // filesystems Pass 1 succeeds directly with the requested spelling.
+    let opts = || PathnameFindOptions {
+      paths: Some(vec![root_s.clone()]),
+      ..Default::default()
+    };
+    clear_nocase_dir_cache();
+    let case_sensitive = !is_readable_file(&format!("{root_s}/pasj95.sty"));
+    let via_find = find("pasj95.sty", opts());
+    let expected_suffix = if case_sensitive {
+      "PASJ95.STY"
+    } else {
+      "pasj95.sty"
+    };
+    assert!(
+      via_find
+        .as_deref()
+        .is_some_and(|p| p.ends_with(expected_suffix)),
+      "expected {expected_suffix}, got {via_find:?}"
+    );
+    assert_eq!(find("pasj95.sty", opts()), via_find);
+    assert_eq!(find("intro", opts()), None);
 
     let _ = std::fs::remove_dir_all(&root);
   }
