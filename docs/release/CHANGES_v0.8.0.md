@@ -43,6 +43,17 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Four more run-397 Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
+    `\end{equation*}` as amsmath.sty:2950-2951 makes them, so a mixed pair (`\[ … \end{equation*}`) no longer errs
+    (math0306159, math0401181, math0508341), and a `\tag` in `\[` is printed (2008.12392; OXIDIZED_DESIGN_DIVERGENCES
+    #1091). etoolbox's `\robustify` of a command that is a macro in LaTeX and a native binding here (`\ref`, `\uline`,
+    `\it`, amsmath's `\sum`, `\uparrow`) leaves it alone: `\robustify{\ref}` had lost every reference (1812.10085),
+    the others errred "not a macro" (1508.06145, 1702.00233); a TeX primitive or a register keeps etoolbox's Error
+    (#1092). The native pgfkeys accessors install only over TeX Live's `pgfkeys.code.tex`, so a paper's own pgf 2.00
+    copy runs as written (1108.0463: 270 Errors → 1; 1010.2550, 0710.3603). doublespace's `\setstretch`
+    (doublespace.sty:66; physics0003041, quant-ph0005132). Guards `perfect_kernel_batchclustfix3::{
+    amsmath_display_brackets, robustify_of_a_native_binding, pgfkeys_natives_skip_a_pgf2_pgfkeys,
+    doublespace_setstretch}`.
   - **hyperref's and atbegshi's commands on first use under the ar5iv preload.** arXiv's build loads hyperref into every
     paper, so the preload provides, the first time a paper uses one while undefined (preamble or body), hyperref's
     `\texorpdfstring` (a title keeps its TeX string; the PDF string was printed beside it after an Error, hep-th0702068),

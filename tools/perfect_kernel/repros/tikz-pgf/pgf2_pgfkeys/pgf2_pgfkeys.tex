@@ -1,0 +1,16 @@
+% A paper's own pgf 2.00 pgfkeys.code.tex (pgfkeys.code.tex beside this file, its shape reduced): the native pgfkeys
+% accessors (pgfkeys_code_tex.rs) assumed TeX Live's file, whose one-argument `\pgfkeys@ifcsname` returns
+% `\pgfkeys@firstoftwo`/`\pgfkeys@secondoftwo`; the old file's delimited callers then raised "undefined
+% \pgfkeys@secondoftwo", "Extra \endcsname" and "unexpected \fi" at every key. They are installed over TL's file only.
+% witness: 1108.0463 (270 Errors), 1010.2550 (216); run 397: 74 papers
+% oracle:  pdflatex 0 errors: "Text [A:x] end."; perl 0 errors (its native engine is off)
+% engines: rust (8c45481) 6 errors (`\pgfkeys@secondoftwo`, `\pgfkeysdefaultpath`, `\pgfkeys@@set` undefined …), "[A:x]" lost
+% expect:  0 errors, 0 warnings; "Text [A:x] end."
+% guard:   perfect_kernel_batchclustfix3::pgfkeys_natives_skip_a_pgf2_pgfkeys
+% status:  GREEN (CLUSTFIX3, 2026-11-19; was RED)
+\documentclass{article}
+\usepackage{pgfkeys}
+\pgfkeysdef{/a}{[A:#1]}
+\begin{document}
+Text \pgfkeys{/a=x} end.
+\end{document}

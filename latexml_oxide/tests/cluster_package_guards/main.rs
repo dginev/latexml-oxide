@@ -439,6 +439,9 @@ mod perfect_kernel_batchclustfix;
 /// CLUSTFIX2: run-397 binding gaps — ar5iv's `\href` anchor layer, pasj00's `\timeform` without its class, psfig's
 /// `\psfigurepath`, `\sep` in revtex4's `\keywords`.
 mod perfect_kernel_batchclustfix2;
+/// CLUSTFIX3: run-397 Error roots — amsmath's `\[`/`\]`, `\robustify` of a native, pgfkeys natives over a pgf 2.00
+/// file, doublespace's `\setstretch`.
+mod perfect_kernel_batchclustfix3;
 /// CMPJ1: cmpj's `\refaddr` marks resolve as TeX's second run (`cmpj_sty.rs`).
 mod perfect_kernel_batchcmpj1;
 mod perfect_kernel_batchcr10a;
