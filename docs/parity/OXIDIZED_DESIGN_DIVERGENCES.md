@@ -20992,7 +20992,13 @@ reads to the delimiter as tokenized, so in an argument it ends there with no err
 `}` stop is then only the recovery for a missing delimiter, with TeX's "Argument of \@tempa has an extra }"
 (pdflatex goes on to "Paragraph ended before \@tempa was complete" and loses the argument; ours keeps it). It has no
 `\verb@eol@error`: a line's end inside it is a space (cs9811025 `\verb|h_0` / `.. h_{-m}|`, was "\verb ended by end
-of line"), and only a `\par` ends it, with that "Paragraph ended" Error.
+of line"), and only a `\par` ends it, with that "Paragraph ended" Error, the `\par` read again (tex.web §396
+`back_error`; the paragraph still ends). Read to the input's end without its delimiter, this read (and tabularx's)
+reports "File ended while scanning use of \@tempa" (tex.web §338) and recovers as the line-bounded read did: the verb
+keeps the body up to the first line end, and what follows is re-read from its spelling under the restored catcodes
+(`\dospecials` froze it), so `\end{document}` and later cells are not lost (was: an empty document, or `\end{document}`
+printed as text, both silent). Guards `perfect_kernel_batchnext397::verb_delimited_unterminated_reports_file_ended`,
+`…::verb_under_documentstyle_unterminated_recovers`.
 cond-mat0203143 (`\documentstyle[aps,…]{revtex}`, ver8.tex:716-727) 14 errors → 0, pdflatex under its own
 `\documentstyle` 0 `\verb` errors; math0303012 (gen2.tex:87 `{\verb|#3|}` in the `kentry` rows) 23 `\verb` errors → 0,
 each row's list as pdflatex prints it. Not covered: an argument a binding digests in place or pushes back without its

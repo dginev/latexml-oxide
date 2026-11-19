@@ -1,0 +1,21 @@
+% witness: synthetic (the NEXT397 re-review's e5); the bound it pins was removed for 2506.19539, 2601.10229, 2606.20642
+%          (tabularx `\verb` across a line end)
+% oracle:  tabularx.sty:205-209 `\TX@verb` reads `\@tempa##1#1`, unbounded by the line's end; with no closing `|` TeX
+%          errs ("Argument of \@tempa has an extra }" at its collected body's end, then "Paragraph ended before
+%          \@tempa was complete") and stops: invalid input on purpose
+% engines: rust NEXT397 fix 1: 0 errors and an EMPTY `<document/>` (the scan ran to the end of the input and handed
+%          it back under `\dospecials`); CLUSTFIX: 1 error "\verb ended by end of line", every cell kept
+% expect:  1 error "File ended while scanning use of \@tempa", 0 warnings; the verb keeps its first line, the second
+%          row's cells and "After." are kept
+% status:  RED (NEXT397 fix 1) -> GREEN (NEXT397 fix 2); guard
+%          perfect_kernel_batchnext397::verb_delimited_unterminated_reports_file_ended
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tabularx}
+\begin{document}
+\begin{tabularx}{\linewidth}{XX}
+A \verb|ab & B \\
+E & F \\
+\end{tabularx}
+After.
+\end{document}

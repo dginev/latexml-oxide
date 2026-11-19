@@ -145,6 +145,8 @@ fn verb_under_documentstyle_reads_to_its_tokenized_delimiter() {
     Some("ar5iv.sty"),
   );
   assert_eq!(counts(&log), (0, 0), "{log}");
+  // KNOWN GAP (row R VERBSPACE): the first `\verb+ +` is empty where pdflatex sets a space — a catcode-10 space that is
+  // the whole body is lost through `\@internal@verb`. Pinned as it stands, not as right.
   assert_element(
     &xml,
     "tabular",
@@ -159,5 +161,62 @@ fn verb_under_documentstyle_reads_to_its_tokenized_delimiter() {
      xml:id=\"p1.2.2\"> done\n<verbatim font=\"typewriter\" \
      xml:id=\"p1.2.2.1\">x y</verbatim> <verbatim font=\"typewriter\" xml:id=\"p1.2.2.2\">h_0 .. \
      h</verbatim></text></p>",
+  );
+}
+
+/// A delimited `\verb` (tabularx's `\TX@verb`, tabularx.sty:205-209) with no closing delimiter reads to the end of
+/// the input: "File ended while scanning use of \@tempa" (tex.web §338), and the verb keeps its first line while the
+/// rest is re-read under the restored catcodes, so the second row and "After." survive (without it, an EMPTY
+/// document). Distinct from `verb_under_documentstyle_unterminated_recovers` (the 2e caller, inside an alignment
+/// cell). Repro boxes-groups/verb_delimited_unterminated_in_a_tabularx_cell.
+#[test]
+fn verb_delimited_unterminated_reports_file_ended() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/verb_delimited_unterminated_in_a_tabularx_cell.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (1, 0), "{log}");
+  assert_eq!(
+    log
+      .matches("Error:unexpected:\\verb File ended while scanning use of \\@tempa")
+      .count(),
+    1,
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[],
+    r#"<para xml:id="p1"><tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="left" xml:id="p1.1.1.1"><inline-block vattach="top" xml:id="p1.1.1.1.1"><p xml:id="p1.1.1.1.1.1">A <verbatim font="typewriter" xml:id="p1.1.1.1.1.1.1">ab &amp; B \\</verbatim>E</p></inline-block></td><td align="left" xml:id="p1.1.1.2"><inline-block vattach="top" xml:id="p1.1.1.2.1"><p xml:id="p1.1.1.2.1.1">F</p></inline-block></td></tr></tbody></tabular><p xml:id="p1.2">After.</p></para>"#,
+  );
+}
+
+/// latex209.def's `\verb` unterminated: at a blank line "Paragraph ended before \@tempa was complete", the `\par` read
+/// again (tex.web §396 `back_error`) so the paragraphs stay two; at the input's end "File ended while scanning use of
+/// \@tempa", the verb keeping its first line and `\end{document}` read as a command, not text. Distinct from
+/// `verb_delimited_unterminated_reports_file_ended` (the `\par` path, and the 2.09 caller). Repro
+/// boxes-groups/verb_under_documentstyle_unterminated_recovers.
+#[test]
+fn verb_under_documentstyle_unterminated_recovers() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/verb_under_documentstyle_unterminated_recovers.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (2, 0), "{log}");
+  for message in [
+    "Error:unexpected:\\verb Paragraph ended before \\@tempa was complete",
+    "Error:unexpected:\\verb File ended while scanning use of \\@tempa",
+  ] {
+    assert_eq!(log.matches(message).count(), 1, "{message}: {log}");
+  }
+  assert_element(
+    &xml,
+    "document",
+    &[],
+    r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><para xml:id="p1"><p xml:id="p1.1">Start <verbatim font="typewriter" xml:id="p1.1.1">abc def</verbatim></p></para><para xml:id="p2"><p xml:id="p2.1">Next para here.</p></para><para xml:id="p3"><p xml:id="p3.1">Again <verbatim font="typewriter" xml:id="p3.1.1">ghi jk</verbatim>Next line here.</p></para></document>"#,
   );
 }
