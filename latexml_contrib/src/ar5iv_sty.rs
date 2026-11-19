@@ -331,28 +331,24 @@ const ATBEGSHI_COMMANDS: &[&str] = &[
 ];
 
 /// atbegshi's user commands with the shipout they hook into absent. What pdflatex prints on a page — a page's
-/// upper-left picture (`\AtBeginShipoutUpperLeft…`), its background or foreground box (`\AtBeginShipoutAddToBox…`), the
-/// first page's material (`\AtBeginShipoutFirst`), directly or inside the material of `\AtBeginShipout` and `…Next` — is
-/// the paper's page notice (2309.06611's IEEE copyright, 2403.15239's conference line, 2302.00362's "Preprint of the
-/// paper which appeared in: …") and is kept once as a publication note; the rest of the hook material is dropped
-/// unrun. `\AtBeginShipoutBox` is the kernel's `\ShipoutBox`, `\AtBeginShipoutInit` and `\AtBeginShipoutDiscard` do
+/// upper-left picture (`\AtBeginShipoutUpperLeft…`) or its background or foreground box (`\AtBeginShipoutAddToBox…`) set
+/// in the material of `\AtBeginShipout` or `…Next`, and the first page's material (`\AtBeginShipoutFirst`) — is the
+/// paper's page notice (2309.06611's IEEE copyright, 2403.15239's conference line, 2302.00362's "Preprint of the paper
+/// which appeared in: …") and is kept once as a publication note; the rest of the hook material is dropped unrun. Used
+/// outside a shipout hook — directly, or in `\AtBeginShipoutFirst`'s own material — the picture and box commands add to
+/// the shipout box when no page is being shipped (latex.ltx:20069, :20200), so pdflatex prints none of it and they do
+/// nothing. `\AtBeginShipoutBox` is the kernel's `\ShipoutBox`, `\AtBeginShipoutInit` and `\AtBeginShipoutDiscard` do
 /// nothing, the shipout box's dimensions are 0pt.
 fn define_atbegshi_hooks() -> Result<()> {
-  DefMacro!("\\AtBeginShipoutUpperLeft{}", "\\lx@arxiv@shipout@note{#1}");
-  DefMacro!(
-    "\\AtBeginShipoutUpperLeftForeground{}",
-    "\\lx@arxiv@shipout@note{#1}"
-  );
-  DefMacro!("\\AtBeginShipoutAddToBox{}", "\\lx@arxiv@shipout@note{#1}");
-  DefMacro!(
-    "\\AtBeginShipoutAddToBoxForeground{}",
-    "\\lx@arxiv@shipout@note{#1}"
-  );
-  DefMacro!("\\AtBeginShipout{}", sub[(material)] { Ok(Tokens::new(shipout_notes(&material).0)) });
-  DefMacro!("\\AtBeginShipoutNext{}", sub[(material)] { Ok(Tokens::new(shipout_notes(&material).0)) });
-  // (the first page's material is printed itself, beside the notes it holds)
+  def_macro_noop("\\AtBeginShipoutUpperLeft{}")?;
+  def_macro_noop("\\AtBeginShipoutUpperLeftForeground{}")?;
+  def_macro_noop("\\AtBeginShipoutAddToBox{}")?;
+  def_macro_noop("\\AtBeginShipoutAddToBoxForeground{}")?;
+  DefMacro!("\\AtBeginShipout{}", sub[(material)] { Ok(Tokens::new(shipout_notes(&material, false).0)) });
+  DefMacro!("\\AtBeginShipoutNext{}", sub[(material)] { Ok(Tokens::new(shipout_notes(&material, false).0)) });
+  // (the first page's material is printed itself, beside the notes its own hooks hold)
   DefMacro!("\\AtBeginShipoutFirst{}", sub[(material)] {
-    let (mut notes, rest) = shipout_notes(&material);
+    let (mut notes, rest) = shipout_notes(&material, true);
     notes.push(T_CS!("\\lx@arxiv@shipout@note"));
     notes.push(T_BEGIN!());
     notes.extend(rest);
@@ -432,8 +428,10 @@ fn define_atbegshi_hooks() -> Result<()> {
 
 /// A shipout hook's material split: the page notes it holds — a `\lx@arxiv@shipout@note{…}` for the argument of each
 /// `\AtBeginShipoutUpperLeft…` / `\AtBeginShipoutAddToBox…` in it at any depth, an `\AtBeginShipoutFirst{…}` for each of
-/// those — and the rest of it, every atbegshi hook taken out with its argument (so nothing is noted twice).
-fn shipout_notes(material: &Tokens) -> (Vec<Token>, Vec<Token>) {
+/// those — and the rest of it, every atbegshi hook taken out with its argument (so nothing is noted twice). In
+/// `\AtBeginShipoutFirst`'s own material (`first_page`), a picture or box command outside a nested hook prints nothing
+/// in pdflatex (see [`define_atbegshi_hooks`]) and is dropped with its argument.
+fn shipout_notes(material: &Tokens, first_page: bool) -> (Vec<Token>, Vec<Token>) {
   let noted = [
     T_CS!("\\AtBeginShipoutUpperLeft"),
     T_CS!("\\AtBeginShipoutUpperLeftForeground"),
@@ -475,12 +473,14 @@ fn shipout_notes(material: &Tokens) -> (Vec<Token>, Vec<Token>) {
     let token = &tokens[i];
     if noted.contains(token) || *token == first {
       let (start, end) = argument(i + 1);
-      notes.push(if *token == first {
-        first
-      } else {
-        T_CS!("\\lx@arxiv@shipout@note")
-      });
-      notes.extend_from_slice(&tokens[start..end]);
+      if !(first_page && *token != first && i >= dropped_until) {
+        notes.push(if *token == first {
+          first
+        } else {
+          T_CS!("\\lx@arxiv@shipout@note")
+        });
+        notes.extend_from_slice(&tokens[start..end]);
+      }
       i = end;
       continue;
     }

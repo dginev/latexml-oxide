@@ -51,7 +51,8 @@ fn own_texorpdfstring_kept() {
 }
 
 /// atbegshi's hooks drop their material but for what pdflatex prints on a page, the upper-left pictures' and the page
-/// boxes', each a publication note of its words with no picture; a rule or a `\special` makes no note (1612.04433's
+/// boxes' (set in `\AtBeginShipoutNext`), each a publication note of its words with no picture, and nothing for the
+/// same commands used outside a hook; a rule or a `\special` makes no note (1612.04433's
 /// tikz highlighter); `\AtBeginShipoutBox` is a box register (2309.06611, 2403.15239, 1607.05658, 2507.04353).
 #[test]
 fn atbegshi_hooks_without_package() {
@@ -74,6 +75,8 @@ fn atbegshi_hooks_without_package() {
     r#"<para xml:id="p1"><p xml:id="p1.1">Body text.</p></para>"#,
   );
   assert!(!xml.contains("<picture") && !xml.contains("<rule"), "{xml}");
+  // (the picture and box commands outside a shipout hook add to no page: pdflatex prints neither)
+  assert!(!xml.contains("Vnone") && !xml.contains("Unone"), "{xml}");
 }
 
 /// A preamble hook (as lpor2014.cls:2987, 1503.07687) and a body one in the same paper: the first use provides, so
@@ -85,12 +88,15 @@ fn shipout_notice_and_preamble_hooks() {
   let (log, xml) = latexml::util::test::convert_with(SHIPOUT_NOTICE, Some("ar5iv.sty"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let start = xml.find("<pubnote").expect("a note");
-  let notes: String = xml[start..xml.find("<para").unwrap()]
+  // (whitespace collapsed, not removed, so glued words fail; the layout's spaces between elements dropped)
+  let notes = xml[start..xml.find("<para").unwrap()]
     .split_whitespace()
-    .collect();
+    .collect::<Vec<_>>()
+    .join(" ")
+    .replace("> <", "><");
   assert_eq!(
     notes,
-    r#"<pubnoterole="note"><textyoffset="0.0pt"xml:id="id1"><inline-blockclass="ltx_parbox"vattach="middle"width="310.5pt"xml:id="id1.1"><palign="center"xml:id="id1.1.1">FirstNoticetext</p></inline-block></text></pubnote><pubnoterole="note">BoxNoticewords</pubnote><pubnoterole="note"><inline-blockclass="ltx_parbox"vattach="middle"width="142.3pt"xml:id="id2"><pxml:id="id2.1">Noticetext</p></inline-block></pubnote>"#
+    r#"<pubnote role="note"><text yoffset="0.0pt" xml:id="id1"><inline-block class="ltx_parbox" vattach="middle" width="310.5pt" xml:id="id1.1"><p align="center" xml:id="id1.1.1">FirstNotice text</p></inline-block></text></pubnote><pubnote role="note">BoxNotice words</pubnote><pubnote role="note"><inline-block class="ltx_parbox" vattach="middle" width="142.3pt" xml:id="id2"><p xml:id="id2.1">Notice text</p></inline-block></pubnote>"#
   );
   assert_eq!(xml.matches("<pubnote").count(), 3, "{xml}");
   assert!(!xml.contains(">P<") && !xml.contains("ERROR"), "{xml}");

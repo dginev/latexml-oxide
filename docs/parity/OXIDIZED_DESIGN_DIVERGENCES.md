@@ -11920,13 +11920,15 @@ user commands of atbegshi, which hyperref 6.77a (2007-10-29) to 7.01m (2025-05-2
 tag formatter is defined at that first use), so a reference back to it shows the target's title, or for an untitled one
 its enclosing unit's (an equation reads as its section's title), not hyperref's "Equation 1": 2 of 74 autorefs on 4
 witnesses (0803.2070 `#Ch0.E1`, 1010.2520 `#S2.SS1`; row R AUTOREFBACK). What pdflatex prints on a page through the
-hooks — a page's upper-left picture (`\AtBeginShipoutUpperLeft…`), its background or foreground box
-(`\AtBeginShipoutAddToBox…`, atbegshi-ltx.sty :59-62), the first page's material (`\AtBeginShipoutFirst`), directly
-or in the material of `\AtBeginShipout`, `…Next` — is the paper's page notice and is kept once as a publication note
+hooks — a page's upper-left picture (`\AtBeginShipoutUpperLeft…`) or its background or foreground box
+(`\AtBeginShipoutAddToBox…`, atbegshi-ltx.sty :59-62) set in the material of `\AtBeginShipout` or `…Next`, and the first
+page's material (`\AtBeginShipoutFirst`) — is the paper's page notice and is kept once as a publication note
 (`role=note`, no label); the rest of the hook material (`\AtBeginShipoutDiscard`, `\setbox\AtBeginShipoutBox…`,
 assignments) is dropped unrun. The note carries the words, not the page geometry: atbegshi's `picture(0,0)` is not set
 up, a `\put(x,y){…}` keeps its `{…}`, material with a picture (a `tikzpicture` overlay) gives its text alone, and
-material printing no text (a rule, an image, 1612.04433's tikz highlighter) makes no note. Witnesses
+material printing no text (a rule, an image, 1612.04433's tikz highlighter) makes no note. Used outside a shipout
+hook — directly, or in `\AtBeginShipoutFirst`'s own material — the picture and box commands add to the shipout box
+when no page is being shipped (latex.ltx:20069, :20200): pdflatex prints none of it, and they do nothing. Witnesses
 2309.06611's IEEE copyright, 2403.15239's conference line, 2302.00362's "Preprint of the paper which appeared in:
 European Conference on Mobile Robots (ECMR) 2021" (printed after an Error before). A notice behind a macro of the paper's is not seen.
 `\AtBeginShipoutBox` is the kernel's `\ShipoutBox`, `\AtBeginShipoutOriginalShipout` is `\shipout`, the
