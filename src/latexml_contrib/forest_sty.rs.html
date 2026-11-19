@@ -1163,207 +1163,221 @@
 <a href=#1163 id=1163 data-nosnippet>1163</a>  )
 <a href=#1164 id=1164 data-nosnippet>1164</a>}
 <a href=#1165 id=1165 data-nosnippet>1165</a>
-<a href=#1166 id=1166 data-nosnippet>1166</a><span class="doccomment">/// `\forestapplylibrarydefaults{&lt;libraries&gt;}` (forest.sty:171-172): runs each
-<a href=#1167 id=1167 data-nosnippet>1167</a>/// library's `libraries/&lt;name&gt;/defaults` style, when defined, through
-<a href=#1168 id=1168 data-nosnippet>1168</a>/// `\forestset`.
-<a href=#1169 id=1169 data-nosnippet>1169</a></span><span class="kw">fn </span>apply_forest_library_defaults(libraries: <span class="kw-2">&amp;</span>[String]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#1170 id=1170 data-nosnippet>1170</a>  <span class="kw">for </span>library <span class="kw">in </span>libraries {
-<a href=#1171 id=1171 data-nosnippet>1171</a>    <span class="comment">// One `\forestset` per library (forest.sty:171-172 `\forcsvlist`), so
-<a href=#1172 id=1172 data-nosnippet>1172</a>    // one budget each.
-<a href=#1173 id=1173 data-nosnippet>1173</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = KeyContext::document(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"the defaults of forest library '{library}'"</span>));
-<a href=#1174 id=1174 data-nosnippet>1174</a>    <span class="kw">let </span>keys = [ForestKey {
-<a href=#1175 id=1175 data-nosnippet>1175</a>      key:   <span class="macro">s!</span>(<span class="string">"libraries/{library}/defaults/.try"</span>),
-<a href=#1176 id=1176 data-nosnippet>1176</a>      value: <span class="prelude-val">None</span>,
-<a href=#1177 id=1177 data-nosnippet>1177</a>    }];
-<a href=#1178 id=1178 data-nosnippet>1178</a>    forestset(<span class="kw-2">&amp;</span>keys, <span class="kw-2">&amp;mut </span>ctx, <span class="number">0</span>);
-<a href=#1179 id=1179 data-nosnippet>1179</a>    ctx.report_runaway()<span class="question-mark">?</span>;
-<a href=#1180 id=1180 data-nosnippet>1180</a>  }
-<a href=#1181 id=1181 data-nosnippet>1181</a>  <span class="prelude-val">Ok</span>(())
-<a href=#1182 id=1182 data-nosnippet>1182</a>}
-<a href=#1183 id=1183 data-nosnippet>1183</a>
-<a href=#1184 id=1184 data-nosnippet>1184</a><span class="attr">#[rustfmt::skip]
-<a href=#1185 id=1185 data-nosnippet>1185</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#1186 id=1186 data-nosnippet>1186</a>  <span class="comment">// Per-conversion reset (a mid-body fatal can leave a tree behind).
-<a href=#1187 id=1187 data-nosnippet>1187</a>  </span>PENDING_FOREST_TREES.with(|c| c.borrow_mut().clear());
-<a href=#1188 id=1188 data-nosnippet>1188</a>  LIBRARIES_LATER.with(|c| c.borrow_mut().clear());
-<a href=#1189 id=1189 data-nosnippet>1189</a>  <span class="comment">// forest.sty:140-157: a package option that is none of forest's settings
-<a href=#1190 id=1190 data-nosnippet>1190</a>  // (`external`, `tikzcshack`, `tikzinstallkeys`, `compat`, `debug`) names a
-<a href=#1191 id=1191 data-nosnippet>1191</a>  // library, loaded with its defaults at the end of the package
-<a href=#1192 id=1192 data-nosnippet>1192</a>  // (`\usepackage[linguistics]{forest}`, forest-doc.tex:1836). Processed
-<a href=#1193 id=1193 data-nosnippet>1193</a>  // before the requires below, while the options are forest's own.
-<a href=#1194 id=1194 data-nosnippet>1194</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@forest@packageoption{}"</span>, sub[(option)] {
-<a href=#1195 id=1195 data-nosnippet>1195</a>    <span class="kw">let </span>option = option.to_string();
-<a href=#1196 id=1196 data-nosnippet>1196</a>    <span class="kw">let </span>setting = option.split([<span class="string">'='</span>, <span class="string">'/'</span>]).next().unwrap_or_default().trim().to_string();
-<a href=#1197 id=1197 data-nosnippet>1197</a>    <span class="kw">if </span>!setting.is_empty()
-<a href=#1198 id=1198 data-nosnippet>1198</a>      &amp;&amp; !<span class="macro">matches!</span>(setting.as_str(), <span class="string">"external" </span>| <span class="string">"tikzcshack" </span>| <span class="string">"tikzinstallkeys" </span>| <span class="string">"compat" </span>| <span class="string">"debug"</span>)
-<a href=#1199 id=1199 data-nosnippet>1199</a>    {
-<a href=#1200 id=1200 data-nosnippet>1200</a>      LIBRARIES_LATER.with(|c| c.borrow_mut().push(setting));
-<a href=#1201 id=1201 data-nosnippet>1201</a>    }
-<a href=#1202 id=1202 data-nosnippet>1202</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#1203 id=1203 data-nosnippet>1203</a>  });
-<a href=#1204 id=1204 data-nosnippet>1204</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
-<a href=#1205 id=1205 data-nosnippet>1205</a>    <span class="macro">Digest!</span>(<span class="string">"\\expandafter\\lx@forest@packageoption\\expandafter{\\CurrentOption}"</span>)<span class="question-mark">?</span>;
-<a href=#1206 id=1206 data-nosnippet>1206</a>  });
-<a href=#1207 id=1207 data-nosnippet>1207</a>  <span class="comment">// forest.sty:178 reads its options with `\ProcessPgfPackageOptions`: `\@curroptions` stays as it was.
-<a href=#1208 id=1208 data-nosnippet>1208</a>  </span><span class="macro">ProcessKeyOptions!</span>();
-<a href=#1209 id=1209 data-nosnippet>1209</a>  <span class="macro">RequirePackage!</span>(<span class="string">"tikz"</span>);
-<a href=#1210 id=1210 data-nosnippet>1210</a>  <span class="comment">// forest.sty:50-53, the TikZ libraries the package loads, which its documents then draw with outside a tree
-<a href=#1211 id=1211 data-nosnippet>1211</a>  // (`single arrow` of shapes.arrows: 1910.06571; `fit`: 2003.06880); :129 its key family, which a document's
-<a href=#1212 id=1212 data-nosnippet>1212</a>  // `\pgfkeys{/forest, …}` selects (2012.09112). Guard `perfect_kernel_batch71a::forest_loads_its_tikz_libraries`.
-<a href=#1213 id=1213 data-nosnippet>1213</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\usetikzlibrary{shapes}\usetikzlibrary{fit}\usetikzlibrary{calc}\usepgflibrary{intersections}"</span>);
-<a href=#1214 id=1214 data-nosnippet>1214</a>  <span class="macro">RequirePackage!</span>(<span class="string">"etoolbox"</span>);
-<a href=#1215 id=1215 data-nosnippet>1215</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\pgfkeys{/forest/.is family}"</span>);
-<a href=#1216 id=1216 data-nosnippet>1216</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\ProvidesPackage{forest}[2017/07/14 v2.1.5 Drawing (linguistic) trees]"</span>);
-<a href=#1217 id=1217 data-nosnippet>1217</a>  <span class="comment">// Semantic tree parser: \begin{forest} reads bracket grammar into a nested
-<a href=#1218 id=1218 data-nosnippet>1218</a>  // inline-enumerate/inline-item tree.
-<a href=#1219 id=1219 data-nosnippet>1219</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#1220 id=1220 data-nosnippet>1220</a>    <span class="macro">T_CS!</span>(<span class="string">"\\begin{forest}"</span>), <span class="prelude-val">None</span>,
-<a href=#1221 id=1221 data-nosnippet>1221</a>    sub [document, _args, props] {
-<a href=#1222 id=1222 data-nosnippet>1222</a>      <span class="comment">// The tree rides on the whatsit's own properties (`Stored::Opaque`),
-<a href=#1223 id=1223 data-nosnippet>1223</a>      // so deferred or nested whatsits construct in any order.
-<a href=#1224 id=1224 data-nosnippet>1224</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Opaque(payload)) = props.get(<span class="string">"forest_tree"</span>)
-<a href=#1225 id=1225 data-nosnippet>1225</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(tree) = payload.downcast_ref::&lt;ForestTree&gt;()
-<a href=#1226 id=1226 data-nosnippet>1226</a>      {
-<a href=#1227 id=1227 data-nosnippet>1227</a>        emit_forest_tree(document, tree)<span class="question-mark">?</span>;
-<a href=#1228 id=1228 data-nosnippet>1228</a>      }
-<a href=#1229 id=1229 data-nosnippet>1229</a>    },
-<a href=#1230 id=1230 data-nosnippet>1230</a>    mode =&gt; <span class="string">"text"</span>,
-<a href=#1231 id=1231 data-nosnippet>1231</a>    locked =&gt; <span class="bool-val">true</span>,
-<a href=#1232 id=1232 data-nosnippet>1232</a>    before_digest =&gt; {
-<a href=#1233 id=1233 data-nosnippet>1233</a>      <span class="kw">let </span>tokens = read_forest_env_tokens()<span class="question-mark">?</span>;
-<a href=#1234 id=1234 data-nosnippet>1234</a>      <span class="kw">let </span>tree = parse_forest_tokens(<span class="kw-2">&amp;</span>tokens);
-<a href=#1235 id=1235 data-nosnippet>1235</a>      PENDING_FOREST_TREES.with(|c| c.borrow_mut().push(tree));
-<a href=#1236 id=1236 data-nosnippet>1236</a>    },
-<a href=#1237 id=1237 data-nosnippet>1237</a>    properties =&gt; {
-<a href=#1238 id=1238 data-nosnippet>1238</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
-<a href=#1239 id=1239 data-nosnippet>1239</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>tree) = PENDING_FOREST_TREES.with(|c| c.borrow_mut().pop()) {
-<a href=#1240 id=1240 data-nosnippet>1240</a>        digest_forest_tree(<span class="kw-2">&amp;mut </span>tree)<span class="question-mark">?</span>;
-<a href=#1241 id=1241 data-nosnippet>1241</a>        props.insert(<span class="string">"forest_tree"</span>, Stored::Opaque(Rc::new(tree)));
-<a href=#1242 id=1242 data-nosnippet>1242</a>      }
-<a href=#1243 id=1243 data-nosnippet>1243</a>      <span class="prelude-val">Ok</span>(props)
-<a href=#1244 id=1244 data-nosnippet>1244</a>    }
-<a href=#1245 id=1245 data-nosnippet>1245</a>  );
-<a href=#1246 id=1246 data-nosnippet>1246</a>  <span class="comment">// \Forest command: \Forest*(config){ [root [child]] }
-<a href=#1247 id=1247 data-nosnippet>1247</a>  // forest.sty:8511 defines \NewDocumentCommand{\Forest}{s D(){} m}. The star
-<a href=#1248 id=1248 data-nosnippet>1248</a>  // only drops forest's `\forest@group@env` group (:8513, :8528;
-<a href=#1249 id=1249 data-nosnippet>1249</a>  // forest-doc.tex:1927-1929), which lets the node names and styles a tree
-<a href=#1250 id=1250 data-nosnippet>1250</a>  // defines outlive it; the binding keeps those tree-local for every form
-<a href=#1251 id=1251 data-nosnippet>1251</a>  // (the constructor digests inside a mode group), so the star is read and
-<a href=#1252 id=1252 data-nosnippet>1252</a>  // ignored. We handle optional * and optional (config) before delegating to
-<a href=#1253 id=1253 data-nosnippet>1253</a>  // \lx@forest@exec.
-<a href=#1254 id=1254 data-nosnippet>1254</a>  </span><span class="macro">RawTeX!</span>(
-<a href=#1255 id=1255 data-nosnippet>1255</a>    <span class="string">r"\def\Forest{\@ifstar{\lx@forest@opt*}{\lx@forest@opt{}}}
-<a href=#1256 id=1256 data-nosnippet>1256</a>\def\lx@forest@opt#1{\@ifnextchar({\lx@forest@withconfig{#1}}{\lx@forest@exec{#1}{}}}
-<a href=#1257 id=1257 data-nosnippet>1257</a>\def\lx@forest@withconfig#1(#2){\lx@forest@exec{#1}{#2}}"
-<a href=#1258 id=1258 data-nosnippet>1258</a>  </span>);
-<a href=#1259 id=1259 data-nosnippet>1259</a>  <span class="macro">DefConstructor!</span>(
-<a href=#1260 id=1260 data-nosnippet>1260</a>    <span class="string">"\\lx@forest@exec {} {} Undigested"</span>,
-<a href=#1261 id=1261 data-nosnippet>1261</a>    sub [document, _args, props] {
-<a href=#1262 id=1262 data-nosnippet>1262</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Opaque(payload)) = props.get(<span class="string">"forest_tree"</span>)
-<a href=#1263 id=1263 data-nosnippet>1263</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(tree) = payload.downcast_ref::&lt;ForestTree&gt;()
-<a href=#1264 id=1264 data-nosnippet>1264</a>      {
-<a href=#1265 id=1265 data-nosnippet>1265</a>        emit_forest_tree(document, tree)<span class="question-mark">?</span>;
-<a href=#1266 id=1266 data-nosnippet>1266</a>      }
-<a href=#1267 id=1267 data-nosnippet>1267</a>    },
-<a href=#1268 id=1268 data-nosnippet>1268</a>    mode =&gt; <span class="string">"text"</span>,
-<a href=#1269 id=1269 data-nosnippet>1269</a>    locked =&gt; <span class="bool-val">true</span>,
-<a href=#1270 id=1270 data-nosnippet>1270</a>    properties =&gt; sub[args] {
-<a href=#1271 id=1271 data-nosnippet>1271</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
-<a href=#1272 id=1272 data-nosnippet>1272</a>      <span class="kw">let </span>config = args[<span class="number">1</span>].as_ref().map(|d| d.to_string()).unwrap_or_default();
-<a href=#1273 id=1273 data-nosnippet>1273</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(body_dig)) = args.get(<span class="number">2</span>) {
-<a href=#1274 id=1274 data-nosnippet>1274</a>        <span class="kw">let </span>tokens = <span class="kw">match </span>body_dig.data() {
-<a href=#1275 id=1275 data-nosnippet>1275</a>          DigestedData::Postponed(t) =&gt; t.unlist_ref().clone(),
-<a href=#1276 id=1276 data-nosnippet>1276</a>          <span class="kw">_ </span>=&gt; Vec::new(),
-<a href=#1277 id=1277 data-nosnippet>1277</a>        };
-<a href=#1278 id=1278 data-nosnippet>1278</a>        <span class="kw">let </span><span class="kw-2">mut </span>tree = parse_forest_tokens(<span class="kw-2">&amp;</span>tokens);
-<a href=#1279 id=1279 data-nosnippet>1279</a>        <span class="kw">if </span>!config.is_empty() &amp;&amp; tree.config.is_empty() {
-<a href=#1280 id=1280 data-nosnippet>1280</a>          tree.config = config;
-<a href=#1281 id=1281 data-nosnippet>1281</a>        }
-<a href=#1282 id=1282 data-nosnippet>1282</a>        digest_forest_tree(<span class="kw-2">&amp;mut </span>tree)<span class="question-mark">?</span>;
-<a href=#1283 id=1283 data-nosnippet>1283</a>        props.insert(<span class="string">"forest_tree"</span>, Stored::Opaque(Rc::new(tree)));
-<a href=#1284 id=1284 data-nosnippet>1284</a>      }
-<a href=#1285 id=1285 data-nosnippet>1285</a>      <span class="prelude-val">Ok</span>(props)
-<a href=#1286 id=1286 data-nosnippet>1286</a>    }
-<a href=#1287 id=1287 data-nosnippet>1287</a>  );
-<a href=#1288 id=1288 data-nosnippet>1288</a>  <span class="comment">// The bare-CS form `\forest … \endforest` that `\NewDocumentEnvironment
-<a href=#1289 id=1289 data-nosnippet>1289</a>  // {forest}{D(){}}` (forest.sty:8506) also defines — neoschool.cls:8567-8581
-<a href=#1290 id=1290 data-nosnippet>1290</a>  // builds its `neotree` env on it; without it `\forest` was undefined and
-<a href=#1291 id=1291 data-nosnippet>1291</a>  // the tree body leaked as text (`\frac` XMApp errors). Guard:
-<a href=#1292 id=1292 data-nosnippet>1292</a>  // `perfect_kernel_batch54::forest_bare_cs_form_discards_body`.
-<a href=#1293 id=1293 data-nosnippet>1293</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#1294 id=1294 data-nosnippet>1294</a>    <span class="macro">T_CS!</span>(<span class="string">"\\forest"</span>), <span class="prelude-val">None</span>,
-<a href=#1295 id=1295 data-nosnippet>1295</a>    <span class="string">"&lt;ltx:ERROR&gt;{forest}&lt;/ltx:ERROR&gt;"</span>,
-<a href=#1296 id=1296 data-nosnippet>1296</a>    bounded =&gt; <span class="bool-val">true</span>,
-<a href=#1297 id=1297 data-nosnippet>1297</a>    mode    =&gt; <span class="string">"text"</span>,
-<a href=#1298 id=1298 data-nosnippet>1298</a>    locked  =&gt; <span class="bool-val">true</span>,
-<a href=#1299 id=1299 data-nosnippet>1299</a>    before_digest =&gt; { discard_body_until_cs(<span class="string">"forest"</span>, <span class="string">"\\endforest"</span>, <span class="string">"forest.sty.ltxml"</span>)<span class="question-mark">?</span>; }
-<a href=#1300 id=1300 data-nosnippet>1300</a>  );
-<a href=#1301 id=1301 data-nosnippet>1301</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endforest"</span>, <span class="string">"\\relax"</span>);
-<a href=#1302 id=1302 data-nosnippet>1302</a>  <span class="comment">// forest.sty:1413-1422 `\bracketset` configures the bracket parser
-<a href=#1303 id=1303 data-nosnippet>1303</a>  // (neoschool.cls:8568, forest-doc.tex:1771, luacas tut3.tex:97
-<a href=#1304 id=1304 data-nosnippet>1304</a>  // `\bracketset{action character=@}`): the opening and closing brackets
-<a href=#1305 id=1305 data-nosnippet>1305</a>  // and the action character, `\let` locally. The action character drives
-<a href=#1306 id=1306 data-nosnippet>1306</a>  // macro expansion while parsing (forest.sty:1491-1492, 1598-1627), which
-<a href=#1307 id=1307 data-nosnippet>1307</a>  // the token-level parser has no stage for; it only marks the trees that
-<a href=#1308 id=1308 data-nosnippet>1308</a>  // use it (`ForestTree::actions`). A bare `action character` (the default,
-<a href=#1309 id=1309 data-nosnippet>1309</a>  // :1422) lets it to `\pgfkeysnovalue`: no action character.
-<a href=#1310 id=1310 data-nosnippet>1310</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracketset{}"</span>, sub[(keys)] {
-<a href=#1311 id=1311 data-nosnippet>1311</a>    <span class="kw">for </span>key <span class="kw">in </span>parse_forest_keylist(keys.unlist_ref()) {
-<a href=#1312 id=1312 data-nosnippet>1312</a>      <span class="kw">let </span>register = <span class="kw">match </span>key.key.as_str() {
-<a href=#1313 id=1313 data-nosnippet>1313</a>        <span class="string">"opening bracket" </span>=&gt; OPENING_BRACKET,
-<a href=#1314 id=1314 data-nosnippet>1314</a>        <span class="string">"closing bracket" </span>=&gt; CLOSING_BRACKET,
-<a href=#1315 id=1315 data-nosnippet>1315</a>        <span class="string">"action character" </span>=&gt; ACTION_CHARACTER,
-<a href=#1316 id=1316 data-nosnippet>1316</a>        <span class="kw">_ </span>=&gt; <span class="kw">continue</span>,
-<a href=#1317 id=1317 data-nosnippet>1317</a>      };
-<a href=#1318 id=1318 data-nosnippet>1318</a>      <span class="kw">match </span>key.value.unwrap_or_default().into_iter().find(|t| !is_ignorable_token(t)) {
-<a href=#1319 id=1319 data-nosnippet>1319</a>        <span class="prelude-val">Some</span>(token) =&gt; assign_value(register, Stored::Token(token), <span class="prelude-val">None</span>),
-<a href=#1320 id=1320 data-nosnippet>1320</a>        <span class="prelude-val">None </span><span class="kw">if </span>register == ACTION_CHARACTER =&gt; assign_value(register, Stored::None, <span class="prelude-val">None</span>),
-<a href=#1321 id=1321 data-nosnippet>1321</a>        <span class="prelude-val">None </span>=&gt; {},
-<a href=#1322 id=1322 data-nosnippet>1322</a>      }
-<a href=#1323 id=1323 data-nosnippet>1323</a>    }
-<a href=#1324 id=1324 data-nosnippet>1324</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#1325 id=1325 data-nosnippet>1325</a>  });
-<a href=#1326 id=1326 data-nosnippet>1326</a>  <span class="comment">// forest resumes the bracket parser with `\bracketResume` after a `@@`
-<a href=#1327 id=1327 data-nosnippet>1327</a>  // action handed it to user code (forest.sty:1450, 1622-1623;
-<a href=#1328 id=1328 data-nosnippet>1328</a>  // forest-doc.tex:1787-1795 `\x#1{@@… \expandafter\bracketResume\xtemp}`);
-<a href=#1329 id=1329 data-nosnippet>1329</a>  // a digested label expands into it.
-<a href=#1330 id=1330 data-nosnippet>1330</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bracketResume"</span>, <span class="string">"\\relax"</span>);
-<a href=#1331 id=1331 data-nosnippet>1331</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\forestset{}"</span>, sub[(keys)] {
-<a href=#1332 id=1332 data-nosnippet>1332</a>    <span class="kw">let </span><span class="kw-2">mut </span>ctx = KeyContext::document(<span class="string">"one \\forestset"</span>);
-<a href=#1333 id=1333 data-nosnippet>1333</a>    forestset(<span class="kw-2">&amp;</span>parse_forest_keylist(keys.unlist_ref()), <span class="kw-2">&amp;mut </span>ctx, <span class="number">0</span>);
-<a href=#1334 id=1334 data-nosnippet>1334</a>    ctx.report_runaway()<span class="question-mark">?</span>;
-<a href=#1335 id=1335 data-nosnippet>1335</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#1336 id=1336 data-nosnippet>1336</a>  });
-<a href=#1337 id=1337 data-nosnippet>1337</a>  <span class="comment">// forest.sty:3945-3946, the two content formats forest names.
-<a href=#1338 id=1338 data-nosnippet>1338</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\forestset{plain content/.style={content format={\forestoption{content}}},math content/.style={content format={\noexpand\ensuremath{\forestoption{content}}}}}"</span>);
-<a href=#1339 id=1339 data-nosnippet>1339</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\forestoption{}"</span>, <span class="string">"\\relax"</span>);
-<a href=#1340 id=1340 data-nosnippet>1340</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\foresteoption{}"</span>, <span class="string">"\\relax"</span>);
-<a href=#1341 id=1341 data-nosnippet>1341</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\forestregister{}"</span>, <span class="string">"\\relax"</span>);
-<a href=#1342 id=1342 data-nosnippet>1342</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\foresteregister{}"</span>, <span class="string">"\\relax"</span>);
-<a href=#1343 id=1343 data-nosnippet>1343</a>  <span class="comment">// forest.sty:162-170 `\useforestlibrary{s O{} m}`. The library name is
-<a href=#1344 id=1344 data-nosnippet>1344</a>  // recorded where forest's `\ProvidesForestLibrary` records it
-<a href=#1345 id=1345 data-nosnippet>1345</a>  // (`\csdef{forest@libraries@loaded@#1}{}`, forest.sty:173-176; read by
-<a href=#1346 id=1346 data-nosnippet>1346</a>  // `\forest@iflibraryloaded`, :177); the library file itself is not loaded
-<a href=#1347 id=1347 data-nosnippet>1347</a>  // (its styles are TikZ layout). The star also applies the defaults.
-<a href=#1348 id=1348 data-nosnippet>1348</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\useforestlibrary OptionalMatch:* [] {}"</span>, sub[(star, _options, libraries)] {
-<a href=#1349 id=1349 data-nosnippet>1349</a>    <span class="kw">let </span>libraries = csv_items(<span class="kw-2">&amp;</span>libraries);
-<a href=#1350 id=1350 data-nosnippet>1350</a>    <span class="kw">for </span>library <span class="kw">in </span><span class="kw-2">&amp;</span>libraries {
-<a href=#1351 id=1351 data-nosnippet>1351</a>      record_forest_library(library)<span class="question-mark">?</span>;
-<a href=#1352 id=1352 data-nosnippet>1352</a>    }
-<a href=#1353 id=1353 data-nosnippet>1353</a>    <span class="kw">if </span>star.is_some() {
-<a href=#1354 id=1354 data-nosnippet>1354</a>      apply_forest_library_defaults(<span class="kw-2">&amp;</span>libraries)<span class="question-mark">?</span>;
-<a href=#1355 id=1355 data-nosnippet>1355</a>    }
-<a href=#1356 id=1356 data-nosnippet>1356</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#1357 id=1357 data-nosnippet>1357</a>  });
-<a href=#1358 id=1358 data-nosnippet>1358</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\forestapplylibrarydefaults{}"</span>, sub[(libraries)] {
-<a href=#1359 id=1359 data-nosnippet>1359</a>    apply_forest_library_defaults(<span class="kw-2">&amp;</span>csv_items(<span class="kw-2">&amp;</span>libraries))<span class="question-mark">?</span>;
-<a href=#1360 id=1360 data-nosnippet>1360</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#1361 id=1361 data-nosnippet>1361</a>  });
-<a href=#1362 id=1362 data-nosnippet>1362</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\forest@iflibraryloaded#1#2#3{\ifcsdef{forest@libraries@loaded@#1}{#2}{#3}}"</span>);
-<a href=#1363 id=1363 data-nosnippet>1363</a>  <span class="comment">// forest.sty:160-161 `\AtEndOfPackage{\forest@loadlibrarieslater}`.
-<a href=#1364 id=1364 data-nosnippet>1364</a>  </span><span class="kw">for </span>library <span class="kw">in </span>LIBRARIES_LATER.with(|c| std::mem::take(<span class="kw-2">&amp;mut *</span>c.borrow_mut())) {
-<a href=#1365 id=1365 data-nosnippet>1365</a>    record_forest_library(<span class="kw-2">&amp;</span>library)<span class="question-mark">?</span>;
-<a href=#1366 id=1366 data-nosnippet>1366</a>    apply_forest_library_defaults(<span class="kw-2">&amp;</span>[library])<span class="question-mark">?</span>;
-<a href=#1367 id=1367 data-nosnippet>1367</a>  }
-<a href=#1368 id=1368 data-nosnippet>1368</a>});
+<a href=#1166 id=1166 data-nosnippet>1166</a><span class="doccomment">/// forest.sty:167-170 `\useforestlibrary@`: loads forest library `library` with `options`, or only records it where
+<a href=#1167 id=1167 data-nosnippet>1167</a>/// this binding stands in for it (`linguistics`, `edges`).
+<a href=#1168 id=1168 data-nosnippet>1168</a></span><span class="kw">fn </span>use_forest_library(library: <span class="kw-2">&amp;</span>str, options: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1169 id=1169 data-nosnippet>1169</a>  <span class="kw">if </span><span class="macro">matches!</span>(library, <span class="string">"linguistics" </span>| <span class="string">"edges"</span>) {
+<a href=#1170 id=1170 data-nosnippet>1170</a>    <span class="kw">return </span>record_forest_library(library);
+<a href=#1171 id=1171 data-nosnippet>1171</a>  }
+<a href=#1172 id=1172 data-nosnippet>1172</a>  <span class="macro">Digest!</span>(mouth::tokenize_internal(TeXString::assembled(<span class="macro">s!</span>(
+<a href=#1173 id=1173 data-nosnippet>1173</a>    <span class="string">"\\RequirePackage[{options}]{{forest-lib-{library}}}"
+<a href=#1174 id=1174 data-nosnippet>1174</a>  </span>))))<span class="question-mark">?</span>;
+<a href=#1175 id=1175 data-nosnippet>1175</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1176 id=1176 data-nosnippet>1176</a>}
+<a href=#1177 id=1177 data-nosnippet>1177</a>
+<a href=#1178 id=1178 data-nosnippet>1178</a><span class="doccomment">/// `\forestapplylibrarydefaults{&lt;libraries&gt;}` (forest.sty:171-172): runs each
+<a href=#1179 id=1179 data-nosnippet>1179</a>/// library's `libraries/&lt;name&gt;/defaults` style, when defined, through
+<a href=#1180 id=1180 data-nosnippet>1180</a>/// `\forestset`.
+<a href=#1181 id=1181 data-nosnippet>1181</a></span><span class="kw">fn </span>apply_forest_library_defaults(libraries: <span class="kw-2">&amp;</span>[String]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1182 id=1182 data-nosnippet>1182</a>  <span class="kw">for </span>library <span class="kw">in </span>libraries {
+<a href=#1183 id=1183 data-nosnippet>1183</a>    <span class="comment">// One `\forestset` per library (forest.sty:171-172 `\forcsvlist`), so
+<a href=#1184 id=1184 data-nosnippet>1184</a>    // one budget each.
+<a href=#1185 id=1185 data-nosnippet>1185</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = KeyContext::document(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"the defaults of forest library '{library}'"</span>));
+<a href=#1186 id=1186 data-nosnippet>1186</a>    <span class="kw">let </span>keys = [ForestKey {
+<a href=#1187 id=1187 data-nosnippet>1187</a>      key:   <span class="macro">s!</span>(<span class="string">"libraries/{library}/defaults/.try"</span>),
+<a href=#1188 id=1188 data-nosnippet>1188</a>      value: <span class="prelude-val">None</span>,
+<a href=#1189 id=1189 data-nosnippet>1189</a>    }];
+<a href=#1190 id=1190 data-nosnippet>1190</a>    forestset(<span class="kw-2">&amp;</span>keys, <span class="kw-2">&amp;mut </span>ctx, <span class="number">0</span>);
+<a href=#1191 id=1191 data-nosnippet>1191</a>    ctx.report_runaway()<span class="question-mark">?</span>;
+<a href=#1192 id=1192 data-nosnippet>1192</a>  }
+<a href=#1193 id=1193 data-nosnippet>1193</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1194 id=1194 data-nosnippet>1194</a>}
+<a href=#1195 id=1195 data-nosnippet>1195</a>
+<a href=#1196 id=1196 data-nosnippet>1196</a><span class="attr">#[rustfmt::skip]
+<a href=#1197 id=1197 data-nosnippet>1197</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#1198 id=1198 data-nosnippet>1198</a>  <span class="comment">// Per-conversion reset (a mid-body fatal can leave a tree behind).
+<a href=#1199 id=1199 data-nosnippet>1199</a>  </span>PENDING_FOREST_TREES.with(|c| c.borrow_mut().clear());
+<a href=#1200 id=1200 data-nosnippet>1200</a>  LIBRARIES_LATER.with(|c| c.borrow_mut().clear());
+<a href=#1201 id=1201 data-nosnippet>1201</a>  <span class="comment">// forest.sty:140-157: a package option that is none of forest's settings
+<a href=#1202 id=1202 data-nosnippet>1202</a>  // (`external`, `tikzcshack`, `tikzinstallkeys`, `compat`, `debug`) names a
+<a href=#1203 id=1203 data-nosnippet>1203</a>  // library, loaded with its defaults at the end of the package
+<a href=#1204 id=1204 data-nosnippet>1204</a>  // (`\usepackage[linguistics]{forest}`, forest-doc.tex:1836). Processed
+<a href=#1205 id=1205 data-nosnippet>1205</a>  // before the requires below, while the options are forest's own.
+<a href=#1206 id=1206 data-nosnippet>1206</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@forest@packageoption{}"</span>, sub[(option)] {
+<a href=#1207 id=1207 data-nosnippet>1207</a>    <span class="kw">let </span>option = option.to_string();
+<a href=#1208 id=1208 data-nosnippet>1208</a>    <span class="kw">let </span>setting = option.split([<span class="string">'='</span>, <span class="string">'/'</span>]).next().unwrap_or_default().trim().to_string();
+<a href=#1209 id=1209 data-nosnippet>1209</a>    <span class="kw">if </span>!setting.is_empty()
+<a href=#1210 id=1210 data-nosnippet>1210</a>      &amp;&amp; !<span class="macro">matches!</span>(setting.as_str(), <span class="string">"external" </span>| <span class="string">"tikzcshack" </span>| <span class="string">"tikzinstallkeys" </span>| <span class="string">"compat" </span>| <span class="string">"debug"</span>)
+<a href=#1211 id=1211 data-nosnippet>1211</a>    {
+<a href=#1212 id=1212 data-nosnippet>1212</a>      LIBRARIES_LATER.with(|c| c.borrow_mut().push(setting));
+<a href=#1213 id=1213 data-nosnippet>1213</a>    }
+<a href=#1214 id=1214 data-nosnippet>1214</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#1215 id=1215 data-nosnippet>1215</a>  });
+<a href=#1216 id=1216 data-nosnippet>1216</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
+<a href=#1217 id=1217 data-nosnippet>1217</a>    <span class="macro">Digest!</span>(<span class="string">"\\expandafter\\lx@forest@packageoption\\expandafter{\\CurrentOption}"</span>)<span class="question-mark">?</span>;
+<a href=#1218 id=1218 data-nosnippet>1218</a>  });
+<a href=#1219 id=1219 data-nosnippet>1219</a>  <span class="comment">// forest.sty:178 reads its options with `\ProcessPgfPackageOptions`: `\@curroptions` stays as it was.
+<a href=#1220 id=1220 data-nosnippet>1220</a>  </span><span class="macro">ProcessKeyOptions!</span>();
+<a href=#1221 id=1221 data-nosnippet>1221</a>  <span class="macro">RequirePackage!</span>(<span class="string">"tikz"</span>);
+<a href=#1222 id=1222 data-nosnippet>1222</a>  <span class="comment">// forest.sty:50-53, the TikZ libraries the package loads, which its documents then draw with outside a tree
+<a href=#1223 id=1223 data-nosnippet>1223</a>  // (`single arrow` of shapes.arrows: 1910.06571; `fit`: 2003.06880); :129 its key family, which a document's
+<a href=#1224 id=1224 data-nosnippet>1224</a>  // `\pgfkeys{/forest, …}` selects (2012.09112). Guard `perfect_kernel_batch71a::forest_loads_its_tikz_libraries`.
+<a href=#1225 id=1225 data-nosnippet>1225</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\usetikzlibrary{shapes}\usetikzlibrary{fit}\usetikzlibrary{calc}\usepgflibrary{intersections}"</span>);
+<a href=#1226 id=1226 data-nosnippet>1226</a>  <span class="macro">RequirePackage!</span>(<span class="string">"etoolbox"</span>);
+<a href=#1227 id=1227 data-nosnippet>1227</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\pgfkeys{/forest/.is family}"</span>);
+<a href=#1228 id=1228 data-nosnippet>1228</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\ProvidesPackage{forest}[2017/07/14 v2.1.5 Drawing (linguistic) trees]"</span>);
+<a href=#1229 id=1229 data-nosnippet>1229</a>  <span class="comment">// Semantic tree parser: \begin{forest} reads bracket grammar into a nested
+<a href=#1230 id=1230 data-nosnippet>1230</a>  // inline-enumerate/inline-item tree.
+<a href=#1231 id=1231 data-nosnippet>1231</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#1232 id=1232 data-nosnippet>1232</a>    <span class="macro">T_CS!</span>(<span class="string">"\\begin{forest}"</span>), <span class="prelude-val">None</span>,
+<a href=#1233 id=1233 data-nosnippet>1233</a>    sub [document, _args, props] {
+<a href=#1234 id=1234 data-nosnippet>1234</a>      <span class="comment">// The tree rides on the whatsit's own properties (`Stored::Opaque`),
+<a href=#1235 id=1235 data-nosnippet>1235</a>      // so deferred or nested whatsits construct in any order.
+<a href=#1236 id=1236 data-nosnippet>1236</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Opaque(payload)) = props.get(<span class="string">"forest_tree"</span>)
+<a href=#1237 id=1237 data-nosnippet>1237</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(tree) = payload.downcast_ref::&lt;ForestTree&gt;()
+<a href=#1238 id=1238 data-nosnippet>1238</a>      {
+<a href=#1239 id=1239 data-nosnippet>1239</a>        emit_forest_tree(document, tree)<span class="question-mark">?</span>;
+<a href=#1240 id=1240 data-nosnippet>1240</a>      }
+<a href=#1241 id=1241 data-nosnippet>1241</a>    },
+<a href=#1242 id=1242 data-nosnippet>1242</a>    mode =&gt; <span class="string">"text"</span>,
+<a href=#1243 id=1243 data-nosnippet>1243</a>    locked =&gt; <span class="bool-val">true</span>,
+<a href=#1244 id=1244 data-nosnippet>1244</a>    before_digest =&gt; {
+<a href=#1245 id=1245 data-nosnippet>1245</a>      <span class="kw">let </span>tokens = read_forest_env_tokens()<span class="question-mark">?</span>;
+<a href=#1246 id=1246 data-nosnippet>1246</a>      <span class="kw">let </span>tree = parse_forest_tokens(<span class="kw-2">&amp;</span>tokens);
+<a href=#1247 id=1247 data-nosnippet>1247</a>      PENDING_FOREST_TREES.with(|c| c.borrow_mut().push(tree));
+<a href=#1248 id=1248 data-nosnippet>1248</a>    },
+<a href=#1249 id=1249 data-nosnippet>1249</a>    properties =&gt; {
+<a href=#1250 id=1250 data-nosnippet>1250</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
+<a href=#1251 id=1251 data-nosnippet>1251</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>tree) = PENDING_FOREST_TREES.with(|c| c.borrow_mut().pop()) {
+<a href=#1252 id=1252 data-nosnippet>1252</a>        digest_forest_tree(<span class="kw-2">&amp;mut </span>tree)<span class="question-mark">?</span>;
+<a href=#1253 id=1253 data-nosnippet>1253</a>        props.insert(<span class="string">"forest_tree"</span>, Stored::Opaque(Rc::new(tree)));
+<a href=#1254 id=1254 data-nosnippet>1254</a>      }
+<a href=#1255 id=1255 data-nosnippet>1255</a>      <span class="prelude-val">Ok</span>(props)
+<a href=#1256 id=1256 data-nosnippet>1256</a>    }
+<a href=#1257 id=1257 data-nosnippet>1257</a>  );
+<a href=#1258 id=1258 data-nosnippet>1258</a>  <span class="comment">// \Forest command: \Forest*(config){ [root [child]] }
+<a href=#1259 id=1259 data-nosnippet>1259</a>  // forest.sty:8511 defines \NewDocumentCommand{\Forest}{s D(){} m}. The star
+<a href=#1260 id=1260 data-nosnippet>1260</a>  // only drops forest's `\forest@group@env` group (:8513, :8528;
+<a href=#1261 id=1261 data-nosnippet>1261</a>  // forest-doc.tex:1927-1929), which lets the node names and styles a tree
+<a href=#1262 id=1262 data-nosnippet>1262</a>  // defines outlive it; the binding keeps those tree-local for every form
+<a href=#1263 id=1263 data-nosnippet>1263</a>  // (the constructor digests inside a mode group), so the star is read and
+<a href=#1264 id=1264 data-nosnippet>1264</a>  // ignored. We handle optional * and optional (config) before delegating to
+<a href=#1265 id=1265 data-nosnippet>1265</a>  // \lx@forest@exec.
+<a href=#1266 id=1266 data-nosnippet>1266</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#1267 id=1267 data-nosnippet>1267</a>    <span class="string">r"\def\Forest{\@ifstar{\lx@forest@opt*}{\lx@forest@opt{}}}
+<a href=#1268 id=1268 data-nosnippet>1268</a>\def\lx@forest@opt#1{\@ifnextchar({\lx@forest@withconfig{#1}}{\lx@forest@exec{#1}{}}}
+<a href=#1269 id=1269 data-nosnippet>1269</a>\def\lx@forest@withconfig#1(#2){\lx@forest@exec{#1}{#2}}"
+<a href=#1270 id=1270 data-nosnippet>1270</a>  </span>);
+<a href=#1271 id=1271 data-nosnippet>1271</a>  <span class="macro">DefConstructor!</span>(
+<a href=#1272 id=1272 data-nosnippet>1272</a>    <span class="string">"\\lx@forest@exec {} {} Undigested"</span>,
+<a href=#1273 id=1273 data-nosnippet>1273</a>    sub [document, _args, props] {
+<a href=#1274 id=1274 data-nosnippet>1274</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Opaque(payload)) = props.get(<span class="string">"forest_tree"</span>)
+<a href=#1275 id=1275 data-nosnippet>1275</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(tree) = payload.downcast_ref::&lt;ForestTree&gt;()
+<a href=#1276 id=1276 data-nosnippet>1276</a>      {
+<a href=#1277 id=1277 data-nosnippet>1277</a>        emit_forest_tree(document, tree)<span class="question-mark">?</span>;
+<a href=#1278 id=1278 data-nosnippet>1278</a>      }
+<a href=#1279 id=1279 data-nosnippet>1279</a>    },
+<a href=#1280 id=1280 data-nosnippet>1280</a>    mode =&gt; <span class="string">"text"</span>,
+<a href=#1281 id=1281 data-nosnippet>1281</a>    locked =&gt; <span class="bool-val">true</span>,
+<a href=#1282 id=1282 data-nosnippet>1282</a>    properties =&gt; sub[args] {
+<a href=#1283 id=1283 data-nosnippet>1283</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
+<a href=#1284 id=1284 data-nosnippet>1284</a>      <span class="kw">let </span>config = args[<span class="number">1</span>].as_ref().map(|d| d.to_string()).unwrap_or_default();
+<a href=#1285 id=1285 data-nosnippet>1285</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(body_dig)) = args.get(<span class="number">2</span>) {
+<a href=#1286 id=1286 data-nosnippet>1286</a>        <span class="kw">let </span>tokens = <span class="kw">match </span>body_dig.data() {
+<a href=#1287 id=1287 data-nosnippet>1287</a>          DigestedData::Postponed(t) =&gt; t.unlist_ref().clone(),
+<a href=#1288 id=1288 data-nosnippet>1288</a>          <span class="kw">_ </span>=&gt; Vec::new(),
+<a href=#1289 id=1289 data-nosnippet>1289</a>        };
+<a href=#1290 id=1290 data-nosnippet>1290</a>        <span class="kw">let </span><span class="kw-2">mut </span>tree = parse_forest_tokens(<span class="kw-2">&amp;</span>tokens);
+<a href=#1291 id=1291 data-nosnippet>1291</a>        <span class="kw">if </span>!config.is_empty() &amp;&amp; tree.config.is_empty() {
+<a href=#1292 id=1292 data-nosnippet>1292</a>          tree.config = config;
+<a href=#1293 id=1293 data-nosnippet>1293</a>        }
+<a href=#1294 id=1294 data-nosnippet>1294</a>        digest_forest_tree(<span class="kw-2">&amp;mut </span>tree)<span class="question-mark">?</span>;
+<a href=#1295 id=1295 data-nosnippet>1295</a>        props.insert(<span class="string">"forest_tree"</span>, Stored::Opaque(Rc::new(tree)));
+<a href=#1296 id=1296 data-nosnippet>1296</a>      }
+<a href=#1297 id=1297 data-nosnippet>1297</a>      <span class="prelude-val">Ok</span>(props)
+<a href=#1298 id=1298 data-nosnippet>1298</a>    }
+<a href=#1299 id=1299 data-nosnippet>1299</a>  );
+<a href=#1300 id=1300 data-nosnippet>1300</a>  <span class="comment">// The bare-CS form `\forest … \endforest` that `\NewDocumentEnvironment
+<a href=#1301 id=1301 data-nosnippet>1301</a>  // {forest}{D(){}}` (forest.sty:8506) also defines — neoschool.cls:8567-8581
+<a href=#1302 id=1302 data-nosnippet>1302</a>  // builds its `neotree` env on it; without it `\forest` was undefined and
+<a href=#1303 id=1303 data-nosnippet>1303</a>  // the tree body leaked as text (`\frac` XMApp errors). Guard:
+<a href=#1304 id=1304 data-nosnippet>1304</a>  // `perfect_kernel_batch54::forest_bare_cs_form_discards_body`.
+<a href=#1305 id=1305 data-nosnippet>1305</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#1306 id=1306 data-nosnippet>1306</a>    <span class="macro">T_CS!</span>(<span class="string">"\\forest"</span>), <span class="prelude-val">None</span>,
+<a href=#1307 id=1307 data-nosnippet>1307</a>    <span class="string">"&lt;ltx:ERROR&gt;{forest}&lt;/ltx:ERROR&gt;"</span>,
+<a href=#1308 id=1308 data-nosnippet>1308</a>    bounded =&gt; <span class="bool-val">true</span>,
+<a href=#1309 id=1309 data-nosnippet>1309</a>    mode    =&gt; <span class="string">"text"</span>,
+<a href=#1310 id=1310 data-nosnippet>1310</a>    locked  =&gt; <span class="bool-val">true</span>,
+<a href=#1311 id=1311 data-nosnippet>1311</a>    before_digest =&gt; { discard_body_until_cs(<span class="string">"forest"</span>, <span class="string">"\\endforest"</span>, <span class="string">"forest.sty.ltxml"</span>)<span class="question-mark">?</span>; }
+<a href=#1312 id=1312 data-nosnippet>1312</a>  );
+<a href=#1313 id=1313 data-nosnippet>1313</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endforest"</span>, <span class="string">"\\relax"</span>);
+<a href=#1314 id=1314 data-nosnippet>1314</a>  <span class="comment">// forest.sty:1413-1422 `\bracketset` configures the bracket parser
+<a href=#1315 id=1315 data-nosnippet>1315</a>  // (neoschool.cls:8568, forest-doc.tex:1771, luacas tut3.tex:97
+<a href=#1316 id=1316 data-nosnippet>1316</a>  // `\bracketset{action character=@}`): the opening and closing brackets
+<a href=#1317 id=1317 data-nosnippet>1317</a>  // and the action character, `\let` locally. The action character drives
+<a href=#1318 id=1318 data-nosnippet>1318</a>  // macro expansion while parsing (forest.sty:1491-1492, 1598-1627), which
+<a href=#1319 id=1319 data-nosnippet>1319</a>  // the token-level parser has no stage for; it only marks the trees that
+<a href=#1320 id=1320 data-nosnippet>1320</a>  // use it (`ForestTree::actions`). A bare `action character` (the default,
+<a href=#1321 id=1321 data-nosnippet>1321</a>  // :1422) lets it to `\pgfkeysnovalue`: no action character.
+<a href=#1322 id=1322 data-nosnippet>1322</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\bracketset{}"</span>, sub[(keys)] {
+<a href=#1323 id=1323 data-nosnippet>1323</a>    <span class="kw">for </span>key <span class="kw">in </span>parse_forest_keylist(keys.unlist_ref()) {
+<a href=#1324 id=1324 data-nosnippet>1324</a>      <span class="kw">let </span>register = <span class="kw">match </span>key.key.as_str() {
+<a href=#1325 id=1325 data-nosnippet>1325</a>        <span class="string">"opening bracket" </span>=&gt; OPENING_BRACKET,
+<a href=#1326 id=1326 data-nosnippet>1326</a>        <span class="string">"closing bracket" </span>=&gt; CLOSING_BRACKET,
+<a href=#1327 id=1327 data-nosnippet>1327</a>        <span class="string">"action character" </span>=&gt; ACTION_CHARACTER,
+<a href=#1328 id=1328 data-nosnippet>1328</a>        <span class="kw">_ </span>=&gt; <span class="kw">continue</span>,
+<a href=#1329 id=1329 data-nosnippet>1329</a>      };
+<a href=#1330 id=1330 data-nosnippet>1330</a>      <span class="kw">match </span>key.value.unwrap_or_default().into_iter().find(|t| !is_ignorable_token(t)) {
+<a href=#1331 id=1331 data-nosnippet>1331</a>        <span class="prelude-val">Some</span>(token) =&gt; assign_value(register, Stored::Token(token), <span class="prelude-val">None</span>),
+<a href=#1332 id=1332 data-nosnippet>1332</a>        <span class="prelude-val">None </span><span class="kw">if </span>register == ACTION_CHARACTER =&gt; assign_value(register, Stored::None, <span class="prelude-val">None</span>),
+<a href=#1333 id=1333 data-nosnippet>1333</a>        <span class="prelude-val">None </span>=&gt; {},
+<a href=#1334 id=1334 data-nosnippet>1334</a>      }
+<a href=#1335 id=1335 data-nosnippet>1335</a>    }
+<a href=#1336 id=1336 data-nosnippet>1336</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#1337 id=1337 data-nosnippet>1337</a>  });
+<a href=#1338 id=1338 data-nosnippet>1338</a>  <span class="comment">// forest resumes the bracket parser with `\bracketResume` after a `@@`
+<a href=#1339 id=1339 data-nosnippet>1339</a>  // action handed it to user code (forest.sty:1450, 1622-1623;
+<a href=#1340 id=1340 data-nosnippet>1340</a>  // forest-doc.tex:1787-1795 `\x#1{@@… \expandafter\bracketResume\xtemp}`);
+<a href=#1341 id=1341 data-nosnippet>1341</a>  // a digested label expands into it.
+<a href=#1342 id=1342 data-nosnippet>1342</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bracketResume"</span>, <span class="string">"\\relax"</span>);
+<a href=#1343 id=1343 data-nosnippet>1343</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\forestset{}"</span>, sub[(keys)] {
+<a href=#1344 id=1344 data-nosnippet>1344</a>    <span class="kw">let </span><span class="kw-2">mut </span>ctx = KeyContext::document(<span class="string">"one \\forestset"</span>);
+<a href=#1345 id=1345 data-nosnippet>1345</a>    forestset(<span class="kw-2">&amp;</span>parse_forest_keylist(keys.unlist_ref()), <span class="kw-2">&amp;mut </span>ctx, <span class="number">0</span>);
+<a href=#1346 id=1346 data-nosnippet>1346</a>    ctx.report_runaway()<span class="question-mark">?</span>;
+<a href=#1347 id=1347 data-nosnippet>1347</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#1348 id=1348 data-nosnippet>1348</a>  });
+<a href=#1349 id=1349 data-nosnippet>1349</a>  <span class="comment">// forest.sty:3945-3946, the two content formats forest names.
+<a href=#1350 id=1350 data-nosnippet>1350</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\forestset{plain content/.style={content format={\forestoption{content}}},math content/.style={content format={\noexpand\ensuremath{\forestoption{content}}}}}"</span>);
+<a href=#1351 id=1351 data-nosnippet>1351</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\forestoption{}"</span>, <span class="string">"\\relax"</span>);
+<a href=#1352 id=1352 data-nosnippet>1352</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\foresteoption{}"</span>, <span class="string">"\\relax"</span>);
+<a href=#1353 id=1353 data-nosnippet>1353</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\forestregister{}"</span>, <span class="string">"\\relax"</span>);
+<a href=#1354 id=1354 data-nosnippet>1354</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\foresteregister{}"</span>, <span class="string">"\\relax"</span>);
+<a href=#1355 id=1355 data-nosnippet>1355</a>  <span class="comment">// forest.sty:162-170 `\useforestlibrary{s O{} m}`: each library loads as
+<a href=#1356 id=1356 data-nosnippet>1356</a>  // `\RequirePackage[&lt;options&gt;]{forest-lib-&lt;name&gt;}`, which records it (`\ProvidesForestLibrary`, :173-176; read by
+<a href=#1357 id=1357 data-nosnippet>1357</a>  // `\forest@iflibraryloaded`, :177); the star then applies the defaults. `linguistics` and `edges` are only recorded:
+<a href=#1358 id=1358 data-nosnippet>1358</a>  // their styles are TikZ layout, which this binding does not draw. Others load raw: prooftrees 0.9.2
+<a href=#1359 id=1359 data-nosnippet>1359</a>  // (prooftrees.sty:44-48) plugs into the socket ext.tagging declares (forest-lib-ext.tagging.sty:92; 2606.20837).
+<a href=#1360 id=1360 data-nosnippet>1360</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\useforestlibrary OptionalMatch:* [] {}"</span>, sub[(star, options, libraries)] {
+<a href=#1361 id=1361 data-nosnippet>1361</a>    <span class="kw">let </span>libraries = csv_items(<span class="kw-2">&amp;</span>libraries);
+<a href=#1362 id=1362 data-nosnippet>1362</a>    <span class="kw">let </span>options = options.map(|o| o.to_string()).unwrap_or_default();
+<a href=#1363 id=1363 data-nosnippet>1363</a>    <span class="kw">for </span>library <span class="kw">in </span><span class="kw-2">&amp;</span>libraries {
+<a href=#1364 id=1364 data-nosnippet>1364</a>      use_forest_library(library, <span class="kw-2">&amp;</span>options)<span class="question-mark">?</span>;
+<a href=#1365 id=1365 data-nosnippet>1365</a>    }
+<a href=#1366 id=1366 data-nosnippet>1366</a>    <span class="kw">if </span>star.is_some() {
+<a href=#1367 id=1367 data-nosnippet>1367</a>      apply_forest_library_defaults(<span class="kw-2">&amp;</span>libraries)<span class="question-mark">?</span>;
+<a href=#1368 id=1368 data-nosnippet>1368</a>    }
+<a href=#1369 id=1369 data-nosnippet>1369</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#1370 id=1370 data-nosnippet>1370</a>  });
+<a href=#1371 id=1371 data-nosnippet>1371</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\NewDocumentCommand\ProvidesForestLibrary{m O{}}{\ProvidesPackage{forest-lib-#1}[#2]\csdef{forest@libraries@loaded@#1}{}}"</span>);
+<a href=#1372 id=1372 data-nosnippet>1372</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\forestapplylibrarydefaults{}"</span>, sub[(libraries)] {
+<a href=#1373 id=1373 data-nosnippet>1373</a>    apply_forest_library_defaults(<span class="kw-2">&amp;</span>csv_items(<span class="kw-2">&amp;</span>libraries))<span class="question-mark">?</span>;
+<a href=#1374 id=1374 data-nosnippet>1374</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#1375 id=1375 data-nosnippet>1375</a>  });
+<a href=#1376 id=1376 data-nosnippet>1376</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\forest@iflibraryloaded#1#2#3{\ifcsdef{forest@libraries@loaded@#1}{#2}{#3}}"</span>);
+<a href=#1377 id=1377 data-nosnippet>1377</a>  <span class="comment">// forest.sty:160-161 `\AtEndOfPackage{\forest@loadlibrarieslater}`.
+<a href=#1378 id=1378 data-nosnippet>1378</a>  </span><span class="kw">for </span>library <span class="kw">in </span>LIBRARIES_LATER.with(|c| std::mem::take(<span class="kw-2">&amp;mut *</span>c.borrow_mut())) {
+<a href=#1379 id=1379 data-nosnippet>1379</a>    use_forest_library(<span class="kw-2">&amp;</span>library, <span class="string">""</span>)<span class="question-mark">?</span>;
+<a href=#1380 id=1380 data-nosnippet>1380</a>    apply_forest_library_defaults(<span class="kw-2">&amp;</span>[library])<span class="question-mark">?</span>;
+<a href=#1381 id=1381 data-nosnippet>1381</a>  }
+<a href=#1382 id=1382 data-nosnippet>1382</a>});
 </code></pre></div></section></main></body></html>
