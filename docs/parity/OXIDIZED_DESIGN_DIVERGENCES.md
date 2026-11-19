@@ -21235,7 +21235,8 @@ smoke article (amsmath, hyperref, a list, a table) stopped at `Fatal:TooManyErro
   conversion of a machine without TeX Live, whatever the document needed. It is gone; the log's
   `Info:kpathsea:backend unavailable (…)` line (`Converter::initialize_session`) still names the resolver, so a dead
   one is not mistaken for a missing file (issue #304). The kpathsea crate's own one-time stderr notice
-  (0.3.4 `lib.rs:433-434`) is outside the log and unchanged.
+  (0.3.4 `lib.rs:433-434`) is outside the log and stays: rust-kpathsea is a general-purpose crate, not
+  latexml-oxide's (DG 2026-11-19).
 
 Where TeX Live is, the dump branch is unchanged (each change sits behind "no catalogue", "no dump-defined name" or
 a found file). **Guards**: `dump_gate_init::nodump_latex_branch_converts_healthily` (the shared NODUMP conversion:
