@@ -1,0 +1,18 @@
+% witness: cs0602002 (a shipped algorithm2e.sty 3.6, 2005: its `\nl`, :740-748, tests `\@ifundefined{href}` for
+%          hyperref, then calls `\Hy@raisedlink{\hyper@anchorstart{AlgoLine…}\hyper@anchorend}`); ~100 run-397 papers
+% oracle:  pdflatex 0 errors, "A text" (no `\href`: the `\refstepcounter` branch); with hyperref loaded, as arXiv's build
+%          does, "B text" through hyperref's anchor layer (hyperref.sty 7.01o :6152-6154 `\NoHyper`'s no-op anchors,
+%          hdvips.def:40 `\let\Hy@raisedlink\@empty`)
+% engines: Perl 0 errors ("A text": no provided `\href`); rust MAIN922 3 Errors (`\Hy@raisedlink`,
+%          `\hyper@anchorstart`, `\hyper@anchorend` undefined): ar5iv's provided `\href` (OD #588) answers "hyperref"
+% expect:  0 errors, 0 warnings; "B text" (the emulated hyperref build), the anchor name gobbled
+% status:  RED (MAIN922) -> GREEN (CLUSTFIX2); guard perfect_kernel_batchclustfix2::ar5iv_href_brings_hyperref_anchors
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\newcommand{\nl}{\@ifundefined{href}{\refstepcounter{equation}A}%
+  {\Hy@raisedlink{\hyper@anchorstart{x}\hyper@anchorend}B}}
+\makeatother
+\begin{document}
+\nl\ text
+\end{document}

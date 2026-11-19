@@ -1,0 +1,14 @@
+% witness: cond-mat0010435, cond-mat0012297 (`\psfigurepath{.:plot:figure}`); ~54 run-397 papers, Error:undefined
+% oracle:  psfig.sty 1.10 (0712.1995's copy) :122-123 `\def\psfigurepath#1{\edef\figurepath{#1:}}`; `\psfig` looks for
+%          its file in each `:`-separated directory (:162 `\DoPaths\figurepath`); pdflatex with that copy 0 errors
+% engines: Perl 1 error (psfig.sty.ltxml is `RequirePackage('epsfig')` only); rust MAIN922 the same 1 and
+%          plot.eps unresolved (`graphic="plot"` without its directory)
+% expect:  0 errors, 0 warnings; the `ltx:graphics` resolves figs/plot.eps
+% status:  RED (MAIN922) -> GREEN (CLUSTFIX2); guard perfect_kernel_batchclustfix2::psfigurepath_is_the_graphics_path
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{psfig}
+\psfigurepath{nothere:figs}
+\begin{document}
+Text \psfig{file=plot.eps,width=2cm}.
+\end{document}

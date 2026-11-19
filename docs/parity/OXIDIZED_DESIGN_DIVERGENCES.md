@@ -21021,6 +21021,59 @@ live-body footnote (`\lx@VerbatimFootnotes`, #192) and the verb is read from the
 URL re-read as text with its `+` delimiter). Guard `perfect_kernel_batchharden397::batchharden397_bigfoot_footnote_verb`
 (repro `boxes-groups/verb_in_a_bigfoot_footnote`).
 
+### 1086. ar5iv's provided `\href` brings hyperref's no-op anchor layer (CLUSTFIX2)
+
+The `\href` #588 provides at `\begin{document}` answers a package's "is hyperref loaded?" test, so the package then
+calls hyperref's internals: a shipped algorithm2e.sty 3.6 (2005; cs0602002, its :740-748) tests `\@ifundefined{href}`
+in `\nl` and otherwise runs `\Hy@raisedlink{\hyper@anchorstart{AlgoLine…}\hyper@anchorend}`, three undefined-macro
+Errors per numbered line (run 397: ~100 papers, all shipping that algorithm2e.sty; Perl, which provides no `\href`,
+and pdflatex take the `\refstepcounter` branch, 0 errors). Under the same provide-only step, when `\href` is provided
+the ar5iv preload also provides hyperref's no-op anchor layer, defined once in `hyperref_sty.rs`
+`define_hyper_anchors` for both: `\Hy@xspace@end` (`\relax`), `\hyper@anchor` and `\hyper@anchorstart` (`\@gobble`),
+`\hyper@anchorend` (`\Hy@xspace@end`), as `\NoHyper` sets them (hyperref.sty 7.01o :6152-6154), and `\Hy@raisedlink`
+(`\@empty`, hdvips.def:40). The line keeps its text; the anchor name is dropped, as it is under the hyperref binding.
+#588's witnesses (2605.07373, 2605.08166, 2605.12003) convert byte-identical. Guard
+`perfect_kernel_batchclustfix2::ar5iv_href_brings_hyperref_anchors` (repro
+`package-bindings/ar5iv_href_hyperref_anchor_layer`).
+
+### 1087. A PASJ paper without its class keeps the class's `\timeform`, `\emissiontype`, abbreviations and `\draft` (CLUSTFIX2)
+
+The fallback of #1082 (`pasj00_cls.rs`, a pasj00/01/02 paper whose source lacks the class) also lacked the class's
+notation commands (run 397: `\timeform` 60, `\emissiontype` 50 papers; astro-ph0201169, astro-ph0204505, 0708.1829;
+0706.0253 also `\arcsec`, `\micron`, `\draft`): an Error each and the time or angle lost (Perl 8 errors on
+astro-ph0201169). `pasj_unshipped_timeform` reads them verbatim from pasj00.cls (0704.3654's copy): `\timeform`/`\TF`
+(:3716-3980, a parser setting each unit as a superscript with the decimal point under the last, "2'.5",
+"12^h34^m56^s.7"), `\emissiontype` (:3578-3598, the ionization state small after a thin space), the abbreviations
+`\arcdeg` … `\micron` with `\fp` … `\fdg` (:3684-3709) and `\ambiguouswarn` (:3710-3713), and their helpers `\@csc@t`
+and `\@@lineno` (:2169-2178); `\draft` (:284-300, the proof-reading page layout) and `\tenpoint`/`\elevenpoint`/
+`\twelvepoint` (:236-283, the size options' layout) are empty. The class's `\mathchoice`
+boxes leave the math parser a Warning per time or angle, as under the shipped class. Beyond Perl and TeX alike (a
+missing class), as #1082 is. PASJ95 (`\documentstyle[PASJadd]{PASJ95}`, 1995; its `\draft` is PASJadd.sty's:46) is a
+different style, not covered. Guard
+`perfect_kernel_batchclustfix2::pasj00_without_its_class_sets_timeform` (repro
+`class-bindings/pasj00_unshipped_timeform`).
+
+### 1088. psfig's `\psfigurepath` adds its directories to the graphics search path (CLUSTFIX2)
+
+Perl's psfig.sty.ltxml (and our `psfig_sty.rs`) is `RequirePackage('epsfig')` only, and psfig.sty 1.10 (0712.1995's
+copy) has `\def\figurepath{./:}` and `\def\psfigurepath#1{\edef\figurepath{#1:}}` (:122-123), the `:`-separated
+directories `\psfig` searches for its file (:162 `\DoPaths\figurepath`): papers that set it (run 397: ~54;
+cond-mat0012297 `\psfigurepath{.:plot:figure}`; cond-mat0010435, whose absolute author paths stay unresolved, loses only the
+Error) had an undefined-macro Error, the path's text in the output, and their figures unresolved (Perl the same error; pdflatex with the shipped psfig.sty 0). The binding
+defines both macros as psfig.sty does and puts each directory on the graphics search path as `\graphicspath` does
+(graphics.sty.ltxml L248-260, `GRAPHICSPATHS`). Guard `perfect_kernel_batchclustfix2::psfigurepath_is_the_graphics_path`
+(repro `package-bindings/psfigurepath`).
+
+### 1089. revtex4's `\keywords` reads an elsart-style `\sep` as elsart's separator (CLUSTFIX2)
+
+revtex4 stores `\keywords` and prints it only under `showkeys`, so TeX never expands what it holds; papers ported from
+elsart keep its `\sep` there (run 397: ~89 papers; cond-mat0309530 manuscript7.tex:46), clean in pdflatex. Perl's
+revtex4_support.sty.ltxml and our binding digest the argument into `ltx:keywords`, where `\sep` was undefined (Perl 1
+error, ours 1). The binding's `\keywords` now digests it with `\providecommand\sep{\unskip,\space}` inside the
+argument (elsart's meaning, `elsart_support_core_sty.rs`), local to the keywords, so a paper's own `\sep` stays its
+own: "vortex matter, columnar defects". Guard `perfect_kernel_batchclustfix2::revtex4_keywords_read_elsart_sep` (repro
+`sectioning-frontmatter/revtex4_keywords_elsart_sep`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a
