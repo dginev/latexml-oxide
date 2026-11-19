@@ -1,0 +1,14 @@
+% witness: cond-mat0309530 (manuscript7.tex:46 `\keywords{… \sep …}`, a paper ported from elsart); ~89 run-397 papers
+% oracle:  pdflatex 0 errors: revtex4 stores `\keywords` and prints it only under `showkeys`, so `\sep` is never expanded
+% engines: Perl 1 error (Error:undefined:\sep); rust MAIN922 the same 1
+% expect:  0 errors, 0 warnings; `ltx:keywords` "vortex matter, columnar defects" (elsart's `\sep`, `\unskip,\space`)
+% status:  RED (MAIN922) -> GREEN (CLUSTFIX2); guard perfect_kernel_batchclustfix2::revtex4_keywords_read_elsart_sep
+% preload: ar5iv.sty
+\documentclass[preprint,aps]{revtex4}
+\begin{document}
+\title{T}
+\author{A}
+\keywords{vortex matter \sep columnar defects}
+\maketitle
+Text.
+\end{document}

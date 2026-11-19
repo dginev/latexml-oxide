@@ -436,6 +436,9 @@ mod perfect_kernel_batchcl8;
 mod perfect_kernel_batchcl9;
 /// CLUSTFIX: run-397 binding gaps — pasj00 without its class, the 1998 aipproc, `\cite*` under the lock, elsart's switches.
 mod perfect_kernel_batchclustfix;
+/// CLUSTFIX2: run-397 binding gaps — ar5iv's `\href` anchor layer, pasj00's `\timeform` without its class, psfig's
+/// `\psfigurepath`, `\sep` in revtex4's `\keywords`.
+mod perfect_kernel_batchclustfix2;
 /// CMPJ1: cmpj's `\refaddr` marks resolve as TeX's second run (`cmpj_sty.rs`).
 mod perfect_kernel_batchcmpj1;
 mod perfect_kernel_batchcr10a;

@@ -160,6 +160,14 @@ LoadDefinitions!({
       }
       hyperref_sty::define_hyper_urls(href, url)?;
       let _provide_only = definition::origin::ProvideOnlyGuard::new();
+      // A provided `\href` answers a package's "is hyperref loaded?" (`\@ifundefined{href}`), so hyperref's no-op
+      // anchor layer it then calls comes with it (a shipped algorithm2e.sty 3.6's `\nl`, cs0602002).
+      if href {
+        definition::origin::with_origin(
+          definition::origin::DefinitionOrigin::Binding,
+          hyperref_sty::define_hyper_anchors,
+        )?;
+      }
       RequirePackage!("url");
     }
   });
