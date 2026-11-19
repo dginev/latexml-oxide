@@ -11904,6 +11904,19 @@ for the names still undefined. An elsarticle-num `.bbl` defines `\path` only whe
 `{\path{doi:…}}` entries were undefined once `\href` was supplied (2605.07373, 2605.08166, 2605.12003). Witnesses
 cond-mat0407333, cs0409028, hep-th0411273, 1001.4826 (`\doi` → `\href`); guards `perfect_kernel_batch67a`.
 
+The same step provides the rest of arXiv's hyperref a paper relies on unloaded (DG ruling 2026-11-19), each name only
+while still undefined, with or without `\href`/`\url`: hyperref's `\texorpdfstring`, which keeps its TeX string and
+drops the PDF string (`hyperref_sty.rs` `define_texorpdfstring`, shared with the binding; ~170 papers of the 2026 run
+printed both after an `undefined` Error, hep-th0702068, 0704.3213, hep-th0210192), and the user commands of the
+atbegshi that hyperref loaded through 2019 (`ar5iv_sty.rs` `define_atbegshi_hooks`, after atbegshi-ltx.sty :52-66):
+`\AtBeginShipout`, `…Next`, `…First`, `…AddToBox`, `…AddToBoxForeground`, `…UpperLeft`, `…UpperLeftForeground`
+take their material and drop it (page-shipout material has no HTML counterpart; 2309.06611's IEEE copyright notice and
+2403.15239's conference line, set on the page by `\AtBeginShipoutUpperLeft…`, are not printed), `\AtBeginShipoutInit`
+and `\AtBeginShipoutDiscard` do nothing, `\AtBeginShipoutBox` is the kernel's `\ShipoutBox`. Body uses lose their
+Errors (2309.06611, 2403.15239, 1607.05658, 1610.04548, 2507.04353); a preamble use (~90% of the run's
+`\AtBeginShipout` papers: lpor2014.cls:2987 in 1503.07687, A&A and mnras papers loading hyperref, 1601.07542,
+1605.02911) comes before the step and keeps its Error. Guards `perfect_kernel_batchhyperprov`.
+
 ### 589. → Bindings beyond Perl's tree: diagrams.tex (`diagrams_tex.rs`)
 
 ### 590. → Bindings beyond Perl's tree: pict2e.sty (`pict2e_sty.rs`)

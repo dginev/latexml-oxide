@@ -1268,10 +1268,7 @@ LoadDefinitions!({
   //======================================================================
   // 4.1 Replacement macros
 
-  // \texorpdfstring{TeXString}{PDFstring}
-  // The PDF string (#2) goes to the bookmarks only; nothing of it is printed: the binding's declared drop, which the
-  // title-page check wants none of (OXIDIZED_DESIGN_DIVERGENCES #953 "106t"; 2306.06741's `{$Y(4230)…$}{Lg}`, 2306.06006).
-  DefMacro!("\\texorpdfstring{}{}", "#1", drops => [2]);
+  define_texorpdfstring()?;
 
   // Perl hyperref.sty.ltxml L413-416: guard against redefinition, then Let
   // the pdfstringdef hooks to sensible no-ops. The guard matters: dhucs /
@@ -2383,6 +2380,15 @@ fn localized_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
     },
     None => insert_bare_anchor(document, id)?,
   }
+  Ok(())
+}
+
+/// `\texorpdfstring{TeXString}{PDFstring}` outside a PDF string (inside one, `\pdfstringdef` keeps #2). The PDF string
+/// goes to the bookmarks only; nothing of it is printed: the binding's declared drop, which the title-page check wants
+/// none of (OXIDIZED_DESIGN_DIVERGENCES #953 "106t"; 2306.06741's `{$Y(4230)…$}{Lg}`, 2306.06006). The ar5iv preload
+/// provides it to a document that never loaded hyperref (`ar5iv_sty.rs`, OXIDIZED_DESIGN #588; hep-th0702068).
+pub fn define_texorpdfstring() -> Result<()> {
+  DefMacro!("\\texorpdfstring{}{}", "#1", drops => [2]);
   Ok(())
 }
 

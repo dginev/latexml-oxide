@@ -1,0 +1,21 @@
+% witness: 2309.06611 (root.tex:113 \AtBeginShipoutNext), 2403.15239 (main.tex:60-61 \AtBeginShipoutNext,
+%          \AtBeginShipoutUpperLeft), 1607.05658 and 2507.04353 (\AtBeginShipout{\AtBeginShipoutDiscard}): body uses, no atbegshi
+% oracle: arXiv builds them (its build loads hyperref, which loaded atbegshi through 2019); pdflatex alone:
+%         ! Undefined control sequence
+% engines: rust MAIN924 = 9 errors (every \AtBeginShipout* undefined), 2 Missing-number warnings; Perl not run
+% expect: 0 Errors, 0 Warnings; the hooks take their material and print none of it; the body text alone
+%         (pdflatex with atbegshi loaded: "Body text." and the page number, 0 errors)
+% mechanism: ar5iv.sty preload, provide-only at \begin{document} (DG ruling 2026-11-19; OXIDIZED_DESIGN #588)
+% status: RED (MAIN924) -> GREEN (HYPERPROV)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\AtBeginShipout{\setbox\AtBeginShipoutBox=\hbox{\copy\AtBeginShipoutBox}}
+\AtBeginShipoutNext{\ifodd\value{page}\else\AtBeginShipoutDiscard\fi}
+\AtBeginShipoutFirst{\special{x}}
+\AtBeginShipoutUpperLeft{\put(0,0){X}}
+\AtBeginShipoutUpperLeftForeground{\put(0,0){Y}}
+\AtBeginShipoutAddToBox{Z}\AtBeginShipoutAddToBoxForeground{W}
+\AtBeginShipoutInit
+Body text.
+\end{document}

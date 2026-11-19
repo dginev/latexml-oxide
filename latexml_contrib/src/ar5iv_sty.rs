@@ -170,6 +170,15 @@ LoadDefinitions!({
       }
       RequirePackage!("url");
     }
+    // The rest of arXiv's hyperref a paper relies on unloaded, provide-only too (DG ruling 2026-11-19):
+    // `\texorpdfstring`, which printed both its arguments (hep-th0702068's section titles), and the shipout hooks of
+    // the atbegshi that hyperref loaded through 2019, which have no HTML counterpart (2309.06611, 1607.05658). A
+    // preamble use (lpor2014.cls:2987, 1503.07687) precedes this step and stays undefined (OXIDIZED_DESIGN #588).
+    let _provide_only = definition::origin::ProvideOnlyGuard::new();
+    definition::origin::with_origin(definition::origin::DefinitionOrigin::Binding, || {
+      hyperref_sty::define_texorpdfstring()?;
+      define_atbegshi_hooks()
+    })?;
   });
   at_begin_document(Tokens!(T_CS!("\\lx@arxiv@provide@hyper@urls")))?;
 
@@ -221,3 +230,30 @@ LoadDefinitions!({
   // post-processing hook (not a compile-time binding), tracked separately —
   // we do not emulate it here. See Perl source L45-73 for context.
 });
+
+/// atbegshi's user commands as atbegshi-ltx.sty (2021/01/10 v1.0c, :52-66) defines them, with the shipout they hook
+/// into absent: every hook takes its material and drops it, `\AtBeginShipoutBox` is the kernel's `\ShipoutBox` (a
+/// box register of its own on a format without one), `\AtBeginShipoutInit` and `\AtBeginShipoutDiscard` do nothing.
+fn define_atbegshi_hooks() -> Result<()> {
+  for hook in [
+    "\\AtBeginShipout{}",
+    "\\AtBeginShipoutNext{}",
+    "\\AtBeginShipoutFirst{}",
+    "\\AtBeginShipoutAddToBox{}",
+    "\\AtBeginShipoutAddToBoxForeground{}",
+    "\\AtBeginShipoutUpperLeft{}",
+    "\\AtBeginShipoutUpperLeftForeground{}",
+  ] {
+    def_macro_noop(hook)?;
+  }
+  Let!("\\AtBeginShipoutInit", "\\@empty");
+  Let!("\\AtBeginShipoutDiscard", "\\@empty");
+  if !IsDefined!(&T_CS!("\\AtBeginShipoutBox")) {
+    if IsDefined!(&T_CS!("\\ShipoutBox")) {
+      Let!("\\AtBeginShipoutBox", "\\ShipoutBox");
+    } else {
+      raw_tex("\\newbox\\AtBeginShipoutBox")?;
+    }
+  }
+  Ok(())
+}

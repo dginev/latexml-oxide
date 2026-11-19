@@ -43,6 +43,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **`\texorpdfstring` and atbegshi's shipout hooks under the ar5iv preload.** arXiv's build loads hyperref into every
+    paper, so the preload provides at `\begin{document}`, where still undefined, hyperref's `\texorpdfstring` (a title
+    keeps its TeX string; the PDF string was printed beside it after an Error, hep-th0702068) and the shipout hooks of
+    the atbegshi that hyperref loaded through 2019 (`\AtBeginShipout`, `\AtBeginShipoutNext`, `\AtBeginShipoutBox`
+    and their siblings), which take their material and print none of it (2309.06611, 1607.05658). A paper's own or
+    loaded definitions win; nothing changes without the preload, and a preamble use of the hooks keeps its Error. Guards
+    `perfect_kernel_batchhyperprov::*`; OXIDIZED_DESIGN_DIVERGENCES #588.
+
   - **Five crash and Fatal roots of the 2026 arXiv run.** A counter whose reset list leads back to it
     (`\newcounter{subsubsection}[subsubsection]`, 2308.05200) is reset once per step, with a Warning (an Error where TeX's
     own lists loop too), instead of a silent stack overflow; an amsrefs list under an active `@` (1810.11524) reads its records instead of looping, the
