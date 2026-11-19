@@ -1,6 +1,7 @@
-//! Red/green guards for batch NEXT397, three Error roots of run 397 where TeX (or the class TeX would read) is clean:
-//! astron.sty's `\astroncite` labels under the locked `\cite`, the 1998 aipproc copy's `\affiliationmark`, and
-//! elsart.sty's option switches. Repros under `tools/perfect_kernel/repros/`.
+//! Red/green guards for batch NEXT397, four Error roots of run 397, three where TeX (or the class TeX would read) is clean:
+//! astron.sty's `\astroncite` labels under the locked `\cite`, the 1998 aipproc copy's `\affiliationmark`,
+//! elsart.sty's option switches, and `\verb` in an argument (TeX errs there too). Repros under
+//! `tools/perfect_kernel/repros/`.
 use latexml::util::test::{assert_element, convert_files_with, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -83,4 +84,34 @@ fn elsart_sty_options_are_its_switches() {
   );
   assert_eq!(counts(&log), (0, 0), "{log}");
   assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">seceqn none</p>"#);
+}
+
+/// `\verb` inside a pre-tokenized argument (cond-mat0203143's `\parbox[t]{…}{\verb+ +\\ \includegraphics…}` in a
+/// tabular cell; astro-ph0108286's `\multicolumn`): its frozen delimiter never matches, so TeX ends it at the `}` that
+/// closes the argument, "\verb illegal in argument" (latex.ltx:15485-15499), and typesets the rest. The scan ran past
+/// that `}` to the next line's end and the rest of the table was lost. The `}` of the verb's own group inside the
+/// argument (`{\verb+ + }`) ends it the same way. Repro boxes-groups/verb_in_an_argument_ends_at_its_brace.
+#[test]
+fn verb_in_an_argument_ends_at_its_brace() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/verb_in_an_argument_ends_at_its_brace.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (2, 0), "{log}");
+  assert_eq!(
+    log
+      .matches("Error:unexpected:\\verb \\verb illegal in argument")
+      .count(),
+    2,
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" xml:id="p1.1.1.1">1)<inline-block class="ltx_parbox" vattach="top" width="85.4pt" xml:id="p1.1.1.1.1"><p xml:id="p1.1.1.1.1.1"><verbatim font="typewriter" xml:id="p1.1.1.1.1.1.1">+<break/><text font="bold" xml:id="p1.1.1.1.1.1.1.1">second</text> line</verbatim></p></inline-block></td></tr><tr xml:id="p1.1.2"><td align="center" xml:id="p1.1.2.1">2)<inline-block class="ltx_parbox" vattach="top" width="85.4pt" xml:id="p1.1.2.1.1"><p xml:id="p1.1.2.1.1.1"><verbatim font="typewriter" xml:id="p1.1.2.1.1.1.1">+</verbatim></p><p xml:id="p1.1.2.1.1.2"><text font="bold" xml:id="p1.1.2.1.1.2.1">third</text> line</p></inline-block></td></tr></tbody></tabular>"#,
+  );
+  assert!(xml.contains(r#"<p xml:id="p1.2">Then more.</p>"#), "{xml}");
 }

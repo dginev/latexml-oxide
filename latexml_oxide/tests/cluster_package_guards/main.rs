@@ -555,7 +555,7 @@ mod perfect_kernel_batchne5;
 mod perfect_kernel_batchne6;
 mod perfect_kernel_batchne7;
 mod perfect_kernel_batchne8;
-/// NEXT397: astron.sty's `\astroncite` labels under the locked `\cite`, the 1998 aipproc's `\affiliationmark`, elsart.sty's switches.
+/// NEXT397: `\astroncite` under the locked `\cite`, aipproc's `\affiliationmark`, elsart.sty's switches, `\verb` in an arg.
 mod perfect_kernel_batchnext397;
 mod perfect_kernel_batchnl1;
 /// NOTCANCEL: math_common's `\not` rewrite moves its operand (Perl appendChild), so one pass rewrites every nested `\not`.

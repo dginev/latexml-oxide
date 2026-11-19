@@ -10166,7 +10166,25 @@ pub fn read_verb_invocation(token_delimited: bool) -> Result<Option<Vec<Token>>>
     // `\verb|…|` in an argument read before it (the `|` frozen "other") ends there; the kernel's needs it active.
     let mut body = Vec::new();
     let mut terminated = false;
+    // latex.ltx:15485-15499 `\verb` opens a group whose `\aftergroup\verb@balance@group` reports "\verb illegal in
+    // argument" (pre-tokenized, its delimiter is never the active one): the `}` closing the enclosing argument ends it,
+    // and what follows is kept. Under `\dospecials` only a pre-tokenized brace has a brace catcode; `depth` counts the
+    // body's own (cond-mat0203143 `\parbox`; astro-ph0108286's `\multicolumn`, its argument pushed back without braces,
+    // still ends at the line's end). Guard
+    // `perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace`; OXIDIZED_DESIGN_DIVERGENCES #1085.
+    let mut depth = 0usize;
     while let Some(token) = read_token()? {
+      match token.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END if depth == 0 => {
+          Error!("unexpected", "\\verb", "\\verb illegal in argument", "");
+          unread_one(token);
+          terminated = true;
+          break;
+        },
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
       if token == delim
         || (token_delimited
           && token.get_catcode() == Catcode::OTHER

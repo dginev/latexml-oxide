@@ -43,12 +43,15 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
-  - **astron.sty's author-year labels, the 1998 aipproc's `\affiliationmark`, elsart.sty's switches.** A
-    `\bibitem[\protect\astroncite{A}{Y}]` label under astron.sty or its copies (EslabStyle, ISOStyle, EAS), whose
-    `\cite` the locked kernel `\cite` refuses, prints "A, Y" as the copy's `\citefull` defines it (was
+  - **astron.sty's author-year labels, the 1998 aipproc's `\affiliationmark`, elsart.sty's switches, `\verb` in an
+    argument.** A `\bibitem[\protect\astroncite{A}{Y}]` label under astron.sty or its copies (EslabStyle, ISOStyle,
+    EAS), whose `\cite` the locked kernel `\cite` refuses, prints "A, Y" as the copy's `\citefull` defines it (was
     `Error:undefined:\astroncite`; 0812.2799, astro-ph0001290, astro-ph0008362); the 1998 aipproc copy's
     `\affiliationmark` is its superscript (astro-ph0011502); elsart.sty's `seceqn`/`secthm` options set its
-    `\if@seceqn`/`\if@secthm`. Guards `perfect_kernel_batchnext397::*`; OXIDIZED_DESIGN_DIVERGENCES #88, #1083, #1084.
+    `\if@seceqn`/`\if@secthm`. A `\verb` inside an argument ends at the argument's `}` with TeX's "\verb illegal in
+    argument" and the text after it is kept; it read on to the line's end and lost the rest of a table (cond-mat0203143,
+    14 errors to 3, its three figures back). Guards `perfect_kernel_batchnext397::*`; OXIDIZED_DESIGN_DIVERGENCES #88,
+    #1083, #1084, #1085.
   - **A paper's own old algorithm2e.sty, and forest's libraries.** A shipped algorithm2e.sty of 1996-2005, which
     defines `\algocf@capseparator` and (before 2004) `\algocf@typo` (release 1.16 also `\algorithmcfname`) not at all, captions as that
     copy prints: "Algorithm 1: text", but "Algorithm 1 text" under release 1.16's `ruled` (was an `Error:undefined`

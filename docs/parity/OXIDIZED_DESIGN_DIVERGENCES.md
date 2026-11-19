@@ -20974,6 +20974,20 @@ The LaTeX 2.09 elsart.sty (v2.23, 0805.0525's copy; Perl's elsart.sty.ltxml the 
 `\if@secthm` set by `\ds@seceqn`/`\ds@secthm` (:66-71) and no `\if@amsthm`; its binding declares those two. Guard
 `perfect_kernel_batchnext397::elsart_sty_options_are_its_switches` (repro `class-bindings/elsart_sty_option_switches`).
 
+### 1085. `\verb` in an argument ends at the argument's closing brace, "\verb illegal in argument" (NEXT397)
+
+latex.ltx:15485-15499: `\verb` opens a group, makes its delimiter active and sets `\aftergroup\verb@balance@group`.
+Inside a pre-tokenized argument the delimiter is frozen "other" and never matches, so the `}` that closes the argument
+closes the verb's group and reports "\verb illegal in argument"; the text after it is typeset. Perl's `readUntil`
+(latex_constructs.pool.ltxml:1797) and our scan read on past that `}`: up to the next line's end in ours ("\verb ended
+by end of line", the bound of `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`), which in a tabular cell lost the rest of the table (cond-mat0203143, 14 errors and its
+three figures; pdflatex 3 "\verb illegal in argument" plus their recovery). `read_verb_invocation` now ends the body at
+a closing-brace token outside the body's own braces, with TeX's Error, and puts the `}` back; under `\dospecials` only
+a pre-tokenized brace has a brace catcode, so a verb read from the file is unchanged. Not covered: an argument a binding
+pushes back without its braces (`\multicolumn`, astro-ph0108286; `\textbf`), where the scan still ends at the line's
+end. Guard `perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace` (repro
+`boxes-groups/verb_in_an_argument_ends_at_its_brace`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a
