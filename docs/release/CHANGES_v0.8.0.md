@@ -51,8 +51,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     whose `\@ifundefined` argument expands the macro again; the CCJNL397 shape under mfirstuc) overflowed the
     conversion thread's stack, SIGABRT with no log; it is counted by the expansion-depth guard and ends in
     `Fatal:Timeout:Recursion` (TeX: "capacity exceeded"). A `\verb` in an argument digested without its braces
-    (`\footnote{a \verb+x+ b}`) reports TeX's "\verb illegal in argument", as pdflatex does (Perl is silent). Guards
-    `perfect_kernel_batchharden397::*`, `cortex_worker` `archive_tests::*`,
+    (`\footnote{a \verb+x+ b}`) reports TeX's "\verb illegal in argument", as pdflatex does (Perl is silent); under
+    bigfoot, whose footnotes take `\verb`, the note is read live and the verb is kept verbatim (2310.18996: 0 Errors,
+    was its URLs re-read as text with their `+`). Guards `perfect_kernel_batchharden397::*`, `cortex_worker`
+    `archive_tests::*`,
     `perfect_kernel_batch56::verb_inside_pretokenized_argument_unreads_instead_of_running_away`;
     OXIDIZED_DESIGN_DIVERGENCES #1085.
   - **astron.sty's author-year labels, the 1998 aipproc's `\affiliationmark`, elsart.sty's switches, `\verb` in an

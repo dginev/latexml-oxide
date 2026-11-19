@@ -88,3 +88,50 @@ fn batchharden397_expansion_recursion_through_an_argument_expansion_is_a_fatal()
   // The Fatal is the log's only Error-or-Fatal line.
   assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
 }
+
+/// bigfoot (bigfoot.sty:31 "makes footnotes work") reads `\footnote` and `\footnotetext` as box bodies, so `\verb` is
+/// legal in them (pdflatex 0 `!`); the binding switches to the kernel's live-body footnotes (`\lx@VerbatimFootnotes`,
+/// OD #192, #1085). Base: the verb's text re-read with its `+` ("Script _ can only appear in math mode"); round 0 also
+/// "\verb illegal in argument". Witness 2310.18996. Repro boxes-groups/verb_in_a_bigfoot_footnote.
+#[test]
+fn batchharden397_bigfoot_footnote_verb() {
+  if !latexml::util::test::kpse_has("bigfoot.sty") {
+    eprintln!("SKIP: bigfoot.sty is not in this TeX Live");
+    return;
+  }
+  let (log, xml) = super::perfect_kernel_batch46::convert(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/verb_in_a_bigfoot_footnote.tex"
+    ),
+    false,
+  );
+  // The one Warning is manyfoot.sty:390's `\g@addto@macro\endminipage` (our \endminipage is not a macro).
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("\\endminipage is not an expandable control sequence"),
+    "{log}"
+  );
+  let notes: Vec<String> = xml
+    .split("<note ")
+    .skip(1)
+    .map(|note| {
+      let note = &note[..note.find("</note>").expect("closed note")];
+      let body = note.rsplit("</tags>").next().unwrap_or_default();
+      body.lines().map(str::trim).collect::<String>()
+    })
+    .collect();
+  assert_eq!(
+    notes,
+    [
+      r#"a <verbatim font="typewriter">x_y</verbatim> b"#,
+      r#"c <verbatim font="typewriter">p{q}</verbatim> d"#,
+      r#"e <verbatim font="typewriter">u%v</verbatim> f"#,
+    ],
+    "{xml}"
+  );
+  assert_eq!(
+    [r#"mark="1""#, r#"mark="7""#, r#"mark="2""#].map(|mark| xml.matches(mark).count()),
+    [1, 1, 1],
+    "{xml}"
+  );
+}

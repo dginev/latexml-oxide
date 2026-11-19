@@ -86,6 +86,7 @@ pub mod beamer_cls;
 pub mod beton_sty;
 pub mod bezier_sty;
 pub mod bibunits_sty;
+pub mod bigfoot_sty;
 pub mod bigintcalc_sty;
 pub mod bigstrut_sty;
 pub mod bitset_sty;

@@ -21007,11 +21007,19 @@ braces (`\mbox`, `\multicolumn`, astro-ph0108286; `\textbf`), where the scan sti
 `perfect_kernel_batchnext397::verb_under_documentstyle_reads_to_its_tokenized_delimiter` (repros
 `boxes-groups/verb_in_an_argument_ends_at_its_brace`,
 `boxes-groups/verb_under_documentstyle_reads_to_its_tokenized_delimiter`).
-An argument digested without its braces (`\footnote{a \verb+x+ b}`) gives no `}`: the scan runs out of tokens and
-unreads them, an empty verbatim (Perl's `readUntil`, Core/Gullet.pm:683-685). That path reports TeX's "\verb illegal in
-argument" too (HARDEN397; Perl is silent; pdflatex 3 `!` on the repro, the Error and its recovery). Guard
-`perfect_kernel_batch56::verb_inside_pretokenized_argument_unreads_instead_of_running_away` (repro
-`boxes-groups/verb_in_a_pretokenized_argument_errs`).
+An argument digested without its braces (`\footnote{a \verb+x+ b}`) gives no `}`: the delimiter was frozen OTHER when
+the argument was read, so the scan runs out of tokens and unreads them, an empty verbatim (Perl's `readUntil`,
+Core/Gullet.pm:683-685; keeping the scanned tokens as the body instead swallowed the rest of the note, an `<item>`
+inside `<verbatim>`, platex-tools/plarray.tex:20). That path reports TeX's "\verb illegal in argument" too (HARDEN397;
+Perl is silent; pdflatex errs on a plain, url, hyperref and lineno footnote alike, 3 `!` on the repro: the Error and
+its recovery). Guard `perfect_kernel_batch56::verb_inside_pretokenized_argument_unreads_instead_of_running_away`
+(repro `boxes-groups/verb_in_a_pretokenized_argument_errs`).
+Where a package makes `\verb` legal in footnotes by reading the note as a box body, the note takes the kernel's
+live-body footnote (`\lx@VerbatimFootnotes`, #192) and the verb is read from the file: fancyvrb/fancybox on
+`\VerbatimFootnotes`, bigfoot on loading (bigfoot.sty, no Perl binding: the raw package runs, then the switch).
+2310.18996 (bigfoot, three `\verb+…+` URLs in footnotes; pdflatex 0 `!`) 0 Errors, each URL a `<verbatim>` (was: the
+URL re-read as text with its `+` delimiter). Guard `perfect_kernel_batchharden397::batchharden397_bigfoot_footnote_verb`
+(repro `boxes-groups/verb_in_a_bigfoot_footnote`).
 
 ## TeX-source fidelity family (TEXSRC)
 

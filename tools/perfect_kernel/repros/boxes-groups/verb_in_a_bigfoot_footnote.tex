@@ -1,0 +1,18 @@
+% witness: 2310.18996 (saclaymocks.tex:45 loads bigfoot; three `\verb+…+` URLs in footnotes), the HARDEN397 review
+% oracle:  bigfoot.sty:31 "makes footnotes work": its \footnote and \footnotetext read the note as a box body, so
+%          `\verb` is legal in them. pdflatex: 0 `!`, "Text1 and7 more2 tail." / "1 a x_y b" / "7 c p{q} d" /
+%          "2 e u%v f".
+% engines: rust MAIN922 1 error ("Script _ can only appear in math mode": the verb's text re-read with its `+`),
+%          HARDEN397 round 0 2 errors (+ "\verb illegal in argument"); Perl: no bigfoot binding, the raw package's
+%          footnotes give way to LaTeXML's argument-reading \footnote
+% expect:  0 errors, 1 warning (manyfoot.sty:390 `\g@addto@macro\endminipage`, our \endminipage not a macro); each
+%          note holds its `<verbatim>` (x_y, p{q}, u%v) between its text
+% status:  RED (MAIN922, HARDEN397 round 0) -> GREEN; guard
+%          perfect_kernel_batchharden397::batchharden397_bigfoot_footnote_verb
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{bigfoot}
+\begin{document}
+Text\footnote{a \verb+x_y+ b} and\footnote[7]{c \verb|p{q}| d} more\footnotemark{} tail.
+\footnotetext{e \verb!u%v! f}
+\end{document}

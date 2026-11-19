@@ -608,8 +608,8 @@ fn collect_tex_files(dir: &Path, files: &mut Vec<PathBuf>, fallback: bool) {
   if let Ok(entries) = std::fs::read_dir(dir) {
     for entry in entries.flatten() {
       let path = entry.path();
-      // Recurse into real directories only: a link to a directory (an archive's `a -> .`) would cycle without end,
-      // and every directory a kept link reaches lies inside the unpacked tree and is walked anyway.
+      // Recurse into real directories only, as Perl's walk does (Util/Pack/Dir.pm:45, File::Find without `follow`):
+      // a link to a directory (an archive's `a -> .`) would cycle without end.
       if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
         collect_tex_files(&path, files, fallback);
       } else if path.is_dir() {
