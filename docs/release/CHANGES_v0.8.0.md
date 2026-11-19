@@ -43,6 +43,13 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **A paper's own old algorithm2e.sty, and forest's libraries.** A shipped algorithm2e.sty of 1996-2005, which
+    defines `\algocf@capseparator` and (before 2004) `\algocf@typo` (release 1.16 also `\algorithmcfname`) not at all, captions as that
+    copy prints: "Algorithm 1: text", but "Algorithm 1 text" under release 1.16's `ruled` (was an `Error:undefined`
+    each; ~200 papers of the 2026 arXiv run, cs0008002, 0711.3765, math0511378). forest's `\useforestlibrary` loads
+    the library file, as forest.sty does, except `linguistics` and `edges`, which the binding stands in for:
+    prooftrees 0.9.2's `ext.tagging` declares the socket prooftrees plugs into (was `Socket
+    'tagsupport/forest/setup' undeclared!`; 2606.20837). Guards `perfect_kernel_batchalgo397`.
   - **Rhai bindings: Perl's hook bodies port 1:1, and every diagnostic is located.** The `Stomach` handle has
     Perl's `bgroup`, `egroup`, `begingroup`, `endgroup`, `beginMode`, `endMode`, `enterHorizontal` and
     `leaveHorizontal`. The boxes a definition's `beforeDigest`/`afterDigest` hook returns are kept, as Perl keeps

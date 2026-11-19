@@ -1,0 +1,8 @@
+% A from-scratch forest library in the shape of forest-ext's forest-lib-ext.tagging.sty (TL 2026): it names itself,
+% declares a socket its client package plugs into, and defines a command and its defaults.
+\ProvidesForestLibrary{lxdemo}[2026/11/18 v0.1]
+\ExplSyntaxOn
+\socket_new:nn {tagsupport/forest/lxdemo}{0}
+\ExplSyntaxOff
+\newcommand\lxdemoname{the demo library}
+\forestset{libraries/lxdemo/defaults/.style={}}
