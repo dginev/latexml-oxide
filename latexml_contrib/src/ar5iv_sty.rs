@@ -146,8 +146,16 @@ LoadDefinitions!({
   // its `{\path{doi:…}}` entries were undefined (2605.07373, 2605.08166, 2605.12003).
   // OXIDIZED_DESIGN #588; guard `perfect_kernel_batch67a`.
   DefPrimitive!("\\lx@arxiv@provide@hyper@urls", {
-    let href = !IsDefined!(&T_CS!("\\href"));
-    let url = !IsDefined!(&T_CS!("\\url"));
+    // a preamble use left an Error's stub, which is no definition of the paper's (the reviewer's S1)
+    let undefined = |cs: &str| {
+      let token = T_CS!(cs);
+      if is_error_stub(&token) {
+        remove_error_stub(&token);
+      }
+      !IsDefined!(&token)
+    };
+    let href = undefined("\\href");
+    let url = undefined("\\url");
     if href || url {
       if !IsDefined!(&T_CS!("\\UrlFont")) {
         DefMacro!("\\UrlFont", "\\lx@fontencoding{ASCII}\\ttfamily");
@@ -172,6 +180,62 @@ LoadDefinitions!({
     }
   });
   at_begin_document(Tokens!(T_CS!("\\lx@arxiv@provide@hyper@urls")))?;
+
+  // The rest of arXiv's hyperref a paper relies on unloaded is provided on first use, provide-only (DG ruling
+  // 2026-11-19): nothing is defined until an undefined name of a family is met, preamble or body, so `\ifdefined`,
+  // `\@ifundefined` and a paper's own `\newcommand` see what pdflatex without the package sees
+  // (`kernel_autoload::name_first_use_provider`). The families: hyperref's `\texorpdfstring`, which printed both its
+  // arguments (hep-th0702068's section titles); hyperref's user commands (math0202134 and hep-th0308186 `\hypersetup`,
+  // 0807.4242 `\hyperlink`/`\hypertarget`, 0803.2070 `\autoref`); and the atbegshi hyperref 6.77a-7.01m loaded
+  // (lpor2014.cls:2987 in 1503.07687, A&A and mnras preambles 1601.07542, 1605.02911; 2309.06611, 1607.05658).
+  // OXIDIZED_DESIGN #588.
+  for (provider, define, names) in [
+    (
+      "\\lx@arxiv@provide@texorpdfstring",
+      hyperref_sty::define_texorpdfstring as fn() -> Result<()>,
+      &["\\texorpdfstring"][..],
+    ),
+    (
+      "\\lx@arxiv@provide@atbegshi",
+      define_atbegshi_hooks,
+      ATBEGSHI_COMMANDS,
+    ),
+    (
+      "\\lx@arxiv@provide@hyperref",
+      define_hyperref_user_commands,
+      HYPERREF_USER_COMMANDS,
+    ),
+  ] {
+    def_macro(
+      T_CS!(provider),
+      None,
+      ExpansionBody::Closure(Rc::new(move |_args| {
+        // arXiv adds hyperref to LaTeX papers only: a plain TeX paper's `\hyperref` stays undefined (hep-th0404136)
+        if !lookup_bool("LaTeX.pool_loaded") {
+          return Ok(Tokens!());
+        }
+        // global, as a package loaded in the preamble: the first use may be inside a group (a section title)
+        let globaldefs = lookup_value("\\globaldefs").unwrap_or(Stored::Number(Number!(0)));
+        assign_value(
+          "\\globaldefs",
+          Stored::Number(Number!(1)),
+          Some(Scope::InPlace),
+        );
+        // inside a provide-only load (a fallback class's own first use) its guard is kept
+        let _provide_only =
+          (!definition::origin::provide_only()).then(definition::origin::ProvideOnlyGuard::new);
+        let defined =
+          definition::origin::with_origin(definition::origin::DefinitionOrigin::Binding, define);
+        assign_value("\\globaldefs", globaldefs, Some(Scope::InPlace));
+        defined?;
+        Ok(Tokens!())
+      })),
+      None,
+    )?;
+    for name in names {
+      binding::kernel_autoload::name_first_use_provider(&T_CS!(*name), T_CS!(provider));
+    }
+  }
 
   // Practical maximum for warnings
   AssignValue!("MAX_WARNINGS" => 10000i64, Scope::Global);
@@ -221,3 +285,211 @@ LoadDefinitions!({
   // post-processing hook (not a compile-time binding), tracked separately —
   // we do not emulate it here. See Perl source L45-73 for context.
 });
+
+/// hyperref's user commands provided on first use (with `\nameref`, from the nameref hyperref loads).
+const HYPERREF_USER_COMMANDS: &[&str] = &[
+  "\\hypersetup",
+  "\\phantomsection",
+  "\\autoref",
+  "\\hyperref",
+  "\\hypertarget",
+  "\\hyperlink",
+  "\\nameref",
+  "\\pdfbookmark",
+  "\\currentpdfbookmark",
+  "\\subpdfbookmark",
+  "\\belowpdfbookmark",
+];
+
+/// The binding's definitions of [`HYPERREF_USER_COMMANDS`], hyperref itself not loaded.
+fn define_hyperref_user_commands() -> Result<()> {
+  hyperref_sty::define_hypersetup()?;
+  hyperref_sty::define_hyper_links()?;
+  hyperref_sty::define_hyper_targets()?;
+  hyperref_sty::define_autoref()?;
+  hyperref_sty::define_autoref_names()?;
+  hyperref_sty::define_pdfbookmarks()?;
+  nameref_sty::define_nameref()
+}
+
+/// atbegshi's user commands (atbegshi-ltx.sty 2021/01/10 v1.0c :52-71), provided on first use.
+const ATBEGSHI_COMMANDS: &[&str] = &[
+  "\\AtBeginShipout",
+  "\\AtBeginShipoutNext",
+  "\\AtBeginShipoutFirst",
+  "\\AtBeginShipoutAddToBox",
+  "\\AtBeginShipoutAddToBoxForeground",
+  "\\AtBeginShipoutUpperLeft",
+  "\\AtBeginShipoutUpperLeftForeground",
+  "\\AtBeginShipoutInit",
+  "\\AtBeginShipoutDiscard",
+  "\\AtBeginShipoutBox",
+  "\\AtBeginShipoutOriginalShipout",
+  "\\ShipoutBoxHeight",
+  "\\ShipoutBoxDepth",
+  "\\ShipoutBoxWidth",
+];
+
+/// atbegshi's user commands with the shipout they hook into absent. What pdflatex prints on a page — a page's
+/// upper-left picture (`\AtBeginShipoutUpperLeft…`) or its background or foreground box (`\AtBeginShipoutAddToBox…`) set
+/// in the material of `\AtBeginShipout` or `…Next`, and the first page's material (`\AtBeginShipoutFirst`) — is the
+/// paper's page notice (2309.06611's IEEE copyright, 2403.15239's conference line, 2302.00362's "Preprint of the paper
+/// which appeared in: …") and is kept once as a publication note; the rest of the hook material is dropped unrun. Used
+/// outside a shipout hook — directly, or in `\AtBeginShipoutFirst`'s own material — the picture and box commands add to
+/// the shipout box when no page is being shipped (latex.ltx:20069, :20200), so pdflatex prints none of it and they do
+/// nothing. `\AtBeginShipoutBox` is the kernel's `\ShipoutBox`, `\AtBeginShipoutInit` and `\AtBeginShipoutDiscard` do
+/// nothing, the shipout box's dimensions are 0pt.
+fn define_atbegshi_hooks() -> Result<()> {
+  def_macro_noop("\\AtBeginShipoutUpperLeft{}")?;
+  def_macro_noop("\\AtBeginShipoutUpperLeftForeground{}")?;
+  def_macro_noop("\\AtBeginShipoutAddToBox{}")?;
+  def_macro_noop("\\AtBeginShipoutAddToBoxForeground{}")?;
+  DefMacro!("\\AtBeginShipout{}", sub[(material)] { Ok(Tokens::new(shipout_notes(&material, false).0)) });
+  DefMacro!("\\AtBeginShipoutNext{}", sub[(material)] { Ok(Tokens::new(shipout_notes(&material, false).0)) });
+  // (the first page's material is printed itself, beside the notes its own hooks hold)
+  DefMacro!("\\AtBeginShipoutFirst{}", sub[(material)] {
+    let (mut notes, rest) = shipout_notes(&material, true);
+    notes.push(T_CS!("\\lx@arxiv@shipout@note"));
+    notes.push(T_BEGIN!());
+    notes.extend(rest);
+    notes.push(T_END!());
+    Ok(Tokens::new(notes))
+  });
+  // The note carries the words, not the page geometry: the material is set in a group where `\put(x,y){…}` keeps only
+  // its `{…}` (atbegshi's `picture(0,0)` is not set up), and material with a picture (a `tikzpicture` overlay, a
+  // `picture`) gives its text alone. Material printing no text (a rule, an image, 1612.04433's tikz highlighter) and
+  // material already noted (a hook registered again, or once per page) make no note.
+  DefPrimitive!("\\lx@arxiv@shipout@note{}", sub[(material)] {
+    let seen = s!("lx@arxiv@shipout@note:{}", material.to_string());
+    if lookup_bool(&seen) {
+      return Ok(Vec::new());
+    }
+    AssignValue!(&seen => true, Scope::Global);
+    let mut body = TokenizeInternal!(r"\hbox{\unitlength=1pt\relax\let\put\lx@arxiv@shipout@put").unlist();
+    body.extend(material.unlist_ref().iter().cloned());
+    body.push(T_END!());
+    let stuff = digest(Tokens::new(body))?;
+    let mut text = String::new();
+    ink_text_printed(&stuff, &mut text);
+    let words = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if !words.chars().any(char::is_alphanumeric) {
+      return Ok(Vec::new());
+    }
+    let source = material.to_string();
+    let content = if ["\\tikz", "\\pgfpicture", "picture}"].iter().any(|p| source.contains(p)) {
+      ExplodeText!(words)
+    } else {
+      let n = lookup_int("lx_arxiv_shipout_notes") + 1;
+      assign_value("lx_arxiv_shipout_notes", Stored::Int(n), Some(Scope::Global));
+      assign_value(&s!("lx_arxiv_shipout_note_{n}"), Stored::Digested(stuff), Some(Scope::Global));
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@arxiv@shipout@box{{{n}}}"))).unlist()
+    };
+    let mut note = TokenizeInternal!(r"\lx@add@pubnote[role=note,name={}]{").unlist();
+    note.extend(content);
+    note.push(T_END!());
+    unread(Tokens::new(note));
+    Ok(Vec::new())
+  });
+  DefMacro!(
+    "\\lx@arxiv@shipout@put SkipSpaces Match:( Until:, Until:) {}",
+    "#4"
+  );
+  // (the `\hbox` `\lx@arxiv@shipout@note` digested, its list given where the note is digested)
+  DefPrimitive!("\\lx@arxiv@shipout@box{}", sub[(n)] {
+    let Some(Stored::Digested(stuff)) = lookup_value(&s!("lx_arxiv_shipout_note_{}", n.to_string().trim())) else {
+      return Ok(Vec::new());
+    };
+    let items = stuff.unlist();
+    Ok(match items.as_slice() {
+      [hbox] => match hbox.data() {
+        DigestedData::Whatsit(w) => w.borrow().get_arg(2).map(Digested::unlist).unwrap_or_default(),
+        _ => items,
+      },
+      _ => items,
+    })
+  });
+  Let!("\\AtBeginShipoutInit", "\\@empty");
+  Let!("\\AtBeginShipoutDiscard", "\\@empty");
+  if !IsDefined!(&T_CS!("\\AtBeginShipoutBox")) {
+    if IsDefined!(&T_CS!("\\ShipoutBox")) {
+      Let!("\\AtBeginShipoutBox", "\\ShipoutBox");
+    } else {
+      raw_tex("\\newbox\\AtBeginShipoutBox")?;
+    }
+  }
+  if IsDefined!(&T_CS!("\\shipout")) {
+    Let!("\\AtBeginShipoutOriginalShipout", "\\shipout");
+  }
+  DefMacro!("\\ShipoutBoxHeight", "0pt");
+  DefMacro!("\\ShipoutBoxDepth", "0pt");
+  DefMacro!("\\ShipoutBoxWidth", "0pt");
+  Ok(())
+}
+
+/// A shipout hook's material split: the page notes it holds — a `\lx@arxiv@shipout@note{…}` for the argument of each
+/// `\AtBeginShipoutUpperLeft…` / `\AtBeginShipoutAddToBox…` in it at any depth, an `\AtBeginShipoutFirst{…}` for each of
+/// those — and the rest of it, every atbegshi hook taken out with its argument (so nothing is noted twice). In
+/// `\AtBeginShipoutFirst`'s own material (`first_page`), a picture or box command outside a nested hook prints nothing
+/// in pdflatex (see [`define_atbegshi_hooks`]) and is dropped with its argument.
+fn shipout_notes(material: &Tokens, first_page: bool) -> (Vec<Token>, Vec<Token>) {
+  let noted = [
+    T_CS!("\\AtBeginShipoutUpperLeft"),
+    T_CS!("\\AtBeginShipoutUpperLeftForeground"),
+    T_CS!("\\AtBeginShipoutAddToBox"),
+    T_CS!("\\AtBeginShipoutAddToBoxForeground"),
+  ];
+  let first = T_CS!("\\AtBeginShipoutFirst");
+  let hooks = [T_CS!("\\AtBeginShipout"), T_CS!("\\AtBeginShipoutNext")];
+  let tokens = material.unlist_ref();
+  // (the end of the argument read from `i`: a balanced group or one token, spaces before it skipped)
+  let argument = |mut i: usize| -> (usize, usize) {
+    while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE {
+      i += 1;
+    }
+    let start = i;
+    if i < tokens.len() && tokens[i].get_catcode() == Catcode::BEGIN {
+      let mut level = 0;
+      while i < tokens.len() {
+        match tokens[i].get_catcode() {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => level -= 1,
+          _ => {},
+        }
+        i += 1;
+        if level == 0 {
+          break;
+        }
+      }
+    } else if i < tokens.len() {
+      i += 1;
+    }
+    (start, i)
+  };
+  let (mut notes, mut rest) = (Vec::new(), Vec::new());
+  // (the hooks' arguments still open in `rest`: what they hold is dropped from it, their notes kept)
+  let mut dropped_until = 0;
+  let mut i = 0;
+  while i < tokens.len() {
+    let token = &tokens[i];
+    if noted.contains(token) || *token == first {
+      let (start, end) = argument(i + 1);
+      if !(first_page && *token != first && i >= dropped_until) {
+        notes.push(if *token == first {
+          first
+        } else {
+          T_CS!("\\lx@arxiv@shipout@note")
+        });
+        notes.extend_from_slice(&tokens[start..end]);
+      }
+      i = end;
+      continue;
+    }
+    if hooks.contains(token) {
+      dropped_until = dropped_until.max(argument(i + 1).1);
+    } else if i >= dropped_until {
+      rest.push(*token);
+    }
+    i += 1;
+  }
+  (notes, rest)
+}

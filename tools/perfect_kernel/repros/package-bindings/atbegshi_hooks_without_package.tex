@@ -1,0 +1,27 @@
+% witness: 2309.06611 (root.tex:113 \AtBeginShipoutNext), 2403.15239 (main.tex:60-61 \AtBeginShipoutNext,
+%          \AtBeginShipoutUpperLeft), 1607.05658 and 2507.04353 (\AtBeginShipout{\AtBeginShipoutDiscard}): body uses, no atbegshi
+% oracle: arXiv builds them (its build loads hyperref, which 6.77a-7.01m loaded atbegshi); pdflatex alone:
+%         ! Undefined control sequence
+% engines: rust MAIN924 = 9 errors (every \AtBeginShipout* undefined), 2 Missing-number warnings; Perl not run
+% expect: 0 Errors, 0 Warnings; the next page's upper-left pictures "X" and "Y" and its boxes "Z" and "W" as four
+%         publication notes of their words, no note for the rule or the \special, nothing for the picture and box
+%         commands used outside a hook ("Vnone", "Unone"), the rest of the material dropped, then the body text
+%         (pdflatex with atbegshi loaded: X, Y, Z, W set off the top edge at (0,0), the rule beside them, "Body
+%         text." and the page number, no Vnone or Unone, 0 errors)
+% mechanism: ar5iv.sty preload, provide-only on first use (DG rulings 2026-11-19; OXIDIZED_DESIGN #588)
+% status: RED (MAIN924) -> GREEN (HYPERPROV round 3 + integration; round 1 dropped X and Y, round 2 Z and W, set X and Y
+%         in a picture, round 3 noted the direct uses pdflatex does not print)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\AtBeginShipout{\setbox\AtBeginShipoutBox=\hbox{\copy\AtBeginShipoutBox}}
+\AtBeginShipoutNext{\ifodd\value{page}\else\AtBeginShipoutDiscard\fi
+  \AtBeginShipoutUpperLeft{\put(0,0){X}}%
+  \AtBeginShipoutUpperLeftForeground{\put(0,0){Y}}%
+  \AtBeginShipoutUpperLeft{\put(0,0){\rule{1cm}{1cm}}}%
+  \AtBeginShipoutAddToBox{Z}\AtBeginShipoutAddToBoxForeground{W}}
+\AtBeginShipoutFirst{\special{x}}
+\AtBeginShipoutUpperLeft{\put(0,0){Vnone}}\AtBeginShipoutAddToBox{Unone}
+\AtBeginShipoutInit
+Body text.
+\end{document}
