@@ -37,6 +37,7 @@ pub(super) fn post_logged(xml: &str, source_directory: &str) -> (String, String)
     plane1:                    true,
     hackplane1:                false,
     mathtex:                   false,
+    unicodemath:               false,
     url_style:                 latexml_post::crossref::UrlStyle::File,
     navigationtoc:             None,
     schemadocs:                false,

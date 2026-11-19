@@ -127,6 +127,7 @@ pub struct RenderManifest {
   pub plane1:                    bool,
   pub hackplane1:                bool,
   pub mathtex:                   bool,
+  pub unicodemath:               bool,
   pub intent_literal:            bool,
   pub stylesheet:                Option<String>,
   /// The fully-resolved XSLT parameter map (CSS/JS/LATEXML_VERSION/user
@@ -658,30 +659,19 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
   if m.is_html_out {
     processors.push(Box::new(latexml_post::svg::SVG::new()));
   }
-  if m.pmml {
-    let mut presentation = latexml_post::mathml::MathML::new_presentation()
-      .with_keep_xmath(m.keep_xmath)
-      .with_invisible_times(m.invisible_times)
-      .with_plane1(m.plane1, m.hackplane1)
-      .with_mathtex(m.mathtex)
-      .with_intent_literal(m.intent_literal);
-    if m.cmml {
-      presentation = presentation.with_secondaries(vec![Box::new(
-        latexml_post::mathml::MathML::new_content()
-          .with_keep_xmath(m.keep_xmath)
-          .with_invisible_times(m.invisible_times)
-          .with_plane1(m.plane1, m.hackplane1)
-          .secondary(),
-      )]);
-    }
-    processors.push(Box::new(presentation));
-  } else if m.cmml {
-    processors.push(Box::new(
-      latexml_post::mathml::MathML::new_content()
-        .with_keep_xmath(m.keep_xmath)
-        .with_invisible_times(m.invisible_times)
-        .with_plane1(m.plane1, m.hackplane1),
-    ));
+  let math_formats = crate::post::MathFormats {
+    pmml:            m.pmml,
+    cmml:            m.cmml,
+    unicodemath:     m.unicodemath,
+    keep_xmath:      m.keep_xmath,
+    invisible_times: m.invisible_times,
+    plane1:          m.plane1,
+    hackplane1:      m.hackplane1,
+    mathtex:         m.mathtex,
+    intent_literal:  m.intent_literal,
+  };
+  if let Some(math) = math_formats.processor() {
+    processors.push(math);
   }
   if let Some(xsl_path) = m.stylesheet.as_deref() {
     let params: rustc_hash::FxHashMap<String, String> = m.xslt_params.iter().cloned().collect();

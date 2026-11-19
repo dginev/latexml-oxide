@@ -43,6 +43,22 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **UnicodeMath output (`--unicodemath`).** Perl's `--unicodemath`/`--nounicodemath` are exposed: each formula's
+    MathML carries an `<annotation encoding="application/x-unicodemath">` (`a+b^2=\frac{x}{y}` gives `𝑎+𝑏²=𝑥/𝑦`),
+    after the Content MathML and before the TeX annotation. As with `--cmml` and `--mathtex`, Presentation MathML stays
+    on in HTML (Perl's `--unicodemath` alone replaces it, and the page then shows the TeX; OXIDIZED_DESIGN #1093);
+    with `--nopmml` and no `--cmml` the string is the only math output, as in Perl. `latexmlmath_oxide --unicodemath`
+    prints the string (`--unicodemath=FILE` writes it to FILE). The converter now writes scripts as Perl's does:
+    sub/superscript codepoints where every character has one (`∫₀¹`, `𝑎⁻¹`, `𝑥'`), `┬`/`┴` for limits
+    (`∑┬{𝑖=1}┴𝑛`), a prescript before its base. Unlike Perl, the annotation of `$0$` is kept (KNOWN_PERL_ERRORS
+    #1289), `latexmlmath_oxide` does not XML-escape `<` and `&` (#1290), and an nth root reads its degree and
+    radicand in order (#1291). **Without the flag too**, the page `<title>` and a reference's `title=` tooltip read a
+    title's math through the same converter, so their scripts now read as Perl's: a section `On $x^2$, $a_{i+1}$ and
+    $\sum_{i=1}^n y_k$` gives `1 On 𝑥², 𝑎_{𝑖+1} and ∑_{𝑖=1}^𝑛{𝑦_𝑘}`, and hep-ex0309075's page `<title>`
+    `𝜋^0⁢𝑒^+⁢𝑒^-` becomes `𝜋⁰⁢𝑒⁺⁢𝑒⁻`. An equation tag in a `title=` reads the same way, its scripts and fonts kept
+    (`\tag{$\mathrm{P_1}$}` gives `Equation P₁`, where Perl's `textContent` gives `P1`; OXIDIZED_DESIGN #1094).
+    Guards `cluster_cli::unicodemath_output::*`, `unicode_math::tests::*`.
+
   - **Four more run-397 Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
     `\end{equation*}` as amsmath.sty:2950-2951 makes them, so a mixed pair (`\[ … \end{equation*}`) no longer errs
     (math0306159, math0401181, math0508341), and a `\tag` in `\[` is printed (2008.12392; OXIDIZED_DESIGN_DIVERGENCES
