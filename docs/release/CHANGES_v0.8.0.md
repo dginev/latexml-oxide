@@ -44,7 +44,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 ## Changes
 
   - **A paper's own old algorithm2e.sty, and forest's libraries.** A shipped algorithm2e.sty of 1996-2005, which
-    defines neither `\algocf@capseparator` nor (release 1.16) `\algocf@typo` and `\algorithmcfname`, captions as that
+    defines `\algocf@capseparator` and (before 2004) `\algocf@typo` (release 1.16 also `\algorithmcfname`) not at all, captions as that
     copy prints: "Algorithm 1: text", but "Algorithm 1 text" under release 1.16's `ruled` (was an `Error:undefined`
     each; ~200 papers of the 2026 arXiv run, cs0008002, 0711.3765, math0511378). forest's `\useforestlibrary` loads
     the library file, as forest.sty does, except `linguistics` and `edges`, which the binding stands in for:
