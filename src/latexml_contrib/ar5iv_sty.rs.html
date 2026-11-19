@@ -160,57 +160,65 @@
 <a href=#160 id=160 data-nosnippet>160</a>      }
 <a href=#161 id=161 data-nosnippet>161</a>      hyperref_sty::define_hyper_urls(href, url)<span class="question-mark">?</span>;
 <a href=#162 id=162 data-nosnippet>162</a>      <span class="kw">let </span>_provide_only = definition::origin::ProvideOnlyGuard::new();
-<a href=#163 id=163 data-nosnippet>163</a>      <span class="macro">RequirePackage!</span>(<span class="string">"url"</span>);
-<a href=#164 id=164 data-nosnippet>164</a>    }
-<a href=#165 id=165 data-nosnippet>165</a>  });
-<a href=#166 id=166 data-nosnippet>166</a>  at_begin_document(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@arxiv@provide@hyper@urls"</span>)))<span class="question-mark">?</span>;
-<a href=#167 id=167 data-nosnippet>167</a>
-<a href=#168 id=168 data-nosnippet>168</a>  <span class="comment">// Practical maximum for warnings
-<a href=#169 id=169 data-nosnippet>169</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"MAX_WARNINGS" </span>=&gt; <span class="number">10000i64</span>, Scope::Global);
-<a href=#170 id=170 data-nosnippet>170</a>
-<a href=#171 id=171 data-nosnippet>171</a>  <span class="comment">// No date in the source (stdin, a single-file submission's undated entry): Perl's `\relax`.
-<a href=#172 id=172 data-nosnippet>172</a>  // We bind at load time with `locked =&gt; true, Scope::Global` instead of
-<a href=#173 id=173 data-nosnippet>173</a>  // wrapping in `\AtBeginDocument{\def\today{\relax}}` (which loses both
-<a href=#174 id=174 data-nosnippet>174</a>  // flags — `\def` is plain-TeX, with no LaTeXML lock). The lock rejects a
-<a href=#175 id=175 data-nosnippet>175</a>  // preamble package's later (re)definition of \today, matching the intent of
-<a href=#176 id=176 data-nosnippet>176</a>  // Perl's AtBeginDocument hook (defer until all packages have loaded). It
-<a href=#177 id=177 data-nosnippet>177</a>  // does NOT make timing irrelevant: binding loads run unlocked
-<a href=#178 id=178 data-nosnippet>178</a>  // (content.rs, state.rs), so the LaTeX format's own `\today`
-<a href=#179 id=179 data-nosnippet>179</a>  // (latex_constructs sect03.rs) would replace this one if it loaded later.
-<a href=#180 id=180 data-nosnippet>180</a>  // It loads earlier today, inside the latexml.sty preload (its body's
-<a href=#181 id=181 data-nosnippet>181</a>  // `\AddToHook` autoloads LaTeX.pool); a change that defers the format load
-<a href=#182 id=182 data-nosnippet>182</a>  // to `\documentclass` must move this to begin-document, as Perl does
-<a href=#183 id=183 data-nosnippet>183</a>  // (repro loader/latexml_preload_keeps_plain.tex).
-<a href=#184 id=184 data-nosnippet>184</a>  </span><span class="kw">if </span>!archival_date {
-<a href=#185 id=185 data-nosnippet>185</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\today"</span>, <span class="string">"\\relax"</span>, locked =&gt; <span class="bool-val">true</span>, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#186 id=186 data-nosnippet>186</a>  }
-<a href=#187 id=187 data-nosnippet>187</a>
-<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// Perl L30-35: drop all non-remote &lt;ltx:resource&gt; nodes (keep only `http*`
-<a href=#189 id=189 data-nosnippet>189</a>  // src so the archival run doesn't embed default local CSS / JS).
-<a href=#190 id=190 data-nosnippet>190</a>  //   DefRewrite(xpath =&gt; 'descendant-or-self::ltx:resource', replace =&gt; sub {
-<a href=#191 id=191 data-nosnippet>191</a>  //     my ($self, $node) = @_;
-<a href=#192 id=192 data-nosnippet>192</a>  //     my $src = $node-&gt;getAttribute('src') || '';
-<a href=#193 id=193 data-nosnippet>193</a>  //     return if $src !~ /^http/;      # non-remote → silently drop
-<a href=#194 id=194 data-nosnippet>194</a>  //     $self-&gt;getNode-&gt;appendChild($node); });   # remote → re-attach
-<a href=#195 id=195 data-nosnippet>195</a>  // Beyond Perl: a style sheet given inline, with no file (`\lxRequireResource[type=text/css,content={…}]{}`), is
-<a href=#196 id=196 data-nosnippet>196</a>  // kept too: it embeds nothing local, and is how a paper styles its own HTML, the arXiv source having no room for a
-<a href=#197 id=197 data-nosnippet>197</a>  // CSS file (2606.12996's rules for its nested tables and appendix TOC entries); so is a class option's own rules
-<a href=#198 id=198 data-nosnippet>198</a>  // (article's `openbib`, `.ltx_bibblock{display:block;}`). Inline scripts stay dropped.
-<a href=#199 id=199 data-nosnippet>199</a>  </span><span class="macro">DefRewrite!</span>(xpath =&gt; <span class="string">"descendant-or-self::ltx:resource"</span>,
-<a href=#200 id=200 data-nosnippet>200</a>  replace =&gt; sub[document, nodes] {
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="kw">let </span>node = nodes.pop().unwrap();
-<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">let </span>src = node.get_attribute(<span class="string">"src"</span>).unwrap_or_default();
-<a href=#203 id=203 data-nosnippet>203</a>    <span class="kw">let </span>inline_css = src.is_empty()
-<a href=#204 id=204 data-nosnippet>204</a>      &amp;&amp; node.get_attribute(<span class="string">"type"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"text/css"</span>)
-<a href=#205 id=205 data-nosnippet>205</a>      &amp;&amp; !node.get_content().trim().is_empty();
-<a href=#206 id=206 data-nosnippet>206</a>    <span class="kw">if </span>src.starts_with(<span class="string">"http"</span>) || inline_css {
-<a href=#207 id=207 data-nosnippet>207</a>      document.get_node_mut().add_child(node)<span class="question-mark">?</span>;
-<a href=#208 id=208 data-nosnippet>208</a>    }
-<a href=#209 id=209 data-nosnippet>209</a>  });
-<a href=#210 id=210 data-nosnippet>210</a>
-<a href=#211 id=211 data-nosnippet>211</a>  <span class="comment">// NOTE: Perl additionally monkey-patches LaTeXML::Post::MathML::outerWrapper
-<a href=#212 id=212 data-nosnippet>212</a>  // to set intent=':literal' on the top-level math element. That is a
-<a href=#213 id=213 data-nosnippet>213</a>  // post-processing hook (not a compile-time binding), tracked separately —
-<a href=#214 id=214 data-nosnippet>214</a>  // we do not emulate it here. See Perl source L45-73 for context.
-<a href=#215 id=215 data-nosnippet>215</a></span>});
+<a href=#163 id=163 data-nosnippet>163</a>      <span class="comment">// A provided `\href` answers a package's "is hyperref loaded?" (`\@ifundefined{href}`), so hyperref's no-op
+<a href=#164 id=164 data-nosnippet>164</a>      // anchor layer it then calls comes with it (a shipped algorithm2e.sty 3.6's `\nl`, cs0602002).
+<a href=#165 id=165 data-nosnippet>165</a>      </span><span class="kw">if </span>href {
+<a href=#166 id=166 data-nosnippet>166</a>        definition::origin::with_origin(
+<a href=#167 id=167 data-nosnippet>167</a>          definition::origin::DefinitionOrigin::Binding,
+<a href=#168 id=168 data-nosnippet>168</a>          hyperref_sty::define_hyper_anchors,
+<a href=#169 id=169 data-nosnippet>169</a>        )<span class="question-mark">?</span>;
+<a href=#170 id=170 data-nosnippet>170</a>      }
+<a href=#171 id=171 data-nosnippet>171</a>      <span class="macro">RequirePackage!</span>(<span class="string">"url"</span>);
+<a href=#172 id=172 data-nosnippet>172</a>    }
+<a href=#173 id=173 data-nosnippet>173</a>  });
+<a href=#174 id=174 data-nosnippet>174</a>  at_begin_document(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@arxiv@provide@hyper@urls"</span>)))<span class="question-mark">?</span>;
+<a href=#175 id=175 data-nosnippet>175</a>
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="comment">// Practical maximum for warnings
+<a href=#177 id=177 data-nosnippet>177</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"MAX_WARNINGS" </span>=&gt; <span class="number">10000i64</span>, Scope::Global);
+<a href=#178 id=178 data-nosnippet>178</a>
+<a href=#179 id=179 data-nosnippet>179</a>  <span class="comment">// No date in the source (stdin, a single-file submission's undated entry): Perl's `\relax`.
+<a href=#180 id=180 data-nosnippet>180</a>  // We bind at load time with `locked =&gt; true, Scope::Global` instead of
+<a href=#181 id=181 data-nosnippet>181</a>  // wrapping in `\AtBeginDocument{\def\today{\relax}}` (which loses both
+<a href=#182 id=182 data-nosnippet>182</a>  // flags — `\def` is plain-TeX, with no LaTeXML lock). The lock rejects a
+<a href=#183 id=183 data-nosnippet>183</a>  // preamble package's later (re)definition of \today, matching the intent of
+<a href=#184 id=184 data-nosnippet>184</a>  // Perl's AtBeginDocument hook (defer until all packages have loaded). It
+<a href=#185 id=185 data-nosnippet>185</a>  // does NOT make timing irrelevant: binding loads run unlocked
+<a href=#186 id=186 data-nosnippet>186</a>  // (content.rs, state.rs), so the LaTeX format's own `\today`
+<a href=#187 id=187 data-nosnippet>187</a>  // (latex_constructs sect03.rs) would replace this one if it loaded later.
+<a href=#188 id=188 data-nosnippet>188</a>  // It loads earlier today, inside the latexml.sty preload (its body's
+<a href=#189 id=189 data-nosnippet>189</a>  // `\AddToHook` autoloads LaTeX.pool); a change that defers the format load
+<a href=#190 id=190 data-nosnippet>190</a>  // to `\documentclass` must move this to begin-document, as Perl does
+<a href=#191 id=191 data-nosnippet>191</a>  // (repro loader/latexml_preload_keeps_plain.tex).
+<a href=#192 id=192 data-nosnippet>192</a>  </span><span class="kw">if </span>!archival_date {
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\today"</span>, <span class="string">"\\relax"</span>, locked =&gt; <span class="bool-val">true</span>, scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#194 id=194 data-nosnippet>194</a>  }
+<a href=#195 id=195 data-nosnippet>195</a>
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="comment">// Perl L30-35: drop all non-remote &lt;ltx:resource&gt; nodes (keep only `http*`
+<a href=#197 id=197 data-nosnippet>197</a>  // src so the archival run doesn't embed default local CSS / JS).
+<a href=#198 id=198 data-nosnippet>198</a>  //   DefRewrite(xpath =&gt; 'descendant-or-self::ltx:resource', replace =&gt; sub {
+<a href=#199 id=199 data-nosnippet>199</a>  //     my ($self, $node) = @_;
+<a href=#200 id=200 data-nosnippet>200</a>  //     my $src = $node-&gt;getAttribute('src') || '';
+<a href=#201 id=201 data-nosnippet>201</a>  //     return if $src !~ /^http/;      # non-remote → silently drop
+<a href=#202 id=202 data-nosnippet>202</a>  //     $self-&gt;getNode-&gt;appendChild($node); });   # remote → re-attach
+<a href=#203 id=203 data-nosnippet>203</a>  // Beyond Perl: a style sheet given inline, with no file (`\lxRequireResource[type=text/css,content={…}]{}`), is
+<a href=#204 id=204 data-nosnippet>204</a>  // kept too: it embeds nothing local, and is how a paper styles its own HTML, the arXiv source having no room for a
+<a href=#205 id=205 data-nosnippet>205</a>  // CSS file (2606.12996's rules for its nested tables and appendix TOC entries); so is a class option's own rules
+<a href=#206 id=206 data-nosnippet>206</a>  // (article's `openbib`, `.ltx_bibblock{display:block;}`). Inline scripts stay dropped.
+<a href=#207 id=207 data-nosnippet>207</a>  </span><span class="macro">DefRewrite!</span>(xpath =&gt; <span class="string">"descendant-or-self::ltx:resource"</span>,
+<a href=#208 id=208 data-nosnippet>208</a>  replace =&gt; sub[document, nodes] {
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="kw">let </span>node = nodes.pop().unwrap();
+<a href=#210 id=210 data-nosnippet>210</a>    <span class="kw">let </span>src = node.get_attribute(<span class="string">"src"</span>).unwrap_or_default();
+<a href=#211 id=211 data-nosnippet>211</a>    <span class="kw">let </span>inline_css = src.is_empty()
+<a href=#212 id=212 data-nosnippet>212</a>      &amp;&amp; node.get_attribute(<span class="string">"type"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"text/css"</span>)
+<a href=#213 id=213 data-nosnippet>213</a>      &amp;&amp; !node.get_content().trim().is_empty();
+<a href=#214 id=214 data-nosnippet>214</a>    <span class="kw">if </span>src.starts_with(<span class="string">"http"</span>) || inline_css {
+<a href=#215 id=215 data-nosnippet>215</a>      document.get_node_mut().add_child(node)<span class="question-mark">?</span>;
+<a href=#216 id=216 data-nosnippet>216</a>    }
+<a href=#217 id=217 data-nosnippet>217</a>  });
+<a href=#218 id=218 data-nosnippet>218</a>
+<a href=#219 id=219 data-nosnippet>219</a>  <span class="comment">// NOTE: Perl additionally monkey-patches LaTeXML::Post::MathML::outerWrapper
+<a href=#220 id=220 data-nosnippet>220</a>  // to set intent=':literal' on the top-level math element. That is a
+<a href=#221 id=221 data-nosnippet>221</a>  // post-processing hook (not a compile-time binding), tracked separately —
+<a href=#222 id=222 data-nosnippet>222</a>  // we do not emulate it here. See Perl source L45-73 for context.
+<a href=#223 id=223 data-nosnippet>223</a></span>});
 </code></pre></div></section></main></body></html>
