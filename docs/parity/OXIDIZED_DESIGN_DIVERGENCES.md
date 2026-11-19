@@ -21200,6 +21200,45 @@ e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the o
 `perfect_kernel_batch69b::robustify_ltx_protected_native_cite` (repros `package-bindings/robustify_of_a_native_binding`,
 `robustify_of_a_tex_primitive_errs`).
 
+### 1093. Presentation MathML stays on when another math format is named; the others annotate it
+
+**Rule.** Wherever Presentation MathML is defaulted on (the HTML formats, `--post`, an XML input) it stays on unless
+`--nopmml` is given, and `--cmml`, `--unicodemath` and `--mathtex` add to it, in that fixed order, as
+`<m:annotation-xml>`/`<m:annotation>` of one `<m:semantics>`. With `--nopmml`, Content MathML is the primary, else
+UnicodeMath alone (an `ltx:text` per formula, as Perl's).
+
+**Perl.** Config.pm:566-570 defaults `pmml` only when no math format is named, and LaTeXML.pm:504-556 makes the
+first named format the primary, the rest secondaries in command-line order. So `latexmlc --format=html5 --unicodemath`
+(or `--mathtex`) runs that processor alone, and the stylesheet, finding no `m:math`, prints the formula's TeX
+(LaTeXML-math-xhtml.xsl:38-65, `as-TeX`): the requested string never reaches the page. `--cmml` alone gives Content
+MathML, which no browser renders: W3C MathML Core lists no Content MathML element (§2.1, `apply`/`ci`/`cn` are
+"Unknown MathML elements") and renders only the first child of `<semantics>` (§3.7), so an annotation adds data
+without changing the page. Perl's `--post`/XML-input runs add `pmml` only for HTML/JATS (Config.pm:567-568), so there
+a named format is the primary.
+
+**Rust.** `ResolvedOptions`/`PostOptions::pmml` (`bin/latexml_oxide.rs`) and `post::MathFormats` (shared by the
+page-render workers). `--unicodemath` alone, like `--mathtex`, needs `--nopmml` to get Perl's output.
+**Guards**: `cluster_cli::unicodemath_output::{unicodemath_annotates_presentation_mathml,
+unicodemath_sits_between_content_mathml_and_tex, unicodemath_through_the_page_render_workers_matches_serial}`.
+
+### 1094. A reference title reads an equation tag's math as UnicodeMath
+
+**Rule.** A `title=` (or page `<title>`) built from a stored equation tag reads the tag's math as the rest of a
+title is read: through UnicodeMath, its scripts and fonts kept, inside the tag's `open`/`close`.
+`\tag{$\mathrm{P_1}$}` gives "Equation P₁"; 2506.17197's `\tag{$\mathrm{TreeSB}_{\mathrm{stat}}^\cS$}` gives
+"Equation TreeSBₛₜₐₜ^𝒮".
+
+**Perl.** `getTextContent_rec` (CrossRef.pm:866-870) returns an `ltx:tag`'s `open` + `textContent` + `close`, so a
+formula in a tag gives its bare tokens with its scripts and fonts dropped: `latexmlc` gives "P1", "TreeSBstatS" (the
+𝒮 read as S), `1′`, `⋆⁣⋆`. Its file-based `latexmlpost` reads the stored copy's indentation too ("P 1"). The Unicode
+reading Perl gives a formula elsewhere in a title (CrossRef.pm:872-873) is the one kept here, so a tag reads as the
+formula it prints; `⋆⁣⋆` is the same either way.
+
+**Rust.** `scan::title_node_text`'s `ltx:tag` branch reads its children through `title_text_content`, as
+`crossref::node_data_text` reads a tag's content. **Guards**:
+`cluster_cli::unicodemath_output::ref_title_reads_a_tags_math_as_unicodemath`,
+`perfect_kernel_batch78j::cleveref_document_format_with_math_in_the_tag`.
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

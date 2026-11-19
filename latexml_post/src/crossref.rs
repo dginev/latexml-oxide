@@ -74,13 +74,18 @@ fn tag_text(doc: &PostDocument, val: &Value) -> String {
 
 /// Derive the STRING form of a stored value (page `<title>`, `title=` tooltip).
 /// Perl `CrossRef::getTextContent` (`CrossRef.pm` L853-859). A `Value::Xml` title
-/// is flattened tag-aware and math-aware (via [`title_text_content`], which routes
-/// `ltx:Math` through `unicodemath`); any other value uses its plain string form.
-/// Either way the result is whitespace-collapsed like Perl: trim both ends, then
-/// `s/\s+/ /g` — so a multi-line math serialization cannot bloat a `title=`
-/// tooltip (issue #761).
+/// is flattened tag-aware and math-aware, the stored node itself first, as Perl's
+/// `getTextContent_rec($doc, $title)`: a stored `ltx:tag` (a `refnum`) reads as its
+/// plain text inside its `open`/`close` ([`title_node_text`]), an `ltx:title` by
+/// its children, with `ltx:Math` through `unicodemath`. Any other value uses its
+/// plain string form. Either way the result is whitespace-collapsed like Perl: trim
+/// both ends, then `s/\s+/ /g` — so a multi-line math serialization cannot bloat a
+/// `title=` tooltip (issue #761).
 fn value_text(doc: &PostDocument, val: &Value) -> String {
   let raw = match val {
+    Value::Xml(node) if node.get_type() == Some(NodeType::ElementNode) => {
+      title_node_text(doc, node)
+    },
     Value::Xml(node) => title_text_content(doc, node),
     other => other.to_string(),
   };

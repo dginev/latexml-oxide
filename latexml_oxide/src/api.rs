@@ -178,6 +178,7 @@ fn html_post_options(default_resources: bool) -> post::PostOptions<'static> {
     plane1: true,
     hackplane1: false,
     mathtex: false,
+    unicodemath: false,
     url_style: latexml_post::crossref::UrlStyle::File,
     navigationtoc: None,
     schemadocs: false,

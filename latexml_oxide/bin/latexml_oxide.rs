@@ -132,6 +132,16 @@ struct Cli {
   #[arg(long, overrides_with = "mathtex")]
   nomathtex: bool,
 
+  /// Add a UnicodeMath (plain-text math) annotation to the MathML, after any
+  /// Content MathML and before the TeX one; with --nopmml and no --cmml,
+  /// UnicodeMath is the only math output.
+  #[arg(long, overrides_with = "nounicodemath")]
+  unicodemath: bool,
+
+  /// Suppress the UnicodeMath annotation (the default).
+  #[arg(long, overrides_with = "unicodemath")]
+  nounicodemath: bool,
+
   /// Replace invisible-times operators (U+2062) with a zero-width space.
   #[arg(long, overrides_with = "invisibletimes")]
   noinvisibletimes: bool,
@@ -569,6 +579,7 @@ struct ResolvedOptions {
   cmml:              bool,
   keep_xmath:        bool,
   mathtex:           bool,
+  unicodemath:       bool,
   noinvisibletimes:  bool,
   plane1:            bool,
   default_resources: bool,
@@ -598,6 +609,7 @@ impl ResolvedOptions {
       cmml:              chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
       keep_xmath:        chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
       mathtex:           chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
+      unicodemath:       chosen_by_clap(cli.unicodemath, cli.nounicodemath).unwrap_or(false),
       noinvisibletimes:  chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
       // Perl `MathML.pm` L70: `--hackplane1` forces plane1 on; otherwise the
       // pair is last-wins over a default-on.
@@ -1475,6 +1487,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       let do_post = resolved.post.unwrap_or(
         resolved.pmml.unwrap_or(false)
           || resolved.cmml
+          // Perl Config.pm L447-449: any requested math format implies post.
+          || resolved.unicodemath
           || effective_stylesheet.is_some()
           || is_html_format
           || split_enabled
@@ -1591,6 +1605,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           js_files: &cli.js_files,
           noinvisibletimes: resolved.noinvisibletimes,
           mathtex: resolved.mathtex,
+          unicodemath: resolved.unicodemath,
           plane1: resolved.plane1,
           hackplane1: cli.hackplane1,
           // Perl `--urlstyle` (Config.pm L482 defaults to `server`; we default
@@ -2489,6 +2504,11 @@ mod boolean_flag_last_wins_tests {
     let c = cli(&["--nomathtex", "--mathtex"]);
     assert_eq!(chosen_by_clap(c.mathtex, c.nomathtex), Some(true));
 
+    let c = cli(&["--nounicodemath", "--unicodemath"]);
+    assert_eq!(chosen_by_clap(c.unicodemath, c.nounicodemath), Some(true));
+    let c = cli(&["--unicodemath", "--nounicodemath"]);
+    assert_eq!(chosen_by_clap(c.unicodemath, c.nounicodemath), Some(false));
+
     let c = cli(&["--invisibletimes", "--noinvisibletimes"]);
     assert_eq!(
       chosen_by_clap(c.noinvisibletimes, c.invisibletimes),
@@ -2543,6 +2563,7 @@ mod boolean_flag_last_wins_tests {
     assert!(!r.cmml);
     assert!(!r.keep_xmath);
     assert!(!r.mathtex);
+    assert!(!r.unicodemath);
     assert!(!r.noinvisibletimes);
     assert!(r.default_resources, "default_resources defaults ON");
     assert!(!r.split_enabled);

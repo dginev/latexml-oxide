@@ -535,7 +535,9 @@ fn cleveref_symbol_format_stands_alone() {
 /// A tag with math is stored as its copy (Perl Scan.pm:269 `cleanNode`), so a reference prints its formula: `\tag{$
 /// \mathrm{P_1}$}` gives "P1", "(P1)", "eq. (P1)" (pdflatex), each a `<math>`. Red (78j r2): " P 1 ", "( P 1 )", "eq. (
 /// P 1 )", the tag's flattened text with the formula's whitespace. Witnesses 2609.28438, 1905.03839, 2510.06152. Repro
-/// cross-references/cleveref_document_format_with_math_in_the_tag.
+/// cross-references/cleveref_document_format_with_math_in_the_tag. The `title=` reads the stored tag's math as
+/// UnicodeMath, "Equation P₁", where Perl's `textContent` (CrossRef.pm:866-870) gives latexmlc's "P1"
+/// (OXIDIZED_DESIGN_DIVERGENCES #1094).
 #[test]
 fn cleveref_document_format_with_math_in_the_tag() {
   let html = html_of(repro!(
@@ -545,7 +547,7 @@ fn cleveref_document_format_with_math_in_the_tag() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">A <a href="#S0.Ex1" title="Equation P_1" class="ltx_ref"><span class="ltx_text ltx_ref_tag"><math class="ltx_Math" alttext="\mathrm{P_{1}}" display="inline" intent=":literal"><msub><mi mathvariant="normal">P</mi><mn>1</mn></msub></math></span></a>. B (<a href="#S0.Ex1" title="Equation P_1" class="ltx_ref"><span class="ltx_text ltx_ref_tag"><math class="ltx_Math" alttext="\mathrm{P_{1}}" display="inline" intent=":literal"><msub><mi mathvariant="normal">P</mi><mn>1</mn></msub></math></span></a>). C <a href="#S0.Ex1" title="" class="ltx_ref"><span class="ltx_text ltx_ref_tag">eq. (<math class="ltx_Math" alttext="\mathrm{P_{1}}" display="inline" intent=":literal"><msub><mi mathvariant="normal">P</mi><mn>1</mn></msub></math>)</span></a>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">A <a href="#S0.Ex1" title="Equation P₁" class="ltx_ref"><span class="ltx_text ltx_ref_tag"><math class="ltx_Math" alttext="\mathrm{P_{1}}" display="inline" intent=":literal"><msub><mi mathvariant="normal">P</mi><mn>1</mn></msub></math></span></a>. B (<a href="#S0.Ex1" title="Equation P₁" class="ltx_ref"><span class="ltx_text ltx_ref_tag"><math class="ltx_Math" alttext="\mathrm{P_{1}}" display="inline" intent=":literal"><msub><mi mathvariant="normal">P</mi><mn>1</mn></msub></math></span></a>). C <a href="#S0.Ex1" title="" class="ltx_ref"><span class="ltx_text ltx_ref_tag">eq. (<math class="ltx_Math" alttext="\mathrm{P_{1}}" display="inline" intent=":literal"><msub><mi mathvariant="normal">P</mi><mn>1</mn></msub></math>)</span></a>.</p>"##,
   );
 }
 

@@ -13,7 +13,7 @@ use libxml::tree::Node;
 
 use crate::{
   document::{PostDocument, element_children},
-  math_processor::{MathConversion, MathProcessor},
+  math_processor::{MathConversion, MathProcessor, process_math},
   processor::{ProcessResult, Processor},
 };
 
@@ -32,6 +32,7 @@ const PREC_SYMBOL: i32 = 10;
 pub struct UnicodeMath {
   name:         String,
   is_secondary: bool,
+  keep_xmath:   bool,
 }
 
 impl Default for UnicodeMath {
@@ -43,7 +44,23 @@ impl UnicodeMath {
     UnicodeMath {
       name:         "UnicodeMath".to_string(),
       is_secondary: false,
+      keep_xmath:   false,
     }
+  }
+
+  /// Keep the XMath beside the converted string (`--keepXMath`), as the MathML
+  /// processors do.
+  pub fn with_keep_xmath(mut self, keep: bool) -> Self {
+    self.keep_xmath = keep;
+    self
+  }
+
+  /// Mark this processor as a parallel-markup secondary: its string becomes an
+  /// `<m:annotation>` of the primary's `<m:semantics>` (Perl `setParallel`, Post.pm
+  /// L348-357, which flags every extra processor `is_secondary`).
+  pub fn secondary(mut self) -> Self {
+    self.is_secondary = true;
+    self
   }
 }
 
@@ -54,7 +71,15 @@ impl Processor for UnicodeMath {
     doc.findnodes("//ltx:Math[not(ancestor::ltx:Math)]")
   }
 
-  fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult { Ok(vec![doc]) }
+  /// Standalone (no MathML primary): Perl inherits `MathProcessor::process`
+  /// (Post.pm L290-342), whose `processNode` wraps the string as
+  /// `<ltx:text class="ltx_math_application/x-unicodemath">` in place of the XMath
+  /// (L394-396) — what `latexmlmath --unicodemath` reads back (`bin/latexmlmath`
+  /// L244-248).
+  fn process(&mut self, mut doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
+    process_math(self, &mut doc, nodes, self.keep_xmath)?;
+    Ok(vec![doc])
+  }
 }
 
 impl MathProcessor for UnicodeMath {
@@ -152,12 +177,12 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
       let op = &children[0];
       let args = &children[1..];
 
-      // Handle floating/post scripts
-      if role.contains("SUBSCRIPT") {
-        return unimath_sub(doc, None, op);
-      }
-      if role.contains("SUPERSCRIPT") {
-        return unimath_sup(doc, None, op);
+      // Floating/post scripts left by a failed parse (Perl
+      // `/^(FLOAT|POST)(SUB|SUPER)SCRIPT$/`): the script alone, no base.
+      match role.as_str() {
+        "FLOATSUBSCRIPT" | "POSTSUBSCRIPT" => return unimath_sub(doc, None, None, op),
+        "FLOATSUPERSCRIPT" | "POSTSUPERSCRIPT" => return unimath_sup(doc, None, None, op),
+        _ => {},
       }
 
       // Realize operator and dispatch
@@ -179,7 +204,8 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
         },
         (_, "nth-root") => {
           if args.len() >= 2 {
-            // nth-root args are (degree, radicand) — same order as Perl.
+            // The XMath args are (degree, radicand), in Perl's XMath too; Perl's
+            // converter reads them swapped (KNOWN_PERL_ERRORS #1291).
             let (n, _) = unimath_internal(doc, &args[0]);
             let base = unimath_nested(doc, &args[1], PREC_MULOP);
             let op_str = match n.as_str() {
@@ -213,14 +239,14 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
         },
         ("SUPERSCRIPTOP", _) => {
           if args.len() >= 2 {
-            unimath_sup(doc, Some(&args[0]), &args[1])
+            unimath_sup(doc, Some(op), Some(&args[0]), &args[1])
           } else {
             unimath_prefix(doc, op, args)
           }
         },
         ("SUBSCRIPTOP", _) => {
           if args.len() >= 2 {
-            unimath_sub(doc, Some(&args[0]), &args[1])
+            unimath_sub(doc, Some(op), Some(&args[0]), &args[1])
           } else {
             unimath_prefix(doc, op, args)
           }
@@ -375,36 +401,82 @@ fn unimath_infix_with_prec(
   }
 }
 
-/// Subscript: base_script or _{script}base (pre).
+/// Subscript: `base_script`, `base┬script` (a `mid` limit), `{_script}base` (a
+/// `pre` script), or the subscript codepoints when every character has one
+/// (`∫₀`).
 ///
 /// Port of `unimath_sub`.
-fn unimath_sub(doc: &PostDocument, base: Option<&Node>, script: &Node) -> (String, i32) {
-  let ubase = base
-    .map(|b| unimath_nested(doc, b, PREC_SCRIPTOP))
-    .unwrap_or_default();
-  let (uscript, prec) = unimath_internal(doc, script);
-  let uscript = if prec < PREC_SCRIPTOP {
-    format!("{{{}}}", uscript)
-  } else {
-    uscript
-  };
-  (format!("{}_{}", ubase, uscript), PREC_SCRIPTOP)
+fn unimath_sub(
+  doc: &PostDocument,
+  op: Option<&Node>,
+  base: Option<&Node>,
+  script: &Node,
+) -> (String, i32) {
+  unimath_script(doc, op, base, script, "subscript", '_', '\u{252C}')
 }
 
-/// Superscript: base^script or ^{script}base (pre).
+/// Superscript: `base^script`, `base┴script` (a `mid` limit), `{^script}base` (a
+/// `pre` script), or the superscript codepoints when every character has one
+/// (`𝑥²`, `¹⁴𝐶`, `𝑥'` for `x^\prime`).
 ///
 /// Port of `unimath_sup`.
-fn unimath_sup(doc: &PostDocument, base: Option<&Node>, script: &Node) -> (String, i32) {
+fn unimath_sup(
+  doc: &PostDocument,
+  op: Option<&Node>,
+  base: Option<&Node>,
+  script: &Node,
+) -> (String, i32) {
+  unimath_script(doc, op, base, script, "superscript", '^', '\u{2534}')
+}
+
+/// The body Perl's `unimath_sub` and `unimath_sup` share (UnicodeMath.pm L259-293),
+/// differing only in the codepoint table, the script operator and the `mid` mark.
+/// The op's `scriptpos` (`pre…`, `mid…`, else `post`) places the script.
+fn unimath_script(
+  doc: &PostDocument,
+  op: Option<&Node>,
+  base: Option<&Node>,
+  script: &Node,
+  codepoints: &str,
+  operator: char,
+  mid_mark: char,
+) -> (String, i32) {
+  let pos = op
+    .and_then(|o| o.get_attribute("scriptpos"))
+    .filter(|p| !p.is_empty())
+    .unwrap_or_else(|| "post".to_string());
+  let pre = pos.starts_with("pre");
+  let mid = pos.starts_with("mid");
   let ubase = base
     .map(|b| unimath_nested(doc, b, PREC_SCRIPTOP))
     .unwrap_or_default();
-  let (uscript, prec) = unimath_internal(doc, script);
-  let uscript = if prec < PREC_SCRIPTOP {
-    format!("{{{}}}", uscript)
-  } else {
-    uscript
+  let (mut uscript, prec) = unimath_internal(doc, script);
+  // A `mid` limit keeps its characters ("Could try for combining accents?").
+  let mapped = match (!mid)
+    .then(|| crate::unicode::unicode_convert(&uscript, codepoints))
+    .flatten()
+  {
+    Some(converted) => {
+      uscript = converted;
+      true
+    },
+    None => false,
   };
-  (format!("{}^{}", ubase, uscript), PREC_SCRIPTOP)
+  if !mapped && prec < PREC_SCRIPTOP {
+    uscript = format!("{{{uscript}}}");
+  }
+  let string = if pre {
+    if mapped {
+      format!("{uscript}{ubase}")
+    } else {
+      format!("{{{operator}{uscript}}}{ubase}")
+    }
+  } else if mapped {
+    format!("{ubase}{uscript}")
+  } else {
+    format!("{ubase}{}{uscript}", if mid { mid_mark } else { operator })
+  };
+  (string, PREC_SCRIPTOP)
 }
 
 /// Over-accent: combining character above.
@@ -494,9 +566,16 @@ fn unimath_text(node: &Node) -> (String, i32) {
 /// Error representation.
 fn unimath_error(msg: &str) -> (String, i32) { (format!("\"ERROR {}\"", msg), PREC_SYMBOL) }
 
+/// The accent's only character: Perl looks the whole accent string up
+/// (`$overaccents{$acc}`), so a longer one has no combining form.
+fn single_char(acc: &str) -> Option<char> {
+  let mut chars = acc.chars();
+  chars.next().filter(|_| chars.next().is_none())
+}
+
 /// Map over-accent character to combining equivalent.
 fn overaccent_combining(acc: &str) -> Option<String> {
-  let c = acc.chars().next()?;
+  let c = single_char(acc)?;
   let combining = match c {
     '^' => '\u{0302}',        // hat
     '\u{02C7}' => '\u{030C}', // check
@@ -517,7 +596,7 @@ fn overaccent_combining(acc: &str) -> Option<String> {
 
 /// Map under-accent character to combining equivalent.
 fn underaccent_combining(acc: &str) -> Option<String> {
-  let c = acc.chars().next()?;
+  let c = single_char(acc)?;
   let combining = match c {
     '\u{00B8}' => '\u{0327}', // cedilla
     '.' => '\u{0323}',        // dot below
@@ -531,6 +610,57 @@ fn underaccent_combining(acc: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::document::PostDocumentOptions;
+
+  /// The UnicodeMath of one `ltx:Math` holding `xmath` (XMath children).
+  fn unicodemath_of(xmath: &str) -> String {
+    let xml = format!(
+      "<document xmlns='http://dlmf.nist.gov/LaTeXML'><Math><XMath>{xmath}</XMath></Math></document>"
+    );
+    let doc = PostDocument::new_from_string(&xml, PostDocumentOptions::default()).expect("parse");
+    let math = doc.findnodes("//ltx:Math").remove(0);
+    unicodemath(&doc, &math)
+  }
+
+  /// Perl's own XMath of `{}^{14}C+\sum_{i}^{n}x^{2}` (latexmlmath --XMath), and Perl's
+  /// string for it: script codepoints where every character has one, a prescript
+  /// before its base, `┬`/`┴` for `mid` limits (UnicodeMath.pm L259-293).
+  #[test]
+  fn scripts_follow_scriptpos_and_take_script_codepoints() {
+    let xmath = "<XMApp><XMTok meaning='plus' role='ADDOP'>+</XMTok>\
+       <XMApp><XMTok role='SUPERSCRIPTOP' scriptpos='pre1'/>\
+         <XMTok role='UNKNOWN' font='italic'>C</XMTok><XMTok meaning='14' role='NUMBER'>14</XMTok></XMApp>\
+       <XMApp><XMApp><XMTok role='SUPERSCRIPTOP' scriptpos='mid1'/>\
+           <XMApp><XMTok role='SUBSCRIPTOP' scriptpos='mid1'/>\
+             <XMTok meaning='sum' role='SUMOP' scriptpos='mid'>\u{2211}</XMTok>\
+             <XMTok role='UNKNOWN' font='italic'>i</XMTok></XMApp>\
+           <XMTok role='UNKNOWN' font='italic'>n</XMTok></XMApp>\
+         <XMApp><XMTok role='SUPERSCRIPTOP' scriptpos='post1'/>\
+           <XMTok role='UNKNOWN' font='italic'>x</XMTok><XMTok meaning='2' role='NUMBER'>2</XMTok></XMApp>\
+       </XMApp></XMApp>";
+    assert_eq!(unicodemath_of(xmath), "¹⁴𝐶+∑┬𝑖┴𝑛{𝑥²}");
+  }
+
+  /// A script with no codepoint keeps the script operator: after the base, or
+  /// braced before it for a prescript.
+  #[test]
+  fn unmapped_scripts_keep_the_script_operator() {
+    let post = "<XMApp><XMTok role='SUBSCRIPTOP' scriptpos='post1'/>\
+       <XMTok role='UNKNOWN' font='italic'>x</XMTok><XMTok role='UNKNOWN' font='italic'>n</XMTok></XMApp>";
+    assert_eq!(unicodemath_of(post), "𝑥_𝑛");
+    let pre = "<XMApp><XMTok role='SUPERSCRIPTOP' scriptpos='pre1'/>\
+       <XMTok role='UNKNOWN' font='italic'>C</XMTok><XMTok role='UNKNOWN' font='italic'>n</XMTok></XMApp>";
+    assert_eq!(unicodemath_of(pre), "{^𝑛}𝐶");
+  }
+
+  /// `\sqrt[3]{x}`: the XMath args are (degree, radicand); Perl's converter reads
+  /// them swapped, `\root 𝑥\of3` (KNOWN_PERL_ERRORS #1291).
+  #[test]
+  fn nth_root_reads_degree_then_radicand() {
+    let xmath = "<XMApp><XMTok meaning='nth-root'/>\
+       <XMTok meaning='3' role='NUMBER'>3</XMTok><XMTok role='UNKNOWN' font='italic'>x</XMTok></XMApp>";
+    assert_eq!(unicodemath_of(xmath), "∛𝑥");
+  }
 
   #[test]
   fn test_stylize_empty_token() {

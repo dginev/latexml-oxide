@@ -514,6 +514,7 @@ impl LatexmlWorker {
       plane1:                    true,
       hackplane1:                false,
       mathtex:                   self.profile.mathtex,
+      unicodemath:               false,
       url_style:                 latexml_post::crossref::UrlStyle::File,
       navigationtoc:             None,
       split:                     false,
