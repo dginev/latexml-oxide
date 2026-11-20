@@ -447,6 +447,39 @@ fn cluster_tcolorbox_tabular_not_flipped_6873() {
 fn cluster_newtcblisting_leading_optarg() {
   convert_clean("tests/cluster_regressions/newtcblisting_leading_optarg.tex");
 }
+/// Issue #944 (reporter tp971): a Rhai binding's `DeclareOption("some-option", || {…})` ran the whole
+/// `\ds@some-option` through the prototype parser, which split off `-option` as a parameter type (Fatal:Parameter:
+/// Unknown). Perl `DeclareOption` (Package.pm:2419-2429) names the control sequence whole. Closure and string-body
+/// handlers whose names hold `-`, `.`, `+` and digits all run from `\usepackage[…]`, a global class option reaches the
+/// package, and a declared option not given stays unrun; the same document is clean under pdflatex.
+#[cfg(feature = "runtime-bindings")]
+#[test]
+fn cluster_rhai_declareoption_punctuated_names_944() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass[class-wide]{article}\n\\usepackage[some-option,v2.1+x,str-opt]{dashopt}\n\
+     \\begin{document}\n\\dashA; \\dashB; \\dashC; \\dashD; \\dashE.\n\\end{document}\n",
+    &[(
+      "dashopt.sty.rhai",
+      r#"RawTeX("\\def\\dashE{E-unset}");
+DeclareOption("some-option", || { Digest(Tokenize("\\gdef\\dashA{closure-ran}")); });
+DeclareOption("v2.1+x", || { Digest(Tokenize("\\gdef\\dashB{punct-ran}")); });
+DeclareOption("str-opt", "\\gdef\\dashC{string-ran}");
+DeclareOption("class-wide", || { Digest(Tokenize("\\gdef\\dashD{class-ran}")); });
+DeclareOption("not-given", || { Digest(Tokenize("\\gdef\\dashE{wrongly-ran}")); });
+ProcessOptions();
+"#,
+    )],
+    None,
+  );
+  assert!(
+    !log.contains("Fatal:") && latexml::util::test::error_count(&log) == 0,
+    "#944: the dashed-option binding must load cleanly:\n{log}"
+  );
+  assert!(
+    xml.contains("closure-ran; punct-ran; string-ran; class-ran; E-unset."),
+    "#944: every given option's handler must run (and only those):\n{xml}"
+  );
+}
 /// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
 /// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
 /// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce

@@ -90,6 +90,7 @@ on:
       - 'latexml_oxide/src/lsp_server/mod.rs'
       - 'latexml_oxide/bin/latexml_oxide.rs'
       - 'latexml_oxide/tests/cluster_cli.rs'
+      - 'tools/make_formats.ps1'
       - '**/Cargo.toml'
       - '.github/workflows/windows-ci-manual-trigger.yml'
   schedule:
