@@ -630,6 +630,13 @@ fn input_definitions_impl(
       } else {
         HashSet::default()
       };
+    // (and the options passed to it after the load, `pass_options_with_raw`)
+    prev.extend(
+      lookup_string(&s!("{fkey}_passed_after_load"))
+        .split(',')
+        .map(|o| o.trim().to_string())
+        .filter(|o| !o.is_empty()),
+    );
     // (and the options passed to it, `\opt@<file>`, which LaTeX's clash test reads, latex.ltx `\@if@ptions`:
     // 2110.14346's `\PassOptionsToPackage{numbers, compress}{natbib}` before neurips_2020.sty's load, then
     // `\usepackage[numbers]{natbib}` — no clash in pdflatex)
@@ -3401,33 +3408,23 @@ pub fn pass_options_with_raw(
   let key = s!("opt@{}.{}", name, ext);
   // (`\opt@<file>` is the list itself, latex.ltx:18514-18517: a pass after the load extends it, which a repeat load's
   // clash test, `\@if@ptions`, reads — a neurips_2022.sty copy's `\PassOptionsToPackage{numbers}{natbib}` after the
-  // binding's natbib load, then the document's `\usepackage[numbers]{natbib}`: no clash, 2403.07005)
-  let opt_cs = T_CS!(s!("\\opt@{}.{}", name, ext));
-  let loaded = match lookup_meaning(&opt_cs) {
-    Some(Stored::Expandable(defn)) => match defn.get_expansion() {
-      Some(ExpansionBody::Tokens(loaded)) => Some(loaded.to_string()),
-      None => Some(String::new()),
-      Some(_) => None,
-    },
-    _ => None,
-  };
+  // binding's natbib load, then the document's `\usepackage[numbers]{natbib}`: no clash, 2403.07005. Kept apart from
+  // our `\opt@<file>`, which bindings read after the load as the load's own options: babel's main language.)
   if !options.is_empty()
-    && let Some(mut list) = loaded
+    && matches!(
+      lookup_meaning(&T_CS!(s!("\\opt@{name}.{ext}"))),
+      Some(Stored::Expandable(_))
+    )
   {
-    if !list.is_empty() {
-      list.push(',');
+    let passed_key = s!("{name}.{ext}_passed_after_load");
+    let mut passed = lookup_string(&passed_key);
+    for opt in &options {
+      if !passed.is_empty() {
+        passed.push(',');
+      }
+      passed.push_str(opt);
     }
-    list.push_str(&options.join(","));
-    let body = zapped_options(list)?;
-    def_macro(
-      opt_cs,
-      None,
-      body,
-      Some(ExpandableOptions {
-        scope: Some(Scope::Global),
-        ..ExpandableOptions::default()
-      }),
-    )?;
+    assign_value(&passed_key, passed, Some(Scope::Global));
   }
   for opt in options {
     push_value(&key, arena::pin(&opt))?;

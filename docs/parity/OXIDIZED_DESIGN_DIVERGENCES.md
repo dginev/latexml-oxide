@@ -23255,8 +23255,9 @@ cli_noincludestyles_restores_perls_binding_only_loading, latexml_sty_iflimit_ove
 its code, `requested_by_binding`) is the binding's guess at what its file loads: no clash, its new options dropped with
 an Info; the file read raw after it decides (cvpr_sty.rs's `[numbers,sort&compress]` after a document's
 `\usepackage[numbers]{natbib}`, whose cvpr.sty loads no natbib: 2109.08809, 2408.02054). (2) `\PassOptionsToPackage`
-after the load extends `\opt@<file>` (latex.ltx:18514-18517, `pass_options_with_raw`), which the clash test reads
-(2403.07005's neurips_2022.sty copy). (3) A class binding claims its load as the class's own
+after the load counts in the clash test, as latex.ltx:18514-18517 extends `\opt@<file>` (2403.07005's neurips_2022.sty
+copy); it is kept as `<file>_passed_after_load` (`pass_options_with_raw`), not in our `\opt@<file>`, which bindings
+read as the load's own options (babel's main language: extending it turned 2405.15450's `en-US` into `en`). (3) A class binding claims its load as the class's own
 (`record_load_as_the_files_own`: elsarticle, acmart, jmlr, jheppub) only where the paper ships no copy of that file
 (`\@currname.\@currext` beside the source): a copy may load natbib otherwise or not at all, so the document's options
 apply (2105.06643, 2206.02837, 2402.13480 elsarticle.cls copies; 2209.10785 cidr.cls). (4) The elsarticle binding reads

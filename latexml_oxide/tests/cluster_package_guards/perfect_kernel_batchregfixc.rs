@@ -57,8 +57,8 @@ fn a_binding_repeat_load_does_not_clash() {
   );
 }
 
-/// `\PassOptionsToPackage` after the load extends `\opt@<file>` (latex.ltx:18514-18517), which a later repeat's clash
-/// test reads: no clash, and the passed option is never processed (2403.07005's neurips_2022.sty copy).
+/// `\PassOptionsToPackage` after the load counts in a later repeat's clash test, as latex.ltx:18514-18517 extends
+/// `\opt@<file>`: no clash, and the passed option is never processed (2403.07005's neurips_2022.sty copy).
 /// pdflatex: 0 errors, "Text (A, 2001)."
 #[test]
 fn a_pass_after_the_load_extends_the_option_list() {
