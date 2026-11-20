@@ -4565,6 +4565,44 @@ mod hostile_input_hardening {
       xml.contains("INCLUDED_PART"),
       "in-archive symlink must resolve to target text:\n{xml}"
     );
+    // Every link that is not made is reported once, by name, with its reason: on Unix only the escaping
+    // `escape.tex` (`alias.tex` and `loopdir` resolve inside the source directory); elsewhere no link is made, so
+    // all three are reported (each unpacked as a plain file).
+    let link_warnings: Vec<&str> = stderr
+      .lines()
+      .filter(|line| line.starts_with("Warning:archive:link"))
+      .collect();
+    #[cfg(unix)]
+    {
+      assert_eq!(
+        link_warnings.len(),
+        1,
+        "exactly one Warning:archive:link expected:\n{stderr}"
+      );
+      assert!(
+        link_warnings[0].contains("'escape.tex'")
+          && link_warnings[0].contains("does not resolve inside the source directory"),
+        "the Warning names escape.tex and its reason: {}",
+        link_warnings[0]
+      );
+    }
+    #[cfg(not(unix))]
+    for name in ["alias.tex", "escape.tex", "loopdir"] {
+      let named: Vec<&&str> = link_warnings
+        .iter()
+        .filter(|line| line.contains(&format!("'{name}'")))
+        .collect();
+      assert_eq!(
+        named.len(),
+        1,
+        "exactly one Warning:archive:link for {name}:\n{stderr}"
+      );
+      assert!(
+        named[0].contains("links are not made on this platform"),
+        "{name}'s Warning gives the platform reason: {}",
+        named[0]
+      );
+    }
     // Zero temp extraction leftovers in our private TMPDIR (proves `ro/` was
     // permission-normalized so TempDir drop deleted it cleanly).
     let leftovers: Vec<_> = std::fs::read_dir(&tmp_root)
