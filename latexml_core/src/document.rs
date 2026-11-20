@@ -2132,12 +2132,11 @@ impl Document {
   /// A theorem or proof in an abstract, dissolved at its close (DG 2026-11-19: a theorem there is markup used for
   /// typesetting, the abstract is what stays): its title opens its first paragraph as a run-in `ltx:text`, as the PDF
   /// sets it; its paragraphs, lists, equations and quotes go into the abstract in its place. That paragraph takes the
-  /// theorem's id, labels and number tags, so a `\ref` to it still resolves (`ltx:p` has no `labels` or `ltx:tags` in
-  /// the schema: set as they are). Witnesses 1908.02189, math0111087 (`\proclaim`), 0804.0728
-  /// (`\newtheorem*{keywords}`); OXIDIZED_DESIGN_DIVERGENCES #1097.
+  /// theorem's id only: no element an abstract admits carries `labels` or `ltx:tags` in the schema, so its label and
+  /// number tags are dropped and a `\ref` to it is unresolved (DG 2026-11-20). Witnesses 1908.02189, math0111087
+  /// (`\proclaim`), 0804.0728 (`\newtheorem*{keywords}`); OXIDIZED_DESIGN_DIVERGENCES #1097.
   fn dissolve_theorem_in_abstract(&mut self, theorem: &Node) -> Result<()> {
     let id = theorem.get_attribute_ns("id", XML_NS);
-    let labels = theorem.get_attribute("labels");
     let mut tags = None;
     let mut title = None;
     let mut body = Vec::new();
@@ -2215,18 +2214,9 @@ impl Document {
         None => first_p.add_child(&mut runin)?,
       }
     }
-    if let Some(mut tags) = tags {
-      // Only the number's roles: the printed tag is in the run-in title already.
-      for tag in xml::element_nodes(&tags) {
-        if tag.get_attribute("role").is_none() {
-          self.remove_node(tag);
-        }
-      }
-      tags.unlink();
-      match first_p.get_first_child() {
-        Some(mut first) => first.add_prev_sibling(&mut tags)?,
-        None => first_p.add_child(&mut tags)?,
-      }
+    if let Some(tags) = tags {
+      // The printed number is in the run-in title already; the abstract admits no `ltx:tags`.
+      self.remove_node(tags);
     }
     self.replace_node(theorem.clone(), body)?;
     if let Some(id) = id {
@@ -2234,9 +2224,6 @@ impl Document {
         self.unrecord_id(&old);
       }
       self.set_attribute(&mut first_p, "xml:id", &id)?;
-    }
-    if let Some(labels) = labels {
-      first_p.set_attribute("labels", &labels)?;
     }
     Ok(())
   }

@@ -21301,9 +21301,9 @@ markup used for a typesetting goal, and the abstract is what stays (DG 2026-11-1
 inserted without the Error and dissolved at its close (`Document::dissolve_theorem_in_abstract`, from
 `close_node_internal`): its title becomes a run-in `ltx:text` (its own fonts, bold for amsthm's plain style; a display
 title, amsppt's `\proclaim`, made bold) at the start of its first `ltx:p`, as the PDF prints it, and its paragraphs' blocks (`ltx:p`, lists, equations, quotes) go
-into the abstract in its place. That paragraph takes the theorem's `xml:id`, `labels` and number tags (the `role`d
-`ltx:tag`s), so a `\ref` still resolves and prints "1" — attributes and a child the schema does not give `ltx:p`, set
-as they are. A theorem in a quote in an abstract is dissolved into the quote; elsewhere the #689 bridge is unchanged.
+into the abstract in its place. That paragraph takes the theorem's `xml:id` only: no element an abstract admits carries
+`labels` or `ltx:tags` in the schema, so its label and number tags are dropped and a `\ref` to it stays unresolved
+(DG 2026-11-20: schema-valid output over a rare reference). A theorem in a quote in an abstract is dissolved into the quote; elsewhere the #689 bridge is unchanged.
 No name-matching: a keywords "theorem" is dissolved as a real one. The other frontmatter containers (keywords,
 acknowledgements, classification, creator) keep the Error, and a table of contents in an abstract still goes after it
 (#753). An `\abstract{…}` that never ends (math0006149, 1108.5171; TeX sets the whole paper in it) is covered alike:
