@@ -519,6 +519,8 @@ pub(crate) fn load() -> Result<()> {
           s!("\\begin{{{name}}} ended by \\end{{document}}: the {name} ends here")
         );
       }
+      // (the body so ended swallowed the main matter: `\lx@add@frontmatter@until` marks its entry, OD #1097)
+      assign_value("lx_frontmatter_open_at_end", true, Some(Scope::Global));
       unread(Tokens!(terminal, T_CS!("\\lx@end@open@frontmatter")));
     } else if lookup_bool("lx_abstract_owes_end") {
       // a `\begin{abstract}` a heading ended (`\lx@heading@ends@frontmatter`, sect05.rs) whose `\end{abstract}` never came

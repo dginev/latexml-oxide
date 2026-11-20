@@ -47,7 +47,7 @@ fn theorem_in_abstract_is_dissolved() {
     &xml,
     "abstract",
     &[],
-    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We prove one thing.</p><p xml:id="Thmtheorem1"><text class="ltx_runin"><text font="bold">Theorem 1</text><text font="bold">.</text></text> <text font="italic">Every <Math mode="inline" tex="x" text="x" xml:id="Thmtheorem1.p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> is <Math mode="inline" tex="x" text="x" xml:id="Thmtheorem1.p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math>.</text></p><p>Then a display</p><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="x=x" text="x = x" xml:id="S0.E1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math></equation><p>and a list:</p><enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>One.</p></para></item></enumerate><quote><p>Quoted.</p></quote><p xml:id="Thmtheorem2"><tags><tag role="refnum">2</tag><tag role="typerefnum">Theorem 2</tag></tags><text class="ltx_runin"><text font="bold">Theorem 2</text><text font="bold">.</text></text> <text font="italic">Two.</text></p><p xml:id="Thmtheorem3"><tags><tag role="refnum">3</tag><tag role="typerefnum">Theorem 3</tag></tags><text class="ltx_runin"><text font="bold">Theorem 3</text><text font="bold">.</text></text> <text font="italic">Three.</text></p><p><text class="ltx_runin" font="italic">Proof.</text><text font="italic"> </text>Trivial.∎</p><p xml:id="Thmkeywordsx1"><tags><tag role="typerefnum">Keywords</tag></tags><text class="ltx_runin"><text font="bold">Keywords</text><text font="bold">.</text></text> <text font="italic">identity, reflexivity</text></p></abstract>"#,
+    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We prove one thing.</p><p xml:id="Thmtheorem1"><text class="ltx_runin"><text font="bold">Theorem 1</text><text font="bold">.</text></text> <text font="italic">Every <Math mode="inline" tex="x" text="x" xml:id="Thmtheorem1.p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> is <Math mode="inline" tex="x" text="x" xml:id="Thmtheorem1.p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math>.</text></p><p>Then a display</p><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="x=x" text="x = x" xml:id="S0.E1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math></equation><p>and a list:</p><enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>One.</p></para></item></enumerate><quote><p>Quoted.</p></quote><p xml:id="Thmtheorem2"><text class="ltx_runin"><text font="bold">Theorem 2</text><text font="bold">.</text></text> <text font="italic">Two.</text></p><p xml:id="Thmtheorem3"><text class="ltx_runin"><text font="bold">Theorem 3</text><text font="bold">.</text></text> <text font="italic">Three.</text></p><p><text class="ltx_runin" font="italic">Proof.</text><text font="italic"> </text>Trivial.∎</p><p xml:id="Thmkeywordsx1"><text class="ltx_runin"><text font="bold">Keywords</text><text font="bold">.</text></text> <text font="italic">identity, reflexivity</text></p></abstract>"#,
   );
   // The dissolved theorem keeps its id only: the abstract admits no `labels`/`ltx:tags` (DG 2026-11-20), so the body's
   // `\ref{t}` finds no target and stays unresolved.
@@ -128,4 +128,43 @@ fn bibliography_floats_out_of_a_float() {
     &[],
     r#"<section inlist="toc" xml:id="S1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>Intro</title><para xml:id="S1.p1"><p>Body text <cite class="ltx_citemacro_cite">[<bibref bibrefs="a" separator="," yyseparator=","/>]</cite> and <cite class="ltx_citemacro_cite">[<bibref bibrefs="b" separator="," yyseparator=","/>]</cite>.</p></para><table placement="h" xml:id="S1.tab1"/><bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem key="a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> A. Author, Title.</bibblock></bibitem></biblist></bibliography><para xml:id="S1.p2"><p>After the table.</p></para><subsection xml:id="S1.SSx1"><title/><bibliography inlist="toc" xml:id="biba"><title>References</title><biblist><bibitem key="b" xml:id="biba.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> B. Author, Book.</bibblock></bibitem></biblist></bibliography><para xml:id="S1.SSx1.p1"><p>After the heading.</p></para></subsection></section>"#,
   );
+}
+
+/// block-model/theorem_in_unended_abstract{,_group}: an abstract still open at `\end{document}` — a brace-less
+/// `\abstract` no heading ends (1108.5171), an `\abstract{` whose group never closes (math0006149) — swallowed the main
+/// matter: its theorems stay theorems, with base's Error (DG 2026-11-20). Two terminal paths (the body's own loop, and
+/// `until_terminal_inside_group`). `\abstract{…}` closed by its group ends there; the theorem after it is the body's.
+#[test]
+fn theorem_in_unended_abstract_stays_a_theorem() {
+  for (repro, warnings) in [
+    ("theorem_in_unended_abstract", 0),
+    ("theorem_in_unended_abstract_group", 1),
+  ] {
+    let (log, xml) = convert_with(
+      &std::fs::read_to_string(format!(
+        "../tools/perfect_kernel/repros/block-model/{repro}.tex"
+      ))
+      .unwrap(),
+      None,
+    );
+    assert_eq!(error_count(&log), 1, "{repro}: {log}");
+    assert!(
+      log.contains("<ltx:theorem> isn't allowed in <ltx:abstract>"),
+      "{repro}: {log}"
+    );
+    assert_eq!(warning_count(&log), warnings, "{repro}: {log}");
+    assert_element(
+      &xml,
+      "abstract",
+      &[],
+      r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Summary.</p><theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">Body theorem.</text></p></para></theorem><p>Text.</p></abstract>"#,
+    );
+  }
+  let (log, xml) = convert_with(
+    r"\documentclass{article}\newtheorem{theorem}{Theorem}\begin{document}
+\abstract{Summary.} \begin{theorem}Body theorem.\end{theorem} Text.\end{document}",
+    None,
+  );
+  assert_eq!(error_count(&log) + warning_count(&log), 0, "{log}");
+  assert!(xml.contains("</abstract>\n  <theorem "), "{xml}");
 }

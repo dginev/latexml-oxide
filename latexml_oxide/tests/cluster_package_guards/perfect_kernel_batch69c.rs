@@ -282,7 +282,7 @@ fn theorem_in_abstract_is_dissolved_not_bridged() {
     &xml,
     "abstract",
     &[],
-    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We show the following.</p><p xml:id="Thmtheorem1"><tags><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><text class="ltx_runin"><text font="bold">Theorem 1</text><text font="bold">.</text></text> <text font="italic">A statement.</text></p><quote><p xml:id="Thmtheorem2"><tags><tag role="refnum">2</tag><tag role="typerefnum">Theorem 2</tag></tags><text class="ltx_runin"><text font="bold">Theorem 2</text><text font="bold">.</text></text> <text font="italic">Quoted.</text></p></quote></abstract>"#,
+    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We show the following.</p><p xml:id="Thmtheorem1"><text class="ltx_runin"><text font="bold">Theorem 1</text><text font="bold">.</text></text> <text font="italic">A statement.</text></p><quote><p xml:id="Thmtheorem2"><text class="ltx_runin"><text font="bold">Theorem 2</text><text font="bold">.</text></text> <text font="italic">Quoted.</text></p></quote></abstract>"#,
   );
 }
 

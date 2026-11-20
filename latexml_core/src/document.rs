@@ -296,6 +296,10 @@ pub fn spilled_segment_count() -> usize { SPILLED_SEGMENTS.get() }
 /// start; eager conversions never touch it).
 pub fn reset_spilled_segment_count() { SPILLED_SEGMENTS.set(0); }
 
+/// The bookkeeping attribute on an `ltx:abstract` whose body was still open at `\end{document}` (sect02.rs
+/// `\lx@end@open@frontmatter`): it swallowed the main matter, so its theorems stay theorems (DG 2026-11-20; OD #1097).
+pub const ABSTRACT_OPEN_AT_END: &str = "_open_at_end";
+
 /// The bookkeeping attribute (dropped at the end, as every `_` attribute) on an object a raw counter step numbered:
 /// the step's serial ([`Document::take_raw_refstep_number`], OXIDIZED_DESIGN_DIVERGENCES #813).
 pub const RAW_REFSTEP_MARK: &str = "_raw_refstep";
@@ -8886,13 +8890,14 @@ fn outside_frontmatter_container(node: &Node) -> bool {
   true
 }
 
-/// Whether the nearest frontmatter container around `node` is an `ltx:abstract` (a theorem there is dissolved, OD #1097).
+/// Whether the nearest frontmatter container around `node` is an `ltx:abstract` its own end closed (a theorem there is
+/// dissolved, OD #1097); one open at `\end{document}` ([`ABSTRACT_OPEN_AT_END`]: math0006149, 1108.5171) is not.
 fn within_abstract(node: &Node) -> bool {
   let mut cur = Some(node.clone());
   while let Some(n) = cur {
     if n.get_type() == Some(NodeType::ElementNode) {
       let kind = with_node_qname(&n, |q| match q {
-        "ltx:abstract" => Some(true),
+        "ltx:abstract" => Some(!n.has_attribute(ABSTRACT_OPEN_AT_END)),
         "ltx:acknowledgements" | "ltx:keywords" | "ltx:classification" | "ltx:creator" => {
           Some(false)
         },

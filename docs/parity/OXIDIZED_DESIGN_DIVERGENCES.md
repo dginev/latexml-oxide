@@ -21306,11 +21306,18 @@ into the abstract in its place. That paragraph takes the theorem's `xml:id` only
 (DG 2026-11-20: schema-valid output over a rare reference). A theorem in a quote in an abstract is dissolved into the quote; elsewhere the #689 bridge is unchanged.
 No name-matching: a keywords "theorem" is dissolved as a real one. The other frontmatter containers (keywords,
 acknowledgements, classification, creator) keep the Error, and a table of contents in an abstract still goes after it
-(#753). An `\abstract{…}` that never ends (math0006149, 1108.5171; TeX sets the whole paper in it) is covered alike:
-its theorems dissolve and the rest renders as on base; its bibliography's Error remains (T3/B5, out of scope).
+(#753). Only an abstract its own end closed (`\end{abstract}`, amsppt's `\endabstract`, a heading, the group of
+`\abstract{…}`) dissolves its theorems. One still open at `\end{document}` swallowed the main matter (math0006149's
+unbalanced `\abstract{`, 1108.5171's brace-less `\abstract` with no heading; TeX sets the whole paper in it): the
+abstract is the misused construct there, so its theorems stay theorems with the Error, as before (DG 2026-11-20).
+`\lx@end@open@frontmatter` (sect02.rs) flags the body it ends, `\lx@add@frontmatter@until` marks that abstract's entry
+`_open_at_end` (`document::ABSTRACT_OPEN_AT_END`), and `within_abstract` passes it over; unwrapping the swallowing
+abstract itself is row R PLACET3.
 Guards `perfect_kernel_batchplacefix::theorem_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_stays`:
 text, equation, list and quote after a theorem, two in a row, a proof, `\newtheorem*`),
 `perfect_kernel_batchplacefix::proclaim_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_proclaim`),
+`perfect_kernel_batchplacefix::theorem_in_unended_abstract_stays_a_theorem` (repros
+`block-model/theorem_in_unended_abstract{,_group}`),
 `perfect_kernel_batch69c::theorem_in_abstract_is_dissolved_not_bridged` (a theorem in a quote in the abstract).
 
 ### 1098. nomencl's list in a float's box keeps its box (PLACEFIX)

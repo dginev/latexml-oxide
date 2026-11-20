@@ -705,6 +705,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // their end: 1310.0585, 1310.0589, 1212.3890)
       assign_value("lx_frontmatter_kept_in_place", true, Some(Scope::Local));
       boxes.extend(digest_next_body(Some(end))?);
+      take_open_at_end();
       return Ok(boxes);
     }
     // extract (possibly multiple!) labels
@@ -761,6 +762,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // (the title-page check's watch over a frontmatter command's entry: #953 "106t")
     let watch = begin_frontmatter_entry_digestion(None, checked);
     let body = digest_next_body(Some(end)).map(|body| [boxes, body].concat());
+    // An abstract still open at `\end{document}` swallowed the main matter: its theorems stay theorems (DG 2026-11-20;
+    // math0006149, 1108.5171; document.rs `ABSTRACT_OPEN_AT_END`, OD #1097)
+    if take_open_at_end() && tag == "ltx:abstract" {
+      frontmatter_set_entry_attr(&tag, index, document::ABSTRACT_OPEN_AT_END, "true");
+    }
     assign_value("lx_frontmatter_par_item", enclosing.0.unwrap_or(Stored::None), Some(Scope::Local));
     assign_value("lx_frontmatter_par_depth", enclosing.1.unwrap_or(Stored::None), Some(Scope::Local));
     let digested = body.map(|body| Digested::from(List::new(body)));
@@ -1498,4 +1504,13 @@ pub(in crate::base_utilities) fn ends_with_abbreviation(name: &str) -> bool {
   let initial = chars.next().is_some_and(char::is_uppercase) && chars.next().is_none();
   // (and "et al." ending a list, `is_name_qualifier`)
   initial || NAME_SUFFIXES.contains(&format!("{word}.").as_str()) || word == "al" || word == "et.al"
+}
+
+/// Whether the body just digested was ended by `\end{document}` (sect02.rs `\lx@end@open@frontmatter`); cleared.
+fn take_open_at_end() -> bool {
+  let open = lookup_bool("lx_frontmatter_open_at_end");
+  if open {
+    assign_value("lx_frontmatter_open_at_end", false, Some(Scope::Global));
+  }
+  open
 }
