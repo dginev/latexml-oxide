@@ -46,7 +46,7 @@ pub fn unpack_tar<R: std::io::Read>(
           "archive",
           "link",
           format!(
-            "the archive entry '{name}' links to a file outside the source directory; not unpacked"
+            "the archive entry '{name}' links to a file that does not resolve inside the source directory; not unpacked"
           ),
         );
       }
@@ -67,7 +67,7 @@ pub fn unpack_tar<R: std::io::Read>(
         "archive",
         "link",
         format!(
-          "the archive entry '{name}' is a link to '{}', outside the source directory; not unpacked",
+          "the archive entry '{name}' is a link to '{}' {LINK_NOT_MADE}; not unpacked",
           target.display()
         ),
       );
@@ -173,17 +173,14 @@ pub fn unpack_zip<R: std::io::Read + std::io::Seek>(
         .is_some_and(|target| make_enclosed_link(&root, &rel_path, target));
 
       if !linked {
-        #[cfg(unix)]
         warn_at_session_start(
           "archive",
           "link",
           format!(
-            "the archive entry '{raw_name}' is a link to '{}', outside the source directory; unpacked as a plain file",
+            "the archive entry '{raw_name}' is a link to '{}' {LINK_NOT_MADE}; unpacked as a plain file",
             String::from_utf8_lossy(&target_bytes)
           ),
         );
-        #[cfg(not(unix))]
-        let _ = raw_name;
         // Write the escaping symlink as a plain file inside `root` (verifying
         // its parent still canonicalizes inside `root`) so the paper still
         // converts rather than failing on a stray symlink.
@@ -275,6 +272,14 @@ fn normalize_unpacked_permissions(dir: &std::path::Path) {
     }
   }
 }
+
+/// Why an archive link was not made, for its counted Warning. On Unix a link is made when it resolves inside the
+/// source directory, so a refused one is absolute, escapes it, climbs (`..`) past a component that does not exist yet,
+/// or runs through a cycle; elsewhere [`make_enclosed_link`] makes none, and every link is reported.
+#[cfg(unix)]
+const LINK_NOT_MADE: &str = "that does not resolve inside the source directory";
+#[cfg(not(unix))]
+const LINK_NOT_MADE: &str = "and links are not made on this platform";
 
 /// Makes the symbolic link `path` (relative to `root`) to `target` when both the link's directory and the target,
 /// resolved physically one component at a time, stay inside `root`; false otherwise.

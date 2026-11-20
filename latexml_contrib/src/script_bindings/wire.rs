@@ -1392,8 +1392,17 @@ pub(super) fn wire_option(
   body: FnPtr,
 ) -> Result<()> {
   latexml_core::state::push_value("@declaredoptions", opt.to_string())?;
-  let cs_proto = format!("\\ds@{opt}");
-  wire_primitive(engine, ast, &cs_proto, body, PrimitiveOptions::default())
+  // Perl Package.pm:2423-2426 `DefPrimitiveI('\ds@' . $option, undef, $code)`: the name whole, never a prototype, so
+  // `some-option` is not read as `\ds@some` with a parameter `-option` (#944).
+  let cs = latexml_core::T_CS!(format!("\\ds@{opt}"));
+  wire_primitive_i(
+    engine,
+    ast,
+    cs,
+    None,
+    Some(body),
+    PrimitiveOptions::default(),
+  )
 }
 
 /// `DeclareOption('opt', '\tex...')` — string-body form. Mirrors the
@@ -1418,11 +1427,13 @@ pub(super) fn wire_option_string(opt: &str, body: &str) -> Result<()> {
 /// define `\default@ds` as a primitive whose body trampolines into Rhai. NOT
 /// pushed onto `@declaredoptions` (it is the catch-all, not a declared option).
 pub(super) fn wire_option_default(engine: &Rc<Engine>, ast: &Rc<AST>, body: FnPtr) -> Result<()> {
-  wire_primitive(
+  let cs = latexml_core::T_CS!("\\default@ds");
+  wire_primitive_i(
     engine,
     ast,
-    "\\default@ds",
-    body,
+    cs,
+    None,
+    Some(body),
     PrimitiveOptions::default(),
   )
 }
