@@ -216,6 +216,13 @@ thread_local! {
   static SPLICE_STARTS: RefCell<HashMap<i64, (String, SymStr)>> = RefCell::default();
 }
 
+/// Clear unmatched splice begin-marks between conversions so an aborted paper
+/// or `\vsplit`-discarded end mark never leaks across papers or `arena::reset()`.
+pub fn reset_splice_state() {
+  SPLICE_SERIAL.with(|s| s.set(0));
+  SPLICE_STARTS.with(|starts| starts.borrow_mut().clear());
+}
+
 /// The internal attribute by which a begin mark records the element it was absorbed in — a value, not a node handle,
 /// which `rename_node` or a removal would leave dangling —, removed again by the end mark of the splice that set it
 /// (and stripped from the output with every `_` attribute should that end mark not come).

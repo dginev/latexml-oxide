@@ -30,6 +30,10 @@ use latexml_core::common::error::Result;
 /// `package::*::load_definitions` / `engine::*::load_definitions`.
 pub type BindingLoader = fn() -> Result<()>;
 
+/// Clear per-conversion thread-local caches held by package bindings (currently
+/// `siunitx`'s unit-definition cache) so persistent workers start each paper clean.
+pub fn reset_conversion_state() { package::siunitx_sty::reset_conversion_caches(); }
+
 /// Single source of truth for the compiled in-distro bindings. Each entry
 /// pairs a filename (with its `.pool` / `.sty` / `.cls` / `.def` extension)
 /// to its `load_definitions` fn. Used by `dispatch` (runtime loader) and by

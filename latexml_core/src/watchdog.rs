@@ -610,10 +610,92 @@ fn children() -> std::sync::MutexGuard<'static, Vec<(u64, std::process::Child)>>
     .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
+/// Child PIDs registered by callers that must retain ownership of `Child` (for
+/// piped `wait_with_output`, e.g. parallel page-render workers, graphics
+/// converters, Rhai `Command::output`). `kill_group = true` signals the child's
+/// process group on Unix (`setsid`-detached converters like `graphics.rs`).
+static KILL_PIDS_ON_EXIT: std::sync::Mutex<Vec<(u64, u32, bool)>> =
+  std::sync::Mutex::new(Vec::new());
+
+/// Keeps a child PID registered with [`kill_registered_children`]; dropping it
+/// unregisters the PID (the owner is responsible for normal waiting/reaping).
+#[must_use = "the child PID is unregistered when this guard is dropped"]
+pub struct KillPidOnExit(u64);
+
+impl Drop for KillPidOnExit {
+  fn drop(&mut self) {
+    let mut pids = kill_pids();
+    if let Some(index) = pids.iter().position(|(id, ..)| *id == self.0) {
+      pids.swap_remove(index);
+    }
+  }
+}
+
+fn kill_pids() -> std::sync::MutexGuard<'static, Vec<(u64, u32, bool)>> {
+  KILL_PIDS_ON_EXIT
+    .lock()
+    .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Registers `pid` to be killed by exits that skip destructors (watchdog
+/// timeout/OOM, allocation failure), for as long as the returned guard lives.
+/// Set `kill_group = true` when the child is a Unix process-group leader.
+pub fn kill_pid_on_exit(pid: u32, kill_group: bool) -> KillPidOnExit {
+  let id = NEXT_REMOVE_ON_EXIT.fetch_add(1, Ordering::Relaxed);
+  kill_pids().push((id, pid, kill_group));
+  KillPidOnExit(id)
+}
+
+/// Best-effort immediate termination of a child PID (or its Unix process group
+/// when `kill_group` is true). Portable across Unix and Windows.
+pub fn kill_pid(pid: u32, kill_group: bool) {
+  if pid == 0 {
+    return;
+  }
+  #[cfg(unix)]
+  {
+    let raw = pid as libc::pid_t;
+    if raw > 0 {
+      // SAFETY: `pid` is a positive child PID spawned by this process; sending
+      // SIGKILL to it (or its own process group) touches no Rust memory.
+      unsafe {
+        if kill_group {
+          libc::killpg(raw, libc::SIGKILL);
+        }
+        libc::kill(raw, libc::SIGKILL);
+      }
+    }
+  }
+  #[cfg(windows)]
+  {
+    let _ = kill_group;
+    use windows_sys::Win32::{
+      Foundation::CloseHandle,
+      System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
+    };
+    // SAFETY: OpenProcess/TerminateProcess/CloseHandle operate on an OS handle
+    // for a child PID we spawned; null handle is checked before use.
+    unsafe {
+      let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
+      if !handle.is_null() {
+        let _ = TerminateProcess(handle, 1);
+        let _ = CloseHandle(handle);
+      }
+    }
+  }
+  #[cfg(not(any(unix, windows)))]
+  {
+    let _ = (pid, kill_group);
+  }
+}
+
 /// Kills every registered child (the exiting process does not wait for them; they are reparented and reaped).
 pub fn kill_registered_children() {
   for (_, child) in children().iter_mut() {
     let _ = child.kill();
+  }
+  for &(_, pid, kill_group) in kill_pids().iter() {
+    kill_pid(pid, kill_group);
   }
 }
 
@@ -622,6 +704,11 @@ pub fn try_kill_registered_children() {
   if let Ok(mut children) = KILL_ON_EXIT.try_lock() {
     for (_, child) in children.iter_mut() {
       let _ = child.kill();
+    }
+  }
+  if let Ok(pids) = KILL_PIDS_ON_EXIT.try_lock() {
+    for &(_, pid, kill_group) in pids.iter() {
+      kill_pid(pid, kill_group);
     }
   }
 }

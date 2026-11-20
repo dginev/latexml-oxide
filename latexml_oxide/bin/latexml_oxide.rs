@@ -801,6 +801,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
   // Guard hook for the worker-panic verdict path (`cluster_cli`): a panic
   // injected here must surface as `Fatal:panic:caught` + the final verdict.
+  // Gated off in release distribution builds so no env var can crash the CLI.
+  #[cfg(any(debug_assertions, feature = "test-utils"))]
   if std::env::var_os("LATEXML_INJECT_PANIC").is_some() {
     panic!("LATEXML_INJECT_PANIC");
   }
@@ -1030,6 +1032,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     .clone()
     .filter(|lp| !(is_archive_out && Path::new(lp).is_file()));
 
+  // Arm the watchdog before unpacking untrusted archives so zip/tar bombs
+  // respect `--timeout` and `--max-memory` (and remove registered temp dirs).
+  // `--init` mode runs without a watchdog.
+  let max_memory = resolve_max_memory(cli.max_memory);
+  let _watchdog = cli.init.is_none().then(|| {
+    latexml_core::watchdog::Watchdog::with_limits(cli.timeout, max_memory.saturating_mul(1024))
+  });
+
   // --whatsin=archive: extract archive to temp directory, find main .tex file
   let mut path_flags = cli.search_paths.clone();
   // The unpacked archive, held for the duration of processing; every later exit goes through `exit_removing`, and
@@ -1044,7 +1054,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // The source's date (`latexml::source_date`): ar5iv's archival clock for `\today`.
   let mut source_date_epoch = None;
   let source = if is_archive_mode {
-    let (tempdir, main_tex) = match unpack_archive(&source) {
+    let (tempdir, on_exit, main_tex) = match unpack_archive(&source) {
       Ok(r) => r,
       Err(failure) => {
         fatal_before_conversion(external_log.as_deref(), &failure, &mut archive_tempdir)
@@ -1059,7 +1069,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       latexml::source_date::of_archive(Path::new(&source), main_in_archive.as_deref());
     let dir_str = tempdir.path().to_string_lossy().to_string();
     path_flags.push(dir_str);
-    _archive_on_exit = Some(latexml_core::watchdog::remove_on_exit(tempdir.path()));
+    _archive_on_exit = Some(on_exit);
     archive_tempdir = Some(tempdir);
     main_tex
   } else {
@@ -1269,17 +1279,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // Normal mode: convert document
     //
     // Two-layer timeout: the cooperative stomach::check_timeout gives a graceful
-    // Err(Fatal) when the digestion loop can poll it, and the Watchdog forcibly
-    // aborts the process if the deadline is reached without cooperation (e.g. a
-    // tight native loop in Marpa / libxml2 / libxslt). The Watchdog cancels
-    // automatically on drop at end of main. `--max-memory` rides the same
-    // Watchdog (it was previously a silent no-op outside `--server`).
-    // Resolve the ceiling ONCE: unset means "derive it from this machine"
-    // (90 % of physical RAM, capped at 64 GiB), so both the hard Watchdog below
-    // and the cooperative fuse agree on the same number.
-    let max_memory = resolve_max_memory(cli.max_memory);
-    let _watchdog =
-      latexml_core::watchdog::Watchdog::with_limits(cli.timeout, max_memory.saturating_mul(1024));
+    // Err(Fatal) when the digestion loop can poll it, and the Watchdog (armed
+    // above before archive unpacking) forcibly aborts the process if the
+    // deadline is reached without cooperation (e.g. a tight native loop in
+    // Marpa / libxml2 / libxslt).
     // `--max-memory` (or its `LATEXML_MAX_MEMORY` env) is the SINGLE memory
     // knob. The hard Watchdog ceiling above rides it directly; the cooperative
     // stomach RSS fuse is DERIVED from it (a fixed fraction below, leaving
@@ -2160,40 +2163,46 @@ fn fatal_before_conversion(
   exit_removing(archive_tempdir, 1)
 }
 
-fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), InputFailure> {
+fn unpack_archive(
+  archive_path: &str,
+) -> Result<
+  (
+    tempfile::TempDir,
+    latexml_core::watchdog::RemoveOnExit,
+    String,
+  ),
+  InputFailure,
+> {
   let unreadable = |e: &dyn std::fmt::Display| InputFailure::unreadable(archive_path, e);
-  let (tempdir, dest) = unpack_archive_files(archive_path).map_err(|e| unreadable(&e))?;
+  let (tempdir, on_exit, dest) = unpack_archive_files(archive_path).map_err(|e| unreadable(&e))?;
   // Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
   // or one containing \documentclass)
   let main_tex = latexml::main_tex::find_main_tex(&dest)
     .map_err(|e| InputFailure::no_main_tex(archive_path, &e))?;
-  Ok((tempdir, main_tex.to_string_lossy().to_string()))
+  Ok((tempdir, on_exit, main_tex.to_string_lossy().to_string()))
 }
 
-/// Extract `archive_path` into a fresh temporary directory, returned with its path.
+/// Extract `archive_path` into a fresh temporary directory, registered with the
+/// watchdog immediately on creation so timeout/OOM during extraction cleans up.
 fn unpack_archive_files(
   archive_path: &str,
-) -> Result<(tempfile::TempDir, std::path::PathBuf), Box<dyn Error>> {
+) -> Result<
+  (
+    tempfile::TempDir,
+    latexml_core::watchdog::RemoveOnExit,
+    std::path::PathBuf,
+  ),
+  Box<dyn Error>,
+> {
   let tempdir = tempfile::tempdir()?;
+  let on_exit = latexml_core::watchdog::remove_on_exit(tempdir.path());
   let dest = tempdir.path();
 
   if archive_path.ends_with(".zip") {
-    // Primary format: ZIP
+    // Primary format: ZIP (use zip::ZipArchive::extract for path-traversal containment)
     let file = File::open(archive_path)?;
     let mut archive = zip::ZipArchive::new(file)?;
-    for i in 0..archive.len() {
-      let mut entry = archive.by_index(i)?;
-      let outpath = dest.join(entry.mangled_name()?);
-      if entry.is_dir() {
-        std::fs::create_dir_all(&outpath)?;
-      } else {
-        if let Some(parent) = outpath.parent() {
-          std::fs::create_dir_all(parent)?;
-        }
-        let mut outfile = File::create(&outpath)?;
-        std::io::copy(&mut entry, &mut outfile)?;
-      }
-    }
+    archive.extract(dest)?;
   } else if archive_path.ends_with(".tar.gz") || archive_path.ends_with(".tgz") {
     let file = File::open(archive_path)?;
     let gz = flate2::read::GzDecoder::new(file);
@@ -2205,7 +2214,7 @@ fn unpack_archive_files(
     return Err(format!("Unsupported archive format: {}", archive_path).into());
   }
   let dest = dest.to_path_buf();
-  Ok((tempdir, dest))
+  Ok((tempdir, on_exit, dest))
 }
 
 // Output-zip packing moved to `latexml_post::pack::pack_archive`

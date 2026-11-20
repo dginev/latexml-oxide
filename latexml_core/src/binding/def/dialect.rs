@@ -1448,7 +1448,34 @@ pub fn env_hook_has_code(name: &str, point: &str) -> bool {
 }
 
 /// Whether the kernel hook `hook` holds code: [`HookStore::has_code`].
-pub fn hook_has_code(hook: &str) -> bool { HookStore::new(hook).has_code() }
+/// Checks `l3_hooks_loaded()` first and probes with non-interning `arena::get`
+/// so checking an empty/undeclared hook never permanently interns 3 `SymStr`s.
+pub fn hook_has_code(hook: &str) -> bool {
+  if !l3_hooks_loaded() {
+    return false;
+  }
+  let prop_has_code = arena::get(format!("\\g__hook_{hook}_code_prop"))
+    .and_then(|sym| {
+      let tok = Token::from_sym(sym, Catcode::CS);
+      with_macro_body(&tok, |body| match body {
+        Some(body) => {
+          with_macro_body(&T_CS!("\\c_empty_prop"), |empty| empty != Some(body)).unwrap_or(true)
+        },
+        None => true,
+      })
+    })
+    .unwrap_or(false);
+  if prop_has_code {
+    return true;
+  }
+  let slot_has_code = |name: &str| {
+    arena::get(name)
+      .map(|sym| hook_slot_has_code(&Token::from_sym(sym, Catcode::CS)))
+      .unwrap_or(false)
+  };
+  slot_has_code(&format!("\\__hook_toplevel {hook}"))
+    || slot_has_code(&format!("\\__hook_next {hook}"))
+}
 
 /// The slots lthooks keeps a hook's code in, named once (a hook read at every `\selectfont` keeps its own).
 pub struct HookStore {
@@ -1464,6 +1491,12 @@ impl HookStore {
       toplevel: T_CS!(s!("\\__hook_toplevel {hook}")),
       next:     T_CS!(s!("\\__hook_next {hook}")),
     }
+  }
+
+  /// Build from already-pinned literal tokens (e.g. `T_CS!("...")`), safe
+  /// across `arena::reset()` because `pin!` re-interns automatically.
+  pub fn from_tokens(prop: Token, toplevel: Token, next: Token) -> Self {
+    HookStore { prop, toplevel, next }
   }
 
   /// lthooks' `\hook_if_empty:nTF` (latex.ltx:6436-6448) read from its storage, no expansion: the labelled code

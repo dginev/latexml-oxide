@@ -1138,8 +1138,15 @@ pub fn reset_field_cover_pending() {
 impl Token {
   /// simple Token constructor, wrapping over text and catcode
   pub fn new<T: AsRef<str>>(text: T, code: Catcode) -> Self {
+    Self::from_sym(arena::pin(text), code)
+  }
+
+  /// Construct a token directly from an already-interned [`SymStr`] without
+  /// re-probing or interning into the arena.
+  #[inline]
+  pub fn from_sym(text: SymStr, code: Catcode) -> Self {
     Token {
-      text: arena::pin(text),
+      text,
       code,
       prov: 0,
       #[cfg(feature = "token-locators")]

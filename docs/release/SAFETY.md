@@ -66,30 +66,22 @@ see that section below.
 
 ## `unsafe` budget
 
-Reconciled **2026-07-20**: the project contains **50 `unsafe {}` blocks +
-5 `unsafe impl Send/Sync` + 0 `unsafe fn` = 55 sites** (was 48+5+0=53 on
-2026-06-24). The delta: `latexml_post/src/xslt.rs` had **4** blocks, not the
-2 §F claims (the `dlsym` write and the parity read-back were two blocks each, unix
-and windows; since 2026-09-26 one link-time `extern` static serves both, so it is
-back to the 2 §F describes), and
-`latexml_core/src/runtime_bindings_reentrancy_model.rs` is a new file not covered
-by any category below — it is the re-entrancy model/proof harness mirroring
-category H. NB the recipe below also matches the word `unsafe` inside comments
-(e.g. `latexml_core/src/parameter.rs`), so subtract prose hits before comparing. Every `unsafe` block
-carries a `// SAFETY:` comment at the call site naming the invariant it
-depends on (the one caveat is category E's *test-only* `EnvGuard`, which
-documents the env data-race invariant but carries a `FIXME` that the default
-test harness does not yet *enforce* single-threaded env access).
+Reconciled **2026-11-20**: the workspace contains **111 `unsafe {}` blocks +
+3 `unsafe impl Send/Sync` + 0 `unsafe fn` = 114 non-comment sites** (93 `unsafe {}`
++ 3 `unsafe impl` in production code, plus 18 test-only `unsafe {}` sites in
+`latexml_oxide/tests/`, `latexml_post/src/test_env.rs`, and `script_bindings/tests.rs`).
 
-2026-11-15 (ARENAR): `latexml_core/src/common/arena.rs` 10 blocks → 1 (category B's eight resolves and
-`first_bytes`'s raw read fold into one; category C is gone).
+Major changes since the 2026-07-20 reconciliation (55 sites):
+- **2026-11-15 (ARENAR):** `latexml_core/src/common/arena.rs` 10 blocks → 1 (category B's eight resolves and `first_bytes`'s raw read fold into one; category C is gone).
+- **2026-11-20:** removed `unsafe impl Send/Sync for Error` (2 sites; `ErrorCategory::Generic` now bounds `Box<dyn Error + Send + Sync>` so `Error` is safely `Send + Sync`), and added `// SAFETY:` comments to all glibc/mimalloc heap-trim & `mallinfo2` sites (`core_interface.rs`, `post.rs`, `render_workers.rs`, `streaming_restart.rs`).
+- **New OS/runtime FFI sites added since July 2026:** `latexml_core/src/watchdog.rs` (24 sites: portable RSS/RAM/disk queries and child PID kill), `latexml_oxide/bin/cortex_worker/exit_report.rs` (6 sites: async-signal-safe crash/exit reporter), `latexml_oxide/src/{core_interface,post,render_workers,streaming_restart}.rs` (13 sites: `malloc_trim`/`mi_collect`/`mallinfo2`), `latexml_oxide/bin/cortex_worker.rs` (4 sites: `mmap`/`raise`/`getrusage`), `latexml_post/src/xslt.rs` (5 sites), `latexml_oxide/src/util/test.rs` (3 sites). Every production `unsafe` block carries a `// SAFETY:` comment at the call site.
 
 Counts and exact line numbers drift as the tree changes — this is a
 point-in-time reconciliation, not a live index. Regenerate the authoritative
 enumeration with:
 
 ```
-rg -n 'unsafe\s*\{|unsafe impl|unsafe fn' -g '*.rs' -g '!target'
+rg -n 'unsafe\s*\{|unsafe impl|unsafe fn' latexml_* -g '*.rs'
 ```
 
 The categories below describe what is unavoidable, what is a deliberate
@@ -99,13 +91,14 @@ drift. **When this count changes, update this section** (see Audit posture).
 
 ---
 
-### A. `unsafe impl Send/Sync` — pragmatic single-thread markers (5 sites)
+### A. `unsafe impl Send/Sync` — pragmatic single-thread markers (3 sites)
 
 | Site | Marker | Why |
 |---|---|---|
 | `latexml_core/src/state.rs` | `Send for State` | `State` holds `Rc`/`RefCell`/`libxml::tree::Node`, all `!Send`. We mark it `Send` so the harness can build a State on one thread and *transition* it to another thread before any first use. After that first use, the value is pinned to a single OS thread via `#[thread_local]` switchers (`use_main_state` / `use_std_state` / `use_sty_state`). The crate never reads a `State` from two threads concurrently. |
 | `latexml_core/src/common/store.rs` | `Send/Sync for Stored` | Same shape as `State`: `Stored` variants embed `Rc<RefCell<…>>` and libxml nodes. The marker exists *only* to satisfy `Box<dyn Error + Send + Sync>` trait bounds on error returns — error variants transitively require `Send + Sync` on every embedded type. No code actually shares a `Stored` across threads. |
-| `latexml_core/src/common/error.rs` | `Send/Sync for Error` | `Error` carries a `Locator` whose `Mouth` is `!Send`. Identical justification to `Stored`: needed for the std `Error + Send + Sync` bound; not for actual cross-thread sharing. |
+
+*(Removed 2026-11-20: `latexml_core/src/common/error.rs` `Send/Sync for Error` is no longer needed now that `ErrorCategory::Generic` requires `+ Send + Sync`.)*
 
 **Could we refactor?** Only by swapping every `Rc<RefCell<…>>` in `State`,
 `Stored`, and `Error` for `Arc<Mutex<…>>`. That contradicts the

@@ -4390,4 +4390,53 @@ mod unicodemath_output {
     // `𝛼_𝑖≤𝑥²&lt;𝑎&amp;𝑏` (KNOWN_PERL_ERRORS #1290).
     assert_eq!(stdout.trim_end(), "𝛼_𝑖≤𝑥²<𝑎&𝑏", "stdout:\n{stdout}");
   }
+
+  #[test]
+  fn latexmlmath_exits_cleanly_on_tex_fatal() {
+    let out = Command::new(env!("CARGO_BIN_EXE_latexmlmath_oxide"))
+      .args(["--quiet", "\\def\\a{\\a}\\a"])
+      .output()
+      .expect("spawn latexmlmath_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(1), "stderr:\n{stderr}");
+    assert!(
+      !stderr.contains("panicked at"),
+      "TeX Fatal must exit cleanly without panicking:\n{stderr}"
+    );
+  }
+}
+
+mod hostile_input_hardening {
+  use std::process::Command;
+
+  #[test]
+  fn cline_overflow_and_huge_range_do_not_panic_or_oom() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("cline.tex"),
+      "\\documentclass{article}\n\\begin{document}\n\
+       \\begin{tabular}{cc}\n\
+       a & b \\\\\n\
+       \\cline{999999999999999999999}\n\
+       \\cline{1-1000000000}\n\
+       c & d \\\\\n\
+       \\end{tabular}\n\\end{document}\n",
+    )
+    .unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(["cline.tex", "--dest", "cline.xml"])
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+      out.status.success(),
+      "expected clean conversion, status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr.contains("panicked at"),
+      "hostile \\cline must not panic:\n{stderr}"
+    );
+  }
 }

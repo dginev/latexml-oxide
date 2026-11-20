@@ -320,10 +320,12 @@ pub(crate) fn parallel_render(
   // distance to this run's own memory fuse. Degrade to fewer workers — or
   // decline to engage — rather than let the kernel choose a victim.
   #[cfg(target_os = "linux")]
+  // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
   unsafe {
     libc::malloc_trim(0);
   }
   #[cfg(not(feature = "dhat-heap"))]
+  // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
   unsafe {
     libmimalloc_sys::mi_collect(true);
   }
@@ -405,6 +407,8 @@ pub(crate) fn parallel_render(
   );
 
   let mut pending: Vec<Pending> = Vec::with_capacity(manifest_paths.len());
+  let mut _kill_guards: Vec<latexml_core::watchdog::KillPidOnExit> =
+    Vec::with_capacity(manifest_paths.len());
   for mpath in &manifest_paths {
     let spawned = std::process::Command::new(&exe)
       .env("LATEXML_RENDER_WORKER", mpath)
@@ -415,6 +419,9 @@ pub(crate) fn parallel_render(
     match spawned {
       Ok(child) => {
         let pid = child.id();
+        // Register with the watchdog so timeout/OOM exits never orphan the
+        // worker pool across Unix and Windows.
+        let kill_guard = latexml_core::watchdog::kill_pid_on_exit(pid, false);
         // Each child gets a drain thread calling `wait_with_output` — piped
         // stderr MUST be consumed while the parent polls, or a chatty child
         // blocks on a full pipe and the poll below never sees it exit.
@@ -422,8 +429,17 @@ pub(crate) fn parallel_render(
           .name(format!("render-worker-drain-{pid}"))
           .spawn(move || child.wait_with_output());
         match handle {
-          Ok(h) => pending.push(Pending::Spawned(h, pid)),
-          Err(e) => pending.push(Pending::Failed(format!("drain thread spawn failed: {e}"))),
+          Ok(h) => {
+            _kill_guards.push(kill_guard);
+            pending.push(Pending::Spawned(h, pid));
+          },
+          Err(e) => {
+            // `child` was moved into the closure and dropped without killing;
+            // kill it explicitly by PID so we never leak a live worker.
+            latexml_core::watchdog::kill_pid(pid, false);
+            drop(kill_guard);
+            pending.push(Pending::Failed(format!("drain thread spawn failed: {e}")));
+          },
         }
       },
       Err(e) => pending.push(Pending::Failed(format!("worker spawn failed: {e}"))),
@@ -442,15 +458,11 @@ pub(crate) fn parallel_render(
     }
     if let Err(e) = latexml_core::stomach::check_timeout() {
       e.log_fatal();
-      #[cfg(unix)]
       for p in &pending {
         if let Pending::Spawned(h, pid) = p
           && !h.is_finished()
         {
-          // SAFETY: plain kill(2) on a child pid this process spawned.
-          unsafe {
-            libc::kill(*pid as i32, libc::SIGKILL);
-          }
+          latexml_core::watchdog::kill_pid(*pid, false);
         }
       }
       break;
@@ -705,10 +717,12 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
     // thousands of pages.
     if !written.is_empty() && written.len().is_multiple_of(512) {
       #[cfg(target_os = "linux")]
+      // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
       unsafe {
         libc::malloc_trim(0);
       }
       #[cfg(not(feature = "dhat-heap"))]
+      // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
       unsafe {
         libmimalloc_sys::mi_collect(true);
       }

@@ -1076,15 +1076,13 @@ impl Graphics {
       .file_name()
       .and_then(|s| s.to_str())
       .unwrap_or("image");
-    let unique = std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .map(|d| d.as_nanos())
-      .unwrap_or(0);
+    let unique = Self::unique_staging_tag();
     let tmp_dir = parent.join(format!(".{}.{}.mutool_svg", stem, unique));
     // `create_dir`, not `create_dir_all`: an existing directory is another job's.
     if std::fs::create_dir(&tmp_dir).is_err() {
       return false;
     }
+    let _on_exit = latexml_core::watchdog::remove_on_exit(&tmp_dir);
     let tmp_actual = tmp_dir.join("page1.svg");
     let p1 = page.map(|p| p.max(1)).unwrap_or(1);
     let mut cmd = std::process::Command::new("mutool");
@@ -1287,6 +1285,7 @@ impl Graphics {
         .ok()
     });
     let pid = child.id() as i32;
+    let _kill_on_exit = latexml_core::watchdog::kill_pid_on_exit(child.id(), true);
     let kill_group = || {
       #[cfg(unix)]
       {
@@ -1561,6 +1560,15 @@ impl Graphics {
   ///
   /// Returns true only when the destination file was actually written.
   /// Optional dep: graceful fallthrough when `mutool` is not on PATH.
+  /// Process- and thread-unique tag for dotfile staging paths beside `dest`.
+  /// Using PID + monotonic counter avoids same-tick collisions under parallel
+  /// graphics workers or coarse OS clocks.
+  fn unique_staging_tag() -> String {
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    format!("{}-{}", std::process::id(), seq)
+  }
+
   fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
@@ -1568,11 +1576,9 @@ impl Graphics {
       .file_name()
       .and_then(|s| s.to_str())
       .unwrap_or("image");
-    let unique = std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .map(|d| d.as_nanos())
-      .unwrap_or(0);
+    let unique = Self::unique_staging_tag();
     let tmp = parent.join(format!(".{}.{}.mutool.png", stem, unique));
+    let _on_exit = latexml_core::watchdog::remove_on_exit(&tmp);
     let timeout = std::time::Duration::from_secs(20);
 
     let mut cmd = std::process::Command::new("mutool");
@@ -1615,12 +1621,10 @@ impl Graphics {
       .file_name()
       .and_then(|s| s.to_str())
       .unwrap_or("image");
-    let unique = std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .map(|d| d.as_nanos())
-      .unwrap_or(0);
+    let unique = Self::unique_staging_tag();
     let tmp_prefix = parent.join(format!(".{}.{}.pdftocairo", stem, unique));
     let tmp_png = PathBuf::from(format!("{}.png", tmp_prefix.to_string_lossy()));
+    let _on_exit = latexml_core::watchdog::remove_on_exit(&tmp_png);
     let timeout = std::time::Duration::from_secs(20);
 
     let cleanup = |tmp_png: &Path| {
@@ -1676,13 +1680,12 @@ impl Graphics {
       .file_name()
       .and_then(|s| s.to_str())
       .unwrap_or("image");
-    let unique = std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .map(|d| d.as_nanos())
-      .unwrap_or(0);
+    let unique = Self::unique_staging_tag();
     let tmp_pdf = parent.join(format!(".{}.{}.pdf", stem, unique));
     let tmp_prefix = parent.join(format!(".{}.{}.pdftocairo", stem, unique));
     let tmp_png = PathBuf::from(format!("{}.png", tmp_prefix.to_string_lossy()));
+    let _on_exit_pdf = latexml_core::watchdog::remove_on_exit(&tmp_pdf);
+    let _on_exit_png = latexml_core::watchdog::remove_on_exit(&tmp_png);
     let timeout = std::time::Duration::from_secs(20);
 
     let cleanup = |tmp_pdf: &Path, tmp_png: &Path| {
@@ -1744,13 +1747,11 @@ impl Graphics {
       .file_name()
       .and_then(|s| s.to_str())
       .unwrap_or("image");
-    let unique = std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .map(|d| d.as_nanos())
-      .unwrap_or(0);
+    let unique = Self::unique_staging_tag();
     // gs picks its output extension from the device, not the path, so
     // we pass it whatever name and rename atomically at the end.
     let tmp = parent.join(format!(".{}.{}.gs", stem, unique));
+    let _on_exit = latexml_core::watchdog::remove_on_exit(&tmp);
     let timeout = std::time::Duration::from_secs(30);
     let dest_lc = dest.to_lowercase();
     // pngalpha matches IM's `ps:alpha` delegate (the default EPS→PNG

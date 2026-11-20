@@ -85,15 +85,27 @@ pub struct SegmentMeta {
 const SEGMENT_WRAPPER: &str = "_lxfragment";
 
 /// The on-disk spill area: numbered segment files plus their in-RAM metadata.
-#[derive(Debug)]
 pub struct SegmentStore {
-  dir:     PathBuf,
-  metas:   Vec<SegmentMeta>,
+  dir:      PathBuf,
+  metas:    Vec<SegmentMeta>,
   /// Historical: segments inlined into an enclosing one. Nested spills now
   /// stay nested (literal placeholders + recursive assembly splice), so
   /// nothing retires in the current pipeline; the mechanism remains for the
   /// store's API stability.
-  retired: Vec<bool>,
+  retired:  Vec<bool>,
+  /// Ensures watchdog timeout/OOM exits (which skip `Drop`) still remove the
+  /// spill directory instead of leaving multi-GB scratch trees behind.
+  _on_exit: crate::watchdog::RemoveOnExit,
+}
+
+impl std::fmt::Debug for SegmentStore {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("SegmentStore")
+      .field("dir", &self.dir)
+      .field("metas", &self.metas)
+      .field("retired", &self.retired)
+      .finish()
+  }
 }
 
 impl SegmentStore {
@@ -116,10 +128,12 @@ impl SegmentStore {
     let seq = SPILL_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let dir = parent.join(format!(".latexml-spill-{}-{seq}", std::process::id()));
     fs::create_dir_all(&dir).map_err(|e| store_error(format!("create {}: {e}", dir.display())))?;
+    let on_exit = crate::watchdog::remove_on_exit(&dir);
     Ok(SegmentStore {
       dir,
       metas: Vec::new(),
       retired: Vec::new(),
+      _on_exit: on_exit,
     })
   }
 

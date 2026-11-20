@@ -756,6 +756,7 @@ pub fn initialize_stomach() {
   let baseline = crate::watchdog::process_rss_kb().unwrap_or_else(|| LAST_SAMPLED_RSS_KB.get());
   LAST_SAMPLED_RSS_KB.set(baseline);
   note_yield_rss_baseline(baseline);
+  EVERYPAR_FIRING.with(|f| f.set(false));
   let mut stomach = stomach_mut!();
   stomach.boxing = Vec::new();
   stomach.token_stack = Vec::new();
@@ -1861,13 +1862,17 @@ fn fire_everypar() {
   let Some(toks) = pending_everypar() else {
     return;
   };
+  struct ResetEverypar;
+  impl Drop for ResetEverypar {
+    fn drop(&mut self) { EVERYPAR_FIRING.with(|f| f.set(false)); }
+  }
   EVERYPAR_FIRING.with(|f| f.set(true));
+  let _guard = ResetEverypar;
   if let Ok(digested) = digest(toks) {
     // A List box is unwound (flattened) on absorption, so `\nl`'s tag-whatsit runs
     // inline in the current listingline rather than under a wrapper.
     push_box_list(digested);
   }
-  EVERYPAR_FIRING.with(|f| f.set(false));
 }
 
 /// The `\everypar` a paragraph started here would fire (see `fire_everypar` for

@@ -992,15 +992,23 @@ pub(super) fn make_engine() -> Engine {
         )
       );
       let mut cmd = std::process::Command::new(&c.program);
-      cmd.args(&c.args);
+      cmd
+        .args(&c.args)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
       for (k, v) in &c.envs {
         cmd.env(k, v);
       }
       if let Some(dir) = &c.cwd {
         cmd.current_dir(dir);
       }
-      let out = cmd
-        .output()
+      let child = cmd
+        .spawn()
+        .map_err(|e| rhai_err(format!("Command '{}': {e}", c.program)))?;
+      let _kill_guard = latexml_core::watchdog::kill_pid_on_exit(child.id(), false);
+      let out = child
+        .wait_with_output()
         .map_err(|e| rhai_err(format!("Command '{}': {e}", c.program)))?;
       let mut m = Map::new();
       m.insert(
