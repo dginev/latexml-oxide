@@ -1284,8 +1284,8 @@ impl Graphics {
         })
         .ok()
     });
-    let pid = child.id() as i32;
-    let _kill_on_exit = latexml_core::watchdog::kill_pid_on_exit(child.id(), true);
+    let pid = child.id();
+    let kill_on_exit = latexml_core::watchdog::kill_pid_on_exit(pid, true);
     let kill_group = || {
       #[cfg(unix)]
       {
@@ -1293,29 +1293,17 @@ impl Graphics {
         // a brief grace if the leader is still alive. This matches what
         // `timeout(1) --kill-after` does for the bench script's outer
         // guard.
-        // SAFETY: killpg(2) on a known pid is documented + safe.
-        unsafe {
-          libc::killpg(pid, libc::SIGTERM);
-        }
+        latexml_core::watchdog::signal_group_term(pid);
         std::thread::sleep(std::time::Duration::from_millis(200));
-        // SAFETY: pgid is the child's own process group (set via setpgid in
-        // pre_exec); killpg only signals that group.
-        unsafe {
-          libc::killpg(pid, libc::SIGKILL);
-        }
+        latexml_core::watchdog::kill_pid(pid, true);
       }
       #[cfg(windows)]
       {
         // Windows analogue of the killpg group-kill: `taskkill /T` walks
         // the child-process tree from the given PID, so a timed-out
         // `magick` also takes down the `gs` it spawned (the exact orphan
-        // scenario the Unix setsid+killpg design exists for). /F because
-        // there is no SIGTERM-style graceful tier on Windows consoles
-        // without a console-event dance; the subsequent child.kill() is
-        // then a no-op backstop.
-        let _ = std::process::Command::new("taskkill")
-          .args(["/PID", &pid.to_string(), "/T", "/F"])
-          .output();
+        // scenario the Unix setsid+killpg design exists for).
+        latexml_core::watchdog::kill_pid(pid, true);
       }
       #[cfg(not(any(unix, windows)))]
       {
@@ -1344,6 +1332,10 @@ impl Graphics {
         },
       }
     };
+    // Child is now reaped on every exit path of the loop above; unregister its
+    // PID before waiting up to 10 s on stderr drain so a reused PID/PGID cannot
+    // be signaled if the watchdog fires during drain.
+    drop(kill_on_exit);
     // Join the stderr drainer and record a diagnostic. gs can print a fatal
     // error (e.g. `/undefinedfilename` under an AppArmor denial) to stderr yet
     // still exit 0, so a non-empty stderr is always worth surfacing — not only
@@ -1544,6 +1536,15 @@ impl Graphics {
   /// tens of seconds on a single page.
   fn should_try_pdf_cairo_path(source: &str) -> bool { source.to_lowercase().ends_with(".pdf") }
 
+  /// Process- and thread-unique tag for dotfile staging paths beside `dest`.
+  /// Using PID + monotonic counter avoids same-tick collisions under parallel
+  /// graphics workers or coarse OS clocks.
+  fn unique_staging_tag() -> String {
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    format!("{}-{}", std::process::id(), seq)
+  }
+
   /// Rasterize a PDF via the `mutool draw` subprocess (MuPDF CLI).
   /// ~1.7× faster than `pdftocairo` on vector-heavy matplotlib /
   /// pgfplots scatter PDFs (the canvas slow-tail).
@@ -1560,15 +1561,6 @@ impl Graphics {
   ///
   /// Returns true only when the destination file was actually written.
   /// Optional dep: graceful fallthrough when `mutool` is not on PATH.
-  /// Process- and thread-unique tag for dotfile staging paths beside `dest`.
-  /// Using PID + monotonic counter avoids same-tick collisions under parallel
-  /// graphics workers or coarse OS clocks.
-  fn unique_staging_tag() -> String {
-    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    format!("{}-{}", std::process::id(), seq)
-  }
-
   fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));

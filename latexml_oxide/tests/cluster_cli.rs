@@ -4438,5 +4438,89 @@ mod hostile_input_hardening {
       !stderr.contains("panicked at"),
       "hostile \\cline must not panic:\n{stderr}"
     );
+    assert!(
+      stderr.contains("Conversion complete: No obvious problems") && !stderr.contains("Error:"),
+      "expected 0 errors on hostile \\cline:\n{stderr}"
+    );
+    let xml = std::fs::read_to_string(work.path().join("cline.xml")).expect("read cline.xml");
+    assert!(xml.contains("<tabular"), "missing <tabular>:\n{xml}");
+    assert_eq!(xml.matches("<tr>").count(), 2, "expected 2 rows:\n{xml}");
+    assert_eq!(xml.matches("<td ").count(), 4, "expected 4 cells:\n{xml}");
+    for cell in [">a</td>", ">b</td>", ">c</td>", ">d</td>"] {
+      assert!(xml.contains(cell), "missing cell {cell}:\n{xml}");
+    }
+  }
+
+  /// End-to-end zip archive hardening: a zip with a read-only dir (`0555`), an
+  /// executable file (`0755`), an in-archive symlink (`alias.tex -> ro/part.tex`),
+  /// an escaping symlink (`escape.tex -> /etc/hostname`), and a directory link
+  /// cycle (`loopdir -> .`, #924) converts cleanly, resolves the in-archive
+  /// symlink's text, and leaves zero temp entries behind in `TMPDIR`.
+  #[test]
+  fn zip_archive_with_readonly_dir_and_symlinks_converts_and_cleans_up() {
+    use std::io::Write as _;
+
+    use zip::{ZipWriter, write::SimpleFileOptions};
+
+    let work = tempfile::tempdir().expect("tempdir");
+    let tmp_root = work.path().join("tmp");
+    std::fs::create_dir(&tmp_root).unwrap();
+
+    let zip_path = work.path().join("paper.zip");
+    {
+      let file = std::fs::File::create(&zip_path).unwrap();
+      let mut zw = ZipWriter::new(file);
+      zw.add_directory("ro/", SimpleFileOptions::default().unix_permissions(0o555))
+        .unwrap();
+      zw.start_file(
+        "ro/part.tex",
+        SimpleFileOptions::default().unix_permissions(0o755),
+      )
+      .unwrap();
+      zw.write_all(b"INCLUDED_PART").unwrap();
+      zw.add_symlink("alias.tex", "ro/part.tex", SimpleFileOptions::default())
+        .unwrap();
+      zw.add_symlink("escape.tex", "/etc/hostname", SimpleFileOptions::default())
+        .unwrap();
+      zw.add_symlink("loopdir", ".", SimpleFileOptions::default())
+        .unwrap();
+      zw.start_file("main.tex", SimpleFileOptions::default())
+        .unwrap();
+      zw.write_all(
+        b"\\documentclass{article}\n\\begin{document}\n\\input{alias}\n\\end{document}\n",
+      )
+      .unwrap();
+      zw.finish().unwrap();
+    }
+
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(["paper.zip", "--dest", "paper.xml"])
+      .env("TMPDIR", &tmp_root)
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+      out.status.success(),
+      "archive with escaping symlink & ro dir must convert cleanly, status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    let xml = std::fs::read_to_string(work.path().join("paper.xml")).expect("read paper.xml");
+    #[cfg(unix)]
+    assert!(
+      xml.contains("INCLUDED_PART"),
+      "in-archive symlink must resolve to target text:\n{xml}"
+    );
+    // Zero temp extraction leftovers in our private TMPDIR (proves `ro/` was
+    // permission-normalized so TempDir drop deleted it cleanly).
+    let leftovers: Vec<_> = std::fs::read_dir(&tmp_root)
+      .unwrap()
+      .flatten()
+      .map(|e| e.path())
+      .collect();
+    assert!(
+      leftovers.is_empty(),
+      "expected 0 temp entries left behind in TMPDIR, found: {leftovers:?}"
+    );
   }
 }

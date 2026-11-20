@@ -646,42 +646,48 @@ pub fn kill_pid_on_exit(pid: u32, kill_group: bool) -> KillPidOnExit {
   KillPidOnExit(id)
 }
 
+/// Best-effort graceful `SIGTERM` to a Unix child's process group (no-op on
+/// non-Unix). Safe wrapper over `rustix::process::kill_process_group`.
+pub fn signal_group_term(pid: u32) {
+  #[cfg(unix)]
+  {
+    use rustix::process::{Pid, Signal, kill_process_group};
+    if let Some(pid) = i32::try_from(pid).ok().and_then(Pid::from_raw) {
+      let _ = kill_process_group(pid, Signal::TERM);
+    }
+  }
+  #[cfg(not(unix))]
+  {
+    let _ = pid;
+  }
+}
+
 /// Best-effort immediate termination of a child PID (or its Unix process group
-/// when `kill_group` is true). Portable across Unix and Windows.
+/// when `kill_group` is true). Portable across Unix and Windows, with zero
+/// `unsafe` (uses `rustix::process` on Unix and `taskkill /T /F` on Windows).
 pub fn kill_pid(pid: u32, kill_group: bool) {
   if pid == 0 {
     return;
   }
   #[cfg(unix)]
   {
-    let raw = pid as libc::pid_t;
-    if raw > 0 {
-      // SAFETY: `pid` is a positive child PID spawned by this process; sending
-      // SIGKILL to it (or its own process group) touches no Rust memory.
-      unsafe {
-        if kill_group {
-          libc::killpg(raw, libc::SIGKILL);
-        }
-        libc::kill(raw, libc::SIGKILL);
+    use rustix::process::{Pid, Signal, kill_process, kill_process_group};
+    if let Some(pid) = i32::try_from(pid).ok().and_then(Pid::from_raw) {
+      if kill_group {
+        let _ = kill_process_group(pid, Signal::KILL);
       }
+      let _ = kill_process(pid, Signal::KILL);
     }
   }
   #[cfg(windows)]
   {
     let _ = kill_group;
-    use windows_sys::Win32::{
-      Foundation::CloseHandle,
-      System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
-    };
-    // SAFETY: OpenProcess/TerminateProcess/CloseHandle operate on an OS handle
-    // for a child PID we spawned; null handle is checked before use.
-    unsafe {
-      let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
-      if !handle.is_null() {
-        let _ = TerminateProcess(handle, 1);
-        let _ = CloseHandle(handle);
-      }
-    }
+    let _ = std::process::Command::new("taskkill")
+      .args(["/PID", &pid.to_string(), "/T", "/F"])
+      .stdin(std::process::Stdio::null())
+      .stdout(std::process::Stdio::null())
+      .stderr(std::process::Stdio::null())
+      .output();
   }
   #[cfg(not(any(unix, windows)))]
   {

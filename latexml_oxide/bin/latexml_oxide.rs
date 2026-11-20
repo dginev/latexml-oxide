@@ -2199,10 +2199,9 @@ fn unpack_archive_files(
   let dest = tempdir.path();
 
   if archive_path.ends_with(".zip") {
-    // Primary format: ZIP (use zip::ZipArchive::extract for path-traversal containment)
     let file = File::open(archive_path)?;
-    let mut archive = zip::ZipArchive::new(file)?;
-    archive.extract(dest)?;
+    let archive = zip::ZipArchive::new(file)?;
+    latexml::util::unpack_zip(archive, dest)?;
   } else if archive_path.ends_with(".tar.gz") || archive_path.ends_with(".tgz") {
     let file = File::open(archive_path)?;
     let gz = flate2::read::GzDecoder::new(file);

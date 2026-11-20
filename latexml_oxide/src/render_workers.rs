@@ -407,8 +407,6 @@ pub(crate) fn parallel_render(
   );
 
   let mut pending: Vec<Pending> = Vec::with_capacity(manifest_paths.len());
-  let mut _kill_guards: Vec<latexml_core::watchdog::KillPidOnExit> =
-    Vec::with_capacity(manifest_paths.len());
   for mpath in &manifest_paths {
     let spawned = std::process::Command::new(&exe)
       .env("LATEXML_RENDER_WORKER", mpath)
@@ -420,24 +418,26 @@ pub(crate) fn parallel_render(
       Ok(child) => {
         let pid = child.id();
         // Register with the watchdog so timeout/OOM exits never orphan the
-        // worker pool across Unix and Windows.
+        // worker pool across Unix and Windows. Moved into the drain closure so
+        // each worker's PID unregisters immediately when `wait_with_output`
+        // reaps it (never outliving an early-finishing worker).
         let kill_guard = latexml_core::watchdog::kill_pid_on_exit(pid, false);
         // Each child gets a drain thread calling `wait_with_output` — piped
         // stderr MUST be consumed while the parent polls, or a chatty child
         // blocks on a full pipe and the poll below never sees it exit.
         let handle = std::thread::Builder::new()
           .name(format!("render-worker-drain-{pid}"))
-          .spawn(move || child.wait_with_output());
+          .spawn(move || {
+            let _kill_guard = kill_guard;
+            child.wait_with_output()
+          });
         match handle {
-          Ok(h) => {
-            _kill_guards.push(kill_guard);
-            pending.push(Pending::Spawned(h, pid));
-          },
+          Ok(h) => pending.push(Pending::Spawned(h, pid)),
           Err(e) => {
-            // `child` was moved into the closure and dropped without killing;
-            // kill it explicitly by PID so we never leak a live worker.
+            // `child` and `kill_guard` were moved into the closure and dropped
+            // on spawn failure, unregistering the PID; kill it explicitly so we
+            // never leak a live worker.
             latexml_core::watchdog::kill_pid(pid, false);
-            drop(kill_guard);
             pending.push(Pending::Failed(format!("drain thread spawn failed: {e}")));
           },
         }

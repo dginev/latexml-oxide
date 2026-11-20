@@ -93,12 +93,13 @@ stacker = "0.1.24"
 # depends on this crate) and the runtime interpreter consume one grammar.
 winnow = "1.0"
 
-# Portable machine-memory / free-disk probing (see `watchdog.rs`:
-# `total_memory_bytes`, `available_disk_bytes`). Both crates are already in the
-# dependency tree via other workspace members, so this adds no new
-# supply-chain surface — only a direct edge.
+# Portable machine-memory / free-disk probing and safe Unix child signaling
+# (see `watchdog.rs`). Both crates are already in the dependency tree via other
+# workspace members, so this adds no new supply-chain surface — only a direct edge.
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+# >= 1.1.6 clears RUSTSEC-2026-0486 (xattr zero-length buffer soundness fix).
+rustix = { version = "1.1.6", default-features = false, features = ["process"] }
 
 # `mach_host_self` (watchdog.rs `available_memory_bytes`): libc deprecated its Mach
 # APIs in favour of the `mach2` crate.
@@ -107,7 +108,6 @@ mach2 = "0.7"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
-  "Win32_Foundation",
   "Win32_System_SystemInformation",
   "Win32_System_ProcessStatus",
   "Win32_System_Threading",
