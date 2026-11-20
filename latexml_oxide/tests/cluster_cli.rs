@@ -2132,6 +2132,36 @@ mod rhai_loading_path {
       "the `.rhai` binding did not apply:\n{stderr}"
     );
   }
+
+  /// #945: the note is printed when the binding logs inside it (its own `RequirePackage`), before the load ends, and
+  /// still names the `.rhai` file the dispatcher found (`name_loading_binding`), the inner load nested in it.
+  #[test]
+  fn rhai_binding_note_names_its_path_when_it_loads_another() {
+    let (log, _) = latexml::util::test::convert_files_with(
+      "\\documentclass{article}\n\\usepackage{outerrhai}\n\\begin{document}\\outerhook\\innerhook Hi\\end{document}\n",
+      &[
+        (
+          "outerrhai.sty.rhai",
+          "RequirePackage(\"innerrhai\"); DefMacro(\"\\\\outerhook\", \"\");\n",
+        ),
+        ("innerrhai.sty.rhai", "DefMacro(\"\\\\innerhook\", \"\");\n"),
+      ],
+      None,
+    );
+    let skeleton = super::log_note_nesting::note_skeleton(&log);
+    assert!(
+      skeleton.contains("(Loading outerrhai.sty.rhai(Loading innerrhai.sty.rhai))"),
+      "{skeleton}\n{log}"
+    );
+    assert_eq!(
+      (
+        latexml::util::test::error_count(&log),
+        latexml::util::test::warning_count(&log)
+      ),
+      (0, 0),
+      "{log}"
+    );
+  }
 }
 
 #[cfg(feature = "runtime-bindings")]
@@ -4613,6 +4643,159 @@ mod hostile_input_hardening {
     assert!(
       leftovers.is_empty(),
       "expected 0 temp entries left behind in TMPDIR, found: {leftovers:?}"
+    );
+  }
+}
+
+mod log_note_nesting {
+  //! Issue #945 (tp971): a binding's `(Loading <name>...` note opens when the binding starts loading, so what it
+  //! loads (its raw `.sty`'s `(Processing definitions …`, the bindings that requires) prints inside it and the notes
+  //! close innermost first, as Perl's `ProgressSpinup`/`ProgressSpindown` nest (`Core/Mouth/Binding.pm:31`,
+  //! `Package.pm:2336`). The note had been printed after the binding's load, so a log reader saw `bigintcalc_sty.rs`
+  //! load after its own `bigintcalc.sty`. Perl 0.8.8 on the same host logs the same skeleton.
+
+  use std::{path::Path, process::Command};
+
+  /// The open/close tree of a log's progress notes: `(<stage> <child>…)`, a path shortened to its file name. Panics
+  /// on a close with no open note; an unclosed note is left open in the string.
+  pub(super) fn note_skeleton(log: &str) -> String {
+    let mut skeleton = String::new();
+    for line in log.lines() {
+      let closes = if let Some(note) = line.strip_prefix('(')
+        && let Some((stage, closes)) = note.split_once("...")
+      {
+        let stage = match stage.rsplit_once(' ') {
+          Some((head, path)) if path.contains('/') => {
+            format!("{head} {}", path.rsplit('/').next().unwrap_or(path))
+          },
+          _ => stage.to_string(),
+        };
+        skeleton.push_str(&format!("({stage}"));
+        closes
+      } else if line.starts_with(" )") {
+        line
+      } else {
+        continue;
+      };
+      for close in closes.split_whitespace() {
+        assert_eq!(
+          close, ")",
+          "a progress note's line ends in closes only: {line:?}\n{log}"
+        );
+        let open = skeleton.matches('(').count();
+        assert!(
+          skeleton.matches(')').count() < open,
+          "a close with no open note:\n{log}"
+        );
+        skeleton.push(')');
+      }
+    }
+    skeleton
+  }
+
+  /// `bigintcalc_sty.rs` raw-loads `bigintcalc.sty`, which requires `pdftexcmds` (whose binding requires `iftex`):
+  /// each note encloses the next, in the log and on stderr alike, and the second request of `pdftexcmds` (loaded
+  /// already) leaves no note, as Perl's `loadLTXML` returns before its note (Package.pm:2328).
+  #[test]
+  fn binding_load_note_encloses_what_it_loads() {
+    if !latexml::util::test::kpse_has("bigintcalc.sty") {
+      eprintln!(
+        "SKIP binding_load_note_encloses_what_it_loads: bigintcalc.sty is not in this TeX Live"
+      );
+      return;
+    }
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      workdir.path().join("doc.tex"),
+      "\\documentclass{article}\n\\usepackage{bigintcalc}\n\\usepackage{pdftexcmds}\n\\begin{document}\nHello \
+       \\bigintcalcAdd{1}{2}.\n\\end{document}\n",
+    )
+    .expect("write doc.tex");
+    let output = Command::new(bin)
+      .args(["doc.tex", "--dest", "doc.xml", "--log", "doc.latexml.log"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\n{stderr}",
+      output.status.code()
+    );
+    let log = std::fs::read_to_string(workdir.path().join("doc.latexml.log")).expect("read log");
+    assert_eq!(
+      (
+        latexml::util::test::error_count(&log),
+        latexml::util::test::warning_count(&log)
+      ),
+      (0, 0),
+      "{log}"
+    );
+    let skeleton = note_skeleton(&log);
+    assert!(
+      skeleton.contains(
+        "(Loading article_cls.rs)(Loading bigintcalc_sty.rs(Processing definitions bigintcalc.sty(Loading \
+         pdftexcmds_sty.rs(Loading iftex_sty.rs))))"
+      ),
+      "{skeleton}\n{log}"
+    );
+    assert_eq!(
+      skeleton.matches('(').count(),
+      skeleton.matches(')').count(),
+      "{skeleton}"
+    );
+    assert_eq!(
+      log.matches("(Loading pdftexcmds_sty.rs").count(),
+      1,
+      "{log}"
+    );
+    assert_eq!(
+      note_skeleton(&stderr),
+      skeleton,
+      "stderr's notes are the log's:\n{stderr}"
+    );
+  }
+
+  /// A binding's `NoteSTDERR` message prints inside its `(Loading …` note on stderr, as its logged lines do: the
+  /// pending note is printed first (#945 review).
+  #[cfg(feature = "runtime-bindings")]
+  #[test]
+  fn binding_stderr_note_prints_inside_its_loading_note() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      workdir.path().join("doc.tex"),
+      "\\documentclass{article}\n\\usepackage{noterhai}\n\\begin{document}\nHi.\n\\end{document}\n",
+    )
+    .expect("write doc.tex");
+    std::fs::write(
+      workdir.path().join("noterhai.sty.rhai"),
+      "NoteSTDERR(\"hello from the binding\");\nDefMacro(\"\\\\a\", \"X\");\n",
+    )
+    .expect("write noterhai.sty.rhai");
+    let output = Command::new(bin)
+      .args(["doc.tex", "--dest", "doc.xml", "--log", "doc.latexml.log"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\n{stderr}",
+      output.status.code()
+    );
+    let note = stderr
+      .find("noterhai.sty.rhai")
+      .unwrap_or_else(|| panic!("no note for the binding\n{stderr}"));
+    let message = stderr
+      .find("hello from the binding")
+      .unwrap_or_else(|| panic!("no binding message\n{stderr}"));
+    assert!(
+      note < message,
+      "the binding's message printed before its (Loading note\n{stderr}"
     );
   }
 }
