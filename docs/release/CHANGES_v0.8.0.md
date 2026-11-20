@@ -777,12 +777,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     Debian/Ubuntu's `libkpathsea6` and run where only an `install-tl` tree is on PATH (a Docker
     image), the linked library searched its compiled-in directories, which lack
     `$SELFAUTOPARENT/texmf-dist/web2c`: it warned `configuration file texmf.cnf not found`, resolved
-    nothing, and every lookup went through the `kpsewhich` subprocess. When the user sets none of
-    `TEXMFCNF`, `TEXMFROOT`, `TEXMFDIST`, the PATH TeX Live's `web2c` (and its root and
-    `texmf-local/web2c`, as TeX Live's own default) is now appended to that search, after the
-    library's own directories, so the in-process backend reads the same configuration as the
-    `kpsewhich` on PATH. Where the library already finds a `texmf.cnf` it keeps precedence. Guard
-    `texmfcnf_fallback_appends_the_ambient_tree_unless_the_user_pinned_one`.
+    nothing, and every lookup went through the `kpsewhich` subprocess. The `kpathsea` crate (0.3.5)
+    now appends that tree's `web2c` directories (and its root and `texmf-local/web2c`, as TeX Live's
+    own default) to the library's search when its compiled-in directories hold no `texmf.cnf` and
+    the user set no `TEXMFCNF`, so the in-process backend reads the same configuration as the
+    `kpsewhich` on PATH. Where the library already finds a `texmf.cnf` nothing changes. Guard: the
+    crate's `texmfcnf_extension_rule` tests.
   - **Windows diagnostics name their source file.** A location's source was taken
     for a URL whenever it held a `:`, which every Windows path does, so messages
     read `at C:\…\t.tex.index.tex; line 3` where Linux says `at t.tex; line 3`. Perl's

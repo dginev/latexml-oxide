@@ -21,7 +21,6 @@ cd "${LINT_ROOT:-$(dirname "$0")/..}"
 # file|VARIABLE|why it is sound
 ALLOW=(
   "latexml_core/src/util/pathname.rs|TEXMFROOT|select_kpaths, forced by init_kpathsea() on the converting thread before the kpathsea-prewarm spawn (both binaries)"
-  "latexml_core/src/util/pathname.rs|TEXMFCNF|select_kpaths (issue #948), beside TEXMFROOT: same ordering"
   "latexml_oxide/bin/latexml_oxide.rs|LATEXML_INI_MODE|--init, set before init_kpathsea() and the kpathsea-prewarm spawn"
   "latexml_oxide/src/util/test.rs|LATEXML_RSS_CAP_BYTES|test-utils: under a Once at the top of each generated test, before any conversion"
   "latexml_oxide/src/identity.rs|SOURCE_DATE_EPOCH|a #[test]"

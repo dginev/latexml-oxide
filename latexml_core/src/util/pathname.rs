@@ -221,23 +221,15 @@ fn choose_kpaths(
 /// the choice for [`kpathsea_backend`].
 #[cfg(feature = "kpathsea")]
 fn select_kpaths() -> Option<Kpaths> {
-  let root = ambient_texlive_root();
-  // Decided before TEXMFROOT is set below, so only the user's own pins count.
-  let texmfcnf = ambient_texmfcnf_fallback(root, |var| env::var_os(var).is_some());
-  // Both writes precede `Kpaths::new` (whose `kpathsea_set_program_name` putenvs SELFAUTO*) and every second thread:
-  // `init_kpathsea` forces this on the main thread first (see there for the `getenv` race).
-  unsafe {
-    // Re-anchor the linked libkpathsea to the ambient TeX Live tree before
-    // construction if TEXMFROOT is not already set. In-process libkpathsea checks
-    // $TEXMFROOT in texmf.cnf, avoiding a fallback to the slow subprocess backend
-    // on dual-TL hosts (e.g. system libkpathsea in /usr/share/texlive vs vendor TL on PATH).
-    if let Some(root) = root
-      && env::var_os("TEXMFROOT").is_none()
-    {
+  // Re-anchor the linked libkpathsea to the ambient TeX Live tree before
+  // construction if TEXMFROOT is not already set. In-process libkpathsea checks
+  // $TEXMFROOT in texmf.cnf, avoiding a fallback to the slow subprocess backend
+  // on dual-TL hosts (e.g. system libkpathsea in /usr/share/texlive vs vendor TL on PATH).
+  if env::var_os("TEXMFROOT").is_none()
+    && let Some(root) = ambient_texlive_root()
+  {
+    unsafe {
       env::set_var("TEXMFROOT", root);
-    }
-    if let Some(cnf) = &texmfcnf {
-      env::set_var("TEXMFCNF", cnf);
     }
   }
   let (kpse, backend, why) = choose_kpaths(
@@ -315,38 +307,6 @@ pub fn ambient_kpsewhich_selfautoparent() -> Option<&'static str> {
 fn ambient_texlive_root() -> Option<&'static str> {
   let root = ambient_kpsewhich_selfautoparent()?;
   Path::new(root).join("texmf-dist").is_dir().then_some(root)
-}
-
-/// The `TEXMFCNF` that lets the linked libkpathsea find the ambient TeX Live's `texmf.cnf`, or `None` to leave it be.
-///
-/// A distro libkpathsea (Ubuntu's `libkpathsea6`: `/etc/texmf/web2c:…:$SELFAUTOPARENT/share/texmf/web2c`) misses an
-/// install-tl tree's `$SELFAUTOPARENT/texmf-dist/web2c`; with no distro tree beside it, it warns `texmf.cnf not found`
-/// and resolves nothing (issue #948, a Docker image). kpathsea's leading `:` searches the compiled-in default first, so
-/// a `texmf.cnf` found there keeps precedence; the appended directories are TeX Live's own default ones of an install-tl
-/// tree, in its order. Never overrides the user's `TEXMFCNF`/`TEXMFROOT`/`TEXMFDIST`; not on Windows (`;`-separated,
-/// and its release links a from-source library that already searches there).
-#[cfg(feature = "kpathsea")]
-fn ambient_texmfcnf_fallback(
-  root: Option<&str>,
-  user_set: impl Fn(&str) -> bool,
-) -> Option<String> {
-  if cfg!(windows)
-    || ["TEXMFCNF", "TEXMFROOT", "TEXMFDIST"]
-      .into_iter()
-      .any(user_set)
-  {
-    return None;
-  }
-  let root = root?.trim_end_matches('/');
-  let web2c = format!("{root}/texmf-dist/web2c");
-  if !Path::new(&web2c).join("texmf.cnf").is_file() {
-    return None;
-  }
-  let local = Path::new(root)
-    .parent()
-    .map(|grand| format!("{}/texmf-local/web2c:", grand.display()))
-    .unwrap_or_default();
-  Some(format!(":{local}{root}:{web2c}"))
 }
 
 /// The ambient `kpsewhich --version` banner (full stdout), memoized for the
@@ -1366,48 +1326,6 @@ mod tests {
     assert!(!path_is_under(file, "c:/texlive/2025"));
     assert_eq!(path_is_under(file, "C:/texlive/2026"), cfg!(windows));
     assert_eq!(path_is_under(file, r"C:\texlive\2026"), cfg!(windows));
-  }
-
-  /// Issue #948: an install-tl tree whose `texmf-dist/web2c/texmf.cnf` exists is appended to the linked library's
-  /// compiled-in `texmf.cnf` search, unless the user pinned the tree; a root without that file changes nothing.
-  #[cfg(feature = "kpathsea")]
-  #[test]
-  fn texmfcnf_fallback_appends_the_ambient_tree_unless_the_user_pinned_one() {
-    let base = env::temp_dir().join(format!("lxo_texmfcnf_948_{}", std::process::id()));
-    let with_cnf = base.join("texlive").join("2024");
-    let without_cnf = base.join("bare").join("2024");
-    std::fs::create_dir_all(with_cnf.join("texmf-dist/web2c")).unwrap();
-    std::fs::write(with_cnf.join("texmf-dist/web2c/texmf.cnf"), "% test\n").unwrap();
-    std::fs::create_dir_all(without_cnf.join("texmf-dist/web2c")).unwrap();
-    let (with_cnf, without_cnf) = (with_cnf.to_str().unwrap(), without_cnf.to_str().unwrap());
-    let unset = |_: &str| false;
-
-    let expected = format!(
-      ":{}/texlive/texmf-local/web2c:{with_cnf}:{with_cnf}/texmf-dist/web2c",
-      base.display()
-    );
-    let got = ambient_texmfcnf_fallback(Some(with_cnf), unset);
-    assert_eq!(got, (!cfg!(windows)).then_some(expected.clone()));
-    // A trailing slash on SELFAUTOPARENT names the same tree.
-    assert_eq!(
-      ambient_texmfcnf_fallback(Some(&format!("{with_cnf}/")), unset),
-      got
-    );
-    assert_eq!(ambient_texmfcnf_fallback(Some(without_cnf), unset), None);
-    assert_eq!(ambient_texmfcnf_fallback(None, unset), None);
-    for pinned in ["TEXMFCNF", "TEXMFROOT", "TEXMFDIST"] {
-      assert_eq!(
-        ambient_texmfcnf_fallback(Some(with_cnf), |var| var == pinned),
-        None,
-        "a user-set {pinned} must not be overridden"
-      );
-    }
-    // Unrelated variables do not count as a pin.
-    assert_eq!(
-      ambient_texmfcnf_fallback(Some(with_cnf), |var| var == "TEXINPUTS"),
-      got
-    );
-    std::fs::remove_dir_all(&base).unwrap();
   }
 
   /// `relative` is Perl's `pathname_relative` (→ `File::Spec->abs2rel`): a
