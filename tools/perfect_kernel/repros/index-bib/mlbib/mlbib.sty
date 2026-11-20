@@ -1,0 +1,30 @@
+% mlbib.sty (Wenzel Matiaske, 1992/1996; cond-mat0011295's copy), its font hooks (:29-34) and citation lines (:353-373)
+\ProvidesPackage{mlbib}
+\providecommand{\citeauthorfont}[1]{\def\citenf{#1}}    \def\citenf{}
+\providecommand{\citebetween}[1]{\def\citebet{#1}}      \def\citebet{}
+\providecommand{\citeleft}[1]{\def\citelb{#1}}          \def\citelb{}
+\providecommand{\citeright}[1]{\def\citerb{#1}}         \def\citerb{}
+\providecommand{\citeasnounleft}[1]{\def\citeanlb{#1}}  \def\citeanlb{}
+\providecommand{\citeasnounright}[1]{\def\citeanrb{#1}} \def\citeanrb{}
+\def\citepp{,\ }
+\def\@citex[#1]#2{%
+    \if@filesw\immediate\write\@auxout{\string\citation{#2}}\fi%
+    \def\@citea{}\@cite{\@for\@citeb:=#2\do{\@citea\def\@citea{\citebet{}}%
+       \@ifundefined{b@\@citeb}{{\@eB\textbf{?}}\@warning%
+         {Citation `\@citeb' on page \thepage \space undefined}}%
+{\csname b@\@citeb\endcsname}}}{#1}}
+\let\@internalcite\cite
+\def\cite{\@ifstar{\citeasnoun}{\new@cite}}
+\def\new@cite{\def\@citeseppen{-1000}%
+     \def\@cite##1##2{\citelb##1\if@tempswa\citepp ##2\fi\citerb }%
+     \def\citeauthoryear##1##2{{\citenf ##1} ##2}\def\@eB{}\@internalcite}%
+\def\citeasnoun{\def\@citeseppen{-1000}%
+    \def\@cite##1##2{##1\if@tempswa\citepp ##2\citeanrb\else\citeanrb\fi}%
+    \def\citeauthoryear##1##2{{\citenf ##1} \citeanlb##2}%
+    \def\@eB{(}\@internalcite}
+\def\citeyear{\def\@citeseppen{-1000}%
+   \def\@cite##1##2{##1\if@tempswa\citepp ##2\fi}%
+   \def\citeauthoryear##1##2{##2}\def\@eB{}\@internalcite}
+\def\citeauthor{\def\@citeseppen{-1000}%
+  \def\@cite##1##2{##1\if@tempswa\citepp ##2\fi}%
+  \def\citeauthoryear##1##2{{\citenf ##1}}\def\@eB{}\@internalcite}

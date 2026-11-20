@@ -1,0 +1,16 @@
+% witness: math0101059 (:1049), hep-th9309006 (:287), math0003076, math0207202, math0008004: `\pmatrix … \endpmatrix`
+%          under `\documentstyle{amsart}`
+% oracle:  latex.ltx `\documentstyle` is compatibility mode, in which amsart.cls:353-362 loads amstex.sty, not
+%          amsmath.sty; amstex.sty:877-928 `\matrix`, `\pmatrix`, `\cases` open their arrays with no `\matrix@check`
+%          (amsmath.sty:1068-1118's "Old form" error is amsmath's). pdflatex: the matrices and cases print, and its only
+%          2 errors are amstex.sty's `\negmedspace`/`\negthickspace` "already defined" (the LaTeX kernel defines them
+%          since 2020), unrelated. Perl 0 errors
+% engines: rust MAIN935 3 errors (amsmath's "Old form `\pmatrix' should be \begin{pmatrix}", once per form)
+% expect:  0 errors, 0 warnings; each matrix and the cases with their rows
+% status:  RED (MAIN935) -> GREEN (REGFIXA); guard perfect_kernel_batchregfixa::amstex_sty_old_form_matrices_are_its_own
+% preload: ar5iv.sty
+\documentstyle{amsart}
+\begin{document}
+Before $\pmatrix 0 & -1 \\ 1 & 0 \endpmatrix$ and $\matrix a & b \\ c & d \endmatrix$ and
+$|x| = \cases x & x>0 \\ -x & x\le 0 \endcases$ after.
+\end{document}

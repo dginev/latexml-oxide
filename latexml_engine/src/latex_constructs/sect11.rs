@@ -1174,7 +1174,7 @@ pub(crate) fn load() -> Result<()> {
   // style, and the lock (OXIDIZED_DESIGN_DIVERGENCES #88) refuses it, so the `*` was the key and the braced key text
   // (astro-ph0001290, astro-ph0008362, astro-ph0005563). Guard `perfect_kernel_batchclustfix::starred_cite_under_the_lock`.
   DefMacro!("\\cite OptionalMatch:* [] Semiverbatim", sub[(_star, post_opt, keys)] {
-    let astron = astroncite_from_refused_cite();
+    let labels = label_macros_from_refused_cite();
     // let style = state::lookup_tokens("CITE_STYLE").unwrap_or(NO_TOKENS);
     let open = lookup_tokens("CITE_OPEN");
     let open = open.unwrap_or(NO_TOKENS);
@@ -1197,7 +1197,7 @@ pub(crate) fn load() -> Result<()> {
     arg_tokens.extend(post_tokens);
     arg_tokens.extend(close.unlist());
 
-    let mut call = astron;
+    let mut call = labels;
     call.extend(Invocation!(T_CS!("\\lx@@cite"),
       vec![Tokens::new(Explode!("cite")), Tokens::new(arg_tokens)]).unlist());
     Ok(Tokens::new(call))
@@ -2478,34 +2478,63 @@ fn carries_nothing(item: &Digested) -> bool {
 /// writes to the .aux (latex.ltx:17746-17749 `\bibcite`) for a `\cite` to print.
 fn cite_list(key: &str) -> String { s!("b@{key}") }
 
-/// astron.sty's `\cite` (and its copies in EslabStyle.cls:1442-1445, ISOStyle.cls:1446-1449, EAS) is
-/// `\@ifstar{\citeyear}{\citefull}`, where `\citefull` = `\def\astroncite##1##2{##1, ##2}\@internalcite`: the only
-/// definition of the `\astroncite{A}{Y}` its `\bibitem` labels hold. The lock (OXIDIZED_DESIGN_DIVERGENCES #88) keeps
-/// the kernel `\cite`, so where it refused that `\cite` and `\astroncite` is undefined, the first call runs the copy's
-/// own `\citefull` definition (the full form), its `\@internalcite` tail dropped, and keeps it for the deferred labels
-/// (0812.2799, 0812.4839, astro-ph0001290, astro-ph0008362).
-/// Guard `perfect_kernel_batchnext397::astroncite_label_under_the_lock`.
-fn astroncite_from_refused_cite() -> Vec<Token> {
-  let astroncite = T_CS!("\\astroncite");
-  if is_defined_token(&astroncite) || !is_defined_token(&T_CS!("\\lx@dropped@cite")) {
-    return Vec::new();
-  }
-  let Ok(Some(full)) = lookup_definition(&T_CS!("\\citefull")) else {
+/// A raw `\cite` the lock (OXIDIZED_DESIGN_DIVERGENCES #88) refused may be the only definition of the macro its
+/// `\bibitem` labels hold: astron.sty's (and its copies in EslabStyle.cls:1442-1445, ISOStyle.cls:1446-1449, EAS)
+/// `\@ifstar{\citeyear}{\citefull}`, whose `\citefull` = `\def\astroncite##1##2{##1, ##2}\@internalcite`; mlbib.sty:360-363's
+/// `\@ifstar{\citeasnoun}{\new@cite}`, whose `\new@cite` defines `\citeauthoryear` for the `.bbl`'s
+/// `\bibitem[\protect\citeauthoryear{A}{Y}]`. The lock keeps the kernel `\cite`, so where the refused `\cite`'s
+/// unstarred branch is a parameterless macro ending in `\@internalcite` that defines a macro still undefined, the first
+/// call runs that branch (the full form), its `\@internalcite` tail dropped, and keeps what it defined for the deferred
+/// labels (0812.2799, 0812.4839, astro-ph0001290, astro-ph0008362; cond-mat0011295).
+/// Guards `perfect_kernel_batchnext397::astroncite_label_under_the_lock`, `perfect_kernel_batchregfixa::mlbib_citeauthoryear_label_under_the_lock`.
+fn label_macros_from_refused_cite() -> Vec<Token> {
+  let Ok(Some(refused)) = lookup_definition(&T_CS!("\\lx@dropped@cite")) else {
     return Vec::new();
   };
-  let defines_astroncite = matches!(full.get_expansion(), Some(ExpansionBody::Tokens(body))
-    if body.unlist_ref().starts_with(&[T_CS!("\\def"), astroncite]));
-  // A parameterless `\citefull` only: a `#1` would take the `\global` that keeps the definition.
+  // `\@ifstar{<starred>}{<unstarred>}`, its unstarred branch one control sequence
+  let branch = match refused.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => match body.unlist_ref().as_slice() {
+      [ifstar, .., open, branch, close]
+        if *ifstar == T_CS!("\\@ifstar") && *open == T_BEGIN!() && *close == T_END!() =>
+      {
+        *branch
+      },
+      _ => return Vec::new(),
+    },
+    _ => return Vec::new(),
+  };
+  let Ok(Some(full)) = lookup_definition(&branch) else {
+    return Vec::new();
+  };
+  // A parameterless branch only: a `#1` would take the `\global` that keeps the definitions.
   let takes_arguments = full
     .get_parameters()
     .is_some_and(|p| !p.get_parameters().is_empty());
-  if !full.is_expandable() || takes_arguments || !defines_astroncite {
+  let Some(ExpansionBody::Tokens(body)) = full.get_expansion() else {
+    return Vec::new();
+  };
+  let body = body.unlist_ref();
+  if !full.is_expandable() || takes_arguments || body.last() != Some(&T_CS!("\\@internalcite")) {
     return Vec::new();
   }
-  TokenizeInternal!(
-    r"\let\lx@astron@internalcite\@internalcite\def\@internalcite{\let\@internalcite\lx@astron@internalcite}\citefull\global\let\astroncite\astroncite"
+  let def = T_CS!("\\def");
+  let undefined: Vec<Token> = body
+    .windows(2)
+    .filter(|pair| pair[0] == def && !is_defined_token(&pair[1]))
+    .map(|pair| pair[1])
+    .collect();
+  if undefined.is_empty() {
+    return Vec::new();
+  }
+  let mut tokens = TokenizeInternal!(
+    r"\let\lx@cite@internalcite\@internalcite\def\@internalcite{\let\@internalcite\lx@cite@internalcite}"
   )
-  .unlist()
+  .unlist();
+  tokens.push(branch);
+  for cs in undefined {
+    tokens.extend([T_CS!("\\global"), T_CS!("\\let"), cs, cs]);
+  }
+  tokens
 }
 
 /// A citation prints its keys' labels (latex.ltx:17761-17771 `\@citex` reads each `\b@key`): the forms of each entry's

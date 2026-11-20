@@ -1,0 +1,13 @@
+% witness: 2112.00443, 2010.03824, 2312.04649 (`$^{\vardiamondsuit}$`, `$^{\varheartsuit}$` author marks)
+% oracle:  fdsymbol.sty:513-515 declares `\vardiamondsuit`, `\varheartsuit` in its own font, whose slots hold the
+%          glyphs uni2666/uni2665 (fdsymbol-a.enc); likewise every symbol below (fdsymbol-[a-f].enc). pdflatex 0 errors
+% engines: rust MAIN935 the binding a no-op, each symbol `Error:undefined`
+% expect:  0 errors, 0 warnings; each symbol at its code point with its class's role
+% status:  RED (MAIN935) -> GREEN (REGFIXA); guard perfect_kernel_batchregfixa::fdsymbol_symbols_are_unicode
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{fdsymbol}
+\begin{document}
+Marks $x^{\vardiamondsuit}$ and $y^{\varheartsuit}$.
+$a \coloneqq b \dotplus c$, $f \mapsfrom g$, $\bigtimes_{i} A_i$, $\fint_0^1 h$, $\lsem e \rsem$, $p \dotcong q$.
+\end{document}

@@ -1996,12 +1996,15 @@ cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 astron.sty's `\cite` (0812.2799, 0812.4839; copied by EslabStyle.cls:1442-1445 astro-ph0001290, ISOStyle.cls:1446-1449
 astro-ph0008362, and the EAS classes) is `\@ifstar{\citeyear}{\citefull}`, and its `\citefull` =
 `\def\astroncite##1##2{##1, ##2}\@internalcite` is the only definition of the `\astroncite{A}{Y}` that astron.bst writes
-into the `\bibitem` labels. With that `\cite` refused, the labels were `Error:undefined:\astroncite` (Perl and pdflatex
-0). Where the lock refused a `\cite`, `\astroncite` is undefined and `\citefull` opens with `\def\astroncite`, the
-kernel `\cite`'s first call runs the copy's own `\citefull` definition (its `\@internalcite` tail dropped) and keeps it
-global for the deferred labels (`sect11.rs` `astroncite_from_refused_cite`). The full form throughout: the starred
-call's year-only form is the class's label style, which the lock does not keep. Guard
-`perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`).
+into the `\bibitem` labels; mlbib.sty:360-363's (cond-mat0011295) is `\@ifstar{\citeasnoun}{\new@cite}`, whose
+`\new@cite` alone defines the `\citeauthoryear{A}{Y}` of its `.bbl` labels. With that `\cite` refused, the labels were
+`Error:undefined:\astroncite` / `\citeauthoryear` (Perl and pdflatex 0). Where the lock refused a `\cite` of the form
+`\@ifstar{…}{\X}`, `\X` parameterless and ending in `\@internalcite`, and a macro `\X` `\def`s is undefined, the kernel
+`\cite`'s first call runs `\X` (its `\@internalcite` tail dropped) and keeps what it defined global for the deferred
+labels (`sect11.rs` `label_macros_from_refused_cite`). The full form throughout: the starred call's year-only form is
+the class's label style, which the lock does not keep. Guards `perfect_kernel_batchnext397::astroncite_label_under_the_lock`
+(repro `index-bib/astroncite`), `perfect_kernel_batchregfixa::mlbib_citeauthoryear_label_under_the_lock` (repro
+`index-bib/mlbib`).
 
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)
