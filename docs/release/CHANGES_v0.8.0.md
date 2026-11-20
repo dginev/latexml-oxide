@@ -44,8 +44,8 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 ## Changes
 
   - **Run 397's misplaced elements, as DG ruled 2026-11-19.** An undefined BibTeX macro (`month = june`; ~190
-    papers) is a Warning, as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1096). A theorem or proof in an abstract (86
-    papers) is dissolved into it: its title a run-in bold text, its paragraphs, lists and equations in the abstract,
+    papers) is a Warning, as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1096). A theorem or proof in an abstract (83 of
+    the 86 papers sampled) is dissolved into it: its title a run-in bold text, its paragraphs, lists and equations in the abstract,
     its id kept (1908.02189, 0804.0728; #1097); an abstract still open at `\end{document}` (math0006149) keeps its
     theorems. nomencl's list in a framed box in a table keeps its box: a
     bold heading and the entries as a description (1410.5511; #1098). A bibliography inside a float or a heading

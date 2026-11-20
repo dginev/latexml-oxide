@@ -2136,7 +2136,7 @@ impl Document {
   /// A theorem or proof in an abstract, dissolved at its close (DG 2026-11-19: a theorem there is markup used for
   /// typesetting, the abstract is what stays): its title opens its first paragraph as a run-in `ltx:text`, as the PDF
   /// sets it; its paragraphs, lists, equations and quotes go into the abstract in its place. That paragraph takes the
-  /// theorem's id only: no element an abstract admits carries `labels` or `ltx:tags` in the schema, so its label and
+  /// theorem's id only: neither `ltx:p` nor `ltx:block` carries `labels` or `ltx:tags` in the schema, so its label and
   /// number tags are dropped and a `\ref` to it is unresolved (DG 2026-11-20). Witnesses 1908.02189, math0111087
   /// (`\proclaim`), 0804.0728 (`\newtheorem*{keywords}`); OXIDIZED_DESIGN_DIVERGENCES #1097.
   fn dissolve_theorem_in_abstract(&mut self, theorem: &Node) -> Result<()> {
