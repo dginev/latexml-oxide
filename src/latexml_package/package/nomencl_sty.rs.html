@@ -128,25 +128,69 @@
 <a href=#128 id=128 data-nosnippet>128</a>    });
 <a href=#129 id=129 data-nosnippet>129</a>  <span class="comment">// `\printnomenclature[width]` (:277-282): the list container, titled
 <a href=#130 id=130 data-nosnippet>130</a>  // `\nomname` (:53 and the babel captions :55-175), filled at post.
-<a href=#131 id=131 data-nosnippet>131</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\printnomenclature"</span>, <span class="string">"\\@ifnextchar[{\\lx@printnomenclature}{\\lx@printnomenclature[]}"</span>);
-<a href=#132 id=132 data-nosnippet>132</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@printnomenclature[]"</span>,
-<a href=#133 id=133 data-nosnippet>133</a>    <span class="string">"&lt;ltx:glossary xml:id='#id' lists='nomenclature' role='nomenclature'&gt;\
-<a href=#134 id=134 data-nosnippet>134</a>     &lt;ltx:title&gt;#title&lt;/ltx:title&gt;&lt;/ltx:glossary&gt;"</span>,
-<a href=#135 id=135 data-nosnippet>135</a>    properties =&gt; sub[_args] {
-<a href=#136 id=136 data-nosnippet>136</a>      <span class="comment">// The list is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
-<a href=#137 id=137 data-nosnippet>137</a>      </span>resolve_deferred_prints(<span class="prelude-val">Some</span>(<span class="string">"nomenclature"</span>))<span class="question-mark">?</span>;
-<a href=#138 id=138 data-nosnippet>138</a>      <span class="kw">let </span>title = digest_in_group(<span class="macro">T_CS!</span>(<span class="string">"\\nomname"</span>)).map(|d| d.to_string()).unwrap_or_default();
-<a href=#139 id=139 data-nosnippet>139</a>      <span class="kw">let </span>docid = lookup_value(<span class="string">"thedocument@ID"</span>)
-<a href=#140 id=140 data-nosnippet>140</a>        .and_then(|v| <span class="kw">match </span>v { Stored::String(s) =&gt; <span class="prelude-val">Some</span>(to_string(s)), <span class="kw">_ </span>=&gt; <span class="prelude-val">None </span>})
-<a href=#141 id=141 data-nosnippet>141</a>        .unwrap_or_default();
-<a href=#142 id=142 data-nosnippet>142</a>      <span class="kw">let </span>id = <span class="kw">if </span>docid.is_empty() { <span class="string">"glo.nomenclature"</span>.to_string() } <span class="kw">else </span>{ <span class="macro">format!</span>(<span class="string">"{docid}.glo.nomenclature"</span>) };
-<a href=#143 id=143 data-nosnippet>143</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"id" </span>=&gt; id, <span class="string">"title" </span>=&gt; title))
-<a href=#144 id=144 data-nosnippet>144</a>    },
-<a href=#145 id=145 data-nosnippet>145</a>    after_digest =&gt; sub[whatsit] {
-<a href=#146 id=146 data-nosnippet>146</a>      note_backmatter_element(whatsit, <span class="string">"ltx:glossary"</span>);
-<a href=#147 id=147 data-nosnippet>147</a>    },
-<a href=#148 id=148 data-nosnippet>148</a>    before_construct =&gt; sub[doc, whatsit] {
-<a href=#149 id=149 data-nosnippet>149</a>      adjust_backmatter_element(doc, whatsit)<span class="question-mark">?</span>;
-<a href=#150 id=150 data-nosnippet>150</a>    });
-<a href=#151 id=151 data-nosnippet>151</a>});
+<a href=#131 id=131 data-nosnippet>131</a>  // In a float's box, where no glossary can open — `{framed}`/`{mdframed}` in a `{table*}`, the IEEE box of 1410.5511,
+<a href=#132 id=132 data-nosnippet>132</a>  // 1608.03855, 1704.00503, 1703.01217 — the list stays in the box, as pdflatex prints it there (`\section*` there is
+<a href=#133 id=133 data-nosnippet>133</a>  // only a bold run-in head): the bold `\nomname` and an `ltx:description` the MakeGlossary post fills
+<a href=#134 id=134 data-nosnippet>134</a>  // (`class="ltx_nomenclature"`; DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1098). Guard
+<a href=#135 id=135 data-nosnippet>135</a>  // `perfect_kernel_batchplacefix::nomenclature_in_a_box_stays_in_the_box`.
+<a href=#136 id=136 data-nosnippet>136</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\printnomenclature"</span>, <span class="string">"\\@ifnextchar[{\\lx@printnomenclature}{\\lx@printnomenclature[]}"</span>);
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@printnomenclature[]"</span>, sub[document, _args, props] {
+<a href=#138 id=138 data-nosnippet>138</a>    <span class="kw">let </span>id = props.get(<span class="string">"id"</span>).map(|id| id.to_string()).unwrap_or_default();
+<a href=#139 id=139 data-nosnippet>139</a>    <span class="kw">if </span>glossary_reachable(document) {
+<a href=#140 id=140 data-nosnippet>140</a>      <span class="kw">let </span>attrs = <span class="macro">string_map!</span>(<span class="string">"xml:id" </span>=&gt; id, <span class="string">"lists" </span>=&gt; <span class="string">"nomenclature"</span>, <span class="string">"role" </span>=&gt; <span class="string">"nomenclature"</span>);
+<a href=#141 id=141 data-nosnippet>141</a>      document.open_element(<span class="string">"ltx:glossary"</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#142 id=142 data-nosnippet>142</a>      document.open_element(<span class="string">"ltx:title"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#143 id=143 data-nosnippet>143</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(title) = props.get(<span class="string">"title"</span>) {
+<a href=#144 id=144 data-nosnippet>144</a>        document.absorb_string(<span class="kw-2">&amp;</span>title.to_string(), props)<span class="question-mark">?</span>;
+<a href=#145 id=145 data-nosnippet>145</a>      }
+<a href=#146 id=146 data-nosnippet>146</a>      document.close_element(<span class="string">"ltx:title"</span>)<span class="question-mark">?</span>;
+<a href=#147 id=147 data-nosnippet>147</a>      document.close_element(<span class="string">"ltx:glossary"</span>)<span class="question-mark">?</span>;
+<a href=#148 id=148 data-nosnippet>148</a>    } <span class="kw">else </span>{
+<a href=#149 id=149 data-nosnippet>149</a>      document.open_element(<span class="string">"ltx:p"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#150 id=150 data-nosnippet>150</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(heading)) = props.get(<span class="string">"heading"</span>) {
+<a href=#151 id=151 data-nosnippet>151</a>        document.absorb(heading, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#152 id=152 data-nosnippet>152</a>      }
+<a href=#153 id=153 data-nosnippet>153</a>      document.close_element(<span class="string">"ltx:p"</span>)<span class="question-mark">?</span>;
+<a href=#154 id=154 data-nosnippet>154</a>      <span class="kw">let </span>attrs = <span class="macro">string_map!</span>(<span class="string">"xml:id" </span>=&gt; id, <span class="string">"class" </span>=&gt; <span class="string">"ltx_nomenclature"</span>);
+<a href=#155 id=155 data-nosnippet>155</a>      document.open_element(<span class="string">"ltx:description"</span>, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#156 id=156 data-nosnippet>156</a>      document.close_element(<span class="string">"ltx:description"</span>)<span class="question-mark">?</span>;
+<a href=#157 id=157 data-nosnippet>157</a>    }
+<a href=#158 id=158 data-nosnippet>158</a>  },
+<a href=#159 id=159 data-nosnippet>159</a>    properties =&gt; sub[_args] {
+<a href=#160 id=160 data-nosnippet>160</a>      <span class="comment">// The list is printed: its deferred entries are typeset (OXIDIZED_DESIGN_DIVERGENCES #738).
+<a href=#161 id=161 data-nosnippet>161</a>      </span>resolve_deferred_prints(<span class="prelude-val">Some</span>(<span class="string">"nomenclature"</span>))<span class="question-mark">?</span>;
+<a href=#162 id=162 data-nosnippet>162</a>      <span class="kw">let </span>title = digest_in_group(<span class="macro">T_CS!</span>(<span class="string">"\\nomname"</span>)).map(|d| d.to_string()).unwrap_or_default();
+<a href=#163 id=163 data-nosnippet>163</a>      <span class="kw">let </span>heading = <span class="macro">Digest!</span>(<span class="string">"{\\bfseries\\nomname}"</span>)<span class="question-mark">?</span>;
+<a href=#164 id=164 data-nosnippet>164</a>      <span class="kw">let </span>docid = lookup_value(<span class="string">"thedocument@ID"</span>)
+<a href=#165 id=165 data-nosnippet>165</a>        .and_then(|v| <span class="kw">match </span>v { Stored::String(s) =&gt; <span class="prelude-val">Some</span>(to_string(s)), <span class="kw">_ </span>=&gt; <span class="prelude-val">None </span>})
+<a href=#166 id=166 data-nosnippet>166</a>        .unwrap_or_default();
+<a href=#167 id=167 data-nosnippet>167</a>      <span class="kw">let </span>id = <span class="kw">if </span>docid.is_empty() { <span class="string">"glo.nomenclature"</span>.to_string() } <span class="kw">else </span>{ <span class="macro">format!</span>(<span class="string">"{docid}.glo.nomenclature"</span>) };
+<a href=#168 id=168 data-nosnippet>168</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"id" </span>=&gt; id, <span class="string">"title" </span>=&gt; title, <span class="string">"heading" </span>=&gt; heading))
+<a href=#169 id=169 data-nosnippet>169</a>    },
+<a href=#170 id=170 data-nosnippet>170</a>    after_digest =&gt; sub[whatsit] {
+<a href=#171 id=171 data-nosnippet>171</a>      note_backmatter_element(whatsit, <span class="string">"ltx:glossary"</span>);
+<a href=#172 id=172 data-nosnippet>172</a>    },
+<a href=#173 id=173 data-nosnippet>173</a>    before_construct =&gt; sub[doc, whatsit] {
+<a href=#174 id=174 data-nosnippet>174</a>      adjust_backmatter_element(doc, whatsit)<span class="question-mark">?</span>;
+<a href=#175 id=175 data-nosnippet>175</a>    });
+<a href=#176 id=176 data-nosnippet>176</a>});
+<a href=#177 id=177 data-nosnippet>177</a>
+<a href=#178 id=178 data-nosnippet>178</a><span class="doccomment">/// Whether the sectional `ltx:glossary` is opened from the insertion point, as before: everywhere but in a float (a box
+<a href=#179 id=179 data-nosnippet>179</a>/// in it, `{framed}`/`{mdframed}` in a `{table*}`, takes anything now and is moved into the float later), where it
+<a href=#180 id=180 data-nosnippet>180</a>/// cannot go. Out of a minipage the glossary floats to the section as it did, error-free (PLACE397 review S1).
+<a href=#181 id=181 data-nosnippet>181</a></span><span class="kw">fn </span>glossary_reachable(doc: <span class="kw-2">&amp;</span>Document) -&gt; bool {
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="kw">let </span><span class="kw-2">mut </span>node = <span class="prelude-val">Some</span>(doc.get_node().clone());
+<a href=#183 id=183 data-nosnippet>183</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(current) = node {
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">if </span>current.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode)
+<a href=#185 id=185 data-nosnippet>185</a>      &amp;&amp; !document::is_capture_block(<span class="kw-2">&amp;</span>current)
+<a href=#186 id=186 data-nosnippet>186</a>      &amp;&amp; (document::can_contain(<span class="kw-2">&amp;</span>current, <span class="string">"ltx:glossary"</span>) || !document::can_auto_close(<span class="kw-2">&amp;</span>current))
+<a href=#187 id=187 data-nosnippet>187</a>    {
+<a href=#188 id=188 data-nosnippet>188</a>      <span class="kw">return </span>!document::with_node_qname(<span class="kw-2">&amp;</span>current, |q| {
+<a href=#189 id=189 data-nosnippet>189</a>        <span class="macro">matches!</span>(q, <span class="string">"ltx:figure" </span>| <span class="string">"ltx:table" </span>| <span class="string">"ltx:float"</span>)
+<a href=#190 id=190 data-nosnippet>190</a>      });
+<a href=#191 id=191 data-nosnippet>191</a>    }
+<a href=#192 id=192 data-nosnippet>192</a>    node = current.get_parent();
+<a href=#193 id=193 data-nosnippet>193</a>  }
+<a href=#194 id=194 data-nosnippet>194</a>  <span class="bool-val">true
+<a href=#195 id=195 data-nosnippet>195</a></span>}
 </code></pre></div></section></main></body></html>
