@@ -499,6 +499,24 @@ Rules that keep this file honest and mergeable:
     for `setsid`); glibc `malloc_trim`/`mallinfo` → the allocator's safe API; no process-env mutation after startup;
     safe libxml/libxslt wrappers upstream in our crates; `unsafe impl Send/Sync`; isolate the rest (signal handlers,
     Windows/macOS queries). Target ≤ 15 shipped, 0 test-only; every PR byte-identical on a fleet A/B and perf-neutral; 5
+  - IMGINTENT — after v0.8.0, a dedicated sprint (DG 2026-11-20: "addressing the full challenge and complexity, and
+    testing against the full diversity of arXiv"): image sizing that keeps the source's width intent (issue #721,
+    ar5iv#83). Today `width=7in`, `0.8\linewidth`, a length register and a macro all reach the XML as pt
+    (`options="width=505.89pt"`) and the HTML as a px `width`; LaTeXML.css caps every image to its minipage
+    (`.ltx_minipage > .ltx_graphics{max-width:100%}`, as Perl) and ar5iv makes nested landscape images fluid
+    (`width:auto`), so #721's 7in image in a `.5\textwidth` minipage shrinks where PDF and tex4ht keep 7in. Goal:
+    relative widths (fractions of `\linewidth`/`\textwidth`/`\columnwidth`/`\hsize`) scale with their box, absolute
+    ones keep their size capped only by the reading column and the screen, natural size (no width) stays fluid.
+    Work: (1) classify while the width's dimension is evaluated (literal and macro widths; a length register already
+    holds a plain length, so it keeps today's cap), on every sizing path (`width`/`height`/`totalheight`/`scale`,
+    `\resizebox`, `\scalebox`, `\epsfig`/`\psfig`/`\epsfxsize`; `latexml_core/src/util/image.rs`), marked by a class
+    on `ltx:graphics` (OD record; Perl marks none); (2) CSS in LaTeXML.css (local delta, offered upstream) and ar5iv-css:
+    the box cap and ar5iv's fluid rule exempt absolute images, everything is fluid again below the reading width, and
+    side-by-side panels never overlap (exempt only a box alone on its row, or take the row from the float panel grid,
+    task #360); (3) test against all of arXiv: count the images whose rendering changes (stated width > box; alone on
+    its row vs side by side; narrow screen), then a visual A/B over a sample stratified by class, column layout,
+    subfigure grids, tables and natural-size rasters; acceptance bar: no new overlap or overflow. Risks: misread
+    registers, panel overlap, phone overflow, two-stylesheet specificity. Witness: #721's MWE; 5
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.
@@ -716,7 +734,7 @@ measured the program; the cortex reruns of sandboxes 2605/2606 (runs 325-328, 20
 - `ar5iv.css` is actively developed (`~/git/ar5iv-css`). Base `LaTeXML.css` starts from upstream Perl LaTeXML's default theme (synced with upstream master in #844).
 - **A measured defect against the PDF is fixed in `LaTeXML.css` (DG 2026-11-14)**, mirrored into ar5iv-css, recorded in OD and offered upstream to `brucemiller/LaTeXML`.
 - `ar5iv.css` is actively developed (`~/git/ar5iv-css`). Base `LaTeXML.css` follows upstream Perl LaTeXML's default theme; a defect measured against the PDF is fixed locally as a commented `latexml-oxide local delta` (recorded in OD, guarded by `witnessed_css_delta`), mirrored into ar5iv.css where ar5iv shows it, and offered upstream to `brucemiller/LaTeXML` (DG 2026-11-14).
-- Sizing intent gap (witness #721, ar5iv#83): Preserve absolute (`7in`) vs relative (`\textwidth`) intent in `image.rs:186` instead of flattening both to `pt`.
+- Sizing intent gap (witness #721, ar5iv#83): the post-v0.8.0 sprint IMGINTENT in row R.
 
 ### Algorithm Markup + CSS Unification (0.7.7 Target)
 - Part 2 landed (line numbers, captions, CSS mirrors).

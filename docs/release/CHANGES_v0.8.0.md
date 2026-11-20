@@ -43,6 +43,59 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Release builds name their inputs.** A release run resolves its build inputs once, in
+    `.github/workflows/release-prepare.yml`: the newest dated nightly whose manifest ships every component and host
+    toolchain the release and CI use (stepping back up to 14 days), and a `Cargo.lock`. Every leg builds with that
+    toolchain and `--locked`: the five platform binaries, the dumps, the notices, the CI and Windows CI suites, and
+    the container images. Both are attached to the release as `BUILD-INPUTS` (toolchain, `rustc -vV`, the lockfile's
+    SHA-256, tag, commit, the RC it reuses) and `Cargo.lock`, so a release has 17 assets. A final `X.Y.Z` whose diff
+    since its last green, published `X.Y.Z-rcN` touches only version pins and docs rebuilds from that RC's toolchain
+    and lockfile (only the workspace crates' own versions rewritten, checked by `--verify-lock-diff`) and skips the
+    test suites the RC passed; anything else, or any error, runs the full pipeline. The Linux binary's `--version` must
+    print exactly `latexml_oxide <tag> (revision <commit>)`; an RC keeps its `-rcN`. `release-prepare.yml` can be
+    dry-run on any branch, without a tag: `gh workflow run release-prepare.yml --ref <branch> -f tag=<tag>`
+    (`docs/release/RELEASING.md`). Guards: `tools/check_rc_reuse_test.sh` (27 checks, run by `tools/lint.sh`,
+    including one that runs the self-test under the pre-push hook's exported `GIT_DIR` and asserts the host
+    repository untouched).
+
+  - **Library API and command-line checks.** The `test-utils` feature is no longer a default feature (the test suites
+    enable it themselves). `latexml::api` returns a failure on its conversion thread as an `Err` instead of panicking
+    the caller, still releases the thread's engine state, and keeps the conversion log when post-processing never
+    starts; `HtmlOptions` is `#[non_exhaustive]` with a `with_default_resources` builder; `PostOptions` implements
+    `Default`. `latexml_oxide` checks `--format`, `--whatsin` and `--whatsout` against their documented values (case
+    folded; `html`, `epub3` and the like normalized), exiting 2 on any other, and its `--log` and `--telemetry-out`
+    help says what they do. `latexmlmath_oxide` gains `-V`/`--version`, reads its options left to right up to `--`,
+    and exits 2 on an unknown long option or an empty `--unicodemath=` (a formula starting with a single `-`, such
+    as `-x + 1`, is still a formula). Guards `api::tests::{worker_panic_returns_err_instead_of_crashing_caller,
+    core_failure_preserves_conversion_log}`, `format_whatsin_whatsout_validate_and_normalize`,
+    `cluster_cli::{latexmlmath_version_and_cli_validation, latexml_oxide_rejects_unknown_format_whatsin_whatsout}`.
+
+  - **Hardening before the release: archives, child processes, long-running workers and hostile input.**
+    - *Archives.* One unpacker, `latexml::util::unpack_zip`, serves the command line and `cortex_worker`: an entry
+      whose path leaves the source directory (`../`, `a/../../x`, `..\`), a link that escapes it, a link cycle or an
+      over-long target is unpacked as a plain file or skipped with a counted Warning (the worker used to lose such a
+      paper); a link inside the archive resolves to its target's text; unpacked files lose their execute bits
+      (`a-x,u+rwX`), and a read-only directory in the archive no longer leaves files behind. On 300 arXiv zips the
+      unpacked trees are identical to before (7,031 files by path, size and SHA-1), and unpacking is 1-5 % faster.
+    - *Document Lua* can no longer create temporary files (`io.tmpfile`, beside `io.popen`, `os.tmpname`,
+      `os.tmpdir`).
+    - *Child processes* (graphics converters, the parallel render workers, Rhai commands) are registered with the
+      watchdog and killed, with their process group, when a conversion times out or exits — on Windows too
+      (`taskkill /T /F`); spill directories and converter staging files are removed at exit; the LSP server retries
+      `waitpid` on `EINTR` instead of reporting exit 0 and leaving a zombie.
+    - *Long-running workers* (`cortex_worker`, the LSP server) reset each conversion's state before the next — the
+      BibTeX entries, the `\everypar` guard, token origins, staged snapshots — and no interned string outlives the
+      arena reset that frees it.
+    - *Hostile input:* a `\cline` with an overflowing or huge column range, multi-byte UTF-8 after `\PYGZ` in a
+      minted cache, and a non-numeric parameter in a constructor's substitution no longer crash;
+      `latexmlmath_oxide` exits 1 on a TeX Fatal instead of panicking; release binaries ignore
+      `LATEXML_INJECT_PANIC`. The `unsafe` count fell from 115 to 110 (`docs/release/SAFETY.md`).
+
+    Guards `lua_bridge::tests::sandbox_denies_io_tmpfile`, `parse_line_handles_multibyte_utf8_after_pygz`,
+    `cluster_cli::{cline_overflow_and_huge_range_do_not_panic_or_oom, latexmlmath_exits_cleanly_on_tex_fatal,
+    zip_archive_with_readonly_dir_and_symlinks_converts_and_cleans_up}`,
+    `util::archive_unpack_tests::unpack_zip_normalizes_permissions_and_contains_symlinks`.
+
   - **An abstract no longer swallows the document.** A brace-less `\abstract`, or an `\abstract{` whose `}` a
     footnote took, with no `\section` after it, held the whole paper and its bibliography (TeX sets them so too; Perl
     loses the body): the bibliography now ends it as its heading would, and an abstract the bibliography closed, or the
