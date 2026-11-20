@@ -724,6 +724,105 @@ mod kpathsea_backend_resolution {
   }
 }
 
+mod texmf_root_trailing_separator {
+  //! Issue #950: `TEXMFROOT=/usr/local/texlive/2024/` (a trailing `/`, as the reporter's Dockerfile set it) made
+  //! conversions ~30x slower. texmf.cnf's `$TEXMFROOT/texmf-dist` became `…/2024//texmf-dist`, kpathsea's `//`
+  //! recursive search: every lookup walked the tree on disk and missed `ls-R`, so the linked libkpathsea resolved
+  //! nothing and each lookup fell back to a spawned `kpsewhich` that walked the tree again.
+  //!
+  //! Runs the binary as a subprocess: the environment is read once, when the process picks its kpathsea backend.
+
+  use std::{collections::BTreeSet, fs, process::Command};
+
+  const MAIN_TEX: &str =
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n$x^2$\n\\end{document}\n";
+
+  /// `kpsewhich -var-value=<var>` as this process's environment resolves it.
+  fn var_value(var: &str) -> String {
+    Command::new("kpsewhich")
+      .arg(format!("-var-value={var}"))
+      .output()
+      .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+      .unwrap_or_default()
+  }
+
+  /// Convert `main.tex` in `dir` under `TEXMFROOT=root`; the log's kpathsea backend line and the paths of
+  /// its `(Processing definitions …)` / `(Loading …)` entries.
+  fn convert(dir: &std::path::Path, tag: &str, root: &str) -> (String, String, BTreeSet<String>) {
+    let log_path = dir.join(format!("{tag}.log"));
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .current_dir(dir)
+      .args(["main.tex", "--nocomments", "--timeout=110"])
+      .arg(format!("--destination={tag}.xml"))
+      .arg(format!("--log={}", log_path.display()))
+      .env("TEXMFROOT", root)
+      // texmf.cnf derives the tree's roots from TEXMFROOT (`TEXMFDIST = $TEXMFROOT/texmf-dist`), as in the report.
+      .env_remove("TEXMFDIST")
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(out.status.success(), "{tag}: conversion failed");
+    let log = fs::read_to_string(&log_path).unwrap_or_default();
+    let backend = log
+      .lines()
+      .find(|l| l.starts_with("Info:kpathsea:backend"))
+      .unwrap_or_default()
+      .to_string();
+    let files = log
+      .split('(')
+      .filter_map(|entry| entry.strip_prefix("Processing definitions "))
+      .filter_map(|rest| rest.split("...").next())
+      .map(|path| path.trim().to_string())
+      .collect();
+    (log, backend, files)
+  }
+
+  #[test]
+  #[cfg_attr(
+    not(building_with_texlive),
+    ignore = "requires a TeX Live installation"
+  )]
+  fn trailing_separator_on_texmf_roots_resolves_as_without() {
+    let root = var_value("TEXMFROOT");
+    if root.is_empty() {
+      latexml::util::test::skip(
+        &latexml::util::test::current_test_name(),
+        "kpsewhich names no TEXMFROOT",
+      );
+      return;
+    }
+    let work = tempfile::tempdir().expect("create tempdir");
+    fs::write(work.path().join("main.tex"), MAIN_TEX).unwrap();
+    let (_, backend, files) = convert(work.path(), "plain", &root);
+    let (log, slashed_backend, slashed_files) =
+      convert(work.path(), "slashed", &format!("{root}/"));
+
+    assert!(
+      !files.is_empty(),
+      "the conversion must process some definitions; log:\n{log}"
+    );
+    let doubled: Vec<&String> = slashed_files.iter().filter(|p| p.contains("//")).collect();
+    assert!(
+      doubled.is_empty(),
+      "no `//` may reach a resolved path: {doubled:?}"
+    );
+    assert_eq!(
+      slashed_files, files,
+      "the same files must resolve with and without the trailing `/`"
+    );
+    // The backend is the speed: a root with `/` used to fall back from the linked library to a `kpsewhich` per lookup.
+    assert_eq!(
+      slashed_backend, backend,
+      "the same kpathsea backend must be chosen"
+    );
+    assert!(
+      log.contains(&format!(
+        "Info:kpathsea:texmf_root TEXMFROOT={root}/ read as {root}"
+      )),
+      "the trimmed roots must be logged; log:\n{log}"
+    );
+  }
+}
+
 mod stale_css_overwrite {
   //! Regression for GitHub #312: a stale/empty `LaTeXML.css` / `ltx-article.css`
   //! already sitting in the destination must be OVERWRITTEN with the bundled

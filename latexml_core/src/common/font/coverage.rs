@@ -262,6 +262,8 @@ fn texmf_trees() -> Vec<String> {
       .output()
     {
       let dir = String::from_utf8_lossy(&out.stdout).trim().to_string();
+      // The index joins paths onto it: no trailing separator (issue #950).
+      let dir = crate::util::pathname::trim_texmf_root(&dir).unwrap_or(dir);
       if !dir.is_empty() && std::path::Path::new(&format!("{dir}/ls-R")).exists() {
         trees.push(dir);
       }
