@@ -21183,7 +21183,10 @@ pdflatex does, where the kernel's display dropped it without a diagnostic (2008.
 1612.02580 `\tag{$*$}`; the ids of later unnumbered displays shift by one). Inside an `{equation}` a `\]` is now amsmath's
 `\end{equation*}`, which pdflatex rejects too ("\begin{equation} ended by \end{equation*}"), not the cheap intertext.
 Guard `perfect_kernel_batchclustfix3::amsmath_display_brackets` (repro
-`ams-internals/amsmath_display_brackets_pair_with_equation_star`).
+`ams-internals/amsmath_display_brackets_pair_with_equation_star`). A `$$ … $$` inside `\[ … \]` (or `{equation*}`) ends
+one unnumbered display and opens the next, as in TeX: the cheap intertext closes and reopens `{equation*}` when
+`\@currenvir` names it, not always `{equation}` (2606.13867; KNOWN_PERL_ERRORS #1295), guards
+`perfect_kernel_batchclustfix3::{amsmath_display_brackets_dollar_dollar, amsmath_equation_dollar_dollar_keeps_its_number}`.
 
 ### 1092. etoolbox's `\robustify` leaves a native binding alone, unless it is a TeX primitive (CLUSTFIX3)
 

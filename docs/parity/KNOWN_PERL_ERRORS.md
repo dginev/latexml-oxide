@@ -22072,3 +22072,22 @@ Short abstract text.
 Perl: hep-th0110297 keeps 55 words (1 Error), math0006149 8 words (58 Errors). Rust: the bibliography ends the
 abstract, which keeps its first paragraph; the rest is body text (OXIDIZED_DESIGN_DIVERGENCES #1101).
 
+## 1295. The cheap intertext closes `{equation}` inside any display
+
+`$$` (or the kernel's `\]`) inside an equation display is the "cheap intertext": its helpers end the display and begin
+the next (latex_constructs.pool.ltxml:1960-1969), but `\lx@begin@fake@intertext` / `\lx@end@fake@intertext` hard-code
+`\end{equation}` / `\begin{equation}`, so in `{equation*}` they err and add a numbered equation:
+
+```latex
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+Text \begin{equation*} a = b $$ $$ = c.\end{equation*} more.
+\end{document}
+```
+
+Perl: 2 Errors ("Can't close environment equation", then "equation*") and a spurious numbered equation; pdflatex 0
+errors, two unnumbered displays. Rust closes and reopens `{equation*}` when that is the open environment
+(`\@currenvir`; a bare `\equation` leaves the enclosing one there, so it keeps `{equation}`); under amsmath `\[` is
+`{equation*}`, so `\[ a $$ $$ b \]` is the same shape (2606.13867; OXIDIZED_DESIGN_DIVERGENCES #1091). Guard
+`perfect_kernel_batchclustfix3::amsmath_display_brackets_dollar_dollar`.

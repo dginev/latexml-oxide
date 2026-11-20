@@ -1,0 +1,18 @@
+% amsmath.sty:2950-2951 makes `\[`/`\]` mean `\begin{equation*}`/`\end{equation*}`; a `$$` inside ends the display
+% (tex.web §1193-1197), the next `$$` opens a fresh one (§1138), and `\]` closes that (amsmath.sty:2794, 2813).
+% The kernel's cheap intertext (`\lx@eDM@in@equation`, sect07.rs; Perl latex_constructs.pool.ltxml:1966-1969)
+% closed and reopened `{equation}` whatever display was open.
+% witness: 2606.13867 (derivation.tex:142, regression from #929)
+% oracle:  pdflatex 0 errors: First / a=b / =c. Then / x=y / text kept / =z. Also / p=q / =r. Done; no number
+% engines: rust (c9f8fd1) 6 errors ("Can't close environment equation" / "equation*" per display) and three
+%          spurious numbered equations; perl 2 errors on the `{equation*}` display (KNOWN_PERL_ERRORS)
+% expect:  0 errors, 0 warnings; six unnumbered ltx:equation, no tag, "text kept" between x=y and =z
+% guard:   perfect_kernel_batchclustfix3::amsmath_display_brackets_dollar_dollar
+% status:  GREEN (REG929, 2026-11-20; was RED)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+First \[ a=b $$ $$ =c. \] Then
+\[ x=y $$ text kept $$ =z. \] Also
+\begin{equation*} p=q $$ $$ =r. \end{equation*} Done.
+\end{document}
