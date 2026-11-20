@@ -1,0 +1,13 @@
+% witness: astro-ph0112270 (shipped revtex 4.0 ltxutil.sty:682; ~21 run-397 recursion Fatals)
+% oracle:  pdflatex 0 errors: section "I. A", then "x"
+% engines: rust MAIN928 = Fatal:Timeout:Recursion (the revtex preload of hyperref installed its `\refstepcounter`
+%          dispatch through `\H@refstepcounter`, which ltxutil's `\let` points back at it); Perl not run
+% expect:  0 errors, 0 warnings; one numbered `ltx:section` titled A
+% status:  RED (MAIN928) -> GREEN (LOOPFIX)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\makeatletter\let\H@refstepcounter\refstepcounter\makeatother
+\begin{document}
+\section{A}
+x
+\end{document}

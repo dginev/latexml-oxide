@@ -1,0 +1,13 @@
+% witness: 2504.21590 (the author's `\def\not#1{\slashed{#1}}`)
+% oracle:  pdflatex 0 errors: a slashed p
+% engines: rust MAIN928 = Fatal:Timeout:Recursion (slashed's `\lx@slashed` called `\not` by name; slashed.sty:112-118 never does);
+%          Perl 0.8.8 the same binding (slashed.sty.ltxml)
+% expect:  0 errors, 0 warnings; the kernel's `\not` saved at load slashes p (`p̸`)
+% status:  RED (MAIN928) -> GREEN (LOOPFIX)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{slashed}
+\def\not#1{\slashed{#1}}
+\begin{document}
+$\not{p}$
+\end{document}
