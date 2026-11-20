@@ -685,6 +685,8 @@ mod perfect_kernel_batchrc1;
 mod perfect_kernel_batchregbind;
 /// REGCHEM: a `\ce` formula holding a macro that expands to a math shift is mhchem's own output.
 mod perfect_kernel_batchregchem;
+/// REGFIXB: an `\halign` that `\lastbox` took is a box and ends no paragraph (easytable/easybmat's peel).
+mod perfect_kernel_batchregfixb;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

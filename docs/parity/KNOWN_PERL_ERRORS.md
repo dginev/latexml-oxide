@@ -22072,3 +22072,23 @@ Short abstract text.
 Perl: hep-th0110297 keeps 55 words (1 Error), math0006149 8 words (58 Errors). Rust: the bibliography ends the
 abstract, which keeps its first paragraph; the rest is body text (OXIDIZED_DESIGN_DIVERGENCES #1101).
 
+## 1296. An `\halign` that `\lastbox` took still ends the paragraph it is put in
+
+`\lastbox` takes a box (tex.web §1080); an `\halign` on a vertical list is its rows, each an hbox (§799). Perl's
+`\lastbox` pops the `\halign` whatsit, whose `beforeConstruct` (`maybeCloseElement('ltx:p')`,
+TeX_Tables.pool.ltxml:175-177) then closes the paragraph the box is copied into, and the table leaves the box:
+
+```latex
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\halign{#\cr a\cr}\global\setbox1\lastbox}
+\mbox{\vbox{\vphantom{\copy1}}}
+After.
+\end{document}
+```
+
+Perl: 3 Errors ("Closing </ltx:text> whose open descendents do not auto-close", "Attempt to close
+<ltx:_CaptureBlock_>"), the table out of the phantom; pdflatex 0. Rust: the taken `\halign` is marked as a box and
+closes nothing (tex_box.rs `taken_as_box`). With `\unvbox` splicing the list (#840) easytable's and easybmat's
+`\@easy@buildbox` peel reaches it: ~250 arXiv papers (1705.10408, 2002.06044, 2109.00258, 2106.13444, 1710.10243).
+Guards `perfect_kernel_batchregfixb::{lastbox_halign_is_a_box, easytable_easybmat_lastbox_peel}`.
