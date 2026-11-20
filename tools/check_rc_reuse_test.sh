@@ -2,6 +2,10 @@
 # Offline self-tests for tools/check_rc_reuse.sh (scratch git repos + fake gh).
 
 set -euo pipefail
+# The pre-push hook (.githooks/pre-push -> tools/lint.sh) runs this with git's repo variables exported: in a linked
+# worktree an absolute GIT_DIR, under which every `git -C <scratch>` below would act on the host repo (its shared
+# config, index, branch and tags). Same guard as tools/perfect_kernel/next_entry_numbers_test.sh.
+unset $(git rev-parse --local-env-vars)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CHECKER="$SCRIPT_DIR/check_rc_reuse.sh"
@@ -389,6 +393,35 @@ if ! PATH="$cb4:$PATH" NIGHTLY_BASE_URL="https://fake.dist" NIGHTLY_LOOKBACK_DAY
   ok "resolve-nightly exits non-zero when lookback window has no complete nightly"
 else
   not_ok "resolve-nightly exits non-zero when lookback window has no complete nightly" "unexpectedly succeeded"
+fi
+
+# 15. The hook's environment: a host repo with a linked worktree, its absolute GIT_DIR exported. This test, run
+#     nested from inside the host worktree, must pass and leave the host untouched (no `core.bare`, identity, tag,
+#     commit or index change).
+if [ -z "${CHECK_RC_REUSE_TEST_NESTED:-}" ]; then
+  host="$TMP_ROOT/host"
+  git init -q -b main "$host"
+  printf 'tracked\n' >"$host/file.txt"
+  git -C "$host" add -A
+  git -C "$host" -c user.name=h -c user.email=h@h commit -qm host
+  git -C "$host" worktree add -q -b hostbranch "$TMP_ROOT/hostwt"
+  host_gitdir="$(git -C "$TMP_ROOT/hostwt" rev-parse --absolute-git-dir)"
+  host_state() {
+    echo "bare=$(git -C "$host" config core.bare) user=$(git -C "$host" config user.name || true)"
+    echo "refs=$(git -C "$host" for-each-ref --format='%(refname) %(objectname)' | tr '\n' ' ')"
+    echo "status=$(git -C "$TMP_ROOT/hostwt" status --porcelain | tr '\n' ' ')"
+  }
+  before="$(host_state)"
+  nested="$(cd "$TMP_ROOT/hostwt" && GIT_DIR="$host_gitdir" CHECK_RC_REUSE_TEST_NESTED=1 bash "$SCRIPT_DIR/$(basename "$0")" 2>&1 || true)"
+  case "$nested" in
+    *" passed, 0 failed"*) ok "nested self-test under an exported GIT_DIR passes" ;;
+    *) not_ok "nested self-test under an exported GIT_DIR passes" "$(printf '%s\n' "$nested" | tail -3)" ;;
+  esac
+  if [ "$(host_state)" = "$before" ]; then
+    ok "nested self-test leaves the host repo untouched"
+  else
+    not_ok "nested self-test leaves the host repo untouched" "before: $before / after: $(host_state)"
+  fi
 fi
 
 printf '%d passed, %d failed\n' "$pass" "$fail"
