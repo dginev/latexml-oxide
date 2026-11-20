@@ -300,7 +300,7 @@ LoadDefinitions!({
   // curated list is incomplete by construction, and the CSes it misses are
   // handled generally by `latex_kernel::autoload_latex_kernel` (registered
   // below), which loads the format for ANY undefined CS the ambient kernel
-  // dump defines. Two Rust-only accretions that used to live here,
+  // dump defines (with no dump, for the first one). Two Rust-only accretions that used to live here,
   // `\UseRawInputEncoding` (witness 2403.19280) and `\DocumentMetadata`
   // (witness 2305.08034), were retired into that mechanism. What the eager
   // triggers still buy over it: they fire on a legitimate *use*, before any
@@ -320,7 +320,8 @@ LoadDefinitions!({
     crate::latex_kernel::load_latex_pool()?;
   });
   // Arm the general safety net: any undefined CS that the ambient kernel dump
-  // defines loads the format and retries, instead of becoming `<ltx:ERROR/>`.
+  // defines (with no dump, the first undefined CS) loads the format and retries,
+  // instead of becoming `<ltx:ERROR/>`.
   // See `latex_kernel` for the oracle's rationale and the no-dump branch.
   binding::kernel_autoload::set_hook(crate::latex_kernel::autoload_latex_kernel);
   binding::kernel_autoload::set_refused_environment_hook(
