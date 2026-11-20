@@ -2495,7 +2495,9 @@ fn label_macros_from_refused_cite() -> Vec<Token> {
   let branch = match refused.get_expansion() {
     Some(ExpansionBody::Tokens(body)) => match body.unlist_ref().as_slice() {
       [ifstar, .., open, branch, close]
-        if *ifstar == T_CS!("\\@ifstar") && *open == T_BEGIN!() && *close == T_END!() =>
+        if ifstar.defined_as(&T_CS!("\\@ifstar"))
+          && open.defined_as(&T_BEGIN!())
+          && close.defined_as(&T_END!()) =>
       {
         *branch
       },
@@ -2514,13 +2516,16 @@ fn label_macros_from_refused_cite() -> Vec<Token> {
     return Vec::new();
   };
   let body = body.unlist_ref();
-  if !full.is_expandable() || takes_arguments || body.last() != Some(&T_CS!("\\@internalcite")) {
+  let tail_is_internalcite = body
+    .last()
+    .is_some_and(|last| last.defined_as(&T_CS!("\\@internalcite")));
+  if !full.is_expandable() || takes_arguments || !tail_is_internalcite {
     return Vec::new();
   }
   let def = T_CS!("\\def");
   let undefined: Vec<Token> = body
     .windows(2)
-    .filter(|pair| pair[0] == def && !is_defined_token(&pair[1]))
+    .filter(|pair| pair[0].defined_as(&def) && !is_defined_token(&pair[1]))
     .map(|pair| pair[1])
     .collect();
   if undefined.is_empty() {
