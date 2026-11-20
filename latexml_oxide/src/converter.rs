@@ -34,17 +34,11 @@ enum RhaiScope {
   TeXTree,
 }
 
-/// Resolve a runtime `<request>.rhai` binding within `scope` and load it if
-/// present. Returns `None` when no such file exists, so the caller falls
-/// through to the next tier of the chain.
-/// See `docs/parity/script_bindings_plan.md` §7.
+/// The runtime `<request>.rhai` binding within `scope`, if there is one.
 #[cfg(feature = "runtime-bindings")]
-fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<BindingSource>> {
-  use latexml_core::{
-    binding::content::{FindFileOptions, find_file},
-    state::record_opened_source,
-  };
-  let path = find_file(
+fn find_rhai_binding(request: &str, scope: RhaiScope) -> Option<String> {
+  use latexml_core::binding::content::{FindFileOptions, find_file};
+  find_file(
     request,
     Some(FindFileOptions {
       // Append `.rhai`, so `foo.sty` resolves `foo.sty.rhai`.
@@ -62,7 +56,17 @@ fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<BindingSource
       search_paths_only: matches!(scope, RhaiScope::LocalPaths),
       ..FindFileOptions::default()
     }),
-  )?;
+  )
+}
+
+/// Resolve a runtime `<request>.rhai` binding within `scope` and load it if
+/// present. Returns `None` when no such file exists, so the caller falls
+/// through to the next tier of the chain.
+/// See `docs/parity/script_bindings_plan.md` §7.
+#[cfg(feature = "runtime-bindings")]
+fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<BindingSource>> {
+  use latexml_core::state::record_opened_source;
+  let path = find_rhai_binding(request, scope)?;
   // Pin the resolved `.rhai` in the opened-sources read-log. `load_file`
   // below reads it with a raw `std::fs::read_to_string` (it is not opened
   // through a `Mouth`, so `Mouth::create`'s `record_opened_source` never
@@ -475,7 +479,16 @@ fn figure_output_cue(main_code: &str, dir: Option<&std::path::Path>) -> state::F
 ///      cannot silently displace the compiled `amsmath` binding. Last, so the
 ///      kpathsea probe is paid only by requests nothing else could answer.
 ///      `runtime-bindings` only.
+///
+/// Tier 1's binding is the only one loaded for its name, and is the file itself:
+/// what a compiled binding does as a stand-in for an author's file (reading the
+/// paper's shipped copy after it) does not follow it either, so the core asks
+/// tier 1 first ([`state::set_local_binding_finder`]; #947).
 pub(crate) fn install_binding_dispatch(extra: Option<BindingDispatcher>) {
+  #[cfg(feature = "runtime-bindings")]
+  state::set_local_binding_finder(Rc::new(|request: &str| {
+    find_rhai_binding(request, RhaiScope::LocalPaths)
+  }));
   set_bindings_dispatch(Rc::new(move |request: &str| {
     #[cfg(feature = "runtime-bindings")]
     if let Some(result) = rhai_dispatch(request, RhaiScope::LocalPaths) {

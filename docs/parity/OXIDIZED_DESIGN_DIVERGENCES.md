@@ -12885,7 +12885,10 @@ extra command the copy defines and the paper uses is undefined (aas_macros.sty:9
 (`fallback_request` for a versioned fallback: `icml2026` → icml2025.sty), found in the paper's source directory or a
 `{filecontents}` file, never TeX Live's — is read raw at the same point, origin `File` (content.rs `read_stand_in_copy`,
 from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.tex` route), before the load's
-`\AtEndOfClass`/`\AtEndOfPackage` code runs. The rules:
+`\AtEndOfClass`/`\AtEndOfPackage` code runs. A binding the user supplies in the search paths (a `.rhai` beside the
+document or under `--path`, the chain's first tier) is no stand-in: it is the file itself, as Perl's first `.ltxml`
+found is, and no copy is read after it (`stands_in_for_an_author_file` asks `state::local_binding_file`; #947, guards
+`cluster_cli::user_binding_precedence`). The rules:
 0. *Identity.* The copy is read only when it is the file the binding stands in for (content.rs
    `copy_is_the_stood_in_file`; 72a r3 rule): (a) its `\Provides(Expl)?(Class|Package|File)` names the binding that
    answered (the file itself when the binding is of its name; #744), or a file the binding is built on — one its own code loads (`state::note_stand_in_file`,

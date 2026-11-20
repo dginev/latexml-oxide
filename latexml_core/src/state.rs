@@ -17,7 +17,7 @@ use crate::{
   Digested, DigestedData,
   alignment::Alignment,
   common::{
-    BindingDispatcher, LabelMappingHook, ResolvingBindingDispatcher,
+    BindingDispatcher, LabelMappingHook, LocalBindingFinder, ResolvingBindingDispatcher,
     arena::{self, SymHashMap, SymStr},
     dimension::Dimension,
     error::{emit_warn, *},
@@ -421,6 +421,8 @@ pub struct State {
   pub bindings_dispatch:       Option<ResolvingBindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
+  /// The chain's first tier, a user's binding file in the local search paths ([`local_binding_file`]).
+  pub local_binding_finder:    Option<LocalBindingFinder>,
   /// All `(name, ext)` pairs for compile-time bindings the dispatchers can
   /// load, stacked one slice per registered dispatcher. Populated at
   /// startup by each binding crate via `add_binding_names`, so both
@@ -616,6 +618,7 @@ impl Default for State {
       opened_sources:          HashSet::default(),
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
+      local_binding_finder:    None,
       binding_names:           Vec::new(),
       label_mapping_hook:      None,
       fallback_meanings:       rustc_hash::FxHashMap::default(),
@@ -8256,6 +8259,16 @@ pub fn set_bindings_dispatch(dispatcher: ResolvingBindingDispatcher) {
 pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   let mut state = state_mut!();
   state.extra_bindings_dispatch = Some(dispatcher);
+}
+pub fn set_local_binding_finder(finder: LocalBindingFinder) {
+  let mut state = state_mut!();
+  state.local_binding_finder = Some(finder);
+}
+/// The binding file a user supplied for `request` in the local search paths, which the chain loads instead of any
+/// compiled binding of that name (#947); `None` without one, or where runtime bindings are not built in.
+pub fn local_binding_file(request: &str) -> Option<String> {
+  let finder = state!().local_binding_finder.clone()?;
+  finder(request)
 }
 
 std::thread_local! {
