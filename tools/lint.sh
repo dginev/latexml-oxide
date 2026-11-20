@@ -28,6 +28,10 @@
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
+# The pre-push hook runs this with git's repository variables exported (in a linked worktree, an absolute GIT_DIR).
+# Clear them, so every check and every self-test's scratch repo finds its repository from its own directory and
+# a scratch `git init`/`git config`/`git commit` can never reach this checkout's shared config, branch or tags.
+unset $(git rev-parse --local-env-vars 2>/dev/null)
 
 fail_fast=0
 [ "${1:-}" = "--fail-fast" ] && fail_fast=1

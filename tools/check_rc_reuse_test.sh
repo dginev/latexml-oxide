@@ -2,6 +2,10 @@
 # Offline self-tests for tools/check_rc_reuse.sh (scratch git repos + fake gh).
 
 set -euo pipefail
+# The pre-push hook (.githooks/pre-push -> tools/lint.sh) runs this with git's repo variables exported: in a linked
+# worktree an absolute GIT_DIR, under which every `git -C <scratch>` below would act on the host repo (its shared
+# config, index, branch and tags). Same guard as tools/perfect_kernel/next_entry_numbers_test.sh.
+unset $(git rev-parse --local-env-vars)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CHECKER="$SCRIPT_DIR/check_rc_reuse.sh"
@@ -73,6 +77,9 @@ case "\$endpoint" in
     if [ "$conclusion" = "success" ] && printf '%s' "\$endpoint" | grep -q "head_sha=${rc_sha}"; then
       printf '998877\n'
     fi
+    ;;
+  *releases/assets/*)
+    cat "\${FAKE_ASSET_DIR:?}/\${endpoint##*/}"
     ;;
   *releases*)
     if [ "$assets_mode" = "both" ]; then
@@ -389,6 +396,73 @@ if ! PATH="$cb4:$PATH" NIGHTLY_BASE_URL="https://fake.dist" NIGHTLY_LOOKBACK_DAY
   ok "resolve-nightly exits non-zero when lookback window has no complete nightly"
 else
   not_ok "resolve-nightly exits non-zero when lookback window has no complete nightly" "unexpectedly succeeded"
+fi
+
+# 16. --fetch-release-inputs: downloads the tag's BUILD-INPUTS + Cargo.lock, checks the lock's SHA-256 against
+#     BUILD-INPUTS and the toolchain's shape, prints the toolchain; any failure exits non-zero and leaves
+#     neither file behind (release-prepare.yml's reuse path and docker.yml's pinning both rely on that).
+fa="$TMP_ROOT/fetch_assets"
+mkdir -p "$fa"
+printf '[[package]]\nname = "x"\nversion = "1.0.0"\n' >"$fa/202"
+lock_sha="$(sha256sum "$fa/202" | awk '{print $1}')"
+fetch_into() { # <bin dir> <dest>
+  PATH="$1:$PATH" REPO=o/r FAKE_ASSET_DIR="$fa" "$CHECKER" --fetch-release-inputs 0.8.0-rc1 "$2"
+}
+fetch_refused() { # <label> <bin dir> <dest>
+  if fetch_into "$2" "$3" >/dev/null 2>&1 || [ -e "$3/Cargo.lock" ] || [ -e "$3/BUILD-INPUTS" ]; then
+    not_ok "$1" "accepted, or left a file in $3"
+  else
+    ok "$1"
+  fi
+}
+fb="$TMP_ROOT/fetch_bin"
+make_fake_gh "$fb" "unused" "0.8.0-rc1" "success" "both"
+printf 'TOOLCHAIN=nightly-2026-11-20\nCARGO_LOCK_SHA256=%s\n' "$lock_sha" >"$fa/101"
+got="$(fetch_into "$fb" "$TMP_ROOT/f1" 2>/dev/null || true)"
+if [ "$got" = "nightly-2026-11-20" ] && cmp -s "$fa/202" "$TMP_ROOT/f1/Cargo.lock" && cmp -s "$fa/101" "$TMP_ROOT/f1/BUILD-INPUTS"; then
+  ok "fetch-release-inputs downloads verified inputs and prints the toolchain"
+else
+  not_ok "fetch-release-inputs downloads verified inputs and prints the toolchain" "got '$got'"
+fi
+printf 'TOOLCHAIN=nightly-2026-11-20\nCARGO_LOCK_SHA256=%s\n' "0000" >"$fa/101"
+fetch_refused "fetch-release-inputs refuses a Cargo.lock whose SHA-256 does not match" "$fb" "$TMP_ROOT/f2"
+printf 'TOOLCHAIN=stable\nCARGO_LOCK_SHA256=%s\n' "$lock_sha" >"$fa/101"
+fetch_refused "fetch-release-inputs refuses a toolchain that is not a dated nightly" "$fb" "$TMP_ROOT/f3"
+printf 'TOOLCHAIN=nightly-2026-11-20\nCARGO_LOCK_SHA256=%s\n' "$lock_sha" >"$fa/101"
+fb2="$TMP_ROOT/fetch_bin2"
+make_fake_gh "$fb2" "unused" "0.8.0-rc1" "success" "missing_lock"
+fetch_refused "fetch-release-inputs refuses a release without a Cargo.lock asset" "$fb2" "$TMP_ROOT/f4"
+fb3="$TMP_ROOT/fetch_bin3"
+make_fake_gh "$fb3" "unused" "0.8.0-rc1" "success" "api_fail"
+fetch_refused "fetch-release-inputs fails cleanly when the API fails" "$fb3" "$TMP_ROOT/f5"
+
+# 15. The hook's environment: a host repo with a linked worktree, its absolute GIT_DIR exported. This test, run
+#     nested from inside the host worktree, must pass and leave the host untouched (no `core.bare`, identity, tag,
+#     commit or index change).
+if [ -z "${CHECK_RC_REUSE_TEST_NESTED:-}" ]; then
+  host="$TMP_ROOT/host"
+  git init -q -b main "$host"
+  printf 'tracked\n' >"$host/file.txt"
+  git -C "$host" add -A
+  git -C "$host" -c user.name=h -c user.email=h@h commit -qm host
+  git -C "$host" worktree add -q -b hostbranch "$TMP_ROOT/hostwt"
+  host_gitdir="$(git -C "$TMP_ROOT/hostwt" rev-parse --absolute-git-dir)"
+  host_state() {
+    echo "bare=$(git -C "$host" config core.bare) user=$(git -C "$host" config user.name || true)"
+    echo "refs=$(git -C "$host" for-each-ref --format='%(refname) %(objectname)' | tr '\n' ' ')"
+    echo "status=$(git -C "$TMP_ROOT/hostwt" status --porcelain | tr '\n' ' ')"
+  }
+  before="$(host_state)"
+  nested="$(cd "$TMP_ROOT/hostwt" && GIT_DIR="$host_gitdir" CHECK_RC_REUSE_TEST_NESTED=1 bash "$SCRIPT_DIR/$(basename "$0")" 2>&1 || true)"
+  case "$nested" in
+    *" passed, 0 failed"*) ok "nested self-test under an exported GIT_DIR passes" ;;
+    *) not_ok "nested self-test under an exported GIT_DIR passes" "$(printf '%s\n' "$nested" | tail -3)" ;;
+  esac
+  if [ "$(host_state)" = "$before" ]; then
+    ok "nested self-test leaves the host repo untouched"
+  else
+    not_ok "nested self-test leaves the host repo untouched" "before: $before / after: $(host_state)"
+  fi
 fi
 
 printf '%d passed, %d failed\n' "$pass" "$fail"

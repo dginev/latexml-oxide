@@ -67,10 +67,17 @@ section is a ≤~100-line curated summary and the detailed `## Unreleased` entri
 land the subcrate bumps. PR → green CI (validates the pin resolves) → merge → tag `X.Y.Z-rcN`
 → `release.yml` builds a **draft** across all 5 platforms. This is the real risk gate:
 **macOS x86_64 (Intel) fat-LTO is the OOM long pole** — confirm it's green before promoting.
-Verify the draft has all 15 assets: `gh release view X.Y.Z-rcN --json assets`.
+Verify the draft has all 17 assets, `BUILD-INPUTS` and `Cargo.lock` among them:
+`gh release view X.Y.Z-rcN --json assets`. Once the RC's executables are tested, **publish
+the draft as a prerelease**: the final can reuse only a published RC's inputs.
 
 ### 3. Promotion PR → final tag (public)
 Tiny commit: `Cargo.toml` `-rcN → X.Y.Z`; refresh the `VERSION=` install samples in `docs/INSTALL.md`.
+Keep it to version pins and docs, on top of the RC's commit: then `release-prepare.yml` reuses the
+RC's nightly and `Cargo.lock` and the final skips the `ci` + `windows-ci` suites the RC passed
+(~540 instead of ~1,970 billed minutes). Any code change after the RC means a new RC instead.
+Dry-run first and expect `skip_tests=true`:
+`gh workflow run release-prepare.yml --ref <promotion branch> -f tag=X.Y.Z` (`docs/release/RELEASING.md`).
 The dynamic `release` badge auto-flips; don't touch the CI/license/ar5iv/arXiv badges. PR → green → merge. Then tag bare:
 ```bash
 git tag -a X.Y.Z -m "…" <merged-sha> && git push origin X.Y.Z
@@ -78,7 +85,7 @@ git tag -a X.Y.Z -m "…" <merged-sha> && git push origin X.Y.Z
 `release.yml` re-builds the matrix, **auto-publishes the public Release**, and fires containers.
 
 ### 4. Verify Gate A + containers + Gate B
-- `gh release view X.Y.Z --json isDraft,assets` → `isDraft=false`, 15 assets.
+- `gh release view X.Y.Z --json isDraft,assets` → `isDraft=false`, 17 assets (`BUILD-INPUTS` and `Cargo.lock` among them).
 - **ghcr `:latest` trap (0.7.4 shipped with none):** confirm `:latest` moved:
   ```bash
   docker manifest inspect ghcr.io/dginev/latexml-oxide:latest | sha256sum

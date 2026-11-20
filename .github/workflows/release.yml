@@ -31,154 +31,17 @@ permissions:
   contents: write
 
 jobs:
-  # Resolve and pin the build inputs ONCE for this release run (RC or final):
-  #   - Rust nightly date (`nightly-YYYY-MM-DD`, overriding rust-toolchain.toml)
-  #   - `Cargo.lock` (consumed with `--locked` by every build leg)
-  #   - `BUILD-INPUTS` (toolchain, `rustc -vV`, lockfile SHA-256, tag/commit)
-  # Both `BUILD-INPUTS` and `Cargo.lock` are attached to the GitHub Release so
-  # they never expire. On a final `X.Y.Z` tag whose diff since the latest green
-  # `X.Y.Z-rcN` touches ONLY `Cargo.toml` version pins and docs, this job reuses
-  # the RC's exact nightly + `Cargo.lock` (rewriting only workspace crate
-  # versions via `cargo update --workspace` and verifying `--verify-lock-diff`)
-  # and sets `skip_tests=true` so the redundant `ci` + `windows-ci` suites are
-  # skipped. Any error or mismatch falls back cleanly to fresh inputs + full CI.
+  # Resolve and pin the build inputs ONCE for this release run (RC or final): the nightly, `Cargo.lock` and
+  # `BUILD-INPUTS`, shared with every leg through the `build-inputs` artifact. On a final whose diff since a
+  # green, published RC is version pins + docs only, it reuses that RC's inputs and sets `skip_tests=true`.
+  # The job lives in release-prepare.yml so it can also be dry-run by hand (see that file's header).
   prepare:
-    name: Resolve pinned build inputs
-    runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    uses: ./.github/workflows/release-prepare.yml
     permissions:
       actions: read
       contents: read
-    outputs:
-      skip_tests: ${{ steps.resolve.outputs.skip_tests }}
-      toolchain: ${{ steps.resolve.outputs.toolchain }}
-      source_rc: ${{ steps.resolve.outputs.source_rc }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: evaluate RC promotion eligibility
-        id: rc
-        env:
-          TAG: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ github.token }}
-        run: bash tools/check_rc_reuse.sh
-
-      - name: resolve or reuse toolchain and Cargo.lock
-        id: resolve
-        env:
-          TAG: ${{ github.ref_name }}
-          REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ github.token }}
-          RC_SKIP: ${{ steps.rc.outputs.skip_tests }}
-          RC_TAG: ${{ steps.rc.outputs.source_rc }}
-          BI_ASSET_ID: ${{ steps.rc.outputs.build_inputs_asset_id }}
-          LOCK_ASSET_ID: ${{ steps.rc.outputs.cargo_lock_asset_id }}
-        run: |
-          set -euo pipefail
-
-          skip_tests="false"
-          source_rc=""
-          toolchain=""
-
-          if [ "${RC_SKIP:-false}" = "true" ] && [ -n "${BI_ASSET_ID:-}" ] && [ -n "${LOCK_ASSET_ID:-}" ]; then
-            reuse_ok=1
-            mkdir -p rc_inputs
-            if ! gh api -H 'Accept: application/octet-stream' \
-              "repos/${REPO}/releases/assets/${BI_ASSET_ID}" > rc_inputs/BUILD-INPUTS; then
-              echo "::warning::failed to download BUILD-INPUTS from ${RC_TAG}; falling back to full pipeline"
-              reuse_ok=0
-            elif ! gh api -H 'Accept: application/octet-stream' \
-              "repos/${REPO}/releases/assets/${LOCK_ASSET_ID}" > rc_inputs/Cargo.lock; then
-              echo "::warning::failed to download Cargo.lock from ${RC_TAG}; falling back to full pipeline"
-              reuse_ok=0
-            fi
-
-            if [ "$reuse_ok" -eq 1 ]; then
-              rc_toolchain="$(sed -n 's/^TOOLCHAIN=//p' rc_inputs/BUILD-INPUTS | head -n1)"
-              rc_lock_sha="$(sed -n 's/^CARGO_LOCK_SHA256=//p' rc_inputs/BUILD-INPUTS | head -n1)"
-              got_lock_sha="$(sha256sum rc_inputs/Cargo.lock | awk '{print $1}')"
-              if ! printf '%s\n' "$rc_toolchain" | grep -Eq '^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
-                echo "::warning::unexpected TOOLCHAIN '${rc_toolchain}' in ${RC_TAG} BUILD-INPUTS; falling back to full pipeline"
-                reuse_ok=0
-              elif [ "$rc_lock_sha" != "$got_lock_sha" ]; then
-                echo "::warning::${RC_TAG} Cargo.lock SHA-256 mismatch (expected ${rc_lock_sha}, got ${got_lock_sha}); falling back to full pipeline"
-                reuse_ok=0
-              fi
-            fi
-
-            if [ "$reuse_ok" -eq 1 ]; then
-              if ! rustup toolchain install "$rc_toolchain" --profile minimal --no-self-update; then
-                echo "::warning::failed to install RC toolchain ${rc_toolchain}; falling back to full pipeline"
-                reuse_ok=0
-              fi
-            fi
-
-            if [ "$reuse_ok" -eq 1 ]; then
-              cp rc_inputs/Cargo.lock Cargo.lock
-              if ! RUSTUP_TOOLCHAIN="$rc_toolchain" cargo update --workspace; then
-                echo "::warning::cargo update --workspace failed against ${RC_TAG} Cargo.lock; falling back to full pipeline"
-                reuse_ok=0
-              elif ! bash tools/check_rc_reuse.sh --verify-lock-diff rc_inputs/Cargo.lock Cargo.lock; then
-                echo "::warning::Cargo.lock diff touched non-workspace packages; falling back to full pipeline"
-                reuse_ok=0
-              fi
-            fi
-
-            if [ "$reuse_ok" -eq 1 ]; then
-              skip_tests="true"
-              source_rc="$RC_TAG"
-              toolchain="$rc_toolchain"
-              echo "Reusing pinned inputs from ${source_rc}: toolchain=${toolchain}"
-            else
-              rm -f Cargo.lock
-            fi
-          fi
-
-          if [ "$skip_tests" != "true" ]; then
-            toolchain="$(bash tools/check_rc_reuse.sh --resolve-nightly)"
-            if ! printf '%s\n' "$toolchain" | grep -Eq '^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
-              echo "::error::could not resolve pinned nightly toolchain (got '${toolchain}')"
-              exit 1
-            fi
-            rustup toolchain install "$toolchain" --profile minimal --no-self-update
-            rm -f Cargo.lock
-            RUSTUP_TOOLCHAIN="$toolchain" cargo generate-lockfile
-            echo "Resolved fresh pinned inputs: toolchain=${toolchain}"
-          fi
-
-          lock_sha="$(sha256sum Cargo.lock | awk '{print $1}')"
-          git_sha="$(git rev-parse HEAD)"
-          mkdir -p build-inputs
-          cp Cargo.lock build-inputs/Cargo.lock
-          {
-            printf 'TOOLCHAIN=%s\n' "$toolchain"
-            printf 'CARGO_LOCK_SHA256=%s\n' "$lock_sha"
-            printf 'GIT_TAG=%s\n' "$TAG"
-            printf 'GIT_SHA=%s\n' "$git_sha"
-            printf 'SOURCE_RC=%s\n' "${source_rc:-none}"
-            printf '\n'
-            RUSTUP_TOOLCHAIN="$toolchain" rustc -vV
-          } > build-inputs/BUILD-INPUTS
-          cat build-inputs/BUILD-INPUTS
-
-          {
-            printf 'skip_tests=%s\n' "$skip_tests"
-            printf 'toolchain=%s\n' "$toolchain"
-            printf 'source_rc=%s\n' "$source_rc"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: upload pinned build inputs
-        uses: actions/upload-artifact@v5
-        with:
-          name: build-inputs
-          path: |
-            build-inputs/BUILD-INPUTS
-            build-inputs/Cargo.lock
-          retention-days: 7
-          if-no-files-found: error
+    with:
+      tag: ${{ github.ref_name }}
 
   # Generate {plain,latex}.YYYY.dump.txt for the 5-year TL window in
   # pinned TL containers (see release-dumps.yml). The dumps are NOT in
