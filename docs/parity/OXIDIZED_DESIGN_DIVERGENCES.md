@@ -10338,7 +10338,9 @@ in TeX, not typeset).
 ### 509. `\endabstract` is locked against redefinition from files (Perl: unlocked)
 
 `\endabstract:locked@files`: a package's `\endabstract` no longer replaces the kernel's (Perl's is unlocked).
-Witness 1606.05599 (its bibliography and abstract are reached again).
+Witness 1606.05599 (its bibliography and abstract are reached again). Exception: a file's `\endabstract` paired with
+its own `\beginabstract` is its own (nanosymp.sty:25-31, cond-mat0105361; `files_lock_holds`, state.rs); the lock
+holds against a file whose `\abstract` redefinition was refused too (IMjournal.sty:81/83, 1702.00108, 2304.05575; #1101).
 
 ### 510. Only a TeX `\item` or `\bibitem` steps the bibliography counter (Perl: recovery entries are numbered)
 
@@ -12717,7 +12719,8 @@ Excluded: the frontmatter containers `ltx:abstract`, `ltx:acknowledgements`, `lt
 `ltx:creator`, and anything inside one (document.rs `outside_frontmatter_container`) — a theorem or a TOC in an
 abstract is a frontmatter question (what the abstract's model should hold, whether the block belongs in the
 frontmatter at all) that the pending frontmatter study decides, so there the Perl/base "isn't allowed" Error stands
-(main-session ruling 2026-10-17; guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`).
+(main-session ruling 2026-10-17) — a theorem or proof in an abstract is dissolved into it since DG's ruling of 2026-11-19
+(#1097; guard `perfect_kernel_batch69c::theorem_in_abstract_is_dissolved_not_bridged`).
 Witnesses 2406.11811 2103.03402 0806.0214 2602.15784 2301.10544 1410.7242 (theorem in a quote), 1412.2039 math0603642
 (TOC in a quote), 2507.09788 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 (theorem in a footnote), 1310.0491
 (an ltx:text). Repros block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards
@@ -21282,6 +21285,80 @@ a found file). **Guards**: `dump_gate_init::nodump_latex_branch_converts_healthi
 `\IfFileExists` before `\documentclass`, hyperref, `\stepcounter`, a list, `\ensuremath`, `\IfDocumentMetadataTF`),
 `preclass_kernel_autoload::latex_route_pre_documentclass_kernel_cs_autoloads` (its dump half).
 
+### 1096. An undefined BibTeX macro is a Warning, as bibtex(1) has it (PLACEFIX)
+
+Perl BibTeX.pm:307-310 raises an Error for a `.bib` macro neither the `.bib` nor the defaults define (`month = june`,
+`sept`, `july`; about 190 papers of run 397) and keeps the name as the value. bibtex(1) prints `Warning--string name
+"june" is undefined` and goes on with the empty string. `pre_bibtex.rs` `report_undefined_macro` now warns whether the
+style is known or not (DG 2026-11-19); the name is still kept as the value, so no word is lost. KNOWN_PERL_ERRORS #1292.
+Guard `perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning` (repro `index-bib/bibtex_month_undefined`).
+
+### 1097. A theorem or proof in an abstract is dissolved into it (PLACEFIX)
+
+`ltx:abstract` holds Block.model, no Para.class, so a `\newtheorem` environment, amsppt's `\proclaim`, plain's, elsart's
+algorithm or a `{proof}` in `{abstract}` erred "<ltx:theorem> isn't allowed in <ltx:abstract>" (Perl the same), the
+content kept in place. Run 397: 86 papers, real theorems (56: 1908.02189, 1604.07743, math0111087) and metadata set as
+`\newtheorem*{keywords}`/`{MSC}`/`{JEL}` (26: 0804.0728, 1405.7144, gr-qc0203098) alike. A theorem in an abstract is
+markup used for a typesetting goal, and the abstract is what stays (DG 2026-11-19): no theorem element is kept. It is
+inserted without the Error and dissolved at its close (`Document::dissolve_theorem_in_abstract`, from
+`close_node_internal`): its title becomes a run-in `ltx:text` (its own fonts, bold for amsthm's plain style; a display
+title, amsppt's `\proclaim`, made bold) at the start of its first `ltx:p`, as the PDF prints it, and its paragraphs' blocks (`ltx:p`, lists, equations, quotes) go
+into the abstract in its place. That paragraph takes the theorem's `xml:id` only: neither `ltx:p` nor `ltx:block` carries
+`labels` or `ltx:tags` in the schema (only an abstract's equations and listings do), so its label and number tags are dropped and a `\ref` to it stays unresolved
+(DG 2026-11-20: schema-valid output over a rare reference). A theorem in a quote in an abstract is dissolved into the quote; elsewhere the #689 bridge is unchanged.
+No name-matching: a keywords "theorem" is dissolved as a real one. The other frontmatter containers (keywords,
+acknowledgements, classification, creator) keep the Error, and a table of contents in an abstract still goes after it
+(#753). Only an abstract its own end closed (`\end{abstract}`, amsppt's `\endabstract`, a heading, the group of
+`\abstract{…}`) dissolves its theorems. One still open at `\end{document}` swallowed the main matter (a
+`\begin{abstract}` never ended, cond-mat9410055; TeX sets the whole paper in it): the abstract is the misused construct
+there, so its theorems stay theorems with the Error, as before (DG 2026-11-20). An abstract opened as a command and
+closed there (math0006149, 1108.5171) is split instead, its theorems moved to the body (#1101).
+`\lx@end@open@frontmatter` (sect02.rs) flags the body it ends, `\lx@add@frontmatter@until` marks that abstract's entry
+`_open_at_end` (`document::ABSTRACT_OPEN_AT_END`), and `within_abstract` passes it over; unwrapping the swallowing
+abstract itself is row R PLACET3.
+Guards `perfect_kernel_batchplacefix::theorem_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_stays`:
+text, equation, list and quote after a theorem, two in a row, a proof, `\newtheorem*`),
+`perfect_kernel_batchplacefix::proclaim_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_proclaim`),
+`perfect_kernel_batchplacefix::theorem_in_unended_abstract_stays_a_theorem` (repros
+`block-model/theorem_in_unended_abstract{,_group}`, split since #1101),
+`perfect_kernel_batch69c::theorem_in_abstract_is_dissolved_not_bridged` (a theorem in a quote in the abstract).
+
+### 1098. nomencl's list in a float's box keeps its box (PLACEFIX)
+
+`\printnomenclature` in a `{framed}`/`{mdframed}` inside a `{table*}` (the IEEE nomenclature box: 111 of run 397's 137
+glossary-cluster papers; 1410.5511, 1608.03855, 1704.00503, 1703.01217) built a sectional `ltx:glossary` where no
+glossary may go ("<ltx:glossary> isn't allowed in <ltx:block>"; Perl: no list at all, its raw nomencl stops at
+scrbase). pdflatex prints the list in the box. Where the nearest container that does not auto-close (past a box's
+capture) is a float (`ltx:figure`, `ltx:table`, `ltx:float`), the binding (`nomencl_sty.rs` `glossary_reachable`, #234)
+now emits in place a paragraph with the bold `\nomname` and an empty `ltx:description class="ltx_nomenclature"` with
+the glossary's id, which MakeGlossary (`make_index.rs`) fills with the same entries as items: the symbol the item's tag,
+the description its paragraph (DG 2026-11-19). The schema allows a `glossarylist` only in an `ltx:glossary`. Everywhere
+else the sectional glossary is opened as before: at section level, and out of a minipage, where it floats to the
+section error-free. Residual: a list in `{IEEEkeywords}` or another frontmatter container (G2/G3, about 9 papers:
+1606.00288, 2111.12783) keeps its Error. Guards `perfect_kernel_batchplacefix::{nomenclature_in_a_box_stays_in_the_box,
+nomenclature_in_a_minipage_is_the_sectional_glossary}` (repros `block-model/nomenclature_in_a_box`,
+`nomenclature_in_a_minipage`).
+
+### 1099. A bibliography inside a float or a heading floats out to the narrative level (PLACEFIX)
+
+A `{thebibliography}` (or `\bibliography`) begun where neither it nor the unit it stands as can go erred "<ltx:
+bibliography> isn't allowed in <ltx:…>". The criterion is the nearest enclosing element that does not auto-close:
+a float (`ltx:figure`, `ltx:table`, `ltx:float`) or a heading (`ltx:title`) is the author's container accidentally
+around the back matter, and the bibliography floats out to the nearest open ancestor that can hold it
+(`Document::float_backmatter_out_of_container`, Perl's `floatToElement`), placed after the container, which stays open
+for the rest of its content; the list's close returns there (`restore_floated_backmatter`). The kernel's
+`{thebibliography}` and `\bibliography` (`adjust_bibliography_element`) and RevTeX 3's, OmniBus's and AASTeX's
+`{references}` (`float_bibliography_out`) share it. Witnesses: cond-mat0108156 (`\end{table}` commented out),
+cond-mat0303649 (an unclosed figure around RevTeX 3's `{references}`), hep-ph0004227 and 1808.04295 (LyX's
+`\subsubsection*{\bibliographystyle{..}\bibliography{..}}`). Residual: cond-mat0108156's `\acknowledgments` in the
+same table keeps its Error (back matter too; row R PLACEACK). A list in a box (an `ltx:block`: a minipage, a framed or
+sidebar frame) or in an abstract does not float: block-local references (2402.17043 and 2502.16577, IEEE CSM sidebars;
+2503.17910, elsarticle's CPC program summary in the abstract; hep-ex0405026, a minipage beside a figure holding the
+conclusions and the references) keep their place and their Error: the schema holds a `biblist` only in an
+`ltx:bibliography`, which is back matter, so a non-sectional in-place list is a schema and MakeBibliography question,
+deferred (row R PLACEB4). DG 2026-11-19. Guard `perfect_kernel_batchplacefix::bibliography_floats_out_of_a_float`
+(repro `block-model/bibliography_floats_out_of_a_float`).
+
 ### 1100. A binding delegates to the internal it saved at load, and aliases only under its package's condition (alias cycles)
 
 **Rule.** Where a binding implements a user-level command by calling another user-level command, it calls a private
@@ -21325,11 +21402,16 @@ physics_commands_are_protected_in_an_edef}` (repros `package-bindings/alias_cycl
 is left alone (`begun_environment`): elsarticle's program summary holds its own bibliography (2503.17910). An abstract
 opened as a command (`\abstract …`, `\abstract{` whose `}` never comes) that the bibliography or `\end{document}`
 (`\lx@end@open@frontmatter`, sect02.rs) closes, not a heading or `\endabstract`, keeps its first paragraph — the
-digested body up to the first paragraph end after typeset content (the body's own `\par`, or a skip's or display's),
-descending into an open group's list — and
-`\lx@add@frontmatter@until` (frontmatter_api.rs `split_after_first_paragraph`) returns the rest where the abstract
-stands, as body material before the bibliography. One Warning, `unexpected:\abstract`, counts the moved words (the
-ink words of the moved boxes, `ink_word_text`).
+digested body up to the first paragraph end after typeset content (the body's own `\par`, or the one a vertical skip
+ends, `\vspace`/`\bigskip`; not a display's, which TeX's paragraph runs across), descending into an open group's list —
+and `\lx@add@frontmatter@until` (frontmatter_api.rs `split_after_first_paragraph`) returns the rest where the abstract
+stands, as body material before the bibliography. Closed by the document's end, it is split only where the rest holds
+the body's structure (`holds_structure`, read off the digested boxes: a whatsit with a `title`, a heading, theorem or
+proof; or with a body and an `id`, a list, display, equation or float — a note or a `{center}` is neither): an
+abstract-only document keeps all its paragraphs, unwarned (DG 2026-11-20). The flag `lx_abstract_ended_late` says which
+closed it (`"bibliography"`, `"end"`); the bibliography sets it, the end of the document re-sets it per pass, and only
+an abstract reads and clears it. One Warning, `unexpected:\abstract`, counts the moved words (the ink words of the moved
+boxes, `ink_word_text`).
 
 **Why.** In TeX the quotation or the group never ends, so the whole paper is set as the abstract (pdflatex 0 `!`;
 "\end occurred inside a group" for the unclosed brace). Kept so, the body and the bibliography sat inside
@@ -21341,13 +21423,17 @@ nets A (the bibliography) and B (the first paragraph).
 **Instances.** M1, a brace-less `\abstract`: hep-th0110297, 1108.5171, 1405.5825, hep-th0602212, gr-qc0302022,
 hep-ph0407142, hep-th0305160. M2, `\abstract{` whose closing brace a footnote or `%` took: math0006149, 1408.0340,
 1501.04098, 1710.10154, 1711.02987, hep-ph9306301, hep-th9506164. Not covered: a `\begin{abstract}` never ended
-(cond-mat9410055), which LaTeX reports at `\end{document}` (its Error) and which stays whole; the document's own
-`\def\abstract{…}` refused by the kernel lock (1209.6193, row R).
+(cond-mat9410055), which LaTeX reports at `\end{document}` (its Error) and which stays whole, its theorems kept (#1097);
+the document's own `\def\abstract{…}` refused by the kernel lock (1209.6193, row R); a short first line (a PACS line)
+taken as the whole abstract; `\printbibliography`, a bare `\thebibliography` and `{references}`, which do not end it.
 
 **Perl.** Perl has neither net and loses the body (KNOWN_PERL_ERRORS #1294). **Guards**
 `perfect_kernel_batchabsfix::{bare_abstract_ended_by_bibliography_keeps_its_first_paragraph,
 unclosed_braced_abstract_ended_by_bibliography_keeps_its_first_paragraph,
-bare_abstract_open_at_end_of_document_keeps_its_first_paragraph}` (repros `sectioning-frontmatter/abstract_*`).
+bare_abstract_open_at_end_of_document_keeps_its_first_paragraph, abstract_only_document_keeps_its_paragraphs,
+a_display_does_not_end_the_first_paragraph}` (repros `sectioning-frontmatter/abstract_*`),
+`perfect_kernel_batch74b::{braceless,braced}_abstract_unclosed_at_end_document_keeps_its_text` (an abstract-only
+document, whole).
 
 ## TeX-source fidelity family (TEXSRC)
 

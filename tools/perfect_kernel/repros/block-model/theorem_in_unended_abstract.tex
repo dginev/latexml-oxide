@@ -1,0 +1,15 @@
+% witness: 1108.5171 (a brace-less `\abstract` no heading ends), math0006149 (an unbalanced `\abstract{`); PLACE397 T3
+% oracle:  pdflatex 0 errors; TeX sets the whole paper in the abstract: "Abstract Summary. Theorem 1 Body theorem.
+%          Text." (the `{abstract}` around the theorem is the misused construct, not the theorem)
+% engines: rust 7ffe5507018 = 1 ("<ltx:theorem> isn't allowed in <ltx:abstract>"), PLACEFIX round 2 = 0 (dissolved)
+% expect:  0 errors, 1 warning (the moved words): the abstract keeps "Summary."; the theorem and "Text." leave it for
+%          the body, in order (ABSFIX, DG 2026-11-20; OXIDIZED_DESIGN_DIVERGENCES #1101)
+% status:  GREEN (PLACEFIX round 3: the theorem kept in the abstract, 1 Error) -> GREEN (ABSFIX round 2: split)
+\documentclass{article}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\abstract Summary.
+
+\begin{theorem}Body theorem.\end{theorem}
+Text.
+\end{document}

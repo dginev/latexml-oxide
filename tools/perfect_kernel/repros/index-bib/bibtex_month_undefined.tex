@@ -1,0 +1,14 @@
+% witness: run 397's ~190 papers with `month = june`/`july`/`sept` (PLACE397 BIBMONTH); bibtex(1) prints
+%          "Warning--string name "june" is undefined" and goes on, the month empty
+% oracle:  pdflatex + bibtex: 0 errors, 1 bibtex warning; style plain prints the month empty: "[1] A. Author. Title.
+%          Journal, 2001."
+% engines: rust 7ffe5507018 = 1 ("The BibTeX macro 'june' is not defined"), perl = 1 (BibTeX.pm:307-310)
+% expect:  0 errors, 1 warning; the entry kept, the name standing as the month
+% data:    latexml_oxide/tests/cluster_regressions/bibtex_month_undefined.bib (the post stage searches there)
+% status:  RED (7ffe5507018) -> GREEN (PLACEFIX; OXIDIZED_DESIGN_DIVERGENCES #1096, KNOWN_PERL_ERRORS #1292)
+\documentclass{article}
+\begin{document}
+See \cite{a}.
+\bibliographystyle{plain}
+\bibliography{bibtex_month_undefined}
+\end{document}

@@ -505,11 +505,10 @@ pub(crate) fn load() -> Result<()> {
         return Ok(Vec::new());
       }
       assign_value("lx_end_open_frontmatter_depth", Stored::Int(depth), Some(Scope::Global));
-      // (a body opened as a command that the document's end closes: an abstract keeps its first paragraph,
-      // `lx_abstract_ended_late`, `\lx@add@frontmatter@until`)
-      if begun_environment().is_none() {
-        assign_value("lx_abstract_ended_late", true, Some(Scope::Global));
-      }
+      // (a body opened as a command that the document's end closes: an abstract may keep only its first paragraph,
+      // `lx_abstract_ended_late`, `\lx@add@frontmatter@until`; set per pass, so an environment's is never flagged)
+      let late = if begun_environment().is_none() { Stored::from("end") } else { Stored::None };
+      assign_value("lx_abstract_ended_late", late, Some(Scope::Global));
       // An environment's body left open is LaTeX's error (latex.ltx `\@checkend`: "\begin{abstract} on input line …
       // ended by \end{document}"; Perl errs too), raised once, for the innermost open environment (`\@currenvir`), on
       // the first pass. A begin code called as a command opens no environment LaTeX checks (`begun_environment`): the
@@ -524,6 +523,8 @@ pub(crate) fn load() -> Result<()> {
           s!("\\begin{{{name}}} ended by \\end{{document}}: the {name} ends here")
         );
       }
+      // (the body so ended swallowed the main matter: `\lx@add@frontmatter@until` marks its entry, OD #1097)
+      assign_value("lx_frontmatter_open_at_end", true, Some(Scope::Global));
       unread(Tokens!(terminal, T_CS!("\\lx@end@open@frontmatter")));
     } else if lookup_bool("lx_abstract_owes_end") {
       // a `\begin{abstract}` a heading ended (`\lx@heading@ends@frontmatter`, sect05.rs) whose `\end{abstract}` never came

@@ -264,39 +264,25 @@ fn clap_is_a_box_in_math() {
   );
 }
 
-/// block-model/theorem_in_abstract_is_not_bridged (CONTROL): a theorem in `{abstract}` and one in a quote in it
-/// (pdflatex 0 errors) keep base's and Perl's 2 Errors "<ltx:theorem> isn't allowed": the P1 bridge stays out of the
-/// frontmatter containers until the frontmatter study is ruled on (main-session ruling 2026-10-17; OXIDIZED_DESIGN #689).
+/// block-model/theorem_in_abstract_is_not_bridged: a theorem in `{abstract}` and one in a quote in it (pdflatex 0
+/// errors). The P1 bridge stays out of the abstract (base and Perl: 2 Errors "<ltx:theorem> isn't allowed"); since DG's
+/// ruling of 2026-11-19 both theorems are dissolved, the first into the abstract, the quoted one into its quote
+/// (OXIDIZED_DESIGN #689, #1097; witnesses 1908.02189, 0804.0728).
 #[test]
-fn theorem_in_abstract_is_not_bridged() {
+fn theorem_in_abstract_is_dissolved_not_bridged() {
   let (stderr, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/block-model/theorem_in_abstract_is_not_bridged.tex"
     ),
     None,
   );
-  assert_eq!(error_count(&stderr), 2, "{stderr}");
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  assert_eq!(
-    stderr
-      .matches("<ltx:theorem> isn't allowed in <ltx:abstract>")
-      .count(),
-    1,
-    "{stderr}"
-  );
-  assert_eq!(
-    stderr
-      .matches("<ltx:theorem> isn't allowed in <ltx:quote>")
-      .count(),
-    1,
-    "{stderr}"
-  );
-  assert!(!xml.contains("inline-logical-block"), "{xml}");
   assert_element(
     &xml,
     "abstract",
     &[],
-    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We show the following.</p><theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag><text font="bold">.</text></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">A statement.</text></p></para></theorem><quote><theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem2"><tags><tag>Theorem 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Theorem 2</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 2</text></tag><text font="bold">.</text></title><para xml:id="Thmtheorem2.p1"><p><text font="italic">Quoted.</text></p></para></theorem></quote></abstract>"#,
+    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We show the following.</p><p xml:id="Thmtheorem1"><text class="ltx_runin"><text font="bold">Theorem 1</text><text font="bold">.</text></text> <text font="italic">A statement.</text></p><quote><p xml:id="Thmtheorem2"><text class="ltx_runin"><text font="bold">Theorem 2</text><text font="bold">.</text></text> <text font="italic">Quoted.</text></p></quote></abstract>"#,
   );
 }
 

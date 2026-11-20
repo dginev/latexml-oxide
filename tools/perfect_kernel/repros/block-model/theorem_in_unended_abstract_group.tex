@@ -1,0 +1,17 @@
+% witness: math0006149 (`\abstract{…` whose group never closes); PLACE397 T3
+% oracle:  pdflatex 0 errors ("(\end occurred inside a group at level 1)"); TeX sets the whole paper in the abstract:
+%          "Abstract Summary. Theorem 1 Body theorem. Text."
+% engines: rust 7ffe5507018 = 1 Error ("<ltx:theorem> isn't allowed in <ltx:abstract>") + 1 Warning (the open group),
+%          PLACEFIX round 2 = 0 Errors (dissolved)
+% expect:  0 errors, 2 warnings (the open group, the moved words): the abstract the end of the document closed from
+%          inside its group (stomach.rs `until_terminal_inside_group`) keeps "Summary."; the theorem and "Text." leave it
+%          for the body, in order (ABSFIX, DG 2026-11-20; OXIDIZED_DESIGN_DIVERGENCES #1101)
+% status:  GREEN (PLACEFIX round 3: the theorem kept in the abstract, 1 Error) -> GREEN (ABSFIX round 2: split)
+\documentclass{article}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\abstract{Summary.
+
+\begin{theorem}Body theorem.\end{theorem}
+Text.
+\end{document}

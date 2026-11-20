@@ -455,12 +455,17 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       engine::latex_constructs::begin_bibliography(whatsit)?;
     },
+    // Out of a float or a heading it cannot open in (OXIDIZED_DESIGN_DIVERGENCES #1099), its end returning there.
+    before_construct => sub[doc, _whatsit] {
+      engine::latex_constructs::float_bibliography_out(doc)?;
+    },
     locked => true
   );
   DefConstructor!("\\endreferences",
     sub[document, _whatsit, _props] {
       document.maybe_close_element("ltx:biblist")?;
       document.maybe_close_element("ltx:bibliography")?;
+      document.restore_floated_backmatter();
     },
     locked => true
   );

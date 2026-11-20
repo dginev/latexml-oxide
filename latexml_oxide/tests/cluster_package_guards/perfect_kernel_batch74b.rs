@@ -25,40 +25,33 @@ macro_rules! convert_repro {
   }};
 }
 
-/// The document both repros below keep, whole: pdflatex sets both paragraphs as the abstract; an abstract opened as a
-/// command that the document's end closed keeps its first paragraph and the rest is body text, counted by a Warning
-/// (DG ruling 2026-11-20, OXIDIZED_DESIGN_DIVERGENCES #1101; was both paragraphs in the abstract).
-const SPLIT_ABSTRACT: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">Abstract only text.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">More abstract text.</p> </para> </document>"#;
+/// The abstract both repros below keep, whole.
+const TWO_PARAGRAPH_ABSTRACT: &str = r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">Abstract only text.</p> <p xml:id="abstract1.2">More abstract text.</p> </abstract>"#;
 
-/// The Warning that counts the paragraph moved out of the abstract.
-const MOVED: &str = "Warning:unexpected:\\abstract an abstract no heading ended holds the document: its first paragraph \
-                     kept, 3 words after it moved to the body";
-
-/// A brace-less `\abstract` no sectioning command ended: its text kept, no Error (was `<document/>`, 2 warnings).
+/// A brace-less `\abstract` no sectioning command ended: both paragraphs in the abstract, clean, as pdflatex prints them
+/// (was `<document/>`, 2 warnings).
 #[test]
 fn braceless_abstract_unclosed_at_end_document_keeps_its_text() {
   let (log, xml) =
     convert_repro!("braceless_abstract_unclosed_at_end_document_keeps_the_document.tex");
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert!(log.lines().any(|l| l == MOVED), "{log}");
-  assert!(xml.contains(SPLIT_ABSTRACT), "{xml}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(TWO_PARAGRAPH_ABSTRACT), "{xml}");
 }
 
-/// An unbalanced `\abstract{`: the same; its open group is a warning too, as pdflatex's "\end occurred inside a
-/// group".
+/// An unbalanced `\abstract{`: the same abstract; its open group is the one warning, as pdflatex's "\end occurred inside
+/// a group".
 #[test]
 fn braced_abstract_unclosed_at_end_document_keeps_its_text() {
   let (log, xml) =
     convert_repro!("braced_abstract_unclosed_at_end_document_keeps_the_document.tex");
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log
       .lines()
       .any(|l| l.starts_with("Warning:unexpected:\\lx@end@abstract")),
     "{log}"
   );
-  assert!(log.lines().any(|l| l == MOVED), "{log}");
-  assert!(xml.contains(SPLIT_ABSTRACT), "{xml}");
+  assert!(xml.contains(TWO_PARAGRAPH_ABSTRACT), "{xml}");
 }
 
 /// An unclosed `\begin{abstract}`: its `\section` closes it (user ruling 2026-10-18), so the section and its text follow

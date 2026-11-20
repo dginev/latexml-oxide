@@ -390,7 +390,7 @@ fn destination_directory_of(destination: &str) -> Option<String> {
 /// handful of pages that actually carry work.
 fn page_placeholder_probes(d: &PostDocument) -> (bool, bool) {
   (
-    !d.findnodes("//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)]")
+    !d.findnodes(latexml_post::make_index::PLACEHOLDERS)
       .is_empty(),
     !d.findnodes("//ltx:bibliography").is_empty(),
   )

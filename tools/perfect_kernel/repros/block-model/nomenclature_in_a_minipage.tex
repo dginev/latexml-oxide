@@ -1,0 +1,15 @@
+% witness: the PLACEFIX round-1 review (S1): `\printnomenclature` in a `{minipage}` in the text
+% oracle:  pdflatex 0 errors; the list "Nomenclature x the unknown y another" printed inside the minipage
+% engines: rust 7ffe5507018 = 0 errors, the list floated out as the section's sectional glossary; PLACEFIX round 1 = 0,
+%          the in-place box list (a change where base was clean)
+% expect:  0 errors, 0 warnings; the sectional `ltx:glossary` after the paragraph, as base: the in-place list is only
+%          for a float (OXIDIZED_DESIGN_DIVERGENCES #1098)
+% status:  GREEN (CONTROL; PLACEFIX round 2)
+\documentclass{article}
+\usepackage{nomencl}
+\makenomenclature
+\begin{document}
+Text $x$.\nomenclature{$x$}{the unknown}\nomenclature{$y$}{another}
+\begin{minipage}{0.5\textwidth}\printnomenclature\end{minipage}
+More text.
+\end{document}

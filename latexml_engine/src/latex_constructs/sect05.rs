@@ -1893,12 +1893,13 @@ pub(crate) fn load() -> Result<()> {
   // paragraph (`\lx@add@frontmatter@until`, `lx_abstract_ended_late`): M1 hep-th0110297, 1108.5171, 1405.5825,
   // hep-th0602212; M2 math0006149, 1408.0340, 1501.04098, 1710.10154. OXIDIZED_DESIGN_DIVERGENCES #1101.
   DefPrimitive!("\\lx@bibliography@ends@frontmatter", {
-    if !lookup_bool("lx_replaying_class_setter")
+    if !in_speculative_digestion()
+      && !lookup_bool("lx_replaying_class_setter")
       && lookup_token("lx@until@terminal").is_some()
       && begun_environment().is_none()
     {
-      // (read and cleared by the body this ends: `\lx@add@frontmatter@until`)
-      assign_value("lx_abstract_ended_late", true, Some(Scope::Global));
+      // (read and cleared by the abstract this ends: `\lx@add@frontmatter@until`)
+      assign_value("lx_abstract_ended_late", "bibliography", Some(Scope::Global));
       unread(Tokens!(T_CS!("\\lx@heading@ends@frontmatter"), T_CS!("\\@startsection@hook")));
     }
   });

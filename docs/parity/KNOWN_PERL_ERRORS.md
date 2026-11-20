@@ -22013,11 +22013,29 @@ latexmlmath --unicodemath=- '\sqrt[3]{x}'
 Rust: `unicode_math.rs` reads the degree from the first argument. Guard
 `unicode_math::tests::nth_root_reads_degree_then_radicand`.
 
+## 1292. An undefined BibTeX macro is an Error where bibtex warns
+
+BibTeX.pm:307-310 raises `Error:unexpected:<name>` for a `.bib` macro that is not defined; bibtex(1) warns ("string name
+… is undefined") and uses the empty string:
+
+```latex
+\documentclass{article}
+\begin{document}\cite{a}\bibliographystyle{plain}\bibliography{m}\end{document}
+% m.bib: @article{a, author={A. Author}, title={Title}, journal={J}, month=june, year=2001}
+% Perl: Error:unexpected:june; bibtex: Warning--string name "june" is undefined
+```
+
+Rust: a Warning, the name kept as the value (OXIDIZED_DESIGN_DIVERGENCES #1096). Guard
+`perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning`.
+
 ## 1293. sv_support reads svjour's and svmult's `\abstract{…}` as an argument
 
-sv_support.sty.ltxml:93-96 routes `\abstract{` to `\@abstract@with@arg{}`, but the classes' `\abstract` takes no
-argument (svjour.cls:832, svmult.cls:1981, the shipped svjour3.cls:966): `{…}` is a group read where it stands. A group
-left open (a footnote's `}` taking the abstract's) is then an argument that runs to the end of the input:
+sv_support.sty.ltxml:93-96 routes `\abstract{` to `\@abstract@with@arg{}`, but svjour's `\abstract` takes no argument
+(svjour.cls:832, the 2003 svmult.cls:1981 environment, the shipped svjour3.cls:966): `{…}` is a group read where it
+stands. A group left open (a footnote's `}` taking the abstract's) is then an argument that runs to the end of the
+input. (Modern svmult, v5.15:2422-2423, `\DeclareRobustCommand\abstract{\@ifstar\@abstgobl\@abstract}` with
+`\def\@abstract#1`, takes one non-`\long` argument: a closed brace reads the same, and an unclosed one is TeX's
+"Paragraph ended before \@abstract was complete", where Rust gives only the open-group Warning.)
 
 ```latex
 \documentclass[global]{svjour}
@@ -22030,7 +22048,8 @@ Body text.
 \end{document}
 ```
 
-Perl: 11 Errors, 4 words kept (astro-ph0702187, math0701897). Rust: `\abstract{` is the kernel's incremental group,
+Perl on this repro: 11 Errors, 4 words kept (the papers: astro-ph0702187, math0701897). Rust: `\abstract{` is the
+kernel's incremental group,
 which the `\section` ends. Guard `perfect_kernel_batchabsfix::sv_braced_abstract_is_a_group_a_section_ends`.
 
 ## 1294. An abstract opened as a command and never ended loses the body

@@ -1715,6 +1715,22 @@ pub(in crate::base_utilities) fn frontmatter_has_open_placekeeper(tag: &str) -> 
   })
 }
 
+/// Set the attribute `key` of the entry at (tag, index).
+pub(in crate::base_utilities) fn frontmatter_set_entry_attr(
+  tag: &str,
+  index: usize,
+  key: &str,
+  value: &str,
+) {
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(mut entry) = frnt.get_mut(tag).and_then(|l| l.get_mut(index))
+    {
+      entry.attr.insert(key.to_string(), value.to_string());
+    }
+  });
+}
+
 /// Replace the first content item (the 'place_keeper') of the entry at
 /// (tag, index). Perl: `$$entry[2] = ...` on the held entry ref.
 pub(in crate::base_utilities) fn frontmatter_set_first_content(

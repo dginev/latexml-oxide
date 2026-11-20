@@ -353,7 +353,10 @@ pub(crate) fn load() -> Result<()> {
       let _ = egroup();
     },
     before_construct => sub[doc,whatsit] {
-      adjust_backmatter_element(doc, whatsit)?;
+      adjust_bibliography_element(doc, whatsit)?;
+    },
+    after_construct => sub[doc,_whatsit] {
+      doc.restore_floated_backmatter();
     },
     properties => sub[args] {
       // The chapterbib/bibunits unit name (`[#1]`) is a LIST IDENTIFIER, matched
@@ -494,7 +497,7 @@ pub(crate) fn load() -> Result<()> {
       setup_pseudo_bibitem()?;
     },
     before_construct => sub[doc,whatsit] {
-      adjust_backmatter_element(doc, whatsit)?;
+      adjust_bibliography_element(doc, whatsit)?;
     },
     locked => true
   );
@@ -503,6 +506,7 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\endthebibliography", sub[document,_whatsit,_props] {
     document.maybe_close_element("ltx:biblist")?;
     document.maybe_close_element("ltx:bibliography")?;
+    document.restore_floated_backmatter();
   },
     before_digest => { Digest!(T_CS!("\\lx@bibliography@postamble"))? },
     // Disarm the `setupPseudoBibitem` redirection that `\thebibliography`
