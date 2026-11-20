@@ -1154,6 +1154,13 @@ impl Token {
     }
   }
 
+  /// Look up an already-interned control-sequence token without interning a
+  /// new symbol if `text` has never been seen.
+  #[inline]
+  pub fn try_cs<T: AsRef<str>>(text: T) -> Option<Self> {
+    arena::get(text).map(|text| Token { text, ..T_CS!("\\relax") })
+  }
+
   /// A cheap structural fingerprint for the cycle-detection guard
   /// ([`crate::cycle_guard`]). Matches [`PartialEq`] semantics: SPACE tokens
   /// fingerprint by catcode alone (their text is irrelevant to equality).
