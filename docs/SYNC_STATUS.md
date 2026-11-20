@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (372 lines, weight 809; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (378 lines, weight 823; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -451,6 +451,25 @@ Rules that keep this file honest and mergeable:
     revtex4-2.cls:7069 `\let\onlinecite\rev@citealp` (the OD #1100 class; no loop witness yet). Post-release; 1
   - CYCLE-WINDOW — `cycle_guard.rs` `MAX_WINDOW = 10`: a loop of 11+ tokens is not caught as a fast Fatal and runs to
     the 180 s wall clock (the apacite loop before LOOPFIX); raise it (DG call). Post-release; 3
+  - PLACEB4 — (PLACEFIX, OD #1099) a block-local reference list (elsarticle CPC program summary in the abstract
+    2503.17910; IEEE CSM sidebars 2402.17043, 2502.16577; hep-ex0405026's minipage) stays in place as DG ruled but keeps
+    its "`<ltx:bibliography>` isn't allowed" Error: the schema allows a `biblist` only in back matter. Ruled design
+    (DG 2026-11-19 "keep in place as a plain list"): a non-sectional list whose items Scan registers as BIBLABEL targets so
+    citations still resolve. ~22 so far; 3
+  - PLACEACK — `\acknowledgments` inside an open float keeps its Error (cond-mat0108156); the float-out of OD #1099 in the
+    acknowledgements constructor would fix it; 1
+  - PLACEG3 — a nomenclature inside an inline frontmatter container (`{IEEEkeywords}` 1606.00288; 2111.12783, 2402.06758)
+    keeps its Error: a paragraph is not allowed there; ~8; 3
+  - PLACEB1 — piparticle(-final).cls:648-666 `{theaffiliation}` does `\let\institution\bibitem` inside `\blfootnote`, so
+    a whole `{thebibliography}` opens in the footnote (1001.2197, 1510.06283; 38 so far; Perl the same,
+    latex_constructs.pool.ltxml:4116-4129). General fix: `\bibitem` in a `\list`-based environment other than
+    thebibliography acts as `\item[\@biblabel{n}]` + anchor; keep astro-ph9806175, 2103.15495, 0801.2060; 3
+  - PLACET3 — an abstract that swallows the main matter (math0006149's unbalanced `\abstract{`, 1108.5171's brace-less
+    `\abstract` with no heading, hep-th0110297) keeps its theorems as `ltx:theorem`, each with its "isn't allowed in
+    <ltx:abstract>" Error (OD #1097, DG 2026-11-20); ABSFIX (in progress) ends such an abstract after its paragraph
+    (DG ruling), which moves those theorems to the body. Repros `block-model/theorem_in_unended_abstract{,_group}`; 3
+  - ABSOWNDEF — a document's own `\long\def\abstract{…}` is refused by the kernel lock (as Perl,
+    latex_constructs.pool.ltxml:1150), so 1209.6193's abstract swallows the body; DG 2026-11-20: keep the lock; 1
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.
