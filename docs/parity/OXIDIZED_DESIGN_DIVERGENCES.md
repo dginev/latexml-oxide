@@ -19,7 +19,7 @@
 > port-bug fix (→ SYNC "Rust Error Fixes"), a gap or residual list (→ SYNC row R), a math-parse divergence (→ `docs/math/OXIDIZED_DESIGN_MATH.md`).
 > A WORKAROUND entry must name the principled mechanism that would replace it and open a SYNC row for it. Entry shape: rule · Perl ref · TeX
 > source:line · sub-rules as bullets · witnesses · guards · upstream status; no batch history (git keeps it); about 60 lines at most. OD
-> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1052** (2026-11-15; #1051 is reserved; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
+> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1103** (2026-11-20; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -21434,6 +21434,22 @@ bare_abstract_open_at_end_of_document_keeps_its_first_paragraph, abstract_only_d
 a_display_does_not_end_the_first_paragraph}` (repros `sectioning-frontmatter/abstract_*`),
 `perfect_kernel_batch74b::{braceless,braced}_abstract_unclosed_at_end_document_keeps_its_text` (an abstract-only
 document, whole).
+
+### 1102. Progress notes carry no elapsed times
+
+**Rule.** A progress note closes with ` )` alone, never with Perl's ` 0.42 sec)`, so a conversion's log is a function
+of its input and two runs of one document log the same bytes. Per-phase wall times are the telemetry module's
+(`latexml_core/src/telemetry.rs`, `docs/performance/TELEMETRY.md`).
+
+**Perl.** `Common/Error.pm:450-456` (`ProgressSpindown` prints `sprintf(" %.2f sec)", $elapsed)` from the timer
+`ProgressSpinup` starts, L435ff). **TeX.** TeX's own log nests the files it reads without times (tex.web:10392
+`print_char("("); incr(open_parens); slow_print(name)`); our notes keep Perl's nesting (#945,
+`common/error.rs` `note_begin`/`note_end`, `DeferredNote`) and TeX's timeless form.
+
+**Why.** Logs are compared byte for byte: the sweep A/B byte-diffs of `.latexml.log` and
+`117_post_2gib_handoff.rs` (`assert_eq!(resident.log, staged.log)`). DG ruling 2026-11-20 (#945: omit, not port, not
+opt-in). **Guards** `117_post_2gib_handoff.rs`; the note structure: `cluster_cli`
+`log_note_nesting::binding_load_note_encloses_what_it_loads`.
 
 ## TeX-source fidelity family (TEXSRC)
 

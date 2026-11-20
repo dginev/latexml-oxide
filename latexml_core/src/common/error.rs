@@ -1656,7 +1656,7 @@ pub fn note_progress_detailed(stuff: &str) {
 /// parentheses is what makes a conversion log readable as a phase tree.
 /// Perl also stamps a `NOTE_TIMERS` entry here so the close can report elapsed
 /// time; this port logs the structure without the timing (per-phase wall times
-/// are the telemetry module's job).
+/// are the telemetry module's job; OXIDIZED_DESIGN #1102).
 pub fn note_begin(stage: &str) {
   if SILENCE_PROGRESS_NOTES.get() {
     return;
