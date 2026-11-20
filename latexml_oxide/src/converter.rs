@@ -71,6 +71,7 @@ fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<BindingSource
   // stale macros survive every reconversion. Recording the resolved path lets
   // the cache invalidate on the file's mtime change.
   record_opened_source(arena::pin(&path));
+  latexml_core::binding::content::name_loading_binding(&path);
   // #560: report the resolved on-disk path as the load's `BindingSource`, so
   // the "(Loading …)" note names the real `.rhai` file rather than the
   // synthesized `<name>_sty.rs` compiled-module proxy name — more useful, and
