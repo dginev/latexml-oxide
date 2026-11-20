@@ -218,6 +218,16 @@ macro_rules! pin {
       None => $crate::common::arena::pin_site(&CACHED, $s),
     }
   }};
+  (concat!($($part:literal),+ $(,)?)) => {{
+    std::thread_local! {
+      static CACHED: std::cell::Cell<Option<$crate::common::arena::SymStr>> =
+        const { std::cell::Cell::new(None) };
+    }
+    match CACHED.with(std::cell::Cell::get) {
+      Some(sym) => sym,
+      None => $crate::common::arena::pin_site(&CACHED, concat!($($part),+)),
+    }
+  }};
 }
 
 /// Assign a string into the arena, returning a unique symbol.

@@ -1136,8 +1136,8 @@ fn unpack_archive(
   let path_str = archive_path.to_string_lossy();
   if path_str.ends_with(".zip") {
     let file = File::open(archive_path)?;
-    let mut archive = zip::ZipArchive::new(file)?;
-    archive.extract(dest)?;
+    let archive = zip::ZipArchive::new(file)?;
+    latexml::util::unpack_zip(archive, dest)?;
   } else if path_str.ends_with(".tar.gz") || path_str.ends_with(".tgz") {
     let file = File::open(archive_path)?;
     let gz = flate2::read::GzDecoder::new(file);

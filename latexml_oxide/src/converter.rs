@@ -611,14 +611,12 @@ impl Converter {
   }
 
   fn initialize_session_logged(&mut self) -> Result<()> {
-    // The engine crate's per-conversion state (the core's is `latexml_core::reset_conversion_state`, run by
-    // `initialize_singletons`): the frontmatter observer's ledger (OXIDIZED_DESIGN_DIVERGENCES #837)
-    latexml_engine::base_utilities::reset_fm_reading();
-    // …and the title-page check's spill notes (OXIDIZED_DESIGN_DIVERGENCES #953)
-    latexml_engine::base_utilities::reset_title_page_check();
-    latexml_engine::pdftex::reset_pdftex_random();
-    // A paper's Lua interpreter (its globals, its working directory) ends with it, as each LuaTeX job's does.
-    latexml_engine::lua_bridge::reset_session();
+    // Per-conversion thread-local state owned by engine & package crates
+    // (the core's is `latexml_core::reset_conversion_state`, run by
+    // `initialize_singletons`): resets frontmatter/title-page/pdftex/lua/
+    // bibtex/splice/siunitx caches so persistent workers never leak across papers.
+    latexml_engine::reset_conversion_state();
+    latexml_package::reset_conversion_state();
     // The main source's kind, for the preloads below and the document's PDF mode
     // (`core_interface::establish_pdf_output_mode`).
     state::set_plain_tex_document(self.compile_route.plain_tex);

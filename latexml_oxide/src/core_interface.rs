@@ -822,9 +822,16 @@ fn apply_rewrite_rules(
         idx, n_rules, elapsed
       );
     } else if elapsed > std::time::Duration::from_secs(5) {
-      eprintln!(
-        "[rewrite-timing] rule #{}/{} SLOW {:.2?} :: {}",
-        idx, n_rules, elapsed, xpath_hint
+      latexml_core::Info!(
+        "rewrite",
+        "slow",
+        s!(
+          "rule #{}/{} took {:.2?} :: {}",
+          idx,
+          n_rules,
+          elapsed,
+          xpath_hint
+        )
       );
     }
   }
@@ -1114,9 +1121,10 @@ impl DigestionAPI for Core {
     // never to the next one a long-lived worker runs — a `.bib` session's
     // `digest_file` propagates a resource fatal without a salvage pass.
     RESCUED_BOXES.with(|r| r.borrow_mut().clear());
-    // Per-conversion notice state in the math parser (the persistent
-    // cortex_worker converts many documents per process).
+    // Per-conversion notice and differential-evidence state in the math parser
+    // (the persistent cortex_worker converts many documents per process).
     latexml_math_parser::reset_conversion_notices();
+    latexml_math_parser::clear_differential_evidence();
     // Same reason: the only other telemetry reset is `take()`, which the
     // binaries skip entirely when no telemetry sink is configured.
     latexml_core::telemetry::reset();
@@ -1170,14 +1178,18 @@ impl DigestionAPI for Core {
         let result = latexml_core::dump_reader::load_native_dump(path);
         match result {
           Ok(count) => {
-            eprintln!(
-              "[latexml-oxide] Loaded {} kernel definitions from {}",
-              count,
-              path.display()
+            latexml_core::Info!(
+              "dump",
+              "loaded",
+              s!(
+                "Loaded {} kernel definitions from {}",
+                count,
+                path.display()
+              )
             );
           },
           Err(e) => {
-            eprintln!("[latexml-oxide] Warning: failed to load dump: {}", e);
+            latexml_core::Warn!("dump", "load_failed", s!("failed to load dump: {}", e));
           },
         }
       }
@@ -1576,6 +1588,7 @@ impl DigestionAPI for Core {
         let trace_spill = std::env::var_os("LXML_TRACE_NODE_BOXES").is_some();
         #[cfg(target_os = "linux")]
         let c_live_before = if trace_spill {
+          // SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
           unsafe { libc::mallinfo2() }.uordblks / (1024 * 1024)
         } else {
           0
@@ -1584,6 +1597,7 @@ impl DigestionAPI for Core {
         let t_spill_dur = t_spill.elapsed();
         #[cfg(target_os = "linux")]
         if trace_spill {
+          // SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
           let c_live_after = unsafe { libc::mallinfo2() }.uordblks / (1024 * 1024);
           eprintln!(
             "streaming: spill C-live {c_live_before} -> {c_live_after} MB ({runs_spilled} runs)"
@@ -1642,6 +1656,7 @@ impl DigestionAPI for Core {
         // fragments.
         #[cfg(target_os = "linux")]
         if fragments.is_multiple_of(4096) {
+          // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
           unsafe {
             libc::malloc_trim(0);
           }
@@ -1651,6 +1666,7 @@ impl DigestionAPI for Core {
         // off under dhat-heap, whose tracking allocator replaces mimalloc.
         #[cfg(not(feature = "dhat-heap"))]
         if fragments.is_multiple_of(4096) {
+          // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
           unsafe {
             libmimalloc_sys::mi_collect(true);
           }
@@ -1663,6 +1679,7 @@ impl DigestionAPI for Core {
           // growth / C fragmentation / Rust growth.
           #[cfg(target_os = "linux")]
           let (c_live_mb, c_free_mb) = {
+            // SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
             let mi = unsafe { libc::mallinfo2() };
             (mi.uordblks / (1024 * 1024), mi.fordblks / (1024 * 1024))
           };

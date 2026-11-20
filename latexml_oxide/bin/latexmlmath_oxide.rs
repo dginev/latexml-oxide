@@ -8,7 +8,7 @@ use libxml::tree::SaveOptions;
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use latexml::util::preset::{lex_single_tex_formula, new_test_engine};
+use latexml::util::preset::{new_test_engine, try_lex_single_tex_formula};
 use latexml_core::{common::error::Result, state};
 use latexml_math_parser::*;
 
@@ -250,7 +250,17 @@ fn real_main() -> Result<()> {
 
   let mut core_engine = new_test_engine();
   let (lexemes, mut lex_nodes, xmath_opt, mut doc) =
-    lex_single_tex_formula(&source, &mut core_engine);
+    match try_lex_single_tex_formula(&source, &mut core_engine) {
+      Ok(r) => r,
+      Err(e) => {
+        Error!(
+          "latexmlmath",
+          "digest",
+          format!("TeX digestion failed: {e}")
+        );
+        process::exit(1);
+      },
+    };
   if lexemes.is_empty() {
     Error!("latexmlmath", "lex", "No lexemes produced from input");
     process::exit(1);

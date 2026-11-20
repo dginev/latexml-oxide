@@ -54,9 +54,13 @@ see that section below.
 - **Archive sources unpack inside their directory.** A `.tar`/`.tar.gz` symbolic link is made only when its target,
   resolved through the links already there, stays inside the extraction directory, a hard link only to a file
   inside it; other links, and entries whose path would leave the directory, are skipped with a counted `Warning`.
-  `.zip` extraction (zip 9.7 or later) creates a link only when its target resolves inside the directory. The
-  search for the main file walks real directories only, so a link to a directory above it (`a -> .`) cannot make it
-  cycle; a persistent `cortex_worker` drops the held archive `Warning`s of a job that failed before its report.
+  `.zip` extraction (`latexml::util::unpack_zip`, used by both `latexml_oxide` and `cortex_worker`) validates every
+  entry path with `enclosed_name()`, creates a symlink only when its target resolves inside the extraction directory
+  (unpacking escaping symlinks as plain files with a counted `Warning` instead of failing the paper), and normalizes
+  permissions across the unpacked tree (`a-x,u+rwX` on Unix; clearing read-only on Windows) so read-only directories
+  never leak temp files and archive exec bits do not survive. The search for the main file walks real directories only,
+  so a link to a directory above it (`a -> .`) cannot make it cycle; a persistent `cortex_worker` drops the held
+  archive `Warning`s of a job that failed before its report.
 - **Fully untrusted sources belong in a container or VM.** TeX itself, and Perl LaTeXML, can read any file the
   invoking user can read, and so can a conversion: run sources you do not trust inside a container or virtual
   machine.
@@ -66,30 +70,24 @@ see that section below.
 
 ## `unsafe` budget
 
-Reconciled **2026-07-20**: the project contains **50 `unsafe {}` blocks +
-5 `unsafe impl Send/Sync` + 0 `unsafe fn` = 55 sites** (was 48+5+0=53 on
-2026-06-24). The delta: `latexml_post/src/xslt.rs` had **4** blocks, not the
-2 §F claims (the `dlsym` write and the parity read-back were two blocks each, unix
-and windows; since 2026-09-26 one link-time `extern` static serves both, so it is
-back to the 2 §F describes), and
-`latexml_core/src/runtime_bindings_reentrancy_model.rs` is a new file not covered
-by any category below — it is the re-entrancy model/proof harness mirroring
-category H. NB the recipe below also matches the word `unsafe` inside comments
-(e.g. `latexml_core/src/parameter.rs`), so subtract prose hits before comparing. Every `unsafe` block
-carries a `// SAFETY:` comment at the call site naming the invariant it
-depends on (the one caveat is category E's *test-only* `EnvGuard`, which
-documents the env data-race invariant but carries a `FIXME` that the default
-test harness does not yet *enforce* single-threaded env access).
+Reconciled **2026-11-20**: the workspace contains **107 `unsafe {}` blocks +
+3 `unsafe impl Send/Sync` + 0 `unsafe fn` = 110 non-comment sites** (86 `unsafe {}`
++ 3 `unsafe impl` outside test suites — including 3 `test-utils`-gated sites in
+`latexml_oxide/src/util/test.rs` — plus 21 test-only `unsafe {}` sites in
+`latexml_oxide/tests/`, `latexml_post/src/test_env.rs`, and
+`latexml_contrib/src/script_bindings/tests.rs`).
 
-2026-11-15 (ARENAR): `latexml_core/src/common/arena.rs` 10 blocks → 1 (category B's eight resolves and
-`first_bytes`'s raw read fold into one; category C is gone).
+Major changes since the 2026-07-20 reconciliation (55 sites):
+- **2026-11-15 (ARENAR):** `latexml_core/src/common/arena.rs` 10 blocks → 1 (category B's eight resolves and `first_bytes`'s raw read fold into one; category C is gone).
+- **2026-11-20:** removed `unsafe impl Send/Sync for Error` (2 sites; `ErrorCategory::Generic` now bounds `Box<dyn Error + Send + Sync>` so `Error` is safely `Send + Sync`), replaced the 2 `unsafe { libc::killpg }` calls in `latexml_post/src/graphics.rs` with safe `rustix::process` helpers in `latexml_core/src/watchdog.rs` (0 new `unsafe`; `graphics.rs` 3 → 1, `watchdog.rs` unchanged at 22), and added `// SAFETY:` comments to all glibc/mimalloc heap-trim & `mallinfo2` sites (`core_interface.rs`, `post.rs`, `render_workers.rs`, `streaming_restart.rs`).
+- **New OS/runtime FFI sites added since July 2026:** `latexml_core/src/watchdog.rs` (22 sites: portable RSS/RAM/disk queries), `latexml_oxide/src/lsp_server/unix.rs` (16 sites: POSIX fork/pipe/poll worker for `--server`), `latexml_oxide/src/{core_interface,post,render_workers,streaming_restart}.rs` (13 sites: `malloc_trim`/`mi_collect`/`mallinfo2`), `latexml_oxide/bin/cortex_worker/exit_report.rs` (6 sites: async-signal-safe crash/exit reporter), `latexml_post/src/xslt.rs` (5 sites), `latexml_oxide/bin/cortex_worker.rs` (4 sites: `mmap`/`raise`/`getrusage`), `latexml_oxide/src/util/test.rs` (3 sites). Every production `unsafe` block carries a `// SAFETY:` comment at the call site.
 
 Counts and exact line numbers drift as the tree changes — this is a
 point-in-time reconciliation, not a live index. Regenerate the authoritative
 enumeration with:
 
 ```
-rg -n 'unsafe\s*\{|unsafe impl|unsafe fn' -g '*.rs' -g '!target'
+rg -n 'unsafe\s*\{|unsafe impl|unsafe fn' latexml_* -g '*.rs'
 ```
 
 The categories below describe what is unavoidable, what is a deliberate
@@ -99,13 +97,14 @@ drift. **When this count changes, update this section** (see Audit posture).
 
 ---
 
-### A. `unsafe impl Send/Sync` — pragmatic single-thread markers (5 sites)
+### A. `unsafe impl Send/Sync` — pragmatic single-thread markers (3 sites)
 
 | Site | Marker | Why |
 |---|---|---|
 | `latexml_core/src/state.rs` | `Send for State` | `State` holds `Rc`/`RefCell`/`libxml::tree::Node`, all `!Send`. We mark it `Send` so the harness can build a State on one thread and *transition* it to another thread before any first use. After that first use, the value is pinned to a single OS thread via `#[thread_local]` switchers (`use_main_state` / `use_std_state` / `use_sty_state`). The crate never reads a `State` from two threads concurrently. |
 | `latexml_core/src/common/store.rs` | `Send/Sync for Stored` | Same shape as `State`: `Stored` variants embed `Rc<RefCell<…>>` and libxml nodes. The marker exists *only* to satisfy `Box<dyn Error + Send + Sync>` trait bounds on error returns — error variants transitively require `Send + Sync` on every embedded type. No code actually shares a `Stored` across threads. |
-| `latexml_core/src/common/error.rs` | `Send/Sync for Error` | `Error` carries a `Locator` whose `Mouth` is `!Send`. Identical justification to `Stored`: needed for the std `Error + Send + Sync` bound; not for actual cross-thread sharing. |
+
+*(Removed 2026-11-20: `latexml_core/src/common/error.rs` `Send/Sync for Error` is no longer needed now that `ErrorCategory::Generic` requires `+ Send + Sync`.)*
 
 **Could we refactor?** Only by swapping every `Rc<RefCell<…>>` in `State`,
 `Stored`, and `Error` for `Arc<Mutex<…>>`. That contradicts the
@@ -167,8 +166,7 @@ and a plain `Child::kill()` does not reap those.
 
 | Call | Why |
 |---|---|
-| `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs post-`fork()`/pre-`exec()`; must be async-signal-safe. `setsid(2)` makes the child a process-group leader so the whole group is killable. |
-| `libc::killpg(pid, SIGTERM)` / `killpg(pid, SIGKILL)` | Graceful then hard kill of the whole group on timeout (mirrors `timeout(1) --kill-after`). |
+| `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs post-`fork()`/pre-`exec()`; must be async-signal-safe. `setsid(2)` makes the child a process-group leader so the whole group is killable (signaling itself now uses safe `rustix::process` via `watchdog.rs`). |
 | `libc::flock(fd, …)` (graphics_cache.rs) | Advisory lock on an owned, open lock-file fd; operates on the fd without aliasing Rust memory. |
 | `std::env::set_var`/`remove_var` in `EnvGuard` (graphics.rs) + a test `set_var` (graphics_cache.rs) | **Test-only.** `set_var`/`remove_var` are `unsafe` in Rust 2024 (concurrent env mutation races). `EnvGuard` is used only in test setup, but the default `cargo test` harness runs a binary's tests multi-threaded and other tests read the env — so the comment documents the invariant and keeps a `FIXME` proposing `serial_test` to make it airtight. The `graphics_cache.rs` test `set_var` is `OnceLock`-serialized. |
 

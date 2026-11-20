@@ -195,6 +195,8 @@ pub fn reset_conversion_state() {
   binding::content::reset_subfile_package_load();
   binding::kernel_autoload::reset_undefined_fallback();
   binding::kernel_autoload::reset_first_use_providers();
+  #[cfg(feature = "token-locators")]
+  token::clear_token_origins();
 }
 
 pub use crate::common::error::*;

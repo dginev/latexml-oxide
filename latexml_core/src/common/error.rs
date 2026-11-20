@@ -1322,13 +1322,6 @@ impl std::ops::DerefMut for Error {
   fn deref_mut(&mut self) -> &mut ErrorData { &mut self.0 }
 }
 impl ErrorTrait for Error {}
-// SAFETY: `Error` contains a `Locator` which embeds a Rc<RefCell<Mouth>> — !Send/!Sync
-// by default. The invariant is the same as for `Stored`: errors propagate within a
-// single thread's conversion pipeline; they never cross thread boundaries at runtime.
-// These impls exist to satisfy `Box<dyn std::error::Error + Send + Sync>` bounds on
-// error return types, which transitively require Send/Sync on all error variants.
-unsafe impl Send for Error {}
-unsafe impl Sync for Error {}
 
 #[derive(Debug)]
 pub enum ErrorCategory {
@@ -1348,7 +1341,7 @@ pub enum ErrorCategory {
   Endgroup,
   FailedParse,
   MaxLimit(usize),
-  Generic(Box<dyn ErrorTrait>),
+  Generic(Box<dyn ErrorTrait + Send + Sync>),
   Filename(String),
   ToDo,
   TokenLimit,
@@ -1523,10 +1516,11 @@ impl From<io::Error> for Error {
 
 impl From<Box<dyn ErrorTrait>> for Error {
   fn from(err: Box<dyn ErrorTrait>) -> Error {
+    let message = err.to_string();
     Error::from(ErrorData {
-      target:   ErrorTarget::Document,
-      message:  err.to_string(),
-      category: ErrorCategory::Generic(err),
+      target: ErrorTarget::Document,
+      category: ErrorCategory::Generic(From::from(message.clone())),
+      message,
     })
   }
 }

@@ -5428,6 +5428,17 @@ thread_local! {
     std::cell::RefCell::new((FxHashSet::default(), Vec::new(), HashMap::default()));
 }
 
+/// Clear any begin-document hook snapshot left behind by an aborted/panicking
+/// conversion so persistent workers never retain `Stored` / `SymStr`s across papers.
+pub fn reset_net_hooks_before() {
+  NET_HOOKS_BEFORE.with(|c| {
+    let mut g = c.borrow_mut();
+    g.0.clear();
+    g.1.clear();
+    g.2.clear();
+  });
+}
+
 /// Around the begin-document hooks (sect02.rs `\begin{document}`): before them (`before`), the Document-origin
 /// definitions that exist and the token registers' contents; after them — `\AtBeginDocument`'s, and the
 /// `begindocument/end` hook's, which `\begin{document}` reads after itself (`\lx@net@document@hooks@done`) —, each

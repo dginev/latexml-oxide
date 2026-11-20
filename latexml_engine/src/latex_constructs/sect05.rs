@@ -3175,6 +3175,15 @@ thread_local! {
     const { RefCell::new(Vec::new()) };
 }
 
+/// Clear per-conversion thread-local caches in `sect05` (`REPLAY_CAPTURED`,
+/// `REPLAY_BODY_STORES`, `KERNEL_TITLE_DEFS`) so persistent workers and
+/// `arena::reset()` never retain stale definitions or `SymStr`s.
+pub(super) fn reset_conversion_caches() {
+  REPLAY_CAPTURED.with(|c| c.borrow_mut().clear());
+  REPLAY_BODY_STORES.with(|c| c.borrow_mut().clear());
+  KERNEL_TITLE_DEFS.with(|c| *c.borrow_mut() = None);
+}
+
 /// Run a raw class's own frontmatter setter that the lock refused (`\lx@dropped@<name>`, state.rs) for its side
 /// effects, its output discarded: the kernel's `\<name>` keeps the frontmatter, and the class keeps the flags and stores
 /// its other code tests (OXIDIZED_DESIGN #482). JINST.cls:755-762 `\renewcommand\author[1]{\global\@authortrue…}` and :819-823
@@ -3527,6 +3536,14 @@ fn replay_dropped_class_code(
   // one source of the frontmatter, and a store the body would define is empty if it was undefined (state.rs, the
   // dropped setter's internals; afthesis.cls:520) — save a body store that now holds the argument (below).
   let mut kernel_stores = vec![T_CS!("\\@author"), T_CS!("\\@shortauthor")];
+  struct ReplayBuffersGuard;
+  impl Drop for ReplayBuffersGuard {
+    fn drop(&mut self) {
+      REPLAY_BODY_STORES.with(|c| c.borrow_mut().clear());
+      REPLAY_CAPTURED.with(|c| c.borrow_mut().clear());
+    }
+  }
+  let _replay_guard = ReplayBuffersGuard;
   REPLAY_BODY_STORES.with(|c| *c.borrow_mut() = stores.iter().map(meaning_key).collect());
   kernel_stores.extend(stores);
   let saved: Vec<Option<Stored>> = kernel_stores.iter().map(lookup_meaning).collect();

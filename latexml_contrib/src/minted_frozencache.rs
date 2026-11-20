@@ -149,7 +149,9 @@ fn parse_line(line: &str) -> Line {
       rest = &rest[1..];
     } else if let Some(after) = rest.strip_prefix("\\PYGZ") {
       // A bare escape outside \PYG (e.g. in an escapeinside remnant).
-      if after.len() >= 2 {
+      // Every PYGZxx name is two ASCII characters; guard char boundary so a
+      // multi-byte UTF-8 character after `\PYGZ` never panics.
+      if after.len() >= 2 && after.is_char_boundary(2) {
         let name = format!("PYGZ{}", &after[..2]);
         if let Some(ch) = pygz_char(&name) {
           lit.push_str(ch);
@@ -469,4 +471,27 @@ pub fn inline_body(raw_code: &str) -> Vec<Token> {
   let mut out = Vec::new();
   emit_text(raw_code, &mut out);
   out
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn parse_line_handles_multibyte_utf8_after_pygz() {
+    // Regression guard: `\PYGZ` followed by multi-byte UTF-8 must not panic on
+    // byte-index slicing (`&after[..2]`).
+    let segs1 = parse_line(r"\PYGZ€foo");
+    assert_eq!(segs1.len(), 1);
+    assert_eq!(segs1[0].text, r"\PYGZ€foo");
+
+    let segs2 = parse_line(r"\PYGZaé");
+    assert_eq!(segs2.len(), 1);
+    assert_eq!(segs2[0].text, r"\PYGZaé");
+
+    // Valid two-ASCII `\PYGZdl{}` still decodes to `$`.
+    let segs3 = parse_line(r"\PYGZdl{}x");
+    assert_eq!(segs3.len(), 1);
+    assert_eq!(segs3[0].text, "$x");
+  }
 }

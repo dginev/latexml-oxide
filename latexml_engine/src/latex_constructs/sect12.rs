@@ -23,6 +23,15 @@ fn length_register_type(register: Option<RegisterType>) -> RegisterType {
   }
 }
 
+thread_local! {
+  /// The `Variable` reader, parsed once per conversion (cleared on conversion
+  /// reset so `Parameters`'s embedded `SymStr`s never outlive `arena::reset()`).
+  static VARIABLE_READER: std::cell::RefCell<Option<Option<Parameters>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+pub(super) fn reset_conversion_caches() { VARIABLE_READER.with(|c| *c.borrow_mut() = None); }
+
 /// `\setlength`/`\addtolength` as latex.ltx:10253-10254 define them — `\def\setlength#1#2{#1 #2\relax}`,
 /// `\def\addtolength#1#2{\advance#1 #2\relax}`: TeX scans the register from `#1` and its value from what follows it
 /// there, the rest of `#1`, a space, then `#2`; what the scan leaves is read after the assignment. So
@@ -36,13 +45,10 @@ fn length_register_type(register: Option<RegisterType>) -> RegisterType {
 /// `#1` begins with no register is TeX's code `#1 #2\relax`, run as it stands (OXIDIZED_DESIGN #746; guard
 /// `perfect_kernel_batch73b::setlength_on_a_non_register_runs_its_code`).
 fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()> {
-  thread_local! {
-    /// The `Variable` reader, parsed once.
-    static VARIABLE: std::cell::OnceCell<Option<Parameters>> = const { std::cell::OnceCell::new() };
-  }
-  let Some(variable) = VARIABLE.with(|cell| {
-    cell
-      .get_or_init(|| {
+  let Some(variable) = VARIABLE_READER.with(|cell| {
+    let mut slot = cell.borrow_mut();
+    slot
+      .get_or_insert_with(|| {
         parse_parameters("Variable", &T_CS!("\\setlength"), true)
           .ok()
           .flatten()

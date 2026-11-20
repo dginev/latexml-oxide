@@ -1444,10 +1444,12 @@ fn run_post_processing_inner(
     // Rate-limited: a trim walks the heap.
     if pages_rendered > 0 && pages_rendered.is_multiple_of(512) {
       #[cfg(target_os = "linux")]
+      // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
       unsafe {
         libc::malloc_trim(0);
       }
       #[cfg(not(feature = "dhat-heap"))]
+      // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
       unsafe {
         libmimalloc_sys::mi_collect(true);
       }
@@ -1462,6 +1464,7 @@ fn run_post_processing_inner(
       && pages_rendered.is_multiple_of(1024)
       && std::env::var("LATEXML_POST_MEMDIAG").is_ok()
     {
+      // SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
       let mi = unsafe { libc::mallinfo2() };
       let rss_mb = latexml_core::watchdog::process_rss_kb().unwrap_or(0) / 1024;
       eprintln!(

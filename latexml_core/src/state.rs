@@ -1683,6 +1683,7 @@ pub fn reset_thread_state() {
     ..StateOptions::default()
   });
   STATE_IN_USE.set(RotateState::Main);
+  STAGED_SNAPSHOTS.with(|m| m.borrow_mut().clear());
 }
 
 /// A refused redefinition of a locked `\<name>` that EXTENDS the meaning it read — the locked binding's replacement

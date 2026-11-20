@@ -153,7 +153,16 @@ fn reap(pid: i32) -> i32 {
   // through; pid is a child this server forked. waitpid/WIF* only read that pid
   // and the local status word — no other memory is touched.
   unsafe {
-    libc::waitpid(pid, &mut status, 0);
+    loop {
+      let rc = libc::waitpid(pid, &mut status, 0);
+      if rc < 0 {
+        if std::io::Error::last_os_error().raw_os_error() == Some(libc::EINTR) {
+          continue;
+        }
+        return -1;
+      }
+      break;
+    }
     if libc::WIFEXITED(status) {
       libc::WEXITSTATUS(status)
     } else if libc::WIFSIGNALED(status) {

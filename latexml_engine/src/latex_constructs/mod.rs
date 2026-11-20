@@ -10400,3 +10400,9 @@ pub(crate) fn absorb_without_tags(document: &mut Document, piece: &Digested) -> 
   }
   Ok(())
 }
+
+/// Clear per-conversion thread-local caches held by `latex_constructs` submodules.
+pub fn reset_conversion_caches() {
+  sect05::reset_conversion_caches();
+  sect12::reset_conversion_caches();
+}

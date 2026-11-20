@@ -110,3 +110,19 @@ pub mod amstex; // Perl: AmSTeX.pool.ltxml
 // Skeleton: full bib defs port pending (see docs/POOL_PARITY_AUDIT.md).
 pub mod bibtex; // Perl: BibTeX.pool.ltxml
 pub mod pre_bibtex; // Perl: Pre/BibTeX.pm (+ Pre/BibTeX/Entry.pm) — low-level .bib parser
+
+/// Reset all per-conversion thread-local state owned by `latexml_engine` so a
+/// persistent worker (`cortex_worker`, LSP) starts every paper clean and never
+/// carries BibTeX entries, Lua sessions, hook snapshots, or `SymStr` caches
+/// across conversions.
+pub fn reset_conversion_state() {
+  base_utilities::reset_fm_reading();
+  base_utilities::reset_title_page_check();
+  pdftex::reset_pdftex_random();
+  lua_bridge::reset_session();
+  bibtex::reset();
+  pre_bibtex::clear_wanted_keys();
+  tex_box::reset_splice_state();
+  frontmatter_stores::reset_net_hooks_before();
+  latex_constructs::reset_conversion_caches();
+}
