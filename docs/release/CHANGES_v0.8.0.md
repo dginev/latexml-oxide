@@ -50,8 +50,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     kernel's `\not`, 2504.21590). amsmath's `\let\sum@\sum` and its eleven siblings run only while `\coprod` is still a
     math character, as amsmath.sty tests, so inlined AmS-TeX keeps its own `\sum@` (math0612243, 0705.4126; ~18). The
     revtex and AASTeX 5 classes' hyperref preload no longer installs hyperref's `\refstepcounter` dispatch, which a
-    shipped revtex 4.0 `ltxutil.sty` pointed back at itself (astro-ph0112270; ~21); a document's own hyperref still
-    installs it. physics's commands are `\protected`, as `\DeclareDocumentCommand` makes them, so `\pdv` in an `\edef`
+    shipped revtex 4.0 `ltxutil.sty` pointed back at itself (astro-ph0112270; ~21); under revtex a document's own
+    hyperref still installs it (under AASTeX 5.x hyperref stays marked loaded, as in Perl, so it does not: row R
+    AAS5-HYPERREF). physics's commands are `\protected`, as `\DeclareDocumentCommand` makes them (all but `\svmqty` and
+    `\trace`/`\Trace` with their `\tr`/`\Tr` aliases: row R PHYS-PROTECT), so `\pdv` in an `\edef`
     stays itself (2001.08539, 2505.01628; ~7), and its shorthands `\vev`, `\acommutator`, `\fderivative` and
     `\paulixmatrix`/`\pauliymatrix`/`\paulizmatrix` are defined. OXIDIZED_DESIGN #1100. Guards
     `cluster_package_guards::perfect_kernel_batchloopfix::*`.

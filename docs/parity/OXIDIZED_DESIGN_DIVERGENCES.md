@@ -21256,12 +21256,16 @@ looped (math0612243, 0705.4126, math0112238; ~18). The revtex classes' preload o
 kept for documents that use its commands, marked unloaded) installed hyperref's `\refstepcounter` dispatch through
 `\H@refstepcounter`, which the shipped revtex 4.0 ltxutil.sty:682 `\let\H@refstepcounter\refstepcounter` pointed back
 at it (astro-ph0112270; ~21); the preload now restores the kernel's `\refstepcounter` (as `aastex_cls.rs` does after
-aas_support's preload for AASTeX 5.x, which loads no hyperref), and the document's own `\usepackage{hyperref}`
-installs the dispatch. slashed's `\lx@slashed` called `\not` by name, which slashed.sty:112-118
+aas_support's preload for AASTeX 5.x, which loads no hyperref). Under revtex the document's own
+`\usepackage{hyperref}` installs the dispatch; under AASTeX 5.x aas_support leaves hyperref marked loaded (as Perl), so
+it does not, and cleveref's hyperref branch (cleveref.sty:2044-2054, patching only `\H@refstepcounter`) then sets no
+`\cref@currentlabel` (an aastex + algpseudocode + cleveref probe: 2 Errors; aastex + cleveref in 0 of 35,942 census
+papers; row R AAS5-HYPERREF). slashed's `\lx@slashed` called `\not` by name, which slashed.sty:112-118
 never does, and an author's `\def\not#1{\slashed{#1}}` looped (2504.21590). physics's commands, built on helpers that
 take the command itself as their reversion argument, re-expanded inside their own helper in an `\edef` (ifthen's
 `\equal` under algpseudocode's `\Function`; 2001.08539, 2505.01628; ~7; Perl physics.sty.ltxml:401/464-476 hangs
-alike): every command physics.sty declares with `\DeclareDocumentCommand` is `protected`, as ltcmd makes it.
+alike): the commands physics.sty declares with `\DeclareDocumentCommand` are `protected`, as ltcmd makes them,
+all but `\svmqty` and `\trace`/`\Trace` (with their `\tr`/`\Tr` aliases), which loop in no `\edef` (row R PHYS-PROTECT).
 
 **Perl.** Perl has no apacite binding (101 undefined-`\citet` errors on the repro), runs amsmath's `\X@` lets only
 through the raw package's test, has no `\refstepcounter` dispatch (hyperref.sty.ltxml:383), and loops on physics as we

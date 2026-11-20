@@ -320,8 +320,8 @@ LoadDefinitions!({
   // file, all under the same rationale. Individual entries don't
   // re-carry the WISDOM #44 tag to avoid comment noise.
   //
-  // Every command physics.sty declares with `\DeclareDocumentCommand` is `protected => true` here, as ltcmd makes
-  // them: the helpers take the command itself as their reversion argument, so in an `\edef` (ifthen's `\equal` under
+  // The commands physics.sty declares with `\DeclareDocumentCommand` are `protected => true` here, as ltcmd makes
+  // them (all but `\svmqty`, `\trace`/`\Trace`; row R PHYS-PROTECT): the helpers take the command itself as their reversion argument, so in an `\edef` (ifthen's `\equal` under
   // algpseudocode's `\Function`) an unprotected `\pdv` re-expanded inside its own helper without end (2001.08539,
   // 2505.01628; Perl physics.sty.ltxml:401/464-476 alike; OXIDIZED_DESIGN_DIVERGENCES #1100). `Let!` copies the flag.
 

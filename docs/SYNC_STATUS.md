@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (365 lines, weight 794; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (372 lines, weight 809; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -426,6 +426,30 @@ Rules that keep this file honest and mergeable:
   - HYPERFAMILY — (INTERIM397g, OD #588) one family member's first use defines its whole family (`\phantomsection`
     then `\providecommand\nameref` is skipped) — arXiv's hyperref build behaves the same; the `ar5iv_sty.rs` comment
     "what pdflatex without the package sees" overclaims for the family's other names. Doc fix; 1
+  - AAS5-HYPERREF — (LOOPFIX review, OD #1100) under AASTeX 5.x aas_support leaves hyperref marked loaded (as Perl), so
+    after `aastex_cls.rs` restores the kernel's `\refstepcounter` a document's own `\usepackage{hyperref}` does not
+    re-install the dispatch, and cleveref's hyperref branch (cleveref.sty:2044-2054) sets no `\cref@currentlabel`:
+    `\documentclass{aastex}` + algorithm/algpseudocode + cleveref, `\label` in an `algorithmic` line, `\cref` → 2
+    Errors (`\cref@currentprefix` expands into itself; base 0, pdflatex 0). aastex + cleveref in 0 of 35,942 census papers.
+    Fix: `unmark_loaded("hyperref.sty")` for AASTeX 5.x after aas_support (A/B AASTeX 5 papers: `\@ifpackageloaded`
+    turns false). Post-release; 3
+  - PHYS-PROTECT — (LOOPFIX review) `\svmqty` (physics_sty.rs:1714, physics.sty:108) and `\trace`/`\Trace` (with the
+    `\tr`/`\Tr` aliases, physics.sty:353-354/371-372) are `\DeclareDocumentCommand`s still unprotected here; no loop
+    found (`\edef\x{\svmqty{a}}` clean). Protect them with the others. Post-release; 1
+  - PHYS-COTH — physics.sty:346 redefines `\coth` as its other hyperbolic functions; doing so here moves the
+    complex/physics golden (TRIGFUNCTION). Also undefined: `\homework`, `\braces`, `\fbraces`, `\argopen`,
+    `\argclose`, `\opbraces`, `\trigbraces`. Post-release; 1
+  - AMSTEX-ENUM — (LOOPFIX) inlined-AmS-TeX papers past the `\sum@` loop hit `malformed:ltx:enumerate` (#PCDATA, Math
+    and text in an `enumerate`) from amsppt `\roster`/`\item` (math0612243, math0112238, math0303294, math0404149,
+    math0404221, math0404272, math0405116, math0406482 TooManyErrors; 0705.4126, math0112286, math0211398, math0405158,
+    math0404207); 3
+  - LTXUTILH-OTHER — (LOOPFIX) shipped-ltxutil papers whose Fatal has another root: "Package loading depth exceeded
+    500" (1408.3933, 1410.2241, 1511.02101, 1511.05750, 1602.08358), unexpected `\fi`/`\par` (1207.4642, 1211.3724,
+    1211.6751, 1304.5586), `\errmessage` (1601.02763); 3
+  - ONLINECITE — (LOOPFIX review) `revtex4_support_sty.rs:430` `\onlinecite` → `\citealp` by user-level name, where
+    revtex4-2.cls:7069 `\let\onlinecite\rev@citealp` (the OD #1100 class; no loop witness yet). Post-release; 1
+  - CYCLE-WINDOW — `cycle_guard.rs` `MAX_WINDOW = 10`: a loop of 11+ tokens is not caught as a fast Fatal and runs to
+    the 180 s wall clock (the apacite loop before LOOPFIX); raise it (DG call). Post-release; 3
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.
