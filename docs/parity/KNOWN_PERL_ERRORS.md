@@ -22075,7 +22075,7 @@ abstract, which keeps its first paragraph; the rest is body text (OXIDIZED_DESIG
 ## 1295. The cheap intertext closes `{equation}` inside any display
 
 `$$` (or the kernel's `\]`) inside an equation display is the "cheap intertext": its helpers end the display and begin
-the next (latex_constructs.pool.ltxml:1957-1969), but `\lx@begin@fake@intertext` / `\lx@end@fake@intertext` hard-code
+the next (latex_constructs.pool.ltxml:1960-1969), but `\lx@begin@fake@intertext` / `\lx@end@fake@intertext` hard-code
 `\end{equation}` / `\begin{equation}`, so in `{equation*}` they err and add a numbered equation:
 
 ```latex
