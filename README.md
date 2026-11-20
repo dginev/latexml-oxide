@@ -34,7 +34,8 @@ see the converted document live.
 # A document → HTML5, with MathML for the math (format inferred from the extension)
 $ latexml_oxide paper.tex --destination=paper.html
 
-# One formula → Presentation MathML (the default; --cmml for Content MathML)
+# One formula → Presentation MathML (--cmml for Content MathML, --unicodemath for UnicodeMath)
+# Note: `latexmlmath_oxide` is installed via `cargo +nightly install latexml` or built from source.
 $ latexmlmath_oxide 'a^2+b^2=c^2'
 ```
 
@@ -44,7 +45,8 @@ More in [docs/USAGE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/U
 
 Prebuilt, self-contained binaries for Linux, macOS and Windows are on the
 [Releases page](https://github.com/dginev/latexml-oxide/releases); Homebrew, a `.deb`, Docker and
-`cargo install latexml` work too. A TeX installation (TeX Live or MiKTeX) is needed at runtime.
+`cargo install latexml` work too. Basic documents using built-in bindings convert without TeX Live;
+a TeX installation (TeX Live or MiKTeX) is needed at runtime for raw packages/classes, `expl3`, and fonts.
 Per-platform steps and the system dependencies: [docs/INSTALL.md](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md).
 The Windows release binary is not code-signed; a Microsoft Store package, signed by Microsoft, is planned for a 0.8.x release (see the [code signing policy](https://github.com/dginev/latexml-oxide/blob/main/docs/release/CODE_SIGNING_POLICY.md)).
 

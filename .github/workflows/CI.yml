@@ -183,11 +183,11 @@ jobs:
           cache-on-failure: true
           key: lint
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      # cargo-machete is installed BEFORE the gate below, which runs it.
-      - name: install cargo-machete
+      # cargo-machete and cargo-about are installed BEFORE the gate below, which runs them.
+      - name: install cargo-machete and cargo-about
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-machete
+          tool: cargo-machete,cargo-about
 
       # The gate itself: xml:id ratchet, rustfmt, clippy, rustdoc, the
       # vendored-native audit and cargo-machete. It lives in tools/lint.sh

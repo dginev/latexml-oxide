@@ -14,7 +14,8 @@ them says so on its own line (e.g. libiconv, Windows only). Section 5 is
 generated per artifact from that artifact's own dependency graph.
 
 CONTAINER IMAGES are a different build and this file's sections 3.1-3.2 do NOT
-describe them. In `ghcr.io/dginev/latexml-oxide` and `ghcr.io/dginev/cortex-worker`
+describe them. In `ghcr.io/dginev/latexml-oxide` and
+`ghcr.io/dginev/latexml-oxide/cortex-worker`
 the binary links libxml2, libxslt and libkpathsea DYNAMICALLY against Ubuntu's
 shared libraries, rather than statically as below; those libraries, TeX Live and
 the graphics tools of section 4 are apt packages, each carrying its own copyright
@@ -251,9 +252,10 @@ See the relinking note in 3.5.
 The Earley/Marpa parsing engine behind the math parser. The C sources are
 vendored as a tarball inside the `libmarpa-asf-sys` crate and compiled into the
 binary at build time, with one file replaced by the crate's modified copy,
-c/marpa_obs.c (below). The `marpa-asf` / `libmarpa-asf-sys` Rust crates declare
-"MIT OR Apache-2.0"; that covers the Rust bindings only. The vendored C library
-is under mixed licenses, per file:
+c/marpa_obs.c (below). `marpa-asf` declares "MIT OR Apache-2.0" (the Rust
+wrapper); from `libmarpa-asf-sys` 0.3.1 onward, its crate manifest declares
+"(MIT OR Apache-2.0) AND MIT AND LGPL-2.1-or-later AND LGPL-3.0-or-later" to
+reflect the mixed per-file licensing of the vendored C library:
 
   * marpa.c, marpa_ami.c, marpa_codes.c
       Copyright 2018 Jeffrey Kegler.

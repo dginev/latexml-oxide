@@ -53,8 +53,12 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   execute, with byte-identical output; a large book's peak memory fell from 6.7 to 4.3 GB; math post-processing is
   linear in the number of formulas; and a conversion that outgrows its memory allowance restarts in streaming mode
   instead of failing.
-- **EPUB 3 and Perl-compatible command lines.** `--format=epub` writes an EPUB 3 container; a repeated option keeps
-  its last value, `--xsltparameter` takes `name:value`, and a stylesheet on disk is honoured.
+- **EPUB 3, UnicodeMath output, and Perl-compatible command lines.** `--format=epub` writes an EPUB 3 container;
+  `--unicodemath` adds `<annotation encoding="application/x-unicodemath">` (or standalone output with `--nopmml`, and
+  `latexmlmath_oxide --unicodemath`); a repeated option keeps its last value, `--xsltparameter` takes `name:value`,
+  and a stylesheet on disk is honoured.
+- **Builds and converts without TeX Live.** Building on a host without `libkpathsea` or `kpsewhich` works out of the
+  box, and basic documents using built-in bindings convert cleanly without a TeX installation.
 - **Better pages in browsers.** MathML Core fixes for aligned columns, slashes, prescripts and arrows; equation
   numbers beside their formulas; box sizes as CSS custom properties; long verbatim lines wrap on phones; the
   stylesheets synced with upstream LaTeXML and ar5iv-css 0.9.5.
