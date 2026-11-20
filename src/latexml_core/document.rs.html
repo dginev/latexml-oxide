@@ -8891,7 +8891,7 @@
 <a href=#8891 id=8891 data-nosnippet>8891</a></span>}
 <a href=#8892 id=8892 data-nosnippet>8892</a>
 <a href=#8893 id=8893 data-nosnippet>8893</a><span class="doccomment">/// Whether the nearest frontmatter container around `node` is an `ltx:abstract` its own end closed (a theorem there is
-<a href=#8894 id=8894 data-nosnippet>8894</a>/// dissolved, OD #1097); one open at `\end{document}` ([`ABSTRACT_OPEN_AT_END`]: math0006149, 1108.5171) is not.
+<a href=#8894 id=8894 data-nosnippet>8894</a>/// dissolved, OD #1097); one open at `\end{document}` ([`ABSTRACT_OPEN_AT_END`]: an environment never ended, cond-mat9410055) is not.
 <a href=#8895 id=8895 data-nosnippet>8895</a></span><span class="kw">fn </span>within_abstract(node: <span class="kw-2">&amp;</span>Node) -&gt; bool {
 <a href=#8896 id=8896 data-nosnippet>8896</a>  <span class="kw">let </span><span class="kw-2">mut </span>cur = <span class="prelude-val">Some</span>(node.clone());
 <a href=#8897 id=8897 data-nosnippet>8897</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(n) = cur {
