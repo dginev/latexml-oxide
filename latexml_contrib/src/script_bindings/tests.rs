@@ -709,6 +709,69 @@ fn declare_option_registers_and_runs() {
   latexml_core::reset_thread_engine();
 }
 
+/// Issue #944: an option name is never a prototype (Perl Package.pm:2423-2428 names `\ds@<option>` whole), so a
+/// closure handler named `a-b` defines the single control sequence `\ds@a-b`, not `\ds@a` with a parameter `-b`.
+#[test]
+fn declare_option_closure_name_is_one_control_sequence() {
+  fresh_state();
+  load_script(
+    r#"DeclareOption("some-option2.0+", || { AssignValue("script:dash_ran", "yes", "global"); });"#,
+  )
+  .expect("load");
+  let cs = latexml_core::T_CS!("\\ds@some-option2.0+");
+  assert!(
+    latexml_core::state::lookup_definition(&cs)
+      .expect("lookup")
+      .is_some(),
+    "\\ds@some-option2.0+ not defined as one control sequence"
+  );
+  latexml_core::stomach::digest(Tokens::new(vec![cs])).expect("digest the handler");
+  let ran = match latexml_core::state::lookup_value("script:dash_ran") {
+    Some(Stored::String(s)) => arena::to_string(s),
+    _ => String::new(),
+  };
+  assert_eq!(ran, "yes", "the dashed option's closure did not run");
+  latexml_core::reset_thread_engine();
+}
+
+/// Issue #944, the compiled side: the `DeclareOption!` macro names `\ds@<option>` whole in both its closure and its
+/// string-body arms, so a punctuated name is one control sequence there too.
+#[test]
+fn declare_option_macro_names_are_one_control_sequence() {
+  fn declare() -> Result<()> {
+    use latexml_package::prelude::*;
+    DeclareOption!("rust-closure2.0+", {
+      AssignValue!("rust:dash_ran" => "yes", Some(Scope::Global));
+    });
+    DeclareOption!("rust-string2.0+", "\\gdef\\rustdash{yes}");
+    Ok(())
+  }
+  fresh_state();
+  declare().expect("declare");
+  for name in ["\\ds@rust-closure2.0+", "\\ds@rust-string2.0+"] {
+    let cs = latexml_core::T_CS!(name);
+    assert!(
+      latexml_core::state::lookup_definition(&cs)
+        .expect("lookup")
+        .is_some(),
+      "{name} not defined as one control sequence"
+    );
+    latexml_core::stomach::digest(Tokens::new(vec![cs])).expect("digest the handler");
+  }
+  let ran = match latexml_core::state::lookup_value("rust:dash_ran") {
+    Some(Stored::String(s)) => arena::to_string(s),
+    _ => String::new(),
+  };
+  assert_eq!(ran, "yes", "the dashed option's closure did not run");
+  let out = gullet::do_expand(mouth::tokenize_internal(r"\rustdash")).expect("expand");
+  assert_eq!(
+    out.to_string(),
+    "yes",
+    "the dashed option's string body did not run"
+  );
+  latexml_core::reset_thread_engine();
+}
+
 /// The `DefConstructor` option-bag form: a trailing Rhai map `#{ … }` with
 /// named options (any order, omittable) including a closure-valued
 /// `afterDigest` — the analog of the macro's `key => value` options.
