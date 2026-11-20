@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["framed_properties","load_definitions","read_box_arg_contents","read_box_contents","read_box_operand"],"struct":["FramedOptions"]};
+window.SIDEBAR_ITEMS = {"fn":["framed_properties","load_definitions","read_box_arg_contents","read_box_contents","read_box_operand","reset_splice_state"],"struct":["FramedOptions"]};

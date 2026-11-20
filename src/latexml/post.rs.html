@@ -1444,383 +1444,386 @@
 <a href=#1444 id=1444 data-nosnippet>1444</a>    // Rate-limited: a trim walks the heap.
 <a href=#1445 id=1445 data-nosnippet>1445</a>    </span><span class="kw">if </span>pages_rendered &gt; <span class="number">0 </span>&amp;&amp; pages_rendered.is_multiple_of(<span class="number">512</span>) {
 <a href=#1446 id=1446 data-nosnippet>1446</a>      <span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
-<a href=#1447 id=1447 data-nosnippet>1447</a>      </span><span class="kw">unsafe </span>{
-<a href=#1448 id=1448 data-nosnippet>1448</a>        libc::malloc_trim(<span class="number">0</span>);
-<a href=#1449 id=1449 data-nosnippet>1449</a>      }
-<a href=#1450 id=1450 data-nosnippet>1450</a>      <span class="attr">#[cfg(not(feature = <span class="string">"dhat-heap"</span>))]
-<a href=#1451 id=1451 data-nosnippet>1451</a>      </span><span class="kw">unsafe </span>{
-<a href=#1452 id=1452 data-nosnippet>1452</a>        libmimalloc_sys::mi_collect(<span class="bool-val">true</span>);
-<a href=#1453 id=1453 data-nosnippet>1453</a>      }
-<a href=#1454 id=1454 data-nosnippet>1454</a>    }
-<a href=#1455 id=1455 data-nosnippet>1455</a>    <span class="comment">// Retention triage probe (`LATEXML_POST_MEMDIAG=1`): splits the render
-<a href=#1456 id=1456 data-nosnippet>1456</a>    // loop's RSS growth into live-C (libxml2/libxslt allocations still
-<a href=#1457 id=1457 data-nosnippet>1457</a>    // reachable), free-but-mapped C, and "everything else" (Rust/mimalloc +
-<a href=#1458 id=1458 data-nosnippet>1458</a>    // mmap). One run with this told the ~144 KB/page term apart from the
-<a href=#1459 id=1459 data-nosnippet>1459</a>    // three candidates the first fixes addressed.
-<a href=#1460 id=1460 data-nosnippet>1460</a>    </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
-<a href=#1461 id=1461 data-nosnippet>1461</a>    </span><span class="kw">if </span>pages_rendered &gt; <span class="number">0
-<a href=#1462 id=1462 data-nosnippet>1462</a>      </span>&amp;&amp; pages_rendered.is_multiple_of(<span class="number">1024</span>)
-<a href=#1463 id=1463 data-nosnippet>1463</a>      &amp;&amp; std::env::var(<span class="string">"LATEXML_POST_MEMDIAG"</span>).is_ok()
-<a href=#1464 id=1464 data-nosnippet>1464</a>    {
-<a href=#1465 id=1465 data-nosnippet>1465</a>      <span class="kw">let </span>mi = <span class="kw">unsafe </span>{ libc::mallinfo2() };
-<a href=#1466 id=1466 data-nosnippet>1466</a>      <span class="kw">let </span>rss_mb = latexml_core::watchdog::process_rss_kb().unwrap_or(<span class="number">0</span>) / <span class="number">1024</span>;
-<a href=#1467 id=1467 data-nosnippet>1467</a>      <span class="macro">eprintln!</span>(
-<a href=#1468 id=1468 data-nosnippet>1468</a>        <span class="string">"memdiag: pages={} RSS={}MB C-live={}MB C-free={}MB"</span>,
-<a href=#1469 id=1469 data-nosnippet>1469</a>        pages_rendered,
-<a href=#1470 id=1470 data-nosnippet>1470</a>        rss_mb,
-<a href=#1471 id=1471 data-nosnippet>1471</a>        mi.uordblks / (<span class="number">1024 </span>* <span class="number">1024</span>),
-<a href=#1472 id=1472 data-nosnippet>1472</a>        mi.fordblks / (<span class="number">1024 </span>* <span class="number">1024</span>)
-<a href=#1473 id=1473 data-nosnippet>1473</a>      );
-<a href=#1474 id=1474 data-nosnippet>1474</a>    }
-<a href=#1475 id=1475 data-nosnippet>1475</a>    <span class="kw">let </span>rendered = <span class="kw">match </span>resident {
-<a href=#1476 id=1476 data-nosnippet>1476</a>      <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>page) =&gt; {
-<a href=#1477 id=1477 data-nosnippet>1477</a>        page.destination = dest;
-<a href=#1478 id=1478 data-nosnippet>1478</a>        page.destination_directory = dest_dir;
-<a href=#1479 id=1479 data-nosnippet>1479</a>        render_page(page, <span class="kw-2">&amp;mut </span>procs, <span class="kw-2">&amp;</span>ctx)
-<a href=#1480 id=1480 data-nosnippet>1480</a>      },
-<a href=#1481 id=1481 data-nosnippet>1481</a>      <span class="prelude-val">None </span>=&gt; render_spilled_page(<span class="kw-2">&amp;</span>path, <span class="kw-2">&amp;mut </span>procs, <span class="kw-2">&amp;</span>ctx, dest, dest_dir),
-<a href=#1482 id=1482 data-nosnippet>1482</a>    };
-<a href=#1483 id=1483 data-nosnippet>1483</a>    <span class="kw">let </span>outputs = <span class="kw">match </span>rendered {
-<a href=#1484 id=1484 data-nosnippet>1484</a>      <span class="prelude-val">Ok</span>(o) =&gt; o,
-<a href=#1485 id=1485 data-nosnippet>1485</a>      <span class="prelude-val">Err</span>(PageFailure::Fatal) =&gt; {
-<a href=#1486 id=1486 data-nosnippet>1486</a>        remove_pages(written);
-<a href=#1487 id=1487 data-nosnippet>1487</a>        written.clear();
-<a href=#1488 id=1488 data-nosnippet>1488</a>        <span class="kw">return </span>String::new();
-<a href=#1489 id=1489 data-nosnippet>1489</a>      },
-<a href=#1490 id=1490 data-nosnippet>1490</a>      <span class="prelude-val">Err</span>(PageFailure::Error) =&gt; <span class="kw">return </span>fallback(),
-<a href=#1491 id=1491 data-nosnippet>1491</a>    };
-<a href=#1492 id=1492 data-nosnippet>1492</a>    <span class="kw">for </span>(dest, output) <span class="kw">in </span>outputs {
-<a href=#1493 id=1493 data-nosnippet>1493</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = dest.as_deref() {
-<a href=#1494 id=1494 data-nosnippet>1494</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = std::path::Path::new(path).parent()
-<a href=#1495 id=1495 data-nosnippet>1495</a>          &amp;&amp; !parent.as_os_str().is_empty()
-<a href=#1496 id=1496 data-nosnippet>1496</a>        {
-<a href=#1497 id=1497 data-nosnippet>1497</a>          <span class="kw">let _ </span>= std::fs::create_dir_all(parent);
-<a href=#1498 id=1498 data-nosnippet>1498</a>        }
-<a href=#1499 id=1499 data-nosnippet>1499</a>        pages_rendered += <span class="number">1</span>;
-<a href=#1500 id=1500 data-nosnippet>1500</a>        <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = std::fs::write(path, <span class="kw-2">&amp;</span>output) {
-<a href=#1501 id=1501 data-nosnippet>1501</a>          post_error(<span class="string">"write"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"failed to write page {path}: {e}"</span>));
-<a href=#1502 id=1502 data-nosnippet>1502</a>        }
-<a href=#1503 id=1503 data-nosnippet>1503</a>        written.push(path.to_string());
-<a href=#1504 id=1504 data-nosnippet>1504</a>      }
-<a href=#1505 id=1505 data-nosnippet>1505</a>      <span class="kw">if </span>main_output.is_none() {
-<a href=#1506 id=1506 data-nosnippet>1506</a>        main_output = <span class="prelude-val">Some</span>(output);
+<a href=#1447 id=1447 data-nosnippet>1447</a>      </span><span class="comment">// SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
+<a href=#1448 id=1448 data-nosnippet>1448</a>      </span><span class="kw">unsafe </span>{
+<a href=#1449 id=1449 data-nosnippet>1449</a>        libc::malloc_trim(<span class="number">0</span>);
+<a href=#1450 id=1450 data-nosnippet>1450</a>      }
+<a href=#1451 id=1451 data-nosnippet>1451</a>      <span class="attr">#[cfg(not(feature = <span class="string">"dhat-heap"</span>))]
+<a href=#1452 id=1452 data-nosnippet>1452</a>      </span><span class="comment">// SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
+<a href=#1453 id=1453 data-nosnippet>1453</a>      </span><span class="kw">unsafe </span>{
+<a href=#1454 id=1454 data-nosnippet>1454</a>        libmimalloc_sys::mi_collect(<span class="bool-val">true</span>);
+<a href=#1455 id=1455 data-nosnippet>1455</a>      }
+<a href=#1456 id=1456 data-nosnippet>1456</a>    }
+<a href=#1457 id=1457 data-nosnippet>1457</a>    <span class="comment">// Retention triage probe (`LATEXML_POST_MEMDIAG=1`): splits the render
+<a href=#1458 id=1458 data-nosnippet>1458</a>    // loop's RSS growth into live-C (libxml2/libxslt allocations still
+<a href=#1459 id=1459 data-nosnippet>1459</a>    // reachable), free-but-mapped C, and "everything else" (Rust/mimalloc +
+<a href=#1460 id=1460 data-nosnippet>1460</a>    // mmap). One run with this told the ~144 KB/page term apart from the
+<a href=#1461 id=1461 data-nosnippet>1461</a>    // three candidates the first fixes addressed.
+<a href=#1462 id=1462 data-nosnippet>1462</a>    </span><span class="attr">#[cfg(target_os = <span class="string">"linux"</span>)]
+<a href=#1463 id=1463 data-nosnippet>1463</a>    </span><span class="kw">if </span>pages_rendered &gt; <span class="number">0
+<a href=#1464 id=1464 data-nosnippet>1464</a>      </span>&amp;&amp; pages_rendered.is_multiple_of(<span class="number">1024</span>)
+<a href=#1465 id=1465 data-nosnippet>1465</a>      &amp;&amp; std::env::var(<span class="string">"LATEXML_POST_MEMDIAG"</span>).is_ok()
+<a href=#1466 id=1466 data-nosnippet>1466</a>    {
+<a href=#1467 id=1467 data-nosnippet>1467</a>      <span class="comment">// SAFETY: `mallinfo2` is a read-only glibc allocator stat query with no pointer inputs.
+<a href=#1468 id=1468 data-nosnippet>1468</a>      </span><span class="kw">let </span>mi = <span class="kw">unsafe </span>{ libc::mallinfo2() };
+<a href=#1469 id=1469 data-nosnippet>1469</a>      <span class="kw">let </span>rss_mb = latexml_core::watchdog::process_rss_kb().unwrap_or(<span class="number">0</span>) / <span class="number">1024</span>;
+<a href=#1470 id=1470 data-nosnippet>1470</a>      <span class="macro">eprintln!</span>(
+<a href=#1471 id=1471 data-nosnippet>1471</a>        <span class="string">"memdiag: pages={} RSS={}MB C-live={}MB C-free={}MB"</span>,
+<a href=#1472 id=1472 data-nosnippet>1472</a>        pages_rendered,
+<a href=#1473 id=1473 data-nosnippet>1473</a>        rss_mb,
+<a href=#1474 id=1474 data-nosnippet>1474</a>        mi.uordblks / (<span class="number">1024 </span>* <span class="number">1024</span>),
+<a href=#1475 id=1475 data-nosnippet>1475</a>        mi.fordblks / (<span class="number">1024 </span>* <span class="number">1024</span>)
+<a href=#1476 id=1476 data-nosnippet>1476</a>      );
+<a href=#1477 id=1477 data-nosnippet>1477</a>    }
+<a href=#1478 id=1478 data-nosnippet>1478</a>    <span class="kw">let </span>rendered = <span class="kw">match </span>resident {
+<a href=#1479 id=1479 data-nosnippet>1479</a>      <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>page) =&gt; {
+<a href=#1480 id=1480 data-nosnippet>1480</a>        page.destination = dest;
+<a href=#1481 id=1481 data-nosnippet>1481</a>        page.destination_directory = dest_dir;
+<a href=#1482 id=1482 data-nosnippet>1482</a>        render_page(page, <span class="kw-2">&amp;mut </span>procs, <span class="kw-2">&amp;</span>ctx)
+<a href=#1483 id=1483 data-nosnippet>1483</a>      },
+<a href=#1484 id=1484 data-nosnippet>1484</a>      <span class="prelude-val">None </span>=&gt; render_spilled_page(<span class="kw-2">&amp;</span>path, <span class="kw-2">&amp;mut </span>procs, <span class="kw-2">&amp;</span>ctx, dest, dest_dir),
+<a href=#1485 id=1485 data-nosnippet>1485</a>    };
+<a href=#1486 id=1486 data-nosnippet>1486</a>    <span class="kw">let </span>outputs = <span class="kw">match </span>rendered {
+<a href=#1487 id=1487 data-nosnippet>1487</a>      <span class="prelude-val">Ok</span>(o) =&gt; o,
+<a href=#1488 id=1488 data-nosnippet>1488</a>      <span class="prelude-val">Err</span>(PageFailure::Fatal) =&gt; {
+<a href=#1489 id=1489 data-nosnippet>1489</a>        remove_pages(written);
+<a href=#1490 id=1490 data-nosnippet>1490</a>        written.clear();
+<a href=#1491 id=1491 data-nosnippet>1491</a>        <span class="kw">return </span>String::new();
+<a href=#1492 id=1492 data-nosnippet>1492</a>      },
+<a href=#1493 id=1493 data-nosnippet>1493</a>      <span class="prelude-val">Err</span>(PageFailure::Error) =&gt; <span class="kw">return </span>fallback(),
+<a href=#1494 id=1494 data-nosnippet>1494</a>    };
+<a href=#1495 id=1495 data-nosnippet>1495</a>    <span class="kw">for </span>(dest, output) <span class="kw">in </span>outputs {
+<a href=#1496 id=1496 data-nosnippet>1496</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = dest.as_deref() {
+<a href=#1497 id=1497 data-nosnippet>1497</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = std::path::Path::new(path).parent()
+<a href=#1498 id=1498 data-nosnippet>1498</a>          &amp;&amp; !parent.as_os_str().is_empty()
+<a href=#1499 id=1499 data-nosnippet>1499</a>        {
+<a href=#1500 id=1500 data-nosnippet>1500</a>          <span class="kw">let _ </span>= std::fs::create_dir_all(parent);
+<a href=#1501 id=1501 data-nosnippet>1501</a>        }
+<a href=#1502 id=1502 data-nosnippet>1502</a>        pages_rendered += <span class="number">1</span>;
+<a href=#1503 id=1503 data-nosnippet>1503</a>        <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = std::fs::write(path, <span class="kw-2">&amp;</span>output) {
+<a href=#1504 id=1504 data-nosnippet>1504</a>          post_error(<span class="string">"write"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"failed to write page {path}: {e}"</span>));
+<a href=#1505 id=1505 data-nosnippet>1505</a>        }
+<a href=#1506 id=1506 data-nosnippet>1506</a>        written.push(path.to_string());
 <a href=#1507 id=1507 data-nosnippet>1507</a>      }
-<a href=#1508 id=1508 data-nosnippet>1508</a>    }
-<a href=#1509 id=1509 data-nosnippet>1509</a>  }
-<a href=#1510 id=1510 data-nosnippet>1510</a>  audit_end(t_pages);
-<a href=#1511 id=1511 data-nosnippet>1511</a>  drop(page_spill);
-<a href=#1512 id=1512 data-nosnippet>1512</a>
-<a href=#1513 id=1513 data-nosnippet>1513</a>  main_output.unwrap_or_else(fallback)
-<a href=#1514 id=1514 data-nosnippet>1514</a>}
+<a href=#1508 id=1508 data-nosnippet>1508</a>      <span class="kw">if </span>main_output.is_none() {
+<a href=#1509 id=1509 data-nosnippet>1509</a>        main_output = <span class="prelude-val">Some</span>(output);
+<a href=#1510 id=1510 data-nosnippet>1510</a>      }
+<a href=#1511 id=1511 data-nosnippet>1511</a>    }
+<a href=#1512 id=1512 data-nosnippet>1512</a>  }
+<a href=#1513 id=1513 data-nosnippet>1513</a>  audit_end(t_pages);
+<a href=#1514 id=1514 data-nosnippet>1514</a>  drop(page_spill);
 <a href=#1515 id=1515 data-nosnippet>1515</a>
-<a href=#1516 id=1516 data-nosnippet>1516</a><span class="doccomment">/// The per-page processor set for pass B — everything [`render_spilled_page`]
-<a href=#1517 id=1517 data-nosnippet>1517</a>/// mutates. Bundled so the serial driver and the process-parallel worker
-<a href=#1518 id=1518 data-nosnippet>1518</a>/// ([`crate::render_workers`]) share ONE pipeline implementation and cannot
-<a href=#1519 id=1519 data-nosnippet>1519</a>/// drift.
-<a href=#1520 id=1520 data-nosnippet>1520</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PageProcessors {
-<a href=#1521 id=1521 data-nosnippet>1521</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) crossref:   latexml_post::crossref::CrossRef,
-<a href=#1522 id=1522 data-nosnippet>1522</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) graphics:   <span class="prelude-ty">Option</span>&lt;latexml_post::graphics::Graphics&gt;,
-<a href=#1523 id=1523 data-nosnippet>1523</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) post:       latexml_post::Post,
-<a href=#1524 id=1524 data-nosnippet>1524</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) processors: Vec&lt;Box&lt;<span class="kw">dyn </span>Processor&gt;&gt;,
-<a href=#1525 id=1525 data-nosnippet>1525</a>}
-<a href=#1526 id=1526 data-nosnippet>1526</a>
-<a href=#1527 id=1527 data-nosnippet>1527</a><span class="doccomment">/// The read-only per-run context for pass B page rendering, shared by every
-<a href=#1528 id=1528 data-nosnippet>1528</a>/// page of one conversion (serial driver or one parallel worker).
-<a href=#1529 id=1529 data-nosnippet>1529</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PageRenderCtx {
-<a href=#1530 id=1530 data-nosnippet>1530</a>  <span class="doccomment">/// Clone-source for each page's `PostDocument` parse — carries the same
-<a href=#1531 id=1531 data-nosnippet>1531</a>  /// searchpaths/site-directory the pass-A parse used.
-<a href=#1532 id=1532 data-nosnippet>1532</a>  </span><span class="kw">pub</span>(<span class="kw">crate</span>) page_opts:   PostDocumentOptions,
-<a href=#1533 id=1533 data-nosnippet>1533</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) is_html_out: bool,
-<a href=#1534 id=1534 data-nosnippet>1534</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) schemadocs:  bool,
-<a href=#1535 id=1535 data-nosnippet>1535</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) whatsout:    latexml_post::extract::Whatsout,
-<a href=#1536 id=1536 data-nosnippet>1536</a>}
-<a href=#1537 id=1537 data-nosnippet>1537</a>
-<a href=#1538 id=1538 data-nosnippet>1538</a><span class="doccomment">/// Run one page-local phase (CrossRef / Graphics) over one page, mirroring
-<a href=#1539 id=1539 data-nosnippet>1539</a>/// `run_phase` for a single document. Failures are reported via [`post_error`].
-<a href=#1540 id=1540 data-nosnippet>1540</a></span><span class="kw">fn </span>run_page_phase(
-<a href=#1541 id=1541 data-nosnippet>1541</a>  doc: PostDocument,
-<a href=#1542 id=1542 data-nosnippet>1542</a>  proc: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Processor,
-<a href=#1543 id=1543 data-nosnippet>1543</a>  label: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
-<a href=#1544 id=1544 data-nosnippet>1544</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;PostDocument&gt;, ()&gt; {
-<a href=#1545 id=1545 data-nosnippet>1545</a>  <span class="kw">let </span>nodes = proc.to_process(<span class="kw-2">&amp;</span>doc);
-<a href=#1546 id=1546 data-nosnippet>1546</a>  <span class="kw">if </span>nodes.is_empty() {
-<a href=#1547 id=1547 data-nosnippet>1547</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[doc]);
-<a href=#1548 id=1548 data-nosnippet>1548</a>  }
-<a href=#1549 id=1549 data-nosnippet>1549</a>  proc.process(doc, nodes).map_err(|e| {
-<a href=#1550 id=1550 data-nosnippet>1550</a>    post_error(label, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{label} failed: {e}"</span>));
-<a href=#1551 id=1551 data-nosnippet>1551</a>  })
-<a href=#1552 id=1552 data-nosnippet>1552</a>}
-<a href=#1553 id=1553 data-nosnippet>1553</a>
-<a href=#1554 id=1554 data-nosnippet>1554</a><span class="doccomment">/// The pass-B per-page pipeline: parse one spilled page (deleting the spill
-<a href=#1555 id=1555 data-nosnippet>1555</a>/// file as soon as it is parsed), run CrossRef → Graphics → MathML/XSLT, and
-<a href=#1556 id=1556 data-nosnippet>1556</a>/// return the finalized `(destination, output)` pairs for the caller to write.
-<a href=#1557 id=1557 data-nosnippet>1557</a>/// Exactly the body the serial render loop ran in place before the
-<a href=#1558 id=1558 data-nosnippet>1558</a>/// process-parallel split — phase order, telemetry and audit calls included —
-<a href=#1559 id=1559 data-nosnippet>1559</a>/// so the serial path stays byte-identical (guard:
-<a href=#1560 id=1560 data-nosnippet>1560</a>/// `118_streaming_split_parity`). `Err(())` means the failure was already
-<a href=#1561 id=1561 data-nosnippet>1561</a>/// reported via [`post_error`] (or a phase's own diagnostics).
-<a href=#1562 id=1562 data-nosnippet>1562</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>render_spilled_page(
-<a href=#1563 id=1563 data-nosnippet>1563</a>  path: <span class="kw-2">&amp;</span>std::path::Path,
-<a href=#1564 id=1564 data-nosnippet>1564</a>  procs: <span class="kw-2">&amp;mut </span>PageProcessors,
-<a href=#1565 id=1565 data-nosnippet>1565</a>  ctx: <span class="kw-2">&amp;</span>PageRenderCtx,
-<a href=#1566 id=1566 data-nosnippet>1566</a>  destination: <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#1567 id=1567 data-nosnippet>1567</a>  destination_directory: <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#1568 id=1568 data-nosnippet>1568</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, String)&gt;, PageFailure&gt; {
-<a href=#1569 id=1569 data-nosnippet>1569</a>  <span class="kw">let </span>path_str = path.to_string_lossy().into_owned();
-<a href=#1570 id=1570 data-nosnippet>1570</a>  <span class="kw">let </span>page = <span class="kw">match </span>PostDocument::new_from_file(<span class="kw-2">&amp;</span>path_str, ctx.page_opts.clone()) {
-<a href=#1571 id=1571 data-nosnippet>1571</a>    <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>d) =&gt; {
-<a href=#1572 id=1572 data-nosnippet>1572</a>      d.destination = destination;
-<a href=#1573 id=1573 data-nosnippet>1573</a>      d.destination_directory = destination_directory;
-<a href=#1574 id=1574 data-nosnippet>1574</a>      d
-<a href=#1575 id=1575 data-nosnippet>1575</a>    },
-<a href=#1576 id=1576 data-nosnippet>1576</a>    <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#1577 id=1577 data-nosnippet>1577</a>      post_error(<span class="string">"post"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"cannot re-read a disk-staged page: {e}"</span>));
-<a href=#1578 id=1578 data-nosnippet>1578</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(PageFailure::Error);
-<a href=#1579 id=1579 data-nosnippet>1579</a>    },
-<a href=#1580 id=1580 data-nosnippet>1580</a>  };
-<a href=#1581 id=1581 data-nosnippet>1581</a>  <span class="comment">// Free the spill as soon as it is parsed: for a 40k-page document the
-<a href=#1582 id=1582 data-nosnippet>1582</a>  // spill area is the size of the core XML, and it need not outlive its page.
-<a href=#1583 id=1583 data-nosnippet>1583</a>  </span><span class="kw">let _ </span>= std::fs::remove_file(path);
-<a href=#1584 id=1584 data-nosnippet>1584</a>  render_page(page, procs, ctx)
-<a href=#1585 id=1585 data-nosnippet>1585</a>}
-<a href=#1586 id=1586 data-nosnippet>1586</a>
-<a href=#1587 id=1587 data-nosnippet>1587</a><span class="doccomment">/// [`render_spilled_page`]'s pipeline after the parse: CrossRef → Graphics →
-<a href=#1588 id=1588 data-nosnippet>1588</a>/// MathML/XSLT on one page, returning its `(destination, output)` pairs.
-<a href=#1589 id=1589 data-nosnippet>1589</a></span><span class="kw">fn </span>render_page(
-<a href=#1590 id=1590 data-nosnippet>1590</a>  page: PostDocument,
-<a href=#1591 id=1591 data-nosnippet>1591</a>  procs: <span class="kw-2">&amp;mut </span>PageProcessors,
-<a href=#1592 id=1592 data-nosnippet>1592</a>  ctx: <span class="kw-2">&amp;</span>PageRenderCtx,
-<a href=#1593 id=1593 data-nosnippet>1593</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, String)&gt;, PageFailure&gt; {
-<a href=#1594 id=1594 data-nosnippet>1594</a>  <span class="comment">// CrossRef resolves this page's references out of the completed ObjectDB,
-<a href=#1595 id=1595 data-nosnippet>1595</a>  // and its navigation/TOC work reads the DB rather than sibling pages — so
-<a href=#1596 id=1596 data-nosnippet>1596</a>  // it is page-local once pass A has finished.
-<a href=#1597 id=1597 data-nosnippet>1597</a>  </span>telemetry::phase_enter(Phase::Crossref);
-<a href=#1598 id=1598 data-nosnippet>1598</a>  <span class="kw">let </span>t_xref = audit_start(<span class="string">"CrossRef"</span>);
-<a href=#1599 id=1599 data-nosnippet>1599</a>  <span class="kw">let </span>xref = run_page_phase(page, <span class="kw-2">&amp;mut </span>procs.crossref, <span class="string">"CrossRef"</span>);
-<a href=#1600 id=1600 data-nosnippet>1600</a>  audit_end(t_xref);
-<a href=#1601 id=1601 data-nosnippet>1601</a>  telemetry::phase_exit();
-<a href=#1602 id=1602 data-nosnippet>1602</a>  <span class="kw">let </span><span class="kw-2">mut </span>staged = xref.map_err(|()| PageFailure::Error)<span class="question-mark">?</span>;
-<a href=#1603 id=1603 data-nosnippet>1603</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(gfx) = procs.graphics.as_mut() {
-<a href=#1604 id=1604 data-nosnippet>1604</a>    telemetry::phase_enter(Phase::Graphics);
-<a href=#1605 id=1605 data-nosnippet>1605</a>    <span class="kw">let </span>t_gfx = audit_start(<span class="string">"Graphics"</span>);
-<a href=#1606 id=1606 data-nosnippet>1606</a>    <span class="kw">let </span><span class="kw-2">mut </span>next = Vec::with_capacity(staged.len());
-<a href=#1607 id=1607 data-nosnippet>1607</a>    <span class="kw">let </span><span class="kw-2">mut </span>failed = <span class="bool-val">false</span>;
-<a href=#1608 id=1608 data-nosnippet>1608</a>    <span class="kw">for </span>d <span class="kw">in </span>staged.drain(..) {
-<a href=#1609 id=1609 data-nosnippet>1609</a>      <span class="kw">match </span>run_page_phase(d, gfx, <span class="string">"Graphics"</span>) {
-<a href=#1610 id=1610 data-nosnippet>1610</a>        <span class="prelude-val">Ok</span>(out) =&gt; next.extend(out),
-<a href=#1611 id=1611 data-nosnippet>1611</a>        <span class="prelude-val">Err</span>(()) =&gt; {
-<a href=#1612 id=1612 data-nosnippet>1612</a>          failed = <span class="bool-val">true</span>;
-<a href=#1613 id=1613 data-nosnippet>1613</a>          <span class="kw">break</span>;
-<a href=#1614 id=1614 data-nosnippet>1614</a>        },
-<a href=#1615 id=1615 data-nosnippet>1615</a>      }
-<a href=#1616 id=1616 data-nosnippet>1616</a>    }
-<a href=#1617 id=1617 data-nosnippet>1617</a>    audit_end(t_gfx);
-<a href=#1618 id=1618 data-nosnippet>1618</a>    telemetry::phase_exit();
-<a href=#1619 id=1619 data-nosnippet>1619</a>    <span class="kw">if </span>failed {
-<a href=#1620 id=1620 data-nosnippet>1620</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(PageFailure::Error);
-<a href=#1621 id=1621 data-nosnippet>1621</a>    }
-<a href=#1622 id=1622 data-nosnippet>1622</a>    staged = next;
-<a href=#1623 id=1623 data-nosnippet>1623</a>  }
-<a href=#1624 id=1624 data-nosnippet>1624</a>
-<a href=#1625 id=1625 data-nosnippet>1625</a>  <span class="kw">let </span>rendered = <span class="kw">match </span>procs.post.process_chain(staged, <span class="kw-2">&amp;mut </span>procs.processors) {
-<a href=#1626 id=1626 data-nosnippet>1626</a>    <span class="prelude-val">Ok</span>(r) =&gt; r,
-<a href=#1627 id=1627 data-nosnippet>1627</a>    <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#1628 id=1628 data-nosnippet>1628</a>      emit_fatal(<span class="string">"post"</span>, <span class="string">"convert"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Post-processing failed: {e}"</span>));
-<a href=#1629 id=1629 data-nosnippet>1629</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(PageFailure::Fatal);
-<a href=#1630 id=1630 data-nosnippet>1630</a>    },
-<a href=#1631 id=1631 data-nosnippet>1631</a>  };
-<a href=#1632 id=1632 data-nosnippet>1632</a>
-<a href=#1633 id=1633 data-nosnippet>1633</a>  <span class="kw">let </span><span class="kw-2">mut </span>outputs = Vec::with_capacity(rendered.len());
-<a href=#1634 id=1634 data-nosnippet>1634</a>  <span class="kw">for </span>doc <span class="kw">in </span>rendered {
-<a href=#1635 id=1635 data-nosnippet>1635</a>    <span class="kw">let </span>dest = doc.get_destination().map(String::from);
-<a href=#1636 id=1636 data-nosnippet>1636</a>    <span class="kw">let </span>output = latexml_post::extract::serialize_whatsout(<span class="kw-2">&amp;</span>doc, ctx.whatsout);
-<a href=#1637 id=1637 data-nosnippet>1637</a>    <span class="kw">let </span>output = <span class="kw">if </span>ctx.is_html_out {
-<a href=#1638 id=1638 data-nosnippet>1638</a>      finalize_html5(output)
-<a href=#1639 id=1639 data-nosnippet>1639</a>    } <span class="kw">else </span>{
-<a href=#1640 id=1640 data-nosnippet>1640</a>      output
-<a href=#1641 id=1641 data-nosnippet>1641</a>    };
-<a href=#1642 id=1642 data-nosnippet>1642</a>    <span class="kw">let </span>output = <span class="kw">if </span>ctx.schemadocs &amp;&amp; ctx.is_html_out {
-<a href=#1643 id=1643 data-nosnippet>1643</a>      latexml_post::schema_docs::process_page(<span class="kw-2">&amp;</span>output)
-<a href=#1644 id=1644 data-nosnippet>1644</a>    } <span class="kw">else </span>{
-<a href=#1645 id=1645 data-nosnippet>1645</a>      output
-<a href=#1646 id=1646 data-nosnippet>1646</a>    };
-<a href=#1647 id=1647 data-nosnippet>1647</a>    outputs.push((dest, output));
-<a href=#1648 id=1648 data-nosnippet>1648</a>    <span class="comment">// `doc` drops here — the whole point.
-<a href=#1649 id=1649 data-nosnippet>1649</a>  </span>}
-<a href=#1650 id=1650 data-nosnippet>1650</a>  <span class="prelude-val">Ok</span>(outputs)
-<a href=#1651 id=1651 data-nosnippet>1651</a>}
-<a href=#1652 id=1652 data-nosnippet>1652</a>
-<a href=#1653 id=1653 data-nosnippet>1653</a><span class="doccomment">/// Remove the pages a render wrote before a Fatal: Perl runs each processor over every page
-<a href=#1654 id=1654 data-nosnippet>1654</a>/// before its writer, so a die in ProcessChain leaves none (LaTeXML.pm L605-614, #782).
-<a href=#1655 id=1655 data-nosnippet>1655</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>remove_pages&lt;S: AsRef&lt;str&gt;&gt;(pages: <span class="kw-2">&amp;</span>[S]) {
-<a href=#1656 id=1656 data-nosnippet>1656</a>  <span class="kw">for </span>page <span class="kw">in </span>pages {
-<a href=#1657 id=1657 data-nosnippet>1657</a>    <span class="kw">let _ </span>= std::fs::remove_file(page.as_ref());
-<a href=#1658 id=1658 data-nosnippet>1658</a>  }
-<a href=#1659 id=1659 data-nosnippet>1659</a>}
-<a href=#1660 id=1660 data-nosnippet>1660</a>
-<a href=#1661 id=1661 data-nosnippet>1661</a><span class="doccomment">/// Why a page did not render (already reported). `Fatal`: a MathML/XSLT step failed, which stops
-<a href=#1662 id=1662 data-nosnippet>1662</a>/// post-processing with no output, as a die in Perl's ProcessChain does (LaTeXML.pm L605-614, #782).
-<a href=#1663 id=1663 data-nosnippet>1663</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-<a href=#1664 id=1664 data-nosnippet>1664</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>PageFailure {
-<a href=#1665 id=1665 data-nosnippet>1665</a>  Error,
-<a href=#1666 id=1666 data-nosnippet>1666</a>  Fatal,
-<a href=#1667 id=1667 data-nosnippet>1667</a>}
-<a href=#1668 id=1668 data-nosnippet>1668</a>
-<a href=#1669 id=1669 data-nosnippet>1669</a><span class="doccomment">/// One page spilled between the post pipeline's two passes: where its XML
-<a href=#1670 id=1670 data-nosnippet>1670</a>/// lives, the metadata that does NOT survive an XML round-trip, and whether it
-<a href=#1671 id=1671 data-nosnippet>1671</a>/// carries the placeholders the two ObjectDB-baton sweeps look for (recorded in
-<a href=#1672 id=1672 data-nosnippet>1672</a>/// pass A, while the page is already parsed).
-<a href=#1673 id=1673 data-nosnippet>1673</a></span><span class="kw">struct </span>SpilledPage {
-<a href=#1674 id=1674 data-nosnippet>1674</a>  path:                  std::path::PathBuf,
-<a href=#1675 id=1675 data-nosnippet>1675</a>  destination:           <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#1676 id=1676 data-nosnippet>1676</a>  destination_directory: <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#1677 id=1677 data-nosnippet>1677</a>  needs_index:           bool,
-<a href=#1678 id=1678 data-nosnippet>1678</a>  needs_bib:             bool,
-<a href=#1679 id=1679 data-nosnippet>1679</a>  <span class="doccomment">/// The page itself, never written to `path`: the one page of an unsplit, cleanly parsed document. Its DOM is
-<a href=#1680 id=1680 data-nosnippet>1680</a>  /// what re-parsing `path` would give (a clean parse reparses to the same tree, and Scan only adds the root's
-<a href=#1681 id=1681 data-nosnippet>1681</a>  /// `xml:id`), and [`as_reparsed`] gives it the wrapper state of a fresh parse.
-<a href=#1682 id=1682 data-nosnippet>1682</a>  </span>resident:              <span class="prelude-ty">Option</span>&lt;PostDocument&gt;,
-<a href=#1683 id=1683 data-nosnippet>1683</a>}
-<a href=#1684 id=1684 data-nosnippet>1684</a>
-<a href=#1685 id=1685 data-nosnippet>1685</a><span class="doccomment">/// Whether libxml2 parsed `doc` without errors: a recovered tree (say, adjacent text nodes around a dropped
-<a href=#1686 id=1686 data-nosnippet>1686</a>/// invalid character) can differ from its reparse, so such a page goes to disk.
-<a href=#1687 id=1687 data-nosnippet>1687</a></span><span class="kw">fn </span>parsed_cleanly(doc: <span class="kw-2">&amp;</span>PostDocument) -&gt; bool {
-<a href=#1688 id=1688 data-nosnippet>1688</a>  <span class="kw">let </span>xml = doc.get_document();
-<a href=#1689 id=1689 data-nosnippet>1689</a>  xml.is_well_formed() &amp;&amp; xml.is_ns_valid()
-<a href=#1690 id=1690 data-nosnippet>1690</a>}
-<a href=#1691 id=1691 data-nosnippet>1691</a>
-<a href=#1692 id=1692 data-nosnippet>1692</a><span class="doccomment">/// `doc` as [`PostDocument::new_from_file`] would return it from `path`: the same DOM, with fresh ids,
-<a href=#1693 id=1693 data-nosnippet>1693</a>/// namespaces, memos, node wrappers and `source` options.
-<a href=#1694 id=1694 data-nosnippet>1694</a></span><span class="kw">fn </span>as_reparsed(
-<a href=#1695 id=1695 data-nosnippet>1695</a>  doc: PostDocument,
-<a href=#1696 id=1696 data-nosnippet>1696</a>  path: <span class="kw-2">&amp;</span>std::path::Path,
-<a href=#1697 id=1697 data-nosnippet>1697</a>  opts: <span class="kw-2">&amp;</span>PostDocumentOptions,
-<a href=#1698 id=1698 data-nosnippet>1698</a>) -&gt; PostDocument {
-<a href=#1699 id=1699 data-nosnippet>1699</a>  <span class="kw">let </span>xml = doc.into_document();
-<a href=#1700 id=1700 data-nosnippet>1700</a>  xml.trim_node_cache();
-<a href=#1701 id=1701 data-nosnippet>1701</a>  <span class="kw">let </span>path_str = path.to_string_lossy();
-<a href=#1702 id=1702 data-nosnippet>1702</a>  <span class="kw">let </span>page = PostDocument::new(xml, PostDocument::file_options(<span class="kw-2">&amp;</span>path_str, opts.clone()));
-<a href=#1703 id=1703 data-nosnippet>1703</a>  <span class="attr">#[cfg(debug_assertions)]
-<a href=#1704 id=1704 data-nosnippet>1704</a>  </span>assert_matches_reparse(<span class="kw-2">&amp;</span>page, <span class="kw-2">&amp;</span>path_str, opts);
-<a href=#1705 id=1705 data-nosnippet>1705</a>  page
-<a href=#1706 id=1706 data-nosnippet>1706</a>}
-<a href=#1707 id=1707 data-nosnippet>1707</a>
-<a href=#1708 id=1708 data-nosnippet>1708</a><span class="doccomment">/// Test-profile check that a resident page is what its disk spill would reparse to: Scan sets the root's
-<a href=#1709 id=1709 data-nosnippet>1709</a>/// `xml:id` with a raw `set_attribute` (scan.rs), so a page that skipped the refresh keeps a stale id cache
-<a href=#1710 id=1710 data-nosnippet>1710</a>/// and `source`. Every post fixture runs it; release builds pay nothing.
-<a href=#1711 id=1711 data-nosnippet>1711</a></span><span class="attr">#[cfg(debug_assertions)]
-<a href=#1712 id=1712 data-nosnippet>1712</a></span><span class="kw">fn </span>assert_matches_reparse(page: <span class="kw-2">&amp;</span>PostDocument, path: <span class="kw-2">&amp;</span>str, opts: <span class="kw-2">&amp;</span>PostDocumentOptions) {
-<a href=#1713 id=1713 data-nosnippet>1713</a>  <span class="kw">let </span>reparsed = PostDocument::new_from_string(
-<a href=#1714 id=1714 data-nosnippet>1714</a>    <span class="kw-2">&amp;</span>page.to_xml_string(),
-<a href=#1715 id=1715 data-nosnippet>1715</a>    PostDocument::file_options(path, opts.clone()),
-<a href=#1716 id=1716 data-nosnippet>1716</a>  )
-<a href=#1717 id=1717 data-nosnippet>1717</a>  .expect(<span class="string">"a resident page reparses"</span>);
-<a href=#1718 id=1718 data-nosnippet>1718</a>  <span class="kw">let </span>root_id_resolves = |d: <span class="kw-2">&amp;</span>PostDocument| {
-<a href=#1719 id=1719 data-nosnippet>1719</a>    <span class="kw">let </span>root = d.get_document().get_root_element()<span class="question-mark">?</span>;
-<a href=#1720 id=1720 data-nosnippet>1720</a>    <span class="kw">let </span>id = latexml_post::document::get_xml_id(<span class="kw-2">&amp;</span>root)<span class="question-mark">?</span>;
-<a href=#1721 id=1721 data-nosnippet>1721</a>    <span class="prelude-val">Some</span>(
-<a href=#1722 id=1722 data-nosnippet>1722</a>      d.find_node_by_id(<span class="kw-2">&amp;</span>id)
-<a href=#1723 id=1723 data-nosnippet>1723</a>        .map(|n| n.node_ptr() == root.node_ptr()),
-<a href=#1724 id=1724 data-nosnippet>1724</a>    )
-<a href=#1725 id=1725 data-nosnippet>1725</a>  };
-<a href=#1726 id=1726 data-nosnippet>1726</a>  <span class="kw">let </span>ns_decls = |d: <span class="kw-2">&amp;</span>PostDocument| {
-<a href=#1727 id=1727 data-nosnippet>1727</a>    <span class="kw">let </span>root = d.get_document().get_root_element();
-<a href=#1728 id=1728 data-nosnippet>1728</a>    <span class="kw">let </span>decls = root
-<a href=#1729 id=1729 data-nosnippet>1729</a>      .map(|r| r.get_namespace_declarations())
-<a href=#1730 id=1730 data-nosnippet>1730</a>      .unwrap_or_default();
-<a href=#1731 id=1731 data-nosnippet>1731</a>    decls
-<a href=#1732 id=1732 data-nosnippet>1732</a>      .iter()
-<a href=#1733 id=1733 data-nosnippet>1733</a>      .map(|ns| (ns.get_prefix(), ns.get_href()))
-<a href=#1734 id=1734 data-nosnippet>1734</a>      .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-<a href=#1735 id=1735 data-nosnippet>1735</a>  };
-<a href=#1736 id=1736 data-nosnippet>1736</a>  <span class="macro">assert_eq!</span>(
-<a href=#1737 id=1737 data-nosnippet>1737</a>    page.to_xml_string(),
-<a href=#1738 id=1738 data-nosnippet>1738</a>    reparsed.to_xml_string(),
-<a href=#1739 id=1739 data-nosnippet>1739</a>    <span class="string">"resident page: XML"
-<a href=#1740 id=1740 data-nosnippet>1740</a>  </span>);
-<a href=#1741 id=1741 data-nosnippet>1741</a>  <span class="macro">assert_eq!</span>(
-<a href=#1742 id=1742 data-nosnippet>1742</a>    root_id_resolves(page),
-<a href=#1743 id=1743 data-nosnippet>1743</a>    root_id_resolves(<span class="kw-2">&amp;</span>reparsed),
-<a href=#1744 id=1744 data-nosnippet>1744</a>    <span class="string">"resident page: root xml:id"
-<a href=#1745 id=1745 data-nosnippet>1745</a>  </span>);
-<a href=#1746 id=1746 data-nosnippet>1746</a>  <span class="macro">assert_eq!</span>(
-<a href=#1747 id=1747 data-nosnippet>1747</a>    page.get_source(),
-<a href=#1748 id=1748 data-nosnippet>1748</a>    reparsed.get_source(),
-<a href=#1749 id=1749 data-nosnippet>1749</a>    <span class="string">"resident page: source"
-<a href=#1750 id=1750 data-nosnippet>1750</a>  </span>);
-<a href=#1751 id=1751 data-nosnippet>1751</a>  <span class="macro">assert_eq!</span>(
-<a href=#1752 id=1752 data-nosnippet>1752</a>    page.source_directory, reparsed.source_directory,
-<a href=#1753 id=1753 data-nosnippet>1753</a>    <span class="string">"resident page: source_directory"
-<a href=#1754 id=1754 data-nosnippet>1754</a>  </span>);
-<a href=#1755 id=1755 data-nosnippet>1755</a>  <span class="macro">assert_eq!</span>(
-<a href=#1756 id=1756 data-nosnippet>1756</a>    page.processing_instructions(),
-<a href=#1757 id=1757 data-nosnippet>1757</a>    reparsed.processing_instructions(),
-<a href=#1758 id=1758 data-nosnippet>1758</a>    <span class="string">"resident page: PIs"
-<a href=#1759 id=1759 data-nosnippet>1759</a>  </span>);
-<a href=#1760 id=1760 data-nosnippet>1760</a>  <span class="macro">assert_eq!</span>(
-<a href=#1761 id=1761 data-nosnippet>1761</a>    page.searchpaths, reparsed.searchpaths,
-<a href=#1762 id=1762 data-nosnippet>1762</a>    <span class="string">"resident page: searchpaths"
-<a href=#1763 id=1763 data-nosnippet>1763</a>  </span>);
-<a href=#1764 id=1764 data-nosnippet>1764</a>  <span class="macro">assert_eq!</span>(
-<a href=#1765 id=1765 data-nosnippet>1765</a>    ns_decls(page),
-<a href=#1766 id=1766 data-nosnippet>1766</a>    ns_decls(<span class="kw-2">&amp;</span>reparsed),
-<a href=#1767 id=1767 data-nosnippet>1767</a>    <span class="string">"resident page: namespace declarations"
-<a href=#1768 id=1768 data-nosnippet>1768</a>  </span>);
-<a href=#1769 id=1769 data-nosnippet>1769</a>  <span class="macro">assert_eq!</span>(
-<a href=#1770 id=1770 data-nosnippet>1770</a>    page.namespaces, reparsed.namespaces,
-<a href=#1771 id=1771 data-nosnippet>1771</a>    <span class="string">"resident page: namespaces"
-<a href=#1772 id=1772 data-nosnippet>1772</a>  </span>);
-<a href=#1773 id=1773 data-nosnippet>1773</a>  <span class="macro">assert_eq!</span>(
-<a href=#1774 id=1774 data-nosnippet>1774</a>    page.namespace_uris, reparsed.namespace_uris,
-<a href=#1775 id=1775 data-nosnippet>1775</a>    <span class="string">"resident page: namespace_uris"
-<a href=#1776 id=1776 data-nosnippet>1776</a>  </span>);
-<a href=#1777 id=1777 data-nosnippet>1777</a>}
-<a href=#1778 id=1778 data-nosnippet>1778</a>
-<a href=#1779 id=1779 data-nosnippet>1779</a><span class="doccomment">/// Apply HTML5 cleanup (XML prolog strip, void-element fixes) to one rendered
-<a href=#1780 id=1780 data-nosnippet>1780</a>/// page. Pulled out of `run_post_processing` so it can run on every split
-<a href=#1781 id=1781 data-nosnippet>1781</a>/// sub-document, not just the first.
-<a href=#1782 id=1782 data-nosnippet>1782</a>///
-<a href=#1783 id=1783 data-nosnippet>1783</a>/// Pictures need no string-level work here any more: `latexml_post::svg::SVG`
-<a href=#1784 id=1784 data-nosnippet>1784</a>/// converts every `&lt;ltx:picture&gt;` on the live page DOM before MathML/XSLT
-<a href=#1785 id=1785 data-nosnippet>1785</a>/// (Perl's chain order, `LaTeXML.pm` Graphics → SVG → MathML → XSLT), so the
-<a href=#1786 id=1786 data-nosnippet>1786</a>/// XSLT's `as-svg` branch renders the `&lt;svg:svg&gt;` itself. The former
-<a href=#1787 id=1787 data-nosnippet>1787</a>/// regex-built fragment table and post-XSLT placeholder splice truncated an
-<a href=#1788 id=1788 data-nosnippet>1788</a>/// outer picture at its first nested `&lt;/picture&gt;` and dropped every
-<a href=#1789 id=1789 data-nosnippet>1789</a>/// `&lt;block&gt;`/`&lt;p&gt;`/`&lt;inline-block&gt;` child (pagelayout ×3, ticket ×2,
-<a href=#1790 id=1790 data-nosnippet>1790</a>/// vocaltract, bookcover-example2, latex-refsheet/header-graph lost all
-<a href=#1791 id=1791 data-nosnippet>1791</a>/// picture text at post; batch 56bz).
-<a href=#1792 id=1792 data-nosnippet>1792</a></span><span class="kw">fn </span>finalize_html5(output: String) -&gt; String {
-<a href=#1793 id=1793 data-nosnippet>1793</a>  <span class="kw">use </span>std::sync::LazyLock;
-<a href=#1794 id=1794 data-nosnippet>1794</a>  <span class="comment">// Cached at first call — regex compile is the slow part of `Regex::new`,
-<a href=#1795 id=1795 data-nosnippet>1795</a>  // and finalize_html5 runs on every (sub-)document in the post-pipeline.
-<a href=#1796 id=1796 data-nosnippet>1796</a>  </span><span class="kw">static </span>XML_PROLOG_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#1797 id=1797 data-nosnippet>1797</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r"^&lt;\?xml[^?]*\?&gt;\s*"</span>).unwrap());
-<a href=#1798 id=1798 data-nosnippet>1798</a>  <span class="kw">static </span>NON_VOID_SELF_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
-<a href=#1799 id=1799 data-nosnippet>1799</a>    regex::Regex::new(
-<a href=#1800 id=1800 data-nosnippet>1800</a>      <span class="string">r"&lt;(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^&gt;]*)?/&gt;"</span>,
-<a href=#1801 id=1801 data-nosnippet>1801</a>    ).unwrap()
-<a href=#1802 id=1802 data-nosnippet>1802</a>  });
-<a href=#1803 id=1803 data-nosnippet>1803</a>  <span class="kw">static </span>VOID_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
-<a href=#1804 id=1804 data-nosnippet>1804</a>    regex::Regex::new(<span class="string">r"&lt;/(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)&gt;"</span>)
-<a href=#1805 id=1805 data-nosnippet>1805</a>      .unwrap()
-<a href=#1806 id=1806 data-nosnippet>1806</a>  });
-<a href=#1807 id=1807 data-nosnippet>1807</a>  <span class="kw">static </span>VOID_SELF_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
-<a href=#1808 id=1808 data-nosnippet>1808</a>    regex::Regex::new(
-<a href=#1809 id=1809 data-nosnippet>1809</a>      <span class="string">r"&lt;(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^&gt;]*?)\s*/&gt;"</span>,
-<a href=#1810 id=1810 data-nosnippet>1810</a>    )
-<a href=#1811 id=1811 data-nosnippet>1811</a>    .unwrap()
-<a href=#1812 id=1812 data-nosnippet>1812</a>  });
-<a href=#1813 id=1813 data-nosnippet>1813</a>
-<a href=#1814 id=1814 data-nosnippet>1814</a>  <span class="kw">let </span>_gp_html5 = telemetry::phase(Phase::Html5Fixups);
-<a href=#1815 id=1815 data-nosnippet>1815</a>  <span class="comment">// Strip &lt;?xml version...?&gt; prolog: HTML5 must NOT have an XML declaration.
-<a href=#1816 id=1816 data-nosnippet>1816</a>  // libxml2's to_string() includes it by default; we strip it here.
-<a href=#1817 id=1817 data-nosnippet>1817</a>  </span><span class="kw">let </span>output = XML_PROLOG_RE.replace(<span class="kw-2">&amp;</span>output, <span class="string">""</span>).to_string();
-<a href=#1818 id=1818 data-nosnippet>1818</a>  <span class="kw">let </span>output = NON_VOID_SELF_CLOSE_RE
-<a href=#1819 id=1819 data-nosnippet>1819</a>    .replace_all(<span class="kw-2">&amp;</span>output, <span class="string">"&lt;$1$2&gt;&lt;/$1&gt;"</span>)
-<a href=#1820 id=1820 data-nosnippet>1820</a>    .to_string();
-<a href=#1821 id=1821 data-nosnippet>1821</a>  <span class="kw">let </span>output = VOID_CLOSE_RE.replace_all(<span class="kw-2">&amp;</span>output, <span class="string">""</span>).to_string();
-<a href=#1822 id=1822 data-nosnippet>1822</a>  VOID_SELF_CLOSE_RE
-<a href=#1823 id=1823 data-nosnippet>1823</a>    .replace_all(<span class="kw-2">&amp;</span>output, <span class="string">"&lt;$1$2&gt;"</span>)
-<a href=#1824 id=1824 data-nosnippet>1824</a>    .to_string()
-<a href=#1825 id=1825 data-nosnippet>1825</a>}
+<a href=#1516 id=1516 data-nosnippet>1516</a>  main_output.unwrap_or_else(fallback)
+<a href=#1517 id=1517 data-nosnippet>1517</a>}
+<a href=#1518 id=1518 data-nosnippet>1518</a>
+<a href=#1519 id=1519 data-nosnippet>1519</a><span class="doccomment">/// The per-page processor set for pass B — everything [`render_spilled_page`]
+<a href=#1520 id=1520 data-nosnippet>1520</a>/// mutates. Bundled so the serial driver and the process-parallel worker
+<a href=#1521 id=1521 data-nosnippet>1521</a>/// ([`crate::render_workers`]) share ONE pipeline implementation and cannot
+<a href=#1522 id=1522 data-nosnippet>1522</a>/// drift.
+<a href=#1523 id=1523 data-nosnippet>1523</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PageProcessors {
+<a href=#1524 id=1524 data-nosnippet>1524</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) crossref:   latexml_post::crossref::CrossRef,
+<a href=#1525 id=1525 data-nosnippet>1525</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) graphics:   <span class="prelude-ty">Option</span>&lt;latexml_post::graphics::Graphics&gt;,
+<a href=#1526 id=1526 data-nosnippet>1526</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) post:       latexml_post::Post,
+<a href=#1527 id=1527 data-nosnippet>1527</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) processors: Vec&lt;Box&lt;<span class="kw">dyn </span>Processor&gt;&gt;,
+<a href=#1528 id=1528 data-nosnippet>1528</a>}
+<a href=#1529 id=1529 data-nosnippet>1529</a>
+<a href=#1530 id=1530 data-nosnippet>1530</a><span class="doccomment">/// The read-only per-run context for pass B page rendering, shared by every
+<a href=#1531 id=1531 data-nosnippet>1531</a>/// page of one conversion (serial driver or one parallel worker).
+<a href=#1532 id=1532 data-nosnippet>1532</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>PageRenderCtx {
+<a href=#1533 id=1533 data-nosnippet>1533</a>  <span class="doccomment">/// Clone-source for each page's `PostDocument` parse — carries the same
+<a href=#1534 id=1534 data-nosnippet>1534</a>  /// searchpaths/site-directory the pass-A parse used.
+<a href=#1535 id=1535 data-nosnippet>1535</a>  </span><span class="kw">pub</span>(<span class="kw">crate</span>) page_opts:   PostDocumentOptions,
+<a href=#1536 id=1536 data-nosnippet>1536</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) is_html_out: bool,
+<a href=#1537 id=1537 data-nosnippet>1537</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) schemadocs:  bool,
+<a href=#1538 id=1538 data-nosnippet>1538</a>  <span class="kw">pub</span>(<span class="kw">crate</span>) whatsout:    latexml_post::extract::Whatsout,
+<a href=#1539 id=1539 data-nosnippet>1539</a>}
+<a href=#1540 id=1540 data-nosnippet>1540</a>
+<a href=#1541 id=1541 data-nosnippet>1541</a><span class="doccomment">/// Run one page-local phase (CrossRef / Graphics) over one page, mirroring
+<a href=#1542 id=1542 data-nosnippet>1542</a>/// `run_phase` for a single document. Failures are reported via [`post_error`].
+<a href=#1543 id=1543 data-nosnippet>1543</a></span><span class="kw">fn </span>run_page_phase(
+<a href=#1544 id=1544 data-nosnippet>1544</a>  doc: PostDocument,
+<a href=#1545 id=1545 data-nosnippet>1545</a>  proc: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Processor,
+<a href=#1546 id=1546 data-nosnippet>1546</a>  label: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+<a href=#1547 id=1547 data-nosnippet>1547</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;PostDocument&gt;, ()&gt; {
+<a href=#1548 id=1548 data-nosnippet>1548</a>  <span class="kw">let </span>nodes = proc.to_process(<span class="kw-2">&amp;</span>doc);
+<a href=#1549 id=1549 data-nosnippet>1549</a>  <span class="kw">if </span>nodes.is_empty() {
+<a href=#1550 id=1550 data-nosnippet>1550</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[doc]);
+<a href=#1551 id=1551 data-nosnippet>1551</a>  }
+<a href=#1552 id=1552 data-nosnippet>1552</a>  proc.process(doc, nodes).map_err(|e| {
+<a href=#1553 id=1553 data-nosnippet>1553</a>    post_error(label, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{label} failed: {e}"</span>));
+<a href=#1554 id=1554 data-nosnippet>1554</a>  })
+<a href=#1555 id=1555 data-nosnippet>1555</a>}
+<a href=#1556 id=1556 data-nosnippet>1556</a>
+<a href=#1557 id=1557 data-nosnippet>1557</a><span class="doccomment">/// The pass-B per-page pipeline: parse one spilled page (deleting the spill
+<a href=#1558 id=1558 data-nosnippet>1558</a>/// file as soon as it is parsed), run CrossRef → Graphics → MathML/XSLT, and
+<a href=#1559 id=1559 data-nosnippet>1559</a>/// return the finalized `(destination, output)` pairs for the caller to write.
+<a href=#1560 id=1560 data-nosnippet>1560</a>/// Exactly the body the serial render loop ran in place before the
+<a href=#1561 id=1561 data-nosnippet>1561</a>/// process-parallel split — phase order, telemetry and audit calls included —
+<a href=#1562 id=1562 data-nosnippet>1562</a>/// so the serial path stays byte-identical (guard:
+<a href=#1563 id=1563 data-nosnippet>1563</a>/// `118_streaming_split_parity`). `Err(())` means the failure was already
+<a href=#1564 id=1564 data-nosnippet>1564</a>/// reported via [`post_error`] (or a phase's own diagnostics).
+<a href=#1565 id=1565 data-nosnippet>1565</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>render_spilled_page(
+<a href=#1566 id=1566 data-nosnippet>1566</a>  path: <span class="kw-2">&amp;</span>std::path::Path,
+<a href=#1567 id=1567 data-nosnippet>1567</a>  procs: <span class="kw-2">&amp;mut </span>PageProcessors,
+<a href=#1568 id=1568 data-nosnippet>1568</a>  ctx: <span class="kw-2">&amp;</span>PageRenderCtx,
+<a href=#1569 id=1569 data-nosnippet>1569</a>  destination: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#1570 id=1570 data-nosnippet>1570</a>  destination_directory: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#1571 id=1571 data-nosnippet>1571</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, String)&gt;, PageFailure&gt; {
+<a href=#1572 id=1572 data-nosnippet>1572</a>  <span class="kw">let </span>path_str = path.to_string_lossy().into_owned();
+<a href=#1573 id=1573 data-nosnippet>1573</a>  <span class="kw">let </span>page = <span class="kw">match </span>PostDocument::new_from_file(<span class="kw-2">&amp;</span>path_str, ctx.page_opts.clone()) {
+<a href=#1574 id=1574 data-nosnippet>1574</a>    <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>d) =&gt; {
+<a href=#1575 id=1575 data-nosnippet>1575</a>      d.destination = destination;
+<a href=#1576 id=1576 data-nosnippet>1576</a>      d.destination_directory = destination_directory;
+<a href=#1577 id=1577 data-nosnippet>1577</a>      d
+<a href=#1578 id=1578 data-nosnippet>1578</a>    },
+<a href=#1579 id=1579 data-nosnippet>1579</a>    <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#1580 id=1580 data-nosnippet>1580</a>      post_error(<span class="string">"post"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"cannot re-read a disk-staged page: {e}"</span>));
+<a href=#1581 id=1581 data-nosnippet>1581</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(PageFailure::Error);
+<a href=#1582 id=1582 data-nosnippet>1582</a>    },
+<a href=#1583 id=1583 data-nosnippet>1583</a>  };
+<a href=#1584 id=1584 data-nosnippet>1584</a>  <span class="comment">// Free the spill as soon as it is parsed: for a 40k-page document the
+<a href=#1585 id=1585 data-nosnippet>1585</a>  // spill area is the size of the core XML, and it need not outlive its page.
+<a href=#1586 id=1586 data-nosnippet>1586</a>  </span><span class="kw">let _ </span>= std::fs::remove_file(path);
+<a href=#1587 id=1587 data-nosnippet>1587</a>  render_page(page, procs, ctx)
+<a href=#1588 id=1588 data-nosnippet>1588</a>}
+<a href=#1589 id=1589 data-nosnippet>1589</a>
+<a href=#1590 id=1590 data-nosnippet>1590</a><span class="doccomment">/// [`render_spilled_page`]'s pipeline after the parse: CrossRef → Graphics →
+<a href=#1591 id=1591 data-nosnippet>1591</a>/// MathML/XSLT on one page, returning its `(destination, output)` pairs.
+<a href=#1592 id=1592 data-nosnippet>1592</a></span><span class="kw">fn </span>render_page(
+<a href=#1593 id=1593 data-nosnippet>1593</a>  page: PostDocument,
+<a href=#1594 id=1594 data-nosnippet>1594</a>  procs: <span class="kw-2">&amp;mut </span>PageProcessors,
+<a href=#1595 id=1595 data-nosnippet>1595</a>  ctx: <span class="kw-2">&amp;</span>PageRenderCtx,
+<a href=#1596 id=1596 data-nosnippet>1596</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(<span class="prelude-ty">Option</span>&lt;String&gt;, String)&gt;, PageFailure&gt; {
+<a href=#1597 id=1597 data-nosnippet>1597</a>  <span class="comment">// CrossRef resolves this page's references out of the completed ObjectDB,
+<a href=#1598 id=1598 data-nosnippet>1598</a>  // and its navigation/TOC work reads the DB rather than sibling pages — so
+<a href=#1599 id=1599 data-nosnippet>1599</a>  // it is page-local once pass A has finished.
+<a href=#1600 id=1600 data-nosnippet>1600</a>  </span>telemetry::phase_enter(Phase::Crossref);
+<a href=#1601 id=1601 data-nosnippet>1601</a>  <span class="kw">let </span>t_xref = audit_start(<span class="string">"CrossRef"</span>);
+<a href=#1602 id=1602 data-nosnippet>1602</a>  <span class="kw">let </span>xref = run_page_phase(page, <span class="kw-2">&amp;mut </span>procs.crossref, <span class="string">"CrossRef"</span>);
+<a href=#1603 id=1603 data-nosnippet>1603</a>  audit_end(t_xref);
+<a href=#1604 id=1604 data-nosnippet>1604</a>  telemetry::phase_exit();
+<a href=#1605 id=1605 data-nosnippet>1605</a>  <span class="kw">let </span><span class="kw-2">mut </span>staged = xref.map_err(|()| PageFailure::Error)<span class="question-mark">?</span>;
+<a href=#1606 id=1606 data-nosnippet>1606</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(gfx) = procs.graphics.as_mut() {
+<a href=#1607 id=1607 data-nosnippet>1607</a>    telemetry::phase_enter(Phase::Graphics);
+<a href=#1608 id=1608 data-nosnippet>1608</a>    <span class="kw">let </span>t_gfx = audit_start(<span class="string">"Graphics"</span>);
+<a href=#1609 id=1609 data-nosnippet>1609</a>    <span class="kw">let </span><span class="kw-2">mut </span>next = Vec::with_capacity(staged.len());
+<a href=#1610 id=1610 data-nosnippet>1610</a>    <span class="kw">let </span><span class="kw-2">mut </span>failed = <span class="bool-val">false</span>;
+<a href=#1611 id=1611 data-nosnippet>1611</a>    <span class="kw">for </span>d <span class="kw">in </span>staged.drain(..) {
+<a href=#1612 id=1612 data-nosnippet>1612</a>      <span class="kw">match </span>run_page_phase(d, gfx, <span class="string">"Graphics"</span>) {
+<a href=#1613 id=1613 data-nosnippet>1613</a>        <span class="prelude-val">Ok</span>(out) =&gt; next.extend(out),
+<a href=#1614 id=1614 data-nosnippet>1614</a>        <span class="prelude-val">Err</span>(()) =&gt; {
+<a href=#1615 id=1615 data-nosnippet>1615</a>          failed = <span class="bool-val">true</span>;
+<a href=#1616 id=1616 data-nosnippet>1616</a>          <span class="kw">break</span>;
+<a href=#1617 id=1617 data-nosnippet>1617</a>        },
+<a href=#1618 id=1618 data-nosnippet>1618</a>      }
+<a href=#1619 id=1619 data-nosnippet>1619</a>    }
+<a href=#1620 id=1620 data-nosnippet>1620</a>    audit_end(t_gfx);
+<a href=#1621 id=1621 data-nosnippet>1621</a>    telemetry::phase_exit();
+<a href=#1622 id=1622 data-nosnippet>1622</a>    <span class="kw">if </span>failed {
+<a href=#1623 id=1623 data-nosnippet>1623</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(PageFailure::Error);
+<a href=#1624 id=1624 data-nosnippet>1624</a>    }
+<a href=#1625 id=1625 data-nosnippet>1625</a>    staged = next;
+<a href=#1626 id=1626 data-nosnippet>1626</a>  }
+<a href=#1627 id=1627 data-nosnippet>1627</a>
+<a href=#1628 id=1628 data-nosnippet>1628</a>  <span class="kw">let </span>rendered = <span class="kw">match </span>procs.post.process_chain(staged, <span class="kw-2">&amp;mut </span>procs.processors) {
+<a href=#1629 id=1629 data-nosnippet>1629</a>    <span class="prelude-val">Ok</span>(r) =&gt; r,
+<a href=#1630 id=1630 data-nosnippet>1630</a>    <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#1631 id=1631 data-nosnippet>1631</a>      emit_fatal(<span class="string">"post"</span>, <span class="string">"convert"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"Post-processing failed: {e}"</span>));
+<a href=#1632 id=1632 data-nosnippet>1632</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(PageFailure::Fatal);
+<a href=#1633 id=1633 data-nosnippet>1633</a>    },
+<a href=#1634 id=1634 data-nosnippet>1634</a>  };
+<a href=#1635 id=1635 data-nosnippet>1635</a>
+<a href=#1636 id=1636 data-nosnippet>1636</a>  <span class="kw">let </span><span class="kw-2">mut </span>outputs = Vec::with_capacity(rendered.len());
+<a href=#1637 id=1637 data-nosnippet>1637</a>  <span class="kw">for </span>doc <span class="kw">in </span>rendered {
+<a href=#1638 id=1638 data-nosnippet>1638</a>    <span class="kw">let </span>dest = doc.get_destination().map(String::from);
+<a href=#1639 id=1639 data-nosnippet>1639</a>    <span class="kw">let </span>output = latexml_post::extract::serialize_whatsout(<span class="kw-2">&amp;</span>doc, ctx.whatsout);
+<a href=#1640 id=1640 data-nosnippet>1640</a>    <span class="kw">let </span>output = <span class="kw">if </span>ctx.is_html_out {
+<a href=#1641 id=1641 data-nosnippet>1641</a>      finalize_html5(output)
+<a href=#1642 id=1642 data-nosnippet>1642</a>    } <span class="kw">else </span>{
+<a href=#1643 id=1643 data-nosnippet>1643</a>      output
+<a href=#1644 id=1644 data-nosnippet>1644</a>    };
+<a href=#1645 id=1645 data-nosnippet>1645</a>    <span class="kw">let </span>output = <span class="kw">if </span>ctx.schemadocs &amp;&amp; ctx.is_html_out {
+<a href=#1646 id=1646 data-nosnippet>1646</a>      latexml_post::schema_docs::process_page(<span class="kw-2">&amp;</span>output)
+<a href=#1647 id=1647 data-nosnippet>1647</a>    } <span class="kw">else </span>{
+<a href=#1648 id=1648 data-nosnippet>1648</a>      output
+<a href=#1649 id=1649 data-nosnippet>1649</a>    };
+<a href=#1650 id=1650 data-nosnippet>1650</a>    outputs.push((dest, output));
+<a href=#1651 id=1651 data-nosnippet>1651</a>    <span class="comment">// `doc` drops here — the whole point.
+<a href=#1652 id=1652 data-nosnippet>1652</a>  </span>}
+<a href=#1653 id=1653 data-nosnippet>1653</a>  <span class="prelude-val">Ok</span>(outputs)
+<a href=#1654 id=1654 data-nosnippet>1654</a>}
+<a href=#1655 id=1655 data-nosnippet>1655</a>
+<a href=#1656 id=1656 data-nosnippet>1656</a><span class="doccomment">/// Remove the pages a render wrote before a Fatal: Perl runs each processor over every page
+<a href=#1657 id=1657 data-nosnippet>1657</a>/// before its writer, so a die in ProcessChain leaves none (LaTeXML.pm L605-614, #782).
+<a href=#1658 id=1658 data-nosnippet>1658</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>remove_pages&lt;S: AsRef&lt;str&gt;&gt;(pages: <span class="kw-2">&amp;</span>[S]) {
+<a href=#1659 id=1659 data-nosnippet>1659</a>  <span class="kw">for </span>page <span class="kw">in </span>pages {
+<a href=#1660 id=1660 data-nosnippet>1660</a>    <span class="kw">let _ </span>= std::fs::remove_file(page.as_ref());
+<a href=#1661 id=1661 data-nosnippet>1661</a>  }
+<a href=#1662 id=1662 data-nosnippet>1662</a>}
+<a href=#1663 id=1663 data-nosnippet>1663</a>
+<a href=#1664 id=1664 data-nosnippet>1664</a><span class="doccomment">/// Why a page did not render (already reported). `Fatal`: a MathML/XSLT step failed, which stops
+<a href=#1665 id=1665 data-nosnippet>1665</a>/// post-processing with no output, as a die in Perl's ProcessChain does (LaTeXML.pm L605-614, #782).
+<a href=#1666 id=1666 data-nosnippet>1666</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#1667 id=1667 data-nosnippet>1667</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>PageFailure {
+<a href=#1668 id=1668 data-nosnippet>1668</a>  Error,
+<a href=#1669 id=1669 data-nosnippet>1669</a>  Fatal,
+<a href=#1670 id=1670 data-nosnippet>1670</a>}
+<a href=#1671 id=1671 data-nosnippet>1671</a>
+<a href=#1672 id=1672 data-nosnippet>1672</a><span class="doccomment">/// One page spilled between the post pipeline's two passes: where its XML
+<a href=#1673 id=1673 data-nosnippet>1673</a>/// lives, the metadata that does NOT survive an XML round-trip, and whether it
+<a href=#1674 id=1674 data-nosnippet>1674</a>/// carries the placeholders the two ObjectDB-baton sweeps look for (recorded in
+<a href=#1675 id=1675 data-nosnippet>1675</a>/// pass A, while the page is already parsed).
+<a href=#1676 id=1676 data-nosnippet>1676</a></span><span class="kw">struct </span>SpilledPage {
+<a href=#1677 id=1677 data-nosnippet>1677</a>  path:                  std::path::PathBuf,
+<a href=#1678 id=1678 data-nosnippet>1678</a>  destination:           <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#1679 id=1679 data-nosnippet>1679</a>  destination_directory: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#1680 id=1680 data-nosnippet>1680</a>  needs_index:           bool,
+<a href=#1681 id=1681 data-nosnippet>1681</a>  needs_bib:             bool,
+<a href=#1682 id=1682 data-nosnippet>1682</a>  <span class="doccomment">/// The page itself, never written to `path`: the one page of an unsplit, cleanly parsed document. Its DOM is
+<a href=#1683 id=1683 data-nosnippet>1683</a>  /// what re-parsing `path` would give (a clean parse reparses to the same tree, and Scan only adds the root's
+<a href=#1684 id=1684 data-nosnippet>1684</a>  /// `xml:id`), and [`as_reparsed`] gives it the wrapper state of a fresh parse.
+<a href=#1685 id=1685 data-nosnippet>1685</a>  </span>resident:              <span class="prelude-ty">Option</span>&lt;PostDocument&gt;,
+<a href=#1686 id=1686 data-nosnippet>1686</a>}
+<a href=#1687 id=1687 data-nosnippet>1687</a>
+<a href=#1688 id=1688 data-nosnippet>1688</a><span class="doccomment">/// Whether libxml2 parsed `doc` without errors: a recovered tree (say, adjacent text nodes around a dropped
+<a href=#1689 id=1689 data-nosnippet>1689</a>/// invalid character) can differ from its reparse, so such a page goes to disk.
+<a href=#1690 id=1690 data-nosnippet>1690</a></span><span class="kw">fn </span>parsed_cleanly(doc: <span class="kw-2">&amp;</span>PostDocument) -&gt; bool {
+<a href=#1691 id=1691 data-nosnippet>1691</a>  <span class="kw">let </span>xml = doc.get_document();
+<a href=#1692 id=1692 data-nosnippet>1692</a>  xml.is_well_formed() &amp;&amp; xml.is_ns_valid()
+<a href=#1693 id=1693 data-nosnippet>1693</a>}
+<a href=#1694 id=1694 data-nosnippet>1694</a>
+<a href=#1695 id=1695 data-nosnippet>1695</a><span class="doccomment">/// `doc` as [`PostDocument::new_from_file`] would return it from `path`: the same DOM, with fresh ids,
+<a href=#1696 id=1696 data-nosnippet>1696</a>/// namespaces, memos, node wrappers and `source` options.
+<a href=#1697 id=1697 data-nosnippet>1697</a></span><span class="kw">fn </span>as_reparsed(
+<a href=#1698 id=1698 data-nosnippet>1698</a>  doc: PostDocument,
+<a href=#1699 id=1699 data-nosnippet>1699</a>  path: <span class="kw-2">&amp;</span>std::path::Path,
+<a href=#1700 id=1700 data-nosnippet>1700</a>  opts: <span class="kw-2">&amp;</span>PostDocumentOptions,
+<a href=#1701 id=1701 data-nosnippet>1701</a>) -&gt; PostDocument {
+<a href=#1702 id=1702 data-nosnippet>1702</a>  <span class="kw">let </span>xml = doc.into_document();
+<a href=#1703 id=1703 data-nosnippet>1703</a>  xml.trim_node_cache();
+<a href=#1704 id=1704 data-nosnippet>1704</a>  <span class="kw">let </span>path_str = path.to_string_lossy();
+<a href=#1705 id=1705 data-nosnippet>1705</a>  <span class="kw">let </span>page = PostDocument::new(xml, PostDocument::file_options(<span class="kw-2">&amp;</span>path_str, opts.clone()));
+<a href=#1706 id=1706 data-nosnippet>1706</a>  <span class="attr">#[cfg(debug_assertions)]
+<a href=#1707 id=1707 data-nosnippet>1707</a>  </span>assert_matches_reparse(<span class="kw-2">&amp;</span>page, <span class="kw-2">&amp;</span>path_str, opts);
+<a href=#1708 id=1708 data-nosnippet>1708</a>  page
+<a href=#1709 id=1709 data-nosnippet>1709</a>}
+<a href=#1710 id=1710 data-nosnippet>1710</a>
+<a href=#1711 id=1711 data-nosnippet>1711</a><span class="doccomment">/// Test-profile check that a resident page is what its disk spill would reparse to: Scan sets the root's
+<a href=#1712 id=1712 data-nosnippet>1712</a>/// `xml:id` with a raw `set_attribute` (scan.rs), so a page that skipped the refresh keeps a stale id cache
+<a href=#1713 id=1713 data-nosnippet>1713</a>/// and `source`. Every post fixture runs it; release builds pay nothing.
+<a href=#1714 id=1714 data-nosnippet>1714</a></span><span class="attr">#[cfg(debug_assertions)]
+<a href=#1715 id=1715 data-nosnippet>1715</a></span><span class="kw">fn </span>assert_matches_reparse(page: <span class="kw-2">&amp;</span>PostDocument, path: <span class="kw-2">&amp;</span>str, opts: <span class="kw-2">&amp;</span>PostDocumentOptions) {
+<a href=#1716 id=1716 data-nosnippet>1716</a>  <span class="kw">let </span>reparsed = PostDocument::new_from_string(
+<a href=#1717 id=1717 data-nosnippet>1717</a>    <span class="kw-2">&amp;</span>page.to_xml_string(),
+<a href=#1718 id=1718 data-nosnippet>1718</a>    PostDocument::file_options(path, opts.clone()),
+<a href=#1719 id=1719 data-nosnippet>1719</a>  )
+<a href=#1720 id=1720 data-nosnippet>1720</a>  .expect(<span class="string">"a resident page reparses"</span>);
+<a href=#1721 id=1721 data-nosnippet>1721</a>  <span class="kw">let </span>root_id_resolves = |d: <span class="kw-2">&amp;</span>PostDocument| {
+<a href=#1722 id=1722 data-nosnippet>1722</a>    <span class="kw">let </span>root = d.get_document().get_root_element()<span class="question-mark">?</span>;
+<a href=#1723 id=1723 data-nosnippet>1723</a>    <span class="kw">let </span>id = latexml_post::document::get_xml_id(<span class="kw-2">&amp;</span>root)<span class="question-mark">?</span>;
+<a href=#1724 id=1724 data-nosnippet>1724</a>    <span class="prelude-val">Some</span>(
+<a href=#1725 id=1725 data-nosnippet>1725</a>      d.find_node_by_id(<span class="kw-2">&amp;</span>id)
+<a href=#1726 id=1726 data-nosnippet>1726</a>        .map(|n| n.node_ptr() == root.node_ptr()),
+<a href=#1727 id=1727 data-nosnippet>1727</a>    )
+<a href=#1728 id=1728 data-nosnippet>1728</a>  };
+<a href=#1729 id=1729 data-nosnippet>1729</a>  <span class="kw">let </span>ns_decls = |d: <span class="kw-2">&amp;</span>PostDocument| {
+<a href=#1730 id=1730 data-nosnippet>1730</a>    <span class="kw">let </span>root = d.get_document().get_root_element();
+<a href=#1731 id=1731 data-nosnippet>1731</a>    <span class="kw">let </span>decls = root
+<a href=#1732 id=1732 data-nosnippet>1732</a>      .map(|r| r.get_namespace_declarations())
+<a href=#1733 id=1733 data-nosnippet>1733</a>      .unwrap_or_default();
+<a href=#1734 id=1734 data-nosnippet>1734</a>    decls
+<a href=#1735 id=1735 data-nosnippet>1735</a>      .iter()
+<a href=#1736 id=1736 data-nosnippet>1736</a>      .map(|ns| (ns.get_prefix(), ns.get_href()))
+<a href=#1737 id=1737 data-nosnippet>1737</a>      .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#1738 id=1738 data-nosnippet>1738</a>  };
+<a href=#1739 id=1739 data-nosnippet>1739</a>  <span class="macro">assert_eq!</span>(
+<a href=#1740 id=1740 data-nosnippet>1740</a>    page.to_xml_string(),
+<a href=#1741 id=1741 data-nosnippet>1741</a>    reparsed.to_xml_string(),
+<a href=#1742 id=1742 data-nosnippet>1742</a>    <span class="string">"resident page: XML"
+<a href=#1743 id=1743 data-nosnippet>1743</a>  </span>);
+<a href=#1744 id=1744 data-nosnippet>1744</a>  <span class="macro">assert_eq!</span>(
+<a href=#1745 id=1745 data-nosnippet>1745</a>    root_id_resolves(page),
+<a href=#1746 id=1746 data-nosnippet>1746</a>    root_id_resolves(<span class="kw-2">&amp;</span>reparsed),
+<a href=#1747 id=1747 data-nosnippet>1747</a>    <span class="string">"resident page: root xml:id"
+<a href=#1748 id=1748 data-nosnippet>1748</a>  </span>);
+<a href=#1749 id=1749 data-nosnippet>1749</a>  <span class="macro">assert_eq!</span>(
+<a href=#1750 id=1750 data-nosnippet>1750</a>    page.get_source(),
+<a href=#1751 id=1751 data-nosnippet>1751</a>    reparsed.get_source(),
+<a href=#1752 id=1752 data-nosnippet>1752</a>    <span class="string">"resident page: source"
+<a href=#1753 id=1753 data-nosnippet>1753</a>  </span>);
+<a href=#1754 id=1754 data-nosnippet>1754</a>  <span class="macro">assert_eq!</span>(
+<a href=#1755 id=1755 data-nosnippet>1755</a>    page.source_directory, reparsed.source_directory,
+<a href=#1756 id=1756 data-nosnippet>1756</a>    <span class="string">"resident page: source_directory"
+<a href=#1757 id=1757 data-nosnippet>1757</a>  </span>);
+<a href=#1758 id=1758 data-nosnippet>1758</a>  <span class="macro">assert_eq!</span>(
+<a href=#1759 id=1759 data-nosnippet>1759</a>    page.processing_instructions(),
+<a href=#1760 id=1760 data-nosnippet>1760</a>    reparsed.processing_instructions(),
+<a href=#1761 id=1761 data-nosnippet>1761</a>    <span class="string">"resident page: PIs"
+<a href=#1762 id=1762 data-nosnippet>1762</a>  </span>);
+<a href=#1763 id=1763 data-nosnippet>1763</a>  <span class="macro">assert_eq!</span>(
+<a href=#1764 id=1764 data-nosnippet>1764</a>    page.searchpaths, reparsed.searchpaths,
+<a href=#1765 id=1765 data-nosnippet>1765</a>    <span class="string">"resident page: searchpaths"
+<a href=#1766 id=1766 data-nosnippet>1766</a>  </span>);
+<a href=#1767 id=1767 data-nosnippet>1767</a>  <span class="macro">assert_eq!</span>(
+<a href=#1768 id=1768 data-nosnippet>1768</a>    ns_decls(page),
+<a href=#1769 id=1769 data-nosnippet>1769</a>    ns_decls(<span class="kw-2">&amp;</span>reparsed),
+<a href=#1770 id=1770 data-nosnippet>1770</a>    <span class="string">"resident page: namespace declarations"
+<a href=#1771 id=1771 data-nosnippet>1771</a>  </span>);
+<a href=#1772 id=1772 data-nosnippet>1772</a>  <span class="macro">assert_eq!</span>(
+<a href=#1773 id=1773 data-nosnippet>1773</a>    page.namespaces, reparsed.namespaces,
+<a href=#1774 id=1774 data-nosnippet>1774</a>    <span class="string">"resident page: namespaces"
+<a href=#1775 id=1775 data-nosnippet>1775</a>  </span>);
+<a href=#1776 id=1776 data-nosnippet>1776</a>  <span class="macro">assert_eq!</span>(
+<a href=#1777 id=1777 data-nosnippet>1777</a>    page.namespace_uris, reparsed.namespace_uris,
+<a href=#1778 id=1778 data-nosnippet>1778</a>    <span class="string">"resident page: namespace_uris"
+<a href=#1779 id=1779 data-nosnippet>1779</a>  </span>);
+<a href=#1780 id=1780 data-nosnippet>1780</a>}
+<a href=#1781 id=1781 data-nosnippet>1781</a>
+<a href=#1782 id=1782 data-nosnippet>1782</a><span class="doccomment">/// Apply HTML5 cleanup (XML prolog strip, void-element fixes) to one rendered
+<a href=#1783 id=1783 data-nosnippet>1783</a>/// page. Pulled out of `run_post_processing` so it can run on every split
+<a href=#1784 id=1784 data-nosnippet>1784</a>/// sub-document, not just the first.
+<a href=#1785 id=1785 data-nosnippet>1785</a>///
+<a href=#1786 id=1786 data-nosnippet>1786</a>/// Pictures need no string-level work here any more: `latexml_post::svg::SVG`
+<a href=#1787 id=1787 data-nosnippet>1787</a>/// converts every `&lt;ltx:picture&gt;` on the live page DOM before MathML/XSLT
+<a href=#1788 id=1788 data-nosnippet>1788</a>/// (Perl's chain order, `LaTeXML.pm` Graphics → SVG → MathML → XSLT), so the
+<a href=#1789 id=1789 data-nosnippet>1789</a>/// XSLT's `as-svg` branch renders the `&lt;svg:svg&gt;` itself. The former
+<a href=#1790 id=1790 data-nosnippet>1790</a>/// regex-built fragment table and post-XSLT placeholder splice truncated an
+<a href=#1791 id=1791 data-nosnippet>1791</a>/// outer picture at its first nested `&lt;/picture&gt;` and dropped every
+<a href=#1792 id=1792 data-nosnippet>1792</a>/// `&lt;block&gt;`/`&lt;p&gt;`/`&lt;inline-block&gt;` child (pagelayout ×3, ticket ×2,
+<a href=#1793 id=1793 data-nosnippet>1793</a>/// vocaltract, bookcover-example2, latex-refsheet/header-graph lost all
+<a href=#1794 id=1794 data-nosnippet>1794</a>/// picture text at post; batch 56bz).
+<a href=#1795 id=1795 data-nosnippet>1795</a></span><span class="kw">fn </span>finalize_html5(output: String) -&gt; String {
+<a href=#1796 id=1796 data-nosnippet>1796</a>  <span class="kw">use </span>std::sync::LazyLock;
+<a href=#1797 id=1797 data-nosnippet>1797</a>  <span class="comment">// Cached at first call — regex compile is the slow part of `Regex::new`,
+<a href=#1798 id=1798 data-nosnippet>1798</a>  // and finalize_html5 runs on every (sub-)document in the post-pipeline.
+<a href=#1799 id=1799 data-nosnippet>1799</a>  </span><span class="kw">static </span>XML_PROLOG_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#1800 id=1800 data-nosnippet>1800</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r"^&lt;\?xml[^?]*\?&gt;\s*"</span>).unwrap());
+<a href=#1801 id=1801 data-nosnippet>1801</a>  <span class="kw">static </span>NON_VOID_SELF_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
+<a href=#1802 id=1802 data-nosnippet>1802</a>    regex::Regex::new(
+<a href=#1803 id=1803 data-nosnippet>1803</a>      <span class="string">r"&lt;(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^&gt;]*)?/&gt;"</span>,
+<a href=#1804 id=1804 data-nosnippet>1804</a>    ).unwrap()
+<a href=#1805 id=1805 data-nosnippet>1805</a>  });
+<a href=#1806 id=1806 data-nosnippet>1806</a>  <span class="kw">static </span>VOID_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
+<a href=#1807 id=1807 data-nosnippet>1807</a>    regex::Regex::new(<span class="string">r"&lt;/(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)&gt;"</span>)
+<a href=#1808 id=1808 data-nosnippet>1808</a>      .unwrap()
+<a href=#1809 id=1809 data-nosnippet>1809</a>  });
+<a href=#1810 id=1810 data-nosnippet>1810</a>  <span class="kw">static </span>VOID_SELF_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
+<a href=#1811 id=1811 data-nosnippet>1811</a>    regex::Regex::new(
+<a href=#1812 id=1812 data-nosnippet>1812</a>      <span class="string">r"&lt;(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^&gt;]*?)\s*/&gt;"</span>,
+<a href=#1813 id=1813 data-nosnippet>1813</a>    )
+<a href=#1814 id=1814 data-nosnippet>1814</a>    .unwrap()
+<a href=#1815 id=1815 data-nosnippet>1815</a>  });
+<a href=#1816 id=1816 data-nosnippet>1816</a>
+<a href=#1817 id=1817 data-nosnippet>1817</a>  <span class="kw">let </span>_gp_html5 = telemetry::phase(Phase::Html5Fixups);
+<a href=#1818 id=1818 data-nosnippet>1818</a>  <span class="comment">// Strip &lt;?xml version...?&gt; prolog: HTML5 must NOT have an XML declaration.
+<a href=#1819 id=1819 data-nosnippet>1819</a>  // libxml2's to_string() includes it by default; we strip it here.
+<a href=#1820 id=1820 data-nosnippet>1820</a>  </span><span class="kw">let </span>output = XML_PROLOG_RE.replace(<span class="kw-2">&amp;</span>output, <span class="string">""</span>).to_string();
+<a href=#1821 id=1821 data-nosnippet>1821</a>  <span class="kw">let </span>output = NON_VOID_SELF_CLOSE_RE
+<a href=#1822 id=1822 data-nosnippet>1822</a>    .replace_all(<span class="kw-2">&amp;</span>output, <span class="string">"&lt;$1$2&gt;&lt;/$1&gt;"</span>)
+<a href=#1823 id=1823 data-nosnippet>1823</a>    .to_string();
+<a href=#1824 id=1824 data-nosnippet>1824</a>  <span class="kw">let </span>output = VOID_CLOSE_RE.replace_all(<span class="kw-2">&amp;</span>output, <span class="string">""</span>).to_string();
+<a href=#1825 id=1825 data-nosnippet>1825</a>  VOID_SELF_CLOSE_RE
+<a href=#1826 id=1826 data-nosnippet>1826</a>    .replace_all(<span class="kw-2">&amp;</span>output, <span class="string">"&lt;$1$2&gt;"</span>)
+<a href=#1827 id=1827 data-nosnippet>1827</a>    .to_string()
+<a href=#1828 id=1828 data-nosnippet>1828</a>}
 </code></pre></div></section></main></body></html>

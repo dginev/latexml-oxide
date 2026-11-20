@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["unpack_tar"],"mod":["preset"]};
+window.SIDEBAR_ITEMS = {"fn":["unpack_tar","unpack_zip"],"mod":["preset"]};

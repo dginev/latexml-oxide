@@ -271,62 +271,58 @@
 <a href=#271 id=271 data-nosnippet>271</a>    // file. Set around `digest_file` only: the filter lives in the same
 <a href=#272 id=272 data-nosnippet>272</a>    // thread-local State the outer document uses, so leaving it installed
 <a href=#273 id=273 data-nosnippet>273</a>    // would leak into any later `.bib` in this process.
-<a href=#274 id=274 data-nosnippet>274</a>    </span>latexml_engine::pre_bibtex::set_wanted_keys(request.wanted_keys.clone());
-<a href=#275 id=275 data-nosnippet>275</a>    <span class="comment">// Hide the OUTER document's bibliography count for the duration of the
-<a href=#276 id=276 data-nosnippet>276</a>    // recursive digestion — the one value reusing the live State would
-<a href=#277 id=277 data-nosnippet>277</a>    // otherwise leak (see the module docs for why the State is shared).
-<a href=#278 id=278 data-nosnippet>278</a>    // `{bibtex@bibliography}` runs `begin_bibliography_clean`, which does
-<a href=#279 id=279 data-nosnippet>279</a>    // `n_bibliographies += 1` and names the session's ids
-<a href=#280 id=280 data-nosnippet>280</a>    // `&lt;docid&gt;bib&lt;radix_alpha(n-1)&gt;` (latex_constructs.rs:2392-2398). Perl
-<a href=#281 id=281 data-nosnippet>281</a>    // builds a FRESH State per `.bib` (MakeBibliography.pm:181-215), so its
-<a href=#282 id=282 data-nosnippet>282</a>    // inner session always sees 0 and mints `bib.bibN`; sharing ours made the
-<a href=#283 id=283 data-nosnippet>283</a>    // FIRST `.bib` of a one-bibliography document mint `biba.bibN` — the
-<a href=#284 id=284 data-nosnippet>284</a>    // second slot of the multi-bibliography sequence. Post then strips `^bib`
-<a href=#285 id=285 data-nosnippet>285</a>    // and re-prepends the OUTER bibid (MakeBibliography.pm:407-415), which is
-<a href=#286 id=286 data-nosnippet>286</a>    // exactly why the inner ids must be `bib`-rooted regardless of which
-<a href=#287 id=287 data-nosnippet>287</a>    // bibliography they end up in.
-<a href=#288 id=288 data-nosnippet>288</a>    </span><span class="kw">let </span>outer_n_bibliographies = latexml_core::state::lookup_int(<span class="string">"n_bibliographies"</span>);
-<a href=#289 id=289 data-nosnippet>289</a>    latexml_core::state::assign_value(
-<a href=#290 id=290 data-nosnippet>290</a>      <span class="string">"n_bibliographies"</span>,
-<a href=#291 id=291 data-nosnippet>291</a>      <span class="number">0</span>,
-<a href=#292 id=292 data-nosnippet>292</a>      <span class="prelude-val">Some</span>(latexml_core::state::Scope::Global),
-<a href=#293 id=293 data-nosnippet>293</a>    );
-<a href=#294 id=294 data-nosnippet>294</a>    <span class="kw">let </span>digested = core.digest_file(source.clone(), DigestionOptions {
-<a href=#295 id=295 data-nosnippet>295</a>      mode: <span class="prelude-val">Some</span>(DigestionMode::BibTeX),
-<a href=#296 id=296 data-nosnippet>296</a>      noinitialize: <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
-<a href=#297 id=297 data-nosnippet>297</a>      ..DigestionOptions::default()
-<a href=#298 id=298 data-nosnippet>298</a>    });
-<a href=#299 id=299 data-nosnippet>299</a>    latexml_core::state::assign_value(
-<a href=#300 id=300 data-nosnippet>300</a>      <span class="string">"n_bibliographies"</span>,
-<a href=#301 id=301 data-nosnippet>301</a>      outer_n_bibliographies,
-<a href=#302 id=302 data-nosnippet>302</a>      <span class="prelude-val">Some</span>(latexml_core::state::Scope::Global),
-<a href=#303 id=303 data-nosnippet>303</a>    );
-<a href=#304 id=304 data-nosnippet>304</a>    latexml_engine::pre_bibtex::clear_wanted_keys();
-<a href=#305 id=305 data-nosnippet>305</a>    <span class="kw">let </span>digested = digested<span class="question-mark">?</span>;
-<a href=#306 id=306 data-nosnippet>306</a>    <span class="kw">let </span>document = core.convert_document(digested)<span class="question-mark">?</span>;
-<a href=#307 id=307 data-nosnippet>307</a>    <span class="prelude-val">Ok</span>(PostDocument::new(document.document, PostDocumentOptions {
-<a href=#308 id=308 data-nosnippet>308</a>      source_directory: <span class="prelude-val">Some</span>(<span class="string">"."</span>.to_string()),
-<a href=#309 id=309 data-nosnippet>309</a>      ..PostDocumentOptions::default()
-<a href=#310 id=310 data-nosnippet>310</a>    }))
-<a href=#311 id=311 data-nosnippet>311</a>  })();
-<a href=#312 id=312 data-nosnippet>312</a>
-<a href=#313 id=313 data-nosnippet>313</a>  <span class="comment">// Perl `MergeStatus` (L237) ADDS the inner session's tally to the outer
-<a href=#314 id=314 data-nosnippet>314</a>  // document's (Common/Error.pm L669-686) — a `.bib` that raises errors makes
-<a href=#315 id=315 data-nosnippet>315</a>  // the document an error document, which is what the corpus signal depends on.
-<a href=#316 id=316 data-nosnippet>316</a>  // Sharing the live state gives that for free: the counters never left.
-<a href=#317 id=317 data-nosnippet>317</a>  </span>note_end(<span class="kw-2">&amp;</span>stage);
-<a href=#318 id=318 data-nosnippet>318</a>
-<a href=#319 id=319 data-nosnippet>319</a>  <span class="kw">match </span>result {
-<a href=#320 id=320 data-nosnippet>320</a>    <span class="prelude-val">Ok</span>(bibdoc) =&gt; <span class="prelude-val">Some</span>(bibdoc),
-<a href=#321 id=321 data-nosnippet>321</a>    <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#322 id=322 data-nosnippet>322</a>      <span class="macro">Error!</span>(
-<a href=#323 id=323 data-nosnippet>323</a>        <span class="string">"bibliography"</span>,
-<a href=#324 id=324 data-nosnippet>324</a>        <span class="string">"convert"</span>,
-<a href=#325 id=325 data-nosnippet>325</a>        <span class="string">"Recursive bibliography conversion failed: {}"</span>,
-<a href=#326 id=326 data-nosnippet>326</a>        e
-<a href=#327 id=327 data-nosnippet>327</a>      );
-<a href=#328 id=328 data-nosnippet>328</a>      <span class="prelude-val">None
-<a href=#329 id=329 data-nosnippet>329</a>    </span>},
-<a href=#330 id=330 data-nosnippet>330</a>  }
-<a href=#331 id=331 data-nosnippet>331</a>}
+<a href=#274 id=274 data-nosnippet>274</a>    </span><span class="kw">struct </span>BibSessionGuard {
+<a href=#275 id=275 data-nosnippet>275</a>      outer_n_bibliographies: i64,
+<a href=#276 id=276 data-nosnippet>276</a>    }
+<a href=#277 id=277 data-nosnippet>277</a>    <span class="kw">impl </span>Drop <span class="kw">for </span>BibSessionGuard {
+<a href=#278 id=278 data-nosnippet>278</a>      <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+<a href=#279 id=279 data-nosnippet>279</a>        latexml_core::state::assign_value(
+<a href=#280 id=280 data-nosnippet>280</a>          <span class="string">"n_bibliographies"</span>,
+<a href=#281 id=281 data-nosnippet>281</a>          <span class="self">self</span>.outer_n_bibliographies,
+<a href=#282 id=282 data-nosnippet>282</a>          <span class="prelude-val">Some</span>(latexml_core::state::Scope::Global),
+<a href=#283 id=283 data-nosnippet>283</a>        );
+<a href=#284 id=284 data-nosnippet>284</a>        latexml_engine::pre_bibtex::clear_wanted_keys();
+<a href=#285 id=285 data-nosnippet>285</a>      }
+<a href=#286 id=286 data-nosnippet>286</a>    }
+<a href=#287 id=287 data-nosnippet>287</a>    <span class="kw">let </span>outer_n_bibliographies = latexml_core::state::lookup_int(<span class="string">"n_bibliographies"</span>);
+<a href=#288 id=288 data-nosnippet>288</a>    latexml_engine::pre_bibtex::set_wanted_keys(request.wanted_keys.clone());
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">let </span>_bib_guard = BibSessionGuard { outer_n_bibliographies };
+<a href=#290 id=290 data-nosnippet>290</a>    latexml_core::state::assign_value(
+<a href=#291 id=291 data-nosnippet>291</a>      <span class="string">"n_bibliographies"</span>,
+<a href=#292 id=292 data-nosnippet>292</a>      <span class="number">0</span>,
+<a href=#293 id=293 data-nosnippet>293</a>      <span class="prelude-val">Some</span>(latexml_core::state::Scope::Global),
+<a href=#294 id=294 data-nosnippet>294</a>    );
+<a href=#295 id=295 data-nosnippet>295</a>    <span class="kw">let </span>digested = core.digest_file(source.clone(), DigestionOptions {
+<a href=#296 id=296 data-nosnippet>296</a>      mode: <span class="prelude-val">Some</span>(DigestionMode::BibTeX),
+<a href=#297 id=297 data-nosnippet>297</a>      noinitialize: <span class="prelude-val">Some</span>(<span class="bool-val">true</span>),
+<a href=#298 id=298 data-nosnippet>298</a>      ..DigestionOptions::default()
+<a href=#299 id=299 data-nosnippet>299</a>    });
+<a href=#300 id=300 data-nosnippet>300</a>    drop(_bib_guard);
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="kw">let </span>digested = digested<span class="question-mark">?</span>;
+<a href=#302 id=302 data-nosnippet>302</a>    <span class="kw">let </span>document = core.convert_document(digested)<span class="question-mark">?</span>;
+<a href=#303 id=303 data-nosnippet>303</a>    <span class="prelude-val">Ok</span>(PostDocument::new(document.document, PostDocumentOptions {
+<a href=#304 id=304 data-nosnippet>304</a>      source_directory: <span class="prelude-val">Some</span>(<span class="string">"."</span>.to_string()),
+<a href=#305 id=305 data-nosnippet>305</a>      ..PostDocumentOptions::default()
+<a href=#306 id=306 data-nosnippet>306</a>    }))
+<a href=#307 id=307 data-nosnippet>307</a>  })();
+<a href=#308 id=308 data-nosnippet>308</a>
+<a href=#309 id=309 data-nosnippet>309</a>  <span class="comment">// Perl `MergeStatus` (L237) ADDS the inner session's tally to the outer
+<a href=#310 id=310 data-nosnippet>310</a>  // document's (Common/Error.pm L669-686) — a `.bib` that raises errors makes
+<a href=#311 id=311 data-nosnippet>311</a>  // the document an error document, which is what the corpus signal depends on.
+<a href=#312 id=312 data-nosnippet>312</a>  // Sharing the live state gives that for free: the counters never left.
+<a href=#313 id=313 data-nosnippet>313</a>  </span>note_end(<span class="kw-2">&amp;</span>stage);
+<a href=#314 id=314 data-nosnippet>314</a>
+<a href=#315 id=315 data-nosnippet>315</a>  <span class="kw">match </span>result {
+<a href=#316 id=316 data-nosnippet>316</a>    <span class="prelude-val">Ok</span>(bibdoc) =&gt; <span class="prelude-val">Some</span>(bibdoc),
+<a href=#317 id=317 data-nosnippet>317</a>    <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#318 id=318 data-nosnippet>318</a>      <span class="macro">Error!</span>(
+<a href=#319 id=319 data-nosnippet>319</a>        <span class="string">"bibliography"</span>,
+<a href=#320 id=320 data-nosnippet>320</a>        <span class="string">"convert"</span>,
+<a href=#321 id=321 data-nosnippet>321</a>        <span class="string">"Recursive bibliography conversion failed: {}"</span>,
+<a href=#322 id=322 data-nosnippet>322</a>        e
+<a href=#323 id=323 data-nosnippet>323</a>      );
+<a href=#324 id=324 data-nosnippet>324</a>      <span class="prelude-val">None
+<a href=#325 id=325 data-nosnippet>325</a>    </span>},
+<a href=#326 id=326 data-nosnippet>326</a>  }
+<a href=#327 id=327 data-nosnippet>327</a>}
 </code></pre></div></section></main></body></html>

@@ -110,4 +110,20 @@
 <a href=#110 id=110 data-nosnippet>110</a>// Skeleton: full bib defs port pending (see docs/POOL_PARITY_AUDIT.md).
 <a href=#111 id=111 data-nosnippet>111</a></span><span class="kw">pub mod </span>bibtex; <span class="comment">// Perl: BibTeX.pool.ltxml
 <a href=#112 id=112 data-nosnippet>112</a></span><span class="kw">pub mod </span>pre_bibtex; <span class="comment">// Perl: Pre/BibTeX.pm (+ Pre/BibTeX/Entry.pm) — low-level .bib parser
-</span></code></pre></div></section></main></body></html>
+<a href=#113 id=113 data-nosnippet>113</a>
+<a href=#114 id=114 data-nosnippet>114</a></span><span class="doccomment">/// Reset all per-conversion thread-local state owned by `latexml_engine` so a
+<a href=#115 id=115 data-nosnippet>115</a>/// persistent worker (`cortex_worker`, LSP) starts every paper clean and never
+<a href=#116 id=116 data-nosnippet>116</a>/// carries BibTeX entries, Lua sessions, hook snapshots, or `SymStr` caches
+<a href=#117 id=117 data-nosnippet>117</a>/// across conversions.
+<a href=#118 id=118 data-nosnippet>118</a></span><span class="kw">pub fn </span>reset_conversion_state() {
+<a href=#119 id=119 data-nosnippet>119</a>  base_utilities::reset_fm_reading();
+<a href=#120 id=120 data-nosnippet>120</a>  base_utilities::reset_title_page_check();
+<a href=#121 id=121 data-nosnippet>121</a>  pdftex::reset_pdftex_random();
+<a href=#122 id=122 data-nosnippet>122</a>  lua_bridge::reset_session();
+<a href=#123 id=123 data-nosnippet>123</a>  bibtex::reset();
+<a href=#124 id=124 data-nosnippet>124</a>  pre_bibtex::clear_wanted_keys();
+<a href=#125 id=125 data-nosnippet>125</a>  tex_box::reset_splice_state();
+<a href=#126 id=126 data-nosnippet>126</a>  frontmatter_stores::reset_net_hooks_before();
+<a href=#127 id=127 data-nosnippet>127</a>  latex_constructs::reset_conversion_caches();
+<a href=#128 id=128 data-nosnippet>128</a>}
+</code></pre></div></section></main></body></html>

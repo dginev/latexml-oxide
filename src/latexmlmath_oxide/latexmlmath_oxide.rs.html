@@ -8,7 +8,7 @@
 <a href=#8 id=8 data-nosnippet>8</a></span><span class="attr">#[global_allocator]
 <a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">static </span>GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 <a href=#10 id=10 data-nosnippet>10</a>
-<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>latexml::util::preset::{lex_single_tex_formula, new_test_engine};
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>latexml::util::preset::{new_test_engine, try_lex_single_tex_formula};
 <a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span>latexml_core::{common::error::Result, state};
 <a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>latexml_math_parser::<span class="kw-2">*</span>;
 <a href=#14 id=14 data-nosnippet>14</a>
@@ -250,169 +250,179 @@
 <a href=#250 id=250 data-nosnippet>250</a>
 <a href=#251 id=251 data-nosnippet>251</a>  <span class="kw">let </span><span class="kw-2">mut </span>core_engine = new_test_engine();
 <a href=#252 id=252 data-nosnippet>252</a>  <span class="kw">let </span>(lexemes, <span class="kw-2">mut </span>lex_nodes, xmath_opt, <span class="kw-2">mut </span>doc) =
-<a href=#253 id=253 data-nosnippet>253</a>    lex_single_tex_formula(<span class="kw-2">&amp;</span>source, <span class="kw-2">&amp;mut </span>core_engine);
-<a href=#254 id=254 data-nosnippet>254</a>  <span class="kw">if </span>lexemes.is_empty() {
-<a href=#255 id=255 data-nosnippet>255</a>    <span class="macro">Error!</span>(<span class="string">"latexmlmath"</span>, <span class="string">"lex"</span>, <span class="string">"No lexemes produced from input"</span>);
-<a href=#256 id=256 data-nosnippet>256</a>    process::exit(<span class="number">1</span>);
-<a href=#257 id=257 data-nosnippet>257</a>  }
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="kw">if </span>!quiet_flag {
-<a href=#259 id=259 data-nosnippet>259</a>    <span class="macro">eprintln!</span>(<span class="string">"lexemes: {lexemes:?}"</span>);
-<a href=#260 id=260 data-nosnippet>260</a>  }
-<a href=#261 id=261 data-nosnippet>261</a>
-<a href=#262 id=262 data-nosnippet>262</a>  state::set_nomathparse_flag(<span class="bool-val">false</span>);
-<a href=#263 id=263 data-nosnippet>263</a>  <span class="kw">let </span><span class="kw-2">mut </span>parser = MathParser::default();
-<a href=#264 id=264 data-nosnippet>264</a>  <span class="kw">match </span>parser.parse_lexemes(lexemes, <span class="kw-2">&amp;</span>lex_nodes, <span class="kw-2">&amp;mut </span>doc) {
-<a href=#265 id=265 data-nosnippet>265</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(parse_tree)) =&gt; {
-<a href=#266 id=266 data-nosnippet>266</a>      <span class="kw">let </span><span class="kw-2">mut </span>xmath = xmath_opt.unwrap();
-<a href=#267 id=267 data-nosnippet>267</a>      <span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>xmath.get_child_nodes() {
-<a href=#268 id=268 data-nosnippet>268</a>        node.unlink();
-<a href=#269 id=269 data-nosnippet>269</a>      }
-<a href=#270 id=270 data-nosnippet>270</a>      <span class="kw">let </span>xml_tree = parse_tree.into_xmath(<span class="kw-2">&amp;mut </span>xmath, <span class="kw-2">&amp;mut </span>lex_nodes, <span class="kw-2">&amp;mut </span>doc)<span class="question-mark">?</span>;
-<a href=#271 id=271 data-nosnippet>271</a>      <span class="comment">// `into_xmath` RETURNS the tree; it does not attach it. The main parser
-<a href=#272 id=272 data-nosnippet>272</a>      // path pairs it with `append_tree` (`parser.rs`, the reparent step) —
-<a href=#273 id=273 data-nosnippet>273</a>      // without that, a formula whose whole body is ONE top-level structure
-<a href=#274 id=274 data-nosnippet>274</a>      // (`\frac{1}{2}`, `\sqrt{2}`) serialized as an empty `&lt;mrow/&gt;`, because
-<a href=#275 id=275 data-nosnippet>275</a>      // the pre-parse children were unlinked just above and nothing replaced
-<a href=#276 id=276 data-nosnippet>276</a>      // them. Formulas with more than one top-level part appeared to work only
-<a href=#277 id=277 data-nosnippet>277</a>      // because their parts are pre-existing lexeme nodes still in the tree.
-<a href=#278 id=278 data-nosnippet>278</a>      </span><span class="kw">if </span>xml_tree.get_parent().is_none() {
-<a href=#279 id=279 data-nosnippet>279</a>        doc.append_tree(<span class="kw-2">&amp;mut </span>xmath, <span class="macro">vec!</span>[xml_tree.clone()])<span class="question-mark">?</span>;
-<a href=#280 id=280 data-nosnippet>280</a>      }
-<a href=#281 id=281 data-nosnippet>281</a>      xmath
-<a href=#282 id=282 data-nosnippet>282</a>        .get_parent()
-<a href=#283 id=283 data-nosnippet>283</a>        .unwrap()
-<a href=#284 id=284 data-nosnippet>284</a>        .set_attribute(<span class="string">"text"</span>, <span class="kw-2">&amp;</span>text_form(<span class="kw-2">&amp;</span>xml_tree, <span class="kw-2">&amp;</span>doc))
-<a href=#285 id=285 data-nosnippet>285</a>        .unwrap();
-<a href=#286 id=286 data-nosnippet>286</a>
-<a href=#287 id=287 data-nosnippet>287</a>      <span class="kw">use </span>latexml_post::{
-<a href=#288 id=288 data-nosnippet>288</a>        document::{PostDocument, PostDocumentOptions},
-<a href=#289 id=289 data-nosnippet>289</a>        processor::Processor,
-<a href=#290 id=290 data-nosnippet>290</a>      };
-<a href=#291 id=291 data-nosnippet>291</a>      <span class="comment">// Serialised once, before `--xmath` reparents the XMath out of `doc`: each
-<a href=#292 id=292 data-nosnippet>292</a>      // format post-processes its own copy (Perl `cloneDoc`, bin/latexmlmath L264-269).
-<a href=#293 id=293 data-nosnippet>293</a>      </span><span class="kw">let </span>xml_str = (pmml_flag || cmml_flag || unimath_flag).then(|| {
-<a href=#294 id=294 data-nosnippet>294</a>        doc.get_document().to_string_with_options(SaveOptions {
-<a href=#295 id=295 data-nosnippet>295</a>          format: <span class="bool-val">true</span>,
-<a href=#296 id=296 data-nosnippet>296</a>          ..SaveOptions::default()
-<a href=#297 id=297 data-nosnippet>297</a>        })
-<a href=#298 id=298 data-nosnippet>298</a>      });
-<a href=#299 id=299 data-nosnippet>299</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(xml_str) = xml_str.as_deref()
-<a href=#300 id=300 data-nosnippet>300</a>        &amp;&amp; (pmml_flag || cmml_flag)
-<a href=#301 id=301 data-nosnippet>301</a>      {
-<a href=#302 id=302 data-nosnippet>302</a>        <span class="comment">// Post-process with MathML
-<a href=#303 id=303 data-nosnippet>303</a>        </span><span class="kw">let </span>post_doc = PostDocument::new_from_string(xml_str, PostDocumentOptions::default())
-<a href=#304 id=304 data-nosnippet>304</a>          .expect(<span class="string">"parse XML for MathML post-processing"</span>);
-<a href=#305 id=305 data-nosnippet>305</a>        <span class="kw">let </span><span class="kw-2">mut </span>post = latexml_post::Post::new();
-<a href=#306 id=306 data-nosnippet>306</a>        <span class="kw">let </span><span class="kw-2">mut </span>processors: Vec&lt;Box&lt;<span class="kw">dyn </span>Processor&gt;&gt; = Vec::new();
-<a href=#307 id=307 data-nosnippet>307</a>        <span class="comment">// Parallel P+C: the Content processor is a parallel *secondary* of the
-<a href=#308 id=308 data-nosnippet>308</a>        // Presentation primary, merged into one &lt;m:semantics&gt;/&lt;m:annotation-xml&gt;
-<a href=#309 id=309 data-nosnippet>309</a>        // by combine_parallel — not an independent pass (which left content as
-<a href=#310 id=310 data-nosnippet>310</a>        // an orphan &lt;apply&gt; sibling of &lt;m:semantics&gt;). Mirrors latexml_oxide::post.
-<a href=#311 id=311 data-nosnippet>311</a>        </span><span class="kw">if </span>pmml_flag {
-<a href=#312 id=312 data-nosnippet>312</a>          <span class="kw">let </span><span class="kw-2">mut </span>presentation = latexml_post::mathml::MathML::new_presentation();
-<a href=#313 id=313 data-nosnippet>313</a>          <span class="kw">if </span>cmml_flag {
-<a href=#314 id=314 data-nosnippet>314</a>            presentation = presentation.with_secondaries(<span class="macro">vec!</span>[Box::new(
-<a href=#315 id=315 data-nosnippet>315</a>              latexml_post::mathml::MathML::new_content().secondary(),
-<a href=#316 id=316 data-nosnippet>316</a>            )]);
-<a href=#317 id=317 data-nosnippet>317</a>          }
-<a href=#318 id=318 data-nosnippet>318</a>          processors.push(Box::new(presentation));
-<a href=#319 id=319 data-nosnippet>319</a>        } <span class="kw">else if </span>cmml_flag {
-<a href=#320 id=320 data-nosnippet>320</a>          processors.push(Box::new(latexml_post::mathml::MathML::new_content()));
-<a href=#321 id=321 data-nosnippet>321</a>        }
-<a href=#322 id=322 data-nosnippet>322</a>        <span class="kw">match </span>post.process_chain(<span class="macro">vec!</span>[post_doc], <span class="kw-2">&amp;mut </span>processors) {
-<a href=#323 id=323 data-nosnippet>323</a>          <span class="prelude-val">Ok</span>(results) =&gt; {
-<a href=#324 id=324 data-nosnippet>324</a>            <span class="comment">// Perl emits the math element alone (`findnode('//m:math')`), not the
-<a href=#325 id=325 data-nosnippet>325</a>            // document around it. With parallel P+C the content markup is annotated
-<a href=#326 id=326 data-nosnippet>326</a>            // INTO the presentation &lt;m:math&gt;, so one node carries both.
-<a href=#327 id=327 data-nosnippet>327</a>            </span><span class="kw">match </span>results[<span class="number">0</span>].findnodes(<span class="string">"//m:math"</span>).into_iter().next() {
-<a href=#328 id=328 data-nosnippet>328</a>              <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>math) =&gt; {
-<a href=#329 id=329 data-nosnippet>329</a>                print_node_defaulted(results[<span class="number">0</span>].get_document(), <span class="kw-2">&amp;mut </span>math, MATHML_NS)
-<a href=#330 id=330 data-nosnippet>330</a>              },
-<a href=#331 id=331 data-nosnippet>331</a>              <span class="prelude-val">None </span>=&gt; {
-<a href=#332 id=332 data-nosnippet>332</a>                <span class="macro">Error!</span>(
-<a href=#333 id=333 data-nosnippet>333</a>                  <span class="string">"latexmlmath"</span>,
-<a href=#334 id=334 data-nosnippet>334</a>                  <span class="string">"output"</span>,
-<a href=#335 id=335 data-nosnippet>335</a>                  <span class="string">"no &lt;m:math&gt; produced for the formula"
-<a href=#336 id=336 data-nosnippet>336</a>                </span>);
-<a href=#337 id=337 data-nosnippet>337</a>                process::exit(<span class="number">1</span>);
-<a href=#338 id=338 data-nosnippet>338</a>              },
-<a href=#339 id=339 data-nosnippet>339</a>            }
-<a href=#340 id=340 data-nosnippet>340</a>          },
-<a href=#341 id=341 data-nosnippet>341</a>          <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#342 id=342 data-nosnippet>342</a>            latexml_core::common::error::emit_error(
-<a href=#343 id=343 data-nosnippet>343</a>              <span class="string">"latexmlmath"</span>,
-<a href=#344 id=344 data-nosnippet>344</a>              <span class="string">"postprocess"</span>,
-<a href=#345 id=345 data-nosnippet>345</a>              <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"MathML post-processing failed: {e}"</span>),
-<a href=#346 id=346 data-nosnippet>346</a>            );
-<a href=#347 id=347 data-nosnippet>347</a>            process::exit(<span class="number">1</span>);
-<a href=#348 id=348 data-nosnippet>348</a>          },
-<a href=#349 id=349 data-nosnippet>349</a>        }
-<a href=#350 id=350 data-nosnippet>350</a>      }
-<a href=#351 id=351 data-nosnippet>351</a>
-<a href=#352 id=352 data-nosnippet>352</a>      <span class="comment">// Perl emits XMath after pmml/cmml (bin/latexmlmath L232-241), and the order is
-<a href=#353 id=353 data-nosnippet>353</a>      // load-bearing here: `print_node_defaulted` REPARENTS the node, so running this
-<a href=#354 id=354 data-nosnippet>354</a>      // first would tear &lt;XMath&gt; out of `doc` before the MathML path serialises it.
-<a href=#355 id=355 data-nosnippet>355</a>      // Read straight from the digested document — the MathML path above serialises +
-<a href=#356 id=356 data-nosnippet>356</a>      // re-parses, which re-materialises indentation whitespace at the node's original
-<a href=#357 id=357 data-nosnippet>357</a>      // depth and drags it into the extracted subtree.
-<a href=#358 id=358 data-nosnippet>358</a>      </span><span class="kw">if </span>xmath_flag {
-<a href=#359 id=359 data-nosnippet>359</a>        strip_internal_attrs(<span class="kw-2">&amp;mut </span>xmath);
-<a href=#360 id=360 data-nosnippet>360</a>        print_node_defaulted(doc.get_document(), <span class="kw-2">&amp;mut </span>xmath, LATEXML_NS);
-<a href=#361 id=361 data-nosnippet>361</a>      }
-<a href=#362 id=362 data-nosnippet>362</a>
-<a href=#363 id=363 data-nosnippet>363</a>      <span class="comment">// UnicodeMath comes last, as in Perl (bin/latexmlmath L244-248): the standalone
-<a href=#364 id=364 data-nosnippet>364</a>      // processor puts the string in `ltx:Math/ltx:text`, printed as plain text. Perl
-<a href=#365 id=365 data-nosnippet>365</a>      // prints that text node's XML serialisation, escaping `&lt;` and `&amp;`
-<a href=#366 id=366 data-nosnippet>366</a>      // (KNOWN_PERL_ERRORS #1290); the string itself is the output here.
-<a href=#367 id=367 data-nosnippet>367</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(xml_str) = xml_str.as_deref()
-<a href=#368 id=368 data-nosnippet>368</a>        &amp;&amp; unimath_flag
-<a href=#369 id=369 data-nosnippet>369</a>      {
-<a href=#370 id=370 data-nosnippet>370</a>        <span class="kw">let </span>post_doc = PostDocument::new_from_string(xml_str, PostDocumentOptions::default())
-<a href=#371 id=371 data-nosnippet>371</a>          .expect(<span class="string">"parse XML for UnicodeMath post-processing"</span>);
-<a href=#372 id=372 data-nosnippet>372</a>        <span class="kw">let </span><span class="kw-2">mut </span>processors: Vec&lt;Box&lt;<span class="kw">dyn </span>Processor&gt;&gt; =
-<a href=#373 id=373 data-nosnippet>373</a>          <span class="macro">vec!</span>[Box::new(latexml_post::unicode_math::UnicodeMath::new())];
-<a href=#374 id=374 data-nosnippet>374</a>        <span class="kw">match </span>latexml_post::Post::new().process_chain(<span class="macro">vec!</span>[post_doc], <span class="kw-2">&amp;mut </span>processors) {
-<a href=#375 id=375 data-nosnippet>375</a>          <span class="prelude-val">Ok</span>(results) =&gt; <span class="kw">match </span>results[<span class="number">0</span>].findnodes(<span class="string">"//ltx:Math/ltx:text"</span>).first() {
-<a href=#376 id=376 data-nosnippet>376</a>            <span class="prelude-val">Some</span>(text) =&gt; write_unicodemath(<span class="kw-2">&amp;</span>text.get_content(), unimath_dest.as_deref())<span class="question-mark">?</span>,
-<a href=#377 id=377 data-nosnippet>377</a>            <span class="prelude-val">None </span>=&gt; {
-<a href=#378 id=378 data-nosnippet>378</a>              <span class="macro">Error!</span>(
-<a href=#379 id=379 data-nosnippet>379</a>                <span class="string">"latexmlmath"</span>,
-<a href=#380 id=380 data-nosnippet>380</a>                <span class="string">"output"</span>,
-<a href=#381 id=381 data-nosnippet>381</a>                <span class="string">"no UnicodeMath produced for the formula"
-<a href=#382 id=382 data-nosnippet>382</a>              </span>);
-<a href=#383 id=383 data-nosnippet>383</a>              process::exit(<span class="number">1</span>);
-<a href=#384 id=384 data-nosnippet>384</a>            },
-<a href=#385 id=385 data-nosnippet>385</a>          },
-<a href=#386 id=386 data-nosnippet>386</a>          <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#387 id=387 data-nosnippet>387</a>            latexml_core::common::error::emit_error(
-<a href=#388 id=388 data-nosnippet>388</a>              <span class="string">"latexmlmath"</span>,
-<a href=#389 id=389 data-nosnippet>389</a>              <span class="string">"postprocess"</span>,
-<a href=#390 id=390 data-nosnippet>390</a>              <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"UnicodeMath post-processing failed: {e}"</span>),
-<a href=#391 id=391 data-nosnippet>391</a>            );
-<a href=#392 id=392 data-nosnippet>392</a>            process::exit(<span class="number">1</span>);
-<a href=#393 id=393 data-nosnippet>393</a>          },
-<a href=#394 id=394 data-nosnippet>394</a>        }
-<a href=#395 id=395 data-nosnippet>395</a>      }
-<a href=#396 id=396 data-nosnippet>396</a>    },
-<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">_ </span>=&gt; {
-<a href=#398 id=398 data-nosnippet>398</a>      <span class="macro">Warn!</span>(<span class="string">"math"</span>, <span class="string">"parse"</span>, <span class="string">"Grammar did not recognize expression."</span>);
-<a href=#399 id=399 data-nosnippet>399</a>      process::exit(<span class="number">1</span>);
-<a href=#400 id=400 data-nosnippet>400</a>    },
-<a href=#401 id=401 data-nosnippet>401</a>  }
-<a href=#402 id=402 data-nosnippet>402</a>  <span class="comment">// End-of-run verdict guard, as in the main CLI: a Fatal raised anywhere in
-<a href=#403 id=403 data-nosnippet>403</a>  // the conversion (and recovered into a result) must not exit 0 — the
-<a href=#404 id=404 data-nosnippet>404</a>  // framework side treats a fatal-status run as failed, and so must we.
-<a href=#405 id=405 data-nosnippet>405</a>  // Single-phase binary: the math post-conversions run in-process against the
-<a href=#406 id=406 data-nosnippet>406</a>  // same shared REPORT counter, so reading it here IS the complete
-<a href=#407 id=407 data-nosnippet>407</a>  // max-across-phases fold (there is no separate `PostOutcome` to fold in).
-<a href=#408 id=408 data-nosnippet>408</a>  </span><span class="kw">let </span>final_status_code = latexml_core::common::error::get_status_code();
-<a href=#409 id=409 data-nosnippet>409</a>  <span class="kw">if </span>final_status_code &gt;= <span class="number">3 </span>{
-<a href=#410 id=410 data-nosnippet>410</a>    <span class="macro">eprintln!</span>(
-<a href=#411 id=411 data-nosnippet>411</a>      <span class="string">"{}"</span>,
-<a href=#412 id=412 data-nosnippet>412</a>      latexml_core::common::error::conversion_verdict(final_status_code)
-<a href=#413 id=413 data-nosnippet>413</a>    );
-<a href=#414 id=414 data-nosnippet>414</a>    process::exit(<span class="number">1</span>);
-<a href=#415 id=415 data-nosnippet>415</a>  }
-<a href=#416 id=416 data-nosnippet>416</a>  <span class="prelude-val">Ok</span>(())
-<a href=#417 id=417 data-nosnippet>417</a>}
+<a href=#253 id=253 data-nosnippet>253</a>    <span class="kw">match </span>try_lex_single_tex_formula(<span class="kw-2">&amp;</span>source, <span class="kw-2">&amp;mut </span>core_engine) {
+<a href=#254 id=254 data-nosnippet>254</a>      <span class="prelude-val">Ok</span>(r) =&gt; r,
+<a href=#255 id=255 data-nosnippet>255</a>      <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#256 id=256 data-nosnippet>256</a>        <span class="macro">Error!</span>(
+<a href=#257 id=257 data-nosnippet>257</a>          <span class="string">"latexmlmath"</span>,
+<a href=#258 id=258 data-nosnippet>258</a>          <span class="string">"digest"</span>,
+<a href=#259 id=259 data-nosnippet>259</a>          <span class="macro">format!</span>(<span class="string">"TeX digestion failed: {e}"</span>)
+<a href=#260 id=260 data-nosnippet>260</a>        );
+<a href=#261 id=261 data-nosnippet>261</a>        process::exit(<span class="number">1</span>);
+<a href=#262 id=262 data-nosnippet>262</a>      },
+<a href=#263 id=263 data-nosnippet>263</a>    };
+<a href=#264 id=264 data-nosnippet>264</a>  <span class="kw">if </span>lexemes.is_empty() {
+<a href=#265 id=265 data-nosnippet>265</a>    <span class="macro">Error!</span>(<span class="string">"latexmlmath"</span>, <span class="string">"lex"</span>, <span class="string">"No lexemes produced from input"</span>);
+<a href=#266 id=266 data-nosnippet>266</a>    process::exit(<span class="number">1</span>);
+<a href=#267 id=267 data-nosnippet>267</a>  }
+<a href=#268 id=268 data-nosnippet>268</a>  <span class="kw">if </span>!quiet_flag {
+<a href=#269 id=269 data-nosnippet>269</a>    <span class="macro">eprintln!</span>(<span class="string">"lexemes: {lexemes:?}"</span>);
+<a href=#270 id=270 data-nosnippet>270</a>  }
+<a href=#271 id=271 data-nosnippet>271</a>
+<a href=#272 id=272 data-nosnippet>272</a>  state::set_nomathparse_flag(<span class="bool-val">false</span>);
+<a href=#273 id=273 data-nosnippet>273</a>  <span class="kw">let </span><span class="kw-2">mut </span>parser = MathParser::default();
+<a href=#274 id=274 data-nosnippet>274</a>  <span class="kw">match </span>parser.parse_lexemes(lexemes, <span class="kw-2">&amp;</span>lex_nodes, <span class="kw-2">&amp;mut </span>doc) {
+<a href=#275 id=275 data-nosnippet>275</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(parse_tree)) =&gt; {
+<a href=#276 id=276 data-nosnippet>276</a>      <span class="kw">let </span><span class="kw-2">mut </span>xmath = xmath_opt.unwrap();
+<a href=#277 id=277 data-nosnippet>277</a>      <span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>xmath.get_child_nodes() {
+<a href=#278 id=278 data-nosnippet>278</a>        node.unlink();
+<a href=#279 id=279 data-nosnippet>279</a>      }
+<a href=#280 id=280 data-nosnippet>280</a>      <span class="kw">let </span>xml_tree = parse_tree.into_xmath(<span class="kw-2">&amp;mut </span>xmath, <span class="kw-2">&amp;mut </span>lex_nodes, <span class="kw-2">&amp;mut </span>doc)<span class="question-mark">?</span>;
+<a href=#281 id=281 data-nosnippet>281</a>      <span class="comment">// `into_xmath` RETURNS the tree; it does not attach it. The main parser
+<a href=#282 id=282 data-nosnippet>282</a>      // path pairs it with `append_tree` (`parser.rs`, the reparent step) —
+<a href=#283 id=283 data-nosnippet>283</a>      // without that, a formula whose whole body is ONE top-level structure
+<a href=#284 id=284 data-nosnippet>284</a>      // (`\frac{1}{2}`, `\sqrt{2}`) serialized as an empty `&lt;mrow/&gt;`, because
+<a href=#285 id=285 data-nosnippet>285</a>      // the pre-parse children were unlinked just above and nothing replaced
+<a href=#286 id=286 data-nosnippet>286</a>      // them. Formulas with more than one top-level part appeared to work only
+<a href=#287 id=287 data-nosnippet>287</a>      // because their parts are pre-existing lexeme nodes still in the tree.
+<a href=#288 id=288 data-nosnippet>288</a>      </span><span class="kw">if </span>xml_tree.get_parent().is_none() {
+<a href=#289 id=289 data-nosnippet>289</a>        doc.append_tree(<span class="kw-2">&amp;mut </span>xmath, <span class="macro">vec!</span>[xml_tree.clone()])<span class="question-mark">?</span>;
+<a href=#290 id=290 data-nosnippet>290</a>      }
+<a href=#291 id=291 data-nosnippet>291</a>      xmath
+<a href=#292 id=292 data-nosnippet>292</a>        .get_parent()
+<a href=#293 id=293 data-nosnippet>293</a>        .unwrap()
+<a href=#294 id=294 data-nosnippet>294</a>        .set_attribute(<span class="string">"text"</span>, <span class="kw-2">&amp;</span>text_form(<span class="kw-2">&amp;</span>xml_tree, <span class="kw-2">&amp;</span>doc))
+<a href=#295 id=295 data-nosnippet>295</a>        .unwrap();
+<a href=#296 id=296 data-nosnippet>296</a>
+<a href=#297 id=297 data-nosnippet>297</a>      <span class="kw">use </span>latexml_post::{
+<a href=#298 id=298 data-nosnippet>298</a>        document::{PostDocument, PostDocumentOptions},
+<a href=#299 id=299 data-nosnippet>299</a>        processor::Processor,
+<a href=#300 id=300 data-nosnippet>300</a>      };
+<a href=#301 id=301 data-nosnippet>301</a>      <span class="comment">// Serialised once, before `--xmath` reparents the XMath out of `doc`: each
+<a href=#302 id=302 data-nosnippet>302</a>      // format post-processes its own copy (Perl `cloneDoc`, bin/latexmlmath L264-269).
+<a href=#303 id=303 data-nosnippet>303</a>      </span><span class="kw">let </span>xml_str = (pmml_flag || cmml_flag || unimath_flag).then(|| {
+<a href=#304 id=304 data-nosnippet>304</a>        doc.get_document().to_string_with_options(SaveOptions {
+<a href=#305 id=305 data-nosnippet>305</a>          format: <span class="bool-val">true</span>,
+<a href=#306 id=306 data-nosnippet>306</a>          ..SaveOptions::default()
+<a href=#307 id=307 data-nosnippet>307</a>        })
+<a href=#308 id=308 data-nosnippet>308</a>      });
+<a href=#309 id=309 data-nosnippet>309</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(xml_str) = xml_str.as_deref()
+<a href=#310 id=310 data-nosnippet>310</a>        &amp;&amp; (pmml_flag || cmml_flag)
+<a href=#311 id=311 data-nosnippet>311</a>      {
+<a href=#312 id=312 data-nosnippet>312</a>        <span class="comment">// Post-process with MathML
+<a href=#313 id=313 data-nosnippet>313</a>        </span><span class="kw">let </span>post_doc = PostDocument::new_from_string(xml_str, PostDocumentOptions::default())
+<a href=#314 id=314 data-nosnippet>314</a>          .expect(<span class="string">"parse XML for MathML post-processing"</span>);
+<a href=#315 id=315 data-nosnippet>315</a>        <span class="kw">let </span><span class="kw-2">mut </span>post = latexml_post::Post::new();
+<a href=#316 id=316 data-nosnippet>316</a>        <span class="kw">let </span><span class="kw-2">mut </span>processors: Vec&lt;Box&lt;<span class="kw">dyn </span>Processor&gt;&gt; = Vec::new();
+<a href=#317 id=317 data-nosnippet>317</a>        <span class="comment">// Parallel P+C: the Content processor is a parallel *secondary* of the
+<a href=#318 id=318 data-nosnippet>318</a>        // Presentation primary, merged into one &lt;m:semantics&gt;/&lt;m:annotation-xml&gt;
+<a href=#319 id=319 data-nosnippet>319</a>        // by combine_parallel — not an independent pass (which left content as
+<a href=#320 id=320 data-nosnippet>320</a>        // an orphan &lt;apply&gt; sibling of &lt;m:semantics&gt;). Mirrors latexml_oxide::post.
+<a href=#321 id=321 data-nosnippet>321</a>        </span><span class="kw">if </span>pmml_flag {
+<a href=#322 id=322 data-nosnippet>322</a>          <span class="kw">let </span><span class="kw-2">mut </span>presentation = latexml_post::mathml::MathML::new_presentation();
+<a href=#323 id=323 data-nosnippet>323</a>          <span class="kw">if </span>cmml_flag {
+<a href=#324 id=324 data-nosnippet>324</a>            presentation = presentation.with_secondaries(<span class="macro">vec!</span>[Box::new(
+<a href=#325 id=325 data-nosnippet>325</a>              latexml_post::mathml::MathML::new_content().secondary(),
+<a href=#326 id=326 data-nosnippet>326</a>            )]);
+<a href=#327 id=327 data-nosnippet>327</a>          }
+<a href=#328 id=328 data-nosnippet>328</a>          processors.push(Box::new(presentation));
+<a href=#329 id=329 data-nosnippet>329</a>        } <span class="kw">else if </span>cmml_flag {
+<a href=#330 id=330 data-nosnippet>330</a>          processors.push(Box::new(latexml_post::mathml::MathML::new_content()));
+<a href=#331 id=331 data-nosnippet>331</a>        }
+<a href=#332 id=332 data-nosnippet>332</a>        <span class="kw">match </span>post.process_chain(<span class="macro">vec!</span>[post_doc], <span class="kw-2">&amp;mut </span>processors) {
+<a href=#333 id=333 data-nosnippet>333</a>          <span class="prelude-val">Ok</span>(results) =&gt; {
+<a href=#334 id=334 data-nosnippet>334</a>            <span class="comment">// Perl emits the math element alone (`findnode('//m:math')`), not the
+<a href=#335 id=335 data-nosnippet>335</a>            // document around it. With parallel P+C the content markup is annotated
+<a href=#336 id=336 data-nosnippet>336</a>            // INTO the presentation &lt;m:math&gt;, so one node carries both.
+<a href=#337 id=337 data-nosnippet>337</a>            </span><span class="kw">match </span>results[<span class="number">0</span>].findnodes(<span class="string">"//m:math"</span>).into_iter().next() {
+<a href=#338 id=338 data-nosnippet>338</a>              <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>math) =&gt; {
+<a href=#339 id=339 data-nosnippet>339</a>                print_node_defaulted(results[<span class="number">0</span>].get_document(), <span class="kw-2">&amp;mut </span>math, MATHML_NS)
+<a href=#340 id=340 data-nosnippet>340</a>              },
+<a href=#341 id=341 data-nosnippet>341</a>              <span class="prelude-val">None </span>=&gt; {
+<a href=#342 id=342 data-nosnippet>342</a>                <span class="macro">Error!</span>(
+<a href=#343 id=343 data-nosnippet>343</a>                  <span class="string">"latexmlmath"</span>,
+<a href=#344 id=344 data-nosnippet>344</a>                  <span class="string">"output"</span>,
+<a href=#345 id=345 data-nosnippet>345</a>                  <span class="string">"no &lt;m:math&gt; produced for the formula"
+<a href=#346 id=346 data-nosnippet>346</a>                </span>);
+<a href=#347 id=347 data-nosnippet>347</a>                process::exit(<span class="number">1</span>);
+<a href=#348 id=348 data-nosnippet>348</a>              },
+<a href=#349 id=349 data-nosnippet>349</a>            }
+<a href=#350 id=350 data-nosnippet>350</a>          },
+<a href=#351 id=351 data-nosnippet>351</a>          <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#352 id=352 data-nosnippet>352</a>            latexml_core::common::error::emit_error(
+<a href=#353 id=353 data-nosnippet>353</a>              <span class="string">"latexmlmath"</span>,
+<a href=#354 id=354 data-nosnippet>354</a>              <span class="string">"postprocess"</span>,
+<a href=#355 id=355 data-nosnippet>355</a>              <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"MathML post-processing failed: {e}"</span>),
+<a href=#356 id=356 data-nosnippet>356</a>            );
+<a href=#357 id=357 data-nosnippet>357</a>            process::exit(<span class="number">1</span>);
+<a href=#358 id=358 data-nosnippet>358</a>          },
+<a href=#359 id=359 data-nosnippet>359</a>        }
+<a href=#360 id=360 data-nosnippet>360</a>      }
+<a href=#361 id=361 data-nosnippet>361</a>
+<a href=#362 id=362 data-nosnippet>362</a>      <span class="comment">// Perl emits XMath after pmml/cmml (bin/latexmlmath L232-241), and the order is
+<a href=#363 id=363 data-nosnippet>363</a>      // load-bearing here: `print_node_defaulted` REPARENTS the node, so running this
+<a href=#364 id=364 data-nosnippet>364</a>      // first would tear &lt;XMath&gt; out of `doc` before the MathML path serialises it.
+<a href=#365 id=365 data-nosnippet>365</a>      // Read straight from the digested document — the MathML path above serialises +
+<a href=#366 id=366 data-nosnippet>366</a>      // re-parses, which re-materialises indentation whitespace at the node's original
+<a href=#367 id=367 data-nosnippet>367</a>      // depth and drags it into the extracted subtree.
+<a href=#368 id=368 data-nosnippet>368</a>      </span><span class="kw">if </span>xmath_flag {
+<a href=#369 id=369 data-nosnippet>369</a>        strip_internal_attrs(<span class="kw-2">&amp;mut </span>xmath);
+<a href=#370 id=370 data-nosnippet>370</a>        print_node_defaulted(doc.get_document(), <span class="kw-2">&amp;mut </span>xmath, LATEXML_NS);
+<a href=#371 id=371 data-nosnippet>371</a>      }
+<a href=#372 id=372 data-nosnippet>372</a>
+<a href=#373 id=373 data-nosnippet>373</a>      <span class="comment">// UnicodeMath comes last, as in Perl (bin/latexmlmath L244-248): the standalone
+<a href=#374 id=374 data-nosnippet>374</a>      // processor puts the string in `ltx:Math/ltx:text`, printed as plain text. Perl
+<a href=#375 id=375 data-nosnippet>375</a>      // prints that text node's XML serialisation, escaping `&lt;` and `&amp;`
+<a href=#376 id=376 data-nosnippet>376</a>      // (KNOWN_PERL_ERRORS #1290); the string itself is the output here.
+<a href=#377 id=377 data-nosnippet>377</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(xml_str) = xml_str.as_deref()
+<a href=#378 id=378 data-nosnippet>378</a>        &amp;&amp; unimath_flag
+<a href=#379 id=379 data-nosnippet>379</a>      {
+<a href=#380 id=380 data-nosnippet>380</a>        <span class="kw">let </span>post_doc = PostDocument::new_from_string(xml_str, PostDocumentOptions::default())
+<a href=#381 id=381 data-nosnippet>381</a>          .expect(<span class="string">"parse XML for UnicodeMath post-processing"</span>);
+<a href=#382 id=382 data-nosnippet>382</a>        <span class="kw">let </span><span class="kw-2">mut </span>processors: Vec&lt;Box&lt;<span class="kw">dyn </span>Processor&gt;&gt; =
+<a href=#383 id=383 data-nosnippet>383</a>          <span class="macro">vec!</span>[Box::new(latexml_post::unicode_math::UnicodeMath::new())];
+<a href=#384 id=384 data-nosnippet>384</a>        <span class="kw">match </span>latexml_post::Post::new().process_chain(<span class="macro">vec!</span>[post_doc], <span class="kw-2">&amp;mut </span>processors) {
+<a href=#385 id=385 data-nosnippet>385</a>          <span class="prelude-val">Ok</span>(results) =&gt; <span class="kw">match </span>results[<span class="number">0</span>].findnodes(<span class="string">"//ltx:Math/ltx:text"</span>).first() {
+<a href=#386 id=386 data-nosnippet>386</a>            <span class="prelude-val">Some</span>(text) =&gt; write_unicodemath(<span class="kw-2">&amp;</span>text.get_content(), unimath_dest.as_deref())<span class="question-mark">?</span>,
+<a href=#387 id=387 data-nosnippet>387</a>            <span class="prelude-val">None </span>=&gt; {
+<a href=#388 id=388 data-nosnippet>388</a>              <span class="macro">Error!</span>(
+<a href=#389 id=389 data-nosnippet>389</a>                <span class="string">"latexmlmath"</span>,
+<a href=#390 id=390 data-nosnippet>390</a>                <span class="string">"output"</span>,
+<a href=#391 id=391 data-nosnippet>391</a>                <span class="string">"no UnicodeMath produced for the formula"
+<a href=#392 id=392 data-nosnippet>392</a>              </span>);
+<a href=#393 id=393 data-nosnippet>393</a>              process::exit(<span class="number">1</span>);
+<a href=#394 id=394 data-nosnippet>394</a>            },
+<a href=#395 id=395 data-nosnippet>395</a>          },
+<a href=#396 id=396 data-nosnippet>396</a>          <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#397 id=397 data-nosnippet>397</a>            latexml_core::common::error::emit_error(
+<a href=#398 id=398 data-nosnippet>398</a>              <span class="string">"latexmlmath"</span>,
+<a href=#399 id=399 data-nosnippet>399</a>              <span class="string">"postprocess"</span>,
+<a href=#400 id=400 data-nosnippet>400</a>              <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"UnicodeMath post-processing failed: {e}"</span>),
+<a href=#401 id=401 data-nosnippet>401</a>            );
+<a href=#402 id=402 data-nosnippet>402</a>            process::exit(<span class="number">1</span>);
+<a href=#403 id=403 data-nosnippet>403</a>          },
+<a href=#404 id=404 data-nosnippet>404</a>        }
+<a href=#405 id=405 data-nosnippet>405</a>      }
+<a href=#406 id=406 data-nosnippet>406</a>    },
+<a href=#407 id=407 data-nosnippet>407</a>    <span class="kw">_ </span>=&gt; {
+<a href=#408 id=408 data-nosnippet>408</a>      <span class="macro">Warn!</span>(<span class="string">"math"</span>, <span class="string">"parse"</span>, <span class="string">"Grammar did not recognize expression."</span>);
+<a href=#409 id=409 data-nosnippet>409</a>      process::exit(<span class="number">1</span>);
+<a href=#410 id=410 data-nosnippet>410</a>    },
+<a href=#411 id=411 data-nosnippet>411</a>  }
+<a href=#412 id=412 data-nosnippet>412</a>  <span class="comment">// End-of-run verdict guard, as in the main CLI: a Fatal raised anywhere in
+<a href=#413 id=413 data-nosnippet>413</a>  // the conversion (and recovered into a result) must not exit 0 — the
+<a href=#414 id=414 data-nosnippet>414</a>  // framework side treats a fatal-status run as failed, and so must we.
+<a href=#415 id=415 data-nosnippet>415</a>  // Single-phase binary: the math post-conversions run in-process against the
+<a href=#416 id=416 data-nosnippet>416</a>  // same shared REPORT counter, so reading it here IS the complete
+<a href=#417 id=417 data-nosnippet>417</a>  // max-across-phases fold (there is no separate `PostOutcome` to fold in).
+<a href=#418 id=418 data-nosnippet>418</a>  </span><span class="kw">let </span>final_status_code = latexml_core::common::error::get_status_code();
+<a href=#419 id=419 data-nosnippet>419</a>  <span class="kw">if </span>final_status_code &gt;= <span class="number">3 </span>{
+<a href=#420 id=420 data-nosnippet>420</a>    <span class="macro">eprintln!</span>(
+<a href=#421 id=421 data-nosnippet>421</a>      <span class="string">"{}"</span>,
+<a href=#422 id=422 data-nosnippet>422</a>      latexml_core::common::error::conversion_verdict(final_status_code)
+<a href=#423 id=423 data-nosnippet>423</a>    );
+<a href=#424 id=424 data-nosnippet>424</a>    process::exit(<span class="number">1</span>);
+<a href=#425 id=425 data-nosnippet>425</a>  }
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="prelude-val">Ok</span>(())
+<a href=#427 id=427 data-nosnippet>427</a>}
 </code></pre></div></section></main></body></html>

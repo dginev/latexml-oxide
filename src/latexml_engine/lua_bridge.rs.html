@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/lua_bridge.rs`."><title>lua_bridge.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (6905905bb 2026-11-19)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>lua_bridge.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! LuaTeX-escape bridge: evaluate `\directlua` bodies in a persistent
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/lua_bridge.rs`."><title>lua_bridge.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (6905905bb 2026-11-19)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>lua_bridge.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! LuaTeX-escape bridge: evaluate `\directlua` bodies in a persistent
 <a href=#2 id=2 data-nosnippet>2</a>//! external `texlua` interpreter (user directive 2026-08-31: "we can assume a
 <a href=#3 id=3 data-nosnippet>3</a>//! lua interpreter is available on devices with texlive installed").
 <a href=#4 id=4 data-nosnippet>4</a>//!
@@ -213,783 +213,797 @@
 <a href=#213 id=213 data-nosnippet>213</a>  os[name] = denier('os.' .. name, os[name])
 <a href=#214 id=214 data-nosnippet>214</a>end
 <a href=#215 id=215 data-nosnippet>215</a>io.popen = denier('io.popen', io.popen)
-<a href=#216 id=216 data-nosnippet>216</a>local io_open, io_output, io_input = io.open, io.output, io.input
-<a href=#217 id=217 data-nosnippet>217</a>io.open = function(name, mode)
-<a href=#218 id=218 data-nosnippet>218</a>  if writes(mode) and not out_name_ok(name) then deny('writing ' .. shown(name)) end
-<a href=#219 id=219 data-nosnippet>219</a>  return io_open(name, mode)
-<a href=#220 id=220 data-nosnippet>220</a>end
-<a href=#221 id=221 data-nosnippet>221</a>io.output = function(file)
-<a href=#222 id=222 data-nosnippet>222</a>  if type(file) == 'string' and not out_name_ok(file) then deny('writing ' .. shown(file)) end
-<a href=#223 id=223 data-nosnippet>223</a>  return io_output(file)
-<a href=#224 id=224 data-nosnippet>224</a>end
-<a href=#225 id=225 data-nosnippet>225</a>if gzip and gzip.open then
-<a href=#226 id=226 data-nosnippet>226</a>  local gzip_open = gzip.open
-<a href=#227 id=227 data-nosnippet>227</a>  gzip.open = function(name, mode)
-<a href=#228 id=228 data-nosnippet>228</a>    if writes(mode) and not out_name_ok(name) then deny('writing ' .. shown(name)) end
-<a href=#229 id=229 data-nosnippet>229</a>    return gzip_open(name, mode)
-<a href=#230 id=230 data-nosnippet>230</a>  end
-<a href=#231 id=231 data-nosnippet>231</a>end
-<a href=#232 id=232 data-nosnippet>232</a>-- mplib takes its file finder in the options table: a copy, read raw, carries the
-<a href=#233 id=233 data-nosnippet>233</a>-- sandbox's finder, whatever the document's table does on assignment.
-<a href=#234 id=234 data-nosnippet>234</a>if mplib and mplib.new then
-<a href=#235 id=235 data-nosnippet>235</a>  local mplib_new = mplib.new
-<a href=#236 id=236 data-nosnippet>236</a>  mplib.new = function(options)
-<a href=#237 id=237 data-nosnippet>237</a>    if options ~= nil and type(options) ~= 'table' then deny('mplib.new with a ' .. type(options)) end
-<a href=#238 id=238 data-nosnippet>238</a>    local copy = {}
-<a href=#239 id=239 data-nosnippet>239</a>    if options then for k, v in next, options do copy[k] = v end end
-<a href=#240 id=240 data-nosnippet>240</a>    local find = copy.find_file
-<a href=#241 id=241 data-nosnippet>241</a>    if type(find) ~= 'function' then find = nil end
-<a href=#242 id=242 data-nosnippet>242</a>    copy.find_file = function(name, mode, kind)
-<a href=#243 id=243 data-nosnippet>243</a>      local found = name
-<a href=#244 id=244 data-nosnippet>244</a>      if find then found = find(name, mode, kind) end
-<a href=#245 id=245 data-nosnippet>245</a>      if writes(mode) and found and not out_name_ok(found) then
-<a href=#246 id=246 data-nosnippet>246</a>        frame('D', 'writing ' .. shown(found) .. ' is not allowed (document Lua runs sandboxed)')
-<a href=#247 id=247 data-nosnippet>247</a>        return nil
-<a href=#248 id=248 data-nosnippet>248</a>      end
-<a href=#249 id=249 data-nosnippet>249</a>      return found
-<a href=#250 id=250 data-nosnippet>250</a>    end
-<a href=#251 id=251 data-nosnippet>251</a>    return mplib_new(copy)
-<a href=#252 id=252 data-nosnippet>252</a>  end
-<a href=#253 id=253 data-nosnippet>253</a>end
-<a href=#254 id=254 data-nosnippet>254</a>-- img needs the engine's backend: texlua ends on its calls (img.new, img.scan, img.write: a crash).
-<a href=#255 id=255 data-nosnippet>255</a>if img then
-<a href=#256 id=256 data-nosnippet>256</a>  for name, value in pairs(img) do
-<a href=#257 id=257 data-nosnippet>257</a>    if type(value) == 'function' then img[name] = denier('img.' .. name, value) end
-<a href=#258 id=258 data-nosnippet>258</a>  end
-<a href=#259 id=259 data-nosnippet>259</a>end
-<a href=#260 id=260 data-nosnippet>260</a>if lfs then
-<a href=#261 id=261 data-nosnippet>261</a>  local read_only = {attributes = true, currentdir = true, dir = true, isdir = true, isfile = true,
-<a href=#262 id=262 data-nosnippet>262</a>    readlink = true, shortname = true, symlinkattributes = true}
-<a href=#263 id=263 data-nosnippet>263</a>  for name, value in pairs(lfs) do
-<a href=#264 id=264 data-nosnippet>264</a>    if type(value) == 'function' and not read_only[name] then lfs[name] = denier('lfs.' .. name, value) end
-<a href=#265 id=265 data-nosnippet>265</a>  end
-<a href=#266 id=266 data-nosnippet>266</a>end
-<a href=#267 id=267 data-nosnippet>267</a>package.loadlib = denier('package.loadlib', package.loadlib)
-<a href=#268 id=268 data-nosnippet>268</a>local c_path = package.cpath
-<a href=#269 id=269 data-nosnippet>269</a>package.cpath = ''
-<a href=#270 id=270 data-nosnippet>270</a>local function is_native(name)
-<a href=#271 id=271 data-nosnippet>271</a>  return name == 'ffi' or s_find(name, '^socket') ~= nil or s_find(name, '^mime') ~= nil
-<a href=#272 id=272 data-nosnippet>272</a>end
-<a href=#273 id=273 data-nosnippet>273</a>for _, name in ipairs({'ffi', 'socket', 'mime'}) do _G[name] = nil end
-<a href=#274 id=274 data-nosnippet>274</a>for _, registry in ipairs({package.loaded, package.preload}) do
-<a href=#275 id=275 data-nosnippet>275</a>  for name in pairs(registry) do
-<a href=#276 id=276 data-nosnippet>276</a>    if type(name) == 'string' and is_native(name) then registry[name] = nil end
-<a href=#277 id=277 data-nosnippet>277</a>  end
-<a href=#278 id=278 data-nosnippet>278</a>end
-<a href=#279 id=279 data-nosnippet>279</a>if lua then lua.getbytecode, lua.setbytecode, lua.bytecode = nil, nil, nil end
-<a href=#280 id=280 data-nosnippet>280</a>-- Text chunks only: crafted bytecode can break out of any Lua-level sandbox.
-<a href=#281 id=281 data-nosnippet>281</a>local base_load, base_loadfile = load, loadfile
-<a href=#282 id=282 data-nosnippet>282</a>-- (an env passed as nil is still an env: forward it only when given)
-<a href=#283 id=283 data-nosnippet>283</a>local function load_text(chunk, name, mode, ...)
-<a href=#284 id=284 data-nosnippet>284</a>  if select('#', ...) &gt; 0 then return base_load(chunk, name, 't', ...) end
-<a href=#285 id=285 data-nosnippet>285</a>  return base_load(chunk, name, 't')
-<a href=#286 id=286 data-nosnippet>286</a>end
-<a href=#287 id=287 data-nosnippet>287</a>local function loadfile_text(file, mode, ...)
-<a href=#288 id=288 data-nosnippet>288</a>  if select('#', ...) &gt; 0 then return base_loadfile(file, 't', ...) end
-<a href=#289 id=289 data-nosnippet>289</a>  return base_loadfile(file, 't')
-<a href=#290 id=290 data-nosnippet>290</a>end
-<a href=#291 id=291 data-nosnippet>291</a>load = load_text
-<a href=#292 id=292 data-nosnippet>292</a>loadstring = function(chunk, name) return base_load(chunk, name, 't') end
-<a href=#293 id=293 data-nosnippet>293</a>loadfile = loadfile_text
-<a href=#294 id=294 data-nosnippet>294</a>dofile = function(file) return assert(loadfile_text(file))() end
-<a href=#295 id=295 data-nosnippet>295</a>-- require: the preload table, then Lua files on package.path and (below) the
-<a href=#296 id=296 data-nosnippet>296</a>-- texmf tree via kpse, all text-only; a C module or a network library is denied.
-<a href=#297 id=297 data-nosnippet>297</a>local searchpath = package.searchpath
-<a href=#298 id=298 data-nosnippet>298</a>local preload = (package.searchers or package.loaders)[1]
-<a href=#299 id=299 data-nosnippet>299</a>local searchers = {
-<a href=#300 id=300 data-nosnippet>300</a>  function(name)
-<a href=#301 id=301 data-nosnippet>301</a>    if type(name) == 'string' and is_native(name) then
-<a href=#302 id=302 data-nosnippet>302</a>      return function() deny('require "' .. shown(name) .. '"') end
-<a href=#303 id=303 data-nosnippet>303</a>    end
-<a href=#304 id=304 data-nosnippet>304</a>    return preload(name)
-<a href=#305 id=305 data-nosnippet>305</a>  end,
-<a href=#306 id=306 data-nosnippet>306</a>  function(name)
-<a href=#307 id=307 data-nosnippet>307</a>    local file, err = searchpath(name, package.path)
-<a href=#308 id=308 data-nosnippet>308</a>    if not file then return err end
-<a href=#309 id=309 data-nosnippet>309</a>    return assert(loadfile_text(file)), file
-<a href=#310 id=310 data-nosnippet>310</a>  end,
-<a href=#311 id=311 data-nosnippet>311</a>}
-<a href=#312 id=312 data-nosnippet>312</a>package.searchers, package.loaders = searchers, searchers
-<a href=#313 id=313 data-nosnippet>313</a>searchers[3] = function(name)
-<a href=#314 id=314 data-nosnippet>314</a>  if searchpath(name, c_path) or searchpath(s_match(name, '^[^.]*'), c_path) then
-<a href=#315 id=315 data-nosnippet>315</a>    return function() deny('loading the C module "' .. shown(name) .. '"') end
-<a href=#316 id=316 data-nosnippet>316</a>  end
-<a href=#317 id=317 data-nosnippet>317</a>  return "\n\tno C modules (document Lua runs sandboxed)"
-<a href=#318 id=318 data-nosnippet>318</a>end
-<a href=#319 id=319 data-nosnippet>319</a>-- The protocol's pipe is the bridge's alone: the document's standard output and
-<a href=#320 id=320 data-nosnippet>320</a>-- input are the null device (its output reaches TeX through tex.print), set before
-<a href=#321 id=321 data-nosnippet>321</a>-- lualibs loads, whose helpers keep what they see (inspect keeps print).
-<a href=#322 id=322 data-nosnippet>322</a>local null_in = io_open(CRLF and 'NUL' or '/dev/null', 'r')
-<a href=#323 id=323 data-nosnippet>323</a>io_output(io.stderr)
-<a href=#324 id=324 data-nosnippet>324</a>if null_in then io_input(null_in) end
-<a href=#325 id=325 data-nosnippet>325</a>io.stdout, io.stdin = io.stderr, null_in
-<a href=#326 id=326 data-nosnippet>326</a>print = function() end
-<a href=#327 id=327 data-nosnippet>327</a>-- Rebind require through texlua's built-in kpse so texmf-shipped Lua modules
-<a href=#328 id=328 data-nosnippet>328</a>-- resolve (newpax, tkz-elements, ...), and load lualibs, which supplies the
-<a href=#329 id=329 data-nosnippet>329</a>-- 'file'/'string'/'table' library extensions lualatex gets via luaotfload.
-<a href=#330 id=330 data-nosnippet>330</a>if kpse and kpse.set_program_name then
-<a href=#331 id=331 data-nosnippet>331</a>  pcall(kpse.set_program_name, 'luatex')
-<a href=#332 id=332 data-nosnippet>332</a>  local find_file = kpse.find_file
-<a href=#333 id=333 data-nosnippet>333</a>  t_insert(searchers, function(name)
-<a href=#334 id=334 data-nosnippet>334</a>    -- LuaTeX's own kpse loader reads a dotted name as a path (pgf.gd.trees.library).
-<a href=#335 id=335 data-nosnippet>335</a>    local f = find_file((s_gsub(name, '%.', '/')), 'lua') or find_file(name, 'lua')
-<a href=#336 id=336 data-nosnippet>336</a>    if f then return assert(loadfile_text(f)), f end
-<a href=#337 id=337 data-nosnippet>337</a>    return "\n\tno texmf module '" .. shown(name) .. "' (kpse)"
-<a href=#338 id=338 data-nosnippet>338</a>  end)
-<a href=#339 id=339 data-nosnippet>339</a>  pcall(require, 'lualibs')
-<a href=#340 id=340 data-nosnippet>340</a>end
-<a href=#341 id=341 data-nosnippet>341</a>-- debug reaches the upvalues the wrappers above hold (the raw io.open, ...).
-<a href=#342 id=342 data-nosnippet>342</a>debug, package.loaded.debug = nil, nil
-<a href=#343 id=343 data-nosnippet>343</a>-- An error value's text, asked of no metamethod (tostring would run the document's __tostring).
-<a href=#344 id=344 data-nosnippet>344</a>local function error_text(value)
-<a href=#345 id=345 data-nosnippet>345</a>  local kind = type(value)
-<a href=#346 id=346 data-nosnippet>346</a>  if kind == 'string' then return value end
-<a href=#347 id=347 data-nosnippet>347</a>  if kind == 'number' then return s_format('%.14g', value) end
-<a href=#348 id=348 data-nosnippet>348</a>  return '(error object is a ' .. kind .. ' value)'
-<a href=#349 id=349 data-nosnippet>349</a>end
-<a href=#350 id=350 data-nosnippet>350</a>booting = false
-<a href=#351 id=351 data-nosnippet>351</a>while true do
-<a href=#352 id=352 data-nosnippet>352</a>  local header = f_read(stdin, '*l')
-<a href=#353 id=353 data-nosnippet>353</a>  if not header then os_exit(0) end
-<a href=#354 id=354 data-nosnippet>354</a>  local n = tonumber(header)
-<a href=#355 id=355 data-nosnippet>355</a>  if not n then os_exit(1) end
-<a href=#356 id=356 data-nosnippet>356</a>  local chunk = f_read(stdin, n)
-<a href=#357 id=357 data-nosnippet>357</a>  f_read(stdin, '*l')
-<a href=#358 id=358 data-nosnippet>358</a>  buf = {}
-<a href=#359 id=359 data-nosnippet>359</a>  local out, tag
-<a href=#360 id=360 data-nosnippet>360</a>  local f, err = load_text(chunk)
-<a href=#361 id=361 data-nosnippet>361</a>  if f then
-<a href=#362 id=362 data-nosnippet>362</a>    local ok, rterr = pcall(f)
-<a href=#363 id=363 data-nosnippet>363</a>    if ok then
-<a href=#364 id=364 data-nosnippet>364</a>      out, tag = t_concat(buf), 'OK'
-<a href=#365 id=365 data-nosnippet>365</a>    else
-<a href=#366 id=366 data-nosnippet>366</a>      out, tag = error_text(rterr), 'ERR'
-<a href=#367 id=367 data-nosnippet>367</a>    end
-<a href=#368 id=368 data-nosnippet>368</a>  else
-<a href=#369 id=369 data-nosnippet>369</a>    out, tag = error_text(err), 'ERR'
-<a href=#370 id=370 data-nosnippet>370</a>  end
-<a href=#371 id=371 data-nosnippet>371</a>  frame(tag, out)
-<a href=#372 id=372 data-nosnippet>372</a>end
-<a href=#373 id=373 data-nosnippet>373</a>"#</span>;
-<a href=#374 id=374 data-nosnippet>374</a>
-<a href=#375 id=375 data-nosnippet>375</a><span class="kw">struct </span>LuaProc {
-<a href=#376 id=376 data-nosnippet>376</a>  <span class="doccomment">/// The child, registered so a timeout or memory exit (which runs no destructor) kills it too; dropping the guard
-<a href=#377 id=377 data-nosnippet>377</a>  /// kills and reaps it.
-<a href=#378 id=378 data-nosnippet>378</a>  </span>child:   <span class="prelude-ty">Option</span>&lt;latexml_core::watchdog::KillOnExit&gt;,
-<a href=#379 id=379 data-nosnippet>379</a>  stdin:   ChildStdin,
-<a href=#380 id=380 data-nosnippet>380</a>  stdout:  BufReader&lt;ChildStdout&gt;,
-<a href=#381 id=381 data-nosnippet>381</a>  <span class="doccomment">/// A private prelude copy (`Prelude::Own`), removed with the process.
-<a href=#382 id=382 data-nosnippet>382</a>  </span>prelude: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
-<a href=#383 id=383 data-nosnippet>383</a>  <span class="doccomment">/// This interpreter's frame nonce (`session_nonce`), sent as its first line.
-<a href=#384 id=384 data-nosnippet>384</a>  </span>nonce:   String,
-<a href=#385 id=385 data-nosnippet>385</a>}
-<a href=#386 id=386 data-nosnippet>386</a>
-<a href=#387 id=387 data-nosnippet>387</a><span class="doccomment">/// This thread's interpreter for the current conversion (`reset_session` ends it: a persistent worker converts its
-<a href=#388 id=388 data-nosnippet>388</a>/// papers on one thread, and LuaTeX starts each job with a fresh Lua state in the job's directory).
-<a href=#389 id=389 data-nosnippet>389</a></span><span class="attr">#[derive(Default)]
-<a href=#390 id=390 data-nosnippet>390</a></span><span class="kw">struct </span>LuaSlot {
-<a href=#391 id=391 data-nosnippet>391</a>  proc_:       <span class="prelude-ty">Option</span>&lt;LuaProc&gt;,
-<a href=#392 id=392 data-nosnippet>392</a>  <span class="doccomment">/// texlua could not be started (reported once per conversion as "texlua not available").
-<a href=#393 id=393 data-nosnippet>393</a>  </span>unavailable: bool,
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="doccomment">/// Interpreters that ended mid-conversion (a crash, a broken frame); each is respawned up to `MAX_RESTARTS`.
-<a href=#395 id=395 data-nosnippet>395</a>  </span>ended:       u32,
-<a href=#396 id=396 data-nosnippet>396</a>}
-<a href=#397 id=397 data-nosnippet>397</a>
-<a href=#398 id=398 data-nosnippet>398</a><span class="doccomment">/// Restarts per conversion after an interpreter ends; past them, later chunks are not evaluated.
-<a href=#399 id=399 data-nosnippet>399</a></span><span class="kw">const </span>MAX_RESTARTS: u32 = <span class="number">3</span>;
-<a href=#400 id=400 data-nosnippet>400</a><span class="doccomment">/// The longest frame the bridge reads: a length past it is a broken protocol, not output.
-<a href=#401 id=401 data-nosnippet>401</a></span><span class="kw">const </span>MAX_FRAME: usize = <span class="number">64 </span>&lt;&lt; <span class="number">20</span>;
-<a href=#402 id=402 data-nosnippet>402</a><span class="doccomment">/// The refusals a chunk reports one by one, by count and by bytes; the rest are counted in one summary Error.
-<a href=#403 id=403 data-nosnippet>403</a></span><span class="kw">const </span>MAX_DENIALS: usize = <span class="number">20</span>;
-<a href=#404 id=404 data-nosnippet>404</a><span class="kw">const </span>MAX_DENIAL_BYTES: usize = <span class="number">64 </span>&lt;&lt; <span class="number">10</span>;
-<a href=#405 id=405 data-nosnippet>405</a>
-<a href=#406 id=406 data-nosnippet>406</a><span class="macro">thread_local!</span> {
-<a href=#407 id=407 data-nosnippet>407</a>  <span class="kw">static </span>LUA: RefCell&lt;LuaSlot&gt; = RefCell::new(LuaSlot::default());
-<a href=#408 id=408 data-nosnippet>408</a>}
-<a href=#409 id=409 data-nosnippet>409</a>
-<a href=#410 id=410 data-nosnippet>410</a><span class="doccomment">/// Ends this thread's interpreter and forgets its restarts: called at each conversion's start
-<a href=#411 id=411 data-nosnippet>411</a>/// (`Converter::initialize_session`), so no Lua state or working directory carries over to the next paper.
-<a href=#412 id=412 data-nosnippet>412</a></span><span class="kw">pub fn </span>reset_session() { LUA.with(|slot| <span class="kw-2">*</span>slot.borrow_mut() = LuaSlot::default()); }
-<a href=#413 id=413 data-nosnippet>413</a>
-<a href=#414 id=414 data-nosnippet>414</a><span class="kw">impl </span>Drop <span class="kw">for </span>LuaProc {
-<a href=#415 id=415 data-nosnippet>415</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-<a href=#416 id=416 data-nosnippet>416</a>    <span class="comment">// The guard kills and reaps the child, so no zombie outlives the thread.
-<a href=#417 id=417 data-nosnippet>417</a>    </span>drop(<span class="self">self</span>.child.take());
-<a href=#418 id=418 data-nosnippet>418</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = <span class="self">self</span>.prelude.take() {
-<a href=#419 id=419 data-nosnippet>419</a>      <span class="kw">let _ </span>= std::fs::remove_file(path);
-<a href=#420 id=420 data-nosnippet>420</a>    }
-<a href=#421 id=421 data-nosnippet>421</a>  }
-<a href=#422 id=422 data-nosnippet>422</a>}
-<a href=#423 id=423 data-nosnippet>423</a>
-<a href=#424 id=424 data-nosnippet>424</a><span class="kw">fn </span>content_hash(text: <span class="kw-2">&amp;</span>str) -&gt; u64 {
-<a href=#425 id=425 data-nosnippet>425</a>  text.bytes().fold(<span class="number">0xcbf2_9ce4_8422_2325</span>, |hash, byte| {
-<a href=#426 id=426 data-nosnippet>426</a>    (hash ^ u64::from(byte)).wrapping_mul(<span class="number">0x0100_0000_01b3</span>)
-<a href=#427 id=427 data-nosnippet>427</a>  })
-<a href=#428 id=428 data-nosnippet>428</a>}
-<a href=#429 id=429 data-nosnippet>429</a>
-<a href=#430 id=430 data-nosnippet>430</a><span class="doccomment">/// Where the prelude script is: the file shared by this user's processes, or a private copy the
-<a href=#431 id=431 data-nosnippet>431</a>/// process removes when its interpreter ends.
-<a href=#432 id=432 data-nosnippet>432</a></span><span class="kw">enum </span>Prelude {
-<a href=#433 id=433 data-nosnippet>433</a>  Shared(std::path::PathBuf),
-<a href=#434 id=434 data-nosnippet>434</a>  Own(std::path::PathBuf),
-<a href=#435 id=435 data-nosnippet>435</a>}
-<a href=#436 id=436 data-nosnippet>436</a>
-<a href=#437 id=437 data-nosnippet>437</a><span class="doccomment">/// The prelude script on disk: `latexml_lua_prelude_&lt;uid&gt;_&lt;content hash&gt;.lua` in the temp dir, shared
-<a href=#438 id=438 data-nosnippet>438</a>/// by this user's processes and used only when it is a regular file (not a link) of this user holding
-<a href=#439 id=439 data-nosnippet>439</a>/// exactly the prelude — the temp dir is world-writable, and a planted or truncated file would run as
-<a href=#440 id=440 data-nosnippet>440</a>/// this user. Written aside under a name no other writer uses (a pid and a counter; a name left by an
-<a href=#441 id=441 data-nosnippet>441</a>/// earlier process of the same pid is skipped) and renamed into place, so a concurrent reader never
-<a href=#442 id=442 data-nosnippet>442</a>/// sees a partial file; where the shared name cannot be taken, the private copy is used and removed
-<a href=#443 id=443 data-nosnippet>443</a>/// with the interpreter (`LuaProc`'s drop).
-<a href=#444 id=444 data-nosnippet>444</a></span><span class="kw">fn </span>prelude_file() -&gt; <span class="prelude-ty">Option</span>&lt;Prelude&gt; {
-<a href=#445 id=445 data-nosnippet>445</a>  <span class="kw">use </span>std::io::Write;
-<a href=#446 id=446 data-nosnippet>446</a>  <span class="kw">static </span>WRITES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(<span class="number">0</span>);
-<a href=#447 id=447 data-nosnippet>447</a>  <span class="kw">let </span>dir = std::env::temp_dir();
-<a href=#448 id=448 data-nosnippet>448</a>  <span class="kw">let </span>hash = content_hash(LUA_PRELUDE);
-<a href=#449 id=449 data-nosnippet>449</a>  <span class="kw">let </span>(own, <span class="kw-2">mut </span>file) = (<span class="number">0</span>..<span class="number">64</span>).find_map(|<span class="kw">_</span>| {
-<a href=#450 id=450 data-nosnippet>450</a>    <span class="kw">let </span>own = dir.join(<span class="macro">format!</span>(
-<a href=#451 id=451 data-nosnippet>451</a>      <span class="string">"latexml_lua_prelude_{hash:016x}.{}.{}.lua"</span>,
-<a href=#452 id=452 data-nosnippet>452</a>      std::process::id(),
-<a href=#453 id=453 data-nosnippet>453</a>      WRITES.fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed)
-<a href=#454 id=454 data-nosnippet>454</a>    ));
-<a href=#455 id=455 data-nosnippet>455</a>    <span class="kw">let </span><span class="kw-2">mut </span>options = std::fs::OpenOptions::new();
-<a href=#456 id=456 data-nosnippet>456</a>    options.write(<span class="bool-val">true</span>).create_new(<span class="bool-val">true</span>);
-<a href=#457 id=457 data-nosnippet>457</a>    <span class="attr">#[cfg(unix)]
-<a href=#458 id=458 data-nosnippet>458</a>    </span>std::os::unix::fs::OpenOptionsExt::mode(<span class="kw-2">&amp;mut </span>options, <span class="number">0o644</span>);
-<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">match </span>options.open(<span class="kw-2">&amp;</span>own) {
-<a href=#460 id=460 data-nosnippet>460</a>      <span class="prelude-val">Ok</span>(file) =&gt; <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>((own, file))),
-<a href=#461 id=461 data-nosnippet>461</a>      <span class="prelude-val">Err</span>(error) <span class="kw">if </span>error.kind() == std::io::ErrorKind::AlreadyExists =&gt; <span class="prelude-val">None</span>,
-<a href=#462 id=462 data-nosnippet>462</a>      <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>),
-<a href=#463 id=463 data-nosnippet>463</a>    }
-<a href=#464 id=464 data-nosnippet>464</a>  })<span class="question-mark">??</span>;
-<a href=#465 id=465 data-nosnippet>465</a>  <span class="kw">if </span>file.write_all(LUA_PRELUDE.as_bytes()).is_err() {
-<a href=#466 id=466 data-nosnippet>466</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>own);
-<a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#468 id=468 data-nosnippet>468</a>  }
-<a href=#469 id=469 data-nosnippet>469</a>  drop(file);
-<a href=#470 id=470 data-nosnippet>470</a>  <span class="attr">#[cfg(unix)]
-<a href=#471 id=471 data-nosnippet>471</a>  </span><span class="kw">let </span>owner = {
-<a href=#472 id=472 data-nosnippet>472</a>    <span class="kw">use </span>std::os::unix::fs::MetadataExt;
-<a href=#473 id=473 data-nosnippet>473</a>    std::fs::symlink_metadata(<span class="kw-2">&amp;</span>own).ok()<span class="question-mark">?</span>.uid()
-<a href=#474 id=474 data-nosnippet>474</a>  };
-<a href=#475 id=475 data-nosnippet>475</a>  <span class="attr">#[cfg(not(unix))]
-<a href=#476 id=476 data-nosnippet>476</a>  </span><span class="kw">let </span>owner = <span class="number">0</span>;
-<a href=#477 id=477 data-nosnippet>477</a>  <span class="kw">let </span>shared = dir.join(<span class="macro">format!</span>(<span class="string">"latexml_lua_prelude_{owner}_{hash:016x}.lua"</span>));
-<a href=#478 id=478 data-nosnippet>478</a>  <span class="kw">let </span>is_ours = |path: <span class="kw-2">&amp;</span>std::path::Path| {
-<a href=#479 id=479 data-nosnippet>479</a>    std::fs::symlink_metadata(path).is_ok_and(|meta| {
-<a href=#480 id=480 data-nosnippet>480</a>      <span class="attr">#[cfg(unix)]
-<a href=#481 id=481 data-nosnippet>481</a>      </span><span class="kw">let </span>same_owner = std::os::unix::fs::MetadataExt::uid(<span class="kw-2">&amp;</span>meta) == owner;
-<a href=#482 id=482 data-nosnippet>482</a>      <span class="attr">#[cfg(not(unix))]
-<a href=#483 id=483 data-nosnippet>483</a>      </span><span class="kw">let </span>same_owner = <span class="bool-val">true</span>;
-<a href=#484 id=484 data-nosnippet>484</a>      meta.is_file() &amp;&amp; same_owner
-<a href=#485 id=485 data-nosnippet>485</a>    })
-<a href=#486 id=486 data-nosnippet>486</a>  };
-<a href=#487 id=487 data-nosnippet>487</a>  <span class="kw">if </span>is_ours(<span class="kw-2">&amp;</span>shared) &amp;&amp; std::fs::read(<span class="kw-2">&amp;</span>shared).is_ok_and(|bytes| bytes == LUA_PRELUDE.as_bytes()) {
-<a href=#488 id=488 data-nosnippet>488</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>own);
-<a href=#489 id=489 data-nosnippet>489</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(Prelude::Shared(shared));
-<a href=#490 id=490 data-nosnippet>490</a>  }
-<a href=#491 id=491 data-nosnippet>491</a>  <span class="kw">if </span>std::fs::rename(<span class="kw-2">&amp;</span>own, <span class="kw-2">&amp;</span>shared).is_ok() {
-<a href=#492 id=492 data-nosnippet>492</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(Prelude::Shared(shared));
-<a href=#493 id=493 data-nosnippet>493</a>  }
-<a href=#494 id=494 data-nosnippet>494</a>  <span class="prelude-val">Some</span>(Prelude::Own(own))
-<a href=#495 id=495 data-nosnippet>495</a>}
-<a href=#496 id=496 data-nosnippet>496</a>
-<a href=#497 id=497 data-nosnippet>497</a><span class="doccomment">/// The environment variables the texlua child keeps: the program and library search (`PATH`, `LD_LIBRARY_PATH`,
-<a href=#498 id=498 data-nosnippet>498</a>/// `DYLD_*`, Windows' system ones), kpathsea's (`TEXMF*`, `KPATHSEA*`, the `*INPUTS`/`*FONTS` format paths), the user's home (`TEXMFHOME`), the
-<a href=#499 id=499 data-nosnippet>499</a>/// locale, the reproducible-date clock and the temp dir. Windows' variable names are case-insensitive, and its usual
-<a href=#500 id=500 data-nosnippet>500</a>/// spellings are mixed-case (`Path`, `SystemRoot`, `windir`), so there a name is matched in upper case.
-<a href=#501 id=501 data-nosnippet>501</a></span><span class="kw">fn </span>child_env_allowed(name: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#502 id=502 data-nosnippet>502</a>  <span class="kw">let </span>name = <span class="kw">if </span><span class="macro">cfg!</span>(windows) {
-<a href=#503 id=503 data-nosnippet>503</a>    std::borrow::Cow::Owned(name.to_ascii_uppercase())
-<a href=#504 id=504 data-nosnippet>504</a>  } <span class="kw">else </span>{
-<a href=#505 id=505 data-nosnippet>505</a>    std::borrow::Cow::Borrowed(name)
-<a href=#506 id=506 data-nosnippet>506</a>  };
-<a href=#507 id=507 data-nosnippet>507</a>  <span class="kw">let </span>name = name.as_ref();
-<a href=#508 id=508 data-nosnippet>508</a>  <span class="kw">const </span>EXACT: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
-<a href=#509 id=509 data-nosnippet>509</a>    <span class="string">"PATH"</span>,
-<a href=#510 id=510 data-nosnippet>510</a>    <span class="string">"HOME"</span>,
-<a href=#511 id=511 data-nosnippet>511</a>    <span class="string">"LANG"</span>,
-<a href=#512 id=512 data-nosnippet>512</a>    <span class="string">"LANGUAGE"</span>,
-<a href=#513 id=513 data-nosnippet>513</a>    <span class="string">"SOURCE_DATE_EPOCH"</span>,
-<a href=#514 id=514 data-nosnippet>514</a>    <span class="string">"FORCE_SOURCE_DATE"</span>,
-<a href=#515 id=515 data-nosnippet>515</a>    <span class="string">"TMPDIR"</span>,
-<a href=#516 id=516 data-nosnippet>516</a>    <span class="string">"TMP"</span>,
-<a href=#517 id=517 data-nosnippet>517</a>    <span class="string">"TEMP"</span>,
-<a href=#518 id=518 data-nosnippet>518</a>    <span class="string">"SYSTEMROOT"</span>,
-<a href=#519 id=519 data-nosnippet>519</a>    <span class="string">"WINDIR"</span>,
-<a href=#520 id=520 data-nosnippet>520</a>    <span class="string">"SYSTEMDRIVE"</span>,
-<a href=#521 id=521 data-nosnippet>521</a>    <span class="string">"USERPROFILE"</span>,
-<a href=#522 id=522 data-nosnippet>522</a>    <span class="string">"HOMEDRIVE"</span>,
-<a href=#523 id=523 data-nosnippet>523</a>    <span class="string">"HOMEPATH"</span>,
-<a href=#524 id=524 data-nosnippet>524</a>    <span class="string">"APPDATA"</span>,
-<a href=#525 id=525 data-nosnippet>525</a>    <span class="string">"LOCALAPPDATA"</span>,
-<a href=#526 id=526 data-nosnippet>526</a>    <span class="string">"PATHEXT"</span>,
-<a href=#527 id=527 data-nosnippet>527</a>    <span class="string">"TEXCONFIG"</span>,
-<a href=#528 id=528 data-nosnippet>528</a>    <span class="string">"TEXFORMATS"</span>,
-<a href=#529 id=529 data-nosnippet>529</a>    <span class="string">"TEXPOOL"</span>,
-<a href=#530 id=530 data-nosnippet>530</a>    <span class="string">"TEXPSHEADERS"</span>,
-<a href=#531 id=531 data-nosnippet>531</a>    <span class="string">"TEXFONTMAPS"</span>,
-<a href=#532 id=532 data-nosnippet>532</a>    <span class="string">"LD_LIBRARY_PATH"</span>,
-<a href=#533 id=533 data-nosnippet>533</a>  ];
-<a href=#534 id=534 data-nosnippet>534</a>  EXACT.contains(<span class="kw-2">&amp;</span>name)
-<a href=#535 id=535 data-nosnippet>535</a>    || name.starts_with(<span class="string">"DYLD_"</span>)
-<a href=#536 id=536 data-nosnippet>536</a>    || name.starts_with(<span class="string">"LC_"</span>)
-<a href=#537 id=537 data-nosnippet>537</a>    || name.starts_with(<span class="string">"TEXMF"</span>)
-<a href=#538 id=538 data-nosnippet>538</a>    || name.starts_with(<span class="string">"KPATHSEA"</span>)
-<a href=#539 id=539 data-nosnippet>539</a>    || name.ends_with(<span class="string">"INPUTS"</span>)
-<a href=#540 id=540 data-nosnippet>540</a>    || name.ends_with(<span class="string">"FONTS"</span>)
-<a href=#541 id=541 data-nosnippet>541</a>}
-<a href=#542 id=542 data-nosnippet>542</a>
-<a href=#543 id=543 data-nosnippet>543</a><span class="doccomment">/// A per-interpreter frame nonce: 128 bits of SipHash keyed by the standard library's random `RandomState` keys,
-<a href=#544 id=544 data-nosnippet>544</a>/// over the pid, the clock and a counter. The prelude reads it before any other code loads; a chunk never sees it.
-<a href=#545 id=545 data-nosnippet>545</a></span><span class="kw">fn </span>session_nonce() -&gt; String {
-<a href=#546 id=546 data-nosnippet>546</a>  <span class="kw">use </span>std::hash::{BuildHasher, Hasher};
-<a href=#547 id=547 data-nosnippet>547</a>  <span class="kw">static </span>SPAWNS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(<span class="number">0</span>);
-<a href=#548 id=548 data-nosnippet>548</a>  <span class="kw">let </span>state = std::collections::hash_map::RandomState::new();
-<a href=#549 id=549 data-nosnippet>549</a>  <span class="kw">let </span>count = SPAWNS.fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed);
-<a href=#550 id=550 data-nosnippet>550</a>  <span class="kw">let </span>clock = std::time::SystemTime::now()
-<a href=#551 id=551 data-nosnippet>551</a>    .duration_since(std::time::UNIX_EPOCH)
-<a href=#552 id=552 data-nosnippet>552</a>    .map_or(<span class="number">0</span>, |since| since.as_nanos());
-<a href=#553 id=553 data-nosnippet>553</a>  <span class="kw">let </span>word = |half: u64| {
-<a href=#554 id=554 data-nosnippet>554</a>    <span class="kw">let </span><span class="kw-2">mut </span>hasher = state.build_hasher();
-<a href=#555 id=555 data-nosnippet>555</a>    hasher.write_u64(half);
-<a href=#556 id=556 data-nosnippet>556</a>    hasher.write_u32(std::process::id());
-<a href=#557 id=557 data-nosnippet>557</a>    hasher.write_u128(clock);
-<a href=#558 id=558 data-nosnippet>558</a>    hasher.write_u64(count);
-<a href=#559 id=559 data-nosnippet>559</a>    hasher.finish()
-<a href=#560 id=560 data-nosnippet>560</a>  };
-<a href=#561 id=561 data-nosnippet>561</a>  <span class="macro">format!</span>(<span class="string">"{:016x}{:016x}"</span>, word(<span class="number">0</span>), word(<span class="number">1</span>))
-<a href=#562 id=562 data-nosnippet>562</a>}
-<a href=#563 id=563 data-nosnippet>563</a>
-<a href=#564 id=564 data-nosnippet>564</a><span class="kw">fn </span>spawn() -&gt; <span class="prelude-ty">Option</span>&lt;LuaProc&gt; {
-<a href=#565 id=565 data-nosnippet>565</a>  <span class="comment">// `texlua` takes a script FILE (its `-e` is not lua's inline-chunk flag) — materialize the
-<a href=#566 id=566 data-nosnippet>566</a>  // prelude in the temp dir, named by its owner and content: one file shared by this user's processes
-<a href=#567 id=567 data-nosnippet>567</a>  // and version-safe (a per-process name was never removed, and one-shot runs and test processes left ~98,000
-<a href=#568 id=568 data-nosnippet>568</a>  // of them, exhausting `/tmp`'s inodes).
-<a href=#569 id=569 data-nosnippet>569</a>  </span><span class="kw">let </span>(prelude_path, prelude) = <span class="kw">match </span>prelude_file()<span class="question-mark">? </span>{
-<a href=#570 id=570 data-nosnippet>570</a>    Prelude::Shared(path) =&gt; (path, <span class="prelude-val">None</span>),
-<a href=#571 id=571 data-nosnippet>571</a>    Prelude::Own(path) =&gt; (path.clone(), <span class="prelude-val">Some</span>(path)),
-<a href=#572 id=572 data-nosnippet>572</a>  };
-<a href=#573 id=573 data-nosnippet>573</a>  <span class="kw">let </span><span class="kw-2">mut </span>cmd = Command::new(<span class="string">"texlua"</span>);
-<a href=#574 id=574 data-nosnippet>574</a>  cmd
-<a href=#575 id=575 data-nosnippet>575</a>    .arg(<span class="kw-2">&amp;</span>prelude_path)
-<a href=#576 id=576 data-nosnippet>576</a>    .stdin(Stdio::piped())
-<a href=#577 id=577 data-nosnippet>577</a>    .stdout(Stdio::piped())
-<a href=#578 id=578 data-nosnippet>578</a>    .stderr(Stdio::null())
-<a href=#579 id=579 data-nosnippet>579</a>    <span class="comment">// Untrusted Lua sees only what the texmf lookup and the locale need, not the worker's environment.
-<a href=#580 id=580 data-nosnippet>580</a>    </span>.env_clear()
-<a href=#581 id=581 data-nosnippet>581</a>    .envs(std::env::vars_os().filter(|(name, <span class="kw">_</span>)| name.to_str().is_some_and(child_env_allowed)));
-<a href=#582 id=582 data-nosnippet>582</a>  <span class="comment">// LuaTeX job semantics: chunks resolve relative files against the
-<a href=#583 id=583 data-nosnippet>583</a>  // document's directory (witness newpax/newpax — `newpax.writenewpax
-<a href=#584 id=584 data-nosnippet>584</a>  // ("doc-input1")` reads the PDFs shipped next to the manual).
-<a href=#585 id=585 data-nosnippet>585</a>  </span><span class="kw">let </span>source_dir = latexml_core::state::lookup_string(<span class="string">"SOURCEDIRECTORY"</span>);
-<a href=#586 id=586 data-nosnippet>586</a>  <span class="kw">if </span>!source_dir.is_empty() &amp;&amp; std::path::Path::new(<span class="kw-2">&amp;</span>source_dir).is_dir() {
-<a href=#587 id=587 data-nosnippet>587</a>    cmd.current_dir(<span class="kw-2">&amp;</span>source_dir);
-<a href=#588 id=588 data-nosnippet>588</a>  }
-<a href=#589 id=589 data-nosnippet>589</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>child) = cmd.spawn() <span class="kw">else </span>{
-<a href=#590 id=590 data-nosnippet>590</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = prelude {
-<a href=#591 id=591 data-nosnippet>591</a>      <span class="kw">let _ </span>= std::fs::remove_file(path);
-<a href=#592 id=592 data-nosnippet>592</a>    }
-<a href=#593 id=593 data-nosnippet>593</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#594 id=594 data-nosnippet>594</a>  };
-<a href=#595 id=595 data-nosnippet>595</a>  <span class="kw">let </span>(<span class="prelude-val">Some</span>(stdin), <span class="prelude-val">Some</span>(stdout)) = (child.stdin.take(), child.stdout.take()) <span class="kw">else </span>{
-<a href=#596 id=596 data-nosnippet>596</a>    <span class="kw">let _ </span>= child.kill();
-<a href=#597 id=597 data-nosnippet>597</a>    <span class="kw">let _ </span>= child.wait();
-<a href=#598 id=598 data-nosnippet>598</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = prelude {
-<a href=#599 id=599 data-nosnippet>599</a>      <span class="kw">let _ </span>= std::fs::remove_file(path);
-<a href=#600 id=600 data-nosnippet>600</a>    }
-<a href=#601 id=601 data-nosnippet>601</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#602 id=602 data-nosnippet>602</a>  };
-<a href=#603 id=603 data-nosnippet>603</a>  <span class="kw">let </span><span class="kw-2">mut </span>proc_ = LuaProc {
-<a href=#604 id=604 data-nosnippet>604</a>    child: <span class="prelude-val">Some</span>(latexml_core::watchdog::kill_on_exit(child)),
-<a href=#605 id=605 data-nosnippet>605</a>    stdin,
-<a href=#606 id=606 data-nosnippet>606</a>    stdout: BufReader::new(stdout),
-<a href=#607 id=607 data-nosnippet>607</a>    prelude,
-<a href=#608 id=608 data-nosnippet>608</a>    nonce: session_nonce(),
-<a href=#609 id=609 data-nosnippet>609</a>  };
-<a href=#610 id=610 data-nosnippet>610</a>  <span class="kw">let </span>line = <span class="macro">format!</span>(<span class="string">"{}\n"</span>, proc_.nonce);
-<a href=#611 id=611 data-nosnippet>611</a>  <span class="kw">if </span>proc_.stdin.write_all(line.as_bytes()).is_err() {
-<a href=#612 id=612 data-nosnippet>612</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#613 id=613 data-nosnippet>613</a>  }
-<a href=#614 id=614 data-nosnippet>614</a>  <span class="prelude-val">Some</span>(proc_)
-<a href=#615 id=615 data-nosnippet>615</a>}
-<a href=#616 id=616 data-nosnippet>616</a>
-<a href=#617 id=617 data-nosnippet>617</a><span class="doccomment">/// Service one live tex-state query from the Lua side (the mirror half of
-<a href=#618 id=618 data-nosnippet>618</a>/// rebind-as-we-emulate): `get{count,dimen} &lt;key&gt;` reads a register from the
-<a href=#619 id=619 data-nosnippet>619</a>/// engine State, `set{count,dimen} [global] &lt;key&gt; &lt;value&gt;` writes one. Keys
-<a href=#620 id=620 data-nosnippet>620</a>/// are numeric register indices (`tex.count[255]` → `\count255`) or
-<a href=#621 id=621 data-nosnippet>621</a>/// `\countdef`'d names (`tex.count.scratchcounter` → `\scratchcounter`).
-<a href=#622 id=622 data-nosnippet>622</a>/// Counts answer as integers, dimens in scaled points (LuaTeX convention).
-<a href=#623 id=623 data-nosnippet>623</a>/// Unknown ops or lookup failures answer "0" — the pre-mirror stub value —
-<a href=#624 id=624 data-nosnippet>624</a>/// so a chunk probing state we don't model degrades exactly as before.
-<a href=#625 id=625 data-nosnippet>625</a></span><span class="kw">fn </span>service_query(payload: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#626 id=626 data-nosnippet>626</a>  <span class="kw">use </span>latexml_core::{
-<a href=#627 id=627 data-nosnippet>627</a>    common::{dimension::Dimension, number::Number},
-<a href=#628 id=628 data-nosnippet>628</a>    definition::{argument::ArgWrap, register::RegisterValue},
-<a href=#629 id=629 data-nosnippet>629</a>    state,
-<a href=#630 id=630 data-nosnippet>630</a>  };
-<a href=#631 id=631 data-nosnippet>631</a>  <span class="kw">let </span><span class="kw-2">mut </span>it = payload.split_whitespace();
-<a href=#632 id=632 data-nosnippet>632</a>  <span class="kw">let </span>op = it.next().unwrap_or(<span class="string">""</span>);
-<a href=#633 id=633 data-nosnippet>633</a>  <span class="kw">let </span><span class="kw-2">mut </span>key = it.next().unwrap_or(<span class="string">""</span>);
-<a href=#634 id=634 data-nosnippet>634</a>  <span class="kw">let </span>global = key == <span class="string">"global"</span>;
-<a href=#635 id=635 data-nosnippet>635</a>  <span class="kw">if </span>global {
-<a href=#636 id=636 data-nosnippet>636</a>    key = it.next().unwrap_or(<span class="string">""</span>);
-<a href=#637 id=637 data-nosnippet>637</a>  }
-<a href=#638 id=638 data-nosnippet>638</a>  <span class="kw">let </span>(cs, params) = <span class="kw">match </span>key.parse::&lt;i64&gt;() {
-<a href=#639 id=639 data-nosnippet>639</a>    <span class="prelude-val">Ok</span>(n) =&gt; {
-<a href=#640 id=640 data-nosnippet>640</a>      <span class="kw">let </span>reg = <span class="kw">if </span>op.ends_with(<span class="string">"dimen"</span>) {
-<a href=#641 id=641 data-nosnippet>641</a>        <span class="string">"\\dimen"
-<a href=#642 id=642 data-nosnippet>642</a>      </span>} <span class="kw">else </span>{
-<a href=#643 id=643 data-nosnippet>643</a>        <span class="string">"\\count"
-<a href=#644 id=644 data-nosnippet>644</a>      </span>};
-<a href=#645 id=645 data-nosnippet>645</a>      (reg.to_string(), <span class="macro">vec!</span>[ArgWrap::Number(Number(n))])
-<a href=#646 id=646 data-nosnippet>646</a>    },
-<a href=#647 id=647 data-nosnippet>647</a>    <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; (<span class="macro">format!</span>(<span class="string">"\\{key}"</span>), Vec::new()),
-<a href=#648 id=648 data-nosnippet>648</a>  };
-<a href=#649 id=649 data-nosnippet>649</a>  <span class="kw">match </span>op {
-<a href=#650 id=650 data-nosnippet>650</a>    <span class="string">"getcount" </span>| <span class="string">"getdimen" </span>=&gt; <span class="kw">match </span>state::lookup_register(<span class="kw-2">&amp;</span>cs, params).ok().flatten() {
-<a href=#651 id=651 data-nosnippet>651</a>      <span class="prelude-val">Some</span>(RegisterValue::Number(n)) =&gt; n.<span class="number">0</span>.to_string(),
-<a href=#652 id=652 data-nosnippet>652</a>      <span class="prelude-val">Some</span>(RegisterValue::Dimension(d)) =&gt; d.<span class="number">0</span>.to_string(),
-<a href=#653 id=653 data-nosnippet>653</a>      <span class="kw">_ </span>=&gt; <span class="string">"0"</span>.to_string(),
-<a href=#654 id=654 data-nosnippet>654</a>    },
-<a href=#655 id=655 data-nosnippet>655</a>    <span class="string">"setcount" </span>| <span class="string">"setdimen" </span>=&gt; {
-<a href=#656 id=656 data-nosnippet>656</a>      <span class="kw">let </span>value: i64 = it.next().and_then(|v| v.parse().ok()).unwrap_or(<span class="number">0</span>);
-<a href=#657 id=657 data-nosnippet>657</a>      <span class="kw">let </span>rv = <span class="kw">if </span>op == <span class="string">"setdimen" </span>{
-<a href=#658 id=658 data-nosnippet>658</a>        RegisterValue::Dimension(Dimension(value))
-<a href=#659 id=659 data-nosnippet>659</a>      } <span class="kw">else </span>{
-<a href=#660 id=660 data-nosnippet>660</a>        RegisterValue::Number(Number(value))
-<a href=#661 id=661 data-nosnippet>661</a>      };
-<a href=#662 id=662 data-nosnippet>662</a>      <span class="kw">let </span>scope = global.then_some(state::Scope::Global);
-<a href=#663 id=663 data-nosnippet>663</a>      <span class="kw">let _ </span>= state::assign_register(<span class="kw-2">&amp;</span>cs, rv, scope, params);
-<a href=#664 id=664 data-nosnippet>664</a>      String::new()
-<a href=#665 id=665 data-nosnippet>665</a>    },
-<a href=#666 id=666 data-nosnippet>666</a>    <span class="kw">_ </span>=&gt; <span class="string">"0"</span>.to_string(),
-<a href=#667 id=667 data-nosnippet>667</a>  }
-<a href=#668 id=668 data-nosnippet>668</a>}
-<a href=#669 id=669 data-nosnippet>669</a>
-<a href=#670 id=670 data-nosnippet>670</a><span class="doccomment">/// Execute one Lua chunk in this thread's persistent interpreter.
-<a href=#671 id=671 data-nosnippet>671</a>///
-<a href=#672 id=672 data-nosnippet>672</a>/// `Ok(text)` is everything the chunk `tex.print`ed (to be retokenized with
-<a href=#673 id=673 data-nosnippet>673</a>/// current catcodes by the caller); `Err(msg)` is a load/runtime Lua error or
-<a href=#674 id=674 data-nosnippet>674</a>/// bridge unavailability ("texlua not available" — callers degrade to a no-op
-<a href=#675 id=675 data-nosnippet>675</a>/// expansion, matching what the document would get from a TeX engine without
-<a href=#676 id=676 data-nosnippet>676</a>/// Lua). Each call the sandbox refused, and an interpreter that ended mid-chunk
-<a href=#677 id=677 data-nosnippet>677</a>/// (its output lost), is raised as an `Error` (the outer `Err`, should that
-<a href=#678 id=678 data-nosnippet>678</a>/// Error escalate to a Fatal).
-<a href=#679 id=679 data-nosnippet>679</a></span><span class="kw">pub fn </span>lua_exec(chunk: <span class="kw-2">&amp;</span>str) -&gt; latexml_core::common::error::Result&lt;<span class="prelude-ty">Result</span>&lt;String, String&gt;&gt; {
-<a href=#680 id=680 data-nosnippet>680</a>  <span class="kw">let </span>framed = exec_framed(chunk);
-<a href=#681 id=681 data-nosnippet>681</a>  <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<a href=#682 id=682 data-nosnippet>682</a>  <span class="kw">for </span>denial <span class="kw">in </span>framed.denials.shown {
-<a href=#683 id=683 data-nosnippet>683</a>    <span class="macro">Error!</span>(<span class="string">"lua"</span>, <span class="string">"sandbox"</span>, denial);
-<a href=#684 id=684 data-nosnippet>684</a>  }
-<a href=#685 id=685 data-nosnippet>685</a>  <span class="kw">if </span>framed.denials.more &gt; <span class="number">0 </span>{
-<a href=#686 id=686 data-nosnippet>686</a>    <span class="macro">Error!</span>(
-<a href=#687 id=687 data-nosnippet>687</a>      <span class="string">"lua"</span>,
-<a href=#688 id=688 data-nosnippet>688</a>      <span class="string">"sandbox"</span>,
-<a href=#689 id=689 data-nosnippet>689</a>      <span class="macro">format!</span>(
-<a href=#690 id=690 data-nosnippet>690</a>        <span class="string">"{} more calls the sandbox refused in this chunk are not listed"</span>,
-<a href=#691 id=691 data-nosnippet>691</a>        framed.denials.more
-<a href=#692 id=692 data-nosnippet>692</a>      )
-<a href=#693 id=693 data-nosnippet>693</a>    );
-<a href=#694 id=694 data-nosnippet>694</a>  }
-<a href=#695 id=695 data-nosnippet>695</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(ended) = framed.ended {
-<a href=#696 id=696 data-nosnippet>696</a>    <span class="macro">Error!</span>(<span class="string">"lua"</span>, <span class="string">"interpreter"</span>, ended);
-<a href=#697 id=697 data-nosnippet>697</a>  }
-<a href=#698 id=698 data-nosnippet>698</a>  <span class="prelude-val">Ok</span>(framed.result)
-<a href=#699 id=699 data-nosnippet>699</a>}
-<a href=#700 id=700 data-nosnippet>700</a>
-<a href=#701 id=701 data-nosnippet>701</a><span class="doccomment">/// One chunk's run: its result, the sandbox's refusals ('D' frames, OXIDIZED_DESIGN_DIVERGENCES #1081) — returned
-<a href=#702 id=702 data-nosnippet>702</a>/// apart, as a pcall in the chunk can swallow the Lua error, never the record — and the report of an interpreter
-<a href=#703 id=703 data-nosnippet>703</a>/// that ended during it.
-<a href=#704 id=704 data-nosnippet>704</a></span><span class="kw">struct </span>Framed {
-<a href=#705 id=705 data-nosnippet>705</a>  result:  <span class="prelude-ty">Result</span>&lt;String, String&gt;,
-<a href=#706 id=706 data-nosnippet>706</a>  denials: Denials,
-<a href=#707 id=707 data-nosnippet>707</a>  ended:   <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#708 id=708 data-nosnippet>708</a>}
-<a href=#709 id=709 data-nosnippet>709</a>
-<a href=#710 id=710 data-nosnippet>710</a><span class="doccomment">/// A chunk's refusals: the first `MAX_DENIALS` (within `MAX_DENIAL_BYTES`) kept, the rest counted.
-<a href=#711 id=711 data-nosnippet>711</a></span><span class="attr">#[derive(Default)]
-<a href=#712 id=712 data-nosnippet>712</a></span><span class="kw">struct </span>Denials {
-<a href=#713 id=713 data-nosnippet>713</a>  shown: Vec&lt;String&gt;,
-<a href=#714 id=714 data-nosnippet>714</a>  bytes: usize,
-<a href=#715 id=715 data-nosnippet>715</a>  more:  usize,
-<a href=#716 id=716 data-nosnippet>716</a>}
-<a href=#717 id=717 data-nosnippet>717</a>
-<a href=#718 id=718 data-nosnippet>718</a><span class="kw">impl </span>Denials {
-<a href=#719 id=719 data-nosnippet>719</a>  <span class="kw">fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, denial: String) {
-<a href=#720 id=720 data-nosnippet>720</a>    <span class="kw">if </span><span class="self">self</span>.shown.len() &lt; MAX_DENIALS &amp;&amp; <span class="self">self</span>.bytes + denial.len() &lt;= MAX_DENIAL_BYTES {
-<a href=#721 id=721 data-nosnippet>721</a>      <span class="self">self</span>.bytes += denial.len();
-<a href=#722 id=722 data-nosnippet>722</a>      <span class="self">self</span>.shown.push(denial);
-<a href=#723 id=723 data-nosnippet>723</a>    } <span class="kw">else </span>{
-<a href=#724 id=724 data-nosnippet>724</a>      <span class="self">self</span>.more += <span class="number">1</span>;
-<a href=#725 id=725 data-nosnippet>725</a>    }
-<a href=#726 id=726 data-nosnippet>726</a>  }
-<a href=#727 id=727 data-nosnippet>727</a>}
-<a href=#728 id=728 data-nosnippet>728</a>
-<a href=#729 id=729 data-nosnippet>729</a><span class="doccomment">/// A frame header's tag and length: `&lt;tag&gt; &lt;nonce&gt; &lt;length&gt;`, with this interpreter's nonce (a header without it
-<a href=#730 id=730 data-nosnippet>730</a>/// came from no prelude frame, OXIDIZED_DESIGN_DIVERGENCES #1081) and a length the bridge reads.
-<a href=#731 id=731 data-nosnippet>731</a></span><span class="kw">fn </span>parse_header&lt;<span class="lifetime">'h</span>&gt;(header: <span class="kw-2">&amp;</span><span class="lifetime">'h </span>str, nonce: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'h </span>str, usize), FrameError&gt; {
-<a href=#732 id=732 data-nosnippet>732</a>  <span class="kw">let </span><span class="kw-2">mut </span>fields = header.trim_end().splitn(<span class="number">3</span>, <span class="string">' '</span>);
-<a href=#733 id=733 data-nosnippet>733</a>  <span class="kw">let </span>(tag, sent, len) = (fields.next(), fields.next(), fields.next());
-<a href=#734 id=734 data-nosnippet>734</a>  <span class="kw">match </span>(tag, len.map(str::parse::&lt;usize&gt;)) {
-<a href=#735 id=735 data-nosnippet>735</a>    (<span class="prelude-val">Some</span>(tag), <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(n))) <span class="kw">if </span>sent == <span class="prelude-val">Some</span>(nonce) &amp;&amp; n &lt;= MAX_FRAME =&gt; <span class="prelude-val">Ok</span>((tag, n)),
-<a href=#736 id=736 data-nosnippet>736</a>    <span class="kw">_ if </span>sent == <span class="prelude-val">Some</span>(nonce) =&gt; <span class="prelude-val">Err</span>(FrameError::Protocol(<span class="macro">format!</span>(
-<a href=#737 id=737 data-nosnippet>737</a>      <span class="string">"a frame header '{}'"</span>,
-<a href=#738 id=738 data-nosnippet>738</a>      header.trim_end()
-<a href=#739 id=739 data-nosnippet>739</a>    ))),
-<a href=#740 id=740 data-nosnippet>740</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(FrameError::Protocol(
-<a href=#741 id=741 data-nosnippet>741</a>      <span class="string">"output that is not a frame (no session nonce)"</span>.to_string(),
-<a href=#742 id=742 data-nosnippet>742</a>    )),
-<a href=#743 id=743 data-nosnippet>743</a>  }
-<a href=#744 id=744 data-nosnippet>744</a>}
-<a href=#745 id=745 data-nosnippet>745</a>
-<a href=#746 id=746 data-nosnippet>746</a><span class="doccomment">/// Why a frame exchange failed: the pipe (the child ended) or a frame no prelude writes.
-<a href=#747 id=747 data-nosnippet>747</a></span><span class="kw">enum </span>FrameError {
-<a href=#748 id=748 data-nosnippet>748</a>  Io(std::io::Error),
-<a href=#749 id=749 data-nosnippet>749</a>  Protocol(String),
-<a href=#750 id=750 data-nosnippet>750</a>}
-<a href=#751 id=751 data-nosnippet>751</a>
-<a href=#752 id=752 data-nosnippet>752</a><span class="kw">impl </span>From&lt;std::io::Error&gt; <span class="kw">for </span>FrameError {
-<a href=#753 id=753 data-nosnippet>753</a>  <span class="kw">fn </span>from(e: std::io::Error) -&gt; <span class="self">Self </span>{ FrameError::Io(e) }
-<a href=#754 id=754 data-nosnippet>754</a>}
-<a href=#755 id=755 data-nosnippet>755</a>
-<a href=#756 id=756 data-nosnippet>756</a><span class="doccomment">/// Sends `chunk` and reads frames up to its final `OK`/`ERR`, servicing `Q`ueries and collecting `D`enials.
-<a href=#757 id=757 data-nosnippet>757</a></span><span class="kw">fn </span>exchange(
-<a href=#758 id=758 data-nosnippet>758</a>  p: <span class="kw-2">&amp;mut </span>LuaProc,
-<a href=#759 id=759 data-nosnippet>759</a>  chunk: <span class="kw-2">&amp;</span>str,
-<a href=#760 id=760 data-nosnippet>760</a>  denials: <span class="kw-2">&amp;mut </span>Denials,
-<a href=#761 id=761 data-nosnippet>761</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(bool, String), FrameError&gt; {
-<a href=#762 id=762 data-nosnippet>762</a>  <span class="kw">use </span>std::io::Read;
-<a href=#763 id=763 data-nosnippet>763</a>  p.stdin.write_all(<span class="macro">format!</span>(<span class="string">"{}\n"</span>, chunk.len()).as_bytes())<span class="question-mark">?</span>;
-<a href=#764 id=764 data-nosnippet>764</a>  p.stdin.write_all(chunk.as_bytes())<span class="question-mark">?</span>;
-<a href=#765 id=765 data-nosnippet>765</a>  p.stdin.write_all(<span class="string">b"\n"</span>)<span class="question-mark">?</span>;
-<a href=#766 id=766 data-nosnippet>766</a>  p.stdin.flush()<span class="question-mark">?</span>;
-<a href=#767 id=767 data-nosnippet>767</a>  <span class="comment">// The chunk may interleave 'Q'uery frames (live tex-state reads/writes)
-<a href=#768 id=768 data-nosnippet>768</a>  // before its final OK/ERR frame — service each against engine State.
-<a href=#769 id=769 data-nosnippet>769</a>  </span><span class="kw">loop </span>{
-<a href=#770 id=770 data-nosnippet>770</a>    <span class="kw">let </span><span class="kw-2">mut </span>header = String::new();
-<a href=#771 id=771 data-nosnippet>771</a>    (<span class="kw-2">&amp;mut </span>p.stdout).take(<span class="number">64</span>).read_line(<span class="kw-2">&amp;mut </span>header)<span class="question-mark">?</span>;
-<a href=#772 id=772 data-nosnippet>772</a>    <span class="kw">if </span>header.is_empty() {
-<a href=#773 id=773 data-nosnippet>773</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(FrameError::Io(std::io::ErrorKind::UnexpectedEof.into()));
-<a href=#774 id=774 data-nosnippet>774</a>    }
-<a href=#775 id=775 data-nosnippet>775</a>    <span class="kw">let </span>(tag, n) = parse_header(<span class="kw-2">&amp;</span>header, <span class="kw-2">&amp;</span>p.nonce)<span class="question-mark">?</span>;
-<a href=#776 id=776 data-nosnippet>776</a>    <span class="kw">let </span><span class="kw-2">mut </span>body = <span class="macro">vec!</span>[<span class="number">0u8</span>; n];
-<a href=#777 id=777 data-nosnippet>777</a>    p.stdout.read_exact(<span class="kw-2">&amp;mut </span>body)<span class="question-mark">?</span>;
-<a href=#778 id=778 data-nosnippet>778</a>    <span class="kw">let </span><span class="kw-2">mut </span>body = String::from_utf8_lossy(<span class="kw-2">&amp;</span>body).into_owned();
-<a href=#779 id=779 data-nosnippet>779</a>    <span class="kw">if </span><span class="macro">cfg!</span>(windows) {
-<a href=#780 id=780 data-nosnippet>780</a>      <span class="comment">// Undo the text-mode stdout: drop the `\r` written before each `\n` (a `\r\n` the chunk printed came
-<a href=#781 id=781 data-nosnippet>781</a>      // through as `\r\r\n`, and stays `\r\n`).
-<a href=#782 id=782 data-nosnippet>782</a>      </span>body = body.replace(<span class="string">"\r\n"</span>, <span class="string">"\n"</span>);
-<a href=#783 id=783 data-nosnippet>783</a>    }
-<a href=#784 id=784 data-nosnippet>784</a>    <span class="kw">match </span>tag {
-<a href=#785 id=785 data-nosnippet>785</a>      <span class="string">"D" </span>=&gt; denials.push(body),
-<a href=#786 id=786 data-nosnippet>786</a>      <span class="string">"Q" </span>=&gt; {
-<a href=#787 id=787 data-nosnippet>787</a>        <span class="kw">let </span>answer = service_query(<span class="kw-2">&amp;</span>body);
-<a href=#788 id=788 data-nosnippet>788</a>        p.stdin
-<a href=#789 id=789 data-nosnippet>789</a>          .write_all(<span class="macro">format!</span>(<span class="string">"A {}\n"</span>, answer.len()).as_bytes())<span class="question-mark">?</span>;
-<a href=#790 id=790 data-nosnippet>790</a>        p.stdin.write_all(answer.as_bytes())<span class="question-mark">?</span>;
-<a href=#791 id=791 data-nosnippet>791</a>        p.stdin.flush()<span class="question-mark">?</span>;
-<a href=#792 id=792 data-nosnippet>792</a>      },
-<a href=#793 id=793 data-nosnippet>793</a>      <span class="string">"OK" </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>((<span class="bool-val">true</span>, body)),
-<a href=#794 id=794 data-nosnippet>794</a>      <span class="string">"ERR" </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>((<span class="bool-val">false</span>, body)),
-<a href=#795 id=795 data-nosnippet>795</a>      <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FrameError::Protocol(<span class="macro">format!</span>(<span class="string">"a frame tagged '{tag}'"</span>))),
-<a href=#796 id=796 data-nosnippet>796</a>    }
-<a href=#797 id=797 data-nosnippet>797</a>  }
-<a href=#798 id=798 data-nosnippet>798</a>}
-<a href=#799 id=799 data-nosnippet>799</a>
-<a href=#800 id=800 data-nosnippet>800</a><span class="kw">fn </span>exec_framed(chunk: <span class="kw-2">&amp;</span>str) -&gt; Framed {
-<a href=#801 id=801 data-nosnippet>801</a>  <span class="kw">let </span><span class="kw-2">mut </span>framed = Framed {
-<a href=#802 id=802 data-nosnippet>802</a>    result:  <span class="prelude-val">Ok</span>(String::new()),
-<a href=#803 id=803 data-nosnippet>803</a>    denials: Denials::default(),
-<a href=#804 id=804 data-nosnippet>804</a>    ended:   <span class="prelude-val">None</span>,
-<a href=#805 id=805 data-nosnippet>805</a>  };
-<a href=#806 id=806 data-nosnippet>806</a>  <span class="comment">// (a speculative run is undone, the interpreter's globals could not be: `\\author{First\\luaexec{n=(n or 0)+1}}`, which a second
-<a href=#807 id=807 data-nosnippet>807</a>  // `\\author` replaces, left its count for the body's `\\luaexec{tex.print(n or 0)}`, lualatex's 0)
-<a href=#808 id=808 data-nosnippet>808</a>  </span><span class="kw">if </span>latexml_core::gullet::in_speculative_digestion() {
-<a href=#809 id=809 data-nosnippet>809</a>    framed.result = <span class="prelude-val">Err</span>(<span class="string">"a speculative run evaluates no Lua"</span>.to_string());
-<a href=#810 id=810 data-nosnippet>810</a>    <span class="kw">return </span>framed;
-<a href=#811 id=811 data-nosnippet>811</a>  }
-<a href=#812 id=812 data-nosnippet>812</a>  LUA.with(|slot| {
-<a href=#813 id=813 data-nosnippet>813</a>    <span class="kw">let </span><span class="kw-2">mut </span>slot = slot.borrow_mut();
-<a href=#814 id=814 data-nosnippet>814</a>    <span class="kw">if </span>slot.unavailable {
-<a href=#815 id=815 data-nosnippet>815</a>      framed.result = <span class="prelude-val">Err</span>(<span class="string">"texlua not available"</span>.to_string());
-<a href=#816 id=816 data-nosnippet>816</a>      <span class="kw">return</span>;
-<a href=#817 id=817 data-nosnippet>817</a>    }
-<a href=#818 id=818 data-nosnippet>818</a>    <span class="kw">if </span>slot.ended &gt; MAX_RESTARTS {
-<a href=#819 id=819 data-nosnippet>819</a>      framed.result = <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
-<a href=#820 id=820 data-nosnippet>820</a>        <span class="string">"texlua ended {} times in this conversion"</span>,
-<a href=#821 id=821 data-nosnippet>821</a>        slot.ended
-<a href=#822 id=822 data-nosnippet>822</a>      ));
-<a href=#823 id=823 data-nosnippet>823</a>      <span class="kw">return</span>;
-<a href=#824 id=824 data-nosnippet>824</a>    }
-<a href=#825 id=825 data-nosnippet>825</a>    <span class="kw">if </span>slot.proc_.is_none() {
-<a href=#826 id=826 data-nosnippet>826</a>      slot.proc_ = spawn();
-<a href=#827 id=827 data-nosnippet>827</a>      <span class="kw">if </span>slot.proc_.is_none() {
-<a href=#828 id=828 data-nosnippet>828</a>        slot.unavailable = <span class="bool-val">true</span>;
-<a href=#829 id=829 data-nosnippet>829</a>        framed.result = <span class="prelude-val">Err</span>(<span class="string">"texlua not available"</span>.to_string());
-<a href=#830 id=830 data-nosnippet>830</a>        <span class="kw">return</span>;
-<a href=#831 id=831 data-nosnippet>831</a>      }
-<a href=#832 id=832 data-nosnippet>832</a>    }
-<a href=#833 id=833 data-nosnippet>833</a>    <span class="comment">// Windows texlua reads stdin in text mode: a `\r\n` arrives as `\n`, one byte short of the frame's count, so
-<a href=#834 id=834 data-nosnippet>834</a>    // it is sent as the `\n` it would read (the prelude's `wire_len` covers the other direction).
-<a href=#835 id=835 data-nosnippet>835</a>    </span><span class="kw">let </span>chunk: std::borrow::Cow&lt;str&gt; = <span class="kw">if </span><span class="macro">cfg!</span>(windows) {
-<a href=#836 id=836 data-nosnippet>836</a>      chunk.replace(<span class="string">"\r\n"</span>, <span class="string">"\n"</span>).into()
-<a href=#837 id=837 data-nosnippet>837</a>    } <span class="kw">else </span>{
-<a href=#838 id=838 data-nosnippet>838</a>      chunk.into()
-<a href=#839 id=839 data-nosnippet>839</a>    };
-<a href=#840 id=840 data-nosnippet>840</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(proc_) = slot.proc_.as_mut() <span class="kw">else </span>{
-<a href=#841 id=841 data-nosnippet>841</a>      <span class="kw">return</span>;
-<a href=#842 id=842 data-nosnippet>842</a>    };
-<a href=#843 id=843 data-nosnippet>843</a>    framed.result = <span class="kw">match </span>exchange(proc_, <span class="kw-2">&amp;</span>chunk, <span class="kw-2">&amp;mut </span>framed.denials) {
-<a href=#844 id=844 data-nosnippet>844</a>      <span class="prelude-val">Ok</span>((<span class="bool-val">true</span>, body)) =&gt; <span class="prelude-val">Ok</span>(body),
-<a href=#845 id=845 data-nosnippet>845</a>      <span class="prelude-val">Ok</span>((<span class="bool-val">false</span>, body)) =&gt; <span class="prelude-val">Err</span>(body),
-<a href=#846 id=846 data-nosnippet>846</a>      <span class="prelude-val">Err</span>(error) =&gt; {
-<a href=#847 id=847 data-nosnippet>847</a>        <span class="comment">// The interpreter ended (a crash, `os.exit`) or broke the protocol: its output is lost and its state gone.
-<a href=#848 id=848 data-nosnippet>848</a>        // Dropping it kills and reaps the child; the next chunk starts a fresh one, up to MAX_RESTARTS times.
-<a href=#849 id=849 data-nosnippet>849</a>        </span>slot.proc_ = <span class="prelude-val">None</span>;
-<a href=#850 id=850 data-nosnippet>850</a>        slot.ended += <span class="number">1</span>;
-<a href=#851 id=851 data-nosnippet>851</a>        <span class="kw">let </span>why = <span class="kw">match </span>error {
-<a href=#852 id=852 data-nosnippet>852</a>          FrameError::Io(e) =&gt; <span class="macro">format!</span>(<span class="string">"the texlua interpreter ended ({e})"</span>),
-<a href=#853 id=853 data-nosnippet>853</a>          FrameError::Protocol(what) =&gt; <span class="macro">format!</span>(<span class="string">"the texlua interpreter sent {what}"</span>),
-<a href=#854 id=854 data-nosnippet>854</a>        };
-<a href=#855 id=855 data-nosnippet>855</a>        <span class="kw">let </span>next = <span class="kw">if </span>slot.ended &gt; MAX_RESTARTS {
-<a href=#856 id=856 data-nosnippet>856</a>          <span class="string">"; later chunks are not evaluated"
-<a href=#857 id=857 data-nosnippet>857</a>        </span>} <span class="kw">else </span>{
-<a href=#858 id=858 data-nosnippet>858</a>          <span class="string">"; the next chunk starts a fresh interpreter"
-<a href=#859 id=859 data-nosnippet>859</a>        </span>};
-<a href=#860 id=860 data-nosnippet>860</a>        framed.ended = <span class="prelude-val">Some</span>(<span class="macro">format!</span>(
-<a href=#861 id=861 data-nosnippet>861</a>          <span class="string">"{why}: this chunk's output and the Lua state are lost{next}"
-<a href=#862 id=862 data-nosnippet>862</a>        </span>));
-<a href=#863 id=863 data-nosnippet>863</a>        <span class="prelude-val">Err</span>(why)
-<a href=#864 id=864 data-nosnippet>864</a>      },
-<a href=#865 id=865 data-nosnippet>865</a>    };
-<a href=#866 id=866 data-nosnippet>866</a>  });
-<a href=#867 id=867 data-nosnippet>867</a>  framed
-<a href=#868 id=868 data-nosnippet>868</a>}
-<a href=#869 id=869 data-nosnippet>869</a>
-<a href=#870 id=870 data-nosnippet>870</a><span class="attr">#[cfg(test)]
-<a href=#871 id=871 data-nosnippet>871</a></span><span class="kw">mod </span>tests {
-<a href=#872 id=872 data-nosnippet>872</a>  <span class="kw">fn </span>lua_exec(chunk: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; { <span class="kw">super</span>::exec_framed(chunk).result }
-<a href=#873 id=873 data-nosnippet>873</a>
-<a href=#874 id=874 data-nosnippet>874</a>  <span class="doccomment">/// A frame header is accepted only with this interpreter's nonce and a length within `MAX_FRAME`; bytes without
-<a href=#875 id=875 data-nosnippet>875</a>  /// the nonce (a header a chunk forged, or stray output) are a broken protocol whatever their tag.
-<a href=#876 id=876 data-nosnippet>876</a>  </span><span class="attr">#[test]
-<a href=#877 id=877 data-nosnippet>877</a>  </span><span class="kw">fn </span>frame_headers_carry_the_session_nonce() {
-<a href=#878 id=878 data-nosnippet>878</a>    <span class="kw">use super</span>::{FrameError, parse_header};
-<a href=#879 id=879 data-nosnippet>879</a>    <span class="kw">let </span>nonce = <span class="kw">super</span>::session_nonce();
-<a href=#880 id=880 data-nosnippet>880</a>    <span class="macro">assert_eq!</span>(nonce.len(), <span class="number">32</span>);
-<a href=#881 id=881 data-nosnippet>881</a>    <span class="macro">assert_ne!</span>(nonce, <span class="kw">super</span>::session_nonce());
-<a href=#882 id=882 data-nosnippet>882</a>    <span class="kw">let </span>accepted = |header: <span class="kw-2">&amp;</span>str| <span class="kw">match </span>parse_header(header, <span class="kw-2">&amp;</span>nonce) {
-<a href=#883 id=883 data-nosnippet>883</a>      <span class="prelude-val">Ok</span>((tag, n)) =&gt; <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"{tag} {n}"</span>)),
-<a href=#884 id=884 data-nosnippet>884</a>      <span class="prelude-val">Err</span>(FrameError::Protocol(<span class="kw">_</span>)) =&gt; <span class="prelude-val">None</span>,
-<a href=#885 id=885 data-nosnippet>885</a>      <span class="prelude-val">Err</span>(FrameError::Io(e)) =&gt; <span class="macro">panic!</span>(<span class="string">"{e}"</span>),
-<a href=#886 id=886 data-nosnippet>886</a>    };
-<a href=#887 id=887 data-nosnippet>887</a>    <span class="macro">assert_eq!</span>(accepted(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"D {nonce} 7\n"</span>)).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"D 7"</span>));
-<a href=#888 id=888 data-nosnippet>888</a>    <span class="macro">assert_eq!</span>(
-<a href=#889 id=889 data-nosnippet>889</a>      accepted(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"OK {nonce} 0\r\n"</span>)).as_deref(),
-<a href=#890 id=890 data-nosnippet>890</a>      <span class="prelude-val">Some</span>(<span class="string">"OK 0"</span>)
-<a href=#891 id=891 data-nosnippet>891</a>    );
-<a href=#892 id=892 data-nosnippet>892</a>    <span class="macro">assert_eq!</span>(accepted(<span class="string">"OK 7\n"</span>), <span class="prelude-val">None</span>);
-<a href=#893 id=893 data-nosnippet>893</a>    <span class="macro">assert_eq!</span>(accepted(<span class="string">"D 0123456789abcdef0123456789abcdef 7\n"</span>), <span class="prelude-val">None</span>);
-<a href=#894 id=894 data-nosnippet>894</a>    <span class="macro">assert_eq!</span>(accepted(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"OK {nonce} 99999999999\n"</span>)), <span class="prelude-val">None</span>);
-<a href=#895 id=895 data-nosnippet>895</a>    <span class="macro">assert_eq!</span>(accepted(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"OK {nonce}\n"</span>)), <span class="prelude-val">None</span>);
-<a href=#896 id=896 data-nosnippet>896</a>  }
-<a href=#897 id=897 data-nosnippet>897</a>
-<a href=#898 id=898 data-nosnippet>898</a>  <span class="doccomment">/// The texlua child's environment allowlist: the search path, kpathsea's and the locale's variables pass, a
-<a href=#899 id=899 data-nosnippet>899</a>  /// variable outside the list does not; on Windows a name matches in any case (`Path` is PATH there).
-<a href=#900 id=900 data-nosnippet>900</a>  </span><span class="attr">#[test]
-<a href=#901 id=901 data-nosnippet>901</a>  </span><span class="kw">fn </span>child_env_allowlist_matches_names_as_the_host_does() {
-<a href=#902 id=902 data-nosnippet>902</a>    <span class="kw">use </span><span class="kw">super</span>::child_env_allowed;
-<a href=#903 id=903 data-nosnippet>903</a>    <span class="kw">for </span>kept <span class="kw">in </span>[
-<a href=#904 id=904 data-nosnippet>904</a>      <span class="string">"PATH"</span>,
-<a href=#905 id=905 data-nosnippet>905</a>      <span class="string">"TEXMFHOME"</span>,
-<a href=#906 id=906 data-nosnippet>906</a>      <span class="string">"KPATHSEA_DEBUG"</span>,
-<a href=#907 id=907 data-nosnippet>907</a>      <span class="string">"BIBINPUTS"</span>,
-<a href=#908 id=908 data-nosnippet>908</a>      <span class="string">"LC_ALL"</span>,
-<a href=#909 id=909 data-nosnippet>909</a>      <span class="string">"SYSTEMROOT"</span>,
-<a href=#910 id=910 data-nosnippet>910</a>    ] {
-<a href=#911 id=911 data-nosnippet>911</a>      <span class="macro">assert!</span>(child_env_allowed(kept), <span class="string">"{kept}"</span>);
-<a href=#912 id=912 data-nosnippet>912</a>    }
-<a href=#913 id=913 data-nosnippet>913</a>    <span class="kw">for </span>dropped <span class="kw">in </span>[
-<a href=#914 id=914 data-nosnippet>914</a>      <span class="string">"LATEXML_SECLUA_PROBE"</span>,
-<a href=#915 id=915 data-nosnippet>915</a>      <span class="string">"AWS_SECRET_ACCESS_KEY"</span>,
-<a href=#916 id=916 data-nosnippet>916</a>      <span class="string">"SSH_AUTH_SOCK"</span>,
-<a href=#917 id=917 data-nosnippet>917</a>    ] {
-<a href=#918 id=918 data-nosnippet>918</a>      <span class="macro">assert!</span>(!child_env_allowed(dropped), <span class="string">"{dropped}"</span>);
-<a href=#919 id=919 data-nosnippet>919</a>    }
-<a href=#920 id=920 data-nosnippet>920</a>    <span class="kw">for </span>spelled <span class="kw">in </span>[<span class="string">"Path"</span>, <span class="string">"SystemRoot"</span>, <span class="string">"windir"</span>, <span class="string">"Temp"</span>, <span class="string">"TexmfHome"</span>] {
-<a href=#921 id=921 data-nosnippet>921</a>      <span class="macro">assert_eq!</span>(child_env_allowed(spelled), <span class="macro">cfg!</span>(windows), <span class="string">"{spelled}"</span>);
-<a href=#922 id=922 data-nosnippet>922</a>    }
-<a href=#923 id=923 data-nosnippet>923</a>  }
-<a href=#924 id=924 data-nosnippet>924</a>
-<a href=#925 id=925 data-nosnippet>925</a>  <span class="kw">fn </span>texlua_present() -&gt; bool {
-<a href=#926 id=926 data-nosnippet>926</a>    std::process::Command::new(<span class="string">"texlua"</span>)
-<a href=#927 id=927 data-nosnippet>927</a>      .arg(<span class="string">"--version"</span>)
-<a href=#928 id=928 data-nosnippet>928</a>      .output()
-<a href=#929 id=929 data-nosnippet>929</a>      .is_ok_and(|o| o.status.success())
-<a href=#930 id=930 data-nosnippet>930</a>  }
-<a href=#931 id=931 data-nosnippet>931</a>
-<a href=#932 id=932 data-nosnippet>932</a>  <span class="doccomment">/// Chunk execution, persistent globals across calls, print vs sprint
-<a href=#933 id=933 data-nosnippet>933</a>  /// line semantics, and Lua-error reporting. Self-skips (green) without a
-<a href=#934 id=934 data-nosnippet>934</a>  /// host texlua — note the CI trimmed-TeX-Live trap: a green run here does
-<a href=#935 id=935 data-nosnippet>935</a>  /// not by itself prove the bridge ran.
-<a href=#936 id=936 data-nosnippet>936</a>  </span><span class="attr">#[test]
-<a href=#937 id=937 data-nosnippet>937</a>  </span><span class="kw">fn </span>bridge_executes_and_persists_state() {
-<a href=#938 id=938 data-nosnippet>938</a>    <span class="kw">if </span>!texlua_present() {
-<a href=#939 id=939 data-nosnippet>939</a>      <span class="kw">return</span>;
-<a href=#940 id=940 data-nosnippet>940</a>    }
-<a href=#941 id=941 data-nosnippet>941</a>    <span class="macro">assert_eq!</span>(lua_exec(<span class="string">"x = 6*7"</span>).as_deref(), <span class="prelude-val">Ok</span>(<span class="string">""</span>));
-<a href=#942 id=942 data-nosnippet>942</a>    <span class="macro">assert_eq!</span>(lua_exec(<span class="string">"tex.print(x)"</span>).as_deref(), <span class="prelude-val">Ok</span>(<span class="string">"42\n"</span>));
-<a href=#943 id=943 data-nosnippet>943</a>    <span class="macro">assert_eq!</span>(
-<a href=#944 id=944 data-nosnippet>944</a>      lua_exec(<span class="string">"tex.sprint('a')  tex.sprint('b')"</span>).as_deref(),
-<a href=#945 id=945 data-nosnippet>945</a>      <span class="prelude-val">Ok</span>(<span class="string">"ab"</span>)
-<a href=#946 id=946 data-nosnippet>946</a>    );
-<a href=#947 id=947 data-nosnippet>947</a>    <span class="comment">// Leading catcode-table number is ignored per LuaTeX convention.
-<a href=#948 id=948 data-nosnippet>948</a>    </span><span class="macro">assert_eq!</span>(lua_exec(<span class="string">"tex.sprint(0, 'c')"</span>).as_deref(), <span class="prelude-val">Ok</span>(<span class="string">"c"</span>));
-<a href=#949 id=949 data-nosnippet>949</a>    <span class="macro">assert!</span>(lua_exec(<span class="string">"this is not lua"</span>).is_err());
-<a href=#950 id=950 data-nosnippet>950</a>    <span class="comment">// The state survives an error.
-<a href=#951 id=951 data-nosnippet>951</a>    </span><span class="macro">assert_eq!</span>(lua_exec(<span class="string">"tex.print(x)"</span>).as_deref(), <span class="prelude-val">Ok</span>(<span class="string">"42\n"</span>));
-<a href=#952 id=952 data-nosnippet>952</a>  }
-<a href=#953 id=953 data-nosnippet>953</a>
-<a href=#954 id=954 data-nosnippet>954</a>  <span class="doccomment">/// Rebind-as-we-emulate shims for engine intents texlua itself cannot carry
-<a href=#955 id=955 data-nosnippet>955</a>  /// (its built-in `tex` table holds only run/initialize/finish — every
-<a href=#956 id=956 data-nosnippet>956</a>  /// `tex.*` an author's chunk touches is OUR shim, so the only question is
-<a href=#957 id=957 data-nosnippet>957</a>  /// how deep each shim goes; docs/perfect_kernel/LUA_REBINDING.md).
-<a href=#958 id=958 data-nosnippet>958</a>  /// Witnesses (TL2025 doc corpus, clean-lualatex slice):
-<a href=#959 id=959 data-nosnippet>959</a>  ///   derivative/derivative — `pdf.setmajorversion(2)` backend intent,
-<a href=#960 id=960 data-nosnippet>960</a>  ///     meaningless for XML output → absorb (accept, do nothing);
-<a href=#961 id=961 data-nosnippet>961</a>  ///   abntexto/abntexto + abntexto-uece — `tex.primitives()` feeds a
-<a href=#962 id=962 data-nosnippet>962</a>  ///     listings texcs highlight list → absorb as an empty table (the
-<a href=#963 id=963 data-nosnippet>963</a>  ///     loop body degrades to "no extra highlighted names", no error);
-<a href=#964 id=964 data-nosnippet>964</a>  ///   newpax/newpax — `require("newpax")` resolves a texmf-shipped Lua
-<a href=#965 id=965 data-nosnippet>965</a>  ///     module → rebind require through texlua's built-in kpse (plus
-<a href=#966 id=966 data-nosnippet>966</a>  ///     lualibs, which supplies the `file` library lualatex gets from
-<a href=#967 id=967 data-nosnippet>967</a>  ///     luaotfload; measured 89 ms one-time load).
-<a href=#968 id=968 data-nosnippet>968</a>  </span><span class="attr">#[test]
-<a href=#969 id=969 data-nosnippet>969</a>  </span><span class="kw">fn </span>rebound_engine_intents_absorb_and_resolve() {
-<a href=#970 id=970 data-nosnippet>970</a>    <span class="kw">if </span>!texlua_present() {
-<a href=#971 id=971 data-nosnippet>971</a>      <span class="kw">return</span>;
-<a href=#972 id=972 data-nosnippet>972</a>    }
-<a href=#973 id=973 data-nosnippet>973</a>    <span class="macro">assert_eq!</span>(
-<a href=#974 id=974 data-nosnippet>974</a>      lua_exec(<span class="string">"pdf.setmajorversion(2) pdf.setminorversion(0)"</span>).as_deref(),
-<a href=#975 id=975 data-nosnippet>975</a>      <span class="prelude-val">Ok</span>(<span class="string">""</span>)
-<a href=#976 id=976 data-nosnippet>976</a>    );
-<a href=#977 id=977 data-nosnippet>977</a>    <span class="macro">assert_eq!</span>(
-<a href=#978 id=978 data-nosnippet>978</a>      lua_exec(<span class="string">"for k,v in pairs(tex.primitives()) do tex.print(k, v .. ',') end"</span>).as_deref(),
-<a href=#979 id=979 data-nosnippet>979</a>      <span class="prelude-val">Ok</span>(<span class="string">""</span>)
-<a href=#980 id=980 data-nosnippet>980</a>    );
-<a href=#981 id=981 data-nosnippet>981</a>    <span class="comment">// texmf Lua-module resolution — only meaningful where kpse can see the
-<a href=#982 id=982 data-nosnippet>982</a>    // module (trimmed-TL CI hosts self-skip, same trap as the bridge test).
-<a href=#983 id=983 data-nosnippet>983</a>    </span><span class="kw">let </span>newpax_installed = std::process::Command::new(<span class="string">"kpsewhich"</span>)
-<a href=#984 id=984 data-nosnippet>984</a>      .arg(<span class="string">"newpax.lua"</span>)
-<a href=#985 id=985 data-nosnippet>985</a>      .output()
-<a href=#986 id=986 data-nosnippet>986</a>      .is_ok_and(|o| o.status.success() &amp;&amp; !o.stdout.is_empty());
-<a href=#987 id=987 data-nosnippet>987</a>    <span class="kw">if </span>newpax_installed {
-<a href=#988 id=988 data-nosnippet>988</a>      <span class="macro">assert_eq!</span>(
-<a href=#989 id=989 data-nosnippet>989</a>        lua_exec(<span class="string">"local ok = pcall(require, 'newpax') tex.sprint(ok and 'R1' or 'R0')"</span>).as_deref(),
-<a href=#990 id=990 data-nosnippet>990</a>        <span class="prelude-val">Ok</span>(<span class="string">"R1"</span>)
-<a href=#991 id=991 data-nosnippet>991</a>      );
-<a href=#992 id=992 data-nosnippet>992</a>    }
-<a href=#993 id=993 data-nosnippet>993</a>  }
-<a href=#994 id=994 data-nosnippet>994</a>}
+<a href=#216 id=216 data-nosnippet>216</a>io.tmpfile = denier('io.tmpfile', io.tmpfile)
+<a href=#217 id=217 data-nosnippet>217</a>local io_open, io_output, io_input = io.open, io.output, io.input
+<a href=#218 id=218 data-nosnippet>218</a>io.open = function(name, mode)
+<a href=#219 id=219 data-nosnippet>219</a>  if writes(mode) and not out_name_ok(name) then deny('writing ' .. shown(name)) end
+<a href=#220 id=220 data-nosnippet>220</a>  return io_open(name, mode)
+<a href=#221 id=221 data-nosnippet>221</a>end
+<a href=#222 id=222 data-nosnippet>222</a>io.output = function(file)
+<a href=#223 id=223 data-nosnippet>223</a>  if type(file) == 'string' and not out_name_ok(file) then deny('writing ' .. shown(file)) end
+<a href=#224 id=224 data-nosnippet>224</a>  return io_output(file)
+<a href=#225 id=225 data-nosnippet>225</a>end
+<a href=#226 id=226 data-nosnippet>226</a>if gzip and gzip.open then
+<a href=#227 id=227 data-nosnippet>227</a>  local gzip_open = gzip.open
+<a href=#228 id=228 data-nosnippet>228</a>  gzip.open = function(name, mode)
+<a href=#229 id=229 data-nosnippet>229</a>    if writes(mode) and not out_name_ok(name) then deny('writing ' .. shown(name)) end
+<a href=#230 id=230 data-nosnippet>230</a>    return gzip_open(name, mode)
+<a href=#231 id=231 data-nosnippet>231</a>  end
+<a href=#232 id=232 data-nosnippet>232</a>end
+<a href=#233 id=233 data-nosnippet>233</a>-- mplib takes its file finder in the options table: a copy, read raw, carries the
+<a href=#234 id=234 data-nosnippet>234</a>-- sandbox's finder, whatever the document's table does on assignment.
+<a href=#235 id=235 data-nosnippet>235</a>if mplib and mplib.new then
+<a href=#236 id=236 data-nosnippet>236</a>  local mplib_new = mplib.new
+<a href=#237 id=237 data-nosnippet>237</a>  mplib.new = function(options)
+<a href=#238 id=238 data-nosnippet>238</a>    if options ~= nil and type(options) ~= 'table' then deny('mplib.new with a ' .. type(options)) end
+<a href=#239 id=239 data-nosnippet>239</a>    local copy = {}
+<a href=#240 id=240 data-nosnippet>240</a>    if options then for k, v in next, options do copy[k] = v end end
+<a href=#241 id=241 data-nosnippet>241</a>    local find = copy.find_file
+<a href=#242 id=242 data-nosnippet>242</a>    if type(find) ~= 'function' then find = nil end
+<a href=#243 id=243 data-nosnippet>243</a>    copy.find_file = function(name, mode, kind)
+<a href=#244 id=244 data-nosnippet>244</a>      local found = name
+<a href=#245 id=245 data-nosnippet>245</a>      if find then found = find(name, mode, kind) end
+<a href=#246 id=246 data-nosnippet>246</a>      if writes(mode) and found and not out_name_ok(found) then
+<a href=#247 id=247 data-nosnippet>247</a>        frame('D', 'writing ' .. shown(found) .. ' is not allowed (document Lua runs sandboxed)')
+<a href=#248 id=248 data-nosnippet>248</a>        return nil
+<a href=#249 id=249 data-nosnippet>249</a>      end
+<a href=#250 id=250 data-nosnippet>250</a>      return found
+<a href=#251 id=251 data-nosnippet>251</a>    end
+<a href=#252 id=252 data-nosnippet>252</a>    return mplib_new(copy)
+<a href=#253 id=253 data-nosnippet>253</a>  end
+<a href=#254 id=254 data-nosnippet>254</a>end
+<a href=#255 id=255 data-nosnippet>255</a>-- img needs the engine's backend: texlua ends on its calls (img.new, img.scan, img.write: a crash).
+<a href=#256 id=256 data-nosnippet>256</a>if img then
+<a href=#257 id=257 data-nosnippet>257</a>  for name, value in pairs(img) do
+<a href=#258 id=258 data-nosnippet>258</a>    if type(value) == 'function' then img[name] = denier('img.' .. name, value) end
+<a href=#259 id=259 data-nosnippet>259</a>  end
+<a href=#260 id=260 data-nosnippet>260</a>end
+<a href=#261 id=261 data-nosnippet>261</a>if lfs then
+<a href=#262 id=262 data-nosnippet>262</a>  local read_only = {attributes = true, currentdir = true, dir = true, isdir = true, isfile = true,
+<a href=#263 id=263 data-nosnippet>263</a>    readlink = true, shortname = true, symlinkattributes = true}
+<a href=#264 id=264 data-nosnippet>264</a>  for name, value in pairs(lfs) do
+<a href=#265 id=265 data-nosnippet>265</a>    if type(value) == 'function' and not read_only[name] then lfs[name] = denier('lfs.' .. name, value) end
+<a href=#266 id=266 data-nosnippet>266</a>  end
+<a href=#267 id=267 data-nosnippet>267</a>end
+<a href=#268 id=268 data-nosnippet>268</a>package.loadlib = denier('package.loadlib', package.loadlib)
+<a href=#269 id=269 data-nosnippet>269</a>local c_path = package.cpath
+<a href=#270 id=270 data-nosnippet>270</a>package.cpath = ''
+<a href=#271 id=271 data-nosnippet>271</a>local function is_native(name)
+<a href=#272 id=272 data-nosnippet>272</a>  return name == 'ffi' or s_find(name, '^socket') ~= nil or s_find(name, '^mime') ~= nil
+<a href=#273 id=273 data-nosnippet>273</a>end
+<a href=#274 id=274 data-nosnippet>274</a>for _, name in ipairs({'ffi', 'socket', 'mime'}) do _G[name] = nil end
+<a href=#275 id=275 data-nosnippet>275</a>for _, registry in ipairs({package.loaded, package.preload}) do
+<a href=#276 id=276 data-nosnippet>276</a>  for name in pairs(registry) do
+<a href=#277 id=277 data-nosnippet>277</a>    if type(name) == 'string' and is_native(name) then registry[name] = nil end
+<a href=#278 id=278 data-nosnippet>278</a>  end
+<a href=#279 id=279 data-nosnippet>279</a>end
+<a href=#280 id=280 data-nosnippet>280</a>if lua then lua.getbytecode, lua.setbytecode, lua.bytecode = nil, nil, nil end
+<a href=#281 id=281 data-nosnippet>281</a>-- Text chunks only: crafted bytecode can break out of any Lua-level sandbox.
+<a href=#282 id=282 data-nosnippet>282</a>local base_load, base_loadfile = load, loadfile
+<a href=#283 id=283 data-nosnippet>283</a>-- (an env passed as nil is still an env: forward it only when given)
+<a href=#284 id=284 data-nosnippet>284</a>local function load_text(chunk, name, mode, ...)
+<a href=#285 id=285 data-nosnippet>285</a>  if select('#', ...) &gt; 0 then return base_load(chunk, name, 't', ...) end
+<a href=#286 id=286 data-nosnippet>286</a>  return base_load(chunk, name, 't')
+<a href=#287 id=287 data-nosnippet>287</a>end
+<a href=#288 id=288 data-nosnippet>288</a>local function loadfile_text(file, mode, ...)
+<a href=#289 id=289 data-nosnippet>289</a>  if select('#', ...) &gt; 0 then return base_loadfile(file, 't', ...) end
+<a href=#290 id=290 data-nosnippet>290</a>  return base_loadfile(file, 't')
+<a href=#291 id=291 data-nosnippet>291</a>end
+<a href=#292 id=292 data-nosnippet>292</a>load = load_text
+<a href=#293 id=293 data-nosnippet>293</a>loadstring = function(chunk, name) return base_load(chunk, name, 't') end
+<a href=#294 id=294 data-nosnippet>294</a>loadfile = loadfile_text
+<a href=#295 id=295 data-nosnippet>295</a>dofile = function(file) return assert(loadfile_text(file))() end
+<a href=#296 id=296 data-nosnippet>296</a>-- require: the preload table, then Lua files on package.path and (below) the
+<a href=#297 id=297 data-nosnippet>297</a>-- texmf tree via kpse, all text-only; a C module or a network library is denied.
+<a href=#298 id=298 data-nosnippet>298</a>local searchpath = package.searchpath
+<a href=#299 id=299 data-nosnippet>299</a>local preload = (package.searchers or package.loaders)[1]
+<a href=#300 id=300 data-nosnippet>300</a>local searchers = {
+<a href=#301 id=301 data-nosnippet>301</a>  function(name)
+<a href=#302 id=302 data-nosnippet>302</a>    if type(name) == 'string' and is_native(name) then
+<a href=#303 id=303 data-nosnippet>303</a>      return function() deny('require "' .. shown(name) .. '"') end
+<a href=#304 id=304 data-nosnippet>304</a>    end
+<a href=#305 id=305 data-nosnippet>305</a>    return preload(name)
+<a href=#306 id=306 data-nosnippet>306</a>  end,
+<a href=#307 id=307 data-nosnippet>307</a>  function(name)
+<a href=#308 id=308 data-nosnippet>308</a>    local file, err = searchpath(name, package.path)
+<a href=#309 id=309 data-nosnippet>309</a>    if not file then return err end
+<a href=#310 id=310 data-nosnippet>310</a>    return assert(loadfile_text(file)), file
+<a href=#311 id=311 data-nosnippet>311</a>  end,
+<a href=#312 id=312 data-nosnippet>312</a>}
+<a href=#313 id=313 data-nosnippet>313</a>package.searchers, package.loaders = searchers, searchers
+<a href=#314 id=314 data-nosnippet>314</a>searchers[3] = function(name)
+<a href=#315 id=315 data-nosnippet>315</a>  if searchpath(name, c_path) or searchpath(s_match(name, '^[^.]*'), c_path) then
+<a href=#316 id=316 data-nosnippet>316</a>    return function() deny('loading the C module "' .. shown(name) .. '"') end
+<a href=#317 id=317 data-nosnippet>317</a>  end
+<a href=#318 id=318 data-nosnippet>318</a>  return "\n\tno C modules (document Lua runs sandboxed)"
+<a href=#319 id=319 data-nosnippet>319</a>end
+<a href=#320 id=320 data-nosnippet>320</a>-- The protocol's pipe is the bridge's alone: the document's standard output and
+<a href=#321 id=321 data-nosnippet>321</a>-- input are the null device (its output reaches TeX through tex.print), set before
+<a href=#322 id=322 data-nosnippet>322</a>-- lualibs loads, whose helpers keep what they see (inspect keeps print).
+<a href=#323 id=323 data-nosnippet>323</a>local null_in = io_open(CRLF and 'NUL' or '/dev/null', 'r')
+<a href=#324 id=324 data-nosnippet>324</a>io_output(io.stderr)
+<a href=#325 id=325 data-nosnippet>325</a>if null_in then io_input(null_in) end
+<a href=#326 id=326 data-nosnippet>326</a>io.stdout, io.stdin = io.stderr, null_in
+<a href=#327 id=327 data-nosnippet>327</a>print = function() end
+<a href=#328 id=328 data-nosnippet>328</a>-- Rebind require through texlua's built-in kpse so texmf-shipped Lua modules
+<a href=#329 id=329 data-nosnippet>329</a>-- resolve (newpax, tkz-elements, ...), and load lualibs, which supplies the
+<a href=#330 id=330 data-nosnippet>330</a>-- 'file'/'string'/'table' library extensions lualatex gets via luaotfload.
+<a href=#331 id=331 data-nosnippet>331</a>if kpse and kpse.set_program_name then
+<a href=#332 id=332 data-nosnippet>332</a>  pcall(kpse.set_program_name, 'luatex')
+<a href=#333 id=333 data-nosnippet>333</a>  local find_file = kpse.find_file
+<a href=#334 id=334 data-nosnippet>334</a>  t_insert(searchers, function(name)
+<a href=#335 id=335 data-nosnippet>335</a>    -- LuaTeX's own kpse loader reads a dotted name as a path (pgf.gd.trees.library).
+<a href=#336 id=336 data-nosnippet>336</a>    local f = find_file((s_gsub(name, '%.', '/')), 'lua') or find_file(name, 'lua')
+<a href=#337 id=337 data-nosnippet>337</a>    if f then return assert(loadfile_text(f)), f end
+<a href=#338 id=338 data-nosnippet>338</a>    return "\n\tno texmf module '" .. shown(name) .. "' (kpse)"
+<a href=#339 id=339 data-nosnippet>339</a>  end)
+<a href=#340 id=340 data-nosnippet>340</a>  pcall(require, 'lualibs')
+<a href=#341 id=341 data-nosnippet>341</a>end
+<a href=#342 id=342 data-nosnippet>342</a>-- debug reaches the upvalues the wrappers above hold (the raw io.open, ...).
+<a href=#343 id=343 data-nosnippet>343</a>debug, package.loaded.debug = nil, nil
+<a href=#344 id=344 data-nosnippet>344</a>-- An error value's text, asked of no metamethod (tostring would run the document's __tostring).
+<a href=#345 id=345 data-nosnippet>345</a>local function error_text(value)
+<a href=#346 id=346 data-nosnippet>346</a>  local kind = type(value)
+<a href=#347 id=347 data-nosnippet>347</a>  if kind == 'string' then return value end
+<a href=#348 id=348 data-nosnippet>348</a>  if kind == 'number' then return s_format('%.14g', value) end
+<a href=#349 id=349 data-nosnippet>349</a>  return '(error object is a ' .. kind .. ' value)'
+<a href=#350 id=350 data-nosnippet>350</a>end
+<a href=#351 id=351 data-nosnippet>351</a>booting = false
+<a href=#352 id=352 data-nosnippet>352</a>while true do
+<a href=#353 id=353 data-nosnippet>353</a>  local header = f_read(stdin, '*l')
+<a href=#354 id=354 data-nosnippet>354</a>  if not header then os_exit(0) end
+<a href=#355 id=355 data-nosnippet>355</a>  local n = tonumber(header)
+<a href=#356 id=356 data-nosnippet>356</a>  if not n then os_exit(1) end
+<a href=#357 id=357 data-nosnippet>357</a>  local chunk = f_read(stdin, n)
+<a href=#358 id=358 data-nosnippet>358</a>  f_read(stdin, '*l')
+<a href=#359 id=359 data-nosnippet>359</a>  buf = {}
+<a href=#360 id=360 data-nosnippet>360</a>  local out, tag
+<a href=#361 id=361 data-nosnippet>361</a>  local f, err = load_text(chunk)
+<a href=#362 id=362 data-nosnippet>362</a>  if f then
+<a href=#363 id=363 data-nosnippet>363</a>    local ok, rterr = pcall(f)
+<a href=#364 id=364 data-nosnippet>364</a>    if ok then
+<a href=#365 id=365 data-nosnippet>365</a>      out, tag = t_concat(buf), 'OK'
+<a href=#366 id=366 data-nosnippet>366</a>    else
+<a href=#367 id=367 data-nosnippet>367</a>      out, tag = error_text(rterr), 'ERR'
+<a href=#368 id=368 data-nosnippet>368</a>    end
+<a href=#369 id=369 data-nosnippet>369</a>  else
+<a href=#370 id=370 data-nosnippet>370</a>    out, tag = error_text(err), 'ERR'
+<a href=#371 id=371 data-nosnippet>371</a>  end
+<a href=#372 id=372 data-nosnippet>372</a>  frame(tag, out)
+<a href=#373 id=373 data-nosnippet>373</a>end
+<a href=#374 id=374 data-nosnippet>374</a>"#</span>;
+<a href=#375 id=375 data-nosnippet>375</a>
+<a href=#376 id=376 data-nosnippet>376</a><span class="kw">struct </span>LuaProc {
+<a href=#377 id=377 data-nosnippet>377</a>  <span class="doccomment">/// The child, registered so a timeout or memory exit (which runs no destructor) kills it too; dropping the guard
+<a href=#378 id=378 data-nosnippet>378</a>  /// kills and reaps it.
+<a href=#379 id=379 data-nosnippet>379</a>  </span>child:   <span class="prelude-ty">Option</span>&lt;latexml_core::watchdog::KillOnExit&gt;,
+<a href=#380 id=380 data-nosnippet>380</a>  stdin:   ChildStdin,
+<a href=#381 id=381 data-nosnippet>381</a>  stdout:  BufReader&lt;ChildStdout&gt;,
+<a href=#382 id=382 data-nosnippet>382</a>  <span class="doccomment">/// A private prelude copy (`Prelude::Own`), removed with the process.
+<a href=#383 id=383 data-nosnippet>383</a>  </span>prelude: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="doccomment">/// This interpreter's frame nonce (`session_nonce`), sent as its first line.
+<a href=#385 id=385 data-nosnippet>385</a>  </span>nonce:   String,
+<a href=#386 id=386 data-nosnippet>386</a>}
+<a href=#387 id=387 data-nosnippet>387</a>
+<a href=#388 id=388 data-nosnippet>388</a><span class="doccomment">/// This thread's interpreter for the current conversion (`reset_session` ends it: a persistent worker converts its
+<a href=#389 id=389 data-nosnippet>389</a>/// papers on one thread, and LuaTeX starts each job with a fresh Lua state in the job's directory).
+<a href=#390 id=390 data-nosnippet>390</a></span><span class="attr">#[derive(Default)]
+<a href=#391 id=391 data-nosnippet>391</a></span><span class="kw">struct </span>LuaSlot {
+<a href=#392 id=392 data-nosnippet>392</a>  proc_:       <span class="prelude-ty">Option</span>&lt;LuaProc&gt;,
+<a href=#393 id=393 data-nosnippet>393</a>  <span class="doccomment">/// texlua could not be started (reported once per conversion as "texlua not available").
+<a href=#394 id=394 data-nosnippet>394</a>  </span>unavailable: bool,
+<a href=#395 id=395 data-nosnippet>395</a>  <span class="doccomment">/// Interpreters that ended mid-conversion (a crash, a broken frame); each is respawned up to `MAX_RESTARTS`.
+<a href=#396 id=396 data-nosnippet>396</a>  </span>ended:       u32,
+<a href=#397 id=397 data-nosnippet>397</a>}
+<a href=#398 id=398 data-nosnippet>398</a>
+<a href=#399 id=399 data-nosnippet>399</a><span class="doccomment">/// Restarts per conversion after an interpreter ends; past them, later chunks are not evaluated.
+<a href=#400 id=400 data-nosnippet>400</a></span><span class="kw">const </span>MAX_RESTARTS: u32 = <span class="number">3</span>;
+<a href=#401 id=401 data-nosnippet>401</a><span class="doccomment">/// The longest frame the bridge reads: a length past it is a broken protocol, not output.
+<a href=#402 id=402 data-nosnippet>402</a></span><span class="kw">const </span>MAX_FRAME: usize = <span class="number">64 </span>&lt;&lt; <span class="number">20</span>;
+<a href=#403 id=403 data-nosnippet>403</a><span class="doccomment">/// The refusals a chunk reports one by one, by count and by bytes; the rest are counted in one summary Error.
+<a href=#404 id=404 data-nosnippet>404</a></span><span class="kw">const </span>MAX_DENIALS: usize = <span class="number">20</span>;
+<a href=#405 id=405 data-nosnippet>405</a><span class="kw">const </span>MAX_DENIAL_BYTES: usize = <span class="number">64 </span>&lt;&lt; <span class="number">10</span>;
+<a href=#406 id=406 data-nosnippet>406</a>
+<a href=#407 id=407 data-nosnippet>407</a><span class="macro">thread_local!</span> {
+<a href=#408 id=408 data-nosnippet>408</a>  <span class="kw">static </span>LUA: RefCell&lt;LuaSlot&gt; = RefCell::new(LuaSlot::default());
+<a href=#409 id=409 data-nosnippet>409</a>}
+<a href=#410 id=410 data-nosnippet>410</a>
+<a href=#411 id=411 data-nosnippet>411</a><span class="doccomment">/// Ends this thread's interpreter and forgets its restarts: called at each conversion's start
+<a href=#412 id=412 data-nosnippet>412</a>/// (`Converter::initialize_session`), so no Lua state or working directory carries over to the next paper.
+<a href=#413 id=413 data-nosnippet>413</a></span><span class="kw">pub fn </span>reset_session() { LUA.with(|slot| <span class="kw-2">*</span>slot.borrow_mut() = LuaSlot::default()); }
+<a href=#414 id=414 data-nosnippet>414</a>
+<a href=#415 id=415 data-nosnippet>415</a><span class="kw">impl </span>Drop <span class="kw">for </span>LuaProc {
+<a href=#416 id=416 data-nosnippet>416</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+<a href=#417 id=417 data-nosnippet>417</a>    <span class="comment">// The guard kills and reaps the child, so no zombie outlives the thread.
+<a href=#418 id=418 data-nosnippet>418</a>    </span>drop(<span class="self">self</span>.child.take());
+<a href=#419 id=419 data-nosnippet>419</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = <span class="self">self</span>.prelude.take() {
+<a href=#420 id=420 data-nosnippet>420</a>      <span class="kw">let _ </span>= std::fs::remove_file(path);
+<a href=#421 id=421 data-nosnippet>421</a>    }
+<a href=#422 id=422 data-nosnippet>422</a>  }
+<a href=#423 id=423 data-nosnippet>423</a>}
+<a href=#424 id=424 data-nosnippet>424</a>
+<a href=#425 id=425 data-nosnippet>425</a><span class="kw">fn </span>content_hash(text: <span class="kw-2">&amp;</span>str) -&gt; u64 {
+<a href=#426 id=426 data-nosnippet>426</a>  text.bytes().fold(<span class="number">0xcbf2_9ce4_8422_2325</span>, |hash, byte| {
+<a href=#427 id=427 data-nosnippet>427</a>    (hash ^ u64::from(byte)).wrapping_mul(<span class="number">0x0100_0000_01b3</span>)
+<a href=#428 id=428 data-nosnippet>428</a>  })
+<a href=#429 id=429 data-nosnippet>429</a>}
+<a href=#430 id=430 data-nosnippet>430</a>
+<a href=#431 id=431 data-nosnippet>431</a><span class="doccomment">/// Where the prelude script is: the file shared by this user's processes, or a private copy the
+<a href=#432 id=432 data-nosnippet>432</a>/// process removes when its interpreter ends.
+<a href=#433 id=433 data-nosnippet>433</a></span><span class="kw">enum </span>Prelude {
+<a href=#434 id=434 data-nosnippet>434</a>  Shared(std::path::PathBuf),
+<a href=#435 id=435 data-nosnippet>435</a>  Own(std::path::PathBuf),
+<a href=#436 id=436 data-nosnippet>436</a>}
+<a href=#437 id=437 data-nosnippet>437</a>
+<a href=#438 id=438 data-nosnippet>438</a><span class="doccomment">/// The prelude script on disk: `latexml_lua_prelude_&lt;uid&gt;_&lt;content hash&gt;.lua` in the temp dir, shared
+<a href=#439 id=439 data-nosnippet>439</a>/// by this user's processes and used only when it is a regular file (not a link) of this user holding
+<a href=#440 id=440 data-nosnippet>440</a>/// exactly the prelude — the temp dir is world-writable, and a planted or truncated file would run as
+<a href=#441 id=441 data-nosnippet>441</a>/// this user. Written aside under a name no other writer uses (a pid and a counter; a name left by an
+<a href=#442 id=442 data-nosnippet>442</a>/// earlier process of the same pid is skipped) and renamed into place, so a concurrent reader never
+<a href=#443 id=443 data-nosnippet>443</a>/// sees a partial file; where the shared name cannot be taken, the private copy is used and removed
+<a href=#444 id=444 data-nosnippet>444</a>/// with the interpreter (`LuaProc`'s drop).
+<a href=#445 id=445 data-nosnippet>445</a></span><span class="kw">fn </span>prelude_file() -&gt; <span class="prelude-ty">Option</span>&lt;Prelude&gt; {
+<a href=#446 id=446 data-nosnippet>446</a>  <span class="kw">use </span>std::io::Write;
+<a href=#447 id=447 data-nosnippet>447</a>  <span class="kw">static </span>WRITES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(<span class="number">0</span>);
+<a href=#448 id=448 data-nosnippet>448</a>  <span class="kw">let </span>dir = std::env::temp_dir();
+<a href=#449 id=449 data-nosnippet>449</a>  <span class="kw">let </span>hash = content_hash(LUA_PRELUDE);
+<a href=#450 id=450 data-nosnippet>450</a>  <span class="kw">let </span>(own, <span class="kw-2">mut </span>file) = (<span class="number">0</span>..<span class="number">64</span>).find_map(|<span class="kw">_</span>| {
+<a href=#451 id=451 data-nosnippet>451</a>    <span class="kw">let </span>own = dir.join(<span class="macro">format!</span>(
+<a href=#452 id=452 data-nosnippet>452</a>      <span class="string">"latexml_lua_prelude_{hash:016x}.{}.{}.lua"</span>,
+<a href=#453 id=453 data-nosnippet>453</a>      std::process::id(),
+<a href=#454 id=454 data-nosnippet>454</a>      WRITES.fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed)
+<a href=#455 id=455 data-nosnippet>455</a>    ));
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="kw">let </span><span class="kw-2">mut </span>options = std::fs::OpenOptions::new();
+<a href=#457 id=457 data-nosnippet>457</a>    options.write(<span class="bool-val">true</span>).create_new(<span class="bool-val">true</span>);
+<a href=#458 id=458 data-nosnippet>458</a>    <span class="attr">#[cfg(unix)]
+<a href=#459 id=459 data-nosnippet>459</a>    </span>std::os::unix::fs::OpenOptionsExt::mode(<span class="kw-2">&amp;mut </span>options, <span class="number">0o644</span>);
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="kw">match </span>options.open(<span class="kw-2">&amp;</span>own) {
+<a href=#461 id=461 data-nosnippet>461</a>      <span class="prelude-val">Ok</span>(file) =&gt; <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>((own, file))),
+<a href=#462 id=462 data-nosnippet>462</a>      <span class="prelude-val">Err</span>(error) <span class="kw">if </span>error.kind() == std::io::ErrorKind::AlreadyExists =&gt; <span class="prelude-val">None</span>,
+<a href=#463 id=463 data-nosnippet>463</a>      <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Some</span>(<span class="prelude-val">None</span>),
+<a href=#464 id=464 data-nosnippet>464</a>    }
+<a href=#465 id=465 data-nosnippet>465</a>  })<span class="question-mark">??</span>;
+<a href=#466 id=466 data-nosnippet>466</a>  <span class="kw">if </span>file.write_all(LUA_PRELUDE.as_bytes()).is_err() {
+<a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>own);
+<a href=#468 id=468 data-nosnippet>468</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#469 id=469 data-nosnippet>469</a>  }
+<a href=#470 id=470 data-nosnippet>470</a>  drop(file);
+<a href=#471 id=471 data-nosnippet>471</a>  <span class="attr">#[cfg(unix)]
+<a href=#472 id=472 data-nosnippet>472</a>  </span><span class="kw">let </span>owner = {
+<a href=#473 id=473 data-nosnippet>473</a>    <span class="kw">use </span>std::os::unix::fs::MetadataExt;
+<a href=#474 id=474 data-nosnippet>474</a>    std::fs::symlink_metadata(<span class="kw-2">&amp;</span>own).ok()<span class="question-mark">?</span>.uid()
+<a href=#475 id=475 data-nosnippet>475</a>  };
+<a href=#476 id=476 data-nosnippet>476</a>  <span class="attr">#[cfg(not(unix))]
+<a href=#477 id=477 data-nosnippet>477</a>  </span><span class="kw">let </span>owner = <span class="number">0</span>;
+<a href=#478 id=478 data-nosnippet>478</a>  <span class="kw">let </span>shared = dir.join(<span class="macro">format!</span>(<span class="string">"latexml_lua_prelude_{owner}_{hash:016x}.lua"</span>));
+<a href=#479 id=479 data-nosnippet>479</a>  <span class="kw">let </span>is_ours = |path: <span class="kw-2">&amp;</span>std::path::Path| {
+<a href=#480 id=480 data-nosnippet>480</a>    std::fs::symlink_metadata(path).is_ok_and(|meta| {
+<a href=#481 id=481 data-nosnippet>481</a>      <span class="attr">#[cfg(unix)]
+<a href=#482 id=482 data-nosnippet>482</a>      </span><span class="kw">let </span>same_owner = std::os::unix::fs::MetadataExt::uid(<span class="kw-2">&amp;</span>meta) == owner;
+<a href=#483 id=483 data-nosnippet>483</a>      <span class="attr">#[cfg(not(unix))]
+<a href=#484 id=484 data-nosnippet>484</a>      </span><span class="kw">let </span>same_owner = <span class="bool-val">true</span>;
+<a href=#485 id=485 data-nosnippet>485</a>      meta.is_file() &amp;&amp; same_owner
+<a href=#486 id=486 data-nosnippet>486</a>    })
+<a href=#487 id=487 data-nosnippet>487</a>  };
+<a href=#488 id=488 data-nosnippet>488</a>  <span class="kw">if </span>is_ours(<span class="kw-2">&amp;</span>shared) &amp;&amp; std::fs::read(<span class="kw-2">&amp;</span>shared).is_ok_and(|bytes| bytes == LUA_PRELUDE.as_bytes()) {
+<a href=#489 id=489 data-nosnippet>489</a>    <span class="kw">let _ </span>= std::fs::remove_file(<span class="kw-2">&amp;</span>own);
+<a href=#490 id=490 data-nosnippet>490</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(Prelude::Shared(shared));
+<a href=#491 id=491 data-nosnippet>491</a>  }
+<a href=#492 id=492 data-nosnippet>492</a>  <span class="kw">if </span>std::fs::rename(<span class="kw-2">&amp;</span>own, <span class="kw-2">&amp;</span>shared).is_ok() {
+<a href=#493 id=493 data-nosnippet>493</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(Prelude::Shared(shared));
+<a href=#494 id=494 data-nosnippet>494</a>  }
+<a href=#495 id=495 data-nosnippet>495</a>  <span class="prelude-val">Some</span>(Prelude::Own(own))
+<a href=#496 id=496 data-nosnippet>496</a>}
+<a href=#497 id=497 data-nosnippet>497</a>
+<a href=#498 id=498 data-nosnippet>498</a><span class="doccomment">/// The environment variables the texlua child keeps: the program and library search (`PATH`, `LD_LIBRARY_PATH`,
+<a href=#499 id=499 data-nosnippet>499</a>/// `DYLD_*`, Windows' system ones), kpathsea's (`TEXMF*`, `KPATHSEA*`, the `*INPUTS`/`*FONTS` format paths), the user's home (`TEXMFHOME`), the
+<a href=#500 id=500 data-nosnippet>500</a>/// locale, the reproducible-date clock and the temp dir. Windows' variable names are case-insensitive, and its usual
+<a href=#501 id=501 data-nosnippet>501</a>/// spellings are mixed-case (`Path`, `SystemRoot`, `windir`), so there a name is matched in upper case.
+<a href=#502 id=502 data-nosnippet>502</a></span><span class="kw">fn </span>child_env_allowed(name: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#503 id=503 data-nosnippet>503</a>  <span class="kw">let </span>name = <span class="kw">if </span><span class="macro">cfg!</span>(windows) {
+<a href=#504 id=504 data-nosnippet>504</a>    std::borrow::Cow::Owned(name.to_ascii_uppercase())
+<a href=#505 id=505 data-nosnippet>505</a>  } <span class="kw">else </span>{
+<a href=#506 id=506 data-nosnippet>506</a>    std::borrow::Cow::Borrowed(name)
+<a href=#507 id=507 data-nosnippet>507</a>  };
+<a href=#508 id=508 data-nosnippet>508</a>  <span class="kw">let </span>name = name.as_ref();
+<a href=#509 id=509 data-nosnippet>509</a>  <span class="kw">const </span>EXACT: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
+<a href=#510 id=510 data-nosnippet>510</a>    <span class="string">"PATH"</span>,
+<a href=#511 id=511 data-nosnippet>511</a>    <span class="string">"HOME"</span>,
+<a href=#512 id=512 data-nosnippet>512</a>    <span class="string">"LANG"</span>,
+<a href=#513 id=513 data-nosnippet>513</a>    <span class="string">"LANGUAGE"</span>,
+<a href=#514 id=514 data-nosnippet>514</a>    <span class="string">"SOURCE_DATE_EPOCH"</span>,
+<a href=#515 id=515 data-nosnippet>515</a>    <span class="string">"FORCE_SOURCE_DATE"</span>,
+<a href=#516 id=516 data-nosnippet>516</a>    <span class="string">"TMPDIR"</span>,
+<a href=#517 id=517 data-nosnippet>517</a>    <span class="string">"TMP"</span>,
+<a href=#518 id=518 data-nosnippet>518</a>    <span class="string">"TEMP"</span>,
+<a href=#519 id=519 data-nosnippet>519</a>    <span class="string">"SYSTEMROOT"</span>,
+<a href=#520 id=520 data-nosnippet>520</a>    <span class="string">"WINDIR"</span>,
+<a href=#521 id=521 data-nosnippet>521</a>    <span class="string">"SYSTEMDRIVE"</span>,
+<a href=#522 id=522 data-nosnippet>522</a>    <span class="string">"USERPROFILE"</span>,
+<a href=#523 id=523 data-nosnippet>523</a>    <span class="string">"HOMEDRIVE"</span>,
+<a href=#524 id=524 data-nosnippet>524</a>    <span class="string">"HOMEPATH"</span>,
+<a href=#525 id=525 data-nosnippet>525</a>    <span class="string">"APPDATA"</span>,
+<a href=#526 id=526 data-nosnippet>526</a>    <span class="string">"LOCALAPPDATA"</span>,
+<a href=#527 id=527 data-nosnippet>527</a>    <span class="string">"PATHEXT"</span>,
+<a href=#528 id=528 data-nosnippet>528</a>    <span class="string">"TEXCONFIG"</span>,
+<a href=#529 id=529 data-nosnippet>529</a>    <span class="string">"TEXFORMATS"</span>,
+<a href=#530 id=530 data-nosnippet>530</a>    <span class="string">"TEXPOOL"</span>,
+<a href=#531 id=531 data-nosnippet>531</a>    <span class="string">"TEXPSHEADERS"</span>,
+<a href=#532 id=532 data-nosnippet>532</a>    <span class="string">"TEXFONTMAPS"</span>,
+<a href=#533 id=533 data-nosnippet>533</a>    <span class="string">"LD_LIBRARY_PATH"</span>,
+<a href=#534 id=534 data-nosnippet>534</a>  ];
+<a href=#535 id=535 data-nosnippet>535</a>  EXACT.contains(<span class="kw-2">&amp;</span>name)
+<a href=#536 id=536 data-nosnippet>536</a>    || name.starts_with(<span class="string">"DYLD_"</span>)
+<a href=#537 id=537 data-nosnippet>537</a>    || name.starts_with(<span class="string">"LC_"</span>)
+<a href=#538 id=538 data-nosnippet>538</a>    || name.starts_with(<span class="string">"TEXMF"</span>)
+<a href=#539 id=539 data-nosnippet>539</a>    || name.starts_with(<span class="string">"KPATHSEA"</span>)
+<a href=#540 id=540 data-nosnippet>540</a>    || name.ends_with(<span class="string">"INPUTS"</span>)
+<a href=#541 id=541 data-nosnippet>541</a>    || name.ends_with(<span class="string">"FONTS"</span>)
+<a href=#542 id=542 data-nosnippet>542</a>}
+<a href=#543 id=543 data-nosnippet>543</a>
+<a href=#544 id=544 data-nosnippet>544</a><span class="doccomment">/// A per-interpreter frame nonce: 128 bits of SipHash keyed by the standard library's random `RandomState` keys,
+<a href=#545 id=545 data-nosnippet>545</a>/// over the pid, the clock and a counter. The prelude reads it before any other code loads; a chunk never sees it.
+<a href=#546 id=546 data-nosnippet>546</a></span><span class="kw">fn </span>session_nonce() -&gt; String {
+<a href=#547 id=547 data-nosnippet>547</a>  <span class="kw">use </span>std::hash::{BuildHasher, Hasher};
+<a href=#548 id=548 data-nosnippet>548</a>  <span class="kw">static </span>SPAWNS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(<span class="number">0</span>);
+<a href=#549 id=549 data-nosnippet>549</a>  <span class="kw">let </span>state = std::collections::hash_map::RandomState::new();
+<a href=#550 id=550 data-nosnippet>550</a>  <span class="kw">let </span>count = SPAWNS.fetch_add(<span class="number">1</span>, std::sync::atomic::Ordering::Relaxed);
+<a href=#551 id=551 data-nosnippet>551</a>  <span class="kw">let </span>clock = std::time::SystemTime::now()
+<a href=#552 id=552 data-nosnippet>552</a>    .duration_since(std::time::UNIX_EPOCH)
+<a href=#553 id=553 data-nosnippet>553</a>    .map_or(<span class="number">0</span>, |since| since.as_nanos());
+<a href=#554 id=554 data-nosnippet>554</a>  <span class="kw">let </span>word = |half: u64| {
+<a href=#555 id=555 data-nosnippet>555</a>    <span class="kw">let </span><span class="kw-2">mut </span>hasher = state.build_hasher();
+<a href=#556 id=556 data-nosnippet>556</a>    hasher.write_u64(half);
+<a href=#557 id=557 data-nosnippet>557</a>    hasher.write_u32(std::process::id());
+<a href=#558 id=558 data-nosnippet>558</a>    hasher.write_u128(clock);
+<a href=#559 id=559 data-nosnippet>559</a>    hasher.write_u64(count);
+<a href=#560 id=560 data-nosnippet>560</a>    hasher.finish()
+<a href=#561 id=561 data-nosnippet>561</a>  };
+<a href=#562 id=562 data-nosnippet>562</a>  <span class="macro">format!</span>(<span class="string">"{:016x}{:016x}"</span>, word(<span class="number">0</span>), word(<span class="number">1</span>))
+<a href=#563 id=563 data-nosnippet>563</a>}
+<a href=#564 id=564 data-nosnippet>564</a>
+<a href=#565 id=565 data-nosnippet>565</a><span class="kw">fn </span>spawn() -&gt; <span class="prelude-ty">Option</span>&lt;LuaProc&gt; {
+<a href=#566 id=566 data-nosnippet>566</a>  <span class="comment">// `texlua` takes a script FILE (its `-e` is not lua's inline-chunk flag) — materialize the
+<a href=#567 id=567 data-nosnippet>567</a>  // prelude in the temp dir, named by its owner and content: one file shared by this user's processes
+<a href=#568 id=568 data-nosnippet>568</a>  // and version-safe (a per-process name was never removed, and one-shot runs and test processes left ~98,000
+<a href=#569 id=569 data-nosnippet>569</a>  // of them, exhausting `/tmp`'s inodes).
+<a href=#570 id=570 data-nosnippet>570</a>  </span><span class="kw">let </span>(prelude_path, prelude) = <span class="kw">match </span>prelude_file()<span class="question-mark">? </span>{
+<a href=#571 id=571 data-nosnippet>571</a>    Prelude::Shared(path) =&gt; (path, <span class="prelude-val">None</span>),
+<a href=#572 id=572 data-nosnippet>572</a>    Prelude::Own(path) =&gt; (path.clone(), <span class="prelude-val">Some</span>(path)),
+<a href=#573 id=573 data-nosnippet>573</a>  };
+<a href=#574 id=574 data-nosnippet>574</a>  <span class="kw">let </span><span class="kw-2">mut </span>cmd = Command::new(<span class="string">"texlua"</span>);
+<a href=#575 id=575 data-nosnippet>575</a>  cmd
+<a href=#576 id=576 data-nosnippet>576</a>    .arg(<span class="kw-2">&amp;</span>prelude_path)
+<a href=#577 id=577 data-nosnippet>577</a>    .stdin(Stdio::piped())
+<a href=#578 id=578 data-nosnippet>578</a>    .stdout(Stdio::piped())
+<a href=#579 id=579 data-nosnippet>579</a>    .stderr(Stdio::null())
+<a href=#580 id=580 data-nosnippet>580</a>    <span class="comment">// Untrusted Lua sees only what the texmf lookup and the locale need, not the worker's environment.
+<a href=#581 id=581 data-nosnippet>581</a>    </span>.env_clear()
+<a href=#582 id=582 data-nosnippet>582</a>    .envs(std::env::vars_os().filter(|(name, <span class="kw">_</span>)| name.to_str().is_some_and(child_env_allowed)));
+<a href=#583 id=583 data-nosnippet>583</a>  <span class="comment">// LuaTeX job semantics: chunks resolve relative files against the
+<a href=#584 id=584 data-nosnippet>584</a>  // document's directory (witness newpax/newpax — `newpax.writenewpax
+<a href=#585 id=585 data-nosnippet>585</a>  // ("doc-input1")` reads the PDFs shipped next to the manual).
+<a href=#586 id=586 data-nosnippet>586</a>  </span><span class="kw">let </span>source_dir = latexml_core::state::lookup_string(<span class="string">"SOURCEDIRECTORY"</span>);
+<a href=#587 id=587 data-nosnippet>587</a>  <span class="kw">if </span>!source_dir.is_empty() &amp;&amp; std::path::Path::new(<span class="kw-2">&amp;</span>source_dir).is_dir() {
+<a href=#588 id=588 data-nosnippet>588</a>    cmd.current_dir(<span class="kw-2">&amp;</span>source_dir);
+<a href=#589 id=589 data-nosnippet>589</a>  }
+<a href=#590 id=590 data-nosnippet>590</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>child) = cmd.spawn() <span class="kw">else </span>{
+<a href=#591 id=591 data-nosnippet>591</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = prelude {
+<a href=#592 id=592 data-nosnippet>592</a>      <span class="kw">let _ </span>= std::fs::remove_file(path);
+<a href=#593 id=593 data-nosnippet>593</a>    }
+<a href=#594 id=594 data-nosnippet>594</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#595 id=595 data-nosnippet>595</a>  };
+<a href=#596 id=596 data-nosnippet>596</a>  <span class="kw">let </span>(<span class="prelude-val">Some</span>(stdin), <span class="prelude-val">Some</span>(stdout)) = (child.stdin.take(), child.stdout.take()) <span class="kw">else </span>{
+<a href=#597 id=597 data-nosnippet>597</a>    <span class="kw">let _ </span>= child.kill();
+<a href=#598 id=598 data-nosnippet>598</a>    <span class="kw">let _ </span>= child.wait();
+<a href=#599 id=599 data-nosnippet>599</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(path) = prelude {
+<a href=#600 id=600 data-nosnippet>600</a>      <span class="kw">let _ </span>= std::fs::remove_file(path);
+<a href=#601 id=601 data-nosnippet>601</a>    }
+<a href=#602 id=602 data-nosnippet>602</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#603 id=603 data-nosnippet>603</a>  };
+<a href=#604 id=604 data-nosnippet>604</a>  <span class="kw">let </span><span class="kw-2">mut </span>proc_ = LuaProc {
+<a href=#605 id=605 data-nosnippet>605</a>    child: <span class="prelude-val">Some</span>(latexml_core::watchdog::kill_on_exit(child)),
+<a href=#606 id=606 data-nosnippet>606</a>    stdin,
+<a href=#607 id=607 data-nosnippet>607</a>    stdout: BufReader::new(stdout),
+<a href=#608 id=608 data-nosnippet>608</a>    prelude,
+<a href=#609 id=609 data-nosnippet>609</a>    nonce: session_nonce(),
+<a href=#610 id=610 data-nosnippet>610</a>  };
+<a href=#611 id=611 data-nosnippet>611</a>  <span class="kw">let </span>line = <span class="macro">format!</span>(<span class="string">"{}\n"</span>, proc_.nonce);
+<a href=#612 id=612 data-nosnippet>612</a>  <span class="kw">if </span>proc_.stdin.write_all(line.as_bytes()).is_err() {
+<a href=#613 id=613 data-nosnippet>613</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#614 id=614 data-nosnippet>614</a>  }
+<a href=#615 id=615 data-nosnippet>615</a>  <span class="prelude-val">Some</span>(proc_)
+<a href=#616 id=616 data-nosnippet>616</a>}
+<a href=#617 id=617 data-nosnippet>617</a>
+<a href=#618 id=618 data-nosnippet>618</a><span class="doccomment">/// Service one live tex-state query from the Lua side (the mirror half of
+<a href=#619 id=619 data-nosnippet>619</a>/// rebind-as-we-emulate): `get{count,dimen} &lt;key&gt;` reads a register from the
+<a href=#620 id=620 data-nosnippet>620</a>/// engine State, `set{count,dimen} [global] &lt;key&gt; &lt;value&gt;` writes one. Keys
+<a href=#621 id=621 data-nosnippet>621</a>/// are numeric register indices (`tex.count[255]` → `\count255`) or
+<a href=#622 id=622 data-nosnippet>622</a>/// `\countdef`'d names (`tex.count.scratchcounter` → `\scratchcounter`).
+<a href=#623 id=623 data-nosnippet>623</a>/// Counts answer as integers, dimens in scaled points (LuaTeX convention).
+<a href=#624 id=624 data-nosnippet>624</a>/// Unknown ops or lookup failures answer "0" — the pre-mirror stub value —
+<a href=#625 id=625 data-nosnippet>625</a>/// so a chunk probing state we don't model degrades exactly as before.
+<a href=#626 id=626 data-nosnippet>626</a></span><span class="kw">fn </span>service_query(payload: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#627 id=627 data-nosnippet>627</a>  <span class="kw">use </span>latexml_core::{
+<a href=#628 id=628 data-nosnippet>628</a>    common::{dimension::Dimension, number::Number},
+<a href=#629 id=629 data-nosnippet>629</a>    definition::{argument::ArgWrap, register::RegisterValue},
+<a href=#630 id=630 data-nosnippet>630</a>    state,
+<a href=#631 id=631 data-nosnippet>631</a>  };
+<a href=#632 id=632 data-nosnippet>632</a>  <span class="kw">let </span><span class="kw-2">mut </span>it = payload.split_whitespace();
+<a href=#633 id=633 data-nosnippet>633</a>  <span class="kw">let </span>op = it.next().unwrap_or(<span class="string">""</span>);
+<a href=#634 id=634 data-nosnippet>634</a>  <span class="kw">let </span><span class="kw-2">mut </span>key = it.next().unwrap_or(<span class="string">""</span>);
+<a href=#635 id=635 data-nosnippet>635</a>  <span class="kw">let </span>global = key == <span class="string">"global"</span>;
+<a href=#636 id=636 data-nosnippet>636</a>  <span class="kw">if </span>global {
+<a href=#637 id=637 data-nosnippet>637</a>    key = it.next().unwrap_or(<span class="string">""</span>);
+<a href=#638 id=638 data-nosnippet>638</a>  }
+<a href=#639 id=639 data-nosnippet>639</a>  <span class="kw">let </span>(cs, params) = <span class="kw">match </span>key.parse::&lt;i64&gt;() {
+<a href=#640 id=640 data-nosnippet>640</a>    <span class="prelude-val">Ok</span>(n) =&gt; {
+<a href=#641 id=641 data-nosnippet>641</a>      <span class="kw">let </span>reg = <span class="kw">if </span>op.ends_with(<span class="string">"dimen"</span>) {
+<a href=#642 id=642 data-nosnippet>642</a>        <span class="string">"\\dimen"
+<a href=#643 id=643 data-nosnippet>643</a>      </span>} <span class="kw">else </span>{
+<a href=#644 id=644 data-nosnippet>644</a>        <span class="string">"\\count"
+<a href=#645 id=645 data-nosnippet>645</a>      </span>};
+<a href=#646 id=646 data-nosnippet>646</a>      (reg.to_string(), <span class="macro">vec!</span>[ArgWrap::Number(Number(n))])
+<a href=#647 id=647 data-nosnippet>647</a>    },
+<a href=#648 id=648 data-nosnippet>648</a>    <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; (<span class="macro">format!</span>(<span class="string">"\\{key}"</span>), Vec::new()),
+<a href=#649 id=649 data-nosnippet>649</a>  };
+<a href=#650 id=650 data-nosnippet>650</a>  <span class="kw">match </span>op {
+<a href=#651 id=651 data-nosnippet>651</a>    <span class="string">"getcount" </span>| <span class="string">"getdimen" </span>=&gt; <span class="kw">match </span>state::lookup_register(<span class="kw-2">&amp;</span>cs, params).ok().flatten() {
+<a href=#652 id=652 data-nosnippet>652</a>      <span class="prelude-val">Some</span>(RegisterValue::Number(n)) =&gt; n.<span class="number">0</span>.to_string(),
+<a href=#653 id=653 data-nosnippet>653</a>      <span class="prelude-val">Some</span>(RegisterValue::Dimension(d)) =&gt; d.<span class="number">0</span>.to_string(),
+<a href=#654 id=654 data-nosnippet>654</a>      <span class="kw">_ </span>=&gt; <span class="string">"0"</span>.to_string(),
+<a href=#655 id=655 data-nosnippet>655</a>    },
+<a href=#656 id=656 data-nosnippet>656</a>    <span class="string">"setcount" </span>| <span class="string">"setdimen" </span>=&gt; {
+<a href=#657 id=657 data-nosnippet>657</a>      <span class="kw">let </span>value: i64 = it.next().and_then(|v| v.parse().ok()).unwrap_or(<span class="number">0</span>);
+<a href=#658 id=658 data-nosnippet>658</a>      <span class="kw">let </span>rv = <span class="kw">if </span>op == <span class="string">"setdimen" </span>{
+<a href=#659 id=659 data-nosnippet>659</a>        RegisterValue::Dimension(Dimension(value))
+<a href=#660 id=660 data-nosnippet>660</a>      } <span class="kw">else </span>{
+<a href=#661 id=661 data-nosnippet>661</a>        RegisterValue::Number(Number(value))
+<a href=#662 id=662 data-nosnippet>662</a>      };
+<a href=#663 id=663 data-nosnippet>663</a>      <span class="kw">let </span>scope = global.then_some(state::Scope::Global);
+<a href=#664 id=664 data-nosnippet>664</a>      <span class="kw">let _ </span>= state::assign_register(<span class="kw-2">&amp;</span>cs, rv, scope, params);
+<a href=#665 id=665 data-nosnippet>665</a>      String::new()
+<a href=#666 id=666 data-nosnippet>666</a>    },
+<a href=#667 id=667 data-nosnippet>667</a>    <span class="kw">_ </span>=&gt; <span class="string">"0"</span>.to_string(),
+<a href=#668 id=668 data-nosnippet>668</a>  }
+<a href=#669 id=669 data-nosnippet>669</a>}
+<a href=#670 id=670 data-nosnippet>670</a>
+<a href=#671 id=671 data-nosnippet>671</a><span class="doccomment">/// Execute one Lua chunk in this thread's persistent interpreter.
+<a href=#672 id=672 data-nosnippet>672</a>///
+<a href=#673 id=673 data-nosnippet>673</a>/// `Ok(text)` is everything the chunk `tex.print`ed (to be retokenized with
+<a href=#674 id=674 data-nosnippet>674</a>/// current catcodes by the caller); `Err(msg)` is a load/runtime Lua error or
+<a href=#675 id=675 data-nosnippet>675</a>/// bridge unavailability ("texlua not available" — callers degrade to a no-op
+<a href=#676 id=676 data-nosnippet>676</a>/// expansion, matching what the document would get from a TeX engine without
+<a href=#677 id=677 data-nosnippet>677</a>/// Lua). Each call the sandbox refused, and an interpreter that ended mid-chunk
+<a href=#678 id=678 data-nosnippet>678</a>/// (its output lost), is raised as an `Error` (the outer `Err`, should that
+<a href=#679 id=679 data-nosnippet>679</a>/// Error escalate to a Fatal).
+<a href=#680 id=680 data-nosnippet>680</a></span><span class="kw">pub fn </span>lua_exec(chunk: <span class="kw-2">&amp;</span>str) -&gt; latexml_core::common::error::Result&lt;<span class="prelude-ty">Result</span>&lt;String, String&gt;&gt; {
+<a href=#681 id=681 data-nosnippet>681</a>  <span class="kw">let </span>framed = exec_framed(chunk);
+<a href=#682 id=682 data-nosnippet>682</a>  <span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#683 id=683 data-nosnippet>683</a>  <span class="kw">for </span>denial <span class="kw">in </span>framed.denials.shown {
+<a href=#684 id=684 data-nosnippet>684</a>    <span class="macro">Error!</span>(<span class="string">"lua"</span>, <span class="string">"sandbox"</span>, denial);
+<a href=#685 id=685 data-nosnippet>685</a>  }
+<a href=#686 id=686 data-nosnippet>686</a>  <span class="kw">if </span>framed.denials.more &gt; <span class="number">0 </span>{
+<a href=#687 id=687 data-nosnippet>687</a>    <span class="macro">Error!</span>(
+<a href=#688 id=688 data-nosnippet>688</a>      <span class="string">"lua"</span>,
+<a href=#689 id=689 data-nosnippet>689</a>      <span class="string">"sandbox"</span>,
+<a href=#690 id=690 data-nosnippet>690</a>      <span class="macro">format!</span>(
+<a href=#691 id=691 data-nosnippet>691</a>        <span class="string">"{} more calls the sandbox refused in this chunk are not listed"</span>,
+<a href=#692 id=692 data-nosnippet>692</a>        framed.denials.more
+<a href=#693 id=693 data-nosnippet>693</a>      )
+<a href=#694 id=694 data-nosnippet>694</a>    );
+<a href=#695 id=695 data-nosnippet>695</a>  }
+<a href=#696 id=696 data-nosnippet>696</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(ended) = framed.ended {
+<a href=#697 id=697 data-nosnippet>697</a>    <span class="macro">Error!</span>(<span class="string">"lua"</span>, <span class="string">"interpreter"</span>, ended);
+<a href=#698 id=698 data-nosnippet>698</a>  }
+<a href=#699 id=699 data-nosnippet>699</a>  <span class="prelude-val">Ok</span>(framed.result)
+<a href=#700 id=700 data-nosnippet>700</a>}
+<a href=#701 id=701 data-nosnippet>701</a>
+<a href=#702 id=702 data-nosnippet>702</a><span class="doccomment">/// One chunk's run: its result, the sandbox's refusals ('D' frames, OXIDIZED_DESIGN_DIVERGENCES #1081) — returned
+<a href=#703 id=703 data-nosnippet>703</a>/// apart, as a pcall in the chunk can swallow the Lua error, never the record — and the report of an interpreter
+<a href=#704 id=704 data-nosnippet>704</a>/// that ended during it.
+<a href=#705 id=705 data-nosnippet>705</a></span><span class="kw">struct </span>Framed {
+<a href=#706 id=706 data-nosnippet>706</a>  result:  <span class="prelude-ty">Result</span>&lt;String, String&gt;,
+<a href=#707 id=707 data-nosnippet>707</a>  denials: Denials,
+<a href=#708 id=708 data-nosnippet>708</a>  ended:   <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#709 id=709 data-nosnippet>709</a>}
+<a href=#710 id=710 data-nosnippet>710</a>
+<a href=#711 id=711 data-nosnippet>711</a><span class="doccomment">/// A chunk's refusals: the first `MAX_DENIALS` (within `MAX_DENIAL_BYTES`) kept, the rest counted.
+<a href=#712 id=712 data-nosnippet>712</a></span><span class="attr">#[derive(Default)]
+<a href=#713 id=713 data-nosnippet>713</a></span><span class="kw">struct </span>Denials {
+<a href=#714 id=714 data-nosnippet>714</a>  shown: Vec&lt;String&gt;,
+<a href=#715 id=715 data-nosnippet>715</a>  bytes: usize,
+<a href=#716 id=716 data-nosnippet>716</a>  more:  usize,
+<a href=#717 id=717 data-nosnippet>717</a>}
+<a href=#718 id=718 data-nosnippet>718</a>
+<a href=#719 id=719 data-nosnippet>719</a><span class="kw">impl </span>Denials {
+<a href=#720 id=720 data-nosnippet>720</a>  <span class="kw">fn </span>push(<span class="kw-2">&amp;mut </span><span class="self">self</span>, denial: String) {
+<a href=#721 id=721 data-nosnippet>721</a>    <span class="kw">if </span><span class="self">self</span>.shown.len() &lt; MAX_DENIALS &amp;&amp; <span class="self">self</span>.bytes + denial.len() &lt;= MAX_DENIAL_BYTES {
+<a href=#722 id=722 data-nosnippet>722</a>      <span class="self">self</span>.bytes += denial.len();
+<a href=#723 id=723 data-nosnippet>723</a>      <span class="self">self</span>.shown.push(denial);
+<a href=#724 id=724 data-nosnippet>724</a>    } <span class="kw">else </span>{
+<a href=#725 id=725 data-nosnippet>725</a>      <span class="self">self</span>.more += <span class="number">1</span>;
+<a href=#726 id=726 data-nosnippet>726</a>    }
+<a href=#727 id=727 data-nosnippet>727</a>  }
+<a href=#728 id=728 data-nosnippet>728</a>}
+<a href=#729 id=729 data-nosnippet>729</a>
+<a href=#730 id=730 data-nosnippet>730</a><span class="doccomment">/// A frame header's tag and length: `&lt;tag&gt; &lt;nonce&gt; &lt;length&gt;`, with this interpreter's nonce (a header without it
+<a href=#731 id=731 data-nosnippet>731</a>/// came from no prelude frame, OXIDIZED_DESIGN_DIVERGENCES #1081) and a length the bridge reads.
+<a href=#732 id=732 data-nosnippet>732</a></span><span class="kw">fn </span>parse_header&lt;<span class="lifetime">'h</span>&gt;(header: <span class="kw-2">&amp;</span><span class="lifetime">'h </span>str, nonce: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'h </span>str, usize), FrameError&gt; {
+<a href=#733 id=733 data-nosnippet>733</a>  <span class="kw">let </span><span class="kw-2">mut </span>fields = header.trim_end().splitn(<span class="number">3</span>, <span class="string">' '</span>);
+<a href=#734 id=734 data-nosnippet>734</a>  <span class="kw">let </span>(tag, sent, len) = (fields.next(), fields.next(), fields.next());
+<a href=#735 id=735 data-nosnippet>735</a>  <span class="kw">match </span>(tag, len.map(str::parse::&lt;usize&gt;)) {
+<a href=#736 id=736 data-nosnippet>736</a>    (<span class="prelude-val">Some</span>(tag), <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(n))) <span class="kw">if </span>sent == <span class="prelude-val">Some</span>(nonce) &amp;&amp; n &lt;= MAX_FRAME =&gt; <span class="prelude-val">Ok</span>((tag, n)),
+<a href=#737 id=737 data-nosnippet>737</a>    <span class="kw">_ if </span>sent == <span class="prelude-val">Some</span>(nonce) =&gt; <span class="prelude-val">Err</span>(FrameError::Protocol(<span class="macro">format!</span>(
+<a href=#738 id=738 data-nosnippet>738</a>      <span class="string">"a frame header '{}'"</span>,
+<a href=#739 id=739 data-nosnippet>739</a>      header.trim_end()
+<a href=#740 id=740 data-nosnippet>740</a>    ))),
+<a href=#741 id=741 data-nosnippet>741</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(FrameError::Protocol(
+<a href=#742 id=742 data-nosnippet>742</a>      <span class="string">"output that is not a frame (no session nonce)"</span>.to_string(),
+<a href=#743 id=743 data-nosnippet>743</a>    )),
+<a href=#744 id=744 data-nosnippet>744</a>  }
+<a href=#745 id=745 data-nosnippet>745</a>}
+<a href=#746 id=746 data-nosnippet>746</a>
+<a href=#747 id=747 data-nosnippet>747</a><span class="doccomment">/// Why a frame exchange failed: the pipe (the child ended) or a frame no prelude writes.
+<a href=#748 id=748 data-nosnippet>748</a></span><span class="kw">enum </span>FrameError {
+<a href=#749 id=749 data-nosnippet>749</a>  Io(std::io::Error),
+<a href=#750 id=750 data-nosnippet>750</a>  Protocol(String),
+<a href=#751 id=751 data-nosnippet>751</a>}
+<a href=#752 id=752 data-nosnippet>752</a>
+<a href=#753 id=753 data-nosnippet>753</a><span class="kw">impl </span>From&lt;std::io::Error&gt; <span class="kw">for </span>FrameError {
+<a href=#754 id=754 data-nosnippet>754</a>  <span class="kw">fn </span>from(e: std::io::Error) -&gt; <span class="self">Self </span>{ FrameError::Io(e) }
+<a href=#755 id=755 data-nosnippet>755</a>}
+<a href=#756 id=756 data-nosnippet>756</a>
+<a href=#757 id=757 data-nosnippet>757</a><span class="doccomment">/// Sends `chunk` and reads frames up to its final `OK`/`ERR`, servicing `Q`ueries and collecting `D`enials.
+<a href=#758 id=758 data-nosnippet>758</a></span><span class="kw">fn </span>exchange(
+<a href=#759 id=759 data-nosnippet>759</a>  p: <span class="kw-2">&amp;mut </span>LuaProc,
+<a href=#760 id=760 data-nosnippet>760</a>  chunk: <span class="kw-2">&amp;</span>str,
+<a href=#761 id=761 data-nosnippet>761</a>  denials: <span class="kw-2">&amp;mut </span>Denials,
+<a href=#762 id=762 data-nosnippet>762</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(bool, String), FrameError&gt; {
+<a href=#763 id=763 data-nosnippet>763</a>  <span class="kw">use </span>std::io::Read;
+<a href=#764 id=764 data-nosnippet>764</a>  p.stdin.write_all(<span class="macro">format!</span>(<span class="string">"{}\n"</span>, chunk.len()).as_bytes())<span class="question-mark">?</span>;
+<a href=#765 id=765 data-nosnippet>765</a>  p.stdin.write_all(chunk.as_bytes())<span class="question-mark">?</span>;
+<a href=#766 id=766 data-nosnippet>766</a>  p.stdin.write_all(<span class="string">b"\n"</span>)<span class="question-mark">?</span>;
+<a href=#767 id=767 data-nosnippet>767</a>  p.stdin.flush()<span class="question-mark">?</span>;
+<a href=#768 id=768 data-nosnippet>768</a>  <span class="comment">// The chunk may interleave 'Q'uery frames (live tex-state reads/writes)
+<a href=#769 id=769 data-nosnippet>769</a>  // before its final OK/ERR frame — service each against engine State.
+<a href=#770 id=770 data-nosnippet>770</a>  </span><span class="kw">loop </span>{
+<a href=#771 id=771 data-nosnippet>771</a>    <span class="kw">let </span><span class="kw-2">mut </span>header = String::new();
+<a href=#772 id=772 data-nosnippet>772</a>    (<span class="kw-2">&amp;mut </span>p.stdout).take(<span class="number">64</span>).read_line(<span class="kw-2">&amp;mut </span>header)<span class="question-mark">?</span>;
+<a href=#773 id=773 data-nosnippet>773</a>    <span class="kw">if </span>header.is_empty() {
+<a href=#774 id=774 data-nosnippet>774</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(FrameError::Io(std::io::ErrorKind::UnexpectedEof.into()));
+<a href=#775 id=775 data-nosnippet>775</a>    }
+<a href=#776 id=776 data-nosnippet>776</a>    <span class="kw">let </span>(tag, n) = parse_header(<span class="kw-2">&amp;</span>header, <span class="kw-2">&amp;</span>p.nonce)<span class="question-mark">?</span>;
+<a href=#777 id=777 data-nosnippet>777</a>    <span class="kw">let </span><span class="kw-2">mut </span>body = <span class="macro">vec!</span>[<span class="number">0u8</span>; n];
+<a href=#778 id=778 data-nosnippet>778</a>    p.stdout.read_exact(<span class="kw-2">&amp;mut </span>body)<span class="question-mark">?</span>;
+<a href=#779 id=779 data-nosnippet>779</a>    <span class="kw">let </span><span class="kw-2">mut </span>body = String::from_utf8_lossy(<span class="kw-2">&amp;</span>body).into_owned();
+<a href=#780 id=780 data-nosnippet>780</a>    <span class="kw">if </span><span class="macro">cfg!</span>(windows) {
+<a href=#781 id=781 data-nosnippet>781</a>      <span class="comment">// Undo the text-mode stdout: drop the `\r` written before each `\n` (a `\r\n` the chunk printed came
+<a href=#782 id=782 data-nosnippet>782</a>      // through as `\r\r\n`, and stays `\r\n`).
+<a href=#783 id=783 data-nosnippet>783</a>      </span>body = body.replace(<span class="string">"\r\n"</span>, <span class="string">"\n"</span>);
+<a href=#784 id=784 data-nosnippet>784</a>    }
+<a href=#785 id=785 data-nosnippet>785</a>    <span class="kw">match </span>tag {
+<a href=#786 id=786 data-nosnippet>786</a>      <span class="string">"D" </span>=&gt; denials.push(body),
+<a href=#787 id=787 data-nosnippet>787</a>      <span class="string">"Q" </span>=&gt; {
+<a href=#788 id=788 data-nosnippet>788</a>        <span class="kw">let </span>answer = service_query(<span class="kw-2">&amp;</span>body);
+<a href=#789 id=789 data-nosnippet>789</a>        p.stdin
+<a href=#790 id=790 data-nosnippet>790</a>          .write_all(<span class="macro">format!</span>(<span class="string">"A {}\n"</span>, answer.len()).as_bytes())<span class="question-mark">?</span>;
+<a href=#791 id=791 data-nosnippet>791</a>        p.stdin.write_all(answer.as_bytes())<span class="question-mark">?</span>;
+<a href=#792 id=792 data-nosnippet>792</a>        p.stdin.flush()<span class="question-mark">?</span>;
+<a href=#793 id=793 data-nosnippet>793</a>      },
+<a href=#794 id=794 data-nosnippet>794</a>      <span class="string">"OK" </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>((<span class="bool-val">true</span>, body)),
+<a href=#795 id=795 data-nosnippet>795</a>      <span class="string">"ERR" </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>((<span class="bool-val">false</span>, body)),
+<a href=#796 id=796 data-nosnippet>796</a>      <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(FrameError::Protocol(<span class="macro">format!</span>(<span class="string">"a frame tagged '{tag}'"</span>))),
+<a href=#797 id=797 data-nosnippet>797</a>    }
+<a href=#798 id=798 data-nosnippet>798</a>  }
+<a href=#799 id=799 data-nosnippet>799</a>}
+<a href=#800 id=800 data-nosnippet>800</a>
+<a href=#801 id=801 data-nosnippet>801</a><span class="kw">fn </span>exec_framed(chunk: <span class="kw-2">&amp;</span>str) -&gt; Framed {
+<a href=#802 id=802 data-nosnippet>802</a>  <span class="kw">let </span><span class="kw-2">mut </span>framed = Framed {
+<a href=#803 id=803 data-nosnippet>803</a>    result:  <span class="prelude-val">Ok</span>(String::new()),
+<a href=#804 id=804 data-nosnippet>804</a>    denials: Denials::default(),
+<a href=#805 id=805 data-nosnippet>805</a>    ended:   <span class="prelude-val">None</span>,
+<a href=#806 id=806 data-nosnippet>806</a>  };
+<a href=#807 id=807 data-nosnippet>807</a>  <span class="comment">// (a speculative run is undone, the interpreter's globals could not be: `\\author{First\\luaexec{n=(n or 0)+1}}`, which a second
+<a href=#808 id=808 data-nosnippet>808</a>  // `\\author` replaces, left its count for the body's `\\luaexec{tex.print(n or 0)}`, lualatex's 0)
+<a href=#809 id=809 data-nosnippet>809</a>  </span><span class="kw">if </span>latexml_core::gullet::in_speculative_digestion() {
+<a href=#810 id=810 data-nosnippet>810</a>    framed.result = <span class="prelude-val">Err</span>(<span class="string">"a speculative run evaluates no Lua"</span>.to_string());
+<a href=#811 id=811 data-nosnippet>811</a>    <span class="kw">return </span>framed;
+<a href=#812 id=812 data-nosnippet>812</a>  }
+<a href=#813 id=813 data-nosnippet>813</a>  LUA.with(|slot| {
+<a href=#814 id=814 data-nosnippet>814</a>    <span class="kw">let </span><span class="kw-2">mut </span>slot = slot.borrow_mut();
+<a href=#815 id=815 data-nosnippet>815</a>    <span class="kw">if </span>slot.unavailable {
+<a href=#816 id=816 data-nosnippet>816</a>      framed.result = <span class="prelude-val">Err</span>(<span class="string">"texlua not available"</span>.to_string());
+<a href=#817 id=817 data-nosnippet>817</a>      <span class="kw">return</span>;
+<a href=#818 id=818 data-nosnippet>818</a>    }
+<a href=#819 id=819 data-nosnippet>819</a>    <span class="kw">if </span>slot.ended &gt; MAX_RESTARTS {
+<a href=#820 id=820 data-nosnippet>820</a>      framed.result = <span class="prelude-val">Err</span>(<span class="macro">format!</span>(
+<a href=#821 id=821 data-nosnippet>821</a>        <span class="string">"texlua ended {} times in this conversion"</span>,
+<a href=#822 id=822 data-nosnippet>822</a>        slot.ended
+<a href=#823 id=823 data-nosnippet>823</a>      ));
+<a href=#824 id=824 data-nosnippet>824</a>      <span class="kw">return</span>;
+<a href=#825 id=825 data-nosnippet>825</a>    }
+<a href=#826 id=826 data-nosnippet>826</a>    <span class="kw">if </span>slot.proc_.is_none() {
+<a href=#827 id=827 data-nosnippet>827</a>      slot.proc_ = spawn();
+<a href=#828 id=828 data-nosnippet>828</a>      <span class="kw">if </span>slot.proc_.is_none() {
+<a href=#829 id=829 data-nosnippet>829</a>        slot.unavailable = <span class="bool-val">true</span>;
+<a href=#830 id=830 data-nosnippet>830</a>        framed.result = <span class="prelude-val">Err</span>(<span class="string">"texlua not available"</span>.to_string());
+<a href=#831 id=831 data-nosnippet>831</a>        <span class="kw">return</span>;
+<a href=#832 id=832 data-nosnippet>832</a>      }
+<a href=#833 id=833 data-nosnippet>833</a>    }
+<a href=#834 id=834 data-nosnippet>834</a>    <span class="comment">// Windows texlua reads stdin in text mode: a `\r\n` arrives as `\n`, one byte short of the frame's count, so
+<a href=#835 id=835 data-nosnippet>835</a>    // it is sent as the `\n` it would read (the prelude's `wire_len` covers the other direction).
+<a href=#836 id=836 data-nosnippet>836</a>    </span><span class="kw">let </span>chunk: std::borrow::Cow&lt;str&gt; = <span class="kw">if </span><span class="macro">cfg!</span>(windows) {
+<a href=#837 id=837 data-nosnippet>837</a>      chunk.replace(<span class="string">"\r\n"</span>, <span class="string">"\n"</span>).into()
+<a href=#838 id=838 data-nosnippet>838</a>    } <span class="kw">else </span>{
+<a href=#839 id=839 data-nosnippet>839</a>      chunk.into()
+<a href=#840 id=840 data-nosnippet>840</a>    };
+<a href=#841 id=841 data-nosnippet>841</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(proc_) = slot.proc_.as_mut() <span class="kw">else </span>{
+<a href=#842 id=842 data-nosnippet>842</a>      <span class="kw">return</span>;
+<a href=#843 id=843 data-nosnippet>843</a>    };
+<a href=#844 id=844 data-nosnippet>844</a>    framed.result = <span class="kw">match </span>exchange(proc_, <span class="kw-2">&amp;</span>chunk, <span class="kw-2">&amp;mut </span>framed.denials) {
+<a href=#845 id=845 data-nosnippet>845</a>      <span class="prelude-val">Ok</span>((<span class="bool-val">true</span>, body)) =&gt; <span class="prelude-val">Ok</span>(body),
+<a href=#846 id=846 data-nosnippet>846</a>      <span class="prelude-val">Ok</span>((<span class="bool-val">false</span>, body)) =&gt; <span class="prelude-val">Err</span>(body),
+<a href=#847 id=847 data-nosnippet>847</a>      <span class="prelude-val">Err</span>(error) =&gt; {
+<a href=#848 id=848 data-nosnippet>848</a>        <span class="comment">// The interpreter ended (a crash, `os.exit`) or broke the protocol: its output is lost and its state gone.
+<a href=#849 id=849 data-nosnippet>849</a>        // Dropping it kills and reaps the child; the next chunk starts a fresh one, up to MAX_RESTARTS times.
+<a href=#850 id=850 data-nosnippet>850</a>        </span>slot.proc_ = <span class="prelude-val">None</span>;
+<a href=#851 id=851 data-nosnippet>851</a>        slot.ended += <span class="number">1</span>;
+<a href=#852 id=852 data-nosnippet>852</a>        <span class="kw">let </span>why = <span class="kw">match </span>error {
+<a href=#853 id=853 data-nosnippet>853</a>          FrameError::Io(e) =&gt; <span class="macro">format!</span>(<span class="string">"the texlua interpreter ended ({e})"</span>),
+<a href=#854 id=854 data-nosnippet>854</a>          FrameError::Protocol(what) =&gt; <span class="macro">format!</span>(<span class="string">"the texlua interpreter sent {what}"</span>),
+<a href=#855 id=855 data-nosnippet>855</a>        };
+<a href=#856 id=856 data-nosnippet>856</a>        <span class="kw">let </span>next = <span class="kw">if </span>slot.ended &gt; MAX_RESTARTS {
+<a href=#857 id=857 data-nosnippet>857</a>          <span class="string">"; later chunks are not evaluated"
+<a href=#858 id=858 data-nosnippet>858</a>        </span>} <span class="kw">else </span>{
+<a href=#859 id=859 data-nosnippet>859</a>          <span class="string">"; the next chunk starts a fresh interpreter"
+<a href=#860 id=860 data-nosnippet>860</a>        </span>};
+<a href=#861 id=861 data-nosnippet>861</a>        framed.ended = <span class="prelude-val">Some</span>(<span class="macro">format!</span>(
+<a href=#862 id=862 data-nosnippet>862</a>          <span class="string">"{why}: this chunk's output and the Lua state are lost{next}"
+<a href=#863 id=863 data-nosnippet>863</a>        </span>));
+<a href=#864 id=864 data-nosnippet>864</a>        <span class="prelude-val">Err</span>(why)
+<a href=#865 id=865 data-nosnippet>865</a>      },
+<a href=#866 id=866 data-nosnippet>866</a>    };
+<a href=#867 id=867 data-nosnippet>867</a>  });
+<a href=#868 id=868 data-nosnippet>868</a>  framed
+<a href=#869 id=869 data-nosnippet>869</a>}
+<a href=#870 id=870 data-nosnippet>870</a>
+<a href=#871 id=871 data-nosnippet>871</a><span class="attr">#[cfg(test)]
+<a href=#872 id=872 data-nosnippet>872</a></span><span class="kw">mod </span>tests {
+<a href=#873 id=873 data-nosnippet>873</a>  <span class="kw">fn </span>lua_exec(chunk: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; { <span class="kw">super</span>::exec_framed(chunk).result }
+<a href=#874 id=874 data-nosnippet>874</a>
+<a href=#875 id=875 data-nosnippet>875</a>  <span class="doccomment">/// A frame header is accepted only with this interpreter's nonce and a length within `MAX_FRAME`; bytes without
+<a href=#876 id=876 data-nosnippet>876</a>  /// the nonce (a header a chunk forged, or stray output) are a broken protocol whatever their tag.
+<a href=#877 id=877 data-nosnippet>877</a>  </span><span class="attr">#[test]
+<a href=#878 id=878 data-nosnippet>878</a>  </span><span class="kw">fn </span>frame_headers_carry_the_session_nonce() {
+<a href=#879 id=879 data-nosnippet>879</a>    <span class="kw">use super</span>::{FrameError, parse_header};
+<a href=#880 id=880 data-nosnippet>880</a>    <span class="kw">let </span>nonce = <span class="kw">super</span>::session_nonce();
+<a href=#881 id=881 data-nosnippet>881</a>    <span class="macro">assert_eq!</span>(nonce.len(), <span class="number">32</span>);
+<a href=#882 id=882 data-nosnippet>882</a>    <span class="macro">assert_ne!</span>(nonce, <span class="kw">super</span>::session_nonce());
+<a href=#883 id=883 data-nosnippet>883</a>    <span class="kw">let </span>accepted = |header: <span class="kw-2">&amp;</span>str| <span class="kw">match </span>parse_header(header, <span class="kw-2">&amp;</span>nonce) {
+<a href=#884 id=884 data-nosnippet>884</a>      <span class="prelude-val">Ok</span>((tag, n)) =&gt; <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"{tag} {n}"</span>)),
+<a href=#885 id=885 data-nosnippet>885</a>      <span class="prelude-val">Err</span>(FrameError::Protocol(<span class="kw">_</span>)) =&gt; <span class="prelude-val">None</span>,
+<a href=#886 id=886 data-nosnippet>886</a>      <span class="prelude-val">Err</span>(FrameError::Io(e)) =&gt; <span class="macro">panic!</span>(<span class="string">"{e}"</span>),
+<a href=#887 id=887 data-nosnippet>887</a>    };
+<a href=#888 id=888 data-nosnippet>888</a>    <span class="macro">assert_eq!</span>(accepted(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"D {nonce} 7\n"</span>)).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"D 7"</span>));
+<a href=#889 id=889 data-nosnippet>889</a>    <span class="macro">assert_eq!</span>(
+<a href=#890 id=890 data-nosnippet>890</a>      accepted(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"OK {nonce} 0\r\n"</span>)).as_deref(),
+<a href=#891 id=891 data-nosnippet>891</a>      <span class="prelude-val">Some</span>(<span class="string">"OK 0"</span>)
+<a href=#892 id=892 data-nosnippet>892</a>    );
+<a href=#893 id=893 data-nosnippet>893</a>    <span class="macro">assert_eq!</span>(accepted(<span class="string">"OK 7\n"</span>), <span class="prelude-val">None</span>);
+<a href=#894 id=894 data-nosnippet>894</a>    <span class="macro">assert_eq!</span>(accepted(<span class="string">"D 0123456789abcdef0123456789abcdef 7\n"</span>), <span class="prelude-val">None</span>);
+<a href=#895 id=895 data-nosnippet>895</a>    <span class="macro">assert_eq!</span>(accepted(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"OK {nonce} 99999999999\n"</span>)), <span class="prelude-val">None</span>);
+<a href=#896 id=896 data-nosnippet>896</a>    <span class="macro">assert_eq!</span>(accepted(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"OK {nonce}\n"</span>)), <span class="prelude-val">None</span>);
+<a href=#897 id=897 data-nosnippet>897</a>  }
+<a href=#898 id=898 data-nosnippet>898</a>
+<a href=#899 id=899 data-nosnippet>899</a>  <span class="doccomment">/// The texlua child's environment allowlist: the search path, kpathsea's and the locale's variables pass, a
+<a href=#900 id=900 data-nosnippet>900</a>  /// variable outside the list does not; on Windows a name matches in any case (`Path` is PATH there).
+<a href=#901 id=901 data-nosnippet>901</a>  </span><span class="attr">#[test]
+<a href=#902 id=902 data-nosnippet>902</a>  </span><span class="kw">fn </span>child_env_allowlist_matches_names_as_the_host_does() {
+<a href=#903 id=903 data-nosnippet>903</a>    <span class="kw">use </span><span class="kw">super</span>::child_env_allowed;
+<a href=#904 id=904 data-nosnippet>904</a>    <span class="kw">for </span>kept <span class="kw">in </span>[
+<a href=#905 id=905 data-nosnippet>905</a>      <span class="string">"PATH"</span>,
+<a href=#906 id=906 data-nosnippet>906</a>      <span class="string">"TEXMFHOME"</span>,
+<a href=#907 id=907 data-nosnippet>907</a>      <span class="string">"KPATHSEA_DEBUG"</span>,
+<a href=#908 id=908 data-nosnippet>908</a>      <span class="string">"BIBINPUTS"</span>,
+<a href=#909 id=909 data-nosnippet>909</a>      <span class="string">"LC_ALL"</span>,
+<a href=#910 id=910 data-nosnippet>910</a>      <span class="string">"SYSTEMROOT"</span>,
+<a href=#911 id=911 data-nosnippet>911</a>    ] {
+<a href=#912 id=912 data-nosnippet>912</a>      <span class="macro">assert!</span>(child_env_allowed(kept), <span class="string">"{kept}"</span>);
+<a href=#913 id=913 data-nosnippet>913</a>    }
+<a href=#914 id=914 data-nosnippet>914</a>    <span class="kw">for </span>dropped <span class="kw">in </span>[
+<a href=#915 id=915 data-nosnippet>915</a>      <span class="string">"LATEXML_SECLUA_PROBE"</span>,
+<a href=#916 id=916 data-nosnippet>916</a>      <span class="string">"AWS_SECRET_ACCESS_KEY"</span>,
+<a href=#917 id=917 data-nosnippet>917</a>      <span class="string">"SSH_AUTH_SOCK"</span>,
+<a href=#918 id=918 data-nosnippet>918</a>    ] {
+<a href=#919 id=919 data-nosnippet>919</a>      <span class="macro">assert!</span>(!child_env_allowed(dropped), <span class="string">"{dropped}"</span>);
+<a href=#920 id=920 data-nosnippet>920</a>    }
+<a href=#921 id=921 data-nosnippet>921</a>    <span class="kw">for </span>spelled <span class="kw">in </span>[<span class="string">"Path"</span>, <span class="string">"SystemRoot"</span>, <span class="string">"windir"</span>, <span class="string">"Temp"</span>, <span class="string">"TexmfHome"</span>] {
+<a href=#922 id=922 data-nosnippet>922</a>      <span class="macro">assert_eq!</span>(child_env_allowed(spelled), <span class="macro">cfg!</span>(windows), <span class="string">"{spelled}"</span>);
+<a href=#923 id=923 data-nosnippet>923</a>    }
+<a href=#924 id=924 data-nosnippet>924</a>  }
+<a href=#925 id=925 data-nosnippet>925</a>
+<a href=#926 id=926 data-nosnippet>926</a>  <span class="kw">fn </span>texlua_present() -&gt; bool {
+<a href=#927 id=927 data-nosnippet>927</a>    std::process::Command::new(<span class="string">"texlua"</span>)
+<a href=#928 id=928 data-nosnippet>928</a>      .arg(<span class="string">"--version"</span>)
+<a href=#929 id=929 data-nosnippet>929</a>      .output()
+<a href=#930 id=930 data-nosnippet>930</a>      .is_ok_and(|o| o.status.success())
+<a href=#931 id=931 data-nosnippet>931</a>  }
+<a href=#932 id=932 data-nosnippet>932</a>
+<a href=#933 id=933 data-nosnippet>933</a>  <span class="doccomment">/// Chunk execution, persistent globals across calls, print vs sprint
+<a href=#934 id=934 data-nosnippet>934</a>  /// line semantics, and Lua-error reporting. Self-skips (green) without a
+<a href=#935 id=935 data-nosnippet>935</a>  /// host texlua — note the CI trimmed-TeX-Live trap: a green run here does
+<a href=#936 id=936 data-nosnippet>936</a>  /// not by itself prove the bridge ran.
+<a href=#937 id=937 data-nosnippet>937</a>  </span><span class="attr">#[test]
+<a href=#938 id=938 data-nosnippet>938</a>  </span><span class="kw">fn </span>bridge_executes_and_persists_state() {
+<a href=#939 id=939 data-nosnippet>939</a>    <span class="kw">if </span>!texlua_present() {
+<a href=#940 id=940 data-nosnippet>940</a>      <span class="kw">return</span>;
+<a href=#941 id=941 data-nosnippet>941</a>    }
+<a href=#942 id=942 data-nosnippet>942</a>    <span class="macro">assert_eq!</span>(lua_exec(<span class="string">"x = 6*7"</span>).as_deref(), <span class="prelude-val">Ok</span>(<span class="string">""</span>));
+<a href=#943 id=943 data-nosnippet>943</a>    <span class="macro">assert_eq!</span>(lua_exec(<span class="string">"tex.print(x)"</span>).as_deref(), <span class="prelude-val">Ok</span>(<span class="string">"42\n"</span>));
+<a href=#944 id=944 data-nosnippet>944</a>    <span class="macro">assert_eq!</span>(
+<a href=#945 id=945 data-nosnippet>945</a>      lua_exec(<span class="string">"tex.sprint('a')  tex.sprint('b')"</span>).as_deref(),
+<a href=#946 id=946 data-nosnippet>946</a>      <span class="prelude-val">Ok</span>(<span class="string">"ab"</span>)
+<a href=#947 id=947 data-nosnippet>947</a>    );
+<a href=#948 id=948 data-nosnippet>948</a>    <span class="comment">// Leading catcode-table number is ignored per LuaTeX convention.
+<a href=#949 id=949 data-nosnippet>949</a>    </span><span class="macro">assert_eq!</span>(lua_exec(<span class="string">"tex.sprint(0, 'c')"</span>).as_deref(), <span class="prelude-val">Ok</span>(<span class="string">"c"</span>));
+<a href=#950 id=950 data-nosnippet>950</a>    <span class="macro">assert!</span>(lua_exec(<span class="string">"this is not lua"</span>).is_err());
+<a href=#951 id=951 data-nosnippet>951</a>    <span class="comment">// The state survives an error.
+<a href=#952 id=952 data-nosnippet>952</a>    </span><span class="macro">assert_eq!</span>(lua_exec(<span class="string">"tex.print(x)"</span>).as_deref(), <span class="prelude-val">Ok</span>(<span class="string">"42\n"</span>));
+<a href=#953 id=953 data-nosnippet>953</a>  }
+<a href=#954 id=954 data-nosnippet>954</a>
+<a href=#955 id=955 data-nosnippet>955</a>  <span class="doccomment">/// Rebind-as-we-emulate shims for engine intents texlua itself cannot carry
+<a href=#956 id=956 data-nosnippet>956</a>  /// (its built-in `tex` table holds only run/initialize/finish — every
+<a href=#957 id=957 data-nosnippet>957</a>  /// `tex.*` an author's chunk touches is OUR shim, so the only question is
+<a href=#958 id=958 data-nosnippet>958</a>  /// how deep each shim goes; docs/perfect_kernel/LUA_REBINDING.md).
+<a href=#959 id=959 data-nosnippet>959</a>  /// Witnesses (TL2025 doc corpus, clean-lualatex slice):
+<a href=#960 id=960 data-nosnippet>960</a>  ///   derivative/derivative — `pdf.setmajorversion(2)` backend intent,
+<a href=#961 id=961 data-nosnippet>961</a>  ///     meaningless for XML output → absorb (accept, do nothing);
+<a href=#962 id=962 data-nosnippet>962</a>  ///   abntexto/abntexto + abntexto-uece — `tex.primitives()` feeds a
+<a href=#963 id=963 data-nosnippet>963</a>  ///     listings texcs highlight list → absorb as an empty table (the
+<a href=#964 id=964 data-nosnippet>964</a>  ///     loop body degrades to "no extra highlighted names", no error);
+<a href=#965 id=965 data-nosnippet>965</a>  ///   newpax/newpax — `require("newpax")` resolves a texmf-shipped Lua
+<a href=#966 id=966 data-nosnippet>966</a>  ///     module → rebind require through texlua's built-in kpse (plus
+<a href=#967 id=967 data-nosnippet>967</a>  ///     lualibs, which supplies the `file` library lualatex gets from
+<a href=#968 id=968 data-nosnippet>968</a>  ///     luaotfload; measured 89 ms one-time load).
+<a href=#969 id=969 data-nosnippet>969</a>  </span><span class="attr">#[test]
+<a href=#970 id=970 data-nosnippet>970</a>  </span><span class="kw">fn </span>rebound_engine_intents_absorb_and_resolve() {
+<a href=#971 id=971 data-nosnippet>971</a>    <span class="kw">if </span>!texlua_present() {
+<a href=#972 id=972 data-nosnippet>972</a>      <span class="kw">return</span>;
+<a href=#973 id=973 data-nosnippet>973</a>    }
+<a href=#974 id=974 data-nosnippet>974</a>    <span class="macro">assert_eq!</span>(
+<a href=#975 id=975 data-nosnippet>975</a>      lua_exec(<span class="string">"pdf.setmajorversion(2) pdf.setminorversion(0)"</span>).as_deref(),
+<a href=#976 id=976 data-nosnippet>976</a>      <span class="prelude-val">Ok</span>(<span class="string">""</span>)
+<a href=#977 id=977 data-nosnippet>977</a>    );
+<a href=#978 id=978 data-nosnippet>978</a>    <span class="macro">assert_eq!</span>(
+<a href=#979 id=979 data-nosnippet>979</a>      lua_exec(<span class="string">"for k,v in pairs(tex.primitives()) do tex.print(k, v .. ',') end"</span>).as_deref(),
+<a href=#980 id=980 data-nosnippet>980</a>      <span class="prelude-val">Ok</span>(<span class="string">""</span>)
+<a href=#981 id=981 data-nosnippet>981</a>    );
+<a href=#982 id=982 data-nosnippet>982</a>    <span class="comment">// texmf Lua-module resolution — only meaningful where kpse can see the
+<a href=#983 id=983 data-nosnippet>983</a>    // module (trimmed-TL CI hosts self-skip, same trap as the bridge test).
+<a href=#984 id=984 data-nosnippet>984</a>    </span><span class="kw">let </span>newpax_installed = std::process::Command::new(<span class="string">"kpsewhich"</span>)
+<a href=#985 id=985 data-nosnippet>985</a>      .arg(<span class="string">"newpax.lua"</span>)
+<a href=#986 id=986 data-nosnippet>986</a>      .output()
+<a href=#987 id=987 data-nosnippet>987</a>      .is_ok_and(|o| o.status.success() &amp;&amp; !o.stdout.is_empty());
+<a href=#988 id=988 data-nosnippet>988</a>    <span class="kw">if </span>newpax_installed {
+<a href=#989 id=989 data-nosnippet>989</a>      <span class="macro">assert_eq!</span>(
+<a href=#990 id=990 data-nosnippet>990</a>        lua_exec(<span class="string">"local ok = pcall(require, 'newpax') tex.sprint(ok and 'R1' or 'R0')"</span>).as_deref(),
+<a href=#991 id=991 data-nosnippet>991</a>        <span class="prelude-val">Ok</span>(<span class="string">"R1"</span>)
+<a href=#992 id=992 data-nosnippet>992</a>      );
+<a href=#993 id=993 data-nosnippet>993</a>    }
+<a href=#994 id=994 data-nosnippet>994</a>  }
+<a href=#995 id=995 data-nosnippet>995</a>
+<a href=#996 id=996 data-nosnippet>996</a>  <span class="attr">#[test]
+<a href=#997 id=997 data-nosnippet>997</a>  </span><span class="kw">fn </span>sandbox_denies_io_tmpfile() {
+<a href=#998 id=998 data-nosnippet>998</a>    <span class="kw">if </span>!texlua_present() {
+<a href=#999 id=999 data-nosnippet>999</a>      <span class="kw">return</span>;
+<a href=#1000 id=1000 data-nosnippet>1000</a>    }
+<a href=#1001 id=1001 data-nosnippet>1001</a>    <span class="kw">super</span>::reset_session();
+<a href=#1002 id=1002 data-nosnippet>1002</a>    <span class="kw">let </span>res = lua_exec(<span class="string">"local f = io.tmpfile() if f then f:close() end"</span>);
+<a href=#1003 id=1003 data-nosnippet>1003</a>    <span class="macro">assert!</span>(
+<a href=#1004 id=1004 data-nosnippet>1004</a>      res.is_err(),
+<a href=#1005 id=1005 data-nosnippet>1005</a>      <span class="string">"io.tmpfile() must be denied by the document Lua sandbox, got: {res:?}"
+<a href=#1006 id=1006 data-nosnippet>1006</a>    </span>);
+<a href=#1007 id=1007 data-nosnippet>1007</a>  }
+<a href=#1008 id=1008 data-nosnippet>1008</a>}
 </code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["lex_single_tex_formula","new_test_engine"]};
+window.SIDEBAR_ITEMS = {"fn":["lex_single_tex_formula","new_test_engine","try_lex_single_tex_formula"],"type":["LexedFormula"]};
