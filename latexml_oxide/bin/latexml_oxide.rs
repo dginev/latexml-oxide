@@ -43,6 +43,42 @@ fn xslt_parameter_arg(param: &str) -> Result<String, String> {
   }
 }
 
+/// Accepted `--format` values (case-insensitive, normalized to lowercase).
+/// Matches `post::default_stylesheet` plus `xml`; Perl `Config.pm` L550
+/// similarly rejects an unrecognized target format.
+fn format_arg(raw: &str) -> Result<String, String> {
+  let lower = raw.to_ascii_lowercase();
+  match lower.as_str() {
+    "html5" | "html" | "xhtml" | "xml" | "epub" | "epub3" => Ok(lower),
+    _ => Err(format!(
+      "unrecognized format '{raw}' (expected one of: html5, html, xhtml, xml, epub, epub3)"
+    )),
+  }
+}
+
+/// Accepted `--whatsin` values (case-insensitive, normalized to lowercase).
+fn whatsin_arg(raw: &str) -> Result<String, String> {
+  let lower = raw.to_ascii_lowercase();
+  match lower.as_str() {
+    "document" | "fragment" | "math" | "archive" | "directory" | "xml" => Ok(lower),
+    _ => Err(format!(
+      "unrecognized --whatsin '{raw}' (expected one of: document, fragment, math, archive, directory, xml)"
+    )),
+  }
+}
+
+/// Accepted `--whatsout` values (case-insensitive, normalized to lowercase).
+/// Delegates to `Whatsout::from_cli` so `archive::*` variants stay in sync.
+fn whatsout_arg(raw: &str) -> Result<String, String> {
+  let lower = raw.to_ascii_lowercase();
+  match latexml_post::extract::Whatsout::from_cli(&lower) {
+    Some(_) => Ok(lower),
+    None => Err(format!(
+      "unrecognized --whatsout '{raw}' (expected one of: document, fragment, math, archive)"
+    )),
+  }
+}
+
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
 // `args_override_self`: an option given twice keeps its last value, as GetOpt::Long does (#530).
@@ -75,9 +111,9 @@ struct Cli {
   #[arg(long)]
   source: Option<String>,
 
-  /// Output format: html5, html, xhtml, xml, epub. Inferred from the --dest
-  /// extension when omitted; falls back to xml.
-  #[arg(long)]
+  /// Output format: html5, html, xhtml, xml, epub, epub3. Inferred from the
+  /// --dest extension when omitted; falls back to xml.
+  #[arg(long, value_parser = format_arg)]
   format: Option<String>,
 
   /// Shortcut for --format=xml: emit the raw LaTeXML XML with no HTML
@@ -131,6 +167,16 @@ struct Cli {
   /// Suppress the TeX-source annotation on MathML.
   #[arg(long, overrides_with = "mathtex")]
   nomathtex: bool,
+
+  /// Add a UnicodeMath (plain-text math) annotation to the MathML, after any
+  /// Content MathML and before the TeX one; with --nopmml and no --cmml,
+  /// UnicodeMath is the only math output.
+  #[arg(long, overrides_with = "nounicodemath")]
+  unicodemath: bool,
+
+  /// Suppress the UnicodeMath annotation (the default).
+  #[arg(long, overrides_with = "unicodemath")]
+  nounicodemath: bool,
 
   /// Replace invisible-times operators (U+2062) with a zero-width space.
   #[arg(long, overrides_with = "invisibletimes")]
@@ -264,7 +310,7 @@ struct Cli {
   /// embeddable inline snippet), `math` (just the math subtree), or `archive`
   /// (the page + resources zipped — also implied by a `.zip` --dest, and writes
   /// `<source-name>.zip` when --dest is omitted).
-  #[arg(long, value_name = "TYPE")]
+  #[arg(long, value_name = "TYPE", value_parser = whatsout_arg)]
   whatsout: Option<String>,
 
   /// Shortcut for --whatsout=fragment: emit an embeddable inline snippet.
@@ -372,7 +418,8 @@ struct Cli {
   #[arg(long)]
   schemadocs: bool,
 
-  /// Write the conversion log to this file (default: stderr).
+  /// Write the conversion log to this file (default: `<source>.log` in the
+  /// current directory, or `latexml.log` for literal/stdin sources).
   #[arg(long, value_name = "PATH")]
   log: Option<String>,
 
@@ -383,7 +430,7 @@ struct Cli {
   /// implied by a trailing `/`), or `xml` (an already-converted LaTeXML core
   /// document to post-process directly — forces the XML-input path regardless of
   /// the file's extension; also implied by a `.xml`/`*-xml`/`*_xml` extension).
-  #[arg(long, value_name = "TYPE")]
+  #[arg(long, value_name = "TYPE", value_parser = whatsin_arg)]
   whatsin: Option<String>,
 
   /// TeX file effectively prepended to the document (implies --whatsin=fragment).
@@ -473,8 +520,8 @@ struct Cli {
   dump_model: bool,
 
   /// Append a one-line JSON telemetry record for this job to this file (or set
-  /// env `LATEXML_TELEMETRY_OUT`); batch runs accumulate a JSONL. Written only
-  /// on a successful conversion.
+  /// env `LATEXML_TELEMETRY_OUT`); batch runs accumulate a JSONL. Written for
+  /// both successful and fatal conversions.
   #[arg(long, value_name = "PATH")]
   telemetry_out: Option<String>,
 
@@ -569,6 +616,7 @@ struct ResolvedOptions {
   cmml:              bool,
   keep_xmath:        bool,
   mathtex:           bool,
+  unicodemath:       bool,
   noinvisibletimes:  bool,
   plane1:            bool,
   default_resources: bool,
@@ -598,6 +646,7 @@ impl ResolvedOptions {
       cmml:              chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
       keep_xmath:        chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
       mathtex:           chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
+      unicodemath:       chosen_by_clap(cli.unicodemath, cli.nounicodemath).unwrap_or(false),
       noinvisibletimes:  chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
       // Perl `MathML.pm` L70: `--hackplane1` forces plane1 on; otherwise the
       // pair is last-wins over a default-on.
@@ -789,6 +838,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
   // Guard hook for the worker-panic verdict path (`cluster_cli`): a panic
   // injected here must surface as `Fatal:panic:caught` + the final verdict.
+  // Gated off in release distribution builds so no env var can crash the CLI.
+  #[cfg(any(debug_assertions, feature = "test-utils"))]
   if std::env::var_os("LATEXML_INJECT_PANIC").is_some() {
     panic!("LATEXML_INJECT_PANIC");
   }
@@ -1018,6 +1069,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     .clone()
     .filter(|lp| !(is_archive_out && Path::new(lp).is_file()));
 
+  // Arm the watchdog before unpacking untrusted archives so zip/tar bombs
+  // respect `--timeout` and `--max-memory` (and remove registered temp dirs).
+  // `--init` mode runs without a watchdog.
+  let max_memory = resolve_max_memory(cli.max_memory);
+  let _watchdog = cli.init.is_none().then(|| {
+    latexml_core::watchdog::Watchdog::with_limits(cli.timeout, max_memory.saturating_mul(1024))
+  });
+
   // --whatsin=archive: extract archive to temp directory, find main .tex file
   let mut path_flags = cli.search_paths.clone();
   // The unpacked archive, held for the duration of processing; every later exit goes through `exit_removing`, and
@@ -1032,7 +1091,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // The source's date (`latexml::source_date`): ar5iv's archival clock for `\today`.
   let mut source_date_epoch = None;
   let source = if is_archive_mode {
-    let (tempdir, main_tex) = match unpack_archive(&source) {
+    let (tempdir, on_exit, main_tex) = match unpack_archive(&source) {
       Ok(r) => r,
       Err(failure) => {
         fatal_before_conversion(external_log.as_deref(), &failure, &mut archive_tempdir)
@@ -1047,7 +1106,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       latexml::source_date::of_archive(Path::new(&source), main_in_archive.as_deref());
     let dir_str = tempdir.path().to_string_lossy().to_string();
     path_flags.push(dir_str);
-    _archive_on_exit = Some(latexml_core::watchdog::remove_on_exit(tempdir.path()));
+    _archive_on_exit = Some(on_exit);
     archive_tempdir = Some(tempdir);
     main_tex
   } else {
@@ -1257,17 +1316,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // Normal mode: convert document
     //
     // Two-layer timeout: the cooperative stomach::check_timeout gives a graceful
-    // Err(Fatal) when the digestion loop can poll it, and the Watchdog forcibly
-    // aborts the process if the deadline is reached without cooperation (e.g. a
-    // tight native loop in Marpa / libxml2 / libxslt). The Watchdog cancels
-    // automatically on drop at end of main. `--max-memory` rides the same
-    // Watchdog (it was previously a silent no-op outside `--server`).
-    // Resolve the ceiling ONCE: unset means "derive it from this machine"
-    // (90 % of physical RAM, capped at 64 GiB), so both the hard Watchdog below
-    // and the cooperative fuse agree on the same number.
-    let max_memory = resolve_max_memory(cli.max_memory);
-    let _watchdog =
-      latexml_core::watchdog::Watchdog::with_limits(cli.timeout, max_memory.saturating_mul(1024));
+    // Err(Fatal) when the digestion loop can poll it, and the Watchdog (armed
+    // above before archive unpacking) forcibly aborts the process if the
+    // deadline is reached without cooperation (e.g. a tight native loop in
+    // Marpa / libxml2 / libxslt).
     // `--max-memory` (or its `LATEXML_MAX_MEMORY` env) is the SINGLE memory
     // knob. The hard Watchdog ceiling above rides it directly; the cooperative
     // stomach RSS fuse is DERIVED from it (a fixed fraction below, leaving
@@ -1475,6 +1527,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       let do_post = resolved.post.unwrap_or(
         resolved.pmml.unwrap_or(false)
           || resolved.cmml
+          // Perl Config.pm L447-449: any requested math format implies post.
+          || resolved.unicodemath
           || effective_stylesheet.is_some()
           || is_html_format
           || split_enabled
@@ -1591,6 +1645,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           js_files: &cli.js_files,
           noinvisibletimes: resolved.noinvisibletimes,
           mathtex: resolved.mathtex,
+          unicodemath: resolved.unicodemath,
           plane1: resolved.plane1,
           hackplane1: cli.hackplane1,
           // Perl `--urlstyle` (Config.pm L482 defaults to `server`; we default
@@ -2145,40 +2200,45 @@ fn fatal_before_conversion(
   exit_removing(archive_tempdir, 1)
 }
 
-fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), InputFailure> {
+fn unpack_archive(
+  archive_path: &str,
+) -> Result<
+  (
+    tempfile::TempDir,
+    latexml_core::watchdog::RemoveOnExit,
+    String,
+  ),
+  InputFailure,
+> {
   let unreadable = |e: &dyn std::fmt::Display| InputFailure::unreadable(archive_path, e);
-  let (tempdir, dest) = unpack_archive_files(archive_path).map_err(|e| unreadable(&e))?;
+  let (tempdir, on_exit, dest) = unpack_archive_files(archive_path).map_err(|e| unreadable(&e))?;
   // Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
   // or one containing \documentclass)
   let main_tex = latexml::main_tex::find_main_tex(&dest)
     .map_err(|e| InputFailure::no_main_tex(archive_path, &e))?;
-  Ok((tempdir, main_tex.to_string_lossy().to_string()))
+  Ok((tempdir, on_exit, main_tex.to_string_lossy().to_string()))
 }
 
-/// Extract `archive_path` into a fresh temporary directory, returned with its path.
+/// Extract `archive_path` into a fresh temporary directory, registered with the
+/// watchdog immediately on creation so timeout/OOM during extraction cleans up.
 fn unpack_archive_files(
   archive_path: &str,
-) -> Result<(tempfile::TempDir, std::path::PathBuf), Box<dyn Error>> {
+) -> Result<
+  (
+    tempfile::TempDir,
+    latexml_core::watchdog::RemoveOnExit,
+    std::path::PathBuf,
+  ),
+  Box<dyn Error>,
+> {
   let tempdir = tempfile::tempdir()?;
+  let on_exit = latexml_core::watchdog::remove_on_exit(tempdir.path());
   let dest = tempdir.path();
 
   if archive_path.ends_with(".zip") {
-    // Primary format: ZIP
     let file = File::open(archive_path)?;
-    let mut archive = zip::ZipArchive::new(file)?;
-    for i in 0..archive.len() {
-      let mut entry = archive.by_index(i)?;
-      let outpath = dest.join(entry.mangled_name()?);
-      if entry.is_dir() {
-        std::fs::create_dir_all(&outpath)?;
-      } else {
-        if let Some(parent) = outpath.parent() {
-          std::fs::create_dir_all(parent)?;
-        }
-        let mut outfile = File::create(&outpath)?;
-        std::io::copy(&mut entry, &mut outfile)?;
-      }
-    }
+    let archive = zip::ZipArchive::new(file)?;
+    latexml::util::unpack_zip(archive, dest)?;
   } else if archive_path.ends_with(".tar.gz") || archive_path.ends_with(".tgz") {
     let file = File::open(archive_path)?;
     let gz = flate2::read::GzDecoder::new(file);
@@ -2190,7 +2250,7 @@ fn unpack_archive_files(
     return Err(format!("Unsupported archive format: {}", archive_path).into());
   }
   let dest = dest.to_path_buf();
-  Ok((tempdir, dest))
+  Ok((tempdir, on_exit, dest))
 }
 
 // Output-zip packing moved to `latexml_post::pack::pack_archive`
@@ -2489,6 +2549,11 @@ mod boolean_flag_last_wins_tests {
     let c = cli(&["--nomathtex", "--mathtex"]);
     assert_eq!(chosen_by_clap(c.mathtex, c.nomathtex), Some(true));
 
+    let c = cli(&["--nounicodemath", "--unicodemath"]);
+    assert_eq!(chosen_by_clap(c.unicodemath, c.nounicodemath), Some(true));
+    let c = cli(&["--unicodemath", "--nounicodemath"]);
+    assert_eq!(chosen_by_clap(c.unicodemath, c.nounicodemath), Some(false));
+
     let c = cli(&["--invisibletimes", "--noinvisibletimes"]);
     assert_eq!(
       chosen_by_clap(c.noinvisibletimes, c.invisibletimes),
@@ -2543,6 +2608,7 @@ mod boolean_flag_last_wins_tests {
     assert!(!r.cmml);
     assert!(!r.keep_xmath);
     assert!(!r.mathtex);
+    assert!(!r.unicodemath);
     assert!(!r.noinvisibletimes);
     assert!(r.default_resources, "default_resources defaults ON");
     assert!(!r.split_enabled);
@@ -2613,5 +2679,43 @@ mod xsltparameter_tests {
     assert!(params(&["--xsltparameter=FOO:bar", "--xsltparameter", "X=y"]).is_ok());
     let err = params(&["--xsltparameter=FOO"]).expect_err("malformed");
     assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation);
+  }
+
+  #[test]
+  fn format_whatsin_whatsout_validate_and_normalize() {
+    let parse = |flags: &[&str]| {
+      let mut argv = vec!["latexml_oxide"];
+      argv.extend_from_slice(flags);
+      argv.push("src.tex");
+      Cli::try_parse_from(argv)
+    };
+    assert_eq!(
+      parse(&["--format=HTML5"]).unwrap().format.as_deref(),
+      Some("html5")
+    );
+    assert_eq!(
+      parse(&["--format=epub3"]).unwrap().format.as_deref(),
+      Some("epub3")
+    );
+    assert_eq!(
+      parse(&["--whatsin=XML"]).unwrap().whatsin.as_deref(),
+      Some("xml")
+    );
+    assert_eq!(
+      parse(&["--whatsout=archive::zip"])
+        .unwrap()
+        .whatsout
+        .as_deref(),
+      Some("archive::zip")
+    );
+    for bad in [
+      "--format=jats",
+      "--format=bogus",
+      "--whatsin=bogus",
+      "--whatsout=bogus",
+    ] {
+      let err = parse(&[bad]).expect_err(bad);
+      assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation, "{bad}");
+    }
   }
 }

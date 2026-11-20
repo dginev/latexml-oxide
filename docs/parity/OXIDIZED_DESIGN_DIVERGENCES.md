@@ -1993,6 +1993,16 @@ class would have printed.
 cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
 
+astron.sty's `\cite` (0812.2799, 0812.4839; copied by EslabStyle.cls:1442-1445 astro-ph0001290, ISOStyle.cls:1446-1449
+astro-ph0008362, and the EAS classes) is `\@ifstar{\citeyear}{\citefull}`, and its `\citefull` =
+`\def\astroncite##1##2{##1, ##2}\@internalcite` is the only definition of the `\astroncite{A}{Y}` that astron.bst writes
+into the `\bibitem` labels. With that `\cite` refused, the labels were `Error:undefined:\astroncite` (Perl and pdflatex
+0). Where the lock refused a `\cite`, `\astroncite` is undefined and `\citefull` opens with `\def\astroncite`, the
+kernel `\cite`'s first call runs the copy's own `\citefull` definition (its `\@internalcite` tail dropped) and keeps it
+global for the deferred labels (`sect11.rs` `astroncite_from_refused_cite`). The full form throughout: the starred
+call's year-only form is the class's label style, which the lock does not keep. Guard
+`perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`).
+
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)
 re-`\edef`/`\let` the target but preserve the original via `\expandonce#2`, so
@@ -2004,6 +2014,20 @@ References vanished with no diagnostic. The etoolbox binding therefore opens a
 scoped unlock window (`state_is_unlocked()`) around JUST the hook's assignment to
 `#2` — `\lx@etb@unlock`/`\lx@etb@relock` in `etoolbox_sty.rs`; a plain
 `\def`/`\renewcommand` from raw source is outside the window and stays refused.
+
+**The star (2026-11-18).** A class whose own `\cite` takes a star for a label style
+(EslabStyle.cls:1443, ISOStyle.cls:1447 `\def\cite{\@ifstar{\citeyear}{\citefull}}`) is
+refused like any other, so the kernel `\cite` reads `\cite[] Semiverbatim` and the
+`*` was the key: a missing citation `*`, then the braced key as text (its `_` out of
+math; astro-ph0001290, astro-ph0008362, astro-ph0005563). The kernel `\cite` reads
+`OptionalMatch:*` and drops it, as the natbib binding's `\cite*` does: one
+citation, only the label style differs — the rationale above. latex.ltx's own
+`\cite` has no star (`\cite*{k}` cites `*` there: latex.ltx writes `\citation{*}`, BibTeX's
+nocite-all, with no warning), so a paper with the kernel `\cite` alone gets a citation of `k`
+where pdflatex (TL 2025) prints `[]k`. The `\astroncite` of astron.sty and the classes that
+copy it (EslabStyle, ISOStyle, EAS; 0812.2799, 0812.4839), defined only inside their refused
+`\cite`, stays undefined in a `\bibitem[\protect\astroncite{A}{Y}]` label (one Error; row R).
+Guard `perfect_kernel_batchclustfix::starred_cite_under_the_lock`.
 
 Guards: `bib_raw_cite_redefinition_is_ignored` (raw redefinition refused) and
 `etoolbox_pretocmd_assigns_through_cite_lock` (non-destructive hook allowed).
@@ -10314,7 +10338,9 @@ in TeX, not typeset).
 ### 509. `\endabstract` is locked against redefinition from files (Perl: unlocked)
 
 `\endabstract:locked@files`: a package's `\endabstract` no longer replaces the kernel's (Perl's is unlocked).
-Witness 1606.05599 (its bibliography and abstract are reached again).
+Witness 1606.05599 (its bibliography and abstract are reached again). Exception: a file's `\endabstract` paired with
+its own `\beginabstract` is its own (nanosymp.sty:25-31, cond-mat0105361; `files_lock_holds`, state.rs); the lock
+holds against a file whose `\abstract` redefinition was refused too (IMjournal.sty:81/83, 1702.00108, 2304.05575; #1101).
 
 ### 510. Only a TeX `\item` or `\bibitem` steps the bibliography counter (Perl: recovery entries are numbered)
 
@@ -11880,6 +11906,39 @@ for the names still undefined. An elsarticle-num `.bbl` defines `\path` only whe
 `{\path{doi:…}}` entries were undefined once `\href` was supplied (2605.07373, 2605.08166, 2605.12003). Witnesses
 cond-mat0407333, cs0409028, hep-th0411273, 1001.4826 (`\doi` → `\href`); guards `perfect_kernel_batch67a`.
 
+The rest of arXiv's hyperref a paper relies on unloaded is provided on first use (DG rulings 2026-11-19): the preload
+names, per family, a provider for each command (`kernel_autoload::name_first_use_provider`), and an undefined name of
+the family met anywhere — executed, expanded, in an `\edef` body, after `\expandafter` — runs the provider once, which
+defines the family globally where still undefined (Binding origin, provide-only), and the name is read again
+(`provide_on_first_use`, asked at every undefined-CS site after the kernel autoload). Nothing is predefined, so
+`\ifdefined`, `\@ifundefined`, `\@ifpackageloaded` and a paper's own `\newcommand` see what pdflatex without the
+package sees; Perl has no such seam. The families, each sharing the binding's definitions: hyperref's
+`\texorpdfstring` (keeps its TeX string; a title printed both strings after an `undefined` Error — ~170 papers of the
+full 2026 run by extrapolation, 73 counted so far; hep-th0702068, 0704.3213, hep-th0210192); hyperref's
+`\hypersetup` with its keys, `\hyperref`, `\hyperlink`, `\hypertarget`, `\phantomsection`, `\autoref` with its tag and
+English names, nameref's `\nameref`, the bookmark commands (math0202134, hep-th0308186, 0807.4242, 0803.2070); and the
+user commands of atbegshi, which hyperref 6.77a (2007-10-29) to 7.01m (2025-05-20) loaded (hyperref ChangeLog.txt
+:1575, :37; atbegshi-ltx.sty :52-71). A target numbered before the paper's first `\autoref` has no autoref tag (the
+tag formatter is defined at that first use), so a reference back to it shows the target's title, or for an untitled one
+its enclosing unit's (an equation reads as its section's title), not hyperref's "Equation 1": 2 of 74 autorefs on 4
+witnesses (0803.2070 `#Ch0.E1`, 1010.2520 `#S2.SS1`; row R AUTOREFBACK). What pdflatex prints on a page through the
+hooks — a page's upper-left picture (`\AtBeginShipoutUpperLeft…`) or its background or foreground box
+(`\AtBeginShipoutAddToBox…`, atbegshi-ltx.sty :59-62) set in the material of `\AtBeginShipout` or `…Next`, and the first
+page's material (`\AtBeginShipoutFirst`) — is the paper's page notice and is kept once as a publication note
+(`role=note`, no label); the rest of the hook material (`\AtBeginShipoutDiscard`, `\setbox\AtBeginShipoutBox…`,
+assignments) is dropped unrun. The note carries the words, not the page geometry: atbegshi's `picture(0,0)` is not set
+up, a `\put(x,y){…}` keeps its `{…}`, material with a picture (a `tikzpicture` overlay) gives its text alone, and
+material printing no text (a rule, an image, 1612.04433's tikz highlighter) makes no note. Used outside a shipout
+hook — directly, or in `\AtBeginShipoutFirst`'s own material — the picture and box commands add to the shipout box
+when no page is being shipped (latex.ltx:20069, :20200): pdflatex prints none of it, and they do nothing. Witnesses
+2309.06611's IEEE copyright, 2403.15239's conference line, 2302.00362's "Preprint of the paper which appeared in:
+European Conference on Mobile Robots (ECMR) 2021" (printed after an Error before). A notice behind a macro of the paper's is not seen.
+`\AtBeginShipoutBox` is the kernel's `\ShipoutBox`, `\AtBeginShipoutOriginalShipout` is `\shipout`, the
+`\ShipoutBox{Height,Depth,Width}` are 0pt. Preamble uses (85% of the run's `\AtBeginShipout` papers, 97 of 114:
+lpor2014.cls:2987 in 1503.07687, A&A and mnras preambles 1601.07542, 1605.02911) and body uses (1607.05658,
+1610.04548, 2507.04353) lose their Errors alike. The `\href`/`\url` step stays at `\begin{document}`; a preamble use
+that left an Error's stub no longer counts as the paper's definition there. Guards `perfect_kernel_batchhyperprov`.
+
 ### 589. → Bindings beyond Perl's tree: diagrams.tex (`diagrams_tex.rs`)
 
 ### 590. → Bindings beyond Perl's tree: pict2e.sty (`pict2e_sty.rs`)
@@ -12660,7 +12719,8 @@ Excluded: the frontmatter containers `ltx:abstract`, `ltx:acknowledgements`, `lt
 `ltx:creator`, and anything inside one (document.rs `outside_frontmatter_container`) — a theorem or a TOC in an
 abstract is a frontmatter question (what the abstract's model should hold, whether the block belongs in the
 frontmatter at all) that the pending frontmatter study decides, so there the Perl/base "isn't allowed" Error stands
-(main-session ruling 2026-10-17; guard `perfect_kernel_batch69c::theorem_in_abstract_is_not_bridged`).
+(main-session ruling 2026-10-17) — a theorem or proof in an abstract is dissolved into it since DG's ruling of 2026-11-19
+(#1097; guard `perfect_kernel_batch69c::theorem_in_abstract_is_dissolved_not_bridged`).
 Witnesses 2406.11811 2103.03402 0806.0214 2602.15784 2301.10544 1410.7242 (theorem in a quote), 1412.2039 math0603642
 (TOC in a quote), 2507.09788 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 (theorem in a footnote), 1310.0491
 (an ltx:text). Repros block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards
@@ -15702,7 +15762,8 @@ tables only, and IEEEtran's and acmart's not at all (KNOWN_PERL_ERRORS #1140). H
   (`\lx@format@caption@@`), as caption formats them.
 - **A package that makes its captions itself** marks its type (`lx@caption@own@<type>`), which caption then formats
   not at all: algorithm2e's `algorithm` (algorithm2e.sty:2287-2318 `\algocf@makecaption`; 1908.06049, 2205.14076), whose
-  label closes with `\algocf@capseparator` (":", :2285-2289) — unless float.sty made the type (algorithm.sty's
+  label closes with `\algocf@capseparator` (":", :2285-2289; a paper's own 1996-2005 copy, which has none, as that copy
+  prints: ":", or " " under release 1.16's float.sty `ruled`; cs0008002, 0711.3765, `perfect_kernel_batchalgo397`) — unless float.sty made the type (algorithm.sty's
   `\newfloat{algorithm}` beside `[algo2e]`: caption's "Algorithm 1 Leakage Removal", 2204.02306, 1812.03871, 2408.08621).
 - **longtable** keeps its own "Table 1: " (`\lx@longtable@format`) without caption, unless a binding ports its class's or
   package's own `\LT@makecaption` as its table format (`\lx@longtable@classformat`: emulateapj.cls:1303-1313,
@@ -20902,6 +20963,478 @@ batchseclua_lua_refusals_are_bounded, batchseclua_lua_interpreter_ends_with_the_
 `luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout}`,
 `loader/image_copy_outside_source_stays_in_dest`).
 
+### 1082. A PASJ paper without its class keeps the class's own `\SetRunningHead`, `\FigureFile` and symbols (CLUSTFIX)
+
+pasj00/01/02.cls ship with the paper and are not in TeX Live; a paper whose source lacks the class falls to OmniBus
+(`pasj00_cls.rs` `pasj_class`), which defined neither `\SetRunningHead` nor `\FigureFile` (run 397: 173 and 149
+papers; astro-ph0108490, astro-ph0201077, astro-ph0204110): an Error each, the figure the error's text. Perl has no
+pasj binding (6 errors on astro-ph0201077); pdflatex stops at the missing class. The fallback, as it already does for
+the class's `{longtable}` (`pasj_unshipped_longtable`), defines the class's own commands, identical in pasj00.cls
+(0704.3654's copy), pasj01.cls (1505.02769) and pasj02.cls (2504.06663): `\SetRunningHead` (pasj00.cls:52-54, a
+running head, no content), `\RelativeFigurePath` and `\FigureFile(w,h){file}` (:4122-4164, `\includegraphics` of
+`\@figurepath/file` at width `w` mm, keepaspectratio; the `\vtop` and the missing-file frame are print layout, the
+missing file is graphicx's warning), amssymb for `\lesssim`/`\gtrsim` (the class's `useamsfonts` branch, :3445-3446),
+the solar symbols `\Sol`/`\solar`/`\MO`/`\LO`/`\RO` (:2303, 3433-3444) with `\odot`, the glyph the class's
+`\@solar` takes in script styles, and `\authorcite`/`\yearcite` (:1636-1637) as natbib's `\citeauthor`/`\citeyear`,
+which OmniBus autoloads (astro-ph0108490's 13 `\authorcite{M31_Makishima}` were 13 `_` Errors). Beyond Perl and
+TeX alike (a missing class), as `pasj_unshipped_longtable` is. Guard `perfect_kernel_batchclustfix::pasj00_without_its_class_keeps_its_figures` (repro
+`class-bindings/pasj00_unshipped_figurefile`).
+
+### 1083. aipproc's 1998 interface: `\author{name}` without keyvals, and `\affiliation` (CLUSTFIX)
+
+Perl's aipproc.cls.ltxml:82 (and our binding) read `\author{} RequiredKeyVals`, the interface of aipproc v1.5+
+(`\author{name}{address=…,email=…}`). The 1998 class (v1.0a, shipped by the papers of run 397's `expected {` cluster;
+astro-ph0003214's copy) takes article's `\author{name}` and a separate `\affiliation{text}` (aipproc.cls:85), and its
+own defaults `\author{AUTHOR here}` `\affiliation{AFFILIATION here}` (:88-89) run when the copy is read as the file
+the binding stands in for (#731): each `\author` was a "Missing keyval arguments" Error and the affiliation was lost
+(Perl 2 errors, pdflatex 0). The binding's `\author{}` reads its keyvals only when a `{` follows (past spaces, as
+`\@ifnextchar` reads), so the modern form is unchanged; where the paper's copy defines
+`\newcommand*\affiliation[1]`, `\affiliation{}` is the author's affiliation contact (`\lx@add@contact[role=affiliation]`),
+the copy's defaults are its placeholders that the document's calls replace (`hand_copy_frontmatter_defaults`). One
+binding per class family supports the union of its versions (FIDELITY_CHARTER).
+Guard `perfect_kernel_batchclustfix::aipproc_old_author_affiliation` (repro `stand-in-copies/aipproc_v1`).
+Beside `\affiliation`, the copy's `\newcommand*\affiliationmark[1]{\textsuperscript{#1}}` (:86; astro-ph0011502's
+renamed myaipproc.cls, which the binding answers as a versioned fallback without reading it) is defined under the same
+test. Guard `perfect_kernel_batchnext397::aipproc_old_affiliationmark`.
+
+### 1084. elsart's options are the class's switches `\if@amsthm`, `\if@seceqn`, `\if@secthm` (CLUSTFIX)
+
+Perl's elsart.cls.ltxml:23-25 (and our binding) store the `amsthm`, `seceqn`, `secthm` options as values only;
+elsart.cls (v2.20, 0712.3870's copy) declares them as switches (:34-35, :62-65, :73-74 `\newif\if@amsthm\@amsthmfalse
+\DeclareOption{amsthm}{\@amsthmtrue}`), which a journal style built on elsart tests: yjsco.sty:98
+`\if@amsthm … \else \PackageError{yjsco}{amsthm option should be used}` (0708.3431; run 397's `(yjsco)` cluster), 2
+errors in Perl and ours, 0 in pdflatex. The binding declares the three switches and its options set them beside the
+values. Guard `perfect_kernel_batchclustfix::elsart_amsthm_option_is_the_class_switch` (repro
+`class-bindings/elsart_amsthm_option_switch`).
+The LaTeX 2.09 elsart.sty (v2.23, 0805.0525's copy; Perl's elsart.sty.ltxml the same values) defines `\if@seceqn`,
+`\if@secthm`, `\if@secfloat`, `\if@nameyear` set by their options, `\ds@secnum` the first three (:66-78), and no
+`\if@amsthm`; its binding declares those four and its options set them. Guard
+`perfect_kernel_batchnext397::elsart_sty_options_are_its_switches` (repro `class-bindings/elsart_sty_option_switches`).
+
+### 1085. `\verb` in an argument ends at the argument's closing brace, "\verb illegal in argument" (NEXT397)
+
+latex.ltx:15485-15499: `\verb` opens a group, makes its delimiter active and sets `\aftergroup\verb@balance@group`.
+Inside a pre-tokenized argument the delimiter is frozen "other" and never matches, so the `}` that closes the argument
+closes the verb's group and reports "\verb illegal in argument"; the text after it is typeset. Perl's `readUntil`
+(latex_constructs.pool.ltxml:1797) and our scan read on past that `}`: up to the next line's end in ours ("\verb ended
+by end of line", the bound of `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`), which in a tabular cell
+lost the rest of the table (pdflatex on the `\documentclass` repro: 2 "\verb illegal in argument" plus their
+recovery). `read_verb_invocation` now ends the body at a closing-brace token outside the body's own braces, with TeX's
+Error, and puts the `}` back; under `\dospecials` only a pre-tokenized brace has a brace catcode, so a verb read from
+the file is unchanged.
+Under `\documentstyle` (`2.09_COMPATIBILITY`), latex209.def:201-211's `\verb` is `\@sverb#1{\def\@tempa##1#1{…}}`: it
+reads to the delimiter as tokenized, so in an argument it ends there with no error. The kernel `\verb` takes the
+`token_delimited` read tabularx's `\TX@verb` already used (now matching the delimiter as tokenized, any catcode); the
+`}` stop is then only the recovery for a missing delimiter, with TeX's "Argument of \@tempa has an extra }"
+(pdflatex goes on to "Paragraph ended before \@tempa was complete" and loses the argument; ours keeps it). It has no
+`\verb@eol@error`: a line's end inside it is a space (cs9811025 `\verb|h_0` / `.. h_{-m}|`, was "\verb ended by end
+of line"), and only a `\par` ends it, with that "Paragraph ended" Error, the `\par` read again (tex.web §396
+`back_error`; the paragraph still ends). Read to the input's end without its delimiter, this read (and tabularx's)
+reports "File ended while scanning use of \@tempa" (tex.web §338) and recovers as the line-bounded read did: the verb
+keeps the body up to the first line end, and what follows is re-read from its spelling under the restored catcodes
+(`\dospecials` froze it), so `\end{document}` and later cells are not lost (was: an empty document, or `\end{document}`
+printed as text, both silent). Guards `perfect_kernel_batchnext397::verb_delimited_unterminated_reports_file_ended`,
+`…::verb_under_documentstyle_unterminated_recovers`.
+cond-mat0203143 (`\documentstyle[aps,…]{revtex}`, ver8.tex:716-727) 14 errors → 0, pdflatex under its own
+`\documentstyle` 0 `\verb` errors; math0303012 (gen2.tex:87 `{\verb|#3|}` in the `kentry` rows) 23 `\verb` errors → 0,
+each row's list as pdflatex prints it. Not covered: an argument a binding digests in place or pushes back without its
+braces (`\mbox`, `\multicolumn`, astro-ph0108286; `\textbf`), where the scan still ends at the line's end. Guards
+`perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace`,
+`perfect_kernel_batchnext397::verb_under_documentstyle_reads_to_its_tokenized_delimiter` (repros
+`boxes-groups/verb_in_an_argument_ends_at_its_brace`,
+`boxes-groups/verb_under_documentstyle_reads_to_its_tokenized_delimiter`).
+An argument digested without its braces (`\footnote{a \verb+x+ b}`) gives no `}`: the delimiter was frozen OTHER when
+the argument was read, so the scan runs out of tokens and unreads them, an empty verbatim (Perl's `readUntil`,
+Core/Gullet.pm:683-685; keeping the scanned tokens as the body instead swallowed the rest of the note, an `<item>`
+inside `<verbatim>`, platex-tools/plarray.tex:20). That path reports TeX's "\verb illegal in argument" too (HARDEN397;
+Perl is silent; pdflatex errs on a plain, url, hyperref and lineno footnote alike, 3 `!` on the repro: the Error and
+its recovery). Guard `perfect_kernel_batch56::verb_inside_pretokenized_argument_unreads_instead_of_running_away`
+(repro `boxes-groups/verb_in_a_pretokenized_argument_errs`).
+Where a package makes `\verb` legal in footnotes by reading the note as a box body, the note takes the kernel's
+live-body footnote (`\lx@VerbatimFootnotes`, #192) and the verb is read from the file: fancyvrb/fancybox on
+`\VerbatimFootnotes`, bigfoot on loading (bigfoot.sty, no Perl binding: the raw package runs, then the switch).
+2310.18996 (bigfoot, three `\verb+…+` URLs in footnotes; pdflatex 0 `!`) 0 Errors, each URL a `<verbatim>` (was: the
+URL re-read as text with its `+` delimiter). Guard `perfect_kernel_batchharden397::batchharden397_bigfoot_footnote_verb`
+(repro `boxes-groups/verb_in_a_bigfoot_footnote`).
+
+### 1086. ar5iv's provided `\href` brings hyperref's no-op anchor layer (CLUSTFIX2)
+
+The `\href` #588 provides at `\begin{document}` answers a package's "is hyperref loaded?" test, so the package then
+calls hyperref's internals: a shipped algorithm2e.sty 3.6 (2005; cs0602002, its :740-748) tests `\@ifundefined{href}`
+in `\nl` and otherwise runs `\Hy@raisedlink{\hyper@anchorstart{AlgoLine…}\hyper@anchorend}`, three undefined-macro
+Errors per numbered line (run 397: ~100 papers, all shipping that algorithm2e.sty; Perl, which provides no `\href`,
+and pdflatex take the `\refstepcounter` branch, 0 errors). Under the same provide-only step, when `\href` is provided
+the ar5iv preload also provides hyperref's no-op anchor layer, defined once in `hyperref_sty.rs`
+`define_hyper_anchors` for both: `\Hy@xspace@end` (`\relax`), `\hyper@anchor` and `\hyper@anchorstart` (`\@gobble`),
+`\hyper@anchorend` (`\Hy@xspace@end`), as `\NoHyper` sets them (hyperref.sty 7.01o :6152-6154), and `\Hy@raisedlink`
+(`\@empty`, hdvips.def:40). The line keeps its text; the anchor name is dropped, as it is under the hyperref binding.
+#588's witnesses (2605.07373, 2605.08166, 2605.12003) convert byte-identical. Guard
+`perfect_kernel_batchclustfix2::ar5iv_href_brings_hyperref_anchors` (repro
+`package-bindings/ar5iv_href_hyperref_anchor_layer`).
+
+### 1087. A PASJ paper without its class keeps the class's `\timeform`, `\emissiontype`, abbreviations and `\draft` (CLUSTFIX2)
+
+The fallback of #1082 (`pasj00_cls.rs`, a pasj00/01/02 paper whose source lacks the class) also lacked the class's
+notation commands (run 397: `\timeform` 60, `\emissiontype` 50 papers; astro-ph0201169, astro-ph0204505, 0708.1829;
+0706.0253 also `\arcsec`, `\micron`, `\draft`): an Error each and the time or angle lost (Perl 8 errors on
+astro-ph0201169). `pasj_unshipped_timeform` reads them verbatim from pasj00.cls (0704.3654's copy): `\timeform`/`\TF`
+(:3716-3980, a parser setting each unit as a superscript with the decimal point under the last, "2'.5",
+"12^h34^m56^s.7"), `\emissiontype` (:3578-3598, the ionization state small after a thin space), the abbreviations
+`\arcdeg` … `\micron` with `\fp` … `\fdg` (:3684-3709) and `\ambiguouswarn` (:3710-3713), and their helpers `\@csc@t`
+and `\@@lineno` (:2169-2178); `\draft` (:284-300, the proof-reading page layout) and `\tenpoint`/`\elevenpoint`/
+`\twelvepoint` (:236-283, the size options' layout) are empty. The class's `\mathchoice`
+boxes leave the math parser a Warning per time or angle, as under the shipped class. Beyond Perl and TeX alike (a
+missing class), as #1082 is. PASJ95 (`\documentstyle[PASJadd]{PASJ95}`, 1995; its `\draft` is PASJadd.sty's:46) is a
+different style, not covered. Guard
+`perfect_kernel_batchclustfix2::pasj00_without_its_class_sets_timeform` (repro
+`class-bindings/pasj00_unshipped_timeform`).
+
+### 1088. psfig's `\psfigurepath` adds its directories to the graphics search path (CLUSTFIX2)
+
+Perl's psfig.sty.ltxml (and our `psfig_sty.rs`) is `RequirePackage('epsfig')` only, and psfig.sty 1.10 (0712.1995's
+copy) has `\def\figurepath{./:}` and `\def\psfigurepath#1{\edef\figurepath{#1:}}` (:122-123), the `:`-separated
+directories `\psfig` searches for its file (:162 `\DoPaths\figurepath`): papers that set it (run 397: ~54;
+cond-mat0012297 `\psfigurepath{.:plot:figure}`; cond-mat0010435, whose absolute author paths stay unresolved, loses only the
+Error) had an undefined-macro Error, the path's text in the output, and their figures unresolved (Perl the same error; pdflatex with the shipped psfig.sty 0). The binding
+defines both macros as psfig.sty does and puts each directory on the graphics search path as `\graphicspath` does
+(graphics.sty.ltxml L248-260, `GRAPHICSPATHS`). Guard `perfect_kernel_batchclustfix2::psfigurepath_is_the_graphics_path`
+(repro `package-bindings/psfigurepath`).
+
+### 1089. revtex4's `\keywords` reads an elsart-style `\sep` as elsart's separator (CLUSTFIX2)
+
+revtex4 stores `\keywords` and prints it only under `showkeys`, so TeX never expands what it holds; papers ported from
+elsart keep its `\sep` there (run 397: ~89 papers; cond-mat0309530 manuscript7.tex:46), clean in pdflatex. Perl's
+revtex4_support.sty.ltxml and our binding digest the argument into `ltx:keywords`, where `\sep` was undefined (Perl 1
+error, ours 1). The binding's `\keywords` now digests it with `\providecommand\sep{\unskip,\space}` inside the
+argument (elsart's meaning, `elsart_support_core_sty.rs`), local to the keywords, so a paper's own `\sep` stays its
+own: "vortex matter, columnar defects". Guard `perfect_kernel_batchclustfix2::revtex4_keywords_read_elsart_sep` (repro
+`sectioning-frontmatter/revtex4_keywords_elsart_sep`).
+
+### 1090. A cycle of counter reset lists resets each counter once; `@` is bibliography-mouth data; a defining command's `{\cs}` argument is read as tokens (CRASH397B)
+
+Three run-397 crash and Fatal roots, each fixed as a class in one place.
+
+**Reset-list cycles.** A counter whose reset list leads back to it (`\newcounter{subsubsection}[subsubsection]`,
+AEA.cls:800, witness 2308.05200 — whose subsubsections lie beyond secnumdepth, so only the id counter cycles and no
+Warning prints; a `\numberwithin`/`\@addtoreset` chain back to its start) loops once it is stepped:
+TeX in `\@stpelt` (latex.ltx:10138, "TeX capacity exceeded [grouping levels=255]"), Perl in `ResetCounter`
+(Package.pm:883-893, `Fatal:perl:deep_recursion`), ours as a silent stack overflow. LaTeXML steps an id counter where
+TeX steps nothing (a unit beyond secnumdepth, `ref_step_id`'s `UN<ctr>`), and its reset lists (the `\cl@<ctr>` values)
+outlive a document's `\def\cl@subsection{}`, so the AEA.cls shape (`\def\cl@subsection{}` +
+`\newcounter{subsubsection}[subsubsection]`) is clean in pdflatex. The cascade (`counter::dialect::
+reset_counter_in_cascade`, from `step_counter` and `reset_counter`) carries the counters on its path and skips one
+already there, once per counter: an Error where TeX loops too (the step is TeX's, not a `UN` counter's or a reset's, and
+TeX's own `\cl@` macro lists lead from it to the cycle: `\@addtoreset{subsubsection}{subsubsection}` under article,
+whose `\cl@subsection` holds subsubsection), else a Warning; a diamond (`UNparagraph` under two parents) is still
+reset twice, as in Perl.
+The document's own `\stepcounter` of such a counter (`\lx@stepcounter@within`, sect08.rs) is TeX's capacity error: an
+Error, and the child leading back is reset once (`reset_list_reaches`). A counter declared within itself builds its id
+without that within (`define_counter_ids`): `\the<ctr>@ID` within `\the<ctr>@ID` expanded to the pushback limit. Open:
+a two-counter id cycle (`\numberwithin{section}{equation}` where the class nests equation ids in section's) is still a
+`Fatal:Timeout:PushbackLimit`. Offered to Perl as a path set in `ResetCounter`.
+
+**`@` in the bibliography mouth.** The `with_bib_data_literals` mouth (OD #74) now reads one set,
+`mouth::BIB_DATA_LITERALS` (`% & # @`), as OTHER where the document gave the character a TeX meaning. `@` is new: the
+entry scaffold's handler names (`\csname bib@field@…\endcsname`, bibtex.rs `\bibentry@create`) carry it, and a
+document's active `@` (1810.11524 reads `@book{…}` records through one) re-entered `\bib` from inside the scaffold
+until `Fatal:Timeout:Recursion`. Perl reads the scaffold under the live catcodes (BibTeX.pool.ltxml:166) and errs 24
+times on the repro (KNOWN_PERL_ERRORS #1286).
+
+**A defining command's `{\cs}` argument.** `defined_cs` / `defined_cs_with_parameters` (base_utilities/fonts_defs.rs)
+read it as TeX's `\def#1` does (`get_r_token`, tex.web §1215): the first non-space token is the command, the tokens
+after it its parameter text (`parse_def_parameters`); no control sequence there is TeX's "Missing control sequence
+inserted", an Error. The bindings had formatted the argument's text into a prototype and re-read it:
+`\DeclareMathAlphabet{ \mathcal}` was `Fatal:Parameter:Unknown "mathcal"` (1810.09714, 1906.05222, 2011.04603,
+2206.00709, 2209.01842; Perl's `T_CS(" \mathcal")` is a junk name and keeps the stock `\mathcal`, as we now do), and
+`\urldef{\wikisurvey2011}` `Fatal:Parameter:Unknown "2011"` (1312.0976; url.sty:185 `\edef#1` defines `\wikisurvey`
+delimited by `2011`, which the paper calls; Perl 1 Error). Users: `\DeclareMathAlphabet`, `\DeclareFixedFont`
+(sect08.rs), `\DeclareOldFontCommand` (sect13.rs), `\DeclareCommandCopy` (latex_constructs_rust_only.rs), `\urldef` (url_sty.rs, with the parameter text), xcolor's `\extractcolorspec`, `\extractcolorspecs`,
+`\convertcolorspec` (the first token, as `\aftergroupdef#2`/`\edef#2`).
+
+**The alpha label's year is BibTeX's.** alpha.bst:1047 `year field.or.null purify$ #-1 #2 substring$`: the last two
+characters of the purified year (`make_bibliography::alpha_label_year`; `purify$` keeps letters and digits and turns
+white space, `-` and `~` into spaces): the year part of `{99}` is `99` (`KNU99`; BibTeX `Knu99`), of `{199}` `99`, of
+`{in press}` `ss`, of `{1--250, 2023}` `23` (`DOE23`). The year is the date's FIRST run of four or more digits where it has one
+(so `{2023/2024}` gives `23`, BibTeX `24`; `{1234--1250, 2023}` `34`, BibTeX `23`; `2001{\'e}` `01`, BibTeX `1e`), as Perl's year tag (MakeBibliography.pm:462): a
+`year` the `month` field extended (`1999-05`, BibTeX.pool.ltxml:632-637), an amsrefs `date={2010nov}` or `{200401}`
+(2308.14725) keep `10`, `04`; so does a lettered `{2023a}` (`Smi23`, BibTeX `Smi3a`), our suffix disambiguating instead.
+Perl's MakeBibliography.pm:501 `substr($yrtext, 2, 2)` drops a two-
+or three-character year (`[KNU]`; KNOWN_PERL_ERRORS #1288); its `year[2..4]` byte slice panicked on `1–250, 2023`
+(2308.14725, 2607.14650). The name part (`KNU` against BibTeX's `Knu`) is Perl's, unchanged.
+
+**Guards**: `perfect_kernel_batchcrash397b::{counter_in_its_own_reset_list_is_reset_once,
+numberwithin_reset_cycle_terminates, stepcounter_of_a_counter_in_its_own_reset_list_terminates,
+sectioning_step_into_a_reset_cycle_is_an_error, amsrefs_records_under_an_active_at, alpha_label_of_a_non_ascii_year,
+alpha_label_year_is_bibtex_s, declare_math_alphabet_command_after_a_space,
+urldef_command_with_parameter_text, extractcolorspec_command_after_a_space}` (repros `macro-state/`,
+`index-bib/`, `fonts-nfss/`, `package-bindings/`).
+
+### 1091. Under amsmath, `\[`/`\]` are `\begin{equation*}`/`\end{equation*}` (CLUSTFIX3)
+
+amsmath.sty:2950-2951 `\DeclareRobustCommand{\[}{\begin{equation*}}` and `\DeclareRobustCommand{\]}{\end{equation*}}`,
+so under amsmath `\[ … \end{equation*}` and `\begin{equation*} … \]` pair, clean in pdflatex. Perl's amsmath binding
+keeps the kernel's `\[` (latex_constructs.pool.ltxml:2070, sect07.rs), and `\end{equation*}` found no `{equation*}` open
+("Can't close environment equation*"; run 397: 188 papers, math0306159:811-812, math0401181 n112.ltx:767,
+math0508341); a `\begin{equation*} … \]` ran the kernel's cheap intertext (`\lx@eDM@in@equation`) and erred on its
+`\end{equation}`. The binding defines both, robust, as amsmath does (`amsmath_sty.rs`); the kernel's stay without
+amsmath. A matched `\[ … \]` gives the same `ltx:equation` as the kernel's `\[` did (the kernel's display and
+`{equation*}` share the numbering and the `\lx@mathdisplay@hook`), except that a `\tag` in it is now printed, as
+pdflatex does, where the kernel's display dropped it without a diagnostic (2008.12392 `\tag*{$(1)_s$}`, 2409.02265,
+1612.02580 `\tag{$*$}`; the ids of later unnumbered displays shift by one). Inside an `{equation}` a `\]` is now amsmath's
+`\end{equation*}`, which pdflatex rejects too ("\begin{equation} ended by \end{equation*}"), not the cheap intertext.
+Guard `perfect_kernel_batchclustfix3::amsmath_display_brackets` (repro
+`ams-internals/amsmath_display_brackets_pair_with_equation_star`).
+
+### 1092. etoolbox's `\robustify` leaves a native binding alone, unless it is a TeX primitive (CLUSTFIX3)
+
+In LaTeX every command `\robustify` meets in practice is a macro (`\ref ` behind `\protect`, amsmath's `\sum`, fontmath's
+`\uparrow`, `\DeclareOldFontCommand`'s `\it`, ulem's `\uline`), and etoolbox.sty:1267-1289 rebuilds it as a
+`\protected` macro. Ours are constructors, math primitives, primitives or closure-bodied macros, already robust:
+etoolbox raised "not a macro" (run 397: 119 papers; 1508.06145, 1702.00233), and `\robustify{\ref}` (wiley-article.cls:
+771-775, 69 papers, 1812.10085) rebuilt `\ref` from its inner `\ref ` into an undefined `\etb@resrvda`, the reference
+lost (Perl the same). `\lx@ifnativecmd` (`etoolbox_sty.rs`) now tests the stored definition, on the command and on
+its LaTeX-robust inner command, where it tested `\meaning` for `CODE(`/`Stored[`; the command is left as it is. A TeX
+primitive in LaTeX (tex.web's primitive table, less the names latex.ltx makes macros: `\par`, `\end`, `\input`,
+`\eqno`, `\leqno`, `\shipout`, `\underline`, `\-`), a register, a chardef or a font selector (`\nullfont`, a
+`\font`) keeps etoolbox's Error, as pdflatex's (`\robustify\hbox`: "not a macro"). Residual (row R ROBUSTIFYERR, no
+corpus witness): a LaTeX `\mathchardef` that is a `DefMath` here (`\alpha`, `\infty`, `\sum` without amsmath) and
+e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the output is unchanged. Guards
+`perfect_kernel_batchclustfix3::robustify_of_a_native_binding`,
+`perfect_kernel_batch69b::robustify_ltx_protected_native_cite` (repros `package-bindings/robustify_of_a_native_binding`,
+`robustify_of_a_tex_primitive_errs`).
+
+### 1093. Presentation MathML stays on when another math format is named; the others annotate it
+
+**Rule.** Wherever Presentation MathML is defaulted on (the HTML formats, `--post`, an XML input) it stays on unless
+`--nopmml` is given, and `--cmml`, `--unicodemath` and `--mathtex` add to it, in that fixed order, as
+`<m:annotation-xml>`/`<m:annotation>` of one `<m:semantics>`. With `--nopmml`, Content MathML is the primary, else
+UnicodeMath alone (an `ltx:text` per formula, as Perl's).
+
+**Perl.** Config.pm:566-570 defaults `pmml` only when no math format is named, and LaTeXML.pm:504-556 makes the
+first named format the primary, the rest secondaries in command-line order. So `latexmlc --format=html5 --unicodemath`
+(or `--mathtex`) runs that processor alone, and the stylesheet, finding no `m:math`, prints the formula's TeX
+(LaTeXML-math-xhtml.xsl:38-65, `as-TeX`): the requested string never reaches the page. `--cmml` alone gives Content
+MathML, which no browser renders: W3C MathML Core lists no Content MathML element (§2.1, `apply`/`ci`/`cn` are
+"Unknown MathML elements") and renders only the first child of `<semantics>` (§3.7), so an annotation adds data
+without changing the page. Perl's `--post`/XML-input runs add `pmml` only for HTML/JATS (Config.pm:567-568), so there
+a named format is the primary.
+
+**Rust.** `ResolvedOptions`/`PostOptions::pmml` (`bin/latexml_oxide.rs`) and `post::MathFormats` (shared by the
+page-render workers). `--unicodemath` alone, like `--mathtex`, needs `--nopmml` to get Perl's output.
+**Guards**: `cluster_cli::unicodemath_output::{unicodemath_annotates_presentation_mathml,
+unicodemath_sits_between_content_mathml_and_tex, unicodemath_through_the_page_render_workers_matches_serial}`.
+
+### 1094. A reference title reads an equation tag's math as UnicodeMath
+
+**Rule.** A `title=` (or page `<title>`) built from a stored equation tag reads the tag's math as the rest of a
+title is read: through UnicodeMath, its scripts and fonts kept, inside the tag's `open`/`close`.
+`\tag{$\mathrm{P_1}$}` gives "Equation P₁"; 2506.17197's `\tag{$\mathrm{TreeSB}_{\mathrm{stat}}^\cS$}` gives
+"Equation TreeSBₛₜₐₜ^𝒮".
+
+**Perl.** `getTextContent_rec` (CrossRef.pm:866-870) returns an `ltx:tag`'s `open` + `textContent` + `close`, so a
+formula in a tag gives its bare tokens with its scripts and fonts dropped: `latexmlc` gives "P1", "TreeSBstatS" (the
+𝒮 read as S), `1′`, `⋆⁣⋆`. Its file-based `latexmlpost` reads the stored copy's indentation too ("P 1"). The Unicode
+reading Perl gives a formula elsewhere in a title (CrossRef.pm:872-873) is the one kept here, so a tag reads as the
+formula it prints; `⋆⁣⋆` is the same either way.
+
+**Rust.** `scan::title_node_text`'s `ltx:tag` branch reads its children through `title_text_content`, as
+`crossref::node_data_text` reads a tag's content. **Guards**:
+`cluster_cli::unicodemath_output::ref_title_reads_a_tags_math_as_unicodemath`,
+`perfect_kernel_batch78j::cleveref_document_format_with_math_in_the_tag`.
+
+### 1095. Without a format dump (or without TeX Live) the kernel commands our constructs call are in the base, the kernel autoload loads the format to see, and our expl3 extensions wait for an expl3 to extend (NOTEX)
+
+**Perl.** `LoadFormat('latex')` without a dump runs `bootstrap → base → constructs` (Package.pm:2751-2769), and
+latex_base.pool.ltxml is TeX-free: everything its constructs call is in it. It has no kernel autoload, no expl3 layer of
+its own and no document-properties store, so it needs no expl3. **Rust.** Our constructs and bindings call kernel and
+expl3 commands Perl's do not, and on the no-dump branch (`LATEXML_NODUMP=1`, or a binary built where there was no TeX
+Live to make a dump) nothing defined them; with no TeX tree either, nothing could load them. A
+smoke article (amsmath, hyperref, a list, a table) stopped at `Fatal:TooManyErrors` (101 Errors) without TeX Live, and the test suite failed 6397 of 8468 tests there. Now:
+- **The base carries what our constructs call** (`latex_base.rs`, after C.1.3): `\@ignorefalse` (the `\end` epilogue
+  reads `\if@ignore`, sect01.rs; latex.ltx:15253), `\@stpelt` (`\lx@stepcounter@within`, sect08.rs; latex.ltx:10138),
+  `\@ensuredmath` (`\@ensuremath`, latex_constructs_rust_only.rs; latex.ltx:15807), and `\IfDocumentMetadataTF`/`T`/`F`
+  as latex.ltx:9167-9169 has them before `\DocumentMetadata` (tikz_sty.rs asks it). The text after a list, a
+  `\stepcounter` and `\ensuremath` are no longer lost; the body is byte-identical to the dump branch's.
+- **The kernel autoload loads the format to see** (`latex_kernel::autoload_latex_kernel`). With no dump there is no
+  catalogue to ask, so in a LaTeX document the first undefined control sequence met before the format loads it, and the
+  post-load `has_meaning` check decides as on the dump branch (KNOWN_PERL_ERRORS entry on `\IfFileExists` before
+  `\documentclass`). latexml.sty's `\AddToHook` (a preload) and an `\IfFileExists` choosing the class were undefined
+  there. A plain TeX document is unchanged: only the Perl trigger list loads the format.
+- **Our expl3 extensions wait for an expl3** (latex_constructs_rust_only.rs: the backend loader, the
+  `\__kernel_chk_if_free_cs:N` override, the Unicode codepoint layer). They run when expl3 is the dump's or `expl3.sty`
+  can be found (its `\ExplSyntaxOn` autoload raw-loads it, as before); with neither there is nothing to extend.
+  Likewise hyperref's document-properties store (hyperref_sty.rs) needs `\NewDocumentCommand`, mathtools' expl3
+  block needs mhsetup's `\MHInternalSyntaxOn`, and `\DocumentMetadata` loads the tagging packages (tagpdf, the
+  latex-lab blocks: expl3 code) only over an expl3 layer.
+- **`\ExplSyntaxOn` without expl3 is the catcode switch** (expl3_sty.rs). With no expl3.sty to load, the `expl3`
+  binding defines `\ExplSyntaxOn`/`\ExplSyntaxOff` as expl3-code.tex:245-277 (TL 2025) sets and restores the catcodes
+  and `\endlinechar`, so our bindings' expl3-syntax names read as names (array_sty.rs's `\@@__tbl`: 2 Errors per
+  `\usepackage{array}`). Code that calls expl3 functions still finds them undefined, as Perl does with no expl3.
+- **expl3.sty missing is reported** (expl3_sty.rs): the mute scope of the raw reload (#1027) is opened only when
+  `expl3.sty` is found, so its `missing_file` Warning is no longer dropped with it.
+- **No Warning for a missing resolver.** Perl's `pathname_kpsewhich` answers nothing, silently, without a `kpsewhich`
+  (Pathname.pm:395-403). Ours warned `kpathsea:unavailable` once per process (#308), one Warning on every
+  conversion of a machine without TeX Live, whatever the document needed. It is gone; the log's
+  `Info:kpathsea:backend unavailable (…)` line (`Converter::initialize_session`) still names the resolver, so a dead
+  one is not mistaken for a missing file (issue #304). The kpathsea crate's own one-time stderr notice
+  (0.3.4 `lib.rs:433-434`) is outside the log and stays: rust-kpathsea is a general-purpose crate, not
+  latexml-oxide's (DG 2026-11-19).
+
+Where TeX Live is, the dump branch is unchanged (each change sits behind "no catalogue", "no dump-defined name" or
+a found file). **Guards**: `dump_gate_init::nodump_latex_branch_converts_healthily` (the shared NODUMP conversion:
+`\IfFileExists` before `\documentclass`, hyperref, `\stepcounter`, a list, `\ensuremath`, `\IfDocumentMetadataTF`),
+`preclass_kernel_autoload::latex_route_pre_documentclass_kernel_cs_autoloads` (its dump half).
+
+### 1096. An undefined BibTeX macro is a Warning, as bibtex(1) has it (PLACEFIX)
+
+Perl BibTeX.pm:307-310 raises an Error for a `.bib` macro neither the `.bib` nor the defaults define (`month = june`,
+`sept`, `july`; about 190 papers of run 397) and keeps the name as the value. bibtex(1) prints `Warning--string name
+"june" is undefined` and goes on with the empty string. `pre_bibtex.rs` `report_undefined_macro` now warns whether the
+style is known or not (DG 2026-11-19); the name is still kept as the value, so no word is lost. KNOWN_PERL_ERRORS #1292.
+Guard `perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning` (repro `index-bib/bibtex_month_undefined`).
+
+### 1097. A theorem or proof in an abstract is dissolved into it (PLACEFIX)
+
+`ltx:abstract` holds Block.model, no Para.class, so a `\newtheorem` environment, amsppt's `\proclaim`, plain's, elsart's
+algorithm or a `{proof}` in `{abstract}` erred "<ltx:theorem> isn't allowed in <ltx:abstract>" (Perl the same), the
+content kept in place. Run 397: 86 papers, real theorems (56: 1908.02189, 1604.07743, math0111087) and metadata set as
+`\newtheorem*{keywords}`/`{MSC}`/`{JEL}` (26: 0804.0728, 1405.7144, gr-qc0203098) alike. A theorem in an abstract is
+markup used for a typesetting goal, and the abstract is what stays (DG 2026-11-19): no theorem element is kept. It is
+inserted without the Error and dissolved at its close (`Document::dissolve_theorem_in_abstract`, from
+`close_node_internal`): its title becomes a run-in `ltx:text` (its own fonts, bold for amsthm's plain style; a display
+title, amsppt's `\proclaim`, made bold) at the start of its first `ltx:p`, as the PDF prints it, and its paragraphs' blocks (`ltx:p`, lists, equations, quotes) go
+into the abstract in its place. That paragraph takes the theorem's `xml:id` only: neither `ltx:p` nor `ltx:block` carries
+`labels` or `ltx:tags` in the schema (only an abstract's equations and listings do), so its label and number tags are dropped and a `\ref` to it stays unresolved
+(DG 2026-11-20: schema-valid output over a rare reference). A theorem in a quote in an abstract is dissolved into the quote; elsewhere the #689 bridge is unchanged.
+No name-matching: a keywords "theorem" is dissolved as a real one. The other frontmatter containers (keywords,
+acknowledgements, classification, creator) keep the Error, and a table of contents in an abstract still goes after it
+(#753). Only an abstract its own end closed (`\end{abstract}`, amsppt's `\endabstract`, a heading, the group of
+`\abstract{…}`) dissolves its theorems. One still open at `\end{document}` swallowed the main matter (a
+`\begin{abstract}` never ended, cond-mat9410055; TeX sets the whole paper in it): the abstract is the misused construct
+there, so its theorems stay theorems with the Error, as before (DG 2026-11-20). An abstract opened as a command and
+closed there (math0006149, 1108.5171) is split instead, its theorems moved to the body (#1101).
+`\lx@end@open@frontmatter` (sect02.rs) flags the body it ends, `\lx@add@frontmatter@until` marks that abstract's entry
+`_open_at_end` (`document::ABSTRACT_OPEN_AT_END`), and `within_abstract` passes it over; unwrapping the swallowing
+abstract itself is row R PLACET3.
+Guards `perfect_kernel_batchplacefix::theorem_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_stays`:
+text, equation, list and quote after a theorem, two in a row, a proof, `\newtheorem*`),
+`perfect_kernel_batchplacefix::proclaim_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_proclaim`),
+`perfect_kernel_batchplacefix::theorem_in_unended_abstract_stays_a_theorem` (repros
+`block-model/theorem_in_unended_abstract{,_group}`, split since #1101),
+`perfect_kernel_batch69c::theorem_in_abstract_is_dissolved_not_bridged` (a theorem in a quote in the abstract).
+
+### 1098. nomencl's list in a float's box keeps its box (PLACEFIX)
+
+`\printnomenclature` in a `{framed}`/`{mdframed}` inside a `{table*}` (the IEEE nomenclature box: 111 of run 397's 137
+glossary-cluster papers; 1410.5511, 1608.03855, 1704.00503, 1703.01217) built a sectional `ltx:glossary` where no
+glossary may go ("<ltx:glossary> isn't allowed in <ltx:block>"; Perl: no list at all, its raw nomencl stops at
+scrbase). pdflatex prints the list in the box. Where the nearest container that does not auto-close (past a box's
+capture) is a float (`ltx:figure`, `ltx:table`, `ltx:float`), the binding (`nomencl_sty.rs` `glossary_reachable`, #234)
+now emits in place a paragraph with the bold `\nomname` and an empty `ltx:description class="ltx_nomenclature"` with
+the glossary's id, which MakeGlossary (`make_index.rs`) fills with the same entries as items: the symbol the item's tag,
+the description its paragraph (DG 2026-11-19). The schema allows a `glossarylist` only in an `ltx:glossary`. Everywhere
+else the sectional glossary is opened as before: at section level, and out of a minipage, where it floats to the
+section error-free. Residual: a list in `{IEEEkeywords}` or another frontmatter container (G2/G3, about 9 papers:
+1606.00288, 2111.12783) keeps its Error. Guards `perfect_kernel_batchplacefix::{nomenclature_in_a_box_stays_in_the_box,
+nomenclature_in_a_minipage_is_the_sectional_glossary}` (repros `block-model/nomenclature_in_a_box`,
+`nomenclature_in_a_minipage`).
+
+### 1099. A bibliography inside a float or a heading floats out to the narrative level (PLACEFIX)
+
+A `{thebibliography}` (or `\bibliography`) begun where neither it nor the unit it stands as can go erred "<ltx:
+bibliography> isn't allowed in <ltx:…>". The criterion is the nearest enclosing element that does not auto-close:
+a float (`ltx:figure`, `ltx:table`, `ltx:float`) or a heading (`ltx:title`) is the author's container accidentally
+around the back matter, and the bibliography floats out to the nearest open ancestor that can hold it
+(`Document::float_backmatter_out_of_container`, Perl's `floatToElement`), placed after the container, which stays open
+for the rest of its content; the list's close returns there (`restore_floated_backmatter`). The kernel's
+`{thebibliography}` and `\bibliography` (`adjust_bibliography_element`) and RevTeX 3's, OmniBus's and AASTeX's
+`{references}` (`float_bibliography_out`) share it. Witnesses: cond-mat0108156 (`\end{table}` commented out),
+cond-mat0303649 (an unclosed figure around RevTeX 3's `{references}`), hep-ph0004227 and 1808.04295 (LyX's
+`\subsubsection*{\bibliographystyle{..}\bibliography{..}}`). Residual: cond-mat0108156's `\acknowledgments` in the
+same table keeps its Error (back matter too; row R PLACEACK). A list in a box (an `ltx:block`: a minipage, a framed or
+sidebar frame) or in an abstract does not float: block-local references (2402.17043 and 2502.16577, IEEE CSM sidebars;
+2503.17910, elsarticle's CPC program summary in the abstract; hep-ex0405026, a minipage beside a figure holding the
+conclusions and the references) keep their place and their Error: the schema holds a `biblist` only in an
+`ltx:bibliography`, which is back matter, so a non-sectional in-place list is a schema and MakeBibliography question,
+deferred (row R PLACEB4). DG 2026-11-19. Guard `perfect_kernel_batchplacefix::bibliography_floats_out_of_a_float`
+(repro `block-model/bibliography_floats_out_of_a_float`).
+
+### 1100. A binding delegates to the internal it saved at load, and aliases only under its package's condition (alias cycles)
+
+**Rule.** Where a binding implements a user-level command by calling another user-level command, it calls a private
+copy saved with `Let!` when the package loads (`\lx@natbib@citet`, `\lx@slashed@not`), never the public name; where
+it aliases two commands, it does so only under the real package's own test. The real package builds each command on
+its own internals, so a class's or document's `\let`/`\def` between the public names is harmless in TeX; through a
+name-call it closed a loop, a 180 s `Timeout:Convert` when the cycle's window exceeds `cycle_guard.rs`'s `MAX_WINDOW`.
+
+**Instances.** apacite's `\citeA`/`\shortcite`/`\citeNP`/… and its `natbibemu` `\cite` called natbib's `\citet`/
+`\citep`/`\citealp`/`\citeyear`/`\citeauthor` by name, and agujournal2018.cls:1140-1143 `\let\cite\shortcite
+\let\citep\cite \let\citet\citeA` closed the loop (1909.02387, 2212.08776; ~28 run-397 papers); nmbib's `\citeall`
+the same. amsmath's `\let\sum@\sum` and its eleven siblings ran unconditionally; amsmath.sty:318-345 runs them only
+while `\coprod` is still a `\mathchar`, so inlined AmS-TeX (`\mathchardef\sum@… \def\sum{\DOTSB\sum@\slimits@}`)
+looped (math0612243, 0705.4126, math0112238; ~18). The revtex classes' preload of hyperref (`revtex4_support_sty.rs`,
+kept for documents that use its commands, marked unloaded) installed hyperref's `\refstepcounter` dispatch through
+`\H@refstepcounter`, which the shipped revtex 4.0 ltxutil.sty:682 `\let\H@refstepcounter\refstepcounter` pointed back
+at it (astro-ph0112270; ~21); the preload now restores the kernel's `\refstepcounter` (as `aastex_cls.rs` does after
+aas_support's preload for AASTeX 5.x, which loads no hyperref). Under revtex the document's own
+`\usepackage{hyperref}` installs the dispatch; under AASTeX 5.x aas_support leaves hyperref marked loaded (as Perl), so
+it does not, and cleveref's hyperref branch (cleveref.sty:2044-2054, patching only `\H@refstepcounter`) then sets no
+`\cref@currentlabel` (an aastex + algpseudocode + cleveref probe: 2 Errors; aastex + cleveref in 0 of 35,942 census
+papers; row R AAS5-HYPERREF). slashed's `\lx@slashed` called `\not` by name, which slashed.sty:112-118
+never does, and an author's `\def\not#1{\slashed{#1}}` looped (2504.21590). physics's commands, built on helpers that
+take the command itself as their reversion argument, re-expanded inside their own helper in an `\edef` (ifthen's
+`\equal` under algpseudocode's `\Function`; 2001.08539, 2505.01628; ~7; Perl physics.sty.ltxml:401/464-476 hangs
+alike): the commands physics.sty declares with `\DeclareDocumentCommand` are `protected`, as ltcmd makes them,
+all but `\svmqty` and `\trace`/`\Trace` (with their `\tr`/`\Tr` aliases), which loop in no `\edef` (row R PHYS-PROTECT).
+
+**Perl.** Perl has no apacite binding (101 undefined-`\citet` errors on the repro), runs amsmath's `\X@` lets only
+through the raw package's test, has no `\refstepcounter` dispatch (hyperref.sty.ltxml:383), and loops on physics as we
+did. **Guards** `perfect_kernel_batchloopfix::{apacite_forms_survive_the_class_lets,
+amsmath_keeps_an_inlined_amstex_sum, revtex_preload_leaves_ltxutil_refstepcounter_alone,
+physics_commands_are_protected_in_an_edef}` (repros `package-bindings/alias_cycle_*`).
+
+### 1101. An abstract opened as a command that the bibliography or the document's end closes keeps its first paragraph
+
+**Rule.** The bibliography begins with its heading (article.cls:565-566 `\section*{\refname}`), so before
+`\begin{thebibliography}` opens its group (`begin_environment_by_macro`, latex_constructs/mod.rs) and in `\bibliography`
+(sect11.rs) `\lx@bibliography@ends@frontmatter` (sect05.rs) ends an abstract or keywords opened as a command, as a
+`\section` does (`\lx@heading@ends@frontmatter` and `\@startsection@hook`; the TOC alike, #753). A `\begin{abstract}`
+is left alone (`begun_environment`): elsarticle's program summary holds its own bibliography (2503.17910). An abstract
+opened as a command (`\abstract …`, `\abstract{` whose `}` never comes) that the bibliography or `\end{document}`
+(`\lx@end@open@frontmatter`, sect02.rs) closes, not a heading or `\endabstract`, keeps its first paragraph — the
+digested body up to the first paragraph end after typeset content (the body's own `\par`, or the one a vertical skip
+ends, `\vspace`/`\bigskip`; not a display's, which TeX's paragraph runs across), descending into an open group's list —
+and `\lx@add@frontmatter@until` (frontmatter_api.rs `split_after_first_paragraph`) returns the rest where the abstract
+stands, as body material before the bibliography. Closed by the document's end, it is split only where the rest holds
+the body's structure (`holds_structure`, read off the digested boxes: a whatsit with a `title`, a heading, theorem or
+proof; or with a body and an `id`, a list, display, equation or float — a note or a `{center}` is neither): an
+abstract-only document keeps all its paragraphs, unwarned (DG 2026-11-20). The flag `lx_abstract_ended_late` says which
+closed it (`"bibliography"`, `"end"`); the bibliography sets it, the end of the document re-sets it per pass, and only
+an abstract reads and clears it. One Warning, `unexpected:\abstract`, counts the moved words (the ink words of the moved
+boxes, `ink_word_text`).
+
+**Why.** In TeX the quotation or the group never ends, so the whole paper is set as the abstract (pdflatex 0 `!`;
+"\end occurred inside a group" for the unclosed brace). Kept so, the body and the bibliography sat inside
+`ltx:abstract` (schema-invalid, `<ltx:bibliography> isn't allowed in <ltx:p>`, and one Error per theorem); every
+witness has a one-paragraph abstract followed by a blank line, `\vspace` or `\bigskip`, and its body without a
+`\section` (`\noindent{\bf 1. Introduction}`, `\begin{center}1. {\it Introduction}\end{center}`). DG ruling 2026-11-20:
+nets A (the bibliography) and B (the first paragraph).
+
+**Instances.** M1, a brace-less `\abstract`: hep-th0110297, 1108.5171, 1405.5825, hep-th0602212, gr-qc0302022,
+hep-ph0407142, hep-th0305160. M2, `\abstract{` whose closing brace a footnote or `%` took: math0006149, 1408.0340,
+1501.04098, 1710.10154, 1711.02987, hep-ph9306301, hep-th9506164. Not covered: a `\begin{abstract}` never ended
+(cond-mat9410055), which LaTeX reports at `\end{document}` (its Error) and which stays whole, its theorems kept (#1097);
+the document's own `\def\abstract{…}` refused by the kernel lock (1209.6193, row R); a short first line (a PACS line)
+taken as the whole abstract; `\printbibliography`, a bare `\thebibliography` and `{references}`, which do not end it.
+
+**Perl.** Perl has neither net and loses the body (KNOWN_PERL_ERRORS #1294). **Guards**
+`perfect_kernel_batchabsfix::{bare_abstract_ended_by_bibliography_keeps_its_first_paragraph,
+unclosed_braced_abstract_ended_by_bibliography_keeps_its_first_paragraph,
+bare_abstract_open_at_end_of_document_keeps_its_first_paragraph, abstract_only_document_keeps_its_paragraphs,
+a_display_does_not_end_the_first_paragraph}` (repros `sectioning-frontmatter/abstract_*`),
+`perfect_kernel_batch74b::{braceless,braced}_abstract_unclosed_at_end_document_keeps_its_text` (an abstract-only
+document, whole).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a
@@ -21712,8 +22245,10 @@ content and structure, and departs from forest.sty and pdflatex as follows:
   Inherited `for tree` keylists live on one stack shared by the tree, and the replay stops once
   the budget is spent. Measured needs: forest-doc ≤ 1,206 per node, milsymb 12,534 per tree,
   prooftrees.sty 34,260 per `\forestset`.
-- **Other:** `\forestoption` and its relatives are `\relax`. `\useforestlibrary` records the
-  library (forest.sty:173-177) but loads no library file. The bare `\forest … \endforest` form
+- **Other:** `\forestoption` and its relatives are `\relax`. `\useforestlibrary` loads the
+  library file as forest.sty:167-170 does (`\RequirePackage[<options>]{forest-lib-<name>}`, which
+  records it, :173-177), except `linguistics` and `edges`, which are only recorded (TikZ layout;
+  prooftrees 0.9.2's `ext.tagging` socket, 2606.20837, `perfect_kernel_batchalgo397`). The bare `\forest … \endforest` form
   emits `<ltx:ERROR>` and discards the body; prooftrees and neoschool reach forest this way.
 - **chemnum:** when `\cmpd{x.a}` is a compound's first use, its output is wrapped in
   `xml:id="cmpd.x"`, so a later `\refcmpd{x}` resolves (chemnum.sty:1324, 1358, 1370-1378).

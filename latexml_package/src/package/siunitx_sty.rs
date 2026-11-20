@@ -135,14 +135,9 @@ const SIX_LOAD_COMPAT1: &str = r"
 /// siunitx critical path. This macro replaces the `&str`-based `six_get`
 /// family for the (41 of 52) call sites that pass a string literal.
 macro_rules! six_pin {
-  ($key:literal) => {{
-    std::thread_local! {
-      static CACHED: std::cell::OnceCell<::latexml_core::common::arena::SymStr>
-        = const { std::cell::OnceCell::new() };
-    }
-    CACHED
-      .with(|c| *c.get_or_init(|| ::latexml_core::common::arena::pin_static(concat!("SIX_", $key))))
-  }};
+  ($key:literal) => {
+    ::latexml_core::pin!(concat!("SIX_", $key))
+  };
 }
 
 /// SymStr-keyed six_get: skip the per-call `format!` + `arena::pin`
@@ -2697,6 +2692,14 @@ thread_local! {
   static UNIT_DEFN_CACHE: std::cell::RefCell<
     rustc_hash::FxHashMap<::latexml_core::common::arena::SymStr, SixUnitDefn>,
   > = std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+}
+
+/// Clear siunitx's per-conversion thread-local caches so persistent workers
+/// (`cortex_worker`, LSP) and `arena::reset()` never retain custom units or
+/// stale `SymStr`s across conversions.
+pub fn reset_conversion_caches() {
+  COLLAPSING_UNITS.with(|c| c.borrow_mut().clear());
+  UNIT_DEFN_CACHE.with(|c| c.borrow_mut().clear());
 }
 
 /// Decode a SixUnitDefn from "type|presentation|power|base" format.

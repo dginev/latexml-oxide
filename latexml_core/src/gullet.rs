@@ -2835,6 +2835,11 @@ fn read_x_token_undefined(token: Token) -> Result<Option<Token>> {
       unread_one(stand_in);
       return Ok(None);
     }
+    // a family the ar5iv preload provides on first use (`kernel_autoload::provide_on_first_use`, OXIDIZED_DESIGN #588)
+    if crate::binding::kernel_autoload::provide_on_first_use(&token)? {
+      unread_one(token);
+      return Ok(None);
+    }
     Ok(Some(generate_error_stub(&token)?))
   } else {
     Ok(Some(token))
@@ -3290,7 +3295,13 @@ pub fn read_balanced_with_close(
                 && (expansion_level == Full || !optional_arg_protected(&defn))
               {
                 local_current_token(token);
-                let mut expansion = defn.invoke(false)?;
+                // A closure that expands its argument (`Expand!`, `\lx@ifundefined`) recurses into this read, past
+                // `read_x_token`'s depth count: count it too, so `\def\x{\@ifundefined{\x}{}{}}` ends in the
+                // recursion Fatal (TeX: "capacity exceeded [input stack size]"), not a stack overflow (CCJNL397).
+                let mut expansion = {
+                  let _depth_guard = ExpandDepthGuard::enter()?;
+                  crate::stack_guard::maybe_grow(|| defn.invoke(false))?
+                };
                 crate::token::inherit_field_prov(token.prov, &mut expansion);
                 if expansion.is_empty() {
                   expire_current_token();
@@ -3333,6 +3344,11 @@ pub fn read_balanced_with_close(
                 continue;
               }
             } else if cc == Catcode::CS && !has_meaning {
+              // a family provided on first use is defined now and read again (`kernel_autoload`)
+              if crate::binding::kernel_autoload::provide_on_first_use(&token)? {
+                unread_one(token);
+                continue;
+              }
               // cs SHOULD have defn by now; report early!
               generate_error_stub(&token)?;
             }

@@ -7,7 +7,7 @@
 The [Releases page](https://github.com/dginev/latexml-oxide/releases) has prebuilt binaries for Linux, macOS and Windows,
 each a single, fully self-contained executable.
 
-You still need a working TeX installation, **TeX Live or MiKTeX**, at runtime, to resolve TeX packages, classes and fonts.
+Basic documents using built-in bindings convert without TeX Live; for raw `.sty`/`.cls` packages, `expl3`, and TeX fonts, install a working TeX distribution (**TeX Live or MiKTeX**) at runtime.
 A few external tools are called as subprocesses, mainly to convert graphics files.
 The binaries embed TeX format dumps for the TeX Live releases they were built with; with any
 other TeX tree (a Linux distribution's TeX Live, or one updated since), the first conversion

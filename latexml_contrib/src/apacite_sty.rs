@@ -21,6 +21,9 @@ use latexml_package::{package::natbib_sty::natbib_invocation, prelude::*};
 /// before an empty post-note (`[pre][]`); a lone `[note]` stays a lone one, which natbib reads as the post-note
 /// (apacite's `\@cite<>[note]`, apacite.sty:313-327). Both pre-note slots given (`[a]<b>`, no spelling of either
 /// package) are joined. A `full` form lists every author: natbib's starred one.
+/// `cs` is natbib's private copy (`\lx@natbib@citet`, …), never the user-level name: apacite.sty:277-401 builds every form
+/// on its own internals, so agujournal2018.cls:1140-1143's `\let\cite\shortcite \let\citep\cite \let\citet\citeA` is no
+/// cycle (1909.02387, 2212.08776; OXIDIZED_DESIGN_DIVERGENCES #1100).
 fn apacite_delegate(cs: &str, full: bool, args: Vec<ArgWrap>) -> Result<Tokens> {
   let mut it = args.into_iter();
   let bracket_pre: Option<Tokens> = it.next().unwrap().into();
@@ -615,13 +618,13 @@ LoadDefinitions!({
   // `\@cite<>[p.~5]`, apacite.sty:313-327, "(Smith, 2001, p. 5)"), and a `<pre>` alone
   // is a pre-note before an empty post-note. 2002.00730, 2005.00039.
   DefMacro!("\\citeA [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citet", false, args)
+    apacite_delegate("\\lx@natbib@citet", false, args)
   });
   DefMacro!("\\citeNP [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citealp", false, args)
+    apacite_delegate("\\lx@natbib@citealp", false, args)
   });
   DefMacro!("\\citeyearNP [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citeyear", false, args)
+    apacite_delegate("\\lx@natbib@citeyear", false, args)
   });
 
   // apacite's `\cite` by citation mode (apacite.sty:71-110). The classic one (`\if@APAC@classic@cite`, :258-267
@@ -642,25 +645,25 @@ LoadDefinitions!({
     // every author (`\citeauthoryear{full}{full}`), natbib's starred ones (upstream #711). apacite defines no
     // `\fullciteauthorNP`, only naming it in its mask lists (:557, :578).
     DefMacro!("\\citeauthorNP [] OptionalAngled [] Semiverbatim", sub[args] {
-      apacite_delegate("\\citeauthor", false, args)
+      apacite_delegate("\\lx@natbib@citeauthor", false, args)
     });
     DefMacro!("\\shortciteauthorA [] OptionalAngled [] Semiverbatim", sub[args] {
-      apacite_delegate("\\citeauthor", false, args)
+      apacite_delegate("\\lx@natbib@citeauthor", false, args)
     });
     DefMacro!("\\fullcite [] OptionalAngled [] Semiverbatim", sub[args] {
       apacite_delegate("\\lx@natbib@cite@parenthetical", true, args)
     });
     DefMacro!("\\fullciteNP [] OptionalAngled [] Semiverbatim", sub[args] {
-      apacite_delegate("\\citealp", true, args)
+      apacite_delegate("\\lx@natbib@citealp", true, args)
     });
     DefMacro!("\\fullciteA [] OptionalAngled [] Semiverbatim", sub[args] {
-      apacite_delegate("\\citet", true, args)
+      apacite_delegate("\\lx@natbib@citet", true, args)
     });
     DefMacro!("\\fullciteauthor [] OptionalAngled [] Semiverbatim", sub[args] {
-      apacite_delegate("\\citeauthor", true, args)
+      apacite_delegate("\\lx@natbib@citeauthor", true, args)
     });
     DefMacro!("\\fullciteauthorA [] OptionalAngled [] Semiverbatim", sub[args] {
-      apacite_delegate("\\citeauthor", true, args)
+      apacite_delegate("\\lx@natbib@citeauthor", true, args)
     });
   } else if mode == "natbibemu" {
     DefMacro!("\\cite OptionalMatch:* [][] Semiverbatim", sub[args] {
@@ -669,7 +672,7 @@ LoadDefinitions!({
       let pre: Option<Tokens> = it.next().unwrap().into();
       let post: Option<Tokens> = it.next().unwrap().into();
       let keys: Tokens = it.next().unwrap().into();
-      let cs = if pre.is_some() { "\\citep" } else { "\\citet" };
+      let cs = if pre.is_some() { "\\lx@natbib@citep" } else { "\\lx@natbib@citet" };
       Ok(natbib_invocation(cs, star, pre, post, keys))
     });
   }
@@ -688,16 +691,16 @@ LoadDefinitions!({
   // `\@ifnextchar<`), with `\cite`'s signature above: 1805.05444's `\let\cite\shortcite` then
   // `\cite<e.g.>[]{Rigden_2017}` took `<` as the key and typeset `e.g.>[]{Rigden_2017}`, a math error.
   DefMacro!("\\shortcite [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citep", false, args)
+    apacite_delegate("\\lx@natbib@citep", false, args)
   });
   DefMacro!("\\shortciteA [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citet", false, args)
+    apacite_delegate("\\lx@natbib@citet", false, args)
   });
   DefMacro!("\\shortciteNP [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citealp", false, args)
+    apacite_delegate("\\lx@natbib@citealp", false, args)
   });
   DefMacro!("\\shortciteauthor [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citeauthor", false, args)
+    apacite_delegate("\\lx@natbib@citeauthor", false, args)
   });
 
   // Old-format compat macros (pre-2012 apacite.bst): the `\bibitem` label uses

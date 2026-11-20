@@ -16,6 +16,16 @@ static NON_ALNUM_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^a-zA-Z0-9
 // Cleaners
 //======================================================================
 
+/// Perl's `substr($text, $offset, $len)` for a non-negative offset and length: it counts CHARACTERS, so a byte slice of
+/// document text (`year[2..4]` on `1–250, 2023`, witnesses 2308.14725, 2607.14650) panics where Perl reads on. Past
+/// the end it is empty, as Perl's in-range `substr` is.
+pub fn substr(text: &str, offset: usize, len: usize) -> &str {
+  let byte_at = |n: usize, from: &str| from.char_indices().nth(n).map_or(from.len(), |(at, _)| at);
+  let start = byte_at(offset, text);
+  let rest = &text[start..];
+  &rest[..byte_at(len, rest)]
+}
+
 static RMLETTERS: [char; 7] = ['i', 'v', 'x', 'l', 'c', 'd', 'm'];
 /// auxiliary helper for `roman`
 pub fn roman_aux<T: Into<i64>>(stuff: T) -> String {

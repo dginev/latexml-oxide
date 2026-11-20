@@ -1,0 +1,29 @@
+% witness: cond-mat0203143 (`\documentstyle[aps,…]{revtex}`, ver8.tex:716-727 `\parbox[t]{…}{\verb+ +\\ …}` and
+%          `{{\verb+ + }\\…}`), math0303012 (`\documentstyle`, gen2.tex:87 `{\verb|#3|}` in the `kentry` rows),
+%          cs9811025 (camera_rdy.tex:120 `\verb|h_0` / `.. h_{-m}|`, across a line end)
+% oracle:  latex209.def:201-211 `\verb` is `\@sverb#1{\def\@tempa##1#1{\leavevmode\null##1\egroup}\@tempa}`: it reads
+%          to the delimiter as tokenized, so in an argument it ends at the frozen delimiter with no error, and the
+%          line's end inside it is a space. pdflatex: 0 `!`, "1) / second line / 2) / third line / ab cd done x y h_0 ..
+%          h / Then more.", "second" and "third" bold
+% engines: rust NEXT397 round 0: 3 errors "\verb illegal in argument", each verb running to the argument's `}` (the
+%          `\\` and the bold line inside the verbatim), and "\verb ended by end of line" at `h_0`; CLUSTFIX: "\verb
+%          ended by end of line"
+% expect:  0 errors, 0 warnings; each verb ends at its delimiter
+% status:  RED (NEXT397 round 0) -> GREEN (NEXT397 fix 1); guard
+%          perfect_kernel_batchnext397::verb_under_documentstyle_reads_to_its_tokenized_delimiter
+% preload: ar5iv.sty
+\documentstyle{article}
+\def\entry#1{{\verb|#1|} done}
+\begin{document}
+\begin{tabular}{c}
+1)\parbox[t]{3cm}{\verb+ +\\
+\textbf{second} line}
+\\
+2)\parbox[t]{3cm}{{\verb+ + }\\\textbf{third} line}
+\end{tabular}
+\entry{ab cd}
+\verb+x y+ \verb|h_0
+.. h|
+
+Then more.
+\end{document}

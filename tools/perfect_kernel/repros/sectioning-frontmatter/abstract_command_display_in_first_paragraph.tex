@@ -1,0 +1,20 @@
+% witness: review p5 of ABSFIX round 1 (a display inside the abstract's first paragraph)
+% oracle:  pdflatex 0 `!`: "We study the equation / x = 1 / which holds in all cases considered." is one paragraph,
+%          then "1. Introduction Body text that is no abstract." and the references
+% engines: rust ABSFIX round 1 = 0 Errors, 1 Warning: the abstract cut after "We study the equation"
+% expect:  0 errors, 1 warning (8 words moved); the abstract holds the text, the display and the text after it; the
+%          body paragraph follows it, the bibliography after that
+% status:  RED (ABSFIX round 1) -> GREEN (ABSFIX round 2), OXIDIZED_DESIGN_DIVERGENCES #1101
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract
+We study the equation
+$$x=1$$
+which holds in all cases considered.
+
+\noindent{\bf 1. Introduction} Body text that is no abstract.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Book.
+\end{thebibliography}
+\end{document}

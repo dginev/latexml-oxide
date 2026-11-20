@@ -387,42 +387,47 @@ pub(crate) fn load() -> Result<()> {
     after_digest => sub[whatsit] {
       let cols = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
       let mut cols_vec = Vec::new();
+      // Cap individual `\cline` range spans to avoid OOM DoS on hostile inputs
+      // like `\cline{1-1000000000}`; no real LaTeX table has >10,000 columns.
+      const MAX_CLINE_COL: usize = 10_000;
+      let push_range = |cols_vec: &mut Vec<usize>, from: Option<usize>, this_num: usize| {
+        if let Some(from_num) = from {
+          let end = this_num.min(from_num.saturating_add(MAX_CLINE_COL));
+          for num_in_range in from_num..=end {
+            cols_vec.push(num_in_range);
+          }
+        } else {
+          cols_vec.push(this_num);
+        }
+      };
       let cols_chars = cols.chars();
-      let mut from : Option<usize> = None;
+      let mut from: Option<usize> = None;
       let mut num = String::new();
       for c_next in cols_chars {
         match c_next {
-          ',' => if !num.is_empty() {
-            let this_num = num.parse::<usize>().unwrap();
-            if let Some(from_num) = from {
-              for num_in_range in from_num..=this_num {
-                cols_vec.push(num_in_range);
+          ',' => {
+            if !num.is_empty() {
+              if let Ok(this_num) = num.parse::<usize>() {
+                push_range(&mut cols_vec, from, this_num);
               }
-            } else {
-              cols_vec.push(this_num);
+              from = None;
+              num.clear();
             }
-            from = None;
-            num.clear();
           },
           '-' => {
             // `\cline{-3}` (no leading number) is malformed but appears in
             // the wild; treat it as `\cline{1-3}` rather than panicking.
             from = Some(num.parse::<usize>().unwrap_or(1));
             num.clear();
-          }
+          },
           c if c.is_ascii_digit() => num.push(c_next),
-          _ => break
+          _ => break,
         }
       }
-      if !num.is_empty() {
-        let this_num = num.parse::<usize>().unwrap();
-        if let Some(from_num) = from {
-          for num_in_range in from_num..=this_num {
-            cols_vec.push(num_in_range);
-          }
-        } else {
-          cols_vec.push(this_num);
-        }
+      if !num.is_empty()
+        && let Ok(this_num) = num.parse::<usize>()
+      {
+        push_range(&mut cols_vec, from, this_num);
       }
       if let Some(alignment_stored) = crate::tex_tables::alignment_to_rule() {
         alignment_stored.alignment_cell().unwrap().borrow_mut()

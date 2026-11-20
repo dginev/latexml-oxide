@@ -71,7 +71,7 @@ impl ExpansionBody {
 }
 
 /// What a body coded in the host language prints where Perl prints `CODE(0x…)`: no address, so the same on every run
-/// (QA89), and still `CODE(`, etoolbox_sty's `\lx@ifnativecmd` sentinel.
+/// (QA89), and still `CODE(`.
 pub const CLOSURE_BODY_TEXT: &str = "CODE(native)";
 
 /// `\meaning`'s text for a closure body of `cs`: its name, letters only, keeps two natives' meanings apart as Perl's

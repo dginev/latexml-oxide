@@ -416,6 +416,8 @@ mod perfect_kernel_batch98c;
 mod perfect_kernel_batch98d;
 mod perfect_kernel_batch98e;
 mod perfect_kernel_batch99b;
+mod perfect_kernel_batchabsfix;
+mod perfect_kernel_batchalgo397;
 mod perfect_kernel_batchamsppt;
 mod perfect_kernel_batchaut1;
 mod perfect_kernel_batchbc1;
@@ -433,6 +435,14 @@ mod perfect_kernel_batchcl6;
 mod perfect_kernel_batchcl7;
 mod perfect_kernel_batchcl8;
 mod perfect_kernel_batchcl9;
+/// CLUSTFIX: run-397 binding gaps — pasj00 without its class, the 1998 aipproc, `\cite*` under the lock, elsart's switches.
+mod perfect_kernel_batchclustfix;
+/// CLUSTFIX2: run-397 binding gaps — ar5iv's `\href` anchor layer, pasj00's `\timeform` without its class, psfig's
+/// `\psfigurepath`, `\sep` in revtex4's `\keywords`.
+mod perfect_kernel_batchclustfix2;
+/// CLUSTFIX3: run-397 Error roots — amsmath's `\[`/`\]`, `\robustify` of a native, pgfkeys natives over a pgf 2.00
+/// file, doublespace's `\setstretch`.
+mod perfect_kernel_batchclustfix3;
 /// CMPJ1: cmpj's `\refaddr` marks resolve as TeX's second run (`cmpj_sty.rs`).
 mod perfect_kernel_batchcmpj1;
 mod perfect_kernel_batchcr10a;
@@ -445,6 +455,9 @@ mod perfect_kernel_batchcr4b;
 mod perfect_kernel_batchcr6;
 mod perfect_kernel_batchcr7;
 mod perfect_kernel_batchcr8;
+/// CRASH397B: run-397 crash/Fatal roots — a cycle of counter reset lists, an active `@` in the bibliography mouth,
+/// an alpha label's non-ASCII year, a defining command's `{\cs}` argument read as tokens.
+mod perfect_kernel_batchcrash397b;
 /// INVDAG: the frontmatter invents no glyph — an unmarked note outside the creators shows its content with none, an authblk
 /// label no `\affil` explains shows on its name (OD #1063, #1064).
 mod perfect_kernel_batchdateleg;
@@ -486,7 +499,10 @@ mod perfect_kernel_batchga2;
 mod perfect_kernel_batchga5;
 mod perfect_kernel_batchgl1;
 /// HG1: the guards DEL1 left hollow asserting again — rows of one table, the wrong ones `_red.tex` catalog repros.
+mod perfect_kernel_batchharden397;
 mod perfect_kernel_batchhg1;
+/// HYPERPROV: the ar5iv preload provides `\texorpdfstring` and atbegshi's shipout hooks (OD #588).
+mod perfect_kernel_batchhyperprov;
 mod perfect_kernel_batchi736;
 mod perfect_kernel_batchi802;
 mod perfect_kernel_batchicmlsym;
@@ -513,6 +529,9 @@ mod perfect_kernel_batchlo3;
 mod perfect_kernel_batchlo4;
 /// LOGO1: what a constructor prints of its own (`\LaTeX`, `\TeX`) is ink of the name or line it is in (amsldoc).
 mod perfect_kernel_batchlogo1;
+/// LOOPFIX: run-397 alias-cycle loop Fatals — apacite, amsmath's `\X@` lets, revtex's hyperref preload, physics,
+/// slashed (OD #1100).
+mod perfect_kernel_batchloopfix;
 /// LOSTF (OD ruling 13): three frontmatter content regressions — fcs's corresponding mark, vmsta's name parts, the pazh/astl
 /// title code's marks; OD #905, #802, #941.
 mod perfect_kernel_batchlostf;
@@ -552,6 +571,8 @@ mod perfect_kernel_batchne5;
 mod perfect_kernel_batchne6;
 mod perfect_kernel_batchne7;
 mod perfect_kernel_batchne8;
+/// NEXT397: `\astroncite` under the locked `\cite`, aipproc's `\affiliationmark`, elsart.sty's switches, `\verb` in an arg.
+mod perfect_kernel_batchnext397;
 mod perfect_kernel_batchnl1;
 /// NOTCANCEL: math_common's `\not` rewrite moves its operand (Perl appendChild), so one pass rewrites every nested `\not`.
 mod perfect_kernel_batchnotcancel;
@@ -629,6 +650,9 @@ mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
 mod perfect_kernel_batchpc3;
+/// PLACEFIX: run 397's placement rulings — a BibTeX month macro warns, a theorem in an abstract dissolves, a nomenclature
+/// keeps its box, a bibliography floats out of a float or heading (OD #1096-#1099).
+mod perfect_kernel_batchplacefix;
 /// PRESBXc: the fail-safes of the title's marks; the lock's refusal record follows a `\let` of `\maketitle` alone.
 mod perfect_kernel_batchpresbxc;
 mod perfect_kernel_batchpsf1;

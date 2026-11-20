@@ -180,11 +180,13 @@ RUN set -ex; for f in /tmp/THIRD-PARTY-NOTICES.cli /tmp/THIRD-PARTY-NOTICES.work
 FROM toolchain AS build-worker
 COPY . .
 # Deterministic telemetry/version provenance: the build context excludes `.git`
-# (see `.dockerignore`), so build.rs can't derive the sha itself — stamp it via a
-# build-arg that build.rs reads first (`LATEXML_GIT_SHA_OVERRIDE`). `unknown` is the
-# honest default for a bare `docker build`; CI passes the real short sha.
+# (see `.dockerignore`), so build.rs can't derive the sha itself — stamp both
+# `LATEXML_GIT_SHA_OVERRIDE` (latexml_core telemetry) and `LATEXML_GIT_SHA`
+# (latexml_oxide --version / banner). `unknown` is the honest default for a
+# bare `docker build`; CI passes the real short sha.
 ARG GITSHA=unknown
 ENV LATEXML_GIT_SHA_OVERRIDE=${GITSHA}
+ENV LATEXML_GIT_SHA=${GITSHA}
 RUN cargo build --profile maxperf-cortex --no-default-features --features cortex \
       --bin cortex_worker --bin latexml_oxide
 
@@ -250,6 +252,7 @@ COPY . .
 # Deterministic provenance (see build-worker) — `.git` is out of context.
 ARG GITSHA=unknown
 ENV LATEXML_GIT_SHA_OVERRIDE=${GITSHA}
+ENV LATEXML_GIT_SHA=${GITSHA}
 RUN set -ex \
  && tools/make_formats.sh \
  && cargo build --no-default-features --features runtime-bindings \

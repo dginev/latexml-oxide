@@ -1,0 +1,20 @@
+% witness: astro-ph0201169 (`\timeform{2.5'}`), astro-ph0204505 (`Fe \emissiontype{II}`, `\timeform{0.4''}`), 0706.0253
+%          (`\draft`, `\arcsec`, `\micron`): pasj00 papers whose source lacks pasj00.cls; ~80 run-397 papers, an
+%          undefined-macro Error each under OmniBus
+% oracle:  pasj00.cls (0704.3654's copy) :3716-3980 `\timeform`/`\TF` parse their argument and set each unit as a
+%          superscript, the decimal point under the last (2'.5, 0''.4, 12^h34^m56^s.7); :3578-3598 `\emissiontype`
+%          sets the ionization state small after a thin space; :3684-3713 `\arcsec`, `\micron`, `\fd` (the point under
+%          ^d); :284-300 `\draft` the proof-reading layout. Not in TeX Live:
+%          without it pdflatex stops at "File pasj00.cls not found" (harness limit); with the copy beside it, 0 errors
+% engines: Perl 8 errors on astro-ph0201169; rust MAIN922 an Error per `\timeform`/`\emissiontype`/`\fd` and the text
+%          after it lost
+% expect:  0 errors, 4 warnings (the math parser's, on the class's `\mathchoice` boxes); "2'.5", "0''.4", "12h34m56s.7",
+%          "Fe II", "3d.5", 5'', 3 μm kept in that order
+% status:  RED (MAIN922) -> GREEN (CLUSTFIX2); guard perfect_kernel_batchclustfix2::pasj00_without_its_class_sets_timeform
+% preload: ar5iv.sty
+\documentclass{pasj00}
+\draft
+\begin{document}
+A shell of \timeform{2.5'} diameter, seeing from \timeform{0.4''} at \TF{12h34m56.7s}.
+We found the Fe \emissiontype{II} emission after 3\fd 5, at 5\arcsec{} and 3\micron.
+\end{document}

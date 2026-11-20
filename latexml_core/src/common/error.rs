@@ -584,6 +584,10 @@ thread_local! {
   static SESSION_WARNINGS: RefCell<Vec<(String, String)>> = const { RefCell::new(Vec::new()) };
 }
 
+/// Drop the warnings held for a source that never reached its report (its archive unpacked, then its job failed before
+/// the session): a persistent worker's next paper must not log them as its own. Called as each archive is unpacked.
+pub fn clear_session_warnings() { SESSION_WARNINGS.with(|held| held.borrow_mut().clear()) }
+
 /// A Warning raised before its conversion's report starts (a source archive is unpacked before the session): held,
 /// then logged and counted by the next [`initialize_report`] on this thread.
 pub fn warn_at_session_start(category: &str, object: &str, message: String) {
@@ -1318,13 +1322,6 @@ impl std::ops::DerefMut for Error {
   fn deref_mut(&mut self) -> &mut ErrorData { &mut self.0 }
 }
 impl ErrorTrait for Error {}
-// SAFETY: `Error` contains a `Locator` which embeds a Rc<RefCell<Mouth>> — !Send/!Sync
-// by default. The invariant is the same as for `Stored`: errors propagate within a
-// single thread's conversion pipeline; they never cross thread boundaries at runtime.
-// These impls exist to satisfy `Box<dyn std::error::Error + Send + Sync>` bounds on
-// error return types, which transitively require Send/Sync on all error variants.
-unsafe impl Send for Error {}
-unsafe impl Sync for Error {}
 
 #[derive(Debug)]
 pub enum ErrorCategory {
@@ -1344,7 +1341,7 @@ pub enum ErrorCategory {
   Endgroup,
   FailedParse,
   MaxLimit(usize),
-  Generic(Box<dyn ErrorTrait>),
+  Generic(Box<dyn ErrorTrait + Send + Sync>),
   Filename(String),
   ToDo,
   TokenLimit,
@@ -1519,10 +1516,11 @@ impl From<io::Error> for Error {
 
 impl From<Box<dyn ErrorTrait>> for Error {
   fn from(err: Box<dyn ErrorTrait>) -> Error {
+    let message = err.to_string();
     Error::from(ErrorData {
-      target:   ErrorTarget::Document,
-      message:  err.to_string(),
-      category: ErrorCategory::Generic(err),
+      target: ErrorTarget::Document,
+      category: ErrorCategory::Generic(From::from(message.clone())),
+      message,
     })
   }
 }

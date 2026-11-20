@@ -127,6 +127,7 @@ pub struct RenderManifest {
   pub plane1:                    bool,
   pub hackplane1:                bool,
   pub mathtex:                   bool,
+  pub unicodemath:               bool,
   pub intent_literal:            bool,
   pub stylesheet:                Option<String>,
   /// The fully-resolved XSLT parameter map (CSS/JS/LATEXML_VERSION/user
@@ -319,10 +320,12 @@ pub(crate) fn parallel_render(
   // distance to this run's own memory fuse. Degrade to fewer workers — or
   // decline to engage — rather than let the kernel choose a victim.
   #[cfg(target_os = "linux")]
+  // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
   unsafe {
     libc::malloc_trim(0);
   }
   #[cfg(not(feature = "dhat-heap"))]
+  // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
   unsafe {
     libmimalloc_sys::mi_collect(true);
   }
@@ -414,15 +417,29 @@ pub(crate) fn parallel_render(
     match spawned {
       Ok(child) => {
         let pid = child.id();
+        // Register with the watchdog so timeout/OOM exits never orphan the
+        // worker pool across Unix and Windows. Moved into the drain closure so
+        // each worker's PID unregisters immediately when `wait_with_output`
+        // reaps it (never outliving an early-finishing worker).
+        let kill_guard = latexml_core::watchdog::kill_pid_on_exit(pid, false);
         // Each child gets a drain thread calling `wait_with_output` — piped
         // stderr MUST be consumed while the parent polls, or a chatty child
         // blocks on a full pipe and the poll below never sees it exit.
         let handle = std::thread::Builder::new()
           .name(format!("render-worker-drain-{pid}"))
-          .spawn(move || child.wait_with_output());
+          .spawn(move || {
+            let _kill_guard = kill_guard;
+            child.wait_with_output()
+          });
         match handle {
           Ok(h) => pending.push(Pending::Spawned(h, pid)),
-          Err(e) => pending.push(Pending::Failed(format!("drain thread spawn failed: {e}"))),
+          Err(e) => {
+            // `child` and `kill_guard` were moved into the closure and dropped
+            // on spawn failure, unregistering the PID; kill it explicitly so we
+            // never leak a live worker.
+            latexml_core::watchdog::kill_pid(pid, false);
+            pending.push(Pending::Failed(format!("drain thread spawn failed: {e}")));
+          },
         }
       },
       Err(e) => pending.push(Pending::Failed(format!("worker spawn failed: {e}"))),
@@ -441,15 +458,11 @@ pub(crate) fn parallel_render(
     }
     if let Err(e) = latexml_core::stomach::check_timeout() {
       e.log_fatal();
-      #[cfg(unix)]
       for p in &pending {
         if let Pending::Spawned(h, pid) = p
           && !h.is_finished()
         {
-          // SAFETY: plain kill(2) on a child pid this process spawned.
-          unsafe {
-            libc::kill(*pid as i32, libc::SIGKILL);
-          }
+          latexml_core::watchdog::kill_pid(*pid, false);
         }
       }
       break;
@@ -658,30 +671,19 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
   if m.is_html_out {
     processors.push(Box::new(latexml_post::svg::SVG::new()));
   }
-  if m.pmml {
-    let mut presentation = latexml_post::mathml::MathML::new_presentation()
-      .with_keep_xmath(m.keep_xmath)
-      .with_invisible_times(m.invisible_times)
-      .with_plane1(m.plane1, m.hackplane1)
-      .with_mathtex(m.mathtex)
-      .with_intent_literal(m.intent_literal);
-    if m.cmml {
-      presentation = presentation.with_secondaries(vec![Box::new(
-        latexml_post::mathml::MathML::new_content()
-          .with_keep_xmath(m.keep_xmath)
-          .with_invisible_times(m.invisible_times)
-          .with_plane1(m.plane1, m.hackplane1)
-          .secondary(),
-      )]);
-    }
-    processors.push(Box::new(presentation));
-  } else if m.cmml {
-    processors.push(Box::new(
-      latexml_post::mathml::MathML::new_content()
-        .with_keep_xmath(m.keep_xmath)
-        .with_invisible_times(m.invisible_times)
-        .with_plane1(m.plane1, m.hackplane1),
-    ));
+  let math_formats = crate::post::MathFormats {
+    pmml:            m.pmml,
+    cmml:            m.cmml,
+    unicodemath:     m.unicodemath,
+    keep_xmath:      m.keep_xmath,
+    invisible_times: m.invisible_times,
+    plane1:          m.plane1,
+    hackplane1:      m.hackplane1,
+    mathtex:         m.mathtex,
+    intent_literal:  m.intent_literal,
+  };
+  if let Some(math) = math_formats.processor() {
+    processors.push(math);
   }
   if let Some(xsl_path) = m.stylesheet.as_deref() {
     let params: rustc_hash::FxHashMap<String, String> = m.xslt_params.iter().cloned().collect();
@@ -715,10 +717,12 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
     // thousands of pages.
     if !written.is_empty() && written.len().is_multiple_of(512) {
       #[cfg(target_os = "linux")]
+      // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
       unsafe {
         libc::malloc_trim(0);
       }
       #[cfg(not(feature = "dhat-heap"))]
+      // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
       unsafe {
         libmimalloc_sys::mi_collect(true);
       }

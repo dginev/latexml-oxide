@@ -319,6 +319,11 @@ LoadDefinitions!({
   // audit counts ~16 DefConstructor → DefPrimitive flips in this
   // file, all under the same rationale. Individual entries don't
   // re-carry the WISDOM #44 tag to avoid comment noise.
+  //
+  // The commands physics.sty declares with `\DeclareDocumentCommand` are `protected => true` here, as ltcmd makes
+  // them (all but `\svmqty`, `\trace`/`\Trace`; row R PHYS-PROTECT): the helpers take the command itself as their reversion argument, so in an `\edef` (ifthen's `\equal` under
+  // algpseudocode's `\Function`) an unprotected `\pdv` re-expanded inside its own helper without end (2001.08539,
+  // 2505.01628; Perl physics.sty.ltxml:401/464-476 alike; OXIDIZED_DESIGN_DIVERGENCES #1100). `Let!` copies the flag.
 
   // DefMacro (expansion-time), not DefPrimitive — it reads a delimited `(…)`/`[…]`
   // body via `phys_read_arg`, so inside an alignment a digestion-time primitive would
@@ -358,7 +363,7 @@ LoadDefinitions!({
       content, presentation, vec![arg],
     )?;
     Ok(result)
-  });
+  }, protected => true);
   Let!("\\qty", "\\quantity");
 
   // Perl: \lx@physics@fenced — fenced stuff with optional semantics
@@ -404,12 +409,12 @@ LoadDefinitions!({
     unread(result);
   });
 
-  DefMacro!("\\pqty", "\\lx@physics@fenced{\\pqty}{}{}{(}{)}");
-  DefMacro!("\\bqty", "\\lx@physics@fenced{\\bqty}{}{}{[}{]}");
-  DefMacro!("\\vqty", "\\lx@physics@fenced{\\vqty}{}{}{\u{007C}}{\u{007C}}");
-  DefMacro!("\\Bqty", "\\lx@physics@fenced{\\Bqty}{}{}{\\{}{\\}}");
-  DefMacro!("\\absolutevalue", "\\lx@physics@fenced{\\absolutevalue}{absolute-value}{}{\\vert}{\\vert}");
-  DefMacro!("\\norm", "\\lx@physics@fenced{\\norm}{norm}{}{\\|}{\\|}");
+  DefMacro!("\\pqty", "\\lx@physics@fenced{\\pqty}{}{}{(}{)}", protected => true);
+  DefMacro!("\\bqty", "\\lx@physics@fenced{\\bqty}{}{}{[}{]}", protected => true);
+  DefMacro!("\\vqty", "\\lx@physics@fenced{\\vqty}{}{}{\u{007C}}{\u{007C}}", protected => true);
+  DefMacro!("\\Bqty", "\\lx@physics@fenced{\\Bqty}{}{}{\\{}{\\}}", protected => true);
+  DefMacro!("\\absolutevalue", "\\lx@physics@fenced{\\absolutevalue}{absolute-value}{}{\\vert}{\\vert}", protected => true);
+  DefMacro!("\\norm", "\\lx@physics@fenced{\\norm}{norm}{}{\\|}{\\|}", protected => true);
   Let!("\\abs", "\\absolutevalue");
 
   // Perl: \evaluated — fenced arg, then read sub/superscript limits.
@@ -498,13 +503,13 @@ LoadDefinitions!({
     let presentation = Tokens::new(pres);
     let result = i_dual(&[("reversion", reversion)], content, presentation, all_args)?;
     Ok(result)
-  });
+  }, protected => true);
   Let!("\\eval", "\\evaluated");
 
   // Perl: \order — O(arg) with meaning=order, function=\ordersymbol
   DefMacro!("\\ordersymbol", r"\mathcal{O}");
   // Intentional — WISDOM #44, see physics umbrella L178.
-  DefMacro!("\\order", "\\lx@physics@fenced{\\order}{order}{\\ordersymbol}{(}{)}");
+  DefMacro!("\\order", "\\lx@physics@fenced{\\order}{order}{\\ordersymbol}{(}{)}", protected => true);
 
   // Perl: \lx@physics@fencedII — 2-argument fenced
   DefPrimitive!("\\lx@physics@fencedII{}{}{}{}{}", sub[(cs, semantic, _function, open, close)] {
@@ -546,11 +551,13 @@ LoadDefinitions!({
     unread(result);
   });
 
-  DefMacro!("\\commutator", "\\lx@physics@fencedII{\\commutator}{commutator}{}{[}{]}");
-  DefMacro!("\\anticommutator", "\\lx@physics@fencedII{\\anticommutator}{anticommutator}{}{\\{}{\\}}");
-  DefMacro!("\\poissonbracket", "\\lx@physics@fencedII{\\poissonbracket}{poisson-bracket}{}{\\{}{\\}}");
+  DefMacro!("\\commutator", "\\lx@physics@fencedII{\\commutator}{commutator}{}{[}{]}", protected => true);
+  DefMacro!("\\anticommutator", "\\lx@physics@fencedII{\\anticommutator}{anticommutator}{}{\\{}{\\}}", protected => true);
+  DefMacro!("\\poissonbracket", "\\lx@physics@fencedII{\\poissonbracket}{poisson-bracket}{}{\\{}{\\}}", protected => true);
   Let!("\\comm", "\\commutator");
   Let!("\\acomm", "\\anticommutator");
+  // physics.sty:204 (the same command under its third name)
+  Let!("\\acommutator", "\\anticommutator");
   Let!("\\pb", "\\poissonbracket");
 
   //======================================================================
@@ -566,11 +573,11 @@ LoadDefinitions!({
     font => { shape => "italic", family => "serif", series => "bold", forcebold => true },
     reversion => "{\\bf\\it#1}");
   DefMacro!("\\vectorbold OptionalMatch:* {}",
-    "\\lx@wrap[role=ID]{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}");
+    "\\lx@wrap[role=ID]{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}", protected => true);
   DefMacro!("\\vectorarrow OptionalMatch:* {}",
-    "\\lx@wrap[role=ID]{\\lx@math@overrightarrow{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}}");
+    "\\lx@wrap[role=ID]{\\lx@math@overrightarrow{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}}", protected => true);
   DefMacro!("\\vectorunit OptionalMatch:* {}",
-    "\\lx@wrap[role=ID]{\\hat{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}}");
+    "\\lx@wrap[role=ID]{\\hat{\\ifx.#1.\\mathbf{#2}\\else\\lx@physics@mathbfit{#2}\\fi}}", protected => true);
   Let!("\\vb", "\\vectorbold");
   Let!("\\va", "\\vectorarrow");
   Let!("\\vu", "\\vectorunit");
@@ -627,10 +634,10 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\gradient", "\\lx@physics@operator{\\gradient}{gradient}{\\nabla}");
-  DefMacro!("\\divergence", "\\lx@physics@operator{\\divergence}{divergence}{\\nabla\\cdot}");
-  DefMacro!("\\curl", "\\lx@physics@operator{\\curl}{curl}{\\nabla\\cross}");
-  DefMacro!("\\laplacian", "\\lx@physics@operator{\\laplacian}{laplacian}{\\nabla^2}");
+  DefMacro!("\\gradient", "\\lx@physics@operator{\\gradient}{gradient}{\\nabla}", protected => true);
+  DefMacro!("\\divergence", "\\lx@physics@operator{\\divergence}{divergence}{\\nabla\\cdot}", protected => true);
+  DefMacro!("\\curl", "\\lx@physics@operator{\\curl}{curl}{\\nabla\\cross}", protected => true);
+  DefMacro!("\\laplacian", "\\lx@physics@operator{\\laplacian}{laplacian}{\\nabla^2}", protected => true);
   Let!("\\grad", "\\gradient");
   Let!("\\divisionsymbol", "\\div");
   Let!("\\div", "\\divergence");
@@ -756,23 +763,23 @@ LoadDefinitions!({
   DefMacro!("\\Probability", "\\lx@physics@operatorP{\\Pr}{probability}{\\operatorname{Pr}}");
 
   // Operator names ported from Perl long→short mapping
-  DefMacro!("\\sin", "\\lx@physics@operatorP{\\sin}{sine}{\\operatorname{sin}}");
-  DefMacro!("\\cos", "\\lx@physics@operatorP{\\cos}{cosine}{\\operatorname{cos}}");
-  DefMacro!("\\tan", "\\lx@physics@operatorP{\\tan}{tangent}{\\operatorname{tan}}");
-  DefMacro!("\\csc", "\\lx@physics@operatorP{\\csc}{cosecant}{\\operatorname{csc}}");
-  DefMacro!("\\sec", "\\lx@physics@operatorP{\\sec}{secant}{\\operatorname{sec}}");
-  DefMacro!("\\cot", "\\lx@physics@operatorP{\\cot}{cotangent}{\\operatorname{cot}}");
-  DefMacro!("\\sinh", "\\lx@physics@operatorP{\\sinh}{hyperbolic-sine}{\\operatorname{sinh}}");
-  DefMacro!("\\cosh", "\\lx@physics@operatorP{\\cosh}{hyperbolic-cosine}{\\operatorname{cosh}}");
-  DefMacro!("\\tanh", "\\lx@physics@operatorP{\\tanh}{hyperbolic-tangent}{\\operatorname{tanh}}");
-  DefMacro!("\\arcsin", "\\lx@physics@operatorP{\\arcsin}{arcsine}{\\operatorname{arcsin}}");
-  DefMacro!("\\arccos", "\\lx@physics@operatorP{\\arccos}{arccosine}{\\operatorname{arccos}}");
-  DefMacro!("\\arctan", "\\lx@physics@operatorP{\\arctan}{arctangent}{\\operatorname{arctan}}");
-  DefMacro!("\\exp", "\\lx@physics@operatorP{\\exp}{exponential}{\\operatorname{exp}}");
-  DefMacro!("\\log", "\\lx@physics@operatorP{\\log}{logarithm}{\\operatorname{log}}");
-  DefMacro!("\\ln", "\\lx@physics@operatorP{\\ln}{natural-logarithm}{\\operatorname{ln}}");
-  DefMacro!("\\det", "\\lx@physics@operatorP{\\det}{determinant}{\\operatorname{det}}");
-  DefMacro!("\\Pr", "\\lx@physics@operatorP{\\Pr}{probability}{\\operatorname{Pr}}");
+  DefMacro!("\\sin", "\\lx@physics@operatorP{\\sin}{sine}{\\operatorname{sin}}", protected => true);
+  DefMacro!("\\cos", "\\lx@physics@operatorP{\\cos}{cosine}{\\operatorname{cos}}", protected => true);
+  DefMacro!("\\tan", "\\lx@physics@operatorP{\\tan}{tangent}{\\operatorname{tan}}", protected => true);
+  DefMacro!("\\csc", "\\lx@physics@operatorP{\\csc}{cosecant}{\\operatorname{csc}}", protected => true);
+  DefMacro!("\\sec", "\\lx@physics@operatorP{\\sec}{secant}{\\operatorname{sec}}", protected => true);
+  DefMacro!("\\cot", "\\lx@physics@operatorP{\\cot}{cotangent}{\\operatorname{cot}}", protected => true);
+  DefMacro!("\\sinh", "\\lx@physics@operatorP{\\sinh}{hyperbolic-sine}{\\operatorname{sinh}}", protected => true);
+  DefMacro!("\\cosh", "\\lx@physics@operatorP{\\cosh}{hyperbolic-cosine}{\\operatorname{cosh}}", protected => true);
+  DefMacro!("\\tanh", "\\lx@physics@operatorP{\\tanh}{hyperbolic-tangent}{\\operatorname{tanh}}", protected => true);
+  DefMacro!("\\arcsin", "\\lx@physics@operatorP{\\arcsin}{arcsine}{\\operatorname{arcsin}}", protected => true);
+  DefMacro!("\\arccos", "\\lx@physics@operatorP{\\arccos}{arccosine}{\\operatorname{arccos}}", protected => true);
+  DefMacro!("\\arctan", "\\lx@physics@operatorP{\\arctan}{arctangent}{\\operatorname{arctan}}", protected => true);
+  DefMacro!("\\exp", "\\lx@physics@operatorP{\\exp}{exponential}{\\operatorname{exp}}", protected => true);
+  DefMacro!("\\log", "\\lx@physics@operatorP{\\log}{logarithm}{\\operatorname{log}}", protected => true);
+  DefMacro!("\\ln", "\\lx@physics@operatorP{\\ln}{natural-logarithm}{\\operatorname{ln}}", protected => true);
+  DefMacro!("\\det", "\\lx@physics@operatorP{\\det}{determinant}{\\operatorname{det}}", protected => true);
+  DefMacro!("\\Pr", "\\lx@physics@operatorP{\\Pr}{probability}{\\operatorname{Pr}}", protected => true);
 
   // Let long names point to short names (Perl: Let('\sine', '\sin') etc.)
   Let!("\\asin", "\\arcsin");
@@ -782,11 +789,11 @@ LoadDefinitions!({
   Let!("\\acosine", "\\arccos");
   Let!("\\atangent", "\\arctan");
 
-  DefMacro!("\\arccsc", "\\lx@physics@operatorP{\\arccsc}{arccosecant}{\\operatorname{arccsc}}");
-  DefMacro!("\\arcsec", "\\lx@physics@operatorP{\\arcsec}{arcsecant}{\\operatorname{arcsec}}");
-  DefMacro!("\\arccot", "\\lx@physics@operatorP{\\arccot}{arccotangent}{\\operatorname{arccot}}");
-  DefMacro!("\\csch", "\\lx@physics@operatorP{\\csch}{hyperbolic-cosecant}{\\operatorname{csch}}");
-  DefMacro!("\\sech", "\\lx@physics@operatorP{\\sech}{hyperbolic-secant}{\\operatorname{sech}}");
+  DefMacro!("\\arccsc", "\\lx@physics@operatorP{\\arccsc}{arccosecant}{\\operatorname{arccsc}}", protected => true);
+  DefMacro!("\\arcsec", "\\lx@physics@operatorP{\\arcsec}{arcsecant}{\\operatorname{arcsec}}", protected => true);
+  DefMacro!("\\arccot", "\\lx@physics@operatorP{\\arccot}{arccotangent}{\\operatorname{arccot}}", protected => true);
+  DefMacro!("\\csch", "\\lx@physics@operatorP{\\csch}{hyperbolic-cosecant}{\\operatorname{csch}}", protected => true);
+  DefMacro!("\\sech", "\\lx@physics@operatorP{\\sech}{hyperbolic-secant}{\\operatorname{sech}}", protected => true);
   Let!("\\hypcosecant", "\\csch");
   Let!("\\hypsecant", "\\sech");
   DefMacro!("\\hypcotangent", "\\lx@physics@operatorP{\\coth}{hyperbolic-cotangent}{\\operatorname{coth}}");
@@ -804,9 +811,9 @@ LoadDefinitions!({
   DefMacro!("\\Trace", "\\lx@physics@operatorP{\\Tr}{trace}{\\operatorname{Tr}}");
   DefMacro!("\\rank", "\\lx@physics@operatorP{\\rank}{rank}{\\operatorname{rank}}");
   DefMacro!("\\erf", "\\lx@physics@operatorP{\\erf}{error-function}{\\operatorname{erf}}");
-  DefMacro!("\\Res", "\\lx@physics@operatorP{\\Res}{residue}{\\operatorname{Res}}");
-  DefMacro!("\\principalvalue", "\\lx@physics@operatorP{\\principalvalue}{principal-value}{\\mathcal{P}}");
-  DefMacro!("\\PV", "\\lx@physics@operatorP{\\PV}{principal-value}{\\operatorname{P.V.}}");
+  DefMacro!("\\Res", "\\lx@physics@operatorP{\\Res}{residue}{\\operatorname{Res}}", protected => true);
+  DefMacro!("\\principalvalue", "\\lx@physics@operatorP{\\principalvalue}{principal-value}{\\mathcal{P}}", protected => true);
+  DefMacro!("\\PV", "\\lx@physics@operatorP{\\PV}{principal-value}{\\operatorname{P.V.}}", protected => true);
   Let!("\\tr", "\\trace");
   Let!("\\Tr", "\\Trace");
   // Intentional — WISDOM #44, see physics umbrella L178.
@@ -853,8 +860,8 @@ LoadDefinitions!({
   Let!("\\real", "\\Re");
   Let!("\\imaginary", "\\Im");
 
-  DefMacro!("\\Re", "\\lx@physics@ReIm{\\Re}{real-part}{\\real}{\\operatorname{Re}}");
-  DefMacro!("\\Im", "\\lx@physics@ReIm{\\Im}{imaginary-part}{\\imaginary}{\\operatorname{Im}}");
+  DefMacro!("\\Re", "\\lx@physics@ReIm{\\Re}{real-part}{\\real}{\\operatorname{Re}}", protected => true);
+  DefMacro!("\\Im", "\\lx@physics@ReIm{\\Im}{imaginary-part}{\\imaginary}{\\operatorname{Im}}", protected => true);
 
   //======================================================================
   // Intentional — WISDOM #44, see physics umbrella L178.
@@ -874,7 +881,7 @@ LoadDefinitions!({
   // Intentional — WISDOM #44, see physics umbrella L178.
     unread(Tokens::new(tks));
   });
-  DefMacro!("\\qcomma", r",\quad");
+  DefMacro!("\\qcomma", r",\quad", protected => true);
   DefPrimitive!("\\qcc", {
     let star = phys_read_star()?;
     let mut tks = Vec::new();
@@ -900,25 +907,25 @@ LoadDefinitions!({
     tks.extend([T_CS!("\\quad"), T_END!()]);
     Ok(Tokens::new(tks))
   });
-  DefMacro!("\\qif", "\\lx@physics@qword{if}");
-  DefMacro!("\\qthen", "\\lx@physics@qword{then}");
-  DefMacro!("\\qelse", "\\lx@physics@qword{else}");
-  DefMacro!("\\qotherwise", "\\lx@physics@qword{otherwise}");
-  DefMacro!("\\qunless", "\\lx@physics@qword{unless}");
-  DefMacro!("\\qgiven", "\\lx@physics@qword{given}");
-  DefMacro!("\\qusing", "\\lx@physics@qword{using}");
-  DefMacro!("\\qassume", "\\lx@physics@qword{assume}");
-  DefMacro!("\\qsince", "\\lx@physics@qword{since}");
-  DefMacro!("\\qlet", "\\lx@physics@qword{let}");
-  DefMacro!("\\qfor", "\\lx@physics@qword{for}");
-  DefMacro!("\\qall", "\\lx@physics@qword{all}");
-  DefMacro!("\\qeven", "\\lx@physics@qword{even}");
-  DefMacro!("\\qodd", "\\lx@physics@qword{odd}");
-  DefMacro!("\\qinteger", "\\lx@physics@qword{integer}");
-  DefMacro!("\\qand", "\\lx@physics@qword{and}");
-  DefMacro!("\\qor", "\\lx@physics@qword{or}");
-  DefMacro!("\\qas", "\\lx@physics@qword{as}");
-  DefMacro!("\\qin", "\\lx@physics@qword{in}");
+  DefMacro!("\\qif", "\\lx@physics@qword{if}", protected => true);
+  DefMacro!("\\qthen", "\\lx@physics@qword{then}", protected => true);
+  DefMacro!("\\qelse", "\\lx@physics@qword{else}", protected => true);
+  DefMacro!("\\qotherwise", "\\lx@physics@qword{otherwise}", protected => true);
+  DefMacro!("\\qunless", "\\lx@physics@qword{unless}", protected => true);
+  DefMacro!("\\qgiven", "\\lx@physics@qword{given}", protected => true);
+  DefMacro!("\\qusing", "\\lx@physics@qword{using}", protected => true);
+  DefMacro!("\\qassume", "\\lx@physics@qword{assume}", protected => true);
+  DefMacro!("\\qsince", "\\lx@physics@qword{since}", protected => true);
+  DefMacro!("\\qlet", "\\lx@physics@qword{let}", protected => true);
+  DefMacro!("\\qfor", "\\lx@physics@qword{for}", protected => true);
+  DefMacro!("\\qall", "\\lx@physics@qword{all}", protected => true);
+  DefMacro!("\\qeven", "\\lx@physics@qword{even}", protected => true);
+  DefMacro!("\\qodd", "\\lx@physics@qword{odd}", protected => true);
+  DefMacro!("\\qinteger", "\\lx@physics@qword{integer}", protected => true);
+  DefMacro!("\\qand", "\\lx@physics@qword{and}", protected => true);
+  DefMacro!("\\qor", "\\lx@physics@qword{or}", protected => true);
+  DefMacro!("\\qas", "\\lx@physics@qword{as}", protected => true);
+  DefMacro!("\\qin", "\\lx@physics@qword{in}", protected => true);
 
   //======================================================================
   // Derivatives
@@ -1004,8 +1011,8 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\differential", "\\lx@physics@diff{\\differential}{differential}{\\mathrm{d}}");
-  DefMacro!("\\variation", "\\lx@physics@diff{\\variation}{variation}{\\delta}");
+  DefMacro!("\\differential", "\\lx@physics@diff{\\differential}{differential}{\\mathrm{d}}", protected => true);
+  DefMacro!("\\variation", "\\lx@physics@diff{\\variation}{variation}{\\delta}", protected => true);
   Let!("\\dd", "\\differential");
   Let!("\\var", "\\variation");
 
@@ -1204,13 +1211,15 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\derivative", "\\lx@physics@deriv{\\derivative}{derivative}{\\mathrm{d}}");
-  DefMacro!("\\partialderivative", "\\lx@physics@deriv{\\partialderivative}{partial-derivative}{\\partial}");
-  DefMacro!("\\functionalderivative", "\\lx@physics@deriv{\\functionalderivative}{functional-derivative}{\\delta}");
+  DefMacro!("\\derivative", "\\lx@physics@deriv{\\derivative}{derivative}{\\mathrm{d}}", protected => true);
+  DefMacro!("\\partialderivative", "\\lx@physics@deriv{\\partialderivative}{partial-derivative}{\\partial}", protected => true);
+  DefMacro!("\\functionalderivative", "\\lx@physics@deriv{\\functionalderivative}{functional-derivative}{\\delta}", protected => true);
   Let!("\\dv", "\\derivative");
   Let!("\\pdv", "\\partialderivative");
   Let!("\\pderivative", "\\partialderivative");
   Let!("\\fdv", "\\functionalderivative");
+  // physics.sty:495
+  Let!("\\fderivative", "\\functionalderivative");
 
   //======================================================================
   // Intentional — WISDOM #44, see physics umbrella L178.
@@ -1337,10 +1346,10 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\innerproduct",
-    "\\lx@physics@qm@product{\\innerproduct}{inner-product}{\\langle}{\\vert}{\\rangle}");
+    "\\lx@physics@qm@product{\\innerproduct}{inner-product}{\\langle}{\\vert}{\\rangle}", protected => true);
   DefMacro!("\\outerproduct",
   // Intentional — WISDOM #44, see physics umbrella L178.
-    "\\lx@physics@qm@product{\\outerproduct}{outer-product}{\\vert}{\\rangle\\langle}{\\vert}");
+    "\\lx@physics@qm@product{\\outerproduct}{outer-product}{\\vert}{\\rangle\\langle}{\\vert}", protected => true);
 
   // Perl: \expectationvalue — ⟨arg⟩ or ⟨arg2|arg1|arg2⟩
   DefPrimitive!("\\expectationvalue", {
@@ -1453,6 +1462,8 @@ LoadDefinitions!({
   Let!("\\op", "\\outerproduct");
   Let!("\\expval", "\\expectationvalue");
   Let!("\\ev", "\\expectationvalue");
+  // physics.sty:590 the vacuum expectation value
+  DefMacro!("\\vev{}", "\\expectationvalue{#1}{0}", protected => true);
   Let!("\\matrixel", "\\matrixelement");
   Let!("\\mel", "\\matrixelement");
 
@@ -1514,13 +1525,13 @@ LoadDefinitions!({
       }
     }
     Ok(Tokens::new(tokens))
-  });
+  }, protected => true);
 
   // physics.sty:662 `\zeromatrix{ m g }`: the column count is an optional braced argument that
   // defaults to the row count (`\zmat{3}` is 3×3); Perl's `{}{}` (physics.sty.ltxml:619, KPE #314)
   // took the next token, `\end` in `\begin{pmatrix}\zmat{3}\end{pmatrix}`.
   DefMacro!("\\zeromatrix{}",
-    "\\@ifnextchar\\bgroup{\\xmatrix{0}{#1}}{\\xmatrix{0}{#1}{#1}}");
+    "\\@ifnextchar\\bgroup{\\xmatrix{0}{#1}}{\\xmatrix{0}{#1}{#1}}", protected => true);
 
   // Perl physics.sty.ltxml L622: `alias => 'i'` — reversion emits `i` rather
   // than the internal `\lx@physics@iunit` CS name. Without it, MathML `name=`
@@ -1688,26 +1699,30 @@ LoadDefinitions!({
   DefMacro!("\\lx@physics@smallmatrix", "\\lx@ams@matrix{datameaning=matrix,style=\\scriptsize}");
   DefMacro!("\\endlx@physics@smallmatrix", "\\lx@end@ams@matrix");
 
-  DefMacro!("\\matrixquantity", "\\lx@physics@mat{\\matrixquantity}{}{lx@physics@matrix}{}{}");
+  DefMacro!("\\matrixquantity", "\\lx@physics@mat{\\matrixquantity}{}{lx@physics@matrix}{}{}", protected => true);
   // physics.sty:70-73, 105-108: `\pmqty{m}` and its kin put their argument in the matrix;
   // physics.sty.ltxml:701-710 read it as `{}` and dropped it, so `\lx@physics@mat` read the
   // next group or none (`\pmqty{a & b}` was an empty matrix). The body is handed on as a group.
-  DefMacro!("\\pmqty{}", "\\lx@physics@mat{\\pmqty}{}{lx@physics@matrix}{(}{)}{#1}");
-  DefMacro!("\\Pmqty{}", "\\lx@physics@mat{\\Pmqty}{}{lx@physics@matrix}{(}{)}{#1}");
-  DefMacro!("\\bmqty{}", "\\lx@physics@mat{\\bmqty}{}{lx@physics@matrix}{[}{]}{#1}");
-  DefMacro!("\\vmqty{}", "\\lx@physics@mat{\\vmqty}{}{lx@physics@matrix}{\\vert}{\\vert}{#1}");
-  DefMacro!("\\smallmatrixquantity", "\\lx@physics@mat{\\smallmatrixquantity}{}{lx@physics@smallmatrix}{}{}");
-  DefMacro!("\\spmqty{}", "\\lx@physics@mat{\\spmqty}{}{lx@physics@smallmatrix}{(}{)}{#1}");
-  DefMacro!("\\sPmqty{}", "\\lx@physics@mat{\\sPmqty}{}{lx@physics@smallmatrix}{(}{)}{#1}");
-  DefMacro!("\\sbmqty{}", "\\lx@physics@mat{\\sbmqty}{}{lx@physics@smallmatrix}{[}{]}{#1}");
+  DefMacro!("\\pmqty{}", "\\lx@physics@mat{\\pmqty}{}{lx@physics@matrix}{(}{)}{#1}", protected => true);
+  DefMacro!("\\Pmqty{}", "\\lx@physics@mat{\\Pmqty}{}{lx@physics@matrix}{(}{)}{#1}", protected => true);
+  DefMacro!("\\bmqty{}", "\\lx@physics@mat{\\bmqty}{}{lx@physics@matrix}{[}{]}{#1}", protected => true);
+  DefMacro!("\\vmqty{}", "\\lx@physics@mat{\\vmqty}{}{lx@physics@matrix}{\\vert}{\\vert}{#1}", protected => true);
+  DefMacro!("\\smallmatrixquantity", "\\lx@physics@mat{\\smallmatrixquantity}{}{lx@physics@smallmatrix}{}{}", protected => true);
+  DefMacro!("\\spmqty{}", "\\lx@physics@mat{\\spmqty}{}{lx@physics@smallmatrix}{(}{)}{#1}", protected => true);
+  DefMacro!("\\sPmqty{}", "\\lx@physics@mat{\\sPmqty}{}{lx@physics@smallmatrix}{(}{)}{#1}", protected => true);
+  DefMacro!("\\sbmqty{}", "\\lx@physics@mat{\\sbmqty}{}{lx@physics@smallmatrix}{[}{]}{#1}", protected => true);
   DefMacro!("\\svmqty{}", "\\lx@physics@mat{\\svmqty}{}{lx@physics@smallmatrix}{\\vert}{\\vert}{#1}");
-  DefMacro!("\\matrixdeterminant", "\\lx@physics@mat{\\matrixdeterminant}{determinant}{matrix}{\\vert}{\\vert}");
-  DefMacro!("\\smallmatrixdeterminant", "\\lx@physics@mat{\\smallmatrixdeterminant}{determinant}{smallmatrix}{\\vert}{\\vert}");
+  DefMacro!("\\matrixdeterminant", "\\lx@physics@mat{\\matrixdeterminant}{determinant}{matrix}{\\vert}{\\vert}", protected => true);
+  DefMacro!("\\smallmatrixdeterminant", "\\lx@physics@mat{\\smallmatrixdeterminant}{determinant}{smallmatrix}{\\vert}{\\vert}", protected => true);
 
   Let!("\\imat", "\\identitymatrix");
   Let!("\\xmat", "\\xmatrix");
   Let!("\\zmat", "\\zeromatrix");
   Let!("\\pmat", "\\paulimatrix");
+  // physics.sty:665-667 the bare entries, for the author's own matrix
+  DefMacro!("\\paulixmatrix", "0&1\\\\1&0", protected => true);
+  DefMacro!("\\pauliymatrix", "0&-i\\\\i&0", protected => true);
+  DefMacro!("\\paulizmatrix", "1&0\\\\0&-1", protected => true);
   Let!("\\dmat", "\\diagonalmatrix");
   Let!("\\admat", "\\antidiagonalmatrix");
   Let!("\\mqty", "\\matrixquantity");
@@ -1716,5 +1731,5 @@ LoadDefinitions!({
   Let!("\\smdet", "\\smallmatrixdeterminant");
   // physics.sty:23/25 — `bolddel` is a default option, so `\vnabla` exists
   // (physics manual; Perl's binding lacks it).
-  DefMacro!("\\vnabla", "\\boldsymbol\\nabla");
+  DefMacro!("\\vnabla", "\\boldsymbol\\nabla", protected => true);
 });

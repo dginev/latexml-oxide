@@ -1,0 +1,16 @@
+% witness: hep-th0110297 shape without its bibliography (M1 closed by `\end{document}`)
+% oracle:  pdflatex 0 `!`: the whole paper is set as the abstract
+% engines: rust MAIN928 = 0 Errors, 0 Warnings: the body sits silently inside ltx:abstract
+% expect:  the abstract keeps its first paragraph; the paragraph, list and paragraph after it are body text; one Warning
+% status:  RED (MAIN928) -> GREEN (ABSFIX), OXIDIZED_DESIGN_DIVERGENCES #1101
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract
+Short abstract text.
+
+\noindent{\bf 1. Introduction} Body text that is no abstract.
+
+\begin{itemize}\item An item.\end{itemize}
+More body text.
+\end{document}

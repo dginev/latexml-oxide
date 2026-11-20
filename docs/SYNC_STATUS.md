@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (359 lines, weight 782; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (387 lines, weight 844; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -287,6 +287,7 @@ Rules that keep this file honest and mergeable:
   - TABUF — `{center}`/`{flushleft}` in a tabu cell keep their line breaks where TeX ends the row (tabu's `\centering` ends with `\arraybackslash`; pdflatex 104 `!`), 0 E (`tabu_center_env_backslash_red`; TABU2); 1
   - SUPIT — a floating superscript rewritten into text `<sup>` (TeX_Math.pool.ltxml:527-550, every `word$^{2}$` and `Name$^{1}$` mark) takes the math default font: `<sup><text font="italic">2</text></sup>` where pdflatex prints CMR7 upright; Perl-shared (KNOWN_PERL_ERRORS #1235), OD #928's frontmatter residual (`floating_superscript_rewrite_digit_italic_red`; P4b4r Q2; since AUT1 ~30 Frontiers papers' held-name marks too, as their inline twin: `omnibus_author_math_mark_in_the_name_run_is_italic_red`); 1
   - TAILN — a name ending in a bare accent command (`A.~Pompo\v`, 0705.2788) falls to the plain-text path and loses its no-break space, counted (PMK1's `tail_call`; CL165); `tail_call` on an operand (`authblk_mark_macro_ending_in_let_operand_red`) (revPMK1); 1
+  - NOTEX — a machine without TeX Live (OXIDIZED_DESIGN_DIVERGENCES #1095; CI `notex` + `tools/notex_smoke.sh`): the test suite is a TeX Live suite by design — without TeX it fails 2883/8468 (2026-11-19, docker `latexml-notex:check`), all on files only TeX Live has (hyperref's raw keyval/kvoptions/… in 989, expl3 220, revtex4-2.cls's `\@FMN@list` 175, listings' language files, tikz, babel); a visible skip policy is open if wanted. Rust-only: `\usepackage{array}` warns `missing_file:expl3` there (array_sty.rs's `\ExplSyntaxOn` blocks fire the expl3 autoload; Perl's binding has none). The kpathsea crate's own one-time stderr notice (0.3.4 lib.rs:433-434) stays: rust-kpathsea is a general-purpose crate, not latexml-oxide's (DG 2026-11-19).
   - LOADFMT — the strict-`LoadFormat` audit's live residual: a ~72-CS Perl-only long tail (the 58 "misc atomics" + the investigate bucket, minus the ported `\bib@*` family; [`archive/PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md)) — demand-driven, bounded by the corpus success gate, not a release blocker; 3
   - KPEDUP — KNOWN_PERL_ERRORS numbers 80-86 are used twice (`parity/KNOWN_PERL_ERRORS.md`: entries 80-86 once from `pdfcol.sty` (80) and again from `\define@cmdkey` (80)), a pre-existing registry defect `next_entry_numbers.sh` surfaced (#846's body): renumber the later set to free numbers and carry every inbound `KPE #8x` reference; 1
   - BEAMSLIDE — beamer's faithful Perl frame model (`ltx:slide` in `ltx:slidesequence`, Perl `beamer.cls.ltxml`) in place of the document-top frontmatter fallback for `\titlepage`/`\maketitle` in a frame (`beamer_cls.rs` `\titlepage`; P12's follow-up, `perfect_kernel/archive/PLANS_DONE_PHASE56_2026-09-27.md`; witnesses beamerthemecelestia demos, beamerthemeNord, beamertheme-simpleplus); 5
@@ -356,6 +357,7 @@ Rules that keep this file honest and mergeable:
   - XDEFP — a PERF lever (post-cutoff): our 1.45-1.75× excess over pdflatex on `\xdef`/`\cs_gset_nopar:Npx` with `\unexpanded` copies — `Tokens::pack_parameters` looks up a meaning per CS and goes through a VecDeque, and parameterless macro bodies are copied onto the pushback where TeX's back_list is O(1) (tex.web §323); HOOKINITb profile `/home/deyan/data/pk_wt/scratch_HOOKINITb/prof/`; options: a single-pass pack_parameters, a cheaper `\unexpanded` copy, a design study for shared token lists on the pushback (also OD #326's 5M pushback limit); 3
   - I777 — issue #777 (the slowdown as a document grows): profile the reporter's document now that #802 is in (#865; ISSTRI, `agent_reports/2026-11-14_report_ISSTRI.md`); 3
   - I802R — #802's follow-ups (#865): ~44 whole-document predicate XPaths in latexml_post (`document.rs:1450/1458/1634`, `math_processor.rs:209`, `crossref.rs:1863,2079`) and frontmatter `insert.rs`/`relocate.rs` each fail past libxml2's 10M node-set cap — reuse `xml::descendant_or_self_elements` / `Document::find_elements`; a no-namespace script XMTok keeps an unreferenced id (`math-parse/unparsed_script_token_outside_ltx_namespace_red`); kit `probe.sh` counts only `^Fatal:` at line start and passes no `--timeout` (a wallclock Fatal after "(Finalizing..." went uncounted); 3
+  - PGTTL — the page `<title>` fallback reads a title's math as raw text (pre-existing; found reviewing the UnicodeMath PR): `crossref.rs` `generate_document_title`, used when the root has no `xml:id`, takes the first `//ltx:title` through `get_text_content_node` (`get_content`), so a document without `\title` that opens with `\section{On $x^2$, $a_{i+1}$}` gets `<title>1On x 2 , a + i 1</title>`, where Perl `generateDocumentTile` (CrossRef.pm:811-812) calls `getTextContent`, which honours the tag's `close` and reads an `ltx:Math` through `unicodemath`: `1 On 𝑥², 𝑎_{𝑖+1}` (vendored Perl latexmlc, 2026-11-19) — route it through `value_text`'s element path (`scan::title_node_text` plus the whitespace collapse); every untitled single-page HTML whose first heading has math; 1
   - I857R — #857's residuals (#864): a real-Safari check of ar5iv-css's WebKit rule; a `\bibitem[Smith et al.(2000)]` label with spaces classed numeric (2003.13016) may be spread by justification in WebKit; a nameless biblatex `\textcite` prints "[2]", classed numeric, where the PDF prints "No Author Misc [2]" (OD #786's open gap); natbib `\citet`'s "(author?)" placeholder lost, uncounted (`index-bib/natbib_citet_unknown_author_red`); lrec's `\protect\citename` bibitem loses its `)` (pre-existing); 1
   - I694 — tcolorbox: flow-content boxes degraded to a semantic CSS block in HTML, where the fixed-geometry SVG overflows (issue #694) — after the cutoff; 3
   - I783P — #783's post-merge author lines (revI783, revI783F; pre-existing unless noted): aistats address rows — Eve East's "Univ E" unclassed while Ann's "Univ A" is classed (77o), a shared one-column aistats address unclassed while two-column ones are; REDs `author_lines_783_center_first_line_red`, `author_lines_783_list_by_order_email_red`, `author_lines_783_declined_email_red`, `author_lines_783_ieee_authorblock_red` (IEEEtran `\IEEEauthorblockA` lines behind the pop-up); 0708.2995's author block shows the Fax line before the e-mail and drops the word "email:"; math0111266's second author "Moreno-Frías, M.A." stays a contact line, not a creator, and "F.J." loses its final dot (base the same); `cluster_cli::browser_render_author_lines` is opt-in (SKIP unless node + playwright-core + Chrome; `LATEXML_BROWSER_TESTS`), so CI enforces only its CSS-string and XML halves; 3
@@ -398,6 +400,105 @@ Rules that keep this file honest and mergeable:
   - DEPS080 — before v0.8.0 (DG 2026-11-17): study `agent_reports/2026-11-18_DEPS080_dependency_review.md` §4-5. DONE (chore/deps080): A2 deny.toml notes (the distribution binary ships rhai/smartstring; chrono is direct and via pericortex), A4 `once_cell` → `std::sync::LazyLock` (direct dep dropped from 5 manifests). LEFT: A1 marpa fork on `bindgen 0.73` or pre-generated bindings, publish libmarpa-asf-sys 0.3.2 (−4-5 build crates); A3 refresh the fleet checkout's stale lock at the next fleet rebuild (clears the libmarpa-asf-sys license-exception warning); A5 clap `default-features = false` (~6 crates; CLI help loses colour and "did you mean" — needs DG); A6 size levers in our code (`build_model` as data, DEP-15 outlining of the top `load_definitions`); CHRONO after v0.8.0; 3
   - XSLTKEYc — (DG 2026-11-17: "Accept, row R") the author-note XSLT still costs 2405.13379 +1.00 % and 1706.03762 +0.59 % instructions vs main (PERFAUDIT basis: REGFIX vs the #895 head, html5 production recipe; 38/40 docs within +0.5 %, median −0.08 %, p90 +0.46 %): the note templates' own work and the per-note `use` of `f:creator-note`, chiefly kind O's scan of a note's text for its opening glyph (about half of 2405.13379's excess is outside the stylesheets). Options: compute a note's opening glyph once when the XML is built (an attribute), or look it up only within the note's own block. Also `f:glyph-elsewhere`'s third key makes 8 walks under the root's non-excluded children (~2M on 1706.03762): lazy like the `printed` node set, since it is read only when a shared mark's glyph may print elsewhere. WISDOM #105 has the method.
   - IEEEROUTE-OWNERCHECK — (revIEEEROUTEb) no post-placement check that each routed IEEE contact sits on its creator (correct by construction today); witness 2106.02811.
+  - AUTOREFBACK — (HYPERPROV, OD #588) under the ar5iv first-use provide, an `\autoref` to a target numbered before the
+    paper's first `\autoref` shows the target's title, or its enclosing unit's (an equation reads as its section's title),
+    not hyperref's "Equation 1": 2 of 74 autorefs on 4 witnesses (0803.2070 `#Ch0.E1`, 1010.2520 `#S2.SS1`). Options: an
+    eager internal tag formatter at preload (an autoref tag on every target of every paper) or a post-processor fallback
+    to `typerefnum`. Post-release; 3
+  - SHIPOUTNOTE — (HYPERPROV final review; synthetic shapes, no corpus witness — 2309.06611, 2403.15239, 2302.00362 and
+    1612.04433 are right) the page-notice note of `ar5iv_sty.rs` `\lx@arxiv@shipout@note`: (a) material with a picture
+    (a tikz node) is noted from `ink_text_printed`'s font-encoded strings, so `\url{…_…~…}`, `\_`, `\textbackslash`, math
+    and fonts garble — take the text nodes' digested boxes and route on the digested result, not the source test; (b) a
+    picture-mode `\put(20,-30){\makebox(0,0)[l]{…}}` still notes a positioned picture; (c) material registered in the
+    preamble is digested there, so `\AtBeginShipoutFirst{\parbox{12cm}{Pre one\par Pre two}}` reads "Pre onePre two"
+    with a false `frontmatter:unclaimed` Warning (base glues too; registered in the body it is right) — digest at
+    registration only to test for text, emit the tokens; (d) a notice behind a macro of the paper's inside the hook's
+    argument (`\AtBeginShipout{\mynotice}`) is not seen by the token scan. Post-release; 3
+  - ROBUSTIFYERR — (CLUSTFIX3 review, OD #1092; synthetic, no corpus witness) etoolbox's `\robustify` is a no-op where
+    TeX errs "not a macro" on a LaTeX `\mathchardef` that is a `DefMath` here (`\usepackage{etoolbox}\robustify{\alpha}`;
+    `\infty`, `\sum`/`\int` without amsmath) and on e-TeX's/pdfTeX's own primitives (`\middle`): pdflatex 1 Error, base 1,
+    now 0, output unchanged. Fix: add pdflatex's e-TeX/pdfTeX primitive names to `LATEX_PRIMITIVE_COMMANDS`
+    (`etoolbox_sty.rs`, `\meaning`-checked), and keep the Error for a `DefMath` whose LaTeX meaning is `\mathchar"…`
+    (fontmath.ltx), unless amsmath made it a macro. Post-release; 1
+  - TITLESEC395 — (INTERIM397g) Fatal `Expansion of '\format@title@@}' has unbalanced {}` (1910.11159, 2005.02481,
+    2005.06700; Perl the same, pdflatex clean): `read_arg` (`gullet.rs` ~:4048-4080, Perl Gullet.pm:732-744) accepts a
+    `}` where TeX raises "Argument of \x has an extra }" and drops the call (tex.web §395). Fix: §395's recovery (EASY
+    code, MED risk: every argument read; corpus A/B). Post-release; 3
+  - HYPERFAMILY — (INTERIM397g, OD #588) one family member's first use defines its whole family (`\phantomsection`
+    then `\providecommand\nameref` is skipped) — arXiv's hyperref build behaves the same; the `ar5iv_sty.rs` comment
+    "what pdflatex without the package sees" overclaims for the family's other names. Doc fix; 1
+  - AAS5-HYPERREF — (LOOPFIX review, OD #1100) under AASTeX 5.x aas_support leaves hyperref marked loaded (as Perl), so
+    after `aastex_cls.rs` restores the kernel's `\refstepcounter` a document's own `\usepackage{hyperref}` does not
+    re-install the dispatch, and cleveref's hyperref branch (cleveref.sty:2044-2054) sets no `\cref@currentlabel`:
+    `\documentclass{aastex}` + algorithm/algpseudocode + cleveref, `\label` in an `algorithmic` line, `\cref` → 2
+    Errors (`\cref@currentprefix` expands into itself; base 0, pdflatex 0). aastex + cleveref in 0 of 35,942 census papers.
+    Fix: `unmark_loaded("hyperref.sty")` for AASTeX 5.x after aas_support (A/B AASTeX 5 papers: `\@ifpackageloaded`
+    turns false). Post-release; 3
+  - PHYS-PROTECT — (LOOPFIX review) `\svmqty` (physics_sty.rs:1714, physics.sty:108) and `\trace`/`\Trace` (with the
+    `\tr`/`\Tr` aliases, physics.sty:353-354/371-372) are `\DeclareDocumentCommand`s still unprotected here; no loop
+    found (`\edef\x{\svmqty{a}}` clean). Protect them with the others. Post-release; 1
+  - PHYS-COTH — physics.sty:346 redefines `\coth` as its other hyperbolic functions; doing so here moves the
+    complex/physics golden (TRIGFUNCTION). Also undefined: `\homework`, `\braces`, `\fbraces`, `\argopen`,
+    `\argclose`, `\opbraces`, `\trigbraces`. Post-release; 1
+  - AMSTEX-ENUM — (LOOPFIX) inlined-AmS-TeX papers past the `\sum@` loop hit `malformed:ltx:enumerate` (#PCDATA, Math
+    and text in an `enumerate`) from amsppt `\roster`/`\item` (math0612243, math0112238, math0303294, math0404149,
+    math0404221, math0404272, math0405116, math0406482 TooManyErrors; 0705.4126, math0112286, math0211398, math0405158,
+    math0404207); 3
+  - LTXUTILH-OTHER — (LOOPFIX) shipped-ltxutil papers whose Fatal has another root: "Package loading depth exceeded
+    500" (1408.3933, 1410.2241, 1511.02101, 1511.05750, 1602.08358), unexpected `\fi`/`\par` (1207.4642, 1211.3724,
+    1211.6751, 1304.5586), `\errmessage` (1601.02763); 3
+  - ONLINECITE — (LOOPFIX review) `revtex4_support_sty.rs:430` `\onlinecite` → `\citealp` by user-level name, where
+    revtex4-2.cls:7069 `\let\onlinecite\rev@citealp` (the OD #1100 class; no loop witness yet). Post-release; 1
+  - CYCLE-WINDOW — `cycle_guard.rs` `MAX_WINDOW = 10`: a loop of 11+ tokens is not caught as a fast Fatal and runs to
+    the 180 s wall clock (the apacite loop before LOOPFIX); raise it (DG call). Post-release; 3
+  - PLACEB4 — (PLACEFIX, OD #1099) a block-local reference list (elsarticle CPC program summary in the abstract
+    2503.17910; IEEE CSM sidebars 2402.17043, 2502.16577; hep-ex0405026's minipage) stays in place as DG ruled but keeps
+    its "`<ltx:bibliography>` isn't allowed" Error: the schema allows a `biblist` only in back matter. Ruled design
+    (DG 2026-11-19 "keep in place as a plain list"): a non-sectional list whose items Scan registers as BIBLABEL targets so
+    citations still resolve. ~22 so far; 3
+  - PLACEACK — `\acknowledgments` inside an open float keeps its Error (cond-mat0108156); the float-out of OD #1099 in the
+    acknowledgements constructor would fix it; 1
+  - PLACEG3 — a nomenclature inside an inline frontmatter container (`{IEEEkeywords}` 1606.00288; 2111.12783, 2402.06758)
+    keeps its Error: a paragraph is not allowed there; ~8; 3
+  - PLACEB1 — piparticle(-final).cls:648-666 `{theaffiliation}` does `\let\institution\bibitem` inside `\blfootnote`, so
+    a whole `{thebibliography}` opens in the footnote (1001.2197, 1510.06283; 38 so far; Perl the same,
+    latex_constructs.pool.ltxml:4116-4129). General fix: `\bibitem` in a `\list`-based environment other than
+    thebibliography acts as `\item[\@biblabel{n}]` + anchor; keep astro-ph9806175, 2103.15495, 0801.2060; 3
+  - PLACET3 — an abstract that swallows the main matter (math0006149's unbalanced `\abstract{`, 1108.5171's brace-less
+    `\abstract` with no heading, hep-th0110297) keeps its theorems as `ltx:theorem`, each with its "isn't allowed in
+    <ltx:abstract>" Error (OD #1097, DG 2026-11-20); ABSFIX (in progress) ends such an abstract after its paragraph
+    (DG ruling), which moves those theorems to the body. Repros `block-model/theorem_in_unended_abstract{,_group}`; 3
+  - ABSOWNDEF — a document's own `\long\def\abstract{…}` is refused by the kernel lock (as Perl,
+    latex_constructs.pool.ltxml:1150), so 1209.6193's abstract swallows the body; DG 2026-11-20: keep the lock; 1
+  - PLACENEST — (PLACEFIX final review; synthetic, 0 of 86 witnesses) a theorem dissolved into an abstract splices every
+    non-`ltx:para` child as it is, so a nested `{proof}`/`{lemma}` or a `{figure}` inside it lands directly in
+    `ltx:abstract` (schema-invalid, no Error; base raised "isn't allowed"). Fix in `document.rs`
+    `dissolve_theorem_in_abstract`: dissolve nested theorems/proofs first; if a remaining child cannot go in the target
+    (`can_contain_qsym`), keep the theorem with base's Error. Probes: an abstract holding a theorem with a proof inside,
+    and a theorem with a figure inside (both pdflatex-clean); 3
+  - REFMISSINGTEXT — an unresolved `\ref` renders an empty `ltx_missing_label` span ("See Theorem ."), where Perl prints
+    the label text (Post/CrossRef.pm:346-348; ours `latexml_post/src/crossref.rs:1907-1910` skips it); PLACEFIX's
+    dropped theorem labels add such refs (0801.2274, math0509535, math0511748, math0605416); 1
+  - ABS-BLOCKPAR — (ABSFIX re-review; synthetic, no witness changed) a late-closed abstract's first paragraph is not
+    ended by a block environment that follows without a blank line (`Short abstract text.` then `\begin{center}…`, or
+    `\begin{theorem}` on the next line): the S1 display exemption narrowed `split_after_first_paragraph`'s `internal_par`
+    arm to "followed by a vertical skip". Fix: an `internal_par` ends it unless it borders a display. Base is worse on
+    all three probes (`\abstract`+center/theorem without a blank line, closed by the bibliography or the end); 3
+  - ABS-SHORTFIRST — a short first line (a PACS line) set before the real abstract is kept as the whole abstract and the
+    rest moved (`\abstract \noindent PACS: 11.15\par We show…`; no witness among the 33 swallows); 3
+  - ABS-BIBFORMS — net A covers `\begin{thebibliography}`/`\bibliography` only: `\printbibliography`, a bare
+    `\thebibliography`, `{references}` and a binding-constructor `thebibliography` do not end a command-opened abstract; 1
+  - SVMULT-PAREND — modern svmult's `\abstract{` with its `}` lost: TeX errs "Paragraph ended before \@abstract was
+    complete"; we give only the open-group Warning; 1
+  - ABS-ENV-OPEN — a `\begin{abstract}` never ended keeps the whole paper with its theorems and its Error
+    (cond-mat9410055); net B covers command forms only; 3
+  - ABS-MOVECOUNT — the moved-words Warning glues words across block edges ("Body theorem." then "Text." counts 2); 1
+  - UNSAFE937 — after v0.8.0 (DG 2026-11-20): move away from `unsafe` per issue #937 — 110 sites at #935 (~89 shipped,
+    ~21 test-only), almost all at OS/C-library boundaries. Phases: an unsafe-count ratchet; Unix syscalls → `rustix`
+    (a direct dependency since #935; `lsp_server/unix.rs`, `watchdog.rs`, getrusage/flock/geteuid/dup, `process_group(0)`
+    for `setsid`); glibc `malloc_trim`/`mallinfo` → the allocator's safe API; no process-env mutation after startup;
+    safe libxml/libxslt wrappers upstream in our crates; `unsafe impl Send/Sync`; isolate the rest (signal handlers,
+    Windows/macOS queries). Target ≤ 15 shipped, 0 test-only; every PR byte-identical on a fleet A/B and perf-neutral; 5
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.

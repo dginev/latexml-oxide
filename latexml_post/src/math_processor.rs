@@ -264,7 +264,9 @@ fn process_math_node(
       conversion.xml = Some(processor.outer_wrapper(doc, &xmath, xml));
     },
     _ => {
-      if let Some(ref string) = conversion.string {
+      // Perl Post.pm L394 `elsif (my $string = ...)`: an empty string adds
+      // nothing ("0", false in Perl too, is kept: KNOWN_PERL_ERRORS #1289).
+      if let Some(string) = conversion.string.as_ref().filter(|s| !s.is_empty()) {
         // Wrap string in ltx:text
         let mimetype = conversion.mimetype.as_deref().unwrap_or("unknown");
         conversion.xml = Some(NodeData::Element {

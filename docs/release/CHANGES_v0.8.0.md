@@ -43,6 +43,145 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **An abstract no longer swallows the document.** A brace-less `\abstract`, or an `\abstract{` whose `}` a
+    footnote took, with no `\section` after it, held the whole paper and its bibliography (TeX sets them so too; Perl
+    loses the body): the bibliography now ends it as its heading would, and an abstract the bibliography closed, or the
+    document's end where body structure follows it, keeps its first paragraph (an abstract-only document keeps all of
+    it), the rest moved back to the body with one Warning counting the moved
+    words (hep-th0110297, 1108.5171, math0006149, 1408.0340; ~30 run-397 papers, each 1-11 Errors to 0;
+    OXIDIZED_DESIGN_DIVERGENCES #1101). svjour's `\abstract{…}` (and the 2003 svmult's) is a group read where it
+    stands, as the classes define it, so one left open no longer reads to the end of the input (astro-ph0702187 12 → 0 Errors,
+    math0701897 48 → 0; KNOWN_PERL_ERRORS #1293). A style's `\endabstract` paired with its own `\beginabstract` is its
+    own (nanosymp.sty, cond-mat0105361), where the kernel lock kept the list open over the paper. Guards
+    `cluster_package_guards::perfect_kernel_batchabsfix::*`.
+  - **Run 397's misplaced elements, as DG ruled 2026-11-19.** An undefined BibTeX macro (`month = june`; ~190
+    papers) is a Warning, as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1096). A theorem or proof in an abstract (83 of
+    the 86 papers sampled) is dissolved into it: its title a run-in bold text, its paragraphs, lists and equations in the abstract,
+    its id kept (1908.02189, 0804.0728; #1097); an abstract still open at `\end{document}` (math0006149) keeps its
+    theorems. nomencl's list in a framed box in a table keeps its box: a
+    bold heading and the entries as a description (1410.5511; #1098). A bibliography inside a float or a heading
+    argument floats out after it (cond-mat0108156, hep-ph0004227; #1099). Guards `perfect_kernel_batchplacefix::*`.
+
+  - **Run-397 loop Fatals of one class: a binding that called another user-level command by name.** apacite's citation
+    forms called natbib's `\citep`/`\citet` by name, and agujournal2018.cls's `\let\cite\shortcite \let\citep\cite
+    \let\citet\citeA` made each call itself: a 180 s timeout (1909.02387, 2212.08776; ~28 papers). They now call
+    natbib's private copies, as do apacite's `natbibemu` `\cite`, nmbib's `\citeall` and slashed's `\slashed` (the
+    kernel's `\not`, 2504.21590). amsmath's `\let\sum@\sum` and its eleven siblings run only while `\coprod` is still a
+    math character, as amsmath.sty tests, so inlined AmS-TeX keeps its own `\sum@` (math0612243, 0705.4126; ~18). The
+    revtex and AASTeX 5 classes' hyperref preload no longer installs hyperref's `\refstepcounter` dispatch, which a
+    shipped revtex 4.0 `ltxutil.sty` pointed back at itself (astro-ph0112270; ~21); under revtex a document's own
+    hyperref still installs it (under AASTeX 5.x hyperref stays marked loaded, as in Perl, so it does not: row R
+    AAS5-HYPERREF). physics's commands are `\protected`, as `\DeclareDocumentCommand` makes them (all but `\svmqty` and
+    `\trace`/`\Trace` with their `\tr`/`\Tr` aliases: row R PHYS-PROTECT), so `\pdv` in an `\edef`
+    stays itself (2001.08539, 2505.01628; ~7), and its shorthands `\vev`, `\acommutator`, `\fderivative` and
+    `\paulixmatrix`/`\pauliymatrix`/`\paulizmatrix` are defined. OXIDIZED_DESIGN #1100. Guards
+    `cluster_package_guards::perfect_kernel_batchloopfix::*`.
+
+  - **UnicodeMath output (`--unicodemath`).** Perl's `--unicodemath`/`--nounicodemath` are exposed: each formula's
+    MathML carries an `<annotation encoding="application/x-unicodemath">` (`a+b^2=\frac{x}{y}` gives `𝑎+𝑏²=𝑥/𝑦`),
+    after the Content MathML and before the TeX annotation. As with `--cmml` and `--mathtex`, Presentation MathML stays
+    on in HTML (Perl's `--unicodemath` alone replaces it, and the page then shows the TeX; OXIDIZED_DESIGN #1093);
+    with `--nopmml` and no `--cmml` the string is the only math output, as in Perl. `latexmlmath_oxide --unicodemath`
+    prints the string (`--unicodemath=FILE` writes it to FILE). The converter now writes scripts as Perl's does:
+    sub/superscript codepoints where every character has one (`∫₀¹`, `𝑎⁻¹`, `𝑥'`), `┬`/`┴` for limits
+    (`∑┬{𝑖=1}┴𝑛`), a prescript before its base. Unlike Perl, the annotation of `$0$` is kept (KNOWN_PERL_ERRORS
+    #1289), `latexmlmath_oxide` does not XML-escape `<` and `&` (#1290), and an nth root reads its degree and
+    radicand in order (#1291). **Without the flag too**, the page `<title>` and a reference's `title=` tooltip read a
+    title's math through the same converter, so their scripts now read as Perl's: a section `On $x^2$, $a_{i+1}$ and
+    $\sum_{i=1}^n y_k$` gives `1 On 𝑥², 𝑎_{𝑖+1} and ∑_{𝑖=1}^𝑛{𝑦_𝑘}`, and hep-ex0309075's page `<title>`
+    `𝜋^0⁢𝑒^+⁢𝑒^-` becomes `𝜋⁰⁢𝑒⁺⁢𝑒⁻`. An equation tag in a `title=` reads the same way, its scripts and fonts kept
+    (`\tag{$\mathrm{P_1}$}` gives `Equation P₁`, where Perl's `textContent` gives `P1`; OXIDIZED_DESIGN #1094).
+    Guards `cluster_cli::unicodemath_output::*`, `unicode_math::tests::*`.
+
+  - **Pre-v0.8.0 output-neutral performance trims (#926).** `Document::serialize_to_string` trims trailing newlines in
+    place instead of allocating a second full-document copy at peak RAM; `pathname::find` caches directory listings
+    behind a `DirStamp` (cleared at conversion start via `reset_conversion_state`) and uses a single-stat
+    `is_readable_file`; `pathname` and `dump_paths` share one ambient `kpsewhich -var-value=SELFAUTOPARENT` probe
+    (`3 → 2` subprocesses).
+
+  - **Four more run-397 Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
+    `\end{equation*}` as amsmath.sty:2950-2951 makes them, so a mixed pair (`\[ … \end{equation*}`) no longer errs
+    (math0306159, math0401181, math0508341), and a `\tag` in `\[` is printed (2008.12392; OXIDIZED_DESIGN_DIVERGENCES
+    #1091). etoolbox's `\robustify` of a command that is a macro in LaTeX and a native binding here (`\ref`, `\uline`,
+    `\it`, amsmath's `\sum`, `\uparrow`) leaves it alone: `\robustify{\ref}` had lost every reference (1812.10085),
+    the others erred "not a macro" (1508.06145, 1702.00233); a TeX primitive or a register keeps etoolbox's Error
+    (#1092). The native pgfkeys accessors install only over TeX Live's `pgfkeys.code.tex`, so a paper's own pgf 2.00
+    copy runs as written (1108.0463: 270 Errors → 1; 1010.2550, 0710.3603). doublespace's `\setstretch`
+    (doublespace.sty:66; physics0003041, quant-ph0005132). Guards `perfect_kernel_batchclustfix3::{
+    amsmath_display_brackets, robustify_of_a_native_binding, pgfkeys_natives_skip_a_pgf2_pgfkeys,
+    doublespace_setstretch}`.
+  - **hyperref's and atbegshi's commands on first use under the ar5iv preload.** arXiv's build loads hyperref into every
+    paper, so the preload provides, the first time a paper uses one while undefined (preamble or body), hyperref's
+    `\texorpdfstring` (a title keeps its TeX string; the PDF string was printed beside it after an Error, hep-th0702068),
+    its `\hypersetup`, `\hyperref`, `\hyperlink`, `\hypertarget`, `\phantomsection`, `\autoref`, `\nameref` and
+    `\pdfbookmark` (math0202134, 0807.4242, 0803.2070), and the shipout hooks of the atbegshi that hyperref 6.77a-7.01m
+    loaded (`\AtBeginShipout`, `\AtBeginShipoutNext`, `\AtBeginShipoutBox` and their siblings; 1503.07687's class,
+    2309.06611). The hooks print nothing, except what pdflatex prints on a page (`\AtBeginShipoutUpperLeft` and
+    `\AtBeginShipoutAddToBox` inside a hook, `\AtBeginShipoutFirst`), kept once as a publication note of its words (2309.06611's IEEE
+    copyright, 2302.00362's conference line). Nothing is predefined, a paper's own or loaded definitions win, and
+    nothing changes without the preload. Guards `perfect_kernel_batchhyperprov::*`; OXIDIZED_DESIGN_DIVERGENCES #588.
+
+  - **Five crash and Fatal roots of the 2026 arXiv run.** A counter whose reset list leads back to it
+    (`\newcounter{subsubsection}[subsubsection]`, 2308.05200) is reset once per step, with a Warning (an Error where TeX's
+    own lists loop too), instead of a silent stack overflow; an amsrefs list under an active `@` (1810.11524) reads its records instead of looping, the
+    bibliography mouth reading `@` as data; an alpha label of a year like `1--250, 2023` no longer panics (2308.14725,
+    2607.14650), and its year part is BibTeX's, the last two characters (`{99}` gives `KNU99`, not Perl's `KNU`); `\DeclareMathAlphabet{ \mathcal}` (1810.09714, 1906.05222, 2011.04603, 2206.00709, 2209.01842) and
+    `\urldef{\wikisurvey2011}` (1312.0976) read their command as TeX does, the first token, so they define it instead of
+    a Fatal (xcolor's `\extractcolorspec`, `\DeclareFixedFont`, `\DeclareOldFontCommand` and
+    `\DeclareCommandCopy` share the reader). Guards
+    `perfect_kernel_batchcrash397b::*`; OXIDIZED_DESIGN_DIVERGENCES #1090.
+
+  - **hyperref's anchors under ar5iv's `\href`, PASJ's `\timeform` without its class, psfig's `\psfigurepath`, `\sep`
+    in revtex4's `\keywords`.** The `\href` the ar5iv preload provides now brings hyperref's no-op anchor layer, so a
+    shipped algorithm2e.sty 3.6 that takes it for hyperref numbers its lines without three Errors each (cs0602002); a
+    pasj00 paper without the class sets `\timeform{2.5'}` as the class prints it, and has `\emissiontype`, the class's
+    abbreviations (`\arcsec`, `\micron`, `\fd`) and `\draft` (astro-ph0201169, astro-ph0204505, 0706.0253); `\psfigurepath{a:b}` puts its directories on the graphics search path, so the
+    figures resolve (cond-mat0012297; cond-mat0010435's absolute author paths lose only the Error); an elsart-style `\sep` in revtex4's `\keywords` is elsart's
+    separator (cond-mat0309530). Each was an `Error:undefined` (an estimated ~230, ~180, ~125 and ~200 papers of the
+    2026 arXiv run). Guards `perfect_kernel_batchclustfix2::*`; OXIDIZED_DESIGN_DIVERGENCES #1086, #1087, #1088, #1089.
+
+  - **A source archive's link cycle, a recursion through an argument expansion, and `\verb` in a footnote.** A
+    `.tar` source whose links point at its own top (`a -> .`, kept since they stay inside it) hung the search for the
+    main file past `--timeout` (the CLI) or into the fleet's timeout: it walks real directories only now
+    (`main_tex.rs`, `cortex_worker.rs`). A persistent `cortex_worker` thread no longer logs the archive Warnings of a
+    job that failed before its report as the next paper's. An expansion recursing through a balanced read (a macro
+    whose `\@ifundefined` argument expands the macro again; the CCJNL397 shape under mfirstuc) overflowed the
+    conversion thread's stack, SIGABRT with no log; it is counted by the expansion-depth guard and ends in
+    `Fatal:Timeout:Recursion` (TeX: "capacity exceeded"). A `\verb` in an argument digested without its braces
+    (`\footnote{a \verb+x+ b}`) reports TeX's "\verb illegal in argument", as pdflatex does (Perl is silent); under
+    bigfoot, whose footnotes take `\verb`, the note is read live and the verb is kept verbatim (2310.18996: 0 Errors,
+    was its URLs re-read as text with their `+`). Guards `perfect_kernel_batchharden397::*`, `cortex_worker`
+    `archive_tests::*`,
+    `perfect_kernel_batch56::verb_inside_pretokenized_argument_unreads_instead_of_running_away`;
+    OXIDIZED_DESIGN_DIVERGENCES #1085.
+
+  - **astron.sty's author-year labels, the 1998 aipproc's `\affiliationmark`, elsart.sty's switches, `\verb` in an
+    argument.** A `\bibitem[\protect\astroncite{A}{Y}]` label under astron.sty or its copies (EslabStyle, ISOStyle,
+    EAS), whose `\cite` the locked kernel `\cite` refuses, prints "A, Y" as the copy's `\citefull` defines it (was
+    `Error:undefined:\astroncite`; 0812.2799, astro-ph0001290, astro-ph0008362); the 1998 aipproc copy's
+    `\affiliationmark` is its superscript (astro-ph0011502); elsart.sty's options set its `\if@seceqn`, `\if@secthm`,
+    `\if@secfloat`, `\if@nameyear`. A `\verb` inside an argument ends at the argument's `}` with TeX's "\verb illegal
+    in argument" and the text after it is kept; it read on to the line's end and lost the rest of a table. Under
+    `\documentstyle` it reads to its delimiter as tokenized, as latex209.def's `\verb` does, with no error
+    (cond-mat0203143 14 errors to 0, its three figures back; math0303012's 23 `\verb` errors to 0). Guards
+    `perfect_kernel_batchnext397::*`; OXIDIZED_DESIGN_DIVERGENCES #88,
+    #1083, #1084, #1085.
+  - **A paper's own old algorithm2e.sty, and forest's libraries.** A shipped algorithm2e.sty of 1996-2005, which
+    defines `\algocf@capseparator` and (before 2004) `\algocf@typo` (release 1.16 also `\algorithmcfname`) not at all, captions as that
+    copy prints: "Algorithm 1: text", but "Algorithm 1 text" under release 1.16's `ruled` (was an `Error:undefined`
+    each; ~200 papers of the 2026 arXiv run, cs0008002, 0711.3765, math0511378). forest's `\useforestlibrary` loads
+    the library file, as forest.sty does, except `linguistics` and `edges`, which the binding stands in for:
+    prooftrees 0.9.2's `ext.tagging` declares the socket prooftrees plugs into (was `Socket
+    'tagsupport/forest/setup' undeclared!`; 2606.20837). Guards `perfect_kernel_batchalgo397`.
+
+  - **Four class and citation gaps of the arXiv run, an Error per use each.** A pasj00/01/02 paper that does not ship
+    its class keeps the class's own `\SetRunningHead`, `\FigureFile` (its figures were the error's text),
+    `\lesssim`/`\gtrsim`, solar symbols (`\MO`, `\LO`, `\RO`) and `\authorcite`/`\yearcite`
+    (OXIDIZED_DESIGN_DIVERGENCES #1082). The 1998 aipproc.cls's `\author{name}` and `\affiliation{text}` are the
+    author and their affiliation (were a "Missing keyval arguments" error each; #1083). A class's starred `\cite*`
+    (EslabStyle, ISOStyle) is one citation (the `*` was the key; #88). elsart's `amsthm`, `seceqn`, `secthm` options
+    are the class's `\if@…` switches a journal style tests (#1084). Guards `perfect_kernel_batchclustfix::*`.
+
   - **Rhai bindings: Perl's hook bodies port 1:1, and every diagnostic is located.** The `Stomach` handle has
     Perl's `bgroup`, `egroup`, `begingroup`, `endgroup`, `beginMode`, `endMode`, `enterHorizontal` and
     `leaveHorizontal`. The boxes a definition's `beforeDigest`/`afterDigest` hook returns are kept, as Perl keeps
@@ -658,6 +797,27 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     the reload mutes. Guards `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
     `expl3_sty::tests::a_muted_expl3_reload_is_counted`,
     `dump_gate_init::nodump_latex_branch_converts_healthily`.
+  - **Builds and converts on a machine without TeX Live.** The `kpathsea` crate's build
+    stopped when it found neither `libkpathsea` nor `kpsewhich`; `.cargo/config.toml` now sets
+    its opt-out (`KPATHSEA_SKIP_TOOLCHAIN_CHECK`), as the release workflows' TeX-less legs did.
+    Such a binary has no format dump (making one needs TeX Live), and the no-dump branch broke
+    on commands our own code calls where Perl's does not: a small article stopped at
+    `Fatal:TooManyErrors` (101 Errors), and `LATEXML_NODUMP=1` broke the same way where TeX
+    Live is. Now the base carries `\@stpelt`, `\if@ignore`, `\@ensuredmath` and
+    `\IfDocumentMetadataTF` (the text after a list, `\stepcounter` and `\ensuremath` were
+    lost); the kernel autoload, with no dump to ask, loads the format on the first undefined
+    command of a LaTeX document (latexml.sty's `\AddToHook`, an `\IfFileExists` choosing the
+    class); our expl3 extensions, hyperref's document-properties store, mathtools' expl3 block
+    and `\DocumentMetadata`'s tagging packages wait for an expl3 to extend, while `\ExplSyntaxOn`
+    without one is expl3's catcode switch (`\usepackage{array}` raised 2 Errors); a missing
+    `expl3.sty` is reported; and, as in Perl, no
+    Warning is raised for the missing resolver itself (the log's `Info:kpathsea:backend` line
+    names it; it was one Warning on every conversion there). The article now
+    converts with no Error, and the no-dump body is byte-identical to the dump branch's. A
+    new CI job builds and converts it on a runner without TeX Live (`tools/notex_smoke.sh`).
+    Guards `dump_gate_init::nodump_latex_branch_converts_healthily`,
+    `preclass_kernel_autoload::latex_route_pre_documentclass_kernel_cs_autoloads`;
+    OXIDIZED_DESIGN_DIVERGENCES #1095.
 
   - **`page=` on an SVG, PNG or JPEG no longer re-encodes it** (#791). A single-page
     format has no page to select (pdfTeX ignores `page=` on a PNG), so

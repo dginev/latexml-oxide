@@ -48,7 +48,8 @@
 //! executing it, and loading a format mid-scan buys a rare case
 //! (`\edef\x{\IfFileExists…}` before `\documentclass`) at the price of running
 //! the whole pool from inside a partially-read token list. Wire it up only with
-//! a reproducer that needs it.
+//! a reproducer that needs it. A provider named for first use ([`provide_on_first_use`]) is asked there too: it
+//! defines a few commands, not a format, so the scan reads the name again.
 
 use std::sync::OnceLock;
 
@@ -147,4 +148,60 @@ pub fn undefined_fallback(token: &Token) -> Option<Token> {
     Some(crate::state::Stored::Token(stand_in)) => Some(stand_in),
     _ => None,
   }
+}
+
+thread_local! {
+  /// Has a first-use provider been named on this thread ([`name_first_use_provider`])? As `FALLBACK_NAMED`.
+  static PROVIDER_NAMED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Name `provider`, an expandable command that defines a family of commands where still undefined, as what an
+/// undefined `token` of that family runs on its first use (`"{cs}:first@use@provider"`, global). Nothing is defined
+/// until then, so `\ifdefined`, `\@ifundefined` and a document's own `\newcommand` see what TeX sees. Beyond Perl, which
+/// has no such seam: the ar5iv preload names hyperref's and atbegshi's user commands (OXIDIZED_DESIGN #588).
+pub fn name_first_use_provider(token: &Token, provider: Token) {
+  PROVIDER_NAMED.with(|named| named.set(true));
+  let key = token.with_cs_name(|cs| format!("{cs}:first@use@provider"));
+  crate::state::assign_value(
+    &key,
+    crate::state::Stored::Token(provider),
+    Some(crate::state::Scope::Global),
+  );
+}
+
+/// Forget that a provider was named (`reset_thread_engine`).
+pub fn reset_first_use_providers() { PROVIDER_NAMED.with(|named| named.set(false)); }
+
+/// Run the provider named for the undefined `token` ([`name_first_use_provider`]), until it has provided once; `true`
+/// ⇒ `token` now has a meaning, retry it. Asked at every undefined-CS site, after [`try_autoload`] and
+/// [`try_refused_environment_definition`].
+pub fn provide_on_first_use(token: &Token) -> crate::common::error::Result<bool> {
+  if !PROVIDER_NAMED.with(std::cell::Cell::get) {
+    return Ok(false);
+  }
+  let key = token.with_cs_name(|cs| format!("{cs}:first@use@provider"));
+  // probe-only: a name never given a provider has no interned key
+  if crate::common::arena::get(&key).is_none() {
+    return Ok(false);
+  }
+  let Some(crate::state::Stored::Token(provider)) = crate::state::lookup_value(&key) else {
+    return Ok(false);
+  };
+  let done = provider.with_cs_name(|cs| format!("{cs}:first@use@done"));
+  if crate::state::lookup_bool(&done) {
+    return Ok(false);
+  }
+  if let Some(defn) = crate::state::lookup_expandable(&provider, None)? {
+    defn.invoke(false)?;
+  }
+  // a provider may decline (a plain TeX document): it is asked again at the next use
+  let provided = crate::state::lookup_definition(token)?.is_some();
+  if provided {
+    crate::state::assign_value(
+      &done,
+      crate::state::Stored::Bool(true),
+      Some(crate::state::Scope::Global),
+    );
+  }
+  Ok(provided)
 }

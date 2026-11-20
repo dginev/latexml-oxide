@@ -1,0 +1,18 @@
+% doublespace.sty (not in TeX Live; the copy quant-ph0004056 ships) defines `\setstretch` (:66,
+% `\renewcommand{\baselinestretch}{#1}`); the binding (as Perl's doublespace.sty.ltxml) had only its environments.
+% witness: physics0003041, quant-ph0005132 (run 397: 68 papers)
+% oracle:  pdflatex with the shipped doublespace.sty: 0 errors, "Text one. Text two."; perl 1 error (undefined)
+% engines: rust (8c45481) 1 error (undefined \setstretch)
+% expect:  0 errors, 0 warnings; both paragraphs kept
+% guard:   perfect_kernel_batchclustfix3::doublespace_setstretch
+% status:  GREEN (CLUSTFIX3, 2026-11-19; was RED)
+\documentclass{article}
+\usepackage{doublespace}
+\setstretch{1.5}
+\begin{document}
+Text one.
+
+\begin{spacing}{2}
+Text two.
+\end{spacing}
+\end{document}

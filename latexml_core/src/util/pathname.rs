@@ -281,10 +281,14 @@ fn path_is_under(path: &str, root: &str) -> bool {
 /// Debian's `/usr` and other yearless layouts return `None`). Shared by the
 /// kpathsea backend agreement probe above; `latexml_engine::dump_paths` keys
 /// its dump-year detection off the same variable.
-#[cfg(feature = "kpathsea")]
-fn ambient_texlive_root() -> Option<&'static str> {
-  static ROOT: OnceLock<Option<String>> = OnceLock::new();
-  ROOT
+/// The ambient `kpsewhich -var-value=SELFAUTOPARENT` output, memoized for the
+/// process so `select_kpaths` and `latexml_engine::dump_paths` share one spawn.
+///
+/// NOT gated on the `kpathsea` feature: it is a plain subprocess probe (no C
+/// library), matching [`ambient_kpsewhich_version`].
+pub fn ambient_kpsewhich_selfautoparent() -> Option<&'static str> {
+  static SELF_AUTO_PARENT: OnceLock<Option<String>> = OnceLock::new();
+  SELF_AUTO_PARENT
     .get_or_init(|| {
       let out = std::process::Command::new("kpsewhich")
         .args(["-var-value=SELFAUTOPARENT"])
@@ -294,13 +298,15 @@ fn ambient_texlive_root() -> Option<&'static str> {
         return None;
       }
       let root = String::from_utf8(out.stdout).ok()?.trim().to_string();
-      if !root.is_empty() && Path::new(&root).join("texmf-dist").is_dir() {
-        Some(root)
-      } else {
-        None
-      }
+      if root.is_empty() { None } else { Some(root) }
     })
     .as_deref()
+}
+
+#[cfg(feature = "kpathsea")]
+fn ambient_texlive_root() -> Option<&'static str> {
+  let root = ambient_kpsewhich_selfautoparent()?;
+  Path::new(root).join("texmf-dist").is_dir().then_some(root)
 }
 
 /// The ambient `kpsewhich --version` banner (full stdout), memoized for the
@@ -364,7 +370,6 @@ pub fn prewarm_kpathsea() {
   // call coordinate — whichever runs first warms; any other caller blocks here
   // until it completes (guaranteeing warm-before-first-lookup) instead of
   // re-taking the `KPSE` mutex and re-probing 11 sentinels on every session.
-  report_unavailable_kpathsea();
   static PREWARM_ONCE: std::sync::Once = std::sync::Once::new();
   PREWARM_ONCE.call_once(|| {
     let kpse_guard = KPSE.lock().unwrap();
@@ -871,6 +876,144 @@ pub fn candidate_pathnames(pathname: &str, options: PathnameFindOptions) -> Vec<
   paths
 }
 
+mod nocase_dir_cache {
+  use std::{
+    cell::RefCell,
+    fs::{self, Metadata},
+    path::{Path, PathBuf},
+    time::SystemTime,
+  };
+
+  use rustc_hash::FxHashMap;
+
+  use super::is_readable_file;
+
+  const MAX_CACHED_DIRS: usize = 256;
+
+  #[derive(Clone, PartialEq, Eq)]
+  struct DirStamp {
+    modified: Option<SystemTime>,
+    #[cfg(unix)]
+    dev:      u64,
+    #[cfg(unix)]
+    ino:      u64,
+    #[cfg(unix)]
+    ctime:    i64,
+    #[cfg(unix)]
+    ctime_ns: i64,
+    #[cfg(unix)]
+    nlink:    u64,
+    #[cfg(not(unix))]
+    len:      u64,
+  }
+
+  impl DirStamp {
+    fn from_meta(m: &Metadata) -> Self {
+      #[cfg(unix)]
+      {
+        use std::os::unix::fs::MetadataExt;
+        Self {
+          modified: m.modified().ok(),
+          dev:      m.dev(),
+          ino:      m.ino(),
+          ctime:    m.ctime(),
+          ctime_ns: m.ctime_nsec(),
+          nlink:    m.nlink(),
+        }
+      }
+      #[cfg(not(unix))]
+      {
+        Self {
+          modified: m.modified().ok(),
+          len:      m.len(),
+        }
+      }
+    }
+  }
+
+  struct DirIndex {
+    stamp:   DirStamp,
+    entries: FxHashMap<String, String>,
+  }
+
+  thread_local! {
+    static CACHE: RefCell<FxHashMap<PathBuf, DirIndex>> = RefCell::new(FxHashMap::default());
+  }
+
+  pub(super) fn clear() { CACHE.with(|cell| cell.borrow_mut().clear()); }
+
+  fn build_index(dir: &Path, stamp: DirStamp) -> Option<DirIndex> {
+    let rd = fs::read_dir(dir).ok()?;
+    let mut entries = FxHashMap::default();
+    for entry in rd.flatten() {
+      let file_name = entry.file_name();
+      let Some(name) = file_name.to_str() else {
+        continue;
+      };
+      // Skip subdirectories without extra `stat` syscalls when `d_type` knows;
+      // follow symlinks via `is_dir()` only when the entry is a symlink or unknown.
+      let is_dir = match entry.file_type() {
+        Ok(ft) if ft.is_dir() => true,
+        Ok(ft) if ft.is_file() => false,
+        _ => entry.path().is_dir(),
+      };
+      if is_dir {
+        continue;
+      }
+      entries
+        .entry(name.to_ascii_lowercase())
+        .or_insert_with(|| name.to_string());
+    }
+    Some(DirIndex { stamp, entries })
+  }
+
+  /// Find a readable non-directory entry in `dir` matching `target`
+  /// ASCII-case-insensitively, using a directory-stamp-validated listing cache
+  /// so repeated missing lookups do not re-read large search directories.
+  pub(super) fn lookup(dir: &Path, target: &str) -> Option<String> {
+    let meta = fs::metadata(dir).ok()?;
+    if !meta.is_dir() {
+      return None;
+    }
+    let stamp = DirStamp::from_meta(&meta);
+    let target_lower = target.to_ascii_lowercase();
+
+    // On non-Unix (no dev/ino), skip caching relative paths in case cwd changes.
+    #[cfg(not(unix))]
+    if !dir.is_absolute() {
+      let idx = build_index(dir, stamp)?;
+      let actual = idx.entries.get(&target_lower)?;
+      let full = dir.join(actual).to_str()?.to_string();
+      return is_readable_file(&full).then_some(full);
+    }
+
+    let matched = CACHE.with(|cell| {
+      let mut cache = cell.borrow_mut();
+      let fresh = cache
+        .get(dir)
+        .is_some_and(|existing| existing.stamp == stamp);
+      if !fresh {
+        let idx = build_index(dir, stamp)?;
+        if cache.len() >= MAX_CACHED_DIRS {
+          cache.clear();
+        }
+        cache.insert(dir.to_path_buf(), idx);
+      }
+      cache
+        .get(dir)
+        .and_then(|idx| idx.entries.get(&target_lower).cloned())
+    })?;
+    let full = dir.join(matched).to_str()?.to_string();
+    is_readable_file(&full).then_some(full)
+  }
+}
+
+/// Drop the thread-local case-insensitive directory listing cache.
+/// Called at each conversion start ([`crate::reset_conversion_state`]) so a
+/// long-lived worker never carries a cached listing across conversions even
+/// within a coarse filesystem mtime tick.
+pub fn clear_nocase_dir_cache() { nocase_dir_cache::clear(); }
+
 /// find the requested `pathname` using the `options` search configuration.
 /// Mirrors Perl `pathname_find` (LaTeXML/Util/Pathname.pm L376-392): directory
 /// search with strict-case match preferred, falling back to a
@@ -908,27 +1051,15 @@ pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
       Some(n) => n,
       None => continue,
     };
-    let entries = match std::fs::read_dir(dir) {
-      Ok(e) => e,
-      Err(_) => continue,
-    };
-    for entry in entries.flatten() {
-      if let Some(name) = entry.file_name().to_str()
-        && name.eq_ignore_ascii_case(target)
-        && !entry.path().is_dir()
-      {
-        return entry.path().to_str().map(String::from);
-      }
+    if let Some(found) = nocase_dir_cache::lookup(dir, target) {
+      return Some(found);
     }
   }
   None
 }
 
 /// A path TeX could open as a file: it exists and is not a directory (kpathsea's `READABLE`).
-pub fn is_readable_file(path: &str) -> bool {
-  let p = Path::new(path);
-  p.exists() && !p.is_dir()
-}
+pub fn is_readable_file(path: &str) -> bool { std::fs::metadata(path).is_ok_and(|m| !m.is_dir()) }
 
 /// transform to a canonical file name, via `Path::file_name`
 pub fn file_name(pathname: &str) -> String {
@@ -1088,39 +1219,13 @@ pub fn clear_kpsewhich_memo() {}
 /// on the in-process backend. Results are stable for a fixed texmf tree
 /// (the same assumption kpathsea's own ls-R cache makes); the memo clears
 /// per conversion via `clear_kpsewhich_memo`.
-/// Say so, ONCE, when neither backend could be constructed.
 ///
-/// A host TeX installation is OPTIONAL here — embedded bindings and dumps
-/// convert self-contained documents perfectly well without one — so this is a
-/// warning, not an error. It exists because a silent dead kpathsea is
-/// indistinguishable from a genuinely missing file: every lookup just reports
-/// `Can't find TeX file X`, which sends users (and us — issue #304) hunting
-/// `TEXINPUTS` instead of the resolver that never came up.
-#[cfg(feature = "kpathsea")]
-pub fn report_unavailable_kpathsea() {
-  static ONCE: std::sync::Once = std::sync::Once::new();
-  ONCE.call_once(|| {
-    let (backend, why) = kpathsea_backend();
-    if backend == KpathseaBackend::Unavailable {
-      crate::Warn!(
-        "kpathsea",
-        "unavailable",
-        s!(
-          "No TeX file resolution ({why}): files from a host texmf tree cannot \
-           be found. Embedded bindings still apply."
-        )
-      );
-    }
-  });
-}
-
-/// Without the `kpathsea` feature there is nothing to report at runtime.
-#[cfg(not(feature = "kpathsea"))]
-pub fn report_unavailable_kpathsea() {}
-
+/// With neither backend (no TeX installation) every lookup answers `None`, silently, as Perl's
+/// `pathname_kpsewhich` does without a `kpsewhich` (Pathname.pm:395-403); a TeX installation is optional
+/// here. Each conversion's log names the backend (`Info:kpathsea:backend`, `Converter::initialize_session`),
+/// so a resolver that never came up is not mistaken for a missing file (issue #304).
 #[cfg(feature = "kpathsea")]
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
-  report_unavailable_kpathsea();
   let key = candidates.join("\x1f");
   if let Some(cached) = KPSE_MEMO.with(|m| m.borrow().get(&key).cloned()) {
     return cached;
@@ -1597,5 +1702,81 @@ mod tests {
     // Keep the dotdot assertion loose — the exact patterns are
     // implementation-defined.
     let _ = has_dotdot;
+  }
+
+  #[test]
+  fn nocase_dir_cache_finds_case_mismatch_and_skips_dirs() {
+    let root = pathsearch_tmproot("nocase_cache");
+    std::fs::write(root.join("PASJ95.STY"), "% sty").unwrap();
+    std::fs::create_dir(root.join("INTRO")).unwrap();
+    let root_s = root.to_str().unwrap().replace('\\', "/");
+
+    // Exercise `nocase_dir_cache::lookup` directly so the cache path is tested
+    // even on case-insensitive filesystems (macOS APFS, Windows) where `find()`
+    // hits Pass 1 before reaching the fallback cache.
+    let found1 = nocase_dir_cache::lookup(&root, "pasj95.sty");
+    let found2 = nocase_dir_cache::lookup(&root, "pasj95.sty");
+    assert!(
+      found1.as_deref().is_some_and(|p| p.ends_with("PASJ95.STY")),
+      "expected PASJ95.STY, got {found1:?}"
+    );
+    assert_eq!(found2, found1);
+
+    // Subdirectories are never returned as readable files.
+    assert_eq!(nocase_dir_cache::lookup(&root, "intro"), None);
+
+    // Misses stay `None`; per-conversion cache reset immediately exposes newly
+    // created files with zero dependence on filesystem mtime granularity.
+    assert_eq!(nocase_dir_cache::lookup(&root, "later.sty"), None);
+    std::fs::write(root.join("LATER.STY"), "% later").unwrap();
+    clear_nocase_dir_cache();
+    let later = nocase_dir_cache::lookup(&root, "later.sty");
+    assert!(
+      later.as_deref().is_some_and(|p| p.ends_with("LATER.STY")),
+      "expected LATER.STY after cache clear, got {later:?}"
+    );
+
+    // On Unix, creating a sibling subdirectory increments the parent's `st_nlink`
+    // immediately (even on 1s-resolution filesystems), invalidating `DirStamp`
+    // without calling `clear_nocase_dir_cache()`.
+    #[cfg(unix)]
+    {
+      assert_eq!(nocase_dir_cache::lookup(&root, "after_nlink.sty"), None);
+      std::fs::write(root.join("AFTER_NLINK.STY"), "% nlink").unwrap();
+      std::fs::create_dir(root.join("BUMP_NLINK")).unwrap();
+      let after = nocase_dir_cache::lookup(&root, "after_nlink.sty");
+      assert!(
+        after
+          .as_deref()
+          .is_some_and(|p| p.ends_with("AFTER_NLINK.STY")),
+        "expected AFTER_NLINK.STY after dir stamp change, got {after:?}"
+      );
+    }
+
+    // End-to-end `find()`: on case-sensitive filesystems Pass 1 misses and
+    // Pass 2 returns the on-disk casing (`PASJ95.STY`); on case-insensitive
+    // filesystems Pass 1 succeeds directly with the requested spelling.
+    let opts = || PathnameFindOptions {
+      paths: Some(vec![root_s.clone()]),
+      ..Default::default()
+    };
+    clear_nocase_dir_cache();
+    let case_sensitive = !is_readable_file(&format!("{root_s}/pasj95.sty"));
+    let via_find = find("pasj95.sty", opts());
+    let expected_suffix = if case_sensitive {
+      "PASJ95.STY"
+    } else {
+      "pasj95.sty"
+    };
+    assert!(
+      via_find
+        .as_deref()
+        .is_some_and(|p| p.ends_with(expected_suffix)),
+      "expected {expected_suffix}, got {via_find:?}"
+    );
+    assert_eq!(find("pasj95.sty", opts()), via_find);
+    assert_eq!(find("intro", opts()), None);
+
+    let _ = std::fs::remove_dir_all(&root);
   }
 }

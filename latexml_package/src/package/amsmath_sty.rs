@@ -423,6 +423,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@mathdisplay@hook", "\\if@fleqn\\lx@math@in@hbox\\fi");
   // amsmath's `{equation}` is its own (amsmath.sty:2913-2932), whatever a class's fleqn.clo made it (fleqn_sty.rs).
   DefMacro!("\\lx@equation@hook", "\\lx@mathdisplay@hook");
+  // DIVERGENCE from Perl (#1091): amsmath.sty:2950-2951, so `\[ … \end{equation*}` and `\begin{equation*} … \]` pair
+  // (witnesses math0306159, math0401181, math0508341). Guard `perfect_kernel_batchclustfix3::amsmath_display_brackets`.
+  DefMacro!("\\[", "\\begin{equation*}", robust => true);
+  DefMacro!("\\]", "\\end{equation*}", robust => true);
   // DIVERGENCE from Perl (#334): amsmath.sty:64 `\newif\if@fleqn` starts
   // false, and amsmath's display environments read only it, so an earlier
   // `fleqn` (article's `fleqn.clo`, fleqn.sty, elsarticle's binding) stops
@@ -491,24 +495,27 @@ LoadDefinitions!({
   Let!("\\@xp", "\\expandafter");
   Let!("\\@nx", "\\noexpand");
 
-  // amsmath L341-348: \let \bigotimes@/\bigoplus@/etc. \bigotimes/...
+  // amsmath.sty:318-345: \let \bigotimes@/\bigoplus@/etc. \bigotimes/...
   // then \gdef the original to use the @-suffix variant for limits
   // placement. We don't materialize that two-step; alias the @ form
   // straight to the user-visible CS so dump-replay of expansions like
-  // `\DOTSB \bigotimes@ \slimits@ _...` resolves.
-  // Witnesses 2406.03357, 2406.10662.
-  Let!("\\bigotimes@", "\\bigotimes");
-  Let!("\\bigoplus@", "\\bigoplus");
-  Let!("\\bigodot@", "\\bigodot");
-  Let!("\\bigsqcup@", "\\bigsqcup");
-  Let!("\\biguplus@", "\\biguplus");
-  Let!("\\bigvee@", "\\bigvee");
-  Let!("\\bigwedge@", "\\bigwedge");
-  Let!("\\bigcap@", "\\bigcap");
-  Let!("\\bigcup@", "\\bigcup");
-  Let!("\\coprod@", "\\coprod");
-  Let!("\\prod@", "\\prod");
-  Let!("\\sum@", "\\sum");
+  // `\DOTSB \bigotimes@ \slimits@ _...` resolves. Witnesses 2406.03357, 2406.10662.
+  // Only while `\coprod` is still a math character, as amsmath tests: an inlined AmS-TeX
+  // `\def\sum{\DOTSB\sum@\slimits@}` would close a loop (math0612243, 0705.4126, math0112238; OD #1100).
+  if !matches!(lookup_definition(&T_CS!("\\coprod")), Ok(Some(defn)) if defn.is_expandable()) {
+    Let!("\\bigotimes@", "\\bigotimes");
+    Let!("\\bigoplus@", "\\bigoplus");
+    Let!("\\bigodot@", "\\bigodot");
+    Let!("\\bigsqcup@", "\\bigsqcup");
+    Let!("\\biguplus@", "\\biguplus");
+    Let!("\\bigvee@", "\\bigvee");
+    Let!("\\bigwedge@", "\\bigwedge");
+    Let!("\\bigcap@", "\\bigcap");
+    Let!("\\bigcup@", "\\bigcup");
+    Let!("\\coprod@", "\\coprod");
+    Let!("\\prod@", "\\prod");
+    Let!("\\sum@", "\\sum");
+  }
   Let!("\\intop@", "\\intop");
   Let!("\\iintop@", "\\iintop");
   Let!("\\iiintop@", "\\iiintop");

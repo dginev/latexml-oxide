@@ -556,8 +556,14 @@ says otherwise.
   - Also open from that report: the kernel paper-size swap under `landscape`.
 - **`LATEXML_NODUMP=1` broke every guard** in the gates env on 64h4 and 64qb (`Warning:recursion:LaTeX.pool`,
   `\AddToHook`/`\NewDocumentCommand` undefined; agent_reports/2026-10-10_payload_64qb.md:186-190).
-  - This is CLAUDE.md's strict-LoadFormat NODUMP branch.
-  - Re-verify on head. A fix is a payload.
+  - FIXED for the root causes (OXIDIZED_DESIGN_DIVERGENCES #1095, guard
+    `dump_gate_init::nodump_latex_branch_converts_healthily`): the kernel autoload loads the format with no
+    catalogue, the base carries what our constructs call, hyperref's store waits for `\NewDocumentCommand`.
+  - Still open: the whole suite cannot run under NODUMP where TeX Live is. Every conversion raw-loads
+    expl3-code.tex (2.6 min at opt-level 0): before the fix, 26 tests finished in 24 min and 19 failed, on
+    `\if@ignore` (229 lines), `\@stpelt`, hyperref's store (`\NewDocumentCommand` …, ~50 each; all fixed) and on
+    `Error:misdefined:#` (1094) and `Error:expected:<variable>` (328), not yet re-checked on the fix; every NODUMP
+    conversion also warns `recursion:LaTeX.pool` and `expl3:raw-load`, which warning-count guards count (2026-11-19).
 - **`\newcommand{\span}` gives only an Info, and `\DeclareMathOperator{\span}` is silent,** where LaTeX's `\@notdefinable`
   errs.
   - Populations: 385 `\def`, 215 `\renewcommand`, 39 `\newcommand`, 39 `\DeclareMathOperator`, 10 `\let`,

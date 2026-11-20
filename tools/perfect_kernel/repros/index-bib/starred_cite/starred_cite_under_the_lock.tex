@@ -1,0 +1,16 @@
+% witness: astro-ph0001290, astro-ph0008362, astro-ph0005563 (EslabStyle.cls:1442-1445, ISOStyle.cls:1446-1449
+%          `\def\cite{\@ifstar{\citeyear}{\citefull}}`, refused by the locked kernel `\cite`, OXIDIZED_DESIGN_DIVERGENCES #88)
+% oracle:  pdflatex with the class's lines (starcite.sty beside): 0 errors, "[Cardelli(1989)] and [Cardelli(1989)]";
+%          Perl 0 errors. A `\def\cite` in the document itself is the parameterless-value path (#500), not this one
+% engines: rust MAIN917 1 error, 1 warning: the `*` read as the key (a missing citation), `{c_89}` typeset with its `_` out of math
+% expect:  0 errors, 0 warnings; both `\cite` calls one `ltx:cite` of the key c_89
+% status:  RED (MAIN917) -> GREEN (CLUSTFIX); guard perfect_kernel_batchclustfix::starred_cite_under_the_lock
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{starcite}
+\begin{document}
+As shown by \cite*{c_89} and \cite{c_89}.
+\begin{thebibliography}{}
+\bibitem[Cardelli(1989)]{c_89} Cardelli J., 1989
+\end{thebibliography}
+\end{document}

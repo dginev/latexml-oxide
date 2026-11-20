@@ -1078,7 +1078,11 @@ pub(crate) fn load() -> Result<()> {
   // through `\verb@egroup`; a MACRO, as packages append to it
   // (`\g@addto@macro`, newverbs.sty:58).
   DefMacro!("\\verb@egroup", "\\global\\let\\verb@balance@group\\@empty\\lx@hidden@egroup");
-  DefMacro!("\\verb", { verb_group(false)? });
+  // latex209.def:201-211 (a `\documentstyle`): `\@sverb#1` reads to `\def\@tempa##1#1`, the delimiter as tokenized, so
+  // in an argument it ends at the frozen delimiter without error, and a line's end is a space (cond-mat0203143,
+  // math0303012, cs9811025).
+  // Guard `perfect_kernel_batchnext397::verb_under_documentstyle_reads_to_its_tokenized_delimiter`.
+  DefMacro!("\\verb", { verb_group(lookup_bool("2.09_COMPATIBILITY"))? });
 
   DefPrimitive!("\\lx@use@visiblespace", {
     // Do NOT (necessarily) skip spaces after \verb!!!

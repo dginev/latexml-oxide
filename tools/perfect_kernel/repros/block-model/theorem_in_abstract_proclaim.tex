@@ -1,0 +1,19 @@
+% witness: math0111087 (amsppt `\proclaim{Theorem}` in `\abstract`); PLACE397 T1
+% oracle:  tex (plain + amstex/amsppt) 0 errors; the abstract reads "We prove the following. Theorem. Every x is x.
+%          More." with "Theorem" in bold
+% engines: rust 7ffe5507018 = 1 ("<ltx:theorem> isn't allowed in <ltx:abstract>"), perl = the same
+% expect:  0 errors, 0 warnings; no theorem element: the display title "Theorem" run in, bold, at the start of the
+%          paragraph that takes the theorem's id
+% status:  RED (7ffe5507018) -> GREEN (PLACEFIX round 2; OXIDIZED_DESIGN_DIVERGENCES #1097)
+\input amstex
+\documentstyle{amsppt}
+\topmatter
+\title Proclaim\endtitle
+\abstract We prove the following.
+\proclaim{Theorem} Every $x$ is $x$.\endproclaim
+More.
+\endabstract
+\endtopmatter
+\document
+Text.
+\enddocument

@@ -1886,6 +1886,23 @@ pub(crate) fn load() -> Result<()> {
       unread(Tokens!(terminal));
     }
   });
+  // The bibliography begins with a heading (article.cls:565-566 `\section*{\refname}`), which ends an abstract or
+  // keywords opened as a command as a `\section` does (the TOC's alike, OD #753): `\begin{thebibliography}` before its
+  // group (`begin_environment_by_macro`, mod.rs) and `\bibliography` (sect11.rs). A `\begin{abstract}` is left alone:
+  // elsarticle's program summary holds its own bibliography (2503.17910). The abstract so ended keeps its first
+  // paragraph (`\lx@add@frontmatter@until`, `lx_abstract_ended_late`): M1 hep-th0110297, 1108.5171, 1405.5825,
+  // hep-th0602212; M2 math0006149, 1408.0340, 1501.04098, 1710.10154. OXIDIZED_DESIGN_DIVERGENCES #1101.
+  DefPrimitive!("\\lx@bibliography@ends@frontmatter", {
+    if !in_speculative_digestion()
+      && !lookup_bool("lx_replaying_class_setter")
+      && lookup_token("lx@until@terminal").is_some()
+      && begun_environment().is_none()
+    {
+      // (read and cleared by the abstract this ends: `\lx@add@frontmatter@until`)
+      assign_value("lx_abstract_ended_late", "bibliography", Some(Scope::Global));
+      unread(Tokens!(T_CS!("\\lx@heading@ends@frontmatter"), T_CS!("\\@startsection@hook")));
+    }
+  });
   // Before a brace-less `\abstract`'s body: a class's refused begin code is not replayed for it
   // (`\lx@abstract@class@setters`, frontmatter_stores.rs). Without its end code it has no extent in TeX, and its
   // bindings would hold for the rest of the abstract: `\let\section\absection` (frontiersFPHY.cls:520) would disable
@@ -1905,7 +1922,8 @@ pub(crate) fn load() -> Result<()> {
   // (IMjournal.sty:81/83) was taken, ending the kernel's abstract by closing a group it never opened
   // (1702.00108, 2304.05575; ~40 of 56 sampled run-336 papers). The document's own `\endabstract` stays
   // its own: an author's `\beginabstract … \endabstract` pair (gr-qc9405068, gr-qc9406008) is not the
-  // kernel's.
+  // kernel's. Nor is a style's paired with its own `\beginabstract` (state.rs `files_lock_holds`): nanosymp.sty:25-31's
+  // list, whose end the lock refused, left open over the whole paper (cond-mat0105361).
   AssignValue!("\\endabstract:locked@files" => true, Some(Scope::Global));
   DefMacro!("\\maybe@end@abstract", "\\lx@end@abstract");
   DefMacro!(
@@ -3157,6 +3175,15 @@ thread_local! {
     const { RefCell::new(Vec::new()) };
 }
 
+/// Clear per-conversion thread-local caches in `sect05` (`REPLAY_CAPTURED`,
+/// `REPLAY_BODY_STORES`, `KERNEL_TITLE_DEFS`) so persistent workers and
+/// `arena::reset()` never retain stale definitions or `SymStr`s.
+pub(super) fn reset_conversion_caches() {
+  REPLAY_CAPTURED.with(|c| c.borrow_mut().clear());
+  REPLAY_BODY_STORES.with(|c| c.borrow_mut().clear());
+  KERNEL_TITLE_DEFS.with(|c| *c.borrow_mut() = None);
+}
+
 /// Run a raw class's own frontmatter setter that the lock refused (`\lx@dropped@<name>`, state.rs) for its side
 /// effects, its output discarded: the kernel's `\<name>` keeps the frontmatter, and the class keeps the flags and stores
 /// its other code tests (OXIDIZED_DESIGN #482). JINST.cls:755-762 `\renewcommand\author[1]{\global\@authortrue…}` and :819-823
@@ -3509,6 +3536,14 @@ fn replay_dropped_class_code(
   // one source of the frontmatter, and a store the body would define is empty if it was undefined (state.rs, the
   // dropped setter's internals; afthesis.cls:520) — save a body store that now holds the argument (below).
   let mut kernel_stores = vec![T_CS!("\\@author"), T_CS!("\\@shortauthor")];
+  struct ReplayBuffersGuard;
+  impl Drop for ReplayBuffersGuard {
+    fn drop(&mut self) {
+      REPLAY_BODY_STORES.with(|c| c.borrow_mut().clear());
+      REPLAY_CAPTURED.with(|c| c.borrow_mut().clear());
+    }
+  }
+  let _replay_guard = ReplayBuffersGuard;
   REPLAY_BODY_STORES.with(|c| *c.borrow_mut() = stores.iter().map(meaning_key).collect());
   kernel_stores.extend(stores);
   let saved: Vec<Option<Stored>> = kernel_stores.iter().map(lookup_meaning).collect();

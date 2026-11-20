@@ -213,6 +213,7 @@ for _, name in ipairs({'execute', 'exec', 'spawn', 'kpsepopen', 'remove', 'renam
   os[name] = denier('os.' .. name, os[name])
 end
 io.popen = denier('io.popen', io.popen)
+io.tmpfile = denier('io.tmpfile', io.tmpfile)
 local io_open, io_output, io_input = io.open, io.output, io.input
 io.open = function(name, mode)
   if writes(mode) and not out_name_ok(name) then deny('writing ' .. shown(name)) end
@@ -990,5 +991,18 @@ mod tests {
         Ok("R1")
       );
     }
+  }
+
+  #[test]
+  fn sandbox_denies_io_tmpfile() {
+    if !texlua_present() {
+      return;
+    }
+    super::reset_session();
+    let res = lua_exec("local f = io.tmpfile() if f then f:close() end");
+    assert!(
+      res.is_err(),
+      "io.tmpfile() must be denied by the document Lua sandbox, got: {res:?}"
+    );
   }
 }

@@ -403,7 +403,8 @@ fn robust_let_over_a_locked_binding_keeps_its_inner() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(xml.contains(">macro:#1#2-&gt;CODE("), "{xml}");
+  // (three parameters: `OptionalMatch:* [] Semiverbatim`, the star since CLUSTFIX, OXIDIZED_DESIGN_DIVERGENCES #88)
+  assert!(xml.contains(">macro:#1#2#3-&gt;CODE("), "{xml}");
   assert!(!xml.contains("MY("), "{xml}");
 }
 

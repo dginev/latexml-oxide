@@ -1,0 +1,24 @@
+% witness: cond-mat0203143 (ver8.tex:717-728 `\parbox[t]{…}{\verb+ +\\ \includegraphics…}`, and `{{\verb+ + }\\…}`; the
+%          run-397 `unexpected/\verb` cluster), its shape under `\documentclass`; the paper is `\documentstyle`, where
+%          latex209.def's `\verb` ends at the delimiter (sibling
+%          verb_under_documentstyle_reads_to_its_tokenized_delimiter)
+% oracle:  latex.ltx:15485-15499 `\verb` opens a group with `\aftergroup\verb@balance@group`: pre-tokenized in an
+%          argument its delimiter is never the active one, the `}` that closes the argument ends it with "\verb illegal
+%          in argument", and the rest is typeset. pdflatex: 4 `!` (2 "\verb illegal in argument", the first one's
+%          "Missing } inserted" / "Extra }" recovery), "+ / second line / + / third line / Then more.", the
+%          words "second" and "third" bold
+% engines: rust CLUSTFIX 2 errors "\verb ended by end of line": the scan ran past the argument's `}` into the next line
+%          (cond-mat0203143 lost its three figures)
+% expect:  2 errors "\verb illegal in argument", 0 warnings; each box keeps its text after the verb
+% status:  RED (CLUSTFIX) -> GREEN (NEXT397); guard perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{tabular}{c}
+1)\parbox[t]{3cm}{\verb+ +\\
+\textbf{second} line}
+\\
+2)\parbox[t]{3cm}{{\verb+ + }\\\textbf{third} line}
+\end{tabular}
+Then more.
+\end{document}

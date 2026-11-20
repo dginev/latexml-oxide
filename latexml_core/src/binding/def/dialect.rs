@@ -1447,8 +1447,39 @@ pub fn env_hook_has_code(name: &str, point: &str) -> bool {
   hook_has_code(&format!("env/{name}/{point}"))
 }
 
+/// The three lthooks macro names for `hook`: labelled prop, toplevel, next-use.
+fn hook_slot_names(hook: &str) -> (String, String, String) {
+  (
+    format!("\\g__hook_{hook}_code_prop"),
+    format!("\\__hook_toplevel {hook}"),
+    format!("\\__hook_next {hook}"),
+  )
+}
+
+/// `\prop_if_empty:N` (expl3-code.tex:10450): a flat prop is empty when its
+/// meaning is `\c_empty_prop`'s.
+fn hook_prop_has_code(prop: &Token) -> bool {
+  with_macro_body(prop, |body| match body {
+    Some(body) => {
+      with_macro_body(&T_CS!("\\c_empty_prop"), |empty| empty != Some(body)).unwrap_or(true)
+    },
+    None => true,
+  })
+  .unwrap_or(false)
+}
+
 /// Whether the kernel hook `hook` holds code: [`HookStore::has_code`].
-pub fn hook_has_code(hook: &str) -> bool { HookStore::new(hook).has_code() }
+/// Checks `l3_hooks_loaded()` first and probes with non-interning [`Token::try_cs`]
+/// so checking an empty/undeclared hook never permanently interns 3 `SymStr`s.
+pub fn hook_has_code(hook: &str) -> bool {
+  if !l3_hooks_loaded() {
+    return false;
+  }
+  let (prop, toplevel, next) = hook_slot_names(hook);
+  Token::try_cs(prop).is_some_and(|tok| hook_prop_has_code(&tok))
+    || Token::try_cs(toplevel).is_some_and(|tok| hook_slot_has_code(&tok))
+    || Token::try_cs(next).is_some_and(|tok| hook_slot_has_code(&tok))
+}
 
 /// The slots lthooks keeps a hook's code in, named once (a hook read at every `\selectfont` keeps its own).
 pub struct HookStore {
@@ -1459,11 +1490,18 @@ pub struct HookStore {
 
 impl HookStore {
   pub fn new(hook: &str) -> Self {
+    let (prop, toplevel, next) = hook_slot_names(hook);
     HookStore {
-      prop:     T_CS!(s!("\\g__hook_{hook}_code_prop")),
-      toplevel: T_CS!(s!("\\__hook_toplevel {hook}")),
-      next:     T_CS!(s!("\\__hook_next {hook}")),
+      prop:     T_CS!(prop),
+      toplevel: T_CS!(toplevel),
+      next:     T_CS!(next),
     }
+  }
+
+  /// Build from already-pinned literal tokens (e.g. `T_CS!("...")`), safe
+  /// across `arena::reset()` because `pin!` re-interns automatically.
+  pub fn from_tokens(prop: Token, toplevel: Token, next: Token) -> Self {
+    HookStore { prop, toplevel, next }
   }
 
   /// lthooks' `\hook_if_empty:nTF` (latex.ltx:6436-6448) read from its storage, no expansion: the labelled code
@@ -1474,14 +1512,7 @@ impl HookStore {
     if !l3_hooks_loaded() {
       return false;
     }
-    // `\prop_if_empty:N` (expl3-code.tex:10450): a flat prop is empty when its meaning is `\c_empty_prop`'s
-    let prop_has_code = with_macro_body(&self.prop, |body| match body {
-      Some(body) => {
-        with_macro_body(&T_CS!("\\c_empty_prop"), |empty| empty != Some(body)).unwrap_or(true)
-      },
-      None => true,
-    });
-    prop_has_code.unwrap_or(false)
+    hook_prop_has_code(&self.prop)
       || hook_slot_has_code(&self.toplevel)
       || hook_slot_has_code(&self.next)
   }

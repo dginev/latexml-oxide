@@ -178,6 +178,42 @@ pub fn today() -> Result<String> {
   Ok(s!("{} {}, {}", month, day, year))
 }
 
+/// The command a defining macro's `{\cs}` argument names, read as TeX's `\def#1` reads it (`get_r_token`,
+/// tex.web §1215, skips spaces): its first non-space token, and the tokens after it, which a `\def` takes as its
+/// parameter text. An argument with no control sequence there is TeX's "Missing control sequence inserted": an
+/// Error, and `None`. The argument's text, re-read as a prototype, made `{ \mathcal}` and `{\survey2011}` Fatal on
+/// the parameter types `mathcal` and `2011` (witnesses 1810.09714, 1906.05222, 2011.04603, 2206.00709, 2209.01842;
+/// 1312.0976).
+pub fn defined_cs(arg: &Tokens) -> Result<Option<(Token, Tokens)>> {
+  let mut tokens = arg
+    .unlist_ref()
+    .iter()
+    .skip_while(|t| t.get_catcode() == Catcode::SPACE);
+  match tokens.next() {
+    Some(cs) if matches!(cs.get_catcode(), Catcode::CS | Catcode::ACTIVE) => {
+      Ok(Some((*cs, Tokens::new(tokens.copied().collect()))))
+    },
+    _ => {
+      let message = s!(
+        "Missing control sequence inserted; '{}' defines nothing",
+        arg.to_string()
+      );
+      Error!("expected", "cs", message);
+      Ok(None)
+    },
+  }
+}
+
+/// [`defined_cs`], the tokens after the command read as `\def`'s parameter text (url.sty:185
+/// `\edef#1`: `\urldef{\survey2011}` defines `\survey` delimited by `2011`).
+pub fn defined_cs_with_parameters(arg: &Tokens) -> Result<Option<(Token, Option<Parameters>)>> {
+  let Some((cs, rest)) = defined_cs(arg)? else {
+    return Ok(None);
+  };
+  let params = parse_def_parameters(&cs, rest)?;
+  Ok(Some((cs, params)))
+}
+
 pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Parameters>> {
   let mut tokens: VecDeque<Token> = VecDeque::from(params_in.pack_parameters()?.unlist());
   // Now, recognize parameters and delimiters.

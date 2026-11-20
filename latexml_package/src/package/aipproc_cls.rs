@@ -126,7 +126,25 @@ LoadDefinitions!({
   // various contact information is supplied via the optional keyvals
   // (Perl PR #2767: each present key becomes a contact shorthand inside
   // the \lx@add@author content).
-  DefMacro!("\\author{} RequiredKeyVals", sub[(author, kv)] {
+  // The keyvals are read only when a `{` follows (past spaces, as `\@ifnextchar` reads): the 1998 class (v1.0a, the
+  // copy astro-ph0003214 ships; aipproc.cls:85-89) takes `\author{name}` and a separate `\affiliation{text}`, its own
+  // default `\author{AUTHOR here}` included, and the required keyvals made each a "Missing keyval arguments" error.
+  // Guard `perfect_kernel_batchclustfix::aipproc_old_author_affiliation`.
+  DefMacro!("\\author{}", sub[(author)] {
+    let next = read_non_space()?;
+    let braced = next.as_ref().is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+    if let Some(next) = next {
+      unread_one(next);
+    }
+    let mut call = vec![T_CS!("\\lx@aipproc@author"), T_BEGIN!()];
+    call.extend(author.unlist());
+    call.push(T_END!());
+    if !braced {
+      call.extend([T_BEGIN!(), T_END!()]);
+    }
+    Ok(Tokens::new(call))
+  });
+  DefMacro!("\\lx@aipproc@author{} RequiredKeyVals", sub[(author, kv)] {
     let mut content: Vec<Token> = author.unlist();
     for (field, code) in [
       ("address",    "\\lx@add@contact[role=address]{#1}"),
@@ -142,6 +160,17 @@ LoadDefinitions!({
     Ok(Invocation!("\\lx@add@author{#1}", vec![Some(Tokens::new(content))]))
   });
 
+  // aipproc.cls:85 (v1.0a, astro-ph0003214's copy) `\newcommand*\affiliation[1]{\def\AIP@affiliation{#1}}`, printed
+  // under the authors by its `\maketitle`: the authors' affiliation. Defined where the paper's copy has it; the later
+  // classes write it as the `address` key. Beside it, :86 `\newcommand*\affiliationmark[1]{\textsuperscript{#1}}`, the
+  // mark pairing an author with an affiliation line (astro-ph0011502's myaipproc.cls).
+  if shipped_class_text("aipproc")?
+    .as_deref()
+    .is_some_and(|text| class_code_contains(text, "\\newcommand*\\affiliation[1]"))
+  {
+    DefMacro!("\\affiliation{}", "\\lx@add@contact[role=affiliation]{#1}");
+    DefMacro!("\\affiliationmark{}", "\\textsuperscript{#1}");
+  }
   DefMacro!("\\keywordsname", "Keywords");
   DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordsname:~}]{#1}");
   DefMacro!("\\classification{}", "\\lx@add@classification{#1}");

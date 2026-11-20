@@ -1,0 +1,15 @@
+% witness: CCJNL397 (an author `\fmt` with `\@ifundefined{fmt@#1}` under mfirstuc's `\capitalisefmtwords`; gdb: the
+%          9-frame cycle read_balanced_with_close -> Expandable::invoke -> `\lx@ifundefined`'s Expand! -> do_expand)
+% oracle:  tex.web §321 push_input: "TeX capacity exceeded, sorry [input stack size=10000]", a fatal error, no PDF
+% engines: rust MAIN922 "thread has overflowed its stack", SIGABRT, no log (the expansion inside a balanced read
+%          was not counted by the expansion-depth guard); Perl: deep recursion until its own limits
+% expect:  one Fatal "Excessive expansion recursion" (Fatal:Timeout:Recursion), a written log, the CLI's Fatal exit
+% status:  RED (MAIN922) -> GREEN (HARDEN397); guard
+%          perfect_kernel_batchharden397::expansion_recursion_through_an_argument_expansion_is_a_fatal
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\x{\@ifundefined{\x}{}{}}
+\begin{document}
+A \x\ B
+\end{document}

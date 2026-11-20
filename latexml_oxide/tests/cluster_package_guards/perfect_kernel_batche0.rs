@@ -2103,7 +2103,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("rest /boxes_lists.rs", 0),
   ("rest /defs/mod.rs", 0),
   ("rest /defs/tags_refnums.rs", 0),
-  ("rest /fonts_defs.rs", 12),
+  // (CRASH397B +2: `defined_cs` skips space tokens and takes a CS or active character, by catcode: tex.web §1215's
+  // `get_r_token`, a kernel scan, not a frontmatter decision)
+  ("rest /fonts_defs.rs", 14),
   ("rest /math_cleanup.rs", 0),
   ("rest /misc.rs", 14),
   ("rest /mod.rs", 0),
@@ -3224,7 +3226,11 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // REGCDE: the walk's `\global\let` (`global_let`: the engine's `assign_meaning`, `lookup_meaning`), no decision.
   ("latexml_core/src/binding/preamble_commands.rs", 2),
   // TABU2b +1: `run_trivlist_hook` names the kernel's own `\lx@trivlist@hook` to read its meaning (empty: skipped).
-  ("latexml_core/src/binding/counter/dialect.rs", 32),
+  // CRASH397B +2: the reset cascade's path and `reset_list_reaches` hold counter NAMES (`\cl@<ctr>` lists, Perl's
+  // `ToString($c)`, Package.pm:891), a state key and no token's spelling.
+  // CRASH397Bb +2: `tex_reset_list` reads TeX's own list, the `\cl@<ctr>` macro's `{<child>}` groups, by their
+  // catcodes 1/2 and the child's name, to tell a reset cycle TeX loops on (an Error) from one only LaTeXML reaches.
+  ("latexml_core/src/binding/counter/dialect.rs", 36),
   // QAB1b +2: `hook_has_code` reads lthooks' storage by meaning (`with_macro_body`'s `with_meaning`) where it expanded
   // `\IfHookEmptyTF`, and `\if:w I` (`hook_used_once`) compares the slot's first token with the character `I`; QAB2b -1.
   ("latexml_core/src/binding/def/dialect.rs", 42),
@@ -3258,7 +3264,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/keyval.rs", 1),
   ("latexml_core/src/keyvals.rs", 22),
   // (MEMA, 47 -> 46: `handle_escape` spells the name in a reused buffer instead of `s!("\\{}", ch)`, which counted)
-  ("latexml_core/src/mouth.rs", 46),
+  // (CRASH397B +1: `catcode_of` reads `BIB_DATA_LITERALS` by catcode, as the mouth's other catcode reads do)
+  ("latexml_core/src/mouth.rs", 47),
   ("latexml_core/src/parameter.rs", 34),
   ("latexml_core/src/rewrite/declare.rs", 7),
   // (PRESBX +2: `note_redefined` records the file whose load made a refused definition, `\@currname.\@currext`, as
@@ -3313,7 +3320,11 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (MTREDUCEE +20, accepted by DG 2026-11-17 for the release, row R RATCHET-MTRE to lower: `kernel_title_marks`'s
   // fail-safes read the group, `\let`, `\thanks`/`\footnotemark`/`\@thefnmark` and conditional tokens of the body by
   // spelling; to move onto meanings)
-  ("latexml_engine/src/latex_constructs/mod.rs", 219),
+  // (NEXT397 +4: `read_verb_invocation` ends a `\verb` in an argument at a `}` outside its body's own braces, by the
+  // tokens' catcodes 1/2 — TeX's own reading of a group's end, not a spelling; OXIDIZED_DESIGN_DIVERGENCES #1085)
+  // (NEXT397 fix 1 +1: under `\documentstyle` the verb's delimited read keeps the line's end it crosses as a space token
+  // of char 32, read by its catcode 10 — tex.web §347's end of line, not a spelling; cs9811025, astro-ph0207672)
+  ("latexml_engine/src/latex_constructs/mod.rs", 224),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
   ("latexml_engine/src/latex_constructs/sect02.rs", 7),

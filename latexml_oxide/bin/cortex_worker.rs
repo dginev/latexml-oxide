@@ -514,6 +514,7 @@ impl LatexmlWorker {
       plane1:                    true,
       hackplane1:                false,
       mathtex:                   self.profile.mathtex,
+      unicodemath:               false,
       url_style:                 latexml_post::crossref::UrlStyle::File,
       navigationtoc:             None,
       split:                     false,
@@ -1126,6 +1127,8 @@ fn parse_address_space(status: &str, limits: &str) -> Option<(u64, u64)> {
 fn unpack_archive(
   archive_path: &Path,
 ) -> Result<(TempDir, latexml_core::watchdog::RemoveOnExit, String), Box<dyn Error>> {
+  // The previous job's held archive warnings, when it failed before its report, are not this paper's.
+  latexml_core::common::error::clear_session_warnings();
   let tempdir = TempDir::new()?;
   let on_exit = latexml_core::watchdog::remove_on_exit(tempdir.path());
   let dest = tempdir.path();
@@ -1133,8 +1136,8 @@ fn unpack_archive(
   let path_str = archive_path.to_string_lossy();
   if path_str.ends_with(".zip") {
     let file = File::open(archive_path)?;
-    let mut archive = zip::ZipArchive::new(file)?;
-    archive.extract(dest)?;
+    let archive = zip::ZipArchive::new(file)?;
+    latexml::util::unpack_zip(archive, dest)?;
   } else if path_str.ends_with(".tar.gz") || path_str.ends_with(".tgz") {
     let file = File::open(archive_path)?;
     let gz = flate2::read::GzDecoder::new(file);
@@ -1188,8 +1191,12 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
     if let Ok(entries) = fs::read_dir(dir) {
       for entry in entries.flatten() {
         let path = entry.path();
-        if path.is_dir() {
+        // Real directories only, as Perl's walk does (Util/Pack/Dir.pm:45, File::Find without `follow`): a link to
+        // a directory (an archive's `a -> .`) would cycle without end.
+        if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
           collect_tex_files(&path, files, fallback);
+        } else if path.is_dir() {
+          continue;
         } else if !fallback {
           if path.extension().is_some_and(|e| {
             let e = e.to_ascii_lowercase();
@@ -2404,5 +2411,80 @@ mod address_space_tests {
       None
     );
     assert_eq!(parse_address_space("", LIMITS_5632), None);
+  }
+}
+
+#[cfg(test)]
+mod archive_tests {
+  use std::path::Path;
+
+  use latexml_core::common::error::{LogStatus, get_status, initialize_report};
+
+  use super::unpack_archive;
+
+  /// A tar of `files` (name, body) and of symbolic links (name, target), written to `dir/name`.
+  fn write_tar(
+    dir: &Path,
+    name: &str,
+    files: &[(&str, &str)],
+    links: &[(&str, &str)],
+  ) -> std::path::PathBuf {
+    let mut builder = tar::Builder::new(Vec::new());
+    for (path, body) in files {
+      let mut header = tar::Header::new_gnu();
+      header.set_size(body.len() as u64);
+      header.set_mode(0o644);
+      header.set_cksum();
+      builder
+        .append_data(&mut header, path, body.as_bytes())
+        .unwrap();
+    }
+    for (path, target) in links {
+      let mut header = tar::Header::new_gnu();
+      header.set_entry_type(tar::EntryType::Symlink);
+      header.set_size(0);
+      builder.append_link(&mut header, path, target).unwrap();
+    }
+    let out = dir.join(name);
+    std::fs::write(&out, builder.into_inner().unwrap()).unwrap();
+    out
+  }
+
+  /// Links to the source's own top (`a -> .`) are unpacked (they stay inside it), and the search for the main file
+  /// does not follow them: three of them branched 3^40 ways before the kernel's link limit stopped each path.
+  #[cfg(unix)]
+  #[test]
+  fn a_link_cycle_in_the_archive_does_not_hang_the_main_file_search() {
+    let root = tempfile::tempdir().unwrap();
+    let tex = "\\documentclass{article}\\begin{document}BODY\\end{document}\n";
+    let tar = write_tar(
+      root.path(),
+      "cycle.tar",
+      &[("main.tex", tex), ("other.tex", "% nothing\n")],
+      &[("a", "."), ("b", "."), ("c", "."), ("d", ".")],
+    );
+    let (tempdir, _on_exit, main) = unpack_archive(&tar).unwrap();
+    assert_eq!(Path::new(&main), tempdir.path().join("main.tex"));
+  }
+
+  /// A job whose archive unpacked with a held Warning (a link leaving the source) and then failed before its report
+  /// hands that Warning to no later paper on the worker's thread.
+  #[cfg(unix)]
+  #[test]
+  fn a_failed_jobs_archive_warnings_do_not_reach_the_next_paper() {
+    let root = tempfile::tempdir().unwrap();
+    let failed = write_tar(root.path(), "failed.tar", &[("data.bin", "\u{1}")], &[(
+      "out.tex",
+      "/nonexistent/elsewhere.tex",
+    )]);
+    assert!(
+      unpack_archive(&failed).is_err(),
+      "no TeX source: the job fails"
+    );
+    let tex = "\\documentclass{article}\\begin{document}BODY\\end{document}\n";
+    let next = write_tar(root.path(), "next.tar", &[("main.tex", tex)], &[]);
+    let (_tempdir, _on_exit, _main) = unpack_archive(&next).unwrap();
+    initialize_report();
+    assert_eq!(get_status(LogStatus::Warning), 0);
   }
 }

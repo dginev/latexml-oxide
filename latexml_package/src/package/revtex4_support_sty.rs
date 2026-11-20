@@ -38,6 +38,10 @@ LoadDefinitions!({
   // hyperref's commands without loading it, but marked unloaded so the document's own load runs the binding again
   // (the `amsmath` precedent of aa_cls.rs, Perl aa.cls.ltxml:57), and `\@ifpackageloaded{hyperref}` is false.
   unmark_loaded("hyperref.sty");
+  // Its `\refstepcounter` dispatch (hyperref.sty:6651-6657) goes with that load too: the shipped revtex 4.0
+  // ltxutil.sty:682 `\let\H@refstepcounter\refstepcounter` took it for the kernel's and closed a loop at every
+  // `\section` (astro-ph0112270; OXIDIZED_DESIGN_DIVERGENCES #1100). The document's own load installs it again.
+  Let!("\\refstepcounter", "\\lx@kernel@refstepcounter");
   RequirePackage!("natbib");
   RequirePackage!("revsymb");
   RequirePackage!("url");
@@ -214,7 +218,10 @@ LoadDefinitions!({
   DefMacro!("\\abstractname", "Abstract");
 
   DefMacro!("\\pacs{}",     "\\lx@add@classification[scheme=pacs,name={PACS:~}]{#1}");
-  DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
+  // revtex4 only stores `\keywords` (printed under `showkeys` alone), so TeX never expands an elsart-style `\sep` a paper
+  // ported from elsart left in it (cond-mat0309530 manuscript7.tex:46); digested here, it is elsart's separator
+  // (elsart_support_core_sty.rs) where the paper does not define it. OXIDIZED_DESIGN_DIVERGENCES #1089.
+  DefMacro!("\\keywords{}", "\\lx@add@keywords{\\providecommand\\sep{\\unskip,\\space}#1}");
   // `\preprint` stores the number for the title page, which prints it or not by the class family's rule, so the branch
   // is chosen before the argument is read (`preprint_printed`). A printed number is Perl's
   // `\lx@add@pubnote[role=preprint]{#1}` (revtex4_support.sty.ltxml:71), its argument read as TeX reads it (`$`, `~`
@@ -448,12 +455,17 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       engine::latex_constructs::begin_bibliography(whatsit)?;
     },
+    // Out of a float or a heading it cannot open in (OXIDIZED_DESIGN_DIVERGENCES #1099), its end returning there.
+    before_construct => sub[doc, _whatsit] {
+      engine::latex_constructs::float_bibliography_out(doc)?;
+    },
     locked => true
   );
   DefConstructor!("\\endreferences",
     sub[document, _whatsit, _props] {
       document.maybe_close_element("ltx:biblist")?;
       document.maybe_close_element("ltx:bibliography")?;
+      document.restore_floated_backmatter();
     },
     locked => true
   );

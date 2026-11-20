@@ -1,0 +1,5 @@
+% EslabStyle.cls:1442-1445 (astro-ph0001290), ISOStyle.cls:1446-1449 (astro-ph0008362), without their \astroncite
+\let\@internalcite\cite
+\def\cite{\@ifstar{\citeyear}{\citefull}}
+\def\citefull{\@internalcite}
+\def\citeyear{\@internalcite}

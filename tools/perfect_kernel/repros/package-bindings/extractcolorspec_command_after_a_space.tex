@@ -1,0 +1,11 @@
+% witness: none (sibling of 1312.0976 and 1810.09714: a defining command's {\cs} argument read as text)
+% oracle:  pdflatex 0 errors: "Spec rgb1,0,0 end." (xcolor.sty:1032 \aftergroupdef#2 skips the space)
+% engines: rust main 45de7916eeb = defines the command " \spec" (the argument's text); \spec undefined, an Error
+% expect:  0 errors; the spec text
+% status:  RED (45de7916eeb) -> GREEN (CRASH397B)
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\extractcolorspec{red}{ \spec}%
+Spec \spec\ end.
+\end{document}

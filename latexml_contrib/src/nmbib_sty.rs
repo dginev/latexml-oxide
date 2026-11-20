@@ -35,7 +35,7 @@ LoadDefinitions!({
     let pre: Option<Tokens> = it.next().unwrap().into();
     let post: Option<Tokens> = it.next().unwrap().into();
     let keys: Tokens = it.next().unwrap().into();
-    Ok(natbib_invocation("\\citet", Some(Tokens!(T_OTHER!("*"))), pre, post, keys))
+    Ok(natbib_invocation("\\lx@natbib@citet", Some(Tokens!(T_OTHER!("*"))), pre, post, keys))
   });
   DefMacro!("\\@biblabel{}", "[#1]");
   RawTeX!(r"\newif\ifNMBIB@rendered");

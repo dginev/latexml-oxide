@@ -8516,6 +8516,29 @@ pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> 
   Ok(())
 }
 
+/// [`adjust_backmatter_element`] for a bibliography, which first floats out of a float or a heading it cannot be built
+/// in (`Document::float_backmatter_out_of_container`, OXIDIZED_DESIGN_DIVERGENCES #1099); its close returns there
+/// (`Document::restore_floated_backmatter`). Guard `perfect_kernel_batchplacefix::bibliography_floats_out_of_a_float`.
+pub fn adjust_bibliography_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
+  let asif = match whatsit.get_property("backmatterelement").as_deref() {
+    Some(Stored::String(asif_sym)) => to_string(*asif_sym),
+    _ => "ltx:section".to_string(),
+  };
+  if !document.is_openable(&asif) && float_bibliography_out(document)? {
+    return Ok(());
+  }
+  adjust_backmatter_element(document, whatsit)
+}
+
+/// A bibliography that cannot open here floats out of a float or a heading (OXIDIZED_DESIGN_DIVERGENCES #1099): the
+/// kernel's and RevTeX 3's / AASTeX's `{references}` (cond-mat0303649, an unclosed figure around it). Whether it did.
+pub fn float_bibliography_out(document: &mut Document) -> Result<bool> {
+  Ok(
+    !document.is_openable("ltx:bibliography")
+      && document.float_backmatter_out_of_container("ltx:bibliography")?,
+  )
+}
+
 // Do this before digesting the body of a bibliography
 // Perl: beforeDigestBibliography in latex_constructs.pool.ltxml L3900
 pub fn before_digest_bibliography() -> Result<()> {
@@ -8952,9 +8975,17 @@ pub(crate) fn env_hook_tokens(name: &str, point: &str) -> Vec<Token> {
 /// it `\@currenvir`, the `begin` hook and `\name` — `\begin`'s path whenever
 /// no `\begin{name}` constructor is defined. `env` is the name as written.
 pub(crate) fn begin_environment_by_macro(name: &str, env: Tokens) -> Result<Vec<Token>> {
-  let mut out = lookup_tokens(&format!("@environment@{name}@beforebegin"))
-    .map(Tokens::unlist)
-    .unwrap_or_default();
+  // (the bibliography begins with its heading, before its group: sect05.rs `\lx@bibliography@ends@frontmatter`)
+  let mut out = if name == "thebibliography" {
+    vec![T_CS!("\\lx@bibliography@ends@frontmatter")]
+  } else {
+    Vec::new()
+  };
+  out.extend(
+    lookup_tokens(&format!("@environment@{name}@beforebegin"))
+      .map(Tokens::unlist)
+      .unwrap_or_default(),
+  );
   out.extend(env_hook_tokens(name, "before"));
   out.push(T_CS!("\\begingroup"));
   if let Some(after) = lookup_tokens(&format!("@environment@{name}@atbegin")) {
@@ -10097,7 +10128,7 @@ LoadDefinitions!({
 });
 
 /// `\verb`'s expansion: the verbatim argument read ([`read_verb_invocation`]) in the hidden group `\verb@egroup`
-/// closes. Shared by the kernel `\verb` and tabularx's `\TX@verb` (`token_delimited`).
+/// closes. Shared by the kernel `\verb` and tabularx's `\TX@verb` and latex209.def's `\verb` (`token_delimited`).
 pub fn verb_group(token_delimited: bool) -> Result<Tokens> {
   Ok(match read_verb_invocation(token_delimited)? {
     Some(inner) => {
@@ -10158,40 +10189,129 @@ pub fn read_verb_invocation(token_delimited: bool) -> Result<Option<Vec<Token>>>
     // (latex_constructs.pool.ltxml:1797) has no such bound, so an unterminated
     // `\verb v1.1 )` scanned across lines and swallowed a later `{verbatim}`
     // (bigints manual, 10-error cascade; SHARED, pdflatex recovers with one
-    // error). Guard: `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`.
-    assign_catcode('\r', Catcode::ACTIVE, None);
+    // error). Guard: `perfect_kernel_batch56::verb_ended_by_end_of_line_recovers`. latex209.def's `\verb` has no
+    // such bound: the line's end is a space, and only a `\par` ends it, "Paragraph ended before \@tempa was complete"
+    // (cs9811025 `\verb|h_0` / `.. h_{-m}|`).
+    if !token_delimited {
+      assign_catcode('\r', Catcode::ACTIVE, None);
+    }
     let eol = T_ACTIVE!('\r');
     let par = T_CS!("\\par");
-    // `token_delimited`: tabularx's `\TX@verb` (tabularx.sty:205-209) ends at the delimiter as it stands, so a
-    // `\verb|…|` in an argument read before it (the `|` frozen "other") ends there; the kernel's needs it active.
+    // `token_delimited`: tabularx's `\TX@verb` (tabularx.sty:205-209) and latex209.def's `\@sverb` (:208-211) read a
+    // `\@tempa##1#1` argument, ending at the delimiter as it stands, so a `\verb|…|` in an argument read before it
+    // (the `|` frozen with its catcode then) ends there; the kernel's needs it active.
     let mut body = Vec::new();
     let mut terminated = false;
+    // latex.ltx:15485-15499 `\verb` opens a group whose `\aftergroup\verb@balance@group` reports "\verb illegal in
+    // argument" (pre-tokenized, its delimiter is never the active one): the `}` closing the enclosing argument ends it,
+    // and what follows is kept. A delimited `\@tempa` (`token_delimited`) meets it only when its delimiter is missing:
+    // tex.web §395 "Argument of \@tempa has an extra }". Under `\dospecials` only a pre-tokenized brace has a brace
+    // catcode; `depth` counts the body's own (cond-mat0203143's `\parbox` shape; astro-ph0108286's `\multicolumn`, its
+    // argument pushed back without braces, still ends at the line's end). Guards
+    // `perfect_kernel_batchnext397::verb_in_an_argument_ends_at_its_brace`,
+    // `…::verb_under_documentstyle_reads_to_its_tokenized_delimiter`; OXIDIZED_DESIGN_DIVERGENCES #1085.
+    let mut depth = 0usize;
+    // Where the delimited read crossed lines' ends (the body's indices): an unterminated read keeps the body up to the
+    // first and re-reads the lines after it.
+    let mut line_ends: Vec<usize> = Vec::new();
     while let Some(token) = read_token()? {
+      match token.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END if depth == 0 => {
+          if token_delimited {
+            Error!(
+              "unexpected",
+              "\\verb",
+              "Argument of \\@tempa has an extra }",
+              ""
+            );
+          } else {
+            Error!("unexpected", "\\verb", "\\verb illegal in argument", "");
+          }
+          unread_one(token);
+          terminated = true;
+          break;
+        },
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
       if token == delim
         || (token_delimited
-          && token.get_catcode() == Catcode::OTHER
-          && token.with_str(|s| s.starts_with(init_ch) && s.chars().count() == 1))
+          && (token == init_token
+            || (token.get_catcode() == Catcode::OTHER
+              && token.with_str(|s| s.starts_with(init_ch) && s.chars().count() == 1))))
       {
         terminated = true;
         break;
       }
-      if token == eol || token == par {
+      if token_delimited && token == par {
+        Error!(
+          "unexpected",
+          "\\verb",
+          "Paragraph ended before \\@tempa was complete",
+          ""
+        );
+        // tex.web §396 `back_error`: the `\par` is read again, so the paragraph still ends (e2 shape).
+        unread_one(token);
+        terminated = true;
+        break;
+      }
+      if !token_delimited && (token == eol || token == par) {
         Error!("unexpected", "\\verb", "\\verb ended by end of line", "");
         terminated = true;
         break;
       }
-      body.push(token);
+      // tex.web §347: the line's end the delimited read crosses is a space, char 32, not a newline.
+      if token_delimited && token.get_catcode() == Catcode::SPACE {
+        line_ends.push(body.len());
+        body.push(T_SPACE!());
+      } else {
+        body.push(token);
+      }
+    }
+    if !terminated && let Some(&first_end) = line_ends.first() {
+      // tex.web §338 "File ended while scanning use of \@tempa": the delimiter never came. Recover as the line-bounded
+      // read did — keep the body up to the first line end and re-read what follows from its spelling, lazily, under
+      // the catcodes restored then (`\dospecials` froze it), so `\end{…}` and later cells survive (tabularx cell
+      // `\verb|ab & B \\`; `\documentstyle` `Start \verb|abc def`). Guards
+      // `perfect_kernel_batchnext397::verb_delimited_unterminated_reports_file_ended`,
+      // `…::verb_under_documentstyle_unterminated_recovers`; OXIDIZED_DESIGN_DIVERGENCES #1085.
+      Error!(
+        "unexpected",
+        "\\verb",
+        "File ended while scanning use of \\@tempa",
+        ""
+      );
+      let rest = body.split_off(first_end);
+      let mut text = String::new();
+      let mut from = 1;
+      // The crossed line ends become line ends again; two in a row (pre-tokenized spaces) stay a space, never a
+      // blank line (`\par`).
+      for end in line_ends[1..].iter().map(|end| end - first_end) {
+        text.push_str(&Tokens::new(rest[from..end].to_vec()).untex());
+        text.push(if end == from { ' ' } else { '\n' });
+        from = end + 1;
+      }
+      text.push_str(&Tokens::new(rest[from..].to_vec()).untex());
+      if !text.trim().is_empty() {
+        open_mouth(Mouth::new(text.as_str(), None)?, true);
+      }
+      terminated = true;
     }
     if !terminated {
-      // Perl `Gullet::readUntil` (Core/Gullet.pm:683-685): ran out of tokens
-      // before the delimiter — unread everything scanned and return an EMPTY
-      // body. That is where a `\verb` inside a pre-tokenized argument
-      // (`\footnote{… \verb+x+ …}`) lands: the closing `+` was frozen as OTHER
-      // when the argument was read, so the ACTIVE delimiter never matches and
-      // the scan hits the end of the argument. Keeping the scanned tokens as
-      // the body swallowed the rest of the note (an `<item>` inside
-      // `<verbatim>`; platex-tools/plarray.tex:20, RUST-ONLY). Guard:
-      // `verb_inside_pretokenized_argument_unreads_instead_of_running_away`.
+      // Ran out of tokens (`\footnote{a \verb+x+ b}`, the `+` frozen OTHER): unread them, an empty body (Perl
+      // `Gullet::readUntil`, Core/Gullet.pm:683-685), with TeX's "\verb illegal in argument" (latex.ltx:15489-15491),
+      // OD #1085. Witness platex-tools/plarray.tex:20; repro boxes-groups/verb_in_a_pretokenized_argument_errs.
+      if token_delimited {
+        Error!(
+          "unexpected",
+          "\\verb",
+          "Argument of \\@tempa has an extra }",
+          ""
+        );
+      } else {
+        Error!("unexpected", "\\verb", "\\verb illegal in argument", "");
+      }
       unread(Tokens::new(std::mem::take(&mut body)));
     }
     let body = Tokens::new(body);
@@ -10279,4 +10399,10 @@ pub(crate) fn absorb_without_tags(document: &mut Document, piece: &Digested) -> 
     },
   }
   Ok(())
+}
+
+/// Clear per-conversion thread-local caches held by `latex_constructs` submodules.
+pub fn reset_conversion_caches() {
+  sect05::reset_conversion_caches();
+  sect12::reset_conversion_caches();
 }

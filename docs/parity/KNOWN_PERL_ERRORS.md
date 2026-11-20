@@ -3171,13 +3171,16 @@ the two undefined-CS paths (`gullet::read_x_token`, `stomach::
 invoke_token_undefined`) *before* the error is raised: if the ambient kernel
 dump defines the control sequence, load `LaTeX.pool` and retry the token; else
 take the ordinary bounded `Error:undefined` path. Fires at most once per
-session, never during `--init` dump-build, and not at all on the degraded
-no-dump branch of `LoadFormat('latex')`. It also retired the two Rust-only
+session and never during `--init` dump-build. On the degraded no-dump branch of
+`LoadFormat('latex')` there is no catalogue, so the first undefined control
+sequence of a LaTeX document loads the format and the same post-load check
+decides (OXIDIZED_DESIGN_DIVERGENCES #1095). It also retired the two Rust-only
 trigger accretions (`\UseRawInputEncoding`, `\DocumentMetadata`). Guards
 `preclass_iffileexists_test` / `preclass_kernel_cs_test`
-(`latexml_oxide/tests/structure/`) and
-`nodump_leaves_pre_documentclass_kernel_cs_undefined`
-(`latexml_oxide/tests/cluster_package_guards/preclass_kernel_autoload.rs`).
+(`latexml_oxide/tests/structure/`),
+`latex_route_pre_documentclass_kernel_cs_autoloads`
+(`latexml_oxide/tests/cluster_package_guards/preclass_kernel_autoload.rs`) and,
+without a dump, `dump_gate_init::nodump_latex_branch_converts_healthily`.
 
 Candidate to upstream, though not as a straight port: Perl has no dump to use as
 the membership oracle, so the upstream-shaped fix is to extend
@@ -6037,8 +6040,8 @@ meanings stay apart as their addresses kept them only when both names are letter
 `\__tl_set_rescan:nNN`) prints `CODE(native)`, so two such meanings of the same parameters compare equal; letters
 only, so a `\scantokens` rebuild reads text, no control sequence. The name is the definition's, which can be an
 internal one: `\meaning\multicolumn` prints `CODE(lx@alignment@multicolumn)`, its `\let` target (`tex_debugging.rs`
-`get_cs_name`), as `\meaning\label` prints `\lx@label`. It keeps the `CODE(` that etoolbox_sty's `\lx@ifnativecmd`
-splits on (`\robustify` leaves a native alone), and `\ifx` of two definitions never reads it (#183), so
+`get_cs_name`), as `\meaning\label` prints `\lx@label`. It keeps the `CODE(` (etoolbox_sty's `\lx@ifnativecmd` tests
+the definition itself since OD #1092), and `\ifx` of two definitions never reads it (#183), so
 `\ifpatchable`/`\patchcmd` on a native `\begin` still answer no. Not latex.ltx's body: a `\meaning`→`\scantokens`
 rebuild would then replace the native `\begin` (#183, KNOWN_PERL_ERRORS #147); that is the post-merge macro-faces
 design (QA53).
@@ -16182,8 +16185,8 @@ Trigger: `\usepackage{etoolbox}\robustify{\cite}` and `Text~\cite{k}. More.` wit
 pdflatex 0 errors, "Text [1]. More."; Perl 0.8.8 and Rust before 69b r2 0 errors and "Text CODE(0x…) More." (the
 citation and the "." lost). arXiv 2210.15126 (wiley-article.cls:774 `\robustify{\cite}`, 15 citations).
 
-Rust (69b r2, etoolbox_sty.rs `\robustify`): for a LaTeX-robust command the native test (`\lx@ifnativecmd`,
-`\lx@ifnativecmdb`) is made on its inner command too (`\lx@robustify@ltxprotect`); a document's own
+Rust (69b r2, etoolbox_sty.rs `\robustify`): for a LaTeX-robust command the native test (`\lx@ifnativecmd`, on the
+stored definition since OD #1092) is made on its inner command too (`\lx@robustify@ltxprotect`); a document's own
 `\DeclareRobustCommand` is still robustified. Repro package-bindings/robustify_ltx_protected_native_cite; guard
 `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`.
 
@@ -21226,9 +21229,10 @@ See \cite{x}.
 ```
 
 **Implementation:** `\lx@ifnativecmd` in
-`latexml_package/src/package/etoolbox_sty.rs` mirrors etoolbox's own
-`\ifdefmacro` `\meaning`-split idiom (sentinel `CODE(`); `\robustify` is
-wrapped to no-op on natives and delegate to the original for token macros.
+`latexml_package/src/package/etoolbox_sty.rs` tests the stored definition (a
+closure-bodied macro, a constructor, a math primitive or a primitive that is a
+macro in LaTeX; OD #1092); `\robustify` is wrapped to no-op on natives and
+delegate to the original for token macros.
 
 **Witness:** 2110.11931 (mnras — its template ships `\robustify{\cite}`):
 10 errors → 0, with correct citation output. User-macro robustify
@@ -21904,3 +21908,167 @@ Body.
 Rust: the notice is a note of the document (its `*` kept), each symbol label a mark-only note of its creator
 (OXIDIZED_DESIGN_DIVERGENCES #1063); 2602.04557. Guard
 `perfect_kernel_batchinvdag::an_unmarked_document_level_note_is_a_block_line`.
+
+## 1286. The BibTeX entry scaffold is read under the document's catcodes
+
+`\bibentry@create` (BibTeX.pool.ltxml:135-166) writes `\begin{bib@entry}…`, `\csname bib@field@<type>@<field>\endcsname{…}`
+as text and reads it with `Mouth->new($tex)`, under the live catcode table. A document that made `@` active in its
+bibliography (amsrefs records read through `@book{…}`, 1810.11524) fires its `@` inside the handler names:
+
+```latex
+\documentclass{amsart}\usepackage{amsrefs}
+\newenvironment{rezabib}{\bibdiv\biblist\catcode`@=\active}{\endbiblist\endbibdiv}
+\begingroup\lccode`~=`@\lowercase{\endgroup\def~}#1#{\gatherkey{#1}}
+\def\gatherkey#1#2{\gatherkeyaux{#1}#2\gatherkeyaux}
+\def\gatherkeyaux#1#2,#3\gatherkeyaux{\bib{#2}{#1}{#3}}
+\begin{document}\cite{maple}
+\begin{rezabib}
+@book{maple, title = {Maple 2017.0}, publisher = {Maplesoft}, year={2017}}
+\end{rezabib}
+\end{document}
+% Perl: 24 Errors ("Missing argument Until:,"); pdflatex: "[1] Maple 2017.0, Maplesoft, 2017."
+```
+
+Rust: the scaffold mouth reads `@` as data (`mouth::BIB_DATA_LITERALS`, OXIDIZED_DESIGN_DIVERGENCES #1090). Guard
+`perfect_kernel_batchcrash397b::amsrefs_records_under_an_active_at`.
+
+## 1287. A counter in its own reset list recurses without end
+
+`StepCounter` resets the counters in `\cl@<ctr>` through `ResetCounter` (Package.pm:748-751, 883-893), which recurses
+into each one's list with no record of where it has been, so a cycle never ends; LaTeXML steps sectioning counters TeX
+does not step (secnumdepth) and keeps its reset lists past a `\def\cl@<ctr>{}`, so a paper clean in pdflatex reaches
+it (AEA.cls:800 `\newcounter{subsubsection}[subsubsection]`, 2308.05200; the class defines its own sectioning counters at
+:797-802 — the example below stands in for that with an emptied `\cl@subsection`):
+
+```latex
+\documentclass{article}
+\makeatletter\let\c@subsubsection\relax\def\cl@subsection{}\makeatother
+\newcounter{subsubsection}[subsubsection]
+\setcounter{secnumdepth}{2}
+\begin{document}\section{A}\subsection{B}\subsubsection{C}Text.\end{document}
+% Perl: Fatal:perl:deep_recursion (ResetCounter, Package.pm:892); pdflatex: "1 A / 1.1 B / C Text."
+```
+
+Rust: the cascade skips a counter already on its path, with a Warning, or an Error where TeX's own lists loop too
+(OXIDIZED_DESIGN_DIVERGENCES #1090). Guards `perfect_kernel_batchcrash397b::{counter_in_its_own_reset_list_is_reset_once,
+sectioning_step_into_a_reset_cycle_is_an_error}`.
+
+## 1288. The alpha label drops a two- or three-character year
+
+MakeBibliography.pm:501 `length($yrtext) >= 2 ? substr($yrtext, 2, 2) : $yrtext` takes the third and fourth
+characters, so a short year gives no year part. BibTeX's alpha.bst:1047 takes the last two characters of the purified
+year (`purify$ #-1 #2 substring$`):
+
+```latex
+\documentclass{article}
+\begin{document}\cite{k99,k3}\bibliographystyle{alpha}\bibliography{a}\end{document}
+% a.bib: @book{k99, author={Knuth, Donald}, title={T}, publisher={P}, year={99}}
+%        @book{k3, author={Brown, Bob}, title={T}, publisher={P}, year={199}}
+% Perl: [KNU], [BRO9]; BibTeX: [Knu99], [Bro99]
+```
+
+Rust: the year part is BibTeX's (OXIDIZED_DESIGN_DIVERGENCES #1090). Guard
+`perfect_kernel_batchcrash397b::alpha_label_year_is_bibtex_s`.
+
+## 1289. A UnicodeMath annotation whose string is `0` is dropped
+
+MathML.pm:128 `elsif (my $string = $$secondary{string})` adds a string secondary only when it is true, and in Perl
+the string `0` is false, so `--unicodemath` gives every formula an `<m:annotation>` except one that reads `0`; the
+standalone path tests the same way (Post.pm:394), so `--format=xml --unicodemath` leaves `$0$` an empty `<Math/>`:
+
+```latex
+\documentclass{article}
+\begin{document}$0$ and $x$\end{document}
+% latexmlc --format=html5 --unicodemath
+% Perl: <math …><mn>0</mn></math> and <math …><semantics><mi>x</mi><annotation encoding="application/x-unicodemath">𝑥</annotation></semantics></math>
+```
+
+Rust: only an empty string is skipped, at both sites (`MathML::combine_parallel`, `process_math_node`). Guard
+`cluster_cli::unicodemath_output::unicodemath_annotates_presentation_mathml`.
+
+## 1290. `latexmlmath --unicodemath` prints the string XML-escaped
+
+bin/latexmlmath:248 hands `outputText` the `text()` node of the converted `ltx:text`, and `outputText` (L285) prints a
+node as `toString(1)`, its XML serialisation, so `<` and `&` come out as `&lt;` and `&amp;` in what L445 documents as
+"an unstructured Unicode string":
+
+```sh
+latexmlmath --unicodemath=- 'a<b \& c'
+# Perl: 𝑎&lt;𝑏&amp;𝑐
+```
+
+Rust: `latexmlmath_oxide --unicodemath` prints the string itself. Guard
+`cluster_cli::unicodemath_output::latexmlmath_prints_unicodemath_as_plain_text`.
+
+## 1291. UnicodeMath reads an nth root's degree and radicand swapped
+
+The XMath of `\sqrt[3]{x}` is `XMApp(nth-root, 3, x)`, degree first, but UnicodeMath.pm:390-397 takes the radicand
+`$_[2]` as the degree and the degree `$_[1]` as the radicand:
+
+```sh
+latexmlmath --unicodemath=- '\sqrt[3]{x}'
+# Perl: \root 𝑥\of3   (expected ∛𝑥)
+```
+
+Rust: `unicode_math.rs` reads the degree from the first argument. Guard
+`unicode_math::tests::nth_root_reads_degree_then_radicand`.
+
+## 1292. An undefined BibTeX macro is an Error where bibtex warns
+
+BibTeX.pm:307-310 raises `Error:unexpected:<name>` for a `.bib` macro that is not defined; bibtex(1) warns ("string name
+… is undefined") and uses the empty string:
+
+```latex
+\documentclass{article}
+\begin{document}\cite{a}\bibliographystyle{plain}\bibliography{m}\end{document}
+% m.bib: @article{a, author={A. Author}, title={Title}, journal={J}, month=june, year=2001}
+% Perl: Error:unexpected:june; bibtex: Warning--string name "june" is undefined
+```
+
+Rust: a Warning, the name kept as the value (OXIDIZED_DESIGN_DIVERGENCES #1096). Guard
+`perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning`.
+
+## 1293. sv_support reads svjour's and svmult's `\abstract{…}` as an argument
+
+sv_support.sty.ltxml:93-96 routes `\abstract{` to `\@abstract@with@arg{}`, but svjour's `\abstract` takes no argument
+(svjour.cls:832, the 2003 svmult.cls:1981 environment, the shipped svjour3.cls:966): `{…}` is a group read where it
+stands. A group left open (a footnote's `}` taking the abstract's) is then an argument that runs to the end of the
+input. (Modern svmult, v5.15:2422-2423, `\DeclareRobustCommand\abstract{\@ifstar\@abstgobl\@abstract}` with
+`\def\@abstract#1`, takes one non-`\long` argument: a closed brace reads the same, and an unclosed one is TeX's
+"Paragraph ended before \@abstract was complete", where Rust gives only the open-group Warning.)
+
+```latex
+\documentclass[global]{svjour}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract{Short abstract text.\footnote{Based on a talk}
+
+\section{Introduction}
+Body text.
+\end{document}
+```
+
+Perl on this repro: 11 Errors, 4 words kept (the papers: astro-ph0702187, math0701897). Rust: `\abstract{` is the
+kernel's incremental group,
+which the `\section` ends. Guard `perfect_kernel_batchabsfix::sv_braced_abstract_is_a_group_a_section_ends`.
+
+## 1294. An abstract opened as a command and never ended loses the body
+
+A brace-less `\abstract` with no `\section` and no `\endabstract`, or an `\abstract{` whose `}` never comes, holds the
+rest of the document (as in TeX, whose quotation or group never ends), and Perl's output loses most of it:
+
+```latex
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract
+Short abstract text.
+
+\noindent{\bf 1. Introduction} Body text.
+\begin{thebibliography}{9}\bibitem{a} A reference.\end{thebibliography}
+\end{document}
+```
+
+Perl: hep-th0110297 keeps 55 words (1 Error), math0006149 8 words (58 Errors). Rust: the bibliography ends the
+abstract, which keeps its first paragraph; the rest is body text (OXIDIZED_DESIGN_DIVERGENCES #1101).
+

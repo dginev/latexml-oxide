@@ -112,54 +112,68 @@ impl Server {
   /// non-Unix). Line numbers are naturally file-relative (the whole document
   /// is one source), and the source-map table is read back after conversion.
   pub(crate) fn convert_in_process(&mut self, uri: &str, text: &str) -> ConvertOutput {
-    self.invalidate_cache();
-    latexml_core::state::reset_thread_state();
-    // Overlay must be re-applied after the reset wiped the engine state.
-    let root_path = PathBuf::from(get_file_path(uri));
-    self.overlay_keys.clear();
-    self.apply_overlay(&root_path);
-    // Cooperative wall-clock guard for the in-process path. (There is no child
-    // to reap here — this path runs on the server's own thread — so the hard
-    // RAM/time backstops don't apply; the cooperative deadline + the engine's
-    // RSS fuse are what bound a runaway fallback conversion.)
-    latexml_core::stomach::set_timeout(self.timeout_secs);
-    // ...and that RSS fuse must come from `--max-memory` like everywhere else.
-    // It matters most here, precisely because there is no Watchdog to fall back
-    // on: before this the fuse sat at its built-in 4.5 GB default, so on this
-    // path the flag bounded nothing at all.
-    latexml_core::stomach::apply_memory_ceiling(self.max_rss_kb / 1024);
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+      self.invalidate_cache();
+      latexml_core::state::reset_thread_state();
+      // Overlay must be re-applied after the reset wiped the engine state.
+      let root_path = PathBuf::from(get_file_path(uri));
+      self.overlay_keys.clear();
+      self.apply_overlay(&root_path);
+      // Cooperative wall-clock guard for the in-process path. (There is no child
+      // to reap here — this path runs on the server's own thread — so the hard
+      // RAM/time backstops don't apply; the cooperative deadline + the engine's
+      // RSS fuse are what bound a runaway fallback conversion.)
+      latexml_core::stomach::set_timeout(self.timeout_secs);
+      // ...and that RSS fuse must come from `--max-memory` like everywhere else.
+      // It matters most here, precisely because there is no Watchdog to fall back
+      // on: before this the fuse sat at its built-in 4.5 GB default, so on this
+      // path the flag bounded nothing at all.
+      latexml_core::stomach::apply_memory_ceiling(self.max_rss_kb / 1024);
 
-    let opts = make_config(uri);
-    let mut converter = Converter::from_config(opts.clone());
-    converter.note_main_source(&format!("literal:{text}"));
-    if let Err(e) = converter.prepare_session(&opts) {
-      return ConvertOutput::error(format!("Fatal: prepare_session failed: {e}"));
-    }
-    converter.bind_log();
-    // Fallback path (no `\begin{document}`, fork failure, or non-Unix). Use a
-    // *named* in-memory source (the document path) so `--source-map` stamps
-    // locators here too, matching the warm-fork path.
-    let resp = converter.convert_content_with_provenance(&get_file_path(uri), text.to_string());
-    let sources = collect_sources(uri);
-    let post = post_process_html(&resp.result.unwrap_or_default(), uri);
-    // A post Fatal (#782) raises the status and its diagnostic joins the log.
-    let status_code = (resp.status_code as i64).max(post.status_code as i64);
-    let status = if resp.status.is_empty() || status_code > resp.status_code as i64 {
-      status_label(status_code).to_string()
-    } else {
-      resp.status
-    };
-    let log = resp.log + post.log.as_str();
-    let diags = parse_log_diagnostics(&log);
-    let html = post.html;
-    ConvertOutput {
-      html,
-      log,
-      diags,
-      sources,
-      root: None, // attributed by the trigger wrappers
-      status,
-      status_code,
+      let opts = make_config(uri);
+      let mut converter = Converter::from_config(opts.clone());
+      converter.note_main_source(&format!("literal:{text}"));
+      if let Err(e) = converter.prepare_session(&opts) {
+        return ConvertOutput::error(format!("Fatal: prepare_session failed: {e}"));
+      }
+      converter.bind_log();
+      // Fallback path (no `\begin{document}`, fork failure, or non-Unix). Use a
+      // *named* in-memory source (the document path) so `--source-map` stamps
+      // locators here too, matching the warm-fork path.
+      let resp = converter.convert_content_with_provenance(&get_file_path(uri), text.to_string());
+      let sources = collect_sources(uri);
+      let post = post_process_html(&resp.result.unwrap_or_default(), uri);
+      // A post Fatal (#782) raises the status and its diagnostic joins the log.
+      let status_code = (resp.status_code as i64).max(post.status_code as i64);
+      let status = if resp.status.is_empty() || status_code > resp.status_code as i64 {
+        status_label(status_code).to_string()
+      } else {
+        resp.status
+      };
+      let log = resp.log + post.log.as_str();
+      let diags = parse_log_diagnostics(&log);
+      let html = post.html;
+      ConvertOutput {
+        html,
+        log,
+        diags,
+        sources,
+        root: None, // attributed by the trigger wrappers
+        status,
+        status_code,
+      }
+    }));
+    match result {
+      Ok(output) => output,
+      Err(payload) => {
+        let msg = payload
+          .downcast_ref::<&str>()
+          .copied()
+          .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+          .unwrap_or("internal panic");
+        self.invalidate_cache();
+        ConvertOutput::error(format!("Fatal:panic:caught {msg}"))
+      },
     }
   }
 }

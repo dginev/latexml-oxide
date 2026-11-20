@@ -355,11 +355,14 @@ LoadDefinitions!({
     "\\lx@add@abstract[name={\\abstractname}]{#1}"
   );
 
+  // The braced form is the kernel's too (Perl reads it as an argument, `\@abstract@with@arg`): svjour's `\abstract`
+  // takes none (svjour.cls:832, old svmult.cls:1981, every shipped svjour3.cls:966 — 2203.11875's, 2510.04813's), so
+  // `{…}` is a group read where it stands, and one left unclosed is no argument that runs to the end of the input
+  // (astro-ph0702187, math0701897; KNOWN_PERL_ERRORS #1293). Modern svmult (v5.15:2422-2423, `\@abstract#1`) takes one
+  // non-`\long` argument: a closed brace reads the same; an unclosed one is TeX's "Paragraph ended" (row R SVMULT-PAREND).
   DefMacro!("\\abstract OptionalMatch:*", sub[(star)] {
     if star.is_some() {
       vec![T_CS!("\\lx@ignore@sv@abstract")]
-    } else if if_next(T_BEGIN!())? {
-      vec![T_CS!("\\@abstract@with@arg")]
     } else {
       vec![T_CS!("\\@orig@abstract")]
     }

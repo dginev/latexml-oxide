@@ -46,15 +46,17 @@ pub fn new_test_engine() -> Core {
   core_engine
 }
 
-/// Simple tokenization of a single formula, without any custom preloads
-/// beyond latex and amsmath.
-pub fn lex_single_tex_formula(
+/// Output of single-formula lexing: `(lexemes, lexeme_nodes, xmath_node, doc)`.
+pub type LexedFormula = (Vec<String>, Vec<Node>, Option<Node>, Document);
+
+/// Fallible tokenization of a single formula, without any custom preloads
+/// beyond latex and amsmath. Used by `latexmlmath_oxide` so a TeX Fatal
+/// surfaces as a clean error instead of panicking.
+pub fn try_lex_single_tex_formula(
   tex: &str,
   latexml: &mut Core,
-) -> (Vec<String>, Vec<Node>, Option<Node>, Document) {
-  let xml_result = latexml.convert_file(format!("literal:\\[ {tex} \\]"));
-  assert!(xml_result.is_ok(), "{:?}", xml_result.err());
-  let mut doc = xml_result.unwrap();
+) -> latexml_core::common::error::Result<LexedFormula> {
+  let mut doc = latexml.convert_file(format!("literal:\\[ {tex} \\]"))?;
 
   match doc.findnode("//*[local-name()='XMath']", None) {
     Some(math) => {
@@ -66,8 +68,17 @@ pub fn lex_single_tex_formula(
         node_to_grammar_lexemes_from(&math, children, &mut idx, Some(&doc));
       latexml_math_parser::clear_differential_evidence();
       type_expectation_operators(&math, &mut lexemes, &nodes, &doc);
-      (lexemes, nodes, Some(math), doc)
+      Ok((lexemes, nodes, Some(math), doc))
     },
-    None => (Vec::new(), Vec::new(), None, doc),
+    None => Ok((Vec::new(), Vec::new(), None, doc)),
   }
+}
+
+/// Simple tokenization of a single formula, without any custom preloads
+/// beyond latex and amsmath.
+pub fn lex_single_tex_formula(
+  tex: &str,
+  latexml: &mut Core,
+) -> (Vec<String>, Vec<Node>, Option<Node>, Document) {
+  try_lex_single_tex_formula(tex, latexml).unwrap_or_else(|e| panic!("{e:?}"))
 }

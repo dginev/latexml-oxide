@@ -5,23 +5,7 @@ LoadDefinitions!({
   RequirePackage!("gettitlestring");
   RequirePackage!("ltxcmds");
 
-  // We want to display the actual "name" of the labeled structure (e.g. \section),
-  //   which is accessible via show="title"
-  //
-  // TODO: The star forms prevent nested double links.
-  // Perl L28 passes `enterHorizontal => 1` so \nameref in vertical mode
-  // transitions into horizontal like \ref does. Rust was missing it, so
-  // a bare `\nameref{…}` at the start of a cell or a potential vmode
-  // position could skip the mode flip.
-  DefConstructor!("\\nameref OptionalMatch:* Semiverbatim",
-  "<ltx:ref ?#1(class='ltx_refmacro_nameref ltx_nolink')(class='ltx_refmacro_nameref')\
-    show='title' labelref='#label' _force_font='true'/>",
-  enter_horizontal => true,
-  properties => sub[args] {
-    let label_arg = args[1].as_ref().map(ToString::to_string).unwrap_or_default();
-    Ok(stored_map!(
-      "label" => clean_label(&label_arg, None)))
-  });
+  define_nameref()?;
 
   // nameref.sty:361-372 `\T@nameref` and `\@namerefstar`, the two branches `\nameref` dispatches to on its star
   // (:376-384); a document that redefines `\nameref` calls them (2404.09236 `\DeclareRobustCommand*{\nameref}{…
@@ -103,3 +87,26 @@ LoadDefinitions!({
     at_begin_document(Tokens!(T_CS!("\\lx@nameref@reset")))?;
   }
 });
+
+/// `\nameref`: the binding's, and the ar5iv preload's provide on first use with hyperref's user commands
+/// (`ar5iv_sty.rs`, OXIDIZED_DESIGN #588).
+pub fn define_nameref() -> Result<()> {
+  // We want to display the actual "name" of the labeled structure (e.g. \section),
+  //   which is accessible via show="title"
+  //
+  // TODO: The star forms prevent nested double links.
+  // Perl L28 passes `enterHorizontal => 1` so \nameref in vertical mode
+  // transitions into horizontal like \ref does. Rust was missing it, so
+  // a bare `\nameref{…}` at the start of a cell or a potential vmode
+  // position could skip the mode flip.
+  DefConstructor!("\\nameref OptionalMatch:* Semiverbatim",
+  "<ltx:ref ?#1(class='ltx_refmacro_nameref ltx_nolink')(class='ltx_refmacro_nameref')\
+    show='title' labelref='#label' _force_font='true'/>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let label_arg = args[1].as_ref().map(ToString::to_string).unwrap_or_default();
+    Ok(stored_map!(
+      "label" => clean_label(&label_arg, None)))
+  });
+  Ok(())
+}

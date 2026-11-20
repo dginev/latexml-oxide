@@ -14,7 +14,7 @@
 //! 6. Format each entry into ltx:bibitem with ltx:tags + ltx:bibblock sections
 //! 7. Optionally split by initial letter
 
-use latexml_core::common::xml::name_is;
+use latexml_core::common::{cleaners::substr, xml::name_is};
 use libxml::tree::Node;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -1141,11 +1141,7 @@ impl MakeBibliography {
       CitationStyle::Alpha => {
         // AY-style: abbreviation from author names + 2-digit year
         let aa = self.make_alpha_label(doc, entry, bibentry);
-        let yy = if entry.year.len() >= 4 {
-          entry.year[2..4].to_string()
-        } else {
-          entry.year.clone()
-        };
+        let yy = alpha_label_year(&entry.year);
         let suffix = entry.suffix.as_deref().unwrap_or("");
         tags.push(NodeData::Element {
           tag:        "ltx:tag".to_string(),
@@ -1155,7 +1151,7 @@ impl MakeBibliography {
             ("open".to_string(), "[".to_string()),
             ("close".to_string(), "]".to_string()),
           ])),
-          children:   vec![NodeData::Text(format!("{}{}{}", aa, yy, suffix))],
+          children:   vec![NodeData::Text(format!("{aa}{yy}{suffix}"))],
         });
       },
       CitationStyle::AuthorYear => {
@@ -1494,7 +1490,7 @@ impl MakeBibliography {
       }
     } else if !surnames.is_empty() {
       let text = surnames[0].get_content();
-      text.chars().take(3).collect::<String>().to_uppercase()
+      substr(&text, 0, 3).to_uppercase()
     } else {
       entry
         .bib_key
@@ -4276,6 +4272,31 @@ fn extract_four_digit_year(text: &str) -> String {
     }
   }
   text.to_string()
+}
+
+/// The year part of an alpha label: alpha.bst:1047 `year field.or.null purify$ #-1 #2 substring$`, the last two
+/// characters of the purified year, as BibTeX labels it (`{99}` → `99`, `{in press}` → `ss`, `{1--250, 2023}`
+/// → `23`, 2308.14725). Perl's `substr($yrtext, 2, 2)` (MakeBibliography.pm:501) drops a short year (KNOWN_PERL_ERRORS
+/// #1288). `year` is the date's four-digit year where it has one, as Perl's year tag (:462): a date the `year` field's
+/// `month` extended (`1999-05`), an amsrefs `date={2010nov}` or `{200401}` (2308.14725), and a lettered `{2023a}`.
+fn alpha_label_year(year: &str) -> String {
+  let purified: Vec<char> = purify(year).chars().collect();
+  purified[purified.len().saturating_sub(2)..]
+    .iter()
+    .collect()
+}
+
+/// BibTeX's `purify$` (bibtex.web §431) on digested text: a letter or digit is kept, white space and the
+/// `sep_char`s `-` `~` become a space (as do the dashes and the tie `--`/`~` digest to), any other character goes.
+fn purify(text: &str) -> String {
+  text
+    .chars()
+    .filter_map(|c| match c {
+      c if c.is_alphanumeric() => Some(c),
+      c if c.is_whitespace() || matches!(c, '-' | '~' | '\u{2010}'..='\u{2015}') => Some(' '),
+      _ => None,
+    })
+    .collect()
 }
 
 /// Convert a suffix string back to a counter value.

@@ -1,0 +1,18 @@
+% witness: 2001.08539 (root.tex:259), 2505.01628 (~7 run-397 PushbackLimit Fatals)
+% oracle:  pdflatex 0 errors: "function augment(∂x/∂y)", "a", "end function"
+% engines: rust MAIN928 = Fatal:Timeout:PushbackLimit (`\pdv` unprotected: ifthen's `\equal` edef re-expands it inside its
+%          own helper); Perl 0.8.8 hangs alike (physics.sty.ltxml:401/464-476)
+% expect:  0 errors, 0 warnings; physics.sty's `\DeclareDocumentCommand`s are `\protected`; the partial derivative is
+%          an `XMDual` of meaning partial-derivative
+% status:  RED (MAIN928) -> GREEN (LOOPFIX)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{physics}
+\usepackage{algorithm,algpseudocode}
+\begin{document}
+\begin{algorithmic}
+\Function{augment}{$\pdv{x}{y}$}
+\State $a$
+\EndFunction
+\end{algorithmic}
+\end{document}

@@ -1,0 +1,20 @@
+% witness: synthetic (the NEXT397 re-review's e2 and e6); cs9811025 (camera_rdy.tex:120, the terminated sibling)
+% oracle:  latex209.def:201-211 `\verb` reads `\@tempa##1#1`: a blank line is "Paragraph ended before \@tempa was
+%          complete" and the `\par` is read again (tex.web §396 `back_error`); no delimiter before the end is "File
+%          ended while scanning use of \@tempa" (tex.web §338). pdflatex errs and stops: invalid input on purpose
+% engines: rust NEXT397 fix 1: 1 error, the two first paragraphs merged into one `<p>`, and the second verb silent,
+%          `\end{document}` printed as text; CLUSTFIX: 2 errors "\verb ended by end of line"
+% expect:  2 errors (one "Paragraph ended", one "File ended"), 0 warnings; three paragraphs, each verb keeps its first
+%          line, "Next line here." typeset after it
+% status:  RED (NEXT397 fix 1) -> GREEN (NEXT397 fix 2); guard
+%          perfect_kernel_batchnext397::verb_under_documentstyle_unterminated_recovers
+% preload: ar5iv.sty
+\documentstyle{article}
+\begin{document}
+Start \verb|abc def
+
+Next para here.
+
+Again \verb|ghi jk
+Next line here.
+\end{document}

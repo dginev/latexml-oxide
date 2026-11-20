@@ -8,7 +8,7 @@ use libxml::tree::SaveOptions;
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-use latexml::util::preset::{lex_single_tex_formula, new_test_engine};
+use latexml::util::preset::{new_test_engine, try_lex_single_tex_formula};
 use latexml_core::{common::error::Result, state};
 use latexml_math_parser::*;
 
@@ -24,7 +24,10 @@ Options:
       --pmml, --presentationmathml  Presentation MathML (the default)
       --cmml, --contentmathml       Content MathML
       --xmath, --XMath              LaTeXML's internal <XMath> parse tree
+      --unicodemath[=FILE]          UnicodeMath, a plain Unicode string (printed last;
+                                    written to FILE instead, `-` is stdout)
   -q, --quiet                       Only warnings and errors; no progress/lexeme notes
+  -V, --version                     Print version
   -h, --help                        Print this help
 
 Passing both --pmml and --cmml emits parallel markup: Content MathML annotated
@@ -34,11 +37,37 @@ Examples:
   latexmlmath_oxide '1+1=2'
   latexmlmath_oxide 'a^2+b^2=c^2'
   latexmlmath_oxide --cmml '\\frac{a}{b}+c'
+  latexmlmath_oxide --unicodemath '\\alpha_i\\leq x^2'
 
 Convert whole documents with `latexml_oxide` instead.";
 
 const MATHML_NS: &str = "http://www.w3.org/1998/Math/MathML";
 const LATEXML_NS: &str = "http://dlmf.nist.gov/LaTeXML";
+
+/// Perl `outputText` (bin/latexmlmath L283-300): `-` prints the string and a newline
+/// on stdout; a file gets the string alone, its directory created first.
+fn write_unicodemath(string: &str, dest: Option<&str>) -> Result<()> {
+  match dest {
+    None | Some("-") => println!("{string}"),
+    Some(path) => {
+      let path = std::path::Path::new(path);
+      let written = match path.parent().filter(|d| !d.as_os_str().is_empty()) {
+        Some(dir) => std::fs::create_dir_all(dir).and_then(|()| std::fs::write(path, string)),
+        None => std::fs::write(path, string),
+      };
+      if let Err(e) = written {
+        Error!(
+          "latexmlmath",
+          "output",
+          format!("couldn't write UnicodeMath to {}", path.display()),
+          e
+        );
+        process::exit(1);
+      }
+    },
+  }
+  Ok(())
+}
 
 /// Perl `finalize` (`Core/Document.pm` L452, `$node->removeAttribute($n) if $n =~ /^_/`)
 /// drops every `_`-prefixed helper attribute — the ones holding fonts, source boxes, id
@@ -125,31 +154,74 @@ fn main() -> Result<()> {
 }
 
 fn real_main() -> Result<()> {
-  let mut argv: Vec<String> = env::args().skip(1).collect();
+  let raw_argv: Vec<String> = env::args().skip(1).collect();
 
-  // Parse flags
-  let mut pmml_flag = argv
-    .iter()
-    .any(|a| a == "--pmml" || a == "--presentationmathml");
-  let cmml_flag = argv.iter().any(|a| a == "--cmml" || a == "--contentmathml");
-  let xmath_flag = argv.iter().any(|a| a == "--xmath" || a == "--XMath");
-  let quiet_flag = argv.iter().any(|a| a == "--quiet" || a == "-q");
-  argv.retain(|a| {
-    ![
-      "--pmml",
-      "--presentationmathml",
-      "--cmml",
-      "--contentmathml",
-      "--xmath",
-      "--XMath",
-      "--quiet",
-      "-q",
-    ]
-    .contains(&a.as_str())
-  });
+  // Parse options left-to-right; `--` stops option parsing so formulas that
+  // begin with `--` can still be passed positionally. Single-dash tokens other
+  // than `-h`, `-q`, `-V` (such as `-x + 1` or `-1`) remain positional formula
+  // text.
+  let mut pmml_flag = false;
+  let mut cmml_flag = false;
+  let mut xmath_flag = false;
+  // Perl `unicodemath=s` (bin/latexmlmath L57): `--unicodemath=FILE`, `-` for
+  // stdout; the bare flag is stdout too. The last one given wins (GetOpt::Long).
+  let mut unimath_dest: Option<String> = None;
+  let mut quiet_flag = false;
+  let mut show_help = false;
+  let mut show_version = false;
+  let mut positional: Vec<String> = Vec::new();
+  let mut parsing_opts = true;
+
+  for arg in raw_argv {
+    if !parsing_opts {
+      positional.push(arg);
+      continue;
+    }
+    match arg.as_str() {
+      "--" => parsing_opts = false,
+      "-h" | "--help" => show_help = true,
+      "-V" | "--version" => show_version = true,
+      "--pmml" | "--presentationmathml" => pmml_flag = true,
+      "--cmml" | "--contentmathml" => cmml_flag = true,
+      "--xmath" | "--XMath" => xmath_flag = true,
+      "--unicodemath" => unimath_dest = Some("-".to_string()),
+      "-q" | "--quiet" => quiet_flag = true,
+      _ if arg.starts_with("--unicodemath=") => {
+        let dest = &arg["--unicodemath=".len()..];
+        if dest.is_empty() {
+          eprintln!(
+            "latexmlmath_oxide: --unicodemath= requires a non-empty file path (or '-' for stdout)"
+          );
+          process::exit(2);
+        }
+        unimath_dest = Some(dest.to_string());
+      },
+      _ if arg.starts_with("--") => {
+        eprintln!("latexmlmath_oxide: unknown option '{arg}' (try --help)");
+        process::exit(2);
+      },
+      _ => positional.push(arg),
+    }
+  }
+
+  // `--help` / `--version` before anything else: without it the flag would fall
+  // through as a formula or fail on missing positional arguments.
+  if show_help {
+    println!("{USAGE}");
+    process::exit(0);
+  }
+  if show_version {
+    println!(
+      "latexmlmath_oxide {}",
+      latexml::identity::VERSION_WITH_REVISION
+    );
+    process::exit(0);
+  }
+
+  let unimath_flag = unimath_dest.is_some();
   // Perl L169: `$pmml = '-' unless (defined $mathimage || ... || $xmath || $unimath)` —
   // with no conversion option, presentation MathML on stdout is the default.
-  if !pmml_flag && !cmml_flag && !xmath_flag {
+  if !pmml_flag && !cmml_flag && !xmath_flag && !unimath_flag {
     pmml_flag = true;
   }
 
@@ -160,14 +232,7 @@ fn real_main() -> Result<()> {
   };
   latexml_core::util::logger::init(log_level).ok();
 
-  // `--help` before anything else: without it the flag falls through as the formula
-  // and gets typeset, landing the user in TeX's interactive error prompt.
-  if argv.iter().any(|a| a == "--help" || a == "-h") {
-    println!("{USAGE}");
-    process::exit(0);
-  }
-
-  let source = match argv.first() {
+  let source = match positional.first() {
     Some(s) => s.clone(),
     None => {
       eprintln!("{USAGE}");
@@ -185,7 +250,17 @@ fn real_main() -> Result<()> {
 
   let mut core_engine = new_test_engine();
   let (lexemes, mut lex_nodes, xmath_opt, mut doc) =
-    lex_single_tex_formula(&source, &mut core_engine);
+    match try_lex_single_tex_formula(&source, &mut core_engine) {
+      Ok(r) => r,
+      Err(e) => {
+        Error!(
+          "latexmlmath",
+          "digest",
+          format!("TeX digestion failed: {e}")
+        );
+        process::exit(1);
+      },
+    };
   if lexemes.is_empty() {
     Error!("latexmlmath", "lex", "No lexemes produced from input");
     process::exit(1);
@@ -219,17 +294,23 @@ fn real_main() -> Result<()> {
         .set_attribute("text", &text_form(&xml_tree, &doc))
         .unwrap();
 
-      if pmml_flag || cmml_flag {
-        // Post-process with MathML
-        let xml_str = doc.get_document().to_string_with_options(SaveOptions {
+      use latexml_post::{
+        document::{PostDocument, PostDocumentOptions},
+        processor::Processor,
+      };
+      // Serialised once, before `--xmath` reparents the XMath out of `doc`: each
+      // format post-processes its own copy (Perl `cloneDoc`, bin/latexmlmath L264-269).
+      let xml_str = (pmml_flag || cmml_flag || unimath_flag).then(|| {
+        doc.get_document().to_string_with_options(SaveOptions {
           format: true,
           ..SaveOptions::default()
-        });
-        use latexml_post::{
-          document::{PostDocument, PostDocumentOptions},
-          processor::Processor,
-        };
-        let post_doc = PostDocument::new_from_string(&xml_str, PostDocumentOptions::default())
+        })
+      });
+      if let Some(xml_str) = xml_str.as_deref()
+        && (pmml_flag || cmml_flag)
+      {
+        // Post-process with MathML
+        let post_doc = PostDocument::new_from_string(xml_str, PostDocumentOptions::default())
           .expect("parse XML for MathML post-processing");
         let mut post = latexml_post::Post::new();
         let mut processors: Vec<Box<dyn Processor>> = Vec::new();
@@ -287,6 +368,40 @@ fn real_main() -> Result<()> {
       if xmath_flag {
         strip_internal_attrs(&mut xmath);
         print_node_defaulted(doc.get_document(), &mut xmath, LATEXML_NS);
+      }
+
+      // UnicodeMath comes last, as in Perl (bin/latexmlmath L244-248): the standalone
+      // processor puts the string in `ltx:Math/ltx:text`, printed as plain text. Perl
+      // prints that text node's XML serialisation, escaping `<` and `&`
+      // (KNOWN_PERL_ERRORS #1290); the string itself is the output here.
+      if let Some(xml_str) = xml_str.as_deref()
+        && unimath_flag
+      {
+        let post_doc = PostDocument::new_from_string(xml_str, PostDocumentOptions::default())
+          .expect("parse XML for UnicodeMath post-processing");
+        let mut processors: Vec<Box<dyn Processor>> =
+          vec![Box::new(latexml_post::unicode_math::UnicodeMath::new())];
+        match latexml_post::Post::new().process_chain(vec![post_doc], &mut processors) {
+          Ok(results) => match results[0].findnodes("//ltx:Math/ltx:text").first() {
+            Some(text) => write_unicodemath(&text.get_content(), unimath_dest.as_deref())?,
+            None => {
+              Error!(
+                "latexmlmath",
+                "output",
+                "no UnicodeMath produced for the formula"
+              );
+              process::exit(1);
+            },
+          },
+          Err(e) => {
+            latexml_core::common::error::emit_error(
+              "latexmlmath",
+              "postprocess",
+              &format!("UnicodeMath post-processing failed: {e}"),
+            );
+            process::exit(1);
+          },
+        }
       }
     },
     _ => {

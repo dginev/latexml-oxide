@@ -122,8 +122,10 @@ LoadDefinitions!({
   // about to run will actually `\input expl3-code.tex` (cascade-prone
   // raw load) or short-circuit it (dump path). The guard inside
   // expl3.sty is `\ifx\csname tex_let:D\endcsname\relax {\input ...}`,
-  // so an undefined `\tex_let:D` here ⇒ raw load will fire.
-  let raw_load_will_run = lookup_meaning(&T_CS!("\\tex_let:D")).is_none();
+  // so an undefined `\tex_let:D` here ⇒ raw load will fire. A tree without expl3.sty (no TeX Live at all) loads
+  // nothing, so nothing is muted: its `missing_file` Warning is reported, as Perl reports it.
+  let no_expl3_layer = lookup_meaning(&T_CS!("\\tex_let:D")).is_none();
+  let raw_load_will_run = no_expl3_layer && find_file("expl3.sty", None).is_some();
 
   // In degraded no-dump mode the raw expl3.sty load re-runs expl3-code.tex,
   // whose group-end codepoint block (L33074-33180) trips known raw-load-only
@@ -168,6 +170,19 @@ LoadDefinitions!({
       Ok(Err(e)) | Err(e) => Some(e),
       Ok(Ok(_)) => None,
     })?;
+  } else if no_expl3_layer {
+    // No expl3 to load (no dump, no TeX tree): its syntax switch alone, the catcode regime of expl3-code.tex:245-277
+    // (TL 2025), so our bindings' expl3-syntax names (array_sty.rs's `\@@__tbl`) still read as names.
+    raw_tex(
+      r"\protected\def\lx@ExplSyntaxOff@idle{}\let\ExplSyntaxOff\lx@ExplSyntaxOff@idle
+\protected\def\ExplSyntaxOn{\ifx\ExplSyntaxOff\lx@ExplSyntaxOff@idle
+    \protected\edef\ExplSyntaxOff{\catcode9=\the\catcode9 \catcode32=\the\catcode32
+      \catcode34=\the\catcode34 \catcode58=\the\catcode58 \catcode94=\the\catcode94
+      \catcode95=\the\catcode95 \catcode124=\the\catcode124 \catcode126=\the\catcode126
+      \endlinechar=\the\endlinechar\relax \let\ExplSyntaxOff\lx@ExplSyntaxOff@idle}\fi
+  \catcode9=9 \catcode32=9 \catcode34=12 \catcode58=11 \catcode94=7 \catcode95=11 \catcode124=12
+  \catcode126=10 \endlinechar=32\relax}",
+    )?;
   }
 
   // Post-load fixup for `\__kernel_msg_info:nnxx`. xparse-2018-04-12.sty

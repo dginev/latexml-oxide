@@ -1150,9 +1150,15 @@ pub(crate) fn load() -> Result<()> {
     if lookup_definition(&update)?.is_some() && !update.defined_as(&TOKEN_RELAX) {
       unread_one(update);
     }
-    // latex.ltx:12580 `\UseHook{selectfont}` ahead of it, when the hook holds code (scrartcl.cls:2673, everysel.sty:49)
-    thread_local! { static SELECTFONT_HOOK: HookStore = HookStore::new("selectfont"); }
-    if SELECTFONT_HOOK.with(HookStore::has_code) {
+    // latex.ltx:12580 `\UseHook{selectfont}` ahead of it, when the hook holds code (scrartcl.cls:2673, everysel.sty:49).
+    // Uses literal `T_CS!` (arena-reset-safe `pin!` cache) instead of a plain `thread_local!` HookStore so
+    // `SymStr`s never go stale across `arena::reset()`.
+    let selectfont_hook = HookStore::from_tokens(
+      T_CS!("\\g__hook_selectfont_code_prop"),
+      T_CS!("\\__hook_toplevel selectfont"),
+      T_CS!("\\__hook_next selectfont"),
+    );
+    if selectfont_hook.has_code() {
       unread(Tokens::new(hook_use_tokens("selectfont", false)));
     }
     Ok(Vec::new())
@@ -1235,9 +1241,10 @@ pub(crate) fn load() -> Result<()> {
   // bare `#3` read the next token as the alphabet's argument (`{\rm LP-HF}` → `\mathrm{L}P-HF`,
   // witnesses jpsj2 cond-mat0510381 and the ptptex/paper/artikel1 classes).
   DefPrimitive!("\\DeclareOldFontCommand{}{}{}", sub[(cmd, font, mathcmd)] {
-    // cmd contains a CS token like \bf; get the first token
-    let cmd_cs = *cmd.unlist_ref().first()
-      .ok_or("DeclareOldFontCommand: expected a CS token")?;
+    // The command (`\bf`) is the argument's first non-space token, as TeX reads `#1` (`defined_cs`).
+    let Some((cmd_cs, _)) = defined_cs(&cmd)? else {
+      return Ok(Vec::new());
+    };
     let mut math = vec![T_CS!("\\lx@math@alphabet@switch"), T_BEGIN!()];
     math.extend(Explode!(cmd_cs.to_string()));
     math.push(T_END!());

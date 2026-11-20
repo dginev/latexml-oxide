@@ -1163,6 +1163,18 @@ fn record_forest_library(library: &str) -> Result<()> {
   )
 }
 
+/// forest.sty:167-170 `\useforestlibrary@`: loads forest library `library` with `options`, or only records it where
+/// this binding stands in for it (`linguistics`, `edges`).
+fn use_forest_library(library: &str, options: &str) -> Result<()> {
+  if matches!(library, "linguistics" | "edges") {
+    return record_forest_library(library);
+  }
+  Digest!(mouth::tokenize_internal(TeXString::assembled(s!(
+    "\\RequirePackage[{options}]{{forest-lib-{library}}}"
+  ))))?;
+  Ok(())
+}
+
 /// `\forestapplylibrarydefaults{<libraries>}` (forest.sty:171-172): runs each
 /// library's `libraries/<name>/defaults` style, when defined, through
 /// `\forestset`.
@@ -1340,21 +1352,23 @@ LoadDefinitions!({
   DefMacro!("\\foresteoption{}", "\\relax");
   DefMacro!("\\forestregister{}", "\\relax");
   DefMacro!("\\foresteregister{}", "\\relax");
-  // forest.sty:162-170 `\useforestlibrary{s O{} m}`. The library name is
-  // recorded where forest's `\ProvidesForestLibrary` records it
-  // (`\csdef{forest@libraries@loaded@#1}{}`, forest.sty:173-176; read by
-  // `\forest@iflibraryloaded`, :177); the library file itself is not loaded
-  // (its styles are TikZ layout). The star also applies the defaults.
-  DefPrimitive!("\\useforestlibrary OptionalMatch:* [] {}", sub[(star, _options, libraries)] {
+  // forest.sty:162-170 `\useforestlibrary{s O{} m}`: each library loads as
+  // `\RequirePackage[<options>]{forest-lib-<name>}`, which records it (`\ProvidesForestLibrary`, :173-176; read by
+  // `\forest@iflibraryloaded`, :177); the star then applies the defaults. `linguistics` and `edges` are only recorded:
+  // their styles are TikZ layout, which this binding does not draw. Others load raw: prooftrees 0.9.2
+  // (prooftrees.sty:44-48) plugs into the socket ext.tagging declares (forest-lib-ext.tagging.sty:92; 2606.20837).
+  DefPrimitive!("\\useforestlibrary OptionalMatch:* [] {}", sub[(star, options, libraries)] {
     let libraries = csv_items(&libraries);
+    let options = options.map(|o| o.to_string()).unwrap_or_default();
     for library in &libraries {
-      record_forest_library(library)?;
+      use_forest_library(library, &options)?;
     }
     if star.is_some() {
       apply_forest_library_defaults(&libraries)?;
     }
     Ok(Vec::new())
   });
+  RawTeX!(r"\NewDocumentCommand\ProvidesForestLibrary{m O{}}{\ProvidesPackage{forest-lib-#1}[#2]\csdef{forest@libraries@loaded@#1}{}}");
   DefPrimitive!("\\forestapplylibrarydefaults{}", sub[(libraries)] {
     apply_forest_library_defaults(&csv_items(&libraries))?;
     Ok(Vec::new())
@@ -1362,7 +1376,7 @@ LoadDefinitions!({
   RawTeX!(r"\def\forest@iflibraryloaded#1#2#3{\ifcsdef{forest@libraries@loaded@#1}{#2}{#3}}");
   // forest.sty:160-161 `\AtEndOfPackage{\forest@loadlibrarieslater}`.
   for library in LIBRARIES_LATER.with(|c| std::mem::take(&mut *c.borrow_mut())) {
-    record_forest_library(&library)?;
+    use_forest_library(&library, "")?;
     apply_forest_library_defaults(&[library])?;
   }
 });
