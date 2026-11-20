@@ -364,6 +364,11 @@ pub(crate) fn load() -> Result<()> {
     let option_str = option.to_string();
     if option_str == "*" {
       DeclareOption!(None, code);
+    } else if option_str.is_empty() {
+      // latex.ltx:18535-18538 `\@declareoption`: `\DeclareOption{}` defines `\ds@`, not the default handler that an
+      // empty name is to a binding's `DeclareOption` (and to Perl's `\DeclareOption`, latex_constructs.pool.ltxml:874).
+      push_value("@declaredoptions", "")?;
+      def_macro(T_CS!("\\ds@"), None, code, None)?;
     } else {
       DeclareOption!(option_str, code);
     }
