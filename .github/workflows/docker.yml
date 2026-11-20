@@ -131,36 +131,14 @@ jobs:
             toolchain="$INPUT_TOOLCHAIN"
             cargo_locked="1"
           elif [ -n "${TAG:-}" ]; then
-            # Best-effort pin for `release: published` (RC publish) and
-            # `workflow_dispatch`: if the tag's Release carries BUILD-INPUTS and
-            # Cargo.lock, pin the container build to those exact inputs.
-            assets="$(gh api "repos/${REPO}/releases?per_page=30" \
-              --jq '.[] | .tag_name as $t | .assets[] | [$t, .name, (.id | tostring)] | @tsv' \
-              2>/dev/null || true)"
-            bi_id=""; lock_id=""
-            while IFS=$'\t' read -r rtag name id; do
-              [ "$rtag" = "$TAG" ] || continue
-              case "$name" in
-                BUILD-INPUTS) [ -z "$bi_id" ] && bi_id="$id" ;;
-                Cargo.lock)   [ -z "$lock_id" ] && lock_id="$id" ;;
-              esac
-            done <<<"$assets"
-            if [ -n "$bi_id" ] && [ -n "$lock_id" ]; then
-              if gh api -H 'Accept: application/octet-stream' "repos/${REPO}/releases/assets/${bi_id}" > BUILD-INPUTS \
-                && gh api -H 'Accept: application/octet-stream' "repos/${REPO}/releases/assets/${lock_id}" > Cargo.lock; then
-                rc_tc="$(sed -n 's/^TOOLCHAIN=//p' BUILD-INPUTS | head -n1)"
-                rc_sha="$(sed -n 's/^CARGO_LOCK_SHA256=//p' BUILD-INPUTS | head -n1)"
-                got_sha="$(sha256sum Cargo.lock | awk '{print $1}')"
-                if printf '%s\n' "$rc_tc" | grep -Eq '^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}$' && [ "$rc_sha" = "$got_sha" ]; then
-                  toolchain="$rc_tc"
-                  cargo_locked="1"
-                  echo "Pinned container build from ${TAG} release assets: toolchain=${toolchain}"
-                else
-                  rm -f BUILD-INPUTS Cargo.lock
-                fi
-              else
-                rm -f BUILD-INPUTS Cargo.lock
-              fi
+            # Best effort for `release: published` and `workflow_dispatch`: when the tag's Release carries
+            # verified BUILD-INPUTS + Cargo.lock, build the image from exactly those inputs.
+            if tc="$(bash tools/check_rc_reuse.sh --fetch-release-inputs "$TAG" .)"; then
+              toolchain="$tc"
+              cargo_locked="1"
+              echo "Pinned container build from ${TAG} release assets: toolchain=${toolchain}"
+            else
+              echo "::notice::${TAG} has no verified BUILD-INPUTS + Cargo.lock; building with rust-toolchain.toml and a fresh resolve"
             fi
           fi
           {
@@ -278,33 +256,14 @@ jobs:
             toolchain="$INPUT_TOOLCHAIN"
             cargo_locked="1"
           elif [ -n "${TAG:-}" ]; then
-            assets="$(gh api "repos/${REPO}/releases?per_page=30" \
-              --jq '.[] | .tag_name as $t | .assets[] | [$t, .name, (.id | tostring)] | @tsv' \
-              2>/dev/null || true)"
-            bi_id=""; lock_id=""
-            while IFS=$'\t' read -r rtag name id; do
-              [ "$rtag" = "$TAG" ] || continue
-              case "$name" in
-                BUILD-INPUTS) [ -z "$bi_id" ] && bi_id="$id" ;;
-                Cargo.lock)   [ -z "$lock_id" ] && lock_id="$id" ;;
-              esac
-            done <<<"$assets"
-            if [ -n "$bi_id" ] && [ -n "$lock_id" ]; then
-              if gh api -H 'Accept: application/octet-stream' "repos/${REPO}/releases/assets/${bi_id}" > BUILD-INPUTS \
-                && gh api -H 'Accept: application/octet-stream' "repos/${REPO}/releases/assets/${lock_id}" > Cargo.lock; then
-                rc_tc="$(sed -n 's/^TOOLCHAIN=//p' BUILD-INPUTS | head -n1)"
-                rc_sha="$(sed -n 's/^CARGO_LOCK_SHA256=//p' BUILD-INPUTS | head -n1)"
-                got_sha="$(sha256sum Cargo.lock | awk '{print $1}')"
-                if printf '%s\n' "$rc_tc" | grep -Eq '^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}$' && [ "$rc_sha" = "$got_sha" ]; then
-                  toolchain="$rc_tc"
-                  cargo_locked="1"
-                  echo "Pinned container build from ${TAG} release assets: toolchain=${toolchain}"
-                else
-                  rm -f BUILD-INPUTS Cargo.lock
-                fi
-              else
-                rm -f BUILD-INPUTS Cargo.lock
-              fi
+            # Best effort for `release: published` and `workflow_dispatch`: when the tag's Release carries
+            # verified BUILD-INPUTS + Cargo.lock, build the image from exactly those inputs.
+            if tc="$(bash tools/check_rc_reuse.sh --fetch-release-inputs "$TAG" .)"; then
+              toolchain="$tc"
+              cargo_locked="1"
+              echo "Pinned container build from ${TAG} release assets: toolchain=${toolchain}"
+            else
+              echo "::notice::${TAG} has no verified BUILD-INPUTS + Cargo.lock; building with rust-toolchain.toml and a fresh resolve"
             fi
           fi
           {

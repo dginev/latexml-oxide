@@ -13,6 +13,12 @@
 #       our release + CI pipeline (rustc/cargo on all 5 release triples plus
 #       rustfmt, clippy, and miri on x86_64-unknown-linux-gnu). Steps back
 #       day-by-day up to NIGHTLY_LOOKBACK_DAYS (default 14).
+#   --fetch-release-inputs <tag> <dir>
+#       Download <tag>'s `BUILD-INPUTS` + `Cargo.lock` release assets into <dir>,
+#       verify the lock's SHA-256 against BUILD-INPUTS and the toolchain's shape,
+#       and print the toolchain. Non-zero, with neither file left in <dir>, on any
+#       failure. Used by release-prepare.yml (the RC's inputs on a final) and
+#       docker.yml (a published tag's inputs).
 #
 # Design:
 # - Pure bash + git + gh + curl + awk + diff (no Python).
@@ -218,6 +224,67 @@ resolve_nightly() {
   return 1
 }
 
+# Set RELEASE_BI_ID / RELEASE_LOCK_ID to the asset ids of the `BUILD-INPUTS` and
+# `Cargo.lock` attached to the release tagged $1 (empty when absent); non-zero
+# when the API call fails. Lists /releases: /releases/tags/<tag> 404s for drafts,
+# and with `contents: read` the list holds published releases only, so an RC
+# still in draft reads as absent (the caller falls back to the full pipeline).
+release_input_asset_ids() {
+  local tag="$1" tsv name id
+  RELEASE_BI_ID=""
+  RELEASE_LOCK_ID=""
+  tsv="$(gh api "repos/${REPO:-}/releases?per_page=30" \
+    --jq ".[] | select(.tag_name == \"${tag}\") | .assets[] | \"\(.name)\t\(.id)\"" 2>/dev/null)" || return 1
+  while IFS=$'\t' read -r name id; do
+    case "$name" in
+      BUILD-INPUTS) [ -n "$RELEASE_BI_ID" ] || RELEASE_BI_ID="$id" ;;
+      Cargo.lock) [ -n "$RELEASE_LOCK_ID" ] || RELEASE_LOCK_ID="$id" ;;
+    esac
+  done <<<"$tsv"
+  return 0
+}
+
+fetch_release_inputs() {
+  local tag="$1" dir="$2" tc want got
+  if [ -z "${REPO:-}" ]; then
+    echo "fetch-release-inputs: REPO not set" >&2
+    return 1
+  fi
+  if ! release_input_asset_ids "$tag"; then
+    echo "fetch-release-inputs: listing releases failed" >&2
+    return 1
+  fi
+  if [ -z "$RELEASE_BI_ID" ] || [ -z "$RELEASE_LOCK_ID" ]; then
+    echo "fetch-release-inputs: ${tag} carries no BUILD-INPUTS + Cargo.lock assets (or is an unpublished draft)" >&2
+    return 1
+  fi
+  mkdir -p "$dir"
+  if ! gh api "repos/${REPO}/releases/assets/${RELEASE_BI_ID}" -H 'Accept: application/octet-stream' >"$dir/BUILD-INPUTS" ||
+    ! gh api "repos/${REPO}/releases/assets/${RELEASE_LOCK_ID}" -H 'Accept: application/octet-stream' >"$dir/Cargo.lock"; then
+    rm -f "$dir/BUILD-INPUTS" "$dir/Cargo.lock"
+    echo "fetch-release-inputs: downloading ${tag}'s assets failed" >&2
+    return 1
+  fi
+  tc="$(sed -n 's/^TOOLCHAIN=//p' "$dir/BUILD-INPUTS" | head -n1)"
+  want="$(sed -n 's/^CARGO_LOCK_SHA256=//p' "$dir/BUILD-INPUTS" | head -n1)"
+  got="$(sha256sum "$dir/Cargo.lock" | awk '{print $1}')"
+  if ! printf '%s\n' "$tc" | grep -Eq '^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}$' || [ -z "$want" ] || [ "$want" != "$got" ]; then
+    rm -f "$dir/BUILD-INPUTS" "$dir/Cargo.lock"
+    echo "fetch-release-inputs: ${tag}'s BUILD-INPUTS/Cargo.lock failed verification (toolchain '${tc}', lock sha256 ${got} vs recorded '${want}')" >&2
+    return 1
+  fi
+  printf '%s\n' "$tc"
+}
+
+if [ "${1:-}" = "--fetch-release-inputs" ]; then
+  if [ $# -ne 3 ]; then
+    echo "usage: $0 --fetch-release-inputs <tag> <dir>" >&2
+    exit 2
+  fi
+  fetch_release_inputs "$2" "$3"
+  exit $?
+fi
+
 if [ "${1:-}" = "--verify-lock-diff" ]; then
   if [ $# -ne 3 ]; then
     echo "usage: $0 --verify-lock-diff <old.lock> <new.lock>" >&2
@@ -368,23 +435,11 @@ check_eligibility() {
   #     list returns published releases (including published prereleases), not
   #     unpublished drafts — if the RC is still a draft, this falls back safely
   #     to the full pipeline.
-  local assets_tsv
-  if ! assets_tsv="$(
-    gh api "repos/${repo}/releases?per_page=30" \
-      --jq ".[] | select(.tag_name == \"${rc_tag}\") | .assets[] | \"\(.name)\t\(.id)\"" \
-      2>/dev/null
-  )"; then
+  if ! release_input_asset_ids "$rc_tag"; then
     emit_output false "$rc_tag" "" "" "gh api query for $rc_tag release assets failed; running full pipeline"
     return 0
   fi
-
-  local bi_id="" lock_id="" name id
-  while IFS=$'\t' read -r name id; do
-    case "$name" in
-      BUILD-INPUTS) [ -z "$bi_id" ] && bi_id="$id" ;;
-      Cargo.lock)   [ -z "$lock_id" ] && lock_id="$id" ;;
-    esac
-  done <<<"$assets_tsv"
+  local bi_id="$RELEASE_BI_ID" lock_id="$RELEASE_LOCK_ID"
 
   if [ -z "$bi_id" ] || [ -z "$lock_id" ]; then
     emit_output false "$rc_tag" "" "" "$rc_tag release is missing BUILD-INPUTS or Cargo.lock asset; running full pipeline"
