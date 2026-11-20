@@ -25,7 +25,7 @@ on:
         type: string
         default: ''
       use_build_inputs:
-        description: Download the release run's pinned Cargo.lock from the build-inputs artifact
+        description: Download the release run's pinned Cargo.lock from the build-inputs artifact and enforce --locked
         type: boolean
         default: false
 
@@ -172,6 +172,7 @@ jobs:
       RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
       RUST_BACKTRACE: "1"
       RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
+      CARGO_LOCKED: ${{ inputs.use_build_inputs && '1' || '0' }}
     steps:
       - uses: actions/checkout@v6
       - name: fetch pinned Cargo.lock
@@ -258,6 +259,7 @@ jobs:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
       RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
+      CARGO_LOCKED: ${{ inputs.use_build_inputs && '1' || '0' }}
     steps:
       - uses: actions/checkout@v6
       - name: fetch pinned Cargo.lock
@@ -299,6 +301,7 @@ jobs:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
       RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
+      CARGO_LOCKED: ${{ inputs.use_build_inputs && '1' || '0' }}
     steps:
       - uses: actions/checkout@v6
       - name: fetch pinned Cargo.lock
@@ -320,7 +323,10 @@ jobs:
           key: notex
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: build
-        run: cargo build --profile ci --bin latexml_oxide
+        run: |
+          locked=()
+          if [ "${CARGO_LOCKED:-0}" = "1" ]; then locked=(--locked); fi
+          cargo build ${locked[@]+"${locked[@]}"} --profile ci --bin latexml_oxide
       - name: convert without TeX Live
         run: tools/notex_smoke.sh target/ci/latexml_oxide
 
@@ -347,6 +353,7 @@ jobs:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
       RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
+      CARGO_LOCKED: ${{ inputs.use_build_inputs && '1' || '0' }}
     steps:
       - uses: actions/checkout@v6
       - name: fetch pinned Cargo.lock
@@ -414,7 +421,10 @@ jobs:
         env:
           RUSTFLAGS: "-Zsanitizer=address -Zthreads=8 -Zunstable-options"
           ASAN_OPTIONS: "detect_leaks=0"
-        run: cargo nextest run --cargo-profile ci --profile ci --target x86_64-unknown-linux-gnu -p latexml --test 06_cluster_math
+        run: |
+          locked=()
+          if [ "${CARGO_LOCKED:-0}" = "1" ]; then locked=(--locked); fi
+          cargo nextest run ${locked[@]+"${locked[@]}"} --cargo-profile ci --profile ci --target x86_64-unknown-linux-gnu -p latexml --test 06_cluster_math
 
   test:
     # Sharded across runners (8 since 2026-11-13, below). The suite's cost is ~398 s of in-binary
@@ -487,6 +497,7 @@ jobs:
       RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
       RUST_BACKTRACE: "1"
       RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
+      CARGO_LOCKED: ${{ inputs.use_build_inputs && '1' || '0' }}
     steps:
       - uses: actions/checkout@v6
       - name: fetch pinned Cargo.lock
@@ -577,7 +588,10 @@ jobs:
         uses: taiki-e/install-action@nextest
 
       - name: build test binaries
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --no-run
+        run: |
+          locked=()
+          if [ "${CARGO_LOCKED:-0}" = "1" ]; then locked=(--locked); fi
+          cargo nextest run ${locked[@]+"${locked[@]}"} --cargo-profile ci --profile ci --workspace --no-run
 
       - name: run tests
         # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
@@ -587,7 +601,10 @@ jobs:
           LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
           # A missing mutool or pdftocairo fails the vector-SVG tests instead of skipping them.
           LATEXML_SVG_TESTS: "1"
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/8
+        run: |
+          locked=()
+          if [ "${CARGO_LOCKED:-0}" = "1" ]; then locked=(--locked); fi
+          cargo nextest run ${locked[@]+"${locked[@]}"} --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/8
 
       - name: skipped tests (requirements not met)
         # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
@@ -640,6 +657,7 @@ jobs:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
       RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
+      CARGO_LOCKED: ${{ inputs.use_build_inputs && '1' || '0' }}
       HOMEBREW_NO_AUTO_UPDATE: "1"
       HOMEBREW_NO_INSTALL_CLEANUP: "1"
     steps:
@@ -731,7 +749,10 @@ jobs:
       # One compile for all four shards: the archive holds every test binary,
       # the workspace binaries the tests spawn and the build-script outputs.
       - name: archive test binaries
-        run: cargo nextest archive --cargo-profile ci --workspace --archive-file nextest-macos.tar.zst
+        run: |
+          locked=()
+          if [ "${CARGO_LOCKED:-0}" = "1" ]; then locked=(--locked); fi
+          cargo nextest archive ${locked[@]+"${locked[@]}"} --cargo-profile ci --workspace --archive-file nextest-macos.tar.zst
       - name: archive size
         run: ls -la nextest-macos.tar.zst
       - uses: actions/upload-artifact@v5

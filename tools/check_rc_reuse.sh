@@ -3,11 +3,19 @@
 # redundant test suites (`ci` + `windows-ci`) by reusing the pinned build inputs
 # (`BUILD-INPUTS` + `Cargo.lock`) from a passing `X.Y.Z-rcN` tag.
 #
-# Also supports `--verify-lock-diff <old.lock> <new.lock>` to prove that
-# `cargo update --workspace` touched ONLY `latexml*` workspace package versions.
+# Also supports:
+#   --verify-lock-diff <old.lock> <new.lock>
+#       Prove `cargo update --workspace` touched ONLY `latexml*` workspace
+#       package versions.
+#   --resolve-nightly
+#       Resolve the newest `nightly-YYYY-MM-DD` whose Rust dist manifest
+#       advertises `available = true` for every component/target required by
+#       our release + CI pipeline (rustc/cargo on all 5 release triples plus
+#       rustfmt, clippy, and miri on x86_64-unknown-linux-gnu). Steps back
+#       day-by-day up to NIGHTLY_LOOKBACK_DAYS (default 14).
 #
 # Design:
-# - Pure bash + git + gh + awk + diff (no Python).
+# - Pure bash + git + gh + curl + awk + diff (no Python).
 # - All external values (TAG, REPO, HEAD_REF) come from env vars, never shell
 #   interpolation of tag names.
 # - Fail-closed in check mode: any error, code/dep diff, or missing RC proof
@@ -97,12 +105,134 @@ verify_lock_diff() {
   return 0
 }
 
+parse_manifest_date() {
+  awk '
+    { sub(/\r$/, "") }
+    /^date[[:space:]]*=[[:space:]]*"[0-9]{4}-[0-9]{2}-[0-9]{2}"[[:space:]]*$/ {
+      sub(/^[^"]*"/, "")
+      sub(/"[^"]*$/, "")
+      print
+      exit
+    }
+  ' "$1"
+}
+
+manifest_has_components() {
+  awk '
+    BEGIN {
+      need["pkg.rustc.target.x86_64-unknown-linux-gnu"] = 1
+      need["pkg.cargo.target.x86_64-unknown-linux-gnu"] = 1
+      need["pkg.rustfmt-preview.target.x86_64-unknown-linux-gnu"] = 1
+      need["pkg.clippy-preview.target.x86_64-unknown-linux-gnu"] = 1
+      need["pkg.miri-preview.target.x86_64-unknown-linux-gnu"] = 1
+      need["pkg.rustc.target.aarch64-unknown-linux-gnu"] = 1
+      need["pkg.cargo.target.aarch64-unknown-linux-gnu"] = 1
+      need["pkg.rustc.target.aarch64-apple-darwin"] = 1
+      need["pkg.cargo.target.aarch64-apple-darwin"] = 1
+      need["pkg.rustc.target.x86_64-apple-darwin"] = 1
+      need["pkg.cargo.target.x86_64-apple-darwin"] = 1
+      need["pkg.rustc.target.x86_64-pc-windows-msvc"] = 1
+      need["pkg.cargo.target.x86_64-pc-windows-msvc"] = 1
+    }
+    { sub(/\r$/, "") }
+    /^\[[^]]+\][[:space:]]*$/ {
+      sec = substr($0, 2, length($0) - 2)
+      next
+    }
+    sec in need && /^available[[:space:]]*=[[:space:]]*true[[:space:]]*$/ {
+      ok[sec] = 1
+    }
+    END {
+      missing = 0
+      for (s in need) {
+        if (!(s in ok)) {
+          printf("resolve-nightly: missing or unavailable [%s]\n", s) > "/dev/stderr"
+          missing = 1
+        }
+      }
+      exit missing
+    }
+  ' "$1"
+}
+
+date_minus_days() {
+  local base_date="$1"
+  local days="$2"
+  if [ "$days" -eq 0 ]; then
+    printf '%s\n' "$base_date"
+    return 0
+  fi
+  date -u -d "${base_date} - ${days} days" +%Y-%m-%d 2>/dev/null \
+    || date -u -j -v-"${days}"d -f %Y-%m-%d "$base_date" +%Y-%m-%d 2>/dev/null
+}
+
+resolve_nightly() {
+  local base_url="${NIGHTLY_BASE_URL:-https://static.rust-lang.org/dist}"
+  local max_lookback="${NIGHTLY_LOOKBACK_DAYS:-14}"
+  local tmp_dir manifest base_date offset day url
+
+  tmp_dir="$(mktemp -d)"
+  # shellcheck disable=SC2064
+  trap "rm -rf '$tmp_dir'" RETURN
+  manifest="$tmp_dir/channel-rust-nightly.toml"
+
+  # Save the manifest to a file before parsing (never pipe curl into an
+  # early-exiting reader under pipefail, which triggers curl exit 23 / SIGPIPE).
+  if ! curl -fsSL -o "$manifest" "${base_url}/channel-rust-nightly.toml"; then
+    echo "resolve-nightly: failed to download ${base_url}/channel-rust-nightly.toml" >&2
+    return 1
+  fi
+
+  base_date="$(parse_manifest_date "$manifest")"
+  if ! printf '%s\n' "$base_date" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+    echo "resolve-nightly: could not parse date from ${base_url}/channel-rust-nightly.toml" >&2
+    return 1
+  fi
+
+  offset=0
+  while [ "$offset" -le "$max_lookback" ]; do
+    if [ "$offset" -eq 0 ]; then
+      day="$base_date"
+    else
+      if ! day="$(date_minus_days "$base_date" "$offset")"; then
+        echo "resolve-nightly: date arithmetic failed for ${base_date} - ${offset} days" >&2
+        return 1
+      fi
+      url="${base_url}/${day}/channel-rust-nightly.toml"
+      if ! curl -fsSL -o "$manifest" "$url"; then
+        echo "resolve-nightly: nightly-${day} manifest unavailable at ${url}; stepping back" >&2
+        offset=$((offset + 1))
+        continue
+      fi
+    fi
+
+    if manifest_has_components "$manifest"; then
+      printf 'nightly-%s\n' "$day"
+      return 0
+    fi
+    echo "resolve-nightly: nightly-${day} is missing required component(s); stepping back" >&2
+    offset=$((offset + 1))
+  done
+
+  echo "resolve-nightly: no complete nightly found within ${max_lookback} days of ${base_date}" >&2
+  return 1
+}
+
 if [ "${1:-}" = "--verify-lock-diff" ]; then
   if [ $# -ne 3 ]; then
     echo "usage: $0 --verify-lock-diff <old.lock> <new.lock>" >&2
     exit 2
   fi
   verify_lock_diff "$2" "$3"
+  exit $?
+fi
+
+if [ "${1:-}" = "--resolve-nightly" ]; then
+  if [ $# -ne 1 ]; then
+    echo "usage: $0 --resolve-nightly" >&2
+    exit 2
+  fi
+  resolve_nightly
   exit $?
 fi
 
@@ -233,8 +363,11 @@ check_eligibility() {
     return 0
   fi
 
-  # (d) RC release (draft or published) must carry both BUILD-INPUTS and Cargo.lock.
-  #     Note: /releases/tags/<tag> returns 404 for drafts, so list /releases instead.
+  # (d) RC release must carry both BUILD-INPUTS and Cargo.lock.
+  #     Note: with `contents: read` (prepare's permission), GitHub's /releases
+  #     list returns published releases (including published prereleases), not
+  #     unpublished drafts — if the RC is still a draft, this falls back safely
+  #     to the full pipeline.
   local assets_tsv
   if ! assets_tsv="$(
     gh api "repos/${repo}/releases?per_page=30" \

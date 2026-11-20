@@ -107,6 +107,16 @@ ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
       | sh -s -- -y --no-modify-path --default-toolchain none
+# Optional pinned nightly (e.g. `nightly-2026-11-20` from release.yml's
+# `prepare` job). When set, overrides `rust-toolchain.toml` via
+# `RUSTUP_TOOLCHAIN` and pre-installs once for all downstream build stages
+# (`notices`, `build-worker`, `build-cli`). When unset (local `docker build`),
+# rustup reads `rust-toolchain.toml` as before.
+ARG RUST_TOOLCHAIN=""
+ENV RUSTUP_TOOLCHAIN=${RUST_TOOLCHAIN}
+RUN if [ -n "$RUST_TOOLCHAIN" ]; then \
+      rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --no-self-update; \
+    fi
 WORKDIR /src
 
 # ===========================================================================
@@ -135,7 +145,9 @@ RUN cargo install cargo-about --locked --features cli
 # .git is out of context (see .dockerignore), so gen_notices.sh cannot resolve our
 # own commit for section 7's relink pointer; docker.yml passes the real sha here.
 ARG GITSHA=unknown
+ARG CARGO_LOCKED=0
 ENV LATEXML_SELF_REV=${GITSHA}
+ENV CARGO_LOCKED=${CARGO_LOCKED}
 # Each image gets the notices for ITS OWN graph. cli takes gen_notices.sh's default
 # (= build-cli's set); worker must override, since `--features cortex` pulls
 # zmq/zeromq-src and no rhai. Change a stage's features → change its override here.
@@ -185,9 +197,13 @@ COPY . .
 # (latexml_oxide --version / banner). `unknown` is the honest default for a
 # bare `docker build`; CI passes the real short sha.
 ARG GITSHA=unknown
+ARG CARGO_LOCKED=0
 ENV LATEXML_GIT_SHA_OVERRIDE=${GITSHA}
 ENV LATEXML_GIT_SHA=${GITSHA}
-RUN cargo build --profile maxperf-cortex --no-default-features --features cortex \
+RUN set -ex \
+ && locked="" \
+ && if [ "$CARGO_LOCKED" = "1" ]; then test -s Cargo.lock; locked="--locked"; fi \
+ && cargo build $locked --profile maxperf-cortex --no-default-features --features cortex \
       --bin cortex_worker --bin latexml_oxide
 
 FROM texbase AS worker
@@ -251,11 +267,15 @@ FROM toolchain AS build-cli
 COPY . .
 # Deterministic provenance (see build-worker) — `.git` is out of context.
 ARG GITSHA=unknown
+ARG CARGO_LOCKED=0
 ENV LATEXML_GIT_SHA_OVERRIDE=${GITSHA}
 ENV LATEXML_GIT_SHA=${GITSHA}
+ENV CARGO_LOCKED=${CARGO_LOCKED}
 RUN set -ex \
+ && locked="" \
+ && if [ "$CARGO_LOCKED" = "1" ]; then test -s Cargo.lock; locked="--locked"; fi \
  && tools/make_formats.sh \
- && cargo build --no-default-features --features runtime-bindings \
+ && cargo build $locked --no-default-features --features runtime-bindings \
       --profile maxperf --bin latexml_oxide \
  && strip --strip-all target/maxperf/latexml_oxide \
  && cp target/maxperf/latexml_oxide /usr/local/bin/latexml_oxide

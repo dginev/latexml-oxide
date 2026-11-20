@@ -130,6 +130,7 @@ jobs:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
       RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
+      CARGO_LOCKED: ${{ inputs.use_build_inputs && '1' || '0' }}
       # Static C libraries + dynamic CRT (see plan Phase 1.1).
       VCPKG_TRIPLET: x64-windows-static-md
       VCPKGRS_TRIPLET: x64-windows-static-md

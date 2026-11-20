@@ -29,16 +29,22 @@
 set -euo pipefail
 
 export MIRIFLAGS="${MIRIFLAGS:-} -Zmiri-disable-isolation -Zmiri-ignore-leaks"
+TOOLCHAIN="${RUSTUP_TOOLCHAIN:-nightly}"
+locked_args=()
+if [ "${CARGO_LOCKED:-0}" = "1" ]; then
+  [ -s Cargo.lock ] || { echo "miri_check: CARGO_LOCKED=1 requires Cargo.lock" >&2; exit 2; }
+  locked_args=(--locked)
+fi
 
-if ! rustup component list --toolchain nightly 2>/dev/null | grep -q 'miri.*(installed)'; then
-  echo "miri not installed; installing for the nightly toolchain…" >&2
-  rustup component add --toolchain nightly miri
+if ! rustup component list --toolchain "$TOOLCHAIN" 2>/dev/null | grep -q 'miri.*(installed)'; then
+  echo "miri not installed; installing for the ${TOOLCHAIN} toolchain…" >&2
+  rustup component add --toolchain "$TOOLCHAIN" miri
 fi
 
 run() { # <label> <extra-miriflags> <test-filter>
-  echo "==> [$1] cargo +nightly miri test -p latexml_core --lib $3" >&2
+  echo "==> [$1] cargo +${TOOLCHAIN} miri test ${locked_args[*]+"${locked_args[*]}"} -p latexml_core --lib $3" >&2
   echo "    MIRIFLAGS=${MIRIFLAGS} $2" >&2
-  MIRIFLAGS="${MIRIFLAGS} $2" cargo +nightly miri test -p latexml_core --lib "$3"
+  MIRIFLAGS="${MIRIFLAGS} $2" cargo "+${TOOLCHAIN}" miri test ${locked_args[@]+"${locked_args[@]}"} -p latexml_core --lib "$3"
 }
 
 if [ "$#" -ge 1 ]; then
