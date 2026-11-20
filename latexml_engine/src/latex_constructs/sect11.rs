@@ -2478,15 +2478,10 @@ fn carries_nothing(item: &Digested) -> bool {
 /// writes to the .aux (latex.ltx:17746-17749 `\bibcite`) for a `\cite` to print.
 fn cite_list(key: &str) -> String { s!("b@{key}") }
 
-/// A raw `\cite` the lock (OXIDIZED_DESIGN_DIVERGENCES #88) refused may be the only definition of the macro its
-/// `\bibitem` labels hold: astron.sty's (and its copies in EslabStyle.cls:1442-1445, ISOStyle.cls:1446-1449, EAS)
-/// `\@ifstar{\citeyear}{\citefull}`, whose `\citefull` = `\def\astroncite##1##2{##1, ##2}\@internalcite`; mlbib.sty:360-363's
-/// `\@ifstar{\citeasnoun}{\new@cite}`, whose `\new@cite` defines `\citeauthoryear` for the `.bbl`'s
-/// `\bibitem[\protect\citeauthoryear{A}{Y}]`. The lock keeps the kernel `\cite`, so where the refused `\cite`'s
-/// unstarred branch is a parameterless macro ending in `\@internalcite` that defines a macro still undefined, the first
-/// call runs that branch (the full form), its `\@internalcite` tail dropped, and keeps what it defined for the deferred
-/// labels (0812.2799, 0812.4839, astro-ph0001290, astro-ph0008362; cond-mat0011295).
-/// Guards `perfect_kernel_batchnext397::astroncite_label_under_the_lock`, `perfect_kernel_batchregfixa::mlbib_citeauthoryear_label_under_the_lock`.
+/// The refused `\cite`'s unstarred branch, when it only `\def`s the label macros of the `\bibitem`s (astron.sty's
+/// `\citefull` 0812.2799, 0812.4839, astro-ph0001290, astro-ph0008362; mlbib.sty's `\new@cite` cond-mat0011295), run
+/// once for them (OXIDIZED_DESIGN_DIVERGENCES #88). Guards `perfect_kernel_batchnext397::astroncite_label_under_the_lock`,
+/// `perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`.
 fn label_macros_from_refused_cite() -> Vec<Token> {
   let Ok(Some(refused)) = lookup_definition(&T_CS!("\\lx@dropped@cite")) else {
     return Vec::new();
@@ -2519,7 +2514,11 @@ fn label_macros_from_refused_cite() -> Vec<Token> {
   let tail_is_internalcite = body
     .last()
     .is_some_and(|last| last.defined_as(&T_CS!("\\@internalcite")));
-  if !full.is_expandable() || takes_arguments || !tail_is_internalcite {
+  if !full.is_expandable()
+    || takes_arguments
+    || !tail_is_internalcite
+    || !only_definitions(&body[..body.len() - 1])
+  {
     return Vec::new();
   }
   let def = T_CS!("\\def");
@@ -2540,6 +2539,43 @@ fn label_macros_from_refused_cite() -> Vec<Token> {
     tokens.extend([T_CS!("\\global"), T_CS!("\\let"), cs, cs]);
   }
   tokens
+}
+
+/// Whether `items` are nothing but `\def\cs<parameters>{…}`s and spaces: a branch that typesets or steps a counter
+/// would do so once, at the first citation only.
+fn only_definitions(items: &[Token]) -> bool {
+  let (def, space, open, close) = (T_CS!("\\def"), T_SPACE!(), T_BEGIN!(), T_END!());
+  let mut i = 0;
+  while i < items.len() {
+    if items[i].defined_as(&space) {
+      i += 1;
+      continue;
+    }
+    if !items[i].defined_as(&def) {
+      return false;
+    }
+    // the name, then the parameter text to the body's `{`
+    i += 2;
+    while items.get(i).is_some_and(|t| !t.defined_as(&open)) {
+      i += 1;
+    }
+    let mut depth = 0usize;
+    loop {
+      let Some(token) = items.get(i) else {
+        return false;
+      };
+      if token.defined_as(&open) {
+        depth += 1;
+      } else if token.defined_as(&close) {
+        depth -= 1;
+      }
+      i += 1;
+      if depth == 0 {
+        break;
+      }
+    }
+  }
+  true
 }
 
 /// A citation prints its keys' labels (latex.ltx:17761-17771 `\@citex` reads each `\b@key`): the forms of each entry's

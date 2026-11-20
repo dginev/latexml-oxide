@@ -1999,12 +1999,14 @@ astro-ph0008362, and the EAS classes) is `\@ifstar{\citeyear}{\citefull}`, and i
 into the `\bibitem` labels; mlbib.sty:360-363's (cond-mat0011295) is `\@ifstar{\citeasnoun}{\new@cite}`, whose
 `\new@cite` alone defines the `\citeauthoryear{A}{Y}` of its `.bbl` labels. With that `\cite` refused, the labels were
 `Error:undefined:\astroncite` / `\citeauthoryear` (Perl and pdflatex 0). Where the lock refused a `\cite` of the form
-`\@ifstar{…}{\X}`, `\X` parameterless and ending in `\@internalcite`, and a macro `\X` `\def`s is undefined, the kernel
-`\cite`'s first call runs `\X` (its `\@internalcite` tail dropped) and keeps what it defined global for the deferred
-labels (`sect11.rs` `label_macros_from_refused_cite`). The full form throughout: the starred call's year-only form is
-the class's label style, which the lock does not keep. Guards `perfect_kernel_batchnext397::astroncite_label_under_the_lock`
-(repro `index-bib/astroncite`), `perfect_kernel_batchregfixa::mlbib_citeauthoryear_label_under_the_lock` (repro
-`index-bib/mlbib`).
+`\@ifstar{…}{\X}`, `\X` parameterless and nothing but `\def\cs<parameters>{…}`s before its `\@internalcite` tail, and a
+macro `\X` `\def`s is undefined, the kernel `\cite`'s first call runs `\X` (its tail dropped) and keeps what it defined
+global for the deferred labels (`sect11.rs` `label_macros_from_refused_cite`). A branch that also typesets or steps a
+counter is not run: once, at the first citation, is not TeX's every one. The full form throughout: the starred call's
+year-only form is the class's label style, which the lock does not keep. Guards
+`perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`),
+`perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`
+(repros `index-bib/mlbib`, `index-bib/sidecite`).
 
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)

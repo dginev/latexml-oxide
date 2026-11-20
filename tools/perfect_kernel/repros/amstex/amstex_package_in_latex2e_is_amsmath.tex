@@ -1,0 +1,15 @@
+% witness: (synthetic, the LaTeX2e side of math0101059/hep-th9309006/math0003076's `\pmatrix … \endpmatrix`)
+% oracle:  amstex.sty:23-30 outside compatibility mode raises `\PackageError{amstex}{… obsolete, substituting
+%          amsmath}` and `\input{amsmath.sty}\endinput`, so amsmath's `\matrix@check` stays: pdflatex 7 errors, among
+%          them "Package amsmath Error: Old form `\pmatrix' should be \begin{pmatrix}"
+% engines: rust MAIN935 3 errors incl. the "Old form" one; REGFIXA a86d7a59154 0 (the check turned off in every mode)
+% expect:  amsmath's "Old form" error, as MAIN935
+% status:  RED (REGFIXA a86d7a59154) -> GREEN; guard perfect_kernel_batchregfixa::amstex_sty_old_form_matrices_are_its_own
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amstex}
+\begin{document}
+Before $\pmatrix 0 & -1 \\ 1 & 0 \endpmatrix$ after.
+
+Second paragraph survives.
+\end{document}

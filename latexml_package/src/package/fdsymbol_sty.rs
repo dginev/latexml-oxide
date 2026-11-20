@@ -3,8 +3,9 @@
 //! The package is not raw-loaded: its `\fdsy@DeclareSymbol` does `\if\relax\noexpand#1\let#1\undefined\fi` before each
 //! `\DeclareMathSymbol` (fdsymbol.sty:110-114), which left locked kernel math chars (`\prime`, `\downarrow`, …)
 //! undefined (2406.19499, 2411.08746). Perl has no binding, and with INCLUDE_STYLES off skips the package. The binding
-//! loads what fdsymbol.sty loads, amssymb's binding for the AMS symbols it redeclares (as Perl's txfonts.sty.ltxml:18
-//! does), and its own symbols as Unicode: `FDSYMBOL_SYMBOLS`.
+//! loads what fdsymbol.sty loads, defines the AMS symbols and alphabets it redeclares from amsfonts' and amssymb's
+//! bindings without loading either (fdsymbol.sty:194-195; `\@ifpackageloaded{amssymb}` stays false, and the AMS names it
+//! never declares stay undefined: `NOT_FDSYMBOL`), and its own symbols as Unicode: `FDSYMBOL_SYMBOLS`.
 use crate::prelude::*;
 
 /// fdsymbol.sty's symbols beyond the LaTeX kernel, amsmath and amssymb, each at the Unicode code point of the glyph its
@@ -310,6 +311,7 @@ const FDSYMBOL_SYMBOLS: &[(&str, &str, Option<&str>)] = &[
   ("\\nsqsupset", "\u{2290}\u{338}", Some("RELOP")),
   ("\\nsqsubseteq", "\u{22E2}", Some("RELOP")),
   ("\\nsqsupseteq", "\u{22E3}", Some("RELOP")),
+  ("\\nsubset", "\u{2284}", Some("RELOP")),
   ("\\nsupset", "\u{2285}", Some("RELOP")),
   ("\\nSubset", "\u{22D0}\u{338}", Some("RELOP")),
   ("\\nSupset", "\u{22D1}\u{338}", Some("RELOP")),
@@ -880,6 +882,17 @@ const FDSYMBOL_SYMBOLS: &[(&str, &str, Option<&str>)] = &[
   ("\\rVvert", "\u{2980}", Some("CLOSE")),
 ];
 
+/// amssymb.sty's symbols fdsymbol.sty does not declare (`\Bbb`, `\bold`, `\frak` and `\dabar@` are amsfonts_sty.rs's own).
+const NOT_FDSYMBOL: &[&str] = &[
+  "\\backepsilon",
+  "\\blacksquare",
+  "\\diagdown",
+  "\\diagup",
+  "\\digamma",
+  "\\eth",
+  "\\varkappa",
+];
+
 LoadDefinitions!({
   // fdsymbol.sty:29, :74-75 load xkeyval, amsmath and textcomp: a document can rely on them (2311.09182: `split`).
   RequirePackage!("xkeyval");
@@ -887,7 +900,8 @@ LoadDefinitions!({
   key_options_processed()?;
   RequirePackage!("amsmath");
   RequirePackage!("textcomp");
-  RequirePackage!("amssymb");
+  amsfonts_sty::define_symbols()?;
+  amssymb_sty::define_symbols(NOT_FDSYMBOL)?;
   for &(cs, glyph, role) in FDSYMBOL_SYMBOLS {
     let (cs_tok, params) = parse_prototype(cs, true)?;
     let variable_size = matches!(role, Some("SUMOP" | "INTOP"));

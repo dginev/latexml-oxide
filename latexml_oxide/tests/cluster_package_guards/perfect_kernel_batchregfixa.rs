@@ -14,8 +14,10 @@ fn counts(log: &str) -> (usize, usize) {
 /// `\documentstyle{amsart}` is compatibility mode, where amsart.cls:353-362 loads amstex.sty, whose `\pmatrix`,
 /// `\matrix`, `\cases` (amstex.sty:877-928) have no `\matrix@check`: no "Old form" error, the rows kept (math0101059,
 /// hep-th9309006, math0003076). `\documentclass{amsart}` loads amsmath.sty, and the same `\pmatrix … \endpmatrix` is
-/// its "Old form" error, as in pdflatex. Distinct from `perfect_kernel_batch77q`'s guards (Plain TeX's `\pmatrix{…}`
-/// where amsmath is or is not loaded). Repro amstex/amstex_sty_old_form_matrices.
+/// its "Old form" error, as in pdflatex, and so does `\usepackage{amstex}` (amstex.sty:23-30 inputs amsmath.sty outside
+/// compatibility mode), where `\documentstyle[amstex]{article}` does not. Distinct from `perfect_kernel_batch77q`'s guards
+/// (Plain TeX's `\pmatrix{…}` where amsmath is or is not loaded). Repros amstex/amstex_sty_old_form_matrices,
+/// amstex/amstex_package_in_latex2e_is_amsmath.
 #[test]
 fn amstex_sty_old_form_matrices_are_its_own() {
   let (log, xml) = convert_with(
@@ -41,6 +43,30 @@ Before $\pmatrix 0 & -1 \\ 1 & 0 \endpmatrix$ after.
   assert!(
     log.contains("Package amsmath Error: Old form `\\pmatrix' should be \\begin{pmatrix}"),
     "{log}"
+  );
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/amstex/amstex_package_in_latex2e_is_amsmath.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (3, 0), "{log}");
+  assert!(
+    log.contains("Package amsmath Error: Old form `\\pmatrix' should be \\begin{pmatrix}"),
+    "{log}"
+  );
+  assert!(xml.contains("Second paragraph survives."), "{xml}");
+  let (log, xml) = convert_with(
+    r"\documentstyle[amstex]{article}
+\begin{document}
+Before $\pmatrix 0 & -1 \\ 1 & 0 \endpmatrix$ after.
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  assert!(
+    xml.contains("text=\"matrix@(Array[[0, - 1], [1, 0]])\""),
+    "{xml}"
   );
 }
 
@@ -74,6 +100,49 @@ fn fdsymbol_symbols_are_unicode() {
   }
 }
 
+/// fdsymbol.sty declares the AMS symbols and its `\mathbb`/`\mathfrak` itself and loads neither amssymb nor amsfonts
+/// (fdsymbol.sty:194-195): `\@ifpackageloaded{amssymb}` is false, a user's `\newcommand{\blacksquare}` (an amssymb name
+/// fdsymbol never declares) is kept, as is `\Bbb`; `\nsubset` is fdsymbol's own (fdsymbol.sty:772). The amssymb names
+/// fdsymbol lacks stay undefined, an Error each as in pdflatex (`\mho` is the LaTeXML kernel's, math_common.pool:76).
+/// Distinct from `fdsymbol_symbols_are_unicode` (what the binding defines; this: what it must not). Repro
+/// package-bindings/fdsymbol_declares_no_amssymb.
+#[test]
+fn fdsymbol_declares_no_amssymb() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/fdsymbol_declares_no_amssymb.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  assert!(
+    xml.contains("AMSSYMB-NOT-LOADED. Proof done <rule "),
+    "{xml}"
+  );
+  assert!(!xml.contains('\u{25A0}'), "{xml}");
+  for token in [
+    r#"<XMTok font="blackboard" role="UNKNOWN">R</XMTok>"#,
+    r#"<XMTok name="nsubset" role="RELOP">⊄</XMTok>"#,
+  ] {
+    assert!(xml.contains(token), "{token}\n{xml}");
+  }
+  let (log, _) = convert_with(
+    r"\documentclass{article}
+\usepackage{fdsymbol}
+\begin{document}
+$\varkappa \digamma \backepsilon \diagup \eth$ and $\lsem x \rsem$
+\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (5, 0), "{log}");
+  for cs in ["varkappa", "digamma", "backepsilon", "diagup", "eth"] {
+    assert!(
+      log.contains(&format!("Error:undefined:\\{cs} ")),
+      "{cs}\n{log}"
+    );
+  }
+}
+
 /// mlbib.sty's `\cite` (cond-mat0011295) is `\@ifstar{\citeasnoun}{\new@cite}`, and its `\new@cite` is the only
 /// definer of the `\citeauthoryear` its `.bbl` labels hold; the lock refuses that `\cite`, and the first kernel `\cite`
 /// runs the copy's `\new@cite` (sect11.rs `label_macros_from_refused_cite`). Distinct from
@@ -104,5 +173,32 @@ fn mlbib_citeauthoryear_label_under_the_lock() {
     "p",
     &[],
     r#"<p xml:id="p1.1">As shown by <cite class="ltx_citemacro_cite">[<bibref bibrefs="Andersen96" separator="," yyseparator=","/>]</cite> and <cite class="ltx_citemacro_cite">[<bibref bibrefs="Andersen96" separator="," yyseparator=","/>]</cite>.</p>"#,
+  );
+}
+
+/// A refused `\cite` whose unstarred branch steps a counter and typesets before `\@internalcite` is not run: TeX runs it
+/// at every citation (pdflatex "Count 3", three "see"), and the kernel `\cite` the lock keeps runs it at none, its label
+/// macro undefined as in MAIN935, never once (sect11.rs `only_definitions`). Distinct from the two label guards above,
+/// where the branch only `\def`s. Repro index-bib/sidecite.
+#[test]
+fn cite_branch_with_side_effects_is_not_run() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/index-bib/sidecite/cite_branch_with_side_effects_is_not_run.tex"
+    ),
+    &[(
+      "sidecite.sty",
+      include_str!("../../../tools/perfect_kernel/repros/index-bib/sidecite/sidecite.sty"),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (1, 0), "{log}");
+  assert!(log.contains("Error:undefined:\\citelabel "), "{log}");
+  let cite = r#"<cite class="ltx_citemacro_cite">[<bibref bibrefs="k" separator="," yyseparator=","/>]</cite>"#;
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    &format!(r#"<p xml:id="p1.1">A {cite} B {cite} C {cite}. Count 0.</p>"#),
   );
 }
