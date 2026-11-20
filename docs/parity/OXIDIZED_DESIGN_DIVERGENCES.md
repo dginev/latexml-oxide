@@ -23247,3 +23247,22 @@ ignored 0).
 cli_noincludestyles_restores_perls_binding_only_loading, latexml_sty_iflimit_overrides_the_front_end_default}` (repro
 `loader/cli_raw_default`); the in-process control
 `rawclasses_binding_precedence_and_no_omnibus::bindingless_class_defaults_to_omnibus_without_rawclasses`.
+
+### 1103. natbib's repeat-load Option clash only where TeX sees the loads (REGFIXC)
+
+**Rule.** The repeat-load clash test (`content.rs` `apply_repeat_options`, OD #43; natbib opts in with
+`natbib.sty_repeat_clash`) errs only on loads TeX makes. (1) A compiled binding's own repeat (`RequirePackage!` from
+its code, `requested_by_binding`) is the binding's guess at what its file loads: no clash, its new options dropped with
+an Info; the file read raw after it decides (cvpr_sty.rs's `[numbers,sort&compress]` after a document's
+`\usepackage[numbers]{natbib}`, whose cvpr.sty loads no natbib: 2109.08809, 2408.02054). (2) `\PassOptionsToPackage`
+after the load extends `\opt@<file>` (latex.ltx:18514-18517, `pass_options_with_raw`), which the clash test reads
+(2403.07005's neurips_2022.sty copy). (3) A class binding claims its load as the class's own
+(`record_load_as_the_files_own`: elsarticle, acmart, jmlr, jheppub) only where the paper ships no copy of that file
+(`\@currname.\@currext` beside the source): a copy may load natbib otherwise or not at all, so the document's options
+apply (2105.06643, 2206.02837, 2402.13480 elsarticle.cls copies; 2209.10785 cidr.cls). (4) The elsarticle binding reads
+`\jobname.spl` into `\@biboptions` before its natbib load, as elsarticle.cls:1240-1243 does (2406.18569, 2503.23289
+ship it); Perl's binding keeps `@biboptions` as a value and never reads the file.
+**Guards**: `perfect_kernel_batchregfixc::{elsarticle_reads_its_spl, a_binding_repeat_load_does_not_clash,
+a_pass_after_the_load_extends_the_option_list, a_shipped_class_copy_keeps_the_binding_load_early}` (repros
+`natbib_repeat_options/`); the clash itself stays `perfect_kernel_batch77w::another_copys_repeat_load_clashes` and the
+72a guards.

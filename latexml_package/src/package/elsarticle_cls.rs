@@ -90,9 +90,9 @@ LoadDefinitions!({
   DeclareOption!("secthm", { assign_value("@secthm", 1i64, Scope::Global); });
   DeclareOption!("amsthm", { assign_value("@amsthm", 1i64, Scope::Global); });
   // Perl L33-35: natbib defaults
-  DeclareOption!("authoryear", { assign_value("@biboptions", Stored::from("round,authoryear"), Scope::Global); });
-  DeclareOption!("number", { assign_value("@biboptions", Stored::from("numbers"), Scope::Global); });
-  DeclareOption!("numbers", { assign_value("@biboptions", Stored::from("numbers"), Scope::Global); });
+  DeclareOption!("authoryear", r"\xdef\@biboptions{round,authoryear}");
+  DeclareOption!("number", r"\xdef\@biboptions{numbers}");
+  DeclareOption!("numbers", r"\xdef\@biboptions{numbers}");
   // Pass other options to article
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
@@ -230,18 +230,22 @@ LoadDefinitions!({
   // natbib with biboptions, unless the `nonatbib` option (elsarticle.cls:1242-1244): those papers bring biblatex or
   // another citation package of their own (2609.05849, 20719, 26003 biblatex; 19225, 23461 apacite). Perl's binding
   // loads natbib for every paper (KNOWN_PERL_ERRORS #501).
+  // elsarticle.cls:1240-1241: the options, `numbers` by default, and those a previous run wrote to the .spl
+  // (`\g@addto@macro\@biboptions{,sort&compress}`, the document's `\biboptions` below), which the paper may ship
+  // (2406.18569, 2503.23289: its `\usepackage[sort&compress]{natbib}` then repeats no new option).
+  RawTeX!(r"\@ifundefined{@biboptions}{\xdef\@biboptions{numbers}}{}\InputIfFileExists{\jobname.spl}{}{}");
   let nonatbib = if_condition(&T_CS!("\\ifnonatbib"))?.unwrap_or(false);
   if !nonatbib {
-    let natbib_opts_stored = lookup_value("@biboptions");
-    let natbib_opts = match &natbib_opts_stored {
-      Some(Stored::String(s)) => with(*s, |s| s.to_string()),
-      _ => "numbers".to_string(),
-    };
-    let natbib_opt_vec: Vec<String> = natbib_opts.split(',').map(|s| s.trim().to_string()).collect();
+    let natbib_opts = do_expand(T_CS!("\\@biboptions"))?.to_string();
+    let natbib_opt_vec: Vec<String> = natbib_opts
+      .split(',')
+      .map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty())
+      .collect();
     RequirePackage!("natbib", options => natbib_opt_vec);
     // (elsarticle.cls:1243 `\RequirePackage[\@biboptions]{natbib}`: the class's own load, so a document's repeat with
     // other options is LaTeX's "Option clash" — binding/content.rs `apply_new_options_on_reload`)
-    AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
+    record_load_as_the_files_own("natbib.sty")?;
   }
   RequirePackage!("hyperref");
   // elsarticle.cls:1247-1249 writes `\biboptions` to the .spl for natbib's options on the next run; without natbib
