@@ -1,0 +1,17 @@
+% witness: math0612243 (861.tex:390-397), 0705.4126, math0112238 (~18 run-397 PushbackLimit Fatals: inlined AmS-TeX)
+% oracle:  pdflatex 0 errors: a sum with subscript i over x_i
+% engines: rust MAIN928 = Fatal:Timeout:PushbackLimit (amsmath's `\let\sum@\sum` ran unconditionally, so `\sum@` became
+%          the author's `\sum`); Perl 0.8.8 0 errors
+% expect:  0 errors, 0 warnings; amsmath.sty:318-345 re-lets `\sum@` only while `\coprod` is still a `\mathchar`
+% status:  RED (MAIN928) -> GREEN (LOOPFIX)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\let\slimits@\displaylimits
+\mathchardef\coprod@="1360 \def\coprod{\DOTSB\coprod@\slimits@}
+\mathchardef\sum@="1350 \def\sum{\DOTSB\sum@\slimits@}
+\makeatother
+\usepackage{amsmath}
+\begin{document}
+$\sum_{i} x_i$
+\end{document}

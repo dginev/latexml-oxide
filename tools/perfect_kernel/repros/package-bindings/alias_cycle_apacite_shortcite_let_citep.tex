@@ -1,0 +1,17 @@
+% witness: 1909.02387, 2212.08776 (agujournal2018.cls:1140-1143; ~28 run-397 180 s timeouts)
+% oracle:  pdflatex 0 errors: "Text (Doe, 2001) and Doe (2001)." after bibtex-less two passes
+% engines: rust MAIN928 = Fatal:Timeout:Recursion (apacite's `\shortcite`/`\citeA` called natbib's `\citep`/`\citet`
+%          by name; the class's `\let`s point those back at them); Perl 0.8.8 has no apacite binding (`\citet` undefined)
+% expect:  0 errors, 0 warnings; two `ltx:cite`, each with one `ltx:bibref bibrefs="k"`
+% status:  RED (MAIN928) -> GREEN (LOOPFIX)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{apacite}
+\let\cite\shortcite \let\citep\cite \let\citet\citeA
+\begin{document}
+Text \citep{k} and \citet{k}.
+\bibliographystyle{apacite}
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Doe}{Doe}{2001}]{k} J. Doe. 2001. Title.
+\end{thebibliography}
+\end{document}

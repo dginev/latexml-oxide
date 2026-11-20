@@ -21282,6 +21282,40 @@ a found file). **Guards**: `dump_gate_init::nodump_latex_branch_converts_healthi
 `\IfFileExists` before `\documentclass`, hyperref, `\stepcounter`, a list, `\ensuremath`, `\IfDocumentMetadataTF`),
 `preclass_kernel_autoload::latex_route_pre_documentclass_kernel_cs_autoloads` (its dump half).
 
+### 1100. A binding delegates to the internal it saved at load, and aliases only under its package's condition (alias cycles)
+
+**Rule.** Where a binding implements a user-level command by calling another user-level command, it calls a private
+copy saved with `Let!` when the package loads (`\lx@natbib@citet`, `\lx@slashed@not`), never the public name; where
+it aliases two commands, it does so only under the real package's own test. The real package builds each command on
+its own internals, so a class's or document's `\let`/`\def` between the public names is harmless in TeX; through a
+name-call it closed a loop, a 180 s `Timeout:Convert` when the cycle's window exceeds `cycle_guard.rs`'s `MAX_WINDOW`.
+
+**Instances.** apacite's `\citeA`/`\shortcite`/`\citeNP`/… and its `natbibemu` `\cite` called natbib's `\citet`/
+`\citep`/`\citealp`/`\citeyear`/`\citeauthor` by name, and agujournal2018.cls:1140-1143 `\let\cite\shortcite
+\let\citep\cite \let\citet\citeA` closed the loop (1909.02387, 2212.08776; ~28 run-397 papers); nmbib's `\citeall`
+the same. amsmath's `\let\sum@\sum` and its eleven siblings ran unconditionally; amsmath.sty:318-345 runs them only
+while `\coprod` is still a `\mathchar`, so inlined AmS-TeX (`\mathchardef\sum@… \def\sum{\DOTSB\sum@\slimits@}`)
+looped (math0612243, 0705.4126, math0112238; ~18). The revtex classes' preload of hyperref (`revtex4_support_sty.rs`,
+kept for documents that use its commands, marked unloaded) installed hyperref's `\refstepcounter` dispatch through
+`\H@refstepcounter`, which the shipped revtex 4.0 ltxutil.sty:682 `\let\H@refstepcounter\refstepcounter` pointed back
+at it (astro-ph0112270; ~21); the preload now restores the kernel's `\refstepcounter` (as `aastex_cls.rs` does after
+aas_support's preload for AASTeX 5.x, which loads no hyperref). Under revtex the document's own
+`\usepackage{hyperref}` installs the dispatch; under AASTeX 5.x aas_support leaves hyperref marked loaded (as Perl), so
+it does not, and cleveref's hyperref branch (cleveref.sty:2044-2054, patching only `\H@refstepcounter`) then sets no
+`\cref@currentlabel` (an aastex + algpseudocode + cleveref probe: 2 Errors; aastex + cleveref in 0 of 35,942 census
+papers; row R AAS5-HYPERREF). slashed's `\lx@slashed` called `\not` by name, which slashed.sty:112-118
+never does, and an author's `\def\not#1{\slashed{#1}}` looped (2504.21590). physics's commands, built on helpers that
+take the command itself as their reversion argument, re-expanded inside their own helper in an `\edef` (ifthen's
+`\equal` under algpseudocode's `\Function`; 2001.08539, 2505.01628; ~7; Perl physics.sty.ltxml:401/464-476 hangs
+alike): the commands physics.sty declares with `\DeclareDocumentCommand` are `protected`, as ltcmd makes them,
+all but `\svmqty` and `\trace`/`\Trace` (with their `\tr`/`\Tr` aliases), which loop in no `\edef` (row R PHYS-PROTECT).
+
+**Perl.** Perl has no apacite binding (101 undefined-`\citet` errors on the repro), runs amsmath's `\X@` lets only
+through the raw package's test, has no `\refstepcounter` dispatch (hyperref.sty.ltxml:383), and loops on physics as we
+did. **Guards** `perfect_kernel_batchloopfix::{apacite_forms_survive_the_class_lets,
+amsmath_keeps_an_inlined_amstex_sum, revtex_preload_leaves_ltxutil_refstepcounter_alone,
+physics_commands_are_protected_in_an_edef}` (repros `package-bindings/alias_cycle_*`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

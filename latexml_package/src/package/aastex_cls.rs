@@ -120,6 +120,13 @@ LoadDefinitions!({
     revtex4_support_sty::define_float_repair()?;
   }
   RequirePackage!("aas_support");
+  // aas_support's hyperref preload re-installs hyperref's `\refstepcounter` dispatch that revtex4_support_sty.rs undid;
+  // AASTeX 5.x loads no hyperref (6+ does), and a shipped ltxutil.sty:682 `\let\H@refstepcounter\refstepcounter`
+  // closed a loop through it (astro-ph0112270; OXIDIZED_DESIGN_DIVERGENCES #1100). hyperref stays marked loaded, so a
+  // document's own `\usepackage{hyperref}` does not re-install it (row R AAS5-HYPERREF).
+  if !aastex6_plus {
+    Let!("\\refstepcounter", "\\lx@kernel@refstepcounter");
+  }
   // AASTeX 6+ set the journal abbreviations of their own (aastex6.cls:1303, aastex631.cls:1838-1900 in the copy
   // 2505.20669 ships, aastex701.cls:8310-8373): the ADS forms of aas_macros.sty, which aas_support's aas_macros binding
   // defines as AASTeX 5.x did, in 28 names (`\apjl` "ApJL", the binding's "ApJ"; 1701.04641's PDF "ApJL" three times,

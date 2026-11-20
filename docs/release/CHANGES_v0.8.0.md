@@ -43,6 +43,21 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Run-397 loop Fatals of one class: a binding that called another user-level command by name.** apacite's citation
+    forms called natbib's `\citep`/`\citet` by name, and agujournal2018.cls's `\let\cite\shortcite \let\citep\cite
+    \let\citet\citeA` made each call itself: a 180 s timeout (1909.02387, 2212.08776; ~28 papers). They now call
+    natbib's private copies, as do apacite's `natbibemu` `\cite`, nmbib's `\citeall` and slashed's `\slashed` (the
+    kernel's `\not`, 2504.21590). amsmath's `\let\sum@\sum` and its eleven siblings run only while `\coprod` is still a
+    math character, as amsmath.sty tests, so inlined AmS-TeX keeps its own `\sum@` (math0612243, 0705.4126; ~18). The
+    revtex and AASTeX 5 classes' hyperref preload no longer installs hyperref's `\refstepcounter` dispatch, which a
+    shipped revtex 4.0 `ltxutil.sty` pointed back at itself (astro-ph0112270; ~21); under revtex a document's own
+    hyperref still installs it (under AASTeX 5.x hyperref stays marked loaded, as in Perl, so it does not: row R
+    AAS5-HYPERREF). physics's commands are `\protected`, as `\DeclareDocumentCommand` makes them (all but `\svmqty` and
+    `\trace`/`\Trace` with their `\tr`/`\Tr` aliases: row R PHYS-PROTECT), so `\pdv` in an `\edef`
+    stays itself (2001.08539, 2505.01628; ~7), and its shorthands `\vev`, `\acommutator`, `\fderivative` and
+    `\paulixmatrix`/`\pauliymatrix`/`\paulizmatrix` are defined. OXIDIZED_DESIGN #1100. Guards
+    `cluster_package_guards::perfect_kernel_batchloopfix::*`.
+
   - **UnicodeMath output (`--unicodemath`).** Perl's `--unicodemath`/`--nounicodemath` are exposed: each formula's
     MathML carries an `<annotation encoding="application/x-unicodemath">` (`a+b^2=\frac{x}{y}` gives `𝑎+𝑏²=𝑥/𝑦`),
     after the Content MathML and before the TeX annotation. As with `--cmml` and `--mathtex`, Presentation MathML stays

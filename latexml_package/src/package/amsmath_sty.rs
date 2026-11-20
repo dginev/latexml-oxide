@@ -495,24 +495,27 @@ LoadDefinitions!({
   Let!("\\@xp", "\\expandafter");
   Let!("\\@nx", "\\noexpand");
 
-  // amsmath L341-348: \let \bigotimes@/\bigoplus@/etc. \bigotimes/...
+  // amsmath.sty:318-345: \let \bigotimes@/\bigoplus@/etc. \bigotimes/...
   // then \gdef the original to use the @-suffix variant for limits
   // placement. We don't materialize that two-step; alias the @ form
   // straight to the user-visible CS so dump-replay of expansions like
-  // `\DOTSB \bigotimes@ \slimits@ _...` resolves.
-  // Witnesses 2406.03357, 2406.10662.
-  Let!("\\bigotimes@", "\\bigotimes");
-  Let!("\\bigoplus@", "\\bigoplus");
-  Let!("\\bigodot@", "\\bigodot");
-  Let!("\\bigsqcup@", "\\bigsqcup");
-  Let!("\\biguplus@", "\\biguplus");
-  Let!("\\bigvee@", "\\bigvee");
-  Let!("\\bigwedge@", "\\bigwedge");
-  Let!("\\bigcap@", "\\bigcap");
-  Let!("\\bigcup@", "\\bigcup");
-  Let!("\\coprod@", "\\coprod");
-  Let!("\\prod@", "\\prod");
-  Let!("\\sum@", "\\sum");
+  // `\DOTSB \bigotimes@ \slimits@ _...` resolves. Witnesses 2406.03357, 2406.10662.
+  // Only while `\coprod` is still a math character, as amsmath tests: an inlined AmS-TeX
+  // `\def\sum{\DOTSB\sum@\slimits@}` would close a loop (math0612243, 0705.4126, math0112238; OD #1100).
+  if !matches!(lookup_definition(&T_CS!("\\coprod")), Ok(Some(defn)) if defn.is_expandable()) {
+    Let!("\\bigotimes@", "\\bigotimes");
+    Let!("\\bigoplus@", "\\bigoplus");
+    Let!("\\bigodot@", "\\bigodot");
+    Let!("\\bigsqcup@", "\\bigsqcup");
+    Let!("\\biguplus@", "\\biguplus");
+    Let!("\\bigvee@", "\\bigvee");
+    Let!("\\bigwedge@", "\\bigwedge");
+    Let!("\\bigcap@", "\\bigcap");
+    Let!("\\bigcup@", "\\bigcup");
+    Let!("\\coprod@", "\\coprod");
+    Let!("\\prod@", "\\prod");
+    Let!("\\sum@", "\\sum");
+  }
   Let!("\\intop@", "\\intop");
   Let!("\\iintop@", "\\iintop");
   Let!("\\iiintop@", "\\iiintop");
