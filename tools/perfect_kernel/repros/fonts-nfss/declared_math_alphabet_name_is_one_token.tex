@@ -1,0 +1,12 @@
+% witness: none (synthetic; the issue-#944 shape, a non-letter name a prototype parser splits)
+% oracle:  pdflatex 0 errors: `\csname mathx-y\endcsname` is one control sequence, an alphabet taking one argument
+%   (latex.ltx `\DeclareMathAlphabet`): W sans serif, c italic
+% engines: rust MAIN935 = Fatal:Parameter:Unknown ("Unrecognized parameter type with name "y"": the name re-read as
+%   the prototype `\mathx-y{}`), perl = 0 (`DefPrimitiveI(T_CS($csname), …)`, latex_constructs.pool.ltxml:2684-2694)
+% expect:  0 errors, 0 warnings; the alphabet's W sansserif, subscripted by an italic c
+% status:  RED (MAIN935) -> GREEN (FUPB: sect08.rs `\DeclareMathAlphabet` defines on the token)
+\documentclass{article}
+\expandafter\DeclareMathAlphabet\csname mathx-y\endcsname{OT1}{cmss}{m}{n}
+\begin{document}
+Text $\csname mathx-y\endcsname{W}_c + x$ end.
+\end{document}

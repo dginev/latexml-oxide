@@ -3419,6 +3419,16 @@ fn unprocessed_options(name: &str, ext: &str) -> Result<()> {
   def_macro(T_CS!("\\@curroptions"), None, options, None)
 }
 
+/// The control sequence a binding's `DeclareOption` defines, its name recorded as declared: Perl Package.pm:2421-2423,
+/// `\ds@<option>` whole, and an empty name (Perl's false `$option`, as undef) is the default handler `\default@ds`.
+pub fn declare_option_cs(option: &str) -> Result<Token> {
+  if option.is_empty() {
+    return Ok(T_CS!("\\default@ds"));
+  }
+  push_value("@declaredoptions", arena::pin(option))?;
+  Ok(T_CS!(s!("\\ds@{option}")))
+}
+
 /// Perl Package.pm L2430-2465: ProcessOptions / ProcessOptions*
 /// `inorder=false` (\ProcessOptions) — execute in declared order, default handler for undeclared
 /// `inorder=true` (\ProcessOptions*) — execute in order passed, class options silently skipped
