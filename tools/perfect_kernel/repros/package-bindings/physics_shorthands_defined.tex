@@ -1,0 +1,12 @@
+% witness: rep/l1scan (run-397 LOOPS397 scan of physics's 165 commands: these were undefined in the binding)
+% oracle:  pdflatex 0 errors: <0|A|0>, {a,b}, delta F/delta x, and the Pauli x matrix (0 1; 1 0)
+% engines: rust MAIN928 = 4 Error:undefined (`\vev`, `\acommutator`, `\fderivative`, `\paulixmatrix`);
+%          Perl 0.8.8 the same binding gap
+% expect:  0 errors, 0 warnings; physics.sty:204/495/590/665 as declared there
+% status:  RED (MAIN928) -> GREEN (LOOPFIX)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+$\vev{A}$, $\acommutator{a}{b}$, $\fderivative{F}{x}$, $\mqty(\paulixmatrix)$.
+\end{document}

@@ -52,7 +52,8 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     revtex and AASTeX 5 classes' hyperref preload no longer installs hyperref's `\refstepcounter` dispatch, which a
     shipped revtex 4.0 `ltxutil.sty` pointed back at itself (astro-ph0112270; ~21); a document's own hyperref still
     installs it. physics's commands are `\protected`, as `\DeclareDocumentCommand` makes them, so `\pdv` in an `\edef`
-    stays itself (2001.08539, 2505.01628; ~7). OXIDIZED_DESIGN #1100. Guards
+    stays itself (2001.08539, 2505.01628; ~7), and its shorthands `\vev`, `\acommutator`, `\fderivative` and
+    `\paulixmatrix`/`\pauliymatrix`/`\paulizmatrix` are defined. OXIDIZED_DESIGN #1100. Guards
     `cluster_package_guards::perfect_kernel_batchloopfix::*`.
 
   - **UnicodeMath output (`--unicodemath`).** Perl's `--unicodemath`/`--nounicodemath` are exposed: each formula's

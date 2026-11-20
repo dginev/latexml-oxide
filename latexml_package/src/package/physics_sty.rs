@@ -556,6 +556,8 @@ LoadDefinitions!({
   DefMacro!("\\poissonbracket", "\\lx@physics@fencedII{\\poissonbracket}{poisson-bracket}{}{\\{}{\\}}", protected => true);
   Let!("\\comm", "\\commutator");
   Let!("\\acomm", "\\anticommutator");
+  // physics.sty:204 (the same command under its third name)
+  Let!("\\acommutator", "\\anticommutator");
   Let!("\\pb", "\\poissonbracket");
 
   //======================================================================
@@ -1216,6 +1218,8 @@ LoadDefinitions!({
   Let!("\\pdv", "\\partialderivative");
   Let!("\\pderivative", "\\partialderivative");
   Let!("\\fdv", "\\functionalderivative");
+  // physics.sty:495
+  Let!("\\fderivative", "\\functionalderivative");
 
   //======================================================================
   // Intentional — WISDOM #44, see physics umbrella L178.
@@ -1458,6 +1462,8 @@ LoadDefinitions!({
   Let!("\\op", "\\outerproduct");
   Let!("\\expval", "\\expectationvalue");
   Let!("\\ev", "\\expectationvalue");
+  // physics.sty:590 the vacuum expectation value
+  DefMacro!("\\vev{}", "\\expectationvalue{#1}{0}", protected => true);
   Let!("\\matrixel", "\\matrixelement");
   Let!("\\mel", "\\matrixelement");
 
@@ -1713,6 +1719,10 @@ LoadDefinitions!({
   Let!("\\xmat", "\\xmatrix");
   Let!("\\zmat", "\\zeromatrix");
   Let!("\\pmat", "\\paulimatrix");
+  // physics.sty:665-667 the bare entries, for the author's own matrix
+  DefMacro!("\\paulixmatrix", "0&1\\\\1&0", protected => true);
+  DefMacro!("\\pauliymatrix", "0&-i\\\\i&0", protected => true);
+  DefMacro!("\\paulizmatrix", "1&0\\\\0&-1", protected => true);
   Let!("\\dmat", "\\diagonalmatrix");
   Let!("\\admat", "\\antidiagonalmatrix");
   Let!("\\mqty", "\\matrixquantity");

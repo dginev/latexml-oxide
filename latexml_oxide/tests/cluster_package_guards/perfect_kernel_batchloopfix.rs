@@ -118,3 +118,46 @@ fn physics_commands_are_protected_in_an_edef() {
   );
   assert!(xml.contains(p), "{xml}");
 }
+
+/// physics.sty's shorthands the binding lacked (`\vev` :590, `\acommutator` :204, `\fderivative` :495,
+/// `\paulixmatrix` :665; the run-397 scan of its 165 commands), each its long form's semantics; the bare Pauli entries
+/// fill the author's `\mqty(…)` as a 2×2 matrix.
+#[test]
+fn physics_shorthands_are_defined() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/physics_shorthands_defined.tex"
+    ),
+    None,
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  let tex: Vec<&str> = xml
+    .split(" tex=\"")
+    .skip(1)
+    .map(|t| t.split('"').next().unwrap())
+    .collect();
+  assert_eq!(
+    tex,
+    [
+      r"\expectationvalue{A}{0}",
+      r"\anticommutator{a}{b}",
+      r"\functionalderivative{F}{x}",
+      r"\matrixquantity(\paulixmatrix)"
+    ],
+    "{xml}"
+  );
+  for meaning in [
+    "expectation-value",
+    "anticommutator",
+    "functional-derivative",
+    "matrix",
+  ] {
+    assert!(xml.contains(&format!("meaning=\"{meaning}\"")), "{xml}");
+  }
+  let cells: Vec<&str> = xml
+    .split("<XMCell align=\"center\">\n                      <XMTok meaning=\"")
+    .skip(1)
+    .map(|t| t.split('"').next().unwrap())
+    .collect();
+  assert_eq!(cells, ["0", "1", "1", "0"], "{xml}");
+}
