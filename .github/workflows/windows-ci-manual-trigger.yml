@@ -69,19 +69,27 @@ on:
         type: boolean
         default: false
   pull_request:
-    # Every file that carries `#[cfg(windows)]`/`windows_sys` code, plus the
-    # manifests that pin the Windows crates. Keep this list in step with
-    #   grep -rl 'cfg(windows)\|windows_sys' --include=*.rs .
-    # A Windows path written as `#[cfg(not(unix))]` escapes that grep: list such a
-    # file when its fallback changes what Windows produces (util.rs: archive links
-    # are never made off Unix, so every one is a plain file with a counted Warning).
+    # Every file that carries Windows-only code — `#[cfg(windows)]`, `windows_sys`,
+    # or a `#[cfg(not(unix))]` fallback (#935's archive links were never made off
+    # Unix and their Warning was compiled out there) — plus the manifests that pin
+    # the Windows crates. Keep this list in step with
+    #   grep -rl 'cfg(windows)\|windows_sys\|cfg(not(unix))' --include=*.rs .
+    # except bin/cortex_worker.rs, which needs the `cortex` feature this workflow
+    # never builds.
     paths:
       - 'latexml_core/src/watchdog.rs'
       - 'latexml_core/src/util/pathname.rs'
+      - 'latexml_core/src/util/logger.rs'
+      - 'latexml_core/src/util/private_files.rs'
+      - 'latexml_engine/src/lua_bridge.rs'
       - 'latexml_post/src/xslt.rs'
       - 'latexml_post/src/graphics.rs'
+      - 'latexml_post/src/graphics_cache.rs'
       - 'latexml_oxide/src/util/test.rs'
       - 'latexml_oxide/src/util.rs'
+      - 'latexml_oxide/src/lsp_server/mod.rs'
+      - 'latexml_oxide/bin/latexml_oxide.rs'
+      - 'latexml_oxide/tests/cluster_cli.rs'
       - '**/Cargo.toml'
       - '.github/workflows/windows-ci-manual-trigger.yml'
   schedule:
