@@ -43,6 +43,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Run 397's misplaced elements, as DG ruled 2026-11-19.** An undefined BibTeX macro (`month = june`; ~190
+    papers) is a Warning, as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1096). A theorem or proof in an abstract (83 of
+    the 86 papers sampled) is dissolved into it: its title a run-in bold text, its paragraphs, lists and equations in the abstract,
+    its id kept (1908.02189, 0804.0728; #1097); an abstract still open at `\end{document}` (math0006149) keeps its
+    theorems. nomencl's list in a framed box in a table keeps its box: a
+    bold heading and the entries as a description (1410.5511; #1098). A bibliography inside a float or a heading
+    argument floats out after it (cond-mat0108156, hep-ph0004227; #1099). Guards `perfect_kernel_batchplacefix::*`.
+
   - **Run-397 loop Fatals of one class: a binding that called another user-level command by name.** apacite's citation
     forms called natbib's `\citep`/`\citet` by name, and agujournal2018.cls's `\let\cite\shortcite \let\citep\cite
     \let\citet\citeA` made each call itself: a 180 s timeout (1909.02387, 2212.08776; ~28 papers). They now call

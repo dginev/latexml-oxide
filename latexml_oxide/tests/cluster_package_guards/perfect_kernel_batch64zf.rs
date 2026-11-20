@@ -55,10 +55,11 @@ pub(super) fn post_logged(xml: &str, source_directory: &str) -> (String, String)
   (out, latexml_core::util::logger::flush_log())
 }
 
-/// A1/A2: the `.bib` reader reports Perl's two Errors — the malformed entry `b` (`Error:expected:}`, Pre/BibTeX.pm:248,
-/// resynced and dropped as bibtex drops it) and the undefined macro `apj` (`Error:unexpected:apj`, BibTeX.pm:307-310,
-/// its name kept). `month = jan` resolves through plain.bst's own `MACRO {jan}` (read by kpathsea), no error. Was: one
-/// Warning, and nothing for `apj`. Repro index-bib/bib_parse_errors_are_reported.
+/// A1/A2: the `.bib` reader reports the malformed entry `b` (`Error:expected:}`, Pre/BibTeX.pm:248, resynced and dropped
+/// as bibtex drops it) and the undefined macro `apj`, its name kept — a Warning, as bibtex(1) warns, where Perl errs
+/// (BibTeX.pm:307-310; DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1096). `month = jan` resolves through plain.bst's own
+/// `MACRO {jan}` (read by kpathsea), no diagnostic. Was: one Warning, and nothing for `apj`. Repro
+/// index-bib/bib_parse_errors_are_reported.
 #[test]
 fn bib_parse_errors_are_reported() {
   let (log, _, (html, post_log)) = latexml::util::test::convert_bytes_files_then(
@@ -76,8 +77,8 @@ fn bib_parse_errors_are_reported() {
   );
   assert_eq!(error_count(&log), 0, "{log}");
   assert_eq!(warning_count(&log), 0, "{log}");
-  assert_eq!(error_count(&post_log), 2, "{post_log}");
-  assert_eq!(warning_count(&post_log), 2, "{post_log}");
+  assert_eq!(error_count(&post_log), 1, "{post_log}");
+  assert_eq!(warning_count(&post_log), 3, "{post_log}");
   // Each Error is located at the `.bib`'s own line (Perl: `at String; line 0 col 1`).
   assert_eq!(
     lines_with(&post_log, "\tat bib_parse_errors_are_reported; line "),
@@ -93,7 +94,7 @@ fn bib_parse_errors_are_reported() {
     "{post_log}"
   );
   assert_eq!(
-    lines_with(&post_log, "Error:unexpected:apj").len(),
+    lines_with(&post_log, "Warning:unexpected:apj").len(),
     1,
     "{post_log}"
   );
@@ -587,7 +588,8 @@ fn raw_sty_endgroup_against_hbox_is_one_error() {
 
 /// A2 with REVTeX's implicit style: with no `\bibliographystyle`, REVTeX writes its society's `\@bibstyle`
 /// (aps4-1.rtx:630 `apsrev\substyle@post`), so apsrev4-1.bst's `MACRO {prl}` defines `journal = prl`: no diagnostic,
-/// and the journal is the style's (2603.22119's shape). A name no style defines is still an Error.
+/// and the journal is the style's (2603.22119's shape). A name no style defines is still reported: a Warning, as bibtex
+/// warns (OXIDIZED_DESIGN_DIVERGENCES #1096).
 #[test]
 fn revtex_implicit_bibstyle_defines_its_macros() {
   let tex = b"\\documentclass{revtex4-1}\n\\begin{document}\n\\cite{p,q}\n\\bibliography{refs}\n\\end{document}\n";
@@ -601,15 +603,15 @@ fn revtex_implicit_bibstyle_defines_its_macros() {
     |xml, source_dir| post_logged(xml, source_dir.to_str().expect("a UTF-8 path")),
   );
   assert_eq!(error_count(&log), 0, "{log}");
-  assert_eq!(error_count(&post_log), 1, "{post_log}");
+  assert_eq!(error_count(&post_log), 0, "{post_log}");
   assert_eq!(
-    lines_with(&post_log, "Error:unexpected:nosuchjournal").len(),
+    lines_with(&post_log, "Warning:unexpected:nosuchjournal").len(),
     1,
     "{post_log}"
   );
   assert!(!post_log.contains(":prl"), "{post_log}");
   assert_eq!(warning_count(&log), 0, "{log}");
-  assert_eq!(warning_count(&post_log), 0, "{post_log}");
+  assert_eq!(warning_count(&post_log), 1, "{post_log}");
   assert_eq!(
     xml_element(&html, "li", &["id=\"bib.bib1\""]).unwrap_or_default(),
     "<li class=\"ltx_bibitem ltx_bib_article\" id=\"bib.bib1\"><span class=\"ltx_tag ltx_bib_key ltx_role_refnum ltx_tag_bibitem\">[1]</span><span class=\"ltx_bibblock\"><span class=\"ltx_text ltx_bib_author\">P. Author</span><span class=\"ltx_text ltx_bib_year\"> (2001)</span></span><span class=\"ltx_bibblock\"><span class=\"ltx_text ltx_bib_title\">T</span>.</span><span class=\"ltx_bibblock\"><span class=\"ltx_text ltx_bib_journal\">Phys. Rev. Lett.</span> <span class=\"ltx_text ltx_bib_volume\">1</span>.</span><span class=\"ltx_bibblock ltx_bib_cited\">Cited by: <a class=\"ltx_ref\" href=\"#p1.1\" title=\"\">p1.1</a>.</span></li>",

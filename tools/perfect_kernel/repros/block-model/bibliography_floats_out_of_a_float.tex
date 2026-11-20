@@ -1,0 +1,20 @@
+% witness: cond-mat0108156 (`\end{table}` commented out, the table closing after the references), cond-mat0303649
+%          (an unclosed figure), hep-ph0004227 and 1808.04295 (LyX `\subsubsection*{\bibliographystyle{..}
+%          \bibliography{..}}`); run 397's bibliography cluster, classes B2/B3 (PLACE397)
+% oracle:  pdflatex 0 errors; "References" with "[1] A. Author, Title." inside the float (on its page) and, the
+%          second, as the heading's text
+% engines: rust 7ffe5507018 = 3 ("<ltx:bibliography> isn't allowed in <ltx:table>", 2x "… in <ltx:title>"); perl = 4
+% expect:  0 errors, 0 warnings; each bibliography after its container (the table, the heading's title), entries and
+%          anchors kept, the citations resolved
+% status:  RED (7ffe5507018) -> GREEN (PLACEFIX; OXIDIZED_DESIGN_DIVERGENCES #1099)
+\documentclass{article}
+\begin{document}
+\section{Intro}
+Body text \cite{a} and \cite{b}.
+\begin{table}[h]
+\begin{thebibliography}{9}\bibitem{a} A. Author, Title.\end{thebibliography}
+\end{table}
+After the table.
+\subsection*{\begin{thebibliography}{9}\bibitem{b} B. Author, Book.\end{thebibliography}}
+After the heading.
+\end{document}

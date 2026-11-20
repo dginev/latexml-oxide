@@ -741,6 +741,10 @@ LoadDefinitions!({
     },
     after_digest => sub[whatsit] {
       engine::latex_constructs::begin_bibliography(whatsit)?;
+    },
+    // Out of a float or a heading it cannot open in (OXIDIZED_DESIGN_DIVERGENCES #1099).
+    before_construct => sub[doc, _whatsit] {
+      engine::latex_constructs::float_bibliography_out(doc)?;
     }
   );
   DefConstructor!(
@@ -748,6 +752,7 @@ LoadDefinitions!({
     sub[document, _whatsit, _props] {
       document.maybe_close_element("ltx:biblist")?;
       document.maybe_close_element("ltx:bibliography")?;
+      document.restore_floated_backmatter();
     }
   );
   // AASTeX's `\reference{key}` needs its key (aastex701.cls:8013-8016, aaspp4.sty:221-224 `\@ifnextchar\bgroup

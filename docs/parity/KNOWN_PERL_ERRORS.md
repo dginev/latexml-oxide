@@ -22012,3 +22012,18 @@ latexmlmath --unicodemath=- '\sqrt[3]{x}'
 
 Rust: `unicode_math.rs` reads the degree from the first argument. Guard
 `unicode_math::tests::nth_root_reads_degree_then_radicand`.
+
+## 1292. An undefined BibTeX macro is an Error where bibtex warns
+
+BibTeX.pm:307-310 raises `Error:unexpected:<name>` for a `.bib` macro that is not defined; bibtex(1) warns ("string name
+… is undefined") and uses the empty string:
+
+```latex
+\documentclass{article}
+\begin{document}\cite{a}\bibliographystyle{plain}\bibliography{m}\end{document}
+% m.bib: @article{a, author={A. Author}, title={Title}, journal={J}, month=june, year=2001}
+% Perl: Error:unexpected:june; bibtex: Warning--string name "june" is undefined
+```
+
+Rust: a Warning, the name kept as the value (OXIDIZED_DESIGN_DIVERGENCES #1096). Guard
+`perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning`.
