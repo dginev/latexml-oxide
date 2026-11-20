@@ -85,7 +85,7 @@ git tag -a X.Y.Z -m "…" <merged-sha> && git push origin X.Y.Z
 `release.yml` re-builds the matrix, **auto-publishes the public Release**, and fires containers.
 
 ### 4. Verify Gate A + containers + Gate B
-- `gh release view X.Y.Z --json isDraft,assets` → `isDraft=false`, 15 assets.
+- `gh release view X.Y.Z --json isDraft,assets` → `isDraft=false`, 17 assets (`BUILD-INPUTS` and `Cargo.lock` among them).
 - **ghcr `:latest` trap (0.7.4 shipped with none):** confirm `:latest` moved:
   ```bash
   docker manifest inspect ghcr.io/dginev/latexml-oxide:latest | sha256sum
