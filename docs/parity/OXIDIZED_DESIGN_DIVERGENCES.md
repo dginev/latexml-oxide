@@ -21299,8 +21299,8 @@ content kept in place. Run 397: 86 papers, real theorems (56: 1908.02189, 1604.0
 `\newtheorem*{keywords}`/`{MSC}`/`{JEL}` (26: 0804.0728, 1405.7144, gr-qc0203098) alike. A theorem in an abstract is
 markup used for a typesetting goal, and the abstract is what stays (DG 2026-11-19): no theorem element is kept. It is
 inserted without the Error and dissolved at its close (`Document::dissolve_theorem_in_abstract`, from
-`close_node_internal`): its title becomes a run-in `ltx:text` (its own fonts, bold for amsthm's plain style) at the
-start of its first `ltx:p`, as the PDF prints it, and its paragraphs' blocks (`ltx:p`, lists, equations, quotes) go
+`close_node_internal`): its title becomes a run-in `ltx:text` (its own fonts, bold for amsthm's plain style; a display
+title, amsppt's `\proclaim`, made bold) at the start of its first `ltx:p`, as the PDF prints it, and its paragraphs' blocks (`ltx:p`, lists, equations, quotes) go
 into the abstract in its place. That paragraph takes the theorem's `xml:id`, `labels` and number tags (the `role`d
 `ltx:tag`s), so a `\ref` still resolves and prints "1" — attributes and a child the schema does not give `ltx:p`, set
 as they are. A theorem in a quote in an abstract is dissolved into the quote; elsewhere the #689 bridge is unchanged.
@@ -21310,6 +21310,7 @@ acknowledgements, classification, creator) keep the Error, and a table of conten
 its theorems dissolve and the rest renders as on base; its bibliography's Error remains (T3/B5, out of scope).
 Guards `perfect_kernel_batchplacefix::theorem_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_stays`:
 text, equation, list and quote after a theorem, two in a row, a proof, `\newtheorem*`),
+`perfect_kernel_batchplacefix::proclaim_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_proclaim`),
 `perfect_kernel_batch69c::theorem_in_abstract_is_dissolved_not_bridged` (a theorem in a quote in the abstract).
 
 ### 1098. nomencl's list in a float's box keeps its box (PLACEFIX)

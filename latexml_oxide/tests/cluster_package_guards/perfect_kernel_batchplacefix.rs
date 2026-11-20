@@ -61,6 +61,26 @@ fn theorem_in_abstract_is_dissolved() {
   );
 }
 
+/// block-model/theorem_in_abstract_proclaim: amsppt's `\proclaim{Theorem}` in `\abstract` (tex 0 errors; math0111087):
+/// a display title, not a run-in one, so it is made bold when run in (the other path of the dissolution's title).
+#[test]
+fn proclaim_in_abstract_is_dissolved() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/block-model/theorem_in_abstract_proclaim.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert_element(
+    &xml,
+    "abstract",
+    &[],
+    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We prove the following.</p><p xml:id="Thmx1"><text class="ltx_runin" font="bold">Theorem</text> Every <Math mode="inline" tex="x" text="x" xml:id="Thmx1.p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> is <Math mode="inline" tex="x" text="x" xml:id="Thmx1.p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math>.</p><p>More.</p></abstract>"#,
+  );
+}
+
 /// block-model/nomenclature_in_a_box: `\printnomenclature` in `{framed}` in a `{table}` (pdflatex 0 errors). Before: 1
 /// Error "<ltx:glossary> isn't allowed in <ltx:block>"; now the bold heading and the post-filled description in the box.
 #[test]

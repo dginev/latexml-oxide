@@ -2171,7 +2171,7 @@ impl Document {
     } else {
       return self.replace_node(theorem.clone(), body);
     };
-    if let Some(title) = title {
+    if let Some(mut title) = title {
       // `ltx:tag` is no inline element: the title's number becomes a text in its font, as the title itself.
       for tag in xml::element_nodes(&title) {
         if name_is(&tag, "tag") {
@@ -2180,7 +2180,23 @@ impl Document {
           self.set_node_font(&mut text, &font)?;
         }
       }
-      let font = self.get_node_font(&title).clone();
+      let mut font = self.get_node_font(&title).clone();
+      let class = title.get_attribute("class").unwrap_or_default();
+      if !class.split_whitespace().any(|c| c == "ltx_runin") {
+        // A display title (amsppt's `\proclaim`, math0111087) is a bold heading: bold when run in.
+        if let Some(bold) = crate::common::font::lookup_font_series("b") {
+          font = font.merge_ref(bold);
+        }
+        title.set_attribute(
+          "class",
+          class
+            .split_whitespace()
+            .chain(["ltx_runin"])
+            .collect::<Vec<_>>()
+            .join(" ")
+            .as_str(),
+        )?;
+      }
       let mut runin = self.rename_node(title, "ltx:text", false)?;
       self.set_node_font(&mut runin, &font)?;
       runin.unlink();
