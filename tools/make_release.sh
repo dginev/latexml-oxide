@@ -107,8 +107,19 @@ mkdir -p "${stage_dir}"
 # `kpathsea-build-from-source` for a static in-process libkpathsea). Empty
 # elsewhere, so the recipe is unchanged on Linux/macOS.
 features="runtime-bindings${RELEASE_EXTRA_FEATURES:+,${RELEASE_EXTRA_FEATURES}}"
-echo "make_release: cargo build --no-default-features --features ${features} --profile maxperf --bin latexml_oxide"
-cargo build --no-default-features --features "${features}" --profile maxperf --bin latexml_oxide
+# Always stamp the current commit's short SHA so a warm rust-cache from an RC
+# build cannot leave a stale revision in `latexml_oxide --version` (build.rs
+# watches `LATEXML_GIT_SHA`, not `.git/HEAD`).
+if [[ -z "${LATEXML_GIT_SHA:-}" ]] && command -v git >/dev/null 2>&1; then
+  LATEXML_GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || true)"
+  export LATEXML_GIT_SHA
+fi
+locked_args=()
+if [[ "${RELEASE_LOCKED:-0}" == "1" ]]; then
+  locked_args=(--locked)
+fi
+echo "make_release: cargo build ${locked_args[*]} --no-default-features --features ${features} --profile maxperf --bin latexml_oxide"
+cargo build ${locked_args[@]+"${locked_args[@]}"} --no-default-features --features "${features}" --profile maxperf --bin latexml_oxide
 
 bin_path="target/maxperf/latexml_oxide${bin_suffix}"
 # -f not -x: Git Bash on Windows doesn't report a .exe as `-x`.

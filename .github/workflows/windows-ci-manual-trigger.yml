@@ -60,6 +60,14 @@ on:
       require_guards:
         type: boolean
         default: true
+      toolchain:
+        description: Pinned Rust nightly toolchain (e.g. nightly-2026-11-20); defaults to floating nightly
+        type: string
+        default: ''
+      use_build_inputs:
+        description: Download the release run's pinned Cargo.lock from the build-inputs artifact and pass --locked
+        type: boolean
+        default: false
   pull_request:
     # Every file that carries `#[cfg(windows)]`/`windows_sys` code, plus the
     # manifests that pin the Windows crates. Keep this list in step with
@@ -121,12 +129,22 @@ jobs:
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
+      RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
+      CARGO_LOCKED: ${{ inputs.use_build_inputs && '1' || '0' }}
       # Static C libraries + dynamic CRT (see plan Phase 1.1).
       VCPKG_TRIPLET: x64-windows-static-md
       VCPKGRS_TRIPLET: x64-windows-static-md
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: fetch pinned Cargo.lock
+        if: ${{ inputs.use_build_inputs }}
+        uses: actions/download-artifact@v6
+        with:
+          name: build-inputs
+          path: .
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.toolchain || 'nightly' }}
       # Only `main` saves (CI.yml's lint job explains the cache budget).
       - uses: Swatinem/rust-cache@v2
         with:
@@ -194,7 +212,14 @@ jobs:
       # libxml2/libxslt are linked statically (the triplet), and the
       # kpathsea DLL comes from TeX Live's bin dir, which every shard has.
       - name: archive test binaries
-        run: cargo nextest archive --cargo-profile ci --workspace --archive-file nextest-windows.tar.zst
+        env:
+          USE_LOCKED: ${{ inputs.use_build_inputs }}
+        run: |
+          if ($env:USE_LOCKED -eq "true") {
+            cargo nextest archive --locked --cargo-profile ci --workspace --archive-file nextest-windows.tar.zst
+          } else {
+            cargo nextest archive --cargo-profile ci --workspace --archive-file nextest-windows.tar.zst
+          }
       - uses: actions/upload-artifact@v5
         with:
           name: windows-test-archive

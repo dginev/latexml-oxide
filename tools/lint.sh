@@ -34,6 +34,14 @@ fail_fast=0
 
 profile_args=()
 [ -n "${LINT_PROFILE:-}" ] && profile_args=(--profile "$LINT_PROFILE")
+locked_args=()
+if [ "${CARGO_LOCKED:-0}" = "1" ]; then
+  if [ ! -s Cargo.lock ]; then
+    echo "lint.sh: CARGO_LOCKED=1 requires Cargo.lock" >&2
+    exit 1
+  fi
+  locked_args=(--locked)
+fi
 # NOTE: expand this as ${profile_args[@]+"${profile_args[@]}"}, never as a bare
 # "${profile_args[@]}". Under `set -u`, bash before 4.4 treats an EMPTY array's
 # expansion as an unbound variable and exits. profile_args is empty on every
@@ -130,6 +138,11 @@ run "next_entry_numbers.sh self-test" \
   "fix tools/perfect_kernel/next_entry_numbers.sh (its self-test lists the failing check)" -- \
   tools/perfect_kernel/next_entry_numbers_test.sh
 
+# 1e. Release RC-promotion reuse checker (offline scratch-repo unit tests, bash).
+run "check_rc_reuse.sh self-test" \
+  "fix tools/check_rc_reuse.sh (its self-test lists the failing check)" -- \
+  tools/check_rc_reuse_test.sh
+
 # 2. Formatting must already be applied (check, don't rewrite).
 run "rustfmt (check)" \
   "run: cargo fmt --all" -- \
@@ -138,7 +151,7 @@ run "rustfmt (check)" \
 # 3. Clippy across the whole workspace and all targets (tests/benches/bins).
 run "clippy (deny warnings, workspace + all targets)" \
   "fix them (try: cargo clippy --fix)" -- \
-  cargo clippy --workspace --all-targets ${profile_args[@]+"${profile_args[@]}"} -- -D warnings
+  cargo clippy --workspace --all-targets ${locked_args[@]+"${locked_args[@]}"} ${profile_args[@]+"${profile_args[@]}"} -- -D warnings
 
 # 4. Rustdoc. Gated HERE, on every push/PR, not only in rustdoc.yml — that
 #    workflow runs on push to main, so a doc warning introduced by a PR would
@@ -147,7 +160,7 @@ run "clippy (deny warnings, workspace + all targets)" \
 #    the warning is the only signal there is.
 run "rustdoc (deny warnings)" \
   "fix the doc warning; do not #[allow] it — the link still dies on the site" -- \
-  env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps ${profile_args[@]+"${profile_args[@]}"}
+  env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps ${locked_args[@]+"${locked_args[@]}"} ${profile_args[@]+"${profile_args[@]}"}
 
 # 5. The complement to cargo-deny, which reasons over crate MANIFESTS and so is
 #    blind to vendored C: a `-sys` crate reports its Rust wrapper's license, not
@@ -182,7 +195,12 @@ if require_or_skip cargo-about "cargo-about (notices license config)" \
      "install: cargo install --locked cargo-about --features cli"; then
   run "cargo-about (cli + cortex notice graphs)" \
     "update about.toml to match deny.toml (see docs/release/LICENSE_INVENTORY.md)" -- \
-    bash -c 'cargo about generate --no-default-features --features runtime-bindings about.hbs -o /dev/null && cargo about generate --no-default-features --features cortex about.hbs -o /dev/null'
+    bash -c '
+      locked=()
+      if [ "${CARGO_LOCKED:-0}" = "1" ]; then locked=(--locked); fi
+      cargo about generate ${locked[@]+"${locked[@]}"} --no-default-features --features runtime-bindings about.hbs -o /dev/null \
+        && cargo about generate ${locked[@]+"${locked[@]}"} --no-default-features --features cortex about.hbs -o /dev/null
+    '
 fi
 
 # 7. Unused dependencies.
