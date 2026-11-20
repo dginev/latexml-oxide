@@ -1,2 +1,2 @@
-window.ALL_CRATES = [{"c":"ab_audit"},{"c":"binding_audit"},{"c":"genschema_oxide"},{"c":"latexml"},{"c":"latexml_codegen"},{"c":"latexml_contrib"},{"c":"latexml_core"},{"c":"latexml_engine"},{"c":"latexml_math_parser"},{"c":"latexml_oxide"},{"c":"latexml_package"},{"c":"latexml_post"},{"c":"latexmlmath_oxide"}];
-//{"start":21,"fragment_lengths":[16,22,24,16,24,24,21,23,28,22,24,21,26]}
+window.ALL_CRATES = [{"c":"genschema_oxide"},{"c":"latexml"},{"c":"latexml_codegen"},{"c":"latexml_contrib"},{"c":"latexml_core"},{"c":"latexml_engine"},{"c":"latexml_math_parser"},{"c":"latexml_oxide"},{"c":"latexml_package"},{"c":"latexml_post"},{"c":"latexmlmath_oxide"}];
+//{"start":21,"fragment_lengths":[23,16,24,24,21,23,28,22,24,21,26]}
