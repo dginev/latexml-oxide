@@ -62,16 +62,30 @@ prerelease: ${{ contains(github.ref_name, '-') }}
 
 * **`X.Y.Z-rcN`** → a **DRAFT prerelease**. Artifacts only, for cross-OS testing.
 * **`X.Y.Z`** → a **public** Release, auto-published.
-* **Fast RC → final promotion (`rc-reuse-check`):** When tagging a final `X.Y.Z`
-  after a passing `X.Y.Z-rcN`, `tools/check_rc_reuse.py` checks whether the diff
-  since the latest `X.Y.Z-rc*` tag touches *only* `Cargo.toml` version pins and
-  docs (`CHANGELOG.md`, `README.md`, `docs/**`) AND that RC's `release.yml` run
-  finished green. When both hold, `release.yml` skips the redundant 23 test
-  shards (`ci` + `windows-ci`) and reuses the RC's 5-year TeX Live dump artifacts
-  (if within their 7-day retention window, else regenerates dumps). All 5
-  `maxperf` packaging legs, `notices`, and `containers` still run so every final
-  binary, `.deb`, and notice carries `X.Y.Z` and its exact commit SHA. Any code
-  or dependency change falls back automatically to the full pipeline.
+* **Pinned build inputs & fast RC → final promotion (`prepare`):** Every release
+  run (RC or final) resolves its Rust nightly date (`nightly-YYYY-MM-DD`) and
+  `Cargo.lock` **once** in the `prepare` job and shares them across every leg
+  (all legs compile with `RUSTUP_TOOLCHAIN` and `--locked`, so the 5 platform
+  binaries and test suites see the exact same compiler and dependency graph).
+  Every release attaches `BUILD-INPUTS` and `Cargo.lock` as permanent release
+  assets. When tagging a final `X.Y.Z` after a passing `X.Y.Z-rcN`,
+  `tools/check_rc_reuse.sh` checks that:
+  1. `git diff` since the latest `X.Y.Z-rc*` tag touches *only* `Cargo.toml`
+     `[package]` / intra-workspace `version` pins and docs (`CHANGELOG.md`,
+     `README.md`, `docs/**`);
+  2. that RC's `release.yml` push run concluded `success`; and
+  3. that RC's release carries `BUILD-INPUTS` and `Cargo.lock`.
+
+  When all three hold, `prepare` reuses the RC's exact nightly toolchain and
+  `Cargo.lock` (updating only workspace crate versions via `cargo update
+  --workspace`, verified by `--verify-lock-diff`) and skips the redundant 23
+  test shards (`ci` + `windows-ci`). `dumps`, `notices`, all 5 `maxperf`
+  packaging legs (with `--version` verified to print `latexml_oxide X.Y.Z
+  (revision <sha>)`), and `containers` still run. **Discipline:** any code or
+  dependency change after an RC means cutting a new `-rc(N+1)` rather than
+  shipping untested changes straight to a final tag (for reference,
+  `0.7.6-rc2..0.7.6` touched 49 files). Any non-version diff or reuse error
+  falls back automatically to fresh build inputs and the full pipeline.
 
 Two consequences worth knowing before you plan an RC:
 
