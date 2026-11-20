@@ -4496,6 +4496,8 @@ mod hostile_input_hardening {
     let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .args(["paper.zip", "--dest", "paper.xml"])
       .env("TMPDIR", &tmp_root)
+      .env("TEMP", &tmp_root)
+      .env("TMP", &tmp_root)
       .current_dir(work.path())
       .output()
       .expect("spawn latexml_oxide");

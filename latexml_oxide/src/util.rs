@@ -182,6 +182,8 @@ pub fn unpack_zip<R: std::io::Read + std::io::Seek>(
             String::from_utf8_lossy(&target_bytes)
           ),
         );
+        #[cfg(not(unix))]
+        let _ = raw_name;
         // Write the escaping symlink as a plain file inside `root` (verifying
         // its parent still canonicalizes inside `root`) so the paper still
         // converts rather than failing on a stray symlink.
