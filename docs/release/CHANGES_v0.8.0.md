@@ -43,6 +43,17 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **An abstract no longer swallows the document.** A brace-less `\abstract`, or an `\abstract{` whose `}` a
+    footnote took, with no `\section` after it, held the whole paper and its bibliography (TeX sets them so too; Perl
+    loses the body): the bibliography now ends it as its heading would, and an abstract the bibliography or the
+    document's end closed keeps its first paragraph, the rest moved back to the body with one Warning counting the moved
+    words (hep-th0110297, 1108.5171, math0006149, 1408.0340; ~30 run-397 papers, each 1-11 Errors to 0;
+    OXIDIZED_DESIGN_DIVERGENCES #1101). svjour's and svmult's `\abstract{…}` is a group read where it stands, as the
+    classes define it, so one left open no longer reads to the end of the input (astro-ph0702187 12 → 0 Errors,
+    math0701897 48 → 0; KNOWN_PERL_ERRORS #1293). A style's `\endabstract` paired with its own `\beginabstract` is its
+    own (nanosymp.sty, cond-mat0105361), where the kernel lock kept the list open over the paper. Guards
+    `cluster_package_guards::perfect_kernel_batchabsfix::*`.
+
   - **Run-397 loop Fatals of one class: a binding that called another user-level command by name.** apacite's citation
     forms called natbib's `\citep`/`\citet` by name, and agujournal2018.cls's `\let\cite\shortcite \let\citep\cite
     \let\citet\citeA` made each call itself: a 180 s timeout (1909.02387, 2212.08776; ~28 papers). They now call

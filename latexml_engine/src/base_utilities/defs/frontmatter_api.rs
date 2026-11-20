@@ -705,6 +705,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // their end: 1310.0585, 1310.0589, 1212.3890)
       assign_value("lx_frontmatter_kept_in_place", true, Some(Scope::Local));
       boxes.extend(digest_next_body(Some(end))?);
+      assign_value("lx_abstract_ended_late", false, Some(Scope::Global));
       return Ok(boxes);
     }
     // extract (possibly multiple!) labels
@@ -761,6 +762,30 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // (the title-page check's watch over a frontmatter command's entry: #953 "106t")
     let watch = begin_frontmatter_entry_digestion(None, checked);
     let body = digest_next_body(Some(end)).map(|body| [boxes, body].concat());
+    // An abstract opened as a command that no heading ended — the bibliography or the document's end did — holds the
+    // body, as in TeX (the group or `\quotation` never ends): it keeps its first paragraph and the rest goes back to
+    // the body, where it stands (sect05.rs `\lx@bibliography@ends@frontmatter`; OXIDIZED_DESIGN_DIVERGENCES #1101).
+    let ended_late = tag == "ltx:abstract" && lookup_bool("lx_abstract_ended_late");
+    assign_value("lx_abstract_ended_late", false, Some(Scope::Global));
+    let (body, moved) = match body {
+      Ok(body) if ended_late => {
+        let (kept, moved) = split_after_first_paragraph(body, &mut false);
+        (Ok(kept), moved)
+      },
+      body => (body, Vec::new()),
+    };
+    if moved.iter().any(typesets_content) {
+      let mut text = String::new();
+      moved.iter().for_each(|d| ink_word_text(d, &mut text));
+      let text = text.replace(INK_SEAM, "");
+      let words = text.split_whitespace().filter(|w| w.chars().any(char::is_alphanumeric)).count();
+      Warn!(
+        "unexpected",
+        "\\abstract",
+        s!("an abstract no heading ended holds the document: its first paragraph kept, {words} words after it moved \
+            to the body")
+      );
+    }
     assign_value("lx_frontmatter_par_item", enclosing.0.unwrap_or(Stored::None), Some(Scope::Local));
     assign_value("lx_frontmatter_par_depth", enclosing.1.unwrap_or(Stored::None), Some(Scope::Local));
     let digested = body.map(|body| Digested::from(List::new(body)));
@@ -774,7 +799,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // `\lx@heading@ends@frontmatter`) or an environment left empty (pdflatex prints only its heading).
     if !typesets_content(&digested) {
       frontmatter_remove(&tag, index);
-      return Ok(Vec::new());
+      return Ok(moved);
     }
     DebugFeature!("frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
@@ -785,7 +810,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if let Some(key) = seal {
       note_digested_frontmatter(&key);
     }
-    Ok(Vec::new())
+    Ok(moved)
   }, bounded => true);
 
   // Some frontmatter elements are "structured" in the sense of having a main bit of data
@@ -1498,4 +1523,40 @@ pub(in crate::base_utilities) fn ends_with_abbreviation(name: &str) -> bool {
   let initial = chars.next().is_some_and(char::is_uppercase) && chars.next().is_none();
   // (and "et al." ending a list, `is_name_qualifier`)
   initial || NAME_SUFFIXES.contains(&format!("{word}.").as_str()) || word == "al" || word == "et.al"
+}
+
+/// Splits a body's boxes after its first paragraph — the first `\par` after typeset content — descending into the
+/// lists its groups made (an unclosed `\abstract{`'s): `(first paragraph, the rest)`. `seen`: content met before.
+fn split_after_first_paragraph(
+  boxes: Vec<Digested>,
+  seen: &mut bool,
+) -> (Vec<Digested>, Vec<Digested>) {
+  let mut kept = Vec::new();
+  let mut boxes = boxes.into_iter();
+  while let Some(digested) = boxes.next() {
+    if let DigestedData::List(list) = digested.data() {
+      let (first, rest) = split_after_first_paragraph(list.borrow().boxes.clone(), seen);
+      if !rest.is_empty() {
+        let mut head = list.borrow().clone();
+        head.boxes = first;
+        let mut tail = list.borrow().clone();
+        tail.boxes = rest;
+        kept.push(Digested::from(head));
+        return (
+          kept,
+          std::iter::once(Digested::from(tail)).chain(boxes).collect(),
+        );
+      }
+    } else if *seen
+      && matches!(digested.data(), DigestedData::Whatsit(w)
+        if w.borrow().get_definition().get_cs_name() == "\\lx@normal@par")
+    {
+      kept.push(digested);
+      return (kept, boxes.collect());
+    } else if typesets_content(&digested) {
+      *seen = true;
+    }
+    kept.push(digested);
+  }
+  (kept, Vec::new())
 }

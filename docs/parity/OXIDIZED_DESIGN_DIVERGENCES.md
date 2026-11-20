@@ -21316,6 +21316,38 @@ did. **Guards** `perfect_kernel_batchloopfix::{apacite_forms_survive_the_class_l
 amsmath_keeps_an_inlined_amstex_sum, revtex_preload_leaves_ltxutil_refstepcounter_alone,
 physics_commands_are_protected_in_an_edef}` (repros `package-bindings/alias_cycle_*`).
 
+### 1101. An abstract opened as a command that the bibliography or the document's end closes keeps its first paragraph
+
+**Rule.** The bibliography begins with its heading (article.cls:565-566 `\section*{\refname}`), so before
+`\begin{thebibliography}` opens its group (`begin_environment_by_macro`, latex_constructs/mod.rs) and in `\bibliography`
+(sect11.rs) `\lx@bibliography@ends@frontmatter` (sect05.rs) ends an abstract or keywords opened as a command, as a
+`\section` does (`\lx@heading@ends@frontmatter` and `\@startsection@hook`; the TOC alike, #753). A `\begin{abstract}`
+is left alone (`begun_environment`): elsarticle's program summary holds its own bibliography (2503.17910). An abstract
+opened as a command (`\abstract …`, `\abstract{` whose `}` never comes) that the bibliography or `\end{document}`
+(`\lx@end@open@frontmatter`, sect02.rs) closes, not a heading or `\endabstract`, keeps its first paragraph — the
+digested body up to the first `\par` after typeset content, descending into an open group's list — and
+`\lx@add@frontmatter@until` (frontmatter_api.rs `split_after_first_paragraph`) returns the rest where the abstract
+stands, as body material before the bibliography. One Warning, `unexpected:\abstract`, counts the moved words (the
+ink words of the moved boxes, `ink_word_text`).
+
+**Why.** In TeX the quotation or the group never ends, so the whole paper is set as the abstract (pdflatex 0 `!`;
+"\end occurred inside a group" for the unclosed brace). Kept so, the body and the bibliography sat inside
+`ltx:abstract` (schema-invalid, `<ltx:bibliography> isn't allowed in <ltx:p>`, and one Error per theorem); every
+witness has a one-paragraph abstract followed by a blank line, `\vspace` or `\bigskip`, and its body without a
+`\section` (`\noindent{\bf 1. Introduction}`, `\begin{center}1. {\it Introduction}\end{center}`). DG ruling 2026-11-20:
+nets A (the bibliography) and B (the first paragraph).
+
+**Instances.** M1, a brace-less `\abstract`: hep-th0110297, 1108.5171, 1405.5825, hep-th0602212, gr-qc0302022,
+hep-ph0407142, hep-th0305160. M2, `\abstract{` whose closing brace a footnote or `%` took: math0006149, 1408.0340,
+1501.04098, 1710.10154, 1711.02987, hep-ph9306301, hep-th9506164. Not covered: a `\begin{abstract}` never ended
+(cond-mat9410055), which LaTeX reports at `\end{document}` (its Error) and which stays whole; the document's own
+`\def\abstract{…}` refused by the kernel lock (1209.6193, row R).
+
+**Perl.** Perl has neither net and loses the body (KNOWN_PERL_ERRORS #1294). **Guards**
+`perfect_kernel_batchabsfix::{bare_abstract_ended_by_bibliography_keeps_its_first_paragraph,
+unclosed_braced_abstract_ended_by_bibliography_keeps_its_first_paragraph,
+bare_abstract_open_at_end_of_document_keeps_its_first_paragraph}` (repros `sectioning-frontmatter/abstract_*`).
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

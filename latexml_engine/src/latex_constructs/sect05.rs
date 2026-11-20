@@ -1886,6 +1886,24 @@ pub(crate) fn load() -> Result<()> {
       unread(Tokens!(terminal));
     }
   });
+  // The bibliography begins with a heading (article.cls:565-566 `\section*{\refname}`), which ends an abstract or
+  // keywords opened as a command as a `\section` does (the TOC's alike, OD #753): `\begin{thebibliography}` before its
+  // group (`begin_environment_by_macro`, mod.rs) and `\bibliography` (sect11.rs). A `\begin{abstract}` is left alone:
+  // elsarticle's program summary holds its own bibliography (2503.17910). The abstract so ended keeps its first
+  // paragraph (`\lx@add@frontmatter@until`, `lx_abstract_ended_late`): M1 hep-th0110297, 1108.5171, 1405.5825,
+  // hep-th0602212; M2 math0006149, 1408.0340, 1501.04098, 1710.10154. OXIDIZED_DESIGN_DIVERGENCES #1101.
+  DefPrimitive!("\\lx@bibliography@ends@frontmatter", {
+    let terminal = lookup_token("lx@until@terminal");
+    if !lookup_bool("lx_replaying_class_setter")
+      && let Some(terminal) = terminal.filter(|t| *t == T_CS!("\\lx@end@abstract") || *t == T_CS!("\\lx@end@keywords"))
+      && begun_environment().is_none()
+    {
+      if terminal == T_CS!("\\lx@end@abstract") {
+        assign_value("lx_abstract_ended_late", true, Some(Scope::Global));
+      }
+      unread(Tokens!(T_CS!("\\lx@heading@ends@frontmatter"), T_CS!("\\@startsection@hook")));
+    }
+  });
   // Before a brace-less `\abstract`'s body: a class's refused begin code is not replayed for it
   // (`\lx@abstract@class@setters`, frontmatter_stores.rs). Without its end code it has no extent in TeX, and its
   // bindings would hold for the rest of the abstract: `\let\section\absection` (frontiersFPHY.cls:520) would disable
@@ -1905,7 +1923,8 @@ pub(crate) fn load() -> Result<()> {
   // (IMjournal.sty:81/83) was taken, ending the kernel's abstract by closing a group it never opened
   // (1702.00108, 2304.05575; ~40 of 56 sampled run-336 papers). The document's own `\endabstract` stays
   // its own: an author's `\beginabstract … \endabstract` pair (gr-qc9405068, gr-qc9406008) is not the
-  // kernel's.
+  // kernel's. Nor is a style's paired with its own `\beginabstract` (state.rs `files_lock_holds`): nanosymp.sty:25-31's
+  // list, whose end the lock refused, left open over the whole paper (cond-mat0105361).
   AssignValue!("\\endabstract:locked@files" => true, Some(Scope::Global));
   DefMacro!("\\maybe@end@abstract", "\\lx@end@abstract");
   DefMacro!(

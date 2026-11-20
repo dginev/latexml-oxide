@@ -1,0 +1,16 @@
+% witness: hep-th0110297, 1108.5171, 1405.5825, hep-th0602212 (M1: a brace-less `\abstract`, no `\section`, no `\endabstract`)
+% oracle:  pdflatex 0 `!`: the quotation never ends, so the whole paper is set as the abstract
+% engines: rust MAIN928 = 2 Errors (`<ltx:bibliography> isn't allowed in <ltx:p>`), body and bibliography inside ltx:abstract;
+%          Perl 0.8.8 loses the body (KNOWN_PERL_ERRORS #1294)
+% expect:  the bibliography ends the abstract as its heading would (article.cls:565-566 `\section*{\refname}`); the abstract
+%          keeps its first paragraph, the rest is body text before the bibliography; one Warning counts the 8 moved words
+% status:  RED (MAIN928) -> GREEN (ABSFIX), OXIDIZED_DESIGN_DIVERGENCES #1101
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract
+Short abstract text.
+
+\noindent{\bf 1. Introduction} Body text that is no abstract.
+\begin{thebibliography}{9}\bibitem{a} A reference.\end{thebibliography}
+\end{document}

@@ -3,8 +3,9 @@
 % witness: the silent-loss inventory (agent_reports/2026-10-18_silent_loss_inventory.md #1)
 % oracle:  pdflatex 0 errors ("\end occurred inside a group at level 1"): "Abstract / Abstract only text. / More abstract text."
 % engines: rust 67int26 = 0 errors, 2 warnings, an empty <document/>
-% expect:  0 errors, 1 warning (the open group); one ltx:abstract holding both paragraphs
-% status:  RED (67int26) -> GREEN (int26)
+% expect:  0 errors, 2 warnings (the open group, 3 words moved); the abstract keeps its first paragraph, the second is
+%          body text (OD #1101)
+% status:  RED (67int26) -> GREEN (int26); split since ABSFIX (DG ruling 2026-11-20)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

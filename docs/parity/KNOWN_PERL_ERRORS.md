@@ -22012,3 +22012,44 @@ latexmlmath --unicodemath=- '\sqrt[3]{x}'
 
 Rust: `unicode_math.rs` reads the degree from the first argument. Guard
 `unicode_math::tests::nth_root_reads_degree_then_radicand`.
+
+## 1293. sv_support reads svjour's and svmult's `\abstract{…}` as an argument
+
+sv_support.sty.ltxml:93-96 routes `\abstract{` to `\@abstract@with@arg{}`, but the classes' `\abstract` takes no
+argument (svjour.cls:832, svmult.cls:1981, the shipped svjour3.cls:966): `{…}` is a group read where it stands. A group
+left open (a footnote's `}` taking the abstract's) is then an argument that runs to the end of the input:
+
+```latex
+\documentclass[global]{svjour}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract{Short abstract text.\footnote{Based on a talk}
+
+\section{Introduction}
+Body text.
+\end{document}
+```
+
+Perl: 11 Errors, 4 words kept (astro-ph0702187, math0701897). Rust: `\abstract{` is the kernel's incremental group,
+which the `\section` ends. Guard `perfect_kernel_batchabsfix::sv_braced_abstract_is_a_group_a_section_ends`.
+
+## 1294. An abstract opened as a command and never ended loses the body
+
+A brace-less `\abstract` with no `\section` and no `\endabstract`, or an `\abstract{` whose `}` never comes, holds the
+rest of the document (as in TeX, whose quotation or group never ends), and Perl's output loses most of it:
+
+```latex
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract
+Short abstract text.
+
+\noindent{\bf 1. Introduction} Body text.
+\begin{thebibliography}{9}\bibitem{a} A reference.\end{thebibliography}
+\end{document}
+```
+
+Perl: hep-th0110297 keeps 55 words (1 Error), math0006149 8 words (58 Errors). Rust: the bibliography ends the
+abstract, which keeps its first paragraph; the rest is body text (OXIDIZED_DESIGN_DIVERGENCES #1101).
+

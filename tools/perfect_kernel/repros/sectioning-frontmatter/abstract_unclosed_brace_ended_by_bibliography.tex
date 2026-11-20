@@ -1,0 +1,15 @@
+% witness: math0006149, 1408.0340, 1501.04098, 1710.10154 (M2: `\abstract{` whose `}` a footnote's closing took)
+% oracle:  pdflatex 0 `!` ("\end occurred inside a group at level 1"): the whole paper is the abstract
+% engines: rust MAIN928 = 2 Errors, body and bibliography inside ltx:abstract; Perl 0.8.8 E=58 on math0006149, 8 words kept
+% expect:  as abstract_command_ended_by_bibliography.tex, through the open group's list (one Warning for the group closed)
+% status:  RED (MAIN928) -> GREEN (ABSFIX), OXIDIZED_DESIGN_DIVERGENCES #1101
+\documentclass{article}
+\begin{document}
+\title{T}\author{A}\maketitle
+\noindent\abstract{\noindent Short abstract text.\footnote{2000 {\it MSC} 53C25}
+
+\bigskip
+\begin{center}1. {\it Introduction}\end{center}
+Body text that is no abstract.
+\begin{thebibliography}{9}\bibitem{a} A reference.\end{thebibliography}
+\end{document}

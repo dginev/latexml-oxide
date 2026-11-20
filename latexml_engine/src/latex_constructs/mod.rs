@@ -8952,9 +8952,17 @@ pub(crate) fn env_hook_tokens(name: &str, point: &str) -> Vec<Token> {
 /// it `\@currenvir`, the `begin` hook and `\name` — `\begin`'s path whenever
 /// no `\begin{name}` constructor is defined. `env` is the name as written.
 pub(crate) fn begin_environment_by_macro(name: &str, env: Tokens) -> Result<Vec<Token>> {
-  let mut out = lookup_tokens(&format!("@environment@{name}@beforebegin"))
-    .map(Tokens::unlist)
-    .unwrap_or_default();
+  // (the bibliography begins with its heading, before its group: sect05.rs `\lx@bibliography@ends@frontmatter`)
+  let mut out = if name == "thebibliography" {
+    vec![T_CS!("\\lx@bibliography@ends@frontmatter")]
+  } else {
+    Vec::new()
+  };
+  out.extend(
+    lookup_tokens(&format!("@environment@{name}@beforebegin"))
+      .map(Tokens::unlist)
+      .unwrap_or_default(),
+  );
   out.extend(env_hook_tokens(name, "before"));
   out.push(T_CS!("\\begingroup"));
   if let Some(after) = lookup_tokens(&format!("@environment@{name}@atbegin")) {

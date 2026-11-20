@@ -1,0 +1,15 @@
+% witness: astro-ph0702187 (svmult), math0701897 (svjour; the oracle ran its shipped svjour.cls + svglobal.clo)
+% oracle:  pdflatex 0 `!`: svjour.cls:832 `\abstract` takes no argument, so `{` is a group left open; the section is set
+% engines: rust MAIN928 = 5 Errors (`readBalanced ran out of input`): sv_support's `\@abstract@with@arg` read the rest of the
+%          file; Perl 0.8.8 E=11, 4 words kept (sv_support.sty.ltxml:93-96; KNOWN_PERL_ERRORS #1293)
+% expect:  the kernel's incremental `\abstract{`: the `\section` ends the abstract, Introduction a section of the document
+% status:  RED (MAIN928) -> GREEN (ABSFIX)
+\documentclass[global]{svjour}
+\begin{document}
+\title{T}\author{A}\maketitle
+\abstract{Short abstract text.\footnote{Based on a talk}
+
+\section{Introduction}
+Body text that is no abstract.
+\begin{thebibliography}{9}\bibitem{a} A reference.\end{thebibliography}
+\end{document}
