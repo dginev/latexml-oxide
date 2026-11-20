@@ -43,6 +43,17 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **An abstract no longer swallows the document.** A brace-less `\abstract`, or an `\abstract{` whose `}` a
+    footnote took, with no `\section` after it, held the whole paper and its bibliography (TeX sets them so too; Perl
+    loses the body): the bibliography now ends it as its heading would, and an abstract the bibliography closed, or the
+    document's end where body structure follows it, keeps its first paragraph (an abstract-only document keeps all of
+    it), the rest moved back to the body with one Warning counting the moved
+    words (hep-th0110297, 1108.5171, math0006149, 1408.0340; ~30 run-397 papers, each 1-11 Errors to 0;
+    OXIDIZED_DESIGN_DIVERGENCES #1101). svjour's `\abstract{…}` (and the 2003 svmult's) is a group read where it
+    stands, as the classes define it, so one left open no longer reads to the end of the input (astro-ph0702187 12 → 0 Errors,
+    math0701897 48 → 0; KNOWN_PERL_ERRORS #1293). A style's `\endabstract` paired with its own `\beginabstract` is its
+    own (nanosymp.sty, cond-mat0105361), where the kernel lock kept the list open over the paper. Guards
+    `cluster_package_guards::perfect_kernel_batchabsfix::*`.
   - **Run 397's misplaced elements, as DG ruled 2026-11-19.** An undefined BibTeX macro (`month = june`; ~190
     papers) is a Warning, as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1096). A theorem or proof in an abstract (83 of
     the 86 papers sampled) is dissolved into it: its title a run-in bold text, its paragraphs, lists and equations in the abstract,

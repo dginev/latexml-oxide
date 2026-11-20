@@ -8891,7 +8891,7 @@ fn outside_frontmatter_container(node: &Node) -> bool {
 }
 
 /// Whether the nearest frontmatter container around `node` is an `ltx:abstract` its own end closed (a theorem there is
-/// dissolved, OD #1097); one open at `\end{document}` ([`ABSTRACT_OPEN_AT_END`]: math0006149, 1108.5171) is not.
+/// dissolved, OD #1097); one open at `\end{document}` ([`ABSTRACT_OPEN_AT_END`]: an environment never ended, cond-mat9410055) is not.
 fn within_abstract(node: &Node) -> bool {
   let mut cur = Some(node.clone());
   while let Some(n) = cur {
