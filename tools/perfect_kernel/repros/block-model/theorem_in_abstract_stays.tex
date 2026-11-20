@@ -1,10 +1,14 @@
 % witness: 1908.02189 (a theorem in a closed {abstract}), 0804.0728 (`\newtheorem*{keywords}` in it), math0111087
-%          (amsppt `\proclaim`); run 397's 86-paper "ltx:theorem in ltx:abstract" cluster (PLACE397 T1+T2)
-% oracle:  pdflatex 0 errors; "Theorem 1. Every x is x." and "Keywords. identity, reflexivity" and the proof, set in
-%          the abstract's quotation
-% engines: rust 7ffe5507018 = 3 ("<ltx:theorem>/<ltx:proof> isn't allowed in <ltx:abstract>"), perl = the same
-% expect:  0 errors, 0 warnings; the abstract holds each in an `ltx:inline-logical-block`, ids and titles kept
-% status:  RED (7ffe5507018) -> GREEN (PLACEFIX; OXIDIZED_DESIGN_DIVERGENCES #1096)
+%          (amsppt `\proclaim`), math0006149 and 1108.5171 (an `\abstract{` never closed); run 397's 86-paper
+%          "ltx:theorem in ltx:abstract" cluster (PLACE397 T1+T2)
+% oracle:  pdflatex 0 errors; in the abstract's quotation: "Theorem 1. Every x is x." then the text, the display (1),
+%          the list, the quote, "Theorem 2. Two." "Theorem 3. Three.", the proof "Proof. Trivial." with its QED and
+%          "Keywords. identity, reflexivity"; the body's \ref prints "1"
+% engines: rust 7ffe5507018 = 5 ("<ltx:theorem>/<ltx:proof> isn't allowed in <ltx:abstract>"), perl = the same;
+%          PLACEFIX round 1 = 0, each in an `ltx:inline-logical-block` that held the rest of the abstract
+% expect:  0 errors, 0 warnings; no theorem element: each title a run-in `ltx:text` at the start of its first
+%          paragraph, which takes the theorem's id, labels and number tags; the body's blocks in the abstract
+% status:  RED (7ffe5507018) -> GREEN (PLACEFIX; OXIDIZED_DESIGN_DIVERGENCES #1097, DG 2026-11-19: dissolved)
 \documentclass{article}
 \usepackage{amsthm}
 \newtheorem{theorem}{Theorem}
@@ -13,6 +17,13 @@
 \begin{abstract}
 We prove one thing.
 \begin{theorem}\label{t}Every $x$ is $x$.\end{theorem}
+Then a display
+\begin{equation} x=x \end{equation}
+and a list:
+\begin{enumerate}\item One.\end{enumerate}
+\begin{quote}Quoted.\end{quote}
+\begin{theorem}Two.\end{theorem}
+\begin{theorem}Three.\end{theorem}
 \begin{proof}Trivial.\end{proof}
 \begin{keywords}identity, reflexivity\end{keywords}
 \end{abstract}

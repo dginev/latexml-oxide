@@ -8517,7 +8517,7 @@ pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> 
 }
 
 /// [`adjust_backmatter_element`] for a bibliography, which first floats out of a float or a heading it cannot be built
-/// in (`Document::float_backmatter_out_of_container`, OXIDIZED_DESIGN_DIVERGENCES #1098); its close returns there
+/// in (`Document::float_backmatter_out_of_container`, OXIDIZED_DESIGN_DIVERGENCES #1099); its close returns there
 /// (`Document::restore_floated_backmatter`). Guard `perfect_kernel_batchplacefix::bibliography_floats_out_of_a_float`.
 pub fn adjust_bibliography_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
   let asif = match whatsit.get_property("backmatterelement").as_deref() {
@@ -8530,7 +8530,7 @@ pub fn adjust_bibliography_element(document: &mut Document, whatsit: &Whatsit) -
   adjust_backmatter_element(document, whatsit)
 }
 
-/// A bibliography that cannot open here floats out of a float or a heading (OXIDIZED_DESIGN_DIVERGENCES #1098): the
+/// A bibliography that cannot open here floats out of a float or a heading (OXIDIZED_DESIGN_DIVERGENCES #1099): the
 /// kernel's and RevTeX 3's / AASTeX's `{references}` (cond-mat0303649, an unclosed figure around it). Whether it did.
 pub fn float_bibliography_out(document: &mut Document) -> Result<bool> {
   Ok(

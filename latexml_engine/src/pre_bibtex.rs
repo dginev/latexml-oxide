@@ -584,7 +584,7 @@ impl PreBibTeX {
   /// BibTeX.pm:307-310: an undefined macro is an Error, and the recovery
   /// leaves the name as-is. bibtex(1) only warns ("Warning--string name
   /// "june" is undefined") and uses the empty string, so this is a Warning
-  /// with the name kept as the value (OXIDIZED_DESIGN #1095, KNOWN_PERL_ERRORS;
+  /// with the name kept as the value (OXIDIZED_DESIGN #1096, KNOWN_PERL_ERRORS #1292;
   /// DG 2026-11-19: `june`, `sept`, … in some 190 run-397 papers). The table
   /// holds the `.bst`'s `MACRO`s (see `new_from_gullet`), so only a name
   /// neither the style nor the `.bib` defines lands here. Reported for an

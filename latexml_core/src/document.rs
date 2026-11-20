@@ -2094,14 +2094,8 @@ impl Document {
     Ok(true)
   }
 
-  /// A bibliography begun where neither it nor the unit it stands as can go, inside a float (`ltx:figure`,
-  /// `ltx:table`, `ltx:float`) or a heading (`ltx:title`) as the nearest container that does not auto-close: the
-  /// author's container left open around the back matter (an `\end{table}` commented out, cond-mat0108156; an
-  /// unclosed figure, cond-mat0303649) or LyX's `\subsubsection*{\bibliography{…}}` (hep-ph0004227, 1808.04295). It is
-  /// built in the nearest open ancestor that can hold it (`float_to_element`), after the container, which stays open
-  /// for the rest of its content; [`Document::restore_floated_backmatter`] returns there at its close. A list in a box
-  /// (a minipage, a sidebar's frame) or an abstract is not floated: block-local references, as the PDF sets them
-  /// (2503.17910, 2402.17043, hep-ex0405026). DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1098.
+  /// A bibliography begun in a float or a heading (the nearest container that does not auto-close) is built after it, in
+  /// the nearest open ancestor that can hold it (cond-mat0108156, hep-ph0004227; OXIDIZED_DESIGN_DIVERGENCES #1099).
   pub fn float_backmatter_out_of_container(&mut self, qname: &str) -> Result<bool> {
     let mut node = Some(self.node.clone());
     while let Some(current) = node {
@@ -2133,6 +2127,102 @@ impl Document {
     {
       self.set_node(&saved);
     }
+  }
+
+  /// A theorem or proof in an abstract, dissolved at its close (DG 2026-11-19: a theorem there is markup used for
+  /// typesetting, the abstract is what stays): its title opens its first paragraph as a run-in `ltx:text`, as the PDF
+  /// sets it; its paragraphs, lists, equations and quotes go into the abstract in its place. That paragraph takes the
+  /// theorem's id, labels and number tags, so a `\ref` to it still resolves (`ltx:p` has no `labels` or `ltx:tags` in
+  /// the schema: set as they are). Witnesses 1908.02189, math0111087 (`\proclaim`), 0804.0728
+  /// (`\newtheorem*{keywords}`); OXIDIZED_DESIGN_DIVERGENCES #1097.
+  fn dissolve_theorem_in_abstract(&mut self, theorem: &Node) -> Result<()> {
+    let id = theorem.get_attribute_ns("id", XML_NS);
+    let labels = theorem.get_attribute("labels");
+    let mut tags = None;
+    let mut title = None;
+    let mut body = Vec::new();
+    for child in theorem.get_child_nodes() {
+      let qname = if child.get_type() == Some(NodeType::ElementNode) {
+        arena::to_string(get_node_qname(&child))
+      } else {
+        String::new()
+      };
+      match qname.as_str() {
+        "ltx:tags" => tags = Some(child),
+        "ltx:title" => title = Some(child),
+        "ltx:toctitle" => self.remove_node(child),
+        // A paragraph (Para.class) cannot stand in the abstract; its blocks can.
+        "ltx:para" => body.extend(child.get_child_nodes()),
+        _ => body.push(child),
+      }
+    }
+    let starts_with_p = body.first().is_some_and(|n| name_is(n, "p"));
+    let mut first_p = if starts_with_p {
+      body[0].clone()
+    } else if title.is_some() || id.is_some() {
+      // A theorem opening on a display or a list: its title is a paragraph of its own.
+      let mut parent = theorem
+        .get_parent()
+        .expect("a theorem to dissolve has a parent");
+      let mut p = self.open_element_at(&mut parent, "ltx:p", None, None)?;
+      p.unlink();
+      body.insert(0, p.clone());
+      p
+    } else {
+      return self.replace_node(theorem.clone(), body);
+    };
+    if let Some(title) = title {
+      // `ltx:tag` is no inline element: the title's number becomes a text in its font, as the title itself.
+      for tag in xml::element_nodes(&title) {
+        if name_is(&tag, "tag") {
+          let font = self.get_node_font(&tag).clone();
+          let mut text = self.rename_node(tag, "ltx:text", false)?;
+          self.set_node_font(&mut text, &font)?;
+        }
+      }
+      let font = self.get_node_font(&title).clone();
+      let mut runin = self.rename_node(title, "ltx:text", false)?;
+      self.set_node_font(&mut runin, &font)?;
+      runin.unlink();
+      match first_p.get_first_child() {
+        // libxml2 merges a text node added beside a text node: the space joins the text instead.
+        Some(mut first) if first.get_type() == Some(NodeType::TextNode) => {
+          first.add_prev_sibling(&mut runin)?;
+          let content = first.get_content();
+          first.set_content(&format!(" {}", content.trim_start()))?;
+        },
+        Some(mut first) => {
+          first.add_prev_sibling(&mut runin)?;
+          let mut space = Node::new_text(" ", &self.document)?;
+          first.add_prev_sibling(&mut space)?;
+        },
+        None => first_p.add_child(&mut runin)?,
+      }
+    }
+    if let Some(mut tags) = tags {
+      // Only the number's roles: the printed tag is in the run-in title already.
+      for tag in xml::element_nodes(&tags) {
+        if tag.get_attribute("role").is_none() {
+          self.remove_node(tag);
+        }
+      }
+      tags.unlink();
+      match first_p.get_first_child() {
+        Some(mut first) => first.add_prev_sibling(&mut tags)?,
+        None => first_p.add_child(&mut tags)?,
+      }
+    }
+    self.replace_node(theorem.clone(), body)?;
+    if let Some(id) = id {
+      if let Some(old) = first_p.get_attribute_ns("id", XML_NS) {
+        self.unrecord_id(&old);
+      }
+      self.set_attribute(&mut first_p, "xml:id", &id)?;
+    }
+    if let Some(labels) = labels {
+      first_p.set_attribute("labels", &labels)?;
+    }
+    Ok(())
   }
 
   /// Whether a `qname` element is open on the current ancestor chain (a font-switch `ltx:text`
@@ -3485,10 +3575,14 @@ impl Document {
     while n.get_type() == Some(NodeType::ElementNode) {
       self.close_element_at(&mut n)?;
       self.auto_collapse_children(&mut n)?;
+      let parent = n.get_parent();
+      if is_theorem_to_dissolve(&n) {
+        self.dissolve_theorem_in_abstract(&n)?;
+      }
       if *node == n {
         break;
       }
-      match n.get_parent() {
+      match parent {
         Some(parent) => {
           n = parent;
         },
@@ -4433,8 +4527,8 @@ impl Document {
           // Perl shares every one of these errors (same schema, no such autoOpen). Not inside a frontmatter
           // container (`ltx:abstract`, `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`, `ltx:creator`, or
           // anything in one): there the "isn't allowed" Error stands, as in Perl (main-session ruling 2026-10-17), but
-          // for a theorem or proof in an abstract (the next bridge, DG 2026-11-19); a kernel table of contents there
-          // goes after the container instead (`float_out_of_frontmatter`, OD #753).
+          // a theorem or proof in an abstract is dissolved into it (below, `dissolve_theorem_in_abstract`); a kernel
+          // table of contents there goes after the container instead (`float_out_of_frontmatter`, OD #753).
           // Witnesses 2406.11811, 2103.03402, 0806.0214, 2602.15784, 2301.10544, 1410.7242 (theorem in a quote),
           // 1412.2039, math0603642 (TOC in a quote), 2507.09788, 2307.10959, 2308.06338, 2410.15097, 0804.3724,
           // math0612590 (theorem in a footnote), 1310.0491 (an ltx:text). Guards
@@ -4445,17 +4539,6 @@ impl Document {
             applies:  |_cur, qsym| matches!(qsym, "ltx:theorem" | "ltx:proof" | "ltx:TOC"),
             attrs:    &[],
             holder:   outside_frontmatter_container,
-            close_up: true,
-          },
-          // …and a theorem or proof in an abstract (`ltx:abstract` holds Block.model, no Para.class): the same block,
-          // so the abstract stays whole and the theorem keeps its id, tags and title — real theorems (1908.02189,
-          // amsppt `\proclaim` math0111087) and metadata set as a `\newtheorem*{keywords}` (0804.0728) alike (DG
-          // 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1096). Guard `perfect_kernel_batchplacefix::theorem_in_abstract_stays`.
-          AutoOpenBridge {
-            chain:    &["ltx:inline-logical-block"],
-            applies:  |_cur, qsym| matches!(qsym, "ltx:theorem" | "ltx:proof"),
-            attrs:    &[],
-            holder:   within_abstract,
             close_up: true,
           },
         ];
@@ -4496,6 +4579,25 @@ impl Document {
             }
             return self.find_insertion_point_qsym(qsym, Some(last));
           }
+        }
+        // A theorem or proof in an abstract (Block.model: no Para.class) goes in as it is, closing the paragraph it
+        // meets as `\@trivlist` does; at its close it is dissolved into the abstract (`dissolve_theorem_in_abstract`).
+        if arena::with(qsym, |q| matches!(q, "ltx:theorem" | "ltx:proof"))
+          && within_abstract(&self.node)
+        {
+          let mut node = self.node.clone();
+          let mut close_to = None;
+          while node.get_type() == Some(NodeType::ElementNode) && can_auto_close(&node) {
+            close_to = Some(node.clone());
+            let Some(parent) = node.get_parent() else {
+              break;
+            };
+            node = parent;
+          }
+          if let Some(close_to_node) = close_to {
+            self.close_node_internal(&close_to_node)?;
+          }
+          return Ok(self.node.clone());
         }
         // Didn't find a legit place.
         // Perl Document.pm:1008-1010: "<qname> isn't allowed in <cur_qname>"
@@ -8781,7 +8883,7 @@ fn outside_frontmatter_container(node: &Node) -> bool {
   true
 }
 
-/// Whether the nearest frontmatter container around `node` is an `ltx:abstract` (a theorem's bridge there, OD #1096).
+/// Whether the nearest frontmatter container around `node` is an `ltx:abstract` (a theorem there is dissolved, OD #1097).
 fn within_abstract(node: &Node) -> bool {
   let mut cur = Some(node.clone());
   while let Some(n) = cur {
@@ -8800,6 +8902,16 @@ fn within_abstract(node: &Node) -> bool {
     cur = n.get_parent();
   }
   false
+}
+
+/// A closed `ltx:theorem`/`ltx:proof` whose container cannot hold it, inside an abstract (OD #1097).
+fn is_theorem_to_dissolve(node: &Node) -> bool {
+  with_node_qname(node, |q| matches!(q, "ltx:theorem" | "ltx:proof"))
+    && node.get_parent().is_some_and(|parent| {
+      parent.get_type() == Some(NodeType::ElementNode)
+        && !can_contain_qsym(get_node_qname(&parent), get_node_qname(node))
+        && within_abstract(&parent)
+    })
 }
 
 /// Whether `qname` is one of the sectioning units `\section`…`\subparagraph` open, by name (the auto-open bridges'

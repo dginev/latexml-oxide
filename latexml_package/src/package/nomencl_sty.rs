@@ -128,10 +128,10 @@ LoadDefinitions!({
     });
   // `\printnomenclature[width]` (:277-282): the list container, titled
   // `\nomname` (:53 and the babel captions :55-175), filled at post.
-  // In a box no glossary can open in — `{framed}`/`{mdframed}` in a `{table*}`, the IEEE nomenclature box of 1410.5511,
+  // In a float's box, where no glossary can open — `{framed}`/`{mdframed}` in a `{table*}`, the IEEE box of 1410.5511,
   // 1608.03855, 1704.00503, 1703.01217 — the list stays in the box, as pdflatex prints it there (`\section*` there is
   // only a bold run-in head): the bold `\nomname` and an `ltx:description` the MakeGlossary post fills
-  // (`class="ltx_nomenclature"`; DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1097). Guard
+  // (`class="ltx_nomenclature"`; DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1098). Guard
   // `perfect_kernel_batchplacefix::nomenclature_in_a_box_stays_in_the_box`.
   DefMacro!("\\printnomenclature", "\\@ifnextchar[{\\lx@printnomenclature}{\\lx@printnomenclature[]}");
   DefConstructor!("\\lx@printnomenclature[]", sub[document, _args, props] {
@@ -175,23 +175,21 @@ LoadDefinitions!({
     });
 });
 
-/// Whether an `ltx:glossary` can go at the insertion point or after closing only elements that auto-close. A box's
-/// capture (`{framed}`, a minipage) takes anything now and is moved into the box's block later: not there.
+/// Whether the sectional `ltx:glossary` is opened from the insertion point, as before: everywhere but in a float (a box
+/// in it, `{framed}`/`{mdframed}` in a `{table*}`, takes anything now and is moved into the float later), where it
+/// cannot go. Out of a minipage the glossary floats to the section as it did, error-free (PLACE397 review S1).
 fn glossary_reachable(doc: &Document) -> bool {
   let mut node = Some(doc.get_node().clone());
   while let Some(current) = node {
-    if current.get_type() == Some(NodeType::ElementNode) {
-      if document::is_capture_block(&current) {
-        return false;
-      }
-      if document::can_contain(&current, "ltx:glossary") {
-        return true;
-      }
-      if !document::can_auto_close(&current) {
-        return false;
-      }
+    if current.get_type() == Some(NodeType::ElementNode)
+      && !document::is_capture_block(&current)
+      && (document::can_contain(&current, "ltx:glossary") || !document::can_auto_close(&current))
+    {
+      return !document::with_node_qname(&current, |q| {
+        matches!(q, "ltx:figure" | "ltx:table" | "ltx:float")
+      });
     }
     node = current.get_parent();
   }
-  false
+  true
 }

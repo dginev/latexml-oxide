@@ -1,8 +1,8 @@
 //! Red/green guards for PLACEFIX: DG's 2026-11-19 rulings on run 397's misplaced-element clusters
-//! (`PLACE397/REPORT.md`). An undefined BibTeX month macro is a Warning, as bibtex(1) has it (OD #1095); a theorem or
-//! proof in an abstract stays there in an `ltx:inline-logical-block` (OD #1096; witnesses 1908.02189 T1, 0804.0728 T2);
-//! nomencl's list in a box keeps its box (OD #1097; 1410.5511); a bibliography inside a float or a heading floats out to
-//! the narrative level (OD #1098; cond-mat0108156, hep-ph0004227). Every repro is checked against pdflatex (its header).
+//! (`PLACE397/REPORT.md`). An undefined BibTeX month macro is a Warning, as bibtex(1) has it (OD #1096); a theorem or
+//! proof in an abstract is dissolved into it (OD #1097; witnesses 1908.02189 T1, 0804.0728 T2);
+//! nomencl's list in a float's box keeps its box (OD #1098; 1410.5511); a bibliography inside a float or a heading floats out to
+//! the narrative level (OD #1099; cond-mat0108156, hep-ph0004227). Every repro is checked against pdflatex (its header).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
 
 use crate::cluster::{convert_and_post_clean, convert_and_post_logging, convert_to_xml};
@@ -27,21 +27,37 @@ fn bibtex_undefined_month_is_a_warning() {
   );
 }
 
-/// block-model/theorem_in_abstract_stays: a theorem (labelled, referenced from the body), a proof and a
-/// `\newtheorem*{keywords}` in `{abstract}` (pdflatex 0 errors). Before: 3 Errors "isn't allowed in <ltx:abstract>".
+/// block-model/theorem_in_abstract_stays: in `{abstract}` a labelled theorem (referenced from the body) followed by
+/// text, an equation, a list and a quote, two theorems in a row, a proof and a `\newtheorem*{keywords}` (pdflatex 0
+/// errors). Before: 5 Errors "isn't allowed in <ltx:abstract>"; round 1 wrapped the rest of the abstract in an
+/// `ltx:inline-logical-block`. Now no theorem element: each title opens its first paragraph, which takes the id.
 #[test]
-fn theorem_in_abstract_stays() {
+fn theorem_in_abstract_is_dissolved() {
   let (log, xml) = convert_with(
     include_str!("../../../tools/perfect_kernel/repros/block-model/theorem_in_abstract_stays.tex"),
     None,
   );
   assert_eq!(error_count(&log), 0, "{log}");
   assert_eq!(warning_count(&log), 0, "{log}");
+  assert!(
+    !xml.contains("<theorem") && !xml.contains("<proof") && !xml.contains("inline-logical-block"),
+    "{xml}"
+  );
   assert_element(
     &xml,
     "abstract",
     &[],
-    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We prove one thing.</p><inline-logical-block><theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" labels="LABEL:t" xml:id="Thmtheorem1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag><text font="bold">.</text></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">Every <Math mode="inline" tex="x" text="x" xml:id="Thmtheorem1.p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> is <Math mode="inline" tex="x" text="x" xml:id="Thmtheorem1.p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math>.</text></p></para></theorem><proof><title class="ltx_runin" font="italic">Proof.</title><para xml:id="abstract1.p1"><p>Trivial.∎</p></para></proof><theorem class="ltx_theorem_keywords" inlist="thm theorem:keywords" xml:id="Thmkeywordsx1"><tags><tag>Keywords</tag><tag role="typerefnum">Keywords</tag></tags><title class="ltx_runin"><tag><text font="bold">Keywords</text></tag><text font="bold">.</text></title><para xml:id="Thmkeywordsx1.p1"><p><text font="italic">identity, reflexivity</text></p></para></theorem></inline-logical-block></abstract>"#,
+    r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>We prove one thing.</p><p labels="LABEL:t" xml:id="Thmtheorem1"><tags><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><text class="ltx_runin"><text font="bold">Theorem 1</text><text font="bold">.</text></text> <text font="italic">Every <Math mode="inline" tex="x" text="x" xml:id="Thmtheorem1.p1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> is <Math mode="inline" tex="x" text="x" xml:id="Thmtheorem1.p1.m2"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math>.</text></p><p>Then a display</p><equation xml:id="S0.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="x=x" text="x = x" xml:id="S0.E1.m1"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMath></Math></equation><p>and a list:</p><enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>One.</p></para></item></enumerate><quote><p>Quoted.</p></quote><p xml:id="Thmtheorem2"><tags><tag role="refnum">2</tag><tag role="typerefnum">Theorem 2</tag></tags><text class="ltx_runin"><text font="bold">Theorem 2</text><text font="bold">.</text></text> <text font="italic">Two.</text></p><p xml:id="Thmtheorem3"><tags><tag role="refnum">3</tag><tag role="typerefnum">Theorem 3</tag></tags><text class="ltx_runin"><text font="bold">Theorem 3</text><text font="bold">.</text></text> <text font="italic">Three.</text></p><p><text class="ltx_runin" font="italic">Proof.</text><text font="italic"> </text>Trivial.∎</p><p xml:id="Thmkeywordsx1"><tags><tag role="typerefnum">Keywords</tag></tags><text class="ltx_runin"><text font="bold">Keywords</text><text font="bold">.</text></text> <text font="italic">identity, reflexivity</text></p></abstract>"#,
+  );
+  // The body's `\ref{t}` resolves to the paragraph that took the theorem's id and number.
+  let post = convert_and_post_clean(
+    "../tools/perfect_kernel/repros/block-model/theorem_in_abstract_stays.tex",
+  );
+  assert_element(
+    &post,
+    "ref",
+    &[],
+    r#"<ref idref="Thmtheorem1" labelref="LABEL:t" title="Theorem 1 ‣ Abstract"><text class="ltx_ref_tag">1</text></ref>"#,
   );
 }
 
@@ -56,6 +72,27 @@ fn nomenclature_in_a_box_stays_in_the_box() {
     "table",
     &[],
     r##"<table fragid="S1.tab1" placement="t" xml:id="S1.tab1"><block cssstyle="padding:9.0pt" framecolor="#000000" framed="rectangle"><p><text font="bold">Nomenclature</text></p><description class="ltx_nomenclature" fragid="glo.nomenclature" xml:id="glo.nomenclature"><item fragid="glo.nomenclature.nomencl.1" xml:id="glo.nomenclature.nomencl.1"><tags><tag><Math mode="inline" tex="Q" text="Q" xml:id="S1.p1.m3a"><XMath><XMTok font="italic" role="UNKNOWN">Q</XMTok></XMath></Math></tag></tags><para><p>heat</p></para></item></description></block></table>"##,
+  );
+}
+
+/// block-model/nomenclature_in_a_minipage: the same list in a `{minipage}` in the text (pdflatex 0 errors) floats out
+/// to the section's glossary, error-free, as on base: the in-place list is for a float only (review S1).
+#[test]
+fn nomenclature_in_a_minipage_is_the_sectional_glossary() {
+  let (log, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/block-model/nomenclature_in_a_minipage.tex"),
+    None,
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  // The document's own child (two-space indent), after the paragraph, as on base.
+  assert!(xml.contains("</para>\n  <glossary "), "{xml}");
+  assert!(!xml.contains("ltx_nomenclature"), "{xml}");
+  assert_element(
+    &xml,
+    "glossary",
+    &[],
+    r#"<glossary lists="nomenclature" role="nomenclature" xml:id="glo.nomenclature"><title>Nomenclature</title></glossary>"#,
   );
 }
 

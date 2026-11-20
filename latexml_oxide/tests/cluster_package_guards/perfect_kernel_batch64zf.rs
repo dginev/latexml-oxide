@@ -57,7 +57,7 @@ pub(super) fn post_logged(xml: &str, source_directory: &str) -> (String, String)
 
 /// A1/A2: the `.bib` reader reports the malformed entry `b` (`Error:expected:}`, Pre/BibTeX.pm:248, resynced and dropped
 /// as bibtex drops it) and the undefined macro `apj`, its name kept — a Warning, as bibtex(1) warns, where Perl errs
-/// (BibTeX.pm:307-310; DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1095). `month = jan` resolves through plain.bst's own
+/// (BibTeX.pm:307-310; DG 2026-11-19, OXIDIZED_DESIGN_DIVERGENCES #1096). `month = jan` resolves through plain.bst's own
 /// `MACRO {jan}` (read by kpathsea), no diagnostic. Was: one Warning, and nothing for `apj`. Repro
 /// index-bib/bib_parse_errors_are_reported.
 #[test]
@@ -589,7 +589,7 @@ fn raw_sty_endgroup_against_hbox_is_one_error() {
 /// A2 with REVTeX's implicit style: with no `\bibliographystyle`, REVTeX writes its society's `\@bibstyle`
 /// (aps4-1.rtx:630 `apsrev\substyle@post`), so apsrev4-1.bst's `MACRO {prl}` defines `journal = prl`: no diagnostic,
 /// and the journal is the style's (2603.22119's shape). A name no style defines is still reported: a Warning, as bibtex
-/// warns (OXIDIZED_DESIGN_DIVERGENCES #1095).
+/// warns (OXIDIZED_DESIGN_DIVERGENCES #1096).
 #[test]
 fn revtex_implicit_bibstyle_defines_its_macros() {
   let tex = b"\\documentclass{revtex4-1}\n\\begin{document}\n\\cite{p,q}\n\\bibliography{refs}\n\\end{document}\n";

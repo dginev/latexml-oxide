@@ -809,7 +809,7 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       engine::latex_constructs::begin_bibliography(whatsit)?;
     },
-    // Out of a float or a heading it cannot open in (OXIDIZED_DESIGN_DIVERGENCES #1098; cond-mat0303649).
+    // Out of a float or a heading it cannot open in (OXIDIZED_DESIGN_DIVERGENCES #1099; cond-mat0303649).
     before_construct => sub[doc, _whatsit] {
       engine::latex_constructs::float_bibliography_out(doc)?;
     });

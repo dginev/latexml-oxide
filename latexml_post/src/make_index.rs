@@ -95,7 +95,7 @@ impl IndexTree {
   }
 }
 
-/// The lists MakeIndex fills: an empty index or glossary, and nomencl's list in a box, a `description` (OD #1097).
+/// The lists MakeIndex fills: an empty index or glossary, and nomencl's list in a box, a `description` (OD #1098).
 pub const PLACEHOLDERS: &str = "//ltx:index[not(ltx:indexlist)] | //ltx:glossary[not(ltx:glossarylist)] \
    | //ltx:description[contains(concat(' ', @class, ' '), ' ltx_nomenclature ')][not(ltx:item)]";
 
@@ -921,7 +921,7 @@ impl Processor for MakeIndex {
           doc.add_nodes(&mut node_mut, &[glist]);
         }
       } else if tag == "ltx:description" {
-        // nomencl's list in a box no glossary may open in (the binding's `ltx_nomenclature` description, OD #1097): the
+        // nomencl's list in a box no glossary may open in (the binding's `ltx_nomenclature` description, OD #1098): the
         // same entries, each an item whose tag is the symbol and whose paragraph is the description.
         let entries = self.get_glossary_entries("nomenclature", &id, true);
         let glist = self.make_glossary_list(&entries);

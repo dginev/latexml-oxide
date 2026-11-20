@@ -12717,8 +12717,8 @@ Excluded: the frontmatter containers `ltx:abstract`, `ltx:acknowledgements`, `lt
 `ltx:creator`, and anything inside one (document.rs `outside_frontmatter_container`) — a theorem or a TOC in an
 abstract is a frontmatter question (what the abstract's model should hold, whether the block belongs in the
 frontmatter at all) that the pending frontmatter study decides, so there the Perl/base "isn't allowed" Error stands
-(main-session ruling 2026-10-17) — but for a theorem or proof in an abstract, bridged since DG's ruling of 2026-11-19
-(#1096; guard `perfect_kernel_batch69c::theorem_in_abstract_is_bridged`).
+(main-session ruling 2026-10-17) — a theorem or proof in an abstract is dissolved into it since DG's ruling of 2026-11-19
+(#1097; guard `perfect_kernel_batch69c::theorem_in_abstract_is_dissolved_not_bridged`).
 Witnesses 2406.11811 2103.03402 0806.0214 2602.15784 2301.10544 1410.7242 (theorem in a quote), 1412.2039 math0603642
 (TOC in a quote), 2507.09788 2307.10959 2308.06338 2410.15097 0804.3724 math0612590 (theorem in a footnote), 1310.0491
 (an ltx:text). Repros block-model/para_level_in_{quote,note_wrapfigure}_opens_inline_logical_block; guards
@@ -21291,34 +21291,42 @@ Perl BibTeX.pm:307-310 raises an Error for a `.bib` macro neither the `.bib` nor
 style is known or not (DG 2026-11-19); the name is still kept as the value, so no word is lost. KNOWN_PERL_ERRORS #1292.
 Guard `perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning` (repro `index-bib/bibtex_month_undefined`).
 
-### 1097. A theorem or proof in an abstract stays in it, in an `ltx:inline-logical-block` (PLACEFIX)
+### 1097. A theorem or proof in an abstract is dissolved into it (PLACEFIX)
 
 `ltx:abstract` holds Block.model, no Para.class, so a `\newtheorem` environment, amsppt's `\proclaim`, plain's, elsart's
 algorithm or a `{proof}` in `{abstract}` erred "<ltx:theorem> isn't allowed in <ltx:abstract>" (Perl the same), the
 content kept in place. Run 397: 86 papers, real theorems (56: 1908.02189, 1604.07743, math0111087) and metadata set as
-`\newtheorem*{keywords}`/`{MSC}`/`{JEL}` (26: 0804.0728, 1405.7144, gr-qc0203098) alike. The auto-open bridge that
-wraps a theorem in a quote or a note (#689) now applies inside an abstract too (`document.rs` `within_abstract`): the
-theorem keeps its id (a `\ref` resolves), tags and title, and the abstract stays one abstract (DG 2026-11-19). The
-schema decided the element: `ltx:para` is Para.class and cannot go in an abstract, `ltx:inline-logical-block` is
-Misc.class with Para.model. No name-matching: a keywords "theorem" is a theorem in the output, as in the PDF. The other
-frontmatter containers (keywords, acknowledgements, classification, creator) keep the Error, and a table of contents
-in an abstract still goes after it (#753). Not covered: an `\abstract{…}` that never ends (math0006149, 1108.5171;
-TeX sets the whole paper in it). Guard `perfect_kernel_batchplacefix::theorem_in_abstract_stays` (repro
-`block-model/theorem_in_abstract_stays`); `perfect_kernel_batch69c::theorem_in_abstract_is_bridged` (was
-`…_is_not_bridged`, the control kept until this ruling).
+`\newtheorem*{keywords}`/`{MSC}`/`{JEL}` (26: 0804.0728, 1405.7144, gr-qc0203098) alike. A theorem in an abstract is
+markup used for a typesetting goal, and the abstract is what stays (DG 2026-11-19): no theorem element is kept. It is
+inserted without the Error and dissolved at its close (`Document::dissolve_theorem_in_abstract`, from
+`close_node_internal`): its title becomes a run-in `ltx:text` (its own fonts, bold for amsthm's plain style) at the
+start of its first `ltx:p`, as the PDF prints it, and its paragraphs' blocks (`ltx:p`, lists, equations, quotes) go
+into the abstract in its place. That paragraph takes the theorem's `xml:id`, `labels` and number tags (the `role`d
+`ltx:tag`s), so a `\ref` still resolves and prints "1" — attributes and a child the schema does not give `ltx:p`, set
+as they are. A theorem in a quote in an abstract is dissolved into the quote; elsewhere the #689 bridge is unchanged.
+No name-matching: a keywords "theorem" is dissolved as a real one. The other frontmatter containers (keywords,
+acknowledgements, classification, creator) keep the Error, and a table of contents in an abstract still goes after it
+(#753). An `\abstract{…}` that never ends (math0006149, 1108.5171; TeX sets the whole paper in it) is covered alike:
+its theorems dissolve and the rest renders as on base; its bibliography's Error remains (T3/B5, out of scope).
+Guards `perfect_kernel_batchplacefix::theorem_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_stays`:
+text, equation, list and quote after a theorem, two in a row, a proof, `\newtheorem*`),
+`perfect_kernel_batch69c::theorem_in_abstract_is_dissolved_not_bridged` (a theorem in a quote in the abstract).
 
-### 1098. nomencl's list in a box keeps its box (PLACEFIX)
+### 1098. nomencl's list in a float's box keeps its box (PLACEFIX)
 
 `\printnomenclature` in a `{framed}`/`{mdframed}` inside a `{table*}` (the IEEE nomenclature box: 111 of run 397's 137
 glossary-cluster papers; 1410.5511, 1608.03855, 1704.00503, 1703.01217) built a sectional `ltx:glossary` where no
 glossary may go ("<ltx:glossary> isn't allowed in <ltx:block>"; Perl: no list at all, its raw nomencl stops at
-scrbase). pdflatex prints the list in the box. Where `ltx:glossary` cannot open, the binding (`nomencl_sty.rs`, #234)
+scrbase). pdflatex prints the list in the box. Where the nearest container that does not auto-close (past a box's
+capture) is a float (`ltx:figure`, `ltx:table`, `ltx:float`), the binding (`nomencl_sty.rs` `glossary_reachable`, #234)
 now emits in place a paragraph with the bold `\nomname` and an empty `ltx:description class="ltx_nomenclature"` with
 the glossary's id, which MakeGlossary (`make_index.rs`) fills with the same entries as items: the symbol the item's tag,
-the description its paragraph (DG 2026-11-19). The schema allows a `glossarylist` only in an `ltx:glossary`. At section
-level the list stays the sectional glossary. Residual: a list in `{IEEEkeywords}` or another inline container (G2/G3,
-about 9 papers: 1606.00288, 2111.12783) still errs, a paragraph being no more allowed there. Guard
-`perfect_kernel_batchplacefix::nomenclature_in_a_box_stays_in_the_box` (repro `block-model/nomenclature_in_a_box`).
+the description its paragraph (DG 2026-11-19). The schema allows a `glossarylist` only in an `ltx:glossary`. Everywhere
+else the sectional glossary is opened as before: at section level, and out of a minipage, where it floats to the
+section error-free. Residual: a list in `{IEEEkeywords}` or another frontmatter container (G2/G3, about 9 papers:
+1606.00288, 2111.12783) keeps its Error. Guards `perfect_kernel_batchplacefix::{nomenclature_in_a_box_stays_in_the_box,
+nomenclature_in_a_minipage_is_the_sectional_glossary}` (repros `block-model/nomenclature_in_a_box`,
+`nomenclature_in_a_minipage`).
 
 ### 1099. A bibliography inside a float or a heading floats out to the narrative level (PLACEFIX)
 
