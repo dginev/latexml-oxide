@@ -12887,7 +12887,8 @@ extra command the copy defines and the paper uses is undefined (aas_macros.sty:9
 from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.tex` route), before the load's
 `\AtEndOfClass`/`\AtEndOfPackage` code runs. A binding the user supplies in the search paths (a `.rhai` beside the
 document or under `--path`, the chain's first tier) is no stand-in: it is the file itself, as Perl's first `.ltxml`
-found is, and no copy is read after it (`stands_in_for_an_author_file` asks `state::local_binding_file`; #947, guards
+found is, and the stand-in's copy is not read after it (`stands_in_for_an_author_file` asks `state::local_binding_file`;
+a renamed copy that `\ProvidesClass` the same name is still read on the provides route, row R; #947, guards
 `cluster_cli::user_binding_precedence`). The rules:
 0. *Identity.* The copy is read only when it is the file the binding stands in for (content.rs
    `copy_is_the_stood_in_file`; 72a r3 rule): (a) its `\Provides(Expl)?(Class|Package|File)` names the binding that

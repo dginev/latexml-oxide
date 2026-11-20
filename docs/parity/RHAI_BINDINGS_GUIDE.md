@@ -26,6 +26,7 @@ Name the file after the package or class it binds, plus `.rhai`: `mypkg.sty.rhai
   file is searched **first**, so `article.cls.rhai` overrides the built-in `article` binding: it is the only binding
   loaded for that name, as Perl loads the first `.ltxml` its search path finds. Where the built-in binding stands in
   for a journal's class the paper ships (`lipics-v2021.cls`), the shipped copy is not read after yours either (#947).
+  To have it read after all, end your binding with `InputDefinitions("lipics-v2021", #{type: "cls", noltxml: true})`.
 - Or load it for every document: `--preload=mypkg.sty` finds `mypkg.sty.rhai` the same way.
 - A `.rhai` file is code: treat one that ships with a source tree as you would any untrusted program
   ([`../release/SAFETY.md`](../release/SAFETY.md) §H). Builds that want the capability gone entirely can use

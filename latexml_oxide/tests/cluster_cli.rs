@@ -2175,8 +2175,14 @@ mod user_binding_precedence {
       .current_dir(dir)
       .output()
       .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\n{stderr}",
+      output.status.code()
+    );
     let html = std::fs::read_to_string(dir.join("out.html")).unwrap_or_default();
-    (html, String::from_utf8_lossy(&output.stderr).into_owned())
+    (html, stderr)
   }
 
   /// Only the user binding `binding` (a `.rhai` file name) took effect: it loaded once, and neither the built-in binding
@@ -2207,7 +2213,7 @@ mod user_binding_precedence {
     assert!(
       !stderr
         .lines()
-        .any(|line| line.contains("Processing definitions") && line.contains(copy)),
+        .any(|line| line.contains("Processing definitions") && line.contains(&format!("{copy}..."))),
       "the shipped copy must not be read after the user binding:\n{stderr}"
     );
     assert!(
