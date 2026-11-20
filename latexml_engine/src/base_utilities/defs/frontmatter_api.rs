@@ -798,8 +798,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
             to the body")
       );
     }
-    // An abstract still open at `\end{document}` and not split keeps its theorems (an environment `\begin{abstract}`
-    // never ended, cond-mat9410055; document.rs `ABSTRACT_OPEN_AT_END`, OD #1097)
+    // An abstract still open at `\end{document}` keeps the theorems left in it (an environment `\begin{abstract}` never
+    // ended, cond-mat9410055; document.rs `ABSTRACT_OPEN_AT_END`, OD #1097); a split one has moved them to the body
     if take_open_at_end() && tag == "ltx:abstract" {
       frontmatter_set_entry_attr(&tag, index, document::ABSTRACT_OPEN_AT_END, "true");
     }
