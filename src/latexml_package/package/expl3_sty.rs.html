@@ -122,208 +122,223 @@
 <a href=#122 id=122 data-nosnippet>122</a>  // about to run will actually `\input expl3-code.tex` (cascade-prone
 <a href=#123 id=123 data-nosnippet>123</a>  // raw load) or short-circuit it (dump path). The guard inside
 <a href=#124 id=124 data-nosnippet>124</a>  // expl3.sty is `\ifx\csname tex_let:D\endcsname\relax {\input ...}`,
-<a href=#125 id=125 data-nosnippet>125</a>  // so an undefined `\tex_let:D` here ⇒ raw load will fire.
-<a href=#126 id=126 data-nosnippet>126</a>  </span><span class="kw">let </span>raw_load_will_run = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\tex_let:D"</span>)).is_none();
-<a href=#127 id=127 data-nosnippet>127</a>
-<a href=#128 id=128 data-nosnippet>128</a>  <span class="comment">// In degraded no-dump mode the raw expl3.sty load re-runs expl3-code.tex,
-<a href=#129 id=129 data-nosnippet>129</a>  // whose group-end codepoint block (L33074-33180) trips known raw-load-only
-<a href=#130 id=130 data-nosnippet>130</a>  // cascades that the dump avoids and that Perl's own raw-load does not produce
-<a href=#131 id=131 data-nosnippet>131</a>  // (Perl converts `\usepackage{fvextra}` with 0 errors). They leave expl3's
-<a href=#132 id=132 data-nosnippet>132</a>  // runtime usable — the document still converts correctly — but their benign
-<a href=#133 id=133 data-nosnippet>133</a>  // error/fatal records would otherwise count against the CONVERSION, so a
-<a href=#134 id=134 data-nosnippet>134</a>  // perfectly good no-dump run reports "Conversion failed: 1 fatal error" (issue
-<a href=#135 id=135 data-nosnippet>135</a>  // #651: a bare `\usepackage{fvextra}`, whose output is a healthy
-<a href=#136 id=136 data-nosnippet>136</a>  // `&lt;p&gt;text&lt;/p&gt;`). Snapshot the report across this raw load and restore it —
-<a href=#137 id=137 data-nosnippet>137</a>  // and mute the spurious stderr lines — so only the DOCUMENT's own diagnostics
-<a href=#138 id=138 data-nosnippet>138</a>  // reach the conversion verdict. Dump mode short-circuits the re-load
-<a href=#139 id=139 data-nosnippet>139</a>  // (`raw_load_will_run == false`), so this is scoped strictly to the degraded
-<a href=#140 id=140 data-nosnippet>140</a>  // fallback; canvas/parity always run on the dump.
-<a href=#141 id=141 data-nosnippet>141</a>  // Perl `local $LaTeXML::IGNORE_ERRORS = 1`: the scope drops each record
-<a href=#142 id=142 data-nosnippet>142</a>  // WHOLE (line and count together), so the log can never show `Error:` lines
-<a href=#143 id=143 data-nosnippet>143</a>  // the summary does not count. (It used to snapshot/restore the counts while
-<a href=#144 id=144 data-nosnippet>144</a>  // the unconditional Error/Fatal lines still reached the log — a log/status
-<a href=#145 id=145 data-nosnippet>145</a>  // inconsistency, diagnostics audit 2026-09-20.)
-<a href=#146 id=146 data-nosnippet>146</a>  // The `undefined`/`unexpected` tallies are direct `note_status` calls gated
-<a href=#147 id=147 data-nosnippet>147</a>  // by the state-level suppressors (as the dump build sets them, ini_tex.rs),
-<a href=#148 id=148 data-nosnippet>148</a>  // so those ride along: a summary naming an undefined macro with no
-<a href=#149 id=149 data-nosnippet>149</a>  // `Error:undefined:` line is the very inconsistency this scope exists to
-<a href=#150 id=150 data-nosnippet>150</a>  // prevent.
-<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="kw">let </span>ignore_scope = raw_load_will_run.then(IgnoreDiagnosticsScope::new);
-<a href=#152 id=152 data-nosnippet>152</a>  <span class="kw">if </span>raw_load_will_run {
-<a href=#153 id=153 data-nosnippet>153</a>    assign_value(<span class="string">"SUPPRESS_UNDEFINED_ERRORS"</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
-<a href=#154 id=154 data-nosnippet>154</a>    assign_value(<span class="string">"SUPPRESS_UNEXPECTED_ERRORS"</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
-<a href=#155 id=155 data-nosnippet>155</a>  }
-<a href=#156 id=156 data-nosnippet>156</a>
-<a href=#157 id=157 data-nosnippet>157</a>  <span class="kw">let </span>loaded = with_expl_syntax_restored(|| <span class="prelude-val">Ok</span>(input_definitions(<span class="string">"expl3"</span>, <span class="macro">NewDefault!</span>(InputDefinitionOptions,
-<a href=#158 id=158 data-nosnippet>158</a>    noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>))))));
-<a href=#159 id=159 data-nosnippet>159</a>
-<a href=#160 id=160 data-nosnippet>160</a>  <span class="kw">if </span>raw_load_will_run {
-<a href=#161 id=161 data-nosnippet>161</a>    assign_value(<span class="string">"SUPPRESS_UNDEFINED_ERRORS"</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
-<a href=#162 id=162 data-nosnippet>162</a>    assign_value(<span class="string">"SUPPRESS_UNEXPECTED_ERRORS"</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
-<a href=#163 id=163 data-nosnippet>163</a>  }
-<a href=#164 id=164 data-nosnippet>164</a>  <span class="kw">let </span>muted = ignore_scope.as_ref().map(IgnoreDiagnosticsScope::dropped).unwrap_or_default();
-<a href=#165 id=165 data-nosnippet>165</a>  drop(ignore_scope);
-<a href=#166 id=166 data-nosnippet>166</a>  <span class="kw">if </span>raw_load_will_run {
-<a href=#167 id=167 data-nosnippet>167</a>    report_muted_reload(muted, <span class="kw">match </span>loaded {
-<a href=#168 id=168 data-nosnippet>168</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Err</span>(e)) | <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Some</span>(e),
-<a href=#169 id=169 data-nosnippet>169</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Ok</span>(<span class="kw">_</span>)) =&gt; <span class="prelude-val">None</span>,
-<a href=#170 id=170 data-nosnippet>170</a>    })<span class="question-mark">?</span>;
-<a href=#171 id=171 data-nosnippet>171</a>  }
-<a href=#172 id=172 data-nosnippet>172</a>
-<a href=#173 id=173 data-nosnippet>173</a>  <span class="comment">// Post-load fixup for `\__kernel_msg_info:nnxx`. xparse-2018-04-12.sty
-<a href=#174 id=174 data-nosnippet>174</a>  // (line 101, 112, 218, 222) calls `\__kernel_msg_info:nnxx { xparse }
-<a href=#175 id=175 data-nosnippet>175</a>  // { define-command }` etc. for every `\NewDocumentCommand`, but
-<a href=#176 id=176 data-nosnippet>176</a>  // expl3-code.tex defines only the `:nnee` variant — `:nnxx` is a
-<a href=#177 id=177 data-nosnippet>177</a>  // deprecated argument-spec letter (`x` = e-expanded, replaced by
-<a href=#178 id=178 data-nosnippet>178</a>  // `e` in modern expl3) that xparse-2018-04-12 expects but expl3
-<a href=#179 id=179 data-nosnippet>179</a>  // never auto-generates. Without this stub the CS is undefined →
-<a href=#180 id=180 data-nosnippet>180</a>  // generate_error_stub installs an `&lt;ltx:ERROR&gt;` Constructor and
-<a href=#181 id=181 data-nosnippet>181</a>  // EVERY `\NewDocumentCommand` invocation leaks the error element
-<a href=#182 id=182 data-nosnippet>182</a>  // plus the unused message-body args into document text.
-<a href=#183 id=183 data-nosnippet>183</a>  //
-<a href=#184 id=184 data-nosnippet>184</a>  // We define `\__kernel_msg_info:nnxx` as a 4-arg no-op, matching
-<a href=#185 id=185 data-nosnippet>185</a>  // Perl LaTeXML's effective end-state (`\msg_info:nnxx` is a
-<a href=#186 id=186 data-nosnippet>186</a>  // log-only path; we have no log channel so a no-op is the closest
-<a href=#187 id=187 data-nosnippet>187</a>  // equivalent).
-<a href=#188 id=188 data-nosnippet>188</a>  //
-<a href=#189 id=189 data-nosnippet>189</a>  // The historical "\cs_end: cascade" that this stub also masked was
-<a href=#190 id=190 data-nosnippet>190</a>  // root-caused and fixed in latexml_core/src/binding/content.rs:
-<a href=#191 id=191 data-nosnippet>191</a>  // \@pushfilename now runs BEFORE \@currname/\@currext are set,
-<a href=#192 id=192 data-nosnippet>192</a>  // matching latex.ltx:15518-15519. With that fix the prior need to
-<a href=#193 id=193 data-nosnippet>193</a>  // also stub `\g__file_record_seq` is gone.
-<a href=#194 id=194 data-nosnippet>194</a>  //
-<a href=#195 id=195 data-nosnippet>195</a>  // GATE: only install when the raw .sty actually re-loaded
-<a href=#196 id=196 data-nosnippet>196</a>  // expl3-code.tex. On the dump path the guard short-circuits the
-<a href=#197 id=197 data-nosnippet>197</a>  // re-load and the dump already provides the right state.
-<a href=#198 id=198 data-nosnippet>198</a>  </span><span class="kw">if </span>raw_load_will_run {
-<a href=#199 id=199 data-nosnippet>199</a>    with_expl_catcodes(|| raw_tex(<span class="string">r"\protected\gdef\__kernel_msg_info:nnxx#1#2#3#4{}"</span>))<span class="question-mark">?</span>;
-<a href=#200 id=200 data-nosnippet>200</a>  }
-<a href=#201 id=201 data-nosnippet>201</a>
-<a href=#202 id=202 data-nosnippet>202</a>  <span class="comment">// expl3 case-folding override.
+<a href=#125 id=125 data-nosnippet>125</a>  // so an undefined `\tex_let:D` here ⇒ raw load will fire. A tree without expl3.sty (no TeX Live at all) loads
+<a href=#126 id=126 data-nosnippet>126</a>  // nothing, so nothing is muted: its `missing_file` Warning is reported, as Perl reports it.
+<a href=#127 id=127 data-nosnippet>127</a>  </span><span class="kw">let </span>no_expl3_layer = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\tex_let:D"</span>)).is_none();
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="kw">let </span>raw_load_will_run = no_expl3_layer &amp;&amp; find_file(<span class="string">"expl3.sty"</span>, <span class="prelude-val">None</span>).is_some();
+<a href=#129 id=129 data-nosnippet>129</a>
+<a href=#130 id=130 data-nosnippet>130</a>  <span class="comment">// In degraded no-dump mode the raw expl3.sty load re-runs expl3-code.tex,
+<a href=#131 id=131 data-nosnippet>131</a>  // whose group-end codepoint block (L33074-33180) trips known raw-load-only
+<a href=#132 id=132 data-nosnippet>132</a>  // cascades that the dump avoids and that Perl's own raw-load does not produce
+<a href=#133 id=133 data-nosnippet>133</a>  // (Perl converts `\usepackage{fvextra}` with 0 errors). They leave expl3's
+<a href=#134 id=134 data-nosnippet>134</a>  // runtime usable — the document still converts correctly — but their benign
+<a href=#135 id=135 data-nosnippet>135</a>  // error/fatal records would otherwise count against the CONVERSION, so a
+<a href=#136 id=136 data-nosnippet>136</a>  // perfectly good no-dump run reports "Conversion failed: 1 fatal error" (issue
+<a href=#137 id=137 data-nosnippet>137</a>  // #651: a bare `\usepackage{fvextra}`, whose output is a healthy
+<a href=#138 id=138 data-nosnippet>138</a>  // `&lt;p&gt;text&lt;/p&gt;`). Snapshot the report across this raw load and restore it —
+<a href=#139 id=139 data-nosnippet>139</a>  // and mute the spurious stderr lines — so only the DOCUMENT's own diagnostics
+<a href=#140 id=140 data-nosnippet>140</a>  // reach the conversion verdict. Dump mode short-circuits the re-load
+<a href=#141 id=141 data-nosnippet>141</a>  // (`raw_load_will_run == false`), so this is scoped strictly to the degraded
+<a href=#142 id=142 data-nosnippet>142</a>  // fallback; canvas/parity always run on the dump.
+<a href=#143 id=143 data-nosnippet>143</a>  // Perl `local $LaTeXML::IGNORE_ERRORS = 1`: the scope drops each record
+<a href=#144 id=144 data-nosnippet>144</a>  // WHOLE (line and count together), so the log can never show `Error:` lines
+<a href=#145 id=145 data-nosnippet>145</a>  // the summary does not count. (It used to snapshot/restore the counts while
+<a href=#146 id=146 data-nosnippet>146</a>  // the unconditional Error/Fatal lines still reached the log — a log/status
+<a href=#147 id=147 data-nosnippet>147</a>  // inconsistency, diagnostics audit 2026-09-20.)
+<a href=#148 id=148 data-nosnippet>148</a>  // The `undefined`/`unexpected` tallies are direct `note_status` calls gated
+<a href=#149 id=149 data-nosnippet>149</a>  // by the state-level suppressors (as the dump build sets them, ini_tex.rs),
+<a href=#150 id=150 data-nosnippet>150</a>  // so those ride along: a summary naming an undefined macro with no
+<a href=#151 id=151 data-nosnippet>151</a>  // `Error:undefined:` line is the very inconsistency this scope exists to
+<a href=#152 id=152 data-nosnippet>152</a>  // prevent.
+<a href=#153 id=153 data-nosnippet>153</a>  </span><span class="kw">let </span>ignore_scope = raw_load_will_run.then(IgnoreDiagnosticsScope::new);
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="kw">if </span>raw_load_will_run {
+<a href=#155 id=155 data-nosnippet>155</a>    assign_value(<span class="string">"SUPPRESS_UNDEFINED_ERRORS"</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+<a href=#156 id=156 data-nosnippet>156</a>    assign_value(<span class="string">"SUPPRESS_UNEXPECTED_ERRORS"</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+<a href=#157 id=157 data-nosnippet>157</a>  }
+<a href=#158 id=158 data-nosnippet>158</a>
+<a href=#159 id=159 data-nosnippet>159</a>  <span class="kw">let </span>loaded = with_expl_syntax_restored(|| <span class="prelude-val">Ok</span>(input_definitions(<span class="string">"expl3"</span>, <span class="macro">NewDefault!</span>(InputDefinitionOptions,
+<a href=#160 id=160 data-nosnippet>160</a>    noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>))))));
+<a href=#161 id=161 data-nosnippet>161</a>
+<a href=#162 id=162 data-nosnippet>162</a>  <span class="kw">if </span>raw_load_will_run {
+<a href=#163 id=163 data-nosnippet>163</a>    assign_value(<span class="string">"SUPPRESS_UNDEFINED_ERRORS"</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#164 id=164 data-nosnippet>164</a>    assign_value(<span class="string">"SUPPRESS_UNEXPECTED_ERRORS"</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#165 id=165 data-nosnippet>165</a>  }
+<a href=#166 id=166 data-nosnippet>166</a>  <span class="kw">let </span>muted = ignore_scope.as_ref().map(IgnoreDiagnosticsScope::dropped).unwrap_or_default();
+<a href=#167 id=167 data-nosnippet>167</a>  drop(ignore_scope);
+<a href=#168 id=168 data-nosnippet>168</a>  <span class="kw">if </span>raw_load_will_run {
+<a href=#169 id=169 data-nosnippet>169</a>    report_muted_reload(muted, <span class="kw">match </span>loaded {
+<a href=#170 id=170 data-nosnippet>170</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Err</span>(e)) | <span class="prelude-val">Err</span>(e) =&gt; <span class="prelude-val">Some</span>(e),
+<a href=#171 id=171 data-nosnippet>171</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Ok</span>(<span class="kw">_</span>)) =&gt; <span class="prelude-val">None</span>,
+<a href=#172 id=172 data-nosnippet>172</a>    })<span class="question-mark">?</span>;
+<a href=#173 id=173 data-nosnippet>173</a>  } <span class="kw">else if </span>no_expl3_layer {
+<a href=#174 id=174 data-nosnippet>174</a>    <span class="comment">// No expl3 to load (no dump, no TeX tree): its syntax switch alone, the catcode regime of expl3-code.tex:245-277
+<a href=#175 id=175 data-nosnippet>175</a>    // (TL 2025), so our bindings' expl3-syntax names (array_sty.rs's `\@@__tbl`) still read as names.
+<a href=#176 id=176 data-nosnippet>176</a>    </span>raw_tex(
+<a href=#177 id=177 data-nosnippet>177</a>      <span class="string">r"\protected\def\lx@ExplSyntaxOff@idle{}\let\ExplSyntaxOff\lx@ExplSyntaxOff@idle
+<a href=#178 id=178 data-nosnippet>178</a>\protected\def\ExplSyntaxOn{\ifx\ExplSyntaxOff\lx@ExplSyntaxOff@idle
+<a href=#179 id=179 data-nosnippet>179</a>    \protected\edef\ExplSyntaxOff{\catcode9=\the\catcode9 \catcode32=\the\catcode32
+<a href=#180 id=180 data-nosnippet>180</a>      \catcode34=\the\catcode34 \catcode58=\the\catcode58 \catcode94=\the\catcode94
+<a href=#181 id=181 data-nosnippet>181</a>      \catcode95=\the\catcode95 \catcode124=\the\catcode124 \catcode126=\the\catcode126
+<a href=#182 id=182 data-nosnippet>182</a>      \endlinechar=\the\endlinechar\relax \let\ExplSyntaxOff\lx@ExplSyntaxOff@idle}\fi
+<a href=#183 id=183 data-nosnippet>183</a>  \catcode9=9 \catcode32=9 \catcode34=12 \catcode58=11 \catcode94=7 \catcode95=11 \catcode124=12
+<a href=#184 id=184 data-nosnippet>184</a>  \catcode126=10 \endlinechar=32\relax}"</span>,
+<a href=#185 id=185 data-nosnippet>185</a>    )<span class="question-mark">?</span>;
+<a href=#186 id=186 data-nosnippet>186</a>  }
+<a href=#187 id=187 data-nosnippet>187</a>
+<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// Post-load fixup for `\__kernel_msg_info:nnxx`. xparse-2018-04-12.sty
+<a href=#189 id=189 data-nosnippet>189</a>  // (line 101, 112, 218, 222) calls `\__kernel_msg_info:nnxx { xparse }
+<a href=#190 id=190 data-nosnippet>190</a>  // { define-command }` etc. for every `\NewDocumentCommand`, but
+<a href=#191 id=191 data-nosnippet>191</a>  // expl3-code.tex defines only the `:nnee` variant — `:nnxx` is a
+<a href=#192 id=192 data-nosnippet>192</a>  // deprecated argument-spec letter (`x` = e-expanded, replaced by
+<a href=#193 id=193 data-nosnippet>193</a>  // `e` in modern expl3) that xparse-2018-04-12 expects but expl3
+<a href=#194 id=194 data-nosnippet>194</a>  // never auto-generates. Without this stub the CS is undefined →
+<a href=#195 id=195 data-nosnippet>195</a>  // generate_error_stub installs an `&lt;ltx:ERROR&gt;` Constructor and
+<a href=#196 id=196 data-nosnippet>196</a>  // EVERY `\NewDocumentCommand` invocation leaks the error element
+<a href=#197 id=197 data-nosnippet>197</a>  // plus the unused message-body args into document text.
+<a href=#198 id=198 data-nosnippet>198</a>  //
+<a href=#199 id=199 data-nosnippet>199</a>  // We define `\__kernel_msg_info:nnxx` as a 4-arg no-op, matching
+<a href=#200 id=200 data-nosnippet>200</a>  // Perl LaTeXML's effective end-state (`\msg_info:nnxx` is a
+<a href=#201 id=201 data-nosnippet>201</a>  // log-only path; we have no log channel so a no-op is the closest
+<a href=#202 id=202 data-nosnippet>202</a>  // equivalent).
 <a href=#203 id=203 data-nosnippet>203</a>  //
-<a href=#204 id=204 data-nosnippet>204</a>  // The kernel `\__kernel_codepoint_case:nn` walks per-codepoint case maps
-<a href=#205 id=205 data-nosnippet>205</a>  // built from `c__codepoint_&lt;case&gt;_&lt;cp&gt;_tl` constants. Those are populated
-<a href=#206 id=206 data-nosnippet>206</a>  // by reading UnicodeData.txt / CaseFolding.txt / SpecialCasing.txt during
-<a href=#207 id=207 data-nosnippet>207</a>  // expl3-code.tex's group-end block at L33074-33180. Our raw expl3 load
-<a href=#208 id=208 data-nosnippet>208</a>  // currently fails to open those files (the `ior_open` chain trips on a
-<a href=#209 id=209 data-nosnippet>209</a>  // file_input dispatch issue tracked separately), leaving the codepoint
-<a href=#210 id=210 data-nosnippet>210</a>  // tables empty — so `\str_lowercase:n {Hello}` returns "Hello" unchanged.
-<a href=#211 id=211 data-nosnippet>211</a>  //
-<a href=#212 id=212 data-nosnippet>212</a>  // Override the kernel function with a Rust impl using `char::to_lowercase`
-<a href=#213 id=213 data-nosnippet>213</a>  // and `char::to_uppercase` from std. Returns a triple `{cp1}{cp2}{cp3}`
-<a href=#214 id=214 data-nosnippet>214</a>  // matching expl3's expected return contract — first slot is the primary
-<a href=#215 id=215 data-nosnippet>215</a>  // result codepoint, slots 2/3 hold combining chars for compound mappings
-<a href=#216 id=216 data-nosnippet>216</a>  // (e.g. "ß" → "SS" upper has slot1=S, slot2=S; we model only single-cp
-<a href=#217 id=217 data-nosnippet>217</a>  // mappings here, leaving slots 2/3 blank). For ASCII this is exact; for
-<a href=#218 id=218 data-nosnippet>218</a>  // non-Latin scripts that map to multi-char sequences (Latin extended,
-<a href=#219 id=219 data-nosnippet>219</a>  // Greek, etc.) Rust's std char::to_lowercase yields the right primary cp.
-<a href=#220 id=220 data-nosnippet>220</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\__kernel_codepoint_case:nn"</span>), <span class="string">"{}{}"</span>, sub[(case_type, cp_str)] {
-<a href=#221 id=221 data-nosnippet>221</a>    <span class="kw">let </span>case = case_type.to_string().to_lowercase();
-<a href=#222 id=222 data-nosnippet>222</a>    <span class="kw">let </span>cp_text = cp_str.to_string();
-<a href=#223 id=223 data-nosnippet>223</a>    <span class="kw">let </span>cp_n: u32 = cp_text.trim().parse().unwrap_or(<span class="number">0</span>);
-<a href=#224 id=224 data-nosnippet>224</a>    <span class="kw">let </span>result_cp = <span class="kw">if </span>cp_n == <span class="number">0 </span>{
-<a href=#225 id=225 data-nosnippet>225</a>      <span class="number">0u32
-<a href=#226 id=226 data-nosnippet>226</a>    </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(c) = char::from_u32(cp_n) {
-<a href=#227 id=227 data-nosnippet>227</a>      <span class="kw">let </span>folded: String = <span class="kw">match </span>case.as_str() {
-<a href=#228 id=228 data-nosnippet>228</a>        <span class="string">"lowercase" </span>| <span class="string">"casefold" </span>=&gt; c.to_lowercase().collect(),
-<a href=#229 id=229 data-nosnippet>229</a>        <span class="string">"uppercase" </span>| <span class="string">"titlecase" </span>=&gt; c.to_uppercase().collect(),
-<a href=#230 id=230 data-nosnippet>230</a>        <span class="kw">_ </span>=&gt; c.to_string(),
-<a href=#231 id=231 data-nosnippet>231</a>      };
-<a href=#232 id=232 data-nosnippet>232</a>      folded.chars().next().map(|fc| fc <span class="kw">as </span>u32).unwrap_or(cp_n)
-<a href=#233 id=233 data-nosnippet>233</a>    } <span class="kw">else </span>{
-<a href=#234 id=234 data-nosnippet>234</a>      cp_n
-<a href=#235 id=235 data-nosnippet>235</a>    };
-<a href=#236 id=236 data-nosnippet>236</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokenize!</span>(TeXString::assembled(<span class="macro">format!</span>(<span class="string">"{{{}}}{{}}{{}}"</span>, result_cp))))
-<a href=#237 id=237 data-nosnippet>237</a>  });
-<a href=#238 id=238 data-nosnippet>238</a>
-<a href=#239 id=239 data-nosnippet>239</a>  <span class="comment">// expl3 historical-alias: `\hbox_unpack_clear:N` was deprecated
-<a href=#240 id=240 data-nosnippet>240</a>  // around 2018 in favor of `\hbox_unpack_drop:N` (both call `\unhbox`
-<a href=#241 id=241 data-nosnippet>241</a>  // — read out the box's contents AND clear/drop the box itself).
-<a href=#242 id=242 data-nosnippet>242</a>  // Modern l3kernel no longer ships the alias, so our dump doesn't
-<a href=#243 id=243 data-nosnippet>243</a>  // contain it, but third-party expl3 packages (mmacells.sty,
-<a href=#244 id=244 data-nosnippet>244</a>  // letgut-lstlang.sty) still call the deprecated name. Add the
-<a href=#245 id=245 data-nosnippet>245</a>  // alias post-dump so those packages load cleanly. Witness:
-<a href=#246 id=246 data-nosnippet>246</a>  // arXiv:2002.07146 (uses `\usepackage{mmacells}`).
-<a href=#247 id=247 data-nosnippet>247</a>  // (See also `\hbox_unpack:N` in dump = `\unhcopy` which is the
-<a href=#248 id=248 data-nosnippet>248</a>  // non-clearing version.)
-<a href=#249 id=249 data-nosnippet>249</a>  </span><span class="macro">Let!</span>(<span class="string">"\\hbox_unpack_clear:N"</span>, <span class="string">"\\hbox_unpack_drop:N"</span>);
-<a href=#250 id=250 data-nosnippet>250</a>
-<a href=#251 id=251 data-nosnippet>251</a>  <span class="comment">// NOTE (issue 421): there used to be a `RawTeX!` block here `\edef`-ing the
-<a href=#252 id=252 data-nosnippet>252</a>  // seven `\c_sys_{minute,hour,day,month,year}_int` / `\c_sys_timestamp_str` /
-<a href=#253 id=253 data-nosnippet>253</a>  // `\c_sys_shell_escape_int` constants, on the belief that they stay undefined
-<a href=#254 id=254 data-nosnippet>254</a>  // because we never fire `\everyjob`. **Do not re-add it.** Both halves of that
-<a href=#255 id=255 data-nosnippet>255</a>  // belief were wrong, measured on the current engine:
-<a href=#256 id=256 data-nosnippet>256</a>  //
-<a href=#257 id=257 data-nosnippet>257</a>  //  * They ARE defined, at package-load time and with live values — probing
-<a href=#258 id=258 data-nosnippet>258</a>  //    `\number\csname c_sys_year_int\endcsname` right after `\usepackage{xparse}`
-<a href=#259 id=259 data-nosnippet>259</a>  //    gives the real year, and `c_sys_minute_int` advances between runs —
-<a href=#260 id=260 data-nosnippet>260</a>  //    `latex.rs` fires `\__kernel_sys_everyjob:` at the end of the format load,
-<a href=#261 id=261 data-nosnippet>261</a>  //    which also sets `\c_sys_jobname_str` from `\tex_jobname:D` (the `Let!` this
-<a href=#262 id=262 data-nosnippet>262</a>  //    binding once carried for it, driver 2406.14142, went in 57aa: the
-<a href=#263 id=263 data-nosnippet>263</a>  //    witness converts byte-identically without it). The raw-load branch
-<a href=#264 id=264 data-nosnippet>264</a>  //    (`LATEXML_NODUMP=1`) defines them the same way (probed 57aa: year, shell
-<a href=#265 id=265 data-nosnippet>265</a>  //    escape and job name all set, 0 errors).
-<a href=#266 id=266 data-nosnippet>266</a>  //  * The block never actually ran. Written as raw TeX, it was tokenized with
-<a href=#267 id=267 data-nosnippet>267</a>  //    the AMBIENT catcodes, and after the expl3 load the document regime has
-<a href=#268 id=268 data-nosnippet>268</a>  //    `_` = SUB — so `\edef\c_sys_minute_int{0}` parsed as `\edef\c` with
-<a href=#269 id=269 data-nosnippet>269</a>  //    parameter text `_sys_minute_int`. It defined none of the constants and
-<a href=#270 id=270 data-nosnippet>270</a>  //    instead REBOUND LaTeX's cedilla accent `\c` (`\meaning\c` =
-<a href=#271 id=271 data-nosnippet>271</a>  //    `macro:_sys_shell_escape_int-&gt;0`), so every later `Fran\c cois` rendered
-<a href=#272 id=272 data-nosnippet>272</a>  //    "Fran0cois" — silently, 0 errors, where Perl renders "François".
-<a href=#273 id=273 data-nosnippet>273</a>  //    Witness arXiv 2605.11579; guard
-<a href=#274 id=274 data-nosnippet>274</a>  //    `expl3_load_does_not_clobber_cedilla_accent`.
-<a href=#275 id=275 data-nosnippet>275</a>  //
-<a href=#276 id=276 data-nosnippet>276</a>  // Fixing only the tokenization would have been worse than deleting: the
-<a href=#277 id=277 data-nosnippet>277</a>  // constants would then overwrite expl3's live clock values with frozen
-<a href=#278 id=278 data-nosnippet>278</a>  // dummies (and a hardcoded year). Perl's expl3.sty.ltxml has no such block
-<a href=#279 id=279 data-nosnippet>279</a>  // either — it is three lines. Any FUTURE expl3-syntax raw TeX added to this
-<a href=#280 id=280 data-nosnippet>280</a>  // file must go through `with_expl_catcodes`.
-<a href=#281 id=281 data-nosnippet>281</a>
-<a href=#282 id=282 data-nosnippet>282</a>  // expl3 l3regex is handled NATIVELY by the real expl3 VM (loaded from
-<a href=#283 id=283 data-nosnippet>283</a>  // expl3-code.tex: \__regex_compile:n / \__regex_build:n / \__regex_match:n,
-<a href=#284 id=284 data-nosnippet>284</a>  // etc.), which now runs correctly under our gullet — so \regex_match,
-<a href=#285 id=285 data-nosnippet>285</a>  // \regex_count, \regex_replace_all, \regex_extract_once and their \seq_*
-<a href=#286 id=286 data-nosnippet>286</a>  // results all work faithfully. A former Rust-`regex`-crate SHIM bypassed the
-<a href=#287 id=287 data-nosnippet>287</a>  // VM (its \if_int_compare:w-driven expansion used to stall); it was REMOVED
-<a href=#288 id=288 data-nosnippet>288</a>  // 2026-06-20 after intervening gullet fixes made the real VM pass — verified
-<a href=#289 id=289 data-nosnippet>289</a>  // on its original cascade witness 2406.14142 (21 errors -&gt; 0) and the
-<a href=#290 id=290 data-nosnippet>290</a>  // expl3/regex_match + expl3/regex_native test fixtures. (Shim in git history.)
-<a href=#291 id=291 data-nosnippet>291</a>
-<a href=#292 id=292 data-nosnippet>292</a>  // The raw load's catcodes are restored by `with_expl_syntax_restored` above (`:`/`_` back from expl3's LETTER, `~`
-<a href=#293 id=293 data-nosnippet>293</a>  // back from its SPACE: a later `\usepackage[english]{babel}` ran `\initiate@active@char{~}` with `~` at catcode
-<a href=#294 id=294 data-nosnippet>294</a>  // 10, an `expected:&lt;relationaltoken&gt;` cascade; minimal repro `\usepackage{expl3}\usepackage[english]{babel}`).
-<a href=#295 id=295 data-nosnippet>295</a></span>});
+<a href=#204 id=204 data-nosnippet>204</a>  // The historical "\cs_end: cascade" that this stub also masked was
+<a href=#205 id=205 data-nosnippet>205</a>  // root-caused and fixed in latexml_core/src/binding/content.rs:
+<a href=#206 id=206 data-nosnippet>206</a>  // \@pushfilename now runs BEFORE \@currname/\@currext are set,
+<a href=#207 id=207 data-nosnippet>207</a>  // matching latex.ltx:15518-15519. With that fix the prior need to
+<a href=#208 id=208 data-nosnippet>208</a>  // also stub `\g__file_record_seq` is gone.
+<a href=#209 id=209 data-nosnippet>209</a>  //
+<a href=#210 id=210 data-nosnippet>210</a>  // GATE: only install when the raw .sty actually re-loaded
+<a href=#211 id=211 data-nosnippet>211</a>  // expl3-code.tex. On the dump path the guard short-circuits the
+<a href=#212 id=212 data-nosnippet>212</a>  // re-load and the dump already provides the right state.
+<a href=#213 id=213 data-nosnippet>213</a>  </span><span class="kw">if </span>raw_load_will_run {
+<a href=#214 id=214 data-nosnippet>214</a>    with_expl_catcodes(|| raw_tex(<span class="string">r"\protected\gdef\__kernel_msg_info:nnxx#1#2#3#4{}"</span>))<span class="question-mark">?</span>;
+<a href=#215 id=215 data-nosnippet>215</a>  }
+<a href=#216 id=216 data-nosnippet>216</a>
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="comment">// expl3 case-folding override.
+<a href=#218 id=218 data-nosnippet>218</a>  //
+<a href=#219 id=219 data-nosnippet>219</a>  // The kernel `\__kernel_codepoint_case:nn` walks per-codepoint case maps
+<a href=#220 id=220 data-nosnippet>220</a>  // built from `c__codepoint_&lt;case&gt;_&lt;cp&gt;_tl` constants. Those are populated
+<a href=#221 id=221 data-nosnippet>221</a>  // by reading UnicodeData.txt / CaseFolding.txt / SpecialCasing.txt during
+<a href=#222 id=222 data-nosnippet>222</a>  // expl3-code.tex's group-end block at L33074-33180. Our raw expl3 load
+<a href=#223 id=223 data-nosnippet>223</a>  // currently fails to open those files (the `ior_open` chain trips on a
+<a href=#224 id=224 data-nosnippet>224</a>  // file_input dispatch issue tracked separately), leaving the codepoint
+<a href=#225 id=225 data-nosnippet>225</a>  // tables empty — so `\str_lowercase:n {Hello}` returns "Hello" unchanged.
+<a href=#226 id=226 data-nosnippet>226</a>  //
+<a href=#227 id=227 data-nosnippet>227</a>  // Override the kernel function with a Rust impl using `char::to_lowercase`
+<a href=#228 id=228 data-nosnippet>228</a>  // and `char::to_uppercase` from std. Returns a triple `{cp1}{cp2}{cp3}`
+<a href=#229 id=229 data-nosnippet>229</a>  // matching expl3's expected return contract — first slot is the primary
+<a href=#230 id=230 data-nosnippet>230</a>  // result codepoint, slots 2/3 hold combining chars for compound mappings
+<a href=#231 id=231 data-nosnippet>231</a>  // (e.g. "ß" → "SS" upper has slot1=S, slot2=S; we model only single-cp
+<a href=#232 id=232 data-nosnippet>232</a>  // mappings here, leaving slots 2/3 blank). For ASCII this is exact; for
+<a href=#233 id=233 data-nosnippet>233</a>  // non-Latin scripts that map to multi-char sequences (Latin extended,
+<a href=#234 id=234 data-nosnippet>234</a>  // Greek, etc.) Rust's std char::to_lowercase yields the right primary cp.
+<a href=#235 id=235 data-nosnippet>235</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\__kernel_codepoint_case:nn"</span>), <span class="string">"{}{}"</span>, sub[(case_type, cp_str)] {
+<a href=#236 id=236 data-nosnippet>236</a>    <span class="kw">let </span>case = case_type.to_string().to_lowercase();
+<a href=#237 id=237 data-nosnippet>237</a>    <span class="kw">let </span>cp_text = cp_str.to_string();
+<a href=#238 id=238 data-nosnippet>238</a>    <span class="kw">let </span>cp_n: u32 = cp_text.trim().parse().unwrap_or(<span class="number">0</span>);
+<a href=#239 id=239 data-nosnippet>239</a>    <span class="kw">let </span>result_cp = <span class="kw">if </span>cp_n == <span class="number">0 </span>{
+<a href=#240 id=240 data-nosnippet>240</a>      <span class="number">0u32
+<a href=#241 id=241 data-nosnippet>241</a>    </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(c) = char::from_u32(cp_n) {
+<a href=#242 id=242 data-nosnippet>242</a>      <span class="kw">let </span>folded: String = <span class="kw">match </span>case.as_str() {
+<a href=#243 id=243 data-nosnippet>243</a>        <span class="string">"lowercase" </span>| <span class="string">"casefold" </span>=&gt; c.to_lowercase().collect(),
+<a href=#244 id=244 data-nosnippet>244</a>        <span class="string">"uppercase" </span>| <span class="string">"titlecase" </span>=&gt; c.to_uppercase().collect(),
+<a href=#245 id=245 data-nosnippet>245</a>        <span class="kw">_ </span>=&gt; c.to_string(),
+<a href=#246 id=246 data-nosnippet>246</a>      };
+<a href=#247 id=247 data-nosnippet>247</a>      folded.chars().next().map(|fc| fc <span class="kw">as </span>u32).unwrap_or(cp_n)
+<a href=#248 id=248 data-nosnippet>248</a>    } <span class="kw">else </span>{
+<a href=#249 id=249 data-nosnippet>249</a>      cp_n
+<a href=#250 id=250 data-nosnippet>250</a>    };
+<a href=#251 id=251 data-nosnippet>251</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokenize!</span>(TeXString::assembled(<span class="macro">format!</span>(<span class="string">"{{{}}}{{}}{{}}"</span>, result_cp))))
+<a href=#252 id=252 data-nosnippet>252</a>  });
+<a href=#253 id=253 data-nosnippet>253</a>
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="comment">// expl3 historical-alias: `\hbox_unpack_clear:N` was deprecated
+<a href=#255 id=255 data-nosnippet>255</a>  // around 2018 in favor of `\hbox_unpack_drop:N` (both call `\unhbox`
+<a href=#256 id=256 data-nosnippet>256</a>  // — read out the box's contents AND clear/drop the box itself).
+<a href=#257 id=257 data-nosnippet>257</a>  // Modern l3kernel no longer ships the alias, so our dump doesn't
+<a href=#258 id=258 data-nosnippet>258</a>  // contain it, but third-party expl3 packages (mmacells.sty,
+<a href=#259 id=259 data-nosnippet>259</a>  // letgut-lstlang.sty) still call the deprecated name. Add the
+<a href=#260 id=260 data-nosnippet>260</a>  // alias post-dump so those packages load cleanly. Witness:
+<a href=#261 id=261 data-nosnippet>261</a>  // arXiv:2002.07146 (uses `\usepackage{mmacells}`).
+<a href=#262 id=262 data-nosnippet>262</a>  // (See also `\hbox_unpack:N` in dump = `\unhcopy` which is the
+<a href=#263 id=263 data-nosnippet>263</a>  // non-clearing version.)
+<a href=#264 id=264 data-nosnippet>264</a>  </span><span class="macro">Let!</span>(<span class="string">"\\hbox_unpack_clear:N"</span>, <span class="string">"\\hbox_unpack_drop:N"</span>);
+<a href=#265 id=265 data-nosnippet>265</a>
+<a href=#266 id=266 data-nosnippet>266</a>  <span class="comment">// NOTE (issue 421): there used to be a `RawTeX!` block here `\edef`-ing the
+<a href=#267 id=267 data-nosnippet>267</a>  // seven `\c_sys_{minute,hour,day,month,year}_int` / `\c_sys_timestamp_str` /
+<a href=#268 id=268 data-nosnippet>268</a>  // `\c_sys_shell_escape_int` constants, on the belief that they stay undefined
+<a href=#269 id=269 data-nosnippet>269</a>  // because we never fire `\everyjob`. **Do not re-add it.** Both halves of that
+<a href=#270 id=270 data-nosnippet>270</a>  // belief were wrong, measured on the current engine:
+<a href=#271 id=271 data-nosnippet>271</a>  //
+<a href=#272 id=272 data-nosnippet>272</a>  //  * They ARE defined, at package-load time and with live values — probing
+<a href=#273 id=273 data-nosnippet>273</a>  //    `\number\csname c_sys_year_int\endcsname` right after `\usepackage{xparse}`
+<a href=#274 id=274 data-nosnippet>274</a>  //    gives the real year, and `c_sys_minute_int` advances between runs —
+<a href=#275 id=275 data-nosnippet>275</a>  //    `latex.rs` fires `\__kernel_sys_everyjob:` at the end of the format load,
+<a href=#276 id=276 data-nosnippet>276</a>  //    which also sets `\c_sys_jobname_str` from `\tex_jobname:D` (the `Let!` this
+<a href=#277 id=277 data-nosnippet>277</a>  //    binding once carried for it, driver 2406.14142, went in 57aa: the
+<a href=#278 id=278 data-nosnippet>278</a>  //    witness converts byte-identically without it). The raw-load branch
+<a href=#279 id=279 data-nosnippet>279</a>  //    (`LATEXML_NODUMP=1`) defines them the same way (probed 57aa: year, shell
+<a href=#280 id=280 data-nosnippet>280</a>  //    escape and job name all set, 0 errors).
+<a href=#281 id=281 data-nosnippet>281</a>  //  * The block never actually ran. Written as raw TeX, it was tokenized with
+<a href=#282 id=282 data-nosnippet>282</a>  //    the AMBIENT catcodes, and after the expl3 load the document regime has
+<a href=#283 id=283 data-nosnippet>283</a>  //    `_` = SUB — so `\edef\c_sys_minute_int{0}` parsed as `\edef\c` with
+<a href=#284 id=284 data-nosnippet>284</a>  //    parameter text `_sys_minute_int`. It defined none of the constants and
+<a href=#285 id=285 data-nosnippet>285</a>  //    instead REBOUND LaTeX's cedilla accent `\c` (`\meaning\c` =
+<a href=#286 id=286 data-nosnippet>286</a>  //    `macro:_sys_shell_escape_int-&gt;0`), so every later `Fran\c cois` rendered
+<a href=#287 id=287 data-nosnippet>287</a>  //    "Fran0cois" — silently, 0 errors, where Perl renders "François".
+<a href=#288 id=288 data-nosnippet>288</a>  //    Witness arXiv 2605.11579; guard
+<a href=#289 id=289 data-nosnippet>289</a>  //    `expl3_load_does_not_clobber_cedilla_accent`.
+<a href=#290 id=290 data-nosnippet>290</a>  //
+<a href=#291 id=291 data-nosnippet>291</a>  // Fixing only the tokenization would have been worse than deleting: the
+<a href=#292 id=292 data-nosnippet>292</a>  // constants would then overwrite expl3's live clock values with frozen
+<a href=#293 id=293 data-nosnippet>293</a>  // dummies (and a hardcoded year). Perl's expl3.sty.ltxml has no such block
+<a href=#294 id=294 data-nosnippet>294</a>  // either — it is three lines. Any FUTURE expl3-syntax raw TeX added to this
+<a href=#295 id=295 data-nosnippet>295</a>  // file must go through `with_expl_catcodes`.
 <a href=#296 id=296 data-nosnippet>296</a>
-<a href=#297 id=297 data-nosnippet>297</a><span class="attr">#[cfg(test)]
-<a href=#298 id=298 data-nosnippet>298</a></span><span class="kw">mod </span>tests {
-<a href=#299 id=299 data-nosnippet>299</a>  <span class="kw">use </span>latexml_core::{
-<a href=#300 id=300 data-nosnippet>300</a>    common::error::{LogStatus, get_status, initialize_report},
-<a href=#301 id=301 data-nosnippet>301</a>    state::{State, StateOptions, set_state},
-<a href=#302 id=302 data-nosnippet>302</a>  };
-<a href=#303 id=303 data-nosnippet>303</a>
-<a href=#304 id=304 data-nosnippet>304</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#305 id=305 data-nosnippet>305</a>
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="doccomment">/// #825: the muted reload says what it muted — a Warning when it completed, an Error when it stopped early, nothing
-<a href=#307 id=307 data-nosnippet>307</a>  /// when it muted nothing.
-<a href=#308 id=308 data-nosnippet>308</a>  </span><span class="attr">#[test]
-<a href=#309 id=309 data-nosnippet>309</a>  </span><span class="kw">fn </span>a_muted_expl3_reload_is_counted() {
-<a href=#310 id=310 data-nosnippet>310</a>    set_state(State::new(StateOptions::default()));
-<a href=#311 id=311 data-nosnippet>311</a>    <span class="kw">let </span>rows = [
-<a href=#312 id=312 data-nosnippet>312</a>      (IgnoredRecords { errors: <span class="number">3</span>, fatals: <span class="number">1 </span>}, <span class="bool-val">false</span>, (<span class="number">1</span>, <span class="number">0</span>)),
-<a href=#313 id=313 data-nosnippet>313</a>      (IgnoredRecords { errors: <span class="number">0</span>, fatals: <span class="number">0 </span>}, <span class="bool-val">false</span>, (<span class="number">0</span>, <span class="number">0</span>)),
-<a href=#314 id=314 data-nosnippet>314</a>      (IgnoredRecords { errors: <span class="number">2</span>, fatals: <span class="number">1 </span>}, <span class="bool-val">true</span>, (<span class="number">0</span>, <span class="number">1</span>)),
-<a href=#315 id=315 data-nosnippet>315</a>    ];
-<a href=#316 id=316 data-nosnippet>316</a>    <span class="kw">for </span>(muted, stopped, (warnings, errors)) <span class="kw">in </span>rows {
-<a href=#317 id=317 data-nosnippet>317</a>      initialize_report();
-<a href=#318 id=318 data-nosnippet>318</a>      <span class="kw">let </span>stopped = stopped.then(|| Error::from(<span class="string">"Excessive recursion (synthetic)"</span>));
-<a href=#319 id=319 data-nosnippet>319</a>      report_muted_reload(muted, stopped).expect(<span class="string">"below MAX_ERRORS"</span>);
-<a href=#320 id=320 data-nosnippet>320</a>      <span class="macro">assert_eq!</span>(
-<a href=#321 id=321 data-nosnippet>321</a>        (get_status(LogStatus::Warning), get_status(LogStatus::Error)),
-<a href=#322 id=322 data-nosnippet>322</a>        (warnings, errors),
-<a href=#323 id=323 data-nosnippet>323</a>        <span class="string">"{muted:?}"
-<a href=#324 id=324 data-nosnippet>324</a>      </span>);
-<a href=#325 id=325 data-nosnippet>325</a>    }
-<a href=#326 id=326 data-nosnippet>326</a>    initialize_report();
-<a href=#327 id=327 data-nosnippet>327</a>  }
-<a href=#328 id=328 data-nosnippet>328</a>}
+<a href=#297 id=297 data-nosnippet>297</a>  // expl3 l3regex is handled NATIVELY by the real expl3 VM (loaded from
+<a href=#298 id=298 data-nosnippet>298</a>  // expl3-code.tex: \__regex_compile:n / \__regex_build:n / \__regex_match:n,
+<a href=#299 id=299 data-nosnippet>299</a>  // etc.), which now runs correctly under our gullet — so \regex_match,
+<a href=#300 id=300 data-nosnippet>300</a>  // \regex_count, \regex_replace_all, \regex_extract_once and their \seq_*
+<a href=#301 id=301 data-nosnippet>301</a>  // results all work faithfully. A former Rust-`regex`-crate SHIM bypassed the
+<a href=#302 id=302 data-nosnippet>302</a>  // VM (its \if_int_compare:w-driven expansion used to stall); it was REMOVED
+<a href=#303 id=303 data-nosnippet>303</a>  // 2026-06-20 after intervening gullet fixes made the real VM pass — verified
+<a href=#304 id=304 data-nosnippet>304</a>  // on its original cascade witness 2406.14142 (21 errors -&gt; 0) and the
+<a href=#305 id=305 data-nosnippet>305</a>  // expl3/regex_match + expl3/regex_native test fixtures. (Shim in git history.)
+<a href=#306 id=306 data-nosnippet>306</a>
+<a href=#307 id=307 data-nosnippet>307</a>  // The raw load's catcodes are restored by `with_expl_syntax_restored` above (`:`/`_` back from expl3's LETTER, `~`
+<a href=#308 id=308 data-nosnippet>308</a>  // back from its SPACE: a later `\usepackage[english]{babel}` ran `\initiate@active@char{~}` with `~` at catcode
+<a href=#309 id=309 data-nosnippet>309</a>  // 10, an `expected:&lt;relationaltoken&gt;` cascade; minimal repro `\usepackage{expl3}\usepackage[english]{babel}`).
+<a href=#310 id=310 data-nosnippet>310</a></span>});
+<a href=#311 id=311 data-nosnippet>311</a>
+<a href=#312 id=312 data-nosnippet>312</a><span class="attr">#[cfg(test)]
+<a href=#313 id=313 data-nosnippet>313</a></span><span class="kw">mod </span>tests {
+<a href=#314 id=314 data-nosnippet>314</a>  <span class="kw">use </span>latexml_core::{
+<a href=#315 id=315 data-nosnippet>315</a>    common::error::{LogStatus, get_status, initialize_report},
+<a href=#316 id=316 data-nosnippet>316</a>    state::{State, StateOptions, set_state},
+<a href=#317 id=317 data-nosnippet>317</a>  };
+<a href=#318 id=318 data-nosnippet>318</a>
+<a href=#319 id=319 data-nosnippet>319</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#320 id=320 data-nosnippet>320</a>
+<a href=#321 id=321 data-nosnippet>321</a>  <span class="doccomment">/// #825: the muted reload says what it muted — a Warning when it completed, an Error when it stopped early, nothing
+<a href=#322 id=322 data-nosnippet>322</a>  /// when it muted nothing.
+<a href=#323 id=323 data-nosnippet>323</a>  </span><span class="attr">#[test]
+<a href=#324 id=324 data-nosnippet>324</a>  </span><span class="kw">fn </span>a_muted_expl3_reload_is_counted() {
+<a href=#325 id=325 data-nosnippet>325</a>    set_state(State::new(StateOptions::default()));
+<a href=#326 id=326 data-nosnippet>326</a>    <span class="kw">let </span>rows = [
+<a href=#327 id=327 data-nosnippet>327</a>      (IgnoredRecords { errors: <span class="number">3</span>, fatals: <span class="number">1 </span>}, <span class="bool-val">false</span>, (<span class="number">1</span>, <span class="number">0</span>)),
+<a href=#328 id=328 data-nosnippet>328</a>      (IgnoredRecords { errors: <span class="number">0</span>, fatals: <span class="number">0 </span>}, <span class="bool-val">false</span>, (<span class="number">0</span>, <span class="number">0</span>)),
+<a href=#329 id=329 data-nosnippet>329</a>      (IgnoredRecords { errors: <span class="number">2</span>, fatals: <span class="number">1 </span>}, <span class="bool-val">true</span>, (<span class="number">0</span>, <span class="number">1</span>)),
+<a href=#330 id=330 data-nosnippet>330</a>    ];
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="kw">for </span>(muted, stopped, (warnings, errors)) <span class="kw">in </span>rows {
+<a href=#332 id=332 data-nosnippet>332</a>      initialize_report();
+<a href=#333 id=333 data-nosnippet>333</a>      <span class="kw">let </span>stopped = stopped.then(|| Error::from(<span class="string">"Excessive recursion (synthetic)"</span>));
+<a href=#334 id=334 data-nosnippet>334</a>      report_muted_reload(muted, stopped).expect(<span class="string">"below MAX_ERRORS"</span>);
+<a href=#335 id=335 data-nosnippet>335</a>      <span class="macro">assert_eq!</span>(
+<a href=#336 id=336 data-nosnippet>336</a>        (get_status(LogStatus::Warning), get_status(LogStatus::Error)),
+<a href=#337 id=337 data-nosnippet>337</a>        (warnings, errors),
+<a href=#338 id=338 data-nosnippet>338</a>        <span class="string">"{muted:?}"
+<a href=#339 id=339 data-nosnippet>339</a>      </span>);
+<a href=#340 id=340 data-nosnippet>340</a>    }
+<a href=#341 id=341 data-nosnippet>341</a>    initialize_report();
+<a href=#342 id=342 data-nosnippet>342</a>  }
+<a href=#343 id=343 data-nosnippet>343</a>}
 </code></pre></div></section></main></body></html>
