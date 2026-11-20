@@ -3171,13 +3171,16 @@ the two undefined-CS paths (`gullet::read_x_token`, `stomach::
 invoke_token_undefined`) *before* the error is raised: if the ambient kernel
 dump defines the control sequence, load `LaTeX.pool` and retry the token; else
 take the ordinary bounded `Error:undefined` path. Fires at most once per
-session, never during `--init` dump-build, and not at all on the degraded
-no-dump branch of `LoadFormat('latex')`. It also retired the two Rust-only
+session and never during `--init` dump-build. On the degraded no-dump branch of
+`LoadFormat('latex')` there is no catalogue, so the first undefined control
+sequence of a LaTeX document loads the format and the same post-load check
+decides (OXIDIZED_DESIGN_DIVERGENCES #1095). It also retired the two Rust-only
 trigger accretions (`\UseRawInputEncoding`, `\DocumentMetadata`). Guards
 `preclass_iffileexists_test` / `preclass_kernel_cs_test`
-(`latexml_oxide/tests/structure/`) and
-`nodump_leaves_pre_documentclass_kernel_cs_undefined`
-(`latexml_oxide/tests/cluster_package_guards/preclass_kernel_autoload.rs`).
+(`latexml_oxide/tests/structure/`),
+`latex_route_pre_documentclass_kernel_cs_autoloads`
+(`latexml_oxide/tests/cluster_package_guards/preclass_kernel_autoload.rs`) and,
+without a dump, `dump_gate_init::nodump_latex_branch_converts_healthily`.
 
 Candidate to upstream, though not as a straight port: Perl has no dump to use as
 the membership oracle, so the upstream-shaped fix is to extend
@@ -21967,7 +21970,50 @@ year (`purify$ #-1 #2 substring$`):
 Rust: the year part is BibTeX's (OXIDIZED_DESIGN_DIVERGENCES #1090). Guard
 `perfect_kernel_batchcrash397b::alpha_label_year_is_bibtex_s`.
 
-## 1289. An undefined BibTeX macro is an Error where bibtex warns
+## 1289. A UnicodeMath annotation whose string is `0` is dropped
+
+MathML.pm:128 `elsif (my $string = $$secondary{string})` adds a string secondary only when it is true, and in Perl
+the string `0` is false, so `--unicodemath` gives every formula an `<m:annotation>` except one that reads `0`; the
+standalone path tests the same way (Post.pm:394), so `--format=xml --unicodemath` leaves `$0$` an empty `<Math/>`:
+
+```latex
+\documentclass{article}
+\begin{document}$0$ and $x$\end{document}
+% latexmlc --format=html5 --unicodemath
+% Perl: <math …><mn>0</mn></math> and <math …><semantics><mi>x</mi><annotation encoding="application/x-unicodemath">𝑥</annotation></semantics></math>
+```
+
+Rust: only an empty string is skipped, at both sites (`MathML::combine_parallel`, `process_math_node`). Guard
+`cluster_cli::unicodemath_output::unicodemath_annotates_presentation_mathml`.
+
+## 1290. `latexmlmath --unicodemath` prints the string XML-escaped
+
+bin/latexmlmath:248 hands `outputText` the `text()` node of the converted `ltx:text`, and `outputText` (L285) prints a
+node as `toString(1)`, its XML serialisation, so `<` and `&` come out as `&lt;` and `&amp;` in what L445 documents as
+"an unstructured Unicode string":
+
+```sh
+latexmlmath --unicodemath=- 'a<b \& c'
+# Perl: 𝑎&lt;𝑏&amp;𝑐
+```
+
+Rust: `latexmlmath_oxide --unicodemath` prints the string itself. Guard
+`cluster_cli::unicodemath_output::latexmlmath_prints_unicodemath_as_plain_text`.
+
+## 1291. UnicodeMath reads an nth root's degree and radicand swapped
+
+The XMath of `\sqrt[3]{x}` is `XMApp(nth-root, 3, x)`, degree first, but UnicodeMath.pm:390-397 takes the radicand
+`$_[2]` as the degree and the degree `$_[1]` as the radicand:
+
+```sh
+latexmlmath --unicodemath=- '\sqrt[3]{x}'
+# Perl: \root 𝑥\of3   (expected ∛𝑥)
+```
+
+Rust: `unicode_math.rs` reads the degree from the first argument. Guard
+`unicode_math::tests::nth_root_reads_degree_then_radicand`.
+
+## 1292. An undefined BibTeX macro is an Error where bibtex warns
 
 BibTeX.pm:307-310 raises `Error:unexpected:<name>` for a `.bib` macro that is not defined; bibtex(1) warns ("string name
 … is undefined") and uses the empty string:
@@ -21979,5 +22025,5 @@ BibTeX.pm:307-310 raises `Error:unexpected:<name>` for a `.bib` macro that is no
 % Perl: Error:unexpected:june; bibtex: Warning--string name "june" is undefined
 ```
 
-Rust: a Warning, the name kept as the value (OXIDIZED_DESIGN_DIVERGENCES #1095). Guard
+Rust: a Warning, the name kept as the value (OXIDIZED_DESIGN_DIVERGENCES #1096). Guard
 `perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning`.

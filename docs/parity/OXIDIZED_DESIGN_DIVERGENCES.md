@@ -21201,15 +21201,97 @@ e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the o
 `perfect_kernel_batch69b::robustify_ltx_protected_native_cite` (repros `package-bindings/robustify_of_a_native_binding`,
 `robustify_of_a_tex_primitive_errs`).
 
-### 1095. An undefined BibTeX macro is a Warning, as bibtex(1) has it (PLACEFIX)
+### 1093. Presentation MathML stays on when another math format is named; the others annotate it
+
+**Rule.** Wherever Presentation MathML is defaulted on (the HTML formats, `--post`, an XML input) it stays on unless
+`--nopmml` is given, and `--cmml`, `--unicodemath` and `--mathtex` add to it, in that fixed order, as
+`<m:annotation-xml>`/`<m:annotation>` of one `<m:semantics>`. With `--nopmml`, Content MathML is the primary, else
+UnicodeMath alone (an `ltx:text` per formula, as Perl's).
+
+**Perl.** Config.pm:566-570 defaults `pmml` only when no math format is named, and LaTeXML.pm:504-556 makes the
+first named format the primary, the rest secondaries in command-line order. So `latexmlc --format=html5 --unicodemath`
+(or `--mathtex`) runs that processor alone, and the stylesheet, finding no `m:math`, prints the formula's TeX
+(LaTeXML-math-xhtml.xsl:38-65, `as-TeX`): the requested string never reaches the page. `--cmml` alone gives Content
+MathML, which no browser renders: W3C MathML Core lists no Content MathML element (§2.1, `apply`/`ci`/`cn` are
+"Unknown MathML elements") and renders only the first child of `<semantics>` (§3.7), so an annotation adds data
+without changing the page. Perl's `--post`/XML-input runs add `pmml` only for HTML/JATS (Config.pm:567-568), so there
+a named format is the primary.
+
+**Rust.** `ResolvedOptions`/`PostOptions::pmml` (`bin/latexml_oxide.rs`) and `post::MathFormats` (shared by the
+page-render workers). `--unicodemath` alone, like `--mathtex`, needs `--nopmml` to get Perl's output.
+**Guards**: `cluster_cli::unicodemath_output::{unicodemath_annotates_presentation_mathml,
+unicodemath_sits_between_content_mathml_and_tex, unicodemath_through_the_page_render_workers_matches_serial}`.
+
+### 1094. A reference title reads an equation tag's math as UnicodeMath
+
+**Rule.** A `title=` (or page `<title>`) built from a stored equation tag reads the tag's math as the rest of a
+title is read: through UnicodeMath, its scripts and fonts kept, inside the tag's `open`/`close`.
+`\tag{$\mathrm{P_1}$}` gives "Equation P₁"; 2506.17197's `\tag{$\mathrm{TreeSB}_{\mathrm{stat}}^\cS$}` gives
+"Equation TreeSBₛₜₐₜ^𝒮".
+
+**Perl.** `getTextContent_rec` (CrossRef.pm:866-870) returns an `ltx:tag`'s `open` + `textContent` + `close`, so a
+formula in a tag gives its bare tokens with its scripts and fonts dropped: `latexmlc` gives "P1", "TreeSBstatS" (the
+𝒮 read as S), `1′`, `⋆⁣⋆`. Its file-based `latexmlpost` reads the stored copy's indentation too ("P 1"). The Unicode
+reading Perl gives a formula elsewhere in a title (CrossRef.pm:872-873) is the one kept here, so a tag reads as the
+formula it prints; `⋆⁣⋆` is the same either way.
+
+**Rust.** `scan::title_node_text`'s `ltx:tag` branch reads its children through `title_text_content`, as
+`crossref::node_data_text` reads a tag's content. **Guards**:
+`cluster_cli::unicodemath_output::ref_title_reads_a_tags_math_as_unicodemath`,
+`perfect_kernel_batch78j::cleveref_document_format_with_math_in_the_tag`.
+
+### 1095. Without a format dump (or without TeX Live) the kernel commands our constructs call are in the base, the kernel autoload loads the format to see, and our expl3 extensions wait for an expl3 to extend (NOTEX)
+
+**Perl.** `LoadFormat('latex')` without a dump runs `bootstrap → base → constructs` (Package.pm:2751-2769), and
+latex_base.pool.ltxml is TeX-free: everything its constructs call is in it. It has no kernel autoload, no expl3 layer of
+its own and no document-properties store, so it needs no expl3. **Rust.** Our constructs and bindings call kernel and
+expl3 commands Perl's do not, and on the no-dump branch (`LATEXML_NODUMP=1`, or a binary built where there was no TeX
+Live to make a dump) nothing defined them; with no TeX tree either, nothing could load them. A
+smoke article (amsmath, hyperref, a list, a table) stopped at `Fatal:TooManyErrors` (101 Errors) without TeX Live, and the test suite failed 6397 of 8468 tests there. Now:
+- **The base carries what our constructs call** (`latex_base.rs`, after C.1.3): `\@ignorefalse` (the `\end` epilogue
+  reads `\if@ignore`, sect01.rs; latex.ltx:15253), `\@stpelt` (`\lx@stepcounter@within`, sect08.rs; latex.ltx:10138),
+  `\@ensuredmath` (`\@ensuremath`, latex_constructs_rust_only.rs; latex.ltx:15807), and `\IfDocumentMetadataTF`/`T`/`F`
+  as latex.ltx:9167-9169 has them before `\DocumentMetadata` (tikz_sty.rs asks it). The text after a list, a
+  `\stepcounter` and `\ensuremath` are no longer lost; the body is byte-identical to the dump branch's.
+- **The kernel autoload loads the format to see** (`latex_kernel::autoload_latex_kernel`). With no dump there is no
+  catalogue to ask, so in a LaTeX document the first undefined control sequence met before the format loads it, and the
+  post-load `has_meaning` check decides as on the dump branch (KNOWN_PERL_ERRORS entry on `\IfFileExists` before
+  `\documentclass`). latexml.sty's `\AddToHook` (a preload) and an `\IfFileExists` choosing the class were undefined
+  there. A plain TeX document is unchanged: only the Perl trigger list loads the format.
+- **Our expl3 extensions wait for an expl3** (latex_constructs_rust_only.rs: the backend loader, the
+  `\__kernel_chk_if_free_cs:N` override, the Unicode codepoint layer). They run when expl3 is the dump's or `expl3.sty`
+  can be found (its `\ExplSyntaxOn` autoload raw-loads it, as before); with neither there is nothing to extend.
+  Likewise hyperref's document-properties store (hyperref_sty.rs) needs `\NewDocumentCommand`, mathtools' expl3
+  block needs mhsetup's `\MHInternalSyntaxOn`, and `\DocumentMetadata` loads the tagging packages (tagpdf, the
+  latex-lab blocks: expl3 code) only over an expl3 layer.
+- **`\ExplSyntaxOn` without expl3 is the catcode switch** (expl3_sty.rs). With no expl3.sty to load, the `expl3`
+  binding defines `\ExplSyntaxOn`/`\ExplSyntaxOff` as expl3-code.tex:245-277 (TL 2025) sets and restores the catcodes
+  and `\endlinechar`, so our bindings' expl3-syntax names read as names (array_sty.rs's `\@@__tbl`: 2 Errors per
+  `\usepackage{array}`). Code that calls expl3 functions still finds them undefined, as Perl does with no expl3.
+- **expl3.sty missing is reported** (expl3_sty.rs): the mute scope of the raw reload (#1027) is opened only when
+  `expl3.sty` is found, so its `missing_file` Warning is no longer dropped with it.
+- **No Warning for a missing resolver.** Perl's `pathname_kpsewhich` answers nothing, silently, without a `kpsewhich`
+  (Pathname.pm:395-403). Ours warned `kpathsea:unavailable` once per process (#308), one Warning on every
+  conversion of a machine without TeX Live, whatever the document needed. It is gone; the log's
+  `Info:kpathsea:backend unavailable (…)` line (`Converter::initialize_session`) still names the resolver, so a dead
+  one is not mistaken for a missing file (issue #304). The kpathsea crate's own one-time stderr notice
+  (0.3.4 `lib.rs:433-434`) is outside the log and stays: rust-kpathsea is a general-purpose crate, not
+  latexml-oxide's (DG 2026-11-19).
+
+Where TeX Live is, the dump branch is unchanged (each change sits behind "no catalogue", "no dump-defined name" or
+a found file). **Guards**: `dump_gate_init::nodump_latex_branch_converts_healthily` (the shared NODUMP conversion:
+`\IfFileExists` before `\documentclass`, hyperref, `\stepcounter`, a list, `\ensuremath`, `\IfDocumentMetadataTF`),
+`preclass_kernel_autoload::latex_route_pre_documentclass_kernel_cs_autoloads` (its dump half).
+
+### 1096. An undefined BibTeX macro is a Warning, as bibtex(1) has it (PLACEFIX)
 
 Perl BibTeX.pm:307-310 raises an Error for a `.bib` macro neither the `.bib` nor the defaults define (`month = june`,
 `sept`, `july`; about 190 papers of run 397) and keeps the name as the value. bibtex(1) prints `Warning--string name
 "june" is undefined` and goes on with the empty string. `pre_bibtex.rs` `report_undefined_macro` now warns whether the
-style is known or not (DG 2026-11-19); the name is still kept as the value, so no word is lost. KNOWN_PERL_ERRORS #1289.
+style is known or not (DG 2026-11-19); the name is still kept as the value, so no word is lost. KNOWN_PERL_ERRORS #1292.
 Guard `perfect_kernel_batchplacefix::bibtex_undefined_month_is_a_warning` (repro `index-bib/bibtex_month_undefined`).
 
-### 1096. A theorem or proof in an abstract stays in it, in an `ltx:inline-logical-block` (PLACEFIX)
+### 1097. A theorem or proof in an abstract stays in it, in an `ltx:inline-logical-block` (PLACEFIX)
 
 `ltx:abstract` holds Block.model, no Para.class, so a `\newtheorem` environment, amsppt's `\proclaim`, plain's, elsart's
 algorithm or a `{proof}` in `{abstract}` erred "<ltx:theorem> isn't allowed in <ltx:abstract>" (Perl the same), the
@@ -21225,7 +21307,7 @@ TeX sets the whole paper in it). Guard `perfect_kernel_batchplacefix::theorem_in
 `block-model/theorem_in_abstract_stays`); `perfect_kernel_batch69c::theorem_in_abstract_is_bridged` (was
 `…_is_not_bridged`, the control kept until this ruling).
 
-### 1097. nomencl's list in a box keeps its box (PLACEFIX)
+### 1098. nomencl's list in a box keeps its box (PLACEFIX)
 
 `\printnomenclature` in a `{framed}`/`{mdframed}` inside a `{table*}` (the IEEE nomenclature box: 111 of run 397's 137
 glossary-cluster papers; 1410.5511, 1608.03855, 1704.00503, 1703.01217) built a sectional `ltx:glossary` where no
@@ -21238,7 +21320,7 @@ level the list stays the sectional glossary. Residual: a list in `{IEEEkeywords}
 about 9 papers: 1606.00288, 2111.12783) still errs, a paragraph being no more allowed there. Guard
 `perfect_kernel_batchplacefix::nomenclature_in_a_box_stays_in_the_box` (repro `block-model/nomenclature_in_a_box`).
 
-### 1098. A bibliography inside a float or a heading floats out to the narrative level (PLACEFIX)
+### 1099. A bibliography inside a float or a heading floats out to the narrative level (PLACEFIX)
 
 A `{thebibliography}` (or `\bibliography`) begun where neither it nor the unit it stands as can go erred "<ltx:
 bibliography> isn't allowed in <ltx:…>". The criterion is the nearest enclosing element that does not auto-close:

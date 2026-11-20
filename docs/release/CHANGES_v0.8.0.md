@@ -44,10 +44,26 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 ## Changes
 
   - **Run 397's misplaced elements, as DG ruled 2026-11-19.** An undefined BibTeX macro (`month = june`) is a Warning,
-    as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1095). A theorem or proof in an abstract stays in it, wrapped as in a
-    quote, with its id and title (1908.02189, 0804.0728; #1096). nomencl's list in a framed box keeps its box: a bold
-    heading and the entries as a description (1410.5511; #1097). A bibliography inside a float or a heading argument
-    floats out after it (cond-mat0108156, hep-ph0004227; #1098). Guards `perfect_kernel_batchplacefix::*`.
+    as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1096). A theorem or proof in an abstract stays in it, wrapped as in a
+    quote, with its id and title (1908.02189, 0804.0728; #1097). nomencl's list in a framed box keeps its box: a bold
+    heading and the entries as a description (1410.5511; #1098). A bibliography inside a float or a heading argument
+    floats out after it (cond-mat0108156, hep-ph0004227; #1099). Guards `perfect_kernel_batchplacefix::*`.
+  - **UnicodeMath output (`--unicodemath`).** Perl's `--unicodemath`/`--nounicodemath` are exposed: each formula's
+    MathML carries an `<annotation encoding="application/x-unicodemath">` (`a+b^2=\frac{x}{y}` gives `𝑎+𝑏²=𝑥/𝑦`),
+    after the Content MathML and before the TeX annotation. As with `--cmml` and `--mathtex`, Presentation MathML stays
+    on in HTML (Perl's `--unicodemath` alone replaces it, and the page then shows the TeX; OXIDIZED_DESIGN #1093);
+    with `--nopmml` and no `--cmml` the string is the only math output, as in Perl. `latexmlmath_oxide --unicodemath`
+    prints the string (`--unicodemath=FILE` writes it to FILE). The converter now writes scripts as Perl's does:
+    sub/superscript codepoints where every character has one (`∫₀¹`, `𝑎⁻¹`, `𝑥'`), `┬`/`┴` for limits
+    (`∑┬{𝑖=1}┴𝑛`), a prescript before its base. Unlike Perl, the annotation of `$0$` is kept (KNOWN_PERL_ERRORS
+    #1289), `latexmlmath_oxide` does not XML-escape `<` and `&` (#1290), and an nth root reads its degree and
+    radicand in order (#1291). **Without the flag too**, the page `<title>` and a reference's `title=` tooltip read a
+    title's math through the same converter, so their scripts now read as Perl's: a section `On $x^2$, $a_{i+1}$ and
+    $\sum_{i=1}^n y_k$` gives `1 On 𝑥², 𝑎_{𝑖+1} and ∑_{𝑖=1}^𝑛{𝑦_𝑘}`, and hep-ex0309075's page `<title>`
+    `𝜋^0⁢𝑒^+⁢𝑒^-` becomes `𝜋⁰⁢𝑒⁺⁢𝑒⁻`. An equation tag in a `title=` reads the same way, its scripts and fonts kept
+    (`\tag{$\mathrm{P_1}$}` gives `Equation P₁`, where Perl's `textContent` gives `P1`; OXIDIZED_DESIGN #1094).
+    Guards `cluster_cli::unicodemath_output::*`, `unicode_math::tests::*`.
+
   - **Four more run-397 Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
     `\end{equation*}` as amsmath.sty:2950-2951 makes them, so a mixed pair (`\[ … \end{equation*}`) no longer errs
     (math0306159, math0401181, math0508341), and a `\tag` in `\[` is printed (2008.12392; OXIDIZED_DESIGN_DIVERGENCES
@@ -746,6 +762,27 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     the reload mutes. Guards `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
     `expl3_sty::tests::a_muted_expl3_reload_is_counted`,
     `dump_gate_init::nodump_latex_branch_converts_healthily`.
+  - **Builds and converts on a machine without TeX Live.** The `kpathsea` crate's build
+    stopped when it found neither `libkpathsea` nor `kpsewhich`; `.cargo/config.toml` now sets
+    its opt-out (`KPATHSEA_SKIP_TOOLCHAIN_CHECK`), as the release workflows' TeX-less legs did.
+    Such a binary has no format dump (making one needs TeX Live), and the no-dump branch broke
+    on commands our own code calls where Perl's does not: a small article stopped at
+    `Fatal:TooManyErrors` (101 Errors), and `LATEXML_NODUMP=1` broke the same way where TeX
+    Live is. Now the base carries `\@stpelt`, `\if@ignore`, `\@ensuredmath` and
+    `\IfDocumentMetadataTF` (the text after a list, `\stepcounter` and `\ensuremath` were
+    lost); the kernel autoload, with no dump to ask, loads the format on the first undefined
+    command of a LaTeX document (latexml.sty's `\AddToHook`, an `\IfFileExists` choosing the
+    class); our expl3 extensions, hyperref's document-properties store, mathtools' expl3 block
+    and `\DocumentMetadata`'s tagging packages wait for an expl3 to extend, while `\ExplSyntaxOn`
+    without one is expl3's catcode switch (`\usepackage{array}` raised 2 Errors); a missing
+    `expl3.sty` is reported; and, as in Perl, no
+    Warning is raised for the missing resolver itself (the log's `Info:kpathsea:backend` line
+    names it; it was one Warning on every conversion there). The article now
+    converts with no Error, and the no-dump body is byte-identical to the dump branch's. A
+    new CI job builds and converts it on a runner without TeX Live (`tools/notex_smoke.sh`).
+    Guards `dump_gate_init::nodump_latex_branch_converts_healthily`,
+    `preclass_kernel_autoload::latex_route_pre_documentclass_kernel_cs_autoloads`;
+    OXIDIZED_DESIGN_DIVERGENCES #1095.
 
   - **`page=` on an SVG, PNG or JPEG no longer re-encodes it** (#791). A single-page
     format has no page to select (pdfTeX ignores `page=` on a PNG), so

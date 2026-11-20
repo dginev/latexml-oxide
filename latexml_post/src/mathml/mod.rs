@@ -262,6 +262,7 @@ impl MathProcessor for MathML {
     if let Some(ref xml) = primary.xml {
       children.push(xml.clone());
     }
+    let primary_only = children.len();
 
     for secondary in &secondaries {
       let mimetype = secondary.mimetype.as_deref().unwrap_or("unknown");
@@ -275,7 +276,10 @@ impl MathProcessor for MathML {
           attributes: Some(HashMap::from_iter([("encoding".to_string(), encoding)])),
           children:   vec![xml.clone()],
         });
-      } else if let Some(ref string) = secondary.string {
+      } else if let Some(string) = secondary.string.as_ref().filter(|s| !s.is_empty()) {
+        // Perl `MathML.pm` L128 `elsif (my $string = ...)` skips a false string. Only
+        // the empty one is meant: Perl's truthiness also drops "0", losing the
+        // UnicodeMath annotation of `$0$` (KNOWN_PERL_ERRORS #1289), which we keep.
         children.push(NodeData::Element {
           tag:        "m:annotation".to_string(),
           attributes: Some(HashMap::from_iter([("encoding".to_string(), encoding)])),
@@ -304,9 +308,17 @@ impl MathProcessor for MathML {
       }
     }
 
+    // Perl L132-133: `m:semantics` only when some annotation was made, else the
+    // primary as it is (an empty UnicodeMath string adds none).
+    if children.len() == primary_only {
+      return primary;
+    }
     MathConversion {
       processor_name: self.name.clone(),
-      mimetype:       Some(MML_MIMETYPE.to_string()),
+      mimetype:       primary
+        .mimetype
+        .clone()
+        .or_else(|| Some(MML_MIMETYPE.to_string())),
       xml:            Some(NodeData::Element {
         tag: "m:semantics".to_string(),
         attributes: None,

@@ -1,4 +1,4 @@
-//! The on-undefined LaTeX-kernel autoload and its two hard boundaries.
+//! The on-undefined LaTeX-kernel autoload, and the plain TeX document it stays out of.
 //!
 //! `latexml_engine/src/latex_kernel.rs` loads `LaTeX.pool` when an *undefined*
 //! control sequence turns out to be one the ambient kernel dump defines, so a
@@ -7,10 +7,10 @@
 //! `tests/structure/preclass_*.tex+.xml` pairs (`preclass_iffileexists_test`,
 //! `preclass_kernel_cs_test`).
 //!
-//! This file guards the two places the mechanism must deliberately stay out of.
-//! The no-dump one spawns a process of its own: `LATEXML_NODUMP` is a process-level mode (`convert_nodump`).
-
-use std::{path::Path, process::Command};
+//! This file guards a LaTeX-route document with a dump and the place the mechanism must deliberately stay out of, a
+//! plain TeX document. Without a dump there is no catalogue, and the format loads on the first undefined control
+//! sequence: that half shares the one NODUMP conversion of
+//! `dump_gate_init::nodump_latex_branch_converts_healthily`, whose document opens with the same idiom.
 
 use latexml::util::test::assert_element;
 
@@ -27,14 +27,9 @@ const PRECLASS_TEX: &str = concat!(
   "\\end{document}\n"
 );
 
-/// The NODUMP twin of the witness idiom. Without a dump the degraded `LoadFormat`
-/// branch raw-loads `latex.ltx` + expl3 on the first trigger-list control
-/// sequence (`\documentclass`), which runs past the CLI's 60 s default timeout at
-/// opt-level 0 — killed after the `\IfFileExists` error was already printed, so
-/// the assertion passed without the conversion finishing. Nothing executed here
-/// is on the trigger list, so the run finishes; the skipped `\documentclass` makes
-/// it a LaTeX document by arXiv AutoTeX's test (`converter::compile_route`), where
-/// the autoload may act.
+/// The witness idiom with no `\documentclass` executed: nothing here is on the trigger list, and the skipped
+/// `\documentclass` makes it a LaTeX document by arXiv AutoTeX's test (`converter::compile_route`), where the
+/// autoload may act.
 const LATEX_ROUTE_PRECLASS_TEX: &str = "\\iffalse\\documentclass{article}\\fi\n\\IfFileExists{ltxo-no-such-class.cls}\
                                         {found-branch}{fallback-branch}\n\\bye\n";
 
@@ -49,29 +44,7 @@ fn convert(tex: &str) -> (bool, String, String) {
   (!xml.is_empty() && status_code < 3, log, xml)
 }
 
-/// Convert `tex` in a fresh process under `LATEXML_NODUMP=1`. A process of its own because the dump-or-raw
-/// `LoadFormat` branch is chosen once per process (`LATEXML_NODUMP` is read into process-once `LazyLock`s, tex.rs,
-/// plain_dump.rs, latex.rs). Returns (exit success, ANSI-stripped stderr, XML — empty if none was written).
-fn convert_nodump(tex: &str) -> (bool, String, String) {
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
-  let workdir = tempfile::tempdir().expect("create tempdir");
-  std::fs::write(workdir.path().join("p.tex"), tex).expect("write p.tex");
-  let output = Command::new(bin)
-    .args(["p.tex", "--dest", "p.xml", "--nocomments"])
-    .current_dir(workdir.path())
-    .env("LATEXML_NODUMP", "1")
-    .output()
-    .expect("spawn latexml_oxide");
-  // The logger TTY-gates colours, so a piped stderr is ANSI-free; strip anyway
-  // (project signal-integrity rule — never let a parse miss hide a diagnostic).
-  let stderr = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
-  let xml = std::fs::read_to_string(workdir.path().join("p.xml")).unwrap_or_default();
-  (output.status.success(), stderr, xml)
-}
-
-/// Baseline for the negative test below: with a dump present the autoload
-/// fires, the FALSE branch's class wins, and nothing is reported undefined.
+/// With a dump present the autoload fires, the FALSE branch's class wins, and nothing is reported undefined.
 #[test]
 fn pre_documentclass_kernel_cs_selects_the_right_class() {
   let (_, stderr, xml) = convert(PRECLASS_TEX);
@@ -85,24 +58,11 @@ fn pre_documentclass_kernel_cs_selects_the_right_class() {
   );
 }
 
-/// `LoadFormat('latex')` has two mutually exclusive branches (CLAUDE.md durable
-/// parity rule 1). On the degraded one there is no dump to test membership
-/// against, so the autoload must not fire at all and behaviour must stay
-/// exactly as it was before the mechanism existed: the Perl `TeX.pool` L33-56
-/// trigger list is the only thing that loads the format, and `\IfFileExists` —
-/// which is not on it — is reported undefined.
-///
-/// This asserts a *limitation on purpose*. If the no-dump branch ever gains a
-/// membership oracle of its own, change this test deliberately; do not delete
-/// it to make a run green.
-///
-/// The same LaTeX-route body is converted with and without the dump, so the only
-/// variable is the dump: with it the autoload fires and the FALSE branch is
-/// typeset; without it `\IfFileExists` is undefined and all three arguments are
-/// typeset as text. Both runs must finish (exit 0, XML written) — a conversion
-/// killed mid-way must not pass for a checked limitation.
+/// In a LaTeX document an `\IfFileExists` met before the format is loaded loads it, from the dump's catalogue: the
+/// FALSE branch alone is typeset, and nothing is reported. The no-dump half (no catalogue: the format loads on the first
+/// undefined control sequence) is the opening line of `dump_gate_init::nodump_latex_branch_converts_healthily`.
 #[test]
-fn nodump_leaves_pre_documentclass_kernel_cs_undefined() {
+fn latex_route_pre_documentclass_kernel_cs_autoloads() {
   let (ok, stderr, xml) = convert(LATEX_ROUTE_PRECLASS_TEX);
   assert!(
     ok,
@@ -120,27 +80,6 @@ fn nodump_leaves_pre_documentclass_kernel_cs_undefined() {
     "para",
     &[],
     r#"<para xml:id="p1"><p>fallback-branch</p></para>"#,
-  );
-
-  let (ok, stderr, xml) = convert_nodump(LATEX_ROUTE_PRECLASS_TEX);
-  assert!(
-    ok,
-    "the NODUMP LaTeX-route conversion exited non-zero:\n{stderr}"
-  );
-  assert!(
-    stderr.contains("Error:undefined:\\IfFileExists"),
-    "with LATEXML_NODUMP the kernel autoload has no oracle and must stay inert:\n{stderr}"
-  );
-  // That one error, and nothing else.
-  assert_eq!(error_count(&stderr), 1, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  // The undefined `\IfFileExists` leaves its three arguments as text.
-  assert_element(
-    &xml,
-    "para",
-    &[],
-    r#"<para><ERROR class="undefined">\IfFileExists</ERROR>
-      <p>ltxo-no-such-class.clsfound-branchfallback-branch</p></para>"#,
   );
 }
 

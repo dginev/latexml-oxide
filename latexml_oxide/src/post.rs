@@ -75,6 +75,9 @@ pub struct PostOptions<'a> {
   /// (Perl `--hackplane1`); implies `plane1`.
   pub hackplane1:                bool,
   pub mathtex:                   bool,
+  /// Add a UnicodeMath annotation to the parallel markup (Perl `--unicodemath`,
+  /// Config.pm L113); with no MathML format requested, UnicodeMath is the only one.
+  pub unicodemath:               bool,
   /// Cross-reference URL style (Perl `--urlstyle`; `CrossRef::generateURL`).
   /// Defaults to [`UrlStyle::File`](latexml_post::crossref::UrlStyle::File) at
   /// every non-CLI construction site (the binary threads the parsed `--urlstyle`
@@ -112,6 +115,64 @@ pub struct PostOptions<'a> {
   /// via `get_math`. Applied to each `PostDocument` in the final
   /// serialization loop.
   pub whatsout:                  latexml_post::extract::Whatsout,
+}
+
+/// The requested math formats as the post chain's one math processor: a primary with
+/// its parallel secondaries (Perl `LaTeXML.pm` L504-556, order per OXIDIZED_DESIGN
+/// #1093), shared by the in-process renderer and the page-render workers.
+#[derive(Clone, Copy)]
+pub(crate) struct MathFormats {
+  pub pmml:            bool,
+  pub cmml:            bool,
+  pub unicodemath:     bool,
+  pub keep_xmath:      bool,
+  pub invisible_times: bool,
+  pub plane1:          bool,
+  pub hackplane1:      bool,
+  pub mathtex:         bool,
+  pub intent_literal:  bool,
+}
+
+impl MathFormats {
+  pub(crate) fn processor(self) -> Option<Box<dyn Processor>> {
+    use latexml_post::{math_processor::MathProcessor, mathml::MathML, unicode_math::UnicodeMath};
+    let content = || {
+      MathML::new_content()
+        .with_keep_xmath(self.keep_xmath)
+        .with_invisible_times(self.invisible_times)
+        .with_plane1(self.plane1, self.hackplane1)
+    };
+    let unicode = || UnicodeMath::new().with_keep_xmath(self.keep_xmath);
+    let unicode_secondary = || -> Option<Box<dyn MathProcessor>> {
+      self
+        .unicodemath
+        .then(|| Box::new(unicode().secondary()) as _)
+    };
+    if self.pmml {
+      let mut secondaries: Vec<Box<dyn MathProcessor>> = Vec::new();
+      if self.cmml {
+        secondaries.push(Box::new(content().secondary()));
+      }
+      secondaries.extend(unicode_secondary());
+      Some(Box::new(
+        MathML::new_presentation()
+          .with_keep_xmath(self.keep_xmath)
+          .with_invisible_times(self.invisible_times)
+          .with_plane1(self.plane1, self.hackplane1)
+          .with_mathtex(self.mathtex)
+          .with_intent_literal(self.intent_literal)
+          .with_secondaries(secondaries),
+      ))
+    } else if self.cmml {
+      Some(Box::new(
+        content().with_secondaries(unicode_secondary().into_iter().collect()),
+      ))
+    } else if self.unicodemath {
+      Some(Box::new(unicode()))
+    } else {
+      None
+    }
+  }
 }
 
 /// The built-in XSLT stylesheet for an output format (Perl `Config.pm` L543-551), as the
@@ -583,6 +644,7 @@ fn run_post_processing_inner(
     plane1,
     hackplane1,
     mathtex,
+    unicodemath,
     url_style,
     navigationtoc,
     schemadocs,
@@ -961,38 +1023,19 @@ fn run_post_processing_inner(
   }
 
   // `intent_literal` was computed up-front (before Split consumed `doc`).
-
-  // Parallel P+C markup: when both formats are requested, the Content-MathML
-  // processor is a *secondary* of the Presentation primary, folded into one
-  // `<m:semantics>`/`<m:annotation-xml>` by `combine_parallel` — NOT a second
-  // independent pass (which left the content tree as an orphan `<apply>` sibling
-  // of `<m:semantics>`, rendered as stray text by browsers). Mirrors Perl
-  // `MathProcessor`'s primary→secondary parallel model.
-  if pmml {
-    let mut presentation = latexml_post::mathml::MathML::new_presentation()
-      .with_keep_xmath(keep_xmath)
-      .with_invisible_times(!noinvisibletimes)
-      .with_plane1(plane1, hackplane1)
-      .with_mathtex(mathtex)
-      .with_intent_literal(intent_literal);
-    if cmml {
-      presentation = presentation.with_secondaries(vec![Box::new(
-        latexml_post::mathml::MathML::new_content()
-          .with_keep_xmath(keep_xmath)
-          .with_invisible_times(!noinvisibletimes)
-          .with_plane1(plane1, hackplane1)
-          .secondary(),
-      )]);
-    }
-    processors.push(Box::new(presentation));
-  } else if cmml {
-    // Content-only output (no presentation primary).
-    processors.push(Box::new(
-      latexml_post::mathml::MathML::new_content()
-        .with_keep_xmath(keep_xmath)
-        .with_invisible_times(!noinvisibletimes)
-        .with_plane1(plane1, hackplane1),
-    ));
+  let math_formats = MathFormats {
+    pmml,
+    cmml,
+    unicodemath,
+    keep_xmath,
+    invisible_times: !noinvisibletimes,
+    plane1,
+    hackplane1,
+    mathtex,
+    intent_literal,
+  };
+  if let Some(math) = math_formats.processor() {
+    processors.push(math);
   }
   // Clones of the fully-resolved XSLT inputs for the parallel-render worker
   // manifest — `XSLT::new` consumes the real map/vec below, and by the time
@@ -1260,6 +1303,7 @@ fn run_post_processing_inner(
       plane1,
       hackplane1,
       mathtex,
+      unicodemath,
       intent_literal,
       stylesheet: stylesheet.map(String::from),
       xslt_params: manifest_xslt_params,

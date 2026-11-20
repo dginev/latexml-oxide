@@ -343,6 +343,19 @@ LoadDefinitions!({
 "
   );
 
+  // Kernel definitions our constructs call where Perl's do not (`\end`, `\lx@stepcounter@within`, `\@ensuremath`,
+  // tikz_sty.rs), as latex.ltx has them (TL 2025 :15253, :10138, :15807, :9167-9169); OXIDIZED_DESIGN_DIVERGENCES #1095.
+  TeX!(
+    r"
+\@ignorefalse
+\def\@stpelt#1{\global\csname c@#1\endcsname \m@ne\stepcounter{#1}}%
+\long\def\@ensuredmath#1{$\relax#1$}
+\let \IfDocumentMetadataTF \@secondoftwo
+\let \IfDocumentMetadataT \@gobble
+\let \IfDocumentMetadataF \@firstofone
+"
+  );
+
   //======================================================================
   // C.3. Sentences and Paragraphs
   // Perl: latex_base.pool.ltxml lines 248-277
