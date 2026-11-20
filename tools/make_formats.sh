@@ -22,7 +22,10 @@
 #   PROFILE=release tools/make_formats.sh  # optimized build
 #
 # Env:
-#   PROFILE              debug (default) | release | ci
+#   PROFILE              any cargo profile: debug (default) | release | ci |
+#                        maxperf | maxperf-cortex | … (the binary is looked up
+#                        where cargo puts that profile: dev/test → debug/,
+#                        bench → release/, a custom profile → <name>/)
 #   CARGO_TARGET_DIR     honoured (the binary is looked up under it)
 #   LATEXML_DUMP_DIR     optional override — where to write the dump
 #                        (default: resources/dumps/)
@@ -33,10 +36,14 @@ cd "$(dirname "$0")/.."
 PROFILE="${PROFILE:-debug}"
 
 case "$PROFILE" in
-  release) CARGO_PROFILE_FLAG="--release" ;;
-  debug)   CARGO_PROFILE_FLAG=""          ;;
-  ci)      CARGO_PROFILE_FLAG="--profile ci" ;;
-  *) echo "PROFILE must be 'release', 'debug', or 'ci' (got: $PROFILE)" >&2; exit 2 ;;
+  *[!A-Za-z0-9_-]*)
+    echo "PROFILE must be a cargo profile name, e.g. debug, release, ci or maxperf (got: '$PROFILE')" >&2
+    exit 2 ;;
+  debug | dev) CARGO_PROFILE_FLAG=""                ; PROFILE_DIR=debug ;;
+  release)     CARGO_PROFILE_FLAG="--release"       ; PROFILE_DIR=release ;;
+  test)        CARGO_PROFILE_FLAG="--profile test"  ; PROFILE_DIR=debug ;;
+  bench)       CARGO_PROFILE_FLAG="--profile bench" ; PROFILE_DIR=release ;;
+  *)           CARGO_PROFILE_FLAG="--profile $PROFILE"; PROFILE_DIR="$PROFILE" ;;
 esac
 
 # Always (re)build the binary — `cargo build` is the staleness authority.
@@ -48,7 +55,7 @@ esac
 # `plain.dump.txt` instead of `plain.YYYY.dump.txt` (pre-year-stamping naming),
 # silently shipping dumps the runtime can't find. cargo is near-instant when
 # nothing changed, so building unconditionally costs nothing.
-BIN="${CARGO_TARGET_DIR:-target}/$PROFILE/latexml_oxide"
+BIN="${CARGO_TARGET_DIR:-target}/$PROFILE_DIR/latexml_oxide"
 locked_args=()
 if [ "${CARGO_LOCKED:-0}" = "1" ]; then
   [ -s Cargo.lock ] || { echo "[make_formats] CARGO_LOCKED=1 requires Cargo.lock" >&2; exit 2; }
