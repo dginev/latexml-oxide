@@ -27,6 +27,7 @@ Options:
       --unicodemath[=FILE]          UnicodeMath, a plain Unicode string (printed last;
                                     written to FILE instead, `-` is stdout)
   -q, --quiet                       Only warnings and errors; no progress/lexeme notes
+  -V, --version                     Print version
   -h, --help                        Print this help
 
 Passing both --pmml and --cmml emits parallel markup: Content MathML annotated
@@ -153,37 +154,71 @@ fn main() -> Result<()> {
 }
 
 fn real_main() -> Result<()> {
-  let mut argv: Vec<String> = env::args().skip(1).collect();
+  let raw_argv: Vec<String> = env::args().skip(1).collect();
 
-  // Parse flags
-  let mut pmml_flag = argv
-    .iter()
-    .any(|a| a == "--pmml" || a == "--presentationmathml");
-  let cmml_flag = argv.iter().any(|a| a == "--cmml" || a == "--contentmathml");
-  let xmath_flag = argv.iter().any(|a| a == "--xmath" || a == "--XMath");
+  // Parse options left-to-right; `--` stops option parsing so formulas that
+  // begin with `--` can still be passed positionally. Single-dash tokens other
+  // than `-h`, `-q`, `-V` (such as `-x + 1` or `-1`) remain positional formula
+  // text.
+  let mut pmml_flag = false;
+  let mut cmml_flag = false;
+  let mut xmath_flag = false;
   // Perl `unicodemath=s` (bin/latexmlmath L57): `--unicodemath=FILE`, `-` for
   // stdout; the bare flag is stdout too. The last one given wins (GetOpt::Long).
-  let unimath_dest: Option<String> = argv.iter().rev().find_map(|a| match a.as_str() {
-    "--unicodemath" => Some("-".to_string()),
-    _ => a.strip_prefix("--unicodemath=").map(String::from),
-  });
+  let mut unimath_dest: Option<String> = None;
+  let mut quiet_flag = false;
+  let mut show_help = false;
+  let mut show_version = false;
+  let mut positional: Vec<String> = Vec::new();
+  let mut parsing_opts = true;
+
+  for arg in raw_argv {
+    if !parsing_opts {
+      positional.push(arg);
+      continue;
+    }
+    match arg.as_str() {
+      "--" => parsing_opts = false,
+      "-h" | "--help" => show_help = true,
+      "-V" | "--version" => show_version = true,
+      "--pmml" | "--presentationmathml" => pmml_flag = true,
+      "--cmml" | "--contentmathml" => cmml_flag = true,
+      "--xmath" | "--XMath" => xmath_flag = true,
+      "--unicodemath" => unimath_dest = Some("-".to_string()),
+      "-q" | "--quiet" => quiet_flag = true,
+      _ if arg.starts_with("--unicodemath=") => {
+        let dest = &arg["--unicodemath=".len()..];
+        if dest.is_empty() {
+          eprintln!(
+            "latexmlmath_oxide: --unicodemath= requires a non-empty file path (or '-' for stdout)"
+          );
+          process::exit(2);
+        }
+        unimath_dest = Some(dest.to_string());
+      },
+      _ if arg.starts_with("--") => {
+        eprintln!("latexmlmath_oxide: unknown option '{arg}' (try --help)");
+        process::exit(2);
+      },
+      _ => positional.push(arg),
+    }
+  }
+
+  // `--help` / `--version` before anything else: without it the flag would fall
+  // through as a formula or fail on missing positional arguments.
+  if show_help {
+    println!("{USAGE}");
+    process::exit(0);
+  }
+  if show_version {
+    println!(
+      "latexmlmath_oxide {}",
+      latexml::identity::VERSION_WITH_REVISION
+    );
+    process::exit(0);
+  }
+
   let unimath_flag = unimath_dest.is_some();
-  let quiet_flag = argv.iter().any(|a| a == "--quiet" || a == "-q");
-  argv.retain(|a| {
-    ![
-      "--pmml",
-      "--presentationmathml",
-      "--cmml",
-      "--contentmathml",
-      "--xmath",
-      "--XMath",
-      "--unicodemath",
-      "--quiet",
-      "-q",
-    ]
-    .contains(&a.as_str())
-      && !a.starts_with("--unicodemath=")
-  });
   // Perl L169: `$pmml = '-' unless (defined $mathimage || ... || $xmath || $unimath)` —
   // with no conversion option, presentation MathML on stdout is the default.
   if !pmml_flag && !cmml_flag && !xmath_flag && !unimath_flag {
@@ -197,14 +232,7 @@ fn real_main() -> Result<()> {
   };
   latexml_core::util::logger::init(log_level).ok();
 
-  // `--help` before anything else: without it the flag falls through as the formula
-  // and gets typeset, landing the user in TeX's interactive error prompt.
-  if argv.iter().any(|a| a == "--help" || a == "-h") {
-    println!("{USAGE}");
-    process::exit(0);
-  }
-
-  let source = match argv.first() {
+  let source = match positional.first() {
     Some(s) => s.clone(),
     None => {
       eprintln!("{USAGE}");
