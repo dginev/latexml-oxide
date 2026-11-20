@@ -52,6 +52,15 @@ on:
   # comment-only edits, e.g. an unrelated PR merge that carried a doc-path
   # comment fix. Validate a change to this pipeline via workflow_dispatch.
   workflow_call:
+    inputs:
+      toolchain:
+        description: Pinned Rust nightly toolchain (e.g. nightly-2026-11-20); defaults to floating nightly
+        type: string
+        default: ''
+      use_build_inputs:
+        description: Download the release run's pinned Cargo.lock from the build-inputs artifact and pass --locked
+        type: boolean
+        default: false
   workflow_dispatch:
 
 jobs:
@@ -63,6 +72,7 @@ jobs:
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
+      RUSTUP_TOOLCHAIN: ${{ inputs.toolchain }}
       # kpathsea 0.3 refuses to build with no TeX backend visible (neither
       # libkpathsea nor a `kpsewhich` on PATH) unless this is set. That is
       # exactly the build-dumper case: build here (TeX-free runner) and
@@ -72,6 +82,12 @@ jobs:
       KPATHSEA_SKIP_TOOLCHAIN_CHECK: "1"
     steps:
       - uses: actions/checkout@v6
+      - name: fetch pinned Cargo.lock
+        if: ${{ inputs.use_build_inputs }}
+        uses: actions/download-artifact@v6
+        with:
+          name: build-inputs
+          path: .
       # libxml2/libxslt + mold — deliberately NO libkpathsea-dev (see header).
       # `mold` is required because the checked-in `.cargo/config.toml` passes
       # `-Clink-arg=-fuse-ld=mold` for the x86_64-linux target, and this job
@@ -83,14 +99,20 @@ jobs:
         run: |
           tools/ci_apt_install.sh \
             libxml2-dev libxslt1-dev mold
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.toolchain || 'nightly' }}
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: release-dumper
       - name: build (release, kpathsea-unlinked)
+        env:
+          USE_LOCKED: ${{ inputs.use_build_inputs }}
         run: |
-          cargo build --release --bin latexml_oxide
+          locked=()
+          if [ "${USE_LOCKED:-false}" = "true" ]; then locked=(--locked); fi
+          cargo build ${locked[@]+"${locked[@]}"} --release --bin latexml_oxide
           # Hard assertion: the dumper must NOT link libkpathsea, or it
           # cannot run inside the TL containers.
           if ldd target/release/latexml_oxide | grep -q kpathsea; then

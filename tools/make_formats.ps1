@@ -1,4 +1,4 @@
-# make_formats.ps1 — PowerShell mirror of tools/make_formats.sh for native
+﻿# make_formats.ps1 — PowerShell mirror of tools/make_formats.sh for native
 # Windows (no bash). KEEP THE TWO IN SYNC: the .sh is authoritative; this
 # mirrors its contract exactly. See that file's header for the full design
 # rationale (two --init invocations, TL-year-versioned dump filenames,
@@ -30,6 +30,14 @@ switch ($BuildProfile) {
     Write-Host "PROFILE must be 'release', 'debug', or 'ci' (got: $BuildProfile)"
     exit 2
   }
+}
+
+if ($env:CARGO_LOCKED -eq '1') {
+  if (-not (Test-Path 'Cargo.lock' -PathType Leaf)) {
+    Write-Host '[make_formats] CARGO_LOCKED=1 requires Cargo.lock'
+    exit 2
+  }
+  $CargoFlags += '--locked'
 }
 
 # Always (re)build — cargo is the staleness authority (see make_formats.sh

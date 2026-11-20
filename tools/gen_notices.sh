@@ -47,10 +47,16 @@ if grep -qF "5. RUST DEPENDENCY LICENSES" THIRD-PARTY-NOTICES; then
   exit 1
 fi
 
+locked_args=()
+if [ "${CARGO_LOCKED:-0}" = "1" ]; then
+  [[ -s Cargo.lock ]] || { echo "error: CARGO_LOCKED=1 requires Cargo.lock" >&2; exit 1; }
+  locked_args=(--locked)
+fi
+
 echo "Generating Rust dependency license section (${cargo_features[*]})..." >&2
 rust_section="$(mktemp)"
 trap 'rm -f "$rust_section"' EXIT
-cargo about generate "${cargo_features[@]}" about.hbs -o "$rust_section"
+cargo about generate ${locked_args[@]+"${locked_args[@]}"} "${cargo_features[@]}" about.hbs -o "$rust_section"
 
 # hand-authored sections 1-4  +  generated section 5  +  section 6 (copyleft texts)
 #

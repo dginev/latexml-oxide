@@ -49,8 +49,13 @@ esac
 # silently shipping dumps the runtime can't find. cargo is near-instant when
 # nothing changed, so building unconditionally costs nothing.
 BIN="${CARGO_TARGET_DIR:-target}/$PROFILE/latexml_oxide"
+locked_args=()
+if [ "${CARGO_LOCKED:-0}" = "1" ]; then
+  [ -s Cargo.lock ] || { echo "[make_formats] CARGO_LOCKED=1 requires Cargo.lock" >&2; exit 2; }
+  locked_args=(--locked)
+fi
 echo "[make_formats] building latexml_oxide ($PROFILE)..."
-cargo build $CARGO_PROFILE_FLAG --bin latexml_oxide
+cargo build ${locked_args[@]+"${locked_args[@]}"} $CARGO_PROFILE_FLAG --bin latexml_oxide
 
 # Generate BOTH dumps — strict mirror of Perl Makefile.PL `formats`
 # target (LaTeXML/Makefile.PL):

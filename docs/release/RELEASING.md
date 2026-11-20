@@ -62,6 +62,36 @@ prerelease: ${{ contains(github.ref_name, '-') }}
 
 * **`X.Y.Z-rcN`** → a **DRAFT prerelease**. Artifacts only, for cross-OS testing.
 * **`X.Y.Z`** → a **public** Release, auto-published.
+* **Pinned build inputs & fast RC → final promotion (`prepare`):** Every release
+  run (RC or final) resolves its Rust nightly date (`nightly-YYYY-MM-DD`, stepping
+  back if needed to the newest nightly whose manifest ships `miri`, `clippy`,
+  `rustfmt`, and all 5 platform toolchains) and `Cargo.lock` **once** in the
+  `prepare` job and shares them across every leg (all legs — including CI,
+  Windows CI, dumps, notices, all 5 platform binaries, and the Docker images —
+  compile with `RUSTUP_TOOLCHAIN` and `--locked`, so every shipped artifact and
+  test suite sees the exact same compiler and dependency graph).
+  Every release attaches `BUILD-INPUTS` and `Cargo.lock` as permanent release
+  assets. When tagging a final `X.Y.Z` after a passing, published `X.Y.Z-rcN`
+  prerelease, `tools/check_rc_reuse.sh` checks that:
+  1. `git diff` since the latest `X.Y.Z-rc*` tag touches *only* `Cargo.toml`
+     `[package]` / intra-workspace `version` pins and docs (`CHANGELOG.md`,
+     `README.md`, `docs/**`);
+  2. that RC's `release.yml` push run concluded `success`; and
+  3. that RC's published prerelease carries `BUILD-INPUTS` and `Cargo.lock` (if
+     the RC is still an unpublished draft, `prepare` cannot read its assets with
+     `contents: read` and falls back safely to the full pipeline).
+
+  When all three hold, `prepare` reuses the RC's exact nightly toolchain and
+  `Cargo.lock` (updating only workspace crate versions via `cargo update
+  --workspace`, verified by `--verify-lock-diff`) and skips the redundant 23
+  test shards (`ci` + `windows-ci`). `dumps`, `notices`, all 5 `maxperf`
+  packaging legs (with `--version` verified to print `latexml_oxide X.Y.Z
+  (revision <sha>)`), and `containers` (pinned to the same nightly and
+  `Cargo.lock`) still run. **Discipline:** any code or
+  dependency change after an RC means cutting a new `-rc(N+1)` rather than
+  shipping untested changes straight to a final tag (for reference,
+  `0.7.6-rc2..0.7.6` touched 49 files). Any non-version diff or reuse error
+  falls back automatically to fresh build inputs and the full pipeline.
 
 Two consequences worth knowing before you plan an RC:
 
