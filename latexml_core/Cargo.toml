@@ -81,7 +81,10 @@ libxml = "0.3.24"
 # when neither backend exists. Guarantee is full on Unix; on Windows the anchor
 # also governs texmf.cnf discovery, so a degraded anchor initializes but does
 # not resolve.
-kpathsea = { version = "0.3.4", optional = true }
+# 0.3.6: both backends read the TEXMF root variables (TEXMFROOT, TEXMFDIST, …) without
+# a trailing separator, which texmf.cnf's `$TEXMFROOT/texmf-dist` turned into a `//`
+# walk of the whole tree (#950); `trimmed_texmf_roots()` reports it for the log.
+kpathsea = { version = "0.3.6", optional = true }
 unidecode = "0.3.0"
 rustc-hash = "2.0.0"
 string-interner = { version = "0.20.0", default-features = false, features = ["std", "backends", "inline-more"] }

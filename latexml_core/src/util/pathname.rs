@@ -232,32 +232,43 @@ pub const TEXMF_ROOT_VARS: [&str; 9] = [
   "TEXMFCONFIG",
 ];
 
-/// The TEXMF roots `select_kpaths` trimmed, as `VAR=value read as trimmed`, for the conversion log.
+/// The TEXMF root variables whose trailing separator the kpathsea crate trimmed (>= 0.3.6, issue #950), each as
+/// (variable, value as given, value used), for the conversion log. Forces the kpathsea initialization, like
+/// [`kpathsea_backend`].
 #[cfg(feature = "kpathsea")]
-static TRIMMED_TEXMF_ROOTS: OnceLock<Vec<String>> = OnceLock::new();
-
-/// The TEXMF root variables whose trailing separator this process trimmed (see [`trim_texmf_root`]), each as
-/// `VAR=value read as trimmed`. Forces the kpathsea initialization, like [`kpathsea_backend`].
-#[cfg(feature = "kpathsea")]
-pub fn trimmed_texmf_roots() -> &'static [String] {
+pub fn trimmed_texmf_roots() -> &'static [(&'static str, String, String)] {
   drop(
     KPSE
       .lock()
       .unwrap_or_else(std::sync::PoisonError::into_inner),
   );
-  TRIMMED_TEXMF_ROOTS.get().map_or(&[], Vec::as_slice)
+  kpathsea::trimmed_texmf_roots()
 }
 
 /// Without the `kpathsea` feature nothing reads the TEXMF roots.
 #[cfg(not(feature = "kpathsea"))]
-pub fn trimmed_texmf_roots() -> &'static [String] { &[] }
+pub fn trimmed_texmf_roots() -> &'static [(&'static str, String, String)] { &[] }
+
+/// A `kpsewhich` command given the TEXMF roots without their trailing separator, as the kpathsea crate gives the
+/// linked library and its own spawns (issue #950): a root ending in `/` would make each spawn walk the whole tree and
+/// resolve nothing. Sets nothing when no root has one.
+pub fn kpsewhich_command() -> std::process::Command {
+  let mut command = std::process::Command::new("kpsewhich");
+  for var in TEXMF_ROOT_VARS {
+    if let Some(trimmed) = env::var(var).ok().as_deref().and_then(trim_texmf_root) {
+      command.env(var, trimmed);
+    }
+  }
+  command
+}
 
 /// A TEXMF root `value` without its trailing directory separators, or `None` when there is none to trim. A root that
 /// ends in `/` joins into `/usr/local/texlive/2024//texmf-dist`, which kpathsea reads as its `//` recursive search
 /// (elt-dirs.c): each lookup walks the tree on disk, and the `!!` ls-R-only elements no longer prefix-match their
 /// `ls-R` directory (db.c), so nothing resolves; real `kpsewhich`/pdflatex fail the same way (issue #950). A value
 /// that is a path list or a brace expansion is a spec and stays as written; a file-system or drive root (`/`, `C:/`)
-/// keeps its separator.
+/// keeps its separator. The kpathsea crate's `trim_texmf_root` (0.3.6) applies the same rule for its lookups; this one
+/// serves our own spawns and path joins, also without the `kpathsea` feature.
 pub fn trim_texmf_root(value: &str) -> Option<String> { trim_root_separators(value, cfg!(windows)) }
 
 /// [`trim_texmf_root`] for the separators of Windows (`/`, `\`, list separator `;`) or of Unix (`/`, `:`).
@@ -285,23 +296,6 @@ fn trim_root_separators(value: &str, windows: bool) -> Option<String> {
 /// the choice for [`kpathsea_backend`].
 #[cfg(feature = "kpathsea")]
 fn select_kpaths() -> Option<Kpaths> {
-  // The linked library and every spawned `kpsewhich` read the TEXMF roots from the environment: hand them the roots
-  // without a trailing separator (issue #950, see `trim_texmf_root`).
-  let trimmed: Vec<(&str, String, String)> = TEXMF_ROOT_VARS
-    .iter()
-    .filter_map(|&var| {
-      let value = env::var(var).ok()?;
-      Some((var, trim_texmf_root(&value)?, value))
-    })
-    .collect();
-  let _ = TRIMMED_TEXMF_ROOTS.set(
-    trimmed
-      .iter()
-      .map(|(var, to, from)| format!("{var}={from} read as {to}"))
-      .collect(),
-  );
-  let mut overrides: Vec<(&str, String)> =
-    trimmed.into_iter().map(|(var, to, _)| (var, to)).collect();
   // Re-anchor the linked libkpathsea to the ambient TeX Live tree before
   // construction if TEXMFROOT is not already set. In-process libkpathsea checks
   // $TEXMFROOT in texmf.cnf, avoiding a fallback to the slow subprocess backend
@@ -309,13 +303,8 @@ fn select_kpaths() -> Option<Kpaths> {
   if env::var_os("TEXMFROOT").is_none()
     && let Some(root) = ambient_texlive_root()
   {
-    overrides.push(("TEXMFROOT", root.to_string()));
-  }
-  // SAFETY: the same window as the `putenv`s of `Kpaths::new` below: the binaries force this from `init_kpathsea`
-  // before a second thread exists (see there).
-  unsafe {
-    for (var, value) in overrides {
-      env::set_var(var, value);
+    unsafe {
+      env::set_var("TEXMFROOT", root);
     }
   }
   let (kpse, backend, why) = choose_kpaths(
@@ -376,7 +365,7 @@ pub fn ambient_kpsewhich_selfautoparent() -> Option<&'static str> {
   static SELF_AUTO_PARENT: OnceLock<Option<String>> = OnceLock::new();
   SELF_AUTO_PARENT
     .get_or_init(|| {
-      let out = std::process::Command::new("kpsewhich")
+      let out = kpsewhich_command()
         .args(["-var-value=SELFAUTOPARENT"])
         .output()
         .ok()?;
@@ -413,10 +402,7 @@ pub fn ambient_kpsewhich_version() -> Option<&'static str> {
   static BANNER: OnceLock<Option<String>> = OnceLock::new();
   BANNER
     .get_or_init(|| {
-      let out = std::process::Command::new("kpsewhich")
-        .arg("--version")
-        .output()
-        .ok()?;
+      let out = kpsewhich_command().arg("--version").output().ok()?;
       if !out.status.success() {
         return None;
       }

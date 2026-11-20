@@ -313,7 +313,7 @@ pub fn codegen_from_dump(dump_path: &str, output_path: &str) -> Result<usize, St
 }
 
 fn save_texlive_version(year: u32) {
-  let version = std::process::Command::new("kpsewhich")
+  let version = latexml_core::util::pathname::kpsewhich_command()
     .arg("--version")
     .output()
     .ok()
