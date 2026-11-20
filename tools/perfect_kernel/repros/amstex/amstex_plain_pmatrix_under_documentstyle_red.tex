@@ -1,0 +1,13 @@
+% witness: (synthetic; review of REGFIXA)
+% oracle:  under `\documentstyle{amsart}` amstex.sty:877-928's `\pmatrix` is AMS-TeX's `\pmatrix … \endpmatrix`, so
+%          Plain TeX's `\pmatrix{a & b\cr c & d}` runs off: pdflatex is fatal (no PDF), so no arXiv paper compiles it
+% engines: rust MAIN935 1 error, the second paragraph kept; REGFIXA 4 errors, the second paragraph lost
+% expect:  the second paragraph kept
+% status:  RED (REGFIXA), no guard: invalid TeX input, recovery only
+% preload: ar5iv.sty
+\documentstyle{amsart}
+\begin{document}
+Before $\pmatrix{a & b\cr c & d}$ after.
+
+Second paragraph survives.
+\end{document}
