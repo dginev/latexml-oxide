@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (380 lines, weight 827; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (387 lines, weight 844; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -479,6 +479,26 @@ Rules that keep this file honest and mergeable:
   - REFMISSINGTEXT — an unresolved `\ref` renders an empty `ltx_missing_label` span ("See Theorem ."), where Perl prints
     the label text (Post/CrossRef.pm:346-348; ours `latexml_post/src/crossref.rs:1907-1910` skips it); PLACEFIX's
     dropped theorem labels add such refs (0801.2274, math0509535, math0511748, math0605416); 1
+  - ABS-BLOCKPAR — (ABSFIX re-review; synthetic, no witness changed) a late-closed abstract's first paragraph is not
+    ended by a block environment that follows without a blank line (`Short abstract text.` then `\begin{center}…`, or
+    `\begin{theorem}` on the next line): the S1 display exemption narrowed `split_after_first_paragraph`'s `internal_par`
+    arm to "followed by a vertical skip". Fix: an `internal_par` ends it unless it borders a display. Base is worse on
+    all three probes (`\abstract`+center/theorem without a blank line, closed by the bibliography or the end); 3
+  - ABS-SHORTFIRST — a short first line (a PACS line) set before the real abstract is kept as the whole abstract and the
+    rest moved (`\abstract \noindent PACS: 11.15\par We show…`; no witness among the 33 swallows); 3
+  - ABS-BIBFORMS — net A covers `\begin{thebibliography}`/`\bibliography` only: `\printbibliography`, a bare
+    `\thebibliography`, `{references}` and a binding-constructor `thebibliography` do not end a command-opened abstract; 1
+  - SVMULT-PAREND — modern svmult's `\abstract{` with its `}` lost: TeX errs "Paragraph ended before \@abstract was
+    complete"; we give only the open-group Warning; 1
+  - ABS-ENV-OPEN — a `\begin{abstract}` never ended keeps the whole paper with its theorems and its Error
+    (cond-mat9410055); net B covers command forms only; 3
+  - ABS-MOVECOUNT — the moved-words Warning glues words across block edges ("Body theorem." then "Text." counts 2); 1
+  - UNSAFE937 — after v0.8.0 (DG 2026-11-20): move away from `unsafe` per issue #937 — 110 sites at #935 (~89 shipped,
+    ~21 test-only), almost all at OS/C-library boundaries. Phases: an unsafe-count ratchet; Unix syscalls → `rustix`
+    (a direct dependency since #935; `lsp_server/unix.rs`, `watchdog.rs`, getrusage/flock/geteuid/dup, `process_group(0)`
+    for `setsid`); glibc `malloc_trim`/`mallinfo` → the allocator's safe API; no process-env mutation after startup;
+    safe libxml/libxslt wrappers upstream in our crates; `unsafe impl Send/Sync`; isolate the rest (signal handlers,
+    Windows/macOS queries). Target ≤ 15 shipped, 0 test-only; every PR byte-identical on a fleet A/B and perf-neutral; 5
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.

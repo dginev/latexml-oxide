@@ -10338,7 +10338,9 @@ in TeX, not typeset).
 ### 509. `\endabstract` is locked against redefinition from files (Perl: unlocked)
 
 `\endabstract:locked@files`: a package's `\endabstract` no longer replaces the kernel's (Perl's is unlocked).
-Witness 1606.05599 (its bibliography and abstract are reached again).
+Witness 1606.05599 (its bibliography and abstract are reached again). Exception: a file's `\endabstract` paired with
+its own `\beginabstract` is its own (nanosymp.sty:25-31, cond-mat0105361; `files_lock_holds`, state.rs); the lock
+holds against a file whose `\abstract` redefinition was refused too (IMjournal.sty:81/83, 1702.00108, 2304.05575; #1101).
 
 ### 510. Only a TeX `\item` or `\bibitem` steps the bibliography counter (Perl: recovery entries are numbered)
 
@@ -21307,9 +21309,10 @@ into the abstract in its place. That paragraph takes the theorem's `xml:id` only
 No name-matching: a keywords "theorem" is dissolved as a real one. The other frontmatter containers (keywords,
 acknowledgements, classification, creator) keep the Error, and a table of contents in an abstract still goes after it
 (#753). Only an abstract its own end closed (`\end{abstract}`, amsppt's `\endabstract`, a heading, the group of
-`\abstract{…}`) dissolves its theorems. One still open at `\end{document}` swallowed the main matter (math0006149's
-unbalanced `\abstract{`, 1108.5171's brace-less `\abstract` with no heading; TeX sets the whole paper in it): the
-abstract is the misused construct there, so its theorems stay theorems with the Error, as before (DG 2026-11-20).
+`\abstract{…}`) dissolves its theorems. One still open at `\end{document}` swallowed the main matter (a
+`\begin{abstract}` never ended, cond-mat9410055; TeX sets the whole paper in it): the abstract is the misused construct
+there, so its theorems stay theorems with the Error, as before (DG 2026-11-20). An abstract opened as a command and
+closed there (math0006149, 1108.5171) is split instead, its theorems moved to the body (#1101).
 `\lx@end@open@frontmatter` (sect02.rs) flags the body it ends, `\lx@add@frontmatter@until` marks that abstract's entry
 `_open_at_end` (`document::ABSTRACT_OPEN_AT_END`), and `within_abstract` passes it over; unwrapping the swallowing
 abstract itself is row R PLACET3.
@@ -21317,7 +21320,7 @@ Guards `perfect_kernel_batchplacefix::theorem_in_abstract_is_dissolved` (repro `
 text, equation, list and quote after a theorem, two in a row, a proof, `\newtheorem*`),
 `perfect_kernel_batchplacefix::proclaim_in_abstract_is_dissolved` (repro `block-model/theorem_in_abstract_proclaim`),
 `perfect_kernel_batchplacefix::theorem_in_unended_abstract_stays_a_theorem` (repros
-`block-model/theorem_in_unended_abstract{,_group}`),
+`block-model/theorem_in_unended_abstract{,_group}`, split since #1101),
 `perfect_kernel_batch69c::theorem_in_abstract_is_dissolved_not_bridged` (a theorem in a quote in the abstract).
 
 ### 1098. nomencl's list in a float's box keeps its box (PLACEFIX)
@@ -21389,6 +21392,48 @@ through the raw package's test, has no `\refstepcounter` dispatch (hyperref.sty.
 did. **Guards** `perfect_kernel_batchloopfix::{apacite_forms_survive_the_class_lets,
 amsmath_keeps_an_inlined_amstex_sum, revtex_preload_leaves_ltxutil_refstepcounter_alone,
 physics_commands_are_protected_in_an_edef}` (repros `package-bindings/alias_cycle_*`).
+
+### 1101. An abstract opened as a command that the bibliography or the document's end closes keeps its first paragraph
+
+**Rule.** The bibliography begins with its heading (article.cls:565-566 `\section*{\refname}`), so before
+`\begin{thebibliography}` opens its group (`begin_environment_by_macro`, latex_constructs/mod.rs) and in `\bibliography`
+(sect11.rs) `\lx@bibliography@ends@frontmatter` (sect05.rs) ends an abstract or keywords opened as a command, as a
+`\section` does (`\lx@heading@ends@frontmatter` and `\@startsection@hook`; the TOC alike, #753). A `\begin{abstract}`
+is left alone (`begun_environment`): elsarticle's program summary holds its own bibliography (2503.17910). An abstract
+opened as a command (`\abstract …`, `\abstract{` whose `}` never comes) that the bibliography or `\end{document}`
+(`\lx@end@open@frontmatter`, sect02.rs) closes, not a heading or `\endabstract`, keeps its first paragraph — the
+digested body up to the first paragraph end after typeset content (the body's own `\par`, or the one a vertical skip
+ends, `\vspace`/`\bigskip`; not a display's, which TeX's paragraph runs across), descending into an open group's list —
+and `\lx@add@frontmatter@until` (frontmatter_api.rs `split_after_first_paragraph`) returns the rest where the abstract
+stands, as body material before the bibliography. Closed by the document's end, it is split only where the rest holds
+the body's structure (`holds_structure`, read off the digested boxes: a whatsit with a `title`, a heading, theorem or
+proof; or with a body and an `id`, a list, display, equation or float — a note or a `{center}` is neither): an
+abstract-only document keeps all its paragraphs, unwarned (DG 2026-11-20). The flag `lx_abstract_ended_late` says which
+closed it (`"bibliography"`, `"end"`); the bibliography sets it, the end of the document re-sets it per pass, and only
+an abstract reads and clears it. One Warning, `unexpected:\abstract`, counts the moved words (the ink words of the moved
+boxes, `ink_word_text`).
+
+**Why.** In TeX the quotation or the group never ends, so the whole paper is set as the abstract (pdflatex 0 `!`;
+"\end occurred inside a group" for the unclosed brace). Kept so, the body and the bibliography sat inside
+`ltx:abstract` (schema-invalid, `<ltx:bibliography> isn't allowed in <ltx:p>`, and one Error per theorem); every
+witness has a one-paragraph abstract followed by a blank line, `\vspace` or `\bigskip`, and its body without a
+`\section` (`\noindent{\bf 1. Introduction}`, `\begin{center}1. {\it Introduction}\end{center}`). DG ruling 2026-11-20:
+nets A (the bibliography) and B (the first paragraph).
+
+**Instances.** M1, a brace-less `\abstract`: hep-th0110297, 1108.5171, 1405.5825, hep-th0602212, gr-qc0302022,
+hep-ph0407142, hep-th0305160. M2, `\abstract{` whose closing brace a footnote or `%` took: math0006149, 1408.0340,
+1501.04098, 1710.10154, 1711.02987, hep-ph9306301, hep-th9506164. Not covered: a `\begin{abstract}` never ended
+(cond-mat9410055), which LaTeX reports at `\end{document}` (its Error) and which stays whole, its theorems kept (#1097);
+the document's own `\def\abstract{…}` refused by the kernel lock (1209.6193, row R); a short first line (a PACS line)
+taken as the whole abstract; `\printbibliography`, a bare `\thebibliography` and `{references}`, which do not end it.
+
+**Perl.** Perl has neither net and loses the body (KNOWN_PERL_ERRORS #1294). **Guards**
+`perfect_kernel_batchabsfix::{bare_abstract_ended_by_bibliography_keeps_its_first_paragraph,
+unclosed_braced_abstract_ended_by_bibliography_keeps_its_first_paragraph,
+bare_abstract_open_at_end_of_document_keeps_its_first_paragraph, abstract_only_document_keeps_its_paragraphs,
+a_display_does_not_end_the_first_paragraph}` (repros `sectioning-frontmatter/abstract_*`),
+`perfect_kernel_batch74b::{braceless,braced}_abstract_unclosed_at_end_document_keeps_its_text` (an abstract-only
+document, whole).
 
 ## TeX-source fidelity family (TEXSRC)
 

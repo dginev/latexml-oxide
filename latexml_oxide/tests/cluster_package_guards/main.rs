@@ -416,6 +416,7 @@ mod perfect_kernel_batch98c;
 mod perfect_kernel_batch98d;
 mod perfect_kernel_batch98e;
 mod perfect_kernel_batch99b;
+mod perfect_kernel_batchabsfix;
 mod perfect_kernel_batchalgo397;
 mod perfect_kernel_batchamsppt;
 mod perfect_kernel_batchaut1;

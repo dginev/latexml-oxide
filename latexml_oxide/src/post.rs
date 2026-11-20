@@ -117,6 +117,41 @@ pub struct PostOptions<'a> {
   pub whatsout:                  latexml_post::extract::Whatsout,
 }
 
+impl Default for PostOptions<'_> {
+  fn default() -> Self {
+    Self {
+      pmml:                      false,
+      cmml:                      false,
+      keep_xmath:                false,
+      stylesheet:                None,
+      destination:               None,
+      source_directory:          None,
+      site_directory:            None,
+      search_paths:              &[],
+      default_resources:         true,
+      css_files:                 &[],
+      js_files:                  &[],
+      noinvisibletimes:          false,
+      plane1:                    true,
+      hackplane1:                false,
+      mathtex:                   false,
+      unicodemath:               false,
+      url_style:                 latexml_post::crossref::UrlStyle::File,
+      navigationtoc:             None,
+      schemadocs:                false,
+      split:                     false,
+      split_xpath:               None,
+      split_naming:              None,
+      xslt_parameters:           &[],
+      graphics_svg_threshold_kb: 0,
+      graphicimages:             true,
+      timestamp:                 None,
+      icon:                      None,
+      whatsout:                  latexml_post::extract::Whatsout::Document,
+    }
+  }
+}
+
 /// The requested math formats as the post chain's one math processor: a primary with
 /// its parallel secondaries (Perl `LaTeXML.pm` L504-556, order per OXIDIZED_DESIGN
 /// #1093), shared by the in-process renderer and the page-render workers.

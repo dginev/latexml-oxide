@@ -230,7 +230,7 @@ pub(crate) fn load() -> Result<()> {
   // is refused with an Info, as `\thebibliography`'s is.
   DefMacro!(
     "\\bibliography Semiverbatim",
-    r#"\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#,
+    r#"\lx@bibliography@ends@frontmatter\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}"#,
     locked => true
   );
 

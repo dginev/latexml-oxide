@@ -705,6 +705,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // their end: 1310.0585, 1310.0589, 1212.3890)
       assign_value("lx_frontmatter_kept_in_place", true, Some(Scope::Local));
       boxes.extend(digest_next_body(Some(end))?);
+      if tag == "ltx:abstract" {
+        take_abstract_ended_late();
+      }
       take_open_at_end();
       return Ok(boxes);
     }
@@ -761,9 +764,42 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // this frame, `until_terminal_inside_group` (stomach.rs) acts.
     // (the title-page check's watch over a frontmatter command's entry: #953 "106t")
     let watch = begin_frontmatter_entry_digestion(None, checked);
+    // (a keywords body closed late before this abstract opened leaves it no flag)
+    if tag == "ltx:abstract" {
+      take_abstract_ended_late();
+    }
     let body = digest_next_body(Some(end)).map(|body| [boxes, body].concat());
-    // An abstract still open at `\end{document}` swallowed the main matter: its theorems stay theorems (DG 2026-11-20;
-    // math0006149, 1108.5171; document.rs `ABSTRACT_OPEN_AT_END`, OD #1097)
+    // An abstract opened as a command that no heading ended — the bibliography or the document's end did — holds the
+    // body, as in TeX (the group or `\quotation` never ends): it keeps its first paragraph and the rest goes back to
+    // the body, where it stands (sect05.rs `\lx@bibliography@ends@frontmatter`; OXIDIZED_DESIGN_DIVERGENCES #1101).
+    // One the document's end closed is split only where what follows holds the body's structure (DG 2026-11-20: an
+    // abstract-only document keeps its paragraphs).
+    let ended_late = if tag == "ltx:abstract" { take_abstract_ended_late() } else { None };
+    let (body, moved) = match body {
+      Ok(body) if let Some(by) = ended_late => {
+        let (kept, moved) = split_after_first_paragraph(body.clone(), &mut false);
+        if by == LateClose::Bibliography || moved.iter().any(holds_structure) {
+          (Ok(kept), moved)
+        } else {
+          (Ok(body), Vec::new())
+        }
+      },
+      body => (body, Vec::new()),
+    };
+    if moved.iter().any(typesets_content) {
+      let mut text = String::new();
+      moved.iter().for_each(|d| ink_word_text(d, &mut text));
+      let text = text.replace(INK_SEAM, "");
+      let words = text.split_whitespace().filter(|w| w.chars().any(char::is_alphanumeric)).count();
+      Warn!(
+        "unexpected",
+        "\\abstract",
+        s!("an abstract no heading ended holds the document: its first paragraph kept, {words} words after it moved \
+            to the body")
+      );
+    }
+    // An abstract still open at `\end{document}` keeps the theorems left in it (an environment `\begin{abstract}` never
+    // ended, cond-mat9410055; document.rs `ABSTRACT_OPEN_AT_END`, OD #1097); a split one has moved them to the body
     if take_open_at_end() && tag == "ltx:abstract" {
       frontmatter_set_entry_attr(&tag, index, document::ABSTRACT_OPEN_AT_END, "true");
     }
@@ -780,7 +816,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // `\lx@heading@ends@frontmatter`) or an environment left empty (pdflatex prints only its heading).
     if !typesets_content(&digested) {
       frontmatter_remove(&tag, index);
-      return Ok(Vec::new());
+      return Ok(moved);
     }
     DebugFeature!("frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
@@ -791,7 +827,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if let Some(key) = seal {
       note_digested_frontmatter(&key);
     }
-    Ok(Vec::new())
+    Ok(moved)
   }, bounded => true);
 
   // Some frontmatter elements are "structured" in the sense of having a main bit of data
@@ -1504,6 +1540,80 @@ pub(in crate::base_utilities) fn ends_with_abbreviation(name: &str) -> bool {
   let initial = chars.next().is_some_and(char::is_uppercase) && chars.next().is_none();
   // (and "et al." ending a list, `is_name_qualifier`)
   initial || NAME_SUFFIXES.contains(&format!("{word}.").as_str()) || word == "al" || word == "et.al"
+}
+
+/// Splits a frontmatter body's boxes after its first paragraph — the first paragraph end after typeset content: the
+/// body's own `\par` (its `frontmatter_item`, tex_paragraph.rs) or one a vertical skip ended (`internal_par` before an
+/// `isVerticalSpace` box; a display's, which TeX's paragraph runs across, is none) — descending into the lists its
+/// groups made (an unclosed `\abstract{`'s): `(first paragraph, the rest)`. `seen`: content met before.
+fn split_after_first_paragraph(
+  boxes: Vec<Digested>,
+  seen: &mut bool,
+) -> (Vec<Digested>, Vec<Digested>) {
+  let mut kept = Vec::new();
+  let mut boxes = boxes.into_iter().peekable();
+  while let Some(digested) = boxes.next() {
+    if let DigestedData::List(list) = digested.data() {
+      let (first, rest) = split_after_first_paragraph(list.borrow().boxes.clone(), seen);
+      if !rest.is_empty() {
+        let mut head = list.borrow().clone();
+        head.boxes = first;
+        let mut tail = list.borrow().clone();
+        tail.boxes = rest;
+        kept.push(Digested::from(head));
+        return (
+          kept,
+          std::iter::once(Digested::from(tail)).chain(boxes).collect(),
+        );
+      }
+    } else if *seen
+      && matches!(digested.data(), DigestedData::Whatsit(w)
+        if w.borrow().get_property("frontmatter_item").is_some()
+          || (w.borrow().get_property_bool("internal_par")
+            && boxes.peek().is_some_and(|next| next.get_property_bool("isVerticalSpace"))))
+    {
+      kept.push(digested);
+      return (kept, boxes.collect());
+    } else if typesets_content(&digested) {
+      *seen = true;
+    }
+    kept.push(digested);
+  }
+  (kept, Vec::new())
+}
+
+/// What closed an abstract no heading ended (`lx_abstract_ended_late`): the bibliography's heading (sect05.rs
+/// `\lx@bibliography@ends@frontmatter`) or the document's end (sect02.rs `\lx@end@open@frontmatter`).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum LateClose {
+  Bibliography,
+  EndOfDocument,
+}
+
+/// How the abstract just digested was closed late, if it was ([`LateClose`]); cleared.
+fn take_abstract_ended_late() -> Option<LateClose> {
+  let by = match lookup_string("lx_abstract_ended_late").as_str() {
+    "bibliography" => Some(LateClose::Bibliography),
+    "end" => Some(LateClose::EndOfDocument),
+    _ => None,
+  };
+  assign_value("lx_abstract_ended_late", Stored::None, Some(Scope::Global));
+  by
+}
+
+/// Whether a box an abstract held holds the body's structure (DG 2026-11-20): a heading, theorem or proof (a whatsit
+/// with a `title`), or a numbered environment or display — a list, an equation, a float (a body and an `id`; a note's
+/// `id` has no body, a `{center}`'s or `{quote}`'s body no `id`) — descending into the lists of its groups.
+fn holds_structure(digested: &Digested) -> bool {
+  match digested.data() {
+    DigestedData::List(list) => list.borrow().boxes.iter().any(holds_structure),
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      w.get_property("title").is_some()
+        || (w.get_property("id").is_some() && w.get_property("body").is_some())
+    },
+    _ => false,
+  }
 }
 
 /// Whether the body just digested was ended by `\end{document}` (sect02.rs `\lx@end@open@frontmatter`); cleared.

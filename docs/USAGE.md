@@ -5,13 +5,16 @@
 **Try it first — no install: [latexml.rs/editor](https://latexml.rs/editor)** — type LaTeX,
 see the converted document live.
 
-Two binaries: `latexml_oxide` for documents, `latexmlmath_oxide` for a single formula.
+Two binaries: `latexml_oxide` for documents (shipped in all prebuilt releases), and `latexmlmath_oxide` for a single formula (installed via `cargo +nightly install latexml` or built from source).
 
 ```bash
 # A document → HTML5, with MathML for the math (format inferred from the extension)
 $ latexml_oxide paper.tex --destination=paper.html
 
-# One formula → Presentation MathML (the default; --cmml for Content MathML)
+# Add a UnicodeMath annotation alongside Presentation MathML (or standalone with --nopmml)
+$ latexml_oxide paper.tex --unicodemath --destination=paper.html
+
+# One formula → Presentation MathML (--cmml for Content MathML, --unicodemath for UnicodeMath)
 $ latexmlmath_oxide 'a^2+b^2=c^2'
 ```
 

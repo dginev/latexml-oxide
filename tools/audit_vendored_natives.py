@@ -200,17 +200,17 @@ AUDITED = {
     # The dginev/marpa fork's sys crate, published to crates.io as
     # `libmarpa-asf-sys` (the upstream `libmarpa-sys` name is taken). Registry-
     # sourced now (was a git dep); consumed via the `package = "marpa-asf"` alias.
-    # 0.3.1 (until released: the TEMP [patch.crates-io] path in Cargo.toml) builds
-    # marpa_obs.c from its own modified copy; 0.3.0 (verbatim) is no longer resolved.
+    # 0.3.1 (published on crates.io) builds marpa_obs.c from its own modified
+    # copy; 0.3.0 (verbatim) is no longer resolved.
     "libmarpa-asf-sys": ("0.3.1",
         "Vendors libmarpa 8.6.2 as a tarball, built with one modified file: c/marpa_obs.c "
         "(GNU obstack, LGPL-2.1+; 16 KiB chunks and a per-thread chunk cache, the change "
-        "recorded in its header) replaces the tarball's copy. Mixed per-file licensing that "
-        "the manifest's 'MIT OR Apache-2.0' does not express: marpa.c/marpa_ami.c/"
-        "marpa_codes.c are MIT (c) Jeffrey Kegler; marpa_avl.c/marpa_tavl.c are "
-        "LGPL-3.0+ (Ben Pfaff's libavl); marpa_obs.c is LGPL-2.1+ (GNU obstack), its "
-        "modified source shipped in the crate. Attributed in THIRD-PARTY-NOTICES 3.3; "
-        "static LGPL link -> relink note 3.5."
+        "recorded in its header) replaces the tarball's copy. From 0.3.1 the manifest "
+        "declares '(MIT OR Apache-2.0) AND MIT AND LGPL-2.1-or-later AND LGPL-3.0-or-later': "
+        "marpa.c/marpa_ami.c/marpa_codes.c are MIT (c) Jeffrey Kegler; "
+        "marpa_avl.c/marpa_tavl.c are LGPL-3.0+ (Ben Pfaff's libavl); "
+        "marpa_obs.c is LGPL-2.1+ (GNU obstack), its modified source shipped in the crate. "
+        "Attributed in THIRD-PARTY-NOTICES 3.3; static LGPL link -> relink note 3.5."
     ),
     "libmimalloc-sys": ("0.1.49", 
         "Vendors mimalloc C. The crate-root LICENSE.txt is the wrapper author's "

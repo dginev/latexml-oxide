@@ -4404,6 +4404,58 @@ mod unicodemath_output {
       "TeX Fatal must exit cleanly without panicking:\n{stderr}"
     );
   }
+
+  #[test]
+  fn latexmlmath_version_and_cli_validation() {
+    let ver = Command::new(env!("CARGO_BIN_EXE_latexmlmath_oxide"))
+      .arg("--version")
+      .output()
+      .expect("spawn latexmlmath_oxide --version");
+    assert!(ver.status.success(), "status: {:?}", ver.status.code());
+    let stdout = String::from_utf8_lossy(&ver.stdout);
+    assert!(
+      stdout.starts_with("latexmlmath_oxide "),
+      "expected version banner, got:\n{stdout}"
+    );
+
+    let bogus = Command::new(env!("CARGO_BIN_EXE_latexmlmath_oxide"))
+      .args(["--bogus", "x^2"])
+      .output()
+      .expect("spawn latexmlmath_oxide --bogus");
+    assert_eq!(
+      bogus.status.code(),
+      Some(2),
+      "unknown flag should exit 2, stderr:\n{}",
+      String::from_utf8_lossy(&bogus.stderr)
+    );
+
+    let empty_uni = Command::new(env!("CARGO_BIN_EXE_latexmlmath_oxide"))
+      .args(["--unicodemath=", "x^2"])
+      .output()
+      .expect("spawn latexmlmath_oxide --unicodemath=");
+    assert_eq!(
+      empty_uni.status.code(),
+      Some(2),
+      "empty --unicodemath= should exit 2, stderr:\n{}",
+      String::from_utf8_lossy(&empty_uni.stderr)
+    );
+  }
+
+  #[test]
+  fn latexml_oxide_rejects_unknown_format_whatsin_whatsout() {
+    for flag in ["--format=jats", "--whatsin=bogus", "--whatsout=bogus"] {
+      let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args([flag, "literal:x"])
+        .output()
+        .expect("spawn latexml_oxide");
+      assert_eq!(
+        out.status.code(),
+        Some(2),
+        "{flag} should fail with clap usage exit 2, stderr:\n{}",
+        String::from_utf8_lossy(&out.stderr)
+      );
+    }
+  }
 }
 
 mod hostile_input_hardening {

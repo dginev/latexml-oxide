@@ -1,0 +1,18 @@
+% witness: cond-mat0105361 (nanosymp.sty:25-31 `\beginabstract` list and its `\endabstract`, no `\abstract` of its own)
+% oracle:  pdflatex 0 `!` with the style (its two lines, nanosymp-abstract.sty beside this file)
+% engines: rust MAIN928 = 0 Errors, 1 Warning: the kernel lock refused the style's `\endabstract`, the list never closed and
+%          the sections and the bibliography landed in its item; Perl does not load the .sty (E=1), keeps the text
+% expect:  the lock lets through an `\endabstract` the style pairs with its own `\beginabstract`; it holds against
+%          IMjournal.sty:81/83 (1702.00108) and asect.sty:297 (2401.14559), which end the kernel's environment
+% status:  RED (MAIN928) -> GREEN (ABSFIX)
+% (style file: `\long\def\beginabstract{\begin{list}{}{\leftmargin=0pt}\item\small{\bf Abstract. }}`
+%  `\long\def\endabstract{\end{list}\normalsize\noindent}`)
+\documentclass{article}
+\usepackage{nanosymp-abstract}
+\begin{document}
+\beginabstract Short abstract text.
+\endabstract
+\section{Introduction}
+Body text that is no abstract.
+\begin{thebibliography}{9}\bibitem{a} A reference.\end{thebibliography}
+\end{document}

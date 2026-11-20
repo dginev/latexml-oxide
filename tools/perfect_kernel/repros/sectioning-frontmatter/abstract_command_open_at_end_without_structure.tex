@@ -1,0 +1,18 @@
+% witness: review p4/c3/c5 of ABSFIX round 1 (an abstract-only document; DG 2026-11-20: not split)
+% oracle:  pdflatex 0 `!`: "Abstract / Short abstract text. / Second paragraph with a note. / Centered. / Quoted." and
+%          the footnote "A note."
+% engines: rust ABSFIX round 1 = 0 Errors, 1 Warning: the paragraphs after the first moved to the body
+% expect:  0 errors, 0 warnings; one ltx:abstract holding every paragraph, the centered line and the quote (a note, a
+%          `{center}` and a `{quote}` are no body structure: frontmatter_api.rs `holds_structure`)
+% status:  RED (ABSFIX round 1) -> GREEN (ABSFIX round 2), OXIDIZED_DESIGN_DIVERGENCES #1101
+\documentclass{article}
+\begin{document}
+\abstract
+Short abstract text.
+
+Second paragraph with a note.\footnote{A note.}
+
+\begin{center}Centered.\end{center}
+
+\begin{quote}Quoted.\end{quote}
+\end{document}

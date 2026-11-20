@@ -43,6 +43,17 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **An abstract no longer swallows the document.** A brace-less `\abstract`, or an `\abstract{` whose `}` a
+    footnote took, with no `\section` after it, held the whole paper and its bibliography (TeX sets them so too; Perl
+    loses the body): the bibliography now ends it as its heading would, and an abstract the bibliography closed, or the
+    document's end where body structure follows it, keeps its first paragraph (an abstract-only document keeps all of
+    it), the rest moved back to the body with one Warning counting the moved
+    words (hep-th0110297, 1108.5171, math0006149, 1408.0340; ~30 run-397 papers, each 1-11 Errors to 0;
+    OXIDIZED_DESIGN_DIVERGENCES #1101). svjour's `\abstract{…}` (and the 2003 svmult's) is a group read where it
+    stands, as the classes define it, so one left open no longer reads to the end of the input (astro-ph0702187 12 → 0 Errors,
+    math0701897 48 → 0; KNOWN_PERL_ERRORS #1293). A style's `\endabstract` paired with its own `\beginabstract` is its
+    own (nanosymp.sty, cond-mat0105361), where the kernel lock kept the list open over the paper. Guards
+    `cluster_package_guards::perfect_kernel_batchabsfix::*`.
   - **Run 397's misplaced elements, as DG ruled 2026-11-19.** An undefined BibTeX macro (`month = june`; ~190
     papers) is a Warning, as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1096). A theorem or proof in an abstract (83 of
     the 86 papers sampled) is dissolved into it: its title a run-in bold text, its paragraphs, lists and equations in the abstract,
@@ -81,6 +92,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `𝜋^0⁢𝑒^+⁢𝑒^-` becomes `𝜋⁰⁢𝑒⁺⁢𝑒⁻`. An equation tag in a `title=` reads the same way, its scripts and fonts kept
     (`\tag{$\mathrm{P_1}$}` gives `Equation P₁`, where Perl's `textContent` gives `P1`; OXIDIZED_DESIGN #1094).
     Guards `cluster_cli::unicodemath_output::*`, `unicode_math::tests::*`.
+
+  - **Pre-v0.8.0 output-neutral performance trims (#926).** `Document::serialize_to_string` trims trailing newlines in
+    place instead of allocating a second full-document copy at peak RAM; `pathname::find` caches directory listings
+    behind a `DirStamp` (cleared at conversion start via `reset_conversion_state`) and uses a single-stat
+    `is_readable_file`; `pathname` and `dump_paths` share one ambient `kpsewhich -var-value=SELFAUTOPARENT` probe
+    (`3 → 2` subprocesses).
 
   - **Four more run-397 Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
     `\end{equation*}` as amsmath.sty:2950-2951 makes them, so a mixed pair (`\[ … \end{equation*}`) no longer errs

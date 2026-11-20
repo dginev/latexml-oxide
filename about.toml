@@ -27,3 +27,15 @@ ignore-build-dependencies = true
 ignore-dev-dependencies = true
 # Private workspace crates are CC0 (our own) — no third-party attribution owed.
 private = { ignore = true }
+
+# Mirror deny.toml's [[licenses.exceptions]] for libmarpa-asf-sys: from 0.3.1
+# its manifest names the LGPL-2.1-or-later (obstack) and LGPL-3.0-or-later
+# (AVL) files bundled inside libmarpa 8.6.2 (verbatim texts ship in section 6
+# of THIRD-PARTY-NOTICES; see docs/release/LICENSE_INVENTORY.md).
+[libmarpa-asf-sys]
+accepted = [
+    "MIT",
+    "Apache-2.0",
+    "LGPL-2.1-or-later",
+    "LGPL-3.0-or-later",
+]

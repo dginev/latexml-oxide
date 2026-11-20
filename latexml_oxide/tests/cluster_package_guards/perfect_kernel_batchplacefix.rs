@@ -132,13 +132,17 @@ fn bibliography_floats_out_of_a_float() {
 
 /// block-model/theorem_in_unended_abstract{,_group}: an abstract still open at `\end{document}` — a brace-less
 /// `\abstract` no heading ends (1108.5171), an `\abstract{` whose group never closes (math0006149) — swallowed the main
-/// matter: its theorems stay theorems, with base's Error (DG 2026-11-20). Two terminal paths (the body's own loop, and
-/// `until_terminal_inside_group`). `\abstract{…}` closed by its group ends there; the theorem after it is the body's.
+/// matter: it keeps its first paragraph, and the theorem and the text after it leave it for the body, in order, 0 Errors
+/// and the moved-words Warning (DG 2026-11-20, OXIDIZED_DESIGN_DIVERGENCES #1101; was the theorem kept in the abstract
+/// with base's Error). Two terminal paths (the body's own loop, and `until_terminal_inside_group`). `\abstract{…}`
+/// closed by its group ends there; the theorem after it is the body's.
 #[test]
 fn theorem_in_unended_abstract_stays_a_theorem() {
+  const MOVED: &str = "Warning:unexpected:\\abstract an abstract no heading ended holds the document: its first \
+                       paragraph kept, 2 words after it moved to the body";
   for (repro, warnings) in [
-    ("theorem_in_unended_abstract", 0),
-    ("theorem_in_unended_abstract_group", 1),
+    ("theorem_in_unended_abstract", 1),
+    ("theorem_in_unended_abstract_group", 2),
   ] {
     let (log, xml) = convert_with(
       &std::fs::read_to_string(format!(
@@ -147,17 +151,14 @@ fn theorem_in_unended_abstract_stays_a_theorem() {
       .unwrap(),
       None,
     );
-    assert_eq!(error_count(&log), 1, "{repro}: {log}");
-    assert!(
-      log.contains("<ltx:theorem> isn't allowed in <ltx:abstract>"),
-      "{repro}: {log}"
-    );
+    assert_eq!(error_count(&log), 0, "{repro}: {log}");
     assert_eq!(warning_count(&log), warnings, "{repro}: {log}");
+    assert!(log.lines().any(|l| l == MOVED), "{repro}: {log}");
     assert_element(
       &xml,
-      "abstract",
+      "document",
       &[],
-      r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Summary.</p><theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">Body theorem.</text></p></para></theorem><p>Text.</p></abstract>"#,
+      r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Summary.</p></abstract><theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">Body theorem.</text></p></para></theorem><para xml:id="p1"><p>Text.</p></para></document>"#,
     );
   }
   let (log, xml) = convert_with(

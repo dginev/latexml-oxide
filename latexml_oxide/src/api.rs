@@ -37,7 +37,10 @@ use std::rc::Rc;
 
 use latexml_core::common::{Config, OutputFormat};
 
-use crate::{converter::Converter, post};
+use crate::{
+  converter::{ConversionResponse, Converter},
+  post,
+};
 
 /// Build the standard library `Config`: quiet, LaTeX mode, with the package +
 /// contrib binding-dispatch chain a normal conversion uses.
@@ -59,25 +62,53 @@ fn library_config(format: OutputFormat) -> Config {
 }
 
 /// Run `job` on a fresh 256 MiB-stack worker thread and free the thread-local
-/// engine before the thread exits. Mirrors `latexml_oxide::main`'s worker
-/// thread and `util::test`'s per-conversion `reset_thread_engine()`.
-fn on_worker<T: Send + 'static>(job: impl FnOnce() -> T + Send + 'static) -> T {
-  std::thread::Builder::new()
+/// engine before the thread exits (even if `job` panics). Mirrors
+/// `latexml_oxide::main`'s worker thread and `util::test`'s per-conversion
+/// `reset_thread_engine()`. Returns `Err` on spawn failure or worker panic
+/// rather than crashing the library caller.
+fn on_worker<T: Send + 'static>(
+  job: impl FnOnce() -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+  let handle = std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
       // The CLI's pushback cap (ar5iv.sty's `pushbacklimit`), on the thread whose gullet converts.
       if std::env::var_os("LATEXML_NO_DEFAULT_PUSHBACK_LIMIT").is_none() {
         latexml_core::gullet::set_pushback_limit(Some(5_000_000));
       }
-      let out = job();
       // `#[thread_local]` engine roots don't Drop on thread exit; free the
-      // ~110 MiB explicitly so repeated calls don't accumulate.
-      latexml_core::reset_thread_engine();
-      out
+      // ~110 MiB explicitly (including on unwind) so repeated calls don't accumulate.
+      struct EngineResetGuard;
+      impl Drop for EngineResetGuard {
+        fn drop(&mut self) { latexml_core::reset_thread_engine(); }
+      }
+      let _guard = EngineResetGuard;
+      job()
     })
-    .expect("spawn latexml worker thread")
-    .join()
-    .expect("latexml worker thread panicked")
+    .map_err(|e| format!("failed to spawn latexml worker thread: {e}"))?;
+  match handle.join() {
+    Ok(result) => result,
+    Err(payload) => {
+      let msg = payload
+        .downcast_ref::<&str>()
+        .copied()
+        .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+        .unwrap_or("unknown panic");
+      Err(format!("latexml worker thread panicked: {msg}"))
+    },
+  }
+}
+
+/// Extract the converted XML from a [`ConversionResponse`], preserving the
+/// captured conversion log in the `Err` message when conversion failed.
+fn core_result_xml(response: ConversionResponse, prefix: &str) -> Result<String, String> {
+  response.result.ok_or_else(|| {
+    if response.log.is_empty() {
+      prefix.to_string()
+    } else {
+      format!("{prefix}:\n{}", response.log)
+    }
+  })
 }
 
 /// Convert a TeX/LaTeX source string to LaTeXML **XML** (the intermediate
@@ -95,9 +126,7 @@ pub fn convert_to_xml(tex: &str) -> Result<String, String> {
       .prepare_session(&opts)
       .map_err(|e| format!("could not prepare session: {e}"))?;
     let response = converter.convert(format!("literal:{tex}"));
-    response
-      .result
-      .ok_or_else(|| format!("conversion failed:\n{}", response.log))
+    core_result_xml(response, "conversion failed")
   })
 }
 
@@ -117,16 +146,17 @@ pub fn convert_to_html(tex: &str) -> Result<String, String> {
 }
 
 /// The settings [`convert_to_html_with`] takes. [`Default`] is what
-/// [`convert_to_html`] does. Construct with `..Default::default()`, so that a
-/// setting added later leaves existing callers compiling:
+/// [`convert_to_html`] does. Start from [`HtmlOptions::default()`] and use its
+/// builder methods so future options remain backwards-compatible:
 ///
 /// ```no_run
 /// use latexml::api::{HtmlOptions, convert_to_html_with};
-/// let options = HtmlOptions { default_resources: false, ..Default::default() };
+/// let options = HtmlOptions::default().with_default_resources(false);
 /// let html = convert_to_html_with(r"\documentclass{article}\begin{document}Hi\end{document}", &options)?;
 /// # Ok::<(), String>(())
 /// ```
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub struct HtmlOptions {
   /// Link and copy the bundled CSS/JS (`true`, Perl `defaultresources`). With no
   /// destination the files land in the working directory; `false` is the
@@ -136,6 +166,15 @@ pub struct HtmlOptions {
 
 impl Default for HtmlOptions {
   fn default() -> Self { HtmlOptions { default_resources: true } }
+}
+
+impl HtmlOptions {
+  /// Set whether to link and copy the bundled CSS/JS resources (`--defaultresources` /
+  /// `--nodefaultresources`).
+  pub fn with_default_resources(mut self, default_resources: bool) -> Self {
+    self.default_resources = default_resources;
+    self
+  }
 }
 
 /// [`convert_to_html`] with the given [`HtmlOptions`].
@@ -149,10 +188,10 @@ pub fn convert_to_html_with(tex: &str, options: &HtmlOptions) -> Result<String, 
     converter
       .prepare_session(&opts)
       .map_err(|e| format!("could not prepare session: {e}"))?;
-    let xml = converter
-      .convert(format!("literal:{tex}"))
-      .result
-      .ok_or_else(|| "conversion failed before post-processing".to_string())?;
+    let xml = core_result_xml(
+      converter.convert(format!("literal:{tex}")),
+      "conversion failed before post-processing",
+    )?;
 
     let post_opts = html_post_options(options.default_resources);
     post_result(post::run_post_processing_logged(&xml, &post_opts))
@@ -163,35 +202,12 @@ pub fn convert_to_html_with(tex: &str, options: &HtmlOptions) -> Result<String, 
 fn html_post_options(default_resources: bool) -> post::PostOptions<'static> {
   post::PostOptions {
     pmml: true,
-    cmml: false,
-    keep_xmath: false,
     // Same per-format sheet the CLI uses (shared source of truth).
     stylesheet: post::default_stylesheet(Some("html5")),
-    destination: None,
-    source_directory: None,
-    site_directory: None,
-    search_paths: &[],
     default_resources,
-    css_files: &[],
-    js_files: &[],
-    noinvisibletimes: false,
-    plane1: true,
-    hackplane1: false,
-    mathtex: false,
-    unicodemath: false,
-    url_style: latexml_post::crossref::UrlStyle::File,
-    navigationtoc: None,
-    schemadocs: false,
-    split: false,
-    split_xpath: None,
-    split_naming: None,
-    xslt_parameters: &[],
-    graphics_svg_threshold_kb: 0,
     // No destination to write images to; keep the raw graphics references.
     graphicimages: false,
-    timestamp: None,
-    icon: None,
-    whatsout: latexml_post::extract::Whatsout::Document,
+    ..post::PostOptions::default()
   }
 }
 
@@ -274,8 +290,9 @@ mod tests {
         &xml,
         &html_post_options(false),
       ));
-      ((response.status_code, response.log), post)
-    });
+      Ok(((response.status_code, response.log), post))
+    })
+    .expect("worker thread");
     assert_eq!(core_log.0, 3, "{}", core_log.1);
     assert!(
       core_log.1.contains("101 errors; 1 fatal error;"),
@@ -288,12 +305,39 @@ mod tests {
 
   #[test]
   fn html_conversion_returns_page() {
-    let html = convert_to_html_with(DOC, &HtmlOptions { default_resources: false })
+    let html = convert_to_html_with(DOC, &HtmlOptions::default().with_default_resources(false))
       .expect("convert_to_html_with");
     assert!(html.contains("Hello"), "HTML should contain the body text");
     assert!(
       html.contains("<math") || html.contains("ltx_Math"),
       "math rendered"
     );
+  }
+
+  #[test]
+  fn worker_panic_returns_err_instead_of_crashing_caller() {
+    let err =
+      on_worker::<()>(|| panic!("boom in worker")).expect_err("worker panic should surface as Err");
+    assert!(
+      err.contains("latexml worker thread panicked: boom in worker"),
+      "unexpected panic error: {err}"
+    );
+  }
+
+  #[test]
+  fn core_failure_preserves_conversion_log() {
+    let response = ConversionResponse {
+      result:      None,
+      log:         "Fatal:foo:bar detailed diagnostic".to_string(),
+      status:      "Fatal".to_string(),
+      status_code: 3,
+    };
+    let err = core_result_xml(response, "conversion failed before post-processing")
+      .expect_err("missing XML is an Err");
+    assert!(
+      err.contains("conversion failed before post-processing"),
+      "{err}"
+    );
+    assert!(err.contains("Fatal:foo:bar detailed diagnostic"), "{err}");
   }
 }

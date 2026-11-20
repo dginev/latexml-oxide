@@ -505,6 +505,10 @@ pub(crate) fn load() -> Result<()> {
         return Ok(Vec::new());
       }
       assign_value("lx_end_open_frontmatter_depth", Stored::Int(depth), Some(Scope::Global));
+      // (a body opened as a command that the document's end closes: an abstract may keep only its first paragraph,
+      // `lx_abstract_ended_late`, `\lx@add@frontmatter@until`; set per pass, so an environment's is never flagged)
+      let late = if begun_environment().is_none() { Stored::from("end") } else { Stored::None };
+      assign_value("lx_abstract_ended_late", late, Some(Scope::Global));
       // An environment's body left open is LaTeX's error (latex.ltx `\@checkend`: "\begin{abstract} on input line …
       // ended by \end{document}"; Perl errs too), raised once, for the innermost open environment (`\@currenvir`), on
       // the first pass. A begin code called as a command opens no environment LaTeX checks (`begun_environment`): the
