@@ -505,8 +505,9 @@ pub(crate) fn load() -> Result<()> {
         return Ok(Vec::new());
       }
       assign_value("lx_end_open_frontmatter_depth", Stored::Int(depth), Some(Scope::Global));
-      // (an abstract opened as a command keeps its first paragraph: `lx_abstract_ended_late`, `\lx@add@frontmatter@until`)
-      if terminal == T_CS!("\\lx@end@abstract") && begun_environment().is_none() {
+      // (a body opened as a command that the document's end closes: an abstract keeps its first paragraph,
+      // `lx_abstract_ended_late`, `\lx@add@frontmatter@until`)
+      if begun_environment().is_none() {
         assign_value("lx_abstract_ended_late", true, Some(Scope::Global));
       }
       // An environment's body left open is LaTeX's error (latex.ltx `\@checkend`: "\begin{abstract} on input line …

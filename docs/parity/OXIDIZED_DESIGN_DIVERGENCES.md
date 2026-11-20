@@ -21325,7 +21325,8 @@ physics_commands_are_protected_in_an_edef}` (repros `package-bindings/alias_cycl
 is left alone (`begun_environment`): elsarticle's program summary holds its own bibliography (2503.17910). An abstract
 opened as a command (`\abstract …`, `\abstract{` whose `}` never comes) that the bibliography or `\end{document}`
 (`\lx@end@open@frontmatter`, sect02.rs) closes, not a heading or `\endabstract`, keeps its first paragraph — the
-digested body up to the first `\par` after typeset content, descending into an open group's list — and
+digested body up to the first paragraph end after typeset content (the body's own `\par`, or a skip's or display's),
+descending into an open group's list — and
 `\lx@add@frontmatter@until` (frontmatter_api.rs `split_after_first_paragraph`) returns the rest where the abstract
 stands, as body material before the bibliography. One Warning, `unexpected:\abstract`, counts the moved words (the
 ink words of the moved boxes, `ink_word_text`).

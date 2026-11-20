@@ -765,6 +765,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // An abstract opened as a command that no heading ended — the bibliography or the document's end did — holds the
     // body, as in TeX (the group or `\quotation` never ends): it keeps its first paragraph and the rest goes back to
     // the body, where it stands (sect05.rs `\lx@bibliography@ends@frontmatter`; OXIDIZED_DESIGN_DIVERGENCES #1101).
+    // (the flag is the body's whatever its tag: any body it closed clears it)
     let ended_late = tag == "ltx:abstract" && lookup_bool("lx_abstract_ended_late");
     assign_value("lx_abstract_ended_late", false, Some(Scope::Global));
     let (body, moved) = match body {
@@ -1525,8 +1526,10 @@ pub(in crate::base_utilities) fn ends_with_abbreviation(name: &str) -> bool {
   initial || NAME_SUFFIXES.contains(&format!("{word}.").as_str()) || word == "al" || word == "et.al"
 }
 
-/// Splits a body's boxes after its first paragraph — the first `\par` after typeset content — descending into the
-/// lists its groups made (an unclosed `\abstract{`'s): `(first paragraph, the rest)`. `seen`: content met before.
+/// Splits a frontmatter body's boxes after its first paragraph — the first paragraph end after typeset content: the
+/// body's own `\par` (its `frontmatter_item`, tex_paragraph.rs) or one a skip or display ended (`internal_par`) —
+/// descending into the lists its groups made (an unclosed `\abstract{`'s): `(first paragraph, the rest)`. `seen`:
+/// content met before.
 fn split_after_first_paragraph(
   boxes: Vec<Digested>,
   seen: &mut bool,
@@ -1549,7 +1552,7 @@ fn split_after_first_paragraph(
       }
     } else if *seen
       && matches!(digested.data(), DigestedData::Whatsit(w)
-        if w.borrow().get_definition().get_cs_name() == "\\lx@normal@par")
+        if w.borrow().get_property("frontmatter_item").is_some() || w.borrow().get_property_bool("internal_par"))
     {
       kept.push(digested);
       return (kept, boxes.collect());

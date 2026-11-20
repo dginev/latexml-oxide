@@ -5990,17 +5990,15 @@ pub fn files_lock_holds(cs: &str, copies_interface: impl FnOnce() -> bool) -> bo
     if let Some(protected) = copies_lock(&begin) {
       return copies_lock_in_force(&begin, &protected) || copies_lock_kept_aside(&begin);
     }
-  }
-  // The end half of a begin half locked against everyone (the kernel's `\endabstract`, sect05.rs) is a file's own when
-  // the file pairs it with a plain `\begin<name>`: nanosymp.sty:25-31's `\beginabstract` list (cond-mat0105361), not
-  // the end of the kernel's environment that IMjournal.sty:81/83 (1702.00108, 2304.05575) and asect.sty:297's `\let`
-  // (2401.14559) give.
-  if let Some(name) = cs.strip_prefix("\\end")
-    && !name.is_empty()
-    && arena::get_suffixed(&s!("\\{name}"), ":locked").is_some_and(lookup_bool_sym)
-    && lookup_meaning(&T_CS!(s!("\\begin{name}"))).is_some()
-  {
-    return false;
+    // The end half of a begin half locked against everyone (the kernel's `\endabstract`, sect05.rs) is a file's own
+    // when the file pairs it with a plain `\begin<name>`: nanosymp.sty:25-31's `\beginabstract` list (cond-mat0105361),
+    // not the end of the kernel's environment that IMjournal.sty:81/83 (1702.00108, 2304.05575) and asect.sty:297's
+    // `\let` (2401.14559) give.
+    if arena::get_suffixed(&begin, ":locked").is_some_and(lookup_bool_sym)
+      && crate::binding::def::dialect::is_defined(&s!("\\begin{name}"))
+    {
+      return false;
+    }
   }
   if let Some(protected) = copies_lock(cs) {
     if !copies_lock_in_force(cs, &protected) && !copies_lock_kept_aside(cs) {
