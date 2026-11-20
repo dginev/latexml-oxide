@@ -134,8 +134,8 @@ token-locators = [
 # Static in-process libkpathsea on windows-msvc (forwards to
 # latexml_core/kpathsea-build-from-source → the kpathsea crate's build-from-source).
 # Off by default; inert off windows-msvc. The Windows distribution build opts in
-# to drop the subprocess `ls-R`-cache-build cost (~0.5 s/conversion). Requires the
-# root [patch] on kpathsea until rust-kpathsea#21 publishes.
+# to drop the subprocess `ls-R`-cache-build cost (~0.5 s/conversion), via
+# kpathsea >= 0.3.4 from crates.io.
 kpathsea-build-from-source = ["latexml_core/kpathsea-build-from-source"]
 # Runtime (Rhai) script bindings (docs/parity/script_bindings_plan.md) — propagates
 # to latexml_contrib (the only crate that embeds Rhai). ON by default:
@@ -229,7 +229,7 @@ copyright = "2016-2026 Deyan Ginev. CC0 1.0 Universal."
 license-file = ["../LICENSE", "0"]
 extended-description = """\
 A Rust port of LaTeXML — converts LaTeX documents to accessible web
-formats (HTML5, XHTML, EPUB3, JATS). Drop-in replacement for the
+formats (HTML5, XHTML, EPUB3). Drop-in replacement for the
 upstream Perl tool with significant throughput improvements on the
 arXiv corpus."""
 # `$auto` runs dpkg-shlibdeps on the packaged binary, deriving the exact,

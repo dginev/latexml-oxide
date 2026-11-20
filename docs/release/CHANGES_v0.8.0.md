@@ -82,6 +82,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     (`\tag{$\mathrm{P_1}$}` gives `Equation P₁`, where Perl's `textContent` gives `P1`; OXIDIZED_DESIGN #1094).
     Guards `cluster_cli::unicodemath_output::*`, `unicode_math::tests::*`.
 
+  - **Pre-v0.8.0 output-neutral performance trims (#926).** `Document::serialize_to_string` trims trailing newlines in
+    place instead of allocating a second full-document copy at peak RAM; `pathname::find` caches directory listings
+    behind a `DirStamp` (cleared at conversion start via `reset_conversion_state`) and uses a single-stat
+    `is_readable_file`; `pathname` and `dump_paths` share one ambient `kpsewhich -var-value=SELFAUTOPARENT` probe
+    (`3 → 2` subprocesses).
+
   - **Four more run-397 Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
     `\end{equation*}` as amsmath.sty:2950-2951 makes them, so a mixed pair (`\[ … \end{equation*}`) no longer errs
     (math0306159, math0401181, math0508341), and a `\tag` in `\[` is printed (2008.12392; OXIDIZED_DESIGN_DIVERGENCES

@@ -6,7 +6,8 @@ graphics tools, build toolchain) are declared once in shared `texbase` +
 `toolchain` stages; only the per-binary build command and entrypoint differ.
 This directory holds the worker entrypoint script.
 
-`.github/workflows/docker.yml` builds + pushes both to GHCR on `release: published`
+`.github/workflows/release.yml`'s `containers` job builds + pushes both to GHCR on final releases
+(with `latest: true`), and `.github/workflows/docker.yml` handles `workflow_dispatch` / manual runs
 (CLI multi-arch amd64+arm64; worker amd64).
 
 ## `cli` — general-purpose CLI · `ghcr.io/dginev/latexml-oxide`
@@ -17,8 +18,8 @@ environment. The image builds its own binary and **embeds** the kernel dumps
 TeX Live needed.
 
 ```bash
-# build (default target)
-docker build --target cli -t ghcr.io/dginev/latexml-oxide .
+# build (default target; GITSHA is required by the notices provenance gate)
+docker build --target cli --build-arg GITSHA="$(git rev-parse HEAD)" -t ghcr.io/dginev/latexml-oxide .
 
 # convert — bind-mount your document tree
 docker run --rm -v "$PWD:/work" ghcr.io/dginev/latexml-oxide paper.tex
@@ -41,7 +42,7 @@ Perl `tex_to_html`). One dispatcher can run both fleets at once; it leases by
 **Build:**
 ```bash
 export HOSTTIME=$(date -Iminute)
-docker build --target worker --build-arg HOSTTIME=$HOSTTIME -t cortex-worker:latest .
+docker build --target worker --build-arg HOSTTIME="$HOSTTIME" --build-arg GITSHA="$(git rev-parse HEAD)" -t cortex-worker:latest .
 ```
 
 **Run the fleet (turnkey — pass just the dispatcher host; `--harness` self-supervises and auto-sizes the box):**

@@ -74,6 +74,6 @@ wildcards = "warn"
 
 [sources]
 unknown-registry = "deny"
-# The marpa parser engine is sourced from github.com/dginev/marpa (see the
-# root Cargo.toml note), so a git source is expected.
+# All shipped dependencies resolve from crates.io; keep unknown-git allowed for
+# temporary upstream git pins during development.
 unknown-git = "allow"

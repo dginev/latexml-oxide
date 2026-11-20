@@ -525,7 +525,8 @@ settings.
 4. **PR, merge, tag.** Every repo edit goes through a branch and a PR — never a
    direct push to `main`. The release-prep PR carries the bumps and the
    CHANGELOG (first as `X.Y.Z-rcN`; the promotion to `X.Y.Z` is a second, tiny
-   PR that also refreshes the `VERSION=` samples in `docs/INSTALL.md`). Once the
+   PR that also refreshes the `VERSION=` samples and `latexml = "X.Y"` library
+   snippet in `docs/INSTALL.md`). Once the
    PR is merged and green, tag the merged commit. Tag format is bare `X.Y.Z` — no
    `v` prefix — matching the existing tag history.
 

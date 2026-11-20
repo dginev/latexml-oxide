@@ -175,6 +175,16 @@ else
   skip "cargo-deny" "not installed (CI covers it via the pinned action; install: cargo install --locked cargo-deny)"
 fi
 
+# 6b. cargo-about (THIRD-PARTY-NOTICES Rust dependency section). Release jobs
+#     and the Dockerfile both run tools/gen_notices.sh; checking here prevents
+#     about.toml from silently drifting out of step with deny.toml.
+if require_or_skip cargo-about "cargo-about (notices license config)" \
+     "install: cargo install --locked cargo-about --features cli"; then
+  run "cargo-about (cli + cortex notice graphs)" \
+    "update about.toml to match deny.toml (see docs/release/LICENSE_INVENTORY.md)" -- \
+    bash -c 'cargo about generate --no-default-features --features runtime-bindings about.hbs -o /dev/null && cargo about generate --no-default-features --features cortex about.hbs -o /dev/null'
+fi
+
 # 7. Unused dependencies.
 if require_or_skip cargo-machete "cargo-machete (unused dependencies)" \
      "install: cargo install --locked cargo-machete"; then

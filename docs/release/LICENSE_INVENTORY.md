@@ -255,9 +255,9 @@ refuses to emit an unresolved pointer.
 **Position (owner-approved 2026-07-14).** The relink obligation is discharged by
 **source availability**: our source is CC0 and public, and every input commit is
 recorded per-artifact in §7. Both sides being open, a recipient can rebuild the
-combined work against a modified library. This holds for libmarpa only once
-`libmarpa-asf-sys` 0.3.1 is on crates.io: until then the modified `marpa_obs.c` comes from
-the TEMP `[patch.crates-io]` path in `Cargo.toml`, and no artifact may be released from it. We therefore do **not** ship prelinkable
+combined work against a modified library. `libmarpa-asf-sys` 0.3.1 is published
+on crates.io with the modified `c/marpa_obs.c` and explicit mixed license
+expression, so every input is immutable and public. We therefore do **not** ship prelinkable
 object files or a written offer — the heavier alternatives LGPL permits for
 distributors who cannot provide source.
 
