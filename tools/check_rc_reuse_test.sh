@@ -78,6 +78,9 @@ case "\$endpoint" in
       printf '998877\n'
     fi
     ;;
+  *releases/assets/*)
+    cat "\${FAKE_ASSET_DIR:?}/\${endpoint##*/}"
+    ;;
   *releases*)
     if [ "$assets_mode" = "both" ]; then
       printf 'BUILD-INPUTS\t101\nCargo.lock\t202\n'
@@ -394,6 +397,44 @@ if ! PATH="$cb4:$PATH" NIGHTLY_BASE_URL="https://fake.dist" NIGHTLY_LOOKBACK_DAY
 else
   not_ok "resolve-nightly exits non-zero when lookback window has no complete nightly" "unexpectedly succeeded"
 fi
+
+# 16. --fetch-release-inputs: downloads the tag's BUILD-INPUTS + Cargo.lock, checks the lock's SHA-256 against
+#     BUILD-INPUTS and the toolchain's shape, prints the toolchain; any failure exits non-zero and leaves
+#     neither file behind (release-prepare.yml's reuse path and docker.yml's pinning both rely on that).
+fa="$TMP_ROOT/fetch_assets"
+mkdir -p "$fa"
+printf '[[package]]\nname = "x"\nversion = "1.0.0"\n' >"$fa/202"
+lock_sha="$(sha256sum "$fa/202" | awk '{print $1}')"
+fetch_into() { # <bin dir> <dest>
+  PATH="$1:$PATH" REPO=o/r FAKE_ASSET_DIR="$fa" "$CHECKER" --fetch-release-inputs 0.8.0-rc1 "$2"
+}
+fetch_refused() { # <label> <bin dir> <dest>
+  if fetch_into "$2" "$3" >/dev/null 2>&1 || [ -e "$3/Cargo.lock" ] || [ -e "$3/BUILD-INPUTS" ]; then
+    not_ok "$1" "accepted, or left a file in $3"
+  else
+    ok "$1"
+  fi
+}
+fb="$TMP_ROOT/fetch_bin"
+make_fake_gh "$fb" "unused" "0.8.0-rc1" "success" "both"
+printf 'TOOLCHAIN=nightly-2026-11-20\nCARGO_LOCK_SHA256=%s\n' "$lock_sha" >"$fa/101"
+got="$(fetch_into "$fb" "$TMP_ROOT/f1" 2>/dev/null || true)"
+if [ "$got" = "nightly-2026-11-20" ] && cmp -s "$fa/202" "$TMP_ROOT/f1/Cargo.lock" && cmp -s "$fa/101" "$TMP_ROOT/f1/BUILD-INPUTS"; then
+  ok "fetch-release-inputs downloads verified inputs and prints the toolchain"
+else
+  not_ok "fetch-release-inputs downloads verified inputs and prints the toolchain" "got '$got'"
+fi
+printf 'TOOLCHAIN=nightly-2026-11-20\nCARGO_LOCK_SHA256=%s\n' "0000" >"$fa/101"
+fetch_refused "fetch-release-inputs refuses a Cargo.lock whose SHA-256 does not match" "$fb" "$TMP_ROOT/f2"
+printf 'TOOLCHAIN=stable\nCARGO_LOCK_SHA256=%s\n' "$lock_sha" >"$fa/101"
+fetch_refused "fetch-release-inputs refuses a toolchain that is not a dated nightly" "$fb" "$TMP_ROOT/f3"
+printf 'TOOLCHAIN=nightly-2026-11-20\nCARGO_LOCK_SHA256=%s\n' "$lock_sha" >"$fa/101"
+fb2="$TMP_ROOT/fetch_bin2"
+make_fake_gh "$fb2" "unused" "0.8.0-rc1" "success" "missing_lock"
+fetch_refused "fetch-release-inputs refuses a release without a Cargo.lock asset" "$fb2" "$TMP_ROOT/f4"
+fb3="$TMP_ROOT/fetch_bin3"
+make_fake_gh "$fb3" "unused" "0.8.0-rc1" "success" "api_fail"
+fetch_refused "fetch-release-inputs fails cleanly when the API fails" "$fb3" "$TMP_ROOT/f5"
 
 # 15. The hook's environment: a host repo with a linked worktree, its absolute GIT_DIR exported. This test, run
 #     nested from inside the host worktree, must pass and leave the host untouched (no `core.bare`, identity, tag,

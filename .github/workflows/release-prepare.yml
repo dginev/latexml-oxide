@@ -1,0 +1,165 @@
+# Resolve and pin a release's build inputs ONCE (called by release.yml as its first job):
+#   - the Rust nightly (`nightly-YYYY-MM-DD`, overriding rust-toolchain.toml; the newest one that ships
+#     every component and host toolchain the release and CI use, see tools/check_rc_reuse.sh --resolve-nightly);
+#   - `Cargo.lock` (consumed with `--locked` by every build and test leg);
+#   - `BUILD-INPUTS` (toolchain, lockfile SHA-256, tag, commit, the RC it reuses, `rustc -vV`).
+# The `build-inputs` artifact carries both to the run's other jobs; release.yml also attaches them to the
+# GitHub Release, where they never expire.
+#
+# On a final `X.Y.Z` whose diff since the latest green, published `X.Y.Z-rcN` touches only version pins and
+# docs (tools/check_rc_reuse.sh), it reuses that RC's nightly and `Cargo.lock` (only the workspace crates'
+# own versions rewritten by `cargo update --workspace`, checked by `--verify-lock-diff`) and reports
+# `skip_tests=true`, so release.yml skips the `ci` + `windows-ci` suites the RC already passed. Any error
+# or mismatch falls back to fresh inputs and the full pipeline.
+#
+# Dry run (no tag, no release, a few Linux minutes): run it by hand on the branch you would tag, naming the
+# tag you would push, and read the job log and the `build-inputs` artifact:
+#   gh workflow run release-prepare.yml --ref release/0.8.0 -f tag=0.8.0
+name: Release prepare
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The release tag being built (release.yml passes github.ref_name)
+        required: true
+        type: string
+    outputs:
+      skip_tests:
+        description: true when this final reuses a green RC's inputs and skips the test suites
+        value: ${{ jobs.prepare.outputs.skip_tests }}
+      toolchain:
+        description: The pinned nightly, e.g. nightly-2026-11-20
+        value: ${{ jobs.prepare.outputs.toolchain }}
+      source_rc:
+        description: The RC whose inputs were reused (empty otherwise)
+        value: ${{ jobs.prepare.outputs.source_rc }}
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to evaluate as if it were pushed on the chosen ref (e.g. 0.8.0 or 0.8.0-rc2)
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  prepare:
+    name: Resolve pinned build inputs
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    outputs:
+      skip_tests: ${{ steps.resolve.outputs.skip_tests }}
+      toolchain: ${{ steps.resolve.outputs.toolchain }}
+      source_rc: ${{ steps.resolve.outputs.source_rc }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: evaluate RC promotion eligibility
+        id: rc
+        env:
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/check_rc_reuse.sh
+
+      - name: resolve or reuse toolchain and Cargo.lock
+        id: resolve
+        env:
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RC_SKIP: ${{ steps.rc.outputs.skip_tests }}
+          RC_TAG: ${{ steps.rc.outputs.source_rc }}
+        run: |
+          set -euo pipefail
+
+          skip_tests="false"
+          source_rc=""
+          toolchain=""
+
+          if [ "${RC_SKIP:-false}" = "true" ] && [ -n "${RC_TAG:-}" ]; then
+            reuse_ok=1
+            if ! rc_toolchain="$(bash tools/check_rc_reuse.sh --fetch-release-inputs "$RC_TAG" rc_inputs)"; then
+              echo "::warning::could not fetch verified build inputs from ${RC_TAG}; falling back to full pipeline"
+              reuse_ok=0
+            fi
+
+            if [ "$reuse_ok" -eq 1 ]; then
+              if ! rustup toolchain install "$rc_toolchain" --profile minimal --no-self-update; then
+                echo "::warning::failed to install RC toolchain ${rc_toolchain}; falling back to full pipeline"
+                reuse_ok=0
+              fi
+            fi
+
+            if [ "$reuse_ok" -eq 1 ]; then
+              cp rc_inputs/Cargo.lock Cargo.lock
+              if ! RUSTUP_TOOLCHAIN="$rc_toolchain" cargo update --workspace; then
+                echo "::warning::cargo update --workspace failed against ${RC_TAG} Cargo.lock; falling back to full pipeline"
+                reuse_ok=0
+              elif ! bash tools/check_rc_reuse.sh --verify-lock-diff rc_inputs/Cargo.lock Cargo.lock; then
+                echo "::warning::Cargo.lock diff touched non-workspace packages; falling back to full pipeline"
+                reuse_ok=0
+              fi
+            fi
+
+            if [ "$reuse_ok" -eq 1 ]; then
+              skip_tests="true"
+              source_rc="$RC_TAG"
+              toolchain="$rc_toolchain"
+              echo "Reusing pinned inputs from ${source_rc}: toolchain=${toolchain}"
+            else
+              rm -f Cargo.lock
+            fi
+          fi
+
+          if [ "$skip_tests" != "true" ]; then
+            toolchain="$(bash tools/check_rc_reuse.sh --resolve-nightly)"
+            rustup toolchain install "$toolchain" --profile minimal --no-self-update
+            rm -f Cargo.lock
+            RUSTUP_TOOLCHAIN="$toolchain" cargo generate-lockfile
+            echo "Resolved fresh pinned inputs: toolchain=${toolchain}"
+          fi
+
+          lock_sha="$(sha256sum Cargo.lock | awk '{print $1}')"
+          git_sha="$(git rev-parse HEAD)"
+          mkdir -p build-inputs
+          cp Cargo.lock build-inputs/Cargo.lock
+          {
+            printf 'TOOLCHAIN=%s\n' "$toolchain"
+            printf 'CARGO_LOCK_SHA256=%s\n' "$lock_sha"
+            printf 'GIT_TAG=%s\n' "$TAG"
+            printf 'GIT_SHA=%s\n' "$git_sha"
+            printf 'SOURCE_RC=%s\n' "${source_rc:-none}"
+            printf '\n'
+            RUSTUP_TOOLCHAIN="$toolchain" rustc -vV
+          } > build-inputs/BUILD-INPUTS
+          cat build-inputs/BUILD-INPUTS
+
+          {
+            printf 'skip_tests=%s\n' "$skip_tests"
+            printf 'toolchain=%s\n' "$toolchain"
+            printf 'source_rc=%s\n' "$source_rc"
+          } >> "$GITHUB_OUTPUT"
+          {
+            printf '### Release inputs for `%s`\n\n' "$TAG"
+            printf '| | |\n|---|---|\n'
+            printf '| toolchain | `%s` |\n' "$toolchain"
+            printf '| skip_tests | `%s` |\n' "$skip_tests"
+            printf '| source RC | `%s` |\n' "${source_rc:-none}"
+            printf '| Cargo.lock sha256 | `%s` |\n' "$lock_sha"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: upload pinned build inputs
+        uses: actions/upload-artifact@v5
+        with:
+          name: build-inputs
+          path: |
+            build-inputs/BUILD-INPUTS
+            build-inputs/Cargo.lock
+          retention-days: 7
+          if-no-files-found: error

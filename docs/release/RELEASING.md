@@ -92,6 +92,14 @@ prerelease: ${{ contains(github.ref_name, '-') }}
   shipping untested changes straight to a final tag (for reference,
   `0.7.6-rc2..0.7.6` touched 49 files). Any non-version diff or reuse error
   falls back automatically to fresh build inputs and the full pipeline.
+* **Dry-run `prepare` before pushing a tag.** The job lives in
+  `.github/workflows/release-prepare.yml`, which `release.yml` calls and which also
+  runs by hand on any branch, without a tag or a release, in a few Linux minutes:
+  `gh workflow run release-prepare.yml --ref <branch you will tag> -f tag=<tag>`.
+  The run's summary shows the toolchain, `skip_tests` and the RC it reuses. Before a
+  final, expect `skip_tests=true` and the RC's toolchain; `false` means the final
+  would rerun every suite, and the log says why (most often: the RC is still a draft,
+  or the branch carries more than the version bump).
 
 Two consequences worth knowing before you plan an RC:
 
