@@ -130,6 +130,11 @@ run "next_entry_numbers.sh self-test" \
   "fix tools/perfect_kernel/next_entry_numbers.sh (its self-test lists the failing check)" -- \
   tools/perfect_kernel/next_entry_numbers_test.sh
 
+# 1e. Release RC-promotion reuse checker (offline scratch-repo unit tests).
+run "check_rc_reuse.py self-test" \
+  "fix tools/check_rc_reuse.py (its self-test lists the failing check)" -- \
+  python3 tools/check_rc_reuse_test.py
+
 # 2. Formatting must already be applied (check, don't rewrite).
 run "rustfmt (check)" \
   "run: cargo fmt --all" -- \

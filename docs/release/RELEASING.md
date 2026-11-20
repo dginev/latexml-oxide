@@ -62,6 +62,16 @@ prerelease: ${{ contains(github.ref_name, '-') }}
 
 * **`X.Y.Z-rcN`** → a **DRAFT prerelease**. Artifacts only, for cross-OS testing.
 * **`X.Y.Z`** → a **public** Release, auto-published.
+* **Fast RC → final promotion (`rc-reuse-check`):** When tagging a final `X.Y.Z`
+  after a passing `X.Y.Z-rcN`, `tools/check_rc_reuse.py` checks whether the diff
+  since the latest `X.Y.Z-rc*` tag touches *only* `Cargo.toml` version pins and
+  docs (`CHANGELOG.md`, `README.md`, `docs/**`) AND that RC's `release.yml` run
+  finished green. When both hold, `release.yml` skips the redundant 23 test
+  shards (`ci` + `windows-ci`) and reuses the RC's 5-year TeX Live dump artifacts
+  (if within their 7-day retention window, else regenerates dumps). All 5
+  `maxperf` packaging legs, `notices`, and `containers` still run so every final
+  binary, `.deb`, and notice carries `X.Y.Z` and its exact commit SHA. Any code
+  or dependency change falls back automatically to the full pipeline.
 
 Two consequences worth knowing before you plan an RC:
 

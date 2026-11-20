@@ -31,11 +31,88 @@ permissions:
   contents: write
 
 jobs:
+  # When tagging a final `X.Y.Z` immediately after a passing `X.Y.Z-rcN`, check
+  # whether the diff since the latest RC touches ONLY Cargo.toml version pins
+  # and docs AND that RC's release.yml run completed green. If so, skip the
+  # redundant 23 test shards (`ci` + `windows-ci`) and reuse the RC's verified
+  # 5-year TeX Live dumps when their 7-day artifacts have not expired. All 5
+  # `maxperf` packaging legs, `notices`, and `containers` still run so every
+  # final artifact carries `X.Y.Z` and its exact commit SHA. Fail-closed: any
+  # code/dep diff or missing RC proof falls back to the full pipeline.
+  rc-reuse-check:
+    name: Check RC promotion reuse
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      skip_tests: ${{ steps.check.outputs.skip_tests }}
+      reuse_dumps_run_id: ${{ steps.check.outputs.reuse_dumps_run_id }}
+      source_rc: ${{ steps.check.outputs.source_rc }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: evaluate RC promotion eligibility
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/check_rc_reuse.py \
+            --tag "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --github-output "$GITHUB_OUTPUT"
+
   # Generate {plain,latex}.YYYY.dump.txt for the 5-year TL window in
   # pinned TL containers (see release-dumps.yml). The dumps are NOT in
-  # git — the release binary embeds what this job produces.
+  # git — the release binary embeds what this job produces. Skipped only
+  # when `rc-reuse-check` verified identical engine code and unexpired
+  # dumps from a green `X.Y.Z-rcN` run (`reuse-dumps` supplies them).
   dumps:
+    needs: [rc-reuse-check]
+    if: ${{ needs.rc-reuse-check.outputs.reuse_dumps_run_id == '' }}
     uses: ./.github/workflows/release-dumps.yml
+
+  # Copy the verified 5-year TL dumps from a green `X.Y.Z-rcN` run into this
+  # workflow run so all 5 packaging legs consume them via `pattern: dumps-*`
+  # identically to a fresh `dumps` run.
+  reuse-dumps:
+    name: Reuse TL dumps from ${{ needs.rc-reuse-check.outputs.source_rc }}
+    needs: [rc-reuse-check]
+    if: ${{ needs.rc-reuse-check.outputs.reuse_dumps_run_id != '' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: download RC TL-window dumps
+        uses: actions/download-artifact@v6
+        with:
+          run-id: ${{ needs.rc-reuse-check.outputs.reuse_dumps_run_id }}
+          github-token: ${{ github.token }}
+          pattern: dumps-*
+          path: resources/dumps/
+          merge-multiple: true
+      - name: verify reused TL-window dumps are complete
+        run: |
+          set -euo pipefail
+          ls -la resources/dumps/
+          for y in 2022 2023 2024 2025 2026; do
+            for f in plain.$y.dump.txt latex.$y.dump.txt texlive.$y.version; do
+              if [ ! -s "resources/dumps/$f" ]; then
+                echo "::error::reused dump window incomplete: missing resources/dumps/$f"
+                exit 1
+              fi
+            done
+          done
+      - name: re-upload TL-window dumps for packaging legs
+        uses: actions/upload-artifact@v5
+        with:
+          name: dumps-reused
+          path: resources/dumps/*
+          retention-days: 7
 
   # Assemble THIRD-PARTY-NOTICES ONCE, here, and hand it to every packaging leg
   # as an artifact (F7 in docs/release/LICENSE_INVENTORY.md). Previously only the
@@ -148,7 +225,8 @@ jobs:
     # wall-clock. If the LTO link OOMs on 7 GB, the documented mitigation is a
     # larger runner or relaxing the macOS leg's codegen-units (RELEASING.md).
     timeout-minutes: 90
-    needs: [dumps, notices]
+    needs: [dumps, reuse-dumps, notices]
+    if: ${{ !failure() && !cancelled() && needs.notices.result == 'success' && (needs.dumps.result == 'success' || needs.reuse-dumps.result == 'success') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -275,7 +353,8 @@ jobs:
     # Intel runners are slower than Apple Silicon; give fat-LTO generous
     # wall-clock (build-macos uses 90 on arm64).
     timeout-minutes: 120
-    needs: [dumps, notices]
+    needs: [dumps, reuse-dumps, notices]
+    if: ${{ !failure() && !cancelled() && needs.notices.result == 'success' && (needs.dumps.result == 'success' || needs.reuse-dumps.result == 'success') }}
     env:
       MACOSX_DEPLOYMENT_TARGET: "10.13"
     steps:
@@ -378,7 +457,8 @@ jobs:
     name: Build Linux arm64 ${{ github.ref_name }}
     runs-on: ubuntu-22.04-arm
     timeout-minutes: 90
-    needs: [dumps, notices]
+    needs: [dumps, reuse-dumps, notices]
+    if: ${{ !failure() && !cancelled() && needs.notices.result == 'success' && (needs.dumps.result == 'success' || needs.reuse-dumps.result == 'success') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -530,7 +610,8 @@ jobs:
     # bring-up job's `ci` profile — give generous wall-clock. Windows Actions
     # minutes are metered 2x on this private repo (see windows-ci-manual-trigger).
     timeout-minutes: 120
-    needs: [dumps, notices]
+    needs: [dumps, reuse-dumps, notices]
+    if: ${{ !failure() && !cancelled() && needs.notices.result == 'success' && (needs.dumps.result == 'success' || needs.reuse-dumps.result == 'success') }}
     env:
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
@@ -676,6 +757,8 @@ jobs:
   # are optional to pass. It runs beside the build legs; only the publishing
   # `release` job waits on it.
   windows-ci:
+    needs: [rc-reuse-check]
+    if: ${{ needs.rc-reuse-check.outputs.skip_tests != 'true' }}
     uses: ./.github/workflows/windows-ci-manual-trigger.yml
     with:
       require_guards: true
@@ -684,8 +767,11 @@ jobs:
   # (DG 2026-11-14: "we always want to run the MacOS CI for our release
   # workflow, we want all platforms checked on release"). CI.yml's PR runs
   # take macOS only for the platform-dependent surface; `full: true` bypasses
-  # that filter here. Only the publishing `release` job waits on it.
+  # that filter here. Only the publishing `release` job waits on it. Skipped
+  # only on a verified pure version-bump promotion from a green `X.Y.Z-rcN`.
   ci:
+    needs: [rc-reuse-check]
+    if: ${{ needs.rc-reuse-check.outputs.skip_tests != 'true' }}
     uses: ./.github/workflows/CI.yml
     with:
       full: true
@@ -694,7 +780,20 @@ jobs:
     name: Build and publish ${{ github.ref_name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
-    needs: [dumps, notices, build-macos, build-macos-intel, build-linux-arm64, build-windows, windows-ci, ci]
+    needs: [rc-reuse-check, dumps, reuse-dumps, notices, build-macos, build-macos-intel, build-linux-arm64, build-windows, windows-ci, ci]
+    if: >-
+      ${{
+        !failure() && !cancelled()
+        && needs.rc-reuse-check.result == 'success'
+        && (needs.dumps.result == 'success' || needs.reuse-dumps.result == 'success')
+        && needs.notices.result == 'success'
+        && needs.build-macos.result == 'success'
+        && needs.build-macos-intel.result == 'success'
+        && needs.build-linux-arm64.result == 'success'
+        && needs.build-windows.result == 'success'
+        && (needs.windows-ci.result == 'success' || (needs.windows-ci.result == 'skipped' && needs.rc-reuse-check.outputs.skip_tests == 'true'))
+        && (needs.ci.result == 'success' || (needs.ci.result == 'skipped' && needs.rc-reuse-check.outputs.skip_tests == 'true'))
+      }}
 
     steps:
       - uses: actions/checkout@v6
