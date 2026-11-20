@@ -90,7 +90,7 @@ pub(crate) fn is_space_flagged_box(whatsit: &Whatsit) -> bool {
 }
 
 /// What `\lastbox` takes is a box (tex.web §1080). An `\halign` on a vertical list is its rows, each an hbox (§799
-/// `fin_align`); LaTeXML's alignment is one item, taken whole, and marked `lx@lastbox` so that placed again in a
+/// `fin_row`, §800 `fin_align`); LaTeXML's alignment is one item, taken whole, and marked `lx@lastbox` so that placed again in a
 /// paragraph or a box it ends none (`\halign`'s `before_construct`): it closed the enclosing `ltx:p` and escaped the
 /// `\vphantom` it was copied into (easytable's and easybmat's `\@easy@buildbox`: 1705.10408, 2002.06044, 2109.00258,
 /// 2106.13444, 1710.10243; KNOWN_PERL_ERRORS #1296).
