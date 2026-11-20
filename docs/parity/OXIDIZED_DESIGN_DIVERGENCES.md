@@ -21239,6 +21239,49 @@ formula it prints; `⋆⁣⋆` is the same either way.
 `cluster_cli::unicodemath_output::ref_title_reads_a_tags_math_as_unicodemath`,
 `perfect_kernel_batch78j::cleveref_document_format_with_math_in_the_tag`.
 
+### 1095. Without a format dump (or without TeX Live) the kernel commands our constructs call are in the base, the kernel autoload loads the format to see, and our expl3 extensions wait for an expl3 to extend (NOTEX)
+
+**Perl.** `LoadFormat('latex')` without a dump runs `bootstrap → base → constructs` (Package.pm:2751-2769), and
+latex_base.pool.ltxml is TeX-free: everything its constructs call is in it. It has no kernel autoload, no expl3 layer of
+its own and no document-properties store, so it needs no expl3. **Rust.** Our constructs and bindings call kernel and
+expl3 commands Perl's do not, and on the no-dump branch (`LATEXML_NODUMP=1`, or a binary built where there was no TeX
+Live to make a dump) nothing defined them; with no TeX tree either, nothing could load them. A
+smoke article (amsmath, hyperref, a list, a table) stopped at `Fatal:TooManyErrors` (101 Errors) without TeX Live, and the test suite failed 6397 of 8468 tests there. Now:
+- **The base carries what our constructs call** (`latex_base.rs`, after C.1.3): `\@ignorefalse` (the `\end` epilogue
+  reads `\if@ignore`, sect01.rs; latex.ltx:15253), `\@stpelt` (`\lx@stepcounter@within`, sect08.rs; latex.ltx:10138),
+  `\@ensuredmath` (`\@ensuremath`, latex_constructs_rust_only.rs; latex.ltx:15807), and `\IfDocumentMetadataTF`/`T`/`F`
+  as latex.ltx:9167-9169 has them before `\DocumentMetadata` (tikz_sty.rs asks it). The text after a list, a
+  `\stepcounter` and `\ensuremath` are no longer lost; the body is byte-identical to the dump branch's.
+- **The kernel autoload loads the format to see** (`latex_kernel::autoload_latex_kernel`). With no dump there is no
+  catalogue to ask, so in a LaTeX document the first undefined control sequence met before the format loads it, and the
+  post-load `has_meaning` check decides as on the dump branch (KNOWN_PERL_ERRORS entry on `\IfFileExists` before
+  `\documentclass`). latexml.sty's `\AddToHook` (a preload) and an `\IfFileExists` choosing the class were undefined
+  there. A plain TeX document is unchanged: only the Perl trigger list loads the format.
+- **Our expl3 extensions wait for an expl3** (latex_constructs_rust_only.rs: the backend loader, the
+  `\__kernel_chk_if_free_cs:N` override, the Unicode codepoint layer). They run when expl3 is the dump's or `expl3.sty`
+  can be found (its `\ExplSyntaxOn` autoload raw-loads it, as before); with neither there is nothing to extend.
+  Likewise hyperref's document-properties store (hyperref_sty.rs) needs `\NewDocumentCommand`, mathtools' expl3
+  block needs mhsetup's `\MHInternalSyntaxOn`, and `\DocumentMetadata` loads the tagging packages (tagpdf, the
+  latex-lab blocks: expl3 code) only over an expl3 layer.
+- **`\ExplSyntaxOn` without expl3 is the catcode switch** (expl3_sty.rs). With no expl3.sty to load, the `expl3`
+  binding defines `\ExplSyntaxOn`/`\ExplSyntaxOff` as expl3-code.tex:245-277 (TL 2025) sets and restores the catcodes
+  and `\endlinechar`, so our bindings' expl3-syntax names read as names (array_sty.rs's `\@@__tbl`: 2 Errors per
+  `\usepackage{array}`). Code that calls expl3 functions still finds them undefined, as Perl does with no expl3.
+- **expl3.sty missing is reported** (expl3_sty.rs): the mute scope of the raw reload (#1027) is opened only when
+  `expl3.sty` is found, so its `missing_file` Warning is no longer dropped with it.
+- **No Warning for a missing resolver.** Perl's `pathname_kpsewhich` answers nothing, silently, without a `kpsewhich`
+  (Pathname.pm:395-403). Ours warned `kpathsea:unavailable` once per process (#308), one Warning on every
+  conversion of a machine without TeX Live, whatever the document needed. It is gone; the log's
+  `Info:kpathsea:backend unavailable (…)` line (`Converter::initialize_session`) still names the resolver, so a dead
+  one is not mistaken for a missing file (issue #304). The kpathsea crate's own one-time stderr notice
+  (0.3.4 `lib.rs:433-434`) is outside the log and stays: rust-kpathsea is a general-purpose crate, not
+  latexml-oxide's (DG 2026-11-19).
+
+Where TeX Live is, the dump branch is unchanged (each change sits behind "no catalogue", "no dump-defined name" or
+a found file). **Guards**: `dump_gate_init::nodump_latex_branch_converts_healthily` (the shared NODUMP conversion:
+`\IfFileExists` before `\documentclass`, hyperref, `\stepcounter`, a list, `\ensuremath`, `\IfDocumentMetadataTF`),
+`preclass_kernel_autoload::latex_route_pre_documentclass_kernel_cs_autoloads` (its dump half).
+
 ### 1100. A binding delegates to the internal it saved at load, and aliases only under its package's condition (alias cycles)
 
 **Rule.** Where a binding implements a user-level command by calling another user-level command, it calls a private

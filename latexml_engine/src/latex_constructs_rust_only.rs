@@ -36,6 +36,15 @@ use crate::{
   prelude::*,
 };
 
+/// Is there an expl3 layer for our expl3-syntax code to extend: the dump's, or the `expl3-code.tex` latex.ltx reads
+/// for it (latex.ltx:1147 `\input expl3.ltx`, expl3.ltx:70 `\input expl3-code.tex`; TL 2025), which `\ExplSyntaxOn`'s
+/// `expl3` autoload (tex.rs) raw-loads without a dump?
+/// Neither without a dump and a TeX tree, where `\ExplSyntaxOn` is only the catcode switch (expl3_sty.rs) and every
+/// expl3 command is undefined (OXIDIZED_DESIGN_DIVERGENCES #1095).
+fn expl3_layer() -> bool {
+  IsDefined!(&T_CS!("\\cs_if_exist:NT")) || find_file("expl3-code.tex", None).is_some()
+}
+
 // The expl3 PDF/tagging API names this pool stubs as no-ops (`\tagpdfsetup`,
 // `\tag_struct_begin:n`, `\pdffile_embed_file:nnn`, `\pdfdict_*`,
 // `\pdfmeta_xmp_*` …) are declared again by tagpdf-base.sty:30-60 and
@@ -239,10 +248,18 @@ LoadDefinitions!({
         scope => Some(Scope::Global));
     }
   });
-  DefMacro!(
-    "\\DocumentMetadata{}",
-    "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\lx@record@provided{pdfmanagement-testphase.sty}\\RequirePackage{tagpdf}\\RequirePackage{latex-lab-testphase-minipage}\\RequirePackage{latex-lab-testphase-block}"
-  );
+  // The tagging packages are expl3 code: with no expl3 layer `\DocumentMetadata` keeps only its conditionals.
+  if expl3_layer() {
+    DefMacro!(
+      "\\DocumentMetadata{}",
+      "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\lx@record@provided{pdfmanagement-testphase.sty}\\RequirePackage{tagpdf}\\RequirePackage{latex-lab-testphase-minipage}\\RequirePackage{latex-lab-testphase-block}"
+    );
+  } else {
+    DefMacro!(
+      "\\DocumentMetadata{}",
+      "\\global\\let\\IfDocumentMetadataTF\\@firstoftwo\\global\\let\\IfDocumentMetadataT\\@firstofone\\global\\let\\IfDocumentMetadataF\\@gobble\\lx@record@provided{pdfmanagement-testphase.sty}"
+    );
+  }
   // `\DocumentMetadata{tagging=on}` activates the kernel's latex-lab
   // tagging project, whose user surface (`\tagpdfsetup` etc.) exists
   // WITHOUT tagpdf.sty ever loading (tagpdf manuals; tex-vpat). Our XML is
@@ -1252,12 +1269,14 @@ LoadDefinitions!({
 \def\ClassNoteNoLine#1#2{\ClassNote{#1}{#2\@gobble}}
 \def\PackageNoteNoLine#1#2{\PackageNote{#1}{#2\@gobble}}"
   );
-  // Begin-document backend loader, see sect02.rs `\document`: expl3.ltx:130's
-  // guard, then blank auto-select in PDF output or `dvips` in DVI output.
-  // `\sys_if_output_pdf:` does not exist before the first `\sys_load_backend:n`
-  // (`\sys_finalize:` creates it), so the gate reads `\pdfoutput` directly.
-  RawTeX!(
-    r"\ExplSyntaxOn
+  // These three blocks extend the expl3 layer (`expl3_layer`).
+  if expl3_layer() {
+    // Begin-document backend loader, see sect02.rs `\document`: expl3.ltx:130's
+    // guard, then blank auto-select in PDF output or `dvips` in DVI output.
+    // `\sys_if_output_pdf:` does not exist before the first `\sys_load_backend:n`
+    // (`\sys_finalize:` creates it), so the gate reads `\pdfoutput` directly.
+    RawTeX!(
+      r"\ExplSyntaxOn
 \cs_if_exist:NT \sys_load_backend:n
   {
     \cs_gset_protected:Npn \lx@sys@load@backend
@@ -1273,9 +1292,9 @@ LoadDefinitions!({
       }
   }
 \ExplSyntaxOff"
-  );
-  RawTeX!(
-    r"\ExplSyntaxOn
+    );
+    RawTeX!(
+      r"\ExplSyntaxOn
 \cs_if_exist:NT \__kernel_chk_if_free_cs:N
   {
     \cs_gset_protected:Npn \__kernel_chk_if_free_cs:N #1
@@ -1338,7 +1357,8 @@ LoadDefinitions!({
       }
   }
 \ExplSyntaxOff"
-  );
+    );
+  }
 
   // expl3's Unicode-engine codepoint layer (the `\sys_if_engine_opentype:TF`
   // true branches of expl3-code.tex). The format's l3unicode and l3text are
@@ -1371,8 +1391,9 @@ LoadDefinitions!({
   // 2025's expl3). `\codepoint_str_generate:n` stays the 8-bit one: it only builds the keys of
   // the SpecialCasing tables, written with it when the format was made and
   // read with it now (`ß` → `SS`).
-  RawTeX!(
-    r#"\ExplSyntaxOn
+  if expl3_layer() {
+    RawTeX!(
+      r#"\ExplSyntaxOn
 \cs_if_exist:NT \__text_codepoint_process:nN
   {
     \cs_undefine:N \c_max_char_int
@@ -1414,7 +1435,8 @@ LoadDefinitions!({
       }
   }
 \ExplSyntaxOff"#
-  );
+    );
+  }
 
   for name in [
     "physics2.sty",
