@@ -4719,4 +4719,45 @@ mod log_note_nesting {
       "stderr's notes are the log's:\n{stderr}"
     );
   }
+
+  /// A binding's `NoteSTDERR` message prints inside its `(Loading …` note on stderr, as its logged lines do: the
+  /// pending note is printed first (#945 review).
+  #[cfg(feature = "runtime-bindings")]
+  #[test]
+  fn binding_stderr_note_prints_inside_its_loading_note() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      workdir.path().join("doc.tex"),
+      "\\documentclass{article}\n\\usepackage{noterhai}\n\\begin{document}\nHi.\n\\end{document}\n",
+    )
+    .expect("write doc.tex");
+    std::fs::write(
+      workdir.path().join("noterhai.sty.rhai"),
+      "NoteSTDERR(\"hello from the binding\");\nDefMacro(\"\\\\a\", \"X\");\n",
+    )
+    .expect("write noterhai.sty.rhai");
+    let output = Command::new(bin)
+      .args(["doc.tex", "--dest", "doc.xml", "--log", "doc.latexml.log"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\n{stderr}",
+      output.status.code()
+    );
+    let note = stderr
+      .find("noterhai.sty.rhai")
+      .unwrap_or_else(|| panic!("no note for the binding\n{stderr}"));
+    let message = stderr
+      .find("hello from the binding")
+      .unwrap_or_else(|| panic!("no binding message\n{stderr}"));
+    assert!(
+      note < message,
+      "the binding's message printed before its (Loading note\n{stderr}"
+    );
+  }
 }

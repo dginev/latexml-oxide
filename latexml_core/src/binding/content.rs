@@ -817,9 +817,10 @@ fn input_definitions_impl(
     return Ok(());
   }
 
-  // The per-file load note is emitted ONLY when a load truly happens, so
+  // The per-file load note is emitted ONLY when a load is attempted, so
   // CorTeX's `loaded_file` extraction (which parses the log) counts genuine
-  // loads and nothing else:
+  // loads and nothing else — a binding whose load then fails (a `.rhai` with a
+  // syntax error) keeps its note, as Perl's `Binding->new` prints before `do`:
   //   * a NATIVE BINDING load announces `(Loading <name>…` around its load
   //     (`_load_binding`; Perl loadLTXML "(Loading <path>…)" analog);
   //   * a RAW .sty/.cls/.def load is announced by its Mouth's

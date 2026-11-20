@@ -21438,7 +21438,7 @@ document, whole).
 ### 1102. Progress notes carry no elapsed times
 
 **Rule.** A progress note closes with ` )` alone, never with Perl's ` 0.42 sec)`, so a conversion's log is a function
-of its input and two runs of one document log the same bytes. Per-phase wall times are the telemetry module's
+of its input and two runs of one document log the same bytes apart from the start banner's date. Per-phase wall times are the telemetry module's
 (`latexml_core/src/telemetry.rs`, `docs/performance/TELEMETRY.md`).
 
 **Perl.** `Common/Error.pm:450-456` (`ProgressSpindown` prints `sprintf(" %.2f sec)", $elapsed)` from the timer

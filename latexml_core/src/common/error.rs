@@ -1277,6 +1277,8 @@ macro_rules! NoteSTDERR {
       && $crate::util::logger::stderr_shows_info()
     {
       let msg = $input;
+      // A binding's message lands inside its `(Loading …` note, as a logged line does (#945).
+      $crate::common::error::print_deferred_notes();
       $crate::util::logger::stderr_fresh_line(&format!("{msg}\n"));
     }
   };
@@ -1691,7 +1693,8 @@ static DEFERRED_NOTES: RefCell<Vec<(String, Option<bool>)>> = RefCell::new(Vec::
 /// A progress stage that may not happen: a binding load, whose dispatcher both finds the binding and runs it, where
 /// Perl opens `(Loading <path>...` once `FindFile` found the `.ltxml` (`Core/Mouth/Binding.pm:31`, `Package.pm:2336`).
 /// Its `(stage...` prints before the first line logged inside it ([`print_deferred_notes`]) or at its end if it
-/// happened, so what it triggers nests inside it (#945); a stage that did not happen leaves no trace.
+/// happened, so what it triggers nests inside it (#945); a stage that did not happen and logged nothing leaves no
+/// trace (one that logged a line and then declined still shows its note).
 #[must_use = "the stage ends when the note is dropped"]
 pub struct DeferredNote {
   depth:    usize,
