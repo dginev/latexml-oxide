@@ -43,9 +43,10 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   and option tables, many more `Package.pm` calls, a Perl/Rust/Rhai cheat sheet
   ([`CHEATSHEET.md`](latexml_contrib/src/script_bindings/CHEATSHEET.md)), and diagnostics that name the `.rhai` file.
 - **Untrusted input stays inside the job.** Document Lua runs sandboxed under TeX's own defaults for untrusted input
-  (no programs; writes only below the job directory), each conversion with its own interpreter; archive links and
-  image copies stay inside the source and destination directories. The limits, and the advice to convert fully
-  untrusted sources in a container or VM: [`docs/release/SAFETY.md`](docs/release/SAFETY.md).
+  (no programs; writes only below the job directory), each conversion with its own interpreter; archives unpack only
+  inside the source directory and image copies only inside the destination; child processes end with their conversion.
+  The limits, and the advice to convert fully untrusted sources in a container or VM:
+  [`docs/release/SAFETY.md`](docs/release/SAFETY.md).
 
 ### Speed, output and platforms
 
@@ -65,6 +66,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - **Windows.** The full test suite passes on Windows and runs on every release tag, and conversions use the linked
   libkpathsea instead of falling back to a `kpsewhich` subprocess (about 270 ms a file lookup). Windows binaries ship
   unsigned in 0.8.0; a Microsoft Store package is planned for 0.8.x.
+- **Releases name their build inputs.** Each release attaches the exact toolchain and `Cargo.lock` its binaries were
+  built with (`BUILD-INPUTS`).
 
 ### Upgrading from 0.7.6
 
@@ -73,6 +76,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   only (OXIDIZED_DESIGN_DIVERGENCES #285).
 - A failing XSLT stylesheet is a Fatal (exit 1, no output); a repeated single-valued option keeps its last value; a
   malformed `--xsltparameter` exits 2; a `--stylesheet` on disk wins over the built-in one of the same name.
+- `--format`, `--whatsin` and `--whatsout` reject unknown values (exit 2); `latexmlmath_oxide` gains `--version` and
+  rejects unknown options.
 - HTML: box sizes are written as `--ltx-box-width` (and height, depth) custom properties instead of `width:`, so a
   custom stylesheet needs LaTeXML.css or ar5iv-css for them; numeric citations carry `ltx_cite_numeric`; a shared
   author note prints once.
@@ -82,7 +87,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - The log opens with the session's own lines (format loading, preloads), as Perl's does, so a failing `--preload` is
   in the log.
 - Rust library: `AssignRegister!` takes `(cs, value[, scope[, parameters]])`; `PostOptions::nodefaultresources` is
-  now `default_resources` (inverted); the prelude exports `LazyLock` in place of `Lazy`.
+  now `default_resources` (inverted); the prelude exports `LazyLock` in place of `Lazy`; the `test-utils` feature is
+  no longer a default; `HtmlOptions` is `#[non_exhaustive]`.
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
