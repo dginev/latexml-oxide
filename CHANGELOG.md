@@ -43,9 +43,13 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   and option tables, many more `Package.pm` calls, a Perl/Rust/Rhai cheat sheet
   ([`CHEATSHEET.md`](latexml_contrib/src/script_bindings/CHEATSHEET.md)), and diagnostics that name the `.rhai` file.
 - **Untrusted input stays inside the job.** Document Lua runs sandboxed under TeX's own defaults for untrusted input
-  (no programs; writes only below the job directory), each conversion with its own interpreter; archive links and
-  image copies stay inside the source and destination directories. The limits, and the advice to convert fully
-  untrusted sources in a container or VM: [`docs/release/SAFETY.md`](docs/release/SAFETY.md).
+  (no programs, no temporary files; writes only below the job directory), each conversion with its own interpreter;
+  a zip or tar archive unpacks only inside the source directory (a path or link that would leave it, or a link
+  cycle, is unpacked as a plain file or skipped, with a counted Warning), and image copies stay inside the
+  destination. Child processes (graphics converters, render workers, Rhai commands) are killed with a conversion
+  that times out, on Windows too, and a long-running worker resets each conversion's state before the next. The
+  limits, and the advice to convert fully untrusted sources in a container or VM:
+  [`docs/release/SAFETY.md`](docs/release/SAFETY.md).
 
 ### Speed, output and platforms
 
@@ -65,6 +69,10 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - **Windows.** The full test suite passes on Windows and runs on every release tag, and conversions use the linked
   libkpathsea instead of falling back to a `kpsewhich` subprocess (about 270 ms a file lookup). Windows binaries ship
   unsigned in 0.8.0; a Microsoft Store package is planned for 0.8.x.
+- **Release builds name their inputs.** Every release is built, on all platforms, with one dated nightly toolchain
+  and one `Cargo.lock`, both attached to the release (`BUILD-INPUTS` records the toolchain, `rustc -vV` and the
+  lockfile's SHA-256); a final release rebuilds its last release candidate from those same inputs, and
+  `--version` prints the tag and revision it was built from (`0.8.0-rc1 (revision …)` for a candidate).
 
 ### Upgrading from 0.7.6
 
@@ -73,6 +81,9 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   only (OXIDIZED_DESIGN_DIVERGENCES #285).
 - A failing XSLT stylesheet is a Fatal (exit 1, no output); a repeated single-valued option keeps its last value; a
   malformed `--xsltparameter` exits 2; a `--stylesheet` on disk wins over the built-in one of the same name.
+- `--format`, `--whatsin` and `--whatsout` accept only their documented values (in any case) and exit 2 on any
+  other. `latexmlmath_oxide` takes `-V`/`--version`, ends its options at `--`, and exits 2 on an unknown long option
+  (a formula starting with a single `-`, such as `-x + 1`, is still a formula) and 1, not a crash, on a TeX Fatal.
 - HTML: box sizes are written as `--ltx-box-width` (and height, depth) custom properties instead of `width:`, so a
   custom stylesheet needs LaTeXML.css or ar5iv-css for them; numeric citations carry `ltx_cite_numeric`; a shared
   author note prints once.
@@ -82,7 +93,10 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - The log opens with the session's own lines (format loading, preloads), as Perl's does, so a failing `--preload` is
   in the log.
 - Rust library: `AssignRegister!` takes `(cs, value[, scope[, parameters]])`; `PostOptions::nodefaultresources` is
-  now `default_resources` (inverted); the prelude exports `LazyLock` in place of `Lazy`.
+  now `default_resources` (inverted); the prelude exports `LazyLock` in place of `Lazy`. The `test-utils` feature is
+  no longer on by default (enable it for the test helpers); `HtmlOptions` is `#[non_exhaustive]` (start from
+  `HtmlOptions::default()`, then `with_default_resources(…)`); `PostOptions` implements `Default`; and a failure on
+  `latexml::api`'s conversion thread is returned as an error instead of panicking the caller, with the log kept.
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
