@@ -528,6 +528,9 @@ mod perfect_kernel_batchlo3;
 mod perfect_kernel_batchlo4;
 /// LOGO1: what a constructor prints of its own (`\LaTeX`, `\TeX`) is ink of the name or line it is in (amsldoc).
 mod perfect_kernel_batchlogo1;
+/// LOOPFIX: run-397 alias-cycle loop Fatals — apacite, amsmath's `\X@` lets, revtex's hyperref preload, physics,
+/// slashed (OD #1100).
+mod perfect_kernel_batchloopfix;
 /// LOSTF (OD ruling 13): three frontmatter content regressions — fcs's corresponding mark, vmsta's name parts, the pazh/astl
 /// title code's marks; OD #905, #802, #941.
 mod perfect_kernel_batchlostf;
