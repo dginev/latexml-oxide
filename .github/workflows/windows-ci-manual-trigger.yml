@@ -72,12 +72,16 @@ on:
     # Every file that carries `#[cfg(windows)]`/`windows_sys` code, plus the
     # manifests that pin the Windows crates. Keep this list in step with
     #   grep -rl 'cfg(windows)\|windows_sys' --include=*.rs .
+    # A Windows path written as `#[cfg(not(unix))]` escapes that grep: list such a
+    # file when its fallback changes what Windows produces (util.rs: archive links
+    # are never made off Unix, so every one is a plain file with a counted Warning).
     paths:
       - 'latexml_core/src/watchdog.rs'
       - 'latexml_core/src/util/pathname.rs'
       - 'latexml_post/src/xslt.rs'
       - 'latexml_post/src/graphics.rs'
       - 'latexml_oxide/src/util/test.rs'
+      - 'latexml_oxide/src/util.rs'
       - '**/Cargo.toml'
       - '.github/workflows/windows-ci-manual-trigger.yml'
   schedule:
