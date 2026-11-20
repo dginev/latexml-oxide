@@ -447,15 +447,6 @@ fn cluster_tcolorbox_tabular_not_flipped_6873() {
 fn cluster_newtcblisting_leading_optarg() {
   convert_clean("tests/cluster_regressions/newtcblisting_leading_optarg.tex");
 }
-/// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
-/// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
-/// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce
-/// Miller, LaTeXML #2435) — we keep that. Instead, `Verbatim`/`HyperVerbatim`
-/// now hold an identity ASCII fontmap THROUGH digestion (a `before_digest`
-/// `MergeFont(encoding => "ASCII")`, mirroring `Semiverbatim`), so a verbatim/URL
-/// argument stays ASCII while normal T1 text still follows Bruce's mapping.
-/// Surpasses Perl (which loses ASCII the same way). OXIDIZED_DESIGN #144.
-/// The runtime Rhai binding beside the document loads in-process (the reported path).
 /// Issue #944 (reporter tp971): a Rhai binding's `DeclareOption("some-option", || {…})` ran the whole
 /// `\ds@some-option` through the prototype parser, which split off `-option` as a parameter type (Fatal:Parameter:
 /// Unknown). Perl `DeclareOption` (Package.pm:2419-2429) names the control sequence whole. Closure and string-body
@@ -489,6 +480,15 @@ ProcessOptions();
     "#944: every given option's handler must run (and only those):\n{xml}"
   );
 }
+/// Issue #723 (reporter xworld21): a Rhai binding's `HyperVerbatim` argument
+/// under T1 fontencoding produced non-ASCII `~`/`^`, breaking URLs. The T1
+/// fontmap deliberately maps slots 94/126 to accent glyphs U+02C6/U+02DC (Bruce
+/// Miller, LaTeXML #2435) — we keep that. Instead, `Verbatim`/`HyperVerbatim`
+/// now hold an identity ASCII fontmap THROUGH digestion (a `before_digest`
+/// `MergeFont(encoding => "ASCII")`, mirroring `Semiverbatim`), so a verbatim/URL
+/// argument stays ASCII while normal T1 text still follows Bruce's mapping.
+/// Surpasses Perl (which loses ASCII the same way). OXIDIZED_DESIGN #144.
+/// The runtime Rhai binding beside the document loads in-process (the reported path).
 #[test]
 fn cluster_t1_hyperverbatim_ascii_723() {
   let (log, xml) = latexml::util::test::convert_files_with(
