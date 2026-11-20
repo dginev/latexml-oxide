@@ -46,6 +46,8 @@ use std::{
   process::{ChildStdin, ChildStdout, Command, Stdio},
 };
 
+use latexml_core::util::pathname::texmf_root_env;
+
 /// The Lua-side server loop. `tex.print(...)` arguments follow the LuaTeX
 /// convention: an optional leading catcode-table number (ignored here — the
 /// text is retokenized with current catcodes on the TeX side either way),
@@ -579,7 +581,13 @@ fn spawn() -> Option<LuaProc> {
     .stderr(Stdio::null())
     // Untrusted Lua sees only what the texmf lookup and the locale need, not the worker's environment.
     .env_clear()
-    .envs(std::env::vars_os().filter(|(name, _)| name.to_str().is_some_and(child_env_allowed)));
+    .envs(std::env::vars_os().filter(|(name, _)| name.to_str().is_some_and(child_env_allowed)))
+    // The TEXMF roots without a trailing separator, as every TeX tool is given them (issue #950).
+    .envs(
+      texmf_root_env()
+        .into_iter()
+        .filter(|(name, _)| child_env_allowed(name)),
+    );
   // LuaTeX job semantics: chunks resolve relative files against the
   // document's directory (witness newpax/newpax — `newpax.writenewpax
   // ("doc-input1")` reads the PDFs shipped next to the manual).
@@ -924,7 +932,7 @@ mod tests {
   }
 
   fn texlua_present() -> bool {
-    std::process::Command::new("texlua")
+    latexml_core::util::pathname::tex_tool_command("texlua")
       .arg("--version")
       .output()
       .is_ok_and(|o| o.status.success())
@@ -981,7 +989,7 @@ mod tests {
     );
     // texmf Lua-module resolution — only meaningful where kpse can see the
     // module (trimmed-TL CI hosts self-skip, same trap as the bridge test).
-    let newpax_installed = std::process::Command::new("kpsewhich")
+    let newpax_installed = latexml_core::util::pathname::tex_tool_command("kpsewhich")
       .arg("newpax.lua")
       .output()
       .is_ok_and(|o| o.status.success() && !o.stdout.is_empty());

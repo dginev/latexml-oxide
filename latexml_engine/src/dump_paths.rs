@@ -100,7 +100,7 @@ fn year_from_kpsewhich_selfautoparent() -> Option<u32> {
 }
 
 fn year_from_pdflatex_version() -> Option<u32> {
-  let out = std::process::Command::new("pdflatex")
+  let out = latexml_core::util::pathname::tex_tool_command("pdflatex")
     .arg("--version")
     .output()
     .ok()?;

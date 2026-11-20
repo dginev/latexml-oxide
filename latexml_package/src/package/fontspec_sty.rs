@@ -295,7 +295,7 @@ fn font_file_exists_case_insensitive(name: &str) -> bool {
   }
   let names = LSR_NAMES.get_or_init(|| {
     let mut set = std::collections::HashSet::new();
-    let Ok(out) = pathname::kpsewhich_command()
+    let Ok(out) = pathname::tex_tool_command("kpsewhich")
       .args(["-var-value=TEXMFDIST"])
       .output()
     else {

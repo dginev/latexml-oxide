@@ -313,7 +313,7 @@ pub fn codegen_from_dump(dump_path: &str, output_path: &str) -> Result<usize, St
 }
 
 fn save_texlive_version(year: u32) {
-  let version = latexml_core::util::pathname::kpsewhich_command()
+  let version = latexml_core::util::pathname::tex_tool_command("kpsewhich")
     .arg("--version")
     .output()
     .ok()

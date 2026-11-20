@@ -826,15 +826,16 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     files `c:/texlive/2026/…`, so every conversion fell back to the subprocess
     backend (about 270 ms a file lookup). Paths now compare as Windows compares
     them. Guard `path_is_under_compares_as_the_file_system_does`.
-  - **A trailing `/` on `TEXMFROOT` no longer makes conversions 30-100× slower (#950).**
+  - **A trailing `/` on `TEXMFROOT` no longer makes conversions 30-150× slower (#950).**
     texmf.cnf's `$TEXMFROOT/texmf-dist` became `…/2024//texmf-dist`, kpathsea's `//`
     recursive search: the linked libkpathsea walked the tree and resolved nothing, and
     each lookup then spawned a `kpsewhich` that walked it again (pdflatex itself fails
     under that setting). The `kpathsea` crate 0.3.6 now hands both backends the TEXMF
     root variables without their trailing separators (`Kpaths::new()`; logged as
-    `Info:kpathsea:texmf_root`), and our own `kpsewhich` spawns get the same values;
-    search-path specs keep their `//`. Guards `trim_root_separators_trims_roots_not_specs`,
-    `trailing_separator_on_texmf_roots_resolves_as_without`.
+    `Info:kpathsea:texmf_root`), and the TeX tools we spawn (`kpsewhich`, `texlua`,
+    `pdflatex`, `latex`, the DVI converters) get the same values; search-path specs keep
+    their `//`. Guard `trailing_separator_on_texmf_roots_resolves_as_without` (the rule's
+    own tests are the crate's).
   - **Windows diagnostics name their source file.** A location's source was taken
     for a URL whenever it held a `:`, which every Windows path does, so messages
     read `at C:\…\t.tex.index.tex; line 3` where Linux says `at t.tex; line 3`. Perl's

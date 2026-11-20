@@ -80,7 +80,7 @@ LoadDefinitions!({
 
 #[cfg(test)]
 mod tests {
-  use std::process::Command;
+  use latexml_core::util::pathname::tex_tool_command;
 
   use super::LINE_SLOTS;
   use crate::package::lcircle_fontmap::LCIRCLE_SLOTS;
@@ -89,7 +89,7 @@ mod tests {
   /// (lines like `(CHARACTER O 27` / `(CHARACTER C a`). Returns None when the
   /// host TeX tree lacks the font or `tftopl` (test self-skips).
   fn tfm_slots(font: &str) -> Option<Vec<usize>> {
-    let tfm = Command::new("kpsewhich")
+    let tfm = tex_tool_command("kpsewhich")
       .arg(format!("{font}.tfm"))
       .output()
       .ok()?;
@@ -97,7 +97,7 @@ mod tests {
       return None;
     }
     let path = String::from_utf8_lossy(&tfm.stdout).trim().to_string();
-    let out = Command::new("tftopl").arg(&path).output().ok()?;
+    let out = tex_tool_command("tftopl").arg(&path).output().ok()?;
     if !out.status.success() {
       return None;
     }

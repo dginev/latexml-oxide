@@ -217,9 +217,11 @@ fn choose_kpaths(
   }
 }
 
-/// The TEXMF tree roots that texmf.cnf joins with `/` into the search paths (`TEXMFDIST = $TEXMFROOT/texmf-dist`,
-/// `TEXMF = {…,!!$TEXMFDIST}`, `TEXINPUTS = …$TEXMF/tex/…//`). Search-path specs (`TEXINPUTS`, `TEXMFCNF`, …) are not
-/// roots: their `//` is kpathsea's recursive search, written on purpose.
+#[cfg(feature = "kpathsea")]
+pub use kpathsea::{TEXMF_ROOT_VARS, TrimmedRoot, trim_texmf_root};
+
+/// The kpathsea crate's TEXMF root variables (0.3.6), for a build without it.
+#[cfg(not(feature = "kpathsea"))]
 pub const TEXMF_ROOT_VARS: [&str; 9] = [
   "TEXMFROOT",
   "TEXMFDIST",
@@ -232,11 +234,32 @@ pub const TEXMF_ROOT_VARS: [&str; 9] = [
   "TEXMFCONFIG",
 ];
 
-/// The TEXMF root variables whose trailing separator the kpathsea crate trimmed (>= 0.3.6, issue #950), each as
-/// (variable, value as given, value used), for the conversion log. Forces the kpathsea initialization, like
-/// [`kpathsea_backend`].
+/// The kpathsea crate's `trim_texmf_root` (0.3.6), for a build without it: `value` without its trailing separators,
+/// `None` when there are none; path lists, brace lists and file-system or drive roots stay (issue #950).
+#[cfg(not(feature = "kpathsea"))]
+pub fn trim_texmf_root(value: &str) -> Option<String> {
+  let (separators, list_separator): (&[char], char) = if cfg!(windows) {
+    (&['/', '\\'], ';')
+  } else {
+    (&['/'], ':')
+  };
+  if value.contains([list_separator, ',', '{']) {
+    return None;
+  }
+  let stem = value.trim_end_matches(separators);
+  let is_drive = cfg!(windows) && stem.len() == 2 && stem.ends_with(':');
+  let keep = if stem.is_empty() || is_drive {
+    stem.len() + 1
+  } else {
+    stem.len()
+  };
+  (keep < value.len()).then(|| value[..keep].to_string())
+}
+
+/// The TEXMF root variables whose trailing separator the kpathsea crate trimmed (>= 0.3.6, issue #950), for the
+/// conversion log. Forces the kpathsea initialization, like [`kpathsea_backend`].
 #[cfg(feature = "kpathsea")]
-pub fn trimmed_texmf_roots() -> &'static [(&'static str, String, String)] {
+pub fn trimmed_texmf_roots() -> &'static [TrimmedRoot] {
   drop(
     KPSE
       .lock()
@@ -247,49 +270,35 @@ pub fn trimmed_texmf_roots() -> &'static [(&'static str, String, String)] {
 
 /// Without the `kpathsea` feature nothing reads the TEXMF roots.
 #[cfg(not(feature = "kpathsea"))]
-pub fn trimmed_texmf_roots() -> &'static [(&'static str, String, String)] { &[] }
+pub fn trimmed_texmf_roots() -> &'static [TrimmedRoot] { &[] }
 
-/// A `kpsewhich` command given the TEXMF roots without their trailing separator, as the kpathsea crate gives the
-/// linked library and its own spawns (issue #950): a root ending in `/` would make each spawn walk the whole tree and
-/// resolve nothing. Sets nothing when no root has one.
-pub fn kpsewhich_command() -> std::process::Command {
-  let mut command = std::process::Command::new("kpsewhich");
-  for var in TEXMF_ROOT_VARS {
-    if let Some(trimmed) = env::var(var).ok().as_deref().and_then(trim_texmf_root) {
-      command.env(var, trimmed);
-    }
-  }
-  command
+/// The kpathsea crate's `TrimmedRoot`, for a build without it.
+#[cfg(not(feature = "kpathsea"))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrimmedRoot {
+  /// The variable, one of [`TEXMF_ROOT_VARS`].
+  pub var:   &'static str,
+  /// Its value as given.
+  pub given: String,
+  /// The value used.
+  pub used:  String,
 }
 
-/// A TEXMF root `value` without its trailing directory separators, or `None` when there is none to trim. A root that
-/// ends in `/` joins into `/usr/local/texlive/2024//texmf-dist`, which kpathsea reads as its `//` recursive search
-/// (elt-dirs.c): each lookup walks the tree on disk, and the `!!` ls-R-only elements no longer prefix-match their
-/// `ls-R` directory (db.c), so nothing resolves; real `kpsewhich`/pdflatex fail the same way (issue #950). A value
-/// that is a path list or a brace expansion is a spec and stays as written; a file-system or drive root (`/`, `C:/`)
-/// keeps its separator. The kpathsea crate's `trim_texmf_root` (0.3.6) applies the same rule for its lookups; this one
-/// serves our own spawns and path joins, also without the `kpathsea` feature.
-pub fn trim_texmf_root(value: &str) -> Option<String> { trim_root_separators(value, cfg!(windows)) }
+/// The TEXMF root variables set now with a trailing separator, each with its trimmed value (issue #950): what a
+/// spawned TeX tool must be given, as the kpathsea crate gives the linked library and its own `kpsewhich` spawns.
+pub fn texmf_root_env() -> Vec<(&'static str, String)> {
+  TEXMF_ROOT_VARS
+    .iter()
+    .filter_map(|&var| Some((var, trim_texmf_root(&env::var(var).ok()?)?)))
+    .collect()
+}
 
-/// [`trim_texmf_root`] for the separators of Windows (`/`, `\`, list separator `;`) or of Unix (`/`, `:`).
-fn trim_root_separators(value: &str, windows: bool) -> Option<String> {
-  let (separators, list_separator): (&[char], char) = if windows {
-    (&['/', '\\'], ';')
-  } else {
-    (&['/'], ':')
-  };
-  if value.contains([list_separator, ',', '{']) {
-    return None;
-  }
-  let stem = value.trim_end_matches(separators);
-  let is_drive = windows && stem.len() == 2 && stem.ends_with(':');
-  // A root (`/`, `C:/`) keeps one separator.
-  let keep = if stem.is_empty() || is_drive {
-    stem.len() + 1
-  } else {
-    stem.len()
-  };
-  (keep < value.len()).then(|| value[..keep].to_string())
+/// A command for a TeX tool (`kpsewhich`, `pdflatex`, `texlua`, …) given [`texmf_root_env`]: a root ending in `/`
+/// would make it walk the whole tree and resolve nothing (issue #950). Sets nothing when no root has one.
+pub fn tex_tool_command(program: impl AsRef<std::ffi::OsStr>) -> std::process::Command {
+  let mut command = std::process::Command::new(program);
+  command.envs(texmf_root_env());
+  command
 }
 
 /// Pick the kpathsea backend that can actually resolve host files, and record
@@ -365,7 +374,7 @@ pub fn ambient_kpsewhich_selfautoparent() -> Option<&'static str> {
   static SELF_AUTO_PARENT: OnceLock<Option<String>> = OnceLock::new();
   SELF_AUTO_PARENT
     .get_or_init(|| {
-      let out = kpsewhich_command()
+      let out = tex_tool_command("kpsewhich")
         .args(["-var-value=SELFAUTOPARENT"])
         .output()
         .ok()?;
@@ -373,8 +382,6 @@ pub fn ambient_kpsewhich_selfautoparent() -> Option<&'static str> {
         return None;
       }
       let root = String::from_utf8(out.stdout).ok()?.trim().to_string();
-      // Paths are joined onto it: no trailing separator (issue #950).
-      let root = trim_texmf_root(&root).unwrap_or(root);
       if root.is_empty() { None } else { Some(root) }
     })
     .as_deref()
@@ -402,7 +409,10 @@ pub fn ambient_kpsewhich_version() -> Option<&'static str> {
   static BANNER: OnceLock<Option<String>> = OnceLock::new();
   BANNER
     .get_or_init(|| {
-      let out = kpsewhich_command().arg("--version").output().ok()?;
+      let out = tex_tool_command("kpsewhich")
+        .arg("--version")
+        .output()
+        .ok()?;
       if !out.status.success() {
         return None;
       }
@@ -1385,67 +1395,18 @@ pub fn cwd() -> String { env::current_dir().unwrap().to_string_lossy().to_string
 mod tests {
   use super::*;
 
-  /// Issue #950: a TEXMF root loses its trailing separators, so texmf.cnf's `$TEXMFROOT/texmf-dist` never becomes
-  /// kpathsea's `//` recursive search; roots keep theirs, and a spec's deliberate `//` is left as written.
+  /// Issue #950: the local copy of the kpathsea crate's rule, for a build without it.
+  #[cfg(not(feature = "kpathsea"))]
   #[test]
-  fn trim_root_separators_trims_roots_not_specs() {
-    for windows in [false, true] {
-      let trim = |value: &str| trim_root_separators(value, windows);
-      assert_eq!(
-        trim("/usr/local/texlive/2024/").as_deref(),
-        Some("/usr/local/texlive/2024")
-      );
-      assert_eq!(
-        trim("/usr/local/texlive/2024///").as_deref(),
-        Some("/usr/local/texlive/2024")
-      );
-      assert_eq!(trim("~/texmf/").as_deref(), Some("~/texmf"));
-      assert_eq!(
-        trim("!!/usr/local/texlive/2024/").as_deref(),
-        Some("!!/usr/local/texlive/2024")
-      );
-      assert_eq!(trim("/usr/local/texlive/2024"), None, "nothing to trim");
-      assert_eq!(
-        trim("/usr/local//texlive/2024"),
-        None,
-        "only the end is trimmed"
-      );
-      assert_eq!(trim(""), None);
-      assert_eq!(trim("/"), None, "the file-system root keeps its separator");
-      assert_eq!(trim("//").as_deref(), Some("/"));
-      // A path list or a brace expansion is a search spec: its `//` is kpathsea's recursive search.
-      assert_eq!(trim("{/a/,/b/}"), None);
-      assert_eq!(trim("/a/,/b/"), None);
-      let list = if windows { ".//;C:/x//" } else { ".//:/x//" };
-      assert_eq!(trim(list), None);
-    }
-    let windows = |value: &str| trim_root_separators(value, true);
+  fn trim_texmf_root_without_the_kpathsea_feature() {
+    assert_eq!(trim_texmf_root("/tl/2024//").as_deref(), Some("/tl/2024"));
     assert_eq!(
-      windows(r"C:\texlive\2024\").as_deref(),
-      Some(r"C:\texlive\2024")
+      trim_texmf_root("!!/tl/2024/").as_deref(),
+      Some("!!/tl/2024")
     );
-    assert_eq!(
-      windows(r"C:/texlive/2024/\").as_deref(),
-      Some("C:/texlive/2024")
-    );
-    assert_eq!(
-      windows(r"\\server\share\").as_deref(),
-      Some(r"\\server\share")
-    );
-    assert_eq!(windows("C:/"), None, "a drive root keeps its separator");
-    assert_eq!(windows(r"C:\"), None);
-    assert_eq!(windows(r"C:\\").as_deref(), Some(r"C:\"));
-    assert_eq!(windows("C:"), None);
-    // On Unix `\` is a file-name character, and `:` separates a path list.
-    assert_eq!(trim_root_separators(r"/x\", false), None);
-    assert_eq!(trim_root_separators("C:/", false), None);
-    // Only roots are trimmed: the search-path specs are not among them.
-    for spec in ["TEXINPUTS", "TEXMFCNF", "TEXMF", "TEXMFDBS", "TFMFONTS"] {
-      assert!(
-        !TEXMF_ROOT_VARS.contains(&spec),
-        "{spec} is a search-path spec"
-      );
-    }
+    assert_eq!(trim_texmf_root("/tl//2024"), None);
+    assert_eq!(trim_texmf_root("/"), None);
+    assert_eq!(trim_texmf_root("{/a/,/b/}"), None);
   }
 
   /// The dual-TL agreement probe compares paths as the file system does: on Windows kpsewhich's SELFAUTOPARENT

@@ -257,7 +257,7 @@ struct FontIndex {
 fn texmf_trees() -> Vec<String> {
   let mut trees = Vec::new();
   for var in ["TEXMFDIST", "TEXMFLOCAL"] {
-    if let Ok(out) = crate::util::pathname::kpsewhich_command()
+    if let Ok(out) = crate::util::pathname::tex_tool_command("kpsewhich")
       .arg(format!("-var-value={var}"))
       .output()
     {

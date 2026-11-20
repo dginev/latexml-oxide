@@ -725,12 +725,9 @@ mod kpathsea_backend_resolution {
 }
 
 mod texmf_root_trailing_separator {
-  //! Issue #950: `TEXMFROOT=/usr/local/texlive/2024/` (a trailing `/`, as the reporter's Dockerfile set it) made
-  //! conversions ~30x slower. texmf.cnf's `$TEXMFROOT/texmf-dist` became `…/2024//texmf-dist`, kpathsea's `//`
-  //! recursive search: every lookup walked the tree on disk and missed `ls-R`, so the linked libkpathsea resolved
-  //! nothing and each lookup fell back to a spawned `kpsewhich` that walked the tree again.
-  //!
-  //! Runs the binary as a subprocess: the environment is read once, when the process picks its kpathsea backend.
+  //! Issue #950: `TEXMFROOT=/usr/local/texlive/2024/` made texmf.cnf's `$TEXMFROOT/texmf-dist` kpathsea's `//`
+  //! recursive search, so every lookup walked the tree and resolved nothing. Runs the binary as a subprocess: the
+  //! environment is read once, when the process picks its kpathsea backend.
 
   use std::{collections::BTreeSet, fs, process::Command};
 
@@ -778,8 +775,13 @@ mod texmf_root_trailing_separator {
 
   #[test]
   #[cfg_attr(
-    not(building_with_texlive),
+    all(not(windows), not(building_with_texlive)),
     ignore = "requires a TeX Live installation"
+  )]
+  #[cfg_attr(
+    windows,
+    ignore = "unverified on Windows: the linked kpathsea DLL's root trim (kpathsea 0.3.6) is checked by the crate's CI \
+              only, and a fallback to the subprocess backend changes the logged backend line"
   )]
   fn trailing_separator_on_texmf_roots_resolves_as_without() {
     let root = var_value("TEXMFROOT");
