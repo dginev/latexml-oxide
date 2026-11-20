@@ -95,12 +95,13 @@ pub(crate) fn is_space_flagged_box(whatsit: &Whatsit) -> bool {
 /// `\vphantom` it was copied into (easytable's and easybmat's `\@easy@buildbox`: 1705.10408, 2002.06044, 2109.00258,
 /// 2106.13444, 1710.10243; KNOWN_PERL_ERRORS #1296).
 fn taken_as_box(item: Digested) -> Digested {
+  // the alignment's own mark (`is_halign`, set by `\halign`'s and `\valign`'s `after_digest`), not the whatsit's name
+  let is_halign = |w: &Whatsit| {
+    matches!(w.get_property("alignment").as_deref(), Some(Stored::Digested(alignment))
+      if matches!(alignment.data(), DigestedData::Alignment(a) if a.try_borrow().is_ok_and(|a| a.is_halign)))
+  };
   match item.data() {
-    DigestedData::Whatsit(w)
-      if w
-        .try_borrow()
-        .is_ok_and(|w| w.get_definition().get_cs_name().as_ref() == "\\halign") =>
-    {
+    DigestedData::Whatsit(w) if w.try_borrow().is_ok_and(|w| is_halign(&w)) => {
       let mut whatsit = w.borrow().clone();
       whatsit.set_property("lx@lastbox", true);
       Digested::from(whatsit)
