@@ -21,9 +21,14 @@ LoadDefinitions!({
   // jheppub.sty:37 `\RequirePackage[numbers,sort&compress]{natbib}` (`no-natbib-sort`: `[numbers,compress]`, the same
   // citations here): numbered citations as 2112.14648's and 2607.20603's PDFs.
   RequirePackage!("natbib", options => vec![s!("numbers"), s!("sort&compress")]);
-  // (the package's own load, so a document's repeat with other options is LaTeX's "Option clash" — binding/content.rs
-  // `apply_new_options_on_reload`)
-  record_load_as_the_files_own("natbib.sty")?;
+  // (the package's own load where the paper's jheppub.sty makes it, so a document's repeat with other options is
+  // LaTeX's "Option clash" — binding/content.rs `apply_new_options_on_reload`)
+  if crate::shipped_class::shipped_copy_makes_load("sty", &[
+    r"\RequirePackage[numbers,sort&compress]{natbib}",
+    r"\RequirePackage[numbers,compress]{natbib}",
+  ])? {
+    record_load_as_the_files_own("natbib.sty");
+  }
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("epsfig");

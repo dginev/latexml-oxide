@@ -4,7 +4,8 @@
 % engines: Perl clean (no clash test); rust MAIN935 1 Error "Option clash for package natbib: options 'authoryear' of a
 %          repeat load dropped"
 % expect:  0 errors, 0 warnings; author-year citations
-% status:  RED (MAIN935) -> GREEN (REGFIXC: a binding's load is the file's own only where the paper ships no copy)
+% status:  RED (MAIN935) -> GREEN (REGFIXC: a binding's load is the file's own only where the paper ships no copy or
+%          one making the same load, unmodified_class_copy.tex)
 \documentclass[preprint,12pt]{elsarticle}
 \usepackage[authoryear]{natbib}
 \begin{document}

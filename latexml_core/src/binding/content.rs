@@ -630,13 +630,18 @@ fn input_definitions_impl(
       } else {
         HashSet::default()
       };
-    // (and the options passed to it after the load, `pass_options_with_raw`)
-    prev.extend(
-      lookup_string(&s!("{fkey}_passed_after_load"))
-        .split(',')
-        .map(|o| o.trim().to_string())
-        .filter(|o| !o.is_empty()),
-    );
+    // (and, for the classic clash test, latex.ltx `\@onefilewithoptions@clashchk`, the options passed to it after the
+    // load, `pass_options_with_raw`: a key-value package, one with an `\opt@handler@<file>`, takes a repeat's options
+    // with no such test, latex.ltx:18752-18762 — `\PassOptionsToPackage{table}{xcolor}` after the load, then
+    // `\usepackage[table]{xcolor}`, loads colortbl)
+    if lookup_bool(&s!("{fkey}_repeat_clash")) {
+      prev.extend(
+        lookup_string(&s!("{fkey}_passed_after_load"))
+          .split(',')
+          .map(|o| o.trim().to_string())
+          .filter(|o| !o.is_empty()),
+      );
+    }
     // (and the options passed to it, `\opt@<file>`, which LaTeX's clash test reads, latex.ltx `\@if@ptions`:
     // 2110.14346's `\PassOptionsToPackage{numbers, compress}{natbib}` before neurips_2020.sty's load, then
     // `\usepackage[numbers]{natbib}` — no clash in pdflatex)
@@ -667,7 +672,7 @@ fn input_definitions_impl(
       // (latex.ltx `\@onefilewithoptions` → `\@if@ptions`), an Error here as there; the new options are dropped.
       // A class binding that loads the package where the real class does too (jmlr.cls:150, acmart.cls:300,
       // elsarticle.cls:1243, jheppub.sty:37) records its load as the class's own (`<file>:requested_by_binding` false,
-      // `record_load_as_the_files_own`: not where the paper ships its copy);
+      // `record_load_as_the_files_own`: not where the paper ships a copy loading it otherwise);
       // a raw file's own repeat ends the early-load state (`apply_new_options_on_reload` below).
       // A stand-in's copy that loads the package its binding loaded on the copy's behalf (`<file>:loaded_by_stand_in`,
       // the first load made while a stand-in binding loaded) makes the load the binding stands in for: TeX sees the
@@ -2707,32 +2712,17 @@ pub fn standard_class_binding_assigned(key: SymStr) -> bool {
 
 /// A compiled binding's load of `file` that the real file it stands for makes too (elsarticle.cls:1243, acmart.cls:300,
 /// jmlr.cls:150, jheppub.sty:37): the file's own, so a document's later repeat with other options is LaTeX's "Option
-/// clash" (`apply_repeat_options`). Not where the paper ships its own copy of that file (`\@currname.\@currext` found
-/// beside it, a renamed copy too): the copy may load it otherwise or not at all, so the load stays the binding's early
-/// one and the document's options apply (elsarticle.cls copies: 2105.06643 `[authoryear]`, 2206.02837 none, 2402.13480
-/// `[numbers,sort&compress]`; 2209.10785's cidr.cls, an acmart.cls copy without natbib).
-pub fn record_load_as_the_files_own(file: &str) -> Result<()> {
-  let request = s!(
-    "{}.{}",
-    do_expand(T_CS!("\\@currname"))?.to_string(),
-    do_expand(T_CS!("\\@currext"))?.to_string()
+/// clash" (`apply_repeat_options`). The binding records it only where the paper ships no copy of that file or one
+/// that makes the same load (`shipped_class::shipped_copy_makes_load`): a copy loading it otherwise or not at all
+/// leaves the binding's early load, and the document's options apply (elsarticle.cls copies: 2105.06643
+/// `[authoryear]`, 2206.02837 none, 2402.13480 `[numbers,sort&compress]`; 2209.10785's cidr.cls, an acmart.cls copy
+/// without natbib).
+pub fn record_load_as_the_files_own(file: &str) {
+  assign_value(
+    &s!("{file}:requested_by_binding"),
+    false,
+    Some(Scope::Global),
   );
-  let shipped = find_file(
-    &request,
-    Some(FindFileOptions {
-      forbid_ltxml: true,
-      ..Default::default()
-    }),
-  )
-  .is_some_and(|path| shipped_with_paper(&path));
-  if !shipped {
-    assign_value(
-      &s!("{file}:requested_by_binding"),
-      false,
-      Some(Scope::Global),
-    );
-  }
-  Ok(())
 }
 
 /// Is the file at `path` one the paper ships: a `{filecontents}` virtual file, or one under the document's own source
@@ -3407,15 +3397,10 @@ pub fn pass_options_with_raw(
 ) -> Result<()> {
   let key = s!("opt@{}.{}", name, ext);
   // (`\opt@<file>` is the list itself, latex.ltx:18514-18517: a pass after the load extends it, which a repeat load's
-  // clash test, `\@if@ptions`, reads — a neurips_2022.sty copy's `\PassOptionsToPackage{numbers}{natbib}` after the
-  // binding's natbib load, then the document's `\usepackage[numbers]{natbib}`: no clash, 2403.07005. Kept apart from
-  // our `\opt@<file>`, which bindings read after the load as the load's own options: babel's main language.)
-  if !options.is_empty()
-    && matches!(
-      lookup_meaning(&T_CS!(s!("\\opt@{name}.{ext}"))),
-      Some(Stored::Expandable(_))
-    )
-  {
+  // classic clash test, `\@if@ptions`, reads — a neurips_2022.sty copy's `\PassOptionsToPackage{numbers}{natbib}` after
+  // the binding's natbib load, then the document's `\usepackage[numbers]{natbib}`: no clash, 2403.07005. Kept apart
+  // from our `\opt@<file>`, which bindings read after the load as the load's own options: babel's main language.)
+  if !options.is_empty() && file_loaded(&s!("{name}.{ext}")) {
     let passed_key = s!("{name}.{ext}_passed_after_load");
     let mut passed = lookup_string(&passed_key);
     for opt in &options {

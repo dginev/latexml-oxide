@@ -244,8 +244,11 @@ LoadDefinitions!({
       .collect();
     RequirePackage!("natbib", options => natbib_opt_vec);
     // (elsarticle.cls:1243 `\RequirePackage[\@biboptions]{natbib}`: the class's own load, so a document's repeat with
-    // other options is LaTeX's "Option clash" — binding/content.rs `apply_new_options_on_reload`)
-    record_load_as_the_files_own("natbib.sty")?;
+    // other options is LaTeX's "Option clash" — binding/content.rs `apply_new_options_on_reload` — unless the paper's
+    // copy loads natbib otherwise: 2105.06643, 2206.02837, 2402.13480)
+    if crate::shipped_class::shipped_copy_makes_load("cls", &[r"\RequirePackage[\@biboptions]{natbib}"])? {
+      record_load_as_the_files_own("natbib.sty");
+    }
   }
   RequirePackage!("hyperref");
   // elsarticle.cls:1247-1249 writes `\biboptions` to the .spl for natbib's options on the next run; without natbib

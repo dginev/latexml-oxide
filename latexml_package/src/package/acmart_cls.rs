@@ -71,7 +71,14 @@ LoadDefinitions!({
 yysep={,},notesep={, }}}
 \newcommand{\bibstyle@acmnumeric}{\setcitestyle{numbers,sort&compress,open={[},close={]},citesep={,},notesep={, }}}");
   if acmart_natbib_option()? {
-    record_load_as_the_files_own("natbib.sty")?;
+    // (acmart.cls:138's default `natbib=true` with it: not where the paper's copy loads natbib otherwise or not at all,
+    // 2209.10785's cidr.cls)
+    if crate::shipped_class::shipped_copy_makes_load("cls", &[
+      r"\ExecuteOptionsX{natbib=true}",
+      r"\RequirePackage{natbib}",
+    ])? {
+      record_load_as_the_files_own("natbib.sty");
+    }
     // acmart.cls:306-345 renews `\setcitestyle` to read natbib's ordering words too (`sort`, `nosort`, `compress`,
     // `nocompress`, `sort&compress`): `acmnumeric` sorts and compresses, "[1–3]" (natbib_sty.rs `\setcitestyle`).
     AssignValue!("natbib@setcitestyle@orders" => true, Some(Scope::Global));

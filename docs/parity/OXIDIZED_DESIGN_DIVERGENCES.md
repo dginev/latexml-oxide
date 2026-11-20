@@ -23255,15 +23255,25 @@ cli_noincludestyles_restores_perls_binding_only_loading, latexml_sty_iflimit_ove
 its code, `requested_by_binding`) is the binding's guess at what its file loads: no clash, its new options dropped with
 an Info; the file read raw after it decides (cvpr_sty.rs's `[numbers,sort&compress]` after a document's
 `\usepackage[numbers]{natbib}`, whose cvpr.sty loads no natbib: 2109.08809, 2408.02054). (2) `\PassOptionsToPackage`
-after the load counts in the clash test, as latex.ltx:18514-18517 extends `\opt@<file>` (2403.07005's neurips_2022.sty
-copy); it is kept as `<file>_passed_after_load` (`pass_options_with_raw`), not in our `\opt@<file>`, which bindings
-read as the load's own options (babel's main language: extending it turned 2405.15450's `en-US` into `en`). (3) A class binding claims its load as the class's own
-(`record_load_as_the_files_own`: elsarticle, acmart, jmlr, jheppub) only where the paper ships no copy of that file
-(`\@currname.\@currext` beside the source): a copy may load natbib otherwise or not at all, so the document's options
-apply (2105.06643, 2206.02837, 2402.13480 elsarticle.cls copies; 2209.10785 cidr.cls). (4) The elsarticle binding reads
-`\jobname.spl` into `\@biboptions` before its natbib load, as elsarticle.cls:1240-1243 does (2406.18569, 2503.23289
-ship it); Perl's binding keeps `@biboptions` as a value and never reads the file.
+after the load counts in the classic clash test (latex.ltx `\@onefilewithoptions@clashchk`), as latex.ltx:18514-18517
+extends `\opt@<file>` (2403.07005's neurips_2022.sty copy); it is kept as `<file>_passed_after_load`
+(`pass_options_with_raw`), not in our `\opt@<file>`, which bindings read as the load's own options (babel's main
+language: extending it turned 2405.15450's `en-US` into `en`), and read by a clash-testing package only
+(`<file>_repeat_clash`): a key-value package takes a repeat's options with no clash test (latex.ltx:18752-18762), so
+`\PassOptionsToPackage{table}{xcolor}` after the load leaves `\usepackage[table]{xcolor}` loading colortbl. (3) A class
+binding claims its load as the class's own (`record_load_as_the_files_own`: elsarticle, acmart, jmlr, jheppub) where
+the paper ships no copy of that file or a copy that makes the same load (`shipped_class::shipped_copy_makes_load`: its
+code, comments out, has elsarticle.cls:1243 `\RequirePackage[\@biboptions]{natbib}`, acmart.cls:300 or jmlr.cls:150
+`\RequirePackage{natbib}`, jheppub.sty:37's `[numbers,sort&compress]` or `[numbers,compress]` load): TeX Live's own
+elsarticle.cls beside the document and `\usepackage[authoryear]{natbib}` is pdflatex's Option clash. A copy that loads
+natbib otherwise or not at all leaves the load early, and the document's options apply (2105.06643, 2206.02837,
+2402.13480 elsarticle.cls copies; 2209.10785 cidr.cls). (4) The elsarticle binding reads `\jobname.spl` into
+`\@biboptions` before its natbib load, as elsarticle.cls:1240-1243 does (2406.18569, 2503.23289 ship it); Perl's
+binding keeps `@biboptions` as a value and never reads the file. Open: natbib loaded before `\documentclass{elsarticle}`
+(repro `natbib_before_elsarticle.tex`, RED, synthetic) is item (1)'s binding repeat, an Info, where pdflatex reports the
+clash.
 **Guards**: `perfect_kernel_batchregfixc::{elsarticle_reads_its_spl, a_binding_repeat_load_does_not_clash,
-a_pass_after_the_load_extends_the_option_list, a_shipped_class_copy_keeps_the_binding_load_early}` (repros
+a_pass_after_the_load_extends_the_option_list, a_shipped_class_copy_keeps_the_binding_load_early,
+an_unmodified_class_copy_keeps_the_clash, a_pass_after_the_load_leaves_a_key_value_repeat}` (repros
 `natbib_repeat_options/`); the clash itself stays `perfect_kernel_batch77w::another_copys_repeat_load_clashes` and the
 72a guards.
