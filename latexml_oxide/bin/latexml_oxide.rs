@@ -43,6 +43,42 @@ fn xslt_parameter_arg(param: &str) -> Result<String, String> {
   }
 }
 
+/// Accepted `--format` values (case-insensitive, normalized to lowercase).
+/// Matches `post::default_stylesheet` plus `xml`; Perl `Config.pm` L550
+/// similarly rejects an unrecognized target format.
+fn format_arg(raw: &str) -> Result<String, String> {
+  let lower = raw.to_ascii_lowercase();
+  match lower.as_str() {
+    "html5" | "html" | "xhtml" | "xml" | "epub" | "epub3" => Ok(lower),
+    _ => Err(format!(
+      "unrecognized format '{raw}' (expected one of: html5, html, xhtml, xml, epub, epub3)"
+    )),
+  }
+}
+
+/// Accepted `--whatsin` values (case-insensitive, normalized to lowercase).
+fn whatsin_arg(raw: &str) -> Result<String, String> {
+  let lower = raw.to_ascii_lowercase();
+  match lower.as_str() {
+    "document" | "fragment" | "math" | "archive" | "directory" | "xml" => Ok(lower),
+    _ => Err(format!(
+      "unrecognized --whatsin '{raw}' (expected one of: document, fragment, math, archive, directory, xml)"
+    )),
+  }
+}
+
+/// Accepted `--whatsout` values (case-insensitive, normalized to lowercase).
+/// Delegates to `Whatsout::from_cli` so `archive::*` variants stay in sync.
+fn whatsout_arg(raw: &str) -> Result<String, String> {
+  let lower = raw.to_ascii_lowercase();
+  match latexml_post::extract::Whatsout::from_cli(&lower) {
+    Some(_) => Ok(lower),
+    None => Err(format!(
+      "unrecognized --whatsout '{raw}' (expected one of: document, fragment, math, archive)"
+    )),
+  }
+}
+
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
 // `args_override_self`: an option given twice keeps its last value, as GetOpt::Long does (#530).
@@ -75,9 +111,9 @@ struct Cli {
   #[arg(long)]
   source: Option<String>,
 
-  /// Output format: html5, html, xhtml, xml, epub. Inferred from the --dest
-  /// extension when omitted; falls back to xml.
-  #[arg(long)]
+  /// Output format: html5, html, xhtml, xml, epub, epub3. Inferred from the
+  /// --dest extension when omitted; falls back to xml.
+  #[arg(long, value_parser = format_arg)]
   format: Option<String>,
 
   /// Shortcut for --format=xml: emit the raw LaTeXML XML with no HTML
@@ -274,7 +310,7 @@ struct Cli {
   /// embeddable inline snippet), `math` (just the math subtree), or `archive`
   /// (the page + resources zipped — also implied by a `.zip` --dest, and writes
   /// `<source-name>.zip` when --dest is omitted).
-  #[arg(long, value_name = "TYPE")]
+  #[arg(long, value_name = "TYPE", value_parser = whatsout_arg)]
   whatsout: Option<String>,
 
   /// Shortcut for --whatsout=fragment: emit an embeddable inline snippet.
@@ -382,7 +418,8 @@ struct Cli {
   #[arg(long)]
   schemadocs: bool,
 
-  /// Write the conversion log to this file (default: stderr).
+  /// Write the conversion log to this file (default: `<source>.log` in the
+  /// current directory, or `latexml.log` for literal/stdin sources).
   #[arg(long, value_name = "PATH")]
   log: Option<String>,
 
@@ -393,7 +430,7 @@ struct Cli {
   /// implied by a trailing `/`), or `xml` (an already-converted LaTeXML core
   /// document to post-process directly — forces the XML-input path regardless of
   /// the file's extension; also implied by a `.xml`/`*-xml`/`*_xml` extension).
-  #[arg(long, value_name = "TYPE")]
+  #[arg(long, value_name = "TYPE", value_parser = whatsin_arg)]
   whatsin: Option<String>,
 
   /// TeX file effectively prepended to the document (implies --whatsin=fragment).
@@ -483,8 +520,8 @@ struct Cli {
   dump_model: bool,
 
   /// Append a one-line JSON telemetry record for this job to this file (or set
-  /// env `LATEXML_TELEMETRY_OUT`); batch runs accumulate a JSONL. Written only
-  /// on a successful conversion.
+  /// env `LATEXML_TELEMETRY_OUT`); batch runs accumulate a JSONL. Written for
+  /// both successful and fatal conversions.
   #[arg(long, value_name = "PATH")]
   telemetry_out: Option<String>,
 
@@ -2634,5 +2671,43 @@ mod xsltparameter_tests {
     assert!(params(&["--xsltparameter=FOO:bar", "--xsltparameter", "X=y"]).is_ok());
     let err = params(&["--xsltparameter=FOO"]).expect_err("malformed");
     assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation);
+  }
+
+  #[test]
+  fn format_whatsin_whatsout_validate_and_normalize() {
+    let parse = |flags: &[&str]| {
+      let mut argv = vec!["latexml_oxide"];
+      argv.extend_from_slice(flags);
+      argv.push("src.tex");
+      Cli::try_parse_from(argv)
+    };
+    assert_eq!(
+      parse(&["--format=HTML5"]).unwrap().format.as_deref(),
+      Some("html5")
+    );
+    assert_eq!(
+      parse(&["--format=epub3"]).unwrap().format.as_deref(),
+      Some("epub3")
+    );
+    assert_eq!(
+      parse(&["--whatsin=XML"]).unwrap().whatsin.as_deref(),
+      Some("xml")
+    );
+    assert_eq!(
+      parse(&["--whatsout=archive::zip"])
+        .unwrap()
+        .whatsout
+        .as_deref(),
+      Some("archive::zip")
+    );
+    for bad in [
+      "--format=jats",
+      "--format=bogus",
+      "--whatsin=bogus",
+      "--whatsout=bogus",
+    ] {
+      let err = parse(&[bad]).expect_err(bad);
+      assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation, "{bad}");
+    }
   }
 }

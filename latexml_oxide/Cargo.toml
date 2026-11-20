@@ -95,7 +95,7 @@ name = "cortex_worker_exit_reports"
 required-features = ["cortex"]
 
 [features]
-default = ["test-utils", "runtime-bindings"]
+default = ["runtime-bindings"]
 # Enable building the cortex_worker binary (ZMQ-based CorTeX dispatcher client).
 # Off by default because pericortex pulls in zmq + zeromq-src (C library build),
 # rand, chrono, tempdir, walkdir — ~15 minutes of CI compile time we don't pay
@@ -111,13 +111,13 @@ jemalloc = ["dep:tikv-jemallocator"]
 # pinpointing the call sites driving allocation count/bytes. Diagnostic only —
 # off by default, slows execution. Build: `--features dhat-heap`.
 dhat-heap = ["dep:dhat"]
-# Compile the integration-test harness in `src/util/test.rs`. On by default
-# so `cargo test` and `cargo build` (no flags) work as expected. Distribution
-# builds should pass `--no-default-features` (or `--no-default-features
-# --features cortex` for the worker) to drop `glob` from the binary's
-# dependency graph (audit DEP-02, 2026-05-18). `roxmltree` and `similar`
-# serve only the `ab_audit` A/B comparator (`bin/ab_audit/`): a pure-Rust XML reader
-# per worker thread (rust-libxml is not shared across threads) and its line diff.
+# Compile the integration-test harness (`src/util/test.rs`, `src/conformance`)
+# and audit binaries (`binding_audit`, `ab_audit`). Off by default so
+# `cargo install latexml` and downstream library consumers don't pull in
+# `glob`/`roxmltree`/`similar`, internal audit binaries, or the Linux
+# `.init_array` SIGSEGV diagnostic hook; enabled automatically for workspace
+# tests via `[dev-dependencies]` below. Pass `--features test-utils` when
+# building `binding_audit` or `ab_audit` directly.
 test-utils = ["dep:glob", "dep:roxmltree", "dep:similar"]
 # Source-map precision build (docs/performance/SOURCE_PROVENANCE.md §3.1.1): widen `Token`
 # with a per-token origin handle (8→12) so each token carries its exact source
@@ -210,6 +210,11 @@ serde = { version = "1.0.229", features = ["derive"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
 [dev-dependencies]
+# Enable `test-utils` automatically when running `cargo test` / `cargo nextest`
+# in the workspace without putting test harness code or audit binaries in the
+# default feature set for downstream `latexml` consumers (`cargo install`).
+# Path-only dev-dependencies are omitted from the published crates.io manifest.
+latexml = { path = ".", features = ["test-utils"] }
 # Line-diff engine for tests/90_latexmlpost.rs's golden comparison — the
 # in-process replacement for the old `bash -c "diff <(xmllint --format …)"`
 # pipeline (which required a Unix userland and silently vacuous-passed when
