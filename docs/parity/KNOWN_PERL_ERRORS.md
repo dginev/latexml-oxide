@@ -22091,3 +22091,24 @@ errors, two unnumbered displays. Rust closes and reopens `{equation*}` when that
 (`\@currenvir`; a bare `\equation` leaves the enclosing one there, so it keeps `{equation}`); under amsmath `\[` is
 `{equation*}`, so `\[ a $$ $$ b \]` is the same shape (2606.13867; OXIDIZED_DESIGN_DIVERGENCES #1091). Guard
 `perfect_kernel_batchclustfix3::amsmath_display_brackets_dollar_dollar`.
+
+## 1296. An `\halign` that `\lastbox` took still ends the paragraph it is put in
+
+`\lastbox` takes a box (tex.web §1080); an `\halign` on a vertical list is its rows, each an hbox (§799). Perl's
+`\lastbox` pops the `\halign` whatsit, whose `beforeConstruct` (`maybeCloseElement('ltx:p')`,
+TeX_Tables.pool.ltxml:175-177) then closes the paragraph the box is copied into, and the table leaves the box:
+
+```latex
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\halign{#\cr a\cr}\global\setbox1\lastbox}
+\mbox{\vbox{\vphantom{\copy1}}}
+After.
+\end{document}
+```
+
+Perl: 3 Errors ("Closing </ltx:text> whose open descendents do not auto-close", "Attempt to close
+<ltx:_CaptureBlock_>"), the table out of the phantom; pdflatex 0. Rust: the taken `\halign` is marked as a box and
+closes nothing (tex_box.rs `taken_as_box`). With `\unvbox` splicing the list (#840) easytable's and easybmat's
+`\@easy@buildbox` peel reaches it: ~250 arXiv papers (1705.10408, 2002.06044, 2109.00258, 2106.13444, 1710.10243).
+Guards `perfect_kernel_batchregfixb::{lastbox_halign_is_a_box, easytable_easybmat_lastbox_peel}`.

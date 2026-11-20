@@ -504,8 +504,12 @@ LoadDefinitions!({
       Ok((Dimension::default(), Dimension::default(), Dimension::default()))
     }}
   },
-  before_construct => sub[document, _whatsit] {
-    document.maybe_close_element("ltx:p")?;
+  // An `\halign` command ends the paragraph (tex.web §1094-1095 `head_for_vmode`); one `\lastbox` took is a box
+  // (`taken_as_box`).
+  before_construct => sub[document, whatsit] {
+    if !whatsit.get_property_bool("lx@lastbox") {
+      document.maybe_close_element("ltx:p")?;
+    }
   },
   after_digest => sub[whatsit] {
     halign_after_digest(whatsit, HashMap::default(), |template, xml_attrs| {
