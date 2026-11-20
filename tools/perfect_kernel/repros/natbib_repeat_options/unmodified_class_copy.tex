@@ -1,0 +1,15 @@
+% witness: review revREGFIXC B1 (probes p_eA, p_eC `[sort&compress]`); a copy that loads natbib otherwise keeps the
+%          binding's load early: 2105.06643, 2206.02837, 2402.13480, 2209.10785 (class_copy_load.tex)
+% oracle:  pdflatex (with TeX Live's own elsarticle.cls copied beside it) 1 "Option clash for package natbib",
+%          "Text [1]." (the class's `\RequirePackage[\@biboptions]{natbib}`, elsarticle.cls:1243, came first)
+% engines: Perl no clash test (not run); rust MAIN935 1 Error, numeric; REGFIXC eed9187827a 0 errors, "(A, 2001)"
+% expect:  1 Error "Option clash for package natbib", 0 warnings; numeric citations
+% status:  RED (REGFIXC 8ef8ab1115b) -> GREEN (REGFIXC: an unmodified copy keeps the load the class's own)
+\documentclass{elsarticle}
+\usepackage[authoryear]{natbib}
+\begin{document}
+Text \citep{a}.
+\begin{thebibliography}{1}
+\bibitem[A(2001)]{a} A. 2001.
+\end{thebibliography}
+\end{document}

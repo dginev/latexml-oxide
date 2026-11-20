@@ -1,0 +1,16 @@
+% witness: 2105.06643 (its elsarticle.cls copy `\RequirePackage[authoryear]{natbib}`), 2206.02837 (a copy that loads
+%          no natbib), 2402.13480 (`[numbers,sort&compress]`), 2209.10785 (cidr.cls, an acmart.cls copy without natbib)
+% oracle:  pdflatex (with this elsarticle.cls beside it) 0 errors, "Text (A, 2001)."
+% engines: Perl clean (no clash test); rust MAIN935 1 Error "Option clash for package natbib: options 'authoryear' of a
+%          repeat load dropped"
+% expect:  0 errors, 0 warnings; author-year citations
+% status:  RED (MAIN935) -> GREEN (REGFIXC: a binding's load is the file's own only where the paper ships no copy or
+%          one making the same load, unmodified_class_copy.tex)
+\documentclass[preprint,12pt]{elsarticle}
+\usepackage[authoryear]{natbib}
+\begin{document}
+Text \citep{a}.
+\begin{thebibliography}{1}
+\bibitem[A(2001)]{a} A. 2001.
+\end{thebibliography}
+\end{document}

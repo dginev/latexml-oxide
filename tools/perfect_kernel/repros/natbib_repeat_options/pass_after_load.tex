@@ -1,0 +1,18 @@
+% witness: 2403.07005 (its neurips_2022.sty copy's `\PassOptionsToPackage{numbers}{natbib}` after the binding's natbib
+%          load, then the document's `\usepackage[numbers]{natbib}`)
+% oracle:  pdflatex 0 errors, no Option clash (latex.ltx:18514-18517 extends `\opt@natbib.sty`; the passed option is
+%          never processed): "Text (A, 2001)."
+% engines: Perl clean (no clash test); rust MAIN935 1 Error "Option clash for package natbib: options 'numbers' of a
+%          repeat load dropped"
+% expect:  0 errors, 0 warnings; the first load's author-year citation
+% status:  RED (MAIN935) -> GREEN (REGFIXC: a pass after the load extends `\opt@<file>`)
+\documentclass{article}
+\usepackage{natbib}
+\PassOptionsToPackage{numbers}{natbib}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \citep{a}.
+\begin{thebibliography}{1}
+\bibitem[A(2001)]{a} A. 2001.
+\end{thebibliography}
+\end{document}
