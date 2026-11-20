@@ -46,6 +46,70 @@ fn amsmath_display_brackets() {
   }
 }
 
+/// The `<p>` texts and the `<equation>` ids with their `tex`, in order and joined by ` | `, and the count of `<tags>`.
+fn display_run(xml: &str) -> (String, usize) {
+  let mut run = Vec::new();
+  for line in xml.lines().map(str::trim) {
+    if let Some(rest) = line.strip_prefix("<equation xml:id=\"") {
+      run.push(rest.split('"').next().unwrap_or_default().to_string());
+    } else if let Some(rest) = line.strip_prefix("<Math mode=\"display\" tex=\"") {
+      run.push(rest.split('"').next().unwrap_or_default().to_string());
+    } else if line.starts_with("<p>") || line.starts_with("<p xml:id=") {
+      let text = line.split_once('>').map_or("", |(_, t)| t);
+      run.push(text.trim_end_matches("</p>").to_string());
+    }
+  }
+  (run.join(" | "), xml.matches("<tags>").count())
+}
+
+/// A `$$` inside amsmath's `\[ … \]` (= `{equation*}`) ends the display and the next `$$` opens one that `\]` closes
+/// (tex.web §1193-1197, §1138; amsmath.sty:2794, 2813): two unnumbered displays, the text between them kept. The
+/// kernel's cheap intertext (`\lx@eDM@in@equation`, sect07.rs) closed and reopened `{equation}` whatever display was
+/// open: "Can't close environment equation" / "equation*" and a spurious numbered equation per display (2606.13867,
+/// a regression from #929; the written-out `{equation*}` erred before, as in Perl, KNOWN_PERL_ERRORS). OD #1091.
+/// Repro ams-internals/amsmath_display_brackets_dollar_dollar.
+#[test]
+fn amsmath_display_brackets_dollar_dollar() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/ams-internals/amsmath_display_brackets_dollar_dollar.tex"
+    ),
+    None,
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  let expected = concat!(
+    "First | S0.Ex1 | a=b | S0.Ex2 | =c. | Then | S0.Ex3 | x=y | text kept | S0.Ex4 | =z. | ",
+    "Also | S0.Ex5 | p=q | S0.Ex6 | =r. | Done."
+  );
+  assert_eq!(display_run(&xml), (expected.to_string(), 0), "{xml}");
+}
+
+/// The numbered `{equation}` path of the same cheap intertext is unchanged: the first half's number is retracted, the
+/// second half carries it, and `$$ text $$` keeps the text between them. Companion of
+/// `amsmath_display_brackets_dollar_dollar`; repro ams-internals/amsmath_equation_dollar_dollar_keeps_its_number.
+#[test]
+fn amsmath_equation_dollar_dollar_keeps_its_number() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/ams-internals/amsmath_equation_dollar_dollar_keeps_its_number.tex"
+    ),
+    None,
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  let expected =
+    "Text | S0.Ex1 | a=b | text kept | S0.E1 | =c. | Then | S0.Ex2 | p=q | S0.E2 | =r. | Done.";
+  assert_eq!(display_run(&xml), (expected.to_string(), 2), "{xml}");
+  for n in ["1", "2"] {
+    let tags = format!(
+      "<tags>\n        <tag>({n})</tag>\n        <tag role=\"refnum\">{n}</tag>\n      </tags>"
+    );
+    assert!(
+      xml.contains(&format!("<equation xml:id=\"S0.E{n}\">\n      {tags}")),
+      "{xml}"
+    );
+  }
+}
+
 /// etoolbox's `\robustify` of a command that is a macro in LaTeX and a native binding here is a no-op (it is robust
 /// already): `\uparrow`, `\sum`, `\it`, `\uline` had "not a macro" (1508.06145, 1702.00233), and `\robustify{\ref}`
 /// left `\ref` an undefined `\etb@resrvda` (wiley-article.cls:771-775, 1812.10085), the reference lost. A TeX
