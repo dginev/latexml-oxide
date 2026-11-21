@@ -133,6 +133,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
       legend note prints its `\inst` mark (1009.3152, 1907.04695; OD #1127). Guards `perfect_kernel_batchregfixs::*`.
     - A stand-in binding's dependency scan runs after the paper's copy is read, in TeX's order (sn-jnl 2211.09062: a
       Fatal → 0 Errors; optica-article; OD #1130). Guard `perfect_kernel_batchregfixu::*`.
+    - The 2605 and 2606 sandbox reruns of this round's code (runs 405, 406 against 403, 404) found 14 newly erring
+      papers, all from the inputenc and amsart fixes above, now fixed: the URL readers no longer empty `\protect`, which
+      made babel's `~` and language shorthands in a footnote's `\href`/`\url` expand without end (12
+      Fatal:Timeout:PushbackLimit, 2605.13298, 2606.06763; WISDOM #106), and `\href` lets the active `~` to
+      `\hyper@tilde` as hyperref.sty:4622 does (KNOWN_PERL_ERRORS #1306); a Latin-1 character stored before
+      `[utf8]{inputenc}` keeps its meaning (2605.20531, 5 Errors → 0; KNOWN_PERL_ERRORS #1305); amsart's `\@setthanks`
+      (amsart.cls:836), which a document's own `\@setauthors` calls, is defined (2606.04416). Guards
+      `perfect_kernel_batchregfixv::*`, `perfect_kernel_batchregfixw::*`, `perfect_kernel_batchregfixx::*`.
 
     On the papers each fix targets, A/Bs of 60-204 papers: none worse. The last round's bundle (1,366 papers, every
     tier-2 regression included): Errors 9,403 → 8,578, Fatals 37 → 24, none worse; of the 497 tier-2 regressions 192

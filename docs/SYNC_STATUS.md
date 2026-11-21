@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (424 lines, weight 955; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (428 lines, weight 961; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -788,6 +788,21 @@ Rules that keep this file honest and mergeable:
   - TIKZCDARROWS — a file declaring `{tikz-cd}` that loads `\usetikzlibrary{arrows}` gives 14 Errors at
     pgflibraryarrows.code.tex:36 ("I did not find the pgf library 's'"), base too, 0 under its own name; pdflatex
     clean; 1
+  - SAFEACTIVES — the URL readers (`\url`'s, `HyperVerbatim`) do not set babel's safe actives, as `\hyper@normalise`
+    does (`\Hy@safe@activestrue`, hyperref.sty:4627, defined :362): ngerman `A\footnote{\href{http://x.org/"o}{s}}`
+    gives href `http://x.org/ö`, pdflatex `http://x.org/"o`; main the same (int/regfix7 review); 1
+  - C1UTF8 — after `[utf8]{inputenc}` a C1 control code point (U+0080-U+009F) read fresh is catcode other
+    (`utf8_def.rs:243`) and prints silently, where pdflatex errs "Unicode character (U+0085) not set up for use with
+    LaTeX"; main the same; 1
+  - INPENCLOOP — `set_input_encoding`'s loop, like Perl's (inputenc.sty.ltxml:48-51), skips 0x1F and 0x7F, which
+    inputenc.sty:83-84 covers (`\^^N\^^_`, `\^^?\^^ff`); 1
+  - AMSDEPOSIT — amsart's `\@settitle`, `\@setdate`, `\@setsubjclass`, `\@setkeywords`, `\@adminfootnotes`,
+    `\@setcopyright`, `\@maketitle@hook`, `\@cleartopmattertags`, `\thanks@warning`, `\@setcontribs` are undefined in
+    `ams_core_cls.rs` (Perl's neither), so a document's own `\@maketitle`/`\maketitle` deposit that calls them is
+    dropped with an Info ("raised 4 error(s)"); in REGFIXX's 200-paper census ~128 redefinitions call `\@settitle`, ~70
+    `\@setdate`, 84 `\@maketitle@hook`. Defining them faithfully changes output (an empty `\@date` gives "Date: ."):
+    (a) define + A/B the deposit population, (b) define but keep the deposit dropped while the frontmatter owns the
+    fields, (c) leave — DG ruling; 3
   - RUNAWAY395 — an undelimited macro argument that meets a closing `}` takes it (Perl `Gullet.pm:732` readArg;
     `gullet.rs` ~4048 `read_arg`), so an `\edef` runs to the end of the file (`\makeatletter\edef\x{\@firstoffive{a}}`):
     1012.2852 loses its last ~370 lines, base and Perl too; TeX inserts `\par` and keeps the `}` (tex.web §395).
