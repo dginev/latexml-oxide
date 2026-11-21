@@ -388,11 +388,7 @@ fn input_definitions_impl(
     .flatten();
   let _substituted = routed_copy.as_ref().map(|_| {
     let ext = options.extension.as_deref().unwrap_or_default();
-    let own_file = lookup_string("fallback_provides")
-      .rsplit_once('.')
-      .map(|(_, e)| e)
-      == Some(ext);
-    SubstitutedRead::enter(s!("{}.{ext}", file_stem(trimmed)), own_file)
+    SubstitutedRead::enter(s!("{}.{ext}", file_stem(trimmed)))
   });
   let name: &str = routed_copy
     .as_deref()
@@ -1120,21 +1116,8 @@ fn input_definitions_impl(
   if let Some(before) = setters_before {
     crate::binding::store_setters::mark_bound(&before)?;
   }
-  // (no binding: the raw read below marks its own; nor a binding whose file a shipped copy was read in place of and
-  // left unloaded, as TeX leaves it: [`RouteCopyRead`])
-  let copy_left_unloaded = loaded.is_some()
-    && read_in_place_by_a_copy(&filename)
-    && still_loading_mark(&filename, &loading_mark);
-  if copy_left_unloaded {
-    Info!(
-      "provide",
-      &filename,
-      s!(
-        "{filename} is not loaded: a copy was read in its place; a request for it loads its binding afresh"
-      )
-    );
-  }
-  if (loaded.is_none() || copy_left_unloaded) && still_loading_mark(&filename, &loading_mark) {
+  // (no binding: the raw read below marks its own)
+  if loaded.is_none() && still_loading_mark(&filename, &loading_mark) {
     let was = loading_mark.as_ref().and_then(|(_, was)| was.clone());
     assign_meaning(
       &T_CS!(s!("\\ver@{filename}")),
@@ -1160,7 +1143,7 @@ fn input_definitions_impl(
     // load_tex_definitions). The `_found_loaded` Rust-only flag is
     // dropped — read sites check `_loaded || _raw_loaded` instead.
     let loaded_flag = format!("{filename}_loaded");
-    assign_value(&loaded_flag, !copy_left_unloaded, Some(Scope::Global));
+    assign_value(&loaded_flag, true, Some(Scope::Global));
     // Also set the Perl-equivalent `<filename>.ltxml_loaded` flag —
     // some callers (e.g. require_package's deps-scan gate) need to
     // distinguish binding-loaded from raw-loaded. Without this,
@@ -1168,11 +1151,7 @@ fn input_definitions_impl(
     // binding) re-trigger deps-scan on natbib.sty, which re-finds
     // \usepackage{natbib} in natbib.sty's own warning text, looping
     // infinitely. Witness 2111.01269 (TIMEOUT from natbib deps loop).
-    assign_value(
-      &s!("{filename}.ltxml_loaded"),
-      !copy_left_unloaded,
-      Some(Scope::Global),
-    );
+    assign_value(&s!("{filename}.ltxml_loaded"), true, Some(Scope::Global));
     // Perl L2326: Let(T_CS('\ver@'.$trequest), T_CS('\fmtversion'), 'global');
     // Set \ver@name.ext to \fmtversion so LaTeX's \RequirePackage guard works.
     // Without this, \RequirePackage date checks fail and packages get re-loaded.
@@ -1184,7 +1163,7 @@ fn input_definitions_impl(
     // space-free `\fmtversion` ran to EOF: `Until:\relax`), `\@ifpackagelater`
     // compares its date. Read it from the installed file when there is one
     // (`provides_version_of`); `\fmtversion` stays the fallback.
-    if options.handleoptions && !copy_left_unloaded {
+    if options.handleoptions {
       let ver_cs = T_CS!(s!("\\ver@{}", filename));
       // (`\relax` is not loaded: a query before the load leaves it, `\ifx\csname ver@X.sty\endcsname\relax`)
       if !file_loaded(&filename) || still_loading_mark(&filename, &loading_mark) {
@@ -1362,7 +1341,6 @@ fn input_definitions_impl(
         // fell back to mn.cls.ltxml with empty options → mn.cls's option-handler
         // never saw `epsfig` → `\compat@loadpackages` after-hook never fired
         // → `\psfig` undefined. Witness: astro-ph0002213.
-        let route = provides.is_some().then(RouteCopyRead::enter);
         let fb_result = input_definitions(&fallback_name, InputDefinitionOptions {
           extension: Some(Cow::Borrowed(if as_type == "sty" { "sty" } else { "cls" })),
           options: original_options,
@@ -1372,7 +1350,6 @@ fn input_definitions_impl(
           reloadable: false,
           ..InputDefinitionOptions::default()
         });
-        drop(route);
         // (a binding loaded already, or a file of its name read raw, is not loaded again, but the copy is still read
         // whole, as TeX reads it: 2304.14243's packages/pictures.sty `\ProvidesPackage{packages/graphics}` after
         // graphicx, its commands lost silently; a copy the binding's load read is not read again)
@@ -2947,78 +2924,157 @@ fn loading_for_a_provides_route(name: &str) -> bool {
 
 /// The paper's copy a binding's own raw read of `file` (of type `ext`) reads instead, while a shipped copy's declaration
 /// routed its request to that binding ([`provided_binding`]): the request, when `file` is the binding's own name and
-/// type (`fallback_provides`, `<binding>.<ext>`) and the paper ships the request's file, or when `file` is of the
-/// binding's other type and the paper ships the request's file of that type, the copy's own. As in TeX, the copy is
-/// read once, where the real file would be: fsmfart.cls `\ProvidesClass{smfart}` (1401.0915; smfartVS.cls 1110.1467,
+/// type (`fallback_provides`, `<binding>.<ext>`) and the paper ships the request's file. As in TeX, the copy is read
+/// once, where the real file would be: fsmfart.cls `\ProvidesClass{smfart}` (1401.0915; smfartVS.cls 1110.1467,
 /// 1404.0804) under smfart_cls.rs, tikzcd.sty `\ProvidesPackage{tikz-cd}` (1201.4414, 1512.05388) under tikz_cd_sty.rs,
-/// pdfplots.sty (2105.12769) under pgfplots_sty.rs; imsart_cls.rs's imsart.sty (imsart.cls:149
-/// `\RequirePackage{imsart}`) is 2405.11676's imsart-altered.sty and 1401.3408's myimsart.sty, which their classes load.
-/// Read after TeX Live's file, the copy's first-load code ran over state TeX never builds (fsmfart.cls:365-370's `\fi`
-/// unmatched; "Arrow tip 'cm to' was already defined"). No text of the copy decides (OXIDIZED_DESIGN_DIVERGENCES
-/// #1118): what it then requests and loads follows TeX ([`SubstitutedRead`], [`RouteCopyRead`]); a self-named copy is
-/// the file the raw read finds already (#1110).
+/// pdfplots.sty (2105.12769) under pgfplots_sty.rs. Read after TeX Live's file, the copy's first-load code ran over
+/// state TeX never builds (fsmfart.cls:365-370's `\fi` unmatched; "Arrow tip 'cm to' was already defined"). While the
+/// copy is read, its own request for the file reads the real file ([`SubstitutedRead`]); a self-named copy is the file
+/// the raw read finds already (OXIDIZED_DESIGN_DIVERGENCES #1110, #1118).
 fn routed_copy_request(file: &str, ext: Option<&str>) -> Option<String> {
   let target = lookup_string("fallback_provides");
-  let (binding, _) = target.rsplit_once('.')?;
+  let (binding, route_ext) = target.rsplit_once('.')?;
   let ext = ext?;
   if !file_stem(file).eq_ignore_ascii_case(binding) {
     return None;
   }
   let request = lookup_string("fallback_request");
-  find_file(
-    &request,
+  let shipped = |ext: &str| {
+    find_file(
+      &request,
+      Some(FindFileOptions {
+        ext_type: Some(Cow::Owned(ext.to_string())),
+        forbid_ltxml: true,
+        search_paths_only: true,
+        ..FindFileOptions::default()
+      }),
+    )
+    .filter(|path| shipped_with_paper(path))
+  };
+  let copy = shipped(route_ext)?;
+  let text = source_text(&copy)?;
+  if ext == route_ext {
+    // (not an author's own file that defines none of the file's names, whose request for it TeX still reads; a
+    // wrapper's `\RequirePackage{tikz-cd}` reads TeX Live's file, [`SubstitutedRead`])
+    let file = s!("{}.{ext}", file_stem(file));
+    if !reads_as_the_file(&text, &file) {
+      return None;
+    }
+    Info!(
+      "provide",
+      &request,
+      s!("The paper's {request}.{ext} is read as {file}, the file the {target} binding reads")
+    );
+    return Some(request);
+  }
+  // (a file of the binding's other type is the copy's own of that name, where the copy loads one: imsart.cls:149
+  // `\RequirePackage{imsart}`, imsart_cls.rs's imsart.sty, is 2405.11676's imsart-altered.cls:149
+  // `\RequirePackage{imsart-altered}`)
+  shipped(ext)?;
+  loads_file(&text, file_stem(&request)).then_some(request)
+}
+
+/// Does the TeX source `text` load the package or class `name` — a `\RequirePackage`, `\usepackage` or `\LoadClass` of
+/// it, outside a comment, in any case?
+fn loads_file(text: &str, name: &str) -> bool {
+  let Ok(load) = Regex::new(&s!(
+    r"(?i)\\(?:RequirePackage|usepackage|LoadClass)\s*(?:\[[^\]]*\])?\s*\{{(?:[^}}]*,)?\s*{}\s*[,}}]",
+    regex::escape(name)
+  )) else {
+    return false;
+  };
+  source_code_lines(text).any(|code| load.is_match(code))
+}
+
+/// Does a paper's copy (its source `text`) read as `file`, the file its binding reads raw (the paper's own, else TeX
+/// Live's)? Only the names each defines count ([`names_read_as`]), never what it loads: an author's file that loads
+/// tikz as tikz-cd.sty does but defines `\mytcd` is no copy. They share a quarter of the smaller set: a cut-down copy
+/// (smfcopy's first-load test, 1 of 2; tikzcd.sty 1201.4414, 1512.05388: 14 of 18; pdfplots.sty 2105.12769: 2 of 2;
+/// smfartVS.cls 1110.1467: 237 of 237) passes, a misdeclared author's file (0) does not. With no such file, the copy
+/// is the only one there is.
+fn reads_as_the_file(text: &str, file: &str) -> bool {
+  let Some(original) = find_file(
+    file,
     Some(FindFileOptions {
-      ext_type: Some(Cow::Owned(ext.to_string())),
       forbid_ltxml: true,
-      search_paths_only: true,
       ..FindFileOptions::default()
     }),
   )
-  .filter(|path| shipped_with_paper(path))?;
-  let read = s!("{}.{ext}", file_stem(file));
-  Info!(
-    "provide",
-    &request,
-    s!("The paper's {request}.{ext} is read as {read}, the file the {target} binding reads")
-  );
-  Some(request)
+  .and_then(|path| source_text(&path)) else {
+    return true;
+  };
+  let (copy, original) = (names_read_as(text), names_read_as(&original));
+  let shared = copy.intersection(&original).count();
+  shared > 0 && shared * 4 >= copy.len().min(original.len())
+}
+
+/// The names the TeX source `text` defines ([`defined_names`]); for a file that defines none itself, those of the
+/// files it reads with `\input` or `\usetikzlibrary`, one level: tikz-cd.sty's are tikzlibrarycd.code.tex's (`\tikzcd`,
+/// `\arrow`, …). A `\usetikzlibrary{X}` reads tikzlibraryX.code.tex, else pgflibraryX.code.tex (tikz.code.tex
+/// `\use@@tikzlibrary`).
+fn names_read_as(text: &str) -> HashSet<String> {
+  static READ: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\\(usetikzlibrary|input)(?:\s*\{([^}]*)\}|\s+([^\s{}\\]+))").unwrap()
+  });
+  let mut names = defined_names(text);
+  if !names.is_empty() {
+    return names;
+  }
+  for code in source_code_lines(text) {
+    for cap in READ.captures_iter(code) {
+      let items = cap.get(2).or_else(|| cap.get(3)).map_or("", |m| m.as_str());
+      for item in items
+        .split(',')
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+      {
+        let candidates = if &cap[1] == "input" {
+          vec![item.to_string()]
+        } else {
+          vec![
+            s!("tikzlibrary{item}.code.tex"),
+            s!("pgflibrary{item}.code.tex"),
+          ]
+        };
+        let read = candidates.iter().find_map(|name| {
+          find_file(
+            name,
+            Some(FindFileOptions {
+              forbid_ltxml: true,
+              ext_type: Some(Cow::Borrowed("tex")),
+              ..FindFileOptions::default()
+            }),
+          )
+        });
+        if let Some(read) = read.and_then(|path| source_text(&path)) {
+          names.extend(defined_names(&read));
+        }
+      }
+    }
+  }
+  names
 }
 
 thread_local! {
   /// The files a shipped copy is read in place of now ([`SubstitutedRead`]), innermost last.
   static SUBSTITUTED_READS: std::cell::RefCell<Vec<String>> =
     const { std::cell::RefCell::new(Vec::new()) };
-  /// Per open provides route, innermost last ([`RouteCopyRead`]): the binding's file a copy was read in place of.
-  static ROUTE_COPY_READS: std::cell::RefCell<Vec<Option<String>>> =
-    const { std::cell::RefCell::new(Vec::new()) };
 }
 
 /// A shipped copy's read in place of `file` ([`routed_copy_request`]). While it is open, a request for `file` — the
 /// copy's `\RequirePackage{tikz-cd}`, `\LoadClassWithOptions{smfart}`, `\IfFileExists{X.sty}{\RequirePackage{X}}{}` —
 /// reads the real file raw, the binding not entered again ([`substituting_for`]): TeX reads the wrapper, then the file.
-struct SubstitutedRead {
-  file:     String,
-  own_file: bool,
-}
+struct SubstitutedRead;
 
 impl SubstitutedRead {
-  fn enter(file: String, own_file: bool) -> Self {
-    SUBSTITUTED_READS.with(|reads| reads.borrow_mut().push(file.clone()));
-    SubstitutedRead { file, own_file }
+  fn enter(file: String) -> Self {
+    SUBSTITUTED_READS.with(|reads| reads.borrow_mut().push(file));
+    SubstitutedRead
   }
 }
 
 impl Drop for SubstitutedRead {
-  fn drop(&mut self) {
-    let _ = SUBSTITUTED_READS.try_with(|reads| reads.borrow_mut().pop());
-    if self.own_file {
-      let _ = ROUTE_COPY_READS.try_with(|routes| {
-        if let Some(slot) = routes.borrow_mut().last_mut() {
-          *slot = Some(self.file.clone());
-        }
-      });
-    }
-  }
+  fn drop(&mut self) { let _ = SUBSTITUTED_READS.try_with(|reads| reads.borrow_mut().pop()); }
 }
 
 /// Is a shipped copy being read in place of `file` (`<name>.<ext>`, [`SubstitutedRead`])?
@@ -3029,35 +3085,6 @@ fn substituting_for(file: &str) -> bool {
       .iter()
       .any(|read| read.eq_ignore_ascii_case(file))
   })
-}
-
-/// An open provides route ([`provided_binding`]), whose copy may be read in place of its binding's own file. Rule M: a
-/// copy so read leaves the file as TeX leaves it — loaded only where the copy's read loaded it (its `\RequirePackage` of
-/// the real file, a `\ProvidesFile{<file>}`), as `\ProvidesPackage` records the requested name (KNOWN_PERL_ERRORS
-/// #1307) — and the binding loaded only with it, so a later request for the file loads the binding afresh with the
-/// real file, as TeX reads it over the copy (the precedent `<file>_unmarks_itself`; `input_definitions_impl`).
-struct RouteCopyRead;
-
-impl RouteCopyRead {
-  fn enter() -> Self {
-    ROUTE_COPY_READS.with(|routes| routes.borrow_mut().push(None));
-    RouteCopyRead
-  }
-}
-
-/// Was a copy read in place of `file`, the binding's own file, in the innermost open provides route ([`RouteCopyRead`])?
-fn read_in_place_by_a_copy(file: &str) -> bool {
-  ROUTE_COPY_READS.with(|routes| {
-    routes.borrow().last().is_some_and(|slot| {
-      slot
-        .as_deref()
-        .is_some_and(|read| read.eq_ignore_ascii_case(file))
-    })
-  })
-}
-
-impl Drop for RouteCopyRead {
-  fn drop(&mut self) { let _ = ROUTE_COPY_READS.try_with(|routes| routes.borrow_mut().pop()); }
 }
 
 /// One class slot (OXIDIZED_DESIGN_DIVERGENCES #736): does the base class a stand-in class binding loaded stand for the

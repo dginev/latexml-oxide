@@ -23575,43 +23575,60 @@ its text (`mark_creator_notes`), "Corresponding author: …" with `mark="*"`. Ru
 `perfect_kernel_batchregfixs::an_epl_institute_legend_note_prints_its_mark` (repro
 `sectioning-frontmatter/epl_institute_legend_note_prints_its_mark.tex`).
 
-### 1118. A renamed copy is read where its binding reads its own file, by TeX's executed path (REGFIXQ, COPYROUTE)
+### 1118. A renamed copy is read where its binding reads its own file, and read when the binding is loaded already (REGFIXQ, COPYROUTE)
 
-**Rule.** While a shipped file's declaration routes its request to a binding (#731, `provided_binding`), three rules on
-the executed path decide what is read; no text test of the copy decides it (maintainer ruling 2026-11-21, row R
-COPYROUTE). **P** — the binding's own raw read of its file (`InputDefinitions!(<its name>, noltxml)`) reads the paper's
-file instead (`routed_copy_request`), so it is read once, where TeX reads it, and the stand-in read after the binding
-skips it as read already: fsmfart.cls and smfartVS.cls `\ProvidesClass{smfart}` under smfart_cls.rs (1401.0915,
-1110.1467, 1404.0804), tikzcd.sty and tikz-cd1.sty `\ProvidesPackage{tikz-cd}` under tikz_cd_sty.rs (1201.4414,
-1512.05388), pdfplots.sty `{pgfplots}` under pgfplots_sty.rs (2105.12769); read after TeX Live's file, the copy's
-first-load code ran over state pdflatex never builds (fsmfart.cls:365-372's `\@tempa` gobbled an `\ifx`, `\else`/`\fi`
-unmatched; tikzcd.sty:413 "Arrow tip `cm to' was already defined"). A read of the binding's other type reads the paper's
-file of that type under the request's name when it declares itself that file: imsart_cls.rs's imsart.sty is
-2405.11676's imsart-altered.sty (`\ProvidesFile{imsart.sty}`), not the unaltered imsart.sty beside it, whose natbib load
-made the document's `\RequirePackage[numbers]{natbib}` an option clash. **W** — a request for the binding's file made
-while that read is open (`SubstitutedRead`: a wrapper's `\RequirePackage{tikz-cd}`, `\LoadClass{smfart}`,
-`\LoadClassWithOptions{smfart}`, `\IfFileExists{X.sty}{\RequirePackage{X}}{}`) reads the real file raw, the binding not
-entered again: TeX reads the wrapper, then the file. **M** — the read leaves the binding's file as TeX leaves it
-(`RouteCopyRead`): `\ver@<file>` is what the copy's read made it (the real file's where the copy loaded it, else unset,
-as `\ProvidesPackage` records the requested name, KNOWN_PERL_ERRORS #1307), and the binding counts loaded only with it,
-so a later `\usepackage{<file>}` loads the binding afresh with the real file, as TeX reads it over the copy (the
-precedent `<file>_unmarks_itself`): a renamed tikz-cd.sty then `\usepackage{tikz-cd}`, an author's one-name file
-declaring tikz-cd (`\def\ar`) or tcolorbox (renewing `\arraystretch`) then the real load keep their diagram and box. A
-binding's own code after its read finds what the paper's file loaded: tikz_cd_sty.rs pulls its tikz libraries only where
-`\usetikzlibrary` is defined. A copy routed to a binding loaded already (or to a file of that name read raw) is read too,
-as TeX reads the file whole: 2304.14243's packages/pictures.sty `\ProvidesPackage{packages/graphics}` after graphicx lost
-its commands silently (34 Errors). A binding that does not read its file raw (neurips, aistats, natbib) keeps the
-provides-mode read after it, and the binding loaded. Perl reads none of these copies: without `--includestyles` it reads
-no raw `.sty`/`.cls` (`RequirePackage`/`LoadClass` set `notex` unless `INCLUDE_STYLES`/`INCLUDE_CLASSES`,
-Package.pm:2688-2689, :2704-2705).
+**Rule.** While a shipped copy's declaration routes its request to a binding (#731, `provided_binding`), the binding's
+own raw read of its file (`InputDefinitions!(<its name>, noltxml)`) reads the copy instead (`routed_copy_request`), so
+the copy is read once, where TeX reads it, and the stand-in read after the binding skips it as read already — the
+generalisation of #1110 (cvpr, iccv) to every binding that reads its file raw: fsmfart.cls and smfartVS.cls
+`\ProvidesClass{smfart}` under smfart_cls.rs (1401.0915, 1110.1467, 1404.0804), tikzcd.sty and tikz-cd1.sty
+`\ProvidesPackage{tikz-cd}` under tikz_cd_sty.rs (1201.4414, 1512.05388), pdfplots.sty `{pgfplots}` under
+pgfplots_sty.rs (2105.12769). Read after TeX Live's file, the copy's first-load code ran over state pdflatex never
+builds: fsmfart.cls:365-372's `\@tempa` gobbled an `\ifx` and left `\else`/`\fi` unmatched, tikzcd.sty:413 "Arrow tip
+`cm to' was already defined" (26 Errors). **The content test decides the route** (`reads_as_the_file`): a shipped file
+is read as the file only when it defines enough of that file's names — only the names each defines are evidence of a
+copy, never what it loads, and the two share a quarter of the smaller set; a file that defines none itself counts those
+of the files it reads with `\input` or `\usetikzlibrary`, one level, so tikz-cd.sty's are tikzlibrarycd.code.tex's;
+measured: tikzcd.sty and tikz-cd1.sty 14 of 18, pdfplots.sty 2 of 2 with pgfplots.sty, smfartVS.cls 237 of 237 with
+smfart.cls; an expansion primitive after a `\def` — `\expandafter\def\csname…` — is no name it defines. Otherwise the
+binding reads its file and the shipped file is read after it, as the stand-in's copy: an author's
+`\ProvidesPackage{tikz-cd}` file that loads tikz and defines `\mytcd` shares none, and the document's
+`\usepackage{tikz-cd}` finds the binding loaded; an author's `\ProvidesPackage{csquotes}` file defining `\myfoo` is not
+read in csquotes.sty's place, where the binding's code after its read failed over it (24 Errors). No executed fact tells
+a true copy from a misdeclared file before that code runs, so the text test stays (maintainer ruling 2026-11-21:
+"binding wins", a true copy keeps the binding's patches). A read of the binding's other type is the copy's own file of
+that type where the copy loads it (`loads_file`): imsart_cls.rs's imsart.sty is 2405.11676's imsart-altered.sty
+(imsart-altered.cls:149 `\RequirePackage{imsart-altered}`), not the unaltered imsart.sty beside it: both were read,
+each with the same natbib load (imsart.sty:4689, imsart-altered.sty:4689), and the document's
+`\RequirePackage[numbers]{natbib}` was an option clash; a class declaring imsart that loads imsart keeps the paper's
+imsart.sty, not an author's myims.sty beside it. **While the copy is read in the binding's place**, its own request
+for the file (`SubstitutedRead`: a wrapper's `\RequirePackage{tikz-cd}`, `\RequirePackageWithOptions{csquotes}`,
+`\LoadClass{smfart}`, `\LoadClassWithOptions{smfart}`, `\IfFileExists{X.sty}{\RequirePackage{X}}{}`) reads the real file
+raw, the binding not entered again — TeX reads the wrapper, then the file: a wrapper that defines the file's names is
+read as the file, and a `\ProvidesPackage{csquotes}` wrapper renewing `\mktextquote` after its
+`\RequirePackageWithOptions{csquotes}` lost csquotes read after the binding (25 Errors). A wrapper that shares too few
+names is read after the binding, its load of the file a repeat. `\ProvidesPackage`/`\ProvidesClass` in the copy record
+the version under the request (KNOWN_PERL_ERRORS #1307), and the binding's own version stands where no copy recorded
+one. A copy routed to a binding loaded already (or to a file of that name read raw) is read too, as TeX reads the file
+whole: 2304.14243's packages/pictures.sty `\ProvidesPackage{packages/graphics}` after graphicx lost its commands
+silently (34 Errors). A binding that does not read its file raw (neurips, aistats, natbib) keeps the provides-mode read
+after it. Perl reads none of these copies: without `--includestyles` it reads no raw `.sty`/`.cls`
+(`RequirePackage`/`LoadClass` set `notex` unless `INCLUDE_STYLES`/`INCLUDE_CLASSES`, Package.pm:2688-2689, :2704-2705).
+Residuals, known red (rows R COPYTHENREAL, COPYSMALL): an author's file of four names or fewer passes on one shared
+name, so `\ProvidesPackage{tikz-cd}` with `\def\ar{…}`, or a `{tcolorbox}` file renewing `\arraystretch`, is read as
+the real file and the document's real load is a no-op; a true copy followed by the real request leaves the real load a
+no-op (TeX reads the file over the copy). Settled dead end: leaving the binding's file unloaded after a copy's read so a
+later request loads the binding afresh re-entered bindings over misdeclared files (a cleveref timeout) and was found in
+0 of 454 papers with a raw-reading binding.
 **Guard**: `perfect_kernel_batchregfixq::{renamed_copy_is_read_once_as_its_bindings_file,
 copy_routed_to_a_loaded_binding_is_read, renamed_class_reads_its_own_package, wrapper_is_read_after_the_file_it_loads,
 class_wrapper_is_read_after_the_class, misdeclared_file_is_not_read_as_the_file,
 misdeclared_file_sharing_a_load_is_not_the_file, misdeclared_pgfplots_sharing_a_load_is_not_the_file,
 exact_tikzcd_copy_is_read_as_the_file}` (repros `stand-in-copies/provides_route/`),
 `perfect_kernel_batchcopyroute::{class_wrapper_with_options_reads_the_class, conditional_wrapper_reads_the_file,
-copy_then_real_load_reads_the_file, small_file_declaring_tikzcd_keeps_the_diagram,
-small_file_declaring_tcolorbox_keeps_the_box}` (repros `stand-in-copies/copy_route/`).
+wrapper_renewing_a_command_reads_the_file, class_declaring_imsart_reads_the_papers_imsart,
+misdeclared_files_stay_their_own}` (repros `stand-in-copies/copy_route/`; RED catalog `copy_then_real_load`,
+`small_file_declares_tikzcd`, `small_file_declares_tcolorbox`).
 
 ### 1130. A stand-in binding's dependency scan runs after the shipped copy's read (REGFIXU)
 
@@ -23636,3 +23653,14 @@ before the copy, as its result chooses the binding's defaults. **Guard**:
 `perfect_kernel_batchregfixu::snjnl_scan_runs_after_the_copy_loads_its_packages` (repro
 `stand-in-copies/scan_order/snjnl_scan_after_the_copy.tex`); `perfect_kernel_batch67u::snjnl_class_copy_loads_program`,
 `perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.
+
+### 1131. A `\Provides…` with no request records its declared name (COPYROUTE)
+
+**Rule.** `\ProvidesPackage{foo}` read where no package or class load is open — a preamble `\input{foo.sty}`, whose
+`\@currname` is empty — records `\ver@foo.sty` and warns nothing, as Perl does (latex_constructs.pool.ltxml:841-850),
+so `\@ifpackageloaded{foo}` is true. pdflatex records the version under the empty request (`\ver@.\@currext`, latex.ltx:18471-
+18486), warns "You have requested file `', but the file provides `foo'", and leaves foo unloaded, so a later
+`\usepackage{foo}` reads the file again. Kept: the empty request is no name to record under, and LaTeX's warning names
+no file. Inside a load an `\input` answers that load's request, as in TeX (KNOWN_PERL_ERRORS #1307). **Guard**: none
+(the shape is in the COPYROUTE review's `inp` probe; one line: `\documentclass{article}\input{foo.sty}` with foo.sty
+`\ProvidesPackage{foo}`, `\@ifpackageloaded{foo}` YES, pdflatex NO).

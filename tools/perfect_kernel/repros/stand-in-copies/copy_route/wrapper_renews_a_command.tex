@@ -1,0 +1,19 @@
+% An author's wrapper declaring itself csquotes (`\RequirePackageWithOptions{csquotes}`, then a `\renewcommand` of
+% csquotes' `\mktextquote`) is read where csquotes_sty.rs reads its file, and its request reads TeX Live's csquotes.sty
+% (`content::SubstitutedRead`, rule W; OXIDIZED_DESIGN_DIVERGENCES #1118).
+% witness: none (synthetic; the COPYROUTE advisor's F3)
+% oracle:  pdflatex 0 errors; "CSQ-Y MY-Y Say “[hello]” twice."; LaTeX Warning "You have requested package `mycsq',
+%          but the package provides `csquotes'"
+% engines: rust INT7b = 25 errors (`#` reaching the stomach, `\csq@…` undefined): the wrapper read after the binding,
+%          its `\renewcommand` over a csquotes it never loaded
+% expect:  0 errors, 1 warning (LaTeX's); the quote "“[hello]”"
+% status:  RED (INT7b) -> GREEN (COPYROUTE)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mycsq}
+\makeatletter
+\edef\r{\@ifpackageloaded{csquotes}{CSQ-Y}{CSQ-N} \@ifpackageloaded{mycsq}{MY-Y}{MY-N}}
+\makeatother
+\begin{document}
+\r{} Say \textquote{hello} twice.
+\end{document}

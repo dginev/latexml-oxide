@@ -1,0 +1,16 @@
+% An author's file declaring itself csquotes that defines none of csquotes' names (`\def\myfoo`) is not read in
+% csquotes.sty's place: its request reads it as itself, and the csquotes binding's code after its read never runs over
+% it (`content::reads_as_the_file`; OXIDIZED_DESIGN_DIVERGENCES #1118).
+% witness: none (synthetic; the COPYROUTE review's B1, the raw-reading bindings' census)
+% oracle:  pdflatex 0 errors; "Text MYFOO."; LaTeX Warning "You have requested package `mycsquotes', but the package
+%          provides `csquotes'"
+% engines: rust INT7b = 0 errors; COPYROUTE r0 = 24 errors (`\newrobustcmd`, `\iftoggle` undefined: the binding's
+%          post-read code over the author's file)
+% expect:  0 errors, 1 warning (LaTeX's); "Text MYFOO."
+% status:  GREEN (guard perfect_kernel_batchcopyroute::misdeclared_files_stay_their_own)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mycsquotes}
+\begin{document}
+Text \myfoo.
+\end{document}

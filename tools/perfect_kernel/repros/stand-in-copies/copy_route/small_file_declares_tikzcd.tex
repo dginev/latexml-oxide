@@ -1,13 +1,14 @@
 % An author's file of one name that declares itself tikz-cd (`\def\ar`) is read where tikz_cd_sty.rs reads its file;
-% it leaves tikz-cd unloaded, so the document's `\usepackage{tikz-cd}` loads the binding afresh with TeX Live's file
-% (`content::RouteCopyRead`; row R COPYSMALL).
+% in TeX it leaves tikz-cd unloaded, so the document's `\usepackage{tikz-cd}` reads TeX Live's file (row R COPYSMALL).
+% Known red: the content test passes it on one shared name (`content::reads_as_the_file`), and no executed fact tells
+% it from a cut-down copy before the binding's code after its read runs (OXIDIZED_DESIGN_DIVERGENCES #1118).
 % witness: none (REGFIXQ3 review)
 % oracle:  pdflatex 0 errors; "Arrow a -> b.", the diagram A -> B; LaTeX Warning "You have requested package `myar',
 %          but the package provides `tikz-cd'"
-% engines: rust INT7b = 4 errors (`\usetikzlibrary`, `{tikzcd}`, `\arrow`, `&`), no picture: the file read as
+% engines: rust INT7b, COPYROUTE r1 = 4 errors (`\usetikzlibrary`, `{tikzcd}`, `\arrow`, `&`), no picture: the file read as
 %          tikz-cd.sty and the binding marked loaded with it
 % expect:  0 errors, 1 warning (LaTeX's); the diagram drawn
-% status:  RED (INT7b) -> GREEN (COPYROUTE)
+% status:  RED (INT7b, COPYROUTE)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{myar}

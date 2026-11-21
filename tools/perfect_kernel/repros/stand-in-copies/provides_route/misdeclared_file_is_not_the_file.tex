@@ -1,13 +1,13 @@
-% An author's file that declares itself tikz-cd is read in tikz-cd.sty's place (`content::routed_copy_request`); in
-% TeX its `\ProvidesPackage` records `\ver@mytcdmacros.sty`, so tikz-cd stays unloaded and the later
-% `\usepackage{tikz-cd}` reads TeX Live's file: the binding loads afresh (`content::RouteCopyRead`, COPYROUTE).
+% An author's file that declares itself tikz-cd but defines none of tikz-cd.sty's names (its library's, `\tikzcd`, ...) is
+% not read as tikz-cd.sty (`reads_as_the_file`): in TeX its `\ProvidesPackage` records `\ver@mytcdmacros.sty`, and the
+% later `\usepackage{tikz-cd}` reads TeX Live's file.
 % witness: none (reviewer's REGFIXQ probe B)
-% oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B; LaTeX Warning "You have requested package `mytcdmacros', but
-%          the package provides `tikz-cd'"
+% oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B; LaTeX Warning "You have requested package
+%          `mytcdmacros', but the package provides `tikz-cd'"
 % engines: rust INT6A = 0 errors; REGFIXQ r1 = 4 errors: the file was read as tikz-cd.sty, the binding loaded with
 %          it, `\usepackage{tikz-cd}` a repeat
-% expect:  0 errors, 1 warning (LaTeX's); the diagram drawn
-% status:  RED (REGFIXQ) -> GREEN (REGFIXQ2, COPYROUTE)
+% expect:  0 errors, 1 warning (LaTeX's, COPYROUTE); the diagram drawn
+% status:  RED (REGFIXQ) -> GREEN (REGFIXQ2)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{mytcdmacros}

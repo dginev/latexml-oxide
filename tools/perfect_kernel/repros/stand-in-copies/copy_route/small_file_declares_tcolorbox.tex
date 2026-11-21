@@ -1,12 +1,12 @@
 % An author's file of one name that declares itself tcolorbox (renewing `\arraystretch`) leaves tcolorbox unloaded, so
-% the document's `\usepackage{tcolorbox}` loads its binding afresh with TeX Live's file (`content::RouteCopyRead`; row R
-% COPYSMALL).
+% the document's `\usepackage{tcolorbox}` reads TeX Live's file in TeX (row R COPYSMALL). Known red: the content test
+% passes it on one shared name (`content::reads_as_the_file`; OXIDIZED_DESIGN_DIVERGENCES #1118).
 % witness: none (REGFIXQ3 review)
 % oracle:  pdflatex 0 errors; "BOXED" in a box; LaTeX Warning "You have requested package `mybox', but the package
 %          provides `tcolorbox'"
-% engines: rust INT7b = 1 error (`{tcolorbox}` undefined), the box lost
+% engines: rust INT7b, COPYROUTE r1 = 1 error (`{tcolorbox}` undefined), the box lost
 % expect:  0 errors, 1 warning (LaTeX's); the box kept
-% status:  RED (INT7b) -> GREEN (COPYROUTE)
+% status:  RED (INT7b, COPYROUTE)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{mybox}

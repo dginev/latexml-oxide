@@ -1,0 +1,5 @@
+%% An author's wrapper declaring itself csquotes: it loads csquotes and renews one of its commands.
+\ProvidesPackage{csquotes}[2020/01/01 wrapper]
+\RequirePackageWithOptions{csquotes}
+\renewcommand{\mktextquote}[6]{#1[#2]#4#5#3#6}
+\endinput

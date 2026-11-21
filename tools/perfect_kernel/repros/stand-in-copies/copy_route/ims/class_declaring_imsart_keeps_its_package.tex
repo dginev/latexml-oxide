@@ -1,0 +1,18 @@
+% A class declaring itself imsart (`\ProvidesClass{imsart}`, `\RequirePackage{imsart}`) beside the paper's own
+% imsart.sty and an author's myims.sty: imsart_cls.rs's read of imsart.sty reads the paper's imsart.sty, since the class
+% loads no myims (`content::routed_copy_request`, the other type; OXIDIZED_DESIGN_DIVERGENCES #1118).
+% witness: none (synthetic; the COPYROUTE review's B2; the shape of 2405.11676's imsart-altered.cls)
+% oracle:  pdflatex 0 errors; "IMS-Y MY-Y PKG-Y MYMAC"; LaTeX Warning "You have requested document class `myims', but
+%          the document class provides `imsart'"
+% engines: rust INT7b = 0 errors, "PKG-Y"; COPYROUTE r0 "PKG-N" (myims.sty read as imsart.sty)
+% expect:  0 errors, 1 warning (LaTeX's); "IMS-Y MY-Y PKG-Y MYMAC"
+% status:  GREEN (guard perfect_kernel_batchcopyroute::class_declaring_imsart_reads_the_papers_imsart)
+% preload: ar5iv.sty
+\documentclass{myims}
+\usepackage{myims}
+\makeatletter
+\edef\r{\@ifpackageloaded{imsart}{IMS-Y}{IMS-N} \@ifpackageloaded{myims}{MY-Y}{MY-N} \ifdefined\imspkg PKG-Y\else PKG-N\fi}
+\makeatother
+\begin{document}
+\r{} \mymac
+\end{document}
