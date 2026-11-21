@@ -37,7 +37,8 @@ fn href_tilde_in_a_footnote_under_babel() {
 /// ambient `\protect` babel's `\active@prefix` (babel.def:1418-1442) lets it expand to its character. Red (INT6D):
 /// Fatal:Timeout:PushbackLimit, the empty `\protect` of `url_string_messages` making `\protect-` re-expand. Witness
 /// 2605.16660. Skipped, visibly, where babel's slovak.ldf (babel-slovak) is not in the TeX Live: babel then errs on the
-/// option itself (Ubuntu's texlive-lang-european ships only the `babel-slovak.tex` locale).
+/// option itself (Ubuntu's texlive-lang-european ships only the `babel-slovak.tex` locale; CI installs
+/// texlive-lang-czechslovak).
 #[test]
 fn babel_shorthand_in_a_footnote_url() {
   if !kpse_has("slovak.ldf") {

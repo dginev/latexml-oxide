@@ -510,7 +510,7 @@ jobs:
       # Removed: imagemagick, inkscape (graphics post-processing —
       # not exercised by the test suite). The second block (≈230 MB) is what the
       # guards load (CIF0, 2026-11-13): tracklang/expkv (plain-generic), tipa,
-      # pstricks, the t4/lae/magyar/spanish encodings and languages, tex-gyre, and
+      # pstricks, the t4/lae/magyar/spanish/slovak encodings and languages, tex-gyre, and
       # jing for the schema guards. texlive-fonts-extra (669 MB), lang-chinese/
       # korean and games stay out: the tests that load them declare it with
       # `requires` and skip visibly (listed after the run). These packages add
@@ -530,6 +530,7 @@ jobs:
             texlive-lang-cyrillic \
             texlive-plain-generic tipa texlive-pstricks texlive-lang-other \
             texlive-lang-arabic texlive-lang-european texlive-lang-spanish \
+            texlive-lang-czechslovak \
             tex-gyre jing mupdf-tools poppler-utils
       - uses: dtolnay/rust-toolchain@master
         with:
