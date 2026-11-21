@@ -193,6 +193,10 @@ Components:
 > `<name>.<ext>.rhai` *overrides any compiled binding of the same name* — e.g.
 > `article.cls.rhai` shadows the built-in `article_cls`. (`latexml_package`
 > and `latexml_contrib` are disjoint, so their relative order is immaterial.)
+> The tier-1 binding is the file itself, as Perl's first `.ltxml` found in
+> SEARCHPATHS is (Package.pm:2127-2129): the core asks tier 1 through
+> `state::local_binding_file` before treating a compiled binding as a stand-in
+> for an author's file, so no shipped copy is read after a user's binding (#947).
 >
 > The TeX-tree tier is **last** on purpose, and the two properties are
 > deliberately different:

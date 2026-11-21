@@ -2165,6 +2165,202 @@ mod rhai_loading_path {
 }
 
 #[cfg(feature = "runtime-bindings")]
+mod user_binding_precedence {
+  //! Issue #947: a user's binding found in the search paths (beside the document, or in a `--path` directory) is THE
+  //! binding for its class or package, as Perl's `FindFile_aux` takes the first `<file>.ltxml` of SEARCHPATHS ahead of
+  //! the installed `Package/` bindings and loads nothing else (Package.pm:2127-2129, Util/Pathname.pm:333-341). Nor
+  //! does what the built-in binding does as a stand-in for an author's file follow it: reading the paper's shipped copy
+  //! after the binding (`author_files::stands_in_for_an_author_file`).
+
+  use std::{
+    path::{Path, PathBuf},
+    process::Command,
+  };
+
+  /// A LIPIcs paper's shipped class, reduced to its declaration and one command of its own.
+  const LIPICS_COPY: &str = "\\NeedsTeXFormat{LaTeX2e}\n\
+    \\ProvidesClass{lipics-v2021}[2021/05/05 v2021.1.2 LIPIcs articles]\n\
+    \\LoadClass{article}\n\\newcommand\\shippedhook{SHIPPED}\n";
+  const LIPICS_USER_BINDING: &str =
+    "LoadClass(\"article\");\nDefMacro(\"\\\\userhook\", \"USERBINDING\");\n";
+  /// `\textsolittle` is the built-in binding's (lipics_cls.rs, announced as `lipics-v2021_cls.rs`), `\shippedhook`
+  /// the shipped copy's, `\userhook` the user binding's.
+  const LIPICS_DOC: &str = "\\documentclass{lipics-v2021}\n\\begin{document}\n\
+    \\ifdefined\\textsolittle BUILTIN\\else NOBUILTIN\\fi{} \\ifdefined\\shippedhook SHIPPED\\else NOSHIPPED\\fi{} \
+    \\ifdefined\\userhook\\userhook\\else NOUSER\\fi\n\\end{document}\n";
+
+  fn write(path: PathBuf, text: &str) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, text).unwrap();
+  }
+
+  /// Converts `dir/main.tex` with `args`; returns the HTML and the log (stderr).
+  fn convert(dir: &Path, args: &[String]) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let output = Command::new(bin)
+      .arg("main.tex")
+      .args(args)
+      .arg("--dest")
+      .arg("out.html")
+      .current_dir(dir)
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\n{stderr}",
+      output.status.code()
+    );
+    let html = std::fs::read_to_string(dir.join("out.html")).unwrap_or_default();
+    (html, stderr)
+  }
+
+  /// Only the user binding `binding` (a `.rhai` file name) took effect: it loaded once, and neither the built-in binding
+  /// (`builtin`, its module-proxy name) nor the shipped copy (`copy`) was read; the conversion is error-free.
+  fn assert_only_the_user_binding(
+    html: &str,
+    stderr: &str,
+    binding: &str,
+    builtin: &str,
+    copy: &str,
+  ) {
+    assert!(
+      html.contains("NOBUILTIN NOSHIPPED USERBINDING"),
+      "only the user binding must define its commands:\nhtml=\n{html}\nstderr=\n{stderr}"
+    );
+    let loads = stderr
+      .lines()
+      .filter(|line| line.contains("(Loading") && line.contains(binding))
+      .count();
+    assert_eq!(
+      loads, 1,
+      "the user binding must load exactly once:\n{stderr}"
+    );
+    assert!(
+      !stderr.contains(builtin),
+      "the built-in binding must not load:\n{stderr}"
+    );
+    assert!(
+      !stderr
+        .lines()
+        .any(|line| line.contains("Processing definitions") && line.contains(&format!("{copy}..."))),
+      "the shipped copy must not be read after the user binding:\n{stderr}"
+    );
+    assert!(
+      !stderr
+        .lines()
+        .any(|line| line.starts_with("Error:") || line.starts_with("Fatal:")),
+      "the conversion must be error-free:\n{stderr}"
+    );
+  }
+
+  /// A `lipics-v2021.cls.rhai` beside the document, which ships its `lipics-v2021.cls`; and the same binding answering
+  /// `--preload=lipics-v2021.cls`.
+  #[test]
+  fn user_class_binding_beside_the_document_is_the_only_binding() {
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    write(root.join("main.tex"), LIPICS_DOC);
+    write(root.join("lipics-v2021.cls"), LIPICS_COPY);
+    write(root.join("lipics-v2021.cls.rhai"), LIPICS_USER_BINDING);
+    let (html, stderr) = convert(root, &[]);
+    assert_only_the_user_binding(
+      &html,
+      &stderr,
+      "lipics-v2021.cls.rhai",
+      "lipics-v2021_cls.rs",
+      "/lipics-v2021.cls",
+    );
+    let (html, stderr) = convert(root, &["--preload=lipics-v2021.cls".to_string()]);
+    assert_only_the_user_binding(
+      &html,
+      &stderr,
+      "lipics-v2021.cls.rhai",
+      "lipics-v2021_cls.rs",
+      "/lipics-v2021.cls",
+    );
+  }
+
+  /// The reporter's other route: the binding in a `--path` directory, the class copy beside the document.
+  #[test]
+  fn user_class_binding_on_the_path_is_the_only_binding() {
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    write(root.join("doc/main.tex"), LIPICS_DOC);
+    write(root.join("doc/lipics-v2021.cls"), LIPICS_COPY);
+    write(
+      root.join("bindings/lipics-v2021.cls.rhai"),
+      LIPICS_USER_BINDING,
+    );
+    let path = format!("--path={}", root.join("bindings").display());
+    let (html, stderr) = convert(&root.join("doc"), &[path]);
+    assert_only_the_user_binding(
+      &html,
+      &stderr,
+      "bindings/lipics-v2021.cls.rhai",
+      "lipics-v2021_cls.rs",
+      "/lipics-v2021.cls",
+    );
+  }
+
+  /// A package: `arxiv.sty.rhai` on the path over the built-in arxiv_sty.rs (whose `\headeright` it does not define),
+  /// the paper shipping its `arxiv.sty`.
+  #[test]
+  fn user_package_binding_on_the_path_is_the_only_binding() {
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    write(
+      root.join("doc/main.tex"),
+      "\\documentclass{article}\n\\usepackage{arxiv}\n\\begin{document}\n\
+       \\ifdefined\\headeright BUILTIN\\else NOBUILTIN\\fi{} \\ifdefined\\shippedhook SHIPPED\\else NOSHIPPED\\fi{} \
+       \\ifdefined\\userhook\\userhook\\else NOUSER\\fi\n\\end{document}\n",
+    );
+    write(
+      root.join("doc/arxiv.sty"),
+      "\\NeedsTeXFormat{LaTeX2e}\n\\ProvidesPackage{arxiv}\n\\newcommand\\headeright{A Preprint}\n\
+       \\newcommand\\shippedhook{SHIPPED}\n",
+    );
+    write(
+      root.join("bindings/arxiv.sty.rhai"),
+      "DefMacro(\"\\\\userhook\", \"USERBINDING\");\n",
+    );
+    let path = format!("--path={}", root.join("bindings").display());
+    let (html, stderr) = convert(&root.join("doc"), &[path]);
+    assert_only_the_user_binding(
+      &html,
+      &stderr,
+      "bindings/arxiv.sty.rhai",
+      "arxiv_sty.rs",
+      "/arxiv.sty",
+    );
+  }
+
+  /// Without a user binding the built-in one loads, once.
+  #[test]
+  fn built_in_class_binding_loads_without_a_user_binding() {
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    write(root.join("main.tex"), LIPICS_DOC);
+    let (html, stderr) = convert(root, &[]);
+    assert!(
+      html.contains("BUILTIN NOSHIPPED NOUSER"),
+      "the built-in binding must define its commands:\nhtml=\n{html}\nstderr=\n{stderr}"
+    );
+    let loads = stderr
+      .lines()
+      .filter(|line| line.contains("(Loading lipics-v2021_cls.rs"))
+      .count();
+    assert_eq!(loads, 1, "the built-in binding must load once:\n{stderr}");
+    assert!(
+      !stderr
+        .lines()
+        .any(|line| line.starts_with("Error:") || line.starts_with("Fatal:")),
+      "the conversion must be error-free:\n{stderr}"
+    );
+  }
+}
+
+#[cfg(feature = "runtime-bindings")]
 mod dir_prefixed_package_loading {
   //! Search-path scoping (#561) and directory-prefixed package resolution.
   //!
