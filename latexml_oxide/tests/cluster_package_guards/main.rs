@@ -706,15 +706,15 @@ mod perfect_kernel_batchregfixg;
 /// REGFIXH: a class binding shares another binding's definitions as code, not as a load of a file its class never loads
 /// (svjour3's svjour.cls, emulateapj's emulateapj.sty: the paper's copies stay unread).
 mod perfect_kernel_batchregfixh;
+/// REGFIXI: thin bindings' v0.8.0 regressions — amsppt's roster items under plain AmS-TeX, a prefix-matched shipped
+/// IUCr class, backref's `\BR@backref`, array's `\@arrayleft`.
+mod perfect_kernel_batchregfixi;
 /// REGFIXJ: `\end{document}` carries latex.ltx's tail (`\@checkend{document}\clearpage…\endgroup`) for the hooks that
 /// scan it (ltxutil's `\rvtx@enddocument@patch`).
 mod perfect_kernel_batchregfixj;
 /// REGFIXK: a `\bibitem` label's cite-printed forms are expanded at the `\bibitem` as `\@lbibitem`'s `\write`; `\text`
 /// reads its argument at the cell's alignment count.
 mod perfect_kernel_batchregfixk;
-/// REGFIXI: thin bindings' v0.8.0 regressions — amsppt's roster items under plain AmS-TeX, a prefix-matched shipped
-/// IUCr class, backref's `\BR@backref`, array's `\@arrayleft`.
-mod perfect_kernel_batchregfixi;
 /// REGFIXL: ulem's declaration (`\ul` from `\useunder`) ends with its group, a cell's or a `\multicolumn` body's end.
 mod perfect_kernel_batchregfixl;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the

@@ -99,8 +99,14 @@ fn svjour2_vec_reads_the_requested_class() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(log.contains("svjour2.cls declares itself svjour"), "{log}");
-  assert!(xml.contains("<XMTok font=\"bold\" role=\"UNKNOWN\">v</XMTok>"), "{xml}");
-  assert!(xml.contains("<XMTok font=\"italic\" name=\"omega\" role=\"UNKNOWN\">ω</XMTok>"), "{xml}");
+  assert!(
+    xml.contains("<XMTok font=\"bold\" role=\"UNKNOWN\">v</XMTok>"),
+    "{xml}"
+  );
+  assert!(
+    xml.contains("<XMTok font=\"italic\" name=\"omega\" role=\"UNKNOWN\">ω</XMTok>"),
+    "{xml}"
+  );
 }
 
 /// A JHEP3.cls copy declaring `\ProvidesClass{JHEP}` is the paper's requested class file: read, as before the code
