@@ -6,7 +6,10 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: mnras.cls.ltxml
 
-  LoadClass!("mn");
+  // Perl mnras.cls.ltxml `LoadClass('mn')`: mnras.cls loads no mn.cls (TeX Live's mnras.cls, :1711 inputs only
+  // mnsym), so the mn binding's definitions are made in this class's load, its options this class's
+  // (KNOWN_PERL_ERRORS #1300).
+  mn_cls::load_definitions()?;
   // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): mnras.cls's, as
   // pdflatex gives it — 508pt in two 244pt columns, one column under `onecolumn` — where the `mn` → article chain
   // keeps article's one-column `\if@twocolumn`. Witness 1902.04580 Figs.

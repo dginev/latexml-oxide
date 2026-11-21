@@ -24,7 +24,7 @@ fn def_jhep_journal(cs: &str, body: &str) -> Result<()> {
 /// JHEP.cls's journal-citation macros (Perl JHEP.cls.ltxml L143-261): `\@spires`, the
 /// `\<journal>{vol}{year}{page}` aliases (`\apj`, `\prd`, …), `\jhep`, `\newjournal`,
 /// `\ibid` and the arXiv-archive links (`\hepth{}`, …, `\Math{}{}`). JHEP, JHEP2 and
-/// JHEP3 have them; PoS.cls, whose binding loads JHEP's as Perl's does (PoS.cls.ltxml
+/// JHEP3 have them; PoS.cls, whose binding takes JHEP's definitions as Perl's loads them (PoS.cls.ltxml
 /// LoadClass JHEP), defines none (it has its own `\href`, PoS.cls:247): a PoS paper's
 /// `\newcommand{\apj}{ApJ}` was refused and its `\apj` read three arguments, swallowing
 /// what followed (an `unexpected:}` Error: 1507.03892, 1510.07042, 1807.03003, 1908.00100).

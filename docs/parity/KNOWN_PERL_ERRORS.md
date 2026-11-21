@@ -22163,3 +22163,31 @@ incomplete"), the bibitem empty; pdftex 0 errors, "??. A. Author, Title, J (1990
 `\noOf`, a LaTeX-style `\make@ref` in an amsppt copy): Perl `Fatal:too_many_errors`, 101 errors; ours the same read
 (amsppt_sty.rs), `Fatal:TooManyErrors`; so math0205237. Open in Rust (digest each field as `\makerefbox` boxes it).
 Repro amstex/amsppt_bibfield_expands_a_conditional_red (OXIDIZED_DESIGN_DIVERGENCES #825).
+
+## 1300. A class binding loads another binding as a file its real class never loads
+
+Perl shares definitions between related classes by loading the other binding as a file: svjour3.cls.ltxml (svjour1,
+svjour2) `LoadClass('svjour')`, emulateapj.cls.ltxml:26 `RequirePackage('emulateapj')`, JHEP2/JHEP3/PoS.cls.ltxml
+`LoadClass('JHEP', withoptions => 1)`, mnras.cls.ltxml `LoadClass('mn')`. The real svjour3.cls, emulateapj.cls (TeX
+Live's; :165-206 load REVTeX, latexsym, graphicx, amssymb, longtable, epsf), JHEP3.cls (0907.1636's), PoS.cls
+(1011.0095's) and mnras.cls (TeX Live's) load none of those files, so `\@ifclassloaded`/`\@ifpackageloaded` answer
+wrong:
+
+```latex
+\documentclass{svjour3}
+\makeatletter
+\@ifclassloaded{svjour}{\def\cl{svjour}}{\def\cl{no svjour}}
+\makeatother
+\begin{document}
+Body: \cl.
+\end{document}
+```
+
+Perl "Body: svjour."; pdflatex "Body: no svjour." (`\documentclass{emulateapj}` with `\@ifpackageloaded{emulateapj}`
+alike). Ours read the paper's copy of the loaded file after its binding (OXIDIZED_DESIGN_DIVERGENCES #731): an older
+svjour.cls shipped beside svjour3.cls ran its :93 "No valid journal specified in option list" (2101.09497,
+2110.05134, 2408.12532), 1305.6912's truncated emulateapj.sty ran out of input. Fixed in Rust (REGFIXH): the class
+binding calls the shared definitions as code in its own load (`svjour_cls::svjour_definitions`,
+`emulateapj_sty::emulateapj_definitions`, `jhep_cls::load_definitions`, `mn_cls::load_definitions`), its options its
+own; the files the real class loads are still loaded. Guards `perfect_kernel_batchregfixh::{svjour3_reads_no_older_svjour_copy,
+emulateapj_reads_no_shipped_sty_copy}`.

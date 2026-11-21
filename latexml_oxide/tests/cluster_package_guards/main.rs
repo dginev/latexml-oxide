@@ -703,6 +703,9 @@ mod perfect_kernel_batchregfixe;
 mod perfect_kernel_batchregfixf;
 /// REGFIXG: a raw class's own `\@author` helper with parameters (bullsrsl.cls) reads every replayed `\author` call.
 mod perfect_kernel_batchregfixg;
+/// REGFIXH: a class binding shares another binding's definitions as code, not as a load of a file its class never loads
+/// (svjour3's svjour.cls, emulateapj's emulateapj.sty: the paper's copies stay unread).
+mod perfect_kernel_batchregfixh;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

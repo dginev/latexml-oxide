@@ -4,9 +4,11 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl: svjour3.cls.ltxml
-  // Intended to cover svjour.cls, svjour1.cls, svjour2.cls & svjour3.cls
-  LoadClass!("svjour");
+  // Perl: svjour3.cls.ltxml `LoadClass('svjour')`. svjour3.cls (svjour1.cls, svjour2.cls) loads no svjour.cls: the
+  // svjour binding's definitions are made in this class's load, so `\@ifclassloaded{svjour}` is false and the paper's
+  // older svjour.cls is never read (its :93 "No valid journal specified": 2101.09497, 2110.05134, 2408.12532;
+  // KNOWN_PERL_ERRORS #1300).
+  svjour_cls::svjour_definitions("svjour3")?;
   // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`) under `twocolumn`
   // (svjour3.cls:42, :1414 `\columnsep{1.5cc}`), as pdflatex gives it: 495pt in two 238.964pt columns, where the
   // registers' 345pt read as the column and twice it as the text (review rev79c2 finding 1). One column (347pt,
