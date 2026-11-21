@@ -75,18 +75,33 @@ LoadDefinitions!({
   // 2102.03176, 2104.02781). With it `;` is active in math (program.sty:67-76),
   // as in pdflatex. This port binds program (a raw load) and Perl does not, so
   // Perl's scan skips it.
-  require_dependencies_except("sn-jnl", "cls", &["article", "natbib", "apacite"]);
-  // program.sty:175-176 also makes `\(`…`\)` a `{programbox}` (a `\textwidth`
-  // minipage around a `{program}`), which the papers of these copies write as
-  // inline maths and pdflatex sets in the line (2112.05038, on 413 lines: "For a
-  // domain Y ⊂ Rn, there exists…"); its raw emulation here made each an
-  // inline-block holding a one-item list (1331 in 2112.05038). They stay the
-  // kernel's inline maths (OXIDIZED_DESIGN_DIVERGENCES #597, approved 2026-10-15;
-  // program loaded under another class keeps the programbox).
-  if package_loaded("program") {
-    DefMacro!("\\(", "\\lx@begin@inline@math");
-    DefMacro!("\\)", "\\lx@end@inline@math");
-  }
+  // The scan runs at the class's end, after the paper's copy is read (`\AtEndOfClass`; the copy is read inside this
+  // load, content.rs `read_stand_in_copy`): the copy loads its packages in its own order, and the scan adds only what
+  // its unexecuted lines name. Run first, it loaded the bound program before the copy's unbound easyReview (:297),
+  // whose tikz then read pgf with program's `|` active (2211.09062: 295 errors and a Fatal).
+  DefPrimitive!("\\lx@sn@class@end", {
+    require_dependencies_except("sn-jnl", "cls", &["article", "natbib", "apacite"]);
+    // program.sty:175-176 also makes `\(`…`\)` a `{programbox}` (a `\textwidth`
+    // minipage around a `{program}`), which the papers of these copies write as
+    // inline maths and pdflatex sets in the line (2112.05038, on 413 lines: "For a
+    // domain Y ⊂ Rn, there exists…"); its raw emulation here made each an
+    // inline-block holding a one-item list (1331 in 2112.05038). They stay the
+    // kernel's inline maths (OXIDIZED_DESIGN_DIVERGENCES #597, approved 2026-10-15;
+    // program loaded under another class keeps the programbox).
+    if package_loaded("program") {
+      DefMacro!(T_CS!("\\("), None, T_CS!("\\lx@begin@inline@math"), scope => Some(Scope::Global));
+      DefMacro!(T_CS!("\\)"), None, T_CS!("\\lx@end@inline@math"), scope => Some(Scope::Global));
+    }
+    // `{appendices}` where the paper ships no copy (the class as distributed), as below.
+    if !package_loaded("appendix")
+      && shipped_class_text("sn-jnl")?
+        .as_deref()
+        .is_none_or(|text| crate::shipped_class::class_text_loads(text, "appendix"))
+    {
+      RequirePackage!("appendix", options => vec![s!("title")]);
+    }
+  });
+  RawTeX!(r"\AtEndOfClass{\lx@sn@class@end}");
   // The proof mark: the class's begin-document code (sn-jnl.cls:1571-1575 of 1907.11468's copy, in all 138 copies
   // of the run-353 sn-jnl papers) declares `\opensquare` (msa "03, □) and makes it the `\qedsymbol`, over
   // program.sty:971-973's `\let\qedsymbol=\blacksquare`, so pdflatex ends a proof with □ ("Proof Trivial. □";
@@ -495,9 +510,9 @@ LoadDefinitions!({
   // both deferred). arXiv/html_feedback#3436, witnesses 2411.11158, 2306.11901.
   //
   // `{appendices}`: appendix.sty's environment, as the class loads it (sn-jnl.cls:1365 `\usepackage[title]{appendix}`
-  // of 2609.33801's copy, in all 164 copies of the census; from the dependency scan above, here where the paper ships
-  // none; the class's own copy of appendix.sty's `{appendices}` at :1369-1407 is the appendix binding's), re-dressed
-  // where it is loaded (:1367 `\@ifpackageloaded{appendix}`) by the class's begin-document code (:1409-1426): the
+  // of 2609.33801's copy, in all 164 copies of the census; from the copy, or `\lx@sn@class@end` above where the paper
+  // ships none; the class's own copy of appendix.sty's `{appendices}` at :1369-1407 is the appendix binding's),
+  // re-dressed at the class's end where it is loaded (:1367 `\@ifpackageloaded{appendix}`) by the class's begin-document code (:1409-1426): the
   // environment resets the figure, table and equation counters and numbers them by the appendix letter,
   // `\@Alph\c@section\arabic{figure}` — "Fig. A1", "Table A1", "(A1)" (2609.24634, 2609.11123, 2609.04047; audit
   // #363). The hook's `\end{oldappendices}` calls `\endoldappendices`, which the class never defines (it saves
@@ -508,20 +523,13 @@ LoadDefinitions!({
   // `{declarations}`: no sn-jnl.cls defines one — 0 of 206 shipped copies, 2021-25 — and no paper of ~23,000 sampled,
   // 2019-25, uses it; the Springer template writes `\section*{Declarations}`/`\bmhead`, so a binding environment was
   // speculative, rev78c.)
-  if !package_loaded("appendix")
-    && class_text
-      .as_deref()
-      .is_none_or(|text| crate::shipped_class::class_text_loads(text, "appendix"))
-  {
-    RequirePackage!("appendix", options => vec![s!("title")]);
-  }
   if class_text
     .as_deref()
     .is_none_or(|text| class_code_contains(text, "\\let\\oldappendices\\appendices"))
   {
     RawTeX!(
-      r"\@ifpackageloaded{appendix}{\AtBeginDocument{\let\oldappendices\appendices\let\oldendappendices\endappendices
-\renewenvironment{appendices}{\setcounter{figure}{0}\setcounter{table}{0}\setcounter{equation}{0}\begin{oldappendices}\gdef\thefigure{\@Alph\c@section\arabic{figure}}\gdef\thetable{\@Alph\c@section\arabic{table}}\gdef\theequation{\@Alph\c@section\arabic{equation}}}{\end{oldappendices}\lx@pp@appendix@end}}}{}"
+      r"\AtEndOfClass{\@ifpackageloaded{appendix}{\AtBeginDocument{\let\oldappendices\appendices\let\oldendappendices\endappendices
+\renewenvironment{appendices}{\setcounter{figure}{0}\setcounter{table}{0}\setcounter{equation}{0}\begin{oldappendices}\gdef\thefigure{\@Alph\c@section\arabic{figure}}\gdef\thetable{\@Alph\c@section\arabic{table}}\gdef\theequation{\@Alph\c@section\arabic{equation}}}{\end{oldappendices}\lx@pp@appendix@end}}}{}}"
     );
   }
 });

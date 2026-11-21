@@ -1,0 +1,20 @@
+% witness: 2211.09062 (its sn-jnl.cls:297 `\usepackage{easyReview}`, which loads todonotes and tikz, before :312
+%          `\usepackage{program}`, whose active `|` pgf cannot be read under)
+% oracle:  pdflatex 0 errors ("A node: x and a < b inline."), the copy loading easyReview (todonotes, tikz) first
+% engines: rust INT6B = 30 errors (sn_jnl_cls.rs's dependency scan of the copy loaded program, bound, before the copy's
+%          own read loaded easyReview, unbound: pgfmathparser.code.tex read with program's `|` active; the witness 295
+%          errors and a Fatal); Perl: no sn-jnl binding, OmniBus scans the class (program has no binding there)
+% expect:  0 errors, 0 warnings; the todo note's text and the tikz node; `\(a<b\)` the kernel's inline maths
+%          (OXIDIZED_DESIGN_DIVERGENCES #597)
+% status:  RED (INT6B) -> GREEN (REGFIXU)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sn-jnl.cls}
+\ProvidesClass{sn-jnl}
+\LoadClass{article}
+\usepackage{easyReview}%
+\usepackage{program}%
+\end{filecontents*}
+\documentclass{sn-jnl}
+\begin{document}
+A node: \tikz\node[draw]{x}; and \(a<b\) inline.\todo{Check it.}
+\end{document}

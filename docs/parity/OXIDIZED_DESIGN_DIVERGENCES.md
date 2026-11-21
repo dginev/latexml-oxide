@@ -12108,7 +12108,8 @@ a `{program}`, :165-173), which the papers of these copies write as inline maths
 inline-block holding a one-item `ltx_trivlist` list (1331 in 2112.05038). sn_jnl_cls.rs puts the kernel's `\(`/`\)`
 (`\lx@begin@inline@math`, sect07.rs) back after the class's loads when program loaded; program's other definitions,
 the active `;` included, stay. Program loaded under another class, or by the document's own later
-`\usepackage{program}` (the test sits in the class binding, right after its scan), keeps the programbox. The faithful
+`\usepackage{program}` (the test runs at the class's end, after the copy's own loads and the scan, #1130), keeps the
+programbox. The faithful
 alternative was to drop the two lines (every `\(…\)` an inline-block). Approved by the main session 2026-10-15: the
 class, not the author, loads program; the authors write inline maths; content and semantics first. Perl's scan loads
 no program (no binding), so its `\(` is the kernel's and `\gt` is undefined. Repro class-bindings/snjnl_class_copy_loads_program; guard
@@ -23610,3 +23611,24 @@ renamed_class_reads_its_own_package,wrapper_loads_the_file_it_declares,class_wra
 misdeclared_file_is_not_the_file,misdeclared_file_shares_a_load,misdeclared_pgfplots_shares_a_load,
 exact_tikzcd_copy_is_read_as_the_file}.tex`; guard `perfect_kernel_batchregfixq::exact_tikzcd_copy_is_read_as_the_file`, the
 one-level extension).
+
+### 1130. A stand-in binding's dependency scan runs after the shipped copy's read (REGFIXU)
+
+**Rule** (maintainer ruling 2026-11-21: TeX's order decides). sn_jnl_cls.rs and optica_article_cls.rs scan the
+paper's shipped class for the packages it names (`require_dependencies_except`, Perl `maybeRequireDependencies`,
+Package.pm:2776-2813, which Perl runs only over a file it does not read: :2696, :2732). They run it at the class's end
+(`\AtEndOfClass{\lx@sn@class@end}`, `\lx@optica@class@end`), after the copy, read inside the class load as the
+stand-in's copy (#731), has loaded its packages in its own order; the scan adds only what the copy's unexecuted lines
+name. The binding code that tests what the scan loaded runs there too: the kernel's `\(`/`\)` over program's
+programbox (#597) and sn-jnl's appendix load and its `{appendices}` re-dress. Run first, the scan loaded the bound
+program ahead of the copy's unbound packages: 2211.09062's sn-jnl.cls:297 `\usepackage{easyReview}` (todonotes,
+tikz) then read pgf with program's `|` active (295 Errors, a Fatal, no output; now 0 Errors). In TeX's order, too, a
+copy's `\usepackage` in a false arm stays unloaded (breakurl in sn-jnl.cls's `\breakurldefns` under the `pdflatex`
+option: the `.bbl`'s own `\burl` fallback, sans-serif text, 2403.06633), and a package the copy loads defines over the
+binding as in pdflatex (optica-article.cls:251's jabbrv `\JournalTitle`, upright, over the binding's `\emph`:
+2211.05707 and 9 more optica papers, content unchanged). Rust-only: Perl has
+neither binding. `shipped_class::require_shipped_packages` (the algorithm and sub-figure families) still scans
+before the copy, as its result chooses the binding's defaults. **Guard**:
+`perfect_kernel_batchregfixu::snjnl_scan_runs_after_the_copy_loads_its_packages` (repro
+`stand-in-copies/scan_order/snjnl_scan_after_the_copy.tex`); `perfect_kernel_batch67u::snjnl_class_copy_loads_program`,
+`perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.

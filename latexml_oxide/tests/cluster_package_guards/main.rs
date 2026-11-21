@@ -746,6 +746,8 @@ mod perfect_kernel_batchregfixr2;
 /// REGFIXS: a title-code `\let` to a command reading arguments reads them in the rehearsal (rims02e's `\let\mail\thanks`);
 /// an EPL `\institute` legend's note prints its `\inst` mark under the class's title meaning.
 mod perfect_kernel_batchregfixs;
+/// REGFIXU: a stand-in binding's dependency scan of the shipped class runs after the copy's read (TeX's order).
+mod perfect_kernel_batchregfixu;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;
