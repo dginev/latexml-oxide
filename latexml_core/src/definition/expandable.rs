@@ -382,7 +382,7 @@ impl Expandable {
       return Ok(None);
     };
     let testopt = T_CS!("\\@protected@testopt");
-    if lookup_meaning(&testopt) == lookup_meaning(&T_CS!("\\lx@kernel@protected@testopt")) {
+    if x_equals(&testopt, &T_CS!("\\lx@kernel@protected@testopt")) {
       return Ok(None);
     }
     let name = self.cs.to_string();
