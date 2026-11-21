@@ -6187,7 +6187,9 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
 /// `\RenewDocumentCommand\mathbf{m}{…}`) by its signature: written out (braced) in the general and expandable wrappers,
 /// and for the optimized one the argument count ltcmd generates `\cs code` from right after the wrapper
 /// (`\l__cmd_current_arg_int`, latex.ltx:1963-1983 `\__cmd_declare_cmd_optimized:Nnn`) (2306.08511, 2306.10719,
-/// 2306.05287).
+/// 2306.05287). A body naming `cs` itself is no value but a command that redefines itself on use (amsppt.sty's
+/// `\def\title{\let\savedef@\title \def\title##1\endtitle{…}\title}`, whose inner command the lock refuses: a
+/// recursion to `Fatal:oom`, math0410032) or recurses.
 fn defines_value(cs: &Token, defn: &Expandable) -> bool {
   let reads_arguments = |params: Option<&crate::parameter::Parameters>| {
     params.is_some_and(|params| !params.get_parameters().is_empty())
@@ -6208,6 +6210,9 @@ fn defines_value(cs: &Token, defn: &Expandable) -> bool {
     return true;
   };
   let body = body.unlist_ref();
+  if body.contains(cs) {
+    return false;
+  }
   if !body
     .first()
     .is_some_and(|first| first.with_str(|name| name.starts_with("\\__cmd_start")))

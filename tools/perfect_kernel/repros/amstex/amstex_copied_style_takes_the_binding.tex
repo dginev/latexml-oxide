@@ -1,0 +1,12 @@
+% witness: math0410032 (ias-pcms.sty), math0108062 (grgppt.sty), math0012097 (amsp2.sty), math0207033 and
+%          math0107068 (grgppt01.sty), 1003.5377 (vis_n.sty): a paper's renamed copy of amsppt.sty
+% oracle:  tex (\input amstex) 0 errors: "Hello" centred bold, "Body text."
+% engines: rust MAIN935 = Fatal:oom (the copy read raw: its self-restoring \title met the locked binding and
+%          recursed); perl 0 errors (no binding for the style: the amsppt fallback, AmSTeX.pool.ltxml:71)
+% expect:  0 errors, 1 warning (missing_file: the copy's own changes are not read); <title>Hello</title>
+% status:  RED (MAIN935) -> GREEN (REGFIXD)
+\input amstex
+\documentstyle{amscopy}
+\title Hello\endtitle
+Body text.
+\bye

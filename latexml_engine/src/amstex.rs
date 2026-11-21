@@ -65,17 +65,23 @@ LoadDefinitions!({
   // fallback lacks: a Fatal runaway, 0 words) — is read raw, as `\input` reads it. A style that `\input`s another
   // style is that style's variation (gr-qc9507042's fic.sty `\input amsppt.sty`, math0406145's grubb-p.sty and
   // 0803.2668's conm-p-mod.sty `\input ams-p.sty`, not in TeX Live): its changes are to the internals of the style it
-  // builds on, which the amsppt binding stands in for, as before. Perl requires a binding (`notex => 1`,
-  // AmSTeX.pool.ltxml:71) and falls back to amsppt (KNOWN_PERL_ERRORS #1051). Guard
-  // `perfect_kernel_batch78i::amstex_local_style_is_read`.
+  // builds on, which the amsppt binding stands in for, as before. So is a renamed copy of a bound style, naming itself
+  // by its name (`copied_style`: math0108062's grgppt.sty, math0012097's amsp2.sty, math0207033's and math0107068's
+  // grgppt01.sty, 1003.5377's vis_n.sty, math0410032's ias-pcms.sty): read raw, amsppt's self-restoring `\title` met
+  // the locked binding and recursed to `Fatal:oom`. Perl requires a binding (`notex => 1`, AmSTeX.pool.ltxml:71) and
+  // falls back to amsppt (KNOWN_PERL_ERRORS #1051). Guards `perfect_kernel_batch78i::amstex_local_style_is_read`,
+  // `perfect_kernel_batchregfixd::amsppt_copy_takes_the_binding`.
   DefConstructor!("\\documentstyle Semiverbatim",
     "<?latexml class='#1' amstex='true'?>",
     after_digest => sub[whatsit] {
       let style = whatsit.get_arg(1).map(|d| d.to_string()).unwrap_or_default();
       let style = style.trim().to_string();
-      if !style.is_empty()
-        && !binding_exists(&style, "sty")
-        && let Some(path) = find_file(&s!("{style}.sty"), None)
+      let local = if style.is_empty() || binding_exists(&style, "sty") { None } else {
+        find_file(&s!("{style}.sty"), None)
+      };
+      let copy_of = local.as_deref().and_then(|path| copied_style(path, &style));
+      if let Some(path) = local
+        && copy_of.is_none()
         && !inputs_a_style(&path)
       {
         let mut input = vec![T_CS!("\\input")];
@@ -95,7 +101,7 @@ LoadDefinitions!({
         load_recorded(&filename)
       };
       if !primary_ok {
-        require_package("amsppt", RequireOptions::default())?;
+        require_package(copy_of.as_deref().unwrap_or("amsppt"), RequireOptions::default())?;
       }
     });
 
@@ -1188,6 +1194,23 @@ fn tie_floated_tags_to_row(document: &mut Document) -> Result<()> {
     ancestor = a.get_parent();
   }
   Ok(())
+}
+
+/// The bound style the AMS-TeX style file at `path` is a renamed copy of: outside comments, it names itself
+/// `<style>.sty` in its load guard (`\csname amsppt.sty\endcsname`) or its `\def\filename{amsppt.sty}`.
+fn copied_style(path: &str, own: &str) -> Option<String> {
+  static SELF_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\\(?:csname|def\s*\\filename\s*\{)\s*([A-Za-z0-9_-]+)\.sty\s*(?:\\endcsname|\})")
+      .unwrap()
+  });
+  let bytes = std::fs::read(path).ok()?;
+  String::from_utf8_lossy(&bytes).lines().find_map(|line| {
+    let code = line.split('%').next().unwrap_or_default();
+    SELF_NAME
+      .captures_iter(code)
+      .map(|c| c[1].to_string())
+      .find(|name| name != own && binding_exists(name, "sty"))
+  })
 }
 
 /// Whether the AMS-TeX style file at `path` `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`), outside

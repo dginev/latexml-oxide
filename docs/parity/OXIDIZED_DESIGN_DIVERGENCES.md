@@ -10184,7 +10184,11 @@ instead of refusing it when it is all of the following:
   ltcmd `{V}` after a `[1]`/`{m}` declaration are values. `def_macro` installs a robust macro's inner `\cs␣` before its
   wrapper, the reverse of Perl's DefMacroI, so the wrapper's install can judge what it wraps; unobservable otherwise;
 - of a binding that `owns_calls`, i.e. its first mandatory parameter reads a braced argument (Plain, Semiverbatim,
-  Digested, Undigested, …) after optional ones only, or it is itself an earlier override (loop iterations).
+  Digested, Undigested, …) after optional ones only, or it is itself an earlier override (loop iterations);
+- not naming `<cs>` in its body: that is a command redefining itself on use, not a value (amsppt.sty's
+  `\def\title{\let\savedef@\title \def\title##1\endtitle{…}\title}`, whose inner command stays refused: taken as a
+  value, it recursed to `Fatal:oom`; math0410032). It stays refused, as in Perl (REGFIXD; repro
+  amstex/amstex_self_redefining_value_is_refused, guard `perfect_kernel_batchregfixd::self_redefining_value_is_refused`).
 
 The installed definition carries `Expandable::yields_calls`. The binding is kept globally as `\lx@locked@<cs>`, and
 expanding the override first peeks one raw token:
@@ -15039,7 +15043,15 @@ unless it `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`: `inp
 that style, whose changes are to internals of the style it builds on (gr-qc9507042's fic.sty redefines amsppt's
 `\titlebox@`, `\thethanks@`; read raw over the amsppt binding it ended in a Fatal pushback runaway and 16 Errors), or
 its parent is missing (math0406145's grubb-p.sty and 0803.2668's conm-p-mod.sty `\input ams-p.sty`, not in TeX Live):
-then the amsppt binding stands in, as before. amstex.tex's `\Invalid@` (:251-252), with which such a style marks the
+then the amsppt binding stands in, as before. So it does for a renamed copy of a bound style, which names itself by
+that style's name outside comments — `\def\filename{amsppt.sty}` or its `\csname amsppt.sty\endcsname` load guard
+(`copied_style`; REGFIXD: math0108062's grgppt.sty, math0207033's and math0107068's grgppt01.sty, math0012097's
+amsp2.sty, 1003.5377's vis_n.sty, math0410032's ias-pcms.sty). Read raw, amsppt's self-restoring `\title` met the
+lock (#500) and recursed to `Fatal:oom`; through the binding they keep their markup and only errors the Oct-8 build
+had too (fewer). Residual: math0610862's jmhppt.sty, which read raw raised 8 errors (no markup), is back at its Oct-8
+`Fatal:TooManyErrors` — the binding's `\@bibfield` reads a field expanding (`XUntil`, Perl amsppt.sty.ltxml:439), and the
+paper's `\noOf` (jmhlab.tex:210) puts `\make@ref`'s `\@warning` there (50 "Missing control sequence"); so math0205237.
+Repro amstex/amstex_copied_style_takes_the_binding; guard `perfect_kernel_batchregfixd::amsppt_copy_takes_the_binding`. amstex.tex's `\Invalid@` (:251-252), with which such a style marks the
 commands it disallows, is defined. amams.sty redefines `\ifdefined` (amams.sty:1099, a three-argument label test,
 as pre-e-TeX styles did); LaTeXML's own macros test with the kernel's `\lx@ifdefined` (etex.rs, `\let` to e-TeX's
 primitive: `\lx@latin@name`, the frontmatter stores' nulls, `\makeindex`, `\makeglossary`), which the redefinition

@@ -13835,7 +13835,9 @@ amsfonts.sty:117-138 keeps AMSTeX's `\newsymbol\cs <font><class><hex><hex>` (fon
 "Obsolete command" warning. Perl's amsfonts.sty.ltxml lacks it, so the declaration and every use of the declared
 symbol are errors. Trigger `\usepackage{amsfonts}\newsymbol\mylneqq 2308` … `$a\mylneqq b$` → Perl: undefined
 `\newsymbol` (pdflatex 0 errors, 1 warning, ≨). Fixed in Rust (65s, amsfonts_sty.rs, through `\DeclareMathSymbol`
-of the same class, font and slot; witnesses 1302.6049, 2112.15557; run 340 ~300 papers).
+of the same class, font and slot; witnesses 1302.6049, 2112.15557; run 340 ~300 papers). A `\global\mathchardef`
+(amsfonts.sty:126), it is legal in the body, where `\DeclareMathSymbol` is `\@onlypreamble`: it calls a private
+alias globally (REGFIXD; witnesses math0008232, 2407.16937; guard `perfect_kernel_batchregfixd::newsymbol_in_the_body`).
 
 ## 633. The AASTeX binding lacks the commands of the AASTeX 6.x class files
 
@@ -17994,8 +17996,10 @@ AmSTeX.pool.ltxml:71-72), so a paper's own style is replaced by amsppt: amams.st
 amsppt's `\title … \endtitle` and the paper ends inside the argument (math0402285, math9806089: Fatal:Mouth:EoF, 0
 words; ~33 papers). Minimal trigger: `\input amstex\documentstyle{loc}\document\received{1}\title{T}Body.\enddocument`
 with a loc.sty defining `\received#1` and `\title#1`. Fixed in Rust (78i, OXIDIZED_DESIGN_DIVERGENCES #825): a style with
-no binding on the search path is read raw unless it builds on another style, which the amsppt binding stands in for.
-Repro amstex/amstex_local_style_is_read; guard `perfect_kernel_batch78i::amstex_local_style_is_read`.
+no binding on the search path is read raw unless it builds on another style or is a renamed copy of a bound one
+(REGFIXD), which the binding stands in for. Repros amstex/{amstex_local_style_is_read,
+amstex_copied_style_takes_the_binding}; guards `perfect_kernel_batch78i::amstex_local_style_is_read`,
+`perfect_kernel_batchregfixd::amsppt_copy_takes_the_binding`.
 
 ## 1052. thm-restate's `{restatable*}` is undefined
 
