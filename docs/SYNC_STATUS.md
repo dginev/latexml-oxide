@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (387 lines, weight 844; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (395 lines, weight 872; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -660,6 +660,52 @@ Rules that keep this file honest and mergeable:
       mnras-like hooks) and `\NewCommandCopy` / `\global\let\maketitle\relax` wrappers (`fmmarks_own_maketitle_relax_red`,
       `maketitle_newcommandcopy_wrapper_red`): measure from the class's own `\maketitle` replay (T1); after DG's sandbox
       review; 5
+  - BINDFID — the long-term binding standard (DG 2026-11-20: "we *eventually* want very principled and complete
+    bindings for each .cls and .sty that requires non-trivial semantic mapping … incrementally, as our sprints allow,
+    while working on improving arXiv's fidelity and satisfying user reports"): a binding that stands in for a real file
+    reproduces the file's observable effects — the files it loads or marks loaded (thmtools' four subpackages), where
+    each command is legal (amsfonts' `\newsymbol` is a body-legal `\global\mathchardef`, not the preamble-only
+    `\DeclareMathSymbol`), each macro's shape (a stored value vs a macro with parameters: EDP's `\@subjclass`), the
+    definitions of the mode it runs in (amstex.sty under `\documentstyle` has no `\matrix@check`), and its own package
+    loads with their options (natbib from elsarticle/acmart/jmlr/jheppub; no invented loads, as cvpr's was). Witnesses:
+    the v0.8.0 regression check (PR #958 and the REGFIX-D/E batches, ~430 papers). Steps: extend
+    `tools/perfect_kernel/binding_conformance.sh` to compare a binding's loaded-file marks and preamble-only commands
+    with the real file's; then audit the bindings in order of arXiv reach; 5
+  - HEALTHYAB — a standing healthy-paper A/B before each bundle merge or fleet swap: a fixed, holdout-free sample
+    stratified over all arXiv years (~10k, `kit/pop.py`), base vs candidate on the error-free rate, content kept,
+    semantic markup and byte identity. The 2605/2606 sandbox reruns cover only 2026 idioms and a batch's own A/B only
+    its construct; the v0.8.0 regressions sat in older idioms (1990s AMS-TeX, amsppt copies, sig-alternate, easytable)
+    and only the full run caught them; 3
+  - LOCKSIDEFX — one principled rule for what a refused definition defines on the side (an `advisor` design study):
+    the definition lock (D1; OD #482, #500, #568) refuses a paper's redefinition of a kernel or binding command, and
+    with it the helpers or counts that redefinition sets — mlbib/astron/ACM `\citeauthoryear` inside their own `\cite`
+    (per-shape rule `label_macros_from_refused_cite`, OD #88; PR #958, REGFIX-F), amsppt copies' self-redefining
+    `\title` (outer accepted, inner refused: an endless recursion; REGFIX-D), bullsrsl's author count (REGTAIL, cause
+    unconfirmed). Replace the per-shape rules with one mechanism; 5
+  - FUPC — after rc1 (DG 2026-11-20): `$$` inside a display (branch `fix/fupc-display-dollar-followups`, `39321db12b4`,
+    reviewed NO-SHIP): it reopens the display its opener opened (a bare `\equation` and aliases too) and carries
+    `\tag`, `\nonumber` and `\label` to the second display. DG ruling (b): an untagged amsmath label prints the
+    equation's number where TeX's `\ref` is empty — record an OD divergence. The fix round: labels kept when a
+    retraction is never reopened; the token-spelling ratchet (`latex_constructs/mod.rs` 224→225, `sect07.rs` 29→30);
+    corrected KPE #1295 / OD #1091 wording. Residuals: `\[ a $$ $$ c \tag{3}\]` (pdflatex errs "\tag not allowed
+    here"), `{displaymath}` with `$$ $$` (1 Error, pdflatex 0); 3
+  - REGTAIL — the v0.8.0 regression check's untraced classes (run 372 → 399 triage): bullsrsl `authorcontributions`
+    (~65; the frontmatter replay of a refused 3-argument setter counts once), the pdflatex-clean `(Springer-SVJour)`
+    subset (~65; 2101.09497, 2408.12532, 2110.05134), `expected:}` causes beyond EDP (emulateapj 1305.6912,
+    biophys-new 2212.00883, llncs 2312.12023, ro_hack 1507.05358), `malformed:ltx:item` (math0006111), `\etalchar`,
+    `\IUCrCemaillink`, `\BR@backref`, `\@arrayleft` → `Fatal:Mouth:EoF` (2502.03242, 2004.09405, 2401.03827),
+    solarphysics.cls `toccaption` (12 papers; 2006.04669, 1510.03282, 2301.09829); 5
+  - REGRES — the regression fixes' residuals: fdsymbol's ~165 `symNNN` glyphs, 6 extensible accents (2312.00399
+    `\overlinesegment`) and `\ullcorner`/`\ulrcorner`; `\usepackage{amsmath}` after `\documentstyle{amsart}` does not
+    restore the old-form error; natbib loaded before `\documentclass{elsarticle}` is only an Info (RED
+    `natbib_before_elsarticle`); natbib residuals 2111.08230 (a standalone sub-document's preamble) and 2405.11676
+    (imsart-altered passes); a binding-defined name silently ignores a document `\newcommand` (no "already defined"
+    Error); `\usepackage{amstex}` under LaTeX2e raises no "obsolete" error; fdsymbol + amssymb gives no "already
+    defined" errors; 3
+  - LASTBOXROW — `\lastbox` takes a whole alignment, not its last row (tex.web §1080; rows §799, §810): easytable's
+    per-cell peel collapses into one cell holding the whole table, so its rules don't line up; 3
+  - VPHANTOMWIDTH — a text-mode `\vphantom` keeps its argument's width in HTML (`visibility:hidden`,
+    LaTeXML-inline-xhtml.xsl:57-75, as Perl), where TeX's is zero width; needs a ruling and an ar5iv-css mirror; 1
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
