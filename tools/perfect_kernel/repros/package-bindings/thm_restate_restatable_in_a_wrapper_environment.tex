@@ -1,0 +1,27 @@
+% witness: 2609.31596 (`\newenvironment{formalrestatable}[5][]{…\restatable[#3]{#4}{#5}}{\endrestatable…}`, then
+%          `\booleanodadv*`)
+% oracle:  pdflatex 0 errors (second run): "Text kept.", "Theorem Xa. Body two.", "Later.", "Theorem 2. Body
+%          three.", "Theorem Xa. Body two.", "Theorem 2. Body three."
+% engines: rust REGFIXJ3 Fatal:Stomach:Recursion (the body collected up to `\end{restatable}`, never met: the
+%          wrapper ends with `\end{fr}`)
+% expect:  0 errors, 0 warnings; four theorems: Xa, 2, then the two restatements Xa, 2 with their bodies
+% mechanism: thm-restate.sty:34-47 `\thmt@collect@body` ends the body at `\end{\@currenvir}`, the environment
+%          current at the start
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXO)
+\documentclass{article}
+\usepackage{amsthm,thmtools}
+\newtheorem{theorem}{Theorem}
+\newenvironment{fr}[2]{\renewcommand{\thetheorem}{X#1}\restatable{theorem}{#2}}{\endrestatable}
+\newenvironment{frs}[1]{\csname restatable*\endcsname{theorem}{#1}}{\csname endrestatable*\endcsname}
+\begin{document}
+Text kept.
+\begin{fr}{a}{foo}\label{t}
+Body two.
+\end{fr}
+Later.
+\begin{frs}{bar}
+Body three.
+\end{frs}
+\foo*
+\bar
+\end{document}

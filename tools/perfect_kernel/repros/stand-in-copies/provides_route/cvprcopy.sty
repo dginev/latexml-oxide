@@ -1,0 +1,7 @@
+%% A renamed copy of a CVPR/ICCV/WACV style (style.sty, main.sty, paper.sty, …: `\ProvidesPackage{cvpr}`), cut down to
+%% the end-of-preamble cleveref load every one of them makes (cvpr.sty 2024-2026).
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{cvpr}[2025 renamed copy]
+\RequirePackage{etoolbox}
+\AtEndPreamble{\usepackage[capitalize]{cleveref}\crefname{section}{Sec.}{Secs.}}
+\endinput

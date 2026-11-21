@@ -1970,24 +1970,124 @@ fn continue_float(captype: &str, suppress_step: bool) -> Result<()> {
 /// both: subcaption.sty:218-222, subfig.sty:285-288). An undefined format is caption3's
 /// `\caption@Error{Undefined label format}`, the label keeping the default.
 pub fn sub_label_tokens(keys: &[String], default: &str, number: Tokens) -> Result<Tokens> {
-  let format = keys
+  let format = match keys
     .iter()
     .map(|key| lookup_string(key))
     .find(|value| !value.is_empty())
-    .unwrap_or_else(|| default.to_string());
-  let mut formatter = T_CS!(&s!("\\caption@labelformat@{}", format.trim()));
-  if !is_defined_token(&formatter) {
-    Error!(
-      "undefined",
-      format.trim(),
-      &s!("Undefined label format `{}'", format.trim())
-    );
-    formatter = T_CS!(&s!("\\caption@labelformat@{default}"));
-  }
+  {
+    Some(format) => format,
+    None => v1_option_labelformat(keys)?.unwrap_or_else(|| default.to_string()),
+  };
+  // (a caption3 before v2.0 a paper ships and a raw floatrow loads names a format `\caption@lfmt@<name>`, v1.8h:619-620;
+  // subfig[caption=false] then loads no caption binding: 2010.15148 2011.14129 2102.00283 2112.02137 2201.07802)
+  let formatter = |name: &str| {
+    [
+      s!("\\caption@labelformat@{name}"),
+      s!("\\caption@lfmt@{name}"),
+    ]
+    .into_iter()
+    .map(|cs| T_CS!(&cs))
+    .find(is_defined_token)
+  };
+  let formatter = match formatter(format.trim()) {
+    Some(formatter) => formatter,
+    None => {
+      Error!(
+        "undefined",
+        format.trim(),
+        &s!("Undefined label format `{}'", format.trim())
+      );
+      formatter(default).unwrap_or_else(|| T_CS!(&s!("\\caption@labelformat@{default}")))
+    },
+  };
   let mut tokens = vec![formatter, T_BEGIN!(), T_END!(), T_BEGIN!()];
   tokens.extend(number.unlist());
   tokens.push(T_END!());
   Ok(Tokens::new(tokens))
+}
+
+/// The `labelformat` a raw caption3 v1.x keeps for `keys` (`CAPTION_<name>_labelformat`): its `\captionsetup[<name>]`
+/// stores the options as the list `\caption@opt@<name>` (v1.8h:258-262), which subfig applies by `\caption@setoptions`
+/// (through floatrow's `\caption@setfloattype`, subfig.sty:328-339), the least specific list first, and so takes off
+/// `\caption@optlist` (v1.8h:321-336), whose leftovers are the end-of-document "Unused \captionsetup[<name>]" Warning.
+/// The binding's keys are then never set: `[caption=false,labelformat=simple]{subfig}` under a shipped v1.8h and raw
+/// floatrow printed "(a)" for "a" (the copy 2010.15148 2011.14129 2102.00283 2112.02137 2201.07802 ship).
+fn v1_option_labelformat(keys: &[String]) -> Result<Option<String>> {
+  let mut format = None;
+  for key in keys.iter().rev() {
+    let Some(name) = key
+      .strip_prefix("CAPTION_")
+      .and_then(|k| k.strip_suffix("_labelformat"))
+    else {
+      continue;
+    };
+    let Some(defn) = lookup_definition(&T_CS!(&s!("\\caption@opt@{name}")))? else {
+      continue;
+    };
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      continue;
+    };
+    v1_remove_from_optlist(name)?;
+    let text = body.to_string();
+    let mut depth = 0usize;
+    let mut start = 0;
+    let mut items = Vec::new();
+    for (i, c) in text.char_indices() {
+      match c {
+        '{' => depth += 1,
+        '}' => depth = depth.saturating_sub(1),
+        ',' if depth == 0 => {
+          items.push(&text[start..i]);
+          start = i + 1;
+        },
+        _ => {},
+      }
+    }
+    items.push(&text[start..]);
+    for item in items {
+      if let Some((k, v)) = item.split_once('=')
+        && k.trim() == "labelformat"
+      {
+        format = Some(
+          v.trim()
+            .trim_start_matches('{')
+            .trim_end_matches('}')
+            .trim()
+            .to_string(),
+        );
+      }
+    }
+  }
+  Ok(format.filter(|f| !f.is_empty()))
+}
+
+/// caption3 v1.8h:333-336 `\caption@removefromoptlist{<name>}`: `<name>` off the global `\caption@optlist`, its
+/// `\caption@opt@<name>@lineno` undefined.
+fn v1_remove_from_optlist(name: &str) -> Result<()> {
+  let list = T_CS!("\\caption@optlist");
+  if let Some(defn) = lookup_definition(&list)?
+    && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+  {
+    let text = body.to_string();
+    let kept: Vec<&str> = text.split(',').filter(|item| item.trim() != name).collect();
+    if kept.len() < text.split(',').count() {
+      def_macro(
+        list,
+        None,
+        ExpansionBody::Tokens(Tokens::new(Explode!(&kept.join(",")))),
+        Some(ExpandableOptions {
+          scope: Some(Scope::Global),
+          ..ExpandableOptions::default()
+        }),
+      )?;
+      let_definition(
+        &T_CS!(&s!("\\caption@opt@{name}@lineno")),
+        &T_CS!("\\@undefined"),
+        Some(Scope::Global),
+      );
+    }
+  }
+  Ok(())
 }
 
 /// A class's own `\@makecaption` whose label is set in `font` and closed by `close`, the close set in the label's font

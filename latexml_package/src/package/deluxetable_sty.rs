@@ -162,8 +162,15 @@ LoadDefinitions!({
   DefMacro!("\\startdata",
     "\\lx@deluxe@print@caption\\global\\lx@deluxetable@datatrue\
      \\bgroup\\@deluxetable@bindings\\@@deluxetabular\\lx@begin@alignment\\hline\\hline\\@deluxetable@header");
+  // The data's end is reset by a primitive, not `\global\lx@deluxetable@datafalse`: a cell reader that expands, an
+  // AASTeX `D` cell (aas_support_sty.rs `\aas@start@D@column`) whose row has no `\\` before `\enddata`, expanded
+  // the `\let`'s `\iflx@deluxetable@data` operand into an open conditional (1712.01997, 2104.10697, 2107.00240,
+  // 2201.08360, 2308.10484, 2606.18355). Guard `perfect_kernel_batchregfixn1::aastex_decimals_last_row_at_enddata`.
+  DefPrimitive!("\\lx@deluxetable@data@end", {
+    let_i(&T_CS!("\\iflx@deluxetable@data"), &T_CS!("\\iffalse"), Some(Scope::Global));
+  });
   DefMacro!("\\enddata",
-    "\\global\\lx@deluxetable@datafalse\\\\\\hline\\lx@end@alignment\\@end@deluxetabular\\egroup");
+    "\\lx@deluxetable@data@end\\\\\\hline\\lx@end@alignment\\@end@deluxetabular\\egroup");
 
   // Perl: DefPrimitive('\@deluxetable@bindings', sub { tabularBindings(LookupValue('@deluxetable@template')); });
   DefPrimitive!("\\@deluxetable@bindings", {

@@ -390,7 +390,10 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   };
   declare_notice_option("accepted", "isaccepted", Some(r"\ICML@appearing"))?;
   declare_notice_option("preprint", "ispreprint", (year == Some(2026)).then_some(r"\ICML@preprint"))?;
-  DeclareOption!("nohyperref", r"\gdef\nohyperref{1}");
+  // (at the package's end: the paper's copy, read after this, tests `\nohyperref` before its own `\ProcessOptions`
+  // defines it — icml2016.sty:88 vs :130, a block one `\fi` short, which skipped the copy's rest when it was defined:
+  // 1603.00748)
+  DeclareOption!("nohyperref", r"\AtEndOfPackage{\gdef\nohyperref{1}}");
   DeclareOption!(None, {});
   ProcessOptions!();
   RawTeX!(r"\ifdefined\isaccepted \icmlshowauthorstrue \fi

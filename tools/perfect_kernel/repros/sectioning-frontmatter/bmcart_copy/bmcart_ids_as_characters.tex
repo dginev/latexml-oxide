@@ -1,0 +1,22 @@
+% witness: 2009.00252, 1403.3568 (bmcart): an address, note or author id with an underscore; bmcart.cls reads ids only
+%          inside \csname (:1137-1154, :1284-1289)
+% oracle:  pdflatex 0 errors (bmcart_copy/bmcart.cls): "Daniel Monsivais … and Ann Other", "Aalto University", "MIT"
+% engines: rust INT6A 7 errors (Script _ / ^ can only appear in math mode: the frontmatter keys digest the ids)
+% expect:  0 errors, 0 warnings; Monsivais with Aalto University, MIT and the note, Other with MIT
+% status:  RED (INT6A) -> GREEN (REGFIXR)
+\documentclass{bmcart}
+\begin{document}
+\begin{frontmatter}
+\begin{fmbox}
+\title{T}
+\author[addressref={aalto_cs,mit^x},noteref={n_1},email={a@b.c}]{\fnm{Daniel} \snm{Monsivais}}
+\author[addressref={mit^x}]{\fnm{Ann} \snm{Other}}
+\address[id=aalto_cs]{\orgname{Aalto University}}
+\address[id=mit^x]{\orgname{MIT}}
+\end{fmbox}
+\begin{artnotes}
+\note[id=n_1]{Equal contributor}
+\end{artnotes}
+\end{frontmatter}
+Text.
+\end{document}

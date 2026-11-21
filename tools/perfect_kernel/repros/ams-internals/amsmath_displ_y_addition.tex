@@ -1,0 +1,14 @@
+% witness: 1406.6618 2301.11270 2304.01203 2401.16335 2402.12617 (a named-equation hack:
+%          `\g@addto@macro\displ@y@{\global\let\eq@name\relax …}`); amsmath.sty:1344-1363
+% oracle:  pdflatex 0 errors: a=b (1)
+% engines: rust INT6A 1 error (\displ@y@ is not defined, since \g@addto@macro errs on an undefined macro as TeX)
+% expect:  0 errors, 0 warnings; the align with its equation (1)
+% status:  RED (INT6A) -> GREEN (REGFIXR)
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\g@addto@macro\displ@y@{\global\let\eq@name\relax}
+\makeatother
+\begin{document}
+\begin{align}a&=b\end{align}
+\end{document}

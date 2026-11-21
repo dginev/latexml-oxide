@@ -7,7 +7,10 @@
 %   Stomach:Recursion). Starting the binding's own begin code instead (66h r1, reverted on review) only flipped the Fatal
 %   to an Error with the document as truncated (an empty <document/>; 2601.10843 306 Errors): the binding's alignment
 %   closes only through `\lx@end@alignment\end@amsalign`, and `\black@` (amsmath.sty:1364)/`\totwidth@` (:1316) are
-%   undefined. Needs `\start@align` to open the alignment in a group whose `\egroup` ends it.
+%   undefined. Needs `\start@align` to open the alignment in a group whose `\egroup` ends it. Since REGFIXO
+%   `\start@align` starts the binding's internal begin code (no call back by name: start_align_reentry_by_name), so
+%   this shape is 3 Errors ("Attempt to close non-boxing group", "Attempt to end mode internal_vertical" ×2) and the
+%   same empty <document/> as the REGFIXJ3 Fatal.
 % status:  RED
 \documentclass{article}
 \usepackage{amsmath}

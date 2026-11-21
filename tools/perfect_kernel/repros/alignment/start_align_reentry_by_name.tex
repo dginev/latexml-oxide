@@ -1,0 +1,23 @@
+% witness: 2610.38589 (flalign), 2607.00952 (alignat): the shipped aa.cls loads linenoaa.sty (aa.cls:2077), whose
+%          :57/:85 renew {alignat}/{flalign} as `\linenomathNonumbers\start@align…`
+% oracle:  pdflatex 0 errors: "Text kept.", four displays a=b c=d, numbered (1), (2) (the starred two unnumbered)
+% engines: rust REGFIXJ3 Fatal:Timeout:Convert (`\start@align` expanded to `\flalign`/`\alignat{2}` by name, the
+%          renewed environments, which call `\start@align` again)
+% expect:  0 errors, 0 warnings; four equationgroups, the first two numbered (1), (2)
+% mechanism: amsmath.sty:1724 `\start@align` is the engine and never calls an environment back by name
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXO)
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\renewenvironment{flalign}{\relax\start@align\tw@\st@rredfalse\m@ne}{\endalign}
+\renewenvironment{alignat}{\relax\start@align\z@\st@rredfalse}{\endalign}
+\renewenvironment{flalign*}{\relax\start@align\tw@\st@rredtrue\m@ne}{\endalign}
+\renewenvironment{alignat*}{\relax\start@align\z@\st@rredtrue}{\endalign}
+\makeatother
+\begin{document}
+Text kept.
+\begin{flalign} a &= b & c &= d \end{flalign}
+\begin{alignat}{2} a &= b & c &= d \end{alignat}
+\begin{flalign*} a &= b & c &= d \end{flalign*}
+\begin{alignat*}{2} a &= b & c &= d \end{alignat*}
+\end{document}

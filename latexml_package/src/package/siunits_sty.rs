@@ -5,6 +5,11 @@ LoadDefinitions!({
   // Perl: SIunits.sty.ltxml
   // Apparently siunitx is a revision and extension of SIunits
   // Not quite backwards compatible, but worth a try...
+  // Its machinery only: real SIunits.sty loads no siunitx, so siunitx's free commands are not made `\ERROR` at
+  // `\begin{document}` (`six_command_create`), and a document's own `\newcommand{\Pa}` there stands (1301.1500, 1705.09090).
+  if !package_loaded("siunitx") {
+    assign_value("lx@six@no@command@create", true, Some(Scope::Global));
+  }
   RequirePackage!("siunitx");
   // SIunits.sty:173.
   RequirePackage!("amstext");

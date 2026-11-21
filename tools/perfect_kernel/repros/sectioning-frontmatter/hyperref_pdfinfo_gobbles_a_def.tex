@@ -1,0 +1,21 @@
+% witness: 2001.10451 (jss.cls:101 `\newcommand{\Plaintitle}[1]{\def\@Plaintitle{#1}}`, the paper's
+%          `\Plaintitle{\Plaintitle{PF …}}`, jss.cls:472 `pdftitle={\@Plaintitle}`)
+% oracle:  pdflatex 0 errors; pdfinfo: Title "" (empty), Author "Me"
+% engines: rust REGFIXJ3 Fatal:Timeout:PushbackLimit (the `\def` in the expanded string stays, `\@Plaintitle`
+%          re-expands without end); the author read "goneMe"
+% expect:  0 errors, 0 warnings; dcterms:title empty, `<rdf about="" content="Me" property="dcterms:creator"/>`;
+%          "Text kept."
+% mechanism: hyperref.sty:555-565 `\let\def\HyPsd@DefCommand` (and `\gdef \edef \xdef`): a definition in the string
+%          gobbles its name, parameter text and body
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXO)
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\newcommand{\Plaintitle}[1]{\def\@Plaintitle{#1}}
+\Plaintitle{\Plaintitle{PF: A Library}}
+\newcommand\mydef[1]{\gdef\mystore{#1}}
+\hypersetup{pdftitle={\@Plaintitle}, pdfauthor={\mydef{gone}Me}}
+\makeatother
+\begin{document}
+Text kept.
+\end{document}

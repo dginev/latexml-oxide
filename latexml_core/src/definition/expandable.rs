@@ -275,6 +275,10 @@ impl Definition for Expandable {
       crate::gullet::unread_expansion(self.expand_watched(once_only, watched)?);
       return Ok(());
     }
+    if let Some(call) = self.testopt_call()? {
+      crate::gullet::unread_expansion(call);
+      return Ok(());
+    }
     match self.special_call {
       SpecialCall::None => {},
       SpecialCall::YieldsCalls => {
@@ -357,6 +361,40 @@ impl Expandable {
       !only_owned_with_parameters
         || (self.paramlist.is_some() && (self.made_in_own_file || self.origin.is_latexml_owned()))
     })
+  }
+
+  /// A `\newcommand` with an optional argument reads it itself (Perl's `convertLaTeXArgs`), where latex.ltx's is
+  /// `\@protected@testopt\cs\\cs{<default>}` (`\@xargdef`, :1245-1257; [`TestoptCall`]): when the head is not the
+  /// kernel's, the call is that body, for the redefinition to act on it (hyperref.sty:548-549 gobbles the command in a
+  /// PDF string, `\HyPsd@protected@testopt`; letltxmacro.sty:127). `None` otherwise, or where the definer made no
+  /// internal (`\@xargdef` itself, the internal's own optional).
+  ///
+  /// [`TestoptCall`]: crate::parameter::TestoptCall
+  fn testopt_call(&self) -> Result<Option<Tokens>> {
+    if !self.peeks_by_futurelet {
+      return Ok(None);
+    }
+    let Some(param) = self
+      .paramlist
+      .as_ref()
+      .and_then(|params| params.get_parameters().first())
+    else {
+      return Ok(None);
+    };
+    let Some(call) = param.testopt_call.as_deref() else {
+      return Ok(None);
+    };
+    if x_equals(&call.head, &call.kernel) {
+      return Ok(None);
+    }
+    Ok(Some(Tokens!(
+      call.head,
+      self.cs,
+      call.internal,
+      T_BEGIN!(),
+      param.extra.first().unwrap_or(&NO_TOKENS).clone(),
+      T_END!()
+    )))
   }
 
   /// [`SpecialCall::YieldsCalls`]?
@@ -505,6 +543,9 @@ impl Expandable {
       && let Some(owner) = self.call_owner()?
     {
       return Ok(Tokens!(owner));
+    }
+    if let Some(call) = self.testopt_call()? {
+      return Ok(call);
     }
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {

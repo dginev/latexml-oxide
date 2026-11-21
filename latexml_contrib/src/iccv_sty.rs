@@ -38,5 +38,12 @@ LoadDefinitions!({
   DefMacro!("\\wrt", "\\emph{w.r.t}\\onedot");
   DefMacro!("\\dof", "d.o.f\\onedot");
 
-  InputDefinitions!("iccv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // The file the request names, as cvpr_sty.rs reads it: a renamed copy declaring `\ProvidesPackage{iccv}`
+  // (2025arXiv.sty, paper.sty: 2507.06125, 2504.13405) is read raw, its `\AtEndPreamble` cleveref load run.
+  let request = latexml_package::shipped_class::stand_in_request()?;
+  InputDefinitions!(
+    if request.is_empty() { "iccv" } else { &request },
+    noltxml => true,
+    extension => Some(Cow::Borrowed("sty"))
+  );
 });

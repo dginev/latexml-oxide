@@ -7,6 +7,7 @@ use crate::{
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: aastex.cls.ltxml — AAS TeX document class
+  save_fig_family();
 
   // Ignorable options
   //
@@ -251,12 +252,7 @@ LoadDefinitions!({
     // The `\fig` family and `\gridline`: AASTeX 6+ only (aastex6.cls:4909). A 5.x paper's `\fig` is its own:
     // astro-ph/0003209 `\newcommand{\fig}…` now prints "Fig. <ref>", where the binding's `\fig` read the argument as a
     // `\ref` of the wrong label (64e review r2).
-    Let!("\\fig", "\\@undefined");
-    Let!("\\leftfig", "\\@undefined");
-    Let!("\\rightfig", "\\@undefined");
-    Let!("\\boxedfig", "\\@undefined");
-    Let!("\\rotatefig", "\\@undefined");
-    Let!("\\gridline", "\\@undefined");
+    restore_fig_family();
   }
   // aastex631.cls:6164 (the copies papers ship: 2307.09521, 2312.03148; aastex63.cls alike, 1907.08642) `\aspconf`,
   // the ASP conference series, which aas_macros lacks: provide-only, a paper's own definition wins.
@@ -321,6 +317,33 @@ fn bundled_aastex_is_6_plus() -> bool {
   )
   .and_then(|path| std::fs::read(path).ok())
   .is_some_and(|bytes| String::from_utf8_lossy(&bytes).contains("\\gridline"))
+}
+
+/// The AASTeX 6+ `\fig` family and `\gridline` (aas_support_sty.rs; aastex6.cls:4909), which AASTeX 5.x and emulateapj
+/// lack.
+const FIG_FAMILY: [&str; 6] = [
+  "fig",
+  "leftfig",
+  "rightfig",
+  "boxedfig",
+  "rotatefig",
+  "gridline",
+];
+
+/// Keep what the `\fig` family means before the class (a paper's own, defined before `\documentclass`: 0910.5598
+/// aastex 5.x; 1002.3626 astro-ph0511141 emulateapj, 1301.6182 emulateapj-rtx4), for `restore_fig_family`.
+fn save_fig_family() {
+  for name in FIG_FAMILY {
+    Let!(T_CS!(&s!("\\lx@aas@own@{name}")), T_CS!(&s!("\\{name}")));
+  }
+}
+
+/// Give the `\fig` family back its meaning before the class, undefined if it had none, for an AAS class that has no
+/// such commands (AASTeX 5.x, emulateapj).
+pub fn restore_fig_family() {
+  for name in FIG_FAMILY {
+    Let!(T_CS!(&s!("\\{name}")), T_CS!(&s!("\\lx@aas@own@{name}")));
+  }
 }
 
 /// Leave `{plate}` and `{plate*}` (`\begin{plate}`, `\end{plate}`, `\plate`, `\endplate`; aas_support_sty.rs) undefined,

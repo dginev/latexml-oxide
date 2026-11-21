@@ -6,8 +6,8 @@
 %          (the same), "After." and the second roster inside item (ii): `DigestUntil` digests the `{` group whole, so the `\endroster`
 %          inside it does not end the roster (amsppt.sty's `\endroster` is a macro, which TeX expands at any group level)
 % expect:  0 errors; `<enumerate>` with items "(i)" and "(ii)", then "After." and the second roster after it
-% status:  RED (fix/amsppt-ids-sections)
-% moves:   post-merge (the `DigestUntil` reading, shared by every amsppt block; 1 paper of the 63 roster papers of the AMSPPT census)
+% status:  RED (fix/amsppt-ids-sections) -> GREEN (REGFIXP: `\endroster` closes the group it is met in, with 1 warning;
+%          guard perfect_kernel_batchregfixp::endroster_ends_the_roster_inside_a_group)
 \input amstex
 \documentstyle{amsppt}
 \document

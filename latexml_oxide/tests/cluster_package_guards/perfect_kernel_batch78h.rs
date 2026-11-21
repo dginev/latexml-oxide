@@ -38,8 +38,13 @@ fn routed_copy_supplies_only_declared_text_names() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
     log.contains(
-      "Info:fallback:aascopy The paper's aascopy.cls declares itself aastex: loading the aastex.cls binding, then the \
-       copy as its stand-in's"
+      "Info:fallback:aascopy The paper's aascopy.cls declares itself aastex: loading the aastex.cls binding\n"
+    ),
+    "{log}"
+  );
+  assert!(
+    log.contains(
+      "Info:provide:aascopy.cls The paper's aascopy.cls is read after the aastex.cls binding, as its stand-in's copy"
     ),
     "{log}"
   );

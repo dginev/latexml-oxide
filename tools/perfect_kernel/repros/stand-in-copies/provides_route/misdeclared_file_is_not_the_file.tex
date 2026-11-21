@@ -1,0 +1,17 @@
+% An author's file that declares itself tikz-cd but defines none of tikz-cd.sty's names (its library's, `\tikzcd`, ...) is
+% not read as tikz-cd.sty (`reads_as_the_file`): in TeX its `\ProvidesPackage` records `\ver@mytcdmacros.sty`, and the
+% later `\usepackage{tikz-cd}` reads TeX Live's file.
+% witness: none (reviewer's REGFIXQ probe B)
+% oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B
+% engines: rust INT6A = 0 errors; REGFIXQ r1 = 4 errors: the file was read as tikz-cd.sty, the binding loaded with
+%          it, `\usepackage{tikz-cd}` a repeat
+% expect:  0 errors, 0 warnings; the diagram drawn
+% status:  RED (REGFIXQ) -> GREEN (REGFIXQ2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mytcdmacros}
+\usepackage{tikz-cd}
+\begin{document}
+\mytcd
+\begin{tikzcd} A \arrow[r] & B \end{tikzcd}
+\end{document}

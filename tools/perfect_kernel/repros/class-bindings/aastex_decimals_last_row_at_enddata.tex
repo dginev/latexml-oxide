@@ -1,0 +1,21 @@
+% witness: 1712.01997, 2104.10697, 2107.00240, 2201.08360, 2308.10484, 2606.18355 (aastex deluxetable, a `D` column
+%          after `\decimals`, the last row ended by `\enddata` without `\\`; v0.8.0 regression check)
+% oracle:  pdflatex 0 errors: two rows, 1.5 and 2.25 aligned at the point; "Text after." a paragraph after the table
+% engines: rust rc1/REGFIXJ3 2 errors (`expected:\fi`, then "Attempt to end mode restricted_horizontal": the `D` cell's
+%          expanding reader met `\enddata`'s `\global\lx@deluxetable@datafalse` and expanded the `\let`'s
+%          `\iflx@deluxetable@data` operand); with a `\\` before `\enddata` 0 errors
+% expect:  0 errors, 0 warnings; both rows split, integer part / point and fraction, as with the `\\`
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXN1, deluxetable_sty.rs `\enddata` resets the flag by a primitive)
+\documentclass{aastex701}
+\begin{document}
+\begin{deluxetable}{lD}
+\tablecaption{T}
+\tablehead{\colhead{A} & \multicolumn2c{B}}
+\decimals
+\startdata
+x & 1.5 \\
+y & 2.25
+\enddata
+\end{deluxetable}
+Text after.
+\end{document}

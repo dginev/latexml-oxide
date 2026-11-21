@@ -1,0 +1,15 @@
+% A shipped copy declaring `\ProvidesClass{smfart}` under another name is read once, where the binding reads its own
+% file raw (`routed_copy_request`), as a copy under the class's own name is; read after TeX Live's smfart.cls, its
+% first-load test ran over amsmath already loaded and its `\else`/`\fi` were unmatched.
+% witness: 1401.0915 (fsmfart.cls), 1110.1467, 1404.0804 (smfartVS.cls); the same read: 1201.4414, 1512.05388
+%          (tikzcd.sty, tikz-cd1.sty `\ProvidesPackage{tikz-cd}`), 2105.12769 (pdfplots.sty `{pgfplots}`)
+% oracle:  pdflatex 0 errors; "SMF-COPY-MACRO Text ok."
+% engines: rust INT6A = 1 error (`\fi` unexpected) + 2 warnings (`\mathfrak` out of math, the stray `\else` branch): the
+%          binding raw-reads TeX Live's smfart.cls, then the copy as its stand-in's
+% expect:  0 errors, 0 warnings; the paragraph "SMF-COPY-MACRO Text ok."
+% status:  RED (INT6A) -> GREEN (REGFIXQ)
+% preload: ar5iv.sty
+\documentclass{smfcopy}
+\begin{document}
+\smfcopymacro{} Text ok.
+\end{document}

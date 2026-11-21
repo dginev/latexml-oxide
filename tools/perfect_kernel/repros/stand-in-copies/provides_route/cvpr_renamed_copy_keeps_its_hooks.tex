@@ -1,0 +1,16 @@
+% A renamed copy declaring `\ProvidesPackage{cvpr}` (or iccv, wacv) is the file the cvpr binding reads raw, as a copy
+% under its own name is: its `\AtEndPreamble{\usepackage{cleveref}}` runs, so `\cref` is defined.
+% witness: 2412.03517 (style.sty), 2603.19547 (text.sty), 2311.13194, 2501.05472, 2510.19001, 2601.03959, 2411.17125
+%          (cvpr), 2507.06125, 2504.13405 (iccv), 2609.04603 (wacv)
+% oracle:  pdflatex 0 errors; "See Sec. 1."
+% engines: rust b77c9754f4 = 1 error (`\cref` undefined; the papers' `\cref{fig:a_b}` add `_` cascades): the binding
+%          raw-loads `\@currname` (cvpr), absent, and the copy is read as its stand-in's, its document hooks deferred
+% expect:  0 errors, 0 warnings; the `\cref` a ref to LABEL:sec:intro
+% status:  RED (b77c9754f4) -> GREEN (REGFIXM: the binding reads the request it answers, `stand_in_request`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{cvprcopy}
+\begin{document}
+\section{Intro}\label{sec:intro}
+See \cref{sec:intro}.
+\end{document}

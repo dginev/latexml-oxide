@@ -38,9 +38,9 @@ LoadDefinitions!({
   // no AASTeX 6 `\fig` family or `\gridline` (which the aastex binding defines for a 6+ class only, aastex_cls.rs), so a
   // paper's own `\fig` is its own (astro-ph/0503342 `\newcommand{\fig}`; KNOWN_PERL_ERRORS #557). The 5.x
   // `\subsubsubsection`/`\supportfrom` stay, the family's union (user 2026-10-10).
-  for command in ["\\fig", "\\leftfig", "\\rightfig", "\\boxedfig", "\\rotatefig", "\\gridline"] {
-    Let!(T_CS!(command), "\\@undefined");
-  }
+  // A `\fig` the paper defines before `\documentclass` stays its own (1002.3626 astro-ph0511141; 1301.6182's
+  // emulateapj-rtx4).
+  aastex_cls::restore_fig_family();
   // …nor AASTeX 5.x's `{plate}` (emulateapj.cls defines none; aastex_cls.rs `undefine_plate`).
   aastex_cls::undefine_plate();
   // …and unlocked: a lock on an undefined `\fig` would refuse the paper's own (64f review r3) — the lock emulateapj_sty.rs

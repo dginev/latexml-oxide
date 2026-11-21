@@ -1,0 +1,20 @@
+% amsart's `\maketitle` runs `\@setauthors` after the title (amsart.cls:638, :808); what a document appends to it is
+% printed under the names: here the author's only affiliation and e-mail, a note at the title block.
+% witness: 2610.08257 (+2610.02630 a `{center}`, 2610.25104 an affiliation and e-mails, 2610.02789)
+% oracle:  pdflatex 0 errors; "ANN ABLE", then "Graduate School of AI, UNIST" / "dms6721@unist.ac.kr" under it
+% engines: rust REGFIXM 3a27287c05 = 0 errors, the text lost (`\@setauthors` a store never run)
+% expect:  0 errors, 0 warnings; one creator Ann Able; the text once, a note at the title block
+% status:  RED (3a27287c05) -> GREEN (REGFIXM2)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\makeatletter
+\g@addto@macro\@setauthors{\begingroup\centering\footnotesize\itshape
+Graduate School of AI, UNIST\\
+dms6721@unist.ac.kr\par\endgroup}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\maketitle
+Body.
+\end{document}

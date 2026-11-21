@@ -1,0 +1,13 @@
+% amsrefs.sty:159 `\RequirePackage{ifoption}`: its `\IfOption` (ifoption.sty:42-45) is defined for the document.
+% witness: 1707.00398 (+1806.01802 1812.07818 1709.04732 1707.03971; WileyNJD-v1.cls:2225 after :1106 amsrefs)
+% oracle:  pdflatex 0 errors; "Initials off."
+% engines: rust b77c9754f4 = 1 error (`\IfOption` undefined); perl 0.8.8 likewise (amsrefs.sty.ltxml loads nothing,
+%          KNOWN_PERL_ERRORS #627)
+% expect:  0 errors, 0 warnings; "Initials off."
+% status:  RED (b77c9754f4) -> GREEN (REGFIXM)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsrefs}
+\begin{document}
+\IfOption{initials}{Initials on.}{Initials off.}
+\end{document}

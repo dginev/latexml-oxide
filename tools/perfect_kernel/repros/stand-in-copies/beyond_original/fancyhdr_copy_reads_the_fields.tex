@@ -1,0 +1,14 @@
+% A paper's copy of fancyhdr.sty read over the fancyhdr binding finds the head and foot fields fancyhdr's load leaves
+% empty (`\f@nch@olh` ... `\f@nch@erf`, fancyhdr.sty:577-597 `\fancyhf{}`).
+% witness: 2606.30940, 2602.04163, 2602.02841, 2602.00576, 2603.09787 (icml2026.sty:119 `\RequirePackage{icml/fancyhdr}`,
+%          read raw after the icml binding's own fancyhdr; the copy's :767 `\fancypagestyle*{fancydefault}{\f@nch@initialise}`)
+% oracle:  pdflatex 0 errors; "FANCY-COPY-MACRO"
+% engines: rust INT6A = 12 errors (`\f@nch@olh` … `\f@nch@erf` undefined)
+% expect:  0 errors, 0 warnings; the paragraph "FANCY-COPY-MACRO"
+% status:  RED (INT6A) -> GREEN (REGFIXQ)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{icml}
+\begin{document}
+\fancycopymacro
+\end{document}

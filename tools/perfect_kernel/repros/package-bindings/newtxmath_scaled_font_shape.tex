@@ -1,0 +1,17 @@
+% newtxmath.sty:46-51 `\ntxmath@scaled` (`s*[\tx@scale]`, the `scaled`/`scale` keys), which a document's own
+% `\DeclareFontShape` of a newtx math font uses.
+% witness: 2205.08971 (+2510.18441 2505.21782 2407.05889 2208.07462)
+% oracle:  pdflatex 0 errors; "x + y"
+% engines: rust b77c9754f4 = 1 error (`\ntxmath@scaled` undefined)
+% expect:  0 errors, 0 warnings
+% status:  RED (b77c9754f4) -> GREEN (REGFIXM)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[varbb,scaled=1.05]{newtxmath}
+\makeatletter
+\DeclareFontFamily{U}{ntxmia}{\skewchar \font =127}
+\DeclareFontShape{U}{ntxmia}{m}{it}{<-> \ntxmath@scaled ntxmia}{}
+\makeatother
+\begin{document}
+$x+y$
+\end{document}

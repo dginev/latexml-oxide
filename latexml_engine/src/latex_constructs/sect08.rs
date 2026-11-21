@@ -93,10 +93,7 @@ pub(crate) fn load() -> Result<()> {
       }
       return Ok(vec![]);
     }
-    if opt.is_some() {
-      define_optional_internal(&cs_token, nargs, &body, star.is_some())?;
-    }
-    let macro_args = convert_latex_args(nargs, opt)?;
+    let macro_args = optional_command_args(&cs_token, nargs, opt, &body, star.is_some())?;
     // When the CS came from the plain pool, bypass any `<cs>:locked`
     // guard so latex.ltx can layer over plain. RAII guard ensures the
     // lock state is restored even if `DefMacro!` errors. No-op when
@@ -109,10 +106,7 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
   sub[(star, cs, nargs_num, opt, body)] {
     let nargs = nargs_num.value_of() as usize;
-    if opt.is_some() {
-      define_optional_internal(&cs, nargs, &body, star.is_some())?;
-    }
-    let macro_args = convert_latex_args(nargs, opt)?;
+    let macro_args = optional_command_args(&cs, nargs, opt, &body, star.is_some())?;
     DefMacro!(cs, macro_args, body, tex_declared => { star.is_some() && nargs > 0 });
   });
 
@@ -160,10 +154,7 @@ pub(crate) fn load() -> Result<()> {
       && lookup_bool(&s!("{}:locked", cs.to_string()));
     if !locked_guess && is_definable_latex(&cs)?.0 {
       let nargs = nargs.value_of() as usize;
-      if opt.is_some() {
-        define_optional_internal(&cs, nargs, &body, star.is_some())?;
-      }
-      let cs_args = convert_latex_args(nargs, opt)?;
+      let cs_args = optional_command_args(&cs, nargs, opt, &body, star.is_some())?;
       DefMacro!(cs, cs_args, body, tex_declared => { star.is_some() && nargs > 0 });
     }
   });
@@ -172,11 +163,12 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\DeclareRobustCommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
   sub[(star,cs,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
-    if opt.is_some() && cs.get_catcode() == Catcode::CS {
-      let inner = T_CS!(cs.with_str(|cstr| s!("{cstr} ")));
-      define_optional_internal(&inner, nargs, &body, star.is_some())?;
-    }
-    let cs_args = convert_latex_args(nargs, opt)?;
+    // (the inner `\cs␣` is `\@protected@testopt\cs␣\\cs␣{<default>}`, :1412-1428)
+    let cs_args = if cs.get_catcode() == Catcode::CS {
+      optional_command_args(&T_CS!(cs.with_str(|cstr| s!("{cstr} "))), nargs, opt, &body, star.is_some())?
+    } else {
+      convert_latex_args(nargs, opt)?
+    };
     // (a stand-in's copy's `\DeclareRobustCommand\maketitle`, as its `\renewcommand`: its title page's body, not the
     // robust wrapper's `\protect\maketitle␣`, `copy_title_page_prints`)
     note_copy_provides_title_page(&cs, &body);
@@ -1420,10 +1412,7 @@ pub(crate) fn load() -> Result<()> {
     } else {
       // TODO: can we convince DefMacro! this is not a second mutable borrow of state::
       let nargs = nargs.value_of() as usize;
-      if opt.is_some() {
-        define_optional_internal(&name_cs, nargs, &begin, star.is_some())?;
-      }
-      let converted_args = convert_latex_args(nargs, opt)?;
+      let converted_args = optional_command_args(&name_cs, nargs, opt, &begin, star.is_some())?;
       let end_name_cs = T_CS!(s!("\\end{}",name));
       // latex.ltx `\newenvironment` → `\@star@or@long`: starred, the begin macro is not `\long`.
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
@@ -1448,10 +1437,7 @@ pub(crate) fn load() -> Result<()> {
       let name_cs = T_CS!(s!("\\{}",name));
       let end_name_cs = T_CS!(s!("\\end{}",name));
       let nargs = nargs.value_of() as usize;
-      if opt.is_some() {
-        define_optional_internal(&name_cs, nargs, &begin, star.is_some())?;
-      }
-      let converted_args = convert_latex_args(nargs, opt)?;
+      let converted_args = optional_command_args(&name_cs, nargs, opt, &begin, star.is_some())?;
 
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
       DefMacro!(end_name_cs, None, end);
@@ -1979,6 +1965,52 @@ pub(crate) fn load() -> Result<()> {
   Ok(())
 }
 
+/// The document's `name` environment replaces the one OmniBus guessed, whose `\begin{name}` constructor `\begin` would
+/// otherwise look up first (`state::document_redefines_guess`; BM Q3.12: under OmniBus the document wins).
+fn yield_guessed_environment(name: &str) {
+  for cs in [T_CS!(s!("\\begin{{{name}}}")), T_CS!(s!("\\end{{{name}}}"))] {
+    if document_redefines_guess(&cs) {
+      assign_meaning(&cs, Stored::None, None);
+    }
+  }
+}
+
+/// `\counterwithin`'s `[format]`, `\arabic` when absent (latex.ltx `O{\arabic}`); a wholly braced value
+/// loses its braces as ltcmd strips them (`[{\arabic}]`, tcolorbox 6.10's `\exp_args:NNo`).
+fn counter_format(format: Option<Tokens>) -> Vec<Token> {
+  match format {
+    Some(format) => format.strip_braces().unlist(),
+    None => vec![T_CS!("\\arabic")],
+  }
+}
+
+/// `convert_latex_args` for a command `\@xargdef` defines with its internal ([`define_optional_internal`]): the
+/// optional parameter names the call (`TestoptCall`; guard `perfect_kernel_batchregfixo::
+/// hyperref_pdf_string_gobbles_testopt_and_let`).
+fn optional_command_args(
+  cs: &Token,
+  nargs: usize,
+  opt: Option<Tokens>,
+  body: &Tokens,
+  star: bool,
+) -> Result<Option<Parameters>> {
+  let internal = match opt {
+    Some(_) => define_optional_internal(
+      cs,
+      convert_latex_args(nargs, Some(Tokens!()))?,
+      body,
+      star && nargs > 0,
+      None,
+    )?,
+    None => None,
+  };
+  let args = convert_latex_args(nargs, opt)?;
+  Ok(match internal {
+    Some(internal) => args.map(|args| args.with_testopt_call(TestoptCall::kernel(internal))),
+    None => args,
+  })
+}
+
 /// latex.ltx:1245-1257 `\@xargdef`: a command with an optional argument is `\@protected@testopt\cs\\cs{<default>}`,
 /// and the macro reading `[#1]` and the rest is the internal `\\cs`, the name `\csname\string\cs\endcsname` reaches.
 /// Our `\cs` reads its optional argument itself (Perl's `convertLaTeXArgs`), so the internal is defined beside it for
@@ -1994,33 +2026,22 @@ pub(crate) fn load() -> Result<()> {
 /// (tex.web §263), never `\\` (2410.07647; guard `perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break`). A `\renewcommand`, `\DeclareRobustCommand` or `\newenvironment` the lock
 /// refuses still defines its internal, as `\@xargdef` does: only `\csname\string\cs\endcsname` reaches it, the class's own
 /// code, and that is how the class's refused setter is replayed (cmfne.cls:462-483 `\renewcommand{\author}[2][]` then
-/// the `\@dblarg` `\edef`, whose `\firstshortauthor` its `\enddoc@text` prints; 2210.02246). No binding defines or calls
-/// a `\\cs` internal (a locked one would refuse the class's). A locked `\renewenvironment` is refused whole, its stores
+/// the `\@dblarg` `\edef`, whose `\firstshortauthor` its `\enddoc@text` prints; 2210.02246). No binding defines a `\\cs`
+/// internal of its own (a locked one would refuse the class's); twoopt's and xargs's declarators make the document's,
+/// as their .sty files do. A locked `\renewenvironment` is refused whole, its stores
 /// recorded; a `\newcommand`/`\providecommand` of a defined name defines none, as LaTeX's.
 /// OXIDIZED_DESIGN #567; guards `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
 /// every_xargdef_declarator_defines_the_internal_macro, refused_dblarg_setter_reaches_its_internal}`.
-/// `\counterwithin`'s `[format]`, `\arabic` when absent (latex.ltx `O{\arabic}`); a wholly braced value
-/// loses its braces as ltcmd strips them (`[{\arabic}]`, tcolorbox 6.10's `\exp_args:NNo`).
-/// The document's `name` environment replaces the one OmniBus guessed, whose `\begin{name}` constructor `\begin` would
-/// otherwise look up first (`state::document_redefines_guess`; BM Q3.12: under OmniBus the document wins).
-fn yield_guessed_environment(name: &str) {
-  for cs in [T_CS!(s!("\\begin{{{name}}}")), T_CS!(s!("\\end{{{name}}}"))] {
-    if document_redefines_guess(&cs) {
-      assign_meaning(&cs, Stored::None, None);
-    }
-  }
-}
-
-fn counter_format(format: Option<Tokens>) -> Vec<Token> {
-  match format {
-    Some(format) => format.strip_braces().unlist(),
-    None => vec![T_CS!("\\arabic")],
-  }
-}
-
-fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool) -> Result<()> {
+/// Returns the internal, `None` for an active character; twoopt's and xargs's declarators give their own `params`.
+pub fn define_optional_internal(
+  cs: &Token,
+  params: Option<Parameters>,
+  body: &Tokens,
+  tex_declared: bool,
+  scope: Option<Scope>,
+) -> Result<Option<Token>> {
   if cs.get_catcode() != Catcode::CS {
-    return Ok(());
+    return Ok(None);
   }
   // (named as `\string` prints the command: the null control sequence's `\csname\endcsname` (tex.web §263), whose
   // internal is `\\csname\endcsname` — `"\\" + "\"` named `\\` itself, so `\expandafter\newcommand\expandafter
@@ -2032,13 +2053,8 @@ fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool)
     name.as_str()
   };
   let internal = T_CS!(s!("\\{}", printed));
-  DefMacro!(
-    internal,
-    convert_latex_args(nargs, Some(Tokens!()))?,
-    body.clone(),
-    tex_declared => { star && nargs > 0 }
-  );
-  Ok(())
+  DefMacro!(internal, params, body.clone(), tex_declared => { tex_declared }, scope => scope);
+  Ok(Some(internal))
 }
 
 /// Is `cs` an encoding dispatcher (`def_text_command_dispatcher`, the `\DeclareTextSymbol` chain): a macro whose body

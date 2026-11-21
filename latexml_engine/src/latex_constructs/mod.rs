@@ -10000,7 +10000,10 @@ use reference_math_slots::{
   BindingToken, ReferenceSymbol, reference_math_accent, reference_math_slot,
 };
 pub use sect07::prepare_latex_equation_counter;
-pub use sect08::{declare_bound_text_symbols, declare_capital_greek, declare_capital_greek_named};
+pub use sect08::{
+  declare_bound_text_symbols, declare_capital_greek, declare_capital_greek_named,
+  define_optional_internal,
+};
 pub use sect10::math_array_bindings;
 pub use sect11::{
   brace_groups, external_label_field, external_label_tex, external_ref_properties,

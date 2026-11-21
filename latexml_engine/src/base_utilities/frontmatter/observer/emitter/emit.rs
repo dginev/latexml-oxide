@@ -20,7 +20,7 @@ use super::{
     EntryCut, cut_entry_call, cut_mail_call, entry_cuts, span_tokens_cut, span_tokens_within,
   },
   calls::{document_note_call, note_call_end},
-  content::{arguments_end, reads_definition, reads_past},
+  content::{arguments_end, reads_definition, reads_no_argument, reads_past},
   dom::{Kind, norm},
   plan::{self, Key, Owner, api_call},
   repart::{crosses_columns, entry_span, joined_across_cells, prefix_tokens},
@@ -677,17 +677,25 @@ fn past_what_it_set(field: &Field, events: &[Event], end: usize) -> usize {
     });
     return if printed { end } else { end + bytes };
   }
+  // (a parameterless macro sets nothing after it: `\todaysdate\vspace{-3ex}` took the `\vspace` alone, which read the
+  // wrapper's `\let` as its dimension, 2401.17245, 2505.18108, 2205.07842, 1807.07558, 1605.01407)
   if end == 0
     || tokens
       .get(end - 1)
-      .is_none_or(|t| t.get_catcode() != Catcode::CS)
+      .is_none_or(|t| t.get_catcode() != Catcode::CS || reads_no_argument(t))
   {
     return end;
   }
   let at = (end..tokens.len())
     .find(|&i| tokens[i].get_catcode() != Catcode::SPACE)
     .unwrap_or(tokens.len());
+  // (a command there that reads arguments by its meaning is a call of its own, taken whole or not at all)
+  let call = tokens.get(at).and_then(|_| arguments_end(tokens, at, true));
   let past = match tokens.get(at).map(Token::get_catcode) {
+    _ if call.is_some() => match call.flatten() {
+      Some(call_end) => call_end,
+      None => return end,
+    },
     Some(Catcode::LETTER | Catcode::OTHER | Catcode::CS) => at + 1,
     Some(Catcode::BEGIN) => {
       let mut depth = 0;

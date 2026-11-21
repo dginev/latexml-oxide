@@ -10,9 +10,10 @@ LoadDefinitions!({
   AssignValue!("BibTeX_title_case" => "asis");
 
   // What amsrefs.sty loads (Perl amsrefs.sty.ltxml loads nothing, KNOWN_PERL_ERRORS #627): url (:45-46, when
-  // url.sty exists), rkeyval (:213, `\DefineSimpleKey`, `\DefineAdditiveKey`), and unless the `lite` option
+  // url.sty exists), ifoption (:159, `\IfOption`: 1707.00398, 1806.01802, 1812.07818, 1709.04732, 1707.03971),
+  // rkeyval (:213, `\DefineSimpleKey`, `\DefineAdditiveKey`), and unless the `lite` option
   // (:179, :214-218) textcmds and mathscinet (`\cprime`, `\germ`, `\scr`, `\Dbar`: the MathSciNet
-  // transliterations a `\bib` entry carries). rkeyval and textcmds have no binding: they are read raw, so only
+  // transliterations a `\bib` entry carries). ifoption, rkeyval and textcmds have no binding: they are read raw, so only
   // where raw loading is on (as `--preload=ar5iv.sty` has it). Witnesses 1907.08888, 2602.02342, math0410226,
   // 1503.01599, 1102.5022.
   DeclareOption!("lite", { AssignValue!("amsrefs@lite" => true, Scope::Global); });
@@ -25,6 +26,7 @@ LoadDefinitions!({
   }
   RequirePackage!("url");
   if lookup_bool("INCLUDE_STYLES") {
+    RequirePackage!("ifoption");
     RequirePackage!("rkeyval");
   }
   if !lookup_bool("amsrefs@lite") {
