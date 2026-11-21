@@ -748,6 +748,8 @@ mod perfect_kernel_batchregfixr2;
 mod perfect_kernel_batchregfixs;
 /// REGFIXU: a stand-in binding's dependency scan of the shipped class runs after the copy's read (TeX's order).
 mod perfect_kernel_batchregfixu;
+/// REGFIXW: a Latin-1 character captured before `[utf8]{inputenc}` keeps its meaning (arxiv.sty's `\crefformat{section}{§…}`).
+mod perfect_kernel_batchregfixw;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;
