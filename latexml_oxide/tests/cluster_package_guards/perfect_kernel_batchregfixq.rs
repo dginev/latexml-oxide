@@ -68,15 +68,12 @@ fn copy_routed_to_a_loaded_binding_is_read() {
 /// imsart_cls.rs's raw read of imsart.sty reads the copy's own package, which the copy loads (2405.11676's
 /// imsart-altered.cls:149 `\RequirePackage{imsart-altered}`), not the unaltered imsart.sty the paper ships beside it.
 /// Red: 1 Error (`\imscopymacro` undefined): imsart.sty read, the copy's package dropped. Distinct: a file of the
-/// binding's other type (`routed_copy_request`'s sibling branch).
+/// binding's other type (`routed_copy_request`'s sibling branch). The paragraph has no "UNALTERED-READ": the repro
+/// tests `\imsunalteredmacro`, which only the unaltered imsart.sty defines.
 #[test]
 fn renamed_class_reads_its_own_package() {
-  let tex = repro!("provides_route", "renamed_class_reads_its_own_package.tex").replace(
-    "\\imscopymacro\n",
-    "\\imscopymacro\\ifdefined\\imsunalteredmacro{} UNALTERED-READ\\fi\n",
-  );
   let (_, xml) = convert(
-    &tex,
+    repro!("provides_route", "renamed_class_reads_its_own_package.tex"),
     &[
       ("imscopy.cls", repro!("provides_route", "imscopy.cls")),
       ("imscopy.sty", repro!("provides_route", "imscopy.sty")),
@@ -180,4 +177,83 @@ fn fancyhdr_copy_finds_the_fields() {
     (0, 0),
   );
   first_paragraph(&xml, "FANCY-COPY-MACRO");
+}
+
+/// The paragraph whose text starts with `text`, a `<picture>` (a tikzcd diagram or a pgfplots axis) drawn after it.
+#[track_caller]
+fn picture_after(xml: &str, text: &str) {
+  assert!(
+    xml.contains(&format!("<p xml:id=\"p1.1\">{text}<picture ")),
+    "{xml}"
+  );
+}
+
+/// provides_route/wrapper_loads_the_file_it_declares: a shipped wrapper that declares itself a file a raw-reading
+/// binding stands for and loads it (`\ProvidesPackage{tikz-cd}\RequirePackage{tikz-cd}`, the pgfplots one that
+/// `\pgfplotsset`s) is not that file's copy (`content::loads_file`): the binding reads TeX Live's file, the wrapper after
+/// it. Red: 4 Errors each (`\usetikzlibrary`, `{tikzcd}`, `\arrow`; `{axis}`), the diagram and the plot lost: the wrapper
+/// read as the file, its `\RequirePackage` hit the binding still loading. Reviewer's REGFIXQ probes A and C.
+#[test]
+fn wrapper_is_read_after_the_file_it_loads() {
+  let (log, xml) = convert(
+    repro!("provides_route", "wrapper_loads_the_file_it_declares.tex"),
+    &[
+      ("mytikzcd.sty", repro!("provides_route", "mytikzcd.sty")),
+      ("mypgfplots.sty", repro!("provides_route", "mypgfplots.sty")),
+    ],
+    (0, 0),
+  );
+  for (copy, binding) in [("mytikzcd", "tikz-cd"), ("mypgfplots", "pgfplots")] {
+    assert!(
+      log.contains(&format!(
+        "Info:provide:{copy}.sty The paper's {copy}.sty is read after the {binding}.sty binding, as its stand-in's copy"
+      )),
+      "{log}"
+    );
+  }
+  picture_after(&xml, "MYTCD");
+  assert!(xml.contains("class=\"ltx_tikzmatrix\""), "{xml}");
+  for tick in ["0", "0.2", "0.4", "0.6", "0.8", "1"] {
+    assert!(xml.contains(&format!("text=\"{tick}\"")), "{tick}: {xml}");
+  }
+}
+
+/// provides_route/misdeclared_file_is_not_the_file: an author's file declaring `\ProvidesPackage{tikz-cd}` that shares
+/// nothing with tikz-cd.sty (`content::reads_as_the_file`) is not read as it; the document's later
+/// `\usepackage{tikz-cd}` finds tikz-cd loaded, as TeX reads it. Red: 4 Errors, the diagram lost: the file read as
+/// tikz-cd.sty and the binding marked loaded with it. Reviewer's REGFIXQ probe B. Distinct: a file that loads nothing.
+#[test]
+fn misdeclared_file_is_not_read_as_the_file() {
+  let (log, xml) = convert(
+    repro!("provides_route", "misdeclared_file_is_not_the_file.tex"),
+    &[(
+      "mytcdmacros.sty",
+      repro!("provides_route", "mytcdmacros.sty"),
+    )],
+    (0, 0),
+  );
+  assert!(
+    !log.contains("is read as the tikz-cd.sty binding's"),
+    "{log}"
+  );
+  picture_after(&xml, "MYTCD");
+  assert!(xml.contains("class=\"ltx_tikzmatrix\""), "{xml}");
+}
+
+/// provides_route/class_wrapper_loads_the_class: a class wrapper `\ProvidesClass{smfart}\LoadClass{smfart}` is not
+/// smfart.cls's copy (`content::loads_file`'s `\LoadClass`): the binding reads TeX Live's class. Red: 0 Errors, but
+/// the section unnumbered and the equation's `ltx_leqno` gone (pdflatex "1. Intro", "(1)" on the left). Reviewer's
+/// REGFIXQ probe F. Distinct: the class load, whose repeat is silent.
+#[test]
+fn class_wrapper_is_read_after_the_class() {
+  let (_, xml) = convert(
+    repro!("provides_route", "class_wrapper_loads_the_class.tex"),
+    &[("mysmf.cls", repro!("provides_route", "mysmf.cls"))],
+    (0, 0),
+  );
+  assert!(
+    xml.contains("<title><tag close=\" \"> 1</tag>Intro</title>"),
+    "{xml}"
+  );
+  assert!(xml.contains("class=\"ltx_leqno\""), "{xml}");
 }

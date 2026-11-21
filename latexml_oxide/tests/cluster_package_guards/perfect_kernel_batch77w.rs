@@ -33,8 +33,13 @@ fn natbib_copy_is_natbib() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
     log.contains(
-      "Info:fallback:natbib_vw The paper's natbib_vw.sty declares itself natbib: loading the natbib.sty binding, then \
-       the copy as its stand-in's"
+      "Info:fallback:natbib_vw The paper's natbib_vw.sty declares itself natbib: loading the natbib.sty binding\n"
+    ),
+    "{log}"
+  );
+  assert!(
+    log.contains(
+      "Info:provide:natbib_vw.sty The paper's natbib_vw.sty is read after the natbib.sty binding, as its stand-in's copy"
     ),
     "{log}"
   );

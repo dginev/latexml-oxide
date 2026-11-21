@@ -1262,13 +1262,16 @@ fn input_definitions_impl(
       let route = match &provides {
         Some((binding, declared)) => {
           let fallback = s!("{binding}.{as_type}");
+          // (where the binding reads its file raw, the copy is read there: `routed_copy_request`'s Info)
+          let action = if lookup_bool(&s!("{fallback}_loaded")) {
+            s!("the {fallback} binding is loaded already, not loaded again; the copy is read")
+          } else {
+            s!("loading the {fallback} binding")
+          };
           Info!(
             "fallback",
             name,
-            s!(
-              "The paper's {filename} declares itself {declared}: loading the {fallback} binding, then the copy as \
-               its stand-in's"
-            )
+            s!("The paper's {filename} declares itself {declared}: {action}")
           );
           Some(fallback)
         },
@@ -2603,6 +2606,13 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
   if routed && ext == "cls" && is_latex_base_class(binding) {
     return read_standard_class_derivative(&file, &path, in_expl3);
   }
+  if routed {
+    Info!(
+      "provide",
+      &file,
+      s!("The paper's {file} is read after the {binding}.{ext} binding, as its stand-in's copy")
+    );
+  }
   let id = new_copy_provides_record(
     file.rsplit(['/', '\\']).next().unwrap_or(&file),
     file_stem(binding),
@@ -2763,11 +2773,11 @@ fn shipped_with_paper(path: &str) -> bool {
 /// file); and the name has a binding of that kind — the registry's, matched as a request is without regard to case,
 /// or the one its versioned fallback reaches (`aistats2023` → aistats, [`find_file_fallback`]). Only the paper's own
 /// files are read ([`shipped_with_paper`]): a TeX Live file is its own name's. Returns the binding's name and the
-/// declared one. In TeX the copy is read whole, redefining everything the package defines; the binding's markup
-/// for it is the ruled answer, the copy read after it as the stand-in's copy (`read_stand_in_copy`), its own
-/// commands added — or, where the binding reads its own file raw, read there instead ([`routed_copy_request`]), and read
-/// even when the binding is loaded already (OXIDIZED_DESIGN_DIVERGENCES #1118). One rule for what were per-name stand-ins (72a's renamed natbib copies, 77o's renamed aistats
-/// styles, 68v's revtex4 copies).
+/// declared one. In TeX the copy is read whole, redefining everything the package defines; the binding's markup for it
+/// is the ruled answer, the copy read after it as the stand-in's copy (`read_stand_in_copy`), its own commands added —
+/// or, where the binding reads its own file raw, read there instead ([`routed_copy_request`]), and read even when the
+/// binding is loaded already (OXIDIZED_DESIGN_DIVERGENCES #1118). One rule for what were per-name stand-ins (72a's
+/// renamed natbib copies, 77o's renamed aistats styles, 68v's revtex4 copies).
 fn provided_binding(name: &str, ext: &str) -> Option<(String, String)> {
   if !matches!(ext, "sty" | "cls") {
     return None;
@@ -2870,22 +2880,79 @@ fn routed_copy_request(file: &str, ext: Option<&str>) -> Option<String> {
     .filter(|path| shipped_with_paper(path))
   };
   let copy = shipped(route_ext)?;
+  let text = source_text(&copy)?;
   if ext == route_ext {
+    // (not a wrapper, which loads the file it declares itself and is read after it, as TeX reads it: a
+    // `\ProvidesPackage{tikz-cd}\RequirePackage{tikz-cd}` hit the binding still loading, TeX Live's file never read;
+    // nor an author's own file that shares nothing with the file it names, whose request for it TeX still reads)
+    let file = s!("{}.{ext}", file_stem(file));
+    if loads_file(&text, binding) || !reads_as_the_file(&text, &file) {
+      return None;
+    }
+    Info!(
+      "provide",
+      &request,
+      s!("The paper's {request}.{ext} is read as the {target} binding's {file}")
+    );
     return Some(request);
   }
   // (a file of the binding's other type is the copy's own of that name, where the copy loads one: imsart.cls:149
   // `\RequirePackage{imsart}`, imsart_cls.rs's imsart.sty, is 2405.11676's imsart-altered.cls:149
   // `\RequirePackage{imsart-altered}`)
   shipped(ext)?;
-  let load = Regex::new(&s!(
-    r"\\(?:RequirePackage|usepackage)\s*(?:\[[^\]]*\])?\s*\{{(?:[^}}]*,)?\s*{}\s*[,}}]",
-    regex::escape(file_stem(&request))
-  ))
-  .ok()?;
-  let text = source_text(&copy)?;
-  source_code_lines(&text)
-    .any(|code| load.is_match(code))
-    .then_some(request)
+  loads_file(&text, file_stem(&request)).then_some(request)
+}
+
+/// Does the TeX source `text` load the package or class `name` — a `\RequirePackage`, `\usepackage` or `\LoadClass` of
+/// it, outside a comment, in any case?
+fn loads_file(text: &str, name: &str) -> bool {
+  let Ok(load) = Regex::new(&s!(
+    r"(?i)\\(?:RequirePackage|usepackage|LoadClass)\s*(?:\[[^\]]*\])?\s*\{{(?:[^}}]*,)?\s*{}\s*[,}}]",
+    regex::escape(name)
+  )) else {
+    return false;
+  };
+  source_code_lines(text).any(|code| load.is_match(code))
+}
+
+/// Does a paper's copy (its source `text`) read as `file`, the file its binding reads raw (the paper's own, else TeX
+/// Live's)? What each defines ([`defined_names`]) and loads (`\RequirePackage`, `\usepackage`, `\LoadClass`, `\input`,
+/// `\usetikzlibrary`) share a quarter of the smaller of the two: a cut-down copy (the class's first-load test and its
+/// packages) and a file that is a wrapper (tikz-cd.sty: tikz, `\usetikzlibrary{cd}`) both pass; an author's file that
+/// only misdeclares itself (defining `\mytcd`) does not. With no such file, the copy is the only one there is.
+fn reads_as_the_file(text: &str, file: &str) -> bool {
+  let Some(original) = find_file(
+    file,
+    Some(FindFileOptions {
+      forbid_ltxml: true,
+      ..FindFileOptions::default()
+    }),
+  )
+  .and_then(|path| source_text(&path)) else {
+    return true;
+  };
+  static LOADED: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+      r"\\(?:RequirePackage|usepackage|LoadClass|usetikzlibrary|input)\s*(?:\[[^\]]*\])?\s*\{?\s*([^}\s\\]+)",
+    )
+    .unwrap()
+  });
+  let footprint = |text: &str| {
+    let mut items = defined_names(text);
+    for code in source_code_lines(text) {
+      for cap in LOADED.captures_iter(code) {
+        items.extend(
+          cap[1]
+            .split(',')
+            .map(|name| file_stem(name.trim()).to_string()),
+        );
+      }
+    }
+    items
+  };
+  let (copy, original) = (footprint(text), footprint(&original));
+  let shared = copy.intersection(&original).count();
+  shared > 0 && shared * 4 >= copy.len().min(original.len())
 }
 
 /// One class slot (OXIDIZED_DESIGN_DIVERGENCES #736): does the base class a stand-in class binding loaded stand for the
@@ -3040,6 +3107,40 @@ fn file_declarations(text: &str) -> Vec<(&'static str, String)> {
   declarations
 }
 
+/// The names the TeX source `text` defines, read as text: a `\def`, `\let`, `\newcommand`, `\newif`, register or
+/// environment, theorem or counter declaration of a name of letters ([`copy_is_the_stood_in_file`]).
+fn defined_names(text: &str) -> HashSet<String> {
+  static DEFINED: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+      r"\\(?:[egx]?def|let|(?:re|provide)?newcommand\*?|DeclareRobustCommand\*?|(?:New|Renew|Provide|Declare)DocumentCommand|newif|chardef|mathchardef|newlength|newcount|newdimen|newskip|newtoks|newbox)\s*\{?\s*(\\[A-Za-z]+)(?:[^A-Za-z@]|$)|\\(?:(?:re)?newenvironment\*?|(?:New|Renew|Provide|Declare)DocumentEnvironment)\s*\{([A-Za-z]+)\}|\\newtheorem\*?\s*\{([A-Za-z]+)\}|\\newcounter\s*\{([A-Za-z]+)\}",
+    )
+    .unwrap()
+  });
+  let mut defined: HashSet<String> = HashSet::default();
+  for code in source_code_lines(text) {
+    for cap in DEFINED.captures_iter(code) {
+      // (the names a declaration makes: `\newif\ifX` also `\Xtrue`/`\Xfalse`, an environment `\X` and `\endX`, a
+      // counter `\theX`)
+      if let Some(name) = cap.get(1) {
+        let name = name.as_str();
+        if let Some(flag) = name.strip_prefix("\\if")
+          && code[cap.get(0).map_or(0, |m| m.start())..].starts_with("\\newif")
+        {
+          defined.insert(s!("\\{flag}true"));
+          defined.insert(s!("\\{flag}false"));
+        }
+        defined.insert(name.to_string());
+      } else if let Some(env) = cap.get(2).or_else(|| cap.get(3)) {
+        defined.insert(s!("\\{}", env.as_str()));
+        defined.insert(s!("\\end{}", env.as_str()));
+      } else if let Some(counter) = cap.get(4) {
+        defined.insert(s!("\\the{}", counter.as_str()));
+      }
+    }
+  }
+  defined
+}
+
 /// Is the paper's file at `path`, of the name a stand-in binding answers (`file`), the file the binding `binding`
 /// stands in for (OXIDIZED_DESIGN_DIVERGENCES #731 rule 0)? Two tests, in order:
 /// 1. **Its declaration.** A `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` (or the `\ProvidesExpl…` form) naming
@@ -3065,18 +3166,10 @@ fn file_declarations(text: &str) -> Vec<(&'static str, String)> {
 /// that only shares the name is not read either: hep-ph9609379's diagrams.sty (fifteen `\special` PostScript macros,
 /// one of them `\diagram`), 2411.02780's equations.sty (`\ProvidesPackage{annotate-equations}`). Logged at Info.
 fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
-  static DEFINED: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-      r"\\(?:[egx]?def|let|(?:re|provide)?newcommand\*?|DeclareRobustCommand\*?|(?:New|Renew|Provide|Declare)DocumentCommand|newif|chardef|mathchardef|newlength|newcount|newdimen|newskip|newtoks|newbox)\s*\{?\s*(\\[A-Za-z]+)(?:[^A-Za-z@]|$)|\\(?:(?:re)?newenvironment\*?|(?:New|Renew|Provide|Declare)DocumentEnvironment)\s*\{([A-Za-z]+)\}|\\newtheorem\*?\s*\{([A-Za-z]+)\}|\\newcounter\s*\{([A-Za-z]+)\}",
-    )
-    .unwrap()
-  });
   let Some(text) = source_text(path) else {
     return false;
   };
   let stem = |name: &str| file_stem(name).to_ascii_lowercase();
-  // (a line ends at CR or LF, as in TeX: 2402.17342's sn-jnl.cls has CR-only ends)
-  let lines = || source_code_lines(&text);
   let declared = file_declaration(&text).map(|(_, name)| stem(&name));
   let built_on = stand_in_built_on();
   // (the binding that answered, not the name asked for: a fallback answers a renamed file too — 1705.03989's aaart.cls,
@@ -3095,28 +3188,7 @@ fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
     return true;
   }
   let public = stand_in_public_names();
-  let mut defined: HashSet<String> = HashSet::default();
-  for code in lines() {
-    for cap in DEFINED.captures_iter(code) {
-      // (the names a declaration makes: `\newif\ifX` also `\Xtrue`/`\Xfalse`, an environment `\X` and `\endX`, a
-      // counter `\theX`)
-      if let Some(name) = cap.get(1) {
-        let name = name.as_str();
-        if let Some(flag) = name.strip_prefix("\\if")
-          && code[cap.get(0).map_or(0, |m| m.start())..].starts_with("\\newif")
-        {
-          defined.insert(s!("\\{flag}true"));
-          defined.insert(s!("\\{flag}false"));
-        }
-        defined.insert(name.to_string());
-      } else if let Some(env) = cap.get(2).or_else(|| cap.get(3)) {
-        defined.insert(s!("\\{}", env.as_str()));
-        defined.insert(s!("\\end{}", env.as_str()));
-      } else if let Some(counter) = cap.get(4) {
-        defined.insert(s!("\\the{}", counter.as_str()));
-      }
-    }
-  }
+  let defined = defined_names(&text);
   let shared = public.iter().filter(|name| defined.contains(*name)).count();
   let the_file = !public.is_empty() && shared * 4 >= public.len();
   Info!(

@@ -23581,12 +23581,21 @@ pgfplots_sty.rs (2105.12769). Read after TeX Live's file, the copy's first-load 
 builds: fsmfart.cls:365-372's `\@tempa` gobbled an `\ifx` and left `\else`/`\fi` unmatched, tikzcd.sty:413 "Arrow tip
 `cm to' was already defined" (26 Errors). A read of the binding's other type is the copy's own file of that type where
 the copy loads it: imsart_cls.rs's imsart.sty is 2405.11676's imsart-altered.sty (imsart-altered.cls:149
-`\RequirePackage{imsart-altered}`), not the unaltered imsart.sty beside it, whose natbib load made the document's
-`\RequirePackage[numbers]{natbib}` an option clash. A copy routed to a binding loaded already (or to a file of that
+`\RequirePackage{imsart-altered}`), not the unaltered imsart.sty beside it: both were read, each with the same natbib
+load (imsart.sty:4689, imsart-altered.sty:4689), and the document's `\RequirePackage[numbers]{natbib}` was an option
+clash. A shipped file is not read as the file when it loads the file it declares itself (a wrapper,
+`\ProvidesPackage{tikz-cd}\RequirePackage{tikz-cd}`, `\ProvidesClass{smfart}\LoadClass{smfart}`: its load hit the
+binding still loading, TeX Live's file never read), nor when it shares nothing with that file (`reads_as_the_file`: what
+each defines and loads share a quarter of the smaller of the two; an author's `\ProvidesPackage{tikz-cd}` file defining
+`\mytcd` records `\ver@` under its own name in TeX, and the document's `\usepackage{tikz-cd}` reads the real file):
+the binding reads its file and the shipped file is read after it, as the stand-in's copy. A copy routed to a binding loaded already (or to a file of that
 name read raw) is read too, as TeX reads the file whole: 2304.14243's packages/pictures.sty `\ProvidesPackage
 {packages/graphics}` after graphicx lost its commands silently (34 Errors). A binding that does not read its file raw
-(neurips, aistats, natbib) keeps the provides-mode read after it. Perl reads none of these copies (`FindFile` prefers
-the `.ltxml`, Package.pm:2113-2133).
+(neurips, aistats, natbib) keeps the provides-mode read after it. Perl reads none of these copies: without
+`--includestyles` it reads no raw `.sty`/`.cls` (`RequirePackage`/`LoadClass` set `notex` unless `INCLUDE_STYLES`/
+`INCLUDE_CLASSES`, Package.pm:2688-2689, :2704-2705).
 **Guard**: `perfect_kernel_batchregfixq::{renamed_copy_is_read_once_as_its_bindings_file,
-copy_routed_to_a_loaded_binding_is_read, renamed_class_reads_its_own_package}` (repros `stand-in-copies/provides_route/
-{smfart_renamed_copy_read_once,copy_of_a_loaded_binding_is_read,renamed_class_reads_its_own_package}.tex`).
+copy_routed_to_a_loaded_binding_is_read, renamed_class_reads_its_own_package, wrapper_is_read_after_the_file_it_loads,
+class_wrapper_is_read_after_the_class, misdeclared_file_is_not_read_as_the_file}` (repros `stand-in-copies/provides_route/{smfart_renamed_copy_read_once,
+copy_of_a_loaded_binding_is_read,renamed_class_reads_its_own_package,wrapper_loads_the_file_it_declares,
+class_wrapper_loads_the_class,misdeclared_file_is_not_the_file}.tex`).

@@ -6,10 +6,10 @@
 % oracle:  pdflatex 0 errors; "IMS-COPY-PACKAGE"
 % engines: rust INT6A = 1 error (`\imscopymacro` undefined): the binding read imsart.sty and the copy's package,
 %          routed to the imsart.sty binding as read already, was dropped
-% expect:  0 errors, 0 warnings; the paragraph "IMS-COPY-PACKAGE"; imsart.sty not read
+% expect:  0 errors, 0 warnings; the paragraph "IMS-COPY-PACKAGE"; imsart.sty not read (no "UNALTERED-READ")
 % status:  RED (INT6A) -> GREEN (REGFIXQ)
 % preload: ar5iv.sty
 \documentclass{imscopy}
 \begin{document}
-\imscopymacro
+\imscopymacro\ifdefined\imsunalteredmacro{} UNALTERED-READ\fi
 \end{document}
