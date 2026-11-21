@@ -3,7 +3,7 @@
 %   inside `\maketitle`, which the binding declares as `\lx@title@inst`): the note's printed `*` is its mark, not an
 %   undefined `\inst` (`\lx@frontmatter@plainsups`, which every note body runs).
 % witness: 1009.3152, 1907.04695
-% oracle:  pdflatex (with epl2.cls v1.1 from 1907.04695) 0 errors: "Ann Able1,∗ and Bob Baker2", "∗ Corresponding author: ann@a.fr"
+% oracle:  pdflatex (with epl2.cls 2006/05/31 v0.1 from 1907.04695) 0 errors: "Ann Able1,∗ and Bob Baker2", "∗ Corresponding author: ann@a.fr"
 % engines: INT6A: 1 Error (`undefined:\inst`), the note "<ERROR>\inst</ERROR>*Corresponding author: ann@a.fr"
 % expect:  0 Errors, 0 Warnings; Ann Able with "Univ A, Paris" and the correspondence note (mark *) "Corresponding author:
 %   ann@a.fr"; Bob Baker with "Univ B, Lyon"

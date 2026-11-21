@@ -1,0 +1,20 @@
+% witness: REGFIXS review should-fix 1 (synthetic) — an unbraced `\newcommand\affil[1]\relax` in the title code is a
+%          definition reading one argument, not a `\let` (title_code.rs `reads_arguments`)
+% oracle:  pdflatex 0 errors; the title block prints "Ann Bee   Bob Cee" (`\affil{Univ X}` gobbled by `\relax`'s
+%          argument read)
+% engines: rust REGFIXS (shape test "no braced body" = a `\let`): W=2 ("2 words … missing: BeeUniv X", "1 words … more
+%          often: Bee"), XML as base; rust INT6A W=0
+% expect:  0 errors, 0 warnings; the two creators "Ann Bee", "Bob Cee"
+% status:  RED (REGFIXS) -> GREEN (int/regfix6: a `\let` has only spaces and one `=` between its definee and target)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\newcommand\affil[1]\relax
+  \begin{center}{\LARGE \@title \par}\vskip 1em
+  {\large \begin{tabular}[t]{c}\@author\end{tabular}\par}\end{center}}
+\makeatother
+\title{T}
+\author{Ann Bee\affil{Univ X} \and Bob Cee}
+\begin{document}
+\maketitle
+Text kept.
+\end{document}

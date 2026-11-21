@@ -44,3 +44,27 @@ fn an_epl_institute_legend_note_prints_its_mark() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, Lyon</contact>\n  </creator>",
   ]);
 }
+
+/// An unbraced `\newcommand\affil[1]\relax` in the title code reads one argument (`[1]`), as pdflatex digests it: the
+/// rehearsal holds it defined, so `\affil{Univ X}` is no name text (red, REGFIXS: taken for a `\let` by "no braced
+/// body", 2 content-check Warnings). Distinct: `title_code::reads_arguments`'s `\let` shape (spaces and one `=` between
+/// the definee and the target). Synthetic (the REGFIXS review).
+#[test]
+fn an_unbraced_newcommand_count_is_no_let() {
+  let (log, xml) = convert(
+    repro!("title_code_newcommand_count_without_braces_reads"),
+    false,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let creators = creator_elements(&xml);
+  assert_eq!(creators.len(), 2, "{xml}");
+  assert!(
+    creators[0].contains("<personname>Ann Bee</personname>"),
+    "{xml}"
+  );
+  assert!(
+    creators[1].contains("<personname>Bob Cee</personname>"),
+    "{xml}"
+  );
+  assert!(!xml.contains("Univ X"), "{xml}");
+}

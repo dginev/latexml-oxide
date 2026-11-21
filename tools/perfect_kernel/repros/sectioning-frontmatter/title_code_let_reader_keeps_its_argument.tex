@@ -2,7 +2,7 @@
 %   (`title_code::reads_arguments`): rims02e.sty:209's `\let\mail\thanks` in `\@maketitle` is in force in the observer's
 %   rehearsal too, so `\mail{…}` is the name's note there as in its digestion, not an undefined command the piece before
 %   it took, cut from its argument (then read by the author markup's cleanup tail `\let\mail\@undefined`).
-%   OXIDIZED_DESIGN_DIVERGENCES #983, #941
+%   OXIDIZED_DESIGN_DIVERGENCES #1126 (the `\let`), #983, #941
 % witness: math0408269 (rims02e.sty `\affil` + `\mail`)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Bee / Kobe University∗", footnote "∗ Supported by X."
 % engines: INT6A: 1 Error (`undefined:\@undefined`), "Supported by X." a second creator; the same `\author` with the

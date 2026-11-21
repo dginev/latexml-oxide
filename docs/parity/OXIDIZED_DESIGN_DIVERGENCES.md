@@ -23550,7 +23550,10 @@ took `\mail` without its argument, which was lexed as an e-mail (or, as text, a 
 affiliation holding it); with the line break written `\\ ` instead of `\affil`, the note's text was lost with 2
 Warnings. Now `\mail{…}` is the name's thanks note, as pdflatex's footnote. Not covered: a `\let` to a parameterless macro
 that reads through its expansion (`\let\mail\footnote`, the kernel's `\footnote` → `\lx@current@footnote` →
-`\lx@note{footnote}`) is still held undefined, unchanged. **Guard**:
+`\lx@note{footnote}`) is still held undefined, unchanged. A `\let` is told from an unbraced `\newcommand\x[1]\y` (a
+definition, its count read) by what stands between the definee and the target: spaces and at most one `=`. **Guards**:
+`perfect_kernel_batchregfixs::an_unbraced_newcommand_count_is_no_let` (repro
+`sectioning-frontmatter/title_code_newcommand_count_without_braces_reads.tex`),
 `perfect_kernel_batchregfixs::a_title_code_let_to_a_reader_keeps_its_argument` (repro
 `sectioning-frontmatter/title_code_let_reader_keeps_its_argument.tex`).
 

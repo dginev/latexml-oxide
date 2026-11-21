@@ -1871,7 +1871,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // structure of the cut, decided by no spelling; 2605.00634, 2605.27539, 2606.14188, 2606.27043, 2605.07722; SBX2F,
   // 479 -> 470: the piece made whole is `content::Field::whole`, its environments the digestion's frames, one reopen
   // helper for both cutters, `notes::reopened`)
-  ("classify", 470),
+  // (int/regfix6, 470 -> 471: `title_code::reads_arguments` tells a `\let` from an unbraced `\newcommand\x[1]\y` by the
+  // tokens between definee and target — spaces by catcode, at most one other — no spelling; REGFIXS review S1)
+  ("classify", 471),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
   // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
   // their last caller, IEEEtran's `name_memberships`; P6f2, 109 -> 107: `line_parts`' parenthesis span, the split's rule
