@@ -3,6 +3,7 @@
 //! trampolines and per-options-struct scalar mappers.
 
 use latexml_core::{
+  binding::content::declare_option_cs,
   pin,
   state::{install_definition, lookup_definition_stored},
 };
@@ -1384,35 +1385,27 @@ pub(super) fn math_options_from_map(
 
 /// Install a `DeclareOption` registration. Mirrors the `DeclareOption!` macro
 /// (`setup_binding_language.rs`): record the option name in `@declaredoptions`
-/// and define a `\ds@<opt>` primitive whose body runs when the option fires.
+/// and define a `\ds@<opt>` primitive whose body runs when the option fires;
+/// no body (`DeclareOption("opt", ())`, Perl's undef `$code`) defines it as a no-op.
 pub(super) fn wire_option(
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
   opt: &str,
-  body: FnPtr,
+  body: Option<FnPtr>,
 ) -> Result<()> {
-  latexml_core::state::push_value("@declaredoptions", opt.to_string())?;
-  // Perl Package.pm:2423-2426 `DefPrimitiveI('\ds@' . $option, undef, $code)`: the name whole, never a prototype, so
-  // `some-option` is not read as `\ds@some` with a parameter `-option` (#944).
-  let cs = latexml_core::T_CS!(format!("\\ds@{opt}"));
-  wire_primitive_i(
-    engine,
-    ast,
-    cs,
-    None,
-    Some(body),
-    PrimitiveOptions::default(),
-  )
+  // Perl Package.pm:2421-2426 `DefPrimitiveI('\ds@' . $option, undef, $code)`: the name whole, never a prototype, so
+  // `some-option` is not read as `\ds@some` with a parameter `-option` (#944); an empty name is `\default@ds`.
+  let cs = declare_option_cs(opt)?;
+  wire_primitive_i(engine, ast, cs, None, body, PrimitiveOptions::default())
 }
 
 /// `DeclareOption('opt', '\tex...')` — string-body form. Mirrors the
 /// `DeclareOption!($option, $tex:literal)` macro arm: push the name onto
-/// `@declaredoptions` and define `\ds@<opt>` as a plain token-expansion macro
-/// (NOT a Rhai closure).
+/// `@declaredoptions` and define `\ds@<opt>` (`\default@ds` for an empty name)
+/// as a plain token-expansion macro (NOT a Rhai closure).
 pub(super) fn wire_option_string(opt: &str, body: &str) -> Result<()> {
-  latexml_core::state::push_value("@declaredoptions", opt.to_string())?;
   def_macro(
-    latexml_core::T_CS!(format!("\\ds@{opt}")),
+    declare_option_cs(opt)?,
     None,
     ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(
       body.to_string(),
@@ -1420,22 +1413,6 @@ pub(super) fn wire_option_string(opt: &str, body: &str) -> Result<()> {
     None,
   )?;
   Ok(())
-}
-
-/// `DeclareOption(sub {...})` with no option name — the default (Perl `undef`)
-/// option handler. Mirrors the `DeclareOption!(None, $body:block)` macro arm:
-/// define `\default@ds` as a primitive whose body trampolines into Rhai. NOT
-/// pushed onto `@declaredoptions` (it is the catch-all, not a declared option).
-pub(super) fn wire_option_default(engine: &Rc<Engine>, ast: &Rc<AST>, body: FnPtr) -> Result<()> {
-  let cs = latexml_core::T_CS!("\\default@ds");
-  wire_primitive_i(
-    engine,
-    ast,
-    cs,
-    None,
-    Some(body),
-    PrimitiveOptions::default(),
-  )
 }
 
 /// Map a Rhai option bag onto an `InputDefinitionOptions` (the `InputDefinitions`

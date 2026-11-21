@@ -817,11 +817,12 @@ fn input_definitions_impl(
     return Ok(());
   }
 
-  // The per-file load note is emitted ONLY when a load truly happens, so
+  // The per-file load note is emitted ONLY when a load is attempted, so
   // CorTeX's `loaded_file` extraction (which parses the log) counts genuine
-  // loads and nothing else:
-  //   * a NATIVE BINDING load announces `(Loading <name>…)` at its success
-  //     point below (Perl loadLTXML "(Loading <path>…)" analog);
+  // loads and nothing else — a binding whose load then fails (a `.rhai` with a
+  // syntax error) keeps its note, as Perl's `Binding->new` prints before `do`:
+  //   * a NATIVE BINDING load announces `(Loading <name>…` around its load
+  //     (`_load_binding`; Perl loadLTXML "(Loading <path>…)" analog);
   //   * a RAW .sty/.cls/.def load is announced by its Mouth's
   //     `(Processing definitions <path>…)` (fires only on a real read);
   //   * the early-return paths — already-loaded skip and missing-file — reach
@@ -1070,34 +1071,10 @@ fn input_definitions_impl(
     );
   }
   let mut is_found_raw = false;
-  // Retain the "a binding loaded" fact for the later hook-firing check (`loaded`
-  // is consumed by the announce branch just below).
+  // Retain the "a binding loaded" fact for the later hook-firing check.
   let is_binding = loaded.is_some();
-  if let Some(binding_source) = loaded {
-    // A native binding was truly loaded: announce it (Perl loadLTXML
-    // "(Loading <path>…)" analog) so CorTeX's `loaded_file` log-parser counts
-    // it. Self-contained begin+end note (timing is currently disabled).
-    // A runtime `.rhai` file binding threads its resolved on-disk path through
-    // the dispatch result (`BindingSource`, converter.rs `rhai_dispatch`), so it
-    // is announced by that real path — more useful, and closer to Perl, whose
-    // note names the actual binding file (#560). A compiled-in binding carries
-    // no source, so it is announced under its module-proxy name — `tcolorbox.sty`
-    // → `tcolorbox_sty.rs`, `aa.cls` → `aa_cls.rs` — mirroring Perl's distinct
-    // `.ltxml` path. This keeps the entry distinguishable from the raw twin's
-    // "(Processing definitions <path>…)" when a binding raw-loads its same-named
-    // file, so cortex's loaded_file stats record two artifacts as two entries
-    // instead of double-counting one file (user, 2026-07-04).
-    let binding_name = if let Some(path) = binding_source {
-      path
-    } else if let Some(stem) = filename.strip_suffix(".sty") {
-      s!("{stem}_sty.rs")
-    } else if let Some(stem) = filename.strip_suffix(".cls") {
-      s!("{stem}_cls.rs")
-    } else {
-      filename.clone()
-    };
-    note_begin(&s!("Loading {binding_name}"));
-    note_end("");
+  if is_binding {
+    // (its `(Loading …` note was logged around the load: `_load_binding`)
     // We found and loaded a binding successfully, mark it as such.
     // Perl Package.pm::loadLTXML L2315-2316 sets TWO flags: `$request`_loaded
     // (e.g. `color.sty_loaded`) AND `$ltxname`_loaded (`color.sty.ltxml_loaded`),
@@ -1666,6 +1643,27 @@ pub fn load_binding(file: &str) -> Result<Option<BindingSource>> {
 pub fn load_external_binding(file: &str) -> Result<Option<BindingSource>> {
   _load_binding(false, file, false)
 }
+/// The binding a `(Loading …` note names. A runtime `.rhai` file binding is named by its on-disk path (`source`,
+/// threaded through the dispatch result: converter.rs `rhai_dispatch`, #560), as Perl names the `.ltxml` file. A
+/// compiled-in one has no file, so it is named by its module proxy — `tcolorbox.sty` → `tcolorbox_sty.rs`, `aa.cls` →
+/// `aa_cls.rs` — which keeps it apart from the raw twin's `(Processing definitions <path>…` when a binding raw-loads its
+/// same-named file, so cortex's `loaded_file` stats count two artifacts, not one file twice (user, 2026-07-04).
+fn binding_note_name(request: &str, source: Option<&String>) -> String {
+  if let Some(path) = source {
+    path.clone()
+  } else if let Some(stem) = request.strip_suffix(".sty") {
+    s!("{stem}_sty.rs")
+  } else if let Some(stem) = request.strip_suffix(".cls") {
+    s!("{stem}_cls.rs")
+  } else {
+    request.to_string()
+  }
+}
+
+/// Name the binding now loading by the file a dispatcher found (a runtime `.rhai` binding), before it runs: its
+/// `(Loading …` note names that path even when the binding logs inside it (#560, #945).
+pub fn name_loading_binding(path: &str) { rename_deferred_note(&s!("Loading {path}")); }
+
 // in the spirit of Perl's Package::loadLTXML
 fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<Option<BindingSource>> {
   // Perl loadLTXML L2311-2313: skip if already loaded, unless reloadable
@@ -1752,7 +1750,14 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<Opti
       }
       let _in_progress_guard = InProgressGuard(request_key);
       let _request_guard = BindingRequestGuard::enter(request);
+      // Perl loadLTXML's `(Loading <path>...` opens before the binding runs (Core/Mouth/Binding.pm:31), so what it
+      // loads nests inside; the dispatcher both finds and runs the binding, so the note waits to know (#945).
+      let note = DeferredNote::begin(&s!("Loading {}", binding_note_name(request, None)));
       let result_opt = dispatcher(request);
+      if let Some(Ok(Some(source))) = &result_opt {
+        rename_deferred_note(&s!("Loading {}", binding_note_name(request, Some(source))));
+      }
+      note.end(result_opt.is_some());
       match result_opt {
         Some(result) => {
           // Here and only here we are certain we have binding support.
@@ -3412,6 +3417,16 @@ fn unprocessed_options(name: &str, ext: &str) -> Result<()> {
     Tokens::default()
   };
   def_macro(T_CS!("\\@curroptions"), None, options, None)
+}
+
+/// The control sequence a binding's `DeclareOption` defines, its name recorded as declared: Perl Package.pm:2421-2423,
+/// `\ds@<option>` whole, and an empty name (Perl's false `$option`, as undef) is the default handler `\default@ds`.
+pub fn declare_option_cs(option: &str) -> Result<Token> {
+  if option.is_empty() {
+    return Ok(T_CS!("\\default@ds"));
+  }
+  push_value("@declaredoptions", arena::pin(option))?;
+  Ok(T_CS!(s!("\\ds@{option}")))
 }
 
 /// Perl Package.pm L2430-2465: ProcessOptions / ProcessOptions*

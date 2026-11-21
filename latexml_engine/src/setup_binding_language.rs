@@ -1966,27 +1966,25 @@ macro_rules! DeclareOption {
       PrimitiveBody::Closure(Rc::new(move |_args| $body.into_digested_result()));
     def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
   };
+  // Perl Package.pm:2421-2423: `\ds@<option>` named whole, an empty name the default `\default@ds`.
   ($option:expr_2021, $tex:literal) => {
     let tokenized;
     compile_tokenize_internal!(tokenized, $tex);
-    state::push_value("@declaredoptions", $option)?;
-    let cs = s!("\\ds@{}", $option);
+    let cs = declare_option_cs(AsRef::<str>::as_ref(&$option))?;
     // literal case, create a macro
-    def_macro(T_CS!(cs), None, tokenized, None)?;
+    def_macro(cs, None, tokenized, None)?;
   };
   ($option:expr_2021, $tokenized:ident) => {
-    state::push_value("@declaredoptions", $option.to_string())?;
-    let cs = s!("\\ds@{}", $option);
+    let cs = declare_option_cs(AsRef::<str>::as_ref(&$option))?;
     // literal case, create a macro
-    def_macro(T_CS!(cs), None, $tokenized, None)?;
+    def_macro(cs, None, $tokenized, None)?;
   };
   ($option:expr_2021, $(sub)? $body:block) => {
-    state::push_value("@declaredoptions", $option)?;
-    let cs = s!("\\ds@{}", $option);
+    let cs = declare_option_cs(AsRef::<str>::as_ref(&$option))?;
     // block case, create a primitive
     let code: PrimitiveBody =
       PrimitiveBody::Closure(Rc::new(move |_args| $body.into_digested_result()));
-    def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
+    def_primitive(cs, None, Some(code), PrimitiveOptions::default())?;
   };
 }
 

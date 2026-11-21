@@ -81,6 +81,9 @@ libxml = "0.3.24"
 # when neither backend exists. Guarantee is full on Unix; on Windows the anchor
 # also governs texmf.cnf discovery, so a degraded anchor initializes but does
 # not resolve.
+# 0.3.5: a distro libkpathsea (Debian's libkpathsea6) finds the texmf.cnf of the
+# install-tl tree it anchors on — `TEXMFCNF` gains that tree's web2c directories
+# when the compiled-in ones hold no texmf.cnf (issue #948).
 # 0.3.6: both backends read the TEXMF root variables (TEXMFROOT, TEXMFDIST, …) without
 # a trailing separator, which texmf.cnf's `$TEXMFROOT/texmf-dist` turned into a `//`
 # walk of the whole tree (#950); `trimmed_texmf_roots()` reports it for the log.

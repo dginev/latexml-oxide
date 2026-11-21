@@ -1126,7 +1126,10 @@ pub(crate) fn load() -> Result<()> {
       // {m}{n}`) read `c` in msbm, where it sets nothing, "Missing sub/superscript argument" (1810.09080;
       // OXIDIZED_DESIGN #747). The `\@fontswitch` path reads the font from the definition (sect13.rs
       // `math_alphabet_font`). Guard `perfect_kernel_batch73b::declared_math_alphabet_takes_one_argument`.
-      DefConstructor!(s!("{}{{}}", cs_tok.with_str(str::to_string)).as_str(), "#1",
+      // Defined on the token, as Perl's `DefPrimitiveI(T_CS($csname), …)`: a name re-read as a prototype split
+      // `\csname mathx-y\endcsname` into `\mathx` and a parameter type `-y` (Fatal:Parameter:Unknown).
+      let params = parse_parameters("{}", &cs_tok, true)?;
+      DefConstructor!(cs_tok, params, "#1",
         bounded => true, require_math => true, font => font);
     }
   });

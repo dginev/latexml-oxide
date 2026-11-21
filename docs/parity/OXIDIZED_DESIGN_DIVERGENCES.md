@@ -19,7 +19,7 @@
 > port-bug fix (→ SYNC "Rust Error Fixes"), a gap or residual list (→ SYNC row R), a math-parse divergence (→ `docs/math/OXIDIZED_DESIGN_MATH.md`).
 > A WORKAROUND entry must name the principled mechanism that would replace it and open a SYNC row for it. Entry shape: rule · Perl ref · TeX
 > source:line · sub-rules as bullets · witnesses · guards · upstream status; no batch history (git keeps it); about 60 lines at most. OD
-> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1052** (2026-11-15; #1051 is reserved; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
+> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1103** (2026-11-20; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -12885,7 +12885,11 @@ extra command the copy defines and the paper uses is undefined (aas_macros.sty:9
 (`fallback_request` for a versioned fallback: `icml2026` → icml2025.sty), found in the paper's source directory or a
 `{filecontents}` file, never TeX Live's — is read raw at the same point, origin `File` (content.rs `read_stand_in_copy`,
 from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.tex` route), before the load's
-`\AtEndOfClass`/`\AtEndOfPackage` code runs. The rules:
+`\AtEndOfClass`/`\AtEndOfPackage` code runs. A binding the user supplies in the search paths (a `.rhai` beside the
+document or under `--path`, the chain's first tier) is no stand-in: it is the file itself, as Perl's first `.ltxml`
+found is, and the stand-in's copy is not read after it (`stands_in_for_an_author_file` asks `state::local_binding_file`;
+a renamed copy that `\ProvidesClass` the same name is still read on the provides route, row R; #947, guards
+`cluster_cli::user_binding_precedence`). The rules:
 0. *Identity.* The copy is read only when it is the file the binding stands in for (content.rs
    `copy_is_the_stood_in_file`; 72a r3 rule): (a) its `\Provides(Expl)?(Class|Package|File)` names the binding that
    answered (the file itself when the binding is of its name; #744), or a file the binding is built on — one its own code loads (`state::note_stand_in_file`,
@@ -21183,7 +21187,10 @@ pdflatex does, where the kernel's display dropped it without a diagnostic (2008.
 1612.02580 `\tag{$*$}`; the ids of later unnumbered displays shift by one). Inside an `{equation}` a `\]` is now amsmath's
 `\end{equation*}`, which pdflatex rejects too ("\begin{equation} ended by \end{equation*}"), not the cheap intertext.
 Guard `perfect_kernel_batchclustfix3::amsmath_display_brackets` (repro
-`ams-internals/amsmath_display_brackets_pair_with_equation_star`).
+`ams-internals/amsmath_display_brackets_pair_with_equation_star`). A `$$ … $$` inside `\[ … \]` (or `{equation*}`) ends
+one unnumbered display and opens the next, as in TeX: the cheap intertext closes and reopens `{equation*}` when
+`\@currenvir` names it, not always `{equation}` (2606.13867; KNOWN_PERL_ERRORS #1295), guards
+`perfect_kernel_batchclustfix3::{amsmath_display_brackets_dollar_dollar, amsmath_equation_dollar_dollar_keeps_its_number}`.
 
 ### 1092. etoolbox's `\robustify` leaves a native binding alone, unless it is a TeX primitive (CLUSTFIX3)
 
@@ -21434,6 +21441,22 @@ bare_abstract_open_at_end_of_document_keeps_its_first_paragraph, abstract_only_d
 a_display_does_not_end_the_first_paragraph}` (repros `sectioning-frontmatter/abstract_*`),
 `perfect_kernel_batch74b::{braceless,braced}_abstract_unclosed_at_end_document_keeps_its_text` (an abstract-only
 document, whole).
+
+### 1102. Progress notes carry no elapsed times
+
+**Rule.** A progress note closes with ` )` alone, never with Perl's ` 0.42 sec)`, so a conversion's log is a function
+of its input and two runs of one document log the same bytes apart from the start banner's date. Per-phase wall times are the telemetry module's
+(`latexml_core/src/telemetry.rs`, `docs/performance/TELEMETRY.md`).
+
+**Perl.** `Common/Error.pm:450-456` (`ProgressSpindown` prints `sprintf(" %.2f sec)", $elapsed)` from the timer
+`ProgressSpinup` starts, L435ff). **TeX.** TeX's own log nests the files it reads without times (tex.web:10392
+`print_char("("); incr(open_parens); slow_print(name)`); our notes keep Perl's nesting (#945,
+`common/error.rs` `note_begin`/`note_end`, `DeferredNote`) and TeX's timeless form.
+
+**Why.** Logs are compared byte for byte: the sweep A/B byte-diffs of `.latexml.log` and
+`117_post_2gib_handoff.rs` (`assert_eq!(resident.log, staged.log)`). DG ruling 2026-11-20 (#945: omit, not port, not
+opt-in). **Guards** `117_post_2gib_handoff.rs`; the note structure: `cluster_cli`
+`log_note_nesting::binding_load_note_encloses_what_it_loads`.
 
 ## TeX-source fidelity family (TEXSRC)
 
