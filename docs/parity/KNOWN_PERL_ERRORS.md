@@ -22257,7 +22257,10 @@ argument's default read from the key-value list (`1=d`). Perl's xargs.sty.ltxml:
 pdflatex `Rdb Rfg Sie; Sij`; Perl and Rust before the fix `R1=db Rfg S2=ei; S2=ei[j]` (in a hyperref PDF string the
 inner command expanded with that text too). Separately, as for every xargs command (Perl and Rust): a later optional
 argument's peek skips spaces and does not put them back where no `[` follows, which `\xargs@ifnextchar` (xargs.sty:64-87)
-does — `\ry{i} \ry{i}[j]` prints `SieSij`, pdflatex `Sie Sij` (row R XARGSSPACE). Rust's binding makes `\cs␣` through `define_xargs`, as `\newcommandx`, with its
+does — `\ry{i} \ry{i}[j]` prints `SieSij`, pdflatex `Sie Sij`; fixed in Rust (ENCURL: xargs_sty.rs
+`XArgsReadOptional` for every optional of a command `\xargs@read` reads, guard
+`perfect_kernel_batchencurl::xargs_later_optional_puts_spaces_back`, repro macro-state/xargs_later_optional_keeps_spaces).
+Rust's binding makes `\cs␣` through `define_xargs`, as `\newcommandx`, with its
 internal `\\cs␣` (xargs_sty.rs). Repro sectioning-frontmatter/hyperref_pdfinfo_gobbles_testopt_and_let; guard
 `perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`.
 ## 1303. `\@testopt` does not skip spaces before its `[`
@@ -22352,3 +22355,47 @@ pdflatex URI `http://x.org/~y`; Perl href `http://x.org/ y` (Rust REGFIXN2 `http
 `\hyper@tilde` (base_parameter_types.rs; `\url`'s reader already lets it to an other `~`). Witnesses 2605.13298,
 2605.19761, 2605.28243, 2605.29955. Repro package-bindings/hyperref_href_babel_tilde_in_footnote; guard
 `perfect_kernel_batchregfixv::href_tilde_in_a_footnote_under_babel`.
+
+## 1307. `\inputencoding` leaves 0x1F and 0x7F unactivated
+
+inputenc.sty:82-85 `\@inpenc@loop`s `\^^A\^^H`, `\^^K\^^K`, `\^^N\^^_` and `\^^?\^^ff`: 1-8, 11, 14-31 and 127-255
+become `\@inpenc@undefined`, which the encoding's `.def` then redefines where it declares a character. Perl's
+`SetInputEncoding` (inputenc.sty.ltxml:48-51) loops over 0-8, 11, 14-30 and 128-255, so the unit separator and DEL
+keep their catcode and print as the font's glyph. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage[latin1]{inputenc}
+\begin{document}
+A^^_B^^?C
+\end{document}
+```
+
+pdflatex 2 Errors "Keyboard character used is undefined in inputencoding `latin1'", "ABC"; Perl and Rust before the fix
+"AØB¨C" (OT1's slots 0x1F and 0x7F; Perl errs on the format's active `^^_` under utf8). Fixed in Rust (ENCURL,
+inputenc_sty.rs `set_input_encoding`); 0 keeps Perl's activation, an Error where latex.ltx:22189's invalid `^^@` errs.
+Repro unicode-catcodes/inputenc_loop_covers_us_and_del; guard
+`perfect_kernel_batchencurl::inputenc_activates_unit_separator_and_delete`.
+
+## 1308. The URL readers do not set babel's safe actives
+
+hyperref's `\hyper@normalise` (hyperref.sty:4604-4628) runs `\Hy@safe@activestrue` (:4627, defined :362 as
+`\csname @safe@activestrue\endcsname`) before it reads the URL, so a babel shorthand tokenized active before the reader
+(a URL in a `\footnote`'s argument) expands to `\normal@char<c>`, its own character (babel.def:1394-1400). Perl's
+`HyperVerbatim` (Base_ParameterTypes.pool.ltxml:217-231) and `\url`'s reader set nothing of the kind. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage[spanish]{babel}
+\usepackage{hyperref}
+\begin{document}
+A\footnote{\href{http://x.org/a"o}{s}}
+\end{document}
+```
+
+pdflatex URI `http://x.org/a"o`; Perl 59 Errors on the repro below and href `http://x.org/a:b;c!d?e.#21o1o#1111#2#21`
+(ngerman: `http://x.org/ö\thinspace`); Rust INT7b 7 Errors and `…e.\setbox\z@\hbox8…`. Fixed in Rust (ENCURL): both
+readers call `url_safe_actives` (misc.rs), and `HyperVerbatim` stringifies an active character whose meaning is not
+expandable (babel-german's native `"` dispatcher, babel_support_sty.rs), as `\url`'s reader does. Repros
+package-bindings/hyperref_url_babel_{spanish_shorthands,safe_actives}_in_footnote; guards
+`perfect_kernel_batchencurl::{url_readers_set_babel_safe_actives, href_german_shorthand_in_a_footnote_is_its_character}`.

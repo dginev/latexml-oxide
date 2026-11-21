@@ -220,6 +220,29 @@ const PRECOMPUTED_UC_LC: [(char, u16, char, u16); 210] = [
   ('\u{00179}', 377, '\u{0017A}', 378),
 ];
 
+/// utf8.def:122-128 `\UTFviii@undefined@err`'s error for `ch`, named as TeX prints it (tex.web §49: `^^A` below
+/// U+0020, the character itself above U+007F).
+fn unicode_character_not_set_up(ch: char) -> Tokens {
+  let code = ch as u32;
+  let shown = if code < 0x20 {
+    s!("^^{}", char::from_u32(code + 0x40).unwrap())
+  } else {
+    ch.to_string()
+  };
+  let mut body = TokenizeInternal!(r"\@latex@error{Unicode character").unlist();
+  body.push(T_SPACE!());
+  // (other tokens: tokenized, `^^A` would be the character again, and the character its own meaning)
+  body.extend(shown.chars().map(|c| T_OTHER!(c.to_string())));
+  body.push(T_SPACE!());
+  body.extend(
+    TokenizeInternal!(TeXString::assembled(s!(
+      r"(U+{code:04X})\MessageBreak not set up for use with LaTeX}}{{You may provide a definition with\MessageBreak \noexpand\DeclareUnicodeCharacter}}"
+    )))
+    .unlist(),
+  );
+  Tokens::new(body)
+}
+
 const UPPER_HALF_PLANE_CODES: [u32; 155] = [
   0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
   30, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145,
@@ -241,6 +264,14 @@ LoadDefinitions!({
     for code in UPPER_HALF_PLANE_CODES {
       let thischar = char::from_u32(code).unwrap();
       AssignCatcode!(thischar, Catcode::OTHER);
+    }
+    // utf8.def:164-170 (C0: 1-8, 11, 14-31) and :122-128 (a sequence with no `\u8:` name: the C1 controls
+    // U+0080-U+009F) err "Unicode character … not set up for use with LaTeX", the character dropped; the format's
+    // `\UTFviii@undefined@err` gobbles until `\everyjob` (latex.ltx:22230-22237), which the engine does not run.
+    for code in (1..=8).chain([11]).chain(14..=31).chain(0x80..=0x9F) {
+      let ch = char::from_u32(code).unwrap();
+      AssignCatcode!(ch, Catcode::ACTIVE);
+      DefMacro!(T_ACTIVE!(ch), None, unicode_character_not_set_up(ch), protected => true);
     }
   }
   AssignValue!("INPUT_ENCODING" => Stored::None);

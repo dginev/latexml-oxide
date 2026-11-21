@@ -1150,6 +1150,16 @@ impl Mouth {
       {
         return Some((decoded, cc));
       }
+      // A C1 byte of a byte-decoded line under [utf8] is an invalid UTF-8 byte, its Latin-1 character as text (OD #481),
+      // not the code point U+0080-U+009F that utf8.def makes an error (utf8_def.rs).
+      if ('\u{80}'..='\u{9F}').contains(&ch)
+        && self.line_is_bytes
+        && cc == Catcode::ACTIVE
+        && !lookup_bool("PDFTEX_BYTE_MOUTH")
+        && lookup_string("lx@inputenc@encoding").starts_with("utf8")
+      {
+        return Some((ch, Catcode::OTHER));
+      }
       Some((ch, cc))
     } else {
       None

@@ -163,16 +163,20 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
     encoding
   )));
   def_macro(T_CS!("\\@inpenc@undefined"), None, undefined, None)?;
-  // Initially disable all odd & upper half-plane chars. Under the native mouth, utf8 (and utf8x, the same binding)
+  // Initially disable all odd & upper half-plane chars, inputenc.sty:82-85's `\@inpenc@loop\^^A\^^H`, `\^^K\^^K`,
+  // `\^^N\^^_`, `\^^?\^^ff` (Perl's inputenc.sty.ltxml:48-51 misses 0x1F and 0x7F, KNOWN_PERL_ERRORS #1307). And 0,
+  // as Perl: latex.ltx:22189 makes `^^@` invalid, an error, which the engine's catcode 12 would not raise.
+  // Under the native mouth, utf8 (and utf8x, the same binding)
   // reads 128..=255 as code points, which `utf8_def.rs` makes other: a token stored earlier (the format's active `§`
   // in arxiv.sty:55-60's `\crefformat{section}{§#2#1#3}`) keeps its meaning, as utf8.def:174-193 redefines every byte
   // and leaves none `\@inpenc@undefined` (2605.20531). KNOWN_PERL_ERRORS #1305.
   let native_utf8 =
     !lookup_bool("PDFTEX_BYTE_MOUTH") && matches!(encoding.trim(), "utf8" | "utf8x");
   let undef_cs = T_CS!("\\@inpenc@undefined");
-  for code in (0..=8u8)
+  for code in (0x00..=0x08u8)
     .chain(std::iter::once(0x0Bu8))
-    .chain(0x0E..=0x1Eu8)
+    .chain(0x0E..=0x1Fu8)
+    .chain(std::iter::once(0x7Fu8))
     .chain((128..=255u8).filter(|_| !native_utf8))
   {
     let ch = code as char;

@@ -1,0 +1,16 @@
+% witness: row R SAFEACTIVES (the ENCURL brief's ngerman case); German and Spanish `"` shorthands in a URL
+% oracle:  pdflatex 0 errors; URIs "http://x.org/"o", "http://x.org/"a", "http://x.org/"u"
+% engines: rust INT7b href "http://x.org/ö" in the footnote (the active `"`, tokenized in the footnote's argument,
+%   digested after the reader as babel-german's dispatcher, babel_support_sty.rs); `\url` and the top-level `\href` kept
+% expect:  0 errors, 0 warnings; the three hrefs with `"`
+% mechanism: hyperref.sty:4627 `\Hy@safe@activestrue` in both URL readers (misc.rs `url_safe_actives`), and
+%   `HyperVerbatim` stringifies an active character with an unexpandable meaning, as `\url`'s reader does
+% status:  RED (INT7b) -> GREEN (ENCURL)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[ngerman]{babel}
+\usepackage{hyperref}
+\begin{document}
+A\footnote{\href{http://x.org/"o}{s} and \url{http://x.org/"a}.}
+B \href{http://x.org/"u}{t}.
+\end{document}

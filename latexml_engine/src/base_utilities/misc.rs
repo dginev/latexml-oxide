@@ -161,6 +161,16 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
   Ok(())
 }
 
+/// For a URL reader (`\url`'s, `HyperVerbatim`), in its group: hyperref.sty:4627 `\Hy@safe@activestrue` (:362,
+/// `\csname @safe@activestrue\endcsname`), so a babel shorthand tokenized before the reader (a URL in a `\footnote`)
+/// expands to its own character, babel.def:1394-1400 `\active@char<c>` → `\normal@char<c>` (ngerman `"o` is `"o`, not `ö`).
+pub fn url_safe_actives() -> Result<()> {
+  if is_defined("\\@safe@activestrue") {
+    digest(T_CS!("\\@safe@activestrue"))?;
+  }
+  Ok(())
+}
+
 /// For a URL read expanded and then stringified (`\url`'s reader, `HyperVerbatim`), in its group: `\GenericError`
 /// raises its Error and leaves nothing, so a robust `\PackageError` (inputenc's undefined byte, inputenc.sty:80,
 /// :139-143) errs once and is no URL text; the readers drop the `\protect` it leaves (OD #1112). `\protect` keeps

@@ -13,15 +13,29 @@ LoadDefinitions!({
   }
 
   DefParameterType!(XArgsOptional, sub[_inner, extra] {
-    let no_tks = &NO_TOKENS;
-    let default = extra.first().unwrap_or(no_tks);
-    let usedefault = extra.get(1).unwrap_or(no_tks);
-    let value = read_optional(None)?.unwrap_or(Tokens!());
-    if (!usedefault.is_empty() && value.to_string() == usedefault.to_string()) ||
-        usedefault.is_empty() && value.to_string().is_empty() {
-      default.clone()
+    xargs_optional_value(read_optional(None)?, extra)
+  },
+  optional => true);
+  // An optional argument of a command read by `\xargs@read` (one after its first is optional, xargs.sty:205-212):
+  // `\xargs@ifnextchar` (:64-87) peeks past spaces and puts them back where no `[` follows, so `\ry{i} \ry{i}[j]`
+  // keeps its space (KNOWN_PERL_ERRORS #1304). Extras: the default, and `usedefault`'s flag where given.
+  DefParameterType!(XArgsReadOptional, sub[_inner, extra] {
+    let mut spaces = Vec::new();
+    let value = loop {
+      match read_token()? {
+        Some(t) if t.get_catcode() == Catcode::SPACE => spaces.push(t),
+        Some(t) if t == T_OTHER!("[") => break Some(read_until(&Tokens!(T_OTHER!("]")))?.unwrap_or_default()),
+        other => {
+          spaces.extend(other);
+          unread(Tokens::new(spaces));
+          break None;
+        },
+      }
+    };
+    if extra.len() > 1 {
+      xargs_optional_value(value, extra)
     } else {
-      value
+      value.or_else(|| extra.first().cloned()).unwrap_or_default()
     }
   },
   optional => true);
@@ -151,9 +165,24 @@ fn define_xargs(
   Ok(())
 }
 
+/// `usedefault` (xargs.sty:53-63 `\xargs@grab@opt`, :100-101): an optional argument equal to the flag (empty where the key has no
+/// value) is the default.
+fn xargs_optional_value(value: Option<Tokens>, extra: &[Tokens]) -> Tokens {
+  let default = extra.first().cloned().unwrap_or_default();
+  let usedefault = extra.get(1).map(Tokens::to_string).unwrap_or_default();
+  let value = value.unwrap_or_default();
+  if value.to_string() == usedefault {
+    default
+  } else {
+    value
+  }
+}
+
 // generate paramlist
 fn convert_xargs_args(nargs: usize, keyval: Option<&KeyVals>) -> Result<Option<Parameters>> {
   let mut paramlist = Vec::new();
+  let optional = |i: usize| keyval.is_some_and(|kv| kv.get_value(&i.to_string()).is_some());
+  let xargs_read = (2..=nargs).any(optional);
   for i in 1..=nargs {
     if let Some(val) = keyval
       .map(|kv| kv.get_value(&i.to_string()))
@@ -162,7 +191,17 @@ fn convert_xargs_args(nargs: usize, keyval: Option<&KeyVals>) -> Result<Option<P
       let usedef_opt = keyval
         .map(|kv| kv.get_value("usedefault"))
         .unwrap_or_default();
-      if let Some(usedef) = usedef_opt {
+      if xargs_read {
+        let mut extra = vec![val.revert()?];
+        if let Some(usedef) = usedef_opt {
+          extra.push(usedef.revert()?);
+        }
+        paramlist.push(Parameter::new(
+          "XArgsReadOptional",
+          &s!("XArgsReadOptional:{val}"),
+          Some(extra),
+        )?);
+      } else if let Some(usedef) = usedef_opt {
         paramlist.push(Parameter::new(
           "XArgsOptional",
           &s!("XArgsOptional:{val}|{usedef}"),

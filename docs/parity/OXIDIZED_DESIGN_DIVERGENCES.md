@@ -23640,3 +23640,20 @@ before the copy, as its result chooses the binding's defaults. **Guard**:
 `perfect_kernel_batchregfixu::snjnl_scan_runs_after_the_copy_loads_its_packages` (repro
 `stand-in-copies/scan_order/snjnl_scan_after_the_copy.tex`); `perfect_kernel_batch67u::snjnl_class_copy_loads_program`,
 `perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.
+
+### 1131. A control character after `[utf8]{inputenc}` is utf8.def's error, dropped (ENCURL)
+
+**Perl behavior**: utf8.def.ltxml:23-26 makes 0-8, 11, 14-30 and 128-255 other, so a C0 control prints as the font's
+glyph (OT1: `^^A` is Δ, `^^Z` æ) and a C1 control (U+0080-U+009F) goes into the text.
+**pdflatex (TL 2025)**: utf8.def:164-170 makes 1-8, 11 and 14-31 `\UTFviii@undefined@err`, and U+0080-U+009F have no
+`\u8:` name (:122-128): each errs "Unicode character … (U+0085) not set up for use with LaTeX" and is dropped.
+**Rust behavior**: utf8_def.rs makes those code points active, each a protected `\@latex@error` with that message,
+one Error per character, as pdflatex (the format's `\UTFviii@undefined@err` gobbles until the `\everyjob`,
+latex.ltx:22230-22237, which the engine does not run). `\DeclareUnicodeCharacter{0092}{'}` replaces the meaning. A C1
+byte of a line that is not UTF-8 stays an invalid byte, its Latin-1 character with the Info (#481): the mouth reads it
+as other (mouth.rs). Not under the pdfTeX byte mouth, and not without inputenc, where the dump's catcode table keeps
+the controls other (row R).
+**Why**: the controls are no content (cp1252 punctuation re-encoded as UTF-8, U+0092 for `’`), and pdflatex errs on
+each. **Guards** `perfect_kernel_batchencurl::{utf8_control_character_errs_and_is_dropped,
+utf8_c1_declared_and_byte_line_keep_their_text}` (repros unicode-catcodes/utf8_inputenc_control_characters_err,
+utf8_c1_declared_and_byte_line).
