@@ -1,0 +1,16 @@
+% witness: 2605.13298, 2605.19761, 2605.28243, 2605.29955 (an \href whose URL has `~`, in a \footnote or a macro argument)
+% oracle:  pdflatex 0 errors; URI "http://x.org/~y", footnote "See site."
+% engines: rust INT6D = Fatal:Timeout:PushbackLimit (babel's `\active@prefix~` re-expanding under the empty `\protect`
+%   of url_string_messages); REGFIXN2 = href "http://x.org/\unhbox\voidb@x\protect\penalty\@M\ y"; Perl href
+%   "http://x.org/ y" (Base_ParameterTypes.pool.ltxml:217-231 lacks hyperref's `\let~\hyper@tilde`)
+% expect:  0 errors, 0 warnings; <ref class="ltx_href" href="http://x.org/~y">site</ref> in the footnote
+% mechanism: HyperVerbatim (\href) lets the active `~` to `\hyper@tilde`, as hyperref.sty:4622 `\hyper@normalise`; the
+%   `~` was tokenized active before the reader (the footnote's argument), so only its meaning can change
+% status:  RED (INT6D) -> GREEN (REGFIXV)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage{hyperref}
+\begin{document}
+a\footnote{See \href{http://x.org/~y}{site}.}
+\end{document}

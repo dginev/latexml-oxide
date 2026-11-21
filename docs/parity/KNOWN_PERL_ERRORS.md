@@ -22306,3 +22306,49 @@ guard `perfect_kernel_batchregfixo::xrightarrow_in_a_protected_edef`. A plain `\
 re-expands the name; hyperref's PDF string, which keeps that `\protect`, gobbles `\lx@long@arrow` with its two
 arguments (`pdftitle={An $a\xrightarrow{b}c$ arrow}` "An abc arrow", pdfinfo the same; guard
 `perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`).
+## 1305. `[utf8]{inputenc}` leaves a Latin-1 character stored before it `\@inpenc@undefined`
+
+Perl's inputenc.sty.ltxml:48-51 `SetInputEncoding` makes 0x80-0xFF active and `\let`s them to `\@inpenc@undefined`;
+utf8.def.ltxml:26 then only resets their catcodes to other. Perl's mouth reads code points, so the `\let` overwrites the
+meaning of a character the format made active (`\DeclareUnicodeCharacter{00A7}{\textsection}`), and a token stored
+earlier errs where it is used. In TeX the stored `§` is the bytes C2 A7, and utf8.def:174-193 redefines every byte
+0x80-0xFF, so after `[utf8]` none keeps `\@inpenc@undefined`. Trigger:
+
+```tex
+\documentclass{article}
+\def\xa{§}
+\usepackage[utf8]{inputenc}
+\begin{document}
+B[\xa]
+\end{document}
+```
+
+pdflatex `B[§]`, 0 errors; Perl `Error:unexpected:<char> Keyboard character used is undefined in inputencoding utf8`,
+`B[]`. arxiv.sty:55-60's `\crefformat{section}{§#2#1#3}`, read before inputenc, erred at every `\Cref` (2605.20531).
+Fixed in Rust: under the native mouth, `utf8`/`utf8x` skip 128..=255 in the loop (`inputenc_sty.rs`
+`set_input_encoding`). The loop still covers the control code points, which utf8.def:164-173 traps too; latin1,
+cp1252 and the pdfTeX byte mouth keep the whole loop. Repro unicode-catcodes/latin1_char_before_utf8_inputenc_keeps_meaning; guard
+`perfect_kernel_batchregfixw::latin1_char_before_utf8_inputenc_keeps_meaning`.
+
+
+## 1306. `\href`'s URL reader does not let the active `~` to `\hyper@tilde`
+
+hyperref's `\hyper@normalise` (hyperref.sty:4622) does `\let~\hyper@tilde` before it reads the URL, so a `~` tokenized
+active before the reader (a URL in a `\footnote`'s or another macro's argument) is a tilde. Perl's `HyperVerbatim`
+(Base_ParameterTypes.pool.ltxml:217-231) lets only `\~` and `\textasciitilde`, so the active `~` expands as
+`\nobreakspace`. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage{hyperref}
+\begin{document}
+a\footnote{See \href{http://x.org/~y}{site}.}
+\end{document}
+```
+
+pdflatex URI `http://x.org/~y`; Perl href `http://x.org/ y` (Rust REGFIXN2 `http://x.org/\unhbox\voidb@x\protect\penalty
+\@M\ y`, then Fatal:Timeout:PushbackLimit until REGFIXV). Fixed in Rust: `HyperVerbatim` lets the active `~` to
+`\hyper@tilde` (base_parameter_types.rs; `\url`'s reader already lets it to an other `~`). Witnesses 2605.13298,
+2605.19761, 2605.28243, 2605.29955. Repro package-bindings/hyperref_href_babel_tilde_in_footnote; guard
+`perfect_kernel_batchregfixv::href_tilde_in_a_footnote_under_babel`.
