@@ -102,9 +102,12 @@
 <a href=#102 id=102 data-nosnippet>102</a>  <span class="comment">// amsart.cls:638, :808 (amsproc.cls:613, :746): `\maketitle` runs `\@setauthors` after the title, a store documents extend
 <a href=#103 id=103 data-nosnippet>103</a>  // (2607.28440, 2610.02789, 2610.02630, 2610.08257, 2610.25104) or copy (1202.1250, 2310.04922). The binding places the
 <a href=#104 id=104 data-nosnippet>104</a>  // names, contributors and addresses, so it starts empty and runs with none of them: what else it prints is a note.
-<a href=#105 id=105 data-nosnippet>105</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\let\@setauthors\@empty
-<a href=#106 id=106 data-nosnippet>106</a>\def\lx@ams@setauthors{\ifx\@empty\authors\else
-<a href=#107 id=107 data-nosnippet>107</a>  \lx@frontmatter@footnotes{\let\authors\@empty\let\contribs\@empty\let\@setaddresses\relax\@setauthors}\fi}"</span>);
-<a href=#108 id=108 data-nosnippet>108</a>  <span class="macro">AddToMacro!</span>(<span class="string">"\\lx@maketitle@body"</span>, <span class="string">"\\lx@ams@setauthors"</span>);
-<a href=#109 id=109 data-nosnippet>109</a>});
+<a href=#105 id=105 data-nosnippet>105</a>  // amsart.cls:836 (amsproc.cls:773, amsbook.cls:615): `\@setthanks` prints the stored `\thankses`, empty here (the
+<a href=#106 id=106 data-nosnippet>106</a>  // binding's `\thanks` is a note), which a document's `\@setauthors` calls as the class's ends (2606.04416).
+<a href=#107 id=107 data-nosnippet>107</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\let\@setauthors\@empty
+<a href=#108 id=108 data-nosnippet>108</a>\def\@setthanks{\def\thanks##1{\par##1\@addpunct.}\thankses}
+<a href=#109 id=109 data-nosnippet>109</a>\def\lx@ams@setauthors{\ifx\@empty\authors\else
+<a href=#110 id=110 data-nosnippet>110</a>  \lx@frontmatter@footnotes{\let\authors\@empty\let\contribs\@empty\let\@setaddresses\relax\@setauthors}\fi}"</span>);
+<a href=#111 id=111 data-nosnippet>111</a>  <span class="macro">AddToMacro!</span>(<span class="string">"\\lx@maketitle@body"</span>, <span class="string">"\\lx@ams@setauthors"</span>);
+<a href=#112 id=112 data-nosnippet>112</a>});
 </code></pre></div></section></main></body></html>
