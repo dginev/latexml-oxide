@@ -102,8 +102,8 @@ fn latin1_undefined_byte_errs_only_where_tex_does() {
 }
 
 /// In a URL, read expanded and then stringified (`\url`'s reader, `HyperVerbatim` for `\href`), the byte's robust
-/// `\PackageError` raises its one Error and leaves no text: `url_string_messages` empties `\protect` and makes
-/// `\GenericError` err and gobble its arguments. Red (REGFIXN2): 0 Errors, href and text
+/// `\PackageError` raises its one Error and leaves no text: `url_string_messages` makes `\GenericError` err and gobble
+/// its arguments, and the reader drops the `\protect` (`is_url_protect`; REGFIXV, OD #1112). Red (REGFIXN2): 0 Errors, href and text
 /// `http://x.org/a\protect\GenericError{(inputenc)}…b`. pdflatex errs too (6 `!`; `\href` Fatal). Synthetic (review of
 /// REGFIXN2); the PDF-key witnesses above stay silent. Repros unicode-catcodes/latin1_undefined_byte_in_{url,href}_errs.
 #[test]

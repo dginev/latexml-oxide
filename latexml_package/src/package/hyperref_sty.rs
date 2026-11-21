@@ -2021,7 +2021,9 @@ pub fn define_hyper_urls(href: bool, url: bool) -> Result<()> {
       // url.sty `\meaning`-stringifies leftover control sequences: recatcode any
       // surviving CS (e.g. `\def`) to `other` so it is LITERAL href text, not
       // digested/executed (#723). The escapes above already resolved during the
-      // read. (Perl "let CS's through!" to digestion — the divergence we surpass.)
+      // read. (Perl "let CS's through!" to digestion — the divergence we surpass.) A robust command's `\protect` is
+      // dropped (OD #1112).
+      .filter(|t| !is_url_protect(t))
       .map(|t| t.as_other())
       .collect();
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];

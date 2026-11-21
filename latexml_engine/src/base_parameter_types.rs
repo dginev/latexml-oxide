@@ -1144,6 +1144,9 @@ LoadDefinitions!({
       DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
       let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None);
       DefMacro!(T_CS!("\\hyper@tilde"), None, T_OTHER!("~"), scope => Some(Scope::Local));
+      // hyperref.sty:4622 `\let~\hyper@tilde`: an active `~` read before the reader (a URL in a `\footnote`) is a
+      // tilde, not `\nobreakspace` or babel's shorthand (2605.13298; KNOWN_PERL_ERRORS #1306).
+      let_i(&T_ACTIVE!('~'), &T_CS!("\\hyper@tilde"), None);
       let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
       let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
       DefMacro!(T_CS!("\\^"), None, T_OTHER!("^"), scope => Some(Scope::Local));
@@ -1159,10 +1162,12 @@ LoadDefinitions!({
       // non-expandable primitive such as `\def`) must become literal characters,
       // NOT be handed to digestion — digesting `\def` executes it, consumes the
       // following tokens and truncates the URL (#723, reporter xworld21).
-      // Recatcode surviving CS tokens to `other`; everything else is untouched.
+      // Recatcode surviving CS tokens to `other`; everything else is untouched. A robust command's `\protect` is
+      // dropped (OD #1112).
       use latexml_core::token::Catcode;
       Tokens::new(
         arg.unlist().into_iter()
+          .filter(|t| !is_url_protect(t))
           .map(|t| if t.get_catcode() == Catcode::CS { t.as_other() } else { t })
           .collect(),
       )

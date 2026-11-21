@@ -22329,3 +22329,26 @@ Fixed in Rust: under the native mouth, `utf8`/`utf8x` skip 128..=255 in the loop
 `set_input_encoding`). The loop still covers the control code points, which utf8.def:164-172 traps too; latin1,
 cp1252 and the pdfTeX byte mouth keep the whole loop. Repro unicode-catcodes/latin1_char_before_utf8_inputenc_keeps_meaning; guard
 `perfect_kernel_batchregfixw::latin1_char_before_utf8_inputenc_keeps_meaning`.
+
+
+## 1306. `\href`'s URL reader does not let the active `~` to `\hyper@tilde`
+
+hyperref's `\hyper@normalise` (hyperref.sty:4622) does `\let~\hyper@tilde` before it reads the URL, so a `~` tokenized
+active before the reader (a URL in a `\footnote`'s or another macro's argument) is a tilde. Perl's `HyperVerbatim`
+(Base_ParameterTypes.pool.ltxml:217-231) lets only `\~` and `\textasciitilde`, so the active `~` expands as
+`\nobreakspace`. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage{hyperref}
+\begin{document}
+a\footnote{See \href{http://x.org/~y}{site}.}
+\end{document}
+```
+
+pdflatex URI `http://x.org/~y`; Perl href `http://x.org/ y` (Rust REGFIXN2 `http://x.org/\unhbox\voidb@x\protect\penalty
+\@M\ y`, then Fatal:Timeout:PushbackLimit until REGFIXV). Fixed in Rust: `HyperVerbatim` lets the active `~` to
+`\hyper@tilde` (base_parameter_types.rs; `\url`'s reader already lets it to an other `~`). Witnesses 2605.13298,
+2605.19761, 2605.28243, 2605.29955. Repro package-bindings/hyperref_href_babel_tilde_in_footnote; guard
+`perfect_kernel_batchregfixv::href_tilde_in_a_footnote_under_babel`.
