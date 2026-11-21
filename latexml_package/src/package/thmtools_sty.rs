@@ -65,6 +65,13 @@ LoadDefinitions!({
   // file over it, whose `\newcommand\addtotheorem…hook` collide with the ones above and whose parseargs wrappers
   // replace the native theorems.
   mark_loaded("thm-patch.sty");
+  // thmtools.sty:47-49 loads thm-kv, thm-autoref and thm-listof too, which this binding stands in for
+  // (`\declaretheorem`, `\declaretheoremstyle`; a theorem's autoref name; `\listoftheorems`): a later
+  // `\usepackage{thm-autoref}` is a no-op, where the raw file extends thm-patch's `\thmt@newtheorem@predefinition`,
+  // never defined here (witnesses 2308.15546, 2206.04091, 2009.07990).
+  mark_loaded("thm-kv.sty");
+  mark_loaded("thm-autoref.sty");
+  mark_loaded("thm-listof.sty");
 
   // Internal registers and macros needed by thm-restate.sty and thm-kv.sty
   // which load as raw TeX and expect these from thmtools internals.

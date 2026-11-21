@@ -608,11 +608,12 @@ pub fn ams_class_caption_format() -> Result<()> {
 ///   :114 `\@dateposted` and :710-711 `\@PII` alike (memo-l.cls:116-171's abstract-page notes read them: 2412.15928).
 ///   A document's own `\subjclass` or `\keywords` that stores them as amsart's does (amsart.cls:553-564; 2004.06211:12
 ///   `\renewcommand*\subjclass[2][2000]{\def\@subjclass{#2}…}`) has them printed by amsart's `\maketitle` (:657-658, a
-///   first-page footnote): the `\maketitle` hands a non-empty one to the frontmatter, as the binding's own setter would
-///   (`\lx@ams@stored@topmatter`, at `\lx@maketitle@begin`), unless that setter ran (`\lx@ams@subjclass@given`,
-///   `\lx@ams@keywords@given`), so a paper using the class's commands is unchanged, nor when the K11 reroute owns a raw
-///   class's `\keywords` store (`\iflx@ams@keywords@rerouted`; a class wrapping acmart, which loads amsart). Perl
-///   loses them (OXIDIZED_DESIGN_DIVERGENCES #902; 1009.1929 too).
+///   first-page footnote): the `\maketitle` hands a non-empty stored one (a parameterless macro,
+///   `\iflx@ams@stored@value`; not edpsmath.cls:326's placeholder taking an argument) to the frontmatter, as the
+///   binding's own setter would (`\lx@ams@stored@topmatter`, at `\lx@maketitle@begin`), unless that setter ran
+///   (`\lx@ams@subjclass@given`, `\lx@ams@keywords@given`), so a paper using the class's commands is unchanged, nor
+///   when the K11 reroute owns a raw class's `\keywords` store (`\iflx@ams@keywords@rerouted`; a class wrapping
+///   acmart, which loads amsart). Perl loses them (OXIDIZED_DESIGN_DIVERGENCES #902; 1009.1929 too).
 /// - :687-689 `\copyrightinfo{0000}{(copyright holder)}`, the defaults `\copyrightyear`/`\copyrightholder` (2403.17965).
 /// - :837, :856-864 `\abstractbox` and `\@setabstract`/`\@setabstracta`, which set a box an abstract-like environment
 ///   of the document's fills (1512.02361 and 2602.22909 `{abstracts}`, 2303.07306 and 2201.00740 `{acknowledgements}`,
@@ -643,6 +644,19 @@ pub fn amsart_class_internals() -> Result<()> {
   // records its store name), handed on as the class sets it: not handed over again at the `\maketitle`.
   DefConditional!("\\iflx@ams@keywords@rerouted", {
     lookup_value("lx_store_cs_keywords").is_some_and(|v| !matches!(v, Stored::None))
+  });
+  // A stored value is a parameterless macro (amsart.cls:553-564 `\def\@subjclass{#2}`); a class's placeholder that takes
+  // an argument is not one (edpsmath.cls:326 `\def\@subjclass#1{\@MSSG@SBJCTCLSS}`, which `{\@subjclass}` handed over
+  // read `}` as: 2004.12879, 1110.0287, 2603.24523, 1501.03645).
+  DefConditional!("\\iflx@ams@stored@value NormalToken", sub[(t)] {
+    match lookup_definition(&t) {
+      Ok(Some(def)) => {
+        def.get_conditional_type().is_none()
+          && def.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
+          && matches!(def.get_expansion(), Some(ExpansionBody::Tokens(_)))
+      },
+      _ => false,
+    }
   });
   RawTeX!(
     r"\newswitch{}
@@ -676,10 +690,10 @@ pub fn amsart_class_internals() -> Result<()> {
 \let\lx@ams@keywords@given\relax
 \let\lx@ams@subjclass@given\relax
 \def\lx@ams@stored@topmatter{%
-  \ifx\@subjclass\@empty\else\ifx\@subjclass\relax\else\ifx\lx@ams@subjclass@given\@empty\else
+  \ifx\@subjclass\@empty\else\iflx@ams@stored@value\@subjclass\ifx\lx@ams@subjclass@given\@empty\else
     \expandafter\lx@ams@stored@subjclass\expandafter{\@subjclass}%
     \global\let\@subjclass\@empty\fi\fi\fi
-  \ifx\@keywords\@empty\else\ifx\@keywords\relax\else\ifx\lx@ams@keywords@given\@empty\else
+  \ifx\@keywords\@empty\else\iflx@ams@stored@value\@keywords\ifx\lx@ams@keywords@given\@empty\else
     \iflx@ams@keywords@rerouted\else
     \expandafter\lx@ams@stored@keywords\expandafter{\@keywords}%
     \global\let\@keywords\@empty\fi\fi\fi\fi}

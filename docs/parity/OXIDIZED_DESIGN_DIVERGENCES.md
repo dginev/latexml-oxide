@@ -16324,8 +16324,10 @@ amsart.cls's `\subjclass` and `\keywords` store `\@subjclass` and `\@keywords`, 
 first-page footnote (amsart.cls:553-564, :657-658); the binding's setters give the frontmatter directly and never set
 them. A document carrying its own copy (`\renewcommand*\subjclass[2][2000]{\def\@subjclass{#2}…}`, 2004.06211:12,
 1009.1929) lost its classification, as Perl does; so did kms-j's and kms-b's (1109.3766, 2207.08173), whose
-`\@adminfootnotes` print `\@subjclass`. Ours: the AMS classes' `\maketitle` hands a non-empty stored value to
-the frontmatter (`\lx@ams@stored@topmatter` at `\lx@maketitle@begin`, `amsart_class_internals`): the subject
+`\@adminfootnotes` print `\@subjclass`. Ours: the AMS classes' `\maketitle` hands a non-empty stored value — a
+parameterless macro (`\iflx@ams@stored@value`), not a class's placeholder taking an argument (edpsmath.cls:326
+`\def\@subjclass#1{\@MSSG@SBJCTCLSS}`, which read `}`: 2004.12879, 1110.0287; guard
+`perfect_kernel_batchregfixe::a_subjclass_placeholder_taking_an_argument_is_no_stored_value`) — to the frontmatter (`\lx@ams@stored@topmatter` at `\lx@maketitle@begin`, `amsart_class_internals`): the subject
 classification under the edition's `\subjclassname` (the scheme and the name), the keywords under `\keywordsname`, then
 empties the store; it does nothing once the binding's own setter ran (`\lx@ams@subjclass@given`,
 `\lx@ams@keywords@given`), so a paper using the class's commands is unchanged, nor when the K11 reroute owns a raw
@@ -18841,7 +18843,8 @@ hhline, subcaption, subfig, natbib's `cite`, quantumarticle, sn-jnl, changepage,
 `biblatex` tests). The loader's own question — were the definitions read here — keeps the records (`load_recorded`,
 `binding_loaded`, `raw_loaded`: the autoload triggers, `\documentstyle`'s fallback, the class dispatch, amsmath's
 beyond-original load). Two writes follow: a binding that stands in for a file its original loads marks it as that load
-does (`state::mark_loaded`: thmtools's thm-patch.sty, aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
+does (`state::mark_loaded`: thmtools's thm-patch.sty, thm-kv.sty, thm-autoref.sty and thm-listof.sty, thmtools.sty:47-49;
+aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
 which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`), and so does the
 format's preload of textcomp (sect13.rs; Perl latex_constructs.pool.ltxml:5893 leaves it loaded), whose definitions
 latex.ltx carries without `\ver@textcomp.sty`: the document's first load runs its file and package hooks (TL manual
