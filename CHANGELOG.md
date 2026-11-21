@@ -53,8 +53,9 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 
 - **Faster and lighter.** The November performance pass cut a median 10.4 % of the instructions typical papers
   execute, with byte-identical output; a large book's peak memory fell from 6.7 to 4.3 GB; math post-processing is
-  linear in the number of formulas; and a conversion that outgrows its memory allowance restarts in streaming mode
-  instead of failing.
+  linear in the number of formulas; splitting a document frees each page once copied, so a 1,600-subsection book's
+  post-processing holds 29 MB of C heap instead of 818 MB (#777); and a conversion that outgrows its memory allowance
+  restarts in streaming mode instead of failing.
 - **EPUB 3, UnicodeMath output, and Perl-compatible command lines.** `--format=epub` writes an EPUB 3 container;
   `--unicodemath` adds `<annotation encoding="application/x-unicodemath">` (or standalone output with `--nopmml`, and
   `latexmlmath_oxide --unicodemath`); a repeated option keeps its last value, `--xsltparameter` takes `name:value`,

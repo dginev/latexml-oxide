@@ -248,6 +248,10 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
 * **Hard constraint:** retain libxml2 for dynamic `DefRewrite` XPath. The
   fragmented architecture is the implemented solution to the measured DOM
   floor; wholesale DOM replacement remains a settled non-lever.
+* **Settled: post XSLT on a large split document is the libraries' cost, not ours.** On the n1600 book
+  post-only, the dev build (system libxml2 2.15 / libxslt 1.1.45) spends 10.4 s in `phase_xslt` against 8.6 s for the
+  0.8.0-rc1 release binary (static 2.13.5 / 1.1.42, `tools/build_static_libxml.sh`), and 8.8 against 8.6 s with
+  `LATEXML_POST_STREAM_SPLIT=1`, whose heap stays small. Measure post XSLT on the release build (2026-11-21, #777).
 
 
 ### P7 — Thermal & Concurrency Budget Limits (`docs/THERMALS.md`)

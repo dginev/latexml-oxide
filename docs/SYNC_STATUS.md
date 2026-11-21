@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (435 lines, weight 978; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (437 lines, weight 977; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -803,15 +803,15 @@ Rules that keep this file honest and mergeable:
     `\@setdate`, 84 `\@maketitle@hook`. Defining them faithfully changes output (an empty `\@date` gives "Date: ."):
     (a) define + A/B the deposit population, (b) define but keep the deposit dropped while the frontmatter owns the
     fields, (c) leave — DG ruling; 3
-  - SPLITLEAK — (issue #777 perf study, 2026-11-21) `Split` deep-copies each page into its own document and never
-    frees the original subtree (`latexml_post/src/split.rs:287` → `document.rs:607-609` `dup_node_into_new_doc` then
-    `let _ = root`; rust-libxml 0.3.24 `node.rs:137-146` frees no Unlinked node whose doc is set; post's `remove_nodes`
-    `document.rs:1499-1526` likewise), so the whole DOM stays live: C-live 818 MB at page 1024 of a 1,600-subsection
-    book vs 29 MB with `LATEXML_POST_STREAM_SPLIT=1` (same instructions, byte-identical pages; main session verified).
-    glibc's heap state then costs ~3/4 of post's superlinear cycles (IPC 3.2 → 2.4 at n1600, 2.0 at n3200); 0.7.6 the
-    same. Fix: free the page subtree after the copy and a discard variant of `remove_nodes`, as the core's
-    `remove_node` → `discard_subtree` → `free_subtree` (`latexml_core/src/document.rs:6869-6880`); bar C-live < 100 MB
-    at page 1024 and identical output. Fallback POSTSTREAMDEF; 3
+  - SPLITFREE — follow-ups of SPLITLEAK (fixed for 0.8.0-rc2, DG 2026-11-21: `Split::process_pages` frees each page's
+    source subtree once copied, `PostDocument::discard_subtree`; a page holding an `ltx:navigation` stays, as the nav may
+    use its namespaces; guards `112_fragment_yield::split_pages_leave_no_c_heap_residue`,
+    `::split_keeps_pages_whose_namespaces_a_navigation_uses`): (a) the other `remove_nodes` callers that never reuse
+    the node — `PostDocument::unwrap_node`, CrossRef `settle_cref_conjunctions`, the external-ref children
+    (`crossref.rs` ~1923), `make_bibliography`'s bibentries and empty biblists (check moved vs copied first), svg's
+    `drawn`; (b) `malloc_trim(0)` after Split as its own lever (C-free 954 MB vs 8 MB streaming at n1600, C-live 29 MB
+    both); (c) with `--input xml`, Split's copies drop a nav's prefixed namespace and a page redeclaring the default
+    namespace comes out `<default:section xmlns:default=…>` (base too, cosmetic, foreign XML only); 3
   - POSTSTREAMDEF — route every split run through the streaming post front-end (today only above a size threshold):
     measured post −24 % cycles at n1600 (−38 % at n3200), RSS 2.2 → 0.15 GB, identical pages; it has run only on
     documents > 1 GiB so far; 3
@@ -819,16 +819,18 @@ Rules that keep this file honest and mergeable:
     `crossref.rs:1307-1323`, Perl `CrossRef.pm` L105-130, which comments "this gets way too much. But how to prune?"):
     126,976 links = 28.7 % of the HTML at n1600, ~225K instructions per link (CrossRef `generate_url`/`generate_title`/
     `generate_ref` `crossref.rs:1936-1964`; XSLT `LaTeXML-webpage-xhtml.xsl:313-320`) — the only true quadratic.
-    Memoising the nav-ref resolution saves ~2/3 of CrossRef's share with identical output; capping or dropping the
+    Memoising the title/ref resolution (`perf/post-scaling` 5ee331327cf, post-0.8.0) saves 0.29 s of CrossRef's 2.1 s
+    with identical output (n1600 −2.1 % instructions); the rest is per page (`add_nodes` 275 ms, link creation 278 ms,
+    cref/rdfa/bibrefs/mathlinks 493 ms). Capping or dropping the
     sibling-of-ancestor links removes the quadratic term but changes output (OXIDIZED_DESIGN entry, offered upstream) —
     DG ruling; 3
   - POSTRESID — after the core, ~190 MB of C heap stays live into post (pass B 12.69 s vs 11.26 s on a clean heap at
-    n1600); cause unidentified; 3
+    n1600): core nodes unlinked and never freed, ~98 KB a subsection (heaptrack, n100: `insert_math_token` ~52 %, the
+    amsmath rearrangement `ams_rearrangeable_bindings`/`equationgroup_join_cols` ~15 %, `tex_math`, `sect07`,
+    `mark_xmnode_visibility`; first suspect `latexml_math_parser/src/parser.rs` ~2190); constant: kpathsea's file
+    database 12.9 MB, the XSLT cache 5 MB. Batch CORELEAK on `perf/core-orphans` (post-0.8.0); 3
   - RENDERJOBS — `LATEXML_RENDER_JOBS=4` takes post wall 19.5 → 7.0 s at n1600 with identical output: mention to #777's
     reporter once SPLITLEAK lands; whether it becomes the default — DG ruling; 1
-  - XSLTLIBGAP — on a leaked heap the dev binary's XSLT (system libxml2 2.15.2 / libxslt 1.1.45) pays 25 % where 0.7.6's
-    static 2.13.5 / 1.1.42 pays 2 %; equal on a clean heap. The shipped build uses `tools/build_static_libxml.sh`'s pins:
-    check the 0.8.0-rc1 release binary post-only on the n1600 XML (`phase_xslt_us` ≈ 8.0 s = libraries, ≈ 9.8 s = ours); 1
   - RUNAWAY395 — an undelimited macro argument that meets a closing `}` takes it (Perl `Gullet.pm:732` readArg;
     `gullet.rs` ~4048 `read_arg`), so an `\edef` runs to the end of the file (`\makeatletter\edef\x{\@firstoffive{a}}`):
     1012.2852 loses its last ~370 lines, base and Perl too; TeX inserts `\par` and keeps the `}` (tex.web §395).
