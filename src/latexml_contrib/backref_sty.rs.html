@@ -53,55 +53,58 @@
 <a href=#53 id=53 data-nosnippet>53</a>  // `{thebibliography}`, with `[pagebackref]{hyperref}` loading backref). :78-92 `\backref` by the options
 <a href=#54 id=54 data-nosnippet>54</a>  // `pageref` (the default, :195), `ref`, `hyperref` and `hyperpageref` (the two hyperref's options pass), other
 <a href=#55 id=55 data-nosnippet>55</a>  // options and `\backrefsetup` keys accepted and dropped; :270-277 `\backrefalt`/`\backrefentrycount`, which
-<a href=#56 id=56 data-nosnippet>56</a>  // documents redefine to format the line; the line itself is not rendered, so they are never called here.
-<a href=#57 id=57 data-nosnippet>57</a>  </span><span class="macro">RawTeX!</span>(
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="string">r"\def\backrefenglish{\def\backrefpagesname{pages}\def\backrefsectionsname{sections}\def\backrefsep{, }%
-<a href=#59 id=59 data-nosnippet>59</a>\def\backreftwosep{ and~}\def\backreflastsep{, and~}}
-<a href=#60 id=60 data-nosnippet>60</a>\def\backrefgerman{\def\backrefpagesname{Seiten}\def\backrefsectionsname{Abschnitte}\def\backrefsep{, }%
-<a href=#61 id=61 data-nosnippet>61</a>\def\backreftwosep{ und~}\def\backreflastsep{ und~}}
-<a href=#62 id=62 data-nosnippet>62</a>\def\backreffrench{\def\backrefpagesname{pages}\def\backrefsectionsname{sections}\def\backrefsep{, }%
-<a href=#63 id=63 data-nosnippet>63</a>\def\backreftwosep{ et~}\def\backreflastsep{ et~}}
-<a href=#64 id=64 data-nosnippet>64</a>\def\backrefspanish{\def\backrefpagesname{p\'aginas}\def\backrefsectionsname{secciones}\def\backrefsep{, }%
-<a href=#65 id=65 data-nosnippet>65</a>\def\backreftwosep{ y~}\def\backreflastsep{ y~}}
-<a href=#66 id=66 data-nosnippet>66</a>\def\backrefbrazil{\def\backrefpagesname{p\'aginas}\def\backrefsectionsname{se\c c\~oes}\def\backrefsep{, }%
-<a href=#67 id=67 data-nosnippet>67</a>\def\backreftwosep{ e~}\def\backreflastsep{ e~}}
-<a href=#68 id=68 data-nosnippet>68</a>\def\backrefafrikaans{\def\backrefpagesname{bladsye}\def\backrefsectionsname{afdelings}\def\backrefsep{, }%
-<a href=#69 id=69 data-nosnippet>69</a>\def\backreftwosep{ en~}\def\backreflastsep{ en~}}
-<a href=#70 id=70 data-nosnippet>70</a>\def\backrefitalian{\def\backrefpagesname{pagine}\def\backrefsectionsname{sezioni}\def\backrefsep{, }%
-<a href=#71 id=71 data-nosnippet>71</a>\def\backreftwosep{ e~}\def\backreflastsep{ e~}}
-<a href=#72 id=72 data-nosnippet>72</a>\backrefenglish
-<a href=#73 id=73 data-nosnippet>73</a>\SetupKeyvalOptions{family=backref,prefix=BR@}
-<a href=#74 id=74 data-nosnippet>74</a>\DeclareBoolOption[false]{verbose}
-<a href=#75 id=75 data-nosnippet>75</a>\long\def\page@backref#1#2#3{#1}
-<a href=#76 id=76 data-nosnippet>76</a>\long\def\section@backref#1#2#3{#2}
-<a href=#77 id=77 data-nosnippet>77</a>\long\def\hyper@section@backref#1#2#3{\hyperlink{#3}{#2}}
-<a href=#78 id=78 data-nosnippet>78</a>\long\def\hyper@page@backref#1#2#3{\hyperlink{page.#1}{#1}}
-<a href=#79 id=79 data-nosnippet>79</a>\DeclareVoidOption{pageref}{\def\backref{\backrefpagesname\ }\let\backrefxxx\page@backref}
-<a href=#80 id=80 data-nosnippet>80</a>\DeclareVoidOption{ref}{\def\backref{\backrefsectionsname\ }\let\backrefxxx\section@backref}
-<a href=#81 id=81 data-nosnippet>81</a>\DeclareVoidOption{hyperref}{\def\backref{}\let\backrefxxx\hyper@section@backref}
-<a href=#82 id=82 data-nosnippet>82</a>\DeclareVoidOption{hyperpageref}{\def\backref{}\let\backrefxxx\hyper@page@backref}
-<a href=#83 id=83 data-nosnippet>83</a>\DeclareBoolOption[true]{enable}
-<a href=#84 id=84 data-nosnippet>84</a>\DeclareComplementaryOption{disable}{enable}
-<a href=#85 id=85 data-nosnippet>85</a>\kv@set@family@handler{backref}{}
-<a href=#86 id=86 data-nosnippet>86</a>\DeclareDefaultOption{}
-<a href=#87 id=87 data-nosnippet>87</a>\backrefsetup{pageref}
-<a href=#88 id=88 data-nosnippet>88</a>\ProcessKeyvalOptions*\relax
-<a href=#89 id=89 data-nosnippet>89</a>\newif\ifbackrefparscan\backrefparscantrue
-<a href=#90 id=90 data-nosnippet>90</a>\@ifundefined{backrefalt}{\def\backrefalt#1#2#3#4{}}{}
-<a href=#91 id=91 data-nosnippet>91</a>\@ifundefined{backrefentrycount}{\def\backrefentrycount#1#2{#1}}{}"
-<a href=#92 id=92 data-nosnippet>92</a>  </span>);
-<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// backref.sty:457-482 `\Hy@backout`, the hook each citation calls (hyperref's `\hyper@natlinkstart`, backref's
-<a href=#94 id=94 data-nosnippet>94</a>  // `\BR@citex`): it writes the back-cite record — "Doc-Start" where no label is current — to the .aux for the next run.
-<a href=#95 id=95 data-nosnippet>95</a>  // The records are never read back here (the lists are not rendered), but documents patch it: `\patchcmd{\Hy@backout}
-<a href=#96 id=96 data-nosnippet>96</a>  // {Doc-Start}{\@currentHref}{}{\errmessage{I can't seem to patch backref}}` failed on hyperref's `\@gobble` stand-in
-<a href=#97 id=97 data-nosnippet>97</a>  // (2405.13143, 2601.06492, 2004.14852).
-<a href=#98 id=98 data-nosnippet>98</a>  </span><span class="macro">RawTeX!</span>(
-<a href=#99 id=99 data-nosnippet>99</a>    <span class="string">r"\def\Hy@backout#1{\@bsphack
-<a href=#100 id=100 data-nosnippet>100</a>\ifBR@enable\ifBR@verbose\PackageInfo{backref}{Back cite \string`#1\string'}\fi
-<a href=#101 id=101 data-nosnippet>101</a>\ifx\@empty\@currentlabel\protected@write\@auxout{}{\string\@writefile{brf}{\string\backcite{#1}{{\thepage}{(document)}{Doc-Start}}}}%
-<a href=#102 id=102 data-nosnippet>102</a>\else\protected@write\@auxout{}{\string\@writefile{brf}{\string\backcite{#1}{{\thepage}{\@currentlabel}{\@currentHref}}}}\fi
-<a href=#103 id=103 data-nosnippet>103</a>\else\ifBR@verbose\PackageInfo{backref}{Disabled back cite \string`#1\string'}\fi\fi
-<a href=#104 id=104 data-nosnippet>104</a>\@esphack}"
-<a href=#105 id=105 data-nosnippet>105</a>  </span>);
-<a href=#106 id=106 data-nosnippet>106</a>});
+<a href=#56 id=56 data-nosnippet>56</a>  // documents redefine to format the line; the line itself is not rendered, so they are never called here. :245
+<a href=#57 id=57 data-nosnippet>57</a>  // `\BR@backref{key}`, the line itself, which a document's own bibitem macro calls where `\ifbackrefparscan` is
+<a href=#58 id=58 data-nosnippet>58</a>  // defined (1211.3435, 1408.3859, 1609.07764), is empty.
+<a href=#59 id=59 data-nosnippet>59</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="string">r"\def\backrefenglish{\def\backrefpagesname{pages}\def\backrefsectionsname{sections}\def\backrefsep{, }%
+<a href=#61 id=61 data-nosnippet>61</a>\def\backreftwosep{ and~}\def\backreflastsep{, and~}}
+<a href=#62 id=62 data-nosnippet>62</a>\def\backrefgerman{\def\backrefpagesname{Seiten}\def\backrefsectionsname{Abschnitte}\def\backrefsep{, }%
+<a href=#63 id=63 data-nosnippet>63</a>\def\backreftwosep{ und~}\def\backreflastsep{ und~}}
+<a href=#64 id=64 data-nosnippet>64</a>\def\backreffrench{\def\backrefpagesname{pages}\def\backrefsectionsname{sections}\def\backrefsep{, }%
+<a href=#65 id=65 data-nosnippet>65</a>\def\backreftwosep{ et~}\def\backreflastsep{ et~}}
+<a href=#66 id=66 data-nosnippet>66</a>\def\backrefspanish{\def\backrefpagesname{p\'aginas}\def\backrefsectionsname{secciones}\def\backrefsep{, }%
+<a href=#67 id=67 data-nosnippet>67</a>\def\backreftwosep{ y~}\def\backreflastsep{ y~}}
+<a href=#68 id=68 data-nosnippet>68</a>\def\backrefbrazil{\def\backrefpagesname{p\'aginas}\def\backrefsectionsname{se\c c\~oes}\def\backrefsep{, }%
+<a href=#69 id=69 data-nosnippet>69</a>\def\backreftwosep{ e~}\def\backreflastsep{ e~}}
+<a href=#70 id=70 data-nosnippet>70</a>\def\backrefafrikaans{\def\backrefpagesname{bladsye}\def\backrefsectionsname{afdelings}\def\backrefsep{, }%
+<a href=#71 id=71 data-nosnippet>71</a>\def\backreftwosep{ en~}\def\backreflastsep{ en~}}
+<a href=#72 id=72 data-nosnippet>72</a>\def\backrefitalian{\def\backrefpagesname{pagine}\def\backrefsectionsname{sezioni}\def\backrefsep{, }%
+<a href=#73 id=73 data-nosnippet>73</a>\def\backreftwosep{ e~}\def\backreflastsep{ e~}}
+<a href=#74 id=74 data-nosnippet>74</a>\backrefenglish
+<a href=#75 id=75 data-nosnippet>75</a>\SetupKeyvalOptions{family=backref,prefix=BR@}
+<a href=#76 id=76 data-nosnippet>76</a>\DeclareBoolOption[false]{verbose}
+<a href=#77 id=77 data-nosnippet>77</a>\long\def\page@backref#1#2#3{#1}
+<a href=#78 id=78 data-nosnippet>78</a>\long\def\section@backref#1#2#3{#2}
+<a href=#79 id=79 data-nosnippet>79</a>\long\def\hyper@section@backref#1#2#3{\hyperlink{#3}{#2}}
+<a href=#80 id=80 data-nosnippet>80</a>\long\def\hyper@page@backref#1#2#3{\hyperlink{page.#1}{#1}}
+<a href=#81 id=81 data-nosnippet>81</a>\DeclareVoidOption{pageref}{\def\backref{\backrefpagesname\ }\let\backrefxxx\page@backref}
+<a href=#82 id=82 data-nosnippet>82</a>\DeclareVoidOption{ref}{\def\backref{\backrefsectionsname\ }\let\backrefxxx\section@backref}
+<a href=#83 id=83 data-nosnippet>83</a>\DeclareVoidOption{hyperref}{\def\backref{}\let\backrefxxx\hyper@section@backref}
+<a href=#84 id=84 data-nosnippet>84</a>\DeclareVoidOption{hyperpageref}{\def\backref{}\let\backrefxxx\hyper@page@backref}
+<a href=#85 id=85 data-nosnippet>85</a>\DeclareBoolOption[true]{enable}
+<a href=#86 id=86 data-nosnippet>86</a>\DeclareComplementaryOption{disable}{enable}
+<a href=#87 id=87 data-nosnippet>87</a>\kv@set@family@handler{backref}{}
+<a href=#88 id=88 data-nosnippet>88</a>\DeclareDefaultOption{}
+<a href=#89 id=89 data-nosnippet>89</a>\backrefsetup{pageref}
+<a href=#90 id=90 data-nosnippet>90</a>\ProcessKeyvalOptions*\relax
+<a href=#91 id=91 data-nosnippet>91</a>\newif\ifbackrefparscan\backrefparscantrue
+<a href=#92 id=92 data-nosnippet>92</a>\long\def\BR@backref#1{}
+<a href=#93 id=93 data-nosnippet>93</a>\@ifundefined{backrefalt}{\def\backrefalt#1#2#3#4{}}{}
+<a href=#94 id=94 data-nosnippet>94</a>\@ifundefined{backrefentrycount}{\def\backrefentrycount#1#2{#1}}{}"
+<a href=#95 id=95 data-nosnippet>95</a>  </span>);
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="comment">// backref.sty:457-482 `\Hy@backout`, the hook each citation calls (hyperref's `\hyper@natlinkstart`, backref's
+<a href=#97 id=97 data-nosnippet>97</a>  // `\BR@citex`): it writes the back-cite record — "Doc-Start" where no label is current — to the .aux for the next run.
+<a href=#98 id=98 data-nosnippet>98</a>  // The records are never read back here (the lists are not rendered), but documents patch it: `\patchcmd{\Hy@backout}
+<a href=#99 id=99 data-nosnippet>99</a>  // {Doc-Start}{\@currentHref}{}{\errmessage{I can't seem to patch backref}}` failed on hyperref's `\@gobble` stand-in
+<a href=#100 id=100 data-nosnippet>100</a>  // (2405.13143, 2601.06492, 2004.14852).
+<a href=#101 id=101 data-nosnippet>101</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#102 id=102 data-nosnippet>102</a>    <span class="string">r"\def\Hy@backout#1{\@bsphack
+<a href=#103 id=103 data-nosnippet>103</a>\ifBR@enable\ifBR@verbose\PackageInfo{backref}{Back cite \string`#1\string'}\fi
+<a href=#104 id=104 data-nosnippet>104</a>\ifx\@empty\@currentlabel\protected@write\@auxout{}{\string\@writefile{brf}{\string\backcite{#1}{{\thepage}{(document)}{Doc-Start}}}}%
+<a href=#105 id=105 data-nosnippet>105</a>\else\protected@write\@auxout{}{\string\@writefile{brf}{\string\backcite{#1}{{\thepage}{\@currentlabel}{\@currentHref}}}}\fi
+<a href=#106 id=106 data-nosnippet>106</a>\else\ifBR@verbose\PackageInfo{backref}{Disabled back cite \string`#1\string'}\fi\fi
+<a href=#107 id=107 data-nosnippet>107</a>\@esphack}"
+<a href=#108 id=108 data-nosnippet>108</a>  </span>);
+<a href=#109 id=109 data-nosnippet>109</a>});
 </code></pre></div></section></main></body></html>

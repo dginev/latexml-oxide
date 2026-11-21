@@ -29,107 +29,201 @@
 <a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\dotuline{}"</span>,
 <a href=#30 id=30 data-nosnippet>30</a>    <span class="string">"?#isMath(&lt;ltx:XMWrap class='ltx_ulem_dotuline'&gt;#1&lt;/ltx:XMWrap&gt;)(&lt;ltx:text class='ltx_ulem_dotuline'&gt;#1&lt;/ltx:text&gt;)"</span>,
 <a href=#31 id=31 data-nosnippet>31</a>    enter_horizontal =&gt; <span class="bool-val">true</span>);
-<a href=#32 id=32 data-nosnippet>32</a>
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="comment">// ulem.sty:310-317 `\ULforem` (`\useunder{\uline}{\em}{\emph}`: `\em`/`\emph` underline) and
-<a href=#34 id=34 data-nosnippet>34</a>  // `\normalem` (back to italics, from the copies ulem takes at load). As Perl's binding, `\em` keeps
-<a href=#35 id=35 data-nosnippet>35</a>  // its italics at load (ulem's own default is `\ULforem`, :317, unless `[normalem]`); a document's
-<a href=#36 id=36 data-nosnippet>36</a>  // `\ULforem` switches to underlining, its `\normalem` back (run 340: 109 first errors, witnesses
-<a href=#37 id=37 data-nosnippet>37</a>  // 2103.16561, 2004.14103, 1811.00488).
-<a href=#38 id=38 data-nosnippet>38</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\let\LA@em\em \let\LA@emph\emph"</span>);
-<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\normalem"</span>, <span class="prelude-val">None</span>, <span class="string">"\\let\\em\\LA@em \\let\\emph\\LA@emph"</span>);
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ULforem"</span>, <span class="prelude-val">None</span>, <span class="string">"\\useunder{\\uline}{\\em}{\\emph}"</span>);
-<a href=#41 id=41 data-nosnippet>41</a>
-<a href=#42 id=42 data-nosnippet>42</a>  <span class="comment">// ulem L343: \newdimen\ULdepth (initialized to \maxdimen for auto-mode).
-<a href=#43 id=43 data-nosnippet>43</a>  // Witnesses 2406.02021, 2406.18999.
-<a href=#44 id=44 data-nosnippet>44</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\ULdepth" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\ULthickness" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0.4pt"</span>));
-<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\UL@height" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
-<a href=#47 id=47 data-nosnippet>47</a>
-<a href=#48 id=48 data-nosnippet>48</a>  <span class="comment">// Real-ulem word-machinery internals: our high-level constructors never
-<a href=#49 id=49 data-nosnippet>49</a>  // call them, but RAW add-on code wires into them by name — xeCJKfntef.sty
-<a href=#50 id=50 data-nosnippet>50</a>  // L102-134 installs `\xeCJK_ulem_word:nw` over `\UL@word` and probes
-<a href=#51 id=51 data-nosnippet>51</a>  // `\UL@stop`/`\UL@hook`/`\UL@end`/`\UL@start` (the
-<a href=#52 id=52 data-nosnippet>52</a>  // `wisdom_latexml_reimpl_internal_name_mismatch` shape; fixdif-zh-cn's
-<a href=#53 id=53 data-nosnippet>53</a>  // digestion loop). Provide the surface inertly: identity word processor,
-<a href=#54 id=54 data-nosnippet>54</a>  // no-op start/stop, the real `\UL@end *` delimited shape (ulem.sty L59).
-<a href=#55 id=55 data-nosnippet>55</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\UL@hook"</span>, <span class="macro">Tokens!</span>());
-<a href=#56 id=56 data-nosnippet>56</a>  def_macro_noop(<span class="string">"\\UL@start"</span>)<span class="question-mark">?</span>;
-<a href=#57 id=57 data-nosnippet>57</a>  def_macro_noop(<span class="string">"\\UL@stop"</span>)<span class="question-mark">?</span>;
-<a href=#58 id=58 data-nosnippet>58</a>  def_macro_noop(<span class="string">"\\UL@putbox"</span>)<span class="question-mark">?</span>;
-<a href=#59 id=59 data-nosnippet>59</a>  def_macro_noop(<span class="string">"\\UL@ender"</span>)<span class="question-mark">?</span>;
-<a href=#60 id=60 data-nosnippet>60</a>  def_macro_identity(<span class="string">"\\UL@word{}"</span>)<span class="question-mark">?</span>;
-<a href=#61 id=61 data-nosnippet>61</a>  <span class="comment">// ulem's documented extension contract (ulem.sty:232-233): a special
-<a href=#62 id=62 data-nosnippet>62</a>  // underline is `\def\command{\bgroup \markoverwith{&lt;leader&gt;} \ULon}`, and
-<a href=#63 id=63 data-nosnippet>63</a>  // the `\bgroup` is closed by the word machinery — `\UL@on#1` ends in
-<a href=#64 id=64 data-nosnippet>64</a>  // `\UL@end *` whose real body (:59) closes the group, `\UL@onin`/`\UL@onmath`
-<a href=#65 id=65 data-nosnippet>65</a>  // (:90-102) end in `\egroup`. Keep that contract with the identity word
-<a href=#66 id=66 data-nosnippet>66</a>  // processor: CJKfntef.sty:258-283 `\CJK@UL` (`\CJKunderline`, raw) left the
-<a href=#67 id=67 data-nosnippet>67</a>  // group open and unbalanced the enclosing list (jnuexam exam sheets, 8
-<a href=#68 id=68 data-nosnippet>68</a>  // CJKfntef manuals). `\markoverwith` only builds the leader box.
-<a href=#69 id=69 data-nosnippet>69</a>  </span>def_macro_noop(<span class="string">"\\markoverwith{}"</span>)<span class="question-mark">?</span>;
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="macro">DefMacro!</span>(
-<a href=#71 id=71 data-nosnippet>71</a>    <span class="string">"\\ULon"</span>,
-<a href=#72 id=72 data-nosnippet>72</a>    <span class="string">r"\ifmmode\expandafter\UL@onmath\else\expandafter\UL@on\fi"
-<a href=#73 id=73 data-nosnippet>73</a>  </span>);
-<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UL@on{}"</span>, <span class="string">r"#1\UL@end *"</span>);
-<a href=#75 id=75 data-nosnippet>75</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UL@onin{}"</span>, <span class="string">r"#1\egroup"</span>);
-<a href=#76 id=76 data-nosnippet>76</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UL@onmath{}"</span>, <span class="string">r"#1\egroup"</span>);
-<a href=#77 id=77 data-nosnippet>77</a>  <span class="comment">// ulem.sty:59 `\def\UL@end *{\relax\relax}`: `*` is a delimiter, nothing after it is read. An
-<a href=#78 id=78 data-nosnippet>78</a>  // `OptionalMatch:*` then skips spaces (Perl Parameter.pm:98-100), so a custom underline built on
-<a href=#79 id=79 data-nosnippet>79</a>  // `\ULon` (`\bgroup\markoverwith{…}\ULon`, ulem.sty:232-233; witnesses 2605.15048 `\redout`,
-<a href=#80 id=80 data-nosnippet>80</a>  // 2605.16437 `\Erase`) ate the space after its argument. The mark itself is not rendered yet (RED
-<a href=#81 id=81 data-nosnippet>81</a>  // `fonts-nfss/ulem_custom_mark_is_rendered`).
-<a href=#82 id=82 data-nosnippet>82</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\UL@end Match:*"</span>, <span class="string">r"\egroup"</span>);
-<a href=#83 id=83 data-nosnippet>83</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UL@spfactor"</span>, <span class="prelude-val">None</span>, <span class="string">"1000"</span>);
-<a href=#84 id=84 data-nosnippet>84</a>
-<a href=#85 id=85 data-nosnippet>85</a>  <span class="comment">// ulem.sty:286-293 `\useunder{ucmd}{decl}{argcmd}`: `argcmd` is `ucmd`, and `decl` a declaration that applies `ucmd`
-<a href=#86 id=86 data-nosnippet>86</a>  // to the rest of its group — `{\ul some words}` underlines "some words" (ulem.sty:288-289 opens `ucmd`'s argument with
-<a href=#87 id=87 data-nosnippet>87</a>  // an unmatched brace, the group's own `}` closing it, and `\UL@swender`, :107, puts the group's `}` back after). An
-<a href=#88 id=88 data-nosnippet>88</a>  // empty slot (papers write `\useunder{\uline}{\ul}{}`) defines nothing. Witnesses 2406.08270 (`\useunder` with
-<a href=#89 id=89 data-nosnippet>89</a>  // `\uline{…}`), 2405.20343 and 2406.03441 (`{\ul 18.8262}`, `{\ul …}`: one character underlined while `\ul` was let
-<a href=#90 id=90 data-nosnippet>90</a>  // to `\uline`). A `\ul{x}` outside any group, a fatal error in pdflatex, reads to the end of the input.
-<a href=#91 id=91 data-nosnippet>91</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\useunder{}{}{}"</span>, sub[(ucmd, decl, argcmd)] {
-<a href=#92 id=92 data-nosnippet>92</a>    <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::new();
-<a href=#93 id=93 data-nosnippet>93</a>    <span class="kw">let </span>ucmd_v = ucmd.unlist();
-<a href=#94 id=94 data-nosnippet>94</a>    <span class="kw">if </span>!ucmd_v.is_empty() {
-<a href=#95 id=95 data-nosnippet>95</a>      <span class="kw">let </span>target = ucmd_v[<span class="number">0</span>];
-<a href=#96 id=96 data-nosnippet>96</a>      <span class="kw">let </span>decl_v = decl.unlist();
-<a href=#97 id=97 data-nosnippet>97</a>      <span class="kw">if </span>!decl_v.is_empty() {
-<a href=#98 id=98 data-nosnippet>98</a>        out.extend([<span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), decl_v[<span class="number">0</span>], <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@ulem@declaration"</span>), target, <span class="macro">T_END!</span>()]);
-<a href=#99 id=99 data-nosnippet>99</a>      }
-<a href=#100 id=100 data-nosnippet>100</a>      <span class="kw">let </span>arg_v = argcmd.unlist();
-<a href=#101 id=101 data-nosnippet>101</a>      <span class="kw">if </span>!arg_v.is_empty() {
-<a href=#102 id=102 data-nosnippet>102</a>        out.extend([<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), arg_v[<span class="number">0</span>], target]);
-<a href=#103 id=103 data-nosnippet>103</a>      }
-<a href=#104 id=104 data-nosnippet>104</a>    }
-<a href=#105 id=105 data-nosnippet>105</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
-<a href=#106 id=106 data-nosnippet>106</a>  });
-<a href=#107 id=107 data-nosnippet>107</a>  <span class="comment">// `\lx@ulem@declaration\uline` opens `\uline`'s argument, which the declaration's group closes; the argument read,
-<a href=#108 id=108 data-nosnippet>108</a>  // the group's own `}` is put back after it.
-<a href=#109 id=109 data-nosnippet>109</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@ulem@declaration{}"</span>, sub[(ucmd)] {
-<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@ulem@declared"</span>)];
-<a href=#111 id=111 data-nosnippet>111</a>    out.extend(ucmd.unlist());
-<a href=#112 id=112 data-nosnippet>112</a>    out.push(<span class="macro">T_BEGIN!</span>());
-<a href=#113 id=113 data-nosnippet>113</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
-<a href=#114 id=114 data-nosnippet>114</a>  });
-<a href=#115 id=115 data-nosnippet>115</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ulem@declared{}{}"</span>, sub[(ucmd, content)] {
-<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = ucmd.unlist();
-<a href=#117 id=117 data-nosnippet>117</a>    out.push(<span class="macro">T_BEGIN!</span>());
-<a href=#118 id=118 data-nosnippet>118</a>    out.extend(content.unlist());
-<a href=#119 id=119 data-nosnippet>119</a>    out.extend([<span class="macro">T_END!</span>(), <span class="macro">T_END!</span>()]);
-<a href=#120 id=120 data-nosnippet>120</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
-<a href=#121 id=121 data-nosnippet>121</a>  });
-<a href=#122 id=122 data-nosnippet>122</a>  <span class="comment">// ulem.sty:221 `\newbox\ULC@box`, the box the `\sout`-family builders measure in;
-<a href=#123 id=123 data-nosnippet>123</a>  // xeCJKfntef.sty sets it directly (xdupgthesis, xduugthesis, xduugtp; class
-<a href=#124 id=124 data-nosnippet>124</a>  // census 2026-09-24).
-<a href=#125 id=125 data-nosnippet>125</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newbox\ULC@box"</span>);
-<a href=#126 id=126 data-nosnippet>126</a>  <span class="comment">// ulem.sty:63-66 `\ULset`, the underline set-up `\uline` runs before `\ULon` (its leaders at
-<a href=#127 id=127 data-nosnippet>127</a>  // `\ULdepth`), and :69-73 `\UL@setULdepth`, which sets `\ULdepth` from the font when it is unset
-<a href=#128 id=128 data-nosnippet>128</a>  // (`\maxdimen`): documents build their own lines from them (`\renewcommand\sout{\bgroup
-<a href=#129 id=129 data-nosnippet>129</a>  // \color{red}\ULdepth=-.5ex \ULset}`, a red double underline `\UL@setULdepth …\markoverwith{…}\ULon`).
-<a href=#130 id=130 data-nosnippet>130</a>  // The rule is drawing (as `\markoverwith`): the text is `\ULon`'s. Run 340: `\UL@setULdepth` 16,
-<a href=#131 id=131 data-nosnippet>131</a>  // `\ULset` 6 first errors (witnesses 2411.10835, 2204.07159, 2109.10013, 0709.1684, 2001.10689, 1706.09467).
-<a href=#132 id=132 data-nosnippet>132</a>  </span>def_macro_noop(<span class="string">"\\UL@setULdepth"</span>)<span class="question-mark">?</span>;
-<a href=#133 id=133 data-nosnippet>133</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ULset"</span>, <span class="string">"\\UL@setULdepth\\ULon"</span>);
-<a href=#134 id=134 data-nosnippet>134</a>});
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="comment">// ulem's own lines, as loaded: a declaration made from one of them digests the rest of its group (`\useunder` below).
+<a href=#33 id=33 data-nosnippet>33</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#34 id=34 data-nosnippet>34</a>    <span class="string">r"\let\lx@ulem@uline\uline \let\lx@ulem@uuline\uuline \let\lx@ulem@uwave\uwave \let\lx@ulem@sout\sout
+<a href=#35 id=35 data-nosnippet>35</a>    \let\lx@ulem@xout\xout \let\lx@ulem@dashuline\dashuline \let\lx@ulem@dotuline\dotuline"
+<a href=#36 id=36 data-nosnippet>36</a>  </span>);
+<a href=#37 id=37 data-nosnippet>37</a>
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="comment">// ulem.sty:310-317 `\ULforem` (`\useunder{\uline}{\em}{\emph}`: `\em`/`\emph` underline) and
+<a href=#39 id=39 data-nosnippet>39</a>  // `\normalem` (back to italics, from the copies ulem takes at load). As Perl's binding, `\em` keeps
+<a href=#40 id=40 data-nosnippet>40</a>  // its italics at load (ulem's own default is `\ULforem`, :317, unless `[normalem]`); a document's
+<a href=#41 id=41 data-nosnippet>41</a>  // `\ULforem` switches to underlining, its `\normalem` back (run 340: 109 first errors, witnesses
+<a href=#42 id=42 data-nosnippet>42</a>  // 2103.16561, 2004.14103, 1811.00488).
+<a href=#43 id=43 data-nosnippet>43</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\let\LA@em\em \let\LA@emph\emph"</span>);
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\normalem"</span>, <span class="prelude-val">None</span>, <span class="string">"\\let\\em\\LA@em \\let\\emph\\LA@emph"</span>);
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ULforem"</span>, <span class="prelude-val">None</span>, <span class="string">"\\useunder{\\uline}{\\em}{\\emph}"</span>);
+<a href=#46 id=46 data-nosnippet>46</a>
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="comment">// ulem L343: \newdimen\ULdepth (initialized to \maxdimen for auto-mode).
+<a href=#48 id=48 data-nosnippet>48</a>  // Witnesses 2406.02021, 2406.18999.
+<a href=#49 id=49 data-nosnippet>49</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\ULdepth" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\ULthickness" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0.4pt"</span>));
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\UL@height" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"0pt"</span>));
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// Real-ulem word-machinery internals: our high-level constructors never
+<a href=#54 id=54 data-nosnippet>54</a>  // call them, but RAW add-on code wires into them by name — xeCJKfntef.sty
+<a href=#55 id=55 data-nosnippet>55</a>  // L102-134 installs `\xeCJK_ulem_word:nw` over `\UL@word` and probes
+<a href=#56 id=56 data-nosnippet>56</a>  // `\UL@stop`/`\UL@hook`/`\UL@end`/`\UL@start` (the
+<a href=#57 id=57 data-nosnippet>57</a>  // `wisdom_latexml_reimpl_internal_name_mismatch` shape; fixdif-zh-cn's
+<a href=#58 id=58 data-nosnippet>58</a>  // digestion loop). Provide the surface inertly: identity word processor,
+<a href=#59 id=59 data-nosnippet>59</a>  // no-op start/stop, the real `\UL@end *` delimited shape (ulem.sty L59).
+<a href=#60 id=60 data-nosnippet>60</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\UL@hook"</span>, <span class="macro">Tokens!</span>());
+<a href=#61 id=61 data-nosnippet>61</a>  def_macro_noop(<span class="string">"\\UL@start"</span>)<span class="question-mark">?</span>;
+<a href=#62 id=62 data-nosnippet>62</a>  def_macro_noop(<span class="string">"\\UL@stop"</span>)<span class="question-mark">?</span>;
+<a href=#63 id=63 data-nosnippet>63</a>  def_macro_noop(<span class="string">"\\UL@putbox"</span>)<span class="question-mark">?</span>;
+<a href=#64 id=64 data-nosnippet>64</a>  def_macro_noop(<span class="string">"\\UL@ender"</span>)<span class="question-mark">?</span>;
+<a href=#65 id=65 data-nosnippet>65</a>  def_macro_identity(<span class="string">"\\UL@word{}"</span>)<span class="question-mark">?</span>;
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="comment">// ulem's documented extension contract (ulem.sty:232-233): a special
+<a href=#67 id=67 data-nosnippet>67</a>  // underline is `\def\command{\bgroup \markoverwith{&lt;leader&gt;} \ULon}`, and
+<a href=#68 id=68 data-nosnippet>68</a>  // the `\bgroup` is closed by the word machinery — `\UL@on#1` ends in
+<a href=#69 id=69 data-nosnippet>69</a>  // `\UL@end *` whose real body (:59) closes the group, `\UL@onin`/`\UL@onmath`
+<a href=#70 id=70 data-nosnippet>70</a>  // (:90-102) end in `\egroup`. Keep that contract with the identity word
+<a href=#71 id=71 data-nosnippet>71</a>  // processor: CJKfntef.sty:258-283 `\CJK@UL` (`\CJKunderline`, raw) left the
+<a href=#72 id=72 data-nosnippet>72</a>  // group open and unbalanced the enclosing list (jnuexam exam sheets, 8
+<a href=#73 id=73 data-nosnippet>73</a>  // CJKfntef manuals). `\markoverwith` only builds the leader box.
+<a href=#74 id=74 data-nosnippet>74</a>  </span>def_macro_noop(<span class="string">"\\markoverwith{}"</span>)<span class="question-mark">?</span>;
+<a href=#75 id=75 data-nosnippet>75</a>  <span class="macro">DefMacro!</span>(
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="string">"\\ULon"</span>,
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="string">r"\ifmmode\expandafter\UL@onmath\else\expandafter\UL@on\fi"
+<a href=#78 id=78 data-nosnippet>78</a>  </span>);
+<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UL@on{}"</span>, <span class="string">r"#1\UL@end *"</span>);
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UL@onin{}"</span>, <span class="string">r"#1\egroup"</span>);
+<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UL@onmath{}"</span>, <span class="string">r"#1\egroup"</span>);
+<a href=#82 id=82 data-nosnippet>82</a>  <span class="comment">// ulem.sty:59 `\def\UL@end *{\relax\relax}`: `*` is a delimiter, nothing after it is read. An
+<a href=#83 id=83 data-nosnippet>83</a>  // `OptionalMatch:*` then skips spaces (Perl Parameter.pm:98-100), so a custom underline built on
+<a href=#84 id=84 data-nosnippet>84</a>  // `\ULon` (`\bgroup\markoverwith{…}\ULon`, ulem.sty:232-233; witnesses 2605.15048 `\redout`,
+<a href=#85 id=85 data-nosnippet>85</a>  // 2605.16437 `\Erase`) ate the space after its argument. The mark itself is not rendered yet (RED
+<a href=#86 id=86 data-nosnippet>86</a>  // `fonts-nfss/ulem_custom_mark_is_rendered`).
+<a href=#87 id=87 data-nosnippet>87</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\UL@end Match:*"</span>, <span class="string">r"\egroup"</span>);
+<a href=#88 id=88 data-nosnippet>88</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\UL@spfactor"</span>, <span class="prelude-val">None</span>, <span class="string">"1000"</span>);
+<a href=#89 id=89 data-nosnippet>89</a>
+<a href=#90 id=90 data-nosnippet>90</a>  <span class="comment">// ulem.sty:286-293 `\useunder{ucmd}{decl}{argcmd}`: `argcmd` is `ucmd`, and `decl` a declaration that applies `ucmd`
+<a href=#91 id=91 data-nosnippet>91</a>  // to the rest of its group — `{\ul some words}` underlines "some words" (ulem.sty:288-289 opens `ucmd`'s argument with
+<a href=#92 id=92 data-nosnippet>92</a>  // an unmatched brace, the group's own `}` closing it, and `\UL@swender`, :107, puts the group's `}` back after). An
+<a href=#93 id=93 data-nosnippet>93</a>  // empty slot (papers write `\useunder{\uline}{\ul}{}`) defines nothing. Witnesses 2406.08270 (`\useunder` with
+<a href=#94 id=94 data-nosnippet>94</a>  // `\uline{…}`), 2405.20343 and 2406.03441 (`{\ul 18.8262}`, `{\ul …}`: one character underlined while `\ul` was let
+<a href=#95 id=95 data-nosnippet>95</a>  // to `\uline`). A `\ul{x}` outside any group, a fatal error in pdflatex, underlines up to the end of its paragraph.
+<a href=#96 id=96 data-nosnippet>96</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\useunder{}{}{}"</span>, sub[(ucmd, decl, argcmd)] {
+<a href=#97 id=97 data-nosnippet>97</a>    <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::new();
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="kw">let </span>ucmd_v = ucmd.unlist();
+<a href=#99 id=99 data-nosnippet>99</a>    <span class="kw">if </span>!ucmd_v.is_empty() {
+<a href=#100 id=100 data-nosnippet>100</a>      <span class="kw">let </span>target = ucmd_v[<span class="number">0</span>];
+<a href=#101 id=101 data-nosnippet>101</a>      <span class="kw">let </span>decl_v = decl.unlist();
+<a href=#102 id=102 data-nosnippet>102</a>      <span class="kw">if </span>!decl_v.is_empty() {
+<a href=#103 id=103 data-nosnippet>103</a>        out.extend([<span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), decl_v[<span class="number">0</span>], <span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@ulem@declaration"</span>), target, <span class="macro">T_END!</span>()]);
+<a href=#104 id=104 data-nosnippet>104</a>      }
+<a href=#105 id=105 data-nosnippet>105</a>      <span class="kw">let </span>arg_v = argcmd.unlist();
+<a href=#106 id=106 data-nosnippet>106</a>      <span class="kw">if </span>!arg_v.is_empty() {
+<a href=#107 id=107 data-nosnippet>107</a>        out.extend([<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), arg_v[<span class="number">0</span>], target]);
+<a href=#108 id=108 data-nosnippet>108</a>      }
+<a href=#109 id=109 data-nosnippet>109</a>    }
+<a href=#110 id=110 data-nosnippet>110</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#111 id=111 data-nosnippet>111</a>  });
+<a href=#112 id=112 data-nosnippet>112</a>  <span class="comment">// `\lx@ulem@declaration\uline` underlines the rest of the current group. One of ulem's own lines digests it up to the
+<a href=#113 id=113 data-nosnippet>113</a>  // group's end: its `}` (put back after the line for the group), a cell's end (an Error), or a `\multicolumn` body's
+<a href=#114 id=114 data-nosnippet>114</a>  // end, where latex.ltx:16664-16676 closes the template's `{…}` around the body (2312.12023
+<a href=#115 id=115 data-nosnippet>115</a>  // `\multicolumn{1}{c|}{\ul 29.9970}`: a balanced read ran out of input there). Any other `ucmd` takes the rest of the
+<a href=#116 id=116 data-nosnippet>116</a>  // group read as its argument.
+<a href=#117 id=117 data-nosnippet>117</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@ulem@declaration{}"</span>, sub[(ucmd)] {
+<a href=#118 id=118 data-nosnippet>118</a>    <span class="kw">let </span>ucmd_v = ucmd.unlist();
+<a href=#119 id=119 data-nosnippet>119</a>    <span class="kw">if let </span>[target] = ucmd_v.as_slice() {
+<a href=#120 id=120 data-nosnippet>120</a>      <span class="kw">for </span>line <span class="kw">in </span>[<span class="string">"uline"</span>, <span class="string">"uuline"</span>, <span class="string">"uwave"</span>, <span class="string">"sout"</span>, <span class="string">"xout"</span>, <span class="string">"dashuline"</span>, <span class="string">"dotuline"</span>] {
+<a href=#121 id=121 data-nosnippet>121</a>        <span class="kw">if </span>x_equals(target, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"\\lx@ulem@{line}"</span>))) {
+<a href=#122 id=122 data-nosnippet>122</a>          <span class="kw">return </span><span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">vec!</span>[
+<a href=#123 id=123 data-nosnippet>123</a>            <span class="macro">T_CS!</span>(<span class="string">"\\lx@ulem@declared@line"</span>), <span class="kw-2">*</span>target, <span class="macro">T_BEGIN!</span>(), <span class="macro">T_OTHER!</span>(line), <span class="macro">T_END!</span>()]));
+<a href=#124 id=124 data-nosnippet>124</a>        }
+<a href=#125 id=125 data-nosnippet>125</a>      }
+<a href=#126 id=126 data-nosnippet>126</a>    }
+<a href=#127 id=127 data-nosnippet>127</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@ulem@declared"</span>)];
+<a href=#128 id=128 data-nosnippet>128</a>    out.extend(ucmd_v);
+<a href=#129 id=129 data-nosnippet>129</a>    out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#131 id=131 data-nosnippet>131</a>  });
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@ulem@declared@line Undigested Semiverbatim DigestedBody"</span>,
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="string">"?#isMath(&lt;ltx:XMWrap class='ltx_ulem_#2'&gt;#3&lt;/ltx:XMWrap&gt;)(&lt;ltx:text class='ltx_ulem_#2'&gt;#3&lt;/ltx:text&gt;)"</span>,
+<a href=#134 id=134 data-nosnippet>134</a>  enter_horizontal =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">"#1{#3}"</span>, sizer =&gt; <span class="string">"#3"</span>,
+<a href=#135 id=135 data-nosnippet>135</a>  <span class="comment">// `lx@ulem@body` is the line's nesting depth on its own frame, so a line inside another tells its own frame from
+<a href=#136 id=136 data-nosnippet>136</a>  // the outer line's (`{\ul a \so b}`, `\multicolumn{1}{c}{a \ul b \so c}`).
+<a href=#137 id=137 data-nosnippet>137</a>  </span>before_digest =&gt; {
+<a href=#138 id=138 data-nosnippet>138</a>    <span class="kw">let </span>depth = lookup_int(<span class="string">"lx@ulem@depth"</span>) + <span class="number">1</span>;
+<a href=#139 id=139 data-nosnippet>139</a>    assign_value(<span class="string">"lx@ulem@depth"</span>, Stored::Int(depth), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#140 id=140 data-nosnippet>140</a>    <span class="kw">let </span>opened = get_locator().to_string();
+<a href=#141 id=141 data-nosnippet>141</a>    assign_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"lx@ulem@opened@{depth}"</span>), Stored::String(pin(<span class="kw-2">&amp;</span>opened)), <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#142 id=142 data-nosnippet>142</a>    <span class="comment">// Made directly in another line's text (`{a \ul b \so c}`), it shares that line's closer, which ends the other's
+<a href=#143 id=143 data-nosnippet>143</a>    // argument: nothing closes this one, pdflatex's fatal "File ended while scanning use of \UL@on".
+<a href=#144 id=144 data-nosnippet>144</a>    </span><span class="kw">let </span>shared = is_value_bound(<span class="string">"lx@ulem@body"</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>));
+<a href=#145 id=145 data-nosnippet>145</a>    assign_value(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"lx@ulem@shared@{depth}"</span>), Stored::Bool(shared), <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#146 id=146 data-nosnippet>146</a>    bgroup();
+<a href=#147 id=147 data-nosnippet>147</a>    assign_value(<span class="string">"lx@ulem@body"</span>, Stored::Int(depth), <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#148 id=148 data-nosnippet>148</a>    <span class="macro">Let!</span>(<span class="string">"\\lx@alignment@multicolumn@end"</span>, <span class="string">"\\lx@ulem@declared@end"</span>);
+<a href=#149 id=149 data-nosnippet>149</a>  },
+<a href=#150 id=150 data-nosnippet>150</a>  after_digest =&gt; sub[whatsit] {
+<a href=#151 id=151 data-nosnippet>151</a>    <span class="kw">let </span>depth = lookup_int(<span class="string">"lx@ulem@depth"</span>);
+<a href=#152 id=152 data-nosnippet>152</a>    assign_value(<span class="string">"lx@ulem@depth"</span>, Stored::Int(depth - <span class="number">1</span>), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#153 id=153 data-nosnippet>153</a>    <span class="kw">let </span>opened = lookup_string(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"lx@ulem@opened@{depth}"</span>));
+<a href=#154 id=154 data-nosnippet>154</a>    <span class="kw">let </span>shared = lookup_bool(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"lx@ulem@shared@{depth}"</span>));
+<a href=#155 id=155 data-nosnippet>155</a>    <span class="kw">if </span><span class="macro">matches!</span>(lookup_value(<span class="string">"lx@ulem@body"</span>), <span class="prelude-val">Some</span>(Stored::Int(own)) <span class="kw">if </span>own == depth) {
+<a href=#156 id=156 data-nosnippet>156</a>      <span class="comment">// A cell's end (`a &amp; \ul 6.7 \\`) closes no group TeX's reading of the argument counts: pdflatex's fatal "File
+<a href=#157 id=157 data-nosnippet>157</a>      // ended while scanning use of \UL@on". The cell's text stays underlined, the next cell intact.
+<a href=#158 id=158 data-nosnippet>158</a>      </span>egroup()<span class="question-mark">?</span>;
+<a href=#159 id=159 data-nosnippet>159</a>      <span class="macro">Error!</span>(
+<a href=#160 id=160 data-nosnippet>160</a>        <span class="string">"expected"</span>,
+<a href=#161 id=161 data-nosnippet>161</a>        <span class="string">"}"</span>,
+<a href=#162 id=162 data-nosnippet>162</a>        <span class="string">"Missing } to end the underline declaration made by \\useunder"</span>,
+<a href=#163 id=163 data-nosnippet>163</a>        <span class="macro">s!</span>(<span class="string">"The declaration at {opened} underlines the text up to its cell's end."</span>)
+<a href=#164 id=164 data-nosnippet>164</a>      );
+<a href=#165 id=165 data-nosnippet>165</a>    } <span class="kw">else </span>{
+<a href=#166 id=166 data-nosnippet>166</a>      <span class="comment">// the group's `}` closed the line's: it leaves the body and is read again for the group (ulem.sty:107)
+<a href=#167 id=167 data-nosnippet>167</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>closed = lookup_value(<span class="string">"lx@ulem@ended"</span>).is_some();
+<a href=#168 id=168 data-nosnippet>168</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(body) = whatsit.get_arg_mut(<span class="number">3</span>)
+<a href=#169 id=169 data-nosnippet>169</a>        &amp;&amp; <span class="kw">let </span>DigestedData::List(list) = body.data()
+<a href=#170 id=170 data-nosnippet>170</a>      {
+<a href=#171 id=171 data-nosnippet>171</a>        <span class="kw">let </span><span class="kw-2">mut </span>list = list.borrow_mut();
+<a href=#172 id=172 data-nosnippet>172</a>        <span class="kw">let </span>closer = list.boxes.last().and_then(|last| last.revert().ok());
+<a href=#173 id=173 data-nosnippet>173</a>        <span class="kw">let </span>brace = |tokens: Tokens| {
+<a href=#174 id=174 data-nosnippet>174</a>          <span class="macro">matches!</span>(tokens.unlist_ref().as_slice(), [t] <span class="kw">if </span>is_right_brace(t))
+<a href=#175 id=175 data-nosnippet>175</a>        };
+<a href=#176 id=176 data-nosnippet>176</a>        <span class="kw">if </span>closer.is_some_and(brace) {
+<a href=#177 id=177 data-nosnippet>177</a>          list.boxes.pop();
+<a href=#178 id=178 data-nosnippet>178</a>          unread_one(<span class="macro">T_END!</span>());
+<a href=#179 id=179 data-nosnippet>179</a>          closed = <span class="bool-val">true</span>;
+<a href=#180 id=180 data-nosnippet>180</a>        }
+<a href=#181 id=181 data-nosnippet>181</a>      }
+<a href=#182 id=182 data-nosnippet>182</a>      <span class="comment">// Neither its group's `}` nor a `\multicolumn` body's end closed it: the input ended first (`Text \ul{x} y.`
+<a href=#183 id=183 data-nosnippet>183</a>      // outside any group), pdflatex's fatal "File ended while scanning use of \UL@on". The text stays underlined.
+<a href=#184 id=184 data-nosnippet>184</a>      </span><span class="kw">if </span>!closed || shared {
+<a href=#185 id=185 data-nosnippet>185</a>        <span class="kw">let </span>why = <span class="kw">if </span>shared {
+<a href=#186 id=186 data-nosnippet>186</a>          <span class="string">"is made in another declaration's text, whose end does not end it"
+<a href=#187 id=187 data-nosnippet>187</a>        </span>} <span class="kw">else </span>{
+<a href=#188 id=188 data-nosnippet>188</a>          <span class="string">"underlines the text after it"
+<a href=#189 id=189 data-nosnippet>189</a>        </span>};
+<a href=#190 id=190 data-nosnippet>190</a>        <span class="macro">Error!</span>(
+<a href=#191 id=191 data-nosnippet>191</a>          <span class="string">"expected"</span>,
+<a href=#192 id=192 data-nosnippet>192</a>          <span class="string">"}"</span>,
+<a href=#193 id=193 data-nosnippet>193</a>          <span class="string">"Missing } to end the underline declaration made by \\useunder"</span>,
+<a href=#194 id=194 data-nosnippet>194</a>          <span class="macro">s!</span>(<span class="string">"The declaration at {opened} {why}."</span>)
+<a href=#195 id=195 data-nosnippet>195</a>        );
+<a href=#196 id=196 data-nosnippet>196</a>      }
+<a href=#197 id=197 data-nosnippet>197</a>      assign_value(<span class="string">"lx@ulem@ended"</span>, Stored::None, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#198 id=198 data-nosnippet>198</a>    }
+<a href=#199 id=199 data-nosnippet>199</a>  });
+<a href=#200 id=200 data-nosnippet>200</a>  <span class="comment">// A `\multicolumn` body's end closes the line's group as the template's `}` does, before the column's after-code,
+<a href=#201 id=201 data-nosnippet>201</a>  // and is read again for a declaration still open outside it.
+<a href=#202 id=202 data-nosnippet>202</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@ulem@declared@end"</span>, {
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="kw">if </span>is_value_bound(<span class="string">"lx@ulem@body"</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>)) {
+<a href=#204 id=204 data-nosnippet>204</a>      egroup()<span class="question-mark">?</span>;
+<a href=#205 id=205 data-nosnippet>205</a>      assign_value(<span class="string">"lx@ulem@ended"</span>, Stored::Bool(<span class="bool-val">true</span>), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#206 id=206 data-nosnippet>206</a>      unread_one(<span class="macro">T_CS!</span>(<span class="string">"\\lx@alignment@multicolumn@end"</span>));
+<a href=#207 id=207 data-nosnippet>207</a>    }
+<a href=#208 id=208 data-nosnippet>208</a>  });
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ulem@declared{}{}"</span>, sub[(ucmd, content)] {
+<a href=#210 id=210 data-nosnippet>210</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = ucmd.unlist();
+<a href=#211 id=211 data-nosnippet>211</a>    out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#212 id=212 data-nosnippet>212</a>    out.extend(content.unlist());
+<a href=#213 id=213 data-nosnippet>213</a>    out.extend([<span class="macro">T_END!</span>(), <span class="macro">T_END!</span>()]);
+<a href=#214 id=214 data-nosnippet>214</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#215 id=215 data-nosnippet>215</a>  });
+<a href=#216 id=216 data-nosnippet>216</a>  <span class="comment">// ulem.sty:221 `\newbox\ULC@box`, the box the `\sout`-family builders measure in;
+<a href=#217 id=217 data-nosnippet>217</a>  // xeCJKfntef.sty sets it directly (xdupgthesis, xduugthesis, xduugtp; class
+<a href=#218 id=218 data-nosnippet>218</a>  // census 2026-09-24).
+<a href=#219 id=219 data-nosnippet>219</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newbox\ULC@box"</span>);
+<a href=#220 id=220 data-nosnippet>220</a>  <span class="comment">// ulem.sty:63-66 `\ULset`, the underline set-up `\uline` runs before `\ULon` (its leaders at
+<a href=#221 id=221 data-nosnippet>221</a>  // `\ULdepth`), and :69-73 `\UL@setULdepth`, which sets `\ULdepth` from the font when it is unset
+<a href=#222 id=222 data-nosnippet>222</a>  // (`\maxdimen`): documents build their own lines from them (`\renewcommand\sout{\bgroup
+<a href=#223 id=223 data-nosnippet>223</a>  // \color{red}\ULdepth=-.5ex \ULset}`, a red double underline `\UL@setULdepth …\markoverwith{…}\ULon`).
+<a href=#224 id=224 data-nosnippet>224</a>  // The rule is drawing (as `\markoverwith`): the text is `\ULon`'s. Run 340: `\UL@setULdepth` 16,
+<a href=#225 id=225 data-nosnippet>225</a>  // `\ULset` 6 first errors (witnesses 2411.10835, 2204.07159, 2109.10013, 0709.1684, 2001.10689, 1706.09467).
+<a href=#226 id=226 data-nosnippet>226</a>  </span>def_macro_noop(<span class="string">"\\UL@setULdepth"</span>)<span class="question-mark">?</span>;
+<a href=#227 id=227 data-nosnippet>227</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ULset"</span>, <span class="string">"\\UL@setULdepth\\ULon"</span>);
+<a href=#228 id=228 data-nosnippet>228</a>});
 </code></pre></div></section></main></body></html>

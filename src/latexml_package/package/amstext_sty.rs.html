@@ -14,10 +14,21 @@
 <a href=#14 id=14 data-nosnippet>14</a>  // read before `\text` digests it, so its own braces are no longer counted: the count is raised for the
 <a href=#15 id=15 data-nosnippet>15</a>  // digestion, as glossaries_sty.rs does for an entry's fields. Perl the same (KNOWN_PERL_ERRORS #931). Guard
 <a href=#16 id=16 data-nosnippet>16</a>  // `perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.
-<a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\text{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>,
-<a href=#18 id=18 data-nosnippet>18</a>    mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>, locked =&gt; <span class="bool-val">true</span>,
-<a href=#19 id=19 data-nosnippet>19</a>    before_digest =&gt; { increment_align_group_count(); },
-<a href=#20 id=20 data-nosnippet>20</a>    after_digest =&gt; { decrement_align_group_count(); });
-<a href=#21 id=21 data-nosnippet>21</a>  <span class="prelude-val">Ok</span>(())
-<a href=#22 id=22 data-nosnippet>22</a>}
+<a href=#17 id=17 data-nosnippet>17</a>  // `\text` reads `#1` as a macro does, at the cell's count: a brace-less `$x$\text &amp; 0.6` ends the cell at the `&amp;`
+<a href=#18 id=18 data-nosnippet>18</a>  // (tex.web §342; 2212.00883). Protected (amstext.sty:28 `\DeclareRobustCommand`; Perl's constructor is unexpandable),
+<a href=#19 id=19 data-nosnippet>19</a>  // so an `\edef`, `\protected@edef` or `\typeout` keeps `\text`, not `\lx@text`; not `robust`, whose inner `\text␣` a
+<a href=#20 id=20 data-nosnippet>20</a>  // document's `\DeclareRobustCommand\text{V}` replaces under the lock (OXIDIZED_DESIGN #1104). Guards
+<a href=#21 id=21 data-nosnippet>21</a>  // `perfect_kernel_batchregfixk::{text_without_braces_before_a_cell_end, text_survives_an_edef}`.
+<a href=#22 id=22 data-nosnippet>22</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\text{}"</span>, <span class="string">"\\lx@text{#1}"</span>, protected =&gt; <span class="bool-val">true</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#23 id=23 data-nosnippet>23</a>  define_text_constructor()
+<a href=#24 id=24 data-nosnippet>24</a>}
+<a href=#25 id=25 data-nosnippet>25</a>
+<a href=#26 id=26 data-nosnippet>26</a><span class="doccomment">/// The `\lx@text` box `\text{#1}` sets its argument in (amstext_sty.rs, revtex4_support_sty.rs), reverting to `\text`.
+<a href=#27 id=27 data-nosnippet>27</a></span><span class="kw">pub fn </span>define_text_constructor() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@text{}"</span>, <span class="string">"&lt;ltx:text _noautoclose='1'&gt;#1&lt;/ltx:text&gt;"</span>,
+<a href=#29 id=29 data-nosnippet>29</a>    alias =&gt; <span class="string">"\\text"</span>, mode =&gt; <span class="string">"restricted_horizontal"</span>, enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#30 id=30 data-nosnippet>30</a>    before_digest =&gt; { increment_align_group_count(); },
+<a href=#31 id=31 data-nosnippet>31</a>    after_digest =&gt; { decrement_align_group_count(); });
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="prelude-val">Ok</span>(())
+<a href=#33 id=33 data-nosnippet>33</a>}
 </code></pre></div></section></main></body></html>

@@ -24,7 +24,7 @@
 <a href=#24 id=24 data-nosnippet>24</a><span class="doccomment">/// JHEP.cls's journal-citation macros (Perl JHEP.cls.ltxml L143-261): `\@spires`, the
 <a href=#25 id=25 data-nosnippet>25</a>/// `\&lt;journal&gt;{vol}{year}{page}` aliases (`\apj`, `\prd`, …), `\jhep`, `\newjournal`,
 <a href=#26 id=26 data-nosnippet>26</a>/// `\ibid` and the arXiv-archive links (`\hepth{}`, …, `\Math{}{}`). JHEP, JHEP2 and
-<a href=#27 id=27 data-nosnippet>27</a>/// JHEP3 have them; PoS.cls, whose binding loads JHEP's as Perl's does (PoS.cls.ltxml
+<a href=#27 id=27 data-nosnippet>27</a>/// JHEP3 have them; PoS.cls, whose binding takes JHEP's definitions as Perl's loads them (PoS.cls.ltxml
 <a href=#28 id=28 data-nosnippet>28</a>/// LoadClass JHEP), defines none (it has its own `\href`, PoS.cls:247): a PoS paper's
 <a href=#29 id=29 data-nosnippet>29</a>/// `\newcommand{\apj}{ApJ}` was refused and its `\apj` read three arguments, swallowing
 <a href=#30 id=30 data-nosnippet>30</a>/// what followed (an `unexpected:}` Error: 1507.03892, 1510.07042, 1807.03003, 1908.00100).
@@ -156,232 +156,241 @@
 <a href=#156 id=156 data-nosnippet>156</a>  <span class="prelude-val">Ok</span>(())
 <a href=#157 id=157 data-nosnippet>157</a>}
 <a href=#158 id=158 data-nosnippet>158</a>
-<a href=#159 id=159 data-nosnippet>159</a><span class="attr">#[rustfmt::skip]
-<a href=#160 id=160 data-nosnippet>160</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#161 id=161 data-nosnippet>161</a>  <span class="comment">// Perl L26-35: Class options
-<a href=#162 id=162 data-nosnippet>162</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"proceedings"</span>, {});
-<a href=#163 id=163 data-nosnippet>163</a>  <span class="macro">DeclareOption!</span>(<span class="string">"published"</span>, {});
-<a href=#164 id=164 data-nosnippet>164</a>  <span class="macro">DeclareOption!</span>(<span class="string">"hyper"</span>, {});
-<a href=#165 id=165 data-nosnippet>165</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nohyper"</span>, {});
-<a href=#166 id=166 data-nosnippet>166</a>  <span class="macro">DeclareOption!</span>(<span class="string">"notoc"</span>, {});
-<a href=#167 id=167 data-nosnippet>167</a>  <span class="macro">ProcessOptions!</span>();
-<a href=#168 id=168 data-nosnippet>168</a>  <span class="macro">LoadClass!</span>(<span class="string">"article"</span>);
-<a href=#169 id=169 data-nosnippet>169</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
-<a href=#170 id=170 data-nosnippet>170</a>  <span class="comment">// The raw JHEP.cls loads hyperref, giving authors \href / \url / \hypertarget
-<a href=#171 id=171 data-nosnippet>171</a>  // without an explicit \usepackage{hyperref}. Perl's JHEP.cls.ltxml omits
-<a href=#172 id=172 data-nosnippet>172</a>  // this, but the real-world paper corpus (e.g. arxiv 1010.4240 via PoS →
-<a href=#173 id=173 data-nosnippet>173</a>  // JHEP) depends on hyperref being active. Load it here so the arxiv sandbox
-<a href=#174 id=174 data-nosnippet>174</a>  // resolves \href without an Error:undefined cascade.
-<a href=#175 id=175 data-nosnippet>175</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
-<a href=#176 id=176 data-nosnippet>176</a>
-<a href=#177 id=177 data-nosnippet>177</a>  <span class="comment">// Perl L40-58: Frontmatter
-<a href=#178 id=178 data-nosnippet>178</a>  // Each `\author` adds one more author block (JHEP.cls:513, JHEP3.cls:764, PoS.cls:666 append to `\@author`:
-<a href=#179 id=179 data-nosnippet>179</a>  // `\xdef\@author{\the\prev@t\the\cur@t}`), read as the article `\author` reads its block: one author with its
-<a href=#180 id=180 data-nosnippet>180</a>  // `\\` lines (affiliation, email), or a marked name list with its marked affiliations (`$^{ab}$`, 0811.4645,
-<a href=#181 id=181 data-nosnippet>181</a>  // 1011.0516). Perl kept the kernel's `\author`, each call replacing the last: astro-ph0611258 (PoS) kept only its
-<a href=#182 id=182 data-nosnippet>182</a>  // third author (63k).
-<a href=#183 id=183 data-nosnippet>183</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\author{}"</span>, <span class="string">"\\lx@add@authors@list{#1}"</span>);
-<a href=#184 id=184 data-nosnippet>184</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\speaker{}"</span>, <span class="string">"\\lx@add@creator[role=speaker]{#1}"</span>);
-<a href=#185 id=185 data-nosnippet>185</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract{}"</span>, <span class="string">"\\lx@add@abstract[name={\\abstractname~}]{#1}"</span>);
-<a href=#186 id=186 data-nosnippet>186</a>  <span class="comment">// JHEP.cls:806 `\newcommand\email[1]{{\tt\href{mailto:#1}{#1}}}` (no corpus `_` witness; JHEP3's
-<a href=#187 id=187 data-nosnippet>187</a>  // `E-mail: \email{…}` author lines, 0911.0568, 0911.0082)
-<a href=#188 id=188 data-nosnippet>188</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\email Semiverbatim"</span>, <span class="string">"\\lx@add@email{\\lx@address@urlfont{#1}}"</span>);
-<a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">// Perl L50-52: each date macro ships `name={\&lt;role&gt;name}` so the localized
-<a href=#190 id=190 data-nosnippet>190</a>  // label is attached to the frontmatter date entry. Restored to match.
-<a href=#191 id=191 data-nosnippet>191</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\received{}"</span>, <span class="string">"\\lx@add@date[role=received,name={\\receivedname}]{#1}"</span>);
-<a href=#192 id=192 data-nosnippet>192</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revised{}"</span>, <span class="string">"\\lx@add@date[role=revised,name={\\revisedname}]{#1}"</span>);
-<a href=#193 id=193 data-nosnippet>193</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\accepted{}"</span>, <span class="string">"\\lx@add@date[role=accepted,name={\\acceptedname}]{#1}"</span>);
-<a href=#194 id=194 data-nosnippet>194</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JHEPcopydate{}"</span>, <span class="string">"\\lx@add@date[role=copydate]{#1}"</span>);
-<a href=#195 id=195 data-nosnippet>195</a>  <span class="comment">// No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): JHEP.cls:608 sets the dedication in italics, :390
-<a href=#196 id=196 data-nosnippet>196</a>  // the preprint header's number, and the conference line its name alone (hep-th0103183's copy) — the role stays.
-<a href=#197 id=197 data-nosnippet>197</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\dedicated{}"</span>, <span class="string">"\\lx@add@pubnote[role=dedication,name={}]{#1}"</span>);
-<a href=#198 id=198 data-nosnippet>198</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\conference{}"</span>, <span class="string">"\\lx@add@pubnote[role=conference,name={}]{#1}"</span>);
-<a href=#199 id=199 data-nosnippet>199</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\preprint{}"</span>, <span class="string">"\\lx@add@pubnote[role=preprint,name={}]{#1}"</span>);
-<a href=#200 id=200 data-nosnippet>200</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\lx@add@keywords[name={\\keywordsname~}]{#1}"</span>);
-<a href=#201 id=201 data-nosnippet>201</a>
-<a href=#202 id=202 data-nosnippet>202</a>  <span class="comment">// Perl L61-64: Acknowledgements environment. Perl uses
-<a href=#203 id=203 data-nosnippet>203</a>  //   properties =&gt; sub { (name =&gt; Digest(T_CS('\acknowlname'))) }
-<a href=#204 id=204 data-nosnippet>204</a>  // — i18n via the user's current \acknowlname binding. Hardcoded
-<a href=#205 id=205 data-nosnippet>205</a>  // "Acknowledgments" was breaking non-English JHEP submissions.
-<a href=#206 id=206 data-nosnippet>206</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\acknowledgments"</span>, <span class="string">"&lt;ltx:acknowledgements name='#name'&gt;"</span>,
-<a href=#207 id=207 data-nosnippet>207</a>    properties =&gt; {
-<a href=#208 id=208 data-nosnippet>208</a>      <span class="kw">let </span>name_toks = digest_in_group_if(<span class="macro">T_CS!</span>(<span class="string">"\\acknowlname"</span>))<span class="question-mark">?</span>;
-<a href=#209 id=209 data-nosnippet>209</a>      <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; name_toks)
-<a href=#210 id=210 data-nosnippet>210</a>    });
-<a href=#211 id=211 data-nosnippet>211</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endacknowledgments"</span>, <span class="string">"&lt;/ltx:acknowledgements&gt;"</span>);
-<a href=#212 id=212 data-nosnippet>212</a>  <span class="comment">// Perl L64: explicit autoClose so a stray paragraph or sectioning command
-<a href=#213 id=213 data-nosnippet>213</a>  // can flush an unclosed `\acknowledgments` block (no \endacknowledgments).
-<a href=#214 id=214 data-nosnippet>214</a>  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
-<a href=#215 id=215 data-nosnippet>215</a>  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
-<a href=#216 id=216 data-nosnippet>216</a>
-<a href=#217 id=217 data-nosnippet>217</a>  // Perl L67-76: Misc macros.
-<a href=#218 id=218 data-nosnippet>218</a>  // \hash: Perl `DefPrimitiveI('\hash', undef, '#')` emits "#" text.
-<a href=#219 id=219 data-nosnippet>219</a>  // Rust delegates to `\#` — observationally equivalent (both yield "#").
-<a href=#220 id=220 data-nosnippet>220</a>  // DP-flag: DefPrimitive → DefMacro, WISDOM #44; safe as `\hash` is a
-<a href=#221 id=221 data-nosnippet>221</a>  // user-facing text macro, never `\edef`-observed in JHEP documents.
-<a href=#222 id=222 data-nosnippet>222</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\hash"</span>, <span class="string">"\\#"</span>);
-<a href=#223 id=223 data-nosnippet>223</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\secstyle"</span>, <span class="string">"\\bfseries"</span>);
-<a href=#224 id=224 data-nosnippet>224</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\militarytime"</span>, <span class="string">"\\time"</span>);
-<a href=#225 id=225 data-nosnippet>225</a>  <span class="macro">Let!</span>(<span class="string">"\\textref"</span>, <span class="string">"\\ref"</span>);
-<a href=#226 id=226 data-nosnippet>226</a>  def_macro_noop(<span class="string">"\\tocsecs"</span>)<span class="question-mark">?</span>;
-<a href=#227 id=227 data-nosnippet>227</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\logo"</span>, <span class="string">"JHEP"</span>);
-<a href=#228 id=228 data-nosnippet>228</a>  <span class="comment">// \JHEP{volume/issue} and \PrHEP{volume/issue} carry journal-issue
-<a href=#229 id=229 data-nosnippet>229</a>  // metadata. Perl L73-74 gobbles with `?` (uncertain); we surpass
-<a href=#230 id=230 data-nosnippet>230</a>  // by preserving as ltx:note for downstream JATS metadata.
-<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\JHEP{}"</span>, <span class="string">"\\lx@add@frontmatter{ltx:note}[role=jhep-issue]{#1}"</span>);
-<a href=#232 id=232 data-nosnippet>232</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PrHEP{}"</span>, <span class="string">"\\lx@add@frontmatter{ltx:note}[role=prhep-issue]{#1}"</span>);
-<a href=#233 id=233 data-nosnippet>233</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Proof"</span>, <span class="string">"\\emph{Proof.}\\ "</span>);
-<a href=#234 id=234 data-nosnippet>234</a>
-<a href=#235 id=235 data-nosnippet>235</a>  <span class="comment">// Perl L80-83: Figure/table macros (map to environments)
-<a href=#236 id=236 data-nosnippet>236</a>  // Perl wraps into `{floatingfigure}` / `{floatingtable}` so the nested
-<a href=#237 id=237 data-nosnippet>237</a>  // `\caption` sees a proper `\@captype`. Previously Rust expanded to bare
-<a href=#238 id=238 data-nosnippet>238</a>  // `#2` which dumped the caption into text-mode and triggered
-<a href=#239 id=239 data-nosnippet>239</a>  // `Error:unexpected:\caption (outside any known float)`.
-<a href=#240 id=240 data-nosnippet>240</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\FIGURE[]{}"</span>, <span class="string">"\\begin{floatingfigure}[#1]#2\\end{floatingfigure}"</span>);
-<a href=#241 id=241 data-nosnippet>241</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\TABLE[]{}"</span>,  <span class="string">"\\begin{floatingtable}[#1]#2\\end{floatingtable}"</span>);
-<a href=#242 id=242 data-nosnippet>242</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\EPSFIGURE[]{}{}"</span>, <span class="string">"\\begin{floatingfigure}[#1]\\epsfig{file=#2}\\caption{#3}\\end{floatingfigure}"</span>);
-<a href=#243 id=243 data-nosnippet>243</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\TABULAR[]{}{}{}"</span>,
-<a href=#244 id=244 data-nosnippet>244</a>    <span class="string">"\\begin{floatingtable}[#1]\\begin{tabular}{#2}#3\\end{tabular}\\caption{#4}\\end{floatingtable}"</span>);
-<a href=#245 id=245 data-nosnippet>245</a>
-<a href=#246 id=246 data-nosnippet>246</a>  <span class="comment">// Perl JHEP.cls.ltxml L85-89: \DOUBLEFIGURE[pos]{img1}{img2}{cap1}{cap2}
-<a href=#247 id=247 data-nosnippet>247</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DOUBLEFIGURE[]{}{}{}{}"</span>,
-<a href=#248 id=248 data-nosnippet>248</a>    <span class="string">"\\begin{figure}[#1]\
-<a href=#249 id=249 data-nosnippet>249</a>     \\begin{@half@doublefigure}\\epsfig{file=#2}\\caption{#4}\\end{@half@doublefigure}\
-<a href=#250 id=250 data-nosnippet>250</a>     \\begin{@half@doublefigure}\\epsfig{file=#3}\\caption{#5}\\end{@half@doublefigure}\
-<a href=#251 id=251 data-nosnippet>251</a>     \\end{figure}"</span>);
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{@half@doublefigure}"</span>,
-<a href=#253 id=253 data-nosnippet>253</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' width='0.45%'&gt;#body&lt;/ltx:figure&gt;#tags"</span>,
-<a href=#254 id=254 data-nosnippet>254</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
-<a href=#255 id=255 data-nosnippet>255</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#256 id=256 data-nosnippet>256</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
-<a href=#257 id=257 data-nosnippet>257</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
-<a href=#258 id=258 data-nosnippet>258</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#259 id=259 data-nosnippet>259</a>
-<a href=#260 id=260 data-nosnippet>260</a>  <span class="comment">// Perl JHEP.cls.ltxml L96-100: \DOUBLETABLE[pos]{tab1}{tab2}{cap1}{cap2}
-<a href=#261 id=261 data-nosnippet>261</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DOUBLETABLE[]{}{}{}{}"</span>,
-<a href=#262 id=262 data-nosnippet>262</a>    <span class="string">"\\begin{table}[#1]\
-<a href=#263 id=263 data-nosnippet>263</a>     \\begin{@half@doubletable}#2\\caption{#4}\\end{@half@doubletable}\
-<a href=#264 id=264 data-nosnippet>264</a>     \\begin{@half@doubletable}#3\\caption{#5}\\end{@half@doubletable}\
-<a href=#265 id=265 data-nosnippet>265</a>     \\end{table}"</span>);
-<a href=#266 id=266 data-nosnippet>266</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{@half@doubletable}"</span>,
-<a href=#267 id=267 data-nosnippet>267</a>    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' width='0.45%'&gt;#body&lt;/ltx:table&gt;#tags"</span>,
-<a href=#268 id=268 data-nosnippet>268</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
-<a href=#269 id=269 data-nosnippet>269</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#270 id=270 data-nosnippet>270</a>    before_digest =&gt; { before_xfloat(<span class="string">"table"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
-<a href=#271 id=271 data-nosnippet>271</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
-<a href=#272 id=272 data-nosnippet>272</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#273 id=273 data-nosnippet>273</a>
-<a href=#274 id=274 data-nosnippet>274</a>  <span class="comment">// Perl JHEP.cls.ltxml L109-117: JHEP-specific {floatingfigure} without
-<a href=#275 id=275 data-nosnippet>275</a>  // the `{Dimension}` width arg that the standalone floatfig package uses.
-<a href=#276 id=276 data-nosnippet>276</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{floatingfigure}[]"</span>,
-<a href=#277 id=277 data-nosnippet>277</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' float='#float'&gt;#tags#body&lt;/ltx:figure&gt;"</span>,
-<a href=#278 id=278 data-nosnippet>278</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
-<a href=#279 id=279 data-nosnippet>279</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#280 id=280 data-nosnippet>280</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
-<a href=#281 id=281 data-nosnippet>281</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
-<a href=#282 id=282 data-nosnippet>282</a>    properties    =&gt; sub[args] {
-<a href=#283 id=283 data-nosnippet>283</a>      <span class="kw">let </span>pos = args[<span class="number">0</span>].as_ref().map(|a| a.to_string()).unwrap_or_default();
-<a href=#284 id=284 data-nosnippet>284</a>      <span class="kw">let </span>float = <span class="kw">if </span>pos.starts_with(<span class="string">'v'</span>) || pos.starts_with(<span class="string">'r'</span>) { <span class="string">"right" </span>} <span class="kw">else </span>{ <span class="string">"left" </span>};
-<a href=#285 id=285 data-nosnippet>285</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"float" </span>=&gt; float))
-<a href=#286 id=286 data-nosnippet>286</a>    },
-<a href=#287 id=287 data-nosnippet>287</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#288 id=288 data-nosnippet>288</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{floatingtable}[]"</span>,
-<a href=#289 id=289 data-nosnippet>289</a>    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' float='#float'&gt;#tags#body&lt;/ltx:table&gt;"</span>,
-<a href=#290 id=290 data-nosnippet>290</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
-<a href=#291 id=291 data-nosnippet>291</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#292 id=292 data-nosnippet>292</a>    before_digest =&gt; { before_xfloat(<span class="string">"table"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
-<a href=#293 id=293 data-nosnippet>293</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
-<a href=#294 id=294 data-nosnippet>294</a>    properties    =&gt; sub[args] {
-<a href=#295 id=295 data-nosnippet>295</a>      <span class="kw">let </span>pos = args[<span class="number">0</span>].as_ref().map(|a| a.to_string()).unwrap_or_default();
-<a href=#296 id=296 data-nosnippet>296</a>      <span class="kw">let </span>float = <span class="kw">if </span>pos.starts_with(<span class="string">'v'</span>) || pos.starts_with(<span class="string">'r'</span>) { <span class="string">"right" </span>} <span class="kw">else </span>{ <span class="string">"left" </span>};
-<a href=#297 id=297 data-nosnippet>297</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"float" </span>=&gt; float))
-<a href=#298 id=298 data-nosnippet>298</a>    },
-<a href=#299 id=299 data-nosnippet>299</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#300 id=300 data-nosnippet>300</a>
-<a href=#301 id=301 data-nosnippet>301</a>  <span class="comment">// Perl JHEP.cls.ltxml L133-136 — JHEP redefines `\href` as a 2-arg
-<a href=#302 id=302 data-nosnippet>302</a>  // `Semiverbatim Semiverbatim` Constructor. The crucial difference from
-<a href=#303 id=303 data-nosnippet>303</a>  // hyperref.sty's `\href HyperVerbatim {}` is that the SECOND arg is
-<a href=#304 id=304 data-nosnippet>304</a>  // also `Semiverbatim`: catcode-neutralized so `^` / `_` in the body
-<a href=#305 id=305 data-nosnippet>305</a>  // become OTHER tokens and do NOT fire script_handler when digested in
-<a href=#306 id=306 data-nosnippet>306</a>  // math mode.
-<a href=#307 id=307 data-nosnippet>307</a>  //
-<a href=#308 id=308 data-nosnippet>308</a>  // Why this matters: JHEP defines journal-citation macros like
-<a href=#309 id=309 data-nosnippet>309</a>  //   \am{}{}{} → \@spires{ANMAA\%2C#1\%2C#3}{...#3}
-<a href=#310 id=310 data-nosnippet>310</a>  // where `\@spires{URL}{BODY}` expands to `\href{URL}{BODY}`. Papers
-<a href=#311 id=311 data-nosnippet>311</a>  // call them inside math (`\beq … \am\mgr M^2S …`), grabbing `^` as
-<a href=#312 id=312 data-nosnippet>312</a>  // the third arg. The `^` then ends up at the end of `\href`'s body
-<a href=#313 id=313 data-nosnippet>313</a>  // — and `\href`'s body MUST treat it as Semiverbatim text, not as
-<a href=#314 id=314 data-nosnippet>314</a>  // a SUPER catcode token that would fire script_handler. The earlier
-<a href=#315 id=315 data-nosnippet>315</a>  // Rust port omitted this override, so `\href` stayed bound to
-<a href=#316 id=316 data-nosnippet>316</a>  // hyperref's `HyperVerbatim {}` form and the trailing `^` errored.
-<a href=#317 id=317 data-nosnippet>317</a>  //
-<a href=#318 id=318 data-nosnippet>318</a>  // Witness: arXiv:2602.22473 (Pallis et al.) line 1019
-<a href=#319 id=319 data-nosnippet>319</a>  //   \beq … -2\ld\am\mgr
-<a href=#320 id=320 data-nosnippet>320</a>  //   M^2S, … \eeq
-<a href=#321 id=321 data-nosnippet>321</a>  // Rust=1, Perl=0 → 0/0 with this binding.
-<a href=#322 id=322 data-nosnippet>322</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\href Semiverbatim Semiverbatim"</span>,
-<a href=#323 id=323 data-nosnippet>323</a>    <span class="string">"&lt;ltx:ref href='#href'&gt;#2&lt;/ltx:ref&gt;"</span>,
-<a href=#324 id=324 data-nosnippet>324</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#325 id=325 data-nosnippet>325</a>    properties =&gt; sub[args] {
-<a href=#326 id=326 data-nosnippet>326</a>      <span class="kw">let </span>url = args.first().and_then(|a| a.as_ref()).map(|t| t.to_string()).unwrap_or_default();
-<a href=#327 id=327 data-nosnippet>327</a>      <span class="kw">let </span>href = compose_url(<span class="kw-2">&amp;</span>lookup_string(<span class="string">"BASE_URL"</span>), <span class="kw-2">&amp;</span>url, <span class="prelude-val">None</span>);
-<a href=#328 id=328 data-nosnippet>328</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"href" </span>=&gt; href))
-<a href=#329 id=329 data-nosnippet>329</a>    });
-<a href=#330 id=330 data-nosnippet>330</a>
-<a href=#331 id=331 data-nosnippet>331</a>  <span class="comment">// Perl L138-140: Stubs.
-<a href=#332 id=332 data-nosnippet>332</a>  </span>def_macro_noop(<span class="string">"\\JHEPspecialurl Semiverbatim"</span>)<span class="question-mark">?</span>;
-<a href=#333 id=333 data-nosnippet>333</a>  def_macro_noop(<span class="string">"\\base Semiverbatim"</span>)<span class="question-mark">?</span>;
-<a href=#334 id=334 data-nosnippet>334</a>  def_macro_noop(<span class="string">"\\name Semiverbatim"</span>)<span class="question-mark">?</span>;
-<a href=#335 id=335 data-nosnippet>335</a>
-<a href=#336 id=336 data-nosnippet>336</a>  <span class="comment">// JHEP's own journal-citation interface (`def_jhep_journal_macros`) — not PoS's, which
-<a href=#337 id=337 data-nosnippet>337</a>  // loads this class (pos_cls.rs) for everything else.
-<a href=#338 id=338 data-nosnippet>338</a>  </span><span class="kw">if </span>!lookup_bool(<span class="string">"JHEP@without@journal@macros"</span>) {
-<a href=#339 id=339 data-nosnippet>339</a>    def_jhep_journal_macros()<span class="question-mark">?</span>;
-<a href=#340 id=340 data-nosnippet>340</a>  }
-<a href=#341 id=341 data-nosnippet>341</a>
-<a href=#342 id=342 data-nosnippet>342</a>  <span class="comment">// Conditionals — Perl L267-291
-<a href=#343 id=343 data-nosnippet>343</a>  </span><span class="macro">TeX!</span>(<span class="string">r"
-<a href=#344 id=344 data-nosnippet>344</a>  \newif\if@preprint\@preprinttrue
-<a href=#345 id=345 data-nosnippet>345</a>  \newif\if@draft\@draftfalse
-<a href=#346 id=346 data-nosnippet>346</a>  \newif\if@hyper\@hypertrue
-<a href=#347 id=347 data-nosnippet>347</a>  \newif\if@proc\@procfalse
-<a href=#348 id=348 data-nosnippet>348</a>  \newif\if@author\@authorfalse
-<a href=#349 id=349 data-nosnippet>349</a>  \newif\if@abstract\@abstractfalse
-<a href=#350 id=350 data-nosnippet>350</a>  \newif\if@keywords\@keywordsfalse
-<a href=#351 id=351 data-nosnippet>351</a>  \newif\if@todotoc\@todotocfalse
-<a href=#352 id=352 data-nosnippet>352</a>  \newif\if@rece\@recefalse
-<a href=#353 id=353 data-nosnippet>353</a>  \newif\if@revi\@revifalse
-<a href=#354 id=354 data-nosnippet>354</a>  \newif\if@acce\@accefalse
-<a href=#355 id=355 data-nosnippet>355</a>  \newif\if@conf\@conffalse
-<a href=#356 id=356 data-nosnippet>356</a>  \newif\if@speaker\@speakerfalse
-<a href=#357 id=357 data-nosnippet>357</a>  "</span>);
-<a href=#358 id=358 data-nosnippet>358</a>
-<a href=#359 id=359 data-nosnippet>359</a>  <span class="comment">// Perl L293-308: Names
-<a href=#360 id=360 data-nosnippet>360</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\acknowlname"</span>, <span class="string">"Acknowledgments"</span>);
-<a href=#361 id=361 data-nosnippet>361</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\receivedname"</span>, <span class="string">"Received:"</span>);
-<a href=#362 id=362 data-nosnippet>362</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revisedname"</span>, <span class="string">"Revised:"</span>);
-<a href=#363 id=363 data-nosnippet>363</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\acceptedname"</span>, <span class="string">"Accepted:"</span>);
-<a href=#364 id=364 data-nosnippet>364</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywordsname"</span>, <span class="string">"Keywords:"</span>);
-<a href=#365 id=365 data-nosnippet>365</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstractname"</span>, <span class="string">"Abstract:"</span>);
-<a href=#366 id=366 data-nosnippet>366</a>  def_macro_noop(<span class="string">"\\JHEP@todaysname"</span>)<span class="question-mark">?</span>;
-<a href=#367 id=367 data-nosnippet>367</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\preprintname"</span>, <span class="string">"PREPRINT"</span>);
-<a href=#368 id=368 data-nosnippet>368</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixname"</span>, <span class="string">"Appendix"</span>);
-<a href=#369 id=369 data-nosnippet>369</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\contentsname"</span>, <span class="string">"Contents"</span>);
-<a href=#370 id=370 data-nosnippet>370</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\listfigurename"</span>, <span class="string">"List of figures"</span>);
-<a href=#371 id=371 data-nosnippet>371</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\listtablename"</span>, <span class="string">"List of tables"</span>);
-<a href=#372 id=372 data-nosnippet>372</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\refname"</span>, <span class="string">"References"</span>);
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\figurename"</span>, <span class="string">"Figure"</span>);
-<a href=#374 id=374 data-nosnippet>374</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablename"</span>, <span class="string">"Table"</span>);
-<a href=#375 id=375 data-nosnippet>375</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\partname"</span>, <span class="string">"Part"</span>);
-<a href=#376 id=376 data-nosnippet>376</a>
-<a href=#377 id=377 data-nosnippet>377</a>  <span class="comment">// The equations are numbered within the sections, "(2.1)", plain "(1)" before the first section, the appendices'
-<a href=#378 id=378 data-nosnippet>378</a>  // "(A.1)" (`\appendix` sets `\thesection` to `\@Alph`): JHEP.cls v2.0.3 (1201.5394's copy):675-676 and :1451,
-<a href=#379 id=379 data-nosnippet>379</a>  // JHEP3.cls:905-906 and :1787 (0708.0971's copy), PoS.cls:771-772 and :1419 (2205.03535's copy; PoS's binding loads
-<a href=#380 id=380 data-nosnippet>380</a>  // this one), each `\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}` and
-<a href=#381 id=381 data-nosnippet>381</a>  // `\@addtoreset{equation}{section}`. Perl's JHEP*.cls.ltxml and PoS.cls.ltxml keep the article's "(1)", "(2)" through
-<a href=#382 id=382 data-nosnippet>382</a>  // the paper (2205.03535: 77 equation references "2" where the PDF prints "1.2"; KNOWN_PERL_ERRORS #1097). Guard
-<a href=#383 id=383 data-nosnippet>383</a>  // `perfect_kernel_batch78q::jhep_family_equations_within_sections`.
-<a href=#384 id=384 data-nosnippet>384</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}
-<a href=#385 id=385 data-nosnippet>385</a>\@addtoreset{equation}{section}"</span>);
-<a href=#386 id=386 data-nosnippet>386</a>});
+<a href=#159 id=159 data-nosnippet>159</a><span class="doccomment">/// The JHEP binding's definitions, made in the load of a class of its own that loads no JHEP.cls (Perl JHEP2.cls.ltxml,
+<a href=#160 id=160 data-nosnippet>160</a>/// JHEP3.cls.ltxml, PoS.cls.ltxml `LoadClass('JHEP', withoptions =&gt; 1)`; 0907.1636's JHEP3.cls, 1011.0095's PoS.cls), its
+<a href=#161 id=161 data-nosnippet>161</a>/// options that class's: `\@ifclassloaded{JHEP}` is false (KNOWN_PERL_ERRORS #1300), and JHEP is a file the class's
+<a href=#162 id=162 data-nosnippet>162</a>/// binding is built on (`note_stand_in_file`), so the paper's copy of that class declaring `\ProvidesClass{JHEP}` is read.
+<a href=#163 id=163 data-nosnippet>163</a></span><span class="kw">pub fn </span>jhep_definitions() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#164 id=164 data-nosnippet>164</a>  note_stand_in_file(<span class="string">"JHEP"</span>);
+<a href=#165 id=165 data-nosnippet>165</a>  load_definitions()
+<a href=#166 id=166 data-nosnippet>166</a>}
+<a href=#167 id=167 data-nosnippet>167</a>
+<a href=#168 id=168 data-nosnippet>168</a><span class="attr">#[rustfmt::skip]
+<a href=#169 id=169 data-nosnippet>169</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#170 id=170 data-nosnippet>170</a>  <span class="comment">// Perl L26-35: Class options
+<a href=#171 id=171 data-nosnippet>171</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"proceedings"</span>, {});
+<a href=#172 id=172 data-nosnippet>172</a>  <span class="macro">DeclareOption!</span>(<span class="string">"published"</span>, {});
+<a href=#173 id=173 data-nosnippet>173</a>  <span class="macro">DeclareOption!</span>(<span class="string">"hyper"</span>, {});
+<a href=#174 id=174 data-nosnippet>174</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nohyper"</span>, {});
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">DeclareOption!</span>(<span class="string">"notoc"</span>, {});
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#177 id=177 data-nosnippet>177</a>  <span class="macro">LoadClass!</span>(<span class="string">"article"</span>);
+<a href=#178 id=178 data-nosnippet>178</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#179 id=179 data-nosnippet>179</a>  <span class="comment">// The raw JHEP.cls loads hyperref, giving authors \href / \url / \hypertarget
+<a href=#180 id=180 data-nosnippet>180</a>  // without an explicit \usepackage{hyperref}. Perl's JHEP.cls.ltxml omits
+<a href=#181 id=181 data-nosnippet>181</a>  // this, but the real-world paper corpus (e.g. arxiv 1010.4240 via PoS →
+<a href=#182 id=182 data-nosnippet>182</a>  // JHEP) depends on hyperref being active. Load it here so the arxiv sandbox
+<a href=#183 id=183 data-nosnippet>183</a>  // resolves \href without an Error:undefined cascade.
+<a href=#184 id=184 data-nosnippet>184</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
+<a href=#185 id=185 data-nosnippet>185</a>
+<a href=#186 id=186 data-nosnippet>186</a>  <span class="comment">// Perl L40-58: Frontmatter
+<a href=#187 id=187 data-nosnippet>187</a>  // Each `\author` adds one more author block (JHEP.cls:513, JHEP3.cls:764, PoS.cls:666 append to `\@author`:
+<a href=#188 id=188 data-nosnippet>188</a>  // `\xdef\@author{\the\prev@t\the\cur@t}`), read as the article `\author` reads its block: one author with its
+<a href=#189 id=189 data-nosnippet>189</a>  // `\\` lines (affiliation, email), or a marked name list with its marked affiliations (`$^{ab}$`, 0811.4645,
+<a href=#190 id=190 data-nosnippet>190</a>  // 1011.0516). Perl kept the kernel's `\author`, each call replacing the last: astro-ph0611258 (PoS) kept only its
+<a href=#191 id=191 data-nosnippet>191</a>  // third author (63k).
+<a href=#192 id=192 data-nosnippet>192</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\author{}"</span>, <span class="string">"\\lx@add@authors@list{#1}"</span>);
+<a href=#193 id=193 data-nosnippet>193</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\speaker{}"</span>, <span class="string">"\\lx@add@creator[role=speaker]{#1}"</span>);
+<a href=#194 id=194 data-nosnippet>194</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract{}"</span>, <span class="string">"\\lx@add@abstract[name={\\abstractname~}]{#1}"</span>);
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="comment">// JHEP.cls:806 `\newcommand\email[1]{{\tt\href{mailto:#1}{#1}}}` (no corpus `_` witness; JHEP3's
+<a href=#196 id=196 data-nosnippet>196</a>  // `E-mail: \email{…}` author lines, 0911.0568, 0911.0082)
+<a href=#197 id=197 data-nosnippet>197</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\email Semiverbatim"</span>, <span class="string">"\\lx@add@email{\\lx@address@urlfont{#1}}"</span>);
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="comment">// Perl L50-52: each date macro ships `name={\&lt;role&gt;name}` so the localized
+<a href=#199 id=199 data-nosnippet>199</a>  // label is attached to the frontmatter date entry. Restored to match.
+<a href=#200 id=200 data-nosnippet>200</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\received{}"</span>, <span class="string">"\\lx@add@date[role=received,name={\\receivedname}]{#1}"</span>);
+<a href=#201 id=201 data-nosnippet>201</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revised{}"</span>, <span class="string">"\\lx@add@date[role=revised,name={\\revisedname}]{#1}"</span>);
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\accepted{}"</span>, <span class="string">"\\lx@add@date[role=accepted,name={\\acceptedname}]{#1}"</span>);
+<a href=#203 id=203 data-nosnippet>203</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JHEPcopydate{}"</span>, <span class="string">"\\lx@add@date[role=copydate]{#1}"</span>);
+<a href=#204 id=204 data-nosnippet>204</a>  <span class="comment">// No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): JHEP.cls:608 sets the dedication in italics, :390
+<a href=#205 id=205 data-nosnippet>205</a>  // the preprint header's number, and the conference line its name alone (hep-th0103183's copy) — the role stays.
+<a href=#206 id=206 data-nosnippet>206</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\dedicated{}"</span>, <span class="string">"\\lx@add@pubnote[role=dedication,name={}]{#1}"</span>);
+<a href=#207 id=207 data-nosnippet>207</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\conference{}"</span>, <span class="string">"\\lx@add@pubnote[role=conference,name={}]{#1}"</span>);
+<a href=#208 id=208 data-nosnippet>208</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\preprint{}"</span>, <span class="string">"\\lx@add@pubnote[role=preprint,name={}]{#1}"</span>);
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\lx@add@keywords[name={\\keywordsname~}]{#1}"</span>);
+<a href=#210 id=210 data-nosnippet>210</a>
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="comment">// Perl L61-64: Acknowledgements environment. Perl uses
+<a href=#212 id=212 data-nosnippet>212</a>  //   properties =&gt; sub { (name =&gt; Digest(T_CS('\acknowlname'))) }
+<a href=#213 id=213 data-nosnippet>213</a>  // — i18n via the user's current \acknowlname binding. Hardcoded
+<a href=#214 id=214 data-nosnippet>214</a>  // "Acknowledgments" was breaking non-English JHEP submissions.
+<a href=#215 id=215 data-nosnippet>215</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\acknowledgments"</span>, <span class="string">"&lt;ltx:acknowledgements name='#name'&gt;"</span>,
+<a href=#216 id=216 data-nosnippet>216</a>    properties =&gt; {
+<a href=#217 id=217 data-nosnippet>217</a>      <span class="kw">let </span>name_toks = digest_in_group_if(<span class="macro">T_CS!</span>(<span class="string">"\\acknowlname"</span>))<span class="question-mark">?</span>;
+<a href=#218 id=218 data-nosnippet>218</a>      <span class="macro">stored_map!</span>(<span class="string">"name" </span>=&gt; name_toks)
+<a href=#219 id=219 data-nosnippet>219</a>    });
+<a href=#220 id=220 data-nosnippet>220</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endacknowledgments"</span>, <span class="string">"&lt;/ltx:acknowledgements&gt;"</span>);
+<a href=#221 id=221 data-nosnippet>221</a>  <span class="comment">// Perl L64: explicit autoClose so a stray paragraph or sectioning command
+<a href=#222 id=222 data-nosnippet>222</a>  // can flush an unclosed `\acknowledgments` block (no \endacknowledgments).
+<a href=#223 id=223 data-nosnippet>223</a>  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+<a href=#224 id=224 data-nosnippet>224</a>  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
+<a href=#225 id=225 data-nosnippet>225</a>
+<a href=#226 id=226 data-nosnippet>226</a>  // Perl L67-76: Misc macros.
+<a href=#227 id=227 data-nosnippet>227</a>  // \hash: Perl `DefPrimitiveI('\hash', undef, '#')` emits "#" text.
+<a href=#228 id=228 data-nosnippet>228</a>  // Rust delegates to `\#` — observationally equivalent (both yield "#").
+<a href=#229 id=229 data-nosnippet>229</a>  // DP-flag: DefPrimitive → DefMacro, WISDOM #44; safe as `\hash` is a
+<a href=#230 id=230 data-nosnippet>230</a>  // user-facing text macro, never `\edef`-observed in JHEP documents.
+<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\hash"</span>, <span class="string">"\\#"</span>);
+<a href=#232 id=232 data-nosnippet>232</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\secstyle"</span>, <span class="string">"\\bfseries"</span>);
+<a href=#233 id=233 data-nosnippet>233</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\militarytime"</span>, <span class="string">"\\time"</span>);
+<a href=#234 id=234 data-nosnippet>234</a>  <span class="macro">Let!</span>(<span class="string">"\\textref"</span>, <span class="string">"\\ref"</span>);
+<a href=#235 id=235 data-nosnippet>235</a>  def_macro_noop(<span class="string">"\\tocsecs"</span>)<span class="question-mark">?</span>;
+<a href=#236 id=236 data-nosnippet>236</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\logo"</span>, <span class="string">"JHEP"</span>);
+<a href=#237 id=237 data-nosnippet>237</a>  <span class="comment">// \JHEP{volume/issue} and \PrHEP{volume/issue} carry journal-issue
+<a href=#238 id=238 data-nosnippet>238</a>  // metadata. Perl L73-74 gobbles with `?` (uncertain); we surpass
+<a href=#239 id=239 data-nosnippet>239</a>  // by preserving as ltx:note for downstream JATS metadata.
+<a href=#240 id=240 data-nosnippet>240</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\JHEP{}"</span>, <span class="string">"\\lx@add@frontmatter{ltx:note}[role=jhep-issue]{#1}"</span>);
+<a href=#241 id=241 data-nosnippet>241</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PrHEP{}"</span>, <span class="string">"\\lx@add@frontmatter{ltx:note}[role=prhep-issue]{#1}"</span>);
+<a href=#242 id=242 data-nosnippet>242</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Proof"</span>, <span class="string">"\\emph{Proof.}\\ "</span>);
+<a href=#243 id=243 data-nosnippet>243</a>
+<a href=#244 id=244 data-nosnippet>244</a>  <span class="comment">// Perl L80-83: Figure/table macros (map to environments)
+<a href=#245 id=245 data-nosnippet>245</a>  // Perl wraps into `{floatingfigure}` / `{floatingtable}` so the nested
+<a href=#246 id=246 data-nosnippet>246</a>  // `\caption` sees a proper `\@captype`. Previously Rust expanded to bare
+<a href=#247 id=247 data-nosnippet>247</a>  // `#2` which dumped the caption into text-mode and triggered
+<a href=#248 id=248 data-nosnippet>248</a>  // `Error:unexpected:\caption (outside any known float)`.
+<a href=#249 id=249 data-nosnippet>249</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\FIGURE[]{}"</span>, <span class="string">"\\begin{floatingfigure}[#1]#2\\end{floatingfigure}"</span>);
+<a href=#250 id=250 data-nosnippet>250</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\TABLE[]{}"</span>,  <span class="string">"\\begin{floatingtable}[#1]#2\\end{floatingtable}"</span>);
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\EPSFIGURE[]{}{}"</span>, <span class="string">"\\begin{floatingfigure}[#1]\\epsfig{file=#2}\\caption{#3}\\end{floatingfigure}"</span>);
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\TABULAR[]{}{}{}"</span>,
+<a href=#253 id=253 data-nosnippet>253</a>    <span class="string">"\\begin{floatingtable}[#1]\\begin{tabular}{#2}#3\\end{tabular}\\caption{#4}\\end{floatingtable}"</span>);
+<a href=#254 id=254 data-nosnippet>254</a>
+<a href=#255 id=255 data-nosnippet>255</a>  <span class="comment">// Perl JHEP.cls.ltxml L85-89: \DOUBLEFIGURE[pos]{img1}{img2}{cap1}{cap2}
+<a href=#256 id=256 data-nosnippet>256</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DOUBLEFIGURE[]{}{}{}{}"</span>,
+<a href=#257 id=257 data-nosnippet>257</a>    <span class="string">"\\begin{figure}[#1]\
+<a href=#258 id=258 data-nosnippet>258</a>     \\begin{@half@doublefigure}\\epsfig{file=#2}\\caption{#4}\\end{@half@doublefigure}\
+<a href=#259 id=259 data-nosnippet>259</a>     \\begin{@half@doublefigure}\\epsfig{file=#3}\\caption{#5}\\end{@half@doublefigure}\
+<a href=#260 id=260 data-nosnippet>260</a>     \\end{figure}"</span>);
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{@half@doublefigure}"</span>,
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' width='0.45%'&gt;#body&lt;/ltx:figure&gt;#tags"</span>,
+<a href=#263 id=263 data-nosnippet>263</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+<a href=#264 id=264 data-nosnippet>264</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#265 id=265 data-nosnippet>265</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
+<a href=#266 id=266 data-nosnippet>266</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#267 id=267 data-nosnippet>267</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a>  <span class="comment">// Perl JHEP.cls.ltxml L96-100: \DOUBLETABLE[pos]{tab1}{tab2}{cap1}{cap2}
+<a href=#270 id=270 data-nosnippet>270</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DOUBLETABLE[]{}{}{}{}"</span>,
+<a href=#271 id=271 data-nosnippet>271</a>    <span class="string">"\\begin{table}[#1]\
+<a href=#272 id=272 data-nosnippet>272</a>     \\begin{@half@doubletable}#2\\caption{#4}\\end{@half@doubletable}\
+<a href=#273 id=273 data-nosnippet>273</a>     \\begin{@half@doubletable}#3\\caption{#5}\\end{@half@doubletable}\
+<a href=#274 id=274 data-nosnippet>274</a>     \\end{table}"</span>);
+<a href=#275 id=275 data-nosnippet>275</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{@half@doubletable}"</span>,
+<a href=#276 id=276 data-nosnippet>276</a>    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' width='0.45%'&gt;#body&lt;/ltx:table&gt;#tags"</span>,
+<a href=#277 id=277 data-nosnippet>277</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+<a href=#278 id=278 data-nosnippet>278</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#279 id=279 data-nosnippet>279</a>    before_digest =&gt; { before_xfloat(<span class="string">"table"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
+<a href=#280 id=280 data-nosnippet>280</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#281 id=281 data-nosnippet>281</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#282 id=282 data-nosnippet>282</a>
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="comment">// Perl JHEP.cls.ltxml L109-117: JHEP-specific {floatingfigure} without
+<a href=#284 id=284 data-nosnippet>284</a>  // the `{Dimension}` width arg that the standalone floatfig package uses.
+<a href=#285 id=285 data-nosnippet>285</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{floatingfigure}[]"</span>,
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' float='#float'&gt;#tags#body&lt;/ltx:figure&gt;"</span>,
+<a href=#287 id=287 data-nosnippet>287</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+<a href=#288 id=288 data-nosnippet>288</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#289 id=289 data-nosnippet>289</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
+<a href=#290 id=290 data-nosnippet>290</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#291 id=291 data-nosnippet>291</a>    properties    =&gt; sub[args] {
+<a href=#292 id=292 data-nosnippet>292</a>      <span class="kw">let </span>pos = args[<span class="number">0</span>].as_ref().map(|a| a.to_string()).unwrap_or_default();
+<a href=#293 id=293 data-nosnippet>293</a>      <span class="kw">let </span>float = <span class="kw">if </span>pos.starts_with(<span class="string">'v'</span>) || pos.starts_with(<span class="string">'r'</span>) { <span class="string">"right" </span>} <span class="kw">else </span>{ <span class="string">"left" </span>};
+<a href=#294 id=294 data-nosnippet>294</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"float" </span>=&gt; float))
+<a href=#295 id=295 data-nosnippet>295</a>    },
+<a href=#296 id=296 data-nosnippet>296</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#297 id=297 data-nosnippet>297</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{floatingtable}[]"</span>,
+<a href=#298 id=298 data-nosnippet>298</a>    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' float='#float'&gt;#tags#body&lt;/ltx:table&gt;"</span>,
+<a href=#299 id=299 data-nosnippet>299</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+<a href=#300 id=300 data-nosnippet>300</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#301 id=301 data-nosnippet>301</a>    before_digest =&gt; { before_xfloat(<span class="string">"table"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
+<a href=#302 id=302 data-nosnippet>302</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#303 id=303 data-nosnippet>303</a>    properties    =&gt; sub[args] {
+<a href=#304 id=304 data-nosnippet>304</a>      <span class="kw">let </span>pos = args[<span class="number">0</span>].as_ref().map(|a| a.to_string()).unwrap_or_default();
+<a href=#305 id=305 data-nosnippet>305</a>      <span class="kw">let </span>float = <span class="kw">if </span>pos.starts_with(<span class="string">'v'</span>) || pos.starts_with(<span class="string">'r'</span>) { <span class="string">"right" </span>} <span class="kw">else </span>{ <span class="string">"left" </span>};
+<a href=#306 id=306 data-nosnippet>306</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"float" </span>=&gt; float))
+<a href=#307 id=307 data-nosnippet>307</a>    },
+<a href=#308 id=308 data-nosnippet>308</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#309 id=309 data-nosnippet>309</a>
+<a href=#310 id=310 data-nosnippet>310</a>  <span class="comment">// Perl JHEP.cls.ltxml L133-136 — JHEP redefines `\href` as a 2-arg
+<a href=#311 id=311 data-nosnippet>311</a>  // `Semiverbatim Semiverbatim` Constructor. The crucial difference from
+<a href=#312 id=312 data-nosnippet>312</a>  // hyperref.sty's `\href HyperVerbatim {}` is that the SECOND arg is
+<a href=#313 id=313 data-nosnippet>313</a>  // also `Semiverbatim`: catcode-neutralized so `^` / `_` in the body
+<a href=#314 id=314 data-nosnippet>314</a>  // become OTHER tokens and do NOT fire script_handler when digested in
+<a href=#315 id=315 data-nosnippet>315</a>  // math mode.
+<a href=#316 id=316 data-nosnippet>316</a>  //
+<a href=#317 id=317 data-nosnippet>317</a>  // Why this matters: JHEP defines journal-citation macros like
+<a href=#318 id=318 data-nosnippet>318</a>  //   \am{}{}{} → \@spires{ANMAA\%2C#1\%2C#3}{...#3}
+<a href=#319 id=319 data-nosnippet>319</a>  // where `\@spires{URL}{BODY}` expands to `\href{URL}{BODY}`. Papers
+<a href=#320 id=320 data-nosnippet>320</a>  // call them inside math (`\beq … \am\mgr M^2S …`), grabbing `^` as
+<a href=#321 id=321 data-nosnippet>321</a>  // the third arg. The `^` then ends up at the end of `\href`'s body
+<a href=#322 id=322 data-nosnippet>322</a>  // — and `\href`'s body MUST treat it as Semiverbatim text, not as
+<a href=#323 id=323 data-nosnippet>323</a>  // a SUPER catcode token that would fire script_handler. The earlier
+<a href=#324 id=324 data-nosnippet>324</a>  // Rust port omitted this override, so `\href` stayed bound to
+<a href=#325 id=325 data-nosnippet>325</a>  // hyperref's `HyperVerbatim {}` form and the trailing `^` errored.
+<a href=#326 id=326 data-nosnippet>326</a>  //
+<a href=#327 id=327 data-nosnippet>327</a>  // Witness: arXiv:2602.22473 (Pallis et al.) line 1019
+<a href=#328 id=328 data-nosnippet>328</a>  //   \beq … -2\ld\am\mgr
+<a href=#329 id=329 data-nosnippet>329</a>  //   M^2S, … \eeq
+<a href=#330 id=330 data-nosnippet>330</a>  // Rust=1, Perl=0 → 0/0 with this binding.
+<a href=#331 id=331 data-nosnippet>331</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\href Semiverbatim Semiverbatim"</span>,
+<a href=#332 id=332 data-nosnippet>332</a>    <span class="string">"&lt;ltx:ref href='#href'&gt;#2&lt;/ltx:ref&gt;"</span>,
+<a href=#333 id=333 data-nosnippet>333</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#334 id=334 data-nosnippet>334</a>    properties =&gt; sub[args] {
+<a href=#335 id=335 data-nosnippet>335</a>      <span class="kw">let </span>url = args.first().and_then(|a| a.as_ref()).map(|t| t.to_string()).unwrap_or_default();
+<a href=#336 id=336 data-nosnippet>336</a>      <span class="kw">let </span>href = compose_url(<span class="kw-2">&amp;</span>lookup_string(<span class="string">"BASE_URL"</span>), <span class="kw-2">&amp;</span>url, <span class="prelude-val">None</span>);
+<a href=#337 id=337 data-nosnippet>337</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"href" </span>=&gt; href))
+<a href=#338 id=338 data-nosnippet>338</a>    });
+<a href=#339 id=339 data-nosnippet>339</a>
+<a href=#340 id=340 data-nosnippet>340</a>  <span class="comment">// Perl L138-140: Stubs.
+<a href=#341 id=341 data-nosnippet>341</a>  </span>def_macro_noop(<span class="string">"\\JHEPspecialurl Semiverbatim"</span>)<span class="question-mark">?</span>;
+<a href=#342 id=342 data-nosnippet>342</a>  def_macro_noop(<span class="string">"\\base Semiverbatim"</span>)<span class="question-mark">?</span>;
+<a href=#343 id=343 data-nosnippet>343</a>  def_macro_noop(<span class="string">"\\name Semiverbatim"</span>)<span class="question-mark">?</span>;
+<a href=#344 id=344 data-nosnippet>344</a>
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="comment">// JHEP's own journal-citation interface (`def_jhep_journal_macros`) — not PoS's, which
+<a href=#346 id=346 data-nosnippet>346</a>  // loads this class (pos_cls.rs) for everything else.
+<a href=#347 id=347 data-nosnippet>347</a>  </span><span class="kw">if </span>!lookup_bool(<span class="string">"JHEP@without@journal@macros"</span>) {
+<a href=#348 id=348 data-nosnippet>348</a>    def_jhep_journal_macros()<span class="question-mark">?</span>;
+<a href=#349 id=349 data-nosnippet>349</a>  }
+<a href=#350 id=350 data-nosnippet>350</a>
+<a href=#351 id=351 data-nosnippet>351</a>  <span class="comment">// Conditionals — Perl L267-291
+<a href=#352 id=352 data-nosnippet>352</a>  </span><span class="macro">TeX!</span>(<span class="string">r"
+<a href=#353 id=353 data-nosnippet>353</a>  \newif\if@preprint\@preprinttrue
+<a href=#354 id=354 data-nosnippet>354</a>  \newif\if@draft\@draftfalse
+<a href=#355 id=355 data-nosnippet>355</a>  \newif\if@hyper\@hypertrue
+<a href=#356 id=356 data-nosnippet>356</a>  \newif\if@proc\@procfalse
+<a href=#357 id=357 data-nosnippet>357</a>  \newif\if@author\@authorfalse
+<a href=#358 id=358 data-nosnippet>358</a>  \newif\if@abstract\@abstractfalse
+<a href=#359 id=359 data-nosnippet>359</a>  \newif\if@keywords\@keywordsfalse
+<a href=#360 id=360 data-nosnippet>360</a>  \newif\if@todotoc\@todotocfalse
+<a href=#361 id=361 data-nosnippet>361</a>  \newif\if@rece\@recefalse
+<a href=#362 id=362 data-nosnippet>362</a>  \newif\if@revi\@revifalse
+<a href=#363 id=363 data-nosnippet>363</a>  \newif\if@acce\@accefalse
+<a href=#364 id=364 data-nosnippet>364</a>  \newif\if@conf\@conffalse
+<a href=#365 id=365 data-nosnippet>365</a>  \newif\if@speaker\@speakerfalse
+<a href=#366 id=366 data-nosnippet>366</a>  "</span>);
+<a href=#367 id=367 data-nosnippet>367</a>
+<a href=#368 id=368 data-nosnippet>368</a>  <span class="comment">// Perl L293-308: Names
+<a href=#369 id=369 data-nosnippet>369</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\acknowlname"</span>, <span class="string">"Acknowledgments"</span>);
+<a href=#370 id=370 data-nosnippet>370</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\receivedname"</span>, <span class="string">"Received:"</span>);
+<a href=#371 id=371 data-nosnippet>371</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\revisedname"</span>, <span class="string">"Revised:"</span>);
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\acceptedname"</span>, <span class="string">"Accepted:"</span>);
+<a href=#373 id=373 data-nosnippet>373</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\keywordsname"</span>, <span class="string">"Keywords:"</span>);
+<a href=#374 id=374 data-nosnippet>374</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstractname"</span>, <span class="string">"Abstract:"</span>);
+<a href=#375 id=375 data-nosnippet>375</a>  def_macro_noop(<span class="string">"\\JHEP@todaysname"</span>)<span class="question-mark">?</span>;
+<a href=#376 id=376 data-nosnippet>376</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\preprintname"</span>, <span class="string">"PREPRINT"</span>);
+<a href=#377 id=377 data-nosnippet>377</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixname"</span>, <span class="string">"Appendix"</span>);
+<a href=#378 id=378 data-nosnippet>378</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\contentsname"</span>, <span class="string">"Contents"</span>);
+<a href=#379 id=379 data-nosnippet>379</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\listfigurename"</span>, <span class="string">"List of figures"</span>);
+<a href=#380 id=380 data-nosnippet>380</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\listtablename"</span>, <span class="string">"List of tables"</span>);
+<a href=#381 id=381 data-nosnippet>381</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\refname"</span>, <span class="string">"References"</span>);
+<a href=#382 id=382 data-nosnippet>382</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\figurename"</span>, <span class="string">"Figure"</span>);
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablename"</span>, <span class="string">"Table"</span>);
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\partname"</span>, <span class="string">"Part"</span>);
+<a href=#385 id=385 data-nosnippet>385</a>
+<a href=#386 id=386 data-nosnippet>386</a>  <span class="comment">// The equations are numbered within the sections, "(2.1)", plain "(1)" before the first section, the appendices'
+<a href=#387 id=387 data-nosnippet>387</a>  // "(A.1)" (`\appendix` sets `\thesection` to `\@Alph`): JHEP.cls v2.0.3 (1201.5394's copy):675-676 and :1451,
+<a href=#388 id=388 data-nosnippet>388</a>  // JHEP3.cls:905-906 and :1787 (0708.0971's copy), PoS.cls:771-772 and :1419 (2205.03535's copy; PoS's binding loads
+<a href=#389 id=389 data-nosnippet>389</a>  // this one), each `\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}` and
+<a href=#390 id=390 data-nosnippet>390</a>  // `\@addtoreset{equation}{section}`. Perl's JHEP*.cls.ltxml and PoS.cls.ltxml keep the article's "(1)", "(2)" through
+<a href=#391 id=391 data-nosnippet>391</a>  // the paper (2205.03535: 77 equation references "2" where the PDF prints "1.2"; KNOWN_PERL_ERRORS #1097). Guard
+<a href=#392 id=392 data-nosnippet>392</a>  // `perfect_kernel_batch78q::jhep_family_equations_within_sections`.
+<a href=#393 id=393 data-nosnippet>393</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}
+<a href=#394 id=394 data-nosnippet>394</a>\@addtoreset{equation}{section}"</span>);
+<a href=#395 id=395 data-nosnippet>395</a>});
 </code></pre></div></section></main></body></html>

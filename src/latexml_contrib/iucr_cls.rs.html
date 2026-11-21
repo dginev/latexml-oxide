@@ -4,11 +4,26 @@
 <a href=#4 id=4 data-nosnippet>4</a>//! runs and every caption, with its `\label`, was lost (1707.09045: no caption in the document,
 <a href=#5 id=5 data-nosnippet>5</a>//! `Table~\ref{model:direct_model}` dangling). The class is read as it is; `\hcaption` is the caption. Guard
 <a href=#6 id=6 data-nosnippet>6</a>//! `perfect_kernel_batch80a::iucr_hcaption_is_the_caption`.
-<a href=#7 id=7 data-nosnippet>7</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
-<a href=#8 id=8 data-nosnippet>8</a>
-<a href=#9 id=9 data-nosnippet>9</a><span class="macro">LoadDefinitions!</span>({
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">InputDefinitions!</span>(<span class="string">"iucr"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"cls"</span>)));
-<a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">Let!</span>(<span class="string">"\\hcaption"</span>, <span class="string">"\\caption"</span>);
-<a href=#13 id=13 data-nosnippet>13</a>});
+<a href=#7 id=7 data-nosnippet>7</a>//!
+<a href=#8 id=8 data-nosnippet>8</a>//! The class read is the paper's copy as the document names it: the prefix fallback answers `iucrjournals` with this
+<a href=#9 id=9 data-nosnippet>9</a>//! binding, and its shipped `iucrjournals.cls` is the one TeX reads (`\IUCrCemaillink`: 2608.11466, 2609.21618,
+<a href=#10 id=10 data-nosnippet>10</a>//! 2607.09916; guard `perfect_kernel_batchregfixi::iucrjournals_reads_its_own_class`). A paper whose source lacks the
+<a href=#11 id=11 data-nosnippet>11</a>//! class falls to OmniBus, with the loader's missing-file Warning.
+<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a><span class="macro">LoadDefinitions!</span>({
+<a href=#15 id=15 data-nosnippet>15</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(class) = latexml_package::shipped_class::requested_shipped_class(<span class="string">"iucr"</span>)<span class="question-mark">? </span><span class="kw">else </span>{
+<a href=#16 id=16 data-nosnippet>16</a>    <span class="kw">return </span>latexml_package::shipped_class::omnibus_without_copy(<span class="string">"iucr"</span>);
+<a href=#17 id=17 data-nosnippet>17</a>  };
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">InputDefinitions!</span>(<span class="kw-2">&amp;</span>class, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"cls"</span>)));
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">Let!</span>(<span class="string">"\\hcaption"</span>, <span class="string">"\\caption"</span>);
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="comment">// iucrjournals.cls:201-206: `\IUCrCemaillink`/`\IUCrEmaillink` in `\author` print only a mail logo linking to the
+<a href=#22 id=22 data-nosnippet>22</a>  // address, which is lost from the author block (a tikz picture): the address is the author's email (2503.09183).
+<a href=#23 id=23 data-nosnippet>23</a>  </span><span class="kw">for </span>cs <span class="kw">in </span>[<span class="string">"\\IUCr@cemaillinkX"</span>, <span class="string">"\\IUCr@emaillinkX"</span>] {
+<a href=#24 id=24 data-nosnippet>24</a>    <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(cs)) {
+<a href=#25 id=25 data-nosnippet>25</a>      <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\def{cs}#1{{\\lx@add@email{{#1}}}}"</span>));
+<a href=#26 id=26 data-nosnippet>26</a>    }
+<a href=#27 id=27 data-nosnippet>27</a>  }
+<a href=#28 id=28 data-nosnippet>28</a>});
 </code></pre></div></section></main></body></html>

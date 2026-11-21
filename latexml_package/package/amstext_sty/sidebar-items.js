@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["define_amstext_text","load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["define_amstext_text","define_text_constructor","load_definitions"]};
