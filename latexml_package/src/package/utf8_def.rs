@@ -267,8 +267,15 @@ LoadDefinitions!({
     }
     // utf8.def:164-170 (C0: 1-8, 11, 14-31) and :122-128 (a sequence with no `\u8:` name: the C1 controls
     // U+0080-U+009F) err "Unicode character … not set up for use with LaTeX", the character dropped; the format's
-    // `\UTFviii@undefined@err` gobbles until `\everyjob` (latex.ltx:22230-22237), which the engine does not run.
-    for code in (1..=8).chain([11]).chain(14..=31).chain(0x80..=0x9F) {
+    // `\UTFviii@undefined@err` gobbles until `\everyjob` (latex.ltx:22230-22237), which the engine does not run. Only
+    // under inputenc: the format's own load (latex.ltx:22224) leaves the dump's catcodes Perl's.
+    let under_inputenc = !lookup_string("lx@inputenc@encoding").is_empty();
+    for code in (1..=8)
+      .chain([11])
+      .chain(14..=31)
+      .chain(0x80..=0x9F)
+      .filter(|_| under_inputenc)
+    {
       let ch = char::from_u32(code).unwrap();
       AssignCatcode!(ch, Catcode::ACTIVE);
       DefMacro!(T_ACTIVE!(ch), None, unicode_character_not_set_up(ch), protected => true);

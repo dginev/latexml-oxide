@@ -1166,14 +1166,11 @@ LoadDefinitions!({
       // Recatcode surviving CS tokens to `other`, and active characters with an unexpandable meaning (babel-german's
       // `"` dispatcher, babel_support_sty.rs), which the URL string prints as their character, as `\url`'s reader does;
       // everything else is untouched. A robust command's `\protect` is dropped (OD #1112).
-      use latexml_core::token::Catcode;
+      use latexml_core::token::Catcode::{ACTIVE, CS};
       Tokens::new(
         arg.unlist().into_iter()
           .filter(|t| *t != T_CS!("\\protect"))
-          .map(|t| match t.get_catcode() {
-            Catcode::CS | Catcode::ACTIVE => t.as_other(),
-            _ => t,
-          })
+          .map(|t| if matches!(t.get_catcode(), CS | ACTIVE) { t.as_other() } else { t })
           .collect(),
       )
     },
