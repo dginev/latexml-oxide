@@ -1,0 +1,15 @@
+% witness: hep-ph0608235 ([epj,referee]{svjour2}: "Fig. 1", svepj.clo's 180mm text), 0712.4224, 1301.5646,
+%          1710.10527, hep-ph0310058, physics0101008 (svjour1/svjour2 papers whose class copy declares svjour)
+% oracle:  pdflatex 0 errors; "Fig. 1: Cap."
+% engines: rust INTREGFIX4 = 0 errors, "Fig. 1"; REGFIXH round 1 = "Figure 1": the copy "defines 3 of the 93
+%          public names … declared svjour: not the file its binding stands in for, not read" — svjour was no longer
+%          a file the svjour3 binding is built on once it made svjour's definitions as code
+% expect:  0 errors, 0 warnings; svjour2.cls read (declares svjour); caption "Fig. 1"
+% status:  RED (REGFIXH) -> GREEN (REGFIXH2)
+% preload: ar5iv.sty
+\documentclass{svjour2}
+\journalname{Test}
+\begin{document}
+\begin{figure}\caption{Cap.}\end{figure}
+Body.
+\end{document}

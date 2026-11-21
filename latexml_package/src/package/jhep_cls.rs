@@ -156,6 +156,15 @@ fn def_jhep_journal_macros() -> Result<()> {
   Ok(())
 }
 
+/// The JHEP binding's definitions, made in the load of a class of its own that loads no JHEP.cls (Perl JHEP2.cls.ltxml,
+/// JHEP3.cls.ltxml, PoS.cls.ltxml `LoadClass('JHEP', withoptions => 1)`; 0907.1636's JHEP3.cls, 1011.0095's PoS.cls), its
+/// options that class's: `\@ifclassloaded{JHEP}` is false (KNOWN_PERL_ERRORS #1300), and JHEP is a file the class's
+/// binding is built on (`note_stand_in_file`), so the paper's copy of that class declaring `\ProvidesClass{JHEP}` is read.
+pub fn jhep_definitions() -> Result<()> {
+  note_stand_in_file("JHEP");
+  load_definitions()
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl L26-35: Class options

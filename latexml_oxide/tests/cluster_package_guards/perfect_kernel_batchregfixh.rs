@@ -65,3 +65,25 @@ fn emulateapj_reads_no_shipped_sty_copy() {
   );
   assert!(!log.contains("emulateapj.sty declares itself"), "{log}");
 }
+
+/// A svjour1/svjour2 paper's own class file, Springer's svjour code declaring `\ProvidesClass{svjour}`, is read: svjour
+/// is a file the svjour3 binding is built on (its definitions made as code, `svjour_cls::svjour_definitions`), and the
+/// copy is of the class the paper requested — unlike the svjour3 guard's svjour.cls, which nothing requests (OD #731
+/// rule 0). pdflatex "Fig. 1: Cap.". Red (REGFIXH): "Figure 1", the copy "declared svjour: … not read". Witnesses
+/// hep-ph0608235 ("Fig. 1", svepj.clo's 180mm), 0712.4224, 1301.5646, 1710.10527, hep-ph0310058, physics0101008.
+#[test]
+fn svjour2_copy_declaring_svjour_is_read() {
+  let (log, xml) = convert_files_with(
+    repro!("svjour2_copy_declaring_svjour_is_read.tex"),
+    &[("svjour2.cls", repro!("svjour2.cls"))],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(log.contains("svjour2.cls declares itself svjour"), "{log}");
+  assert_element(
+    &xml,
+    "caption",
+    &[],
+    "<caption><tag close=\": \">Fig. 1</tag>Cap.</caption>",
+  );
+}

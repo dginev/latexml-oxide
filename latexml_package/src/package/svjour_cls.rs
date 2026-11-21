@@ -23,11 +23,14 @@ LoadDefinitions!({
   svjour_definitions("svjour")?;
 });
 
-/// The Springer journal classes' definitions (Perl svjour.cls.ltxml), as the class `class` (svjour, or svjour3 for
-/// svjour1-3: svjour3_cls.rs) — its options, its title page, its theorems — in that class's own load: svjour3.cls is
-/// a class of its own, loading no svjour.cls (KNOWN_PERL_ERRORS #1300).
+/// The Springer journal classes' definitions (Perl svjour.cls.ltxml), as the class `class` (svjour, or the svjour1-3
+/// the paper requested: svjour3_cls.rs) — its options, its title page, its theorems — in that class's own load:
+/// svjour3.cls is a class of its own, loading no svjour.cls (KNOWN_PERL_ERRORS #1300). svjour is a file the class's
+/// binding is built on (`note_stand_in_file`): a svjour1/svjour2 copy, Springer's svjour code renamed, declares
+/// `\ProvidesClass{svjour}` and is read (hep-ph0608235, 0712.4224, 1301.5646, 1710.10527, hep-ph0310058, physics0101008).
 #[rustfmt::skip]
 pub fn svjour_definitions(class: &str) -> Result<()> {
+  note_stand_in_file("svjour");
 
   // Option handling — declare all known options as no-ops
   for option in [

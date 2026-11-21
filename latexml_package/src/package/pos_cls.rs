@@ -7,10 +7,8 @@ LoadDefinitions!({
   // …without JHEP's journal-citation macros, which PoS.cls does not define (jhep_cls.rs
   // `def_jhep_journal_macros`; witnesses 1507.03892, 1510.07042, 1807.03003, 1908.00100).
   AssignValue!("JHEP@without@journal@macros" => true);
-  // JHEP3.cls, JHEP2.cls and PoS.cls are classes of their own, loading no JHEP.cls (0907.1636's JHEP3.cls, 1011.0095's
-  // PoS.cls): the JHEP binding's definitions are made in this class's load, its options this class's
-  // (KNOWN_PERL_ERRORS #1300).
-  jhep_cls::load_definitions()?;
+  // (this class loads no JHEP.cls: `jhep_cls::jhep_definitions`)
+  jhep_cls::jhep_definitions()?;
   RequirePackage!("ifpdf");
   RequirePackage!("times");
   RequirePackage!("mathptmx");

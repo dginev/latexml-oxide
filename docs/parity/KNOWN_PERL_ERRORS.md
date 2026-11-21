@@ -22188,6 +22188,10 @@ alike). Ours read the paper's copy of the loaded file after its binding (OXIDIZE
 svjour.cls shipped beside svjour3.cls ran its :93 "No valid journal specified in option list" (2101.09497,
 2110.05134, 2408.12532), 1305.6912's truncated emulateapj.sty ran out of input. Fixed in Rust (REGFIXH): the class
 binding calls the shared definitions as code in its own load (`svjour_cls::svjour_definitions`,
-`emulateapj_sty::emulateapj_definitions`, `jhep_cls::load_definitions`, `mn_cls::load_definitions`), its options its
-own; the files the real class loads are still loaded. Guards `perfect_kernel_batchregfixh::{svjour3_reads_no_older_svjour_copy,
-emulateapj_reads_no_shipped_sty_copy}`.
+`emulateapj_sty::emulateapj_definitions`, `jhep_cls::jhep_definitions`, `mn_cls::load_definitions`), its options its
+own; the files the real class loads are still loaded. The sibling stays a file the binding is built on, not marked
+loaded (`state::note_stand_in_file`): the paper's copy of the requested class declaring it is read (hep-ph0608235's
+svjour2.cls `\ProvidesClass{svjour}`, "Fig. 1" from svepj.clo; 0712.4224, 1301.5646, 1710.10527, hep-ph0310058,
+physics0101008), the sibling's own copy, which nothing requests, is not. Guards
+`perfect_kernel_batchregfixh::{svjour3_reads_no_older_svjour_copy, emulateapj_reads_no_shipped_sty_copy,
+svjour2_copy_declaring_svjour_is_read}`.
