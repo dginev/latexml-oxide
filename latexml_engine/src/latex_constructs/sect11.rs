@@ -2478,16 +2478,10 @@ fn carries_nothing(item: &Digested) -> bool {
 /// writes to the .aux (latex.ltx:17746-17749 `\bibcite`) for a `\cite` to print.
 fn cite_list(key: &str) -> String { s!("b@{key}") }
 
-/// The definitions a refused `\cite` begins with, of label macros nothing else defines, run once, globally, for the
-/// `\bibitem`s' labels (OXIDIZED_DESIGN_DIVERGENCES #88): the body as TeX reads it — through a robust wrapper to its
-/// inner `\cite␣` (OXIDIZED_DESIGN #568), an `\@ifstar` to its unstarred branch, one call of a macro to its body with
-/// the call's arguments — to its first token that is not a `\def`/`\edef`/`\gdef`/`\xdef`; nothing after is run.
-/// astron.sty's `\citefull` (0812.2799, 0812.4839, astro-ph0001290, astro-ph0008362), mlbib.sty's `\new@cite`
-/// (cond-mat0011295), the ACM classes' `\start@cite23` (acm_proc_article-sp.cls:1223 1312.2098,
-/// sig-alternate-05-2015.cls:1395 1703.08365, sig-alternate.cls:1146 1806.05694). Guards
-/// `perfect_kernel_batchnext397::astroncite_label_under_the_lock`,
-/// `perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`,
-/// `perfect_kernel_batchregfixf::acm_robust_cite_label_under_the_lock`.
+/// The definitions a refused `\cite` begins with, run at every kernel `\cite` as TeX's would, `\global` for names still
+/// undefined (OXIDIZED_DESIGN_DIVERGENCES #88). Witnesses 0812.2799, 0812.4839, astro-ph0001290, astro-ph0008362,
+/// cond-mat0011295, 1312.2098, 1703.08365, 1806.05694, 1312.4435, 0705.1246, 1511.09009; guards in
+/// `perfect_kernel_batch{next397,regfixa,regfixf}`.
 fn label_macros_from_refused_cite() -> Vec<Token> {
   let Some(body) = refused_body(&T_CS!("\\lx@dropped@cite")) else {
     return Vec::new();
@@ -2517,10 +2511,14 @@ fn label_macros_from_refused_cite() -> Vec<Token> {
   let mut tokens = Vec::new();
   let mut i = 0;
   while let Some((name, end)) = definition_at(&body, i) {
+    // (a parameter of the refused `\cite` itself has no argument here)
+    if body[i..end].iter().any(|t| t.get_catcode() == Catcode::ARG) {
+      break;
+    }
     if !is_defined_token(&name) {
       tokens.push(T_CS!("\\global"));
-      tokens.extend_from_slice(&body[i..end]);
     }
+    tokens.extend_from_slice(&body[i..end]);
     i = end;
     while body.get(i).is_some_and(|t| t.defined_as(&T_SPACE!())) {
       i += 1;

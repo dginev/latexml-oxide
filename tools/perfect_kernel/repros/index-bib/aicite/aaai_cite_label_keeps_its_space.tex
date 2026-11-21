@@ -1,0 +1,20 @@
+% witness: 1511.09009 (aaai.sty); ~49 census papers ship an aaai*.sty with this `\cite`
+% oracle:  aaai.sty:253-254 `\def\cite{\def\citeauthoryear##1##2{\def\@thisauthor{##1}\ifx\@lastauthor\@thisauthor
+%          \relax\else##1 \fi ##2}\@icite}`: the label macro of the `.bbl`'s `\bibitem[\protect\citeauthoryear{…}{…}]`,
+%          which the lock, refusing that `\cite`, defines empty (state.rs, the dropped setter's internals);
+%          TeX's `\cite` makes it at every call (OXIDIZED_DESIGN_DIVERGENCES #88). pdflatex (two runs, aicite.sty
+%          beside): 0 errors, "See (Ali and Meila 2012) and (Doe 1999).", labels "[Ali and Meila 2012]", "[Doe 1999]"
+% engines: rust INTREGFIX3 and REGFIXF round 1 "Ali and Meila2012" (the empty placeholder)
+% expect:  0 errors, 0 warnings; the labels "Ali and Meila 2012", "Doe 1999"
+% status:  RED (REGFIXF round 1) -> GREEN (REGFIXF round 2); guard
+%          perfect_kernel_batchregfixf::refused_cite_redefines_a_defined_label_macro
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{aicite}
+\begin{document}
+See \cite{a} and \cite{b}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Ali and Meila}{2012}]{a} A. Ali. A Title. 2012.
+\bibitem[\protect\citeauthoryear{Doe}{1999}]{b} J. Doe. Another Title. 1999.
+\end{thebibliography}
+\end{document}

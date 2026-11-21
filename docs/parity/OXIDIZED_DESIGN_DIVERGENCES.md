@@ -2002,17 +2002,22 @@ into the `\bibitem` labels; mlbib.sty:360-363's (cond-mat0011295) is `\@ifstar{\
 {\start@cite23}` (acm_proc_article-sp.cls:1223-1236 1312.2098, sig-alternate-05-2015.cls:1395-1408 1703.08365,
 sig-alternate.cls:1146-1159 1806.05694; older copies' plain `\def\cite{\start@cite23}`, 0705.2819, cs0404029) are the
 same: `\start@cite#1#2` `\edef`s the `\citeauthoryear` of the `.bbl` labels, then branches; the lock refuses the robust
-wrapper and its inner `\cite␣` (OXIDIZED_DESIGN #568). Where the lock refused a `\cite`, the kernel `\cite`'s first call
-reads the refused body as TeX would — the robust wrapper to its refused inner `\cite␣`, an `\@ifstar{…}{…}` to its
-unstarred branch, one call `\X<arguments>` of a macro with undelimited parameters to `\X`'s body with them substituted
-— and runs, globally, its leading `\def`/`\edef`/`\gdef`/`\xdef`s of names still undefined, to the first token that is
-not a definition (`sect11.rs` `label_macros_from_refused_cite`). Nothing after is run: a branch that typesets or steps
-a counter first runs nothing, as once at the first citation is not TeX's every one. The full form throughout: the
+wrapper and its inner `\cite␣` (OXIDIZED_DESIGN #568). Where the lock refused a `\cite`, every kernel `\cite` reads
+the refused body as TeX would — the robust wrapper to its refused inner `\cite␣`, an `\@ifstar{…}{…}` to its unstarred
+branch, one call `\X<arguments>` of a macro with undelimited parameters to `\X`'s body with them substituted — and runs
+its leading `\def`/`\edef`/`\gdef`/`\xdef`s, to the first token that is not a definition (`sect11.rs`
+`label_macros_from_refused_cite`): as TeX's `\cite` does at each call, locally, so the labels take the form of the last
+citation command before the bibliography — over a name already defined too: Kluwer's `[namedreferences]` `\klu@cite`
+(SolarPhysics.cls:2048-2101 1312.4435, solarphysics.cls 0705.1246, SSRv.cls) redefines the class's own aux-writer
+`\citeauthoryear` (`\string\citeauthoryear{…}{…}`), aaai.sty:253 (1511.09009) the lock's empty placeholder for its
+refused setter's internals (state.rs), so its "Ali and Meilă 2012" kept its space. A name still undefined is defined
+`\global`ly, so a first citation inside a group still defines it for the bibliography. Nothing after the first
+non-definition is run: a branch that typesets or steps a counter first runs nothing. The full form throughout: the
 starred call's year-only form is the class's label style, which the lock does not keep. Guards
 `perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`),
 `perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`
-(repros `index-bib/mlbib`, `index-bib/sidecite`), `perfect_kernel_batchregfixf::acm_robust_cite_label_under_the_lock`
-(repro `index-bib/acmcite`, both forms).
+(repros `index-bib/mlbib`, `index-bib/sidecite`), `perfect_kernel_batchregfixf::{acm_robust_cite_label_under_the_lock,
+refused_cite_redefines_a_defined_label_macro}` (repros `index-bib/acmcite`, `index-bib/klucite`, `index-bib/aicite`).
 
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)

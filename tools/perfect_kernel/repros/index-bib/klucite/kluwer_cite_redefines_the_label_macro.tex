@@ -1,0 +1,20 @@
+% witness: 1312.4435 (SolarPhysics.cls), 0705.1246 (solarphysics.cls); SSRv.cls the same lines
+% oracle:  SolarPhysics.cls:2048-2101 `\def\cite{\@ifstar{\citeyear}{\klu@cite}}`, `\klu@cite` =
+%          `\def\@citeseppen{1000}\def\@cite##1##2{…}\def\citeauthoryear##1##2{{\rm…##1, ##2}}\@internalcite`, over the
+%          class's own aux-writer `\def\citeauthoryear##1##2{\string\citeauthoryear{##1}{##2}}`: TeX's `\cite` makes
+%          the label macro of the `.bbl`'s `\bibitem[\protect\citeauthoryear{…}{…}]` at every call, locally
+%          (OXIDIZED_DESIGN_DIVERGENCES #88). pdflatex (two runs, klucite.cls beside): 0 errors,
+%          "See (Aly, 1991) and (Lighthill, 1951).", labels "[Aly, 1991]", "[Lighthill, 1951]"
+% engines: rust INTREGFIX3 0 errors, labels "Aly, 1991"; REGFIXF round 1 the writer form ("\citeauthoryearAly1991")
+% expect:  0 errors, 0 warnings; the labels "Aly, 1991", "Lighthill, 1951"
+% status:  RED (REGFIXF round 1) -> GREEN (REGFIXF round 2); guard
+%          perfect_kernel_batchregfixf::refused_cite_redefines_a_defined_label_macro
+% preload: ar5iv.sty
+\documentclass{klucite}
+\begin{document}
+See \cite{a} and \cite{b}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Aly}{1991}]{a} J. Aly. A Title. 1991.
+\bibitem[\protect\citeauthoryear{Lighthill}{1951}]{b} M. Lighthill. Another Title. 1951.
+\end{thebibliography}
+\end{document}
