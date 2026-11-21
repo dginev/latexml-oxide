@@ -76,8 +76,8 @@ pub use latexml_core::{
   mouth::{Mouth, MouthOptions},
   parameter::{
     BETWEEN_ALIGNMENT_ROWS, IN_EVERY_CELL, Parameter, Parameters, ReaderClosure, ReversionClosure,
-    drop_argument_tail, dropping_argument_tails, in_braced_read, read_braced, read_braced_value,
-    read_length_value, read_through_redefined_setlength,
+    TestoptCall, drop_argument_tail, dropping_argument_tails, in_braced_read, read_braced,
+    read_braced_value, read_length_value, read_through_redefined_setlength,
   },
   pin,
   rewrite::{Rewrite, RewriteOptions},

@@ -2338,27 +2338,15 @@ pub fn define_hypersetup() -> Result<()> {
     // Same surpass-Perl rationale as the main option loop above.
     DefKeyVal!("Hyp", key, "Semiverbatim");
   }
-  // `\lx@pdfstringdef\cs{<text>}`: hyperref's `\pdfstringdef` (hyperref.sty:386-560) in brief — `<text>` expanded in full
-  // (the digit commands stay the PDF escapes they spell, :388-396, `pdfauthor={Uwe L\374ck}`, fnlineno:44; a character is
-  // `\string`'d, this text being read while a latin `inputenc` may make ß active with the meaning `\ss`: bibleref-german)
-  // with the document's markup made harmless: `\protect` left as it is (a robust command is its inner body, :386-570
-  // never sets it; empty, `\$` re-expanded itself without end: 0812.2921 1104.1704 1201.4321 1303.2471 1405.1922
-  // 1510.06427), `\{ \} \# \$ \% \& \_` their characters (:405-413), font and size commands their argument or
-  // nothing, `\\` a space, `~` and the other spaces a space (`\HyPsd@LetUnexpandableSpace`), `\texorpdfstring` its PDF branch,
-  // labels, index entries and error messages gobbled (:550-552), the text glyphs and symbols their characters (puenc.def's
-  // `\DeclareTextCommand{\ss}{PU}{\80\337}` …, latex.ltx:564 `\aa`; `\textendash` :1082, `\textsection` :184, … with
-  // the kernel's names for them, `\S`, `\dag`, `\copyright`, `\pounds`, and hyperref.sty:416-418's `\P`, `\ldots`,
-  // `\dots`), and (as for `pdfusetitle`'s title, hyperref.sty
-  // `\Hy@UseMaketitleString`) `\thanks` and the note commands gobbled, so that no note is made twice; then the
-  // document's own `\pdfstringdefPreHook` (`\pdfstringdefDisableCommands`); then, as :545-549, `\@ifnextchar` (and
-  // latex.ltx:1775's `\@ifstar` on it) and `\@protected@testopt` gobble their command with its arguments (`\opt[q]`
-  // is "[q]"; `Expandable::testopt_call`), and so does the extensible arrows' `\lx@long@arrow`, whose reversion names
-  // the robust arrow again (`\xrightarrow[u]{b}` is "[u]b", as amsmath's `\@protected@testopt`; KPE #1302); then, as
-  // :555-565 `\HyPsd@DefCommand`, a `\def`/`\gdef`/`\edef`/`\xdef` in the text gobbles its name, parameter text and
-  // body (2001.10451's jss.cls `\Plaintitle{#1}` = `\def\@Plaintitle{#1}`, its `pdftitle={\@Plaintitle}`, re-expanded
-  // without end), and `\HyPsd@LetCommand` a `\let`/`\futurelet` its name (`\let\zzundef\relax` no undefined
-  // `\zzundef`). [`pdf_string`] keeps the characters of the result; the `\pdfstringdefWarn` tokens hyperref reports as
-  // "Token not allowed" are dropped with the other control sequences, unreported.
+  // `\lx@pdfstringdef\cs{<text>}`: hyperref's `\pdfstringdef` (hyperref.sty:386-560) in brief, OXIDIZED_DESIGN #824 —
+  // `\protect` left as it is (:386-570; 0812.2921 1104.1704 1201.4321 1303.2471 1405.1922 1510.06427), the digit
+  // commands their PDF escapes (:388-396; fnlineno:44), `\{ \} \# \$ \% \& \_` their characters (:405-413), the fonts,
+  // sizes, spaces, `\texorpdfstring`, labels, notes and errors made harmless (:550-552, `\Hy@UseMaketitleString`), the
+  // text glyphs and symbols their characters, `\string`'d (puenc.def, latex.ltx:564, :416-418; bibleref-german's active
+  // ß), `\pdfstringdefPreHook`; then
+  // :545-549's `\@ifnextchar`, `\@ifstar` (latex.ltx:1775) and `\@protected@testopt` gobbling (`Expandable::testopt_call`),
+  // the arrows' `\lx@long@arrow` (KPE #1302), and :555-565's `\HyPsd@DefCommand`/`\HyPsd@LetCommand` (2001.10451).
+  // [`pdf_string`] keeps the result's characters; the `\pdfstringdefWarn` tokens ("Token not allowed") drop unreported.
   RawTeX!(
     r#"\long\def\lx@pdfstringdef#1#2{\begingroup
 \escapechar`\\\edef\0{\string\0}\edef\1{\string\1}\edef\2{\string\2}\edef\3{\string\3}\edef\8{\string\8}\edef\9{\string\9}%
@@ -2391,7 +2379,7 @@ pub fn define_hypersetup() -> Result<()> {
 \def\@ifnextchar{\HyPsd@ifnextchar\@ifnextchar}\def\kernel@ifnextchar{\HyPsd@ifnextchar\kernel@ifnextchar}%
 \def\new@ifnextchar{\HyPsd@ifnextchar\new@ifnextchar}\def\@ifstar##1{\@ifnextchar*{\@firstoftwo{##1}}}%
 \let\@protected@testopt\HyPsd@protected@testopt\let\@protected@testopt@xargs\HyPsd@protected@testopt
-\let\lx@long@arrow\@gobbletwo
+\let\lx@long@arrow\@gobbletwo% (the amsmath binding's internal, its extensible arrows')
 \let\Hy@temp\xdef\let\def\HyPsd@DefCommand\let\gdef\HyPsd@DefCommand\let\edef\HyPsd@DefCommand
 \let\xdef\HyPsd@DefCommand\let\futurelet\HyPsd@LetCommand\let\let\HyPsd@LetCommand\Hy@temp#1{#2}\endgroup}
 \def\pdfstringdefWarn#1{\expandafter\noexpand\csname<>-\string#1\endcsname}

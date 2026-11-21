@@ -11639,8 +11639,8 @@ declarator's internal is not `\long` (`\l@ngrel@x`). `\cs` itself is unchanged. 
 `\DeclareRobustCommand` or `\newenvironment` the lock refuses still defines its internal, as `\@xargdef` does: only the
 class's own `\csname\string\cs\endcsname` reaches it, and the replay of a refused class setter goes through it
 (cmfne.cls:462-483 `\renewcommand{\author}[2][]` + the `\@dblarg` `\edef`, whose `\enddoc@text` prints
-`\firstshortauthor`: 2210.02246 lost its two author lines while the internal was skipped). No binding defines or calls a
-`\\cs` internal; a locked `\renewenvironment` is refused whole (its stores recorded), and a `\newcommand` of a defined
+`\firstshortauthor`: 2210.02246 lost its two author lines while the internal was skipped). No binding defines a `\\cs`
+internal of its own (twoopt's and xargs's declarators make the document's, twoopt.sty:51-55, xargs.sty:205-212); a locked `\renewenvironment` is refused whole (its stores recorded), and a `\newcommand` of a defined
 name defines none, as LaTeX's. Residuals: the internal reads `[…]` as
 an optional argument, as our `\@yargdef` does, where LaTeX's requires the brackets; an active character gets none (its
 `\string` names another control sequence). The internal is named as `\string` prints the command: the null control
@@ -11648,7 +11648,11 @@ sequence's is `\\csname\endcsname` (tex.web §263) — named `"\\" + "\"`, it wa
 `\expandafter\newcommand\expandafter{\csname\endcsname}[1][x]{…}` (changes' `\csname\Changes@commandname\endcsname`
 with its `\Changes@commandname` undefined in our binding) replaced the line break, and a `{#1\\}` body recursed to a
 Fatal (2410.07647: F 1 → 0, 870 → 23,196 words; int131fix, guard
-`perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break`). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors), 2210.02246 (cmfne's author lines).
+`perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break`). The command's optional parameter carries
+the internal its declarator made (`TestoptCall`), and the call becomes `\@protected@testopt\cs\\cs{<default>}` whenever
+`\@protected@testopt` is not the kernel's (`Expandable::testopt_call`, REGFIXO; xargs's head `\@protected@testopt@xargs`
+where an argument after the first is optional): hyperref's PDF string gobbles it, and letltxmacro.sty:126-144's `\ifx`
+holds as in LaTeX (guard `perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors), 2210.02246 (cmfne's author lines).
 Guards `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
 every_xargdef_declarator_defines_the_internal_macro, refused_dblarg_setter_reaches_its_internal}`; repros
 `macro-state/newcommand_optional_internal_cs`, `sectioning-frontmatter/refused_dblarg_setter_reaches_its_internal`.

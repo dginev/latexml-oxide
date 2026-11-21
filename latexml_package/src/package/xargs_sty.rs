@@ -1,3 +1,5 @@
+use latexml_engine::latex_constructs::define_optional_internal;
+
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -24,6 +26,13 @@ LoadDefinitions!({
   },
   optional => true);
 
+  // xargs.sty:20-25, the head of a command whose optional arguments are not only its first (:209-212), and the copy
+  // against which the command sees it redefined (`Expandable::testopt_call`; hyperref.sty:549)
+  RawTeX!(
+    r"\newcommand*\@protected@testopt@xargs[1]{\ifx\protect\@typeset@protect\expandafter\xargs@read\else\@x@protect#1\fi}
+\let\lx@xargs@protected@testopt@xargs\@protected@testopt@xargs"
+  );
+
   // Macros
 
   DefPrimitive!(
@@ -40,8 +49,7 @@ LoadDefinitions!({
       let nargs = if let Some(nargs_tks) = nargs_opt {
         nargs_tks.to_string().parse::<usize>()?
       } else {0};
-      let cargs = convert_xargs_args(nargs, defaults.as_ref())?;
-      DefMacro!(cs, cargs, body, scope => scope);
+      define_xargs(&cs, nargs, defaults.as_ref(), body, scope)?;
     }
   });
 
@@ -51,7 +59,7 @@ LoadDefinitions!({
     let nargs = if let Some(nargs_tks) = nargs_opt {
       nargs_tks.to_string().parse::<usize>()?
     } else {0};
-    DefMacro!(cs, convert_xargs_args(nargs, defaults.as_ref())?, body, scope=>scope);
+    define_xargs(&cs, nargs, defaults.as_ref(), body, scope)?;
   });
 
   DefPrimitive!("\\providecommandx OptionalMatch:* DefToken [] OptionalKeyVals:xargs {}",
@@ -62,7 +70,7 @@ LoadDefinitions!({
       let nargs = if let Some(nargs_tks) = nargs_opt {
         nargs_tks.to_string().parse::<usize>()?
       } else {0};
-      DefMacro!(cs, convert_xargs_args(nargs, defaults.as_ref())?, body, scope => scope);
+      define_xargs(&cs, nargs, defaults.as_ref(), body, scope)?;
     }
   });
 
@@ -91,7 +99,7 @@ LoadDefinitions!({
     let nargs = if let Some(nargs_tks) = nargs_opt {
       nargs_tks.to_string().parse::<usize>()?
     } else {0};
-    DefMacro!(T_CS!(cs_full), convert_xargs_args(nargs, defaults.as_ref())?,preamble, scope=>scope);
+    define_xargs(&T_CS!(cs_full), nargs, defaults.as_ref(), preamble, scope)?;
     DefMacro!(T_CS!(end_cs_full), None, postamble, scope => scope);
   });
 
@@ -102,12 +110,44 @@ LoadDefinitions!({
     let nargs = if let Some(nargs_tks) = nargs_opt {
       nargs_tks.to_string().parse::<usize>()?
     } else {0};
-    DefMacro!(T_CS!(s!("\\{cs_str}")), convert_xargs_args(nargs, defaults.as_ref())?, preamble, scope => scope);
+    define_xargs(&T_CS!(s!("\\{cs_str}")), nargs, defaults.as_ref(), preamble, scope)?;
     DefMacro!(T_CS!(s!("\\end{cs_str}")), None, postamble, scope => scope);
   });
 });
 
 // Utils
+
+/// xargs.sty:205-212: `\cs` with an optional argument is `\@protected@testopt\cs\\cs{<default>}`, or
+/// `\@protected@testopt@xargs\cs\\cs{<its reading>}` where one after the first is optional; the internal `\\cs`
+/// here reads the arguments itself (sect08.rs `define_optional_internal`), and the call carries the first default.
+fn define_xargs(
+  cs: &Token,
+  nargs: usize,
+  defaults: Option<&KeyVals>,
+  body: Tokens,
+  scope: Option<Scope>,
+) -> Result<()> {
+  let optional = |i: usize| defaults.is_some_and(|kv| kv.get_value(&i.to_string()).is_some());
+  let params = convert_xargs_args(nargs, defaults)?;
+  let internal = if (1..=nargs).any(optional) {
+    define_optional_internal(cs, params.clone(), &body, false, scope)?
+  } else {
+    None
+  };
+  let params = match internal {
+    Some(internal) if (2..=nargs).any(optional) => params.map(|params| {
+      params.with_testopt_call(TestoptCall {
+        head: T_CS!("\\@protected@testopt@xargs"),
+        kernel: T_CS!("\\lx@xargs@protected@testopt@xargs"),
+        internal,
+      })
+    }),
+    Some(internal) => params.map(|params| params.with_testopt_call(TestoptCall::kernel(internal))),
+    None => params,
+  };
+  DefMacro!(*cs, params, body, scope => scope);
+  Ok(())
+}
 
 // generate paramlist
 fn convert_xargs_args(nargs: usize, keyval: Option<&KeyVals>) -> Result<Option<Parameters>> {

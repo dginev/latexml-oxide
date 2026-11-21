@@ -364,45 +364,35 @@ impl Expandable {
   }
 
   /// A `\newcommand` with an optional argument reads it itself (Perl's `convertLaTeXArgs`), where latex.ltx's is
-  /// `\@protected@testopt\cs\\cs{<default>}` (`\@xargdef`, :1245-1257): when `\@protected@testopt` is not the
+  /// `\@protected@testopt\cs\\cs{<default>}` (`\@xargdef`, :1245-1257; [`TestoptCall`]): when the head is not the
   /// kernel's, the call is that body, for the redefinition to act on it (hyperref.sty:548-549 gobbles the command in a
-  /// PDF string, `\HyPsd@protected@testopt`; letltxmacro.sty:127). `None` otherwise, or where `\\cs` is undefined
-  /// (the internal itself, twoopt's commands).
+  /// PDF string, `\HyPsd@protected@testopt`; letltxmacro.sty:127). `None` otherwise, or where the definer made no
+  /// internal (`\@xargdef` itself, the internal's own optional).
+  ///
+  /// [`TestoptCall`]: crate::parameter::TestoptCall
   fn testopt_call(&self) -> Result<Option<Tokens>> {
     if !self.peeks_by_futurelet {
       return Ok(None);
     }
-    let Some(default) = self.paramlist.as_ref().and_then(|params| {
-      params
-        .get_parameters()
-        .first()
-        .filter(|param| param.testopt)
-        .and_then(|param| param.extra.first())
-    }) else {
+    let Some(param) = self
+      .paramlist
+      .as_ref()
+      .and_then(|params| params.get_parameters().first())
+    else {
       return Ok(None);
     };
-    let testopt = T_CS!("\\@protected@testopt");
-    if x_equals(&testopt, &T_CS!("\\lx@kernel@protected@testopt")) {
+    let Some(call) = param.testopt_call.as_deref() else {
       return Ok(None);
-    }
-    let name = self.cs.to_string();
-    let internal = T_CS!(s!(
-      "\\{}",
-      if name == "\\" {
-        "\\csname\\endcsname"
-      } else {
-        name.as_str()
-      }
-    ));
-    if lookup_meaning(&internal).is_none() {
+    };
+    if x_equals(&call.head, &call.kernel) {
       return Ok(None);
     }
     Ok(Some(Tokens!(
-      testopt,
+      call.head,
       self.cs,
-      internal,
+      call.internal,
       T_BEGIN!(),
-      default.clone(),
+      param.extra.first().unwrap_or(&NO_TOKENS).clone(),
       T_END!()
     )))
   }

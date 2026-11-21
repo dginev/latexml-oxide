@@ -75,6 +75,9 @@ pub struct Parameter {
   /// 1259-1260), a futurelet peek, so its macro
   /// [`peeks_by_futurelet`](crate::definition::Definition::peeks_by_futurelet).
   pub testopt:            bool,
+  /// The `\@protected@testopt` call its command is in LaTeX, where the command's definer made the internal it names
+  /// ([`TestoptCall`]).
+  pub testopt_call:       Option<Rc<TestoptCall>>,
   /// A size argument latex.ltx evaluates with the box already set, so that
   /// `\width`/`\height`/`\depth`/`\totalheight` measure it (`\@begin@tempboxa`,
   /// latex.ltx:16085-16094): `TempboxaDimension`. See
@@ -125,11 +128,36 @@ pub const WITHHOLD_STATED_LENGTHS: &str = "lx@withhold@stated@lengths";
 /// ([`WITHHOLD_STATED_LENGTHS`]): it states none.
 pub const STATED_LENGTHS_WITHHELD: &str = "stated_lengths_withheld";
 
+/// A command with an optional argument is `\@protected@testopt\cs\\cs{<default>}` in LaTeX (latex.ltx:1245-1257
+/// `\@xargdef`; twoopt.sty:51-55; xargs.sty:205-212, whose `head` is `\@protected@testopt@xargs` where an argument
+/// after the first is optional). Ours reads its arguments itself, and `Expandable::testopt_call` makes this call, the
+/// default its parameter's, only once `head` is no longer `kernel`, the copy its definer saved (hyperref.sty:548-549
+/// in a PDF string).
+#[derive(Clone, Debug)]
+pub struct TestoptCall {
+  pub head:     Token,
+  pub kernel:   Token,
+  /// `\cs`, `\csname\string\cs\endcsname`, which the definer defined
+  pub internal: Token,
+}
+
+impl TestoptCall {
+  /// latex.ltx's `\@protected@testopt`, against its copy `\lx@kernel@protected@testopt` (sect13.rs).
+  pub fn kernel(internal: Token) -> Self {
+    TestoptCall {
+      head: crate::T_CS!("\\@protected@testopt"),
+      kernel: crate::T_CS!("\\lx@kernel@protected@testopt"),
+      internal,
+    }
+  }
+}
+
 impl Default for Parameter {
   fn default() -> Self {
     Parameter {
       novalue:            false,
       testopt:            false,
+      testopt_call:       None,
       after_box:          false,
       semiverbatim:       None,
       optional:           false,
@@ -812,6 +840,13 @@ impl Parameters {
   pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
   pub fn get_parameters(&self) -> &[Parameter] { &self.0 }
   pub fn take_parameters(self) -> Vec<Parameter> { self.0 }
+  /// The first parameter's [`Parameter::testopt_call`], where it is an optional one ([`Parameter::testopt`]).
+  pub fn with_testopt_call(mut self, call: TestoptCall) -> Self {
+    if let Some(first) = self.0.first_mut().filter(|first| first.testopt) {
+      first.testopt_call = Some(Rc::new(call));
+    }
+    self
+  }
   /// Revert `args`, one per valued parameter: a novalue parameter (an
   /// environment's leading `SkipSpaces`, a `Match` delimiter) stored no
   /// argument and takes none here. Perl `Parameters::revertArguments`

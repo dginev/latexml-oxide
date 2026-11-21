@@ -3250,9 +3250,7 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/definition/argument.rs", 4),
   ("latexml_core/src/definition/conditional.rs", 9),
   ("latexml_core/src/definition/constructor.rs", 2),
-  // (REGFIXO2, 49 -> 51: `testopt_call` names latex.ltx's internal `\csname\string\cs\endcsname`, the null control
-  // sequence's as `\string` prints it, and asks whether it is defined)
-  ("latexml_core/src/definition/expandable.rs", 51),
+  ("latexml_core/src/definition/expandable.rs", 49),
   ("latexml_core/src/definition/math_primitive.rs", 1),
   ("latexml_core/src/definition/primitive.rs", 1),
   ("latexml_core/src/definition/register.rs", 2),
