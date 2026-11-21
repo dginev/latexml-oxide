@@ -2478,104 +2478,153 @@ fn carries_nothing(item: &Digested) -> bool {
 /// writes to the .aux (latex.ltx:17746-17749 `\bibcite`) for a `\cite` to print.
 fn cite_list(key: &str) -> String { s!("b@{key}") }
 
-/// The refused `\cite`'s unstarred branch, when it only `\def`s the label macros of the `\bibitem`s (astron.sty's
-/// `\citefull` 0812.2799, 0812.4839, astro-ph0001290, astro-ph0008362; mlbib.sty's `\new@cite` cond-mat0011295), run
-/// once for them (OXIDIZED_DESIGN_DIVERGENCES #88). Guards `perfect_kernel_batchnext397::astroncite_label_under_the_lock`,
-/// `perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`.
+/// The definitions a refused `\cite` begins with, of label macros nothing else defines, run once, globally, for the
+/// `\bibitem`s' labels (OXIDIZED_DESIGN_DIVERGENCES #88): the body as TeX reads it — through a robust wrapper to its
+/// inner `\cite␣` (OXIDIZED_DESIGN #568), an `\@ifstar` to its unstarred branch, one call of a macro to its body with
+/// the call's arguments — to its first token that is not a `\def`/`\edef`/`\gdef`/`\xdef`; nothing after is run.
+/// astron.sty's `\citefull` (0812.2799, 0812.4839, astro-ph0001290, astro-ph0008362), mlbib.sty's `\new@cite`
+/// (cond-mat0011295), the ACM classes' `\start@cite23` (acm_proc_article-sp.cls:1223 1312.2098,
+/// sig-alternate-05-2015.cls:1395 1703.08365, sig-alternate.cls:1146 1806.05694). Guards
+/// `perfect_kernel_batchnext397::astroncite_label_under_the_lock`,
+/// `perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`,
+/// `perfect_kernel_batchregfixf::acm_robust_cite_label_under_the_lock`.
 fn label_macros_from_refused_cite() -> Vec<Token> {
-  let Ok(Some(refused)) = lookup_definition(&T_CS!("\\lx@dropped@cite")) else {
+  let Some(body) = refused_body(&T_CS!("\\lx@dropped@cite")) else {
     return Vec::new();
   };
-  // `\@ifstar{<starred>}{<unstarred>}`, its unstarred branch one control sequence
-  let branch = match refused.get_expansion() {
-    Some(ExpansionBody::Tokens(body)) => match body.unlist_ref().as_slice() {
-      [ifstar, .., open, branch, close]
-        if ifstar.defined_as(&T_CS!("\\@ifstar"))
-          && open.defined_as(&T_BEGIN!())
-          && close.defined_as(&T_END!()) =>
-      {
-        *branch
-      },
-      _ => return Vec::new(),
+  // a robust wrapper `[\x@protect\cite]\protect\cite␣`: the lock refused its inner too, and kept that body
+  let body = match body.as_slice() {
+    [.., protect, inner] if protect.defined_as(&T_CS!("\\protect")) => {
+      let dropped = inner.with_cs_name(|cs| s!("\\lx@dropped@{}", cs.trim_start_matches('\\')));
+      match refused_body(&T_CS!(dropped)) {
+        Some(inner_body) => inner_body,
+        None => return Vec::new(),
+      }
     },
-    _ => return Vec::new(),
+    _ => body,
   };
-  let Ok(Some(full)) = lookup_definition(&branch) else {
-    return Vec::new();
+  // `\@ifstar{<starred>}{<unstarred>}`: the unstarred branch
+  let body = match body.as_slice() {
+    [ifstar, rest @ ..] if ifstar.defined_as(&T_CS!("\\@ifstar")) => {
+      match split_undelimited(rest).as_deref() {
+        Some([_, unstarred]) => unstarred.to_vec(),
+        _ => return Vec::new(),
+      }
+    },
+    _ => body,
   };
-  // A parameterless branch only: a `#1` would take the `\global` that keeps the definitions.
-  let takes_arguments = full
-    .get_parameters()
-    .is_some_and(|p| !p.get_parameters().is_empty());
-  let Some(ExpansionBody::Tokens(body)) = full.get_expansion() else {
-    return Vec::new();
-  };
-  let body = body.unlist_ref();
-  let tail_is_internalcite = body
-    .last()
-    .is_some_and(|last| last.defined_as(&T_CS!("\\@internalcite")));
-  if !full.is_expandable()
-    || takes_arguments
-    || !tail_is_internalcite
-    || !only_definitions(&body[..body.len() - 1])
-  {
-    return Vec::new();
-  }
-  let def = T_CS!("\\def");
-  let undefined: Vec<Token> = body
-    .windows(2)
-    .filter(|pair| pair[0].defined_as(&def) && !is_defined_token(&pair[1]))
-    .map(|pair| pair[1])
-    .collect();
-  if undefined.is_empty() {
-    return Vec::new();
-  }
-  let mut tokens = TokenizeInternal!(
-    r"\let\lx@cite@internalcite\@internalcite\def\@internalcite{\let\@internalcite\lx@cite@internalcite}"
-  )
-  .unlist();
-  tokens.push(branch);
-  for cs in undefined {
-    tokens.extend([T_CS!("\\global"), T_CS!("\\let"), cs, cs]);
+  let body = expand_call(&body).unwrap_or(body);
+  let mut tokens = Vec::new();
+  let mut i = 0;
+  while let Some((name, end)) = definition_at(&body, i) {
+    if !is_defined_token(&name) {
+      tokens.push(T_CS!("\\global"));
+      tokens.extend_from_slice(&body[i..end]);
+    }
+    i = end;
+    while body.get(i).is_some_and(|t| t.defined_as(&T_SPACE!())) {
+      i += 1;
+    }
   }
   tokens
 }
 
-/// Whether `items` are nothing but `\def\cs<parameters>{…}`s and spaces: a branch that typesets or steps a counter
-/// would do so once, at the first citation only.
-fn only_definitions(items: &[Token]) -> bool {
-  let (def, space, open, close) = (T_CS!("\\def"), T_SPACE!(), T_BEGIN!(), T_END!());
+/// The body of the macro `cs`, when it is one with a token body.
+fn refused_body(cs: &Token) -> Option<Vec<Token>> {
+  let definition = lookup_definition(cs).ok().flatten()?;
+  match definition.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) if definition.is_expandable() => {
+      Some(body.unlist_ref().to_vec())
+    },
+    _ => None,
+  }
+}
+
+/// `items` read as undelimited arguments (tex.web §392-393: a single non-blank token, or a group's contents), when
+/// they are nothing else.
+fn split_undelimited(items: &[Token]) -> Option<Vec<Vec<Token>>> {
+  let mut args = Vec::new();
   let mut i = 0;
   while i < items.len() {
-    if items[i].defined_as(&space) {
+    let token = items[i];
+    if token.defined_as(&T_SPACE!()) {
       i += 1;
       continue;
     }
-    if !items[i].defined_as(&def) {
-      return false;
-    }
-    // the name, then the parameter text to the body's `{`
-    i += 2;
-    while items.get(i).is_some_and(|t| !t.defined_as(&open)) {
-      i += 1;
-    }
-    let mut depth = 0usize;
-    loop {
-      let Some(token) = items.get(i) else {
-        return false;
-      };
-      if token.defined_as(&open) {
-        depth += 1;
-      } else if token.defined_as(&close) {
-        depth -= 1;
-      }
-      i += 1;
-      if depth == 0 {
-        break;
-      }
+    match token.group_step() {
+      1 => {
+        let end = group_end(items, i)?;
+        args.push(items[i + 1..end - 1].to_vec());
+        i = end;
+      },
+      0 => {
+        args.push(vec![token]);
+        i += 1;
+      },
+      _ => return None,
     }
   }
-  true
+  Some(args)
+}
+
+/// The index past the group that opens at `items[start]`, when it closes.
+fn group_end(items: &[Token], start: usize) -> Option<usize> {
+  let mut depth = 0;
+  for (i, token) in items.iter().enumerate().skip(start) {
+    depth += token.group_step();
+    if depth == 0 {
+      return Some(i + 1);
+    }
+  }
+  None
+}
+
+/// `body` when it is one call `\cs<arguments>` of a macro with undelimited parameters, the arguments all there: the
+/// macro's body with them substituted (tex.web §389-390 `macro_call`).
+fn expand_call(body: &[Token]) -> Option<Vec<Token>> {
+  let (head, rest) = body.split_first()?;
+  let definition = lookup_definition(head).ok().flatten()?;
+  let Some(ExpansionBody::Tokens(expansion)) = definition.get_expansion() else {
+    return None;
+  };
+  let plain = pin!("Plain");
+  let parameters = definition
+    .get_parameters()
+    .map_or(&[][..], |p| p.get_parameters());
+  let args = split_undelimited(rest)?;
+  if !definition.is_expandable()
+    || args.len() != parameters.len()
+    || parameters.iter().any(|p| p.name != plain)
+  {
+    return None;
+  }
+  let args: Vec<Option<Cow<Tokens>>> = args
+    .into_iter()
+    .map(|arg| Some(Cow::Owned(Tokens::new(arg))))
+    .collect();
+  Some(expansion.substitute_parameters(&args).unlist())
+}
+
+/// The definition `\def\cs<parameter text>{<body>}` at `items[i]` (with `\edef`, `\gdef`, `\xdef`, after `\long` or
+/// `\global`): its name and the index past its body.
+fn definition_at(items: &[Token], mut i: usize) -> Option<(Token, usize)> {
+  while items
+    .get(i)
+    .is_some_and(|t| t.defined_as(&T_CS!("\\long")) || t.defined_as(&T_CS!("\\global")))
+  {
+    i += 1;
+  }
+  let definer = items.get(i)?;
+  let defines = definer.defined_as(&T_CS!("\\def"))
+    || definer.defined_as(&T_CS!("\\edef"))
+    || definer.defined_as(&T_CS!("\\gdef"))
+    || definer.defined_as(&T_CS!("\\xdef"));
+  if !defines {
+    return None;
+  }
+  let name = *items.get(i + 1)?;
+  let open = (i + 2..items.len()).find(|&at| items[at].group_step() == 1)?;
+  Some((name, group_end(items, open)?))
 }
 
 /// A citation prints its keys' labels (latex.ltx:17761-17771 `\@citex` reads each `\b@key`): the forms of each entry's

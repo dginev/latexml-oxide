@@ -1998,15 +1998,21 @@ astro-ph0008362, and the EAS classes) is `\@ifstar{\citeyear}{\citefull}`, and i
 `\def\astroncite##1##2{##1, ##2}\@internalcite` is the only definition of the `\astroncite{A}{Y}` that astron.bst writes
 into the `\bibitem` labels; mlbib.sty:360-363's (cond-mat0011295) is `\@ifstar{\citeasnoun}{\new@cite}`, whose
 `\new@cite` alone defines the `\citeauthoryear{A}{Y}` of its `.bbl` labels. With that `\cite` refused, the labels were
-`Error:undefined:\astroncite` / `\citeauthoryear` (Perl and pdflatex 0). Where the lock refused a `\cite` of the form
-`\@ifstar{…}{\X}`, `\X` parameterless and nothing but `\def\cs<parameters>{…}`s before its `\@internalcite` tail, and a
-macro `\X` `\def`s is undefined, the kernel `\cite`'s first call runs `\X` (its tail dropped) and keeps what it defined
-global for the deferred labels (`sect11.rs` `label_macros_from_refused_cite`). A branch that also typesets or steps a
-counter is not run: once, at the first citation, is not TeX's every one. The full form throughout: the starred call's
-year-only form is the class's label style, which the lock does not keep. Guards
+`Error:undefined:\astroncite` / `\citeauthoryear` (Perl and pdflatex 0). The ACM classes' `\DeclareRobustCommand\cite
+{\start@cite23}` (acm_proc_article-sp.cls:1223-1236 1312.2098, sig-alternate-05-2015.cls:1395-1408 1703.08365,
+sig-alternate.cls:1146-1159 1806.05694; older copies' plain `\def\cite{\start@cite23}`, 0705.2819, cs0404029) are the
+same: `\start@cite#1#2` `\edef`s the `\citeauthoryear` of the `.bbl` labels, then branches; the lock refuses the robust
+wrapper and its inner `\cite␣` (OXIDIZED_DESIGN #568). Where the lock refused a `\cite`, the kernel `\cite`'s first call
+reads the refused body as TeX would — the robust wrapper to its refused inner `\cite␣`, an `\@ifstar{…}{…}` to its
+unstarred branch, one call `\X<arguments>` of a macro with undelimited parameters to `\X`'s body with them substituted
+— and runs, globally, its leading `\def`/`\edef`/`\gdef`/`\xdef`s of names still undefined, to the first token that is
+not a definition (`sect11.rs` `label_macros_from_refused_cite`). Nothing after is run: a branch that typesets or steps
+a counter first runs nothing, as once at the first citation is not TeX's every one. The full form throughout: the
+starred call's year-only form is the class's label style, which the lock does not keep. Guards
 `perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`),
 `perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`
-(repros `index-bib/mlbib`, `index-bib/sidecite`).
+(repros `index-bib/mlbib`, `index-bib/sidecite`), `perfect_kernel_batchregfixf::acm_robust_cite_label_under_the_lock`
+(repro `index-bib/acmcite`, both forms).
 
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)
