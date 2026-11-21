@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (395 lines, weight 872; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (400 lines, weight 889; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -667,7 +667,13 @@ Rules that keep this file honest and mergeable:
     each command is legal (amsfonts' `\newsymbol` is a body-legal `\global\mathchardef`, not the preamble-only
     `\DeclareMathSymbol`), each macro's shape (a stored value vs a macro with parameters: EDP's `\@subjclass`), the
     definitions of the mode it runs in (amstex.sty under `\documentstyle` has no `\matrix@check`), and its own package
-    loads with their options (natbib from elsarticle/acmart/jmlr/jheppub; no invented loads, as cvpr's was). Witnesses:
+    loads with their options (natbib from elsarticle/acmart/jmlr/jheppub; no invented loads, as cvpr's was). A binding
+    that reuses another binding's definitions calls them as Rust code and never loads a file the real one does not load
+    (DG 2026-11-21: "reuse as Rust code, without the side effects of declaring auxiliary package and class bindings as
+    loaded"; Perl's emulateapj.cls → emulateapj.sty and svjour3 → svjour shortcuts read 1305.6912's and 2110.05134's
+    shipped copies; REGFIXH), while every file the real one loads itself is loaded as a real load, with its options and
+    a shipped copy read (DG: "we still want to faithfully load LaTeX dependencies that the original packages and classes
+    load themselves"). Witnesses:
     the v0.8.0 regression check (PR #958 and the REGFIX-D/E batches, ~430 papers). Steps: extend
     `tools/perfect_kernel/binding_conformance.sh` to compare a binding's loaded-file marks and preamble-only commands
     with the real file's; then audit the bindings in order of arXiv reach; 5
@@ -692,7 +698,7 @@ Rules that keep this file honest and mergeable:
   - REGTAIL — the v0.8.0 regression check's untraced classes (run 372 → 399 triage): bullsrsl `authorcontributions`
     (~65; the frontmatter replay of a refused 3-argument setter counts once), the pdflatex-clean `(Springer-SVJour)`
     subset (~65; 2101.09497, 2408.12532, 2110.05134), `expected:}` causes beyond EDP (emulateapj 1305.6912,
-    biophys-new 2212.00883, llncs 2312.12023, ro_hack 1507.05358), `malformed:ltx:item` (math0006111), `\etalchar`,
+    biophys-new 2212.00883, llncs 2312.12023, ro_hack 1507.05358, aastex631 2211.00793), `malformed:ltx:item` (math0006111), `\etalchar`,
     `\IUCrCemaillink`, `\BR@backref`, `\@arrayleft` → `Fatal:Mouth:EoF` (2502.03242, 2004.09405, 2401.03827),
     solarphysics.cls `toccaption` (12 papers; 2006.04669, 1510.03282, 2301.09829); 5
   - REGRES — the regression fixes' residuals: fdsymbol's ~165 `symNNN` glyphs, 6 extensible accents (2312.00399
@@ -701,11 +707,42 @@ Rules that keep this file honest and mergeable:
     `natbib_before_elsarticle`); natbib residuals 2111.08230 (a standalone sub-document's preamble) and 2405.11676
     (imsart-altered passes); a binding-defined name silently ignores a document `\newcommand` (no "already defined"
     Error); `\usepackage{amstex}` under LaTeX2e raises no "obsolete" error; fdsymbol + amssymb gives no "already
-    defined" errors; 3
+    defined" errors; papers whose `aaai.sty` is missing (cmp-lg9406010, cmp-lg9704001, cs9811010, cs0003021) keep
+    `undefined:\citeauthoryear`, the honest missing-file result (option: a small aaai.sty binding); 3
   - LASTBOXROW — `\lastbox` takes a whole alignment, not its last row (tex.web §1080; rows §799, §810): easytable's
     per-cell peel collapses into one cell holding the whole table, so its rules don't line up; 3
   - VPHANTOMWIDTH — a text-mode `\vphantom` keeps its argument's width in HTML (`visibility:hidden`,
     LaTeXML-inline-xhtml.xsl:57-75, as Perl), where TeX's is zero width; needs a ruling and an ar5iv-css mirror; 1
+  - FUPA — after rc1 (DG 2026-11-20): the loader follow-ups of #945 and #947. A user `.rhai` for a name reached on the
+    provides route (the paper ships `mylipics.cls` with `\ProvidesClass{lipics-v2021}`) still has the renamed copy read
+    after it (`loading_for_a_provides_route`, `content.rs`, never asks `state::local_binding_file`);
+    `\IfFileExists{mypkg.sty}` with only a user `mypkg.sty.rhai` answers false (`binding_counts_as_file`), where Perl's
+    `FindFile` finds any `.ltxml` in the search paths; `DeferredNote` state unit tests (an empty load, log then
+    decline, `catch_unwind` inside a printed and an unprinted note, silenced notes); a dispatcher that logs and then
+    declines leaves a phantom `(Loading X... )` (Perl's `FindFile` runs before `ProgressSpinup`); a `.tex` binding's
+    note names the raw file (`(Loading epsf.tex... )`); 3
+  - AMSPPTRES — REGFIX-D's residuals (PR #960): math0610862 is back at its Oct-8 `Fatal:TooManyErrors` — the amsppt
+    binding reads each `\ref` field expanding (`\@bibfield … XUntil`, `amsppt_sty.rs`; Perl amsppt.sty.ltxml:439,
+    KNOWN_PERL_ERRORS #1298) where amsppt.sty boxes it (:956-965), so the paper's `\noOf` assignment misfires: read the
+    field by digesting it (RED `amstex/amsppt_bibfield_expands_a_conditional_red`); a copy's additions over amsppt
+    are lost (math0610862 `\Refst`, `\subrefhead`; 1003.5377 `\SecondPage`; RED
+    `amstex/amstex_copy_additions_are_kept_red`); amsppt's self-redefining `\title` stays refused, 1 Error with every
+    word kept where TeX prints "[T:Hello]" (RED `amstex/amstex_self_redefining_title_runs_red`; LOCKSIDEFX); 5
+  - THMEDPSRES — REGFIX-E's residuals (PR #960): thm-listof's filters (`\showtheorems`, `\ignoretheorems`,
+    `\onlynamedtheorems`, `\setlisttheoremstyle`) are undefined under the thmtools binding (2 of ~519 census papers;
+    `\usepackage{thmtools}\ignoretheorems{x}`); edpsmath's `\keywords` stores into box `\@b@kwrds` and our
+    `\maketitle` never runs `\@setkeywords`, so 1110.0287's keywords are missing (~11 of 60 edps papers; under
+    `[proc]` the PDF empties them too: a FIDELITY_CHARTER §2 question); a stored `\@subjclass` without a year gets
+    "1991 Mathematics Subject Classification" (Perl ams_support.sty.ltxml:131) where TL 2025's amsart prints "2020"
+    (amsart.cls:555, :789); 1704.06431's `Fatal` enumerate/`\lx@tags` recursion (pre-existing on main); 3
+  - LMCSQED — the lmcs binding's `\qEd` is `\ensuremath{\square}` (`lmcs_cls.rs` ~149), where LMCS.cls:551-553 draws its own
+    box: a paper that redefines `\square` (1305.0576's ldiagxy.tex:207, a delimited diagram macro) breaks every `\qEd`
+    display (217 errors, more since `\[` is `{equation*}`; 0 with `\qEd` overridden). Give `\qEd` the class's box under
+    an internal name; repro `tmp/END399/T3W/repros/1305.0576/qEd_square.tex` (tier 3 A/B, pre-existing; 1202.6352); 1
+  - TIKZCDHANG — a tikz-cd diagram whose cell has `\hspace{1em}\rar[mapsto]` loops under calc after an earlier cell's
+    calc error (1611.01788 thesis.tex:5400/:5434; both the Nov 17 binary and the release candidate; pdflatex is fatal
+    there too, 8 errors): find the loop site (`perf record` at 20 s), then end in a bounded Error. The wall-clock Fatal
+    leaves no XML and no log, so the paper's 56k words are lost — a salvage question too; 5
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
