@@ -136,8 +136,8 @@ pub(crate) fn convert_env_args(
 
 /// node_boxes stays bounded under streaming (K8 memory lever): spilled subtrees
 /// purge their own entries as they spill. This fixture leaves no stale entries
-/// (its finishing sweep drops none), so it guards spill-time purging; the sweep
-/// itself is guarded by `align_stale_node_boxes_are_swept`.
+/// (its finishing sweep drops none), so it guards spill-time purging; as does
+/// `align_leaves_no_stale_node_boxes` for the MathFork's freed cells.
 #[test]
 fn spill_gated_node_boxes_stays_bounded() {
   let tex = r"\documentclass{article}
@@ -172,17 +172,14 @@ fn spill_gated_node_boxes_stays_bounded() {
   assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
 }
 
-/// The backstop sweep reclaims `node_boxes` entries that a build-time discard
-/// path detached without purging: alignment rearrangement leaves ~23 stale
-/// entries per `align` (7,203 → 303 here). The finishing yield sweeps, so none
-/// is pinned through pass 2 and the spine tail (batch 56it). This document
-/// yields only when its RSS crosses the spill watermark, so the watermark is
-/// pinned (`LATEXML_SPILL_AT_MIB`) well below the run's own growth (the mark is
-/// the watermark above the conversion's starting RSS, STRM): derived from
-/// `--max-memory` (a third of the fuse, 192 MB at 768), it sat 7 MB under a
-/// 199 MB run, and batch 56kp's 67 MB saving stopped the yield.
+/// Alignment rearrangement leaves no stale `node_boxes` entry for the backstop sweep: the MathFork frees each copied
+/// `_Capture_` cell through `discard_subtree`, which purges its entries (batch CORELEAK; before, ~23 stale entries per
+/// `align` waited for the sweep, 7,203 → 303 here, batch 56it). This document yields only when its RSS crosses the
+/// spill watermark, so the watermark is pinned (`LATEXML_SPILL_AT_MIB`) well below the run's own growth (the mark is
+/// the watermark above the conversion's starting RSS, STRM): derived from `--max-memory` (a third of the fuse, 192 MB
+/// at 768), it sat 7 MB under a 199 MB run, and batch 56kp's 67 MB saving stopped the yield.
 #[test]
-fn align_stale_node_boxes_are_swept() {
+fn align_leaves_no_stale_node_boxes() {
   let body: String = (0..300)
     .map(|i| format!("Text {i}.\n\\begin{{align}}a_{{{i}}}&=b+c\\\\d&=e\\end{{align}}\n\n"))
     .collect();
@@ -207,11 +204,15 @@ fn align_stale_node_boxes_are_swept() {
         .ok()
     })
     .sum();
-  assert!(dropped > 0, "no stale entry was swept:\n{stderr}");
+  assert_eq!(
+    dropped, 0,
+    "a stale entry was left for the sweep:\n{stderr}"
+  );
   let sizes: Vec<usize> = stderr
     .lines()
     .filter_map(|line| line.rsplit_once("; node_boxes ")?.1.trim().parse().ok())
     .collect();
+  assert!(!sizes.is_empty(), "no streaming progress report:\n{stderr}");
   assert!(
     sizes.iter().all(|&n| n < 1000),
     "node_boxes grew: {sizes:?}"
