@@ -712,6 +712,9 @@ mod perfect_kernel_batchregfixj;
 /// REGFIXK: a `\bibitem` label's cite-printed forms are expanded at the `\bibitem` as `\@lbibitem`'s `\write`; `\text`
 /// reads its argument at the cell's alignment count.
 mod perfect_kernel_batchregfixk;
+/// REGFIXI: thin bindings' v0.8.0 regressions — amsppt's roster items under plain AmS-TeX, a prefix-matched shipped
+/// IUCr class, backref's `\BR@backref`, array's `\@arrayleft`.
+mod perfect_kernel_batchregfixi;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

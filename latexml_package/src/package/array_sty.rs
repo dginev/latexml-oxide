@@ -157,11 +157,15 @@ LoadDefinitions!({
   // (revtex's alignment code, raw-loaded by revtex-derived classes), dgruyter_NEW.sty:1480 `\@array`.
   // Run 340: `\extratabsurround` 88, `\col@sep` 56, `\NC@list` 11, `\@acol` 8 first errors
   // (witnesses 2508.08881, 2103.15196, 2103.08263, 2407.04867, 2004.09405, 2401.02879, 2006.15794,
-  // 2006.04593). Those callers then reach the rest of array's preamble builder, below.
+  // 2006.04593). Those callers then reach the rest of array's preamble builder, below. :428-429 `\@arrayleft`,
+  // `\@arrayright` (empty), which ltxutil's `\@array@array@new` (:1322-1343, switched in at `\begin{document}` when
+  // array is loaded, :909-918) puts around every tabular (2004.09405, 2401.03827).
   RawTeX!(r"\newdimen\col@sep
 \def\@acol{\@addtopreamble{\hskip\col@sep}}
 \newtoks\NC@list
-\newlength{\extratabsurround}\setlength{\extratabsurround}{2pt}");
+\newlength{\extratabsurround}\setlength{\extratabsurround}{2pt}
+\let\@arrayleft\@empty
+\let\@arrayright\@empty");
   // array.sty's preamble builder (v2.6n, 2025/09/25), as the package defines it, for raw code that
   // builds its own alignment preamble with it: :54 `\@addtopreamble` (global, where the kernel's is a
   // local `\edef`), :56-81 `\@testpach`, :94-200 the token registers,

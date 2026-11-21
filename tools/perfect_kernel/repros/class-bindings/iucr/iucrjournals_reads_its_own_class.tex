@@ -1,0 +1,17 @@
+% witness: 2608.11466 (also 2609.21618, 2607.09916; 27 papers of the v0.8.0 regression check): a shipped
+%          iucrjournals.cls, which the prefix fallback answers with the iucr binding; 2503.09183 for the e-mail links
+% oracle:  pdflatex with the stand-in iucrjournals.cls beside it: 0 errors; "T Ann Able @ Bob Baker @ Body." (each `@` a
+%          mailto link; the real class's logo is a tikz picture)
+% engines: rust INTREGFIX4 = "Can't find binding or file for 'iucr.cls'", Error:undefined:\IUCrCemaillink and
+%          \IUCrEmaillink (the binding read iucr.cls, which the paper does not ship, never its own class); with the class
+%          read, the logo link left no trace of the address in the author block
+% expect:  0 errors, 1 Warning (the loader's "Can't find binding for class iucrjournals (using iucr)"); Ann Able with
+%          email ann@x.org, Bob Baker with bob@y.org
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXI; guard perfect_kernel_batchregfixi::iucrjournals_reads_its_own_class)
+\documentclass{iucrjournals}
+\title{T}
+\author{Ann Able\IUCrCemaillink{ann@x.org}\and Bob Baker\IUCrEmaillink{bob@y.org}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

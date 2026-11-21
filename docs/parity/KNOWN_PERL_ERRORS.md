@@ -22200,3 +22200,24 @@ svjour2.cls `\ProvidesClass{svjour}`, "Fig. 1" from svepj.clo; 0712.4224, 1301.5
 physics0101008), the sibling's own copy, which nothing requests, is not. Guards
 `perfect_kernel_batchregfixh::{svjour3_reads_no_older_svjour_copy, emulateapj_reads_no_shipped_sty_copy,
 svjour2_copy_declaring_svjour_is_read}`.
+## 1301. amsppt declares no `ltx:item` Tag, so under plain AmS-TeX each roster item opens inside the last
+
+Perl's amsppt.sty.ltxml:248-250 `\roster@item` opens `<ltx:item>`, which closes the item before it only through
+latex_constructs' `Tag('ltx:item', autoClose => 1, autoOpen => 1)` (latex_constructs.pool.ltxml:1277). `\input
+amsppt.sty` under `\input amstex` loads no latex_constructs, so the second item is opened inside the first item's
+`<ltx:p>`: malformed. Latent in Perl behind #1270 (its roster's `#body` drops every item); with the body kept the
+trigger is
+
+```tex
+\input amstex
+\input amsppt.sty
+\document
+\roster\item first item
+\item second item.\endroster
+\enddocument
+```
+
+pdftex: "(1) first item (2) second item."; Rust before the fix: `Error:malformed:ltx:item <ltx:item> isn't allowed in
+<ltx:p>` and a malformed `<enumerate>` (`\documentstyle{amsppt}` loads LaTeX.pool, whose Tag hid it). Rust's binding
+declares the Tag (amsppt_sty.rs). Witnesses math0006111, gr-qc9610061, math9809193 (59 papers); repro
+amstex/amsppt_input_roster_items_close; guard `perfect_kernel_batchregfixi::amsppt_input_roster_items_close`.
