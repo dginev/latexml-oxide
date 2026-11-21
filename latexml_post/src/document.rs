@@ -603,7 +603,8 @@ impl PostDocument {
     // The returned Document shares zero C-side state with the source.
     //
     // SCOPE: this method is only called from `Split::process_pages`, which
-    // frees `root` once it is copied; non-split flows do not pay the deep-copy cost.
+    // frees `root` once it is copied (unless it holds a navigation); non-split
+    // flows do not pay the deep-copy cost.
     let new_xml_doc: XmlDocument = XmlDocument::dup_node_into_new_doc(&root)
       .expect("dup_node_into_new_doc returned NULL while creating split sub-document");
     let _ = root;

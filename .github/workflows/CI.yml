@@ -338,8 +338,8 @@ jobs:
   # Linux suite is NOT proof of memory safety; and miri cannot cross the
   # libmarpa/libxml2 C FFI. ASAN intercepts the system allocator, so it catches
   # heap errors inside those C libraries too. Scoped to the math-parser
-  # discard/free class (`06_cluster_math`, which carries the #703 guard) to stay
-  # a single fast job — widen the nextest selection as new witnesses land.
+  # discard/free class (`06_cluster_math`, which carries the #703 guard) and
+  # post Split's page-free guard (`112_fragment_yield`) to stay a single fast job — widen the nextest selection as new witnesses land.
   asan:
     name: asan (memory-safety UB check)
     needs: changes
@@ -404,8 +404,9 @@ jobs:
       - name: install cargo-nextest
         uses: taiki-e/install-action@nextest
       # `06_cluster_math` exercises the math-parser discard/free paths (the
-      # #703 use-after-free lived there). Under ASAN this run is red on any
-      # platform when a node is freed twice — the deterministic catch the plain
+      # #703 use-after-free lived there); one `112_fragment_yield` guard covers
+      # post Split's page frees (a navigation reading a freed page's xmlNs).
+      # Under ASAN this run is red on any platform when a node is freed twice — the deterministic catch the plain
       # suite lacks. The sanitizer flags are scoped to THIS step (not the job
       # env) and paired with an explicit `--target`: that is exactly what makes
       # cargo build the proc-macros / build-scripts for the host WITHOUT the
@@ -424,7 +425,9 @@ jobs:
         run: |
           locked=()
           if [ "${CARGO_LOCKED:-0}" = "1" ]; then locked=(--locked); fi
-          cargo nextest run ${locked[@]+"${locked[@]}"} --cargo-profile ci --profile ci --target x86_64-unknown-linux-gnu -p latexml --test 06_cluster_math
+          cargo nextest run ${locked[@]+"${locked[@]}"} --cargo-profile ci --profile ci --target x86_64-unknown-linux-gnu -p latexml \
+            --test 06_cluster_math --test 112_fragment_yield \
+            -E 'binary(06_cluster_math) | test(=split_keeps_pages_whose_namespaces_a_navigation_uses)'
 
   test:
     # Sharded across runners (8 since 2026-11-13, below). The suite's cost is ~398 s of in-binary

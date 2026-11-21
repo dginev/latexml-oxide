@@ -186,6 +186,7 @@ impl Split {
     &mut self,
     doc: &mut PostDocument,
     entries: &mut Vec<PageEntry>,
+    nav_holders: &[Node],
   ) -> Vec<PostDocument> {
     // Before any document surgery, copy inheritable attributes.
     let mut intoc = false;
@@ -281,14 +282,17 @@ impl Split {
         }
 
         // Process children pages BEFORE this page (Perl: "Due to the way document building works")
-        let mut child_docs = self.process_pages(doc, &mut entry.children);
+        let mut child_docs = self.process_pages(doc, &mut entry.children, nav_holders);
 
         // Create sub-document from the extracted page
         let subdoc = doc.new_document(page.clone(), &entry.name);
         // The page now lives in its copy; free the source subtree (Perl's GC does at
         // the last reference). Left unlinked, every page leaked: the whole source DOM
-        // stayed live through post, 818 MB of C heap by page 1024 of a 1,600-page book.
-        doc.discard_subtree(page);
+        // stayed live through post, 818 MB of C heap by page 1024 of a 1,600-subsection
+        // book. A page holding a navigation stays: the nav may use its namespaces.
+        if !nav_holders.contains(&page) {
+          doc.discard_subtree(page);
+        }
         entry.document = Some(subdoc);
         // Take the document out to push to the results
         docs.push(entry.document.take().unwrap());
@@ -489,6 +493,12 @@ impl Processor for Split {
 
     // Save and remove navigation elements
     let nav_nodes: Vec<Node> = doc.findnodes("descendant::ltx:navigation");
+    // The navs are copied back after the split, so their ancestors are never freed:
+    // a namespace a nav uses may be declared on (or inside) a page.
+    let nav_holders: Vec<Node> = nav_nodes
+      .iter()
+      .flat_map(|nav| std::iter::successors(nav.get_parent(), Node::get_parent))
+      .collect();
     if !nav_nodes.is_empty() {
       doc.remove_nodes(&nav_nodes);
     }
@@ -516,7 +526,7 @@ impl Processor for Split {
     // Process pages: extract and create sub-documents
     let mut doc = tree.document.take().unwrap();
     let mut docs = vec![];
-    let mut child_docs = self.process_pages(&mut doc, &mut tree.children);
+    let mut child_docs = self.process_pages(&mut doc, &mut tree.children, &nav_holders);
 
     // Restore navigation to all documents
     if !nav_nodes.is_empty() && !self.no_navigation {
