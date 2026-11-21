@@ -1209,6 +1209,10 @@ pub(crate) fn load() -> Result<()> {
   });
   // the replay group's inert frontmatter: each entry point a local no-op taking the same arguments
   DefPrimitive!("\\lx@replay@inert", {
+    // the class's own helper that its setter's body calls by the store's name (`class_store_helper`)
+    if let Some((store, helper)) = REPLAY_HELPER.with(|c| c.borrow_mut().take()) {
+      assign_internal(TableName::Meaning, meaning_key(&store), helper, Some(Scope::Local));
+    }
     for cs in FRONTMATTER_ENTRY_POINTS {
       let token = T_CS!(cs);
       if let Some(definition) = lookup_definition(&token)? {
@@ -3178,6 +3182,8 @@ thread_local! {
   /// The stores the replayed setter's own body defines (`defined_stores`), for `\lx@replay@capture`.
   static REPLAY_BODY_STORES: RefCell<Vec<SymStr>> =
     const { RefCell::new(Vec::new()) };
+  /// The class's own helper of the replayed field's store (`class_store_helper`), bound by `\lx@replay@inert`.
+  static REPLAY_HELPER: RefCell<Option<(Token, Stored)>> = const { RefCell::new(None) };
 }
 
 /// Clear per-conversion thread-local caches in `sect05` (`REPLAY_CAPTURED`,
@@ -3186,6 +3192,7 @@ thread_local! {
 pub(super) fn reset_conversion_caches() {
   REPLAY_CAPTURED.with(|c| c.borrow_mut().clear());
   REPLAY_BODY_STORES.with(|c| c.borrow_mut().clear());
+  REPLAY_HELPER.with(|c| *c.borrow_mut() = None);
   KERNEL_TITLE_DEFS.with(|c| *c.borrow_mut() = None);
 }
 
@@ -3546,9 +3553,13 @@ fn replay_dropped_class_code(
     fn drop(&mut self) {
       REPLAY_BODY_STORES.with(|c| c.borrow_mut().clear());
       REPLAY_CAPTURED.with(|c| c.borrow_mut().clear());
+      REPLAY_HELPER.with(|c| *c.borrow_mut() = None);
     }
   }
   let _replay_guard = ReplayBuffersGuard;
+  if !begin_code {
+    REPLAY_HELPER.with(|c| *c.borrow_mut() = class_store_helper(name));
+  }
   REPLAY_BODY_STORES.with(|c| *c.borrow_mut() = stores.iter().map(meaning_key).collect());
   kernel_stores.extend(stores);
   let saved: Vec<Option<Stored>> = kernel_stores.iter().map(lookup_meaning).collect();
@@ -3736,6 +3747,30 @@ fn replay_dropped_class_code(
     );
   }
   Ok(())
+}
+
+/// The class's own macro named as the kernel's store `\@<name>`, which its refused `\<name>` calls to read the call:
+/// bullsrsl.cls:326-327 `\def\author{\@ifnextchar[\@author{\@author[]}}\def\@author[#1]#2#3{…}`, which counts the
+/// authors (:358) that its `{authorcontributions}` tests (:958-961; 2312.08217, 2607.02675). LaTeX's store takes no
+/// parameters (latex.ltx `\gdef\@author{#1}`), so a raw file's that does is such a helper, kept (a value, per field) where
+/// a replay finds it: the kernel's `\<name>` stores its value there after the replay, where TeX keeps the class's. Bound
+/// only over a store (beilstein.cls:586-588 `\@author#1` too); a binding's own helper stays.
+fn class_store_helper(name: &str) -> Option<(Token, Stored)> {
+  let store = T_CS!(s!("\\@{name}"));
+  let kept = s!("lx_class_store_helper:{name}");
+  match lookup_definition_stored(&store).ok().flatten() {
+    Some(Stored::Expandable(d))
+      if d
+        .get_parameters()
+        .is_some_and(|p| !p.get_parameters().is_empty()) =>
+    {
+      if d.get_origin() == DefinitionOrigin::File {
+        assign_value(&kept, Stored::Expandable(d), Some(Scope::Global));
+      }
+      None
+    },
+    _ => lookup_value(&kept).map(|helper| (store, helper)),
+  }
 }
 
 /// The class's own definition of `\<name>` that the lock refused (`\lx@dropped@<name>`, state.rs), when a call can be

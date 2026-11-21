@@ -701,6 +701,8 @@ mod perfect_kernel_batchregfixd;
 mod perfect_kernel_batchregfixe;
 /// REGFIXF: the ACM classes' `\citeauthoryear` labels under the locked robust `\cite` (`\start@cite23`).
 mod perfect_kernel_batchregfixf;
+/// REGFIXG: a raw class's own `\@author` helper with parameters (bullsrsl.cls) reads every replayed `\author` call.
+mod perfect_kernel_batchregfixg;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

@@ -9884,6 +9884,10 @@ re-entrant, its output discarded; the groups it left open — `\begingroup`, env
 a reading context and box list of their own, so their `\aftergroup` tokens and group-end boxes are discarded with it,
 and an imbalance that cannot be closed (or a document group it closed) is an Error. One that raises an error is
 dropped with its diagnostics (Info), as the `\maketitle` deposit is (#265), and with its assignments (#534).
+A raw file's macro named as the field's store but taking parameters (`\@author[#1]#2#3`), which LaTeX's store never
+does (latex.ltx `\gdef\@author{#1}`), is the class's helper that its `\<name>` calls: kept where a replay meets it and
+bound in each later replay's group over the store the kernel's setter put there (`class_store_helper`; bullsrsl.cls
+:326-358 counts its authors that way, :958-961 errs at one: 2312.08217, 2607.02675; beilstein.cls:586-588).
 Afterwards the lock's own record (`\lx@dropped@<name>`, `<name>:redefined@nargs`, which a `\let`/`\def` of the name in
 the body would rewrite globally) is as before, and so are the kernel's `\@author`/`\@shortauthor` and every store the
 dropped body `\def`s/`\gdef`s/`\edef`s/`\xdef`s that does not now hold the call's argument (one that does stays set,
