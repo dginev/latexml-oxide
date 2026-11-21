@@ -146,7 +146,10 @@ LoadDefinitions!({
       {
         let mut list = list.borrow_mut();
         let closer = list.boxes.last().and_then(|last| last.revert().ok());
-        if closer.is_some_and(|tokens| matches!(tokens.unlist_ref().as_slice(), [t] if is_right_brace(t))) {
+        let brace = |tokens: Tokens| {
+          matches!(tokens.unlist_ref().as_slice(), [t] if is_right_brace(t))
+        };
+        if closer.is_some_and(brace) {
           list.boxes.pop();
           unread_one(T_END!());
         }
