@@ -23347,3 +23347,28 @@ a_pass_after_the_load_extends_the_option_list, a_shipped_class_copy_keeps_the_bi
 an_unmodified_class_copy_keeps_the_clash, a_pass_after_the_load_leaves_a_key_value_repeat}` (repros
 `natbib_repeat_options/`); the clash itself stays `perfect_kernel_batch77w::another_copys_repeat_load_clashes` and the
 72a guards.
+
+### 1107. `\end{document}` carries latex.ltx's tail for the hooks that scan it (REGFIXJ)
+
+**Rule.** Perl's `\end{document}` is one constructor (latex_constructs.pool.ltxml:347-394); ours expands to
+`\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage`
+`\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup`
+`\lx@enddocument@late{enddocument/end}\lx@finalize@document\@@end` (sect02.rs), the token shape of latex.ltx:15255-15278,
+so an end-document hook that grabs the rest of `\enddocument` by its delimiters finds them: ltxutil.sty:262-282's
+`\rvtx@enddocument@patch` reads `#2\@checkend#3` and `#2\clearpage#3\endgroup` and re-emits them (also in revtex4-2.cls,
+which our binding does not read); without them the scan ran to the end of the file, `Fatal:Mouth:EoF` (2004.09405,
+2401.03827, 2502.03242 — classes that load ltxgrid/ltxutil raw), as morewrites' `\@@end` scan did before; etoolbox's
+`\patchcmd{\enddocument}{\clearpage}{…}` now patches, as in pdflatex, where it took the failure branch. The late hooks
+run in their latex.ltx slots, each in a dropped box (their typesetting goes nowhere in pdflatex either).
+`\lx@enddocument@tail` = `\let\@checkend\@gobble\let\clearpage\relax`: the finalizer reports an environment left open
+(Perl's Warning, not a second diagnostic beside it; pdflatex's `\@badend` is an Error) and the last page has nothing to
+ship, so no `ltx:pagination` is added; a hook's own `\clearpage` before it still paginates. Open: a hook that drops
+what it grabbed before `\@checkend` drops `\lx@enddocument@tail` with it, so the tail's `\@checkend` checks and its
+`\clearpage` paginates (repro `expansion-primitives/enddocument_hook_scan_drops_the_tail.tex`, synthetic). Raw ltxgrid's
+re-emitted `\clear@document` (`\do@output@cclv`, an output-routine message) leaves empty `ltx:p`s at the end, as its
+other messages do mid-document.
+**Guards**: `perfect_kernel_batchregfixj::{enddocument_hook_scans_the_kernel_tail,
+enddocument_hook_scan_in_an_open_environment_reports_once, ltxgrid_enddocument_patch_keeps_the_tabular,
+patchcmd_finds_the_enddocument_tail}`; the
+morewrites/modernposter shapes stay `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box` and the sect02.rs
+witnesses (cntperchap_example, runcode_troubleshoot, modernposter/demo).

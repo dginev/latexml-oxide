@@ -1,0 +1,10 @@
+% witness: (synthetic sibling of 2004.09405's ltxutil scan) a hook that grabs up to \@checkend and drops it
+% oracle:  pdflatex 0 errors; "Body. ENDHOOK[GOT:\__hook_next enddocument \@kernel@after@enddocument|document]"
+% engines: rust (INTREGFIX4) = Fatal:Mouth:EoF "Missing argument Until:\@checkend"; perl = 0 errors (no lthooks)
+% expect:  0 errors; ENDHOOK[GOT:…|document] (the dropped tokens are our tail's, so its \clearpage paginates)
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXJ)
+\documentclass{article}
+\makeatletter\long\def\grab#1#2\@checkend#3{[GOT:\detokenize{#2}|#3]}\AddToHook{enddocument}{ENDHOOK\grab{}}\makeatother
+\begin{document}
+Body.
+\end{document}

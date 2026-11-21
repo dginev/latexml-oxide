@@ -1,0 +1,16 @@
+% witness: 2004.09405 (marginquantumarticle), 2401.03827 (pdg), 2502.03242 (quantumarticle2): raw ltxgrid/ltxutil
+% oracle:  pdflatex 0 errors; "Before." the 2x2 tabular "After."
+% engines: rust (INTREGFIX4) = 2 errors + Fatal:Mouth:EoF "Until:\@checkend"; perl (--preload=ar5iv) = 0 errors
+% expect:  no Fatal; the tabular keeps a b / c d (the \@arrayleft Error is array_sty's, batch REGFIXI)
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXJ)
+\documentclass{article}
+\usepackage{ltxgrid}% loads ltxutil.sty
+\usepackage{array}
+\begin{document}
+Before.
+\begin{tabular}{r|c}
+a & b \\ \hline
+c & d \\
+\end{tabular}
+After.
+\end{document}

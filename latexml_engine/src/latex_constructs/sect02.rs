@@ -480,7 +480,20 @@ pub(crate) fn load() -> Result<()> {
   // dump): it does `\tex_shipout:D\vbox to\textheight{…}` with the
   // "Temporary page!" text (latex.ltx:20261-20269), which the `\shipout`
   // primitive would now emit in place (DIVERGENCES #314).
-  DefMacro!(T_CS!("\\end{document}"), None, "\\lx@end@open@frontmatter\\lx@enddocument@hooks\\lx@finalize@document\\@@end");
+  // The tail after the hooks has latex.ltx:15258-15277's shape, `\@checkend{document}\clearpage…\begingroup…\endgroup`,
+  // the late hooks in their slots: ltxutil.sty:262-282's `\AddToHook{enddocument}{\rvtx@enddocument@patch{}}` grabs
+  // `#2\@checkend#3` and then `#2\clearpage#3\endgroup` from it and re-emits them; without the delimiters the scan ran
+  // to the end of the file ("Missing argument Until:\@checkend", `Fatal:Mouth:EoF`; revtex/ltxgrid users 2004.09405,
+  // 2401.03827, 2502.03242). Guard: `perfect_kernel_batchregfixj::enddocument_hook_scans_the_kernel_tail`.
+  DefMacro!(
+    T_CS!("\\end{document}"),
+    None,
+    r"\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup\lx@enddocument@late{enddocument/end}\lx@finalize@document\@@end"
+  );
+  // What the tail's `\@checkend` and `\clearpage` (and a scanning hook's re-emitted ones) do in TeX is done here by
+  // the finalizer: it reports an environment left open (Perl's Warning, latex_constructs.pool.ltxml:385), and the last
+  // page has nothing to ship, so the tail emits no `ltx:pagination`.
+  DefMacro!("\\lx@enddocument@tail", r"\let\@checkend\@gobble\let\clearpage\relax");
   // A frontmatter body still open at `\end{document}` — an unclosed `\begin{abstract}`, `\abstract{`, or a brace-less
   // `\abstract` no sectioning command ended (`\lx@add@frontmatter@until`, base_utilities.rs) — ends first: its terminal
   // is read before the end-document code, which then runs at the document's level, so the abstract keeps its text as an
@@ -551,24 +564,24 @@ pub(crate) fn load() -> Result<()> {
     if let Some(ops) = lookup_tokens("@after@enddocument@hooks") {
       toks.extend(ops.unlist());
     }
-    // latex.ltx:15262-15277 `enddocument/afterlastpage`, `/afteraux`, `/end` run after the last page shipped: what they
-    // typeset goes nowhere (pdflatex), so the document's own code (lthooks' top-level slot) runs for its side effects in
-    // a box that is dropped. A package's code there keeps the `.aux` and the page model, which LaTeXML has not: acro's
-    // property lists (2502.06996, a Fatal), pageslts' numbering check (a false Warning); `enddocument/info` is the
-    // kernel's file list and rerun warnings.
-    let mut late = Vec::new();
-    for hook in ["enddocument/afterlastpage", "enddocument/afteraux", "enddocument/end"] {
-      let toplevel = T_CS!(s!("\\__hook_toplevel {hook}"));
-      if hook_slot_has_code(&toplevel) {
-        late.push(toplevel);
-      }
-    }
-    if !late.is_empty() {
-      toks.extend([T_CS!("\\setbox"), T_CS!("\\@tempboxa"), T_CS!("\\vbox"), T_BEGIN!()]);
-      toks.extend(late);
-      toks.push(T_END!());
-    }
     unread(Tokens::new(toks));
+    Ok(Vec::new())
+  });
+  // latex.ltx:15262-15277 `enddocument/afterlastpage`, `/afteraux`, `/end` run after the last page shipped: what they
+  // typeset goes nowhere (pdflatex), so the document's own code (lthooks' top-level slot) runs for its side effects in
+  // a box that is dropped. A package's code there keeps the `.aux` and the page model, which LaTeXML has not: acro's
+  // property lists (2502.06996, a Fatal), pageslts' numbering check (a false Warning); `enddocument/info` is the
+  // kernel's file list and rerun warnings. Once each, as `\lx@enddocument@hooks`.
+  DefPrimitive!("\\lx@enddocument@late{}", sub[(hook)] {
+    let fired = s!("lx@enddocument@late@fired@{}", hook.to_string());
+    if in_speculative_digestion() || lookup_bool(&fired) {
+      return Ok(Vec::new());
+    }
+    assign_value(&fired, true, Some(Scope::Global));
+    let toplevel = T_CS!(s!("\\__hook_toplevel {}", hook.to_string()));
+    if hook_slot_has_code(&toplevel) {
+      unread(Tokens!(T_CS!("\\setbox"), T_CS!("\\@tempboxa"), T_CS!("\\vbox"), T_BEGIN!(), toplevel, T_END!()));
+    }
     Ok(Vec::new())
   });
 

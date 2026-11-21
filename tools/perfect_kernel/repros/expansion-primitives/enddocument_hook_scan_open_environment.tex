@@ -1,0 +1,14 @@
+% witness: (synthetic sibling of 2004.09405's ltxutil scan) the scan re-emits \@checkend{document} inside an open itemize
+% oracle:  pdflatex 1 error ("\begin{itemize} on input line 7 ended by \end{document}"); "• Open. [CHECK:document]"
+% engines: rust (INTREGFIX4) = Fatal:Mouth:EoF; perl = 2 errors (no lthooks; malformed closes)
+% expect:  0 errors, 1 warning (the finalizer's "Attempt to end document with open …", Perl's level; no second report)
+% status:  GREEN (REGFIXJ)
+\documentclass{article}
+\makeatletter
+\long\def\grab#1#2\@checkend#3{#1#2[CHECK:#3]\@checkend{#3}}
+\AddToHook{enddocument}{\grab{}}
+\makeatother
+\begin{document}
+\begin{itemize}
+\item Open.
+\end{document}

@@ -706,6 +706,9 @@ mod perfect_kernel_batchregfixg;
 /// REGFIXH: a class binding shares another binding's definitions as code, not as a load of a file its class never loads
 /// (svjour3's svjour.cls, emulateapj's emulateapj.sty: the paper's copies stay unread).
 mod perfect_kernel_batchregfixh;
+/// REGFIXJ: `\end{document}` carries latex.ltx's tail (`\@checkend{document}\clearpage…\endgroup`) for the hooks that
+/// scan it (ltxutil's `\rvtx@enddocument@patch`).
+mod perfect_kernel_batchregfixj;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

@@ -1,0 +1,18 @@
+% witness: 2004.09405, 2401.03827, 2502.03242 (ltxutil.sty:262-282 \rvtx@enddocument@patch: an enddocument hook
+%          that grabs `#2\@checkend#3`, then `#2\clearpage#3\endgroup`, of \enddocument and re-emits them)
+% oracle:  pdflatex 0 errors; "Body." / "Last.[CHECK:document]" (the hook's \clearpage between); AFTER-LAST-PAGE once
+% engines: rust (INTREGFIX4) = Fatal:Mouth:EoF "Missing argument Until:\@checkend"; perl = 0 errors (no lthooks)
+% expect:  0 errors; <p>Body. Last.[CHECK:document]</p>, one <pagination> (the hook's own \clearpage)
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXJ)
+% mechanism: latex.ltx:15255-15278; our \end{document} tail now carries \@checkend{document}\clearpage…\begingroup…\endgroup
+\documentclass{article}
+\makeatletter
+\long\def\grab#1#2\@checkend#3{\grabtail{#1#2}{#3}}
+\long\def\grabtail#1#2#3\clearpage#4\endgroup{\gdef\savedtail{#4\endgroup}#1[CHECK:#2]\@checkend{#2}\clearpage\savedtail}
+\AddToHook{enddocument}{\grab{}}
+\AddToHook{enddocument/afterlastpage}{\typeout{AFTER-LAST-PAGE}}
+\AtEndDocument{\clearpage Last.}
+\makeatother
+\begin{document}
+Body.
+\end{document}

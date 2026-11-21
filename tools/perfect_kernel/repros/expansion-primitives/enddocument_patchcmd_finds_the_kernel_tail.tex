@@ -1,0 +1,13 @@
+% witness: (synthetic sibling of 2004.09405's ltxutil scan) etoolbox's \patchcmd of \enddocument at latex.ltx's \clearpage
+% oracle:  pdflatex 0 errors; PATCHED in the log; "Body."
+% engines: rust (INTREGFIX4) = 0 errors, NOPATCH (the failure branch: our tail had no \clearpage); perl = not run
+% expect:  0 errors; PATCHED; <p>Body.</p>, no <pagination>
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXJ)
+\documentclass{article}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd{\enddocument}{\clearpage}{\typeout{PATCHED}\clearpage}{}{\typeout{NOPATCH}}
+\makeatother
+\begin{document}
+Body.
+\end{document}
