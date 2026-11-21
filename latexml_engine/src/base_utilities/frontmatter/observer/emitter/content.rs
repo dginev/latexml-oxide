@@ -238,51 +238,43 @@ pub(super) fn arguments_end(tokens: &[Token], at: usize, tail: bool) -> Option<O
 /// `\DeclareRobustCommand*{\IEEEauthorrefmark}[1]`, 0912.0896), IEEEtran's `\def\authorrefmark{…\IEEEauthorrefmark}`
 /// (2609.25589): cut from its `{1}`, the mark read the wrapper's `\let` as its `\ifcase` number.
 fn tail_call(cs: &Token) -> Option<Rc<Expandable>> {
+  match tail(cs) {
+    Tail::Call(meaning) => Some(meaning),
+    Tail::Nothing | Tail::Unknown => None,
+  }
+}
+
+/// Whether a call of `cs` reads no argument, by its meaning now: a parameterless macro whose expansion ends in a
+/// character, or in a command that reads none (`\newcommand{\todaysdate}{1 May 2024}`) — not where its meaning does not
+/// tell (a primitive, an expansion computed by code).
+pub(super) fn reads_no_argument(cs: &Token) -> bool { matches!(tail(cs), Tail::Nothing) }
+
+/// Where a call's reading ends, by [`tail_call`]'s walk: the macro whose parameters it reads, a parameterless expansion
+/// ending in no command (it reads nothing), or a meaning that does not tell.
+enum Tail {
+  Call(Rc<Expandable>),
+  Nothing,
+  Unknown,
+}
+
+fn tail(cs: &Token) -> Tail {
   let mut called = *cs;
   for _ in 0..8 {
     let Some(Stored::Expandable(meaning)) = lookup_meaning(&called) else {
-      return None;
+      return Tail::Unknown;
     };
     let parameterless = meaning
       .get_parameters()
       .is_none_or(|parameters| parameters.get_parameters().is_empty());
     match meaning.get_expansion() {
-      Some(ExpansionBody::Tokens(body)) if parameterless => {
-        called = *body.unlist_ref().last()?;
-        if called.get_catcode() != Catcode::CS {
-          return None;
-        }
+      Some(ExpansionBody::Tokens(body)) if parameterless => match body.unlist_ref().last() {
+        Some(last) if last.get_catcode() == Catcode::CS => called = *last,
+        _ => return Tail::Nothing,
       },
-      _ => return Some(meaning),
+      _ => return Tail::Call(meaning),
     }
   }
-  None
-}
-
-/// Whether a call of `cs` reads no argument, by its meaning now: a parameterless macro whose expansion ends in a
-/// character, or in a command that reads none (`\newcommand{\todaysdate}{1 May 2024}`). `false` where its meaning does
-/// not tell (a primitive, an expansion computed by code).
-pub(super) fn reads_no_argument(cs: &Token) -> bool {
-  let mut called = *cs;
-  for _ in 0..8 {
-    let Some(Stored::Expandable(meaning)) = lookup_meaning(&called) else {
-      return false;
-    };
-    if meaning
-      .get_parameters()
-      .is_some_and(|parameters| !parameters.get_parameters().is_empty())
-    {
-      return false;
-    }
-    let Some(ExpansionBody::Tokens(body)) = meaning.get_expansion() else {
-      return false;
-    };
-    match body.unlist_ref().last() {
-      Some(last) if last.get_catcode().is_active_or_cs() => called = *last,
-      _ => return true,
-    }
-  }
-  false
+  Tail::Unknown
 }
 
 /// A conditional's part `t` is, by its meaning now.

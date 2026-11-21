@@ -689,14 +689,14 @@ fn past_what_it_set(field: &Field, events: &[Event], end: usize) -> usize {
   let at = (end..tokens.len())
     .find(|&i| tokens[i].get_catcode() != Catcode::SPACE)
     .unwrap_or(tokens.len());
+  // (a command there that reads arguments by its meaning is a call of its own, taken whole or not at all)
+  let call = tokens.get(at).and_then(|_| arguments_end(tokens, at, true));
   let past = match tokens.get(at).map(Token::get_catcode) {
-    // (a command there that reads arguments by its meaning is a call of its own, taken whole or not at all)
-    Some(Catcode::CS) => match arguments_end(tokens, at, true) {
-      Some(Some(call_end)) => call_end,
-      Some(None) => return end,
-      None => at + 1,
+    _ if call.is_some() => match call.flatten() {
+      Some(call_end) => call_end,
+      None => return end,
     },
-    Some(Catcode::LETTER | Catcode::OTHER) => at + 1,
+    Some(Catcode::LETTER | Catcode::OTHER | Catcode::CS) => at + 1,
     Some(Catcode::BEGIN) => {
       let mut depth = 0;
       (at..tokens.len())
