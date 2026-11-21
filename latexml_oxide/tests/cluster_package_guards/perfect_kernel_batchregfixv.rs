@@ -34,7 +34,7 @@ fn href_tilde_in_a_footnote_under_babel() {
 }
 
 /// A babel shorthand (slovak `-`) tokenized active before the reader, in `\url` and `\href` in a `\footnote`: under the
-/// ambient `\protect` babel's `\active@prefix` (babel.def:1450-1465) lets it expand to its character. Red (INT6D):
+/// ambient `\protect` babel's `\active@prefix` (babel.def:1418-1442) lets it expand to its character. Red (INT6D):
 /// Fatal:Timeout:PushbackLimit, the empty `\protect` of `url_string_messages` making `\protect-` re-expand. Witness
 /// 2605.16660.
 #[test]

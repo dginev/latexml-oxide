@@ -155,8 +155,9 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   // invalid byte (mouth.rs `decode_bytes`).
   AssignValue!("lx@inputenc@encoding" => encoding.trim().to_ascii_lowercase(), Some(Scope::Global));
   // inputenc.sty:80 `\edef\@inpenc@undefined{\noexpand\protect\noexpand\@inpenc@undefined@{#1}}`: robust, so that
-  // hyperref's PDF strings (`\let\protect\@empty`) gobble its `\PackageError` (1803.03083, 1609.03819, 1903.03818,
-  // 2108.12063, 2408.03605). Perl's is a native Error (inputenc.sty.ltxml:33). OXIDIZED_DESIGN_DIVERGENCES #1112.
+  // hyperref's PDF strings gobble its `\PackageError` (`\let\GenericError\@gobblefour`, hyperref.sty:551; 1803.03083,
+  // 1609.03819, 1903.03818, 2108.12063, 2408.03605). Perl's is a native Error (inputenc.sty.ltxml:33).
+  // OXIDIZED_DESIGN_DIVERGENCES #1112.
   let undefined = TokenizeInternal!(TeXString::assembled(s!(
     "\\protect\\@inpenc@undefined@{{{}}}",
     encoding
@@ -164,7 +165,7 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   def_macro(T_CS!("\\@inpenc@undefined"), None, undefined, None)?;
   // Initially disable all odd & upper half-plane chars. Under the native mouth, utf8 (and utf8x, the same binding)
   // reads 128..=255 as code points, which `utf8_def.rs` makes other: a token stored earlier (the format's active `§`
-  // in arxiv.sty:55-60's `\crefformat{section}{§#2#1#3}`) keeps its meaning, as utf8.def:174-192 redefines every byte
+  // in arxiv.sty:55-60's `\crefformat{section}{§#2#1#3}`) keeps its meaning, as utf8.def:174-193 redefines every byte
   // and leaves none `\@inpenc@undefined` (2605.20531). KNOWN_PERL_ERRORS #1305.
   let native_utf8 =
     !lookup_bool("PDFTEX_BYTE_MOUTH") && matches!(encoding.trim(), "utf8" | "utf8x");

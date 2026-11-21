@@ -1,9 +1,9 @@
 % mechanism: a Latin-1 character the kernel declared (`\DeclareUnicodeCharacter`, active in the format) and captured
-%   before `\usepackage[utf8]{inputenc}` keeps its meaning: utf8.def:174-192 redefines every byte 0x80-0xFF, so in TeX
+%   before `\usepackage[utf8]{inputenc}` keeps its meaning: utf8.def:174-193 redefines every byte 0x80-0xFF, so in TeX
 %   no byte keeps inputenc's `\@inpenc@undefined` (inputenc.sty:84); arxiv.sty:55-60's `\crefformat{section}{§…}`.
 % witness: 2605.20531
 % oracle:  pdflatex 0 errors: "A[13] B[§] C[café]" and "See §1."
-% engines: perl = 1 Error:unexpected:<char> (`\xa`), B[] (inputenc.sty.ltxml:50-51 + utf8.def.ltxml:26; its cref format
+% engines: perl = 1 Error:unexpected:<char> (`\xa`), B[] (inputenc.sty.ltxml:48-51 + utf8.def.ltxml:26; its cref format
 %   is not digested as text);
 %   rust INT6D = 2 Error:latex:(inputenc) "Keyboard character used is undefined in inputencoding `utf8'" (`\xa`, the
 %   `\Cref` format digested), B[]; `é`, not active in the format, was kept

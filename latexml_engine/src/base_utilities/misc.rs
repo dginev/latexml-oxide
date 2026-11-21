@@ -165,7 +165,7 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
 /// raises its Error and leaves nothing, so a robust `\PackageError` (inputenc's undefined byte, inputenc.sty:80,
 /// :139-143) errs once and is no URL text; the readers drop the `\protect` it leaves (OD #1112). `\protect` keeps
 /// its meaning, as in hyperref's `\hyper@normalise` (hyperref.sty:4604-4650): emptied, babel's
-/// `\active@prefix` (babel.def:1450-1465) re-expands a shorthand read before the reader, to PushbackLimit (2605.13298).
+/// `\active@prefix` (babel.def:1418-1442) re-expands a shorthand read before the reader, to PushbackLimit (2605.13298).
 pub fn url_string_messages() -> Result<()> {
   DefMacro!("\\GenericError{}{}{}{}", sub[args] {
     let args = args.into_iter().map(|arg| arg.owned_tokens().unwrap_or_default()).collect();

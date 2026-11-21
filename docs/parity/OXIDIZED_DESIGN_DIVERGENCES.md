@@ -23505,7 +23505,7 @@ arguments, and the readers' stringify step drops the `\protect` token, so the by
 URL text, where pdflatex errs and garbles the URL (`\url` 6 `!`, `\href` Fatal). The divergence: a robust command's
 `\protect` is no URL text (`\url{http://x.org/\foo b}`, `\foo` robust: `http://x.org/Fb`; pdflatex and REGFIXJ3 print
 `http://x.org/\protectFb`). `\protect` itself keeps its ambient meaning during the read, as in hyperref's
-`\hyper@normalise` (hyperref.sty:4604-4650): emptied (REGFIXN2b), babel's `\active@prefix` (babel.def:1450-1465) made a
+`\hyper@normalise` (hyperref.sty:4604-4650): emptied (REGFIXN2b), babel's `\active@prefix` (babel.def:1418-1442) made a
 shorthand tokenized before the reader (`~`, slovak `-`, in a `\footnote`'s URL) re-expand to Fatal:Timeout:PushbackLimit
 (2605.13298, 2605.16660, 2605.19761, 2605.28243, 2605.29955; fixed by REGFIXV).
 **Guard**: `perfect_kernel_batchregfixn2::{latin1_undefined_byte_errs_only_where_tex_does,
