@@ -4,9 +4,10 @@
 %          "macro:->\protect \text  {q}"; the math reads "x_max zq"
 % engines: rust INTREGFIX4 "\text {z}" (a constructor); REGFIXK "macro:->\lx@text {z}", "macro:#1->\lx@text {#1}",
 %          "macro:->\lx@text {q}" (the internal exposed)
-% expect:  0 errors, 0 warnings; "macro:->\protect \text  {z}" (the inner `\text␣` protected, as Perl's constructor is
-%          unexpandable: never `\lx@text`), "macro:->\protect \text  ", "macro:->\protect \text  {q}"; the math unchanged
-% status:  RED (REGFIXK) -> GREEN (REGFIXK2, `\text` robust with a protected inner)
+% expect:  0 errors, 0 warnings; "macro:->\text {z}" and "macro:->\text {q}" (`\text` protected, as Perl's constructor
+%          is unexpandable: never `\lx@text`), "\protected macro:#1->\lx@text {#1}" (OXIDIZED_DESIGN #1104); the math
+%          unchanged
+% status:  RED (REGFIXK) -> GREEN (REGFIXK2, `\text` a protected macro)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{amsmath}

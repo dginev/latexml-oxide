@@ -382,9 +382,9 @@ LoadDefinitions!({
   // treatment RevTeX relies on for inline-text-in-math spacing).
   // revtex4-2.cls:7547-7560 `\REV@text` sets `#1` in `\hbox{{…}}` (math) or `\mbox{#1}` (text): its argument is
   // digested inside box braces, so the alignment count is raised for it, as amstext_sty.rs `\text`
-  // (KNOWN_PERL_ERRORS #931), after `#1` is read at the cell's count (2212.00883); robust as its
-  // `\DeclareRobustCommand`, the inner `\text␣` protected as amstext_sty.rs's.
-  DefMacro!("\\text{}", "\\lx@text{#1}", robust => true, protected => true, locked => true);
+  // (KNOWN_PERL_ERRORS #931), after `#1` is read at the cell's count (2212.00883); protected as
+  // amstext_sty.rs's (its `\DeclareRobustCommand`, OXIDIZED_DESIGN #1104).
+  DefMacro!("\\text{}", "\\lx@text{#1}", protected => true, locked => true);
   amstext_sty::define_text_constructor()?;
   // revtex4-2.cls:7547-7585 (revtex4.cls:5992, revtex4-1.cls:7526): REVTeX's `\text` is `\REV@text`, which apsrev's
   // `.bbl` notes write out (`$t'=R(t)\protect \REV@text { mod } 1$`; 2202.11665, 2107.02243, 1407.5317).
