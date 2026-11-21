@@ -8,6 +8,7 @@
 //! argument; where it's cut comes from the events' spans.
 
 use std::{
+  cell::OnceCell,
   collections::{BTreeMap, BTreeSet, btree_map::Entry as Entry2},
   rc::Rc,
 };
@@ -4527,7 +4528,11 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
 /// `\lx@add@authors` writes it ([`split_decline`]; OD #988, its FNR1 paragraph: 1404.5602, 2503.21719; 0809.5152 and
 /// 1110.6375 until GRP1, whose `\received` now replays as far as it read and is no decline),
 /// in order, with a counted Warning, once per block over the flushes.
-fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
+fn declaration_reads_past(
+  index: usize,
+  resolved: &Resolved,
+  apart: &OnceCell<Vec<ApartCall>>,
+) -> bool {
   // (`Some(None)`: a declaration not cut whole)
   let past = with_block(index, None, |block, _| {
     let Outcome::Events { declarations, .. } = &block.outcome else {
@@ -4541,8 +4546,9 @@ fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
       })
   });
   // (a printing call alone: where the split would be the whole block, CR7d, the replay is kept, review revFNR1 u01)
-  let printing =
-    past.is_none() && printing_read_later(index, resolved) && !split_owns_falsely(index, resolved);
+  let printing = past.is_none()
+    && printing_read_later(index, resolved, apart)
+    && !split_owns_falsely(index, resolved);
   if past.is_none() && !printing {
     return false;
   }
@@ -4568,11 +4574,17 @@ fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
 /// Whether a call of the author block at ledger index `index` printing a note, a contact or a mark no name's run holds
 /// ([`unwritten`]) defines what a later token of the block reads ([`reads_definition`]): a local definition up to the next
 /// `\and`, which ends the author's tabular cell (latex.ltx `\and`). 2407.13730, 2606.19583.
-/// A global call [`printing_kept`] can't cut whole is one too: never dropped.
-fn printing_read_later(index: usize, resolved: &Resolved) -> bool {
-  printing_apart(index, resolved)
+/// A global call [`printing_kept`] can't cut whole is one too: never dropped. `apart`: the block's [`printing_apart`],
+/// read once.
+fn printing_read_later(
+  index: usize,
+  resolved: &Resolved,
+  apart: &OnceCell<Vec<ApartCall>>,
+) -> bool {
+  apart
+    .get_or_init(|| printing_apart(index, resolved))
     .iter()
-    .any(|call| call.read || (call.global && !call.notes && call.tokens.is_none()))
+    .any(|call| call.read || (call.global && !call.written && call.tokens.is_none()))
 }
 
 /// The calls [`printing_read_later`] reads that the block does not read again but whose definitions are all global, kept
@@ -4580,13 +4592,18 @@ fn printing_read_later(index: usize, resolved: &Resolved) -> bool {
 /// `\aufnX<n>`, `\IUCr@printauthornotes` prints it; 2609.21618, 2511.12314, 2509.01370). TeX runs the call where it
 /// stands; its print written apart, it runs in a box no one uses (`\lx@title@mark@step`), at its place among the
 /// block's steps ([`note_steps`]).
-fn printing_kept(index: usize, resolved: &Resolved) -> Vec<(usize, Vec<Token>)> {
-  printing_apart(index, resolved)
-    .into_iter()
-    .filter(|call| !call.read && call.global && !call.notes)
+fn printing_kept(
+  index: usize,
+  resolved: &Resolved,
+  apart: &OnceCell<Vec<ApartCall>>,
+) -> Vec<(usize, Vec<Token>)> {
+  apart
+    .get_or_init(|| printing_apart(index, resolved))
+    .iter()
+    .filter(|call| !call.read && call.global && !call.written)
     .filter_map(|call| {
       let mut step = vec![T_CS!(TITLE_MARK_STEP), T_BEGIN!()];
-      step.extend(call.tokens?);
+      step.extend(call.tokens.as_deref()?.iter().copied());
       step.push(T_END!());
       Some((call.from, step))
     })
@@ -4594,15 +4611,16 @@ fn printing_kept(index: usize, resolved: &Resolved) -> Vec<(usize, Vec<Token>)> 
 }
 
 /// A call [`printing_apart`] reads: its block offset, its tokens with their arguments (`None`: not balanced), whether
-/// a later token of the block reads its definitions, whether every one is global, and whether it prints a note: the
-/// emitter writes and steps that note itself, so the call is not run again (`\footremember{dam}{…}`'s `\footnote`
-/// after a `\footrecall`, 2509.04225: a second note, the counter stepped twice).
+/// a later token of the block reads its definitions, whether every one is global, and whether the emitter writes what
+/// it prints, so it is not run again: a note it writes and steps itself (`\footremember{dam}{…}`'s `\footnote` after a
+/// `\footrecall`, 2509.04225: a second note, the counter stepped twice), or an item, a contact, affiliation or note, written
+/// from the call's tokens (`\newcommand\mail[1]{\stepcounter{em}…\href{mailto:#1}{#1}}`: the counter stepped twice).
 struct ApartCall {
-  from:   usize,
-  tokens: Option<Vec<Token>>,
-  read:   bool,
-  global: bool,
-  notes:  bool,
+  from:    usize,
+  tokens:  Option<Vec<Token>>,
+  read:    bool,
+  global:  bool,
+  written: bool,
 }
 
 /// The calls of the author block at ledger index `index` printing a note, a contact or a mark no name's run holds
@@ -4621,6 +4639,17 @@ fn printing_apart(index: usize, resolved: &Resolved) -> Vec<ApartCall> {
     let tokens = block.read_tokens().unlist_ref();
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     let span_at = |e: &Event| e.span.and_then(|(s, t)| Some((at(s)?, at(t)?)));
+    // (the items the emitter writes from the block's tokens, each its event's span, as `mark_dropped` reads them)
+    let items: Vec<(usize, usize)> = resolved
+      .creators
+      .iter()
+      .flat_map(|c| c.affiliations.iter().chain(&c.contacts).chain(&c.notes))
+      .chain(&resolved.block)
+      .filter_map(|a| match a.source {
+        Some((source, Some((s, t)))) if source == index => Some((at(s)?, at(t)?)),
+        _ => None,
+      })
+      .collect();
     unsaid
       .printing
       .iter()
@@ -4631,10 +4660,11 @@ fn printing_apart(index: usize, resolved: &Resolved) -> Vec<ApartCall> {
             && span_at(e).is_some_and(|(s, t)| s < to && from < t)
         };
         let apart = events.iter().any(|e| printed(&e));
-        let notes = events
+        let written = events
           .iter()
           .filter(printed)
-          .any(|e| e.kind == EventKind::Note);
+          .any(|e| e.kind == EventKind::Note)
+          || items.iter().any(|&(s, t)| s < to && from < t);
         if !unheld.contains(&(from, to)) || !apart {
           return None;
         }
@@ -4682,7 +4712,7 @@ fn printing_apart(index: usize, resolved: &Resolved) -> Vec<ApartCall> {
           tokens: own.map(<[Token]>::to_vec),
           read,
           global: call.global,
-          notes,
+          written,
         })
       })
       .collect()
@@ -5852,18 +5882,19 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       let mut given_lost = Vec::new();
       let mut bare_lost = Vec::new();
       let mut kept_calls = Vec::new();
+      let apart = OnceCell::new();
       let (declined, as_perl) = if names_fail(source) || cells {
         (true, false)
       } else if counter_moved(source, resolved) {
         (true, true)
       } else if names_overlap(source, resolved) {
         (true, false)
-      } else if declaration_reads_past(source, resolved) {
+      } else if declaration_reads_past(source, resolved, &apart) {
         (true, true)
       } else {
         let dropped = mark_dropped(source, resolved, &mut given_lost, &mut bare_lost);
         // (a bare mark's step runs its call already)
-        kept_calls = printing_kept(source, resolved);
+        kept_calls = printing_kept(source, resolved, &apart);
         kept_calls.retain(|(at, _)| !bare_lost.iter().any(|(s, ..)| s == at));
         (dropped, false)
       };
@@ -6398,7 +6429,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     );
     // (a kept superscript printed after its name's runs and before the next name's, in no written run — past a gap or a
     // comma, `Ann Able\, $^{1}$ ,` — shows as an unkept one: 2209.05831, 2201.04171, 2609.18180, 2403.18314)
-    let unwritten = std::cell::OnceCell::new();
+    let unwritten = OnceCell::new();
     let unprinted = |request: &String| {
       keeps
         && !printed.contains(request)

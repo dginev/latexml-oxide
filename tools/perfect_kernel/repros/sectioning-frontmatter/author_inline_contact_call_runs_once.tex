@@ -1,0 +1,10 @@
+% witness: synthetic (review of REGFIXI2, S1, its inline shape); see author_contact_call_runs_once.tex
+% oracle:  pdflatex: 0 errors; "T Ann Able1 ann@x.org Bob Baker2 bob@y.org … Count 2."
+% engines: rust REGFIXI2 = marks 3 and 4, "Count 4": the call written as each author's e-mail contact ran again as a
+%          kept call
+% expect:  0 errors, 0 Warnings; Ann Able with the e-mail ann@x.org marked 1, Bob Baker with bob@y.org marked 2; "Count 2."
+% status:  RED (REGFIXI2) -> GREEN (REGFIXI3; guard perfect_kernel_batchregfixi::contact_printing_call_runs_once)
+\documentclass{article}\usepackage{hyperref}\newcounter{em}
+\newcommand\mail[1]{\stepcounter{em}\expandafter\gdef\csname eX\theem\endcsname{#1}\textsuperscript{\theem}\href{mailto:#1}{#1}}
+\title{T}\author{Ann Able\mail{ann@x.org} \and Bob Baker\mail{bob@y.org}}
+\begin{document}\maketitle Count \theem.\end{document}

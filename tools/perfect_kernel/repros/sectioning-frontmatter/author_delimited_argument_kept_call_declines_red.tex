@@ -1,0 +1,21 @@
+% witness: synthetic (review of REGFIXI2, S4); the kept-call shape of 2609.21618, 2511.12314, 2509.01370 with a
+%          delimited argument
+% oracle:  pdflatex: 0 errors; "T Ann Ableann@x.org1 Bob Bakerbob@y.org2 … Count 2: [Note A.] [Note B.]."
+% engines: rust INTREGFIX4 = each author's e-mail a contact, marks 1 and 2, but "Count 0: [] []" (the call printing the
+%          mark dropped); rust REGFIXI2/REGFIXI3 = "Count 2: [Note A.] [Note B.]" but the block declines
+%          (emit::printing_read_later: `\mynote Note A.;` read with `arguments_end` is not cut whole), each e-mail
+%          written inside `<personname>`, 3 Warnings (the decline, the content check's lost and doubled words)
+% expect:  0 errors, 0 Warnings; Ann Able with the e-mail ann@x.org and mark 1, Bob Baker with bob@y.org and mark 2;
+%          "Count 2: [Note A.] [Note B.]."
+% status:  RED (REGFIXI3; no guard: a delimited parameter text is cut by the macro's own reading, not done)
+\documentclass{article}
+\usepackage{hyperref}
+\newcounter{ec}
+\newcommand\mymail[1]{\href{mailto:#1}{#1}}
+\def\mynote#1;{\stepcounter{ec}\expandafter\gdef\csname nX\theec\endcsname{#1}\textsuperscript{\theec}}
+\title{T}
+\author{Ann Able\mymail{ann@x.org}\mynote Note A.; \and Bob Baker\mymail{bob@y.org}\mynote Note B.;}
+\begin{document}
+\maketitle
+Count \theec: [\csname nX1\endcsname] [\csname nX2\endcsname].
+\end{document}

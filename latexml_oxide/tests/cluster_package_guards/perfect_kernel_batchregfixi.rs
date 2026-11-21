@@ -2,7 +2,9 @@
 //! bindings: amsppt's roster items under plain AmS-TeX, a prefix-matched shipped IUCr class, backref's `\BR@backref`,
 //! array's `\@arrayleft`. Each guard converts its repro under `tools/perfect_kernel/repros/` with the ar5iv preload
 //! and asserts the diagnostics by count and the whole element.
-use latexml::util::test::{assert_element, convert_files_with, convert_with};
+use latexml::util::test::{
+  assert_element, convert_files_with, convert_with, normalize_markup, xml_element,
+};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -72,7 +74,8 @@ fn iucrjournals_reads_its_own_class() {
 /// An author note written after an e-mail link (`\IUCrAufn`, iucrjournals.cls:212-232) is printed after the title
 /// (:293-296): the e-mail a contact, the block is written as items, and the call printing Ann's mark apart runs for its
 /// global definition of `\aufnX1` (`emit::printing_kept`, in a box no one uses) — REGFIXI dropped it, a bare "†" after
-/// the title. The ORCID link's iD is read without the line end after it (2507.03170). Witnesses 2609.21618,
+/// the title; Bob's own note, the second, prints after Ann's, each kept call run at its place. The ORCID link's iD is
+/// read without the line end after it (2507.03170). Witnesses 2609.21618,
 /// 2511.12314, 2509.01370. Distinct from `iucrjournals_reads_its_own_class`: a call printing apart from the names,
 /// read outside the block.
 #[test]
@@ -94,36 +97,100 @@ fn iucr_author_note_after_email() {
      xml:id=\"id1\"/><contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact><contact name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\">Univ</contact></creator>",
   );
-  let bob = xml
-    .split("<personname>Bob Baker</personname>")
-    .nth(1)
-    .unwrap_or_default();
-  let bob = &bob[..bob.find("</creator>").unwrap_or(bob.len())];
-  let order: Vec<usize> = [
-    "<note mark=\"†\" role=\"footnotemark\"",
-    "role=\"email\">bob@y.org</contact>",
-    "href=\"https://orcid.org/0000-0002-1825-0097\" title=\"ORCID 0000-0002-1825-0097\"",
-    "role=\"affiliation\">Univ</contact>",
+  // (Bob's whole, his ORCID logo's SVG cut: `\IUCrAufn[1]{}` points at Ann's note, his own the second, in order)
+  let bob = xml_element(&xml, "creator", &["before=\"\u{2003}\u{2003}\""])
+    .unwrap_or_else(|| panic!("{xml}"));
+  let (logo, rest) = bob
+    .split_once("<svg:svg")
+    .unwrap_or_else(|| panic!("{bob}"));
+  let bob = [
+    logo,
+    &rest[rest
+      .find("</svg:svg>")
+      .map_or(0, |at| at + "</svg:svg>".len())..],
   ]
-  .iter()
-  .map(|part| {
-    bob
-      .find(part)
-      .unwrap_or_else(|| panic!("{part} not in Bob's creator: {xml}"))
-  })
-  .collect();
-  assert!(order.is_sorted(), "{xml}");
+  .concat();
   assert_eq!(
-    xml.matches("These authors contributed equally.").count(),
-    1,
+    normalize_markup(&bob),
+    normalize_markup(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"†,‡\" \
+       role=\"footnotemark\" xml:id=\"id2\"/><contact name=\"Email:\u{a0}\" role=\"email\">bob@y.org</contact><contact \
+       role=\"orcid\">\u{2009}\u{2009}<ref class=\"ltx_orcid\" href=\"https://orcid.org/0000-0002-1825-0097\" title=\"ORCID \
+       0000-0002-1825-0097\"></ref></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ</contact></creator>"
+    ),
     "{xml}"
+  );
+  for note in [
+    "These authors contributed equally.",
+    "Present address: CERN.",
+  ] {
+    assert_eq!(xml.matches(note).count(), 1, "{xml}");
+  }
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p align=\"center\" xml:id=\"p1.1\"><sup xml:id=\"p1.1.1\"><text font=\"italic\" \
+     xml:id=\"p1.1.1.1\">†</text></sup>These authors contributed equally.</p>",
   );
   assert_element(
     &xml,
     "p",
-    &["align=\"center\""],
-    "<p align=\"center\" xml:id=\"p1.1\"><sup xml:id=\"p1.1.1\"><text font=\"italic\" \
-     xml:id=\"p1.1.1.1\">†</text></sup>These authors contributed equally.</p>",
+    &["xml:id=\"p1.2\""],
+    "<p align=\"center\" xml:id=\"p1.2\"><sup xml:id=\"p1.2.1\"><text font=\"italic\" \
+     xml:id=\"p1.2.1.1\">‡</text></sup>Present address: CERN.</p>",
+  );
+}
+
+/// A call printing a mark and a contact apart from the names is run once: the contact item the emitter writes holds the
+/// call, which is not kept for a reader past the block as well (`emit::printing_apart`'s `written`). Red (REGFIXI2):
+/// marks 3 and 4, "Count 4". Distinct from `iucr_author_note_after_email`: the kept call's sibling the item writes
+/// itself; the e-mail on its own line and inline.
+#[test]
+fn contact_printing_call_runs_once() {
+  let (log, xml) = convert_with(
+    repro!("sectioning-frontmatter/author_contact_call_runs_once.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (id, n, address) in [("id1", 1, "ann@x.org"), ("id2", 2, "bob@y.org")] {
+    let contact = format!(
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><sup xml:id=\"{id}\">{n}</sup><ref \
+       class=\"ltx_href\" href=\"mailto:{address}\">{address}</ref></contact>"
+    );
+    assert_eq!(xml.matches(&contact).count(), 1, "{contact} in {xml}");
+  }
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Count 2.</p>",
+  );
+  let (log, xml) = convert_with(
+    repro!("sectioning-frontmatter/author_inline_contact_call_runs_once.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" role=\"email\"><sup \
+     xml:id=\"id1\">1</sup><ref class=\"ltx_href\" href=\"mailto:ann@x.org\">ann@x.org</ref></contact></creator>",
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["before=\"\u{2003}\u{2003}\""],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+     name=\"Email:\u{a0}\" role=\"email\"><sup xml:id=\"id2\">2</sup><ref class=\"ltx_href\" \
+     href=\"mailto:bob@y.org\">bob@y.org</ref></contact></creator>",
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Count 2.</p>",
   );
 }
 

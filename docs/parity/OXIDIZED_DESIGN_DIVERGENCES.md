@@ -12245,8 +12245,11 @@ the address themselves: mrm's `\orcid` (mrm_cls.rs) and apa7's `\addORCIDlink` (
 `https://orcid.org/#2`, so pdflatex shows and links the doubled address). An argument holding a macro, or text that
 is no orcid.org address (2106.08963's swapped `{Andrew S. Nencka}`), is kept as written. orcidlink.sty's
 `\orcidlink{https://…}` stays doubled, as orcidlink.sty builds `https://orcid.org/#1` (the kernel `\lx@orcidlink` is
-its link, without the normaliser). Perl's `\lx@add@orcid` (Base_Utility.pool.ltxml:659-660) puts the text in the
-contact with no link, so it has no doubled address to fix. Repros sectioning-frontmatter/{orcid_given_as_url_is_the_id,
+its link, without the normaliser); its iD is linked without the spaces around it (orcidlink_sty.rs `\lx@orcidlink@id`:
+iucrjournals.cls's `\IUCrOrcidlink{0009-…-0174⏎}`, 2507.03170, 2511.22516), a beyond-Perl surpass: Perl's binding
+(orcidlink.sty.ltxml) passes `\lx@orcidlink{#2}` as written and pdflatex links `/URI(https://orcid.org/…\040)`.
+Perl's `\lx@add@orcid` (Base_Utility.pool.ltxml:659-660) puts the text in the contact with no link, so it has no
+doubled address to fix. Repros sectioning-frontmatter/{orcid_given_as_url_is_the_id,
 orcid_inline_link_takes_the_id}; guards `perfect_kernel_batch68h::{orcid_given_as_url_is_the_id,
 orcid_inline_link_takes_the_id}`.
 
@@ -17981,10 +17984,17 @@ it whole as one `\lx@add@author` (Base_Utility.pool.ltxml:687-693), else `SplitT
 - *Emit.* The resolved tuples become Perl's calls; an API creator call holding its own `\and`s is cut at them
   (`emit.rs:4511 creator_call_cut`); a block calling a binding's list setter keeps the setter's call as written, its
   entries the list its marks request (`emit.rs:1304 list_setter_runs`, `:1331 list_setter_call`; formerly #982); a block
-  no rehearsal read is Perl's whole-block creator (`fallback.rs:23 whole_block_author`).
+  no rehearsal read is Perl's whole-block creator (`fallback.rs:23 whole_block_author`). A call of a split block that
+  prints a mark or a contact apart from the names, its definitions all global and read by nothing later in the block,
+  runs in a box no one uses at its place among the block's steps (`emit.rs printing_kept`, `\lx@title@mark@step`), as
+  TeX runs it there: iucrjournals.cls's `\IUCrAufn` stores the note `\maketitle` prints after the title (2609.21618,
+  2511.12314, 2509.01370). A call whose print the emitter writes is not run again: a note it writes and steps
+  (2509.04225's `\footremember` after a `\footrecall`), an item holding the call (`printing_apart`'s `written`).
 - *Declines* (written as Perl writes it, each with one Warning, once per block over the flushes): a name's words lost
   (`emit.rs:3558 written_whole`); a footnote counter moved (`:3577 counter_moved`); a declaration reading past its piece
-  (`:3903 declaration_reads_past`, `:3944 printing_read_later`); a shared run printing a note (`:3834 names_overlap`).
+  (`:3903 declaration_reads_past`, `:3944 printing_read_later`), or a global call printing apart that cannot be cut whole
+  (`printing_read_later`; a delimited argument, repro `author_delimited_argument_kept_call_declines_red`); a shared run
+  printing a note (`:3834 names_overlap`).
   The counter and definition declines write Perl's split (`fallback.rs:101 perl_author_calls`), and whole where that
   split states an owner the marks do not support or loses a name (`emit.rs:4096 split_owns_falsely`, `:4196
   split_loses_a_name`, `:4377 split_decline`; formerly #988). A re-referencing `\footnotemark[n]` keeps the reading, its
