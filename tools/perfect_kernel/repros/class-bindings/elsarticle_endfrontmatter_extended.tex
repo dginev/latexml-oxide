@@ -1,0 +1,19 @@
+% `\endfrontmatter` is the end of elsarticle's `{frontmatter}` (elsarticle.cls:1303 `\newenvironment{frontmatter}{}
+% {\maketitle}`), which documents extend: the binding's `\end{frontmatter}` runs it, so an addition is legal and runs.
+% witness: 1609.08567 (+2308.12736 1609.08586 2304.14608 1910.03866)
+% oracle:  pdflatex 0 errors; "T / A. Author / Body."
+% engines: rust b77c9754f4 = 1 error (`\g@addto@macro` on undefined `\endfrontmatter`, OD #1036)
+% expect:  0 errors, 0 warnings; the title and the one creator as before
+% status:  RED (b77c9754f4) -> GREEN (REGFIXM)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\makeatletter
+\g@addto@macro\endfrontmatter{\enlargethispage{-2\baselineskip}}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{A. Author}
+\end{frontmatter}
+Body.
+\end{document}

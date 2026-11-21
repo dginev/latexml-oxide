@@ -338,7 +338,7 @@ fn declare_body_title_marks(
 
 /// The file a stand-in binding answers, as the paper asked for it: the request a versioned fallback answers with
 /// this binding (`fallback_request` while its `fallback_target` is the load's `\@currname`), else `\@currname`.
-fn stand_in_request() -> Result<String> {
+pub fn stand_in_request() -> Result<String> {
   let currname = Expand!(Tokens!(T_CS!("\\@currname"))).to_string();
   let fallback_request = lookup_string("fallback_request");
   Ok(

@@ -54,6 +54,27 @@ LoadDefinitions!({
   // the user writes; :1015-1039 then re-declares the capital Greek letters from `letters` or `lettersA` (witness
   // 2508.05134, newpxmath `slantedGreek`).
   declare_newtx_greek_options()?;
+  // newtxmath.sty:46-51: the scale of its math fonts, `\ntxmath@scaled` (`s*[1]`, the `scaled`/`scale` option), which a
+  // document's `\DeclareFontShape` of a newtx math font names (2205.08971, 2510.18441, 2505.21782, 2407.05889,
+  // 2208.07462). Its other options are not the binding's concern.
+  RawTeX!(
+    r"\@ifundefined{ntxmathscale}{\def\ntxmathscale{1}}{}\def\tx@scale{\ntxmathscale}\def\ntxmath@scaled{s*[\tx@scale]}
+\define@key{ntxmath}{scaled}[1.0]{\def\tx@scale{#1}\def\ntxmath@scaled{s*[#1]}}
+\define@key{ntxmath}{scale}[1.0]{\def\tx@scale{#1}\def\ntxmath@scaled{s*[#1]}}"
+  );
+  DeclareOption!(None, {
+    let option = Expand!(T_CS!("\\CurrentOption")).to_string();
+    if matches!(
+      option
+        .split_once('=')
+        .map_or(option.as_str(), |(key, _)| key)
+        .trim(),
+      "scaled" | "scale"
+    ) {
+      // (:58-62 `\DeclareOption*`)
+      Digest!(r"\begingroup\edef\x{\endgroup\noexpand\setkeys{ntxmath}{\CurrentOption}}\x")?;
+    }
+  });
   ProcessOptions!();
   newtx_capital_greek()?;
 });

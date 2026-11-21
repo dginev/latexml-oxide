@@ -717,6 +717,10 @@ mod perfect_kernel_batchregfixj;
 mod perfect_kernel_batchregfixk;
 /// REGFIXL: ulem's declaration (`\ul` from `\useunder`) ends with its group, a cell's or a `\multicolumn` body's end.
 mod perfect_kernel_batchregfixl;
+/// REGFIXM: bindings keep the names their real files define and documents extend (elsarticle's `\@fnotes` and
+/// `\endfrontmatter`, amsart's `\@setauthors`, newtxmath's `\ntxmath@scaled`, amsrefs' ifoption load); the cvpr/iccv
+/// bindings read a renamed copy raw.
+mod perfect_kernel_batchregfixm;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

@@ -1,0 +1,22 @@
+% A document's own `\fntext` adds to elsarticle's `\@fnotes` (elsarticle.cls:167-171), which `\maketitle` prints at the
+% title page's foot (:778): the binding keeps the list and prints it at `\end{frontmatter}`, a note per `\footnotetext`.
+% witness: 2301.05821 (+2311.15389 2312.12429 2312.17670 2406.09335 2407.19043 2408.17198 2412.18760 2504.16921
+%          2508.04484)
+% oracle:  pdflatex 0 errors; "A. Author1" and the footnote "1 These authors contributed equally."
+% engines: rust b77c9754f4 = 1 error (`\g@addto@macro` on undefined `\@fnotes`, OD #1036), the note text lost
+% expect:  0 errors, 0 warnings; one ltx:note "These authors contributed equally."
+% status:  RED (b77c9754f4) -> GREEN (REGFIXM)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\makeatletter
+\def\fntext[#1]#2{\g@addto@macro\@fnotes{\refstepcounter{fnote}\elsLabel{#1}%
+   \def\thefootnote{\thefnote}\global\setcounter{footnote}{\c@fnote}\footnotetext{#2}}}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{A. Author\fnref{eq}}
+\fntext[eq]{These authors contributed equally.}
+\end{frontmatter}
+Body.
+\end{document}

@@ -13773,7 +13773,9 @@ and mathscinet, and it defines no `\bibselect` (:1291), `\resetbiblist` (:651) o
 `\documentclass{amsart}\usepackage{amsrefs}\begin{document}\cite{G}\begin{bibdiv}\begin{biblist}
 \bib{G}{article}{author={Gel\cprime fand, I.}, title={On ${\germ g}$}, note={\url{http://x.org}}, journal={J},
 year={1950}}\end{biblist}\end{bibdiv}\end{document}` → 3 errors (`\cprime`, `\germ`, `\url` undefined); pdflatex 0.
-Fixed in Rust (65r, OD #563; 1907.08888, 1904.05225).
+Fixed in Rust (65r, OD #563; 1907.08888, 1904.05225). Likewise ifoption (:159): `\documentclass{article}
+\usepackage{amsrefs}\begin{document}\IfOption{initials}{on}{off}\end{document}` → 1 error (`\IfOption` undefined);
+pdflatex 0, "off". Fixed in Rust (REGFIXM; 1707.00398, 1806.01802, 1812.07818, 1709.04732, 1707.03971).
 
 ## 628. A class binding's hyperref load swallows the author's hyperref options
 
