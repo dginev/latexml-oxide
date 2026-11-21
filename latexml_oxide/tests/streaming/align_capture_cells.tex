@@ -1,0 +1,14 @@
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+Every aligned row below is regrouped into an equation whose MathFork copies
+each cell twice, once into the main branch and once into its td.
+\newcount\rows \rows=0
+\loop
+\begin{align*}
+  \frac{d}{dx}\left(\mu(x) y\right) &= \mu(x) q(x) \\
+  \mu(x) &= \exp\left(\int p(x)\,dx\right) = \left(x^{2}+1\right)^{\the\rows}
+\end{align*}
+\advance\rows by 1
+\ifnum\rows<150 \repeat
+\end{document}

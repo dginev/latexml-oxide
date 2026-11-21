@@ -2191,6 +2191,7 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
   let mut last_hint_for: Vec<Option<Node>> = Vec::new(); // parallel to prefiltered
   // Perl's `_phantom`, parallel to prefiltered
   let mut phantom: Vec<bool> = Vec::new();
+  let mut hints: Vec<Node> = Vec::new();
 
   for mut node in nodes {
     if node.get_type() != Some(NodeType::ElementNode) {
@@ -2224,6 +2225,7 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
       }
       // Unlink from the XML tree; XMHints are ephemeral
       node.unlink();
+      hints.push(node);
     } else if name_is(&node, "XMTok")
       && node.with_attribute(c"role", |v| v == "APPLYOP") == Some(true)
     {
@@ -2275,6 +2277,14 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
       } else {
         let _ = node.set_attribute("rpadding", &format!("{:.1}pt", s));
       }
+    }
+  }
+  // A hint that did not become a PUNCT is garbage (Perl drops it with the replaced children); unlinked, it leaked. One
+  // with an `xml:id` is left alone: an XMRef may still name it (Perl MathParser.pm:454-457 keeps those).
+  for hint in hints {
+    if !filtered.contains(&hint) && !hint.has_attribute_ns("id", latexml_core::common::xml::XML_NS)
+    {
+      crate::data::defer_discard(hint);
     }
   }
   filtered

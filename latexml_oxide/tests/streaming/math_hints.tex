@@ -1,0 +1,10 @@
+\documentclass{article}
+\begin{document}
+Every thin space below is a math hint the parser folds into its neighbours'
+padding before it parses the formula.
+\newcount\formulas \formulas=0
+\loop
+$a\,b\,c\,d\,e\,f\,g\,h\,i\,j\,k\,l\,m\,n$
+\advance\formulas by 1
+\ifnum\formulas<300 \repeat
+\end{document}
