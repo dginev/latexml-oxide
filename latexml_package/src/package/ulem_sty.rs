@@ -131,16 +131,25 @@ LoadDefinitions!({
   DefConstructor!("\\lx@ulem@declared@line Undigested Semiverbatim DigestedBody",
   "?#isMath(<ltx:XMWrap class='ltx_ulem_#2'>#3</ltx:XMWrap>)(<ltx:text class='ltx_ulem_#2'>#3</ltx:text>)",
   enter_horizontal => true, reversion => "#1{#3}", sizer => "#3",
+  // `lx@ulem@body` is the line's nesting depth on its own frame, so a line inside another tells its own frame from
+  // the outer line's (`{\ul a \so b}`, `\multicolumn{1}{c}{a \ul b \so c}`).
   before_digest => {
+    let depth = lookup_int("lx@ulem@depth") + 1;
+    assign_value("lx@ulem@depth", Stored::Int(depth), Some(Scope::Global));
+    let opened = get_locator().to_string();
+    assign_value(&format!("lx@ulem@opened@{depth}"), Stored::String(pin(&opened)), Some(Scope::Local));
     bgroup();
-    assign_value("lx@ulem@body", Stored::Bool(true), Some(Scope::Local));
+    assign_value("lx@ulem@body", Stored::Int(depth), Some(Scope::Local));
     Let!("\\lx@alignment@multicolumn@end", "\\lx@ulem@declared@end");
   },
   after_digest => sub[whatsit] {
-    if is_value_bound("lx@ulem@body", Some(0)) {
+    let depth = lookup_int("lx@ulem@depth");
+    assign_value("lx@ulem@depth", Stored::Int(depth - 1), Some(Scope::Global));
+    if matches!(lookup_value("lx@ulem@body"), Some(Stored::Int(own)) if own == depth) {
       egroup()?;
     } else {
       // the group's `}` closed the line's: it leaves the body and is read again for the group (ulem.sty:107)
+      let mut closed = lookup_value("lx@ulem@ended").is_some();
       if let Some(body) = whatsit.get_arg_mut(3)
         && let DigestedData::List(list) = body.data()
       {
@@ -152,8 +161,21 @@ LoadDefinitions!({
         if closer.is_some_and(brace) {
           list.boxes.pop();
           unread_one(T_END!());
+          closed = true;
         }
       }
+      // Neither its group's `}` nor a `\multicolumn` body's end closed it: the input ended first (`Text \ul{x} y.`
+      // outside any group), pdflatex's fatal "File ended while scanning use of \UL@on". The text stays underlined.
+      if !closed {
+        let opened = lookup_string(&format!("lx@ulem@opened@{depth}"));
+        Error!(
+          "expected",
+          "}",
+          "Missing } to end the underline declaration made by \\useunder",
+          s!("The declaration at {opened} underlines the text after it.")
+        );
+      }
+      assign_value("lx@ulem@ended", Stored::None, Some(Scope::Global));
     }
   });
   // A `\multicolumn` body's end closes the line's group as the template's `}` does, before the column's after-code,
@@ -161,6 +183,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@ulem@declared@end", {
     if is_value_bound("lx@ulem@body", Some(0)) {
       egroup()?;
+      assign_value("lx@ulem@ended", Stored::Bool(true), Some(Scope::Global));
       unread_one(T_CS!("\\lx@alignment@multicolumn@end"));
     }
   });

@@ -1,0 +1,17 @@
+% witness: none (synthetic; REGFIXL2): a declaration with no group of its own in a cell, ended by the cell's `&`/`\\`
+%          (stomach.rs digest_body's alignment return, `\lx@ulem@declared@line`'s egroup in ulem_sty.rs)
+% oracle:  pdflatex fatal: "File ended while scanning use of \UL@on." (ulem.sty:286-293: a cell end does not close
+%          the declaration's argument)
+% engines: rust INTREGFIX4 = 3 errors, the table lost; rust REGFIXL, REGFIXL2 = 0 errors, "6.7" and "8" underlined,
+%          but the declared cells lose their right borders (`border` absent on cells 2 and 3; `{\ul 6.7}` keeps it)
+% expect:  0 errors, 0 warnings; cells 2 and 3 `border="r"`, as with `{\ul 6.7}`
+% status:  RED (REGFIXL2)
+\documentclass{article}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\begin{document}
+\begin{tabular}{|l|c|r|}
+a & \ul 6.7 & \ul 8 \\
+\end{tabular}
+After.
+\end{document}

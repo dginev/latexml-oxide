@@ -1,0 +1,14 @@
+% witness: none (synthetic; REGFIXL review item 2): the list's `\item`/`\end{itemize}`, at the line's own depth,
+%          do not end the line opened in item 1 (ulem.sty:286-293)
+% oracle:  pdflatex fatal: "File ended while scanning use of \UL@on."
+% engines: rust INTREGFIX4 = 2 errors, everything after the line lost; rust REGFIXL2 = 2 errors + 1 warning ("Attempt
+%          to end mode internal_vertical", the open group, "Missing } to end the underline declaration"), "Next para."
+%          inside item 2 ("zNext para.")
+% expect:  "x y" underlined in item 1, "z" in item 2, "Next para." a paragraph after the list; an Error
+% status:  RED (REGFIXL2)
+\documentclass{article}
+\usepackage[normalem]{ulem}\useunder{\uline}{\ul}{}
+\begin{document}
+\begin{itemize}\item \ul{x} y\item z\end{itemize}
+Next para.
+\end{document}

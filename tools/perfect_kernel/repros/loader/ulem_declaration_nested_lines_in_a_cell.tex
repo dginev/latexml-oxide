@@ -1,0 +1,19 @@
+% witness: none (synthetic; REGFIXL review item 3): two declarations nested in one `\multicolumn` body: the body-end
+%          marker `\lx@alignment@multicolumn@end` closes the inner line (`\so`) and is read again for the outer (`\ul`);
+%          the same in one `{…}` group, where the group's `}`, read again, closes each in turn
+% oracle:  pdflatex fatal: "File ended while scanning use of \UL@on." (ulem.sty:286-293: the body's `}` ends `\ul`'s
+%          argument, and `\so` inside it opens a brace nothing closes)
+% engines: rust INTREGFIX4 = 5 errors (readBalanced ran out of input), the table lost; rust REGFIXL = the markup
+%          below, but 1 warning: the inner line's end closed the outer line's group too, the `{…}` left open
+% expect:  0 errors, 0 warnings (the content-first recovery); `\so c` nested inside `\ul b`, both inside the cell,
+%          its borders kept
+% status:  RED (REGFIXL) -> GREEN (REGFIXL2)
+\documentclass{article}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\useunder{\sout}{\so}{}
+\begin{document}
+\begin{tabular}{|c|c|} \multicolumn{1}{|c|}{a \ul b \so c} & d\\\end{tabular} After.
+
+Para {a \ul b \so c} d.
+\end{document}
