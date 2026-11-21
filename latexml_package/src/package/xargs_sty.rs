@@ -82,8 +82,10 @@ LoadDefinitions!({
     let nargs = if let Some(nargs_tks) = nargs_opt {
       nargs_tks.to_string().parse::<usize>()?
     } else {0};
-    let defaults_tks = defaults.map(|kvs| kvs.revert().ok().unwrap_or_default());
-    DefMacro!(mungedcs, convert_latex_args(nargs, defaults_tks)?, body, scope => scope);
+    // xargs.sty:282-300 `\xargs@DRC`: `\cs` is `\protect\cs␣`, and `\cs␣` is made as `\newcommandx` makes a command,
+    // its internal `\\cs␣` with it (`define_xargs`); Perl's convertLaTeXArgs takes the key-value list itself for the
+    // default, so `\DeclareRobustCommandx\rx[2][1=d]{R#1#2}` prints `\rx{b}` as "R1=db" (KNOWN_PERL_ERRORS #1304).
+    define_xargs(&mungedcs, nargs, defaults.as_ref(), body, scope)?;
     DefMacro!(cs, None, Tokens!(T_CS!("\\protect"), mungedcs), scope=>scope);
   });
 

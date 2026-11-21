@@ -78,7 +78,8 @@ fn hyperref_pdf_string_gobbles_a_definition() {
 /// `\futurelet` their name (`\let\zzundef\relax` no undefined `\zzundef`); an extensible arrow keeps its labels
 /// (`$a\xrightarrow{b}c$` "abc", Fatal:Timeout:PushbackLimit); the package option's `pdfauthor` is `\pdfstringdef`'d.
 /// Round 3: xargs's and twoopt's commands, through the internal `\\cs` their call names (twoopt.sty:51-55,
-/// xargs.sty:205-212; `\xa[c]{d}` "[c]d", round 2 "Xcd"), typeset as before. Repro
+/// xargs.sty:205-212; `\xa[c]{d}` "[c]d", round 2 "Xcd"), typeset as before; `\DeclareRobustCommandx`'s inner `\cs␣`
+/// made as `\newcommandx` makes it (`\rx{b}` "b" in the string, "Rdb" typeset; round 3 "R1=db" both). Repro
 /// sectioning-frontmatter/hyperref_pdfinfo_gobbles_testopt_and_let.
 #[test]
 fn hyperref_pdf_string_gobbles_testopt_and_let() {
@@ -95,11 +96,11 @@ fn hyperref_pdf_string_gobbles_testopt_and_let() {
     "<rdf about=\"\" content=\"On the $q$\" property=\"dcterms:creator\"/>",
     "<rdf about=\"\" content=\"An abc arrow [u]v\" property=\"dcterms:subject\"/>",
     "<rdf about=\"\" content=\"k [m]n X Y *x\" property=\"dcterms:subject\"/>",
-    "<rdf about=\"\" content=\"X [q] #3 s b t [c]d u r v [m][n]o w [m]o x q y [1]2[3] z e A f B [g]h C\" \
-     property=\"dcterms:title\"/>",
+    "<rdf about=\"\" content=\"X [q] #3 s b t [c]d u r v [m][n]o w [m]o x q y [1]2[3] z e A f B [g]h C D b E [f]g F \
+     i[j] G\" property=\"dcterms:title\"/>",
   ]);
   assert!(
-    text(&xml).contains("Text kept. Xab Xcd Tpqr Tmno Tmqo Yqe Z123 Upqf Wgh"),
+    text(&xml).contains("Text kept. Xab Xcd Tpqr Tmno Tmqo Yqe Z123 Upqf Wgh Rdb Rfg Sie; Sij"),
     "{xml}"
   );
 }

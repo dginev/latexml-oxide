@@ -17965,9 +17965,14 @@ another's body (`\thmt@collect@body` stops at the inner `\end{restatable}`: pdfl
 fatal error-count stop; ours 101 errors and Fatal:TooManyErrors, bounded the same way). A restatement replays what the
 original holds, errors too: 1711.05227 55 → 58 errors, `\thmrelevance*` at proofs.tex:45 replayed inside a math frame
 left open at proofs.tex:23 and an alignment open since magic.tex:150-155, its error locations moving to
-`\end{restatable}`. Only `\the<env>` is faked (thm-restate.sty:123-133): a wrapper environment with none (ltexpprt.sty:216-217
-`\newenvironment{theorem}{\begin{@theorem}}`: 1911.08418, 2410.24104, 2503.21951) freezes no number, so its restatement,
-`{restatable*}` too, steps the inner theorem's counter and prints the next number, as pdflatex. Witnesses 2108.11527, 2602.09462, 2402.14202, 1702.04225. Repros
+`\end{restatable}`. Only `\the<env>` and `\c@<env>` are faked (thm-restate.sty:123-133): a wrapper environment with
+neither (ltexpprt.sty:216-217 `\newenvironment{theorem}{\begin{@theorem}}`: 1911.08418, 2410.24104, 2503.21951) freezes
+no number, so its restatement, `{restatable*}` too, steps the inner theorem's counter and prints the next number, as
+pdflatex. `{restatable}` ends the theorem it began (`\csname end#2\endcsname`); Perl's end `\end{\@currenvir}`
+(thm-restate.sty.ltxml:18-23), ours until int/regfix6, ends a wrapper's inner theorem and leaves the wrapper and the
+restatable open to `\end{document}` — in `{restatable*}` every later `\label` gobbled (repro
+package-bindings/thm_restate_restatable_star_in_a_wrapper_steps_the_counter). Witnesses 2108.11527, 2602.09462,
+2402.14202, 1702.04225. Repros
 package-bindings/thm_restate_restated_theorem_prints_its_statement, …/thm_restate_restatable_star_takes_the_later_number;
 guards `perfect_kernel_batch78i::{restated_theorem_prints_its_statement, restatable_star_takes_the_later_number}`.
 
@@ -22233,6 +22238,26 @@ pdftex: "(1) first item (2) second item."; Rust before the fix: `Error:malformed
 declares the Tag (amsppt_sty.rs). Witnesses math0006111, gr-qc9610061, math9809193 (59 papers); repro
 amstex/amsppt_input_roster_items_close; guard `perfect_kernel_batchregfixi::amsppt_input_roster_items_close`.
 
+## 1304. `\DeclareRobustCommandx` takes its key-value list for the default
+
+xargs.sty:282-300 `\xargs@DRC` makes `\cs` `\protect\cs␣` and `\cs␣` as `\newcommandx` makes a command, each optional
+argument's default read from the key-value list (`1=d`). Perl's xargs.sty.ltxml:112-117 defines `\cs␣` with
+`convertLaTeXArgs($nargs, $defaults)`, which takes the whole list as the first optional's default text. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage{xargs}
+\DeclareRobustCommandx\rx[2][1=d]{R#1#2}
+\DeclareRobustCommandx\ry[2][2=e]{S#1#2}
+\begin{document}\rx{b} \rx[f]{g} \ry{i}; \ry{i}[j]\end{document}
+```
+
+pdflatex `Rdb Rfg Sie; Sij`; Perl and Rust before the fix `R1=db Rfg S2=ei; S2=ei[j]` (in a hyperref PDF string the
+inner command expanded with that text too). Separately, as for every xargs command (Perl and Rust): a later optional
+argument's peek skips spaces and does not put them back where no `[` follows, which `\xargs@ifnextchar` (xargs.sty:64-87)
+does — `\ry{i} \ry{i}[j]` prints `SieSij`, pdflatex `Sie Sij` (row R XARGSSPACE). Rust's binding makes `\cs␣` through `define_xargs`, as `\newcommandx`, with its
+internal `\\cs␣` (xargs_sty.rs). Repro sectioning-frontmatter/hyperref_pdfinfo_gobbles_testopt_and_let; guard
+`perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`.
 ## 1303. `\@testopt` does not skip spaces before its `[`
 
 latex.ltx:1259-1260 `\long\def\@testopt#1#2{\kernel@ifnextchar[{#1}{#1[{#2}]}}` peeks by `\@ifnextchar`, which

@@ -4,8 +4,8 @@
 %          fine.", "Theorem 2.1. Every graph is fine.", "Theorem 2.2. Every forest is fine.", "See Theorems 1.2 and 2.2.":
 %          the preview fakes `\thetheorem` only, so `@theorem` steps and prints its next number (thm-restate.sty:123-146)
 % engines: rust REGFIXP = 0 errors, the preview numbered as a reference to the later `\mainthm` (`restatable:mainthm`)
-% expect:  0 errors, 1 warning (the `{restatable*}` group still open at `\end{document}`, as in the sibling); the numbers
-%          as pdflatex: 1.1, 1.2, 2.1, 2.2
+% expect:  0 errors, 0 warnings; the numbers as pdflatex: 1.1, 1.2, 2.1, 2.2; the labels thm:next and thm:after kept
+%          (before int/regfix6 the open `{restatable*}` group gobbled every later `\label`, 1 Warning)
 % status:  RED (REGFIXP) -> GREEN (REGFIXP2; guard
 %          perfect_kernel_batchregfixp::restatable_in_a_wrapper_theorem_is_numbered_by_its_counter)
 % preload: ar5iv.sty

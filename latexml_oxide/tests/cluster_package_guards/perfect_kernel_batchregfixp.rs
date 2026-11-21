@@ -84,9 +84,10 @@ fn theorem_numbers(xml: &str) -> Vec<&str> {
 /// `\newenvironment{theorem}{\begin{@theorem}}` has no `\thetheorem`, so `renumber` freezes nothing (`if_numbered`).
 /// Red (REGFIXJ3): `undefined:\thetheorem`; red (REGFIXP): the restatement 1.1 and the theorem after it 2.1 (the
 /// stepped counter's `\@currentlabel` frozen). `{restatable*}` in the wrapper (the binding's preview `\ref` skipped on
-/// the same test) steps the same; the plain `\newtheorem{theorem}` contrast still restates 1.1. The one Warning is the
-/// `{restatable}` group still open at `\end{document}` (its `\end{\@currenvir}` ends `@theorem`, not the wrapper),
-/// reported apart. Witnesses 1911.08418 (the PDF's "Theorem 5.1", "Theorem 6.1"), 2410.24104, 2503.21951. Distinct
+/// the same test) steps the same and keeps the labels after it; the plain `\newtheorem{theorem}` contrast still
+/// restates 1.1. `{restatable}` ends the theorem it began, so no group is left open (red, int/regfix6: its
+/// `\end{\@currenvir}` ended `@theorem`, the wrapper open to `\end{document}`, 1 Warning; `{restatable*}`'s later
+/// `\label`s gobbled). Witnesses 1911.08418 (the PDF's "Theorem 5.1", "Theorem 6.1"), 2410.24104, 2503.21951. Distinct
 /// from `perfect_kernel_batch78i::restated_theorem_prints_its_statement` (a `\newtheorem` environment).
 #[test]
 fn restatable_in_a_wrapper_theorem_is_numbered_by_its_counter() {
@@ -94,8 +95,7 @@ fn restatable_in_a_wrapper_theorem_is_numbered_by_its_counter() {
     repro!("package-bindings/thm_restate_restatable_numbered_by_the_stepped_counter.tex"),
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert!(log.contains("Environment restatable opened by"), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(theorem_numbers(&xml), ["1.1", "1.2", "2.1", "2.2"], "{xml}");
   assert_element(
     &xml,
@@ -120,9 +120,13 @@ fn restatable_in_a_wrapper_theorem_is_numbered_by_its_counter() {
     repro!("package-bindings/thm_restate_restatable_star_in_a_wrapper_steps_the_counter.tex"),
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(theorem_numbers(&xml), ["1.1", "1.2", "2.1", "2.2"], "{xml}");
   assert!(!xml.contains("restatable:mainthm\"/>"), "{xml}");
+  assert!(
+    xml.contains("labels=\"LABEL:thm:next\"") && xml.contains("labels=\"LABEL:thm:after\""),
+    "{xml}"
+  );
   let (log, xml) = convert_with(
     repro!("package-bindings/thm_restate_restatable_plain_theorem_restates_its_number.tex"),
     Some("ar5iv.sty"),

@@ -240,8 +240,13 @@ LoadDefinitions!({
   // The body ends at the `\end` of the environment current at `{restatable}`'s start (thm-restate.sty:34-47 compares
   // `\@currenvir`): an environment of the document's that calls `\restatable…\endrestatable` (2609.31596
   // `{formalrestatable}`) is ended by its own `\end`. Guard `perfect_kernel_batchregfixo::restatable_in_a_wrapper_environment`.
-  RawTeX!(r"\newenvironment{restatable}[3][]{\edef\lx@thm@restate@end{\@currenvir}\begin{#2}[#1]%
-\expandafter\lx@thm@restate@store\expandafter{\lx@thm@restate@end}{#2}{#3}{#1}}{\end{\@currenvir}}");
+  // It ends the theorem it began (`\thmt@restatable` closes `\csname end#2\endcsname`), not `\@currenvir`: a wrapper
+  // environment's inner theorem (ltexpprt.sty:216-217) is current at the end, and ending it left the wrapper and the
+  // restatable open to `\end{document}` (1911.08418, 2410.24104, 2503.21951; in `{restatable*}` every later `\label`
+  // gobbled; KNOWN_PERL_ERRORS #1048).
+  RawTeX!(r"\newenvironment{restatable}[3][]{\edef\lx@thm@restate@env{#2}\edef\lx@thm@restate@end{\@currenvir}%
+\begin{#2}[#1]\expandafter\lx@thm@restate@store\expandafter{\lx@thm@restate@end}{#2}{#3}{#1}}%
+{\expandafter\end\expandafter{\lx@thm@restate@env}}");
   // thm-restate.sty:207-213 `{restatable*}` is `\thmt@thisistheonefalse`: its theorem printed as a starred restatement
   // is (:130-152) — numbered as the later `\<name>` that is the one (a reference to that instance's label, resolved
   // with the document's references, as `continues=`; pdflatex reads it from the .aux), no counter stepped, its labels
@@ -252,6 +257,7 @@ LoadDefinitions!({
   RawTeX!(r"\newenvironment{restatable*}[3][]{\let\label\thmt@gobble@label\let\ltx@label\@gobble
 \edef\lx@thm@restate@eq{\the\c@equation}%
 \ifcsname the\lx@counterfor{#2}\endcsname\lx@thm@restate@number{\ref{restatable:#3}}\fi%
-\edef\lx@thm@restate@end{\@currenvir}\begin{#2}[#1]%
-\expandafter\lx@thm@restate@store@star\expandafter{\lx@thm@restate@end}{#2}{#3}{#1}}{\end{\@currenvir}\setcounter{equation}{\lx@thm@restate@eq}}");
+\edef\lx@thm@restate@env{#2}\edef\lx@thm@restate@end{\@currenvir}\begin{#2}[#1]%
+\expandafter\lx@thm@restate@store@star\expandafter{\lx@thm@restate@end}{#2}{#3}{#1}}%
+{\expandafter\end\expandafter{\lx@thm@restate@env}\setcounter{equation}{\lx@thm@restate@eq}}");
 });

@@ -9,8 +9,9 @@
 %          restatement "See <ref>" (KNOWN_PERL_ERRORS #1048); rust REGFIXJ3 = 1 error (`undefined:\thetheorem`, the
 %          number frozen as `\csname the<env>\endcsname`), 1 warning; rust REGFIXP = 0 errors, the restatement "1.1" and
 %          the theorem after it "2.1" (the stepped counter's `\@currentlabel` frozen and reused)
-% expect:  0 errors, 1 warning (the `{restatable}` group still open at `\end{document}`: its `\end{\@currenvir}` ends
-%          `@theorem`, not the wrapper; reported, not this mechanism); the numbers as pdflatex: 1.1, 1.2, 2.1, 2.2
+% expect:  0 errors, 0 warnings (int/regfix6: `{restatable}` ends the theorem it began; before, its
+%          `\end{\@currenvir}` ended `@theorem` and left the wrapper open, 1 Warning); the numbers as pdflatex: 1.1, 1.2,
+%          2.1, 2.2
 % status:  RED (REGFIXJ3, REGFIXP) -> GREEN (REGFIXP2; guard
 %          perfect_kernel_batchregfixp::restatable_in_a_wrapper_theorem_is_numbered_by_its_counter)
 % preload: ar5iv.sty
