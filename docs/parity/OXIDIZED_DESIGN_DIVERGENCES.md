@@ -23380,3 +23380,13 @@ enddocument_hook_scan_in_an_open_environment_reports_once, ltxgrid_enddocument_p
 patchcmd_finds_the_enddocument_tail, enddocument_late_hooks_scope_as_in_tex}`; the
 morewrites/modernposter shapes stay `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box` and the sect02.rs
 witnesses (cntperchap_example, runcode_troubleshoot, modernposter/demo).
+### 1104. `\text` is robust, its inner `\text␣` protected, so an `\edef` keeps `\text` (REGFIXK2)
+
+amstext.sty:28 `\DeclareRobustCommand{\text}` (revtex4-2.cls:7547 `\REV@text` the same): `\text` is `\protect \text␣`,
+as `\meaning\text`, `\protected@edef` and `\typeout` show in pdflatex. The `\text␣` that amstext_sty.rs,
+revtex4_support_sty.rs and amstex.rs define as `\lx@text{#1}` (the constructor that raises the alignment count once `#1`
+is read, KNOWN_PERL_ERRORS #931) is `protected`, as Perl's `\text` constructor is unexpandable: a plain
+`\edef\y{\text{z}}` holds `\protect \text  {z}`, where pdflatex expands amstext's internals (`\protect \protect \unhbox
+\voidb@x \hbox {z}`) and Perl keeps `\text {z}`; `\lx@text` never shows. AMS-TeX's `\text` (amstex.tex:1217) is a plain
+`\def`; it takes the same form (`\protect` is `\relax`, TeX_Macro.pool:39). Digestion is unchanged.
+**Guard**: `perfect_kernel_batchregfixk::text_survives_an_edef` (repro `macro-state/text_survives_an_edef.tex`).

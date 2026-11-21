@@ -15,8 +15,10 @@ pub fn define_amstext_text() -> Result<()> {
   // digestion, as glossaries_sty.rs does for an entry's fields. Perl the same (KNOWN_PERL_ERRORS #931). Guard
   // `perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.
   // `\text` reads `#1` as a macro does, at the cell's count: a brace-less `$x$\text & 0.6` ends the cell at the `&`
-  // (tex.web §342; 2212.00883). Guard `perfect_kernel_batchregfixk::text_without_braces_before_a_cell_end`.
-  DefMacro!("\\text{}", "\\lx@text{#1}", locked => true);
+  // (tex.web §342; 2212.00883). Robust as amstext.sty:28 `\DeclareRobustCommand`; its inner `\text␣` is
+  // protected, as Perl's constructor is unexpandable, so an `\edef` keeps `\text` (not `\lx@text`). Guards
+  // `perfect_kernel_batchregfixk::{text_without_braces_before_a_cell_end, text_survives_an_edef}`.
+  DefMacro!("\\text{}", "\\lx@text{#1}", robust => true, protected => true, locked => true);
   define_text_constructor()
 }
 

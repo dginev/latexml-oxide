@@ -16326,7 +16326,8 @@ kernel-alignment/text_argument_is_braced_in_an_alignment_cell; guard
 (REGFIXK): each `\text` is a macro reading `#1` at the cell's count, as amstext's, and `\lx@text{#1}` (reverting to
 `\text`) the constructor, so a brace-less `$x$\text & 0.6` ends the cell at the `&` (tex.web §342; 2212.00883, pdflatex
 0 errors; repro kernel-alignment/text_without_braces_before_a_cell_end, guard
-`perfect_kernel_batchregfixk::text_without_braces_before_a_cell_end`).
+`perfect_kernel_batchregfixk::text_without_braces_before_a_cell_end`; robust with a protected inner, so an `\edef`
+keeps `\text`, OXIDIZED_DESIGN #1104).
 
 ## 935. A document that prints the kernel's `\@title`/`\@author` itself shows the title and the author twice
 

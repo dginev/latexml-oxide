@@ -60,3 +60,31 @@ fn text_without_braces_before_a_cell_end() {
      <text xml:id=\"p1.1.2.1.1\"/></td><td align=\"left\" xml:id=\"p1.1.2.2\">0.6</td></tr>",
   );
 }
+
+/// macro-state/text_survives_an_edef: `\text` is robust as amstext.sty:28 `\DeclareRobustCommand`, its inner `\text␣`
+/// protected (Perl's constructor is unexpandable), so a plain `\edef`, a `\protected@edef` and `\meaning` keep `\text`
+/// (pdflatex's `\meaning\text` and `\protected@edef` the same); round 1's unprotected macro showed `\lx@text {z}`.
+/// Distinct from `text_without_braces_before_a_cell_end`: the expansion-only contexts, not the digestion.
+#[test]
+fn text_survives_an_edef() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/macro-state/text_survives_an_edef.tex");
+  let (log, xml) = convert_files_with(tex, &[], Some("ar5iv.sty"));
+  assert!(!log.contains("Fatal:"), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="p1.1""#],
+    "<p xml:id=\"p1.1\"><text font=\"typewriter\" xml:id=\"p1.1.1\">macro:-&gt;\\protect \\text  {z}</text> \
+     <text font=\"typewriter\" xml:id=\"p1.1.2\">macro:-&gt;\\protect \\text  </text>\n\
+     <text font=\"typewriter\" xml:id=\"p1.1.3\">macro:-&gt;\\protect \\text  {q}</text>\n\
+     <Math mode=\"inline\" tex=\"x_{\\text{max}}\\text{z}\\text{q}\" text=\"x _ [max] * [zq]\" xml:id=\"p1.m1\">\
+     <XMath xml:id=\"p1.m1.1\"><XMApp xml:id=\"p1.m1.1.1\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>\
+     <XMApp xml:id=\"p1.m1.1.1.2\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\
+     <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMText xml:id=\"p1.m1.1.1.2.3\">\
+     <text fontsize=\"70%\" xml:id=\"p1.m1.1.1.2.3.1\">max</text></XMText></XMApp>\
+     <XMText xml:id=\"p1.m1.1.1.3\"><text xml:id=\"p1.m1.1.1.3.1\">z</text><text xml:id=\"p1.m1.1.1.3.2\">q</text>\
+     </XMText></XMApp></XMath></Math></p>",
+  );
+}
