@@ -1396,7 +1396,13 @@ fixed before any code runs but installed late here: the job’s <code>\jobname</
 with payload-free categories are kept (the latch exists for resource
 fatals; payload-carrying <code>ErrorCategory</code> variants are not cloneable and
 are never resource-class).</dd><dt><a class="fn" href="fn.record_left_group_input.html" title="fn latexml_engine::prelude::record_left_group_input">record_<wbr>left_<wbr>group_<wbr>input</a></dt><dd>Record on the innermost frame — the <code>\left</code> group, whose group code <code>\lx@math@left@group</code> has just set — the reading
-context the <code>\left</code> was read in, for <code>close_left_group_at_input_end</code>.</dd><dt><a class="fn" href="fn.record_opened_source.html" title="fn latexml_engine::prelude::record_opened_source">record_<wbr>opened_<wbr>source</a></dt><dd>Record a <em>named</em> source in the opened-sources read-log. Called from
+context the <code>\left</code> was read in, for <code>close_left_group_at_input_end</code>.</dd><dt><a class="fn" href="fn.record_load_as_the_files_own.html" title="fn latexml_engine::prelude::record_load_as_the_files_own">record_<wbr>load_<wbr>as_<wbr>the_<wbr>files_<wbr>own</a></dt><dd>A compiled binding’s load of <code>file</code> that the real file it stands for makes too (elsarticle.cls:1243, acmart.cls:300,
+jmlr.cls:150, jheppub.sty:37): the file’s own, so a document’s later repeat with other options is LaTeX’s “Option
+clash” (<code>apply_repeat_options</code>). The binding records it only where the paper ships no copy of that file or one
+that makes the same load (<code>shipped_class::shipped_copy_makes_load</code>): a copy loading it otherwise or not at all
+leaves the binding’s early load, and the document’s options apply (elsarticle.cls copies: 2105.06643
+<code>[authoryear]</code>, 2206.02837 none, 2402.13480 <code>[numbers,sort&amp;compress]</code>; 2209.10785’s cidr.cls, an acmart.cls copy
+without natbib).</dd><dt><a class="fn" href="fn.record_opened_source.html" title="fn latexml_engine::prelude::record_opened_source">record_<wbr>opened_<wbr>source</a></dt><dd>Record a <em>named</em> source in the opened-sources read-log. Called from
 <code>Mouth::create</code> for file and cached-content mouths — a cold path (one
 call per file open, not per token).</dd><dt><a class="fn" href="fn.record_redefined_default.html" title="fn latexml_engine::prelude::record_redefined_default">record_<wbr>redefined_<wbr>default</a></dt><dd>Record the default of the optional argument a refused redefinition of <code>token</code> takes first, as
 <code>"{cs}:redefined@default"</code> (<code>[1][\proofname]</code>), for the locked binding to title its own use with — only under a
