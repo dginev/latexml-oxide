@@ -23464,3 +23464,15 @@ read of a renamed copy (`aistats_sty.rs` finds the copy by the family name only;
 `stand-in-copies/provides_route/aistats_renamed_copy.tex`).
 **Guard**: `perfect_kernel_batchregfixm::renamed_cvpr_and_iccv_copies_keep_their_hooks` (repro
 `stand-in-copies/provides_route/cvpr_renamed_copy_keeps_its_hooks.tex`).
+### 1112. inputenc's undefined byte is TeX's robust `\PackageError`, gobbled in a PDF string (REGFIXN2)
+
+**Rule.** `\inputencoding{enc}` defines `\@inpenc@undefined` as `\protect\@inpenc@undefined@{enc}` (inputenc.sty:80)
+and the undefined bytes `\let` to it; `\@inpenc@undefined@` is inputenc.sty:139-143's `\PackageError{inputenc}`. Perl's
+binding defines `\@inpenc@undefined` as a native macro raising `Error:unexpected:<char>` at expansion
+(inputenc.sty.ltxml:33). Since our hyperref expands its PDF information keys (`\lx@pdfstringdef`, KNOWN_PERL_ERRORS
+#1050; Perl records them unexpanded), a latin1 byte 0x80-0x9F in `pdfauthor` raised that Error where pdflatex's
+`\pdfstringdef` (`\protect` empty, `\GenericError` gobbled, hyperref.sty:550-552) is silent (1803.03083, 1609.03819,
+1903.03818, 2108.12063, 2408.03605). In body text the byte is still an Error, now TeX's: `Error:latex:(inputenc)
+Package inputenc Error: Keyboard character used is undefined in inputencoding `latin1'`.
+**Guard**: `perfect_kernel_batchregfixn2::latin1_undefined_byte_errs_only_where_tex_does` (repros
+`unicode-catcodes/latin1_undefined_byte_in_{pdf_key,text_errs}.tex`).

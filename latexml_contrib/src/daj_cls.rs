@@ -28,7 +28,9 @@ LoadDefinitions!({
   RequirePackage!("eucal"); // math journal: \mathcal/\mathscr script font
   RequirePackage!("mathptmx"); // tocbase's text/math font choice
   RequirePackage!("microtype");
-  RequirePackage!("lastpage");
+  // Not lastpage: tocbase.cls loads totpages (2020-2022, :162) or lastpage (2016, 2022-2023, :67), and the paper's copy,
+  // read after the binding, loads its own; both is totpages.sty:148-153's "Can't use both" Error (2003.11116,
+  // 2008.04606, 2010.07854, 2203.04657, 2212.13728; lastpage: 2208.01327, 2305.10828).
   RequirePackage!("textcomp");
 
   // \dajdetails / \dajAUTHORdetails / \dajEDITORdetails — argument

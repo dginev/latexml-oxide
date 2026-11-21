@@ -1,0 +1,13 @@
+% mechanism: the sibling of lipics_v2018_own_comment_command: lipics-v2019.cls:756-757 loads comment.sty and excludes
+%   {CCSXML}, so the ACM classification block is not typeset (its `_`s were math errors, 2609.13485).
+% witness: 1610.07530, 1902.11263 (lipics-v2019.cls shipped)
+% oracle:  pdflatex 0 errors: "Text." only
+% expect:  0 errors, 0 warnings; "Text."; comment.sty loaded
+% preload: ar5iv.sty
+\documentclass{lipics-v2019}
+\begin{document}
+\begin{CCSXML}
+<ccs2012><concept_id>10003752_x</concept_id></ccs2012>
+\end{CCSXML}
+Text.\makeatletter\@ifpackageloaded{comment}{}{ NO COMMENT}\makeatother
+\end{document}
