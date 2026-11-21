@@ -1,0 +1,16 @@
+% A stand-in binding's option takes effect where the paper's copy of its file processes it: icml2016.sty tests
+% `\nohyperref` at :88, before its `\ProcessOptions` (:130); defined by the binding's own option code first, the test
+% skipped the copy's rest to its end, its open conditional "fell off end".
+% witness: 1603.00748 (`\usepackage[arxiv,nohyperref]{icml2016}`)
+% oracle:  pdflatex 0 errors; "ICML-COPY-MACRO"
+% engines: rust INT6A = 2 errors (`\fi` expected: "conditional fell off end", icml2016.sty:8; `\icmlcopymacro` undefined,
+%          the copy's rest skipped) + the Warning below
+% expect:  0 errors, 1 warning (`\end{document}` inside the copy's open `\ifdefined`: TeX logs "(\end occurred when
+%          … was incomplete)" for it); the paragraph "ICML-COPY-MACRO"
+% status:  RED (INT6A) -> GREEN (REGFIXQ)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[arxiv,nohyperref]{icml2016}
+\begin{document}
+\icmlcopymacro
+\end{document}

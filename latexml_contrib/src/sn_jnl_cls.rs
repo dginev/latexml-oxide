@@ -28,7 +28,17 @@ LoadDefinitions!({
     latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
     &[],
   )?;
-  RequirePackage!("amsthm");
+  // amsthm as well (2203.14452's copy:301 `\usepackage{amsthm}`); the others test `\@ifpackageloaded{amsthm}` at class
+  // time (:1547), false in pdflatex as the paper loads it after, so their theorem styles stay undefined —
+  // thmstylefour's head runs `\global\proofthmtrue`, no `\ifproofthm` anywhere (2305.14168, 2408.00130, 2409.14383,
+  // 2503.20196, 2506.14776). Their copy borrows it (`require_package_borrowed`): `\@ifpackageloaded{amsthm}` false.
+  if latexml_package::shipped_class::shipped_copy_text("cls")?
+    .is_some_and(|text| !latexml_package::shipped_class::class_text_loads(&text, "amsthm"))
+  {
+    require_package_borrowed("amsthm")?;
+  } else {
+    RequirePackage!("amsthm");
+  }
   RequirePackage!("amssymb");
   // xcolor is not preloaded here: it comes from the class's own
   // `\usepackage{xcolor}` through the dependency scan below, as in Perl, and a

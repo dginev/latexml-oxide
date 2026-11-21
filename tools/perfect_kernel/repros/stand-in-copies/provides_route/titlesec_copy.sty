@@ -1,0 +1,10 @@
+%% A shipped copy of titlesec.sty under another name (1501.02633's titlesecMod.sty:276, 1801.07174's and 2007.08085's
+%% mytitlesec.sty:51, 2002.06448's titlesecfix.sty:51 `\ProvidesPackage{titlesec}`), cut down to the format its load
+%% gives `\section` (:1464, :1556-1571), whose before-code `\ttl@passexplicit` its `\ttl@select` defines (:297-301).
+\ProvidesPackage{titlesec}[2016/03/21 v2.10.2 Sectioning titles]
+\let\ttl@case\@firstofone
+\def\ttl@select#1{\begingroup\let\ttl@passexplicit\ttl@case#1\endgroup}
+\newcommand\titleformat[6][]{\def\ttl@section@format##1{#3#4\hspace{#5}#6{##1}}}
+\titleformat{\section}{\normalfont\bfseries}{\thesection}{1em}{\ttl@passexplicit}
+\renewcommand\section[1]{\par\refstepcounter{section}\ttl@select{\ttl@section@format{#1}}\par}
+\endinput

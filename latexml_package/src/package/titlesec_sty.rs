@@ -295,6 +295,11 @@ LoadDefinitions!({
       TokenizeInternal!(r"{\z@}{\z@}{*3}{*2}{\z@}"), None)?;
   }
   DefMacro!("\\ttl@chapterout", "\\typeout{\\chaptertitlename\\space\\thechapter.}");
+  // The title's case (:1614-1615) and the before-code a format passes the title to, as `\ttl@select` sets it without
+  // `explicit` (:301): a paper's titlesec copy under another name gives its formats that before-code
+  // (titlesecMod.sty:1464, 1501.02633, 1505.02642; mytitlesec.sty, 1801.07174, 2007.08085; titlesecfix.sty, 2002.06448).
+  Let!("\\ttl@case", "\\@firstofone");
+  Let!("\\ttl@passexplicit", "\\ttl@case");
 
   DefMacro!("\\filright",  "\\raggedright");
   DefMacro!("\\filcenter", "\\centering");

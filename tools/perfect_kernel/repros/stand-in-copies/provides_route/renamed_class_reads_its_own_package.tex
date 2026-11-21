@@ -1,0 +1,15 @@
+% A binding a shipped copy's declaration routed its request to reads, for a file of its other type it reads raw
+% (imsart_cls.rs's imsart.sty, imsart.cls:149), the copy's own file of that type where the copy loads it
+% (`routed_copy_request`): imsart-altered.cls:149 `\RequirePackage{imsart-altered}`, not the paper's unaltered
+% imsart.sty.
+% witness: 2405.11676 (imsart-altered.cls, imsart-altered.sty beside imsart.cls, imsart.sty)
+% oracle:  pdflatex 0 errors; "IMS-COPY-PACKAGE"
+% engines: rust INT6A = 1 error (`\imscopymacro` undefined): the binding read imsart.sty and the copy's package,
+%          routed to the imsart.sty binding as read already, was dropped
+% expect:  0 errors, 0 warnings; the paragraph "IMS-COPY-PACKAGE"; imsart.sty not read
+% status:  RED (INT6A) -> GREEN (REGFIXQ)
+% preload: ar5iv.sty
+\documentclass{imscopy}
+\begin{document}
+\imscopymacro
+\end{document}

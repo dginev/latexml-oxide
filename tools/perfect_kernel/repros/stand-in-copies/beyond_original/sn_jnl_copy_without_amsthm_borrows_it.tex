@@ -1,0 +1,18 @@
+% A binding's load of a package its file does not load counts as not loaded for the paper's copy: sn-jnl.cls tests
+% `\@ifpackageloaded{amsthm}` at class time (:1547), false in pdflatex, so its theorem styles stay undefined and the
+% document's `\theoremstyle{thmstylefour}` falls back to plain, amsthm warning; the binding borrows amsthm where the
+% copy does not load it (`require_package_borrowed`).
+% witness: 2305.14168, 2408.00130, 2409.14383, 2503.20196, 2506.14776 (sn-jnl.cls without `\usepackage{amsthm}`; the
+%          copies that load it, 2203.14452's :301, keep the plain load)
+% oracle:  pdflatex 0 errors, "Package amsthm Warning: Unknown theoremstyle `thmstylefour'"; "Lemma 1. A claim."
+% engines: rust INT6A = 1 error (`\proofthmtrue` undefined, in the lemma's head)
+% expect:  0 errors, 1 warning (`undefined:theoremstyle`, the unknown style); the lemma "Lemma 1." with "A claim."
+% status:  RED (INT6A) -> GREEN (REGFIXQ)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsthm}
+\theoremstyle{thmstylefour}
+\newtheorem{lemma}{Lemma}
+\begin{document}
+\begin{lemma}A claim.\end{lemma}
+\end{document}

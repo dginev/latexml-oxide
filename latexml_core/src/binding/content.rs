@@ -365,7 +365,15 @@ fn input_definitions_impl(
   } else {
     None
   };
-  let name: &str = currname_request.as_deref().unwrap_or(trimmed);
+  // (and a binding a shipped copy's declaration routed its request to reads that copy as its own file:
+  // [`routed_copy_request`])
+  let routed_copy = (options.noltxml && requested_by_binding && !options.reread)
+    .then(|| routed_copy_request(trimmed, options.extension.as_deref()))
+    .flatten();
+  let name: &str = routed_copy
+    .as_deref()
+    .or(currname_request.as_deref())
+    .unwrap_or(trimmed);
   // A re-read (`input`) is raw-only, but not a binding loading its own name.
   if options.reread {
     options.noltxml = true;
@@ -1298,11 +1306,7 @@ fn input_definitions_impl(
         let renamed_copy_key = s!("{fallback}:options_of_a_renamed_copy");
         let outer_renamed_copy = lookup_bool(&renamed_copy_key);
         if provides.is_some() {
-          assign_value(
-            "fallback_provides",
-            fallback_name.clone(),
-            Some(Scope::Global),
-          );
+          assign_value("fallback_provides", fallback.clone(), Some(Scope::Global));
           assign_value(&renamed_copy_key, true, Some(Scope::Global));
         } else {
           assign_value("fallback_provides", String::new(), Some(Scope::Global));
@@ -1323,6 +1327,12 @@ fn input_definitions_impl(
           reloadable: false,
           ..InputDefinitionOptions::default()
         });
+        // (a binding loaded already, or a file of its name read raw, is not loaded again, but the copy is still read
+        // whole, as TeX reads it: 2304.14243's packages/pictures.sty `\ProvidesPackage{packages/graphics}` after
+        // graphicx, its commands lost silently; a copy the binding's load read is not read again)
+        if provides.is_some() && fb_result.is_ok() {
+          read_stand_in_copy(name, &fallback_name, &as_type, grandparent_in_expl3)?;
+        }
         assign_value("fallback_request", outer_request, Some(Scope::Global));
         assign_value("fallback_target", outer_target, Some(Scope::Global));
         assign_value("fallback_provides", outer_provides, Some(Scope::Global));
@@ -2755,7 +2765,8 @@ fn shipped_with_paper(path: &str) -> bool {
 /// files are read ([`shipped_with_paper`]): a TeX Live file is its own name's. Returns the binding's name and the
 /// declared one. In TeX the copy is read whole, redefining everything the package defines; the binding's markup
 /// for it is the ruled answer, the copy read after it as the stand-in's copy (`read_stand_in_copy`), its own
-/// commands added. One rule for what were per-name stand-ins (72a's renamed natbib copies, 77o's renamed aistats
+/// commands added — or, where the binding reads its own file raw, read there instead ([`routed_copy_request`]), and read
+/// even when the binding is loaded already (OXIDIZED_DESIGN_DIVERGENCES #1118). One rule for what were per-name stand-ins (72a's renamed natbib copies, 77o's renamed aistats
 /// styles, 68v's revtex4 copies).
 fn provided_binding(name: &str, ext: &str) -> Option<(String, String)> {
   if !matches!(ext, "sty" | "cls") {
@@ -2828,6 +2839,53 @@ fn provided_binding(name: &str, ext: &str) -> Option<(String, String)> {
 fn loading_for_a_provides_route(name: &str) -> bool {
   let target = lookup_string("fallback_provides");
   !target.is_empty() && file_stem(&target).eq_ignore_ascii_case(file_stem(name))
+}
+
+/// The paper's copy a binding's own raw read of `file` (of type `ext`) reads instead, while a shipped copy's declaration
+/// routed its request to that binding ([`provided_binding`]): the request, when `file` is the binding's own name and
+/// type (`fallback_provides`, `<binding>.<ext>`) and the paper ships the request's file. As in TeX, the copy is read
+/// once, where the real file would be: fsmfart.cls `\ProvidesClass{smfart}` (1401.0915; smfartVS.cls 1110.1467,
+/// 1404.0804) under smfart_cls.rs, tikzcd.sty `\ProvidesPackage{tikz-cd}` (1201.4414, 1512.05388) under tikz_cd_sty.rs,
+/// pdfplots.sty (2105.12769) under pgfplots_sty.rs. Read after TeX Live's file, the copy's first-load code ran over
+/// state TeX never builds (fsmfart.cls:365-370's `\fi` unmatched; "Arrow tip 'cm to' was already defined"); a
+/// self-named copy is the file the raw read finds already (OXIDIZED_DESIGN_DIVERGENCES #1110, #1118).
+fn routed_copy_request(file: &str, ext: Option<&str>) -> Option<String> {
+  let target = lookup_string("fallback_provides");
+  let (binding, route_ext) = target.rsplit_once('.')?;
+  let ext = ext?;
+  if !file_stem(file).eq_ignore_ascii_case(binding) {
+    return None;
+  }
+  let request = lookup_string("fallback_request");
+  let shipped = |ext: &str| {
+    find_file(
+      &request,
+      Some(FindFileOptions {
+        ext_type: Some(Cow::Owned(ext.to_string())),
+        forbid_ltxml: true,
+        search_paths_only: true,
+        ..FindFileOptions::default()
+      }),
+    )
+    .filter(|path| shipped_with_paper(path))
+  };
+  let copy = shipped(route_ext)?;
+  if ext == route_ext {
+    return Some(request);
+  }
+  // (a file of the binding's other type is the copy's own of that name, where the copy loads one: imsart.cls:149
+  // `\RequirePackage{imsart}`, imsart_cls.rs's imsart.sty, is 2405.11676's imsart-altered.cls:149
+  // `\RequirePackage{imsart-altered}`)
+  shipped(ext)?;
+  let load = Regex::new(&s!(
+    r"\\(?:RequirePackage|usepackage)\s*(?:\[[^\]]*\])?\s*\{{(?:[^}}]*,)?\s*{}\s*[,}}]",
+    regex::escape(file_stem(&request))
+  ))
+  .ok()?;
+  let text = source_text(&copy)?;
+  source_code_lines(&text)
+    .any(|code| load.is_match(code))
+    .then_some(request)
 }
 
 /// One class slot (OXIDIZED_DESIGN_DIVERGENCES #736): does the base class a stand-in class binding loaded stand for the
