@@ -22112,3 +22112,24 @@ Perl: 3 Errors ("Closing </ltx:text> whose open descendents do not auto-close", 
 closes nothing (tex_box.rs `taken_as_box`). With `\unvbox` splicing the list (#840) easytable's and easybmat's
 `\@easy@buildbox` peel reaches it: ~250 arXiv papers (1705.10408, 2002.06044, 2109.00258, 2106.13444, 1710.10243).
 Guards `perfect_kernel_batchregfixb::{lastbox_halign_is_a_box, easytable_easybmat_lastbox_peel}`.
+
+## 1297. thmtools leaves thm-autoref's `\Autoref` undefined
+
+thmtools.sty:47-49 loads thm-autoref, whose `\Autoref*?{label}` (thm-autoref.sty:60-95) is an `\autoref` naming a
+theorem by its `Refname=` (`\<env>Autorefname`), and as `\autoref` does where the type has none. Perl's
+thmtools.sty.ltxml loads neither and defines no `\Autoref`:
+
+```latex
+\documentclass{article}
+\usepackage{amsthm,hyperref,thmtools}
+\declaretheorem[name=Theorem,Refname={Theorem,Theorems}]{thm}
+\begin{document}
+\begin{thm}\label{t1}Text.\end{thm}
+See \Autoref{t1}.
+\end{document}
+```
+
+Perl: 1 Error (undefined `\Autoref`); pdflatex 0, "See Theorem 1." Rust: the thmtools binding defines `\Autoref`, its
+text the `autorefcap` tag (hyperref_sty.rs `autoref_tag`, shown `autorefcap|autoref`). Witnesses 1611.06061 (45
+`\Autoref`, 30 errors), 1405.2249 (`\RenewDocumentCommand\Autoref`). Guards
+`perfect_kernel_batchregfixe::{thmtools_thm_autoref_capital_autoref, thmtools_alone_defines_capital_autoref}`.

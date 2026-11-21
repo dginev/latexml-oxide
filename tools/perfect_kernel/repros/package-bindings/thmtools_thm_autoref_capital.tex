@@ -1,0 +1,19 @@
+% witness: review of REGFIXE (int/regfix3): `\usepackage{thmtools}\usepackage{thm-autoref}` lost thm-autoref's
+%          `\Autoref` once the binding marked thm-autoref.sty loaded; thm-autoref.sty:60-95 `\Autoref*?{label}`
+% oracle:  pdflatex 0 errors: "See theorem 1, Theorem 1, Theorem 1 and lemma 1."
+% engines: Perl: no `\Autoref` (thmtools.sty.ltxml); rust MAIN935 raw thm-autoref.sty: `\Autoref` an `\autoref`
+%          ("theorem 1"); REGFIXE round 1: Error undefined `\Autoref`
+% expect:  0 errors, 0 warnings; `\Autoref` names a theorem by its `Refname=`, a type without one as `\autoref` does
+% status:  RED (REGFIXE round 1) -> GREEN (REGFIXE round 2: the thmtools binding defines `\Autoref`)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{hyperref}
+\usepackage{thmtools}
+\usepackage{thm-autoref}
+\declaretheorem[name=Theorem,refname={theorem,theorems},Refname={Theorem,Theorems}]{thm}
+\declaretheorem[name=Lemma,refname={lemma,lemmas}]{lem}
+\begin{document}
+\begin{thm}\label{t1}Text.\end{thm}
+\begin{lem}\label{l1}Text.\end{lem}
+See \autoref{t1}, \Autoref{t1}, \Autoref*{t1} and \Autoref{l1}.
+\end{document}

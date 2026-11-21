@@ -72,9 +72,27 @@ LoadDefinitions!({
   mark_loaded("thm-kv.sty");
   mark_loaded("thm-autoref.sty");
   mark_loaded("thm-listof.sty");
+  // thm-autoref.sty:60-95 `\Autoref*?{label}`: `\autoref` naming a theorem by its `Refname=` (`\<env>Autorefname`), and
+  // as `\autoref` does where the target's type has none (`\HyRef@Testreftype`); one defined before is kept. Its text
+  // is a tag of its own (`autorefcap`, hyperref_sty `autoref_tag`), held as the autoref name's is. Witnesses
+  // 1611.06061, 1405.2249.
+  if !has_meaning(&T_CS!("\\Autoref")) {
+    DefConstructor!("\\Autoref OptionalMatch:* Semiverbatim",
+      "<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref') \
+       show='autorefcap|autoref' labelref='#label' _force_font='true'/>",
+      enter_horizontal => true,
+      properties => sub[args] {
+        Ok(stored_map!("label" => clean_label(&args[1].as_ref().unwrap().to_string(), None).to_string()))
+      });
+  }
+  DefMacro!("\\lx@Autorefnum@@{}", sub[(ttype)] {
+    hyperref_sty::autoref_tag(&ttype.unwrap().to_string(), true)
+  });
+  AssignMapping!("type_tag_formatter", "autorefcap" => "\\lx@Autorefnum@@");
+  AssignMapping!("type_tag_deferred", "autorefcap" => true);
 
-  // Internal registers and macros needed by thm-restate.sty and thm-kv.sty
-  // which load as raw TeX and expect these from thmtools internals.
+  // Internal registers and macros needed by thm-restate.sty, which loads as raw TeX and expects these from thmtools
+  // internals.
   DefRegister!("\\thmt@toks" => RegisterValue::Tokens(Tokens!()));
   DefMacro!("\\thmt@thmuse@families", "thm@track@keys");
   def_macro_noop("\\thmt@mkignoringkeyhandler{}")?;
@@ -240,6 +258,9 @@ continuing\fi\ from p.\,\pageref{#1}}");
       let parts: Vec<&str> = refname_str.splitn(2, ',').collect();
       let singular = parts.first().map(|s| s.trim()).unwrap_or("");
       let plural = parts.get(1).map(|s| s.trim()).unwrap_or(singular);
+      // (thm-autoref.sty:47-58: `Refname=` names the theorem for `\Autoref`, as `refname=` does for `\autoref`)
+      def_macro(T_CS!(s!("\\{name}Autorefname")), None,
+        Tokens::new(ExplodeText!(singular)), None)?;
       def_macro(T_CS!(s!("\\Cref@{name}@name")), None,
         Tokens::new(ExplodeText!(singular)), None)?;
       def_macro(T_CS!(s!("\\Cref@{name}@name@plural")), None,

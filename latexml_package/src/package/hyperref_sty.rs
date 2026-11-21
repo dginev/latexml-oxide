@@ -2592,61 +2592,7 @@ pub fn define_autoref() -> Result<()> {
   // plain.tex's `\null`, which the autoref tag runs whatever the document made of `\null` (below)
   DefMacro!("\\lx@autoref@null", "\\hbox{}");
   DefMacro!("\\lx@autorefnum@@{}", sub[(ttype)] {
-    let type_s  = ttype.unwrap().to_string();
-    let counter_str = with_mapping("counter_for_type",&type_s, |mapping_opt|
-      mapping_opt.map(ToString::to_string)).unwrap_or_else(|| type_s.clone());
-    let name_type = if is_counter_alias(&type_s) { &type_s } else { &counter_str };
-    let unstarred = name_type.strip_suffix('*').unwrap_or(name_type);
-    // A `\<ctr>name` that is no name noun — a drawing command sharing the spelling, argumentation.sty:403 `\afname`
-    // — is not run, as for the other tags (`\iflx@namenoun`, KNOWN_PERL_ERRORS #194): at every target it drew a
-    // `\node` outside a picture (argumentation-doc, sweep #136). The `*autorefname`s are hyperref's own and may
-    // read their `~#1\null` themselves (`\def\equationautorefname~#1\null{(#1)\null}`, DIVERGENCES #98), so they
-    // are taken as they are.
-    let name = [
-      s!("\\{type_s}autorefname"),
-      s!("\\{name_type}autorefname"),
-      s!("\\{name_type}name"),
-      s!("\\{unstarred}autorefname"),
-      s!("\\{unstarred}name"),
-    ]
-    .into_iter()
-    .find(|cs| is_defined(cs));
-    // The trailing `\null` is the kernel's empty box whatever the author made of it (`\lx@autoref@null`): this text is
-    // built at every target, where pdflatex runs `\null` only where an `\autoref` prints, so `\def\null0{…}` hiding a
-    // subsection (1501.00090) ran its `\subsection` in every `\section`'s tag, a Fatal recursion. The token still ends
-    // a name's `~#1\null` argument, a delimiter being matched by the token. The document's `\null` is saved and put
-    // back by `\let`, with no group, which a name opening a `\bgroup` would meet (78j).
-    let mut tokens = vec![
-      T_CS!("\\let"),
-      T_CS!("\\lx@autoref@savednull"),
-      T_CS!("\\null"),
-      T_CS!("\\let"),
-      T_CS!("\\null"),
-      T_CS!("\\lx@autoref@null"),
-    ];
-    tokens.extend(match name {
-      Some(cs) if cs.ends_with("autorefname") || is_name_noun_cs(&cs) => vec![T_CS!(cs), T_ACTIVE!('~')],
-      // hyperref sets the first defined name before the `~` whatever it is: amsthm's `\let\thmname\@iden`
-      // (amsthm.sty:152) takes the `~` and prints it back, "~1.1", as here; the name itself is not run, since it is
-      // built at every target (DIVERGENCES #418): a text-bearing name that takes a required argument prints its text
-      // in pdflatex ("Hh1") and " 1" here, traded for never running a drawing command.
-      Some(_) => vec![T_ACTIVE!('~')],
-      None => Vec::new(),
-    });
-
-    let pcounter = T_CS!(s!("\\p@{counter_str}",));
-    let thecounter = T_CS!(s!("\\the{counter_str}"));
-    if lookup_definition(&pcounter)?.is_some() {
-      tokens.push(pcounter);
-    }
-    tokens.push(thecounter);
-    tokens.extend([
-      T_CS!("\\null"),
-      T_CS!("\\let"),
-      T_CS!("\\null"),
-      T_CS!("\\lx@autoref@savednull"),
-    ]);
-    Tokens::new(tokens)
+    autoref_tag(&ttype.unwrap().to_string(), false)
   });
 
   AssignMapping!("type_tag_formatter", "autoref" => "\\lx@autorefnum@@");
@@ -2654,6 +2600,90 @@ pub fn define_autoref() -> Result<()> {
   // (`\lx@tag@intags@held`, ruling 7e).
   AssignMapping!("type_tag_deferred", "autoref" => true);
   Ok(())
+}
+
+/// The text `\autoref` prints for a target of type `type_s`: hyperref's name, its `~`, the number. Under `capital`
+/// (thm-autoref's `\Autoref`, thm-autoref.sty:60-95) the name is the type's `\<type>Autorefname`, and a type without
+/// one has no text: `\Autoref` prints `\autoref`'s there (`\HyRef@Testreftype`).
+pub(crate) fn autoref_tag(type_s: &str, capital: bool) -> Result<Tokens> {
+  let counter_str = with_mapping("counter_for_type", type_s, |mapping_opt| {
+    mapping_opt.map(ToString::to_string)
+  })
+  .unwrap_or_else(|| type_s.to_string());
+  let name_type = if is_counter_alias(type_s) {
+    type_s
+  } else {
+    &counter_str
+  };
+  let unstarred = name_type.strip_suffix('*').unwrap_or(name_type);
+  if capital {
+    let Some(name) = [s!("\\{type_s}Autorefname"), s!("\\{name_type}Autorefname")]
+      .into_iter()
+      .find(|cs| is_defined(cs))
+    else {
+      return Ok(Tokens::new(Vec::new()));
+    };
+    return autoref_tag_with_name(Some(name), &counter_str);
+  }
+  // A `\<ctr>name` that is no name noun — a drawing command sharing the spelling, argumentation.sty:403 `\afname`
+  // — is not run, as for the other tags (`\iflx@namenoun`, KNOWN_PERL_ERRORS #194): at every target it drew a
+  // `\node` outside a picture (argumentation-doc, sweep #136). The `*autorefname`s are hyperref's own and may
+  // read their `~#1\null` themselves (`\def\equationautorefname~#1\null{(#1)\null}`, DIVERGENCES #98), so they
+  // are taken as they are.
+  let name = [
+    s!("\\{type_s}autorefname"),
+    s!("\\{name_type}autorefname"),
+    s!("\\{name_type}name"),
+    s!("\\{unstarred}autorefname"),
+    s!("\\{unstarred}name"),
+  ]
+  .into_iter()
+  .find(|cs| is_defined(cs));
+  autoref_tag_with_name(name, &counter_str)
+}
+
+/// hyperref's autoref text from the `name` its `\HyRef@testreftype` found (none: the number alone).
+fn autoref_tag_with_name(name: Option<String>, counter_str: &str) -> Result<Tokens> {
+  // The trailing `\null` is the kernel's empty box whatever the author made of it (`\lx@autoref@null`): this text is
+  // built at every target, where pdflatex runs `\null` only where an `\autoref` prints, so `\def\null0{…}` hiding a
+  // subsection (1501.00090) ran its `\subsection` in every `\section`'s tag, a Fatal recursion. The token still ends
+  // a name's `~#1\null` argument, a delimiter being matched by the token. The document's `\null` is saved and put
+  // back by `\let`, with no group, which a name opening a `\bgroup` would meet (78j).
+  let mut tokens = vec![
+    T_CS!("\\let"),
+    T_CS!("\\lx@autoref@savednull"),
+    T_CS!("\\null"),
+    T_CS!("\\let"),
+    T_CS!("\\null"),
+    T_CS!("\\lx@autoref@null"),
+  ];
+  tokens.extend(match name {
+    Some(cs)
+      if cs.ends_with("autorefname") || cs.ends_with("Autorefname") || is_name_noun_cs(&cs) =>
+    {
+      vec![T_CS!(cs), T_ACTIVE!('~')]
+    },
+    // hyperref sets the first defined name before the `~` whatever it is: amsthm's `\let\thmname\@iden`
+    // (amsthm.sty:152) takes the `~` and prints it back, "~1.1", as here; the name itself is not run, since it is
+    // built at every target (DIVERGENCES #418): a text-bearing name that takes a required argument prints its text
+    // in pdflatex ("Hh1") and " 1" here, traded for never running a drawing command.
+    Some(_) => vec![T_ACTIVE!('~')],
+    None => Vec::new(),
+  });
+
+  let pcounter = T_CS!(s!("\\p@{counter_str}",));
+  let thecounter = T_CS!(s!("\\the{counter_str}"));
+  if lookup_definition(&pcounter)?.is_some() {
+    tokens.push(pcounter);
+  }
+  tokens.push(thecounter);
+  tokens.extend([
+    T_CS!("\\null"),
+    T_CS!("\\let"),
+    T_CS!("\\null"),
+    T_CS!("\\lx@autoref@savednull"),
+  ]);
+  Ok(Tokens::new(tokens))
 }
 
 /// The bookmark commands, which make nothing outside a PDF: the binding's, and the ar5iv preload's provide on first use
