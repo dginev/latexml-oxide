@@ -1996,12 +1996,17 @@ cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 astron.sty's `\cite` (0812.2799, 0812.4839; copied by EslabStyle.cls:1442-1445 astro-ph0001290, ISOStyle.cls:1446-1449
 astro-ph0008362, and the EAS classes) is `\@ifstar{\citeyear}{\citefull}`, and its `\citefull` =
 `\def\astroncite##1##2{##1, ##2}\@internalcite` is the only definition of the `\astroncite{A}{Y}` that astron.bst writes
-into the `\bibitem` labels. With that `\cite` refused, the labels were `Error:undefined:\astroncite` (Perl and pdflatex
-0). Where the lock refused a `\cite`, `\astroncite` is undefined and `\citefull` opens with `\def\astroncite`, the
-kernel `\cite`'s first call runs the copy's own `\citefull` definition (its `\@internalcite` tail dropped) and keeps it
-global for the deferred labels (`sect11.rs` `astroncite_from_refused_cite`). The full form throughout: the starred
-call's year-only form is the class's label style, which the lock does not keep. Guard
-`perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`).
+into the `\bibitem` labels; mlbib.sty:360-363's (cond-mat0011295) is `\@ifstar{\citeasnoun}{\new@cite}`, whose
+`\new@cite` alone defines the `\citeauthoryear{A}{Y}` of its `.bbl` labels. With that `\cite` refused, the labels were
+`Error:undefined:\astroncite` / `\citeauthoryear` (Perl and pdflatex 0). Where the lock refused a `\cite` of the form
+`\@ifstar{…}{\X}`, `\X` parameterless and nothing but `\def\cs<parameters>{…}`s before its `\@internalcite` tail, and a
+macro `\X` `\def`s is undefined, the kernel `\cite`'s first call runs `\X` (its tail dropped) and keeps what it defined
+global for the deferred labels (`sect11.rs` `label_macros_from_refused_cite`). A branch that also typesets or steps a
+counter is not run: once, at the first citation, is not TeX's every one. The full form throughout: the starred call's
+year-only form is the class's label style, which the lock does not keep. Guards
+`perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`),
+`perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`
+(repros `index-bib/mlbib`, `index-bib/sidecite`).
 
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)
@@ -23270,3 +23275,33 @@ ignored 0).
 cli_noincludestyles_restores_perls_binding_only_loading, latexml_sty_iflimit_overrides_the_front_end_default}` (repro
 `loader/cli_raw_default`); the in-process control
 `rawclasses_binding_precedence_and_no_omnibus::bindingless_class_defaults_to_omnibus_without_rawclasses`.
+
+### 1103. natbib's repeat-load Option clash only where TeX sees the loads (REGFIXC)
+
+**Rule.** The repeat-load clash test (`content.rs` `apply_repeat_options`, OD #43; natbib opts in with
+`natbib.sty_repeat_clash`) errs only on loads TeX makes. (1) A compiled binding's own repeat (`RequirePackage!` from
+its code, `requested_by_binding`) is the binding's guess at what its file loads: no clash, its new options dropped with
+an Info; the file read raw after it decides (cvpr_sty.rs's `[numbers,sort&compress]` after a document's
+`\usepackage[numbers]{natbib}`, whose cvpr.sty loads no natbib: 2109.08809, 2408.02054). (2) `\PassOptionsToPackage`
+after the load counts in the classic clash test (latex.ltx `\@onefilewithoptions@clashchk`), as latex.ltx:18514-18517
+extends `\opt@<file>` (2403.07005's neurips_2022.sty copy); it is kept as `<file>_passed_after_load`
+(`pass_options_with_raw`), not in our `\opt@<file>`, which bindings read as the load's own options (babel's main
+language: extending it turned 2405.15450's `en-US` into `en`), and read by a clash-testing package only
+(`<file>_repeat_clash`): a key-value package takes a repeat's options with no clash test (latex.ltx:18752-18762), so
+`\PassOptionsToPackage{table}{xcolor}` after the load leaves `\usepackage[table]{xcolor}` loading colortbl. (3) A class
+binding claims its load as the class's own (`record_load_as_the_files_own`: elsarticle, acmart, jmlr, jheppub) where
+the paper ships no copy of that file or a copy that makes the same load (`shipped_class::shipped_copy_makes_load`: its
+code, comments out, has elsarticle.cls:1243 `\RequirePackage[\@biboptions]{natbib}`, acmart.cls:300 or jmlr.cls:150
+`\RequirePackage{natbib}`, jheppub.sty:37's `[numbers,sort&compress]` or `[numbers,compress]` load): TeX Live's own
+elsarticle.cls beside the document and `\usepackage[authoryear]{natbib}` is pdflatex's Option clash. A copy that loads
+natbib otherwise or not at all leaves the load early, and the document's options apply (2105.06643, 2206.02837,
+2402.13480 elsarticle.cls copies; 2209.10785 cidr.cls). (4) The elsarticle binding reads `\jobname.spl` into
+`\@biboptions` before its natbib load, as elsarticle.cls:1240-1243 does (2406.18569, 2503.23289 ship it); Perl's
+binding keeps `@biboptions` as a value and never reads the file. Open: natbib loaded before `\documentclass{elsarticle}`
+(repro `natbib_before_elsarticle.tex`, RED, synthetic) is item (1)'s binding repeat, an Info, where pdflatex reports the
+clash.
+**Guards**: `perfect_kernel_batchregfixc::{elsarticle_reads_its_spl, a_binding_repeat_load_does_not_clash,
+a_pass_after_the_load_extends_the_option_list, a_shipped_class_copy_keeps_the_binding_load_early,
+an_unmodified_class_copy_keeps_the_clash, a_pass_after_the_load_leaves_a_key_value_repeat}` (repros
+`natbib_repeat_options/`); the clash itself stays `perfect_kernel_batch77w::another_copys_repeat_load_clashes` and the
+72a guards.

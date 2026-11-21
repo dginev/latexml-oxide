@@ -368,6 +368,24 @@ pub fn shipped_copy_loads(ext: &str, package: &str) -> Result<bool> {
   Ok(shipped_copy_text(ext)?.is_some_and(|text| class_text_loads(&text, package)))
 }
 
+/// Does the paper's copy of the file a binding stands in for ([`shipped_copy_text`], of type `ext`) make the load the
+/// distributed file makes: does its code (comments out, spaces ignored) have every one of `code`, the load command and
+/// what it rests on, as written there? `true` where the source has no copy: the file as distributed. A binding that loads
+/// a package where its file does records that load as the file's own only then (`record_load_as_the_files_own`): TeX
+/// Live's elsarticle.cls copied beside the document and a later `\usepackage[authoryear]{natbib}` is LaTeX's "Option
+/// clash", while a copy that loads natbib otherwise or not at all leaves the binding's load an early one (2105.06643,
+/// 2206.02837, 2402.13480; 2209.10785's cidr.cls, an acmart.cls copy whose `\ExecuteOptionsX{natbib=true}` is commented
+/// out).
+pub fn shipped_copy_makes_load(ext: &str, code: &[&str]) -> Result<bool> {
+  Ok(shipped_copy_text(ext)?.is_none_or(|text| {
+    let copy: String = class_code(&text)
+      .chars()
+      .filter(|c| !c.is_whitespace())
+      .collect();
+    code.iter().all(|piece| copy.contains(piece))
+  }))
+}
+
 /// Does the paper's own `file` of type `ext` (not a binding) load `package` ([`class_text_loads`])? `false` when the
 /// source has none: for a file read by `\input`, which has no `\@currname` of its own ([`shipped_copy_loads`]):
 /// Scientific Word 5.x's tcilatex.tex loads amsmath (2212.12000's :851), 2.5's does not (0805.4522's).

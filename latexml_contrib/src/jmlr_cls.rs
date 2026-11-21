@@ -12,7 +12,9 @@ LoadDefinitions!({
   RequirePackage!("natbib");
   // (jmlr.cls:150 `\RequirePackage{natbib}`: the class's own load, so a document's `\usepackage[numbers]{natbib}` is
   // LaTeX's "Option clash", its options dropped — binding/content.rs `apply_new_options_on_reload`)
-  AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
+  if crate::shipped_class::shipped_copy_makes_load("cls", &[r"\RequirePackage{natbib}"])? {
+    record_load_as_the_files_own("natbib.sty");
+  }
   // jmlr.cls:150-154 `\RequirePackage{graphicx}`, `{url}`, `\PassOptionsToPackage{x11names}{xcolor}`
   // `\RequirePackage{xcolor}`: papers colour with `\textcolor`/`\definecolor` without loading xcolor (21 of run 353
   // with them undefined: 1902.03035, 2010.02010, 2107.03212). Perl, with no binding, loads it through OmniBus's scan of
