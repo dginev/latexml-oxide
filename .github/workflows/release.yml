@@ -272,8 +272,8 @@ jobs:
       # the signature survived, and actually running `--version` proves the
       # binary launches on this arch end-to-end (the real Killed:9 gate — this
       # is what lets the release auto-publish, below, without a manual "download
-      # and confirm it runs" step). Conversion paths (static libxml2/libxslt,
-      # XSLT, RelaxNG) are covered by CI.yml's macOS test job on the same arch.
+      # and confirm it runs" step). The step after it converts hello.tex with this
+      # binary (tools/release_smoke.sh); CI.yml's macOS test job covers the rest.
       # NOT notarization — ripgrep-style posture, see RELEASING.md "macOS
       # Gatekeeper & code signing".
       - name: verify code signature + launch smoke
@@ -284,6 +284,14 @@ jobs:
           "$bin" --version \
             || { echo "::error::macOS binary failed to launch (--version) — un-runnable artifact"; exit 1; }
           echo "OK: valid (ad-hoc) signature and the binary launches"
+
+      # The shipped binary converts a document, not just launches (DG 2026-11-21:
+      # rc1's macOS legs ran only `--version`). No TeX Live on this runner, so it
+      # is the no-dump branch with the embedded bindings, resources/ moved aside.
+      - name: conversion smoke (embedded resources, no TeX)
+        run: |
+          bash tools/release_smoke.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
+            latexml_oxide/tests/hello/hello.tex
 
       - name: upload macOS artifact
         uses: actions/upload-artifact@v5
@@ -400,6 +408,14 @@ jobs:
           "$bin" --version \
             || { echo "::error::macOS Intel binary failed to launch (--version) — un-runnable artifact"; exit 1; }
           echo "OK: valid (ad-hoc) signature and the binary launches"
+
+      # The shipped binary converts a document, not just launches (DG 2026-11-21:
+      # rc1's macOS legs ran only `--version`). No TeX Live on this runner, so it
+      # is the no-dump branch with the embedded bindings, resources/ moved aside.
+      - name: conversion smoke (embedded resources, no TeX)
+        run: |
+          bash tools/release_smoke.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
+            latexml_oxide/tests/hello/hello.tex
 
       - name: upload macOS Intel artifact
         uses: actions/upload-artifact@v5
@@ -535,20 +551,8 @@ jobs:
 
       - name: embedded-resource smoke (no own-resource disk read)
         run: |
-          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
-          mv resources resources.hidden
-          out="$(mktemp -d)"; set +e
-          "$bin" --destination="$out/hello.html" latexml_oxide/tests/hello/hello.tex 2>"$out/log"
-          rc=$?; set -e
-          mv resources.hidden resources
-          if [ "$rc" -ne 0 ] || [ ! -s "$out/hello.html" ]; then
-            echo "::error::conversion failed with resources/ removed — self-containment regression"
-            cat "$out/log"; exit 1
-          fi
-          if ! grep -q 'ltx_' "$out/hello.html"; then
-            echo "::error::output missing ltx_ classes — embedded CSS/XSLT not applied"; exit 1
-          fi
-          echo "OK: converts with resources/ removed (fully self-contained)"
+          bash tools/release_smoke.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
+            latexml_oxide/tests/hello/hello.tex
 
       - name: upload Linux arm64 artifacts
         uses: actions/upload-artifact@v5
@@ -697,8 +701,8 @@ jobs:
       # the runner has the VC++ redist, so even a dynamic-CRT `.exe` would launch
       # here. So we ALSO assert (via dumpbin) that the import table carries no
       # VCRUNTIME — the actual property that lets the `.exe` run on a clean
-      # Windows. Conversion paths aren't exercised (no TeX Live on this leg);
-      # windows-ci-manual-trigger.yml runs the full suite with TeX Live.
+      # Windows. The step after it converts hello.tex with this .exe (no TeX Live
+      # on this leg); windows-ci-manual-trigger.yml runs the full suite with TeX Live.
       - name: launch smoke + self-containment guard
         shell: bash
         run: |
@@ -723,6 +727,15 @@ jobs:
             exit 1
           fi
           echo "OK: imports only core OS DLLs — fully static, runs on any Windows / any TeX distro"
+
+      # The shipped .exe converts a document, not just launches (DG 2026-11-21:
+      # rc1's Windows leg ran only `--version`): the no-dump branch with the
+      # embedded bindings, resources/ moved aside.
+      - name: conversion smoke (embedded resources, no TeX)
+        shell: bash
+        run: |
+          bash tools/release_smoke.sh "$(find target/release-artifacts -name '*.exe' -type f | head -1)" \
+            latexml_oxide/tests/hello/hello.tex
 
       - name: upload Windows artifact
         uses: actions/upload-artifact@v5
@@ -961,20 +974,8 @@ jobs:
       # complements tests/001_single_binary_smoke.rs, which only isolates cwd).
       - name: embedded-resource smoke (no own-resource disk read)
         run: |
-          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
-          mv resources resources.hidden
-          out="$(mktemp -d)"; set +e
-          "$bin" --destination="$out/hello.html" latexml_oxide/tests/hello/hello.tex 2>"$out/log"
-          rc=$?; set -e
-          mv resources.hidden resources
-          if [ "$rc" -ne 0 ] || [ ! -s "$out/hello.html" ]; then
-            echo "::error::conversion failed with resources/ removed — self-containment regression"
-            cat "$out/log"; exit 1
-          fi
-          if ! grep -q 'ltx_' "$out/hello.html"; then
-            echo "::error::output missing ltx_ classes — embedded CSS/XSLT not applied"; exit 1
-          fi
-          echo "OK: converts with resources/ removed (fully self-contained)"
+          bash tools/release_smoke.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)" \
+            latexml_oxide/tests/hello/hello.tex
 
       # Pull the macOS tarball (+ sidecar) built by the build-macos job into
       # the staging dir so they publish alongside the Linux artifacts.
@@ -1017,17 +1018,28 @@ jobs:
       # test job. The build stays tied to a release tag (no workflow_dispatch, no
       # "random" builds). If a published asset is ever found broken, delete the
       # Release + tag, bump the patch, and re-tag (RELEASING.md "Failure recovery").
+      # Append GitHub's generated notes — every merged PR since the previous tag — below the curated RELEASE_BODY
+      # summary, with the "What's Changed" list folded into a <details> block so a long list does not swamp the page
+      # (DG 2026-11-21; tools/release_notes_details.sh). The same generate-notes API softprops called, same default
+      # previous tag.
+      - name: append the folded "What's Changed" to the release body
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${{ github.repository }}/releases/generate-notes" -f tag_name="${{ github.ref_name }}" \
+            --jq .body > target/release-artifacts/GENERATED_NOTES.md
+          { printf '\n'; bash tools/release_notes_details.sh target/release-artifacts/GENERATED_NOTES.md; } \
+            >> target/release-artifacts/RELEASE_BODY.md
+          grep -c '^\* ' target/release-artifacts/GENERATED_NOTES.md || true
       - name: publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body_path: target/release-artifacts/RELEASE_BODY.md
-          # Append GitHub's auto-generated "What's Changed" — every merged PR
-          # since the previous tag — below our curated RELEASE_BODY summary
-          # (softprops pre-pends `body` to the generated notes). Brief, high-level
-          # highlights up top + the full per-PR list underneath.
-          generate_release_notes: true
+          # The generated notes are already in RELEASE_BODY (folded, step above).
+          generate_release_notes: false
           files: |
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz.sha256

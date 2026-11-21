@@ -147,6 +147,11 @@ run "check_rc_reuse.sh self-test" \
   "fix tools/check_rc_reuse.sh (its self-test lists the failing check)" -- \
   tools/check_rc_reuse_test.sh
 
+# 1f. The release page's folded "What's Changed" (offline fixtures, bash).
+run "release_notes_details.sh self-test" \
+  "fix tools/release_notes_details.sh (its self-test prints the expected and actual notes)" -- \
+  tools/release_notes_details_test.sh
+
 # 2. Formatting must already be applied (check, don't rewrite).
 run "rustfmt (check)" \
   "run: cargo fmt --all" -- \
