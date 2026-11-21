@@ -4568,59 +4568,124 @@ fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
 /// Whether a call of the author block at ledger index `index` printing a note, a contact or a mark no name's run holds
 /// ([`unwritten`]) defines what a later token of the block reads ([`reads_definition`]): a local definition up to the next
 /// `\and`, which ends the author's tabular cell (latex.ltx `\and`). 2407.13730, 2606.19583.
+/// A global call [`printing_kept`] can't cut whole is one too: never dropped.
 fn printing_read_later(index: usize, resolved: &Resolved) -> bool {
+  printing_apart(index, resolved)
+    .iter()
+    .any(|call| call.read || (call.global && !call.notes && call.tokens.is_none()))
+}
+
+/// The calls [`printing_read_later`] reads that the block does not read again but whose definitions are all global, kept
+/// for a reader past the block: `\maketitle`, a later block (iucrjournals.cls:212-232's `\IUCrAufn` stores its note in
+/// `\aufnX<n>`, `\IUCr@printauthornotes` prints it; 2609.21618, 2511.12314, 2509.01370). TeX runs the call where it
+/// stands; its print written apart, it runs in a box no one uses (`\lx@title@mark@step`), at its place among the
+/// block's steps ([`note_steps`]).
+fn printing_kept(index: usize, resolved: &Resolved) -> Vec<(usize, Vec<Token>)> {
+  printing_apart(index, resolved)
+    .into_iter()
+    .filter(|call| !call.read && call.global && !call.notes)
+    .filter_map(|call| {
+      let mut step = vec![T_CS!(TITLE_MARK_STEP), T_BEGIN!()];
+      step.extend(call.tokens?);
+      step.push(T_END!());
+      Some((call.from, step))
+    })
+    .collect()
+}
+
+/// A call [`printing_apart`] reads: its block offset, its tokens with their arguments (`None`: not balanced), whether
+/// a later token of the block reads its definitions, whether every one is global, and whether it prints a note: the
+/// emitter writes and steps that note itself, so the call is not run again (`\footremember{dam}{…}`'s `\footnote`
+/// after a `\footrecall`, 2509.04225: a second note, the counter stepped twice).
+struct ApartCall {
+  from:   usize,
+  tokens: Option<Vec<Token>>,
+  read:   bool,
+  global: bool,
+  notes:  bool,
+}
+
+/// The calls of the author block at ledger index `index` printing a note, a contact or a mark no name's run holds
+/// ([`unwritten`]), defining what the block did not define before (`rehearsal::rehearse`).
+fn printing_apart(index: usize, resolved: &Resolved) -> Vec<ApartCall> {
   let unheld = unwritten(index, resolved, |unsaid| {
     unsaid.printing.iter().map(|call| call.span).collect()
   });
   if unheld.is_empty() {
-    return false;
+    return Vec::new();
   }
-  with_block(index, false, |block, events| {
+  with_block(index, Vec::new(), |block, events| {
     let Outcome::Events { unsaid: Some(unsaid), .. } = &block.outcome else {
-      return false;
+      return Vec::new();
     };
     let tokens = block.read_tokens().unlist_ref();
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     let span_at = |e: &Event| e.span.and_then(|(s, t)| Some((at(s)?, at(t)?)));
-    unsaid.printing.iter().any(|call| {
-      let Some((from, to)) = at(call.span.0).zip(at(call.span.1)) else {
-        return false;
-      };
-      let apart = events
-        .iter()
-        .filter(|e| matches!(e.kind, EventKind::Note | EventKind::Contact | EventKind::Mark))
-        .filter_map(span_at)
-        .any(|(s, t)| s < to && from < t);
-      if !unheld.contains(&(from, to)) || !apart {
-        return false;
-      }
-      let end = if call.global {
-        tokens.len()
-      } else {
-        events
+    unsaid
+      .printing
+      .iter()
+      .filter_map(|call| {
+        let (from, to) = at(call.span.0).zip(at(call.span.1))?;
+        let printed = |e: &&Event| {
+          matches!(e.kind, EventKind::Note | EventKind::Contact | EventKind::Mark)
+            && span_at(e).is_some_and(|(s, t)| s < to && from < t)
+        };
+        let apart = events.iter().any(|e| printed(&e));
+        let notes = events
           .iter()
-          .filter(|e| e.nest == 0 && matches!(e.kind, EventKind::Sep(SepKind::And(_))))
-          .filter_map(span_at)
-          .map(|(s, _)| s)
-          .filter(|&s| s >= to)
-          .min()
-          .unwrap_or(tokens.len())
-      };
-      // (past the call's own arguments, `\footremember{a}{…}`'s `{a}`)
-      let past = match (from < tokens.len()).then(|| arguments_end(tokens, from, false)).flatten() {
-        Some(Some(after)) => after.max(to),
-        _ => to,
-      };
-      let read = tokens
-        .get(past..end.min(tokens.len()))
-        .is_some_and(|later| reads_definition(later, &call.definees));
-      DebugFeature!(
-        "frontmatter",
-        "FRONT emit: block {index}'s call {from}..{to} prints apart, defining {:?}, read later: {read}",
-        call.definees.iter().map(|&key| with(key, str::to_string)).collect::<Vec<_>>()
-      );
-      read
-    })
+          .filter(printed)
+          .any(|e| e.kind == EventKind::Note);
+        if !unheld.contains(&(from, to)) || !apart {
+          return None;
+        }
+        let end = if call.global {
+          tokens.len()
+        } else {
+          events
+            .iter()
+            .filter(|e| e.nest == 0 && matches!(e.kind, EventKind::Sep(SepKind::And(_))))
+            .filter_map(span_at)
+            .map(|(s, _)| s)
+            .filter(|&s| s >= to)
+            .min()
+            .unwrap_or(tokens.len())
+        };
+        // (past the call's own arguments, `\footremember{a}{…}`'s `{a}`)
+        let arguments = (from < tokens.len()).then(|| arguments_end(tokens, from, false));
+        let past = match arguments.flatten() {
+          Some(Some(after)) => after.max(to),
+          _ => to,
+        };
+        let read = tokens
+          .get(past..end.min(tokens.len()))
+          .is_some_and(|later| reads_definition(later, &call.definees));
+        DebugFeature!(
+          "frontmatter",
+          "FRONT emit: block {index}'s call {from}..{to} prints apart, defining {:?}, read later: {read}",
+          call.definees.iter().map(|&key| with(key, str::to_string)).collect::<Vec<_>>()
+        );
+        // (the call whole, by the macro reading its arguments: a robust command's `\protect \cs␣`)
+        let own = (from < tokens.len())
+          .then(|| arguments_end(tokens, from, true))
+          .flatten()
+          .flatten()
+          .and_then(|after| tokens.get(from..after.max(to)))
+          .filter(|run| {
+            let mut depth = 0i32;
+            run.iter().all(|t| {
+              depth += t.group_step();
+              depth >= 0
+            }) && depth == 0
+          });
+        Some(ApartCall {
+          from,
+          tokens: own.map(<[Token]>::to_vec),
+          read,
+          global: call.global,
+          notes,
+        })
+      })
+      .collect()
   })
 }
 
@@ -5786,6 +5851,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       let cells = across_cells(source);
       let mut given_lost = Vec::new();
       let mut bare_lost = Vec::new();
+      let mut kept_calls = Vec::new();
       let (declined, as_perl) = if names_fail(source) || cells {
         (true, false)
       } else if counter_moved(source, resolved) {
@@ -5795,10 +5861,11 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       } else if declaration_reads_past(source, resolved) {
         (true, true)
       } else {
-        (
-          mark_dropped(source, resolved, &mut given_lost, &mut bare_lost),
-          false,
-        )
+        let dropped = mark_dropped(source, resolved, &mut given_lost, &mut bare_lost);
+        // (a bare mark's step runs its call already)
+        kept_calls = printing_kept(source, resolved);
+        kept_calls.retain(|(at, _)| !bare_lost.iter().any(|(s, ..)| s == at));
+        (dropped, false)
       };
       let whole = written_whole(source, declined);
       // (the fail-safe: a split stating an owner its marks don't support is the whole block, review revCR7c B1/B2)
@@ -5815,6 +5882,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           bare_lost
             .into_iter()
             .map(|(at, _, tokens)| (at, tokens))
+            .chain(kept_calls)
             .collect(),
         );
       }

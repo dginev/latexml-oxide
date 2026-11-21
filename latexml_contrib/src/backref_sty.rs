@@ -53,7 +53,7 @@ LoadDefinitions!({
   // `{thebibliography}`, with `[pagebackref]{hyperref}` loading backref). :78-92 `\backref` by the options
   // `pageref` (the default, :195), `ref`, `hyperref` and `hyperpageref` (the two hyperref's options pass), other
   // options and `\backrefsetup` keys accepted and dropped; :270-277 `\backrefalt`/`\backrefentrycount`, which
-  // documents redefine to format the line; the line itself is not rendered, so they are never called here. :244
+  // documents redefine to format the line; the line itself is not rendered, so they are never called here. :245
   // `\BR@backref{key}`, the line itself, which a document's own bibitem macro calls where `\ifbackrefparscan` is
   // defined (1211.3435, 1408.3859, 1609.07764), is empty.
   RawTeX!(

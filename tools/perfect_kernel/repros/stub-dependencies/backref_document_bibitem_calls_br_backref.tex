@@ -1,5 +1,5 @@
 % witness: 1211.3435 (also 1408.3859, 1609.07764; 22 papers of the v0.8.0 regression check): a document's bibitem
-%          macro calls backref's `\BR@backref` (backref.sty:244) where `\ifbackrefparscan` is defined
+%          macro calls backref's `\BR@backref` (backref.sty:245) where `\ifbackrefparscan` is defined
 % oracle:  pdflatex 0 errors; "See [?]. References [1] A. Author, Title." (no back-reference line: no citation recorded)
 % engines: rust INTREGFIX4 = Error:undefined:\BR@backref (the stub's `\newif\ifbackrefparscan` advertised backref)
 % expect:  0 errors, 0 warnings (backref loaded by hyperref: an Info); the bibitem's text kept

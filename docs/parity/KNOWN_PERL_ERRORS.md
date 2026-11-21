@@ -22203,7 +22203,7 @@ svjour2_copy_declaring_svjour_is_read}`.
 ## 1301. amsppt declares no `ltx:item` Tag, so under plain AmS-TeX each roster item opens inside the last
 
 Perl's amsppt.sty.ltxml:248-250 `\roster@item` opens `<ltx:item>`, which closes the item before it only through
-latex_constructs' `Tag('ltx:item', autoClose => 1, autoOpen => 1)` (latex_constructs.pool.ltxml:1277). `\input
+latex_constructs' `Tag('ltx:item', autoClose => 1, autoOpen => 1)` (latex_constructs.pool.ltxml:1284). `\input
 amsppt.sty` under `\input amstex` loads no latex_constructs, so the second item is opened inside the first item's
 `<ltx:p>`: malformed. Latent in Perl behind #1270 (its roster's `#body` drops every item); with the body kept the
 trigger is

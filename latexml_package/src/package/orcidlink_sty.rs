@@ -25,9 +25,10 @@ LoadDefinitions!({
   // and left its mode-switch open (arXiv 2605.21922, 7 errors).
   // The link starts a paragraph, as the real `\orcidlinkX` does: it is `\href{…}{…}`
   // (orcidlink.sty:69), whose `\hyper@linkurl` begins with `\leavevmode` (hpdftex.def:411).
-  // K13 stage-2 finding; Perl's binding shares the gap (DIVERGENCES #340).
+  // K13 stage-2 finding; Perl's binding shares the gap (DIVERGENCES #340). The iD is linked without the space a line end
+  // after it makes (`\lx@orcid@trimmed`: `\IUCrOrcidlink{0009-…-0174⏎}`, 2507.03170), else as written (OD #616).
   DefMacro!("\\orcidlinkX{}{}{}",
-    "\\leavevmode\\lx@orcidlink{#2}{\\if\\relax\\detokenize{#1}\\relax\\else#1\\,\\fi\\orcidlogo\\if\\relax\\detokenize{#3}\\relax\\else\\,#3\\fi}",
+    "\\leavevmode\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@trimmed{#2}}{\\if\\relax\\detokenize{#1}\\relax\\else#1\\,\\fi\\orcidlogo\\if\\relax\\detokenize{#3}\\relax\\else\\,#3\\fi}",
     robust => true);
 
   // Default, Full, Compact and Inline versions

@@ -13,7 +13,7 @@ macro_rules! repro {
 }
 
 /// amsppt's roster items close each other where latex_constructs is not loaded (`\input amsppt.sty`): the binding
-/// declares latex_constructs' `ltx:item` Tag (latex_constructs.pool.ltxml:1277). Red (INTREGFIX4): each item opened
+/// declares latex_constructs' `ltx:item` Tag (latex_constructs.pool.ltxml:1284). Red (INTREGFIX4): each item opened
 /// inside its predecessor's paragraph, "malformed:ltx:item" ×2, a malformed enumerate ×2. A nested roster's items close
 /// in the inner list. Witnesses math0006111, gr-qc9610061, math9809193 (KNOWN_PERL_ERRORS #1301). Distinct from
 /// `perfect_kernel_batchamsppt::amsppt_heads_and_theorems`: `\documentstyle{amsppt}` loads LaTeX.pool, whose Tag hid it.
@@ -69,7 +69,65 @@ fn iucrjournals_reads_its_own_class() {
   );
 }
 
-/// backref's stub defines `\BR@backref` (backref.sty:244, the back-reference line, not rendered: empty), which a
+/// An author note written after an e-mail link (`\IUCrAufn`, iucrjournals.cls:212-232) is printed after the title
+/// (:293-296): the e-mail a contact, the block is written as items, and the call printing Ann's mark apart runs for its
+/// global definition of `\aufnX1` (`emit::printing_kept`, in a box no one uses) — REGFIXI dropped it, a bare "†" after
+/// the title. The ORCID link's iD is read without the line end after it (2507.03170). Witnesses 2609.21618,
+/// 2511.12314, 2509.01370. Distinct from `iucrjournals_reads_its_own_class`: a call printing apart from the names,
+/// read outside the block.
+#[test]
+fn iucr_author_note_after_email() {
+  let (log, xml) = convert_files_with(
+    repro!("class-bindings/iucr/iucrjournals_author_note_after_email.tex"),
+    &[(
+      "iucrjournals.cls",
+      repro!("class-bindings/iucr/iucrjournals.cls"),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"†\" role=\"footnotemark\" \
+     xml:id=\"id1\"/><contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact><contact name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\">Univ</contact></creator>",
+  );
+  let bob = xml
+    .split("<personname>Bob Baker</personname>")
+    .nth(1)
+    .unwrap_or_default();
+  let bob = &bob[..bob.find("</creator>").unwrap_or(bob.len())];
+  let order: Vec<usize> = [
+    "<note mark=\"†\" role=\"footnotemark\"",
+    "role=\"email\">bob@y.org</contact>",
+    "href=\"https://orcid.org/0000-0002-1825-0097\" title=\"ORCID 0000-0002-1825-0097\"",
+    "role=\"affiliation\">Univ</contact>",
+  ]
+  .iter()
+  .map(|part| {
+    bob
+      .find(part)
+      .unwrap_or_else(|| panic!("{part} not in Bob's creator: {xml}"))
+  })
+  .collect();
+  assert!(order.is_sorted(), "{xml}");
+  assert_eq!(
+    xml.matches("These authors contributed equally.").count(),
+    1,
+    "{xml}"
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["align=\"center\""],
+    "<p align=\"center\" xml:id=\"p1.1\"><sup xml:id=\"p1.1.1\"><text font=\"italic\" \
+     xml:id=\"p1.1.1.1\">†</text></sup>These authors contributed equally.</p>",
+  );
+}
+
+/// backref's stub defines `\BR@backref` (backref.sty:245, the back-reference line, not rendered: empty), which a
 /// document's bibitem macro calls once `\ifbackrefparscan` is defined. Red (INTREGFIX4): `\BR@backref` undefined, an
 /// ERROR element and the key in the bibblock. Witnesses 1211.3435, 1408.3859, 1609.07764.
 #[test]
@@ -79,12 +137,14 @@ fn backref_document_bibitem_calls_br_backref() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // (the `[[1]]` is the pre-existing `\item[label]` in `{thebibliography}`, not this guard's subject)
+  // (the doubled `[[1]]` is the pre-existing `\item[label]` in `{thebibliography}`, BIBITEMLABEL2, pinned here as it
+  // stands, not this guard's subject)
   assert_element(
     &xml,
-    "bibblock",
+    "bibitem",
     &[],
-    "<bibblock>[[1]]A. Author, Title.</bibblock>",
+    "<bibitem xml:id=\"bib.bib1\"><tags><tag>[1]</tag><tag role=\"autoref\">1<text xml:id=\"bib.bib1.1\"/></tag><tag role=\"refnum\">1</tag></tags>\
+     <bibblock>[[1]]A. Author, Title.</bibblock></bibitem>",
   );
 }
 
