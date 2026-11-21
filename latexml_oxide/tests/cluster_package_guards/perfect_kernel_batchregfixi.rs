@@ -234,3 +234,22 @@ fn ltxutil_array_tabular_arrayleft() {
     r#"<tabular class="ltx_markedasmath" vattach="bottom" xml:id="p1.1.1"><tr xml:id="p1.1.1.1"><td align="right" border="r" xml:id="p1.1.1.1.1">a</td><td align="center" xml:id="p1.1.1.1.2">b</td></tr><tr xml:id="p1.1.1.2"><td align="right" border="r t" xml:id="p1.1.1.2.1">c</td><td align="center" border="t" xml:id="p1.1.1.2.2">d</td></tr></tabular>"#,
   );
 }
+
+/// A counted affiliation macro whose item the emitter writes from its argument alone: the item does not hold the call,
+/// so the call still runs once with its globals (`printing_apart` tests containment, as `unwritten` and
+/// `mark_dropped` do). pdflatex "Count 2: Univ A, Univ B."; the overlap test gave "Count 1: Univ B, ." (int/regfix5
+/// review).
+#[test]
+fn affiliation_call_globals_run_once() {
+  let (log, xml) = convert_with(
+    repro!("sectioning-frontmatter/author_affiliation_call_globals_run.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Count 2: Univ A, Univ B.</p>",
+  );
+}

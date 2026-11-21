@@ -4664,7 +4664,9 @@ fn printing_apart(index: usize, resolved: &Resolved) -> Vec<ApartCall> {
           .iter()
           .filter(printed)
           .any(|e| e.kind == EventKind::Note)
-          || items.iter().any(|&(s, t)| s < to && from < t);
+          // an item that holds the whole call runs it when it is written (`unwritten`, `mark_dropped` test containment
+          // too); one holding only part of it (an affiliation of the call's argument) does not
+          || items.iter().any(|&(s, t)| s <= from && to <= t);
         if !unheld.contains(&(from, to)) || !apart {
           return None;
         }

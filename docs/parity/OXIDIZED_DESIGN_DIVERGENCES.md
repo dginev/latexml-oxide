@@ -23419,11 +23419,11 @@ of the group as a balanced argument (63u) ran out of input in a `\multicolumn` b
 `\multicolumn{1}{c|}{\ul 29.9970}`: 5 errors, 30 warnings, 11 of 12 underlines lost); it stays for any other `ucmd`.
 Under array.sty pdflatex fails the same `\multicolumn` (`\insert@column` has no brace group); the marker ends it there
 too. A line holds its nesting depth on its own frame, so a line nested in another (`{\ul a \so b}`) closes only its own
-group. A line that meets neither its group's `}` nor a cell's or body's end (`Text \ul{x} y.` outside any group,
-pdflatex's fatal "File ended while scanning use of \UL@on") raises `Error:expected:}` and keeps the text underlined;
-so does a line closed by a cell's end (`& \ul 8 \\`, the cell's text underlined, the next cell intact) and one made
-directly in another line's text (`{a \ul b \so c}`, the nesting kept; `{a \ul b {\so c} e}` is clean), both
-pdflatex-fatal (REGFIXL3). RED: the cell's border lost at a cell's end, and an environment's end or `$` that the line's
+group. Only the line's own group's `}` or the `\multicolumn` body marker closes it cleanly, TeX's only closers; any
+other end raises `Error:expected:}` with the text kept underlined — the end of the text (`Text \ul{x} y.` outside any
+group, pdflatex's fatal "File ended while scanning use of \UL@on"), a cell's end (`& \ul 8 \\`, the cell's text
+underlined, the next cell intact), and a line made directly in another line's text (`{a \ul b \so c}`, the nesting
+kept; `{a \ul b {\so c} e}` is clean), all pdflatex-fatal (REGFIXL2, REGFIXL3). RED: the cell's border lost at a cell's end, and an environment's end or `$` that the line's
 group runs through (`loader/ulem_declaration_{cell_end_loses_borders,runs_through_*,in_math_runs_past_the_formula}.tex`).
 **Guards**: `perfect_kernel_batchregfixl::{ulem_declaration_ends_with_the_cell, ulem_declaration_closes_with_its_group,
 ulem_declaration_unclosed_errs, ulem_declaration_nested_lines_in_a_cell, ulem_declaration_cell_end_errs}`
