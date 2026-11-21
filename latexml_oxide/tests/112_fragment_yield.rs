@@ -173,3 +173,70 @@ fn removed_subtrees_leave_no_c_heap_residue() {
      removed nodes are leaking again"
   );
 }
+
+/// Split one generated book of `sections` sections (four paragraphs each) and
+/// drop every page.
+#[cfg(target_os = "linux")]
+fn split_and_drop_book(sections: usize) -> usize {
+  use latexml_post::{
+    document::{PostDocument, PostDocumentOptions},
+    processor::Processor,
+    split::{Split, SplitNaming},
+  };
+  let mut xml = String::from(
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<document xmlns=\"http://dlmf.nist.gov/LaTeXML\" xml:id=\"Doc\">",
+  );
+  for s in 1..=sections {
+    xml.push_str(&format!(
+      "<section xml:id=\"S{s}\"><title>Section {s}</title>"
+    ));
+    for p in 1..=4 {
+      xml.push_str(&format!(
+        "<para xml:id=\"S{s}.p{p}\"><p>Paragraph {p} of section {s}: the quick brown fox jumps over the lazy dog.</p></para>"
+      ));
+    }
+    xml.push_str("</section>");
+  }
+  xml.push_str("</document>");
+  let options = PostDocumentOptions {
+    destination: Some("/nonexistent/index.html".to_string()),
+    ..PostDocumentOptions::default()
+  };
+  let doc = PostDocument::new_from_string(&xml, options).expect("parse the generated book");
+  let mut splitter = Split::new("//ltx:section", SplitNaming::Id, false);
+  let nodes = splitter.to_process(&doc);
+  let docs = splitter
+    .process(doc, nodes)
+    .expect("split the generated book");
+  docs.len()
+}
+
+/// Post's `Split` frees each page's original subtree once it is copied into
+/// the page's own document. An unlinked doc-owned node is freed by nobody (the
+/// same rust-libxml rule as above), so every page leaked its source subtree and
+/// the whole original DOM stayed live through post: 818 MB of C heap at page
+/// 1024 of a 1,600-subsection book. Splitting the same book repeatedly must
+/// leave the C heap where it was.
+#[cfg(target_os = "linux")]
+#[test]
+fn split_pages_leave_no_c_heap_residue() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  // Warm-up: the XPath cache, the dictionary and libxml2's arenas settle.
+  assert_eq!(
+    split_and_drop_book(400),
+    401,
+    "every section must become a page"
+  );
+  let before = c_heap_in_use();
+  for _ in 0..2 {
+    assert_eq!(split_and_drop_book(400), 401);
+  }
+  let growth = c_heap_in_use().saturating_sub(before);
+  eprintln!("C heap growth over two splits: {growth} B");
+  // Leaking, the 400 sections' source subtrees cost about a megabyte per split;
+  // freed, the residue is allocator noise.
+  assert!(
+    growth < 256 * 1024,
+    "two more splits grew the C heap {growth} bytes: split pages are leaking their source subtrees"
+  );
+}

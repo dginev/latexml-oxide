@@ -602,8 +602,8 @@ impl PostDocument {
     // up doc pointers via xmlSetTreeDoc, and reconciles namespaces.
     // The returned Document shares zero C-side state with the source.
     //
-    // SCOPE: this method is only called from `Split::process_pages`
-    // (split.rs L260); non-split flows do not pay the deep-copy cost.
+    // SCOPE: this method is only called from `Split::process_pages`, which
+    // frees `root` once it is copied; non-split flows do not pay the deep-copy cost.
     let new_xml_doc: XmlDocument = XmlDocument::dup_node_into_new_doc(&root)
       .expect("dup_node_into_new_doc returned NULL while creating split sub-document");
     let _ = root;
@@ -1523,6 +1523,32 @@ impl PostDocument {
       let mut n = node.clone();
       n.unlink_node();
     }
+  }
+
+  /// Free a garbage subtree's C memory now, the post-side twin of the core's
+  /// `Document::discard_subtree`. An unlinked node whose `node->doc` is still
+  /// set is freed by nobody (rust-libxml's `Drop`; `xmlFreeDoc` cannot reach
+  /// it), so Perl's GC-at-last-reference has to be done by hand. The cached
+  /// handles into the subtree are dropped first; `free_subtree` neutralizes
+  /// every other registered wrapper.
+  ///
+  /// The caller's contract: the subtree's ids are already out of the id cache
+  /// ([`remove_nodes`](Self::remove_nodes)), and no handle into it is used
+  /// afterwards.
+  pub fn discard_subtree(&mut self, node: Node) {
+    use latexml_core::common::xml::is_descendant_or_self;
+    if let Some(memo) = self.nav_memo.as_mut()
+      && memo
+        .element
+        .as_ref()
+        .is_some_and(|nav| is_descendant_or_self(nav, &node))
+    {
+      memo.element = None;
+    }
+    self
+      .pending_xmath_unlinks
+      .retain(|xmath| !is_descendant_or_self(xmath, &node));
+    node.free_subtree();
   }
 
   /// Mark nodes as "will be removed later" — their IDs become reusable.
