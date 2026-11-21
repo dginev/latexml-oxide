@@ -732,7 +732,8 @@ Rules that keep this file honest and mergeable:
     unconditional natbib (svjour3.cls:68 only under its option); `\meaning\text` shows `\lx@text` where pdflatex shows
     `\protect \text  ` (OD #1104; robust needs the lock to hold the inner `\text␣`, OD #568); `\bibitem[\lab]` with an
     argument-taking `\lab` (pdflatex 2 errors, we 0); ulem's `\ul` runs through an `\end{…}`/`\endgroup` at its depth
-    and past a closing `$` (pdflatex fatal; RED repros under `loader/`), and a document's own underline macro through
+    and past a closing `$`, and a cell-end-closed line loses the cell's right border (pdflatex fatal; RED repros under
+    `loader/ulem_declaration_*`), and a document's own underline macro through
     `\useunder` in a `\multicolumn` still errs; 3
   - REGRES — the regression fixes' residuals: fdsymbol's ~165 `symNNN` glyphs, 6 extensible accents (2312.00399
     `\overlinesegment`) and `\ullcorner`/`\ulrcorner`; `\usepackage{amsmath}` after `\documentstyle{amsart}` does not
