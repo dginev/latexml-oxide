@@ -59,7 +59,9 @@ fn acm_robust_cite_label_under_the_lock() {
 /// "Citation `a' … undefined" as pdflatex's first pass does.)
 #[test]
 fn refused_cite_redefines_a_defined_label_macro() {
-  let cases: [(&str, &[(&str, &str)], usize, &str); 3] = [
+  // (the source, its files, its Warnings, the expected `<biblist>`)
+  type Case<'a> = (&'a str, &'a [(&'a str, &'a str)], usize, &'a str);
+  let cases: [Case; 3] = [
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/index-bib/klucite/kluwer_cite_redefines_the_label_macro.tex"

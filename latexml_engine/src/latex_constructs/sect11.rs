@@ -2511,10 +2511,6 @@ fn label_macros_from_refused_cite() -> Vec<Token> {
   let mut tokens = Vec::new();
   let mut i = 0;
   while let Some((name, end)) = definition_at(&body, i) {
-    // (a parameter of the refused `\cite` itself has no argument here)
-    if body[i..end].iter().any(|t| t.get_catcode() == Catcode::ARG) {
-      break;
-    }
     if !is_defined_token(&name) {
       tokens.push(T_CS!("\\global"));
     }
@@ -2527,11 +2523,14 @@ fn label_macros_from_refused_cite() -> Vec<Token> {
   tokens
 }
 
-/// The body of the macro `cs`, when it is one with a token body.
+/// The body of the macro `cs`, when it is one with a token body and no parameters (a parameter has no argument here).
 fn refused_body(cs: &Token) -> Option<Vec<Token>> {
   let definition = lookup_definition(cs).ok().flatten()?;
+  let parameters = definition.get_parameters();
   match definition.get_expansion() {
-    Some(ExpansionBody::Tokens(body)) if definition.is_expandable() => {
+    Some(ExpansionBody::Tokens(body))
+      if definition.is_expandable() && parameters.is_none_or(|p| p.get_parameters().is_empty()) =>
+    {
       Some(body.unlist_ref().to_vec())
     },
     _ => None,
