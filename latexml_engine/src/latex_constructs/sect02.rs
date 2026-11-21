@@ -485,10 +485,15 @@ pub(crate) fn load() -> Result<()> {
   // `#2\@checkend#3` and then `#2\clearpage#3\endgroup` from it and re-emits them; without the delimiters the scan ran
   // to the end of the file ("Missing argument Until:\@checkend", `Fatal:Mouth:EoF`; revtex/ltxgrid users 2004.09405,
   // 2401.03827, 2502.03242). Guard: `perfect_kernel_batchregfixj::enddocument_hook_scans_the_kernel_tail`.
+  // `protected`: an `\edef` keeps it whole, as it kept the inert primitives the expansion had before; expanded there,
+  // the tail's `\@checkend` and `\clearpage` ran at edef time (an `\edef` that ran away to the end of the file, a
+  // `\let…\enddocument` in it: 1012.2852, `Fatal:Timeout:PushbackLimit`).
+  // Guard `perfect_kernel_batchregfixj::enddocument_expanded_in_an_edef_stays_whole`.
   DefMacro!(
     T_CS!("\\end{document}"),
     None,
-    r"\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage\lx@enddocument@late@box\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup\lx@enddocument@late{enddocument/end}\lx@enddocument@late@endbox\lx@finalize@document\@@end"
+    r"\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage\lx@enddocument@late@box\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup\lx@enddocument@late{enddocument/end}\lx@enddocument@late@endbox\lx@finalize@document\@@end",
+    protected => true
   );
   // What the tail's `\@checkend` and `\clearpage` (and a scanning hook's re-emitted ones) do in TeX is done here by
   // the finalizer: it reports an environment left open (Perl's Warning, latex_constructs.pool.ltxml:385), and the last

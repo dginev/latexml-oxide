@@ -1,0 +1,17 @@
+% witness: 1012.2852 (amsart; TL 2025's kernel `\Ref` reads `\Ref \mapsto`, its `\protected@edef` runs to the end of the file)
+% oracle:  pdflatex 2 errors ("Argument of \@firstoffive has an extra }", "Paragraph ended before …"); "Text more. References [1] A. Author, Title."
+% engines: rust (INTREGFIX5) = 20 errors (the `\let…\enddocument` of the `\bibitem`'s recovery expanded the tail: \lx@enddocument@checkend undefined, \@badend, \clearpage read latex2e-first-aid…); rust (INTREGFIX4) = 3 errors; perl = 1 error (readBalanced ran out of input), the text lost too
+% expect:  3 errors, no \lx@enddocument@ name (INTREGFIX4's; the run-away edef that drops the text is the residual, tex.web §395)
+% status:  RED (INTREGFIX5) -> GREEN (REGFIXJ3)
+\documentclass{article}
+\makeatletter
+% (1012.2852's shape: its `\newcommand{\Ref}` loses to TL 2025's kernel `\Ref`, whose `\protected@edef` runs away)
+\newcommand\brokenref[1]{\protected@edef\reserved@a{\@firstoffive{#1}}}
+\makeatother
+\begin{document}
+Text \brokenref{x} more.
+
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Title.
+\end{thebibliography}
+\end{document}

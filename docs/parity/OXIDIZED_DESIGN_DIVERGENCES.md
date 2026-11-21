@@ -23388,9 +23388,15 @@ re-emitted `\clear@document` (`\do@output@cclv`, an output-routine message) leav
 other messages do mid-document; and under raw ltxgrid the document's own `enddocument/afterlastpage` and `/afteraux`
 code never runs: ltxutil.sty:279 re-emits the tail as `\do@check@aux{#3\endgroup}`, which ltxgrid.sty:2199 sends
 through `\do@output@MVL`, an output-routine penalty we never fire (side effects only; pdflatex drops their typesetting).
+The macro is `protected` (REGFIXJ3): an `\edef` keeps `\end{document}` whole, as it keeps Perl's unexpandable
+constructor and kept our earlier expansion's inert primitives; latex.ltx's `\enddocument` is not protected, but no edef
+reaches it in pdflatex, whereas ours does when an `\edef` runs away to the end of the file (an undelimited argument
+that meets the edef's `}` takes it, Perl's `readArg`; TeX §395 inserts `\par` and keeps the `}`), and there the
+tail's `\@checkend` and `\clearpage` ran at edef time — 1012.2852, whose `\protected@edef` (TL 2025's kernel `\Ref`)
+runs away to its bibliography, whose `\bibitem` recovery `\let`s `\enddocument`: `Fatal:Timeout:PushbackLimit`.
 **Guards**: `perfect_kernel_batchregfixj::{enddocument_hook_scans_the_kernel_tail,
 enddocument_hook_scan_in_an_open_environment_reports_once, ltxgrid_enddocument_patch_keeps_the_tabular,
-patchcmd_finds_the_enddocument_tail, enddocument_late_hooks_scope_as_in_tex}`; the
+patchcmd_finds_the_enddocument_tail, enddocument_late_hooks_scope_as_in_tex, enddocument_expanded_in_an_edef_stays_whole}`; the
 morewrites/modernposter shapes stay `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box` and the sect02.rs
 witnesses (cntperchap_example, runcode_troubleshoot, modernposter/demo).
 

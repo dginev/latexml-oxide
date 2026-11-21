@@ -161,3 +161,36 @@ fn patchcmd_finds_the_enddocument_tail() {
   assert!(xml.contains("<p xml:id=\"p1.1\">Body.</p>"), "{xml}");
   assert!(!xml.contains("<pagination"), "{xml}");
 }
+
+/// `\end{document}` expanded in an `\edef` stays one token (it is `protected`), so the tail's `\@checkend` and
+/// `\clearpage` do not run at edef time: an `\edef` that runs away to the end of the file (tex.web §395's "extra }",
+/// which we read as the argument) meets `\end{document}` itself, or the `\let…\enddocument` of a `\bibitem`'s
+/// recovery (1012.2852: `Fatal:Timeout:PushbackLimit`). The counts are INTREGFIX4's; the text the run-away edef drops
+/// is the §395 residual, pinned, not intended behaviour (pdflatex keeps it).
+#[test]
+fn enddocument_expanded_in_an_edef_stays_whole() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/enddocument_expanded_in_a_runaway_edef.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (3, 0), "{log}");
+  assert!(!log.contains("lx@enddocument"), "{log}");
+  assert!(xml.contains("<p xml:id=\"p1.1\">Text </p>"), "{xml}");
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/enddocument_expanded_in_an_edef.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (1, 0), "{log}");
+  assert!(
+    log.contains("readBalanced ran out of input") && !log.contains("lx@enddocument"),
+    "{log}"
+  );
+  assert!(
+    !xml.contains("<ERROR") && !xml.contains("<pagination"),
+    "{xml}"
+  );
+}
