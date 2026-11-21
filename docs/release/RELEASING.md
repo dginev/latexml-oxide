@@ -253,13 +253,13 @@ What this means concretely:
 Assets attached to each `X.Y.Z` GitHub Release — five platform builds (two
 Linux, two macOS, one Windows). Linux/macOS ship a tarball (+ `.sha256`);
 Windows ships a `.zip` (+ `.sha256`) — no `.deb` equivalent. Every archive
-carries the binary plus `THIRD-PARTY-NOTICES`, `LICENSE`, `README.md` and
-`CHANGELOG.md`. Plus a `.deb` (+ `.sha256`) for each Linux arch, plus the
+carries the binary plus `THIRD-PARTY-NOTICES`, `LICENSE`, `README.md`,
+`CHANGELOG.md` and `docs/INSTALL.md`. Plus a `.deb` (+ `.sha256`) for each Linux arch, plus the
 aggregate `THIRD-PARTY-NOTICES` as a standalone asset:
 
 | Asset | Purpose |
 |---|---|
-| `latexml-oxide-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz` | Portable Linux (x86_64) archive: stripped `latexml_oxide` binary, `README.md`, `CHANGELOG.md`, `LICENSE`, `THIRD-PARTY-NOTICES`. |
+| `latexml-oxide-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz` | Portable Linux (x86_64) archive: stripped `latexml_oxide` binary, `README.md`, `CHANGELOG.md`, `LICENSE`, `THIRD-PARTY-NOTICES`, `docs/INSTALL.md`. |
 | `latexml-oxide-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz.sha256` | SHA-256 sidecar (ripgrep-style). |
 | `latexml-oxide_X.Y.Z-1_amd64.deb` | Debian package (x86_64). With libxml2/libxslt/kpathsea statically linked, `$auto` resolves to just the glibc family — `Depends:` carries NO libxml2/libxslt SONAME, only the graphics/TeX tools (`imagemagick`, `mupdf-tools`, `poppler-utils`, `ghostscript`, `dvipng`, `dvisvgm`, `texlive-latex-{base,extra}`, `texlive-science`). |
 | `latexml-oxide_X.Y.Z-1_amd64.deb.sha256` | SHA-256 sidecar. |
@@ -593,9 +593,11 @@ settings.
 6. **Nothing — it auto-publishes.** The workflow publishes a **public**
    Release directly (`release.yml` `draft: false`), so a tag push is the last
    manual step. This is safe because every asset is gated in-CI before publish:
-   static-linkage checks (`ldd`/`otool`), the size budget, a real conversion
-   smoke on the Linux legs, and a code-signature + `--version` launch smoke on
-   both macOS legs — plus CI.yml's macOS test job covers arm64 conversion paths
+   static-linkage checks (`ldd`/`otool`/`dumpbin`), the size budget, a code-signature
+   + `--version` launch smoke on both macOS legs, and on all five legs a real
+   conversion of `hello.tex` by the shipped binary with `resources/` moved aside
+   (`tools/release_smoke.sh`; macOS and Windows since 0.8.0-rc2, with no TeX Live on
+   those runners) — plus CI.yml's macOS test job covers arm64 conversion paths
    on the same arch. If a published asset is later found broken, use *Failure
    recovery* below. (To re-add a human review gate, set `draft: true` and
    publish manually.)
