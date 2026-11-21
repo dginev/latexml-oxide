@@ -753,6 +753,8 @@ mod perfect_kernel_batchregfixu;
 mod perfect_kernel_batchregfixv;
 /// REGFIXW: a Latin-1 character captured before `[utf8]{inputenc}` keeps its meaning (arxiv.sty's `\crefformat{section}{§…}`).
 mod perfect_kernel_batchregfixw;
+/// REGFIXX: amsart's `\@setthanks`, which a document's own `\@setauthors` calls as the class's ends.
+mod perfect_kernel_batchregfixx;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;
