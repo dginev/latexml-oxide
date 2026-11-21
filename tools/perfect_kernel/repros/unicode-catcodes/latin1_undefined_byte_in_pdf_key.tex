@@ -1,0 +1,17 @@
+% mechanism: under a latin inputenc an undefined byte (latin1's 0x80-0x9F) is `\protect\@inpenc@undefined@{latin1}`
+%   (inputenc.sty:80), whose `\PackageError` (:139) hyperref's PDF-string expansion gobbles (`\GenericError`,
+%   hyperref.sty:550-552): the byte inside a PDF information key is no error. Was: Perl's native `\@inpenc@undefined`
+%   (inputenc.sty.ltxml:33) raised the Error at expansion, in \hypersetup's `\lx@pdfstringdef` too.
+% witness: 1803.03083, 1609.03819, 1903.03818, 2108.12063, 2408.03605
+% oracle:  pdflatex 0 errors: "A word."
+% engines: rust REGFIXJ3 = 1 Error:unexpected:<char>; Perl = 0 errors (it records the key unexpanded, KPE #1050)
+% expect:  0 errors, 0 warnings; "A word."
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXN2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[latin1]{inputenc}
+\usepackage{hyperref}
+\hypersetup{pdfauthor = {MÃller}}
+\begin{document}
+A word.
+\end{document}

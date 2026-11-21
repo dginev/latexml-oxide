@@ -1,0 +1,17 @@
+% mechanism: the lipics binding stands in for lipics.cls, lipics-v2016/v2018, lipicsmio (by prefix) and v2019-v2024;
+%   only lipics-v2019.cls:756-757 and later load comment.sty (and exclude {CCSXML}). Loaded for every version, it took
+%   `\comment`: the document's own `\newcommand{\comment}[1]{}` was refused and `\comment{...}` opened comment.sty's
+%   environment, which no `\end{comment}` line closed, so the rest of the document was lost.
+% witness: 1511.06260, 1705.05828, 1711.02032, 1803.04513
+% oracle:  pdflatex 0 errors: "Kept text." and "Last paragraph."
+% engines: rust REGFIXJ3 = 1 Error:unexpected:EOF, the text after \comment lost
+% expect:  0 errors, 0 warnings; both paragraphs kept
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXN2)
+% preload: ar5iv.sty
+\documentclass{lipics-v2018}
+\newcommand{\comment}[1]{}
+\begin{document}
+Kept \comment{dropped} text.
+
+Last paragraph.
+\end{document}

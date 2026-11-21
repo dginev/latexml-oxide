@@ -542,9 +542,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
   // A note's text is typeset as a footnote's, under `\@footnotetext`'s `\@parboxrestore` (latex.ltx:17663, 16288),
   // which also gives `\\` back its plain meaning: in a `p{}` cell of an author tabular it ended the row in the middle
-  // of `\thanks{Corresponding author.\\ Code: none.}` (2609.32661).
+  // of `\thanks{Corresponding author.\\ Code: none.}` (2609.32661). Inside the class's title, where a binding declares
+  // the `\inst` its title code defines (`\lx@title@inst`; epl2.cls:692 for its whole `\maketitle`): an EPL institute
+  // legend `\inst{*} Corresponding author…` made a note prints its mark (1009.3152, 1907.04695; OD #1127).
   DefPrimitive!(T_CS!("\\lx@frontmatter@plainsups"), None, {
     Let!(T_CS!("\\\\"), T_CS!("\\@normalcr"));
+    if is_defined_token(&T_CS!("\\lx@title@inst")) {
+      Let!(T_CS!("\\inst"), T_CS!("\\lx@title@inst"));
+    }
     if let Some(plain) = lookup_meaning(&T_CS!("\\lx@frontmatter@plainsup")) {
       assign_meaning(&T_SUPER!(), plain, None);
     }

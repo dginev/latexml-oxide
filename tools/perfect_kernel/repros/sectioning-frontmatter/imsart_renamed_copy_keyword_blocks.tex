@@ -7,8 +7,8 @@
 %          phrases: Shewhart test, Change detection."
 % engines: rust 85a = 0 errors, one keyword entry, the codes lost; a lock released right after the binding's raw
 %          imsart.sty read (86a r2 draft) lost both elements: the copy's myimsart.sty redefined the blocks
-% expect:  0 errors, 1 warning (the binding's request for imsart.sty, which neither the paper nor TeX Live ships, as on
-%          1401.3408); <keywords name="Keywords and phrases: "> with both entries and a <classification
+% expect:  0 errors, 0 warnings (the binding's raw read of imsart.sty reads the copy's myimsart.sty, OD #1118; until
+%          REGFIXQ 1 warning, its request for an imsart.sty neither the paper nor TeX Live ships, as on 1401.3408); <keywords name="Keywords and phrases: "> with both entries and a <classification
 %          scheme="AMS 2000 subject classifications"> with the codes
 % status:  RED (85a) -> GREEN (86a)
 % preload: ar5iv.sty

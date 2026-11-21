@@ -789,9 +789,14 @@ LoadDefinitions!({
       Ok(Tokens::new(tks))
     }
   );
+  // Robust, as amsmath.sty:1027 `\DeclareRobustCommand{\xrightarrow}[2][]` (extarrows.sty:47 `\providecommand`, whose
+  // optional argument protects it) keeps `\protect\xrightarrow` in a `\protected@edef`: the body names itself, so an
+  // edef re-expanded it without end (natbib `\bibfield`, 2007.15542; Perl the same, KNOWN_PERL_ERRORS #1302). Guard
+  // `perfect_kernel_batchregfixo::xrightarrow_in_a_protected_edef`.
   DefMacro!(
     "\\xrightarrow",
-    "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}"
+    "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}",
+    robust => true
   );
 
   // amsmath.sty L1012: `\def\ext@arrow#1#2#3#4#5#6#7` — the internal
@@ -857,7 +862,8 @@ LoadDefinitions!({
   DefMacro!("\\Leftrightarrowfill@ {}", "\\ensuremath{\\Leftrightarrow}");
   DefMacro!(
     "\\xleftarrow",
-    "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}"
+    "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}",
+    robust => true
   );
   // extarrows.sty defines \xlongrightarrow/\xlongleftarrow with the
   // same look-and-feel as amsmath's \xrightarrow/\xleftarrow but using
@@ -866,19 +872,23 @@ LoadDefinitions!({
   // Witnesses 2405.19992, 2406.05043.
   DefMacro!(
     "\\xlongrightarrow",
-    "\\lx@long@arrow{\\xlongrightarrow}{\\lx@stretchy@rightarrow}"
+    "\\lx@long@arrow{\\xlongrightarrow}{\\lx@stretchy@rightarrow}",
+    robust => true
   );
   DefMacro!(
     "\\xlongleftarrow",
-    "\\lx@long@arrow{\\xlongleftarrow}{\\lx@stretchy@leftarrow}"
+    "\\lx@long@arrow{\\xlongleftarrow}{\\lx@stretchy@leftarrow}",
+    robust => true
   );
   DefMacro!(
     "\\xlongLeftarrow",
-    "\\lx@long@arrow{\\xlongLeftarrow}{\\lx@stretchy@Leftarrow}"
+    "\\lx@long@arrow{\\xlongLeftarrow}{\\lx@stretchy@Leftarrow}",
+    robust => true
   );
   DefMacro!(
     "\\xlongRightarrow",
-    "\\lx@long@arrow{\\xlongRightarrow}{\\lx@stretchy@Rightarrow}"
+    "\\lx@long@arrow{\\xlongRightarrow}{\\lx@stretchy@Rightarrow}",
+    robust => true
   );
   DefMath!("\\lx@stretchy@leftarrow", "\u{2190}",
     role => "ARROW", stretchy => true, alias => "\\leftarrow");
@@ -1320,29 +1330,38 @@ LoadDefinitions!({
     egroup()?;
   });
 
-  DefMacro!("\\align",
+  // The bodies of `{align}`, `{flalign}`, starred or not, are internal macros the public names call, and so does
+  // `\start@align` (amsmath.sty:1724 is the engine and never calls an environment back by name): linenoaa.sty:57,85
+  // (aa.cls:2077) renews `{alignat}`/`{flalign}` as `\linenomathNonumbers\start@align…`, looping through the public
+  // names (2607.00952 2610.38589). Guard `perfect_kernel_batchregfixo::start_align_does_not_reenter_by_name`.
+  DefMacro!("\\align", "\\lx@ams@align", locked => true);
+  DefMacro!(
+    "\\lx@ams@align",
     "\\ifmmode\\let\\endalign\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi",
-    locked => true);
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
+  );
   DefMacro!("\\endalign",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup",
     locked => true);
-  DefMacro!("\\csname align*\\endcsname",
+  DefMacro!("\\csname align*\\endcsname", "\\lx@ams@align@star", locked => true);
+  DefMacro!(
+    "\\lx@ams@align@star",
     "\\ifmmode\\expandafter\\let\\csname endalign*\\endcsname\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi",
-    locked => true);
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
+  );
   DefMacro!("\\csname endalign*\\endcsname",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup",
     locked => true);
 
   // flalign — same as align for now (Perl treats it identically)
+  DefMacro!("\\flalign", "\\lx@ams@flalign");
   DefMacro!(
-    "\\flalign",
-    "\\ifmmode\\let\\endfalign\\endaligned\\aligned\\else\
+    "\\lx@ams@flalign",
+    "\\ifmmode\\let\\endflalign\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
      \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
@@ -1351,9 +1370,10 @@ LoadDefinitions!({
     "\\endflalign",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
+  DefMacro!("\\csname flalign*\\endcsname", "\\lx@ams@flalign@star");
   DefMacro!(
-    "\\csname flalign*\\endcsname",
-    "\\ifmmode\\expandafter\\let\\csname endfalign*\\endcsname\\endaligned\\aligned\\else\
+    "\\lx@ams@flalign@star",
+    "\\ifmmode\\expandafter\\let\\csname endflalign*\\endcsname\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
      \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
@@ -1675,6 +1695,69 @@ LoadDefinitions!({
     let star = out.first().is_some_and(|t| *t == T_CS!("\\st@rredtrue"));
     out.push(T_CS!(if star { "\\lx@ams@multline@star" } else { "\\lx@ams@multline" }));
     Ok(Tokens::new(out))
+  });
+  // amsmath.sty:1540 `\start@gather#1` starts `{gather}`/`{gather*}`, whose end (:1552-1557 `\math@cr \black@\totwidth@
+  // \egroup \dollardollar@end`; `$$` in older amsmath and in linenoaa.sty:51-55's copy) closes the `$$\halign`
+  // `\gather@` opened; a package's environment copies that end (aa.cls's linenoaa.sty; 2407.04074 2503.08108 2503.20535
+  // 2604.03365 2608.16665). The binding builds no `\halign`, so the package's end runs with `\math@cr` (only there)
+  // reading that idiom as the binding's `\endgather`, as `\lendmultline@` does for multline (OD #1124, guards
+  // `perfect_kernel_batchregfixr::start_gather_ends_a_package_gather`, `perfect_kernel_batchregfixr2::*`).
+  Let!("\\lx@ams@gather", "\\gather");
+  Let!("\\lx@ams@gather@star", "\\gather*");
+  Let!("\\lx@ams@endgather", "\\endgather");
+  DefMacro!(
+    "\\lx@ams@gather@end",
+    "\\let\\math@cr\\lx@ams@gather@close\\lx@ams@gather@pkgend"
+  );
+  DefMacro!("\\start@gather{}", sub[(starred)] {
+    let mut out = starred.unlist();
+    let star = out.first().is_some_and(|t| *t == T_CS!("\\st@rredtrue"));
+    out.extend(TokenizeInternal!(
+      r"\expandafter\let\expandafter\lx@ams@gather@pkgend\csname end\@currenvir\endcsname
+        \expandafter\let\csname end\@currenvir\endcsname\lx@ams@gather@end"
+    ).unlist());
+    out.push(T_CS!(if star { "\\lx@ams@gather@star" } else { "\\lx@ams@gather" }));
+    Ok(Tokens::new(out))
+  });
+  // `\math@cr` … `\egroup` then `$$` or `\dollardollar@end`; anything but `\black@<dimen>` before the `\egroup` is
+  // `\halign` material the binding has no place for, so it is dropped with a Warning (none within a few tokens: all
+  // of it is put back).
+  DefMacro!("\\lx@ams@gather@close", sub[_args] {
+    let mut dropped = Vec::new();
+    let mut closed = false;
+    while dropped.len() < 8 {
+      match read_token()? {
+        Some(t) if t == T_CS!("\\egroup") => { closed = true; break; },
+        Some(t) => dropped.push(t),
+        None => break,
+      }
+    }
+    if !closed {
+      unread(Tokens::new(std::mem::take(&mut dropped)));
+      Warn!("unexpected", "\\math@cr", "The end of a {gather} has no \\egroup closing its alignment");
+      return Ok(Tokens::from(T_CS!("\\lx@ams@endgather")));
+    }
+    while peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
+      read_token()?;
+    }
+    if peek_token()?.is_some_and(|t| t == T_CS!("\\dollardollar@end")) {
+      read_token()?;
+    } else if peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::MATH) {
+      let first = read_token()?;
+      if peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::MATH) {
+        read_token()?;
+      } else if let Some(first) = first {
+        unread(Tokens::new(vec![first]));
+      }
+    }
+    let idiom = dropped.len() == 2 && dropped[0] == T_CS!("\\black@");
+    if !dropped.is_empty() && !idiom {
+      Warn!("unexpected", "\\math@cr", &s!(
+        "The end of a {{gather}} drops the alignment material {}",
+        Tokens::new(dropped).untex()
+      ));
+    }
+    Ok(Tokens::from(T_CS!("\\lx@ams@endgather")))
   });
   // AmSTeX version (inside math)
   DefConstructor!("\\@@AmS@multline DigestedBody",
@@ -2884,6 +2967,20 @@ fn ams_author_called_internals() -> Result<()> {
   \vbox{\noindent\hbox to\displaywidth{\hbox to#1{\strut@\hfill}}}%
   \prevdepth\dimen@ \fi}}"
   );
+  // amsmath.sty:1344-1363 `\displ@y@`, the row setup `\gather@` and `\align@` (:1568, :1820) start their `\halign` with,
+  // and :1267, :1294 the tag registers it resets. The binding's displays build no `\halign` and run none of it; a
+  // document's `\g@addto@macro\displ@y@{…}` (a named-equation hack: 1406.6618 2301.11270 2304.01203 2401.16335
+  // 2402.12617) adds to it, inert. (`\displ@y` stays latex_constructs' `\displaystyle`, as Perl's.) Guard
+  // `perfect_kernel_batchregfixr::amsmath_displ_y_takes_an_addition`.
+  RawTeX!(
+    r"\newcount\column@
+\let\raise@tag\@empty
+\def\@display@init#1{\global\lineht@\z@ \global\dt@ptrue \spread@equation
+  \everycr{\noalign{#1\ifdt@p \global\dt@pfalse \vskip-\lineskiplimit \vskip\normallineskiplimit
+    \else \penalty\@eqpen \global\dspbrk@lvl\m@ne \fi}}}
+\def\displ@y@{\@display@init{\global\column@\z@ \global\dspbrk@lvl\m@ne
+  \global\tag@false \global\let\raise@tag\@empty}}"
+  );
 
   // amsmath.sty:1187 `\intertext@` makes `\intertext` the in-alignment one, which is
   // `\@ams@intertext` here (the alignment bindings `\let` it so; 2506.12131).
@@ -2915,7 +3012,7 @@ fn ams_author_called_internals() -> Result<()> {
   // `{align*}`, `{flalign}` (`\tw@`), `{alignat}` (`\z@`, then the column count), `{xalignat}`
   // and `{xxalignat}`, which a document's own environment calls (2008.12422
   // `\newenvironment{mathouteq}{…\start@align\tw@\st@rredtrue\m@ne}{\endalign…}`). It starts
-  // the same environment here, closed by that environment's `\endalign`.
+  // the same environment here (its internal body, not its public name), closed by that environment's `\endalign`.
   DefMacro!("\\start@align{}{}{}", sub[(level, starred, columns)] {
     let number = |tokens: Tokens| -> Result<i64> {
       let mut probe = tokens.unlist();
@@ -2933,14 +3030,14 @@ fn ams_author_called_internals() -> Result<()> {
     let mut out = Vec::new();
     if columns < 0 {
       let name = if level == 2 { star_name("flalign") } else { star_name("align") };
-      out.push(T_CS!(&s!("\\{name}")));
+      out.push(T_CS!(&s!("\\lx@ams@{}", name.replace('*', "@star"))));
     } else {
       let name = match level {
         0 => star_name("alignat"),
         1 => star_name("xalignat"),
         _ => "xxalignat".to_string(),
       };
-      out.push(T_CS!(&s!("\\{name}")));
+      out.push(T_CS!(&s!("\\lx@{}@col", name.replace('*', "Star"))));
       out.push(T_BEGIN!());
       out.extend(columns_tokens.unlist());
       out.push(T_END!());

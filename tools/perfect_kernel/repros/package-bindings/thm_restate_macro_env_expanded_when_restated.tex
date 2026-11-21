@@ -1,0 +1,19 @@
+% witness: int/regfix6 review S1; 1411.0871, 1410.0855 (`\renewcommand{\retheorem}{rtheorem}` before restating:
+%          "Restated Theorem 2.1", "Restated Lemma 3.3" in the PDF)
+% oracle:  pdflatex 0 errors: "Theorem 1. Main body." then "Restated Theorem 1. Main body."
+% engines: rust INT6B (`Expand!(env)` at store time) "Theorem 1" both times, class ltx_theorem_theorem; main errs
+%          "{\retheorem} is not defined" and drops the restatement
+% expect:  0 errors, 0 warnings; the restatement an `rtheorem` "Restated Theorem 1"
+% mechanism: thm-restate.sty:153-163 stores `#2` in `\thmt@stored@<name>` and expands it when the theorem is restated;
+%          the binding keeps the raw tokens and expands them at restatement (thm_restate_sty.rs `store`)
+% status:  RED (INT6B) -> GREEN (int/regfix6)
+\documentclass{article}
+\usepackage{amsthm,thm-restate}
+\newtheorem{theorem}{Theorem}
+\newtheorem{rtheorem}{Restated Theorem}
+\newcommand{\retheorem}{theorem}
+\begin{document}
+\begin{restatable}{\retheorem}{mainthm}\label{t1}Main body.\end{restatable}
+\renewcommand{\retheorem}{rtheorem}
+\mainthm*
+\end{document}

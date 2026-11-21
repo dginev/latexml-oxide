@@ -14,8 +14,13 @@ LoadDefinitions!({
   // tabularx, multirow, newtxmath's `\gtrsim` (2609.00899, 2609.05706, 2609.06191, 2609.10235): the class file's own
   // dependency scan, as sn_jnl_cls.rs does, without the base class and soul, which is the `\else` arm of `\ifpdf`
   // (:46-54) pdflatex never takes — its `\hl`/`\st` would replace a paper's own. (`styles/#1`, :59, sits in a macro body
-  // the scan skips anyway.)
-  require_dependencies_except("optica-article", "cls", &["article", "soul", "styles/#1"]);
+  // the scan skips anyway.) At the class's end, after the paper's copy is read, as sn_jnl_cls.rs's: the copy loads its
+  // packages in its own order; the loads that ran are loaded and the rest filtered (content.rs's executed-set gate), so
+  // after a copy the scan adds nothing — it acts only for a paper's class not read as the stand-in's copy.
+  DefPrimitive!("\\lx@optica@class@end", {
+    require_dependencies_except("optica-article", "cls", &["article", "soul", "styles/#1"]);
+  });
+  RawTeX!(r"\AtEndOfClass{\lx@optica@class@end}");
 
   // Optica-specific frontmatter / formatting.
   DefMacro!("\\authormark{}", "\\textsuperscript{#1}");

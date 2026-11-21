@@ -1,0 +1,19 @@
+% witness: 2007.15542 (its .bbl, apsrev4-1: `\bibfield {title} {… $2 \xrightarrow[]{H_I+H_I} 2$ …}`)
+% oracle:  pdflatex 0 errors: "Text kept [1]. a ←(v over u) b →(w) c", the bibitem "in the 2 →(H) 2 transition";
+%          `\protected@edef` keeps `\protect \xrightarrow` (amsmath.sty:1027 `\DeclareRobustCommand`)
+% engines: rust REGFIXJ3 Fatal:Timeout:PushbackLimit (revtex4-1.cls:7046 `\let\NAT@merge\thr@@` -> natbib.sty:930
+%          `\bibfield`'s `\protected@edef` re-expanded `\xrightarrow`, whose body names it); perl the same
+%          (KNOWN_PERL_ERRORS #1302)
+% expect:  0 errors; the bibitem's formula an `XMApp role='ARROW'`; the edef'd `\xleftarrow[u]{v}` typeset with
+%          its under- and overaccent
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXO)
+\documentclass{revtex4-1}
+\usepackage{amsmath}
+\makeatletter\protected@edef\x{$a \xleftarrow[u]{v} b \xrightarrow{w} c$}\makeatother
+\begin{document}
+Text kept \cite{Feng}. \x
+\begin{thebibliography}{1}
+\bibitem [{Feng(2020)}]{Feng}
+  \bibfield {title} {in the $2 \xrightarrow{H} 2$ transition}
+\end{thebibliography}
+\end{document}

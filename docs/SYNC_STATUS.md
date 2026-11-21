@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (405 lines, weight 906; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (424 lines, weight 955; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -696,12 +696,98 @@ Rules that keep this file honest and mergeable:
     retraction is never reopened; the token-spelling ratchet (`latex_constructs/mod.rs` 224→225, `sect07.rs` 29→30);
     corrected KPE #1295 / OD #1091 wording. Residuals: `\[ a $$ $$ c \tag{3}\]` (pdflatex errs "\tag not allowed
     here"), `{displaymath}` with `$$ $$` (1 Error, pdflatex 0); 3
-  - REGTAIL — the v0.8.0 regression check's classes still untraced after REGFIX G-L (run 372 → 399 triage): aastex631
-    2211.00793 (`Missing } inserted` ×20 at "Anonymous String"), 2502.03242's `\the@toks` undefined and `\@sharp`
-    reaching the Stomach (colortbl + raw ltxutil), solarphysics.cls `toccaption` (12 papers; 2006.04669, 1510.03282,
-    2301.09829), the `(caption)` and `fi` classes (~37 each, unsampled), and ANONSTR. Fixed by REGFIX G-L: bullsrsl
-    `authorcontributions`, the SVJour subset, emulateapj 1305.6912, biophys-new 2212.00883, llncs 2312.12023,
-    `malformed:ltx:item`, `\etalchar`, `\IUCrCemaillink`, `\BR@backref`, `\@arrayleft` → `Fatal:Mouth:EoF`; 5
+  - REGTAIL — the v0.8.0 regression check's residue after REGFIX M-U (int/regfix6; run 372 → 399, tier 2): of the
+    497 papers clean on run 372, 192 still err (343 before that round, 0 newly erring, 12 Fatal), ~45 classes of 2-9:
+    `unexpected:\endgroup` 9 (2110.03080, 1907.13475, 2502.02871), `expected:<dimen>` 7 (xy `\ar` labels, 1504.04186,
+    1809.00682), `Fatal:oom:alloc_failed` 6, `unexpected:}`/`&` 6 each (ANONSTR), `expected:Match` 5, `\end{center}` 5,
+    `\lx@personname` 5 (1207.5684, 1906.11649), `toccaption` 5 (solarphysics, svjour3; 1510.03282, 1511.05217),
+    `TooManyErrors` 5, `\ordinal` 5 (1112.4346), `\@metaauthor` 5 (snapshotmfo.cls), `\email` 4 (cccconf.cls), old pgf
+    1.x trees' `expected:conditional` 4 (0704.2264, cond-mat0610559), pgfmath overflow (2007.09944, 2201.10213),
+    `\@end@tabular` 4 (0708.3763, 1107.1010), `\omit`/`\noalign` (2601.10115, 2609.04552, 2408.07095), `\relax` in
+    `\csname` (2205.09553, 2208.14960); traced: THEAPABCA, NOLTAAUTHOR, IEEEDVI, CREFCAPS, EXPANDCUT, NEURIPSACK,
+    TBLRADJ. From REGFIX G-L still: aastex631 2211.00793, 2502.03242's `\the@toks`; 5
+  - COPYROUTE — (post-0.8.0 first, DG 2026-11-21) REGFIXQ's copy tests read the shipped file's text before TeX reads
+    it (content.rs `loads_file`, `reads_as_the_file`, `names_read_as`; OD #1118); replace them by rules on the executed
+    path (advisor study): P the copy read where the binding reads its file (exists), W a request for X during that read
+    reads X's real file, M a substituted read does not mark X loaded (precedent content.rs `_unmarks_itself`).
+    `\ProvidesPackage`/`\ProvidesClass` record `\ver@` under the requested name (latex.ltx:18471-18486; ours and Perl's
+    the declared one, sect05.rs:260-271, latex_constructs.pool.ltxml:841-850 — a KNOWN_PERL_ERRORS entry) and warn
+    "You have requested … but the package provides …" as a Warning (DG). Guards to add: `\ProvidesClass{smfart}
+    \LoadClassWithOptions{smfart}` (3 Errors now), `\IfFileExists{X.sty}{\RequirePackage{X}}{}`, an author file of four
+    names or fewer sharing one (COPYSMALL: `{tikz-cd}` with `\def\ar`, `{tcolorbox}` renewing `\arraystretch`), a copy
+    then a real `\usepackage{X}`; 5
+  - SHIPPEDPKGSCAN — dependency scans still made before a copy is read: `shipped_class.rs` `require_shipped_packages`
+    (~213, it chooses the binding's defaults) and `require_package`'s after a raw read (content.rs ~4215, a near no-op
+    by the executed-set gate ~4828). Perl never scans a file it reads (Package.pm:2696, :2732); sn-jnl and optica follow
+    TeX's order since REGFIXU (OD #1130); 3
+  - NOLTAAUTHOR — nolta.cls's `\AUTHOR{…}` stores `\author{Name}{1}\orcid{…}` in `\@Mauthor`, run only by its
+    `\@maketitle`; the lock refuses the class's `\author`, so there is no creator (the name a block note) and
+    `Error:undefined:\current@author` (2404.06828, 2509.07487, 2604.20333, 2605.00366, 2605.05978; census reach ≈0): a
+    thin binding, or a kernel rule that a raw class's stored `\author` calls printed by its title page are the creators;
+    3
+  - EXPANDCUT — a parameterless macro reading through its expansion in an author (`\def\contact{\xdef\@thefnmark{}
+    \@footnotetext}`) is cut from its argument: 1909.05295 (svmult) a creator "and \@undefined", Stefan Bruckner lost,
+    "footnote" in an e-mail; `\author{\textsc{Ann Bee}\contact{a@b.org}, Univ A\\ \textsc{Cy Dee}\contact{c@d.org},
+    Univ B}` merges Cy Dee into Ann Bee's affiliation. A whatsit made by a macro's expansion should cover the invoking
+    token; 3
+  - IEEEDVI — IEEEtran papers with `\includegraphics{x.eps}` throughout: the figure cue (converter.rs ~305
+    `figure_output_cue`) picks DVI, `\ifCLASSINFOpdf` is false (ieeetran_cls.rs ~170) and graphicx never loads (3
+    papers; 2112.07932 ships `-eps-converted-to.pdf`, so arXiv ran pdflatex): the cue should not pick DVI where the DVI
+    branch cannot load graphicx; 3
+  - THEAPABCA — theapa.sty read raw: after a `\cite`, `\BCAY` calls `\BCA`, defined only inside `\@@cite`, as our
+    `\bibitem` digests the `\protect\BCAY{…}` label theapa's `\@biblabel` gobbles (:429) (1109.6618, 1111.0053,
+    1405.3608, 2111.08066, 2304.01300; Perl 8 errors, it never reads theapa.sty): honour a raw `\@biblabel`, or bind
+    theapa; 3
+  - CREFCAPS — (ruling pending; (a), build the capitalised name lazily on its first use, recommended) a cleveref
+    capitalised name with a leading command (`\MakeUppercase{\color{black} Section}`) is typeset at every `\label`
+    (cleveref_sty.rs ~913-1000, CREF_TAG_ROLES): "Can't find color BLACK" though `\Cref` is unused (2402.05459,
+    2404.01185, 2605.26927, 2606.11815; 2212.00537 errs in pdflatex too); 3
+  - NEURIPSACK — `\usepackage[preprint]{neurips_2025}` with `\begin{ack}Thanks $$x_i=1$$\end{ack}` (or `\ack` as a
+    command) gives `_` in math mode, the TL file too and Perl's same `{ack}` (2510.08734): model environ's
+    `\NewEnviron{ack}`; 3
+  - TBLRADJ — a `tblr` inside `adjustbox` inside `table*` (2502.02871), untraced; 3
+  - STARTALIGNGRP — `\start@align` under a document's renewed `{alignat}` ended by its own `\math@cr\black@\totwidth@
+    \egroup\egroup` (eqndefns-left: 2601.10843, 2602.04048): Fatal Recursion → 3 Errors, still an empty document; open
+    the alignment in a group a plain `\egroup` closes (repro alignment/start_align_under_redressed_alignat); 3
+  - GATHERCAP — `\lx@ams@gather@close` scans 8 tokens, not items: `…\black@\totwidth@ \noalign{\vskip 4pt}\egroup $$`
+    overflows into the raw cascade (6 Errors), `\iftag@\fi` before the `\egroup` gives a false Warning (synthetic; every
+    TL and corpus form is `\math@cr \black@\totwidth@ \egroup`): scan balanced items, skip `\black@<arg>`, empty
+    conditionals and `\relax` silently; 1
+  - XARGSSPACE — an xargs later optional argument peeks past spaces and drops them where no `[` follows, which
+    `\xargs@ifnextchar` (xargs.sty:64-87) puts back: `\ry{i} \ry{i}[j]` prints "SieSij", pdflatex "Sie Sij"; Perl the
+    same (KNOWN_PERL_ERRORS #1304); 1
+  - PDFSTRGAPS — hyperref PDF strings against pdfinfo: `\cite[p.~3]{k}` → `[cite][k, p. 3]`, `\footnote[3]{n}` →
+    `3]n`, `\hspace{1em}` → `1em`, `\textcolor{red}` keeps `red`, `\fontsize{9}{10}` → `910`, `\raisebox{1pt}` keeps
+    `1pt`; no "Token not allowed in a PDF string" Warnings (OD #824); a plain `\edef` of `\xrightarrow` still Fatal
+    (pdflatex 3 `!`; KNOWN_PERL_ERRORS #1302); a macro used in hyperref's package options before its `\newcommand`
+    stays an ERROR stub; 3
+  - FMNOTESHAPES — frontmatter note shapes (synthetic unless named; REGFIXM2, P, S reviews): a list note with several
+    marks (`\textsuperscript{1}Univ X\\ \textsuperscript{2}Univ Y` appended to `\@setauthors`; elsarticle's unlabelled
+    `\elsaddress`, acmart's `\@authornotes`) loses its marks (`\lx@fm@list@note` is mark-led at one mark only); a
+    stranded "by" from a document's `\@setauthors` printing `by \authors`; a `\footnote` in `\@setauthors` nests in a
+    note; a mark-led note goes to every creator showing the mark (2610.02789: three copies; OD #1054); a printed
+    `$/\!\!/$` between names dropped with 0 Warnings (2401.17245); `\let\mail\footnote` in title code still held
+    undefined; an EPL `\inst{2}` in a `\thanks` an italic digit; amsart's `\@setthanks` undefined; 3
+  - CAPTIONV1 — caption3 v1 residues (REGFIXR2 review): a consumed v1 option list applies `labelformat` only
+    (`[subfloat]{labelformat={simple},labelsep=colon}` prints "a", pdflatex "a:"); a caption-less `\subfloat` under
+    `[subfigure]` warns "Unused" (pdflatex not), and raw v1.8h errs on `\phantomcaption`; `\captionsetup[figure]`
+    under raw floatrow warns "Unused"; a document's `\usepackage{caption3}` reaches the binding while a raw package's
+    `\RequirePackage{caption3}` reads the shipped copy; 3
+  - KERNELSMALL — kernel residuals found by this round's reviews: a `\let` copy of `\underline` prints as the primitive
+    under `\meaning` (pdflatex `macro:->\protect \underline  `; tex_debugging.rs ~286-290 keys on the token's name);
+    `\ignorespacesafterend` leaves the space after `\end{…}` ("AFTERTEXT  next."); a named-equation hack (`\eqname`
+    through a patched `\maketag@@@`) prints nothing (pdflatex "NAMEA"); `\[…\]\noindent X` marks the whole paragraph
+    `ltx_noindent`; a `\let` (or `\LetLtxMacro`) copy of an optional-argument command keeps the old body after the
+    original's redefinition, where LaTeX's calls `\\cs` by name; 3
+  - RESTATEKEY — thm-restate residuals: the `restate=` key's `\x*` prints the first number where pdflatex reads the
+    last from the `.aux`; `restate=` on a wrapper environment unprobed; 2609.31596's `\renewcommand{\thecorollary}
+    {\ref*{#1}.#2}` ignored (theorem numbering, "Corollary 9" for pdflatex's "8.1"); 1
+  - INPUTNAMEBYTE — `\input{x<0x81>y}` under latin1 is a missing file whose name holds `\protect\GenericError…`
+    (pdflatex: a garbled name, then Fatal); revtex4-1 without hyperref defines `\ifpdf`/`\ifxetex` (undefined in
+    TeX); emulateapj answers `\@ifpackageloaded{iftex}`/`{hyperref}` yes (pdflatex no); 1
+  - TIKZCDARROWS — a file declaring `{tikz-cd}` that loads `\usetikzlibrary{arrows}` gives 14 Errors at
+    pgflibraryarrows.code.tex:36 ("I did not find the pgf library 's'"), base too, 0 under its own name; pdflatex
+    clean; 1
   - RUNAWAY395 — an undelimited macro argument that meets a closing `}` takes it (Perl `Gullet.pm:732` readArg;
     `gullet.rs` ~4048 `read_arg`), so an `\edef` runs to the end of the file (`\makeatletter\edef\x{\@firstoffive{a}}`):
     1012.2852 loses its last ~370 lines, base and Perl too; TeX inserts `\par` and keeps the `}` (tex.web §395).

@@ -104,7 +104,8 @@ const LATEX_PRIMITIVE_COMMANDS: &[&str] = &[
 
 /// Is `cs` a binding's native standing in for what is a macro in LaTeX: a closure-bodied macro, a constructor, a
 /// math primitive or a primitive, unless it is a font selector or one of LaTeX's TeX primitives (`\hbox` is a
-/// constructor here)?
+/// constructor here)? A `\protected` macro counts too: etoolbox rebuilds it as the same protected macro, so it is
+/// robust already (the binding's `\underline`, whose rebuild failed: 2407.21515, 2506.16228, 2511.14592).
 fn native_macro_in_latex(cs: &Token) -> bool {
   let not_tex_primitive = |name: &Token| {
     name.with_cs_name(|n| {
@@ -115,7 +116,7 @@ fn native_macro_in_latex(cs: &Token) -> bool {
   };
   match lookup_meaning(cs) {
     Some(Stored::Expandable(e)) => {
-      matches!(e.expansion, Some(ExpansionBody::Closure(_)))
+      (e.is_protected || matches!(e.expansion, Some(ExpansionBody::Closure(_))))
         && not_tex_primitive(&e.get_cs_or_alias())
     },
     Some(Stored::Constructor(c)) => not_tex_primitive(&c.get_cs_or_alias()),
@@ -2210,7 +2211,8 @@ LoadDefinitions!({
   // (wiley-article.cls:771-775 `\robustify{\ref}`/`{\cite}`: 1812.10085, 2210.15126; Perl the same, KNOWN_PERL_ERRORS
   // #902). A TeX primitive, a register or a chardef keeps etoolbox's Error, as in TeX (`native_macro_in_latex`).
   // OD #1092. Guards `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`,
-  // `perfect_kernel_batchclustfix3::robustify_of_a_native_binding`.
+  // `perfect_kernel_batchclustfix3::robustify_of_a_native_binding`,
+  // `perfect_kernel_batchregfixn1::robustify_a_protected_binding_macro`.
   DefMacro!("\\lx@ifnativecmd{}{}{}", sub[(cs, yes, no)] {
     let native = matches!(cs.unlist_ref().as_slice(), [t] if native_macro_in_latex(t));
     Ok(if native { yes } else { no })

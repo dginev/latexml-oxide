@@ -2808,8 +2808,12 @@ fn append_name_list(key: &str, name: &str) {
 /// siunitx declared whose command the document leaves free (`\cs_if_free:N`, LaTeX's `\@ifundefined`) becomes
 /// `\protected` and means `\ERROR` — an error where it is used outside a unit argument, and a protected macro to an
 /// alignment's look-ahead and an expanding read (an `s` column's cell). The version-1 units declared here beside
-/// siunitx's own stay undefined: `\tikzmath{\yb = .6;}` assigns a variable (2409.01115).
+/// siunitx's own stay undefined: `\tikzmath{\yb = .6;}` assigns a variable (2409.01115). None where the SIunits binding
+/// loaded siunitx for its machinery (`lx@six@no@command@create`, siunits_sty.rs).
 fn six_command_create() -> Result<()> {
+  if lookup_bool("lx@six@no@command@create") {
+    return Ok(());
+  }
   let names = with_value("siunitx_command_names", |v| {
     v.map(|s| s.to_string()).unwrap_or_default()
   });

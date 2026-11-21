@@ -1,0 +1,14 @@
+% A shipped copy whose declaration routes its request to a binding the document loaded already is still read: the
+% binding is not run again, the copy is (TeX reads the file whole).
+% witness: 2304.14243 (packages/pictures.sty `\ProvidesPackage{packages/graphics}`, after graphicx)
+% oracle:  pdflatex 0 errors; "PICTURE-MACRO"
+% engines: rust INT6A = 1 error (`\mypicmacro` undefined): the route found graphics loaded and read nothing, silently
+% expect:  0 errors, 0 warnings; the paragraph "PICTURE-MACRO"
+% status:  RED (INT6A) -> GREEN (REGFIXQ)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{picscopy}
+\begin{document}
+\mypicmacro
+\end{document}

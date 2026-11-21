@@ -1,0 +1,15 @@
+% witness: 1808.09428, 1812.07558, 1904.08912, 1906.04729 (revtex4-1, `\let\ifpdf\relax` before `\usepackage{hyperref}`;
+%          v0.8.0 regression check)
+% oracle:  pdflatex 0 errors, "A word.": revtex4-1.cls loads no iftex, so the document's hyperref loads it
+%          (hyperref.sty:122) and iftex.sty:272-291 sets `\ifpdf` again before hyperref tests it
+% engines: rust rc1/REGFIXJ3 2 errors (`unexpected:\else`, `unexpected:\fi`: the revtex binding's hyperref preload had
+%          left iftex marked loaded, so the second hyperref load's driver test read the document's `\ifpdf`=`\relax`)
+% expect:  0 errors, 0 warnings; "A word."
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXN1, revtex4_support_sty.rs unmarks the iftex its preload loaded)
+\documentclass[twocolumn]{revtex4-1}
+\pdfoutput=1
+\let\ifpdf\relax
+\usepackage{hyperref}
+\begin{document}
+A word.
+\end{document}

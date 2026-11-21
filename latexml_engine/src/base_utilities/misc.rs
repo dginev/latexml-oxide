@@ -161,6 +161,19 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
   Ok(())
 }
 
+/// For a URL read expanded and then stringified (`\url`'s reader, `HyperVerbatim`), in its group: `\protect` empty, as
+/// in hyperref's `\pdfstringdef`, and `\GenericError` raising its Error and leaving nothing, so a robust
+/// `\PackageError` (inputenc's undefined byte, inputenc.sty:80, :139-143) errs once and is no URL text.
+pub fn url_string_messages() -> Result<()> {
+  DefMacro!(T_CS!("\\protect"), None, Tokens!(), scope => Some(Scope::Local));
+  DefMacro!("\\GenericError{}{}{}{}", sub[args] {
+    let args = args.into_iter().map(|arg| arg.owned_tokens().unwrap_or_default()).collect();
+    make_generic_message("\\GenericError", args, "error")?;
+    Ok(Tokens!())
+  }, scope => Some(Scope::Local));
+  Ok(())
+}
+
 /// Heuristic classifier for vendor `\PackageError`/`\GenericError`
 /// messages whose only concern is PDF typesetting (size, layout,
 /// position, page-fit). These have no signal in XML/HTML output and

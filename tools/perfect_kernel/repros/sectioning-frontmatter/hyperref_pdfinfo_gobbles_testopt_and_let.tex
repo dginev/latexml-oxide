@@ -1,0 +1,46 @@
+% witness: REGFIXO review B1 (the optional-argument `\newcommand` in a PDF string, round 1's `\protect`), S2, S3, N4;
+%          REGFIXO2 review B1 (xargs's and twoopt's commands in a PDF string); REGFIXO3 review B1
+%          (`\DeclareRobustCommandx`, its inner `\cs␣` with no internal; KNOWN_PERL_ERRORS #1304)
+% oracle:  pdflatex 0 errors; pdfinfo: Title "X [q]  #3 s b t [c]d u r v [m][n]o w [m]o x q y [1]2[3] z e A f B [g]h C D b E [f]g F i[j] G",
+%          Subject "k [m]n X Y *x", Keywords "An abc arrow [u]v",
+%          Author "On the $q$" (hyperref's "Token not allowed in a PDF string" Warnings for \opt, \two, \zzundef …)
+% engines: rust REGFIXO2 Title "X [q] #3 s Xab t Xcd u Tpqr v Tmno w Tmqo x Yqzy Z123 z ZaecA Upqf B Wgh C" (twoopt
+%          and xargs made no internal `\\cs`); rust REGFIXO Error:undefined:\zzundef, Fatal:Timeout:PushbackLimit (the
+%          arrow); `\opt[q]` "Fq", `\opt{}` "Fd", `\two{k}` "Txk", `\st*x` "Sx", the option's author "On the \protect\$q\protect\$"
+% expect:  0 errors, 0 warnings; the four `<rdf>` strings as pdfinfo's (spaces collapsed); "Text kept."
+% mechanism: hyperref.sty:545-549 (`\@ifnextchar`, `\@protected@testopt` gobble their command and its arguments;
+%          `Expandable::testopt_call`), :563-564 `\HyPsd@LetCommand`, the arrows' `\lx@long@arrow` gobbled, the
+%          package option's information string `\pdfstringdef`'d as `\hypersetup`'s; twoopt.sty:51-55 and
+%          xargs.sty:205-212 define the internal `\\cs` their call names (`\@protected@testopt@xargs` for xargs's
+%          other optionals)
+% status:  RED (REGFIXO) -> GREEN (REGFIXO2); xargs's and twoopt's RED (REGFIXO2) -> GREEN (REGFIXO3);
+%          `\DeclareRobustCommandx` RED (REGFIXO3: title "D R1=db E Rfg F S2=ei[j] G", text "R1=db Rfg S2=ei; S2=ei[j]")
+%          -> GREEN (int/regfix6)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{xargs}
+\usepackage{twoopt}
+\usepackage[pdfauthor={On the \$q\$}]{hyperref}
+\makeatletter
+\newcommand\opt[1][d]{F#1}
+\newcommand\two[2][x]{T#1#2}
+\newcommand\mk[1]{\let\zzundef\relax #1}
+\newcommand\st{\@ifstar{S}{N}}
+\newcommandx\xa[2][1=a]{X#1#2}
+\newcommandx\xb[2][2=z]{Y#1#2}
+\newcommandx\xc[3][1=a,3=c]{Z#1#2#3}
+\providecommandx*\xd[2][1=a]{W#1#2}
+\newcommandtwoopt\tw[3][p][q]{T#1#2#3}
+\providecommandtwoopt\tp[3][p][q]{T#1#2#3}
+\DeclareRobustCommandx\rx[2][1=d]{R#1#2}
+\DeclareRobustCommandx\ry[2][2=e]{S#1#2}
+\renewcommandtwoopt\tp[2][p][q]{U#1#2}
+\title{X \opt[q]}
+\hypersetup{pdftitle={\@title{} \opt{} \#3 s \xa{b} t \xa[c]{d} u \tw{r} v \tw[m][n]{o} w \tw[m]{o} x \xb{q} y
+  \xc[1]{2}[3] z \xc{e} A \tp{f} B \xd[g]{h} C D \rx{b} E \rx[f]{g} F \ry{i}[j] G}, pdfsubject={\two{k} \protect\two[m]{n} \mk{X} Y \st*x},
+  pdfkeywords={An $a\xrightarrow{b}c$ arrow \xrightarrow[u]{v}}}
+\makeatother
+\begin{document}
+Text kept. \xa{b} \xa[c]{d} \tw{r} \tw[m][n]{o} \tw[m]{o} \xb{q}[e] \xc[1]{2}[3] \tp{f} \xd[g]{h}
+\rx{b} \rx[f]{g} \ry{i}; \ry{i}[j]
+\end{document}

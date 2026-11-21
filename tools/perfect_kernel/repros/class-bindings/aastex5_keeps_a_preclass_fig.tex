@@ -1,0 +1,12 @@
+% witness: 0910.5598 (aastex 5.x); emulateapj: 1002.3626 astro-ph0511141, 1301.6182 (emulateapj-rtx4) — a `\fig`
+%          defined before \documentclass; neither aastex.cls 5.x nor emulateapj.cls defines \fig
+% oracle:  pdflatex 0 errors (the paper's aastex.cls 5.x copy): "Fig. 1.— C", "See Figure 1."
+% engines: rust INT6A 1 error (undefined \fig: the binding's 5.x branch undefined the family)
+% expect:  0 errors; "See Figure <ref labelref=LABEL:f/>."
+% status:  RED (INT6A) -> GREEN (REGFIXR)
+\newcommand{\fig}[1]{Figure~\ref{#1}}
+\documentclass{aastex}
+\begin{document}
+\begin{figure}\caption{C}\label{f}\end{figure}
+See \fig{f}.
+\end{document}

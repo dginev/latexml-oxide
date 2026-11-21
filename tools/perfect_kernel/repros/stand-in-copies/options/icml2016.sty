@@ -1,0 +1,15 @@
+%% The paper's copy of icml2016.sty (1603.00748), cut down to its options and its first hyperref block (:76-107, :130):
+%% the block tests `\nohyperref` before `\ProcessOptions` defines it and closes one conditional fewer than it opens.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{icml2016}[2016/01/01 v2.0 ICML Conference Style File]
+\DeclareOption{accepted}{\gdef\isaccepted{1}}
+\DeclareOption{arxiv}{\gdef\isarxiv{1}}
+\DeclareOption{nohyperref}{\gdef\nohyperref{1}}
+\ifdefined\nohyperref\else\ifdefined\hypersetup
+  \hypersetup{pdfborder=0 0 0}
+  \ifdefined\isaccepted \else\ifdefined\isarxiv \else
+    \hypersetup{pdfauthor={Anonymous Submission}}
+  \fi
+\fi\fi
+\newcommand\icmlcopymacro{ICML-COPY-MACRO}
+\ProcessOptions\relax

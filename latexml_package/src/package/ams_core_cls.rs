@@ -99,4 +99,11 @@ LoadDefinitions!({
     \@translators}
   \endgroup
 }");
+  // amsart.cls:638, :808 (amsproc.cls:613, :746): `\maketitle` runs `\@setauthors` after the title, a store documents extend
+  // (2607.28440, 2610.02789, 2610.02630, 2610.08257, 2610.25104) or copy (1202.1250, 2310.04922). The binding places the
+  // names, contributors and addresses, so it starts empty and runs with none of them: what else it prints is a note.
+  RawTeX!(r"\let\@setauthors\@empty
+\def\lx@ams@setauthors{\ifx\@empty\authors\else
+  \lx@frontmatter@footnotes{\let\authors\@empty\let\contribs\@empty\let\@setaddresses\relax\@setauthors}\fi}");
+  AddToMacro!("\\lx@maketitle@body", "\\lx@ams@setauthors");
 });

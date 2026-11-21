@@ -1,0 +1,17 @@
+% witness: 2407.21515, 2506.16228, 2511.14592 (`\robustify\underline` after etoolbox; v0.8.0 regression check)
+% oracle:  pdflatex 0 errors, "A word here [a]." with "word" underlined: LaTeX's `\underline` is robust
+%          (latex.ltx:16369), etoolbox.sty:1267-1289 rebuilds it the same. (`\robustify\overline`, also a protected
+%          macro here, stays an Error: a TeX primitive in LaTeX, "\overline not a macro")
+% engines: rust rc1/REGFIXJ3 3 errors (`unexpected:\else`, `unexpected:\fi`, `unexpected:}`: the binding's
+%          `\protected` `\underline` is no native closure, so etoolbox's rebuild ran, from a `\meaning` of
+%          `\underline`, and `\etb@robustify` failed)
+% expect:  0 errors, 0 warnings; the underline kept, a user's protected `\pfoo` unchanged
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXN1, etoolbox_sty.rs: a `\protected` macro is robust already)
+\documentclass{article}
+\usepackage{etoolbox}
+\robustify\underline
+\protected\long\def\pfoo#1{[#1]}
+\robustify\pfoo
+\begin{document}
+A \underline{word} here \pfoo{a}.
+\end{document}

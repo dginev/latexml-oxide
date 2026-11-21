@@ -1,0 +1,14 @@
+% A shipped titlesec copy's format passes the title to `\ttl@passexplicit`, which titlesec's `\ttl@select` lets to
+% `\ttl@case` (titlesec.sty:301, :1614-1615) and the titlesec binding defines so.
+% witness: 1501.02633, 1505.02642 (titlesecMod.sty), 1801.07174, 2007.08085 (mytitlesec.sty), 2002.06448 (titlesecfix.sty)
+% oracle:  pdflatex 0 errors; "1 Introduction", "Text."
+% engines: rust INT6A = 1 error (`\ttl@passexplicit` undefined, in the heading)
+% expect:  0 errors, 0 warnings; the section title "Introduction", numbered 1
+% status:  RED (INT6A) -> GREEN (REGFIXQ)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{titlesec_copy}
+\begin{document}
+\section{Introduction}
+Text.
+\end{document}

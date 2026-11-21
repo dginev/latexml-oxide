@@ -1,0 +1,22 @@
+% amsproc's `\maketitle` runs `\@setauthors` (amsproc.cls:613, :746); a document's own definition, a copy of the
+% class's (`\author@andify\authors`, the `\contribs` test), prints the names and what else it sets: the names are the
+% frontmatter's, the rest a note at the title block.
+% witness: 1202.1250, 2310.04922, 1910.14629, 2206.08060 (copies printing only the names; red: 2 errors, `\@setcontribs`
+%          undefined, when run with `\contribs` undefined); the text: the 2610.08257 shape
+% oracle:  pdflatex 0 errors; "Ann Able", then "Institute Z, Somewhere" under it
+% engines: rust REGFIXM 3a27287c05 = 0 errors, "Institute Z, Somewhere" lost
+% expect:  0 errors, 0 warnings; one creator Ann Able (the name once); the text once, a note at the title block
+% status:  RED (3a27287c05) -> GREEN (REGFIXM2)
+% preload: ar5iv.sty
+\documentclass{amsproc}
+\makeatletter
+\renewcommand\@setauthors{\begingroup\trivlist\centering\item\relax\author@andify\authors
+\scshape\authors\ifx\@empty\contribs\else,\penalty-3 \space\@setcontribs\@closetoccontribs\fi\par
+\normalfont\itshape Institute Z, Somewhere\par\endtrivlist\endgroup}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\maketitle
+Body.
+\end{document}

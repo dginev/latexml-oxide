@@ -247,9 +247,36 @@ fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
 /// `\@yargd@f`'s parameter text runs `#1`…`#n`, none for 0). A count that is no number here (`[\n]`) is taken as
 /// reading. The frontmatter observer's rehearsal reads the author content under such a definition, so its argument
 /// prints there as it prints in pdflatex (`\address{1}`'s "1", a mark: `author_markup_begin`, OD #941); a
-/// parameterless one (aaai2026.sty's `\co`, a note; `\newcommand{\x}[0]{…}` (RA0); a `\let`, a `\newcounter`'s `\c@x`)
-/// stays undefined there, an undefined token a piece takes alone (`emitter::content::Field::held_undefined_at`).
+/// parameterless one (aaai2026.sty's `\co`, a note; `\newcommand{\x}[0]{…}` (RA0); a `\let` to a meaning reading none, a
+/// `\newcounter`'s `\c@x`) stays undefined there, an undefined token a piece takes alone
+/// (`emitter::content::Field::held_undefined_at`). A `\let` reads what its target's meaning reads: rims02e.sty:209's
+/// `\let\mail\thanks` (math0408269), whose `\mail{…}` held undefined left its argument a piece of its own.
 pub(in crate::base_utilities) fn reads_arguments(definee: &Token, statement: &[Token]) -> bool {
+  // (a `\let`'s statement: no braced body, and between the definee and the target nothing but spaces and one `=` —
+  // an unbraced `\newcommand\x[1]\y` has its count's three tokens there and is read below, as a definition)
+  let is_let = !statement.iter().any(|t| t.group_step() == 1)
+    && statement
+      .iter()
+      .position(|t| t == definee)
+      .is_some_and(|at| {
+        at + 1 < statement.len()
+          && statement[at + 1..statement.len() - 1]
+            .iter()
+            .filter(|t| t.get_catcode() != Catcode::SPACE)
+            .count()
+            <= 1
+      });
+  if is_let {
+    return statement
+      .last()
+      .filter(|target| *target != definee)
+      .and_then(lookup_meaning)
+      .and_then(|meaning| meaning.to_definition())
+      .is_some_and(|d| {
+        d.get_parameters()
+          .is_some_and(|p| !p.get_parameters().is_empty())
+      });
+  }
   let Some(at) = statement.iter().skip(1).position(|t| t == definee) else {
     return false;
   };

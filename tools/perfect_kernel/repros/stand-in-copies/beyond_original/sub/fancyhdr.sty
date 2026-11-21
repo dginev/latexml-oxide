@@ -1,0 +1,12 @@
+%% The paper's copy of fancyhdr.sty in a subdirectory (2606.30940's icml/fancyhdr.sty, under icml2026.sty:119
+%% `\RequirePackage{icml/fancyhdr}`), cut down to the head and foot fields its load initialises (:577-597 `\fancyhf{}`)
+%% and its :767 reading of them.
+\ProvidesPackage{fancyhdr}[2025/02/07 v5.2 Extensive control of page headers and footers]
+\newcommand\fancyhf[1]{\def\f@nch@olh{#1}\def\f@nch@och{#1}\def\f@nch@orh{#1}\def\f@nch@elh{#1}\def\f@nch@ech{#1}%
+  \def\f@nch@erh{#1}\def\f@nch@olf{#1}\def\f@nch@ocf{#1}\def\f@nch@orf{#1}\def\f@nch@elf{#1}\def\f@nch@ecf{#1}%
+  \def\f@nch@erf{#1}}
+\fancyhf{}
+\edef\fancycopyfields{\f@nch@olh\f@nch@och\f@nch@orh\f@nch@elh\f@nch@ech\f@nch@erh
+  \f@nch@olf\f@nch@ocf\f@nch@orf\f@nch@elf\f@nch@ecf\f@nch@erf}
+\newcommand\fancycopymacro{FANCY-COPY-MACRO}
+\endinput

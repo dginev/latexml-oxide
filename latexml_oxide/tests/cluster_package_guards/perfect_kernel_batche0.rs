@@ -1871,7 +1871,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // structure of the cut, decided by no spelling; 2605.00634, 2605.27539, 2606.14188, 2606.27043, 2605.07722; SBX2F,
   // 479 -> 470: the piece made whole is `content::Field::whole`, its environments the digestion's frames, one reopen
   // helper for both cutters, `notes::reopened`)
-  ("classify", 470),
+  // (int/regfix6, 470 -> 471: `title_code::reads_arguments` tells a `\let` from an unbraced `\newcommand\x[1]\y` by the
+  // tokens between definee and target — spaces by catcode, at most one other — no spelling; REGFIXS review S1)
+  ("classify", 471),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
   // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
   // their last caller, IEEEtran's `name_memberships`; P6f2, 109 -> 107: `line_parts`' parenthesis span, the split's rule
@@ -3222,7 +3224,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/alignment.rs", 16),
   ("latexml_core/src/alignment/cell.rs", 1),
   ("latexml_core/src/alignment/normalize.rs", 1),
-  ("latexml_core/src/binding/content.rs", 45),
+  // (int/regfix6, 45 -> 46: `defined_names` skips an expansion primitive after a `\def` in a file's source text — a regex
+  // over a raw file's text, where the spelling is the datum, no token decision; REGFIXQ3 review S1)
+  ("latexml_core/src/binding/content.rs", 46),
   // REGCDE: the walk's `\global\let` (`global_let`: the engine's `assign_meaning`, `lookup_meaning`), no decision.
   ("latexml_core/src/binding/preamble_commands.rs", 2),
   // TABU2b +1: `run_trivlist_hook` names the kernel's own `\lx@trivlist@hook` to read its meaning (empty: skipped).

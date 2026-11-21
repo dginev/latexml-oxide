@@ -58,7 +58,20 @@ LoadDefinitions!({
   // `standardpagestyle` under the acmart binding reads acmart.cls's `\if@ACM@printfolios` and `\if@ACM@timestamp`,
   // which pdflatex defines (9 Errors on 2408.16304, 2602.20222, 2606.05273 when it ran). The starred form's reset of
   // the fields (`\f@nch@pagestyle@setup`) and the base style's checks (an unknown or non-fancyhdr base is a
-  // `\PackageError`) are not modelled: the fields are not.
+  // `\PackageError`) are not modelled: the fields are not, but they exist, empty as `\f@nch@initialise`'s `\fancyhf{}`
+  // leaves them (:577-597), so a paper's copy of fancyhdr.sty read over this binding finds them — its :767
+  // `\fancypagestyle*{fancydefault}{\f@nch@initialise}`, under icml2026.sty:119 `\RequirePackage{icml/fancyhdr}`
+  // (2606.30940, 2602.04163, 2602.02841, 2602.00576, 2603.09787).
+  for field in [
+    "olh", "och", "orh", "elh", "ech", "erh", "olf", "ocf", "orf", "elf", "ecf", "erf",
+  ] {
+    def_macro(
+      T_CS!(s!("\\f@nch@{field}")),
+      None,
+      Tokens::new(Vec::new()),
+      None,
+    )?;
+  }
   RawTeX!(
     r"\long\def\lx@fancyhdr@style#1{}%
 \def\ps@f@nch@fancyproto{}\@namedef{f@nch@ps@f@nch@fancyproto-is-fancyhdr}{}%

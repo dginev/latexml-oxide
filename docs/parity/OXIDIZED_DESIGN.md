@@ -23,7 +23,7 @@ This file is the **index + overview**. The detail lives in a themed family:
 > "Speculative function application"**) are in MATH; (3) **`#76` is a retired
 > number** — its entry was consolidated into `#74` and the number was not
 > reused, so a gap in the sequence is expected, not a missing file. Next free
-> number: **#1110** (2026-11-21; allocate with
+> number: **#1131** (2026-11-21; allocate with
 > `tools/perfect_kernel/next_entry_numbers.sh`, which also reads every open PR's head). When in doubt,
 > `grep '### N\.' docs/parity/OXIDIZED_DESIGN_*.md docs/math/OXIDIZED_DESIGN_MATH.md`.
 

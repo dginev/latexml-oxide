@@ -154,6 +154,14 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   // UTF-8 under a declared non-UTF-8 encoding is that encoding's text, not an
   // invalid byte (mouth.rs `decode_bytes`).
   AssignValue!("lx@inputenc@encoding" => encoding.trim().to_ascii_lowercase(), Some(Scope::Global));
+  // inputenc.sty:80 `\edef\@inpenc@undefined{\noexpand\protect\noexpand\@inpenc@undefined@{#1}}`: robust, so that
+  // hyperref's PDF strings (`\let\protect\@empty`) gobble its `\PackageError` (1803.03083, 1609.03819, 1903.03818,
+  // 2108.12063, 2408.03605). Perl's is a native Error (inputenc.sty.ltxml:33). OXIDIZED_DESIGN_DIVERGENCES #1112.
+  let undefined = TokenizeInternal!(TeXString::assembled(s!(
+    "\\protect\\@inpenc@undefined@{{{}}}",
+    encoding
+  )));
+  def_macro(T_CS!("\\@inpenc@undefined"), None, undefined, None)?;
   // Initially disable all odd & upper half-plane chars
   let undef_cs = T_CS!("\\@inpenc@undefined");
   for code in (0..=8u8)
@@ -204,14 +212,12 @@ LoadDefinitions!({
 
   DefMacro!("\\IeC{}", "#1");
 
-  DefMacro!("\\@inpenc@undefined", {
-    let enc = lookup_string("INPUT_ENCODING");
-    let message = s!(
-      "Keyboard character used is undefined in inputencoding {}",
-      enc
-    );
-    Error!("unexpected", "<char>", message);
-  });
+  // inputenc.sty:139-143, the error an undefined byte raises (`\@inpenc@undefined`, set by `\inputencoding`).
+  RawTeX!(
+    r"\def\@inpenc@undefined@#1{\PackageError{inputenc}{Keyboard character used is undefined\MessageBreak
+ in inputencoding `#1'}{You need to provide a definition with \noexpand\DeclareInputText\MessageBreak
+ or \noexpand\DeclareInputMath before using this key.}}"
+  );
 
   // `\@inpenc@test` is inputenc.sty's one-shot initialization guard.
   // The raw source (inputenc.sty L79) defines it inline as

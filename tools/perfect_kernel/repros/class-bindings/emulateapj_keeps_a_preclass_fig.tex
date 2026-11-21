@@ -1,0 +1,12 @@
+% witness: 1002.3626 astro-ph0511141, 1301.6182 (emulateapj-rtx4): a `\fig` defined before \documentclass;
+%          emulateapj.cls defines none
+% oracle:  pdflatex 0 errors: "Fig. 1.— C", "See Figure 1."
+% engines: rust INT6A 1 error (undefined \fig)
+% expect:  0 errors; "See Figure <ref labelref=LABEL:f/>."
+% status:  RED (INT6A) -> GREEN (REGFIXR)
+\newcommand{\fig}[1]{Figure~\ref{#1}}
+\documentclass{emulateapj}
+\begin{document}
+\begin{figure}\caption{C}\label{f}\end{figure}
+See \fig{f}.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 2010.15148 2011.14129 2102.00283 2112.02137 2201.07802 (each ships caption3.sty v1.8h, this directory's
+%          copy, under raw floatrow): a label format set by a subfig option or \captionsetup[sub<type>] is kept in
+%          caption3 v1's option lists `\caption@opt@<name>` (v1.8h:258-262), applied when the sub-caption is made
+% oracle:  pdflatex 0 errors: "a)" "b)" (the subfloat list: the option labelformat=brace), "a" (the subtable list
+%          over it), no "Unused \captionsetup" warning
+% engines: rust REGFIXR "(a)" "(b)" "(a)" and 2 Warnings "Unused \captionsetup[subfloat]"/"[subtable]"
+% expect:  0 errors, 0 warnings; tags a) b) a
+% status:  RED (REGFIXR) -> GREEN (REGFIXR2)
+\documentclass{article}
+\usepackage{floatrow}
+\usepackage[caption=false,labelformat=brace]{subfig}
+\captionsetup[subtable]{labelformat=simple}
+\begin{document}
+\begin{figure}\subfloat[A]{X}\subfloat[B]{Y}\caption{C}\end{figure}
+\begin{table}\subfloat[D]{Z}\caption{E}\end{table}
+\end{document}

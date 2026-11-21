@@ -456,7 +456,18 @@ LoadDefinitions!({
   DefConstructor!("\\lx@amsppt@roster@item{}",
     "<ltx:item xml:id='#id'>?#1(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)",
     properties => sub[_args] { RefStepID!("rosteritem") });
-  Let!("\\endroster", "\\relax");
+  // amsppt.sty:738-751 `\endroster` opens and closes no group, so it ends the roster at any group depth: met inside a group
+  // its body opened (an item's `{\it` never closed, alg-geom9511013, math0511546, math9901010; `\roster {\item`,
+  // math0309287), that group is closed with a Warning (`until_terminal_inside_group`) and the roster ends there. With no
+  // roster open it is amsppt.sty:120-122 `\revert@envir`'s "AmS-TeX error: Extra \endroster", the text kept.
+  DefPrimitive!("\\endroster", {
+    if !until_terminal_inside_group(&T_CS!("\\endroster"))?
+      && lookup_token("lx@until@terminal") != Some(T_CS!("\\endroster"))
+      && lookup_value("amsppt@roster@id").is_none()
+    {
+      Error!("unexpected", "\\endroster", "AmS-TeX error: Extra \\endroster.");
+    }
+  });
 
   // Perl amsppt.sty.ltxml L261-263: \block — simple block-quote container.
   // Previously unported. DigestUntil parameter type landed in 27cc66b60

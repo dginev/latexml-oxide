@@ -1,0 +1,12 @@
+% mechanism: the sibling of latin1_undefined_byte_in_pdf_key: the same undefined latin1 byte in body text is
+%   inputenc's `\PackageError` (inputenc.sty:139), an Error as in TeX, and the byte is dropped.
+% witness: 1803.03083 (the PDF-key shape)
+% oracle:  pdflatex 1 error: "Package inputenc Error: Keyboard character used is undefined in inputencoding `latin1'"
+% engines: rust REGFIXJ3 = 1 Error:unexpected:<char> (Perl's); REGFIXN2 = 1 Error:latex:(inputenc), TeX's message
+% expect:  1 error, 0 warnings; "A word."
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[latin1]{inputenc}
+\begin{document}
+A ƒword.
+\end{document}

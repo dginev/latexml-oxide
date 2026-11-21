@@ -19,7 +19,7 @@
 > port-bug fix (→ SYNC "Rust Error Fixes"), a gap or residual list (→ SYNC row R), a math-parse divergence (→ `docs/math/OXIDIZED_DESIGN_MATH.md`).
 > A WORKAROUND entry must name the principled mechanism that would replace it and open a SYNC row for it. Entry shape: rule · Perl ref · TeX
 > source:line · sub-rules as bullets · witnesses · guards · upstream status; no batch history (git keeps it); about 60 lines at most. OD
-> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1110** (2026-11-21; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
+> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1131** (2026-11-21; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -11639,8 +11639,8 @@ declarator's internal is not `\long` (`\l@ngrel@x`). `\cs` itself is unchanged. 
 `\DeclareRobustCommand` or `\newenvironment` the lock refuses still defines its internal, as `\@xargdef` does: only the
 class's own `\csname\string\cs\endcsname` reaches it, and the replay of a refused class setter goes through it
 (cmfne.cls:462-483 `\renewcommand{\author}[2][]` + the `\@dblarg` `\edef`, whose `\enddoc@text` prints
-`\firstshortauthor`: 2210.02246 lost its two author lines while the internal was skipped). No binding defines or calls a
-`\\cs` internal; a locked `\renewenvironment` is refused whole (its stores recorded), and a `\newcommand` of a defined
+`\firstshortauthor`: 2210.02246 lost its two author lines while the internal was skipped). No binding defines a `\\cs`
+internal of its own (twoopt's and xargs's declarators make the document's, twoopt.sty:51-55, xargs.sty:205-212); a locked `\renewenvironment` is refused whole (its stores recorded), and a `\newcommand` of a defined
 name defines none, as LaTeX's. Residuals: the internal reads `[…]` as
 an optional argument, as our `\@yargdef` does, where LaTeX's requires the brackets; an active character gets none (its
 `\string` names another control sequence). The internal is named as `\string` prints the command: the null control
@@ -11648,7 +11648,11 @@ sequence's is `\\csname\endcsname` (tex.web §263) — named `"\\" + "\"`, it wa
 `\expandafter\newcommand\expandafter{\csname\endcsname}[1][x]{…}` (changes' `\csname\Changes@commandname\endcsname`
 with its `\Changes@commandname` undefined in our binding) replaced the line break, and a `{#1\\}` body recursed to a
 Fatal (2410.07647: F 1 → 0, 870 → 23,196 words; int131fix, guard
-`perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break`). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors), 2210.02246 (cmfne's author lines).
+`perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break`). The command's optional parameter carries
+the internal its declarator made (`TestoptCall`), and the call becomes `\@protected@testopt\cs\\cs{<default>}` whenever
+`\@protected@testopt` is not the kernel's (`Expandable::testopt_call`, REGFIXO; xargs's head `\@protected@testopt@xargs`
+where an argument after the first is optional): hyperref's PDF string gobbles it, and letltxmacro.sty:126-144's `\ifx`
+holds as in LaTeX (guard `perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors), 2210.02246 (cmfne's author lines).
 Guards `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
 every_xargdef_declarator_defines_the_internal_macro, refused_dblarg_setter_reaches_its_internal}`; repros
 `macro-state/newcommand_optional_internal_cs`, `sectioning-frontmatter/refused_dblarg_setter_reaches_its_internal`.
@@ -12104,7 +12108,8 @@ a `{program}`, :165-173), which the papers of these copies write as inline maths
 inline-block holding a one-item `ltx_trivlist` list (1331 in 2112.05038). sn_jnl_cls.rs puts the kernel's `\(`/`\)`
 (`\lx@begin@inline@math`, sect07.rs) back after the class's loads when program loaded; program's other definitions,
 the active `;` included, stay. Program loaded under another class, or by the document's own later
-`\usepackage{program}` (the test sits in the class binding, right after its scan), keeps the programbox. The faithful
+`\usepackage{program}` (the test runs at the class's end, after the copy's own loads and the scan, #1130), keeps the
+programbox. The faithful
 alternative was to drop the two lines (every `\(…\)` an inline-block). Approved by the main session 2026-10-15: the
 class, not the author, loads program; the authors write inline maths; content and semantics first. Perl's scan loads
 no program (no binding), so its `\(` is the kernel's and `\gt` is undefined. Repro class-bindings/snjnl_class_copy_loads_program; guard
@@ -15015,7 +15020,15 @@ string its characters. Perl records the value's source text (hyperref.sty.ltxml:
 #1050), so `pdftitle={\mytitle}` was the metadata `<rdf content="\mytitle" property="dcterms:title"/>` (1210.7805
 `\OfficialTitle`; resphilosophica.cls:311/:324 `pdftitle=\@title`, `pdfauthor=\authors` in every paper of that class).
 Ours (78i, hyperref_sty.rs `pdf_string`): the value of `pdftitle`, `pdfauthor`, `pdfsubject`, `pdfkeywords` and
-`pdfcopyright` is expanded by `\lx@pdfstringdef` — hyperref's `\pdfstringdef` in brief (:386-560): `\protect` empty, the
+`pdfcopyright` is expanded by `\lx@pdfstringdef` — hyperref's `\pdfstringdef` in brief (:386-560): `\protect` left as
+it is, a robust command its inner body (REGFIXO; empty, the robust `\$` re-expanded itself without end: 0812.2921),
+`\{ \} \# \$ \% \& \_` their characters (:405-413), a `\def`/`\gdef`/`\edef`/`\xdef` gobbling its name, parameter text
+and body (:555-565 `\HyPsd@DefCommand`; 2001.10451's jss.cls `\Plaintitle`) and a `\let`/`\futurelet` its name
+(:563-564 `\HyPsd@LetCommand`), `\@ifnextchar` (latex.ltx:1775's `\@ifstar` on it) and `\@protected@testopt`
+gobbling their command and arguments (:545-549; an optional-argument `\newcommand`, which reads its own `[…]`, is
+`\@protected@testopt\cs\\cs{<default>}` wherever `\@protected@testopt` is not the kernel's, `Expandable::testopt_call`:
+`\opt[q]` is "[q]"), the extensible arrows' `\lx@long@arrow` gobbled with its two arguments (its reversion names the
+robust arrow again, KNOWN_PERL_ERRORS #1302: `\xrightarrow[u]{b}` "[u]b"), the
 font and size commands their argument or nothing, `\\`, `~` and the other spaces a space, `\texorpdfstring` its PDF
 branch, labels, index entries and error messages gobbled, then the document's `\pdfstringdefPreHook` — and, as for
 hyperref's own `pdfusetitle` title (`\Hy@UseMaketitleString`, :6248-6266), `\thanks` and the note commands gobbled,
@@ -15039,10 +15052,13 @@ set, hyperref's own timing: `\hypersetup{pdftitle=\@title}` before `\title{…}`
 (resphilosophica) sees its local definitions. Beyond hyperref: a `\and` in a PDF string is "; ", the separator of
 hyperref's own `pdfusetitle` author (:6255), where `\pdfstringdef` makes garbage of it (pdfinfo "Ann Able [t]cBob
 Baker"). The `\@pdf<key>` macros keep the value's tokens, as before (packages read them as text: nlctuserguide.sty's
-`author={\@pdfauthor}`). Repros sectioning-frontmatter/{hyperref_pdfinfo_expands_macros (red 60m),
-hyperref_pdfinfo_drops_notes_and_markup, hyperref_pdfinfo_text_symbols}; guards
-`perfect_kernel_batch78i::{hyperref_metadata_is_expanded, hyperref_metadata_drops_notes_and_markup,
-hyperref_metadata_text_symbols}`.
+`author={\@pdfauthor}`). A package option's information string (`\usepackage[pdfauthor={On the \$q\$}]{hyperref}`)
+is expanded the same way (REGFIXO2; it was its option text, "On the \protect\$q\protect\$"). hyperref's "Token not
+allowed in a PDF string" Warnings are not reported: the `\pdfstringdefWarn` tokens are dropped with the other control
+sequences. Repros sectioning-frontmatter/{hyperref_pdfinfo_expands_macros (red 60m),
+hyperref_pdfinfo_drops_notes_and_markup, hyperref_pdfinfo_text_symbols, hyperref_pdfinfo_gobbles_testopt_and_let};
+guards `perfect_kernel_batch78i::{hyperref_metadata_is_expanded, hyperref_metadata_drops_notes_and_markup,
+hyperref_metadata_text_symbols}`, `perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`.
 
 ### 825. An AMS-TeX paper's own style is read raw unless it builds on another style
 
@@ -19168,19 +19184,30 @@ is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xd
 
 So a binding defines the lists and hooks its real class or package defines, which documents extend (REGBIND, 17 papers
 of the 2605/2606 reruns: enumerate's `\@enhook`, threeparttable's `\TPT@defaults`, oup-authoring-template's
-`\ps@opening`, and the lists below). Where the class prints such a list with its title page and the binding's own
+`\ps@opening`, and the lists below; REGFIXM, 20 papers of the v0.8.0 check: elsarticle's `\endfrontmatter`
+(elsarticle.cls:1303, which `\end{frontmatter}` runs by name; 1609.08567, 2308.12736, 1609.08586, 2304.14608,
+1910.03866), amsart's and amsproc's `\@setauthors` (amsart.cls:808, amsproc.cls:746; printed below), newtxmath's `\ntxmath@scaled` (newtxmath.sty:46-51
+with its `scaled`/`scale` keys; 2205.08971, 2510.18441), and amsrefs' ifoption load (amsrefs.sty:159, `\IfOption`;
+1707.00398, 1806.01802, KNOWN_PERL_ERRORS #627). Where the class prints such a list with its title page and the binding's own
 setters do not fill it, the binding prints it there too, or what a document adds to it is lost without a word (Perl:
 dropped, with the Warning above): `\lx@frontmatter@footnotes{<list>}` runs it where the class runs it, each
 `\footnotetext`/`\@footnotetext` in it an `ltx:pubnote` (role `note`), what else it prints a note at the title block
 (#1054). acmart's `\@titlenotes`, `\@subtitlenotes`, `\@authornotes` at `\maketitle` (acmart.cls:2245-2247;
 2605.28175, 2605.16813, 2606.04448); amsaddr's `\emails` as its footnote (amsaddr.sty:102-113; 2606.23853, 2606.25954,
-2212.11488, 1801.06576, 2307.06418); elsarticle's `\elsaddress` and `\@cornotes` at `\end{frontmatter}` or
-`\maketitle` (elsarticle.cls:766, :806; 2605.22682, cnf.sty's `\cortext` 2605.08232, 2606.15628); REVTeX's
+2212.11488, 1801.06576, 2307.06418); elsarticle's `\elsaddress`, `\@cornotes` and `\@fnotes` at `\end{frontmatter}` or
+`\maketitle` (elsarticle.cls:766, :778, :806; 2605.22682, cnf.sty's `\cortext` 2605.08232, 2606.15628, a document's
+own `\fntext` 2301.05821, 2311.15389, 2312.12429, 2312.17670, 2406.09335, 2407.19043, 2408.17198, 2412.18760, 2504.16921,
+2508.04484); amsart's and amsproc's `\@setauthors` at `\maketitle` (amsart.cls:638, amsproc.cls:613), run without the
+names, contributors and `\@setaddresses`, which the binding places (an appended `\@setaddresses` prints no address twice, 2607.28440;
+appended text, an affiliation or e-mail under the names, is a note: 2610.08257, 2610.02630, 2610.25104, 2610.02789);
+REVTeX's
 `\prep@absbox`, `\post@absbox`, `\mini@notes` and `\@FMN@list` at `\maketitle` (revtex4-2.cls:2648-2652, :3020-3022;
 2606.06621, 2605.00976); and the text a document adds to icml's `\icmlcorrespondingauthor@text`, whose names and
 addresses are the contacts (icml2026.sty:529-530; 2605.04712, 2605.21190, 2606.01172). **Guard**:
 `perfect_kernel_batchregbind::{bindings_define_the_macros_their_files_define,
-bindings_print_the_title_page_lists_their_files_print}`.
+bindings_print_the_title_page_lists_their_files_print}`, `perfect_kernel_batchregfixm::{bindings_define_names_documents_extend,
+elsarticle_document_fntext_note_is_kept, elsarticle_endfrontmatter_addition_runs,
+amsart_setauthors_additions_are_printed}`.
 
 ### 1026. → KNOWN_PERL_ERRORS #1241 (`page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791))
 
@@ -21264,9 +21291,13 @@ lost (Perl the same). `\lx@ifnativecmd` (`etoolbox_sty.rs`) now tests the stored
 its LaTeX-robust inner command, where it tested `\meaning` for `CODE(`/`Stored[`; the command is left as it is. A TeX
 primitive in LaTeX (tex.web's primitive table, less the names latex.ltx makes macros: `\par`, `\end`, `\input`,
 `\eqno`, `\leqno`, `\shipout`, `\underline`, `\-`), a register, a chardef or a font selector (`\nullfont`, a
-`\font`) keeps etoolbox's Error, as pdflatex's (`\robustify\hbox`: "not a macro"). Residual (row R ROBUSTIFYERR, no
-corpus witness): a LaTeX `\mathchardef` that is a `DefMath` here (`\alpha`, `\infty`, `\sum` without amsmath) and
-e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the output is unchanged. Guards
+`\font`) keeps etoolbox's Error, as pdflatex's (`\robustify\hbox`: "not a macro"). A `\protected` macro that is no TeX
+primitive in LaTeX is left alone too (the binding's `\underline`, latex.ltx:16369 `\DeclareRobustCommand`; 2407.21515,
+2506.16228, 2511.14592): etoolbox rebuilds a protected macro as the same macro, and the rebuild from our `\meaning`
+failed, as a `\let` copy of `\underline` prints as the primitive (`tex_debugging.rs` keys that exception on the token's
+name; row R ULMEANING) (REGFIXN1; guard `perfect_kernel_batchregfixn1::robustify_a_protected_binding_macro`). Residual (row R
+ROBUSTIFYERR, no corpus witness): a LaTeX `\mathchardef` that is a `DefMath` here (`\alpha`, `\infty`, `\sum` without
+amsmath) and e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the output is unchanged. Guards
 `perfect_kernel_batchclustfix3::robustify_of_a_native_binding`,
 `perfect_kernel_batch69b::robustify_ltx_protected_native_cite` (repros `package-bindings/robustify_of_a_native_binding`,
 `robustify_of_a_tex_primitive_errs`).
@@ -22778,6 +22809,10 @@ for it is not raised) and `\gray`/`\Gray` at the document's start as the options
 L104), the `italian` option's names, the `DeclareOption*` warning. Like the real `\addunit` (`\newcommand`), a
 paper's later `\newcommand` of one of these names (`\rem`, `\rad`, `\gal`, `\are`, `\bel`, `\ton`, `\hour`,
 `\minute`, `\ohm`) keeps the unit — pdflatex stops on "already defined", we drop the paper's definition silently.
+The shim is siunitx's machinery only: as real SIunits.sty loads no siunitx, siunitx's free commands (`\Pa`, `\J`) are
+not made `\ERROR` at `\begin{document}` (`six_command_create`, skipped under `lx@six@no@command@create`), so a
+document's `\newcommand{\Pa}` there stands (1301.1500, 1705.09090; guard
+`perfect_kernel_batchregfixp::siunits_leaves_siunitx_free_commands_free`).
 Witnesses 0709.1649, 2103.01586, 1904.06264, 2407.13230. Guard `perfect_kernel_batch65y::siunits_unit_commands`; repro
 `stub-dependencies/siunits_unit_commands`.
 
@@ -23434,3 +23469,169 @@ group runs through (`loader/ulem_declaration_{cell_end_loses_borders,runs_throug
 **Guards**: `perfect_kernel_batchregfixl::{ulem_declaration_ends_with_the_cell, ulem_declaration_closes_with_its_group,
 ulem_declaration_unclosed_errs, ulem_declaration_nested_lines_in_a_cell, ulem_declaration_cell_end_errs}`
 (repros `loader/ulem_declaration_*.tex`); `perfect_kernel_batch63::ulem_declaration_form`.
+
+### 1110. The cvpr and iccv bindings read a renamed copy raw, as a self-named one (REGFIXM)
+
+**Rule.** cvpr_sty.rs (cvpr, cvpr2023-2025, wacv) and iccv_sty.rs (iccv, iccvw) read the paper's style raw after their
+definitions, by the file the request names (`shipped_class::stand_in_request`: `\@currname`, or the request a versioned
+fallback or a shipped copy's `\ProvidesPackage{cvpr}` routed to the binding), not by the binding's own name. A renamed
+copy (style.sty, main.sty, paper.sty, … declaring `\ProvidesPackage{cvpr|iccv|wacv}`) is then read as the self-named
+cvpr.sty is, so its document hooks run, and the stand-in read in provides mode (#731), which defers them, skips it as
+read already. Before, the binding asked for `cvpr.sty`/`iccv.sty`, absent, and the copy's `\AtEndPreamble{\usepackage
+{cleveref}}` was deferred: `\cref` undefined, with `_` cascades from `\cref{fig:a_b}` (10 papers of the v0.8.0 check:
+2412.03517, 2603.19547, 2311.13194, 2501.05472, 2510.19001, 2601.03959, 2411.17125; iccv 2507.06125, 2504.13405; wacv
+2609.04603). Perl has no cvpr or iccv binding and reads every such file raw. The aistats binding keeps the provides-mode
+read of a renamed copy (`aistats_sty.rs` finds the copy by the family name only; repro
+`stand-in-copies/provides_route/aistats_renamed_copy.tex`).
+**Guard**: `perfect_kernel_batchregfixm::renamed_cvpr_and_iccv_copies_keep_their_hooks` (repro
+`stand-in-copies/provides_route/cvpr_renamed_copy_keeps_its_hooks.tex`).
+
+### 1112. inputenc's undefined byte is TeX's robust `\PackageError`, gobbled in a PDF string (REGFIXN2)
+
+**Rule.** `\inputencoding{enc}` defines `\@inpenc@undefined` as `\protect\@inpenc@undefined@{enc}` (inputenc.sty:80)
+and the undefined bytes `\let` to it; `\@inpenc@undefined@` is inputenc.sty:139-143's `\PackageError{inputenc}`. Perl's
+binding defines `\@inpenc@undefined` as a native macro raising `Error:unexpected:<char>` at expansion
+(inputenc.sty.ltxml:33). Since our hyperref expands its PDF information keys (`\lx@pdfstringdef`, KNOWN_PERL_ERRORS
+#1050; Perl records them unexpanded), a latin1 byte 0x80-0x9F in `pdfauthor` raised that Error where pdflatex's
+`\pdfstringdef` (`\protect` empty, `\GenericError` gobbled, hyperref.sty:550-552) is silent (1803.03083, 1609.03819,
+1903.03818, 2108.12063, 2408.03605). In body text the byte is still an Error, now TeX's; the log breaks the message at
+its `\MessageBreak`: `Error:latex:(inputenc) Package inputenc Error: Keyboard character used is undefined` and, on the
+next line, ``in inputencoding `latin1'`` (where the argument was expanded first, `\edef`, `\label`, `\cite`, a
+`Semiverbatim` argument such as `\hyperlink`'s or `\includegraphics`'s, the category is followed by the spaces of
+`\PackageError`'s prefix: `Error:latex:(inputenc)                 Package …`). A URL is read
+expanded and then stringified (`\url`'s reader, the `HyperVerbatim` of `\href`, revtex's `\@@startlink`, the doi
+fields): there `url_string_messages` (base_utilities/misc.rs) empties `\protect` and makes `\GenericError` raise its
+Error and gobble its four arguments, so the byte errs once and is no URL text, where pdflatex errs and garbles the URL
+(`\url` 6 `!`, `\href` Fatal). A side effect: a robust command's `\protect` is no longer URL text
+(`\url{http://x.org/\foo b}`, `\foo` robust: `http://x.org/Fb`; pdflatex and REGFIXJ3 print `http://x.org/\protectFb`).
+**Guard**: `perfect_kernel_batchregfixn2::{latin1_undefined_byte_errs_only_where_tex_does,
+latin1_undefined_byte_in_a_url_errs_once}` (repros `unicode-catcodes/latin1_undefined_byte_in_{pdf_key,text_errs,
+url_errs,href_errs}.tex`).
+### 1117. amsppt's `\endroster` inside an open group closes that group (REGFIXP)
+
+**Rule.** amsppt.sty:738-751's `\endroster` opens and closes no group, so TeX ends the roster at whatever group depth it
+is met; the binding's `\roster DigestUntil:\endroster` digests a `{` group in its body whole, so an `\endroster` inside
+one ended nothing and the roster ran to the document's end ("malformed: ltx:document … enumerate"). `\endroster` is a
+primitive calling `until_terminal_inside_group`: met inside a group the roster's body opened, it closes that group with
+a Warning and ends the roster. TeX keeps the group open (the last item's `{\it` italicizes the rest of the document,
+"(\end occurred inside a group at level 1)"); ours ends it with the roster, the text after it upright. Witnesses
+alg-geom9511013, math0511546, math9901010 (a last item's open `{\it`/`{\text`), math0309287 (`\roster {\item`).
+**Guard** `perfect_kernel_batchregfixp::endroster_ends_the_roster_inside_a_group` (repros
+`amstex/amsppt_roster_endroster_inside_an_items_group.tex`, `amstex/amsppt_roster_open_brace_red.tex`).
+
+### 1124. An environment started by `\start@gather` closes the binding's `{gather}` where its end closes the `\halign` (REGFIXR, REGFIXR2)
+
+**Rule.** amsmath.sty:1540 `\start@gather` opens `$$\halign` (through `\gather@`, :1564-1585) and `{gather}`'s end,
+`\math@cr \black@\totwidth@ \egroup \dollardollar@end` (TL 2025 :1552-1557; `$$` in older amsmath and in linenoaa.sty's
+copy), closes it. The binding builds the display as an `equationgroup`, with no `\halign` for those tokens to close, so
+`\start@gather` starts the binding's `{gather}`/`{gather*}` (kept as `\lx@ams@gather`, `\lx@ams@gather@star` before any
+redefinition) and the environment's own end (`\end\@currenvir`, saved, local to its group) runs with `\math@cr` `\let`
+(at end time only, so a `\Let@` in the rows is untouched) to `\lx@ams@gather@close`, which reads through the `\egroup`
+and the `$$`/`\dollardollar@end` and gives the binding's `\endgather`; what the end adds after it runs, as in TeX:
+linenoaa.sty:51-55 (aa.cls's copy :2078; 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665)
+`\math@cr \black@\totwidth@ \egroup $$\endlinenomath\ignorespacesafterend`, text printed after the display, an
+`\endgroup` closing the package's own `\begingroup`. An end that calls `\endgather`, whether the binding's or a
+package's own (linenoaa's `{gather*}`: `\endgather\endlinenomath`, its `{gather}` renewed), passes through. Material other than `\black@<dimen>` before the `\egroup` is
+dropped with a Warning, and an end with no `\egroup` within a few tokens is put back with one. Before, `\start@gather`
+was undefined and the raw end cascaded (`\noalign`, `\egroup`, `$`: 13 errors in the repro). `{align}` and its kin keep
+their locked bindings (Perl amsmath.sty.ltxml:491-501), so linenoaa's renewal of them never runs.
+**Guard**: `perfect_kernel_batchregfixr::start_gather_ends_a_package_gather` (repro
+`alignment/start_gather_by_a_package.tex`), `perfect_kernel_batchregfixr2::{start_gather_runs_the_package_end,
+start_gather_linenoaa_is_plain_amsmath}` (repros `alignment/start_gather_package_end_runs.tex`,
+`alignment/start_gather_linenoaa.tex`).
+
+### 1126. A title-code `\let` reads what its target reads, in the frontmatter rehearsal too (REGFIXS)
+
+**Rule.** A command the class's title code defines where it reads `\@author` is replayed for the author content, and in
+the observer's rehearsal only when it reads arguments (`classify/title_code.rs` `reads_arguments`, #941, #983); a `\let`
+reads what its target's meaning reads (a definition with parameters), as TeX's `\let` copies that meaning. rims02e.sty:209's
+`\let\mail\thanks` in `\@maketitle` (math0408269) was held undefined in the rehearsal, so the affiliation piece before it
+took `\mail` without its argument, which was lexed as an e-mail (or, as text, a second creator); digested, the piece's
+`\mail` (`\thanks`) read the author markup's cleanup tail `\let\mail\@undefined` (1 `Error:undefined:\@undefined`, an
+affiliation holding it); with the line break written `\\ ` instead of `\affil`, the note's text was lost with 2
+Warnings. Now `\mail{…}` is the name's thanks note, as pdflatex's footnote. Not covered: a `\let` to a parameterless macro
+that reads through its expansion (`\let\mail\footnote`, the kernel's `\footnote` → `\lx@current@footnote` →
+`\lx@note{footnote}`) is still held undefined, unchanged. A `\let` is told from an unbraced `\newcommand\x[1]\y` (a
+definition, its count read) by what stands between the definee and the target: spaces and at most one `=`. **Guards**:
+`perfect_kernel_batchregfixs::an_unbraced_newcommand_count_is_no_let` (repro
+`sectioning-frontmatter/title_code_newcommand_count_without_braces_reads.tex`),
+`perfect_kernel_batchregfixs::a_title_code_let_to_a_reader_keeps_its_argument` (repro
+`sectioning-frontmatter/title_code_let_reader_keeps_its_argument.tex`).
+
+### 1127. A frontmatter note is digested with the class's title meaning of `\inst` (REGFIXS)
+
+**Rule.** A binding that declares the class's title-only `\inst` as `\lx@title@inst` (#807; epl_cls.rs, epl2.cls:692
+`\def\inst##1{\unskip${}^{##1}$\hspace{0.5em}\ignorespaces}` inside `\maketitle`) has a creator's note digested with
+`\inst` meaning it (`\lx@frontmatter@plainsups`, defs/author_macros.rs, which every note body runs), as pdflatex sets
+that note's text inside the class's `\maketitle`. An EPL `\institute{… \inst{*} Corresponding author: …}` under
+`\inst{1,*}` made a correspondence note still holding an undefined `\inst` (1 `Error:undefined:\inst`,
+"\inst*Corresponding author" in the note: 1009.3152, 1907.04695); now its printed `*` is the note's mark, taken out of
+its text (`mark_creator_notes`), "Corresponding author: …" with `mark="*"`. Rust-only: Perl has no EPL binding. **Guard**:
+`perfect_kernel_batchregfixs::an_epl_institute_legend_note_prints_its_mark` (repro
+`sectioning-frontmatter/epl_institute_legend_note_prints_its_mark.tex`).
+
+### 1118. A renamed copy is read where its binding reads its own file, and read when the binding is loaded already (REGFIXQ)
+
+**Rule.** While a shipped copy's declaration routes its request to a binding (#731, `provided_binding`), the binding's
+own raw read of its file (`InputDefinitions!(<its name>, noltxml)`) reads the copy instead (`routed_copy_request`), so
+the copy is read once, where TeX reads it, and the stand-in read after the binding skips it as read already — the
+generalisation of #1110 (cvpr, iccv) to every binding that reads its file raw: fsmfart.cls and smfartVS.cls
+`\ProvidesClass{smfart}` under smfart_cls.rs (1401.0915, 1110.1467, 1404.0804), tikzcd.sty and tikz-cd1.sty
+`\ProvidesPackage{tikz-cd}` under tikz_cd_sty.rs (1201.4414, 1512.05388), pdfplots.sty `{pgfplots}` under
+pgfplots_sty.rs (2105.12769). Read after TeX Live's file, the copy's first-load code ran over state pdflatex never
+builds: fsmfart.cls:365-372's `\@tempa` gobbled an `\ifx` and left `\else`/`\fi` unmatched, tikzcd.sty:413 "Arrow tip
+`cm to' was already defined" (26 Errors). A read of the binding's other type is the copy's own file of that type where
+the copy loads it: imsart_cls.rs's imsart.sty is 2405.11676's imsart-altered.sty (imsart-altered.cls:149
+`\RequirePackage{imsart-altered}`), not the unaltered imsart.sty beside it: both were read, each with the same natbib
+load (imsart.sty:4689, imsart-altered.sty:4689), and the document's `\RequirePackage[numbers]{natbib}` was an option
+clash. A shipped file is not read as the file when it loads the file it declares itself (a wrapper,
+`\ProvidesPackage{tikz-cd}\RequirePackage{tikz-cd}`, `\ProvidesClass{smfart}\LoadClass{smfart}`: its load hit the
+binding still loading, TeX Live's file never read), nor when it defines too few of that file's names (`reads_as_the_file`:
+only the names each defines are evidence of a copy, never what it loads, and the two share a quarter of the smaller
+set; a file that defines none itself counts those of the files it reads with `\input` or `\usetikzlibrary`, one level,
+so tikz-cd.sty's are tikzlibrarycd.code.tex's; measured: tikzcd.sty and tikz-cd1.sty 14 of 18, pdfplots.sty 2 of 2
+with pgfplots.sty, smfartVS.cls 237 of 237 with smfart.cls; an author's `\ProvidesPackage{tikz-cd}` file that loads
+tikz, as tikz-cd.sty does, and defines `\mytcd` shares none, records `\ver@` under its own name in TeX, and the
+document's `\usepackage{tikz-cd}` reads the real file; likewise a `{pgfplots}` file loading graphicx or tikz; an
+expansion primitive after a `\def` — `\expandafter\def\csname…` — is no name it defines. Residual: an author's file of
+four names or fewer passes on one shared name, so `\ProvidesPackage{tikz-cd}` with `\def\ar{…}`, or a `{tcolorbox}`
+file renewing `\arraystretch`, is read as the real file (synthetic; no misdeclared author file of a raw-reading binding in
+the 192-paper population, row R COPYSMALL)): the binding reads its file and the shipped file is read after it, as the stand-in's copy. A copy routed to a binding loaded already (or to a file of that
+name read raw) is read too, as TeX reads the file whole: 2304.14243's packages/pictures.sty `\ProvidesPackage
+{packages/graphics}` after graphicx lost its commands silently (34 Errors). A binding that does not read its file raw
+(neurips, aistats, natbib) keeps the provides-mode read after it. Perl reads none of these copies: without
+`--includestyles` it reads no raw `.sty`/`.cls` (`RequirePackage`/`LoadClass` set `notex` unless `INCLUDE_STYLES`/
+`INCLUDE_CLASSES`, Package.pm:2688-2689, :2704-2705).
+**Guard**: `perfect_kernel_batchregfixq::{renamed_copy_is_read_once_as_its_bindings_file,
+copy_routed_to_a_loaded_binding_is_read, renamed_class_reads_its_own_package, wrapper_is_read_after_the_file_it_loads,
+class_wrapper_is_read_after_the_class, misdeclared_file_is_not_read_as_the_file,
+misdeclared_file_sharing_a_load_is_not_the_file, misdeclared_pgfplots_sharing_a_load_is_not_the_file}` (repros
+`stand-in-copies/provides_route/{smfart_renamed_copy_read_once,copy_of_a_loaded_binding_is_read,
+renamed_class_reads_its_own_package,wrapper_loads_the_file_it_declares,class_wrapper_loads_the_class,
+misdeclared_file_is_not_the_file,misdeclared_file_shares_a_load,misdeclared_pgfplots_shares_a_load,
+exact_tikzcd_copy_is_read_as_the_file}.tex`; guard `perfect_kernel_batchregfixq::exact_tikzcd_copy_is_read_as_the_file`, the
+one-level extension).
+
+### 1130. A stand-in binding's dependency scan runs after the shipped copy's read (REGFIXU)
+
+**Rule** (maintainer ruling 2026-11-21: TeX's order decides). sn_jnl_cls.rs and optica_article_cls.rs scan the
+paper's shipped class for the packages it names (`require_dependencies_except`, Perl `maybeRequireDependencies`,
+Package.pm:2776-2813, which Perl runs only over a file it does not read: :2696, :2732). They run it at the class's end
+(`\AtEndOfClass{\lx@sn@class@end}`, `\lx@optica@class@end`), after the copy, read inside the class load as the
+stand-in's copy (#731), has loaded its packages in its own order: the loads that ran are loaded and the rest filtered
+(content.rs's executed-set gate), so after a copy the scan adds nothing; it acts only for a paper's class not read as
+the stand-in's copy. What it loads then comes after the binding's own definitions, so a scanned package's definition
+replaces the binding's (a `\ProvidesClass{springer-custom}` sn-jnl.cls loading threeparttable: its `\tnote` prints no
+mark outside `{threeparttable}`, as pdflatex; synthetic, no population paper). The binding code that tests what the scan loaded runs there too: the kernel's `\(`/`\)` over program's
+programbox (#597) and sn-jnl's appendix load and its `{appendices}` re-dress. Run first, the scan loaded the bound
+program ahead of the copy's unbound packages: 2211.09062's sn-jnl.cls:297 `\usepackage{easyReview}` (todonotes,
+tikz) then read pgf with program's `|` active (295 Errors, a Fatal, no output; now 0 Errors). In TeX's order, too, a
+copy's `\usepackage` in a false arm stays unloaded (breakurl in sn-jnl.cls's `\breakurldefns` under the `pdflatex`
+option: the `.bbl`'s own `\burl` fallback, sans-serif text, 2403.06633), and a package the copy loads defines over the
+binding as in pdflatex (optica-article.cls:251's jabbrv `\JournalTitle`, upright, over the binding's `\emph`:
+2211.05707 and 9 more optica papers, content unchanged). Rust-only: Perl has
+neither binding. `shipped_class::require_shipped_packages` (the algorithm and sub-figure families) still scans
+before the copy, as its result chooses the binding's defaults. **Guard**:
+`perfect_kernel_batchregfixu::snjnl_scan_runs_after_the_copy_loads_its_packages` (repro
+`stand-in-copies/scan_order/snjnl_scan_after_the_copy.tex`); `perfect_kernel_batch67u::snjnl_class_copy_loads_program`,
+`perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.

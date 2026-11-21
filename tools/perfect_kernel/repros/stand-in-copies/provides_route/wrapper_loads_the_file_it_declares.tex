@@ -1,0 +1,18 @@
+% A shipped wrapper that declares itself a file a raw-reading binding stands for and loads that file is not its copy:
+% the binding reads TeX Live's file, the wrapper is read after it (`routed_copy_request`, `loads_file`).
+% witness: none (reviewer's REGFIXQ probes A and C; the copies of 1201.4414, 1512.05388, 2105.12769 load no such name)
+% oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B; the plot with ticks 0 ... 1
+% engines: rust INT6A = 0 errors; REGFIXQ r1 = 4 errors (`\usetikzlibrary`, `{tikzcd}`, `\arrow` undefined): the
+%          wrapper was read as tikz-cd.sty, its `\RequirePackage{tikz-cd}` hit the binding still loading
+% expect:  0 errors, 0 warnings; the diagram and the plot drawn
+% status:  RED (REGFIXQ) -> GREEN (REGFIXQ2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mytikzcd}
+\usepackage{mypgfplots}
+\begin{document}
+\mytcd
+\begin{tikzcd} A \arrow[r] & B \end{tikzcd}
+Plot:
+\begin{tikzpicture}\begin{axis}\addplot coordinates {(0,0) (1,1)};\end{axis}\end{tikzpicture}
+\end{document}

@@ -5,13 +5,21 @@ use latexml_package::prelude::*;
 use crate::and_by_meaning::and_runs;
 
 LoadDefinitions!({
+  // The class the binding stands in for is lipics-v2019 or later (its options list, `\opt@<class>.cls`, is defined).
+  let v2019_or_later = [
+    "\\opt@lipics-v2019.cls",
+    "\\opt@lipics-v2021.cls",
+    "\\opt@lipics-v2024.cls",
+  ]
+  .iter()
+  .any(|list| has_meaning(&T_CS!(list)));
   LoadClass!("OmniBus");
   // lipics-v2021.cls:514-1098 loads these packages, in this order. The binding stands in for the class, so they load
   // here or not at all: `\newcolumntype` (array, 2609.13401), `{subfigure}` (subcaption, 2609.10114), the `{CCSXML}`
-  // block the class excludes (comment, :861-862; its `_`s were math errors, 2609.13485), `\multirow`, `tabularx`,
-  // `threeparttable`, `listings`, soul with the class's `\textsolittle` (:540-541)… Font, PDF and page-layout packages
-  // (microtype, lmodern, fontawesome5, hyperxmp, totpages, colorprofiles) are left out, and so are the class's MnSymbol
-  // block (:534-538) and its options to amsmath (`tbtags,fleqn`).
+  // block the class excludes (comment, :861-862, from v2019 on, below; its `_`s were math errors, 2609.13485),
+  // `\multirow`, `tabularx`, `threeparttable`, `listings`, soul with the class's `\textsolittle` (:540-541)… Font, PDF
+  // and page-layout packages (microtype, lmodern, fontawesome5, hyperxmp, totpages, colorprofiles) are left out, and so
+  // are the class's MnSymbol block (:534-538) and its options to amsmath (`tbtags,fleqn`).
   // Not xcolor at class time: the class loads `color` and takes xcolor at the document's start only when the paper
   // has not (:543-546, below), so a paper's own `\usepackage[table]{xcolor}` decides its options (colortbl's
   // `\rowcolor`, array `m{}` columns). (Perl has no lipics binding: OmniBus with `maybeRequireDependencies`,
@@ -67,8 +75,14 @@ LoadDefinitions!({
   RequirePackage!("rotating", options => vec![s!("figuresright")]);
   RequirePackage!("subcaption");
   RequirePackage!("xstring");
-  RequirePackage!("comment");
-  RawTeX!(r"\excludecomment{CCSXML}");
+  // lipics-v2019.cls:756-757 (lipics-v2021.cls:861-862) and not before: lipics.cls, lipics-v2016/v2018 and lipicsmio
+  // (bound here by name prefix) leave `\comment` to the paper, whose `\newcommand{\comment}[1]{}` comment.sty refused,
+  // so `\comment{…}` opened comment.sty's environment and the rest of the paper was lost (1511.06260, 1705.05828,
+  // 1711.02032, 1803.04513).
+  if v2019_or_later {
+    RequirePackage!("comment");
+    RawTeX!(r"\excludecomment{CCSXML}");
+  }
   RequirePackage!("amsthm");
   // :188-193: the class's options, `\DeclareOption{thm-restate}{\let\usethmrestate\relax}` and the like, read from the
   // class's own option list (`\opt@<class>.cls`, as a wrapper's `\LoadClass[thm-restate]{lipics-v2021}` passes it) or
@@ -117,14 +131,7 @@ LoadDefinitions!({
   // `anonymous` option (:192) the class prints "Anonymous author" and "Anonymous affiliation" and nothing else of it.
   // The 2016 `lipics.cls` keeps LaTeX's `\author` (17 of the 92 shipped copies). Before, the name alone was the author
   // and the other four arguments were typeset in the body (2607.26691, 2603.11908, 2307.12098, 2608.03845).
-  let five_part_author = [
-    "\\opt@lipics-v2019.cls",
-    "\\opt@lipics-v2021.cls",
-    "\\opt@lipics-v2024.cls",
-  ]
-  .iter()
-  .any(|list| has_meaning(&T_CS!(list)));
-  if five_part_author {
+  if v2019_or_later {
     AssignValue!("lx_lipics_anonymous" => class_option("anonymous"), Some(Scope::Global));
     DefMacro!(
       "\\author{}{} Semiverbatim Semiverbatim {}",

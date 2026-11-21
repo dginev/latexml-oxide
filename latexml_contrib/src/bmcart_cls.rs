@@ -150,6 +150,12 @@ fn body_holds(cs: &str, pattern: &[Token]) -> Result<bool> {
   })
 }
 
+/// An `id` key's value as the characters it is spelled with: bmcart.cls reads ids only inside `\csname` (:1137-1154
+/// `\csname addressref@\addressref@id\endcsname`, :1284-1289 `\csname address@\address@id\endcsname`), while the
+/// frontmatter's `annotations` and `label` keys digest theirs (Perl Base_Utility.pool.ltxml:250-251), where `aalto_cs`
+/// was a math subscript (2009.00252, 1403.3568).
+fn id_chars(tokens: &[Token]) -> Vec<Token> { Explode!(Tokens::new(tokens.to_vec()).to_string()) }
+
 /// `tokens` in braces.
 fn braced(tokens: &[Token]) -> Vec<Token> {
   let mut out = Vec::with_capacity(tokens.len() + 2);
@@ -196,7 +202,7 @@ LoadDefinitions!({
           if !labels.is_empty() {
             labels.push(T_OTHER!(","));
           }
-          labels.extend_from_slice(value);
+          labels.extend(id_chars(value));
         }
         // (:1131-1143: the article notes its `noteref` key, and `thanksref`, whose alias it is, names; each id the
         // `note:`-labelled contact `\@bmcartnote` makes)
@@ -211,7 +217,7 @@ LoadDefinitions!({
               labels.push(T_OTHER!(","));
             }
             labels.extend(ExplodeText!("note:"));
-            labels.extend(id);
+            labels.extend(id_chars(&id));
           }
         }
       }
@@ -278,7 +284,7 @@ LoadDefinitions!({
         .map(|(_, value)| value)
         .unwrap_or_else(|| ExplodeText!(&s!("aff{n}")));
       let mut out = TokenizeInternal!("\\lx@add@contact[role=affiliation,label=").unlist();
-      out.extend(braced(&id));
+      out.extend(braced(&id_chars(&id)));
       out.push(T_OTHER!("]"));
       let mut shown = TokenizeInternal!(
         "\\def\\orgdiv#1{#1}\\def\\orgname#1{#1}\\def\\street#1{#1}\\def\\postcode#1{#1}\\def\\postbox#1{#1}\\def\\city#1{#1}\\def\\state#1{#1}\\def\\cny#1{#1}\\let\\interref\\surl"
@@ -305,7 +311,7 @@ LoadDefinitions!({
       if let Some(id) = id {
         out.extend(TokenizeInternal!(",label=").unlist());
         let mut label = ExplodeText!("note:");
-        label.extend(id.iter().copied());
+        label.extend(id_chars(&id));
         out.extend(braced(&label));
         let id = Tokens::new(id).to_string();
         let mut ids = lookup_string(NOTE_IDS);

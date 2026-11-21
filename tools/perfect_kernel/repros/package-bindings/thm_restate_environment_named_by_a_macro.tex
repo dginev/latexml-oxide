@@ -1,0 +1,18 @@
+% witness: 1410.0855 1411.0871 1411.1619 1504.05476 1511.01379 (`\begin{restatable}{\retheorem}{x}`, the environment
+%          named by a macro; thm-restate.sty passes #2 to \begin, which expands it)
+% oracle:  pdflatex 0 errors: "Theorem 1 (Named). A claim.", "Lemma 2. A lemma.", then the same two again
+% engines: rust INT6A 2 errors (environment {\retheorem}/{\relemma} undefined at the replay)
+% expect:  0 errors, 0 warnings; Theorem 1 twice, Lemma 2 twice (the {restatable*} preview by reference)
+% status:  RED (INT6A) -> GREEN (REGFIXR)
+\documentclass{article}
+\usepackage{amsthm,thm-restate}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newcommand{\retheorem}{theorem}
+\newcommand{\relemma}{lemma}
+\begin{document}
+\begin{restatable}[Named]{\retheorem}{again}A claim.\end{restatable}
+\begin{restatable*}{\relemma}{later}A lemma.\end{restatable*}
+\again*
+\later
+\end{document}

@@ -98,9 +98,46 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     - ulem's `\ul` declaration (from `\useunder`) underlines to the end of its group, a cell or a `\multicolumn` body
       instead of reading past it (2312.12023: 5 Errors → 0, 12 underlines; OXIDIZED_DESIGN_DIVERGENCES #1109); an
       unclosed `\ul` is an Error, as in TeX. Guards `perfect_kernel_batchregfixl::*`.
+    - Bindings keep the names their files define and documents extend: cvpr/iccv read a renamed copy raw
+      (2412.03517, OXIDIZED_DESIGN_DIVERGENCES #1110), elsarticle's `\@fnotes` and `\endfrontmatter` are run by name,
+      amsart/amsproc run `\@setauthors` at `\maketitle` so what a document appends is a note (2610.08257, 2610.02630,
+      2610.25104), amsrefs answers `\IfOption`, newtxmath defines `\ntxmath@scaled`. Guards
+      `perfect_kernel_batchregfixm::*`.
+    - aastex's `{deluxetable}` ends at `\enddata` under a `D` column; revtex no longer marks iftex loaded; etoolbox's
+      `\robustify` keeps a `\protected` macro; `\@testopt` peeks past spaces as `\@ifnextchar` does
+      (KNOWN_PERL_ERRORS #1303). daj loads no lastpage beside its copy's totpages; an undefined inputenc byte is TeX's
+      robust `\PackageError` (one Error, the byte dropped, also in a `\url`/`\href`; OD #1112); lipics loads
+      comment.sty from v2019 on. Guards `perfect_kernel_batchregfixn1::*`, `perfect_kernel_batchregfixn2::*`.
+    - Eleven Fatals: hyperref's PDF strings port hyperref.sty:405-413 and :545-565 (specials, `\def`/`\let` gobbled,
+      `\@ifnextchar`/`\@ifstar`/`\@protected@testopt`; a `\newcommand` optional follows a redefined
+      `\@protected@testopt` through its recorded `\\cs` internal, twoopt's and xargs' too), `\start@align` starts the
+      internal alignment, `\xrightarrow`/`\xleftarrow` are robust (KNOWN_PERL_ERRORS #1302), `{restatable}` ends its
+      body at the `\end` of the environment current at its start (0812.2921, 2001.10451, 2007.15542, 2607.00952,
+      2609.31596); `\DeclareRobustCommandx` makes its inner command as `\newcommandx` (KNOWN_PERL_ERRORS #1304). Guards
+      `perfect_kernel_batchregfixo::*`.
+    - A frontmatter name no longer loses a trailing skip's argument after a parameterless macro (2401.17245); SIunits
+      leaves siunitx's free unit commands free; a wrapper theorem's restatement takes the next number as pdflatex
+      (1911.08418 "Theorem 5.1", "6.1"), `{restatable}` ends the theorem it began and keeps later labels
+      (KNOWN_PERL_ERRORS #1048), a macro-named environment expands when restated ("Restated Theorem", 1411.0871); amsppt's
+      `\endroster` closes an item's open group (alg-geom9511013; OD #1117) and a stray one errs as AMS-TeX. Guards
+      `perfect_kernel_batchregfixp::*`.
+    - A paper's renamed copy of a bound class or package is read once, where its binding reads its own file, and read
+      when the binding is loaded already; a wrapper that loads the name it declares, or a file sharing no defined names
+      with the real one, is read after the binding (OD #1118; 1401.0915, 1201.4414, 2105.12769, 2304.14243). titlesec,
+      fancyhdr, icml and sn-jnl copies find the internals they use. Guards `perfect_kernel_batchregfixq::*`.
+    - aa's linenoaa `{gather}` runs its own end around amsmath's idiom (2503.08108: 96 Errors → 0; OD #1124); a
+      sub-caption under a shipped caption3 v1 takes its label format; amsmath defines `\displ@y@`; AASTeX 5.x and
+      emulateapj keep a pre-class `\fig`; bmcart ids are characters. Guards `perfect_kernel_batchregfixr::*`,
+      `perfect_kernel_batchregfixr2::*`.
+    - A title-code `\let` reads what its target reads (rims02e's `\let\mail\thanks`, math0408269; OD #1126); an EPL
+      legend note prints its `\inst` mark (1009.3152, 1907.04695; OD #1127). Guards `perfect_kernel_batchregfixs::*`.
+    - A stand-in binding's dependency scan runs after the paper's copy is read, in TeX's order (sn-jnl 2211.09062: a
+      Fatal → 0 Errors; optica-article; OD #1130). Guard `perfect_kernel_batchregfixu::*`.
 
-    On the papers each fix targets, A/Bs of 60-204 papers: none worse. The residuals are row R's REGRES, REGTAIL,
-    AMSPPTRES and THMEDPSRES lines in `docs/SYNC_STATUS.md`.
+    On the papers each fix targets, A/Bs of 60-204 papers: none worse. The last round's bundle (1,366 papers, every
+    tier-2 regression included): Errors 9,403 → 8,578, Fatals 37 → 24, none worse; of the 497 tier-2 regressions 192
+    still err (343 before it, 0 newly erring). The residuals are row R's REGRES, REGTAIL, AMSPPTRES and THMEDPSRES
+    lines in `docs/SYNC_STATUS.md`; the copy-routing design debt is COPYROUTE.
   - **A binding's `(Loading … )` note encloses what it loads (#945).** The note opens once the binding is found
     (Perl `Core/Mouth/Binding.pm:31`) and prints before the first line logged inside it, so the raw files and bindings
     it loads nest inside it, and a binding's own messages start on a fresh line. Progress notes carry no elapsed times

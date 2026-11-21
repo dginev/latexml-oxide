@@ -13773,7 +13773,9 @@ and mathscinet, and it defines no `\bibselect` (:1291), `\resetbiblist` (:651) o
 `\documentclass{amsart}\usepackage{amsrefs}\begin{document}\cite{G}\begin{bibdiv}\begin{biblist}
 \bib{G}{article}{author={Gel\cprime fand, I.}, title={On ${\germ g}$}, note={\url{http://x.org}}, journal={J},
 year={1950}}\end{biblist}\end{bibdiv}\end{document}` → 3 errors (`\cprime`, `\germ`, `\url` undefined); pdflatex 0.
-Fixed in Rust (65r, OD #563; 1907.08888, 1904.05225).
+Fixed in Rust (65r, OD #563; 1907.08888, 1904.05225). Likewise ifoption (:159): `\documentclass{article}
+\usepackage{amsrefs}\begin{document}\IfOption{initials}{on}{off}\end{document}` → 1 error (`\IfOption` undefined);
+pdflatex 0, "off". Fixed in Rust (REGFIXM; 1707.00398, 1806.01802, 1812.07818, 1709.04732, 1707.03971).
 
 ## 628. A class binding's hyperref load swallows the author's hyperref options
 
@@ -13818,7 +13820,9 @@ behind `\big` … `\Bigg`, restated as `\newcommand{\vast}{\bBigg@{4}}`), `\big@
 them, so each use is "undefined" (run 340: `\bBigg@` 595 papers, `\Let@` 264, `\big@size` 132). Trigger
 `\makeatletter\newcommand{\vast}{\bBigg@{4}}\makeatother` … `\[\vast( x \vast)\]` → Perl: undefined `\bBigg@`
 (pdflatex 0 errors). Fixed in Rust (65s, amsmath_sty.rs `ams_author_called_internals`; witnesses 1412.0919,
-2509.20301, 1606.05562, 2508.13749, 2103.12630, 2103.14974, 1109.5733).
+2509.20301, 1606.05562, 2508.13749, 2103.12630, 2103.14974, 1109.5733). Also `\displ@y@` (:1344-1363), which documents
+extend (`\g@addto@macro\displ@y@{…}`: Perl leaves it undefined, so `\g@addto@macro` errs, as TeX would on an
+undefined macro; 1406.6618 2301.11270 2304.01203 2401.16335 2402.12617): defined, but run by no display; and `\start@gather` (:1540, OD #1124; REGFIXR).
 
 ## 631. amscd reads the space after `@` as the connector, and lacks `\atdef@` and `\CDat`
 
@@ -17225,7 +17229,13 @@ is `\newcommand\autoref…`, our preload's `\autoref` is already defined and the
 the reference keeps hyperref's form where pdflatex prints the document's ("Sec. I"); the XML of the reviewed
 controls is unchanged. Repros `class-bindings/revtex_preloaded_hyperref_loads_again`,
 `class-bindings/revtex_hyperref_loaded_twice_cleveref`; guards `perfect_kernel_batch77r::{
-revtex_preloaded_hyperref_loads_again, revtex_hyperref_loaded_twice_keeps_cleveref}`.
+revtex_preloaded_hyperref_loads_again, revtex_hyperref_loaded_twice_keeps_cleveref}`. The iftex the preload loaded is
+marked unloaded too: in LaTeX the document's hyperref reads iftex.sty (hyperref.sty:122), which sets `\ifpdf` again
+(iftex.sty:272-291), so a document's `\let\ifpdf\relax` before it is undone where hyperref's driver test reads it (stray
+`\else`/`\fi` else; 1808.09428, 1812.07558, 1904.08912, 1906.04729). The other packages the preload loaded stay loaded
+(their bindings are not idempotent: etoolbox saves its `\robustify` as `\lx@saved@robustify`). Repro
+`package-bindings/revtex_hyperref_after_ifpdf_relax`; guard
+`perfect_kernel_batchregfixn1::revtex_hyperref_after_ifpdf_relax`.
 
 ## 998. cleveref's `\label[type]{key}` drops the type, so `\cref` names the object by its own type
 
@@ -17957,7 +17967,14 @@ another's body (`\thmt@collect@body` stops at the inner `\end{restatable}`: pdfl
 fatal error-count stop; ours 101 errors and Fatal:TooManyErrors, bounded the same way). A restatement replays what the
 original holds, errors too: 1711.05227 55 → 58 errors, `\thmrelevance*` at proofs.tex:45 replayed inside a math frame
 left open at proofs.tex:23 and an alignment open since magic.tex:150-155, its error locations moving to
-`\end{restatable}`. Witnesses 2108.11527, 2602.09462, 2402.14202, 1702.04225. Repros
+`\end{restatable}`. Only `\the<env>` and `\c@<env>` are faked (thm-restate.sty:123-133): a wrapper environment with
+neither (ltexpprt.sty:216-217 `\newenvironment{theorem}{\begin{@theorem}}`: 1911.08418, 2410.24104, 2503.21951) freezes
+no number, so its restatement, `{restatable*}` too, steps the inner theorem's counter and prints the next number, as
+pdflatex. `{restatable}` ends the theorem it began (`\csname end#2\endcsname`); Perl's end `\end{\@currenvir}`
+(thm-restate.sty.ltxml:18-23), ours until int/regfix6, ends a wrapper's inner theorem and leaves the wrapper and the
+restatable open to `\end{document}` — in `{restatable*}` every later `\label` gobbled (repro
+package-bindings/thm_restate_restatable_star_in_a_wrapper_steps_the_counter). Witnesses 2108.11527, 2602.09462,
+2402.14202, 1702.04225. Repros
 package-bindings/thm_restate_restated_theorem_prints_its_statement, …/thm_restate_restatable_star_takes_the_later_number;
 guards `perfect_kernel_batch78i::{restated_theorem_prints_its_statement, restatable_star_takes_the_later_number}`.
 
@@ -21729,6 +21746,7 @@ item."; Perl: `<enumerate/>`): `\input amstex \documentstyle{amsppt} \document \
 `\therosteritem{n}` or `{\rm label}`, steps the roster's id at `\roster` and gives a nested roster's outer item ids back at its
 end. Witness alg-geom9502009 (45 rosters); repros amstex/{amsppt_roster_keeps_its_items, amsppt_roster_nested,
 amsppt_roster_runinitem, amsppt_roster_runinitem_stray}; guard `perfect_kernel_batchamsppt::amsppt_heads_and_theorems`.
+An `\endroster` met inside a group the body opened ends the roster there (OXIDIZED_DESIGN_DIVERGENCES #1117).
 Upstream: to offer.
 
 ## 1271. A family register's value is read as one token: `\textfont9=\textfont1` typesets the "1"
@@ -22221,3 +22239,70 @@ pdftex: "(1) first item (2) second item."; Rust before the fix: `Error:malformed
 <ltx:p>` and a malformed `<enumerate>` (`\documentstyle{amsppt}` loads LaTeX.pool, whose Tag hid it). Rust's binding
 declares the Tag (amsppt_sty.rs). Witnesses math0006111, gr-qc9610061, math9809193 (59 papers); repro
 amstex/amsppt_input_roster_items_close; guard `perfect_kernel_batchregfixi::amsppt_input_roster_items_close`.
+
+## 1304. `\DeclareRobustCommandx` takes its key-value list for the default
+
+xargs.sty:282-300 `\xargs@DRC` makes `\cs` `\protect\cs␣` and `\cs␣` as `\newcommandx` makes a command, each optional
+argument's default read from the key-value list (`1=d`). Perl's xargs.sty.ltxml:112-117 defines `\cs␣` with
+`convertLaTeXArgs($nargs, $defaults)`, which takes the whole list as the first optional's default text. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage{xargs}
+\DeclareRobustCommandx\rx[2][1=d]{R#1#2}
+\DeclareRobustCommandx\ry[2][2=e]{S#1#2}
+\begin{document}\rx{b} \rx[f]{g} \ry{i}; \ry{i}[j]\end{document}
+```
+
+pdflatex `Rdb Rfg Sie; Sij`; Perl and Rust before the fix `R1=db Rfg S2=ei; S2=ei[j]` (in a hyperref PDF string the
+inner command expanded with that text too). Separately, as for every xargs command (Perl and Rust): a later optional
+argument's peek skips spaces and does not put them back where no `[` follows, which `\xargs@ifnextchar` (xargs.sty:64-87)
+does — `\ry{i} \ry{i}[j]` prints `SieSij`, pdflatex `Sie Sij` (row R XARGSSPACE). Rust's binding makes `\cs␣` through `define_xargs`, as `\newcommandx`, with its
+internal `\\cs␣` (xargs_sty.rs). Repro sectioning-frontmatter/hyperref_pdfinfo_gobbles_testopt_and_let; guard
+`perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`.
+## 1303. `\@testopt` does not skip spaces before its `[`
+
+latex.ltx:1259-1260 `\long\def\@testopt#1#2{\kernel@ifnextchar[{#1}{#1[{#2}]}}` peeks by `\@ifnextchar`, which
+skips spaces (`\@ifnch`, `\@xifnch`: latex.ltx:1756-1774): with a `[` after them the option is read, without one the
+default is inserted and the spaces are gone. Perl's closure (latex_constructs.pool.ltxml:5674-5677) tests
+`ifNext(T_OTHER('['))` on the very next token, so a space before the `[` inserts the default and leaves `[` and the
+option as text. Minimal trigger:
+
+```tex
+\documentclass{article}
+\makeatletter
+\def\y[#1]#2{\typeout{Y=[#1],[#2]}}
+\@testopt\y{d} [c]{e}
+\makeatother
+\begin{document}x\end{document}
+```
+
+pdflatex `Y=[c],[e]`; Perl and Rust before the fix `Y=[d],[[]`. caption.sty's `\DeclareCaptionSubType * [alph]{table}`
+(`\@ifstar` then `\@testopt`) took `[` for the float type: "No float type '[' defined" and "alph]table" printed
+(2012.09877, 2102.01489, 2108.10505, 2407.20995, 2601.08142). Rust's `\@testopt` (sect13.rs) peeks as
+`\@ifnextchar` does: past spaces, `\@let@token` set, the `[` compared by meaning. Repro
+expansion-primitives/testopt_skips_spaces; guard `perfect_kernel_batchregfixn1::testopt_skips_spaces`.
+## 1302. `\xrightarrow` names itself in its body, so an `\edef` re-expands it without end
+
+Perl's amsmath.sty.ltxml:957-958 `DefMacro('\xrightarrow', '\lx@long@arrow{\xrightarrow}{…}')` (and `\xleftarrow`)
+passes its own name to the constructor for reversion; an `\edef` or `\protected@edef` expands that name again.
+amsmath.sty:1027 `\DeclareRobustCommand{\xrightarrow}[2][]` is robust, so pdflatex keeps `\protect \xrightarrow {H}`.
+Trigger:
+
+```tex
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\makeatletter\protected@edef\x{$2 \xrightarrow{H} 2$}\makeatother
+\show\x
+\end{document}
+```
+
+Perl: "Out of memory"; Rust before the fix: `Fatal:Timeout:PushbackLimit`. natbib.sty:930 `\bibfield`'s
+`\protected@edef` (revtex4-1.cls:7046 `\let\NAT@merge\thr@@`) meets it in an apsrev4-1 `.bbl` (2007.15542). Fixed in
+Rust where `\protect` is not typesetting's: the six `\lx@long@arrow` arrows (`\xrightarrow`, `\xleftarrow`,
+extarrows' `\xlong…`) are `robust => true` (amsmath_sty.rs). Repro package-bindings/amsmath_xarrow_in_protected_edef;
+guard `perfect_kernel_batchregfixo::xrightarrow_in_a_protected_edef`. A plain `\edef` (typesetting's `\protect`) still
+re-expands the name; hyperref's PDF string, which keeps that `\protect`, gobbles `\lx@long@arrow` with its two
+arguments (`pdftitle={An $a\xrightarrow{b}c$ arrow}` "An abc arrow", pdfinfo the same; guard
+`perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`).

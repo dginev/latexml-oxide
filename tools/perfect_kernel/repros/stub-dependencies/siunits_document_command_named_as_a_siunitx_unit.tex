@@ -1,0 +1,16 @@
+% witness: 1301.1500 (`\newcommand{\Pa}{\ensuremath{\hat{P}_{\mathrm{c}}}}` after `\begin{document}`), 1705.09090 (`\J`)
+% oracle:  pdflatex 0 errors; "Quadratures P̂c and J; a pressure of 3 Pa."
+% engines: Perl 0.8.8 = 0 errors; rust REGFIXJ3 = 1 error (`undefined:\ERROR`) and `Info:ignore` for each `\newcommand`:
+%          the binding loads siunitx for its machinery (Perl's shim, SIunits.sty.ltxml:20), whose `\begin{document}`
+%          made every free unit command `\ERROR` (siunitx.sty:8369-8378; `six_command_create`), which real SIunits.sty
+%          (it loads no siunitx) never defines
+% expect:  0 errors, 0 warnings; the document's own `\Pa` and `\J` (P̂_c, bold J), SIunits' `\pascal` "Pa"
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXP; guard perfect_kernel_batchregfixp::siunits_leaves_siunitx_free_commands_free)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{SIunits}
+\begin{document}
+\newcommand{\Pa}{\ensuremath{\hat P_c}}
+\newcommand{\J}{\ensuremath{\mathbf{J}}}
+Quadratures $\Pa$ and $\J$; a pressure of \unit{3}{\pascal}.
+\end{document}
