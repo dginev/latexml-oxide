@@ -3979,7 +3979,7 @@ pub fn begin_stand_in_load() {
 }
 
 /// A stand-in binding's own code loads `file`, or makes `file`'s binding's definitions as code without loading it
-/// (svjour3_cls.rs over svjour's, jhep_cls.rs `jhep_definitions`, mnras_cls.rs over mn's): a file it is built on
+/// (svjour3_cls.rs over svjour's, jhep_cls.rs `jhep_definitions`): a file it is built on
 /// ([`State::stand_in_load_files`]), not marked loaded.
 pub fn note_stand_in_file(file: &str) {
   if let Some(files) = state_mut!().stand_in_load_files.last_mut() {

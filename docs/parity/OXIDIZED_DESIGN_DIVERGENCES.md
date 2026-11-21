@@ -12918,7 +12918,8 @@ a renamed copy that `\ProvidesClass` the same name is still read on the provides
 `cluster_cli::user_binding_precedence`). The rules:
 0. *Identity.* The copy is read only when it is the file the binding stands in for (content.rs
    `copy_is_the_stood_in_file`; 72a r3 rule): (a) its `\Provides(Expl)?(Class|Package|File)` names the binding that
-   answered (the file itself when the binding is of its name; #744), or a file the binding is built on — one its own code loads (`state::note_stand_in_file`,
+   answered (the file itself when the binding is of its name; #744), or a file the binding is built on — one its own code loads, or a binding whose definitions it makes as code
+   (never requested, so that file's own copy is not read: REGFIXH2, hep-ph0608235; `state::note_stand_in_file`,
    `stand_in_built_on`) —, a declared macro read as its definition in the copy says, as `\ProvidesClass` expands its
    argument (r4: cimart.cls:13-14 `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`, 2412.00032), whatever
    the version (1609.03892's fcs.cls of 2016, older than the `\fcssetup` the binding
@@ -23374,7 +23375,9 @@ ship, so no `ltx:pagination` is added; a hook's own `\clearpage` before it still
 what it grabbed before `\@checkend` drops `\lx@enddocument@tail` with it, so the tail's `\@checkend` checks and its
 `\clearpage` paginates (repro `expansion-primitives/enddocument_hook_scan_drops_the_tail.tex`, synthetic). Raw ltxgrid's
 re-emitted `\clear@document` (`\do@output@cclv`, an output-routine message) leaves empty `ltx:p`s at the end, as its
-other messages do mid-document.
+other messages do mid-document; and under raw ltxgrid the document's own `enddocument/afterlastpage` and `/afteraux`
+code never runs: ltxutil.sty:279 re-emits the tail as `\do@check@aux{#3\endgroup}`, which ltxgrid.sty:2199 sends
+through `\do@output@MVL`, an output-routine penalty we never fire (side effects only; pdflatex drops their typesetting).
 **Guards**: `perfect_kernel_batchregfixj::{enddocument_hook_scans_the_kernel_tail,
 enddocument_hook_scan_in_an_open_environment_reports_once, ltxgrid_enddocument_patch_keeps_the_tabular,
 patchcmd_finds_the_enddocument_tail, enddocument_late_hooks_scope_as_in_tex}`; the

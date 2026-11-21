@@ -3749,12 +3749,8 @@ fn replay_dropped_class_code(
   Ok(())
 }
 
-/// The class's own macro named as the kernel's store `\@<name>`, which its refused `\<name>` calls to read the call:
-/// bullsrsl.cls:326-327 `\def\author{\@ifnextchar[\@author{\@author[]}}\def\@author[#1]#2#3{…}`, which counts the
-/// authors (:358) that its `{authorcontributions}` tests (:958-961; 2312.08217, 2607.02675). LaTeX's store takes no
-/// parameters (latex.ltx `\gdef\@author{#1}`), so a raw file's that does is such a helper, kept (a value, per field) where
-/// a replay finds it: the kernel's `\<name>` stores its value there after the replay, where TeX keeps the class's. Bound
-/// only over a store (beilstein.cls:586-588 `\@author#1` too); a binding's own helper stays.
+/// A raw class's `\@<name>` taking parameters is its refused setter's helper, not LaTeX's store (latex.ltx
+/// `\gdef\@author{#1}`): bullsrsl.cls:326-327 (2312.08217, 2607.02675), beilstein.cls:586-588. OD #482.
 fn class_store_helper(name: &str) -> Option<(Token, Stored)> {
   let store = T_CS!(s!("\\@{name}"));
   let kept = s!("lx_class_store_helper:{name}");
@@ -3766,6 +3762,9 @@ fn class_store_helper(name: &str) -> Option<(Token, Stored)> {
     {
       if d.get_origin() == DefinitionOrigin::File {
         assign_value(&kept, Stored::Expandable(d), Some(Scope::Global));
+      } else {
+        // a binding's own helper now: a class helper recorded earlier is stale
+        assign_value(&kept, Stored::None, Some(Scope::Global));
       }
       None
     },

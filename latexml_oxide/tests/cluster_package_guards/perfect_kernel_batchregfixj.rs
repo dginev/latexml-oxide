@@ -46,7 +46,7 @@ fn enddocument_hook_scans_the_kernel_tail() {
     ),
     "{xml}"
   );
-  // the tail's `\clearpage`, dropped with its `\let`s, paginates (OD #1107)
+  // the tail's `\clearpage`, dropped with its `\let`s, paginates: OD #1107's open residual pinned, not intended behaviour
   assert_eq!(
     xml.matches("<pagination role=\"newpage\"/>").count(),
     1,

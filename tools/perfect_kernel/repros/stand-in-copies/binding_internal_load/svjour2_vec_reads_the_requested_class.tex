@@ -1,0 +1,12 @@
+% witness: (synthetic; the REGFIXH2 re-review's p3) a svjour2 paper whose class copy defines \vec as a bold \mathbf
+% oracle:  pdflatex 0 errors; ω set in CMMI10 (italic), v bold (pdffonts: no CMMIB)
+% engines: rust INTREGFIX4 and REGFIXH = ω font="bold italic" (the \vec test read svjour.cls / svjour3.cls, neither shipped);
+%          REGFIXH2 = ω font="italic", v font="bold" (the test reads the requested class, \@currname)
+% expect:  0 errors, 0 warnings; svjour2.cls read (declares svjour); ω italic, v bold
+% status:  RED (REGFIXH) -> GREEN (REGFIXH2)
+% preload: ar5iv.sty
+\documentclass{svjour2}
+\begin{document}
+\begin{figure}\caption{Cap.}\end{figure}
+$\vec{v}+\vec{\omega}$
+\end{document}

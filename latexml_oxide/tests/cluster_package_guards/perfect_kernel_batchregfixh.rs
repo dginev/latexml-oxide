@@ -87,3 +87,29 @@ fn svjour2_copy_declaring_svjour_is_read() {
     "<caption><tag close=\": \">Fig. 1</tag>Cap.</caption>",
   );
 }
+
+/// The shipped-class `\vec` test reads the class the paper requested (`\@currname`), here a svjour2.cls copy whose `\vec`
+/// is `\mathbf`, so ω stays italic as in pdflatex; it read svjour.cls / svjour3.cls, neither shipped (REGFIXH2 review).
+#[test]
+fn svjour2_vec_reads_the_requested_class() {
+  let (log, xml) = convert_files_with(
+    repro!("svjour2_vec_reads_the_requested_class.tex"),
+    &[("svjour2.cls", repro!("svjour2_vec.cls"))],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(log.contains("svjour2.cls declares itself svjour"), "{log}");
+  assert!(xml.contains("<XMTok font=\"bold\" role=\"UNKNOWN\">v</XMTok>"), "{xml}");
+  assert!(xml.contains("<XMTok font=\"italic\" name=\"omega\" role=\"UNKNOWN\">ω</XMTok>"), "{xml}");
+}
+
+/// A JHEP3.cls copy declaring `\ProvidesClass{JHEP}` is the paper's requested class file: read, as before the code
+/// reuse (the JHEP3 binding records JHEP as a file it is built on, never loaded by it).
+#[test]
+fn jhep3_copy_declaring_jhep_is_read() {
+  convert_to_paragraph(
+    repro!("jhep3_copy_declaring_jhep_is_read.tex"),
+    &[("JHEP3.cls", repro!("JHEP3_declares_jhep.cls"))],
+    "Body JLOADED COPYREAD.",
+  );
+}
