@@ -1,0 +1,18 @@
+% witness: alg-geom9511013 (also math0511546's `{\text{\rm B(e)}`, math9901010's `{\text{\rm Minimality…}`): a bibliography
+%          `\roster` whose last `\item` leaves `{\it` open
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors ("(\end occurred inside a group at level 1)");
+%          "[S-D] B. St.-Donat, Sur les equations, C.R. Acad. Sci. Paris 274 (1972). After." — the italic runs on to the end
+% engines: Perl 0.8.8 = 0 errors, 1 warning, an empty `<enumerate/>` and "After." lost (KNOWN_PERL_ERRORS #1270);
+%          rust REGFIXJ3 = 1 error (malformed: `ltx:document` closes an open `enumerate`), 1 warning (`\endroster` body
+%          should have ended with `\endroster`): `DigestUntil` digests the `{` group whole, so the `\endroster` inside it
+%          ended nothing and the roster ran to the document's end
+% expect:  0 errors, 1 warning (`\endroster` inside 1 open group: closing it); the roster's one item, then "After." after it
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXP; guard perfect_kernel_batchregfixp::endroster_ends_the_roster_inside_a_group)
+\input amstex
+\documentstyle{amsppt}
+\document
+\roster
+\item "[S-D]" B. St.-Donat, {\it Sur les equations, C.R. Acad. Sci. Paris {\bf 274} (1972).
+\endroster
+After.
+\enddocument

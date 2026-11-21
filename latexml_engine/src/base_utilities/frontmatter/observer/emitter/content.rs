@@ -86,7 +86,8 @@ pub(in crate::base_utilities::frontmatter::observer) fn aligned(events: &[Event]
 }
 
 /// Where a call in `tokens` reads past them: a macro at their top level whose parameters are each undelimited (TeX's
-/// `#1#2`, `\newcommand`'s `[2]`; a verbatim group, `\href`'s URL) or an optional one (`[…]`), by its meaning now, an
+/// `#1#2`, `\newcommand`'s `[2]`; a verbatim group, `\href`'s URL), an optional one (`[…]`) or a star (`\vspace*`), by its
+/// meaning now, an
 /// undelimited argument of which the tokens don't hold — the next read at a closing brace or past the last token, there
 /// the wrapper's own tokens (`\lx@author@withinst`'s `\let\inst\lx@saved@inst…`, `frontmatter_fields.rs`) or the item's
 /// brace. Whether it is cut between its arguments (`\def\authord#1#2{…}`'s `\authord{Anh Thu Nguyen}`, 2209.12410) or
@@ -144,11 +145,12 @@ pub(super) fn reads_definition(tokens: &[Token], definees: &[SymStr]) -> bool {
 /// `Some(None)` where an undelimited one is not in the tokens, `None` for no such call (a primitive, an unexpandable
 /// command, no parameters, a parameter of another kind).
 pub(super) fn arguments_end(tokens: &[Token], at: usize, tail: bool) -> Option<Option<usize>> {
-  let (plain, verbatim, hyper, optional) = (
+  let (plain, verbatim, hyper, optional, matched) = (
     pin!("Plain"),
     pin!("Semiverbatim"),
     pin!("HyperVerbatim"),
     pin!("Optional"),
+    pin!("OptionalMatch"),
   );
   let meaning = if tail {
     tail_call(&tokens[at])?
@@ -160,9 +162,13 @@ pub(super) fn arguments_end(tokens: &[Token], at: usize, tail: bool) -> Option<O
   };
   let parameters = meaning.get_parameters()?.get_parameters();
   if parameters.is_empty()
-    || parameters
-      .iter()
-      .any(|p| !(p.name == plain || p.name == verbatim || p.name == hyper || p.name == optional))
+    || parameters.iter().any(|p| {
+      !(p.name == plain
+        || p.name == verbatim
+        || p.name == hyper
+        || p.name == optional
+        || p.name == matched)
+    })
   {
     return None;
   }
@@ -173,6 +179,18 @@ pub(super) fn arguments_end(tokens: &[Token], at: usize, tail: bool) -> Option<O
       .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
     {
       j += 1;
+    }
+    // (`\vspace*`'s star, read where it stands, peeked where it does not: Perl's `readMatch`, Gullet.pm:604)
+    if parameter.name == matched {
+      if tokens.get(j).is_some_and(|t| {
+        parameter
+          .extra
+          .iter()
+          .any(|m| m.unlist_ref().first() == Some(t))
+      }) {
+        j += 1;
+      }
+      continue;
     }
     if parameter.name == optional {
       // (an option present is read to its `]` at the top level; one absent reads nothing: the next token is peeked)
@@ -239,6 +257,32 @@ fn tail_call(cs: &Token) -> Option<Rc<Expandable>> {
     }
   }
   None
+}
+
+/// Whether a call of `cs` reads no argument, by its meaning now: a parameterless macro whose expansion ends in a
+/// character, or in a command that reads none (`\newcommand{\todaysdate}{1 May 2024}`). `false` where its meaning does
+/// not tell (a primitive, an expansion computed by code).
+pub(super) fn reads_no_argument(cs: &Token) -> bool {
+  let mut called = *cs;
+  for _ in 0..8 {
+    let Some(Stored::Expandable(meaning)) = lookup_meaning(&called) else {
+      return false;
+    };
+    if meaning
+      .get_parameters()
+      .is_some_and(|parameters| !parameters.get_parameters().is_empty())
+    {
+      return false;
+    }
+    let Some(ExpansionBody::Tokens(body)) = meaning.get_expansion() else {
+      return false;
+    };
+    match body.unlist_ref().last() {
+      Some(last) if last.get_catcode().is_active_or_cs() => called = *last,
+      _ => return true,
+    }
+  }
+  false
 }
 
 /// A conditional's part `t` is, by its meaning now.

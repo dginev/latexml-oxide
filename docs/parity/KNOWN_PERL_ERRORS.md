@@ -17965,7 +17965,8 @@ another's body (`\thmt@collect@body` stops at the inner `\end{restatable}`: pdfl
 fatal error-count stop; ours 101 errors and Fatal:TooManyErrors, bounded the same way). A restatement replays what the
 original holds, errors too: 1711.05227 55 → 58 errors, `\thmrelevance*` at proofs.tex:45 replayed inside a math frame
 left open at proofs.tex:23 and an alignment open since magic.tex:150-155, its error locations moving to
-`\end{restatable}`. Witnesses 2108.11527, 2602.09462, 2402.14202, 1702.04225. Repros
+`\end{restatable}`. The frozen number is `\@currentlabel` after the head, the stepped counter's (a wrapper environment's
+too: OXIDIZED_DESIGN_DIVERGENCES #1116). Witnesses 2108.11527, 2602.09462, 2402.14202, 1702.04225. Repros
 package-bindings/thm_restate_restated_theorem_prints_its_statement, …/thm_restate_restatable_star_takes_the_later_number;
 guards `perfect_kernel_batch78i::{restated_theorem_prints_its_statement, restatable_star_takes_the_later_number}`.
 
@@ -21737,6 +21738,7 @@ item."; Perl: `<enumerate/>`): `\input amstex \documentstyle{amsppt} \document \
 `\therosteritem{n}` or `{\rm label}`, steps the roster's id at `\roster` and gives a nested roster's outer item ids back at its
 end. Witness alg-geom9502009 (45 rosters); repros amstex/{amsppt_roster_keeps_its_items, amsppt_roster_nested,
 amsppt_roster_runinitem, amsppt_roster_runinitem_stray}; guard `perfect_kernel_batchamsppt::amsppt_heads_and_theorems`.
+An `\endroster` met inside a group the body opened ends the roster there (OXIDIZED_DESIGN_DIVERGENCES #1117).
 Upstream: to offer.
 
 ## 1271. A family register's value is read as one token: `\textfont9=\textfont1` typesets the "1"

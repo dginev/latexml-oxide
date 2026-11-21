@@ -33,10 +33,11 @@ fn stored_tokens(part: &str, name: &str) -> Vec<Token> {
   }
 }
 
-/// What a theorem stored as `<name>` records right after its head: its number (`\the<counter>`, latex_constructs
-/// `\lx@the@@`, frozen), the one a starred restatement prints (thm-restate.sty:130-132 fakes `\the<env>` from the label
-/// `thmt@@<name>` that this theorem sets, :158-160)…
-fn renumber(name: &str, env: &str) -> Tokens {
+/// What a theorem stored as `<name>` records right after its head: its number (`\@currentlabel`, of the counter its head
+/// stepped, frozen), the one a starred restatement prints (thm-restate.sty:130-132 fakes `\the<env>` from the label
+/// `thmt@@<name>` that this theorem sets, :158-160) — not `\the<env>`, which a wrapper environment lacks
+/// (ltexpprt.sty:216-217 `\newenvironment{theorem}{\begin{@theorem}}`: 1911.08418, 2410.24104, 2503.21951)…
+fn renumber(name: &str, _env: &str) -> Tokens {
   let mut tokens = vec![
     T_CS!("\\expandafter"),
     T_CS!("\\protected@xdef"),
@@ -46,11 +47,9 @@ fn renumber(name: &str, env: &str) -> Tokens {
   tokens.extend([
     T_CS!("\\endcsname"),
     T_BEGIN!(),
-    T_CS!("\\lx@the@@"),
-    T_BEGIN!(),
+    T_CS!("\\@currentlabel"),
+    T_END!(),
   ]);
-  tokens.extend(Explode!(env));
-  tokens.extend([T_END!(), T_END!()]);
   // …and the equation counter before its body, for the equations restated with it (:89-101, :146-152)
   tokens.extend([T_CS!("\\expandafter"), T_CS!("\\xdef"), T_CS!("\\csname")]);
   tokens.extend(Explode!(s!("lx@thm@restate@eq@{name}")));

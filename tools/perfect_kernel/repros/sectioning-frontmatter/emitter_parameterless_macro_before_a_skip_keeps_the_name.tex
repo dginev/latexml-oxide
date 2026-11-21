@@ -1,0 +1,19 @@
+% witness: 2401.17245 (also 2505.18108, 2205.07842, 1807.07558; 1605.01407 the revtex4-1 form): `\author{\small Cristina
+%          Anghel \quad $/\!\!/$\quad \todaysdate\vspace{-3ex}}`, a parameterless macro before a skip
+% oracle:  pdflatex 0 errors; "Cristina Anghel // 1 May 2024", "Bob Baker 2 May 2024"
+% engines: Perl 0.8.8 = 0 errors, the names "Cristina Anghel", the formula, "1 May 2024"; rust REGFIXJ3 = 2 errors, 2 warnings:
+%          each piece's run took the `\vspace` after `\todaysdate` without its argument (`emit::past_what_it_set` read
+%          the macro's next token as an accent's argument), which read the wrapper's `\let` (Missing number) and left
+%          `\lx@saved@inst` undefined in the name
+% expect:  0 errors, 0 warnings; creators "Cristina Anghel", "1 May 2024", "Bob Baker 2 May 2024" — no skip in a name
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXP; guard perfect_kernel_batchregfixp::a_parameterless_macro_before_a_skip_keeps_the_name)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\todaysdate}{1 May 2024}
+\newcommand{\nextdate}{2 May 2024}
+\title{T}
+\author{\small Cristina Anghel \quad $/\!\!/$\quad \todaysdate\vspace{-3ex} \and Bob Baker \nextdate\vspace*{2pt}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

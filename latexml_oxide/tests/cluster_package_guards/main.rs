@@ -727,6 +727,9 @@ mod perfect_kernel_batchregfixn1;
 /// REGFIXN2: the daj binding loads no lastpage beside its copy's totpages; an undefined latin1 byte is inputenc's robust
 /// `\PackageError`, gobbled in a PDF string; lipics loads comment.sty from v2019 on.
 mod perfect_kernel_batchregfixn2;
+/// REGFIXP: a name's run after a parameterless macro; SIunits leaves siunitx's free commands free; a restated theorem
+/// numbered by its stepped counter; amsppt's `\endroster` inside a group.
+mod perfect_kernel_batchregfixp;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

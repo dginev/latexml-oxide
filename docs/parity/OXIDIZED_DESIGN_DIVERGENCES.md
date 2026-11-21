@@ -22793,6 +22793,10 @@ for it is not raised) and `\gray`/`\Gray` at the document's start as the options
 L104), the `italian` option's names, the `DeclareOption*` warning. Like the real `\addunit` (`\newcommand`), a
 paper's later `\newcommand` of one of these names (`\rem`, `\rad`, `\gal`, `\are`, `\bel`, `\ton`, `\hour`,
 `\minute`, `\ohm`) keeps the unit — pdflatex stops on "already defined", we drop the paper's definition silently.
+The shim is siunitx's machinery only: as real SIunits.sty loads no siunitx, siunitx's free commands (`\Pa`, `\J`) are
+not made `\ERROR` at `\begin{document}` (`six_command_create`, skipped under `lx@six@no@command@create`), so a
+document's `\newcommand{\Pa}` there stands (1301.1500, 1705.09090; guard
+`perfect_kernel_batchregfixp::siunits_leaves_siunitx_free_commands_free`).
 Witnesses 0709.1649, 2103.01586, 1904.06264, 2407.13230. Guard `perfect_kernel_batch65y::siunits_unit_commands`; repro
 `stub-dependencies/siunits_unit_commands`.
 
@@ -23487,3 +23491,28 @@ Error and gobble its four arguments, so the byte errs once and is no URL text, w
 **Guard**: `perfect_kernel_batchregfixn2::{latin1_undefined_byte_errs_only_where_tex_does,
 latin1_undefined_byte_in_a_url_errs_once}` (repros `unicode-catcodes/latin1_undefined_byte_in_{pdf_key,text_errs,
 url_errs,href_errs}.tex`).
+### 1116. A restated theorem in a wrapper environment keeps the number of the counter its head stepped (REGFIXP)
+
+**Rule.** `{restatable}{<env>}{<name>}` freezes, right after the theorem's head, `\@currentlabel` — the number of the
+counter the head stepped — for `\<name>*` (thm_restate_sty.rs `renumber`), not `\csname the<env>\endcsname`. A wrapper
+environment has no counter of its own: ltexpprt.sty:216-217 `\newtheorem{@theorem}{Theorem}[section]`,
+`\newenvironment{theorem}{\begin{@theorem}}{\end{@theorem}}`, where `\thetheorem` was undefined (1 Error per
+restatable: 1911.08418, 2410.24104, 2503.21951). pdflatex fakes `\the<env>` and `\c@<env>` for the environment named
+(thm-restate.sty:130-140), so a wrapper's restatement steps the real counter and prints the next number ("Theorem 2.1"
+for the restated 1.1); ours prints the original's number, as thm-restate does for every theorem it can see. Residual,
+Perl-shared: the binding's `\end{\@currenvir}` (Perl's thm-restate.sty.ltxml:18-23 too) ends the wrapper's inner
+environment, so `{restatable}` stays open to `\end{document}` (1 Warning). **Guard**
+`perfect_kernel_batchregfixp::restatable_in_a_wrapper_theorem_is_numbered_by_its_counter` (repro
+`package-bindings/thm_restate_restatable_numbered_by_the_stepped_counter.tex`).
+
+### 1117. amsppt's `\endroster` inside an open group closes that group (REGFIXP)
+
+**Rule.** amsppt.sty:738-751's `\endroster` opens and closes no group, so TeX ends the roster at whatever group depth it
+is met; the binding's `\roster DigestUntil:\endroster` digests a `{` group in its body whole, so an `\endroster` inside
+one ended nothing and the roster ran to the document's end ("malformed: ltx:document … enumerate"). `\endroster` is a
+primitive calling `until_terminal_inside_group`: met inside a group the roster's body opened, it closes that group with
+a Warning and ends the roster. TeX keeps the group open (the last item's `{\it` italicizes the rest of the document,
+"(\end occurred inside a group at level 1)"); ours ends it with the roster, the text after it upright. Witnesses
+alg-geom9511013, math0511546, math9901010 (a last item's open `{\it`/`{\text`), math0309287 (`\roster {\item`).
+**Guard** `perfect_kernel_batchregfixp::endroster_ends_the_roster_inside_a_group` (repros
+`amstex/amsppt_roster_endroster_inside_an_items_group.tex`, `amstex/amsppt_roster_open_brace_red.tex`).
