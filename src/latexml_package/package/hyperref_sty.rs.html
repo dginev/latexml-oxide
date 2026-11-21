@@ -2592,109 +2592,139 @@
 <a href=#2592 id=2592 data-nosnippet>2592</a>  // plain.tex's `\null`, which the autoref tag runs whatever the document made of `\null` (below)
 <a href=#2593 id=2593 data-nosnippet>2593</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@autoref@null"</span>, <span class="string">"\\hbox{}"</span>);
 <a href=#2594 id=2594 data-nosnippet>2594</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@autorefnum@@{}"</span>, sub[(ttype)] {
-<a href=#2595 id=2595 data-nosnippet>2595</a>    <span class="kw">let </span>type_s  = ttype.unwrap().to_string();
-<a href=#2596 id=2596 data-nosnippet>2596</a>    <span class="kw">let </span>counter_str = with_mapping(<span class="string">"counter_for_type"</span>,<span class="kw-2">&amp;</span>type_s, |mapping_opt|
-<a href=#2597 id=2597 data-nosnippet>2597</a>      mapping_opt.map(ToString::to_string)).unwrap_or_else(|| type_s.clone());
-<a href=#2598 id=2598 data-nosnippet>2598</a>    <span class="kw">let </span>name_type = <span class="kw">if </span>is_counter_alias(<span class="kw-2">&amp;</span>type_s) { <span class="kw-2">&amp;</span>type_s } <span class="kw">else </span>{ <span class="kw-2">&amp;</span>counter_str };
-<a href=#2599 id=2599 data-nosnippet>2599</a>    <span class="kw">let </span>unstarred = name_type.strip_suffix(<span class="string">'*'</span>).unwrap_or(name_type);
-<a href=#2600 id=2600 data-nosnippet>2600</a>    <span class="comment">// A `\&lt;ctr&gt;name` that is no name noun — a drawing command sharing the spelling, argumentation.sty:403 `\afname`
-<a href=#2601 id=2601 data-nosnippet>2601</a>    // — is not run, as for the other tags (`\iflx@namenoun`, KNOWN_PERL_ERRORS #194): at every target it drew a
-<a href=#2602 id=2602 data-nosnippet>2602</a>    // `\node` outside a picture (argumentation-doc, sweep #136). The `*autorefname`s are hyperref's own and may
-<a href=#2603 id=2603 data-nosnippet>2603</a>    // read their `~#1\null` themselves (`\def\equationautorefname~#1\null{(#1)\null}`, DIVERGENCES #98), so they
-<a href=#2604 id=2604 data-nosnippet>2604</a>    // are taken as they are.
-<a href=#2605 id=2605 data-nosnippet>2605</a>    </span><span class="kw">let </span>name = [
-<a href=#2606 id=2606 data-nosnippet>2606</a>      <span class="macro">s!</span>(<span class="string">"\\{type_s}autorefname"</span>),
-<a href=#2607 id=2607 data-nosnippet>2607</a>      <span class="macro">s!</span>(<span class="string">"\\{name_type}autorefname"</span>),
-<a href=#2608 id=2608 data-nosnippet>2608</a>      <span class="macro">s!</span>(<span class="string">"\\{name_type}name"</span>),
-<a href=#2609 id=2609 data-nosnippet>2609</a>      <span class="macro">s!</span>(<span class="string">"\\{unstarred}autorefname"</span>),
-<a href=#2610 id=2610 data-nosnippet>2610</a>      <span class="macro">s!</span>(<span class="string">"\\{unstarred}name"</span>),
-<a href=#2611 id=2611 data-nosnippet>2611</a>    ]
-<a href=#2612 id=2612 data-nosnippet>2612</a>    .into_iter()
-<a href=#2613 id=2613 data-nosnippet>2613</a>    .find(|cs| is_defined(cs));
-<a href=#2614 id=2614 data-nosnippet>2614</a>    <span class="comment">// The trailing `\null` is the kernel's empty box whatever the author made of it (`\lx@autoref@null`): this text is
-<a href=#2615 id=2615 data-nosnippet>2615</a>    // built at every target, where pdflatex runs `\null` only where an `\autoref` prints, so `\def\null0{…}` hiding a
-<a href=#2616 id=2616 data-nosnippet>2616</a>    // subsection (1501.00090) ran its `\subsection` in every `\section`'s tag, a Fatal recursion. The token still ends
-<a href=#2617 id=2617 data-nosnippet>2617</a>    // a name's `~#1\null` argument, a delimiter being matched by the token. The document's `\null` is saved and put
-<a href=#2618 id=2618 data-nosnippet>2618</a>    // back by `\let`, with no group, which a name opening a `\bgroup` would meet (78j).
-<a href=#2619 id=2619 data-nosnippet>2619</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>tokens = <span class="macro">vec!</span>[
-<a href=#2620 id=2620 data-nosnippet>2620</a>      <span class="macro">T_CS!</span>(<span class="string">"\\let"</span>),
-<a href=#2621 id=2621 data-nosnippet>2621</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@autoref@savednull"</span>),
-<a href=#2622 id=2622 data-nosnippet>2622</a>      <span class="macro">T_CS!</span>(<span class="string">"\\null"</span>),
-<a href=#2623 id=2623 data-nosnippet>2623</a>      <span class="macro">T_CS!</span>(<span class="string">"\\let"</span>),
-<a href=#2624 id=2624 data-nosnippet>2624</a>      <span class="macro">T_CS!</span>(<span class="string">"\\null"</span>),
-<a href=#2625 id=2625 data-nosnippet>2625</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@autoref@null"</span>),
-<a href=#2626 id=2626 data-nosnippet>2626</a>    ];
-<a href=#2627 id=2627 data-nosnippet>2627</a>    tokens.extend(<span class="kw">match </span>name {
-<a href=#2628 id=2628 data-nosnippet>2628</a>      <span class="prelude-val">Some</span>(cs) <span class="kw">if </span>cs.ends_with(<span class="string">"autorefname"</span>) || is_name_noun_cs(<span class="kw-2">&amp;</span>cs) =&gt; <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(cs), <span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>)],
-<a href=#2629 id=2629 data-nosnippet>2629</a>      <span class="comment">// hyperref sets the first defined name before the `~` whatever it is: amsthm's `\let\thmname\@iden`
-<a href=#2630 id=2630 data-nosnippet>2630</a>      // (amsthm.sty:152) takes the `~` and prints it back, "~1.1", as here; the name itself is not run, since it is
-<a href=#2631 id=2631 data-nosnippet>2631</a>      // built at every target (DIVERGENCES #418): a text-bearing name that takes a required argument prints its text
-<a href=#2632 id=2632 data-nosnippet>2632</a>      // in pdflatex ("Hh1") and " 1" here, traded for never running a drawing command.
-<a href=#2633 id=2633 data-nosnippet>2633</a>      </span><span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[<span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>)],
-<a href=#2634 id=2634 data-nosnippet>2634</a>      <span class="prelude-val">None </span>=&gt; Vec::new(),
-<a href=#2635 id=2635 data-nosnippet>2635</a>    });
-<a href=#2636 id=2636 data-nosnippet>2636</a>
-<a href=#2637 id=2637 data-nosnippet>2637</a>    <span class="kw">let </span>pcounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\p@{counter_str}"</span>,));
-<a href=#2638 id=2638 data-nosnippet>2638</a>    <span class="kw">let </span>thecounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{counter_str}"</span>));
-<a href=#2639 id=2639 data-nosnippet>2639</a>    <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>pcounter)<span class="question-mark">?</span>.is_some() {
-<a href=#2640 id=2640 data-nosnippet>2640</a>      tokens.push(pcounter);
-<a href=#2641 id=2641 data-nosnippet>2641</a>    }
-<a href=#2642 id=2642 data-nosnippet>2642</a>    tokens.push(thecounter);
-<a href=#2643 id=2643 data-nosnippet>2643</a>    tokens.extend([
-<a href=#2644 id=2644 data-nosnippet>2644</a>      <span class="macro">T_CS!</span>(<span class="string">"\\null"</span>),
-<a href=#2645 id=2645 data-nosnippet>2645</a>      <span class="macro">T_CS!</span>(<span class="string">"\\let"</span>),
-<a href=#2646 id=2646 data-nosnippet>2646</a>      <span class="macro">T_CS!</span>(<span class="string">"\\null"</span>),
-<a href=#2647 id=2647 data-nosnippet>2647</a>      <span class="macro">T_CS!</span>(<span class="string">"\\lx@autoref@savednull"</span>),
-<a href=#2648 id=2648 data-nosnippet>2648</a>    ]);
-<a href=#2649 id=2649 data-nosnippet>2649</a>    Tokens::new(tokens)
-<a href=#2650 id=2650 data-nosnippet>2650</a>  });
-<a href=#2651 id=2651 data-nosnippet>2651</a>
-<a href=#2652 id=2652 data-nosnippet>2652</a>  <span class="macro">AssignMapping!</span>(<span class="string">"type_tag_formatter"</span>, <span class="string">"autoref" </span>=&gt; <span class="string">"\\lx@autorefnum@@"</span>);
-<a href=#2653 id=2653 data-nosnippet>2653</a>  <span class="comment">// The name is typeset only where an `\autoref` prints it (hyperref.sty:8202-8278): its diagnostics wait for that
-<a href=#2654 id=2654 data-nosnippet>2654</a>  // (`\lx@tag@intags@held`, ruling 7e).
-<a href=#2655 id=2655 data-nosnippet>2655</a>  </span><span class="macro">AssignMapping!</span>(<span class="string">"type_tag_deferred"</span>, <span class="string">"autoref" </span>=&gt; <span class="bool-val">true</span>);
-<a href=#2656 id=2656 data-nosnippet>2656</a>  <span class="prelude-val">Ok</span>(())
-<a href=#2657 id=2657 data-nosnippet>2657</a>}
-<a href=#2658 id=2658 data-nosnippet>2658</a>
-<a href=#2659 id=2659 data-nosnippet>2659</a><span class="doccomment">/// The bookmark commands, which make nothing outside a PDF: the binding's, and the ar5iv preload's provide on first use
-<a href=#2660 id=2660 data-nosnippet>2660</a>/// (OXIDIZED_DESIGN #588).
-<a href=#2661 id=2661 data-nosnippet>2661</a></span><span class="kw">pub fn </span>define_pdfbookmarks() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#2662 id=2662 data-nosnippet>2662</a>  def_macro_noop(<span class="string">"\\pdfbookmark[]{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#2663 id=2663 data-nosnippet>2663</a>  <span class="comment">// hyperref.sty:2077 `\def\Hy@writebookmark#1#2#3#4#5{}` — the driver-less
-<a href=#2664 id=2664 data-nosnippet>2664</a>  // default a class may call directly (shtthesis.cls; Perl lacks it too).
-<a href=#2665 id=2665 data-nosnippet>2665</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\Hy@writebookmark#1#2#3#4#5{}"</span>);
-<a href=#2666 id=2666 data-nosnippet>2666</a>  def_macro_noop(<span class="string">"\\currentpdfbookmark{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#2667 id=2667 data-nosnippet>2667</a>  def_macro_noop(<span class="string">"\\subpdfbookmark{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#2668 id=2668 data-nosnippet>2668</a>  def_macro_noop(<span class="string">"\\belowpdfbookmark{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#2669 id=2669 data-nosnippet>2669</a>  <span class="prelude-val">Ok</span>(())
-<a href=#2670 id=2670 data-nosnippet>2670</a>}
-<a href=#2671 id=2671 data-nosnippet>2671</a>
-<a href=#2672 id=2672 data-nosnippet>2672</a><span class="doccomment">/// hyperref's English `\&lt;type&gt;autorefname`s, only where nothing (a class, the document, a language) set one: the
-<a href=#2673 id=2673 data-nosnippet>2673</a>/// binding's, and the ar5iv preload's provide on first use with `\autoref` (OXIDIZED_DESIGN #588).
-<a href=#2674 id=2674 data-nosnippet>2674</a></span><span class="kw">pub fn </span>define_autoref_names() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#2675 id=2675 data-nosnippet>2675</a>  <span class="macro">RawTeX!</span>(
-<a href=#2676 id=2676 data-nosnippet>2676</a>    <span class="string">r"% hyperref.sty:8293-8312: the English names, only where nothing (a class, the document, a language) set one.
-<a href=#2677 id=2677 data-nosnippet>2677</a>\providecommand*\AMSautorefname{\equationautorefname}
-<a href=#2678 id=2678 data-nosnippet>2678</a>\providecommand*\Hfootnoteautorefname{\footnoteautorefname}
-<a href=#2679 id=2679 data-nosnippet>2679</a>\providecommand*\Itemautorefname{\itemautorefname}
-<a href=#2680 id=2680 data-nosnippet>2680</a>\providecommand*\itemautorefname{item}
-<a href=#2681 id=2681 data-nosnippet>2681</a>\providecommand*\equationautorefname{Equation}
-<a href=#2682 id=2682 data-nosnippet>2682</a>\providecommand*\footnoteautorefname{footnote}
-<a href=#2683 id=2683 data-nosnippet>2683</a>\providecommand*\itemautorefname{item}
-<a href=#2684 id=2684 data-nosnippet>2684</a>\providecommand*\figureautorefname{Figure}
-<a href=#2685 id=2685 data-nosnippet>2685</a>\providecommand*\tableautorefname{Table}
-<a href=#2686 id=2686 data-nosnippet>2686</a>\providecommand*\partautorefname{Part}
-<a href=#2687 id=2687 data-nosnippet>2687</a>\providecommand*\appendixautorefname{Appendix}
-<a href=#2688 id=2688 data-nosnippet>2688</a>\providecommand*\chapterautorefname{chapter}
-<a href=#2689 id=2689 data-nosnippet>2689</a>\providecommand*\sectionautorefname{section}
-<a href=#2690 id=2690 data-nosnippet>2690</a>\providecommand*\subsectionautorefname{subsection}
-<a href=#2691 id=2691 data-nosnippet>2691</a>\providecommand*\subsubsectionautorefname{subsubsection}
-<a href=#2692 id=2692 data-nosnippet>2692</a>\providecommand*\paragraphautorefname{paragraph}
-<a href=#2693 id=2693 data-nosnippet>2693</a>\providecommand*\subparagraphautorefname{subparagraph}
-<a href=#2694 id=2694 data-nosnippet>2694</a>\providecommand*\FancyVerbLineautorefname{line}
-<a href=#2695 id=2695 data-nosnippet>2695</a>\providecommand*\theoremautorefname{Theorem}
-<a href=#2696 id=2696 data-nosnippet>2696</a>\providecommand*\pageautorefname{page}"
-<a href=#2697 id=2697 data-nosnippet>2697</a>  </span>);
-<a href=#2698 id=2698 data-nosnippet>2698</a>  <span class="prelude-val">Ok</span>(())
-<a href=#2699 id=2699 data-nosnippet>2699</a>}
+<a href=#2595 id=2595 data-nosnippet>2595</a>    autoref_tag(<span class="kw-2">&amp;</span>ttype.unwrap().to_string(), <span class="bool-val">false</span>)
+<a href=#2596 id=2596 data-nosnippet>2596</a>  });
+<a href=#2597 id=2597 data-nosnippet>2597</a>
+<a href=#2598 id=2598 data-nosnippet>2598</a>  <span class="macro">AssignMapping!</span>(<span class="string">"type_tag_formatter"</span>, <span class="string">"autoref" </span>=&gt; <span class="string">"\\lx@autorefnum@@"</span>);
+<a href=#2599 id=2599 data-nosnippet>2599</a>  <span class="comment">// The name is typeset only where an `\autoref` prints it (hyperref.sty:8202-8278): its diagnostics wait for that
+<a href=#2600 id=2600 data-nosnippet>2600</a>  // (`\lx@tag@intags@held`, ruling 7e).
+<a href=#2601 id=2601 data-nosnippet>2601</a>  </span><span class="macro">AssignMapping!</span>(<span class="string">"type_tag_deferred"</span>, <span class="string">"autoref" </span>=&gt; <span class="bool-val">true</span>);
+<a href=#2602 id=2602 data-nosnippet>2602</a>  <span class="prelude-val">Ok</span>(())
+<a href=#2603 id=2603 data-nosnippet>2603</a>}
+<a href=#2604 id=2604 data-nosnippet>2604</a>
+<a href=#2605 id=2605 data-nosnippet>2605</a><span class="doccomment">/// The text `\autoref` prints for a target of type `type_s`: hyperref's name, its `~`, the number. Under `capital`
+<a href=#2606 id=2606 data-nosnippet>2606</a>/// (thm-autoref's `\Autoref`, thm-autoref.sty:60-95) the name is the type's `\&lt;type&gt;Autorefname`, and a type without
+<a href=#2607 id=2607 data-nosnippet>2607</a>/// one has no text: `\Autoref` prints `\autoref`'s there (`\HyRef@Testreftype`).
+<a href=#2608 id=2608 data-nosnippet>2608</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>autoref_tag(type_s: <span class="kw-2">&amp;</span>str, capital: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#2609 id=2609 data-nosnippet>2609</a>  <span class="kw">let </span>counter_str = with_mapping(<span class="string">"counter_for_type"</span>, type_s, |mapping_opt| {
+<a href=#2610 id=2610 data-nosnippet>2610</a>    mapping_opt.map(ToString::to_string)
+<a href=#2611 id=2611 data-nosnippet>2611</a>  })
+<a href=#2612 id=2612 data-nosnippet>2612</a>  .unwrap_or_else(|| type_s.to_string());
+<a href=#2613 id=2613 data-nosnippet>2613</a>  <span class="kw">let </span>name_type = <span class="kw">if </span>is_counter_alias(type_s) {
+<a href=#2614 id=2614 data-nosnippet>2614</a>    type_s
+<a href=#2615 id=2615 data-nosnippet>2615</a>  } <span class="kw">else </span>{
+<a href=#2616 id=2616 data-nosnippet>2616</a>    <span class="kw-2">&amp;</span>counter_str
+<a href=#2617 id=2617 data-nosnippet>2617</a>  };
+<a href=#2618 id=2618 data-nosnippet>2618</a>  <span class="kw">let </span>unstarred = name_type.strip_suffix(<span class="string">'*'</span>).unwrap_or(name_type);
+<a href=#2619 id=2619 data-nosnippet>2619</a>  <span class="kw">if </span>capital {
+<a href=#2620 id=2620 data-nosnippet>2620</a>    <span class="kw">let </span><span class="prelude-val">Some</span>(name) = [<span class="macro">s!</span>(<span class="string">"\\{type_s}Autorefname"</span>), <span class="macro">s!</span>(<span class="string">"\\{name_type}Autorefname"</span>)]
+<a href=#2621 id=2621 data-nosnippet>2621</a>      .into_iter()
+<a href=#2622 id=2622 data-nosnippet>2622</a>      .find(|cs| is_defined(cs))
+<a href=#2623 id=2623 data-nosnippet>2623</a>    <span class="kw">else </span>{
+<a href=#2624 id=2624 data-nosnippet>2624</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Tokens::new(Vec::new()));
+<a href=#2625 id=2625 data-nosnippet>2625</a>    };
+<a href=#2626 id=2626 data-nosnippet>2626</a>    <span class="kw">return </span>autoref_tag_with_name(<span class="prelude-val">Some</span>(name), <span class="kw-2">&amp;</span>counter_str);
+<a href=#2627 id=2627 data-nosnippet>2627</a>  }
+<a href=#2628 id=2628 data-nosnippet>2628</a>  <span class="comment">// A `\&lt;ctr&gt;name` that is no name noun — a drawing command sharing the spelling, argumentation.sty:403 `\afname`
+<a href=#2629 id=2629 data-nosnippet>2629</a>  // — is not run, as for the other tags (`\iflx@namenoun`, KNOWN_PERL_ERRORS #194): at every target it drew a
+<a href=#2630 id=2630 data-nosnippet>2630</a>  // `\node` outside a picture (argumentation-doc, sweep #136). The `*autorefname`s are hyperref's own and may
+<a href=#2631 id=2631 data-nosnippet>2631</a>  // read their `~#1\null` themselves (`\def\equationautorefname~#1\null{(#1)\null}`, DIVERGENCES #98), so they
+<a href=#2632 id=2632 data-nosnippet>2632</a>  // are taken as they are.
+<a href=#2633 id=2633 data-nosnippet>2633</a>  </span><span class="kw">let </span>name = [
+<a href=#2634 id=2634 data-nosnippet>2634</a>    <span class="macro">s!</span>(<span class="string">"\\{type_s}autorefname"</span>),
+<a href=#2635 id=2635 data-nosnippet>2635</a>    <span class="macro">s!</span>(<span class="string">"\\{name_type}autorefname"</span>),
+<a href=#2636 id=2636 data-nosnippet>2636</a>    <span class="macro">s!</span>(<span class="string">"\\{name_type}name"</span>),
+<a href=#2637 id=2637 data-nosnippet>2637</a>    <span class="macro">s!</span>(<span class="string">"\\{unstarred}autorefname"</span>),
+<a href=#2638 id=2638 data-nosnippet>2638</a>    <span class="macro">s!</span>(<span class="string">"\\{unstarred}name"</span>),
+<a href=#2639 id=2639 data-nosnippet>2639</a>  ]
+<a href=#2640 id=2640 data-nosnippet>2640</a>  .into_iter()
+<a href=#2641 id=2641 data-nosnippet>2641</a>  .find(|cs| is_defined(cs));
+<a href=#2642 id=2642 data-nosnippet>2642</a>  autoref_tag_with_name(name, <span class="kw-2">&amp;</span>counter_str)
+<a href=#2643 id=2643 data-nosnippet>2643</a>}
+<a href=#2644 id=2644 data-nosnippet>2644</a>
+<a href=#2645 id=2645 data-nosnippet>2645</a><span class="doccomment">/// hyperref's autoref text from the `name` its `\HyRef@testreftype` found (none: the number alone).
+<a href=#2646 id=2646 data-nosnippet>2646</a></span><span class="kw">fn </span>autoref_tag_with_name(name: <span class="prelude-ty">Option</span>&lt;String&gt;, counter_str: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#2647 id=2647 data-nosnippet>2647</a>  <span class="comment">// The trailing `\null` is the kernel's empty box whatever the author made of it (`\lx@autoref@null`): this text is
+<a href=#2648 id=2648 data-nosnippet>2648</a>  // built at every target, where pdflatex runs `\null` only where an `\autoref` prints, so `\def\null0{…}` hiding a
+<a href=#2649 id=2649 data-nosnippet>2649</a>  // subsection (1501.00090) ran its `\subsection` in every `\section`'s tag, a Fatal recursion. The token still ends
+<a href=#2650 id=2650 data-nosnippet>2650</a>  // a name's `~#1\null` argument, a delimiter being matched by the token. The document's `\null` is saved and put
+<a href=#2651 id=2651 data-nosnippet>2651</a>  // back by `\let`, with no group, which a name opening a `\bgroup` would meet (78j).
+<a href=#2652 id=2652 data-nosnippet>2652</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>tokens = <span class="macro">vec!</span>[
+<a href=#2653 id=2653 data-nosnippet>2653</a>    <span class="macro">T_CS!</span>(<span class="string">"\\let"</span>),
+<a href=#2654 id=2654 data-nosnippet>2654</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@autoref@savednull"</span>),
+<a href=#2655 id=2655 data-nosnippet>2655</a>    <span class="macro">T_CS!</span>(<span class="string">"\\null"</span>),
+<a href=#2656 id=2656 data-nosnippet>2656</a>    <span class="macro">T_CS!</span>(<span class="string">"\\let"</span>),
+<a href=#2657 id=2657 data-nosnippet>2657</a>    <span class="macro">T_CS!</span>(<span class="string">"\\null"</span>),
+<a href=#2658 id=2658 data-nosnippet>2658</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@autoref@null"</span>),
+<a href=#2659 id=2659 data-nosnippet>2659</a>  ];
+<a href=#2660 id=2660 data-nosnippet>2660</a>  tokens.extend(<span class="kw">match </span>name {
+<a href=#2661 id=2661 data-nosnippet>2661</a>    <span class="prelude-val">Some</span>(cs)
+<a href=#2662 id=2662 data-nosnippet>2662</a>      <span class="kw">if </span>cs.ends_with(<span class="string">"autorefname"</span>) || cs.ends_with(<span class="string">"Autorefname"</span>) || is_name_noun_cs(<span class="kw-2">&amp;</span>cs) =&gt;
+<a href=#2663 id=2663 data-nosnippet>2663</a>    {
+<a href=#2664 id=2664 data-nosnippet>2664</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(cs), <span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>)]
+<a href=#2665 id=2665 data-nosnippet>2665</a>    },
+<a href=#2666 id=2666 data-nosnippet>2666</a>    <span class="comment">// hyperref sets the first defined name before the `~` whatever it is: amsthm's `\let\thmname\@iden`
+<a href=#2667 id=2667 data-nosnippet>2667</a>    // (amsthm.sty:152) takes the `~` and prints it back, "~1.1", as here; the name itself is not run, since it is
+<a href=#2668 id=2668 data-nosnippet>2668</a>    // built at every target (DIVERGENCES #418): a text-bearing name that takes a required argument prints its text
+<a href=#2669 id=2669 data-nosnippet>2669</a>    // in pdflatex ("Hh1") and " 1" here, traded for never running a drawing command.
+<a href=#2670 id=2670 data-nosnippet>2670</a>    </span><span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[<span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>)],
+<a href=#2671 id=2671 data-nosnippet>2671</a>    <span class="prelude-val">None </span>=&gt; Vec::new(),
+<a href=#2672 id=2672 data-nosnippet>2672</a>  });
+<a href=#2673 id=2673 data-nosnippet>2673</a>
+<a href=#2674 id=2674 data-nosnippet>2674</a>  <span class="kw">let </span>pcounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\p@{counter_str}"</span>,));
+<a href=#2675 id=2675 data-nosnippet>2675</a>  <span class="kw">let </span>thecounter = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{counter_str}"</span>));
+<a href=#2676 id=2676 data-nosnippet>2676</a>  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>pcounter)<span class="question-mark">?</span>.is_some() {
+<a href=#2677 id=2677 data-nosnippet>2677</a>    tokens.push(pcounter);
+<a href=#2678 id=2678 data-nosnippet>2678</a>  }
+<a href=#2679 id=2679 data-nosnippet>2679</a>  tokens.push(thecounter);
+<a href=#2680 id=2680 data-nosnippet>2680</a>  tokens.extend([
+<a href=#2681 id=2681 data-nosnippet>2681</a>    <span class="macro">T_CS!</span>(<span class="string">"\\null"</span>),
+<a href=#2682 id=2682 data-nosnippet>2682</a>    <span class="macro">T_CS!</span>(<span class="string">"\\let"</span>),
+<a href=#2683 id=2683 data-nosnippet>2683</a>    <span class="macro">T_CS!</span>(<span class="string">"\\null"</span>),
+<a href=#2684 id=2684 data-nosnippet>2684</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@autoref@savednull"</span>),
+<a href=#2685 id=2685 data-nosnippet>2685</a>  ]);
+<a href=#2686 id=2686 data-nosnippet>2686</a>  <span class="prelude-val">Ok</span>(Tokens::new(tokens))
+<a href=#2687 id=2687 data-nosnippet>2687</a>}
+<a href=#2688 id=2688 data-nosnippet>2688</a>
+<a href=#2689 id=2689 data-nosnippet>2689</a><span class="doccomment">/// The bookmark commands, which make nothing outside a PDF: the binding's, and the ar5iv preload's provide on first use
+<a href=#2690 id=2690 data-nosnippet>2690</a>/// (OXIDIZED_DESIGN #588).
+<a href=#2691 id=2691 data-nosnippet>2691</a></span><span class="kw">pub fn </span>define_pdfbookmarks() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#2692 id=2692 data-nosnippet>2692</a>  def_macro_noop(<span class="string">"\\pdfbookmark[]{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#2693 id=2693 data-nosnippet>2693</a>  <span class="comment">// hyperref.sty:2077 `\def\Hy@writebookmark#1#2#3#4#5{}` — the driver-less
+<a href=#2694 id=2694 data-nosnippet>2694</a>  // default a class may call directly (shtthesis.cls; Perl lacks it too).
+<a href=#2695 id=2695 data-nosnippet>2695</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\Hy@writebookmark#1#2#3#4#5{}"</span>);
+<a href=#2696 id=2696 data-nosnippet>2696</a>  def_macro_noop(<span class="string">"\\currentpdfbookmark{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#2697 id=2697 data-nosnippet>2697</a>  def_macro_noop(<span class="string">"\\subpdfbookmark{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#2698 id=2698 data-nosnippet>2698</a>  def_macro_noop(<span class="string">"\\belowpdfbookmark{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#2699 id=2699 data-nosnippet>2699</a>  <span class="prelude-val">Ok</span>(())
+<a href=#2700 id=2700 data-nosnippet>2700</a>}
+<a href=#2701 id=2701 data-nosnippet>2701</a>
+<a href=#2702 id=2702 data-nosnippet>2702</a><span class="doccomment">/// hyperref's English `\&lt;type&gt;autorefname`s, only where nothing (a class, the document, a language) set one: the
+<a href=#2703 id=2703 data-nosnippet>2703</a>/// binding's, and the ar5iv preload's provide on first use with `\autoref` (OXIDIZED_DESIGN #588).
+<a href=#2704 id=2704 data-nosnippet>2704</a></span><span class="kw">pub fn </span>define_autoref_names() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#2705 id=2705 data-nosnippet>2705</a>  <span class="macro">RawTeX!</span>(
+<a href=#2706 id=2706 data-nosnippet>2706</a>    <span class="string">r"% hyperref.sty:8293-8312: the English names, only where nothing (a class, the document, a language) set one.
+<a href=#2707 id=2707 data-nosnippet>2707</a>\providecommand*\AMSautorefname{\equationautorefname}
+<a href=#2708 id=2708 data-nosnippet>2708</a>\providecommand*\Hfootnoteautorefname{\footnoteautorefname}
+<a href=#2709 id=2709 data-nosnippet>2709</a>\providecommand*\Itemautorefname{\itemautorefname}
+<a href=#2710 id=2710 data-nosnippet>2710</a>\providecommand*\itemautorefname{item}
+<a href=#2711 id=2711 data-nosnippet>2711</a>\providecommand*\equationautorefname{Equation}
+<a href=#2712 id=2712 data-nosnippet>2712</a>\providecommand*\footnoteautorefname{footnote}
+<a href=#2713 id=2713 data-nosnippet>2713</a>\providecommand*\itemautorefname{item}
+<a href=#2714 id=2714 data-nosnippet>2714</a>\providecommand*\figureautorefname{Figure}
+<a href=#2715 id=2715 data-nosnippet>2715</a>\providecommand*\tableautorefname{Table}
+<a href=#2716 id=2716 data-nosnippet>2716</a>\providecommand*\partautorefname{Part}
+<a href=#2717 id=2717 data-nosnippet>2717</a>\providecommand*\appendixautorefname{Appendix}
+<a href=#2718 id=2718 data-nosnippet>2718</a>\providecommand*\chapterautorefname{chapter}
+<a href=#2719 id=2719 data-nosnippet>2719</a>\providecommand*\sectionautorefname{section}
+<a href=#2720 id=2720 data-nosnippet>2720</a>\providecommand*\subsectionautorefname{subsection}
+<a href=#2721 id=2721 data-nosnippet>2721</a>\providecommand*\subsubsectionautorefname{subsubsection}
+<a href=#2722 id=2722 data-nosnippet>2722</a>\providecommand*\paragraphautorefname{paragraph}
+<a href=#2723 id=2723 data-nosnippet>2723</a>\providecommand*\subparagraphautorefname{subparagraph}
+<a href=#2724 id=2724 data-nosnippet>2724</a>\providecommand*\FancyVerbLineautorefname{line}
+<a href=#2725 id=2725 data-nosnippet>2725</a>\providecommand*\theoremautorefname{Theorem}
+<a href=#2726 id=2726 data-nosnippet>2726</a>\providecommand*\pageautorefname{page}"
+<a href=#2727 id=2727 data-nosnippet>2727</a>  </span>);
+<a href=#2728 id=2728 data-nosnippet>2728</a>  <span class="prelude-val">Ok</span>(())
+<a href=#2729 id=2729 data-nosnippet>2729</a>}
 </code></pre></div></section></main></body></html>
