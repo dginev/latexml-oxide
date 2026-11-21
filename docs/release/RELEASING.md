@@ -44,6 +44,10 @@ tag X.Y.Z  →  release.yml ─┬─→ GitHub Release (public)
 | 4 | **crates.io** (8 crates) | manual: `cargo publish --workspace` | [`CRATES_IO_PUBLISH.md`](CRATES_IO_PUBLISH.md) |
 | 5 | **latexml.rs** (ar5iv-editor) | manual: that repo's `deploy/build-and-push.sh` + cloud rollout | ar5iv-editor `deploy/` |
 
+The release page's body is `RELEASE_BODY.md` (install + the CHANGELOG slice, `tools/make_release.sh`) followed by
+GitHub's generated notes, whose "What's Changed" pull-request list `release.yml` folds into a `<details>` block
+(`tools/release_notes_details.sh`, DG 2026-11-21) so a long list does not swamp the page.
+
 Also automatic, no action needed: `rustdoc.yml` republishes the gh-pages rustdoc on
 every push to `main` — that is what crates.io's `documentation` link points at.
 
