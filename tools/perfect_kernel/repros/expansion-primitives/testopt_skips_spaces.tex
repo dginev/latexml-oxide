@@ -1,0 +1,22 @@
+% witness: 2012.09877, 2102.01489, 2108.10505, 2407.20995, 2601.08142 (`\DeclareCaptionSubType * [alph]{table}`;
+%          v0.8.0 regression check)
+% oracle:  pdflatex 0 errors; the log shows Y=[a],[b] twice, Y=[c],[e], Y=[d],[f]: latex.ltx:1259 `\@testopt` peeks by
+%          `\kernel@ifnextchar[`, which skips spaces (`\@xifnch`); the table caption is "Table 1: T", no stray text
+% engines: rust rc1/REGFIXJ3 1 error (caption: "No float type '[' defined", `[alph]table` printed as text);
+%          `\@testopt\y{d} [c]{e}` gave Y=[d],[[]; Perl the same (`ifNext`, KNOWN_PERL_ERRORS #1303)
+% expect:  0 errors, 0 warnings; the four Y= lines as pdflatex; one caption, no paragraph of "alph]table"
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXN1, sect13.rs `\@testopt` peeks past spaces)
+\documentclass{article}
+\usepackage{caption}
+\DeclareCaptionSubType * [alph]{table}
+\makeatletter
+\def\y[#1]#2{\typeout{Y=[#1],[#2]}}
+\def\x{\@ifstar{\@testopt\y{d}}{N}}
+\x * [a]{b}
+\x*[a]{b}
+\@testopt\y{d} [c]{e}
+\@testopt\y{d}  {f}
+\makeatother
+\begin{document}
+\begin{table}\caption{T}\end{table}
+\end{document}

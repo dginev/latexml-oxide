@@ -721,6 +721,9 @@ mod perfect_kernel_batchregfixl;
 /// `\endfrontmatter`, amsart's `\@setauthors`, newtxmath's `\ntxmath@scaled`, amsrefs' ifoption load); the cvpr/iccv
 /// bindings read a renamed copy raw.
 mod perfect_kernel_batchregfixm;
+/// REGFIXN1: deluxetable's `\enddata` resets its flag by a primitive (an AASTeX `D` cell's reader expands); revtex's
+/// hyperref preload unmarks its iftex; `\robustify` of a `\protected` macro is a no-op; `\@testopt` peeks past spaces.
+mod perfect_kernel_batchregfixn1;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

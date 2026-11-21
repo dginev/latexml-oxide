@@ -21275,9 +21275,12 @@ lost (Perl the same). `\lx@ifnativecmd` (`etoolbox_sty.rs`) now tests the stored
 its LaTeX-robust inner command, where it tested `\meaning` for `CODE(`/`Stored[`; the command is left as it is. A TeX
 primitive in LaTeX (tex.web's primitive table, less the names latex.ltx makes macros: `\par`, `\end`, `\input`,
 `\eqno`, `\leqno`, `\shipout`, `\underline`, `\-`), a register, a chardef or a font selector (`\nullfont`, a
-`\font`) keeps etoolbox's Error, as pdflatex's (`\robustify\hbox`: "not a macro"). Residual (row R ROBUSTIFYERR, no
-corpus witness): a LaTeX `\mathchardef` that is a `DefMath` here (`\alpha`, `\infty`, `\sum` without amsmath) and
-e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the output is unchanged. Guards
+`\font`) keeps etoolbox's Error, as pdflatex's (`\robustify\hbox`: "not a macro"). A `\protected` macro that is no TeX
+primitive in LaTeX is left alone too (the binding's `\underline`, latex.ltx:16369 `\DeclareRobustCommand`; 2407.21515,
+2506.16228, 2511.14592): etoolbox rebuilds a protected macro as the same macro, and the rebuild from our `\meaning`
+failed (REGFIXN1; guard `perfect_kernel_batchregfixn1::robustify_a_protected_binding_macro`). Residual (row R
+ROBUSTIFYERR, no corpus witness): a LaTeX `\mathchardef` that is a `DefMath` here (`\alpha`, `\infty`, `\sum` without
+amsmath) and e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the output is unchanged. Guards
 `perfect_kernel_batchclustfix3::robustify_of_a_native_binding`,
 `perfect_kernel_batch69b::robustify_ltx_protected_native_cite` (repros `package-bindings/robustify_of_a_native_binding`,
 `robustify_of_a_tex_primitive_errs`).

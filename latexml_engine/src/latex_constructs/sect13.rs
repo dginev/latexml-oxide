@@ -1746,14 +1746,23 @@ pub(crate) fn load() -> Result<()> {
 
   // latex.ltx:1259-1260 `\long\def\@testopt#1#2{\kernel@ifnextchar[{#1}{#1[{#2}]}}`:
   // the default goes in braced, so a `]` in it stays inside the argument
-  // (`\@testopt\oo{a]b}` reads `a]b`, pdflatex; unbraced it read `a`).
+  // (`\@testopt\oo{a]b}` reads `a]b`, pdflatex; unbraced it read `a`). The peek is `\@ifnextchar`'s, past spaces
+  // (`\DeclareCaptionSubType * [alph]{table}` took `[` for the float type: 2012.09877, 2102.01489; Perl's `ifNext`
+  // does not skip them, KNOWN_PERL_ERRORS #1303). Guard `perfect_kernel_batchregfixn1::testopt_skips_spaces`.
   DefMacro!("\\@testopt{}{}", sub[(cmd, option)] {
-    if if_next(T_OTHER!("["))? {
-      Ok(cmd)
+    let next = read_non_space()?;
+    let_peeked_token(next.as_ref());
+    let mut result = if next.as_ref().is_some_and(|n| XEquals!(&T_OTHER!("["), n)) {
+      cmd.unlist()
     } else {
-      Ok(Tokens!(cmd.unlist(), T_OTHER!("["), T_BEGIN!(), option.unlist(), T_END!(),
-        T_OTHER!("]")))
+      Tokens!(cmd.unlist(), T_OTHER!("["), T_BEGIN!(), option.unlist(), T_END!(), T_OTHER!("]")).unlist()
+    };
+    if let Some(next) = next {
+      // (re-enters via our expansion: retract its brace count, as `\@ifnextchar` below)
+      retract_scanned_brace(&next);
+      result.push(next);
     }
+    Ok(Tokens::new(result))
   }, peeks_by_futurelet => true);
   TeX!(
     r"

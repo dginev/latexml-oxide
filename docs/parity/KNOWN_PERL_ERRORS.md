@@ -17227,7 +17227,13 @@ is `\newcommand\autoref…`, our preload's `\autoref` is already defined and the
 the reference keeps hyperref's form where pdflatex prints the document's ("Sec. I"); the XML of the reviewed
 controls is unchanged. Repros `class-bindings/revtex_preloaded_hyperref_loads_again`,
 `class-bindings/revtex_hyperref_loaded_twice_cleveref`; guards `perfect_kernel_batch77r::{
-revtex_preloaded_hyperref_loads_again, revtex_hyperref_loaded_twice_keeps_cleveref}`.
+revtex_preloaded_hyperref_loads_again, revtex_hyperref_loaded_twice_keeps_cleveref}`. The iftex the preload loaded is
+marked unloaded too: in LaTeX the document's hyperref reads iftex.sty (hyperref.sty:122), which sets `\ifpdf` again
+(iftex.sty:272-291), so a document's `\let\ifpdf\relax` before it is undone where hyperref's driver test reads it (stray
+`\else`/`\fi` else; 1808.09428, 1812.07558, 1904.08912, 1906.04729). The other packages the preload loaded stay loaded
+(their bindings are not idempotent: etoolbox saves its `\robustify` as `\lx@saved@robustify`). Repro
+`package-bindings/revtex_hyperref_after_ifpdf_relax`; guard
+`perfect_kernel_batchregfixn1::revtex_hyperref_after_ifpdf_relax`.
 
 ## 998. cleveref's `\label[type]{key}` drops the type, so `\cref` names the object by its own type
 
@@ -22223,3 +22229,26 @@ pdftex: "(1) first item (2) second item."; Rust before the fix: `Error:malformed
 <ltx:p>` and a malformed `<enumerate>` (`\documentstyle{amsppt}` loads LaTeX.pool, whose Tag hid it). Rust's binding
 declares the Tag (amsppt_sty.rs). Witnesses math0006111, gr-qc9610061, math9809193 (59 papers); repro
 amstex/amsppt_input_roster_items_close; guard `perfect_kernel_batchregfixi::amsppt_input_roster_items_close`.
+
+## 1303. `\@testopt` does not skip spaces before its `[`
+
+latex.ltx:1259-1260 `\long\def\@testopt#1#2{\kernel@ifnextchar[{#1}{#1[{#2}]}}` peeks by `\@ifnextchar`, which
+skips spaces (`\@ifnch`, `\@xifnch`: latex.ltx:1756-1774): with a `[` after them the option is read, without one the
+default is inserted and the spaces are gone. Perl's closure (latex_constructs.pool.ltxml:5674-5677) tests
+`ifNext(T_OTHER('['))` on the very next token, so a space before the `[` inserts the default and leaves `[` and the
+option as text. Minimal trigger:
+
+```tex
+\documentclass{article}
+\makeatletter
+\def\y[#1]#2{\typeout{Y=[#1],[#2]}}
+\@testopt\y{d} [c]{e}
+\makeatother
+\begin{document}x\end{document}
+```
+
+pdflatex `Y=[c],[e]`; Perl and Rust before the fix `Y=[d],[[]`. caption.sty's `\DeclareCaptionSubType * [alph]{table}`
+(`\@ifstar` then `\@testopt`) took `[` for the float type: "No float type '[' defined" and "alph]table" printed
+(2012.09877, 2102.01489, 2108.10505, 2407.20995, 2601.08142). Rust's `\@testopt` (sect13.rs) peeks as
+`\@ifnextchar` does: past spaces, `\@let@token` set, the `[` compared by meaning. Repro
+expansion-primitives/testopt_skips_spaces; guard `perfect_kernel_batchregfixn1::testopt_skips_spaces`.
