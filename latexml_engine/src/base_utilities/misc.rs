@@ -163,7 +163,7 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
 
 /// For a URL read expanded and then stringified (`\url`'s reader, `HyperVerbatim`), in its group: `\GenericError`
 /// raises its Error and leaves nothing, so a robust `\PackageError` (inputenc's undefined byte, inputenc.sty:80,
-/// :139-143) errs once and is no URL text; the `\protect` it leaves is dropped by [`is_url_protect`]. `\protect` keeps
+/// :139-143) errs once and is no URL text; the readers drop the `\protect` it leaves (OD #1112). `\protect` keeps
 /// its meaning, as in hyperref's `\hyper@normalise` (hyperref.sty:4604-4650): emptied, babel's
 /// `\active@prefix` (babel.def:1450-1465) re-expands a shorthand read before the reader, to PushbackLimit (2605.13298).
 pub fn url_string_messages() -> Result<()> {
@@ -174,10 +174,6 @@ pub fn url_string_messages() -> Result<()> {
   }, scope => Some(Scope::Local));
   Ok(())
 }
-
-/// A `\protect` the URL reader leaves before a robust command is no URL text (OD #1112: pdflatex keeps it as
-/// `\protect`; `\url{http://x.org/\foo b}` → `http://x.org/Fb`).
-pub fn is_url_protect(token: &Token) -> bool { *token == T_CS!("\\protect") }
 
 /// Heuristic classifier for vendor `\PackageError`/`\GenericError`
 /// messages whose only concern is PDF typesetting (size, layout,

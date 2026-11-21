@@ -2023,7 +2023,7 @@ pub fn define_hyper_urls(href: bool, url: bool) -> Result<()> {
       // digested/executed (#723). The escapes above already resolved during the
       // read. (Perl "let CS's through!" to digestion — the divergence we surpass.) A robust command's `\protect` is
       // dropped (OD #1112).
-      .filter(|t| !is_url_protect(t))
+      .filter(|t| *t != T_CS!("\\protect"))
       .map(|t| t.as_other())
       .collect();
     let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];

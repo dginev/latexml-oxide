@@ -1167,7 +1167,7 @@ LoadDefinitions!({
       use latexml_core::token::Catcode;
       Tokens::new(
         arg.unlist().into_iter()
-          .filter(|t| !is_url_protect(t))
+          .filter(|t| *t != T_CS!("\\protect"))
           .map(|t| if t.get_catcode() == Catcode::CS { t.as_other() } else { t })
           .collect(),
       )

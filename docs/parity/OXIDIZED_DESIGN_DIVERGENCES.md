@@ -23501,7 +23501,7 @@ next line, ``in inputencoding `latin1'`` (where the argument was expanded first,
 `\PackageError`'s prefix: `Error:latex:(inputenc)                 Package …`). A URL is read
 expanded and then stringified (`\url`'s reader, the `HyperVerbatim` of `\href`, revtex's `\@@startlink`, the doi
 fields): there `url_string_messages` (base_utilities/misc.rs) makes `\GenericError` raise its Error and gobble its four
-arguments, and the readers' stringify step drops the `\protect` token (`is_url_protect`), so the byte errs once and is no
+arguments, and the readers' stringify step drops the `\protect` token, so the byte errs once and is no
 URL text, where pdflatex errs and garbles the URL (`\url` 6 `!`, `\href` Fatal). The divergence: a robust command's
 `\protect` is no URL text (`\url{http://x.org/\foo b}`, `\foo` robust: `http://x.org/Fb`; pdflatex and REGFIXJ3 print
 `http://x.org/\protectFb`). `\protect` itself keeps its ambient meaning during the read, as in hyperref's
