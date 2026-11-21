@@ -12,6 +12,4 @@ LoadDefinitions!({
 \ifx\@classname\@empty \edef\@classname{\@currname}\fi");
   // LoadClass('ams_core', withoptions => 1);
   LoadClass!("ams_core", withoptions => true);
-  // amsproc.cls:746 `\@setauthors`, kept as amsart's is (amsart_cls.rs): a store documents extend, never run.
-  RawTeX!(r"\let\@setauthors\@empty");
 });

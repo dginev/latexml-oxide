@@ -19169,9 +19169,8 @@ is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xd
 So a binding defines the lists and hooks its real class or package defines, which documents extend (REGBIND, 17 papers
 of the 2605/2606 reruns: enumerate's `\@enhook`, threeparttable's `\TPT@defaults`, oup-authoring-template's
 `\ps@opening`, and the lists below; REGFIXM, 20 papers of the v0.8.0 check: elsarticle's `\endfrontmatter`
-(elsarticle.cls:1303, which `\end{frontmatter}` runs by name; 1609.08567, 2308.12736), amsart's and amsproc's
-`\@setauthors` (amsart.cls:808, amsproc.cls:746; a store the binding's frontmatter never runs, so an appended
-`\@setaddresses` prints no address twice; 2607.28440, 2610.02789), newtxmath's `\ntxmath@scaled` (newtxmath.sty:46-51
+(elsarticle.cls:1303, which `\end{frontmatter}` runs by name; 1609.08567, 2308.12736, 1609.08586, 2304.14608,
+1910.03866), amsart's and amsproc's `\@setauthors` (amsart.cls:808, amsproc.cls:746; printed below), newtxmath's `\ntxmath@scaled` (newtxmath.sty:46-51
 with its `scaled`/`scale` keys; 2205.08971, 2510.18441), and amsrefs' ifoption load (amsrefs.sty:159, `\IfOption`;
 1707.00398, 1806.01802, KNOWN_PERL_ERRORS #627). Where the class prints such a list with its title page and the binding's own
 setters do not fill it, the binding prints it there too, or what a document adds to it is lost without a word (Perl:
@@ -19181,13 +19180,18 @@ dropped, with the Warning above): `\lx@frontmatter@footnotes{<list>}` runs it wh
 2605.28175, 2605.16813, 2606.04448); amsaddr's `\emails` as its footnote (amsaddr.sty:102-113; 2606.23853, 2606.25954,
 2212.11488, 1801.06576, 2307.06418); elsarticle's `\elsaddress`, `\@cornotes` and `\@fnotes` at `\end{frontmatter}` or
 `\maketitle` (elsarticle.cls:766, :778, :806; 2605.22682, cnf.sty's `\cortext` 2605.08232, 2606.15628, a document's
-own `\fntext` 2301.05821, 2311.15389); REVTeX's
+own `\fntext` 2301.05821, 2311.15389, 2312.12429, 2312.17670, 2406.09335, 2407.19043, 2408.17198, 2412.18760, 2504.16921,
+2508.04484); amsart's and amsproc's `\@setauthors` at `\maketitle` (amsart.cls:638, amsproc.cls:613), run without the
+names and `\@setaddresses`, which the binding places (an appended `\@setaddresses` prints no address twice, 2607.28440;
+appended text, an affiliation or e-mail under the names, is a note: 2610.08257, 2610.02630, 2610.25104, 2610.02789);
+REVTeX's
 `\prep@absbox`, `\post@absbox`, `\mini@notes` and `\@FMN@list` at `\maketitle` (revtex4-2.cls:2648-2652, :3020-3022;
 2606.06621, 2605.00976); and the text a document adds to icml's `\icmlcorrespondingauthor@text`, whose names and
 addresses are the contacts (icml2026.sty:529-530; 2605.04712, 2605.21190, 2606.01172). **Guard**:
 `perfect_kernel_batchregbind::{bindings_define_the_macros_their_files_define,
 bindings_print_the_title_page_lists_their_files_print}`, `perfect_kernel_batchregfixm::{bindings_define_names_documents_extend,
-elsarticle_document_fntext_note_is_kept, elsarticle_endfrontmatter_addition_runs}`.
+elsarticle_document_fntext_note_is_kept, elsarticle_endfrontmatter_addition_runs,
+amsart_setauthors_additions_are_printed}`.
 
 ### 1026. → KNOWN_PERL_ERRORS #1241 (`page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791))
 

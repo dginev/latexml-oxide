@@ -30,8 +30,4 @@ LoadDefinitions!({
   // Perl `Let('\specialsection', '\chapter')`: the kernel's chapter, which `\documentclass` takes away while the class
   // loads (amsart has no `\chapter`; OXIDIZED_DESIGN #179), so read under its own name.
   Let!("\\specialsection", "\\lx@kernel@chapter"); // Close enough?
-  // amsart.cls:808 `\@setauthors`, the names `\maketitle` prints, which documents extend
-  // (`\g@addto@macro\@setauthors{\par\vspace{2ex}\@setaddresses}`: 2607.28440, 2610.02789, 2610.02630, 2610.08257,
-  // 2610.25104). Kept as an empty store the binding's frontmatter never runs: it places the names and the addresses.
-  RawTeX!(r"\let\@setauthors\@empty");
 });

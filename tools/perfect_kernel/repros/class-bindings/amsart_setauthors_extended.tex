@@ -1,10 +1,11 @@
 % amsart's `\@setauthors` (amsart.cls:808) prints the names in `\maketitle`; documents append the address list to it.
-% The binding keeps the name, which its frontmatter does not call: the addition is legal, each address placed once.
+% The binding places the addresses and runs the store without `\@setaddresses`: each address placed once.
 % witness: 2607.28440 (+2610.02789 2610.02630 2610.08257 2610.25104)
-% oracle:  pdflatex 0 errors; "ANN ABLE" with "Univ X" under it, and again at the end (`\enddoc@text`)
+% oracle:  pdflatex 0 errors; "ANN ABLE AND BOB BAKER" with the addresses under it, and again at the end
+%          (`\enddoc@text`)
 % engines: rust b77c9754f4 = 1 error (`\g@addto@macro` on undefined `\@setauthors`, OD #1036)
-% expect:  0 errors, 0 warnings; one creator Ann Able, affiliation Univ X, once
-% status:  RED (b77c9754f4) -> GREEN (REGFIXM)
+% expect:  0 errors, 0 warnings; Ann Able (Univ X, Town; ann@x.edu) and Bob Baker (Univ Y, City), each once
+% status:  RED (b77c9754f4) -> GREEN (REGFIXM); two authors and an e-mail since REGFIXM2
 % preload: ar5iv.sty
 \documentclass{amsart}
 \makeatletter
@@ -13,7 +14,10 @@
 \begin{document}
 \title{T}
 \author{Ann Able}
-\address{Univ X}
+\address{Univ X, Town}
+\email{ann@x.edu}
+\author{Bob Baker}
+\address{Univ Y, City}
 \maketitle
 Body.
 \end{document}

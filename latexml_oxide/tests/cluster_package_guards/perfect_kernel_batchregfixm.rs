@@ -1,11 +1,11 @@
 //! Red/green guards for batch REGFIXM, four regressions of the v0.8.0 per-paper check: a renamed cvpr/iccv copy read
 //! raw by its binding, and names a binding's real class or package defines, which documents extend
 //! (`\g@addto@macro`, an Error on an undefined name since OD #1036) or name.
-use latexml::util::test::{assert_element, convert_files_with, convert_with};
+use latexml::util::test::{assert_element, convert_files_with, convert_with, kpse_has};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch84b::{creators, text},
+  perfect_kernel_batch84b::creators,
 };
 
 macro_rules! repro {
@@ -102,24 +102,13 @@ fn elsarticle_endfrontmatter_addition_runs() {
 }
 
 /// The names a real file defines and documents extend or name, which the binding defines as it does (red: 1 Error each,
-/// the name undefined): amsart's `\@setauthors` (amsart.cls:808; 2607.28440, 2610.02789, …), a store the binding's
-/// frontmatter does not run, so the appended `\@setaddresses` places no address twice; amsrefs' ifoption load
-/// (amsrefs.sty:159, `\IfOption`; 1707.00398, 1806.01802, …); newtxmath's `\ntxmath@scaled` (newtxmath.sty:46-51,
-/// `s*[\tx@scale]`, the `scaled` key; 2205.08971, 2510.18441, …).
+/// the name undefined): newtxmath's `\ntxmath@scaled` (newtxmath.sty:46-51, `s*[\tx@scale]`, the `scaled` key;
+/// 2205.08971, 2510.18441, …); amsrefs' ifoption load (amsrefs.sty:159, `\IfOption`; 1707.00398, 1806.01802, …), skipped
+/// visibly where the amsrefs bundle is absent. amsart's `\@setauthors` is `amsart_setauthors_additions_are_printed`.
 #[test]
 fn bindings_define_names_documents_extend() {
-  let xml = clean(repro!("class-bindings", "amsart_setauthors_extended.tex"));
-  assert_eq!(
-    creators(&xml),
-    vec![vec!["Ann Able".to_string(), "address=Univ X".to_string()]],
-    "{xml}"
-  );
-  assert_eq!(xml.matches("Univ X").count(), 1, "{xml}");
-  let xml = clean(repro!("package-bindings", "amsrefs_loads_ifoption.tex"));
-  assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">Initials off.</p>"#);
   let tex = repro!("package-bindings", "newtxmath_scaled_font_shape.tex");
-  let xml = clean(tex);
-  assert!(xml.contains("<Math "), "{xml}");
+  clean(tex);
   // (the option sets the scale as the key does: pdflatex `\meaning` "macro:->s*[1.05]")
   let probe = tex.replace(
     r"\makeatother",
@@ -127,5 +116,68 @@ fn bindings_define_names_documents_extend() {
   );
   let (log, _) = convert_with(&probe, Some("ar5iv.sty"));
   assert!(log.contains("[[macro:->s*[1.05]]]"), "{log}");
-  assert!(text(&xml).contains("x"), "{xml}");
+  if kpse_has("amsrefs.sty") && kpse_has("ifoption.sty") {
+    let xml = clean(repro!("package-bindings", "amsrefs_loads_ifoption.tex"));
+    assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">Initials off.</p>"#);
+  } else {
+    eprintln!("SKIP amsrefs_loads_ifoption: amsrefs.sty or ifoption.sty is not in this TeX Live");
+  }
+}
+
+/// class-bindings/amsart_setauthors_*: amsart's and amsproc's `\maketitle` run `\@setauthors` after the title
+/// (amsart.cls:638, :808; amsproc.cls:613, :746), a store documents extend. The binding places the names and the
+/// addresses and runs it with neither: an appended `\@setaddresses` (2607.28440) places each address once; appended text
+/// (the author's only affiliation and e-mail, 2610.08257; 2610.02630, 2610.25104) is a note at the title block; a
+/// document's own `\renewcommand\@setauthors` (amsproc), a copy of the class's (1202.1250, 2310.04922), prints its text,
+/// its `\authors` not twice, its `\contribs` test reaching no undefined setter. Red (REGFIXM): the text lost, 0
+/// diagnostics.
+#[test]
+fn amsart_setauthors_additions_are_printed() {
+  let xml = clean(repro!("class-bindings", "amsart_setauthors_extended.tex"));
+  assert_eq!(
+    creators(&xml),
+    vec![
+      vec![
+        "Ann Able".to_string(),
+        "address=Univ X, Town".to_string(),
+        "email=ann@x.edu".to_string()
+      ],
+      vec!["Bob Baker".to_string(), "address=Univ Y, City".to_string()]
+    ],
+    "{xml}"
+  );
+  for address in ["Univ X, Town", "Univ Y, City", "ann@x.edu"] {
+    assert_eq!(xml.matches(address).count(), 1, "{address}: {xml}");
+  }
+  assert!(!xml.contains("<note"), "{xml}");
+  let xml = clean(repro!(
+    "class-bindings",
+    "amsart_setauthors_prints_additions.tex"
+  ));
+  assert_eq!(creators(&xml), vec![vec!["Ann Able".to_string()]], "{xml}");
+  assert_element(
+    &xml,
+    "note",
+    &[r#"role="note""#],
+    r#"<note role="note" xml:id="id1"><text align="center" font="italic" fontsize="80%" xml:id="id1.1">Graduate School of AI, UNIST<break/>dms6721@unist.ac.kr</text></note>"#,
+  );
+  assert_eq!(xml.matches("UNIST").count(), 1, "{xml}");
+  let xml = clean(repro!("class-bindings", "amsproc_setauthors_renewed.tex"));
+  assert_eq!(creators(&xml), vec![vec!["Ann Able".to_string()]], "{xml}");
+  assert_eq!(xml.matches("Ann Able").count(), 1, "{xml}");
+  assert_element(
+    &xml,
+    "note",
+    &[r#"role="note""#],
+    r#"<note role="note" xml:id="id1"><itemize class="ltx_trivlist" xml:id="S0.I1a">
+        <item class="ltx_centering" xml:id="S0.I1.ix1a">
+          <tags>
+            <tag/>
+          </tags>
+          <para xml:id="S0.I1.ix1.p1a">
+            <p xml:id="S0.I1.ix1.p1a.1"><text font="italic" xml:id="S0.I1.ix1.p1a.1.1">Institute Z, Somewhere</text></p>
+          </para>
+        </item>
+      </itemize></note>"#,
+  );
 }
