@@ -3199,3 +3199,43 @@ the sets — O(children × nodes). Restricting a key's walk to the root's childr
 document with no section (every paragraph a root child) quadratic: 0707.2621 10 s → past 180 s, 3 of the run's first
 56 fatals. Keep `//` steps predicate-free and put the exclusion in `use` (an excluded node keyed under '' that no
 lookup asks for). Guard: `latexml_post::xslt::witnessed_css_delta::no_xsl_key_match_has_a_predicated_descendant_step`.
+
+## 106. `\protect` takes only latex.ltx's values — an empty `\protect` makes babel's shorthands expand forever
+
+latex.ltx gives `\protect` exactly three meanings, and package code branches on them: `\@typeset@protect` (= `\relax`,
+latex.ltx:1437) while typesetting, `\@unexpandable@protect` (`\noexpand\protect\noexpand`, :1384) while building a
+string (`\protected@edef`, :1440-1443), and `\noexpand` in a few writes. babel's active shorthands (`~` in every
+language, slovak/czech `-`, german `"`) are expandable `\active@prefix<c>\active@char<c>`, and `\active@prefix`
+(TL 2025 babel.def:1418-1442) tests `\ifx\protect\@typeset@protect` and `\ifx\protect\@unexpandable@protect`; any
+other `\protect` takes the `\protect#1` branch. With `\protect` empty that is `#1` again: the character re-expands
+until `Fatal:Timeout:PushbackLimit`. It fires only on a token tokenized before a reader re-catcodes, i.e. a URL inside
+a macro argument (`\footnote{\href{http://x.org/~y}{…}}`, `\author`). REGFIXN2b's `url_string_messages` (misc.rs)
+emptied `\protect` in both URL readers on the false premise that hyperref's `\pdfstringdef` does so; hyperref never
+does, and its own URL path for babel (`\Hy@babelnormalise`, hyperref.sty:4815-4818) uses
+`\let\protect\@unexpandable@protect` under `\Hy@safe@activestrue`. Six of 2605's 30,079 papers went Fatal
+(2605.04270, 13298, 16660, 19761, 28243, 29955; REGFIXV). To keep a robust command from expanding in a string,
+use `\@unexpandable@protect`; to let it expand, keep the typeset `\relax`; never invent a fourth value. Guards
+`perfect_kernel_batchregfixv::*`.
+
+## 107. A claim about what a package or the kernel does cites the file and line it read — an uncited premise is unverified
+
+Every comment, brief and commit message that states TeX's, a package's or Perl's behaviour names the source line it was
+read from (`hyperref.sty:4815`, `inputenc.sty:80`, `Package.pm:2776`), and a reviewer treats an uncited behavioural
+claim as a finding. Witness: REGFIXN2b's "`\protect` empty, as in hyperref's `\pdfstringdef`" carried no citation, was
+false (#106), passed review and its 78-paper A/B, and was contradicted in the same bundle by REGFIXO, whose cited
+reading (hyperref.sty:386-570 never sets `\protect`) nobody set beside it; the full 2605 rerun was the first check
+that could fail. When two batches of one bundle describe the same machinery, the integration review compares their
+claims. A synthetic-only review finding that would change a hot path (every `\url`/`\href`, every utf8 document)
+waits for the post-merge queue rather than landing before a release.
+
+## 108. A change of a macro's form (native closure → robust macro) can flip every heuristic that classifies a meaning by its shape
+
+Bindings that judge "is this text?" or "is this a name?" by the shape of a token's meaning — cleveref's format builder
+(`cref_text_token`, cleveref_sty.rs:578), the frontmatter title-code classifiers — read a native closure as opaque and
+a macro whose body starts with `\protect` as text. REGFIXN2 made inputenc's undefined character faithful to
+inputenc.sty:80 (`\protect\@inpenc@undefined@{enc}`, previously a native closure); cleveref then accepted a
+`\crefformat{section}{§#2#1#3}` whose `§` had (by a separate, Perl-origin bug, KNOWN_PERL_ERRORS #1305) been rebound to
+that undefined meaning, digested it at the reference and replayed its Error: 2605.20531 Warning → 5 Errors with
+byte-identical output. Before landing a change that turns a native definition into a macro (or back), grep for the
+classifiers that test meanings by shape (`cref_text_token`, `cref_format_is_text`, `classify/title_code.rs`) and convert
+a witness that exercises each. Guards `perfect_kernel_batchregfixw::latin1_char_before_utf8_inputenc_keeps_meaning`.
