@@ -23591,8 +23591,11 @@ set; a file that defines none itself counts those of the files it reads with `\i
 so tikz-cd.sty's are tikzlibrarycd.code.tex's; measured: tikzcd.sty and tikz-cd1.sty 14 of 18, pdfplots.sty 2 of 2
 with pgfplots.sty, smfartVS.cls 237 of 237 with smfart.cls; an author's `\ProvidesPackage{tikz-cd}` file that loads
 tikz, as tikz-cd.sty does, and defines `\mytcd` shares none, records `\ver@` under its own name in TeX, and the
-document's `\usepackage{tikz-cd}` reads the real file; likewise a `{pgfplots}` file loading graphicx or tikz):
-the binding reads its file and the shipped file is read after it, as the stand-in's copy. A copy routed to a binding loaded already (or to a file of that
+document's `\usepackage{tikz-cd}` reads the real file; likewise a `{pgfplots}` file loading graphicx or tikz; an
+expansion primitive after a `\def` — `\expandafter\def\csname…` — is no name it defines. Residual: an author's file of
+four names or fewer passes on one shared name, so `\ProvidesPackage{tikz-cd}` with `\def\ar{…}`, or a `{tcolorbox}`
+file renewing `\arraystretch`, is read as the real file (synthetic; no misdeclared author file of a raw-reading binding in
+the 192-paper population, row R COPYSMALL)): the binding reads its file and the shipped file is read after it, as the stand-in's copy. A copy routed to a binding loaded already (or to a file of that
 name read raw) is read too, as TeX reads the file whole: 2304.14243's packages/pictures.sty `\ProvidesPackage
 {packages/graphics}` after graphicx lost its commands silently (34 Errors). A binding that does not read its file raw
 (neurips, aistats, natbib) keeps the provides-mode read after it. Perl reads none of these copies: without
@@ -23604,4 +23607,6 @@ class_wrapper_is_read_after_the_class, misdeclared_file_is_not_read_as_the_file,
 misdeclared_file_sharing_a_load_is_not_the_file, misdeclared_pgfplots_sharing_a_load_is_not_the_file}` (repros
 `stand-in-copies/provides_route/{smfart_renamed_copy_read_once,copy_of_a_loaded_binding_is_read,
 renamed_class_reads_its_own_package,wrapper_loads_the_file_it_declares,class_wrapper_loads_the_class,
-misdeclared_file_is_not_the_file,misdeclared_file_shares_a_load,misdeclared_pgfplots_shares_a_load}.tex`).
+misdeclared_file_is_not_the_file,misdeclared_file_shares_a_load,misdeclared_pgfplots_shares_a_load,
+exact_tikzcd_copy_is_read_as_the_file}.tex`; guard `perfect_kernel_batchregfixq::exact_tikzcd_copy_is_read_as_the_file`, the
+one-level extension).

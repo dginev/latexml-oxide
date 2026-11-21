@@ -3224,7 +3224,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/alignment.rs", 16),
   ("latexml_core/src/alignment/cell.rs", 1),
   ("latexml_core/src/alignment/normalize.rs", 1),
-  ("latexml_core/src/binding/content.rs", 45),
+  // (int/regfix6, 45 -> 46: `defined_names` skips an expansion primitive after a `\def` in a file's source text — a regex
+  // over a raw file's text, where the spelling is the datum, no token decision; REGFIXQ3 review S1)
+  ("latexml_core/src/binding/content.rs", 46),
   // REGCDE: the walk's `\global\let` (`global_let`: the engine's `assign_meaning`, `lookup_meaning`), no decision.
   ("latexml_core/src/binding/preamble_commands.rs", 2),
   // TABU2b +1: `run_trivlist_hook` names the kernel's own `\lx@trivlist@hook` to read its meaning (empty: skipped).

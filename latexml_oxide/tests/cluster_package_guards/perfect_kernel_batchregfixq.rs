@@ -287,3 +287,28 @@ fn class_wrapper_is_read_after_the_class() {
   );
   assert!(xml.contains("class=\"ltx_leqno\""), "{xml}");
 }
+
+/// provides_route/exact_tikzcd_copy_is_read_as_the_file: an exact renamed tikz-cd.sty (`\RequirePackage{tikz}`,
+/// `\usetikzlibrary{cd}`, no name of its own) is read as tikz-cd.sty: neither file defines a name, so both are compared
+/// by the names of the library they read (`content::names_read_as`'s one-level extension), as for 1201.4414's and
+/// 1512.05388's copies. Distinct: the only guard on that extension (REGFIXQ3 review S2).
+#[test]
+fn exact_tikzcd_copy_is_read_as_the_file() {
+  let (log, xml) = convert(
+    repro!(
+      "provides_route",
+      "exact_tikzcd_copy_is_read_as_the_file.tex"
+    ),
+    &[(
+      "tikzcd_exact.sty",
+      repro!("provides_route", "tikzcd_exact.sty"),
+    )],
+    (0, 0),
+  );
+  assert!(
+    log.contains("The paper's tikzcd_exact.sty is read as tikz-cd.sty"),
+    "{log}"
+  );
+  picture_after(&xml, "COPY");
+  assert!(xml.contains("class=\"ltx_tikzmatrix\""), "{xml}");
+}

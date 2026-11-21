@@ -3152,6 +3152,11 @@ fn defined_names(text: &str) -> HashSet<String> {
       // counter `\theX`)
       if let Some(name) = cap.get(1) {
         let name = name.as_str();
+        // (`\expandafter\def\csname…`, `\noexpand\def\noexpand\x`: an expansion primitive after `\def` names no
+        // definee, so it is no evidence a file shares names with another)
+        if matches!(name, "\\csname" | "\\expandafter" | "\\noexpand") {
+          continue;
+        }
         if let Some(flag) = name.strip_prefix("\\if")
           && code[cap.get(0).map_or(0, |m| m.start())..].starts_with("\\newif")
         {
