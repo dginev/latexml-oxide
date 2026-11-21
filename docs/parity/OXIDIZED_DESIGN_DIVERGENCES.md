@@ -23472,7 +23472,16 @@ binding defines `\@inpenc@undefined` as a native macro raising `Error:unexpected
 (inputenc.sty.ltxml:33). Since our hyperref expands its PDF information keys (`\lx@pdfstringdef`, KNOWN_PERL_ERRORS
 #1050; Perl records them unexpanded), a latin1 byte 0x80-0x9F in `pdfauthor` raised that Error where pdflatex's
 `\pdfstringdef` (`\protect` empty, `\GenericError` gobbled, hyperref.sty:550-552) is silent (1803.03083, 1609.03819,
-1903.03818, 2108.12063, 2408.03605). In body text the byte is still an Error, now TeX's: `Error:latex:(inputenc)
-Package inputenc Error: Keyboard character used is undefined in inputencoding `latin1'`.
-**Guard**: `perfect_kernel_batchregfixn2::latin1_undefined_byte_errs_only_where_tex_does` (repros
-`unicode-catcodes/latin1_undefined_byte_in_{pdf_key,text_errs}.tex`).
+1903.03818, 2108.12063, 2408.03605). In body text the byte is still an Error, now TeX's; the log breaks the message at
+its `\MessageBreak`: `Error:latex:(inputenc) Package inputenc Error: Keyboard character used is undefined` and, on the
+next line, ``in inputencoding `latin1'`` (where the argument was expanded first, `\edef`, `\label`, `\cite`, a
+`Semiverbatim` argument such as `\hyperlink`'s or `\includegraphics`'s, the category is followed by the spaces of
+`\PackageError`'s prefix: `Error:latex:(inputenc)                 Package …`). A URL is read
+expanded and then stringified (`\url`'s reader, the `HyperVerbatim` of `\href`, revtex's `\@@startlink`, the doi
+fields): there `url_string_messages` (base_utilities/misc.rs) empties `\protect` and makes `\GenericError` raise its
+Error and gobble its four arguments, so the byte errs once and is no URL text, where pdflatex errs and garbles the URL
+(`\url` 6 `!`, `\href` Fatal). A side effect: a robust command's `\protect` is no longer URL text
+(`\url{http://x.org/\foo b}`, `\foo` robust: `http://x.org/Fb`; pdflatex and REGFIXJ3 print `http://x.org/\protectFb`).
+**Guard**: `perfect_kernel_batchregfixn2::{latin1_undefined_byte_errs_only_where_tex_does,
+latin1_undefined_byte_in_a_url_errs_once}` (repros `unicode-catcodes/latin1_undefined_byte_in_{pdf_key,text_errs,
+url_errs,href_errs}.tex`).

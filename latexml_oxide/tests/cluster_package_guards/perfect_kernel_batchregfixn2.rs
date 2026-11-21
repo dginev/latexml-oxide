@@ -15,7 +15,7 @@ macro_rules! repro {
 }
 
 /// The daj binding loads no lastpage: the paper's copies of daj.cls and tocbase.cls, read after it, load totpages
-/// (tocbase.cls :162, 2020-2022) or lastpage (:67, 2016 and 2022-2023) themselves, and both is totpages.sty:148-153's
+/// (tocbase.cls:162, 2020-2022) or lastpage (:162, 2016 and 2022-2023) themselves, and both is totpages.sty:148-153's
 /// "Can't use both" Error. Red (REGFIXJ3): 1 Error:latex:(totpages) on the totpages copy. Witnesses 2003.11116,
 /// 2008.04606, 2010.07854, 2203.04657, 2212.13728; the lastpage copy (2208.01327, 2305.10828) stays clean.
 #[test]
@@ -84,6 +84,54 @@ fn latin1_undefined_byte_errs_only_where_tex_does() {
     &["xml:id=\"p1.1\""],
     "<p xml:id=\"p1.1\">A word.</p>",
   );
+  // The `{enc}` of `\@inpenc@undefined@{enc}` is the encoding in force: cp1252 leaves 0x81 undefined.
+  let switched = [
+    &text[..text.len() - b"A \x83word.\n\\end{document}\n".len()],
+    b"\\inputencoding{cp1252}A \x81word.\n\\end{document}\n",
+  ]
+  .concat();
+  let (log, xml, ()) = convert_bytes_files_then(&switched, &[], Some("ar5iv.sty"), |_, _| ());
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(log.contains("in inputencoding `cp1252'"), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">A word.</p>",
+  );
+}
+
+/// In a URL, read expanded and then stringified (`\url`'s reader, `HyperVerbatim` for `\href`), the byte's robust
+/// `\PackageError` raises its one Error and leaves no text: `url_string_messages` empties `\protect` and makes
+/// `\GenericError` err and gobble its arguments. Red (REGFIXN2): 0 Errors, href and text
+/// `http://x.org/a\protect\GenericError{(inputenc)}…b`. pdflatex errs too (6 `!`; `\href` Fatal). Synthetic (review of
+/// REGFIXN2); the PDF-key witnesses above stay silent. Repros unicode-catcodes/latin1_undefined_byte_in_{url,href}_errs.
+#[test]
+fn latin1_undefined_byte_in_a_url_errs_once() {
+  for (tex, element) in [
+    (
+      &include_bytes!(
+        "../../../tools/perfect_kernel/repros/unicode-catcodes/latin1_undefined_byte_in_url_errs.tex"
+      )[..],
+      "<p xml:id=\"p1.1\">A <ref class=\"ltx_url\" font=\"typewriter\" href=\"http://x.org/ab\">http://x.org/ab</ref> word.</p>",
+    ),
+    (
+      &include_bytes!(
+        "../../../tools/perfect_kernel/repros/unicode-catcodes/latin1_undefined_byte_in_href_errs.tex"
+      )[..],
+      "<p xml:id=\"p1.1\">A <ref class=\"ltx_href\" href=\"http://x.org/ab\">link</ref> word.</p>",
+    ),
+  ] {
+    let (log, xml, ()) = convert_bytes_files_then(tex, &[], Some("ar5iv.sty"), |_, _| ());
+    assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+    assert!(
+      log.contains(
+        "Error:latex:(inputenc) Package inputenc Error: Keyboard character used is undefined"
+      ),
+      "{log}"
+    );
+    assert_element(&xml, "p", &["xml:id=\"p1.1\""], element);
+  }
 }
 
 /// lipics.cls, lipics-v2016/v2018 and lipicsmio (bound by name prefix) load no comment.sty; lipics-v2019.cls:756-757 and
@@ -114,10 +162,8 @@ fn lipics_comment_sty_from_v2019_on() {
     &["xml:id=\"p2.1\""],
     "<p xml:id=\"p2.1\">Last paragraph.</p>",
   );
-  let (log, xml) = convert_with(
-    repro!("class-bindings/lipics_v2018/lipics_v2019_excludes_ccsxml.tex"),
-    Some("ar5iv.sty"),
-  );
+  let v2019 = repro!("class-bindings/lipics_v2018/lipics_v2019_excludes_ccsxml.tex");
+  let (log, xml) = convert_with(v2019, Some("ar5iv.sty"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_element(
     &xml,
@@ -125,4 +171,25 @@ fn lipics_comment_sty_from_v2019_on() {
     &["xml:id=\"p1.1\""],
     "<p xml:id=\"p1.1\">Text.</p>",
   );
+  // lipics-v2021.cls:861-862 and v2024 alike, beside a shipped copy that loads nothing itself.
+  for class in ["lipics-v2021", "lipics-v2024"] {
+    let copy =
+      format!("\\NeedsTeXFormat{{LaTeX2e}}\n\\ProvidesClass{{{class}}}[2024/01/01 test]\n");
+    let (log, xml) = convert_files_with(
+      &v2019.replace("{lipics-v2019}", &format!("{{{class}}}")),
+      &[(format!("{class}.cls").as_str(), copy.as_str())],
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{class}: {log}"
+    );
+    assert_element(
+      &xml,
+      "p",
+      &["xml:id=\"p1.1\""],
+      "<p xml:id=\"p1.1\">Text.</p>",
+    );
+  }
 }

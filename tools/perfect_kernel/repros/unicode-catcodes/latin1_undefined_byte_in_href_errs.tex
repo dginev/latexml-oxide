@@ -1,0 +1,16 @@
+% mechanism: the sibling of latin1_undefined_byte_in_pdf_key in an \href URL (HyperVerbatim): the reader expands the URL
+%   and stringifies it, so inputenc's robust `\PackageError` (inputenc.sty:80, :139-143) must raise its Error there and leave no text
+%   (`url_string_messages`: `\protect` empty, `\GenericError` errs and gobbles its four arguments).
+% witness: synthetic (review of REGFIXN2); the PDF-key shape 1803.03083
+% oracle:  pdflatex Fatal, 14 errors (\hyper@readexternallink: extra }, File ended while scanning)
+% engines: rust REGFIXJ3 = 1 Error:unexpected:<char>, href "http://x.org/ab"; REGFIXN2 = 0 errors, href
+%   "http://x.org/a\protect\GenericError{(inputenc)}...b"
+% expect:  1 error (Error:latex:(inputenc)), 0 warnings; href "http://x.org/ab", text "link"
+% status:  RED (REGFIXN2) -> GREEN (REGFIXN2b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[latin1]{inputenc}
+\usepackage{hyperref}
+\begin{document}
+A \href{http://x.org/aÅb}{link} word.
+\end{document}

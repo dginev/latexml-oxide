@@ -1150,6 +1150,7 @@ LoadDefinitions!({
       let_i(&T_CS!("\\textasciicircum"), &T_CS!("\\^"), None);
       let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
       DefMacro!(T_CS!("\\textbackslash"), None, T_OTHER!("\\"), scope => Some(Scope::Local));
+      url_string_messages()?;
       // Having prepared, read in the argument, expanding as we go
       let arg = read_balanced(ExpansionLevel::Partial,false,false)?;
       end_semiverbatim()?;
