@@ -76,8 +76,8 @@ fn enddocument_hook_scan_in_an_open_environment_reports_once() {
 }
 
 /// Raw ltxgrid/ltxutil with array (the three witnesses' classes load them): the patch runs, the document ends, and the
-/// tabular keeps its cells. The one Error is array_sty's undefined `\@arrayleft` (REGFIXI's known gap: 0 once array_sty
-/// defines it); the two Warnings are ltxutil's own (no class name, no `\@vspace` patches).
+/// tabular keeps its cells, with no Error (array_sty defines `\@arrayleft`, REGFIXI); the two Warnings are ltxutil's own
+/// (no class name, no `\@vspace` patches).
 #[test]
 fn ltxgrid_enddocument_patch_keeps_the_tabular() {
   if !kpse_has("ltxgrid.sty") {
@@ -92,8 +92,8 @@ fn ltxgrid_enddocument_patch_keeps_the_tabular() {
     ),
     Some("ar5iv.sty"),
   );
-  assert_eq!(counts(&log), (1, 2), "{log}");
-  assert!(log.contains("Error:undefined:\\@arrayleft"), "{log}");
+  assert_eq!(counts(&log), (0, 2), "{log}");
+  assert!(!log.contains("Error:"), "{log}");
   assert!(!log.contains("Until:\\@checkend"), "{log}");
   let cells: Vec<&str> = xml
     .split("<td ")

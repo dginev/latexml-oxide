@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (400 lines, weight 889; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (404 lines, weight 903; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -686,8 +686,9 @@ Rules that keep this file honest and mergeable:
     the definition lock (D1; OD #482, #500, #568) refuses a paper's redefinition of a kernel or binding command, and
     with it the helpers or counts that redefinition sets — mlbib/astron/ACM `\citeauthoryear` inside their own `\cite`
     (per-shape rule `label_macros_from_refused_cite`, OD #88; PR #958, REGFIX-F), amsppt copies' self-redefining
-    `\title` (outer accepted, inner refused: an endless recursion; REGFIX-D), bullsrsl's author count (REGTAIL, cause
-    unconfirmed). Replace the per-shape rules with one mechanism; 5
+    `\title` (outer accepted, inner refused: an endless recursion; REGFIX-D), a replay's local change to an existing
+    switch (REPLAYSWITCH). (bullsrsl's author count was not this: the kernel's store overwrote the class's own
+    `\@author` helper, REGFIXG.) Replace the per-shape rules with one mechanism; 5
   - FUPC — after rc1 (DG 2026-11-20): `$$` inside a display (branch `fix/fupc-display-dollar-followups`, `39321db12b4`,
     reviewed NO-SHIP): it reopens the display its opener opened (a bare `\equation` and aliases too) and carries
     `\tag`, `\nonumber` and `\label` to the second display. DG ruling (b): an untagged amsmath label prints the
@@ -695,12 +696,44 @@ Rules that keep this file honest and mergeable:
     retraction is never reopened; the token-spelling ratchet (`latex_constructs/mod.rs` 224→225, `sect07.rs` 29→30);
     corrected KPE #1295 / OD #1091 wording. Residuals: `\[ a $$ $$ c \tag{3}\]` (pdflatex errs "\tag not allowed
     here"), `{displaymath}` with `$$ $$` (1 Error, pdflatex 0); 3
-  - REGTAIL — the v0.8.0 regression check's untraced classes (run 372 → 399 triage): bullsrsl `authorcontributions`
-    (~65; the frontmatter replay of a refused 3-argument setter counts once), the pdflatex-clean `(Springer-SVJour)`
-    subset (~65; 2101.09497, 2408.12532, 2110.05134), `expected:}` causes beyond EDP (emulateapj 1305.6912,
-    biophys-new 2212.00883, llncs 2312.12023, ro_hack 1507.05358, aastex631 2211.00793), `malformed:ltx:item` (math0006111), `\etalchar`,
-    `\IUCrCemaillink`, `\BR@backref`, `\@arrayleft` → `Fatal:Mouth:EoF` (2502.03242, 2004.09405, 2401.03827),
-    solarphysics.cls `toccaption` (12 papers; 2006.04669, 1510.03282, 2301.09829); 5
+  - REGTAIL — the v0.8.0 regression check's classes still untraced after REGFIX G-L (run 372 → 399 triage): aastex631
+    2211.00793 (`Missing } inserted` ×20 at "Anonymous String"), 2502.03242's `\the@toks` undefined and `\@sharp`
+    reaching the Stomach (colortbl + raw ltxutil), solarphysics.cls `toccaption` (12 papers; 2006.04669, 1510.03282,
+    2301.09829), the `(caption)` and `fi` classes (~37 each, unsampled), and ANONSTR. Fixed by REGFIX G-L: bullsrsl
+    `authorcontributions`, the SVJour subset, emulateapj 1305.6912, biophys-new 2212.00883, llncs 2312.12023,
+    `malformed:ltx:item`, `\etalchar`, `\IUCrCemaillink`, `\BR@backref`, `\@arrayleft` → `Fatal:Mouth:EoF`; 5
+  - ANONSTR — the "at Anonymous String" `&`/`}` error classes are separate mechanisms (REGFIXK sample): 2512.14155 (a
+    stray `&`), 2107.00457 (an extra alignment tab), 2003.01824 (`Extra }` with arydshln), 2207.06210 (unclassified):
+    one root-causer each; 3
+  - FMREPLAY — the class-setter replay's residuals (REGFIXG, REGFIXI): a replay drops its local change to an existing
+    switch (bullsrsl `\setboolean{BSRSL@affilsempty}`: "Affiliation is empty", 19 papers, 2309.01084, 2411.00793;
+    clashes with `perfect_kernel_batch56::class_maketitle_replay_that_errors_is_dropped`); a replay's records held in
+    toks registers survive the deposit (a class helper appending authors to a toks its `\maketitle` prints prints
+    each twice; synthetic); bullsrsl surnames read as affiliations (`\lx@author@trailing@mand`, since Oct 8) and its
+    "Corresponding author(s):" label not kept (now counted: 38 papers' unclaimed Warning); a delimited-argument kept
+    call makes the block decline (RED `sectioning-frontmatter/author_delimited_argument_kept_call_declines_red`); a
+    note-printing call's globals read outside the block are still lost (no witness); with authblk a `\footnotemark`
+    inside a robust command drops its mark (counted); contacts on a `\\` line land in a nameless creator; a counted
+    `\orcidlink` wrapper gives Count 1 (pdflatex 2); JATS/TEI `[@class='ltx_phantom']` misses `ltx_align_left
+    ltx_phantom`; 5
+  - ENDDOCRES — `\end{document}`'s residuals (REGFIXJ): an environment open at the end is Perl's Warning where TeX's
+    `\@badend` errs (the standing rule says Error: count the corpus first); `enddocument/info` and
+    `\AtEndAfterFileList` never run; raw ltxgrid's output-routine messages (`\do@output@MVL`/`\do@output@cclv`) never
+    fire (empty `ltx:p`s at the end; the document's own afterlastpage/afteraux code dropped); a hook that detokenizes
+    the grabbed tail prints `“lx@enddocument@tail` where pdflatex prints `“@kernel@after@enddocument` (name the slot
+    after latex.ltx:15258's); `\deadcycles\z@` before `\@@end` would let ~40 papers' `\patchcmd\enddocument{\deadcycles}`
+    (quantumarticle.cls, cedram.cls) succeed; 3
+  - BINDRES — the binding fixes' residuals (REGFIXH, REGFIXI, REGFIXK, REGFIXL): no harvard binding (17 IUCr papers;
+    2504.07452's `\citeasnoun` prints a bold "?", "[]" before every bibblock, keyless bibitems); `\item[label]` in
+    `{thebibliography}` prints the label twice (`[[1]]`, since Oct 8); emulateapj's `\textwidth` is 345pt where
+    emulateapj.cls:334 sets 7.1in (1612.09425, 0812.1578); `[epj]{svjour2}` papers never get the EPJ panel page
+    (svjour_cls.rs:82 `is_document_class("svjour")`); BINDFID's audit list: aas_support (aas_macros, deluxetable),
+    svproc (aas_macros), paspconf (aaspp), emulateapj's base class aastex (the real one is REVTeX), sv_support's
+    unconditional natbib (svjour3.cls:68 only under its option); `\meaning\text` shows `\lx@text` where pdflatex shows
+    `\protect \text  ` (OD #1104; robust needs the lock to hold the inner `\text␣`, OD #568); `\bibitem[\lab]` with an
+    argument-taking `\lab` (pdflatex 2 errors, we 0); ulem's `\ul` runs through an `\end{…}`/`\endgroup` at its depth
+    and past a closing `$` (pdflatex fatal; RED repros under `loader/`), and a document's own underline macro through
+    `\useunder` in a `\multicolumn` still errs; 3
   - REGRES — the regression fixes' residuals: fdsymbol's ~165 `symNNN` glyphs, 6 extensible accents (2312.00399
     `\overlinesegment`) and `\ullcorner`/`\ulrcorner`; `\usepackage{amsmath}` after `\documentstyle{amsart}` does not
     restore the old-form error; natbib loaded before `\documentclass{elsarticle}` is only an Info (RED

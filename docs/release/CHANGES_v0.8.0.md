@@ -43,7 +43,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
-  - **Regressions from the per-paper check of the November run (#954, #958, #960).** Every paper that converted with
+  - **Regressions from the per-paper check of the November run (#954, #958, #960, and the follow-up integration).** Every paper that converted with
     no Error on 2026-11-05 (run 372) and erred in the November run was classified (pdflatex, Perl, a bisect); the
     clusters our changes caused are fixed:
     - `$$ $$` inside amsmath's `\[ … \]` closes and reopens `{equation*}`, not `{equation}`, as TeX's `$$` ends one
@@ -70,6 +70,34 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
       argument-taking placeholder no longer swallows the title page; thmtools marks thm-patch, thm-kv, thm-autoref and
       thm-listof loaded (thmtools.sty:47-49) and defines `\Autoref` (KNOWN_PERL_ERRORS #1297). Guards
       `perfect_kernel_batchregfixe::*`.
+
+    - A class's own author helper is kept through its refused setter's replays: bullsrsl.cls counts every author
+      again (its "Unwanted authorcontributions" Error is gone on 81 of 84 papers; 2312.08217, 2607.02675), and an IUCr
+      `\IUCrAufn` note after an e-mail link is printed after the title as the class prints it. A call that prints a
+      contact or a mark apart from the names keeps its global definitions, run once. Guards
+      `perfect_kernel_batchregfixg::*`, `perfect_kernel_batchregfixi::{iucr_author_note_after_email,
+      contact_printing_call_runs_once}`.
+    - A binding that reuses another binding's definitions calls them as Rust code instead of loading a file its real
+      class never loads (svjour3, emulateapj, JHEP2, JHEP3, PoS, mnras; KNOWN_PERL_ERRORS #1300): svjour3 papers that
+      also ship the older svjour.cls no longer raise its "No valid journal" Error (2101.09497, 2110.05134,
+      2408.12532), nor 1305.6912 its truncated emulateapj.sty's, while a requested class copy declaring the sibling's
+      name is still read (hep-ph0608235). Guards `perfect_kernel_batchregfixh::*`.
+    - iucrjournals.cls is read under its own name (`\IUCrCemaillink` and the rest were undefined; 38 papers), its
+      e-mail links become the authors' contacts; amsppt's `\roster` items close under plain AMS-TeX
+      (KNOWN_PERL_ERRORS #1301); the backref stub defines `\BR@backref`; array defines `\@arrayleft`/`\@arrayright`
+      (array.sty:428-429). Guards `perfect_kernel_batchregfixi::*`.
+    - `\end{document}` carries latex.ltx's tail (`\@checkend{document}\clearpage…\begingroup…\endgroup`, the late hooks
+      in their slots, scoped as in TeX; OXIDIZED_DESIGN_DIVERGENCES #1107), so revtex's ltxutil.sty and etoolbox's
+      `\patchcmd{\enddocument}` find what they scan for: 9 of 14 `Fatal:Mouth:EoF` papers convert whole (2004.09405,
+      2401.03827). Guards `perfect_kernel_batchregfixj::*`.
+    - A bibitem label's cite-printed form is expanded at the `\bibitem`, as latex.ltx writes it to the `.aux`, so
+      alpha.bst's `\etalchar` in a grouped bibliography no longer errs at a later `\cite` (1101.1169, 2402.10127,
+      2203.12786); `\text` reads its argument before raising a cell's alignment count, so a brace-less `\text &` ends the
+      cell (2212.00883), and stays `\text` under `\edef` (OXIDIZED_DESIGN_DIVERGENCES #1104). Guards
+      `perfect_kernel_batchregfixk::*`.
+    - ulem's `\ul` declaration (from `\useunder`) underlines to the end of its group, a cell or a `\multicolumn` body
+      instead of reading past it (2312.12023: 5 Errors → 0, 12 underlines; OXIDIZED_DESIGN_DIVERGENCES #1109); an
+      unclosed `\ul` is an Error, as in TeX. Guards `perfect_kernel_batchregfixl::*`.
 
     On the papers each fix targets, A/Bs of 60-204 papers: none worse. The residuals are row R's REGRES, REGTAIL,
     AMSPPTRES and THMEDPSRES lines in `docs/SYNC_STATUS.md`.
