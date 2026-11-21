@@ -3138,7 +3138,7 @@ fn source_code_lines(text: &str) -> impl Iterator<Item = &str> {
 
 /// The request a `\ProvidesPackage`/`\ProvidesClass` answers, as `(\@currpath\@currname, \@currext)`
 /// (latex.ltx:18471-18486). Where our loader reads a `.sty`/`.cls` without making it the request — a binding's raw read
-/// of a file, a copy read in a binding's place ([`routed_copy_request`], `read_stand_in_copy`) — the request is the file
+/// of a file, a copy read in a binding's place (`routed_copy_request`, `read_stand_in_copy`) — the request is the file
 /// read, as TeX's `\RequirePackage` of it would make it. `None` in a binding's code, which declares its own name
 /// (xcolor_sty.rs `\ProvidesPackage{xcolor}`), and with no request (an `\input` of a `.sty` in the document's preamble,
 /// where TeX's `\@currname` is empty: the declared name is kept).
