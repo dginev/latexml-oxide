@@ -1,8 +1,11 @@
 % witness: (synthetic; the REGFIXH2 re-review's p4) a JHEP3.cls copy declaring \ProvidesClass{JHEP}, as old JHEP3 copies do
-% oracle:  pdflatex reads the copy: "Body JLOADED COPYREAD."
+% oracle:  pdflatex reads the copy: "Body JNOT COPYREAD." (its `\ProvidesClass{JHEP}` records `\ver@JHEP3.cls`, latex.ltx
+%          :18471-18486; LaTeX Warning "You have requested document class `JHEP3', but the document class provides
+%          `JHEP'"; 1 `!`, the fixture's preamble `\abstract`)
 % engines: rust INTREGFIX4 = read; REGFIXH round 1 = not read (`Error:undefined:\probeB`): JHEP was no longer a file the
 %          JHEP3 binding is built on once it made JHEP's definitions as code; REGFIXH2 = read ("declares itself jhep")
-% expect:  0 errors, 0 warnings; "Body JLOADED COPYREAD."
+% expect:  0 errors, 1 warning (LaTeX's); "Body JNOT COPYREAD." (COPYROUTE; "JLOADED" before, the declared name
+%          recorded as Perl does, KNOWN_PERL_ERRORS #1307)
 % status:  RED (REGFIXH) -> GREEN (REGFIXH2)
 % preload: ar5iv.sty
 \documentclass{JHEP3}

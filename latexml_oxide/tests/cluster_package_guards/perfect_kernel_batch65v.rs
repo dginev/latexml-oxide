@@ -182,7 +182,7 @@ None declared.
     )],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   for label in ["a)", "b)"] {
     assert!(
       xml.contains(&format!("<tag>{label}</tag>")),

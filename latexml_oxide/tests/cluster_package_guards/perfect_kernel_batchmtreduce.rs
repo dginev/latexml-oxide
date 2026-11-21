@@ -651,7 +651,7 @@ fn a_copy_in_a_subdirectory_keeps_its_marks() {
     )],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(
     creator_lines(&xml),
     [

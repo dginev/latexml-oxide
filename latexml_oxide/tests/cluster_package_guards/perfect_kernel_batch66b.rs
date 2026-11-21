@@ -104,7 +104,7 @@ Body text.
     );
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 0),
+      (0, 1),
       "{maketitle}{log}"
     );
     assert!(xml.contains("Body text."), "{xml}");
@@ -135,7 +135,7 @@ Body text.
     )],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(xml.contains("Body text."), "{xml}");
 }
 

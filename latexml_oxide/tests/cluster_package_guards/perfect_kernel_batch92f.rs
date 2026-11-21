@@ -53,7 +53,7 @@ fn without_copy(tex: &str) -> String {
 fn nature_affiliations_list_is_the_cover_before_the_abstract() {
   let tex = repro!("nature_affiliations_list_before_abstract.tex");
   let (log, xml) = convert_with(tex, Some(PRELOAD));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(
     root_children(&xml),
     ["title", "creator", "titlepage", "abstract", "section"],
@@ -73,7 +73,7 @@ fn nature_affiliations_list_is_the_cover_before_the_abstract() {
   // (the binary, eager and `--streaming`: the same root order and titlepage — review rev92f S2)
   for streaming in [false, true] {
     let (log, xml) = cli_conversion(tex, streaming);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
     assert_eq!(
       root_children(&xml),
       ["title", "creator", "titlepage", "abstract", "section"],

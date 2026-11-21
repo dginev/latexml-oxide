@@ -670,7 +670,8 @@ fn copy_numbers_the_kernel_counters() {
 /// binding's: base behaviour).
 #[test]
 fn copy_identity_by_declaration_and_command_set() {
-  for (tex, file, copy, text) in [
+  // (IEEEtai.cls's `\ProvidesClass{IEEEtran}` is LaTeX's "You have requested document class `IEEEtai', but …" warning)
+  for (tex, file, copy, text, warnings) in [
     (
       repro!("identity/declared_expl_class_is_read.tex"),
       "fcs.cls",
@@ -679,24 +680,27 @@ fn copy_identity_by_declaration_and_command_set() {
        xml:id=\"p1.m1.1\"><XMApp xml:id=\"p1.m1.1.1\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok \
        font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok fontsize=\"70%\" meaning=\"1\" \
        role=\"NUMBER\">1</XMTok></XMApp></XMath></Math>.",
+      0,
     ),
     (
       repro!("identity/declared_base_class_is_read.tex"),
       "IEEEtai.cls",
       repro!("identity/IEEEtai.cls"),
       "EXTRA",
+      1,
     ),
     (
       repro!("identity/empty_command_set_is_not_read.tex"),
       "citesort.sty",
       repro!("identity/citesort.sty"),
       "NOT READ",
+      0,
     ),
   ] {
     let (log, xml) = convert_files_with(tex, &[(file, copy)], Some("ar5iv.sty"));
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 0),
+      (0, warnings),
       "{file}: {log}"
     );
     assert_element(

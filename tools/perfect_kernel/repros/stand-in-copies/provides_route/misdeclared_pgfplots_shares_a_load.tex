@@ -1,11 +1,12 @@
-% An author's file that declares itself pgfplots and loads graphicx, as pgfplots.sty does, is not read as pgfplots.sty:
-% it defines none of pgfplots.sty's names (`\pgfplotsversion`, `\pgfplotsrevision`, ...; `reads_as_the_file`).
+% An author's file that declares itself pgfplots and loads graphicx, as pgfplots.sty does, is read in pgfplots.sty's
+% place and leaves pgfplots unloaded, so the document's `\usepackage{pgfplots}` reads the real file
+% (`content::RouteCopyRead`, COPYROUTE).
 % witness: none (reviewer's REGFIXQ2 probe p3)
-% oracle:  pdflatex 0 errors; "MYPGF", the plot with ticks 0 ... 1
-% engines: rust INT6A = 0 errors; REGFIXQ2 = 3 errors, the plot lost: the file was read as pgfplots.sty (both load
-%          graphicx)
-% expect:  0 errors, 0 warnings; the plot drawn
-% status:  RED (REGFIXQ2) -> GREEN (REGFIXQ3)
+% oracle:  pdflatex 0 errors; "MYPGF", the plot with ticks 0 ... 1; LaTeX Warning "You have requested package
+%          `mygxplots', but the package provides `pgfplots'"
+% engines: rust INT6A = 0 errors; REGFIXQ2 = 3 errors, the plot lost: the binding marked loaded with the file
+% expect:  0 errors, 1 warning (LaTeX's); the plot drawn
+% status:  RED (REGFIXQ2) -> GREEN (REGFIXQ3, COPYROUTE)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{mygxplots}

@@ -1,0 +1,16 @@
+% A shipped class wrapper `\ProvidesClass{smfart}\LoadClassWithOptions{smfart}` is read where smfart_cls.rs reads its
+% own file, and its request for smfart reads TeX Live's smfart.cls raw, the binding not entered again
+% (`content::SubstitutedRead`): TeX reads the wrapper, then the class.
+% witness: none (the advisor's COPYROUTE counter-example to a text test of the wrapper)
+% oracle:  pdflatex 0 errors; "1. Intro", the equation numbered on the left "(1)"; LaTeX Warning "You have requested
+%          document class `mysmfw', but the document class provides `smfart'"
+% engines: rust INT7b = 0 errors, 0 warnings (the wrapper read after the binding's TeX Live class)
+% expect:  0 errors, 1 warning (LaTeX's); section 1 numbered, the equation `ltx_leqno`
+% status:  GREEN (COPYROUTE)
+% preload: ar5iv.sty
+\documentclass[a4paper]{mysmfw}
+\begin{document}
+\section{Intro}
+Text.
+\begin{equation}a=b\end{equation}
+\end{document}

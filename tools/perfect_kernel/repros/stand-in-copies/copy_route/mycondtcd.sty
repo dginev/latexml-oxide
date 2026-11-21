@@ -1,0 +1,5 @@
+%% A conditional wrapper that declares itself tikz-cd and loads it when TeX finds it.
+\ProvidesPackage{tikz-cd}
+\IfFileExists{tikz-cd.sty}{\RequirePackage{tikz-cd}}{}
+\newcommand\mytcd{MYTCD}
+\endinput

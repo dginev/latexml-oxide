@@ -1,12 +1,12 @@
-% An author's file that declares itself tikz-cd and loads tikz, as tikz-cd.sty does, is not read as tikz-cd.sty: only
-% the names a file defines count as evidence of a copy, never what it loads, and tikz-cd.sty's own are its library's
-% (`\usetikzlibrary{cd}`, tikzlibrarycd.code.tex: `\tikzcd`, `\arrow`, ...), of which the file defines none
-% (`reads_as_the_file`).
+% An author's file that declares itself tikz-cd and loads tikz, as tikz-cd.sty does, is read in tikz-cd.sty's place
+% and leaves tikz-cd unloaded, so the document's `\usepackage{tikz-cd}` reads the real file (`content::RouteCopyRead`,
+% COPYROUTE).
 % witness: none (reviewer's REGFIXQ2 probe p1)
-% oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B
-% engines: rust INT6A = 0 errors; REGFIXQ2 = 3 errors, no picture: the file was read as tikz-cd.sty (both load tikz)
-% expect:  0 errors, 0 warnings; the diagram drawn
-% status:  RED (REGFIXQ2) -> GREEN (REGFIXQ3)
+% oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B; LaTeX Warning "You have requested package `mytkmacros', but
+%          the package provides `tikz-cd'"
+% engines: rust INT6A = 0 errors; REGFIXQ2 = 3 errors, no picture: the binding marked loaded with the file
+% expect:  0 errors, 1 warning (LaTeX's); the diagram drawn
+% status:  RED (REGFIXQ2) -> GREEN (REGFIXQ3, COPYROUTE)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{mytkmacros}

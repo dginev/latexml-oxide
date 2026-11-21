@@ -1,0 +1,15 @@
+% A conditional wrapper `\ProvidesPackage{tikz-cd}\IfFileExists{tikz-cd.sty}{\RequirePackage{tikz-cd}}{}` is read
+% where tikz_cd_sty.rs reads its file; its request reads TeX Live's tikz-cd.sty (`content::SubstitutedRead`).
+% witness: none (the advisor's COPYROUTE shape)
+% oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B; LaTeX Warning "You have requested package `mycondtcd', but
+%          the package provides `tikz-cd'"
+% engines: rust INT7b = 0 errors, 0 warnings (the wrapper read after the binding's TeX Live file)
+% expect:  0 errors, 1 warning (LaTeX's); the diagram drawn
+% status:  GREEN (COPYROUTE)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mycondtcd}
+\begin{document}
+\mytcd
+\begin{tikzcd} A \arrow[r] & B \end{tikzcd}
+\end{document}

@@ -165,6 +165,7 @@ fn jfm_section_star_zeroes_equations() {
         "../../../tools/perfect_kernel/repros/cross-references/class_copies_78q/jfm_flm.cls"
       ),
     )],
+    0,
     "sA@S1=1 e1@S1.E1=1.1 e2@S1.E2=1.2 sB@S2=2 e3@S2.E1=2.1 e4@Sx1.E2=2.2 sC@A1=A e5@A1.E1=A\u{2009}1",
   );
 }
@@ -487,10 +488,14 @@ fn aipproc_headings_unnumbered() {
     )],
   );
 }
-/// Convert `tex` beside the class copy `files`: 0 errors, 0 warnings, the labels' ids and refnums as `labels`.
-fn assert_copy_numbers(tex: &str, files: &[(&str, &str)], labels: &str) {
+/// Convert `tex` beside the class copy `files`: 0 errors, `warnings` warnings, the labels' ids and refnums as `labels`.
+fn assert_copy_numbers(tex: &str, files: &[(&str, &str)], warnings: usize, labels: &str) {
   let (log, xml) = convert_files_with(tex, files, Some(PRELOAD));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, warnings),
+    "{log}"
+  );
   assert_eq!(label_refnums(&xml), labels, "{xml}");
 }
 
@@ -511,6 +516,7 @@ fn appendix_counters_follow_the_paper_s_copy() {
         "../../../tools/perfect_kernel/repros/cross-references/class_copies_78q/elsarticle.cls"
       ),
     )],
+    0,
     "sA@S1=1 e1@S1.E1=1 f1@S1.F1=1 t1@S1.T1=1 sB@S2=2 sC@S2.SS1=2.1 e2@S2.E2=2 e3@S2.E3=3 sD@A1=A e4@A1.E4=4 \
      sE@A1.SS1=A.1 f2@A1.F2=2 t2@A1.T2=2 sG@A2=B e5@A2.E5=5 f3@A2.F3=3",
   );
@@ -522,6 +528,7 @@ fn appendix_counters_follow_the_paper_s_copy() {
         "../../../tools/perfect_kernel/repros/cross-references/class_copies_78q/emulateapj.cls"
       ),
     )],
+    0,
     "sA@S1=1 e1@S1.E1=1 f1@S1.F1=1 t1@S1.T1=1 sB@S2=2 sC@S2.SS1=2.1 e2@S2.E2=2 e3@S2.E3=3 sD@A1=A e4@A1.E1=A1 \
      sE@A1.SS1=A.1 f2@A1.F1=A1 t2@A1.T1=A1 sG@A2=B e5@A2.E1=B1 f3@A2.F1=B1",
   );
@@ -569,6 +576,8 @@ fn jfm_copy_numbers_equations_by_section() {
         "../../../tools/perfect_kernel/repros/stand-in-copies/provides_route/jfmcopy.cls"
       ),
     )],
+    // (LaTeX's "You have requested document class `jfmcopy', but the document class provides `jfm'")
+    1,
     "e@S2.E1=2.1",
   );
 }

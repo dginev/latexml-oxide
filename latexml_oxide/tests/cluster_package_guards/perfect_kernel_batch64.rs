@@ -1796,7 +1796,8 @@ fn family_binding_reads_requested_class() {
       Some("ar5iv.sty"),
     );
     assert_eq!(error_count(&log), 0, "{request}: {log}");
-    assert_eq!(warning_count(&log), 0, "{request}: {log}");
+    // (LaTeX's "You have requested document class `<request>', but the document class provides `JINST'")
+    assert_eq!(warning_count(&log), 1, "{request}: {log}");
     assert_eq!(
       creators(&xml),
       vec![

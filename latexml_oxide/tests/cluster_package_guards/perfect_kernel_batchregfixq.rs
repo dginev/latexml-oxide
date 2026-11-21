@@ -46,7 +46,7 @@ fn renamed_copy_is_read_once_as_its_bindings_file() {
   let (_, xml) = convert(
     repro!("provides_route", "smfart_renamed_copy_read_once.tex"),
     &[("smfcopy.cls", repro!("provides_route", "smfcopy.cls"))],
-    (0, 0),
+    (0, 1),
   );
   first_paragraph(&xml, "SMF-COPY-MACRO Text ok.");
 }
@@ -59,7 +59,7 @@ fn copy_routed_to_a_loaded_binding_is_read() {
   let (_, xml) = convert(
     repro!("provides_route", "copy_of_a_loaded_binding_is_read.tex"),
     &[("picscopy.sty", repro!("provides_route", "picscopy.sty"))],
-    (0, 0),
+    (0, 1),
   );
   first_paragraph(&xml, "PICTURE-MACRO");
 }
@@ -79,7 +79,7 @@ fn renamed_class_reads_its_own_package() {
       ("imscopy.sty", repro!("provides_route", "imscopy.sty")),
       ("imsart.sty", repro!("provides_route", "imsart.sty")),
     ],
-    (0, 0),
+    (0, 1),
   );
   first_paragraph(&xml, "IMS-COPY-PACKAGE");
 }
@@ -96,7 +96,7 @@ fn titlesec_copy_format_passes_the_title() {
       "titlesec_copy.sty",
       repro!("provides_route", "titlesec_copy.sty"),
     )],
-    (0, 0),
+    (0, 1),
   );
   assert_element(
     &xml,
@@ -174,7 +174,7 @@ fn fancyhdr_copy_finds_the_fields() {
         repro!("beyond_original", "sub/fancyhdr.sty"),
       ),
     ],
-    (0, 0),
+    (0, 1),
   );
   first_paragraph(&xml, "FANCY-COPY-MACRO");
 }
@@ -190,9 +190,11 @@ fn picture_after(xml: &str, text: &str) {
 
 /// provides_route/wrapper_loads_the_file_it_declares: a shipped wrapper that declares itself a file a raw-reading
 /// binding stands for and loads it (`\ProvidesPackage{tikz-cd}\RequirePackage{tikz-cd}`, the pgfplots one that
-/// `\pgfplotsset`s) is not that file's copy (`content::loads_file`): the binding reads TeX Live's file, the wrapper after
-/// it. Red: 4 Errors each (`\usetikzlibrary`, `{tikzcd}`, `\arrow`; `{axis}`), the diagram and the plot lost: the wrapper
-/// read as the file, its `\RequirePackage` hit the binding still loading. Reviewer's REGFIXQ probes A and C.
+/// `\pgfplotsset`s) is read where the binding reads its file, and its `\RequirePackage` reads TeX Live's file
+/// (`content::SubstitutedRead`, COPYROUTE; REGFIXQ2 read it after the binding by a text test). Red (REGFIXQ r1): 4
+/// Errors each (`\usetikzlibrary`, `{tikzcd}`, `\arrow`; `{axis}`), the diagram and the plot lost: the wrapper's
+/// `\RequirePackage` hit the binding still loading. Two Warnings, LaTeX's "You have requested package …". Reviewer's
+/// REGFIXQ probes A and C.
 #[test]
 fn wrapper_is_read_after_the_file_it_loads() {
   let (log, xml) = convert(
@@ -201,12 +203,19 @@ fn wrapper_is_read_after_the_file_it_loads() {
       ("mytikzcd.sty", repro!("provides_route", "mytikzcd.sty")),
       ("mypgfplots.sty", repro!("provides_route", "mypgfplots.sty")),
     ],
-    (0, 0),
+    (0, 2),
   );
   for (copy, binding) in [("mytikzcd", "tikz-cd"), ("mypgfplots", "pgfplots")] {
     assert!(
       log.contains(&format!(
-        "Info:provide:{copy}.sty The paper's {copy}.sty is read after the {binding}.sty binding, as its stand-in's copy"
+        "Info:provide:{copy} The paper's {copy}.sty is read as {binding}.sty, the file the {binding}.sty binding reads"
+      )),
+      "{log}"
+    );
+    assert!(
+      log.contains(&format!(
+        "Info:provide:{binding} {binding} is requested while a copy is read in its place: its own file is read, not \
+         its binding"
       )),
       "{log}"
     );
@@ -218,10 +227,15 @@ fn wrapper_is_read_after_the_file_it_loads() {
   }
 }
 
-/// provides_route/misdeclared_file_is_not_the_file: an author's file declaring `\ProvidesPackage{tikz-cd}` that defines
-/// none of tikz-cd.sty's names (`content::reads_as_the_file`) is not read as it; the document's later
-/// `\usepackage{tikz-cd}` finds tikz-cd loaded, as TeX reads it. Red: 4 Errors, the diagram lost: the file read as
-/// tikz-cd.sty and the binding marked loaded with it. Reviewer's REGFIXQ probe B. Distinct: a file that loads nothing.
+/// The Info of a file read in tikz-cd.sty's place that leaves it unloaded (`content::RouteCopyRead`, rule M).
+const TIKZCD_LEFT_UNLOADED: &str = "Info:provide:tikz-cd.sty tikz-cd.sty is not loaded: a copy was read in its place; a \
+                                    request for it loads its binding afresh";
+
+/// provides_route/misdeclared_file_is_not_the_file: an author's file declaring `\ProvidesPackage{tikz-cd}` is read in
+/// tikz-cd.sty's place and leaves tikz-cd unloaded, so the document's later `\usepackage{tikz-cd}` loads the binding
+/// afresh with TeX Live's file, as TeX reads it (`content::RouteCopyRead`, COPYROUTE; REGFIXQ2 decided by a text test).
+/// Red (REGFIXQ r1): 4 Errors, the diagram lost: the binding marked loaded with the file. Reviewer's REGFIXQ probe B.
+/// Distinct: a file that loads nothing.
 #[test]
 fn misdeclared_file_is_not_read_as_the_file() {
   let (log, xml) = convert(
@@ -230,48 +244,55 @@ fn misdeclared_file_is_not_read_as_the_file() {
       "mytcdmacros.sty",
       repro!("provides_route", "mytcdmacros.sty"),
     )],
-    (0, 0),
+    (0, 1),
   );
-  assert!(!log.contains("is read as tikz-cd.sty"), "{log}");
+  assert!(log.contains(TIKZCD_LEFT_UNLOADED), "{log}");
   picture_after(&xml, "MYTCD");
   assert!(xml.contains("class=\"ltx_tikzmatrix\""), "{xml}");
 }
 
 /// provides_route/misdeclared_file_shares_a_load: an author's `\ProvidesPackage{tikz-cd}` file that loads tikz, as
-/// tikz-cd.sty does, and defines `\mytcd` is not read as tikz-cd.sty: a shared load is no evidence of a copy, and
-/// tikz-cd.sty's names are its library's (`\usetikzlibrary{cd}`), none of them the file's (`content::reads_as_the_file`).
-/// Red: 3 Errors, no picture. Reviewer's REGFIXQ2 probe p1. Distinct: the real file defines nothing itself.
+/// tikz-cd.sty does, and defines `\mytcd` leaves tikz-cd unloaded, so the document's `\usepackage{tikz-cd}` reads the
+/// real file (`content::RouteCopyRead`). Red (REGFIXQ2): 3 Errors, no picture. Reviewer's REGFIXQ2 probe p1. Distinct:
+/// the file loads what the real file loads, and the binding's own code after the read finds tikz.
 #[test]
 fn misdeclared_file_sharing_a_load_is_not_the_file() {
   let (log, xml) = convert(
     repro!("provides_route", "misdeclared_file_shares_a_load.tex"),
     &[("mytkmacros.sty", repro!("provides_route", "mytkmacros.sty"))],
-    (0, 0),
+    (0, 1),
   );
-  assert!(!log.contains("is read as tikz-cd.sty"), "{log}");
+  assert!(log.contains(TIKZCD_LEFT_UNLOADED), "{log}");
   picture_after(&xml, "MYTCD");
   assert!(xml.contains("class=\"ltx_tikzmatrix\""), "{xml}");
 }
 
 /// provides_route/misdeclared_pgfplots_shares_a_load: an author's `\ProvidesPackage{pgfplots}` file that loads
-/// graphicx, as pgfplots.sty does, defines none of pgfplots.sty's names and is not read as it. Red: 3 Errors, the plot
-/// lost. Reviewer's REGFIXQ2 probe p3. Distinct: the real file defines names of its own (`\pgfplotsversion`).
+/// graphicx, as pgfplots.sty does, leaves pgfplots unloaded, so the document's `\usepackage{pgfplots}` reads the real
+/// file (`content::RouteCopyRead`). Red (REGFIXQ2): 3 Errors, the plot lost. Reviewer's REGFIXQ2 probe p3. Distinct:
+/// another binding, pgfplots_sty.rs.
 #[test]
 fn misdeclared_pgfplots_sharing_a_load_is_not_the_file() {
   let (log, xml) = convert(
     repro!("provides_route", "misdeclared_pgfplots_shares_a_load.tex"),
     &[("mygxplots.sty", repro!("provides_route", "mygxplots.sty"))],
-    (0, 0),
+    (0, 1),
   );
-  assert!(!log.contains("is read as pgfplots.sty"), "{log}");
+  assert!(
+    log.contains(
+      "Info:provide:pgfplots.sty pgfplots.sty is not loaded: a copy was read in its place; a request for it loads its \
+       binding afresh"
+    ),
+    "{log}"
+  );
   picture_after(&xml, "MYPGF");
   for tick in ["0", "0.2", "0.4", "0.6", "0.8", "1"] {
     assert!(xml.contains(&format!("text=\"{tick}\"")), "{tick}: {xml}");
   }
 }
 
-/// provides_route/class_wrapper_loads_the_class: a class wrapper `\ProvidesClass{smfart}\LoadClass{smfart}` is not
-/// smfart.cls's copy (`content::loads_file`'s `\LoadClass`): the binding reads TeX Live's class. Red: 0 Errors, but
+/// provides_route/class_wrapper_loads_the_class: a class wrapper `\ProvidesClass{smfart}\LoadClass{smfart}` is read
+/// where smfart_cls.rs reads its class, and its `\LoadClass` reads TeX Live's class (`content::SubstitutedRead`). Red: 0 Errors, but
 /// the section unnumbered and the equation's `ltx_leqno` gone (pdflatex "1. Intro", "(1)" on the left). Reviewer's
 /// REGFIXQ probe F. Distinct: the class load, whose repeat is silent.
 #[test]
@@ -279,7 +300,7 @@ fn class_wrapper_is_read_after_the_class() {
   let (_, xml) = convert(
     repro!("provides_route", "class_wrapper_loads_the_class.tex"),
     &[("mysmf.cls", repro!("provides_route", "mysmf.cls"))],
-    (0, 0),
+    (0, 1),
   );
   assert!(
     xml.contains("<title><tag close=\" \"> 1</tag>Intro</title>"),
@@ -289,9 +310,8 @@ fn class_wrapper_is_read_after_the_class() {
 }
 
 /// provides_route/exact_tikzcd_copy_is_read_as_the_file: an exact renamed tikz-cd.sty (`\RequirePackage{tikz}`,
-/// `\usetikzlibrary{cd}`, no name of its own) is read as tikz-cd.sty: neither file defines a name, so both are compared
-/// by the names of the library they read (`content::names_read_as`'s one-level extension), as for 1201.4414's and
-/// 1512.05388's copies. Distinct: the only guard on that extension (REGFIXQ3 review S2).
+/// `\usetikzlibrary{cd}`, no name of its own) is read as tikz-cd.sty, as 1201.4414's and 1512.05388's copies are
+/// (`content::routed_copy_request`). Distinct: a copy with no name of its own (REGFIXQ3 review S2).
 #[test]
 fn exact_tikzcd_copy_is_read_as_the_file() {
   let (log, xml) = convert(
@@ -303,7 +323,7 @@ fn exact_tikzcd_copy_is_read_as_the_file() {
       "tikzcd_exact.sty",
       repro!("provides_route", "tikzcd_exact.sty"),
     )],
-    (0, 0),
+    (0, 1),
   );
   assert!(
     log.contains("The paper's tikzcd_exact.sty is read as tikz-cd.sty"),

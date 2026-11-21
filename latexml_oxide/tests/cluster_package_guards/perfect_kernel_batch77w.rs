@@ -30,7 +30,7 @@ fn natbib_copy_is_natbib() {
     &[("natbib_vw.sty", NATBIB_VW)],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
       "Info:fallback:natbib_vw The paper's natbib_vw.sty declares itself natbib: loading the natbib.sty binding\n"
@@ -70,7 +70,7 @@ fn natbib_renamed_copy_citations_resolve() {
     &[("natbib_vw.sty", NATBIB_VW)],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(!xml.contains(">?<"), "{xml}");
   assert!(
     xml.contains("<tag role=\"refnum\">Schneider et al. (2010)</tag>"),
@@ -90,20 +90,33 @@ fn natbib_renamed_copy_citations_resolve() {
 fn revtex4_copy_class_is_revtex4() {
   let class = repro!("qmcopy.cls");
   let declaration = "\\ProvidesClass{revtex4}";
-  for class in [
-    class.to_string(),
-    class.replace(
-      declaration,
-      "\\def\\ClassName{revtex4}\n\\ProvidesClass{\\ClassName}",
+  // (a `\ProvidesClass` of another name is LaTeX's "You have requested document class `qmcopy', but …" warning; a
+  // `\ProvidesFile` warns nothing)
+  for (class, warnings) in [
+    (class.to_string(), 1),
+    // (the code line, not the header comment naming it)
+    (
+      class.replace(
+        &format!("\n{declaration}"),
+        "\n\\def\\ClassName{revtex4}\n\\ProvidesClass{\\ClassName}",
+      ),
+      1,
     ),
-    class.replace(declaration, "\\ProvidesFile{revtex4.cls}"),
+    (
+      class.replace(&format!("\n{declaration}"), "\n\\ProvidesFile{revtex4.cls}"),
+      0,
+    ),
   ] {
     let (log, xml) = convert_files_with(
       repro!("revtex4_copy_class.tex"),
       &[("qmcopy.cls", &class)],
       Some("ar5iv.sty"),
     );
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{log}"
+    );
     assert!(
       log.contains("Info:fallback:qmcopy The paper's qmcopy.cls declares itself revtex4"),
       "{log}"
@@ -134,7 +147,7 @@ fn aistats_renamed_copy_is_aistats() {
     &[("mystyle.sty", repro!("mystyle.sty"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
       "Info:fallback:mystyle The paper's mystyle.sty declares itself aistats2023: loading the aistats.sty binding"
@@ -165,17 +178,20 @@ fn provides_route_exclusions() {
   let style = repro!("selfnamed.sty");
   let declaration = "\\ProvidesPackage{selfnamed}";
   let tex = repro!("not_routed.tex");
-  for (tex, file, style) in [
-    (tex.to_string(), "selfnamed.sty", style.to_string()),
+  // (a declared name other than the request is LaTeX's "You have requested package `selfnamed', but …" warning)
+  for (tex, file, style, warnings) in [
+    (tex.to_string(), "selfnamed.sty", style.to_string(), 0),
     (
       tex.to_string(),
       "selfnamed.sty",
       style.replace(declaration, "\\ProvidesPackage{nosuchfile}"),
+      1,
     ),
     (
       tex.to_string(),
       "selfnamed.sty",
       style.replace(declaration, "\\ProvidesClass{revtex4}"),
+      1,
     ),
     (
       tex.replace(
@@ -186,12 +202,13 @@ fn provides_route_exclusions() {
       style
         .replace(declaration, "\\ProvidesPackage{natbib}")
         .replace("\\newcommand\\selfextra{SELF}", ""),
+      0,
     ),
   ] {
     let (log, xml) = convert_files_with(&tex, &[(file, &style)], Some("ar5iv.sty"));
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 0),
+      (0, warnings),
       "{style}: {log}"
     );
     assert!(!log.contains("declares itself"), "{style}: {log}");
@@ -215,7 +232,7 @@ fn copy_resaves_a_wrapped_command() {
     &[("jmlrcopy.cls", repro!("jmlrcopy.cls"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
       "Info:provide:\\jmlr@org@newtheorem \\jmlr@org@newtheorem keeps its saved \\newtheorem: the paper's \
@@ -350,7 +367,7 @@ fn copy_loads_its_binding_package() {
     &[("elscopy.cls", repro!("elscopy.cls"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains("Applying options 'square' from a repeat load of natbib.sty"),
     "{log}"
@@ -376,7 +393,7 @@ fn copy_writes_document_hook() {
     &[("hookcopy.cls", repro!("hookcopy.cls"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
       "The paper's hookcopy.cls defers code to the document (\\@begindocumenthook); not registered: its binding \
@@ -405,7 +422,7 @@ fn standard_class_derivative_keeps_every_author() {
     &[("aipcopy.cls", repro!("aipcopy.cls"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
       "Info:provide:aipcopy.cls The paper's aipcopy.cls derives from a LaTeX class: read as a raw class over its binding"
@@ -446,7 +463,7 @@ fn standard_class_derivative_patches_stand() {
     &[("stdderiv.cls", repro!("stdderiv.cls"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     xml.contains("<?latexml nominal-font-size=\"10.95\"?>"),
     "{xml}"
@@ -495,7 +512,7 @@ fn standard_class_derivative_keeps_book_structure() {
     &[("bookcopy.cls", repro!("bookcopy.cls"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
       "Info:provide:bookcopy.cls The paper's bookcopy.cls derives from a LaTeX class: read as a raw class over its binding"
@@ -542,7 +559,7 @@ fn provides_route_skips_bundles_and_trailers() {
     ],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
   assert!(!log.contains("declares itself"), "{log}");
   assert_element(
     &xml,
@@ -566,7 +583,7 @@ fn another_copys_repeat_load_clashes() {
     ],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
   assert!(
     log.contains(
       "Error:latex:options Option clash for package natbib: options 'round' of a repeat load dropped, as LaTeX keeps \
@@ -596,7 +613,7 @@ fn standard_class_derivative_defines_only_its_class_names() {
     ],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_element(
     &xml,
     "p",
@@ -635,7 +652,7 @@ fn standard_class_derivative_beside_a_self_named_article() {
     ],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
       "Info:provide:aipcopy.cls The paper's aipcopy.cls derives from a LaTeX class: read as a raw class over its binding"
