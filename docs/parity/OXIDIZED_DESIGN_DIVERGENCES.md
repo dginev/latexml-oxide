@@ -1309,8 +1309,11 @@ test file.)*
 
 **Amended by #74 (every field's content is data).** Since #74 a `%`, `&`, `#` in ANY field is inert where the entry is
 read, so this entry's `%` story is one case of #74's rule, and its reading of a `%` in a `title` as "genuine parity"
-is superseded there. These three fields are still read Verbatim (`bibtex.rs:2543`), so their markup is not digested;
-`ltx:bib-extract` carries the stored text.
+is superseded there. These three fields are still read Verbatim (`bibtex.rs`), as a macro's argument that is never
+digested (`\bib@field@default@abstract Verbatim` → `\bib@field@extract{abstract}`, Perl's L346 idiom), so their
+markup is not digested and a character that errs only where typeset (utf8.def's C1 controls, #1131) raises nothing;
+`ltx:bib-extract` carries the stored text. Guard `perfect_kernel_batchencurl::bbl_abstract_c1_is_stored_data`
+(arXiv 2302.06923, 2304.01940).
 
 **Perl behaviour.** `BibTeX.pool.ltxml` L708-709/716-717/732-733 route these three
 fields to `\bib@@field{ltx:bib-extract}[role=...]`, whose value is `Digested` —
@@ -1326,8 +1329,8 @@ abstract on every entry, 52 entries): same-host `latexmlc` emits **101 errors
 plus a `too_many_errors` Fatal and produces no output at all**. Perl's own
 `\bib@field@default@abstract` cannot survive its own input.
 
-**Rust behaviour.** The same three fields become `DefConstructor`s taking a
-`Verbatim` argument (`bibtex.rs`). `Verbatim` calls
+**Rust behaviour.** The same three fields become `DefMacro`s taking a
+`Verbatim` argument (`bibtex.rs`), which they drop for `\bib@field@extract{<field>}`. `Verbatim` calls
 `begin_semiverbatim(Some(&['%', '\\']))` (`base_parameter_types.rs` L457-469),
 so `%` and `\` are neutralized for the field's duration and the content cannot
 break out of it. The value is then recovered from the entry's stored field via
@@ -23652,8 +23655,10 @@ one Error per character, as pdflatex (the format's `\UTFviii@undefined@err` gobb
 latex.ltx:22230-22237, which the engine does not run). `\DeclareUnicodeCharacter{0092}{'}` replaces the meaning. A C1
 byte of a line that is not UTF-8 stays an invalid byte, its Latin-1 character with the Info (#481): the mouth reads it
 as other (mouth.rs). Not under the pdfTeX byte mouth, and not without inputenc, where the dump's catcode table keeps
-the controls other (row R).
+the controls other (row R). A field the bibliography only stores (`abstract`, `keywords`, `contents`: biblatex.sty:7871
+`\blx@bbl@fielddef`, a `.bst` drops them) is never digested (#73), so its control raises nothing, as in pdflatex.
 **Why**: the controls are no content (cp1252 punctuation re-encoded as UTF-8, U+0092 for `’`), and pdflatex errs on
 each. **Guards** `perfect_kernel_batchencurl::{utf8_control_character_errs_and_is_dropped,
-utf8_c1_declared_and_byte_line_keep_their_text}` (repros unicode-catcodes/utf8_inputenc_control_characters_err,
-utf8_c1_declared_and_byte_line).
+utf8_c1_declared_and_byte_line_keep_their_text, bbl_abstract_c1_is_stored_data}` (repros
+unicode-catcodes/utf8_inputenc_control_characters_err, utf8_c1_declared_and_byte_line,
+index-bib/biblatex_bbl_abstract_c1_is_stored_data).

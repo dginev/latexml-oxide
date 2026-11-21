@@ -197,3 +197,42 @@ fn xargs_later_optional_puts_spaces_back() {
     "<p xml:id=\"p3.1\">Uad b Uad c Uav d.</p>",
   );
 }
+
+/// biblatex stores a `.bbl` `\field{abstract}` (biblatex.sty:7871 `\blx@bbl@fielddef`) and its styles never print it:
+/// a C1 control there (cp1252 mojibake, arXiv 2302.06923, 2304.01940) raises no utf8.def error, and the bib-extract
+/// keeps the stored text; the same kind of character in the text errs (U+0083), as in pdflatex. The `.bib` path and
+/// `keywords`/`contents` share the handler (`\bib@field@extract`). Red (ENCURL f10be4db4c6): 3 Errors, 2 for U+009D.
+#[test]
+fn bbl_abstract_c1_is_stored_data() {
+  let (log, xml, ()) = convert_bytes_files_then(
+    include_bytes!(
+      "../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_abstract_c1_is_stored_data.tex"
+    ),
+    &[(
+      "t.bbl",
+      include_bytes!(
+        "../../../tools/perfect_kernel/repros/index-bib/biblatex_bbl_abstract_c1_is_stored_data.bbl"
+      ),
+    )],
+    Some("ar5iv.sty"),
+    |_, _| (),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!(errors_with(&log, "(U+0083)"), 1, "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Text.</p>",
+  );
+  assert_element(
+    &xml,
+    "bibentry",
+    &["key=\"k\""],
+    "<bibentry key=\"k\" type=\"article\" xml:id=\"bib.bib1\"><bib-name role=\"author\"><surname>Doe</surname><givenname>Jane</givenname></bib-name><bib-extract \
+     role=\"abstract\">On class \u{e2}\u{20ac}\u{9d}cat\u{e2}\u{20ac}\u{9d} it fails.</bib-extract><bib-title>A \
+     Title</bib-title><bib-date role=\"publication\">2021</bib-date><bib-data role=\"self\" type=\"BibTeX\">@article{k,\n    author = {Doe, \
+     Jane},\n  abstract = {On class \u{e2}\u{20ac}\u{9d}cat\u{e2}\u{20ac}\u{9d} it fails.},\n     title = {A Title},\n      date = \
+     {2021}}\n</bib-data></bibentry>",
+  );
+}

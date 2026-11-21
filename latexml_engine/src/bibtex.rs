@@ -2540,17 +2540,22 @@ LoadDefinitions!({
   // SURPASS-PERL, with pdflatex as ground truth rather than preference.
   // OXIDIZED_DESIGN #73. Guard:
   // `06_cluster_bibliography::bib_abstract_percent_does_not_sink_the_entry`.
-  DefConstructor!(
+  // The value is a macro's argument, never digested (Perl's `\bib@field@default@default` idiom, L346 "IGNORE the
+  // tokenized data"): TeX only stores it (biblatex.sty:7871 `\blx@bbl@fielddef`; a `.bst` drops it), so a character
+  // that errs where typeset (utf8.def's C1 controls, arXiv 2302.06923, 2304.01940) raises nothing here.
+  DefMacro!(
     "\\bib@field@default@abstract Verbatim",
-    "?#rawdata(<ltx:bib-extract role='abstract'>#rawdata</ltx:bib-extract>)()",
-    properties => sub[_args] {
-      // Emit NOTHING when the field is empty. `abstract = {},` is a routine
-      // reference-manager export (witness 2605.00555 `refs.bib` L956), and an
-      // element opened with no content is never closed — every later field then
-      // nests inside `ltx:bib-extract` and the entry is malformed. Leaving the
-      // property undefined makes the `?#rawdata(...)()` conditional pick the
-      // empty branch. Same guard fixture case: `emptyabstract`.
-      let text = bib_extract_text("abstract");
+    "\\bib@field@extract{abstract}"
+  );
+  // `?#rawdata(...)()`: emit NOTHING when the field is empty. `abstract = {},` is a routine reference-manager export
+  // (witness 2605.00555 `refs.bib` L956), and an element opened with no content is never closed — every later field
+  // then nests inside `ltx:bib-extract`. Same guard fixture case: `emptyabstract`.
+  DefConstructor!(
+    "\\bib@field@extract{}",
+    "?#rawdata(<ltx:bib-extract role='#1'>#rawdata</ltx:bib-extract>)()",
+    properties => sub[args] {
+      let field = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let text = bib_extract_text(&field);
       Ok(if text.is_empty() {
         stored_map!()
       } else {
@@ -2559,23 +2564,9 @@ LoadDefinitions!({
     }
   );
   DefMacro!("\\bib@field@default@archive", "\\bib@@field{ltx:bib-links}");
-  DefConstructor!(
+  DefMacro!(
     "\\bib@field@default@contents Verbatim",
-    "?#rawdata(<ltx:bib-extract role='contents'>#rawdata</ltx:bib-extract>)()",
-    properties => sub[_args] {
-      // Emit NOTHING when the field is empty. `abstract = {},` is a routine
-      // reference-manager export (witness 2605.00555 `refs.bib` L956), and an
-      // element opened with no content is never closed — every later field then
-      // nests inside `ltx:bib-extract` and the entry is malformed. Leaving the
-      // property undefined makes the `?#rawdata(...)()` conditional pick the
-      // empty branch. Same guard fixture case: `emptyabstract`.
-      let text = bib_extract_text("contents");
-      Ok(if text.is_empty() {
-        stored_map!()
-      } else {
-        stored_map!("rawdata" => Stored::String(pin(&text)))
-      })
-    }
+    "\\bib@field@extract{contents}"
   );
   DefMacro!(
     "\\bib@field@default@copyright",
@@ -2586,23 +2577,9 @@ LoadDefinitions!({
     "\\bib@field@default@preprint",
     "\\bib@@field{ltx:bib-links}"
   );
-  DefConstructor!(
+  DefMacro!(
     "\\bib@field@default@keywords Verbatim",
-    "?#rawdata(<ltx:bib-extract role='keywords'>#rawdata</ltx:bib-extract>)()",
-    properties => sub[_args] {
-      // Emit NOTHING when the field is empty. `abstract = {},` is a routine
-      // reference-manager export (witness 2605.00555 `refs.bib` L956), and an
-      // element opened with no content is never closed — every later field then
-      // nests inside `ltx:bib-extract` and the entry is malformed. Leaving the
-      // property undefined makes the `?#rawdata(...)()` conditional pick the
-      // empty branch. Same guard fixture case: `emptyabstract`.
-      let text = bib_extract_text("keywords");
-      Ok(if text.is_empty() {
-        stored_map!()
-      } else {
-        stored_map!("rawdata" => Stored::String(pin(&text)))
-      })
-    }
+    "\\bib@field@extract{keywords}"
   );
   DefMacro!(
     "\\bib@field@default@language",

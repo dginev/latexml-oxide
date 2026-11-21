@@ -1,0 +1,18 @@
+% mechanism: biblatex stores a `.bbl` `\field{abstract}` (biblatex.sty:7871 `\blx@bbl@fielddef`, a `\def`) and
+%   its styles never print it, so a C1 control there (cp1252 mojibake re-encoded as UTF-8: U+009D) raises no
+%   utf8.def error; the same kind of character in the text does (U+0083). Our BibTeX reader digested the Verbatim
+%   argument of `\bib@field@default@abstract` (and `keywords`, `contents`), whose text it then took from the raw field.
+% witness: arXiv 2302.06923 (`0main.bbl`:1022), 2304.01940 (`Tracialembeddedstrategymainpaper.bbl`:1485-1487)
+% oracle:  pdflatex 1 error "Unicode character ^^83 (U+0083) not set up for use with LaTeX" (the text's); prints
+%   "Text." and "Doe, Jane. “A Title”. In: (2021).", no abstract
+% engines: rust ENCURL round 1 (f10be4db4c6): 3 Errors (2 for the abstract's U+009D)
+% expect:  1 Error (U+0083), 0 warnings; the bib-extract keeps the abstract's stored text with its U+009D
+% status:  RED (ENCURL f10be4db4c6) -> GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[backend=biber,style=authoryear]{biblatex}
+\begin{document}
+Text.\nocite{k}
+\printbibliography
+\end{document}
