@@ -39,8 +39,19 @@ fn enddocument_hook_scans_the_kernel_tail() {
     Some("ar5iv.sty"),
   );
   assert_eq!(counts(&log), (0, 0), "{log}");
-  assert!(xml.contains("Body.\nENDHOOK[GOT:"), "{xml}");
-  assert!(xml.contains("—document]</p>"), "{xml}");
+  // (`\detokenize` in OT1, as pdflatex sets it: `\` is “, `_` is ˙; the dropped tokens are our tail's)
+  assert!(
+    xml.contains(
+      "<p xml:id=\"p1.1\">Body.\nENDHOOK[GOT:“˙˙hook˙next enddocument “lx@enddocument@tail —document]</p>"
+    ),
+    "{xml}"
+  );
+  // the tail's `\clearpage`, dropped with its `\let`s, paginates (OD #1107)
+  assert_eq!(
+    xml.matches("<pagination role=\"newpage\"/>").count(),
+    1,
+    "{xml}"
+  );
 }
 
 /// The re-emitted `\@checkend{document}` inside an environment left open: the finalizer's report of the open
@@ -65,7 +76,8 @@ fn enddocument_hook_scan_in_an_open_environment_reports_once() {
 }
 
 /// Raw ltxgrid/ltxutil with array (the three witnesses' classes load them): the patch runs, the document ends, and the
-/// tabular keeps its cells. The error count is not pinned: array_sty's `\@arrayleft` is batch REGFIXI's.
+/// tabular keeps its cells. The one Error is array_sty's undefined `\@arrayleft` (REGFIXI's known gap: 0 once array_sty
+/// defines it); the two Warnings are ltxutil's own (no class name, no `\@vspace` patches).
 #[test]
 fn ltxgrid_enddocument_patch_keeps_the_tabular() {
   if !kpse_has("ltxgrid.sty") {
@@ -80,7 +92,8 @@ fn ltxgrid_enddocument_patch_keeps_the_tabular() {
     ),
     Some("ar5iv.sty"),
   );
-  assert!(!log.contains("Fatal:"), "{log}");
+  assert_eq!(counts(&log), (1, 2), "{log}");
+  assert!(log.contains("Error:undefined:\\@arrayleft"), "{log}");
   assert!(!log.contains("Until:\\@checkend"), "{log}");
   let cells: Vec<&str> = xml
     .split("<td ")
@@ -92,8 +105,44 @@ fn ltxgrid_enddocument_patch_keeps_the_tabular() {
     })
     .collect();
   assert_eq!(cells, ["a", "b", "c", "d"], "{xml}");
-  assert!(xml.contains("Before.\n"), "{xml}");
-  assert!(xml.contains("After.</p>"), "{xml}");
+  assert!(xml.contains("<p xml:id=\"p1.1\">Before.\n"), "{xml}");
+  // the re-emitted `\clear@document`'s `\do@output@cclv` (an output-routine message) leaves two empty paragraphs
+  assert!(
+    xml.trim_end().ends_with(
+      "After.</p>\n    <p vattach=\"bottom\" xml:id=\"p1.2\"/>\n    <p vattach=\"bottom\" xml:id=\"p1.3\"/>\n  \
+       </para>\n</document>"
+    ),
+    "{xml}"
+  );
+}
+
+/// The three late slots share one dropped box with the tail's `\begingroup…\endgroup` inside it, so their local
+/// definitions scope as in latex.ltx:15262-15277 (pdflatex): `/afterlastpage`'s `\X` reaches `/afteraux` and `/end`,
+/// `/afteraux`'s `\Y` does not reach `/end`, and they see the kernel's `\clearpage` again. Their output is dropped, so the
+/// probe is the log's.
+#[test]
+fn enddocument_late_hooks_scope_as_in_tex() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/enddocument_late_hooks_scope.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  let probes: Vec<&str> = log
+    .lines()
+    .filter(|line| line.starts_with("LATE["))
+    .collect();
+  assert_eq!(
+    probes,
+    [
+      "LATE[afteraux|X=alp|Y=aux|CP=real]",
+      "LATE[end|X=alp|Y=undef|CP=real]"
+    ],
+    "{log}"
+  );
+  assert!(xml.contains("<p xml:id=\"p1.1\">Body.</p>"), "{xml}");
+  assert!(!xml.contains("<pagination"), "{xml}");
 }
 
 /// etoolbox's `\patchcmd{\enddocument}{\clearpage}{…}` finds latex.ltx's token and patches, as in pdflatex (it took the

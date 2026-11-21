@@ -488,12 +488,15 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!(
     T_CS!("\\end{document}"),
     None,
-    r"\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup\lx@enddocument@late{enddocument/end}\lx@finalize@document\@@end"
+    r"\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage\lx@enddocument@late@box\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup\lx@enddocument@late{enddocument/end}\lx@enddocument@late@endbox\lx@finalize@document\@@end"
   );
   // What the tail's `\@checkend` and `\clearpage` (and a scanning hook's re-emitted ones) do in TeX is done here by
   // the finalizer: it reports an environment left open (Perl's Warning, latex_constructs.pool.ltxml:385), and the last
-  // page has nothing to ship, so the tail emits no `ltx:pagination`.
-  DefMacro!("\\lx@enddocument@tail", r"\let\@checkend\@gobble\let\clearpage\relax");
+  // page has nothing to ship, so the tail emits no `ltx:pagination`. The late hooks get the real ones back.
+  DefMacro!(
+    "\\lx@enddocument@tail",
+    r"\let\lx@enddocument@checkend\@checkend\let\lx@enddocument@clearpage\clearpage\let\@checkend\@gobble\let\clearpage\relax"
+  );
   // A frontmatter body still open at `\end{document}` — an unclosed `\begin{abstract}`, `\abstract{`, or a brace-less
   // `\abstract` no sectioning command ended (`\lx@add@frontmatter@until`, base_utilities.rs) — ends first: its terminal
   // is read before the end-document code, which then runs at the document's level, so the abstract keeps its text as an
@@ -580,9 +583,36 @@ pub(crate) fn load() -> Result<()> {
     assign_value(&fired, true, Some(Scope::Global));
     let toplevel = T_CS!(s!("\\__hook_toplevel {}", hook.to_string()));
     if hook_slot_has_code(&toplevel) {
-      unread(Tokens!(T_CS!("\\setbox"), T_CS!("\\@tempboxa"), T_CS!("\\vbox"), T_BEGIN!(), toplevel, T_END!()));
+      if lookup_bool("lx@enddocument@late@open") {
+        unread(Tokens!(toplevel));
+      } else {
+        // (the shared box's opener was dropped by a hook that scanned the tail)
+        let mut toks = late_box_open();
+        toks.extend([toplevel, T_END!()]);
+        unread(Tokens::new(toks));
+      }
     }
     Ok(Vec::new())
+  });
+  // The three slots share ONE dropped box, the tail's `\begingroup…\endgroup` inside it, so their local definitions
+  // scope as in TeX's `\enddocument`: `/afterlastpage`'s reach `/afteraux` and `/end`, `/afteraux`'s do not reach `/end`.
+  DefPrimitive!("\\lx@enddocument@late@box", {
+    if in_speculative_digestion() || lookup_bool("lx@enddocument@late@open") {
+      return Ok(Vec::new());
+    }
+    let has_code = ["enddocument/afterlastpage", "enddocument/afteraux", "enddocument/end"]
+      .iter()
+      .any(|hook| hook_slot_has_code(&T_CS!(s!("\\__hook_toplevel {hook}"))));
+    if has_code {
+      assign_value("lx@enddocument@late@open", true, Some(Scope::Global));
+      unread(Tokens::new(late_box_open()));
+    }
+  });
+  DefPrimitive!("\\lx@enddocument@late@endbox", {
+    if lookup_bool("lx@enddocument@late@open") {
+      assign_value("lx@enddocument@late@open", false, Some(Scope::Global));
+      unread(Tokens!(T_END!()));
+    }
   });
 
   // The `\@checkend{document}` + `final_cleanup` half of `\enddocument`:
@@ -739,6 +769,28 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\lx@orig@enddocument", "\\end{document}", Scope::Global);
 
   Ok(())
+}
+
+/// Opens the late end-document hooks' dropped box, `\setbox\@tempboxa\vbox{`, inside which `\@checkend` and
+/// `\clearpage` are the kernel's again (`\lx@enddocument@tail` saved them; a hook that dropped the tail saved nothing).
+fn late_box_open() -> Vec<Token> {
+  let mut toks = vec![
+    T_CS!("\\setbox"),
+    T_CS!("\\@tempboxa"),
+    T_CS!("\\vbox"),
+    T_BEGIN!(),
+  ];
+  if is_defined_token(&T_CS!("\\lx@enddocument@clearpage")) {
+    toks.extend([
+      T_CS!("\\let"),
+      T_CS!("\\@checkend"),
+      T_CS!("\\lx@enddocument@checkend"),
+      T_CS!("\\let"),
+      T_CS!("\\clearpage"),
+      T_CS!("\\lx@enddocument@clearpage"),
+    ]);
+  }
+  toks
 }
 
 /// Digest begin-document code with the state RE-LOCKED (see `\begin{document}`): a binding-locked macro is never

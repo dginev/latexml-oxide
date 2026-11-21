@@ -23353,14 +23353,19 @@ an_unmodified_class_copy_keeps_the_clash, a_pass_after_the_load_leaves_a_key_val
 **Rule.** Perl's `\end{document}` is one constructor (latex_constructs.pool.ltxml:347-394); ours expands to
 `\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage`
 `\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup`
-`\lx@enddocument@late{enddocument/end}\lx@finalize@document\@@end` (sect02.rs), the token shape of latex.ltx:15255-15278,
+`\lx@enddocument@late{enddocument/end}\lx@enddocument@late@endbox\lx@finalize@document\@@end` (sect02.rs, with
+`\lx@enddocument@late@box` after `\clearpage`), the token shape of latex.ltx:15255-15278,
 so an end-document hook that grabs the rest of `\enddocument` by its delimiters finds them: ltxutil.sty:262-282's
 `\rvtx@enddocument@patch` reads `#2\@checkend#3` and `#2\clearpage#3\endgroup` and re-emits them (also in revtex4-2.cls,
 which our binding does not read); without them the scan ran to the end of the file, `Fatal:Mouth:EoF` (2004.09405,
 2401.03827, 2502.03242 — classes that load ltxgrid/ltxutil raw), as morewrites' `\@@end` scan did before; etoolbox's
 `\patchcmd{\enddocument}{\clearpage}{…}` now patches, as in pdflatex, where it took the failure branch. The late hooks
-run in their latex.ltx slots, each in a dropped box (their typesetting goes nowhere in pdflatex either).
-`\lx@enddocument@tail` = `\let\@checkend\@gobble\let\clearpage\relax`: the finalizer reports an environment left open
+run in their latex.ltx slots inside ONE dropped box (their typesetting goes nowhere in pdflatex either), opened after
+`\clearpage` and closed after `/end`, the tail's `\begingroup…\endgroup` inside it: local definitions scope as in TeX
+(`/afterlastpage`'s reach `/afteraux` and `/end`, `/afteraux`'s do not reach `/end`), and the hooks see the kernel's
+`\@checkend` and `\clearpage` again; a slot whose opener a scanning hook dropped gets a box of its own.
+`\lx@enddocument@tail` saves `\@checkend` and `\clearpage`, then `\let\@checkend\@gobble\let\clearpage\relax`: the
+finalizer reports an environment left open
 (Perl's Warning, not a second diagnostic beside it; pdflatex's `\@badend` is an Error) and the last page has nothing to
 ship, so no `ltx:pagination` is added; a hook's own `\clearpage` before it still paginates. Open: a hook that drops
 what it grabbed before `\@checkend` drops `\lx@enddocument@tail` with it, so the tail's `\@checkend` checks and its
@@ -23369,6 +23374,6 @@ re-emitted `\clear@document` (`\do@output@cclv`, an output-routine message) leav
 other messages do mid-document.
 **Guards**: `perfect_kernel_batchregfixj::{enddocument_hook_scans_the_kernel_tail,
 enddocument_hook_scan_in_an_open_environment_reports_once, ltxgrid_enddocument_patch_keeps_the_tabular,
-patchcmd_finds_the_enddocument_tail}`; the
+patchcmd_finds_the_enddocument_tail, enddocument_late_hooks_scope_as_in_tex}`; the
 morewrites/modernposter shapes stay `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box` and the sect02.rs
 witnesses (cntperchap_example, runcode_troubleshoot, modernposter/demo).
