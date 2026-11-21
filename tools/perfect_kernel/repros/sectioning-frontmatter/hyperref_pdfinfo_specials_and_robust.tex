@@ -1,0 +1,16 @@
+% witness: 0812.2921, 1104.1704, 1201.4321, 1303.2471, 1405.1922, 1510.06427 (`pdftitle={On the \$q\$-exponential …}`)
+% oracle:  pdflatex 0 errors; pdfinfo: Title "On the $q$-exponential {b} #1 50% R&D x_y XY XY"
+% engines: rust REGFIXJ3 Fatal:Timeout:IfLimit (`\lx@pdfstringdef` set `\protect` empty, which hyperref.sty:386-570 never
+%          does: the robust `\$` re-expanded itself without end)
+% expect:  0 errors, 0 warnings; `<rdf about="" content="On the $q$-exponential {b} #1 50% R&amp;D x_y XY XY"
+%          property="dcterms:title"/>`; "Text kept."
+% mechanism: hyperref.sty:405-413 `\let\$\textdollar` and kin (the characters), `\protect` left as it is (a robust
+%          command is its inner body)
+% status:  RED (REGFIXJ3) -> GREEN (REGFIXO)
+\documentclass{article}
+\usepackage{hyperref}
+\DeclareRobustCommand\mycmd{XY}
+\hypersetup{pdftitle={On the \$q\$-exponential \{b\} \#1 50\% R\&D x\_y \mycmd{} \protect\mycmd}}
+\begin{document}
+Text kept.
+\end{document}

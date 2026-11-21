@@ -789,9 +789,14 @@ LoadDefinitions!({
       Ok(Tokens::new(tks))
     }
   );
+  // Robust, as amsmath.sty:1027 `\DeclareRobustCommand{\xrightarrow}[2][]` (extarrows.sty:47 `\providecommand`, whose
+  // optional argument protects it) keeps `\protect\xrightarrow` in a `\protected@edef`: the body names itself, so an
+  // edef re-expanded it without end (natbib `\bibfield`, 2007.15542; Perl the same, KNOWN_PERL_ERRORS #1302). Guard
+  // `perfect_kernel_batchregfixo::xrightarrow_in_a_protected_edef`.
   DefMacro!(
     "\\xrightarrow",
-    "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}"
+    "\\lx@long@arrow{\\xrightarrow}{\\lx@stretchy@rightarrow}",
+    robust => true
   );
 
   // amsmath.sty L1012: `\def\ext@arrow#1#2#3#4#5#6#7` — the internal
@@ -857,7 +862,8 @@ LoadDefinitions!({
   DefMacro!("\\Leftrightarrowfill@ {}", "\\ensuremath{\\Leftrightarrow}");
   DefMacro!(
     "\\xleftarrow",
-    "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}"
+    "\\lx@long@arrow{\\xleftarrow}{\\lx@stretchy@leftarrow}",
+    robust => true
   );
   // extarrows.sty defines \xlongrightarrow/\xlongleftarrow with the
   // same look-and-feel as amsmath's \xrightarrow/\xleftarrow but using
@@ -866,19 +872,23 @@ LoadDefinitions!({
   // Witnesses 2405.19992, 2406.05043.
   DefMacro!(
     "\\xlongrightarrow",
-    "\\lx@long@arrow{\\xlongrightarrow}{\\lx@stretchy@rightarrow}"
+    "\\lx@long@arrow{\\xlongrightarrow}{\\lx@stretchy@rightarrow}",
+    robust => true
   );
   DefMacro!(
     "\\xlongleftarrow",
-    "\\lx@long@arrow{\\xlongleftarrow}{\\lx@stretchy@leftarrow}"
+    "\\lx@long@arrow{\\xlongleftarrow}{\\lx@stretchy@leftarrow}",
+    robust => true
   );
   DefMacro!(
     "\\xlongLeftarrow",
-    "\\lx@long@arrow{\\xlongLeftarrow}{\\lx@stretchy@Leftarrow}"
+    "\\lx@long@arrow{\\xlongLeftarrow}{\\lx@stretchy@Leftarrow}",
+    robust => true
   );
   DefMacro!(
     "\\xlongRightarrow",
-    "\\lx@long@arrow{\\xlongRightarrow}{\\lx@stretchy@Rightarrow}"
+    "\\lx@long@arrow{\\xlongRightarrow}{\\lx@stretchy@Rightarrow}",
+    robust => true
   );
   DefMath!("\\lx@stretchy@leftarrow", "\u{2190}",
     role => "ARROW", stretchy => true, alias => "\\leftarrow");
@@ -1320,29 +1330,38 @@ LoadDefinitions!({
     egroup()?;
   });
 
-  DefMacro!("\\align",
+  // The bodies of `{align}`, `{flalign}`, starred or not, are internal macros the public names call, and so does
+  // `\start@align` (amsmath.sty:1724 is the engine and never calls an environment back by name): linenoaa.sty:57,85
+  // (aa.cls:2077) renews `{alignat}`/`{flalign}` as `\linenomathNonumbers\start@align…`, looping through the public
+  // names (2607.00952 2610.38589). Guard `perfect_kernel_batchregfixo::start_align_does_not_reenter_by_name`.
+  DefMacro!("\\align", "\\lx@ams@align", locked => true);
+  DefMacro!(
+    "\\lx@ams@align",
     "\\ifmmode\\let\\endalign\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi",
-    locked => true);
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
+  );
   DefMacro!("\\endalign",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup",
     locked => true);
-  DefMacro!("\\csname align*\\endcsname",
+  DefMacro!("\\csname align*\\endcsname", "\\lx@ams@align@star", locked => true);
+  DefMacro!(
+    "\\lx@ams@align@star",
     "\\ifmmode\\expandafter\\let\\csname endalign*\\endcsname\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
-     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi",
-    locked => true);
+     \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
+  );
   DefMacro!("\\csname endalign*\\endcsname",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup",
     locked => true);
 
   // flalign — same as align for now (Perl treats it identically)
+  DefMacro!("\\flalign", "\\lx@ams@flalign");
   DefMacro!(
-    "\\flalign",
-    "\\ifmmode\\let\\endfalign\\endaligned\\aligned\\else\
+    "\\lx@ams@flalign",
+    "\\ifmmode\\let\\endflalign\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
      \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
@@ -1351,9 +1370,10 @@ LoadDefinitions!({
     "\\endflalign",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
+  DefMacro!("\\csname flalign*\\endcsname", "\\lx@ams@flalign@star");
   DefMacro!(
-    "\\csname flalign*\\endcsname",
-    "\\ifmmode\\expandafter\\let\\csname endfalign*\\endcsname\\endaligned\\aligned\\else\
+    "\\lx@ams@flalign@star",
+    "\\ifmmode\\expandafter\\let\\csname endflalign*\\endcsname\\endaligned\\aligned\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
      \\lx@begin@alignment\\expandafter\\lx@ams@collect@body\\fi"
@@ -2915,7 +2935,7 @@ fn ams_author_called_internals() -> Result<()> {
   // `{align*}`, `{flalign}` (`\tw@`), `{alignat}` (`\z@`, then the column count), `{xalignat}`
   // and `{xxalignat}`, which a document's own environment calls (2008.12422
   // `\newenvironment{mathouteq}{…\start@align\tw@\st@rredtrue\m@ne}{\endalign…}`). It starts
-  // the same environment here, closed by that environment's `\endalign`.
+  // the same environment here (its internal body, not its public name), closed by that environment's `\endalign`.
   DefMacro!("\\start@align{}{}{}", sub[(level, starred, columns)] {
     let number = |tokens: Tokens| -> Result<i64> {
       let mut probe = tokens.unlist();
@@ -2933,14 +2953,14 @@ fn ams_author_called_internals() -> Result<()> {
     let mut out = Vec::new();
     if columns < 0 {
       let name = if level == 2 { star_name("flalign") } else { star_name("align") };
-      out.push(T_CS!(&s!("\\{name}")));
+      out.push(T_CS!(&s!("\\lx@ams@{}", name.replace('*', "@star"))));
     } else {
       let name = match level {
         0 => star_name("alignat"),
         1 => star_name("xalignat"),
         _ => "xxalignat".to_string(),
       };
-      out.push(T_CS!(&s!("\\{name}")));
+      out.push(T_CS!(&s!("\\lx@{}@col", name.replace('*', "Star"))));
       out.push(T_BEGIN!());
       out.extend(columns_tokens.unlist());
       out.push(T_END!());

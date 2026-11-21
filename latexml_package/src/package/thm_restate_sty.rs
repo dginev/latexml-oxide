@@ -97,6 +97,67 @@ fn restate_ref(name: &str) -> Vec<Token> {
   tokens
 }
 
+/// `\lx@thm@restate@store{<end>}{<env>}{<name>}{<opt>}` and `…@store@star` (below): `star` for `{restatable*}`.
+fn store(star: bool, end: Tokens, env: Tokens, name: Tokens, opt: Tokens) -> Result<Tokens> {
+  let (end, env, name) = (end.to_string(), env.to_string(), name.to_string());
+  let body = collect_body(&end)?;
+  assign_value(
+    &stored("env", &name),
+    Stored::Tokens(Tokens::new(Explode!(&env))),
+    Some(Scope::Global),
+  );
+  assign_value(
+    &stored("opt", &name),
+    Stored::Tokens(opt),
+    Some(Scope::Global),
+  );
+  assign_value(
+    &stored("body", &name),
+    Stored::Tokens(Tokens::new(body.clone())),
+    Some(Scope::Global),
+  );
+  let mut tokens = Vec::new();
+  if star {
+    // thm-restate.sty:207-213, :130-145: `{restatable*}` is not the one — its number, and a `\<name>*`'s until then,
+    // is the later `\<name>`'s that sets the label last (:158-160; each sets it, pdflatex keeps the last), as
+    // `continues=` takes its theorem's (the equation counter stored as for the one)
+    tokens.extend(renumber(&name, &env).unlist());
+    let mut number = vec![T_CS!("\\expandafter"), T_CS!("\\gdef"), T_CS!("\\csname")];
+    number.extend(Explode!(s!("lx@thm@restate@num@{name}")));
+    number.extend([T_CS!("\\endcsname"), T_BEGIN!()]);
+    number.extend(restate_ref(&name));
+    number.push(T_END!());
+    tokens.extend(if_numbered(&env, number));
+  } else {
+    tokens.extend(label(&name));
+    tokens.extend(renumber(&name, &env).unlist());
+  }
+  // `\<name>`: `\@ifstar{\lx@thm@restate*{<name>}}{\lx@thm@restate{<name>}}`
+  tokens.extend([T_CS!("\\expandafter"), T_CS!("\\gdef"), T_CS!("\\csname")]);
+  tokens.extend(Explode!(&name));
+  tokens.extend([
+    T_CS!("\\endcsname"),
+    T_BEGIN!(),
+    T_CS!("\\@ifstar"),
+    T_BEGIN!(),
+    T_CS!("\\lx@thm@restate"),
+    T_OTHER!("*"),
+    T_BEGIN!(),
+  ]);
+  tokens.extend(Explode!(&name));
+  tokens.extend([
+    T_END!(),
+    T_END!(),
+    T_BEGIN!(),
+    T_CS!("\\lx@thm@restate"),
+    T_BEGIN!(),
+  ]);
+  tokens.extend(Explode!(&name));
+  tokens.extend([T_END!(), T_END!(), T_END!()]);
+  tokens.extend(body);
+  Ok(Tokens::new(tokens))
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // thm-restate.sty:26 `\RequirePackage{thmtools}`: `\usepackage{thm-restate}` alone brings `\declaretheorem`,
@@ -107,49 +168,17 @@ LoadDefinitions!({
   // A theorem stored for `\<name>` (thm-restate.sty:103-184 `thmt@restatable`). `{restatable}[<opt>]{<env>}{<name>}`
   // prints its theorem, `\begin{<env>}[<opt>]`, and stores it; so does a theorem's `restate=<name>` key
   // (thm-restate.sty:198-215; latex_constructs `thmtools_use_keys`, which passes the other keys as `<opt>`; 2108.11527,
-  // 2602.09462). `\lx@thm@restate@store{<end>}{<env>}{<name>}{<opt>}`, read right after the theorem's head, labels it
-  // `restatable:<name>`, freezes its number and stores the body up to `\end{<end>}` (`\thmt@collect@body`), which it
-  // leaves in place. `\<name>*` then prints the statement again (thm-restate.sty:122-156): `\begin{<env>}[<opt>]<body>
-  // \end{<env>}` in a group where `\label` is gobbled, numbered as the original, no counter stepped (a wrapper's inner
-  // theorem steps its own, `if_numbered`), the equation counter put back after it; `\<name>` without the star is the
-  // theorem once more as a new one, numbered and labelled, whose number the next `\<name>*` prints (the "this is the
-  // one" branch, :116-121, :158-160). Perl (thm-restate.sty.ltxml:28) prints "See <ref>" in place of the statement
-  // (KNOWN_PERL_ERRORS #1048). Witnesses 2108.11527, 2602.09462, 2402.14202; guard
-  // `perfect_kernel_batch78i::restated_theorem_prints_its_statement`.
-  DefMacro!("\\lx@thm@restate@store{}{}{}{}", sub[(end, env, name, opt)] {
-    let (end, env, name) = (end.to_string(), env.to_string(), name.to_string());
-    let body = collect_body(&end)?;
-    assign_value(&stored("env", &name), Stored::Tokens(Tokens::new(Explode!(&env))), Some(Scope::Global));
-    assign_value(&stored("opt", &name), Stored::Tokens(opt), Some(Scope::Global));
-    assign_value(&stored("body", &name), Stored::Tokens(Tokens::new(body.clone())), Some(Scope::Global));
-    let mut tokens = Vec::new();
-    if end == "restatable*" {
-      // thm-restate.sty:207-213, :130-145: `{restatable*}` is not the one — its number, and a `\<name>*`'s until then,
-      // is the later `\<name>`'s that sets the label last (:158-160; each sets it, pdflatex keeps the last), as
-      // `continues=` takes its theorem's (the equation counter stored as for the one)
-      tokens.extend(renumber(&name, &env).unlist());
-      let mut number = vec![T_CS!("\\expandafter"), T_CS!("\\gdef"), T_CS!("\\csname")];
-      number.extend(Explode!(s!("lx@thm@restate@num@{name}")));
-      number.extend([T_CS!("\\endcsname"), T_BEGIN!()]);
-      number.extend(restate_ref(&name));
-      number.push(T_END!());
-      tokens.extend(if_numbered(&env, number));
-    } else {
-      tokens.extend(label(&name));
-      tokens.extend(renumber(&name, &env).unlist());
-    }
-    // `\<name>`: `\@ifstar{\lx@thm@restate*{<name>}}{\lx@thm@restate{<name>}}`
-    tokens.extend([T_CS!("\\expandafter"), T_CS!("\\gdef"), T_CS!("\\csname")]);
-    tokens.extend(Explode!(&name));
-    tokens.extend([T_CS!("\\endcsname"), T_BEGIN!(), T_CS!("\\@ifstar"), T_BEGIN!(), T_CS!("\\lx@thm@restate"),
-      T_OTHER!("*"), T_BEGIN!()]);
-    tokens.extend(Explode!(&name));
-    tokens.extend([T_END!(), T_END!(), T_BEGIN!(), T_CS!("\\lx@thm@restate"), T_BEGIN!()]);
-    tokens.extend(Explode!(&name));
-    tokens.extend([T_END!(), T_END!(), T_END!()]);
-    tokens.extend(body);
-    Ok(Tokens::new(tokens))
-  });
+  // 2602.09462). `\lx@thm@restate@store{<end>}{<env>}{<name>}{<opt>}` (`…@store@star` for `{restatable*}`), read
+  // right after the theorem's head, labels it `restatable:<name>`, freezes its number and stores the body up to
+  // `\end{<end>}` (`\thmt@collect@body`), which it leaves in place. `\<name>*` then prints the statement again
+  // (thm-restate.sty:122-156): `\begin{<env>}[<opt>]<body>\end{<env>}` in a group where `\label` is gobbled, numbered
+  // as the original, no counter stepped (a wrapper's inner theorem steps its own, `if_numbered`), the equation counter
+  // put back after it; `\<name>` without the star is the theorem once more as a new one, numbered and labelled, whose
+  // number the next `\<name>*` prints (the "this is the one" branch, :116-121, :158-160). Perl
+  // (thm-restate.sty.ltxml:28) prints "See <ref>" in place of the statement (KNOWN_PERL_ERRORS #1048). Witnesses
+  // 2108.11527, 2602.09462, 2402.14202; guard `perfect_kernel_batch78i::restated_theorem_prints_its_statement`.
+  DefMacro!("\\lx@thm@restate@store{}{}{}{}", sub[(end, env, name, opt)] { store(false, end, env, name, opt) });
+  DefMacro!("\\lx@thm@restate@store@star{}{}{}{}", sub[(end, env, name, opt)] { store(true, end, env, name, opt) });
   // `\lx@thm@restate[*]{<name>}`: the stored theorem printed again (above).
   DefMacro!("\\lx@thm@restate OptionalMatch:* {}", sub[(star, name)] {
     let name = name.to_string();
@@ -208,7 +237,11 @@ LoadDefinitions!({
   // thm-restate.sty:186-191: a label in a restated theorem is gobbled, cleveref's `\label[<type>]{…}` too.
   RawTeX!(r"\let\thmt@gobble@label\@gobble
 \AtBeginDocument{\@ifpackageloaded{cleveref}{\renewcommand*\thmt@gobble@label[2][]{}}{}}");
-  RawTeX!("\\newenvironment{restatable}[3][]{\\begin{#2}[#1]\\lx@thm@restate@store{restatable}{#2}{#3}{#1}}{\\end{\\@currenvir}}");
+  // The body ends at the `\end` of the environment current at `{restatable}`'s start (thm-restate.sty:34-47 compares
+  // `\@currenvir`): an environment of the document's that calls `\restatable…\endrestatable` (2609.31596
+  // `{formalrestatable}`) is ended by its own `\end`. Guard `perfect_kernel_batchregfixo::restatable_in_a_wrapper_environment`.
+  RawTeX!(r"\newenvironment{restatable}[3][]{\edef\lx@thm@restate@end{\@currenvir}\begin{#2}[#1]%
+\expandafter\lx@thm@restate@store\expandafter{\lx@thm@restate@end}{#2}{#3}{#1}}{\end{\@currenvir}}");
   // thm-restate.sty:207-213 `{restatable*}` is `\thmt@thisistheonefalse`: its theorem printed as a starred restatement
   // is (:130-152) — numbered as the later `\<name>` that is the one (a reference to that instance's label, resolved
   // with the document's references, as `continues=`; pdflatex reads it from the .aux), no counter stepped, its labels
@@ -219,5 +252,6 @@ LoadDefinitions!({
   RawTeX!(r"\newenvironment{restatable*}[3][]{\let\label\thmt@gobble@label\let\ltx@label\@gobble
 \edef\lx@thm@restate@eq{\the\c@equation}%
 \ifcsname the\lx@counterfor{#2}\endcsname\lx@thm@restate@number{\ref{restatable:#3}}\fi%
-\begin{#2}[#1]\lx@thm@restate@store{restatable*}{#2}{#3}{#1}}{\end{\@currenvir}\setcounter{equation}{\lx@thm@restate@eq}}");
+\edef\lx@thm@restate@end{\@currenvir}\begin{#2}[#1]%
+\expandafter\lx@thm@restate@store@star\expandafter{\lx@thm@restate@end}{#2}{#3}{#1}}{\end{\@currenvir}\setcounter{equation}{\lx@thm@restate@eq}}");
 });

@@ -22255,3 +22255,24 @@ pdflatex `Y=[c],[e]`; Perl and Rust before the fix `Y=[d],[[]`. caption.sty's `\
 (2012.09877, 2102.01489, 2108.10505, 2407.20995, 2601.08142). Rust's `\@testopt` (sect13.rs) peeks as
 `\@ifnextchar` does: past spaces, `\@let@token` set, the `[` compared by meaning. Repro
 expansion-primitives/testopt_skips_spaces; guard `perfect_kernel_batchregfixn1::testopt_skips_spaces`.
+## 1302. `\xrightarrow` names itself in its body, so an `\edef` re-expands it without end
+
+Perl's amsmath.sty.ltxml:957-958 `DefMacro('\xrightarrow', '\lx@long@arrow{\xrightarrow}{…}')` (and `\xleftarrow`)
+passes its own name to the constructor for reversion; an `\edef` or `\protected@edef` expands that name again.
+amsmath.sty:1027 `\DeclareRobustCommand{\xrightarrow}[2][]` is robust, so pdflatex keeps `\protect \xrightarrow {H}`.
+Trigger:
+
+```tex
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\makeatletter\protected@edef\x{$2 \xrightarrow{H} 2$}\makeatother
+\show\x
+\end{document}
+```
+
+Perl: "Out of memory"; Rust before the fix: `Fatal:Timeout:PushbackLimit`. natbib.sty:930 `\bibfield`'s
+`\protected@edef` (revtex4-1.cls:7046 `\let\NAT@merge\thr@@`) meets it in an apsrev4-1 `.bbl` (2007.15542). Fixed in
+Rust: the six `\lx@long@arrow` arrows (`\xrightarrow`, `\xleftarrow`, extarrows' `\xlong…`) are `robust => true`
+(amsmath_sty.rs). Repro package-bindings/amsmath_xarrow_in_protected_edef; guard
+`perfect_kernel_batchregfixo::xrightarrow_in_a_protected_edef`.

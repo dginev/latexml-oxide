@@ -15015,7 +15015,10 @@ string its characters. Perl records the value's source text (hyperref.sty.ltxml:
 #1050), so `pdftitle={\mytitle}` was the metadata `<rdf content="\mytitle" property="dcterms:title"/>` (1210.7805
 `\OfficialTitle`; resphilosophica.cls:311/:324 `pdftitle=\@title`, `pdfauthor=\authors` in every paper of that class).
 Ours (78i, hyperref_sty.rs `pdf_string`): the value of `pdftitle`, `pdfauthor`, `pdfsubject`, `pdfkeywords` and
-`pdfcopyright` is expanded by `\lx@pdfstringdef` — hyperref's `\pdfstringdef` in brief (:386-560): `\protect` empty, the
+`pdfcopyright` is expanded by `\lx@pdfstringdef` — hyperref's `\pdfstringdef` in brief (:386-560): `\protect` left as
+it is, a robust command its inner body (REGFIXO; empty, the robust `\$` re-expanded itself without end: 0812.2921),
+`\{ \} \# \$ \% \& \_` their characters (:405-413), a `\def`/`\gdef`/`\edef`/`\xdef` gobbling its name, parameter text
+and body (:555-565 `\HyPsd@DefCommand`; 2001.10451's jss.cls `\Plaintitle`), the
 font and size commands their argument or nothing, `\\`, `~` and the other spaces a space, `\texorpdfstring` its PDF
 branch, labels, index entries and error messages gobbled, then the document's `\pdfstringdefPreHook` — and, as for
 hyperref's own `pdfusetitle` title (`\Hy@UseMaketitleString`, :6248-6266), `\thanks` and the note commands gobbled,

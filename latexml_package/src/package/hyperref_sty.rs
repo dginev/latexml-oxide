@@ -2331,21 +2331,27 @@ pub fn define_hypersetup() -> Result<()> {
   // `\lx@pdfstringdef\cs{<text>}`: hyperref's `\pdfstringdef` (hyperref.sty:386-560) in brief — `<text>` expanded in full
   // (the digit commands stay the PDF escapes they spell, :388-396, `pdfauthor={Uwe L\374ck}`, fnlineno:44; a character is
   // `\string`'d, this text being read while a latin `inputenc` may make ß active with the meaning `\ss`: bibleref-german)
-  // with the document's markup made harmless: `\protect` empty, font and size commands their argument or nothing, `\\`
-  // a space, `~` and the other spaces a space (`\HyPsd@LetUnexpandableSpace`), `\texorpdfstring` its PDF branch,
+  // with the document's markup made harmless: `\protect` left as it is (a robust command is its inner body, :386-570
+  // never sets it; empty, `\$` re-expanded itself without end: 0812.2921 1104.1704 1201.4321 1303.2471 1405.1922
+  // 1510.06427), `\{ \} \# \$ \% \& \_` their characters (:405-413), font and size commands their argument or
+  // nothing, `\\` a space, `~` and the other spaces a space (`\HyPsd@LetUnexpandableSpace`), `\texorpdfstring` its PDF branch,
   // labels, index entries and error messages gobbled (:550-552), the text glyphs and symbols their characters (puenc.def's
   // `\DeclareTextCommand{\ss}{PU}{\80\337}` …, latex.ltx:564 `\aa`; `\textendash` :1082, `\textsection` :184, … with
   // the kernel's names for them, `\S`, `\dag`, `\copyright`, `\pounds`, and hyperref.sty:416-418's `\P`, `\ldots`,
   // `\dots`), and (as for `pdfusetitle`'s title, hyperref.sty
   // `\Hy@UseMaketitleString`) `\thanks` and the note commands gobbled, so that no note is made twice; then the
-  // document's own `\pdfstringdefPreHook` (`\pdfstringdefDisableCommands`). [`pdf_string`] keeps the characters of the
-  // result.
+  // document's own `\pdfstringdefPreHook` (`\pdfstringdefDisableCommands`); then, as :555-565 `\HyPsd@DefCommand`, a
+  // `\def`/`\gdef`/`\edef`/`\xdef` in the text gobbles its name, parameter text and body (2001.10451's jss.cls
+  // `\Plaintitle{#1}` = `\def\@Plaintitle{#1}`, its `pdftitle={\@Plaintitle}`, re-expanded without end). [`pdf_string`]
+  // keeps the characters of the result.
   RawTeX!(
     r#"\long\def\lx@pdfstringdef#1#2{\begingroup
 \escapechar`\\\edef\0{\string\0}\edef\1{\string\1}\edef\2{\string\2}\edef\3{\string\3}\edef\8{\string\8}\edef\9{\string\9}%
-\let\protect\@empty\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\@empty\let\footnotetext\@gobble
+\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\@empty\let\footnotetext\@gobble
 \let\label\@gobble\let\index\@gobble\let\glossary\@gobble\long\def\texorpdfstring##1##2{##2}%
-\def\\{ }\def\newline{ }\def~{ }\def\nobreakspace{ }\def\ { }\def\,{ }\def\quad{ }%
+\edef\{{\expandafter\@gobble\string\{}\edef\}{\expandafter\@gobble\string\}}\edef\#{\expandafter\@gobble\string\#}%
+\edef\${\expandafter\@gobble\string\$}\edef\%{\expandafter\@gobble\string\%}\edef\&{\expandafter\@gobble\string\&}%
+\edef\_{\expandafter\@gobble\string\_}\def\\{ }\def\newline{ }\def~{ }\def\nobreakspace{ }\def\ { }\def\,{ }\def\quad{ }%
 \let\emph\@firstofone\let\textnormal\@firstofone\let\textrm\@firstofone\let\textsf\@firstofone
 \let\texttt\@firstofone\let\textbf\@firstofone\let\textmd\@firstofone\let\textit\@firstofone
 \let\textsc\@firstofone\let\textsl\@firstofone\let\textup\@firstofone\let\mbox\@firstofone
@@ -2367,7 +2373,9 @@ pub fn define_hypersetup() -> Result<()> {
 \def\guilsinglleft{\string‹}\def\guilsinglright{\string›}\def\textdegree{\string°}\def\textbullet{\string•}\def\textexclamdown{\string¡}%
 \def\textquestiondown{\string¿}%
 \csname pdfstringdefPreHook\endcsname
-\xdef#1{#2}\endgroup}"#
+\let\lx@hyp@xdef\xdef\let\def\lx@hyp@defcommand\let\gdef\lx@hyp@defcommand\let\edef\lx@hyp@defcommand
+\let\xdef\lx@hyp@defcommand\lx@hyp@xdef#1{#2}\endgroup}
+\long\def\lx@hyp@defcommand#1#2#{\@gobble}"#
   );
   // Digest & store the options
   // Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
