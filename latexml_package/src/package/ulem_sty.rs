@@ -110,9 +110,10 @@ LoadDefinitions!({
     Ok(Tokens::new(out))
   });
   // `\lx@ulem@declaration\uline` underlines the rest of the current group. One of ulem's own lines digests it up to the
-  // group's end: its `}` (put back after the line for the group), a cell's end, or a `\multicolumn` body's end, where
-  // latex.ltx:16664-16676 closes the template's `{…}` around the body (2312.12023 `\multicolumn{1}{c|}{\ul 29.9970}`:
-  // a balanced read ran out of input there). Any other `ucmd` takes the rest of the group read as its argument.
+  // group's end: its `}` (put back after the line for the group), a cell's end (an Error), or a `\multicolumn` body's
+  // end, where latex.ltx:16664-16676 closes the template's `{…}` around the body (2312.12023
+  // `\multicolumn{1}{c|}{\ul 29.9970}`: a balanced read ran out of input there). Any other `ucmd` takes the rest of the
+  // group read as its argument.
   DefMacro!("\\lx@ulem@declaration{}", sub[(ucmd)] {
     let ucmd_v = ucmd.unlist();
     if let [target] = ucmd_v.as_slice() {
@@ -138,6 +139,10 @@ LoadDefinitions!({
     assign_value("lx@ulem@depth", Stored::Int(depth), Some(Scope::Global));
     let opened = get_locator().to_string();
     assign_value(&format!("lx@ulem@opened@{depth}"), Stored::String(pin(&opened)), Some(Scope::Local));
+    // Made directly in another line's text (`{a \ul b \so c}`), it shares that line's closer, which ends the other's
+    // argument: nothing closes this one, pdflatex's fatal "File ended while scanning use of \UL@on".
+    let shared = is_value_bound("lx@ulem@body", Some(0));
+    assign_value(&format!("lx@ulem@shared@{depth}"), Stored::Bool(shared), Some(Scope::Local));
     bgroup();
     assign_value("lx@ulem@body", Stored::Int(depth), Some(Scope::Local));
     Let!("\\lx@alignment@multicolumn@end", "\\lx@ulem@declared@end");
@@ -145,8 +150,18 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     let depth = lookup_int("lx@ulem@depth");
     assign_value("lx@ulem@depth", Stored::Int(depth - 1), Some(Scope::Global));
+    let opened = lookup_string(&format!("lx@ulem@opened@{depth}"));
+    let shared = lookup_bool(&format!("lx@ulem@shared@{depth}"));
     if matches!(lookup_value("lx@ulem@body"), Some(Stored::Int(own)) if own == depth) {
+      // A cell's end (`a & \ul 6.7 \\`) closes no group TeX's reading of the argument counts: pdflatex's fatal "File
+      // ended while scanning use of \UL@on". The cell's text stays underlined, the next cell intact.
       egroup()?;
+      Error!(
+        "expected",
+        "}",
+        "Missing } to end the underline declaration made by \\useunder",
+        s!("The declaration at {opened} underlines the text up to its cell's end.")
+      );
     } else {
       // the group's `}` closed the line's: it leaves the body and is read again for the group (ulem.sty:107)
       let mut closed = lookup_value("lx@ulem@ended").is_some();
@@ -166,13 +181,17 @@ LoadDefinitions!({
       }
       // Neither its group's `}` nor a `\multicolumn` body's end closed it: the input ended first (`Text \ul{x} y.`
       // outside any group), pdflatex's fatal "File ended while scanning use of \UL@on". The text stays underlined.
-      if !closed {
-        let opened = lookup_string(&format!("lx@ulem@opened@{depth}"));
+      if !closed || shared {
+        let why = if shared {
+          "is made in another declaration's text, whose end does not end it"
+        } else {
+          "underlines the text after it"
+        };
         Error!(
           "expected",
           "}",
           "Missing } to end the underline declaration made by \\useunder",
-          s!("The declaration at {opened} underlines the text after it.")
+          s!("The declaration at {opened} {why}.")
         );
       }
       assign_value("lx@ulem@ended", Stored::None, Some(Scope::Global));

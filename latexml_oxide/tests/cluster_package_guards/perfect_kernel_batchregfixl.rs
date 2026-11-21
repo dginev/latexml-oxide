@@ -1,6 +1,7 @@
 //! Red/green guards for batch REGFIXL, a regression of the v0.8.0 per-paper check: ulem's declaration form (`\ul`
 //! from `\useunder{\uline}{\ul}{}`, tablesgenerator's output) in a `\multicolumn` body ran out of input. Repros under
-//! `tools/perfect_kernel/repros/loader/`. Round 2: a declaration that never meets its `}` errs; nested lines.
+//! `tools/perfect_kernel/repros/loader/`. Round 2: a declaration that never meets its `}` errs; nested lines. Round 3:
+//! a cell's end and a declaration made directly in another's text err too, as pdflatex is fatal there.
 use latexml::util::test::{assert_element, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -70,14 +71,22 @@ fn ulem_declaration_unclosed_errs() {
 /// the outer one; in one `{…}` group the `}`, read again, does. Each line tells its own frame from the outer line's
 /// (`lx@ulem@body` holds its depth): before, the inner line's end closed the outer's group too, leaving the `{…}` open
 /// (1 warning; RED on REGFIXL). pdflatex is fatal here (`\so` opens a brace nothing closes); the content-first recovery
-/// keeps the nesting and the cell's borders, 0 errors. Distinct from the cell guard: one end closes two lines.
+/// keeps the nesting and the cell's borders, and (REGFIXL3) one Error per inner declaration, which TeX never closes
+/// (INTREGFIX4 errs too; RED on REGFIXL2: 0 errors). Distinct from the cell guard: one end closes two lines.
 #[test]
 fn ulem_declaration_nested_lines_in_a_cell() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/loader/ulem_declaration_nested_lines_in_a_cell.tex"
   );
   let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
+  assert_eq!(
+    log
+      .matches("is made in another declaration's text, whose end does not end it")
+      .count(),
+    2,
+    "{log}"
+  );
   assert_element(
     &xml,
     "tabular",
@@ -90,4 +99,38 @@ fn ulem_declaration_nested_lines_in_a_cell() {
     &["xml:id=\"p2\""],
     r#"<para xml:id="p2"><p xml:id="p2.1">Para a <text class="ltx_ulem_uline" xml:id="p2.1.1">b <text class="ltx_ulem_sout" xml:id="p2.1.1.1">c</text></text> d.</p></para>"#,
   );
+}
+
+/// A declaration closed by its cell's `&` or `\\` (`a & \ul 6.7 & {\ul 8} \\`): no group TeX's reading of the argument
+/// counts ends there, pdflatex's fatal "File ended while scanning use of \UL@on" (ulem.sty:286-293). One Error per such
+/// cell, naming where it opened; the cell's text underlined, the braced `{\ul 8}` silent, the next row and the text after
+/// the table kept (REGFIXL3 ruling). RED on REGFIXL2: 0 errors. Distinct: the cell end is the closer (stomach.rs
+/// digest_body's alignment return), not a `}` or the body marker.
+#[test]
+fn ulem_declaration_cell_end_errs() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/ulem_declaration_cell_end_errs.tex");
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
+  assert_eq!(
+    log
+      .matches("Error:expected:} Missing } to end the underline declaration made by \\useunder")
+      .count(),
+    2,
+    "{log}"
+  );
+  assert_eq!(
+    log
+      .matches("underlines the text up to its cell's end.")
+      .count(),
+    2,
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="left" xml:id="p1.1.1.1">a</td><td align="center" xml:id="p1.1.1.2"><text class="ltx_ulem_uline" xml:id="p1.1.1.2.1">6.7</text></td><td align="right" xml:id="p1.1.1.3"><text class="ltx_ulem_uline" xml:id="p1.1.1.3.1">8</text></td></tr><tr xml:id="p1.1.2"><td align="left" xml:id="p1.1.2.1">b</td><td align="center" xml:id="p1.1.2.2">c</td><td align="right" xml:id="p1.1.2.3"><text class="ltx_ulem_uline" xml:id="p1.1.2.3.1">5</text></td></tr></tbody></tabular>"#,
+  );
+  assert!(xml.contains(r#"<p xml:id="p1.2">After.</p>"#), "{xml}");
 }

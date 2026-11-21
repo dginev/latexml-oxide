@@ -4,7 +4,8 @@
 %          the declaration's argument)
 % engines: rust INTREGFIX4 = 3 errors, the table lost; rust REGFIXL, REGFIXL2 = 0 errors, "6.7" and "8" underlined,
 %          but the declared cells lose their right borders (`border` absent on cells 2 and 3; `{\ul 6.7}` keeps it)
-% expect:  0 errors, 0 warnings; cells 2 and 3 `border="r"`, as with `{\ul 6.7}`
+% expect:  2 errors (`expected:}`, REGFIXL3: the cell end closes no group TeX counts), 0 warnings; cells 2 and 3
+%          `border="r"`, as with `{\ul 6.7}`
 % status:  RED (REGFIXL2)
 \documentclass{article}
 \usepackage[normalem]{ulem}

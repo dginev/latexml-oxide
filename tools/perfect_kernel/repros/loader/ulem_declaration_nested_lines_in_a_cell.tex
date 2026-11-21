@@ -5,9 +5,10 @@
 %          argument, and `\so` inside it opens a brace nothing closes)
 % engines: rust INTREGFIX4 = 5 errors (readBalanced ran out of input), the table lost; rust REGFIXL = the markup
 %          below, but 1 warning: the inner line's end closed the outer line's group too, the `{…}` left open
-% expect:  0 errors, 0 warnings (the content-first recovery); `\so c` nested inside `\ul b`, both inside the cell,
-%          its borders kept
-% status:  RED (REGFIXL) -> GREEN (REGFIXL2)
+%          (0 errors); rust REGFIXL2 = the markup below, 0 errors; `{a \ul b {\so c} e}` is clean in pdflatex
+% expect:  2 errors (`expected:}`, one per inner declaration made directly in the outer one's text; INTREGFIX4 errs
+%          too), 0 warnings; `\so c` nested inside `\ul b`, both inside the cell, its borders kept
+% status:  RED (REGFIXL) -> GREEN (REGFIXL2); RED (REGFIXL2: 0 errors) -> GREEN (REGFIXL3)
 \documentclass{article}
 \usepackage[normalem]{ulem}
 \useunder{\uline}{\ul}{}

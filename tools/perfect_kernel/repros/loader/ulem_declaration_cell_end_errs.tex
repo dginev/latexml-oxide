@@ -1,0 +1,18 @@
+% witness: none (synthetic; REGFIXL3 ruling): a declaration with no group of its own in a cell, ended by the cell's
+%          `&` or `\\` (stomach.rs digest_body's alignment return); `{\ul 8}` in the same row is closed by its `}`
+% oracle:  pdflatex fatal: "File ended while scanning use of \UL@on." (ulem.sty:286-293: a cell end does not close
+%          the declaration's argument)
+% engines: rust INTREGFIX4 = 3 errors, the table lost; rust REGFIXL, REGFIXL2 = 0 errors, the cells underlined
+% expect:  2 errors (`expected:}` per cell-end-closed declaration), 0 warnings; "6.7" and "5" underlined to their
+%          cell's end, "8" underlined, the next row and the text after the table intact
+% status:  RED (REGFIXL2) -> GREEN (REGFIXL3)
+\documentclass{article}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\begin{document}
+\begin{tabular}{lcr}
+a & \ul 6.7 & {\ul 8} \\
+b & c & \ul 5 \\
+\end{tabular}
+After.
+\end{document}
