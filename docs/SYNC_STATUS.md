@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (398 lines, weight 883; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (400 lines, weight 889; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -735,6 +735,14 @@ Rules that keep this file honest and mergeable:
     `[proc]` the PDF empties them too: a FIDELITY_CHARTER §2 question); a stored `\@subjclass` without a year gets
     "1991 Mathematics Subject Classification" (Perl ams_support.sty.ltxml:131) where TL 2025's amsart prints "2020"
     (amsart.cls:555, :789); 1704.06431's `Fatal` enumerate/`\lx@tags` recursion (pre-existing on main); 3
+  - LMCSQED — the lmcs binding's `\qEd` is `\ensuremath{\square}` (`lmcs_cls.rs` ~149), where LMCS.cls:551-553 draws its own
+    box: a paper that redefines `\square` (1305.0576's ldiagxy.tex:207, a delimited diagram macro) breaks every `\qEd`
+    display (217 errors, more since `\[` is `{equation*}`; 0 with `\qEd` overridden). Give `\qEd` the class's box under
+    an internal name; repro `tmp/END399/T3W/repros/1305.0576/qEd_square.tex` (tier 3 A/B, pre-existing; 1202.6352); 1
+  - TIKZCDHANG — a tikz-cd diagram whose cell has `\hspace{1em}\rar[mapsto]` loops under calc after an earlier cell's
+    calc error (1611.01788 thesis.tex:5400/:5434; both the Nov 17 binary and the release candidate; pdflatex is fatal
+    there too, 8 errors): find the loop site (`perf record` at 20 s), then end in a bounded Error. The wall-clock Fatal
+    leaves no XML and no log, so the paper's 56k words are lost — a salvage question too; 5
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
