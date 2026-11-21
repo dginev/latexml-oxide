@@ -23380,7 +23380,7 @@ enddocument_hook_scan_in_an_open_environment_reports_once, ltxgrid_enddocument_p
 patchcmd_finds_the_enddocument_tail, enddocument_late_hooks_scope_as_in_tex}`; the
 morewrites/modernposter shapes stay `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box` and the sect02.rs
 witnesses (cntperchap_example, runcode_troubleshoot, modernposter/demo).
-### 1104. `\text` is robust, its inner `\text␣` protected, so an `\edef` keeps `\text` (REGFIXK2)
+
 ### 1104. `\text` is a protected macro, so an `\edef` keeps `\text` (REGFIXK2)
 
 The `\text` that amstext_sty.rs, revtex4_support_sty.rs and amstex.rs define as `\lx@text{#1}` (the constructor raising
