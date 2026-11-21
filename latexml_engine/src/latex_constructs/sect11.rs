@@ -783,8 +783,17 @@ pub(crate) fn load() -> Result<()> {
         define_label.extend(Revert!(tag));
         define_label.push(T_END!());
         let mut printed_here = Vec::new();
-        let mut printed_by_cite = vec![T_CS!("\\begingroup")];
-        printed_by_cite.extend(define_label.iter().copied());
+        // `\b@key` is the label as the `.aux` holds it, expanded at the `\bibitem` under `\let\protect\noexpand`
+        // (`\@lbibitem`'s `\write`, latex.ltx:17746-17749): a `.bbl` read in a group (`{\small\bibliography{…}}`)
+        // takes alpha.bst's `\etalchar` with it before a later `\cite` (1101.1169, 2402.10127, 2203.12786); a
+        // `\protect`ed `\citeauthoryear` still waits for the `\cite`. Repro index-bib/etalchar_grouped.
+        bgroup();
+        let_i(&T_CS!("\\protect"), &T_CS!("\\noexpand"), None);
+        let written = do_expand_partially(Revert!(tag));
+        egroup()?;
+        let mut printed_by_cite = vec![T_CS!("\\begingroup"), T_CS!("\\def"), T_CS!("\\the@bibitem"), T_BEGIN!()];
+        printed_by_cite.extend(written?.unlist());
+        printed_by_cite.push(T_END!());
         let mut cite_forms = false;
         for (here, form) in tag_forms(&Tokens!(T_OTHER!("@bibitem")))? {
           if here {

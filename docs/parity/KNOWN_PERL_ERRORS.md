@@ -16322,7 +16322,11 @@ Rust (int19, amstext_sty.rs `\text`): the constructor raises the alignment count
 stored fields; amstex.rs `\text` (amstex.tex:1217-1226 `\hbox{#1}`) and revtex4_support_sty.rs `\text`
 (revtex4-2.cls:7547-7560 `\REV@text`) the same. 1703.08664 58 → 0 errors, 24,260 → 24,774 words. Repro
 kernel-alignment/text_argument_is_braced_in_an_alignment_cell; guard
-`perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.
+`perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`. The count is raised only once `#1` is read
+(REGFIXK): each `\text` is a macro reading `#1` at the cell's count, as amstext's, and `\lx@text{#1}` (reverting to
+`\text`) the constructor, so a brace-less `$x$\text & 0.6` ends the cell at the `&` (tex.web §342; 2212.00883, pdflatex
+0 errors; repro kernel-alignment/text_without_braces_before_a_cell_end, guard
+`perfect_kernel_batchregfixk::text_without_braces_before_a_cell_end`).
 
 ## 935. A document that prints the kernel's `\@title`/`\@author` itself shows the title and the author twice
 

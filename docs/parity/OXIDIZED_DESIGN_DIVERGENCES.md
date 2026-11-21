@@ -13696,7 +13696,10 @@ rationalization (C, DEFER).
   base_utilities/util_text.rs): the role-less `\fnum@@bibitem` = `{\@biblabel{\the@bibitem}}` is digested at the
   `\bibitem` through the class's `\@biblabel`; refnum, typerefnum, autoref and the cleveref forms are deferred under `b@key`,
   resolved when a `\@@bibref` names the key (`sect11.rs:2475 cite_prints_keys`: the kernel's `\cite`, natbib's, biblatex's,
-  the `.bbl` styles'), at once when one already has. `\nocite` prints nothing; the streaming yield typesets pending forms at
+  the `.bbl` styles'), at once when one already has. The deferred label is the one the `.aux` holds, expanded at the
+  `\bibitem` under `\let\protect\noexpand` as `\@lbibitem`'s `\write` does: an alpha.bst `\etalchar` defined by a `.bbl`
+  read in a group (`{\small\bibliography{…}}`) prints at a later `\cite` (REGFIXK; 1101.1169, 2402.10127, 2203.12786;
+  guard `perfect_kernel_batchregfixk::etalchar_label_cited_after_its_bbl_group`). `\nocite` prints nothing; the streaming yield typesets pending forms at
   the spill, as Perl. Under mn2e/mnras without `usenatbib` (their bindings define the class's `\def\@biblabel#1{}`,
   mn2e.cls:1370, mnras.cls:1636) a `\bibitem[\protect\citeauthoryear{…}{…}]{key}` errs only when cited (pdflatex 0 uncited,
   1 per citation). An uncited or keyless entry has no refnum tag; the bibliography XSLT shows the role-less tag, else the

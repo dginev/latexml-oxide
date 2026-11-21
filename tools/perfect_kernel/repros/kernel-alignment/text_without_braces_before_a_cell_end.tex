@@ -1,0 +1,17 @@
+% witness: 2212.00883 (biophys-new.cls table: `$x$\text & 0.6`; v0.8.0 regression check, "at Anonymous String" `&`)
+% oracle:  pdflatex 0 errors: "x | 0.6" in two cells: `\text` reads `#1` as a macro does, and
+%          `get_next` at align_state 0 meets the `&` and inserts the v-template (tex.web §342), so the cell ends there
+% engines: rust INTREGFIX4 3 errors (`expected:}`, `unexpected:}`, `unexpected:&`: the count raised before the
+%          argument was read took the `&` as `#1`); Oct-8 63l 0 errors
+% expect:  0 errors, 0 warnings; row 2 has two cells, "x" and "0.6" (in math, `\begin{array}{cc} y\text & 1`, pdflatex
+%          errs: array's v-template opens with `$`, invalid input)
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXK, amstext_sty.rs `\text` reads `#1`, then `\lx@text{#1}` raises the count)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{tabular}{l l}
+A & B \\
+$x$\text & 0.6 \\
+\end{tabular}
+\end{document}

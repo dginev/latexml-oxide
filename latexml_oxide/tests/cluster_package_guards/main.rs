@@ -709,6 +709,9 @@ mod perfect_kernel_batchregfixh;
 /// REGFIXJ: `\end{document}` carries latex.ltx's tail (`\@checkend{document}\clearpage…\endgroup`) for the hooks that
 /// scan it (ltxutil's `\rvtx@enddocument@patch`).
 mod perfect_kernel_batchregfixj;
+/// REGFIXK: a `\bibitem` label's cite-printed forms are expanded at the `\bibitem` as `\@lbibitem`'s `\write`; `\text`
+/// reads its argument at the cell's alignment count.
+mod perfect_kernel_batchregfixk;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

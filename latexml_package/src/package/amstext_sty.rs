@@ -14,8 +14,16 @@ pub fn define_amstext_text() -> Result<()> {
   // read before `\text` digests it, so its own braces are no longer counted: the count is raised for the
   // digestion, as glossaries_sty.rs does for an entry's fields. Perl the same (KNOWN_PERL_ERRORS #931). Guard
   // `perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.
-  DefConstructor!("\\text{}", "<ltx:text _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal", enter_horizontal => true, locked => true,
+  // `\text` reads `#1` as a macro does, at the cell's count: a brace-less `$x$\text & 0.6` ends the cell at the `&`
+  // (tex.web §342; 2212.00883). Guard `perfect_kernel_batchregfixk::text_without_braces_before_a_cell_end`.
+  DefMacro!("\\text{}", "\\lx@text{#1}", locked => true);
+  define_text_constructor()
+}
+
+/// The `\lx@text` box `\text{#1}` sets its argument in (amstext_sty.rs, revtex4_support_sty.rs), reverting to `\text`.
+pub fn define_text_constructor() -> Result<()> {
+  DefConstructor!("\\lx@text{}", "<ltx:text _noautoclose='1'>#1</ltx:text>",
+    alias => "\\text", mode => "restricted_horizontal", enter_horizontal => true,
     before_digest => { increment_align_group_count(); },
     after_digest => { decrement_align_group_count(); });
   Ok(())
