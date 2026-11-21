@@ -1,0 +1,17 @@
+% witness: 1611.06061 (45 `\Autoref`, 30 errors), 1405.2249 (`\RenewDocumentCommand\Autoref`): thmtools alone, which
+%          loads thm-autoref (thmtools.sty:47-49), so `\Autoref` (thm-autoref.sty:60-95) is defined
+% oracle:  pdflatex 0 errors: "See Theorem 1 and lemma 1."
+% engines: Perl: no `\Autoref` (thmtools.sty.ltxml); rust MAIN935 and REGFIXE round 1: Error undefined `\Autoref`
+% expect:  0 errors, 0 warnings; "See Theorem 1 and lemma 1."
+% status:  RED (MAIN935) -> GREEN (REGFIXE round 2: the thmtools binding defines `\Autoref`)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{hyperref}
+\usepackage{thmtools}
+\declaretheorem[name=Theorem,Refname={Theorem,Theorems}]{thm}
+\declaretheorem[name=Lemma,refname={lemma,lemmas}]{lem}
+\begin{document}
+\begin{thm}\label{t1}Text.\end{thm}
+\begin{lem}\label{l1}Text.\end{lem}
+See \Autoref{t1} and \Autoref{l1}.
+\end{document}

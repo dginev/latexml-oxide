@@ -144,7 +144,7 @@ $\varkappa \digamma \backepsilon \diagup \eth$ and $\lsem x \rsem$
 }
 
 /// mlbib.sty's `\cite` (cond-mat0011295) is `\@ifstar{\citeasnoun}{\new@cite}`, and its `\new@cite` is the only
-/// definer of the `\citeauthoryear` its `.bbl` labels hold; the lock refuses that `\cite`, and the first kernel `\cite`
+/// definer of the `\citeauthoryear` its `.bbl` labels hold; the lock refuses that `\cite`, and each kernel `\cite`
 /// runs the copy's `\new@cite` (sect11.rs `label_macros_from_refused_cite`). Distinct from
 /// `perfect_kernel_batchnext397::astroncite_label_under_the_lock`: the definer is not the branch's first `\def`, and the
 /// first citation is starred. Repro index-bib/mlbib.

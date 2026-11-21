@@ -1,0 +1,17 @@
+% aaai.sty (1511.09009; ~49 census papers ship an aaai*.sty): its citation lines (:252-271)
+\ProvidesPackage{aicite}
+\def\leftcite{(}\def\rightcite{)}
+\def\cite{\def\citeauthoryear##1##2{\def\@thisauthor{##1}%
+\ifx \@lastauthor \@thisauthor \relax \else##1 \fi ##2}\@icite}
+\def\shortcite{\def\citeauthoryear##1##2{##2}\@icite}
+\def\@icite{\leavevmode\def\@citeseppen{-1000}%
+\def\@cite##1##2{\leftcite\nobreak\hskip 0in{##1\if@tempswa , ##2\fi}\rightcite}%
+\@ifnextchar [{\@tempswatrue\@citex}{\@tempswafalse\@citex[]}}
+\def\@citex[#1]#2{%
+\def\@lastauthor{}\def\@citea{}%
+\@cite{\@for\@citeb:=#2\do
+{\@citea\def\@citea{;\penalty\@citeseppen\ }%
+\if@filesw\immediate\write\@auxout{\string\citation{\@citeb}}\fi
+\@ifundefined{b@\@citeb}{\def\@thisauthor{}{\bf ?}\@warning
+{Citation `\@citeb' on page \thepage \space undefined}}%
+{\csname b@\@citeb\endcsname}\let\@lastauthor\@thisauthor}}{#1}}

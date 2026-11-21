@@ -13835,7 +13835,9 @@ amsfonts.sty:117-138 keeps AMSTeX's `\newsymbol\cs <font><class><hex><hex>` (fon
 "Obsolete command" warning. Perl's amsfonts.sty.ltxml lacks it, so the declaration and every use of the declared
 symbol are errors. Trigger `\usepackage{amsfonts}\newsymbol\mylneqq 2308` … `$a\mylneqq b$` → Perl: undefined
 `\newsymbol` (pdflatex 0 errors, 1 warning, ≨). Fixed in Rust (65s, amsfonts_sty.rs, through `\DeclareMathSymbol`
-of the same class, font and slot; witnesses 1302.6049, 2112.15557; run 340 ~300 papers).
+of the same class, font and slot; witnesses 1302.6049, 2112.15557; run 340 ~300 papers). A `\global\mathchardef`
+(amsfonts.sty:126), it is legal in the body, where `\DeclareMathSymbol` is `\@onlypreamble`: it calls a private
+alias globally (REGFIXD; witnesses math0008232, 2407.16937; guard `perfect_kernel_batchregfixd::newsymbol_in_the_body`).
 
 ## 633. The AASTeX binding lacks the commands of the AASTeX 6.x class files
 
@@ -17994,8 +17996,10 @@ AmSTeX.pool.ltxml:71-72), so a paper's own style is replaced by amsppt: amams.st
 amsppt's `\title … \endtitle` and the paper ends inside the argument (math0402285, math9806089: Fatal:Mouth:EoF, 0
 words; ~33 papers). Minimal trigger: `\input amstex\documentstyle{loc}\document\received{1}\title{T}Body.\enddocument`
 with a loc.sty defining `\received#1` and `\title#1`. Fixed in Rust (78i, OXIDIZED_DESIGN_DIVERGENCES #825): a style with
-no binding on the search path is read raw unless it builds on another style, which the amsppt binding stands in for.
-Repro amstex/amstex_local_style_is_read; guard `perfect_kernel_batch78i::amstex_local_style_is_read`.
+no binding on the search path is read raw unless it builds on another style or is a renamed copy of amsppt.sty
+(REGFIXD), which the binding stands in for. Repros amstex/{amstex_local_style_is_read,
+amstex_copied_style_takes_the_binding}; guards `perfect_kernel_batch78i::amstex_local_style_is_read`,
+`perfect_kernel_batchregfixd::{amsppt_copy_takes_the_binding, only_an_amsppt_copy_takes_the_binding}`.
 
 ## 1052. thm-restate's `{restatable*}` is undefined
 
@@ -22112,3 +22116,50 @@ Perl: 3 Errors ("Closing </ltx:text> whose open descendents do not auto-close", 
 closes nothing (tex_box.rs `taken_as_box`). With `\unvbox` splicing the list (#840) easytable's and easybmat's
 `\@easy@buildbox` peel reaches it: ~250 arXiv papers (1705.10408, 2002.06044, 2109.00258, 2106.13444, 1710.10243).
 Guards `perfect_kernel_batchregfixb::{lastbox_halign_is_a_box, easytable_easybmat_lastbox_peel}`.
+
+## 1297. thmtools leaves thm-autoref's `\Autoref` undefined
+
+thmtools.sty:47-49 loads thm-autoref, whose `\Autoref*?{label}` (thm-autoref.sty:60-95) is an `\autoref` naming a
+theorem by its `Refname=` (`\<env>Autorefname`), and as `\autoref` does where the type has none. Perl's
+thmtools.sty.ltxml loads neither and defines no `\Autoref`:
+
+```latex
+\documentclass{article}
+\usepackage{amsthm,hyperref,thmtools}
+\declaretheorem[name=Theorem,Refname={Theorem,Theorems}]{thm}
+\begin{document}
+\begin{thm}\label{t1}Text.\end{thm}
+See \Autoref{t1}.
+\end{document}
+```
+
+Perl: 1 Error (undefined `\Autoref`); pdflatex 0, "See Theorem 1." Rust: the thmtools binding defines `\Autoref`, its
+text the `autorefcap` tag (hyperref_sty.rs `autoref_tag`, shown `autorefcap|autoref`). Witnesses 1611.06061 (45
+`\Autoref`, 30 errors), 1405.2249 (`\RenewDocumentCommand\Autoref`). Guards
+`perfect_kernel_batchregfixe::{thmtools_thm_autoref_capital_autoref, thmtools_alone_defines_capital_autoref}`.
+## 1298. amsppt's `\ref` fields are read expanding, so an assignment in a field misfires
+
+amsppt.sty:956-965 `\makerefbox` sets each `\ref` field (`\no`, `\by`, `\paper`, …) in a box,
+`\setbox\curbox\vbox\bgroup`, where its assignments are executed. Perl's `\@bibfield{} XUntil:\@end@bibfield`
+(amsppt.sty.ltxml:439) reads the field expanding, which expands the targets of its assignments: a `\newif` switch set
+in the field (`\global\@fwdreftrue`, i.e. `\let\if@fwdref\iftrue`) is evaluated as a conditional, a `\def`'s name
+expanded:
+
+```latex
+\input amstex
+\documentstyle{amsppt}
+\catcode`\@=11 \newif\if@fwdref
+\def\noOf#1{\no {??}\global\@fwdreftrue}
+\catcode`\@=12
+\document
+\Refs
+\ref\noOf{x}\by A. Author\paper Title\jour J\yr 1990\endref
+\endRefs
+\enddocument
+```
+
+Perl: 2 Errors ("Missing \fi or \else, conditional fell off end", "Input ended while conditional \if@fwdref was
+incomplete"), the bibitem empty; pdftex 0 errors, "??. A. Author, Title, J (1990)." math0610862 (jmhlab.tex:210
+`\noOf`, a LaTeX-style `\make@ref` in an amsppt copy): Perl `Fatal:too_many_errors`, 101 errors; ours the same read
+(amsppt_sty.rs), `Fatal:TooManyErrors`; so math0205237. Open in Rust (digest each field as `\makerefbox` boxes it).
+Repro amstex/amsppt_bibfield_expands_a_conditional_red (OXIDIZED_DESIGN_DIVERGENCES #825).

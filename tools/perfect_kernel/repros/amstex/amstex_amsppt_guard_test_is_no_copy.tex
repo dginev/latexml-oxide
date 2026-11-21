@@ -1,0 +1,15 @@
+% witness: the review of REGFIXD r1 (copied_style took any `\csname <bound>.sty\endcsname`); the shape of
+%          gr-qc9507042's fic.sty (`\input amsppt.sty`)
+% oracle:  tex (\input amstex) 0 errors: "HELLO" (amsppt's title) centred, "Body text."
+% engines: rust REGFIXD r1 = the amsppt binding (the guard test read as a copy); perl the same (the amsppt fallback,
+%          AmSTeX.pool.ltxml:71)
+% expect:  0 errors, 1 warning (missing_file: a variation on amsppt, the binding stands in); <title>Hello</title>
+% status:  GREEN (REGFIXD r1 and r2: the route kept)
+\input amstex
+\documentstyle{amsneeds}
+\topmatter
+\title Hello\endtitle
+\endtopmatter
+\document
+Body text.
+\enddocument

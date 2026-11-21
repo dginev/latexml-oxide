@@ -1,0 +1,15 @@
+% witness: math0008232 (line 15), 2407.16937 (line 113): \newsymbol after \begin{document}
+% oracle:  pdflatex 0 errors (amsfonts.sty:118-129 \newsymbol is a \global\mathchardef, legal in the body; the
+%          obsolete Warning): "a⋊b", "c⋊d"
+% engines: rust MAIN935 = Error "Can be used only in preamble" (\DeclareMathSymbol is \@onlypreamble), then
+%          undefined:\rtimes; perl: \newsymbol undefined (KNOWN_PERL_ERRORS #632)
+% expect:  0 errors, 2 warnings (amsfonts' obsolete-command Warning, as pdflatex); ⋊ and ⋉, the second after its group
+% status:  RED (MAIN935) -> GREEN (REGFIXD)
+\documentclass{article}
+\usepackage{amsfonts}
+\begin{document}
+\newsymbol\rtimes 226F
+$a\rtimes b$
+{\newsymbol\ltimes 226E}
+$c\ltimes d$
+\end{document}

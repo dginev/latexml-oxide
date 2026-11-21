@@ -693,6 +693,14 @@ mod perfect_kernel_batchregfixa;
 mod perfect_kernel_batchregfixb;
 /// Batch REGFIXC: natbib's repeat-load Option clash from our bindings' own loads.
 mod perfect_kernel_batchregfixc;
+/// REGFIXD: a renamed copy of amsppt.sty takes the amsppt binding; a self-redefining value is no value; amsfonts'
+/// `\newsymbol` in the body.
+mod perfect_kernel_batchregfixd;
+/// REGFIXE: only a parameterless `\@subjclass`/`\@keywords` is amsart's stored value (edpsmath.cls); thmtools loads
+/// thm-kv, thm-autoref and thm-listof.
+mod perfect_kernel_batchregfixe;
+/// REGFIXF: the ACM classes' `\citeauthoryear` labels under the locked robust `\cite` (`\start@cite23`).
+mod perfect_kernel_batchregfixf;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

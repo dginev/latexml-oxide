@@ -1,0 +1,20 @@
+% witness: 1703.08365 (sig-alternate-05-2015.cls), 1806.05694 (sig-alternate.cls), 1312.2098 (acm_proc_article-sp.cls);
+%          the plain `\def\cite{\start@cite23}` of older copies (0705.2819, cs0404029) with acmcite_def.cls in place
+% oracle:  sig-alternate-05-2015.cls:1395-1408 `\DeclareRobustCommand\cite{\start@cite23}`, whose `\start@cite#1#2`
+%          `\edef`s `\citeauthoryear` before its `\ifnum…\let\@@cite…\fi\@ifstar…`: the only definition of the label
+%          macro of the `.bbl`'s `\bibitem[\protect\citeauthoryear{…}{…}{…}]`, made by the `\cite` the lock refuses with
+%          its inner `\cite␣` (OXIDIZED_DESIGN_DIVERGENCES #88, OXIDIZED_DESIGN #568). pdflatex (two runs, acmcite.cls
+%          beside): 0 errors, "See [Smith et al. 2012, Doe 1999] and Doe 1999.", labels "[Smith et al. 2012]",
+%          "[Doe 1999]"; the same with acmcite_def.cls
+% engines: rust MAIN935 1 error (`\citeauthoryear` undefined in the deferred labels, an `<ERROR>` in each tag)
+% expect:  0 errors, 0 warnings; the labels "Smith et al. 2012", "Doe 1999"
+% status:  RED (MAIN935) -> GREEN (REGFIXF); guard perfect_kernel_batchregfixf::acm_robust_cite_label_under_the_lock
+% preload: ar5iv.sty
+\documentclass{acmcite}
+\begin{document}
+See \cite{a,b} and \citeNP{b}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Smith, Jones, and Brown}{Smith et~al.}{2012}]{a} A. Smith. A Title. 2012.
+\bibitem[\protect\citeauthoryear{Doe}{Doe}{1999}]{b} J. Doe. Another Title. 1999.
+\end{thebibliography}
+\end{document}

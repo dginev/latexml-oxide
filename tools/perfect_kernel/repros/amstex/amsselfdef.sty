@@ -1,0 +1,6 @@
+%% amsppt.sty's self-restoring \title in a style of its own (ias-pcms.sty:235-246)
+\catcode`\@=11
+\def\title{\let\savedef@\title
+  \def\title##1\endtitle{\let\title\savedef@ [T:##1]}%
+  \title}
+\catcode`\@=12

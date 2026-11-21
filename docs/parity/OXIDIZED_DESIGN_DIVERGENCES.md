@@ -1998,15 +1998,26 @@ astro-ph0008362, and the EAS classes) is `\@ifstar{\citeyear}{\citefull}`, and i
 `\def\astroncite##1##2{##1, ##2}\@internalcite` is the only definition of the `\astroncite{A}{Y}` that astron.bst writes
 into the `\bibitem` labels; mlbib.sty:360-363's (cond-mat0011295) is `\@ifstar{\citeasnoun}{\new@cite}`, whose
 `\new@cite` alone defines the `\citeauthoryear{A}{Y}` of its `.bbl` labels. With that `\cite` refused, the labels were
-`Error:undefined:\astroncite` / `\citeauthoryear` (Perl and pdflatex 0). Where the lock refused a `\cite` of the form
-`\@ifstar{…}{\X}`, `\X` parameterless and nothing but `\def\cs<parameters>{…}`s before its `\@internalcite` tail, and a
-macro `\X` `\def`s is undefined, the kernel `\cite`'s first call runs `\X` (its tail dropped) and keeps what it defined
-global for the deferred labels (`sect11.rs` `label_macros_from_refused_cite`). A branch that also typesets or steps a
-counter is not run: once, at the first citation, is not TeX's every one. The full form throughout: the starred call's
-year-only form is the class's label style, which the lock does not keep. Guards
+`Error:undefined:\astroncite` / `\citeauthoryear` (Perl and pdflatex 0). The ACM classes' `\DeclareRobustCommand\cite
+{\start@cite23}` (acm_proc_article-sp.cls:1223-1236 1312.2098, sig-alternate-05-2015.cls:1395-1408 1703.08365,
+sig-alternate.cls:1146-1159 1806.05694; older copies' plain `\def\cite{\start@cite23}`, 0705.2819, cs0404029) are the
+same: `\start@cite#1#2` `\edef`s the `\citeauthoryear` of the `.bbl` labels, then branches; the lock refuses the robust
+wrapper and its inner `\cite␣` (OXIDIZED_DESIGN #568). Where the lock refused a `\cite`, every kernel `\cite` reads
+the refused body as TeX would — the robust wrapper to its refused inner `\cite␣`, an `\@ifstar{…}{…}` to its unstarred
+branch, one call `\X<arguments>` of a macro with undelimited parameters to `\X`'s body with them substituted — and runs
+its leading `\def`/`\edef`/`\gdef`/`\xdef`s, to the first token that is not a definition (`sect11.rs`
+`label_macros_from_refused_cite`): as TeX's `\cite` does at each call, locally, so the labels take the form of the last
+citation command before the bibliography — over a name already defined too: Kluwer's `[namedreferences]` `\klu@cite`
+(SolarPhysics.cls:2048-2101 1312.4435, solarphysics.cls 0705.1246, SSRv.cls) redefines the class's own aux-writer
+`\citeauthoryear` (`\string\citeauthoryear{…}{…}`), aaai.sty:253 (1511.09009) the lock's empty placeholder for its
+refused setter's internals (state.rs), so its "Ali and Meilă 2012" kept its space. A name still undefined is defined
+`\global`ly, so a first citation inside a group still defines it for the bibliography. Nothing after the first
+non-definition is run: a branch that typesets or steps a counter first runs nothing. The full form throughout: the
+starred call's year-only form is the class's label style, which the lock does not keep. Guards
 `perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`),
 `perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`
-(repros `index-bib/mlbib`, `index-bib/sidecite`).
+(repros `index-bib/mlbib`, `index-bib/sidecite`), `perfect_kernel_batchregfixf::{acm_robust_cite_label_under_the_lock,
+refused_cite_redefines_a_defined_label_macro}` (repros `index-bib/acmcite`, `index-bib/klucite`, `index-bib/aicite`).
 
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)
@@ -10173,7 +10184,13 @@ instead of refusing it when it is all of the following:
   ltcmd `{V}` after a `[1]`/`{m}` declaration are values. `def_macro` installs a robust macro's inner `\cs␣` before its
   wrapper, the reverse of Perl's DefMacroI, so the wrapper's install can judge what it wraps; unobservable otherwise;
 - of a binding that `owns_calls`, i.e. its first mandatory parameter reads a braced argument (Plain, Semiverbatim,
-  Digested, Undigested, …) after optional ones only, or it is itself an earlier override (loop iterations).
+  Digested, Undigested, …) after optional ones only, or it is itself an earlier override (loop iterations);
+- not naming `<cs>` in its body: that is a command redefining itself on use, not a value (amsppt.sty's
+  `\def\title{\let\savedef@\title \def\title##1\endtitle{…}\title}`, whose inner command stays refused: taken as a
+  value, it recursed to `Fatal:oom`; math0410032). It stays refused, as in Perl (REGFIXD): a fail-safe that ends the
+  conversion, not TeX's output — the braced binding then reads one token and `\endtitle` is undefined (1 Error, every
+  word kept; TeX's "[T:Hello]" is repro amstex/amstex_self_redefining_title_runs_red). Repro
+  amstex/amstex_self_redefining_value_is_refused, guard `perfect_kernel_batchregfixd::self_redefining_value_fails_safe`.
 
 The installed definition carries `Expandable::yields_calls`. The binding is kept globally as `\lx@locked@<cs>`, and
 expanding the override first peeks one raw token:
@@ -15028,7 +15045,25 @@ unless it `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`: `inp
 that style, whose changes are to internals of the style it builds on (gr-qc9507042's fic.sty redefines amsppt's
 `\titlebox@`, `\thethanks@`; read raw over the amsppt binding it ended in a Fatal pushback runaway and 16 Errors), or
 its parent is missing (math0406145's grubb-p.sty and 0803.2668's conm-p-mod.sty `\input ams-p.sty`, not in TeX Live):
-then the amsppt binding stands in, as before. amstex.tex's `\Invalid@` (:251-252), with which such a style marks the
+then the amsppt binding stands in, as before. So it does for a renamed copy of amsppt.sty (the only AMS-TeX
+documentstyle with a binding), which carries amsppt's docstrip header or trailer (``This is file `amsppt.sty'``,
+``End of file `amsppt.sty'``) or its `\def\filename{amsppt.sty}` (`copied_style`; REGFIXD: math0108062's grgppt.sty,
+math0207033's and math0107068's grgppt01.sty, math0012097's amsp2.sty, 1003.5377's vis_n.sty, math0410032's
+ias-pcms.sty); a bare `\csname amsppt.sty\endcsname` test is none (a style insisting on amsppt tests it), nor is
+another bound package's guard a style inlines (`\csname epsf.sty\endcsname`: read raw). Read raw, amsppt's
+self-restoring `\title` met the lock (#500) and recursed to `Fatal:oom`; through the binding they keep their markup,
+but lose what the copy adds to amsppt: math0410032's lecture macros `\Lecture`, `\Author`, `\xca`, `\Bibliography`,
+math0610862's `\Refst`, `\subrefhead`, 1003.5377's `\SecondPage` are undefined (Errors; repro
+amstex/amstex_copy_additions_are_kept_red). Residual: math0610862's jmhppt.sty, which read raw raised 8 errors (no
+markup), is back at its Oct-8 `Fatal:TooManyErrors`, so math0205237: the binding reads each `\ref` field expanding
+(`\@bibfield … XUntil`, amsppt_sty.rs, Perl amsppt.sty.ltxml:439), and the paper's `\noOf` (jmhlab.tex:210) puts
+`\make@ref` there: the expanding read expands the targets of its assignments, `\global\@fwdreftrue`'s
+`\let\if@fwdref\iftrue` evaluated as a conditional (the repro's `Error:expected:\fi \iffalse`, the bibitem empty), a
+`\def`'s name (the paper's 50 "Missing control sequence inserted", 49 "Attempt to close"); TeX boxes each field
+(amsppt.sty:956-965 `\makerefbox`, `\setbox\curbox\vbox\bgroup`), where the `\let` is executed. Perl reads the same
+(KNOWN_PERL_ERRORS #1298); repro amstex/amsppt_bibfield_expands_a_conditional_red. Repros amstex/{amstex_copied_style_takes_the_binding, amstex_amsppt_guard_test_is_no_copy,
+amstex_inlined_package_guard_is_read}; guards `perfect_kernel_batchregfixd::{amsppt_copy_takes_the_binding,
+only_an_amsppt_copy_takes_the_binding}`. amstex.tex's `\Invalid@` (:251-252), with which such a style marks the
 commands it disallows, is defined. amams.sty redefines `\ifdefined` (amams.sty:1099, a three-argument label test,
 as pre-e-TeX styles did); LaTeXML's own macros test with the kernel's `\lx@ifdefined` (etex.rs, `\let` to e-TeX's
 primitive: `\lx@latin@name`, the frontmatter stores' nulls, `\makeindex`, `\makeglossary`), which the redefinition
@@ -16324,8 +16359,10 @@ amsart.cls's `\subjclass` and `\keywords` store `\@subjclass` and `\@keywords`, 
 first-page footnote (amsart.cls:553-564, :657-658); the binding's setters give the frontmatter directly and never set
 them. A document carrying its own copy (`\renewcommand*\subjclass[2][2000]{\def\@subjclass{#2}…}`, 2004.06211:12,
 1009.1929) lost its classification, as Perl does; so did kms-j's and kms-b's (1109.3766, 2207.08173), whose
-`\@adminfootnotes` print `\@subjclass`. Ours: the AMS classes' `\maketitle` hands a non-empty stored value to
-the frontmatter (`\lx@ams@stored@topmatter` at `\lx@maketitle@begin`, `amsart_class_internals`): the subject
+`\@adminfootnotes` print `\@subjclass`. Ours: the AMS classes' `\maketitle` hands a non-empty stored value — a
+parameterless macro (`\iflx@ams@stored@value`), not a class's placeholder taking an argument (edpsmath.cls:326
+`\def\@subjclass#1{\@MSSG@SBJCTCLSS}`, which read `}`: 2004.12879, 1110.0287; guard
+`perfect_kernel_batchregfixe::a_subjclass_placeholder_taking_an_argument_is_no_stored_value`) — to the frontmatter (`\lx@ams@stored@topmatter` at `\lx@maketitle@begin`, `amsart_class_internals`): the subject
 classification under the edition's `\subjclassname` (the scheme and the name), the keywords under `\keywordsname`, then
 empties the store; it does nothing once the binding's own setter ran (`\lx@ams@subjclass@given`,
 `\lx@ams@keywords@given`), so a paper using the class's commands is unchanged, nor when the K11 reroute owns a raw
@@ -18841,7 +18878,8 @@ hhline, subcaption, subfig, natbib's `cite`, quantumarticle, sn-jnl, changepage,
 `biblatex` tests). The loader's own question — were the definitions read here — keeps the records (`load_recorded`,
 `binding_loaded`, `raw_loaded`: the autoload triggers, `\documentstyle`'s fallback, the class dispatch, amsmath's
 beyond-original load). Two writes follow: a binding that stands in for a file its original loads marks it as that load
-does (`state::mark_loaded`: thmtools's thm-patch.sty, aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
+does (`state::mark_loaded`: thmtools's thm-patch.sty, thm-kv.sty, thm-autoref.sty and thm-listof.sty, thmtools.sty:47-49;
+aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
 which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`), and so does the
 format's preload of textcomp (sect13.rs; Perl latex_constructs.pool.ltxml:5893 leaves it loaded), whose definitions
 latex.ltx carries without `\ver@textcomp.sty`: the document's first load runs its file and package hooks (TL manual

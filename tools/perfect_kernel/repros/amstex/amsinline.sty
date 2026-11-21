@@ -1,0 +1,8 @@
+%% a style of its own that inlines a LaTeX package's code behind that package's load guard
+\catcode`\@=11
+\expandafter\ifx\csname epsf.sty\endcsname\relax
+  \expandafter\def\csname epsf.sty\endcsname{inlined}
+  \def\epsfsize#1#2{0pt}
+\fi
+\def\Lecture#1{\centerline{\bf Lecture #1}}
+\catcode`\@=12
