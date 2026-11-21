@@ -14,26 +14,31 @@
 <a href=#14 id=14 data-nosnippet>14</a>  // tabularx, multirow, newtxmath's `\gtrsim` (2609.00899, 2609.05706, 2609.06191, 2609.10235): the class file's own
 <a href=#15 id=15 data-nosnippet>15</a>  // dependency scan, as sn_jnl_cls.rs does, without the base class and soul, which is the `\else` arm of `\ifpdf`
 <a href=#16 id=16 data-nosnippet>16</a>  // (:46-54) pdflatex never takes — its `\hl`/`\st` would replace a paper's own. (`styles/#1`, :59, sits in a macro body
-<a href=#17 id=17 data-nosnippet>17</a>  // the scan skips anyway.)
-<a href=#18 id=18 data-nosnippet>18</a>  </span>require_dependencies_except(<span class="string">"optica-article"</span>, <span class="string">"cls"</span>, <span class="kw-2">&amp;</span>[<span class="string">"article"</span>, <span class="string">"soul"</span>, <span class="string">"styles/#1"</span>]);
-<a href=#19 id=19 data-nosnippet>19</a>
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// Optica-specific frontmatter / formatting.
-<a href=#21 id=21 data-nosnippet>21</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\authormark{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">DefMacro!</span>(
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="string">"\\bmsection{}"</span>,
-<a href=#24 id=24 data-nosnippet>24</a>    <span class="string">"\\par\\medskip\\noindent\\textbf{#1.}\\enspace"
-<a href=#25 id=25 data-nosnippet>25</a>  </span>);
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JournalTitle{}"</span>, <span class="string">"\\emph{#1}"</span>);
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="comment">// Bibliographic metadata — preserve author values.
-<a href=#28 id=28 data-nosnippet>28</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Year{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=year]{#1}"</span>);
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Month{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=month]{#1}"</span>);
-<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">DefMacro!</span>(
-<a href=#31 id=31 data-nosnippet>31</a>    <span class="string">"\\Volume{}"</span>,
-<a href=#32 id=32 data-nosnippet>32</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=volume]{#1}"
-<a href=#33 id=33 data-nosnippet>33</a>  </span>);
-<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Page{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=page]{#1}"</span>);
-<a href=#35 id=35 data-nosnippet>35</a>
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">// {abstract*} environment.
-<a href=#37 id=37 data-nosnippet>37</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract*}"</span>, <span class="string">"&lt;ltx:abstract&gt;#body&lt;/ltx:abstract&gt;"</span>);
-<a href=#38 id=38 data-nosnippet>38</a>});
+<a href=#17 id=17 data-nosnippet>17</a>  // the scan skips anyway.) At the class's end, after the paper's copy is read, as sn_jnl_cls.rs's: the copy loads its
+<a href=#18 id=18 data-nosnippet>18</a>  // packages in its own order; the loads that ran are loaded and the rest filtered (content.rs's executed-set gate), so
+<a href=#19 id=19 data-nosnippet>19</a>  // after a copy the scan adds nothing — it acts only for a paper's class not read as the stand-in's copy.
+<a href=#20 id=20 data-nosnippet>20</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@optica@class@end"</span>, {
+<a href=#21 id=21 data-nosnippet>21</a>    require_dependencies_except(<span class="string">"optica-article"</span>, <span class="string">"cls"</span>, <span class="kw-2">&amp;</span>[<span class="string">"article"</span>, <span class="string">"soul"</span>, <span class="string">"styles/#1"</span>]);
+<a href=#22 id=22 data-nosnippet>22</a>  });
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\AtEndOfClass{\lx@optica@class@end}"</span>);
+<a href=#24 id=24 data-nosnippet>24</a>
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="comment">// Optica-specific frontmatter / formatting.
+<a href=#26 id=26 data-nosnippet>26</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\authormark{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
+<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefMacro!</span>(
+<a href=#28 id=28 data-nosnippet>28</a>    <span class="string">"\\bmsection{}"</span>,
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="string">"\\par\\medskip\\noindent\\textbf{#1.}\\enspace"
+<a href=#30 id=30 data-nosnippet>30</a>  </span>);
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\JournalTitle{}"</span>, <span class="string">"\\emph{#1}"</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="comment">// Bibliographic metadata — preserve author values.
+<a href=#33 id=33 data-nosnippet>33</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Year{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=year]{#1}"</span>);
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Month{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=month]{#1}"</span>);
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefMacro!</span>(
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="string">"\\Volume{}"</span>,
+<a href=#37 id=37 data-nosnippet>37</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=volume]{#1}"
+<a href=#38 id=38 data-nosnippet>38</a>  </span>);
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Page{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=page]{#1}"</span>);
+<a href=#40 id=40 data-nosnippet>40</a>
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="comment">// {abstract*} environment.
+<a href=#42 id=42 data-nosnippet>42</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{abstract*}"</span>, <span class="string">"&lt;ltx:abstract&gt;#body&lt;/ltx:abstract&gt;"</span>);
+<a href=#43 id=43 data-nosnippet>43</a>});
 </code></pre></div></section></main></body></html>

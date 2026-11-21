@@ -100,14 +100,14 @@
 <a href=#100 id=100 data-nosnippet>100</a>  // skipped, leaving `\cref` undefined and triggering "_ in math mode"
 <a href=#101 id=101 data-nosnippet>101</a>  // cascades on every `\cref{fig:foo_bar}`. Witness 2312.06720.
 <a href=#102 id=102 data-nosnippet>102</a>  //
-<a href=#103 id=103 data-nosnippet>103</a>  // \@currname expands to the actual package name being processed (e.g.
-<a href=#104 id=104 data-nosnippet>104</a>  // "cvpr2024_conference"). Use it so the raw-load targets the user's
-<a href=#105 id=105 data-nosnippet>105</a>  // own file. Fall back to "cvpr" if \@currname is somehow empty.
-<a href=#106 id=106 data-nosnippet>106</a>  </span><span class="kw">let </span>currname = do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\@currname"</span>))<span class="question-mark">?</span>.to_string();
-<a href=#107 id=107 data-nosnippet>107</a>  <span class="kw">let </span>raw_name = <span class="kw">if </span>currname.is_empty() {
+<a href=#103 id=103 data-nosnippet>103</a>  // The file the request names (`stand_in_request`): `\@currname`, or a renamed copy declaring `\ProvidesPackage{cvpr}`
+<a href=#104 id=104 data-nosnippet>104</a>  // (style.sty: 2412.03517; 2603.19547, 2311.13194, 2501.05472, 2510.19001, 2601.03959, 2411.17125; wacv 2609.04603),
+<a href=#105 id=105 data-nosnippet>105</a>  // read raw as the self-named one is (OXIDIZED_DESIGN_DIVERGENCES #1110).
+<a href=#106 id=106 data-nosnippet>106</a>  </span><span class="kw">let </span>request = latexml_package::shipped_class::stand_in_request()<span class="question-mark">?</span>;
+<a href=#107 id=107 data-nosnippet>107</a>  <span class="kw">let </span>raw_name = <span class="kw">if </span>request.is_empty() {
 <a href=#108 id=108 data-nosnippet>108</a>    <span class="string">"cvpr"</span>.to_string()
 <a href=#109 id=109 data-nosnippet>109</a>  } <span class="kw">else </span>{
-<a href=#110 id=110 data-nosnippet>110</a>    currname
+<a href=#110 id=110 data-nosnippet>110</a>    request
 <a href=#111 id=111 data-nosnippet>111</a>  };
 <a href=#112 id=112 data-nosnippet>112</a>  <span class="kw">let _ </span>= input_definitions(<span class="kw-2">&amp;</span>raw_name, InputDefinitionOptions {
 <a href=#113 id=113 data-nosnippet>113</a>    extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)),

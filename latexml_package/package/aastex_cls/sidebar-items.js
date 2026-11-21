@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions","undefine_plate"]};
+window.SIDEBAR_ITEMS = {"fn":["load_definitions","restore_fig_family","undefine_plate"]};

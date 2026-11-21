@@ -338,7 +338,7 @@
 <a href=#338 id=338 data-nosnippet>338</a>
 <a href=#339 id=339 data-nosnippet>339</a><span class="doccomment">/// The file a stand-in binding answers, as the paper asked for it: the request a versioned fallback answers with
 <a href=#340 id=340 data-nosnippet>340</a>/// this binding (`fallback_request` while its `fallback_target` is the load's `\@currname`), else `\@currname`.
-<a href=#341 id=341 data-nosnippet>341</a></span><span class="kw">fn </span>stand_in_request() -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
+<a href=#341 id=341 data-nosnippet>341</a></span><span class="kw">pub fn </span>stand_in_request() -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
 <a href=#342 id=342 data-nosnippet>342</a>  <span class="kw">let </span>currname = <span class="macro">Expand!</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@currname"</span>))).to_string();
 <a href=#343 id=343 data-nosnippet>343</a>  <span class="kw">let </span>fallback_request = lookup_string(<span class="string">"fallback_request"</span>);
 <a href=#344 id=344 data-nosnippet>344</a>  <span class="prelude-val">Ok</span>(

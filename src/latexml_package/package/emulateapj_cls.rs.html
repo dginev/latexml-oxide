@@ -38,9 +38,9 @@
 <a href=#38 id=38 data-nosnippet>38</a>  // no AASTeX 6 `\fig` family or `\gridline` (which the aastex binding defines for a 6+ class only, aastex_cls.rs), so a
 <a href=#39 id=39 data-nosnippet>39</a>  // paper's own `\fig` is its own (astro-ph/0503342 `\newcommand{\fig}`; KNOWN_PERL_ERRORS #557). The 5.x
 <a href=#40 id=40 data-nosnippet>40</a>  // `\subsubsubsection`/`\supportfrom` stay, the family's union (user 2026-10-10).
-<a href=#41 id=41 data-nosnippet>41</a>  </span><span class="kw">for </span>command <span class="kw">in </span>[<span class="string">"\\fig"</span>, <span class="string">"\\leftfig"</span>, <span class="string">"\\rightfig"</span>, <span class="string">"\\boxedfig"</span>, <span class="string">"\\rotatefig"</span>, <span class="string">"\\gridline"</span>] {
-<a href=#42 id=42 data-nosnippet>42</a>    <span class="macro">Let!</span>(<span class="macro">T_CS!</span>(command), <span class="string">"\\@undefined"</span>);
-<a href=#43 id=43 data-nosnippet>43</a>  }
+<a href=#41 id=41 data-nosnippet>41</a>  // A `\fig` the paper defines before `\documentclass` stays its own (1002.3626 astro-ph0511141; 1301.6182's
+<a href=#42 id=42 data-nosnippet>42</a>  // emulateapj-rtx4).
+<a href=#43 id=43 data-nosnippet>43</a>  </span>aastex_cls::restore_fig_family();
 <a href=#44 id=44 data-nosnippet>44</a>  <span class="comment">// …nor AASTeX 5.x's `{plate}` (emulateapj.cls defines none; aastex_cls.rs `undefine_plate`).
 <a href=#45 id=45 data-nosnippet>45</a>  </span>aastex_cls::undefine_plate();
 <a href=#46 id=46 data-nosnippet>46</a>  <span class="comment">// …and unlocked: a lock on an undefined `\fig` would refuse the paper's own (64f review r3) — the lock emulateapj_sty.rs

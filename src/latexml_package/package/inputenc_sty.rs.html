@@ -154,86 +154,92 @@
 <a href=#154 id=154 data-nosnippet>154</a>  // UTF-8 under a declared non-UTF-8 encoding is that encoding's text, not an
 <a href=#155 id=155 data-nosnippet>155</a>  // invalid byte (mouth.rs `decode_bytes`).
 <a href=#156 id=156 data-nosnippet>156</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"lx@inputenc@encoding" </span>=&gt; encoding.trim().to_ascii_lowercase(), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#157 id=157 data-nosnippet>157</a>  <span class="comment">// Initially disable all odd &amp; upper half-plane chars
-<a href=#158 id=158 data-nosnippet>158</a>  </span><span class="kw">let </span>undef_cs = <span class="macro">T_CS!</span>(<span class="string">"\\@inpenc@undefined"</span>);
-<a href=#159 id=159 data-nosnippet>159</a>  <span class="kw">for </span>code <span class="kw">in </span>(<span class="number">0</span>..=<span class="number">8u8</span>)
-<a href=#160 id=160 data-nosnippet>160</a>    .chain(std::iter::once(<span class="number">0x0Bu8</span>))
-<a href=#161 id=161 data-nosnippet>161</a>    .chain(<span class="number">0x0E</span>..=<span class="number">0x1Eu8</span>)
-<a href=#162 id=162 data-nosnippet>162</a>    .chain(<span class="number">128</span>..=<span class="number">255u8</span>)
-<a href=#163 id=163 data-nosnippet>163</a>  {
-<a href=#164 id=164 data-nosnippet>164</a>    <span class="kw">let </span>ch = code <span class="kw">as </span>char;
-<a href=#165 id=165 data-nosnippet>165</a>    <span class="macro">AssignCatcode!</span>(ch, Catcode::ACTIVE);
-<a href=#166 id=166 data-nosnippet>166</a>    <span class="macro">Let!</span>(<span class="macro">T_ACTIVE!</span>(ch), undef_cs);
-<a href=#167 id=167 data-nosnippet>167</a>  }
-<a href=#168 id=168 data-nosnippet>168</a>  <span class="comment">// Disable the perl-level decoding, if any — unless the pdfTeX byte mouth is
-<a href=#169 id=169 data-nosnippet>169</a>  // on (K10): a package reloading `[utf8]{inputenc}` after the switch
-<a href=#170 id=170 data-nosnippet>170</a>  // (kotexutf.sty:34) keeps reading bytes, as pdfTeX would.
-<a href=#171 id=171 data-nosnippet>171</a>  </span><span class="kw">if </span>!lookup_bool(<span class="string">"PDFTEX_BYTE_MOUTH"</span>) {
-<a href=#172 id=172 data-nosnippet>172</a>    state::set_input_encoding(<span class="prelude-val">None</span>);
-<a href=#173 id=173 data-nosnippet>173</a>  }
-<a href=#174 id=174 data-nosnippet>174</a>
-<a href=#175 id=175 data-nosnippet>175</a>  <span class="comment">// Then load TeX's input encoding definitions.
-<a href=#176 id=176 data-nosnippet>176</a>  // Then load TeX's input encoding definitions.
-<a href=#177 id=177 data-nosnippet>177</a>  </span>input_definitions(encoding, InputDefinitionOptions {
-<a href=#178 id=178 data-nosnippet>178</a>    extension: <span class="prelude-val">Some</span>(<span class="string">"def"</span>.into()),
-<a href=#179 id=179 data-nosnippet>179</a>    reloadable: <span class="bool-val">true</span>,
-<a href=#180 id=180 data-nosnippet>180</a>    ..InputDefinitionOptions::default()
-<a href=#181 id=181 data-nosnippet>181</a>  })<span class="question-mark">?</span>;
-<a href=#182 id=182 data-nosnippet>182</a>  <span class="comment">// NOTE: INPUT_ENCODING is never actually used anywhere!
-<a href=#183 id=183 data-nosnippet>183</a>  // So, presumably either Perl is magically converting to utf8
-<a href=#184 id=184 data-nosnippet>184</a>  // or more likely, treating the bytes as (misinterpreted?) utf8?
-<a href=#185 id=185 data-nosnippet>185</a>  // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
-<a href=#186 id=186 data-nosnippet>186</a>  </span>assign_value(<span class="string">"INPUT_ENCODING"</span>, encoding.to_string(), <span class="prelude-val">None</span>);
-<a href=#187 id=187 data-nosnippet>187</a>  <span class="kw">let </span>encoding_tokenized = <span class="macro">TokenizeInternal!</span>(TeXString::assembled(encoding.to_string()));
-<a href=#188 id=188 data-nosnippet>188</a>  def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\inputencodingname"</span>), <span class="prelude-val">None</span>, encoding_tokenized, <span class="prelude-val">None</span>)
-<a href=#189 id=189 data-nosnippet>189</a>}
-<a href=#190 id=190 data-nosnippet>190</a>
-<a href=#191 id=191 data-nosnippet>191</a><span class="macro">LoadDefinitions!</span>({
-<a href=#192 id=192 data-nosnippet>192</a>  <span class="comment">//**********************************************************************
-<a href=#193 id=193 data-nosnippet>193</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareInputMath {Number} {}"</span>, sub[(code,expansion)] {
-<a href=#194 id=194 data-nosnippet>194</a>    <span class="kw">let </span>ch = code.value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char;
-<a href=#195 id=195 data-nosnippet>195</a>    <span class="macro">AssignCatcode!</span>(ch, Catcode::ACTIVE);
-<a href=#196 id=196 data-nosnippet>196</a>    <span class="macro">DefMacro!</span>(<span class="macro">T_ACTIVE!</span>(ch), <span class="prelude-val">None</span>, expansion);
-<a href=#197 id=197 data-nosnippet>197</a>  });
+<a href=#157 id=157 data-nosnippet>157</a>  <span class="comment">// inputenc.sty:80 `\edef\@inpenc@undefined{\noexpand\protect\noexpand\@inpenc@undefined@{#1}}`: robust, so that
+<a href=#158 id=158 data-nosnippet>158</a>  // hyperref's PDF strings (`\let\protect\@empty`) gobble its `\PackageError` (1803.03083, 1609.03819, 1903.03818,
+<a href=#159 id=159 data-nosnippet>159</a>  // 2108.12063, 2408.03605). Perl's is a native Error (inputenc.sty.ltxml:33). OXIDIZED_DESIGN_DIVERGENCES #1112.
+<a href=#160 id=160 data-nosnippet>160</a>  </span><span class="kw">let </span>undefined = <span class="macro">TokenizeInternal!</span>(TeXString::assembled(<span class="macro">s!</span>(
+<a href=#161 id=161 data-nosnippet>161</a>    <span class="string">"\\protect\\@inpenc@undefined@{{{}}}"</span>,
+<a href=#162 id=162 data-nosnippet>162</a>    encoding
+<a href=#163 id=163 data-nosnippet>163</a>  )));
+<a href=#164 id=164 data-nosnippet>164</a>  def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\@inpenc@undefined"</span>), <span class="prelude-val">None</span>, undefined, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#165 id=165 data-nosnippet>165</a>  <span class="comment">// Initially disable all odd &amp; upper half-plane chars
+<a href=#166 id=166 data-nosnippet>166</a>  </span><span class="kw">let </span>undef_cs = <span class="macro">T_CS!</span>(<span class="string">"\\@inpenc@undefined"</span>);
+<a href=#167 id=167 data-nosnippet>167</a>  <span class="kw">for </span>code <span class="kw">in </span>(<span class="number">0</span>..=<span class="number">8u8</span>)
+<a href=#168 id=168 data-nosnippet>168</a>    .chain(std::iter::once(<span class="number">0x0Bu8</span>))
+<a href=#169 id=169 data-nosnippet>169</a>    .chain(<span class="number">0x0E</span>..=<span class="number">0x1Eu8</span>)
+<a href=#170 id=170 data-nosnippet>170</a>    .chain(<span class="number">128</span>..=<span class="number">255u8</span>)
+<a href=#171 id=171 data-nosnippet>171</a>  {
+<a href=#172 id=172 data-nosnippet>172</a>    <span class="kw">let </span>ch = code <span class="kw">as </span>char;
+<a href=#173 id=173 data-nosnippet>173</a>    <span class="macro">AssignCatcode!</span>(ch, Catcode::ACTIVE);
+<a href=#174 id=174 data-nosnippet>174</a>    <span class="macro">Let!</span>(<span class="macro">T_ACTIVE!</span>(ch), undef_cs);
+<a href=#175 id=175 data-nosnippet>175</a>  }
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="comment">// Disable the perl-level decoding, if any — unless the pdfTeX byte mouth is
+<a href=#177 id=177 data-nosnippet>177</a>  // on (K10): a package reloading `[utf8]{inputenc}` after the switch
+<a href=#178 id=178 data-nosnippet>178</a>  // (kotexutf.sty:34) keeps reading bytes, as pdfTeX would.
+<a href=#179 id=179 data-nosnippet>179</a>  </span><span class="kw">if </span>!lookup_bool(<span class="string">"PDFTEX_BYTE_MOUTH"</span>) {
+<a href=#180 id=180 data-nosnippet>180</a>    state::set_input_encoding(<span class="prelude-val">None</span>);
+<a href=#181 id=181 data-nosnippet>181</a>  }
+<a href=#182 id=182 data-nosnippet>182</a>
+<a href=#183 id=183 data-nosnippet>183</a>  <span class="comment">// Then load TeX's input encoding definitions.
+<a href=#184 id=184 data-nosnippet>184</a>  // Then load TeX's input encoding definitions.
+<a href=#185 id=185 data-nosnippet>185</a>  </span>input_definitions(encoding, InputDefinitionOptions {
+<a href=#186 id=186 data-nosnippet>186</a>    extension: <span class="prelude-val">Some</span>(<span class="string">"def"</span>.into()),
+<a href=#187 id=187 data-nosnippet>187</a>    reloadable: <span class="bool-val">true</span>,
+<a href=#188 id=188 data-nosnippet>188</a>    ..InputDefinitionOptions::default()
+<a href=#189 id=189 data-nosnippet>189</a>  })<span class="question-mark">?</span>;
+<a href=#190 id=190 data-nosnippet>190</a>  <span class="comment">// NOTE: INPUT_ENCODING is never actually used anywhere!
+<a href=#191 id=191 data-nosnippet>191</a>  // So, presumably either Perl is magically converting to utf8
+<a href=#192 id=192 data-nosnippet>192</a>  // or more likely, treating the bytes as (misinterpreted?) utf8?
+<a href=#193 id=193 data-nosnippet>193</a>  // In latter case, perhaps it doesn't matter as long as we end up with the same bytes in/out???
+<a href=#194 id=194 data-nosnippet>194</a>  </span>assign_value(<span class="string">"INPUT_ENCODING"</span>, encoding.to_string(), <span class="prelude-val">None</span>);
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="kw">let </span>encoding_tokenized = <span class="macro">TokenizeInternal!</span>(TeXString::assembled(encoding.to_string()));
+<a href=#196 id=196 data-nosnippet>196</a>  def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\inputencodingname"</span>), <span class="prelude-val">None</span>, encoding_tokenized, <span class="prelude-val">None</span>)
+<a href=#197 id=197 data-nosnippet>197</a>}
 <a href=#198 id=198 data-nosnippet>198</a>
-<a href=#199 id=199 data-nosnippet>199</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareInputText {Number} {}"</span>, sub[(code, expansion)] {
-<a href=#200 id=200 data-nosnippet>200</a>    <span class="kw">let </span>ch = code.value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char;
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="macro">AssignCatcode!</span>(ch, Catcode::ACTIVE);
-<a href=#202 id=202 data-nosnippet>202</a>    <span class="macro">DefMacro!</span>(<span class="macro">T_ACTIVE!</span>(ch), <span class="prelude-val">None</span>, expansion);
-<a href=#203 id=203 data-nosnippet>203</a>  });
-<a href=#204 id=204 data-nosnippet>204</a>
-<a href=#205 id=205 data-nosnippet>205</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\IeC{}"</span>, <span class="string">"#1"</span>);
+<a href=#199 id=199 data-nosnippet>199</a><span class="macro">LoadDefinitions!</span>({
+<a href=#200 id=200 data-nosnippet>200</a>  <span class="comment">//**********************************************************************
+<a href=#201 id=201 data-nosnippet>201</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareInputMath {Number} {}"</span>, sub[(code,expansion)] {
+<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">let </span>ch = code.value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char;
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="macro">AssignCatcode!</span>(ch, Catcode::ACTIVE);
+<a href=#204 id=204 data-nosnippet>204</a>    <span class="macro">DefMacro!</span>(<span class="macro">T_ACTIVE!</span>(ch), <span class="prelude-val">None</span>, expansion);
+<a href=#205 id=205 data-nosnippet>205</a>  });
 <a href=#206 id=206 data-nosnippet>206</a>
-<a href=#207 id=207 data-nosnippet>207</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@inpenc@undefined"</span>, {
-<a href=#208 id=208 data-nosnippet>208</a>    <span class="kw">let </span>enc = lookup_string(<span class="string">"INPUT_ENCODING"</span>);
-<a href=#209 id=209 data-nosnippet>209</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(
-<a href=#210 id=210 data-nosnippet>210</a>      <span class="string">"Keyboard character used is undefined in inputencoding {}"</span>,
-<a href=#211 id=211 data-nosnippet>211</a>      enc
-<a href=#212 id=212 data-nosnippet>212</a>    );
-<a href=#213 id=213 data-nosnippet>213</a>    <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"&lt;char&gt;"</span>, message);
-<a href=#214 id=214 data-nosnippet>214</a>  });
-<a href=#215 id=215 data-nosnippet>215</a>
-<a href=#216 id=216 data-nosnippet>216</a>  <span class="comment">// `\@inpenc@test` is inputenc.sty's one-shot initialization guard.
-<a href=#217 id=217 data-nosnippet>217</a>  // The raw source (inputenc.sty L79) defines it inline as
-<a href=#218 id=218 data-nosnippet>218</a>  //   `\gdef\@inpenc@test{\global\let\@inpenc@test\relax}`
-<a href=#219 id=219 data-nosnippet>219</a>  // — i.e. self-defining and self-disabling — but our binding
-<a href=#220 id=220 data-nosnippet>220</a>  // short-circuits the raw-load before reaching that point, so
-<a href=#221 id=221 data-nosnippet>221</a>  // downstream code (e.g. utf8.def L195, the encoding .def files,
-<a href=#222 id=222 data-nosnippet>222</a>  // and `\DeclareInputMath`) hits `Error:undefined`. Mirror the
-<a href=#223 id=223 data-nosnippet>223</a>  // upstream's effective behavior: no-op (post-init state).
-<a href=#224 id=224 data-nosnippet>224</a>  // Witness: 15 papers in R-stages affected (~1 paper per stage).
-<a href=#225 id=225 data-nosnippet>225</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@inpenc@test"</span>, <span class="prelude-val">None</span>);
-<a href=#226 id=226 data-nosnippet>226</a>
-<a href=#227 id=227 data-nosnippet>227</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\inputencoding{}"</span>, sub[(encoding)] {
-<a href=#228 id=228 data-nosnippet>228</a>    set_input_encoding(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(encoding).to_string())<span class="question-mark">?</span>;
-<a href=#229 id=229 data-nosnippet>229</a>  });
-<a href=#230 id=230 data-nosnippet>230</a>
-<a href=#231 id=231 data-nosnippet>231</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
-<a href=#232 id=232 data-nosnippet>232</a>    set_input_encoding(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>)).to_string())<span class="question-mark">?</span>;
-<a href=#233 id=233 data-nosnippet>233</a>  });
-<a href=#234 id=234 data-nosnippet>234</a>
-<a href=#235 id=235 data-nosnippet>235</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#207 id=207 data-nosnippet>207</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareInputText {Number} {}"</span>, sub[(code, expansion)] {
+<a href=#208 id=208 data-nosnippet>208</a>    <span class="kw">let </span>ch = code.value_of() <span class="kw">as </span>u8 <span class="kw">as </span>char;
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="macro">AssignCatcode!</span>(ch, Catcode::ACTIVE);
+<a href=#210 id=210 data-nosnippet>210</a>    <span class="macro">DefMacro!</span>(<span class="macro">T_ACTIVE!</span>(ch), <span class="prelude-val">None</span>, expansion);
+<a href=#211 id=211 data-nosnippet>211</a>  });
+<a href=#212 id=212 data-nosnippet>212</a>
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\IeC{}"</span>, <span class="string">"#1"</span>);
+<a href=#214 id=214 data-nosnippet>214</a>
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="comment">// inputenc.sty:139-143, the error an undefined byte raises (`\@inpenc@undefined`, set by `\inputencoding`).
+<a href=#216 id=216 data-nosnippet>216</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#217 id=217 data-nosnippet>217</a>    <span class="string">r"\def\@inpenc@undefined@#1{\PackageError{inputenc}{Keyboard character used is undefined\MessageBreak
+<a href=#218 id=218 data-nosnippet>218</a> in inputencoding `#1'}{You need to provide a definition with \noexpand\DeclareInputText\MessageBreak
+<a href=#219 id=219 data-nosnippet>219</a> or \noexpand\DeclareInputMath before using this key.}}"
+<a href=#220 id=220 data-nosnippet>220</a>  </span>);
+<a href=#221 id=221 data-nosnippet>221</a>
+<a href=#222 id=222 data-nosnippet>222</a>  <span class="comment">// `\@inpenc@test` is inputenc.sty's one-shot initialization guard.
+<a href=#223 id=223 data-nosnippet>223</a>  // The raw source (inputenc.sty L79) defines it inline as
+<a href=#224 id=224 data-nosnippet>224</a>  //   `\gdef\@inpenc@test{\global\let\@inpenc@test\relax}`
+<a href=#225 id=225 data-nosnippet>225</a>  // — i.e. self-defining and self-disabling — but our binding
+<a href=#226 id=226 data-nosnippet>226</a>  // short-circuits the raw-load before reaching that point, so
+<a href=#227 id=227 data-nosnippet>227</a>  // downstream code (e.g. utf8.def L195, the encoding .def files,
+<a href=#228 id=228 data-nosnippet>228</a>  // and `\DeclareInputMath`) hits `Error:undefined`. Mirror the
+<a href=#229 id=229 data-nosnippet>229</a>  // upstream's effective behavior: no-op (post-init state).
+<a href=#230 id=230 data-nosnippet>230</a>  // Witness: 15 papers in R-stages affected (~1 paper per stage).
+<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@inpenc@test"</span>, <span class="prelude-val">None</span>);
+<a href=#232 id=232 data-nosnippet>232</a>
+<a href=#233 id=233 data-nosnippet>233</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\inputencoding{}"</span>, sub[(encoding)] {
+<a href=#234 id=234 data-nosnippet>234</a>    set_input_encoding(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(encoding).to_string())<span class="question-mark">?</span>;
+<a href=#235 id=235 data-nosnippet>235</a>  });
 <a href=#236 id=236 data-nosnippet>236</a>
-<a href=#237 id=237 data-nosnippet>237</a>  <span class="comment">//**********************************************************************
-<a href=#238 id=238 data-nosnippet>238</a></span>});
+<a href=#237 id=237 data-nosnippet>237</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
+<a href=#238 id=238 data-nosnippet>238</a>    set_input_encoding(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>)).to_string())<span class="question-mark">?</span>;
+<a href=#239 id=239 data-nosnippet>239</a>  });
+<a href=#240 id=240 data-nosnippet>240</a>
+<a href=#241 id=241 data-nosnippet>241</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#242 id=242 data-nosnippet>242</a>
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="comment">//**********************************************************************
+<a href=#244 id=244 data-nosnippet>244</a></span>});
 </code></pre></div></section></main></body></html>

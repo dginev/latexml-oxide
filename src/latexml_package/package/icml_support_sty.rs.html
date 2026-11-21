@@ -390,11 +390,14 @@
 <a href=#390 id=390 data-nosnippet>390</a>  };
 <a href=#391 id=391 data-nosnippet>391</a>  declare_notice_option(<span class="string">"accepted"</span>, <span class="string">"isaccepted"</span>, <span class="prelude-val">Some</span>(<span class="string">r"\ICML@appearing"</span>))<span class="question-mark">?</span>;
 <a href=#392 id=392 data-nosnippet>392</a>  declare_notice_option(<span class="string">"preprint"</span>, <span class="string">"ispreprint"</span>, (year == <span class="prelude-val">Some</span>(<span class="number">2026</span>)).then_some(<span class="string">r"\ICML@preprint"</span>))<span class="question-mark">?</span>;
-<a href=#393 id=393 data-nosnippet>393</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nohyperref"</span>, <span class="string">r"\gdef\nohyperref{1}"</span>);
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {});
-<a href=#395 id=395 data-nosnippet>395</a>  <span class="macro">ProcessOptions!</span>();
-<a href=#396 id=396 data-nosnippet>396</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\ifdefined\isaccepted \icmlshowauthorstrue \fi
-<a href=#397 id=397 data-nosnippet>397</a>\ifdefined\ispreprint \icmlshowauthorstrue \fi"</span>);
-<a href=#398 id=398 data-nosnippet>398</a>  <span class="prelude-val">Ok</span>(())
-<a href=#399 id=399 data-nosnippet>399</a>}
+<a href=#393 id=393 data-nosnippet>393</a>  <span class="comment">// (at the package's end: the paper's copy, read after this, tests `\nohyperref` before its own `\ProcessOptions`
+<a href=#394 id=394 data-nosnippet>394</a>  // defines it — icml2016.sty:88 vs :130, a block one `\fi` short, which skipped the copy's rest when it was defined:
+<a href=#395 id=395 data-nosnippet>395</a>  // 1603.00748)
+<a href=#396 id=396 data-nosnippet>396</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"nohyperref"</span>, <span class="string">r"\AtEndOfPackage{\gdef\nohyperref{1}}"</span>);
+<a href=#397 id=397 data-nosnippet>397</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {});
+<a href=#398 id=398 data-nosnippet>398</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#399 id=399 data-nosnippet>399</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\ifdefined\isaccepted \icmlshowauthorstrue \fi
+<a href=#400 id=400 data-nosnippet>400</a>\ifdefined\ispreprint \icmlshowauthorstrue \fi"</span>);
+<a href=#401 id=401 data-nosnippet>401</a>  <span class="prelude-val">Ok</span>(())
+<a href=#402 id=402 data-nosnippet>402</a>}
 </code></pre></div></section></main></body></html>
