@@ -1,0 +1,18 @@
+% witness: 2308.15546 main.tex:43 (+2206.04091, 2009.07990): thmtools.sty:47-49 loads thm-kv, thm-autoref and
+%          thm-listof, so a later `\usepackage` of them is a no-op
+% oracle:  pdflatex 0 errors: "List of Theorems 1 Theorem (Foo) ... Theorem 1 (Foo). True. See Theorem 1."
+% engines: Perl 0; rust MAIN935 3 errors (`\thmt@newtheorem@predefinition`, `…@postdefinition`, `\thmt@shortoptarg`
+%          undefined: raw thm-autoref.sty:44-45 extends thm-patch's hooks, never defined by the binding)
+% expect:  0 errors, 0 warnings; the autoref reads "Theorem 1"
+% status:  RED (MAIN935) -> GREEN (REGFIXE: the thmtools binding marks thm-kv, thm-autoref, thm-listof loaded)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{thmtools}
+\usepackage{hyperref}
+\usepackage{thm-kv,thm-autoref,thm-listof}
+\declaretheorem[name=Theorem]{theorem}
+\begin{document}
+\listoftheorems
+\begin{theorem}[Foo]\label{t}True.\end{theorem}
+See \autoref{t}.
+\end{document}

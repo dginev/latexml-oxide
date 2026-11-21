@@ -1,0 +1,27 @@
+% witness: math0610862 (jmhlab.tex:210 `\noOf`, jmhppt.sty a copy of amsppt.sty), math0205237
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors, 1 "Citation x undefined" message;
+%          "??. A. Author, Title, J (1990)."
+% engines: rust REGFIXD = 1 error (expected:\fi \iffalse: the binding's expanding `\@bibfield … XUntil` read,
+%          amsppt_sty.rs / Perl amsppt.sty.ltxml:439, evaluates `\global\@fwdreftrue`'s `\let\if@fwdref\iftrue`
+%          as a conditional), the bibitem empty; perl the same read (KNOWN_PERL_ERRORS #1298; math0610862
+%          Fatal:too_many_errors, 101 errors)
+% expect:  0 errors; one bibitem "??. A. Author, Title, J (1990)."
+% status:  RED (REGFIXD)
+% moves:   post-merge (digest each field as amsppt.sty:956-965 `\makerefbox` boxes it, not an expanding read)
+\input amstex
+\documentstyle{amsppt}
+\catcode`\@=11
+\newif\if@fwdref \@fwdreffalse
+\newwrite\@unused
+\def\typeout#1{{\let\protect\string\immediate\write\@unused{#1}}}
+\def\@warning#1{\typeout{Warning: #1.}}
+\long\def\@ifundefined#1#2#3{\expandafter\ifx\csname #1\endcsname\relax#2\else#3\fi}
+\def\make@ref#1{\@ifundefined{b@#1}{{??}\global\@fwdreftrue\@warning{Citation #1 undefined}}{\csname b@#1\endcsname}}
+\def\noOf#1{\no \make@ref{#1}}
+\catcode`\@=12
+\document
+Text.
+\Refs
+\ref\noOf{x}\by A. Author\paper Title\jour J\yr 1990\endref
+\endRefs
+\enddocument

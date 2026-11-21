@@ -1,0 +1,17 @@
+% witness: 2406.03441, 2405.20343 (`{\ul …}`); ulem.sty:286-293 `\useunder`, :107 `\UL@swender`: the declaration
+%          underlines the rest of its group, the group's `}` put back after it — a `{…}` group, a nested one, a box
+%          (`\mbox`, `\fbox`), any of ulem's lines (`\sout`), and an underline command of the document's own
+% oracle:  pdflatex 0 errors: "One a b c d. Two x y. Three gone kept. Four m n. Five p q r s after."
+% engines: rust INTREGFIX4 = the same markup, read as an argument
+% expect:  0 errors, 0 warnings; the same markup as INTREGFIX4
+% status:  GREEN (INTREGFIX4, REGFIXL)
+\documentclass{article}
+\usepackage{ulem}
+\useunder{\uline}{\ul}{}
+\useunder{\sout}{\so}{}
+\newcommand\myul[1]{\uline{#1}}
+\useunder{\myul}{\mul}{}
+\begin{document}
+One {\ul a {\ul b} c} d. Two {\bf\ul x} y. Three {\so gone} kept. Four {\mul m} n.
+Five \mbox{\ul p q} \fbox{\ul r s} after.
+\end{document}

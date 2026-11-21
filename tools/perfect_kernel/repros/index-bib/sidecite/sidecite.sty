@@ -1,0 +1,7 @@
+% A `\cite` the lock refuses, whose unstarred branch steps a counter and typesets before `\@internalcite`
+\ProvidesPackage{sidecite}
+\newcounter{cites}
+\let\@internalcite\cite
+\def\cite{\@ifstar{\citeyr}{\citefull}}
+\def\citefull{\stepcounter{cites}\def\citelabel##1##2{##1 ##2}see \@internalcite}
+\def\citeyr{\def\citelabel##1##2{##2}\@internalcite}

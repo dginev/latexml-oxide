@@ -13,7 +13,7 @@ fn counts(log: &str) -> (usize, usize) {
 }
 
 /// astron.sty's `\cite` (0812.2799, 0812.4839; its copies EslabStyle.cls astro-ph0001290, ISOStyle.cls astro-ph0008362)
-/// is the only definer of the `\astroncite` its `\bibitem` labels hold, and the lock refuses it: the first kernel
+/// is the only definer of the `\astroncite` its `\bibitem` labels hold, and the lock refuses it: each kernel
 /// `\cite` runs the copy's own `\citefull` definition. Distinct from
 /// `perfect_kernel_batchclustfix::starred_cite_under_the_lock` (the star; this is the label the citation prints). Repro
 /// index-bib/astroncite.

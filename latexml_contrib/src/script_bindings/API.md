@@ -39,7 +39,7 @@ sets each call beside its Perl spelling and the Rust a compiled binding uses.
 
 Called at the top level of a binding file, or from inside any body.
 
-253 functions, 588 calls.
+253 functions, 589 calls.
 
 | call | documentation |
 |---|---|
@@ -113,7 +113,7 @@ Called at the top level of a binding file, or from inside any body.
 | `Debug(string)`<br>`Debug(string, string, string)` | Log a `Debug:` record, `Debug(message)` or `Debug(cat, obj, message)`, counted in the status tally; silent unless `--verbose`, where Perl prints unconditionally (Error.pm:476) — DG 2026-11-14. ([`emit_record`](latexml_core::common::error::emit_record)) |
 | `DeclareFontMap(string, array)`<br>`DeclareFontMap(string, array, map)` | Declare an encoding's font map: an array of 1-char strings or `()`, with Perl's `family` and `*_mathstyle` options. |
 | `DeclareFontMapMultichar(string, map)`<br>`DeclareFontMapMultichar(string, string, map)` | Declare the multi-character glyphs of a font map (optionally a family's): position (decimal string) to its text. |
-| `DeclareOption(Fn)`<br>`DeclareOption(string, Fn)`<br>`DeclareOption(string, string)` | Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl `DeclareOption(undef, sub {...})`). |
+| `DeclareOption(Fn)`<br>`DeclareOption(string, ())`<br>`DeclareOption(string, Fn)`<br>`DeclareOption(string, string)` | Declare a class/package option: named with a closure or TeX-string body, or `()` for a no-op (Perl's undef `$code`); the bare-closure form, or an empty name, is the default handler (Perl `DeclareOption(undef, sub {...})`). |
 | `DefAccent(string, string, string)`<br>`DefAccent(string, string, string, bool)`<br>`DefAccent(string, string, string, map)` | Define an accent command in both its combining and standalone forms; Perl's options map `#{below: true}`. **Deprecated:** its older form (Warns once per binding load); use `DefAccent(accent, combining, standalone, #{below: true})`. |
 | `DefAutoload(?, string)` | Make `cs` load a definition file when first used: `name.sty` (a package), `name.cls` (a class) or `name.pool`, an `.ltxml` suffix dropped; nothing when it is loaded or `cs` defined; any other name Warns (Package.pm:1086). ([`def_autoload_file`](latexml_engine::tex::def_autoload_file)) |
 | `DefColumnType(string, Fn)` | Define a tabular column type, as its rewrite expansion. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |

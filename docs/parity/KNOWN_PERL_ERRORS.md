@@ -13835,7 +13835,9 @@ amsfonts.sty:117-138 keeps AMSTeX's `\newsymbol\cs <font><class><hex><hex>` (fon
 "Obsolete command" warning. Perl's amsfonts.sty.ltxml lacks it, so the declaration and every use of the declared
 symbol are errors. Trigger `\usepackage{amsfonts}\newsymbol\mylneqq 2308` … `$a\mylneqq b$` → Perl: undefined
 `\newsymbol` (pdflatex 0 errors, 1 warning, ≨). Fixed in Rust (65s, amsfonts_sty.rs, through `\DeclareMathSymbol`
-of the same class, font and slot; witnesses 1302.6049, 2112.15557; run 340 ~300 papers).
+of the same class, font and slot; witnesses 1302.6049, 2112.15557; run 340 ~300 papers). A `\global\mathchardef`
+(amsfonts.sty:126), it is legal in the body, where `\DeclareMathSymbol` is `\@onlypreamble`: it calls a private
+alias globally (REGFIXD; witnesses math0008232, 2407.16937; guard `perfect_kernel_batchregfixd::newsymbol_in_the_body`).
 
 ## 633. The AASTeX binding lacks the commands of the AASTeX 6.x class files
 
@@ -16320,7 +16322,12 @@ Rust (int19, amstext_sty.rs `\text`): the constructor raises the alignment count
 stored fields; amstex.rs `\text` (amstex.tex:1217-1226 `\hbox{#1}`) and revtex4_support_sty.rs `\text`
 (revtex4-2.cls:7547-7560 `\REV@text`) the same. 1703.08664 58 → 0 errors, 24,260 → 24,774 words. Repro
 kernel-alignment/text_argument_is_braced_in_an_alignment_cell; guard
-`perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.
+`perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`. The count is raised only once `#1` is read
+(REGFIXK): each `\text` is a macro reading `#1` at the cell's count, as amstext's, and `\lx@text{#1}` (reverting to
+`\text`) the constructor, so a brace-less `$x$\text & 0.6` ends the cell at the `&` (tex.web §342; 2212.00883, pdflatex
+0 errors; repro kernel-alignment/text_without_braces_before_a_cell_end, guard
+`perfect_kernel_batchregfixk::text_without_braces_before_a_cell_end`; protected, so an `\edef` keeps `\text`,
+OXIDIZED_DESIGN #1104).
 
 ## 935. A document that prints the kernel's `\@title`/`\@author` itself shows the title and the author twice
 
@@ -17994,8 +18001,10 @@ AmSTeX.pool.ltxml:71-72), so a paper's own style is replaced by amsppt: amams.st
 amsppt's `\title … \endtitle` and the paper ends inside the argument (math0402285, math9806089: Fatal:Mouth:EoF, 0
 words; ~33 papers). Minimal trigger: `\input amstex\documentstyle{loc}\document\received{1}\title{T}Body.\enddocument`
 with a loc.sty defining `\received#1` and `\title#1`. Fixed in Rust (78i, OXIDIZED_DESIGN_DIVERGENCES #825): a style with
-no binding on the search path is read raw unless it builds on another style, which the amsppt binding stands in for.
-Repro amstex/amstex_local_style_is_read; guard `perfect_kernel_batch78i::amstex_local_style_is_read`.
+no binding on the search path is read raw unless it builds on another style or is a renamed copy of amsppt.sty
+(REGFIXD), which the binding stands in for. Repros amstex/{amstex_local_style_is_read,
+amstex_copied_style_takes_the_binding}; guards `perfect_kernel_batch78i::amstex_local_style_is_read`,
+`perfect_kernel_batchregfixd::{amsppt_copy_takes_the_binding, only_an_amsppt_copy_takes_the_binding}`.
 
 ## 1052. thm-restate's `{restatable*}` is undefined
 
@@ -22072,3 +22081,143 @@ Short abstract text.
 Perl: hep-th0110297 keeps 55 words (1 Error), math0006149 8 words (58 Errors). Rust: the bibliography ends the
 abstract, which keeps its first paragraph; the rest is body text (OXIDIZED_DESIGN_DIVERGENCES #1101).
 
+## 1295. The cheap intertext closes `{equation}` inside any display
+
+`$$` (or the kernel's `\]`) inside an equation display is the "cheap intertext": its helpers end the display and begin
+the next (latex_constructs.pool.ltxml:1960-1969), but `\lx@begin@fake@intertext` / `\lx@end@fake@intertext` hard-code
+`\end{equation}` / `\begin{equation}`, so in `{equation*}` they err and add a numbered equation:
+
+```latex
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+Text \begin{equation*} a = b $$ $$ = c.\end{equation*} more.
+\end{document}
+```
+
+Perl: 2 Errors ("Can't close environment equation", then "equation*") and a spurious numbered equation; pdflatex 0
+errors, two unnumbered displays. Rust closes and reopens `{equation*}` when that is the open environment
+(`\@currenvir`; a bare `\equation` leaves the enclosing one there, so it keeps `{equation}`); under amsmath `\[` is
+`{equation*}`, so `\[ a $$ $$ b \]` is the same shape (2606.13867; OXIDIZED_DESIGN_DIVERGENCES #1091). Guard
+`perfect_kernel_batchclustfix3::amsmath_display_brackets_dollar_dollar`.
+
+## 1296. An `\halign` that `\lastbox` took still ends the paragraph it is put in
+
+`\lastbox` takes a box (tex.web §1080); an `\halign` on a vertical list is its rows, each an hbox (§799). Perl's
+`\lastbox` pops the `\halign` whatsit, whose `beforeConstruct` (`maybeCloseElement('ltx:p')`,
+TeX_Tables.pool.ltxml:175-177) then closes the paragraph the box is copied into, and the table leaves the box:
+
+```latex
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\halign{#\cr a\cr}\global\setbox1\lastbox}
+\mbox{\vbox{\vphantom{\copy1}}}
+After.
+\end{document}
+```
+
+Perl: 3 Errors ("Closing </ltx:text> whose open descendents do not auto-close", "Attempt to close
+<ltx:_CaptureBlock_>"), the table out of the phantom; pdflatex 0. Rust: the taken `\halign` is marked as a box and
+closes nothing (tex_box.rs `taken_as_box`). With `\unvbox` splicing the list (#840) easytable's and easybmat's
+`\@easy@buildbox` peel reaches it: ~250 arXiv papers (1705.10408, 2002.06044, 2109.00258, 2106.13444, 1710.10243).
+Guards `perfect_kernel_batchregfixb::{lastbox_halign_is_a_box, easytable_easybmat_lastbox_peel}`.
+
+## 1297. thmtools leaves thm-autoref's `\Autoref` undefined
+
+thmtools.sty:47-49 loads thm-autoref, whose `\Autoref*?{label}` (thm-autoref.sty:60-95) is an `\autoref` naming a
+theorem by its `Refname=` (`\<env>Autorefname`), and as `\autoref` does where the type has none. Perl's
+thmtools.sty.ltxml loads neither and defines no `\Autoref`:
+
+```latex
+\documentclass{article}
+\usepackage{amsthm,hyperref,thmtools}
+\declaretheorem[name=Theorem,Refname={Theorem,Theorems}]{thm}
+\begin{document}
+\begin{thm}\label{t1}Text.\end{thm}
+See \Autoref{t1}.
+\end{document}
+```
+
+Perl: 1 Error (undefined `\Autoref`); pdflatex 0, "See Theorem 1." Rust: the thmtools binding defines `\Autoref`, its
+text the `autorefcap` tag (hyperref_sty.rs `autoref_tag`, shown `autorefcap|autoref`). Witnesses 1611.06061 (45
+`\Autoref`, 30 errors), 1405.2249 (`\RenewDocumentCommand\Autoref`). Guards
+`perfect_kernel_batchregfixe::{thmtools_thm_autoref_capital_autoref, thmtools_alone_defines_capital_autoref}`.
+## 1298. amsppt's `\ref` fields are read expanding, so an assignment in a field misfires
+
+amsppt.sty:956-965 `\makerefbox` sets each `\ref` field (`\no`, `\by`, `\paper`, …) in a box,
+`\setbox\curbox\vbox\bgroup`, where its assignments are executed. Perl's `\@bibfield{} XUntil:\@end@bibfield`
+(amsppt.sty.ltxml:439) reads the field expanding, which expands the targets of its assignments: a `\newif` switch set
+in the field (`\global\@fwdreftrue`, i.e. `\let\if@fwdref\iftrue`) is evaluated as a conditional, a `\def`'s name
+expanded:
+
+```latex
+\input amstex
+\documentstyle{amsppt}
+\catcode`\@=11 \newif\if@fwdref
+\def\noOf#1{\no {??}\global\@fwdreftrue}
+\catcode`\@=12
+\document
+\Refs
+\ref\noOf{x}\by A. Author\paper Title\jour J\yr 1990\endref
+\endRefs
+\enddocument
+```
+
+Perl: 2 Errors ("Missing \fi or \else, conditional fell off end", "Input ended while conditional \if@fwdref was
+incomplete"), the bibitem empty; pdftex 0 errors, "??. A. Author, Title, J (1990)." math0610862 (jmhlab.tex:210
+`\noOf`, a LaTeX-style `\make@ref` in an amsppt copy): Perl `Fatal:too_many_errors`, 101 errors; ours the same read
+(amsppt_sty.rs), `Fatal:TooManyErrors`; so math0205237. Open in Rust (digest each field as `\makerefbox` boxes it).
+Repro amstex/amsppt_bibfield_expands_a_conditional_red (OXIDIZED_DESIGN_DIVERGENCES #825).
+
+## 1300. A class binding loads another binding as a file its real class never loads
+
+Perl shares definitions between related classes by loading the other binding as a file: svjour3.cls.ltxml (svjour1,
+svjour2) `LoadClass('svjour')`, emulateapj.cls.ltxml:26 `RequirePackage('emulateapj')`, JHEP2/JHEP3/PoS.cls.ltxml
+`LoadClass('JHEP', withoptions => 1)`, mnras.cls.ltxml `LoadClass('mn')`. The real svjour3.cls, emulateapj.cls (TeX
+Live's; :165-206 load REVTeX, latexsym, graphicx, amssymb, longtable, epsf), JHEP3.cls (0907.1636's), PoS.cls
+(1011.0095's) and mnras.cls (TeX Live's) load none of those files, so `\@ifclassloaded`/`\@ifpackageloaded` answer
+wrong:
+
+```latex
+\documentclass{svjour3}
+\makeatletter
+\@ifclassloaded{svjour}{\def\cl{svjour}}{\def\cl{no svjour}}
+\makeatother
+\begin{document}
+Body: \cl.
+\end{document}
+```
+
+Perl "Body: svjour."; pdflatex "Body: no svjour." (`\documentclass{emulateapj}` with `\@ifpackageloaded{emulateapj}`
+alike). Ours read the paper's copy of the loaded file after its binding (OXIDIZED_DESIGN_DIVERGENCES #731): an older
+svjour.cls shipped beside svjour3.cls ran its :93 "No valid journal specified in option list" (2101.09497,
+2110.05134, 2408.12532), 1305.6912's truncated emulateapj.sty ran out of input. Fixed in Rust (REGFIXH): the class
+binding calls the shared definitions as code in its own load (`svjour_cls::svjour_definitions`,
+`emulateapj_sty::emulateapj_definitions`, `jhep_cls::jhep_definitions`, `mn_cls::load_definitions`), its options its
+own; the files the real class loads are still loaded. The sibling stays a file the binding is built on, not marked
+loaded (`state::note_stand_in_file`): the paper's copy of the requested class declaring it is read (hep-ph0608235's
+svjour2.cls `\ProvidesClass{svjour}`, "Fig. 1" from svepj.clo; 0712.4224, 1301.5646, 1710.10527, hep-ph0310058,
+physics0101008), the sibling's own copy, which nothing requests, is not. Guards
+`perfect_kernel_batchregfixh::{svjour3_reads_no_older_svjour_copy, emulateapj_reads_no_shipped_sty_copy,
+svjour2_copy_declaring_svjour_is_read}`.
+## 1301. amsppt declares no `ltx:item` Tag, so under plain AmS-TeX each roster item opens inside the last
+
+Perl's amsppt.sty.ltxml:248-250 `\roster@item` opens `<ltx:item>`, which closes the item before it only through
+latex_constructs' `Tag('ltx:item', autoClose => 1, autoOpen => 1)` (latex_constructs.pool.ltxml:1284). `\input
+amsppt.sty` under `\input amstex` loads no latex_constructs, so the second item is opened inside the first item's
+`<ltx:p>`: malformed. Latent in Perl behind #1270 (its roster's `#body` drops every item); with the body kept the
+trigger is
+
+```tex
+\input amstex
+\input amsppt.sty
+\document
+\roster\item first item
+\item second item.\endroster
+\enddocument
+```
+
+pdftex: "(1) first item (2) second item."; Rust before the fix: `Error:malformed:ltx:item <ltx:item> isn't allowed in
+<ltx:p>` and a malformed `<enumerate>` (`\documentstyle{amsppt}` loads LaTeX.pool, whose Tag hid it). Rust's binding
+declares the Tag (amsppt_sty.rs). Witnesses math0006111, gr-qc9610061, math9809193 (59 papers); repro
+amstex/amsppt_input_roster_items_close; guard `perfect_kernel_batchregfixi::amsppt_input_roster_items_close`.

@@ -455,7 +455,7 @@ impl LaTeXImages {
   /// - LaTeX command availability
   pub fn can_process(&self) -> bool {
     // Check for latex command
-    let latex_available = std::process::Command::new("latex")
+    let latex_available = latexml_core::util::pathname::tex_tool_command("latex")
       .arg("--version")
       .output()
       .is_ok();
@@ -475,7 +475,7 @@ impl LaTeXImages {
       DviMethod::DviSvgm => "dvisvgm",
       DviMethod::Dvips => "dvips",
     };
-    let dvi_available = std::process::Command::new(dvi_cmd)
+    let dvi_available = latexml_core::util::pathname::tex_tool_command(dvi_cmd)
       .arg("--version")
       .output()
       .is_ok();

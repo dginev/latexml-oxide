@@ -163,10 +163,23 @@ pub(crate) fn load() -> Result<()> {
     "\\lx@eDM@in@equation",
     "\\lx@retract@eqnno\\lx@begin@fake@intertext\\let\\lx@saved@begin@display@math\\lx@begin@display@math\\let\\lx@saved@bdm\\[\\let\\lx@begin@display@math\\lx@end@fake@intertext\\let\\[\\lx@end@fake@intertext"
   );
-  DefMacro!("\\lx@begin@fake@intertext", "\\end{equation}");
+  // The display closed and reopened is the open `{equation*}` (`\@currenvir`), not always `{equation}` as in Perl
+  // (latex_constructs.pool.ltxml:1966-1969): amsmath's `\[` is `{equation*}`, where TeX's `$$` ends one unnumbered
+  // display and opens the next (tex.web §1193-1197, §1138; 2606.13867, KNOWN_PERL_ERRORS #1295). A bare `\equation`
+  // leaves `\@currenvir` at the enclosing environment (latex.ltx:15346-15355), so any other name keeps `{equation}`.
+  // The name is set after `\end`, so in the group where `\begin` reopens it.
+  DefMacro!("\\lx@fake@intertext@starred", "equation*");
+  DefMacro!(
+    "\\lx@begin@fake@intertext",
+    "\\ifx\\@currenvir\\lx@fake@intertext@starred\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{\\lx@fake@intertext@end{equation*}}{\\lx@fake@intertext@end{equation}}"
+  );
+  DefMacro!(
+    "\\lx@fake@intertext@end{}",
+    "\\end{#1}\\def\\lx@fake@intertext@env{#1}"
+  );
   DefMacro!(
     "\\lx@end@fake@intertext",
-    "\\let\\lx@begin@display@math\\lx@saved@begin@display@math\\let\\[\\lx@saved@bdm\\begin{equation}"
+    "\\let\\lx@begin@display@math\\lx@saved@begin@display@math\\let\\[\\lx@saved@bdm\\begin{\\lx@fake@intertext@env}"
   );
   DefPrimitive!("\\lx@retract@eqnno", {
     retract_equation();

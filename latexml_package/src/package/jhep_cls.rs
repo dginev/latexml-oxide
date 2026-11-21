@@ -24,7 +24,7 @@ fn def_jhep_journal(cs: &str, body: &str) -> Result<()> {
 /// JHEP.cls's journal-citation macros (Perl JHEP.cls.ltxml L143-261): `\@spires`, the
 /// `\<journal>{vol}{year}{page}` aliases (`\apj`, `\prd`, …), `\jhep`, `\newjournal`,
 /// `\ibid` and the arXiv-archive links (`\hepth{}`, …, `\Math{}{}`). JHEP, JHEP2 and
-/// JHEP3 have them; PoS.cls, whose binding loads JHEP's as Perl's does (PoS.cls.ltxml
+/// JHEP3 have them; PoS.cls, whose binding takes JHEP's definitions as Perl's loads them (PoS.cls.ltxml
 /// LoadClass JHEP), defines none (it has its own `\href`, PoS.cls:247): a PoS paper's
 /// `\newcommand{\apj}{ApJ}` was refused and its `\apj` read three arguments, swallowing
 /// what followed (an `unexpected:}` Error: 1507.03892, 1510.07042, 1807.03003, 1908.00100).
@@ -154,6 +154,15 @@ fn def_jhep_journal_macros() -> Result<()> {
   DefMacro!("\\solvint{}", "\\href{http://xxx.lanl.gov/abs/solv-int/#1}{\\tt solv-int/#1}");
   DefMacro!("\\Math{}{}", "\\href{http://xxx.lanl.gov/abs/math.#1/#2}{\\tt math.#1/#2}");
   Ok(())
+}
+
+/// The JHEP binding's definitions, made in the load of a class of its own that loads no JHEP.cls (Perl JHEP2.cls.ltxml,
+/// JHEP3.cls.ltxml, PoS.cls.ltxml `LoadClass('JHEP', withoptions => 1)`; 0907.1636's JHEP3.cls, 1011.0095's PoS.cls), its
+/// options that class's: `\@ifclassloaded{JHEP}` is false (KNOWN_PERL_ERRORS #1300), and JHEP is a file the class's
+/// binding is built on (`note_stand_in_file`), so the paper's copy of that class declaring `\ProvidesClass{JHEP}` is read.
+pub fn jhep_definitions() -> Result<()> {
+  note_stand_in_file("JHEP");
+  load_definitions()
 }
 
 #[rustfmt::skip]

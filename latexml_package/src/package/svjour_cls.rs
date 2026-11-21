@@ -20,6 +20,17 @@ const JOURNAL_VECTORS: [(&str, bool, bool); 9] = [
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: svjour.cls.ltxml — covers svjour.cls, svjour1.cls, svjour2.cls & svjour3.cls
+  svjour_definitions("svjour")?;
+});
+
+/// The Springer journal classes' definitions (Perl svjour.cls.ltxml), as the class `class` (svjour, or the svjour1-3
+/// the paper requested: svjour3_cls.rs) — its options, its title page, its theorems — in that class's own load:
+/// svjour3.cls is a class of its own, loading no svjour.cls (KNOWN_PERL_ERRORS #1300). svjour is a file the class's
+/// binding is built on (`note_stand_in_file`): a svjour1/svjour2 copy, Springer's svjour code renamed, declares
+/// `\ProvidesClass{svjour}` and is read (hep-ph0608235, 0712.4224, 1301.5646, 1710.10527, hep-ph0310058, physics0101008).
+#[rustfmt::skip]
+pub fn svjour_definitions(class: &str) -> Result<()> {
+  note_stand_in_file("svjour");
 
   // Option handling — declare all known options as no-ops
   for option in [
@@ -115,7 +126,7 @@ LoadDefinitions!({
   // `\if@mathematic` (17 of 73: 0710.3184's), Greek left medium: the paper's copy says which.
   RawTeX!(r"\let\if@mathematic\iftrue");
   let plain_mathbf = |text: &str| crate::shipped_class::class_code_contains(text, "\\def\\vec#1{\\ensuremath{\\mathbf{#1}}}");
-  let class_mathbf = crate::shipped_class::shipped_class_text("svjour")?.is_some_and(|text| plain_mathbf(&text));
+  let class_mathbf = crate::shipped_class::shipped_class_text(class)?.is_some_and(|text| plain_mathbf(&text));
   let mut journal_mathbf = false;
   for option in crate::shipped_class::class_options()? {
     let (mathematic, mathbf) = match crate::shipped_class::shipped_file_text(&s!("sv{option}"), "clo") {
@@ -145,4 +156,5 @@ LoadDefinitions!({
   // at the title page's top right (svjour.cls:489-492) — a publication note, as REVTeX's (1801.06113, 1605.08256,
   // 2305.07696), with no label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
   DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
-});
+  Ok(())
+}

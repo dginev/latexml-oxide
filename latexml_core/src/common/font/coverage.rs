@@ -257,11 +257,13 @@ struct FontIndex {
 fn texmf_trees() -> Vec<String> {
   let mut trees = Vec::new();
   for var in ["TEXMFDIST", "TEXMFLOCAL"] {
-    if let Ok(out) = std::process::Command::new("kpsewhich")
+    if let Ok(out) = crate::util::pathname::tex_tool_command("kpsewhich")
       .arg(format!("-var-value={var}"))
       .output()
     {
       let dir = String::from_utf8_lossy(&out.stdout).trim().to_string();
+      // The index joins paths onto it: no trailing separator (issue #950).
+      let dir = crate::util::pathname::trim_texmf_root(&dir).unwrap_or(dir);
       if !dir.is_empty() && std::path::Path::new(&format!("{dir}/ls-R")).exists() {
         trees.push(dir);
       }

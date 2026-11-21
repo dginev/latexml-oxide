@@ -1,0 +1,16 @@
+% witness: none (synthetic; REGFIXL review item 2): in math, the line's group runs past the formula's closing `$`
+%          (ulem.sty:97-98 `\UL@onmath`; :286-293)
+% oracle:  pdflatex fatal: "File ended while scanning use of \underline ."
+% engines: rust INTREGFIX4 = 2 errors, everything after the formula lost; rust REGFIXL2 = 1 error + 2 warnings ("Missing
+%          } inserted", the open groups, "Missing } to end the underline declaration"), "$ h." and the next paragraph's
+%          text inside the formula (`tex="\uline{{x}$h.\par Nextpara.\par}"`)
+% expect:  only x underlined in the formula, " h." and "Next para." text; an Error
+% status:  RED (REGFIXL2)
+\documentclass{article}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\begin{document}
+A $\ul{x}$ h.
+
+Next para.
+\end{document}

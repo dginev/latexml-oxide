@@ -724,6 +724,107 @@ mod kpathsea_backend_resolution {
   }
 }
 
+mod texmf_root_trailing_separator {
+  //! Issue #950: `TEXMFROOT=/usr/local/texlive/2024/` made texmf.cnf's `$TEXMFROOT/texmf-dist` kpathsea's `//`
+  //! recursive search, so every lookup walked the tree and resolved nothing. Runs the binary as a subprocess: the
+  //! environment is read once, when the process picks its kpathsea backend.
+
+  use std::{collections::BTreeSet, fs, process::Command};
+
+  const MAIN_TEX: &str =
+    "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n$x^2$\n\\end{document}\n";
+
+  /// `kpsewhich -var-value=<var>` as this process's environment resolves it.
+  fn var_value(var: &str) -> String {
+    Command::new("kpsewhich")
+      .arg(format!("-var-value={var}"))
+      .output()
+      .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+      .unwrap_or_default()
+  }
+
+  /// Convert `main.tex` in `dir` under `TEXMFROOT=root`; the log's kpathsea backend line and the paths of
+  /// its `(Processing definitions …)` / `(Loading …)` entries.
+  fn convert(dir: &std::path::Path, tag: &str, root: &str) -> (String, String, BTreeSet<String>) {
+    let log_path = dir.join(format!("{tag}.log"));
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .current_dir(dir)
+      .args(["main.tex", "--nocomments", "--timeout=110"])
+      .arg(format!("--destination={tag}.xml"))
+      .arg(format!("--log={}", log_path.display()))
+      .env("TEXMFROOT", root)
+      // texmf.cnf derives the tree's roots from TEXMFROOT (`TEXMFDIST = $TEXMFROOT/texmf-dist`), as in the report.
+      .env_remove("TEXMFDIST")
+      .output()
+      .expect("spawn latexml_oxide");
+    assert!(out.status.success(), "{tag}: conversion failed");
+    let log = fs::read_to_string(&log_path).unwrap_or_default();
+    let backend = log
+      .lines()
+      .find(|l| l.starts_with("Info:kpathsea:backend"))
+      .unwrap_or_default()
+      .to_string();
+    let files = log
+      .split('(')
+      .filter_map(|entry| entry.strip_prefix("Processing definitions "))
+      .filter_map(|rest| rest.split("...").next())
+      .map(|path| path.trim().to_string())
+      .collect();
+    (log, backend, files)
+  }
+
+  #[test]
+  #[cfg_attr(
+    all(not(windows), not(building_with_texlive)),
+    ignore = "requires a TeX Live installation"
+  )]
+  #[cfg_attr(
+    windows,
+    ignore = "unverified on Windows: the linked kpathsea DLL's root trim (kpathsea 0.3.6) is checked by the crate's CI \
+              only, and a fallback to the subprocess backend changes the logged backend line"
+  )]
+  fn trailing_separator_on_texmf_roots_resolves_as_without() {
+    let root = var_value("TEXMFROOT");
+    if root.is_empty() {
+      latexml::util::test::skip(
+        &latexml::util::test::current_test_name(),
+        "kpsewhich names no TEXMFROOT",
+      );
+      return;
+    }
+    let work = tempfile::tempdir().expect("create tempdir");
+    fs::write(work.path().join("main.tex"), MAIN_TEX).unwrap();
+    let (_, backend, files) = convert(work.path(), "plain", &root);
+    let (log, slashed_backend, slashed_files) =
+      convert(work.path(), "slashed", &format!("{root}/"));
+
+    assert!(
+      !files.is_empty(),
+      "the conversion must process some definitions; log:\n{log}"
+    );
+    let doubled: Vec<&String> = slashed_files.iter().filter(|p| p.contains("//")).collect();
+    assert!(
+      doubled.is_empty(),
+      "no `//` may reach a resolved path: {doubled:?}"
+    );
+    assert_eq!(
+      slashed_files, files,
+      "the same files must resolve with and without the trailing `/`"
+    );
+    // The backend is the speed: a root with `/` used to fall back from the linked library to a `kpsewhich` per lookup.
+    assert_eq!(
+      slashed_backend, backend,
+      "the same kpathsea backend must be chosen"
+    );
+    assert!(
+      log.contains(&format!(
+        "Info:kpathsea:texmf_root TEXMFROOT={root}/ read as {root}"
+      )),
+      "the trimmed roots must be logged; log:\n{log}"
+    );
+  }
+}
+
 mod stale_css_overwrite {
   //! Regression for GitHub #312: a stale/empty `LaTeXML.css` / `ltx-article.css`
   //! already sitting in the destination must be OVERWRITTEN with the bundled
@@ -2130,6 +2231,232 @@ mod rhai_loading_path {
     assert!(
       !stderr.contains("undefined:\\mybindinghook") && !stderr.contains("Fatal:"),
       "the `.rhai` binding did not apply:\n{stderr}"
+    );
+  }
+
+  /// #945: the note is printed when the binding logs inside it (its own `RequirePackage`), before the load ends, and
+  /// still names the `.rhai` file the dispatcher found (`name_loading_binding`), the inner load nested in it.
+  #[test]
+  fn rhai_binding_note_names_its_path_when_it_loads_another() {
+    let (log, _) = latexml::util::test::convert_files_with(
+      "\\documentclass{article}\n\\usepackage{outerrhai}\n\\begin{document}\\outerhook\\innerhook Hi\\end{document}\n",
+      &[
+        (
+          "outerrhai.sty.rhai",
+          "RequirePackage(\"innerrhai\"); DefMacro(\"\\\\outerhook\", \"\");\n",
+        ),
+        ("innerrhai.sty.rhai", "DefMacro(\"\\\\innerhook\", \"\");\n"),
+      ],
+      None,
+    );
+    let skeleton = super::log_note_nesting::note_skeleton(&log);
+    assert!(
+      skeleton.contains("(Loading outerrhai.sty.rhai(Loading innerrhai.sty.rhai))"),
+      "{skeleton}\n{log}"
+    );
+    assert_eq!(
+      (
+        latexml::util::test::error_count(&log),
+        latexml::util::test::warning_count(&log)
+      ),
+      (0, 0),
+      "{log}"
+    );
+  }
+}
+
+#[cfg(feature = "runtime-bindings")]
+mod user_binding_precedence {
+  //! Issue #947: a user's binding found in the search paths (beside the document, or in a `--path` directory) is THE
+  //! binding for its class or package, as Perl's `FindFile_aux` takes the first `<file>.ltxml` of SEARCHPATHS ahead of
+  //! the installed `Package/` bindings and loads nothing else (Package.pm:2127-2129, Util/Pathname.pm:333-341). Nor
+  //! does what the built-in binding does as a stand-in for an author's file follow it: reading the paper's shipped copy
+  //! after the binding (`author_files::stands_in_for_an_author_file`).
+
+  use std::{
+    path::{Path, PathBuf},
+    process::Command,
+  };
+
+  /// A LIPIcs paper's shipped class, reduced to its declaration and one command of its own.
+  const LIPICS_COPY: &str = "\\NeedsTeXFormat{LaTeX2e}\n\
+    \\ProvidesClass{lipics-v2021}[2021/05/05 v2021.1.2 LIPIcs articles]\n\
+    \\LoadClass{article}\n\\newcommand\\shippedhook{SHIPPED}\n";
+  const LIPICS_USER_BINDING: &str =
+    "LoadClass(\"article\");\nDefMacro(\"\\\\userhook\", \"USERBINDING\");\n";
+  /// `\textsolittle` is the built-in binding's (lipics_cls.rs, announced as `lipics-v2021_cls.rs`), `\shippedhook`
+  /// the shipped copy's, `\userhook` the user binding's.
+  const LIPICS_DOC: &str = "\\documentclass{lipics-v2021}\n\\begin{document}\n\
+    \\ifdefined\\textsolittle BUILTIN\\else NOBUILTIN\\fi{} \\ifdefined\\shippedhook SHIPPED\\else NOSHIPPED\\fi{} \
+    \\ifdefined\\userhook\\userhook\\else NOUSER\\fi\n\\end{document}\n";
+
+  fn write(path: PathBuf, text: &str) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(path, text).unwrap();
+  }
+
+  /// Converts `dir/main.tex` with `args`; returns the HTML and the log (stderr).
+  fn convert(dir: &Path, args: &[String]) -> (String, String) {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let output = Command::new(bin)
+      .arg("main.tex")
+      .args(args)
+      .arg("--dest")
+      .arg("out.html")
+      .current_dir(dir)
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\n{stderr}",
+      output.status.code()
+    );
+    let html = std::fs::read_to_string(dir.join("out.html")).unwrap_or_default();
+    (html, stderr)
+  }
+
+  /// Only the user binding `binding` (a `.rhai` file name) took effect: it loaded once, and neither the built-in binding
+  /// (`builtin`, its module-proxy name) nor the shipped copy (`copy`) was read; the conversion is error-free.
+  fn assert_only_the_user_binding(
+    html: &str,
+    stderr: &str,
+    binding: &str,
+    builtin: &str,
+    copy: &str,
+  ) {
+    assert!(
+      html.contains("NOBUILTIN NOSHIPPED USERBINDING"),
+      "only the user binding must define its commands:\nhtml=\n{html}\nstderr=\n{stderr}"
+    );
+    let loads = stderr
+      .lines()
+      .filter(|line| line.contains("(Loading") && line.contains(binding))
+      .count();
+    assert_eq!(
+      loads, 1,
+      "the user binding must load exactly once:\n{stderr}"
+    );
+    assert!(
+      !stderr.contains(builtin),
+      "the built-in binding must not load:\n{stderr}"
+    );
+    assert!(
+      !stderr
+        .lines()
+        .any(|line| line.contains("Processing definitions") && line.contains(&format!("{copy}..."))),
+      "the shipped copy must not be read after the user binding:\n{stderr}"
+    );
+    assert!(
+      !stderr
+        .lines()
+        .any(|line| line.starts_with("Error:") || line.starts_with("Fatal:")),
+      "the conversion must be error-free:\n{stderr}"
+    );
+  }
+
+  /// A `lipics-v2021.cls.rhai` beside the document, which ships its `lipics-v2021.cls`; and the same binding answering
+  /// `--preload=lipics-v2021.cls`.
+  #[test]
+  fn user_class_binding_beside_the_document_is_the_only_binding() {
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    write(root.join("main.tex"), LIPICS_DOC);
+    write(root.join("lipics-v2021.cls"), LIPICS_COPY);
+    write(root.join("lipics-v2021.cls.rhai"), LIPICS_USER_BINDING);
+    let (html, stderr) = convert(root, &[]);
+    assert_only_the_user_binding(
+      &html,
+      &stderr,
+      "lipics-v2021.cls.rhai",
+      "lipics-v2021_cls.rs",
+      "/lipics-v2021.cls",
+    );
+    let (html, stderr) = convert(root, &["--preload=lipics-v2021.cls".to_string()]);
+    assert_only_the_user_binding(
+      &html,
+      &stderr,
+      "lipics-v2021.cls.rhai",
+      "lipics-v2021_cls.rs",
+      "/lipics-v2021.cls",
+    );
+  }
+
+  /// The reporter's other route: the binding in a `--path` directory, the class copy beside the document.
+  #[test]
+  fn user_class_binding_on_the_path_is_the_only_binding() {
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    write(root.join("doc/main.tex"), LIPICS_DOC);
+    write(root.join("doc/lipics-v2021.cls"), LIPICS_COPY);
+    write(
+      root.join("bindings/lipics-v2021.cls.rhai"),
+      LIPICS_USER_BINDING,
+    );
+    let path = format!("--path={}", root.join("bindings").display());
+    let (html, stderr) = convert(&root.join("doc"), &[path]);
+    assert_only_the_user_binding(
+      &html,
+      &stderr,
+      "bindings/lipics-v2021.cls.rhai",
+      "lipics-v2021_cls.rs",
+      "/lipics-v2021.cls",
+    );
+  }
+
+  /// A package: `arxiv.sty.rhai` on the path over the built-in arxiv_sty.rs (whose `\headeright` it does not define),
+  /// the paper shipping its `arxiv.sty`.
+  #[test]
+  fn user_package_binding_on_the_path_is_the_only_binding() {
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    write(
+      root.join("doc/main.tex"),
+      "\\documentclass{article}\n\\usepackage{arxiv}\n\\begin{document}\n\
+       \\ifdefined\\headeright BUILTIN\\else NOBUILTIN\\fi{} \\ifdefined\\shippedhook SHIPPED\\else NOSHIPPED\\fi{} \
+       \\ifdefined\\userhook\\userhook\\else NOUSER\\fi\n\\end{document}\n",
+    );
+    write(
+      root.join("doc/arxiv.sty"),
+      "\\NeedsTeXFormat{LaTeX2e}\n\\ProvidesPackage{arxiv}\n\\newcommand\\headeright{A Preprint}\n\
+       \\newcommand\\shippedhook{SHIPPED}\n",
+    );
+    write(
+      root.join("bindings/arxiv.sty.rhai"),
+      "DefMacro(\"\\\\userhook\", \"USERBINDING\");\n",
+    );
+    let path = format!("--path={}", root.join("bindings").display());
+    let (html, stderr) = convert(&root.join("doc"), &[path]);
+    assert_only_the_user_binding(
+      &html,
+      &stderr,
+      "bindings/arxiv.sty.rhai",
+      "arxiv_sty.rs",
+      "/arxiv.sty",
+    );
+  }
+
+  /// Without a user binding the built-in one loads, once.
+  #[test]
+  fn built_in_class_binding_loads_without_a_user_binding() {
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    let root = workdir.path();
+    write(root.join("main.tex"), LIPICS_DOC);
+    let (html, stderr) = convert(root, &[]);
+    assert!(
+      html.contains("BUILTIN NOSHIPPED NOUSER"),
+      "the built-in binding must define its commands:\nhtml=\n{html}\nstderr=\n{stderr}"
+    );
+    let loads = stderr
+      .lines()
+      .filter(|line| line.contains("(Loading lipics-v2021_cls.rs"))
+      .count();
+    assert_eq!(loads, 1, "the built-in binding must load once:\n{stderr}");
+    assert!(
+      !stderr
+        .lines()
+        .any(|line| line.starts_with("Error:") || line.starts_with("Fatal:")),
+      "the conversion must be error-free:\n{stderr}"
     );
   }
 }
@@ -4565,6 +4892,44 @@ mod hostile_input_hardening {
       xml.contains("INCLUDED_PART"),
       "in-archive symlink must resolve to target text:\n{xml}"
     );
+    // Every link that is not made is reported once, by name, with its reason: on Unix only the escaping
+    // `escape.tex` (`alias.tex` and `loopdir` resolve inside the source directory); elsewhere no link is made, so
+    // all three are reported (each unpacked as a plain file).
+    let link_warnings: Vec<&str> = stderr
+      .lines()
+      .filter(|line| line.starts_with("Warning:archive:link"))
+      .collect();
+    #[cfg(unix)]
+    {
+      assert_eq!(
+        link_warnings.len(),
+        1,
+        "exactly one Warning:archive:link expected:\n{stderr}"
+      );
+      assert!(
+        link_warnings[0].contains("'escape.tex'")
+          && link_warnings[0].contains("does not resolve inside the source directory"),
+        "the Warning names escape.tex and its reason: {}",
+        link_warnings[0]
+      );
+    }
+    #[cfg(not(unix))]
+    for name in ["alias.tex", "escape.tex", "loopdir"] {
+      let named: Vec<&&str> = link_warnings
+        .iter()
+        .filter(|line| line.contains(&format!("'{name}'")))
+        .collect();
+      assert_eq!(
+        named.len(),
+        1,
+        "exactly one Warning:archive:link for {name}:\n{stderr}"
+      );
+      assert!(
+        named[0].contains("links are not made on this platform"),
+        "{name}'s Warning gives the platform reason: {}",
+        named[0]
+      );
+    }
     // Zero temp extraction leftovers in our private TMPDIR (proves `ro/` was
     // permission-normalized so TempDir drop deleted it cleanly).
     let leftovers: Vec<_> = std::fs::read_dir(&tmp_root)
@@ -4575,6 +4940,159 @@ mod hostile_input_hardening {
     assert!(
       leftovers.is_empty(),
       "expected 0 temp entries left behind in TMPDIR, found: {leftovers:?}"
+    );
+  }
+}
+
+mod log_note_nesting {
+  //! Issue #945 (tp971): a binding's `(Loading <name>...` note opens when the binding starts loading, so what it
+  //! loads (its raw `.sty`'s `(Processing definitions …`, the bindings that requires) prints inside it and the notes
+  //! close innermost first, as Perl's `ProgressSpinup`/`ProgressSpindown` nest (`Core/Mouth/Binding.pm:31`,
+  //! `Package.pm:2336`). The note had been printed after the binding's load, so a log reader saw `bigintcalc_sty.rs`
+  //! load after its own `bigintcalc.sty`. Perl 0.8.8 on the same host logs the same skeleton.
+
+  use std::{path::Path, process::Command};
+
+  /// The open/close tree of a log's progress notes: `(<stage> <child>…)`, a path shortened to its file name. Panics
+  /// on a close with no open note; an unclosed note is left open in the string.
+  pub(super) fn note_skeleton(log: &str) -> String {
+    let mut skeleton = String::new();
+    for line in log.lines() {
+      let closes = if let Some(note) = line.strip_prefix('(')
+        && let Some((stage, closes)) = note.split_once("...")
+      {
+        let stage = match stage.rsplit_once(' ') {
+          Some((head, path)) if path.contains('/') => {
+            format!("{head} {}", path.rsplit('/').next().unwrap_or(path))
+          },
+          _ => stage.to_string(),
+        };
+        skeleton.push_str(&format!("({stage}"));
+        closes
+      } else if line.starts_with(" )") {
+        line
+      } else {
+        continue;
+      };
+      for close in closes.split_whitespace() {
+        assert_eq!(
+          close, ")",
+          "a progress note's line ends in closes only: {line:?}\n{log}"
+        );
+        let open = skeleton.matches('(').count();
+        assert!(
+          skeleton.matches(')').count() < open,
+          "a close with no open note:\n{log}"
+        );
+        skeleton.push(')');
+      }
+    }
+    skeleton
+  }
+
+  /// `bigintcalc_sty.rs` raw-loads `bigintcalc.sty`, which requires `pdftexcmds` (whose binding requires `iftex`):
+  /// each note encloses the next, in the log and on stderr alike, and the second request of `pdftexcmds` (loaded
+  /// already) leaves no note, as Perl's `loadLTXML` returns before its note (Package.pm:2328).
+  #[test]
+  fn binding_load_note_encloses_what_it_loads() {
+    if !latexml::util::test::kpse_has("bigintcalc.sty") {
+      eprintln!(
+        "SKIP binding_load_note_encloses_what_it_loads: bigintcalc.sty is not in this TeX Live"
+      );
+      return;
+    }
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      workdir.path().join("doc.tex"),
+      "\\documentclass{article}\n\\usepackage{bigintcalc}\n\\usepackage{pdftexcmds}\n\\begin{document}\nHello \
+       \\bigintcalcAdd{1}{2}.\n\\end{document}\n",
+    )
+    .expect("write doc.tex");
+    let output = Command::new(bin)
+      .args(["doc.tex", "--dest", "doc.xml", "--log", "doc.latexml.log"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\n{stderr}",
+      output.status.code()
+    );
+    let log = std::fs::read_to_string(workdir.path().join("doc.latexml.log")).expect("read log");
+    assert_eq!(
+      (
+        latexml::util::test::error_count(&log),
+        latexml::util::test::warning_count(&log)
+      ),
+      (0, 0),
+      "{log}"
+    );
+    let skeleton = note_skeleton(&log);
+    assert!(
+      skeleton.contains(
+        "(Loading article_cls.rs)(Loading bigintcalc_sty.rs(Processing definitions bigintcalc.sty(Loading \
+         pdftexcmds_sty.rs(Loading iftex_sty.rs))))"
+      ),
+      "{skeleton}\n{log}"
+    );
+    assert_eq!(
+      skeleton.matches('(').count(),
+      skeleton.matches(')').count(),
+      "{skeleton}"
+    );
+    assert_eq!(
+      log.matches("(Loading pdftexcmds_sty.rs").count(),
+      1,
+      "{log}"
+    );
+    assert_eq!(
+      note_skeleton(&stderr),
+      skeleton,
+      "stderr's notes are the log's:\n{stderr}"
+    );
+  }
+
+  /// A binding's `NoteSTDERR` message prints inside its `(Loading …` note on stderr, as its logged lines do: the
+  /// pending note is printed first (#945 review).
+  #[cfg(feature = "runtime-bindings")]
+  #[test]
+  fn binding_stderr_note_prints_inside_its_loading_note() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      workdir.path().join("doc.tex"),
+      "\\documentclass{article}\n\\usepackage{noterhai}\n\\begin{document}\nHi.\n\\end{document}\n",
+    )
+    .expect("write doc.tex");
+    std::fs::write(
+      workdir.path().join("noterhai.sty.rhai"),
+      "NoteSTDERR(\"hello from the binding\");\nDefMacro(\"\\\\a\", \"X\");\n",
+    )
+    .expect("write noterhai.sty.rhai");
+    let output = Command::new(bin)
+      .args(["doc.tex", "--dest", "doc.xml", "--log", "doc.latexml.log"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+      output.status.success(),
+      "binary exited {:?}\n{stderr}",
+      output.status.code()
+    );
+    let note = stderr
+      .find("noterhai.sty.rhai")
+      .unwrap_or_else(|| panic!("no note for the binding\n{stderr}"));
+    let message = stderr
+      .find("hello from the binding")
+      .unwrap_or_else(|| panic!("no binding message\n{stderr}"));
+    assert!(
+      note < message,
+      "the binding's message printed before its (Loading note\n{stderr}"
     );
   }
 }

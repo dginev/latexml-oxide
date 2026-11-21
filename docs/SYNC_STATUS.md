@@ -60,7 +60,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (387 lines, weight 844; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (405 lines, weight 906; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -499,6 +499,24 @@ Rules that keep this file honest and mergeable:
     for `setsid`); glibc `malloc_trim`/`mallinfo` → the allocator's safe API; no process-env mutation after startup;
     safe libxml/libxslt wrappers upstream in our crates; `unsafe impl Send/Sync`; isolate the rest (signal handlers,
     Windows/macOS queries). Target ≤ 15 shipped, 0 test-only; every PR byte-identical on a fleet A/B and perf-neutral; 5
+  - IMGINTENT — after v0.8.0, a dedicated sprint (DG 2026-11-20: "addressing the full challenge and complexity, and
+    testing against the full diversity of arXiv"): image sizing that keeps the source's width intent (issue #721,
+    ar5iv#83). Today `width=7in`, `0.8\linewidth`, a length register and a macro all reach the XML as pt
+    (`options="width=505.89pt"`) and the HTML as a px `width`; LaTeXML.css caps every image to its minipage
+    (`.ltx_minipage > .ltx_graphics{max-width:100%}`, as Perl) and ar5iv makes nested landscape images fluid
+    (`width:auto`), so #721's 7in image in a `.5\textwidth` minipage shrinks where PDF and tex4ht keep 7in. Goal:
+    relative widths (fractions of `\linewidth`/`\textwidth`/`\columnwidth`/`\hsize`) scale with their box, absolute
+    ones keep their size capped only by the reading column and the screen, natural size (no width) stays fluid.
+    Work: (1) classify while the width's dimension is evaluated (literal and macro widths; a length register already
+    holds a plain length, so it keeps today's cap), on every sizing path (`width`/`height`/`totalheight`/`scale`,
+    `\resizebox`, `\scalebox`, `\epsfig`/`\psfig`/`\epsfxsize`; `latexml_core/src/util/image.rs`), marked by a class
+    on `ltx:graphics` (OD record; Perl marks none); (2) CSS in LaTeXML.css (local delta, offered upstream) and ar5iv-css:
+    the box cap and ar5iv's fluid rule exempt absolute images, everything is fluid again below the reading width, and
+    side-by-side panels never overlap (exempt only a box alone on its row, or take the row from the float panel grid,
+    task #360); (3) test against all of arXiv: count the images whose rendering changes (stated width > box; alone on
+    its row vs side by side; narrow screen), then a visual A/B over a sample stratified by class, column layout,
+    subfigure grids, tables and natural-size rasters; acceptance bar: no new overlap or overflow. Risks: misread
+    registers, panel overlap, phone overflow, two-stylesheet specificity. Witness: #721's MWE; 5
   - IEEEROUTE-ABBREV — an IEEE affiliation note with "St."/"Univ." + capital, or a "D.S. Name" sentence start, keeps the whole note unrouted; 2011.08553 (probe p2).
   - IEEEROUTE-CUTLIST — the content check does not read a note's routed contacts as one printed text (B3 cleared via B2c only).
   - IEEEROUTE-PARTIAL — (REVIEEEB S2) 2204.03507: Torrisi's "also with INSTM" is routed while his main note "A and B, are with …" stays whole; fix: leave an author's "also with" note whole when an earlier note of his stayed whole, or accept the comma.
@@ -642,6 +660,128 @@ Rules that keep this file honest and mergeable:
       mnras-like hooks) and `\NewCommandCopy` / `\global\let\maketitle\relax` wrappers (`fmmarks_own_maketitle_relax_red`,
       `maketitle_newcommandcopy_wrapper_red`): measure from the class's own `\maketitle` replay (T1); after DG's sandbox
       review; 5
+  - BINDFID — the long-term binding standard (DG 2026-11-20: "we *eventually* want very principled and complete
+    bindings for each .cls and .sty that requires non-trivial semantic mapping … incrementally, as our sprints allow,
+    while working on improving arXiv's fidelity and satisfying user reports"): a binding that stands in for a real file
+    reproduces the file's observable effects — the files it loads or marks loaded (thmtools' four subpackages), where
+    each command is legal (amsfonts' `\newsymbol` is a body-legal `\global\mathchardef`, not the preamble-only
+    `\DeclareMathSymbol`), each macro's shape (a stored value vs a macro with parameters: EDP's `\@subjclass`), the
+    definitions of the mode it runs in (amstex.sty under `\documentstyle` has no `\matrix@check`), and its own package
+    loads with their options (natbib from elsarticle/acmart/jmlr/jheppub; no invented loads, as cvpr's was). A binding
+    that reuses another binding's definitions calls them as Rust code and never loads a file the real one does not load
+    (DG 2026-11-21: "reuse as Rust code, without the side effects of declaring auxiliary package and class bindings as
+    loaded"; Perl's emulateapj.cls → emulateapj.sty and svjour3 → svjour shortcuts read 1305.6912's and 2110.05134's
+    shipped copies; REGFIXH), while every file the real one loads itself is loaded as a real load, with its options and
+    a shipped copy read (DG: "we still want to faithfully load LaTeX dependencies that the original packages and classes
+    load themselves"). Witnesses:
+    the v0.8.0 regression check (PR #958 and the REGFIX-D/E batches, ~430 papers). Steps: extend
+    `tools/perfect_kernel/binding_conformance.sh` to compare a binding's loaded-file marks and preamble-only commands
+    with the real file's; then audit the bindings in order of arXiv reach; 5
+  - HEALTHYAB — a standing healthy-paper A/B before each bundle merge or fleet swap: a fixed, holdout-free sample
+    stratified over all arXiv years (~10k, `kit/pop.py`), base vs candidate on the error-free rate, content kept,
+    semantic markup and byte identity. The 2605/2606 sandbox reruns cover only 2026 idioms and a batch's own A/B only
+    its construct; the v0.8.0 regressions sat in older idioms (1990s AMS-TeX, amsppt copies, sig-alternate, easytable)
+    and only the full run caught them; 3
+  - LOCKSIDEFX — one principled rule for what a refused definition defines on the side (an `advisor` design study):
+    the definition lock (D1; OD #482, #500, #568) refuses a paper's redefinition of a kernel or binding command, and
+    with it the helpers or counts that redefinition sets — mlbib/astron/ACM `\citeauthoryear` inside their own `\cite`
+    (per-shape rule `label_macros_from_refused_cite`, OD #88; PR #958, REGFIX-F), amsppt copies' self-redefining
+    `\title` (outer accepted, inner refused: an endless recursion; REGFIX-D), a replay's local change to an existing
+    switch (REPLAYSWITCH). (bullsrsl's author count was not this: the kernel's store overwrote the class's own
+    `\@author` helper, REGFIXG.) Replace the per-shape rules with one mechanism; 5
+  - FUPC — after rc1 (DG 2026-11-20): `$$` inside a display (branch `fix/fupc-display-dollar-followups`, `39321db12b4`,
+    reviewed NO-SHIP): it reopens the display its opener opened (a bare `\equation` and aliases too) and carries
+    `\tag`, `\nonumber` and `\label` to the second display. DG ruling (b): an untagged amsmath label prints the
+    equation's number where TeX's `\ref` is empty — record an OD divergence. The fix round: labels kept when a
+    retraction is never reopened; the token-spelling ratchet (`latex_constructs/mod.rs` 224→225, `sect07.rs` 29→30);
+    corrected KPE #1295 / OD #1091 wording. Residuals: `\[ a $$ $$ c \tag{3}\]` (pdflatex errs "\tag not allowed
+    here"), `{displaymath}` with `$$ $$` (1 Error, pdflatex 0); 3
+  - REGTAIL — the v0.8.0 regression check's classes still untraced after REGFIX G-L (run 372 → 399 triage): aastex631
+    2211.00793 (`Missing } inserted` ×20 at "Anonymous String"), 2502.03242's `\the@toks` undefined and `\@sharp`
+    reaching the Stomach (colortbl + raw ltxutil), solarphysics.cls `toccaption` (12 papers; 2006.04669, 1510.03282,
+    2301.09829), the `(caption)` and `fi` classes (~37 each, unsampled), and ANONSTR. Fixed by REGFIX G-L: bullsrsl
+    `authorcontributions`, the SVJour subset, emulateapj 1305.6912, biophys-new 2212.00883, llncs 2312.12023,
+    `malformed:ltx:item`, `\etalchar`, `\IUCrCemaillink`, `\BR@backref`, `\@arrayleft` → `Fatal:Mouth:EoF`; 5
+  - RUNAWAY395 — an undelimited macro argument that meets a closing `}` takes it (Perl `Gullet.pm:732` readArg;
+    `gullet.rs` ~4048 `read_arg`), so an `\edef` runs to the end of the file (`\makeatletter\edef\x{\@firstoffive{a}}`):
+    1012.2852 loses its last ~370 lines, base and Perl too; TeX inserts `\par` and keeps the `}` (tex.web §395).
+    Fix through the `Runaway::Paragraph` path, as its own PR with an A/B. (`\end{document}` is protected since REGFIXJ3,
+    so the runaway no longer loops on its tail; OD #1107); 3
+  - ANONSTR — the "at Anonymous String" `&`/`}` error classes are separate mechanisms (REGFIXK sample): 2512.14155 (a
+    stray `&`), 2107.00457 (an extra alignment tab), 2003.01824 (`Extra }` with arydshln), 2207.06210 (unclassified):
+    one root-causer each; 3
+  - FMREPLAY — the class-setter replay's residuals (REGFIXG, REGFIXI): a replay drops its local change to an existing
+    switch (bullsrsl `\setboolean{BSRSL@affilsempty}`: "Affiliation is empty", 19 papers, 2309.01084, 2411.00793;
+    clashes with `perfect_kernel_batch56::class_maketitle_replay_that_errors_is_dropped`); a replay's records held in
+    toks registers survive the deposit (a class helper appending authors to a toks its `\maketitle` prints prints
+    each twice; synthetic); bullsrsl surnames read as affiliations (`\lx@author@trailing@mand`, since Oct 8) and its
+    "Corresponding author(s):" label not kept (now counted: 38 papers' unclaimed Warning); a delimited-argument kept
+    call makes the block decline (RED `sectioning-frontmatter/author_delimited_argument_kept_call_declines_red`); a
+    note-printing call's globals read outside the block are still lost (no witness); with authblk a `\footnotemark`
+    inside a robust command drops its mark (counted); contacts on a `\\` line land in a nameless creator; a counted
+    `\orcidlink` wrapper gives Count 1 (pdflatex 2); JATS/TEI `[@class='ltx_phantom']` misses `ltx_align_left
+    ltx_phantom`; 5
+  - ENDDOCRES — `\end{document}`'s residuals (REGFIXJ): an environment open at the end is Perl's Warning where TeX's
+    `\@badend` errs (the standing rule says Error: count the corpus first); `enddocument/info` and
+    `\AtEndAfterFileList` never run; raw ltxgrid's output-routine messages (`\do@output@MVL`/`\do@output@cclv`) never
+    fire (empty `ltx:p`s at the end; the document's own afterlastpage/afteraux code dropped); a hook that detokenizes
+    the grabbed tail prints `“lx@enddocument@tail` where pdflatex prints `“@kernel@after@enddocument` (name the slot
+    after latex.ltx:15258's); `\deadcycles\z@` before `\@@end` would let ~40 papers' `\patchcmd\enddocument{\deadcycles}`
+    (quantumarticle.cls, cedram.cls) succeed; 3
+  - BINDRES — the binding fixes' residuals (REGFIXH, REGFIXI, REGFIXK, REGFIXL): no harvard binding (17 IUCr papers;
+    2504.07452's `\citeasnoun` prints a bold "?", "[]" before every bibblock, keyless bibitems); `\item[label]` in
+    `{thebibliography}` prints the label twice (`[[1]]`, since Oct 8); emulateapj's `\textwidth` is 345pt where
+    emulateapj.cls:334 sets 7.1in (1612.09425, 0812.1578); `[epj]{svjour2}` papers never get the EPJ panel page
+    (svjour_cls.rs:82 `is_document_class("svjour")`); BINDFID's audit list: aas_support (aas_macros, deluxetable),
+    svproc (aas_macros), paspconf (aaspp), emulateapj's base class aastex (the real one is REVTeX), sv_support's
+    unconditional natbib (svjour3.cls:68 only under its option); `\meaning\text` shows `\lx@text` where pdflatex shows
+    `\protect \text  ` (OD #1104; robust needs the lock to hold the inner `\text␣`, OD #568); `\bibitem[\lab]` with an
+    argument-taking `\lab` (pdflatex 2 errors, we 0); ulem's `\ul` runs through an `\end{…}`/`\endgroup` at its depth
+    and past a closing `$`, and a cell-end-closed line loses the cell's right border (pdflatex fatal; RED repros under
+    `loader/ulem_declaration_*`), and a document's own underline macro through
+    `\useunder` in a `\multicolumn` still errs; 3
+  - REGRES — the regression fixes' residuals: fdsymbol's ~165 `symNNN` glyphs, 6 extensible accents (2312.00399
+    `\overlinesegment`) and `\ullcorner`/`\ulrcorner`; `\usepackage{amsmath}` after `\documentstyle{amsart}` does not
+    restore the old-form error; natbib loaded before `\documentclass{elsarticle}` is only an Info (RED
+    `natbib_before_elsarticle`); natbib residuals 2111.08230 (a standalone sub-document's preamble) and 2405.11676
+    (imsart-altered passes); a binding-defined name silently ignores a document `\newcommand` (no "already defined"
+    Error); `\usepackage{amstex}` under LaTeX2e raises no "obsolete" error; fdsymbol + amssymb gives no "already
+    defined" errors; papers whose `aaai.sty` is missing (cmp-lg9406010, cmp-lg9704001, cs9811010, cs0003021) keep
+    `undefined:\citeauthoryear`, the honest missing-file result (option: a small aaai.sty binding); 3
+  - LASTBOXROW — `\lastbox` takes a whole alignment, not its last row (tex.web §1080; rows §799, §810): easytable's
+    per-cell peel collapses into one cell holding the whole table, so its rules don't line up; 3
+  - VPHANTOMWIDTH — a text-mode `\vphantom` keeps its argument's width in HTML (`visibility:hidden`,
+    LaTeXML-inline-xhtml.xsl:57-75, as Perl), where TeX's is zero width; needs a ruling and an ar5iv-css mirror; 1
+  - FUPA — after rc1 (DG 2026-11-20): the loader follow-ups of #945 and #947. A user `.rhai` for a name reached on the
+    provides route (the paper ships `mylipics.cls` with `\ProvidesClass{lipics-v2021}`) still has the renamed copy read
+    after it (`loading_for_a_provides_route`, `content.rs`, never asks `state::local_binding_file`);
+    `\IfFileExists{mypkg.sty}` with only a user `mypkg.sty.rhai` answers false (`binding_counts_as_file`), where Perl's
+    `FindFile` finds any `.ltxml` in the search paths; `DeferredNote` state unit tests (an empty load, log then
+    decline, `catch_unwind` inside a printed and an unprinted note, silenced notes); a dispatcher that logs and then
+    declines leaves a phantom `(Loading X... )` (Perl's `FindFile` runs before `ProgressSpinup`); a `.tex` binding's
+    note names the raw file (`(Loading epsf.tex... )`); 3
+  - AMSPPTRES — REGFIX-D's residuals (PR #960): math0610862 is back at its Oct-8 `Fatal:TooManyErrors` — the amsppt
+    binding reads each `\ref` field expanding (`\@bibfield … XUntil`, `amsppt_sty.rs`; Perl amsppt.sty.ltxml:439,
+    KNOWN_PERL_ERRORS #1298) where amsppt.sty boxes it (:956-965), so the paper's `\noOf` assignment misfires: read the
+    field by digesting it (RED `amstex/amsppt_bibfield_expands_a_conditional_red`); a copy's additions over amsppt
+    are lost (math0610862 `\Refst`, `\subrefhead`; 1003.5377 `\SecondPage`; RED
+    `amstex/amstex_copy_additions_are_kept_red`); amsppt's self-redefining `\title` stays refused, 1 Error with every
+    word kept where TeX prints "[T:Hello]" (RED `amstex/amstex_self_redefining_title_runs_red`; LOCKSIDEFX); 5
+  - THMEDPSRES — REGFIX-E's residuals (PR #960): thm-listof's filters (`\showtheorems`, `\ignoretheorems`,
+    `\onlynamedtheorems`, `\setlisttheoremstyle`) are undefined under the thmtools binding (2 of ~519 census papers;
+    `\usepackage{thmtools}\ignoretheorems{x}`); edpsmath's `\keywords` stores into box `\@b@kwrds` and our
+    `\maketitle` never runs `\@setkeywords`, so 1110.0287's keywords are missing (~11 of 60 edps papers; under
+    `[proc]` the PDF empties them too: a FIDELITY_CHARTER §2 question); a stored `\@subjclass` without a year gets
+    "1991 Mathematics Subject Classification" (Perl ams_support.sty.ltxml:131) where TL 2025's amsart prints "2020"
+    (amsart.cls:555, :789); 1704.06431's `Fatal` enumerate/`\lx@tags` recursion (pre-existing on main); 3
+  - LMCSQED — the lmcs binding's `\qEd` is `\ensuremath{\square}` (`lmcs_cls.rs` ~149), where LMCS.cls:551-553 draws its own
+    box: a paper that redefines `\square` (1305.0576's ldiagxy.tex:207, a delimited diagram macro) breaks every `\qEd`
+    display (217 errors, more since `\[` is `{equation*}`; 0 with `\qEd` overridden). Give `\qEd` the class's box under
+    an internal name; repro `tmp/END399/T3W/repros/1305.0576/qEd_square.tex` (tier 3 A/B, pre-existing; 1202.6352); 1
+  - TIKZCDHANG — a tikz-cd diagram whose cell has `\hspace{1em}\rar[mapsto]` loops under calc after an earlier cell's
+    calc error (1611.01788 thesis.tex:5400/:5434; both the Nov 17 binary and the release candidate; pdflatex is fatal
+    there too, 8 errors): find the loop site (`perf record` at 20 s), then end in a bounded Error. The wall-clock Fatal
+    leaves no XML and no log, so the paper's 56k words are lost — a salvage question too; 5
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
@@ -716,7 +856,7 @@ measured the program; the cortex reruns of sandboxes 2605/2606 (runs 325-328, 20
 - `ar5iv.css` is actively developed (`~/git/ar5iv-css`). Base `LaTeXML.css` starts from upstream Perl LaTeXML's default theme (synced with upstream master in #844).
 - **A measured defect against the PDF is fixed in `LaTeXML.css` (DG 2026-11-14)**, mirrored into ar5iv-css, recorded in OD and offered upstream to `brucemiller/LaTeXML`.
 - `ar5iv.css` is actively developed (`~/git/ar5iv-css`). Base `LaTeXML.css` follows upstream Perl LaTeXML's default theme; a defect measured against the PDF is fixed locally as a commented `latexml-oxide local delta` (recorded in OD, guarded by `witnessed_css_delta`), mirrored into ar5iv.css where ar5iv shows it, and offered upstream to `brucemiller/LaTeXML` (DG 2026-11-14).
-- Sizing intent gap (witness #721, ar5iv#83): Preserve absolute (`7in`) vs relative (`\textwidth`) intent in `image.rs:186` instead of flattening both to `pt`.
+- Sizing intent gap (witness #721, ar5iv#83): the post-v0.8.0 sprint IMGINTENT in row R.
 
 ### Algorithm Markup + CSS Unification (0.7.7 Target)
 - Part 2 landed (line numbers, captions, CSS mirrors).

@@ -1,0 +1,20 @@
+% witness: (synthetic; review of REGFIXA) fdsymbol users 2112.00443, 2010.03824, 2312.04649
+% oracle:  fdsymbol.sty loads xkeyval, amsmath and textcomp, not amssymb or amsfonts: it declares the AMS symbols and
+%          its own `\mathbb`/`\mathfrak` itself (fdsymbol.sty:194-195), never `\blacksquare`, `\eth`, `\Bbb` (nor
+%          `\digamma`, `\varkappa`, `\backepsilon`, `\diagup`, `\diagdown`, `\frak`, `\bold`). `\nsubset` is its
+%          relation at the slot of glyph `notsubset` (fdsymbol.sty:772, fdsymbol-b.enc). pdflatex 0 errors,
+%          "AMSSYMB-NOT-LOADED", the user's square
+% engines: rust REGFIXA a86d7a59154 0 errors but amssymb loaded, the user's `\blacksquare` replaced by amssymb's ■
+% expect:  0 errors, 0 warnings; "AMSSYMB-NOT-LOADED", the user's rule, `\nsubset` ⊄
+% status:  RED (REGFIXA a86d7a59154) -> GREEN; guard perfect_kernel_batchregfixa::fdsymbol_declares_no_amssymb
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{fdsymbol}
+\newcommand{\blacksquare}{\rule{1ex}{1ex}}
+\newcommand{\Bbb}{\mathbb}
+\makeatletter
+\@ifpackageloaded{amssymb}{\def\X{AMSSYMB-LOADED}}{\def\X{AMSSYMB-NOT-LOADED}}
+\makeatother
+\begin{document}
+\X. Proof done $\blacksquare$ and $\Bbb{R}$ and $A \nsubset B$ and $\vardiamondsuit$.
+\end{document}

@@ -1,0 +1,22 @@
+% witness: easytable `{TAB}` (2002.06044, 2109.00258, 2404.03737) and easybmat `{BMAT}` in math (1705.10408,
+%          2106.13444): `\@easy@buildbox` (easy.sty:450-501) peels the `\halign` box with `\lastbox` and sets each
+%          piece as `\vphantom{\copy\@ne}\unhbox\@ne`
+% oracle:  pdflatex 0 errors: a 2x2 ruled table, then "After."; a 2x2 matrix in parentheses, then "after."
+% engines: rust (MAIN935) 2 errors each ("Closing tag ltx:text whose open descendents do not auto-close.
+%          Descendants are _CaptureBlock_" + "Attempt to close ltx:_CaptureBlock_"), the phantom's table shown;
+%          rust (Oct 8, before 68q's `\unvbox` splice) 0 errors and no table at all; Perl has no binding and loads no
+%          raw style (undefined {TAB})
+% expect:  0 errors; each table once inside the `\vphantom` (hidden) and once shown
+% status:  GREEN REGFIXB. Guard perfect_kernel_batchregfixb::easytable_easybmat_lastbox_peel
+\documentclass{article}
+\usepackage{easytable}
+\usepackage{easybmat}
+\begin{document}
+\begin{TAB}(r,1cm,2cm)[5pt]{|c|c|}{|c|c|}
+a & b \\
+c & d \\
+\end{TAB}
+After.
+
+$\left(\begin{BMAT}{cc}{cc} e & f \\ g & h \end{BMAT}\right)$ after.
+\end{document}

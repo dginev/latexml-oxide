@@ -43,6 +43,134 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Regressions from the per-paper check of the November run (#954, #958, #960, and the follow-up integration).** Every paper that converted with
+    no Error on 2026-11-05 (run 372) and erred in the November run was classified (pdflatex, Perl, a bisect); the
+    clusters our changes caused are fixed:
+    - `$$ $$` inside amsmath's `\[ … \]` closes and reopens `{equation*}`, not `{equation}`, as TeX's `$$` ends one
+      display and opens the next (tex.web §1193-1197; KNOWN_PERL_ERRORS #1295, OXIDIZED_DESIGN_DIVERGENCES #1091;
+      2606.13867). Guard `perfect_kernel_batchclustfix3::amsmath_display_brackets_dollar_dollar`.
+    - AMS-TeX: `\pmatrix … \endpmatrix` under `\documentstyle{amsart}` raises no "Old form" error, since amstex.sty's
+      `\pmatrix` has none (a LaTeX2e `\usepackage{amstex}` still gets amsmath's, as in TeX); a renamed copy of
+      amsppt.sty (amsppt's docstrip header or trailer, or its `\def\filename`) takes the amsppt binding instead of
+      looping on its self-restoring `\title` to `Fatal:oom`; amsfonts' `\newsymbol` is legal in the body. Guards
+      `perfect_kernel_batchregfixa::*`, `perfect_kernel_batchregfixd::{amsppt_copy_takes_the_binding,
+      only_an_amsppt_copy_takes_the_binding, self_redefining_value_fails_safe}`.
+    - fdsymbol defines its 862 symbols from its own slots and `.enc` glyph names, without marking amssymb loaded.
+    - An `\halign` that `\lastbox` took is a box, so putting it back ends no paragraph (tex.web §1080, §1094-1095;
+      KNOWN_PERL_ERRORS #1296): easytable/easybmat tables convert again. Guards `perfect_kernel_batchregfixb::*`.
+    - natbib's "Option clash" is raised only where TeX sees both loads: a binding's own repeat load, an unmodified
+      class copy's load and a later `\PassOptionsToPackage` for a key-value package no longer clash
+      (OXIDIZED_DESIGN_DIVERGENCES #1103). Guards `perfect_kernel_batchregfixc::*`.
+    - Citation labels from a `\cite` the definition lock refuses: at every kernel `\cite` the refused body's leading
+      definitions run, as TeX's `\cite` does at each call (OXIDIZED_DESIGN_DIVERGENCES #88), so mlbib, ACM's
+      sig-alternate and acm_proc, Kluwer/Solar Physics and AAAI author-year labels print as in the PDF. Guards
+      `perfect_kernel_batchregfixf::{acm_robust_cite_label_under_the_lock,
+      refused_cite_redefines_a_defined_label_macro}`.
+    - amsart hands over `\@subjclass` and `\@keywords` only when they are stored values, so edpsmath.cls's
+      argument-taking placeholder no longer swallows the title page; thmtools marks thm-patch, thm-kv, thm-autoref and
+      thm-listof loaded (thmtools.sty:47-49) and defines `\Autoref` (KNOWN_PERL_ERRORS #1297). Guards
+      `perfect_kernel_batchregfixe::*`.
+
+    - A class's own author helper is kept through its refused setter's replays: bullsrsl.cls counts every author
+      again (its "Unwanted authorcontributions" Error is gone on 81 of 84 papers; 2312.08217, 2607.02675), and an IUCr
+      `\IUCrAufn` note after an e-mail link is printed after the title as the class prints it. A call that prints a
+      contact or a mark apart from the names keeps its global definitions, run once. Guards
+      `perfect_kernel_batchregfixg::*`, `perfect_kernel_batchregfixi::{iucr_author_note_after_email,
+      contact_printing_call_runs_once}`.
+    - A binding that reuses another binding's definitions calls them as Rust code instead of loading a file its real
+      class never loads (svjour3, emulateapj, JHEP2, JHEP3, PoS, mnras; KNOWN_PERL_ERRORS #1300): svjour3 papers that
+      also ship the older svjour.cls no longer raise its "No valid journal" Error (2101.09497, 2110.05134,
+      2408.12532), nor 1305.6912 its truncated emulateapj.sty's, while a requested class copy declaring the sibling's
+      name is still read (hep-ph0608235). Guards `perfect_kernel_batchregfixh::*`.
+    - iucrjournals.cls is read under its own name (`\IUCrCemaillink` and the rest were undefined; 38 papers), its
+      e-mail links become the authors' contacts; amsppt's `\roster` items close under plain AMS-TeX
+      (KNOWN_PERL_ERRORS #1301); the backref stub defines `\BR@backref`; array defines `\@arrayleft`/`\@arrayright`
+      (array.sty:428-429). Guards `perfect_kernel_batchregfixi::*`.
+    - `\end{document}` carries latex.ltx's tail (`\@checkend{document}\clearpage…\begingroup…\endgroup`, the late hooks
+      in their slots, scoped as in TeX; OXIDIZED_DESIGN_DIVERGENCES #1107), so revtex's ltxutil.sty and etoolbox's
+      `\patchcmd{\enddocument}` find what they scan for: 9 of 14 `Fatal:Mouth:EoF` papers convert whole (2004.09405,
+      2401.03827). Guards `perfect_kernel_batchregfixj::*`.
+    - A bibitem label's cite-printed form is expanded at the `\bibitem`, as latex.ltx writes it to the `.aux`, so
+      alpha.bst's `\etalchar` in a grouped bibliography no longer errs at a later `\cite` (1101.1169, 2402.10127,
+      2203.12786); `\text` reads its argument before raising a cell's alignment count, so a brace-less `\text &` ends the
+      cell (2212.00883), and stays `\text` under `\edef` (OXIDIZED_DESIGN_DIVERGENCES #1104). Guards
+      `perfect_kernel_batchregfixk::*`.
+    - ulem's `\ul` declaration (from `\useunder`) underlines to the end of its group, a cell or a `\multicolumn` body
+      instead of reading past it (2312.12023: 5 Errors → 0, 12 underlines; OXIDIZED_DESIGN_DIVERGENCES #1109); an
+      unclosed `\ul` is an Error, as in TeX. Guards `perfect_kernel_batchregfixl::*`.
+
+    On the papers each fix targets, A/Bs of 60-204 papers: none worse. The residuals are row R's REGRES, REGTAIL,
+    AMSPPTRES and THMEDPSRES lines in `docs/SYNC_STATUS.md`.
+  - **A binding's `(Loading … )` note encloses what it loads (#945).** The note opens once the binding is found
+    (Perl `Core/Mouth/Binding.pm:31`) and prints before the first line logged inside it, so the raw files and bindings
+    it loads nest inside it, and a binding's own messages start on a fresh line. Progress notes carry no elapsed times
+    (OXIDIZED_DESIGN_DIVERGENCES #1102). Guards `cluster_cli::log_note_nesting::*`.
+  - **A user's binding in the search paths is the only binding for its name (#947).** A `lipics-v2021.cls.rhai`
+    beside the paper or under `--path` no longer has the paper's own `lipics-v2021.cls` read on top of it, as Perl's
+    `FindFile` loads the first binding found and never the raw copy. Guards
+    `cluster_cli::user_binding_precedence::*`.
+  - **Option and math-alphabet names are tokens (#944).** A Rhai `DeclareOption` closure whose option name contains
+    `-` or `.` no longer fails with `Fatal:Parameter:Unknown`, and `\DeclareMathAlphabet` defines a `\csname`-built
+    name whole, as Perl defines both on the token (`Package.pm:2419-2429`, `latex_constructs.pool.ltxml:2684-2694`).
+    Rhai's `DeclareOption("opt", ())` is a no-op handler and an empty option name is the default handler
+    (`\default@ds`), as in Perl. Guards `cluster_rhai_declareoption_punctuated_names_944`,
+    `perfect_kernel_batchfupb::*`.
+  - **`tools/make_formats.sh` and `make_formats.ps1` accept any cargo profile (#943)**, `maxperf` among them, and
+    find the binary where cargo puts it; a name that is not a profile name still exits 2.
+
+  - **Release builds name their inputs.** A release run resolves its build inputs once, in
+    `.github/workflows/release-prepare.yml`: the newest dated nightly whose manifest ships every component and host
+    toolchain the release and CI use (stepping back up to 14 days), and a `Cargo.lock`. Every leg builds with that
+    toolchain and `--locked`: the five platform binaries, the dumps, the notices, the CI and Windows CI suites, and
+    the container images. Both are attached to the release as `BUILD-INPUTS` (toolchain, `rustc -vV`, the lockfile's
+    SHA-256, tag, commit, the RC it reuses) and `Cargo.lock`, so a release has 17 assets. A final `X.Y.Z` whose diff
+    since its last green, published `X.Y.Z-rcN` touches only version pins and docs rebuilds from that RC's toolchain
+    and lockfile (only the workspace crates' own versions rewritten, checked by `--verify-lock-diff`) and skips the
+    test suites the RC passed; anything else, or any error, runs the full pipeline. The Linux binary's `--version` must
+    print exactly `latexml_oxide <tag> (revision <commit>)`; an RC keeps its `-rcN`. `release-prepare.yml` can be
+    dry-run on any branch, without a tag: `gh workflow run release-prepare.yml --ref <branch> -f tag=<tag>`
+    (`docs/release/RELEASING.md`). Guards: `tools/check_rc_reuse_test.sh` (27 checks, run by `tools/lint.sh`,
+    including one that runs the self-test under the pre-push hook's exported `GIT_DIR` and asserts the host
+    repository untouched).
+
+  - **Library API and command-line checks.** The `test-utils` feature is no longer a default feature (the test suites
+    enable it themselves). `latexml::api` returns a failure on its conversion thread as an `Err` instead of panicking
+    the caller, still releases the thread's engine state, and keeps the conversion log when post-processing never
+    starts; `HtmlOptions` is `#[non_exhaustive]` with a `with_default_resources` builder; `PostOptions` implements
+    `Default`. `latexml_oxide` checks `--format`, `--whatsin` and `--whatsout` against their documented values (case
+    folded; `html`, `epub3` and the like normalized), exiting 2 on any other, and its `--log` and `--telemetry-out`
+    help says what they do. `latexmlmath_oxide` gains `-V`/`--version`, reads its options left to right up to `--`,
+    and exits 2 on an unknown long option or an empty `--unicodemath=` (a formula starting with a single `-`, such
+    as `-x + 1`, is still a formula). Guards `api::tests::{worker_panic_returns_err_instead_of_crashing_caller,
+    core_failure_preserves_conversion_log}`, `format_whatsin_whatsout_validate_and_normalize`,
+    `cluster_cli::{latexmlmath_version_and_cli_validation, latexml_oxide_rejects_unknown_format_whatsin_whatsout}`.
+
+  - **Hardening before the release: archives, child processes, long-running workers and hostile input.**
+    - *Archives.* One unpacker, `latexml::util::unpack_zip`, serves the command line and `cortex_worker`: an entry
+      whose path leaves the source directory (`../`, `a/../../x`, `..\`), a link that escapes it, a link cycle or an
+      over-long target is unpacked as a plain file or skipped with a counted Warning (the worker used to lose such a
+      paper); a link inside the archive resolves to its target's text; unpacked files lose their execute bits
+      (`a-x,u+rwX`), and a read-only directory in the archive no longer leaves files behind. On 300 arXiv zips the
+      unpacked trees are identical to before (7,031 files by path, size and SHA-1), and unpacking is 1-5 % faster.
+    - *Document Lua* can no longer create temporary files (`io.tmpfile`, beside `io.popen`, `os.tmpname`,
+      `os.tmpdir`).
+    - *Child processes* (graphics converters, the parallel render workers, Rhai commands) are registered with the
+      watchdog and killed, with their process group, when a conversion times out or exits — on Windows too
+      (`taskkill /T /F`); spill directories and converter staging files are removed at exit; the LSP server retries
+      `waitpid` on `EINTR` instead of reporting exit 0 and leaving a zombie.
+    - *Long-running workers* (`cortex_worker`, the LSP server) reset each conversion's state before the next — the
+      BibTeX entries, the `\everypar` guard, token origins, staged snapshots — and no interned string outlives the
+      arena reset that frees it.
+    - *Hostile input:* a `\cline` with an overflowing or huge column range, multi-byte UTF-8 after `\PYGZ` in a
+      minted cache, and a non-numeric parameter in a constructor's substitution no longer crash;
+      `latexmlmath_oxide` exits 1 on a TeX Fatal instead of panicking; release binaries ignore
+      `LATEXML_INJECT_PANIC`. The `unsafe` count fell from 115 to 110 (`docs/release/SAFETY.md`).
+
+    Guards `lua_bridge::tests::sandbox_denies_io_tmpfile`, `parse_line_handles_multibyte_utf8_after_pygz`,
+    `cluster_cli::{cline_overflow_and_huge_range_do_not_panic_or_oom, latexmlmath_exits_cleanly_on_tex_fatal,
+    zip_archive_with_readonly_dir_and_symlinks_converts_and_cleans_up}`,
+    `util::archive_unpack_tests::unpack_zip_normalizes_permissions_and_contains_symlinks`.
+
   - **An abstract no longer swallows the document.** A brace-less `\abstract`, or an `\abstract{` whose `}` a
     footnote took, with no `\section` after it, held the whole paper and its bibliography (TeX sets them so too; Perl
     loses the body): the bibliography now ends it as its heading would, and an abstract the bibliography closed, or the
@@ -773,6 +901,27 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     files `c:/texlive/2026/…`, so every conversion fell back to the subprocess
     backend (about 270 ms a file lookup). Paths now compare as Windows compares
     them. Guard `path_is_under_compares_as_the_file_system_does`.
+  - **A distro libkpathsea finds an install-tl TeX Live's `texmf.cnf`** (#948). Built against
+    Debian/Ubuntu's `libkpathsea6` and run where only an `install-tl` tree is on PATH (a Docker
+    image), the linked library searched its compiled-in directories, which lack
+    `$SELFAUTOPARENT/texmf-dist/web2c`: it warned `configuration file texmf.cnf not found`, resolved
+    nothing, and every lookup went through the `kpsewhich` subprocess. The `kpathsea` crate (0.3.5)
+    now appends that tree's `web2c` directories (and its root and `texmf-local/web2c`, the part of
+    TeX Live's default an install-tl tree populates) to the library's search when its compiled-in
+    directories hold no `texmf.cnf` and the user set no `TEXMFCNF`, so the in-process backend reads
+    the same configuration as the `kpsewhich` on PATH. Where the library already finds a `texmf.cnf`
+    nothing changes. Verified in a container with only `libkpathsea6` and an install-tl tree; the
+    crate's own tests for it are opt-in (`cargo test -- --ignored`), being host-specific.
+  - **A trailing `/` on `TEXMFROOT` no longer makes conversions 30-150× slower (#950).**
+    texmf.cnf's `$TEXMFROOT/texmf-dist` became `…/2024//texmf-dist`, kpathsea's `//`
+    recursive search: the linked libkpathsea walked the tree and resolved nothing, and
+    each lookup then spawned a `kpsewhich` that walked it again (pdflatex itself fails
+    under that setting). The `kpathsea` crate 0.3.6 now hands both backends the TEXMF
+    root variables without their trailing separators (`Kpaths::new()`; logged as
+    `Info:kpathsea:texmf_root`), and the TeX tools we spawn (`kpsewhich`, `texlua`,
+    `pdflatex`, `latex`, the DVI converters) get the same values; search-path specs keep
+    their `//`. Guard `trailing_separator_on_texmf_roots_resolves_as_without` (the rule's
+    own tests are the crate's).
   - **Windows diagnostics name their source file.** A location's source was taken
     for a URL whenever it held a `:`, which every Windows path does, so messages
     read `at C:\…\t.tex.index.tex; line 3` where Linux says `at t.tex; line 3`. Perl's

@@ -1,0 +1,8 @@
+\newcommand{\etalchar}[1]{$^{#1}$}
+\begin{thebibliography}{ADH{\etalchar{+}}19}
+
+\bibitem[ADH{\etalchar{+}}19]{arora}
+S.~Arora et al.
+\newblock Fine-grained analysis.
+
+\end{thebibliography}

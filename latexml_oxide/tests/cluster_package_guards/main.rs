@@ -488,6 +488,8 @@ mod perfect_kernel_batchfms2a2r8;
 mod perfect_kernel_batchfms2b;
 mod perfect_kernel_batchfn1;
 mod perfect_kernel_batchfs1;
+/// FUPB: #944's follow-ups — a declared math alphabet's name is a token; the TeX-level `\DeclareOption{}` keeps `\ds@`.
+mod perfect_kernel_batchfupb;
 mod perfect_kernel_batchfx24;
 mod perfect_kernel_batchfx25;
 mod perfect_kernel_batchfx3;
@@ -685,6 +687,36 @@ mod perfect_kernel_batchrc1;
 mod perfect_kernel_batchregbind;
 /// REGCHEM: a `\ce` formula holding a macro that expands to a math shift is mhchem's own output.
 mod perfect_kernel_batchregchem;
+/// REGFIXA: v0.8.0 regressions — amstex.sty's old-form matrices, fdsymbol's symbols, mlbib's `\citeauthoryear` labels.
+mod perfect_kernel_batchregfixa;
+/// REGFIXB: an `\halign` that `\lastbox` took is a box and ends no paragraph (easytable/easybmat's peel).
+mod perfect_kernel_batchregfixb;
+/// Batch REGFIXC: natbib's repeat-load Option clash from our bindings' own loads.
+mod perfect_kernel_batchregfixc;
+/// REGFIXD: a renamed copy of amsppt.sty takes the amsppt binding; a self-redefining value is no value; amsfonts'
+/// `\newsymbol` in the body.
+mod perfect_kernel_batchregfixd;
+/// REGFIXE: only a parameterless `\@subjclass`/`\@keywords` is amsart's stored value (edpsmath.cls); thmtools loads
+/// thm-kv, thm-autoref and thm-listof.
+mod perfect_kernel_batchregfixe;
+/// REGFIXF: the ACM classes' `\citeauthoryear` labels under the locked robust `\cite` (`\start@cite23`).
+mod perfect_kernel_batchregfixf;
+/// REGFIXG: a raw class's own `\@author` helper with parameters (bullsrsl.cls) reads every replayed `\author` call.
+mod perfect_kernel_batchregfixg;
+/// REGFIXH: a class binding shares another binding's definitions as code, not as a load of a file its class never loads
+/// (svjour3's svjour.cls, emulateapj's emulateapj.sty: the paper's copies stay unread).
+mod perfect_kernel_batchregfixh;
+/// REGFIXI: thin bindings' v0.8.0 regressions — amsppt's roster items under plain AmS-TeX, a prefix-matched shipped
+/// IUCr class, backref's `\BR@backref`, array's `\@arrayleft`.
+mod perfect_kernel_batchregfixi;
+/// REGFIXJ: `\end{document}` carries latex.ltx's tail (`\@checkend{document}\clearpage…\endgroup`) for the hooks that
+/// scan it (ltxutil's `\rvtx@enddocument@patch`).
+mod perfect_kernel_batchregfixj;
+/// REGFIXK: a `\bibitem` label's cite-printed forms are expanded at the `\bibitem` as `\@lbibitem`'s `\write`; `\text`
+/// reads its argument at the cell's alignment count.
+mod perfect_kernel_batchregfixk;
+/// REGFIXL: ulem's declaration (`\ul` from `\useunder`) ends with its group, a cell's or a `\multicolumn` body's end.
+mod perfect_kernel_batchregfixl;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

@@ -1,0 +1,28 @@
+% witness: easytable's `\@easy@buildbox` and easybmat's (easy.sty:450-501: `\unvbox` the `\halign`'s box, peel it with
+%          `\lastbox`, then `\vphantom{\copy\@ne}\unhbox\@ne` in each cell) — ~250 arXiv papers Error since 68q's `\unvbox`
+%          splice (34adb486865) let `\lastbox` reach the `\halign`: 1705.10408, 2002.06044, 2109.00258, 2106.13444,
+%          1710.10243
+% oracle:  pdflatex 0 errors: [h] One. | Two. | x c (bold) / Three. | ( ) Four. | e / Five.
+%          (tex.web §1080: `\lastbox` takes a box; an `\halign`'s rows are hboxes, §799 `fin_align`)
+% engines: rust (MAIN935) p1, p2: "Closing tag ltx:text whose open descendents do not auto-close" + "Attempt to close
+%          ltx:_CaptureBlock_" (the taken `\halign`'s `before_construct` closed the paragraph, the table left the
+%          `\vphantom`); p3 the table out of the bold text, p4 out of the phantom (shown); Perl alike on p1 (3 errors)
+% expect:  0 errors; each table where its box put it, inside the phantom (p1, p2, p4) and the bold text (p3)
+% status:  GREEN REGFIXB. Guard perfect_kernel_batchregfixb::lastbox_halign_is_a_box
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\halign{#\cr a\cr}\global\setbox1\lastbox}%
+[\ifhbox1 h\else v\fi]\mbox{\vbox{\vphantom{\copy1}}}One.
+
+\setbox5\vbox{\halign{#\cr b\cr}}\setbox0\vbox{\unvbox5 \global\setbox1\lastbox}%
+\mbox{\vbox{\hbox{\vphantom{\copy1}}}}Two.
+
+\setbox5\vbox{\halign{#\cr c\cr}}\setbox0\vbox{\unvbox5 \global\setbox1\lastbox}%
+\vbox{\noindent\textbf{x\copy1}}Three.
+
+\setbox5\vbox{\halign{#\cr d\cr}}\setbox0\vbox{\unvbox5 \global\setbox1\lastbox}%
+$\left(\vbox{\vphantom{\copy1}}\right)$ Four.
+
+\setbox5\vbox{\halign{#\cr e\cr}}\setbox0\vbox{\unvbox5 \global\setbox1\lastbox}%
+\vbox{\box1}Five.
+\end{document}

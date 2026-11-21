@@ -630,6 +630,18 @@ fn input_definitions_impl(
       } else {
         HashSet::default()
       };
+    // (and, for the classic clash test, latex.ltx `\@onefilewithoptions@clashchk`, the options passed to it after the
+    // load, `pass_options_with_raw`: a key-value package, one with an `\opt@handler@<file>`, takes a repeat's options
+    // with no such test, latex.ltx:18752-18762 — `\PassOptionsToPackage{table}{xcolor}` after the load, then
+    // `\usepackage[table]{xcolor}`, loads colortbl)
+    if lookup_bool(&s!("{fkey}_repeat_clash")) {
+      prev.extend(
+        lookup_string(&s!("{fkey}_passed_after_load"))
+          .split(',')
+          .map(|o| o.trim().to_string())
+          .filter(|o| !o.is_empty()),
+      );
+    }
     // (and the options passed to it, `\opt@<file>`, which LaTeX's clash test reads, latex.ltx `\@if@ptions`:
     // 2110.14346's `\PassOptionsToPackage{numbers, compress}{natbib}` before neurips_2020.sty's load, then
     // `\usepackage[numbers]{natbib}` — no clash in pdflatex)
@@ -659,7 +671,8 @@ fn input_definitions_impl(
       // the first load was the document's world's, and LaTeX keeps its options and stops with "Option clash"
       // (latex.ltx `\@onefilewithoptions` → `\@if@ptions`), an Error here as there; the new options are dropped.
       // A class binding that loads the package where the real class does too (jmlr.cls:150, acmart.cls:300,
-      // elsarticle.cls:1243, jheppub.sty:37) records its load as the class's own (`<file>:requested_by_binding` false);
+      // elsarticle.cls:1243, jheppub.sty:37) records its load as the class's own (`<file>:requested_by_binding` false,
+      // `record_load_as_the_files_own`: not where the paper ships a copy loading it otherwise);
       // a raw file's own repeat ends the early-load state (`apply_new_options_on_reload` below).
       // A stand-in's copy that loads the package its binding loaded on the copy's behalf (`<file>:loaded_by_stand_in`,
       // the first load made while a stand-in binding loaded) makes the load the binding stands in for: TeX sees the
@@ -667,12 +680,26 @@ fn input_definitions_impl(
       // 1811.10063).
       let copys_own_load = !requested_by_copy.is_empty()
         && lookup_string(&s!("{fkey}:loaded_by_stand_in")).eq_ignore_ascii_case(&requested_by_copy);
-      if !new_options.is_empty()
+      let clash = !new_options.is_empty()
         && lookup_bool(&s!("{fkey}_repeat_clash"))
         && !lookup_bool(&s!("{fkey}:requested_by_binding"))
         && !lookup_bool(&s!("{fkey}:options_of_a_renamed_copy"))
-        && !copys_own_load
-      {
+        && !copys_own_load;
+      // A compiled binding's own repeat is no load TeX sees, only the binding's guess at what its file loads: no clash,
+      // its options dropped; the file read raw after it decides (cvpr_sty.rs's `[numbers,sort&compress]` after the
+      // document's `\usepackage[numbers]{natbib}`, where the paper's cvpr.sty loads no natbib: 2109.08809, 2408.02054).
+      if clash && requested_by_binding {
+        Info!(
+          "unexpected",
+          "options",
+          s!(
+            "Options '{}' of a binding's repeat load of {fkey} dropped: the document loaded it first",
+            new_options.join(",")
+          )
+        );
+        return Ok(());
+      }
+      if clash {
         let package = fkey.rsplit_once('.').map_or(fkey, |(stem, _)| stem);
         Error!(
           "latex",
@@ -817,11 +844,12 @@ fn input_definitions_impl(
     return Ok(());
   }
 
-  // The per-file load note is emitted ONLY when a load truly happens, so
+  // The per-file load note is emitted ONLY when a load is attempted, so
   // CorTeX's `loaded_file` extraction (which parses the log) counts genuine
-  // loads and nothing else:
-  //   * a NATIVE BINDING load announces `(Loading <name>…)` at its success
-  //     point below (Perl loadLTXML "(Loading <path>…)" analog);
+  // loads and nothing else — a binding whose load then fails (a `.rhai` with a
+  // syntax error) keeps its note, as Perl's `Binding->new` prints before `do`:
+  //   * a NATIVE BINDING load announces `(Loading <name>…` around its load
+  //     (`_load_binding`; Perl loadLTXML "(Loading <path>…)" analog);
   //   * a RAW .sty/.cls/.def load is announced by its Mouth's
   //     `(Processing definitions <path>…)` (fires only on a real read);
   //   * the early-return paths — already-loaded skip and missing-file — reach
@@ -1070,34 +1098,10 @@ fn input_definitions_impl(
     );
   }
   let mut is_found_raw = false;
-  // Retain the "a binding loaded" fact for the later hook-firing check (`loaded`
-  // is consumed by the announce branch just below).
+  // Retain the "a binding loaded" fact for the later hook-firing check.
   let is_binding = loaded.is_some();
-  if let Some(binding_source) = loaded {
-    // A native binding was truly loaded: announce it (Perl loadLTXML
-    // "(Loading <path>…)" analog) so CorTeX's `loaded_file` log-parser counts
-    // it. Self-contained begin+end note (timing is currently disabled).
-    // A runtime `.rhai` file binding threads its resolved on-disk path through
-    // the dispatch result (`BindingSource`, converter.rs `rhai_dispatch`), so it
-    // is announced by that real path — more useful, and closer to Perl, whose
-    // note names the actual binding file (#560). A compiled-in binding carries
-    // no source, so it is announced under its module-proxy name — `tcolorbox.sty`
-    // → `tcolorbox_sty.rs`, `aa.cls` → `aa_cls.rs` — mirroring Perl's distinct
-    // `.ltxml` path. This keeps the entry distinguishable from the raw twin's
-    // "(Processing definitions <path>…)" when a binding raw-loads its same-named
-    // file, so cortex's loaded_file stats record two artifacts as two entries
-    // instead of double-counting one file (user, 2026-07-04).
-    let binding_name = if let Some(path) = binding_source {
-      path
-    } else if let Some(stem) = filename.strip_suffix(".sty") {
-      s!("{stem}_sty.rs")
-    } else if let Some(stem) = filename.strip_suffix(".cls") {
-      s!("{stem}_cls.rs")
-    } else {
-      filename.clone()
-    };
-    note_begin(&s!("Loading {binding_name}"));
-    note_end("");
+  if is_binding {
+    // (its `(Loading …` note was logged around the load: `_load_binding`)
     // We found and loaded a binding successfully, mark it as such.
     // Perl Package.pm::loadLTXML L2315-2316 sets TWO flags: `$request`_loaded
     // (e.g. `color.sty_loaded`) AND `$ltxname`_loaded (`color.sty.ltxml_loaded`),
@@ -1666,6 +1670,27 @@ pub fn load_binding(file: &str) -> Result<Option<BindingSource>> {
 pub fn load_external_binding(file: &str) -> Result<Option<BindingSource>> {
   _load_binding(false, file, false)
 }
+/// The binding a `(Loading …` note names. A runtime `.rhai` file binding is named by its on-disk path (`source`,
+/// threaded through the dispatch result: converter.rs `rhai_dispatch`, #560), as Perl names the `.ltxml` file. A
+/// compiled-in one has no file, so it is named by its module proxy — `tcolorbox.sty` → `tcolorbox_sty.rs`, `aa.cls` →
+/// `aa_cls.rs` — which keeps it apart from the raw twin's `(Processing definitions <path>…` when a binding raw-loads its
+/// same-named file, so cortex's `loaded_file` stats count two artifacts, not one file twice (user, 2026-07-04).
+fn binding_note_name(request: &str, source: Option<&String>) -> String {
+  if let Some(path) = source {
+    path.clone()
+  } else if let Some(stem) = request.strip_suffix(".sty") {
+    s!("{stem}_sty.rs")
+  } else if let Some(stem) = request.strip_suffix(".cls") {
+    s!("{stem}_cls.rs")
+  } else {
+    request.to_string()
+  }
+}
+
+/// Name the binding now loading by the file a dispatcher found (a runtime `.rhai` binding), before it runs: its
+/// `(Loading …` note names that path even when the binding logs inside it (#560, #945).
+pub fn name_loading_binding(path: &str) { rename_deferred_note(&s!("Loading {path}")); }
+
 // in the spirit of Perl's Package::loadLTXML
 fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<Option<BindingSource>> {
   // Perl loadLTXML L2311-2313: skip if already loaded, unless reloadable
@@ -1752,7 +1777,14 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<Opti
       }
       let _in_progress_guard = InProgressGuard(request_key);
       let _request_guard = BindingRequestGuard::enter(request);
+      // Perl loadLTXML's `(Loading <path>...` opens before the binding runs (Core/Mouth/Binding.pm:31), so what it
+      // loads nests inside; the dispatcher both finds and runs the binding, so the note waits to know (#945).
+      let note = DeferredNote::begin(&s!("Loading {}", binding_note_name(request, None)));
       let result_opt = dispatcher(request);
+      if let Some(Ok(Some(source))) = &result_opt {
+        rename_deferred_note(&s!("Loading {}", binding_note_name(request, Some(source))));
+      }
+      note.end(result_opt.is_some());
       match result_opt {
         Some(result) => {
           // Here and only here we are certain we have binding support.
@@ -2683,6 +2715,21 @@ pub fn standard_class_binding_assigned(key: SymStr) -> bool {
     })
 }
 
+/// A compiled binding's load of `file` that the real file it stands for makes too (elsarticle.cls:1243, acmart.cls:300,
+/// jmlr.cls:150, jheppub.sty:37): the file's own, so a document's later repeat with other options is LaTeX's "Option
+/// clash" (`apply_repeat_options`). The binding records it only where the paper ships no copy of that file or one
+/// that makes the same load (`shipped_class::shipped_copy_makes_load`): a copy loading it otherwise or not at all
+/// leaves the binding's early load, and the document's options apply (elsarticle.cls copies: 2105.06643
+/// `[authoryear]`, 2206.02837 none, 2402.13480 `[numbers,sort&compress]`; 2209.10785's cidr.cls, an acmart.cls copy
+/// without natbib).
+pub fn record_load_as_the_files_own(file: &str) {
+  assign_value(
+    &s!("{file}:requested_by_binding"),
+    false,
+    Some(Scope::Global),
+  );
+}
+
 /// Is the file at `path` one the paper ships: a `{filecontents}` virtual file, or one under the document's own source
 /// directory (`SOURCEDIRECTORY`), not TeX Live's?
 fn shipped_with_paper(path: &str) -> bool {
@@ -2940,10 +2987,13 @@ fn file_declarations(text: &str) -> Vec<(&'static str, String)> {
 /// 1. **Its declaration.** A `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` (or the `\ProvidesExpl…` form) naming
 ///    the binding that answered (the file's own name only when the binding is of that name: a fallback answers a renamed
 ///    file too, 1705.03989's aaart.cls under `aa`), or a file the binding is built on (its own `LoadClass!`/`RequirePackage!`,
-///    `state::stand_in_built_on`) is that file, whatever its version: 1609.03892's fcs.cls of 2016, older than the
-///    `\fcssetup` the binding models; 2308.11432's fcs.cls `\ProvidesExplClass{fcs}`; apjfonts.sty (1202.3442,
-///    1009.4702); 2011.13564's IEEEtai.cls, IEEE's own file, which declares itself `IEEEtran`, the class the binding
-///    loads.
+///    or a binding whose definitions it makes as code: `state::stand_in_built_on`) is that file, whatever its version:
+///    1609.03892's fcs.cls of 2016, older than the `\fcssetup` the binding models; 2308.11432's fcs.cls
+///    `\ProvidesExplClass{fcs}`; apjfonts.sty (1202.3442, 1009.4702); 2011.13564's IEEEtai.cls, IEEE's own file, which
+///    declares itself `IEEEtran`, the class the binding loads; hep-ph0608235's svjour2.cls, Springer's svjour code
+///    renamed, declaring `svjour`. The test is of the copy of the file the paper requested: a file the binding is built
+///    on without loading it is never requested, so the paper's copy of it is not read (the older svjour.cls beside
+///    svjour3.cls: 2101.09497, 2110.05134, 2408.12532).
 /// 2. **Its command set**, for a copy that declares another file or none (2.09-era files declare nothing): the copy
 ///    defines at least a quarter of the public names (letters only) the binding's own code assigned, a stand-in it loads
 ///    included (`state::stand_in_public_names`; the diagrams binding's diagrams.tex). Over the reviewer's simulation of
@@ -3354,6 +3404,21 @@ pub fn pass_options_with_raw(
   raw: Tokens,
 ) -> Result<()> {
   let key = s!("opt@{}.{}", name, ext);
+  // (`\opt@<file>` is the list itself, latex.ltx:18514-18517: a pass after the load extends it, which a repeat load's
+  // classic clash test, `\@if@ptions`, reads — a neurips_2022.sty copy's `\PassOptionsToPackage{numbers}{natbib}` after
+  // the binding's natbib load, then the document's `\usepackage[numbers]{natbib}`: no clash, 2403.07005. Kept apart
+  // from our `\opt@<file>`, which bindings read after the load as the load's own options: babel's main language.)
+  if !options.is_empty() && file_loaded(&s!("{name}.{ext}")) {
+    let passed_key = s!("{name}.{ext}_passed_after_load");
+    let mut passed = lookup_string(&passed_key);
+    for opt in &options {
+      if !passed.is_empty() {
+        passed.push(',');
+      }
+      passed.push_str(opt);
+    }
+    assign_value(&passed_key, passed, Some(Scope::Global));
+  }
   for opt in options {
     push_value(&key, arena::pin(&opt))?;
   }
@@ -3412,6 +3477,16 @@ fn unprocessed_options(name: &str, ext: &str) -> Result<()> {
     Tokens::default()
   };
   def_macro(T_CS!("\\@curroptions"), None, options, None)
+}
+
+/// The control sequence a binding's `DeclareOption` defines, its name recorded as declared: Perl Package.pm:2421-2423,
+/// `\ds@<option>` whole, and an empty name (Perl's false `$option`, as undef) is the default handler `\default@ds`.
+pub fn declare_option_cs(option: &str) -> Result<Token> {
+  if option.is_empty() {
+    return Ok(T_CS!("\\default@ds"));
+  }
+  push_value("@declaredoptions", arena::pin(option))?;
+  Ok(T_CS!(s!("\\ds@{option}")))
 }
 
 /// Perl Package.pm L2430-2465: ProcessOptions / ProcessOptions*

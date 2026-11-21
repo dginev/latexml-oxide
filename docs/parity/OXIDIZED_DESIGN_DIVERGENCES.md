@@ -19,7 +19,7 @@
 > port-bug fix (→ SYNC "Rust Error Fixes"), a gap or residual list (→ SYNC row R), a math-parse divergence (→ `docs/math/OXIDIZED_DESIGN_MATH.md`).
 > A WORKAROUND entry must name the principled mechanism that would replace it and open a SYNC row for it. Entry shape: rule · Perl ref · TeX
 > source:line · sub-rules as bullets · witnesses · guards · upstream status; no batch history (git keeps it); about 60 lines at most. OD
-> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1052** (2026-11-15; #1051 is reserved; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
+> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1110** (2026-11-21; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -1996,12 +1996,28 @@ cluster), 2606.29340 (0 → 40), 2605.09519 (0 → 24). Audit family F9(a) in
 astron.sty's `\cite` (0812.2799, 0812.4839; copied by EslabStyle.cls:1442-1445 astro-ph0001290, ISOStyle.cls:1446-1449
 astro-ph0008362, and the EAS classes) is `\@ifstar{\citeyear}{\citefull}`, and its `\citefull` =
 `\def\astroncite##1##2{##1, ##2}\@internalcite` is the only definition of the `\astroncite{A}{Y}` that astron.bst writes
-into the `\bibitem` labels. With that `\cite` refused, the labels were `Error:undefined:\astroncite` (Perl and pdflatex
-0). Where the lock refused a `\cite`, `\astroncite` is undefined and `\citefull` opens with `\def\astroncite`, the
-kernel `\cite`'s first call runs the copy's own `\citefull` definition (its `\@internalcite` tail dropped) and keeps it
-global for the deferred labels (`sect11.rs` `astroncite_from_refused_cite`). The full form throughout: the starred
-call's year-only form is the class's label style, which the lock does not keep. Guard
-`perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`).
+into the `\bibitem` labels; mlbib.sty:360-363's (cond-mat0011295) is `\@ifstar{\citeasnoun}{\new@cite}`, whose
+`\new@cite` alone defines the `\citeauthoryear{A}{Y}` of its `.bbl` labels. With that `\cite` refused, the labels were
+`Error:undefined:\astroncite` / `\citeauthoryear` (Perl and pdflatex 0). The ACM classes' `\DeclareRobustCommand\cite
+{\start@cite23}` (acm_proc_article-sp.cls:1223-1236 1312.2098, sig-alternate-05-2015.cls:1395-1408 1703.08365,
+sig-alternate.cls:1146-1159 1806.05694; older copies' plain `\def\cite{\start@cite23}`, 0705.2819, cs0404029) are the
+same: `\start@cite#1#2` `\edef`s the `\citeauthoryear` of the `.bbl` labels, then branches; the lock refuses the robust
+wrapper and its inner `\cite␣` (OXIDIZED_DESIGN #568). Where the lock refused a `\cite`, every kernel `\cite` reads
+the refused body as TeX would — the robust wrapper to its refused inner `\cite␣`, an `\@ifstar{…}{…}` to its unstarred
+branch, one call `\X<arguments>` of a macro with undelimited parameters to `\X`'s body with them substituted — and runs
+its leading `\def`/`\edef`/`\gdef`/`\xdef`s, to the first token that is not a definition (`sect11.rs`
+`label_macros_from_refused_cite`): as TeX's `\cite` does at each call, locally, so the labels take the form of the last
+citation command before the bibliography — over a name already defined too: Kluwer's `[namedreferences]` `\klu@cite`
+(SolarPhysics.cls:2048-2101 1312.4435, solarphysics.cls 0705.1246, SSRv.cls) redefines the class's own aux-writer
+`\citeauthoryear` (`\string\citeauthoryear{…}{…}`), aaai.sty:253 (1511.09009) the lock's empty placeholder for its
+refused setter's internals (state.rs), so its "Ali and Meilă 2012" kept its space. A name still undefined is defined
+`\global`ly, so a first citation inside a group still defines it for the bibliography. Nothing after the first
+non-definition is run: a branch that typesets or steps a counter first runs nothing. The full form throughout: the
+starred call's year-only form is the class's label style, which the lock does not keep. Guards
+`perfect_kernel_batchnext397::astroncite_label_under_the_lock` (repro `index-bib/astroncite`),
+`perfect_kernel_batchregfixa::{mlbib_citeauthoryear_label_under_the_lock, cite_branch_with_side_effects_is_not_run}`
+(repros `index-bib/mlbib`, `index-bib/sidecite`), `perfect_kernel_batchregfixf::{acm_robust_cite_label_under_the_lock,
+refused_cite_redefines_a_defined_label_macro}` (repros `index-bib/acmcite`, `index-bib/klucite`, `index-bib/aicite`).
 
 **Exception — non-destructive etoolbox hooks assign through the lock
 (2026-08-05).** `\pretocmd`/`\apptocmd` (and the param-branch `\etb@hooktocmd@i`)
@@ -9868,6 +9884,10 @@ re-entrant, its output discarded; the groups it left open — `\begingroup`, env
 a reading context and box list of their own, so their `\aftergroup` tokens and group-end boxes are discarded with it,
 and an imbalance that cannot be closed (or a document group it closed) is an Error. One that raises an error is
 dropped with its diagnostics (Info), as the `\maketitle` deposit is (#265), and with its assignments (#534).
+A raw file's macro named as the field's store but taking parameters (`\@author[#1]#2#3`), which LaTeX's store never
+does (latex.ltx `\gdef\@author{#1}`), is the class's helper that its `\<name>` calls: kept where a replay meets it and
+bound in each later replay's group over the store the kernel's setter put there (`class_store_helper`; bullsrsl.cls
+:326-358 counts its authors that way, :958-961 errs at one: 2312.08217, 2607.02675; beilstein.cls:586-588).
 Afterwards the lock's own record (`\lx@dropped@<name>`, `<name>:redefined@nargs`, which a `\let`/`\def` of the name in
 the body would rewrite globally) is as before, and so are the kernel's `\@author`/`\@shortauthor` and every store the
 dropped body `\def`s/`\gdef`s/`\edef`s/`\xdef`s that does not now hold the call's argument (one that does stays set,
@@ -10168,7 +10188,13 @@ instead of refusing it when it is all of the following:
   ltcmd `{V}` after a `[1]`/`{m}` declaration are values. `def_macro` installs a robust macro's inner `\cs␣` before its
   wrapper, the reverse of Perl's DefMacroI, so the wrapper's install can judge what it wraps; unobservable otherwise;
 - of a binding that `owns_calls`, i.e. its first mandatory parameter reads a braced argument (Plain, Semiverbatim,
-  Digested, Undigested, …) after optional ones only, or it is itself an earlier override (loop iterations).
+  Digested, Undigested, …) after optional ones only, or it is itself an earlier override (loop iterations);
+- not naming `<cs>` in its body: that is a command redefining itself on use, not a value (amsppt.sty's
+  `\def\title{\let\savedef@\title \def\title##1\endtitle{…}\title}`, whose inner command stays refused: taken as a
+  value, it recursed to `Fatal:oom`; math0410032). It stays refused, as in Perl (REGFIXD): a fail-safe that ends the
+  conversion, not TeX's output — the braced binding then reads one token and `\endtitle` is undefined (1 Error, every
+  word kept; TeX's "[T:Hello]" is repro amstex/amstex_self_redefining_title_runs_red). Repro
+  amstex/amstex_self_redefining_value_is_refused, guard `perfect_kernel_batchregfixd::self_redefining_value_fails_safe`.
 
 The installed definition carries `Expandable::yields_calls`. The binding is kept globally as `\lx@locked@<cs>`, and
 expanding the override first peeks one raw token:
@@ -12219,8 +12245,11 @@ the address themselves: mrm's `\orcid` (mrm_cls.rs) and apa7's `\addORCIDlink` (
 `https://orcid.org/#2`, so pdflatex shows and links the doubled address). An argument holding a macro, or text that
 is no orcid.org address (2106.08963's swapped `{Andrew S. Nencka}`), is kept as written. orcidlink.sty's
 `\orcidlink{https://…}` stays doubled, as orcidlink.sty builds `https://orcid.org/#1` (the kernel `\lx@orcidlink` is
-its link, without the normaliser). Perl's `\lx@add@orcid` (Base_Utility.pool.ltxml:659-660) puts the text in the
-contact with no link, so it has no doubled address to fix. Repros sectioning-frontmatter/{orcid_given_as_url_is_the_id,
+its link, without the normaliser); its iD is linked without the spaces around it (orcidlink_sty.rs `\lx@orcidlink@id`:
+iucrjournals.cls's `\IUCrOrcidlink{0009-…-0174⏎}`, 2507.03170, 2511.22516), a beyond-Perl surpass: Perl's binding
+(orcidlink.sty.ltxml) passes `\lx@orcidlink{#2}` as written and pdflatex links `/URI(https://orcid.org/…\040)`.
+Perl's `\lx@add@orcid` (Base_Utility.pool.ltxml:659-660) puts the text in the contact with no link, so it has no
+doubled address to fix. Repros sectioning-frontmatter/{orcid_given_as_url_is_the_id,
 orcid_inline_link_takes_the_id}; guards `perfect_kernel_batch68h::{orcid_given_as_url_is_the_id,
 orcid_inline_link_takes_the_id}`.
 
@@ -12885,10 +12914,15 @@ extra command the copy defines and the paper uses is undefined (aas_macros.sty:9
 (`fallback_request` for a versioned fallback: `icml2026` → icml2025.sty), found in the paper's source directory or a
 `{filecontents}` file, never TeX Live's — is read raw at the same point, origin `File` (content.rs `read_stand_in_copy`,
 from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.tex` route), before the load's
-`\AtEndOfClass`/`\AtEndOfPackage` code runs. The rules:
+`\AtEndOfClass`/`\AtEndOfPackage` code runs. A binding the user supplies in the search paths (a `.rhai` beside the
+document or under `--path`, the chain's first tier) is no stand-in: it is the file itself, as Perl's first `.ltxml`
+found is, and the stand-in's copy is not read after it (`stands_in_for_an_author_file` asks `state::local_binding_file`;
+a renamed copy that `\ProvidesClass` the same name is still read on the provides route, row R; #947, guards
+`cluster_cli::user_binding_precedence`). The rules:
 0. *Identity.* The copy is read only when it is the file the binding stands in for (content.rs
    `copy_is_the_stood_in_file`; 72a r3 rule): (a) its `\Provides(Expl)?(Class|Package|File)` names the binding that
-   answered (the file itself when the binding is of its name; #744), or a file the binding is built on — one its own code loads (`state::note_stand_in_file`,
+   answered (the file itself when the binding is of its name; #744), or a file the binding is built on — one its own code loads, or a binding whose definitions it makes as code
+   (never requested, so that file's own copy is not read: REGFIXH2, hep-ph0608235; `state::note_stand_in_file`,
    `stand_in_built_on`) —, a declared macro read as its definition in the copy says, as `\ProvidesClass` expands its
    argument (r4: cimart.cls:13-14 `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`, 2412.00032), whatever
    the version (1609.03892's fcs.cls of 2016, older than the `\fcssetup` the binding
@@ -13666,7 +13700,10 @@ rationalization (C, DEFER).
   base_utilities/util_text.rs): the role-less `\fnum@@bibitem` = `{\@biblabel{\the@bibitem}}` is digested at the
   `\bibitem` through the class's `\@biblabel`; refnum, typerefnum, autoref and the cleveref forms are deferred under `b@key`,
   resolved when a `\@@bibref` names the key (`sect11.rs:2475 cite_prints_keys`: the kernel's `\cite`, natbib's, biblatex's,
-  the `.bbl` styles'), at once when one already has. `\nocite` prints nothing; the streaming yield typesets pending forms at
+  the `.bbl` styles'), at once when one already has. The deferred label is the one the `.aux` holds, expanded at the
+  `\bibitem` under `\let\protect\noexpand` as `\@lbibitem`'s `\write` does: an alpha.bst `\etalchar` defined by a `.bbl`
+  read in a group (`{\small\bibliography{…}}`) prints at a later `\cite` (REGFIXK; 1101.1169, 2402.10127, 2203.12786;
+  guard `perfect_kernel_batchregfixk::etalchar_label_cited_after_its_bbl_group`). `\nocite` prints nothing; the streaming yield typesets pending forms at
   the spill, as Perl. Under mn2e/mnras without `usenatbib` (their bindings define the class's `\def\@biblabel#1{}`,
   mn2e.cls:1370, mnras.cls:1636) a `\bibitem[\protect\citeauthoryear{…}{…}]{key}` errs only when cited (pdflatex 0 uncited,
   1 per citation). An uncited or keyless entry has no refnum tag; the bibliography XSLT shows the role-less tag, else the
@@ -15019,7 +15056,25 @@ unless it `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`: `inp
 that style, whose changes are to internals of the style it builds on (gr-qc9507042's fic.sty redefines amsppt's
 `\titlebox@`, `\thethanks@`; read raw over the amsppt binding it ended in a Fatal pushback runaway and 16 Errors), or
 its parent is missing (math0406145's grubb-p.sty and 0803.2668's conm-p-mod.sty `\input ams-p.sty`, not in TeX Live):
-then the amsppt binding stands in, as before. amstex.tex's `\Invalid@` (:251-252), with which such a style marks the
+then the amsppt binding stands in, as before. So it does for a renamed copy of amsppt.sty (the only AMS-TeX
+documentstyle with a binding), which carries amsppt's docstrip header or trailer (``This is file `amsppt.sty'``,
+``End of file `amsppt.sty'``) or its `\def\filename{amsppt.sty}` (`copied_style`; REGFIXD: math0108062's grgppt.sty,
+math0207033's and math0107068's grgppt01.sty, math0012097's amsp2.sty, 1003.5377's vis_n.sty, math0410032's
+ias-pcms.sty); a bare `\csname amsppt.sty\endcsname` test is none (a style insisting on amsppt tests it), nor is
+another bound package's guard a style inlines (`\csname epsf.sty\endcsname`: read raw). Read raw, amsppt's
+self-restoring `\title` met the lock (#500) and recursed to `Fatal:oom`; through the binding they keep their markup,
+but lose what the copy adds to amsppt: math0410032's lecture macros `\Lecture`, `\Author`, `\xca`, `\Bibliography`,
+math0610862's `\Refst`, `\subrefhead`, 1003.5377's `\SecondPage` are undefined (Errors; repro
+amstex/amstex_copy_additions_are_kept_red). Residual: math0610862's jmhppt.sty, which read raw raised 8 errors (no
+markup), is back at its Oct-8 `Fatal:TooManyErrors`, so math0205237: the binding reads each `\ref` field expanding
+(`\@bibfield … XUntil`, amsppt_sty.rs, Perl amsppt.sty.ltxml:439), and the paper's `\noOf` (jmhlab.tex:210) puts
+`\make@ref` there: the expanding read expands the targets of its assignments, `\global\@fwdreftrue`'s
+`\let\if@fwdref\iftrue` evaluated as a conditional (the repro's `Error:expected:\fi \iffalse`, the bibitem empty), a
+`\def`'s name (the paper's 50 "Missing control sequence inserted", 49 "Attempt to close"); TeX boxes each field
+(amsppt.sty:956-965 `\makerefbox`, `\setbox\curbox\vbox\bgroup`), where the `\let` is executed. Perl reads the same
+(KNOWN_PERL_ERRORS #1298); repro amstex/amsppt_bibfield_expands_a_conditional_red. Repros amstex/{amstex_copied_style_takes_the_binding, amstex_amsppt_guard_test_is_no_copy,
+amstex_inlined_package_guard_is_read}; guards `perfect_kernel_batchregfixd::{amsppt_copy_takes_the_binding,
+only_an_amsppt_copy_takes_the_binding}`. amstex.tex's `\Invalid@` (:251-252), with which such a style marks the
 commands it disallows, is defined. amams.sty redefines `\ifdefined` (amams.sty:1099, a three-argument label test,
 as pre-e-TeX styles did); LaTeXML's own macros test with the kernel's `\lx@ifdefined` (etex.rs, `\let` to e-TeX's
 primitive: `\lx@latin@name`, the frontmatter stores' nulls, `\makeindex`, `\makeglossary`), which the redefinition
@@ -16315,8 +16370,10 @@ amsart.cls's `\subjclass` and `\keywords` store `\@subjclass` and `\@keywords`, 
 first-page footnote (amsart.cls:553-564, :657-658); the binding's setters give the frontmatter directly and never set
 them. A document carrying its own copy (`\renewcommand*\subjclass[2][2000]{\def\@subjclass{#2}…}`, 2004.06211:12,
 1009.1929) lost its classification, as Perl does; so did kms-j's and kms-b's (1109.3766, 2207.08173), whose
-`\@adminfootnotes` print `\@subjclass`. Ours: the AMS classes' `\maketitle` hands a non-empty stored value to
-the frontmatter (`\lx@ams@stored@topmatter` at `\lx@maketitle@begin`, `amsart_class_internals`): the subject
+`\@adminfootnotes` print `\@subjclass`. Ours: the AMS classes' `\maketitle` hands a non-empty stored value — a
+parameterless macro (`\iflx@ams@stored@value`), not a class's placeholder taking an argument (edpsmath.cls:326
+`\def\@subjclass#1{\@MSSG@SBJCTCLSS}`, which read `}`: 2004.12879, 1110.0287; guard
+`perfect_kernel_batchregfixe::a_subjclass_placeholder_taking_an_argument_is_no_stored_value`) — to the frontmatter (`\lx@ams@stored@topmatter` at `\lx@maketitle@begin`, `amsart_class_internals`): the subject
 classification under the edition's `\subjclassname` (the scheme and the name), the keywords under `\keywordsname`, then
 empties the store; it does nothing once the binding's own setter ran (`\lx@ams@subjclass@given`,
 `\lx@ams@keywords@given`), so a paper using the class's commands is unchanged, nor when the K11 reroute owns a raw
@@ -17927,10 +17984,17 @@ it whole as one `\lx@add@author` (Base_Utility.pool.ltxml:687-693), else `SplitT
 - *Emit.* The resolved tuples become Perl's calls; an API creator call holding its own `\and`s is cut at them
   (`emit.rs:4511 creator_call_cut`); a block calling a binding's list setter keeps the setter's call as written, its
   entries the list its marks request (`emit.rs:1304 list_setter_runs`, `:1331 list_setter_call`; formerly #982); a block
-  no rehearsal read is Perl's whole-block creator (`fallback.rs:23 whole_block_author`).
+  no rehearsal read is Perl's whole-block creator (`fallback.rs:23 whole_block_author`). A call of a split block that
+  prints a mark or a contact apart from the names, its definitions all global and read by nothing later in the block,
+  runs in a box no one uses at its place among the block's steps (`emit.rs printing_kept`, `\lx@title@mark@step`), as
+  TeX runs it there: iucrjournals.cls's `\IUCrAufn` stores the note `\maketitle` prints after the title (2609.21618,
+  2511.12314, 2509.01370). A call whose print the emitter writes is not run again: a note it writes and steps
+  (2509.04225's `\footremember` after a `\footrecall`), an item holding the call (`printing_apart`'s `written`).
 - *Declines* (written as Perl writes it, each with one Warning, once per block over the flushes): a name's words lost
   (`emit.rs:3558 written_whole`); a footnote counter moved (`:3577 counter_moved`); a declaration reading past its piece
-  (`:3903 declaration_reads_past`, `:3944 printing_read_later`); a shared run printing a note (`:3834 names_overlap`).
+  (`:3903 declaration_reads_past`, `:3944 printing_read_later`), or a global call printing apart that cannot be cut whole
+  (`printing_read_later`; a delimited argument, repro `author_delimited_argument_kept_call_declines_red`); a shared run
+  printing a note (`:3834 names_overlap`).
   The counter and definition declines write Perl's split (`fallback.rs:101 perl_author_calls`), and whole where that
   split states an owner the marks do not support or loses a name (`emit.rs:4096 split_owns_falsely`, `:4196
   split_loses_a_name`, `:4377 split_decline`; formerly #988). A re-referencing `\footnotemark[n]` keeps the reading, its
@@ -18832,7 +18896,8 @@ hhline, subcaption, subfig, natbib's `cite`, quantumarticle, sn-jnl, changepage,
 `biblatex` tests). The loader's own question — were the definitions read here — keeps the records (`load_recorded`,
 `binding_loaded`, `raw_loaded`: the autoload triggers, `\documentstyle`'s fallback, the class dispatch, amsmath's
 beyond-original load). Two writes follow: a binding that stands in for a file its original loads marks it as that load
-does (`state::mark_loaded`: thmtools's thm-patch.sty, aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
+does (`state::mark_loaded`: thmtools's thm-patch.sty, thm-kv.sty, thm-autoref.sty and thm-listof.sty, thmtools.sty:47-49;
+aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
 which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`), and so does the
 format's preload of textcomp (sect13.rs; Perl latex_constructs.pool.ltxml:5893 leaves it loaded), whose definitions
 latex.ltx carries without `\ver@textcomp.sty`: the document's first load runs its file and package hooks (TL manual
@@ -21183,7 +21248,10 @@ pdflatex does, where the kernel's display dropped it without a diagnostic (2008.
 1612.02580 `\tag{$*$}`; the ids of later unnumbered displays shift by one). Inside an `{equation}` a `\]` is now amsmath's
 `\end{equation*}`, which pdflatex rejects too ("\begin{equation} ended by \end{equation*}"), not the cheap intertext.
 Guard `perfect_kernel_batchclustfix3::amsmath_display_brackets` (repro
-`ams-internals/amsmath_display_brackets_pair_with_equation_star`).
+`ams-internals/amsmath_display_brackets_pair_with_equation_star`). A `$$ … $$` inside `\[ … \]` (or `{equation*}`) ends
+one unnumbered display and opens the next, as in TeX: the cheap intertext closes and reopens `{equation*}` when
+`\@currenvir` names it, not always `{equation}` (2606.13867; KNOWN_PERL_ERRORS #1295), guards
+`perfect_kernel_batchclustfix3::{amsmath_display_brackets_dollar_dollar, amsmath_equation_dollar_dollar_keeps_its_number}`.
 
 ### 1092. etoolbox's `\robustify` leaves a native binding alone, unless it is a TeX primitive (CLUSTFIX3)
 
@@ -21434,6 +21502,22 @@ bare_abstract_open_at_end_of_document_keeps_its_first_paragraph, abstract_only_d
 a_display_does_not_end_the_first_paragraph}` (repros `sectioning-frontmatter/abstract_*`),
 `perfect_kernel_batch74b::{braceless,braced}_abstract_unclosed_at_end_document_keeps_its_text` (an abstract-only
 document, whole).
+
+### 1102. Progress notes carry no elapsed times
+
+**Rule.** A progress note closes with ` )` alone, never with Perl's ` 0.42 sec)`, so a conversion's log is a function
+of its input and two runs of one document log the same bytes apart from the start banner's date. Per-phase wall times are the telemetry module's
+(`latexml_core/src/telemetry.rs`, `docs/performance/TELEMETRY.md`).
+
+**Perl.** `Common/Error.pm:450-456` (`ProgressSpindown` prints `sprintf(" %.2f sec)", $elapsed)` from the timer
+`ProgressSpinup` starts, L435ff). **TeX.** TeX's own log nests the files it reads without times (tex.web:10392
+`print_char("("); incr(open_parens); slow_print(name)`); our notes keep Perl's nesting (#945,
+`common/error.rs` `note_begin`/`note_end`, `DeferredNote`) and TeX's timeless form.
+
+**Why.** Logs are compared byte for byte: the sweep A/B byte-diffs of `.latexml.log` and
+`117_post_2gib_handoff.rs` (`assert_eq!(resident.log, staged.log)`). DG ruling 2026-11-20 (#945: omit, not port, not
+opt-in). **Guards** `117_post_2gib_handoff.rs`; the note structure: `cluster_cli`
+`log_note_nesting::binding_load_note_encloses_what_it_loads`.
 
 ## TeX-source fidelity family (TEXSRC)
 
@@ -23247,3 +23331,106 @@ ignored 0).
 cli_noincludestyles_restores_perls_binding_only_loading, latexml_sty_iflimit_overrides_the_front_end_default}` (repro
 `loader/cli_raw_default`); the in-process control
 `rawclasses_binding_precedence_and_no_omnibus::bindingless_class_defaults_to_omnibus_without_rawclasses`.
+
+### 1103. natbib's repeat-load Option clash only where TeX sees the loads (REGFIXC)
+
+**Rule.** The repeat-load clash test (`content.rs` `apply_repeat_options`, OD #43; natbib opts in with
+`natbib.sty_repeat_clash`) errs only on loads TeX makes. (1) A compiled binding's own repeat (`RequirePackage!` from
+its code, `requested_by_binding`) is the binding's guess at what its file loads: no clash, its new options dropped with
+an Info; the file read raw after it decides (cvpr_sty.rs's `[numbers,sort&compress]` after a document's
+`\usepackage[numbers]{natbib}`, whose cvpr.sty loads no natbib: 2109.08809, 2408.02054). (2) `\PassOptionsToPackage`
+after the load counts in the classic clash test (latex.ltx `\@onefilewithoptions@clashchk`), as latex.ltx:18514-18517
+extends `\opt@<file>` (2403.07005's neurips_2022.sty copy); it is kept as `<file>_passed_after_load`
+(`pass_options_with_raw`), not in our `\opt@<file>`, which bindings read as the load's own options (babel's main
+language: extending it turned 2405.15450's `en-US` into `en`), and read by a clash-testing package only
+(`<file>_repeat_clash`): a key-value package takes a repeat's options with no clash test (latex.ltx:18752-18762), so
+`\PassOptionsToPackage{table}{xcolor}` after the load leaves `\usepackage[table]{xcolor}` loading colortbl. (3) A class
+binding claims its load as the class's own (`record_load_as_the_files_own`: elsarticle, acmart, jmlr, jheppub) where
+the paper ships no copy of that file or a copy that makes the same load (`shipped_class::shipped_copy_makes_load`: its
+code, comments out, has elsarticle.cls:1243 `\RequirePackage[\@biboptions]{natbib}`, acmart.cls:300 or jmlr.cls:150
+`\RequirePackage{natbib}`, jheppub.sty:37's `[numbers,sort&compress]` or `[numbers,compress]` load): TeX Live's own
+elsarticle.cls beside the document and `\usepackage[authoryear]{natbib}` is pdflatex's Option clash. A copy that loads
+natbib otherwise or not at all leaves the load early, and the document's options apply (2105.06643, 2206.02837,
+2402.13480 elsarticle.cls copies; 2209.10785 cidr.cls). (4) The elsarticle binding reads `\jobname.spl` into
+`\@biboptions` before its natbib load, as elsarticle.cls:1240-1243 does (2406.18569, 2503.23289 ship it); Perl's
+binding keeps `@biboptions` as a value and never reads the file. Open: natbib loaded before `\documentclass{elsarticle}`
+(repro `natbib_before_elsarticle.tex`, RED, synthetic) is item (1)'s binding repeat, an Info, where pdflatex reports the
+clash.
+**Guards**: `perfect_kernel_batchregfixc::{elsarticle_reads_its_spl, a_binding_repeat_load_does_not_clash,
+a_pass_after_the_load_extends_the_option_list, a_shipped_class_copy_keeps_the_binding_load_early,
+an_unmodified_class_copy_keeps_the_clash, a_pass_after_the_load_leaves_a_key_value_repeat}` (repros
+`natbib_repeat_options/`); the clash itself stays `perfect_kernel_batch77w::another_copys_repeat_load_clashes` and the
+72a guards.
+
+### 1107. `\end{document}` carries latex.ltx's tail for the hooks that scan it (REGFIXJ)
+
+**Rule.** Perl's `\end{document}` is one constructor (latex_constructs.pool.ltxml:347-394); ours expands to
+`\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage`
+`\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup`
+`\lx@enddocument@late{enddocument/end}\lx@enddocument@late@endbox\lx@finalize@document\@@end` (sect02.rs, with
+`\lx@enddocument@late@box` after `\clearpage`), the token shape of latex.ltx:15255-15278,
+so an end-document hook that grabs the rest of `\enddocument` by its delimiters finds them: ltxutil.sty:262-282's
+`\rvtx@enddocument@patch` reads `#2\@checkend#3` and `#2\clearpage#3\endgroup` and re-emits them (also in revtex4-2.cls,
+which our binding does not read); without them the scan ran to the end of the file, `Fatal:Mouth:EoF` (2004.09405,
+2401.03827, 2502.03242 — classes that load ltxgrid/ltxutil raw), as morewrites' `\@@end` scan did before; etoolbox's
+`\patchcmd{\enddocument}{\clearpage}{…}` now patches, as in pdflatex, where it took the failure branch. The late hooks
+run in their latex.ltx slots inside ONE dropped box (their typesetting goes nowhere in pdflatex either), opened after
+`\clearpage` and closed after `/end`, the tail's `\begingroup…\endgroup` inside it: local definitions scope as in TeX
+(`/afterlastpage`'s reach `/afteraux` and `/end`, `/afteraux`'s do not reach `/end`), and the hooks see the kernel's
+`\@checkend` and `\clearpage` again; a slot whose opener a scanning hook dropped gets a box of its own.
+`\lx@enddocument@tail` saves `\@checkend` and `\clearpage`, then `\let\@checkend\@gobble\let\clearpage\relax`: the
+finalizer reports an environment left open
+(Perl's Warning, not a second diagnostic beside it; pdflatex's `\@badend` is an Error) and the last page has nothing to
+ship, so no `ltx:pagination` is added; a hook's own `\clearpage` before it still paginates. Open: a hook that drops
+what it grabbed before `\@checkend` drops `\lx@enddocument@tail` with it, so the tail's `\@checkend` checks and its
+`\clearpage` paginates (repro `expansion-primitives/enddocument_hook_scan_drops_the_tail.tex`, synthetic). Raw ltxgrid's
+re-emitted `\clear@document` (`\do@output@cclv`, an output-routine message) leaves empty `ltx:p`s at the end, as its
+other messages do mid-document; and under raw ltxgrid the document's own `enddocument/afterlastpage` and `/afteraux`
+code never runs: ltxutil.sty:279 re-emits the tail as `\do@check@aux{#3\endgroup}`, which ltxgrid.sty:2199 sends
+through `\do@output@MVL`, an output-routine penalty we never fire (side effects only; pdflatex drops their typesetting).
+The macro is `protected` (REGFIXJ3): an `\edef` keeps `\end{document}` whole, as it keeps Perl's unexpandable
+constructor and kept our earlier expansion's inert primitives; latex.ltx's `\enddocument` is not protected, but no edef
+reaches it in pdflatex, whereas ours does when an `\edef` runs away to the end of the file (an undelimited argument
+that meets the edef's `}` takes it, Perl's `readArg`; TeX §395 inserts `\par` and keeps the `}`), and there the
+tail's `\@checkend` and `\clearpage` ran at edef time — 1012.2852, whose `\protected@edef` (TL 2025's kernel `\Ref`)
+runs away to its bibliography, whose `\bibitem` recovery `\let`s `\enddocument`: `Fatal:Timeout:PushbackLimit`.
+**Guards**: `perfect_kernel_batchregfixj::{enddocument_hook_scans_the_kernel_tail,
+enddocument_hook_scan_in_an_open_environment_reports_once, ltxgrid_enddocument_patch_keeps_the_tabular,
+patchcmd_finds_the_enddocument_tail, enddocument_late_hooks_scope_as_in_tex, enddocument_expanded_in_an_edef_stays_whole}`; the
+morewrites/modernposter shapes stay `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box` and the sect02.rs
+witnesses (cntperchap_example, runcode_troubleshoot, modernposter/demo).
+
+### 1104. `\text` is a protected macro, so an `\edef` keeps `\text` (REGFIXK2)
+
+The `\text` that amstext_sty.rs, revtex4_support_sty.rs and amstex.rs define as `\lx@text{#1}` (the constructor raising
+the alignment count once `#1` is read, KNOWN_PERL_ERRORS #931) is `protected`: a plain `\edef`, `\protected@edef` or
+`\typeout` keeps `\text {z}`, as Perl's unexpandable constructor does; `\lx@text` never shows there. amstext.sty:28 is
+`\DeclareRobustCommand{\text}` (revtex4-2.cls:7547 `\REV@text` the same), so pdflatex's `\meaning\text` is
+`macro:->\protect \text  ` and a plain `\edef` expands amstext's internals; ours says `\protected macro:#1->\lx@text
+{#1}`. Not `robust => true`: a locked robust binding keeps its inner `\text␣` against class files only (#568), so a
+document's `\DeclareRobustCommand\text{V}` replaced the inner and `\text{c}` lost the binding
+(`perfect_kernel_batch64zb::robust_and_ltcmd_values_take_uses_without_an_argument`).
+**Guard**: `perfect_kernel_batchregfixk::text_survives_an_edef` (repro `macro-state/text_survives_an_edef.tex`).
+
+### 1109. ulem's declaration digests the rest of its group; a `\multicolumn` body ends with a marker (REGFIXL)
+
+**Rule.** `\useunder{ucmd}{decl}{}` (ulem.sty:286-293; Perl's binding has no `\useunder`) makes `decl` underline the
+rest of its group. With one of ulem's own lines as `ucmd` (`\uline` … `\dotuline`, as loaded) the declaration is the
+constructor `\lx@ulem@declared@line`, which opens a group of its own and digests the rest (`DigestedBody`) up to the
+first end: the group's `}`, which closes the line's group and is read again for the enclosing one (ulem.sty:107
+`\UL@swender`), a cell's end, or `\lx@alignment@multicolumn@end`. `\lx@alignment@multicolumn` puts that marker (a no-op
+primitive) after the body it splices, where latex.ltx:16603-16607 and :16664-16676 close the template's `{…}` around
+`\@sharp`, so the declaration ends before the column's after-code and the cell keeps its borders. The read of the rest
+of the group as a balanced argument (63u) ran out of input in a `\multicolumn` body (2312.12023
+`\multicolumn{1}{c|}{\ul 29.9970}`: 5 errors, 30 warnings, 11 of 12 underlines lost); it stays for any other `ucmd`.
+Under array.sty pdflatex fails the same `\multicolumn` (`\insert@column` has no brace group); the marker ends it there
+too. A line holds its nesting depth on its own frame, so a line nested in another (`{\ul a \so b}`) closes only its own
+group. Only the line's own group's `}` or the `\multicolumn` body marker closes it cleanly, TeX's only closers; any
+other end raises `Error:expected:}` with the text kept underlined — the end of the text (`Text \ul{x} y.` outside any
+group, pdflatex's fatal "File ended while scanning use of \UL@on"), a cell's end (`& \ul 8 \\`, the cell's text
+underlined, the next cell intact), and a line made directly in another line's text (`{a \ul b \so c}`, the nesting
+kept; `{a \ul b {\so c} e}` is clean), all pdflatex-fatal (REGFIXL2, REGFIXL3). RED: the cell's border lost at a cell's end, and an environment's end or `$` that the line's
+group runs through (`loader/ulem_declaration_{cell_end_loses_borders,runs_through_*,in_math_runs_past_the_formula}.tex`).
+**Guards**: `perfect_kernel_batchregfixl::{ulem_declaration_ends_with_the_cell, ulem_declaration_closes_with_its_group,
+ulem_declaration_unclosed_errs, ulem_declaration_nested_lines_in_a_cell, ulem_declaration_cell_end_errs}`
+(repros `loader/ulem_declaration_*.tex`); `perfect_kernel_batch63::ulem_declaration_form`.

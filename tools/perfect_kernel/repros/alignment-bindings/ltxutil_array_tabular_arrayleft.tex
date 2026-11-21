@@ -1,0 +1,22 @@
+% witness: 2004.09405 (also 2401.03827): revtex's ltxutil.sty (raw, through ltxgrid) with array: `\switch@array`
+%          (ltxutil.sty:909-918, at `\begin{document}`) makes `\@array` ltxutil's `\@array@array@new` (:1322-1343),
+%          which puts array.sty's `\@arrayleft`/`\@arrayright` (:428-429, empty) around the tabular
+% oracle:  pdflatex 0 errors; "Before. a b c d After." (pdftotext reorders the cells)
+% engines: rust INTREGFIX4 = Error:undefined:\@arrayleft
+% expect:  0 errors, 2 Warnings (ltxutil's "You should define the class name", as pdflatex; its "Failed to recognize
+%          \\@vspace…", ours: the kernel's `\\@vspace` is not latex.ltx's); the tabular's four cells.
+%          `\rvtx@enddocument@patch` is gobbled: the witnesses also meet `\end{document}`'s missing `\@checkend` tail
+%          (Fatal:Mouth:EoF), a kernel item of its own
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXI; guard perfect_kernel_batchregfixi::ltxutil_array_tabular_arrayleft)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{ltxgrid}% loads ltxutil.sty
+\usepackage{array}\makeatletter\let\rvtx@enddocument@patch\@gobble\makeatother
+\begin{document}
+Before.
+\begin{tabular}{r|c}
+a & b \\ \hline
+c & d \\
+\end{tabular}
+After.
+\end{document}

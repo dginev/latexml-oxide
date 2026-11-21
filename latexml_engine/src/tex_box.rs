@@ -89,6 +89,27 @@ pub(crate) fn is_space_flagged_box(whatsit: &Whatsit) -> bool {
   )
 }
 
+/// What `\lastbox` takes is a box (tex.web §1080). An `\halign` on a vertical list is its rows, each an hbox (§799
+/// `fin_row`, §800 `fin_align`); LaTeXML's alignment is one item, taken whole, and marked `lx@lastbox` so that placed again in a
+/// paragraph or a box it ends none (`\halign`'s `before_construct`): it closed the enclosing `ltx:p` and escaped the
+/// `\vphantom` it was copied into (easytable's and easybmat's `\@easy@buildbox`: 1705.10408, 2002.06044, 2109.00258,
+/// 2106.13444, 1710.10243; KNOWN_PERL_ERRORS #1296).
+fn taken_as_box(item: Digested) -> Digested {
+  // the alignment's own mark (`is_halign`, set by `\halign`'s and `\valign`'s `after_digest`), not the whatsit's name
+  let is_halign = |w: &Whatsit| {
+    matches!(w.get_property("alignment").as_deref(), Some(Stored::Digested(alignment))
+      if matches!(alignment.data(), DigestedData::Alignment(a) if a.try_borrow().is_ok_and(|a| a.is_halign)))
+  };
+  match item.data() {
+    DigestedData::Whatsit(w) if w.try_borrow().is_ok_and(|w| is_halign(&w)) => {
+      let mut whatsit = w.borrow().clone();
+      whatsit.set_property("lx@lastbox", true);
+      Digested::from(whatsit)
+    },
+    _ => item,
+  }
+}
+
 /// tex.web §1110 `unpackage`: `\unhbox`/`\unhcopy` put a box's list into the current list. A register filled by
 /// `\setbox0\hbox{…}` (LaTeX's `\sbox`, `\savebox`) holds the `\hbox` whatsit, whose list is its contents (argument 2);
 /// Perl puts the whatsit back whole (`Whatsit::unlist` returns itself), so `\unhbox0\unskip` could not reach the box's
@@ -1594,7 +1615,7 @@ LoadDefinitions!({
       .any(|key| item.get_property_bool(key)),
     };
     match peek_own_box() {
-      Some(item) if is_box(&item) => pop_own_box().into_iter().collect(),
+      Some(item) if is_box(&item) => pop_own_box().map(taken_as_box).into_iter().collect(),
       Some(_) => Vec::new(),
       // The implicit indent box at a paragraph's start is taken, though void here: TeX's is an empty `\hbox to
       // \parindent` (KNOWN_PERL_ERRORS #432 residual).

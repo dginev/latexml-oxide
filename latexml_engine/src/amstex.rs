@@ -65,17 +65,21 @@ LoadDefinitions!({
   // fallback lacks: a Fatal runaway, 0 words) — is read raw, as `\input` reads it. A style that `\input`s another
   // style is that style's variation (gr-qc9507042's fic.sty `\input amsppt.sty`, math0406145's grubb-p.sty and
   // 0803.2668's conm-p-mod.sty `\input ams-p.sty`, not in TeX Live): its changes are to the internals of the style it
-  // builds on, which the amsppt binding stands in for, as before. Perl requires a binding (`notex => 1`,
-  // AmSTeX.pool.ltxml:71) and falls back to amsppt (KNOWN_PERL_ERRORS #1051). Guard
-  // `perfect_kernel_batch78i::amstex_local_style_is_read`.
+  // builds on, which the amsppt binding stands in for, as before; so is a renamed copy of amsppt.sty (`copied_style`,
+  // OD #825; math0108062, math0410032). Perl requires a binding (`notex => 1`, AmSTeX.pool.ltxml:71) and falls back to
+  // amsppt (KNOWN_PERL_ERRORS #1051). Guards `perfect_kernel_batch78i::amstex_local_style_is_read`,
+  // `perfect_kernel_batchregfixd::{amsppt_copy_takes_the_binding, only_an_amsppt_copy_takes_the_binding}`.
   DefConstructor!("\\documentstyle Semiverbatim",
     "<?latexml class='#1' amstex='true'?>",
     after_digest => sub[whatsit] {
       let style = whatsit.get_arg(1).map(|d| d.to_string()).unwrap_or_default();
       let style = style.trim().to_string();
-      if !style.is_empty()
-        && !binding_exists(&style, "sty")
-        && let Some(path) = find_file(&s!("{style}.sty"), None)
+      let local = if style.is_empty() || binding_exists(&style, "sty") { None } else {
+        find_file(&s!("{style}.sty"), None)
+      };
+      let copy_of = local.as_deref().and_then(copied_style);
+      if let Some(path) = local
+        && copy_of.is_none()
         && !inputs_a_style(&path)
       {
         let mut input = vec![T_CS!("\\input")];
@@ -95,7 +99,7 @@ LoadDefinitions!({
         load_recorded(&filename)
       };
       if !primary_ok {
-        require_package("amsppt", RequireOptions::default())?;
+        require_package(copy_of.unwrap_or("amsppt"), RequireOptions::default())?;
       }
     });
 
@@ -424,9 +428,12 @@ LoadDefinitions!({
 
   // amstex.tex:1217-1226: `\text` is `\text@@` = `\leavevmode\hbox{#1}` in text and a `\mathchoice` of `\hbox`es in
   // math, so its argument is digested inside box braces: the count an alignment's `&`/`\cr` is tested at is raised
-  // for it, as amstext_sty.rs `\text` (KNOWN_PERL_ERRORS #931).
-  DefConstructor!("\\text {}",
+  // for it, as amstext_sty.rs `\text` (KNOWN_PERL_ERRORS #931), after `#1` is read at the cell's count (2212.00883).
+  // Protected as amstext_sty.rs's, so an `\edef` keeps `\text` as Perl's constructor did (OXIDIZED_DESIGN #1104).
+  DefMacro!("\\text {}", "\\lx@text{#1}", protected => true);
+  DefConstructor!("\\lx@text {}",
     "<ltx:text _noautoclose='1'>#1</ltx:text>",
+    alias => "\\text",
     mode => "restricted_horizontal",
     enter_horizontal => true,
     before_digest => { increment_align_group_count(); },
@@ -1188,6 +1195,29 @@ fn tie_floated_tags_to_row(document: &mut Document) -> Result<()> {
     ancestor = a.get_parent();
   }
   Ok(())
+}
+
+/// The AMS-TeX documentstyle binding the style file at `path` is a renamed copy of: it carries that style's docstrip
+/// header or trailer (``This is file `amsppt.sty'``, ``End of file `amsppt.sty'``) or its `\def\filename{amsppt.sty}`.
+/// A bare `\csname amsppt.sty\endcsname` test is no evidence: a style that insists on amsppt tests it too.
+fn copied_style(path: &str) -> Option<&'static str> {
+  const AMSTEX_STYLES: &[&str] = &["amsppt"];
+  static SELF_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?:(?:This is|End of) file `|(\\def\s*\\filename\s*\{\s*))([A-Za-z0-9_-]+)\.sty\b")
+      .unwrap()
+  });
+  let bytes = std::fs::read(path).ok()?;
+  let text = String::from_utf8_lossy(&bytes);
+  SELF_NAME.captures_iter(&text).find_map(|c| {
+    let name = AMSTEX_STYLES.iter().copied().find(|s| *s == &c[2])?;
+    // The docstrip lines are comments; the `\def` counts outside one.
+    let commented = text[..c.get(0)?.start()]
+      .rsplit('\n')
+      .next()
+      .is_some_and(|l| l.contains('%'));
+    let is_def = c.get(1).is_some();
+    (is_def != commented && binding_exists(name, "sty")).then_some(name)
+  })
 }
 
 /// Whether the AMS-TeX style file at `path` `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`), outside

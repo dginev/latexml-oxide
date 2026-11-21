@@ -1,0 +1,19 @@
+% witness: sig-alternate-05-2015.cls (1703.08365) with a document's own `\citeA`, as its sibling commands are made
+% oracle:  sig-alternate-05-2015.cls:1395 `\DeclareRobustCommand\cite{\start@cite23}`: every citation command `\edef`s
+%          `\citeauthoryear`, so the `.bbl`'s labels take the form of the LAST one before the bibliography.
+%          pdflatex (two runs, acmcite.cls beside): 0 errors, labels "[Smith et al. 2012]", "[Doe 1999]"
+% engines: rust INTREGFIX3 / REGFIXF round 1 "[Smith, Jones, and Brown]", "[Doe]" (the first command's form)
+% expect:  0 errors, 1 warning (the raw `\citeA` before its `\bibitem`: "Citation `a' on page 1 undefined", as
+%          pdflatex's first pass); the labels "Smith et al. 2012", "Doe 1999"
+% status:  RED (REGFIXF round 1) -> GREEN (REGFIXF round 2); guard
+%          perfect_kernel_batchregfixf::refused_cite_redefines_a_defined_label_macro
+% preload: ar5iv.sty
+\documentclass{acmcite}
+\makeatletter\DeclareRobustCommand\citeA{\start@cite10}\makeatother
+\begin{document}
+See \citeA{a} and \cite{a,b}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Smith, Jones, and Brown}{Smith et~al.}{2012}]{a} A. Smith. A Title. 2012.
+\bibitem[\protect\citeauthoryear{Doe}{Doe}{1999}]{b} J. Doe. Another Title. 1999.
+\end{thebibliography}
+\end{document}

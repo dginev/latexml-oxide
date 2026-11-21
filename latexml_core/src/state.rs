@@ -17,7 +17,7 @@ use crate::{
   Digested, DigestedData,
   alignment::Alignment,
   common::{
-    BindingDispatcher, LabelMappingHook, ResolvingBindingDispatcher,
+    BindingDispatcher, LabelMappingHook, LocalBindingFinder, ResolvingBindingDispatcher,
     arena::{self, SymHashMap, SymStr},
     dimension::Dimension,
     error::{emit_warn, *},
@@ -421,6 +421,8 @@ pub struct State {
   pub bindings_dispatch:       Option<ResolvingBindingDispatcher>,
   /// Auxiliary convenience -- extra dispatch
   pub extra_bindings_dispatch: Option<BindingDispatcher>,
+  /// The chain's first tier, a user's binding file in the local search paths ([`local_binding_file`]).
+  pub local_binding_finder:    Option<LocalBindingFinder>,
   /// All `(name, ext)` pairs for compile-time bindings the dispatchers can
   /// load, stacked one slice per registered dispatcher. Populated at
   /// startup by each binding crate via `add_binding_names`, so both
@@ -465,8 +467,8 @@ pub struct State {
   /// The names the stand-in binding loaded last assigned in its own code ([`end_stand_in_load`]): the public ones are
   /// the command set the paper's copy must define to be that binding's file (`binding::content` `read_stand_in_copy`).
   pub stand_in_last_load:      Vec<SymStr>,
-  /// The files each stand-in binding loading now loads from its own code (its `LoadClass!`/`RequirePackage!`),
-  /// innermost last ([`note_stand_in_file`]).
+  /// The files each stand-in binding loading now loads from its own code (its `LoadClass!`/`RequirePackage!`), or
+  /// whose binding's definitions it makes as code, innermost last ([`note_stand_in_file`]).
   pub stand_in_load_files:     Vec<Vec<String>>,
   /// The files the stand-in binding loaded last loaded from its own code ([`end_stand_in_load`]): the files it is
   /// built on, which the paper's copy may declare itself (`binding::content` `copy_is_the_stood_in_file`).
@@ -616,6 +618,7 @@ impl Default for State {
       opened_sources:          HashSet::default(),
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
+      local_binding_finder:    None,
       binding_names:           Vec::new(),
       label_mapping_hook:      None,
       fallback_meanings:       rustc_hash::FxHashMap::default(),
@@ -3975,7 +3978,9 @@ pub fn begin_stand_in_load() {
   state.stand_in_load_files.push(Vec::new());
 }
 
-/// A stand-in binding's own code loads `file` ([`State::stand_in_load_files`]).
+/// A stand-in binding's own code loads `file`, or makes `file`'s binding's definitions as code without loading it
+/// (svjour3_cls.rs over svjour's, jhep_cls.rs `jhep_definitions`): a file it is built on
+/// ([`State::stand_in_load_files`]), not marked loaded.
 pub fn note_stand_in_file(file: &str) {
   if let Some(files) = state_mut!().stand_in_load_files.last_mut() {
     files.push(file.to_string());
@@ -6184,7 +6189,9 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
 /// `\RenewDocumentCommand\mathbf{m}{…}`) by its signature: written out (braced) in the general and expandable wrappers,
 /// and for the optimized one the argument count ltcmd generates `\cs code` from right after the wrapper
 /// (`\l__cmd_current_arg_int`, latex.ltx:1963-1983 `\__cmd_declare_cmd_optimized:Nnn`) (2306.08511, 2306.10719,
-/// 2306.05287).
+/// 2306.05287). A body naming `cs` itself is no value but a command that redefines itself on use (amsppt.sty's
+/// `\def\title{\let\savedef@\title \def\title##1\endtitle{…}\title}`, whose inner command the lock refuses: a
+/// recursion to `Fatal:oom`, math0410032) or recurses.
 fn defines_value(cs: &Token, defn: &Expandable) -> bool {
   let reads_arguments = |params: Option<&crate::parameter::Parameters>| {
     params.is_some_and(|params| !params.get_parameters().is_empty())
@@ -6205,6 +6212,9 @@ fn defines_value(cs: &Token, defn: &Expandable) -> bool {
     return true;
   };
   let body = body.unlist_ref();
+  if body.contains(cs) {
+    return false;
+  }
   if !body
     .first()
     .is_some_and(|first| first.with_str(|name| name.starts_with("\\__cmd_start")))
@@ -8256,6 +8266,16 @@ pub fn set_bindings_dispatch(dispatcher: ResolvingBindingDispatcher) {
 pub fn set_extra_bindings_dispatch(dispatcher: BindingDispatcher) {
   let mut state = state_mut!();
   state.extra_bindings_dispatch = Some(dispatcher);
+}
+pub fn set_local_binding_finder(finder: LocalBindingFinder) {
+  let mut state = state_mut!();
+  state.local_binding_finder = Some(finder);
+}
+/// The binding file a user supplied for `request` in the local search paths, which the chain loads instead of any
+/// compiled binding of that name (#947); `None` without one, or where runtime bindings are not built in.
+pub fn local_binding_file(request: &str) -> Option<String> {
+  let finder = state!().local_binding_finder.clone()?;
+  finder(request)
 }
 
 std::thread_local! {

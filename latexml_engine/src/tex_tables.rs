@@ -504,8 +504,12 @@ LoadDefinitions!({
       Ok((Dimension::default(), Dimension::default(), Dimension::default()))
     }}
   },
-  before_construct => sub[document, _whatsit] {
-    document.maybe_close_element("ltx:p")?;
+  // An `\halign` command ends the paragraph (tex.web §1094-1095 `head_for_vmode`); one `\lastbox` took is a box
+  // (`taken_as_box`).
+  before_construct => sub[document, whatsit] {
+    if !whatsit.get_property_bool("lx@lastbox") {
+      document.maybe_close_element("ltx:p")?;
+    }
   },
   after_digest => sub[whatsit] {
     halign_after_digest(whatsit, HashMap::default(), |template, xml_attrs| {
@@ -861,6 +865,7 @@ LoadDefinitions!({
       tks.extend([T_CS!("\\hbox"), T_BEGIN!()]);
     }
     tks.extend(body.unlist_ref().iter().copied());
+    tks.push(T_CS!("\\lx@alignment@multicolumn@end"));
     if text_cell {
       tks.push(T_END!());
     }
@@ -872,6 +877,11 @@ LoadDefinitions!({
     tks.extend([T_CS!("\\let"), T_CS!("\\\\"), T_CS!("\\lx@multicolumn@cr")]);
     Ok(Tokens::new(tks))
   });
+
+  // Where latex.ltx's template closes the brace group around a `\multicolumn` body (latex.ltx:16603-16607 `\@sharp`,
+  // :16664-16676 `\@tabclassz`'s `{…}`), which the body is not wrapped in here: nothing in itself, it is where a
+  // declaration that lasts to the group's end ends (ulem's `\ul`; 2312.12023).
+  DefPrimitive!("\\lx@alignment@multicolumn@end", {});
 
   DefConditional!("\\if@in@lx@alignment", { lookup_alignment().is_some() });
 

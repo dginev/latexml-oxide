@@ -1,0 +1,14 @@
+% witness: 2004.12879, 1110.0287, 2603.24523, 1501.03645 (edpsmath.cls:326 `\def\@subjclass#1{\@MSSG@SBJCTCLSS}`
+%          after `\LoadClass{amsart}`; stand-in class subjclass_placeholder.cls)
+% oracle:  pdflatex 0 errors: "T", "A", "Body."; no classification printed
+% engines: Perl 1 error; rust MAIN935 9 errors (`expected:}` readBalanced ran out, twice: `{\@subjclass}` handed over read
+%          `}` as its argument, the title page swallowed into <classification>)
+% expect:  0 errors, 0 warnings; no <classification>, no <keywords>; title T, author A
+% status:  RED (MAIN935) -> GREEN (REGFIXE: only a parameterless `\@subjclass`/`\@keywords` is a stored value)
+\documentclass{subjclass_placeholder}
+\begin{document}
+\title{T}
+\author{A}
+\maketitle
+Body.
+\end{document}

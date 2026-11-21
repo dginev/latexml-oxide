@@ -100,6 +100,12 @@ pub type BindingSource = Option<String>;
 /// its proxy name.
 pub type ResolvingBindingDispatcher = Rc<dyn Fn(&str) -> Option<Result<BindingSource>>>;
 
+/// Finds the binding file a user supplied for a request in the local search paths (a runtime `.rhai` beside the
+/// document or in a `--path` directory), which the resolving chain loads ahead of every compiled binding, as Perl's
+/// `FindFile_aux` takes the first `<file>.ltxml` of SEARCHPATHS before the installed ones (Package.pm:2127-2129).
+/// Installed with the chain (`converter::install_binding_dispatch`).
+pub type LocalBindingFinder = Rc<dyn Fn(&str) -> Option<String>>;
+
 /// Lift a **native** (compiled-in) binding dispatcher — one with no source file
 /// to name — into a [`ResolvingBindingDispatcher`]: a successful load reports
 /// `None` source, so the caller announces it by its module-proxy name. Pairs

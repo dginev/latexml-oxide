@@ -153,8 +153,10 @@ AUDITED = {
         "message, so diagnostics only, no object code, never linked; license MIT OR "
         "Apache-2.0 unchanged.",
     ),
-    "walkdir": ("2.5.0",
-        "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
+    "walkdir": (("2.5.0", "2.5.1"),
+        "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built. 2.5.0 -> 2.5.1 "
+        "verified 2026-11-21: nftw.c byte-identical (sha256 6b900b0ac78ce8ece199...), still the only "
+        "native file, no build.rs; license Unlicense/MIT unchanged.",
     ),
     "nix": (("0.31.3", "0.32.0"),
         "test/test_kmod/hello_mod/hello.c -- a Linux kernel-module test fixture, not built "

@@ -1,0 +1,15 @@
+% witness: 2101.09497, 2110.05134, 2408.12532 (svjour3 papers that also ship Springer's older svjour.cls)
+% oracle:  pdflatex 0 errors; "Body: no svjour." (svjour3.cls loads no svjour.cls; svjour.cls is never read)
+% engines: rust INTREGFIX4 = 1 error, "Class Springer-SVJour Error: No valid journal specified in option list" — the
+%          svjour3 binding's LoadClass!("svjour") (Perl svjour3.cls.ltxml) read the paper's svjour.cls raw over
+%          svjour3's options; "Body: svjour."
+% expect:  0 errors, 0 warnings; svjour.cls not read, svjour3.cls read; "Body: no svjour."
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXH)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{svjour3}
+\makeatletter
+\@ifclassloaded{svjour}{\def\cl{svjour}}{\def\cl{no svjour}}
+\makeatother
+\begin{document}
+Body: \cl.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: (synthetic; review of REGFIXA) the side-effect sibling of astron.sty's `\citefull` and mlbib.sty's `\new@cite`
+% oracle:  pdflatex (sidecite.sty beside, two runs): 0 errors, "A see [Doe 1999] B see [Doe 1999] C see [Doe 1999].
+%          Count 3." The lock keeps the kernel `\cite` (OXIDIZED_DESIGN_DIVERGENCES #88), so the branch's counter step
+%          and "see" are not the kernel's to replay
+% engines: rust MAIN935 1 error (`\citelabel` undefined), "Count 0"; REGFIXA a86d7a59154 0 errors, "Count 1" and one
+%          "see": the branch run once, side effects included
+% expect:  MAIN935's output: the branch is not run, `\citelabel` undefined (1 error), "Count 0"
+% status:  RED (REGFIXA a86d7a59154) -> GREEN; guard perfect_kernel_batchregfixa::cite_branch_with_side_effects_is_not_run
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{sidecite}
+\begin{document}
+A \cite{k} B \cite{k} C \cite{k}. Count \arabic{cites}.
+\begin{thebibliography}{}
+\bibitem[\protect\citelabel{Doe}{1999}]{k} Doe, J.: Title, 1999
+\end{thebibliography}
+\end{document}

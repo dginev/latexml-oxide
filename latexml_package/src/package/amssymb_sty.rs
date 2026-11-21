@@ -20,6 +20,19 @@ fn def_math_sym(cs: &str, present: &str, role: Option<&str>, meaning: Option<&st
 
 LoadDefinitions!({
   RequirePackage!("amsfonts");
+  define_symbols(&[])?;
+});
+
+/// amssymb.sty's symbols, but those named in `except`: fdsymbol_sty.rs defines the ones fdsymbol.sty declares too.
+pub fn define_symbols(except: &[&str]) -> Result<()> {
+  // Shadows the helper above for the calls below.
+  let def_math_sym = |cs: &str, present: &str, role: Option<&str>, meaning: Option<&str>| {
+    if except.contains(&cs) {
+      Ok(())
+    } else {
+      def_math_sym(cs, present, role, meaning)
+    }
+  };
 
   //======================================================================
   // Lowercase Greek letters
@@ -764,4 +777,5 @@ LoadDefinitions!({
   def_math_sym("\\nLeftrightarrow", "\u{21CE}", Some("ARROW"), None)?; // LEFT RIGHT DOUBLE ARROW WITH STROKE
 
   //======================================================================
-});
+  Ok(())
+}

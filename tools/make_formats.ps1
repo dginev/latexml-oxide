@@ -9,7 +9,10 @@
 #   $env:PROFILE='release'; tools\make_formats.ps1
 #
 # Env:
-#   PROFILE              release | debug (default) | ci
+#   PROFILE              any cargo profile: debug (default) | release | ci |
+#                        maxperf | maxperf-cortex | … (looked up where cargo
+#                        puts it: dev/test → debug\, bench → release\, a
+#                        custom profile → <name>\)
 #   LATEXML_DUMP_DIR     optional override — where to COPY the dumps
 #                        (they are always written to resources/dumps/)
 #
@@ -22,14 +25,17 @@ Set-Location (Join-Path $PSScriptRoot '..')
 # but environment variables live in a separate namespace, so $env:PROFILE
 # is safe; just never assign the plain $Profile variable.
 $BuildProfile = if ($env:PROFILE) { $env:PROFILE } else { 'debug' }
+if ($BuildProfile -notmatch '^[A-Za-z0-9_-]+$') {
+  Write-Host "PROFILE must be a cargo profile name, e.g. debug, release, ci or maxperf (got: '$BuildProfile')"
+  exit 2
+}
 switch ($BuildProfile) {
-  'release' { $CargoFlags = @('--release') }
-  'debug'   { $CargoFlags = @() }
-  'ci'      { $CargoFlags = @('--profile', 'ci') }
-  default   {
-    Write-Host "PROFILE must be 'release', 'debug', or 'ci' (got: $BuildProfile)"
-    exit 2
-  }
+  'debug'   { $CargoFlags = @(); $ProfileDir = 'debug'; break }
+  'dev'     { $CargoFlags = @(); $ProfileDir = 'debug'; break }
+  'release' { $CargoFlags = @('--release'); $ProfileDir = 'release'; break }
+  'test'    { $CargoFlags = @('--profile', 'test'); $ProfileDir = 'debug'; break }
+  'bench'   { $CargoFlags = @('--profile', 'bench'); $ProfileDir = 'release'; break }
+  default   { $CargoFlags = @('--profile', $BuildProfile); $ProfileDir = $BuildProfile }
 }
 
 if ($env:CARGO_LOCKED -eq '1') {
@@ -47,7 +53,7 @@ cargo build @CargoFlags --bin latexml_oxide
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 # Honour CARGO_TARGET_DIR, as the .sh does.
 $TargetDir = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { 'target' }
-$Bin = Join-Path (Join-Path $TargetDir $BuildProfile) 'latexml_oxide.exe'
+$Bin = Join-Path (Join-Path $TargetDir $ProfileDir) 'latexml_oxide.exe'
 
 # TL-year detection, mirroring the .sh (and the runtime's
 # dump_paths::detect_ambient_texlive_year two-step strategy):

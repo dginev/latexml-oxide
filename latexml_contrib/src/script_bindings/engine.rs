@@ -175,7 +175,14 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "DeclareOption",
     |opt: &str, body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
-      wire_now(|e, a| wire_option(e, a, opt, body))
+      wire_now(|e, a| wire_option(e, a, opt, Some(body)))
+    },
+  );
+  // No body: `DeclareOption('opt', ())`, Perl's `DeclareOption($o, undef)` (Package.pm:2424-2425), a no-op handler.
+  engine.register_fn(
+    "DeclareOption",
+    |opt: &str, _: ()| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_option(e, a, opt, None))
     },
   );
   // String-body form: `DeclareOption('opt', '\xdef...')` — the body is TeX,
@@ -192,7 +199,7 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "DeclareOption",
     |body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
-      wire_now(|e, a| wire_option_default(e, a, body))
+      wire_now(|e, a| wire_option(e, a, "", Some(body)))
     },
   );
 

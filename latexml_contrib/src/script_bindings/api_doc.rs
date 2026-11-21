@@ -772,7 +772,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "DeclareOption",
     Mirror("DeclareOption", "DeclareOption!"),
     Doc::Note(
-      "Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl `DeclareOption(undef, sub {...})`).",
+      "Declare a class/package option: named with a closure or TeX-string body, or `()` for a no-op (Perl's undef `$code`); the bare-closure form, or an empty name, is the default handler (Perl `DeclareOption(undef, sub {...})`).",
     ),
   ),
   (

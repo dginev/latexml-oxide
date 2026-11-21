@@ -109,11 +109,12 @@ impl Drop for SuppressLogOutputGuard {
   fn drop(&mut self) { SUPPRESS_LOG_OUTPUT.set(self.prev); }
 }
 
-/// Clear the log-output suppression flag and the progress notes' silence ([`SilenceProgressNotesGuard`];
-/// `reset_thread_engine`): a fresh conversion on a reused thread logs.
+/// Clear the log-output suppression flag, the progress notes' silence ([`SilenceProgressNotesGuard`];
+/// `reset_thread_engine`) and any [`DeferredNote`] a panic left: a fresh conversion on a reused thread logs.
 pub fn reset_suppress_log_output() {
   SUPPRESS_LOG_OUTPUT.set(false);
   SILENCE_PROGRESS_NOTES.set(false);
+  DEFERRED_NOTES.borrow_mut().clear();
 }
 
 // Thread-local FATAL DEMOTION for bibliography post-processing (user
@@ -1250,8 +1251,8 @@ macro_rules! Note {
     if !$crate::common::error::is_log_output_suppressed()
       && $crate::util::logger::stderr_shows_info()
     {
-      $crate::println_stderr!("{msg}");
-      $crate::util::logger::mark_stderr_at_line_start();
+      // (on a fresh line, as Perl's `_freshline`: not glued to a progress note's ` )`)
+      $crate::util::logger::stderr_fresh_line(&format!("{msg}\n"));
     }
   }};
 }
@@ -1276,8 +1277,9 @@ macro_rules! NoteSTDERR {
       && $crate::util::logger::stderr_shows_info()
     {
       let msg = $input;
-      $crate::println_stderr!("{msg}");
-      $crate::util::logger::mark_stderr_at_line_start();
+      // A binding's message lands inside its `(Loading …` note, as a logged line does (#945).
+      $crate::common::error::print_deferred_notes();
+      $crate::util::logger::stderr_fresh_line(&format!("{msg}\n"));
     }
   };
 }
@@ -1656,7 +1658,7 @@ pub fn note_progress_detailed(stuff: &str) {
 /// parentheses is what makes a conversion log readable as a phase tree.
 /// Perl also stamps a `NOTE_TIMERS` entry here so the close can report elapsed
 /// time; this port logs the structure without the timing (per-phase wall times
-/// are the telemetry module's job).
+/// are the telemetry module's job; OXIDIZED_DESIGN #1102).
 pub fn note_begin(stage: &str) {
   if SILENCE_PROGRESS_NOTES.get() {
     return;
@@ -1682,6 +1684,83 @@ pub fn note_end(_stage: &str) {
   // info!(target: "note", " %.2f sec)", elapsed);
   use log::info;
   info!(target: "note", " )");
+}
+
+/// A stage of a [`DeferredNote`]: its text, and whether its `(stage...` is printed (`None`: silenced when it began).
+#[thread_local]
+static DEFERRED_NOTES: RefCell<Vec<(String, Option<bool>)>> = RefCell::new(Vec::new());
+
+/// A progress stage that may not happen: a binding load, whose dispatcher both finds the binding and runs it, where
+/// Perl opens `(Loading <path>...` once `FindFile` found the `.ltxml` (`Core/Mouth/Binding.pm:31`, `Package.pm:2336`).
+/// Its `(stage...` prints before the first line logged inside it ([`print_deferred_notes`]) or at its end if it
+/// happened, so what it triggers nests inside it (#945); a stage that did not happen and logged nothing leaves no
+/// trace (one that logged a line and then declined still shows its note).
+#[must_use = "the stage ends when the note is dropped"]
+pub struct DeferredNote {
+  depth:    usize,
+  happened: bool,
+}
+
+impl DeferredNote {
+  /// Begin the stage (a [`note_begin`] held back until it is known to happen).
+  pub fn begin(stage: &str) -> Self {
+    let silenced = SILENCE_PROGRESS_NOTES.get();
+    let mut notes = DEFERRED_NOTES.borrow_mut();
+    notes.push((stage.to_string(), (!silenced).then_some(false)));
+    DeferredNote {
+      depth:    notes.len() - 1,
+      happened: false,
+    }
+  }
+
+  /// End the stage; `happened` says the stage took place (a binding was found), so its note prints if it has not.
+  pub fn end(mut self, happened: bool) { self.happened = happened; }
+}
+
+impl Drop for DeferredNote {
+  fn drop(&mut self) {
+    let unprinted = matches!(
+      DEFERRED_NOTES.borrow().get(self.depth),
+      Some((_, Some(false)))
+    );
+    if self.happened && unprinted {
+      print_deferred_notes();
+    }
+    let stage = {
+      let mut notes = DEFERRED_NOTES.borrow_mut();
+      let stage = notes.get(self.depth).cloned();
+      notes.truncate(self.depth);
+      stage
+    };
+    if let Some((stage, Some(true))) = stage {
+      note_end(&stage);
+    }
+  }
+}
+
+/// Rename the innermost unprinted [`DeferredNote`]: a binding's dispatcher names the file it found
+/// (a runtime `.rhai` binding's path, #560).
+pub fn rename_deferred_note(stage: &str) {
+  if let Some((text, Some(false))) = DEFERRED_NOTES.borrow_mut().last_mut() {
+    *text = stage.to_string();
+  }
+}
+
+/// Print every begun, unprinted [`DeferredNote`], outermost first: the logger calls it before it writes a line, so
+/// the line lands inside them.
+pub fn print_deferred_notes() {
+  let pending: Vec<String> = DEFERRED_NOTES
+    .borrow_mut()
+    .iter_mut()
+    .filter(|(_, printed)| *printed == Some(false))
+    .map(|(stage, printed)| {
+      *printed = Some(true);
+      stage.clone()
+    })
+    .collect();
+  for stage in pending {
+    log::info!(target: "note", "\n({}...", stage);
+  }
 }
 
 #[cfg(test)]

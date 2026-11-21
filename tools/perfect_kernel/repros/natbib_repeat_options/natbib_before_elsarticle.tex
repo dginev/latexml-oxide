@@ -1,0 +1,15 @@
+% witness: review revREGFIXC S1 (probe p_pre); synthetic, no corpus witness
+% oracle:  pdflatex 5 errors, among them "Option clash for package natbib" (natbib before the class: `\@listi`
+%          undefined, `{thebibliography}` undefined): the class's `\RequirePackage[\@biboptions]{natbib}` is a repeat
+% engines: rust MAIN935 1 Error (the clash); REGFIXC 0 errors, an Info: the elsarticle binding's natbib load is its
+%          own repeat, which a binding's repeat never clashes (content.rs `apply_repeat_options`)
+% expect:  1 Error "Option clash for package natbib"
+% status:  RED, no guard: a mirroring binding would declare its load the file's own before loading it
+\RequirePackage[authoryear]{natbib}
+\documentclass{elsarticle}
+\begin{document}
+Text \citep{a}.
+\begin{thebibliography}{1}
+\bibitem[A(2001)]{a} A. 2001.
+\end{thebibliography}
+\end{document}

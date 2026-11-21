@@ -480,7 +480,28 @@ pub(crate) fn load() -> Result<()> {
   // dump): it does `\tex_shipout:D\vbox to\textheight{…}` with the
   // "Temporary page!" text (latex.ltx:20261-20269), which the `\shipout`
   // primitive would now emit in place (DIVERGENCES #314).
-  DefMacro!(T_CS!("\\end{document}"), None, "\\lx@end@open@frontmatter\\lx@enddocument@hooks\\lx@finalize@document\\@@end");
+  // The tail after the hooks has latex.ltx:15258-15277's shape, `\@checkend{document}\clearpage…\begingroup…\endgroup`,
+  // the late hooks in their slots: ltxutil.sty:262-282's `\AddToHook{enddocument}{\rvtx@enddocument@patch{}}` grabs
+  // `#2\@checkend#3` and then `#2\clearpage#3\endgroup` from it and re-emits them; without the delimiters the scan ran
+  // to the end of the file ("Missing argument Until:\@checkend", `Fatal:Mouth:EoF`; revtex/ltxgrid users 2004.09405,
+  // 2401.03827, 2502.03242). Guard: `perfect_kernel_batchregfixj::enddocument_hook_scans_the_kernel_tail`.
+  // `protected`: an `\edef` keeps it whole, as it kept the inert primitives the expansion had before; expanded there,
+  // the tail's `\@checkend` and `\clearpage` ran at edef time (an `\edef` that ran away to the end of the file, a
+  // `\let…\enddocument` in it: 1012.2852, `Fatal:Timeout:PushbackLimit`).
+  // Guard `perfect_kernel_batchregfixj::enddocument_expanded_in_an_edef_stays_whole`.
+  DefMacro!(
+    T_CS!("\\end{document}"),
+    None,
+    r"\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage\lx@enddocument@late@box\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup\lx@enddocument@late{enddocument/end}\lx@enddocument@late@endbox\lx@finalize@document\@@end",
+    protected => true
+  );
+  // What the tail's `\@checkend` and `\clearpage` (and a scanning hook's re-emitted ones) do in TeX is done here by
+  // the finalizer: it reports an environment left open (Perl's Warning, latex_constructs.pool.ltxml:385), and the last
+  // page has nothing to ship, so the tail emits no `ltx:pagination`. The late hooks get the real ones back.
+  DefMacro!(
+    "\\lx@enddocument@tail",
+    r"\let\lx@enddocument@checkend\@checkend\let\lx@enddocument@clearpage\clearpage\let\@checkend\@gobble\let\clearpage\relax"
+  );
   // A frontmatter body still open at `\end{document}` — an unclosed `\begin{abstract}`, `\abstract{`, or a brace-less
   // `\abstract` no sectioning command ended (`\lx@add@frontmatter@until`, base_utilities.rs) — ends first: its terminal
   // is read before the end-document code, which then runs at the document's level, so the abstract keeps its text as an
@@ -551,25 +572,52 @@ pub(crate) fn load() -> Result<()> {
     if let Some(ops) = lookup_tokens("@after@enddocument@hooks") {
       toks.extend(ops.unlist());
     }
-    // latex.ltx:15262-15277 `enddocument/afterlastpage`, `/afteraux`, `/end` run after the last page shipped: what they
-    // typeset goes nowhere (pdflatex), so the document's own code (lthooks' top-level slot) runs for its side effects in
-    // a box that is dropped. A package's code there keeps the `.aux` and the page model, which LaTeXML has not: acro's
-    // property lists (2502.06996, a Fatal), pageslts' numbering check (a false Warning); `enddocument/info` is the
-    // kernel's file list and rerun warnings.
-    let mut late = Vec::new();
-    for hook in ["enddocument/afterlastpage", "enddocument/afteraux", "enddocument/end"] {
-      let toplevel = T_CS!(s!("\\__hook_toplevel {hook}"));
-      if hook_slot_has_code(&toplevel) {
-        late.push(toplevel);
-      }
-    }
-    if !late.is_empty() {
-      toks.extend([T_CS!("\\setbox"), T_CS!("\\@tempboxa"), T_CS!("\\vbox"), T_BEGIN!()]);
-      toks.extend(late);
-      toks.push(T_END!());
-    }
     unread(Tokens::new(toks));
     Ok(Vec::new())
+  });
+  // latex.ltx:15262-15277 `enddocument/afterlastpage`, `/afteraux`, `/end` run after the last page shipped: what they
+  // typeset goes nowhere (pdflatex), so the document's own code (lthooks' top-level slot) runs for its side effects in
+  // a box that is dropped. A package's code there keeps the `.aux` and the page model, which LaTeXML has not: acro's
+  // property lists (2502.06996, a Fatal), pageslts' numbering check (a false Warning); `enddocument/info` is the
+  // kernel's file list and rerun warnings. Once each, as `\lx@enddocument@hooks`.
+  DefPrimitive!("\\lx@enddocument@late{}", sub[(hook)] {
+    let fired = s!("lx@enddocument@late@fired@{}", hook.to_string());
+    if in_speculative_digestion() || lookup_bool(&fired) {
+      return Ok(Vec::new());
+    }
+    assign_value(&fired, true, Some(Scope::Global));
+    let toplevel = T_CS!(s!("\\__hook_toplevel {}", hook.to_string()));
+    if hook_slot_has_code(&toplevel) {
+      if lookup_bool("lx@enddocument@late@open") {
+        unread(Tokens!(toplevel));
+      } else {
+        // (the shared box's opener was dropped by a hook that scanned the tail)
+        let mut toks = late_box_open();
+        toks.extend([toplevel, T_END!()]);
+        unread(Tokens::new(toks));
+      }
+    }
+    Ok(Vec::new())
+  });
+  // The three slots share ONE dropped box, the tail's `\begingroup…\endgroup` inside it, so their local definitions
+  // scope as in TeX's `\enddocument`: `/afterlastpage`'s reach `/afteraux` and `/end`, `/afteraux`'s do not reach `/end`.
+  DefPrimitive!("\\lx@enddocument@late@box", {
+    if in_speculative_digestion() || lookup_bool("lx@enddocument@late@open") {
+      return Ok(Vec::new());
+    }
+    let has_code = ["enddocument/afterlastpage", "enddocument/afteraux", "enddocument/end"]
+      .iter()
+      .any(|hook| hook_slot_has_code(&T_CS!(s!("\\__hook_toplevel {hook}"))));
+    if has_code {
+      assign_value("lx@enddocument@late@open", true, Some(Scope::Global));
+      unread(Tokens::new(late_box_open()));
+    }
+  });
+  DefPrimitive!("\\lx@enddocument@late@endbox", {
+    if lookup_bool("lx@enddocument@late@open") {
+      assign_value("lx@enddocument@late@open", false, Some(Scope::Global));
+      unread(Tokens!(T_END!()));
+    }
   });
 
   // The `\@checkend{document}` + `final_cleanup` half of `\enddocument`:
@@ -726,6 +774,28 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\lx@orig@enddocument", "\\end{document}", Scope::Global);
 
   Ok(())
+}
+
+/// Opens the late end-document hooks' dropped box, `\setbox\@tempboxa\vbox{`, inside which `\@checkend` and
+/// `\clearpage` are the kernel's again (`\lx@enddocument@tail` saved them; a hook that dropped the tail saved nothing).
+fn late_box_open() -> Vec<Token> {
+  let mut toks = vec![
+    T_CS!("\\setbox"),
+    T_CS!("\\@tempboxa"),
+    T_CS!("\\vbox"),
+    T_BEGIN!(),
+  ];
+  if is_defined_token(&T_CS!("\\lx@enddocument@clearpage")) {
+    toks.extend([
+      T_CS!("\\let"),
+      T_CS!("\\@checkend"),
+      T_CS!("\\lx@enddocument@checkend"),
+      T_CS!("\\let"),
+      T_CS!("\\clearpage"),
+      T_CS!("\\lx@enddocument@clearpage"),
+    ]);
+  }
+  toks
 }
 
 /// Digest begin-document code with the state RE-LOCKED (see `\begin{document}`): a binding-locked macro is never

@@ -1,0 +1,16 @@
+% witness: none (synthetic; REGFIXL review item 1): `\ul{x}` outside any group never meets its group's `}`
+%          (ulem.sty:286-293 opens `\UL@on`'s argument with an unmatched brace)
+% oracle:  pdflatex fatal: "File ended while scanning use of \UL@on."
+% engines: rust INTREGFIX4 = 1 error (`expected:}` readBalanced ran out of input), "x y." underlined to the paragraph's
+%          end; rust REGFIXL = the same markup, only the Warning "Attempt to end document with open groups"
+% expect:  1 error (`expected:}` naming the unclosed declaration), 1 warning (the open group at `\end{document}`);
+%          "x y." underlined, "Next para." kept as its own paragraph
+% status:  RED (REGFIXL) -> GREEN (REGFIXL2)
+\documentclass{article}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\begin{document}
+Text \ul{x} y.
+
+Next para.
+\end{document}

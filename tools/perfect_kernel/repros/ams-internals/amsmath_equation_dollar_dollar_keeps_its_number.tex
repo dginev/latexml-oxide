@@ -1,0 +1,16 @@
+% `$$` inside a numbered `{equation}` ends the display and the next `$$` opens one that `\end{equation}` closes with
+% the number (tex.web §1193-1197, §1138; amsmath.sty `\endmathdisplay`). The kernel's cheap intertext
+% (`\lx@eDM@in@equation`, sect07.rs; Perl latex_constructs.pool.ltxml:1957-1969) retracts the number of the first
+% half; the second half carries the number.
+% witness: companion of amsmath_display_brackets_dollar_dollar (2606.13867)
+% oracle:  pdflatex 0 errors: Text / a=b / text kept / =c. (1) Then / p=q / =r. (2) Done.
+% engines: rust (c9f8fd1) and perl 0 errors; the number on the second half
+% expect:  0 errors, 0 warnings; S0.Ex1, S0.E1 (1), S0.Ex2, S0.E2 (2); "text kept" between the first pair
+% guard:   perfect_kernel_batchclustfix3::amsmath_equation_dollar_dollar_keeps_its_number
+% status:  GREEN (REG929, 2026-11-20)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+Text \begin{equation} a=b $$ text kept $$ =c. \end{equation} Then
+\begin{equation} p=q $$ $$ =r. \end{equation} Done.
+\end{document}

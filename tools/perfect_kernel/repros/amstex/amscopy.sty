@@ -1,0 +1,9 @@
+%% a renamed copy of amsppt.sty names itself amsppt.sty (grgppt.sty:6,39-40)
+\def\filename{amsppt.sty}
+\catcode`\@=11
+\expandafter\ifx\csname amsppt.sty\endcsname\relax\else\endinput\fi
+\expandafter\def\csname amsppt.sty\endcsname{2.1 (copy)}
+\def\title{\let\savedef@\title
+  \def\title##1\endtitle{\let\title\savedef@ \centerline{\bf ##1}}%
+  \title}
+\catcode`\@=12

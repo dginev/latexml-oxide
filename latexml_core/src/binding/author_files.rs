@@ -354,8 +354,12 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
 /// case, as the binding registry matches a request (`jhep.cls` → `JHEP.cls`). It stands in on every tree: a paper's copy
 /// is read after it (TeX reads the document's directory first), and where the paper ships none, a later tree's own file
 /// (TL 2026's `rasti.cls`) answers `\IfFileExists` by the disk search made before the binding is asked.
+/// A stand-in is the compiled binding: a user's binding found ahead of it in the search paths (`lipics-v2021.cls.rhai`
+/// beside the document or under `--path`) is the file itself, as Perl's first `.ltxml` found is (Package.pm:2127-2129),
+/// and no copy is read after it (#947).
 pub fn stands_in_for_an_author_file(file: &str) -> bool {
   AUTHOR_FILE_STAND_INS
     .iter()
     .any(|name| name.eq_ignore_ascii_case(file))
+    && crate::state::local_binding_file(file).is_none()
 }

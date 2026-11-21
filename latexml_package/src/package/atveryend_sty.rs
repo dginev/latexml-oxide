@@ -5,7 +5,7 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // atveryend.sty 2024-08-06 v1.12 (= base/atveryend-ltx.sty): each command adds to a kernel hook, which the
-  // end-document code runs (sect02.rs `\lx@enddocument@hooks`). Perl's no-ops dropped the code (QA47B).
+  // end-document code runs (sect02.rs `\lx@enddocument@hooks`, `\lx@enddocument@late`). Perl's no-ops dropped the code (QA47B).
   DefMacro!("\\AfterLastShipout", "\\AddToHook{enddocument/afterlastpage}");
   DefMacro!("\\AtVeryEndDocument", "\\AddToHook{enddocument/afteraux}");
   DefMacro!("\\AtEndAfterFileList", "\\AddToHook{enddocument/info}");

@@ -1,0 +1,16 @@
+% witness: 2406.18569, 2503.23289 (each ships its `\jobname.spl`; elsarticle.cls:1240-1243 reads it before
+%          `\RequirePackage[\@biboptions]{natbib}`)
+% oracle:  pdflatex (with t.spl beside it) 0 errors, "Text [1, 2]."
+% engines: Perl clean (its binding loads natbib [numbers], no clash test); rust MAIN935 1 Error "Option clash for
+%          package natbib: options 'sort&compress' of a repeat load dropped"
+% expect:  0 errors, 0 warnings; numeric citations
+% status:  RED (MAIN935) -> GREEN (REGFIXC: the binding reads the .spl)
+\documentclass[preprint,12pt]{elsarticle}
+\usepackage[sort&compress]{natbib}
+\begin{document}
+Text \citep{a,b}.
+\begin{thebibliography}{2}
+\bibitem{a} A.
+\bibitem{b} B.
+\end{thebibliography}
+\end{document}

@@ -364,6 +364,11 @@ pub(crate) fn load() -> Result<()> {
     let option_str = option.to_string();
     if option_str == "*" {
       DeclareOption!(None, code);
+    } else if option_str.is_empty() {
+      // latex.ltx:18535-18538 `\@declareoption`: `\DeclareOption{}` defines `\ds@`, not the default handler that an
+      // empty name is to a binding's `DeclareOption` (and to Perl's `\DeclareOption`, latex_constructs.pool.ltxml:874).
+      push_value("@declaredoptions", "")?;
+      def_macro(T_CS!("\\ds@"), None, code, None)?;
     } else {
       DeclareOption!(option_str, code);
     }
@@ -1204,6 +1209,10 @@ pub(crate) fn load() -> Result<()> {
   });
   // the replay group's inert frontmatter: each entry point a local no-op taking the same arguments
   DefPrimitive!("\\lx@replay@inert", {
+    // the class's own helper that its setter's body calls by the store's name (`class_store_helper`)
+    if let Some((store, helper)) = REPLAY_HELPER.with(|c| c.borrow_mut().take()) {
+      assign_internal(TableName::Meaning, meaning_key(&store), helper, Some(Scope::Local));
+    }
     for cs in FRONTMATTER_ENTRY_POINTS {
       let token = T_CS!(cs);
       if let Some(definition) = lookup_definition(&token)? {
@@ -3173,6 +3182,8 @@ thread_local! {
   /// The stores the replayed setter's own body defines (`defined_stores`), for `\lx@replay@capture`.
   static REPLAY_BODY_STORES: RefCell<Vec<SymStr>> =
     const { RefCell::new(Vec::new()) };
+  /// The class's own helper of the replayed field's store (`class_store_helper`), bound by `\lx@replay@inert`.
+  static REPLAY_HELPER: RefCell<Option<(Token, Stored)>> = const { RefCell::new(None) };
 }
 
 /// Clear per-conversion thread-local caches in `sect05` (`REPLAY_CAPTURED`,
@@ -3181,6 +3192,7 @@ thread_local! {
 pub(super) fn reset_conversion_caches() {
   REPLAY_CAPTURED.with(|c| c.borrow_mut().clear());
   REPLAY_BODY_STORES.with(|c| c.borrow_mut().clear());
+  REPLAY_HELPER.with(|c| *c.borrow_mut() = None);
   KERNEL_TITLE_DEFS.with(|c| *c.borrow_mut() = None);
 }
 
@@ -3541,9 +3553,13 @@ fn replay_dropped_class_code(
     fn drop(&mut self) {
       REPLAY_BODY_STORES.with(|c| c.borrow_mut().clear());
       REPLAY_CAPTURED.with(|c| c.borrow_mut().clear());
+      REPLAY_HELPER.with(|c| *c.borrow_mut() = None);
     }
   }
   let _replay_guard = ReplayBuffersGuard;
+  if !begin_code {
+    REPLAY_HELPER.with(|c| *c.borrow_mut() = class_store_helper(name));
+  }
   REPLAY_BODY_STORES.with(|c| *c.borrow_mut() = stores.iter().map(meaning_key).collect());
   kernel_stores.extend(stores);
   let saved: Vec<Option<Stored>> = kernel_stores.iter().map(lookup_meaning).collect();
@@ -3731,6 +3747,29 @@ fn replay_dropped_class_code(
     );
   }
   Ok(())
+}
+
+/// A raw class's `\@<name>` taking parameters is its refused setter's helper, not LaTeX's store (latex.ltx
+/// `\gdef\@author{#1}`): bullsrsl.cls:326-327 (2312.08217, 2607.02675), beilstein.cls:586-588. OD #482.
+fn class_store_helper(name: &str) -> Option<(Token, Stored)> {
+  let store = T_CS!(s!("\\@{name}"));
+  let kept = s!("lx_class_store_helper:{name}");
+  match lookup_definition_stored(&store).ok().flatten() {
+    Some(Stored::Expandable(d))
+      if d
+        .get_parameters()
+        .is_some_and(|p| !p.get_parameters().is_empty()) =>
+    {
+      if d.get_origin() == DefinitionOrigin::File {
+        assign_value(&kept, Stored::Expandable(d), Some(Scope::Global));
+      } else {
+        // a binding's own helper now: a class helper recorded earlier is stale
+        assign_value(&kept, Stored::None, Some(Scope::Global));
+      }
+      None
+    },
+    _ => lookup_value(&kept).map(|helper| (store, helper)),
+  }
 }
 
 /// The class's own definition of `\<name>` that the lock refused (`\lx@dropped@<name>`, state.rs), when a call can be

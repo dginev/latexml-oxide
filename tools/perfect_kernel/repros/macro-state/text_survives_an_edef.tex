@@ -1,0 +1,18 @@
+% witness: synthetic (REGFIXK review probe t8_edef; the \text of round 1's macro-then-\lx@text form)
+% oracle:  pdflatex 0 errors: "macro:->\protect \protect \unhbox \voidb@x \hbox {z}" (amstext.sty:28 `\DeclareRobustCommand`:
+%          a plain \edef expands the inner `\text␣`), "macro:->\protect \text  " and, under \protected@edef,
+%          "macro:->\protect \text  {q}"; the math reads "x_max zq"
+% engines: rust INTREGFIX4 "\text {z}" (a constructor); REGFIXK "macro:->\lx@text {z}", "macro:#1->\lx@text {#1}",
+%          "macro:->\lx@text {q}" (the internal exposed)
+% expect:  0 errors, 0 warnings; "macro:->\text {z}" and "macro:->\text {q}" (`\text` protected, as Perl's constructor
+%          is unexpandable: never `\lx@text`), "\protected macro:#1->\lx@text {#1}" (OXIDIZED_DESIGN #1104); the math
+%          unchanged
+% status:  RED (REGFIXK) -> GREEN (REGFIXK2, `\text` a protected macro)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\edef\y{\text{z}}\texttt{\meaning\y} \texttt{\meaning\text}
+\makeatletter\protected@edef\w{\text{q}}\makeatother\texttt{\meaning\w}
+$x_\text{max}\y\w$
+\end{document}

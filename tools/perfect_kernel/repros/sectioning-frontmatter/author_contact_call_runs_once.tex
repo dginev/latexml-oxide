@@ -1,0 +1,11 @@
+% witness: synthetic (review of REGFIXI2, S1); the call shape of 2609.21618, 2511.12314, 2509.01370 (a call printing apart
+%          from the names, global definitions, emit::printing_kept)
+% oracle:  pdflatex: 0 errors; "T 1 Ann Able ann@x.org Bob Baker bob@y.org 2 … Count 2."
+% engines: rust REGFIXI2 = marks 3 and 4, "Count 4": the call printing a mark and an e-mail contact apart ran twice, once
+%          by the contact item that holds it and once more as a kept call
+% expect:  0 errors, 0 Warnings; the contacts ann@x.org with mark 1 and bob@y.org with mark 2; "Count 2."
+% status:  RED (REGFIXI2) -> GREEN (REGFIXI3; guard perfect_kernel_batchregfixi::contact_printing_call_runs_once)
+\documentclass{article}\usepackage{hyperref}\newcounter{em}
+\newcommand\mail[1]{\stepcounter{em}\expandafter\gdef\csname eX\theem\endcsname{#1}\textsuperscript{\theem}\href{mailto:#1}{#1}}
+\title{T}\author{Ann Able\\ \mail{ann@x.org} \and Bob Baker\\ \mail{bob@y.org}}
+\begin{document}\maketitle Count \theem.\end{document}

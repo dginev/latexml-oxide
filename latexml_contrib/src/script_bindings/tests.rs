@@ -709,6 +709,182 @@ fn declare_option_registers_and_runs() {
   latexml_core::reset_thread_engine();
 }
 
+/// Issue #944: an option name is never a prototype (Perl Package.pm:2423-2428 names `\ds@<option>` whole), so a
+/// closure handler named `a-b` defines the single control sequence `\ds@a-b`, not `\ds@a` with a parameter `-b`.
+#[test]
+fn declare_option_closure_name_is_one_control_sequence() {
+  fresh_state();
+  load_script(
+    r#"DeclareOption("some-option2.0+", || { AssignValue("script:dash_ran", "yes", "global"); });"#,
+  )
+  .expect("load");
+  let cs = latexml_core::T_CS!("\\ds@some-option2.0+");
+  assert!(
+    latexml_core::state::lookup_definition(&cs)
+      .expect("lookup")
+      .is_some(),
+    "\\ds@some-option2.0+ not defined as one control sequence"
+  );
+  latexml_core::stomach::digest(Tokens::new(vec![cs])).expect("digest the handler");
+  let ran = match latexml_core::state::lookup_value("script:dash_ran") {
+    Some(Stored::String(s)) => arena::to_string(s),
+    _ => String::new(),
+  };
+  assert_eq!(ran, "yes", "the dashed option's closure did not run");
+  latexml_core::reset_thread_engine();
+}
+
+/// Issue #944, the compiled side: the `DeclareOption!` macro names `\ds@<option>` whole in both its closure and its
+/// string-body arms, so a punctuated name is one control sequence there too.
+#[test]
+fn declare_option_macro_names_are_one_control_sequence() {
+  fn declare() -> Result<()> {
+    use latexml_package::prelude::*;
+    DeclareOption!("rust-closure2.0+", {
+      AssignValue!("rust:dash_ran" => "yes", Some(Scope::Global));
+    });
+    DeclareOption!("rust-string2.0+", "\\gdef\\rustdash{yes}");
+    Ok(())
+  }
+  fresh_state();
+  declare().expect("declare");
+  for name in ["\\ds@rust-closure2.0+", "\\ds@rust-string2.0+"] {
+    let cs = latexml_core::T_CS!(name);
+    assert!(
+      latexml_core::state::lookup_definition(&cs)
+        .expect("lookup")
+        .is_some(),
+      "{name} not defined as one control sequence"
+    );
+    latexml_core::stomach::digest(Tokens::new(vec![cs])).expect("digest the handler");
+  }
+  let ran = match latexml_core::state::lookup_value("rust:dash_ran") {
+    Some(Stored::String(s)) => arena::to_string(s),
+    _ => String::new(),
+  };
+  assert_eq!(ran, "yes", "the dashed option's closure did not run");
+  let out = gullet::do_expand(mouth::tokenize_internal(r"\rustdash")).expect("expand");
+  assert_eq!(
+    out.to_string(),
+    "yes",
+    "the dashed option's string body did not run"
+  );
+  latexml_core::reset_thread_engine();
+}
+
+/// The option names `@declaredoptions` holds, in order.
+fn declared_options() -> Vec<String> {
+  latexml_core::state::lookup_vecdeque("@declaredoptions")
+    .unwrap_or_default()
+    .into_iter()
+    .map(|s| match s {
+      Stored::String(s) => arena::to_string(s),
+      other => panic!("@declaredoptions holds a non-string {other:?}"),
+    })
+    .collect()
+}
+
+/// Perl `DeclareOption($option, undef)` (Package.pm:2424-2425) defines `\ds@<option>` as a primitive with no code: the
+/// Rhai `DeclareOption("opt", ())` declares the option, and running it does nothing, quietly.
+#[test]
+fn declare_option_undef_body_is_a_noop() {
+  fresh_state();
+  load_script(r#"DeclareOption("quiet-opt", ());"#).expect("load");
+  assert_eq!(declared_options(), ["quiet-opt"]);
+  let cs = latexml_core::T_CS!("\\ds@quiet-opt");
+  assert!(
+    matches!(
+      latexml_core::state::lookup_meaning(&cs),
+      Some(Stored::Primitive(_))
+    ),
+    "\\ds@quiet-opt is not a primitive"
+  );
+  let boxes = latexml_core::stomach::digest(Tokens::new(vec![cs])).expect("digest the handler");
+  assert_eq!(boxes.to_string(), "", "the no-op handler produced output");
+  latexml_core::reset_thread_engine();
+}
+
+/// Perl `DeclareOption` (Package.pm:2421-2423) reads an empty name as false, as undef: the default handler
+/// `\default@ds`, not `\ds@`, and not a declared option. The Rhai closure and string-body forms both.
+#[test]
+fn declare_option_empty_name_is_the_default_handler() {
+  fresh_state();
+  load_script(r#"DeclareOption("", || { AssignValue("script:default_ran", "yes", "global"); });"#)
+    .expect("load");
+  let default = latexml_core::T_CS!("\\default@ds");
+  latexml_core::stomach::digest(Tokens::new(vec![default])).expect("digest the default handler");
+  let ran = match latexml_core::state::lookup_value("script:default_ran") {
+    Some(Stored::String(s)) => arena::to_string(s),
+    _ => String::new(),
+  };
+  assert_eq!(ran, "yes", "the empty-named closure is not \\default@ds");
+  load_script(r#"DeclareOption("", "\\gdef\\defaultstr{yes}");"#).expect("load");
+  latexml_core::stomach::digest(Tokens::new(vec![default])).expect("digest the default handler");
+  let out = gullet::do_expand(mouth::tokenize_internal(r"\defaultstr")).expect("expand");
+  assert_eq!(
+    out.to_string(),
+    "yes",
+    "the empty-named string body is not \\default@ds"
+  );
+  assert!(
+    latexml_core::state::lookup_definition(&latexml_core::T_CS!("\\ds@"))
+      .expect("lookup")
+      .is_none(),
+    "an empty name defined \\ds@"
+  );
+  assert!(
+    declared_options().is_empty(),
+    "the default handler was declared as an option"
+  );
+  latexml_core::reset_thread_engine();
+}
+
+/// The compiled `DeclareOption!` macro reads an empty name as Perl does (Package.pm:2421-2423): `\default@ds`, in its
+/// closure and string-body arms.
+#[test]
+fn declare_option_macro_empty_name_is_the_default_handler() {
+  fn declare_closure() -> Result<()> {
+    use latexml_package::prelude::*;
+    DeclareOption!("", {
+      AssignValue!("rust:default_ran" => "yes", Some(Scope::Global));
+    });
+    Ok(())
+  }
+  fn declare_string() -> Result<()> {
+    use latexml_package::prelude::*;
+    DeclareOption!("", "\\gdef\\rustdefault{yes}");
+    Ok(())
+  }
+  fresh_state();
+  let default = latexml_core::T_CS!("\\default@ds");
+  declare_closure().expect("declare");
+  latexml_core::stomach::digest(Tokens::new(vec![default])).expect("digest the default handler");
+  let ran = match latexml_core::state::lookup_value("rust:default_ran") {
+    Some(Stored::String(s)) => arena::to_string(s),
+    _ => String::new(),
+  };
+  assert_eq!(ran, "yes", "the empty-named closure is not \\default@ds");
+  declare_string().expect("declare");
+  latexml_core::stomach::digest(Tokens::new(vec![default])).expect("digest the default handler");
+  let out = gullet::do_expand(mouth::tokenize_internal(r"\rustdefault")).expect("expand");
+  assert_eq!(
+    out.to_string(),
+    "yes",
+    "the empty-named string body is not \\default@ds"
+  );
+  assert!(
+    latexml_core::state::lookup_definition(&latexml_core::T_CS!("\\ds@"))
+      .expect("lookup")
+      .is_none(),
+    "an empty name defined \\ds@"
+  );
+  assert!(
+    declared_options().is_empty(),
+    "the default handler was declared as an option"
+  );
+  latexml_core::reset_thread_engine();
+}
+
 /// The `DefConstructor` option-bag form: a trailing Rhai map `#{ … }` with
 /// named options (any order, omittable) including a closure-valued
 /// `afterDigest` — the analog of the macro's `key => value` options.

@@ -1,0 +1,16 @@
+% witness: cond-mat0011295 (mlbib.sty, `\cite*{Andersen96}` and the `.bbl`'s `\bibitem[\protect\citeauthoryear{…}{…}]`)
+% oracle:  mlbib.sty:360-363 `\def\cite{\@ifstar{\citeasnoun}{\new@cite}}`, `\new@cite` the only definition of
+%          `\citeauthoryear`, made by the `\cite` the lock refuses (OXIDIZED_DESIGN_DIVERGENCES #88). pdflatex (two runs,
+%          mlbib.sty beside): 0 errors, "As shown by Andersen 1996 and Andersen 1996.", label "[Andersen 1996]"; Perl 0 errors
+% engines: rust MAIN935 1 error (`\citeauthoryear` undefined in the deferred label, since #921 reads `\cite*`'s star)
+% expect:  0 errors, 0 warnings; the reference label "Andersen 1996"
+% status:  RED (MAIN935) -> GREEN (REGFIXA); guard perfect_kernel_batchregfixa::mlbib_citeauthoryear_label_under_the_lock
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mlbib}
+\begin{document}
+As shown by \cite*{Andersen96} and \cite{Andersen96}.
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{{\citenf Andersen\/}}{1996}]{Andersen96} Andersen, T.: Return Volatility, 1996
+\end{thebibliography}
+\end{document}

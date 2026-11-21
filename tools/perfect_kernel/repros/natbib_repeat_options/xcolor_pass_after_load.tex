@@ -1,0 +1,14 @@
+% witness: review revREGFIXC B2 (probe p_xc); the key-value repeat of 2605.00310 (`\usepackage{xcolor}` then
+%          `\usepackage[table]{xcolor}`)
+% oracle:  pdflatex 0 errors, colortbl loaded: a key-value package takes a repeat's options with no clash test
+%          (latex.ltx:18752-18762), whatever was passed after the load
+% engines: rust MAIN935 0 errors, the cell red; REGFIXC 8ef8ab1115b `Error:undefined:\cellcolor`, colour lost
+% expect:  0 errors, 0 warnings; the cell's background red
+% status:  RED (REGFIXC 8ef8ab1115b) -> GREEN (REGFIXC: a pass after the load joins the classic clash test only)
+\documentclass{article}
+\usepackage{xcolor}
+\PassOptionsToPackage{table}{xcolor}
+\usepackage[table]{xcolor}
+\begin{document}
+\begin{tabular}{c}\cellcolor{red}A\end{tabular}
+\end{document}

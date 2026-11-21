@@ -8,8 +8,9 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 ### Coverage
 
 - **98 % of arXiv converts without an error.** Of arXiv's 2,962,950 LaTeX articles, the production run of November
-  2026 converts 98.0 % with no Error or Fatal, up from 86.3 % under 0.7.6 (run 306, September 2026) and 93.4 % in
-  October (run 336). latexml-oxide converts the ar5iv Lab and arXiv's HTML Papers.
+  2026 converts 98.1 % with no Error or Fatal, up from 86.3 % under 0.7.6 (run 306, September 2026) and 93.4 % in
+  October (run 336). The release is regression-tested against the entire arXiv corpus: each paper's result is
+  compared with the previous full run. latexml-oxide converts the ar5iv Lab and arXiv's HTML Papers.
 - **TeX Live's package manuals convert clean.** The perfect-kernel campaign (2026-08-31 to 11-13) took the LaTeX
   kernel to fidelity under raw interpretation of the packages' own sources: of the 1,602 TeX Live manuals that
   compile under some TeX engine, 1,592 convert with no Error outside a few ruled-out kinds, valid against the schema
@@ -43,9 +44,10 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   and option tables, many more `Package.pm` calls, a Perl/Rust/Rhai cheat sheet
   ([`CHEATSHEET.md`](latexml_contrib/src/script_bindings/CHEATSHEET.md)), and diagnostics that name the `.rhai` file.
 - **Untrusted input stays inside the job.** Document Lua runs sandboxed under TeX's own defaults for untrusted input
-  (no programs; writes only below the job directory), each conversion with its own interpreter; archive links and
-  image copies stay inside the source and destination directories. The limits, and the advice to convert fully
-  untrusted sources in a container or VM: [`docs/release/SAFETY.md`](docs/release/SAFETY.md).
+  (no programs; writes only below the job directory), each conversion with its own interpreter; archives unpack only
+  inside the source directory and image copies only inside the destination; child processes end with their conversion.
+  The limits, and the advice to convert fully untrusted sources in a container or VM:
+  [`docs/release/SAFETY.md`](docs/release/SAFETY.md).
 
 ### Speed, output and platforms
 
@@ -65,6 +67,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - **Windows.** The full test suite passes on Windows and runs on every release tag, and conversions use the linked
   libkpathsea instead of falling back to a `kpsewhich` subprocess (about 270 ms a file lookup). Windows binaries ship
   unsigned in 0.8.0; a Microsoft Store package is planned for 0.8.x.
+- **Releases name their build inputs.** Each release attaches the exact toolchain and `Cargo.lock` its binaries were
+  built with (`BUILD-INPUTS`).
 
 ### Upgrading from 0.7.6
 
@@ -73,6 +77,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   only (OXIDIZED_DESIGN_DIVERGENCES #285).
 - A failing XSLT stylesheet is a Fatal (exit 1, no output); a repeated single-valued option keeps its last value; a
   malformed `--xsltparameter` exits 2; a `--stylesheet` on disk wins over the built-in one of the same name.
+- `--format`, `--whatsin` and `--whatsout` reject unknown values (exit 2); `latexmlmath_oxide` gains `--version` and
+  rejects unknown options.
 - HTML: box sizes are written as `--ltx-box-width` (and height, depth) custom properties instead of `width:`, so a
   custom stylesheet needs LaTeXML.css or ar5iv-css for them; numeric citations carry `ltx_cite_numeric`; a shared
   author note prints once.
@@ -82,7 +88,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - The log opens with the session's own lines (format loading, preloads), as Perl's does, so a failing `--preload` is
   in the log.
 - Rust library: `AssignRegister!` takes `(cs, value[, scope[, parameters]])`; `PostOptions::nodefaultresources` is
-  now `default_resources` (inverted); the prelude exports `LazyLock` in place of `Lazy`.
+  now `default_resources` (inverted); the prelude exports `LazyLock` in place of `Lazy`; the `test-utils` feature is
+  no longer a default; `HtmlOptions` is `#[non_exhaustive]`.
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 

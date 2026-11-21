@@ -186,12 +186,6 @@ fn write_fd(_fd: i32, _bytes: &[u8]) {}
 /// check-write-set happens as one critical section holding the stderr lock.
 static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
 
-/// Tell the logger that stderr is back at line start. For the `Note!` /
-/// `NoteLog!` macros, which write to stderr directly via `println_stderr!`
-/// rather than through `log::Log` — without this the next diagnostic record
-/// could emit a spurious leading newline.
-pub fn mark_stderr_at_line_start() { STDERR_AT_LINE_START.store(true, Ordering::Release); }
-
 /// Perl `print STDERR _freshline(\*STDERR), $text`: a direct STDERR write at any verbosity, on a fresh line. One write
 /// under the (reentrant) stderr lock, so a capture buffer shared by a test's threads never splits a line.
 pub fn stderr_fresh_line(text: &str) {
@@ -223,6 +217,7 @@ pub fn note_to_log(msg: &str) {
   if crate::common::error::is_log_output_suppressed() {
     return;
   }
+  crate::common::error::print_deferred_notes();
   if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
     && let Some(ref mut log) = *buf
   {
@@ -393,6 +388,8 @@ impl log::Log for LatexmlLogger {
       let details = record.args();
       if record_target == "note" {
         let note = details.to_string();
+        // (a line inside a binding load not yet announced comes after its `(Loading …`, #945)
+        crate::common::error::print_deferred_notes();
         // A note (e.g. `(Loading foo.sty… )`) is a live progress indicator — but when a capture
         // buffer is active it must ALSO land there so it reaches the flushed `cortex.log` and
         // CorTeX's `loaded_file` parser, which anchors on `^(Loading …`. `append_note` keeps it
@@ -499,6 +496,7 @@ impl log::Log for LatexmlLogger {
 /// STDERR echo (gated). The tail of [`LatexmlLogger::log`], shared with
 /// [`DiagnosticsHold::commit`], which writes records it held back.
 fn write_record(level: Level, painted_message: String) {
+  crate::common::error::print_deferred_notes();
   // Capture to log buffer if active (strip ANSI for clean log text).
   // A diagnostic record (Info/Warning/Error/Fatal) must start on a fresh
   // line so CorTeX's line-anchored parser (^Error:/^Warning:/^Info:)

@@ -1,0 +1,18 @@
+% witness: math0006111 (also gr-qc9610061, math9809193; 59 papers of the v0.8.0 regression check): `\input amsppt.sty`,
+%          which loads no latex_constructs, so no `ltx:item` Tag (latex_constructs.pool.ltxml:1284)
+% oracle:  pdftex this file: 0 errors; "Text (1) first item (2) second item: (a) inner one (1) inner two After."
+% engines: Perl 0.8.8 = 0 errors, an empty `<enumerate/>` (KNOWN_PERL_ERRORS #1270 hides #1301); rust INTREGFIX4 =
+%          "Error:malformed:ltx:item <ltx:item> isn't allowed in <ltx:p>", each item inside its predecessor's paragraph
+% expect:  0 errors, 0 warnings; `Ix1` holding items "(1)", "(2)", the second holding `Ix2`'s "(a)", "(1)", each a sibling
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXI; guard perfect_kernel_batchregfixi::amsppt_input_roster_items_close)
+\input amstex
+\input amsppt.sty
+\document
+Text
+\roster\item first item
+\item second item:
+  \roster\item"(a)" inner one
+  \item inner two\endroster
+\endroster
+After.
+\enddocument
