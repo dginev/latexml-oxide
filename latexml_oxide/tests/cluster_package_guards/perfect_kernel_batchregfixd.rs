@@ -33,28 +33,58 @@ fn amsppt_copy_takes_the_binding() {
   );
 }
 
-/// A document definition of a locked command without parameters whose body names the command itself redefines it on
-/// use (amsppt's `\def\title{\let\savedef@\title \def\title##1\endtitle{…}\title}`): no value, refused as Perl refuses
-/// it. Red (MAIN935): the outer taken as a value, the inner refused, `\title` recursed to `Fatal:oom`. A fail-safe:
-/// the braced binding reads `H`, `\endtitle` is undefined (1 Error), every word kept. Repro
-/// amstex/amstex_self_redefining_value_is_refused.
+/// Only a copy of amsppt.sty takes its binding: a style that tests amsppt's `\csname amsppt.sty\endcsname` and
+/// `\input`s it builds on amsppt (the binding stands in, as for gr-qc9507042's fic.sty), and a style of its own that
+/// inlines another bound package behind that package's guard (`\csname epsf.sty\endcsname`) is read raw. Red
+/// (REGFIXD r1, the second shape): the epsf binding loaded in its stead, `\Lecture` undefined. Repros
+/// amstex/{amstex_amsppt_guard_test_is_no_copy, amstex_inlined_package_guard_is_read}.
 #[test]
-fn self_redefining_value_is_refused() {
+fn only_an_amsppt_copy_takes_the_binding() {
+  let (log, xml) = convert_files_with(
+    repro!("amstex/amstex_amsppt_guard_test_is_no_copy.tex"),
+    &[("amsneeds.sty", repro!("amstex/amsneeds.sty"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(log.contains("Warning:missing_file:amsneeds"), "{log}");
+  assert_element(&xml, "title", &[], "<title>Hello</title>");
+  let (log, xml) = convert_files_with(
+    repro!("amstex/amstex_inlined_package_guard_is_read.tex"),
+    &[("amsinline.sty", repro!("amstex/amsinline.sty"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><p class=\"ltx_align_center\" xml:id=\"p1.1\"><text font=\"bold\" xml:id=\"p1.1.1\">Lecture \
+     One</text></p><p xml:id=\"p1.2\">Body text.\n</p></para>",
+  );
+}
+
+/// A fail-safe, not TeX's output: a document definition of a locked command without parameters whose body names the
+/// command itself redefines it on use (amsppt's `\def\title{\let\savedef@\title \def\title##1\endtitle{…}\title}`);
+/// it is no value and stays refused, as Perl refuses it, so the conversion ends. Red (MAIN935): the outer taken as a
+/// value, the inner refused, `\title` recursed to `Fatal:oom`. Pinned: termination, the one Error (`\endtitle`
+/// undefined) and every word; not the braced binding's split of "Hello" ("H" + "ello"). TeX's "[T:Hello]" is the
+/// catalog repro amstex/amstex_self_redefining_title_runs_red. Repro amstex/amstex_self_redefining_value_is_refused.
+#[test]
+fn self_redefining_value_fails_safe() {
   let (log, xml) = convert_files_with(
     repro!("amstex/amstex_self_redefining_value_is_refused.tex"),
     &[("amsselfdef.sty", repro!("amstex/amsselfdef.sty"))],
     Some("ar5iv.sty"),
   );
+  assert!(!log.contains("Fatal:"), "{log}");
   assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert!(log.contains("Error:undefined:\\endtitle"), "{log}");
   assert!(log.contains("Info:ignore:\\title"), "{log}");
-  assert_element(&xml, "title", &[], "<title>H</title>");
-  assert_element(
-    &xml,
-    "p",
-    &["xml:id=\"p1.1\""],
-    "<p xml:id=\"p1.1\">ello<ERROR class=\"undefined\" xml:id=\"p1.1.1\">\\endtitle</ERROR>Body text.</p>",
-  );
+  let body = &xml[xml.find("<document").expect("a document")..];
+  let words = super::perfect_kernel_batch84b::text(body)
+    .replace("\\endtitle", "")
+    .replace(' ', "");
+  assert_eq!(words, "HelloBodytext.", "{xml}");
 }
 
 /// amsfonts.sty:118-129 `\newsymbol` is a `\global\mathchardef`, legal in the body, where `\DeclareMathSymbol` is

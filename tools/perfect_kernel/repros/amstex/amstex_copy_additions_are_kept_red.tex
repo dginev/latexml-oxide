@@ -1,0 +1,14 @@
+% witness: math0410032 (ias-pcms.sty: `\Lecture`, `\Author`, `\xca`, `\Bibliography`), math0610862 (jmhppt.sty:
+%          `\Refst`, `\subrefhead`), 1003.5377 (vis_n.sty: `\SecondPage`)
+% oracle:  tex (\input amstex) 0 errors: "Lecture One" centred bold, "Hello" centred bold, "Body text."
+% engines: rust REGFIXD = the copy replaced by the amsppt binding, its own `\Lecture` lost (undefined, 1 error);
+%          MAIN935 = read raw, Fatal:oom; perl the amsppt fallback, `\Lecture` undefined (KNOWN_PERL_ERRORS #1051)
+% expect:  0 errors, 1 warning at most; "Lecture One", <title>Hello</title>, the body paragraph
+% status:  RED (REGFIXD)
+% moves:   post-merge (read the copy's additions over the binding: what a copy defines beyond amsppt.sty)
+\input amstex
+\documentstyle{amscopyplus}
+\Lecture{One}
+\title Hello\endtitle
+Body text.
+\bye

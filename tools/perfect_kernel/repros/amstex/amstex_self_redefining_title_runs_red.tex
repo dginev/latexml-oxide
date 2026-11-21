@@ -1,0 +1,12 @@
+% witness: math0410032's ias-pcms.sty:235-246 (amsppt's \title), here in a style that is no copy of amsppt
+% oracle:  tex (\input amstex) 0 errors: "[T:Hello]", "Body text."
+% engines: rust REGFIXD = the self-redefining \title refused (Info:ignore), the braced binding reads "H", 1 error
+%          (undefined \endtitle); MAIN935 = Fatal:oom; perl 0 errors (the amsppt fallback)
+% expect:  0 errors, 0 warnings; "[T:Hello]" then "Body text.", no `\endtitle` error
+% status:  RED (REGFIXD; the fail-safe guard perfect_kernel_batchregfixd::self_redefining_value_fails_safe)
+% moves:   post-merge (run a self-restoring definition over the lock: the inner `\def\title##1\endtitle` taken too)
+\input amstex
+\documentstyle{amsselfdef}
+\title Hello\endtitle
+Body text.
+\bye

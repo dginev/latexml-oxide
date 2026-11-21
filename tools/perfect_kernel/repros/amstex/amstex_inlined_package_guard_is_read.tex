@@ -1,0 +1,11 @@
+% witness: the review of REGFIXD r1 (a local style naming `\csname epsf.sty\endcsname` took the epsf binding)
+% oracle:  tex (\input amstex) 0 errors: "Lecture One" centred bold, "Body text."
+% engines: rust REGFIXD r1 = the style replaced by the epsf binding, `\Lecture` undefined (1 error); perl the amsppt
+%          fallback, `\Lecture` undefined (KNOWN_PERL_ERRORS #1051)
+% expect:  0 errors, 0 warnings; "Lecture One" and the body paragraph
+% status:  RED (REGFIXD r1) -> GREEN (REGFIXD r2)
+\input amstex
+\documentstyle{amsinline}
+\Lecture{One}
+Body text.
+\bye

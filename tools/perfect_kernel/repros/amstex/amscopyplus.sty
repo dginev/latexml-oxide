@@ -1,0 +1,10 @@
+%% a renamed copy of amsppt.sty plus a command of its own (math0410032 ias-pcms.sty's \Lecture)
+\def\filename{amsppt.sty}
+\catcode`\@=11
+\expandafter\ifx\csname amsppt.sty\endcsname\relax\else\endinput\fi
+\expandafter\def\csname amsppt.sty\endcsname{2.1 (copy)}
+\def\title{\let\savedef@\title
+  \def\title##1\endtitle{\let\title\savedef@ \centerline{\bf ##1}}%
+  \title}
+\def\Lecture#1{\centerline{\bf Lecture #1}}
+\catcode`\@=12

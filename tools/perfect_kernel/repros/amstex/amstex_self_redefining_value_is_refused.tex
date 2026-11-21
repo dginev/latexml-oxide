@@ -2,8 +2,9 @@
 % oracle:  tex (\input amstex) 0 errors: "[T:Hello]", "Body text."
 % engines: rust MAIN935 = Fatal:oom (the parameterless \title taken as a value over the locked binding, the inner
 %          \def\title##1\endtitle refused: \title recursed); perl 0 errors (the amsppt fallback)
-% expect:  terminates: the self-redefining \title refused (Info:ignore), the braced binding reads "H"; 1 error
-%          (undefined \endtitle), every word kept. The style's own \title is not run (SYNC note).
+% expect:  1 error (undefined \endtitle): a fail-safe, not TeX's output; terminates, the self-redefining \title
+%          refused (Info:ignore), no word lost (the braced binding splits "Hello" as "H" + "ello"); TeX's
+%          "[T:Hello]" is amstex_self_redefining_title_runs_red
 % status:  RED (MAIN935) -> GREEN (REGFIXD, fail-safe)
 \input amstex
 \documentstyle{amsselfdef}
