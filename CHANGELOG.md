@@ -8,7 +8,7 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 ### Coverage
 
 - **98 % of arXiv converts without an error.** Of arXiv's 2,962,950 LaTeX articles, the production run of November
-  2026 converts 98.0 % with no Error or Fatal, up from 86.3 % under 0.7.6 (run 306, September 2026) and 93.4 % in
+  2026 converts 98.1 % with no Error or Fatal, up from 86.3 % under 0.7.6 (run 306, September 2026) and 93.4 % in
   October (run 336). latexml-oxide converts the ar5iv Lab and arXiv's HTML Papers.
 - **TeX Live's package manuals convert clean.** The perfect-kernel campaign (2026-08-31 to 11-13) took the LaTeX
   kernel to fidelity under raw interpretation of the packages' own sources: of the 1,602 TeX Live manuals that

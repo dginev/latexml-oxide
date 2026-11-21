@@ -43,6 +43,53 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **Regressions from the per-paper check of the November run (#954, #958, #960).** Every paper that converted with
+    no Error on 2026-11-05 (run 372) and erred in the November run was classified (pdflatex, Perl, a bisect); the
+    clusters our changes caused are fixed:
+    - `$$ $$` inside amsmath's `\[ … \]` closes and reopens `{equation*}`, not `{equation}`, as TeX's `$$` ends one
+      display and opens the next (tex.web §1193-1197; KNOWN_PERL_ERRORS #1295, OXIDIZED_DESIGN_DIVERGENCES #1091;
+      2606.13867). Guard `perfect_kernel_batchclustfix3::amsmath_display_brackets_dollar_dollar`.
+    - AMS-TeX: `\pmatrix … \endpmatrix` under `\documentstyle{amsart}` raises no "Old form" error, since amstex.sty's
+      `\pmatrix` has none (a LaTeX2e `\usepackage{amstex}` still gets amsmath's, as in TeX); a renamed copy of
+      amsppt.sty (amsppt's docstrip header or trailer, or its `\def\filename`) takes the amsppt binding instead of
+      looping on its self-restoring `\title` to `Fatal:oom`; amsfonts' `\newsymbol` is legal in the body. Guards
+      `perfect_kernel_batchregfixa::*`, `perfect_kernel_batchregfixd::{amsppt_copy_takes_the_binding,
+      only_an_amsppt_copy_takes_the_binding, self_redefining_value_fails_safe}`.
+    - fdsymbol defines its 862 symbols from its own slots and `.enc` glyph names, without marking amssymb loaded.
+    - An `\halign` that `\lastbox` took is a box, so putting it back ends no paragraph (tex.web §1080, §1094-1095;
+      KNOWN_PERL_ERRORS #1296): easytable/easybmat tables convert again. Guards `perfect_kernel_batchregfixb::*`.
+    - natbib's "Option clash" is raised only where TeX sees both loads: a binding's own repeat load, an unmodified
+      class copy's load and a later `\PassOptionsToPackage` for a key-value package no longer clash
+      (OXIDIZED_DESIGN_DIVERGENCES #1103). Guards `perfect_kernel_batchregfixc::*`.
+    - Citation labels from a `\cite` the definition lock refuses: at every kernel `\cite` the refused body's leading
+      definitions run, as TeX's `\cite` does at each call (OXIDIZED_DESIGN_DIVERGENCES #88), so mlbib, ACM's
+      sig-alternate and acm_proc, Kluwer/Solar Physics and AAAI author-year labels print as in the PDF. Guards
+      `perfect_kernel_batchregfixf::{acm_robust_cite_label_under_the_lock,
+      refused_cite_redefines_a_defined_label_macro}`.
+    - amsart hands over `\@subjclass` and `\@keywords` only when they are stored values, so edpsmath.cls's
+      argument-taking placeholder no longer swallows the title page; thmtools marks thm-patch, thm-kv, thm-autoref and
+      thm-listof loaded (thmtools.sty:47-49) and defines `\Autoref` (KNOWN_PERL_ERRORS #1297). Guards
+      `perfect_kernel_batchregfixe::*`.
+
+    On the papers each fix targets, A/Bs of 60-204 papers: none worse. The residuals are row R's REGRES, REGTAIL,
+    AMSPPTRES and THMEDPSRES lines in `docs/SYNC_STATUS.md`.
+  - **A binding's `(Loading … )` note encloses what it loads (#945).** The note opens once the binding is found
+    (Perl `Core/Mouth/Binding.pm:31`) and prints before the first line logged inside it, so the raw files and bindings
+    it loads nest inside it, and a binding's own messages start on a fresh line. Progress notes carry no elapsed times
+    (OXIDIZED_DESIGN_DIVERGENCES #1102). Guards `cluster_cli::log_note_nesting::*`.
+  - **A user's binding in the search paths is the only binding for its name (#947).** A `lipics-v2021.cls.rhai`
+    beside the paper or under `--path` no longer has the paper's own `lipics-v2021.cls` read on top of it, as Perl's
+    `FindFile` loads the first binding found and never the raw copy. Guards
+    `cluster_cli::user_binding_precedence::*`.
+  - **Option and math-alphabet names are tokens (#944).** A Rhai `DeclareOption` closure whose option name contains
+    `-` or `.` no longer fails with `Fatal:Parameter:Unknown`, and `\DeclareMathAlphabet` defines a `\csname`-built
+    name whole, as Perl defines both on the token (`Package.pm:2419-2429`, `latex_constructs.pool.ltxml:2684-2694`).
+    Rhai's `DeclareOption("opt", ())` is a no-op handler and an empty option name is the default handler
+    (`\default@ds`), as in Perl. Guards `cluster_rhai_declareoption_punctuated_names_944`,
+    `perfect_kernel_batchfupb::*`.
+  - **`tools/make_formats.sh` and `make_formats.ps1` accept any cargo profile (#943)**, `maxperf` among them, and
+    find the binary where cargo puts it; a name that is not a profile name still exits 2.
+
   - **Release builds name their inputs.** A release run resolves its build inputs once, in
     `.github/workflows/release-prepare.yml`: the newest dated nightly whose manifest ships every component and host
     toolchain the release and CI use (stepping back up to 14 days), and a `Cargo.lock`. Every leg builds with that
