@@ -667,7 +667,11 @@ Rules that keep this file honest and mergeable:
     each command is legal (amsfonts' `\newsymbol` is a body-legal `\global\mathchardef`, not the preamble-only
     `\DeclareMathSymbol`), each macro's shape (a stored value vs a macro with parameters: EDP's `\@subjclass`), the
     definitions of the mode it runs in (amstex.sty under `\documentstyle` has no `\matrix@check`), and its own package
-    loads with their options (natbib from elsarticle/acmart/jmlr/jheppub; no invented loads, as cvpr's was). Witnesses:
+    loads with their options (natbib from elsarticle/acmart/jmlr/jheppub; no invented loads, as cvpr's was). A binding
+    that reuses another binding's definitions calls them as Rust code and never loads a file the real one does not load
+    (DG 2026-11-21: "reuse as Rust code, without the side effects of declaring auxiliary package and class bindings as
+    loaded"; Perl's emulateapj.cls → emulateapj.sty and svjour3 → svjour shortcuts read 1305.6912's and 2110.05134's
+    shipped copies; REGFIXH). Witnesses:
     the v0.8.0 regression check (PR #958 and the REGFIX-D/E batches, ~430 papers). Steps: extend
     `tools/perfect_kernel/binding_conformance.sh` to compare a binding's loaded-file marks and preamble-only commands
     with the real file's; then audit the bindings in order of arXiv reach; 5
