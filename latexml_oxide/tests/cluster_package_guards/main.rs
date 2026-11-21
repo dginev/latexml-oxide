@@ -733,6 +733,10 @@ mod perfect_kernel_batchregfixo;
 /// REGFIXP: a name's run after a parameterless macro; SIunits leaves siunitx's free commands free; a restated theorem
 /// numbered by its stepped counter; amsppt's `\endroster` inside a group.
 mod perfect_kernel_batchregfixp;
+/// REGFIXR: a package's `{gather}` over `\start@gather`, a sub-caption label under a shipped caption3 v1.8h, amsmath's
+/// `\displ@y@`, a pre-class `\fig` under AASTeX 5.x/emulateapj, a `{restatable}` environment named by a macro, bmcart
+/// ids as characters.
+mod perfect_kernel_batchregfixr;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

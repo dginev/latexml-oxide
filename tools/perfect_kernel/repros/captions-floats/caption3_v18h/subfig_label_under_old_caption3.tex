@@ -1,0 +1,13 @@
+% witness: 2010.15148 2011.14129 2102.00283 2112.02137 2201.07802 (each ships caption3.sty v1.8h, this copy; floatrow
+%          loads it raw, so subfig[caption=false] loads no caption binding; v1.8h:619-620 names a label format
+%          `\caption@lfmt@<name>`, caption3 v2 `\caption@labelformat@<name>`)
+% oracle:  pdflatex 0 errors: "X Y", "(a) A", "(b) B", "Figure 1: C"
+% engines: rust INT6A 2 errors (Undefined label format `parens', undefined \caption@labelformat@parens)
+% expect:  0 errors; sub-figure tags (a), (b), refnums 1a, 1b
+% status:  RED (INT6A) -> GREEN (REGFIXR)
+\documentclass{article}
+\usepackage{floatrow}
+\usepackage[caption=false]{subfig}
+\begin{document}
+\begin{figure}\subfloat[A]{X}\subfloat[B]{Y}\caption{C}\end{figure}
+\end{document}

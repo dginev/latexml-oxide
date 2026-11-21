@@ -1,0 +1,23 @@
+% witness: 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665 (aa.cls copy :2078 loads linenoaa.sty, whose
+%          :51-55 renew {gather}/{gather*} over amsmath's \start@gather, ending `\math@cr \black@\totwidth@ \egroup $$`)
+% oracle:  pdflatex 0 errors: "Text before." a=b (1), c=d, e=f, g=h, i=j (2), "In a list" k=l (3) "after.",
+%          "See (1)." (amsmath.sty:1540-1562)
+% engines: rust INT6A 13 errors (undefined \start@gather, then the \noalign/\egroup/$ cascade of the raw end)
+% expect:  0 errors, 0 warnings; four ltx_eqn_gather groups, equations numbered 1, 2, 3, the \notag row and
+%          {gather*} unnumbered, the label e1 on (1)
+% status:  RED (INT6A) -> GREEN (REGFIXR)
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\renewenvironment{gather}{\relax\start@gather\st@rredfalse}{\math@cr \black@\totwidth@ \egroup $$\ignorespacesafterend}
+\renewenvironment{gather*}{\relax\start@gather\st@rredtrue}{\endgather}
+\newenvironment{mygather}{\start@gather\st@rredfalse}{\endgather}
+\makeatother
+\begin{document}
+Text before.
+\begin{gather} a=b \label{e1} \\ c=d \notag \end{gather}
+\begin{gather*} e=f \\ g=h \end{gather*}
+\begin{mygather} i=j \end{mygather}
+\begin{itemize}\item In a list \begin{gather} k=l \end{gather} after.\end{itemize}
+See (\ref{e1}).
+\end{document}

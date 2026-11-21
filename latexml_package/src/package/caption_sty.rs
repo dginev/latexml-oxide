@@ -1975,15 +1975,28 @@ pub fn sub_label_tokens(keys: &[String], default: &str, number: Tokens) -> Resul
     .map(|key| lookup_string(key))
     .find(|value| !value.is_empty())
     .unwrap_or_else(|| default.to_string());
-  let mut formatter = T_CS!(&s!("\\caption@labelformat@{}", format.trim()));
-  if !is_defined_token(&formatter) {
-    Error!(
-      "undefined",
-      format.trim(),
-      &s!("Undefined label format `{}'", format.trim())
-    );
-    formatter = T_CS!(&s!("\\caption@labelformat@{default}"));
-  }
+  // (a caption3 before v2.0 a paper ships and a raw floatrow loads names a format `\caption@lfmt@<name>`, v1.8h:619-620;
+  // subfig[caption=false] then loads no caption binding: 2010.15148 2011.14129 2102.00283 2112.02137 2201.07802)
+  let formatter = |name: &str| {
+    [
+      s!("\\caption@labelformat@{name}"),
+      s!("\\caption@lfmt@{name}"),
+    ]
+    .into_iter()
+    .map(|cs| T_CS!(&cs))
+    .find(is_defined_token)
+  };
+  let formatter = match formatter(format.trim()) {
+    Some(formatter) => formatter,
+    None => {
+      Error!(
+        "undefined",
+        format.trim(),
+        &s!("Undefined label format `{}'", format.trim())
+      );
+      formatter(default).unwrap_or_else(|| T_CS!(&s!("\\caption@labelformat@{default}")))
+    },
+  };
   let mut tokens = vec![formatter, T_BEGIN!(), T_END!(), T_BEGIN!()];
   tokens.extend(number.unlist());
   tokens.push(T_END!());

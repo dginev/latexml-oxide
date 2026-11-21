@@ -1696,6 +1696,21 @@ LoadDefinitions!({
     out.push(T_CS!(if star { "\\lx@ams@multline@star" } else { "\\lx@ams@multline" }));
     Ok(Tokens::new(out))
   });
+  // amsmath.sty:1540 `\start@gather#1` starts `{gather}`/`{gather*}`, whose end (:1554-1557 `\math@cr \black@\totwidth@
+  // \egroup $$`) closes the `$$\halign` `\gather@` opened; a package's environment copies that end (aa.cls's
+  // linenoaa.sty:51-55; 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665). The binding builds no `\halign`, so
+  // the environment it starts ends with the binding's own `\endgather` (local to the environment's group; OD #1124,
+  // guard `perfect_kernel_batchregfixr::start_gather_ends_a_package_gather`).
+  Let!("\\lx@ams@gather", "\\gather");
+  Let!("\\lx@ams@gather@star", "\\gather*");
+  Let!("\\lx@ams@endgather", "\\endgather");
+  DefMacro!("\\start@gather{}", sub[(starred)] {
+    let mut out = starred.unlist();
+    let star = out.first().is_some_and(|t| *t == T_CS!("\\st@rredtrue"));
+    out.extend(TokenizeInternal!(r"\expandafter\let\csname end\@currenvir\endcsname\lx@ams@endgather").unlist());
+    out.push(T_CS!(if star { "\\lx@ams@gather@star" } else { "\\lx@ams@gather" }));
+    Ok(Tokens::new(out))
+  });
   // AmSTeX version (inside math)
   DefConstructor!("\\@@AmS@multline DigestedBody",
   "#body",
@@ -2903,6 +2918,20 @@ fn ams_author_called_internals() -> Result<()> {
   \dimen@\prevdepth \nointerlineskip \vskip-\ht\strutbox@ \vskip-\dp\strutbox@
   \vbox{\noindent\hbox to\displaywidth{\hbox to#1{\strut@\hfill}}}%
   \prevdepth\dimen@ \fi}}"
+  );
+  // amsmath.sty:1344-1363 `\displ@y@`, the row setup `\gather@` and `\align@` (:1568, :1820) start their `\halign` with,
+  // and :1267, :1294 the tag registers it resets. The binding's displays build no `\halign` and run none of it; a
+  // document's `\g@addto@macro\displ@y@{…}` (a named-equation hack: 1406.6618 2301.11270 2304.01203 2401.16335
+  // 2402.12617) adds to it, inert. (`\displ@y` stays latex_constructs' `\displaystyle`, as Perl's.) Guard
+  // `perfect_kernel_batchregfixr::amsmath_displ_y_takes_an_addition`.
+  RawTeX!(
+    r"\newcount\column@
+\let\raise@tag\@empty
+\def\@display@init#1{\global\lineht@\z@ \global\dt@ptrue \spread@equation
+  \everycr{\noalign{#1\ifdt@p \global\dt@pfalse \vskip-\lineskiplimit \vskip\normallineskiplimit
+    \else \penalty\@eqpen \global\dspbrk@lvl\m@ne \fi}}}
+\def\displ@y@{\@display@init{\global\column@\z@ \global\dspbrk@lvl\m@ne
+  \global\tag@false \global\let\raise@tag\@empty}}"
   );
 
   // amsmath.sty:1187 `\intertext@` makes `\intertext` the in-alignment one, which is

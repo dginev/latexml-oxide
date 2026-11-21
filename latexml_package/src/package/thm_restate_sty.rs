@@ -99,7 +99,9 @@ fn restate_ref(name: &str) -> Vec<Token> {
 
 /// `\lx@thm@restate@store{<end>}{<env>}{<name>}{<opt>}` and `…@store@star` (below): `star` for `{restatable*}`.
 fn store(star: bool, end: Tokens, env: Tokens, name: Tokens, opt: Tokens) -> Result<Tokens> {
-  let (end, env, name) = (end.to_string(), env.to_string(), name.to_string());
+  // (the environment's name as `\begin` reads it, expanded: `{restatable}{\retheorem}{x}` with
+  // `\newcommand\retheorem{theorem}`; 1410.0855 1411.0871 1411.1619 1504.05476 1511.01379)
+  let (end, env, name) = (end.to_string(), Expand!(env).to_string(), name.to_string());
   let body = collect_body(&end)?;
   assign_value(
     &stored("env", &name),
