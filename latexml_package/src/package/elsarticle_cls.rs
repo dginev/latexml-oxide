@@ -119,8 +119,9 @@ LoadDefinitions!({
   // here both after the frontmatter, once, where the class prints its title page (`\end{frontmatter}`, `\maketitle`),
   // each `\footnotetext` a note on the document (`\lx@frontmatter@footnotes`); a correspondence item's `\elsLabel{cor1}`
   // the `cor:cor1` its names request (`\lx@fm@list@label`, OD #1054). Likewise `\@fnotes` (:167-171, :778), which a
-  // document's own `\fntext` fills (2301.05821); `\endfrontmatter` (:1303) is run by name, as documents extend it
-  // (1609.08567).
+  // document's own `\fntext` fills (2301.05821, 2311.15389, 2312.12429, 2312.17670, 2406.09335, 2407.19043, 2408.17198,
+  // 2412.18760, 2504.16921, 2508.04484); `\endfrontmatter` (:1303) is run by name, as documents extend it (1609.08567,
+  // 2308.12736, 1609.08586, 2304.14608, 1910.03866).
   RawTeX!(r"\let\@cormark\@empty\let\@cornotes\@empty\let\@fnotes\@empty\def\elsaddress{}
 \def\lx@els@print@lists{\lx@els@names@printed\lx@frontmatter@footnotes{\elsaddress}\lx@frontmatter@footnotes{\def\lx@els@label@prefix{cor}\@cornotes}\lx@frontmatter@footnotes{\def\lx@els@label@prefix{fn}\@fnotes}\global\let\elsaddress\@empty\global\let\@cornotes\@empty\global\let\@fnotes\@empty}
 \def\lx@els@end@frontmatter{\lx@els@print@lists\lx@note@title@page}

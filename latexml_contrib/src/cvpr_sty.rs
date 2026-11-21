@@ -101,7 +101,8 @@ LoadDefinitions!({
   // cascades on every `\cref{fig:foo_bar}`. Witness 2312.06720.
   //
   // The file the request names (`stand_in_request`): `\@currname`, or a renamed copy declaring `\ProvidesPackage{cvpr}`
-  // (style.sty: 2412.03517), read raw as the self-named one is (OXIDIZED_DESIGN_DIVERGENCES #1110).
+  // (style.sty: 2412.03517; 2603.19547, 2311.13194, 2501.05472, 2510.19001, 2601.03959, 2411.17125; wacv 2609.04603),
+  // read raw as the self-named one is (OXIDIZED_DESIGN_DIVERGENCES #1110).
   let request = latexml_package::shipped_class::stand_in_request()?;
   let raw_name = if request.is_empty() {
     "cvpr".to_string()

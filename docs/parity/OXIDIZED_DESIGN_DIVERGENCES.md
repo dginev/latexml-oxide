@@ -19182,7 +19182,7 @@ dropped, with the Warning above): `\lx@frontmatter@footnotes{<list>}` runs it wh
 `\maketitle` (elsarticle.cls:766, :778, :806; 2605.22682, cnf.sty's `\cortext` 2605.08232, 2606.15628, a document's
 own `\fntext` 2301.05821, 2311.15389, 2312.12429, 2312.17670, 2406.09335, 2407.19043, 2408.17198, 2412.18760, 2504.16921,
 2508.04484); amsart's and amsproc's `\@setauthors` at `\maketitle` (amsart.cls:638, amsproc.cls:613), run without the
-names and `\@setaddresses`, which the binding places (an appended `\@setaddresses` prints no address twice, 2607.28440;
+names, contributors and `\@setaddresses`, which the binding places (an appended `\@setaddresses` prints no address twice, 2607.28440;
 appended text, an affiliation or e-mail under the names, is a note: 2610.08257, 2610.02630, 2610.25104, 2610.02789);
 REVTeX's
 `\prep@absbox`, `\post@absbox`, `\mini@notes` and `\@FMN@list` at `\maketitle` (revtex4-2.cls:2648-2652, :3020-3022;
@@ -21278,7 +21278,8 @@ primitive in LaTeX (tex.web's primitive table, less the names latex.ltx makes ma
 `\font`) keeps etoolbox's Error, as pdflatex's (`\robustify\hbox`: "not a macro"). A `\protected` macro that is no TeX
 primitive in LaTeX is left alone too (the binding's `\underline`, latex.ltx:16369 `\DeclareRobustCommand`; 2407.21515,
 2506.16228, 2511.14592): etoolbox rebuilds a protected macro as the same macro, and the rebuild from our `\meaning`
-failed (REGFIXN1; guard `perfect_kernel_batchregfixn1::robustify_a_protected_binding_macro`). Residual (row R
+failed, as a `\let` copy of `\underline` prints as the primitive (`tex_debugging.rs` keys that exception on the token's
+name; row R ULMEANING) (REGFIXN1; guard `perfect_kernel_batchregfixn1::robustify_a_protected_binding_macro`). Residual (row R
 ROBUSTIFYERR, no corpus witness): a LaTeX `\mathchardef` that is a `DefMath` here (`\alpha`, `\infty`, `\sum` without
 amsmath) and e-TeX's/pdfTeX's own primitives (`\middle`) are left alone where TeX errs; the output is unchanged. Guards
 `perfect_kernel_batchclustfix3::robustify_of_a_native_binding`,
@@ -23464,6 +23465,7 @@ read of a renamed copy (`aistats_sty.rs` finds the copy by the family name only;
 `stand-in-copies/provides_route/aistats_renamed_copy.tex`).
 **Guard**: `perfect_kernel_batchregfixm::renamed_cvpr_and_iccv_copies_keep_their_hooks` (repro
 `stand-in-copies/provides_route/cvpr_renamed_copy_keeps_its_hooks.tex`).
+
 ### 1112. inputenc's undefined byte is TeX's robust `\PackageError`, gobbled in a PDF string (REGFIXN2)
 
 **Rule.** `\inputencoding{enc}` defines `\@inpenc@undefined` as `\protect\@inpenc@undefined@{enc}` (inputenc.sty:80)
