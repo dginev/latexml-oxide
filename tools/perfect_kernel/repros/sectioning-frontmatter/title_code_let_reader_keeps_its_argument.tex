@@ -1,0 +1,21 @@
+% mechanism: a `\let` the class's title code makes where it reads `\@author` reads what its target reads
+%   (`title_code::reads_arguments`): rims02e.sty:209's `\let\mail\thanks` in `\@maketitle` is in force in the observer's
+%   rehearsal too, so `\mail{…}` is the name's note there as in its digestion, not an undefined command the piece before
+%   it took, cut from its argument (then read by the author markup's cleanup tail `\let\mail\@undefined`).
+%   OXIDIZED_DESIGN_DIVERGENCES #983, #941
+% witness: math0408269 (rims02e.sty `\affil` + `\mail`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Bee / Kobe University∗", footnote "∗ Supported by X."
+% engines: INT6A: 1 Error (`undefined:\@undefined`), "Supported by X." a second creator; the same `\author` with the
+%   line break written `\\ Kobe University`: 0 Errors, 2 Warnings, the note's text lost
+% expect:  0 Errors, 0 Warnings; one creator Ann Bee, its affiliation "Kobe University", its thanks note "Supported by X."
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\let\mail\thanks\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author}\end{center}}
+\makeatother
+\def\affil#1{\\ #1}
+\begin{document}
+\title{T}
+\author{Ann Bee\affil{Kobe University}\mail{Supported by X.}}
+\maketitle
+Text.
+\end{document}

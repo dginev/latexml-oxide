@@ -23538,3 +23538,30 @@ their locked bindings (Perl amsmath.sty.ltxml:491-501), so linenoaa's renewal of
 `alignment/start_gather_by_a_package.tex`), `perfect_kernel_batchregfixr2::{start_gather_runs_the_package_end,
 start_gather_linenoaa_is_plain_amsmath}` (repros `alignment/start_gather_package_end_runs.tex`,
 `alignment/start_gather_linenoaa.tex`).
+
+### 1126. A title-code `\let` reads what its target reads, in the frontmatter rehearsal too (REGFIXS)
+
+**Rule.** A command the class's title code defines where it reads `\@author` is replayed for the author content, and in
+the observer's rehearsal only when it reads arguments (`classify/title_code.rs` `reads_arguments`, #941, #983); a `\let`
+reads what its target's meaning reads (a definition with parameters), as TeX's `\let` copies that meaning. rims02e.sty:209's
+`\let\mail\thanks` in `\@maketitle` (math0408269) was held undefined in the rehearsal, so the affiliation piece before it
+took `\mail` without its argument, which was lexed as an e-mail (or, as text, a second creator); digested, the piece's
+`\mail` (`\thanks`) read the author markup's cleanup tail `\let\mail\@undefined` (1 `Error:undefined:\@undefined`, an
+affiliation holding it); with the line break written `\\ ` instead of `\affil`, the note's text was lost with 2
+Warnings. Now `\mail{…}` is the name's thanks note, as pdflatex's footnote. Not covered: a `\let` to a parameterless macro
+that reads through its expansion (`\let\mail\footnote`, the kernel's `\footnote` → `\lx@current@footnote` →
+`\lx@note{footnote}`) is still held undefined, unchanged. **Guard**:
+`perfect_kernel_batchregfixs::a_title_code_let_to_a_reader_keeps_its_argument` (repro
+`sectioning-frontmatter/title_code_let_reader_keeps_its_argument.tex`).
+
+### 1127. A frontmatter note is digested with the class's title meaning of `\inst` (REGFIXS)
+
+**Rule.** A binding that declares the class's title-only `\inst` as `\lx@title@inst` (#807; epl_cls.rs, epl2.cls:692
+`\def\inst##1{\unskip${}^{##1}$\hspace{0.5em}\ignorespaces}` inside `\maketitle`) has a creator's note digested with
+`\inst` meaning it (`emitter::calls::note_body`), as pdflatex sets that note's text inside the class's `\maketitle`. An
+EPL `\institute{… \inst{*} Corresponding author: …}` under `\inst{1,*}` made a correspondence note still holding an
+undefined `\inst` (1 `Error:undefined:\inst`, "\inst*Corresponding author" in the note: 1009.3152, 1907.04695); now its
+printed `*` is the note's mark, taken out of its text (`mark_creator_notes`), "Corresponding author: …" with `mark="*"`.
+Rust-only: Perl has no EPL binding. **Guard**:
+`perfect_kernel_batchregfixs::an_epl_institute_legend_note_prints_its_mark` (repro
+`sectioning-frontmatter/epl_institute_legend_note_prints_its_mark.tex`).

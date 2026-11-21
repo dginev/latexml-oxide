@@ -740,6 +740,9 @@ mod perfect_kernel_batchregfixr;
 /// REGFIXR2: a package's `{gather}` end runs (text after the display, a group it closes), a sub-caption label from
 /// caption3 v1.8h's option lists.
 mod perfect_kernel_batchregfixr2;
+/// REGFIXS: a title-code `\let` to a command reading arguments reads them in the rehearsal (rims02e's `\let\mail\thanks`);
+/// an EPL `\institute` legend's note prints its `\inst` mark under the class's title meaning.
+mod perfect_kernel_batchregfixs;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;
