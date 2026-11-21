@@ -254,10 +254,7 @@ pub(in crate::base_utilities) fn mark_label(operand: &[Token]) -> Option<String>
 /// them when an author's mark requests them and the note is one legend — a `\thanks{\textsuperscript{$\dagger$} School
 /// ...}` is labelled by its mark and goes to the starred authors (2609.00885, 2609.19600) — and the rest, or all of it
 /// when no author requests the mark or more legends follow, with the plain superscripts (`\lx@frontmatter@plainsups`): its `10 m$^{2}$` is text, not a mark
-/// (KNOWN_PERL_ERRORS #515), and an unrequested leading mark stays shown, its note with its author. Its `\inst` is the
-/// class's title meaning where a binding declares one (`\lx@title@inst`): epl2.cls:692 defines `\inst` for its whole
-/// `\maketitle`, so the legend `\inst{*} Corresponding author…` its institute list makes a note prints the mark there
-/// (1009.3152, 1907.04695).
+/// (KNOWN_PERL_ERRORS #515), and an unrequested leading mark stays shown, its note with its author.
 pub(in crate::base_utilities) fn note_body(content: Tokens) -> Tokens {
   let toks = content.unlist();
   let lead = toks.iter().take_while(|t| **t == T_SPACE!()).count();
@@ -284,9 +281,6 @@ pub(in crate::base_utilities) fn note_body(content: Tokens) -> Tokens {
   let split = if marks_requested { end } else { 0 };
   let mut body = toks[..split].to_vec();
   body.extend([T_CS!("\\bgroup"), T_CS!("\\lx@frontmatter@plainsups")]);
-  if IsDefined!(&T_CS!("\\lx@title@inst")) {
-    body.extend([T_CS!("\\let"), T_CS!("\\inst"), T_CS!("\\lx@title@inst")]);
-  }
   body.extend_from_slice(&toks[split..]);
   body.push(T_CS!("\\egroup"));
   Tokens::new(body)

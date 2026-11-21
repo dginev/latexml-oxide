@@ -252,7 +252,8 @@ fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
 /// (`emitter::content::Field::held_undefined_at`). A `\let` reads what its target's meaning reads: rims02e.sty:209's
 /// `\let\mail\thanks` (math0408269), whose `\mail{…}` held undefined left its argument a piece of its own.
 pub(in crate::base_utilities) fn reads_arguments(definee: &Token, statement: &[Token]) -> bool {
-  if statement[0] == T_CS!("\\let") {
+  // (a `\let`'s statement, the one shape `statements_at_author` reads with no braced body)
+  if !statement.iter().any(|t| t.group_step() == 1) {
     return statement
       .last()
       .filter(|target| *target != definee)

@@ -33,7 +33,8 @@ fn a_title_code_let_to_a_reader_keeps_its_argument() {
 
 /// An EPL `\institute{… \inst{*} Corresponding author: ann@a.fr}` under `Ann Able\inst{1,*}` (1009.3152, 1907.04695): the
 /// legend line's note is digested with `\inst` the class's title meaning (epl2.cls:692, the binding's `\lx@title@inst`),
-/// so it holds no undefined `\inst` and its printed `*` is the note's mark. Distinct: `emitter::calls::note_body`.
+/// so it holds no undefined `\inst` and its printed `*` is the note's mark. Distinct: `\lx@frontmatter@plainsups`
+/// (defs/author_macros.rs), which every note body runs.
 #[test]
 fn an_epl_institute_legend_note_prints_its_mark() {
   let (log, xml) = convert(repro!("epl_institute_legend_note_prints_its_mark"), false);

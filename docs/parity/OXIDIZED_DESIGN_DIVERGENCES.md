@@ -23558,10 +23558,10 @@ that reads through its expansion (`\let\mail\footnote`, the kernel's `\footnote`
 
 **Rule.** A binding that declares the class's title-only `\inst` as `\lx@title@inst` (#807; epl_cls.rs, epl2.cls:692
 `\def\inst##1{\unskip${}^{##1}$\hspace{0.5em}\ignorespaces}` inside `\maketitle`) has a creator's note digested with
-`\inst` meaning it (`emitter::calls::note_body`), as pdflatex sets that note's text inside the class's `\maketitle`. An
-EPL `\institute{… \inst{*} Corresponding author: …}` under `\inst{1,*}` made a correspondence note still holding an
-undefined `\inst` (1 `Error:undefined:\inst`, "\inst*Corresponding author" in the note: 1009.3152, 1907.04695); now its
-printed `*` is the note's mark, taken out of its text (`mark_creator_notes`), "Corresponding author: …" with `mark="*"`.
-Rust-only: Perl has no EPL binding. **Guard**:
+`\inst` meaning it (`\lx@frontmatter@plainsups`, defs/author_macros.rs, which every note body runs), as pdflatex sets
+that note's text inside the class's `\maketitle`. An EPL `\institute{… \inst{*} Corresponding author: …}` under
+`\inst{1,*}` made a correspondence note still holding an undefined `\inst` (1 `Error:undefined:\inst`,
+"\inst*Corresponding author" in the note: 1009.3152, 1907.04695); now its printed `*` is the note's mark, taken out of
+its text (`mark_creator_notes`), "Corresponding author: …" with `mark="*"`. Rust-only: Perl has no EPL binding. **Guard**:
 `perfect_kernel_batchregfixs::an_epl_institute_legend_note_prints_its_mark` (repro
 `sectioning-frontmatter/epl_institute_legend_note_prints_its_mark.tex`).
