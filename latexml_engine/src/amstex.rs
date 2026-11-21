@@ -1200,19 +1200,19 @@ fn tie_floated_tags_to_row(document: &mut Document) -> Result<()> {
 fn copied_style(path: &str) -> Option<&'static str> {
   const AMSTEX_STYLES: &[&str] = &["amsppt"];
   static SELF_NAME: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?:(?:This is|End of) file `|\\def\s*\\filename\s*\{\s*)([A-Za-z0-9_-]+)\.sty\b")
+    Regex::new(r"(?:(?:This is|End of) file `|(\\def\s*\\filename\s*\{\s*))([A-Za-z0-9_-]+)\.sty\b")
       .unwrap()
   });
   let bytes = std::fs::read(path).ok()?;
   let text = String::from_utf8_lossy(&bytes);
   SELF_NAME.captures_iter(&text).find_map(|c| {
-    let name = AMSTEX_STYLES.iter().copied().find(|s| *s == &c[1])?;
+    let name = AMSTEX_STYLES.iter().copied().find(|s| *s == &c[2])?;
     // The docstrip lines are comments; the `\def` counts outside one.
     let commented = text[..c.get(0)?.start()]
       .rsplit('\n')
       .next()
       .is_some_and(|l| l.contains('%'));
-    let is_def = c[0].starts_with('\\');
+    let is_def = c.get(1).is_some();
     (is_def != commented && binding_exists(name, "sty")).then_some(name)
   })
 }
