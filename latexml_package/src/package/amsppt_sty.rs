@@ -458,9 +458,15 @@ LoadDefinitions!({
     properties => sub[_args] { RefStepID!("rosteritem") });
   // amsppt.sty:738-751 `\endroster` opens and closes no group, so it ends the roster at any group depth: met inside a group
   // its body opened (an item's `{\it` never closed, alg-geom9511013, math0511546, math9901010; `\roster {\item`,
-  // math0309287), that group is closed with a Warning (`until_terminal_inside_group`) and the roster ends there.
+  // math0309287), that group is closed with a Warning (`until_terminal_inside_group`) and the roster ends there. With no
+  // roster open it is amsppt.sty:120-122 `\revert@envir`'s "AmS-TeX error: Extra \endroster", the text kept.
   DefPrimitive!("\\endroster", {
-    until_terminal_inside_group(&T_CS!("\\endroster"))?;
+    if !until_terminal_inside_group(&T_CS!("\\endroster"))?
+      && lookup_token("lx@until@terminal") != Some(T_CS!("\\endroster"))
+      && lookup_value("amsppt@roster@id").is_none()
+    {
+      Error!("unexpected", "\\endroster", "AmS-TeX error: Extra \\endroster.");
+    }
   });
 
   // Perl amsppt.sty.ltxml L261-263: \block — simple block-quote container.

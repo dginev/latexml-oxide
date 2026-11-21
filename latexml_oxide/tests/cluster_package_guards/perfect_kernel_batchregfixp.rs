@@ -20,6 +20,8 @@ macro_rules! repro {
 /// replayed without its `{-3ex}` read the wrapper's `\let` (Missing number) and left `\lx@saved@inst` undefined in each
 /// name. `\vspace*` is the starred sibling. Witnesses 2401.17245, 2505.18108, 2205.07842, 1807.07558, 1605.01407.
 /// Distinct from the emitter's `reads_past` guards (a call cut from its arguments by its own span): here the run grew.
+/// Known gap, pinned as is: the printed separator `$/\!\!/$` between the first name and its date is dropped from the
+/// frontmatter with 0 warnings (not this mechanism; open).
 #[test]
 fn a_parameterless_macro_before_a_skip_keeps_the_name() {
   let (log, xml) = convert_with(
@@ -68,12 +70,24 @@ fn siunits_leaves_siunitx_free_commands_free() {
   }
 }
 
-/// A `{restatable}` theorem freezes the number of the counter its head stepped (`\@currentlabel`), not
-/// `\csname the<env>\endcsname`, which a wrapper environment lacks (ltexpprt.sty:216-217
-/// `\newenvironment{theorem}{\begin{@theorem}}`). Red (REGFIXJ3): `undefined:\thetheorem` in the restated head.
-/// The one Warning is the `{restatable}` group still open at `\end{document}` (its `\end{\@currenvir}` ends `@theorem`,
-/// not the wrapper), reported apart. Witnesses 1911.08418, 2410.24104, 2503.21951. Distinct from
-/// `perfect_kernel_batch78i::restated_theorem_prints_its_statement` (a `\newtheorem` environment, `\the<env>` defined).
+/// The printed theorem numbers, in order.
+fn theorem_numbers(xml: &str) -> Vec<&str> {
+  xml
+    .split("<tag>Theorem ")
+    .skip(1)
+    .filter_map(|rest| rest.split_once("</tag>").map(|(number, _)| number))
+    .collect()
+}
+
+/// A restatement of a wrapper environment's theorem steps the inner theorem's counter and prints the next number, as
+/// pdflatex: thm-restate.sty:123-133 fakes `\the<env>`/`\c@<env>` only, and ltexpprt.sty:216-217's wrapper
+/// `\newenvironment{theorem}{\begin{@theorem}}` has no `\thetheorem`, so `renumber` freezes nothing (`if_numbered`).
+/// Red (REGFIXJ3): `undefined:\thetheorem`; red (REGFIXP): the restatement 1.1 and the theorem after it 2.1 (the
+/// stepped counter's `\@currentlabel` frozen). `{restatable*}` in the wrapper (the binding's preview `\ref` skipped on
+/// the same test) steps the same; the plain `\newtheorem{theorem}` contrast still restates 1.1. The one Warning is the
+/// `{restatable}` group still open at `\end{document}` (its `\end{\@currenvir}` ends `@theorem`, not the wrapper),
+/// reported apart. Witnesses 1911.08418 (the PDF's "Theorem 5.1", "Theorem 6.1"), 2410.24104, 2503.21951. Distinct
+/// from `perfect_kernel_batch78i::restated_theorem_prints_its_statement` (a `\newtheorem` environment).
 #[test]
 fn restatable_in_a_wrapper_theorem_is_numbered_by_its_counter() {
   let (log, xml) = convert_with(
@@ -82,12 +96,39 @@ fn restatable_in_a_wrapper_theorem_is_numbered_by_its_counter() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(log.contains("Environment restatable opened by"), "{log}");
+  assert_eq!(theorem_numbers(&xml), ["1.1", "1.2", "2.1", "2.2"], "{xml}");
   assert_element(
     &xml,
     "theorem",
-    &["xml:id=\"S2.Thmtheoremx1\""],
-    r#"<theorem class="ltx_theorem_theorem" inlist="thm theorem:@theorem" xml:id="S2.Thmtheoremx1"><tags><tag>Theorem 1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">Theorem 1.1</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="S2.Thmtheoremx1.1">Theorem 1.1</text></tag><text font="bold" xml:id="S2.Thmtheoremx1.2">.</text></title><para xml:id="S2.Thmtheoremx1.p1"><p xml:id="S2.Thmtheoremx1.p1.1"><text font="italic" xml:id="S2.Thmtheoremx1.p1.1.1">Every graph is fine.</text></p></para></theorem>"#,
+    &["xml:id=\"S2.Thmtheorem1\""],
+    r#"<theorem class="ltx_theorem_theorem" inlist="thm theorem:@theorem" xml:id="S2.Thmtheorem1"><tags><tag>Theorem 2.1</tag><tag role="refnum">2.1</tag><tag role="typerefnum">Theorem 2.1</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="S2.Thmtheorem1.1">Theorem 2.1</text></tag><text font="bold" xml:id="S2.Thmtheorem1.2">.</text></title><para xml:id="S2.Thmtheorem1.p1"><p xml:id="S2.Thmtheorem1.p1.1"><text font="italic" xml:id="S2.Thmtheorem1.p1.1.1">Every graph is fine.</text></p></para></theorem>"#,
   );
+  assert_element(
+    &xml,
+    "theorem",
+    &["xml:id=\"S2.Thmtheorem2\""],
+    r#"<theorem class="ltx_theorem_theorem" inlist="thm theorem:@theorem" labels="LABEL:thm:after" xml:id="S2.Thmtheorem2"><tags><tag>Theorem 2.2</tag><tag role="refnum">2.2</tag><tag role="typerefnum">Theorem 2.2</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="S2.Thmtheorem2.1">Theorem 2.2</text></tag><text font="bold" xml:id="S2.Thmtheorem2.2">.</text></title><para xml:id="S2.Thmtheorem2.p1"><p xml:id="S2.Thmtheorem2.p1.1"><text font="italic" xml:id="S2.Thmtheorem2.p1.1.1">Every forest is fine.</text></p></para></theorem>"#,
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"S2.p2.1\""],
+    "<p xml:id=\"S2.p2.1\">See Theorems\u{a0}<ref labelref=\"LABEL:thm:main\"/>, <ref labelref=\"LABEL:thm:next\"/> \
+     and\u{a0}<ref labelref=\"LABEL:thm:after\"/>.</p>",
+  );
+  let (log, xml) = convert_with(
+    repro!("package-bindings/thm_restate_restatable_star_in_a_wrapper_steps_the_counter.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(theorem_numbers(&xml), ["1.1", "1.2", "2.1", "2.2"], "{xml}");
+  assert!(!xml.contains("restatable:mainthm\"/>"), "{xml}");
+  let (log, xml) = convert_with(
+    repro!("package-bindings/thm_restate_restatable_plain_theorem_restates_its_number.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(theorem_numbers(&xml), ["1.1", "1.2", "1.1", "2.1"], "{xml}");
 }
 
 /// amsppt's `\endroster` (amsppt.sty:738-751, no group of its own) ends the roster at any group depth: met inside a
@@ -95,6 +136,7 @@ fn restatable_in_a_wrapper_theorem_is_numbered_by_its_counter() {
 /// the roster ran to the document's end, "malformed: ltx:document … enumerate". Two shapes on the one path: the last
 /// item's `{\it` never closed (alg-geom9511013, math0511546, math9901010) and `\roster {\item…` (math0309287). Distinct
 /// from `perfect_kernel_batchregfixi::amsppt_input_roster_items_close` and the #868 roster guards: an unbalanced body.
+/// Its sibling, an `\endroster` with no roster open, errs as TeX does (red, REGFIXP: 0 errors).
 #[test]
 fn endroster_ends_the_roster_inside_a_group() {
   let (log, xml) = convert_with(
@@ -120,4 +162,15 @@ fn endroster_ends_the_roster_inside_a_group() {
     &["xml:id=\"C0.Sx1\""],
     r#"<section inlist="toc" xml:id="C0.Sx1"><title>1. Brace</title><para xml:id="C0.Sx1.p1"><enumerate xml:id="Ix1"><item xml:id="Ix1.ix1"><tags><tag>(i)</tag></tags><para xml:id="Ix1.ix1.p1"><p xml:id="Ix1.ix1.p1.1">One,</p></para></item><item xml:id="Ix1.ix2"><tags><tag>(ii)</tag></tags><para xml:id="Ix1.ix2.p1"><p xml:id="Ix1.ix2.p1.1">two.</p></para></item></enumerate><p xml:id="C0.Sx1.p1.1">After.</p><enumerate xml:id="Ix2"><item xml:id="Ix2.ix1"><tags><tag>(1)</tag></tags><para xml:id="Ix2.ix1.p1"><p xml:id="Ix2.ix1.p1.1">Next.</p></para></item></enumerate></para></section>"#,
   );
+  // with no roster open, TeX's "AmS-TeX error: Extra \endroster." (amsppt.sty:120-122), the text kept
+  let (log, xml) = convert_with(
+    repro!("amstex/amsppt_endroster_with_no_roster_open.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(
+    log.contains(r"Error:unexpected:\endroster AmS-TeX error: Extra \endroster."),
+    "{log}"
+  );
+  assert!(xml.contains("Before. After stray."), "{xml}");
 }

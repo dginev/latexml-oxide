@@ -1,15 +1,18 @@
 % witness: 1911.08418 (also 2410.24104, 2503.21951): ltexpprt.sty:216-217 `\newtheorem{@theorem}{Theorem}[section]`,
 %          `\newenvironment{theorem}{\begin{@theorem}}{\end{@theorem}}`, then `\begin{restatable}{theorem}{…}`
-% oracle:  pdflatex 0 errors (second run); "Theorem 1.1. Every graph is fine.", "Restated: Theorem 2.1. Every graph is
-%          fine.": thm-restate fakes `\the<env>`/`\c@<env>` for `theorem`, not the `@theorem` that prints, so the
-%          restatement steps `@theorem` (thm-restate.sty:130-140)
+% oracle:  pdflatex 0 errors (second run): "Theorem 1.1. Every graph is fine.", "Theorem 1.2. Every tree is fine.",
+%          "Restated: Theorem 2.1. Every graph is fine.", "Theorem 2.2. Every forest is fine.", "See Theorems 1.1, 1.2
+%          and 2.2.": thm-restate fakes `\the<env>`/`\c@<env>` for `theorem` only, not the `@theorem` that prints, so the
+%          restatement steps `@theorem` and prints the next number (thm-restate.sty:123-146; `\thmt@restorecounters`
+%          puts back the inner counters, not `@theorem`)
 % engines: Perl 0.8.8 = 0 errors, 1 warning (the same open group: thm-restate.sty.ltxml's `\end{\@currenvir}`), the
 %          restatement "See <ref>" (KNOWN_PERL_ERRORS #1048); rust REGFIXJ3 = 1 error (`undefined:\thetheorem`, the
-%          number frozen as `\csname the<env>\endcsname`), 1 warning
+%          number frozen as `\csname the<env>\endcsname`), 1 warning; rust REGFIXP = 0 errors, the restatement "1.1" and
+%          the theorem after it "2.1" (the stepped counter's `\@currentlabel` frozen and reused)
 % expect:  0 errors, 1 warning (the `{restatable}` group still open at `\end{document}`: its `\end{\@currenvir}` ends
-%          `@theorem`, not the wrapper; reported, not this mechanism); the restatement numbered "1.1" as the theorem it
-%          restates — the author's number, which pdflatex's wrapper-blind fake misses
-% status:  RED (REGFIXJ3) -> GREEN (REGFIXP; guard perfect_kernel_batchregfixp::restatable_in_a_wrapper_theorem_is_numbered_by_its_counter)
+%          `@theorem`, not the wrapper; reported, not this mechanism); the numbers as pdflatex: 1.1, 1.2, 2.1, 2.2
+% status:  RED (REGFIXJ3, REGFIXP) -> GREEN (REGFIXP2; guard
+%          perfect_kernel_batchregfixp::restatable_in_a_wrapper_theorem_is_numbered_by_its_counter)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{amsthm,thmtools,thm-restate}
@@ -22,8 +25,14 @@
 \begin{restatable}{theorem}{mainthm}\label{thm:main}
 Every graph is fine.
 \end{restatable}
+\begin{theorem}\label{thm:next}
+Every tree is fine.
+\end{theorem}
 \section{Two}
 Restated:
 \mainthm*
-See Theorem~\ref{thm:main}.
+\begin{theorem}\label{thm:after}
+Every forest is fine.
+\end{theorem}
+See Theorems~\ref{thm:main}, \ref{thm:next} and~\ref{thm:after}.
 \end{document}

@@ -246,7 +246,8 @@ fn tail_call(cs: &Token) -> Option<Rc<Expandable>> {
 
 /// Whether a call of `cs` reads no argument, by its meaning now: a parameterless macro whose expansion ends in a
 /// character, or in a command that reads none (`\newcommand{\todaysdate}{1 May 2024}`) — not where its meaning does not
-/// tell (a primitive, an expansion computed by code).
+/// tell (a primitive, an expansion computed by code). Caveat: a body ending in a character can still read on, an
+/// unfinished number or assignment (`\def\x{\kern 2}`, `\def\x{\count0=}`).
 pub(super) fn reads_no_argument(cs: &Token) -> bool { matches!(tail(cs), Tail::Nothing) }
 
 /// Where a call's reading ends, by [`tail_call`]'s walk: the macro whose parameters it reads, a parameterless expansion

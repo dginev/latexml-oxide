@@ -1,0 +1,11 @@
+% witness: none (the sibling of amsppt_roster_endroster_inside_an_items_group.tex's `\endroster`, met with no roster open)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 1 error "! AmS-TeX error: Extra \endroster."
+%          (amsppt.sty:120-122 `\revert@envir`); "Before. After stray."
+% engines: rust REGFIXP = 0 errors (the stray `\endroster` silently a no-op)
+% expect:  1 error (`unexpected:\endroster`, "AmS-TeX error: Extra \endroster."), 0 warnings; "Before. After stray." kept
+% status:  RED (REGFIXP) -> GREEN (REGFIXP2; guard perfect_kernel_batchregfixp::endroster_ends_the_roster_inside_a_group)
+\input amstex
+\documentstyle{amsppt}
+\document
+Before. \endroster After stray.
+\enddocument

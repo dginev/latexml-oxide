@@ -6,6 +6,7 @@
 %          the macro's next token as an accent's argument), which read the wrapper's `\let` (Missing number) and left
 %          `\lx@saved@inst` undefined in the name
 % expect:  0 errors, 0 warnings; creators "Cristina Anghel", "1 May 2024", "Bob Baker 2 May 2024" — no skip in a name
+%          (known gap, not this mechanism: the printed separator `$/\!\!/$` is dropped from the frontmatter with 0 warnings)
 % status:  RED (REGFIXJ3) -> GREEN (REGFIXP; guard perfect_kernel_batchregfixp::a_parameterless_macro_before_a_skip_keeps_the_name)
 % preload: ar5iv.sty
 \documentclass{article}

@@ -1,0 +1,33 @@
+% witness: none (the `{restatable*}` sibling of thm_restate_restatable_numbered_by_the_stepped_counter.tex, whose wrapper
+%          is ltexpprt.sty:216-217's: 1911.08418, 2410.24104, 2503.21951)
+% oracle:  pdflatex 0 errors (second run): "Preview: Theorem 1.1. Every graph is fine.", "Theorem 1.2. Every tree is
+%          fine.", "Theorem 2.1. Every graph is fine.", "Theorem 2.2. Every forest is fine.", "See Theorems 1.2 and 2.2.":
+%          the preview fakes `\thetheorem` only, so `@theorem` steps and prints its next number (thm-restate.sty:123-146)
+% engines: rust REGFIXP = 0 errors, the preview numbered as a reference to the later `\mainthm` (`restatable:mainthm`)
+% expect:  0 errors, 1 warning (the `{restatable*}` group still open at `\end{document}`, as in the sibling); the numbers
+%          as pdflatex: 1.1, 1.2, 2.1, 2.2
+% status:  RED (REGFIXP) -> GREEN (REGFIXP2; guard
+%          perfect_kernel_batchregfixp::restatable_in_a_wrapper_theorem_is_numbered_by_its_counter)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm,thmtools,thm-restate}
+\makeatletter
+\newtheorem{@theorem}{Theorem}[section]
+\newenvironment{theorem}{\begin{@theorem}}{\end{@theorem}}
+\makeatother
+\begin{document}
+\section{One}
+Preview:
+\begin{restatable*}{theorem}{mainthm}
+Every graph is fine.
+\end{restatable*}
+\begin{theorem}\label{thm:next}
+Every tree is fine.
+\end{theorem}
+\section{Two}
+\mainthm
+\begin{theorem}\label{thm:after}
+Every forest is fine.
+\end{theorem}
+See Theorems~\ref{thm:next} and~\ref{thm:after}.
+\end{document}

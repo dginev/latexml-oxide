@@ -1,0 +1,29 @@
+% witness: none (the plain `\newtheorem{theorem}` contrast of thm_restate_restatable_numbered_by_the_stepped_counter.tex)
+% oracle:  pdflatex 0 errors (second run): "Theorem 1.1.", "Theorem 1.2.", "Restated: Theorem 1.1. Every graph is fine.",
+%          "Theorem 2.1. Every forest is fine.", "See Theorems 1.1, 1.2 and 2.1.": `\thetheorem` faked, `\c@theorem`
+%          not stepped (thm-restate.sty:123-133)
+% engines: rust REGFIXJ3 = REGFIXP = REGFIXP2 = 0 errors, 0 warnings, the numbers as pdflatex
+% expect:  0 errors, 0 warnings; the numbers 1.1, 1.2, 1.1, 2.1
+% status:  GREEN (guard perfect_kernel_batchregfixp::restatable_in_a_wrapper_theorem_is_numbered_by_its_counter)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm,thmtools,thm-restate}
+\makeatletter
+\newtheorem{theorem}{Theorem}[section]
+\makeatother
+\begin{document}
+\section{One}
+\begin{restatable}{theorem}{mainthm}\label{thm:main}
+Every graph is fine.
+\end{restatable}
+\begin{theorem}\label{thm:next}
+Every tree is fine.
+\end{theorem}
+\section{Two}
+Restated:
+\mainthm*
+\begin{theorem}\label{thm:after}
+Every forest is fine.
+\end{theorem}
+See Theorems~\ref{thm:main}, \ref{thm:next} and~\ref{thm:after}.
+\end{document}

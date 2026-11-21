@@ -17965,8 +17965,9 @@ another's body (`\thmt@collect@body` stops at the inner `\end{restatable}`: pdfl
 fatal error-count stop; ours 101 errors and Fatal:TooManyErrors, bounded the same way). A restatement replays what the
 original holds, errors too: 1711.05227 55 → 58 errors, `\thmrelevance*` at proofs.tex:45 replayed inside a math frame
 left open at proofs.tex:23 and an alignment open since magic.tex:150-155, its error locations moving to
-`\end{restatable}`. The frozen number is `\@currentlabel` after the head, the stepped counter's (a wrapper environment's
-too: OXIDIZED_DESIGN_DIVERGENCES #1116). Witnesses 2108.11527, 2602.09462, 2402.14202, 1702.04225. Repros
+`\end{restatable}`. Only `\the<env>` is faked (thm-restate.sty:123-133): a wrapper environment with none (ltexpprt.sty:216-217
+`\newenvironment{theorem}{\begin{@theorem}}`: 1911.08418, 2410.24104, 2503.21951) freezes no number, so its restatement,
+`{restatable*}` too, steps the inner theorem's counter and prints the next number, as pdflatex. Witnesses 2108.11527, 2602.09462, 2402.14202, 1702.04225. Repros
 package-bindings/thm_restate_restated_theorem_prints_its_statement, …/thm_restate_restatable_star_takes_the_later_number;
 guards `perfect_kernel_batch78i::{restated_theorem_prints_its_statement, restatable_star_takes_the_later_number}`.
 
