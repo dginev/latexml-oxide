@@ -1,0 +1,17 @@
+% mechanism: a raw class's refused `\author` reads its call with its own helper `\@author[#1]#2#3` (bullsrsl.cls:326-327),
+%   which counts the authors (:358); the kernel's `\author` stores the call in `\@author` after the first replay, and
+%   the later replays expanded that store, not the helper: the count stayed 1, and `{authorcontributions}` (:958-961)
+%   raised "Unwanted authorcontributions". Each replay binds the class's helper back in its group (sect05.rs
+%   `replay_dropped_class_code`).
+% witness: 2312.08217, 2607.02675 (bullsrsl.cls; 73 arXiv papers)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Authors: 2."
+% engines: INTREGFIX4: 1 error (Class cntauth Error: Unwanted contrib), "Authors: 1."
+% expect:  0 errors, 0 warnings; "Authors: 2." (with a third author: "Authors: 3.")
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXG)
+% preload: ar5iv.sty
+\documentclass{cntauth}
+\begin{document}
+\author[x]{Ann}{Alpha}
+\author[y]{Bob}{Beta}
+\begin{contrib}Authors: \the\value{nbauth}.\end{contrib}
+\end{document}

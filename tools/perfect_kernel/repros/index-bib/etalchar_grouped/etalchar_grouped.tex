@@ -1,0 +1,18 @@
+% witness: 1101.1169, 2402.10127, 2203.12786 (v0.8.0 regression check: `undefined:\etalchar`, 30 papers; 373 census users)
+% oracle:  pdflatex (2 passes) 0 errors, "See [ADH+ 19]": `\@lbibitem` writes the label to the .aux expanded under
+%          `\let\protect\noexpand` (latex.ltx:17746-17749), `\bibcite{arora}{ADH{$^{+}$}19}`; the later \cite reads that
+% engines: rust INTREGFIX4 1 Error `undefined:\etalchar` (the label kept raw for the \cite, after the group that
+%          defined `\etalchar` closed); Oct-8 63l 0 errors; Perl 0 (digests the label at the \bibitem)
+% expect:  0 errors, 0 warnings; the refnum tag is "ADH+19" with the + a superscript
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXK, sect11.rs `\lx@bibitem` expands the cite-printed label at the \bibitem)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Text.
+{\small
+\bibliographystyle{alpha}
+\bibliography{etalchar_grouped}
+}
+\section{Appendix}
+See \cite{arora}.
+\end{document}

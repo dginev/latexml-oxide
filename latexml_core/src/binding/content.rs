@@ -2987,10 +2987,13 @@ fn file_declarations(text: &str) -> Vec<(&'static str, String)> {
 /// 1. **Its declaration.** A `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` (or the `\ProvidesExpl…` form) naming
 ///    the binding that answered (the file's own name only when the binding is of that name: a fallback answers a renamed
 ///    file too, 1705.03989's aaart.cls under `aa`), or a file the binding is built on (its own `LoadClass!`/`RequirePackage!`,
-///    `state::stand_in_built_on`) is that file, whatever its version: 1609.03892's fcs.cls of 2016, older than the
-///    `\fcssetup` the binding models; 2308.11432's fcs.cls `\ProvidesExplClass{fcs}`; apjfonts.sty (1202.3442,
-///    1009.4702); 2011.13564's IEEEtai.cls, IEEE's own file, which declares itself `IEEEtran`, the class the binding
-///    loads.
+///    or a binding whose definitions it makes as code: `state::stand_in_built_on`) is that file, whatever its version:
+///    1609.03892's fcs.cls of 2016, older than the `\fcssetup` the binding models; 2308.11432's fcs.cls
+///    `\ProvidesExplClass{fcs}`; apjfonts.sty (1202.3442, 1009.4702); 2011.13564's IEEEtai.cls, IEEE's own file, which
+///    declares itself `IEEEtran`, the class the binding loads; hep-ph0608235's svjour2.cls, Springer's svjour code
+///    renamed, declaring `svjour`. The test is of the copy of the file the paper requested: a file the binding is built
+///    on without loading it is never requested, so the paper's copy of it is not read (the older svjour.cls beside
+///    svjour3.cls: 2101.09497, 2110.05134, 2408.12532).
 /// 2. **Its command set**, for a copy that declares another file or none (2.09-era files declare nothing): the copy
 ///    defines at least a quarter of the public names (letters only) the binding's own code assigned, a stand-in it loads
 ///    included (`state::stand_in_public_names`; the diagrams binding's diagrams.tex). Over the reviewer's simulation of

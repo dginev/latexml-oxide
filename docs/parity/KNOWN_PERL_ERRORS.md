@@ -16322,7 +16322,12 @@ Rust (int19, amstext_sty.rs `\text`): the constructor raises the alignment count
 stored fields; amstex.rs `\text` (amstex.tex:1217-1226 `\hbox{#1}`) and revtex4_support_sty.rs `\text`
 (revtex4-2.cls:7547-7560 `\REV@text`) the same. 1703.08664 58 → 0 errors, 24,260 → 24,774 words. Repro
 kernel-alignment/text_argument_is_braced_in_an_alignment_cell; guard
-`perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`.
+`perfect_kernel_batchint19::text_argument_is_braced_in_an_alignment_cell`. The count is raised only once `#1` is read
+(REGFIXK): each `\text` is a macro reading `#1` at the cell's count, as amstext's, and `\lx@text{#1}` (reverting to
+`\text`) the constructor, so a brace-less `$x$\text & 0.6` ends the cell at the `&` (tex.web §342; 2212.00883, pdflatex
+0 errors; repro kernel-alignment/text_without_braces_before_a_cell_end, guard
+`perfect_kernel_batchregfixk::text_without_braces_before_a_cell_end`; protected, so an `\edef` keeps `\text`,
+OXIDIZED_DESIGN #1104).
 
 ## 935. A document that prints the kernel's `\@title`/`\@author` itself shows the title and the author twice
 
@@ -22163,3 +22168,56 @@ incomplete"), the bibitem empty; pdftex 0 errors, "??. A. Author, Title, J (1990
 `\noOf`, a LaTeX-style `\make@ref` in an amsppt copy): Perl `Fatal:too_many_errors`, 101 errors; ours the same read
 (amsppt_sty.rs), `Fatal:TooManyErrors`; so math0205237. Open in Rust (digest each field as `\makerefbox` boxes it).
 Repro amstex/amsppt_bibfield_expands_a_conditional_red (OXIDIZED_DESIGN_DIVERGENCES #825).
+
+## 1300. A class binding loads another binding as a file its real class never loads
+
+Perl shares definitions between related classes by loading the other binding as a file: svjour3.cls.ltxml (svjour1,
+svjour2) `LoadClass('svjour')`, emulateapj.cls.ltxml:26 `RequirePackage('emulateapj')`, JHEP2/JHEP3/PoS.cls.ltxml
+`LoadClass('JHEP', withoptions => 1)`, mnras.cls.ltxml `LoadClass('mn')`. The real svjour3.cls, emulateapj.cls (TeX
+Live's; :165-206 load REVTeX, latexsym, graphicx, amssymb, longtable, epsf), JHEP3.cls (0907.1636's), PoS.cls
+(1011.0095's) and mnras.cls (TeX Live's) load none of those files, so `\@ifclassloaded`/`\@ifpackageloaded` answer
+wrong:
+
+```latex
+\documentclass{svjour3}
+\makeatletter
+\@ifclassloaded{svjour}{\def\cl{svjour}}{\def\cl{no svjour}}
+\makeatother
+\begin{document}
+Body: \cl.
+\end{document}
+```
+
+Perl "Body: svjour."; pdflatex "Body: no svjour." (`\documentclass{emulateapj}` with `\@ifpackageloaded{emulateapj}`
+alike). Ours read the paper's copy of the loaded file after its binding (OXIDIZED_DESIGN_DIVERGENCES #731): an older
+svjour.cls shipped beside svjour3.cls ran its :93 "No valid journal specified in option list" (2101.09497,
+2110.05134, 2408.12532), 1305.6912's truncated emulateapj.sty ran out of input. Fixed in Rust (REGFIXH): the class
+binding calls the shared definitions as code in its own load (`svjour_cls::svjour_definitions`,
+`emulateapj_sty::emulateapj_definitions`, `jhep_cls::jhep_definitions`, `mn_cls::load_definitions`), its options its
+own; the files the real class loads are still loaded. The sibling stays a file the binding is built on, not marked
+loaded (`state::note_stand_in_file`): the paper's copy of the requested class declaring it is read (hep-ph0608235's
+svjour2.cls `\ProvidesClass{svjour}`, "Fig. 1" from svepj.clo; 0712.4224, 1301.5646, 1710.10527, hep-ph0310058,
+physics0101008), the sibling's own copy, which nothing requests, is not. Guards
+`perfect_kernel_batchregfixh::{svjour3_reads_no_older_svjour_copy, emulateapj_reads_no_shipped_sty_copy,
+svjour2_copy_declaring_svjour_is_read}`.
+## 1301. amsppt declares no `ltx:item` Tag, so under plain AmS-TeX each roster item opens inside the last
+
+Perl's amsppt.sty.ltxml:248-250 `\roster@item` opens `<ltx:item>`, which closes the item before it only through
+latex_constructs' `Tag('ltx:item', autoClose => 1, autoOpen => 1)` (latex_constructs.pool.ltxml:1284). `\input
+amsppt.sty` under `\input amstex` loads no latex_constructs, so the second item is opened inside the first item's
+`<ltx:p>`: malformed. Latent in Perl behind #1270 (its roster's `#body` drops every item); with the body kept the
+trigger is
+
+```tex
+\input amstex
+\input amsppt.sty
+\document
+\roster\item first item
+\item second item.\endroster
+\enddocument
+```
+
+pdftex: "(1) first item (2) second item."; Rust before the fix: `Error:malformed:ltx:item <ltx:item> isn't allowed in
+<ltx:p>` and a malformed `<enumerate>` (`\documentstyle{amsppt}` loads LaTeX.pool, whose Tag hid it). Rust's binding
+declares the Tag (amsppt_sty.rs). Witnesses math0006111, gr-qc9610061, math9809193 (59 papers); repro
+amstex/amsppt_input_roster_items_close; guard `perfect_kernel_batchregfixi::amsppt_input_roster_items_close`.

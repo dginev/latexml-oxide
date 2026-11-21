@@ -1,0 +1,11 @@
+% witness: (synthetic; the int/regfix5 review) a counted affiliation macro whose item the emitter writes from its argument
+% oracle:  pdflatex 0 errors; "Ann Able 1 Univ A … Count 2: Univ A, Univ B."
+% engines: rust INTREGFIX4 = "Count 0: , ."; REGFIXI2 = "Count 2: Univ A, Univ B."; REGFIXI3 (overlap test) =
+%          "Count 1: Univ B, ." — the affiliation item holds only the call's argument, yet counted the call as written
+% expect:  0 errors; the body paragraph "Count 2: Univ A, Univ B."
+% status:  RED (REGFIXI3) -> GREEN (int/regfix5)
+% preload: ar5iv.sty
+\documentclass{article}\newcounter{em}
+\newcommand\aff[1]{\stepcounter{em}\expandafter\gdef\csname aX\theem\endcsname{#1}\textsuperscript{\theem}#1}
+\title{T}\author{Ann Able\\ \aff{Univ A} \and Bob Baker\\ \aff{Univ B}}
+\begin{document}\maketitle Count \theem: \csname aX1\endcsname, \csname aX2\endcsname.\end{document}

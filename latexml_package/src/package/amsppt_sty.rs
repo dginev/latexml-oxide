@@ -404,6 +404,10 @@ LoadDefinitions!({
   // in one shot, bounded=>true keeps the entire frame self-contained.
   NewCounter!("roster", "document", idprefix => "I");
   NewCounter!("rosteritem", "roster", idprefix => "i");
+  // An item closes the one before it, as latex_constructs' Tag has it (latex_constructs.pool.ltxml:1284), which plain
+  // AmS-TeX does not load: each item opened inside its predecessor's paragraph, malformed (KNOWN_PERL_ERRORS #1301;
+  // math0006111, gr-qc9610061, math9809193).
+  Tag!("ltx:item", auto_close => true, auto_open => true);
   DefMacro!("\\therosteritem{}", "\\rom{(#1)}");
   // amsppt.sty:704-736: `\item[n]` sets the count, `\item"label"` prints `{\rm label}`, a bare `\item` steps the
   // count; the label is the item's tag (amsppt's `\itembox@`).

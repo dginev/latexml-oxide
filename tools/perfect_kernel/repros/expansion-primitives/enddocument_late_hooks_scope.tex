@@ -1,0 +1,16 @@
+% witness: (synthetic; REGFIXJ review) the late end-document hooks' local definitions, latex.ltx:15262-15277
+% oracle:  pdflatex 0 errors; log LATE[afteraux|X=alp|Y=aux|CP=real] then LATE[end|X=alp|Y=undef|CP=real]
+% engines: rust (REGFIXJ) = X=undef in both, CP=relax (a dropped box per slot; the tail's \let\clearpage\relax);
+%          rust (INTREGFIX4) = Y=aux in end (one box, no \begingroup); perl = no lthooks
+% expect:  0 errors; LATE[afteraux|X=alp|Y=aux|CP=real], LATE[end|X=alp|Y=undef|CP=real]
+% status:  RED (REGFIXJ) -> GREEN (REGFIXJ2)
+% mechanism: one dropped box around the three slots, the tail's \begingroup…\endgroup inside it
+\documentclass{article}
+\newcommand\probe[1]{\typeout{LATE[#1|X=\ifdefined\X\X\else undef\fi|Y=\ifdefined\Y\Y\else undef\fi
+  |CP=\ifx\clearpage\relax relax\else real\fi]}}
+\AddToHook{enddocument/afterlastpage}{\def\X{alp}}
+\AddToHook{enddocument/afteraux}{\def\Y{aux}\probe{afteraux}}
+\AddToHook{enddocument/end}{\probe{end}}
+\begin{document}
+Body.
+\end{document}

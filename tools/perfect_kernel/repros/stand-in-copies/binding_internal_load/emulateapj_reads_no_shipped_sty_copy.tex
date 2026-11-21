@@ -1,0 +1,14 @@
+% witness: 1305.6912 (ships a truncated emulateapj.sty beside its \documentclass{emulateapj})
+% oracle:  pdflatex 0 errors; "Text: no emulateapj.sty." (emulateapj.cls never loads emulateapj.sty)
+% engines: rust INTREGFIX4 = 1 error, "Gullet->readBalanced ran out of input" — the emulateapj binding's
+%          RequirePackage!("emulateapj") (Perl emulateapj.cls.ltxml:26) read the paper's emulateapj.sty raw
+% expect:  0 errors, 0 warnings; emulateapj.sty not read; "Text: no emulateapj.sty."
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXH)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\makeatletter
+\@ifpackageloaded{emulateapj}{\def\pk{emulateapj.sty}}{\def\pk{no emulateapj.sty}}
+\makeatother
+\begin{document}
+Text: \pk.
+\end{document}

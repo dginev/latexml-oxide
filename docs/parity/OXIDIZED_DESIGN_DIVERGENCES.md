@@ -19,7 +19,7 @@
 > port-bug fix (→ SYNC "Rust Error Fixes"), a gap or residual list (→ SYNC row R), a math-parse divergence (→ `docs/math/OXIDIZED_DESIGN_MATH.md`).
 > A WORKAROUND entry must name the principled mechanism that would replace it and open a SYNC row for it. Entry shape: rule · Perl ref · TeX
 > source:line · sub-rules as bullets · witnesses · guards · upstream status; no batch history (git keeps it); about 60 lines at most. OD
-> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1103** (2026-11-20; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
+> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1110** (2026-11-21; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -9884,6 +9884,10 @@ re-entrant, its output discarded; the groups it left open — `\begingroup`, env
 a reading context and box list of their own, so their `\aftergroup` tokens and group-end boxes are discarded with it,
 and an imbalance that cannot be closed (or a document group it closed) is an Error. One that raises an error is
 dropped with its diagnostics (Info), as the `\maketitle` deposit is (#265), and with its assignments (#534).
+A raw file's macro named as the field's store but taking parameters (`\@author[#1]#2#3`), which LaTeX's store never
+does (latex.ltx `\gdef\@author{#1}`), is the class's helper that its `\<name>` calls: kept where a replay meets it and
+bound in each later replay's group over the store the kernel's setter put there (`class_store_helper`; bullsrsl.cls
+:326-358 counts its authors that way, :958-961 errs at one: 2312.08217, 2607.02675; beilstein.cls:586-588).
 Afterwards the lock's own record (`\lx@dropped@<name>`, `<name>:redefined@nargs`, which a `\let`/`\def` of the name in
 the body would rewrite globally) is as before, and so are the kernel's `\@author`/`\@shortauthor` and every store the
 dropped body `\def`s/`\gdef`s/`\edef`s/`\xdef`s that does not now hold the call's argument (one that does stays set,
@@ -12241,8 +12245,11 @@ the address themselves: mrm's `\orcid` (mrm_cls.rs) and apa7's `\addORCIDlink` (
 `https://orcid.org/#2`, so pdflatex shows and links the doubled address). An argument holding a macro, or text that
 is no orcid.org address (2106.08963's swapped `{Andrew S. Nencka}`), is kept as written. orcidlink.sty's
 `\orcidlink{https://…}` stays doubled, as orcidlink.sty builds `https://orcid.org/#1` (the kernel `\lx@orcidlink` is
-its link, without the normaliser). Perl's `\lx@add@orcid` (Base_Utility.pool.ltxml:659-660) puts the text in the
-contact with no link, so it has no doubled address to fix. Repros sectioning-frontmatter/{orcid_given_as_url_is_the_id,
+its link, without the normaliser); its iD is linked without the spaces around it (orcidlink_sty.rs `\lx@orcidlink@id`:
+iucrjournals.cls's `\IUCrOrcidlink{0009-…-0174⏎}`, 2507.03170, 2511.22516), a beyond-Perl surpass: Perl's binding
+(orcidlink.sty.ltxml) passes `\lx@orcidlink{#2}` as written and pdflatex links `/URI(https://orcid.org/…\040)`.
+Perl's `\lx@add@orcid` (Base_Utility.pool.ltxml:659-660) puts the text in the contact with no link, so it has no
+doubled address to fix. Repros sectioning-frontmatter/{orcid_given_as_url_is_the_id,
 orcid_inline_link_takes_the_id}; guards `perfect_kernel_batch68h::{orcid_given_as_url_is_the_id,
 orcid_inline_link_takes_the_id}`.
 
@@ -12914,7 +12921,8 @@ a renamed copy that `\ProvidesClass` the same name is still read on the provides
 `cluster_cli::user_binding_precedence`). The rules:
 0. *Identity.* The copy is read only when it is the file the binding stands in for (content.rs
    `copy_is_the_stood_in_file`; 72a r3 rule): (a) its `\Provides(Expl)?(Class|Package|File)` names the binding that
-   answered (the file itself when the binding is of its name; #744), or a file the binding is built on — one its own code loads (`state::note_stand_in_file`,
+   answered (the file itself when the binding is of its name; #744), or a file the binding is built on — one its own code loads, or a binding whose definitions it makes as code
+   (never requested, so that file's own copy is not read: REGFIXH2, hep-ph0608235; `state::note_stand_in_file`,
    `stand_in_built_on`) —, a declared macro read as its definition in the copy says, as `\ProvidesClass` expands its
    argument (r4: cimart.cls:13-14 `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`, 2412.00032), whatever
    the version (1609.03892's fcs.cls of 2016, older than the `\fcssetup` the binding
@@ -13692,7 +13700,10 @@ rationalization (C, DEFER).
   base_utilities/util_text.rs): the role-less `\fnum@@bibitem` = `{\@biblabel{\the@bibitem}}` is digested at the
   `\bibitem` through the class's `\@biblabel`; refnum, typerefnum, autoref and the cleveref forms are deferred under `b@key`,
   resolved when a `\@@bibref` names the key (`sect11.rs:2475 cite_prints_keys`: the kernel's `\cite`, natbib's, biblatex's,
-  the `.bbl` styles'), at once when one already has. `\nocite` prints nothing; the streaming yield typesets pending forms at
+  the `.bbl` styles'), at once when one already has. The deferred label is the one the `.aux` holds, expanded at the
+  `\bibitem` under `\let\protect\noexpand` as `\@lbibitem`'s `\write` does: an alpha.bst `\etalchar` defined by a `.bbl`
+  read in a group (`{\small\bibliography{…}}`) prints at a later `\cite` (REGFIXK; 1101.1169, 2402.10127, 2203.12786;
+  guard `perfect_kernel_batchregfixk::etalchar_label_cited_after_its_bbl_group`). `\nocite` prints nothing; the streaming yield typesets pending forms at
   the spill, as Perl. Under mn2e/mnras without `usenatbib` (their bindings define the class's `\def\@biblabel#1{}`,
   mn2e.cls:1370, mnras.cls:1636) a `\bibitem[\protect\citeauthoryear{…}{…}]{key}` errs only when cited (pdflatex 0 uncited,
   1 per citation). An uncited or keyless entry has no refnum tag; the bibliography XSLT shows the role-less tag, else the
@@ -17973,10 +17984,17 @@ it whole as one `\lx@add@author` (Base_Utility.pool.ltxml:687-693), else `SplitT
 - *Emit.* The resolved tuples become Perl's calls; an API creator call holding its own `\and`s is cut at them
   (`emit.rs:4511 creator_call_cut`); a block calling a binding's list setter keeps the setter's call as written, its
   entries the list its marks request (`emit.rs:1304 list_setter_runs`, `:1331 list_setter_call`; formerly #982); a block
-  no rehearsal read is Perl's whole-block creator (`fallback.rs:23 whole_block_author`).
+  no rehearsal read is Perl's whole-block creator (`fallback.rs:23 whole_block_author`). A call of a split block that
+  prints a mark or a contact apart from the names, its definitions all global and read by nothing later in the block,
+  runs in a box no one uses at its place among the block's steps (`emit.rs printing_kept`, `\lx@title@mark@step`), as
+  TeX runs it there: iucrjournals.cls's `\IUCrAufn` stores the note `\maketitle` prints after the title (2609.21618,
+  2511.12314, 2509.01370). A call whose print the emitter writes is not run again: a note it writes and steps
+  (2509.04225's `\footremember` after a `\footrecall`), an item holding the call (`printing_apart`'s `written`).
 - *Declines* (written as Perl writes it, each with one Warning, once per block over the flushes): a name's words lost
   (`emit.rs:3558 written_whole`); a footnote counter moved (`:3577 counter_moved`); a declaration reading past its piece
-  (`:3903 declaration_reads_past`, `:3944 printing_read_later`); a shared run printing a note (`:3834 names_overlap`).
+  (`:3903 declaration_reads_past`, `:3944 printing_read_later`), or a global call printing apart that cannot be cut whole
+  (`printing_read_later`; a delimited argument, repro `author_delimited_argument_kept_call_declines_red`); a shared run
+  printing a note (`:3834 names_overlap`).
   The counter and definition declines write Perl's split (`fallback.rs:101 perl_author_calls`), and whole where that
   split states an owner the marks do not support or loses a name (`emit.rs:4096 split_owns_falsely`, `:4196
   split_loses_a_name`, `:4377 split_decline`; formerly #988). A re-referencing `\footnotemark[n]` keeps the reading, its
@@ -23343,3 +23361,76 @@ a_pass_after_the_load_extends_the_option_list, a_shipped_class_copy_keeps_the_bi
 an_unmodified_class_copy_keeps_the_clash, a_pass_after_the_load_leaves_a_key_value_repeat}` (repros
 `natbib_repeat_options/`); the clash itself stays `perfect_kernel_batch77w::another_copys_repeat_load_clashes` and the
 72a guards.
+
+### 1107. `\end{document}` carries latex.ltx's tail for the hooks that scan it (REGFIXJ)
+
+**Rule.** Perl's `\end{document}` is one constructor (latex_constructs.pool.ltxml:347-394); ours expands to
+`\lx@end@open@frontmatter\lx@enddocument@hooks\lx@enddocument@tail\@checkend{document}\clearpage`
+`\lx@enddocument@late{enddocument/afterlastpage}\begingroup\lx@enddocument@late{enddocument/afteraux}\endgroup`
+`\lx@enddocument@late{enddocument/end}\lx@enddocument@late@endbox\lx@finalize@document\@@end` (sect02.rs, with
+`\lx@enddocument@late@box` after `\clearpage`), the token shape of latex.ltx:15255-15278,
+so an end-document hook that grabs the rest of `\enddocument` by its delimiters finds them: ltxutil.sty:262-282's
+`\rvtx@enddocument@patch` reads `#2\@checkend#3` and `#2\clearpage#3\endgroup` and re-emits them (also in revtex4-2.cls,
+which our binding does not read); without them the scan ran to the end of the file, `Fatal:Mouth:EoF` (2004.09405,
+2401.03827, 2502.03242 — classes that load ltxgrid/ltxutil raw), as morewrites' `\@@end` scan did before; etoolbox's
+`\patchcmd{\enddocument}{\clearpage}{…}` now patches, as in pdflatex, where it took the failure branch. The late hooks
+run in their latex.ltx slots inside ONE dropped box (their typesetting goes nowhere in pdflatex either), opened after
+`\clearpage` and closed after `/end`, the tail's `\begingroup…\endgroup` inside it: local definitions scope as in TeX
+(`/afterlastpage`'s reach `/afteraux` and `/end`, `/afteraux`'s do not reach `/end`), and the hooks see the kernel's
+`\@checkend` and `\clearpage` again; a slot whose opener a scanning hook dropped gets a box of its own.
+`\lx@enddocument@tail` saves `\@checkend` and `\clearpage`, then `\let\@checkend\@gobble\let\clearpage\relax`: the
+finalizer reports an environment left open
+(Perl's Warning, not a second diagnostic beside it; pdflatex's `\@badend` is an Error) and the last page has nothing to
+ship, so no `ltx:pagination` is added; a hook's own `\clearpage` before it still paginates. Open: a hook that drops
+what it grabbed before `\@checkend` drops `\lx@enddocument@tail` with it, so the tail's `\@checkend` checks and its
+`\clearpage` paginates (repro `expansion-primitives/enddocument_hook_scan_drops_the_tail.tex`, synthetic). Raw ltxgrid's
+re-emitted `\clear@document` (`\do@output@cclv`, an output-routine message) leaves empty `ltx:p`s at the end, as its
+other messages do mid-document; and under raw ltxgrid the document's own `enddocument/afterlastpage` and `/afteraux`
+code never runs: ltxutil.sty:279 re-emits the tail as `\do@check@aux{#3\endgroup}`, which ltxgrid.sty:2199 sends
+through `\do@output@MVL`, an output-routine penalty we never fire (side effects only; pdflatex drops their typesetting).
+The macro is `protected` (REGFIXJ3): an `\edef` keeps `\end{document}` whole, as it keeps Perl's unexpandable
+constructor and kept our earlier expansion's inert primitives; latex.ltx's `\enddocument` is not protected, but no edef
+reaches it in pdflatex, whereas ours does when an `\edef` runs away to the end of the file (an undelimited argument
+that meets the edef's `}` takes it, Perl's `readArg`; TeX §395 inserts `\par` and keeps the `}`), and there the
+tail's `\@checkend` and `\clearpage` ran at edef time — 1012.2852, whose `\protected@edef` (TL 2025's kernel `\Ref`)
+runs away to its bibliography, whose `\bibitem` recovery `\let`s `\enddocument`: `Fatal:Timeout:PushbackLimit`.
+**Guards**: `perfect_kernel_batchregfixj::{enddocument_hook_scans_the_kernel_tail,
+enddocument_hook_scan_in_an_open_environment_reports_once, ltxgrid_enddocument_patch_keeps_the_tabular,
+patchcmd_finds_the_enddocument_tail, enddocument_late_hooks_scope_as_in_tex, enddocument_expanded_in_an_edef_stays_whole}`; the
+morewrites/modernposter shapes stay `perfect_kernel_batch56::atenddocument_closer_reaches_the_galley_box` and the sect02.rs
+witnesses (cntperchap_example, runcode_troubleshoot, modernposter/demo).
+
+### 1104. `\text` is a protected macro, so an `\edef` keeps `\text` (REGFIXK2)
+
+The `\text` that amstext_sty.rs, revtex4_support_sty.rs and amstex.rs define as `\lx@text{#1}` (the constructor raising
+the alignment count once `#1` is read, KNOWN_PERL_ERRORS #931) is `protected`: a plain `\edef`, `\protected@edef` or
+`\typeout` keeps `\text {z}`, as Perl's unexpandable constructor does; `\lx@text` never shows there. amstext.sty:28 is
+`\DeclareRobustCommand{\text}` (revtex4-2.cls:7547 `\REV@text` the same), so pdflatex's `\meaning\text` is
+`macro:->\protect \text  ` and a plain `\edef` expands amstext's internals; ours says `\protected macro:#1->\lx@text
+{#1}`. Not `robust => true`: a locked robust binding keeps its inner `\text␣` against class files only (#568), so a
+document's `\DeclareRobustCommand\text{V}` replaced the inner and `\text{c}` lost the binding
+(`perfect_kernel_batch64zb::robust_and_ltcmd_values_take_uses_without_an_argument`).
+**Guard**: `perfect_kernel_batchregfixk::text_survives_an_edef` (repro `macro-state/text_survives_an_edef.tex`).
+
+### 1109. ulem's declaration digests the rest of its group; a `\multicolumn` body ends with a marker (REGFIXL)
+
+**Rule.** `\useunder{ucmd}{decl}{}` (ulem.sty:286-293; Perl's binding has no `\useunder`) makes `decl` underline the
+rest of its group. With one of ulem's own lines as `ucmd` (`\uline` … `\dotuline`, as loaded) the declaration is the
+constructor `\lx@ulem@declared@line`, which opens a group of its own and digests the rest (`DigestedBody`) up to the
+first end: the group's `}`, which closes the line's group and is read again for the enclosing one (ulem.sty:107
+`\UL@swender`), a cell's end, or `\lx@alignment@multicolumn@end`. `\lx@alignment@multicolumn` puts that marker (a no-op
+primitive) after the body it splices, where latex.ltx:16603-16607 and :16664-16676 close the template's `{…}` around
+`\@sharp`, so the declaration ends before the column's after-code and the cell keeps its borders. The read of the rest
+of the group as a balanced argument (63u) ran out of input in a `\multicolumn` body (2312.12023
+`\multicolumn{1}{c|}{\ul 29.9970}`: 5 errors, 30 warnings, 11 of 12 underlines lost); it stays for any other `ucmd`.
+Under array.sty pdflatex fails the same `\multicolumn` (`\insert@column` has no brace group); the marker ends it there
+too. A line holds its nesting depth on its own frame, so a line nested in another (`{\ul a \so b}`) closes only its own
+group. Only the line's own group's `}` or the `\multicolumn` body marker closes it cleanly, TeX's only closers; any
+other end raises `Error:expected:}` with the text kept underlined — the end of the text (`Text \ul{x} y.` outside any
+group, pdflatex's fatal "File ended while scanning use of \UL@on"), a cell's end (`& \ul 8 \\`, the cell's text
+underlined, the next cell intact), and a line made directly in another line's text (`{a \ul b \so c}`, the nesting
+kept; `{a \ul b {\so c} e}` is clean), all pdflatex-fatal (REGFIXL2, REGFIXL3). RED: the cell's border lost at a cell's end, and an environment's end or `$` that the line's
+group runs through (`loader/ulem_declaration_{cell_end_loses_borders,runs_through_*,in_math_runs_past_the_formula}.tex`).
+**Guards**: `perfect_kernel_batchregfixl::{ulem_declaration_ends_with_the_cell, ulem_declaration_closes_with_its_group,
+ulem_declaration_unclosed_errs, ulem_declaration_nested_lines_in_a_cell, ulem_declaration_cell_end_errs}`
+(repros `loader/ulem_declaration_*.tex`); `perfect_kernel_batch63::ulem_declaration_form`.

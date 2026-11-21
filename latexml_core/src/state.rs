@@ -467,8 +467,8 @@ pub struct State {
   /// The names the stand-in binding loaded last assigned in its own code ([`end_stand_in_load`]): the public ones are
   /// the command set the paper's copy must define to be that binding's file (`binding::content` `read_stand_in_copy`).
   pub stand_in_last_load:      Vec<SymStr>,
-  /// The files each stand-in binding loading now loads from its own code (its `LoadClass!`/`RequirePackage!`),
-  /// innermost last ([`note_stand_in_file`]).
+  /// The files each stand-in binding loading now loads from its own code (its `LoadClass!`/`RequirePackage!`), or
+  /// whose binding's definitions it makes as code, innermost last ([`note_stand_in_file`]).
   pub stand_in_load_files:     Vec<Vec<String>>,
   /// The files the stand-in binding loaded last loaded from its own code ([`end_stand_in_load`]): the files it is
   /// built on, which the paper's copy may declare itself (`binding::content` `copy_is_the_stood_in_file`).
@@ -3978,7 +3978,9 @@ pub fn begin_stand_in_load() {
   state.stand_in_load_files.push(Vec::new());
 }
 
-/// A stand-in binding's own code loads `file` ([`State::stand_in_load_files`]).
+/// A stand-in binding's own code loads `file`, or makes `file`'s binding's definitions as code without loading it
+/// (svjour3_cls.rs over svjour's, jhep_cls.rs `jhep_definitions`): a file it is built on
+/// ([`State::stand_in_load_files`]), not marked loaded.
 pub fn note_stand_in_file(file: &str) {
   if let Some(files) = state_mut!().stand_in_load_files.last_mut() {
     files.push(file.to_string());

@@ -15,6 +15,13 @@ LoadDefinitions!({
     install_definition(def, Some(Scope::Global));
     AssignValue!("\\fig:locked" => 1i64, Some(Scope::Global));
   }
+  emulateapj_definitions()?;
+});
+
+/// The emulateapj commands (Perl emulateapj.sty.ltxml:30-62), which the emulateapj class binding defines too
+/// (emulateapj_cls.rs): emulateapj.cls defines them and loads no emulateapj.sty.
+#[rustfmt::skip]
+pub fn emulateapj_definitions() -> Result<()> {
   def_macro_noop("\\LongTables")?;
   Let!("\\BeginEnvironment", "\\begin");
   Let!("\\EndEnvironment",   "\\end");
@@ -49,4 +56,5 @@ LoadDefinitions!({
   // emulateapj.cls:1303-1313 `\LT@makecaption` prints a longtable's caption as the table's, "Table 4~~Galaxies"
   // (longtable_sty.rs `\lx@longtable@format`). Guard `perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`.
   RawTeX!(r"\def\lx@longtable@classformat{}");
-});
+  Ok(())
+}

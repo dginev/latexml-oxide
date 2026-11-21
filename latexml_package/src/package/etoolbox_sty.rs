@@ -2149,7 +2149,7 @@ LoadDefinitions!({
   }},
   protected => true, peeks_by_futurelet => true);
   // etoolbox.sty:1746 `\AddToHook{enddocument/end}` on a 2020+ format; the end-document code runs it for its side
-  // effects (sect02.rs `\lx@enddocument@hooks`). Perl's `@after@end@document` list is read by nothing.
+  // effects (sect02.rs `\lx@enddocument@late`). Perl's `@after@end@document` list is read by nothing.
   DefMacro!("\\AfterEndDocument[]{}", sub[(label, arg)] {
   if copy_provides_defers("\\AfterEndDocument") {
     Tokens!()

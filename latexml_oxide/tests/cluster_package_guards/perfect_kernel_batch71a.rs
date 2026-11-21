@@ -650,7 +650,7 @@ fn breqn_script_macro_argument() {
     undelimited_warnings(&log),
     [
       "Warning:malformed:_ breqn's _ takes \\text alone as its argument, where TeX errs: \\text reads an argument of \
-       its own; read as _{\\text…}, \\text with its argument",
+       its own; read as _{\\text{abc}}",
       "Warning:malformed:^ breqn's ^ takes \\mathrm alone as its argument, where TeX errs: \\mathrm reads an argument \
        of its own; read as ^{\\mathrm…}, \\mathrm with its argument",
       "Warning:malformed:^ breqn's ^ takes \\hat alone as its argument, where TeX errs: \\hat reads an argument of its \

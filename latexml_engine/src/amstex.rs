@@ -428,9 +428,12 @@ LoadDefinitions!({
 
   // amstex.tex:1217-1226: `\text` is `\text@@` = `\leavevmode\hbox{#1}` in text and a `\mathchoice` of `\hbox`es in
   // math, so its argument is digested inside box braces: the count an alignment's `&`/`\cr` is tested at is raised
-  // for it, as amstext_sty.rs `\text` (KNOWN_PERL_ERRORS #931).
-  DefConstructor!("\\text {}",
+  // for it, as amstext_sty.rs `\text` (KNOWN_PERL_ERRORS #931), after `#1` is read at the cell's count (2212.00883).
+  // Protected as amstext_sty.rs's, so an `\edef` keeps `\text` as Perl's constructor did (OXIDIZED_DESIGN #1104).
+  DefMacro!("\\text {}", "\\lx@text{#1}", protected => true);
+  DefConstructor!("\\lx@text {}",
     "<ltx:text _noautoclose='1'>#1</ltx:text>",
+    alias => "\\text",
     mode => "restricted_horizontal",
     enter_horizontal => true,
     before_digest => { increment_align_group_count(); },

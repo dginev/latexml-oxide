@@ -1,0 +1,16 @@
+% witness: (synthetic; the REGFIXH2 re-review's p4) a JHEP3.cls copy declaring \ProvidesClass{JHEP}, as old JHEP3 copies do
+% oracle:  pdflatex reads the copy: "Body JLOADED COPYREAD."
+% engines: rust INTREGFIX4 = read; REGFIXH round 1 = not read (`Error:undefined:\probeB`): JHEP was no longer a file the
+%          JHEP3 binding is built on once it made JHEP's definitions as code; REGFIXH2 = read ("declares itself jhep")
+% expect:  0 errors, 0 warnings; "Body JLOADED COPYREAD."
+% status:  RED (REGFIXH) -> GREEN (REGFIXH2)
+% preload: ar5iv.sty
+\documentclass{JHEP3}
+\makeatletter
+\@ifclassloaded{JHEP}{\def\probe{JLOADED}}{\def\probe{JNOT}}
+\makeatother
+\title{T}
+\abstract{A.}
+\begin{document}
+Body \probe\ \probeB.
+\end{document}

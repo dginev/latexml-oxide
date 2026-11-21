@@ -1,0 +1,15 @@
+% witness: none (synthetic; REGFIXL review item 2): a `\begingroup` … `\endgroup` group does not end the line (its
+%          `\endgroup` meets the line's boxing group) (ulem.sty:286-293)
+% oracle:  pdflatex fatal: "File ended while scanning use of \UL@on."
+% engines: rust INTREGFIX4 = 1 error, everything after the line lost; rust REGFIXL2 = 2 errors + 1 warning ("Attempt
+%          to close non-boxing group", the open groups, "Missing } to end the underline declaration"), "g h." underlined
+% expect:  "g" underlined, " h." and "Next para." not; an Error
+% status:  RED (REGFIXL2)
+\documentclass{article}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\begin{document}
+A \begingroup\ul g\endgroup\ h.
+
+Next para.
+\end{document}

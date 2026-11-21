@@ -1,0 +1,21 @@
+% witness: 2609.21618, 2511.12314, 2509.01370 (iucrjournals.cls; "These authors contributed equally.", "Present address:
+%          CERN" lost in REGFIXI); 2507.03170 (`\IUCrOrcidlink{…⏎}`)
+% oracle:  pdflatex with the stand-in iucrjournals.cls beside it: 0 errors; "T Ann Able @ †a and Bob Baker @ †a Univ …
+%          † These authors contributed equally. ‡ Present address: CERN. Body."
+% engines: rust REGFIXI = the note's text lost, a bare "†" printed after the title: the e-mail a contact, the author
+%          block is written as items, and `\IUCrAufn`, printed apart as Ann's mark, never ran, so `\aufnX1` was undefined
+%          at `\maketitle` (iucrjournals.cls:212-232, 293-296); Bob's ORCID link `https://orcid.org/0000-0002-1825-0097&#10;`
+% expect:  0 errors, 1 Warning (the loader's "Can't find binding for class iucrjournals (using iucr)"); Ann Able with
+%          email ann@x.org and mark †, Bob Baker with email bob@y.org, ORCID 0000-0002-1825-0097 and marks †,‡; "These authors
+%          contributed equally." and "Present address: CERN." once each, in that order, after the title
+% status:  RED (REGFIXI) -> GREEN (REGFIXI2, the second note REGFIXI3; guard perfect_kernel_batchregfixi::iucr_author_note_after_email)
+\documentclass{iucrjournals}
+\title{T}
+\author[a]{Ann Able\IUCrCemaillink{ann@x.org}\IUCrAufn{These authors contributed equally.}}
+\author[a]{Bob Baker\IUCrCemaillink{bob@y.org}\IUCrOrcidlink{0000-0002-1825-0097
+}\IUCrAufn[1]{}\IUCrAufn{Present address: CERN.}}
+\affil[a]{Univ}
+\begin{document}
+\maketitle
+Body.
+\end{document}

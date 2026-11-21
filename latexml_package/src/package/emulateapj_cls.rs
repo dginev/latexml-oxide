@@ -21,7 +21,12 @@ LoadDefinitions!({
     last_declared_class_option(&["twocolumn", "onecolumn"]) != Some("onecolumn"),
   );
   RequireResource!("ltx-apj.css");
-  RequirePackage!("emulateapj");
+  // emulateapj.cls loads no emulateapj.sty (the AASTeX 4/5 `\documentstyle[emulateapj]{aastex}` option, not in TeX Live),
+  // so its commands are defined here without that file's load (Perl emulateapj.cls.ltxml:26 `RequirePackage('emulateapj')`,
+  // KNOWN_PERL_ERRORS #1300): `\@ifpackageloaded{emulateapj}` is false, and the paper's own emulateapj.sty is never
+  // read (1305.6912's, truncated: "ran out of input"). epsf is the class's (emulateapj.cls:206).
+  RequirePackage!("epsf");
+  emulateapj_sty::emulateapj_definitions()?;
   // emulateapj's `\footnotemark[n]` and `\footnotetext[n]` print n itself (emulateapj.cls:558-571 `\@thefnmark{#1}`;
   // in the front matter `\altaffilmark{#1}`/`\altaffiltext{#1}`, :491-494), not the front-matter symbol of the REVTeX
   // class under it (revtex4.cls:5020-5022, the title block's marks the REVTeX binding declares): the title block's marks
@@ -38,8 +43,8 @@ LoadDefinitions!({
   }
   // …nor AASTeX 5.x's `{plate}` (emulateapj.cls defines none; aastex_cls.rs `undefine_plate`).
   aastex_cls::undefine_plate();
-  // …and unlocked: emulateapj_sty.rs locks the `\fig` it found defined, which a 6+ `aastex.cls` the paper ships leaves
-  // (aastex_cls.rs), and a lock on an undefined `\fig` would refuse the paper's own (64f review r3).
+  // …and unlocked: a lock on an undefined `\fig` would refuse the paper's own (64f review r3) — the lock emulateapj_sty.rs
+  // sets on a `\fig` it found defined, which a 6+ `aastex.cls` the paper ships leaves (aastex_cls.rs).
   assign_value("\\fig:locked", Stored::None, Some(Scope::Global));
   // emulateapj's deluxetable is a longtable opened at the environment's `\begin` (emulateapj.cls:1430-1460, `{table*}`
   // and `{longtable*}` :1464-1495), not AASTeX's table whose data `\startdata#1\enddata` holds (aastex701.cls:11384,
