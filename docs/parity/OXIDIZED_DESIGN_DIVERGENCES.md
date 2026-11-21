@@ -23405,3 +23405,18 @@ the alignment count once `#1` is read, KNOWN_PERL_ERRORS #931) is `protected`: a
 document's `\DeclareRobustCommand\text{V}` replaced the inner and `\text{c}` lost the binding
 (`perfect_kernel_batch64zb::robust_and_ltcmd_values_take_uses_without_an_argument`).
 **Guard**: `perfect_kernel_batchregfixk::text_survives_an_edef` (repro `macro-state/text_survives_an_edef.tex`).
+### 1109. ulem's declaration digests the rest of its group; a `\multicolumn` body ends with a marker (REGFIXL)
+
+**Rule.** `\useunder{ucmd}{decl}{}` (ulem.sty:286-293; Perl's binding has no `\useunder`) makes `decl` underline the
+rest of its group. With one of ulem's own lines as `ucmd` (`\uline` … `\dotuline`, as loaded) the declaration is the
+constructor `\lx@ulem@declared@line`, which opens a group of its own and digests the rest (`DigestedBody`) up to the
+first end: the group's `}`, which closes the line's group and is read again for the enclosing one (ulem.sty:107
+`\UL@swender`), a cell's end, or `\lx@alignment@multicolumn@end`. `\lx@alignment@multicolumn` puts that marker (a no-op
+primitive) after the body it splices, where latex.ltx:16603-16607 and :16664-16676 close the template's `{…}` around
+`\@sharp`, so the declaration ends before the column's after-code and the cell keeps its borders. The read of the rest
+of the group as a balanced argument (63u) ran out of input in a `\multicolumn` body (2312.12023
+`\multicolumn{1}{c|}{\ul 29.9970}`: 5 errors, 30 warnings, 11 of 12 underlines lost); it stays for any other `ucmd`.
+Under array.sty pdflatex fails the same `\multicolumn` (`\insert@column` has no brace group); the marker ends it there
+too.
+**Guards**: `perfect_kernel_batchregfixl::{ulem_declaration_ends_with_the_cell, ulem_declaration_closes_with_its_group}`
+(repros `loader/ulem_declaration_*.tex`); `perfect_kernel_batch63::ulem_declaration_form`.

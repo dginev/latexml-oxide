@@ -865,6 +865,7 @@ LoadDefinitions!({
       tks.extend([T_CS!("\\hbox"), T_BEGIN!()]);
     }
     tks.extend(body.unlist_ref().iter().copied());
+    tks.push(T_CS!("\\lx@alignment@multicolumn@end"));
     if text_cell {
       tks.push(T_END!());
     }
@@ -876,6 +877,11 @@ LoadDefinitions!({
     tks.extend([T_CS!("\\let"), T_CS!("\\\\"), T_CS!("\\lx@multicolumn@cr")]);
     Ok(Tokens::new(tks))
   });
+
+  // Where latex.ltx's template closes the brace group around a `\multicolumn` body (latex.ltx:16603-16607 `\@sharp`,
+  // :16664-16676 `\@tabclassz`'s `{…}`), which the body is not wrapped in here: nothing in itself, it is where a
+  // declaration that lasts to the group's end ends (ulem's `\ul`; 2312.12023).
+  DefPrimitive!("\\lx@alignment@multicolumn@end", {});
 
   DefConditional!("\\if@in@lx@alignment", { lookup_alignment().is_some() });
 

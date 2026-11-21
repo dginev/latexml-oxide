@@ -715,6 +715,8 @@ mod perfect_kernel_batchregfixk;
 /// REGFIXI: thin bindings' v0.8.0 regressions — amsppt's roster items under plain AmS-TeX, a prefix-matched shipped
 /// IUCr class, backref's `\BR@backref`, array's `\@arrayleft`.
 mod perfect_kernel_batchregfixi;
+/// REGFIXL: ulem's declaration (`\ul` from `\useunder`) ends with its group, a cell's or a `\multicolumn` body's end.
+mod perfect_kernel_batchregfixl;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

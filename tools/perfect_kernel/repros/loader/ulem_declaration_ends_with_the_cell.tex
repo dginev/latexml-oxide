@@ -1,0 +1,19 @@
+% witness: 2312.12023 (llncs, tablesgenerator output): `\useunder{\uline}{\ul}{}` and
+%          `\multicolumn{1}{c|}{\ul 29.9970}`: latex.ltx:16603-16607, :16664-16676 sets the `\multicolumn` body in
+%          the template's `{…}` (`\@tabclassz`), which ends the declaration (ulem.sty:286-293, :107)
+% oracle:  pdflatex 0 errors: "a 6.7 / 2.9 b / x 3.1 y z  After."
+% engines: rust INTREGFIX4 = 3 errors (`expected:}` readBalanced ran out of input, Missing } inserted, \omit);
+%          Perl 0.8.8 = 2 errors (no `\useunder`); rust 63l = 0 errors
+% expect:  0 errors, 0 warnings; each cell's declared text underlined, up to the cell's end
+% status:  RED (INTREGFIX4) -> GREEN (REGFIXL)
+\documentclass{article}
+\usepackage[normalem]{ulem}
+\useunder{\uline}{\ul}{}
+\begin{document}
+\begin{tabular}{|lc|}
+a & {\ul 6.7} \\
+\multicolumn{1}{|l|}{\ul 2.9} & b \\
+\multicolumn{1}{|l|}{x \ul 3.1 y} & z \\
+\end{tabular}
+After.
+\end{document}

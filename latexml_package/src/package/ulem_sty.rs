@@ -29,6 +29,11 @@ LoadDefinitions!({
   DefConstructor!("\\dotuline{}",
     "?#isMath(<ltx:XMWrap class='ltx_ulem_dotuline'>#1</ltx:XMWrap>)(<ltx:text class='ltx_ulem_dotuline'>#1</ltx:text>)",
     enter_horizontal => true);
+  // ulem's own lines, as loaded: a declaration made from one of them digests the rest of its group (`\useunder` below).
+  RawTeX!(
+    r"\let\lx@ulem@uline\uline \let\lx@ulem@uuline\uuline \let\lx@ulem@uwave\uwave \let\lx@ulem@sout\sout
+    \let\lx@ulem@xout\xout \let\lx@ulem@dashuline\dashuline \let\lx@ulem@dotuline\dotuline"
+  );
 
   // ulem.sty:310-317 `\ULforem` (`\useunder{\uline}{\em}{\emph}`: `\em`/`\emph` underline) and
   // `\normalem` (back to italics, from the copies ulem takes at load). As Perl's binding, `\em` keeps
@@ -87,7 +92,7 @@ LoadDefinitions!({
   // an unmatched brace, the group's own `}` closing it, and `\UL@swender`, :107, puts the group's `}` back after). An
   // empty slot (papers write `\useunder{\uline}{\ul}{}`) defines nothing. Witnesses 2406.08270 (`\useunder` with
   // `\uline{…}`), 2405.20343 and 2406.03441 (`{\ul 18.8262}`, `{\ul …}`: one character underlined while `\ul` was let
-  // to `\uline`). A `\ul{x}` outside any group, a fatal error in pdflatex, reads to the end of the input.
+  // to `\uline`). A `\ul{x}` outside any group, a fatal error in pdflatex, underlines up to the end of its paragraph.
   DefMacro!("\\useunder{}{}{}", sub[(ucmd, decl, argcmd)] {
     let mut out: Vec<Token> = Vec::new();
     let ucmd_v = ucmd.unlist();
@@ -104,13 +109,57 @@ LoadDefinitions!({
     }
     Ok(Tokens::new(out))
   });
-  // `\lx@ulem@declaration\uline` opens `\uline`'s argument, which the declaration's group closes; the argument read,
-  // the group's own `}` is put back after it.
+  // `\lx@ulem@declaration\uline` underlines the rest of the current group. One of ulem's own lines digests it up to the
+  // group's end: its `}` (put back after the line for the group), a cell's end, or a `\multicolumn` body's end, where
+  // latex.ltx:16664-16676 closes the template's `{…}` around the body (2312.12023 `\multicolumn{1}{c|}{\ul 29.9970}`:
+  // a balanced read ran out of input there). Any other `ucmd` takes the rest of the group read as its argument.
   DefMacro!("\\lx@ulem@declaration{}", sub[(ucmd)] {
+    let ucmd_v = ucmd.unlist();
+    if let [target] = ucmd_v.as_slice() {
+      for line in ["uline", "uuline", "uwave", "sout", "xout", "dashuline", "dotuline"] {
+        if x_equals(target, &T_CS!(&format!("\\lx@ulem@{line}"))) {
+          return Ok(Tokens::new(vec![
+            T_CS!("\\lx@ulem@declared@line"), *target, T_BEGIN!(), T_OTHER!(line), T_END!()]));
+        }
+      }
+    }
     let mut out = vec![T_CS!("\\lx@ulem@declared")];
-    out.extend(ucmd.unlist());
+    out.extend(ucmd_v);
     out.push(T_BEGIN!());
     Ok(Tokens::new(out))
+  });
+  DefConstructor!("\\lx@ulem@declared@line Undigested Semiverbatim DigestedBody",
+  "?#isMath(<ltx:XMWrap class='ltx_ulem_#2'>#3</ltx:XMWrap>)(<ltx:text class='ltx_ulem_#2'>#3</ltx:text>)",
+  enter_horizontal => true, reversion => "#1{#3}", sizer => "#3",
+  before_digest => {
+    bgroup();
+    assign_value("lx@ulem@body", Stored::Bool(true), Some(Scope::Local));
+    Let!("\\lx@alignment@multicolumn@end", "\\lx@ulem@declared@end");
+  },
+  after_digest => sub[whatsit] {
+    if is_value_bound("lx@ulem@body", Some(0)) {
+      egroup()?;
+    } else {
+      // the group's `}` closed the line's: it leaves the body and is read again for the group (ulem.sty:107)
+      if let Some(body) = whatsit.get_arg_mut(3)
+        && let DigestedData::List(list) = body.data()
+      {
+        let mut list = list.borrow_mut();
+        let closer = list.boxes.last().and_then(|last| last.revert().ok());
+        if closer.is_some_and(|tokens| matches!(tokens.unlist_ref().as_slice(), [t] if is_right_brace(t))) {
+          list.boxes.pop();
+          unread_one(T_END!());
+        }
+      }
+    }
+  });
+  // A `\multicolumn` body's end closes the line's group as the template's `}` does, before the column's after-code,
+  // and is read again for a declaration still open outside it.
+  DefPrimitive!("\\lx@ulem@declared@end", {
+    if is_value_bound("lx@ulem@body", Some(0)) {
+      egroup()?;
+      unread_one(T_CS!("\\lx@alignment@multicolumn@end"));
+    }
   });
   DefMacro!("\\lx@ulem@declared{}{}", sub[(ucmd, content)] {
     let mut out = ucmd.unlist();
