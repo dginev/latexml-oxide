@@ -26,9 +26,16 @@ LoadDefinitions!({
   // The link starts a paragraph, as the real `\orcidlinkX` does: it is `\href{…}{…}`
   // (orcidlink.sty:69), whose `\hyper@linkurl` begins with `\leavevmode` (hpdftex.def:411).
   // K13 stage-2 finding; Perl's binding shares the gap (DIVERGENCES #340). The iD is linked without the space a line end
-  // after it makes (`\lx@orcid@trimmed`: `\IUCrOrcidlink{0009-…-0174⏎}`, 2507.03170), else as written (OD #616).
+  // after it makes (`\lx@orcidlink@id`: `\IUCrOrcidlink{0009-…-0174⏎}`, 2507.03170), else as written (OD #616).
+  DefMacro!("\\lx@orcidlink@id{}", sub[(id)] {
+    let id = id.unlist();
+    let space = |t: &Token| t.get_catcode() == Catcode::SPACE;
+    let from = id.iter().position(|t| !space(t)).unwrap_or(id.len());
+    let to = id.iter().rposition(|t| !space(t)).map_or(from, |k| k + 1);
+    Ok(Tokens::new(id[from..to].to_vec()))
+  });
   DefMacro!("\\orcidlinkX{}{}{}",
-    "\\leavevmode\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@trimmed{#2}}{\\if\\relax\\detokenize{#1}\\relax\\else#1\\,\\fi\\orcidlogo\\if\\relax\\detokenize{#3}\\relax\\else\\,#3\\fi}",
+    "\\leavevmode\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcidlink@id{#2}}{\\if\\relax\\detokenize{#1}\\relax\\else#1\\,\\fi\\orcidlogo\\if\\relax\\detokenize{#3}\\relax\\else\\,#3\\fi}",
     robust => true);
 
   // Default, Full, Compact and Inline versions

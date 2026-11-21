@@ -893,15 +893,6 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@id{#2}}{\\lx@orcidlogo}}"
   );
   DefMacro!("\\lx@orcid@id Semiverbatim", sub[(id)] { Ok(orcid_id(id)) });
-  // An iD without the spaces around it, as written otherwise (orcidlink.sty's `\orcidlinkX`, which builds its address
-  // from it: `\IUCrOrcidlink{0009-…-0174⏎}`, 2507.03170, linked `https://orcid.org/0009-…-0174&#10;`).
-  DefMacro!("\\lx@orcid@trimmed{}", sub[(id)] {
-    let id = id.unlist();
-    let space = |t: &Token| t.get_catcode() == Catcode::SPACE;
-    let from = id.iter().position(|t| !space(t)).unwrap_or(id.len());
-    let to = id.iter().rposition(|t| !space(t)).map_or(from, |k| k + 1);
-    Ok(Tokens::new(id[from..to].to_vec()))
-  });
   // (the iD's link of [`orcid_icon_link`], the icon as printed)
   DefMacro!(
     "\\lx@orcid@href[]{}{}",
