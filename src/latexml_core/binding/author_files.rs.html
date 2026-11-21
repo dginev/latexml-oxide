@@ -354,9 +354,13 @@
 <a href=#354 id=354 data-nosnippet>354</a>/// case, as the binding registry matches a request (`jhep.cls` → `JHEP.cls`). It stands in on every tree: a paper's copy
 <a href=#355 id=355 data-nosnippet>355</a>/// is read after it (TeX reads the document's directory first), and where the paper ships none, a later tree's own file
 <a href=#356 id=356 data-nosnippet>356</a>/// (TL 2026's `rasti.cls`) answers `\IfFileExists` by the disk search made before the binding is asked.
-<a href=#357 id=357 data-nosnippet>357</a></span><span class="kw">pub fn </span>stands_in_for_an_author_file(file: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#358 id=358 data-nosnippet>358</a>  AUTHOR_FILE_STAND_INS
-<a href=#359 id=359 data-nosnippet>359</a>    .iter()
-<a href=#360 id=360 data-nosnippet>360</a>    .any(|name| name.eq_ignore_ascii_case(file))
-<a href=#361 id=361 data-nosnippet>361</a>}
+<a href=#357 id=357 data-nosnippet>357</a>/// A stand-in is the compiled binding: a user's binding found ahead of it in the search paths (`lipics-v2021.cls.rhai`
+<a href=#358 id=358 data-nosnippet>358</a>/// beside the document or under `--path`) is the file itself, as Perl's first `.ltxml` found is (Package.pm:2127-2129),
+<a href=#359 id=359 data-nosnippet>359</a>/// and no copy is read after it (#947).
+<a href=#360 id=360 data-nosnippet>360</a></span><span class="kw">pub fn </span>stands_in_for_an_author_file(file: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#361 id=361 data-nosnippet>361</a>  AUTHOR_FILE_STAND_INS
+<a href=#362 id=362 data-nosnippet>362</a>    .iter()
+<a href=#363 id=363 data-nosnippet>363</a>    .any(|name| name.eq_ignore_ascii_case(file))
+<a href=#364 id=364 data-nosnippet>364</a>    &amp;&amp; <span class="kw">crate</span>::state::local_binding_file(file).is_none()
+<a href=#365 id=365 data-nosnippet>365</a>}
 </code></pre></div></section></main></body></html>

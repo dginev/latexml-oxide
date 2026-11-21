@@ -16,7 +16,10 @@ for a runtime <em>file</em> binding (e.g. a <code>.rhai</code> script), <code>No
 compiled-in binding. Threaded through the resolving dispatcher’s result so
 the “(Loading …)” note can name the real path (#560) — rather than a State
 side-channel.</dd><dt><a class="type" href="type.LabelMappingHook.html" title="type latexml_engine::prelude::common::LabelMappingHook">Label<wbr>Mapping<wbr>Hook</a></dt><dd>Perl: LABEL_MAPPING_HOOK =&gt; sub { ($label, $ctr, $norefnum) =&gt; ($refnum, $id) }
-Returns (optional refnum string, optional id string)</dd><dt><a class="type" href="type.ResolvingBindingDispatcher.html" title="type latexml_engine::prelude::common::ResolvingBindingDispatcher">Resolving<wbr>Binding<wbr>Dispatcher</a></dt><dd>The <strong>resolving</strong> binding dispatcher installed as the single, ordered
+Returns (optional refnum string, optional id string)</dd><dt><a class="type" href="type.LocalBindingFinder.html" title="type latexml_engine::prelude::common::LocalBindingFinder">Local<wbr>Binding<wbr>Finder</a></dt><dd>Finds the binding file a user supplied for a request in the local search paths (a runtime <code>.rhai</code> beside the
+document or in a <code>--path</code> directory), which the resolving chain loads ahead of every compiled binding, as Perl’s
+<code>FindFile_aux</code> takes the first <code>&lt;file&gt;.ltxml</code> of SEARCHPATHS before the installed ones (Package.pm:2127-2129).
+Installed with the chain (<code>converter::install_binding_dispatch</code>).</dd><dt><a class="type" href="type.ResolvingBindingDispatcher.html" title="type latexml_engine::prelude::common::ResolvingBindingDispatcher">Resolving<wbr>Binding<wbr>Dispatcher</a></dt><dd>The <strong>resolving</strong> binding dispatcher installed as the single, ordered
 resolution chain (see <code>converter::install_binding_dispatch</code>). Unlike a bare
 <a href="type.BindingDispatcher.html" title="type latexml_engine::prelude::common::BindingDispatcher"><code>BindingDispatcher</code></a>, a successful load reports the <a href="type.BindingSource.html" title="type latexml_engine::prelude::common::BindingSource"><code>BindingSource</code></a> it
 loaded from, so a file binding announces its real path and a compiled one
