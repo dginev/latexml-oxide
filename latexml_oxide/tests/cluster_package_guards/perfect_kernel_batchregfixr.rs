@@ -221,3 +221,28 @@ fn bmcart_ids_are_characters() {
   .collect();
   assert_eq!(creators, expected, "{xml}");
 }
+
+/// thm-restate.sty:153-163 stores `{restatable}`'s `#2` and expands it when the theorem is restated: with
+/// `\renewcommand{\retheorem}{rtheorem}` before `\mainthm*` the restatement is a "Restated Theorem" (1411.0871,
+/// 1410.0855; the PDF's "Restated Theorem 2.1"). Red (int/regfix6 before the fix): the name expanded when stored,
+/// "Theorem 1" both times. Distinct: the stored environment's expansion time.
+#[test]
+fn restatable_macro_environment_expands_when_restated() {
+  let (log, xml) = convert_with(
+    repro!("package-bindings/thm_restate_macro_env_expanded_when_restated.tex"),
+    Some(PRELOAD),
+  );
+  assert_eq!(counts(&log), (0, 0), "{log}");
+  assert_eq!(
+    xml.matches("class=\"ltx_theorem_theorem\"").count(),
+    1,
+    "{xml}"
+  );
+  assert_eq!(
+    xml.matches("class=\"ltx_theorem_rtheorem\"").count(),
+    1,
+    "{xml}"
+  );
+  assert!(xml.contains("<tag>Restated Theorem 1</tag>"), "{xml}");
+  assert_eq!(xml.matches("Main body.").count(), 2, "{xml}");
+}

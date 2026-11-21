@@ -99,13 +99,16 @@ fn restate_ref(name: &str) -> Vec<Token> {
 
 /// `\lx@thm@restate@store{<end>}{<env>}{<name>}{<opt>}` and `…@store@star` (below): `star` for `{restatable*}`.
 fn store(star: bool, end: Tokens, env: Tokens, name: Tokens, opt: Tokens) -> Result<Tokens> {
-  // (the environment's name as `\begin` reads it, expanded: `{restatable}{\retheorem}{x}` with
-  // `\newcommand\retheorem{theorem}`; 1410.0855 1411.0871 1411.1619 1504.05476 1511.01379)
+  // (the environment kept as `{restatable}` received it, for the restatement to expand when it runs — thm-restate.sty
+  // :153-163 stores `#2` in `\thmt@stored@<name>`: `{restatable}{\retheorem}{x}` with `\newcommand\retheorem{theorem}`,
+  // renewed to `rtheorem` before `\x*`, "Restated Theorem" (1410.0855, 1411.0871); its expansion now names the counter
+  // the number is frozen by; 1411.1619 1504.05476 1511.01379)
+  let raw_env = env.clone();
   let (end, env, name) = (end.to_string(), Expand!(env).to_string(), name.to_string());
   let body = collect_body(&end)?;
   assign_value(
     &stored("env", &name),
-    Stored::Tokens(Tokens::new(Explode!(&env))),
+    Stored::Tokens(raw_env),
     Some(Scope::Global),
   );
   assign_value(
@@ -185,7 +188,8 @@ LoadDefinitions!({
   DefMacro!("\\lx@thm@restate OptionalMatch:* {}", sub[(star, name)] {
     let name = name.to_string();
     let env = stored_tokens("env", &name);
-    let env_name: String = env.iter().map(|t| t.to_string()).collect();
+    // (expanded now, as thm-restate's `\csname #2\endcsname` is when the theorem is restated)
+    let env_name = Expand!(Tokens::new(env.clone())).to_string();
     let opt = stored_tokens("opt", &name);
     let begin = |tokens: &mut Vec<Token>| {
       tokens.extend([T_CS!("\\begin"), T_BEGIN!()]);
