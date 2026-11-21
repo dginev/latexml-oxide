@@ -173,3 +173,132 @@ fn removed_subtrees_leave_no_c_heap_residue() {
      removed nodes are leaking again"
   );
 }
+
+/// Split one generated book of `sections` sections (four paragraphs each) and
+/// drop every page.
+#[cfg(target_os = "linux")]
+fn split_and_drop_book(sections: usize) -> usize {
+  use latexml_post::{
+    document::{PostDocument, PostDocumentOptions},
+    processor::Processor,
+    split::{Split, SplitNaming},
+  };
+  let mut xml = String::from(
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<document xmlns=\"http://dlmf.nist.gov/LaTeXML\" xml:id=\"Doc\">",
+  );
+  for s in 1..=sections {
+    xml.push_str(&format!(
+      "<section xml:id=\"S{s}\"><title>Section {s}</title>"
+    ));
+    for p in 1..=4 {
+      xml.push_str(&format!(
+        "<para xml:id=\"S{s}.p{p}\"><p>Paragraph {p} of section {s}: the quick brown fox jumps over the lazy dog.</p></para>"
+      ));
+    }
+    xml.push_str("</section>");
+  }
+  xml.push_str("</document>");
+  let options = PostDocumentOptions {
+    destination: Some("/nonexistent/index.html".to_string()),
+    ..PostDocumentOptions::default()
+  };
+  let doc = PostDocument::new_from_string(&xml, options).expect("parse the generated book");
+  let mut splitter = Split::new("//ltx:section", SplitNaming::Id, false);
+  let nodes = splitter.to_process(&doc);
+  let docs = splitter
+    .process(doc, nodes)
+    .expect("split the generated book");
+  docs.len()
+}
+
+/// Post's `Split` frees each page's original subtree once it is copied into
+/// the page's own document. An unlinked doc-owned node is freed by nobody (the
+/// same rust-libxml rule as above), so every page leaked its source subtree and
+/// the whole original DOM stayed live through post: 818 MB of C heap at page
+/// 1024 of a 1,600-subsection book. Splitting the same book repeatedly must
+/// leave the C heap where it was. It lives here to share `SERIAL` and
+/// `c_heap_in_use`.
+#[cfg(target_os = "linux")]
+#[test]
+fn split_pages_leave_no_c_heap_residue() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  // Warm-up: the XPath cache, the dictionary and libxml2's arenas settle.
+  assert_eq!(
+    split_and_drop_book(400),
+    401,
+    "every section must become a page"
+  );
+  let before = c_heap_in_use();
+  for _ in 0..2 {
+    assert_eq!(split_and_drop_book(400), 401);
+  }
+  let growth = c_heap_in_use().saturating_sub(before);
+  eprintln!("C heap growth over two splits: {growth} B");
+  // Leaking, the 400 sections' source subtrees cost about a megabyte per split;
+  // freed, the residue is allocator noise.
+  assert!(
+    growth < 256 * 1024,
+    "two more splits grew the C heap {growth} bytes: split pages are leaking their source subtrees"
+  );
+}
+
+/// Split restores every `ltx:navigation` (unlinked before the split) into each
+/// page, so a page holding one keeps its source subtree: the nav's namespaces
+/// may be declared on the page (`xmlns:foo` on S1, a redeclared default on S2),
+/// and freeing the page left the nav pointing at freed `xmlNs`. Navigation comes
+/// only from `--input xml`. The child's glibc perturbs freed memory, so the
+/// read faults on a plain build too (the CI `asan` job runs this test).
+#[cfg(target_os = "linux")]
+#[test]
+fn split_keeps_pages_whose_namespaces_a_navigation_uses() {
+  let work = tempfile::tempdir().expect("tempdir");
+  std::fs::write(
+    work.path().join("navpage.xml"),
+    r#"<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="Doc"><title>T</title>
+<section xml:id="S1" xmlns:foo="urn:example:foo" inlist="toc"><title>A</title><navigation><inline-block foo:mark="m1"><text>NAVONE</text></inline-block></navigation><para xml:id="S1.p1"><p>alpha</p></para></section>
+<section xml:id="S2" xmlns="http://dlmf.nist.gov/LaTeXML" inlist="toc"><title>B</title><navigation><inline-block><text>NAVTWO</text></inline-block></navigation><para xml:id="S2.p1"><p>beta</p></para></section></document>
+"#,
+  )
+  .unwrap();
+  let out = std::process::Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+    .args([
+      "navpage.xml",
+      "--splitat=section",
+      "--format=xml",
+      "--dest=index.xml",
+    ])
+    .env(
+      "GLIBC_TUNABLES",
+      "glibc.malloc.tcache_count=0:glibc.malloc.perturb=165",
+    )
+    .current_dir(work.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  assert!(
+    out.status.success(),
+    "splitting a document whose pages hold navigation failed ({:?}):\n{}",
+    out.status,
+    String::from_utf8_lossy(&out.stderr)
+  );
+  for page in ["index.xml", "S1.xml", "S2.xml"] {
+    let xml = std::fs::read_to_string(work.path().join(page)).expect("read a split page");
+    let navs: Vec<&str> = xml
+      .split("<navigation>")
+      .skip(1)
+      .filter_map(|rest| rest.split_once("</navigation>").map(|(nav, _)| nav))
+      .collect();
+    assert_eq!(
+      navs.len(),
+      2,
+      "{page} must carry both restored navigations:\n{xml}"
+    );
+    assert!(
+      // The first gains CrossRef's links; `foo:mark`'s prefix is not pinned.
+      navs[0].starts_with("<inline-block ")
+        && navs[0].contains("><text>NAVONE</text></inline-block><title>")
+        && navs[1] == "<inline-block><text>NAVTWO</text></inline-block>",
+      "{page} must carry both navigations' content, in order:\n{xml}"
+    );
+  }
+}
