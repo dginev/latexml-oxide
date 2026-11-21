@@ -1008,7 +1008,17 @@ LoadDefinitions!({
           if value.len() >= 2 && value.starts_with('{') && value.ends_with('}') {
             value = value[1..value.len() - 1].trim();
           }
-          assign_mapping("Hyperref_options", key, Some(value.to_string()));
+          // an information string is `\pdfstringdef`'d as `\hypersetup` records it (hyperref.sty:3543-3600):
+          // `pdftitle={On the \$q\$}`, whose option text holds `\protect\$`, is "On the $q$"
+          let recorded = if matches!(
+            key,
+            "pdftitle" | "pdfauthor" | "pdfsubject" | "pdfkeywords" | "pdfcopyright"
+          ) {
+            pdf_string(mouth::tokenize(TeXString::assembled(value.to_string())))?
+          } else {
+            value.to_string()
+          };
+          assign_mapping("Hyperref_options", key, Some(recorded));
           if key == "baseurl" {
             AssignValue!("BASE_URL" => value.to_string());
           }
@@ -2340,10 +2350,15 @@ pub fn define_hypersetup() -> Result<()> {
   // the kernel's names for them, `\S`, `\dag`, `\copyright`, `\pounds`, and hyperref.sty:416-418's `\P`, `\ldots`,
   // `\dots`), and (as for `pdfusetitle`'s title, hyperref.sty
   // `\Hy@UseMaketitleString`) `\thanks` and the note commands gobbled, so that no note is made twice; then the
-  // document's own `\pdfstringdefPreHook` (`\pdfstringdefDisableCommands`); then, as :555-565 `\HyPsd@DefCommand`, a
-  // `\def`/`\gdef`/`\edef`/`\xdef` in the text gobbles its name, parameter text and body (2001.10451's jss.cls
-  // `\Plaintitle{#1}` = `\def\@Plaintitle{#1}`, its `pdftitle={\@Plaintitle}`, re-expanded without end). [`pdf_string`]
-  // keeps the characters of the result.
+  // document's own `\pdfstringdefPreHook` (`\pdfstringdefDisableCommands`); then, as :545-549, `\@ifnextchar` (and
+  // latex.ltx:1775's `\@ifstar` on it) and `\@protected@testopt` gobble their command with its arguments (`\opt[q]`
+  // is "[q]"; `Expandable::testopt_call`), and so does the extensible arrows' `\lx@long@arrow`, whose reversion names
+  // the robust arrow again (`\xrightarrow[u]{b}` is "[u]b", as amsmath's `\@protected@testopt`; KPE #1302); then, as
+  // :555-565 `\HyPsd@DefCommand`, a `\def`/`\gdef`/`\edef`/`\xdef` in the text gobbles its name, parameter text and
+  // body (2001.10451's jss.cls `\Plaintitle{#1}` = `\def\@Plaintitle{#1}`, its `pdftitle={\@Plaintitle}`, re-expanded
+  // without end), and `\HyPsd@LetCommand` a `\let`/`\futurelet` its name (`\let\zzundef\relax` no undefined
+  // `\zzundef`). [`pdf_string`] keeps the characters of the result; the `\pdfstringdefWarn` tokens hyperref reports as
+  // "Token not allowed" are dropped with the other control sequences, unreported.
   RawTeX!(
     r#"\long\def\lx@pdfstringdef#1#2{\begingroup
 \escapechar`\\\edef\0{\string\0}\edef\1{\string\1}\edef\2{\string\2}\edef\3{\string\3}\edef\8{\string\8}\edef\9{\string\9}%
@@ -2373,9 +2388,25 @@ pub fn define_hypersetup() -> Result<()> {
 \def\guilsinglleft{\string‹}\def\guilsinglright{\string›}\def\textdegree{\string°}\def\textbullet{\string•}\def\textexclamdown{\string¡}%
 \def\textquestiondown{\string¿}%
 \csname pdfstringdefPreHook\endcsname
-\let\lx@hyp@xdef\xdef\let\def\lx@hyp@defcommand\let\gdef\lx@hyp@defcommand\let\edef\lx@hyp@defcommand
-\let\xdef\lx@hyp@defcommand\lx@hyp@xdef#1{#2}\endgroup}
-\long\def\lx@hyp@defcommand#1#2#{\@gobble}"#
+\def\@ifnextchar{\HyPsd@ifnextchar\@ifnextchar}\def\kernel@ifnextchar{\HyPsd@ifnextchar\kernel@ifnextchar}%
+\def\new@ifnextchar{\HyPsd@ifnextchar\new@ifnextchar}\def\@ifstar##1{\@ifnextchar*{\@firstoftwo{##1}}}%
+\let\@protected@testopt\HyPsd@protected@testopt\let\@protected@testopt@xargs\HyPsd@protected@testopt
+\let\lx@long@arrow\@gobbletwo
+\let\Hy@temp\xdef\let\def\HyPsd@DefCommand\let\gdef\HyPsd@DefCommand\let\edef\HyPsd@DefCommand
+\let\xdef\HyPsd@DefCommand\let\futurelet\HyPsd@LetCommand\let\let\HyPsd@LetCommand\Hy@temp#1{#2}\endgroup}
+\def\pdfstringdefWarn#1{\expandafter\noexpand\csname<>-\string#1\endcsname}
+\begingroup\def\x#1#2{\endgroup\let#1\def
+\def\HyPsd@DefCommand##1##2##{#1\expandafter\noexpand\csname\expandafter\@gobble\string##1\@empty\endcsname\@gobble}%
+\let#2\let
+\def\HyPsd@@LetCommand##1{\expandafter\ifx\csname##1\expandafter\endcsname\csname iftrue\endcsname
+\pdfstringdefWarn\let\expandafter\@gobble\else\expandafter\ifx\csname##1\expandafter\endcsname\csname iffalse\endcsname
+\pdfstringdefWarn\let\expandafter\expandafter\expandafter\@gobble\else
+#2\expandafter\noexpand\csname##1\expandafter\expandafter\expandafter\endcsname\fi\fi}}%
+\expandafter\x\csname <def>-command\expandafter\endcsname\csname <let>-command\endcsname
+\def\HyPsd@LetCommand#1{\expandafter\expandafter\expandafter\HyPsd@@LetCommand
+\expandafter\expandafter\expandafter{\expandafter\@gobble\string#1\@empty}}
+\def\HyPsd@ifnextchar#1{\pdfstringdefWarn#1\expandafter\@gobbletwo\@gobble}
+\def\HyPsd@protected@testopt#1{\pdfstringdefWarn#1\@gobbletwo}"#
   );
   // Digest & store the options
   // Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {

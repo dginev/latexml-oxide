@@ -1773,6 +1773,8 @@ pub(crate) fn load() -> Result<()> {
       \@x@protect#1%
     \fi}"
   );
+  // the kernel's, against which an optional-argument macro sees it redefined (`Expandable::testopt_call`)
+  Let!("\\lx@kernel@protected@testopt", "\\@protected@testopt");
 
   Let!("\\l@ngrel@x", "\\relax");
   DefMacro!(

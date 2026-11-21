@@ -4,7 +4,8 @@
 //! calling no environment back by name (2607.00952, 2610.38589); the extensible arrows robust in a `\protected@edef`
 //! (2007.15542); thm-restate's body ending at the `\end` of the environment current at its start (2609.31596). Each
 //! guard converts its repro under `tools/perfect_kernel/repros/` and asserts no Error or Warning and the authored
-//! content, against pdflatex.
+//! content, against pdflatex. Round 2: the PDF string's `\@protected@testopt`, `\@ifnextchar`, `\let` and arrows
+//! (hyperref.sty:545-549, 563-564), and the package option's information strings.
 use latexml::util::test::{assert_element, convert_with};
 
 use super::{
@@ -71,6 +72,32 @@ fn hyperref_pdf_string_gobbles_a_definition() {
   assert!(text(&xml).contains("Text kept."), "{xml}");
 }
 
+/// hyperref.sty:545-549 and :563-564 in a PDF string: an optional-argument `\newcommand` is gobbled with its
+/// `\@protected@testopt` arguments (`\opt[q]` is "[q]", `\opt{}` nothing; round 1's typesetting `\protect` took
+/// latex.ltx's `\@testopt` branch, "Fq", "Fd"), `\@ifstar` its command and branches (`\st*x` "*x"), `\let` and
+/// `\futurelet` their name (`\let\zzundef\relax` no undefined `\zzundef`); an extensible arrow keeps its labels
+/// (`$a\xrightarrow{b}c$` "abc", Fatal:Timeout:PushbackLimit); the package option's `pdfauthor` is `\pdfstringdef`'d.
+/// Repro sectioning-frontmatter/hyperref_pdfinfo_gobbles_testopt_and_let.
+#[test]
+fn hyperref_pdf_string_gobbles_testopt_and_let() {
+  let (log, xml) = convert_with(
+    repro!("sectioning-frontmatter/hyperref_pdfinfo_gobbles_testopt_and_let.tex"),
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let rdf: Vec<&str> = xml
+    .match_indices("<rdf ")
+    .map(|(i, _)| &xml[i..i + xml[i..].find("/>").unwrap_or(0) + 2])
+    .collect();
+  assert_eq!(rdf, [
+    "<rdf about=\"\" content=\"On the $q$\" property=\"dcterms:creator\"/>",
+    "<rdf about=\"\" content=\"An abc arrow [u]v\" property=\"dcterms:subject\"/>",
+    "<rdf about=\"\" content=\"k [m]n X Y *x\" property=\"dcterms:subject\"/>",
+    "<rdf about=\"\" content=\"X [q] #3\" property=\"dcterms:title\"/>",
+  ]);
+  assert!(text(&xml).contains("Text kept."), "{xml}");
+}
+
 /// amsmath.sty:1724 `\start@align` starts the alignment itself: the document's `{flalign}`, `{alignat}` (and starred)
 /// renewed over it (linenoaa.sty:57,85, loaded by aa.cls:2077) are not called back by name, which looped
 /// (Fatal:Timeout:Convert). Four displays, the unstarred two numbered (1), (2). Repro
@@ -115,7 +142,7 @@ fn xrightarrow_in_a_protected_edef() {
     repro!("package-bindings/amsmath_xarrow_in_protected_edef.tex"),
     Some(PRELOAD),
   );
-  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let items = elements(&xml, "bibitem");
   assert_eq!(items.len(), 1, "{xml}");
   let item = items[0];
@@ -174,5 +201,21 @@ fn restatable_in_a_wrapper_environment() {
     theorems[3].starts_with("Theorem 2") && theorems[3].ends_with("Body three."),
     "{theorems:?}"
   );
-  assert!(text(&xml).contains("Later."), "{xml}");
+  // the `{restatable*}` is numbered as the later `\bar` (pdflatex "Theorem 2"): a reference to its label
+  let elements = elements(&xml, "theorem");
+  assert!(
+    elements[1].contains("<tag role=\"refnum\"><ref labelref=\"LABEL:restatable:bar\"/></tag>"),
+    "{}",
+    elements[1]
+  );
+  assert!(
+    elements[3].contains("labels=\"LABEL:restatable:bar\"")
+      && elements[3].contains("<tag role=\"refnum\">2</tag>"),
+    "{}",
+    elements[3]
+  );
+  assert!(
+    text(&xml).contains("Text kept.") && text(&xml).contains("Later."),
+    "{xml}"
+  );
 }

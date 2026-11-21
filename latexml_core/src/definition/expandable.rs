@@ -275,6 +275,10 @@ impl Definition for Expandable {
       crate::gullet::unread_expansion(self.expand_watched(once_only, watched)?);
       return Ok(());
     }
+    if let Some(call) = self.testopt_call()? {
+      crate::gullet::unread_expansion(call);
+      return Ok(());
+    }
     match self.special_call {
       SpecialCall::None => {},
       SpecialCall::YieldsCalls => {
@@ -357,6 +361,50 @@ impl Expandable {
       !only_owned_with_parameters
         || (self.paramlist.is_some() && (self.made_in_own_file || self.origin.is_latexml_owned()))
     })
+  }
+
+  /// A `\newcommand` with an optional argument reads it itself (Perl's `convertLaTeXArgs`), where latex.ltx's is
+  /// `\@protected@testopt\cs\\cs{<default>}` (`\@xargdef`, :1245-1257): when `\@protected@testopt` is not the
+  /// kernel's, the call is that body, for the redefinition to act on it (hyperref.sty:548-549 gobbles the command in a
+  /// PDF string, `\HyPsd@protected@testopt`; letltxmacro.sty:127). `None` otherwise, or where `\\cs` is undefined
+  /// (the internal itself, twoopt's commands).
+  fn testopt_call(&self) -> Result<Option<Tokens>> {
+    if !self.peeks_by_futurelet {
+      return Ok(None);
+    }
+    let Some(default) = self.paramlist.as_ref().and_then(|params| {
+      params
+        .get_parameters()
+        .first()
+        .filter(|param| param.testopt)
+        .and_then(|param| param.extra.first())
+    }) else {
+      return Ok(None);
+    };
+    let testopt = T_CS!("\\@protected@testopt");
+    if lookup_meaning(&testopt) == lookup_meaning(&T_CS!("\\lx@kernel@protected@testopt")) {
+      return Ok(None);
+    }
+    let name = self.cs.to_string();
+    let internal = T_CS!(s!(
+      "\\{}",
+      if name == "\\" {
+        "\\csname\\endcsname"
+      } else {
+        name.as_str()
+      }
+    ));
+    if lookup_meaning(&internal).is_none() {
+      return Ok(None);
+    }
+    Ok(Some(Tokens!(
+      testopt,
+      self.cs,
+      internal,
+      T_BEGIN!(),
+      default.clone(),
+      T_END!()
+    )))
   }
 
   /// [`SpecialCall::YieldsCalls`]?
@@ -505,6 +553,9 @@ impl Expandable {
       && let Some(owner) = self.call_owner()?
     {
       return Ok(Tokens!(owner));
+    }
+    if let Some(call) = self.testopt_call()? {
+      return Ok(call);
     }
     match &self.expansion {
       Some(ExpansionBody::Closure(closure)) => {

@@ -1,0 +1,25 @@
+% witness: REGFIXO review B1 (the optional-argument `\newcommand` in a PDF string, round 1's `\protect`), S2, S3, N4
+% oracle:  pdflatex 0 errors; pdfinfo: Title "X [q]  #3", Subject "k [m]n X Y *x", Keywords "An abc arrow [u]v",
+%          Author "On the $q$" (hyperref's "Token not allowed in a PDF string" Warnings for \opt, \two, \zzundef …)
+% engines: rust REGFIXO Error:undefined:\zzundef, Fatal:Timeout:PushbackLimit (the arrow); `\opt[q]` "Fq", `\opt{}`
+%          "Fd", `\two{k}` "Txk", `\st*x` "Sx", the option's author "On the \protect\$q\protect\$"
+% expect:  0 errors, 0 warnings; the four `<rdf>` strings as pdfinfo's (spaces collapsed); "Text kept."
+% mechanism: hyperref.sty:545-549 (`\@ifnextchar`, `\@protected@testopt` gobble their command and its arguments;
+%          `Expandable::testopt_call`), :563-564 `\HyPsd@LetCommand`, the arrows' `\lx@long@arrow` gobbled, the
+%          package option's information string `\pdfstringdef`'d as `\hypersetup`'s
+% status:  RED (REGFIXO) -> GREEN (REGFIXO2)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[pdfauthor={On the \$q\$}]{hyperref}
+\makeatletter
+\newcommand\opt[1][d]{F#1}
+\newcommand\two[2][x]{T#1#2}
+\newcommand\mk[1]{\let\zzundef\relax #1}
+\newcommand\st{\@ifstar{S}{N}}
+\title{X \opt[q]}
+\hypersetup{pdftitle={\@title{} \opt{} \#3}, pdfsubject={\two{k} \protect\two[m]{n} \mk{X} Y \st*x},
+  pdfkeywords={An $a\xrightarrow{b}c$ arrow \xrightarrow[u]{v}}}
+\makeatother
+\begin{document}
+Text kept.
+\end{document}

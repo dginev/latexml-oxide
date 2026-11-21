@@ -15018,7 +15018,12 @@ Ours (78i, hyperref_sty.rs `pdf_string`): the value of `pdftitle`, `pdfauthor`, 
 `pdfcopyright` is expanded by `\lx@pdfstringdef` — hyperref's `\pdfstringdef` in brief (:386-560): `\protect` left as
 it is, a robust command its inner body (REGFIXO; empty, the robust `\$` re-expanded itself without end: 0812.2921),
 `\{ \} \# \$ \% \& \_` their characters (:405-413), a `\def`/`\gdef`/`\edef`/`\xdef` gobbling its name, parameter text
-and body (:555-565 `\HyPsd@DefCommand`; 2001.10451's jss.cls `\Plaintitle`), the
+and body (:555-565 `\HyPsd@DefCommand`; 2001.10451's jss.cls `\Plaintitle`) and a `\let`/`\futurelet` its name
+(:563-564 `\HyPsd@LetCommand`), `\@ifnextchar` (latex.ltx:1775's `\@ifstar` on it) and `\@protected@testopt`
+gobbling their command and arguments (:545-549; an optional-argument `\newcommand`, which reads its own `[…]`, is
+`\@protected@testopt\cs\\cs{<default>}` wherever `\@protected@testopt` is not the kernel's, `Expandable::testopt_call`:
+`\opt[q]` is "[q]"), the extensible arrows' `\lx@long@arrow` gobbled with its two arguments (its reversion names the
+robust arrow again, KNOWN_PERL_ERRORS #1302: `\xrightarrow[u]{b}` "[u]b"), the
 font and size commands their argument or nothing, `\\`, `~` and the other spaces a space, `\texorpdfstring` its PDF
 branch, labels, index entries and error messages gobbled, then the document's `\pdfstringdefPreHook` — and, as for
 hyperref's own `pdfusetitle` title (`\Hy@UseMaketitleString`, :6248-6266), `\thanks` and the note commands gobbled,
@@ -15042,10 +15047,13 @@ set, hyperref's own timing: `\hypersetup{pdftitle=\@title}` before `\title{…}`
 (resphilosophica) sees its local definitions. Beyond hyperref: a `\and` in a PDF string is "; ", the separator of
 hyperref's own `pdfusetitle` author (:6255), where `\pdfstringdef` makes garbage of it (pdfinfo "Ann Able [t]cBob
 Baker"). The `\@pdf<key>` macros keep the value's tokens, as before (packages read them as text: nlctuserguide.sty's
-`author={\@pdfauthor}`). Repros sectioning-frontmatter/{hyperref_pdfinfo_expands_macros (red 60m),
-hyperref_pdfinfo_drops_notes_and_markup, hyperref_pdfinfo_text_symbols}; guards
-`perfect_kernel_batch78i::{hyperref_metadata_is_expanded, hyperref_metadata_drops_notes_and_markup,
-hyperref_metadata_text_symbols}`.
+`author={\@pdfauthor}`). A package option's information string (`\usepackage[pdfauthor={On the \$q\$}]{hyperref}`)
+is expanded the same way (REGFIXO2; it was its option text, "On the \protect\$q\protect\$"). hyperref's "Token not
+allowed in a PDF string" Warnings are not reported: the `\pdfstringdefWarn` tokens are dropped with the other control
+sequences. Repros sectioning-frontmatter/{hyperref_pdfinfo_expands_macros (red 60m),
+hyperref_pdfinfo_drops_notes_and_markup, hyperref_pdfinfo_text_symbols, hyperref_pdfinfo_gobbles_testopt_and_let};
+guards `perfect_kernel_batch78i::{hyperref_metadata_is_expanded, hyperref_metadata_drops_notes_and_markup,
+hyperref_metadata_text_symbols}`, `perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`.
 
 ### 825. An AMS-TeX paper's own style is read raw unless it builds on another style
 

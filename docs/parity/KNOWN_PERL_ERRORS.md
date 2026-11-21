@@ -22273,6 +22273,9 @@ Trigger:
 
 Perl: "Out of memory"; Rust before the fix: `Fatal:Timeout:PushbackLimit`. natbib.sty:930 `\bibfield`'s
 `\protected@edef` (revtex4-1.cls:7046 `\let\NAT@merge\thr@@`) meets it in an apsrev4-1 `.bbl` (2007.15542). Fixed in
-Rust: the six `\lx@long@arrow` arrows (`\xrightarrow`, `\xleftarrow`, extarrows' `\xlong…`) are `robust => true`
-(amsmath_sty.rs). Repro package-bindings/amsmath_xarrow_in_protected_edef; guard
-`perfect_kernel_batchregfixo::xrightarrow_in_a_protected_edef`.
+Rust where `\protect` is not typesetting's: the six `\lx@long@arrow` arrows (`\xrightarrow`, `\xleftarrow`,
+extarrows' `\xlong…`) are `robust => true` (amsmath_sty.rs). Repro package-bindings/amsmath_xarrow_in_protected_edef;
+guard `perfect_kernel_batchregfixo::xrightarrow_in_a_protected_edef`. A plain `\edef` (typesetting's `\protect`) still
+re-expands the name; hyperref's PDF string, which keeps that `\protect`, gobbles `\lx@long@arrow` with its two
+arguments (`pdftitle={An $a\xrightarrow{b}c$ arrow}` "An abc arrow", pdfinfo the same; guard
+`perfect_kernel_batchregfixo::hyperref_pdf_string_gobbles_testopt_and_let`).
