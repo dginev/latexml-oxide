@@ -826,6 +826,17 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     files `c:/texlive/2026/…`, so every conversion fell back to the subprocess
     backend (about 270 ms a file lookup). Paths now compare as Windows compares
     them. Guard `path_is_under_compares_as_the_file_system_does`.
+  - **A distro libkpathsea finds an install-tl TeX Live's `texmf.cnf`** (#948). Built against
+    Debian/Ubuntu's `libkpathsea6` and run where only an `install-tl` tree is on PATH (a Docker
+    image), the linked library searched its compiled-in directories, which lack
+    `$SELFAUTOPARENT/texmf-dist/web2c`: it warned `configuration file texmf.cnf not found`, resolved
+    nothing, and every lookup went through the `kpsewhich` subprocess. The `kpathsea` crate (0.3.5)
+    now appends that tree's `web2c` directories (and its root and `texmf-local/web2c`, the part of
+    TeX Live's default an install-tl tree populates) to the library's search when its compiled-in
+    directories hold no `texmf.cnf` and the user set no `TEXMFCNF`, so the in-process backend reads
+    the same configuration as the `kpsewhich` on PATH. Where the library already finds a `texmf.cnf`
+    nothing changes. Verified in a container with only `libkpathsea6` and an install-tl tree; the
+    crate's own tests for it are opt-in (`cargo test -- --ignored`), being host-specific.
   - **Windows diagnostics name their source file.** A location's source was taken
     for a URL whenever it held a `:`, which every Windows path does, so messages
     read `at C:\…\t.tex.index.tex; line 3` where Linux says `at t.tex; line 3`. Perl's
