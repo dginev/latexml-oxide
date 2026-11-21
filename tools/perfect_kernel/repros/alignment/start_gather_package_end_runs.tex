@@ -1,0 +1,20 @@
+% witness: synthetic (review of REGFIXR): a package's {gather} end that prints after the display, and one that closes
+%          its own \begingroup (the 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665 linenoaa.sty:51-55 shape,
+%          amsmath.sty:1552-1557 `\math@cr \black@\totwidth@ \egroup \dollardollar@end`, `$$` in older copies)
+% oracle:  pdflatex 0 errors: "Before." a=b (1) "AFTERTEXT next." c=d e=f "then" g=h (2) "last."
+% engines: rust REGFIXR 0 errors, AFTERTEXT dropped silently, then "Attempt to end document with open groups"
+%          (gather* and mygather opened by \begingroup)
+% expect:  0 errors, 0 warnings; three ltx_eqn_gather groups, equations 1 and 2, AFTERTEXT before "next."
+% status:  RED (REGFIXR) -> GREEN (REGFIXR2)
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\renewenvironment{gather}{\start@gather\st@rredfalse}{\math@cr \black@\totwidth@ \egroup $$\noindent AFTERTEXT \ignorespacesafterend}
+\renewenvironment{gather*}{\begingroup\small\start@gather\st@rredtrue}{\math@cr \black@\totwidth@ \egroup \dollardollar@end\endgroup\ignorespacesafterend}
+\newenvironment{mygather}{\begingroup\start@gather\st@rredfalse}{\math@cr \black@\totwidth@ \egroup $$\endgroup\ignorespacesafterend}
+\makeatother
+\begin{document}
+Before. \begin{gather} a=b \end{gather} next.
+\begin{gather*} c=d \\ e=f \end{gather*} then
+\begin{mygather} g=h \end{mygather} last.
+\end{document}

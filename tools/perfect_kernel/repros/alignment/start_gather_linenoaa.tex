@@ -1,0 +1,18 @@
+% witness: 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665 (aa.cls's linenoaa.sty:51-55, verbatim: {gather*}
+%          ends `\endgather\endlinenomath`, {gather} `\math@cr \black@\totwidth@ \egroup $$\endlinenomath`)
+% oracle:  pdflatex 0 errors, the same page as without lineno and the renewals: "Text." a=b (1) c=d "then" e=f g=h
+% engines: rust INT6A 13 errors (undefined \start@gather and the raw end's cascade)
+% expect:  0 errors, 0 warnings; the XML of the same document under plain amsmath, but for lineno's processing PI
+% status:  GREEN (REGFIXR, REGFIXR2)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[mathlines,switch]{lineno}
+\makeatletter
+\renewenvironment{gather}{\linenomathNonumbers\start@gather\st@rredfalse}{%
+  \math@cr \black@\totwidth@ \egroup
+  $$\endlinenomath\ignorespacesafterend}
+\renewenvironment{gather*}{\linenomath\start@gather\st@rredtrue}{\endgather\endlinenomath}
+\makeatother
+\begin{document}
+Text. \begin{gather} a=b \label{e1}\\ c=d \notag \end{gather} then \begin{gather*} e=f \\ g=h \end{gather*} See (\ref{e1}).
+\end{document}

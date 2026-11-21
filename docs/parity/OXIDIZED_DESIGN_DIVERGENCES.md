@@ -23518,17 +23518,23 @@ alg-geom9511013, math0511546, math9901010 (a last item's open `{\it`/`{\text`), 
 **Guard** `perfect_kernel_batchregfixp::endroster_ends_the_roster_inside_a_group` (repros
 `amstex/amsppt_roster_endroster_inside_an_items_group.tex`, `amstex/amsppt_roster_open_brace_red.tex`).
 
-### 1124. An environment started by `\start@gather` ends as the binding's `{gather}` (REGFIXR)
+### 1124. An environment started by `\start@gather` closes the binding's `{gather}` where its end closes the `\halign` (REGFIXR, REGFIXR2)
 
 **Rule.** amsmath.sty:1540 `\start@gather` opens `$$\halign` (through `\gather@`, :1564-1585) and `{gather}`'s end,
-`\math@cr \black@\totwidth@ \egroup $$` (:1554), closes it. The binding builds the display as an `equationgroup`, with
-no `\halign` for those tokens to close, so `\start@gather` starts the binding's `{gather}`/`{gather*}` (kept as
-`\lx@ams@gather`, `\lx@ams@gather@star` before any redefinition) and `\let`s the environment's own end
-(`\end\@currenvir`, local to its group) to the binding's `\endgather`. What a package's end adds after the display is not
-run: linenoaa.sty:51-55 (aa.cls's copy :2078; 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665) renews
-`{gather}` as `\linenomathNonumbers\start@gather\st@rredfalse` … `\math@cr \black@\totwidth@ \egroup $$\endlinenomath
-\ignorespacesafterend`, whose `\endlinenomath` only counts line numbers. Before, `\start@gather` was undefined and the
-raw end cascaded (`\noalign`, `\egroup`, `$`: 13 errors in the repro). `{align}` and its kin keep their locked
-bindings (Perl amsmath.sty.ltxml:491-501), so linenoaa's renewal of them never runs.
+`\math@cr \black@\totwidth@ \egroup \dollardollar@end` (TL 2025 :1552-1557; `$$` in older amsmath and in linenoaa.sty's
+copy), closes it. The binding builds the display as an `equationgroup`, with no `\halign` for those tokens to close, so
+`\start@gather` starts the binding's `{gather}`/`{gather*}` (kept as `\lx@ams@gather`, `\lx@ams@gather@star` before any
+redefinition) and the environment's own end (`\end\@currenvir`, saved, local to its group) runs with `\math@cr` `\let`
+(at end time only, so a `\Let@` in the rows is untouched) to `\lx@ams@gather@close`, which reads through the `\egroup`
+and the `$$`/`\dollardollar@end` and gives the binding's `\endgather`; what the end adds after it runs, as in TeX:
+linenoaa.sty:51-55 (aa.cls's copy :2078; 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665)
+`\math@cr \black@\totwidth@ \egroup $$\endlinenomath\ignorespacesafterend`, text printed after the display, an
+`\endgroup` closing the package's own `\begingroup`. An end that calls the binding's `\endgather` (linenoaa's
+`{gather*}`: `\endgather\endlinenomath`) passes through. Material other than `\black@<dimen>` before the `\egroup` is
+dropped with a Warning, and an end with no `\egroup` within a few tokens is put back with one. Before, `\start@gather`
+was undefined and the raw end cascaded (`\noalign`, `\egroup`, `$`: 13 errors in the repro). `{align}` and its kin keep
+their locked bindings (Perl amsmath.sty.ltxml:491-501), so linenoaa's renewal of them never runs.
 **Guard**: `perfect_kernel_batchregfixr::start_gather_ends_a_package_gather` (repro
-`alignment/start_gather_by_a_package.tex`).
+`alignment/start_gather_by_a_package.tex`), `perfect_kernel_batchregfixr2::{start_gather_runs_the_package_end,
+start_gather_linenoaa_is_plain_amsmath}` (repros `alignment/start_gather_package_end_runs.tex`,
+`alignment/start_gather_linenoaa.tex`).

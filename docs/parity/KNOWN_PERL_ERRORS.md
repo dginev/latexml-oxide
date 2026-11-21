@@ -13821,8 +13821,8 @@ them, so each use is "undefined" (run 340: `\bBigg@` 595 papers, `\Let@` 264, `\
 `\makeatletter\newcommand{\vast}{\bBigg@{4}}\makeatother` … `\[\vast( x \vast)\]` → Perl: undefined `\bBigg@`
 (pdflatex 0 errors). Fixed in Rust (65s, amsmath_sty.rs `ams_author_called_internals`; witnesses 1412.0919,
 2509.20301, 1606.05562, 2508.13749, 2103.12630, 2103.14974, 1109.5733). Also `\displ@y@` (:1344-1363), which documents
-extend (`\g@addto@macro\displ@y@{…}`, an undefined-macro Error in Perl and in TeX; 1406.6618 2301.11270 2304.01203
-2401.16335 2402.12617), defined and run by no display of the binding; and `\start@gather` (:1540, OD #1124; REGFIXR).
+extend (`\g@addto@macro\displ@y@{…}`: Perl leaves it undefined, so `\g@addto@macro` errs, as TeX would on an
+undefined macro; 1406.6618 2301.11270 2304.01203 2401.16335 2402.12617): defined, but run by no display; and `\start@gather` (:1540, OD #1124; REGFIXR).
 
 ## 631. amscd reads the space after `@` as the connector, and lacks `\atdef@` and `\CDat`
 

@@ -737,6 +737,9 @@ mod perfect_kernel_batchregfixp;
 /// `\displ@y@`, a pre-class `\fig` under AASTeX 5.x/emulateapj, a `{restatable}` environment named by a macro, bmcart
 /// ids as characters.
 mod perfect_kernel_batchregfixr;
+/// REGFIXR2: a package's `{gather}` end runs (text after the display, a group it closes), a sub-caption label from
+/// caption3 v1.8h's option lists.
+mod perfect_kernel_batchregfixr2;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;

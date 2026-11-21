@@ -34,9 +34,9 @@ fn refnums(xml: &str) -> Vec<&str> {
     .collect()
 }
 
-/// amsmath.sty:1540 `\start@gather` starts `{gather}`/`{gather*}`, whose end (:1554 `\math@cr \black@\totwidth@
-/// \egroup $$`) a package copies (linenoaa.sty:51-55, which aa.cls's copy loads: 2407.04074 2503.08108 2503.20535
-/// 2604.03365 2608.16665): undefined, then that end's cascade, 13 errors. Each environment ends as the binding's
+/// amsmath.sty:1540 `\start@gather` starts `{gather}`/`{gather*}`, whose end (:1552-1557 `\math@cr \black@\totwidth@
+/// \egroup \dollardollar@end`, `$$` in older amsmath) a package copies (linenoaa.sty:51-55, which aa.cls's copy loads:
+/// 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665): undefined, then that end's cascade, 13 errors. Each environment ends as the binding's
 /// `{gather}`, numbered as pdflatex: (1) labelled e1, the `\notag` row and `{gather*}` unnumbered, a document's own
 /// `{mygather}` (2), one in a list (3). Distinct from `perfect_kernel_batchregfixo`'s `\start@align` (no raw end).
 #[test]

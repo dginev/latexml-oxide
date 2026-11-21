@@ -1696,20 +1696,68 @@ LoadDefinitions!({
     out.push(T_CS!(if star { "\\lx@ams@multline@star" } else { "\\lx@ams@multline" }));
     Ok(Tokens::new(out))
   });
-  // amsmath.sty:1540 `\start@gather#1` starts `{gather}`/`{gather*}`, whose end (:1554-1557 `\math@cr \black@\totwidth@
-  // \egroup $$`) closes the `$$\halign` `\gather@` opened; a package's environment copies that end (aa.cls's
-  // linenoaa.sty:51-55; 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665). The binding builds no `\halign`, so
-  // the environment it starts ends with the binding's own `\endgather` (local to the environment's group; OD #1124,
-  // guard `perfect_kernel_batchregfixr::start_gather_ends_a_package_gather`).
+  // amsmath.sty:1540 `\start@gather#1` starts `{gather}`/`{gather*}`, whose end (:1552-1557 `\math@cr \black@\totwidth@
+  // \egroup \dollardollar@end`; `$$` in older amsmath and in linenoaa.sty:51-55's copy) closes the `$$\halign`
+  // `\gather@` opened; a package's environment copies that end (aa.cls's linenoaa.sty; 2407.04074 2503.08108 2503.20535
+  // 2604.03365 2608.16665). The binding builds no `\halign`, so the package's end runs with `\math@cr` (only there)
+  // reading that idiom as the binding's `\endgather`, as `\lendmultline@` does for multline (OD #1124, guards
+  // `perfect_kernel_batchregfixr::start_gather_ends_a_package_gather`, `perfect_kernel_batchregfixr2::*`).
   Let!("\\lx@ams@gather", "\\gather");
   Let!("\\lx@ams@gather@star", "\\gather*");
   Let!("\\lx@ams@endgather", "\\endgather");
+  DefMacro!(
+    "\\lx@ams@gather@end",
+    "\\let\\math@cr\\lx@ams@gather@close\\lx@ams@gather@pkgend"
+  );
   DefMacro!("\\start@gather{}", sub[(starred)] {
     let mut out = starred.unlist();
     let star = out.first().is_some_and(|t| *t == T_CS!("\\st@rredtrue"));
-    out.extend(TokenizeInternal!(r"\expandafter\let\csname end\@currenvir\endcsname\lx@ams@endgather").unlist());
+    out.extend(TokenizeInternal!(
+      r"\expandafter\let\expandafter\lx@ams@gather@pkgend\csname end\@currenvir\endcsname
+        \expandafter\let\csname end\@currenvir\endcsname\lx@ams@gather@end"
+    ).unlist());
     out.push(T_CS!(if star { "\\lx@ams@gather@star" } else { "\\lx@ams@gather" }));
     Ok(Tokens::new(out))
+  });
+  // `\math@cr` … `\egroup` then `$$` or `\dollardollar@end`; anything but `\black@<dimen>` before the `\egroup` is
+  // `\halign` material the binding has no place for, so it is dropped with a Warning (none within a few tokens: all
+  // of it is put back).
+  DefMacro!("\\lx@ams@gather@close", sub[_args] {
+    let mut dropped = Vec::new();
+    let mut closed = false;
+    while dropped.len() < 8 {
+      match read_token()? {
+        Some(t) if t == T_CS!("\\egroup") => { closed = true; break; },
+        Some(t) => dropped.push(t),
+        None => break,
+      }
+    }
+    if !closed {
+      unread(Tokens::new(std::mem::take(&mut dropped)));
+      Warn!("unexpected", "\\math@cr", "The end of a {gather} has no \\egroup closing its alignment");
+      return Ok(Tokens::from(T_CS!("\\lx@ams@endgather")));
+    }
+    while peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
+      read_token()?;
+    }
+    if peek_token()?.is_some_and(|t| t == T_CS!("\\dollardollar@end")) {
+      read_token()?;
+    } else if peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::MATH) {
+      let first = read_token()?;
+      if peek_token()?.is_some_and(|t| t.get_catcode() == Catcode::MATH) {
+        read_token()?;
+      } else if let Some(first) = first {
+        unread(Tokens::new(vec![first]));
+      }
+    }
+    let idiom = dropped.len() == 2 && dropped[0] == T_CS!("\\black@");
+    if !dropped.is_empty() && !idiom {
+      Warn!("unexpected", "\\math@cr", &s!(
+        "The end of a {{gather}} drops the alignment material {}",
+        Tokens::new(dropped).untex()
+      ));
+    }
+    Ok(Tokens::from(T_CS!("\\lx@ams@endgather")))
   });
   // AmSTeX version (inside math)
   DefConstructor!("\\@@AmS@multline DigestedBody",
