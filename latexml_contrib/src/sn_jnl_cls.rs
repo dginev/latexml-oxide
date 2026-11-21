@@ -76,8 +76,10 @@ LoadDefinitions!({
   // as in pdflatex. This port binds program (a raw load) and Perl does not, so
   // Perl's scan skips it.
   // The scan runs at the class's end, after the paper's copy is read (`\AtEndOfClass`; the copy is read inside this
-  // load, content.rs `read_stand_in_copy`): the copy loads its packages in its own order, and the scan adds only what
-  // its unexecuted lines name. Run first, it loaded the bound program before the copy's unbound easyReview (:297),
+  // load, content.rs `read_stand_in_copy`): the copy loads its packages in its own order; the loads that ran are loaded
+  // and the rest filtered (content.rs's executed-set gate), so after a copy the scan adds nothing — it acts only for a
+  // paper's sn-jnl.cls not read as the stand-in's copy. Run first, it loaded the bound program before the copy's
+  // unbound easyReview (:297),
   // whose tikz then read pgf with program's `|` active (2211.09062: 295 errors and a Fatal).
   DefPrimitive!("\\lx@sn@class@end", {
     require_dependencies_except("sn-jnl", "cls", &["article", "natbib", "apacite"]);
@@ -512,7 +514,8 @@ LoadDefinitions!({
   // `{appendices}`: appendix.sty's environment, as the class loads it (sn-jnl.cls:1365 `\usepackage[title]{appendix}`
   // of 2609.33801's copy, in all 164 copies of the census; from the copy, or `\lx@sn@class@end` above where the paper
   // ships none; the class's own copy of appendix.sty's `{appendices}` at :1369-1407 is the appendix binding's),
-  // re-dressed at the class's end where it is loaded (:1367 `\@ifpackageloaded{appendix}`) by the class's begin-document code (:1409-1426): the
+  // re-dressed at the class's end where it is loaded (:1367 `\@ifpackageloaded{appendix}`) by the class's
+  // begin-document code (:1409-1426): the
   // environment resets the figure, table and equation counters and numbers them by the appendix letter,
   // `\@Alph\c@section\arabic{figure}` — "Fig. A1", "Table A1", "(A1)" (2609.24634, 2609.11123, 2609.04047; audit
   // #363). The hook's `\end{oldappendices}` calls `\endoldappendices`, which the class never defines (it saves

@@ -23618,8 +23618,11 @@ one-level extension).
 paper's shipped class for the packages it names (`require_dependencies_except`, Perl `maybeRequireDependencies`,
 Package.pm:2776-2813, which Perl runs only over a file it does not read: :2696, :2732). They run it at the class's end
 (`\AtEndOfClass{\lx@sn@class@end}`, `\lx@optica@class@end`), after the copy, read inside the class load as the
-stand-in's copy (#731), has loaded its packages in its own order; the scan adds only what the copy's unexecuted lines
-name. The binding code that tests what the scan loaded runs there too: the kernel's `\(`/`\)` over program's
+stand-in's copy (#731), has loaded its packages in its own order: the loads that ran are loaded and the rest filtered
+(content.rs's executed-set gate), so after a copy the scan adds nothing; it acts only for a paper's class not read as
+the stand-in's copy. What it loads then comes after the binding's own definitions, so a scanned package's definition
+replaces the binding's (a `\ProvidesClass{springer-custom}` sn-jnl.cls loading threeparttable: its `\tnote` prints no
+mark outside `{threeparttable}`, as pdflatex; synthetic, no population paper). The binding code that tests what the scan loaded runs there too: the kernel's `\(`/`\)` over program's
 programbox (#597) and sn-jnl's appendix load and its `{appendices}` re-dress. Run first, the scan loaded the bound
 program ahead of the copy's unbound packages: 2211.09062's sn-jnl.cls:297 `\usepackage{easyReview}` (todonotes,
 tikz) then read pgf with program's `|` active (295 Errors, a Fatal, no output; now 0 Errors). In TeX's order, too, a
