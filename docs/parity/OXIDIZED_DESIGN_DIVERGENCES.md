@@ -23491,20 +23491,6 @@ Error and gobble its four arguments, so the byte errs once and is no URL text, w
 **Guard**: `perfect_kernel_batchregfixn2::{latin1_undefined_byte_errs_only_where_tex_does,
 latin1_undefined_byte_in_a_url_errs_once}` (repros `unicode-catcodes/latin1_undefined_byte_in_{pdf_key,text_errs,
 url_errs,href_errs}.tex`).
-### 1116. A restated theorem in a wrapper environment keeps the number of the counter its head stepped (REGFIXP)
-
-**Rule.** `{restatable}{<env>}{<name>}` freezes, right after the theorem's head, `\@currentlabel` — the number of the
-counter the head stepped — for `\<name>*` (thm_restate_sty.rs `renumber`), not `\csname the<env>\endcsname`. A wrapper
-environment has no counter of its own: ltexpprt.sty:216-217 `\newtheorem{@theorem}{Theorem}[section]`,
-`\newenvironment{theorem}{\begin{@theorem}}{\end{@theorem}}`, where `\thetheorem` was undefined (1 Error per
-restatable: 1911.08418, 2410.24104, 2503.21951). pdflatex fakes `\the<env>` and `\c@<env>` for the environment named
-(thm-restate.sty:130-140), so a wrapper's restatement steps the real counter and prints the next number ("Theorem 2.1"
-for the restated 1.1); ours prints the original's number, as thm-restate does for every theorem it can see. Residual,
-Perl-shared: the binding's `\end{\@currenvir}` (Perl's thm-restate.sty.ltxml:18-23 too) ends the wrapper's inner
-environment, so `{restatable}` stays open to `\end{document}` (1 Warning). **Guard**
-`perfect_kernel_batchregfixp::restatable_in_a_wrapper_theorem_is_numbered_by_its_counter` (repro
-`package-bindings/thm_restate_restatable_numbered_by_the_stepped_counter.tex`).
-
 ### 1117. amsppt's `\endroster` inside an open group closes that group (REGFIXP)
 
 **Rule.** amsppt.sty:738-751's `\endroster` opens and closes no group, so TeX ends the roster at whatever group depth it
