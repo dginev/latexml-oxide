@@ -287,7 +287,7 @@ LoadDefinitions!({
           // utf8.def:55-60: in a name, the character itself
           Tokens::new(vec![T_OTHER!(ch.to_string())])
         } else if is_defined_token(&declared) {
-          Tokens::new(vec![declared.clone()])
+          Tokens::new(vec![declared])
         } else {
           undeclared.clone()
         })
