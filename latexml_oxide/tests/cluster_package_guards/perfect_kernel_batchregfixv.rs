@@ -2,7 +2,7 @@
 //! `\protect`, as hyperref's `\hyper@normalise` (hyperref.sty:4604-4650), and `HyperVerbatim` lets the active `~` to
 //! `\hyper@tilde` (:4622). Repros `tools/perfect_kernel/repros/package-bindings/hyperref_*_in_footnote.tex`; each
 //! pdflatex-checked.
-use latexml::util::test::{assert_element, convert_with};
+use latexml::util::test::{assert_element, convert_with, kpse_has};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -36,9 +36,16 @@ fn href_tilde_in_a_footnote_under_babel() {
 /// A babel shorthand (slovak `-`) tokenized active before the reader, in `\url` and `\href` in a `\footnote`: under the
 /// ambient `\protect` babel's `\active@prefix` (babel.def:1418-1442) lets it expand to its character. Red (INT6D):
 /// Fatal:Timeout:PushbackLimit, the empty `\protect` of `url_string_messages` making `\protect-` re-expand. Witness
-/// 2605.16660.
+/// 2605.16660. Skipped, visibly, where babel's slovak.ldf (babel-slovak) is not in the TeX Live: babel then errs on the
+/// option itself (Ubuntu's texlive-lang-european ships only the `babel-slovak.tex` locale).
 #[test]
 fn babel_shorthand_in_a_footnote_url() {
+  if !kpse_has("slovak.ldf") {
+    eprintln!(
+      "SKIP babel_shorthand_in_a_footnote_url: slovak.ldf (babel-slovak) is not in this TeX Live"
+    );
+    return;
+  }
   let (log, xml) = convert_with(
     repro!("package-bindings/hyperref_url_babel_shorthand_in_footnote.tex"),
     Some("ar5iv.sty"),
