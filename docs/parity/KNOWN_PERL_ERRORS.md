@@ -22356,27 +22356,6 @@ pdflatex URI `http://x.org/~y`; Perl href `http://x.org/ y` (Rust REGFIXN2 `http
 2605.19761, 2605.28243, 2605.29955. Repro package-bindings/hyperref_href_babel_tilde_in_footnote; guard
 `perfect_kernel_batchregfixv::href_tilde_in_a_footnote_under_babel`.
 
-## 1307. `\inputencoding` leaves 0x1F and 0x7F unactivated
-
-inputenc.sty:82-85 `\@inpenc@loop`s `\^^A\^^H`, `\^^K\^^K`, `\^^N\^^_` and `\^^?\^^ff`: 1-8, 11, 14-31 and 127-255
-become `\@inpenc@undefined`, which the encoding's `.def` then redefines where it declares a character. Perl's
-`SetInputEncoding` (inputenc.sty.ltxml:48-51) loops over 0-8, 11, 14-30 and 128-255, so the unit separator and DEL
-keep their catcode and print as the font's glyph. Minimal trigger:
-
-```tex
-\documentclass{article}
-\usepackage[latin1]{inputenc}
-\begin{document}
-A^^_B^^?C
-\end{document}
-```
-
-pdflatex 2 Errors "Keyboard character used is undefined in inputencoding `latin1'", "ABC"; Perl and Rust before the fix
-"AØB¨C" (OT1's slots 0x1F and 0x7F; Perl errs on the format's active `^^_` under utf8). Fixed in Rust (ENCURL,
-inputenc_sty.rs `set_input_encoding`); 0 keeps Perl's activation, an Error where latex.ltx:22189's invalid `^^@` errs.
-Repro unicode-catcodes/inputenc_loop_covers_us_and_del; guard
-`perfect_kernel_batchencurl::inputenc_activates_unit_separator_and_delete`.
-
 ## 1308. The URL readers do not set babel's safe actives
 
 hyperref's `\hyper@normalise` (hyperref.sty:4604-4628) runs `\Hy@safe@activestrue` (:4627, defined :362 as
@@ -22399,3 +22378,26 @@ readers call `url_safe_actives` (misc.rs), and `HyperVerbatim` stringifies an ac
 expandable (babel-german's native `"` dispatcher, babel_support_sty.rs), as `\url`'s reader does. Repros
 package-bindings/hyperref_url_babel_{spanish_shorthands,safe_actives}_in_footnote; guards
 `perfect_kernel_batchencurl::{url_readers_set_babel_safe_actives, href_german_shorthand_in_a_footnote_is_its_character}`.
+
+## 1309. `\inputencoding` leaves 0x1F and 0x7F unactivated
+
+inputenc.sty:82-85 `\@inpenc@loop`s `\^^A\^^H`, `\^^K\^^K`, `\^^N\^^_` and `\^^?\^^ff`: 1-8, 11, 14-31 and 127-255
+become `\@inpenc@undefined`, which the encoding's `.def` then redefines where it declares a character. Perl's
+`SetInputEncoding` (inputenc.sty.ltxml:48-51) loops over 0-8, 11, 14-30 and 128-255, so the unit separator and DEL
+keep their catcode and print as the font's glyph. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage[latin1]{inputenc}
+\begin{document}
+A^^_B^^?C
+\end{document}
+```
+
+pdflatex 2 Errors "Keyboard character used is undefined in inputencoding `latin1'", "ABC"; Perl and Rust before the fix
+"AØB¨C" (OT1's slots 0x1F and 0x7F; Perl errs on the format's active `^^_` under utf8). Fixed in Rust (ENCURL,
+inputenc_sty.rs `set_input_encoding`). 0 keeps Perl's activation: under a byte encoding an Error, where latex.ltx:22189's
+invalid `^^@` errs; under `[utf8]` utf8.def's binding resets it to other (utf8_def.rs, Perl's utf8.def.ltxml:24-26), so
+NUL prints OT1's "Γ" with no Error where pdflatex errs "Text line contains an invalid character" (pre-existing, Perl too).
+Repro unicode-catcodes/inputenc_loop_covers_us_and_del; guard
+`perfect_kernel_batchencurl::inputenc_activates_unit_separator_and_delete`.

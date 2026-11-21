@@ -1279,6 +1279,8 @@ pub(crate) fn load() -> Result<()> {
             if !(native_utf8 && (0x80..=0xFF).contains(&cp)) {
               AssignCatcode!(ch, Catcode::ACTIVE);
             }
+            // utf8.def:207-221's `\u8:<character>` too, which utf8.def's (re)load keeps (`utf8_def.rs` reads it).
+            DefMacro!(T_CS!(s!("\\u8:{ch}")), None, Tokens::new(expansion.clone().unlist()));
             // utf8.def:55-90 (`\UTFviii@two@octets` …): inside a `\csname`
             // the character stays LITERAL in the name (`\ifincsname`), else
             // it is its LICR expansion.

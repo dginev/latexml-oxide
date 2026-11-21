@@ -164,8 +164,9 @@ fn set_input_encoding(encoding: &str) -> Result<()> {
   )));
   def_macro(T_CS!("\\@inpenc@undefined"), None, undefined, None)?;
   // Initially disable all odd & upper half-plane chars, inputenc.sty:82-85's `\@inpenc@loop\^^A\^^H`, `\^^K\^^K`,
-  // `\^^N\^^_`, `\^^?\^^ff` (Perl's inputenc.sty.ltxml:48-51 misses 0x1F and 0x7F, KNOWN_PERL_ERRORS #1307). And 0,
-  // as Perl: latex.ltx:22189 makes `^^@` invalid, an error, which the engine's catcode 12 would not raise.
+  // `\^^N\^^_`, `\^^?\^^ff` (Perl's inputenc.sty.ltxml:48-51 misses 0x1F and 0x7F, KNOWN_PERL_ERRORS #1309). And 0,
+  // as Perl: under a byte encoding latex.ltx:22189's invalid `^^@` errs, which catcode 12 would not; under `[utf8]`,
+  // utf8_def.rs resets it to other (Perl's utf8.def.ltxml:24-26), so NUL prints silently (pre-existing).
   // Under the native mouth, utf8 (and utf8x, the same binding)
   // reads 128..=255 as code points, which `utf8_def.rs` makes other: a token stored earlier (the format's active `§`
   // in arxiv.sty:55-60's `\crefformat{section}{§#2#1#3}`) keeps its meaning, as utf8.def:174-193 redefines every byte

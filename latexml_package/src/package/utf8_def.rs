@@ -268,7 +268,9 @@ LoadDefinitions!({
     // utf8.def:164-170 (C0: 1-8, 11, 14-31) and :122-128 (a sequence with no `\u8:` name: the C1 controls
     // U+0080-U+009F) err "Unicode character … not set up for use with LaTeX", the character dropped; the format's
     // `\UTFviii@undefined@err` gobbles until `\everyjob` (latex.ltx:22230-22237), which the engine does not run. Only
-    // under inputenc: the format's own load (latex.ltx:22224) leaves the dump's catcodes Perl's.
+    // under inputenc: the format's own load (latex.ltx:22224) leaves the dump's catcodes Perl's. A declared character
+    // keeps its meaning, as TeX's lead byte reads the `\u8:` name the declaration made (utf8.def:93-108); for C0, TeX's
+    // `[utf8]` never reloads (inputenc.sty:76), where ours does.
     let under_inputenc = !lookup_string("lx@inputenc@encoding").is_empty();
     for code in (1..=8)
       .chain([11])
@@ -278,7 +280,18 @@ LoadDefinitions!({
     {
       let ch = char::from_u32(code).unwrap();
       AssignCatcode!(ch, Catcode::ACTIVE);
-      DefMacro!(T_ACTIVE!(ch), None, unicode_character_not_set_up(ch), protected => true);
+      let declared = T_CS!(s!("\\u8:{ch}"));
+      let undeclared = unicode_character_not_set_up(ch);
+      DefMacro!(T_ACTIVE!(ch), None, sub[_args] {
+        Ok(if code >= 0x80 && ::latexml_core::gullet::in_csname() {
+          // utf8.def:55-60: in a name, the character itself
+          Tokens::new(vec![T_OTHER!(ch.to_string())])
+        } else if is_defined_token(&declared) {
+          Tokens::new(vec![declared.clone()])
+        } else {
+          undeclared.clone()
+        })
+      }, protected => true);
     }
   }
   AssignValue!("INPUT_ENCODING" => Stored::None);

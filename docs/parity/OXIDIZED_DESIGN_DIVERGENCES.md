@@ -23652,13 +23652,19 @@ glyph (OT1: `^^A` is Δ, `^^Z` æ) and a C1 control (U+0080-U+009F) goes into th
 `\u8:` name (:122-128): each errs "Unicode character … (U+0085) not set up for use with LaTeX" and is dropped.
 **Rust behavior**: utf8_def.rs makes those code points active, each a protected `\@latex@error` with that message,
 one Error per character, as pdflatex (the format's `\UTFviii@undefined@err` gobbles until the `\everyjob`,
-latex.ltx:22230-22237, which the engine does not run). `\DeclareUnicodeCharacter{0092}{'}` replaces the meaning. A C1
+latex.ltx:22230-22237, which the engine does not run). A declaration made before or after inputenc keeps its meaning:
+`\DeclareUnicodeCharacter` also records utf8.def:207-221's `\u8:<character>`, which the activated character reads
+(utf8.def:93-108), so utf8.def's reload does not clear it; in a `\csname` a C1 character is itself (utf8.def:55-60). A
+C0 declaration (no `\u8:` name in TeX) survives in pdflatex because `[utf8]` never reloads utf8.def
+(inputenc.sty:76, the format's `\inputencodingname` is utf8); ours reloads, and the record keeps it too, also after a
+switch from another encoding, where pdflatex's reload errs on it. A C1
 byte of a line that is not UTF-8 stays an invalid byte, its Latin-1 character with the Info (#481): the mouth reads it
 as other (mouth.rs). Not under the pdfTeX byte mouth, and not without inputenc, where the dump's catcode table keeps
 the controls other (row R). A field the bibliography only stores (`abstract`, `keywords`, `contents`: biblatex.sty:7871
 `\blx@bbl@fielddef`, a `.bst` drops them) is never digested (#73), so its control raises nothing, as in pdflatex.
 **Why**: the controls are no content (cp1252 punctuation re-encoded as UTF-8, U+0092 for `’`), and pdflatex errs on
 each. **Guards** `perfect_kernel_batchencurl::{utf8_control_character_errs_and_is_dropped,
-utf8_c1_declared_and_byte_line_keep_their_text, bbl_abstract_c1_is_stored_data}` (repros
-unicode-catcodes/utf8_inputenc_control_characters_err, utf8_c1_declared_and_byte_line,
+utf8_c1_declared_and_byte_line_keep_their_text, utf8_declared_before_inputenc_keeps_its_meaning,
+bbl_abstract_c1_is_stored_data}` (repros unicode-catcodes/utf8_inputenc_control_characters_err,
+utf8_c1_declared_and_byte_line, utf8_declared_before_inputenc_keeps_meaning,
 index-bib/biblatex_bbl_abstract_c1_is_stored_data).

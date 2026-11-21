@@ -1,0 +1,28 @@
+% witness: review ENCURL r1 B1 (m_decl_before / m_decl_reenc: a declaration before inputenc lost, 0 -> 1 Error)
+% siblings: a declaration in a package loaded before inputenc, C1 and C0, both orders, a later \inputencoding{utf8},
+%   a C1 character in a \csname (declared and not)
+% oracle:  pdflatex 0 errors: "A `don't \textexclamdown{} (one) (two) (three)." twice, then "P Y Z Q."
+% engines: rust ENCURL r1 22 Errors ("Unicode character ... not set up" for U+0091/0092/0001/0003 on both lines,
+%   U+0093/0002 after the re-encoding, the rest in the names, their messages in the text); INT7b 0 errors, the C1 and
+%   the early C0 text dropped ("A dont  Δ (two) Λ.")
+% expect:  0 errors, 0 warnings, the pdflatex text
+% mechanism: the declaration records utf8.def:207-221's `\u8:<character>`; utf8.def's (re)load reads it
+%   (utf8.def:93-108), and in a name the character is itself (utf8.def:55-60)
+% status:  RED (ENCURL r1) -> GREEN (ENCURL r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{declc}
+\DeclareUnicodeCharacter{0092}{'}
+\DeclareUnicodeCharacter{0001}{(one)}
+\usepackage[utf8]{inputenc}
+\DeclareUnicodeCharacter{0002}{(two)}
+\DeclareUnicodeCharacter{0093}{<}
+\expandafter\def\csname ab\endcsname{Y}
+\expandafter\def\csname cd\endcsname{Z}
+\begin{document}
+A dont    .
+
+\inputencoding{utf8}B dont    .
+
+P \csname ab\endcsname{} \csname cd\endcsname{} Q.
+\end{document}

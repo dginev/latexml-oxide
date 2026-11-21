@@ -145,9 +145,44 @@ fn utf8_c1_declared_and_byte_line_keep_their_text() {
   );
 }
 
+/// A declaration made before `[utf8]{inputenc}` — in the preamble or a package, C1 and C0 — keeps its meaning through
+/// utf8.def's (re)load and a later `\inputencoding{utf8}`: the declaration records `\u8:<character>` (utf8.def:207-221),
+/// which the activated character reads (utf8.def:93-108); in a `\csname` a C1 character is itself (utf8.def:55-60). Red
+/// (ENCURL r1): 22 Errors, the declared characters dropped, the names' errors in the text; INT7b: 0 Errors, "A dont  Δ
+/// (two) Λ.".
+#[test]
+fn utf8_declared_before_inputenc_keeps_its_meaning() {
+  let (log, xml, ()) = convert_bytes_files_then(
+    include_bytes!(
+      "../../../tools/perfect_kernel/repros/unicode-catcodes/utf8_declared_before_inputenc_keeps_meaning.tex"
+    ),
+    &[(
+      "declc.sty",
+      include_bytes!("../../../tools/perfect_kernel/repros/unicode-catcodes/declc.sty"),
+    )],
+    Some("ar5iv.sty"),
+    |_, _| (),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (id, lead) in [("p1.1", "A"), ("p2.1", "B")] {
+    assert_element(
+      &xml,
+      "p",
+      &[&format!("xml:id=\"{id}\"")],
+      &format!("<p xml:id=\"{id}\">{lead} \u{2018}don\u{2019}t \u{a1} (one) (two) (three).</p>"),
+    );
+  }
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p3.1\""],
+    "<p xml:id=\"p3.1\">P Y Z Q.</p>",
+  );
+}
+
 /// inputenc.sty:82-85 activates 1-8, 11, 14-31 and 127-255 as `\@inpenc@undefined`; `^^_` and `^^?` were missing
-/// (Perl's inputenc.sty.ltxml:48-51, KNOWN_PERL_ERRORS #1307), printed as OT1's "Ø" and "¨". `^^@` keeps Perl's
-/// activation, an Error where latex.ltx:22189's invalid `^^@` errs. Red (INT7b): 1 Error, "AØB¨CD".
+/// (Perl's inputenc.sty.ltxml:48-51, KNOWN_PERL_ERRORS #1309), printed as OT1's "Ø" and "¨". `^^@` keeps Perl's
+/// activation, under a byte encoding an Error where latex.ltx:22189's invalid `^^@` errs. Red (INT7b): 1 Error, "AØB¨CD".
 #[test]
 fn inputenc_activates_unit_separator_and_delete() {
   let (log, xml) = convert_with(
