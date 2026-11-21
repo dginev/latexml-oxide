@@ -1,0 +1,28 @@
+% amsart's `\maketitle` runs `\@setauthors` (amsart.cls:638, :808), whose body ends with `\@setthanks` (:836, which
+% prints the stored `\thankses`); a document's own `\@setauthors` copies that call: the thanks stays one note.
+% witness: 2606.04416 (main.tex:96-105)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" centered, "Supported by grant 42." under them and again in
+%          the first-page footnote (`\@adminfootnotes`, :659), the one text the frontmatter keeps once
+% engines: rust INT6D 07168347aed = 1 Error (`\@setthanks` undefined)
+% expect:  0 errors, 0 warnings; creators Ann Able (e-mail) and Bob Baker; the thanks text once, a pubnote
+% status:  RED (07168347aed) -> GREEN (REGFIXX)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\makeatletter
+\def\@setauthors{%
+  \begingroup
+    \let\MakeUppercase\relax
+    \begin{center}\normalfont\normalsize\authors\end{center}%
+  \endgroup
+  \@setthanks
+}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\email{ann@x.edu}
+\author{Bob Baker}
+\thanks{Supported by grant 42.}
+\maketitle
+Body.
+\end{document}

@@ -1,6 +1,6 @@
 % mechanism: the sibling of latin1_undefined_byte_in_pdf_key in a \url (hyperref's reader): the reader expands the URL and stringifies
 %   it, so inputenc's robust `\PackageError` (inputenc.sty:80, :139-143) must raise its Error there and leave no text
-%   (`url_string_messages`: `\protect` empty, `\GenericError` errs and gobbles its four arguments).
+%   (`url_string_messages`: `\GenericError` errs and gobbles its four arguments; the reader drops the `\protect`, REGFIXV).
 % witness: synthetic (review of REGFIXN2); the PDF-key shape 1803.03083
 % oracle:  pdflatex 6 errors (4 Undefined control sequence, 2 in \KV@def), the URL text garbled
 % engines: rust REGFIXJ3 = 1 Error:unexpected:<char>, href "http://x.org/ab"; REGFIXN2 = 0 errors, href and text
