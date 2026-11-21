@@ -218,8 +218,8 @@ fn wrapper_is_read_after_the_file_it_loads() {
   }
 }
 
-/// provides_route/misdeclared_file_is_not_the_file: an author's file declaring `\ProvidesPackage{tikz-cd}` that shares
-/// nothing with tikz-cd.sty (`content::reads_as_the_file`) is not read as it; the document's later
+/// provides_route/misdeclared_file_is_not_the_file: an author's file declaring `\ProvidesPackage{tikz-cd}` that defines
+/// none of tikz-cd.sty's names (`content::reads_as_the_file`) is not read as it; the document's later
 /// `\usepackage{tikz-cd}` finds tikz-cd loaded, as TeX reads it. Red: 4 Errors, the diagram lost: the file read as
 /// tikz-cd.sty and the binding marked loaded with it. Reviewer's REGFIXQ probe B. Distinct: a file that loads nothing.
 #[test]
@@ -232,12 +232,42 @@ fn misdeclared_file_is_not_read_as_the_file() {
     )],
     (0, 0),
   );
-  assert!(
-    !log.contains("is read as the tikz-cd.sty binding's"),
-    "{log}"
-  );
+  assert!(!log.contains("is read as tikz-cd.sty"), "{log}");
   picture_after(&xml, "MYTCD");
   assert!(xml.contains("class=\"ltx_tikzmatrix\""), "{xml}");
+}
+
+/// provides_route/misdeclared_file_shares_a_load: an author's `\ProvidesPackage{tikz-cd}` file that loads tikz, as
+/// tikz-cd.sty does, and defines `\mytcd` is not read as tikz-cd.sty: a shared load is no evidence of a copy, and
+/// tikz-cd.sty's names are its library's (`\usetikzlibrary{cd}`), none of them the file's (`content::reads_as_the_file`).
+/// Red: 3 Errors, no picture. Reviewer's REGFIXQ2 probe p1. Distinct: the real file defines nothing itself.
+#[test]
+fn misdeclared_file_sharing_a_load_is_not_the_file() {
+  let (log, xml) = convert(
+    repro!("provides_route", "misdeclared_file_shares_a_load.tex"),
+    &[("mytkmacros.sty", repro!("provides_route", "mytkmacros.sty"))],
+    (0, 0),
+  );
+  assert!(!log.contains("is read as tikz-cd.sty"), "{log}");
+  picture_after(&xml, "MYTCD");
+  assert!(xml.contains("class=\"ltx_tikzmatrix\""), "{xml}");
+}
+
+/// provides_route/misdeclared_pgfplots_shares_a_load: an author's `\ProvidesPackage{pgfplots}` file that loads
+/// graphicx, as pgfplots.sty does, defines none of pgfplots.sty's names and is not read as it. Red: 3 Errors, the plot
+/// lost. Reviewer's REGFIXQ2 probe p3. Distinct: the real file defines names of its own (`\pgfplotsversion`).
+#[test]
+fn misdeclared_pgfplots_sharing_a_load_is_not_the_file() {
+  let (log, xml) = convert(
+    repro!("provides_route", "misdeclared_pgfplots_shares_a_load.tex"),
+    &[("mygxplots.sty", repro!("provides_route", "mygxplots.sty"))],
+    (0, 0),
+  );
+  assert!(!log.contains("is read as pgfplots.sty"), "{log}");
+  picture_after(&xml, "MYPGF");
+  for tick in ["0", "0.2", "0.4", "0.6", "0.8", "1"] {
+    assert!(xml.contains(&format!("text=\"{tick}\"")), "{tick}: {xml}");
+  }
 }
 
 /// provides_route/class_wrapper_loads_the_class: a class wrapper `\ProvidesClass{smfart}\LoadClass{smfart}` is not

@@ -2884,7 +2884,7 @@ fn routed_copy_request(file: &str, ext: Option<&str>) -> Option<String> {
   if ext == route_ext {
     // (not a wrapper, which loads the file it declares itself and is read after it, as TeX reads it: a
     // `\ProvidesPackage{tikz-cd}\RequirePackage{tikz-cd}` hit the binding still loading, TeX Live's file never read;
-    // nor an author's own file that shares nothing with the file it names, whose request for it TeX still reads)
+    // nor an author's own file that defines none of the file's names, whose request for it TeX still reads)
     let file = s!("{}.{ext}", file_stem(file));
     if loads_file(&text, binding) || !reads_as_the_file(&text, &file) {
       return None;
@@ -2892,7 +2892,7 @@ fn routed_copy_request(file: &str, ext: Option<&str>) -> Option<String> {
     Info!(
       "provide",
       &request,
-      s!("The paper's {request}.{ext} is read as the {target} binding's {file}")
+      s!("The paper's {request}.{ext} is read as {file}, the file the {target} binding reads")
     );
     return Some(request);
   }
@@ -2916,10 +2916,11 @@ fn loads_file(text: &str, name: &str) -> bool {
 }
 
 /// Does a paper's copy (its source `text`) read as `file`, the file its binding reads raw (the paper's own, else TeX
-/// Live's)? What each defines ([`defined_names`]) and loads (`\RequirePackage`, `\usepackage`, `\LoadClass`, `\input`,
-/// `\usetikzlibrary`) share a quarter of the smaller of the two: a cut-down copy (the class's first-load test and its
-/// packages) and a file that is a wrapper (tikz-cd.sty: tikz, `\usetikzlibrary{cd}`) both pass; an author's file that
-/// only misdeclares itself (defining `\mytcd`) does not. With no such file, the copy is the only one there is.
+/// Live's)? Only the names each defines count ([`names_read_as`]), never what it loads: an author's file that loads
+/// tikz as tikz-cd.sty does but defines `\mytcd` is no copy. They share a quarter of the smaller set: a cut-down copy
+/// (smfcopy's first-load test, 1 of 2; tikzcd.sty 1201.4414, 1512.05388: 14 of 18; pdfplots.sty 2105.12769: 2 of 2;
+/// smfartVS.cls 1110.1467: 237 of 237) passes, a misdeclared author's file (0) does not. With no such file, the copy
+/// is the only one there is.
 fn reads_as_the_file(text: &str, file: &str) -> bool {
   let Some(original) = find_file(
     file,
@@ -2931,28 +2932,56 @@ fn reads_as_the_file(text: &str, file: &str) -> bool {
   .and_then(|path| source_text(&path)) else {
     return true;
   };
-  static LOADED: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-      r"\\(?:RequirePackage|usepackage|LoadClass|usetikzlibrary|input)\s*(?:\[[^\]]*\])?\s*\{?\s*([^}\s\\]+)",
-    )
-    .unwrap()
-  });
-  let footprint = |text: &str| {
-    let mut items = defined_names(text);
-    for code in source_code_lines(text) {
-      for cap in LOADED.captures_iter(code) {
-        items.extend(
-          cap[1]
-            .split(',')
-            .map(|name| file_stem(name.trim()).to_string()),
-        );
-      }
-    }
-    items
-  };
-  let (copy, original) = (footprint(text), footprint(&original));
+  let (copy, original) = (names_read_as(text), names_read_as(&original));
   let shared = copy.intersection(&original).count();
   shared > 0 && shared * 4 >= copy.len().min(original.len())
+}
+
+/// The names the TeX source `text` defines ([`defined_names`]); for a file that defines none itself, those of the
+/// files it reads with `\input` or `\usetikzlibrary`, one level: tikz-cd.sty's are tikzlibrarycd.code.tex's (`\tikzcd`,
+/// `\arrow`, …). A `\usetikzlibrary{X}` reads tikzlibraryX.code.tex, else pgflibraryX.code.tex (tikz.code.tex
+/// `\use@@tikzlibrary`).
+fn names_read_as(text: &str) -> HashSet<String> {
+  static READ: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\\(usetikzlibrary|input)(?:\s*\{([^}]*)\}|\s+([^\s{}\\]+))").unwrap()
+  });
+  let mut names = defined_names(text);
+  if !names.is_empty() {
+    return names;
+  }
+  for code in source_code_lines(text) {
+    for cap in READ.captures_iter(code) {
+      let items = cap.get(2).or_else(|| cap.get(3)).map_or("", |m| m.as_str());
+      for item in items
+        .split(',')
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+      {
+        let candidates = if &cap[1] == "input" {
+          vec![item.to_string()]
+        } else {
+          vec![
+            s!("tikzlibrary{item}.code.tex"),
+            s!("pgflibrary{item}.code.tex"),
+          ]
+        };
+        let read = candidates.iter().find_map(|name| {
+          find_file(
+            name,
+            Some(FindFileOptions {
+              forbid_ltxml: true,
+              ext_type: Some(Cow::Borrowed("tex")),
+              ..FindFileOptions::default()
+            }),
+          )
+        });
+        if let Some(read) = read.and_then(|path| source_text(&path)) {
+          names.extend(defined_names(&read));
+        }
+      }
+    }
+  }
+  names
 }
 
 /// One class slot (OXIDIZED_DESIGN_DIVERGENCES #736): does the base class a stand-in class binding loaded stand for the
