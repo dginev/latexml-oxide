@@ -689,6 +689,10 @@ impl Converter {
     // #304 cost days for want of this one line in the reporter's log.
     let (backend, why) = latexml_core::util::pathname::kpathsea_backend();
     Info!("kpathsea", "backend", s!("{} ({why})", backend.as_str()));
+    for root in latexml_core::util::pathname::trimmed_texmf_roots() {
+      let (var, given, used) = (root.var, &root.given, &root.used);
+      Info!("kpathsea", "texmf_root", s!("{var}={given} read as {used}"));
+    }
     self.ready = true;
     Ok(())
   }

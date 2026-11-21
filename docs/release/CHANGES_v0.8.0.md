@@ -837,6 +837,16 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     the same configuration as the `kpsewhich` on PATH. Where the library already finds a `texmf.cnf`
     nothing changes. Verified in a container with only `libkpathsea6` and an install-tl tree; the
     crate's own tests for it are opt-in (`cargo test -- --ignored`), being host-specific.
+  - **A trailing `/` on `TEXMFROOT` no longer makes conversions 30-150× slower (#950).**
+    texmf.cnf's `$TEXMFROOT/texmf-dist` became `…/2024//texmf-dist`, kpathsea's `//`
+    recursive search: the linked libkpathsea walked the tree and resolved nothing, and
+    each lookup then spawned a `kpsewhich` that walked it again (pdflatex itself fails
+    under that setting). The `kpathsea` crate 0.3.6 now hands both backends the TEXMF
+    root variables without their trailing separators (`Kpaths::new()`; logged as
+    `Info:kpathsea:texmf_root`), and the TeX tools we spawn (`kpsewhich`, `texlua`,
+    `pdflatex`, `latex`, the DVI converters) get the same values; search-path specs keep
+    their `//`. Guard `trailing_separator_on_texmf_roots_resolves_as_without` (the rule's
+    own tests are the crate's).
   - **Windows diagnostics name their source file.** A location's source was taken
     for a URL whenever it held a `:`, which every Windows path does, so messages
     read `at C:\…\t.tex.index.tex; line 3` where Linux says `at t.tex; line 3`. Perl's

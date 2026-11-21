@@ -217,6 +217,90 @@ fn choose_kpaths(
   }
 }
 
+#[cfg(feature = "kpathsea")]
+pub use kpathsea::{TEXMF_ROOT_VARS, TrimmedRoot, trim_texmf_root};
+
+/// The kpathsea crate's TEXMF root variables (0.3.6), for a build without it.
+#[cfg(not(feature = "kpathsea"))]
+pub const TEXMF_ROOT_VARS: [&str; 9] = [
+  "TEXMFROOT",
+  "TEXMFDIST",
+  "TEXMFMAIN",
+  "TEXMFLOCAL",
+  "TEXMFSYSVAR",
+  "TEXMFSYSCONFIG",
+  "TEXMFHOME",
+  "TEXMFVAR",
+  "TEXMFCONFIG",
+];
+
+/// The kpathsea crate's `trim_texmf_root` (0.3.6), for a build without it: `value` without its trailing separators,
+/// `None` when there are none; path lists, brace lists and file-system or drive roots stay (issue #950).
+#[cfg(not(feature = "kpathsea"))]
+pub fn trim_texmf_root(value: &str) -> Option<String> {
+  let (separators, list_separator): (&[char], char) = if cfg!(windows) {
+    (&['/', '\\'], ';')
+  } else {
+    (&['/'], ':')
+  };
+  if value.contains([list_separator, ',', '{']) {
+    return None;
+  }
+  let stem = value.trim_end_matches(separators);
+  let is_drive = cfg!(windows) && stem.len() == 2 && stem.ends_with(':');
+  let keep = if stem.is_empty() || is_drive {
+    stem.len() + 1
+  } else {
+    stem.len()
+  };
+  (keep < value.len()).then(|| value[..keep].to_string())
+}
+
+/// The TEXMF root variables whose trailing separator the kpathsea crate trimmed (>= 0.3.6, issue #950), for the
+/// conversion log. Forces the kpathsea initialization, like [`kpathsea_backend`].
+#[cfg(feature = "kpathsea")]
+pub fn trimmed_texmf_roots() -> &'static [TrimmedRoot] {
+  drop(
+    KPSE
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner),
+  );
+  kpathsea::trimmed_texmf_roots()
+}
+
+/// Without the `kpathsea` feature nothing reads the TEXMF roots.
+#[cfg(not(feature = "kpathsea"))]
+pub fn trimmed_texmf_roots() -> &'static [TrimmedRoot] { &[] }
+
+/// The kpathsea crate's `TrimmedRoot`, for a build without it.
+#[cfg(not(feature = "kpathsea"))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrimmedRoot {
+  /// The variable, one of [`TEXMF_ROOT_VARS`].
+  pub var:   &'static str,
+  /// Its value as given.
+  pub given: String,
+  /// The value used.
+  pub used:  String,
+}
+
+/// The TEXMF root variables set now with a trailing separator, each with its trimmed value (issue #950): what a
+/// spawned TeX tool must be given, as the kpathsea crate gives the linked library and its own `kpsewhich` spawns.
+pub fn texmf_root_env() -> Vec<(&'static str, String)> {
+  TEXMF_ROOT_VARS
+    .iter()
+    .filter_map(|&var| Some((var, trim_texmf_root(&env::var(var).ok()?)?)))
+    .collect()
+}
+
+/// A command for a TeX tool (`kpsewhich`, `pdflatex`, `texlua`, …) given [`texmf_root_env`]: a root ending in `/`
+/// would make it walk the whole tree and resolve nothing (issue #950). Sets nothing when no root has one.
+pub fn tex_tool_command(program: impl AsRef<std::ffi::OsStr>) -> std::process::Command {
+  let mut command = std::process::Command::new(program);
+  command.envs(texmf_root_env());
+  command
+}
+
 /// Pick the kpathsea backend that can actually resolve host files, and record
 /// the choice for [`kpathsea_backend`].
 #[cfg(feature = "kpathsea")]
@@ -290,7 +374,7 @@ pub fn ambient_kpsewhich_selfautoparent() -> Option<&'static str> {
   static SELF_AUTO_PARENT: OnceLock<Option<String>> = OnceLock::new();
   SELF_AUTO_PARENT
     .get_or_init(|| {
-      let out = std::process::Command::new("kpsewhich")
+      let out = tex_tool_command("kpsewhich")
         .args(["-var-value=SELFAUTOPARENT"])
         .output()
         .ok()?;
@@ -325,7 +409,7 @@ pub fn ambient_kpsewhich_version() -> Option<&'static str> {
   static BANNER: OnceLock<Option<String>> = OnceLock::new();
   BANNER
     .get_or_init(|| {
-      let out = std::process::Command::new("kpsewhich")
+      let out = tex_tool_command("kpsewhich")
         .arg("--version")
         .output()
         .ok()?;
@@ -1310,6 +1394,20 @@ pub fn cwd() -> String { env::current_dir().unwrap().to_string_lossy().to_string
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// Issue #950: the local copy of the kpathsea crate's rule, for a build without it.
+  #[cfg(not(feature = "kpathsea"))]
+  #[test]
+  fn trim_texmf_root_without_the_kpathsea_feature() {
+    assert_eq!(trim_texmf_root("/tl/2024//").as_deref(), Some("/tl/2024"));
+    assert_eq!(
+      trim_texmf_root("!!/tl/2024/").as_deref(),
+      Some("!!/tl/2024")
+    );
+    assert_eq!(trim_texmf_root("/tl//2024"), None);
+    assert_eq!(trim_texmf_root("/"), None);
+    assert_eq!(trim_texmf_root("{/a/,/b/}"), None);
+  }
 
   /// The dual-TL agreement probe compares paths as the file system does: on Windows kpsewhich's SELFAUTOPARENT
   /// (`C:/texlive/2026`) and the linked library's `c:/texlive/2026/…` name one tree.
