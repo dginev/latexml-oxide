@@ -23529,8 +23529,8 @@ redefinition) and the environment's own end (`\end\@currenvir`, saved, local to 
 and the `$$`/`\dollardollar@end` and gives the binding's `\endgather`; what the end adds after it runs, as in TeX:
 linenoaa.sty:51-55 (aa.cls's copy :2078; 2407.04074 2503.08108 2503.20535 2604.03365 2608.16665)
 `\math@cr \black@\totwidth@ \egroup $$\endlinenomath\ignorespacesafterend`, text printed after the display, an
-`\endgroup` closing the package's own `\begingroup`. An end that calls the binding's `\endgather` (linenoaa's
-`{gather*}`: `\endgather\endlinenomath`) passes through. Material other than `\black@<dimen>` before the `\egroup` is
+`\endgroup` closing the package's own `\begingroup`. An end that calls `\endgather`, whether the binding's or a
+package's own (linenoaa's `{gather*}`: `\endgather\endlinenomath`, its `{gather}` renewed), passes through. Material other than `\black@<dimen>` before the `\egroup` is
 dropped with a Warning, and an end with no `\egroup` within a few tokens is put back with one. Before, `\start@gather`
 was undefined and the raw end cascaded (`\noalign`, `\egroup`, `$`: 13 errors in the repro). `{align}` and its kin keep
 their locked bindings (Perl amsmath.sty.ltxml:491-501), so linenoaa's renewal of them never runs.
