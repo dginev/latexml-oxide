@@ -64,10 +64,17 @@
 //!
 //! * Documents whose `ltx` namespace mapping cannot be resolved from the
 //!   declaration stack error out with a pointer to
-//!   `LATEXML_POST_STREAM_SPLIT=0` (the whole-DOM path).
-//! * `ltx:resource` elements / `<?latexml?>` PIs first appearing *after* a
-//!   page has been written cannot retroactively reach it; a `Warn` flags the
-//!   (never observed in practice) case.
+//!   `LATEXML_POST_STREAM_SPLIT=0` (the whole-DOM path); the driver takes that
+//!   path itself, with an Info, for an input under 1 GiB.
+//! * `ltx:resource`, root `ltx:date` and `ltx:navigation` elements and
+//!   `<?latexml?>` PIs first appearing *after* a page has been written cannot
+//!   retroactively reach it (the DOM path copies them into every page). With
+//!   `late_template_fails` the split then fails, so the driver can take the
+//!   whole-DOM path; without it a `Warn` flags the case. A navigation inside a
+//!   page arrives late (navigation reaches post only from `--input xml`;
+//!   guard `112_fragment_yield::split_keeps_pages_whose_namespaces_a_navigation_uses`).
+//!   An `ltx:resource` nested inside content never reaches the templates,
+//!   early or late; it is handled the same way.
 
 use std::{
   io::Write,
@@ -121,6 +128,7 @@ pub fn stream_split(
   naming: SplitNaming,
   destination: Option<&str>,
   spill_dir: &Path,
+  late_template_fails: bool,
 ) -> Result<Option<StreamSplitOutcome>, String> {
   let arms = parse_split_union(union_xpath)
     .ok_or_else(|| format!("split union not streamable: {union_xpath}"))?;
@@ -137,7 +145,11 @@ pub fn stream_split(
   let reader = TextReader::from_file(source_path, OPTIONS)
     .map_err(|()| format!("cannot open '{source_path}' for streaming"))?;
   let mut splitter = Splitter::new(arms, naming, destination, spill_dir);
+  splitter.late_template_fails = late_template_fails;
   splitter.run(reader)?;
+  if late_template_fails && let Some(why) = splitter.late_template {
+    return Err(format!("{why}; the staged pages would not carry it"));
+  }
   if splitter.metas.len() <= 1 {
     // No page matched: mirror the DOM path's `[not split]` outcome and let
     // the caller run the ordinary pipeline (the root spill alone would be a
@@ -221,30 +233,35 @@ enum LevelKind {
 }
 
 struct Splitter {
-  arms:               Vec<SplitArm>,
-  naming:             SplitNaming,
-  root_destination:   String,
-  spill_dir:          PathBuf,
-  levels:             Vec<Level>,
-  metas:              Vec<PageMeta>,
+  arms:                Vec<SplitArm>,
+  naming:              SplitNaming,
+  root_destination:    String,
+  spill_dir:           PathBuf,
+  levels:              Vec<Level>,
+  metas:               Vec<PageMeta>,
   /// The root spill's prolog: pre-root PIs/comments, reconstructed verbatim.
-  root_prolog:        String,
+  root_prolog:         String,
   /// Root page trailing misc (post-root comments/PIs).
-  root_tail:          String,
+  root_tail:           String,
   /// `<?latexml …?>` bodies, document order (ar5iv sniff + page templates).
-  latexml_pis:        Vec<String>,
+  latexml_pis:         Vec<String>,
   /// Serialized `ltx:resource` elements (page template).
-  resources_xml:      Vec<String>,
+  resources_xml:       Vec<String>,
   /// Serialized root-direct `ltx:date` elements (page template).
-  dates_xml:          Vec<String>,
+  dates_xml:           Vec<String>,
   /// Serialized `ltx:navigation` elements, excised from content.
-  navs_xml:           Vec<String>,
+  navs_xml:            Vec<String>,
   /// Root element `class` attribute (merged into every page).
-  root_class:         Option<String>,
+  root_class:          Option<String>,
   /// Concatenated `ltx:picture` serializations for SVG extraction.
-  first_page_spilled: bool,
-  warned_late:        bool,
-  unnamed_counter:    u32,
+  first_page_spilled:  bool,
+  warned_late:         bool,
+  /// Why the staged pages miss a template item: the first one met after a
+  /// page was written, or a nested `ltx:resource`.
+  late_template:       Option<String>,
+  /// Fail on a late template instead of warning (see the module doc).
+  late_template_fails: bool,
+  unnamed_counter:     u32,
 }
 
 impl Splitter {
@@ -270,6 +287,8 @@ impl Splitter {
       root_class: None,
       first_page_spilled: false,
       warned_late: false,
+      late_template: None,
+      late_template_fails: false,
       unnamed_counter: 0,
     }
   }
@@ -313,8 +332,11 @@ impl Splitter {
             if ltx && localname == "navigation" {
               // Excised BEFORE page surgery in the DOM path — deliberately
               // does not break a page run.
+              self.warn_if_late("an ltx:navigation");
               self.navs_xml.push(outer);
             } else if self.needs_dom_descent(&outer) {
+              // A wrapper: its non-page content never reaches `append_bulk`.
+              self.probe_nested_resource(&outer);
               let mut minidoc = reader
                 .expand_to_document()
                 .ok_or_else(|| "expand_to_document failed mid-stream".to_string())?;
@@ -404,8 +426,11 @@ impl Splitter {
     self.latexml_pis.push(body);
   }
 
-  fn warn_if_late(&mut self, what: &str) {
-    if self.first_page_spilled && !self.warned_late {
+  fn warn_if_late(&mut self, what: &'static str) {
+    if self.first_page_spilled && self.late_template.is_none() {
+      self.late_template = Some(format!("{what} appeared after the first page was written"));
+    }
+    if self.first_page_spilled && !self.late_template_fails && !self.warned_late {
       self.warned_late = true;
       Warn!(
         "split",
@@ -550,7 +575,7 @@ impl Splitter {
 
   /// Content probes shared by every bulk append: the TOC-suppression flag,
   /// picture collection for SVG extraction, embedded `<?latexml?>` PI
-  /// bodies, and the nested-resource warning.
+  /// bodies, and the nested-resource probe.
   fn bulk_probes(&mut self, outer: &str, expected_resource: bool) {
     if probe_lists_toc(outer) {
       self.top().has_lists_toc = true;
@@ -558,21 +583,35 @@ impl Splitter {
     // `expected_resource`: the subtree IS a direct-child ltx:resource that
     // append_bulk already collected — its own serialization must not trip the
     // nested-resource flag.
-    if !expected_resource
-      && (outer.contains("<resource") || outer.contains(":resource"))
-      && !self.warned_late
-    {
+    if !expected_resource {
+      self.probe_nested_resource(outer);
+    }
+    if outer.contains("<?latexml") {
+      for body in extract_pi_bodies(outer) {
+        self.latexml_pis.push(body);
+      }
+    }
+  }
+
+  /// An `ltx:resource` inside `outer`, a content subtree: the DOM split copies
+  /// every `//ltx:resource` into the page templates (Perl Post.pm L770-771,
+  /// `PostDocument::new_document`); the stream collects only the root's direct
+  /// ones.
+  fn probe_nested_resource(&mut self, outer: &str) {
+    if !contains_element_probe(outer, "resource") {
+      return;
+    }
+    if self.late_template_fails {
+      if self.late_template.is_none() {
+        self.late_template = Some("a nested ltx:resource is not in the page templates".into());
+      }
+    } else if !self.warned_late {
       self.warned_late = true;
       Warn!(
         "split",
         "stream",
         "an ltx:resource nested inside content is not propagated to page templates by the streaming split"
       );
-    }
-    if outer.contains("<?latexml") {
-      for body in extract_pi_bodies(outer) {
-        self.latexml_pis.push(body);
-      }
     }
   }
 
@@ -815,6 +854,7 @@ impl Splitter {
     for nav in &mut navs {
       let s = minidoc.node_to_string(nav);
       nav.unlink_node();
+      self.warn_if_late("an ltx:navigation");
       self.navs_xml.push(s);
     }
     // Pre-collect page matches on the intact (nav-free) tree.
@@ -1702,6 +1742,7 @@ mod tests {
       SplitNaming::Id,
       Some("out/mini.html"),
       &spill,
+      true,
     )
     .expect("split runs")
     .expect("split produces pages");

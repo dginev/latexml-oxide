@@ -281,6 +281,17 @@ fn split_keeps_pages_whose_namespaces_a_navigation_uses() {
     out.status,
     String::from_utf8_lossy(&out.stderr)
   );
+  // S2's navigation follows the written S1: the streamed split cannot give
+  // it to S1, so it steps aside for the whole-DOM split, which does.
+  let stderr = String::from_utf8_lossy(&out.stderr);
+  assert_eq!(
+    stderr
+      .matches("ltx:navigation appeared after the first page was written")
+      .count(),
+    1,
+    "the streamed split must hand this document to the whole-DOM split:\n{stderr}"
+  );
+  assert!(!stderr.contains("Warning:"), "{stderr}");
   for page in ["index.xml", "S1.xml", "S2.xml"] {
     let xml = std::fs::read_to_string(work.path().join(page)).expect("read a split page");
     let navs: Vec<&str> = xml
