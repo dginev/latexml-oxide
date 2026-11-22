@@ -148,6 +148,7 @@ LoadDefinitions!({
     "and @role!='ADDOP' and @role!='MULOP' and @role!='BINOP' ",
     "and @role!='OPEN' and @role!='CLOSE'",
     "])]"),
+  local_replace => true,
   replace => sub[document, nodes] {
     // Perl: `$node->cloneNode(0)` — SHALLOW clone (attributes only, no
     // children). Rust's `Node::clone` is an Rc clone (same underlying node),

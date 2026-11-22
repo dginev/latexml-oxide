@@ -5400,10 +5400,130 @@ More text.
       "bibliography author must render on --split:\nstderr:\n{stderr}"
     );
 
-    // 2. Core REPORT undefined-command tally must survive into the final verdict.
+    // 2. Core REPORT undefined-command tally must survive into the FINAL combined verdict line.
+    let verdict_line = stderr
+      .lines()
+      .rfind(|line| line.starts_with("Conversion complete:"))
+      .unwrap_or_else(|| panic!("missing final Conversion complete line:\n{stderr}"));
     assert!(
-      stderr.contains("\\NoSuchCoreCommandXYZ"),
-      "core undefined macro tally must survive into final status report:\n{stderr}"
+      verdict_line.contains("undefined macro[\\NoSuchCoreCommandXYZ]"),
+      "final status verdict must carry core undefined-macro tally:\n{verdict_line}\nfull stderr:\n{stderr}"
+    );
+  }
+
+  /// Regression guard: `release_core_state_for_post()` must preserve
+  /// `NOMINAL_FONT_SIZE` across `state::reset_thread_state()`, because MathML
+  /// presentation reads `Font::math_default()` (`defsize()`) when sizing
+  /// negative-space `<mpadded>` widths on 11pt/12pt documents.
+  #[test]
+  fn split_preserves_11pt_nominal_font_size_for_mpadded_widths() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let src = dir.path().join("math11.tex");
+    let unsplit_out = dir.path().join("unsplit.html");
+    let split_dir = dir.path().join("split");
+    let split_out = split_dir.join("math11.html");
+    std::fs::create_dir_all(&split_dir).unwrap();
+    std::fs::write(
+      &src,
+      r"\documentclass[11pt]{article}
+\usepackage{amsmath}
+\begin{document}
+\section{One}
+$Q\!\kappa_{G}$
+\section{Two}
+Text.
+\end{document}
+",
+    )
+    .unwrap();
+
+    let run = |extra: &[&str], dest: &std::path::Path| {
+      let out = Command::new(binary())
+        .args(extra)
+        .args([
+          "--format=html5",
+          "--pmml",
+          "--noinvisibletimes",
+          "--dest",
+          dest.to_str().unwrap(),
+          src.to_str().unwrap(),
+        ])
+        .output()
+        .expect("run latexml_oxide");
+      assert!(
+        out.status.success(),
+        "latexml_oxide failed:\n{}",
+        String::from_utf8_lossy(&out.stderr)
+      );
+    };
+
+    run(&[], &unsplit_out);
+    run(&["--split", "--splitat=section"], &split_out);
+
+    let unsplit_html = std::fs::read_to_string(&unsplit_out).unwrap();
+    let split_s1_html = std::fs::read_to_string(split_dir.join("S1.html")).unwrap();
+    let extract_mpadded = |html: &str| -> String {
+      let start = html
+        .find("<mpadded ")
+        .unwrap_or_else(|| panic!("expected <mpadded> in html:\n{html}"));
+      let end = html[start..].find('>').unwrap() + start + 1;
+      html[start..end].to_string()
+    };
+    let unsplit_mpadded = extract_mpadded(&unsplit_html);
+    let split_mpadded = extract_mpadded(&split_s1_html);
+    assert_eq!(
+      split_mpadded, unsplit_mpadded,
+      "split run (with core release) must keep 11pt mpadded width identical to unsplit"
+    );
+  }
+
+  /// Regression guard: default `Rewrite::Replace` (without `local_replace`) must
+  /// detach following siblings before running the closure (Perl `Rewrite.pm:124-134`),
+  /// keeping `acmart` teaser-after-abstract ordering unchanged.
+  #[test]
+  fn acmart_teaser_after_abstract_keeps_perl_replace_follower_detach_order() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let src = dir.path().join("acm.tex");
+    let out = dir.path().join("acm.xml");
+    std::fs::write(
+      &src,
+      r"\documentclass[sigconf]{acmart}
+\begin{document}
+\title{A Title}
+\author{A. Author}
+\affiliation{\institution{Inst}\city{C}\country{X}}
+\begin{abstract}An abstract.\end{abstract}
+\keywords{one, two}
+\begin{teaserfigure}\centering TEASER\caption{A teaser.}\end{teaserfigure}
+\maketitle
+\section{Intro}
+Body.
+\end{document}
+",
+    )
+    .unwrap();
+
+    let output = Command::new(binary())
+      .args([
+        "--format=xml",
+        "--dest",
+        out.to_str().unwrap(),
+        src.to_str().unwrap(),
+      ])
+      .output()
+      .expect("run latexml_oxide");
+    assert!(
+      output.status.success(),
+      "latexml_oxide failed:\n{}",
+      String::from_utf8_lossy(&output.stderr)
+    );
+    let xml = std::fs::read_to_string(&out).unwrap();
+    let abs_pos = xml.find("<abstract").expect("abstract");
+    let kw_pos = xml.find("<keywords").expect("keywords");
+    let teaser_pos = xml.find("ltx_teaserfigure").expect("teaser");
+    assert!(
+      abs_pos < kw_pos && kw_pos < teaser_pos,
+      "expected abstract < keywords < teaser (Perl Replace follower-detach semantics):\n{xml}"
     );
   }
 }

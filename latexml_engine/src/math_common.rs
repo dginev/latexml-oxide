@@ -659,16 +659,11 @@ LoadDefinitions!({
   def_math_atom("\\not", "\u{FF0F}", Some("OPFUNCTION"), Some("not"))?;
 
   // For a \not operator that is followed by anything, concoct an appropriate not or cancelation.
-  // `latex_constructs` reloads `math_common` after `plain_constructs` to restore math
-  // symbol definitions; guard the rewrite registration so `\not` is not registered twice
-  // in `DOCUMENT_REWRITE_RULES` (saving a full-DOM XPath scan on every document and
-  // streaming pass-2 segment).
-  if !has_value("math_common_not_rewrite_loaded") {
-    assign_value("math_common_not_rewrite_loaded", true, Some(Scope::Global));
-    DefRewrite!(select =>
-      "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @meaning='not'][following-sibling::*]",
-    select_count => 2,
-    replace =>  sub[document, nodes] {
+  DefRewrite!(select =>
+    "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @meaning='not'][following-sibling::*]",
+  select_count => 2,
+  local_replace => true,
+  replace =>  sub[document, nodes] {
     // TODO: This argument low-level boilerplate is annoying
     // what is a good design pattern to "destructure" a Vec?
     // should it be another datastructure?
@@ -747,7 +742,6 @@ LoadDefinitions!({
       }   // ? Hopefully this is safe.
     }
     });
-  }
 
   //----------------------------------------------------------------------
   // \joinrel

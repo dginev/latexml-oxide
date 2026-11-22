@@ -2051,6 +2051,7 @@ LoadDefinitions!({
       "descendant::ltx:Math[descendant::ltx:XMApp[",
       "@role='FLOATSUPERSCRIPT' or @role='FLOATSUBSCRIPT']]"
     ),
+    local_replace => true,
     replace => sub[document, nodes] {
       let math = nodes.pop().unwrap();
       let mut replaced = false;

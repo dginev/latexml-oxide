@@ -111,6 +111,10 @@ pub struct RewriteOptions {
   /// Rust-only: run the rule up to this many times, each later pass on the nodes the previous one inserted.
   /// For a rule whose select can match only what its replacement inserts (`base_xmath`'s thousands separator).
   pub passes:         Option<usize>,
+  /// Rust-only opt-in for built-in rules whose `replace` closure is strictly DOM-local
+  /// (never calls `findnodes`, `\label`, or inspects/moves unrelated siblings): splices
+  /// replacements in O(inserted) instead of detaching/re-appending all following siblings.
+  pub local_replace:  bool,
 }
 impl fmt::Debug for RewriteOptions {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "<RewriteOptions>") }
@@ -674,11 +678,68 @@ impl Rewrite {
           let Some(mut parent) = tree.get_parent() else {
             return Ok(());
           };
-          // Detach only the `nmatched` nodes being replaced (O(nmatched)), keeping
-          // `anchor = next_sibling` so we can splice replacements directly before
-          // it in O(inserted) instead of unbinding and re-attaching all following
-          // siblings on every match (which was O(matches * siblings) — 637 ms /
-          // 31% of wall on LHCb 2402.01336v5's 1,222 author superscripts).
+          if !self.options.local_replace {
+            // Perl `Rewrite.pm:123-152`: detach the matched node and every following sibling
+            // while the closure runs so closures that query or inspect the DOM see Perl's tree.
+            let mut following = VecDeque::new();
+            while let Some(mut sib) = parent.get_last_child() {
+              sib.unbind_node();
+              following.push_front(sib.clone());
+              if sib == *tree {
+                break;
+              }
+            }
+            let mut replaced = Vec::with_capacity(nmatched);
+            for _ in 0..nmatched {
+              if let Some(node) = following.pop_front() {
+                replaced.push(node);
+              }
+            }
+            for rnode in replaced.iter() {
+              document.unrecord_node_ids(rnode);
+            }
+            document.set_node(&parent);
+            let point_opt = parent.get_last_child();
+            if let RewritePattern::Closure(closure) = pattern {
+              closure(document, replaced.iter_mut().collect())?;
+            }
+            let mut ins_queue = VecDeque::new();
+            let mut walk = parent.get_last_child();
+            while let Some(sib) = walk {
+              if point_opt.as_ref() == Some(&sib) {
+                break;
+              }
+              walk = sib.get_prev_sibling();
+              ins_queue.push_front(sib);
+            }
+            let inserted: Vec<Node> = ins_queue.into_iter().collect();
+            for ins in inserted.iter() {
+              document.record_node_ids(ins)?;
+            }
+            let font = document.get_node_font(tree).clone();
+            for ins in inserted.iter() {
+              document.merge_node_font_rec(ins, &font)?;
+            }
+            if let Some(sink) = self.inserted.borrow_mut().as_mut() {
+              sink.extend(inserted.iter().cloned());
+            }
+            for mut fnode in following {
+              parent.add_child(&mut fnode)?;
+            }
+            return Ok(());
+          }
+
+          // Opt-in O(inserted) splice for DOM-local built-in rules: detach only `nmatched`
+          // nodes and park an RAII `<?_lx_rw?>` PI sentinel at the end of `parent`.
+          struct SentinelGuard(Option<Node>);
+          impl Drop for SentinelGuard {
+            fn drop(&mut self) {
+              if let Some(pi) = self.0.take() {
+                pi.free_subtree();
+              }
+            }
+          }
+
           let mut replaced = Vec::with_capacity(nmatched);
           let mut cur_opt = Some(tree.clone());
           for _ in 0..nmatched {
@@ -690,18 +751,10 @@ impl Rewrite {
             replaced.push(node);
           }
           let anchor_opt = cur_opt;
-          let anchor_next_opt = anchor_opt.as_ref().and_then(|n| n.get_next_sibling());
           for rnode in replaced.iter() {
             document.unrecord_node_ids(rnode);
           }
-          // When `anchor_opt` is present we append the closure's output to the
-          // end of `parent` and splice it before `anchor_opt` in O(inserted).
-          // Append a temporary ProcessingInstruction sentinel at the end of
-          // `parent` while the closure runs so neither `insert_math_token`
-          // (number/token ligatures), `open_text_internal` (libxml2 text
-          // coalescing), `swap_comment_text_if_needed`, nor `insert_comment`
-          // can merge the replacement into an unrelated trailing sibling.
-          let mut sentinel = if anchor_opt.is_some() {
+          let mut sentinel = SentinelGuard(if anchor_opt.is_some() {
             let mut pi = document
               .document
               .create_processing_instruction("_lx_rw", "")
@@ -710,26 +763,12 @@ impl Rewrite {
             Some(pi)
           } else {
             None
-          };
-          // Carry out the operation, inserting whatever nodes.
+          });
           document.set_node(&parent);
-          let point_opt = sentinel.clone().or_else(|| parent.get_last_child());
-          let closure_res = if let RewritePattern::Closure(closure) = pattern {
-            closure(document, replaced.iter_mut().collect()) // Carry out the insertion.
-          } else {
-            Ok(())
-          };
-          if let Err(err) = closure_res {
-            drop(point_opt);
-            if let Some(pi) = sentinel.take() {
-              document.discard_subtree(pi);
-            }
-            return Err(err);
+          let point_opt = sentinel.0.clone().or_else(|| parent.get_last_child());
+          if let RewritePattern::Closure(closure) = pattern {
+            closure(document, replaced.iter_mut().collect())?;
           }
-
-          // Collect only the newly appended nodes by walking backwards from
-          // `parent.get_last_child()` to `point_opt` in O(inserted) rather than
-          // materializing all preceding siblings with `parent.get_child_nodes()`.
           let mut ins_queue = VecDeque::new();
           let mut walk = parent.get_last_child();
           while let Some(sib) = walk {
@@ -742,46 +781,15 @@ impl Rewrite {
           drop(point_opt);
           let inserted: Vec<Node> = ins_queue.into_iter().collect();
 
-          // Now make any adjustments to the new nodes
           for ins in inserted.iter() {
-            if let Err(err) = document.record_node_ids(ins) {
-              if let Some(pi) = sentinel.take() {
-                document.discard_subtree(pi);
-              }
-              return Err(err);
-            }
+            document.record_node_ids(ins)?;
           }
-          // TODO: Can we avoid this clone?
           let font = document.get_node_font(tree).clone();
-          // the font of the matched node
           for ins in inserted.iter() {
-            // Copy the non-semantic parts of font to the replacement
-            if let Err(err) = document.merge_node_font_rec(ins, &font) {
-              if let Some(pi) = sentinel.take() {
-                document.discard_subtree(pi);
-              }
-              return Err(err);
-            }
+            document.merge_node_font_rec(ins, &font)?;
           }
-          // Splice `inserted` back into `tree`'s original slot (before `anchor`, or
-          // `anchor_next` if the closure relocated `anchor` itself). When `anchor`
-          // was absent, `inserted` is already in place.
-          let splice_target = if let Some(ref anchor) = anchor_opt
-            && anchor.get_parent().as_ref() == Some(&parent)
-            && !inserted.iter().any(|n| n == anchor)
+          if let Some(mut target) = anchor_opt.filter(|a| a.get_parent().as_ref() == Some(&parent))
           {
-            Some(anchor.clone())
-          } else if let Some(ref next) = anchor_next_opt
-            && next.get_parent().as_ref() == Some(&parent)
-            && !inserted.iter().any(|n| n == next)
-          {
-            Some(next.clone())
-          } else {
-            None
-          };
-          if let Some(mut target) = splice_target {
-            // Record non-text nodes before moving: `xmlAddPrevSibling` never
-            // merges/frees elements, whereas a merged TextNode can be freed.
             if let Some(sink) = self.inserted.borrow_mut().as_mut() {
               for ins in &inserted {
                 if ins.get_type() != Some(libxml::tree::NodeType::TextNode) {
@@ -789,40 +797,35 @@ impl Rewrite {
                 }
               }
             }
-            // Reuse the non-text PI sentinel as the splice point right before
-            // `target`: `xmlAddPrevSibling(TextNode, TextNode)` merges into
-            // `target`, which would reorder `[Text("X"), <Y/>]` before
-            // `Text("B")` into `[<Y/>, Text("XB")]`. Inserting before `pi`
-            // keeps exact order while still letting libxml2 coalesce a leading
-            // TextNode with `pi`'s preceding TextNode; afterward we free `pi`
-            // and coalesce adjacent TextNodes across the right boundary.
-            if let Some(mut pi) = sentinel.take() {
+            // Move the non-text PI right before `target` so inserting TextNodes cannot
+            // reorder via `xmlAddPrevSibling(Text, Text)`, and coalesce both text boundaries.
+            if let Some(mut pi) = sentinel.0.take() {
               pi.unlink_node();
               if let Err(err) = target.add_prev_sibling(&mut pi) {
                 document.discard_subtree(pi);
                 return Err(err.into());
               }
+              sentinel.0 = Some(pi);
+              let pi_ref = sentinel.0.as_mut().unwrap();
               for mut ins in inserted {
                 ins.unlink_node();
-                // `xmlAddPrevSibling(PI, Text)` does not coalesce with `PI->prev`
-                // when `PI->prev` is also a TextNode; merge explicitly so the left
-                // boundary stays coalesced identically to `parent.appendChild`.
                 if ins.get_type() == Some(libxml::tree::NodeType::TextNode)
-                  && let Some(mut prev) = pi.get_prev_sibling()
+                  && let Some(mut prev) = pi_ref.get_prev_sibling()
                   && prev.get_type() == Some(libxml::tree::NodeType::TextNode)
                 {
                   let mut merged = prev.get_content();
                   merged.push_str(&ins.get_content());
                   let _ = prev.set_content(&merged);
                   document.discard_subtree(ins);
-                } else if let Err(err) = pi.add_prev_sibling(&mut ins) {
-                  document.discard_subtree(pi);
-                  return Err(err.into());
+                } else {
+                  pi_ref.add_prev_sibling(&mut ins)?;
                 }
               }
-              let left_neighbor = pi.get_prev_sibling();
-              let right_neighbor = pi.get_next_sibling();
-              document.discard_subtree(pi);
+              let left_neighbor = pi_ref.get_prev_sibling();
+              let right_neighbor = pi_ref.get_next_sibling();
+              if let Some(pi) = sentinel.0.take() {
+                document.discard_subtree(pi);
+              }
               if let (Some(mut left), Some(right)) = (left_neighbor, right_neighbor)
                 && left.get_type() == Some(libxml::tree::NodeType::TextNode)
                 && right.get_type() == Some(libxml::tree::NodeType::TextNode)
@@ -832,14 +835,9 @@ impl Rewrite {
                 let _ = left.set_content(&merged);
                 document.discard_subtree(right);
               }
-            } else {
-              for mut ins in inserted {
-                ins.unlink_node();
-                target.add_prev_sibling(&mut ins)?;
-              }
             }
           } else {
-            if let Some(pi) = sentinel.take() {
+            if let Some(pi) = sentinel.0.take() {
               document.discard_subtree(pi);
             }
             if let Some(sink) = self.inserted.borrow_mut().as_mut() {
@@ -1589,7 +1587,10 @@ mod tests {
       root.add_child(&mut old).unwrap();
       root.add_child(&mut t_b).unwrap();
 
-      let rule = Rewrite::new("text", RewriteOptions::default());
+      let rule = Rewrite::new("text", RewriteOptions {
+        local_replace: true,
+        ..RewriteOptions::default()
+      });
       let clause = RewriteClause::new_compiled(
         RewriteOperator::Replace,
         RewritePattern::Closure(Rc::new(|doc, _replaced| {
@@ -1630,7 +1631,10 @@ mod tests {
       root.add_child(&mut old).unwrap();
       root.add_child(&mut t_b).unwrap();
 
-      let rule = Rewrite::new("text", RewriteOptions::default());
+      let rule = Rewrite::new("text", RewriteOptions {
+        local_replace: true,
+        ..RewriteOptions::default()
+      });
       let clause = RewriteClause::new_compiled(
         RewriteOperator::Replace,
         RewritePattern::Closure(Rc::new(|_doc, _replaced| Ok(()))),
@@ -1656,7 +1660,10 @@ mod tests {
       root.add_child(&mut old).unwrap();
       root.add_child(&mut tail).unwrap();
 
-      let rule = Rewrite::new("text", RewriteOptions::default());
+      let rule = Rewrite::new("text", RewriteOptions {
+        local_replace: true,
+        ..RewriteOptions::default()
+      });
       let clause = RewriteClause::new_compiled(
         RewriteOperator::Replace,
         RewritePattern::Closure(Rc::new(|_doc, _replaced| Err(Error::todo()))),
@@ -1676,6 +1683,43 @@ mod tests {
       );
       assert_eq!(children.len(), 1);
       assert_eq!(children[0].get_name(), "tail");
+    }
+
+    // Case 4: default (`local_replace: false`) detaches following siblings during closure
+    {
+      let mut document = Document::new();
+      let xml = document.get_document_mut();
+      let mut root = Node::new("root", None, xml).unwrap();
+      xml.set_root_element(&root);
+      let mut head = Node::new("head", None, xml).unwrap();
+      let mut old = Node::new("old", None, xml).unwrap();
+      let mut tail = Node::new("tail", None, xml).unwrap();
+      root.add_child(&mut head).unwrap();
+      root.add_child(&mut old).unwrap();
+      root.add_child(&mut tail).unwrap();
+
+      let rule = Rewrite::new("text", RewriteOptions::default());
+      let clause = RewriteClause::new_compiled(
+        RewriteOperator::Replace,
+        RewritePattern::Closure(Rc::new(|doc, _replaced| {
+          // Following sibling `<tail/>` must be detached while closure runs.
+          assert!(doc.findnodes("//tail", None).is_empty());
+          assert_eq!(
+            doc.get_node().get_last_child().map(|n| n.get_name()),
+            Some("head".to_string())
+          );
+          Ok(())
+        })),
+      );
+      rule
+        .apply_clause(&mut document, &old, 1, VecDeque::from([&clause]))
+        .unwrap();
+      let names: Vec<String> = root
+        .get_child_nodes()
+        .into_iter()
+        .map(|n| n.get_name())
+        .collect();
+      assert_eq!(names, vec!["head", "tail"]);
     }
   }
 }

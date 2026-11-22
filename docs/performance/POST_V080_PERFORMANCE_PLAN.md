@@ -6,10 +6,10 @@
 > --splitat=subsection --navigationtoc=context`).
 >
 > Low-risk, non-refactor wins from the same review were staged directly for
-> v0.8.0 (PR #973: readonly `ObjectDB` baseline skip, core-state release before
-> post, `Scan` placeholder tracking, `CrossRef` memo bounding, `FileSink`
-> fail-fast, zero-copy `finalize_html5`, `Rewrite` $O(N)$ `Replace` +
-> deduplicated `\not` + root-retry skip, `XSLT` embedded `cache_key` +
+> v0.8.0 (PR #973: readonly `ObjectDB` baseline skip, core-state release after
+> `MakeBibliography`, `Scan` placeholder tracking, `CrossRef` memo bounding,
+> `FileSink` fail-fast, zero-copy `finalize_html5`, `Rewrite` opt-in $O(1)$
+> local `Replace` + root-retry skip, `XSLT` embedded `cache_key` +
 > `new_transformed`, `Document::from_parts`, lazy rewrite hint formatting, and
 > prepared/streamed `ObjectDB::save_as`).
 >

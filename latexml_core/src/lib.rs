@@ -184,6 +184,15 @@ pub fn reset_thread_engine() {
 ///    engine afterward (see the `THREAD-LIFECYCLE CONTRACT` on
 ///    [`reset_thread_engine`]).
 pub fn release_core_state_for_post() {
+  // Snapshot the two STATE values that post-processing and diagnostics can
+  // still read after MakeBibliography:
+  // - `NOMINAL_FONT_SIZE`: read by `font::defsize()` ← `Font::math_default()`
+  //   when MathML presentation sizes negative-space `<mpadded>` widths on
+  //   11pt/12pt documents (`latexml_post/src/mathml/presentation.rs`).
+  // - `MAX_ERRORS`: read by `error::note_error_cap()` / `Error!` (e.g. tikz
+  //   raises the cap from 100 to 1000).
+  let nominal_font_size = state::lookup_float("NOMINAL_FONT_SIZE");
+  let max_errors = state::try_lookup_int("MAX_ERRORS");
   preserve_arena_keyed_reports_across(|| {
     common::local_assignments::initialize_localized();
     gullet::initialize_gullet();
@@ -194,6 +203,12 @@ pub fn release_core_state_for_post() {
     binding::content::reset_fontmap_key_memo();
     reset_conversion_state();
   });
+  if let Some(sz) = nominal_font_size {
+    state::assign_value("NOMINAL_FONT_SIZE", sz, Some(state::Scope::Global));
+  }
+  if let Some(max) = max_errors {
+    state::assign_value("MAX_ERRORS", max, Some(state::Scope::Global));
+  }
 }
 
 /// Forgets what one conversion leaves on its thread for the next, as Perl builds a fresh State per document
@@ -684,6 +699,12 @@ mod release_for_post_tests {
     note_status(LogStatus::Missing, Some("missing_pkg.sty"));
     emit_warn("test", "sample", "a warning");
     emit_error("test", "sample", "an error");
+    state::assign_value(
+      "NOMINAL_FONT_SIZE",
+      common::float::Float(10.95),
+      Some(state::Scope::Global),
+    );
+    state::assign_value("MAX_ERRORS", 1000i64, Some(state::Scope::Global));
 
     let msg_before = get_status_message();
     let code_before = get_status_code();
@@ -708,5 +729,15 @@ mod release_for_post_tests {
     );
     assert!(msg_before.contains("\\myundefmacro"));
     assert!(msg_before.contains("missing_pkg.sty"));
+    assert_eq!(
+      common::font::defsize(),
+      10.95,
+      "NOMINAL_FONT_SIZE must survive release for MathML <mpadded> sizing"
+    );
+    assert_eq!(
+      state::try_lookup_int("MAX_ERRORS"),
+      Some(1000),
+      "MAX_ERRORS must survive release for post-processing error cap"
+    );
   }
 }
