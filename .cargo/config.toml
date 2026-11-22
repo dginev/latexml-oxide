@@ -30,8 +30,11 @@ KPATHSEA_SKIP_TOOLCHAIN_CHECK = "1"
 
 # Linker + rustc parallel-frontend tuning for x86_64 Linux.
 #
-# Linker: `mold` (faster than `lld`, much faster than `bfd`). mold ≥ 1.4 is
-# stable for Rust binaries; mold 2.30 ships in Ubuntu. We pass it via cc's
+# Linker: `mold` (faster than `lld`, much faster than `bfd`). Use mold ≥ 2: mold 1.0.3
+# (Ubuntu 22.04's apt package) leaves Rust std's `.init_array` entry in a section of
+# its own and DT_INIT_ARRAY covers only it, so mimalloc's constructor never runs; the
+# jammy release legs override these flags and link with the default ld
+# (tools/release_alloc_check.sh). mold 2.30 ships in Ubuntu 24.04. We pass it via cc's
 # `-fuse-ld=mold` (gcc ≥ 12 understands this; this system runs gcc 13.3).
 # Order of preference: mold > rust-lld > gold > bfd. Saves ~3-5× linker
 # wall-clock vs lld on our binary size.

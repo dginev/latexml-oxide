@@ -43,6 +43,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **The x86_64 Linux release binary's allocator initialises.** The release leg linked with Ubuntu 22.04's mold 1.0.3,
+    which left Rust std's `.init_array` entry in a section of its own; DT_INIT_ARRAY covered only that one, so
+    mimalloc's constructor never ran and every 64 KiB page came straight from the OS (0.7.6 and 0.8.0-rc1/rc2: 10,094
+    mmap / 19,395 munmap calls on a small document against 96 / 22). The jammy legs now link with the default ld, and
+    `tools/release_alloc_check.sh` fails a Linux release whose binary skips a constructor or whose mimalloc prints no
+    statistics. Output is unchanged; system time falls, most of all where syscalls are slow (WSL 1).
   - **0.8.0-rc2: Split frees each page once it is copied (#965; issue 777).** `Split::process_pages` frees a page's
     source subtree after copying it into its own document (`PostDocument::discard_subtree`); a page holding an
     `ltx:navigation` stays, since the navigation may use its namespaces. A 1,600-subsection book split by subsection
