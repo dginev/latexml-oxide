@@ -1036,6 +1036,44 @@ Rules that keep this file honest and mergeable:
   - ACMTEASER (post-0.8.0, fidelity, needs a ruling) — acmart's `teaserfigure`: pdflatex prints title, authors, teaser,
     abstract, keywords; ours (`acmart_cls.rs` ~455-476, Perl's Replace semantics) puts the teaser after the keywords,
     Perl LaTeXML before the title. A binding change with an OD entry and an A/B over the acmart papers; 1
+  - TEMPSWEEP (after the v0.8.0 tag, DG 2026-11-22) — an abandoned render fleet leaves pid-tagged staging temps in the
+    output: the stop-at-first-death loop (`render_workers.rs:682`, `kill_pid(pid, false)`) SIGKILLs the other workers mid-
+    graphics, so they never remove their registered paths and their mutool/pdftocairo/gs children survive. Probe: a
+    73-page `--split` with 9,000 math copies in section 1 and 10 tikz PDFs per later section, `--max-memory=1400`,
+    graphics cache off: 6 hidden `..f_N_0.tmp.<pid>.5.svg.<pid>-3.mutool_svg/` dirs; the base before #973 left 0; pages
+    byte-identical. Fix: workers as process-group leaders (`CommandExt::process_group(0)`) killed as a group, a parent
+    sweep of the killed pids' staging names on abandon (output and graphics cache; matcher built from
+    `unique_staging_tag`), and `install_panic_sweep` before the worker-mode return (`bin/latexml_oxide.rs:799/803`,
+    maxperf `panic=abort`). Supersedes GFXTEMPS' "lever" line; 2
+  - ALLOCOPTS (after 0.8.0, portable, DG 2026-11-22) — the fleet's children get `MALLOC_ARENA_MAX=2` and
+    `MIMALLOC_ARENA_RESERVE=128MiB` by environment (PR fix/worker-malloc-arenas). The `latexml_oxide` CLI sets no
+    address-space limit and does not need them (2605.22454: VmPeak 4.7-5.8 -> 2.1-2.4 GB, resident 472-479 MB either way,
+    HTML byte-identical); under a user's `ulimit -v` they help the same way. Setting them from inside the binaries
+    (glibc `mallopt(M_ARENA_MAX)`, mimalloc `mi_option_set`) needs a design for macOS and Windows too; a small `unsafe`
+    at that boundary is acceptable if truly needed; 1
+  - WORKERAS-RECAL (after 0.8.0) — `cortex_worker.rs` `FRESH_ADDRESS_SPACE_KB`, `ADDRESS_SPACE_HEADROOM_KB`,
+    `RECYCLE_ADDRESS_SPACE_KB` (:1046-1062) were measured on mimalloc 3.3.2; re-measure a fresh child's address space and
+    the recycle point under 2.3.2 with the new allocator settings; 1
+  - SCANFLAGS-SUBTREE (after 0.8.0, nit) — in release builds the per-page index/bibliography flags come from Scan's own
+    walk (the XPath probe is a `debug_assert`); Scan does not descend `ltx:Math`, `ltx:rawhtml`, `ltx:navigation`,
+    `ltx:bibentry`, so an `ltx:bibliography`/empty `ltx:index` under one would skip MakeBibliography/MakeIndex on that
+    page. No witness; document the limit by `last_page_placeholders` or fall back to the XPath; 1
+  - LOCALREPLACE-ANCHOR (after 0.8.0, doc nit) — `rewrite.rs:806-813`: under the opt-in `local_replace`, a closure that
+    moves the anchor sibling leaves the inserted nodes at the parent's end. None of the four opted-in rules touches
+    siblings; one line in the `local_replace` doc; 1
+  - ENVCONSIST (after 0.8.0) — the environment-variable inventory (docs/ENVIRONMENT.md) found inconsistent parsing: six
+    flag conventions (presence: `LATEXML_NODUMP=0` still skips the dumps; exactly `1`; `1|true|yes`; `0` disables;
+    clap bool; `LATEXML_POST_STREAM_SPLIT` any-non-0 forces on); `SOURCE_DATE_EPOCH` parsed as i64 (`tex_job.rs:17`,
+    `identity.rs:64`) and u64 (`bin/latexml_oxide.rs:1829,2148`, `epub.rs:583`); `NO_COLOR` empty counts as set
+    (`logger.rs:32`); a non-numeric `LATEXML_TOKEN_LIMIT` falls back yet still disables source scaling (`gullet.rs:794`);
+    uncached hot-path reads (`LATEXML_MARPA_ASF_AUDIT` 6× per ambiguous formula, `parser.rs:2534-2863`;
+    `LXML_TRACE_NODE_BOXES` per child, `document.rs:5509`); no-op `rerun-if-env-changed` for run-time dump variables
+    (`latexml_engine/build.rs:326-328`); two git-sha inputs (`LATEXML_GIT_SHA` vs `LATEXML_GIT_SHA_OVERRIDE`); cache-home
+    resolution differs (`graphics_cache.rs:157` has no `USERPROFILE` fallback); `LATEXML_RENDER_JOBS` ≥ 2 outside the
+    `latexml_oxide` binary re-execs `current_exe()` as a render worker that only that binary serves (`render_workers.rs:493,611`;
+    inferred, not run); `KPSEWHICH` not honoured by our own kpsewhich probes (`pathname.rs:377,412`). Stale docs:
+    PERFORMANCE.md says `LATEXML_TELEMETRY_OUT` truncates (it appends), `graphics.rs:1422` says 100 dpi (120). One
+    convention per kind, documented in ENVIRONMENT.md; 1
   - FMTCACHE-PRUNE (post-0.8.0) — the per-user format cache (`~/.cache/latexml-oxide/formats/<version>-<executable>-
     <tree>/`, ~4 MB an entry, OXIDIZED_DESIGN_DIVERGENCES #449) is never pruned: a developer host holds 1,843 entries
     (7 GB). Drop entries whose executable hash no longer exists, or keep the newest few per tree; 1
