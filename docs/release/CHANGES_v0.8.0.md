@@ -137,6 +137,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     container images print the binaries' revision and carry `org.opencontainers.image.{title,version,revision,source}`;
     the release page folds its generated pull-request list into `<details>` (`tools/release_notes_details.sh`) and its
     links point at the tag's files.
+  - **0.8.0-rc2: two frontmatter Errors of the TeX Live manual sweep.** The ams bindings run only what was added to
+    `\@setauthors` after the class's load ended, so a class built on amsart keeps its own setter unrun: ijmart.cls's,
+    whose `\if\authors\@empty\relax\else` has no `\fi`, ran off its argument with the names emptied (ijmart/ijmsample:
+    2 Errors → 0, output unchanged). Guards `perfect_kernel_batchmanfm::*`.
   - **Regressions from the per-paper check of the November run (#954, #958, #960, and the follow-up integration).** Every paper that converted with
     no Error on 2026-11-05 (run 372) and erred in the November run was classified (pdflatex, Perl, a bisect); the
     clusters our changes caused are fixed:

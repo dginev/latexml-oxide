@@ -541,6 +541,9 @@ mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;
 /// MACSYNC: the binding macros mean what Perl's same-named API means (AUDMAC).
 mod perfect_kernel_batchmacsync;
+/// MANFM: two manual-sweep frontmatter regressions — an ams-based class's own `\@setauthors` run (ijmart), the default
+/// e-mail label digested with no e-mail (lineno).
+mod perfect_kernel_batchmanfm;
 /// MARKBIND: class bindings compute their title marks and footnote steps (mnras, lni, REVTeX's aip/sor), the internal
 /// Frontmatter keys declared.
 mod perfect_kernel_batchmarkbind;

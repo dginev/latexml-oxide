@@ -19200,6 +19200,10 @@ own `\fntext` 2301.05821, 2311.15389, 2312.12429, 2312.17670, 2406.09335, 2407.1
 2508.04484); amsart's and amsproc's `\@setauthors` at `\maketitle` (amsart.cls:638, amsproc.cls:613), run without the
 names, contributors and `\@setaddresses`, which the binding places (an appended `\@setaddresses` prints no address twice, 2607.28440;
 appended text, an affiliation or e-mail under the names, is a note: 2610.08257, 2610.02630, 2610.25104, 2610.02789);
+of a class built on them only what was added after its load ended (`\lx@ams@setauthors@added`, the store past the
+definition kept at `class/after`; all of it where the document replaced it), so ijmart.cls:229-244's own setter, whose
+`\if\authors\@empty\relax\else` has no `\fi`, never runs with `\authors` emptied (ijmart/ijmsample, TL doc; Guard
+`perfect_kernel_batchmanfm::ams_based_class_setauthors_runs_only_the_document_additions`);
 REVTeX's
 `\prep@absbox`, `\post@absbox`, `\mini@notes` and `\@FMN@list` at `\maketitle` (revtex4-2.cls:2648-2652, :3020-3022;
 2606.06621, 2605.00976); and the text a document adds to icml's `\icmlcorrespondingauthor@text`, whose names and

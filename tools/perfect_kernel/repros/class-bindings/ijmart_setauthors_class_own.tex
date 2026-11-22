@@ -1,0 +1,11 @@
+% ijmart.cls:229-244 redefines amsart's `\@setauthors` wholesale; its `\if\authors\@empty\relax\else` has no `\fi`,
+% harmless in TeX, where `\authors` holds the names. The binding runs only what the document added after the class
+% (none here), so the class's own setter never runs with `\authors` emptied.
+% witness: ijmart/ijmsample (TL doc, manual sweep)
+% oracle:  pdflatex 0 errors; "T", "BY", "A", "x"
+% engines: Perl 0 errors (no `\@setauthors` run); rust 4a74afcbfd = 2 errors (`expected:\fi \else`, then
+%          `\endgroup` in internal_vertical) + 1 warning (open group at `\end{document}`)
+% expect:  0 errors, 0 warnings; one author creator "A", no note, no "BY"
+% status:  RED (4a74afcbfd) -> GREEN (MANFM)
+% preload: ar5iv.sty
+\documentclass{ijmart}\begin{document}\title{T}\author{A}\maketitle x\end{document}
