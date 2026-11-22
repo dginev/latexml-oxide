@@ -23650,7 +23650,8 @@ Ours emits an `ambiguous_math` / `unparsed_math` Warning once per distinct lexem
 by `reset_conversion_notices` (from `core_interface::initialize_singletons`), as `FORMULA_ORDINAL` and
 `LOSTNODES_NOOP_REPORTED` are. It is not a `MathParser` field: streaming pass 2 builds a parser per segment and
 `finish_document` one more, so a per-parser set warned once per segment (the Nasser FAQ slices k600/k1200: 101
-Warnings eager, 171 streamed, byte-identical XML). Eager output and counts are unchanged. **Guard**:
+Warnings eager, 171 streamed, byte-identical XML). Eager output is unchanged; eager counts change only where the
+bibliography's `.bib` session repeats a body formula, which now warns once per conversion. **Guard**:
 `perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion` (repro
 `streaming/streamed_unparsed_math_warns_once.tex`: 4 Perl `not_parsed`, 1 ours eager and streamed); unit
 `parser::tests::warns_once_per_distinct_formula_per_conversion`.
@@ -23669,7 +23670,8 @@ every ancestor and the page's own child pages, only those whose relation the sty
   `next`, the `<title>` `up`, `LaTeXML-structure-xhtml.xsl` `up`. The sectional relations and `sidebar` reach only the
   head-link copy (`webpage-xhtml.xsl:308-320`), which duplicates the navigation TOC; HTML 4.01 §6.12 listed `Chapter`/
   `Section`/`Subsection`/`Appendix` as link types, the HTML Living Standard (§4.6.7) does not, and no browser, ar5iv
-  or ar5iv-css reads them.
+  or ar5iv-css reads them. The `ltx:navigation` refs of split XML pages (`--format=xml --splitat`) lose them too, as
+  does any custom `--stylesheet` that read them.
 - Measured: Nasser's 2,400-problem slice (`--splitat=subsubsection`) had 66 % of its HTML in these links (612,424
   links, 246-455 bytes each); the page bodies are byte-identical.
 - Implementation: `CrossRef::related_pages` (memoized on the entry's `ChildPages`), so the walk does no per-link work.
