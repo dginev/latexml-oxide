@@ -2273,8 +2273,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
     eprintln!("Converting {} ...", input);
     let (result_path, _result_on_exit) = worker.convert_archive(Path::new(&input))?;
-    // A run the watchdog is ending leaves its placeholder at `--output`, not a result built over its deleted trees.
-    latexml_core::watchdog::park_if_exiting();
+    // A run the watchdog is ending leaves its placeholder at `--output`, not a result built over its deleted trees; past
+    // the claim, a late breach stands down instead of overwriting the result with its placeholder.
+    latexml_core::watchdog::claim_normal_end();
 
     // Read result and write to output (overwrites the placeholder).
     let mut result_data = Vec::new();

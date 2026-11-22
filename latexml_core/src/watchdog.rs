@@ -728,7 +728,7 @@ pub fn remove_registered_paths() { remove_paths(std::mem::take(&mut *registry())
 /// interrupted the registry's holder: it gives up rather than wait for the lock. It claims the exit first, as the watchdog does: in a worker pool the sweep
 /// takes every job's trees, and the other threads must not hand on results built over them.
 pub fn try_remove_registered_paths() {
-  claim_exit(EXIT_OOM);
+  let _ = claim_exit(EXIT_OOM);
   try_kill_registered_children();
   let paths = match REMOVE_ON_EXIT.try_lock() {
     Ok(mut paths) => std::mem::take(&mut *paths),
@@ -847,12 +847,30 @@ pub fn write_stderr_unlocked(args: std::fmt::Arguments) {
 /// The exit code claimed when the watchdog (or an allocation-failure hook) begins to exit, 0 while none is. Its sweep
 /// deletes the run's trees while the other threads still run, and one finishing in that window must neither exit first
 /// with its own code (the first `exit` wins) nor hand on output built over the deleted trees: [`park_if_exiting`] holds
-/// it until the claimed exit ends the process.
+/// it until the claimed exit ends the process. [`NORMAL_END`] while the normal path hands on its result.
 static EXITING: AtomicI32 = AtomicI32::new(0);
 
-/// Claims the exit with `code` (the first claim stands).
-fn claim_exit(code: i32) {
-  let _ = EXITING.compare_exchange(0, code, Ordering::AcqRel, Ordering::Acquire);
+/// [`EXITING`] once the normal path has claimed the process's end ([`claim_normal_end`]).
+const NORMAL_END: i32 = -1;
+
+/// Claims the exit with `code` (the first claim stands); false once the normal path claimed the end.
+fn claim_exit(code: i32) -> bool {
+  match EXITING.compare_exchange(0, code, Ordering::AcqRel, Ordering::Acquire) {
+    Ok(_) => true,
+    Err(held) => held != NORMAL_END,
+  }
+}
+
+/// Claims the process's end for the normal path before a single-run binary hands on its result: a breach after it
+/// stands down, where its pre-exit hook would overwrite the written result with its placeholder (cortex_worker
+/// `--standalone --output`). When a breach claimed first, parks ([`park_if_exiting`]) until its exit.
+pub fn claim_normal_end() {
+  if EXITING
+    .compare_exchange(0, NORMAL_END, Ordering::AcqRel, Ordering::Acquire)
+    .is_err()
+  {
+    park_if_exiting();
+  }
 }
 
 /// Parks the calling thread once the watchdog has begun to exit, until that exit ends the process. Called before every
@@ -861,7 +879,7 @@ fn claim_exit(code: i32) {
 /// short) the thread exits itself, with the claimed code, through [`exit_now`]: the watchdog thread still runs.
 pub fn park_if_exiting() {
   let code = EXITING.load(Ordering::Acquire);
-  if code != 0 {
+  if code > 0 {
     let deadline = Instant::now() + Duration::from_secs(60);
     while let Some(left) = deadline.checked_duration_since(Instant::now()) {
       thread::park_timeout(left);
@@ -909,7 +927,8 @@ impl Watchdog {
       if let Some(deadline) = deadline
         && Instant::now() >= deadline
       {
-        if cancelled.load(Ordering::Relaxed) {
+        // Claimed first: a normal end claimed before it (the result being written) stands the breach down.
+        if cancelled.load(Ordering::Relaxed) || !claim_exit(EXIT_TIMEOUT) {
           return;
         }
         // Unlocked: a thread stuck while holding the stderr lock must not hold up the exit.
@@ -919,7 +938,6 @@ impl Watchdog {
         // Run the optional pre-exit hook (e.g. cortex_worker writing a
         // structured Status:conversion:3 placeholder to its --output path)
         // BEFORE exiting. The hook is invoked at most once per process.
-        claim_exit(EXIT_TIMEOUT);
         run_pre_exit_hook(EXIT_TIMEOUT);
         kill_registered_children();
         remove_registered_paths();
@@ -935,7 +953,7 @@ impl Watchdog {
         && let Some(rss) = process_rss_kb()
         && rss > max_rss_kb
       {
-        if cancelled.load(Ordering::Relaxed) {
+        if cancelled.load(Ordering::Relaxed) || !claim_exit(EXIT_OOM) {
           return;
         }
         write_stderr_unlocked(format_args!(
@@ -945,7 +963,6 @@ impl Watchdog {
           rss / 1024,
           max_rss_kb / 1024
         ));
-        claim_exit(EXIT_OOM);
         run_pre_exit_hook(EXIT_OOM);
         kill_registered_children();
         remove_registered_paths();
@@ -1023,6 +1040,38 @@ mod tests {
         "{breach}: stdout was flushed: std::process::exit, not _exit"
       );
     }
+  }
+
+  /// A breach after the normal path claimed the end (cortex_worker's result written to `--output`) stands down: no
+  /// Fatal line, no pre-exit hook (its placeholder would overwrite the result), no exit. Run here, it is the child.
+  #[test]
+  fn a_breach_after_the_normal_end_stands_down() {
+    const CHILD: &str = "LATEXML_WATCHDOG_NORMAL_END_CHILD";
+    if std::env::var_os(CHILD).is_some() {
+      set_pre_exit_hook(Box::new(|_| {
+        write_stderr_unlocked(format_args!("hook-ran\n"))
+      }));
+      claim_normal_end();
+      Watchdog::run(Arc::new(AtomicBool::new(false)), 1, 0);
+      write_stderr_unlocked(format_args!("stood-down\n"));
+      park_if_exiting();
+      exit_now(0);
+    }
+    let out = std::process::Command::new(std::env::current_exe().unwrap())
+      .args([
+        "watchdog::tests::a_breach_after_the_normal_end_stands_down",
+        "--exact",
+        "--nocapture",
+        "--test-threads=1",
+      ])
+      .env(CHILD, "1")
+      .output()
+      .unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(0), "{stderr}");
+    assert!(stderr.contains("stood-down"), "{stderr}");
+    assert!(!stderr.contains("Fatal:"), "{stderr}");
+    assert!(!stderr.contains("hook-ran"), "the hook ran: {stderr}");
   }
 
   /// A registered path is removed by the sweep an exit runs; one whose guard was dropped (its owner removed it, or
