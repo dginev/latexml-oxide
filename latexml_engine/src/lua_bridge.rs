@@ -30,8 +30,9 @@
 //! Lua modules (newpax, tkz-elements, …) resolve.
 //!
 //! Document Lua is untrusted input: the prelude sandboxes it to TeX's defaults
-//! (`shell_escape=f`, `openout_any=p`) before any chunk runs, each refusal an
-//! `Error:lua:sandbox` (OXIDIZED_DESIGN_DIVERGENCES #1081).
+//! (`shell_escape=f`, `openout_any=p`) before any chunk runs. A call lualatex
+//! refuses too gets lualatex's values and a `Warning:lua:sandbox`; one only the
+//! sandbox refuses, an `Error:lua:sandbox` (OXIDIZED_DESIGN_DIVERGENCES #1081).
 //!
 //! Process shape: one `texlua` child per conversion thread, spawned on first
 //! use with a prelude that loops over length-framed requests on stdin and
@@ -160,10 +161,12 @@ package.loaded.node = nil
 -- with no '..' part and no dotfile), checked on every path component and through
 -- no symbolic link; reads stay open (openin_any=a). texlua's
 -- --safer/--nosocket/--shell-escape do not restrict a script, so the prelude
--- does it before any document chunk runs. A denied call reports a 'D' frame (an
--- Error a pcall cannot swallow) and raises a Lua error.
+-- does it before any document chunk runs. A call lualatex refuses too returns
+-- lualatex's values and reports a 'W' frame (a Warning); one only the sandbox
+-- refuses reports a 'D' frame (an Error) and raises a Lua error. Neither record
+-- can be swallowed by a pcall.
 -- While the prelude loads lualibs (texmf code, trusted like a format), the
--- originals still answer; the wrappers it captures deny once the loop starts.
+-- originals still answer; the wrappers it captures refuse once the loop starts.
 local booting = true
 local function deny(what)
   if booting then error(what .. ' is not allowed', 3) end
@@ -186,39 +189,70 @@ end
 local symlinkattributes = lfs and lfs.symlinkattributes
 -- kpse_out_name_ok under openout_any=p, decided here rather than by texlua's
 -- kpse.out_name_ok, which follows the host's texmf.cnf (openout_any=a there
--- allows anything) and checks only the last component for a dotfile.
+-- allows anything) and checks only the last component for a dotfile. A name
+-- refused only by the sandbox's stricter checks, which lualatex would write,
+-- returns false, true.
 local function out_name_ok(name)
   if type(name) ~= 'string' or name == '' or s_find(name, '\0', 1, true) then return false end
-  local path = name
+  local path, strict = name, false
   if CRLF then
     -- Windows: '\' separates too; a ':' is a drive or an alternate data stream; '\\?\' and '\\.\' are device paths.
     if s_find(name, '^[\\/][\\/][%?%.][\\/]') or s_find(name, ':', 1, true) then return false end
     path = s_gsub(name, '\\', '/')
   elseif s_find(name, '\\', 1, true) then
     -- Unix: '\' is a filename character; the name checked must be the name the system opens.
-    return false
+    strict = true
   end
   if s_sub(path, 1, 1) == '/' then return false end
   local prefix = nil
   for part in s_gmatch(path, '[^/]+') do
     if part == '..' or (s_sub(part, 1, 1) == '.' and part ~= '.' and part ~= '.tex') then return false end
     -- (Windows drops a component's trailing dots and spaces: 'a.' opens 'a')
-    if CRLF and part ~= '.' and s_find(part, '[%. ]$') then return false end
+    if CRLF and part ~= '.' and s_find(part, '[%. ]$') then strict = true end
     -- No component may be a symbolic link: one made by the source tree could point anywhere.
     prefix = prefix and (prefix .. '/' .. part) or part
-    if symlinkattributes and symlinkattributes(prefix, 'mode') == 'link' then return false end
+    if not strict and symlinkattributes and symlinkattributes(prefix, 'mode') == 'link' then strict = true end
   end
+  if strict then return false, true end
   return true
 end
 local function writes(mode) return type(mode) == 'string' and s_find(mode, '[wa+]') ~= nil end
-for _, name in ipairs({'execute', 'exec', 'spawn', 'kpsepopen', 'remove', 'rename', 'tmpname', 'tmpdir', 'setenv'}) do
+-- A program call answers as lualatex --no-shell-escape does (shell_escape=f, which \pdfshellescape and
+-- status.shell_escape also read; measured on TL 2025): nil and its message, and os.execute() asks whether a shell
+-- exists, 0 (pdftexcmds' \pdf@shellescape, imakeidx: TL manuals derivative, wheelchart, xassoccnt_doc).
+local function no_program(what, original, message)
+  return function(...)
+    if booting and original then return original(...) end
+    local command = ...
+    if what == 'os.execute' and command == nil then return 0 end
+    if type(command) == 'string' then command = '"' .. shown(command) .. '"' else command = shown(command) end
+    frame('W', what .. ' ' .. command .. ' was not run (document Lua runs no programs, as lualatex without shell escape)')
+    return nil, message
+  end
+end
+for _, name in ipairs({'execute', 'exec', 'spawn'}) do
+  os[name] = no_program('os.' .. name, os[name], 'All command execution disabled.')
+end
+os.kpsepopen = no_program('os.kpsepopen', os.kpsepopen, 'all command execution is disabled')
+io.popen = no_program('io.popen', io.popen, 'all command execution is disabled')
+for _, name in ipairs({'remove', 'rename', 'tmpname', 'tmpdir', 'setenv'}) do
   os[name] = denier('os.' .. name, os[name])
 end
-io.popen = denier('io.popen', io.popen)
 io.tmpfile = denier('io.tmpfile', io.tmpfile)
 local io_open, io_output, io_input = io.open, io.output, io.input
+-- lualatex's io.open answers a write openout_any=p forbids with a lone nil; a name only the sandbox refuses (a
+-- symbolic link, a '\' name) and io.output and gzip.open, which lualatex does not check, are denied.
 io.open = function(name, mode)
-  if writes(mode) and not out_name_ok(name) then deny('writing ' .. shown(name)) end
+  if writes(mode) then
+    local ok, strict = out_name_ok(name)
+    if strict then deny('writing ' .. shown(name)) end
+    if not ok then
+      if not booting then
+        frame('W', 'writing ' .. shown(name) .. ' was refused (document Lua writes only below the job directory, as lualatex under openout_any=p)')
+      end
+      return nil
+    end
+  end
   return io_open(name, mode)
 end
 io.output = function(file)
@@ -252,6 +286,15 @@ if mplib and mplib.new then
       return found
     end
     return mplib_new(copy)
+  end
+end
+-- font.current(), font.id and font.define read the engine's fonts, which texlua has none of (a crash: hologo's glyph
+-- test, TL manual derivative): a Lua error, as for any engine layer out of scope, and the interpreter keeps its state.
+if font then
+  for _, name in ipairs({'current', 'id', 'define'}) do
+    if font[name] then
+      font[name] = function() error('font.' .. name .. ' needs the TeX engine (texlua has no fonts)', 2) end
+    end
   end
 end
 -- img needs the engine's backend: texlua ends on its calls (img.new, img.scan, img.write: a crash).
@@ -402,7 +445,7 @@ struct LuaSlot {
 const MAX_RESTARTS: u32 = 3;
 /// The longest frame the bridge reads: a length past it is a broken protocol, not output.
 const MAX_FRAME: usize = 64 << 20;
-/// The refusals a chunk reports one by one, by count and by bytes; the rest are counted in one summary Error.
+/// The refusals a chunk reports one by one, by count and by bytes; the rest are counted in a summary per severity.
 const MAX_DENIALS: usize = 20;
 const MAX_DENIAL_BYTES: usize = 64 << 10;
 
@@ -682,24 +725,25 @@ fn service_query(payload: &str) -> String {
 /// current catcodes by the caller); `Err(msg)` is a load/runtime Lua error or
 /// bridge unavailability ("texlua not available" — callers degrade to a no-op
 /// expansion, matching what the document would get from a TeX engine without
-/// Lua). Each call the sandbox refused, and an interpreter that ended mid-chunk
-/// (its output lost), is raised as an `Error` (the outer `Err`, should that
-/// Error escalate to a Fatal).
+/// Lua). Each call the sandbox refused is a `Warning` where lualatex refuses it too and an `Error` otherwise; an
+/// interpreter that ended mid-chunk (its output lost) is an `Error` (the outer `Err`, should one escalate to a Fatal).
 pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<String, String>> {
   let framed = exec_framed(chunk);
   use crate::prelude::*;
-  for denial in framed.denials.shown {
-    Error!("lua", "sandbox", denial);
+  for refusal in framed.denials.shown {
+    if refusal.error {
+      Error!("lua", "sandbox", refusal.message);
+    } else {
+      Warn!("lua", "sandbox", refusal.message);
+    }
   }
-  if framed.denials.more > 0 {
-    Error!(
-      "lua",
-      "sandbox",
-      format!(
-        "{} more calls the sandbox refused in this chunk are not listed",
-        framed.denials.more
-      )
-    );
+  let unlisted =
+    |n: usize| format!("{n} more calls the sandbox refused in this chunk are not listed");
+  if framed.denials.more_errors > 0 {
+    Error!("lua", "sandbox", unlisted(framed.denials.more_errors));
+  }
+  if framed.denials.more_warnings > 0 {
+    Warn!("lua", "sandbox", unlisted(framed.denials.more_warnings));
   }
   if let Some(ended) = framed.ended {
     Error!("lua", "interpreter", ended);
@@ -707,7 +751,7 @@ pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<Strin
   Ok(framed.result)
 }
 
-/// One chunk's run: its result, the sandbox's refusals ('D' frames, OXIDIZED_DESIGN_DIVERGENCES #1081) — returned
+/// One chunk's run: its result, the sandbox's refusals ('D' and 'W' frames, OXIDIZED_DESIGN_DIVERGENCES #1081) — returned
 /// apart, as a pcall in the chunk can swallow the Lua error, never the record — and the report of an interpreter
 /// that ended during it.
 struct Framed {
@@ -716,21 +760,30 @@ struct Framed {
   ended:   Option<String>,
 }
 
-/// A chunk's refusals: the first `MAX_DENIALS` (within `MAX_DENIAL_BYTES`) kept, the rest counted.
+/// A chunk's refusals in order: the first `MAX_DENIALS` (within `MAX_DENIAL_BYTES`) kept, the rest counted.
 #[derive(Default)]
 struct Denials {
-  shown: Vec<String>,
-  bytes: usize,
-  more:  usize,
+  shown:         Vec<Refusal>,
+  bytes:         usize,
+  more_errors:   usize,
+  more_warnings: usize,
+}
+
+/// One refused call: an Error ('D', only the sandbox refuses it) or a Warning ('W', lualatex refuses it too).
+struct Refusal {
+  error:   bool,
+  message: String,
 }
 
 impl Denials {
-  fn push(&mut self, denial: String) {
-    if self.shown.len() < MAX_DENIALS && self.bytes + denial.len() <= MAX_DENIAL_BYTES {
-      self.bytes += denial.len();
-      self.shown.push(denial);
+  fn push(&mut self, error: bool, message: String) {
+    if self.shown.len() < MAX_DENIALS && self.bytes + message.len() <= MAX_DENIAL_BYTES {
+      self.bytes += message.len();
+      self.shown.push(Refusal { error, message });
+    } else if error {
+      self.more_errors += 1;
     } else {
-      self.more += 1;
+      self.more_warnings += 1;
     }
   }
 }
@@ -762,7 +815,7 @@ impl From<std::io::Error> for FrameError {
   fn from(e: std::io::Error) -> Self { FrameError::Io(e) }
 }
 
-/// Sends `chunk` and reads frames up to its final `OK`/`ERR`, servicing `Q`ueries and collecting `D`enials.
+/// Sends `chunk` and reads frames up to its final `OK`/`ERR`, servicing `Q`ueries and collecting refusals (`D`, `W`).
 fn exchange(
   p: &mut LuaProc,
   chunk: &str,
@@ -791,7 +844,8 @@ fn exchange(
       body = body.replace("\r\n", "\n");
     }
     match tag {
-      "D" => denials.push(body),
+      "D" => denials.push(true, body),
+      "W" => denials.push(false, body),
       "Q" => {
         let answer = service_query(&body);
         p.stdin

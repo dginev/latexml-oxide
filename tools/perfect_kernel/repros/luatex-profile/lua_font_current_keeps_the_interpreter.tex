@@ -1,0 +1,14 @@
+% mechanism: lua_bridge.rs prelude: font.current(), font.id and font.define read the engine's fonts, which texlua
+%   has none of (they segfaulted it, so the Lua state was lost and SECLUA counted an Error:lua:interpreter); each
+%   now raises a Lua error, the chunk is not evaluated (an Info, as for any engine layer out of scope) and the
+%   interpreter keeps its state.
+% witness: TL manual derivative (hologo.sty:1303-1315's glyph test in \hologo{LuaTeX}: font.fonts[font.current()])
+% oracle:  lualatex: "[font] [5]" (a real current font); texlua has no fonts, so the first bracket stays empty
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
+% expect:  "[] [5]"; 0 Errors, 0 Warnings; one Info lua:directlua (font.current needs the TeX engine)
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\luaexec{n = 5}[\luaexec{local f = font.fonts[font.current()] tex.sprint(f and "font" or "none")}] [\luaexec{tex.sprint(tostring(n))}]
+\end{document}

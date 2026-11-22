@@ -1,18 +1,22 @@
 % mechanism: lua_bridge.rs prelude sandbox (OXIDIZED_DESIGN_DIVERGENCES #1081): document Lua runs with TeX's
-%   untrusted-input defaults, shell_escape=f — os.execute/io.popen/package.loadlib, a C module and the network
-%   libraries are refused; each refusal is an Error even when the chunk pcalls it.
+%   untrusted-input defaults, shell_escape=f — os.execute/io.popen/os.exec/os.spawn/os.kpsepopen run nothing and
+%   return lualatex's values, a Warning each; package.loadlib, a C module and the network libraries are refused,
+%   an Error each even when the chunk pcalls it.
 % witness: synthetic (security hardening; the luacode/directlua A/B population popSECLUA)
-% oracle:  lualatex --no-shell-escape: os.execute and io.popen return nil (no process runs), "X[nil] Y [none] Z"
-% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
+% oracle:  lualatex --no-shell-escape: os.execute and io.popen return nil (no process runs), "X[nil] Y [none] Z
+%   W[nil:All command execution disabled. / nil:All command execution disabled. / nil:all command execution is disabled]"
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
 % layout:  an empty cmod.so next to it, cmod.dll on Windows (the guard writes it: a C module on package.cpath's
 %   ./?.so, .\?.dll on Windows)
-% expect:  "X[nil] Y [none] Z"; 5 Errors (lua:sandbox os.execute, io.popen, require "socket", the C module
-%   "cmod", package.loadlib); no process runs, no library loads
+% expect:  "X[nil] Y [none] Z W[nil:All command execution disabled. / …]"; 5 Warnings (lua:sandbox os.execute,
+%   io.popen, os.exec, os.spawn, os.kpsepopen), 3 Errors (require "socket", the C module "cmod", package.loadlib);
+%   no process runs (no ran.txt), no library loads
 % status:  GREEN
 \documentclass{article}
 \usepackage{luacode}
 \begin{document}
 X\luaexec{local ok, r = pcall(os.execute, "exit 3") tex.sprint("[" .. tostring(ok and r or nil) .. "]")} Y
 \luaexec{local ok, h = pcall(io.popen, "exit 3") tex.sprint("[" .. (ok and h and "ran" or "none") .. "]")} Z
+W\luaexec{local r = {} for _, f in ipairs({os.exec, os.spawn, os.kpsepopen}) do local v, m = f("touch ran.txt") table.insert(r, tostring(v) .. ":" .. m) end tex.sprint("[" .. table.concat(r, " / ") .. "]")}
 \luaexec{pcall(require, "socket") pcall(require, "cmod") pcall(package.loadlib, "./cmod.so", "f")}
 \end{document}

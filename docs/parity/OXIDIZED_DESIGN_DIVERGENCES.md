@@ -21008,19 +21008,32 @@ relative path with no `..` part and no dotfile), decided by the prelude on every
 existing symbolic-link component (`lfs.symlinkattributes`), checked on the name the system opens (on Unix a name
 holding `\` is refused, `\` being a filename character there; on Windows `\` separates, and a `:`, a `\\?\`/`\\.\`
 prefix and a component ending in a dot or a space are refused); reads stay open (`openin_any=a`); chunks load as text
-only. Each refused call is `Error:lua:sandbox` (a `D` frame, raised even when the chunk pcalls it) and a Lua error;
-the name shown is cut at 256 bytes, and a chunk lists 20 refusals (64 KiB), the rest in one summary Error.
+only. A call lualatex refuses too answers as lualatex `-no-shell-escape` does (TL 2025, LuaHBTeX 1.22, measured;
+`shell_escape=f` is also what `\pdfshellescape` and `status.shell_escape`, 0, report, so restricted mode's
+`os.execute()` = 2 would invite a whitelisted call that could not run): `os.execute(cmd)`, `os.exec`, `os.spawn` return
+`nil, "All command execution disabled."`, `io.popen` and `os.kpsepopen` `nil, "all command execution is disabled"`,
+`io.open` of a name `openout_any=p` forbids a lone `nil`; each is `Warning:lua:sandbox` (a `W` frame) and the document
+goes on, as TeX does not err. `os.execute()`, which asks whether a shell exists, returns 0 with no record (it refuses
+nothing; pdftexcmds' `\pdf@shellescape` and imakeidx.sty:54 ask it — the TL manuals biblatex-sbl, biblatex-sbl-ibid,
+derivative, labyrinth, liftarm, polyomino, toptesi/FrontespizioScudo, wheelchart and xassoccnt_doc each erred on it).
+A call only the sandbox refuses — `os.remove`/`rename`/`tmpname`/`tmpdir`/`setenv`, `io.tmpfile`, the `lfs`
+writers, `io.output`/`gzip.open`/`mplib` writes and an `io.open` through a symbolic link or of a `\` name (all of
+which lualatex performs), a C module, a network library, `package.loadlib` — is `Error:lua:sandbox` (a `D` frame) and
+a Lua error. Neither record is swallowed when the chunk pcalls the call; the name shown is cut at 256 bytes, and a
+chunk lists 20 refusals (64 KiB), the rest in one summary per severity.
 Every helper the checks and the frame protocol call (`string.*`, `next`, `type`, the file handles' C
 `read`/`write`/`flush`, `package.searchpath`, `kpse.find_file`, `load`) is a local captured at boot, never a method
 looked up through a table the document can change; `mplib.new` gets a raw copy (`next`) of its options carrying the
 sandbox's finder; every `img` function is refused (texlua has no backend: `img.new`, `img.scan`, `img.write`
-crashed it). Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
+crashed it); `font.current`, `font.id` and `font.define`, which read the engine's fonts texlua lacks (a crash, so the
+Lua state was lost: hologo.sty:1303-1315's glyph test, TL manual derivative), raise a Lua error, the chunk not
+evaluated (an Info). Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
 the null device and `print` a no-op, and `package.loaded.texio`/`pdf`/`status`/`token` are the shims (`node` is
 nil). Frames are authenticated: the bridge sends a 128-bit nonce (SipHash under the standard library's random
 `RandomState` keys) as the interpreter's first line, the prelude reads it before any other code loads, and every
 header is `<tag> <nonce> <length>`, built by concatenation (a `%s` format would run a string `__tostring` the
 document set); an error value is shown without `tostring`. The bridge reads a frame header of at most 64 bytes and a
-body of at most 64 MiB, only the tags `D`/`Q`/`OK`/`ERR` and only with the nonce, so bytes reaching the pipe by any
+body of at most 64 MiB, only the tags `D`/`W`/`Q`/`OK`/`ERR` and only with the nonce, so bytes reaching the pipe by any
 other route are a broken protocol, so a record cannot be forged. The record itself is best-effort: a chunk can
 suppress its OWN refusal records — by exhausting the C stack just before the record is written (a ~195-deep `pcall`
 nest), by reading its own pipe through `/proc/self/fd/1` and winning the race, or by reading its process memory
@@ -21044,15 +21057,17 @@ The CLI's own zip unpacking writes a link entry as a plain file. `graphics.rs`
 `copy_to_destination` follows Perl: a source-relative path that would leave `--dest` (a `..`, root or drive
 component) takes the next free `xN.<ext>`. **Witnesses.** TL manuals ijsra (its class's images reached as
 `../../../tex/latex/…`, written beside `--dest`; now `x1.png`, `x2.png`), newpax (unchanged). **Guards.**
-`cluster_package_guards::perfect_kernel_batchseclua::{batchseclua_lua_runs_no_program,
+`cluster_package_guards::perfect_kernel_batchseclua::{batchluaexec_refused_program_answers_as_lualatex,
+batchluaexec_font_current_keeps_the_interpreter,
+batchseclua_lua_runs_no_program,
 batchseclua_lua_writes_stay_in_the_job_directory, batchseclua_image_copy_stays_in_dest,
 batchseclua_sandbox_helpers_are_held_at_boot, batchseclua_lua_writes_follow_no_symlink,
 batchseclua_lua_interpreter_restarts_and_owns_its_pipe, batchseclua_tar_links_stay_inside_the_source,
 batchseclua_lua_frames_are_authenticated, batchseclua_lua_backslash_names_are_refused,
 batchseclua_lua_refusals_are_bounded, batchseclua_lua_interpreter_ends_with_the_timeout}`,
 `lua_bridge::tests::frame_headers_carry_the_session_nonce` (repros
-`luatex-profile/lua_sandbox_{no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
-`luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout}`,
+`luatex-profile/lua_sandbox_{refused_program_goes_on,no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
+`luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout,font_current_keeps_the_interpreter}`,
 `loader/image_copy_outside_source_stays_in_dest`).
 
 ### 1082. A PASJ paper without its class keeps the class's own `\SetRunningHead`, `\FigureFile` and symbols (CLUSTFIX)
