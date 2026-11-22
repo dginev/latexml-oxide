@@ -499,8 +499,7 @@ impl LaTeXImages {
   /// For dvipng output: already cropped, just copy.
   /// For dvips output (EPS): needs ImageMagick conversion + trim.
   /// For dvisvgm output (SVG): already in final format.
-  /// The copies install atomically ([`crate::writer::copy_atomic`]): page-render workers share
-  /// the destination.
+  /// Nothing calls it yet; its copies go through [`crate::writer::copy_atomic`].
   ///
   /// Returns (width, height) in pixels, or None on failure.
   pub fn convert_image(&self, src: &str, dest: &str) -> Option<(u32, u32)> {
