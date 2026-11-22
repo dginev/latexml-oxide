@@ -132,11 +132,12 @@ static ATOMIC_TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 /// every page uses): written or converted there, then [installed](Staged::install) by one rename,
 /// so no reader sees a partial file and no writer touches another's. Named
 /// `.<stem>.tmp.<pid>.<seq>.<ext>`, its extension kept last for converters that read the format
-/// from it; registered with the watchdog's exit sweep, and removed when dropped uninstalled.
+/// from it; registered with the watchdog's exit sweep, and removed when dropped — after an install
+/// too, since a rename onto a hard link of the same file succeeds and leaves both names (POSIX
+/// `rename(2)`; a graphics-cache entry linked into the destination by a sibling worker).
 pub struct Staged {
-  path:      PathBuf,
-  installed: bool,
-  _on_exit:  latexml_core::watchdog::RemoveOnExit,
+  path:     PathBuf,
+  _on_exit: latexml_core::watchdog::RemoveOnExit,
 }
 
 impl Staged {
@@ -157,11 +158,7 @@ impl Staged {
       _ => PathBuf::from(name),
     };
     let _on_exit = latexml_core::watchdog::remove_on_exit(&path);
-    Staged {
-      path,
-      installed: false,
-      _on_exit,
-    }
+    Staged { path, _on_exit }
   }
 
   pub fn path(&self) -> &Path { &self.path }
@@ -170,12 +167,9 @@ impl Staged {
   /// `MoveFileExW` refuses a file another worker holds open) but `dest` already holds these very
   /// bytes, a sibling installed the same output and the install stands; the bytes are compared
   /// before the temp is removed, so a stale file of the same length is never taken for it.
-  pub fn install(mut self, dest: &Path) -> io::Result<()> {
+  pub fn install(self, dest: &Path) -> io::Result<()> {
     match fs::rename(&self.path, dest) {
-      Ok(()) => {
-        self.installed = true;
-        Ok(())
-      },
+      Ok(()) => Ok(()),
       Err(_) if same_bytes(&self.path, dest) => Ok(()),
       Err(e) => Err(e),
     }
@@ -183,11 +177,7 @@ impl Staged {
 }
 
 impl Drop for Staged {
-  fn drop(&mut self) {
-    if !self.installed {
-      let _ = fs::remove_file(&self.path);
-    }
-  }
+  fn drop(&mut self) { let _ = fs::remove_file(&self.path); }
 }
 
 /// Whether `a` and `b` are regular files holding the same bytes.
@@ -537,6 +527,22 @@ mod tests {
       !temp.exists(),
       "an uninstalled stage is removed when dropped"
     );
+  }
+
+  /// A rename onto a hard link of the same file succeeds and keeps both names (POSIX): a
+  /// graphics-cache entry a sibling worker linked into the destination left every later worker's
+  /// staged link behind.
+  #[test]
+  fn a_stage_installed_onto_its_own_hard_link_is_removed() {
+    let dir = tempfile::tempdir().unwrap();
+    let a = dir.path().join("fig.svg");
+    fs::write(&a, b"<svg/>").unwrap();
+    let staged = Staged::beside(&a);
+    let temp = staged.path().to_path_buf();
+    fs::hard_link(&a, &temp).unwrap();
+    staged.install(&a).unwrap();
+    assert!(!temp.exists(), "the staged link is left behind");
+    assert_eq!(fs::read(&a).unwrap(), b"<svg/>");
   }
 
   #[test]

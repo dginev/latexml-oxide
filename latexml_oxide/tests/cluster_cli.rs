@@ -5183,8 +5183,13 @@ mod shared_figure_parallel_render {
     found
   }
 
-  /// The pages of one run of `a.tex` (`LATEXML_RENDER_JOBS=jobs`), with the run's stderr.
-  fn run(tex: &str, jobs: &str) -> (Vec<(String, String)>, Vec<String>, String) {
+  /// The pages of one run of `a.tex` (`LATEXML_RENDER_JOBS=jobs`; the graphics cache off, or in
+  /// `cache`), the image and hidden files beside them, and the run's stderr.
+  fn run(
+    tex: &str,
+    jobs: &str,
+    cache: Option<&std::path::Path>,
+  ) -> (Vec<(String, String)>, Vec<String>, String) {
     let work = tempfile::tempdir().expect("tempdir");
     std::fs::write(work.path().join("a.tex"), tex).unwrap();
     std::fs::copy(
@@ -5195,7 +5200,8 @@ mod shared_figure_parallel_render {
       work.path().join("fig.pdf"),
     )
     .unwrap();
-    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"));
+    cmd
       .args([
         "a.tex",
         "--format=html5",
@@ -5204,10 +5210,14 @@ mod shared_figure_parallel_render {
         "--dest=a.html",
       ])
       .env("LATEXML_RENDER_JOBS", jobs)
-      .env("LATEXML_GRAPHICS_CACHE_OFF", "1")
-      .current_dir(work.path())
-      .output()
-      .expect("spawn latexml_oxide");
+      .current_dir(work.path());
+    match cache {
+      Some(dir) => cmd
+        .env_remove("LATEXML_GRAPHICS_CACHE_OFF")
+        .env("LATEXML_GRAPHICS_CACHE_DIR", dir),
+      None => cmd.env("LATEXML_GRAPHICS_CACHE_OFF", "1"),
+    };
+    let out = cmd.output().expect("spawn latexml_oxide");
     let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
     assert!(out.status.success(), "stderr:\n{stderr}");
     let mut pages = Vec::new();
@@ -5240,7 +5250,7 @@ mod shared_figure_parallel_render {
       ));
     }
     tex.push_str("\\end{document}\n");
-    let (serial, serial_images, _) = run(&tex, "1");
+    let (serial, serial_images, _) = run(&tex, "1", None);
     assert_eq!(serial_images, ["fig.svg"], "the serial run's images");
     let s72 = &serial
       .iter()
@@ -5251,9 +5261,12 @@ mod shared_figure_parallel_render {
       s72.contains("data=\"fig.svg\""),
       "S72 shows the vector render:\n{s72}"
     );
-    // The race is a matter of timing: three parallel runs make a miss unlikely.
-    for round in 1..=3 {
-      let (parallel, images, stderr) = run(&tex, "8");
+    // The race is a matter of timing: three parallel runs make a miss unlikely. A fourth uses the
+    // graphics cache, whose entry the workers hard-link into the destination: a staged link
+    // renamed onto the same file is a no-op that left it behind.
+    let cache = tempfile::tempdir().expect("tempdir");
+    for round in 1..=4 {
+      let (parallel, images, stderr) = run(&tex, "8", (round == 4).then(|| cache.path()));
       assert!(
         stderr.contains("parallel page render engaged: 8 worker(s)"),
         "the worker path must engage:\n{stderr}"
