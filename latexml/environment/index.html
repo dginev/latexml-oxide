@@ -1,0 +1,139 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Environment variables"><title>latexml::environment - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1e18a8e7.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (bdf712ee8 2026-11-21)" data-channel="nightly" data-search-js="search-085293d4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module environment</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml/index.html">latexml</a><span class="version">0.8.0-rc2</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module environment</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#environment-variables" title="Environment variables">Environment variables</a><ul><li><a href="#running-conversions-user" title="Running conversions (user)">Running conversions (user)</a></li><li><a href="#embedding-the-library-library" title="Embedding the library (library)">Embedding the library (library)</a></li><li><a href="#building-and-packaging-packager" title="Building and packaging (packager)">Building and packaging (packager)</a></li><li><a href="#the-cortex-worker-fleet-fleet" title="The cortex worker fleet (fleet)">The cortex worker fleet (fleet)</a></li><li><a href="#diagnosing-and-measuring-dev" title="Diagnosing and measuring (dev)">Diagnosing and measuring (dev)</a></li><li><a href="#tests-test" title="Tests (test)">Tests (test)</a></li><li><a href="#internal-do-not-set" title="Internal (do not set)">Internal (do not set)</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml</a></div><h1>Module <span>environment</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml/lib.rs.html#12">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="environment-variables"><a class="doc-anchor" href="#environment-variables">§</a>Environment variables</h2>
+<p>Every environment variable that latexml-oxide reads or sets, with the values it accepts, its default and its effect.
+A command-line flag always wins over the variable of the same meaning. Most variables are read once, when a
+conversion starts.</p>
+<p><strong>Audience legend</strong></p>
+<div class="table"><table><thead><tr><th>Mark</th><th>Who it is for</th></tr></thead><tbody>
+<tr><td><strong>user</strong></td><td>anyone running <code>latexml_oxide</code> from the command line</td></tr>
+<tr><td><strong>library</strong></td><td>Rust code embedding the <code>latexml</code> crate</td></tr>
+<tr><td><strong>packager</strong></td><td>building, packaging or releasing the binaries</td></tr>
+<tr><td><strong>fleet</strong></td><td><code>cortex_worker</code> deployments</td></tr>
+<tr><td><strong>dev</strong></td><td>diagnosing or measuring the converter; output and speed may change</td></tr>
+<tr><td><strong>test</strong></td><td>the test suite only</td></tr>
+<tr><td><strong>internal</strong></td><td>set by latexml-oxide for its own child processes; never set these yourself</td></tr>
+</tbody></table>
+</div>
+<p><strong>How values are read.</strong> Conventions differ between variables, so each row gives its own:</p>
+<ul>
+<li><em>presence</em>: the variable being set at all switches the feature on, whatever its value. <code>LATEXML_NODUMP=0</code> also skips the dumps.</li>
+<li><em><code>1</code></em>: only the exact value <code>1</code> switches it on.</li>
+<li><em><code>1|true|yes</code></em>: one of those three values, case-sensitive.</li>
+<li><em><code>0</code> disables</em>: the feature is on unless the value is exactly <code>0</code>.</li>
+<li>A number that does not parse falls back to the default, except <code>LATEXML_MAX_MEMORY</code>, which is a command-line error.</li>
+</ul>
+<h3 id="running-conversions-user"><a class="doc-anchor" href="#running-conversions-user">§</a>Running conversions (user)</h3><h4 id="memory-and-limits"><a class="doc-anchor" href="#memory-and-limits">§</a>Memory and limits</h4><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>LATEXML_MAX_MEMORY</code></td><td>MiB; <code>0</code> = no ceiling</td><td>90 % of available RAM, at most 64 GiB, at least 2048 MiB</td><td>The one memory knob of <code>latexml_oxide</code>, the same as <code>--max-memory</code>. The watchdog stops the run above it; the cooperative fuse sits at 3/4 of it; streaming spills at a third of the fuse.</td></tr>
+<tr><td><code>LATEXML_STREAMING</code></td><td><code>true</code> / <code>false</code></td><td>unset = automatic</td><td>The same as <code>--streaming</code>. <code>true</code> streams from the start; <code>false</code> never streams. <code>1</code> is rejected.</td></tr>
+<tr><td><code>LATEXML_TOKEN_LIMIT</code></td><td>tokens; <code>0</code> disables</td><td>20,000,000,000, raised to 1000 × the source size</td><td>Runaway-expansion backstop (a Fatal). <code>--token-limit</code> wins. Setting it at all turns off the scaling with source size.</td></tr>
+<tr><td><code>LATEXML_EXPAND_DEPTH_LIMIT</code></td><td>integer; <code>0</code> disables</td><td>12,000</td><td>Nested expansion depth before <code>Fatal:Timeout:Recursion</code>.</td></tr>
+<tr><td><code>LATEXML_MAX_GRAMMAR_LEXEMES</code></td><td>integer; <code>0</code> or <code>none</code> disables</td><td>12,000</td><td>Formulas longer than this skip the grammar parser for the simpler fallback parser.</td></tr>
+</tbody></table>
+</div>
+<p><strong>Under an address-space limit</strong> (<code>ulimit -v</code>, as some batch systems impose), the allocators’ reservations count
+against the limit even though they use no memory. Two variables of the allocators themselves, not ours, cut that
+reservation by about half without changing memory use, speed or output:</p>
+<div class="table"><table><thead><tr><th>Variable</th><th>Recommended</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>MALLOC_ARENA_MAX</code></td><td><code>2</code></td><td>glibc: two malloc arenas instead of one per thread (each reserves 64-128 MiB).</td></tr>
+<tr><td><code>MIMALLOC_ARENA_RESERVE</code></td><td><code>128MiB</code></td><td>mimalloc: reserve 128 MiB at a time instead of 1 GiB.</td></tr>
+</tbody></table>
+</div>
+<p>Without an address-space limit neither is needed. The fleet sets both for its children (see below).</p>
+<h4 id="format-dumps"><a class="doc-anchor" href="#format-dumps">§</a>Format dumps</h4><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>LATEXML_FORMAT_CACHE</code></td><td>directory</td><td><code>$XDG_CACHE_HOME/latexml-oxide/formats</code>, else <code>~/.cache/latexml-oxide/formats</code>, else the temp directory</td><td>Where the format built for your TeX tree is cached. It is built once, on the first conversion with a tree the release’s embedded dumps were not built from.</td></tr>
+<tr><td><code>LATEXML_DUMP_DIR</code></td><td>directory</td><td>unset</td><td>Also look here for <code>plain.YYYY.dump.txt</code> / <code>latex.YYYY.dump.txt</code>.</td></tr>
+<tr><td><code>LATEXML_DUMP_PATH</code></td><td>file</td><td>unset</td><td>An explicit LaTeX dump, used when it matches this TeX tree.</td></tr>
+<tr><td><code>LATEXML_PLAIN_DUMP_PATH</code></td><td>file</td><td>unset</td><td>An explicit plain TeX dump.</td></tr>
+<tr><td><code>LATEXML_NODUMP</code></td><td>presence</td><td>unset</td><td>Load no dump; build the formats from the engine’s definitions on every run (slow).</td></tr>
+<tr><td><code>LATEXML_SKIP_DUMP_STAMP_CHECK</code></td><td>presence</td><td>unset</td><td>Silence the TeX Live year-mismatch warning for the LaTeX dump.</td></tr>
+</tbody></table>
+</div><h4 id="post-processing-split-and-render"><a class="doc-anchor" href="#post-processing-split-and-render">§</a>Post-processing, split and render</h4><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>LATEXML_RENDER_JOBS</code></td><td>integer ≥ 1</td><td><code>latexml_oxide</code>: min(cores, 8); the library and <code>cortex_worker</code>: 1</td><td>Worker processes that render the pages of a split run with 64 or more pages. <code>1</code> renders serially.</td></tr>
+<tr><td><code>LATEXML_POST_STREAM_SPLIT</code></td><td><code>0</code> = off, any other value = forced on</td><td>automatic for <code>--splitat</code> runs</td><td>The streaming split, which splits from the core result on disk instead of one whole document in memory.</td></tr>
+</tbody></table>
+</div><h4 id="graphics"><a class="doc-anchor" href="#graphics">§</a>Graphics</h4><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>LATEXML_GRAPHICS_CACHE_DIR</code></td><td>directory; empty is ignored</td><td><code>$XDG_CACHE_HOME/latexml-oxide/graphics</code>, else <code>$HOME/.cache/…</code>; neither set = no cache</td><td>The shared cache of converted images.</td></tr>
+<tr><td><code>LATEXML_GRAPHICS_CACHE_OFF</code></td><td><code>1|true|yes</code></td><td>cache on</td><td>Convert every image afresh.</td></tr>
+<tr><td><code>LATEXML_GRAPHICS_CACHE_MAX_MB</code></td><td>MiB; <code>0</code> = never prune</td><td>2048</td><td>The cache’s size; the least recently used entries go first.</td></tr>
+<tr><td><code>LATEXML_GRAPHICS_VECTOR_AUTO_OFF</code></td><td><code>1|true|yes</code></td><td>on</td><td>Turn off the automatic PDF-to-SVG conversion of small vector figures (see <code>--graphics-svg-threshold-kb</code>).</td></tr>
+<tr><td><code>LATEXML_RASTER_DENSITY</code></td><td>dpi, 50-600</td><td>120 (the longest side capped at 2048 px)</td><td>Resolution of rasterized figures.</td></tr>
+<tr><td><code>LATEXML_CONVERT_TIMEOUT_SECS</code></td><td>seconds &gt; 0</td><td>60</td><td>Time limit for one ImageMagick or Ghostscript conversion.</td></tr>
+<tr><td><code>LATEXML_SVG_CONVERT_TIMEOUT_SECS</code></td><td>seconds &gt; 0</td><td>15</td><td>Time limit for one mutool or pdftocairo SVG conversion.</td></tr>
+</tbody></table>
+</div><h4 id="output-logging-and-safety"><a class="doc-anchor" href="#output-logging-and-safety">§</a>Output, logging and safety</h4><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>LATEXML_TELEMETRY_OUT</code></td><td>file</td><td>none</td><td>Append one JSON line of timings and counts per conversion; the same as <code>--telemetry-out</code>.</td></tr>
+<tr><td><code>LATEXML_SOURCE_MAP</code></td><td>presence</td><td>off</td><td>The same as <code>--source-map</code>: <code>data-sourcepos</code> attributes in the output.</td></tr>
+<tr><td><code>LATEXML_DISABLE_SHELL_ESCAPE</code></td><td>presence</td><td>allowed</td><td>Rhai bindings may not run external commands (builds with runtime bindings).</td></tr>
+<tr><td><code>SOURCE_DATE_EPOCH</code></td><td>Unix seconds</td><td>the clock</td><td>Fixes <code>\today</code>, <code>\time</code> and the log banner’s time (UTC), and the member times of <code>--format=zip</code>/EPUB output, for reproducible builds.</td></tr>
+<tr><td><code>NO_COLOR</code></td><td>presence</td><td>colour on a terminal</td><td>No colour codes on stderr.</td></tr>
+<tr><td><code>TMPDIR</code> (<code>TMP</code>/<code>TEMP</code> on Windows)</td><td>directory</td><td>the system default</td><td>Scratch files and temporary caches.</td></tr>
+</tbody></table>
+</div><h4 id="tex-live"><a class="doc-anchor" href="#tex-live">§</a>TeX Live</h4>
+<p>latexml-oxide finds packages, classes and fonts through kpathsea, so the usual TeX Live variables apply:
+<code>TEXMFROOT</code>, <code>TEXMFDIST</code>, <code>TEXMFMAIN</code>, <code>TEXMFLOCAL</code>, <code>TEXMFHOME</code>, <code>TEXMFVAR</code>, <code>TEXMFCONFIG</code>, <code>TEXMFSYSVAR</code>,
+<code>TEXMFSYSCONFIG</code>, <code>TEXMFCNF</code>, <code>TEXINPUTS</code>, <code>BIBINPUTS</code> and the other <code>*INPUTS</code> paths. A trailing <code>/</code> on a tree root is
+trimmed and logged. <code>KPSEWHICH</code> names the <code>kpsewhich</code> program that anchors kpathsea; <code>PATH</code> also finds the external
+tools (kpsewhich, ImageMagick, Ghostscript, mutool, pdftocairo, texlua).</p>
+<h3 id="embedding-the-library-library"><a class="doc-anchor" href="#embedding-the-library-library">§</a>Embedding the library (library)</h3><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>LATEXML_RSS_CAP_BYTES</code></td><td>bytes; <code>0</code> = off</td><td>4,500,000,000</td><td>The cooperative memory fuse (a graceful Fatal). The <code>latexml_oxide</code> binary sets its own from <code>--max-memory</code> and ignores this.</td></tr>
+<tr><td><code>LATEXML_NO_DEFAULT_PUSHBACK_LIMIT</code></td><td>presence</td><td>a 5,000,000-token cap</td><td>Remove the pushback cap.</td></tr>
+<tr><td><code>LATEXML_STACK_RED_ZONE_BYTES</code></td><td>bytes</td><td>262,144</td><td>Remaining stack below which a new stack segment is allocated.</td></tr>
+<tr><td><code>LATEXML_STACK_SEGMENT_BYTES</code></td><td>bytes</td><td>8,388,608</td><td>The size of each new stack segment.</td></tr>
+</tbody></table>
+</div><h3 id="building-and-packaging-packager"><a class="doc-anchor" href="#building-and-packaging-packager">§</a>Building and packaging (packager)</h3><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>LATEXML_GIT_SHA</code></td><td>string</td><td><code>git rev-parse --short HEAD</code>, else <code>unknown</code></td><td>The revision printed by <code>--version</code> and the log banner.</td></tr>
+<tr><td><code>LATEXML_GIT_SHA_OVERRIDE</code></td><td>string</td><td>the git short sha</td><td>The revision recorded in telemetry.</td></tr>
+<tr><td><code>LATEXML_NO_EMBEDDED_DUMP</code></td><td>presence</td><td>unset</td><td>Run time: do not fall back to the dumps compiled into the binary.</td></tr>
+<tr><td><code>LATEXML_DUMP_DIR_ONLY</code></td><td>presence</td><td>unset</td><td>Run time: use only the dumps named by <code>LATEXML_DUMP_PATH</code> / <code>LATEXML_DUMP_DIR</code> or built for the tree.</td></tr>
+<tr><td><code>KPATHSEA_SKIP_TOOLCHAIN_CHECK</code></td><td><code>1</code></td><td>set in <code>.cargo/config.toml</code></td><td>Build without a TeX installation.</td></tr>
+<tr><td><code>PKG_CONFIG_PATH</code>, <code>LIBCLANG_PATH</code>, <code>VCPKG_ROOT</code>, <code>KPATHSEA_LIB_DIR</code>, <code>KPATHSEA_STATIC</code>, <code>LIBXML2_STATIC</code>, <code>LIBXSLT_STATIC</code></td><td></td><td></td><td>Native library discovery and static linking; see BUILDING.md.</td></tr>
+</tbody></table>
+</div>
+<p><code>tools/make_formats.sh</code> (and <code>.ps1</code>) reads <code>PROFILE</code> (the cargo profile, default <code>debug</code>), <code>CARGO_TARGET_DIR</code>,
+<code>CARGO_LOCKED=1</code> (build <code>--locked</code>) and <code>LATEXML_DUMP_DIR</code> (copy the built dumps there). <code>tools/make_release.sh</code>
+reads <code>GITHUB_REF_NAME</code>, <code>RELEASE_TARGET</code>, <code>RELEASE_EXTRA_FEATURES</code> and <code>RELEASE_LOCKED</code>. The other <code>tools/</code> scripts
+document their variables in their headers.</p>
+<h3 id="the-cortex-worker-fleet-fleet"><a class="doc-anchor" href="#the-cortex-worker-fleet-fleet">§</a>The cortex worker fleet (fleet)</h3>
+<p><code>cortex_worker</code> is configured by its command-line options. For each child process it starts it sets:</p>
+<div class="table"><table><thead><tr><th>Variable</th><th>Value</th><th>Why</th></tr></thead><tbody>
+<tr><td><code>TMPDIR</code>, <code>MAGICK_TEMPORARY_PATH</code>, <code>MAGICK_TMPDIR</code></td><td>a fresh directory per worker slot</td><td>Scratch space emptied between spawns.</td></tr>
+<tr><td><code>MALLOC_ARENA_MAX</code>, <code>MIMALLOC_ARENA_RESERVE</code></td><td><code>2</code>, <code>128MiB</code></td><td>The children run under an address-space limit (<code>--child-mem-limit-mb</code>); see “Under an address-space limit”.</td></tr>
+<tr><td><code>MALLOC_CONF</code>, <code>_RJEM_MALLOC_CONF</code></td><td><code>background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0</code></td><td>Prompt return of freed memory in jemalloc builds.</td></tr>
+<tr><td><code>LATEXML_RSS_CAP_BYTES</code></td><td><code>--max-rss-mb</code>, else <code>--child-mem-limit-mb</code> − 256 MiB</td><td>The per-child memory fuse.</td></tr>
+</tbody></table>
+</div>
+<p>These replace any value of the same name in the worker’s own environment. The Docker entrypoint reads <code>WORKERS</code> and
+<code>PROFILE</code> (<code>ar5iv</code> or <code>generic</code>).</p>
+<h3 id="diagnosing-and-measuring-dev"><a class="doc-anchor" href="#diagnosing-and-measuring-dev">§</a>Diagnosing and measuring (dev)</h3>
+<p>These switch on traces, audits or alternative code paths. They are for developers; output and speed may change.</p>
+<div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>LATEXML_DEBUG_FATAL</code></td><td>presence</td><td>A backtrace, the pushback and the last tokens at the first Fatal.</td></tr>
+<tr><td><code>LATEXML_DEBUG_MEMBUDGET</code></td><td>presence</td><td>A backtrace and box statistics when the memory fuse trips.</td></tr>
+<tr><td><code>LATEXML_CSNAME_TRACE</code>, <code>LATEXML_EXPL_TRACE</code>, <code>LATEXML_PGFKEYS_TRACE</code>, <code>LATEXML_CMML_TRACE_CYCLE</code></td><td>presence</td><td>Traces of <code>\csname</code> errors, expl3 syntax state at file exit, pgfkeys dispatch, Content MathML cycles.</td></tr>
+<tr><td><code>LXML_TRACE_BOUND_MODE</code>, <code>LXML_TRACE_FRAMES</code>, <code>LXML_TRACE_TERMINAL</code>, <code>LXML_TRACE_GROUP_END</code>, <code>LXML_TRACE_ALIGN_STATE</code>, <code>LXML_SIZE_TRACE</code>, <code>LXML_TRACE_NODE_BOXES</code>, <code>LXML_TRACE_FRAGMENT_RC</code>, <code>LXML_TRACE_INSERT_BLOCK</code></td><td>presence</td><td>Engine traces: modes, frames, group ends, alignments, box sizes, streaming spills, fragment references, block insertion.</td></tr>
+<tr><td><code>LXML_TRACE_ARGS</code></td><td>a control sequence name</td><td>Print the arguments that definition reads.</td></tr>
+<tr><td><code>LATEXML_REWRITE_TIMING</code>, <code>LATEXML_POST_AUDIT</code>, <code>LATEXML_POST_MEMDIAG</code></td><td>presence</td><td>Timings of rewrite rules and post-processing stages; heap statistics every 1024 pages (Linux).</td></tr>
+<tr><td><code>LATEXML_PARSE_LEXEMES</code>, <code>LATEXML_PARSE_AUDIT</code>, <code>LATEXML_PARSE_PRUNE_REASONS</code>, <code>LATEXML_MATH_AMBIGUITY_AUDIT</code>, <code>LATEXML_MARPA_HYBRID_AUDIT_PARITY</code>, <code>LATEXML_MARPA_ASF_AUDIT</code>, <code>LATEXML_PARSE_DUMP_ORDER</code></td><td>presence</td><td>Math parser audits and dumps.</td></tr>
+<tr><td><code>LATEXML_MARPA_LEGACY</code>, <code>LATEXML_MARPA_ASF_ONLY</code></td><td>presence</td><td>Force one math parse strategy (tree iteration or ASF).</td></tr>
+<tr><td><code>LATEXML_MARPA_HYBRID_AND_NODE_LIMIT</code></td><td>integer; <code>0</code>/<code>none</code> = no cap (500)</td><td>Bocage size above which the parser falls back to tree iteration.</td></tr>
+<tr><td><code>LATEXML_L3FP_NATIVE</code>, <code>LATEXML_PGFKEYS_NATIVE</code>, <code>LATEXML_DATATOOL_NATIVE</code></td><td><code>0</code> disables</td><td>Turn a native fast path off, to compare with the macro path.</td></tr>
+<tr><td><code>LATEXML_L3FP_TRACE</code>, <code>LATEXML_L3FP_CHECK</code></td><td><code>1</code></td><td>Count the native l3fp calls; check them against the macro results.</td></tr>
+<tr><td><code>LATEXML_NO_KPATHSEA_PREWARM</code></td><td>presence</td><td>Skip the kpathsea prewarm thread.</td></tr>
+<tr><td><code>LATEXML_SPILL_AT_MIB</code>, <code>LATEXML_SEGMENT_CHUNK_MIB</code>, <code>LATEXML_SOFT_YIELD_MIN_BOXES</code>, <code>LXML_NODE_BOXES_SWEEP</code></td><td>integers</td><td>Streaming watermark, segment size and yield points.</td></tr>
+<tr><td><code>LATEXML_CHECK_READ_BUDGET</code>, <code>LATEXML_REHEARSAL_READ_BUDGET</code></td><td>tokens; <code>0</code> = unlimited</td><td>Budgets of the frontmatter’s speculative reads (8,000,000).</td></tr>
+<tr><td><code>LATEXML_POST_STREAM_THRESHOLD</code>, <code>LATEXML_POST_MEM_PARSE_LIMIT</code>, <code>LATEXML_POST_SPILL_PAGE</code></td><td>bytes / <code>1</code></td><td>Streaming-split threshold, in-memory parse ceiling, staging an unsplit page on disk.</td></tr>
+<tr><td><code>LATEXML_INIT_DEBUG</code></td><td>presence</td><td>Keep and count the errors of an <code>--init</code> format build.</td></tr>
+<tr><td><code>LATEXML_DUMP</code></td><td>file</td><td>Load an extra dump after the preloads.</td></tr>
+</tbody></table>
+</div><h3 id="tests-test"><a class="doc-anchor" href="#tests-test">§</a>Tests (test)</h3>
+<p><code>LATEXML_BLESS</code>, <code>LATEXML_SAVE_ACTUAL</code>, <code>LATEXML_TEST_LOG</code>, <code>LATEXML_SIGSEGV_TRACE</code>, <code>LATEXML_TEST_TEXLIVE</code>,
+<code>LATEXML_TEST_SKIP_LOG</code>, <code>LATEXML_SVG_TESTS</code>, <code>LATEXML_BROWSER_TESTS</code>, <code>LATEXML_EPUBCHECK_TESTS</code>, <code>LATEXML_FIREFOX</code>,
+<code>LATEXML_BROWSER_ENGINE</code>, <code>LATEXML_FIREFOX_PATH</code>, <code>LATEXML_INJECT_PANIC</code>, <code>LATEXML_RENDER_TEST_SERIAL_STOP</code>,
+<code>LATEXML_RENDER_WORKER_TEST_ABORT</code>, <code>CORTEX_WORKER_TEST_FAULT</code>, <code>CORTEX_WORKER_TEST_GROW_MB</code>, <code>UPDATE_SUPPORTED_PACKAGES</code>,
+<code>UPDATE_API_DOC</code> and <code>LATEXML_PERL_LIB</code> drive the test suite: blessing goldens, requiring optional tools (a missing
+mutool, browser or epubcheck becomes a failure instead of a skip), and fault injection. BUILDING.md describes the
+ones a contributor uses.</p>
+<h3 id="internal-do-not-set"><a class="doc-anchor" href="#internal-do-not-set">§</a>Internal (do not set)</h3><div class="table"><table><thead><tr><th>Variable</th><th>Set by</th><th>Effect if set by hand</th></tr></thead><tbody>
+<tr><td><code>LATEXML_INI_MODE</code></td><td><code>latexml_oxide --init</code></td><td>A normal conversion stops after the bootstrap pools.</td></tr>
+<tr><td><code>LATEXML_RENDER_WORKER</code></td><td>the render fleet, for its workers</td><td><code>latexml_oxide</code> ignores its command line and waits as a render worker.</td></tr>
+</tbody></table>
+</div></div></details></section></div></main></body></html>
