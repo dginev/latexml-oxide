@@ -319,7 +319,7 @@ fn beilstein_authors_carry_their_numbered_affiliations() {
   assert_eq!(
     front_block(&xml),
     normalize_markup(
-      r#"<title>The Title</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">First University</contact><contact name="Affiliation: " role="affiliation">Second Institute</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">First University</contact><contact name="Email: " role="email">bob@example.org</contact></creator><creator before="  " role="author"><personname>Carl Cole</personname><contact name="Affiliation: " role="affiliation">Third Lab</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract>"#
+      r#"<title>The Title</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">First University</contact><contact name="Affiliation: " role="affiliation">Second Institute</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">First University</contact><contact name="Email: " role="email">bob@example.org</contact></creator><creator before="  " role="author"><personname>Carl Cole</personname><contact name="Affiliation: " role="affiliation">Third Lab</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract>"#
     ),
     "{xml}"
   );
@@ -367,12 +367,12 @@ fn lni_authors_carry_email_orcid_and_affiliation() {
     &xml,
     "creator",
     &[r#"before="  ""#],
-    r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Email: " role="email">bob@example.org</contact><contact name="Affiliation: " role="affiliation">Second Institute<break/>Town</contact></creator>"#,
+    r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Email: " role="email">bob@example.org</contact><contact name="Affiliation: " role="affiliation">Second Institute<break/>Town</contact></creator>"#,
   );
   let ann = xml_element(&xml, "creator", &[r#"role="author""#]).expect("Ann Able");
   for part in [
-    r#"<personname>Ann Able</personname><contact name="Email: " role="email">ann@example.org</contact><contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097">"#,
-    r#"<contact name="Affiliation: " role="affiliation">First University<break/>Street 1<break/>Town</contact></creator>"#,
+    r#"<personname>Ann Able</personname><contact name="Email: " role="email">ann@example.org</contact><contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097">"#,
+    r#"<contact name="Affiliation: " role="affiliation">First University<break/>Street 1<break/>Town</contact></creator>"#,
   ] {
     assert!(ann.contains(part), "{ann}");
   }
@@ -552,7 +552,7 @@ fn beilstein_author_with_marks_and_email_options() {
   assert_eq!(
     front_block(&xml),
     normalize_markup(
-      r#"<title>The Title</title><creator role="author"><personname>Ann Able</personname><contact name="Email: " role="email">ann@example.org</contact><contact name="Affiliation: " role="affiliation">First University</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Email: " role="email">bob@example.org</contact><contact name="Affiliation: " role="affiliation">Second Institute</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract>"#
+      r#"<title>The Title</title><creator role="author"><personname>Ann Able</personname><contact name="Email: " role="email">ann@example.org</contact><contact name="Affiliation: " role="affiliation">First University</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Email: " role="email">bob@example.org</contact><contact name="Affiliation: " role="affiliation">Second Institute</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract>"#
     ),
     "{xml}"
   );

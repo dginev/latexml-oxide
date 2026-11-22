@@ -69,7 +69,7 @@ fn a_contact_keeps_its_call_beside_a_cjk_name() {
         ],
         &["Cid Cole", "affiliation=University of Y"],
       ]),
-      r#"<contact name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@x.edu</text></contact>"#,
+      r#"<contact name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@x.edu</text></contact>"#,
     ),
     (
       "corrauth after",

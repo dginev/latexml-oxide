@@ -23801,9 +23801,14 @@ it, and as a CSS table it put the `\intertext` row in its first column (a footno
   exists under plain TeX too; general.rs), as
   LaTeX's classes spell a label with `\nobreakspace` for this robustness (article.cls:457 `\def\fnum@figure{\figurename
   \nobreakspace\thefigure}`, :469). A document that does not redefine `~` gets the same name (`Affiliation:` U+00A0) and
-  byte-identical output; the dumps do not change (the labels are not in them). Class and package bindings that spell
-  their class's own label keep it (llncs_cls.rs `\emailname~`, as llncs.cls).
+  byte-identical output; the dumps do not change (the labels are not in them). Where a class or package the document
+  loads makes `~` a plain space (aa, beilstein, lni, lion-msc read raw, elsart under babel-french), the name ended in a
+  space and now ends in U+00A0, as everywhere else. The raw-class date reader takes the label's word from its character
+  tokens only (frontmatter_stores.rs `prints_default_name_before`). Class and package bindings that spell their class's
+  own label keep it (llncs_cls.rs `\emailname~`, as llncs.cls; aa_support_sty.rs "Corresponding author: ").
 - Witness: lineno/lineno (TL doc) 4 Errors → 0, names `Affiliation:` U+00A0.
 - Upstream: offered to Perl as a patch (the label definitions).
 
-**Guards**: `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`.
+**Guards**: `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`; the names pinned with a space in
+`perfect_kernel_batch{64u,68u,68x,90a,92g,hg1,p21c,p22,p22b}`, `class_census::k11_class_default_store` and
+`tests/babel/elsart_keyword_brace_form.xml` now end in U+00A0.

@@ -63,9 +63,9 @@ fn rows(rows: &[&[&str]]) -> Vec<Vec<String>> {
 /// text of its entry. The Warnings: OmniBus's missing class binding, and the entries written by their text.
 #[test]
 fn an_institute_list_split_by_spelling_today() {
-  // (OmniBus's contact names end in a no-break space, aa's in a space)
+  // (OmniBus's and aa's contact names end in a no-break space, `\lx@nobreakspace`: OD #1136)
   let a = "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">";
-  let aa_a = r#"<contact name="Affiliation: " role="affiliation">"#;
+  let aa_a = r#"<contact name="Affiliation: " role="affiliation">"#;
   let ab = rows(&[&["Ann Able", "affiliation=Univ A"], &[
     "Bob Baker",
     "affiliation=Univ B",
@@ -122,7 +122,7 @@ fn an_institute_list_split_by_spelling_today() {
       aa_email.clone(),
       vec![
         s(aa_a, "Univ A, Town</contact>"),
-        r#"<contact name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@a.edu</text></contact>"#
+        r#"<contact name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@a.edu</text></contact>"#
           .to_string(),
         s(aa_a, "Univ B, City</contact>"),
       ],
@@ -165,7 +165,7 @@ fn an_institute_list_split_by_spelling_today() {
       aa_email,
       vec![
         s(aa_a, "Univ A, Town</contact>"),
-        r#"<contact name="Email: " role="email"><text font="italic" xml:id="id1">ann@a.edu</text></contact>"#
+        r#"<contact name="Email: " role="email"><text font="italic" xml:id="id1">ann@a.edu</text></contact>"#
           .to_string(),
         s(aa_a, "Univ B, City</contact>"),
       ],

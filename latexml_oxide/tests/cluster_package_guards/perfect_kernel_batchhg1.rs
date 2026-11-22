@@ -501,8 +501,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><contact name="Email: " role="email"><text font="typewriter">ann@x.org</text></contact><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Email: " role="email"><text font="typewriter">ann@x.org</text></contact><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
       ]),
     },
     Row {
