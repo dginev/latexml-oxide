@@ -49,6 +49,32 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     mmap / 19,395 munmap calls on a small document against 96 / 22). The jammy legs now link with the default ld, and
     `tools/release_alloc_check.sh` fails a Linux release whose binary skips a constructor or whose mimalloc prints no
     statistics. Output is unchanged; system time falls, most of all where syscalls are slow (WSL 1).
+  - **0.8.0-rc2: speed against 0.7.6 (the basis of the CHANGELOG's figures).** The 0.7.6 x86_64 Linux release
+    binary against the rc2 candidate built as the release job builds it (`maxperf`, `runtime-bindings`), on one
+    host (Threadripper 9980X, TeX Live 2025), each conversion pinned to one core, best of 2, interleaved:
+    - 100 arXiv papers on the production HTML recipe (`--preload=ar5iv.sty --format=html5 --pmml --mathtex`): on the
+      94 both convert, wall time 1.31× median (p10-p90 1.11-1.42×), 1.30× in aggregate (194.5 → 149.2 s), 1.24×
+      fewer instructions, 1.10× lower peak RSS; 0.7.6 failed 6 (four Fatals, one memory kill, one digestion loop),
+      rc2 none. About a fifth of the gain is the allocator (#969: system time 14.3 → 4.5 s); the instruction ratio
+      equals the user-time ratio.
+    - Nasser's 2,400-problem slice (`--splitat=subsubsection --format=html5`, 9,713 pages): 151.9 → 65.5 s with the
+      default 8 render workers (2.3×), 85.5 s serial (1.8×); peak memory of the whole process tree 4.9 → 2.9 GB
+      (1.0 GB serial). The pages are 3× smaller (the unread head links dropped, OXIDIZED_DESIGN_DIVERGENCES #1134).
+    - His whole book (115,519 pages): rc2 1,609 s at 4.3 GB; 0.7.6 stops after 99 s at its memory fuse
+      (`Fatal:Timeout:MemoryBudget`, 6.5 GB, `--max-memory=8192`) with 730 partial pages.
+    - Against TeX, same host and tree: TeX Live 2025 as last updated 2026-02-26 (formats 2026.2.26), pdfTeX
+      1.40.28, LuaHBTeX 1.22.0, LaTeX2e 2025-11-01 patch level 0, L3 programming layer 2025-11-06; latexml-oxide
+      read the same tree. The 32 papers of `docs/performance/PERFORMANCE.md` P13, one core, best of 3, the three
+      tools interleaved; CPU time (user + sys) per paper: latexml-oxide median 0.48 s (mean 1.55), one pdflatex pass
+      0.40 s (1.19), a full build (pdflatex, bibtex where the `.aux` names a `.bib`, pdflatex ×2) 1.20 s (3.60).
+      Ratios per paper: X/P1 median 1.12, geomean 1.14 (0.99 without P13's two outliers); X/full build 0.39 / 0.38.
+      pdflatex's own times matched the 2026-11-15 run within 0.5 %, so the conditions match: 31 of the 32 papers
+      got faster (median 0.934×; the int/perf release-profile binary then, the maxperf release build now).
+    - lualatex on the whole book (one run per pass, on one core): pass 1 1,134 s, pass 2 2,389 s, 67,424 PDF pages,
+      0.95 GB peak, 98 TeX errors in each pass (it continued past them); latexml-oxide 1,609 s at 4.3 GB for 115,519
+      HTML pages, post-processing included, no errors.
+    - Not in the timings: the one-time format build for a TeX tree the release's embedded dumps were not built from
+      (~9 s, OXIDIZED_DESIGN_DIVERGENCES #449). Loaded 56 conversions at a time, the paper gain is 1.2×.
   - **0.8.0-rc2: Split frees each page once it is copied (#965; issue 777).** `Split::process_pages` frees a page's
     source subtree after copying it into its own document (`PostDocument::discard_subtree`); a page holding an
     `ltx:navigation` stays, since the navigation may use its namespaces. A 1,600-subsection book split by subsection
