@@ -1047,12 +1047,20 @@ impl Graphics {
         .and_then(|s| s.to_str())
         .unwrap_or("image"),
     );
-    let unique = Self::unique_staging_tag();
-    let tmp_dir = parent.join(format!(".{}.{}.mutool_svg", stem, unique));
-    // `create_dir`, not `create_dir_all`: an existing directory is another job's.
-    if std::fs::create_dir(&tmp_dir).is_err() {
-      return false;
-    }
+    // `create_dir`, not `create_dir_all`: an existing directory is another job's or a killed
+    // run's, and the next tag is tried (a failure here would hand the figure to pdftocairo).
+    let tmp_dir = loop {
+      let dir = parent.join(format!(
+        ".{}.{}.mutool_svg",
+        stem,
+        Self::unique_staging_tag()
+      ));
+      match std::fs::create_dir(&dir) {
+        Ok(()) => break dir,
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+        Err(_) => return false,
+      }
+    };
     let _on_exit = latexml_core::watchdog::remove_on_exit(&tmp_dir);
     let tmp_actual = tmp_dir.join("page1.svg");
     let p1 = page.map(|p| p.max(1)).unwrap_or(1);

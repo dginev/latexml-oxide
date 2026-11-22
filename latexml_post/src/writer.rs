@@ -133,18 +133,62 @@ static ATOMIC_TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 /// so no reader sees a partial file and no writer touches another's. Named
 /// `.<stem>.tmp.<pid>.<seq>.<ext>` (the stem [bounded](bounded_name)), its extension kept last
 /// for converters that read the format from it; registered with the watchdog's exit sweep, and
-/// removed when dropped — after an install
-/// too, since a rename onto a hard link of the same file succeeds and leaves both names (POSIX
-/// `rename(2)`; a graphics-cache entry linked into the destination by a sibling worker).
+/// removed when dropped — after an install too, since a rename onto a hard link of the same file
+/// succeeds and leaves both names (POSIX `rename(2)`; a graphics-cache entry linked into the
+/// destination by a sibling worker). A name some file already holds — a killed run's leftover,
+/// perhaps a link to a cache entry, or a process with the same pid in another PID namespace
+/// sharing the cache — is skipped, never written through.
 pub struct Staged {
   path:     PathBuf,
   _on_exit: latexml_core::watchdog::RemoveOnExit,
 }
 
 impl Staged {
-  /// A fresh private path beside `dest` (nothing is created).
-  pub fn beside(dest: &Path) -> Self {
-    let path = staged_path(dest, ATOMIC_TMP_SEQ.fetch_add(1, Ordering::Relaxed));
+  /// A fresh private path beside `dest` that no file holds, for a converter to write (nothing
+  /// is created).
+  pub fn beside(dest: &Path) -> Self { Self::at(free_path(dest)) }
+
+  /// [`Self::beside`], created empty by `create_new`: the name is this caller's alone.
+  fn create(dest: &Path) -> io::Result<(Self, fs::File)> {
+    loop {
+      let path = free_path(dest);
+      match fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+      {
+        Ok(file) => return Ok((Self::at(path), file)),
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+        Err(e) => return Err(e),
+      }
+    }
+  }
+
+  /// [`Self::beside`], made a hard link to `src`; `None` where the filesystem can't link it here.
+  fn link(src: &Path, dest: &Path) -> io::Result<Option<Self>> {
+    loop {
+      let path = free_path(dest);
+      match fs::hard_link(src, &path) {
+        Ok(()) => return Ok(Some(Self::at(path))),
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+        // Another filesystem, or one without (more) hard links: the caller copies.
+        Err(e)
+          if matches!(
+            e.kind(),
+            io::ErrorKind::CrossesDevices
+              | io::ErrorKind::PermissionDenied
+              | io::ErrorKind::TooManyLinks
+              | io::ErrorKind::Unsupported
+          ) =>
+        {
+          return Ok(None);
+        },
+        Err(e) => return Err(e),
+      }
+    }
+  }
+
+  fn at(path: PathBuf) -> Self {
     let _on_exit = latexml_core::watchdog::remove_on_exit(&path);
     Staged { path, _on_exit }
   }
@@ -204,6 +248,17 @@ fn staged_path(dest: &Path, seq: u64) -> PathBuf {
   }
 }
 
+/// The next [`staged_path`] for `dest` that names no file (a failing `lstat` other than "not
+/// found" is left to the write that follows).
+fn free_path(dest: &Path) -> PathBuf {
+  loop {
+    let path = staged_path(dest, ATOMIC_TMP_SEQ.fetch_add(1, Ordering::Relaxed));
+    if fs::symlink_metadata(&path).is_err() {
+      return path;
+    }
+  }
+}
+
 impl Drop for Staged {
   fn drop(&mut self) { let _ = fs::remove_file(&self.path); }
 }
@@ -233,8 +288,9 @@ pub fn same_file(a: &Path, b: &Path) -> bool {
 /// a truncated/interleaved file, and Windows avoids `ERROR_SHARING_VIOLATION`
 /// on concurrent writers.
 pub fn write_atomic(dest: &Path, bytes: &[u8]) -> io::Result<()> {
-  let staged = Staged::beside(dest);
-  fs::write(staged.path(), bytes)?;
+  let (staged, mut file) = Staged::create(dest)?;
+  file.write_all(bytes)?;
+  drop(file);
   staged.install(dest)
 }
 
@@ -253,10 +309,12 @@ fn place_atomic(src: &Path, dest: &Path, link: bool) -> io::Result<()> {
       dest.display()
     )));
   }
-  let staged = Staged::beside(dest);
-  if !(link && fs::hard_link(src, staged.path()).is_ok()) {
-    fs::copy(src, staged.path())?;
+  if link && let Some(staged) = Staged::link(src, dest)? {
+    return staged.install(dest);
   }
+  let (staged, file) = Staged::create(dest)?;
+  drop(file);
+  fs::copy(src, staged.path())?;
   staged.install(dest)
 }
 
@@ -596,6 +654,37 @@ mod tests {
     );
     assert_ne!(bounded_name(&a), bounded_name(&b));
     assert_eq!(bounded_name("fig.svg"), "fig.svg", "a short name is kept");
+  }
+
+  /// A temp name already taken — a killed run's leftover, perhaps a hard link to a graphics-cache
+  /// entry, or a process with the same pid in another PID namespace sharing the cache — is never
+  /// written through: `write_atomic`, `link_atomic` and `copy_atomic` take the next name.
+  #[test]
+  fn a_taken_temp_name_is_never_written_through() {
+    let dir = tempfile::tempdir().unwrap();
+    let sentinel = dir.path().join("site.svg");
+    fs::write(&sentinel, b"<svg>site</svg>").unwrap();
+    let src = dir.path().join("cached.svg");
+    fs::write(&src, b"<svg>new</svg>").unwrap();
+    let dests = ["w.svg", "l.svg", "c.svg"].map(|name| dir.path().join(name));
+    let next = ATOMIC_TMP_SEQ.load(Ordering::Relaxed);
+    for dest in &dests {
+      for seq in next..next + 64 {
+        fs::hard_link(&sentinel, staged_path(dest, seq)).unwrap();
+      }
+    }
+    write_atomic(&dests[0], b"<svg>new</svg>").unwrap();
+    link_atomic(&src, &dests[1]).unwrap();
+    copy_atomic(&src, &dests[2]).unwrap();
+    assert_eq!(fs::read(&sentinel).unwrap(), b"<svg>site</svg>");
+    for dest in &dests {
+      assert_eq!(
+        fs::read(dest).unwrap(),
+        b"<svg>new</svg>",
+        "{}",
+        dest.display()
+      );
+    }
   }
 
   #[test]
