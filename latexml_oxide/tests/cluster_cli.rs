@@ -5796,22 +5796,30 @@ mod watchdog_fatal_line_start {
       .expect("spawn latexml_oxide");
     let stderr = String::from_utf8_lossy(&out.stderr);
     // Two deadlines race: the watchdog thread's wall-clock breach (exit 124) and the conversion's own cooperative
-    // check (`Fatal:Timeout:Convert`, a graceful stop, exit 1), which wins on some hosts (the macOS runner). Either
-    // way every Fatal line opens a line of its own; the watchdog's, when it fires, is exactly its line.
+    // check (`Fatal:Timeout:Convert`, a graceful stop, exit 1), which wins on some hosts (the macOS runner). Both can
+    // print: the cooperative stop raises its Fatal and the watchdog fires while the process winds down (exit 124, the
+    // watchdog's line last, as `_exit` follows it). Either way every Fatal line opens a line of its own.
     let fatals: Vec<&str> = stderr.lines().filter(|l| l.contains("Fatal:")).collect();
     assert!(!fatals.is_empty(), "no Fatal line:\n{stderr}");
     assert!(
       fatals.iter().all(|l| l.starts_with("Fatal:")),
       "a Fatal glued mid-line:\n{stderr}"
     );
+    let (last, earlier) = fatals.split_last().expect("non-empty");
     match out.status.code() {
-      Some(124) => assert_eq!(
-        fatals,
-        [
-          "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after 2s — exiting process"
-        ],
-        "{stderr}"
-      ),
+      Some(124) => {
+        assert_eq!(
+          *last,
+          "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after 2s — exiting process",
+          "{stderr}"
+        );
+        assert!(
+          earlier
+            .iter()
+            .all(|l| l.starts_with("Fatal:Timeout:Convert")),
+          "{stderr}"
+        );
+      },
       Some(1) => assert!(
         fatals
           .iter()

@@ -198,7 +198,8 @@ fn attempt(
     &format!("the {kind} format build died with its process"),
   )?;
   eprintln!(
-    "[format_dumps] no {kind} dump matches this TeX tree; building one into {}",
+    "[format_dumps] no {kind} dump matches this TeX tree; building one into {} (once for this tree; later \
+     conversions reuse it)",
     dir.display()
   );
   let built = build(kind, year, dir).and_then(|()| {
