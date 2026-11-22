@@ -2,7 +2,7 @@
 % `Ch2a` while their sections keep `Ch1.S1`, `Ch2.S1a`. Split knows each page's parent (Perl Split.pm:132-133
 % `parent_id => $$entry{upid}`, Scan.pm:99); guessing it from the id prefix filed `Ch1.S1` under Part A's `Ch1`
 % and every chapter under the site root, not its part.
-% witness: a large split book (9,262 of 115,519 pages navigated into the wrong part); synthetic.
+% witness: issue 777's book (9,262 of 115,519 pages navigated into the wrong part); synthetic.
 % oracle:  pdflatex (TL 2025) 0 errors: Part I A (1 Intro, 2 Perf 2.1-2.2), Part II B (1 Book1 1.1-1.3, 2 Book2 2.1)
 % engines: Perl 0.8.8 `--splitat=section`: `Ch1.S1` up `Ch1a.html`, title "1.1 X1 ‣ Chapter 1 Book1 ‣ Part II B";
 %          `Ch1` up `Pt1.html`; ours before: `Ch1.S1` up `Ch1.html`, "1.1 X1 ‣ Chapter 1 Intro"; no up on `Ch1`, `Ch1a`

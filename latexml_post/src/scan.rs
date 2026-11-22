@@ -1001,7 +1001,8 @@ impl Processor for Scan {
     self.page_id = Some(id.clone());
     // Perl Scan.pm:99: a split page is filed under the page Split took it from; the guesses
     // below are only for a document without one (an id renumbered by `\@addtoreset{chapter}{part}`
-    // defeats the id-prefix guess: `Ch1.S1` under Part II's `Ch1a`).
+    // defeats the id-prefix guess: `Ch1.S1` under Part II's `Ch1a`; witness: issue 777's book, 9,262
+    // of 115,519 pages).
     self.scan(&doc, &root, doc.parent_id.as_deref());
     self.page_id = None;
 
@@ -1011,14 +1012,11 @@ impl Processor for Scan {
       .db
       .register(&doc_key, vec![("id", Value::from(id.as_str()))]);
 
-    // Perl Post::Scan L108-133: when scanning a doc that's not itself
-    // the site root and whose own entry has no parent yet, infer one.
-    // Without this step, the cross-document TOC produced by Split has
-    // the SITE_ROOT (e.g. "Document") with no `children` pointing at
-    // the per-page roots ("Ch1", "Ch1.S1", …) — CrossRef::fill_in_tocs
-    // then walks an empty children list and emits an empty TOC, so the
-    // index page's `\tableofcontents` placeholder collapses to a 27-
-    // line title-only page.
+    // Perl Post::Scan L108-133: a doc that is not the site root and whose entry still has no
+    // parent (one Split did not produce: Split's pages got theirs from `parent_id` above)
+    // infers one, the nearest id-prefix ancestor already scanned, else the site root. Perl's
+    // other guess, an `index.xml` in a containing directory (Scan.pm:117-124), matters only
+    // for multi-document sites and is not ported.
     let site_id = self
       .db
       .lookup("SITE_ROOT")

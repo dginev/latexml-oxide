@@ -547,7 +547,7 @@ fn nested_resource_split_falls_back_to_the_whole_dom_split() {
 /// `Ch1.S1`, `Ch2.S1a`: the id-prefix guess filed them under Part A's `Ch1`, and every chapter
 /// under the site root rather than its part. Expected values are Perl 0.8.8's head links (less the
 /// sibling relations OXIDIZED_DESIGN_DIVERGENCES #1134 drops), titles and nav anchors.
-/// Witness: a large split book, 9,262 of 115,519 pages navigating into the wrong part.
+/// Witness: issue 777's book, 9,262 of 115,519 pages navigating into the wrong part.
 #[test]
 fn split_pages_navigate_under_the_parent_split_gave_them() {
   type Page = (
