@@ -274,12 +274,16 @@ fn midscale_parallel_render_matches_serial() {
 /// alike) sends the whole document back to the serial render with an Info, not
 /// an Error: every page as the serial run writes it, the same verdict. So does a
 /// worker whose own setup fails (its db attach, the hook's `attach`): no Fatal.
+/// A worker killed by a signal (the hook's `signal`, a crash) is a counted
+/// Warning, and the parent stops its siblings at once (they would sleep ten
+/// minutes) instead of waiting for them.
 #[test]
 fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
   let serial_dir = tempfile::tempdir().expect("tempdir");
   let auto_dir = tempfile::tempdir().expect("tempdir");
   let failed_dir = tempfile::tempdir().expect("tempdir");
   let setup_dir = tempfile::tempdir().expect("tempdir");
+  let signal_dir = tempfile::tempdir().expect("tempdir");
   let serial = run_midscale(serial_dir.path(), &[("LATEXML_RENDER_JOBS", "1")]);
   let auto = run_midscale(auto_dir.path(), &[]);
   let failed = run_midscale(failed_dir.path(), &[
@@ -290,6 +294,12 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
     ("LATEXML_RENDER_JOBS", "3"),
     ("LATEXML_RENDER_WORKER_TEST_ABORT", "attach"),
   ]);
+  let signal_start = std::time::Instant::now();
+  let signal = run_midscale(signal_dir.path(), &[
+    ("LATEXML_RENDER_JOBS", "3"),
+    ("LATEXML_RENDER_WORKER_TEST_ABORT", "signal"),
+  ]);
+  let signal_secs = signal_start.elapsed().as_secs();
   let serial_pages = page_bytes(serial_dir.path());
   assert!(serial_pages.len() > 150, "got {} pages", serial_pages.len());
   let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
@@ -298,6 +308,7 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
     ("auto", &auto, &auto_dir),
     ("failed", &failed, &failed_dir),
     ("setup", &setup, &setup_dir),
+    ("signal", &signal, &signal_dir),
   ] {
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(0), "{label}:\n{stderr}");
@@ -306,9 +317,14 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
       .rev()
       .find(|l| !l.trim().is_empty())
       .unwrap_or("");
+    let verdict = if label == "signal" {
+      "Conversion complete: 2 warnings"
+    } else {
+      "Conversion complete: 1 warning"
+    };
     assert!(
-      last.contains("Conversion complete: 1 warning"),
-      "{label}: the anchored 1-warning verdict, got: {last}"
+      last.contains(verdict),
+      "{label}: the anchored verdict `{verdict}`, got: {last}"
     );
     let engaged = stderr.contains("parallel page render engaged");
     match label {
@@ -332,10 +348,25 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
         assert_eq!(
           stderr.matches("parallel render abandoned (worker ").count(),
           1,
-          "{label}: one Info names the failed worker:\n{stderr}"
+          "{label}: one line names the failed worker:\n{stderr}"
+        );
+        assert_eq!(
+          stderr
+            .matches(
+              "Warning:post:parallel-render parallel render abandoned (worker 0: killed by signal 9"
+            )
+            .count(),
+          usize::from(label == "signal"),
+          "{label}: only a signal death is a Warning:\n{stderr}"
         );
         assert!(!stderr.contains("Error:"), "{label}: no Error:\n{stderr}");
         assert!(!stderr.contains("Fatal:"), "{label}: no Fatal:\n{stderr}");
+        if label == "signal" {
+          assert!(
+            signal_secs < 300,
+            "signal: the siblings were waited for ({signal_secs} s)"
+          );
+        }
         if label == "setup" {
           assert!(
             stderr.contains("setup failed: cannot attach the render db"),

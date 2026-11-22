@@ -22,12 +22,13 @@
 //! embedder (the library, `cortex_worker`) stays serial. The pages are
 //! byte-identical either way; a worker that fails to spawn, cannot set up, or
 //! dies without its status report sends the whole document back to the serial
-//! render (an Info).
+//! render at once, stopping the rest of the fleet (an Info; a Warning for a
+//! worker killed by a signal, a crash).
 
 use std::path::{Path, PathBuf};
 
 use latexml_core::{
-  Info,
+  Info, Warn,
   common::error::{
     LogStatus, ReportCounts, emit_error, get_status_code, note_status, snapshot_report_counts,
   },
@@ -304,6 +305,72 @@ enum Pending {
   Failed(String),
 }
 
+/// A joined worker: its parsed report and exit status, or why it could not be waited for.
+type Joined = Result<(ChildReport, std::process::ExitStatus), String>;
+
+fn join_worker(p: Pending) -> Joined {
+  match p {
+    Pending::Failed(e) => Err(e),
+    Pending::Spawned(handle, _) => match handle.join() {
+      Err(_) => Err("drain thread panicked".to_string()),
+      Ok(Err(e)) => Err(format!("wait failed: {e}")),
+      Ok(Ok(output)) => {
+        let stderr_text = strip_ansi(&String::from_utf8_lossy(&output.stderr));
+        Ok((parse_child_report(&stderr_text), output.status))
+      },
+    },
+  }
+}
+
+/// Why a worker sends the document to the serial render.
+struct WorkerFailure {
+  why:       String,
+  /// Ended by a signal (no exit code): a crash, not one of the worker's own exits.
+  by_signal: bool,
+}
+
+/// The failure of a joined worker that did not render its range, `None` for one that reported.
+fn worker_failure(r: &Joined) -> Option<WorkerFailure> {
+  let (why, by_signal) = match r {
+    Err(e) => (e.clone(), false),
+    Ok((report, _)) if let Some(why) = &report.setup_failed => {
+      (format!("setup failed: {why}"), false)
+    },
+    Ok((report, status)) if report.status.is_none() => match status.code() {
+      Some(code) => (
+        format!("exited (code {code}) without a Status:conversion line"),
+        false,
+      ),
+      None => (
+        format!(
+          "killed by {} without a Status:conversion line",
+          describe_signal(status)
+        ),
+        true,
+      ),
+    },
+    Ok(_) => return None,
+  };
+  Some(WorkerFailure { why, by_signal })
+}
+
+#[cfg(unix)]
+fn describe_signal(status: &std::process::ExitStatus) -> String {
+  use std::os::unix::process::ExitStatusExt;
+  status
+    .signal()
+    .map_or_else(|| "a signal".to_string(), |n| format!("signal {n}"))
+}
+
+#[cfg(not(unix))]
+fn describe_signal(_: &std::process::ExitStatus) -> String { "a signal".to_string() }
+
+/// A worker's expected peak resident set: it decodes the whole db at attach, and its pages add
+/// little. Measured VmHWM, Nasser's book: 95 MB on the 600-problem part (11 MB db), 260 MB on the
+/// 2,400-problem part (45 MB db), i.e. ~42 MB + 4.85 x db; this adds a quarter's margin. The old
+/// `max(3 x db, 256 MB)` sized k2400 workers below their start, and one died (exit 137).
+fn worker_estimate_bytes(db_bytes: u64) -> u64 { (64 << 20) + db_bytes.saturating_mul(6) }
+
 /// Pure fleet-sizing calculation for [`parallel_render`].
 ///
 /// `soft_cap` is the cooperative RSS fuse (`stomach::resolve_rss_cap`, already
@@ -317,7 +384,7 @@ fn compute_fleet_budget(
   requested_jobs: usize,
   total_pages: usize,
 ) -> (usize, usize, u64, u64, u64) {
-  let per_worker = db_bytes.saturating_mul(3).max(256 * 1024 * 1024);
+  let per_worker = worker_estimate_bytes(db_bytes);
   let mut budget = available_mem.unwrap_or(u64::MAX);
   if let Some(fuse) = soft_cap {
     budget = budget.min(fuse.saturating_sub(parent_rss_bytes));
@@ -335,9 +402,7 @@ fn compute_fleet_budget(
 /// Remove every output page written by sibling workers before abandoning a
 /// parallel render to the serial fallback, so a later Fatal in the serial pass
 /// cannot leave earlier workers' pages orphaned on disk (#782).
-fn cleanup_abandoned_worker_pages(
-  joined: &[Result<(ChildReport, std::process::ExitStatus), String>],
-) {
+fn cleanup_abandoned_worker_pages(joined: &[Joined]) {
   for (report, _) in joined.iter().flatten() {
     crate::post::remove_pages(&report.written);
   }
@@ -346,7 +411,7 @@ fn cleanup_abandoned_worker_pages(
 /// Spawn `jobs` page-range workers over `pages` and fold their results.
 ///
 /// Returns `None` when setup failed, or a worker failed to spawn, could not
-/// set up, or died without its status report (reported at Info severity) — the caller falls
+/// set up, or died without its status report (an Info, a Warning when a signal killed it) — the caller falls
 /// back to the serial render, which is still fully correct since the workers
 /// keep the spilled pages. Only a timeout breach folds the killed workers as an
 /// Error + FATAL status (fail toward flagging, never silent success).
@@ -511,76 +576,72 @@ pub(crate) fn parallel_render(
   }
 
   // Poll (rather than block) so the parent's cooperative timeout keeps
-  // running between waits; on a breach, kill the fleet so the join below
-  // returns promptly instead of riding out the children.
-  let mut timed_out = false;
-  loop {
-    let all_done = pending
+  // running between waits, and join each worker as it ends: the first one
+  // that fails sends the document to the serial render at once, and a breach
+  // ends the run, so either way the rest of the fleet is killed rather than
+  // waited for (Nasser k2400: a worker's death was acted on only after its
+  // seven siblings finished).
+  let mut slots: Vec<Option<Pending>> = pending.into_iter().map(Some).collect();
+  let mut joined: Vec<Option<Joined>> = slots.iter().map(|_| None).collect();
+  let failed: Option<(usize, WorkerFailure)> = loop {
+    for (slot, out) in slots.iter_mut().zip(joined.iter_mut()) {
+      if slot
+        .as_ref()
+        .is_some_and(|p| !matches!(p, Pending::Spawned(h, _) if !h.is_finished()))
+      {
+        *out = slot.take().map(join_worker);
+      }
+    }
+    let failure = joined
       .iter()
-      .all(|p| !matches!(p, Pending::Spawned(h, _) if !h.is_finished()));
-    if all_done {
-      break;
+      .enumerate()
+      .find_map(|(i, r)| r.as_ref().and_then(worker_failure).map(|f| (i, f)));
+    if failure.is_some() || slots.iter().all(Option::is_none) {
+      break failure;
     }
     if let Err(e) = latexml_core::stomach::check_timeout() {
       e.log_fatal();
-      timed_out = true;
-      for p in &pending {
-        if let Pending::Spawned(h, pid) = p
-          && !h.is_finished()
-        {
-          latexml_core::watchdog::kill_pid(*pid, false);
-        }
-      }
-      break;
+      break None;
     }
     std::thread::sleep(std::time::Duration::from_millis(100));
+  };
+  for slot in slots.iter().flatten() {
+    if let Pending::Spawned(h, pid) = slot
+      && !h.is_finished()
+    {
+      latexml_core::watchdog::kill_pid(*pid, false);
+    }
+  }
+  for (slot, out) in slots.into_iter().zip(joined.iter_mut()) {
+    if let Some(p) = slot {
+      *out = Some(join_worker(p));
+    }
   }
 
-  // Join every worker first: one that could not run, or died without its
-  // status report (a crash, its memory share exceeded, a broken pipe), sends
-  // the whole range to the serial render before any child log is folded, so
+  // Every worker is joined before any child log is folded: one that could not
+  // run, or died without its status report (a crash, its memory share
+  // exceeded, a broken pipe), sends the whole range to the serial render, so
   // nothing is counted twice. A worker's own diagnostics, Fatal included, are
   // the document's and fold as they are. After a timeout breach the killed
   // workers fold as failures (the Fatal is already logged).
-  let mut joined: Vec<Result<(ChildReport, std::process::ExitStatus), String>> = pending
+  let mut joined: Vec<Joined> = joined
     .into_iter()
-    .map(|p| match p {
-      Pending::Failed(e) => Err(e),
-      Pending::Spawned(handle, _) => match handle.join() {
-        Err(_) => Err("drain thread panicked".to_string()),
-        Ok(Err(e)) => Err(format!("wait failed: {e}")),
-        Ok(Ok(output)) => {
-          let stderr_text = strip_ansi(&String::from_utf8_lossy(&output.stderr));
-          Ok((parse_child_report(&stderr_text), output.status))
-        },
-      },
-    })
+    .map(|r| r.unwrap_or_else(|| Err("not joined".to_string())))
     .collect();
-  if !timed_out
-    && let Some((i, why)) = joined.iter().enumerate().find_map(|(i, r)| match r {
-      Err(e) => Some((i, e.clone())),
-      Ok((report, _)) if let Some(why) = &report.setup_failed => {
-        Some((i, format!("setup failed: {why}")))
-      },
-      Ok((report, status)) if report.status.is_none() => Some((
-        i,
-        format!(
-          "exited (code {:?}) without a Status:conversion line",
-          status.code()
-        ),
-      )),
-      Ok(_) => None,
-    })
-  {
-    Info!(
-      "post",
-      "parallel-render",
-      s!(
-        "parallel render abandoned (worker {}: {}) — rendering serially",
-        i,
-        why
-      )
+  if let Some((i, failure)) = failed {
+    let message = s!(
+      "parallel render abandoned (worker {}: {}) — rendering serially",
+      i,
+      failure.why
     );
+    // A worker killed by a signal crashed (or the kernel's OOM killer took
+    // it): the serial render recovers the pages, but the crash is counted. Its
+    // own watchdog's memory exit and a setup failure are expected outcomes.
+    if failure.by_signal {
+      Warn!("post", "parallel-render", message);
+    } else {
+      Info!("post", "parallel-render", message);
+    }
     cleanup_abandoned_worker_pages(&joined);
     cleanup_handoff(&dbfile, &manifest_paths);
     return None;
@@ -718,12 +779,19 @@ pub fn worker_main(manifest_path: &str) -> i32 {
   // Mirror `api.rs::on_worker`: a 256 MiB-stack thread for deeply nested
   // math, and an explicit engine reset before the thread exits (the
   // `#[thread_local]` roots do not Drop on a bare thread exit).
+  #[cfg(feature = "test-utils")]
+  let first_worker = manifest_path.ends_with("render-manifest-0.json");
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
       #[cfg(feature = "test-utils")]
-      if test_fault().is_some_and(|f| f != "attach") {
-        std::process::exit(70);
+      match test_fault().as_deref() {
+        None | Some("attach") => {},
+        Some("signal") if first_worker => {
+          latexml_core::watchdog::kill_pid(std::process::id(), false)
+        },
+        Some("signal") => std::thread::sleep(std::time::Duration::from_secs(600)),
+        Some(_) => std::process::exit(70),
       }
       // Hold this worker to its share of the run's memory budget, and align
       // `heap_trim::step_kb()` with that ceiling instead of the 4.5 GB default.
@@ -745,8 +813,10 @@ pub fn worker_main(manifest_path: &str) -> i32 {
 }
 
 /// Test hook `LATEXML_RENDER_WORKER_TEST_ABORT` (guard: 120_midscale_streaming):
-/// `attach` fails the worker's db attach; any other value kills the worker
-/// before its status report, as a crash or an exceeded memory share would.
+/// `attach` fails the worker's db attach; `signal` SIGKILLs worker 0 (a crash)
+/// and holds its siblings for ten minutes, unless the parent stops them; any
+/// other value exits the worker before its status report, as its exceeded
+/// memory share would.
 #[cfg(feature = "test-utils")]
 fn test_fault() -> Option<String> { std::env::var("LATEXML_RENDER_WORKER_TEST_ABORT").ok() }
 
@@ -938,7 +1008,7 @@ mod tests {
   fn fleet_budget_uses_soft_cap_without_double_discount() {
     const MIB: u64 = 1024 * 1024;
     // `--max-memory=8192` → soft_cap = 6,144 MiB (3/4 of 8 GiB).
-    // With 4,300 MiB parent RSS and 200 MiB db (per_worker = 600 MiB):
+    // With 4,300 MiB parent RSS and 80 MiB db (per_worker = 64 + 6 x 80 = 544 MiB):
     // remaining fuse headroom is 1,844 MiB → 3 workers affordable.
     // (With the old double 3/4 bug, fuse dropped to 4,608 MiB → 308 MiB → 0 workers.)
     let soft_cap = latexml_core::stomach::soft_cap_from_ceiling(8192);
@@ -947,15 +1017,61 @@ mod tests {
       Some(16_000 * MIB),
       Some(soft_cap),
       4300 * MIB,
-      200 * MIB,
+      80 * MIB,
       8,
       1000,
     );
     assert_eq!(budget, 1844 * MIB);
-    assert_eq!(per_worker, 600 * MIB);
+    assert_eq!(per_worker, 544 * MIB);
     assert_eq!(affordable, 3);
     assert_eq!(jobs, 3);
     assert_eq!(max_rss_kb, (1844 * MIB) / 3 / 1024);
+  }
+
+  #[test]
+  fn fleet_shares_cover_the_measured_worker_peak() {
+    const MIB: u64 = 1024 * 1024;
+    // Nasser k2400 under `--max-memory=4900`: a 45 MB db, the parent at ~860 MB when the fleet
+    // spawns, a worker's measured VmHWM 260 MB. Every share must hold that peak.
+    let (jobs, _, _, per_worker, max_rss_kb) = compute_fleet_budget(
+      Some(16_000 * MIB),
+      Some(latexml_core::stomach::soft_cap_from_ceiling(4900)),
+      860 * MIB,
+      45 * MIB,
+      8,
+      9713,
+    );
+    assert_eq!(per_worker, 334 * MIB);
+    assert_eq!(jobs, 8);
+    assert!(max_rss_kb * 1024 >= 260 * MIB, "share {max_rss_kb} KiB");
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn only_a_signal_death_is_a_crash() {
+    use std::os::unix::process::ExitStatusExt;
+    let report = || parse_child_report("Info:post:x partial\n");
+    let killed = worker_failure(&Ok((report(), std::process::ExitStatus::from_raw(9)))).unwrap();
+    assert!(killed.by_signal);
+    assert_eq!(
+      killed.why,
+      "killed by signal 9 without a Status:conversion line"
+    );
+    let capped = worker_failure(&Ok((
+      report(),
+      std::process::ExitStatus::from_raw(137 << 8),
+    )))
+    .unwrap();
+    assert!(
+      !capped.by_signal,
+      "the worker's own memory exit is not a crash"
+    );
+    assert_eq!(
+      capped.why,
+      "exited (code 137) without a Status:conversion line"
+    );
+    let done = parse_child_report("Status:pages:1\nStatus:conversion:0\n");
+    assert!(worker_failure(&Ok((done, std::process::ExitStatus::from_raw(0)))).is_none());
   }
 
   #[test]
