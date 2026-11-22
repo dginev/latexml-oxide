@@ -17,7 +17,8 @@
 use std::{
   fs,
   io::{self, Write},
-  path::Path,
+  path::{Path, PathBuf},
+  sync::atomic::{AtomicU64, Ordering},
 };
 
 use libxml::tree::{Node, SaveOptions};
@@ -99,7 +100,7 @@ pub fn ensure_parent_dir(path: &str) -> io::Result<()> {
 /// directories, and each `create_dir_all` is a `mkdir` and a `statx` (Nasser's 71,476-page document,
 /// #777 FAQ).
 #[derive(Debug, Default)]
-pub struct MadeDirs(std::collections::HashSet<std::path::PathBuf>);
+pub struct MadeDirs(std::collections::HashSet<PathBuf>);
 
 std::thread_local! {
   static DIRS_MADE: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
@@ -122,6 +123,71 @@ impl MadeDirs {
     self.0.insert(parent.to_path_buf());
     Ok(())
   }
+}
+
+/// Monotonic per-process counter for unique sibling temp files in [`write_atomic`] / [`copy_atomic`].
+static ATOMIC_TMP_SEQ: AtomicU64 = AtomicU64::new(0);
+
+fn atomic_tmp_path(dest: &Path) -> PathBuf {
+  let seq = ATOMIC_TMP_SEQ.fetch_add(1, Ordering::Relaxed);
+  let pid = std::process::id();
+  let name = dest
+    .file_name()
+    .and_then(|n| n.to_str())
+    .unwrap_or("resource");
+  let tmp_name = format!(".{name}.tmp.{pid}.{seq}");
+  match dest.parent() {
+    Some(p) if !p.as_os_str().is_empty() => p.join(tmp_name),
+    _ => PathBuf::from(tmp_name),
+  }
+}
+
+fn install_temp(tmp: &Path, dest: &Path, expected_len: u64) -> io::Result<()> {
+  let _ = expected_len;
+  match fs::rename(tmp, dest) {
+    Ok(()) => Ok(()),
+    Err(e) => {
+      let _ = fs::remove_file(tmp);
+      // On Windows, `MoveFileExW(MOVEFILE_REPLACE_EXISTING)` can fail with
+      // sharing/access errors when parallel render workers race to publish the
+      // same shared resource (CSS/JS/graphics). If a peer worker already
+      // installed a regular file of the expected length at `dest`, treat the
+      // race as satisfied; keep real errors (e.g. `dest` is a directory).
+      #[cfg(windows)]
+      if dest.is_file() && fs::metadata(dest).is_ok_and(|m| m.len() == expected_len) {
+        return Ok(());
+      }
+      Err(e)
+    },
+  }
+}
+
+/// Atomically write `bytes` to `dest` via a sibling temp file + rename.
+///
+/// Safe when multiple parallel render workers publish the same shared resource
+/// (`LaTeXML.css`, `LaTeXML.js`, etc.) concurrently: Unix readers never observe
+/// a truncated/interleaved file, and Windows avoids `ERROR_SHARING_VIOLATION`
+/// on concurrent writers.
+pub fn write_atomic(dest: &Path, bytes: &[u8]) -> io::Result<()> {
+  let tmp = atomic_tmp_path(dest);
+  if let Err(e) = fs::write(&tmp, bytes) {
+    let _ = fs::remove_file(&tmp);
+    return Err(e);
+  }
+  install_temp(&tmp, dest, bytes.len() as u64)
+}
+
+/// Atomically copy `src` to `dest` via a sibling temp file + rename.
+pub fn copy_atomic(src: &Path, dest: &Path) -> io::Result<()> {
+  let tmp = atomic_tmp_path(dest);
+  let len = match fs::copy(src, &tmp) {
+    Ok(n) => n,
+    Err(e) => {
+      let _ = fs::remove_file(&tmp);
+      return Err(e);
+    },
+  };
+  install_temp(&tmp, dest, len)
 }
 
 /// Output format for the writer.
@@ -340,5 +406,49 @@ mod tests {
       after.contains("<!DOCTYPE"),
       "expected DOCTYPE preserved, got: {after}"
     );
+  }
+
+  #[test]
+  fn write_and_copy_atomic_succeed_and_clean_up_on_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let dst = dir.path().join("LaTeXML.css");
+    write_atomic(&dst, b"body { color: black; }\n").unwrap();
+    assert_eq!(fs::read(&dst).unwrap(), b"body { color: black; }\n");
+
+    let src = dir.path().join("custom.css");
+    fs::write(&src, b".a { color: red; }\n").unwrap();
+    copy_atomic(&src, &dst).unwrap();
+    assert_eq!(fs::read(&dst).unwrap(), b".a { color: red; }\n");
+
+    // Failing install onto a directory must return Err and leave no stray .tmp file.
+    let bad = dir.path().join("blocked.css");
+    fs::create_dir(&bad).unwrap();
+    assert!(write_atomic(&bad, b"x").is_err());
+    assert!(copy_atomic(&src, &bad).is_err());
+    let strays: Vec<_> = fs::read_dir(dir.path())
+      .unwrap()
+      .filter_map(|e| e.ok())
+      .filter(|e| e.file_name().to_string_lossy().contains(".tmp."))
+      .collect();
+    assert!(strays.is_empty(), "leftover atomic temp files: {strays:?}");
+  }
+
+  #[test]
+  fn concurrent_write_atomic_produces_intact_file_without_errors() {
+    let dir = tempfile::tempdir().unwrap();
+    let dst = dir.path().join("shared.css");
+    let payload: Vec<u8> = b"/* css */\n".repeat(4096);
+    std::thread::scope(|s| {
+      for _ in 0..8 {
+        let dst = &dst;
+        let payload = &payload;
+        s.spawn(move || {
+          for _ in 0..16 {
+            write_atomic(dst, payload).expect("concurrent atomic write");
+          }
+        });
+      }
+    });
+    assert_eq!(fs::read(&dst).unwrap(), payload);
   }
 }

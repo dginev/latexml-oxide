@@ -976,11 +976,12 @@ impl Graphics {
       std::fs::create_dir_all(parent).ok()?;
     }
 
-    // Copy the file (skip if same path)
+    // Copy the file atomically (skip if same path) so parallel render workers
+    // referencing the same image never race on a truncated destination.
     let source_canonical = std::fs::canonicalize(source).ok();
     let dest_canonical = std::fs::canonicalize(&abs_dest).ok();
     if source_canonical != dest_canonical || dest_canonical.is_none() {
-      std::fs::copy(source, &abs_dest).ok()?;
+      crate::writer::copy_atomic(Path::new(source), &abs_dest).ok()?;
     }
 
     // Return relative path for imagesrc attribute

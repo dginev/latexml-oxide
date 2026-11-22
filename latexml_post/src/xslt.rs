@@ -529,7 +529,7 @@ impl XSLT {
           if let Some(bytes) = embedded_resources::lookup(basename) {
             ensure_parent(&dest);
             note_resource_copy();
-            if let Err(e) = fs::write(&dest, bytes) {
+            if let Err(e) = crate::writer::write_atomic(Path::new(&dest), bytes) {
               placed = false;
               Warn!(
                 "I/O",
@@ -544,7 +544,7 @@ impl XSLT {
         } else {
           ensure_parent(&dest);
           note_resource_copy();
-          if let Err(e) = fs::copy(&path, &dest) {
+          if let Err(e) = crate::writer::copy_atomic(Path::new(&path), Path::new(&dest)) {
             placed = false;
             Warn!("I/O", dest, "Couldn't copy {} to {}: {}", path, dest, e);
           }
@@ -562,7 +562,7 @@ impl XSLT {
         if let Some(bytes) = embedded_resources::lookup(basename) {
           ensure_parent(&dest);
           note_resource_copy();
-          if let Err(e) = fs::write(&dest, bytes) {
+          if let Err(e) = crate::writer::write_atomic(Path::new(&dest), bytes) {
             placed = false;
             Warn!(
               "I/O",
@@ -713,7 +713,7 @@ fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) -> boo
       if let Some(parent) = import_dest.parent() {
         let _ = fs::create_dir_all(parent);
       }
-      if let Err(e) = fs::copy(&import_src, &import_dest) {
+      if let Err(e) = crate::writer::copy_atomic(&import_src, &import_dest) {
         Warn!(
           "I/O",
           t,

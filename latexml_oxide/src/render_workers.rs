@@ -304,6 +304,45 @@ enum Pending {
   Failed(String),
 }
 
+/// Pure fleet-sizing calculation for [`parallel_render`].
+///
+/// `soft_cap` is the cooperative RSS fuse (`stomach::resolve_rss_cap`, already
+/// 3/4 of `--max-memory` via `soft_cap_from_ceiling`) — it must NOT be scaled
+/// by 3/4 a second time. Returns `(jobs, affordable, budget, per_worker, max_rss_kb)`.
+fn compute_fleet_budget(
+  available_mem: Option<u64>,
+  soft_cap: Option<u64>,
+  parent_rss_bytes: u64,
+  db_bytes: u64,
+  requested_jobs: usize,
+  total_pages: usize,
+) -> (usize, usize, u64, u64, u64) {
+  let per_worker = db_bytes.saturating_mul(3).max(256 * 1024 * 1024);
+  let mut budget = available_mem.unwrap_or(u64::MAX);
+  if let Some(fuse) = soft_cap {
+    budget = budget.min(fuse.saturating_sub(parent_rss_bytes));
+  }
+  let affordable = (budget / per_worker) as usize;
+  let jobs = requested_jobs.min(total_pages).min(affordable);
+  let max_rss_kb = if budget != u64::MAX && jobs >= 2 {
+    budget / jobs as u64 / 1024
+  } else {
+    0
+  };
+  (jobs, affordable, budget, per_worker, max_rss_kb)
+}
+
+/// Remove every output page written by sibling workers before abandoning a
+/// parallel render to the serial fallback, so a later Fatal in the serial pass
+/// cannot leave earlier workers' pages orphaned on disk (#782).
+fn cleanup_abandoned_worker_pages(
+  joined: &[Result<(ChildReport, std::process::ExitStatus), String>],
+) {
+  for (report, _) in joined.iter().flatten() {
+    crate::post::remove_pages(&report.written);
+  }
+}
+
 /// Spawn `jobs` page-range workers over `pages` and fold their results.
 ///
 /// Returns `None` when setup failed, or a worker failed to spawn, could not
@@ -352,22 +391,20 @@ pub(crate) fn parallel_render(
   // decline to engage — rather than let the kernel choose a victim.
   crate::heap_trim::release_free_heap();
   let db_bytes = std::fs::metadata(&dbfile).map(|m| m.len()).unwrap_or(0);
-  let per_worker = db_bytes.saturating_mul(3).max(256 * 1024 * 1024);
-  let mut budget = latexml_core::watchdog::available_memory_bytes().unwrap_or(u64::MAX);
-  if let Some(cap) = latexml_core::stomach::resolve_rss_cap() {
-    // Budget against the cooperative FUSE (75% of the hard cap), where the
-    // graceful stop fires — not the cap itself, where the watchdog kills.
-    let fuse = cap / 4 * 3;
-    let rss = latexml_core::watchdog::process_rss_kb().unwrap_or(0) * 1024;
-    budget = budget.min(fuse.saturating_sub(rss));
-  }
-  let affordable = (budget / per_worker) as usize;
-  let jobs = jobs.min(total_pages).min(affordable);
+  let parent_rss_bytes = latexml_core::watchdog::process_rss_kb()
+    .unwrap_or(0)
+    .saturating_mul(1024);
+  let (jobs, affordable, budget, per_worker, max_rss_kb) = compute_fleet_budget(
+    latexml_core::watchdog::available_memory_bytes(),
+    latexml_core::stomach::resolve_rss_cap(),
+    parent_rss_bytes,
+    db_bytes,
+    jobs,
+    total_pages,
+  );
   // Each worker's watchdog holds it to its share, so parent + fleet stay
   // under the fuse; one that outgrows it dies and the document renders serially.
-  if budget != u64::MAX && jobs >= 2 {
-    manifest.max_rss_kb = budget / jobs as u64 / 1024;
-  }
+  manifest.max_rss_kb = max_rss_kb;
   if jobs < 2 {
     Info!(
       "post",
@@ -544,6 +581,7 @@ pub(crate) fn parallel_render(
         why
       )
     );
+    cleanup_abandoned_worker_pages(&joined);
     cleanup_handoff(&dbfile, &manifest_paths);
     return None;
   }
@@ -687,7 +725,11 @@ pub fn worker_main(manifest_path: &str) -> i32 {
       if test_fault().is_some_and(|f| f != "attach") {
         std::process::exit(70);
       }
-      // Hold this worker to its share of the run's memory budget.
+      // Hold this worker to its share of the run's memory budget, and align
+      // `heap_trim::step_kb()` with that ceiling instead of the 4.5 GB default.
+      if manifest.max_rss_kb > 0 {
+        latexml_core::stomach::set_memory_cap(Some(manifest.max_rss_kb.saturating_mul(1024)));
+      }
       let _watchdog = (manifest.max_rss_kb > 0)
         .then(|| latexml_core::watchdog::Watchdog::with_limits(0, manifest.max_rss_kb));
       let code = match render_manifest_pages(manifest) {
@@ -890,5 +932,60 @@ mod tests {
     // NOTE: does not set the env var (process-global); only checks the parse
     // fallback contract via the default branch.
     assert!(render_jobs() >= 1);
+  }
+
+  #[test]
+  fn fleet_budget_uses_soft_cap_without_double_discount() {
+    const MIB: u64 = 1024 * 1024;
+    // `--max-memory=8192` → soft_cap = 6,144 MiB (3/4 of 8 GiB).
+    // With 4,300 MiB parent RSS and 200 MiB db (per_worker = 600 MiB):
+    // remaining fuse headroom is 1,844 MiB → 3 workers affordable.
+    // (With the old double 3/4 bug, fuse dropped to 4,608 MiB → 308 MiB → 0 workers.)
+    let soft_cap = latexml_core::stomach::soft_cap_from_ceiling(8192);
+    assert_eq!(soft_cap, 6144 * MIB);
+    let (jobs, affordable, budget, per_worker, max_rss_kb) = compute_fleet_budget(
+      Some(16_000 * MIB),
+      Some(soft_cap),
+      4300 * MIB,
+      200 * MIB,
+      8,
+      1000,
+    );
+    assert_eq!(budget, 1844 * MIB);
+    assert_eq!(per_worker, 600 * MIB);
+    assert_eq!(affordable, 3);
+    assert_eq!(jobs, 3);
+    assert_eq!(max_rss_kb, (1844 * MIB) / 3 / 1024);
+  }
+
+  #[test]
+  fn abandoned_worker_cleanup_removes_sibling_pages() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let p1 = dir.path().join("S1.html");
+    let p2 = dir.path().join("S2.html");
+    std::fs::write(&p1, "<html/>").unwrap();
+    std::fs::write(&p2, "<html/>").unwrap();
+    let status = std::process::ExitStatus::default();
+    let joined = vec![
+      Ok((
+        ChildReport {
+          log:          String::new(),
+          counts:       None,
+          status:       Some(0),
+          pages:        2,
+          discard:      false,
+          written:      vec![
+            p1.to_string_lossy().into_owned(),
+            p2.to_string_lossy().into_owned(),
+          ],
+          setup_failed: None,
+        },
+        status,
+      )),
+      Err("worker died".to_string()),
+    ];
+    cleanup_abandoned_worker_pages(&joined);
+    assert!(!p1.exists(), "abandoned sibling page S1 must be removed");
+    assert!(!p2.exists(), "abandoned sibling page S2 must be removed");
   }
 }

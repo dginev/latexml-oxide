@@ -1377,6 +1377,11 @@ fn xml_ns_attr(node: &Node, localname: &str) -> Option<String> {
 /// (escaped), so `<`-anchored matches are always element starts;
 /// `:`-anchored matches can over-trigger on text (harmless — descent is
 /// correct, just slower).
+/// Byte-level check for XML NCName characters that may appear in a namespace prefix.
+fn is_xml_ncname_char(b: u8) -> bool {
+  b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.') || b >= 0x80
+}
+
 fn contains_element_probe(outer: &str, localname: &str) -> bool {
   let boundary = |rest: &str| {
     rest
@@ -1391,8 +1396,18 @@ fn contains_element_probe(outer: &str, localname: &str) -> bool {
     }
   }
   let prefixed = format!(":{localname}");
+  let bytes = outer.as_bytes();
   for (at, _) in outer.match_indices(&prefixed) {
-    if boundary(&outer[at + prefixed.len()..]) {
+    if !boundary(&outer[at + prefixed.len()..]) {
+      continue;
+    }
+    // Require a real XML start-tag `<prefix:localname` — not prose/URLs/code
+    // such as `urn:resource/1` or `std::resource `, and not a close tag `</p:name>`.
+    let mut i = at;
+    while i > 0 && is_xml_ncname_char(bytes[i - 1]) {
+      i -= 1;
+    }
+    if i < at && i > 0 && bytes[i - 1] == b'<' {
       return true;
     }
   }
@@ -1794,8 +1809,59 @@ mod tests {
     assert!(contains_element_probe("<index>", "index"));
     assert!(contains_element_probe("<index/>", "index"));
     assert!(contains_element_probe("<ltx:index>x</ltx:index>", "index"));
+    assert!(contains_element_probe(
+      "<a-1.b_2:resource src=\"x\"/>",
+      "resource"
+    ));
     assert!(!contains_element_probe("<subsubsection>", "subsection"));
     assert!(!contains_element_probe("plain text", "section"));
+    // Prose, URLs, attributes, code, and close tags containing `:name` must NOT
+    // match as prefixed start tags (false positive aborts stream_split or emits
+    // spurious nested-resource warnings).
+    assert!(!contains_element_probe(
+      "<p>urn:resource/1 and std::resource and a:resource </p>",
+      "resource"
+    ));
+    assert!(!contains_element_probe(
+      "<p about=\"ex:resource \">http://example.org/ns:resource/</p>",
+      "resource"
+    ));
+    assert!(!contains_element_probe("</ltx:resource>", "resource"));
+    assert!(!contains_element_probe("<:resource/>", "resource"));
+  }
+
+  #[test]
+  fn stream_split_ignores_colon_resource_in_prose_and_attrs() {
+    let dir = tempfile::tempdir().unwrap();
+    let src = dir.path().join("prose.xml");
+    std::fs::write(
+      &src,
+      r#"<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <title>T</title>
+  <section xml:id="S1"><title>One</title>
+    <para xml:id="S1.p1"><p about="ex:resource ">See urn:resource/1 and std::resource and doc:section/a.</p></para>
+  </section>
+  <section xml:id="S2"><title>Two</title>
+    <para xml:id="S2.p1"><p>Clean.</p></para>
+  </section>
+</document>
+"#,
+    )
+    .unwrap();
+    let spill = dir.path().join("spill");
+    std::fs::create_dir(&spill).unwrap();
+    let outcome = stream_split(
+      &src.to_string_lossy(),
+      "//ltx:section",
+      SplitNaming::Id,
+      Some("out/prose.html"),
+      &spill,
+      true,
+    )
+    .expect("prose containing :resource must not abort streaming split")
+    .expect("split produces pages");
+    assert_eq!(outcome.pages.len(), 3);
   }
 
   #[test]
