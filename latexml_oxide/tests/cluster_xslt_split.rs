@@ -624,7 +624,15 @@ mod xslt_failure_is_fatal {
       "{stderr}"
     );
     assert_eq!(out.status.code(), Some(1), "{stderr}");
-    assert_eq!(stderr.matches("Fatal:post:convert").count(), 1, "{stderr}");
+    // The serial render's Fatal; the worker's own ends the abandon Info's message.
+    assert_eq!(
+      stderr
+        .lines()
+        .filter(|l| l.starts_with("Fatal:post:convert"))
+        .count(),
+      1,
+      "{stderr}"
+    );
     assert_eq!(html_files(dir.path()), Vec::<String>::new(), "{stderr}");
   }
 

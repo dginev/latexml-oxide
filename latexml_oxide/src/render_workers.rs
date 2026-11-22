@@ -333,37 +333,84 @@ struct WorkerFailure {
   by_signal: bool,
 }
 
-/// The failure of a joined worker that did not render its range, `None` for one that reported.
+/// The failure of a joined worker that did not render its range, `None` for one that reported. A death names its
+/// signal and ends with the worker's last stderr lines (its `Fatal:oom:rss`, a panic), which are not folded.
 fn worker_failure(r: &Joined) -> Option<WorkerFailure> {
   let (why, by_signal) = match r {
     Err(e) => (e.clone(), false),
     Ok((report, _)) if let Some(why) = &report.setup_failed => {
       (format!("setup failed: {why}"), false)
     },
-    Ok((report, status)) if report.status.is_none() => match status.code() {
-      Some(code) => (
-        format!("exited (code {code}) without a Status:conversion line"),
-        false,
-      ),
-      None => (
-        format!(
-          "killed by {} without a Status:conversion line",
-          describe_signal(status)
-        ),
-        true,
-      ),
+    Ok((report, status)) if report.status.is_none() => {
+      let by_signal = status.code().is_none();
+      let why = format!(
+        "{} without a Status:conversion line",
+        describe_death(status)
+      );
+      match stderr_tail(&report.log) {
+        Some(tail) => (format!("{why}; its stderr ended: {tail}"), by_signal),
+        None => (why, by_signal),
+      }
     },
     Ok(_) => return None,
   };
   Some(WorkerFailure { why, by_signal })
 }
 
+/// The last three non-blank lines of a failed worker's stderr, on one line (each cut at 300 bytes), so a line the
+/// worker began with `Fatal:` stays inside the parent's message.
+fn stderr_tail(log: &str) -> Option<String> {
+  let mut lines: Vec<&str> = log
+    .lines()
+    .map(str::trim)
+    .filter(|l| !l.is_empty())
+    .rev()
+    .take(3)
+    .map(|l| &l[..l.floor_char_boundary(300)])
+    .collect();
+  lines.reverse();
+  (!lines.is_empty()).then(|| lines.join(" | "))
+}
+
+/// How a worker ended: `exited (code 137)`, or `killed by SIGSEGV (signal 11)`.
+fn describe_death(status: &std::process::ExitStatus) -> String {
+  match status.code() {
+    Some(code) => format!("exited (code {code})"),
+    None => format!("killed by {}", describe_signal(status)),
+  }
+}
+
+/// The signal by name and number (`SIGSEGV (signal 11)`), and whether it dumped core.
 #[cfg(unix)]
 fn describe_signal(status: &std::process::ExitStatus) -> String {
   use std::os::unix::process::ExitStatusExt;
-  status
-    .signal()
-    .map_or_else(|| "a signal".to_string(), |n| format!("signal {n}"))
+  let Some(n) = status.signal() else {
+    return "a signal".to_string();
+  };
+  let name = match n {
+    libc::SIGSEGV => "SIGSEGV",
+    libc::SIGBUS => "SIGBUS",
+    libc::SIGABRT => "SIGABRT",
+    libc::SIGILL => "SIGILL",
+    libc::SIGFPE => "SIGFPE",
+    libc::SIGKILL => "SIGKILL",
+    libc::SIGTERM => "SIGTERM",
+    libc::SIGINT => "SIGINT",
+    libc::SIGHUP => "SIGHUP",
+    libc::SIGQUIT => "SIGQUIT",
+    libc::SIGPIPE => "SIGPIPE",
+    libc::SIGTRAP => "SIGTRAP",
+    libc::SIGSYS => "SIGSYS",
+    libc::SIGXCPU => "SIGXCPU",
+    libc::SIGXFSZ => "SIGXFSZ",
+    _ => return format!("signal {n}"),
+  };
+  let core = if status.core_dumped() {
+    ", core dumped"
+  } else {
+    ""
+  };
+  format!("{name} (signal {n}{core})")
 }
 
 #[cfg(not(unix))]
@@ -706,8 +753,8 @@ pub(crate) fn parallel_render(
               "post",
               "render_worker",
               &format!(
-                "worker {i} exited (code {:?}) without a Status:conversion line",
-                exit_status.code()
+                "worker {i} {} without a Status:conversion line",
+                describe_death(&exit_status)
               ),
             );
             note_status(LogStatus::Fatal, None);
@@ -812,7 +859,7 @@ pub fn worker_main(manifest_path: &str) -> i32 {
     .spawn(move || {
       #[cfg(feature = "test-utils")]
       match test_fault().as_deref() {
-        None | Some("attach" | "unreported") => {},
+        None | Some("attach" | "unreported" | "rss") => {},
         Some("signal") if first_worker => {
           latexml_core::watchdog::kill_pid(std::process::id(), false)
         },
@@ -827,8 +874,15 @@ pub fn worker_main(manifest_path: &str) -> i32 {
       if manifest.max_rss_kb > 0 {
         latexml_core::stomach::set_memory_cap(Some(manifest.max_rss_kb.saturating_mul(1024)));
       }
-      let _watchdog = (manifest.max_rss_kb > 0)
-        .then(|| latexml_core::watchdog::Watchdog::with_limits(0, manifest.max_rss_kb));
+      let watchdog_kb = manifest.max_rss_kb;
+      #[cfg(feature = "test-utils")]
+      let watchdog_kb = if test_fault().as_deref() == Some("rss") {
+        1
+      } else {
+        watchdog_kb
+      };
+      let _watchdog =
+        (watchdog_kb > 0).then(|| latexml_core::watchdog::Watchdog::with_limits(0, watchdog_kb));
       let code = match render_manifest_pages(manifest) {
         #[cfg(feature = "test-utils")]
         Ok(_) if test_fault().as_deref() == Some("unreported") => {
@@ -849,8 +903,9 @@ pub fn worker_main(manifest_path: &str) -> i32 {
 /// `attach` fails the worker's db attach; `signal` SIGKILLs worker 0 (a crash)
 /// and holds its siblings for ten minutes, unless the parent stops them;
 /// `unreported` renders the range and exits before the status report, as a
-/// worker killed late would; any other value exits the worker before it
-/// renders, as its exceeded memory share would.
+/// worker killed late would; `rss` holds the worker's watchdog to 1 KB, so it
+/// exits 137 at its first poll, while the render attaches; any other value
+/// exits the worker before it renders.
 #[cfg(feature = "test-utils")]
 fn test_fault() -> Option<String> { std::env::var("LATEXML_RENDER_WORKER_TEST_ABORT").ok() }
 
@@ -1089,10 +1144,25 @@ mod tests {
     assert!(killed.by_signal);
     assert_eq!(
       killed.why,
-      "killed by signal 9 without a Status:conversion line"
+      "killed by SIGKILL (signal 9) without a Status:conversion line; its stderr ended: Info:post:x partial"
     );
+    // A crash names its signal and the core dump (wait status 11 | 0x80).
+    let crashed = worker_failure(&Ok((
+      parse_child_report(""),
+      std::process::ExitStatus::from_raw(11 | 0x80),
+    )))
+    .unwrap();
+    assert!(crashed.by_signal);
+    assert_eq!(
+      crashed.why,
+      "killed by SIGSEGV (signal 11, core dumped) without a Status:conversion line"
+    );
+    // The worker's own memory exit is not a crash; its last three stderr lines end the message, on one line.
     let capped = worker_failure(&Ok((
-      report(),
+      parse_child_report(
+        "Info:post:a one\nInfo:post:b two\n\nWarning:post:c three\nFatal:oom:rss latexml-oxide: resident \
+         memory 900MB exceeded the 800MB ceiling\nStatus:pages:0\n",
+      ),
       std::process::ExitStatus::from_raw(137 << 8),
     )))
     .unwrap();
@@ -1102,7 +1172,8 @@ mod tests {
     );
     assert_eq!(
       capped.why,
-      "exited (code 137) without a Status:conversion line"
+      "exited (code 137) without a Status:conversion line; its stderr ended: Info:post:b two | Warning:post:c \
+       three | Fatal:oom:rss latexml-oxide: resident memory 900MB exceeded the 800MB ceiling"
     );
     let done = parse_child_report("Status:pages:1\nStatus:conversion:0\n");
     assert!(worker_failure(&Ok((done, std::process::ExitStatus::from_raw(0)))).is_none());

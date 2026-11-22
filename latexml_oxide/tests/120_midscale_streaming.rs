@@ -275,8 +275,10 @@ fn midscale_parallel_render_matches_serial() {
 /// an Error: every page as the serial run writes it, the same verdict. So does a
 /// worker whose own setup fails (its db attach, the hook's `attach`): no Fatal.
 /// A worker killed by a signal (the hook's `signal`, a crash) is a counted
-/// Warning, and the parent stops its siblings at once (they would sleep ten
-/// minutes) instead of waiting for them.
+/// Warning naming the signal, and the parent stops its siblings at once (they
+/// would sleep ten minutes) instead of waiting for them. A worker over its
+/// memory share (the hook's `rss`) exits 137 through `_exit`, never a signal,
+/// and the Info ends with its `Fatal:oom:rss` line.
 #[test]
 fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
   let serial_dir = tempfile::tempdir().expect("tempdir");
@@ -284,6 +286,7 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
   let failed_dir = tempfile::tempdir().expect("tempdir");
   let setup_dir = tempfile::tempdir().expect("tempdir");
   let signal_dir = tempfile::tempdir().expect("tempdir");
+  let rss_dir = tempfile::tempdir().expect("tempdir");
   let serial = run_midscale(serial_dir.path(), &[("LATEXML_RENDER_JOBS", "1")]);
   let auto = run_midscale(auto_dir.path(), &[]);
   let failed = run_midscale(failed_dir.path(), &[
@@ -300,6 +303,10 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
     ("LATEXML_RENDER_WORKER_TEST_ABORT", "signal"),
   ]);
   let signal_secs = signal_start.elapsed().as_secs();
+  let rss = run_midscale(rss_dir.path(), &[
+    ("LATEXML_RENDER_JOBS", "3"),
+    ("LATEXML_RENDER_WORKER_TEST_ABORT", "rss"),
+  ]);
   let serial_pages = page_bytes(serial_dir.path());
   assert!(serial_pages.len() > 150, "got {} pages", serial_pages.len());
   let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
@@ -309,6 +316,7 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
     ("failed", &failed, &failed_dir),
     ("setup", &setup, &setup_dir),
     ("signal", &signal, &signal_dir),
+    ("rss", &rss, &rss_dir),
   ] {
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(0), "{label}:\n{stderr}");
@@ -353,14 +361,29 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
         assert_eq!(
           stderr
             .matches(
-              "Warning:post:parallel-render parallel render abandoned (worker 0: killed by signal 9"
+              "Warning:post:parallel-render parallel render abandoned (worker 0: killed by SIGKILL \
+               (signal 9) without a Status:conversion line"
             )
             .count(),
           usize::from(label == "signal"),
           "{label}: only a signal death is a Warning:\n{stderr}"
         );
         assert!(!stderr.contains("Error:"), "{label}: no Error:\n{stderr}");
-        assert!(!stderr.contains("Fatal:"), "{label}: no Fatal:\n{stderr}");
+        assert!(
+          !stderr.lines().any(|l| l.starts_with("Fatal:")),
+          "{label}: no Fatal:\n{stderr}"
+        );
+        if label == "rss" {
+          assert!(
+            stderr.lines().any(|l| l
+              .starts_with("Info:post:parallel-render parallel render abandoned (worker ")
+              && l.contains(
+                " exited (code 137) without a Status:conversion line; its stderr ended: "
+              )
+              && l.contains("Fatal:oom:rss latexml-oxide: resident memory ")),
+            "rss: the Info names exit 137 and ends with the worker's Fatal line:\n{stderr}"
+          );
+        }
         if label == "signal" {
           assert!(
             signal_secs < 300,
