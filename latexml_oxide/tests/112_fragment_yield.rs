@@ -301,4 +301,60 @@ fn split_keeps_pages_whose_namespaces_a_navigation_uses() {
       "{page} must carry both navigations' content, in order:\n{xml}"
     );
   }
+
+/// The C heap two more conversions of `source` leave past two of the prose control (the per-thread floor).
+#[cfg(target_os = "linux")]
+fn c_heap_surplus_over_prose(source: &str) -> (String, usize) {
+  let (_, prose_growth) = c_heap_growth_over_two_conversions("tests/streaming/prose_only.tex");
+  let (first, growth) = c_heap_growth_over_two_conversions(source);
+  let surplus = growth.saturating_sub(prose_growth);
+  eprintln!(
+    "{source}: C heap growth over two conversions {growth} B, {surplus} B past the prose control"
+  );
+  (first, surplus)
+}
+
+/// An aligned row's `_Capture_` cells are freed once the MathFork has copied them: `add_column_to_math_fork` copies
+/// every cell child into the main branch and the td, and the detached cell was left to nobody (~15 KB per cell; 9 MB
+/// of the n100 generated book's residue at the start of post).
+#[cfg(target_os = "linux")]
+#[test]
+fn mathfork_capture_cells_leave_no_c_heap_residue() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  let (first, surplus) = c_heap_surplus_over_prose("tests/streaming/align_capture_cells.tex");
+  assert_eq!(
+    first.matches("<MathFork").count(),
+    300,
+    "150 align* of two rows each fork"
+  );
+  assert!(
+    surplus < 1536 * 1024,
+    "two more align* conversions grew the C heap {surplus} bytes past the prose control: the copied `_Capture_` \
+     cells are leaking again"
+  );
+}
+
+/// The math parser frees the spacing hints it folds into padding (`filter_hints`); unlinked, every `\,` stayed
+/// allocated for the process lifetime. Measured surplus: 20.2 MB with the hints left unfreed (base, three runs within
+/// 2 KB), 0 B freed, against the 1.5 MiB threshold.
+#[cfg(target_os = "linux")]
+#[test]
+fn folded_math_hints_leave_no_c_heap_residue() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  let (first, surplus) = c_heap_surplus_over_prose("tests/streaming/math_hints.tex");
+  assert_eq!(
+    first.matches("<XMHint").count(),
+    0,
+    "every hint is folded into padding"
+  );
+  assert_eq!(
+    first.matches(r#"rpadding="1.7pt""#).count(),
+    300 * 13,
+    "and is kept as its neighbour's padding"
+  );
+  assert!(
+    surplus < 1536 * 1024,
+    "two more hint-dense conversions grew the C heap {surplus} bytes past the prose control: the folded hints are \
+     leaking again"
+  );
 }
