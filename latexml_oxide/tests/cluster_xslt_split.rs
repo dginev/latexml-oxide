@@ -448,7 +448,7 @@ mod xslt_failure_is_fatal {
     ]
   }
 
-  fn post_options(xsl: &str) -> latexml::post::PostOptions<'_> {
+  pub(super) fn post_options(xsl: &str) -> latexml::post::PostOptions<'_> {
     latexml::post::PostOptions {
       pmml:                      false,
       cmml:                      false,
@@ -950,6 +950,93 @@ mod split_css_links {
       "split child Ch1.html is missing the parent document's date (newDocument addDate); head:\n{}",
       child.split("</head>").next().unwrap_or(&child),
     );
+  }
+
+  /// A split run finds and copies each CSS resource once, and makes the page directory once, not per
+  /// page — both the `<ltx:resource>` route and the `--css` parameter route (Perl `copyResource` skips an
+  /// up-to-date copy, `Pathname.pm` `pathname_copy`). Nasser's 71,476-page document paid ~35 `statx`, 2
+  /// copies and 3 `mkdir` a page (#777 FAQ); every page still links both, and the copies hold the
+  /// bundled bytes.
+  #[test]
+  fn split_copies_each_resource_once() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dest = dir.path().join("index.html").to_string_lossy().into_owned();
+    let mut xml = String::from(
+      "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\
+       <resource src=\"LaTeXML.css\" type=\"text/css\"/><title>T</title>",
+    );
+    for n in 1..=6 {
+      xml.push_str(&format!(
+        "<section xml:id=\"S{n}\"><title>Sec {n}</title><para><p>text {n}</p></para></section>"
+      ));
+    }
+    xml.push_str("</document>");
+    let css = ["LaTeXML-blue.css".to_string()];
+    let (copies, dirs) = (
+      latexml_post::xslt::resource_copy_count(),
+      latexml_post::writer::made_dir_count(),
+    );
+    latexml_core::common::error::initialize_report();
+    let out = latexml::post::run_post_processing_logged(&xml, &latexml::post::PostOptions {
+      destination: Some(&dest),
+      split: true,
+      split_xpath: Some("//ltx:section".to_string()),
+      default_resources: true,
+      css_files: &css,
+      ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+    });
+    latexml_core::common::error::initialize_report();
+    assert_eq!(out.status_code, 0, "{}", out.log);
+    assert_eq!(out.log.matches("Warning:").count(), 0, "{}", out.log);
+    assert_eq!(
+      latexml_post::xslt::resource_copy_count() - copies,
+      2,
+      "one copy per resource, not per page"
+    );
+    assert_eq!(
+      latexml_post::writer::made_dir_count() - dirs,
+      1,
+      "one mkdir for the page directory"
+    );
+    let pages = [
+      "index.html",
+      "S1.html",
+      "S2.html",
+      "S3.html",
+      "S4.html",
+      "S5.html",
+      "S6.html",
+    ];
+    for page in pages {
+      let html =
+        std::fs::read_to_string(dir.path().join(page)).unwrap_or_else(|e| panic!("{page}: {e}"));
+      for css in ["LaTeXML.css", "LaTeXML-blue.css"] {
+        assert!(
+          html.contains(&format!(
+            "<link rel=\"stylesheet\" href=\"{css}\" type=\"text/css\">"
+          )),
+          "{page} lacks {css}: {}",
+          html.split("</head>").next().unwrap_or(&html)
+        );
+      }
+    }
+    for (css, source) in [
+      (
+        "LaTeXML.css",
+        include_str!("../../latexml_post/resources/CSS/LaTeXML.css"),
+      ),
+      (
+        "LaTeXML-blue.css",
+        include_str!("../../latexml_post/resources/CSS/LaTeXML-blue.css"),
+      ),
+    ] {
+      assert_eq!(
+        std::fs::read_to_string(dir.path().join(css)).unwrap(),
+        source,
+        "{css}"
+      );
+    }
   }
 }
 

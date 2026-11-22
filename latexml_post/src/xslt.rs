@@ -5,7 +5,7 @@
 //! Handles CSS/JS/icon resource copying.
 
 use std::{
-  cell::RefCell,
+  cell::{Cell, RefCell},
   collections::HashSet,
   fs,
   path::{Path, PathBuf},
@@ -353,7 +353,19 @@ pub struct XSLT {
   resource_directory: Option<String>,
   /// Search paths for finding resources.
   searchpaths:        Vec<String>,
+  /// The resources this processor already put in place, as (source, type, destination): a split run
+  /// asks for the same CSS/JS on every page, and the search (~35 `statx` a page) and the copy are made
+  /// once per conversion (Nasser's 71,476-page document, #777 FAQ).
+  copied:             RefCell<HashSet<(String, Option<String>, String)>>,
 }
+
+std::thread_local! {
+  static RESOURCE_COPIES: Cell<usize> = const { Cell::new(0) };
+}
+
+/// How many resource files this thread has copied or written into a destination (a test seam).
+pub fn resource_copy_count() -> usize { RESOURCE_COPIES.get() }
+fn note_resource_copy() { RESOURCE_COPIES.set(RESOURCE_COPIES.get() + 1); }
 
 impl XSLT {
   pub fn new(
@@ -400,6 +412,7 @@ impl XSLT {
       no_resources,
       resource_directory,
       searchpaths,
+      copied: RefCell::default(),
     })
   }
 
@@ -482,6 +495,16 @@ impl XSLT {
         let _ = fs::create_dir_all(parent);
       }
     };
+    let key = (
+      src.to_string(),
+      resource_type.map(str::to_string),
+      dest.clone(),
+    );
+    if self.copied.borrow().contains(&key) {
+      return relative_to_destination(doc, dest);
+    }
+    // A failed write warns and is retried on the next page, as before.
+    let mut placed = true;
 
     match find_resource_file(src, info, &search_paths) {
       Some(path) => {
@@ -494,7 +517,9 @@ impl XSLT {
           // stale/empty leftover; otherwise it is genuinely already in place.
           if let Some(bytes) = embedded_resources::lookup(basename) {
             ensure_parent(&dest);
+            note_resource_copy();
             if let Err(e) = fs::write(&dest, bytes) {
+              placed = false;
               Warn!(
                 "I/O",
                 dest,
@@ -507,7 +532,9 @@ impl XSLT {
           }
         } else {
           ensure_parent(&dest);
+          note_resource_copy();
           if let Err(e) = fs::copy(&path, &dest) {
+            placed = false;
             Warn!("I/O", dest, "Couldn't copy {} to {}: {}", path, dest, e);
           }
         }
@@ -523,7 +550,9 @@ impl XSLT {
         // straight to the destination, no temp dir round-trip.
         if let Some(bytes) = embedded_resources::lookup(basename) {
           ensure_parent(&dest);
+          note_resource_copy();
           if let Err(e) = fs::write(&dest, bytes) {
+            placed = false;
             Warn!(
               "I/O",
               dest,
@@ -545,13 +574,10 @@ impl XSLT {
         }
       },
     }
-
-    // Perl `pathname_relative($dest, $doc->getDestinationDirectory)`: `../x.css` from a split sub-page.
-    if let Some(dest_dir) = doc.get_destination_directory() {
-      pathname::relative(&pathname::absolute(&dest), &pathname::absolute(dest_dir))
-    } else {
-      dest
+    if placed {
+      self.copied.borrow_mut().insert(key);
     }
+    relative_to_destination(doc, dest)
   }
 
   /// The `CSS`/`JAVASCRIPT`/`ICON` stylesheet parameter (a `"a|b|c"` quoted pipe-list) with each entry copied
@@ -579,6 +605,15 @@ impl XSLT {
       .map(|entry| self.copy_resource_following(doc, entry, resource_type, Some(&mut seen)))
       .collect();
     format!("\"{}\"", entries.join("|"))
+  }
+}
+
+/// Perl `pathname_relative($dest, $doc->getDestinationDirectory)`: `../x.css` from a split sub-page.
+fn relative_to_destination(doc: &PostDocument, dest: String) -> String {
+  if let Some(dest_dir) = doc.get_destination_directory() {
+    pathname::relative(&pathname::absolute(&dest), &pathname::absolute(dest_dir))
+  } else {
+    dest
   }
 }
 

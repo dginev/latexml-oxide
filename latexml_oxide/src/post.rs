@@ -1398,6 +1398,7 @@ fn run_post_processing_inner(
   let mut main_output: Option<String> = None;
   let t_pages = audit_start("render_pages");
   let mut pages_rendered = 0usize;
+  let mut made_dirs = latexml_post::writer::MadeDirs::default();
   for SpilledPage {
     path,
     destination: dest,
@@ -1441,18 +1442,9 @@ fn run_post_processing_inner(
     // the render loop's measured ~152 KB/page RSS growth on the 131 MB
     // witness is dominated by exactly this class, and it is what pushed the
     // single-invocation run over the memory fuse at page 56,088 of 115,519.
-    // Rate-limited: a trim walks the heap.
-    if pages_rendered > 0 && pages_rendered.is_multiple_of(512) {
-      #[cfg(target_os = "linux")]
-      // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
-      unsafe {
-        libc::malloc_trim(0);
-      }
-      #[cfg(not(feature = "dhat-heap"))]
-      // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
-      unsafe {
-        libmimalloc_sys::mi_collect(true);
-      }
+    // A trim walks the heap: it runs when RSS grew by a step, not per page count (`heap_trim`).
+    if pages_rendered > 0 && pages_rendered.is_multiple_of(crate::heap_trim::SAMPLE_PAGES) {
+      crate::heap_trim::sample();
     }
     // Retention triage probe (`LATEXML_POST_MEMDIAG=1`): splits the render
     // loop's RSS growth into live-C (libxml2/libxslt allocations still
@@ -1494,11 +1486,7 @@ fn run_post_processing_inner(
     };
     for (dest, output) in outputs {
       if let Some(path) = dest.as_deref() {
-        if let Some(parent) = std::path::Path::new(path).parent()
-          && !parent.as_os_str().is_empty()
-        {
-          let _ = std::fs::create_dir_all(parent);
-        }
+        let _ = made_dirs.ensure_parent(path);
         pages_rendered += 1;
         if let Err(e) = std::fs::write(path, &output) {
           post_error("write", &format!("failed to write page {path}: {e}"));

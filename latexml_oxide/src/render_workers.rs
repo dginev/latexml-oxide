@@ -319,16 +319,7 @@ pub(crate) fn parallel_render(
   // fixed floor, and size the fleet from the smaller of MemAvailable and the
   // distance to this run's own memory fuse. Degrade to fewer workers — or
   // decline to engage — rather than let the kernel choose a victim.
-  #[cfg(target_os = "linux")]
-  // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
-  unsafe {
-    libc::malloc_trim(0);
-  }
-  #[cfg(not(feature = "dhat-heap"))]
-  // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
-  unsafe {
-    libmimalloc_sys::mi_collect(true);
-  }
+  crate::heap_trim::release_free_heap();
   let db_bytes = std::fs::metadata(&dbfile).map(|m| m.len()).unwrap_or(0);
   let per_worker = db_bytes.saturating_mul(3).max(256 * 1024 * 1024);
   let mut budget = latexml_core::watchdog::available_memory_bytes().unwrap_or(u64::MAX);
@@ -711,21 +702,13 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
     processors,
   };
   let mut written: Vec<String> = Vec::new();
+  let mut made_dirs = latexml_post::writer::MadeDirs::default();
   for job in &m.pages {
     // Same OS give-back cadence as the serial render loop: each page cycles a
     // DOM + XSLT result through the C heap, and a chunk can be tens of
     // thousands of pages.
-    if !written.is_empty() && written.len().is_multiple_of(512) {
-      #[cfg(target_os = "linux")]
-      // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
-      unsafe {
-        libc::malloc_trim(0);
-      }
-      #[cfg(not(feature = "dhat-heap"))]
-      // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
-      unsafe {
-        libmimalloc_sys::mi_collect(true);
-      }
+    if !written.is_empty() && written.len().is_multiple_of(crate::heap_trim::SAMPLE_PAGES) {
+      crate::heap_trim::sample();
     }
     match crate::post::render_spilled_page(
       &job.path,
@@ -737,11 +720,7 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
       Ok(outputs) => {
         for (dest, output) in outputs {
           if let Some(path) = dest.as_deref() {
-            if let Some(parent) = Path::new(path).parent()
-              && !parent.as_os_str().is_empty()
-            {
-              let _ = std::fs::create_dir_all(parent);
-            }
+            let _ = made_dirs.ensure_parent(path);
             written.push(path.to_string());
             if let Err(e) = std::fs::write(path, &output) {
               emit_error(
