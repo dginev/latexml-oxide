@@ -55,6 +55,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     holds 29 MB of C heap at page 1024 instead of 818 MB, the whole conversion takes ~8 % fewer cycles, and every page
     is byte-identical. Guards `112_fragment_yield::split_pages_leave_no_c_heap_residue` and
     `::split_keeps_pages_whose_namespaces_a_navigation_uses` (in the CI asan job).
+  - **0.8.0-rc2: parallel page rendering is safe and sized from measurement (issue 777).**
+    - Render workers install shared CSS/JS and every converted figure atomically: a private staged file, then a rename. Before, workers rendering pages that share a figure raced, and some pages silently switched to a PNG; the shared SVG could be deleted while pages still pointed at it.
+    - The fleet's memory budget no longer takes 3/4 of `--max-memory` twice. Each worker is sized from its measured peak (64 MiB + 6 × the render database), so Nasser's 2,400-problem slice keeps 7 workers at `--max-memory=3700` instead of losing one and re-rendering serially.
+    - A worker's death stops the rest of the fleet at once, and a worker killed by a signal is a counted Warning. A stop after an abandoned fleet leaves exactly the pages it reports.
+    - `--streaming=false` keeps a split run's core eager, as `--help` says.
+    - An aborting panic removes the run's staging files.
+    - A stream that must fall back to the whole-DOM split stops at once.
+    - The streamed split no longer mistakes `x:resource` in text for an element.
   - **0.8.0-rc2: a split run's core result goes straight to disk (issue 777).** The core serializes its XML into
     the file post's streamed split reads (`Document::serialize_to_file`) instead of building it as one string first;
     the output is byte-identical. Nasser's whole book (28,076 problems, 2.73 GB of core XML) had stopped with an
