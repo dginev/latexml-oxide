@@ -379,9 +379,11 @@ struct Cli {
   /// exceeds the --max-memory ceiling, i.e. only where the normal path is
   /// certain to exhaust memory anyway.
   ///
-  /// `--streaming=false` (or `LATEXML_STREAMING=false`) disables BOTH the flag
-  /// and the auto-activation, forcing the eager path even for a document
-  /// projected to exhaust the ceiling.
+  /// `--streaming=false` (or `LATEXML_STREAMING=false`) disables the flag, the
+  /// auto-activation and the eager run's switch to streaming at the spill
+  /// watermark, forcing the eager path even for a document projected to
+  /// exhaust the ceiling. It governs the conversion only: a split run's
+  /// post-processing still streams its pages.
   #[arg(long, env = "LATEXML_STREAMING", num_args = 0..=1, default_missing_value = "true")]
   streaming: Option<bool>,
 
@@ -703,7 +705,8 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
 /// peak RSS per MB of math-heavy source on the 131 MB witness
 /// (`docs/archive/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
 /// documents that today would die at the ceiling with certainty. An explicit
-/// `--streaming=false` (or `LATEXML_STREAMING=false`) suppresses BOTH — the
+/// `--streaming=false` (or `LATEXML_STREAMING=false`) suppresses BOTH, and the
+/// eager run's switch to streaming at the spill watermark too — the
 /// escape hatch for a caller who would rather have the eager path's Fatal
 /// than a fragmented conversion, and the only way to A/B the two paths on a
 /// document large enough for auto to fire. The returned
@@ -1386,7 +1389,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       latexml_core::stomach::set_timeout(cli.timeout);
     }
     apply_token_limit(cli.token_limit);
-    if resolved.split_enabled && std::env::var_os("LATEXML_SPILL_AT_MIB").is_none() {
+    // `--streaming=false` keeps the core eager: no watermark, so no switch to streaming pass 1.
+    if cli.streaming == Some(false) {
+      latexml_core::stomach::set_spill_disabled(true);
+    } else if resolved.split_enabled && std::env::var_os("LATEXML_SPILL_AT_MIB").is_none() {
       latexml_core::stomach::set_spill_watermark_override(split_spill_watermark());
     }
 

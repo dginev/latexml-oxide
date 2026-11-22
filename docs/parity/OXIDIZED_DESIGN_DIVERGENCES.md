@@ -23663,7 +23663,9 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
 - spills its core at min(512 MiB, the `--max-memory` default of a third of the fuse) of growth (`split_spill_watermark`,
   `bin/latexml_oxide.rs`). A document that never grows past that mark converts eagerly, as before. One that grows
   past 512 MiB but not past the default mark (a third of the fuse) now takes the spilling core, with its documented
-  differences from the eager result (#456, #738, #903); `--streaming=false` does not keep such a run eager.
+  differences from the eager result (#456, #738, #903). `--streaming=false` keeps the core eager at any size: it
+  removes the spill watermark (`stomach::set_spill_disabled`), so no eager run turns into streaming pass 1; the
+  split's post still streams.
 - splits through the streaming front-end (`latexml_post::stream_split`) at any size: `post::stream_split_threshold`
   now defaults to 0, where it was 1 GiB. This holds for every caller of `post::run_post_processing_logged` that sets
   `split: true`; `api.rs`, `cortex_worker` and the LSP pass `split: false`. The CLI's core serializes its result

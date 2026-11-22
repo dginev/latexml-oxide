@@ -5096,3 +5096,64 @@ mod log_note_nesting {
     );
   }
 }
+
+mod streaming_opt_out {
+  //! `--streaming=false` keeps a split run's core eager (`--help`; OD #1133): a run over the spill
+  //! watermark (`LATEXML_SPILL_AT_MIB=0` puts every yield seam over it, `LATEXML_SOFT_YIELD_MIN_BOXES=1`
+  //! lifts the seams' box floor) never switches to streaming
+  //! pass 1, which it does without the flag.
+
+  use std::process::Command;
+
+  fn run(extra: &[&str]) -> String {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let mut tex = String::from("\\documentclass{article}\n\\begin{document}\n");
+    for s in 0..6 {
+      tex.push_str(&format!(
+        "\\section{{Part {s}}}\nSome prose of part {s}.\n\n\\subsection{{Sub {s}}}\nMore prose.\n\n"
+      ));
+    }
+    tex.push_str("\\end{document}\n");
+    std::fs::write(dir.path().join("doc.tex"), tex).expect("fixture written");
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "doc.tex",
+        "--dest=doc.html",
+        "--splitat=section",
+        "--log=doc.log",
+      ])
+      .args(extra)
+      .env("LATEXML_SPILL_AT_MIB", "0")
+      .env("LATEXML_SOFT_YIELD_MIN_BOXES", "1")
+      .env_remove("LATEXML_STREAMING")
+      .current_dir(dir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert_eq!(output.status.code(), Some(0), "{stderr}");
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Warning:"),
+      "{stderr}"
+    );
+    assert!(
+      dir.path().join("doc.html").is_file(),
+      "the split's first page:\n{stderr}"
+    );
+    stderr
+  }
+
+  #[test]
+  fn streaming_false_keeps_a_split_run_eager() {
+    const TRANSITION: &str = "continuing as streaming pass 1";
+    let adaptive = run(&[]);
+    assert!(
+      adaptive.contains(TRANSITION),
+      "the control run switches:\n{adaptive}"
+    );
+    let eager = run(&["--streaming=false"]);
+    assert!(
+      !eager.contains(TRANSITION),
+      "--streaming=false switched:\n{eager}"
+    );
+  }
+}
