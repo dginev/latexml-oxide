@@ -355,30 +355,49 @@ fn post_mem_parse_limit() -> usize {
 }
 
 /// The size at which a *split* run prefers the streaming split front-end
-/// (`latexml_post::stream_split`) over the whole-DOM parse. Default 1 GiB: a
-/// core XML that large parses to a ~20+ GB DOM (measured ~16 GB for 614 MB),
-/// where the streaming front-end peaks at one content subtree. Test override:
-/// `LATEXML_POST_STREAM_THRESHOLD` (bytes).
+/// (`latexml_post::stream_split`) over the whole-DOM parse. Default 0: every
+/// split run streams, since its pages are byte-identical to the whole-DOM
+/// split's (guard: `118_streaming_split_parity`) while its peak is one content
+/// subtree, not the whole DOM (Nasser's 2,400-problem book, 337 MB of HTML in
+/// 9,713 pages, with the split run's core watermark: 3.8 → 1.35 GB peak RSS).
+/// Calibration/test override: `LATEXML_POST_STREAM_THRESHOLD` (bytes).
 fn stream_split_threshold() -> u64 {
   std::env::var("LATEXML_POST_STREAM_THRESHOLD")
     .ok()
     .and_then(|v| v.parse::<u64>().ok())
-    .unwrap_or(1 << 30)
+    .unwrap_or(0)
 }
 
-/// Gate for the streaming split: `LATEXML_POST_STREAM_SPLIT=1` forces it on
-/// (any size), `=0` disables it, unset engages it automatically for files at
-/// or above [`stream_split_threshold`] — where the whole-DOM parse is beyond
-/// commodity-RAM hosts anyway (the 131 MB witness's 2.68 GB core XML OOM'd a
-/// 31 GB laptop *during the parse*, 0 pages written).
-fn stream_split_gate(path: &str) -> bool {
+/// Below this size a failed streaming split falls back to the whole-DOM path,
+/// the pre-default behaviour (a 614 MB core XML parsed to ~16 GB of DOM);
+/// above it the fallback is the OOM the streaming front-end exists to avoid
+/// (a 2.68 GB core XML OOM'd a 31 GB host), so the failure stays an Error.
+const STREAM_SPLIT_DOM_FALLBACK_LIMIT: u64 = 1 << 30;
+
+/// Gate for the streaming split on an input of `len` bytes:
+/// `LATEXML_POST_STREAM_SPLIT=1` forces it on (any size), `=0` disables it,
+/// unset engages it at or above [`stream_split_threshold`] (by default every
+/// split run).
+fn stream_split_gate(len: u64) -> bool {
   match std::env::var("LATEXML_POST_STREAM_SPLIT").as_deref() {
     Ok("0") => false,
     Ok(_) => true,
-    Err(_) => std::fs::metadata(path)
-      .map(|m| m.len() >= stream_split_threshold())
-      .unwrap_or(false),
+    Err(_) => len >= stream_split_threshold(),
   }
+}
+
+/// Will a run with `opts` over an input of `len` bytes take the streaming split
+/// front-end? The front-end's own preconditions (a destination, a union it can
+/// evaluate) and the gate. An in-memory handoff that answers yes is staged to a
+/// file first: the streaming reader parses only files.
+fn takes_streaming_split(opts: &PostOptions, len: u64) -> bool {
+  opts.split
+    && opts.destination.is_some()
+    && opts
+      .split_xpath
+      .as_deref()
+      .is_some_and(latexml_post::stream_split::supports_union)
+    && stream_split_gate(len)
 }
 
 /// Test override: `LATEXML_POST_SPILL_PAGE=1` stages an unsplit page on disk as
@@ -405,6 +424,18 @@ fn resolve_split_naming(split_naming: Option<&str>) -> latexml_post::split::Spli
       SplitNaming::Id
     },
   }
+}
+
+/// The destination's directory for the staged handoff and the page spill: "."
+/// for a bare file name (`--dest=index.html`), whose empty parent would
+/// otherwise send them to the system temp dir (often a RAM-backed tmpfs).
+fn staging_dir_of(destination: Option<&str>) -> Option<std::path::PathBuf> {
+  let parent = std::path::Path::new(destination?).parent()?;
+  Some(if parent.as_os_str().is_empty() {
+    std::path::PathBuf::from(".")
+  } else {
+    parent.to_path_buf()
+  })
 }
 
 /// Destination directory for a page pathname (empty parent → ".", mirroring
@@ -447,7 +478,9 @@ struct PostFront {
 /// could not be split faithfully — already reported) → the caller falls back
 /// to the whole-DOM pipeline. `Err(())` = a hard failure after pages were in
 /// flight (I/O, resource ceiling), already reported via `post_error`; the
-/// caller bails out.
+/// caller bails out. With `dom_fallback` (an input below
+/// [`STREAM_SPLIT_DOM_FALLBACK_LIMIT`]) a failed stream is `Ok(None)` instead,
+/// reported at Info.
 fn try_streaming_front(
   path: &str,
   split_xpath: &str,
@@ -455,15 +488,32 @@ fn try_streaming_front(
   destination: Option<&str>,
   page_opts: &PostDocumentOptions,
   spill_dir: &std::path::Path,
+  dom_fallback: bool,
 ) -> Result<Option<PostFront>, ()> {
   let naming = resolve_split_naming(split_naming);
   telemetry::phase_enter(Phase::Split);
-  let outcome =
-    latexml_post::stream_split::stream_split(path, split_xpath, naming, destination, spill_dir);
+  let outcome = latexml_post::stream_split::stream_split(
+    path,
+    split_xpath,
+    naming,
+    destination,
+    spill_dir,
+    dom_fallback,
+  );
   telemetry::phase_exit();
   let outcome = match outcome {
     Ok(Some(o)) => o,
     Ok(None) => return Ok(None),
+    // A file the whole-DOM path parses comfortably: give it that path, as
+    // before every split run streamed.
+    Err(e) if dom_fallback => {
+      Info!(
+        "post",
+        "stream-split",
+        s!("streaming split failed ({e}); splitting the whole document instead")
+      );
+      return Ok(None);
+    },
     Err(e) => {
       // Fail toward flagging: the whole-DOM fallback may well OOM on an input
       // this large, but a loud failure beats a silently wrong result — and
@@ -579,22 +629,91 @@ fn try_streaming_front(
   }))
 }
 
-/// Write an oversized handoff to a temp file for the streaming file parser.
-/// Beside the destination when there is one (writing to the destination
-/// directory is always allowed), else the system temp dir.
-fn spill_oversized_xml(xml: &str, opts: &PostOptions) -> std::io::Result<std::path::PathBuf> {
-  let dir = opts
-    .destination
-    .and_then(|d| {
-      std::path::Path::new(d)
-        .parent()
-        .map(std::path::Path::to_path_buf)
-    })
-    .filter(|d| !d.as_os_str().is_empty())
-    .unwrap_or_else(std::env::temp_dir);
+/// A core handoff staged on disk for the streaming file parser, removed when
+/// dropped and on the exits that skip destructors.
+struct StagedHandoff {
+  path:   String,
+  _guard: latexml_core::watchdog::RemoveOnExit,
+}
+
+impl Drop for StagedHandoff {
+  fn drop(&mut self) { let _ = std::fs::remove_file(&self.path); }
+}
+
+/// Should an in-memory handoff be staged to a file: past the in-memory parse
+/// ceiling (`post_mem_parse_limit`), or bound for the streaming split, which
+/// parses only files. An empty handoff stays in memory: it is post-processed
+/// against a bare `<document/>` (Perl LaTeXML.pm L330-336).
+fn handoff_needs_file(xml: &str, opts: &PostOptions) -> bool {
+  xml.len() >= post_mem_parse_limit()
+    || (!xml.trim().is_empty() && takes_streaming_split(opts, xml.len() as u64))
+}
+
+/// Write the handoff to a temp file beside the destination when there is one
+/// (writing to the destination directory is always allowed), else the system
+/// temp dir. `None` = the write failed (reported at Info): parse from memory.
+fn stage_handoff(xml: &str, opts: &PostOptions) -> Option<StagedHandoff> {
+  let dir = staging_dir_of(opts.destination).unwrap_or_else(std::env::temp_dir);
   let path = dir.join(format!("latexml-post-handoff-{}.xml", std::process::id()));
-  std::fs::write(&path, xml)?;
-  Ok(path)
+  let guard = latexml_core::watchdog::remove_on_exit(&path);
+  // The destination's directory may not exist yet: the writer creates it, so
+  // create it here, where the handoff and the page spill go first.
+  if let Err(e) = std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(&path, xml)) {
+    let _ = std::fs::remove_file(&path);
+    latexml_core::Info!(
+      "post",
+      "spill",
+      format!("could not stage the core handoff to disk ({e}); parsing from memory")
+    );
+    return None;
+  }
+  // Operationally worth a line: a temp file the size of the core XML just
+  // appeared beside the destination. Also the guard tests' engagement proof —
+  // without it a silently-failing spill would fall back to the memory parse
+  // and the tests would pass vacuously.
+  let why = if xml.len() >= post_mem_parse_limit() {
+    "oversized handoff"
+  } else {
+    "streaming-split handoff"
+  };
+  latexml_core::Info!(
+    "post",
+    "spill",
+    format!("{why} ({} bytes) staged to {}", xml.len(), path.display())
+  );
+  Some(StagedHandoff {
+    path:   path.to_string_lossy().into_owned(),
+    _guard: guard,
+  })
+}
+
+/// [`run_post_processing_logged`] taking the core result by value: a handoff
+/// staged to disk (see `handoff_needs_file`) is dropped before post runs, so
+/// the core XML is not resident beside the post pipeline — on Nasser's
+/// 2,400-problem book a few hundred MB of the single-invocation peak.
+pub fn run_post_processing_owned_logged(xml: String, opts: &PostOptions) -> PostOutcome {
+  // Bound first: the staging Info belongs to the post log.
+  latexml_core::util::logger::bind_log();
+  latexml_core::common::arena::take_overflow_interns();
+  let staged = if handoff_needs_file(&xml, opts) {
+    stage_handoff(&xml, opts)
+  } else {
+    None
+  };
+  let mut pages = Vec::new();
+  // Straight to the inner pipeline: a handoff whose staging failed must not
+  // be staged a second time.
+  let html = match staged {
+    Some(staged) => {
+      drop(xml);
+      let path = staged.path.clone();
+      run_post_processing_inner(PostInput::File(&path), opts, &mut pages, Some(staged))
+    },
+    None => run_post_processing_inner(PostInput::Xml(&xml), opts, &mut pages, None),
+  };
+  let log = latexml_core::util::logger::flush_log();
+  let status_code = latexml_core::common::error::get_status_code();
+  PostOutcome { html, log, status_code, pages }
 }
 
 /// `written` collects the pages written, in the pipeline's order (see [`PostOutcome::pages`]).
@@ -605,63 +724,29 @@ fn run_post_processing_impl(
 ) -> String {
   // A conversion entry point: the arena's overflow count starts at zero, as in `Converter::convert`.
   latexml_core::common::arena::take_overflow_interns();
-  // Oversized in-memory handoff → spill + streaming file parse (see
-  // `post_mem_parse_limit`). The temp file is removed on every exit path by
-  // the guard; a spill failure falls through to the memory parse, whose own
-  // error reporting then names the real problem.
-  let mut _spill_cleanup: Option<std::path::PathBuf> = None;
-  let spilled_path: Option<String>;
-  // A handoff below the i32 ceiling but at/above the streaming-split
-  // threshold also spills when splitting is on: only the `File` arm can take
-  // the streaming split, and a memory parse of a multi-GB handoff is the OOM
-  // this work removes.
-  let spill_for_streaming = |len: usize| opts.split && len as u64 >= stream_split_threshold();
-  let input = match input {
-    PostInput::Xml(xml)
-      if xml.len() >= post_mem_parse_limit() || spill_for_streaming(xml.len()) =>
-    {
-      match spill_oversized_xml(xml, opts) {
-        Ok(path) => {
-          // Operationally worth a line: a multi-GB temp file just appeared
-          // beside the destination. Also the guard test's engagement proof —
-          // without it a silently-failing spill would fall back to the memory
-          // parse and the test would pass vacuously.
-          latexml_core::Info!(
-            "post",
-            "spill",
-            format!(
-              "oversized handoff ({} bytes) staged to {}",
-              xml.len(),
-              path.display()
-            )
-          );
-          spilled_path = Some(path.to_string_lossy().into_owned());
-          _spill_cleanup = Some(path);
-          PostInput::File(spilled_path.as_deref().expect("just set"))
-        },
-        Err(e) => {
-          latexml_core::Info!(
-            "post",
-            "spill",
-            format!("could not stage an oversized handoff to disk ({e}); parsing from memory")
-          );
-          PostInput::Xml(xml)
-        },
-      }
-    },
-    other => other,
+  // An in-memory handoff past the parse ceiling, or bound for the streaming
+  // split, parses from a staged file (dropped, and so removed, once the front-end has read it); a staging
+  // failure falls through to the memory parse, whose own error reporting then
+  // names the real problem.
+  let staged = match input {
+    PostInput::Xml(xml) if handoff_needs_file(xml, opts) => stage_handoff(xml, opts),
+    _ => None,
   };
-  let result = run_post_processing_inner(input, opts, written);
-  if let Some(path) = _spill_cleanup {
-    let _ = std::fs::remove_file(path);
-  }
-  result
+  let path = staged.as_ref().map(|staged| staged.path.clone());
+  let input = match path.as_deref() {
+    Some(path) => PostInput::File(path),
+    None => input,
+  };
+  run_post_processing_inner(input, opts, written, staged)
 }
 
+/// `staged`: the handoff file `input` reads, removed once a front-end has
+/// read it (the page spill then holds the document).
 fn run_post_processing_inner(
   input: PostInput,
   opts: &PostOptions,
   written: &mut Vec<String>,
+  staged: Option<StagedHandoff>,
 ) -> String {
   let PostOptions {
     pmml,
@@ -741,10 +826,7 @@ fn run_post_processing_inner(
   // a 40k-page document spills the whole core XML's worth of pages here).
   let mut spill_builder = tempfile::Builder::new();
   spill_builder.prefix(".latexml-post-pages-");
-  let page_spill = match destination
-    .and_then(|d| std::path::Path::new(d).parent())
-    .filter(|p| !p.as_os_str().is_empty() && p.is_dir())
-  {
+  let page_spill = match staging_dir_of(destination).filter(|p| p.is_dir()) {
     Some(dest_dir) => spill_builder.tempdir_in(dest_dir),
     None => spill_builder.tempdir(),
   };
@@ -769,12 +851,11 @@ fn run_post_processing_inner(
   // whole-DOM parse of a 2.68 GB core XML needs ~30+ GB and OOM'd a 31 GB
   // host before Split ran (laptop UAT 2026-07-31). Everything downstream of
   // this block is shared between the two front-ends.
+  let file_len = |path: &str| std::fs::metadata(path).map(|m| m.len()).ok();
   let streamed: Option<PostFront> = if let PostInput::File(path) = input
-    && split
-    && destination.is_some()
+    && let Some(len) = file_len(path)
+    && takes_streaming_split(opts, len)
     && let Some(xpath) = split_xpath.as_deref()
-    && latexml_post::stream_split::supports_union(xpath)
-    && stream_split_gate(path)
   {
     match try_streaming_front(
       path,
@@ -783,6 +864,7 @@ fn run_post_processing_inner(
       destination,
       &page_opts,
       page_spill.path(),
+      len < STREAM_SPLIT_DOM_FALLBACK_LIMIT,
     ) {
       Ok(front) => front,
       Err(()) => return fallback(),
@@ -792,6 +874,8 @@ fn run_post_processing_inner(
   };
 
   let front = if let Some(front) = streamed {
+    // The pages are spilled: the staged handoff is read no more.
+    drop(staged);
     front
   } else {
     // ==== Whole-DOM front-end (the pre-existing pipeline, indentation kept) ====
@@ -815,6 +899,7 @@ fn run_post_processing_inner(
     };
     audit_end(t_parse);
     telemetry::phase_exit();
+    drop(staged);
 
     // ar5iv sniff: the ar5iv package emits literal-intent MathML. In-memory input
     // checks the raw string; file input checks the parsed doc's `<?latexml
@@ -1306,8 +1391,9 @@ fn run_post_processing_inner(
   }
   // ---- Parallel pass B: process-level page-range workers (design §6) ------
   //
-  // Env-gated (`LATEXML_RENDER_JOBS`, default 1 = the serial path below,
-  // unchanged), and only past a minimum page count — below it the db save +
+  // Sized by `render_workers::render_jobs` (`LATEXML_RENDER_JOBS`, else
+  // automatic in the `latexml_oxide` binary, else 1 = the serial path below),
+  // and only past a minimum page count — below it the db save +
   // child spawn overhead beats the win. The ObjectDB is COMPLETE here (Scan,
   // MakeIndex and MakeBibliography have all run), so it is saved once as a
   // SQLite file and each worker attaches it readonly; the workers run the
@@ -1349,6 +1435,8 @@ fn run_post_processing_inner(
       whatsout: whatsout.as_cli().to_string(),
       page_opts: (&page_opts).into(),
       pages: Vec::new(),
+      // Filled in by `parallel_render` once the fleet is sized.
+      max_rss_kb: 0,
     };
     let t_pages = audit_start("render_pages");
     let outcome = crate::render_workers::parallel_render(
@@ -1377,8 +1465,9 @@ fn run_post_processing_inner(
       *written = result.written;
       return result.main_output.unwrap_or_else(fallback);
     }
-    // Setup failed BEFORE any worker spawned (already reported): fall through
-    // to the serial render — the spilled pages are untouched on disk.
+    // Setup failed, or a worker failed to spawn or died without its report
+    // (already reported at Info): fall through to the serial render — the
+    // workers keep the spilled pages on disk.
   }
 
   let crossref = build_crossref(bibmaker.db);
@@ -1387,6 +1476,7 @@ fn run_post_processing_inner(
     is_html_out,
     schemadocs,
     whatsout,
+    remove_spilled: true,
   };
   let mut procs = PageProcessors {
     crossref,
@@ -1398,6 +1488,7 @@ fn run_post_processing_inner(
   let mut main_output: Option<String> = None;
   let t_pages = audit_start("render_pages");
   let mut pages_rendered = 0usize;
+  let mut made_dirs = latexml_post::writer::MadeDirs::default();
   for SpilledPage {
     path,
     destination: dest,
@@ -1441,18 +1532,9 @@ fn run_post_processing_inner(
     // the render loop's measured ~152 KB/page RSS growth on the 131 MB
     // witness is dominated by exactly this class, and it is what pushed the
     // single-invocation run over the memory fuse at page 56,088 of 115,519.
-    // Rate-limited: a trim walks the heap.
-    if pages_rendered > 0 && pages_rendered.is_multiple_of(512) {
-      #[cfg(target_os = "linux")]
-      // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
-      unsafe {
-        libc::malloc_trim(0);
-      }
-      #[cfg(not(feature = "dhat-heap"))]
-      // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
-      unsafe {
-        libmimalloc_sys::mi_collect(true);
-      }
+    // A trim walks the heap: it runs when RSS grew by a step, not per page count (`heap_trim`).
+    if pages_rendered > 0 && pages_rendered.is_multiple_of(crate::heap_trim::SAMPLE_PAGES) {
+      crate::heap_trim::sample();
     }
     // Retention triage probe (`LATEXML_POST_MEMDIAG=1`): splits the render
     // loop's RSS growth into live-C (libxml2/libxslt allocations still
@@ -1494,11 +1576,7 @@ fn run_post_processing_inner(
     };
     for (dest, output) in outputs {
       if let Some(path) = dest.as_deref() {
-        if let Some(parent) = std::path::Path::new(path).parent()
-          && !parent.as_os_str().is_empty()
-        {
-          let _ = std::fs::create_dir_all(parent);
-        }
+        let _ = made_dirs.ensure_parent(path);
         pages_rendered += 1;
         if let Err(e) = std::fs::write(path, &output) {
           post_error("write", &format!("failed to write page {path}: {e}"));
@@ -1532,10 +1610,13 @@ pub(crate) struct PageProcessors {
 pub(crate) struct PageRenderCtx {
   /// Clone-source for each page's `PostDocument` parse — carries the same
   /// searchpaths/site-directory the pass-A parse used.
-  pub(crate) page_opts:   PostDocumentOptions,
-  pub(crate) is_html_out: bool,
-  pub(crate) schemadocs:  bool,
-  pub(crate) whatsout:    latexml_post::extract::Whatsout,
+  pub(crate) page_opts:      PostDocumentOptions,
+  pub(crate) is_html_out:    bool,
+  pub(crate) schemadocs:     bool,
+  pub(crate) whatsout:       latexml_post::extract::Whatsout,
+  /// Delete each spilled page once parsed. A render worker keeps its pages:
+  /// should one fail, the serial render redoes the document from them.
+  pub(crate) remove_spilled: bool,
 }
 
 /// Run one page-local phase (CrossRef / Graphics) over one page, mirroring
@@ -1583,7 +1664,9 @@ pub(crate) fn render_spilled_page(
   };
   // Free the spill as soon as it is parsed: for a 40k-page document the
   // spill area is the size of the core XML, and it need not outlive its page.
-  let _ = std::fs::remove_file(path);
+  if ctx.remove_spilled {
+    let _ = std::fs::remove_file(path);
+  }
   render_page(page, procs, ctx)
 }
 

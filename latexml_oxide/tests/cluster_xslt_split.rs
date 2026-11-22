@@ -448,7 +448,7 @@ mod xslt_failure_is_fatal {
     ]
   }
 
-  fn post_options(xsl: &str) -> latexml::post::PostOptions<'_> {
+  pub(super) fn post_options(xsl: &str) -> latexml::post::PostOptions<'_> {
     latexml::post::PostOptions {
       pmml:                      false,
       cmml:                      false,
@@ -951,19 +951,194 @@ mod split_css_links {
       child.split("</head>").next().unwrap_or(&child),
     );
   }
+
+  /// A split run finds and copies each CSS resource once, and makes the page directory once, not per
+  /// page — both the `<ltx:resource>` route and the `--css` parameter route (Perl `copyResource` skips an
+  /// up-to-date copy, `Pathname.pm` `pathname_copy`). Nasser's 71,476-page document paid ~35 `statx`, 2
+  /// copies and 3 `mkdir` a page (#777 FAQ); every page still links both, and the copies hold the
+  /// bundled bytes.
+  #[test]
+  fn split_copies_each_resource_once() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dest = dir.path().join("index.html").to_string_lossy().into_owned();
+    let mut xml = String::from(
+      "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\
+       <resource src=\"LaTeXML.css\" type=\"text/css\"/><title>T</title>",
+    );
+    for n in 1..=6 {
+      xml.push_str(&format!(
+        "<section xml:id=\"S{n}\"><title>Sec {n}</title><para><p>text {n}</p></para></section>"
+      ));
+    }
+    xml.push_str("</document>");
+    let css = ["LaTeXML-blue.css".to_string()];
+    let (copies, dirs) = (
+      latexml_post::xslt::resource_copy_count(),
+      latexml_post::writer::made_dir_count(),
+    );
+    latexml_core::common::error::initialize_report();
+    let out = latexml::post::run_post_processing_logged(&xml, &latexml::post::PostOptions {
+      destination: Some(&dest),
+      split: true,
+      split_xpath: Some("//ltx:section".to_string()),
+      default_resources: true,
+      css_files: &css,
+      ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+    });
+    latexml_core::common::error::initialize_report();
+    assert_eq!(out.status_code, 0, "{}", out.log);
+    assert_eq!(out.log.matches("Warning:").count(), 0, "{}", out.log);
+    assert_eq!(
+      latexml_post::xslt::resource_copy_count() - copies,
+      2,
+      "one copy per resource, not per page"
+    );
+    assert_eq!(
+      latexml_post::writer::made_dir_count() - dirs,
+      1,
+      "one mkdir for the page directory"
+    );
+    let pages = [
+      "index.html",
+      "S1.html",
+      "S2.html",
+      "S3.html",
+      "S4.html",
+      "S5.html",
+      "S6.html",
+    ];
+    for page in pages {
+      let html =
+        std::fs::read_to_string(dir.path().join(page)).unwrap_or_else(|e| panic!("{page}: {e}"));
+      for css in ["LaTeXML.css", "LaTeXML-blue.css"] {
+        assert!(
+          html.contains(&format!(
+            "<link rel=\"stylesheet\" href=\"{css}\" type=\"text/css\">"
+          )),
+          "{page} lacks {css}: {}",
+          html.split("</head>").next().unwrap_or(&html)
+        );
+      }
+    }
+    for (css, source) in [
+      (
+        "LaTeXML.css",
+        include_str!("../../latexml_post/resources/CSS/LaTeXML.css"),
+      ),
+      (
+        "LaTeXML-blue.css",
+        include_str!("../../latexml_post/resources/CSS/LaTeXML-blue.css"),
+      ),
+    ] {
+      assert_eq!(
+        std::fs::read_to_string(dir.path().join(css)).unwrap(),
+        source,
+        "{css}"
+      );
+    }
+  }
+
+  /// `my.css`, which `@import`s `base.css`.
+  fn write_importing_css(dir: &Path) {
+    std::fs::write(dir.join("my.css"), "@import \"base.css\";\n.x{color:red}\n").unwrap();
+    std::fs::write(dir.join("base.css"), ".y{color:blue}\n").unwrap();
+  }
+
+  /// One CSS file requested by both routes: `\lxRequireResource` (an `<ltx:resource>`, copied without
+  /// its `@import`s) runs first, then `--css` (which follows them). The once-per-conversion cache must
+  /// not let the first request stand in for the second, or `base.css` is silently never copied.
+  #[test]
+  fn css_imports_followed_after_a_resource_copy() {
+    const DOC: &str = "\\documentclass{book}\n\\usepackage{latexml}\n\\lxRequireResource{my.css}\n\
+                       \\begin{document}\n\\chapter{One}\nText one.\n\\section{Sec A}\nAlpha.\n\
+                       \\chapter{Two}\nText two.\n\\end{document}\n";
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("doc.tex"), DOC).unwrap();
+    write_importing_css(work.path());
+    let out = run(work.path(), &[
+      "--css=my.css",
+      "--splitat=section",
+      "--format=html5",
+      "--dest=out/index.html",
+      "doc.tex",
+    ]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{stderr}");
+    assert_eq!(stderr.matches("Warning:").count(), 0, "{stderr}");
+    assert_eq!(stderr.matches("Error:").count(), 0, "{stderr}");
+    for css in ["my.css", "base.css"] {
+      assert_eq!(
+        std::fs::read_to_string(work.path().join("out").join(css)).ok(),
+        std::fs::read_to_string(work.path().join(css)).ok(),
+        "{css} not copied: {stderr}"
+      );
+    }
+  }
+
+  /// A `--css` file whose `@import` target cannot be copied (the destination is a directory) is
+  /// retried, with its Warning, on every page, as a failed copy of the file itself is.
+  #[test]
+  fn failed_css_import_copy_is_retried_per_page() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let src = tempfile::tempdir().expect("tempdir");
+    write_importing_css(src.path());
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::create_dir(dir.path().join("base.css")).unwrap();
+    let dest = dir.path().join("index.html").to_string_lossy().into_owned();
+    let mut xml = String::from(
+      "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><title>T</title>",
+    );
+    for n in 1..=2 {
+      xml.push_str(&format!(
+        "<section xml:id=\"S{n}\"><title>Sec {n}</title><para><p>text {n}</p></para></section>"
+      ));
+    }
+    xml.push_str("</document>");
+    let css = ["my.css".to_string()];
+    let search = [src.path().to_string_lossy().into_owned()];
+    latexml_core::common::error::initialize_report();
+    let out = latexml::post::run_post_processing_logged(&xml, &latexml::post::PostOptions {
+      destination: Some(&dest),
+      source_directory: Some(&search[0]),
+      search_paths: &search,
+      split: true,
+      split_xpath: Some("//ltx:section".to_string()),
+      css_files: &css,
+      ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+    });
+    latexml_core::common::error::initialize_report();
+    // The root page and two sections: one Warning each, and no Error.
+    assert_eq!(
+      out.log.matches("Warning:").count(),
+      3,
+      "a Warning per page: {}",
+      out.log
+    );
+    assert_eq!(
+      out.log.matches("Couldn't copy @import").count(),
+      3,
+      "{}",
+      out.log
+    );
+    assert_eq!(out.log.matches("Error:").count(), 0, "{}", out.log);
+    assert_eq!(
+      std::fs::read_to_string(dir.path().join("my.css")).unwrap(),
+      "@import \"base.css\";\n.x{color:red}\n"
+    );
+  }
 }
 
 mod split_nav_relations {
-  //! Split-page navigation-relation parity guard (full pipeline: split + CrossRef + XSLT).
+  //! Split-page navigation relations (full pipeline: split + CrossRef + XSLT).
   //!
-  //! Same-host Perl (`latexmlc --format=html5 --splitat=section`) emits, on each split
-  //! page, a full set of `<link rel=…>` head entries: `prev` (the parent page for a
-  //! first-child section), the relation-typed sibling/ancestor links
-  //! (`rel="chapter"`/`rel="section"`/…), and full-breadcrumb `title=` attributes on
-  //! all of them. Rust had ported only the first half of `CrossRef::fill_in_relations`
-  //! (up/start/prev/next) — dropping `prev` for first-children, the entire
-  //! relation-typed block, and the `fulltitle` attribute the XSLT head-links template
-  //! prefers — so split pages carried a truncated, mostly-untitled nav set.
+  //! Each split page's head carries `up`/"up up"/`start`/`prev`/`next` (Perl
+  //! `CrossRef::fill_in_relations`, `prev` being the parent page for a first-child
+  //! section) and, of the relation-typed sibling/ancestor and child links (Perl L105-130),
+  //! only those something reads: `bibliography`/`index`/`glossary` (the footer navigation).
+  //! Perl's sectional `rel="chapter"`/`rel="section"`/… links, one per sibling of every
+  //! ancestor, are dropped (OXIDIZED_DESIGN_DIVERGENCES #1134). Every link carries the full
+  //! breadcrumb `fulltitle` the XSLT head-links template prefers over `title`.
 
   use std::{path::Path, process::Command};
 
@@ -975,11 +1150,24 @@ mod split_nav_relations {
       .expect("spawn latexml_oxide")
   }
 
-  /// A first `\section` of a `\chapter`, split at `section`, must carry: a `rel="prev"`
-  /// back to the chapter page (with the chapter's title), the relation-typed
-  /// `rel="chapter"` link, and full-breadcrumb titles — matching Perl.
+  /// The `<link rel=…>` lines of a page's `<head>`, stylesheets excluded.
+  fn head_links(page: &str) -> Vec<String> {
+    let head = page.split("</head>").next().unwrap_or(page);
+    head
+      .match_indices("<link rel=")
+      .map(|(i, _)| {
+        let rest = &head[i..];
+        rest[..rest.find('>').map(|j| j + 1).unwrap_or(rest.len())].to_string()
+      })
+      .filter(|l| !l.contains("stylesheet"))
+      .collect()
+  }
+
+  /// The whole head link set of a first `\section` of a `\chapter` (an ancestor's
+  /// sibling bibliography kept, the sectional siblings dropped) and of the root page
+  /// (its child bibliography kept, its child chapters dropped), split at `section`.
   #[test]
-  fn split_page_navigation_relations_match_perl() {
+  fn split_page_navigation_relations() {
     const DOC: &str = "\\documentclass[12pt]{book}\n\
                        \\begin{document}\n\
                        \\chapter{Alpha}\n\
@@ -987,6 +1175,10 @@ mod split_nav_relations {
                        \\subsection{Gamma}\n\
                        \\section{Delta}\n\
                        \\chapter{Epsilon}\n\
+                       \\section{Zeta}\n\
+                       \\begin{thebibliography}{9}\n\
+                       \\bibitem{k} A. Author, \\emph{A Title}.\n\
+                       \\end{thebibliography}\n\
                        \\end{document}\n";
     let work = tempfile::tempdir().expect("tempdir");
     std::fs::write(work.path().join("index.tex"), DOC).unwrap();
@@ -1005,68 +1197,21 @@ mod split_nav_relations {
       out.status.code(),
       String::from_utf8_lossy(&out.stderr)
     );
+    let read = |name: &str| {
+      std::fs::read_to_string(work.path().join(name)).unwrap_or_else(|e| panic!("read {name}: {e}"))
+    };
 
-    let page = std::fs::read_to_string(work.path().join("Ch1.S1.html")).expect("read Ch1.S1.html");
-    // The <head> nav links only.
-    let head = page.split("</head>").next().unwrap_or(&page);
-    let links: Vec<&str> = head
-      .match_indices("<link rel=")
-      .map(|(i, _)| {
-        let rest = &head[i..];
-        &rest[..rest.find('>').map(|j| j + 1).unwrap_or(rest.len())]
-      })
-      .filter(|l| !l.contains("stylesheet"))
-      .collect();
-    let joined = links.join("\n");
-
-    // 1. prev-for-first-child: Ch1.S1 is the first section of Ch1, so prev is the
-    //    chapter page itself (the old `?` dropped this link entirely).
-    assert!(
-      links
-        .iter()
-        .any(|l| l.contains("rel=\"prev\"") && l.contains("href=\"Ch1.html\"")),
-      "missing rel=\"prev\" -> parent chapter page (first-child prev):\n{joined}"
-    );
-    // 2. relation-typed links: the second half of fill_in_relations (chapter/section).
-    assert!(
-      links
-        .iter()
-        .any(|l| l.contains("rel=\"chapter\"") && l.contains("href=\"Ch1.html\"")),
-      "missing relation-typed rel=\"chapter\" link:\n{joined}"
-    );
-    assert!(
-      links.iter().any(|l| l.contains("rel=\"section\"")),
-      "missing relation-typed rel=\"section\" link:\n{joined}"
-    );
-    // 3. full-breadcrumb titles (fulltitle, not empty and not the "In X" collapse):
-    //    the `up`/`prev` links point to the parent chapter, so carry its own title.
-    for l in links
-      .iter()
-      .filter(|l| l.contains("rel=\"up\"") || l.contains("rel=\"prev\""))
-    {
-      assert!(
-        l.contains("title=\"Chapter 1 Alpha\""),
-        "up/prev nav link should carry the parent chapter title \"Chapter 1 Alpha\", got:\n{l}"
-      );
-    }
-    // Every non-start nav link must carry a NON-empty title that is not the buggy
-    // "In <context>" collapse (the previous behavior emitted empty or "In X").
-    for l in links
-      .iter()
-      .filter(|l| !l.contains("rel=\"start\"") && !l.contains("rel=\"up up"))
-    {
-      assert!(
-        !l.contains("title=\"\"") && !l.contains("title=\"In "),
-        "nav link has an empty / \"In X\" collapsed title (fulltitle missing):\n{l}"
-      );
-    }
-    // The deeper next/section links carry the multi-level breadcrumb (‣ separator).
-    assert!(
-      links
-        .iter()
-        .any(|l| l.contains("rel=\"next\"") && l.contains('\u{2023}')),
-      "rel=\"next\" should carry the full breadcrumb title (with \u{2023}):\n{joined}"
-    );
+    assert_eq!(head_links(&read("Ch1.S1.html")), [
+      r#"<link rel="up" href="Ch1.html" title="Chapter 1 Alpha">"#,
+      r#"<link rel="start" href="index.html" title="">"#,
+      r#"<link rel="prev" href="Ch1.html" title="Chapter 1 Alpha">"#,
+      "<link rel=\"next\" href=\"Ch1.S2.html\" title=\"1.2 Delta \u{2023} Chapter 1 Alpha\">",
+      r#"<link rel="bibliography" href="bib.html" title="Bibliography">"#,
+    ]);
+    assert_eq!(head_links(&read("index.html")), [
+      r#"<link rel="next" href="Ch1.html" title="Chapter 1 Alpha">"#,
+      r#"<link rel="bibliography" href="bib.html" title="Bibliography">"#,
+    ]);
   }
 }
 
@@ -1613,12 +1758,12 @@ mod urlstyle {
       "default should keep index.html: {links:?}"
     );
     assert!(
-      has(&links, "chapter", "Ch1.html"),
+      has(&links, "up", "Ch1.html"),
       "default should keep Ch1.html: {links:?}"
     );
     // Explicit `--urlstyle=file` is identical to the default.
     let explicit = nav_hrefs(&["--urlstyle", "file"]);
-    assert!(has(&explicit, "start", "index.html") && has(&explicit, "chapter", "Ch1.html"));
+    assert!(has(&explicit, "start", "index.html") && has(&explicit, "up", "Ch1.html"));
   }
 
   /// `server`: strip a trailing `index.html` (landing page → `./`); a non-index
@@ -1631,7 +1776,7 @@ mod urlstyle {
       "server should strip index.html → ./ : {links:?}"
     );
     assert!(
-      has(&links, "chapter", "Ch1.html"),
+      has(&links, "up", "Ch1.html"),
       "server keeps a non-index sub-page: {links:?}"
     );
     assert!(
@@ -1647,7 +1792,7 @@ mod urlstyle {
   fn negotiated_style_strips_extension() {
     let links = nav_hrefs(&["--urlstyle", "negotiated"]);
     assert!(
-      has(&links, "chapter", "Ch1"),
+      has(&links, "up", "Ch1"),
       "negotiated should drop .html → Ch1: {links:?}"
     );
     assert!(

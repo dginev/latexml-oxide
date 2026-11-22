@@ -5,7 +5,12 @@
 //! referenced IDs in the ObjectDB and filling in the reference text,
 //! titles, and navigation links.
 
-use std::{cell::RefCell, collections::VecDeque, rc::Rc, sync::LazyLock};
+use std::{
+  cell::{OnceCell, RefCell},
+  collections::VecDeque,
+  rc::Rc,
+  sync::LazyLock,
+};
 
 use latexml_core::common::xml::name_is;
 use libxml::tree::{Node, NodeType};
@@ -47,7 +52,16 @@ const NORMAL_TOC_TYPES: &[&str] = &[
 struct ChildPages {
   ids:      Vec<String>,
   index_of: HashMap<String, usize>,
+  /// The `(relation, pageid)` head links these pages contribute, filled on first use by
+  /// [`CrossRef::related_pages`].
+  related:  OnceCell<Vec<(&'static str, String)>>,
 }
+
+/// The page types whose sibling/child relation `fill_in_relations` keeps: the footer navigation of
+/// `LaTeXML-webpage-xhtml.xsl` reads `rel='bibliography'`/`'index'`/`'glossary'`. The sectional
+/// relations (`chapter`, `section`, …) and `sidebar` are read by nothing but the head-link copy
+/// (OXIDIZED_DESIGN_DIVERGENCES #1134).
+const KEPT_RELATIONS: &[&str] = &["bibliography", "index", "glossary"];
 
 /// Fallback fields when a requested ref show key is not found.
 fn ref_fallbacks(key: &str) -> &'static [&'static str] {
@@ -226,6 +240,9 @@ fn apply_url_style(url: &str, style: UrlStyle, extension: &str) -> String {
   }
 }
 
+/// One memoized [`CrossRef::generate_ref`] content: its `show`, `is_nameref` and the content.
+type RefMemoEntry = (String, bool, Vec<NodeData>);
+
 /// CrossRef post-processor.
 ///
 /// Port of `LaTeXML::Post::CrossRef`.
@@ -259,6 +276,12 @@ pub struct CrossRef {
   /// entry (`\section{On \nameref{s}}\label{s}`) is used as stored the second time, where Perl's `fillInTitle`
   /// recurses without end.
   filling:        RefCell<Vec<String>>,
+  /// Memoized [`Self::generate_title`] results, keyed by (id, shown). Every split page's head links each chapter
+  /// (`fill_in_relations` step 4), so a title is otherwise rebuilt once per page. Only a title read from no math is
+  /// kept: `unicodemath` realizes an `XMRef` against the page.
+  title_memo:     RefCell<HashMap<String, HashMap<String, Option<String>>>>,
+  /// Memoized [`Self::generate_ref`] content by id, then (show, is_nameref): it reads the ObjectDB alone.
+  ref_memo:       RefCell<HashMap<String, Vec<RefMemoEntry>>>,
 }
 
 /// One cited entry as Perl `make_bibcite` collects it (`CrossRef.pm` L516-562):
@@ -458,6 +481,29 @@ fn needs_fill_in(node: &Node) -> bool {
     child = c.get_next_sibling();
   }
   false
+}
+
+/// Does a stored value read the page it is shown on? Its math does (`unicodemath` realizes an `XMRef` against the
+/// page), and so may the targets of refs still to fill in it.
+fn value_reads_page(val: &Value) -> bool {
+  fn holds_math(node: &Node) -> bool {
+    let mut child = node.get_first_child();
+    while let Some(c) = child {
+      if c.get_type() == Some(NodeType::ElementNode) && (c.get_name() == "Math" || holds_math(&c)) {
+        return true;
+      }
+      child = c.get_next_sibling();
+    }
+    false
+  }
+  match val {
+    Value::Xml(node) => {
+      (node.get_type() == Some(NodeType::ElementNode) && node.get_name() == "Math")
+        || holds_math(node)
+        || needs_fill_in(node)
+    },
+    _ => false,
+  }
 }
 
 /// An `ltx:ref` naming its target (`idref`/`labelref`) whose text is still to be generated (Perl `next if
@@ -709,6 +755,8 @@ impl CrossRef {
       missing: HashMap::default(),
       child_pages: RefCell::new(HashMap::default()),
       filling: RefCell::new(Vec::new()),
+      title_memo: RefCell::new(HashMap::default()),
+      ref_memo: RefCell::new(HashMap::default()),
     }
   }
 
@@ -768,6 +816,32 @@ impl CrossRef {
   ///
   /// Port of `CrossRef::generateTitle`.
   fn generate_title(&self, doc: &PostDocument, id: &str, shown: &str) -> Option<String> {
+    if let Some(title) = self
+      .title_memo
+      .borrow()
+      .get(id)
+      .and_then(|by_shown| by_shown.get(shown))
+    {
+      return title.clone();
+    }
+    let (title, reads_page) = self.generate_title_uncached(doc, id, shown);
+    if !reads_page {
+      let mut memo = self.title_memo.borrow_mut();
+      let by_shown = memo.entry(id.to_string()).or_default();
+      by_shown.insert(shown.to_string(), title.clone());
+    }
+    title
+  }
+
+  /// [`Self::generate_title`] and whether the title read the page: a value with math (or with refs to fill, whose
+  /// targets may hold math) is read against `doc`.
+  fn generate_title_uncached(
+    &self,
+    doc: &PostDocument,
+    id: &str,
+    shown: &str,
+  ) -> (Option<String>, bool) {
+    let mut reads_page = false;
     let mut current_id = id.to_string();
     let mut result = String::new();
     let mut prefix = String::new();
@@ -784,6 +858,7 @@ impl CrossRef {
           // The title is stored as a NODE (`Value::Xml`) for sections; derive
           // its string form tag-aware (Perl `getTextContent`). A plain-string
           // title (e.g. abstract/bibliography names) is used verbatim.
+          reads_page |= value_reads_page(title_val);
           pieces.push(self.filled_value_text(doc, &current_id, title_val));
         }
       }
@@ -797,16 +872,20 @@ impl CrossRef {
         if has_type.is_some() && has_refnum.is_some() {
           is_dup = shown_so_far.contains("type") && shows_refnum;
           if let Some(t) = has_type {
+            reads_page |= value_reads_page(t);
             pieces.push(tag_text(doc, t));
           }
           if let Some(r) = has_refnum {
+            reads_page |= value_reads_page(r);
             pieces.push(tag_text(doc, r));
           }
         } else if let Some(tr) = entry.get_value("typerefnum") {
           is_dup = shown_so_far.contains("type") && shows_refnum;
+          reads_page |= value_reads_page(tr);
           pieces.push(tag_text(doc, tr));
         } else if let Some(r) = has_refnum {
           is_dup = shows_refnum;
+          reads_page |= value_reads_page(r);
           pieces.push(tag_text(doc, r));
         }
       }
@@ -831,11 +910,12 @@ impl CrossRef {
       }
     }
 
-    if result.is_empty() {
+    let title = if result.is_empty() {
       None
     } else {
       Some(result)
-    }
+    };
+    (title, reads_page)
   }
 
   /// Generate a title for the document itself.
@@ -1078,6 +1158,36 @@ impl CrossRef {
     req_show: &str,
     is_nameref: bool,
   ) -> Vec<NodeData> {
+    if let Some(stuff) = self.ref_memo.borrow().get(req_id).and_then(|by_show| {
+      by_show
+        .iter()
+        .find(|(show, nameref, _)| show == req_show && *nameref == is_nameref)
+        .map(|(_, _, stuff)| stuff.clone())
+    }) {
+      return stuff;
+    }
+    match self.generate_ref_uncached(req_id, req_show, is_nameref) {
+      Some(stuff) => {
+        let mut memo = self.ref_memo.borrow_mut();
+        let by_show = memo.entry(req_id.to_string()).or_default();
+        by_show.push((req_show.to_string(), is_nameref, stuff.clone()));
+        stuff
+      },
+      // (not kept: each use is noted missing)
+      None => {
+        self.note_missing("info", "Usable title for ID", req_id);
+        vec![NodeData::Text(req_id.to_string())]
+      },
+    }
+  }
+
+  /// [`Self::generate_ref`]'s content, none where no entry up the chain has a usable one.
+  fn generate_ref_uncached(
+    &self,
+    req_id: &str,
+    req_show: &str,
+    is_nameref: bool,
+  ) -> Option<Vec<NodeData>> {
     // A format of the document's (a `|` show's alternative before the last, cleveref_sty.rs `cref_multi`) is the whole
     // reference as cleveref prints it: kept as it is when the target has it, with no context sought for a format
     // with no letter or digit in it — siamart's `\crefformat{equation}{\textup{#2(#1)#3}}` with `\tag{$\star$}`
@@ -1088,7 +1198,7 @@ impl CrossRef {
       for format in formats {
         let stuff = self.generate_ref_aux(req_id, format, is_nameref);
         if !stuff.is_empty() {
-          return stuff;
+          return Some(stuff);
         }
       }
     }
@@ -1114,7 +1224,7 @@ impl CrossRef {
           }
           stuff.extend(s);
           if self.check_ref_content(&stuff) {
-            return stuff;
+            return Some(stuff);
           }
           pending = self.ref_join.clone();
         }
@@ -1128,12 +1238,10 @@ impl CrossRef {
         }
       }
       if !stuff.is_empty() {
-        return stuff;
+        return Some(stuff);
       }
     }
-
-    self.note_missing("info", "Usable title for ID", req_id);
-    vec![NodeData::Text(req_id.to_string())]
+    None
   }
 
   /// Generate ref content from a single DB entry. A `show` of `|`-separated alternatives (outside `{…}` literals)
@@ -1304,45 +1412,48 @@ impl CrossRef {
       doc.add_navigation("next", &next);
     }
 
-    // 4. Relation-typed links (Perl CrossRef.pm L105-130). "Dig around for other
-    // interesting related documents": the sibling pages of each ancestor (walking
-    // up), then this page's own child pages. Each is keyed by the page's own
-    // element-name relation (`chapter`/`section`/`subsection`/…) if it is a
-    // primary page, else `sidebar`. This is what gives split pages their
-    // `rel="chapter"`/`rel="section"`/… head links; the whole block was unported.
+    // 4. Relation-typed links (Perl CrossRef.pm L105-130): the sibling pages of each
+    // ancestor (walking up), then this page's own child pages, keyed by the page's
+    // element name. Perl links every one ("this gets way too much. But how to prune?",
+    // CrossRef.pm:110) — a quadratic set of head links, 66 % of a split book's bytes; we
+    // keep only the relations something reads (KEPT_RELATIONS, OXIDIZED_DESIGN_DIVERGENCES #1134).
     let mut xentry = page_id.clone();
     while let Some(parent) = self.get_parent_page_id(&xentry) {
-      for sib in self.child_pages(&parent).ids.iter() {
-        if *sib == page_id {
-          continue;
+      for (rel, sib) in self.related_pages(&parent) {
+        if sib != page_id {
+          doc.add_navigation(rel, &sib);
         }
-        self.add_typed_navigation(doc, sib);
       }
       xentry = parent;
     }
-    for child in self.child_pages(&page_id).ids.iter() {
-      self.add_typed_navigation(doc, child);
+    for (rel, child) in self.related_pages(&page_id) {
+      doc.add_navigation(rel, &child);
     }
   }
 
-  /// Add a navigation link to `related_id` keyed by its own element-name
-  /// relation (Perl: `$type =~ s/^(\w+)://` → `chapter`/`section`/…) when it is
-  /// a primary page, else `sidebar`. Port of the per-entry arm of Perl
-  /// `CrossRef::fill_in_relations`'s second half.
-  fn add_typed_navigation(&self, doc: &mut PostDocument, related_id: &str) {
-    if self.is_primary_page(related_id) {
-      let rel = self
-        .db
-        .lookup(&format!("ID:{}", related_id))
-        .and_then(|e| e.get_string("type").map(String::from))
-        // Strip the namespace prefix: `ltx:chapter` → `chapter`.
-        .map(|t| t.rsplit(':').next().unwrap_or(&t).to_string());
-      if let Some(rel) = rel.filter(|r| !r.is_empty()) {
-        doc.add_navigation(&rel, related_id);
+  /// The child pages of `entry_id` that `fill_in_relations` links, with their relation:
+  /// primary pages whose element name (Perl `$type =~ s/^(\w+)://`) is in
+  /// [`KEPT_RELATIONS`], in page order. Memoized on the entry's [`ChildPages`].
+  fn related_pages(&self, entry_id: &str) -> Vec<(&'static str, String)> {
+    let pages = self.child_pages(entry_id);
+    let related = pages.related.get_or_init(|| {
+      let mut related = Vec::new();
+      for id in pages.ids.iter() {
+        if !self.is_primary_page(id) {
+          continue; // Perl's `sidebar` relation: unread, dropped.
+        }
+        let typ = self
+          .db
+          .lookup(&format!("ID:{}", id))
+          .and_then(|e| e.get_string("type").map(String::from));
+        let name = typ.as_deref().map(|t| t.rsplit(':').next().unwrap_or(t));
+        if let Some(rel) = name.and_then(|n| KEPT_RELATIONS.iter().find(|k| **k == n)) {
+          related.push((*rel, id.clone()));
+        }
       }
-    } else {
-      doc.add_navigation("sidebar", related_id);
-    }
+      related
+    });
+    related.clone()
   }
 
   /// Return whether the given xml:id is registered as a primary page.
@@ -1381,7 +1492,11 @@ impl CrossRef {
     for (i, id) in ids.iter().enumerate() {
       index_of.insert(id.clone(), i);
     }
-    let rc = Rc::new(ChildPages { ids, index_of });
+    let rc = Rc::new(ChildPages {
+      ids,
+      index_of,
+      related: OnceCell::new(),
+    });
     self
       .child_pages
       .borrow_mut()

@@ -55,6 +55,44 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     holds 29 MB of C heap at page 1024 instead of 818 MB, the whole conversion takes ~8 % fewer cycles, and every page
     is byte-identical. Guards `112_fragment_yield::split_pages_leave_no_c_heap_residue` and
     `::split_keeps_pages_whose_namespaces_a_navigation_uses` (in the CI asan job).
+  - **0.8.0-rc2: the allocator is mimalloc 2.3.2, not 3.3.2.** The `libmimalloc-sys` crate bundles both, and its
+    3.3.2 has upstream reports of intermittent heap corruption (microsoft/mimalloc issues 1287 and 1430, fixed only in
+    later 3.x releases the crate does not bundle yet); one of our conversions crashed on a corrupted 3.3.2 free list
+    under heavy load. On Nasser's slices, a 1,600-section book and 30 papers, 2.3.2 runs 0.2-0.8 % fewer instructions
+    with 1-7 % lower peak memory, and every output is byte-identical. `cortex_worker` uses the same allocator.
+  - **0.8.0-rc2: a split run streams and renders in parallel by default (issue 777).** With `--splitat`, the core
+    spills at 512 MiB of growth, post splits through the streaming front-end with the core result staged to disk and
+    freed, and 64 or more pages render on min(cores, 8) worker processes. Each worker is held to its share of
+    `--max-memory`, and a failed worker sends the whole document back to the serial render. Nasser's 2,400-problem slice
+    (9,713 pages): the same pages and Warnings, and peak RSS 3.8-4.9 → 1.35 GB. Unsplit conversions and
+    `cortex_worker` are unchanged; the library's `post::run_post_processing_logged` with `split: true` now stages
+    and streams too. Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`,
+    `LATEXML_RENDER_JOBS=1` (OXIDIZED_DESIGN_DIVERGENCES #1133).
+  - **0.8.0-rc2: a split page's head links only the related pages something reads (OXIDIZED_DESIGN_DIVERGENCES
+    #1134).** Each split page keeps `up`/`start`/`prev`/`next` and the `bibliography`/`index`/`glossary` links the
+    navigation reads, and drops Perl's `<link rel="chapter">`/`"section"`/`"subsection"`/…/`"sidebar"`, one per sibling
+    of every ancestor (`CrossRef.pm:105-130`), which only duplicated the navigation TOC. Page bodies are byte-identical.
+    Nasser's 2,400-problem slice split at `subsubsection`: 612,424 links dropped, HTML 343 → 118 MB, −12.9 %
+    instructions; the 1,600-subsection book: 37.4 → 24.6 MB, −4.8 %. Guard
+    `cluster_xslt_split::split_nav_relations::split_page_navigation_relations`.
+  - **0.8.0-rc2: a large split document's post makes fewer system calls (issue 777).** The heap give-back
+    (`malloc_trim` + `mi_collect`) runs when the resident set has grown by 1/64 of the soft memory fuse, not every 512
+    pages, since each trim walks the whole heap; a split run's XSLT finds and copies each CSS/JS resource once per
+    conversion (with its `@import`s; a failed copy is retried and warned on every page, as before), and the page
+    writers make each output directory once. Nasser's 2,000-problem slice (8,094 pages): `madvise` 198,969 → 29,189,
+    `statx` 282,753 → 15,756, `mkdir` 24,294 → 15, system time 17.3 → 13.1 s; pages byte-identical. Guards
+    `cluster_xslt_split::split_css_links::{split_copies_each_resource_once, css_imports_followed_after_a_resource_copy,
+    failed_css_import_copy_is_retried_per_page}`.
+  - **0.8.0-rc2: the core frees two kinds of discarded math nodes.** The MathFork's copied `_Capture_` cells (one per
+    aligned cell) and the XMHints the math parser folds into padding were unlinked and never freed; core orphans on a
+    100-section generated book fall from 1,402 subtrees to 2, and the live C heap entering post on a 400-section one
+    from 271 to 224 MB. Output is byte-identical. Guards `112_fragment_yield::{mathfork_capture_cells_leave_no_c_heap_residue,
+    folded_math_hints_leave_no_c_heap_residue}`.
+  - **0.8.0-rc2: a streamed conversion warns once per failing formula, as an eager one does
+    (OXIDIZED_DESIGN_DIVERGENCES #1132).** The `ambiguous_math`/`unparsed_math` once-per-distinct-formula set is per
+    conversion, not per math parser; streaming builds one parser per segment, so a formula repeated across segments
+    warned once per segment (Nasser's 600-problem slice: 101 Warnings converted whole, 171 streamed). Guard
+    `perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion`.
   - **0.8.0-rc2: release checks.** Every release build converts `hello.tex` with the binary it ships and
     `resources/` moved aside (`tools/release_smoke.sh`; rc1's macOS and Windows builds ran only `--version`); the
     container images print the binaries' revision and carry `org.opencontainers.image.{title,version,revision,source}`;

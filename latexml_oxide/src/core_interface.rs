@@ -1651,25 +1651,12 @@ impl DigestionAPI for Core {
         // measured on the 131 MB witness: every probed Rust collection flat,
         // C live-heap 4.45 GB peak (heaptrack), yet RSS crept 22→36 GB into
         // the fuse. `malloc_trim(0)` madvises free pages away (glibc ≥2.26
-        // releases mid-heap pages too, not just the top). Rate-limited: a
-        // trim walks the heap, and a book-scale run yields millions of
-        // fragments.
-        #[cfg(target_os = "linux")]
+        // releases mid-heap pages too, not just the top); mimalloc (the Rust
+        // global allocator) is collected with it. A trim walks the heap, and
+        // a book-scale run yields millions of fragments: sampled every 4096,
+        // it runs when RSS grew by a step (`heap_trim`).
         if fragments.is_multiple_of(4096) {
-          // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
-          unsafe {
-            libc::malloc_trim(0);
-          }
-        }
-        // The Rust-side analogue: mimalloc (the global allocator) retains
-        // freed pages; a forced collect purges them back to the OS. Gated
-        // off under dhat-heap, whose tracking allocator replaces mimalloc.
-        #[cfg(not(feature = "dhat-heap"))]
-        if fragments.is_multiple_of(4096) {
-          // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
-          unsafe {
-            libmimalloc_sys::mi_collect(true);
-          }
+          crate::heap_trim::sample();
         }
         if fragments.is_power_of_two() || fragments.is_multiple_of(65536) {
           let (index_ids, index_labels, _) = index.sizes();

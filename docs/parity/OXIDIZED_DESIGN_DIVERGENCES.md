@@ -19,7 +19,7 @@
 > port-bug fix (→ SYNC "Rust Error Fixes"), a gap or residual list (→ SYNC row R), a math-parse divergence (→ `docs/math/OXIDIZED_DESIGN_MATH.md`).
 > A WORKAROUND entry must name the principled mechanism that would replace it and open a SYNC row for it. Entry shape: rule · Perl ref · TeX
 > source:line · sub-rules as bullets · witnesses · guards · upstream status; no batch history (git keeps it); about 60 lines at most. OD
-> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1131** (2026-11-21; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
+> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1135** (2026-11-21; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -23640,3 +23640,86 @@ before the copy, as its result chooses the binding's defaults. **Guard**:
 `perfect_kernel_batchregfixu::snjnl_scan_runs_after_the_copy_loads_its_packages` (repro
 `stand-in-copies/scan_order/snjnl_scan_after_the_copy.tex`); `perfect_kernel_batch67u::snjnl_class_copy_loads_program`,
 `perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.
+
+### 1132. A failing formula warns once per distinct lexeme string per conversion (STRMWARN)
+
+**Rule** (maintainer ruling 2026-11-21). Perl warns for every failing formula: `parse` resets `$WARNED` per formula
+(MathParser.pm:250-254) and `failureReport` warns each time (:862-897), so a formula repeated N times warns N times.
+Ours emits an `ambiguous_math` / `unparsed_math` Warning once per distinct lexeme string per conversion
+(parser.rs `warn_formula_once`, a SipHash set). The set is the thread-local `WARNED_FORMULAS`, cleared per conversion
+by `reset_conversion_notices` (from `core_interface::initialize_singletons`), as `FORMULA_ORDINAL` and
+`LOSTNODES_NOOP_REPORTED` are. It is not a `MathParser` field: streaming pass 2 builds a parser per segment and
+`finish_document` one more, so a per-parser set warned once per segment (the Nasser FAQ slices k600/k1200: 101
+Warnings eager, 171 streamed, byte-identical XML). Eager output is unchanged; eager counts change only where the
+bibliography's `.bib` session repeats a body formula, which now warns once per conversion. **Guard**:
+`perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion` (repro
+`streaming/streamed_unparsed_math_warns_once.tex`: 4 Perl `not_parsed`, 1 ours eager and streamed); unit
+`parser::tests::warns_once_per_distinct_formula_per_conversion`.
+
+### 1133. A split run streams and renders its pages in parallel by default (BIGSPLIT)
+
+**Rule** (DG ruling 2026-11-21). Perl builds the whole DOM in core and splits it in post. A `latexml_oxide` run that
+splits (`--splitat`/`--splitpath`/`--split`) instead:
+- spills its core at min(512 MiB, the `--max-memory` default of a third of the fuse) of growth (`split_spill_watermark`,
+  `bin/latexml_oxide.rs`). A document that never grows past that mark converts eagerly, as before. One that grows
+  past 512 MiB but not past the default mark (a third of the fuse) now takes the spilling core, with its documented
+  differences from the eager result (#456, #738, #903); `--streaming=false` does not keep such a run eager.
+- splits through the streaming front-end (`latexml_post::stream_split`) at any size: `post::stream_split_threshold`
+  now defaults to 0, where it was 1 GiB. This holds for every caller of `post::run_post_processing_logged` that sets
+  `split: true`; `api.rs`, `cortex_worker` and the LSP pass `split: false`. The CLI hands over the core result by value
+  (`post::run_post_processing_owned_logged`): staged beside the destination (in "." for a bare `--dest=a.html`), whose
+  directory it creates, and removed once the pages are spilled. A stream that fails on an input under 1 GiB falls back
+  to the whole-DOM split with an Info. Such a stream fails when a template item arrives after a page was written (an
+  `ltx:navigation` from `--input xml`, an `ltx:resource`, a root `ltx:date` or a `<?latexml?>` PI), or when an
+  `ltx:resource` sits nested inside content. The DOM split copies these into the pages' templates, each page taking the
+  `ltx:resource`s and PIs still in the document when it is pulled out (Perl `Post/Split.pm:111-115`, `:132`; `Post.pm:770-771`),
+  so a nested one reaches only the pages after it. Above 1 GiB the
+  stream keeps its Warn.
+- renders 64 or more pages on min(available cores, 8) worker processes (`render_workers::render_jobs`,
+  `enable_auto_jobs`). Each worker's watchdog holds it to its share of the fuse headroom (`RenderManifest::max_rss_kb`).
+  A worker that fails to spawn, cannot set up (its manifest or db unreadable: a `Status:setup-failed:` line) or dies
+  without its status report sends the whole document back to the serial render, with an Info. The workers keep their spilled pages for this, and no child log is folded. Only a timeout still folds a
+  killed fleet as Errors.
+
+Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`/`1`, `LATEXML_POST_STREAM_THRESHOLD`,
+`LATEXML_RENDER_JOBS` (`1` = serial). Every embedder but the `latexml_oxide` binary keeps the serial render and the
+default watermark. `cortex_worker` never splits, so its output is unchanged.
+
+Effect on Nasser's 2,400-problem slice (`--splitat=subsubsection`, 9,713 pages): the pages are byte-identical to the
+eager whole-DOM run, the Warnings equal, and peak RSS falls from 3.8-4.9 GB to 1.35 GB (serial render).
+
+The streamed split differs from the whole-DOM split only where the latter loses a page's non-`ltx` namespaces. Witnesses:
+1502.06095 and 1609.07593 (an xy-pic `svg:svg` inside math, 344 and 1,377 `malformed:namespace` Warnings) and
+2606.28974 (a dropped `aria-hidden`). On all three the streamed pages match the unsplit conversion.
+
+**Guards**: `118_streaming_split_parity::streaming_split_pages_are_byte_identical_to_dom_split` (the default and
+in-memory cases), `::cli_split_streams_by_default_and_unsplit_stays_eager`, and
+`120_midscale_streaming::midscale_render_fleet_defaults_on_and_falls_back_to_serial` (the
+`LATEXML_RENDER_WORKER_TEST_ABORT` hook, test-utils builds only: a dead worker and a failed db attach),
+`112_fragment_yield::split_keeps_pages_whose_namespaces_a_navigation_uses` (a late navigation),
+`118_streaming_split_parity::nested_resource_split_falls_back_to_the_whole_dom_split` and
+`::cli_bare_dest_stages_beside_the_destination`.
+
+### 1134. A split page links only the related pages something reads (CHAPLINKS)
+
+**Rule** (maintainer ruling 2026-11-21: drop unread relations). CrossRef's relation walk keeps, of the sibling pages of
+every ancestor and the page's own child pages, only those whose relation the stylesheets read: `bibliography`, `index`,
+`glossary`. The sectional relations (`part`, `chapter`, `section`, `subsection`, … — the page type's element name) and
+`sidebar` (a non-primary page) are no longer made. `up` (and "up up"…), `start`, `prev`, `next` are unchanged.
+- Perl: `CrossRef.pm:105-130` adds every such page (`:110`: "In a large/complex site, this gets way too much. But how
+  to prune?"), so a page carries one link per sibling of each ancestor: quadratic in the pages, each link with its full
+  breadcrumb `fulltitle`.
+- Readers (`latexml_post/resources/XSLT/LaTeXML-webpage-xhtml.xsl`; Perl's copy :451, :514-516, :527-531): the header
+  navigation reads `up`, `prev`, `next`, the navbar `start`, the footer `prev`, `bibliography`, `index`, `glossary`,
+  `next`, the `<title>` `up`, `LaTeXML-structure-xhtml.xsl` `up`. The sectional relations and `sidebar` reach only the
+  head-link copy (`webpage-xhtml.xsl:308-320`), which duplicates the navigation TOC; HTML 4.01 §6.12 listed `Chapter`/
+  `Section`/`Subsection`/`Appendix` as link types, the HTML Living Standard (§4.6.7) does not, and no browser, ar5iv
+  or ar5iv-css reads them. The `ltx:navigation` refs of split XML pages (`--format=xml --splitat`) lose them too, as
+  does any custom `--stylesheet` that read them.
+- Measured: Nasser's 2,400-problem slice (`--splitat=subsubsection`) had 66 % of its HTML in these links (612,424
+  links, 246-455 bytes each); the page bodies are byte-identical.
+- Implementation: `CrossRef::related_pages` (memoized on the entry's `ChildPages`), so the walk does no per-link work.
+- Upstream: offered to Perl as a patch (prune the walk to the read relations).
+
+**Guards**: `cluster_xslt_split::split_nav_relations::split_page_navigation_relations` (a section page's and the root
+page's whole head link sets), `cluster_xslt_split::urlstyle::*` (the parent page reached by `up`).

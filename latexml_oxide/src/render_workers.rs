@@ -14,18 +14,22 @@
 //! counts deterministically, in chunk order, into its own `LOG_BUFFER` /
 //! `REPORT` — so the combined verdict and the persisted `--log` stay lossless
 //! (canvas signal-integrity rule: a child that dies without a status line is
-//! folded as FATAL, never as success).
+//! never taken for success).
 //!
-//! Env knob: `LATEXML_RENDER_JOBS` (usize). Default 1 = the serial path,
-//! byte-identical to before this module existed.
+//! Env knob: `LATEXML_RENDER_JOBS` (usize; `1` = the serial path). Unset, the
+//! `latexml_oxide` binary renders a split of `MIN_PAGES_FOR_PARALLEL` pages
+//! or more on min(available cores, `AUTO_JOBS_MAX`) workers; every other
+//! embedder (the library, `cortex_worker`) stays serial. The pages are
+//! byte-identical either way; a worker that fails to spawn, cannot set up, or
+//! dies without its status report sends the whole document back to the serial
+//! render (an Info).
 
 use std::path::{Path, PathBuf};
 
 use latexml_core::{
   Info,
   common::error::{
-    LogStatus, ReportCounts, emit_error, emit_fatal, get_status_code, note_status,
-    snapshot_report_counts,
+    LogStatus, ReportCounts, emit_error, get_status_code, note_status, snapshot_report_counts,
   },
   s,
   util::logger::{CapturedDiagnostics, replay_captured},
@@ -37,15 +41,33 @@ use serde::{Deserialize, Serialize};
 /// the parallel win — the serial path is taken regardless of the jobs knob.
 pub(crate) const MIN_PAGES_FOR_PARALLEL: usize = 64;
 
-/// The `LATEXML_RENDER_JOBS` knob: how many page-render worker processes pass
-/// B may spawn. Default (and any unparsable value) is 1 = serial. Read once
-/// per conversion, so no hot-path caching is needed.
+/// The automatic fleet's ceiling: on Nasser's 2,400-problem book (9,713 pages)
+/// 8 workers took the two-invocation run from 115 s to 79 s.
+pub(crate) const AUTO_JOBS_MAX: usize = 8;
+
+/// Set by a binary that serves the worker mode (`LATEXML_RENDER_WORKER`, see
+/// [`worker_main`]): only it may spawn itself as a worker, so only it renders
+/// in parallel without being asked.
+static AUTO_JOBS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Let an unset `LATEXML_RENDER_JOBS` pick the fleet size (`render_jobs`).
+pub fn enable_auto_jobs() { AUTO_JOBS.store(true, std::sync::atomic::Ordering::Relaxed); }
+
+/// How many page-render worker processes pass B may spawn: an explicit
+/// `LATEXML_RENDER_JOBS` wins (an unparsable or zero value is 1 = serial);
+/// unset, min(available cores, `AUTO_JOBS_MAX`) where [`enable_auto_jobs`]
+/// was called, else 1. Read once per conversion, so no hot-path caching is
+/// needed.
 pub(crate) fn render_jobs() -> usize {
-  std::env::var("LATEXML_RENDER_JOBS")
-    .ok()
-    .and_then(|v| v.parse::<usize>().ok())
-    .filter(|&n| n >= 1)
-    .unwrap_or(1)
+  match std::env::var("LATEXML_RENDER_JOBS") {
+    Ok(v) => v.parse::<usize>().ok().filter(|&n| n >= 1).unwrap_or(1),
+    Err(_) if AUTO_JOBS.load(std::sync::atomic::Ordering::Relaxed) => {
+      std::thread::available_parallelism()
+        .map_or(1, std::num::NonZeroUsize::get)
+        .min(AUTO_JOBS_MAX)
+    },
+    Err(_) => 1,
+  }
 }
 
 /// The serializable subset of `PostDocumentOptions` a worker needs to
@@ -144,6 +166,10 @@ pub struct RenderManifest {
   pub whatsout:                  String,
   pub page_opts:                 PageOpts,
   pub pages:                     Vec<PageJob>,
+  /// This worker's share of the run's memory budget, in KiB (0 = none): its
+  /// watchdog's ceiling, so the fleet stays within `--max-memory`.
+  #[serde(default)]
+  pub max_rss_kb:                u64,
 }
 
 /// The parent-side result of a parallel render in which workers were actually
@@ -199,14 +225,16 @@ fn strip_ansi(s: &str) -> String {
 /// A worker's stderr, parsed: the trailing `Status:` lines are consumed into
 /// structured fields and everything else is the log text to forward + fold.
 struct ChildReport {
-  log:     String,
-  counts:  Option<ReportCounts>,
-  status:  Option<usize>,
-  pages:   usize,
+  log:          String,
+  counts:       Option<ReportCounts>,
+  status:       Option<usize>,
+  pages:        usize,
   /// `Status:discard:1`: a MathML/XSLT step died, so no page of the run is kept (#782).
-  discard: bool,
+  discard:      bool,
   /// `Status:written:<path>`: the pages this worker wrote, the only ones a discard removes.
-  written: Vec<String>,
+  written:      Vec<String>,
+  /// `Status:setup-failed:<why>`: the worker rendered nothing (`print_setup_failure`).
+  setup_failed: Option<String>,
 }
 
 fn parse_child_report(stderr_text: &str) -> ChildReport {
@@ -216,6 +244,7 @@ fn parse_child_report(stderr_text: &str) -> ChildReport {
   let mut pages = 0usize;
   let mut discard = false;
   let mut written = Vec::new();
+  let mut setup_failed = None;
   for line in stderr_text.lines() {
     if let Some(rest) = line.strip_prefix("Status:counts:") {
       let mut it = rest.split(',').map(|v| v.trim().parse::<usize>().ok());
@@ -243,6 +272,8 @@ fn parse_child_report(stderr_text: &str) -> ChildReport {
       discard = rest.trim() == "1";
     } else if let Some(path) = line.strip_prefix("Status:written:") {
       written.push(path.to_string());
+    } else if let Some(why) = line.strip_prefix("Status:setup-failed:") {
+      setup_failed = Some(why.to_string());
     } else {
       log.push_str(line);
       log.push('\n');
@@ -255,6 +286,7 @@ fn parse_child_report(stderr_text: &str) -> ChildReport {
     pages,
     discard,
     written,
+    setup_failed,
   }
 }
 
@@ -274,12 +306,11 @@ enum Pending {
 
 /// Spawn `jobs` page-range workers over `pages` and fold their results.
 ///
-/// Returns `None` when setup failed BEFORE any child was spawned (reported at
-/// Info severity) — the caller falls back to the serial render, which is still
-/// fully correct since the spilled pages are untouched. Once children run
-/// there is no fallback: a worker that fails, dies, or omits its status line
-/// is folded as an Error + FATAL status (fail toward flagging, never silent
-/// success).
+/// Returns `None` when setup failed, or a worker failed to spawn, could not
+/// set up, or died without its status report (reported at Info severity) — the caller falls
+/// back to the serial render, which is still fully correct since the workers
+/// keep the spilled pages. Only a timeout breach folds the killed workers as an
+/// Error + FATAL status (fail toward flagging, never silent success).
 pub(crate) fn parallel_render(
   mut manifest: RenderManifest,
   pages: Vec<PageJob>,
@@ -319,16 +350,7 @@ pub(crate) fn parallel_render(
   // fixed floor, and size the fleet from the smaller of MemAvailable and the
   // distance to this run's own memory fuse. Degrade to fewer workers — or
   // decline to engage — rather than let the kernel choose a victim.
-  #[cfg(target_os = "linux")]
-  // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
-  unsafe {
-    libc::malloc_trim(0);
-  }
-  #[cfg(not(feature = "dhat-heap"))]
-  // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
-  unsafe {
-    libmimalloc_sys::mi_collect(true);
-  }
+  crate::heap_trim::release_free_heap();
   let db_bytes = std::fs::metadata(&dbfile).map(|m| m.len()).unwrap_or(0);
   let per_worker = db_bytes.saturating_mul(3).max(256 * 1024 * 1024);
   let mut budget = latexml_core::watchdog::available_memory_bytes().unwrap_or(u64::MAX);
@@ -341,6 +363,11 @@ pub(crate) fn parallel_render(
   }
   let affordable = (budget / per_worker) as usize;
   let jobs = jobs.min(total_pages).min(affordable);
+  // Each worker's watchdog holds it to its share, so parent + fleet stay
+  // under the fuse; one that outgrows it dies and the document renders serially.
+  if budget != u64::MAX && jobs >= 2 {
+    manifest.max_rss_kb = budget / jobs as u64 / 1024;
+  }
   if jobs < 2 {
     Info!(
       "post",
@@ -449,6 +476,7 @@ pub(crate) fn parallel_render(
   // Poll (rather than block) so the parent's cooperative timeout keeps
   // running between waits; on a breach, kill the fleet so the join below
   // returns promptly instead of riding out the children.
+  let mut timed_out = false;
   loop {
     let all_done = pending
       .iter()
@@ -458,6 +486,7 @@ pub(crate) fn parallel_render(
     }
     if let Err(e) = latexml_core::stomach::check_timeout() {
       e.log_fatal();
+      timed_out = true;
       for p in &pending {
         if let Pending::Spawned(h, pid) = p
           && !h.is_finished()
@@ -470,74 +499,103 @@ pub(crate) fn parallel_render(
     std::thread::sleep(std::time::Duration::from_millis(100));
   }
 
+  // Join every worker first: one that could not run, or died without its
+  // status report (a crash, its memory share exceeded, a broken pipe), sends
+  // the whole range to the serial render before any child log is folded, so
+  // nothing is counted twice. A worker's own diagnostics, Fatal included, are
+  // the document's and fold as they are. After a timeout breach the killed
+  // workers fold as failures (the Fatal is already logged).
+  let mut joined: Vec<Result<(ChildReport, std::process::ExitStatus), String>> = pending
+    .into_iter()
+    .map(|p| match p {
+      Pending::Failed(e) => Err(e),
+      Pending::Spawned(handle, _) => match handle.join() {
+        Err(_) => Err("drain thread panicked".to_string()),
+        Ok(Err(e)) => Err(format!("wait failed: {e}")),
+        Ok(Ok(output)) => {
+          let stderr_text = strip_ansi(&String::from_utf8_lossy(&output.stderr));
+          Ok((parse_child_report(&stderr_text), output.status))
+        },
+      },
+    })
+    .collect();
+  if !timed_out
+    && let Some((i, why)) = joined.iter().enumerate().find_map(|(i, r)| match r {
+      Err(e) => Some((i, e.clone())),
+      Ok((report, _)) if let Some(why) = &report.setup_failed => {
+        Some((i, format!("setup failed: {why}")))
+      },
+      Ok((report, status)) if report.status.is_none() => Some((
+        i,
+        format!(
+          "exited (code {:?}) without a Status:conversion line",
+          status.code()
+        ),
+      )),
+      Ok(_) => None,
+    })
+  {
+    Info!(
+      "post",
+      "parallel-render",
+      s!(
+        "parallel render abandoned (worker {}: {}) — rendering serially",
+        i,
+        why
+      )
+    );
+    cleanup_handoff(&dbfile, &manifest_paths);
+    return None;
+  }
+
   // Fold IN CHUNK ORDER (deterministic log/tally, mirroring the graphics
   // worker fold): forward each child's stderr, replay its log + counts into
   // the parent LOG_BUFFER/REPORT, and flag anything that did not report.
   let mut pages_rendered = 0usize;
   let mut discard = false;
   let mut written: Vec<String> = Vec::new();
-  for (i, p) in pending.into_iter().enumerate() {
-    match p {
-      Pending::Failed(e) => {
+  for (i, r) in joined.drain(..).enumerate() {
+    match r {
+      Err(e) => {
         emit_error("post", "render_worker", &format!("worker {i}: {e}"));
         note_status(LogStatus::Fatal, None);
       },
-      Pending::Spawned(handle, _) => match handle.join() {
-        Err(_) => {
-          emit_error(
-            "post",
-            "render_worker",
-            &format!("worker {i}: drain thread panicked"),
-          );
-          note_status(LogStatus::Fatal, None);
-        },
-        Ok(Err(e)) => {
-          emit_error(
-            "post",
-            "render_worker",
-            &format!("worker {i}: wait failed: {e}"),
-          );
-          note_status(LogStatus::Fatal, None);
-        },
-        Ok(Ok(output)) => {
-          let stderr_text = strip_ansi(&String::from_utf8_lossy(&output.stderr));
-          let report = parse_child_report(&stderr_text);
-          if !report.log.is_empty() {
-            // The child's stderr was piped, so nothing reached the live
-            // stderr yet — forward it now, then fold the same text + counts
-            // into the captured log and the REPORT tally.
-            eprint!("{}", report.log);
-          }
-          replay_captured(CapturedDiagnostics {
-            log:    report.log,
-            counts: report.counts.unwrap_or_default(),
-          });
-          pages_rendered += report.pages;
-          discard |= report.discard;
-          written.extend(report.written);
-          match report.status {
-            None => {
-              // No status line = the child died before its final report (or
-              // never got that far). Fail toward flagging: this chunk's pages
-              // cannot be assumed rendered.
-              emit_error(
-                "post",
-                "render_worker",
-                &format!(
-                  "worker {i} exited (code {:?}) without a Status:conversion line",
-                  output.status.code()
-                ),
-              );
-              note_status(LogStatus::Fatal, None);
-            },
-            Some(s) if s >= 3 && !report.counts.is_some_and(|c| c.fatal) => {
-              // The child declared fatal but its counts line didn't carry the
-              // flag (or was missing) — max-fold the declared status anyway.
-              note_status(LogStatus::Fatal, None);
-            },
-            Some(_) => {},
-          }
-        },
+      Ok((report, exit_status)) => {
+        if !report.log.is_empty() {
+          // The child's stderr was piped, so nothing reached the live
+          // stderr yet — forward it now, then fold the same text + counts
+          // into the captured log and the REPORT tally.
+          eprint!("{}", report.log);
+        }
+        replay_captured(CapturedDiagnostics {
+          log:    report.log,
+          counts: report.counts.unwrap_or_default(),
+        });
+        pages_rendered += report.pages;
+        discard |= report.discard;
+        written.extend(report.written);
+        match report.status {
+          None => {
+            // No status line = the child died before its final report (or
+            // never got that far). Fail toward flagging: this chunk's pages
+            // cannot be assumed rendered.
+            emit_error(
+              "post",
+              "render_worker",
+              &format!(
+                "worker {i} exited (code {:?}) without a Status:conversion line",
+                exit_status.code()
+              ),
+            );
+            note_status(LogStatus::Fatal, None);
+          },
+          Some(s) if s >= 3 && !report.counts.is_some_and(|c| c.fatal) => {
+            // The child declared fatal but its counts line didn't carry the
+            // flag (or was missing) — max-fold the declared status anyway.
+            note_status(LogStatus::Fatal, None);
+          },
+          Some(_) => {},
+        }
       },
     }
   }
@@ -593,11 +651,19 @@ fn print_status_report(written: &[String], discard: bool) -> i32 {
   if status < 3 { 0 } else { 1 }
 }
 
+/// A worker that could not set up (its manifest or db unreadable) has rendered
+/// nothing and its failure is not the document's: no status report, so the
+/// parent renders serially, and this line names why (an Info there).
+fn print_setup_failure(why: &str) -> i32 {
+  eprintln!("Status:setup-failed:{}", why.replace('\n', " "));
+  1
+}
+
 /// Entry point of the hidden worker mode (`LATEXML_RENDER_WORKER=<manifest>`),
 /// dispatched from the binary's `main` before any CLI handling. Renders the
-/// manifest's page range and ALWAYS ends its stderr with the status report —
-/// even when the manifest cannot be read — so the parent never mistakes a
-/// broken worker for a clean one.
+/// manifest's page range and ends its stderr with the status report, or with
+/// the setup-failure line when it could not start, so the parent never
+/// mistakes a broken worker for a clean one.
 pub fn worker_main(manifest_path: &str) -> i32 {
   latexml_core::util::logger::init(log::LevelFilter::Info).ok();
   let manifest: RenderManifest = match std::fs::read_to_string(manifest_path)
@@ -606,12 +672,9 @@ pub fn worker_main(manifest_path: &str) -> i32 {
   {
     Ok(m) => m,
     Err(e) => {
-      emit_fatal(
-        "post",
-        "render_worker",
-        &format!("cannot read the render manifest {manifest_path}: {e}"),
-      );
-      return print_status_report(&[], false);
+      return print_setup_failure(&format!(
+        "cannot read the render manifest {manifest_path}: {e}"
+      ));
     },
   };
   // Mirror `api.rs::on_worker`: a 256 MiB-stack thread for deeply nested
@@ -620,8 +683,17 @@ pub fn worker_main(manifest_path: &str) -> i32 {
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
-      let (written, discard) = render_manifest_pages(manifest);
-      let code = print_status_report(&written, discard);
+      #[cfg(feature = "test-utils")]
+      if test_fault().is_some_and(|f| f != "attach") {
+        std::process::exit(70);
+      }
+      // Hold this worker to its share of the run's memory budget.
+      let _watchdog = (manifest.max_rss_kb > 0)
+        .then(|| latexml_core::watchdog::Watchdog::with_limits(0, manifest.max_rss_kb));
+      let code = match render_manifest_pages(manifest) {
+        Ok((written, discard)) => print_status_report(&written, discard),
+        Err(why) => print_setup_failure(&why),
+      };
       latexml_core::reset_thread_engine();
       code
     })
@@ -630,15 +702,31 @@ pub fn worker_main(manifest_path: &str) -> i32 {
     .expect("render worker thread panicked")
 }
 
+/// Test hook `LATEXML_RENDER_WORKER_TEST_ABORT` (guard: 120_midscale_streaming):
+/// `attach` fails the worker's db attach; any other value kills the worker
+/// before its status report, as a crash or an exceeded memory share would.
+#[cfg(feature = "test-utils")]
+fn test_fault() -> Option<String> { std::env::var("LATEXML_RENDER_WORKER_TEST_ABORT").ok() }
+
 /// Rebuild the pass-B processor set from the manifest — the EXACT construction
 /// the parent's `run_post_processing_inner` performs (same MathML
 /// primary/secondary parallel model, same XSLT wiring, same error paths) —
 /// then render every page in the manifest's range through the shared
-/// [`crate::post::render_spilled_page`]. Returns the pages written, and whether a Fatal discards them.
-fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
+/// [`crate::post::render_spilled_page`]. Returns the pages written, and whether a Fatal discards them;
+/// `Err` = the worker could not set up (see `print_setup_failure`).
+fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), String> {
   use latexml_post::{
     crossref::{CrossRef, UrlStyle},
     processor::Processor,
+  };
+  #[cfg(feature = "test-utils")]
+  let m = RenderManifest {
+    dbfile: if test_fault().as_deref() == Some("attach") {
+      m.dbfile.with_extension("missing")
+    } else {
+      m.dbfile
+    },
+    ..m
   };
   let db = match ObjectDB::attach(&m.dbfile, DbAttachOptions {
     readonly: true,
@@ -646,12 +734,10 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
   }) {
     Ok(db) => db,
     Err(e) => {
-      emit_fatal(
-        "post",
-        "render_worker",
-        &format!("cannot attach the render db {}: {e}", m.dbfile.display()),
-      );
-      return (Vec::new(), false);
+      return Err(format!(
+        "cannot attach the render db {}: {e}",
+        m.dbfile.display()
+      ));
     },
   };
   let url_style = UrlStyle::from_cli(&m.url_style).unwrap_or(UrlStyle::File);
@@ -699,10 +785,11 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
     }
   }
   let ctx = crate::post::PageRenderCtx {
-    page_opts:   m.page_opts.clone().into(),
-    is_html_out: m.is_html_out,
-    schemadocs:  m.schemadocs,
-    whatsout:    latexml_post::extract::Whatsout::from_cli(&m.whatsout).unwrap_or_default(),
+    page_opts:      m.page_opts.clone().into(),
+    is_html_out:    m.is_html_out,
+    schemadocs:     m.schemadocs,
+    whatsout:       latexml_post::extract::Whatsout::from_cli(&m.whatsout).unwrap_or_default(),
+    remove_spilled: false,
   };
   let mut procs = crate::post::PageProcessors {
     crossref,
@@ -711,21 +798,13 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
     processors,
   };
   let mut written: Vec<String> = Vec::new();
+  let mut made_dirs = latexml_post::writer::MadeDirs::default();
   for job in &m.pages {
     // Same OS give-back cadence as the serial render loop: each page cycles a
     // DOM + XSLT result through the C heap, and a chunk can be tens of
     // thousands of pages.
-    if !written.is_empty() && written.len().is_multiple_of(512) {
-      #[cfg(target_os = "linux")]
-      // SAFETY: `malloc_trim(0)` only advises glibc to release unused heap pages; no Rust refs are affected.
-      unsafe {
-        libc::malloc_trim(0);
-      }
-      #[cfg(not(feature = "dhat-heap"))]
-      // SAFETY: `mi_collect(true)` only purges unused mimalloc pages; live allocations remain valid.
-      unsafe {
-        libmimalloc_sys::mi_collect(true);
-      }
+    if !written.is_empty() && written.len().is_multiple_of(crate::heap_trim::SAMPLE_PAGES) {
+      crate::heap_trim::sample();
     }
     match crate::post::render_spilled_page(
       &job.path,
@@ -737,11 +816,7 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
       Ok(outputs) => {
         for (dest, output) in outputs {
           if let Some(path) = dest.as_deref() {
-            if let Some(parent) = Path::new(path).parent()
-              && !parent.as_os_str().is_empty()
-            {
-              let _ = std::fs::create_dir_all(parent);
-            }
+            let _ = made_dirs.ensure_parent(path);
             written.push(path.to_string());
             if let Err(e) = std::fs::write(path, &output) {
               emit_error(
@@ -758,10 +833,10 @@ fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
       // folded error + the fatal-bearing status this worker will report).
       Err(crate::post::PageFailure::Error) => break,
       // The parent removes every page of the run (#782).
-      Err(crate::post::PageFailure::Fatal) => return (written, true),
+      Err(crate::post::PageFailure::Fatal) => return Ok((written, true)),
     }
   }
-  (written, false)
+  Ok((written, false))
 }
 
 #[cfg(test)]
@@ -784,6 +859,17 @@ mod tests {
       !r.log.contains("Status:"),
       "status lines must not leak into the folded log"
     );
+  }
+
+  #[test]
+  fn child_report_parses_a_setup_failure() {
+    let r = parse_child_report("Status:setup-failed:cannot attach the render db /d/render.db\n");
+    assert_eq!(
+      r.setup_failed.as_deref(),
+      Some("cannot attach the render db /d/render.db")
+    );
+    assert_eq!(r.status, None);
+    assert!(r.log.is_empty());
   }
 
   #[test]

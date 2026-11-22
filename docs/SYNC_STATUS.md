@@ -52,9 +52,10 @@ Rules that keep this file honest and mergeable:
 - **Where it stands (2026-11-21):** the full arXiv run on the cutoff is run 397 (November 2026, 98.1 % of 2,962,950
   error-free); its regressions were classified and the clusters our changes caused fixed (#954-#964), the residue in
   row R. **0.8.0-rc1** is published as a prerelease (tag `f7f8120f349`, merged to main as #919); **0.8.0-rc2** is main
-  `7c2b9ef3b76` (#965: Split frees its pages, release checks; #966: the version), its release checks green, the tag
-  on DG's go. Main stays the release line until 0.8.0 final; the reviewed post-release branches (COPYROUTE, ENCURL,
-  POSTPERF, CORELEAK) merge after it. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.
+  `7c2b9ef3b76` (#965: Split frees its pages, release checks; #966: the version); its tag was cut and its release
+  run cancelled (unused), and it is re-issued once the large-document perf bundle `int/rc2-perf` (DG 2026-11-21:
+  STRMWARN, CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT) merges. Main stays the release line until 0.8.0
+  final; the reviewed post-release branches (COPYROUTE, ENCURL) merge after it. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.
 - **Where it stood (2026-11-18):** the frontmatter campaign merged as PR #895 (`aeda3db4e47`, 2026-11-17; DG's 39-paper
   showcase review in runs 389–392, a 300-paper acceptance A/B, and a performance audit whose XSLT-key cost was cut to
   median −0.08 % / p90 +0.46 % vs main, the residual row R XSLTKEYc). **Cutoff = `aeda3db4e47`** (DG 2026-11-17): the
@@ -979,25 +980,31 @@ Rules that keep this file honest and mergeable:
     `drawn`; (b) `malloc_trim(0)` after Split as its own lever (C-free 954 MB vs 8 MB streaming at n1600, C-live 29 MB
     both); (c) with `--input xml`, Split's copies drop a nav's prefixed namespace and a page redeclaring the default
     namespace comes out `<default:section xmlns:default=…>` (base too, cosmetic, foreign XML only); 3
-  - POSTSTREAMDEF — route every split run through the streaming post front-end (today only above a size threshold):
-    measured post −24 % cycles at n1600 (−38 % at n3200), RSS 2.2 → 0.15 GB, identical pages; it has run only on
-    documents > 1 GiB so far; 3
-  - CHAPLINKS — every split page carries one `<link rel="chapter">` per chapter (CrossRef `fill_in_relations` step 4,
-    `crossref.rs:1307-1323`, Perl `CrossRef.pm` L105-130, which comments "this gets way too much. But how to prune?"):
-    126,976 links = 28.7 % of the HTML at n1600, ~225K instructions per link (CrossRef `generate_url`/`generate_title`/
-    `generate_ref` `crossref.rs:1936-1964`; XSLT `LaTeXML-webpage-xhtml.xsl:313-320`) — the only true quadratic.
-    Memoising the title/ref resolution (`perf/post-scaling` 5ee331327cf, post-0.8.0) saves 0.29 s of CrossRef's 2.1 s
-    with identical output (n1600 −2.1 % instructions); the rest is per page (`add_nodes` 275 ms, link creation 278 ms,
-    cref/rdfa/bibrefs/mathlinks 493 ms). Capping or dropping the
-    sibling-of-ancestor links removes the quadratic term but changes output (OXIDIZED_DESIGN entry, offered upstream) —
-    DG ruling; 3
+  - MIMALLOC3 — back to mimalloc 3.x once `libmimalloc-sys` bundles a release with the 3.3.x heap-corruption fixes
+    (≥ 3.5.3; microsoft/mimalloc issues 1287, 1430): 0.8.0-rc2 builds the bundled 2.3.2 (`latexml_oxide/Cargo.toml`
+    `v2` feature). Witness: 1502.06095 crashed twice under full-width A/B load (mimalloc's small free list holding a
+    Token-shaped value; an indirect call through a corrupted pointer), ~0.3 % of loaded runs, 0 of ~370 quiet runs and 0
+    ASan reports on the system allocator; the fleet's only unexplained SIGSEGV in run 397 is 2212.05990 (never
+    reproduced). Re-measure 3.x against 2.3.2 (instructions, peak RSS, a loaded 1502.06095 loop) before switching; 2
+  - STREAMPROBE — the streamed split's `contains_element_probe` (`stream_split.rs` ~1393) takes `:resource` in page text
+    (`ex:resource`) for a prefixed element, so such a page falls back to the whole-DOM split with a misleading Info (≥ 1
+    GiB: a false Warn); match only after `<` and a valid prefix. And a stream doomed by a late template still spills
+    every page before failing over (`Splitter::run`, ~150/~604): stop at the first late template; 1
+  - SPLITDOMNS — the whole-DOM split (`latexml_post/src/split.rs`) loses a page's non-`ltx` namespaces: xy-pic's svg
+    inside math raises `malformed:namespace` Warnings (1502.06095: 344, 1609.07593: 1,377 under `--splitat=section`)
+    and 2606.28974 loses an `aria-hidden`; the streamed split, the default for split runs since OXIDIZED_DESIGN_DIVERGENCES
+    #1133, gives the unsplit pages. Reached now only with `LATEXML_POST_STREAM_SPLIT=0` and the streamed split's
+    fallbacks (a late navigation, resource, root date or `<?latexml?>` PI; a nested `ltx:resource`); 2
+  - PARTUP — a split `\part` book's chapter pages carry no `up` link to their part page, which Perl's carries
+    (pre-existing, seen while pruning the head links, OXIDIZED_DESIGN_DIVERGENCES #1134); 2
   - POSTRESID — after the core, ~190 MB of C heap stays live into post (pass B 12.69 s vs 11.26 s on a clean heap at
     n1600): core nodes unlinked and never freed, ~98 KB a subsection (heaptrack, n100: `insert_math_token` ~52 %, the
     amsmath rearrangement `ams_rearrangeable_bindings`/`equationgroup_join_cols` ~15 %, `tex_math`, `sect07`,
     `mark_xmnode_visibility`; first suspect `latexml_math_parser/src/parser.rs` ~2190); constant: kpathsea's file
-    database 12.9 MB, the XSLT cache 5 MB. Batch CORELEAK on `perf/core-orphans` (post-0.8.0); 3
-  - RENDERJOBS — `LATEXML_RENDER_JOBS=4` takes post wall 19.5 → 7.0 s at n1600 with identical output: mention to #777's
-    reporter once SPLITLEAK lands; whether it becomes the default — DG ruling; 1
+    database 12.9 MB, the XSLT cache 5 MB. CORELEAK (0.8.0-rc2) frees the MathFork's `_Capture_` cells and the folded
+    XMHints (core orphans 1,402 roots → 2 on the n100 book); left: a constant `rewrite.rs` Replace residue (2 roots),
+    and eqnarray leaves 4 stale `node_boxes` entries per environment, which the streaming backstop sweeps
+    (`perfect_kernel_gemini::eqnarray_stale_node_boxes_are_swept`); 2
   - RUNAWAY395 — an undelimited macro argument that meets a closing `}` takes it (Perl `Gullet.pm:732` readArg;
     `gullet.rs` ~4048 `read_arg`), so an `\edef` runs to the end of the file (`\makeatletter\edef\x{\@firstoffive{a}}`):
     1012.2852 loses its last ~370 lines, base and Perl too; TeX inserts `\par` and keeps the `}` (tex.web §395).

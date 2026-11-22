@@ -95,6 +95,35 @@ pub fn ensure_parent_dir(path: &str) -> io::Result<()> {
   Ok(())
 }
 
+/// The directories a page render already made: a split run writes thousands of pages into a handful of
+/// directories, and each `create_dir_all` is a `mkdir` and a `statx` (Nasser's 71,476-page document,
+/// #777 FAQ).
+#[derive(Debug, Default)]
+pub struct MadeDirs(std::collections::HashSet<std::path::PathBuf>);
+
+std::thread_local! {
+  static DIRS_MADE: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// How many directories [`MadeDirs::ensure_parent`] asked the OS for on this thread (a test seam).
+pub fn made_dir_count() -> usize { DIRS_MADE.get() }
+
+impl MadeDirs {
+  /// [`ensure_parent_dir`], once per directory; an error leaves the directory to be retried.
+  pub fn ensure_parent(&mut self, path: &str) -> io::Result<()> {
+    let Some(parent) = Path::new(path).parent() else {
+      return Ok(());
+    };
+    if parent.as_os_str().is_empty() || self.0.contains(parent) {
+      return Ok(());
+    }
+    DIRS_MADE.set(DIRS_MADE.get() + 1);
+    fs::create_dir_all(parent)?;
+    self.0.insert(parent.to_path_buf());
+    Ok(())
+  }
+}
+
 /// Output format for the writer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputFormat {

@@ -3444,13 +3444,10 @@ whole post run** (1227.9 s of 1576 s attributed; XSLT 17.0 %, MathML-pres 2.3 %)
 was obtained; this box's PMU has no branch-stack sampling, so `perf --call-graph
 lbr` cannot profile here.
 
-**This is faithful, and pruning it would be a divergence.** The Rust port
-(`latexml_post/src/crossref.rs::fill_in_relations`, the `while let Some(parent) =
-self.get_parent_page_id(&xentry)` loop) reproduces the walk exactly, including
-the `primary` → element-name relation and the `sidebar` fallback. Only the
-*cost per link* is ours to optimize (`child_pages` is already memoized); the
-*number* of links is Perl's answer and must stay. A future "optimization" that
-bounds the ancestor walk needs a surpass-Perl decision, not a perf argument.
+**Pruned in Rust (OXIDIZED_DESIGN_DIVERGENCES #1134, maintainer ruling 2026-11-21).** The walk
+(`latexml_post/src/crossref.rs::fill_in_relations`, via `related_pages`) keeps only the relations the
+stylesheets read — `bibliography`, `index`, `glossary` — and no longer makes the sectional (`chapter`,
+`section`, …) and `sidebar` links; offered upstream as a patch.
 
 ## 70. Default CSS renders adjacent display equations touching (no display skips)
 

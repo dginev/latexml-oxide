@@ -136,10 +136,10 @@ fn html_pages(dir: &Path) -> Vec<String> {
   pages
 }
 
-/// Run the midscale conversion in `workdir`; `render_jobs` engages the
-/// process-parallel page renderer. Same args both ways — the ONLY variable is
-/// the jobs knob.
-fn run_midscale(workdir: &Path, render_jobs: Option<&str>) -> std::process::Output {
+/// Run the midscale conversion in `workdir` under `env`: `LATEXML_RENDER_JOBS`
+/// sizes the process-parallel page renderer (unset = the binary's automatic
+/// fleet). Same args every way — the ONLY variable is the env.
+fn run_midscale(workdir: &Path, env: &[(&str, &str)]) -> std::process::Output {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   let tex = generate_midscale(workdir);
   let mut cmd = Command::new(bin);
@@ -153,13 +153,25 @@ fn run_midscale(workdir: &Path, render_jobs: Option<&str>) -> std::process::Outp
       "--timeout=1200",
     ])
     .env("LATEXML_POST_STREAM_SPLIT", "1")
-    // The serial baseline must really be serial, whatever the ambient env.
+    // Whatever the ambient env, only `env` decides the fleet.
     .env_remove("LATEXML_RENDER_JOBS")
+    .env_remove("LATEXML_RENDER_WORKER_TEST_ABORT")
     .current_dir(workdir);
-  if let Some(jobs) = render_jobs {
-    cmd.env("LATEXML_RENDER_JOBS", jobs);
+  for (key, value) in env {
+    cmd.env(key, value);
   }
   cmd.output().expect("spawn latexml_oxide")
+}
+
+/// Every split page of `dir`, by name.
+fn page_bytes(dir: &Path) -> Vec<(String, Vec<u8>)> {
+  html_pages(dir)
+    .into_iter()
+    .map(|name| {
+      let bytes = std::fs::read(dir.join(&name)).expect("page read");
+      (name, bytes)
+    })
+    .collect()
 }
 
 /// The process-parallel page renderer (LATEXML_RENDER_JOBS) must be an
@@ -171,8 +183,8 @@ fn midscale_parallel_render_matches_serial() {
   let serial_dir = tempfile::tempdir().expect("tempdir");
   let parallel_dir = tempfile::tempdir().expect("tempdir");
 
-  let serial = run_midscale(serial_dir.path(), None);
-  let parallel = run_midscale(parallel_dir.path(), Some("3"));
+  let serial = run_midscale(serial_dir.path(), &[("LATEXML_RENDER_JOBS", "1")]);
+  let parallel = run_midscale(parallel_dir.path(), &[("LATEXML_RENDER_JOBS", "3")]);
   let serial_stderr = String::from_utf8_lossy(&serial.stderr);
   let parallel_stderr = String::from_utf8_lossy(&parallel.stderr);
 
@@ -254,4 +266,89 @@ fn midscale_parallel_render_matches_serial() {
     log_last, "Status:conversion:1",
     "the parallel run's log must end with the canonical combined status"
   );
+}
+
+/// The binary's default fleet: a split of 64+ pages renders on min(available
+/// cores, 8) workers with no `LATEXML_RENDER_JOBS` — and a worker that dies
+/// before its status report (the test hook; a crash or an exceeded memory share
+/// alike) sends the whole document back to the serial render with an Info, not
+/// an Error: every page as the serial run writes it, the same verdict. So does a
+/// worker whose own setup fails (its db attach, the hook's `attach`): no Fatal.
+#[test]
+fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
+  let serial_dir = tempfile::tempdir().expect("tempdir");
+  let auto_dir = tempfile::tempdir().expect("tempdir");
+  let failed_dir = tempfile::tempdir().expect("tempdir");
+  let setup_dir = tempfile::tempdir().expect("tempdir");
+  let serial = run_midscale(serial_dir.path(), &[("LATEXML_RENDER_JOBS", "1")]);
+  let auto = run_midscale(auto_dir.path(), &[]);
+  let failed = run_midscale(failed_dir.path(), &[
+    ("LATEXML_RENDER_JOBS", "3"),
+    ("LATEXML_RENDER_WORKER_TEST_ABORT", "1"),
+  ]);
+  let setup = run_midscale(setup_dir.path(), &[
+    ("LATEXML_RENDER_JOBS", "3"),
+    ("LATEXML_RENDER_WORKER_TEST_ABORT", "attach"),
+  ]);
+  let serial_pages = page_bytes(serial_dir.path());
+  assert!(serial_pages.len() > 150, "got {} pages", serial_pages.len());
+  let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
+  for (label, out, dir) in [
+    ("serial", &serial, &serial_dir),
+    ("auto", &auto, &auto_dir),
+    ("failed", &failed, &failed_dir),
+    ("setup", &setup, &setup_dir),
+  ] {
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(0), "{label}:\n{stderr}");
+    let last = stderr
+      .lines()
+      .rev()
+      .find(|l| !l.trim().is_empty())
+      .unwrap_or("");
+    assert!(
+      last.contains("Conversion complete: 1 warning"),
+      "{label}: the anchored 1-warning verdict, got: {last}"
+    );
+    let engaged = stderr.contains("parallel page render engaged");
+    match label {
+      "serial" => assert!(!engaged, "serial:\n{stderr}"),
+      "auto" if cores >= 2 => {
+        // `parallel_render` also caps the fleet by affordable memory.
+        let workers = stderr
+          .split("parallel page render engaged: ")
+          .nth(1)
+          .and_then(|rest| rest.split(' ').next())
+          .and_then(|n| n.parse::<usize>().ok());
+        assert!(
+          workers.is_some_and(|n| (2..=cores.min(8)).contains(&n)),
+          "auto: the default fleet must engage 2..={} workers on {cores} cores:\n{stderr}",
+          cores.min(8)
+        );
+      },
+      "auto" => assert!(!engaged, "auto on one core stays serial:\n{stderr}"),
+      _ => {
+        assert!(engaged, "{label}: the fleet must spawn first:\n{stderr}");
+        assert_eq!(
+          stderr.matches("parallel render abandoned (worker ").count(),
+          1,
+          "{label}: one Info names the failed worker:\n{stderr}"
+        );
+        assert!(!stderr.contains("Error:"), "{label}: no Error:\n{stderr}");
+        assert!(!stderr.contains("Fatal:"), "{label}: no Fatal:\n{stderr}");
+        if label == "setup" {
+          assert!(
+            stderr.contains("setup failed: cannot attach the render db"),
+            "setup: the Info names the attach failure:\n{stderr}"
+          );
+        }
+      },
+    }
+    if label != "serial" {
+      assert!(
+        page_bytes(dir.path()) == serial_pages,
+        "{label}: the pages must be the serial run's"
+      );
+    }
+  }
 }
