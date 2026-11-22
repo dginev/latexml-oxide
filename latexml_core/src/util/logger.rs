@@ -186,7 +186,7 @@ fn write_fd(_fd: i32, _bytes: &[u8]) {}
 /// check-write-set happens as one critical section holding the stderr lock.
 static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
 
-/// Whether stderr sits at the start of a line ([`STDERR_AT_LINE_START`]): read without the stderr lock by
+/// Whether stderr sits at the start of a line (`STDERR_AT_LINE_START`): read without the stderr lock by
 /// [`crate::watchdog::write_stderr_unlocked`], which must not wait on a stuck thread.
 pub fn stderr_at_line_start() -> bool { STDERR_AT_LINE_START.load(Ordering::Acquire) }
 
