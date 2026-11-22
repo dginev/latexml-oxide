@@ -184,8 +184,12 @@ pub(crate) struct ParallelResult {
   /// A worker's MathML/XSLT step died (`Status:discard:1`): the pages written are removed and
   /// the render leaves no output (#782).
   pub(crate) discarded:      bool,
-  /// The pages the workers wrote, folded in chunk order — the serial render's page order.
+  /// The pages the workers wrote, folded in chunk order — the serial render's page order. For an
+  /// abandoned fleet, every page it may have written ([`pages_the_fleet_may_have_written`]).
   pub(crate) written:        Vec<String>,
+  /// A worker failed, so nothing was folded and the document renders serially; a Fatal there
+  /// removes `written` too (#782).
+  pub(crate) abandoned:      bool,
 }
 
 /// Remove the per-run handoff artifacts (db + WAL sidecars + manifests).
@@ -399,19 +403,29 @@ fn compute_fleet_budget(
   (jobs, affordable, budget, per_worker, max_rss_kb)
 }
 
-/// Remove every output page written by sibling workers before abandoning a
-/// parallel render to the serial fallback, so a later Fatal in the serial pass
-/// cannot leave earlier workers' pages orphaned on disk (#782).
-fn cleanup_abandoned_worker_pages(joined: &[Joined]) {
-  for (report, _) in joined.iter().flatten() {
-    crate::post::remove_pages(&report.written);
-  }
+/// The pages an abandoned fleet may have written, for the serial render to remove if it ends in a
+/// Fatal (#782): a worker that reported (or could not set up) names its pages, and one that died
+/// before its `Status:written:` lines may have written any page of its range. They stay on disk
+/// otherwise: the serial render rewrites them, or keeps them as the partial site a fuse stop leaves.
+fn pages_the_fleet_may_have_written(joined: &[Joined], ranges: &[Vec<String>]) -> Vec<String> {
+  joined
+    .iter()
+    .zip(ranges)
+    .flat_map(|(r, range)| match r {
+      Ok((report, _)) if report.status.is_some() || report.setup_failed.is_some() => {
+        report.written.clone()
+      },
+      Err(e) if e.starts_with("worker spawn failed") => Vec::new(),
+      _ => range.clone(),
+    })
+    .collect()
 }
 
 /// Spawn `jobs` page-range workers over `pages` and fold their results.
 ///
-/// Returns `None` when setup failed, or a worker failed to spawn, could not
-/// set up, or died without its status report (an Info, a Warning when a signal killed it) — the caller falls
+/// Returns `None` when setup failed or the fleet was declined, and an `abandoned` result when a
+/// worker failed to spawn, could not set up, or died without its status report (an Info, a Warning
+/// when a signal killed it) — the caller falls
 /// back to the serial render, which is still fully correct since the workers
 /// keep the spilled pages. Only a timeout breach folds the killed workers as an
 /// Error + FATAL status (fail toward flagging, never silent success).
@@ -490,7 +504,9 @@ pub(crate) fn parallel_render(
   let chunk_size = total_pages.div_ceil(jobs);
   let first_destination = pages.first().and_then(|p| p.destination.clone());
   let mut manifest_paths: Vec<PathBuf> = Vec::with_capacity(jobs);
+  let mut ranges: Vec<Vec<String>> = Vec::with_capacity(jobs);
   for (i, chunk) in pages.chunks(chunk_size).enumerate() {
+    ranges.push(chunk.iter().filter_map(|p| p.destination.clone()).collect());
     let mut m = manifest.clone();
     m.pages = chunk.to_vec();
     let mpath = spill_dir.join(format!("render-manifest-{i}.json"));
@@ -520,6 +536,7 @@ pub(crate) fn parallel_render(
       pages_rendered: 0,
       discarded:      false,
       written:        Vec::new(),
+      abandoned:      false,
     });
   }
 
@@ -642,9 +659,14 @@ pub(crate) fn parallel_render(
     } else {
       Info!("post", "parallel-render", message);
     }
-    cleanup_abandoned_worker_pages(&joined);
     cleanup_handoff(&dbfile, &manifest_paths);
-    return None;
+    return Some(ParallelResult {
+      main_output:    None,
+      pages_rendered: 0,
+      discarded:      false,
+      written:        pages_the_fleet_may_have_written(&joined, &ranges),
+      abandoned:      true,
+    });
   }
 
   // Fold IN CHUNK ORDER (deterministic log/tally, mirroring the graphics
@@ -712,6 +734,7 @@ pub(crate) fn parallel_render(
       pages_rendered: 0,
       discarded:      true,
       written:        Vec::new(),
+      abandoned:      false,
     });
   }
   let main_output = first_destination.and_then(|d| std::fs::read_to_string(&d).ok());
@@ -721,6 +744,7 @@ pub(crate) fn parallel_render(
     pages_rendered,
     discarded: false,
     written,
+    abandoned: false,
   })
 }
 
@@ -786,7 +810,7 @@ pub fn worker_main(manifest_path: &str) -> i32 {
     .spawn(move || {
       #[cfg(feature = "test-utils")]
       match test_fault().as_deref() {
-        None | Some("attach") => {},
+        None | Some("attach" | "unreported") => {},
         Some("signal") if first_worker => {
           latexml_core::watchdog::kill_pid(std::process::id(), false)
         },
@@ -804,6 +828,8 @@ pub fn worker_main(manifest_path: &str) -> i32 {
       let _watchdog = (manifest.max_rss_kb > 0)
         .then(|| latexml_core::watchdog::Watchdog::with_limits(0, manifest.max_rss_kb));
       let code = match render_manifest_pages(manifest) {
+        #[cfg(feature = "test-utils")]
+        Ok(_) if test_fault().as_deref() == Some("unreported") => std::process::exit(70),
         Ok((written, discard)) => print_status_report(&written, discard),
         Err(why) => print_setup_failure(&why),
       };
@@ -817,9 +843,10 @@ pub fn worker_main(manifest_path: &str) -> i32 {
 
 /// Test hook `LATEXML_RENDER_WORKER_TEST_ABORT` (guard: 120_midscale_streaming):
 /// `attach` fails the worker's db attach; `signal` SIGKILLs worker 0 (a crash)
-/// and holds its siblings for ten minutes, unless the parent stops them; any
-/// other value exits the worker before its status report, as its exceeded
-/// memory share would.
+/// and holds its siblings for ten minutes, unless the parent stops them;
+/// `unreported` renders the range and exits before the status report, as a
+/// worker killed late would; any other value exits the worker before it
+/// renders, as its exceeded memory share would.
 #[cfg(feature = "test-utils")]
 fn test_fault() -> Option<String> { std::env::var("LATEXML_RENDER_WORKER_TEST_ABORT").ok() }
 
@@ -1078,33 +1105,32 @@ mod tests {
   }
 
   #[test]
-  fn abandoned_worker_cleanup_removes_sibling_pages() {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let p1 = dir.path().join("S1.html");
-    let p2 = dir.path().join("S2.html");
-    std::fs::write(&p1, "<html/>").unwrap();
-    std::fs::write(&p2, "<html/>").unwrap();
+  fn an_abandoned_fleet_names_every_page_it_may_have_written() {
+    let report = |text: &str| parse_child_report(text);
     let status = std::process::ExitStatus::default();
-    let joined = vec![
+    let joined: Vec<Joined> = vec![
+      // Reported: only the pages it names (not S3, a stale page of an earlier run).
       Ok((
-        ChildReport {
-          log:          String::new(),
-          counts:       None,
-          status:       Some(0),
-          pages:        2,
-          discard:      false,
-          written:      vec![
-            p1.to_string_lossy().into_owned(),
-            p2.to_string_lossy().into_owned(),
-          ],
-          setup_failed: None,
-        },
+        report("Status:written:S1\nStatus:pages:1\nStatus:conversion:0\n"),
         status,
       )),
-      Err("worker died".to_string()),
+      // Died before its report: any page of its range.
+      Ok((report("Info:post:x partial\n"), status)),
+      // Could not set up: none.
+      Ok((report("Status:setup-failed:no db\n"), status)),
+      Err("worker spawn failed: EAGAIN".to_string()),
+      Err("wait failed: EINTR".to_string()),
     ];
-    cleanup_abandoned_worker_pages(&joined);
-    assert!(!p1.exists(), "abandoned sibling page S1 must be removed");
-    assert!(!p2.exists(), "abandoned sibling page S2 must be removed");
+    let range = |names: &[&str]| names.iter().map(|n| n.to_string()).collect::<Vec<_>>();
+    let ranges = vec![
+      range(&["S1", "S3"]),
+      range(&["S4", "S5"]),
+      range(&["S6"]),
+      range(&["S7"]),
+      range(&["S8"]),
+    ];
+    assert_eq!(pages_the_fleet_may_have_written(&joined, &ranges), vec![
+      "S1", "S4", "S5", "S8"
+    ]);
   }
 }

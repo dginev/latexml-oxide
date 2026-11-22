@@ -1470,6 +1470,8 @@ fn run_post_processing_inner(
   // SQLite file and each worker attaches it readonly; the workers run the
   // identical `render_spilled_page` pipeline over contiguous page ranges and
   // the parent folds their diagnostics deterministically, in chunk order.
+  // The pages an abandoned fleet may have written: the serial render's Fatal removes them too.
+  let mut fleet_pages: Vec<String> = Vec::new();
   let render_jobs = crate::render_workers::render_jobs();
   if render_jobs > 1 && spilled_pages.len() >= crate::render_workers::MIN_PAGES_FOR_PARALLEL {
     let page_jobs: Vec<crate::render_workers::PageJob> = spilled_pages
@@ -1518,7 +1520,9 @@ fn run_post_processing_inner(
       &bibmaker.db,
     );
     audit_end(t_pages);
-    if let Some(result) = outcome {
+    if let Some(result) = outcome.as_ref().filter(|r| r.abandoned) {
+      fleet_pages.clone_from(&result.written);
+    } else if let Some(result) = outcome {
       Info!(
         "post",
         "parallel-render",
@@ -1537,8 +1541,8 @@ fn run_post_processing_inner(
       return result.main_output.unwrap_or_else(fallback);
     }
     // Setup failed, or a worker failed to spawn or died without its report
-    // (already reported at Info): fall through to the serial render — the
-    // workers keep the spilled pages on disk.
+    // (already reported): fall through to the serial render — the workers keep
+    // the spilled pages on disk.
   }
 
   let crossref = build_crossref(bibmaker.db);
@@ -1640,6 +1644,7 @@ fn run_post_processing_inner(
       Ok(o) => o,
       Err(PageFailure::Fatal) => {
         remove_pages(written);
+        remove_pages(&fleet_pages);
         written.clear();
         return String::new();
       },
