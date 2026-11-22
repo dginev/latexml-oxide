@@ -1,9 +1,11 @@
 //! Red/green guards for batch COPYROUTE: a paper's file that declares itself a bound file and reads as it is read where
 //! the binding reads that file, and its request for the file reads the real one (`content::SubstitutedRead`,
-//! OXIDIZED_DESIGN_DIVERGENCES #1118); a file that does not read as it stays its own; `\ProvidesPackage`/`\ProvidesClass`
+//! OXIDIZED_DESIGN_DIVERGENCES #1118); a wrapper whose text loads the file, however late, is read after it
+//! (`content::loads_file`); a file that does not read as it stays its own; `\ProvidesPackage`/`\ProvidesClass`
 //! record the version under the requested name and warn as LaTeX does (latex.ltx:18471-18486; KNOWN_PERL_ERRORS #1307).
 //! Known red, no guard (rows R COPYTHENREAL, COPYSMALL): repros copy_then_real_load, small_file_declares_tikzcd,
-//! small_file_declares_tcolorbox.
+//! small_file_declares_tcolorbox, deferred_wrapper_load_with_options. Green, no guard (the path of
+//! `perfect_kernel_batchregfixq::wrapper_is_read_after_the_file_it_loads`): conditional_wrapper.
 use latexml::util::test::{assert_element, convert_files_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -32,14 +34,6 @@ fn provides_warning(log: &str, kind: &str, request: &str, declared: &str) {
     "Warning:latex:provides You have requested {kind} `{request}', but the {kind} provides `{declared}'"
   );
   assert!(log.contains(&warning), "{warning}\n{log}");
-}
-
-/// A tikzcd diagram drawn after the paragraph's text `text`.
-#[track_caller]
-fn diagram_after(xml: &str, text: &str) {
-  assert!(xml.contains(&format!("<p xml:id=\"p1.1\">{text}")), "{xml}");
-  assert!(xml.contains("<picture "), "{xml}");
-  assert!(xml.contains("class=\"ltx_tikzmatrix\""), "{xml}");
 }
 
 /// The Info of a paper's file read after the binding it declares itself, as the binding's stand-in's copy.
@@ -71,19 +65,63 @@ fn class_wrapper_with_options_reads_the_class() {
   assert!(xml.contains("class=\"ltx_leqno\""), "{xml}");
 }
 
-/// copy_route/conditional_wrapper: `\IfFileExists{tikz-cd.sty}{\RequirePackage{tikz-cd}}{}` in a file declaring
-/// tikz-cd that defines only `\mytcd` is read after the binding's TeX Live file. Distinct: the request made through a
-/// conditional, a package.
+/// copy_route/deferred_wrapper_load, later_wrapper_load: an author's wrapper declaring itself csquotes whose
+/// `\RequirePackage{csquotes}` runs after its read — deferred to `\AtEndOfPackage`, or in a macro the preamble calls —
+/// is read after the binding's TeX Live file (`content::loads_file`), its `\renewcommand*{\mkcitation}` then standing.
+/// Red on the COPYROUTE r1 branch: 26 Errors each, `\textquote` undefined (the wrapper read in the binding's place, the
+/// request made once the binding was marked loaded). Distinct: a request no read-time scope (rule W) sees.
 #[test]
-fn conditional_wrapper_reads_the_file() {
+fn deferred_wrapper_load_reads_the_file() {
+  for (tex, file, copy) in [
+    (
+      repro!("deferred_wrapper_load.tex"),
+      "mycsqend.sty",
+      repro!("mycsqend.sty"),
+    ),
+    (
+      repro!("later_wrapper_load.tex"),
+      "mycsqlater.sty",
+      repro!("mycsqlater.sty"),
+    ),
+  ] {
+    let (log, xml) = convert(tex, &[(file, copy)], (0, 1));
+    provides_warning(&log, "package", file.trim_end_matches(".sty"), "csquotes");
+    read_after(&log, file, "csquotes.sty");
+    assert_element(
+      &xml,
+      "p",
+      &[r#"xml:id="p1.1""#],
+      "<p xml:id=\"p1.1\">CSQ-Y MY-Y <text class=\"ltx_textquote\" xml:id=\"p1.1.1\"><text class=\"ltx_inline-quote \
+       ltx_outerquote\" xml:id=\"p1.1.1.1\">\u{201c}inline\u{201d}</text><text class=\"ltx_citation\" \
+       xml:id=\"p1.1.1.2\"> [CIT:Doe]</text></text> <text class=\"ltx_inline-quote ltx_outerquote\" \
+       xml:id=\"p1.1.2\">\u{201c}x\u{201d}</text></p>",
+    );
+  }
+}
+
+/// copy_route/deferred_class_wrapper_load: `\ProvidesClass{smfart}\AtEndOfClass{\LoadClass{smfart}\renewcommand…}`
+/// is read after smfart_cls.rs's TeX Live class (`content::loads_file`). Red on the COPYROUTE r1 branch: 0 Errors, the
+/// section unnumbered (`sectionx1`). Distinct: the deferred request of a class, whose repeat load is silent.
+#[test]
+fn deferred_class_wrapper_load_reads_the_class() {
   let (log, xml) = convert(
-    repro!("conditional_wrapper.tex"),
-    &[("mycondtcd.sty", repro!("mycondtcd.sty"))],
+    repro!("deferred_class_wrapper_load.tex"),
+    &[("mysmfend.cls", repro!("mysmfend.cls"))],
     (0, 1),
   );
-  provides_warning(&log, "package", "mycondtcd", "tikz-cd");
-  read_after(&log, "mycondtcd.sty", "tikz-cd.sty");
-  diagram_after(&xml, "MYTCD");
+  provides_warning(&log, "document class", "mysmfend", "smfart");
+  read_after(&log, "mysmfend.cls", "smfart.cls");
+  assert!(
+    xml.contains("<title><tag close=\" \"> 1</tag>Intro</title>"),
+    "{xml}"
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"xml:id="section1.p1.1""#],
+    "<p xml:id=\"section1.p1.1\">Text SMALLER end.</p>",
+  );
+  assert!(xml.contains("class=\"ltx_leqno\""), "{xml}");
 }
 
 /// copy_route/wrapper_renews_a_command: an author's `\ProvidesPackage{csquotes}` wrapper whose
@@ -133,33 +171,34 @@ fn class_declaring_imsart_reads_the_papers_imsart() {
 
 /// copy_route/misdeclared_csquotes, misdeclared_cleveref_then_real: an author's file declaring a raw-reading binding's
 /// name that defines none of its names stays its own, the binding's code after its read never run over it, and a later
-/// real request loads the binding once. Red on the COPYROUTE r0 branch: 24 Errors (csquotes), a Fatal timeout
-/// (cleveref). Distinct: the content test that keeps a misdeclared file out of the binding's place.
+/// real request loads the binding once: cleveref loaded, its `\cref` a reference. Red on the COPYROUTE r0 branch: 24
+/// Errors (csquotes), a Fatal timeout (cleveref). Distinct: the content test that keeps a misdeclared file out of the
+/// binding's place.
 #[test]
 fn misdeclared_files_stay_their_own() {
-  for (tex, file, copy, declared) in [
+  for (tex, file, copy, declared, id, p) in [
     (
       repro!("misdeclared_csquotes.tex"),
       "mycsquotes.sty",
       repro!("mycsquotes.sty"),
       "csquotes",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Text MYFOO.</p>",
     ),
     (
       repro!("misdeclared_cleveref_then_real.tex"),
       "mycleveref.sty",
       repro!("mycleveref.sty"),
       "cleveref",
+      "S1.p1.1",
+      "<p xml:id=\"S1.p1.1\">Text MYFOO CR-Y MY-Y <ref labelref=\"LABEL:a\" show=\"creftype~creflabel\"/>.</p>",
     ),
   ] {
     let (log, xml) = convert(tex, &[(file, copy)], (0, 1));
     assert!(!log.contains("Fatal:"), "{file}: {log}");
     provides_warning(&log, "package", file.trim_end_matches(".sty"), declared);
-    assert_element(
-      &xml,
-      "p",
-      &[r#"xml:id="p1.1""#],
-      "<p xml:id=\"p1.1\">Text MYFOO.</p>",
-    );
+    let id = format!("xml:id=\"{id}\"");
+    assert_element(&xml, "p", &[id.as_str()], p);
   }
 }
 

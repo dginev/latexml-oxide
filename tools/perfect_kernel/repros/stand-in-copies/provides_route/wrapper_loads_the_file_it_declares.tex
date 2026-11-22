@@ -1,6 +1,5 @@
 % A shipped wrapper that declares itself a file a raw-reading binding stands for and loads that file is not its copy:
-% the binding reads TeX Live's file, the wrapper is read after it (`routed_copy_request`; it defines none of the
-% file's names, `reads_as_the_file`).
+% the binding reads TeX Live's file, the wrapper is read after it (`routed_copy_request`, `loads_file`).
 % witness: none (reviewer's REGFIXQ probes A and C; the copies of 1201.4414, 1512.05388, 2105.12769 load no such name)
 % oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B; the plot with ticks 0 ... 1; LaTeX Warnings "You have
 %          requested package `mytikzcd', but the package provides `tikz-cd'" and the same for mypgfplots

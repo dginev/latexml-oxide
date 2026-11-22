@@ -2954,10 +2954,13 @@ fn routed_copy_request(file: &str, ext: Option<&str>) -> Option<String> {
   let copy = shipped(route_ext)?;
   let text = source_text(&copy)?;
   if ext == route_ext {
-    // (not an author's own file that defines none of the file's names, whose request for it TeX still reads; a
-    // wrapper's `\RequirePackage{tikz-cd}` reads TeX Live's file, [`SubstitutedRead`])
+    // (not a wrapper, which loads the file it declares itself and is read after it, as TeX reads it: a
+    // `\ProvidesPackage{tikz-cd}\RequirePackage{tikz-cd}` hit the binding still loading, TeX Live's file never read,
+    // and a deferred `\AtEndOfPackage{\RequirePackage{csquotes}}` runs after the read; nor an author's own file that
+    // defines none of the file's names, whose request for it TeX still reads. A request the text test misses,
+    // `\RequirePackageWithOptions{csquotes}`, made while the copy is read, reads TeX Live's file: [`SubstitutedRead`])
     let file = s!("{}.{ext}", file_stem(file));
-    if !reads_as_the_file(&text, &file) {
+    if loads_file(&text, binding) || !reads_as_the_file(&text, &file) {
       return None;
     }
     Info!(
@@ -3061,9 +3064,9 @@ thread_local! {
     const { std::cell::RefCell::new(Vec::new()) };
 }
 
-/// A shipped copy's read in place of `file` ([`routed_copy_request`]). While it is open, a request for `file` — the
-/// copy's `\RequirePackage{tikz-cd}`, `\LoadClassWithOptions{smfart}`, `\IfFileExists{X.sty}{\RequirePackage{X}}{}` —
-/// reads the real file raw, the binding not entered again ([`substituting_for`]): TeX reads the wrapper, then the file.
+/// A shipped copy's read in place of `file` ([`routed_copy_request`]). While it is open, a request for `file` the text
+/// test ([`loads_file`]) does not see — the copy's `\RequirePackageWithOptions{csquotes}`, `\LoadClassWithOptions{smfart}`
+/// — reads the real file raw, the binding not entered again ([`substituting_for`]): TeX reads the wrapper, then the file.
 struct SubstitutedRead;
 
 impl SubstitutedRead {

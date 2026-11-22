@@ -190,10 +190,10 @@ fn picture_after(xml: &str, text: &str) {
 
 /// provides_route/wrapper_loads_the_file_it_declares: a shipped wrapper that declares itself a file a raw-reading
 /// binding stands for and loads it (`\ProvidesPackage{tikz-cd}\RequirePackage{tikz-cd}`, the pgfplots one that
-/// `\pgfplotsset`s) and defines none of its names is not that file's copy (`content::reads_as_the_file`): the binding
-/// reads TeX Live's file, the wrapper after it. Red: 4 Errors each (`\usetikzlibrary`, `{tikzcd}`, `\arrow`; `{axis}`),
-/// the diagram and the plot lost: the wrapper read as the file, its `\RequirePackage` hit the binding still loading.
-/// Two Warnings, LaTeX's "You have requested package …" (KNOWN_PERL_ERRORS #1307). Reviewer's REGFIXQ probes A and C.
+/// `\pgfplotsset`s) is not that file's copy (`content::loads_file`): the binding reads TeX Live's file, the wrapper after
+/// it. Red: 4 Errors each (`\usetikzlibrary`, `{tikzcd}`, `\arrow`; `{axis}`), the diagram and the plot lost: the wrapper
+/// read as the file, its `\RequirePackage` hit the binding still loading. Two Warnings, LaTeX's "You have requested
+/// package …" (KNOWN_PERL_ERRORS #1307). Reviewer's REGFIXQ probes A and C.
 #[test]
 fn wrapper_is_read_after_the_file_it_loads() {
   let (log, xml) = convert(
@@ -271,8 +271,8 @@ fn misdeclared_pgfplots_sharing_a_load_is_not_the_file() {
   }
 }
 
-/// provides_route/class_wrapper_loads_the_class: a class wrapper `\ProvidesClass{smfart}\LoadClass{smfart}` defining
-/// none of smfart.cls's names is not its copy (`content::reads_as_the_file`): the binding reads TeX Live's class. Red: 0 Errors, but
+/// provides_route/class_wrapper_loads_the_class: a class wrapper `\ProvidesClass{smfart}\LoadClass{smfart}` is not
+/// smfart.cls's copy (`content::loads_file`'s `\LoadClass`): the binding reads TeX Live's class. Red: 0 Errors, but
 /// the section unnumbered and the equation's `ltx_leqno` gone (pdflatex "1. Intro", "(1)" on the left). Reviewer's
 /// REGFIXQ probe F. Distinct: the class load, whose repeat is silent.
 #[test]

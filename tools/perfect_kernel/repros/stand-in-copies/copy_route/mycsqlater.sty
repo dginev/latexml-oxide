@@ -1,0 +1,5 @@
+%% An author's wrapper declaring itself csquotes whose load of csquotes is a macro the preamble calls.
+\ProvidesPackage{csquotes}[2020/01/01 wrapper]
+\newcommand\loadquotes{\RequirePackage{csquotes}%
+  \renewcommand*{\mkcitation}[1]{ [CIT:##1]}}
+\endinput

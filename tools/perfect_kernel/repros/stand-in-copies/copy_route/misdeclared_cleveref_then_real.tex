@@ -1,15 +1,19 @@
 % An author's file declaring itself cleveref (`\def\myfoo`), then the document's `\usepackage{cleveref}`: the file is
 % not read as cleveref.sty, and the real load is the binding's, once (OXIDIZED_DESIGN_DIVERGENCES #1118).
 % witness: none (synthetic; the COPYROUTE review's r_cleveref)
-% oracle:  pdflatex 0 errors; "Text MYFOO."; LaTeX Warning "You have requested package `mycleveref', but the package
-%          provides `cleveref'"
+% oracle:  pdflatex 0 errors; "Text MYFOO CR-Y MY-Y section 1."; LaTeX Warning "You have requested package
+%          `mycleveref', but the package provides `cleveref'"
 % engines: rust INT7b = 0 errors; COPYROUTE r0 = Fatal (Timeout: rule M's fresh load re-entered the binding)
-% expect:  0 errors, 1 warning (LaTeX's), no Fatal; "Text MYFOO."
+% expect:  0 errors, 1 warning (LaTeX's), no Fatal; "Text MYFOO CR-Y MY-Y", the `\cref` a cleveref reference
 % status:  GREEN (guard perfect_kernel_batchcopyroute::misdeclared_files_stay_their_own)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{mycleveref}
 \usepackage{cleveref}
+\makeatletter
+\edef\r{\@ifpackageloaded{cleveref}{CR-Y}{CR-N} \@ifpackageloaded{mycleveref}{MY-Y}{MY-N}}
+\makeatother
 \begin{document}
-Text \myfoo.
+\section{A}\label{a}
+Text \myfoo{} \r{} \cref{a}.
 \end{document}
