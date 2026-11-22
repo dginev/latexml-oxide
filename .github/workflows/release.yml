@@ -516,6 +516,11 @@ jobs:
           RELEASE_TARGET: aarch64-unknown-linux-gnu
           RELEASE_LOCKED: "1"
 
+      # The shipped binary's allocator initialises (tools/release_alloc_check.sh): every `.init_array` constructor is
+      # in DT_INIT_ARRAY's range, and mimalloc prints its statistics.
+      - name: allocator initialises
+        run: bash tools/release_alloc_check.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)"
+
       - name: binary size budget
         run: |
           bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
@@ -809,13 +814,14 @@ jobs:
           path: .
 
       # Runtime + build-time apt deps. Matches CI.yml's set, minus
-      # language packs the release build doesn't exercise.
+      # language packs the release build doesn't exercise. No mold: jammy's
+      # mold 1.0.3 splits `.init_array`, so mimalloc never initialised in the
+      # shipped x86_64 binary (the build step below links with the default ld).
       - name: install dependencies
         timeout-minutes: 20
         run: |
           tools/ci_apt_install.sh \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
-            mold \
             dpkg-dev \
             texlive texlive-latex-extra texlive-science \
             texlive-bibtex-extra texlive-publishers \
@@ -902,6 +908,12 @@ jobs:
           # and refuses to build on mismatch.
           GITHUB_REF_NAME: ${{ github.ref_name }}
           RELEASE_LOCKED: "1"
+          # `.cargo/config.toml`'s x86_64 flags without `-fuse-ld=mold`: jammy's mold 1.0.3 leaves Rust std's init
+          # entry in an `.init_array` of its own and DT_INIT_ARRAY covers only that one, so mimalloc's constructor never
+          # ran and every 64 KiB page came straight from the OS (0.7.6, 0.8.0-rc1, rc2). The default ld merges them.
+          # RUSTFLAGS replaces the config's target rustflags; a CARGO_TARGET_<triple>_RUSTFLAGS env is merged with them
+          # and keeps the mold flag (checked with `cargo build -v`).
+          RUSTFLAGS: "-Zthreads=8 -Zunstable-options -Zplt=yes"
           # Include the macOS install sections in the shared release body. The
           # tarball files themselves are collected from the build-macos /
           # build-macos-intel artifacts in a later step — make_release.sh wipes
@@ -915,6 +927,11 @@ jobs:
       # stripped binary blows the size budget (a runaway-growth alarm), and stage
       # the assembled notices for publishing. (Corpus smoke + telemetry are
       # deliberately NOT run in CI — too expensive.)
+      # The shipped binary's allocator initialises (tools/release_alloc_check.sh): every `.init_array` constructor is
+      # in DT_INIT_ARRAY's range, and mimalloc prints its statistics.
+      - name: allocator initialises
+        run: bash tools/release_alloc_check.sh "$(find target/release-artifacts -name latexml_oxide -type f | head -1)"
+
       - name: binary size budget + version stamp + stage provenance
         env:
           TAG: ${{ github.ref_name }}

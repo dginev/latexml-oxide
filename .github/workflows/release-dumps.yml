@@ -88,17 +88,15 @@ jobs:
         with:
           name: build-inputs
           path: .
-      # libxml2/libxslt + mold — deliberately NO libkpathsea-dev (see header).
-      # `mold` is required because the checked-in `.cargo/config.toml` passes
-      # `-Clink-arg=-fuse-ld=mold` for the x86_64-linux target, and this job
-      # (unlike CI.yml) sets no overriding RUSTFLAGS env. Without it the link
-      # fails with `collect2: fatal error: cannot find 'ld'`. This mirrors
-      # the proven release.yml apt set (0.6.1 built this way on 22.04).
+      # libxml2/libxslt — deliberately NO libkpathsea-dev (see header). No mold:
+      # the build step overrides `.cargo/config.toml`'s `-fuse-ld=mold`, since
+      # jammy's mold 1.0.3 splits `.init_array` and mimalloc then never
+      # initialises (tools/release_alloc_check.sh; release.yml's `release` job).
       - name: install dependencies
         timeout-minutes: 20
         run: |
           tools/ci_apt_install.sh \
-            libxml2-dev libxslt1-dev mold
+            libxml2-dev libxslt1-dev
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.toolchain || 'nightly' }}
@@ -109,6 +107,8 @@ jobs:
       - name: build (release, kpathsea-unlinked)
         env:
           USE_LOCKED: ${{ inputs.use_build_inputs }}
+          # Replaces `.cargo/config.toml`'s x86_64 rustflags (and its `-fuse-ld=mold`; see the install step).
+          RUSTFLAGS: "-Zthreads=8 -Zunstable-options -Zplt=yes"
         run: |
           locked=()
           if [ "${USE_LOCKED:-false}" = "true" ]; then locked=(--locked); fi
@@ -119,6 +119,9 @@ jobs:
             echo "::error::dumper unexpectedly links libkpathsea — it would not be portable across TL containers"
             exit 1
           fi
+      # The jammy link without mold keeps every constructor (mimalloc's); same check as release.yml's Linux legs.
+      - name: allocator initialises
+        run: bash tools/release_alloc_check.sh target/release/latexml_oxide
       - uses: actions/upload-artifact@v5
         with:
           name: dumper-binary
