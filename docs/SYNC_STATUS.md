@@ -1011,12 +1011,43 @@ Rules that keep this file honest and mergeable:
     directory output (the cache's `STALE_TMP_AGE` sweep reclaims the cache's; zips skip dotfiles): the parent could
     sweep a dead worker's temps after abandoning the fleet. Also ImageMagick's PNG `date:*` chunks make raster bytes
     differ run to run; 1
+  - SPILLSEG (post-0.8.0) — output can depend on where the streaming core spills: Nasser's 2,400-problem slice at
+    `--max-memory=3700` (RSS ≈ the 925 MB watermark) wraps `\date` in an extra `<span id="id2" class="ltx_text">` when
+    pass 1 stages 7 segments instead of 5; pinning `LATEXML_SPILL_AT_MIB` makes two builds agree. Find the yield-point
+    dependence (an id counter or a frame crossing a segment boundary); 2
+  - WORKERERRBASE (post-0.8.0) — a render worker counts errors from 0, while the serial render's cap also counts the core
+    phase's errors, so a document near its cap can latch `TooManyErrors` serially but not in parallel: pass the
+    parent's error count as a baseline in the `RenderManifest`; 1
+  - LOGONBREACH (post-0.8.0) — on a wall-clock or memory breach the CLI writes no `--log` file (0.7.6 too): the
+    watchdog thread cannot flush the converting thread's `LOG_BUFFER`. Options: open `--log` up front and mirror into
+    it (`set_log_mirror`, as cortex harness children do; costs a write per log append, measure), or a one-line stub
+    log from the hook; 2
+  - CHROMEGATHER (post-0.8.0) — Chrome sizes a `display="block"` `<math>` to its ink alone, so `gather*` rows sit 11-13
+    px apart (no line strut), inside or outside a cell; Firefox gives 19-21 px. Options: a minimum line height on
+    equation cells holding block math, or `display="inline"` for per-row math in equation tables; 1
+  - EQNSPANRESID (post-0.8.0, #972 residual, OXIDIZED_DESIGN_DIVERGENCES #1135) — in the span form (a display in a
+    `p{}` cell, `\parbox`, minipage or note) `colspan`/`rowspan` do not span: an `\intertext` splits the column grid,
+    and a `leqno` tag cell (`rowspan`) covers only row 1, shifting rows 2+ one column left (minimal: `align` with
+    `leqno` in a minipage); a `::before` table-cell on the following rows is a cheap fix; 1
+  - EQNUMTD (post-0.8.0; Perl too, KNOWN_PERL_ERRORS candidate) — `LaTeXML-block-xhtml.xsl:551/579` `eqnumtd` tests
+    `ancestor-or-self::ltx:tr`, which also matches an enclosing tabular's row, so an `equation`+`aligned` in a tabular
+    cell prints its tag on every row. Minimal: `\begin{tabular}{|p{3in}|}{\begin{equation}\begin{aligned} x &= 1\\
+    y &= 2\end{aligned}\end{equation}}\\\end{tabular}`; test only for a row inside the equation's own MathFork; 1
+  - ACMTEASER (post-0.8.0, fidelity, needs a ruling) — acmart's `teaserfigure`: pdflatex prints title, authors, teaser,
+    abstract, keywords; ours (`acmart_cls.rs` ~455-476, Perl's Replace semantics) puts the teaser after the keywords,
+    Perl LaTeXML before the title. A binding change with an OD entry and an A/B over the acmart papers; 1
+  - FMTCACHE-PRUNE (post-0.8.0) — the per-user format cache (`~/.cache/latexml-oxide/formats/<version>-<executable>-
+    <tree>/`, ~4 MB an entry, OXIDIZED_DESIGN_DIVERGENCES #449) is never pruned: a developer host holds 1,843 entries
+    (7 GB). Drop entries whose executable hash no longer exists, or keep the newest few per tree; 1
   - MIMALLOC3 — back to mimalloc 3.x once `libmimalloc-sys` bundles a release with the 3.3.x heap-corruption fixes
     (≥ 3.5.3; microsoft/mimalloc issues 1287, 1430): 0.8.0-rc2 builds the bundled 2.3.2 (`latexml_oxide/Cargo.toml`
     `v2` feature). Witness: 1502.06095 crashed twice under full-width A/B load (mimalloc's small free list holding a
     Token-shaped value; an indirect call through a corrupted pointer), ~0.3 % of loaded runs, 0 of ~370 quiet runs and 0
     ASan reports on the system allocator; the fleet's only unexplained SIGSEGV in run 397 is 2212.05990 (never
-    reproduced). Re-measure 3.x against 2.3.2 (instructions, peak RSS, a loaded 1502.06095 loop) before switching; 2
+    reproduced). A render worker's later SIGSEGV on 2.3.2 (Nasser's 2,400-problem slice under load; ip in
+    the glibc heap) is a different class, fixed by the watchdog ending through `_exit` (#973); the 1502.06095 crash in
+    mimalloc's own heap during digestion stays unexplained. Re-measure 3.x against 2.3.2 (instructions, peak RSS, a
+    loaded 1502.06095 loop) before switching; 2
   - SPLITDOMNS — the whole-DOM split (`latexml_post/src/split.rs`) loses a page's non-`ltx` namespaces: xy-pic's svg
     inside math raises `malformed:namespace` Warnings (1502.06095: 344, 1609.07593: 1,377 under `--splitat=section`)
     and 2606.28974 loses an `aria-hidden`; the streamed split, the default for split runs since OXIDIZED_DESIGN_DIVERGENCES

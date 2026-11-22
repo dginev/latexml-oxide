@@ -51,6 +51,16 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 
 ### Speed, output and platforms
 
+- **Faster than 0.7.6, in less memory.** Measured against the 0.7.6 release binary on the same machine:
+  - a typical arXiv paper converts 1.3× faster (median of 94 papers on the production HTML recipe, one core each;
+    about a fifth of the gain is the Linux binary's allocator now initialising, the rest is code), and 6 of 100
+    papers that 0.7.6 failed on now convert;
+  - a 9,700-page book split at `subsubsection` converts 2.3× faster in 1.7× less memory (1.8× faster in 4.9× less
+    with serial rendering);
+  - the whole 115,519-page book converts in 27 minutes, where 0.7.6 stopped at its memory ceiling (#777).
+- **Large split documents stream by default.** A `--splitat` run streams its core and its split, writes the core
+  result straight to disk, renders 64 or more pages on up to 8 worker processes within `--max-memory`, and keeps
+  only the head links the navigation reads. Overrides: `LATEXML_POST_STREAM_SPLIT=0`, `LATEXML_RENDER_JOBS=1`.
 - **Faster and lighter.** The November performance pass cut a median 10.4 % of the instructions typical papers
   execute, with byte-identical output; a large book's peak memory fell from 6.7 to 4.3 GB; math post-processing is
   linear in the number of formulas; splitting a document frees each page once copied, so a 1,600-subsection book's
@@ -73,6 +83,9 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 
 ### Upgrading from 0.7.6
 
+- The first conversion with a new release, or after a TeX Live update that changes the LaTeX kernel, builds that
+  tree's format once (about 10 s) and caches it in `~/.cache/latexml-oxide/formats/`; a format built from another
+  tree is never used (OXIDIZED_DESIGN_DIVERGENCES #449).
 - Raw loading is the default; `--noincludestyles` restores Perl LaTeXML's behaviour.
 - Bindings that now read the real package source can surface conflicts TeX itself has and 0.7.x hid: for example
   `fancybox` loaded after `fancyvrb` redefines `\VerbatimEnvironment`, so every fancyvrb environment runs to the end
