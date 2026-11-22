@@ -207,7 +207,7 @@ pub fn release_core_state_for_post() {
 ///   `latexml_post/src/mathml/presentation.rs`);
 /// - `MAX_ERRORS`: the error cap, `error::note_error_cap()` / `Error!` (tikz
 ///   raises it from 100 to 1000).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PostStateValues {
   pub nominal_font_size: Option<f64>,
   pub max_errors:        Option<i64>,

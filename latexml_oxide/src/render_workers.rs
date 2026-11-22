@@ -130,7 +130,7 @@ pub struct PageJob {
 /// Everything a page-render worker needs to rebuild the pass-B processor set
 /// exactly as the parent would have, plus its page range. Written as
 /// `render-manifest-{i}.json` beside the saved `render.db`.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct RenderManifest {
   /// The saved ObjectDB (SQLite, attached readonly by each worker).
   pub dbfile:                    PathBuf,
@@ -171,12 +171,10 @@ pub struct RenderManifest {
   /// watchdog's ceiling, so the fleet stays within `--max-memory`.
   #[serde(default)]
   pub max_rss_kb:                u64,
-  /// The parent's [`latexml_core::PostStateValues`]: a worker is a fresh process, whose STATE
-  /// holds neither (MathML's `<mpadded>` widths read `NOMINAL_FONT_SIZE`).
+  /// The parent's STATE values the render reads: a worker is a fresh process, whose STATE
+  /// holds none (MathML's `<mpadded>` widths read `NOMINAL_FONT_SIZE`).
   #[serde(default)]
-  pub nominal_font_size:         Option<f64>,
-  #[serde(default)]
-  pub max_errors:                Option<i64>,
+  pub post_values:               latexml_core::PostStateValues,
 }
 
 /// The parent-side result of a parallel render in which workers were actually
@@ -880,11 +878,7 @@ pub fn worker_main(manifest_path: &str) -> i32 {
       if manifest.max_rss_kb > 0 {
         latexml_core::stomach::set_memory_cap(Some(manifest.max_rss_kb.saturating_mul(1024)));
       }
-      latexml_core::PostStateValues {
-        nominal_font_size: manifest.nominal_font_size,
-        max_errors:        manifest.max_errors,
-      }
-      .restore();
+      manifest.post_values.restore();
       let watchdog_kb = manifest.max_rss_kb;
       #[cfg(feature = "test-utils")]
       let watchdog_kb = if test_fault().as_deref() == Some("rss") {
@@ -1070,6 +1064,30 @@ mod tests {
     assert!(
       !r.log.contains("Status:"),
       "status lines must not leak into the folded log"
+    );
+  }
+
+  /// The parent's STATE values reach the worker's STATE through the manifest's JSON: the raised error cap
+  /// (tikz's 1000) as the nominal font size (the a0poster guard in cluster_cli).
+  #[test]
+  fn manifest_carries_the_parents_state_values() {
+    let manifest = RenderManifest {
+      post_values: latexml_core::PostStateValues {
+        nominal_font_size: Some(24.88),
+        max_errors:        Some(1000),
+      },
+      ..RenderManifest::default()
+    };
+    let json = serde_json::to_string(&manifest).unwrap();
+    let read: RenderManifest = serde_json::from_str(&json).unwrap();
+    read.post_values.restore();
+    assert_eq!(
+      latexml_core::state::try_lookup_int("MAX_ERRORS"),
+      Some(1000)
+    );
+    assert_eq!(
+      latexml_core::state::lookup_float("NOMINAL_FONT_SIZE").map(|f| f.0),
+      Some(24.88)
     );
   }
 
