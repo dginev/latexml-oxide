@@ -999,7 +999,10 @@ impl Processor for Scan {
     }
 
     self.page_id = Some(id.clone());
-    self.scan(&doc, &root, None);
+    // Perl Scan.pm:99: a split page is filed under the page Split took it from; the guesses
+    // below are only for a document without one (an id renumbered by `\@addtoreset{chapter}{part}`
+    // defeats the id-prefix guess: `Ch1.S1` under Part II's `Ch1a`).
+    self.scan(&doc, &root, doc.parent_id.as_deref());
     self.page_id = None;
 
     let loc = doc.site_relative_destination().unwrap_or_default();

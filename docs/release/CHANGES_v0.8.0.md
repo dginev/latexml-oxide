@@ -132,6 +132,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     conversion, not per math parser; streaming builds one parser per segment, so a formula repeated across segments
     warned once per segment (Nasser's 600-problem slice: 101 Warnings converted whole, 171 streamed). Guard
     `perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion`.
+  - **0.8.0-rc2: a split page navigates under the page it was split from, as in Perl.** Scan filed each page under
+    a parent guessed from its id prefix; Perl passes the parent Split computed (`Split.pm:132-133`
+    `parent_id => $$entry{upid}`, `Scan.pm:99`), and both of our split paths now do. Under
+    `\@addtoreset{chapter}{part}` Part II's chapters are `Ch1a`, `Ch2a` while their sections keep `Ch1.S1`, so
+    those sections went up into Part I's `Ch1`, with its title chain and prev/next (9,262 of Nasser's 115,519 pages);
+    and in every book with `\part`, a chapter now has its part as `up` and in its title (`Chapter 1 Intro ‣ Part I
+    A`), where it had no `up`. A split without parts is byte-identical. Guard
+    `118_streaming_split_parity::split_pages_navigate_under_the_parent_split_gave_them`.
   - **0.8.0-rc2: release checks.** Every release build converts `hello.tex` with the binary it ships and
     `resources/` moved aside (`tools/release_smoke.sh`; rc1's macOS and Windows builds ran only `--version`); the
     container images print the binaries' revision and carry `org.opencontainers.image.{title,version,revision,source}`;
