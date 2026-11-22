@@ -1,0 +1,11 @@
+% The date and keywords labels of the same family (`\lx@date@received@name` `Received~`, `\lx@keywords@name`
+% `Keywords:~`, Perl Base_Utility.pool.ltxml:755, :777) beside a document's `\def~{\verb~}` (lineno.tex:20): spelled
+% with `\lx@nobreakspace`, the document's `~` does not reach them.
+% witness: lineno/lineno (TL doc, manual sweep): the date/keywords sibling
+% oracle:  pdflatex 0 errors; "T", "A", "(Dated: <today>; Received 1 May 2020)", "x" (revtex prints no keywords here)
+% engines: Perl 0 errors, names "Received\verb~~", "Keywords:\verb~~"; rust MANFM 945eab9385 = 2 errors (`\verb illegal
+%          in argument`), the same names
+% expect:  0 errors, 0 warnings; the received date named "Received" + U+00A0, the keywords named "Keywords:" + U+00A0
+% status:  RED (MANFM 945eab9385) -> GREEN (MANFM2)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}\def~{\verb~}\begin{document}\title{T}\author{A}\date{\today}\received{1 May 2020}\keywords{k1, k2}\maketitle x\end{document}

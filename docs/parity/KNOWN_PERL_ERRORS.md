@@ -22370,3 +22370,20 @@ display run side by side instead of stacking aligned at `&`. Minimal trigger:
 pdflatex: two rows aligned at `=`, centred in the cell. Perl 0.8.8 and Rust (until issue #972): the same HTML, both rows
 on one line in Chrome and Firefox. Fixed in Rust in `LaTeXML.css` and ar5iv-css (OXIDIZED_DESIGN_DIVERGENCES #1135).
 Repro block-model/display_rows_in_a_p_cell_972; guard `cluster_cli::browser_render_eqn_rows_in_cells`.
+
+## 1311. A document's `\def~` reaches LaTeXML's default frontmatter labels
+
+Base_Utility.pool.ltxml:755-788 defines the labels LaTeXML gives an unnamed frontmatter item with a trailing `~`
+(`\lx@contact@affiliation@name` `Affiliation:~`, `Email:~`, `Received~`, `Keywords:~`, …), digested under the
+document's own `~`. Minimal trigger:
+
+```tex
+\documentclass{article}\title{T}\author{A\\B}\def~{\verb~}\begin{document}\maketitle\end{document}
+```
+
+pdflatex prints T, A, B. Perl (same host, 0 Errors): `<contact name="Affiliation:\verb~~" role="affiliation">B</contact>`;
+revtex4-2's `\email{a@b.org}` gives `name="Email:\verb~~"`, `\received`/`\keywords` `Received\verb~~`/`Keywords:\verb~~`.
+Fixed in Rust: the labels end in `\lx@nobreakspace` (OXIDIZED_DESIGN_DIVERGENCES #1136), as article.cls:457 spells
+`\fnum@figure` with `\nobreakspace`. Witness lineno/lineno (TL doc, lineno.tex:20). Repros
+sectioning-frontmatter/default_{affiliation_label_tilde_redefined,email_label_tilde_redefined_used,date_keywords_labels_tilde_redefined};
+guard `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`.

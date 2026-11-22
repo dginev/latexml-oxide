@@ -1,0 +1,12 @@
+% An e-mail that takes LaTeXML's default label (revtex4-2's `\email{…}`, `Default:\lx@contact@email@name`, Perl
+% Base_Utility.pool.ltxml:783 `Email:~`) beside a document's `\def~{\verb~}` (lineno.tex:20, ulineno.tex:33): the label
+% is spelled with `\lx@nobreakspace`, which the document's `~` does not reach. The same holds for
+% `\email[Corresponding author: ]{…}`, whose contact keeps the default label beside the correspondence note.
+% witness: lineno/lineno, lineno/ulineno (TL doc, manual sweep): the e-mail sibling
+% oracle:  pdflatex 0 errors; "T", "A∗", "x", "∗ a@b.org"
+% engines: Perl 0 errors, contact name "Email:\verb~~"; rust MANFM 945eab9385 = 1 error (`\verb illegal in argument`),
+%          the same name
+% expect:  0 errors, 0 warnings; author "A" with the e-mail contact a@b.org named "Email:" + U+00A0
+% status:  RED (MANFM 945eab9385) -> GREEN (MANFM2)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}\def~{\verb~}\begin{document}\title{T}\author{A}\email{a@b.org}\maketitle x\end{document}

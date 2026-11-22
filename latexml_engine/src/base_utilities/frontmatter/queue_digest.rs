@@ -991,10 +991,10 @@ pub(in crate::base_utilities) fn get_frontmatter_name(
   Ok(None)
 }
 
-/// The e-mail contact's default label, [`get_frontmatter_name`]`(None, "ltx:contact", "email")`, digested where a
-/// contact the steps after the frontmatter is placed label first takes it, as Perl digests a name only for an entry it
-/// adds (Base_Utility.pool.ltxml:408). A document with no such contact never digests `Email:~`, whose `~` it may have
-/// redefined (lineno.tex:20, ulineno.tex:33 `\def~{\verb~}`).
+/// The e-mail contact's default label, [`get_frontmatter_name`]`(None, "ltx:contact", "email")`, digested the first time
+/// a step after the frontmatter is placed labels a contact with it, as Perl digests a name only for an entry it adds
+/// (Base_Utility.pool.ltxml:408). A document with no such contact never digests it (lineno.tex:20, ulineno.tex:33
+/// `\def~{\verb~}`; the label itself no longer reads `~`, OXIDIZED_DESIGN_DIVERGENCES #1136).
 #[derive(Default)]
 pub(in crate::base_utilities) struct DefaultEmailName(Option<Option<String>>);
 

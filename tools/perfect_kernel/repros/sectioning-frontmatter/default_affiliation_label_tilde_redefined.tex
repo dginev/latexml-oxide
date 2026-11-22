@@ -1,0 +1,11 @@
+% LaTeXML's own default labels (`\lx@contact@affiliation@name`, Perl Base_Utility.pool.ltxml:780 `Affiliation:~`) are
+% spelled with `\lx@nobreakspace`, as article.cls:457 spells `\fnum@figure` with `\nobreakspace`: a document's
+% `\def~{\verb~}` (lineno.tex:20) does not reach the label of the affiliation an author's second line becomes.
+% witness: lineno/lineno (4 errors after MANFM round 1) (TL doc, manual sweep)
+% oracle:  pdflatex 0 errors; "T", "A", "B"
+% engines: Perl 0 errors, contact name "Affiliation:\verb~~"; rust MANFM 945eab9385 = 3 errors (`\verb illegal in
+%          argument`), the same name
+% expect:  0 errors, 0 warnings; author "A" with the affiliation contact "B" named "Affiliation:" + U+00A0
+% status:  RED (MANFM 945eab9385) -> GREEN (MANFM2)
+% preload: ar5iv.sty
+\documentclass{article}\title{T}\author{A\\B}\def~{\verb~}\begin{document}\maketitle\end{document}

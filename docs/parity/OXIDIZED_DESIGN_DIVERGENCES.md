@@ -19203,7 +19203,11 @@ appended text, an affiliation or e-mail under the names, is a note: 2610.08257, 
 of a class built on them only what was added after its load ended (`\lx@ams@setauthors@added`, the store past the
 definition kept at `class/after`; all of it where the document replaced it), so ijmart.cls:229-244's own setter, whose
 `\if\authors\@empty\relax\else` has no `\fi`, never runs with `\authors` emptied (ijmart/ijmsample, TL doc; Guard
-`perfect_kernel_batchmanfm::ams_based_class_setauthors_runs_only_the_document_additions`);
+`perfect_kernel_batchmanfm::ams_based_class_setauthors_runs_only_the_document_additions`). So what such a class's own
+`\@setauthors` prints beyond the names (text the class itself appends or defines there) is no longer kept as a note;
+only what the document appends after the class's load is. Known gap: a wrapper class that `\LoadClass{amsart}` and then
+appends to `\@setauthors` has that text dropped (pdflatex prints it); synthetic, no TL or arXiv class seen, recorded for
+after 0.8.0;
 REVTeX's
 `\prep@absbox`, `\post@absbox`, `\mini@notes` and `\@FMN@list` at `\maketitle` (revtex4-2.cls:2648-2652, :3020-3022;
 2606.06621, 2605.00976); and the text a document adds to icml's `\icmlcorrespondingauthor@text`, whose names and
@@ -23784,3 +23788,22 @@ it, and as a CSS table it put the `\intertext` row in its first column (a footno
 
 **Guards**: `cluster_cli::browser_render_eqn_rows_in_cells::display_rows_stack_and_align_in_cells` (opt-in, local),
 `latexml_post::xslt::witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present` (CI).
+
+### 1136. LaTeXML's default frontmatter labels are spelled with `\lx@nobreakspace`, not `~` (MANFM2)
+
+- Perl: the labels LaTeXML invents for an item its class does not name (Base_Utility.pool.ltxml:755-788:
+  `\lx@contact@affiliation@name` `Affiliation:~`, `Email:~`, `Received~`, `Keywords:~`, the pubnote and contact names)
+  end in `~`, digested under the document's `~`. A document's `\def~{\verb~}` (lineno.tex:20, ulineno.tex:33) gives the
+  name `Affiliation:\verb~~`; Perl prints it with no Error, we raise `\verb illegal in argument` (OD #1085) once per
+  digestion. KNOWN_PERL_ERRORS #1311.
+- Ours (author_macros.rs): the same labels end in `\lx@nobreakspace`, LaTeXML's own stand-in for `~`
+  (Base_Utility.pool.ltxml:50-55: the U+00A0 box of 0.333em that `~`'s `\lx@NBSP` makes, defined by Base_Utility itself so it
+  exists under plain TeX too; general.rs), as
+  LaTeX's classes spell a label with `\nobreakspace` for this robustness (article.cls:457 `\def\fnum@figure{\figurename
+  \nobreakspace\thefigure}`, :469). A document that does not redefine `~` gets the same name (`Affiliation:` U+00A0) and
+  byte-identical output; the dumps do not change (the labels are not in them). Class and package bindings that spell
+  their class's own label keep it (llncs_cls.rs `\emailname~`, as llncs.cls).
+- Witness: lineno/lineno (TL doc) 4 Errors → 0, names `Affiliation:` U+00A0.
+- Upstream: offered to Perl as a patch (the label definitions).
+
+**Guards**: `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`.
