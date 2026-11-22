@@ -367,13 +367,16 @@ EOF
   if grep -qE "^## \[${changelog_version}\]" CHANGELOG.md; then
     echo "## Changelog"
     echo
+    # The CHANGELOG's relative links (`](docs/release/CHANGES_v0.8.0.md)`) would resolve against the release page's
+    # URL there, so they are made absolute links to this tag's files.
     awk -v ver="${changelog_version}" '
       /^## \[/ {
         if (in_block) exit
         if ($0 ~ "^## \\[" ver "\\]") { in_block = 1; print; next }
       }
       in_block { print }
-    ' CHANGELOG.md
+    ' CHANGELOG.md \
+      | sed -E "s#\]\(([^)\#:/][^):]*)\)#](https://github.com/${GITHUB_REPOSITORY:-dginev/latexml-oxide}/blob/${GITHUB_REF_NAME:-${version}}/\1)#g"
   else
     echo "_See [CHANGELOG.md](https://github.com/dginev/latexml-oxide/blob/main/CHANGELOG.md) for release notes._"
   fi

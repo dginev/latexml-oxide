@@ -49,7 +49,13 @@ Rules that keep this file honest and mergeable:
 ## The task list — start here (row R, the post-merge worklist)
 
 - **The campaign (DG 2026-11-14), in order:** (1) finish latexml-oxide's open PRs and issues and ALL the Bruce Q&A residuals (the QA lines below); (2) a cutoff commit — output-changing merges freeze; (3) rerun the 2605/2606 cortex sandboxes and review regressions against runs 375/376; (4) reconvert the whole arXiv corpus in cortex (ARXIV); (5) sync to ar5iv.
-- **Where it stands (2026-11-18):** the frontmatter campaign merged as PR #895 (`aeda3db4e47`, 2026-11-17; DG's 39-paper
+- **Where it stands (2026-11-21):** the full arXiv run on the cutoff is run 397 (November 2026, 98.1 % of 2,962,950
+  error-free); its regressions were classified and the clusters our changes caused fixed (#954-#964), the residue in
+  row R. **0.8.0-rc1** is published as a prerelease (tag `f7f8120f349`, merged to main as #919); **0.8.0-rc2** is main
+  `7c2b9ef3b76` (#965: Split frees its pages, release checks; #966: the version), its release checks green, the tag
+  on DG's go. Main stays the release line until 0.8.0 final; the reviewed post-release branches (COPYROUTE, ENCURL,
+  POSTPERF, CORELEAK) merge after it. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.
+- **Where it stood (2026-11-18):** the frontmatter campaign merged as PR #895 (`aeda3db4e47`, 2026-11-17; DG's 39-paper
   showcase review in runs 389–392, a 300-paper acceptance A/B, and a performance audit whose XSLT-key cost was cut to
   median −0.08 % / p90 +0.46 % vs main, the residual row R XSLTKEYc). **Cutoff = `aeda3db4e47`** (DG 2026-11-17): the
   fleet runs it, and the 2605/2606 reruns are runs 395/396, compared against 379/380. The Bruce Q&A lines below move to
@@ -288,7 +294,7 @@ Rules that keep this file honest and mergeable:
   - QA84 — comment compaction across the crates — DG 2026-11-12: after the merge (on main); DG 2026-11-15: deferred until after the cutoff ("it can wait"); 5
   - QA75 — eyeball review of rendered HTML (a short look folded into SWEEP before the merge: QA75S, 2026-11-13 — LOGO1 and MEM1 fixed, the minor patterns QA75M) — DG 2026-11-12; 3
   - CLEAN — workspace cleanup (keep-list to DG) — DG 2026-11-12: after the merge; 1
-  - ARXIV — L7, the full arXiv rerun on the merged head (stream G; ~2.96M papers, ~3 days; the last complete one run 336, 2026-10-10) — DG 2026-11-12: after the merge, from main; its new Error/Fatal clusters classified into this list; 5
+  - ARXIV — L7, the full arXiv rerun on the merged head (stream G; ~2.96M papers, ~3 days; the last complete one run 397, November 2026, on the cutoff; run 336, 2026-10-10, before it) — DG 2026-11-12: after the merge, from main; its new Error/Fatal clusters classified into this list; 5
   - TABUN — tabu's private `|` let is inherited by a tabular nested in a tabu cell: `|[1pt]` accepted where TeX errs "Illegal pream-token" (`tabu_vline_style_in_a_nested_tabular_red`; revTABU2 N1); 1
   - TABUE — a `\tabularnewline` inside a list in a plain tabular cell: the recovery from the unbalanced group drops the table and every word after it (8 E, only "Before." kept; pdflatex errs but prints all) (`row_end_inside_a_list_in_a_cell_red`; revTABU2 N2); 3
   - TABUC — `{thebibliography}` in a p-column cell: `<ltx:bibliography> isn't allowed in <ltx:block>`, the content kept; pdflatex 0 errors (`block-model/bibliography_in_a_table_cell_red`; TABU2c); 1
