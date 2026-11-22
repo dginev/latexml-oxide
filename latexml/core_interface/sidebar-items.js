@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["LATEXML_VERSION"],"enum":["AdaptiveOutcome"],"fn":["digest_setup_count"],"struct":["DigestionOptions"],"trait":["DigestionAPI"]};
+window.SIDEBAR_ITEMS = {"constant":["LATEXML_VERSION"],"enum":["AdaptiveOutcome"],"fn":["digest_setup_count","release_core_state_for_post"],"struct":["DigestionOptions"],"trait":["DigestionAPI"]};
