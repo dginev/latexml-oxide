@@ -49,6 +49,13 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     holds 29 MB of C heap at page 1024 instead of 818 MB, the whole conversion takes ~8 % fewer cycles, and every page
     is byte-identical. Guards `112_fragment_yield::split_pages_leave_no_c_heap_residue` and
     `::split_keeps_pages_whose_namespaces_a_navigation_uses` (in the CI asan job).
+  - **0.8.0-rc2: a split page's head links only the related pages something reads (OXIDIZED_DESIGN_DIVERGENCES
+    #1132).** Each split page keeps `up`/`start`/`prev`/`next` and the `bibliography`/`index`/`glossary` links the
+    navigation reads, and drops Perl's `<link rel="chapter">`/`"section"`/`"subsection"`/…/`"sidebar"`, one per sibling
+    of every ancestor (`CrossRef.pm:105-130`), which only duplicated the navigation TOC. Page bodies are byte-identical.
+    Nasser's 2,400-problem slice split at `subsubsection`: 612,424 links dropped, HTML 343 → 118 MB, −12.9 %
+    instructions; the 1,600-subsection book: 37.4 → 24.6 MB, −4.8 %. Guard
+    `cluster_xslt_split::split_nav_relations::split_page_navigation_relations`.
   - **0.8.0-rc2: release checks.** Every release build converts `hello.tex` with the binary it ships and
     `resources/` moved aside (`tools/release_smoke.sh`; rc1's macOS and Windows builds ran only `--version`); the
     container images print the binaries' revision and carry `org.opencontainers.image.{title,version,revision,source}`;

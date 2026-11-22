@@ -5,7 +5,12 @@
 //! referenced IDs in the ObjectDB and filling in the reference text,
 //! titles, and navigation links.
 
-use std::{cell::RefCell, collections::VecDeque, rc::Rc, sync::LazyLock};
+use std::{
+  cell::{OnceCell, RefCell},
+  collections::VecDeque,
+  rc::Rc,
+  sync::LazyLock,
+};
 
 use latexml_core::common::xml::name_is;
 use libxml::tree::{Node, NodeType};
@@ -47,7 +52,16 @@ const NORMAL_TOC_TYPES: &[&str] = &[
 struct ChildPages {
   ids:      Vec<String>,
   index_of: HashMap<String, usize>,
+  /// The `(relation, pageid)` head links these pages contribute, filled on first use by
+  /// [`CrossRef::related_pages`].
+  related:  OnceCell<Vec<(&'static str, String)>>,
 }
+
+/// The page types whose sibling/child relation `fill_in_relations` keeps: the footer navigation of
+/// `LaTeXML-webpage-xhtml.xsl` reads `rel='bibliography'`/`'index'`/`'glossary'`. The sectional
+/// relations (`chapter`, `section`, …) and `sidebar` are read by nothing but the head-link copy
+/// (OXIDIZED_DESIGN_DIVERGENCES #1132).
+const KEPT_RELATIONS: &[&str] = &["bibliography", "index", "glossary"];
 
 /// Fallback fields when a requested ref show key is not found.
 fn ref_fallbacks(key: &str) -> &'static [&'static str] {
@@ -1304,45 +1318,48 @@ impl CrossRef {
       doc.add_navigation("next", &next);
     }
 
-    // 4. Relation-typed links (Perl CrossRef.pm L105-130). "Dig around for other
-    // interesting related documents": the sibling pages of each ancestor (walking
-    // up), then this page's own child pages. Each is keyed by the page's own
-    // element-name relation (`chapter`/`section`/`subsection`/…) if it is a
-    // primary page, else `sidebar`. This is what gives split pages their
-    // `rel="chapter"`/`rel="section"`/… head links; the whole block was unported.
+    // 4. Relation-typed links (Perl CrossRef.pm L105-130): the sibling pages of each
+    // ancestor (walking up), then this page's own child pages, keyed by the page's
+    // element name. Perl links every one ("this gets way too much. But how to prune?",
+    // CrossRef.pm:110) — a quadratic set of head links, 66 % of a split book's bytes; we
+    // keep only the relations something reads (KEPT_RELATIONS, OXIDIZED_DESIGN_DIVERGENCES #1132).
     let mut xentry = page_id.clone();
     while let Some(parent) = self.get_parent_page_id(&xentry) {
-      for sib in self.child_pages(&parent).ids.iter() {
-        if *sib == page_id {
-          continue;
+      for (rel, sib) in self.related_pages(&parent) {
+        if sib != page_id {
+          doc.add_navigation(rel, &sib);
         }
-        self.add_typed_navigation(doc, sib);
       }
       xentry = parent;
     }
-    for child in self.child_pages(&page_id).ids.iter() {
-      self.add_typed_navigation(doc, child);
+    for (rel, child) in self.related_pages(&page_id) {
+      doc.add_navigation(rel, &child);
     }
   }
 
-  /// Add a navigation link to `related_id` keyed by its own element-name
-  /// relation (Perl: `$type =~ s/^(\w+)://` → `chapter`/`section`/…) when it is
-  /// a primary page, else `sidebar`. Port of the per-entry arm of Perl
-  /// `CrossRef::fill_in_relations`'s second half.
-  fn add_typed_navigation(&self, doc: &mut PostDocument, related_id: &str) {
-    if self.is_primary_page(related_id) {
-      let rel = self
-        .db
-        .lookup(&format!("ID:{}", related_id))
-        .and_then(|e| e.get_string("type").map(String::from))
-        // Strip the namespace prefix: `ltx:chapter` → `chapter`.
-        .map(|t| t.rsplit(':').next().unwrap_or(&t).to_string());
-      if let Some(rel) = rel.filter(|r| !r.is_empty()) {
-        doc.add_navigation(&rel, related_id);
+  /// The child pages of `entry_id` that `fill_in_relations` links, with their relation:
+  /// primary pages whose element name (Perl `$type =~ s/^(\w+)://`) is in
+  /// [`KEPT_RELATIONS`], in page order. Memoized on the entry's [`ChildPages`].
+  fn related_pages(&self, entry_id: &str) -> Vec<(&'static str, String)> {
+    let pages = self.child_pages(entry_id);
+    let related = pages.related.get_or_init(|| {
+      let mut related = Vec::new();
+      for id in pages.ids.iter() {
+        if !self.is_primary_page(id) {
+          continue; // Perl's `sidebar` relation: unread, dropped.
+        }
+        let typ = self
+          .db
+          .lookup(&format!("ID:{}", id))
+          .and_then(|e| e.get_string("type").map(String::from));
+        let name = typ.as_deref().map(|t| t.rsplit(':').next().unwrap_or(t));
+        if let Some(rel) = name.and_then(|n| KEPT_RELATIONS.iter().find(|k| **k == n)) {
+          related.push((*rel, id.clone()));
+        }
       }
-    } else {
-      doc.add_navigation("sidebar", related_id);
-    }
+      related
+    });
+    related.clone()
   }
 
   /// Return whether the given xml:id is registered as a primary page.
@@ -1381,7 +1398,11 @@ impl CrossRef {
     for (i, id) in ids.iter().enumerate() {
       index_of.insert(id.clone(), i);
     }
-    let rc = Rc::new(ChildPages { ids, index_of });
+    let rc = Rc::new(ChildPages {
+      ids,
+      index_of,
+      related: OnceCell::new(),
+    });
     self
       .child_pages
       .borrow_mut()

@@ -23640,3 +23640,26 @@ before the copy, as its result chooses the binding's defaults. **Guard**:
 `perfect_kernel_batchregfixu::snjnl_scan_runs_after_the_copy_loads_its_packages` (repro
 `stand-in-copies/scan_order/snjnl_scan_after_the_copy.tex`); `perfect_kernel_batch67u::snjnl_class_copy_loads_program`,
 `perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.
+
+### 1132. A split page links only the related pages something reads (CHAPLINKS)
+
+**Rule** (maintainer ruling 2026-11-21: drop unread relations). CrossRef's relation walk keeps, of the sibling pages of
+every ancestor and the page's own child pages, only those whose relation the stylesheets read: `bibliography`, `index`,
+`glossary`. The sectional relations (`part`, `chapter`, `section`, `subsection`, … — the page type's element name) and
+`sidebar` (a non-primary page) are no longer made. `up` (and "up up"…), `start`, `prev`, `next` are unchanged.
+- Perl: `CrossRef.pm:105-130` adds every such page (`:110`: "In a large/complex site, this gets way too much. But how
+  to prune?"), so a page carries one link per sibling of each ancestor: quadratic in the pages, each link with its full
+  breadcrumb `fulltitle`.
+- Readers (`latexml_post/resources/XSLT/LaTeXML-webpage-xhtml.xsl`; Perl's copy :451, :514-516, :527-531): the header
+  navigation reads `up`, `prev`, `next`, the navbar `start`, the footer `prev`, `bibliography`, `index`, `glossary`,
+  `next`, the `<title>` `up`, `LaTeXML-structure-xhtml.xsl` `up`. The sectional relations and `sidebar` reach only the
+  head-link copy (`webpage-xhtml.xsl:308-320`), which duplicates the navigation TOC; HTML 4.01 §6.12 listed `Chapter`/
+  `Section`/`Subsection`/`Appendix` as link types, the HTML Living Standard (§4.6.7) does not, and no browser, ar5iv
+  or ar5iv-css reads them.
+- Measured: Nasser's 2,400-problem slice (`--splitat=subsubsection`) had 66 % of its HTML in these links (612,424
+  links, 246-455 bytes each); the page bodies are byte-identical.
+- Implementation: `CrossRef::related_pages` (memoized on the entry's `ChildPages`), so the walk does no per-link work.
+- Upstream: offered to Perl as a patch (prune the walk to the read relations).
+
+**Guards**: `cluster_xslt_split::split_nav_relations::split_page_navigation_relations` (a section page's and the root
+page's whole head link sets), `cluster_xslt_split::urlstyle::*` (the parent page reached by `up`).
