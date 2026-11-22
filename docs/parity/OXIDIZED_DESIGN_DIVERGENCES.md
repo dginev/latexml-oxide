@@ -23660,23 +23660,27 @@ Warnings eager, 171 streamed, byte-identical XML). Eager output and counts are u
 **Rule** (DG ruling 2026-11-21). Perl builds the whole DOM in core and splits it in post. A `latexml_oxide` run that
 splits (`--splitat`/`--splitpath`/`--split`) instead:
 - spills its core at min(512 MiB, the `--max-memory` default of a third of the fuse) of growth (`split_spill_watermark`,
-  `bin/latexml_oxide.rs`). A document that never grows past that mark converts eagerly, as before.
+  `bin/latexml_oxide.rs`). A document that never grows past that mark converts eagerly, as before. One that grows
+  past 512 MiB but not past the default mark (a third of the fuse) now takes the spilling core, with its documented
+  differences from the eager result (#456, #738, #903); `--streaming=false` does not keep such a run eager.
 - splits through the streaming front-end (`latexml_post::stream_split`) at any size: `post::stream_split_threshold`
-  now defaults to 0, where it was 1 GiB. The CLI hands over the core result by value
-  (`post::run_post_processing_owned_logged`): staged beside the destination, whose directory it creates, and freed before
-  post runs. A stream that fails on an input under 1 GiB falls back to the whole-DOM split with an Info. Such a
-  stream fails when a template item arrives after a page was written: an `ltx:navigation` (from `--input xml`), an
-  `ltx:resource`, a root `ltx:date` or a `<?latexml?>` PI. The DOM split copies these into every page. Above 1 GiB the
+  now defaults to 0, where it was 1 GiB. This holds for every caller of `post::run_post_processing_logged` that sets
+  `split: true`; `api.rs`, `cortex_worker` and the LSP pass `split: false`. The CLI hands over the core result by value
+  (`post::run_post_processing_owned_logged`): staged beside the destination (in "." for a bare `--dest=a.html`), whose
+  directory it creates, and removed once the pages are spilled. A stream that fails on an input under 1 GiB falls back
+  to the whole-DOM split with an Info. Such a stream fails when a template item arrives after a page was written (an
+  `ltx:navigation` from `--input xml`, an `ltx:resource`, a root `ltx:date` or a `<?latexml?>` PI), or when an
+  `ltx:resource` sits nested inside content. The DOM split copies these into the pages' templates. Above 1 GiB the
   stream keeps its Warn.
 - renders 64 or more pages on min(available cores, 8) worker processes (`render_workers::render_jobs`,
   `enable_auto_jobs`). Each worker's watchdog holds it to its share of the fuse headroom (`RenderManifest::max_rss_kb`).
-  A worker that fails to spawn or dies without its status report sends the whole range back to the serial render, with
-  an Info. The workers keep their spilled pages for this, and no child log is folded. Only a timeout still folds a
+  A worker that fails to spawn, cannot set up (its manifest or db unreadable: a `Status:setup-failed:` line) or dies
+  without its status report sends the whole document back to the serial render, with an Info. The workers keep their spilled pages for this, and no child log is folded. Only a timeout still folds a
   killed fleet as Errors.
 
 Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`/`1`, `LATEXML_POST_STREAM_THRESHOLD`,
-`LATEXML_RENDER_JOBS` (`1` = serial). The library API and `cortex_worker` keep the serial render and the default
-watermark. `cortex_worker` never splits, so its output is unchanged.
+`LATEXML_RENDER_JOBS` (`1` = serial). Every embedder but the `latexml_oxide` binary keeps the serial render and the
+default watermark. `cortex_worker` never splits, so its output is unchanged.
 
 Effect on Nasser's 2,400-problem slice (`--splitat=subsubsection`, 9,713 pages): the pages are byte-identical to the
 eager whole-DOM run, the Warnings equal, and peak RSS falls from 3.8-4.9 GB to 1.35 GB (serial render).
@@ -23687,6 +23691,8 @@ The streamed split differs from the whole-DOM split only where the latter loses 
 
 **Guards**: `118_streaming_split_parity::streaming_split_pages_are_byte_identical_to_dom_split` (the default and
 in-memory cases), `::cli_split_streams_by_default_and_unsplit_stays_eager`, and
-`120_midscale_streaming::midscale_render_fleet_defaults_on_and_falls_back_to_serial` (with the
-`LATEXML_RENDER_WORKER_TEST_ABORT` hook), and `112_fragment_yield::split_keeps_pages_whose_namespaces_a_navigation_uses`
-(a late navigation).
+`120_midscale_streaming::midscale_render_fleet_defaults_on_and_falls_back_to_serial` (the
+`LATEXML_RENDER_WORKER_TEST_ABORT` hook, test-utils builds only: a dead worker and a failed db attach),
+`112_fragment_yield::split_keeps_pages_whose_namespaces_a_navigation_uses` (a late navigation),
+`118_streaming_split_parity::nested_resource_split_falls_back_to_the_whole_dom_split` and
+`::cli_bare_dest_stages_beside_the_destination`.

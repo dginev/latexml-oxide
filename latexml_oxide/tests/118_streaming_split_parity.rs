@@ -366,3 +366,169 @@ fn cli_split_streams_by_default_and_unsplit_stays_eager() {
     "an unsplit run takes the eager path:\n{unsplit_log}"
   );
 }
+
+/// A bare `--dest=a.html` stages the handoff and the page spill in ".", the
+/// destination's directory, never in the system temp dir (a RAM-backed tmpfs
+/// on many hosts, outside the `--max-memory` accounting). An unusable TMPDIR
+/// proves it: staging there would fail.
+#[test]
+fn cli_bare_dest_stages_beside_the_destination() {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let mut tex = String::from("\\documentclass{article}\n\\begin{document}\n");
+  for i in 1..=3 {
+    tex.push_str(&format!("\\section{{S{i}}}\nText {i}.\n\n"));
+  }
+  tex.push_str("\\end{document}\n");
+  let work = tempfile::tempdir().expect("tempdir");
+  std::fs::write(work.path().join("a.tex"), &tex).unwrap();
+  let out = std::process::Command::new(bin)
+    .args([
+      "a.tex",
+      "--format=html5",
+      "--dest=a.html",
+      "--splitat=section",
+    ])
+    .env_remove("LATEXML_POST_STREAM_SPLIT")
+    .env_remove("LATEXML_SPILL_AT_MIB")
+    .env("TMPDIR", work.path().join("no-such-tmp"))
+    .current_dir(work.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let stderr = String::from_utf8_lossy(&out.stderr);
+  assert!(out.status.success(), "stderr:\n{stderr}");
+  assert!(
+    stderr.contains("Conversion complete: No obvious problems"),
+    "stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains("staged to ./latexml-post-handoff-")
+      && stderr.contains("streaming split engaged"),
+    "the handoff must be staged in the destination's directory and streamed:\n{stderr}"
+  );
+  assert!(
+    !work.path().join("no-such-tmp").exists(),
+    "nothing may be staged in TMPDIR"
+  );
+  let mut names: Vec<String> = std::fs::read_dir(work.path())
+    .expect("readdir")
+    .filter_map(|e| e.ok())
+    .map(|e| e.file_name().to_string_lossy().into_owned())
+    .filter(|n| n.ends_with(".html") || n.contains("latexml-post-"))
+    .collect();
+  names.sort();
+  assert_eq!(
+    names,
+    ["S1.html", "S2.html", "S3.html", "a.html"],
+    "the pages, and nothing staged left behind"
+  );
+}
+
+/// An `ltx:resource` nested inside content, before any page (root content) or
+/// inside one: the whole-DOM split copies the `//ltx:resource` of what remains
+/// around each page into its template, the stream only the root's direct ones.
+/// The default split hands such a document to the whole-DOM split (an Info):
+/// its pages, no Warning. The second document holds its resource in a wrapper
+/// (`ltx:backmatter` around a page), whose content the stream reads by DOM
+/// descent, not as bulk.
+#[test]
+fn nested_resource_split_falls_back_to_the_whole_dom_split() {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  const NESTED: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+<title>T</title>
+<para xml:id="p0"><p>Intro</p><resource src="early.css" type="text/css"/></para>
+<section xml:id="S1"><title>S1</title><para xml:id="S1.p1"><p>Text 1.</p></para></section>
+<section xml:id="S2"><title>S2</title><para xml:id="S2.p1"><p>Text 2.</p><resource src="mid.css" type="text/css"/></para></section>
+<section xml:id="S3"><title>S3</title><para xml:id="S3.p1"><p>Text 3.</p></para></section>
+</document>
+"#;
+  const WRAPPED: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+<title>T</title>
+<section xml:id="S1"><title>S1</title><para xml:id="S1.p1"><p>Text 1.</p></para></section>
+<backmatter><para xml:id="B.p1"><p>Back.</p><resource src="early.css" type="text/css"/></para>
+<section xml:id="S2"><title>S2</title><para xml:id="S2.p1"><p>Text 2.</p></para></section></backmatter>
+</document>
+"#;
+  let work = tempfile::tempdir().expect("workdir");
+  std::fs::write(work.path().join("nest.xml"), NESTED).expect("fixture written");
+  std::fs::write(work.path().join("wrap.xml"), WRAPPED).expect("fixture written");
+  for css in ["early.css", "mid.css"] {
+    std::fs::write(work.path().join(css), "p {}\n").expect("stylesheet written");
+  }
+  let run = |source: &str, label: &str, stream: Option<&str>| {
+    let mut cmd = std::process::Command::new(bin);
+    cmd
+      .args([source, "--format=html5", "--splitat=section"])
+      .arg(format!("--dest={label}/index.html"))
+      .env_remove("LATEXML_POST_STREAM_SPLIT")
+      .current_dir(work.path());
+    if let Some(v) = stream {
+      cmd.env("LATEXML_POST_STREAM_SPLIT", v);
+    }
+    let out = cmd.output().expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert!(out.status.success(), "{label}:\n{stderr}");
+    assert!(
+      stderr.contains("Conversion complete: No obvious problems"),
+      "{label}: no Warning:\n{stderr}"
+    );
+    let mut tree = collect_tree(&work.path().join(label));
+    tree.retain(|name, _| name.ends_with(".html"));
+    (tree, stderr)
+  };
+  let sheets = |tree: &std::collections::BTreeMap<String, Vec<u8>>| -> Vec<(String, Vec<&str>)> {
+    tree
+      .iter()
+      .map(|(name, page)| {
+        let html = std::str::from_utf8(page).expect("utf-8 page");
+        let found = ["early.css", "mid.css"]
+          .into_iter()
+          .filter(|css| html.contains(&format!("href=\"{css}\"")))
+          .collect();
+        (name.clone(), found)
+      })
+      .collect()
+  };
+  /// Each page's stylesheets, by page name.
+  type Sheets<'a> = &'a [(&'a str, &'a [&'a str])];
+  let expected: [(&str, Sheets); 2] = [
+    ("nest.xml", &[
+      ("S1.html", &["early.css"]),
+      ("S2.html", &["early.css", "mid.css"]),
+      ("S3.html", &["early.css"]),
+      ("index.html", &["early.css"]),
+    ]),
+    // The whole-DOM split gives S1 no copy of the backmatter's resource.
+    ("wrap.xml", &[
+      ("S1.html", &[]),
+      ("S2.html", &["early.css"]),
+      ("index.html", &["early.css"]),
+    ]),
+  ];
+  for (source, want) in expected {
+    let stem = source.trim_end_matches(".xml");
+    let (dom, _) = run(source, &format!("{stem}_dom"), Some("0"));
+    let (default, default_log) = run(source, &format!("{stem}_default"), None);
+    let want: Vec<(String, Vec<&str>)> = want
+      .iter()
+      .map(|(name, css)| (name.to_string(), css.to_vec()))
+      .collect();
+    assert_eq!(
+      sheets(&dom),
+      want,
+      "{source}: the whole-DOM split's stylesheets per page"
+    );
+    assert_eq!(
+      default_log
+        .matches("a nested ltx:resource is not in the page templates")
+        .count(),
+      1,
+      "{source}: the stream must hand this document to the whole-DOM split:\n{default_log}"
+    );
+    assert_eq!(
+      default, dom,
+      "{source}: the pages must be the whole-DOM split's"
+    );
+  }
+}

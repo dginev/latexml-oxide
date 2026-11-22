@@ -271,18 +271,24 @@ fn midscale_parallel_render_matches_serial() {
 /// The binary's default fleet: a split of 64+ pages renders on min(available
 /// cores, 8) workers with no `LATEXML_RENDER_JOBS` — and a worker that dies
 /// before its status report (the test hook; a crash or an exceeded memory share
-/// alike) sends the range back to the serial render with an Info, not an Error:
-/// every page as the serial run writes it, the same verdict.
+/// alike) sends the whole document back to the serial render with an Info, not
+/// an Error: every page as the serial run writes it, the same verdict. So does a
+/// worker whose own setup fails (its db attach, the hook's `attach`): no Fatal.
 #[test]
 fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
   let serial_dir = tempfile::tempdir().expect("tempdir");
   let auto_dir = tempfile::tempdir().expect("tempdir");
   let failed_dir = tempfile::tempdir().expect("tempdir");
+  let setup_dir = tempfile::tempdir().expect("tempdir");
   let serial = run_midscale(serial_dir.path(), &[("LATEXML_RENDER_JOBS", "1")]);
   let auto = run_midscale(auto_dir.path(), &[]);
   let failed = run_midscale(failed_dir.path(), &[
     ("LATEXML_RENDER_JOBS", "3"),
     ("LATEXML_RENDER_WORKER_TEST_ABORT", "1"),
+  ]);
+  let setup = run_midscale(setup_dir.path(), &[
+    ("LATEXML_RENDER_JOBS", "3"),
+    ("LATEXML_RENDER_WORKER_TEST_ABORT", "attach"),
   ]);
   let serial_pages = page_bytes(serial_dir.path());
   assert!(serial_pages.len() > 150, "got {} pages", serial_pages.len());
@@ -291,6 +297,7 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
     ("serial", &serial, &serial_dir),
     ("auto", &auto, &auto_dir),
     ("failed", &failed, &failed_dir),
+    ("setup", &setup, &setup_dir),
   ] {
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert_eq!(out.status.code(), Some(0), "{label}:\n{stderr}");
@@ -306,22 +313,35 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
     let engaged = stderr.contains("parallel page render engaged");
     match label {
       "serial" => assert!(!engaged, "serial:\n{stderr}"),
-      "auto" if cores >= 2 => assert!(
-        stderr.contains(&format!(
-          "parallel page render engaged: {} worker(s)",
+      "auto" if cores >= 2 => {
+        // `parallel_render` also caps the fleet by affordable memory.
+        let workers = stderr
+          .split("parallel page render engaged: ")
+          .nth(1)
+          .and_then(|rest| rest.split(' ').next())
+          .and_then(|n| n.parse::<usize>().ok());
+        assert!(
+          workers.is_some_and(|n| (2..=cores.min(8)).contains(&n)),
+          "auto: the default fleet must engage 2..={} workers on {cores} cores:\n{stderr}",
           cores.min(8)
-        )),
-        "auto: the default fleet must engage on {cores} cores:\n{stderr}"
-      ),
+        );
+      },
       "auto" => assert!(!engaged, "auto on one core stays serial:\n{stderr}"),
       _ => {
-        assert!(engaged, "failed: the fleet must spawn first:\n{stderr}");
+        assert!(engaged, "{label}: the fleet must spawn first:\n{stderr}");
         assert_eq!(
           stderr.matches("parallel render abandoned (worker ").count(),
           1,
-          "failed: one Info names the dead worker:\n{stderr}"
+          "{label}: one Info names the failed worker:\n{stderr}"
         );
-        assert!(!stderr.contains("Error:"), "failed: no Error:\n{stderr}");
+        assert!(!stderr.contains("Error:"), "{label}: no Error:\n{stderr}");
+        assert!(!stderr.contains("Fatal:"), "{label}: no Fatal:\n{stderr}");
+        if label == "setup" {
+          assert!(
+            stderr.contains("setup failed: cannot attach the render db"),
+            "setup: the Info names the attach failure:\n{stderr}"
+          );
+        }
       },
     }
     if label != "serial" {

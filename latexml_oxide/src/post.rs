@@ -426,6 +426,18 @@ fn resolve_split_naming(split_naming: Option<&str>) -> latexml_post::split::Spli
   }
 }
 
+/// The destination's directory for the staged handoff and the page spill: "."
+/// for a bare file name (`--dest=index.html`), whose empty parent would
+/// otherwise send them to the system temp dir (often a RAM-backed tmpfs).
+fn staging_dir_of(destination: Option<&str>) -> Option<std::path::PathBuf> {
+  let parent = std::path::Path::new(destination?).parent()?;
+  Some(if parent.as_os_str().is_empty() {
+    std::path::PathBuf::from(".")
+  } else {
+    parent.to_path_buf()
+  })
+}
+
 /// Destination directory for a page pathname (empty parent → ".", mirroring
 /// `PostDocument`'s internal derivation).
 fn destination_directory_of(destination: &str) -> Option<String> {
@@ -641,15 +653,7 @@ fn handoff_needs_file(xml: &str, opts: &PostOptions) -> bool {
 /// (writing to the destination directory is always allowed), else the system
 /// temp dir. `None` = the write failed (reported at Info): parse from memory.
 fn stage_handoff(xml: &str, opts: &PostOptions) -> Option<StagedHandoff> {
-  let dir = opts
-    .destination
-    .and_then(|d| {
-      std::path::Path::new(d)
-        .parent()
-        .map(std::path::Path::to_path_buf)
-    })
-    .filter(|d| !d.as_os_str().is_empty())
-    .unwrap_or_else(std::env::temp_dir);
+  let dir = staging_dir_of(opts.destination).unwrap_or_else(std::env::temp_dir);
   let path = dir.join(format!("latexml-post-handoff-{}.xml", std::process::id()));
   let guard = latexml_core::watchdog::remove_on_exit(&path);
   // The destination's directory may not exist yet: the writer creates it, so
@@ -690,20 +694,23 @@ fn stage_handoff(xml: &str, opts: &PostOptions) -> Option<StagedHandoff> {
 pub fn run_post_processing_owned_logged(xml: String, opts: &PostOptions) -> PostOutcome {
   // Bound first: the staging Info belongs to the post log.
   latexml_core::util::logger::bind_log();
+  latexml_core::common::arena::take_overflow_interns();
   let staged = if handoff_needs_file(&xml, opts) {
     stage_handoff(&xml, opts)
   } else {
     None
   };
   let mut pages = Vec::new();
-  let html = match staged.as_ref() {
+  // Straight to the inner pipeline: a handoff whose staging failed must not
+  // be staged a second time.
+  let html = match staged {
     Some(staged) => {
       drop(xml);
-      run_post_processing_impl(PostInput::File(&staged.path), opts, &mut pages)
+      let path = staged.path.clone();
+      run_post_processing_inner(PostInput::File(&path), opts, &mut pages, Some(staged))
     },
-    None => run_post_processing_impl(PostInput::Xml(&xml), opts, &mut pages),
+    None => run_post_processing_inner(PostInput::Xml(&xml), opts, &mut pages, None),
   };
-  drop(staged);
   let log = latexml_core::util::logger::flush_log();
   let status_code = latexml_core::common::error::get_status_code();
   PostOutcome { html, log, status_code, pages }
@@ -725,17 +732,21 @@ fn run_post_processing_impl(
     PostInput::Xml(xml) if handoff_needs_file(xml, opts) => stage_handoff(xml, opts),
     _ => None,
   };
-  let input = match staged.as_ref() {
-    Some(staged) => PostInput::File(&staged.path),
+  let path = staged.as_ref().map(|staged| staged.path.clone());
+  let input = match path.as_deref() {
+    Some(path) => PostInput::File(path),
     None => input,
   };
-  run_post_processing_inner(input, opts, written)
+  run_post_processing_inner(input, opts, written, staged)
 }
 
+/// `staged`: the handoff file `input` reads, removed once a front-end has
+/// read it (the page spill then holds the document).
 fn run_post_processing_inner(
   input: PostInput,
   opts: &PostOptions,
   written: &mut Vec<String>,
+  staged: Option<StagedHandoff>,
 ) -> String {
   let PostOptions {
     pmml,
@@ -815,10 +826,7 @@ fn run_post_processing_inner(
   // a 40k-page document spills the whole core XML's worth of pages here).
   let mut spill_builder = tempfile::Builder::new();
   spill_builder.prefix(".latexml-post-pages-");
-  let page_spill = match destination
-    .and_then(|d| std::path::Path::new(d).parent())
-    .filter(|p| !p.as_os_str().is_empty() && p.is_dir())
-  {
+  let page_spill = match staging_dir_of(destination).filter(|p| p.is_dir()) {
     Some(dest_dir) => spill_builder.tempdir_in(dest_dir),
     None => spill_builder.tempdir(),
   };
@@ -866,6 +874,8 @@ fn run_post_processing_inner(
   };
 
   let front = if let Some(front) = streamed {
+    // The pages are spilled: the staged handoff is read no more.
+    drop(staged);
     front
   } else {
     // ==== Whole-DOM front-end (the pre-existing pipeline, indentation kept) ====
@@ -889,6 +899,7 @@ fn run_post_processing_inner(
     };
     audit_end(t_parse);
     telemetry::phase_exit();
+    drop(staged);
 
     // ar5iv sniff: the ar5iv package emits literal-intent MathML. In-memory input
     // checks the raw string; file input checks the parsed doc's `<?latexml
@@ -1616,7 +1627,7 @@ pub(crate) struct PageRenderCtx {
   pub(crate) schemadocs:     bool,
   pub(crate) whatsout:       latexml_post::extract::Whatsout,
   /// Delete each spilled page once parsed. A render worker keeps its pages:
-  /// should it die, the serial render redoes its range from them.
+  /// should one fail, the serial render redoes the document from them.
   pub(crate) remove_spilled: bool,
 }
 

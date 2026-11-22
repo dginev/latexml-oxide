@@ -52,9 +52,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
   - **0.8.0-rc2: a split run streams and renders in parallel by default (issue 777).** With `--splitat`, the core
     spills at 512 MiB of growth, post splits through the streaming front-end with the core result staged to disk and
     freed, and 64 or more pages render on min(cores, 8) worker processes. Each worker is held to its share of
-    `--max-memory`, and a failed worker sends its range back to the serial render. Nasser's 2,400-problem slice
-    (9,713 pages): the same pages and Warnings, and peak RSS 3.8-4.9 → 1.35 GB. Unsplit conversions, the library API
-    and `cortex_worker` are unchanged. Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`,
+    `--max-memory`, and a failed worker sends the whole document back to the serial render. Nasser's 2,400-problem slice
+    (9,713 pages): the same pages and Warnings, and peak RSS 3.8-4.9 → 1.35 GB. Unsplit conversions and
+    `cortex_worker` are unchanged; the library's `post::run_post_processing_logged` with `split: true` now stages
+    and streams too. Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`,
     `LATEXML_RENDER_JOBS=1` (OXIDIZED_DESIGN_DIVERGENCES #1133).
   - **0.8.0-rc2: release checks.** Every release build converts `hello.tex` with the binary it ships and
     `resources/` moved aside (`tools/release_smoke.sh`; rc1's macOS and Windows builds ran only `--version`); the
