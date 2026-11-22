@@ -23654,3 +23654,35 @@ Warnings eager, 171 streamed, byte-identical XML). Eager output and counts are u
 `perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion` (repro
 `streaming/streamed_unparsed_math_warns_once.tex`: 4 Perl `not_parsed`, 1 ours eager and streamed); unit
 `parser::tests::warns_once_per_distinct_formula_per_conversion`.
+
+### 1133. A split run streams and renders its pages in parallel by default (BIGSPLIT)
+
+**Rule** (DG ruling 2026-11-21). Perl builds the whole DOM in core and splits it in post. A `latexml_oxide` run that
+splits (`--splitat`/`--splitpath`/`--split`) instead:
+- spills its core at min(512 MiB, the `--max-memory` default of a third of the fuse) of growth (`split_spill_watermark`,
+  `bin/latexml_oxide.rs`). A document that never grows past that mark converts eagerly, as before.
+- splits through the streaming front-end (`latexml_post::stream_split`) at any size: `post::stream_split_threshold`
+  now defaults to 0, where it was 1 GiB. The CLI hands over the core result by value
+  (`post::run_post_processing_owned_logged`): staged beside the destination, whose directory it creates, and freed before
+  post runs. A stream that fails on an input under 1 GiB falls back to the whole-DOM split with an Info.
+- renders 64 or more pages on min(available cores, 8) worker processes (`render_workers::render_jobs`,
+  `enable_auto_jobs`). Each worker's watchdog holds it to its share of the fuse headroom (`RenderManifest::max_rss_kb`).
+  A worker that fails to spawn or dies without its status report sends the whole range back to the serial render, with
+  an Info. The workers keep their spilled pages for this, and no child log is folded. Only a timeout still folds a
+  killed fleet as Errors.
+
+Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`/`1`, `LATEXML_POST_STREAM_THRESHOLD`,
+`LATEXML_RENDER_JOBS` (`1` = serial). The library API and `cortex_worker` keep the serial render and the default
+watermark. `cortex_worker` never splits, so its output is unchanged.
+
+Effect on Nasser's 2,400-problem slice (`--splitat=subsubsection`, 9,713 pages): the pages are byte-identical to the
+eager whole-DOM run, the Warnings equal, and peak RSS falls from 3.8-4.9 GB to 1.35 GB (serial render).
+
+The streamed split differs from the whole-DOM split only where the latter loses a page's non-`ltx` namespaces. Witnesses:
+1502.06095 and 1609.07593 (an xy-pic `svg:svg` inside math, 344 and 1,377 `malformed:namespace` Warnings) and
+2606.28974 (a dropped `aria-hidden`). On all three the streamed pages match the unsplit conversion.
+
+**Guards**: `118_streaming_split_parity::streaming_split_pages_are_byte_identical_to_dom_split` (the default and
+in-memory cases), `::cli_split_streams_by_default_and_unsplit_stays_eager`, and
+`120_midscale_streaming::midscale_render_fleet_defaults_on_and_falls_back_to_serial` (with the
+`LATEXML_RENDER_WORKER_TEST_ABORT` hook).

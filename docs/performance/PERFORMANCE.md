@@ -197,15 +197,21 @@ The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, x
 ### P2 — Complete streaming across the core-to-post boundary
 
 * **Current reality:** fragmented core conversion and the two-pass streaming
-  split front-end are implemented. However, `ConversionResponse.result` still
-  materializes complete core XML as a `String`; TeX-to-HTML passes that string
-  to post, which may immediately spill it to disk. Pass 2 also clones the
+  split front-end are implemented. A split run streams by default
+  (OXIDIZED_DESIGN_DIVERGENCES #1133, 2026-11-21): the core spills at 512 MiB of
+  growth, and the CLI stages its core result beside the destination and frees it
+  before post takes the streaming split. Pages of 64 or more render on min(cores, 8)
+  workers. Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`/`1`,
+  `LATEXML_POST_STREAM_THRESHOLD`, `LATEXML_RENDER_JOBS=1`. Nasser's
+  2,400-problem slice (9,713 pages): peak RSS 3.8-4.9 → 1.35 GB, pages
+  byte-identical. `ConversionResponse.result` still materializes the complete
+  core XML as a `String` before that staging. Pass 2 also clones the
   conversion-global font map and rewrite rules per segment and constructs an
   unused XML scaffold per fragment. (The math grammar is shared since 2026-11-15:
   audit log, PERFA.)
 * **Fix:** add a writer/file-backed conversion API while retaining the current
   string API as a compatibility wrapper. Hand the CLI's file directly to post.
-  Independently, share immutable pass-2 data, use fragment-local overlays, make
+  (The split run's staging, above, is the stopgap.) Independently, share immutable pass-2 data, use fragment-local overlays, make
   rewrite diagnostics lazy, and construct fragment fields without `Self::new()`.
 * **Boundary:** this attacks very-large-document RSS and segmented pass-2 CPU;
   it is not expected to move ordinary-paper medians. See audit F3/F4.

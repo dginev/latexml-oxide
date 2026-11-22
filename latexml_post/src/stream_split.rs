@@ -64,7 +64,8 @@
 //!
 //! * Documents whose `ltx` namespace mapping cannot be resolved from the
 //!   declaration stack error out with a pointer to
-//!   `LATEXML_POST_STREAM_SPLIT=0` (the whole-DOM path).
+//!   `LATEXML_POST_STREAM_SPLIT=0` (the whole-DOM path); the driver takes that
+//!   path itself, with an Info, for an input under 1 GiB.
 //! * `ltx:resource` elements / `<?latexml?>` PIs first appearing *after* a
 //!   page has been written cannot retroactively reach it; a `Warn` flags the
 //!   (never observed in practice) case.

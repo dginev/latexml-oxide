@@ -737,6 +737,20 @@ fn apply_token_limit(limit: Option<usize>) {
   }
 }
 
+/// The spill watermark of a split run: at most 512 MiB of growth, never above
+/// the `--max-memory` default (a third of the fuse). A split run's post streams
+/// its pages one subtree at a time, so the core is the only whole-document peak
+/// left. Nasser's 2,400-problem book (9,713 pages), serial render: peak RSS
+/// 2.01 GB at 1 GiB, 1.35 GB at 512 MiB, 1.39 GB at 256 MiB, user time 128 /
+/// 125 / 119 s, pages byte-identical; the default 2 GiB mark of an 8 GiB
+/// budget let the eager run reach 3.8-4.9 GB. A document that never grows past
+/// the mark converts eagerly, exactly as before. `LATEXML_SPILL_AT_MIB`
+/// overrides it.
+fn split_spill_watermark() -> Option<u64> {
+  const SPLIT_SPILL_WATERMARK: u64 = 512 << 20;
+  latexml_core::stomach::spill_watermark_bytes().map(|w| w.min(SPLIT_SPILL_WATERMARK))
+}
+
 /// May this EAGER run be rerun under `--streaming`? Not opted out
 /// (`--streaming=false`), a DOM output (TeX/Box outputs never build a document),
 /// and not already streaming.
@@ -767,6 +781,8 @@ fn main() -> Result<(), Box<dyn Error>> {
   if let Ok(manifest) = std::env::var("LATEXML_RENDER_WORKER") {
     process::exit(latexml::render_workers::worker_main(&manifest));
   }
+  // This binary serves the worker mode above, so a big split may spawn it.
+  latexml::render_workers::enable_auto_jobs();
 
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees don't overflow the OS-default 8 MB main-thread
@@ -1343,6 +1359,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       latexml_core::stomach::set_timeout(cli.timeout);
     }
     apply_token_limit(cli.token_limit);
+    if resolved.split_enabled && std::env::var_os("LATEXML_SPILL_AT_MIB").is_none() {
+      latexml_core::stomach::set_spill_watermark_override(split_spill_watermark());
+    }
 
     let source_for_post = source.clone();
     // XML-input mode: when the source is already-converted LaTeXML XML
@@ -1700,7 +1719,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         } else if xml_input_mode {
           latexml::post::run_post_processing_from_file_logged(&source_for_post, &post_opts)
         } else {
-          latexml::post::run_post_processing_logged(&xml, &post_opts)
+          // By value: a handoff the streaming split takes is staged to disk and
+          // its String freed before post runs.
+          latexml::post::run_post_processing_owned_logged(xml, &post_opts)
         };
         let output = post.html;
         phase_status_max = phase_status_max.max(post.status_code);

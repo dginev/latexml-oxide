@@ -224,4 +224,145 @@ fn streaming_split_pages_are_byte_identical_to_dom_split() {
     auto_outcome.html, dom_outcome.html,
     "auto-gated output must match the reference"
   );
+
+  // ---- Default: no env at all. Every split run streams, from a file and from
+  // the in-memory core handoff alike (the one-invocation `.tex → .html` path,
+  // which stages the handoff to a file first), with the reference's pages.
+  for (label, in_memory) in [("default-file", false), ("default-memory", true)] {
+    let dir = work.path().join(label);
+    std::fs::create_dir(&dir).unwrap();
+    let dest = dir.join("book.html").to_string_lossy().into_owned();
+    let outcome = if in_memory {
+      latexml::post::run_post_processing_owned_logged(
+        FIXTURE.to_string(),
+        &post_opts(&dest, &src_dir),
+      )
+    } else {
+      latexml::post::run_post_processing_from_file_logged(
+        &source.to_string_lossy(),
+        &post_opts(&dest, &src_dir),
+      )
+    };
+    assert!(
+      outcome.log.contains("streaming split engaged"),
+      "{label}: a split run must stream by default — log:\n{}",
+      outcome.log
+    );
+    assert_eq!(
+      outcome.log.contains("streaming-split handoff"),
+      in_memory,
+      "{label}: only the in-memory handoff is staged — log:\n{}",
+      outcome.log
+    );
+    assert_eq!(outcome.html, dom_outcome.html, "{label}: main output");
+    assert_eq!(
+      collect_tree(&dir),
+      dom_tree,
+      "{label}: pages differ from the whole-DOM split"
+    );
+  }
+
+  // ---- Opt-out: `LATEXML_POST_STREAM_SPLIT=0` keeps an in-memory handoff in
+  // memory and splits the whole DOM.
+  let off_dir = work.path().join("off-memory");
+  std::fs::create_dir(&off_dir).unwrap();
+  let off_dest = off_dir.join("book.html").to_string_lossy().into_owned();
+  unsafe { std::env::set_var("LATEXML_POST_STREAM_SPLIT", "0") };
+  let off_outcome = latexml::post::run_post_processing_owned_logged(
+    FIXTURE.to_string(),
+    &post_opts(&off_dest, &src_dir),
+  );
+  unsafe { std::env::remove_var("LATEXML_POST_STREAM_SPLIT") };
+  assert!(
+    !off_outcome.log.contains("stream-split") && !off_outcome.log.contains("staged"),
+    "the opt-out must neither stage nor stream — log:\n{}",
+    off_outcome.log
+  );
+  assert_eq!(collect_tree(&off_dir), dom_tree, "opt-out pages");
+  // No handoff file is left beside the destinations.
+  for label in ["default-memory", "off-memory"] {
+    let stale: Vec<_> = std::fs::read_dir(work.path().join(label))
+      .unwrap()
+      .filter_map(|e| e.ok())
+      .filter(|e| {
+        e.file_name()
+          .to_string_lossy()
+          .starts_with("latexml-post-handoff-")
+      })
+      .collect();
+    assert!(stale.is_empty(), "{label}: handoff left behind: {stale:?}");
+  }
+}
+
+/// The single-invocation CLI (`.tex → split .html`) takes the streaming split
+/// by default — byte-identical to the whole-DOM split it replaced — while a
+/// run that does not split neither stages nor streams anything.
+#[test]
+fn cli_split_streams_by_default_and_unsplit_stays_eager() {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let mut tex = String::from("\\documentclass{article}\n\\begin{document}\n");
+  for i in 1..=4 {
+    tex.push_str(&format!(
+      "\\section{{S{i}}}\\label{{s{i}}}\nSee \\ref{{s1}} and $x_{{{i}}}^2$.\n\n"
+    ));
+  }
+  tex.push_str("\\end{document}\n");
+  let run = |stream: Option<&str>, split: bool| {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("a.tex"), &tex).unwrap();
+    let mut cmd = std::process::Command::new(bin);
+    // A destination directory that does not exist yet: the handoff staged
+    // beside it must create it, or the run silently stays whole-DOM.
+    cmd.args(["a.tex", "--format=html5", "--dest=site/a.html"]);
+    if split {
+      cmd.arg("--splitat=section");
+    }
+    cmd
+      .env_remove("LATEXML_POST_STREAM_SPLIT")
+      .env_remove("LATEXML_SPILL_AT_MIB")
+      .current_dir(work.path());
+    if let Some(v) = stream {
+      cmd.env("LATEXML_POST_STREAM_SPLIT", v);
+    }
+    let out = cmd.output().expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert!(out.status.success(), "stderr:\n{stderr}");
+    assert!(
+      stderr.contains("Conversion complete: No obvious problems"),
+      "stderr:\n{stderr}"
+    );
+    let mut tree = collect_tree(work.path());
+    tree.retain(|name, _| name.ends_with(".html"));
+    (tree, stderr)
+  };
+  let (streamed, streamed_log) = run(None, true);
+  let (dom, dom_log) = run(Some("0"), true);
+  assert!(
+    streamed_log.contains("streaming-split handoff")
+      && streamed_log.contains("streaming split engaged"),
+    "the split run must stage its handoff and stream:\n{streamed_log}"
+  );
+  assert!(
+    !dom_log.contains("stream-split") && !dom_log.contains("staged"),
+    "the opt-out must not stream:\n{dom_log}"
+  );
+  assert_eq!(
+    streamed.len(),
+    5,
+    "root + 4 sections: {:?}",
+    streamed.keys()
+  );
+  assert_eq!(
+    streamed, dom,
+    "the streamed split must match the whole-DOM split"
+  );
+
+  let (unsplit, unsplit_log) = run(None, false);
+  assert_eq!(unsplit.keys().collect::<Vec<_>>(), ["site/a.html"]);
+  assert!(
+    !unsplit_log.contains("stream-split")
+      && !unsplit_log.contains("staged")
+      && !unsplit_log.contains("parallel"),
+    "an unsplit run takes the eager path:\n{unsplit_log}"
+  );
 }

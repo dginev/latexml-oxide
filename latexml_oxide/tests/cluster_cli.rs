@@ -4640,7 +4640,7 @@ mod unicodemath_output {
       pages.sort();
       (pages, stderr)
     };
-    let (serial, _) = run(None);
+    let (serial, _) = run(Some("1"));
     let (parallel, stderr) = run(Some("2"));
     assert!(
       stderr.contains("parallel page render engaged: 2 worker(s)"),
