@@ -2069,6 +2069,21 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
         "MALLOC_CONF",
         "background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0",
       );
+    // Two glibc malloc arenas, not one per thread (glibc reads MALLOC_ARENA_MAX at its first allocation, so it
+    // too is set before exec). Every thread that allocates through C (libxml2, libxslt, the graphics phase's up to
+    // 22 workers) gets its own arena, 64-128 MiB of address space each, 1.8-2.7 GB at a graphics peak; on top of
+    // mimalloc 2.3.2's 1 GiB arena reservations (#970) that filled the 5632 MiB `RLIMIT_AS` at 0.3-0.6 GB resident,
+    // a 1-byte Rust allocation then failing (`Fatal:oom:alloc_failed`) or libxslt's (`XSLT transformation failed:
+    // Unknown error applying stylesheet`). Witnesses 2605.27150, 2606.00183, 2606.22978, 2606.21380 (oom),
+    // 2605.04561, 2605.22454, 2606.19625 (XSLT), sandbox runs 409/410: VmPeak 2605.27150 4.84 -> 2.81 GB, and
+    // 2605.22454 converts under a 4096 MiB cap with it and fails without. Rust allocates through mimalloc, so
+    // only C-side allocations share the two arenas. mimalloc's own reservations go 128 MiB at a time instead of 1 GiB
+    // (`arena_reserve`, read from the environment at its init): 2605.27150's VmPeak 2.81 -> 2.16 GB with both. Neither
+    // costs wall time (2605.22454, 26 figures: 3.44/3.28 s without, 3.44/3.29 s with). Setting them from inside the
+    // binaries, for CLI users under an address-space limit too, is row R ALLOCOPTS (after 0.8.0, portable).
+    cmd
+      .env("MALLOC_ARENA_MAX", "2")
+      .env("MIMALLOC_ARENA_RESERVE", "128MiB");
     // Align the engine's in-process RSS fuse (`stomach::check_timeout`, default
     // 4.5 GB) with this fleet's actual per-child ceiling. That default is a
     // one-conversion-per-process leftover: in a long-lived worker the working set
