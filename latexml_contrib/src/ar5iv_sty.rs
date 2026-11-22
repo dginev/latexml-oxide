@@ -269,6 +269,7 @@ LoadDefinitions!({
   // CSS file (2606.12996's rules for its nested tables and appendix TOC entries); so is a class option's own rules
   // (article's `openbib`, `.ltx_bibblock{display:block;}`). Inline scripts stay dropped.
   DefRewrite!(xpath => "descendant-or-self::ltx:resource",
+  local_replace => true,
   replace => sub[document, nodes] {
     let node = nodes.pop().unwrap();
     let src = node.get_attribute("src").unwrap_or_default();

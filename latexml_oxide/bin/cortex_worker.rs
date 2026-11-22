@@ -1746,13 +1746,13 @@ fn write_exit_placeholder_zip(
       "Fatal:timeout:wallclock latexml-oxide hit the {timeout_secs}s \
        main-level wall-clock timeout converting {input_path}; the worker \
        thread was presumed wedged in a tight native loop and the watchdog \
-       exited the process via exit(124). No output produced.\n\
+       exited with code 124. No output produced.\n\
        Status:conversion:3\n"
     )
   } else {
     format!(
       "Fatal:oom:rss latexml-oxide: resident memory exceeded the ceiling converting \
-       {input_path}; the watchdog exited the process via exit({exit_code}). No output \
+       {input_path}; the watchdog exited with code {exit_code}. No output \
        produced.\n\
        Status:conversion:3\n"
     )
@@ -2259,7 +2259,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // a missing file plus "Aborted (core dumped)" from the shell.
     // Per-conversion overhead in the happy path is zero — the
     // callback is only invoked from the watchdog thread immediately
-    // before `exit(124)`. Witnesses: 2602.11915, 2604.11500,
+    // before it exits with code 124. Witnesses: 2602.11915, 2604.11500,
     // 2604.13944, hep-ph9205242, q-alg9604005/9605003/9605028 — the
     // 7 "Aborted" rows in the 2026-05-13 588-paper sweep.
     if let Some(ref out) = cli.output {
@@ -2273,8 +2273,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
     eprintln!("Converting {} ...", input);
     let (result_path, _result_on_exit) = worker.convert_archive(Path::new(&input))?;
-    // A run the watchdog is ending leaves its placeholder at `--output`, not a result built over its deleted trees.
-    latexml_core::watchdog::park_if_exiting();
+    // A run the watchdog is ending leaves its placeholder at `--output`, not a result built over its deleted trees; past
+    // the claim, a late breach stands down instead of overwriting the result with its placeholder.
+    latexml_core::watchdog::claim_normal_end();
 
     // Read result and write to output (overwrites the placeholder).
     let mut result_data = Vec::new();

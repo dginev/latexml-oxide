@@ -23663,7 +23663,9 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
 - spills its core at min(512 MiB, the `--max-memory` default of a third of the fuse) of growth (`split_spill_watermark`,
   `bin/latexml_oxide.rs`). A document that never grows past that mark converts eagerly, as before. One that grows
   past 512 MiB but not past the default mark (a third of the fuse) now takes the spilling core, with its documented
-  differences from the eager result (#456, #738, #903); `--streaming=false` does not keep such a run eager.
+  differences from the eager result (#456, #738, #903). `--streaming=false` keeps the core eager at any size: it
+  removes the spill watermark (`stomach::set_spill_disabled`), so no eager run turns into streaming pass 1; the
+  split's post still streams.
 - splits through the streaming front-end (`latexml_post::stream_split`) at any size: `post::stream_split_threshold`
   now defaults to 0, where it was 1 GiB. This holds for every caller of `post::run_post_processing_logged` that sets
   `split: true`; `api.rs`, `cortex_worker` and the LSP pass `split: false`. The CLI's core serializes its result
@@ -23684,9 +23686,16 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
   stream keeps its Warn.
 - renders 64 or more pages on min(available cores, 8) worker processes (`render_workers::render_jobs`,
   `enable_auto_jobs`). Each worker's watchdog holds it to its share of the fuse headroom (`RenderManifest::max_rss_kb`).
-  A worker that fails to spawn, cannot set up (its manifest or db unreadable: a `Status:setup-failed:` line) or dies
-  without its status report sends the whole document back to the serial render, with an Info. The workers keep their spilled pages for this, and no child log is folded. Only a timeout still folds a
-  killed fleet as Errors.
+  A worker is estimated at 64 MiB + 6 × the saved db (`render_workers::worker_estimate_bytes`; measured VmHWM
+  ~42 MB + 4.85 × db on Nasser's book), and the fleet takes as many as fit. A worker that fails to spawn, cannot set
+  up (its manifest or db unreadable: a `Status:setup-failed:` line) or dies without its status report sends the whole
+  document back to the serial render at once: the rest of the fleet is killed, not waited for. That is an Info, and a
+  Warning when a signal killed the worker (a crash; its own watchdog's memory exit is code 137, an Info). The workers
+  keep their spilled pages for this, and no child log is folded. Their pages stay until the serial render rewrites
+  them. A page's Fatal there (#782) removes every page the fleet may have written (a worker that died unreported, its
+  whole range). A memory-fuse or timeout stop, or a page's Error, removes the fleet's pages it did not rewrite, so it
+  leaves the contiguous partial site a serial-only run does, the pages its "stopped after N page(s)" Info counts.
+  Only a timeout still folds a killed fleet as Errors.
 
 Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`/`1`, `LATEXML_POST_STREAM_THRESHOLD`,
 `LATEXML_RENDER_JOBS` (`1` = serial). Every embedder but the `latexml_oxide` binary keeps the serial render and the
@@ -23695,14 +23704,19 @@ default watermark. `cortex_worker` never splits, so its output is unchanged.
 Effect on Nasser's 2,400-problem slice (`--splitat=subsubsection`, 9,713 pages): the pages are byte-identical to the
 eager whole-DOM run, the Warnings equal, and peak RSS falls from 3.8-4.9 GB to 1.35 GB (serial render).
 
-The streamed split differs from the whole-DOM split only where the latter loses a page's non-`ltx` namespaces. Witnesses:
-1502.06095 and 1609.07593 (an xy-pic `svg:svg` inside math, 344 and 1,377 `malformed:namespace` Warnings) and
-2606.28974 (a dropped `aria-hidden`). On all three the streamed pages match the unsplit conversion.
+The streamed split's pages mean the same XML as the whole-DOM split's, except where the latter loses a page's non-`ltx`
+namespaces. Witnesses: 1502.06095 and 1609.07593 (an xy-pic `svg:svg` inside math, 344 and 1,377 `malformed:namespace`
+Warnings) and 2606.28974 (a dropped `aria-hidden`). On all three the streamed pages match the unsplit conversion. The
+namespace declarations sit elsewhere: under `--format=xml` a whole-DOM page root is
+`<default:section xmlns:default="…LaTeXML" xmlns="…LaTeXML">` with `xmlns:svg` on each `svg:svg`, a streamed one
+`<section xmlns="…LaTeXML" xmlns:svg="…">`. The HTML formats show no placement.
 
 **Guards**: `118_streaming_split_parity::streaming_split_pages_are_byte_identical_to_dom_split` (the default and
 in-memory cases), `::cli_split_streams_by_default_and_unsplit_stays_eager`, and
 `120_midscale_streaming::midscale_render_fleet_defaults_on_and_falls_back_to_serial` (the
 `LATEXML_RENDER_WORKER_TEST_ABORT` hook, test-utils builds only: a dead worker and a failed db attach),
+`cluster_xslt_split::xslt_failure_is_fatal::an_abandoned_fleet_then_a_serial_stop_keeps_only_the_rewritten_pages`
+(with the `LATEXML_RENDER_TEST_SERIAL_STOP` hook) and `::an_abandoned_fleet_then_a_serial_fatal_keeps_no_page`,
 `112_fragment_yield::split_keeps_pages_whose_namespaces_a_navigation_uses` (a late navigation),
 `118_streaming_split_parity::nested_resource_split_falls_back_to_the_whole_dom_split` and
 `::cli_bare_dest_stages_beside_the_destination`; the handoff file:

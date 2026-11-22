@@ -274,6 +274,15 @@ pub fn set_spill_watermark_override(bytes: Option<u64>) {
   SPILL_WATERMARK_OVERRIDE.with(|c| c.set(bytes));
 }
 
+thread_local! {
+  /// Set by `--streaming=false`: the conversion has no spill watermark, so an eager run never turns into
+  /// streaming pass 1 (`digest_adaptive` arms its yield only at a watermark).
+  static SPILL_DISABLED: Cell<bool> = const { Cell::new(false) };
+}
+
+/// See `SPILL_DISABLED`; wins over the override, the env and the default.
+pub fn set_spill_disabled(disabled: bool) { SPILL_DISABLED.with(|c| c.set(disabled)); }
+
 /// The RAM watermark, in bytes above the conversion's starting RSS ([`spill_mark_kb`]), at which streaming pass 1
 /// begins spilling closed subtrees to disk — the second derived quantity of the single
 /// `--max-memory` knob, and deliberately NOT a flag of its own (a watermark a
@@ -291,6 +300,9 @@ pub fn set_spill_watermark_override(bytes: Option<u64>) {
 /// the machine run out". Fall back to an eighth of physical RAM, which lands
 /// the same 12 GiB on a 96 GB host that the validated 48 GiB ceiling derives.
 pub fn spill_watermark_bytes() -> Option<u64> {
+  if SPILL_DISABLED.with(Cell::get) {
+    return None;
+  }
   if let Some(bytes) = SPILL_WATERMARK_OVERRIDE.with(|c| c.get()) {
     return Some(bytes);
   }

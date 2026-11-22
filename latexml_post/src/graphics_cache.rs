@@ -60,12 +60,13 @@
 //! The cache is designed to be shared by parallel `cortex_worker`
 //! processes within a canvas sweep. Concurrency guarantees:
 //!
-//! 1. **Concurrent writes to the same key**: each writer renders to a private
-//!    `<final>.tmp.<pid>.<nanos>` sidecar then issues a single `rename(2)` into the final path.
-//!    `rename` is atomic on the same filesystem; if two writers race, the last `rename` wins, and
-//!    because both sources are byte-equivalent the outcome is correct. `link_or_copy` retries once
-//!    on `EEXIST` for the same reason.
-//! 2. **Concurrent reads + writes**: a reader hardlinks the cached file into the destination. POSIX
+//! 1. **Concurrent writes to the same key**: each writer links or copies into a private
+//!    `.<stem>.tmp.<pid>.<seq>.<ext>` file ([`crate::writer::Staged`]) then issues a single
+//!    `rename(2)` into the final path. `rename` is atomic on the same filesystem; if two writers
+//!    race, the last `rename` wins, and because both sources are byte-equivalent the outcome is
+//!    correct.
+//! 2. **Concurrent reads + writes**: a reader hardlinks the cached file into the destination, the
+//!    same way (a staged link renamed onto it). POSIX
 //!    `link(2)` either succeeds (returning a new directory entry that survives any subsequent
 //!    `unlink` of the source) or fails cleanly. If the cache file is unlinked between hash
 //!    computation and link, the reader gets a miss and falls through — no data corruption.
@@ -322,27 +323,16 @@ fn dims_sidecar(cache_file: &Path) -> PathBuf {
   PathBuf::from(s)
 }
 
-/// Hardlink `src` → `dst`; on cross-filesystem or other failure, fall
-/// back to plain copy. Returns `true` on success.
+/// Hard-link (else copy) `src` to `dst` through a staged file and one rename
+/// ([`crate::writer::link_atomic`]): a reader of `dst` never sees it half-written, and a link is
+/// safe because graphics outputs are immutable artefacts. Returns `true` on success.
 fn link_or_copy(src: &Path, dst: &Path) -> bool {
-  if let Some(parent) = dst.parent() {
-    if fs::create_dir_all(parent).is_err() {
-      return false;
-    }
+  if let Some(parent) = dst.parent()
+    && fs::create_dir_all(parent).is_err()
+  {
+    return false;
   }
-  // Try hardlink first (zero-copy). Hardlinking from cache to dest is
-  // safe because graphics outputs are immutable artefacts.
-  if fs::hard_link(src, dst).is_ok() {
-    return true;
-  }
-  // Hard-link can fail for cross-FS (EXDEV), permission, or because
-  // the destination already exists. Try to remove and retry once.
-  let _ = fs::remove_file(dst);
-  if fs::hard_link(src, dst).is_ok() {
-    return true;
-  }
-  // Final fallback: plain copy.
-  fs::copy(src, dst).is_ok()
+  crate::writer::link_atomic(src, dst).is_ok()
 }
 
 /// Read a `.dims` sidecar if present.
@@ -354,30 +344,16 @@ fn read_dims_sidecar(sidecar: &Path) -> Option<CachedDims> {
   Some(CachedDims { width, height })
 }
 
-/// Write a `.dims` sidecar via tmp+rename for atomicity. Idempotent
+/// Write a `.dims` sidecar atomically ([`crate::writer::write_atomic`]). Idempotent
 /// and best-effort — failures leave no state behind.
 fn write_dims_sidecar(sidecar: &Path, dims: CachedDims) {
-  if let Some(parent) = sidecar.parent() {
-    if fs::create_dir_all(parent).is_err() {
-      return;
-    }
-  }
-  let pid = std::process::id();
-  let nanos = std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .map(|d| d.as_nanos())
-    .unwrap_or(0);
-  let mut tmp = sidecar.as_os_str().to_owned();
-  tmp.push(format!(".tmp.{pid}.{nanos}"));
-  let tmp_path = PathBuf::from(tmp);
-  let body = format!("{}\n{}\n", dims.width, dims.height);
-  if fs::write(&tmp_path, body).is_err() {
-    let _ = fs::remove_file(&tmp_path);
+  if let Some(parent) = sidecar.parent()
+    && fs::create_dir_all(parent).is_err()
+  {
     return;
   }
-  if fs::rename(&tmp_path, sidecar).is_err() {
-    let _ = fs::remove_file(&tmp_path);
-  }
+  let body = format!("{}\n{}\n", dims.width, dims.height);
+  let _ = crate::writer::write_atomic(sidecar, body.as_bytes());
 }
 
 /// Result of a cache lookup.
@@ -457,35 +433,15 @@ fn store_digest(
 }
 
 /// Install `dest` as the cache entry `cached`, unless an entry is already there; whether an entry is in place after.
+/// Concurrent writers each stage a private link or copy and race the rename ([`link_or_copy`]): the
+/// last wins, and both are the same bytes. A killed install's staged `.tmp.` file is reclaimed by
+/// the prune's `STALE_TMP_AGE` sweep (33k such files in the fleet's cache by 2026-11-16).
 fn install(dest: &Path, cached: &Path) -> bool {
-  // Atomic install: write to .tmp.<pid>.<nanos>, rename into place.
-  // Concurrent writers each get a private tmp and race the rename —
-  // last rename wins, both sources are byte-equivalent.
-  let pid = std::process::id();
-  let nanos = std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .map(|d| d.as_nanos())
-    .unwrap_or(0);
-  let mut tmp = cached.as_os_str().to_owned();
-  tmp.push(format!(".tmp.{pid}.{nanos}"));
-  let tmp = PathBuf::from(tmp);
-  // A failed copy may have left a partial tmp, a failed rename a whole one: neither is reclaimed otherwise but
-  // by the prune's `STALE_TMP_AGE` sweep (33k such files in the fleet's cache by 2026-11-16).
-  if !link_or_copy(dest, &tmp) {
-    let _ = fs::remove_file(&tmp);
-    return cached.is_file();
-  }
-  if !cached.is_file() {
-    // rename is atomic on the same filesystem; failures are non-fatal.
-    if fs::rename(&tmp, cached).is_err() {
-      let _ = fs::remove_file(&tmp);
-    }
-  } else {
-    // Cache file already present (race with another writer); clean up.
-    let _ = fs::remove_file(&tmp);
+  if cached.is_file() {
     let _ = touch_now(cached);
+    return true;
   }
-  cached.is_file()
+  link_or_copy(dest, cached) || cached.is_file()
 }
 
 fn touch_now(p: &Path) -> std::io::Result<()> {

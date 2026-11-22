@@ -299,6 +299,10 @@ impl Splitter {
   fn run(&mut self, mut reader: TextReader) -> Result<(), String> {
     let mut advanced = reader.read().map_err(|()| "XML parse error".to_string())?;
     while advanced {
+      // A late template item dooms the stream to the whole-DOM split: stop spilling pages for it.
+      if self.late_template_fails && self.late_template.is_some() {
+        return Ok(());
+      }
       match reader.event() {
         ReaderEvent::Element => {
           let localname = reader.local_name().unwrap_or_default();
@@ -1369,14 +1373,20 @@ fn xml_ns_attr(node: &Node, localname: &str) -> Option<String> {
     .or_else(|| node.get_attribute(&format!("xml:{localname}")))
 }
 
+/// Byte-level check for XML NCName characters that may appear in a namespace prefix.
+fn is_xml_ncname_char(b: u8) -> bool {
+  b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.') || b >= 0x80
+}
+
 /// Conservative substring probe for "this serialized fragment may contain an
 /// element with `localname`": matches `<localname` or `<pfx:localname`
 /// followed by a name-boundary character, so `<indexmark` does NOT register
 /// as `<index` (a real document's `\\index` markers would otherwise trigger a
 /// mini-DOM descent per paragraph). Text content cannot introduce `<`
-/// (escaped), so `<`-anchored matches are always element starts;
-/// `:`-anchored matches can over-trigger on text (harmless — descent is
-/// correct, just slower).
+/// (escaped), so `<`-anchored matches are always element starts. A
+/// `:localname` match counts only after `<` and a prefix: text such as
+/// `urn:resource/1` is not escaped, and a false match costs a descent at best
+/// and, for `resource`, a needless whole-DOM failover or a false Warning.
 fn contains_element_probe(outer: &str, localname: &str) -> bool {
   let boundary = |rest: &str| {
     rest
@@ -1391,8 +1401,18 @@ fn contains_element_probe(outer: &str, localname: &str) -> bool {
     }
   }
   let prefixed = format!(":{localname}");
+  let bytes = outer.as_bytes();
   for (at, _) in outer.match_indices(&prefixed) {
-    if boundary(&outer[at + prefixed.len()..]) {
+    if !boundary(&outer[at + prefixed.len()..]) {
+      continue;
+    }
+    // Require a real XML start-tag `<prefix:localname` — not prose/URLs/code
+    // such as `urn:resource/1` or `std::resource `, and not a close tag `</p:name>`.
+    let mut i = at;
+    while i > 0 && is_xml_ncname_char(bytes[i - 1]) {
+      i -= 1;
+    }
+    if i < at && i > 0 && bytes[i - 1] == b'<' {
       return true;
     }
   }
@@ -1794,8 +1814,98 @@ mod tests {
     assert!(contains_element_probe("<index>", "index"));
     assert!(contains_element_probe("<index/>", "index"));
     assert!(contains_element_probe("<ltx:index>x</ltx:index>", "index"));
+    assert!(contains_element_probe(
+      "<a-1.b_2:resource src=\"x\"/>",
+      "resource"
+    ));
     assert!(!contains_element_probe("<subsubsection>", "subsection"));
     assert!(!contains_element_probe("plain text", "section"));
+    // Prose, URLs, attributes, code, and close tags containing `:name` must NOT
+    // match as prefixed start tags (false positive aborts stream_split or emits
+    // spurious nested-resource warnings).
+    assert!(!contains_element_probe(
+      "<p>urn:resource/1 and std::resource and a:resource </p>",
+      "resource"
+    ));
+    assert!(!contains_element_probe(
+      "<p about=\"ex:resource \">http://example.org/ns:resource/</p>",
+      "resource"
+    ));
+    assert!(!contains_element_probe("</ltx:resource>", "resource"));
+    assert!(!contains_element_probe("<:resource/>", "resource"));
+  }
+
+  #[test]
+  fn stream_split_ignores_colon_resource_in_prose_and_attrs() {
+    let dir = tempfile::tempdir().unwrap();
+    let src = dir.path().join("prose.xml");
+    std::fs::write(
+      &src,
+      r#"<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <title>T</title>
+  <section xml:id="S1"><title>One</title>
+    <para xml:id="S1.p1"><p about="ex:resource ">See urn:resource/1 and std::resource and doc:section/a.</p></para>
+  </section>
+  <section xml:id="S2"><title>Two</title>
+    <para xml:id="S2.p1"><p>Clean.</p></para>
+  </section>
+</document>
+"#,
+    )
+    .unwrap();
+    let spill = dir.path().join("spill");
+    std::fs::create_dir(&spill).unwrap();
+    let outcome = stream_split(
+      &src.to_string_lossy(),
+      "//ltx:section",
+      SplitNaming::Id,
+      Some("out/prose.html"),
+      &spill,
+      true,
+    )
+    .expect("prose containing :resource must not abort streaming split")
+    .expect("split produces pages");
+    assert_eq!(outcome.pages.len(), 3);
+  }
+
+  /// A late template item (here an `ltx:resource` after the first page) fails the stream over to
+  /// the whole-DOM split; the stream stops there instead of spilling the remaining pages.
+  #[test]
+  fn a_doomed_stream_stops_at_the_late_template() {
+    let dir = tempfile::tempdir().unwrap();
+    let src = dir.path().join("late.xml");
+    let mut xml = String::from(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\n<title>T</title>\n",
+    );
+    xml.push_str("<section xml:id=\"S1\"><title>1</title><para><p>x</p></para></section>\n");
+    xml.push_str("<resource src=\"late.css\" type=\"text/css\"/>\n");
+    for i in 2..=20 {
+      xml.push_str(&format!(
+        "<section xml:id=\"S{i}\"><title>{i}</title><para><p>x</p></para></section>\n"
+      ));
+    }
+    xml.push_str("</document>\n");
+    std::fs::write(&src, xml).unwrap();
+    let spill = dir.path().join("spill");
+    std::fs::create_dir(&spill).unwrap();
+    let failed = stream_split(
+      &src.to_string_lossy(),
+      "//ltx:section",
+      SplitNaming::Id,
+      Some("out/late.html"),
+      &spill,
+      true,
+    );
+    assert!(
+      failed
+        .as_ref()
+        .is_err_and(|why| why.contains("ltx:resource appeared after the first page")),
+      "{:?}",
+      failed.map(|o| o.map(|o| o.pages.len()))
+    );
+    let spilled = std::fs::read_dir(&spill).unwrap().count();
+    assert!(spilled <= 2, "{spilled} pages spilled for a doomed stream");
   }
 
   #[test]

@@ -903,6 +903,7 @@ LoadDefinitions!({
     DefRewrite!(select => THOUSANDS_SELECT_XPATH,
     select_count => 3,
     passes => { Some(THOUSANDS_MERGE_PASSES) },
+    local_replace => true,
     replace => sub[document, nodes] {
       // `nodes` is [NUMBER, PUNCT ",", NUMBER] — already detached and
       // id-unrecorded by the rewrite engine; we insert ONE token in their place.

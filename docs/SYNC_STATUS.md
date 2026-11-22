@@ -985,19 +985,38 @@ Rules that keep this file honest and mergeable:
     (`Document::serialize_to_string`, `converter.rs` `serialize_result`); the same sink (`serialize_to_file`) could write
     them to `--dest` or to post's file input. Witness: any unsplit document past ~1 GiB of core XML (Nasser's whole
     book unsplit); 2
-  - RENDERFLEETBIG — Nasser's whole book (115,519 pages) rendered serially: the worker fleet affords 0 workers at
-    ~1.8 GB each under `--max-memory=8192` with the parent at ~4.3 GB (`render_workers.rs` affordable-memory cap);
-    measure each worker's real need and the parent's post-render footprint before lowering the estimate; 2
+  - RENDERFLEETBIG (post-0.8.0) — a render worker decodes the whole render database at attach: its peak is ~42 MB +
+    4.85 × the db (measured on Nasser k600/k2400; the estimate is `64 MiB + 6 × db`, `render_workers.rs`
+    `worker_estimate_bytes`). On Nasser's whole book (115,519 pages, db ≈ 600 MB) one worker needs ~3.7 GB, so under
+    `--max-memory=8192` with the parent at ~4.3 GB the fleet affords 0 workers and the pages render serially. Lever:
+    attach the db lazily (point lookups per page), so a worker's footprint follows its page range; an `ObjectDB`
+    redesign — measure k2400 and the whole book before and after; 2
+  - SPILLKEEP (post-0.8.0) — render workers keep their spilled pages (`remove_spilled: false`) until post ends, since
+    the serial fallback re-renders the whole document: ~+2.7 GB of disk on Nasser's whole book. Freeing a finished
+    worker's pages needs a fallback that re-renders only the failed ranges (`render_workers.rs` `parallel_render`'s
+    fold); 1
+  - RENDERPLATFORMS (verify before 0.8.0 final) — the automatic render fleet is on in the `latexml_oxide` binary on
+    every platform but measured only on Linux: macOS has no RSS reading (a worker's watchdog share is not enforced),
+    and Windows' process spawning and `writer::Staged` renames onto existing files have run only in CI tests. Run a
+    split document on the macOS and Windows rc2 binaries against `LATEXML_RENDER_JOBS=1`; if either misbehaves,
+    default the fleet to serial there; 2
+  - PANICSWEEP-MAXPERF (verify) — the abort-panic hook that removes the run's registered paths (`install_panic_sweep`,
+    `bin/latexml_oxide.rs`) is guarded only through its wiring (test builds unwind; the test runs the hook in a child
+    process): one maxperf build with a test-utils post panic, check no `latexml-post-handoff-*` stays; 1
+  - RENDERPID (post-0.8.0) — `render_workers.rs` (the first-death kill) and `try_kill_registered_children` kill by raw
+    pid: between the drain thread's `wait()` and `is_finished()` the pid is free and could be reused (a microsecond
+    window, now on every abandoned fleet); signal through a pidfd opened at spawn. Also a child whose drain thread fails
+    to spawn is killed and dropped unwaited, a zombie until the parent exits; 1
+  - GFXTEMPS (post-0.8.0) — a SIGKILLed render worker leaves its pid-tagged `.…tmp.<pid>.…` staging files in a
+    directory output (the cache's `STALE_TMP_AGE` sweep reclaims the cache's; zips skip dotfiles): the parent could
+    sweep a dead worker's temps after abandoning the fleet. Also ImageMagick's PNG `date:*` chunks make raster bytes
+    differ run to run; 1
   - MIMALLOC3 — back to mimalloc 3.x once `libmimalloc-sys` bundles a release with the 3.3.x heap-corruption fixes
     (≥ 3.5.3; microsoft/mimalloc issues 1287, 1430): 0.8.0-rc2 builds the bundled 2.3.2 (`latexml_oxide/Cargo.toml`
     `v2` feature). Witness: 1502.06095 crashed twice under full-width A/B load (mimalloc's small free list holding a
     Token-shaped value; an indirect call through a corrupted pointer), ~0.3 % of loaded runs, 0 of ~370 quiet runs and 0
     ASan reports on the system allocator; the fleet's only unexplained SIGSEGV in run 397 is 2212.05990 (never
     reproduced). Re-measure 3.x against 2.3.2 (instructions, peak RSS, a loaded 1502.06095 loop) before switching; 2
-  - STREAMPROBE — the streamed split's `contains_element_probe` (`stream_split.rs` ~1393) takes `:resource` in page text
-    (`ex:resource`) for a prefixed element, so such a page falls back to the whole-DOM split with a misleading Info (≥ 1
-    GiB: a false Warn); match only after `<` and a valid prefix. And a stream doomed by a late template still spills
-    every page before failing over (`Splitter::run`, ~150/~604): stop at the first late template; 1
   - SPLITDOMNS — the whole-DOM split (`latexml_post/src/split.rs`) loses a page's non-`ltx` namespaces: xy-pic's svg
     inside math raises `malformed:namespace` Warnings (1502.06095: 344, 1609.07593: 1,377 under `--splitat=section`)
     and 2606.28974 loses an `aria-hidden`; the streamed split, the default for split runs since OXIDIZED_DESIGN_DIVERGENCES

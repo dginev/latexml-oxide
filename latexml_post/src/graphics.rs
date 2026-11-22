@@ -763,8 +763,8 @@ impl Graphics {
   /// their own units. Clamped to the page, never padded, as the raster crop.
   /// `Ok(false)` when the box keeps the whole page; `Err` when the root lacks a
   /// usable `viewBox`, `width` or `height`, and the caller renders a raster to
-  /// crop instead. Replaces the file by rename (it may be a cache hard link).
-  /// Witness 2605.06510 (`trim=0cm 0.25cm 0cm 0.1cm,clip` on PDF legends).
+  /// crop instead. Replaces the file by rename ([`crate::writer::write_atomic`]; it may be a cache
+  /// hard link). Witness 2605.06510 (`trim=0cm 0.25cm 0cm 0.1cm,clip` on PDF legends).
   fn crop_svg_inplace(path: &str, op: &GraphicxOp) -> Result<bool, String> {
     use latexml_core::util::image::{svg_attr_value, svg_root_tag};
     let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
@@ -822,35 +822,9 @@ impl Graphics {
       new_tag.replace_range(start..start + old.len(), &value);
     }
     let cropped = format!("{}{new_tag}{}", &text[..at], &text[at + tag.len()..]);
-    let tmp = format!("{path}.cropped.{}", std::process::id());
-    std::fs::write(&tmp, cropped).map_err(|e| {
-      let _ = std::fs::remove_file(&tmp);
-      format!("{tmp}: {e}")
-    })?;
-    std::fs::rename(&tmp, path).map_err(|e| {
-      let _ = std::fs::remove_file(&tmp);
-      format!("{path}: {e}")
-    })?;
+    crate::writer::write_atomic(Path::new(path), cropped.as_bytes())
+      .map_err(|e| format!("{path}: {e}"))?;
     Ok(true)
-  }
-
-  /// Copy `source` to `dest` through a sibling temp file and a rename, so an
-  /// existing `dest` — a graphics-cache hard link, or the source itself when
-  /// the output lands in the source directory — is replaced, never written
-  /// through (a copy onto itself truncates the file).
-  fn copy_beside(source: &str, dest: &str) -> std::io::Result<()> {
-    if let (Ok(a), Ok(b)) = (std::fs::canonicalize(source), std::fs::canonicalize(dest))
-      && a == b
-    {
-      return Err(std::io::Error::other(format!(
-        "{dest} is the source itself"
-      )));
-    }
-    let tmp = format!("{dest}.copying.{}", std::process::id());
-    std::fs::copy(source, &tmp)?;
-    std::fs::rename(&tmp, dest).inspect_err(|_| {
-      let _ = std::fs::remove_file(&tmp);
-    })
   }
 
   /// Crop and turn the raster at `dest` in one `convert` run, as Perl's
@@ -888,14 +862,9 @@ impl Graphics {
     if crop.is_none() && angle.abs() <= 0.5 {
       return Ok(None);
     }
-    let dest_path = Path::new(dest);
-    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let name = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
-    // `convert` picks the output format from the extension, so keep it last.
-    let tmp = parent.join(format!(".transformed.{}.{name}", std::process::id()));
+    // `convert` picks the output format from the extension, which the staged name keeps last.
+    let staged = crate::writer::Staged::beside(Path::new(dest));
+    let tmp = staged.path();
     let mut cmd = std::process::Command::new(im_convert_program());
     cmd.arg(dest);
     if let Some((x, y, cw, ch)) = crop {
@@ -910,13 +879,12 @@ impl Graphics {
     if angle.abs() > 0.5 {
       cmd.arg("-rotate").arg(format!("{}", -angle));
     }
-    cmd.arg(&tmp);
+    cmd.arg(tmp);
     let timeout = std::time::Duration::from_secs(Self::convert_timeout_secs());
     let ran = Self::run_with_timeout(cmd, timeout)
       .map(|status| status.success())
       .unwrap_or(false);
-    if !ran || !tmp.exists() || std::fs::rename(&tmp, dest).is_err() {
-      let _ = std::fs::remove_file(&tmp);
+    if !ran || !tmp.exists() || staged.install(Path::new(dest)).is_err() {
       let why = take_converter_diag().unwrap_or_else(|| "no converter diagnostic".to_string());
       return Err(format!(
         "`{}` could not crop or turn {dest}: {why}",
@@ -976,11 +944,10 @@ impl Graphics {
       std::fs::create_dir_all(parent).ok()?;
     }
 
-    // Copy the file (skip if same path)
-    let source_canonical = std::fs::canonicalize(source).ok();
-    let dest_canonical = std::fs::canonicalize(&abs_dest).ok();
-    if source_canonical != dest_canonical || dest_canonical.is_none() {
-      std::fs::copy(source, &abs_dest).ok()?;
+    // Copy the file atomically (skip if same path) so parallel render workers
+    // referencing the same image never race on a truncated destination.
+    if !crate::writer::same_file(Path::new(source), &abs_dest) {
+      crate::writer::copy_atomic(Path::new(source), &abs_dest).ok()?;
     }
 
     // Return relative path for imagesrc attribute
@@ -1013,7 +980,7 @@ impl Graphics {
   /// to the raster (PNG) path — so a PDF that no vector tool can handle is
   /// never lost, just rasterized instead.
   ///
-  /// `page` is 1-based (graphicx convention).
+  /// `page` is 1-based (graphicx convention); `dest` is the job's private staged file.
   ///
   /// Each converter is guarded by a **hard timeout** (15 s default; see
   /// `svg_convert_timeout_secs`) and an output-size cap
@@ -1068,20 +1035,32 @@ impl Graphics {
   /// anyway), so the one page lands in `page1.svg` of a private directory beside `dest` (same
   /// filesystem: the rename stays atomic), removed whatever mutool wrote. Naming the file for
   /// the source page left page ≥ 2 in the destination and to pdftocairo (2305.12780, 1906.10268,
-  /// 2406.07459, 2406.14311, 1709.02311).
+  /// 2406.07459, 2406.14311, 1709.02311). The directory is named after `dest`'s
+  /// [bounded](crate::writer::bounded_name) name: a long one took it past NAME_MAX, and pdftocairo
+  /// drew the figure instead.
   fn convert_image_svg_mutool(source: &str, dest: &str, page: Option<u32>) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
-    let unique = Self::unique_staging_tag();
-    let tmp_dir = parent.join(format!(".{}.{}.mutool_svg", stem, unique));
-    // `create_dir`, not `create_dir_all`: an existing directory is another job's.
-    if std::fs::create_dir(&tmp_dir).is_err() {
-      return false;
-    }
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
+    // `create_dir`, not `create_dir_all`: an existing directory is another job's or a killed
+    // run's, and the next tag is tried (a failure here would hand the figure to pdftocairo).
+    let tmp_dir = loop {
+      let dir = parent.join(format!(
+        ".{}.{}.mutool_svg",
+        stem,
+        Self::unique_staging_tag()
+      ));
+      match std::fs::create_dir(&dir) {
+        Ok(()) => break dir,
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+        Err(_) => return false,
+      }
+    };
     let _on_exit = latexml_core::watchdog::remove_on_exit(&tmp_dir);
     let tmp_actual = tmp_dir.join("page1.svg");
     let p1 = page.map(|p| p.max(1)).unwrap_or(1);
@@ -1097,13 +1076,7 @@ impl Graphics {
     let timeout = std::time::Duration::from_secs(Self::svg_convert_timeout_secs());
     let ok = Self::run_with_timeout(cmd, timeout).is_some_and(|status| status.success())
       && std::fs::metadata(&tmp_actual).is_ok_and(|md| md.len() <= Self::MAX_SVG_OUTPUT_BYTES);
-    let installed = ok && {
-      let _ = std::fs::remove_file(dest);
-      std::fs::rename(&tmp_actual, dest)
-        .or_else(|_| std::fs::copy(&tmp_actual, dest).map(|_| ()))
-        .is_ok()
-        && dest_path.exists()
-    };
+    let installed = ok && std::fs::rename(&tmp_actual, dest).is_ok();
     let _ = std::fs::remove_dir_all(&tmp_dir);
     installed
   }
@@ -1564,10 +1537,12 @@ impl Graphics {
   fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
     let unique = Self::unique_staging_tag();
     let tmp = parent.join(format!(".{}.{}.mutool.png", stem, unique));
     let _on_exit = latexml_core::watchdog::remove_on_exit(&tmp);
@@ -1594,11 +1569,7 @@ impl Graphics {
       return false;
     }
 
-    let _ = std::fs::remove_file(dest);
-    let installed = std::fs::rename(&tmp, dest)
-      .or_else(|_| std::fs::copy(&tmp, dest).map(|_| ()))
-      .is_ok()
-      && dest_path.exists();
+    let installed = std::fs::rename(&tmp, dest).is_ok();
     let _ = std::fs::remove_file(&tmp);
     installed
   }
@@ -1609,10 +1580,12 @@ impl Graphics {
   fn convert_pdf_via_pdftocairo(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
     let unique = Self::unique_staging_tag();
     let tmp_prefix = parent.join(format!(".{}.{}.pdftocairo", stem, unique));
     let tmp_png = PathBuf::from(format!("{}.png", tmp_prefix.to_string_lossy()));
@@ -1652,11 +1625,7 @@ impl Graphics {
       return false;
     }
 
-    let _ = std::fs::remove_file(dest);
-    let installed = std::fs::rename(&tmp_png, dest)
-      .or_else(|_| std::fs::copy(&tmp_png, dest).map(|_| ()))
-      .is_ok()
-      && dest_path.exists();
+    let installed = std::fs::rename(&tmp_png, dest).is_ok();
     cleanup(&tmp_png);
     installed
   }
@@ -1668,10 +1637,12 @@ impl Graphics {
   fn convert_eps_via_pdf(source: &str, dest: &str, density: u32) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
     let unique = Self::unique_staging_tag();
     let tmp_pdf = parent.join(format!(".{}.{}.pdf", stem, unique));
     let tmp_prefix = parent.join(format!(".{}.{}.pdftocairo", stem, unique));
@@ -1713,11 +1684,7 @@ impl Graphics {
       return false;
     }
 
-    let _ = std::fs::remove_file(dest);
-    let installed = std::fs::rename(&tmp_png, dest)
-      .or_else(|_| std::fs::copy(&tmp_png, dest).map(|_| ()))
-      .is_ok()
-      && dest_path.exists();
+    let installed = std::fs::rename(&tmp_png, dest).is_ok();
     cleanup(&tmp_pdf, &tmp_png);
     installed
   }
@@ -1735,10 +1702,12 @@ impl Graphics {
   fn convert_eps_via_gs(source: &str, dest: &str, density: u32) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
     let unique = Self::unique_staging_tag();
     // gs picks its output extension from the device, not the path, so
     // we pass it whatever name and rename atomically at the end.
@@ -1831,11 +1800,7 @@ impl Graphics {
       let _ = std::fs::remove_file(&tmp);
       return false;
     }
-    let _ = std::fs::remove_file(dest);
-    let installed = std::fs::rename(&tmp, dest)
-      .or_else(|_| std::fs::copy(&tmp, dest).map(|_| ()))
-      .is_ok()
-      && dest_path.exists();
+    let installed = std::fs::rename(&tmp, dest).is_ok();
     let _ = std::fs::remove_file(&tmp);
     installed
   }
@@ -1843,6 +1808,8 @@ impl Graphics {
   /// Convert a graphics file using ImageMagick's `convert` command.
   /// Perl: image_graphicx_complex via Image::Magick / convert CLI.
   /// `page` is 1-based (graphicx convention); converted to 0-based for ImageMagick.
+  /// `dest` is the job's private staged file (`writer::Staged`), as for [`Self::convert_image_svg`]:
+  /// the converters write and remove it freely, and the worker installs it.
   fn convert_image(source: &str, dest: &str, dpi: u32, page: Option<u32>) -> bool {
     // A MetaPost figure that leaves its fonts to dvips is converted from a copy that holds them, as dvips would give
     // them (`postscript_fonts`, OXIDIZED_DESIGN #587; gr-qc0001079, math0102124).
@@ -2657,15 +2624,21 @@ impl Processor for Graphics {
                     // failed_to_convert Error (if it fires) reports THIS asset's
                     // converter error, not a previous job's.
                     take_converter_diag();
-                    // Try vector-SVG path first if requested for this source.
-                    // The cache layer (graphics_cache) hardlinks/copies a
-                    // matching cached output before any subprocess fires and
-                    // round-trips the dimensions through a .dims sidecar so
-                    // hits skip the `read_*_dimensions` re-measure too.
-                    // Misses fall through to the real conversion + measure
-                    // and write back on success. Disable via
-                    // LATEXML_GRAPHICS_CACHE_OFF=1.
-                    let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
+                    // Each output is made in a private staged file beside its destination and
+                    // installed by one rename (`writer::Staged`): parallel page-render workers
+                    // convert a figure their pages share into the same destination, and a worker
+                    // that judged or removed a sibling's half-written `fig.svg` switched pages to a
+                    // PNG and deleted the file under the rest. The cache layer (graphics_cache)
+                    // links a matching cached output into the staged file before any subprocess
+                    // fires and round-trips the dimensions through a .dims sidecar; misses fall
+                    // through to the real conversion + measure and write back on success. Disable
+                    // via LATEXML_GRAPHICS_CACHE_OFF=1.
+                    let svg_outcome = 'svg: {
+                      let Some((rel_svg, abs_svg)) = svg_paths else {
+                        break 'svg None;
+                      };
+                      let staged = crate::writer::Staged::beside(Path::new(abs_svg));
+                      let stage = staged.path().to_string_lossy().into_owned();
                       let svg_key = crate::graphics_cache::RenderKey {
                         page:    *page,
                         density: 0,
@@ -2675,139 +2648,180 @@ impl Processor for Graphics {
                         cache_policy,
                         source,
                         digest.as_ref(),
-                        abs_svg,
+                        &stage,
                         svg_key,
                         || {
                           subproc_ref.fetch_add(1, Ordering::Relaxed);
-                          Self::convert_image_svg(source, abs_svg, *page)
+                          Self::convert_image_svg(source, &stage, *page)
                         },
                         || {
-                          Self::read_svg_dimensions(abs_svg).map(|(w, h)| {
+                          Self::read_svg_dimensions(&stage).map(|(w, h)| {
                             crate::graphics_cache::CachedDims { width: w, height: h }
                           })
                         },
                       );
-                      // Judged past the cache, so a cached render is too: a raster drawn larger
-                      // than its pixels takes the PNG path (DG 2026-11-14, OD #1034).
-                      let enlarged = if svg_res.is_ok() {
-                        std::fs::read_to_string(abs_svg)
-                          .map_or(Some(EnlargedRaster { pixels: None, scale: None }), |text| {
-                            svg_enlarged_raster(&text)
-                          })
-                      } else {
-                        None
+                      let crate::graphics_cache::ConvertResult::Ok { dims } = svg_res else {
+                        Warn!(
+                          "shell",
+                          "svg",
+                          "Graphics: vector-SVG path failed for {}, falling back to raster",
+                          source
+                        );
+                        break 'svg None;
                       };
-                      match (svg_res, enlarged) {
-                        (
-                          crate::graphics_cache::ConvertResult::Ok { .. },
-                          Some(EnlargedRaster { pixels, scale }),
-                        ) => {
-                          Info!(
-                            "shell",
-                            "svg",
-                            "Graphics: {} draws a {} raster at {} bp per pixel; using a PNG",
-                            source,
-                            pixels.map_or("?".to_string(), |(w, h)| format!("{w}x{h}")),
-                            scale.map_or("?".to_string(), |s| format!("{s:.2}"))
-                          );
-                          let _ = std::fs::remove_file(abs_svg);
-                          None
-                        },
-                        (crate::graphics_cache::ConvertResult::Ok { dims }, None) => {
-                          let crop = ops.iter().find(|op| {
-                            matches!(op, GraphicxOp::Trim { .. } | GraphicxOp::Clip { .. })
-                          });
-                          match crop.map(|op| Self::crop_svg_inplace(abs_svg, op)) {
-                            None | Some(Ok(false)) => Some(ConvertOutcome {
-                              job_id:   *job_id,
-                              imagesrc: Some(rel_svg.clone()),
-                              raw_dims: dims.map(|d| (d.width, d.height)),
-                            }),
-                            Some(Ok(true)) => Some(ConvertOutcome {
-                              job_id:   *job_id,
-                              imagesrc: Some(rel_svg.clone()),
-                              raw_dims: Self::read_svg_dimensions(abs_svg),
-                            }),
-                            Some(Err(why)) => {
-                              Warn!(
-                                "shell",
-                                "svg",
-                                "Graphics: can't crop the vector render of {} ({}); cropping a \
-                                 raster instead",
-                                source,
-                                why
-                              );
-                              let _ = std::fs::remove_file(abs_svg);
-                              None
-                            },
-                          }
-                        },
-                        (crate::graphics_cache::ConvertResult::Failed, _) => {
+                      // Judged on this job's own render, past the cache, so a cached render is
+                      // too: a raster drawn larger than its pixels takes the PNG path (DG
+                      // 2026-11-14, OD #1034).
+                      let bytes = match std::fs::read(&stage) {
+                        Ok(bytes) => bytes,
+                        Err(e) => {
                           Warn!(
                             "shell",
                             "svg",
-                            "Graphics: vector-SVG path failed for {}, falling back to raster",
-                            source
+                            "Graphics: can't read the vector render of {} ({}); using a raster",
+                            source,
+                            e
                           );
-                          None
+                          break 'svg None;
                         },
-                      }
-                    } else {
-                      None
-                    };
-                    let raster_res = if svg_outcome.is_none() && *copy_source {
-                      match Self::copy_beside(source, abs_dest_str)
-                        .inspect_err(|e| record_converter_diag(format!("copy {source}: {e}")))
-                      {
-                        Ok(()) => crate::graphics_cache::ConvertResult::Ok {
-                          dims: Self::read_image_dimensions(abs_dest_str).map(|(w, h)| {
-                            crate::graphics_cache::CachedDims { width: w, height: h }
-                          }),
-                        },
-                        Err(_) => crate::graphics_cache::ConvertResult::Failed,
-                      }
-                    } else if svg_outcome.is_none() {
-                      let raster_key = crate::graphics_cache::RenderKey {
-                        page:    *page,
-                        density: Self::raster_density_for_source(source),
-                        ext:     ext_from_path(abs_dest_str),
                       };
-                      crate::graphics_cache::with_cache_dims(
-                        cache_policy,
-                        source,
-                        digest.as_ref(),
-                        abs_dest_str,
-                        raster_key,
-                        || {
-                          subproc_ref.fetch_add(1, Ordering::Relaxed);
-                          Self::convert_image(source, abs_dest_str, dpi, *page)
+                      // A browser refuses an SVG that is not UTF-8.
+                      let Ok(text) = std::str::from_utf8(&bytes) else {
+                        Warn!(
+                          "shell",
+                          "svg",
+                          "Graphics: the vector render of {} is not UTF-8; using a raster",
+                          source
+                        );
+                        break 'svg None;
+                      };
+                      if let Some(EnlargedRaster { pixels, scale }) = svg_enlarged_raster(text) {
+                        Info!(
+                          "shell",
+                          "svg",
+                          "Graphics: {} draws a {} raster at {} bp per pixel; using a PNG",
+                          source,
+                          pixels.map_or("?".to_string(), |(w, h)| format!("{w}x{h}")),
+                          scale.map_or("?".to_string(), |s| format!("{s:.2}"))
+                        );
+                        break 'svg None;
+                      }
+                      drop(bytes);
+                      let crop = ops
+                        .iter()
+                        .find(|op| matches!(op, GraphicxOp::Trim { .. } | GraphicxOp::Clip { .. }));
+                      let raw_dims = match crop.map(|op| Self::crop_svg_inplace(&stage, op)) {
+                        None | Some(Ok(false)) => dims.map(|d| (d.width, d.height)),
+                        Some(Ok(true)) => Self::read_svg_dimensions(&stage),
+                        Some(Err(why)) => {
+                          Warn!(
+                            "shell",
+                            "svg",
+                            "Graphics: can't crop the vector render of {} ({}); cropping a \
+                             raster instead",
+                            source,
+                            why
+                          );
+                          break 'svg None;
                         },
-                        || {
-                          Self::read_image_dimensions(abs_dest_str).map(|(w, h)| {
-                            crate::graphics_cache::CachedDims { width: w, height: h }
-                          })
-                        },
-                      )
+                      };
+                      if let Err(e) = staged.install(Path::new(abs_svg)) {
+                        Warn!(
+                          "shell",
+                          "svg",
+                          "Graphics: can't install the vector render of {} as {} ({}); falling \
+                           back to raster",
+                          source,
+                          abs_svg,
+                          e
+                        );
+                        break 'svg None;
+                      }
+                      Some(ConvertOutcome {
+                        job_id: *job_id,
+                        imagesrc: Some(rel_svg.clone()),
+                        raw_dims,
+                      })
+                    };
+                    // The raster: converted (or, for a web-native raster whose pixels change,
+                    // copied) into its staged file, cropped or turned there, then installed —
+                    // never over its own source (`assign_dest_name` avoids every source's name).
+                    let raster_dims = if svg_outcome.is_some() {
+                      None
                     } else {
-                      crate::graphics_cache::ConvertResult::Failed
+                      let staged = crate::writer::Staged::beside(Path::new(abs_dest_str));
+                      let stage = staged.path().to_string_lossy().into_owned();
+                      let raster_res = if *copy_source {
+                        match std::fs::copy(source, &stage)
+                          .inspect_err(|e| record_converter_diag(format!("copy {source}: {e}")))
+                        {
+                          Ok(_) => crate::graphics_cache::ConvertResult::Ok {
+                            dims: Self::read_image_dimensions(&stage).map(|(w, h)| {
+                              crate::graphics_cache::CachedDims { width: w, height: h }
+                            }),
+                          },
+                          Err(_) => crate::graphics_cache::ConvertResult::Failed,
+                        }
+                      } else {
+                        let raster_key = crate::graphics_cache::RenderKey {
+                          page:    *page,
+                          density: Self::raster_density_for_source(source),
+                          ext:     ext_from_path(abs_dest_str),
+                        };
+                        crate::graphics_cache::with_cache_dims(
+                          cache_policy,
+                          source,
+                          digest.as_ref(),
+                          &stage,
+                          raster_key,
+                          || {
+                            subproc_ref.fetch_add(1, Ordering::Relaxed);
+                            Self::convert_image(source, &stage, dpi, *page)
+                          },
+                          || {
+                            Self::read_image_dimensions(&stage).map(|(w, h)| {
+                              crate::graphics_cache::CachedDims { width: w, height: h }
+                            })
+                          },
+                        )
+                      };
+                      if let crate::graphics_cache::ConvertResult::Ok { dims } = raster_res {
+                        let mut raw_dims = dims.map(|d| (d.width, d.height));
+                        if !ops.is_empty() {
+                          match Self::transform_raster_inplace(&stage, ops, *px_per_bp) {
+                            Ok(Some(size)) => raw_dims = Some(size),
+                            Ok(None) => {},
+                            Err(why) => Error!(
+                              "imageprocessing",
+                              "transform",
+                              "Graphics: {}; {} is shown untransformed",
+                              why,
+                              source
+                            ),
+                          }
+                        }
+                        let dest = Path::new(abs_dest_str);
+                        let installed = if crate::writer::same_file(Path::new(source), dest) {
+                          Err(std::io::Error::other(format!(
+                            "{abs_dest_str} is the source itself"
+                          )))
+                        } else {
+                          staged.install(dest)
+                        };
+                        match installed {
+                          Ok(()) => Some(raw_dims),
+                          Err(e) => {
+                            record_converter_diag(format!("install {abs_dest_str}: {e}"));
+                            None
+                          },
+                        }
+                      } else {
+                        None
+                      }
                     };
                     let outcome = if let Some(o) = svg_outcome {
                       o
-                    } else if raster_res.is_ok() {
-                      let mut raw_dims = raster_res.dims().map(|d| (d.width, d.height));
-                      if !ops.is_empty() {
-                        match Self::transform_raster_inplace(abs_dest_str, ops, *px_per_bp) {
-                          Ok(Some(size)) => raw_dims = Some(size),
-                          Ok(None) => {},
-                          Err(why) => Error!(
-                            "imageprocessing",
-                            "transform",
-                            "Graphics: {}; {} is shown untransformed",
-                            why,
-                            source
-                          ),
-                        }
-                      }
+                    } else if let Some(raw_dims) = raster_dims {
                       ConvertOutcome {
                         job_id: *job_id,
                         imagesrc: Some(rel_dest.clone()),
@@ -4703,6 +4717,74 @@ endobj
         gs_program()
       );
     }
+  }
+
+  /// A sibling page-render worker writes and removes the same `fig.svg` (`render_workers`): a
+  /// destination missing or half-written when this job looks at it must never switch the figure to
+  /// a PNG. The job judges its own staged render and installs it by rename; a thread here plays the
+  /// sibling, truncating, rewriting and removing the destination throughout.
+  #[test]
+  fn a_sibling_clobbering_the_destination_never_switches_to_png() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    if !["mutool", "pdftocairo"]
+      .iter()
+      .any(|tool| svg_tool_or_skip(tool, "a_sibling_clobbering_the_destination"))
+    {
+      return;
+    }
+    let tmp = TempDir::new("sibling_clobber");
+    let dir = tmp.join("out");
+    std::fs::create_dir_all(&dir).unwrap();
+    let src = dir.join("fig.pdf");
+    std::fs::copy(
+      format!(
+        "{}/tests/fixtures/two_page_sizes.pdf",
+        env!("CARGO_MANIFEST_DIR")
+      ),
+      &src,
+    )
+    .unwrap();
+    let shared = dir.join("fig.svg");
+    let stop = AtomicBool::new(false);
+    std::thread::scope(|s| {
+      s.spawn(|| {
+        while !stop.load(Ordering::Relaxed) {
+          let _ = std::fs::write(&shared, b"<svg xmlns=\"http://www.w3.org/2000/svg\"");
+          let _ = std::fs::remove_file(&shared);
+        }
+      });
+      for round in 0..20 {
+        let xml = format!(
+          r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><graphics graphic="fig.pdf" candidates="{}"/></document>"#,
+          src.display()
+        );
+        let doc_opts = crate::document::PostDocumentOptions {
+          destination: Some(dir.join("out.html").display().to_string()),
+          source_directory: Some(dir.display().to_string()),
+          ..Default::default()
+        };
+        let doc = PostDocument::new_from_string(&xml, doc_opts).expect("parse");
+        let mut graphics =
+          Graphics::new(None, true).with_cache_policy(crate::graphics_cache::CachePolicy::Bypass);
+        let nodes = graphics.to_process(&doc);
+        let out = graphics.process(doc, nodes).expect("graphics process")[0].to_xml_string();
+        if !out.contains(r#" imagesrc="fig.svg" "#) {
+          stop.store(true, Ordering::Relaxed);
+          panic!("round {round}: the figure left its vector render:\n{out}");
+        }
+      }
+      stop.store(true, Ordering::Relaxed);
+    });
+    let mut left: Vec<String> = std::fs::read_dir(&dir)
+      .unwrap()
+      .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+      .filter(|name| name != "fig.pdf" && name != "fig.svg")
+      .collect();
+    left.sort();
+    assert!(
+      left.is_empty(),
+      "no PNG and no staged file is left: {left:?}"
+    );
   }
 
   /// `\includegraphics[page=2]` of a vector PDF renders page 2 (100×300 bp; page 1 is 300×100) and leaves

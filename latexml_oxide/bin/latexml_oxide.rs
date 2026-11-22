@@ -379,9 +379,11 @@ struct Cli {
   /// exceeds the --max-memory ceiling, i.e. only where the normal path is
   /// certain to exhaust memory anyway.
   ///
-  /// `--streaming=false` (or `LATEXML_STREAMING=false`) disables BOTH the flag
-  /// and the auto-activation, forcing the eager path even for a document
-  /// projected to exhaust the ceiling.
+  /// `--streaming=false` (or `LATEXML_STREAMING=false`) disables the flag, the
+  /// auto-activation and the eager run's switch to streaming at the spill
+  /// watermark, forcing the eager path even for a document projected to
+  /// exhaust the ceiling. It governs the conversion only: a split run's
+  /// post-processing still streams its pages.
   #[arg(long, env = "LATEXML_STREAMING", num_args = 0..=1, default_missing_value = "true")]
   streaming: Option<bool>,
 
@@ -560,6 +562,20 @@ fn custom_alloc_error_hook(layout: Layout) {
   latexml_core::watchdog::exit_now(137);
 }
 
+/// Under `panic = "abort"` (the maxperf distribution build) a panic ends the process without unwinding, so no
+/// guard removes the paths the run registered (`watchdog::remove_on_exit`: the post handoff beside the pages, the
+/// page-spill directory) and no guard stops a render worker: the panic hook does, as the exits that skip destructors
+/// do. An unwinding build leaves them to their guards, since a caught panic (a per-page `catch_unwind`) continues.
+fn install_panic_sweep(aborts: bool) {
+  if aborts {
+    let report = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+      report(info);
+      latexml_core::watchdog::try_remove_registered_paths();
+    }));
+  }
+}
+
 /// Read back which side of a `--opt`/`--noopt` boolean pair clap kept, or `None`
 /// if neither flag was given.
 ///
@@ -703,7 +719,8 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
 /// peak RSS per MB of math-heavy source on the 131 MB witness
 /// (`docs/archive/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
 /// documents that today would die at the ceiling with certainty. An explicit
-/// `--streaming=false` (or `LATEXML_STREAMING=false`) suppresses BOTH — the
+/// `--streaming=false` (or `LATEXML_STREAMING=false`) suppresses BOTH, and the
+/// eager run's switch to streaming at the spill watermark too — the
 /// escape hatch for a caller who would rather have the eager path's Fatal
 /// than a fragmented conversion, and the only way to A/B the two paths on a
 /// document large enough for auto to fire. The returned
@@ -783,6 +800,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   }
   // This binary serves the worker mode above, so a big split may spawn it.
   latexml::render_workers::enable_auto_jobs();
+  install_panic_sweep(cfg!(panic = "abort"));
 
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees don't overflow the OS-default 8 MB main-thread
@@ -1386,7 +1404,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       latexml_core::stomach::set_timeout(cli.timeout);
     }
     apply_token_limit(cli.token_limit);
-    if resolved.split_enabled && std::env::var_os("LATEXML_SPILL_AT_MIB").is_none() {
+    // `--streaming=false` keeps the core eager: no watermark, so no switch to streaming pass 1.
+    if cli.streaming == Some(false) {
+      latexml_core::stomach::set_spill_disabled(true);
+    } else if resolved.split_enabled && std::env::var_os("LATEXML_SPILL_AT_MIB").is_none() {
       latexml_core::stomach::set_spill_watermark_override(split_spill_watermark());
     }
 
@@ -1715,6 +1736,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           icon: cli.icon.as_deref(),
           whatsout: whatsout_mode,
         };
+        // Drop dead core TeX state right after `MakeBibliography` (before
+        // `parallel_render` sizes the worker fleet and before render phases)
+        // on split runs or >256 MiB RSS so stale TeX memory doesn't starve
+        // post-processing, while keeping `STATE`/`VFS_KEY`/macros alive for
+        // recursive `.bib` digestion and paying zero teardown on small papers.
+        let _core_release_guard = (!xml_input_mode
+          && (split_enabled || latexml_core::watchdog::process_rss_kb().unwrap_or(0) > 256 * 1024))
+          .then(latexml::post::arm_core_release_after_bib);
         // XML-input mode parses the (possibly huge) source straight from disk
         // via the streaming file reader; TeX-conversion output is already in
         // memory as `xml`.
@@ -2340,6 +2369,39 @@ mod input_failure_tests {
       )]),
       ("invalid".to_string(), "no_viable_tex".to_string())
     );
+  }
+}
+
+#[cfg(test)]
+mod panic_sweep_tests {
+  /// The hook an aborting build installs removes the run's registered paths (a test build unwinds, so the hook is
+  /// installed by hand and the panic caught by its thread's join). The hook claims the process's exit and kills its
+  /// registered children, so the test reruns itself in a child process and leaves a `cargo test` process untouched.
+  #[test]
+  fn an_aborting_panic_removes_the_registered_paths() {
+    const CHILD: &str = "LATEXML_PANIC_SWEEP_TEST_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+      let name = "panic_sweep_tests::an_aborting_panic_removes_the_registered_paths";
+      let out = std::process::Command::new(std::env::current_exe().expect("the test binary"))
+        .args(["--exact", name, "--test-threads=1"])
+        .env(CHILD, "1")
+        .output()
+        .expect("spawn the test binary");
+      let stdout = String::from_utf8_lossy(&out.stdout);
+      let stderr = String::from_utf8_lossy(&out.stderr);
+      assert!(out.status.success(), "{stdout}{stderr}");
+      assert!(stdout.contains("1 passed"), "{stdout}{stderr}");
+      return;
+    }
+    let dir = tempfile::tempdir().expect("tempdir");
+    let handoff = dir.path().join("latexml-post-handoff-1.xml");
+    std::fs::write(&handoff, "<document/>").expect("handoff written");
+    let _guard = latexml_core::watchdog::remove_on_exit(&handoff);
+    super::install_panic_sweep(true);
+    let joined = std::thread::spawn(|| panic!("post")).join();
+    let _ = std::panic::take_hook();
+    assert!(joined.is_err());
+    assert!(!handoff.exists(), "the handoff survived the panic");
   }
 }
 

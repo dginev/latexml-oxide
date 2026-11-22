@@ -661,55 +661,61 @@ impl Document {
       Some(root) => root,
       None => doc_scaffold.as_node(), // when empty, set the document node as a node.
     };
+    Self::from_parts(doc_scaffold, root, HashMap::default())
+  }
+
+  /// Build a `Document` around an existing `XmlDoc`, insertion point, and font
+  /// map without allocating a throwaway `XmlDoc` (Audit F4).
+  fn from_parts(document: XmlDoc, node: Node, node_fonts: HashMap<u64, Font>) -> Self {
     Document {
-      document:                    doc_scaffold,
-      node:                        root,
-      node_boxes:                  HashMap::default(),
-      node_fonts:                  HashMap::default(),
-      idstore:                     HashMap::default(),
-      idref_index:                 None,
-      spilled_ids:                 rustc_hash::FxHashSet::default(),
-      spill_anchors:               rustc_hash::FxHashSet::default(),
-      spilled_anchor_counters:     rustc_hash::FxHashMap::default(),
-      fragment_anchor_id:          None,
-      svg_ids:                     rustc_hash::FxHashSet::default(),
-      svg_id_suffixes:             rustc_hash::FxHashMap::default(),
-      spilled_ns_prefixes:         rustc_hash::FxHashSet::default(),
-      rewrite_labels:              HashMap::default(),
-      rewrite_labels_shared:       None,
-      pending:                     Vec::new(),
+      document,
+      node,
+      node_boxes: HashMap::default(),
+      node_fonts,
+      idstore: HashMap::default(),
+      idref_index: None,
+      spilled_ids: rustc_hash::FxHashSet::default(),
+      spill_anchors: rustc_hash::FxHashSet::default(),
+      spilled_anchor_counters: rustc_hash::FxHashMap::default(),
+      fragment_anchor_id: None,
+      svg_ids: rustc_hash::FxHashSet::default(),
+      svg_id_suffixes: rustc_hash::FxHashMap::default(),
+      spilled_ns_prefixes: rustc_hash::FxHashSet::default(),
+      rewrite_labels: HashMap::default(),
+      rewrite_labels_shared: None,
+      pending: Vec::new(),
       localized_constructed_nodes: Vec::new(),
-      constructed_nodes:           Vec::new(),
-      reusable_node_buffers:       Vec::new(),
-      box_to_absorb:               None,
-      verbatim_space_pending:      false,
-      text_run_font:               None,
-      ligated_text:                None,
-      current_box_locator:         None,
-      localized_box_locators:      Vec::new(),
-      context:                     None,
-      localized_boxes:             Vec::new(),
-      box_unended:                 false,
-      localized_fonts:             Vec::new(),
-      spill_store:                 None,
-      extra_rdfa_prefixes:         Vec::new(),
-      literal_placeholders:        false,
-      spill_observer:              None,
-      spill_flat:                  false,
-      fragment_ancestor_ids:       rustc_hash::FxHashSet::default(),
-      raw_refstep_objects:         HashMap::default(),
-      placed_labels:               rustc_hash::FxHashSet::default(),
-      fragment_parent_qname:       None,
-      defer_root_after_open:       false,
-      last_swept_node_boxes_len:   0,
-      field_run:                   None,
-      field_run_serial:            0,
-      absorb_level:                0,
-      field_inherit:               0,
-      field_ink_settled:           false,
-      field_box_pending:           false,
-      marks_made:                  Vec::new(),
-      floated_backmatter:          Vec::new(),
+      constructed_nodes: Vec::new(),
+      reusable_node_buffers: Vec::new(),
+      box_to_absorb: None,
+      verbatim_space_pending: false,
+      text_run_font: None,
+      ligated_text: None,
+      current_box_locator: None,
+      localized_box_locators: Vec::new(),
+      context: None,
+      localized_boxes: Vec::new(),
+      box_unended: false,
+      localized_fonts: Vec::new(),
+      spill_store: None,
+      extra_rdfa_prefixes: Vec::new(),
+      literal_placeholders: false,
+      spill_observer: None,
+      spill_flat: false,
+      fragment_ancestor_ids: rustc_hash::FxHashSet::default(),
+      raw_refstep_objects: HashMap::default(),
+      placed_labels: rustc_hash::FxHashSet::default(),
+      fragment_parent_qname: None,
+      defer_root_after_open: false,
+      last_swept_node_boxes_len: 0,
+      field_run: None,
+      field_run_serial: 0,
+      absorb_level: 0,
+      field_inherit: 0,
+      field_ink_settled: false,
+      field_box_pending: false,
+      marks_made: Vec::new(),
+      floated_backmatter: Vec::new(),
     }
   }
 
@@ -726,23 +732,12 @@ impl Document {
       Some(root) => root,
       None => doc.as_node(),
     };
-    let mut document = Document {
-      document: doc,
-      node,
-      node_fonts,
-      ..Document::new_empty_fields()
-    };
+    let mut document = Self::from_parts(doc, node, node_fonts);
     if let Some(root) = document.document.get_root_element() {
       document.record_node_ids(&root)?;
     }
     Ok(document)
   }
-
-  /// The all-empty field set shared by [`Document::new`] and
-  /// [`Document::from_xml_document`] (functional-update base; the caller
-  /// overrides `document`/`node`/`node_fonts`). Not public: an empty scaffold
-  /// with a dangling default `node` is not a usable document on its own.
-  fn new_empty_fields() -> Self { Self::new() }
 
   /// Get the element at (or containing) the current insertion point.
   pub fn get_element(&self) -> Option<Node> {
@@ -2779,7 +2774,9 @@ impl Document {
   /// scan cannot match anything but real markers.
   fn splice_segment_text<S: SerializeSink>(&self, out: &mut S, text: &str) {
     let mut rest = text;
-    while let Some(pos) = rest.find("<_spilled_ ") {
+    while !out.failed()
+      && let Some(pos) = rest.find("<_spilled_ ")
+    {
       let (before, from) = rest.split_at(pos);
       let Some(elem_end) = from.find("/>").map(|e| e + 2) else {
         break; // malformed marker: emit as-is below
@@ -2847,6 +2844,9 @@ impl Document {
       for _ in 0..depth {
         out.push_str("  ");
       }
+    }
+    if out.failed() {
+      return;
     }
     // `spill_flat` means "emit no decorative whitespace", which is exactly what
     // `noindent` already means at every emission site — so fold it in ONCE here
@@ -8739,6 +8739,10 @@ impl Document {
 trait SerializeSink {
   fn push_str(&mut self, s: &str);
   fn push(&mut self, c: char) { self.push_str(c.encode_utf8(&mut [0; 4])) }
+  /// True once an underlying I/O error has latched, so traversal can stop early
+  /// instead of reading/splicing the rest of a multi-GB document into a dead sink.
+  #[inline]
+  fn failed(&self) -> bool { false }
 }
 
 impl SerializeSink for String {
@@ -8820,12 +8824,18 @@ impl FileSink {
 impl SerializeSink for FileSink {
   #[inline]
   fn push_str(&mut self, s: &str) {
+    if self.error.is_some() {
+      return;
+    }
     if self.buf.len() + s.len() < self.chunk {
       self.buf.push_str(s);
     } else {
       self.write_out(s);
     }
   }
+
+  #[inline]
+  fn failed(&self) -> bool { self.error.is_some() }
 }
 
 /// Strip characters that may not appear in XML 1.0 content at all: NUL and
@@ -9609,7 +9619,9 @@ mod serializer_escape {
     let mut sink = FileSink::new(full, 4);
     sink.push_str("<a>");
     assert_eq!((sink.written, sink.error.is_none()), (0, true), "buffered");
+    assert!(!sink.failed());
     sink.push_str("text\n");
+    assert!(sink.failed());
     let first = sink.error.as_ref().map(std::io::Error::raw_os_error);
     assert_eq!(first, Some(Some(28)), "ENOSPC on the first chunk");
     assert_eq!(sink.written, 0);

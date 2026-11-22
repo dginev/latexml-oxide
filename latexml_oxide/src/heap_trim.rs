@@ -42,8 +42,9 @@ const BLIND_TRIM_SAMPLES: usize = 512 / SAMPLE_PAGES;
 /// `--max-memory`), within 32-256 MB: 96 MB under `--max-memory=8192`, the 32 MB floor below a ceiling of
 /// ~2.7 GB, ~67 MB at the 4.5 GB default fuse, 256 MB with none. Per sample this replaces up to
 /// step/page-cost of retained free pages (~650 pages at the 152 KB/page growth) with one
-/// `/proc/self/status` read. `--max-memory` does not reach a render-worker child
-/// (`render_workers::worker_main`): it steps by the default fuse, or by `LATEXML_RSS_CAP_BYTES` if set.
+/// `/proc/self/status` read. A render-worker child (`render_workers::worker_main`) installs its
+/// `manifest.max_rss_kb` share via `stomach::set_memory_cap`, so it steps by its own share (or by
+/// the default fuse / `LATEXML_RSS_CAP_BYTES` when uncapped).
 pub fn step_kb() -> u64 {
   const MIB: u64 = 1024;
   let cap_kb = latexml_core::stomach::resolve_rss_cap().map_or(u64::MAX, |cap| cap / 1024);

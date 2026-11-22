@@ -111,6 +111,10 @@ pub struct RewriteOptions {
   /// Rust-only: run the rule up to this many times, each later pass on the nodes the previous one inserted.
   /// For a rule whose select can match only what its replacement inserts (`base_xmath`'s thousands separator).
   pub passes:         Option<usize>,
+  /// Rust-only opt-in for built-in rules whose `replace` closure is strictly DOM-local
+  /// (never calls `findnodes`, `\label`, or inspects/moves unrelated siblings): splices
+  /// replacements in O(inserted) instead of detaching/re-appending all following siblings.
+  pub local_replace:  bool,
 }
 impl fmt::Debug for RewriteOptions {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "<RewriteOptions>") }
@@ -627,11 +631,21 @@ impl Rewrite {
             return Ok(());
           }
           if let RewritePattern::String(xpath) = pattern {
-            // Try subtree context first; if 0 results, retry from document root
-            // and filter to descendants of `tree`. This works around rust-libxml
-            // XPath namespace issues when called on a subtree context.
+            // Try subtree context first; if 0 results on a non-root subtree, retry
+            // from document root and filter to descendants of `tree`. This works
+            // around rust-libxml XPath namespace issues on subtree contexts; when
+            // `tree` IS the document root, `findnodes(xpath, None)` evaluates the
+            // exact same query on the exact same root node, so skip the duplicate.
             let mut matches = document.findnodes(xpath, Some(tree));
-            if matches.is_empty() && !xpath.contains("xml:id") && !xpath.contains("@id=") {
+            let is_root = document
+              .get_document()
+              .get_root_element()
+              .is_some_and(|r| std::ptr::eq(r.node_ptr(), tree.node_ptr()));
+            if matches.is_empty()
+              && !is_root
+              && !xpath.contains("xml:id")
+              && !xpath.contains("@id=")
+            {
               let all = document.findnodes(xpath, None);
               if !all.is_empty() {
                 let tree_ptr = tree.node_ptr();
@@ -664,71 +678,171 @@ impl Rewrite {
           let Some(mut parent) = tree.get_parent() else {
             return Ok(());
           };
-          // Remove & separate nodes to be replaced, and sibling nodes following them.
-          let mut following = VecDeque::new(); // Collect the matching and following nodes
-          while let Some(mut sib) = parent.get_last_child() {
-            sib.unbind_node();
-            if *tree == sib {
-              following.push_front(sib);
+          if !self.options.local_replace {
+            // Perl `Rewrite.pm:123-152`: detach the matched node and every following sibling
+            // while the closure runs so closures that query or inspect the DOM see Perl's tree.
+            let mut following = VecDeque::new();
+            while let Some(mut sib) = parent.get_last_child() {
+              sib.unbind_node();
+              following.push_front(sib.clone());
+              if sib == *tree {
+                break;
+              }
+            }
+            let mut replaced = Vec::with_capacity(nmatched);
+            for _ in 0..nmatched {
+              if let Some(node) = following.pop_front() {
+                replaced.push(node);
+              }
+            }
+            for rnode in replaced.iter() {
+              document.unrecord_node_ids(rnode);
+            }
+            document.set_node(&parent);
+            let point_opt = parent.get_last_child();
+            if let RewritePattern::Closure(closure) = pattern {
+              closure(document, replaced.iter_mut().collect())?;
+            }
+            let mut ins_queue = VecDeque::new();
+            let mut walk = parent.get_last_child();
+            while let Some(sib) = walk {
+              if point_opt.as_ref() == Some(&sib) {
+                break;
+              }
+              walk = sib.get_prev_sibling();
+              ins_queue.push_front(sib);
+            }
+            let inserted: Vec<Node> = ins_queue.into_iter().collect();
+            for ins in inserted.iter() {
+              document.record_node_ids(ins)?;
+            }
+            let font = document.get_node_font(tree).clone();
+            for ins in inserted.iter() {
+              document.merge_node_font_rec(ins, &font)?;
+            }
+            if let Some(sink) = self.inserted.borrow_mut().as_mut() {
+              sink.extend(inserted.iter().cloned());
+            }
+            for mut fnode in following {
+              parent.add_child(&mut fnode)?;
+            }
+            return Ok(());
+          }
+
+          // Opt-in O(inserted) splice for DOM-local built-in rules: detach only `nmatched`
+          // nodes and park an RAII `<?_lx_rw?>` PI sentinel at the end of `parent`.
+          struct SentinelGuard(Option<Node>);
+          impl Drop for SentinelGuard {
+            fn drop(&mut self) {
+              if let Some(pi) = self.0.take() {
+                pi.free_subtree();
+              }
+            }
+          }
+
+          let mut replaced = Vec::with_capacity(nmatched);
+          let mut cur_opt = Some(tree.clone());
+          for _ in 0..nmatched {
+            let Some(mut node) = cur_opt else {
               break;
-            } else {
-              following.push_front(sib);
-            }
+            };
+            cur_opt = node.get_next_sibling();
+            node.unbind_node();
+            replaced.push(node);
           }
-          let mut replaced = Vec::new();
-          for _idx in 0..nmatched {
-            // Remove the nodes to be replaced
-            match following.pop_front() {
-              Some(popped) => {
-                replaced.push(popped);
-              },
-              _ => {
-                break; // nmatched larger than available nodes — stop
-              },
-            }
-          }
+          let anchor_opt = cur_opt;
           for rnode in replaced.iter() {
             document.unrecord_node_ids(rnode);
           }
-          // Carry out the operation, inserting whatever nodes.
-          document.set_node(&parent);
-          let point_opt = parent.get_last_child();
-          if let RewritePattern::Closure(closure) = pattern {
-            closure(document, replaced.iter_mut().collect())?; // Carry out the insertion.
-          }
-
-          // Now collect the newly inserted nodes for any needed patching
-          let inserted = if let Some(point) = point_opt {
-            let mut ins_queue = VecDeque::new();
-            let mut sibs = parent.get_child_nodes();
-            while let Some(sib) = sibs.pop() {
-              if sib == point {
-                break;
-              }
-              ins_queue.push_front(sib);
-            }
-            ins_queue.into_iter().collect::<Vec<Node>>()
+          let mut sentinel = SentinelGuard(if anchor_opt.is_some() {
+            let mut pi = document
+              .document
+              .create_processing_instruction("_lx_rw", "")
+              .expect("create rewrite sentinel PI");
+            parent.add_child(&mut pi)?;
+            Some(pi)
           } else {
-            parent.get_child_nodes()
-          };
+            None
+          });
+          document.set_node(&parent);
+          let point_opt = sentinel.0.clone().or_else(|| parent.get_last_child());
+          if let RewritePattern::Closure(closure) = pattern {
+            closure(document, replaced.iter_mut().collect())?;
+          }
+          let mut ins_queue = VecDeque::new();
+          let mut walk = parent.get_last_child();
+          while let Some(sib) = walk {
+            if point_opt.as_ref() == Some(&sib) {
+              break;
+            }
+            walk = sib.get_prev_sibling();
+            ins_queue.push_front(sib);
+          }
+          drop(point_opt);
+          let inserted: Vec<Node> = ins_queue.into_iter().collect();
 
-          // Now make any adjustments to the new nodes
           for ins in inserted.iter() {
             document.record_node_ids(ins)?;
           }
-          if let Some(sink) = self.inserted.borrow_mut().as_mut() {
-            sink.extend(inserted.iter().cloned());
-          }
-          // TODO: Can we avoid this clone?
           let font = document.get_node_font(tree).clone();
-          // the font of the matched node
           for ins in inserted.iter() {
-            // Copy the non-semantic parts of font to the replacement
             document.merge_node_font_rec(ins, &font)?;
           }
-          // Now, replace the following nodes.
-          for mut follow_node in following {
-            parent.add_child(&mut follow_node)?;
+          if let Some(mut target) = anchor_opt.filter(|a| a.get_parent().as_ref() == Some(&parent))
+          {
+            if let Some(sink) = self.inserted.borrow_mut().as_mut() {
+              for ins in &inserted {
+                if ins.get_type() != Some(libxml::tree::NodeType::TextNode) {
+                  sink.push(ins.clone());
+                }
+              }
+            }
+            // Move the non-text PI right before `target` so inserting TextNodes cannot
+            // reorder via `xmlAddPrevSibling(Text, Text)`, and coalesce both text boundaries.
+            if let Some(mut pi) = sentinel.0.take() {
+              pi.unlink_node();
+              if let Err(err) = target.add_prev_sibling(&mut pi) {
+                document.discard_subtree(pi);
+                return Err(err.into());
+              }
+              sentinel.0 = Some(pi);
+              let pi_ref = sentinel.0.as_mut().unwrap();
+              for mut ins in inserted {
+                ins.unlink_node();
+                if ins.get_type() == Some(libxml::tree::NodeType::TextNode)
+                  && let Some(mut prev) = pi_ref.get_prev_sibling()
+                  && prev.get_type() == Some(libxml::tree::NodeType::TextNode)
+                {
+                  let mut merged = prev.get_content();
+                  merged.push_str(&ins.get_content());
+                  let _ = prev.set_content(&merged);
+                  document.discard_subtree(ins);
+                } else {
+                  pi_ref.add_prev_sibling(&mut ins)?;
+                }
+              }
+              let left_neighbor = pi_ref.get_prev_sibling();
+              let right_neighbor = pi_ref.get_next_sibling();
+              if let Some(pi) = sentinel.0.take() {
+                document.discard_subtree(pi);
+              }
+              if let (Some(mut left), Some(right)) = (left_neighbor, right_neighbor)
+                && left.get_type() == Some(libxml::tree::NodeType::TextNode)
+                && right.get_type() == Some(libxml::tree::NodeType::TextNode)
+              {
+                let mut merged = left.get_content();
+                merged.push_str(&right.get_content());
+                let _ = left.set_content(&merged);
+                document.discard_subtree(right);
+              }
+            }
+          } else {
+            if let Some(pi) = sentinel.0.take() {
+              document.discard_subtree(pi);
+            }
+            if let Some(sink) = self.inserted.borrow_mut().as_mut() {
+              sink.extend(inserted.iter().cloned());
+            }
           }
         },
         Attributes => {
@@ -1447,6 +1561,165 @@ mod tests {
         ..
       }) => assert_eq!(nodes, &vec![second]),
       other => panic!("an id scope must select the node carrying the id, got {other:?}"),
+    }
+  }
+
+  /// Guard `Replace`'s PI-sentinel O(1) splice against three libxml2 hazards:
+  /// 1. `[Text("A"), <old/>, Text("B")]` + `[Text("X"), <Y/>, Text("Z")]` must
+  ///    preserve order and coalesce both boundaries (`[Text("AX"), <Y/>, Text("ZB")]`)
+  ///    rather than letting `xmlAddPrevSibling(Text("B"), Text("X"))` reorder nodes.
+  /// 2. `[Text("A"), <old/>, Text("B")]` + `[]` must coalesce to `[Text("AB")]`.
+  /// 3. A closure returning `Err` must unlink and free the `<?_lx_rw?>` sentinel.
+  #[test]
+  fn replace_preserves_order_coalesces_text_and_cleans_sentinel_on_error() {
+    use libxml::tree::NodeType;
+
+    // Case 1: `[Text("A"), <old/>, Text("B")]` -> `[Text("AX"), <Y/>, Text("ZB")]`
+    {
+      let mut document = Document::new();
+      let xml = document.get_document_mut();
+      let mut root = Node::new("root", None, xml).unwrap();
+      xml.set_root_element(&root);
+      let mut t_a = Node::new_text("A", xml).unwrap();
+      let mut old = Node::new("old", None, xml).unwrap();
+      let mut t_b = Node::new_text("B", xml).unwrap();
+      root.add_child(&mut t_a).unwrap();
+      root.add_child(&mut old).unwrap();
+      root.add_child(&mut t_b).unwrap();
+
+      let rule = Rewrite::new("text", RewriteOptions {
+        local_replace: true,
+        ..RewriteOptions::default()
+      });
+      let clause = RewriteClause::new_compiled(
+        RewriteOperator::Replace,
+        RewritePattern::Closure(Rc::new(|doc, _replaced| {
+          let mut parent = doc.get_node().clone();
+          let mut t_x = Node::new_text("X", doc.get_document()).unwrap();
+          let mut y = Node::new("Y", None, doc.get_document()).unwrap();
+          let mut t_z = Node::new_text("Z", doc.get_document()).unwrap();
+          parent.add_child(&mut t_x).unwrap();
+          parent.add_child(&mut y).unwrap();
+          parent.add_child(&mut t_z).unwrap();
+          Ok(())
+        })),
+      );
+      rule
+        .apply_clause(&mut document, &old, 1, VecDeque::from([&clause]))
+        .unwrap();
+
+      let children = root.get_child_nodes();
+      assert_eq!(children.len(), 3, "expected [Text(AX), <Y/>, Text(ZB)]");
+      assert_eq!(children[0].get_type(), Some(NodeType::TextNode));
+      assert_eq!(children[0].get_content(), "AX");
+      assert_eq!(children[1].get_type(), Some(NodeType::ElementNode));
+      assert_eq!(children[1].get_name(), "Y");
+      assert_eq!(children[2].get_type(), Some(NodeType::TextNode));
+      assert_eq!(children[2].get_content(), "ZB");
+    }
+
+    // Case 2: `[Text("A"), <old/>, Text("B")]` -> `[]` coalesces to `[Text("AB")]`
+    {
+      let mut document = Document::new();
+      let xml = document.get_document_mut();
+      let mut root = Node::new("root", None, xml).unwrap();
+      xml.set_root_element(&root);
+      let mut t_a = Node::new_text("A", xml).unwrap();
+      let mut old = Node::new("old", None, xml).unwrap();
+      let mut t_b = Node::new_text("B", xml).unwrap();
+      root.add_child(&mut t_a).unwrap();
+      root.add_child(&mut old).unwrap();
+      root.add_child(&mut t_b).unwrap();
+
+      let rule = Rewrite::new("text", RewriteOptions {
+        local_replace: true,
+        ..RewriteOptions::default()
+      });
+      let clause = RewriteClause::new_compiled(
+        RewriteOperator::Replace,
+        RewritePattern::Closure(Rc::new(|_doc, _replaced| Ok(()))),
+      );
+      rule
+        .apply_clause(&mut document, &old, 1, VecDeque::from([&clause]))
+        .unwrap();
+
+      let children = root.get_child_nodes();
+      assert_eq!(children.len(), 1, "adjacent text nodes must coalesce");
+      assert_eq!(children[0].get_type(), Some(NodeType::TextNode));
+      assert_eq!(children[0].get_content(), "AB");
+    }
+
+    // Case 3: closure returning `Err` must not leak `<?_lx_rw?>` into the DOM
+    {
+      let mut document = Document::new();
+      let xml = document.get_document_mut();
+      let mut root = Node::new("root", None, xml).unwrap();
+      xml.set_root_element(&root);
+      let mut old = Node::new("old", None, xml).unwrap();
+      let mut tail = Node::new("tail", None, xml).unwrap();
+      root.add_child(&mut old).unwrap();
+      root.add_child(&mut tail).unwrap();
+
+      let rule = Rewrite::new("text", RewriteOptions {
+        local_replace: true,
+        ..RewriteOptions::default()
+      });
+      let clause = RewriteClause::new_compiled(
+        RewriteOperator::Replace,
+        RewritePattern::Closure(Rc::new(|_doc, _replaced| Err(Error::todo()))),
+      );
+      assert!(
+        rule
+          .apply_clause(&mut document, &old, 1, VecDeque::from([&clause]))
+          .is_err()
+      );
+
+      let children = root.get_child_nodes();
+      assert!(
+        children
+          .iter()
+          .all(|n| n.get_type() != Some(NodeType::PiNode)),
+        "sentinel PI must not remain in DOM after closure error: {children:?}"
+      );
+      assert_eq!(children.len(), 1);
+      assert_eq!(children[0].get_name(), "tail");
+    }
+
+    // Case 4: default (`local_replace: false`) detaches following siblings during closure
+    {
+      let mut document = Document::new();
+      let xml = document.get_document_mut();
+      let mut root = Node::new("root", None, xml).unwrap();
+      xml.set_root_element(&root);
+      let mut head = Node::new("head", None, xml).unwrap();
+      let mut old = Node::new("old", None, xml).unwrap();
+      let mut tail = Node::new("tail", None, xml).unwrap();
+      root.add_child(&mut head).unwrap();
+      root.add_child(&mut old).unwrap();
+      root.add_child(&mut tail).unwrap();
+
+      let rule = Rewrite::new("text", RewriteOptions::default());
+      let clause = RewriteClause::new_compiled(
+        RewriteOperator::Replace,
+        RewritePattern::Closure(Rc::new(|doc, _replaced| {
+          // Following sibling `<tail/>` must be detached while closure runs.
+          assert!(doc.findnodes("//tail", None).is_empty());
+          assert_eq!(
+            doc.get_node().get_last_child().map(|n| n.get_name()),
+            Some("head".to_string())
+          );
+          Ok(())
+        })),
+      );
+      rule
+        .apply_clause(&mut document, &old, 1, VecDeque::from([&clause]))
+        .unwrap();
+      let names: Vec<String> = root
+        .get_child_nodes()
+        .into_iter()
+        .map(|n| n.get_name())
+        .collect();
+      assert_eq!(names, vec!["head", "tail"]);
     }
   }
 }

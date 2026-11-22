@@ -5096,3 +5096,567 @@ mod log_note_nesting {
     );
   }
 }
+
+mod streaming_opt_out {
+  //! `--streaming=false` keeps a split run's core eager (`--help`; OD #1133): a run over the spill
+  //! watermark (`LATEXML_SPILL_AT_MIB=0` puts every yield seam over it, `LATEXML_SOFT_YIELD_MIN_BOXES=1`
+  //! lifts the seams' box floor) never switches to streaming
+  //! pass 1, which it does without the flag.
+
+  use std::process::Command;
+
+  fn run(extra: &[&str]) -> String {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let mut tex = String::from("\\documentclass{article}\n\\begin{document}\n");
+    for s in 0..6 {
+      tex.push_str(&format!(
+        "\\section{{Part {s}}}\nSome prose of part {s}.\n\n\\subsection{{Sub {s}}}\nMore prose.\n\n"
+      ));
+    }
+    tex.push_str("\\end{document}\n");
+    std::fs::write(dir.path().join("doc.tex"), tex).expect("fixture written");
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "doc.tex",
+        "--dest=doc.html",
+        "--splitat=section",
+        "--log=doc.log",
+      ])
+      .args(extra)
+      .env("LATEXML_SPILL_AT_MIB", "0")
+      .env("LATEXML_SOFT_YIELD_MIN_BOXES", "1")
+      .env_remove("LATEXML_STREAMING")
+      .current_dir(dir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    assert_eq!(output.status.code(), Some(0), "{stderr}");
+    assert!(
+      !stderr.contains("Error:") && !stderr.contains("Warning:"),
+      "{stderr}"
+    );
+    assert!(
+      dir.path().join("doc.html").is_file(),
+      "the split's first page:\n{stderr}"
+    );
+    stderr
+  }
+
+  #[test]
+  fn streaming_false_keeps_a_split_run_eager() {
+    const TRANSITION: &str = "continuing as streaming pass 1";
+    let adaptive = run(&[]);
+    assert!(
+      adaptive.contains(TRANSITION),
+      "the control run switches:\n{adaptive}"
+    );
+    let eager = run(&["--streaming=false"]);
+    assert!(
+      !eager.contains(TRANSITION),
+      "--streaming=false switched:\n{eager}"
+    );
+  }
+}
+
+mod shared_figure_parallel_render {
+  //! Parallel page-render workers (`LATEXML_RENDER_JOBS`, 64+ pages) each convert a figure every
+  //! page shares into the same destination. A worker that read a sibling's half-written or just
+  //! removed `fig.svg` took it for an enlarged raster, switched its pages to a PNG and deleted the
+  //! shared file under every other page (`graphics.rs`, the staged conversion). Every page must
+  //! show the serial run's vector render, and that file must exist.
+
+  use std::process::Command;
+
+  /// Whether `mutool` or `pdftocairo` spawns; without one a visible SKIP, a failure where
+  /// `LATEXML_SVG_TESTS` is set (CI installs both).
+  fn svg_converter_or_skip(test: &str) -> bool {
+    let found = ["mutool", "pdftocairo"]
+      .iter()
+      .any(|tool| Command::new(tool).arg("--version").output().is_ok());
+    if !found {
+      assert!(
+        std::env::var_os("LATEXML_SVG_TESTS").is_none(),
+        "LATEXML_SVG_TESTS is set but neither mutool nor pdftocairo is on PATH ({test})"
+      );
+      eprintln!("SKIP {test}: neither mutool nor pdftocairo on PATH");
+    }
+    found
+  }
+
+  /// Each page's file name and content.
+  type Pages = Vec<(String, String)>;
+
+  /// The pages of one run of `a.tex` (`LATEXML_RENDER_JOBS=jobs`; the graphics cache off, or in
+  /// `cache`; the figure `<fig>.pdf`), the image and hidden files beside them, the run's stderr and
+  /// the bytes of `<fig>.svg`.
+  fn run(
+    tex: &str,
+    jobs: &str,
+    cache: Option<&std::path::Path>,
+    fig: &str,
+  ) -> (Pages, Vec<String>, String, Option<Vec<u8>>) {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("a.tex"), tex).unwrap();
+    std::fs::copy(
+      concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../latexml_post/tests/fixtures/two_page_sizes.pdf"
+      ),
+      work.path().join(format!("{fig}.pdf")),
+    )
+    .unwrap();
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"));
+    cmd
+      .args([
+        "a.tex",
+        "--format=html5",
+        "--nodefaultresources",
+        "--splitat=section",
+        "--dest=a.html",
+      ])
+      .env("LATEXML_RENDER_JOBS", jobs)
+      .current_dir(work.path());
+    match cache {
+      Some(dir) => cmd
+        .env_remove("LATEXML_GRAPHICS_CACHE_OFF")
+        .env("LATEXML_GRAPHICS_CACHE_DIR", dir),
+      None => cmd.env("LATEXML_GRAPHICS_CACHE_OFF", "1"),
+    };
+    let out = cmd.output().expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert!(out.status.success(), "stderr:\n{stderr}");
+    let mut pages = Vec::new();
+    let mut images = Vec::new();
+    for entry in std::fs::read_dir(work.path()).unwrap() {
+      let path = entry.unwrap().path();
+      let name = path.file_name().unwrap().to_string_lossy().into_owned();
+      match path.extension().and_then(|ext| ext.to_str()) {
+        Some("html") => pages.push((name, std::fs::read_to_string(&path).unwrap())),
+        Some("svg" | "png") => images.push(name),
+        _ if name.starts_with('.') => images.push(name),
+        _ => {},
+      }
+    }
+    pages.sort();
+    images.sort();
+    let svg = std::fs::read(work.path().join(format!("{fig}.svg"))).ok();
+    (pages, images, stderr, svg)
+  }
+
+  #[test]
+  fn every_page_keeps_the_shared_vector_render() {
+    if !svg_converter_or_skip("every_page_keeps_the_shared_vector_render") {
+      return;
+    }
+    let mut tex =
+      String::from("\\documentclass{article}\n\\usepackage{graphicx}\n\\begin{document}\n");
+    for i in 1..=72 {
+      tex.push_str(&format!(
+        "\\section{{S{i}}}\nText {i}.\n\\includegraphics[width=3cm]{{fig}}\n\n"
+      ));
+    }
+    tex.push_str("\\end{document}\n");
+    let (serial, serial_images, ..) = run(&tex, "1", None, "fig");
+    assert_eq!(serial_images, ["fig.svg"], "the serial run's images");
+    let s72 = &serial
+      .iter()
+      .find(|(name, _)| name == "S72.html")
+      .expect("S72.html")
+      .1;
+    assert!(
+      s72.contains("data=\"fig.svg\""),
+      "S72 shows the vector render:\n{s72}"
+    );
+    // The race is a matter of timing: three parallel runs make a miss unlikely. A fourth uses the
+    // graphics cache, whose entry the workers hard-link into the destination: a staged link
+    // renamed onto the same file is a no-op that left it behind.
+    let cache = tempfile::tempdir().expect("tempdir");
+    for round in 1..=4 {
+      let (parallel, images, stderr, _) = run(&tex, "8", (round == 4).then(|| cache.path()), "fig");
+      assert!(
+        stderr.contains("parallel page render engaged: 8 worker(s)"),
+        "the worker path must engage:\n{stderr}"
+      );
+      assert!(!stderr.contains("using a PNG"), "round {round}:\n{stderr}");
+      let diagnostics: Vec<&str> = stderr
+        .lines()
+        .filter(|line| line.starts_with("Warning:") || line.starts_with("Error:"))
+        .collect();
+      assert!(diagnostics.is_empty(), "round {round}: {diagnostics:#?}");
+      assert_eq!(images, serial_images, "round {round}: the images on disk");
+      assert_eq!(serial.len(), parallel.len());
+      for ((name, serial_page), (_, parallel_page)) in serial.iter().zip(&parallel) {
+        assert_eq!(
+          serial_page, parallel_page,
+          "round {round}: {name} differs between the serial and parallel render"
+        );
+      }
+    }
+  }
+
+  /// A figure name of 220 characters or more converts as a short one: the same converter, the
+  /// same bytes. Its staged file and mutool's directory, named after it with a counter added,
+  /// passed NAME_MAX (255 bytes): mutool failed and pdftocairo drew the figure without a word, or
+  /// every converter failed and the figure was lost (`writer::bounded_name`).
+  #[test]
+  fn a_long_figure_name_converts_as_a_short_one() {
+    if !svg_converter_or_skip("a_long_figure_name_converts_as_a_short_one") {
+      return;
+    }
+    let tex = |fig: &str| {
+      format!(
+        "\\documentclass{{article}}\n\\usepackage{{graphicx}}\n\\begin{{document}}\n\\section{{S}}\nA \\includegraphics[width=3cm]{{{fig}}}\n\\end{{document}}\n"
+      )
+    };
+    let (_, images, stderr, short) = run(&tex("fig"), "1", None, "fig");
+    assert_eq!(images, ["fig.svg"], "{stderr}");
+    let short = short.expect("fig.svg");
+    for len in [221, 240] {
+      let fig = "f".repeat(len);
+      let (_, images, stderr, svg) = run(&tex(&fig), "1", None, &fig);
+      let diagnostics: Vec<&str> = stderr
+        .lines()
+        .filter(|line| line.starts_with("Warning:") || line.starts_with("Error:"))
+        .collect();
+      assert!(diagnostics.is_empty(), "{len}: {diagnostics:#?}");
+      assert_eq!(images, [format!("{fig}.svg")], "{len}");
+      assert!(
+        svg.as_ref() == Some(&short),
+        "{len}: the render differs from the short name's"
+      );
+    }
+  }
+}
+
+mod split_release_core_after_bib {
+  use std::process::Command;
+
+  fn binary() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_BIN_EXE_latexml_oxide"))
+  }
+
+  /// Regression guard: releasing core TeX state for post-processing on `--split`
+  /// must happen AFTER `MakeBibliography`, never before — otherwise virtual
+  /// `.bib` files (`filecontents` in `VFS_KEY`), author preamble macros used in
+  /// `.bib` fields, and core `REPORT` tallies (undefined commands) are lost when
+  /// `bib_session` falls back to re-initializing the engine.
+  #[test]
+  fn split_with_filecontents_bib_preserves_bib_macros_and_core_report() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let src = dir.path().join("book.tex");
+    let out = dir.path().join("site").join("book.html");
+    std::fs::create_dir_all(out.parent().unwrap()).unwrap();
+    std::fs::write(
+      &src,
+      r"\begin{filecontents*}{refs.bib}
+@article{knuth84,
+  author = {Donald E. Knuth},
+  title = {\MyBibTitle},
+  journal = {Comput. J.},
+  year = {1984}
+}
+\end{filecontents*}
+\documentclass{article}
+\newcommand{\MyBibTitle}{Literate Programming Macro Title}
+\begin{document}
+\section{First}
+See \cite{knuth84} and \NoSuchCoreCommandXYZ.
+\section{Second}
+More text.
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+",
+    )
+    .unwrap();
+
+    let output = Command::new(binary())
+      .args([
+        "--split",
+        "--splitat=section",
+        "--format=html5",
+        "--dest",
+        out.to_str().unwrap(),
+        src.to_str().unwrap(),
+      ])
+      .output()
+      .expect("run latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // 1. Virtual `.bib` + author preamble macro must render into the split site.
+    let mut all_html = String::new();
+    for entry in std::fs::read_dir(out.parent().unwrap()).unwrap() {
+      let path = entry.unwrap().path();
+      if path.extension().and_then(|e| e.to_str()) == Some("html") {
+        all_html.push_str(&std::fs::read_to_string(&path).unwrap());
+      }
+    }
+    assert!(
+      all_html.contains("Literate Programming Macro Title"),
+      "virtual .bib file and author preamble macro must survive --split:\nstderr:\n{stderr}\nhtml:\n{all_html}"
+    );
+    assert!(
+      all_html.contains("Donald E. Knuth"),
+      "bibliography author must render on --split:\nstderr:\n{stderr}"
+    );
+
+    // 2. Core REPORT undefined-command tally must survive into the FINAL combined verdict line.
+    let verdict_line = stderr
+      .lines()
+      .rfind(|line| line.starts_with("Conversion complete:"))
+      .unwrap_or_else(|| panic!("missing final Conversion complete line:\n{stderr}"));
+    assert!(
+      verdict_line.contains("undefined macro[\\NoSuchCoreCommandXYZ]"),
+      "final status verdict must carry core undefined-macro tally:\n{verdict_line}\nfull stderr:\n{stderr}"
+    );
+  }
+
+  /// Regression guard: `release_core_state_for_post()` must preserve
+  /// `NOMINAL_FONT_SIZE` across `state::reset_thread_state()`, because MathML
+  /// presentation reads `Font::math_default()` (`defsize()`) when sizing
+  /// negative-space `<mpadded>` widths on documents whose nominal font size
+  /// differs from 10pt (such as `a0poster`, where losing `NOMINAL_FONT_SIZE`
+  /// drops `<mpadded width="1.556em">` to `0.371em`).
+  #[test]
+  fn split_preserves_nominal_font_size_for_mpadded_widths() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let src = dir.path().join("poster.tex");
+    let unsplit_out = dir.path().join("unsplit.html");
+    let split_dir = dir.path().join("split");
+    let split_out = split_dir.join("poster.html");
+    std::fs::create_dir_all(&split_dir).unwrap();
+    std::fs::write(
+      &src,
+      r"\documentclass{a0poster}
+\usepackage{amsmath}
+\begin{document}
+\section{One}
+$Q\!\kappa_{G}$
+\section{Two}
+Text.
+\end{document}
+",
+    )
+    .unwrap();
+
+    let run = |extra: &[&str], dest: &std::path::Path| {
+      let out = Command::new(binary())
+        .args(extra)
+        .args([
+          "--format=html5",
+          "--pmml",
+          "--noinvisibletimes",
+          "--dest",
+          dest.to_str().unwrap(),
+          src.to_str().unwrap(),
+        ])
+        .output()
+        .expect("run latexml_oxide");
+      assert!(
+        out.status.success(),
+        "latexml_oxide failed:\n{}",
+        String::from_utf8_lossy(&out.stderr)
+      );
+    };
+
+    run(&[], &unsplit_out);
+    run(&["--split", "--splitat=section"], &split_out);
+
+    let unsplit_html = std::fs::read_to_string(&unsplit_out).unwrap();
+    let split_s1_html = std::fs::read_to_string(split_dir.join("S1.html")).unwrap();
+    let extract_mpadded = |html: &str| -> String {
+      let start = html
+        .find("<mpadded ")
+        .unwrap_or_else(|| panic!("expected <mpadded> in html:\n{html}"));
+      let end = html[start..].find('>').unwrap() + start + 1;
+      html[start..end].to_string()
+    };
+    let unsplit_mpadded = extract_mpadded(&unsplit_html);
+    let split_mpadded = extract_mpadded(&split_s1_html);
+    assert_eq!(
+      split_mpadded, unsplit_mpadded,
+      "split run (with core release) must keep non-10pt mpadded width identical to unsplit"
+    );
+    assert!(
+      split_mpadded.contains("width=\"1.556em\""),
+      "expected a0poster nominal-font-size mpadded width 1.556em (not 10pt fallback 0.371em), got {split_mpadded}"
+    );
+  }
+
+  /// The page-render workers are fresh processes: the parent's `NOMINAL_FONT_SIZE` reaches them through
+  /// the render manifest, so an `a0poster` page (25pt) sizes its `\!` `<mpadded>` as the serial render
+  /// does (1.556em, not the 10pt default's 0.371em), and every page is the serial one.
+  #[test]
+  fn render_workers_keep_the_nominal_font_size() {
+    let mut tex = String::from("\\documentclass{a0poster}\n\\begin{document}\n");
+    for i in 1..=70 {
+      tex.push_str(&format!("\\section{{S{i}}}\n$Q\\!\\kappa_{{G}}$\n\n"));
+    }
+    tex.push_str("\\end{document}\n");
+    let run = |jobs: &str| {
+      let work = tempfile::tempdir().expect("tempdir");
+      std::fs::write(work.path().join("a.tex"), &tex).unwrap();
+      let out = Command::new(binary())
+        .args([
+          "a.tex",
+          "--format=html5",
+          "--nodefaultresources",
+          "--pmml",
+          "--noinvisibletimes",
+          "--splitat=section",
+          "--dest=a.html",
+        ])
+        .env("LATEXML_RENDER_JOBS", jobs)
+        .current_dir(work.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+      assert!(out.status.success(), "stderr:\n{stderr}");
+      let mut pages: Vec<(String, String)> = std::fs::read_dir(work.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "html"))
+        .map(|path| {
+          let name = path.file_name().unwrap().to_string_lossy().into_owned();
+          (name, std::fs::read_to_string(&path).unwrap())
+        })
+        .collect();
+      pages.sort();
+      (pages, stderr)
+    };
+    let (serial, serial_err) = run("1");
+    let (parallel, stderr) = run("8");
+    assert!(
+      stderr.contains("parallel page render engaged: "),
+      "the worker path must engage:\n{stderr}"
+    );
+    for err in [&serial_err, &stderr] {
+      let verdict = err
+        .lines()
+        .rfind(|line| line.starts_with("Conversion complete:"));
+      assert_eq!(
+        verdict,
+        Some("Conversion complete: No obvious problems"),
+        "a0poster must convert cleanly:\n{err}"
+      );
+    }
+    let mpadded = "<mpadded style=\"width:1.556em;\" width=\"1.556em\">";
+    for (run, pages) in [("serial", &serial), ("parallel", &parallel)] {
+      for (name, page) in pages.iter().filter(|(name, _)| name.starts_with('S')) {
+        assert!(
+          page.contains(mpadded),
+          "{run} {name} lacks {mpadded}:\n{page}"
+        );
+      }
+    }
+    assert_eq!(serial.len(), parallel.len());
+    assert!(serial.len() > 70, "{} pages", serial.len());
+    for ((name, serial_page), (_, parallel_page)) in serial.iter().zip(&parallel) {
+      assert_eq!(
+        serial_page, parallel_page,
+        "{name} differs between the serial and parallel render"
+      );
+    }
+  }
+
+  /// Regression guard: default `Rewrite::Replace` (without `local_replace`) must
+  /// detach following siblings before running the closure (Perl `Rewrite.pm:124-134`),
+  /// keeping `acmart` teaser-after-abstract ordering unchanged.
+  #[test]
+  fn acmart_teaser_after_abstract_keeps_perl_replace_follower_detach_order() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let src = dir.path().join("acm.tex");
+    let out = dir.path().join("acm.xml");
+    std::fs::write(
+      &src,
+      r"\documentclass[sigconf]{acmart}
+\begin{document}
+\title{A Title}
+\author{A. Author}
+\affiliation{\institution{Inst}\city{C}\country{X}}
+\begin{abstract}An abstract.\end{abstract}
+\keywords{one, two}
+\begin{teaserfigure}\centering TEASER\caption{A teaser.}\end{teaserfigure}
+\maketitle
+\section{Intro}
+Body.
+\end{document}
+",
+    )
+    .unwrap();
+
+    let output = Command::new(binary())
+      .args([
+        "--format=xml",
+        "--dest",
+        out.to_str().unwrap(),
+        src.to_str().unwrap(),
+      ])
+      .output()
+      .expect("run latexml_oxide");
+    assert!(
+      output.status.success(),
+      "latexml_oxide failed:\n{}",
+      String::from_utf8_lossy(&output.stderr)
+    );
+    let xml = std::fs::read_to_string(&out).unwrap();
+    let abs_pos = xml.find("<abstract").expect("abstract");
+    let kw_pos = xml.find("<keywords").expect("keywords");
+    let teaser_pos = xml.find("ltx_teaserfigure").expect("teaser");
+    assert!(
+      abs_pos < kw_pos && kw_pos < teaser_pos,
+      "expected abstract < keywords < teaser (Perl Replace follower-detach semantics):\n{xml}"
+    );
+  }
+}
+
+mod watchdog_fatal_line_start {
+  use std::process::Command;
+
+  /// The watchdog's `Fatal:timeout:wallclock` opens a line of its own, also when it lands while a progress note
+  /// (`(Processing definitions …l3backend-pdftex.def... )`, written without a newline) holds stderr mid-line: glued
+  /// onto it, the Fatal escaped every `^Fatal:` count. Exit 124, the timeout's code.
+  #[test]
+  fn a_timeout_fatal_starts_its_line() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("slow.tex"),
+      "\\documentclass{article}\n\\begin{document}\nHello.\n\\count255=0\n\
+       \\loop\\advance\\count255 by 1 \\iftrue\\repeat\n\\end{document}\n",
+    )
+    .unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(["slow.tex", "--dest=slow.xml", "--nocomments", "--timeout=2"])
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    // Two deadlines race: the watchdog thread's wall-clock breach (exit 124) and the conversion's own cooperative
+    // check (`Fatal:Timeout:Convert`, a graceful stop, exit 1), which wins on some hosts (the macOS runner). Either
+    // way every Fatal line opens a line of its own; the watchdog's, when it fires, is exactly its line.
+    let fatals: Vec<&str> = stderr.lines().filter(|l| l.contains("Fatal:")).collect();
+    assert!(!fatals.is_empty(), "no Fatal line:\n{stderr}");
+    assert!(
+      fatals.iter().all(|l| l.starts_with("Fatal:")),
+      "a Fatal glued mid-line:\n{stderr}"
+    );
+    match out.status.code() {
+      Some(124) => assert_eq!(
+        fatals,
+        [
+          "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after 2s — exiting process"
+        ],
+        "{stderr}"
+      ),
+      Some(1) => assert!(
+        fatals
+          .iter()
+          .any(|l| l.starts_with("Fatal:Timeout:Convert")),
+        "{stderr}"
+      ),
+      other => {
+        panic!("exit {other:?}, expected 124 (watchdog) or 1 (cooperative timeout):\n{stderr}")
+      },
+    }
+  }
+}

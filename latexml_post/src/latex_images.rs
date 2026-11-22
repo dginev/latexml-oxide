@@ -499,13 +499,16 @@ impl LaTeXImages {
   /// For dvipng output: already cropped, just copy.
   /// For dvips output (EPS): needs ImageMagick conversion + trim.
   /// For dvisvgm output (SVG): already in final format.
+  /// Nothing calls it yet; its copies go through [`crate::writer::copy_atomic`].
   ///
   /// Returns (width, height) in pixels, or None on failure.
   pub fn convert_image(&self, src: &str, dest: &str) -> Option<(u32, u32)> {
     match self.dvi_method {
       DviMethod::DviSvgm => {
         // SVG: just copy
-        if let Err(e) = std::fs::copy(src, dest) {
+        if let Err(e) =
+          crate::writer::copy_atomic(std::path::Path::new(src), std::path::Path::new(dest))
+        {
           // Perl LaTeXImages.pm I/O failure: Error('I/O', $dest, …)
           Error!("I/O", dest, "Failed to copy {} to {}: {}", src, dest, e);
           return None;
@@ -515,7 +518,9 @@ impl LaTeXImages {
       },
       DviMethod::DviPng => {
         // PNG: already cropped by dvipng -T tight
-        if let Err(e) = std::fs::copy(src, dest) {
+        if let Err(e) =
+          crate::writer::copy_atomic(std::path::Path::new(src), std::path::Path::new(dest))
+        {
           Error!("I/O", dest, "Failed to copy {} to {}: {}", src, dest, e);
           return None;
         }

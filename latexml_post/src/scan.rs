@@ -30,6 +30,13 @@ pub struct Scan {
   /// 115k+ near-identical lines on a book-scale split; exponential backoff
   /// keeps the growth curve visible in ~20 lines (user directive 2026-08-03).
   db_status_due_at: usize,
+  /// Whether the most recently scanned page contains a MakeIndex / glossary /
+  /// nomenclature placeholder (`make_index::PLACEHOLDERS`). Recorded during
+  /// Scan's own DOM walk so the driver avoids two redundant full-page XPath
+  /// queries per page on large splits.
+  page_needs_index: bool,
+  /// Whether the most recently scanned page contains an `ltx:bibliography`.
+  page_needs_bib:   bool,
 }
 
 /// Collected properties for a scanned element, ready for DB registration.
@@ -53,7 +60,15 @@ impl Scan {
       db,
       page_id: None,
       db_status_due_at: 1,
+      page_needs_index: false,
+      page_needs_bib: false,
     }
+  }
+
+  /// Placeholder flags observed during the most recent `process()` call:
+  /// `(needs_index_or_glossary_or_nomenclature, needs_bibliography)`.
+  pub fn last_page_placeholders(&self) -> (bool, bool) {
+    (self.page_needs_index, self.page_needs_bib)
   }
 
   /// Recursively scan a node and its children.
@@ -71,6 +86,18 @@ impl Scan {
       "ltx:document" | "ltx:part" | "ltx:chapter" | "ltx:section" | "ltx:appendix"
       | "ltx:subsection" | "ltx:subsubsection" | "ltx:paragraph" | "ltx:subparagraph"
       | "ltx:bibliography" | "ltx:index" | "ltx:glossary" | "ltx:theorem" | "ltx:proof" => {
+        match tag {
+          "ltx:bibliography" => self.page_needs_bib = true,
+          "ltx:index" if !self.page_needs_index && !has_ltx_element_child(node, "indexlist") => {
+            self.page_needs_index = true;
+          },
+          "ltx:glossary"
+            if !self.page_needs_index && !has_ltx_element_child(node, "glossarylist") =>
+          {
+            self.page_needs_index = true;
+          },
+          _ => {},
+        }
         self.section_handler(doc, node, tag, parent_id)
       },
       // arXiv-fork (Post/Scan.pm abstract_handler / ack_handler): register
@@ -121,6 +148,17 @@ impl Scan {
       "ltx:navigation" | "ltx:rawhtml" => {},
       "ltx:rdf" => self.rdf_handler(node, parent_id),
       "ltx:declare" => self.declare_handler(doc, node, tag, parent_id),
+      "ltx:description" => {
+        if !self.page_needs_index
+          && node
+            .get_attribute("class")
+            .is_some_and(|c| c.split(' ').any(|cls| cls == "ltx_nomenclature"))
+          && !has_ltx_element_child(node, "item")
+        {
+          self.page_needs_index = true;
+        }
+        self.default_handler(doc, node, tag, parent_id)
+      },
       _ => self.default_handler(doc, node, tag, parent_id),
     }
   }
@@ -940,6 +978,9 @@ impl Processor for Scan {
   fn get_name(&self) -> &str { &self.name }
 
   fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
+    self.page_needs_index = false;
+    self.page_needs_bib = false;
+
     let root = match doc.get_document_element() {
       Some(r) => r,
       None => return Ok(vec![doc]),
@@ -1215,6 +1256,19 @@ fn push_clean_text(node: &Node, text: &mut String) {
   }
 }
 
+/// True iff `node` has a direct `ltx:<local>` element child (mirrors XPath
+/// `ltx:indexlist` / `ltx:glossarylist` / `ltx:item` child predicates).
+fn has_ltx_element_child(node: &Node, local: &str) -> bool {
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    if c.get_type() == Some(NodeType::ElementNode) && is_ltx(&c) && name_is(&c, local) {
+      return true;
+    }
+    child = c.get_next_sibling();
+  }
+  false
+}
+
 /// Get xml:id from a node, trying both attribute forms.
 fn get_xml_id(node: &Node) -> Option<String> {
   node
@@ -1294,3 +1348,76 @@ pub(crate) fn title_node_text(doc: &PostDocument, c: &Node) -> String {
 // as nodes (see `section_handler`); the derived string form is
 // `title_text_content`. Index `phrases`/`see_also` values are also stored as
 // (adopted) `Value::Xml`.
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::document::PostDocumentOptions;
+
+  #[test]
+  fn scan_tracks_page_placeholders_identically_to_xpath() {
+    let cases = [
+      (
+        "plain",
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="D1"><section xml:id="S1"><p>Hello</p></section></document>"#,
+        (false, false),
+      ),
+      (
+        "empty_index",
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="D2"><index xml:id="I1"/></document>"#,
+        (true, false),
+      ),
+      (
+        "filled_index",
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="D3"><index xml:id="I2"><indexlist/></index></document>"#,
+        (false, false),
+      ),
+      (
+        "empty_glossary",
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="D4"><glossary xml:id="G1"/></document>"#,
+        (true, false),
+      ),
+      (
+        "filled_glossary",
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="D5"><glossary xml:id="G2"><glossarylist/></glossary></document>"#,
+        (false, false),
+      ),
+      (
+        "empty_nomenclature",
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="D6"><description class="ltx_nomenclature"/></document>"#,
+        (true, false),
+      ),
+      (
+        "filled_nomenclature",
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="D7"><description class="foo ltx_nomenclature"><item/></description></document>"#,
+        (false, false),
+      ),
+      (
+        "bibliography",
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="D8"><bibliography xml:id="B1" files="refs"/></document>"#,
+        (false, true),
+      ),
+      (
+        "both",
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="D9"><index xml:id="I3"/><bibliography xml:id="B2" files="refs"/></document>"#,
+        (true, true),
+      ),
+    ];
+    let mut scanner = Scan::new(ObjectDB::new());
+    for (name, xml, expected) in cases {
+      let doc = PostDocument::new_from_string(xml, PostDocumentOptions::default()).expect(name);
+      let nodes = scanner.to_process(&doc);
+      let out = scanner.process(doc, nodes).expect(name);
+      let xpath = (
+        !out[0].findnodes(crate::make_index::PLACEHOLDERS).is_empty(),
+        !out[0].findnodes("//ltx:bibliography").is_empty(),
+      );
+      assert_eq!(scanner.last_page_placeholders(), expected, "case {name}");
+      assert_eq!(
+        scanner.last_page_placeholders(),
+        xpath,
+        "xpath parity {name}"
+      );
+    }
+  }
+}
