@@ -369,10 +369,15 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
           "{label}: only a signal death is a Warning:\n{stderr}"
         );
         assert!(!stderr.contains("Error:"), "{label}: no Error:\n{stderr}");
-        assert!(
-          !stderr.lines().any(|l| l.starts_with("Fatal:")),
-          "{label}: no Fatal:\n{stderr}"
-        );
+        // Only `rss`'s Info quotes the worker's `Fatal:oom:rss` line.
+        if label == "rss" {
+          assert!(
+            !stderr.lines().any(|l| l.starts_with("Fatal:")),
+            "{label}: no Fatal:\n{stderr}"
+          );
+        } else {
+          assert!(!stderr.contains("Fatal:"), "{label}: no Fatal:\n{stderr}");
+        }
         if label == "rss" {
           assert!(
             stderr.lines().any(|l| l

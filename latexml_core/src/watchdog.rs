@@ -790,7 +790,8 @@ pub fn enter_alloc_failure_hook() {
 /// that will never release it. Every exit taken while another thread may still run goes through it:
 /// `exit` runs the libraries' destructors under that thread (libxml2's `.fini_array` calls
 /// `xmlCleanupParser`, freeing the catalog, encoding aliases, dict mutexes and global-state key a
-/// running render reads: a render worker's SIGSEGV with ip == fault address in freed heap). What
+/// running render reads: a render worker's SIGSEGV with ip == fault address in freed heap, on Nasser's
+/// 2,400-problem slice under concurrent load, issue #777, not reproduced). What
 /// must land is written first, unbuffered: the stderr line ([`write_stderr_unlocked`]), the log
 /// mirror (a raw descriptor), a pre-exit hook's file. Only a partial line still in stdout's
 /// line buffer is lost.
@@ -946,7 +947,7 @@ impl Watchdog {
         // dumped)"; witnesses 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
         // q-alg9605003, q-alg9605028, the 7 "Aborted" rows of the 2026-05-13 588-paper sweep).
         // Through `exit_now`, as that thread still runs: `exit`'s library destructors would free
-        // libxml2's globals under it.
+        // libxml2's globals under it (issue #777's render-worker SIGSEGV, not reproduced).
         exit_now(EXIT_TIMEOUT);
       }
       if max_rss_kb > 0
