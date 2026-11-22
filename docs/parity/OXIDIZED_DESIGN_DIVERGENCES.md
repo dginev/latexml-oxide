@@ -23686,9 +23686,12 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
   stream keeps its Warn.
 - renders 64 or more pages on min(available cores, 8) worker processes (`render_workers::render_jobs`,
   `enable_auto_jobs`). Each worker's watchdog holds it to its share of the fuse headroom (`RenderManifest::max_rss_kb`).
-  A worker that fails to spawn, cannot set up (its manifest or db unreadable: a `Status:setup-failed:` line) or dies
-  without its status report sends the whole document back to the serial render, with an Info. The workers keep their spilled pages for this, and no child log is folded. Only a timeout still folds a
-  killed fleet as Errors.
+  A worker is estimated at 64 MiB + 6 × the saved db (`render_workers::worker_estimate_bytes`; measured VmHWM
+  ~42 MB + 4.85 × db on Nasser's book), and the fleet takes as many as fit. A worker that fails to spawn, cannot set
+  up (its manifest or db unreadable: a `Status:setup-failed:` line) or dies without its status report sends the whole
+  document back to the serial render at once: the rest of the fleet is killed, not waited for. That is an Info, and a
+  Warning when a signal killed the worker (a crash; its own watchdog's memory exit is code 137, an Info). The workers
+  keep their spilled pages for this, and no child log is folded. Only a timeout still folds a killed fleet as Errors.
 
 Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`/`1`, `LATEXML_POST_STREAM_THRESHOLD`,
 `LATEXML_RENDER_JOBS` (`1` = serial). Every embedder but the `latexml_oxide` binary keeps the serial render and the
@@ -23697,9 +23700,12 @@ default watermark. `cortex_worker` never splits, so its output is unchanged.
 Effect on Nasser's 2,400-problem slice (`--splitat=subsubsection`, 9,713 pages): the pages are byte-identical to the
 eager whole-DOM run, the Warnings equal, and peak RSS falls from 3.8-4.9 GB to 1.35 GB (serial render).
 
-The streamed split differs from the whole-DOM split only where the latter loses a page's non-`ltx` namespaces. Witnesses:
-1502.06095 and 1609.07593 (an xy-pic `svg:svg` inside math, 344 and 1,377 `malformed:namespace` Warnings) and
-2606.28974 (a dropped `aria-hidden`). On all three the streamed pages match the unsplit conversion.
+The streamed split's pages mean the same XML as the whole-DOM split's, except where the latter loses a page's non-`ltx`
+namespaces. Witnesses: 1502.06095 and 1609.07593 (an xy-pic `svg:svg` inside math, 344 and 1,377 `malformed:namespace`
+Warnings) and 2606.28974 (a dropped `aria-hidden`). On all three the streamed pages match the unsplit conversion. The
+namespace declarations sit elsewhere: under `--format=xml` a whole-DOM page root is
+`<default:section xmlns:default="…LaTeXML" xmlns="…LaTeXML">` with `xmlns:svg` on each `svg:svg`, a streamed one
+`<section xmlns="…LaTeXML" xmlns:svg="…">`. The HTML formats show no placement.
 
 **Guards**: `118_streaming_split_parity::streaming_split_pages_are_byte_identical_to_dom_split` (the default and
 in-memory cases), `::cli_split_streams_by_default_and_unsplit_stays_eager`, and
