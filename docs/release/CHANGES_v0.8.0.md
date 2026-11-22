@@ -156,8 +156,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     so a document's `\def~{\verb~}` no longer meets it with no e-mail (lineno/ulineno 1 Error → 0). LaTeXML's own
     default labels ("Affiliation:", "Email:", "Received", "Keywords:" …) end in `\lx@nobreakspace` instead of `~`, as
     article.cls spells its labels with `\nobreakspace`, so that `\def~` no longer reaches the label a contact or date
-    takes (lineno/lineno 5 Errors → 0, its names "Affiliation:\verb~~" → "Affiliation: "); where a class makes `~` a
-    plain space (aa, elsart under babel-french) the names now end in a no-break space, as everywhere else. Guards
+    takes (lineno/lineno 5 Errors → 0, its names "Affiliation:\verb~~" → "Affiliation: "). Where the document's `~`
+    digests to a plain space (every babel document, and aa) these names ended in an ASCII space, as in Perl, and now
+    end in a no-break space (U+00A0), as everywhere else and as TeX's `\nobreak\ ` prints; it renders the same. Guards
     `perfect_kernel_batchmanfm::*`.
   - **Regressions from the per-paper check of the November run (#954, #958, #960, and the follow-up integration).** Every paper that converted with
     no Error on 2026-11-05 (run 372) and erred in the November run was classified (pdflatex, Perl, a bisect); the

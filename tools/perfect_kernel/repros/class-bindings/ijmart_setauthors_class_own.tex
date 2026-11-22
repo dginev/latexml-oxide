@@ -5,7 +5,8 @@
 % oracle:  pdflatex 0 errors; "T", "BY", "A", "x"
 % engines: Perl 0 errors (no `\@setauthors` run); rust 4a74afcbfd = 2 errors (`expected:\fi \else`, then
 %          `\endgroup` in internal_vertical) + 1 warning (open group at `\end{document}`)
-% expect:  0 errors, 0 warnings; one author creator "A", no note, no "BY"
+% expect:  0 errors, 0 warnings; the first creator is the author "A" (pdflatex's "BY" comes from ijmart's own setter,
+%          which the binding leaves unrun: OD #1036's recorded gap)
 % status:  RED (4a74afcbfd) -> GREEN (MANFM)
 % preload: ar5iv.sty
 \documentclass{ijmart}\begin{document}\title{T}\author{A}\maketitle x\end{document}

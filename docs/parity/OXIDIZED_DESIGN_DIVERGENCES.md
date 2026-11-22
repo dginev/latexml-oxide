@@ -23800,10 +23800,13 @@ it, and as a CSS table it put the `\intertext` row in its first column (a footno
   (Base_Utility.pool.ltxml:50-55: the U+00A0 box of 0.333em that `~`'s `\lx@NBSP` makes, defined by Base_Utility itself so it
   exists under plain TeX too; general.rs), as
   LaTeX's classes spell a label with `\nobreakspace` for this robustness (article.cls:457 `\def\fnum@figure{\figurename
-  \nobreakspace\thefigure}`, :469). A document that does not redefine `~` gets the same name (`Affiliation:` U+00A0) and
-  byte-identical output; the dumps do not change (the labels are not in them). Where a class or package the document
-  loads makes `~` a plain space (aa, beilstein, lni, lion-msc read raw, elsart under babel-french), the name ended in a
-  space and now ends in U+00A0, as everywhere else. The raw-class date reader takes the label's word from its character
+  \nobreakspace\thefigure}`, :469). A document whose `~` is the kernel's gets the same name (`Affiliation:` U+00A0) and
+  byte-identical output; the dumps do not change (the labels are not in them). Where the document's `~` digests to a
+  plain space the name ended in an ASCII space (in Perl too) and now ends in U+00A0, as everywhere else: every babel
+  document, whatever its language (babel.sty:1504, babel.def:1628 make `~` the shorthand `\leavevmode\nobreak\ `, whose
+  `\ ` digests to a space), and the classes that make `~` a space themselves (aa, beilstein, lni, lion-msc read raw). A
+  no-break space is what TeX prints there (`\nobreak\ `), and U+00A0 is its HTML form; it renders the same. The
+  raw-class date reader takes the label's word from its character
   tokens only (frontmatter_stores.rs `prints_default_name_before`). Class and package bindings that spell their class's
   own label keep it (llncs_cls.rs `\emailname~`, as llncs.cls; aa_support_sty.rs "Corresponding author: ").
 - Witness: lineno/lineno (TL doc) 4 Errors → 0, names `Affiliation:` U+00A0.
