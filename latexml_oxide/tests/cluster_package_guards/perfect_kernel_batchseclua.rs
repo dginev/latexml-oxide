@@ -111,6 +111,97 @@ fn batchluaexec_refused_program_answers_as_lualatex() {
   assert_eq!(files_below(root.path()), ["t.tex", "t.xml"]);
 }
 
+/// A chunk that uses a refused call's nil and fails is lost, as under lualatex (rc=1, "attempt to index a nil value"):
+/// `io.popen(cmd):read()` and an `io.open` write openout_any=p refuses, each an Error naming the refused call beside
+/// its Warning; the next chunk runs. Base: a Warning and an Info each, 0 Errors. Repro
+/// luatex-profile/lua_sandbox_refused_then_failed.
+#[test]
+fn batchluaexec_refused_then_failed_is_an_error() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  let job = root.path().join("job");
+  std::fs::create_dir(&job).unwrap();
+  std::fs::write(
+    job.join("t.tex"),
+    repro!("luatex-profile", "lua_sandbox_refused_then_failed"),
+  )
+  .unwrap();
+  let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
+  let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
+  let sandbox: Vec<&str> = log
+    .lines()
+    .filter(|line| line.contains(":lua:sandbox "))
+    .collect();
+  assert_eq!(
+    sandbox,
+    [
+      "Warning:lua:sandbox io.popen \"echo hi\" was not run (document Lua runs no programs, as lualatex without \
+       shell escape)",
+      "Error:lua:sandbox the chunk failed after the sandbox refused io.popen \"echo hi\": [string \"local h = \
+       io.popen(\"echo hi\") tex.sprint(h:re...\"]:1: attempt to index a nil value (local 'h')",
+      "Warning:lua:sandbox writing ../refused_then_failed.txt was refused (document Lua writes only below the job \
+       directory, as lualatex under openout_any=p)",
+      "Error:lua:sandbox the chunk failed after the sandbox refused writing ../refused_then_failed.txt: [string \
+       \"local f = io.open(\"../refused_then_failed.txt...\"]:1: attempt to index a nil value (local 'f')",
+    ],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (2, 2), "{log}");
+  assert!(xml.contains("<p>A[]\nB[]\nC[alive]</p>"), "{xml}");
+  assert_eq!(files_below(root.path()), ["job/t.tex", "job/t.xml"]);
+}
+
+/// Each severity has its own budget of 20 listed refusals and its own summary: 40 `io.output` writes outside the job
+/// (only the sandbox refuses them) are 20 Errors and one summary Error; after 30 `os.execute` Warnings, 30 such writes
+/// still list 20 Errors by name. Base: the Warnings filled the list, and the mixed chunk's writes were one summary
+/// Error. Repro luatex-profile/lua_sandbox_refusal_budgets.
+#[test]
+fn batchluaexec_refusal_budget_per_severity() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  let job = root.path().join("job");
+  std::fs::create_dir(&job).unwrap();
+  std::fs::write(
+    job.join("t.tex"),
+    repro!("luatex-profile", "lua_sandbox_refusal_budgets"),
+  )
+  .unwrap();
+  let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
+  let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
+  let strict = |name: &str| {
+    format!(
+      "Error:lua:sandbox writing ../{name} is not allowed (document Lua runs sandboxed: no programs, writes only \
+       below the job directory)"
+    )
+  };
+  let program = "Warning:lua:sandbox os.execute \"exit 0\" was not run (document Lua runs no programs, as lualatex \
+                 without shell escape)"
+    .to_string();
+  let more = |severity: &str, n: usize| {
+    format!(
+      "{severity}:lua:sandbox {n} more calls the sandbox refused in this chunk are not listed"
+    )
+  };
+  let mut expected: Vec<String> = vec![strict("budget_strict.txt"); 20];
+  expected.push(more("Error", 20));
+  expected.extend(vec![program; 20]);
+  expected.extend(vec![strict("budget_mixed.txt"); 20]);
+  expected.push(more("Error", 10));
+  expected.push(more("Warning", 10));
+  let sandbox: Vec<&str> = log
+    .lines()
+    .filter(|line| line.contains(":lua:sandbox "))
+    .collect();
+  assert_eq!(sandbox, expected, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (42, 21), "{log}");
+  assert!(xml.contains("[strict:40][programs:30 writes:30]"), "{xml}");
+  assert_eq!(files_below(root.path()), ["job/t.tex", "job/t.xml"]);
+}
+
 /// `font.current()` (hologo's glyph test, `font.fonts[font.current()]`) raises a Lua error instead of ending texlua,
 /// which has no fonts: the chunk is not evaluated (an Info) and the next chunk sees the state an earlier one set.
 /// Base: `[] [nil]`, an `Error:lua:interpreter`. Witness the TL manual derivative. Repro
@@ -206,7 +297,16 @@ fn batchseclua_lua_writes_stay_in_the_job_directory() {
   std::fs::write(job.join("t.tex"), tex).unwrap();
   let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
   let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
-  assert_eq!(refusals(&log).len(), 3, "{log}");
+  let absolute = format!("writing {}", absolute.to_string_lossy().replace('\\', "/"));
+  assert_eq!(
+    refusals(&log),
+    [
+      "writing ../sandbox_escape.txt",
+      absolute.as_str(),
+      "writing .sandbox_escape"
+    ],
+    "{log}"
+  );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
   assert!(xml.contains("W[ok] R[hello] [nil nil nil]"), "{xml}");
   assert_eq!(files_below(root.path()), [
@@ -440,9 +540,9 @@ fn batchseclua_tar_links_stay_inside_the_source() {
 }
 
 /// The bridge accepts only frames that carry its nonce and builds them without a metamethod: a string `__tostring`
-/// that fails no longer hides a refusal, lualibs' `inspect` (which held the original `print`) and
-/// `require('texio').write` reach no pipe. Base: the first refusal unreported and the raw `texio` write a broken
-/// frame. Repro luatex-profile/lua_sandbox_frames_authenticated.
+/// that fails no longer hides a refusal, and a forged `D` or `W` header through lualibs' `inspect` (which held the
+/// original `print`), `io.write` or `require('texio').write` reaches no pipe, so no refusal is invented. Base: the
+/// first refusal unreported and the raw `texio` write a broken frame. Repro luatex-profile/lua_sandbox_frames_authenticated.
 #[test]
 fn batchseclua_lua_frames_are_authenticated() {
   if !texlua_present() {
@@ -464,6 +564,7 @@ fn batchseclua_lua_frames_are_authenticated() {
     "{log}"
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert!(!log.contains("forged"), "{log}");
   assert!(xml.contains("[a:true] [b:true] [texio:true]"), "{xml}");
   assert_eq!(files_below(root.path()), ["job/t.tex", "job/t.xml"]);
 }
@@ -500,7 +601,7 @@ fn batchseclua_lua_backslash_names_are_refused() {
 }
 
 /// Forty refusals of a 1 MiB name: 20 listed, each name cut at 256 bytes, and one summary for the rest, Warnings as
-/// lualatex refuses each too; no Fatal. Base: every refusal carried the whole name (a reviewer's 80 × 50 MB ran the bridge out of memory). Repro
+/// lualatex refuses each too; no Fatal (the Errors' own budget: `batchluaexec_refusal_budget_per_severity`). Base: every refusal carried the whole name (a reviewer's 80 × 50 MB ran the bridge out of memory). Repro
 /// luatex-profile/lua_sandbox_many_refusals.
 #[test]
 fn batchseclua_lua_refusals_are_bounded() {

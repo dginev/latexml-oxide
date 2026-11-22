@@ -1,0 +1,17 @@
+% mechanism: lua_bridge.rs lua_exec (OXIDIZED_DESIGN_DIVERGENCES #1081): a chunk that uses a refused call's nil
+%   (io.popen's, an io.open write's) and then fails is lost as lualatex loses it: its Lua error is an Error naming
+%   the refused call, beside the refusal's Warning; a refusal the chunk handles stays a Warning only.
+% witness: synthetic (review of batch LUAEXEC: the Error the base counted for this idiom)
+% oracle:  lualatex -no-shell-escape (TL 2025): rc=1, "attempt to index a nil value (local 'h')" and "(local 'f')";
+%   "A[] B[] C[alive]"
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
+% expect:  "A[] B[] C[alive]"; 2 Errors (lua:sandbox: the chunk failed after the sandbox refused io.popen "echo hi" /
+%   writing ../refused_then_failed.txt), 2 Warnings (the refusals); no ../refused_then_failed.txt
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+A[\luaexec{local h = io.popen("echo hi") tex.sprint(h:read("a"))}]
+B[\luaexec{local f = io.open("../refused_then_failed.txt", "w") f:write("x") f:close()}]
+C[\luaexec{tex.sprint("alive")}]
+\end{document}

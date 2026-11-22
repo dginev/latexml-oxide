@@ -310,6 +310,8 @@ if lfs then
     if type(value) == 'function' and not read_only[name] then lfs[name] = denier('lfs.' .. name, value) end
   end
 end
+-- lualatex without shell escape refuses native code too (luatex-core.lua L195-200: an empty loadlib, no C
+-- searchers); its values for it are not given yet, so these stay Errors (OXIDIZED_DESIGN_DIVERGENCES #1081).
 package.loadlib = denier('package.loadlib', package.loadlib)
 local c_path = package.cpath
 package.cpath = ''
@@ -445,7 +447,8 @@ struct LuaSlot {
 const MAX_RESTARTS: u32 = 3;
 /// The longest frame the bridge reads: a length past it is a broken protocol, not output.
 const MAX_FRAME: usize = 64 << 20;
-/// The refusals a chunk reports one by one, by count and by bytes; the rest are counted in a summary per severity.
+/// The refusals of each severity a chunk reports one by one, by count and by bytes; the rest are counted in a summary
+/// per severity.
 const MAX_DENIALS: usize = 20;
 const MAX_DENIAL_BYTES: usize = 64 << 10;
 
@@ -725,8 +728,9 @@ fn service_query(payload: &str) -> String {
 /// current catcodes by the caller); `Err(msg)` is a load/runtime Lua error or
 /// bridge unavailability ("texlua not available" — callers degrade to a no-op
 /// expansion, matching what the document would get from a TeX engine without
-/// Lua). Each call the sandbox refused is a `Warning` where lualatex refuses it too and an `Error` otherwise; an
-/// interpreter that ended mid-chunk (its output lost) is an `Error` (the outer `Err`, should one escalate to a Fatal).
+/// Lua). Each call the sandbox refused is a `Warning` where lualatex refuses it too and an `Error` otherwise; a
+/// chunk that fails after such a `Warning`, and an interpreter that ended mid-chunk (its output lost), are an `Error`
+/// (the outer `Err`, should one escalate to a Fatal).
 pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<String, String>> {
   let framed = exec_framed(chunk);
   use crate::prelude::*;
@@ -739,14 +743,22 @@ pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<Strin
   }
   let unlisted =
     |n: usize| format!("{n} more calls the sandbox refused in this chunk are not listed");
-  if framed.denials.more_errors > 0 {
-    Error!("lua", "sandbox", unlisted(framed.denials.more_errors));
+  if framed.denials.errors.more > 0 {
+    Error!("lua", "sandbox", unlisted(framed.denials.errors.more));
   }
-  if framed.denials.more_warnings > 0 {
-    Warn!("lua", "sandbox", unlisted(framed.denials.more_warnings));
+  if framed.denials.warnings.more > 0 {
+    Warn!("lua", "sandbox", unlisted(framed.denials.warnings.more));
   }
   if let Some(ended) = framed.ended {
     Error!("lua", "interpreter", ended);
+  } else if let (Err(failure), Some(call)) = (&framed.result, &framed.denials.first_warning) {
+    // The chunk used the refused call's nil (`io.popen(cmd):read()`) and is lost, as under lualatex (rc=1): an
+    // Error, where the chunk's own Lua error is the caller's Info.
+    Error!(
+      "lua",
+      "sandbox",
+      format!("the chunk failed after the sandbox refused {call}: {failure}")
+    );
   }
   Ok(framed.result)
 }
@@ -760,13 +772,23 @@ struct Framed {
   ended:   Option<String>,
 }
 
-/// A chunk's refusals in order: the first `MAX_DENIALS` (within `MAX_DENIAL_BYTES`) kept, the rest counted.
+/// A chunk's refusals in order: the first `MAX_DENIALS` of each severity (within `MAX_DENIAL_BYTES` each) kept, the
+/// rest counted, so a flood of Warnings never hides an Error.
 #[derive(Default)]
 struct Denials {
   shown:         Vec<Refusal>,
-  bytes:         usize,
-  more_errors:   usize,
-  more_warnings: usize,
+  errors:        Budget,
+  warnings:      Budget,
+  /// The first call refused with lualatex's values, named should the chunk then fail.
+  first_warning: Option<String>,
+}
+
+/// One severity's share of a chunk's refusal record.
+#[derive(Default)]
+struct Budget {
+  listed: usize,
+  bytes:  usize,
+  more:   usize,
 }
 
 /// One refused call: an Error ('D', only the sandbox refuses it) or a Warning ('W', lualatex refuses it too).
@@ -777,13 +799,24 @@ struct Refusal {
 
 impl Denials {
   fn push(&mut self, error: bool, message: String) {
-    if self.shown.len() < MAX_DENIALS && self.bytes + message.len() <= MAX_DENIAL_BYTES {
-      self.bytes += message.len();
-      self.shown.push(Refusal { error, message });
-    } else if error {
-      self.more_errors += 1;
+    if !error && self.first_warning.is_none() {
+      // The prelude's 'W' message is `<call> was not run (…)` or `writing <name> was refused (…)`.
+      let call = message
+        .rsplit_once(" was ")
+        .map_or(message.as_str(), |(call, _)| call);
+      self.first_warning = Some(call.to_string());
+    }
+    let budget = if error {
+      &mut self.errors
     } else {
-      self.more_warnings += 1;
+      &mut self.warnings
+    };
+    if budget.listed < MAX_DENIALS && budget.bytes + message.len() <= MAX_DENIAL_BYTES {
+      budget.listed += 1;
+      budget.bytes += message.len();
+      self.shown.push(Refusal { error, message });
+    } else {
+      budget.more += 1;
     }
   }
 }

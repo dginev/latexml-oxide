@@ -21017,10 +21017,17 @@ goes on, as TeX does not err. `os.execute()`, which asks whether a shell exists,
 nothing; pdftexcmds' `\pdf@shellescape` and imakeidx.sty:54 ask it — the TL manuals biblatex-sbl, biblatex-sbl-ibid,
 derivative, labyrinth, liftarm, polyomino, toptesi/FrontespizioScudo, wheelchart and xassoccnt_doc each erred on it).
 A call only the sandbox refuses — `os.remove`/`rename`/`tmpname`/`tmpdir`/`setenv`, `io.tmpfile`, the `lfs`
-writers, `io.output`/`gzip.open`/`mplib` writes and an `io.open` through a symbolic link or of a `\` name (all of
-which lualatex performs), a C module, a network library, `package.loadlib` — is `Error:lua:sandbox` (a `D` frame) and
-a Lua error. Neither record is swallowed when the chunk pcalls the call; the name shown is cut at 256 bytes, and a
-chunk lists 20 refusals (64 KiB), the rest in one summary per severity.
+writers, `io.output`/`gzip.open`/`mplib` writes and an `io.open` through a symbolic link or of a `\` name, all of
+which lualatex performs — is `Error:lua:sandbox` (a `D` frame) and a Lua error. A C module, a network library and
+`package.loadlib` stay that Error too, though lualatex `-no-shell-escape` refuses them as well (`luatex-core.lua`
+L195-200 empties `package.loadlib` and drops `package.searchers[3]`/`[4]` when `shellescape ~= 1`; measured:
+`pcall(package.loadlib, './cmod.so', 'f')` is `true` with no value, `pcall(require, 'socket')` `false` and a
+message): no TL manual needs them, so their lualatex values (with a `W` frame) wait past 0.8.0. Neither record is
+swallowed when the chunk pcalls the call; the name shown is cut at 256 bytes, and a chunk lists 20 refusals of each
+severity (64 KiB each), the rest in one summary per severity, so Warnings never push an Error's name out. A chunk
+that fails after a `W` refusal — it used the refused call's `nil`, `io.popen(cmd):read()`, and is lost as under
+lualatex (rc=1, "attempt to index a nil value") — adds `Error:lua:sandbox the chunk failed after the sandbox refused
+<call>: <Lua error>`; any other chunk's Lua error stays the caller's Info.
 Every helper the checks and the frame protocol call (`string.*`, `next`, `type`, the file handles' C
 `read`/`write`/`flush`, `package.searchpath`, `kpse.find_file`, `load`) is a local captured at boot, never a method
 looked up through a table the document can change; `mplib.new` gets a raw copy (`next`) of its options carrying the
@@ -21058,6 +21065,7 @@ The CLI's own zip unpacking writes a link entry as a plain file. `graphics.rs`
 component) takes the next free `xN.<ext>`. **Witnesses.** TL manuals ijsra (its class's images reached as
 `../../../tex/latex/…`, written beside `--dest`; now `x1.png`, `x2.png`), newpax (unchanged). **Guards.**
 `cluster_package_guards::perfect_kernel_batchseclua::{batchluaexec_refused_program_answers_as_lualatex,
+batchluaexec_refused_then_failed_is_an_error, batchluaexec_refusal_budget_per_severity,
 batchluaexec_font_current_keeps_the_interpreter,
 batchseclua_lua_runs_no_program,
 batchseclua_lua_writes_stay_in_the_job_directory, batchseclua_image_copy_stays_in_dest,
@@ -21066,7 +21074,7 @@ batchseclua_lua_interpreter_restarts_and_owns_its_pipe, batchseclua_tar_links_st
 batchseclua_lua_frames_are_authenticated, batchseclua_lua_backslash_names_are_refused,
 batchseclua_lua_refusals_are_bounded, batchseclua_lua_interpreter_ends_with_the_timeout}`,
 `lua_bridge::tests::frame_headers_carry_the_session_nonce` (repros
-`luatex-profile/lua_sandbox_{refused_program_goes_on,no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
+`luatex-profile/lua_sandbox_{refused_program_goes_on,refused_then_failed,refusal_budgets,no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
 `luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout,font_current_keeps_the_interpreter}`,
 `loader/image_copy_outside_source_stays_in_dest`).
 
