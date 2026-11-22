@@ -53,8 +53,9 @@ Rules that keep this file honest and mergeable:
   error-free); its regressions were classified and the clusters our changes caused fixed (#954-#964), the residue in
   row R. **0.8.0-rc1** is published as a prerelease (tag `f7f8120f349`, merged to main as #919); **0.8.0-rc2** is main
   `7c2b9ef3b76` (#965: Split frees its pages, release checks; #966: the version); its tag was cut and its release
-  run cancelled (unused), and it is re-issued once the large-document perf bundle `int/rc2-perf` (DG 2026-11-21:
-  STRMWARN, CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT) merges. Main stays the release line until 0.8.0
+  run cancelled (unused), and it is re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
+  CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT, mimalloc 2.3.2) and SERSTREAM (the core result serialized to
+  disk; Nasser's whole book converts, 1,609 s against lualatex's 3,523 s for two passes). Main stays the release line until 0.8.0
   final; the reviewed post-release branches (COPYROUTE, ENCURL) merge after it. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.
 - **Where it stood (2026-11-18):** the frontmatter campaign merged as PR #895 (`aeda3db4e47`, 2026-11-17; DG's 39-paper
   showcase review in runs 389–392, a 300-paper acceptance A/B, and a performance audit whose XSLT-key cost was cut to
@@ -980,6 +981,13 @@ Rules that keep this file honest and mergeable:
     `drawn`; (b) `malloc_trim(0)` after Split as its own lever (C-free 954 MB vs 8 MB streaming at n1600, C-live 29 MB
     both); (c) with `--input xml`, Split's copies drop a nav's prefixed namespace and a page redeclaring the default
     namespace comes out `<default:section xmlns:default=…>` (base too, cosmetic, foreign XML only); 3
+  - SERSTREAMUNSPLIT — an unsplit run and `--nopost` output still build the whole core XML as one String
+    (`Document::serialize_to_string`, `converter.rs` `serialize_result`); the same sink (`serialize_to_file`) could write
+    them to `--dest` or to post's file input. Witness: any unsplit document past ~1 GiB of core XML (Nasser's whole
+    book unsplit); 2
+  - RENDERFLEETBIG — Nasser's whole book (115,519 pages) rendered serially: the worker fleet affords 0 workers at
+    ~1.8 GB each under `--max-memory=8192` with the parent at ~4.3 GB (`render_workers.rs` affordable-memory cap);
+    measure each worker's real need and the parent's post-render footprint before lowering the estimate; 2
   - MIMALLOC3 — back to mimalloc 3.x once `libmimalloc-sys` bundles a release with the 3.3.x heap-corruption fixes
     (≥ 3.5.3; microsoft/mimalloc issues 1287, 1430): 0.8.0-rc2 builds the bundled 2.3.2 (`latexml_oxide/Cargo.toml`
     `v2` feature). Witness: 1502.06095 crashed twice under full-width A/B load (mimalloc's small free list holding a

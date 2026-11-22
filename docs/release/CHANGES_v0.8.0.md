@@ -55,6 +55,11 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     holds 29 MB of C heap at page 1024 instead of 818 MB, the whole conversion takes ~8 % fewer cycles, and every page
     is byte-identical. Guards `112_fragment_yield::split_pages_leave_no_c_heap_residue` and
     `::split_keeps_pages_whose_namespaces_a_navigation_uses` (in the CI asan job).
+  - **0.8.0-rc2: a split run's core result goes straight to disk (issue 777).** The core serializes its XML into
+    the file post's streamed split reads (`Document::serialize_to_file`) instead of building it as one string first;
+    the output is byte-identical. Nasser's whole book (28,076 problems, 2.73 GB of core XML) had stopped with an
+    allocation failure after the core; it now converts in one run: 115,519 pages in 1,609 s, peak RSS 4.3 GB, against
+    3,523 s for lualatex's two passes on the same machine.
   - **0.8.0-rc2: the allocator is mimalloc 2.3.2, not 3.3.2.** The `libmimalloc-sys` crate bundles both, and its
     3.3.2 has upstream reports of intermittent heap corruption (microsoft/mimalloc issues 1287 and 1430, fixed only in
     later 3.x releases the crate does not bundle yet); one of our conversions crashed on a corrupted 3.3.2 free list
