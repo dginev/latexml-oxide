@@ -1196,6 +1196,67 @@ Rules that keep this file honest and mergeable:
     calc error (1611.01788 thesis.tex:5400/:5434; both the Nov 17 binary and the release candidate; pdflatex is fatal
     there too, 8 errors): find the loop site (`perf record` at 20 s), then end in a bounded Error. The wall-clock Fatal
     leaves no XML and no log, so the paper's 56k words are lost — a salvage question too; 5
+  - BACKMATTERPART (after 0.8.0, needs DG's ruling; TeX fidelity, offer upstream) — LaTeXML nests `\backmatter` (the
+    bibliography and index after it) inside the last `ltx:part`, while in TeX `\backmatter` belongs to no part. Since
+    SPLITPARENT matches Perl's Split → Scan parents, a split `\part` book's Bibliography/Index footer buttons appear only
+    on the last part's pages (KEPT_RELATIONS, OD #1134) and `bib.html`'s title ends "‣ Part II …"; identical in Perl.
+    Fix in the XML nesting (close the part at `\backmatter`) or in the relation walk; 1
+  - SCANINDEXXML (after 0.8.0, multi-document sites) — Rust's Scan parent fallback (`scan.rs` after `doc.parent_id`)
+    lacks Perl's second guess, an `index.xml` in a containing directory (`Scan.pm:117-124`). Split's pages no longer
+    use the fallback; 1
+  - STREAMNODISPLAY (after 0.8.0, suspected) — `stream_split.rs` has no equivalent of `split.rs::get_pages`'s
+    `ltx_nodisplay` filter, so a hidden bibliography (a `\fullcite`-only one under `--splitat`) may become a page only
+    on the streamed path. Probe first; 1
+  - ROOTTOCSPLIT (after 0.8.0, pre-existing) — a split root page's run TOC comes out as several `<nav class="ltx_TOC">`
+    lists (Preface / Pt1 / Pt2) where Perl has one; both split paths, before and after SPLITPARENT; 1
+  - LUAERRSEV (after 0.8.0) — a document Lua chunk's runtime error is an Info (`pdftex.rs:118-123`, `luacode_sty.rs:64`)
+    while lualatex stops with rc=1; LUAEXEC2 escalates only a chunk that carried a sandbox refusal. Decide whether every
+    chunk runtime error is an Error (texlua lacks LuaTeX's node/font libraries, so measure the Error flood on the manual
+    sweep first); 1
+  - LUAWINCOLON (after 0.8.0, Windows, suspected) — `lua_bridge.rs:200` `out_name_ok`: a `:` that is not a drive letter
+    (`a:b`, an alternate data stream) gets lualatex's refusal values and a Warning; kpathsea's paranoid check rejects a
+    `:` only in position 2, so lualatex probably writes it and the policy makes it an Error. Empty/NUL/non-string names
+    get nil + Warning where lualatex returns fopen's 3 values or "bad argument". Needs a Windows lualatex; 1
+  - LINENOAUTHORS (after 0.8.0, content) — lineno/lineno's two extra `\author` lines ("Uwe Lück", "Karl Wette") become
+    affiliation contacts; pre-existing, separate from MANFM's `~` fix. Perl itself is not clean on this manual under the
+    sweep preload (23 missing-argument Errors near the end); 1
+  - AMSWRAPSETAUTHORS (after 0.8.0, synthetic only) — MANFM keeps the `\@setauthors` an amsart-based class ends its load
+    with (`class/after`) and runs only what the document appends. A wrapper class that `\LoadClass{amsart}` and then
+    appends to (`\g@addto@macro\@setauthors{\par Communicated by …}`) or redefines `\@setauthors` with extra text has
+    that text dropped (pdflatex prints it; base kept it as a note). No TL or arXiv class seen (12 real-class papers: 8
+    identical, 4 only lose a junk nameless creator). Route: keep the definition amsart's binding ends with (`\@empty`)
+    and skip only a derived class's setter that fails a sanity check; 1
+  - IJMEMAILCOLON (after 0.8.0, nit) — an ijmart e-mail contact gets `name="e-mail:: "`: the class's `\emailaddrname`
+    already ends in ":" and the binding appends ": "; 1
+  - LUAFONTIDS (after 0.8.0) — the texlua `font` mirror holds one font (the current one, id 1): `font.id(<real font>)`
+    answers -1 with a Warning where lualatex gives its id (e.g. 2 for `\tenln`); hand out mirror ids per named font; 1
+  - LUALANG (after 0.8.0) — `lang.new()` succeeds in lualatex (polyglossia.lua:99, luababel.def:274) but is an engine-gap
+    Warning plus a Lua error under texlua; a `lang` mirror is its own batch; 1
+  - LUAERRSEV2 (after 0.8.0) — answer C modules, network libraries and `package.loadlib` with lualatex
+    `-no-shell-escape`'s values and a `W` frame (`loadlib` → no value; `require` of a C module/network library →
+    `false, msg`; `luatex-core.lua` L195-200); decide how `G` engine gaps rank once chunk runtime errors are ruled; and a
+    chunk with a `W` then an uncaught `D` logs two Errors (the `D` and the escalation) — skip the escalation when a `D`
+    already flags the chunk; 1
+  - LUASPRINTSPACE (after 0.8.0) — a trailing space in what a chunk `tex.sprint`s is dropped: `\luaexec{tex.sprint("[c] ")}d`
+    gives `[c]d`, lualatex `[c] d` (also `luacode*`); the bridge's tokenizing of chunk output; 1
+  - NBSPREVERT (after 0.8.0) — Rust's `\lx@nobreakspace` box (`general.rs:118`) reverts to itself; Perl's
+    (Base_Utility.pool.ltxml:53-55) reverts to `\nobreakspace`. Since MANFM2 the 28 default frontmatter labels end in it;
+    no output showed the difference. Align with Perl; 1
+  - BABELTILDE (after 0.8.0, pre-existing, Perl too) — under babel, `x~y` gives "x y" with an ASCII space: babel's `~`
+    shorthand `\leavevmode\nobreak\ ` (babel.sty:1504) digests its `\ ` to a plain space and the no-break is lost; TeX prints
+    a no-break space (U+00A0). The default labels end in U+00A0 since MANFM2 (OD #1136); body text does not; 1
+  - FMTIESTILDE (after 0.8.0, suspected) — ties LaTeXML adds still use the document's `~`: `frontmatter_api/email_lines.rs:103`
+    (`named_email_calls` pushes `T_ACTIVE('~')`), `defs/frontmatter_fields.rs` `\lx@row@email@named` (`name={#2~}`),
+    `frontmatter_stores.rs:4219` (the off-table label); under `\def~{\verb~}` they would meet OD #1136's Error; not
+    triggered by `Emails: …` lines. Spell them with `\lx@nobreakspace` with a RED repro first; 1
+  - LUAMKTEX (record, decided) — the Lua sandbox sets `MKTEXTFM`/`MKTEXPK`/`MKTEXMF`/`MKTEXTEX`/`MKTEXFMT`/`MKOCP`/`MKOFM`
+    to 0 before kpathsea starts (LUAFONT2): with `MKTEXTFM=1` in the environment, `kpse.find_file` (since SECLUA) and
+    `font.read_tfm` ran mktextfm/METAFONT and wrote into `TEXMFVAR`. Stricter than lualatex, which may run mktextfm for a
+    missing TFM; fail-safe by choice. State it in SAFETY.md; 1
+  - PDFEXTFONTID (after 0.8.0) — `\pdfextension fontattr`/`includechars` (and `\pdfincludechars`) read their font as one
+    token, so a `\textfont1`-style font identifier leaks the "1"; add a font-identifier reader; 1
+  - PDFCOLORSTACKNOACT (after 0.8.0) — `\pdfcolorstack<n>` with no action: TeX errors, we read nothing and say nothing;
+    add the Error; 1
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
@@ -1248,6 +1309,11 @@ Each entry's body (defect, cause, fix, guards, witnesses) is verbatim in [`archi
 - **hyperref's `\Hy@driver` was `hpdftex` whatever the output mode (101a)**
 - **A recovered Fatal left the Stomach's token stack full (int131fix)**
 - **The null control sequence's optional-argument internal was `\\` (int131fix)**
+- **Split's pages were filed under a parent guessed from the id prefix (SPLITPARENT, #979)**: Scan now takes the parent Split computed (Split.pm:132-133, Scan.pm:99) on both split paths; guard `118_streaming_split_parity::split_pages_navigate_under_the_parent_split_gave_them` (issue 777's book: 9,262 pages).
+- **Document Lua's refused program calls gave an Error and no value (LUAEXEC)**: they answer lualatex `-no-shell-escape`'s values with a counted Warning; a chunk failing after one is an Error, as lualatex errs (OD #1081; guards `perfect_kernel_batchseclua::batchluaexec_*`).
+- **texlua's `font`/`lang`/`vf` crashed the Lua bridge (LUAFONT)**: a one-font mirror answers through `\iffontchar`, the rest is a counted `Warning:lua:engine` (OD #1081; guards `perfect_kernel_batchluafont::*`).
+- **`\pdfextension <kw>` read one token and printed its operands (LUAFONT2)**: every keyword reads pdfTeX's operands (xfakebold-doc 58 leaks → 0; guards `perfect_kernel_batchluafont::batchluafont_pdfextension_*`).
+- **An amsart-based class's own `\@setauthors` ran with the names emptied (MANFM)**: the ams bindings run only the document's additions (OD #1036; ijmart/ijmsample 2 Errors → 0; guard `perfect_kernel_batchmanfm::ams_based_class_setauthors_runs_only_the_document_additions`).
 
 ## Current status
 
