@@ -2,10 +2,14 @@
 % mechanism: in an inline context (a p{}/m{}/b{} cell, \parbox, minipage, note) the XSLT writes a display's table as
 %   spans (f:blockelement), each tbody a classless span; LaTeXML.css gave that span no display, so each row became an
 %   anonymous inline table of its own: the rows of an aligned display ran side by side, their columns apart.
+%   Round 2 (gather*, \intertext): the rows sharing one table had no cell padding, so a gather* row's block <math>
+%   (Chrome: its ink alone) touched the next (pitch 11 px, 13 outside), and CSS tables ignore colspan, so the
+%   \intertext cell fell into the first column and wrapped word by word.
 % oracle:  pdflatex 0 errors; every display set as outside the cells (rows stacked, aligned at &, centred in the cell)
 % engines: SERSTREAM (f84f9e2abcb) and Perl 0.8.8 = the same HTML; in Chrome/Firefox the in-cell rows side by side
 % expect:  in the browser each display's rows stacked, an aligned display's cells at the same x in every row, the
-%   in-cell aligned/align* column offsets those of the same display outside (within the UA's 1px td padding)
+%   in-cell aligned/align* column offsets those of the same display outside (within the UA's 1px td padding); a
+%   gather*'s rows at least the outside pitch, their formulas apart; an \intertext one line, as tall as outside
 % status:  RED (SERSTREAM) -> GREEN (fix-972-display-math-in-pcolumn); guards
 %   cluster_cli::browser_render_eqn_rows_in_cells, xslt::witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present
 \documentclass{article}
@@ -93,4 +97,39 @@ xx &= 3 & yy &= 4
 \mu_3 &=\cos \left(2 x \right)
 \end{aligned}
 \]}
+
+Outside gather:
+\begin{gather*}
+a = b \\
+cc = dd
+\end{gather*}
+\begin{gather*}
+\sum_{i=1}^n a_i = b \\
+\frac{cc}{2} = dd
+\end{gather*}
+\begin{align}
+x &= 1 \\
+\intertext{and some intertext here}
+xx &= 3
+\end{align}
+
+\noindent\parbox{4in}{Parbox gather:
+\begin{gather*}
+a = b \\
+cc = dd
+\end{gather*}
+\begin{align}
+x &= 1 \\
+\intertext{and some intertext here}
+xx &= 3
+\end{align}}
+
+\begin{tabular}{|p{4in}|}
+Cell gather:
+{\begin{gather*}
+\sum_{i=1}^n a_i = b \\
+\frac{cc}{2} = dd
+\end{gather*}}
+\\\hline
+\end{tabular}
 \end{document}

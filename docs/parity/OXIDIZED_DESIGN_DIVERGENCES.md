@@ -23738,7 +23738,12 @@ page's whole head link sets), `cluster_xslt_split::urlstyle::*` (the parent page
 **Rule.** `LaTeXML.css` (and ar5iv-css, mirrored) gives the tbody stand-ins of a span-form display table
 `display:table-row-group` (`span.ltx_eqn_table > span:not([class])`), keys the `align` column gap and the `eqnarray`
 `lefteqn` rule on classes instead of `table`/`tr`/`td`, and keeps a tabular's cell padding off the display's cells
-(`.ltx_tabular .ltx_eqn_cell { padding:0 }`; they carry `ltx_td` too).
+(`.ltx_tabular .ltx_eqn_cell { padding:0 }`; they carry `ltx_td` too). The span cells get the UA's 1px `<td>` padding
+(`span.ltx_eqn_table .ltx_eqn_cell`): Chrome sizes a block `<math>` to its ink, so the rows of a `gather*` sharing one
+table touched (pitch 11 px, 13 outside; `\sum` limits over a `\frac` ran together). A row of one spanning cell
+(`\intertext`, `ltx:p` mode `ininalignment`, `colspan` 3+n; a constraint row has the same shape) is a block across the
+display, with its row group: CSS tables ignore `colspan`, so in the shared table it fell into the first column and
+wrapped word by word (54 px for one line, 108 with `leqno`).
 - Perl: the same HTML. In an inline context (`ltx:inline-block` of a `p{}`/`m{}`/`b{}` cell, `\parbox`, minipage, a
   note) `f:blockelement` (`LaTeXML-common.xsl`) writes the equation table, its tbodies, rows and cells as `span`s, and
   the tbodies carry no class (`LaTeXML-block-xhtml.xsl`, `ltx:equation`/`ltx:equationgroup` mode `inalignment`). Vanilla
@@ -23747,8 +23752,14 @@ page's whole head link sets), `cluster_xslt_split::urlstyle::*` (the parent page
   issue-533 `display:block` box, stacked but each sized alone), not aligned at `&`. KNOWN_PERL_ERRORS #1310.
 - TeX: a `p{}` cell is a `\vtop` in paragraph mode, so `\[…\]` there is a real display, set as outside the cell.
 - Measured (Chrome and Firefox, 1280/375 px, `display_rows_in_a_p_cell_972.tex`): the in-cell `aligned` rows went
-  from one top (scrollWidth 1164 in a 385 px cell) to stacked, every row's cells at the same x; the column offsets
-  match the same display outside within the 1px UA padding of an outside `<td>` (ar5iv.css: equal).
+  from one top (scrollWidth 1164 in a 385 px cell) to stacked, the cells of the rows between two spanning rows at the
+  same x; the column offsets, the row pitch (`gather*` 13/44 px Chrome, 21/50 Firefox) and an `\intertext`'s height
+  match the same display outside (ar5iv.css: its cells' own 0.3rem padding, so the pitch was already outside's).
+- Residual: `colspan` and `rowspan` do not span in the span form. An `\intertext` splits the column grid (the rows
+  above and below it are each aligned, but not with each other: `=` 5 px apart in a `\parbox`; outside, one grid). A
+  `leqno` tag's `rowspan` cell (`equation`+`aligned`/`split`) is in the first row only, so rows 2+ start one column
+  left (`=` under the first row's left side); pre-existing, as each row was its own table before. An unaligned
+  equation in a group (`colspan` = n) spans one column.
 - Upstream: offered to Perl as a patch (the CSS rules).
 
 **Guards**: `cluster_cli::browser_render_eqn_rows_in_cells::display_rows_stack_and_align_in_cells` (opt-in, local),

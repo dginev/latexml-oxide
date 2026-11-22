@@ -3204,8 +3204,9 @@ mod browser_render_eqn_rows_in_cells {
   //! Issue #972 rendered at 1280/768/375 px (reporter nasser1's longtable `p{}` MWE and its siblings: a tabular `p{}`,
   //! `m{}`/`b{}` cells, `align*`/`gather*`/`eqnarray*` in a cell, a `\parbox`): a display in an inline context is written
   //! as spans, and each of its rows stacks under the last, the cells of an aligned display at the same x in every row,
-  //! at the column offsets of the same display outside the cell. Opt-in and LOCAL like the guards above (Firefox too
-  //! with `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present`.
+  //! at the column offsets of the same display outside the cell; a `gather*`'s rows as far apart as outside, and an
+  //! `\intertext` one line as tall as outside. Opt-in and LOCAL like the guards above (Firefox too with
+  //! `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present`.
 
   const DOC: &str =
     include_str!("../../tools/perfect_kernel/repros/block-model/display_rows_in_a_p_cell_972.tex");
@@ -3242,7 +3243,7 @@ mod browser_render_eqn_rows_in_cells {
         ids,
         [
           "S0.Ex1", "S0.Ex2", "S0.Ex3", "S0.Ex4", "S0.E1", "S0.EGx1", "S0.EGx2", "S0.EGx3",
-          "S0.EGx4", "S0.Ex13"
+          "S0.EGx4", "S0.Ex13", "S0.EGx5", "S0.EGx6", "S0.EGx7", "S0.EGx8", "S0.EGx9", "S0.EGx10"
         ],
         "the displays ({key}): {stdout}"
       );
@@ -3260,10 +3261,29 @@ mod browser_render_eqn_rows_in_cells {
           tops.windows(2).all(|w| w[1] > w[0]),
           "{id}: rows not stacked ({key}): {tops:?}"
         );
-        let rows = lefts(e);
+        // The rows between two spanning rows (an \intertext) share one grid; a spanning row splits it.
+        let runs = e["lines"]
+          .as_array()
+          .unwrap()
+          .split(|l| l["spanning"] == true);
+        for run in runs {
+          let rows = lefts(&serde_json::json!({ "lines": run }));
+          assert!(
+            rows.windows(2).all(|w| w[0] == w[1]),
+            "{id}: rows not aligned ({key}): {rows:?}"
+          );
+        }
+        // Before (15800612b4b, Chrome): a span-form gather*'s block <math> rows touched (pitch 11 px).
+        let extents: Vec<_> = e["lines"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .filter_map(|l| l["math"].as_array())
+          .map(|m| (m[0].as_f64().unwrap(), m[1].as_f64().unwrap()))
+          .collect();
         assert!(
-          rows.windows(2).all(|w| w[0] == w[1]),
-          "{id}: rows not aligned ({key}): {rows:?}"
+          extents.windows(2).all(|w| w[0].1 <= w[1].0 + 0.5),
+          "{id}: one row's formulas reach into the next's ({key}): {extents:?}"
         );
         assert!(
           e["scrollWidth"].as_i64() <= e["clientWidth"].as_i64(),
@@ -3291,6 +3311,40 @@ mod browser_render_eqn_rows_in_cells {
       assert!(
         close(&inside, &outside),
         "align* columns {inside:?}, outside {outside:?} ({key})"
+      );
+      // A gather* in a \parbox and one with limits and a fraction in a cell keep the outside row pitch; before
+      // (15800612b4b, Chrome) 11 px against 13, 42 against 44.
+      let pitch = |id: &str| -> Vec<i64> {
+        let ls = by(id)["lines"].as_array().unwrap();
+        let mut p: Vec<i64> = ls
+          .windows(2)
+          .map(|w| w[1]["top"].as_i64().unwrap() - w[0]["top"].as_i64().unwrap())
+          .collect();
+        p.push(ls.last().unwrap()["height"].as_i64().unwrap());
+        p
+      };
+      for (inside, outside) in [("S0.EGx8", "S0.EGx5"), ("S0.EGx10", "S0.EGx6")] {
+        let (i, o) = (pitch(inside), pitch(outside));
+        assert!(
+          i.len() == o.len() && i.iter().zip(&o).all(|(a, b)| a + 1 >= *b),
+          "{inside}: row pitch {i:?}, outside {o:?} ({key})"
+        );
+      }
+      // An \intertext in a \parbox is one line as tall as outside; before (15800612b4b) its cell fell into the first
+      // column and wrapped (Firefox/375: 46 px against 25; the reviewer's longer one 54 and, with leqno, 108 against 18).
+      let spanning = |id: &str| -> Vec<i64> {
+        by(id)["lines"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .filter(|l| l["spanning"] == true)
+          .map(|l| l["height"].as_i64().unwrap())
+          .collect()
+      };
+      let (i, o) = (spanning("S0.EGx9"), spanning("S0.EGx7"));
+      assert!(
+        i.len() == 1 && o.len() == 1 && (i[0] - o[0]).abs() <= 1,
+        "intertext height {i:?}, outside {o:?} ({key})"
       );
     }
   }

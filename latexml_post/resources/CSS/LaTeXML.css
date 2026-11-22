@@ -667,6 +667,14 @@ foreignObject {
    padding also reached the display's cells (`ltx_td` too) and widened the gap at each `&`. */
 span.ltx_eqn_table > span:not([class]) { display:table-row-group; }
 .ltx_tabular .ltx_eqn_cell { padding:0; }
+/* The span cells get the UA's 1px <td> padding: Chrome sizes a block <math> to its ink, so rows sharing the table
+   without it touched (a gather* row pitch 11 px, 13 outside). CSS tables ignore colspan, so a row of one spanning
+   cell (\intertext, a constraint) is a block across the display (splitting its column grid), not a cell of the first
+   column. OXIDIZED_DESIGN_DIVERGENCES #1135. */
+span.ltx_eqn_table .ltx_eqn_cell { padding:1px; }
+span.ltx_eqn_table > span:not([class]):has(> .ltx_eqn_row > .ltx_eqn_cell[colspan]:only-child),
+span.ltx_eqn_table > span:not([class]) > .ltx_eqn_row:has(> .ltx_eqn_cell[colspan]:only-child),
+span.ltx_eqn_table > span:not([class]) > .ltx_eqn_row > .ltx_eqn_cell[colspan]:only-child { display:block; }
 /* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #431): vanilla's
    `.ltx_verbatim { white-space:nowrap }` (kept above) overrides the UA `pre`
    rule, so a plain {verbatim} <pre> collapses to ONE line, and fancyvrb's
