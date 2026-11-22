@@ -1990,7 +1990,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (QA61D1, 520 -> 532: DG's D1 moves a labelled off-table store to a pubnote; what the deposit takes out with it is the
   // label's token part K11's table path takes, extended over the store and its line's stop (`part_to_the_line_end`),
   // and the line gate counts the class's other stores (`store_lines_among`) — the static readers of OD #767's fallback)
-  ("frontmatter_stores", 532),
+  // (MANFM2, 532 -> 533: no new read — `prints_default_name_before` already read the default label's body spelling; its
+  // filter to the character tokens, past the label's `\lx@nobreakspace` (OD #1136), puts a `get_catcode()` on the line)
+  ("frontmatter_stores", 533),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,
