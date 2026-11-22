@@ -5275,6 +5275,11 @@ mod shared_figure_parallel_render {
         "the worker path must engage:\n{stderr}"
       );
       assert!(!stderr.contains("using a PNG"), "round {round}:\n{stderr}");
+      let diagnostics: Vec<&str> = stderr
+        .lines()
+        .filter(|line| line.starts_with("Warning:") || line.starts_with("Error:"))
+        .collect();
+      assert!(diagnostics.is_empty(), "round {round}: {diagnostics:#?}");
       assert_eq!(images, serial_images, "round {round}: the images on disk");
       assert_eq!(serial.len(), parallel.len());
       for ((name, serial_page), (_, parallel_page)) in serial.iter().zip(&parallel) {
