@@ -23640,3 +23640,17 @@ before the copy, as its result chooses the binding's defaults. **Guard**:
 `perfect_kernel_batchregfixu::snjnl_scan_runs_after_the_copy_loads_its_packages` (repro
 `stand-in-copies/scan_order/snjnl_scan_after_the_copy.tex`); `perfect_kernel_batch67u::snjnl_class_copy_loads_program`,
 `perfect_kernel_batch68f::scan_skips_a_package_the_document_marked_loaded`.
+
+### 1132. A failing formula warns once per distinct lexeme string per conversion (STRMWARN)
+
+**Rule** (maintainer ruling 2026-11-21). Perl warns for every failing formula: `parse` resets `$WARNED` per formula
+(MathParser.pm:250-254) and `failureReport` warns each time (:862-897), so a formula repeated N times warns N times.
+Ours emits an `ambiguous_math` / `unparsed_math` Warning once per distinct lexeme string per conversion
+(parser.rs `warn_formula_once`, a SipHash set). The set is the thread-local `WARNED_FORMULAS`, cleared per conversion
+by `reset_conversion_notices` (from `core_interface::initialize_singletons`), as `FORMULA_ORDINAL` and
+`LOSTNODES_NOOP_REPORTED` are. It is not a `MathParser` field: streaming pass 2 builds a parser per segment and
+`finish_document` one more, so a per-parser set warned once per segment (the Nasser FAQ slices k600/k1200: 101
+Warnings eager, 171 streamed, byte-identical XML). Eager output and counts are unchanged. **Guard**:
+`perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion` (repro
+`streaming/streamed_unparsed_math_warns_once.tex`: 4 Perl `not_parsed`, 1 ours eager and streamed); unit
+`parser::tests::warns_once_per_distinct_formula_per_conversion`.

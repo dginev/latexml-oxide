@@ -784,6 +784,7 @@ mod perfect_kernel_batchspconf;
 mod perfect_kernel_batchst1;
 /// ST3: a document converted after others on one thread (a persistent cortex_worker's papers) is the document alone.
 mod perfect_kernel_batchst3;
+mod perfect_kernel_batchstrmwarn;
 mod perfect_kernel_batchta1;
 mod perfect_kernel_batchunc;
 /// UPS1: the upstream LaTeXML master commits since #2833 (frames padded as TeX draws them, #2820).
