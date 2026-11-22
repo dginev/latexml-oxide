@@ -8561,7 +8561,7 @@ Perl's `generateResourcePathname` numbers a processed image's file `x1`, `x2`, â
 
 Trigger: `\includegraphics[trim=100 0 0 50,clip]{a.png}` and `\includegraphics{x1.png}`, converted with the destination in the source directory.
 
-Rust (batch 56kx) resolves every graphic's source first and reserves each copied source's relative path before naming any output (`used_dests`), so the crop takes `x2.png`; a copy onto the source itself is refused (`copy_beside`). Guard: `latexml_post graphics::tests::a_crop_gets_its_own_file_and_a_zero_trim_none`.
+Rust (batch 56kx) resolves every graphic's source first and reserves each copied source's relative path before naming any output (`used_dests`), so the crop takes `x2.png`; a copy or a staged install onto the source itself is refused (`writer::copy_atomic`, `graphics.rs`'s staged raster install). Guard: `latexml_post graphics::tests::a_crop_gets_its_own_file_and_a_zero_trim_none`.
 
 ## 309. A `\parbox` in vertical mode does not start a paragraph (FIXED in Rust)
 

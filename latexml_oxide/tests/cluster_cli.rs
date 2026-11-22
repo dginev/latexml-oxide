@@ -5157,3 +5157,116 @@ mod streaming_opt_out {
     );
   }
 }
+
+mod shared_figure_parallel_render {
+  //! Parallel page-render workers (`LATEXML_RENDER_JOBS`, 64+ pages) each convert a figure every
+  //! page shares into the same destination. A worker that read a sibling's half-written or just
+  //! removed `fig.svg` took it for an enlarged raster, switched its pages to a PNG and deleted the
+  //! shared file under every other page (`graphics.rs`, the staged conversion). Every page must
+  //! show the serial run's vector render, and that file must exist.
+
+  use std::process::Command;
+
+  /// Whether `mutool` or `pdftocairo` spawns; without one a visible SKIP, a failure where
+  /// `LATEXML_SVG_TESTS` is set (CI installs both).
+  fn svg_converter_or_skip(test: &str) -> bool {
+    let found = ["mutool", "pdftocairo"]
+      .iter()
+      .any(|tool| Command::new(tool).arg("--version").output().is_ok());
+    if !found {
+      assert!(
+        std::env::var_os("LATEXML_SVG_TESTS").is_none(),
+        "LATEXML_SVG_TESTS is set but neither mutool nor pdftocairo is on PATH ({test})"
+      );
+      eprintln!("SKIP {test}: neither mutool nor pdftocairo on PATH");
+    }
+    found
+  }
+
+  /// The pages of one run of `a.tex` (`LATEXML_RENDER_JOBS=jobs`), with the run's stderr.
+  fn run(tex: &str, jobs: &str) -> (Vec<(String, String)>, Vec<String>, String) {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("a.tex"), tex).unwrap();
+    std::fs::copy(
+      concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../latexml_post/tests/fixtures/two_page_sizes.pdf"
+      ),
+      work.path().join("fig.pdf"),
+    )
+    .unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "a.tex",
+        "--format=html5",
+        "--nodefaultresources",
+        "--splitat=section",
+        "--dest=a.html",
+      ])
+      .env("LATEXML_RENDER_JOBS", jobs)
+      .env("LATEXML_GRAPHICS_CACHE_OFF", "1")
+      .current_dir(work.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert!(out.status.success(), "stderr:\n{stderr}");
+    let mut pages = Vec::new();
+    let mut images = Vec::new();
+    for entry in std::fs::read_dir(work.path()).unwrap() {
+      let path = entry.unwrap().path();
+      let name = path.file_name().unwrap().to_string_lossy().into_owned();
+      match path.extension().and_then(|ext| ext.to_str()) {
+        Some("html") => pages.push((name, std::fs::read_to_string(&path).unwrap())),
+        Some("svg" | "png") => images.push(name),
+        _ if name.starts_with('.') => images.push(name),
+        _ => {},
+      }
+    }
+    pages.sort();
+    images.sort();
+    (pages, images, stderr)
+  }
+
+  #[test]
+  fn every_page_keeps_the_shared_vector_render() {
+    if !svg_converter_or_skip("every_page_keeps_the_shared_vector_render") {
+      return;
+    }
+    let mut tex =
+      String::from("\\documentclass{article}\n\\usepackage{graphicx}\n\\begin{document}\n");
+    for i in 1..=72 {
+      tex.push_str(&format!(
+        "\\section{{S{i}}}\nText {i}.\n\\includegraphics[width=3cm]{{fig}}\n\n"
+      ));
+    }
+    tex.push_str("\\end{document}\n");
+    let (serial, serial_images, _) = run(&tex, "1");
+    assert_eq!(serial_images, ["fig.svg"], "the serial run's images");
+    let s72 = &serial
+      .iter()
+      .find(|(name, _)| name == "S72.html")
+      .expect("S72.html")
+      .1;
+    assert!(
+      s72.contains("data=\"fig.svg\""),
+      "S72 shows the vector render:\n{s72}"
+    );
+    // The race is a matter of timing: three parallel runs make a miss unlikely.
+    for round in 1..=3 {
+      let (parallel, images, stderr) = run(&tex, "8");
+      assert!(
+        stderr.contains("parallel page render engaged: 8 worker(s)"),
+        "the worker path must engage:\n{stderr}"
+      );
+      assert!(!stderr.contains("using a PNG"), "round {round}:\n{stderr}");
+      assert_eq!(images, serial_images, "round {round}: the images on disk");
+      assert_eq!(serial.len(), parallel.len());
+      for ((name, serial_page), (_, parallel_page)) in serial.iter().zip(&parallel) {
+        assert_eq!(
+          serial_page, parallel_page,
+          "round {round}: {name} differs between the serial and parallel render"
+        );
+      }
+    }
+  }
+}
