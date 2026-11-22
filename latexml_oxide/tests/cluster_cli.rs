@@ -3200,6 +3200,170 @@ mod browser_render_eqn_tags {
   }
 }
 
+mod browser_render_eqn_rows_in_cells {
+  //! Issue #972 rendered at 1280/768/375 px (reporter nasser1's longtable `p{}` MWE and its siblings: a tabular `p{}`,
+  //! `m{}`/`b{}` cells, `align*`/`gather*`/`eqnarray*` in a cell, a `\parbox`): a display in an inline context is written
+  //! as spans, and each of its rows stacks under the last, the cells of an aligned display at the same x in every row,
+  //! at the column offsets of the same display outside the cell; a `gather*`'s rows as far apart as outside, and an
+  //! `\intertext` one line as tall as outside (also in a footnote and a minipage, where the span table has no
+  //! `ltx_inline-block`/`ltx_td` ancestor; the measuring script opens notes). Opt-in and LOCAL like the guards above (Firefox too with
+  //! `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present`.
+
+  const DOC: &str =
+    include_str!("../../tools/perfect_kernel/repros/block-model/display_rows_in_a_p_cell_972.tex");
+
+  #[test]
+  fn display_rows_stack_and_align_in_cells() {
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#972", DOC, "measure_eqn_tags.js")
+    else {
+      return;
+    };
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+    // Each row's content-cell lefts, relative to its table.
+    let lefts = |e: &serde_json::Value| -> Vec<Vec<i64>> {
+      e["lines"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| {
+          l["lefts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_i64().unwrap())
+            .collect()
+        })
+        .collect()
+    };
+    let gaps = |row: &[i64]| -> Vec<i64> { row.windows(2).map(|w| w[1] - w[0]).collect() };
+    for (key, run) in v.as_object().expect("engines x widths") {
+      let eqns = run["eqns"].as_array().expect("eqns");
+      let ids: Vec<_> = eqns.iter().map(|e| e["id"].as_str().unwrap()).collect();
+      assert_eq!(
+        ids,
+        [
+          "S0.Ex1", "S0.Ex2", "S0.Ex3", "S0.Ex4", "S0.E1", "S0.EGx1", "S0.EGx2", "S0.EGx3",
+          "S0.EGx4", "S0.Ex13", "S0.EGx5", "S0.EGx6", "S0.EGx7", "S0.EGx8", "S0.EGx9", "S0.EGx10",
+          "S0.EGx11", "S0.EGx12"
+        ],
+        "the displays ({key}): {stdout}"
+      );
+      // Before (SERSTREAM, Chrome and Firefox): each in-cell row its own inline table, side by side at one top and
+      // scrolled out of the cell (scrollWidth 1164 in 385 px); the \parbox rows stacked but apart (lefts 168/142/141).
+      for e in eqns {
+        let id = e["id"].as_str().unwrap();
+        let tops: Vec<_> = e["lines"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .map(|l| l["top"].as_i64().unwrap())
+          .collect();
+        assert!(
+          tops.windows(2).all(|w| w[1] > w[0]),
+          "{id}: rows not stacked ({key}): {tops:?}"
+        );
+        // The rows between two spanning rows (an \intertext) share one grid; a spanning row splits it.
+        let runs = e["lines"]
+          .as_array()
+          .unwrap()
+          .split(|l| l["spanning"] == true);
+        for run in runs {
+          let rows = lefts(&serde_json::json!({ "lines": run }));
+          assert!(
+            rows.windows(2).all(|w| w[0] == w[1]),
+            "{id}: rows not aligned ({key}): {rows:?}"
+          );
+        }
+        // Without the span cells' 1px padding (Chrome) a span-form gather*'s block <math> rows touched (pitch 11 px).
+        let extents: Vec<_> = e["lines"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .filter_map(|l| l["math"].as_array())
+          .map(|m| (m[0].as_f64().unwrap(), m[1].as_f64().unwrap()))
+          .collect();
+        assert!(
+          extents.windows(2).all(|w| w[0].1 <= w[1].0 + 0.5),
+          "{id}: one row's formulas reach into the next's ({key}): {extents:?}"
+        );
+        assert!(
+          e["scrollWidth"].as_i64() <= e["clientWidth"].as_i64(),
+          "{id}: the display scrolls in its cell ({key}): {stdout}"
+        );
+      }
+      // The in-cell columns sit as outside, within the UA's 1px padding of an outside <td>; before, the tabular's
+      // 0.5em cell padding reached the display's cells too (Chrome: the `aligned` gap 32 px in the cell, 18 outside).
+      let by = |id: &str| eqns.iter().find(|e| e["id"] == id).unwrap();
+      let close = |a: &[i64], b: &[i64]| {
+        a.len() == b.len() && a.iter().zip(b).all(|(x, y)| (x - y).abs() <= 3)
+      };
+      let aligned = gaps(&lefts(by("S0.Ex1"))[0]);
+      for id in ["S0.Ex2", "S0.Ex3", "S0.Ex13"] {
+        let g = gaps(&lefts(by(id))[0]);
+        assert!(
+          close(&g, &aligned),
+          "{id}: aligned columns {g:?}, outside {aligned:?} ({key})"
+        );
+      }
+      let (inside, outside) = (
+        gaps(&lefts(by("S0.EGx1"))[0]),
+        gaps(&lefts(by("S0.EGx4"))[0]),
+      );
+      assert!(
+        close(&inside, &outside),
+        "align* columns {inside:?}, outside {outside:?} ({key})"
+      );
+      // A gather* in a \parbox and one with limits and a fraction in a cell keep the outside row pitch (without the
+      // 1px cell padding, Chrome: 11 px against 13, 42 against 44).
+      let pitch = |id: &str| -> Vec<i64> {
+        let ls = by(id)["lines"].as_array().unwrap();
+        let mut p: Vec<i64> = ls
+          .windows(2)
+          .map(|w| w[1]["top"].as_i64().unwrap() - w[0]["top"].as_i64().unwrap())
+          .collect();
+        p.push(ls.last().unwrap()["height"].as_i64().unwrap());
+        p
+      };
+      for (inside, outside) in [("S0.EGx8", "S0.EGx5"), ("S0.EGx10", "S0.EGx6")] {
+        let (i, o) = (pitch(inside), pitch(outside));
+        assert!(
+          i.len() == o.len() && i.iter().zip(&o).all(|(a, b)| a + 1 >= *b),
+          "{inside}: row pitch {i:?}, outside {o:?} ({key})"
+        );
+      }
+      // An \intertext in a \parbox, a footnote or a theorem in a minipage is one line, as tall as outside (a note's
+      // smaller type: no taller). As a cell of a CSS table's first column it wrapped: Firefox/375 46 px against 25 in a
+      // \parbox (a longer one 54, 108 with leqno, against 18); a footnote's 44 against 23 in Firefox, 36 against 19 in
+      // Chrome at 375; a minipage's 48 against 25 in Firefox at 375.
+      let spanning = |id: &str| -> Vec<i64> {
+        by(id)["lines"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .filter(|l| l["spanning"] == true)
+          .map(|l| l["height"].as_i64().unwrap())
+          .collect()
+      };
+      let o = spanning("S0.EGx7");
+      for id in ["S0.EGx9", "S0.EGx11", "S0.EGx12"] {
+        let i = spanning(id);
+        let as_tall = |h: i64| {
+          if id == "S0.EGx11" {
+            h <= o[0] + 1
+          } else {
+            (h - o[0]).abs() <= 1
+          }
+        };
+        assert!(
+          i.len() == 1 && o.len() == 1 && as_tall(i[0]),
+          "{id}: intertext height {i:?}, outside {o:?} ({key})"
+        );
+      }
+    }
+  }
+}
+
 mod browser_render_author_lines {
   //! Issue #783 rendered at 1280/375 px: an author whose contacts are all `\\` lines of the author block shows them
   //! under the name with no starred pop-up (a marked `\thanks` or `\footnote` note of one author shows there too, with

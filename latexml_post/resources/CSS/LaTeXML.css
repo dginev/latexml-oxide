@@ -296,12 +296,14 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 .ltx_eqn_row   { display:table-row; }
 .ltx_eqn_cell  { display:table-cell; width:auto; }
 
-/* Padding between column pairs in ams align */
-table.ltx_eqn_align tr.ltx_equation td.ltx_align_left + td.ltx_align_right,
-table.ltx_eqn_align tr.ltx_equation td.ltx_align_left + td.ltx_align_center,
-table.ltx_eqn_align tr.ltx_equation td.ltx_align_center + td.ltx_align_right,
-table.ltx_eqn_align tr.ltx_equation td.ltx_align_center + td.ltx_align_center  { padding-left:3em; }
-table.ltx_eqn_eqnarray tr.ltx_eqn_lefteqn + tr td.ltx_align_right { min-width:2em; }
+/* Padding between column pairs in ams align
+   (latexml-oxide local delta, issue #972: keyed on classes, not on table/tr/td, so the span form of a display in a
+   p{} cell or \parbox keeps it) */
+.ltx_eqn_align .ltx_equation > .ltx_align_left + .ltx_align_right,
+.ltx_eqn_align .ltx_equation > .ltx_align_left + .ltx_align_center,
+.ltx_eqn_align .ltx_equation > .ltx_align_center + .ltx_align_right,
+.ltx_eqn_align .ltx_equation > .ltx_align_center + .ltx_align_center  { padding-left:3em; }
+.ltx_eqn_eqnarray .ltx_eqn_lefteqn + .ltx_eqn_row > .ltx_align_right { min-width:2em; }
 
 /* Native-MathML alignment cells. An `aligned`/`align`/`gather`/`split` that is
    NESTED in another math environment renders as ONE `<math>` with an `<mtable>`
@@ -659,6 +661,24 @@ foreignObject {
    enumerate whose items hold `\[\begin{aligned}…\end{aligned}\]`. */
 .ltx_inline-block .ltx_eqn_table,
 .ltx_td .ltx_eqn_table { display:block; overflow-x:auto; max-width:100%; }
+/* latexml-oxide local delta (issue #972): in an inline context (a p{} cell, \parbox, minipage, note) the XSLT writes a
+   display's table as spans, each tbody a classless span. As an inline box it gave every row an anonymous table of its
+   own, so an aligned display's rows ran side by side, their columns apart; they are row groups. A tabular's cell
+   padding also reached the display's cells (`ltx_td` too) and widened the gap at each `&`. */
+span.ltx_eqn_table > span:not([class]) { display:table-row-group; }
+/* The span form is always the block scroll box above: a note or a minipage (`ltx_inline-logical-block`) is neither
+   `ltx_inline-block` nor `ltx_td`, and as a CSS table it put an \intertext row in its first column (Firefox: a
+   footnote's wrapped, 44 px against 23 for one line; a minipage's at 375 px, 48 against 25). */
+span.ltx_eqn_table { display:block; overflow-x:auto; max-width:100%; }
+.ltx_tabular .ltx_eqn_cell { padding:0; }
+/* The span cells get the UA's 1px <td> padding: Chrome sizes a block <math> to its ink, so rows sharing the table
+   without it touched (a gather* row pitch 11 px, 13 outside). CSS tables ignore colspan, so a row of one spanning
+   cell (\intertext, a constraint) is a block across the display (splitting its column grid), not a cell of the first
+   column. OXIDIZED_DESIGN_DIVERGENCES #1135. */
+span.ltx_eqn_table .ltx_eqn_cell { padding:1px; }
+span.ltx_eqn_table > span:not([class]):has(> .ltx_eqn_row > .ltx_eqn_cell[colspan]:only-child),
+span.ltx_eqn_table > span:not([class]) > .ltx_eqn_row:has(> .ltx_eqn_cell[colspan]:only-child),
+span.ltx_eqn_table > span:not([class]) > .ltx_eqn_row > .ltx_eqn_cell[colspan]:only-child { display:block; }
 /* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #431): vanilla's
    `.ltx_verbatim { white-space:nowrap }` (kept above) overrides the UA `pre`
    rule, so a plain {verbatim} <pre> collapses to ONE line, and fancyvrb's

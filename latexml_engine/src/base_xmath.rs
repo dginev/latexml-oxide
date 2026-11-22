@@ -2031,7 +2031,7 @@ pub fn equationgroup_join_rows(
     // fires: `\lx@add@cssclass` cannot class the `_Capture_` (not in the schema), and `/\blefteqn\b/` misses
     // `ltx_eqn_lefteqn` (`_` is a word character). The cell carries the class now (`\lx@alignment@cell@overprint`,
     // OXIDIZED_DESIGN_DIVERGENCES #556). The class is in the XML only: LaTeXML-block-xhtml.xsl writes the HTML row's
-    // own class (:703, :883), so LaTeXML.css's `tr.ltx_eqn_lefteqn + tr` rule never meets it.
+    // own class (:703, :883), so LaTeXML.css's `.ltx_eqn_lefteqn + .ltx_eqn_row` rule never meets it.
     if cells
       .first()
       .and_then(|c| c.get_attribute("class"))
