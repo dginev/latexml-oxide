@@ -299,6 +299,10 @@ impl Splitter {
   fn run(&mut self, mut reader: TextReader) -> Result<(), String> {
     let mut advanced = reader.read().map_err(|()| "XML parse error".to_string())?;
     while advanced {
+      // A late template item dooms the stream to the whole-DOM split: stop spilling pages for it.
+      if self.late_template_fails && self.late_template.is_some() {
+        return Ok(());
+      }
       match reader.event() {
         ReaderEvent::Element => {
           let localname = reader.local_name().unwrap_or_default();
@@ -1863,6 +1867,45 @@ mod tests {
     .expect("prose containing :resource must not abort streaming split")
     .expect("split produces pages");
     assert_eq!(outcome.pages.len(), 3);
+  }
+
+  /// A late template item (here an `ltx:resource` after the first page) fails the stream over to
+  /// the whole-DOM split; the stream stops there instead of spilling the remaining pages.
+  #[test]
+  fn a_doomed_stream_stops_at_the_late_template() {
+    let dir = tempfile::tempdir().unwrap();
+    let src = dir.path().join("late.xml");
+    let mut xml = String::from(
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\n<title>T</title>\n",
+    );
+    xml.push_str("<section xml:id=\"S1\"><title>1</title><para><p>x</p></para></section>\n");
+    xml.push_str("<resource src=\"late.css\" type=\"text/css\"/>\n");
+    for i in 2..=20 {
+      xml.push_str(&format!(
+        "<section xml:id=\"S{i}\"><title>{i}</title><para><p>x</p></para></section>\n"
+      ));
+    }
+    xml.push_str("</document>\n");
+    std::fs::write(&src, xml).unwrap();
+    let spill = dir.path().join("spill");
+    std::fs::create_dir(&spill).unwrap();
+    let failed = stream_split(
+      &src.to_string_lossy(),
+      "//ltx:section",
+      SplitNaming::Id,
+      Some("out/late.html"),
+      &spill,
+      true,
+    );
+    assert!(
+      failed
+        .as_ref()
+        .is_err_and(|why| why.contains("ltx:resource appeared after the first page")),
+      "{:?}",
+      failed.map(|o| o.map(|o| o.pages.len()))
+    );
+    let spilled = std::fs::read_dir(&spill).unwrap().count();
+    assert!(spilled <= 2, "{spilled} pages spilled for a doomed stream");
   }
 
   #[test]
