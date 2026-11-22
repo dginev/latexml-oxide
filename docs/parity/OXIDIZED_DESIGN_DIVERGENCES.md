@@ -23693,7 +23693,8 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
   Warning when a signal killed the worker (a crash; its own watchdog's memory exit is code 137, an Info). The workers
   keep their spilled pages for this, and no child log is folded. Their pages stay until the serial render rewrites
   them. A page's Fatal there (#782) removes every page the fleet may have written (a worker that died unreported, its
-  whole range); a memory-fuse or timeout stop keeps a partial site.
+  whole range). A memory-fuse or timeout stop, or a page's Error, removes the fleet's pages it did not rewrite, so it
+  leaves the contiguous partial site a serial-only run does, the pages its "stopped after N page(s)" Info counts.
   Only a timeout still folds a killed fleet as Errors.
 
 Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`/`1`, `LATEXML_POST_STREAM_THRESHOLD`,
@@ -23714,6 +23715,8 @@ namespace declarations sit elsewhere: under `--format=xml` a whole-DOM page root
 in-memory cases), `::cli_split_streams_by_default_and_unsplit_stays_eager`, and
 `120_midscale_streaming::midscale_render_fleet_defaults_on_and_falls_back_to_serial` (the
 `LATEXML_RENDER_WORKER_TEST_ABORT` hook, test-utils builds only: a dead worker and a failed db attach),
+`cluster_xslt_split::xslt_failure_is_fatal::an_abandoned_fleet_then_a_serial_stop_keeps_only_the_rewritten_pages`
+(with the `LATEXML_RENDER_TEST_SERIAL_STOP` hook) and `::an_abandoned_fleet_then_a_serial_fatal_keeps_no_page`,
 `112_fragment_yield::split_keeps_pages_whose_namespaces_a_navigation_uses` (a late navigation),
 `118_streaming_split_parity::nested_resource_split_falls_back_to_the_whole_dom_split` and
 `::cli_bare_dest_stages_beside_the_destination`; the handoff file:

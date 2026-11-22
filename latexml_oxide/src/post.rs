@@ -1470,7 +1470,8 @@ fn run_post_processing_inner(
   // SQLite file and each worker attaches it readonly; the workers run the
   // identical `render_spilled_page` pipeline over contiguous page ranges and
   // the parent folds their diagnostics deterministically, in chunk order.
-  // The pages an abandoned fleet may have written: the serial render's Fatal removes them too.
+  // The pages an abandoned fleet may have written: a page's Fatal in the serial render removes them
+  // too, and a stop removes those it did not rewrite.
   let mut fleet_pages: Vec<String> = Vec::new();
   let render_jobs = crate::render_workers::render_jobs();
   if render_jobs > 1 && spilled_pages.len() >= crate::render_workers::MIN_PAGES_FOR_PARALLEL {
@@ -1584,7 +1585,10 @@ fn run_post_processing_inner(
     //
     // Stopping HERE is cheap and honest: pages already rendered are already
     // written, so the run ends with a real, if partial, site.
-    if let Err(e) = latexml_core::stomach::check_timeout() {
+    let stop = latexml_core::stomach::check_timeout();
+    #[cfg(feature = "test-utils")]
+    let stop = stop.and_then(|()| serial_stop_hook(pages_rendered));
+    if let Err(e) = stop {
       // FATAL, not Error (user decision 2026-08-02): a render stopped at
       // page N of M is a TRUNCATED deliverable — the same severity class as
       // the core's cheap-partial handoff. The pages already written stay on
@@ -1598,6 +1602,7 @@ fn run_post_processing_inner(
         s!("render stopped after {pages_rendered} page(s); partial site preserved")
       );
       e.log_fatal();
+      remove_fleet_pages_not_rewritten(&fleet_pages, written);
       break;
     }
     // Hand freed page memory back to the OS, exactly as core pass 1 does
@@ -1648,7 +1653,10 @@ fn run_post_processing_inner(
         written.clear();
         return String::new();
       },
-      Err(PageFailure::Error) => return fallback(),
+      Err(PageFailure::Error) => {
+        remove_fleet_pages_not_rewritten(&fleet_pages, written);
+        return fallback();
+      },
     };
     for (dest, output) in outputs {
       if let Some(path) = dest.as_deref() {
@@ -1818,6 +1826,33 @@ pub(crate) fn remove_pages<S: AsRef<str>>(pages: &[S]) {
   for page in pages {
     let _ = std::fs::remove_file(page.as_ref());
   }
+}
+
+/// A serial render that stops after an abandoned fleet removes the fleet's pages it did not
+/// rewrite: Info's count and `PostOutcome::pages` name only `written`, and a worker killed mid-write
+/// may have left an empty page. The site is then the contiguous partial one a serial-only run leaves.
+fn remove_fleet_pages_not_rewritten(fleet_pages: &[String], written: &[String]) {
+  if fleet_pages.is_empty() {
+    return;
+  }
+  let rewritten: std::collections::HashSet<&str> = written.iter().map(String::as_str).collect();
+  for page in fleet_pages
+    .iter()
+    .filter(|p| !rewritten.contains(p.as_str()))
+  {
+    let _ = std::fs::remove_file(page);
+  }
+}
+
+/// Test hook `LATEXML_RENDER_TEST_SERIAL_STOP=<n>` (guard: cluster_xslt_split): the serial render
+/// stops before its page `n + 1`, as the memory fuse or the timeout would.
+#[cfg(feature = "test-utils")]
+fn serial_stop_hook(pages_rendered: usize) -> latexml_core::common::error::Result<()> {
+  let at = std::env::var("LATEXML_RENDER_TEST_SERIAL_STOP").ok();
+  if at.and_then(|n| n.parse().ok()) == Some(pages_rendered) {
+    latexml_core::fatal!(Timeout, Convert, "Conversion timed out!");
+  }
+  Ok(())
 }
 
 /// Why a page did not render (already reported). `Fatal`: a MathML/XSLT step failed, which stops

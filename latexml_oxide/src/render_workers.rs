@@ -188,7 +188,7 @@ pub(crate) struct ParallelResult {
   /// abandoned fleet, every page it may have written ([`pages_the_fleet_may_have_written`]).
   pub(crate) written:        Vec<String>,
   /// A worker failed, so nothing was folded and the document renders serially. A page's Fatal
-  /// there removes `written` too (#782); a fuse or timeout stop keeps a partial site.
+  /// there removes `written` too (#782); a fuse or timeout stop keeps only the pages it rewrote.
   pub(crate) abandoned:      bool,
 }
 
@@ -405,8 +405,8 @@ fn compute_fleet_budget(
 
 /// The pages an abandoned fleet may have written, for the serial render to remove if it ends in a
 /// Fatal (#782): a worker that reported (or could not set up) names its pages, and one that died
-/// before its `Status:written:` lines may have written any page of its range. They stay on disk
-/// otherwise: the serial render rewrites them, or keeps them as the partial site a fuse stop leaves.
+/// before its `Status:written:` lines may have written any page of its range. The serial render
+/// rewrites them; one that stops (the fuse, the timeout, a page's Error) removes those it did not.
 fn pages_the_fleet_may_have_written(joined: &[Joined], ranges: &[Vec<String>]) -> Vec<String> {
   joined
     .iter()

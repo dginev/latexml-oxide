@@ -628,6 +628,48 @@ mod xslt_failure_is_fatal {
     assert_eq!(html_files(dir.path()), Vec::<String>::new(), "{stderr}");
   }
 
+  /// An abandoned fleet whose serial render then stops (the hook `LATEXML_RENDER_TEST_SERIAL_STOP`,
+  /// as the fuse or the timeout would): the fleet's pages past the stop are removed, so the site is
+  /// the serial render's five pages, the count its Info names.
+  #[test]
+  fn an_abandoned_fleet_then_a_serial_stop_keeps_only_the_rewritten_pages() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let mut tex = String::from("\\documentclass{article}\n\\begin{document}\n");
+    for i in 1..=70 {
+      tex.push_str(&format!("\\section{{S{i}}}\nfine\n\n"));
+    }
+    tex.push_str("\\end{document}\n");
+    std::fs::write(dir.path().join("a.tex"), tex).unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(["--splitat=section", "--dest=a.html", "a.tex"])
+      .env("LATEXML_RENDER_JOBS", "2")
+      .env("LATEXML_RENDER_WORKER_TEST_ABORT", "unreported")
+      .env("LATEXML_RENDER_TEST_SERIAL_STOP", "5")
+      .current_dir(dir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(
+      stderr.matches("parallel render abandoned (worker ").count(),
+      1,
+      "{stderr}"
+    );
+    assert_eq!(
+      stderr
+        .matches("render stopped after 5 page(s); partial site preserved")
+        .count(),
+      1,
+      "{stderr}"
+    );
+    assert_eq!(out.status.code(), Some(1), "{stderr}");
+    assert_eq!(stderr.matches("Fatal:").count(), 1, "{stderr}");
+    assert_eq!(
+      html_files(dir.path()),
+      ["S1.html", "S2.html", "S3.html", "S4.html", "a.html"],
+      "{stderr}"
+    );
+  }
+
   /// The CLI exits 1 and writes no `.html`.
   #[test]
   fn the_cli_exits_nonzero_and_writes_nothing() {
