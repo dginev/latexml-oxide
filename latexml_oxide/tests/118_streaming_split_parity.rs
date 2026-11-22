@@ -342,6 +342,14 @@ fn cli_split_streams_by_default_and_unsplit_stays_eager() {
       && streamed_log.contains("streaming split engaged"),
     "the split run must stage its handoff and stream:\n{streamed_log}"
   );
+  // The core serialized its result into the handoff file itself: no document-sized String was built only to be
+  // written there (issue 777).
+  assert!(
+    streamed_log.contains("staged to site/latexml-post-handoff-")
+      && streamed_log.contains(".xml by the core serializer")
+      && !streamed_log.contains("could not"),
+    "the split run's core result must reach post through the file:\n{streamed_log}"
+  );
   assert!(
     !dom_log.contains("stream-split") && !dom_log.contains("staged"),
     "the opt-out must not stream:\n{dom_log}"

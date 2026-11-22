@@ -631,13 +631,68 @@ fn try_streaming_front(
 
 /// A core handoff staged on disk for the streaming file parser, removed when
 /// dropped and on the exits that skip destructors.
-struct StagedHandoff {
+pub struct StagedHandoff {
   path:   String,
   _guard: latexml_core::watchdog::RemoveOnExit,
 }
 
 impl Drop for StagedHandoff {
   fn drop(&mut self) { let _ = std::fs::remove_file(&self.path); }
+}
+
+impl StagedHandoff {
+  /// The handoff's path beside the destination ("." for a bare file name), else in the system temp dir.
+  fn at(destination: Option<&str>) -> StagedHandoff {
+    let dir = staging_dir_of(destination).unwrap_or_else(std::env::temp_dir);
+    let path = dir.join(format!("latexml-post-handoff-{}.xml", std::process::id()));
+    StagedHandoff {
+      _guard: latexml_core::watchdog::remove_on_exit(&path),
+      path:   path.to_string_lossy().into_owned(),
+    }
+  }
+
+  pub fn path(&self) -> &str { &self.path }
+}
+
+/// The reserved handoff, kept only when the core serialized into it (`ConversionResponse::handoff_file`). An
+/// unused one is dropped here, removing a file an earlier attempt wrote: a fused eager attempt's salvage, when the
+/// `--streaming` rerun on the same path ends without a document.
+pub fn used_core_handoff(
+  reserved: Option<StagedHandoff>,
+  serialized_to: Option<&str>,
+) -> Option<StagedHandoff> {
+  reserved.filter(|staged| serialized_to == Some(staged.path()))
+}
+
+/// The handoff file a split run's core result is serialized into (`Config::handoff_file`), reserved before the
+/// conversion: when the run would take the streaming split, which parses only files, the document-sized `String`
+/// would exist only to be staged (2 GiB on Nasser's whole book, issue 777). `None` when it would not.
+pub fn reserve_core_handoff(
+  split: bool,
+  destination: Option<&str>,
+  split_xpath: Option<&str>,
+) -> Option<StagedHandoff> {
+  let streams = split
+    && destination.is_some()
+    && split_xpath.is_some_and(latexml_post::stream_split::supports_union)
+    && std::env::var("LATEXML_POST_STREAM_SPLIT").as_deref() != Ok("0");
+  streams.then(|| StagedHandoff::at(destination))
+}
+
+/// The staging Info: operationally worth a line (a temp file the size of the core XML just appeared beside the
+/// destination), and the guard tests' engagement proof — without it a silently-failing spill would fall back to the
+/// memory parse and the tests would pass vacuously.
+fn note_staged(len: u64, path: &str, how: &str) {
+  let why = if len >= post_mem_parse_limit() as u64 {
+    "oversized handoff"
+  } else {
+    "streaming-split handoff"
+  };
+  latexml_core::Info!(
+    "post",
+    "spill",
+    format!("{why} ({len} bytes) staged to {path}{how}")
+  );
 }
 
 /// Should an in-memory handoff be staged to a file: past the in-memory parse
@@ -653,13 +708,15 @@ fn handoff_needs_file(xml: &str, opts: &PostOptions) -> bool {
 /// (writing to the destination directory is always allowed), else the system
 /// temp dir. `None` = the write failed (reported at Info): parse from memory.
 fn stage_handoff(xml: &str, opts: &PostOptions) -> Option<StagedHandoff> {
-  let dir = staging_dir_of(opts.destination).unwrap_or_else(std::env::temp_dir);
-  let path = dir.join(format!("latexml-post-handoff-{}.xml", std::process::id()));
-  let guard = latexml_core::watchdog::remove_on_exit(&path);
+  let staged = StagedHandoff::at(opts.destination);
   // The destination's directory may not exist yet: the writer creates it, so
   // create it here, where the handoff and the page spill go first.
-  if let Err(e) = std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(&path, xml)) {
-    let _ = std::fs::remove_file(&path);
+  let dir = std::path::Path::new(&staged.path).parent();
+  if let Err(e) = dir
+    .map_or(Ok(()), std::fs::create_dir_all)
+    .and_then(|()| std::fs::write(&staged.path, xml))
+  {
+    // (the drop removes a partial file)
     latexml_core::Info!(
       "post",
       "spill",
@@ -667,24 +724,8 @@ fn stage_handoff(xml: &str, opts: &PostOptions) -> Option<StagedHandoff> {
     );
     return None;
   }
-  // Operationally worth a line: a temp file the size of the core XML just
-  // appeared beside the destination. Also the guard tests' engagement proof —
-  // without it a silently-failing spill would fall back to the memory parse
-  // and the tests would pass vacuously.
-  let why = if xml.len() >= post_mem_parse_limit() {
-    "oversized handoff"
-  } else {
-    "streaming-split handoff"
-  };
-  latexml_core::Info!(
-    "post",
-    "spill",
-    format!("{why} ({} bytes) staged to {}", xml.len(), path.display())
-  );
-  Some(StagedHandoff {
-    path:   path.to_string_lossy().into_owned(),
-    _guard: guard,
-  })
+  note_staged(xml.len() as u64, &staged.path, "");
+  Some(staged)
 }
 
 /// [`run_post_processing_logged`] taking the core result by value: a handoff
@@ -710,6 +751,36 @@ pub fn run_post_processing_owned_logged(xml: String, opts: &PostOptions) -> Post
       run_post_processing_inner(PostInput::File(&path), opts, &mut pages, Some(staged))
     },
     None => run_post_processing_inner(PostInput::Xml(&xml), opts, &mut pages, None),
+  };
+  let log = latexml_core::util::logger::flush_log();
+  let status_code = latexml_core::common::error::get_status_code();
+  PostOutcome { html, log, status_code, pages }
+}
+
+/// [`run_post_processing_owned_logged`] for a core result the conversion serialized into `staged`
+/// ([`reserve_core_handoff`]), so no `String` of it ever existed. A file the gate keeps in memory (a test's
+/// `LATEXML_POST_STREAM_THRESHOLD` above its size) is read back and post-processed as that `String` would be.
+pub fn run_post_processing_staged_logged(staged: StagedHandoff, opts: &PostOptions) -> PostOutcome {
+  latexml_core::util::logger::bind_log();
+  latexml_core::common::arena::take_overflow_interns();
+  let len = std::fs::metadata(&staged.path).map_or(0, |m| m.len());
+  let mut pages = Vec::new();
+  let html = if len >= post_mem_parse_limit() as u64 || takes_streaming_split(opts, len) {
+    note_staged(len, &staged.path, " by the core serializer");
+    let path = staged.path.clone();
+    run_post_processing_inner(PostInput::File(&path), opts, &mut pages, Some(staged))
+  } else {
+    match std::fs::read_to_string(&staged.path) {
+      Ok(xml) => {
+        drop(staged);
+        run_post_processing_inner(PostInput::Xml(&xml), opts, &mut pages, None)
+      },
+      // (unreadable: the file parser reports it as the failure it is)
+      Err(_) => {
+        let path = staged.path.clone();
+        run_post_processing_inner(PostInput::File(&path), opts, &mut pages, Some(staged))
+      },
+    }
   };
   let log = latexml_core::util::logger::flush_log();
   let status_code = latexml_core::common::error::get_status_code();
@@ -1908,4 +1979,31 @@ fn finalize_html5(output: String) -> String {
   VOID_SELF_CLOSE_RE
     .replace_all(&output, "<$1$2>")
     .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// An unused reservation removes the file an earlier attempt wrote; a used one keeps it for post.
+  #[test]
+  fn an_unused_core_handoff_is_removed() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dest = dir.path().join("index.html");
+    let dest = dest.to_str();
+    let staged = StagedHandoff::at(dest);
+    let path = staged.path().to_string();
+    std::fs::write(&path, "<document/>\n").expect("written");
+    let kept = used_core_handoff(Some(staged), Some(&path));
+    assert_eq!(kept.as_ref().map(StagedHandoff::path), Some(path.as_str()));
+    assert!(
+      std::path::Path::new(&path).exists(),
+      "a used handoff stays for post"
+    );
+    assert!(used_core_handoff(kept, None).is_none());
+    assert!(
+      !std::path::Path::new(&path).exists(),
+      "an unused handoff is removed"
+    );
+  }
 }

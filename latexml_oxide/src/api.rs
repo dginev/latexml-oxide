@@ -327,10 +327,11 @@ mod tests {
   #[test]
   fn core_failure_preserves_conversion_log() {
     let response = ConversionResponse {
-      result:      None,
-      log:         "Fatal:foo:bar detailed diagnostic".to_string(),
-      status:      "Fatal".to_string(),
-      status_code: 3,
+      result:       None,
+      log:          "Fatal:foo:bar detailed diagnostic".to_string(),
+      status:       "Fatal".to_string(),
+      status_code:  3,
+      handoff_file: None,
     };
     let err = core_result_xml(response, "conversion failed before post-processing")
       .expect_err("missing XML is an Err");

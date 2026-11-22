@@ -5,7 +5,6 @@ pub mod tag;
 use std::{
   borrow::Cow,
   collections::{BTreeSet, VecDeque},
-  fmt::Write as _,
   rc::Rc,
   sync::LazyLock,
 };
@@ -292,9 +291,20 @@ static SPILLED_SEGMENTS: std::cell::Cell<usize> = std::cell::Cell::new(0);
 /// How many segment runs the current conversion has spilled (0 = eager).
 pub fn spilled_segment_count() -> usize { SPILLED_SEGMENTS.get() }
 
+/// Segments spliced back from inside another segment at final assembly (a test probe, reset with
+/// [`spilled_segment_count`]'s).
+#[thread_local]
+static NESTED_SPLICES: std::cell::Cell<usize> = std::cell::Cell::new(0);
+
+/// How many nested segments the current conversion's assembly spliced back.
+pub fn nested_splice_count() -> usize { NESTED_SPLICES.get() }
+
 /// Reset the spill probe (the streaming driver calls this at conversion
 /// start; eager conversions never touch it).
-pub fn reset_spilled_segment_count() { SPILLED_SEGMENTS.set(0); }
+pub fn reset_spilled_segment_count() {
+  SPILLED_SEGMENTS.set(0);
+  NESTED_SPLICES.set(0);
+}
 
 /// The bookkeeping attribute on an `ltx:abstract` whose body was still open at `\end{document}` (sect02.rs
 /// `\lx@end@open@frontmatter`): it swallowed the main matter, so its theorems stay theorems (DG 2026-11-20; OD #1097).
@@ -2716,6 +2726,25 @@ impl Document {
     result
   }
 
+  /// [`Document::serialize_to_string`]'s bytes, written to a new file at `path` instead: a split run's core
+  /// result goes to post through a file, and a document-sized `String` (2 GiB for Nasser's whole book, issue 777)
+  /// would exist only to be written there. On a write error the partial file is removed. Returns the bytes written.
+  pub fn serialize_to_file(&self, path: &std::path::Path) -> std::io::Result<u64> {
+    let mut sink = FileSink::new(std::fs::File::create(path)?, 1 << 20);
+    self.serialize_into(
+      &mut sink,
+      self.document.as_node().as_readonly(),
+      0,
+      false,
+      false,
+    );
+    let result = sink.finish();
+    if result.is_err() {
+      let _ = std::fs::remove_file(path);
+    }
+    result
+  }
+
   /// We ought to try for something close to C14N (<http://www.w3.org/TR/xml-c14n>),
   /// but keep XML declaration, comments and don't convert empty elements.
   pub fn serialize_aux(
@@ -2748,7 +2777,7 @@ impl Document {
   /// is line-positioned, so content spaces in noindent contexts survive.
   /// `<` is escaped everywhere in serialized text/attribute content, so the
   /// scan cannot match anything but real markers.
-  fn splice_segment_text(&self, out: &mut String, text: &str) {
+  fn splice_segment_text<S: SerializeSink>(&self, out: &mut S, text: &str) {
     let mut rest = text;
     while let Some(pos) = rest.find("<_spilled_ ") {
       let (before, from) = rest.split_at(pos);
@@ -2789,6 +2818,7 @@ impl Document {
       } else {
         out.push_str(before);
       }
+      NESTED_SPLICES.set(NESTED_SPLICES.get() + 1);
       self.splice_segment_text(out, &inner);
       rest = &from[elem_end..];
       if line_positioned && rest.starts_with('\n') {
@@ -2803,9 +2833,9 @@ impl Document {
   /// recursive return-a-String pattern was the single largest byte source in the
   /// allocation profile (~2.8 GB across the witness corpus). Output is identical. The walk is read-only, so it
   /// wraps no `Node`s: a wrapper is a registry entry kept until the document drops (PERF2 R5).
-  fn serialize_into(
+  fn serialize_into<S: SerializeSink>(
     &self,
-    out: &mut String,
+    out: &mut S,
     node: RoNode,
     depth: usize,
     noindent: bool,
@@ -2813,7 +2843,7 @@ impl Document {
   ) {
     // Push `depth` levels of two-space indent without the `"  ".repeat(depth)`
     // allocation the old code paid on every call (including text nodes).
-    fn push_indent(out: &mut String, depth: usize) {
+    fn push_indent<S: SerializeSink>(out: &mut S, depth: usize) {
       for _ in 0..depth {
         out.push_str("  ");
       }
@@ -2949,7 +2979,9 @@ impl Document {
             out.push(':');
             out.push_str(&prefix);
           }
-          write!(out, "=\"{}\"", ns.get_href()).ok();
+          out.push_str("=\"");
+          out.push_str(&ns.get_href());
+          out.push('"');
         }
         for (_, key_sym, value) in anodes {
           out.push(' ');
@@ -2972,7 +3004,9 @@ impl Document {
           if !noindent_children {
             push_indent(out, depth);
           }
-          write!(out, "</{tag}>").ok();
+          out.push_str("</");
+          out.push_str(&tag);
+          out.push('>');
         } else {
           // empty element.
           out.push_str("/>");
@@ -8701,6 +8735,99 @@ impl Document {
 
 // Auxiliary
 
+/// Where [`Document`]'s serializer writes: a `String`, or a file ([`Document::serialize_to_file`]).
+trait SerializeSink {
+  fn push_str(&mut self, s: &str);
+  fn push(&mut self, c: char) { self.push_str(c.encode_utf8(&mut [0; 4])) }
+}
+
+impl SerializeSink for String {
+  #[inline]
+  fn push_str(&mut self, s: &str) { String::push_str(self, s) }
+  #[inline]
+  fn push(&mut self, c: char) { String::push(self, c) }
+}
+
+/// A file sink buffering in a `String`, as cheap per push as the `String` sink, and writing it out in chunks of
+/// `chunk` bytes (1 MiB). The buffer's trailing newlines stay held back, so the file ends as `serialize_to_string`'s
+/// trimmed result does. The first write error is kept and later writes are skipped.
+struct FileSink {
+  file:    std::fs::File,
+  buf:     String,
+  chunk:   usize,
+  error:   Option<std::io::Error>,
+  written: u64,
+}
+
+impl FileSink {
+  fn new(file: std::fs::File, chunk: usize) -> Self {
+    FileSink {
+      file,
+      buf: String::with_capacity(chunk + (chunk >> 4)),
+      chunk,
+      error: None,
+      written: 0,
+    }
+  }
+
+  fn write_bytes(&mut self, bytes: &[u8]) {
+    if self.error.is_none() {
+      match std::io::Write::write_all(&mut self.file, bytes) {
+        Ok(()) => self.written += bytes.len() as u64,
+        Err(e) => self.error = Some(e),
+      }
+    }
+  }
+
+  /// Write the buffer, and then `s`, up to their trailing newlines. A large `s` (a spliced segment's text) is
+  /// written straight from its own string, not copied into the buffer.
+  #[cold]
+  fn write_out(&mut self, s: &str) {
+    if s.len() < self.chunk {
+      self.buf.push_str(s);
+      let body = self.buf.trim_end_matches('\n').len();
+      let buf = std::mem::take(&mut self.buf);
+      self.write_bytes(&buf.as_bytes()[..body]);
+      self.buf = buf;
+      self.buf.drain(..body);
+      return;
+    }
+    let body = s.trim_end_matches('\n').len();
+    if body > 0 {
+      let buf = std::mem::take(&mut self.buf);
+      self.write_bytes(buf.as_bytes());
+      self.write_bytes(&s.as_bytes()[..body]);
+      self.buf = buf;
+      self.buf.clear();
+    }
+    self.buf.push_str(&s[body..]);
+  }
+
+  /// The last write, the buffer's trailing newlines trimmed to one; the bytes written.
+  fn finish(mut self) -> std::io::Result<u64> {
+    let body = self.buf.trim_end_matches('\n').len();
+    self.buf.truncate(body);
+    self.buf.push('\n');
+    let buf = std::mem::take(&mut self.buf);
+    self.write_bytes(buf.as_bytes());
+    match self.error.take() {
+      Some(e) => Err(e),
+      None => Ok(self.written),
+    }
+  }
+}
+
+impl SerializeSink for FileSink {
+  #[inline]
+  fn push_str(&mut self, s: &str) {
+    if self.buf.len() + s.len() < self.chunk {
+      self.buf.push_str(s);
+    } else {
+      self.write_out(s);
+    }
+  }
+}
+
 /// Strip characters that may not appear in XML 1.0 content at all: NUL and
 /// the other C0 controls except TAB/LF/CR, plus the non-characters
 /// U+FFFE/U+FFFF. libxml's `CString`-based APIs *panic* on interior NULs
@@ -8722,12 +8849,16 @@ fn xml_sanitize(value: &str) -> Cow<'_, str> {
 /// Text content with its basic entities escaped (`&`, `>`, `<`), appended to `out` in one pass. No replacement
 /// contains a character escaped, so this equals replacing `&` first and the rest after (the guard
 /// `serializer_escape_matches_sequential_replace`).
-fn push_escaped_text(out: &mut String, string: &str) { push_escaped(out, string, false) }
+fn push_escaped_text<S: SerializeSink>(out: &mut S, string: &str) {
+  push_escaped(out, string, false)
+}
 
 /// An attribute value escaped as [`push_escaped_text`], and `"`, newline and tab too.
-fn push_escaped_attr(out: &mut String, string: &str) { push_escaped(out, string, true) }
+fn push_escaped_attr<S: SerializeSink>(out: &mut S, string: &str) {
+  push_escaped(out, string, true)
+}
 
-fn push_escaped(out: &mut String, string: &str, attr: bool) {
+fn push_escaped<S: SerializeSink>(out: &mut S, string: &str, attr: bool) {
   let mut rest = string;
   // Copy each run up to the next escaped character whole; every escaped character is ASCII.
   while let Some(at) =
@@ -9377,7 +9508,7 @@ mod attribute_cleaners {
 
 #[cfg(test)]
 mod serializer_escape {
-  use super::{push_escaped_attr, push_escaped_text};
+  use super::{FileSink, SerializeSink, push_escaped_attr, push_escaped_text};
 
   /// The one-pass escape writes exactly what the sequential `replace` chain wrote (`&` first, then `>`, `<`, and for an
   /// attribute `"`, newline, tab), on strings made of every escaped character, the unescaped `\r` and `'`, entities
@@ -9426,5 +9557,66 @@ mod serializer_escape {
       push_escaped_attr(&mut attr, case);
       assert_eq!(attr, attr_by_replace(case), "attribute {case:?}");
     }
+  }
+
+  /// The file sink writes the `String` sink's bytes with the trailing newlines trimmed to one, whatever the pushes'
+  /// sizes against its chunk: small runs, newline-only pushes across a chunk boundary, pushes larger than a chunk.
+  #[test]
+  fn file_sink_writes_the_trimmed_string() {
+    let pushes: &[&[&str]] = &[
+      &["<a>", "\n", "  ", "text", "</a>", "\n"],
+      &["0123456789", "\n\n\n", "\n\n", "x", "\n"],
+      &[
+        "abc",
+        "a long segment\nlonger than a chunk\n\n",
+        "\n",
+        "tail\n\n\n",
+      ],
+      &["\n\n\n\n\n\n\n\n\n\n\n\n", "z"],
+      &["", "\n"],
+      &["no newline at all"],
+    ];
+    let dir = std::env::temp_dir().join(format!("lx-file-sink-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("dir");
+    for (n, case) in pushes.iter().enumerate() {
+      for chunk in [1, 4, 8, 1 << 20] {
+        let path = dir.join(format!("{n}.{chunk}.xml"));
+        let mut sink = FileSink::new(std::fs::File::create(&path).expect("file"), chunk);
+        let mut string = String::new();
+        for push in *case {
+          sink.push_str(push);
+          string.push_str(push);
+        }
+        let written = sink.finish().expect("written");
+        string.truncate(string.trim_end_matches('\n').len());
+        string.push('\n');
+        let file = std::fs::read_to_string(&path).expect("read");
+        assert_eq!(file, string, "case {n}, chunk {chunk}");
+        assert_eq!(written, string.len() as u64, "case {n}, chunk {chunk}");
+      }
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+  }
+
+  /// A failed write is kept, the first one: nothing more is written or counted after it, and `finish` returns it.
+  #[cfg(target_os = "linux")]
+  #[test]
+  fn file_sink_keeps_the_first_write_error() {
+    let full = std::fs::OpenOptions::new()
+      .write(true)
+      .open("/dev/full")
+      .expect("/dev/full");
+    let mut sink = FileSink::new(full, 4);
+    sink.push_str("<a>");
+    assert_eq!((sink.written, sink.error.is_none()), (0, true), "buffered");
+    sink.push_str("text\n");
+    let first = sink.error.as_ref().map(std::io::Error::raw_os_error);
+    assert_eq!(first, Some(Some(28)), "ENOSPC on the first chunk");
+    assert_eq!(sink.written, 0);
+    sink.push_str("a segment longer than a chunk\n");
+    sink.push_str("</a>\n");
+    assert_eq!(sink.written, 0, "nothing counted after the error");
+    let err = sink.finish().expect_err("the write error");
+    assert_eq!(err.raw_os_error(), Some(28));
   }
 }

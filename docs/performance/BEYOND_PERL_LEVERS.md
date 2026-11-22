@@ -137,10 +137,11 @@ CLI flag, and auto-activation are live; see
 The two-pass large split front-end is also implemented in
 [`STREAMING_POST_DESIGN_2026-07-06.md`](../archive/STREAMING_POST_DESIGN_2026-07-06.md).
 
-**Residual, not BP-6 reimplementation:** core XML is still collected into a
-document-sized `String` before post, and pass 2 repeats global map/rule work per
-segment. Complete the writer/file handoff and shared pass-2 ownership described
-by audit F3/F4. Retain libxml2: dynamic `DefRewrite` XPath remains the hard
+**Residual, not BP-6 reimplementation:** outside the CLI's split runs (which
+serialize the core result straight into post's handoff file, OXIDIZED_DESIGN_DIVERGENCES
+#1133), core XML is still collected into a document-sized `String` before post, and
+pass 2 repeats global map/rule work per segment. Complete the writer/file handoff and
+shared pass-2 ownership described by audit F3/F4. Retain libxml2: dynamic `DefRewrite` XPath remains the hard
 constraint that invalidates a wholesale pure-Rust tree substitution.
 
 **Digest (19.7%) note:** sequential TeX engine — **no** parallelism lever; the win

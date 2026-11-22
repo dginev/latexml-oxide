@@ -1226,6 +1226,34 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     _ => DataSize::Document,
   };
 
+  // `--whatsin=xml` forces the already-converted-XML input path regardless of the
+  // file's extension (Perl-style: the input analog of `--format` for output),
+  // covering a core document under a name `is_xml_input` doesn't recognise (#655).
+  let xml_input = is_xml_input(&source) || cli.whatsin.as_deref() == Some("xml");
+  let split_xpath = if resolved.split_enabled {
+    cli.splitpath.clone().or_else(|| {
+      let splitat = cli.splitat.as_deref().unwrap_or("section");
+      Some(make_splitpaths(splitat))
+    })
+  } else {
+    None
+  };
+  // A split run that posts to its `--dest` (no archive, no joined supplements) serializes its core result straight
+  // into the handoff file the streaming split reads: never a document-sized `String` (issue 777).
+  let core_handoff = if cli.init.is_none()
+    && !xml_input
+    && supplement_sources.is_empty()
+    && !is_archive_out
+    && resolved.post != Some(false)
+  {
+    latexml::post::reserve_core_handoff(
+      resolved.split_enabled,
+      target.as_deref(),
+      split_xpath.as_deref(),
+    )
+  } else {
+    None
+  };
   let document = cli.init.is_none();
   let opts = Config {
     verbosity,
@@ -1270,12 +1298,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     inputencoding: cli.inputencoding.clone(),
     streaming: resolve_streaming(cli.streaming, resolve_max_memory(cli.max_memory), &source),
     source_date_epoch,
+    handoff_file: core_handoff
+      .as_ref()
+      .map(|staged| staged.path().to_string()),
   };
   let mut converter = Converter::from_config(opts.clone());
-  // `--whatsin=xml` forces the already-converted-XML input path regardless of the
-  // file's extension (Perl-style: the input analog of `--format` for output),
-  // covering a core document under a name `is_xml_input` doesn't recognise (#655).
-  let xml_input = is_xml_input(&source) || cli.whatsin.as_deref() == Some("xml");
   // Skip engine init for already-converted XML input: post-processing is pure
   // libxml2 and never touches the TeX engine or its dump, so loading
   // TeX.pool/latex + the format dump (~85–160 ms and a chunk of RSS) is wasted
@@ -1378,10 +1405,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       // call below). We only need a non-empty `result` sentinel so the post
       // gate fires; the real input is the source path.
       latexml::converter::ConversionResponse {
-        result:      Some(String::new()),
-        log:         String::new(),
-        status:      String::from("Status:conversion:0"),
-        status_code: 0,
+        result:       Some(String::new()),
+        log:          String::new(),
+        status:       String::from("Status:conversion:0"),
+        status_code:  0,
+        handoff_file: None,
       }
     } else if supplement_sources.is_empty() {
       if streaming_restart_eligible(&cli, &opts) {
@@ -1479,10 +1507,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           }
           match latexml::multidoc::join_core_documents(main_xml, &supp_xmls) {
             Ok(joined) => latexml::converter::ConversionResponse {
-              result:      Some(joined),
-              log:         main_resp.log,
-              status:      main_resp.status,
-              status_code: status_max,
+              result:       Some(joined),
+              log:          main_resp.log,
+              status:       main_resp.status,
+              status_code:  status_max,
+              handoff_file: None,
             },
             Err(e) => {
               latexml_core::common::error::emit_warn(
@@ -1507,6 +1536,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // it; stays empty when post-processing is skipped, keeping that --log
     // byte-identical to before.
     let mut post_log = String::new();
+    // `process::exit` skips destructors: an unused reservation is dropped here, before post re-stages to its path.
+    let core_handoff =
+      latexml::post::used_core_handoff(core_handoff, response.handoff_file.as_deref());
     if let Some(xml) = response.result {
       let inferred_format: Option<String> = dest_format
         .clone()
@@ -1555,15 +1587,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           // Perl Config.pm L454: any non-`document` whatsout forces post.
           || whatsout_mode.requires_post(),
       );
-
-      let split_xpath = if split_enabled {
-        cli.splitpath.clone().or_else(|| {
-          let splitat = cli.splitat.as_deref().unwrap_or("section");
-          Some(make_splitpaths(splitat))
-        })
-      } else {
-        None
-      };
 
       if do_post {
         post_ran = true;
@@ -1718,6 +1741,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           latexml::post::run_post_processing_logged(core, &post_opts)
         } else if xml_input_mode {
           latexml::post::run_post_processing_from_file_logged(&source_for_post, &post_opts)
+        } else if let Some(staged) = core_handoff {
+          // The core serialized its result into the handoff file: post reads it from there.
+          latexml::post::run_post_processing_staged_logged(staged, &post_opts)
         } else {
           // By value: a handoff the streaming split takes is staged to disk and
           // its String freed before post runs.
@@ -2121,11 +2147,12 @@ fn is_xml_input(source: &str) -> bool {
 
 /// `process::exit` skips destructors, so an archive's unpacked sources (`--whatsin=archive`, a `TempDir`) are removed
 /// first: each conversion of an arXiv zip left its whole source tree in the temp directory, which filled a per-user
-/// `/tmp` quota over an A/B run. The exits this function does not see — the watchdog's timeout and memory
-/// ceiling, the allocation-failure hook — remove it through its `remove_on_exit` registration.
+/// `/tmp` quota over an A/B run. Then every path still registered with `remove_on_exit` goes, as on the watchdog's
+/// exits (its timeout and memory ceiling, the allocation-failure hook): a core handoff an early exit still holds.
 fn exit_removing(archive_tempdir: &mut Option<tempfile::TempDir>, code: i32) -> ! {
   latexml_core::watchdog::park_if_exiting();
   drop(archive_tempdir.take());
+  latexml_core::watchdog::remove_registered_paths();
   process::exit(code)
 }
 

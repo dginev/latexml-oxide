@@ -206,6 +206,7 @@ pub(crate) fn make_config(uri: &str) -> Config {
     streaming:               None,
     // An editor buffer is no dated source bundle: ar5iv keeps Perl's empty `\today`.
     source_date_epoch:       None,
+    handoff_file:            None,
   }
 }
 
