@@ -71,6 +71,7 @@ Start with the [Rhai guide](https://github.com/dginev/latexml-oxide/blob/main/do
 | All internal docs, by theme | [docs/README.md](https://github.com/dginev/latexml-oxide/blob/main/docs/README.md) |
 | Installing (per platform, Docker, system dependencies, crates.io, as a library) | [docs/INSTALL.md](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md) |
 | Usage and the command line | [docs/USAGE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/USAGE.md) |
+| Environment variables: every one we read or set, its values, default and effect | [docs/ENVIRONMENT.md](https://github.com/dginev/latexml-oxide/blob/main/docs/ENVIRONMENT.md) · [rustdoc](https://dginev.github.io/latexml-oxide/latexml/environment/index.html) |
 | Building from source, build profiles, development tips, Cargo features | [docs/BUILDING.md](https://github.com/dginev/latexml-oxide/blob/main/docs/BUILDING.md) |
 | Supported packages and classes (ported, beyond Perl, contributed, raw) | [docs/SUPPORTED_PACKAGES.md](https://github.com/dginev/latexml-oxide/blob/main/docs/SUPPORTED_PACKAGES.md) |
 | Writing a Rhai binding | [docs/parity/RHAI_BINDINGS_GUIDE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md), [worked examples](https://github.com/dginev/latexml-oxide/tree/main/docs/examples) |

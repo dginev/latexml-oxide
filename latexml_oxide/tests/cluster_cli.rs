@@ -5832,3 +5832,21 @@ mod watchdog_fatal_line_start {
     }
   }
 }
+
+mod environment_doc {
+  /// The rustdoc page `latexml::environment` includes `latexml_oxide/src/ENVIRONMENT.md`, a copy of
+  /// `docs/ENVIRONMENT.md` kept inside the crate for its package. The two must not drift.
+  #[test]
+  fn the_crate_copy_matches_docs() {
+    let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let docs = std::fs::read_to_string(crate_dir.join("../docs/ENVIRONMENT.md"))
+      .expect("docs/ENVIRONMENT.md");
+    let copy =
+      std::fs::read_to_string(crate_dir.join("src/ENVIRONMENT.md")).expect("src/ENVIRONMENT.md");
+    assert!(
+      docs == copy,
+      "latexml_oxide/src/ENVIRONMENT.md differs from docs/ENVIRONMENT.md: \
+       cp docs/ENVIRONMENT.md latexml_oxide/src/ENVIRONMENT.md"
+    );
+  }
+}
