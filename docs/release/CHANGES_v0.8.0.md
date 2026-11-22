@@ -43,6 +43,16 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **0.8.0-rc2: document Lua's refused program call answers as lualatex without shell escape.** `os.execute("…")`,
+    `os.exec` and `os.spawn` return `nil, "All command execution disabled."`, `io.popen` and `os.kpsepopen` `nil,
+    "all command execution is disabled"`, and an `io.open` write `openout_any=p` forbids `nil`, each with a counted
+    `Warning:lua:sandbox` instead of an Error and a Lua error, so the document goes on; `os.execute()` (is there a
+    shell?) returns 0. No program runs. Calls lualatex would perform but the sandbox refuses stay Errors. Nine TL
+    manuals that erred on pdftexcmds'/imakeidx's `tex.write(os.execute())` (derivative, wheelchart, xassoccnt_doc,
+    …) are clean again. `font.current()`, which crashed texlua (hologo's glyph test in `\hologo{LuaTeX}`), now answers
+    through the `font` mirror (below), so the interpreter keeps its state and no Error is counted.
+    OXIDIZED_DESIGN_DIVERGENCES #1081; guards `perfect_kernel_batchseclua::{batchluaexec_refused_program_answers_as_lualatex,
+    batchluaexec_font_current_keeps_the_interpreter}`.
   - **The x86_64 Linux release binary's allocator initialises.** The release leg linked with Ubuntu 22.04's mold 1.0.3,
     which left Rust std's `.init_array` entry in a section of its own; DT_INIT_ARRAY covered only that one, so
     mimalloc's constructor never ran and every 64 KiB page came straight from the OS (0.7.6 and 0.8.0-rc1/rc2: 10,094
@@ -1486,10 +1496,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
   - **Untrusted input stays in the job.** Document Lua code could run programs or write files outside the job; it
     is now sandboxed, under TeX's own defaults for untrusted input (no shell escape, paranoid writes, no write through
-    a symbolic link, on Unix no backslash in a written name): a refused call never takes effect, and is reported as
-    an Error on a best-effort basis (the bridge accepts only frames carrying a per-interpreter nonce, so a refusal
+    a symbolic link, on Unix no backslash in a written name): a refused call never takes effect, and is reported (a
+    Warning where lualatex refuses it too, else an Error) on a best-effort basis (the bridge accepts only frames carrying a per-interpreter nonce, so a refusal
     record cannot be forged, but a chunk that exhausts its C stack or reads its own pipe can suppress its own record;
-    a chunk lists at most 20 refusals, then one summary Error); each conversion has its own interpreter with a reduced environment, restarted (with an Error)
+    a chunk lists at most 20 refusals, then a summary); each conversion has its own interpreter with a reduced environment, restarted (with an Error)
     when it ends mid-chunk and killed by a timeout or memory exit. A tar archive's links are unpacked only when
     they resolve inside the source directory, the others skipped with a counted Warning; the `zip` floor is 9.7.0. An image whose path relative to the source leaves the destination directory is copied under a
     generated `xN` name inside it, as Perl does. Guards

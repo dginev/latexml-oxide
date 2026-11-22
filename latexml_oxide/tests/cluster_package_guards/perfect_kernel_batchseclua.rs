@@ -1,6 +1,7 @@
 //! Red/green guards for batch SECLUA: untrusted input stays in the job. Document Lua runs sandboxed (the
-//! `lua_bridge.rs` prelude: TeX's `shell_escape=f`, `openout_any=p`), each refusal an Error; an image copy never
-//! leaves `--dest` (`graphics.rs` `copy_to_destination`, Perl `Post/Graphics.pm` L292-300).
+//! `lua_bridge.rs` prelude: TeX's `shell_escape=f`, `openout_any=p`): a call lualatex refuses too returns lualatex's
+//! values with a Warning (batch LUAEXEC), one only the sandbox refuses is an Error; an image copy never leaves
+//! `--dest` (`graphics.rs` `copy_to_destination`, Perl `Post/Graphics.pm` L292-300).
 //! OXIDIZED_DESIGN_DIVERGENCES #1081. The Lua guards self-skip without a host `texlua`.
 use std::{
   path::{Path, PathBuf},
@@ -62,7 +63,7 @@ fn files_below(dir: &Path) -> Vec<String> {
   out
 }
 
-/// The sandbox's refusals in `log`, in order.
+/// The sandbox's refusals in `log` that only it makes (Errors), in order.
 fn denials(log: &str) -> Vec<&str> {
   log
     .lines()
@@ -71,9 +72,70 @@ fn denials(log: &str) -> Vec<&str> {
     .collect()
 }
 
-/// No program runs and no native code loads: `os.execute`/`io.popen` (pcalled, so only the record shows the refusal),
-/// `require` of a network library and of a C module on `package.cpath` (`./?.so`; `.\?.dll` on Windows),
-/// `package.loadlib`. Base: `X[768]`, the shell ran.
+/// The sandbox's refusals in `log` that lualatex makes too (Warnings), in order.
+fn refusals(log: &str) -> Vec<&str> {
+  log
+    .lines()
+    .filter_map(|line| line.strip_prefix("Warning:lua:sandbox "))
+    .map(|line| line.split(" was ").next().unwrap())
+    .collect()
+}
+
+/// A refused program call answers as lualatex `-no-shell-escape`: `os.execute("…")` returns nil and "All command
+/// execution disabled." and the document goes on (its `else` branch), `os.execute()` (pdftexcmds'
+/// `\pdf@shellescape`) returns 0 silently; one Warning, no program runs. Base: 2 Errors, both chunks lost. Witnesses
+/// the TL manuals derivative, wheelchart, xassoccnt_doc (+6). Repro luatex-profile/lua_sandbox_refused_program_goes_on.
+#[test]
+fn batchluaexec_refused_program_answers_as_lualatex() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  std::fs::write(
+    root.path().join("t.tex"),
+    repro!("luatex-profile", "lua_sandbox_refused_program_goes_on"),
+  )
+  .unwrap();
+  let log = convert_at(root.path(), "t.tex", "t.xml");
+  let xml = std::fs::read_to_string(root.path().join("t.xml")).unwrap_or_default();
+  assert_eq!(
+    refusals(&log),
+    ["os.execute \"echo ran >ran.txt\""],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    xml.contains("<p>[refused: All command execution disabled.]\n[0]</p>"),
+    "{xml}"
+  );
+  assert_eq!(files_below(root.path()), ["t.tex", "t.xml"]);
+}
+
+/// `font.current()` (hologo's glyph test, `font.fonts[font.current()]`) no longer ends texlua, which has no fonts: the
+/// prelude's font mirror answers the current font, as lualatex does (`[font] [5]`), and the next chunk sees the state
+/// an earlier one set. Base: `[] [nil]`, an `Error:lua:interpreter`. Witness the TL manual derivative. Repro
+/// luatex-profile/lua_font_current_keeps_the_interpreter.
+#[test]
+fn batchluaexec_font_current_keeps_the_interpreter() {
+  if !texlua_present() {
+    return;
+  }
+  let root = tempfile::tempdir().unwrap();
+  std::fs::write(
+    root.path().join("t.tex"),
+    repro!("luatex-profile", "lua_font_current_keeps_the_interpreter"),
+  )
+  .unwrap();
+  let log = convert_at(root.path(), "t.tex", "t.xml");
+  let xml = std::fs::read_to_string(root.path().join("t.xml")).unwrap_or_default();
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!log.contains("not evaluated"), "{log}");
+  assert!(xml.contains("<p>[font] [5]</p>"), "{xml}");
+}
+
+/// No program runs and no native code loads: `os.execute`/`io.popen`/`os.exec`/`os.spawn`/`os.kpsepopen` return
+/// lualatex's values (a Warning each), `require` of a network library and of a C module on `package.cpath` (`./?.so`;
+/// `.\?.dll` on Windows) and `package.loadlib` are refused (an Error each, pcalled). Base: `X[768]`, the shell ran.
 /// Repro luatex-profile/lua_sandbox_no_programs.
 #[test]
 fn batchseclua_lua_runs_no_program() {
@@ -94,20 +156,36 @@ fn batchseclua_lua_runs_no_program() {
   assert_eq!(
     denials(&log),
     [
-      "os.execute",
-      "io.popen",
       "require \"socket\"",
       "loading the C module \"cmod\"",
       "package.loadlib"
     ],
     "{log}"
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (5, 0), "{log}");
-  assert!(xml.contains("X[nil] Y\n[none] Z"), "{xml}");
+  assert_eq!(
+    refusals(&log),
+    [
+      "os.execute \"exit 3\"",
+      "io.popen \"exit 3\"",
+      "os.exec \"touch ran.txt\"",
+      "os.spawn \"touch ran.txt\"",
+      "os.kpsepopen \"touch ran.txt\""
+    ],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (3, 5), "{log}");
+  assert!(
+    xml.contains(
+      "X[nil] Y\n[none] Z\nW[nil:All command execution disabled. / nil:All command execution disabled. / nil:all command execution is disabled]"
+    ),
+    "{xml}"
+  );
+  assert_eq!(files_below(root.path()), [cmod, "t.tex", "t.xml"]);
 }
 
 /// Writes follow kpathsea's `openout_any=p`: `out.txt` in the job directory is written and read back; `../`, an
-/// absolute path and a dotfile are refused, and nothing appears there. Base: all three written. Repro
+/// absolute path and a dotfile are refused as lualatex refuses them (`io.open` returns nil, a Warning each), and
+/// nothing appears there. Base: all three written. Repro
 /// luatex-profile/lua_sandbox_paranoid_writes (its absolute path pointed into the test's own directory).
 #[test]
 fn batchseclua_lua_writes_stay_in_the_job_directory() {
@@ -125,9 +203,9 @@ fn batchseclua_lua_writes_stay_in_the_job_directory() {
   std::fs::write(job.join("t.tex"), tex).unwrap();
   let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
   let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
-  assert_eq!(denials(&log).len(), 3, "{log}");
-  assert_eq!((error_count(&log), warning_count(&log)), (3, 0), "{log}");
-  assert!(xml.contains("W[ok] R[hello]"), "{xml}");
+  assert_eq!(refusals(&log).len(), 3, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
+  assert!(xml.contains("W[ok] R[hello] [nil nil nil]"), "{xml}");
   assert_eq!(files_below(root.path()), [
     "job/out.txt",
     "job/t.tex",
@@ -172,7 +250,8 @@ fn batchseclua_image_copy_stays_in_dest() {
 /// The checks hold their helpers from boot: an `mplib` instance whose options table swallows assignments (made
 /// first, in a fresh interpreter: lmplib keeps a finder across instances) still writes through the sandbox's finder; a
 /// replaced `string.find` no longer disables the write check; a file-handle `write` that filters out `D` frames does
-/// not hide a refusal. Base: the two files written outside the job, the `os.execute` refusal unreported. Repro
+/// not hide a refusal (an Error or a Warning). Base: the two files written outside the job, the `os.execute` refusal
+/// unreported. Repro
 /// luatex-profile/lua_sandbox_helpers_held_at_boot.
 #[test]
 fn batchseclua_sandbox_helpers_are_held_at_boot() {
@@ -189,18 +268,15 @@ fn batchseclua_sandbox_helpers_are_held_at_boot() {
   .unwrap();
   let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
   let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
+  assert_eq!(denials(&log), ["writing ../mp_escape.txt"], "{log}");
   assert_eq!(
-    denials(&log),
-    [
-      "writing ../mp_escape.txt",
-      "writing ../find_escape.txt",
-      "os.execute"
-    ],
+    refusals(&log),
+    ["writing ../find_escape.txt", "os.execute \"exit 3\""],
     "{log}"
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (3, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
   assert!(
-    xml.contains("[mp:done] [find:refused] [hidden:false]"),
+    xml.contains("[mp:done] [find:refused] [hidden:nil]"),
     "{xml}"
   );
   assert_eq!(files_below(root.path()), ["job/t.tex", "job/t.xml"]);
@@ -380,11 +456,11 @@ fn batchseclua_lua_frames_are_authenticated() {
   let log = convert_at(root.path(), "job/t.tex", "job/t.xml");
   let xml = std::fs::read_to_string(job.join("t.xml")).unwrap_or_default();
   assert_eq!(
-    denials(&log),
+    refusals(&log),
     ["writing ../escape_a.txt", "writing ../escape_b.txt"],
     "{log}"
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
   assert!(xml.contains("[a:true] [b:true] [texio:true]"), "{xml}");
   assert_eq!(files_below(root.path()), ["job/t.tex", "job/t.xml"]);
 }
@@ -420,8 +496,8 @@ fn batchseclua_lua_backslash_names_are_refused() {
   );
 }
 
-/// Forty refusals of a 1 MiB name: 20 listed, each name cut at 256 bytes, and one summary Error for the rest; no
-/// Fatal. Base: every refusal carried the whole name (a reviewer's 80 × 50 MB ran the bridge out of memory). Repro
+/// Forty refusals of a 1 MiB name: 20 listed, each name cut at 256 bytes, and one summary for the rest, Warnings as
+/// lualatex refuses each too; no Fatal. Base: every refusal carried the whole name (a reviewer's 80 × 50 MB ran the bridge out of memory). Repro
 /// luatex-profile/lua_sandbox_many_refusals.
 #[test]
 fn batchseclua_lua_refusals_are_bounded() {
@@ -438,7 +514,7 @@ fn batchseclua_lua_refusals_are_bounded() {
   let xml = std::fs::read_to_string(root.path().join("t.xml")).unwrap_or_default();
   let refusals: Vec<&str> = log
     .lines()
-    .filter(|line| line.starts_with("Error:lua:sandbox "))
+    .filter(|line| line.starts_with("Warning:lua:sandbox "))
     .collect();
   assert_eq!(refusals.len(), 21, "{log}");
   assert!(
@@ -448,9 +524,9 @@ fn batchseclua_lua_refusals_are_bounded() {
   );
   assert_eq!(
     refusals[20],
-    "Error:lua:sandbox 20 more calls the sandbox refused in this chunk are not listed"
+    "Warning:lua:sandbox 20 more calls the sandbox refused in this chunk are not listed"
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (21, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 21), "{log}");
   assert!(!log.contains("Fatal:"), "{log}");
   assert!(xml.contains("[denied:40]"), "{xml}");
 }
