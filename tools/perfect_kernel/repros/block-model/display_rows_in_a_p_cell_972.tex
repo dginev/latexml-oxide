@@ -1,0 +1,96 @@
+% witness: issue #972 (reporter nasser1; its MWE is the longtable cell); synthetic siblings for the other cells
+% mechanism: in an inline context (a p{}/m{}/b{} cell, \parbox, minipage, note) the XSLT writes a display's table as
+%   spans (f:blockelement), each tbody a classless span; LaTeXML.css gave that span no display, so each row became an
+%   anonymous inline table of its own: the rows of an aligned display ran side by side, their columns apart.
+% oracle:  pdflatex 0 errors; every display set as outside the cells (rows stacked, aligned at &, centred in the cell)
+% engines: SERSTREAM (f84f9e2abcb) and Perl 0.8.8 = the same HTML; in Chrome/Firefox the in-cell rows side by side
+% expect:  in the browser each display's rows stacked, an aligned display's cells at the same x in every row, the
+%   in-cell aligned/align* column offsets those of the same display outside (within the UA's 1px td padding)
+% status:  RED (SERSTREAM) -> GREEN (fix-972-display-math-in-pcolumn); guards
+%   cluster_cli::browser_render_eqn_rows_in_cells, xslt::witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{longtable}
+\usepackage{array}
+\begin{document}
+Integrating factor found :
+\[
+\begin{aligned}
+\mu_1 &=y^{\prime}\\
+\mu_2 &=\sin \left(2 x \right)\\
+\mu_3 &=\cos \left(2 x \right)
+\end{aligned}
+\]
+
+\begin{tabular}{|p{4in}|}
+Tabular p:
+\[
+\begin{aligned}
+\mu_1 &=y^{\prime}\\
+\mu_2 &=\sin \left(2 x \right)\\
+\mu_3 &=\cos \left(2 x \right)
+\end{aligned}
+\]
+\\\hline
+\end{tabular}
+
+\begin{longtable}{|p{4in}|}
+Integrating factor found :
+
+\[
+\begin{aligned}
+\mu_1 &= y^{\prime} \\
+\mu_2 &= \sin\left(2x\right) \\
+\mu_3 &= \cos\left(2x\right)
+\end{aligned}
+\]
+\\\hline
+\end{longtable}
+
+\begin{tabular}{|m{2in}|b{2in}|}
+Starred:
+\begin{equation*}
+a = b
+\end{equation*}
+&
+Numbered:
+\begin{equation}
+c = d
+\end{equation}
+\\\hline
+\end{tabular}
+
+\begin{tabular}{|p{4in}|}
+Align:
+{\begin{align*}
+x &= 1 & y &= 2 \\
+xx &= 3 & yy &= 4
+\end{align*}}
+Gather:
+\begin{gather*}
+a = b \\
+cc = dd
+\end{gather*}
+Eqnarray:
+\begin{eqnarray*}
+x &=& 1 \\
+xx &=& 3
+\end{eqnarray*}
+\\\hline
+\end{tabular}
+
+Outside align:
+\begin{align*}
+x &= 1 & y &= 2 \\
+xx &= 3 & yy &= 4
+\end{align*}
+
+\noindent\parbox{4in}{Parbox:
+\[
+\begin{aligned}
+\mu_1 &=y^{\prime}\\
+\mu_2 &=\sin \left(2 x \right)\\
+\mu_3 &=\cos \left(2 x \right)
+\end{aligned}
+\]}
+\end{document}

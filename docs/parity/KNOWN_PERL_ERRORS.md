@@ -22349,3 +22349,24 @@ pdflatex URI `http://x.org/~y`; Perl href `http://x.org/ y` (Rust REGFIXN2 `http
 `\hyper@tilde` (base_parameter_types.rs; `\url`'s reader already lets it to an other `~`). Witnesses 2605.13298,
 2605.19761, 2605.28243, 2605.29955. Repro package-bindings/hyperref_href_babel_tilde_in_footnote; guard
 `perfect_kernel_batchregfixv::href_tilde_in_a_footnote_under_babel`.
+
+## 1310. A display in a `p{}` cell renders its rows side by side
+
+In an inline context the XSLT writes a display's table as spans, its tbodies classless spans, which `LaTeXML.css`
+leaves inline; each row then lays out as an anonymous table of its own (CSS 2.1 §17.2.1), so the rows of an `aligned`
+display run side by side instead of stacking aligned at `&`. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{tabular}{|p{4in}|}
+\[\begin{aligned} \mu_1 &= y' \\ \mu_2 &= \sin(2x) \end{aligned}\]
+\\\hline
+\end{tabular}
+\end{document}
+```
+
+pdflatex: two rows aligned at `=`, centred in the cell. Perl 0.8.8 and Rust (until issue #972): the same HTML, both rows
+on one line in Chrome and Firefox. Fixed in Rust in `LaTeXML.css` and ar5iv-css (OXIDIZED_DESIGN_DIVERGENCES #1135).
+Repro block-model/display_rows_in_a_p_cell_972; guard `cluster_cli::browser_render_eqn_rows_in_cells`.

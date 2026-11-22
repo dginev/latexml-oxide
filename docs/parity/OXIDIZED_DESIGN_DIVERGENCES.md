@@ -11441,7 +11441,7 @@ never absorbed). So the HTML keeps Perl's intent where the row is empty after th
 with content keeps its own column. The eqnarray's `_Capture_` carries the class, so `equationgroup_join_rows` classes
 the row `ltx_eqn_lefteqn` as Perl Base_XMath.pool.ltxml:956-957 means to; in Perl it never fires. The class is in the
 XML only: LaTeXML-block-xhtml.xsl writes the HTML row's own class (:703, :883), so LaTeXML.css's
-`tr.ltx_eqn_lefteqn + tr` rule never meets it. Run 340's `&` cluster R1 (about 2,050 papers, 29 of 55 sampled): the 31
+`.ltx_eqn_lefteqn + .ltx_eqn_row` rule never meets it. Run 340's `&` cluster R1 (about 2,050 papers, 29 of 55 sampled): the 31
 erroring witnesses go to 0 errors (0707.3929, 0801.4655, 0806.1442, 1103.1986, 1209.6494, 1409.4633, nucl-th9512020,
 0810.2247, 0810.2511, 1104.3567, 1109.2680, 1203.3852, 1301.5488, 1411.3238, 1503.01263, 1701.08456, 1704.07012,
 1706.08792, 1806.07473, 1903.02286, 2201.13255, astro-ph0111262, astro-ph0203455, cond-mat0209129, cond-mat9710308,
@@ -23732,3 +23732,24 @@ every ancestor and the page's own child pages, only those whose relation the sty
 
 **Guards**: `cluster_xslt_split::split_nav_relations::split_page_navigation_relations` (a section page's and the root
 page's whole head link sets), `cluster_xslt_split::urlstyle::*` (the parent page reached by `up`).
+
+### 1135. A display in a `p{}` cell or `\parbox` lays out its rows as a display outside (issue #972)
+
+**Rule.** `LaTeXML.css` (and ar5iv-css, mirrored) gives the tbody stand-ins of a span-form display table
+`display:table-row-group` (`span.ltx_eqn_table > span:not([class])`), keys the `align` column gap and the `eqnarray`
+`lefteqn` rule on classes instead of `table`/`tr`/`td`, and keeps a tabular's cell padding off the display's cells
+(`.ltx_tabular .ltx_eqn_cell { padding:0 }`; they carry `ltx_td` too).
+- Perl: the same HTML. In an inline context (`ltx:inline-block` of a `p{}`/`m{}`/`b{}` cell, `\parbox`, minipage, a
+  note) `f:blockelement` (`LaTeXML-common.xsl`) writes the equation table, its tbodies, rows and cells as `span`s, and
+  the tbodies carry no class (`LaTeXML-block-xhtml.xsl`, `ltx:equation`/`ltx:equationgroup` mode `inalignment`). Vanilla
+  `LaTeXML.css` styles the table, rows and cells but not the tbody spans, so each is an inline box and CSS 2.1 §17.2.1
+  wraps each row in an anonymous inline table of its own: an aligned display's rows sit side by side (or, under the
+  issue-533 `display:block` box, stacked but each sized alone), not aligned at `&`. KNOWN_PERL_ERRORS #1310.
+- TeX: a `p{}` cell is a `\vtop` in paragraph mode, so `\[…\]` there is a real display, set as outside the cell.
+- Measured (Chrome and Firefox, 1280/375 px, `display_rows_in_a_p_cell_972.tex`): the in-cell `aligned` rows went
+  from one top (scrollWidth 1164 in a 385 px cell) to stacked, every row's cells at the same x; the column offsets
+  match the same display outside within the 1px UA padding of an outside `<td>` (ar5iv.css: equal).
+- Upstream: offered to Perl as a patch (the CSS rules).
+
+**Guards**: `cluster_cli::browser_render_eqn_rows_in_cells::display_rows_stack_and_align_in_cells` (opt-in, local),
+`latexml_post::xslt::witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present` (CI).

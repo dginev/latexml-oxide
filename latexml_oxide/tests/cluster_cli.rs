@@ -3200,6 +3200,102 @@ mod browser_render_eqn_tags {
   }
 }
 
+mod browser_render_eqn_rows_in_cells {
+  //! Issue #972 rendered at 1280/768/375 px (reporter nasser1's longtable `p{}` MWE and its siblings: a tabular `p{}`,
+  //! `m{}`/`b{}` cells, `align*`/`gather*`/`eqnarray*` in a cell, a `\parbox`): a display in an inline context is written
+  //! as spans, and each of its rows stacks under the last, the cells of an aligned display at the same x in every row,
+  //! at the column offsets of the same display outside the cell. Opt-in and LOCAL like the guards above (Firefox too
+  //! with `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present`.
+
+  const DOC: &str =
+    include_str!("../../tools/perfect_kernel/repros/block-model/display_rows_in_a_p_cell_972.tex");
+
+  #[test]
+  fn display_rows_stack_and_align_in_cells() {
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#972", DOC, "measure_eqn_tags.js")
+    else {
+      return;
+    };
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+    // Each row's content-cell lefts, relative to its table.
+    let lefts = |e: &serde_json::Value| -> Vec<Vec<i64>> {
+      e["lines"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|l| {
+          l["lefts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_i64().unwrap())
+            .collect()
+        })
+        .collect()
+    };
+    let gaps = |row: &[i64]| -> Vec<i64> { row.windows(2).map(|w| w[1] - w[0]).collect() };
+    for (key, run) in v.as_object().expect("engines x widths") {
+      let eqns = run["eqns"].as_array().expect("eqns");
+      let ids: Vec<_> = eqns.iter().map(|e| e["id"].as_str().unwrap()).collect();
+      assert_eq!(
+        ids,
+        [
+          "S0.Ex1", "S0.Ex2", "S0.Ex3", "S0.Ex4", "S0.E1", "S0.EGx1", "S0.EGx2", "S0.EGx3",
+          "S0.EGx4", "S0.Ex13"
+        ],
+        "the displays ({key}): {stdout}"
+      );
+      // Before (SERSTREAM, Chrome and Firefox): each in-cell row its own inline table, side by side at one top and
+      // scrolled out of the cell (scrollWidth 1164 in 385 px); the \parbox rows stacked but apart (lefts 168/142/141).
+      for e in eqns {
+        let id = e["id"].as_str().unwrap();
+        let tops: Vec<_> = e["lines"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .map(|l| l["top"].as_i64().unwrap())
+          .collect();
+        assert!(
+          tops.windows(2).all(|w| w[1] > w[0]),
+          "{id}: rows not stacked ({key}): {tops:?}"
+        );
+        let rows = lefts(e);
+        assert!(
+          rows.windows(2).all(|w| w[0] == w[1]),
+          "{id}: rows not aligned ({key}): {rows:?}"
+        );
+        assert!(
+          e["scrollWidth"].as_i64() <= e["clientWidth"].as_i64(),
+          "{id}: the display scrolls in its cell ({key}): {stdout}"
+        );
+      }
+      // The in-cell columns sit as outside, within the UA's 1px padding of an outside <td>; before, the tabular's
+      // 0.5em cell padding reached the display's cells too (Chrome: the `aligned` gap 32 px in the cell, 18 outside).
+      let by = |id: &str| eqns.iter().find(|e| e["id"] == id).unwrap();
+      let close = |a: &[i64], b: &[i64]| {
+        a.len() == b.len() && a.iter().zip(b).all(|(x, y)| (x - y).abs() <= 3)
+      };
+      let aligned = gaps(&lefts(by("S0.Ex1"))[0]);
+      for id in ["S0.Ex2", "S0.Ex3", "S0.Ex13"] {
+        let g = gaps(&lefts(by(id))[0]);
+        assert!(
+          close(&g, &aligned),
+          "{id}: aligned columns {g:?}, outside {aligned:?} ({key})"
+        );
+      }
+      let (inside, outside) = (
+        gaps(&lefts(by("S0.EGx1"))[0]),
+        gaps(&lefts(by("S0.EGx4"))[0]),
+      );
+      assert!(
+        close(&inside, &outside),
+        "align* columns {inside:?}, outside {outside:?} ({key})"
+      );
+    }
+  }
+}
+
 mod browser_render_author_lines {
   //! Issue #783 rendered at 1280/375 px: an author whose contacts are all `\\` lines of the author block shows them
   //! under the name with no starred pop-up (a marked `\thanks` or `\footnote` note of one author shows there too, with
