@@ -125,69 +125,121 @@ impl MadeDirs {
   }
 }
 
-/// Monotonic per-process counter for unique sibling temp files in [`write_atomic`] / [`copy_atomic`].
+/// Monotonic per-process counter for unique sibling temp files ([`Staged::beside`]).
 static ATOMIC_TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 
-fn atomic_tmp_path(dest: &Path) -> PathBuf {
-  let seq = ATOMIC_TMP_SEQ.fetch_add(1, Ordering::Relaxed);
-  let pid = std::process::id();
-  let name = dest
-    .file_name()
-    .and_then(|n| n.to_str())
-    .unwrap_or("resource");
-  let tmp_name = format!(".{name}.tmp.{pid}.{seq}");
-  match dest.parent() {
-    Some(p) if !p.as_os_str().is_empty() => p.join(tmp_name),
-    _ => PathBuf::from(tmp_name),
+/// A private file beside a destination that parallel render workers may share (the CSS, a figure
+/// every page uses): written or converted there, then [installed](Staged::install) by one rename,
+/// so no reader sees a partial file and no writer touches another's. Named
+/// `.<stem>.tmp.<pid>.<seq>.<ext>`, its extension kept last for converters that read the format
+/// from it; registered with the watchdog's exit sweep, and removed when dropped uninstalled.
+pub struct Staged {
+  path:      PathBuf,
+  installed: bool,
+  _on_exit:  latexml_core::watchdog::RemoveOnExit,
+}
+
+impl Staged {
+  /// A fresh private path beside `dest` (nothing is created).
+  pub fn beside(dest: &Path) -> Self {
+    let seq = ATOMIC_TMP_SEQ.fetch_add(1, Ordering::Relaxed);
+    let pid = std::process::id();
+    let stem = dest
+      .file_stem()
+      .and_then(|n| n.to_str())
+      .unwrap_or("resource");
+    let name = match dest.extension().and_then(|e| e.to_str()) {
+      Some(ext) => format!(".{stem}.tmp.{pid}.{seq}.{ext}"),
+      None => format!(".{stem}.tmp.{pid}.{seq}"),
+    };
+    let path = match dest.parent() {
+      Some(p) if !p.as_os_str().is_empty() => p.join(name),
+      _ => PathBuf::from(name),
+    };
+    let _on_exit = latexml_core::watchdog::remove_on_exit(&path);
+    Staged {
+      path,
+      installed: false,
+      _on_exit,
+    }
+  }
+
+  pub fn path(&self) -> &Path { &self.path }
+
+  /// Install the staged file as `dest` by rename. When the rename fails (Windows'
+  /// `MoveFileExW` refuses a file another worker holds open) but `dest` already holds these very
+  /// bytes, a sibling installed the same output and the install stands; the bytes are compared
+  /// before the temp is removed, so a stale file of the same length is never taken for it.
+  pub fn install(mut self, dest: &Path) -> io::Result<()> {
+    match fs::rename(&self.path, dest) {
+      Ok(()) => {
+        self.installed = true;
+        Ok(())
+      },
+      Err(_) if same_bytes(&self.path, dest) => Ok(()),
+      Err(e) => Err(e),
+    }
   }
 }
 
-fn install_temp(tmp: &Path, dest: &Path, expected_len: u64) -> io::Result<()> {
-  let _ = expected_len;
-  match fs::rename(tmp, dest) {
-    Ok(()) => Ok(()),
-    Err(e) => {
-      let _ = fs::remove_file(tmp);
-      // On Windows, `MoveFileExW(MOVEFILE_REPLACE_EXISTING)` can fail with
-      // sharing/access errors when parallel render workers race to publish the
-      // same shared resource (CSS/JS/graphics). If a peer worker already
-      // installed a regular file of the expected length at `dest`, treat the
-      // race as satisfied; keep real errors (e.g. `dest` is a directory).
-      #[cfg(windows)]
-      if dest.is_file() && fs::metadata(dest).is_ok_and(|m| m.len() == expected_len) {
-        return Ok(());
-      }
-      Err(e)
+impl Drop for Staged {
+  fn drop(&mut self) {
+    if !self.installed {
+      let _ = fs::remove_file(&self.path);
+    }
+  }
+}
+
+/// Whether `a` and `b` are regular files holding the same bytes.
+pub fn same_bytes(a: &Path, b: &Path) -> bool {
+  match (fs::metadata(a), fs::metadata(b)) {
+    (Ok(ma), Ok(mb)) if ma.is_file() && mb.is_file() && ma.len() == mb.len() => {
+      matches!((fs::read(a), fs::read(b)), (Ok(x), Ok(y)) if x == y)
     },
+    _ => false,
   }
 }
 
-/// Atomically write `bytes` to `dest` via a sibling temp file + rename.
+/// Whether `a` and `b` name the same existing file (by canonical path).
+pub fn same_file(a: &Path, b: &Path) -> bool {
+  match (fs::canonicalize(a), fs::canonicalize(b)) {
+    (Ok(ca), Ok(cb)) => ca == cb,
+    _ => false,
+  }
+}
+
+/// Atomically write `bytes` to `dest` through a [`Staged`] file.
 ///
 /// Safe when multiple parallel render workers publish the same shared resource
 /// (`LaTeXML.css`, `LaTeXML.js`, etc.) concurrently: Unix readers never observe
 /// a truncated/interleaved file, and Windows avoids `ERROR_SHARING_VIOLATION`
 /// on concurrent writers.
 pub fn write_atomic(dest: &Path, bytes: &[u8]) -> io::Result<()> {
-  let tmp = atomic_tmp_path(dest);
-  if let Err(e) = fs::write(&tmp, bytes) {
-    let _ = fs::remove_file(&tmp);
-    return Err(e);
-  }
-  install_temp(&tmp, dest, bytes.len() as u64)
+  let staged = Staged::beside(dest);
+  fs::write(staged.path(), bytes)?;
+  staged.install(dest)
 }
 
-/// Atomically copy `src` to `dest` via a sibling temp file + rename.
-pub fn copy_atomic(src: &Path, dest: &Path) -> io::Result<()> {
-  let tmp = atomic_tmp_path(dest);
-  let len = match fs::copy(src, &tmp) {
-    Ok(n) => n,
-    Err(e) => {
-      let _ = fs::remove_file(&tmp);
-      return Err(e);
-    },
-  };
-  install_temp(&tmp, dest, len)
+/// Atomically copy `src` to `dest` through a [`Staged`] file. Copying a file onto itself is
+/// refused: it would only rewrite it, and a caller that then changes `dest` would change its source.
+pub fn copy_atomic(src: &Path, dest: &Path) -> io::Result<()> { place_atomic(src, dest, false) }
+
+/// [`copy_atomic`] by a hard link where the filesystem allows one, for an immutable artefact
+/// (a graphics-cache entry) whose readers replace it, never write through it.
+pub fn link_atomic(src: &Path, dest: &Path) -> io::Result<()> { place_atomic(src, dest, true) }
+
+fn place_atomic(src: &Path, dest: &Path, link: bool) -> io::Result<()> {
+  if same_file(src, dest) {
+    return Err(io::Error::other(format!(
+      "{} is the source itself",
+      dest.display()
+    )));
+  }
+  let staged = Staged::beside(dest);
+  if !(link && fs::hard_link(src, staged.path()).is_ok()) {
+    fs::copy(src, staged.path())?;
+  }
+  staged.install(dest)
 }
 
 /// Output format for the writer.
@@ -431,6 +483,60 @@ mod tests {
       .filter(|e| e.file_name().to_string_lossy().contains(".tmp."))
       .collect();
     assert!(strays.is_empty(), "leftover atomic temp files: {strays:?}");
+  }
+
+  /// A failed rename stands only when the destination already holds the staged bytes — compared
+  /// before the temp is removed, so a stale file of the same length is never taken for them
+  /// (Windows' `MoveFileExW` refuses a file a sibling worker holds open). A read-only directory
+  /// stands in for the refusal; a root run renames regardless and skips visibly.
+  #[cfg(unix)]
+  #[test]
+  fn a_refused_install_stands_only_on_identical_bytes() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let a = dir.path().join("a.svg");
+    let b = dir.path().join("b.svg");
+    fs::write(&a, b"<svg>1</svg>").unwrap();
+    fs::write(&b, b"<svg>2</svg>").unwrap();
+    assert!(same_bytes(&a, &a.clone()));
+    assert!(!same_bytes(&a, &b), "same length, other bytes");
+    assert!(!same_bytes(&a, &dir.path().join("missing.svg")));
+    assert!(
+      !same_bytes(dir.path(), dir.path()),
+      "a directory holds no bytes"
+    );
+
+    let stage = |bytes: &[u8]| {
+      let staged = Staged::beside(&a);
+      fs::write(staged.path(), bytes).unwrap();
+      staged
+    };
+    let (same, other) = (stage(b"<svg>1</svg>"), stage(b"<svg>9</svg>"));
+    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o555)).unwrap();
+    let probe = fs::rename(&b, dir.path().join("probe.svg"));
+    let refused = probe.is_err();
+    let (same, other) = (same.install(&a), other.install(&a));
+    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o755)).unwrap();
+    if !refused {
+      eprintln!(
+        "SKIP a_refused_install_stands_only_on_identical_bytes: renames are not refused (root)"
+      );
+      return;
+    }
+    assert!(same.is_ok(), "{same:?}");
+    assert!(
+      other.is_err(),
+      "a stale file of the same length is not the install"
+    );
+    assert_eq!(fs::read(&a).unwrap(), b"<svg>1</svg>");
+    let staged = Staged::beside(&a);
+    let temp = staged.path().to_path_buf();
+    fs::write(&temp, b"x").unwrap();
+    drop(staged);
+    assert!(
+      !temp.exists(),
+      "an uninstalled stage is removed when dropped"
+    );
   }
 
   #[test]
