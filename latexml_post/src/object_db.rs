@@ -1027,7 +1027,10 @@ mod tests {
     })
     .expect("attach readonly");
     assert!(
-      reloaded.external.as_ref().is_some_and(|e| e.baseline.is_empty()),
+      reloaded
+        .external
+        .as_ref()
+        .is_some_and(|e| e.baseline.is_empty()),
       "a readonly attach keeps no as-stored copy"
     );
     let entry = reloaded.lookup("doc1#s1").expect("entry survives");
