@@ -23743,7 +23743,9 @@ page's whole head link sets), `cluster_xslt_split::urlstyle::*` (the parent page
 table touched (pitch 11 px, 13 outside; `\sum` limits over a `\frac` ran together). A row of one spanning cell
 (`\intertext`, `ltx:p` mode `ininalignment`, `colspan` 3+n; a constraint row has the same shape) is a block across the
 display, with its row group: CSS tables ignore `colspan`, so in the shared table it fell into the first column and
-wrapped word by word (54 px for one line, 108 with `leqno`).
+wrapped word by word (54 px for one line, 108 with `leqno`). The span table itself is always the issue-533 block scroll
+box (`span.ltx_eqn_table`): in a note or a minipage (`ltx_inline-logical-block`) no `ltx_inline-block`/`ltx_td` boxes
+it, and as a CSS table it put the `\intertext` row in its first column (a footnote's 44 px against 23 in Firefox).
 - Perl: the same HTML. In an inline context (`ltx:inline-block` of a `p{}`/`m{}`/`b{}` cell, `\parbox`, minipage, a
   note) `f:blockelement` (`LaTeXML-common.xsl`) writes the equation table, its tbodies, rows and cells as `span`s, and
   the tbodies carry no class (`LaTeXML-block-xhtml.xsl`, `ltx:equation`/`ltx:equationgroup` mode `inalignment`). Vanilla

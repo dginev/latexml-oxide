@@ -1559,15 +1559,19 @@ mod witnessed_css_delta {
     // (Chrome/Firefox: the rows of an `aligned` ran side by side, scrolled out of the cell), the tabular's cell padding
     // stays off its cells, and the align column gap is keyed on classes; its cells keep the UA's 1px <td> padding
     // (Chrome: a gather*'s rows touched) and a row of one colspan cell (\intertext) is a block (it wrapped in the first
-    // column). The browser half is `cluster_cli::browser_render_eqn_rows_in_cells`.
+    // column), as is the span table itself in a note or minipage, where no `ltx_inline-block`/`ltx_td` boxes it. The
+    // browser half is `cluster_cli::browser_render_eqn_rows_in_cells`.
     let css = bundled_latexml_css();
     for rule in [
       "span.ltx_eqn_table > span:not([class]) { display:table-row-group; }",
+      "span.ltx_eqn_table { display:block; overflow-x:auto; max-width:100%; }",
       ".ltx_tabular .ltx_eqn_cell { padding:0; }",
       ".ltx_eqn_align .ltx_equation > .ltx_align_left + .ltx_align_right,",
       ".ltx_eqn_eqnarray .ltx_eqn_lefteqn + .ltx_eqn_row > .ltx_align_right { min-width:2em; }",
       "span.ltx_eqn_table .ltx_eqn_cell { padding:1px; }",
-      "span.ltx_eqn_table > span:not([class]) > .ltx_eqn_row > .ltx_eqn_cell[colspan]:only-child { display:block; }",
+      "span.ltx_eqn_table > span:not([class]):has(> .ltx_eqn_row > .ltx_eqn_cell[colspan]:only-child),\n\
+       span.ltx_eqn_table > span:not([class]) > .ltx_eqn_row:has(> .ltx_eqn_cell[colspan]:only-child),\n\
+       span.ltx_eqn_table > span:not([class]) > .ltx_eqn_row > .ltx_eqn_cell[colspan]:only-child { display:block; }",
     ] {
       assert!(
         css.contains("#972") && css.contains(rule),

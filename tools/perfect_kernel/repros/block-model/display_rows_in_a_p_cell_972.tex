@@ -2,20 +2,24 @@
 % mechanism: in an inline context (a p{}/m{}/b{} cell, \parbox, minipage, note) the XSLT writes a display's table as
 %   spans (f:blockelement), each tbody a classless span; LaTeXML.css gave that span no display, so each row became an
 %   anonymous inline table of its own: the rows of an aligned display ran side by side, their columns apart.
-%   Round 2 (gather*, \intertext): the rows sharing one table had no cell padding, so a gather* row's block <math>
-%   (Chrome: its ink alone) touched the next (pitch 11 px, 13 outside), and CSS tables ignore colspan, so the
-%   \intertext cell fell into the first column and wrapped word by word.
+%   Sharing one table, the rows need the UA's 1px cell padding (Chrome sizes a block <math> to its ink: a gather*'s
+%   rows touched, pitch 11 px against 13 outside), and since CSS tables ignore colspan an \intertext row is a block
+%   (it fell into the first column and wrapped); in a note or minipage, with no ltx_inline-block/ltx_td above, the
+%   span table must be a block too (as a CSS table it put the \intertext in its first column: a footnote's 44 px
+%   against 23 in Firefox).
 % oracle:  pdflatex 0 errors; every display set as outside the cells (rows stacked, aligned at &, centred in the cell)
 % engines: SERSTREAM (f84f9e2abcb) and Perl 0.8.8 = the same HTML; in Chrome/Firefox the in-cell rows side by side
 % expect:  in the browser each display's rows stacked, an aligned display's cells at the same x in every row, the
 %   in-cell aligned/align* column offsets those of the same display outside (within the UA's 1px td padding); a
-%   gather*'s rows at least the outside pitch, their formulas apart; an \intertext one line, as tall as outside
+%   gather*'s rows at least the outside pitch, their formulas apart; an \intertext one line, as tall as outside (in a
+%   \parbox, a footnote and a theorem in a minipage)
 % status:  RED (SERSTREAM) -> GREEN (fix-972-display-math-in-pcolumn); guards
 %   cluster_cli::browser_render_eqn_rows_in_cells, xslt::witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present
 \documentclass{article}
 \usepackage{amsmath}
 \usepackage{longtable}
 \usepackage{array}
+\newtheorem{thm}{Theorem}
 \begin{document}
 Integrating factor found :
 \[
@@ -132,4 +136,12 @@ Cell gather:
 \end{gather*}}
 \\\hline
 \end{tabular}
+
+Note\footnote{In a note: \begin{align} x &= 1 \\ \intertext{and some intertext here} xx &= 3 \end{align}}
+
+\mbox{\begin{minipage}{3in}\begin{thm}In a theorem: \begin{align}
+x &= 1 \\
+\intertext{and some intertext here}
+xx &= 3
+\end{align}\end{thm}\end{minipage}}
 \end{document}

@@ -4,7 +4,7 @@
 // horizontal scroll or off the page), and the formula's offset from the line's
 // centre; per table, its scroll width when it scrolls, and (issue #972) each row's top, height and
 // formulas' vertical extent, and the lefts of its content cells (not the pads or the tag), which an aligned display
-// shares across its rows.
+// shares across its rows. Notes are opened, as on hover.
 //
 // Usage:   node measure_eqn_tags.js <file-url> [width,...]
 //          (Chrome; with LATEXML_FIREFOX=<firefox executable> Firefox as well)
@@ -32,6 +32,8 @@ const pw = require('playwright-core');
       for (const w of widths) {
         const page = await browser.newPage({ viewport: { width: w, height: 900 } });
         await page.goto(url, { waitUntil: 'load' });
+        // A note's content shows on hover only; open it in place so a display in a note is measured.
+        await page.addStyleTag({ content: '.ltx_note_content{display:block !important;position:absolute}' });
         out[`${name}/${w}`] = await page.evaluate(() => {
           const R = (e) => e.getBoundingClientRect();
           const eqns = Array.from(document.querySelectorAll('.ltx_eqn_table')).map((t) => {

@@ -3205,7 +3205,8 @@ mod browser_render_eqn_rows_in_cells {
   //! `m{}`/`b{}` cells, `align*`/`gather*`/`eqnarray*` in a cell, a `\parbox`): a display in an inline context is written
   //! as spans, and each of its rows stacks under the last, the cells of an aligned display at the same x in every row,
   //! at the column offsets of the same display outside the cell; a `gather*`'s rows as far apart as outside, and an
-  //! `\intertext` one line as tall as outside. Opt-in and LOCAL like the guards above (Firefox too with
+  //! `\intertext` one line as tall as outside (also in a footnote and a minipage, where the span table has no
+  //! `ltx_inline-block`/`ltx_td` ancestor; the measuring script opens notes). Opt-in and LOCAL like the guards above (Firefox too with
   //! `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present`.
 
   const DOC: &str =
@@ -3243,7 +3244,8 @@ mod browser_render_eqn_rows_in_cells {
         ids,
         [
           "S0.Ex1", "S0.Ex2", "S0.Ex3", "S0.Ex4", "S0.E1", "S0.EGx1", "S0.EGx2", "S0.EGx3",
-          "S0.EGx4", "S0.Ex13", "S0.EGx5", "S0.EGx6", "S0.EGx7", "S0.EGx8", "S0.EGx9", "S0.EGx10"
+          "S0.EGx4", "S0.Ex13", "S0.EGx5", "S0.EGx6", "S0.EGx7", "S0.EGx8", "S0.EGx9", "S0.EGx10",
+          "S0.EGx11", "S0.EGx12"
         ],
         "the displays ({key}): {stdout}"
       );
@@ -3273,7 +3275,7 @@ mod browser_render_eqn_rows_in_cells {
             "{id}: rows not aligned ({key}): {rows:?}"
           );
         }
-        // Before (15800612b4b, Chrome): a span-form gather*'s block <math> rows touched (pitch 11 px).
+        // Without the span cells' 1px padding (Chrome) a span-form gather*'s block <math> rows touched (pitch 11 px).
         let extents: Vec<_> = e["lines"]
           .as_array()
           .unwrap()
@@ -3312,8 +3314,8 @@ mod browser_render_eqn_rows_in_cells {
         close(&inside, &outside),
         "align* columns {inside:?}, outside {outside:?} ({key})"
       );
-      // A gather* in a \parbox and one with limits and a fraction in a cell keep the outside row pitch; before
-      // (15800612b4b, Chrome) 11 px against 13, 42 against 44.
+      // A gather* in a \parbox and one with limits and a fraction in a cell keep the outside row pitch (without the
+      // 1px cell padding, Chrome: 11 px against 13, 42 against 44).
       let pitch = |id: &str| -> Vec<i64> {
         let ls = by(id)["lines"].as_array().unwrap();
         let mut p: Vec<i64> = ls
@@ -3330,8 +3332,10 @@ mod browser_render_eqn_rows_in_cells {
           "{inside}: row pitch {i:?}, outside {o:?} ({key})"
         );
       }
-      // An \intertext in a \parbox is one line as tall as outside; before (15800612b4b) its cell fell into the first
-      // column and wrapped (Firefox/375: 46 px against 25; the reviewer's longer one 54 and, with leqno, 108 against 18).
+      // An \intertext in a \parbox, a footnote or a theorem in a minipage is one line, as tall as outside (a note's
+      // smaller type: no taller). As a cell of a CSS table's first column it wrapped: Firefox/375 46 px against 25 in a
+      // \parbox (a longer one 54, 108 with leqno, against 18); a footnote's 44 against 23 in Firefox, 36 against 19 in
+      // Chrome at 375; a minipage's 48 against 25 in Firefox at 375.
       let spanning = |id: &str| -> Vec<i64> {
         by(id)["lines"]
           .as_array()
@@ -3341,11 +3345,21 @@ mod browser_render_eqn_rows_in_cells {
           .map(|l| l["height"].as_i64().unwrap())
           .collect()
       };
-      let (i, o) = (spanning("S0.EGx9"), spanning("S0.EGx7"));
-      assert!(
-        i.len() == 1 && o.len() == 1 && (i[0] - o[0]).abs() <= 1,
-        "intertext height {i:?}, outside {o:?} ({key})"
-      );
+      let o = spanning("S0.EGx7");
+      for id in ["S0.EGx9", "S0.EGx11", "S0.EGx12"] {
+        let i = spanning(id);
+        let as_tall = |h: i64| {
+          if id == "S0.EGx11" {
+            h <= o[0] + 1
+          } else {
+            (h - o[0]).abs() <= 1
+          }
+        };
+        assert!(
+          i.len() == 1 && o.len() == 1 && as_tall(i[0]),
+          "{id}: intertext height {i:?}, outside {o:?} ({key})"
+        );
+      }
     }
   }
 }
