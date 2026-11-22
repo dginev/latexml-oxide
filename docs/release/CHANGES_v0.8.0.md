@@ -1514,15 +1514,16 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     but not the engine's fonts or typesetter, so `font.current()`, `font.id`, `font.define`, `lang.new`, `vf.char`
     and texlua's `tex.run`/`tex.finish` killed it past any `pcall` (an `Error:lua:interpreter`, and after three
     restarts no later chunk ran). `font` now mirrors one font, the current one, whose `characters` answer as
-    `\iffontchar\font` does; `font.id` names no font (-1); the calls that need the engine are a Lua error. hologo's
+    `\iffontchar\font` does; `font.id` answers -1; the calls that need the engine are a Lua error, and every answer
+    that is not lualatex's (a defined font's id, a font field the mirror lacks, those calls) a counted Warning. hologo's
     XeTeX and LaTeX logos print the reversed E (Ǝ) and "Hàn Thế Thành" its ế, as lualatex does (12 TeX Live manuals
     under the luatex profile, among them hvlogos-doc, mfirstuc-manual and glossariesbegin, back to 0 errors; babel's
-    bidi Lua in lettrine-demo-arabic too). An interpreter that still ends mid-chunk says how in its Error
+    bidi Lua in lettrine-demo-arabic too, with 4 Warnings for its `font.id` of latex.ltx's line and circle fonts). An interpreter that still ends mid-chunk says how in its Error
     (`signal: 11 (SIGSEGV)`, `exit status: 3`). OXIDIZED_DESIGN_DIVERGENCES #1081; guards
     `perfect_kernel_batchluafont`.
 
   - **`\pdfextension literal` reads its operands under the luatex profile.** It read one token, so the rest of the
     keyword and the literal's PDF code leaked as text ("iteralq -1 0 0 1 0 0 cm", accsupp's
-    "iteralpage/Span«/ActualText(…)»BDC" in mfirstuc-manual, glossaries-user, datatool-user and 9 more TeX Live
+    "iteralpage/Span«/ActualText(…)»BDC" in mfirstuc-manual, glossaries-user, datatool-user and 7 more TeX Live
     manuals); it now reads `\pdfliteral`'s `[shipout] [direct|page] <general text>`. Guard
     `perfect_kernel_batchluafont::batchluafont_pdfextension_literal_reads_its_operands`.

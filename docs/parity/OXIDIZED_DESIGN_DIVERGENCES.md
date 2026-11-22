@@ -21034,10 +21034,14 @@ lettrine-demo-arabic). The prelude replaces `font` with a pure-Lua mirror of one
 `font.getcopy(1)` and `font.fonts[1]` return a table whose `characters[<code>]` asks the bridge `fontchar <code>`
 over the query channel, answered as `\iffontchar\font<code>` is (`etex.rs` `font_has_char`: the font file's coverage,
 true when the file cannot be resolved) — an integer out, `0`/`1` back, no I/O, no process, no TeX evaluated; any
-other id is nil; `font.id(<name>)` is -1, the LuaTeX manual's answer for an undefined name (luatex-fonts.tex:832;
-lualatex answers latex.ltx's `\tenln` with its id); every other `font` function, every `lang` and `vf` function and
-`tex.run`/`tex.finish` raise a plain Lua error (lualatex's `lang.new()` succeeds, and its `font.define{}` and
-`vf.char()` outside a virtual font end the run). A document that replaces `font` changes only its own answers. Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
+other id is nil; `font.id(<name>)` is -1, the LuaTeX manual's answer for an undefined name (luatex-fonts.tex:832).
+Every answer that is not lualatex's counts a `Warning:lua:sandbox` (a `W` frame, kept through a `pcall`): `font.id`
+of a name the bridge reports as a font (`fontid <name>`: `fontinfo_\<name>` holds one; lualatex answers latex.ltx's
+`\tenln` with its id), another non-negative font id, `font.current(<id>)`, `font.each`, a read of a font or character
+field the mirror does not hold (`resources`, `fullname`: fontawesome5, texnegar); every other `font` function, every
+`lang` and `vf` function and `tex.run`/`tex.finish` are such a Warning and a Lua error (lualatex's `lang.new()`
+succeeds, and its `font.define{}` and `vf.char()` outside a virtual font end the run). hologo's test reads only
+`characters` and counts nothing. A document that replaces `font` changes only its own answers. Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
 the null device and `print` a no-op, and `package.loaded.texio`/`pdf`/`status`/`token` are the shims (`node` is
 nil). Frames are authenticated: the bridge sends a 128-bit nonce (SipHash under the standard library's random
 `RandomState` keys) as the interpreter's first line, the prelude reads it before any other code loads, and every

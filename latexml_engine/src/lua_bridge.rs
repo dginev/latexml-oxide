@@ -299,31 +299,56 @@ end
 -- font, lang and vf need the engine's font memory and typesetter, which texlua lacks: font.current, font.id,
 -- font.define, lang.new and vf.char crash it and font.read_vf aborts, past any pcall (hologo.sty:1298's
 -- \HOLOGO@IfCharExists, TL manuals hvlogos-doc, derivative; babel-bidi-basic.lua:44's font.id('tenln'),
--- lettrine-demo-arabic).
--- font is mirrored as one font, the current one: its characters answer \iffontchar\font<code> (an integer sent
--- over the query channel, '0'/'1' back; no I/O, no process, no TeX evaluated); a name is undefined (font.id's -1,
--- the LuaTeX manual's luatex-fonts.tex:832); a call that needs the engine's fonts, and every lang and vf call, is a
--- plain Lua error.
--- A document that replaces font changes only its own answers.
+-- lettrine-demo-arabic). font is mirrored as one font, the current one (id 1): its characters answer
+-- \iffontchar\font<code> (an integer sent over the query channel, '0'/'1' back; no I/O, no process, no TeX
+-- evaluated); font.id answers -1, which is lualatex's answer for a name that is not a font (the LuaTeX manual's
+-- luatex-fonts.tex:832; the bridge says whether \<name> is one). Every answer lualatex would give otherwise — a
+-- font's id, another font, a field the mirror does not hold, a call that needs the engine's fonts, every lang and vf
+-- call — counts a Warning (a 'W' frame, which no pcall swallows); a call is then also a Lua error. A document that
+-- replaces font changes only its own answers.
 local CURRENT_FONT = 1
+local function engine_warning(msg)
+  if not booting then frame('W', msg .. ' (texlua has no TeX engine fonts or typesetter)') end
+end
 local function needs_engine(what)
-  return function() error(what .. " needs the engine's fonts and typesetter (texlua has neither)", 2) end
+  return function()
+    engine_warning(what .. ' was not run')
+    error(what .. " needs the engine's fonts and typesetter (texlua has neither)", 2)
+  end
+end
+-- A table whose fields beyond the mirrored ones read nil, each read a Warning.
+local function partial(what, fields)
+  return setmetatable(fields, {__index = function(_, key)
+    engine_warning(what .. ' has no field ' .. shown(key) .. ' here')
+    return nil
+  end})
 end
 local function font_char(_, code)
   if type(code) == 'number' and code >= 0 and code <= 0x10FFFF and code == m_floor(code)
     and query('fontchar ' .. s_format('%d', code)) == '1' then
-    return {}
+    return partial('a character of the current font', {})
   end
   return nil
 end
 local function getfont(id)
-  if id ~= CURRENT_FONT then return nil end
-  return {characters = setmetatable({}, {__index = font_char})}
+  if id == CURRENT_FONT then
+    return partial('the current font', {characters = setmetatable({}, {__index = font_char})})
+  end
+  if type(id) == 'number' and id >= 0 then engine_warning('font ' .. s_format('%.14g', id) .. ' is not known') end
+  return nil
 end
 local engine_font = font
 font = {
-  current = function(id) if id == nil then return CURRENT_FONT end end,
-  id = function() return -1 end,
+  current = function(id)
+    if id == nil then return CURRENT_FONT end
+    engine_warning('font.current(id) was not run')
+  end,
+  id = function(name)
+    if type(name) == 'string' and query('fontid ' .. name) == '1' then
+      engine_warning('font.id("' .. shown(name) .. '") names a font whose id is not known; it answers -1')
+    end
+    return -1
+  end,
   getfont = getfont,
   getcopy = getfont,
   fonts = setmetatable({}, {__index = function(_, id) return getfont(id) end,
@@ -331,6 +356,7 @@ font = {
   max = function() return CURRENT_FONT end,
   nextid = function() return CURRENT_FONT + 1 end,
   each = function()
+    engine_warning('font.each lists only the current font')
     local done = false
     return function()
       if done then return nil end
@@ -736,6 +762,16 @@ fn service_query(payload: &str) -> String {
   let mut it = payload.split_whitespace();
   let op = it.next().unwrap_or("");
   let mut key = it.next().unwrap_or("");
+  // `fontid <name>`: whether `\<name>` is a font identifier (`\font\tenln=line10`), read-only.
+  if let Some(name) = payload.strip_prefix("fontid ") {
+    let font = state::lookup_value(&format!("fontinfo_\\{name}"));
+    return if matches!(font, Some(state::Stored::Font(_))) {
+      "1"
+    } else {
+      "0"
+    }
+    .to_string();
+  }
   // `fontchar <code>`: the prelude's `font` mirror asks whether the current font has a character, read-only.
   if op == "fontchar" {
     let code = key.parse::<i64>().unwrap_or(-1);

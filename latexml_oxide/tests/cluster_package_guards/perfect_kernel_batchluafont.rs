@@ -48,10 +48,12 @@ fn batchluafont_hologo_asks_the_current_font_for_its_glyph() {
   assert!(!xml.contains("iteralq"), "{xml}");
 }
 
-/// The calls with no engine behind them answer without a crash: `font.id` names no font (-1), `font.define`,
-/// `lang.new`, `vf.char` and texlua's `tex.finish` are a Lua error a pcall catches, `font.current`/`max`/`nextid`
-/// agree on the one font, and babel's bidi Lua (`font.id('tenln')` at babel-bidi-basic.lua:44) loads without an
-/// Error. Base: each crashing chunk was an `Error:lua:interpreter`, and past 3 restarts no chunk ran. Witness TL
+/// The calls with no engine behind them answer without a crash: `font.id` answers -1, `font.define`, `lang.new`,
+/// `vf.char` and texlua's `tex.finish` are a Lua error a pcall catches, `font.current`/`max`/`nextid` agree on the
+/// one font, and babel's bidi Lua (`font.id('tenln')` at babel-bidi-basic.lua:44) loads without an Error. Each
+/// answer that is not lualatex's is a Warning: the four calls, a font field the mirror does not hold (`resources`,
+/// fontawesome5's and texnegar's read), and `font.id` of a font latex.ltx defines (`\tenln`,
+/// `\tenlnw`, `\tencirc`, `\tencircw`), whose id lualatex would give. Base: each crashing chunk was an `Error:lua:interpreter`, and past 3 restarts no chunk ran. Witness TL
 /// manual lettrine/lettrine-demo-arabic (luababel.def:1484). One guard: the
 /// shims share one code path (`needs_engine`). Repro luatex-profile/lua_font_lang_vf_need_the_engine.
 #[test]
@@ -60,9 +62,30 @@ fn batchluafont_font_lang_vf_calls_need_the_engine() {
     return;
   }
   let (log, xml) = convert_with(repro!("lua_font_lang_vf_need_the_engine"), LUATEX);
-  assert_eq!(error_count(&log), 0, "{log}");
+  let warned: Vec<&str> = log
+    .lines()
+    .filter_map(|line| line.strip_prefix("Warning:lua:sandbox "))
+    .map(|line| line.split([' ', '(']).next().unwrap())
+    .collect();
+  assert_eq!(
+    warned,
+    [
+      "font.id",
+      "font.define",
+      "lang.new",
+      "vf.char",
+      "tex.finish",
+      "the",
+      "font.id",
+      "font.id",
+      "font.id",
+      "font.id"
+    ],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 10), "{log}");
   assert!(
-    xml.contains("I[-1]\nD[false]\nL[false]\nV[false]\nF[false]\nC[1/1/2]\nAB"),
+    xml.contains("I[-1]\nD[false]\nL[false]\nV[false]\nF[false]\nC[1/1/2]\nR[nil]\nAB"),
     "{xml}"
   );
 }

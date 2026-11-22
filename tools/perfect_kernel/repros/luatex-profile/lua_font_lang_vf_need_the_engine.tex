@@ -1,13 +1,16 @@
-% mechanism: lua_bridge.rs prelude font/lang/vf shims (OXIDIZED_DESIGN_DIVERGENCES #1081): font.id names no font
-%   (-1, the LuaTeX manual's luatex-fonts.tex:832); a font call that needs the engine's fonts, every lang and vf
-%   call, and texlua's tex.run/tex.finish are a plain Lua error; texlua crashed on font.id, font.define, lang.new,
-%   vf.char and tex.finish past any pcall. babel-bidi-basic.lua:44 asks font.id('tenln') at load.
+% mechanism: lua_bridge.rs prelude font/lang/vf shims (OXIDIZED_DESIGN_DIVERGENCES #1081): font.id answers -1 (the
+%   LuaTeX manual's luatex-fonts.tex:832), a Warning when \<name> is a font (lualatex gives its id); a font call
+%   that needs the engine's fonts, every lang and vf call, and texlua's tex.run/tex.finish are a Warning and a Lua
+%   error; texlua crashed on font.id, font.define, lang.new, vf.char and tex.finish past any pcall.
+%   babel-bidi-basic.lua:44 asks font.id('tenln'), 'tenlnw', 'tencirc', 'tencircw' at load.
 % witness: TL manual lettrine/lettrine-demo-arabic (luababel.def:1484 loads babel-bidi-basic.lua: font.id crashed)
-% oracle:  lualatex -no-shell-escape: I[2] (latex.ltx's \tenln), lang.new true, AB; font.define{} and vf.char()
+% oracle:  lualatex -no-shell-escape: I[2] (latex.ltx's \tenln), lang.new true, R[table: 0x…], AB; font.define{} and vf.char()
 %          end the run (fatal "lua-loaded font has no name", "vf.char() outside virtual font")
 % engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
 % preload: [rawstyles,rawclasses,luatex]latexml.sty
-% expect:  0 errors; "I[-1] D[false] L[false] V[false] F[false] C[1/1/2] AB"
+% expect:  0 errors, 10 Warnings (lua:sandbox: font.id tenln, font.define, lang.new, vf.char, tex.finish, the font's
+%          resources field (fontawesome5's, texnegar's read), babel's 4 font.id);
+%          "I[-1] D[false] L[false] V[false] F[false] C[1/1/2] R[nil] AB"
 % status:  RED (Error:lua:interpreter per crashing chunk; past 3 restarts later chunks are not evaluated) -> GREEN
 \documentclass{article}
 \begin{document}
@@ -17,5 +20,6 @@ L[\directlua{tex.print(tostring((pcall(lang.new))))}]
 V[\directlua{tex.print(tostring((pcall(vf.char))))}]
 F[\directlua{tex.print(tostring((pcall(tex.finish))))}]
 C[\directlua{tex.print(font.current() .. '/' .. font.max() .. '/' .. font.nextid())}]
+R[\directlua{tex.print(tostring(font.getfont(font.current()).resources))}]
 A\directlua{Babel = {} require('babel-data-bidi.lua') require('babel-bidi-basic.lua')}B
 \end{document}
