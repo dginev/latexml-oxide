@@ -5184,12 +5184,14 @@ mod shared_figure_parallel_render {
   }
 
   /// The pages of one run of `a.tex` (`LATEXML_RENDER_JOBS=jobs`; the graphics cache off, or in
-  /// `cache`), the image and hidden files beside them, and the run's stderr.
+  /// `cache`; the figure `<fig>.pdf`), the image and hidden files beside them, the run's stderr and
+  /// the bytes of `<fig>.svg`.
   fn run(
     tex: &str,
     jobs: &str,
     cache: Option<&std::path::Path>,
-  ) -> (Vec<(String, String)>, Vec<String>, String) {
+    fig: &str,
+  ) -> (Vec<(String, String)>, Vec<String>, String, Option<Vec<u8>>) {
     let work = tempfile::tempdir().expect("tempdir");
     std::fs::write(work.path().join("a.tex"), tex).unwrap();
     std::fs::copy(
@@ -5197,7 +5199,7 @@ mod shared_figure_parallel_render {
         env!("CARGO_MANIFEST_DIR"),
         "/../latexml_post/tests/fixtures/two_page_sizes.pdf"
       ),
-      work.path().join("fig.pdf"),
+      work.path().join(format!("{fig}.pdf")),
     )
     .unwrap();
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"));
@@ -5234,7 +5236,8 @@ mod shared_figure_parallel_render {
     }
     pages.sort();
     images.sort();
-    (pages, images, stderr)
+    let svg = std::fs::read(work.path().join(format!("{fig}.svg"))).ok();
+    (pages, images, stderr, svg)
   }
 
   #[test]
@@ -5250,7 +5253,7 @@ mod shared_figure_parallel_render {
       ));
     }
     tex.push_str("\\end{document}\n");
-    let (serial, serial_images, _) = run(&tex, "1", None);
+    let (serial, serial_images, ..) = run(&tex, "1", None, "fig");
     assert_eq!(serial_images, ["fig.svg"], "the serial run's images");
     let s72 = &serial
       .iter()
@@ -5266,7 +5269,7 @@ mod shared_figure_parallel_render {
     // renamed onto the same file is a no-op that left it behind.
     let cache = tempfile::tempdir().expect("tempdir");
     for round in 1..=4 {
-      let (parallel, images, stderr) = run(&tex, "8", (round == 4).then(|| cache.path()));
+      let (parallel, images, stderr, _) = run(&tex, "8", (round == 4).then(|| cache.path()), "fig");
       assert!(
         stderr.contains("parallel page render engaged: 8 worker(s)"),
         "the worker path must engage:\n{stderr}"
@@ -5280,6 +5283,39 @@ mod shared_figure_parallel_render {
           "round {round}: {name} differs between the serial and parallel render"
         );
       }
+    }
+  }
+
+  /// A figure name of 220 characters or more converts as a short one: the same converter, the
+  /// same bytes. Its staged file and mutool's directory, named after it with a counter added,
+  /// passed NAME_MAX (255 bytes): mutool failed and pdftocairo drew the figure without a word, or
+  /// every converter failed and the figure was lost (`writer::bounded_name`).
+  #[test]
+  fn a_long_figure_name_converts_as_a_short_one() {
+    if !svg_converter_or_skip("a_long_figure_name_converts_as_a_short_one") {
+      return;
+    }
+    let tex = |fig: &str| {
+      format!(
+        "\\documentclass{{article}}\n\\usepackage{{graphicx}}\n\\begin{{document}}\n\\section{{S}}\nA \\includegraphics[width=3cm]{{{fig}}}\n\\end{{document}}\n"
+      )
+    };
+    let (_, images, stderr, short) = run(&tex("fig"), "1", None, "fig");
+    assert_eq!(images, ["fig.svg"], "{stderr}");
+    let short = short.expect("fig.svg");
+    for len in [221, 240] {
+      let fig = "f".repeat(len);
+      let (_, images, stderr, svg) = run(&tex(&fig), "1", None, &fig);
+      let diagnostics: Vec<&str> = stderr
+        .lines()
+        .filter(|line| line.starts_with("Warning:") || line.starts_with("Error:"))
+        .collect();
+      assert!(diagnostics.is_empty(), "{len}: {diagnostics:#?}");
+      assert_eq!(images, [format!("{fig}.svg")], "{len}");
+      assert!(
+        svg.as_ref() == Some(&short),
+        "{len}: the render differs from the short name's"
+      );
     }
   }
 }

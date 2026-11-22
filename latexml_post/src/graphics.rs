@@ -1035,14 +1035,18 @@ impl Graphics {
   /// anyway), so the one page lands in `page1.svg` of a private directory beside `dest` (same
   /// filesystem: the rename stays atomic), removed whatever mutool wrote. Naming the file for
   /// the source page left page ≥ 2 in the destination and to pdftocairo (2305.12780, 1906.10268,
-  /// 2406.07459, 2406.14311, 1709.02311).
+  /// 2406.07459, 2406.14311, 1709.02311). The directory is named after `dest`'s
+  /// [bounded](crate::writer::bounded_name) name: a long one took it past NAME_MAX, and pdftocairo
+  /// drew the figure instead.
   fn convert_image_svg_mutool(source: &str, dest: &str, page: Option<u32>) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
     let unique = Self::unique_staging_tag();
     let tmp_dir = parent.join(format!(".{}.{}.mutool_svg", stem, unique));
     // `create_dir`, not `create_dir_all`: an existing directory is another job's.
@@ -1525,10 +1529,12 @@ impl Graphics {
   fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
     let unique = Self::unique_staging_tag();
     let tmp = parent.join(format!(".{}.{}.mutool.png", stem, unique));
     let _on_exit = latexml_core::watchdog::remove_on_exit(&tmp);
@@ -1566,10 +1572,12 @@ impl Graphics {
   fn convert_pdf_via_pdftocairo(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
     let unique = Self::unique_staging_tag();
     let tmp_prefix = parent.join(format!(".{}.{}.pdftocairo", stem, unique));
     let tmp_png = PathBuf::from(format!("{}.png", tmp_prefix.to_string_lossy()));
@@ -1621,10 +1629,12 @@ impl Graphics {
   fn convert_eps_via_pdf(source: &str, dest: &str, density: u32) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
     let unique = Self::unique_staging_tag();
     let tmp_pdf = parent.join(format!(".{}.{}.pdf", stem, unique));
     let tmp_prefix = parent.join(format!(".{}.{}.pdftocairo", stem, unique));
@@ -1684,10 +1694,12 @@ impl Graphics {
   fn convert_eps_via_gs(source: &str, dest: &str, density: u32) -> bool {
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
-    let stem = dest_path
-      .file_name()
-      .and_then(|s| s.to_str())
-      .unwrap_or("image");
+    let stem = crate::writer::bounded_name(
+      dest_path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("image"),
+    );
     let unique = Self::unique_staging_tag();
     // gs picks its output extension from the device, not the path, so
     // we pass it whatever name and rename atomically at the end.

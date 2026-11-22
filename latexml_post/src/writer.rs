@@ -131,8 +131,9 @@ static ATOMIC_TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 /// A private file beside a destination that parallel render workers may share (the CSS, a figure
 /// every page uses): written or converted there, then [installed](Staged::install) by one rename,
 /// so no reader sees a partial file and no writer touches another's. Named
-/// `.<stem>.tmp.<pid>.<seq>.<ext>`, its extension kept last for converters that read the format
-/// from it; registered with the watchdog's exit sweep, and removed when dropped — after an install
+/// `.<stem>.tmp.<pid>.<seq>.<ext>` (the stem [bounded](bounded_name)), its extension kept last
+/// for converters that read the format from it; registered with the watchdog's exit sweep, and
+/// removed when dropped — after an install
 /// too, since a rename onto a hard link of the same file succeeds and leaves both names (POSIX
 /// `rename(2)`; a graphics-cache entry linked into the destination by a sibling worker).
 pub struct Staged {
@@ -143,20 +144,7 @@ pub struct Staged {
 impl Staged {
   /// A fresh private path beside `dest` (nothing is created).
   pub fn beside(dest: &Path) -> Self {
-    let seq = ATOMIC_TMP_SEQ.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id();
-    let stem = dest
-      .file_stem()
-      .and_then(|n| n.to_str())
-      .unwrap_or("resource");
-    let name = match dest.extension().and_then(|e| e.to_str()) {
-      Some(ext) => format!(".{stem}.tmp.{pid}.{seq}.{ext}"),
-      None => format!(".{stem}.tmp.{pid}.{seq}"),
-    };
-    let path = match dest.parent() {
-      Some(p) if !p.as_os_str().is_empty() => p.join(name),
-      _ => PathBuf::from(name),
-    };
+    let path = staged_path(dest, ATOMIC_TMP_SEQ.fetch_add(1, Ordering::Relaxed));
     let _on_exit = latexml_core::watchdog::remove_on_exit(&path);
     Staged { path, _on_exit }
   }
@@ -173,6 +161,46 @@ impl Staged {
       Err(_) if same_bytes(&self.path, dest) => Ok(()),
       Err(e) => Err(e),
     }
+  }
+}
+
+/// Bytes of a file name [`bounded_name`] keeps.
+const NAME_KEPT: usize = 64;
+
+/// `name`, or for a longer one its first 64 bytes and a hash of the whole: every name derived from a
+/// destination (its staged file, a stage of that, a converter's temp) then stays under the 255-byte
+/// NAME_MAX, which a figure name of 220 characters or more took them past.
+pub fn bounded_name(name: &str) -> std::borrow::Cow<'_, str> {
+  use std::hash::{Hash, Hasher};
+  if name.len() <= NAME_KEPT {
+    return name.into();
+  }
+  let mut cut = NAME_KEPT;
+  while !name.is_char_boundary(cut) {
+    cut -= 1;
+  }
+  let mut hasher = std::hash::DefaultHasher::new();
+  name.hash(&mut hasher);
+  format!("{}~{:016x}", &name[..cut], hasher.finish()).into()
+}
+
+/// The staged name for `dest` with counter `seq`: `.<stem>.tmp.<pid>.<seq>.<ext>`, the stem
+/// [bounded](bounded_name).
+fn staged_path(dest: &Path, seq: u64) -> PathBuf {
+  let pid = std::process::id();
+  let stem = bounded_name(
+    dest
+      .file_stem()
+      .and_then(|n| n.to_str())
+      .unwrap_or("resource"),
+  );
+  let name = match dest.extension().and_then(|e| e.to_str()) {
+    Some(ext) => format!(".{stem}.tmp.{pid}.{seq}.{ext}"),
+    None => format!(".{stem}.tmp.{pid}.{seq}"),
+  };
+  match dest.parent() {
+    Some(p) if !p.as_os_str().is_empty() => p.join(name),
+    _ => PathBuf::from(name),
   }
 }
 
@@ -543,6 +571,31 @@ mod tests {
     staged.install(&a).unwrap();
     assert!(!temp.exists(), "the staged link is left behind");
     assert_eq!(fs::read(&a).unwrap(), b"<svg/>");
+  }
+
+  /// A 240-character figure name stays under NAME_MAX (255 bytes) through its stage and a stage of
+  /// that stage (a crop's `write_atomic` of a staged render), the extension kept last; two names
+  /// that differ only past the kept bytes stage apart.
+  #[test]
+  fn the_stages_of_a_long_figure_name_stay_under_name_max() {
+    let dir = tempfile::tempdir().unwrap();
+    let long = dir.path().join(format!("{}.svg", "g".repeat(240)));
+    let stage = Staged::beside(&long);
+    let again = Staged::beside(stage.path());
+    for path in [stage.path(), again.path()] {
+      let name = path.file_name().unwrap().to_str().unwrap();
+      assert!(name.len() <= 128, "{} bytes: {name}", name.len());
+      assert!(name.ends_with(".svg"), "{name}");
+      fs::write(path, b"<svg/>").unwrap();
+    }
+    write_atomic(&long, b"<svg>1</svg>").unwrap();
+    assert_eq!(fs::read(&long).unwrap(), b"<svg>1</svg>");
+    let (a, b) = (
+      format!("{}a", "é".repeat(40)),
+      format!("{}b", "é".repeat(40)),
+    );
+    assert_ne!(bounded_name(&a), bounded_name(&b));
+    assert_eq!(bounded_name("fig.svg"), "fig.svg", "a short name is kept");
   }
 
   #[test]
