@@ -5327,3 +5327,83 @@ mod shared_figure_parallel_render {
     }
   }
 }
+
+mod split_release_core_after_bib {
+  use std::process::Command;
+
+  fn binary() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_BIN_EXE_latexml_oxide"))
+  }
+
+  /// Regression guard: releasing core TeX state for post-processing on `--split`
+  /// must happen AFTER `MakeBibliography`, never before — otherwise virtual
+  /// `.bib` files (`filecontents` in `VFS_KEY`), author preamble macros used in
+  /// `.bib` fields, and core `REPORT` tallies (undefined commands) are lost when
+  /// `bib_session` falls back to re-initializing the engine.
+  #[test]
+  fn split_with_filecontents_bib_preserves_bib_macros_and_core_report() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let src = dir.path().join("book.tex");
+    let out = dir.path().join("site").join("book.html");
+    std::fs::create_dir_all(out.parent().unwrap()).unwrap();
+    std::fs::write(
+      &src,
+      r"\begin{filecontents*}{refs.bib}
+@article{knuth84,
+  author = {Donald E. Knuth},
+  title = {\MyBibTitle},
+  journal = {Comput. J.},
+  year = {1984}
+}
+\end{filecontents*}
+\documentclass{article}
+\newcommand{\MyBibTitle}{Literate Programming Macro Title}
+\begin{document}
+\section{First}
+See \cite{knuth84} and \NoSuchCoreCommandXYZ.
+\section{Second}
+More text.
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+",
+    )
+    .unwrap();
+
+    let output = Command::new(binary())
+      .args([
+        "--split",
+        "--splitat=section",
+        "--format=html5",
+        "--dest",
+        out.to_str().unwrap(),
+        src.to_str().unwrap(),
+      ])
+      .output()
+      .expect("run latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // 1. Virtual `.bib` + author preamble macro must render into the split site.
+    let mut all_html = String::new();
+    for entry in std::fs::read_dir(out.parent().unwrap()).unwrap() {
+      let path = entry.unwrap().path();
+      if path.extension().and_then(|e| e.to_str()) == Some("html") {
+        all_html.push_str(&std::fs::read_to_string(&path).unwrap());
+      }
+    }
+    assert!(
+      all_html.contains("Literate Programming Macro Title"),
+      "virtual .bib file and author preamble macro must survive --split:\nstderr:\n{stderr}\nhtml:\n{all_html}"
+    );
+    assert!(
+      all_html.contains("Donald E. Knuth"),
+      "bibliography author must render on --split:\nstderr:\n{stderr}"
+    );
+
+    // 2. Core REPORT undefined-command tally must survive into the final verdict.
+    assert!(
+      stderr.contains("\\NoSuchCoreCommandXYZ"),
+      "core undefined macro tally must survive into final status report:\n{stderr}"
+    );
+  }
+}

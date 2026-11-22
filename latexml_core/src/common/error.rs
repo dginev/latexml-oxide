@@ -610,6 +610,40 @@ pub fn reset_arena_keyed_reports() {
   report.missing = Default::default();
 }
 
+/// Run `f` (which resets the string arena) while preserving `REPORT`'s
+/// `undefined` and `missing` tallies: their `SymStr` keys are materialized to
+/// owned strings before `f` and re-interned into the fresh arena afterwards, so
+/// [`get_status_message`] / [`conversion_verdict`] remain byte-identical after
+/// dropping the core engine's arena between core and post-processing.
+pub fn preserve_arena_keyed_reports_across(f: impl FnOnce()) {
+  let (undef, miss) = {
+    let mut report = REPORT.borrow_mut();
+    let u: Vec<(String, usize)> = report
+      .undefined
+      .0
+      .drain()
+      .map(|(k, v)| (crate::common::arena::to_string(k), v))
+      .collect();
+    let m: Vec<(String, usize)> = report
+      .missing
+      .0
+      .drain()
+      .map(|(k, v)| (crate::common::arena::to_string(k), v))
+      .collect();
+    (u, m)
+  };
+  f();
+  if !undef.is_empty() || !miss.is_empty() {
+    let mut report = REPORT.borrow_mut();
+    for (s, count) in undef {
+      *report.undefined.entry(&s).or_insert(0) += count;
+    }
+    for (s, count) in miss {
+      *report.missing.entry(&s).or_insert(0) += count;
+    }
+  }
+}
+
 thread_local! {
   /// Latch for the most recent RESOURCE-class fatal (`ErrorTarget::Timeout`
   /// with a unit category: token/pushback/if limits, cycle-guard recursion,

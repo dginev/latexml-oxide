@@ -307,6 +307,19 @@ thread_local! {
     const { std::cell::RefCell::new(Vec::new()) };
 }
 
+/// Release core TeX/LaTeX engine state before post-processing begins on large
+/// or split documents, returning freed arena/state memory to the OS while
+/// keeping end-of-run diagnostics (`REPORT`, `LOGGER`, `telemetry`, watchdog)
+/// intact. See [`latexml_core::release_core_state_for_post`].
+pub fn release_core_state_for_post() {
+  RESCUED_BOXES.with(|r| r.borrow_mut().clear());
+  latexml_core::release_core_state_for_post();
+  latexml_engine::reset_conversion_state();
+  latexml_package::reset_conversion_state();
+  latexml_math_parser::reset_conversion_notices();
+  crate::heap_trim::release_free_heap();
+}
+
 /// Perl `hardYankProcessing` (Common/Error.pm L320-348): after a Fatal there
 /// is nothing left to do in the main processing — rescue the digested bodies
 /// and reset the gullet (pushback, mouth stack, mouth), so the salvage
@@ -762,10 +775,9 @@ fn apply_rewrite_rules(
   // mid-rule otherwise).
   let trace_all = std::env::var_os("LATEXML_REWRITE_TIMING").is_some();
   let n_rules = rewrites.len();
-  for (idx, mut rewrite_rule) in rewrites.into_iter().enumerate() {
-    // Build a useful one-line hint from the rule's options. The
-    // Debug impl on RewriteOptions is `<RewriteOptions>` only,
-    // so reach into the fields directly.
+  // Format rule diagnostics lazily (Audit F4): only allocate when tracing is
+  // enabled or a rule actually exceeds the slow-rule threshold.
+  let format_hint = |rewrite_rule: &Rewrite| -> String {
     let opts = &rewrite_rule.options;
     let mut xpath_hint = format!(
       "select={:?} xpath={:?} regexp={:?} scope={:?} label={:?} clauses={}",
@@ -785,9 +797,6 @@ fn apply_rewrite_rules(
       opts.label.as_deref(),
       rewrite_rule.clauses.len(),
     );
-    // Dump compiled clauses by op + pattern preview (helps when
-    // the options struct itself is empty after compile_clauses
-    // moved them into the clauses vec).
     for (ci, c) in rewrite_rule.clauses.iter().enumerate() {
       use std::fmt::Write;
       let _ = write!(
@@ -804,10 +813,15 @@ fn apply_rewrite_rules(
         }
       );
     }
+    xpath_hint
+  };
+  for (idx, mut rewrite_rule) in rewrites.into_iter().enumerate() {
     if trace_all {
       eprintln!(
         "[rewrite-timing] rule #{}/{} START :: {}",
-        idx, n_rules, xpath_hint
+        idx,
+        n_rules,
+        format_hint(&rewrite_rule)
       );
       // Flush stderr so it appears even if the rule hangs
       use std::io::Write;
@@ -830,7 +844,7 @@ fn apply_rewrite_rules(
           idx,
           n_rules,
           elapsed,
-          xpath_hint
+          format_hint(&rewrite_rule)
         )
       );
     }
@@ -917,8 +931,10 @@ fn streaming_pass2(
     // (`append_clone`'s doc-comment records the same trap). The streaming
     // TextReader stays reserved for genuinely unbounded files (the post
     // half's pass A over the whole core XML).
+    let wrapped = store.wrapped_segment(seg)?;
+    let has_empty_text = wrapped.contains("_lx_empty_text");
     let frag_xml = libxml::parser::Parser::default()
-      .parse_string(&store.wrapped_segment(seg)?)
+      .parse_string(&wrapped)
       .map_err(|e| {
         Error::from(ErrorData {
           target:   ErrorTarget::Internal,
@@ -926,6 +942,7 @@ fn streaming_pass2(
           message:  s!("cannot re-parse staged segment {seg}: {e}"),
         })
       })?;
+    drop(wrapped);
     let mut out = String::new();
     {
       let mut frag = Document::from_xml_document(frag_xml, node_fonts.clone())?;
@@ -977,14 +994,16 @@ fn streaming_pass2(
       // Restore empty text children the parse could not represent (spill-time
       // `_lx_empty_text` markers — see `spill_run`): `<p></p>` must not
       // collapse to `<p/>` across the round-trip.
-      for mut marked in frag.find_elements(|n| n.has_attribute_no_ns("_lx_empty_text")) {
-        let _ = marked.remove_attribute("_lx_empty_text");
-        if marked.get_child_nodes().is_empty() {
-          // `append_text("")` is a no-op (the fork guards on len > 0), so
-          // create a real text node and then empty it in place.
-          let _ = marked.append_text("x");
-          if let Some(mut text) = marked.get_first_child() {
-            let _ = text.set_content("");
+      if has_empty_text {
+        for mut marked in frag.find_elements(|n| n.has_attribute_no_ns("_lx_empty_text")) {
+          let _ = marked.remove_attribute("_lx_empty_text");
+          if marked.get_child_nodes().is_empty() {
+            // `append_text("")` is a no-op (the fork guards on len > 0), so
+            // create a real text node and then empty it in place.
+            let _ = marked.append_text("x");
+            if let Some(mut text) = marked.get_first_child() {
+              let _ = text.set_content("");
+            }
           }
         }
       }

@@ -870,7 +870,7 @@ impl Processor for XSLT {
       ));
     }
 
-    let result_doc = PostDocument::new(result_doc, PostDocumentOptions {
+    let result_doc = PostDocument::new_transformed(result_doc, PostDocumentOptions {
       destination: doc.destination.clone(),
       destination_directory: doc.destination_directory.clone(),
       site_directory: doc.site_directory.clone(),
@@ -915,6 +915,11 @@ impl Processor for XSLT {
 // 8 parses per process, instead of N parses per N papers.
 
 fn cache_key(path: &str) -> String {
+  // Embedded virtual URLs never exist on the filesystem; skip `fs::canonicalize`
+  // to avoid failing `statx`/`readlink` syscalls on every page of a large split.
+  if path.starts_with(embedded_xslt::URL_PREFIX) {
+    return path.to_string();
+  }
   // Canonicalise so `./resources/XSLT/foo.xsl` and
   // `/abs/.../resources/XSLT/foo.xsl` hit the same entry. Falls back
   // to the raw path on canonicalisation failure (the file might not

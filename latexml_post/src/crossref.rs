@@ -243,6 +243,16 @@ fn apply_url_style(url: &str, style: UrlStyle, extension: &str) -> String {
 /// One memoized [`CrossRef::generate_ref`] content: its `show`, `is_nameref` and the content.
 type RefMemoEntry = (String, bool, Vec<NodeData>);
 
+/// One memoized [`CrossRef::generate_title`] entry for an ID: `(shown, title)`.
+/// Each ID only takes 1-2 `shown` values (`""`, `"title"`), so a tiny `Vec`
+/// avoids allocating an inner `HashMap` per page ID across 100K+ split pages.
+type TitleMemoEntry = (String, Option<String>);
+
+/// Upper bound on distinct IDs retained in `title_memo` / `ref_memo`. Hot
+/// ancestors (`start`, `up`, chapters) re-warm immediately after a clear while
+/// 100K+ one-shot leaf `prev`/`next` entries cannot grow RAM without bound.
+const MAX_MEMO_IDS: usize = 16_384;
+
 /// CrossRef post-processor.
 ///
 /// Port of `LaTeXML::Post::CrossRef`.
@@ -276,11 +286,11 @@ pub struct CrossRef {
   /// entry (`\section{On \nameref{s}}\label{s}`) is used as stored the second time, where Perl's `fillInTitle`
   /// recurses without end.
   filling:        RefCell<Vec<String>>,
-  /// Memoized [`Self::generate_title`] results, keyed by (id, shown). Every split page's head links each chapter
-  /// (`fill_in_relations` step 4), so a title is otherwise rebuilt once per page. Only a title read from no math is
-  /// kept: `unicodemath` realizes an `XMRef` against the page.
-  title_memo:     RefCell<HashMap<String, HashMap<String, Option<String>>>>,
-  /// Memoized [`Self::generate_ref`] content by id, then (show, is_nameref): it reads the ObjectDB alone.
+  /// Memoized [`Self::generate_title`] results, keyed by id then `shown` (bounded by [`MAX_MEMO_IDS`]).
+  /// Only a title read from no math is kept: `unicodemath` realizes an `XMRef` against the page.
+  title_memo:     RefCell<HashMap<String, Vec<TitleMemoEntry>>>,
+  /// Memoized [`Self::generate_ref`] content by id, then (show, is_nameref) (bounded by [`MAX_MEMO_IDS`]):
+  /// it reads the ObjectDB alone.
   ref_memo:       RefCell<HashMap<String, Vec<RefMemoEntry>>>,
 }
 
@@ -816,19 +826,22 @@ impl CrossRef {
   ///
   /// Port of `CrossRef::generateTitle`.
   fn generate_title(&self, doc: &PostDocument, id: &str, shown: &str) -> Option<String> {
-    if let Some(title) = self
-      .title_memo
-      .borrow()
-      .get(id)
-      .and_then(|by_shown| by_shown.get(shown))
-    {
-      return title.clone();
+    if let Some(title) = self.title_memo.borrow().get(id).and_then(|by_shown| {
+      by_shown
+        .iter()
+        .find(|(s, _)| s == shown)
+        .map(|(_, t)| t.clone())
+    }) {
+      return title;
     }
     let (title, reads_page) = self.generate_title_uncached(doc, id, shown);
     if !reads_page {
       let mut memo = self.title_memo.borrow_mut();
+      if memo.len() >= MAX_MEMO_IDS && !memo.contains_key(id) {
+        memo.clear();
+      }
       let by_shown = memo.entry(id.to_string()).or_default();
-      by_shown.insert(shown.to_string(), title.clone());
+      by_shown.push((shown.to_string(), title.clone()));
     }
     title
   }
@@ -1169,6 +1182,9 @@ impl CrossRef {
     match self.generate_ref_uncached(req_id, req_show, is_nameref) {
       Some(stuff) => {
         let mut memo = self.ref_memo.borrow_mut();
+        if memo.len() >= MAX_MEMO_IDS && !memo.contains_key(req_id) {
+          memo.clear();
+        }
         let by_show = memo.entry(req_id.to_string()).or_default();
         by_show.push((req_show.to_string(), is_nameref, stuff.clone()));
         stuff
@@ -2703,38 +2719,46 @@ impl Processor for CrossRef {
     let doc_title = self.generate_document_title(&doc);
     let navtoc = self.navigation_toc.clone();
 
-    if (navtoc.is_some() || doc_title.is_some()) && doc.findnode("//ltx:navigation").is_none() {
-      if let Some(mut root) = doc.get_document_element() {
-        doc.add_nodes(&mut root, &[NodeData::Element {
-          tag:        "ltx:navigation".to_string(),
-          attributes: None,
-          children:   vec![],
-        }]);
+    let mut nav = if navtoc.is_some() || doc_title.is_some() {
+      match doc.findnode("//ltx:navigation") {
+        Some(existing) => Some(existing),
+        None => {
+          if let Some(mut root) = doc.get_document_element() {
+            doc.add_nodes(&mut root, &[NodeData::Element {
+              tag:        "ltx:navigation".to_string(),
+              attributes: None,
+              children:   vec![],
+            }]);
+          }
+          doc.findnode("//ltx:navigation")
+        },
       }
+    } else {
+      None
+    };
+    if let Some(ref format) = navtoc
+      && let Some(ref mut nav_node) = nav
+    {
+      // Perl CrossRef.pm L50: `['ltx:TOC', {format => $navtoc}]` — format
+      // ONLY, no `scope`. `fill_in_tocs` then defaults scope to `current`, so
+      // this TOC is built relative to THIS page's document element. On a split
+      // document that yields a per-page navigation breadcrumb via
+      // `gen_toc_context` (each page's own contents enclosed within its
+      // ancestors + their siblings), rather than one identical global tree.
+      doc.add_nodes(nav_node, &[NodeData::Element {
+        tag:        "ltx:TOC".to_string(),
+        attributes: Some(HashMap::from_iter([("format".to_string(), format.clone())])),
+        children:   vec![],
+      }]);
     }
-    if let Some(ref format) = navtoc {
-      if let Some(mut nav) = doc.findnode("//ltx:navigation") {
-        // Perl CrossRef.pm L50: `['ltx:TOC', {format => $navtoc}]` — format
-        // ONLY, no `scope`. `fill_in_tocs` then defaults scope to `current`, so
-        // this TOC is built relative to THIS page's document element. On a split
-        // document that yields a per-page navigation breadcrumb via
-        // `gen_toc_context` (each page's own contents enclosed within its
-        // ancestors + their siblings), rather than one identical global tree.
-        doc.add_nodes(&mut nav, &[NodeData::Element {
-          tag:        "ltx:TOC".to_string(),
-          attributes: Some(HashMap::from_iter([("format".to_string(), format.clone())])),
-          children:   vec![],
-        }]);
-      }
-    }
-    if let Some(ref title) = doc_title {
-      if let Some(mut nav) = doc.findnode("//ltx:navigation") {
-        doc.add_nodes(&mut nav, &[NodeData::Element {
-          tag:        "ltx:title".to_string(),
-          attributes: None,
-          children:   vec![NodeData::Text(title.clone())],
-        }]);
-      }
+    if let Some(ref title) = doc_title
+      && let Some(ref mut nav_node) = nav
+    {
+      doc.add_nodes(nav_node, &[NodeData::Element {
+        tag:        "ltx:title".to_string(),
+        attributes: None,
+        children:   vec![NodeData::Text(title.clone())],
+      }]);
     }
 
     self.fill_in_relations(&mut doc);

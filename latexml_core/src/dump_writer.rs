@@ -236,6 +236,7 @@ pub fn write_dump(
         key_str.as_str(),
         "if_stack"
           | "DOCUMENT_REWRITE_RULES"
+          | "math_common_not_rewrite_loaded"
           | "PARAMETER_TYPES"
           | "TAG_PROPERTIES"
           | "MATH_LIGATURES"

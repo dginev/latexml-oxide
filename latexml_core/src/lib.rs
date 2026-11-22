@@ -164,6 +164,38 @@ pub fn reset_thread_engine() {
   reset_conversion_state();
 }
 
+/// Release the TeX engine's thread-local state (`STATE`, `STOMACH`, `GULLET`,
+/// `StringInterner` arena, and per-conversion caches) after `MakeBibliography`
+/// completes and before the render phases (`parallel_render`, `CrossRef`,
+/// `Graphics`, `MathML`, `XSLT`), while keeping `REPORT` (including
+/// `undefined`/`missing` macro/file tallies), `LOGGER`, `telemetry`, and
+/// watchdog/deadline limits intact.
+///
+/// On a large split book, dead core engine state can retain gigabytes in the
+/// parent process throughout post-processing, starving `parallel_render`'s
+/// worker memory budget (`RENDERFLEETBIG`).
+///
+/// **Safety / ordering contract:**
+/// 1. Call ONLY **after** `MakeBibliography` finishes — `MakeBibliography`
+///    reads virtual `.bib` files (`VFS_KEY`) and runs recursive `.bib`
+///    digestion against live `STATE` (author preamble macros and
+///    `lx@bibliography@normalfont`, OD #779).
+/// 2. Call ONLY in a one-shot process/thread that will NOT re-enter the TeX
+///    engine afterward (see the `THREAD-LIFECYCLE CONTRACT` on
+///    [`reset_thread_engine`]).
+pub fn release_core_state_for_post() {
+  preserve_arena_keyed_reports_across(|| {
+    common::local_assignments::initialize_localized();
+    gullet::initialize_gullet();
+    stomach::initialize_stomach();
+    state::reset_thread_state();
+    common::arena::reset();
+    token::reset_noexpand_family_memo();
+    binding::content::reset_fontmap_key_memo();
+    reset_conversion_state();
+  });
+}
+
 /// Forgets what one conversion leaves on its thread for the next, as Perl builds a fresh State per document
 /// (LaTeXML.pm:232): a persistent `cortex_worker` converts its papers on one thread. Called at each conversion's start
 /// ([`initialize_report`]) and by [`reset_thread_engine`]. Not every per-conversion reset: the gullet's, the math
@@ -624,4 +656,57 @@ pub enum TexMode {
   Math,
   /// TeX's text mode
   Text,
+}
+
+#[cfg(test)]
+mod release_for_post_tests {
+  use super::*;
+  use crate::common::{
+    arena,
+    error::{LogStatus, get_status_code, get_status_message, initialize_report, note_status},
+  };
+
+  #[test]
+  fn release_core_state_for_post_shrinks_arena_and_preserves_report() {
+    initialize_report();
+    // Intern a burst of transient conversion strings.
+    let before_burst = arena::len();
+    for i in 0..2_000 {
+      let _ = arena::pin(format!("__transient_perf_test_sym_{i}__"));
+    }
+    assert!(
+      arena::len() >= before_burst + 2_000,
+      "transient strings should grow the arena"
+    );
+
+    note_status(LogStatus::Undefined, Some("\\myundefmacro"));
+    note_status(LogStatus::Undefined, Some("\\myundefmacro"));
+    note_status(LogStatus::Missing, Some("missing_pkg.sty"));
+    emit_warn("test", "sample", "a warning");
+    emit_error("test", "sample", "an error");
+
+    let msg_before = get_status_message();
+    let code_before = get_status_code();
+    let warn_before = get_status(LogStatus::Warning);
+    let err_before = get_status(LogStatus::Error);
+
+    release_core_state_for_post();
+
+    assert!(
+      arena::len() < before_burst + 100,
+      "arena should shrink back near pinned baseline after release (len={}, before_burst={})",
+      arena::len(),
+      before_burst
+    );
+    assert_eq!(get_status_code(), code_before);
+    assert_eq!(get_status(LogStatus::Warning), warn_before);
+    assert_eq!(get_status(LogStatus::Error), err_before);
+    assert_eq!(
+      get_status_message(),
+      msg_before,
+      "status message (including undefined/missing tallies) must remain byte-identical"
+    );
+    assert!(msg_before.contains("\\myundefmacro"));
+    assert!(msg_before.contains("missing_pkg.sty"));
+  }
 }

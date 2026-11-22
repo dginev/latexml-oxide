@@ -406,6 +406,16 @@ impl PostDocument {
     pd
   }
 
+  /// Wrap a terminal XSLT output document (HTML5/XHTML/JATS/TEI) without
+  /// walking the entire DOM to populate `idcache` or scan `<?latexml?>` PIs —
+  /// no downstream processor queries `idcache` on XSLT output, only root
+  /// namespace declarations are needed for `--whatsout=fragment|math`.
+  pub fn new_transformed(doc: Document, options: PostDocumentOptions) -> Self {
+    let mut pd = Self::new_internal(doc, options);
+    pd.register_root_namespaces();
+    pd
+  }
+
   fn new_internal(doc: Document, options: PostDocumentOptions) -> Self {
     let mut dest_dir = options.destination_directory.clone();
     if options.destination.is_some() && dest_dir.is_none() {
@@ -459,6 +469,24 @@ impl PostDocument {
     }
   }
 
+  /// Record namespace declarations from the root element (O(1) on the root).
+  fn register_root_namespaces(&mut self) {
+    if let Some(root) = self.document.get_root_element() {
+      let ns_decls = root.get_namespace_declarations();
+      for ns in ns_decls {
+        let prefix = ns.get_prefix();
+        if !prefix.is_empty() {
+          let href = ns.get_href();
+          self
+            .namespaces
+            .entry(prefix.clone())
+            .or_insert_with(|| href.clone());
+          self.namespace_uris.entry(href).or_insert(prefix);
+        }
+      }
+    }
+  }
+
   /// Initialize document internals: scan IDs, extract namespaces and PIs.
   fn set_document_internal(&mut self) {
     // Record every `xml:id` and `<?latexml …?>` PI in one limit-safe walk (see
@@ -476,20 +504,7 @@ impl PostDocument {
     self.processing_instructions = pis;
 
     // Extract namespaces from root element
-    if let Some(root) = self.document.get_root_element() {
-      let ns_decls = root.get_namespace_declarations();
-      for ns in ns_decls {
-        let prefix = ns.get_prefix();
-        if !prefix.is_empty() {
-          let href = ns.get_href();
-          self
-            .namespaces
-            .entry(prefix.clone())
-            .or_insert_with(|| href.clone());
-          self.namespace_uris.entry(href).or_insert(prefix);
-        }
-      }
-    }
+    self.register_root_namespaces();
 
     // Extract search paths from PIs
     static SP_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {

@@ -1736,6 +1736,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           icon: cli.icon.as_deref(),
           whatsout: whatsout_mode,
         };
+        // Drop dead core TeX state right after `MakeBibliography` (before
+        // `parallel_render` sizes the worker fleet and before render phases)
+        // on split runs or >256 MiB RSS so stale TeX memory doesn't starve
+        // post-processing, while keeping `STATE`/`VFS_KEY`/macros alive for
+        // recursive `.bib` digestion and paying zero teardown on small papers.
+        let _core_release_guard = (!xml_input_mode
+          && (split_enabled || latexml_core::watchdog::process_rss_kb().unwrap_or(0) > 256 * 1024))
+          .then(latexml::post::arm_core_release_after_bib);
         // XML-input mode parses the (possibly huge) source straight from disk
         // via the streaming file reader; TeX-conversion output is already in
         // memory as `xml`.

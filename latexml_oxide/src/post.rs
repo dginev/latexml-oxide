@@ -152,6 +152,34 @@ impl Default for PostOptions<'_> {
   }
 }
 
+thread_local! {
+  /// One-shot CLI flag: release dead core TeX engine state on this thread right
+  /// after `MakeBibliography` finishes (before `parallel_render` sizes the
+  /// worker fleet and before render phases). Armed only by the one-shot
+  /// `latexml_oxide` binary so persistent workers (`cortex_worker`, LSP, library
+  /// API) never tear down their thread-local engine/arena.
+  static RELEASE_CORE_AFTER_BIB: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// RAII guard returned by [`arm_core_release_after_bib`] that clears the flag on
+/// drop even if post-processing returns early before `MakeBibliography`.
+pub struct CoreReleaseAfterBibGuard;
+
+impl Drop for CoreReleaseAfterBibGuard {
+  fn drop(&mut self) { RELEASE_CORE_AFTER_BIB.with(|f| f.set(false)); }
+}
+
+/// Arm one-shot teardown of dead core TeX engine state (`STATE`, `STOMACH`,
+/// `GULLET`, `StringInterner`, and per-conversion caches) on the current thread
+/// right after `MakeBibliography` completes in `run_post_processing_*`.
+///
+/// Only call this from a one-shot CLI process whose thread will not re-enter
+/// the TeX engine afterward (see [`latexml_core::release_core_state_for_post`]).
+pub fn arm_core_release_after_bib() -> CoreReleaseAfterBibGuard {
+  RELEASE_CORE_AFTER_BIB.with(|f| f.set(true));
+  CoreReleaseAfterBibGuard
+}
+
 /// The requested math formats as the post chain's one math processor: a primary with
 /// its parallel secondaries (Perl `LaTeXML.pm` L504-556, order per OXIDIZED_DESIGN
 /// #1093), shared by the in-process renderer and the page-render workers.
@@ -591,7 +619,8 @@ fn try_streaming_front(
       .and_then(|r| latexml_post::document::get_xml_id(&r))
       .is_none();
     let nodes = scanner.to_process(&page_doc);
-    let processed = if nodes.is_empty() {
+    let has_scan_nodes = !nodes.is_empty();
+    let processed = if !has_scan_nodes {
       vec![page_doc]
     } else {
       match scanner.process(page_doc, nodes) {
@@ -603,13 +632,25 @@ fn try_streaming_front(
         },
       }
     };
+    let scan_placeholders = if has_scan_nodes {
+      scanner.last_page_placeholders()
+    } else {
+      (false, false)
+    };
     for d in processed {
       if root_unnamed && let Err(e) = std::fs::write(&page.path, d.to_xml_string()) {
         post_error("post", &format!("cannot refresh a disk-staged page: {e}"));
         telemetry::phase_exit();
         return Err(());
       }
-      let (needs_index, needs_bib) = page_placeholder_probes(&d);
+      #[cfg(debug_assertions)]
+      debug_assert_eq!(
+        scan_placeholders,
+        page_placeholder_probes(&d),
+        "Scan placeholder tracking diverged from XPath probe on {}",
+        page.destination
+      );
+      let (needs_index, needs_bib) = scan_placeholders;
       spilled.push(SpilledPage {
         needs_index,
         needs_bib,
@@ -619,6 +660,9 @@ fn try_streaming_front(
         resident: None,
       });
       // The page's DOM drops here — one resident at a time.
+    }
+    if !spilled.is_empty() && spilled.len().is_multiple_of(crate::heap_trim::SAMPLE_PAGES) {
+      crate::heap_trim::sample();
     }
   }
   telemetry::phase_exit();
@@ -1460,6 +1504,13 @@ fn run_post_processing_inner(
   if bib_result.is_err() {
     return fallback();
   }
+  // MakeBibliography (the last post-phase that can read `STATE`, `VFS_KEY`, or
+  // run a recursive `.bib` session) is finished. On large/split one-shot CLI
+  // runs, release dead core TeX engine state + arena + malloc trim BEFORE
+  // `parallel_render` sizes the worker fleet and before `CrossRef`/`MathML`/`XSLT`.
+  if RELEASE_CORE_AFTER_BIB.with(|f| f.replace(false)) {
+    crate::core_interface::release_core_state_for_post();
+  }
   // ---- Parallel pass B: process-level page-range workers (design §6) ------
   //
   // Sized by `render_workers::render_jobs` (`LATEXML_RENDER_JOBS`, else
@@ -1986,8 +2037,8 @@ fn assert_matches_reparse(page: &PostDocument, path: &str, opts: &PostDocumentOp
 /// `<block>`/`<p>`/`<inline-block>` child (pagelayout ×3, ticket ×2,
 /// vocaltract, bookcover-example2, latex-refsheet/header-graph lost all
 /// picture text at post; batch 56bz).
-fn finalize_html5(output: String) -> String {
-  use std::sync::LazyLock;
+fn finalize_html5(mut output: String) -> String {
+  use std::{borrow::Cow, sync::LazyLock};
   // Cached at first call — regex compile is the slow part of `Regex::new`,
   // and finalize_html5 runs on every (sub-)document in the post-pipeline.
   static XML_PROLOG_RE: LazyLock<regex::Regex> =
@@ -2011,19 +2062,60 @@ fn finalize_html5(output: String) -> String {
   let _gp_html5 = telemetry::phase(Phase::Html5Fixups);
   // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
   // libxml2's to_string() includes it by default; we strip it here.
-  let output = XML_PROLOG_RE.replace(&output, "").to_string();
-  let output = NON_VOID_SELF_CLOSE_RE
-    .replace_all(&output, "<$1$2></$1>")
-    .to_string();
-  let output = VOID_CLOSE_RE.replace_all(&output, "").to_string();
-  VOID_SELF_CLOSE_RE
-    .replace_all(&output, "<$1$2>")
-    .to_string()
+  let prolog_end = if output.starts_with("<?xml") {
+    XML_PROLOG_RE.find(&output).map_or(0, |m| m.end())
+  } else {
+    0
+  };
+  let mut s: Cow<'_, str> = Cow::Borrowed(&output[prolog_end..]);
+  if s.contains("/>")
+    && let Cow::Owned(replaced) = NON_VOID_SELF_CLOSE_RE.replace_all(&s, "<$1$2></$1>")
+  {
+    s = Cow::Owned(replaced);
+  }
+  if s.contains("</")
+    && let Cow::Owned(replaced) = VOID_CLOSE_RE.replace_all(&s, "")
+  {
+    s = Cow::Owned(replaced);
+  }
+  if s.contains("/>")
+    && let Cow::Owned(replaced) = VOID_SELF_CLOSE_RE.replace_all(&s, "<$1$2>")
+  {
+    s = Cow::Owned(replaced);
+  }
+  match s {
+    Cow::Owned(final_str) => final_str,
+    Cow::Borrowed(_) => {
+      if prolog_end > 0 {
+        output.drain(..prolog_end);
+      }
+      output
+    },
+  }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn finalize_html5_preserves_clean_html_and_fixes_xml_artifacts() {
+    let clean = "<!DOCTYPE html><html><body><p>Hello</p><br></body></html>";
+    assert_eq!(finalize_html5(clean.to_string()), clean);
+
+    let with_prolog = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE html><p>ok</p>";
+    assert_eq!(
+      finalize_html5(with_prolog.to_string()),
+      "<!DOCTYPE html><p>ok</p>"
+    );
+
+    let with_fixes =
+      "<?xml version=\"1.0\"?> <span class=\"x\"/><div/><br></br><img src=\"a.png\" />";
+    assert_eq!(
+      finalize_html5(with_fixes.to_string()),
+      "<span class=\"x\"></span><div></div><br><img src=\"a.png\">"
+    );
+  }
 
   /// An unused reservation removes the file an earlier attempt wrote; a used one keeps it for post.
   #[test]

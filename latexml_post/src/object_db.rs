@@ -623,18 +623,22 @@ impl ObjectDB {
       .transaction()
       .map_err(|e| format!("cannot begin save_as transaction: {e}"))?;
     let mut stored = 0usize;
-    for (key, entry) in &self.objects {
-      let map: serde_json::Map<String, serde_json::Value> = entry
-        .values
-        .iter()
-        .map(|(k, v)| (k.clone(), value_to_json_with(self.xml_holder.as_ref(), v)))
-        .collect();
-      tx.execute(
-        "INSERT INTO entries(key, props) VALUES (?1, ?2)",
-        rusqlite::params![key, serde_json::Value::Object(map).to_string()],
-      )
-      .map_err(|e| format!("cannot store entry {key}: {e}"))?;
-      stored += 1;
+    {
+      let mut stmt = tx
+        .prepare("INSERT INTO entries(key, props) VALUES (?1, ?2)")
+        .map_err(|e| format!("cannot prepare save_as insert: {e}"))?;
+      let mut buf = Vec::with_capacity(512);
+      for (key, entry) in &self.objects {
+        buf.clear();
+        write_entry_json(&mut buf, self.xml_holder.as_ref(), entry)
+          .map_err(|e| format!("cannot encode entry {key}: {e}"))?;
+        let props =
+          std::str::from_utf8(&buf).map_err(|e| format!("encoded entry {key} not utf-8: {e}"))?;
+        stmt
+          .execute(rusqlite::params![key, props])
+          .map_err(|e| format!("cannot store entry {key}: {e}"))?;
+        stored += 1;
+      }
     }
     tx.execute(
       "INSERT INTO meta(key, value) VALUES ('latexml_version', ?1)",
@@ -665,25 +669,30 @@ impl ObjectDB {
     let tx = conn
       .transaction()
       .map_err(|e| format!("cannot begin dbfile transaction: {e}"))?;
-    for (key, entry) in &self.objects {
-      let props = {
-        let map: serde_json::Map<String, serde_json::Value> = entry
-          .values
-          .iter()
-          .map(|(k, v)| (k.clone(), value_to_json_with(self.xml_holder.as_ref(), v)))
-          .collect();
-        serde_json::Value::Object(map).to_string()
-      };
-      if external.baseline.get(key) == Some(&props) {
-        continue;
+    {
+      let mut stmt = tx
+        .prepare(
+          "INSERT INTO entries(key, props) VALUES (?1, ?2)
+           ON CONFLICT(key) DO UPDATE SET props = excluded.props",
+        )
+        .map_err(|e| format!("cannot prepare dbfile upsert: {e}"))?;
+      for (key, entry) in &self.objects {
+        let props = {
+          let map: serde_json::Map<String, serde_json::Value> = entry
+            .values
+            .iter()
+            .map(|(k, v)| (k.clone(), value_to_json_with(self.xml_holder.as_ref(), v)))
+            .collect();
+          serde_json::Value::Object(map).to_string()
+        };
+        if external.baseline.get(key) == Some(&props) {
+          continue;
+        }
+        stmt
+          .execute(rusqlite::params![key, props])
+          .map_err(|e| format!("cannot store entry {key}: {e}"))?;
+        stored += 1;
       }
-      tx.execute(
-        "INSERT INTO entries(key, props) VALUES (?1, ?2)
-         ON CONFLICT(key) DO UPDATE SET props = excluded.props",
-        rusqlite::params![key, props],
-      )
-      .map_err(|e| format!("cannot store entry {key}: {e}"))?;
-      stored += 1;
     }
     tx.execute(
       "INSERT INTO meta(key, value) VALUES ('latexml_version', ?1)
@@ -765,6 +774,91 @@ impl ObjectDB {
     }
     Err(format!("entry {key}: malformed value object"))
   }
+}
+
+/// Stream an [`Entry`] directly as the tagged JSON encoding used by
+/// [`value_to_json_with`] into a caller-reused byte buffer, avoiding per-entry
+/// `serde_json::Map` and `serde_json::Value` allocations during `save_as`.
+fn write_entry_json(
+  out: &mut Vec<u8>,
+  holder: Option<&libxml::tree::Document>,
+  entry: &Entry,
+) -> serde_json::Result<()> {
+  write_map_json(out, holder, &entry.values)
+}
+
+fn write_map_json(
+  out: &mut Vec<u8>,
+  holder: Option<&libxml::tree::Document>,
+  map: &HashMap<String, Value>,
+) -> serde_json::Result<()> {
+  // Sort keys so the serialized JSON matches `serde_json::Map` (`BTreeMap`)
+  // byte-for-byte, keeping `finish()`'s `baseline` equality sound even if a
+  // `save_as` DB is ever reopened read-write.
+  let mut keys: Vec<&String> = map.keys().collect();
+  keys.sort_unstable();
+  out.push(b'{');
+  for (idx, k) in keys.into_iter().enumerate() {
+    if idx > 0 {
+      out.push(b',');
+    }
+    serde_json::to_writer(&mut *out, k)?;
+    out.push(b':');
+    write_value_json(out, holder, &map[k])?;
+  }
+  out.push(b'}');
+  Ok(())
+}
+
+fn write_value_json(
+  out: &mut Vec<u8>,
+  holder: Option<&libxml::tree::Document>,
+  value: &Value,
+) -> serde_json::Result<()> {
+  match value {
+    Value::Null => out.extend_from_slice(b"null"),
+    Value::String(s) => {
+      out.extend_from_slice(b"{\"s\":");
+      serde_json::to_writer(&mut *out, s)?;
+      out.push(b'}');
+    },
+    Value::Int(i) => {
+      out.extend_from_slice(b"{\"i\":");
+      serde_json::to_writer(&mut *out, i)?;
+      out.push(b'}');
+    },
+    Value::Bool(b) => {
+      out.extend_from_slice(if *b {
+        b"{\"b\":true}"
+      } else {
+        b"{\"b\":false}"
+      });
+    },
+    Value::List(items) => {
+      out.extend_from_slice(b"{\"l\":[");
+      for (idx, item) in items.iter().enumerate() {
+        if idx > 0 {
+          out.push(b',');
+        }
+        write_value_json(out, holder, item)?;
+      }
+      out.extend_from_slice(b"]}");
+    },
+    Value::Hash(map) => {
+      out.extend_from_slice(b"{\"h\":");
+      write_map_json(out, holder, map)?;
+      out.push(b'}');
+    },
+    Value::Xml(node) => {
+      let xml = holder
+        .map(|doc| doc.node_to_string(node))
+        .unwrap_or_default();
+      out.extend_from_slice(b"{\"x\":");
+      serde_json::to_writer(&mut *out, &xml)?;
+      out.push(b'}');
+    },
+  }
+  Ok(())
 }
 
 /// Tagged, self-describing encoding (see [`ObjectDB::value_to_json`]); a free
@@ -1203,5 +1297,81 @@ mod tests {
     })
     .expect("clean rebuild attaches");
     assert!(db.is_empty());
+  }
+
+  /// Verify that `write_entry_json` (used by `save_as`) emits byte-identical
+  /// JSON to `serde_json::to_string(&value_to_json_with(...))` across all 7
+  /// `Value` variants, including deterministic sorted keys and escaped chars,
+  /// and round-trips cleanly through `save_as` -> `attach`.
+  #[test]
+  fn save_as_streaming_json_matches_value_to_json_for_all_variants() {
+    use crate::document::{PostDocument, PostDocumentOptions};
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dbfile = dir.path().join("snapshot.db");
+
+    let mut db = ObjectDB::new();
+    let doc = PostDocument::new_from_string(
+      r#"<ltx:document xmlns:ltx="http://dlmf.nist.gov/LaTeXML"><ltx:title>Hi &amp; "Bye"</ltx:title></ltx:document>"#,
+      PostDocumentOptions::default(),
+    )
+    .expect("parse xml");
+    let title = doc
+      .findnodes("//ltx:title")
+      .into_iter()
+      .next()
+      .expect("title node");
+    let adopted = db.adopt_xml(&title).expect("adopt xml");
+
+    let mut nested = HashMap::default();
+    nested.insert("z_key".to_string(), Value::Int(-42));
+    nested.insert("a_key".to_string(), Value::Bool(false));
+
+    db.register("ID:all7", vec![
+      ("k_null", Value::Null),
+      ("k_str", Value::from("line1\n\"quoted\"\\slash")),
+      ("k_int", Value::Int(123_456)),
+      ("k_bool_t", Value::Bool(true)),
+      ("k_bool_f", Value::Bool(false)),
+      (
+        "k_list",
+        Value::List(vec![Value::from("x"), Value::Int(7), Value::Null]),
+      ),
+      ("k_hash", Value::Hash(nested)),
+      ("k_xml", adopted),
+    ]);
+
+    let entry = db.lookup("ID:all7").expect("registered entry");
+    let holder = db.xml_holder.as_ref();
+    let mut streamed = Vec::new();
+    write_entry_json(&mut streamed, holder, entry).expect("stream json");
+    let streamed_str = String::from_utf8(streamed).expect("utf8");
+
+    let mut serde_map = serde_json::Map::new();
+    for (k, v) in &entry.values {
+      serde_map.insert(k.clone(), value_to_json_with(holder, v));
+    }
+    let expected_str = serde_json::to_string(&serde_json::Value::Object(serde_map)).expect("serde");
+    assert_eq!(streamed_str, expected_str);
+
+    assert_eq!(db.save_as(&dbfile).expect("save_as"), 1);
+    let reloaded = ObjectDB::attach(&dbfile, DbAttachOptions {
+      readonly: true,
+      ..Default::default()
+    })
+    .expect("reattach");
+    let r = reloaded.lookup("ID:all7").expect("reloaded entry");
+    // Top-level `Value::Null` deletes the key on `set_value`; `Value::Null` inside `k_list` survives.
+    assert!(r.get_value("k_null").is_none());
+    assert_eq!(r.get_string("k_str"), Some("line1\n\"quoted\"\\slash"));
+    assert!(matches!(r.get_value("k_int"), Some(Value::Int(123_456))));
+    assert!(matches!(r.get_value("k_bool_t"), Some(Value::Bool(true))));
+    assert!(matches!(r.get_value("k_bool_f"), Some(Value::Bool(false))));
+    assert!(matches!(
+      r.get_value("k_list"),
+      Some(Value::List(l)) if l.len() == 3 && matches!(l[2], Value::Null)
+    ));
+    assert!(matches!(r.get_value("k_hash"), Some(Value::Hash(h)) if h.len() == 2));
+    assert!(matches!(r.get_value("k_xml"), Some(Value::Xml(_))));
   }
 }
