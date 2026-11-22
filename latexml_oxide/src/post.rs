@@ -480,8 +480,14 @@ fn try_streaming_front(
 ) -> Result<Option<PostFront>, ()> {
   let naming = resolve_split_naming(split_naming);
   telemetry::phase_enter(Phase::Split);
-  let outcome =
-    latexml_post::stream_split::stream_split(path, split_xpath, naming, destination, spill_dir);
+  let outcome = latexml_post::stream_split::stream_split(
+    path,
+    split_xpath,
+    naming,
+    destination,
+    spill_dir,
+    dom_fallback,
+  );
   telemetry::phase_exit();
   let outcome = match outcome {
     Ok(Some(o)) => o,

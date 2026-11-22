@@ -23664,7 +23664,10 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
 - splits through the streaming front-end (`latexml_post::stream_split`) at any size: `post::stream_split_threshold`
   now defaults to 0, where it was 1 GiB. The CLI hands over the core result by value
   (`post::run_post_processing_owned_logged`): staged beside the destination, whose directory it creates, and freed before
-  post runs. A stream that fails on an input under 1 GiB falls back to the whole-DOM split with an Info.
+  post runs. A stream that fails on an input under 1 GiB falls back to the whole-DOM split with an Info. Such a
+  stream fails when a template item arrives after a page was written: an `ltx:navigation` (from `--input xml`), an
+  `ltx:resource`, a root `ltx:date` or a `<?latexml?>` PI. The DOM split copies these into every page. Above 1 GiB the
+  stream keeps its Warn.
 - renders 64 or more pages on min(available cores, 8) worker processes (`render_workers::render_jobs`,
   `enable_auto_jobs`). Each worker's watchdog holds it to its share of the fuse headroom (`RenderManifest::max_rss_kb`).
   A worker that fails to spawn or dies without its status report sends the whole range back to the serial render, with
@@ -23685,4 +23688,5 @@ The streamed split differs from the whole-DOM split only where the latter loses 
 **Guards**: `118_streaming_split_parity::streaming_split_pages_are_byte_identical_to_dom_split` (the default and
 in-memory cases), `::cli_split_streams_by_default_and_unsplit_stays_eager`, and
 `120_midscale_streaming::midscale_render_fleet_defaults_on_and_falls_back_to_serial` (with the
-`LATEXML_RENDER_WORKER_TEST_ABORT` hook).
+`LATEXML_RENDER_WORKER_TEST_ABORT` hook), and `112_fragment_yield::split_keeps_pages_whose_namespaces_a_navigation_uses`
+(a late navigation).

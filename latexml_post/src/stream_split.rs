@@ -66,9 +66,13 @@
 //!   declaration stack error out with a pointer to
 //!   `LATEXML_POST_STREAM_SPLIT=0` (the whole-DOM path); the driver takes that
 //!   path itself, with an Info, for an input under 1 GiB.
-//! * `ltx:resource` elements / `<?latexml?>` PIs first appearing *after* a
-//!   page has been written cannot retroactively reach it; a `Warn` flags the
-//!   (never observed in practice) case.
+//! * `ltx:resource`, root `ltx:date` and `ltx:navigation` elements and
+//!   `<?latexml?>` PIs first appearing *after* a page has been written cannot
+//!   retroactively reach it (the DOM path copies them into every page). With
+//!   `late_template_fails` the split then fails, so the driver can take the
+//!   whole-DOM path; without it a `Warn` flags the case. A navigation inside a
+//!   page arrives late (navigation reaches post only from `--input xml`;
+//!   guard `112_fragment_yield::split_keeps_pages_whose_namespaces_a_navigation_uses`).
 
 use std::{
   io::Write,
@@ -122,6 +126,7 @@ pub fn stream_split(
   naming: SplitNaming,
   destination: Option<&str>,
   spill_dir: &Path,
+  late_template_fails: bool,
 ) -> Result<Option<StreamSplitOutcome>, String> {
   let arms = parse_split_union(union_xpath)
     .ok_or_else(|| format!("split union not streamable: {union_xpath}"))?;
@@ -138,7 +143,13 @@ pub fn stream_split(
   let reader = TextReader::from_file(source_path, OPTIONS)
     .map_err(|()| format!("cannot open '{source_path}' for streaming"))?;
   let mut splitter = Splitter::new(arms, naming, destination, spill_dir);
+  splitter.late_template_fails = late_template_fails;
   splitter.run(reader)?;
+  if late_template_fails && let Some(what) = splitter.late_template {
+    return Err(format!(
+      "{what} appeared after the first page was written; the staged pages would not carry it"
+    ));
+  }
   if splitter.metas.len() <= 1 {
     // No page matched: mirror the DOM path's `[not split]` outcome and let
     // the caller run the ordinary pipeline (the root spill alone would be a
@@ -222,30 +233,34 @@ enum LevelKind {
 }
 
 struct Splitter {
-  arms:               Vec<SplitArm>,
-  naming:             SplitNaming,
-  root_destination:   String,
-  spill_dir:          PathBuf,
-  levels:             Vec<Level>,
-  metas:              Vec<PageMeta>,
+  arms:                Vec<SplitArm>,
+  naming:              SplitNaming,
+  root_destination:    String,
+  spill_dir:           PathBuf,
+  levels:              Vec<Level>,
+  metas:               Vec<PageMeta>,
   /// The root spill's prolog: pre-root PIs/comments, reconstructed verbatim.
-  root_prolog:        String,
+  root_prolog:         String,
   /// Root page trailing misc (post-root comments/PIs).
-  root_tail:          String,
+  root_tail:           String,
   /// `<?latexml …?>` bodies, document order (ar5iv sniff + page templates).
-  latexml_pis:        Vec<String>,
+  latexml_pis:         Vec<String>,
   /// Serialized `ltx:resource` elements (page template).
-  resources_xml:      Vec<String>,
+  resources_xml:       Vec<String>,
   /// Serialized root-direct `ltx:date` elements (page template).
-  dates_xml:          Vec<String>,
+  dates_xml:           Vec<String>,
   /// Serialized `ltx:navigation` elements, excised from content.
-  navs_xml:           Vec<String>,
+  navs_xml:            Vec<String>,
   /// Root element `class` attribute (merged into every page).
-  root_class:         Option<String>,
+  root_class:          Option<String>,
   /// Concatenated `ltx:picture` serializations for SVG extraction.
-  first_page_spilled: bool,
-  warned_late:        bool,
-  unnamed_counter:    u32,
+  first_page_spilled:  bool,
+  warned_late:         bool,
+  /// The first template element or PI met after a page was written.
+  late_template:       Option<&'static str>,
+  /// Fail on a late template instead of warning (see the module doc).
+  late_template_fails: bool,
+  unnamed_counter:     u32,
 }
 
 impl Splitter {
@@ -271,6 +286,8 @@ impl Splitter {
       root_class: None,
       first_page_spilled: false,
       warned_late: false,
+      late_template: None,
+      late_template_fails: false,
       unnamed_counter: 0,
     }
   }
@@ -314,6 +331,7 @@ impl Splitter {
             if ltx && localname == "navigation" {
               // Excised BEFORE page surgery in the DOM path — deliberately
               // does not break a page run.
+              self.warn_if_late("an ltx:navigation");
               self.navs_xml.push(outer);
             } else if self.needs_dom_descent(&outer) {
               let mut minidoc = reader
@@ -405,8 +423,11 @@ impl Splitter {
     self.latexml_pis.push(body);
   }
 
-  fn warn_if_late(&mut self, what: &str) {
-    if self.first_page_spilled && !self.warned_late {
+  fn warn_if_late(&mut self, what: &'static str) {
+    if self.first_page_spilled && self.late_template.is_none() {
+      self.late_template = Some(what);
+    }
+    if self.first_page_spilled && !self.late_template_fails && !self.warned_late {
       self.warned_late = true;
       Warn!(
         "split",
@@ -816,6 +837,7 @@ impl Splitter {
     for nav in &mut navs {
       let s = minidoc.node_to_string(nav);
       nav.unlink_node();
+      self.warn_if_late("an ltx:navigation");
       self.navs_xml.push(s);
     }
     // Pre-collect page matches on the intact (nav-free) tree.
@@ -1703,6 +1725,7 @@ mod tests {
       SplitNaming::Id,
       Some("out/mini.html"),
       &spill,
+      true,
     )
     .expect("split runs")
     .expect("split produces pages");
