@@ -373,7 +373,9 @@ fn describe_signal(_: &std::process::ExitStatus) -> String { "a signal".to_strin
 /// little. Measured VmHWM, Nasser's book: 95 MB on the 600-problem part (11 MB db), 260 MB on the
 /// 2,400-problem part (45 MB db), i.e. ~42 MB + 4.85 x db; this adds a quarter's margin. The old
 /// `max(3 x db, 256 MB)` sized k2400 workers below their start, and one died (exit 137).
-fn worker_estimate_bytes(db_bytes: u64) -> u64 { (64 << 20) + db_bytes.saturating_mul(6) }
+fn worker_estimate_bytes(db_bytes: u64) -> u64 {
+  db_bytes.saturating_mul(6).saturating_add(64 << 20)
+}
 
 /// Pure fleet-sizing calculation for [`parallel_render`].
 ///
@@ -464,8 +466,8 @@ pub(crate) fn parallel_render(
   // eager-loading a 1.82M-object db blew a 30 GB cgroup at spawn — the
   // post-only measurement survived only because its parent was fresh). Free
   // what the allocators will give back first, then estimate each worker at
-  // ~3x the on-disk db (eager JSON decode + libxml holder + one page) plus a
-  // fixed floor, and size the fleet from the smaller of MemAvailable and the
+  // 64 MiB + 6x the on-disk db (`worker_estimate_bytes`), and size the
+  // fleet from the smaller of MemAvailable and the
   // distance to this run's own memory fuse. Degrade to fewer workers — or
   // decline to engage — rather than let the kernel choose a victim.
   crate::heap_trim::release_free_heap();

@@ -2367,9 +2367,24 @@ mod input_failure_tests {
 #[cfg(test)]
 mod panic_sweep_tests {
   /// The hook an aborting build installs removes the run's registered paths (a test build unwinds, so the hook is
-  /// installed by hand and the panic caught by its thread's join).
+  /// installed by hand and the panic caught by its thread's join). The hook claims the process's exit and kills its
+  /// registered children, so the test reruns itself in a child process and leaves a `cargo test` process untouched.
   #[test]
   fn an_aborting_panic_removes_the_registered_paths() {
+    const CHILD: &str = "LATEXML_PANIC_SWEEP_TEST_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+      let name = "panic_sweep_tests::an_aborting_panic_removes_the_registered_paths";
+      let out = std::process::Command::new(std::env::current_exe().expect("the test binary"))
+        .args(["--exact", name, "--test-threads=1"])
+        .env(CHILD, "1")
+        .output()
+        .expect("spawn the test binary");
+      let stdout = String::from_utf8_lossy(&out.stdout);
+      let stderr = String::from_utf8_lossy(&out.stderr);
+      assert!(out.status.success(), "{stdout}{stderr}");
+      assert!(stdout.contains("1 passed"), "{stdout}{stderr}");
+      return;
+    }
     let dir = tempfile::tempdir().expect("tempdir");
     let handoff = dir.path().join("latexml-post-handoff-1.xml");
     std::fs::write(&handoff, "<document/>").expect("handoff written");

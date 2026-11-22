@@ -546,7 +546,8 @@ fn run_pre_exit_hook(code: i32) {
 /// Paths a run created that an exit skipping destructors would leave behind — an unpacked archive (a `TempDir`), the
 /// destination, the post page-spill directory: the watchdog's `exit(124)`/`exit(EXIT_OOM)` and the binaries'
 /// allocation-failure hooks call [`remove_registered_paths`] first. On the normal path a path's owner removes it, and
-/// its [`RemoveOnExit`] guard unregisters it. (A `panic = "abort"` build still leaves them on a panic.)
+/// its [`RemoveOnExit`] guard unregisters it. (A `panic = "abort"` build of `cortex_worker` still leaves them on a
+/// panic; `latexml_oxide`'s panic hook removes them.)
 static REMOVE_ON_EXIT: std::sync::Mutex<Vec<(u64, std::path::PathBuf)>> =
   std::sync::Mutex::new(Vec::new());
 static NEXT_REMOVE_ON_EXIT: AtomicU64 = AtomicU64::new(0);
