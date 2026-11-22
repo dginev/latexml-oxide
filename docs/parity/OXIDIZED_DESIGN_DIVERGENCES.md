@@ -19,7 +19,7 @@
 > port-bug fix (→ SYNC "Rust Error Fixes"), a gap or residual list (→ SYNC row R), a math-parse divergence (→ `docs/math/OXIDIZED_DESIGN_MATH.md`).
 > A WORKAROUND entry must name the principled mechanism that would replace it and open a SYNC row for it. Entry shape: rule · Perl ref · TeX
 > source:line · sub-rules as bullets · witnesses · guards · upstream status; no batch history (git keeps it); about 60 lines at most. OD
-> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1131** (2026-11-21; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
+> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1135** (2026-11-21; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -23654,3 +23654,26 @@ Warnings eager, 171 streamed, byte-identical XML). Eager output and counts are u
 `perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion` (repro
 `streaming/streamed_unparsed_math_warns_once.tex`: 4 Perl `not_parsed`, 1 ours eager and streamed); unit
 `parser::tests::warns_once_per_distinct_formula_per_conversion`.
+
+### 1134. A split page links only the related pages something reads (CHAPLINKS)
+
+**Rule** (maintainer ruling 2026-11-21: drop unread relations). CrossRef's relation walk keeps, of the sibling pages of
+every ancestor and the page's own child pages, only those whose relation the stylesheets read: `bibliography`, `index`,
+`glossary`. The sectional relations (`part`, `chapter`, `section`, `subsection`, … — the page type's element name) and
+`sidebar` (a non-primary page) are no longer made. `up` (and "up up"…), `start`, `prev`, `next` are unchanged.
+- Perl: `CrossRef.pm:105-130` adds every such page (`:110`: "In a large/complex site, this gets way too much. But how
+  to prune?"), so a page carries one link per sibling of each ancestor: quadratic in the pages, each link with its full
+  breadcrumb `fulltitle`.
+- Readers (`latexml_post/resources/XSLT/LaTeXML-webpage-xhtml.xsl`; Perl's copy :451, :514-516, :527-531): the header
+  navigation reads `up`, `prev`, `next`, the navbar `start`, the footer `prev`, `bibliography`, `index`, `glossary`,
+  `next`, the `<title>` `up`, `LaTeXML-structure-xhtml.xsl` `up`. The sectional relations and `sidebar` reach only the
+  head-link copy (`webpage-xhtml.xsl:308-320`), which duplicates the navigation TOC; HTML 4.01 §6.12 listed `Chapter`/
+  `Section`/`Subsection`/`Appendix` as link types, the HTML Living Standard (§4.6.7) does not, and no browser, ar5iv
+  or ar5iv-css reads them.
+- Measured: Nasser's 2,400-problem slice (`--splitat=subsubsection`) had 66 % of its HTML in these links (612,424
+  links, 246-455 bytes each); the page bodies are byte-identical.
+- Implementation: `CrossRef::related_pages` (memoized on the entry's `ChildPages`), so the walk does no per-link work.
+- Upstream: offered to Perl as a patch (prune the walk to the read relations).
+
+**Guards**: `cluster_xslt_split::split_nav_relations::split_page_navigation_relations` (a section page's and the root
+page's whole head link sets), `cluster_xslt_split::urlstyle::*` (the parent page reached by `up`).

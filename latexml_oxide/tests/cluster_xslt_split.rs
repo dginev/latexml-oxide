@@ -954,16 +954,15 @@ mod split_css_links {
 }
 
 mod split_nav_relations {
-  //! Split-page navigation-relation parity guard (full pipeline: split + CrossRef + XSLT).
+  //! Split-page navigation relations (full pipeline: split + CrossRef + XSLT).
   //!
-  //! Same-host Perl (`latexmlc --format=html5 --splitat=section`) emits, on each split
-  //! page, a full set of `<link rel=…>` head entries: `prev` (the parent page for a
-  //! first-child section), the relation-typed sibling/ancestor links
-  //! (`rel="chapter"`/`rel="section"`/…), and full-breadcrumb `title=` attributes on
-  //! all of them. Rust had ported only the first half of `CrossRef::fill_in_relations`
-  //! (up/start/prev/next) — dropping `prev` for first-children, the entire
-  //! relation-typed block, and the `fulltitle` attribute the XSLT head-links template
-  //! prefers — so split pages carried a truncated, mostly-untitled nav set.
+  //! Each split page's head carries `up`/"up up"/`start`/`prev`/`next` (Perl
+  //! `CrossRef::fill_in_relations`, `prev` being the parent page for a first-child
+  //! section) and, of the relation-typed sibling/ancestor and child links (Perl L105-130),
+  //! only those something reads: `bibliography`/`index`/`glossary` (the footer navigation).
+  //! Perl's sectional `rel="chapter"`/`rel="section"`/… links, one per sibling of every
+  //! ancestor, are dropped (OXIDIZED_DESIGN_DIVERGENCES #1134). Every link carries the full
+  //! breadcrumb `fulltitle` the XSLT head-links template prefers over `title`.
 
   use std::{path::Path, process::Command};
 
@@ -975,11 +974,24 @@ mod split_nav_relations {
       .expect("spawn latexml_oxide")
   }
 
-  /// A first `\section` of a `\chapter`, split at `section`, must carry: a `rel="prev"`
-  /// back to the chapter page (with the chapter's title), the relation-typed
-  /// `rel="chapter"` link, and full-breadcrumb titles — matching Perl.
+  /// The `<link rel=…>` lines of a page's `<head>`, stylesheets excluded.
+  fn head_links(page: &str) -> Vec<String> {
+    let head = page.split("</head>").next().unwrap_or(page);
+    head
+      .match_indices("<link rel=")
+      .map(|(i, _)| {
+        let rest = &head[i..];
+        rest[..rest.find('>').map(|j| j + 1).unwrap_or(rest.len())].to_string()
+      })
+      .filter(|l| !l.contains("stylesheet"))
+      .collect()
+  }
+
+  /// The whole head link set of a first `\section` of a `\chapter` (an ancestor's
+  /// sibling bibliography kept, the sectional siblings dropped) and of the root page
+  /// (its child bibliography kept, its child chapters dropped), split at `section`.
   #[test]
-  fn split_page_navigation_relations_match_perl() {
+  fn split_page_navigation_relations() {
     const DOC: &str = "\\documentclass[12pt]{book}\n\
                        \\begin{document}\n\
                        \\chapter{Alpha}\n\
@@ -987,6 +999,10 @@ mod split_nav_relations {
                        \\subsection{Gamma}\n\
                        \\section{Delta}\n\
                        \\chapter{Epsilon}\n\
+                       \\section{Zeta}\n\
+                       \\begin{thebibliography}{9}\n\
+                       \\bibitem{k} A. Author, \\emph{A Title}.\n\
+                       \\end{thebibliography}\n\
                        \\end{document}\n";
     let work = tempfile::tempdir().expect("tempdir");
     std::fs::write(work.path().join("index.tex"), DOC).unwrap();
@@ -1005,68 +1021,21 @@ mod split_nav_relations {
       out.status.code(),
       String::from_utf8_lossy(&out.stderr)
     );
+    let read = |name: &str| {
+      std::fs::read_to_string(work.path().join(name)).unwrap_or_else(|e| panic!("read {name}: {e}"))
+    };
 
-    let page = std::fs::read_to_string(work.path().join("Ch1.S1.html")).expect("read Ch1.S1.html");
-    // The <head> nav links only.
-    let head = page.split("</head>").next().unwrap_or(&page);
-    let links: Vec<&str> = head
-      .match_indices("<link rel=")
-      .map(|(i, _)| {
-        let rest = &head[i..];
-        &rest[..rest.find('>').map(|j| j + 1).unwrap_or(rest.len())]
-      })
-      .filter(|l| !l.contains("stylesheet"))
-      .collect();
-    let joined = links.join("\n");
-
-    // 1. prev-for-first-child: Ch1.S1 is the first section of Ch1, so prev is the
-    //    chapter page itself (the old `?` dropped this link entirely).
-    assert!(
-      links
-        .iter()
-        .any(|l| l.contains("rel=\"prev\"") && l.contains("href=\"Ch1.html\"")),
-      "missing rel=\"prev\" -> parent chapter page (first-child prev):\n{joined}"
-    );
-    // 2. relation-typed links: the second half of fill_in_relations (chapter/section).
-    assert!(
-      links
-        .iter()
-        .any(|l| l.contains("rel=\"chapter\"") && l.contains("href=\"Ch1.html\"")),
-      "missing relation-typed rel=\"chapter\" link:\n{joined}"
-    );
-    assert!(
-      links.iter().any(|l| l.contains("rel=\"section\"")),
-      "missing relation-typed rel=\"section\" link:\n{joined}"
-    );
-    // 3. full-breadcrumb titles (fulltitle, not empty and not the "In X" collapse):
-    //    the `up`/`prev` links point to the parent chapter, so carry its own title.
-    for l in links
-      .iter()
-      .filter(|l| l.contains("rel=\"up\"") || l.contains("rel=\"prev\""))
-    {
-      assert!(
-        l.contains("title=\"Chapter 1 Alpha\""),
-        "up/prev nav link should carry the parent chapter title \"Chapter 1 Alpha\", got:\n{l}"
-      );
-    }
-    // Every non-start nav link must carry a NON-empty title that is not the buggy
-    // "In <context>" collapse (the previous behavior emitted empty or "In X").
-    for l in links
-      .iter()
-      .filter(|l| !l.contains("rel=\"start\"") && !l.contains("rel=\"up up"))
-    {
-      assert!(
-        !l.contains("title=\"\"") && !l.contains("title=\"In "),
-        "nav link has an empty / \"In X\" collapsed title (fulltitle missing):\n{l}"
-      );
-    }
-    // The deeper next/section links carry the multi-level breadcrumb (‣ separator).
-    assert!(
-      links
-        .iter()
-        .any(|l| l.contains("rel=\"next\"") && l.contains('\u{2023}')),
-      "rel=\"next\" should carry the full breadcrumb title (with \u{2023}):\n{joined}"
-    );
+    assert_eq!(head_links(&read("Ch1.S1.html")), [
+      r#"<link rel="up" href="Ch1.html" title="Chapter 1 Alpha">"#,
+      r#"<link rel="start" href="index.html" title="">"#,
+      r#"<link rel="prev" href="Ch1.html" title="Chapter 1 Alpha">"#,
+      "<link rel=\"next\" href=\"Ch1.S2.html\" title=\"1.2 Delta \u{2023} Chapter 1 Alpha\">",
+      r#"<link rel="bibliography" href="bib.html" title="Bibliography">"#,
+    ]);
+    assert_eq!(head_links(&read("index.html")), [
+      r#"<link rel="next" href="Ch1.html" title="Chapter 1 Alpha">"#,
+      r#"<link rel="bibliography" href="bib.html" title="Bibliography">"#,
+    ]);
   }
 }
 
@@ -1613,12 +1582,12 @@ mod urlstyle {
       "default should keep index.html: {links:?}"
     );
     assert!(
-      has(&links, "chapter", "Ch1.html"),
+      has(&links, "up", "Ch1.html"),
       "default should keep Ch1.html: {links:?}"
     );
     // Explicit `--urlstyle=file` is identical to the default.
     let explicit = nav_hrefs(&["--urlstyle", "file"]);
-    assert!(has(&explicit, "start", "index.html") && has(&explicit, "chapter", "Ch1.html"));
+    assert!(has(&explicit, "start", "index.html") && has(&explicit, "up", "Ch1.html"));
   }
 
   /// `server`: strip a trailing `index.html` (landing page → `./`); a non-index
@@ -1631,7 +1600,7 @@ mod urlstyle {
       "server should strip index.html → ./ : {links:?}"
     );
     assert!(
-      has(&links, "chapter", "Ch1.html"),
+      has(&links, "up", "Ch1.html"),
       "server keeps a non-index sub-page: {links:?}"
     );
     assert!(
@@ -1647,7 +1616,7 @@ mod urlstyle {
   fn negotiated_style_strips_extension() {
     let links = nav_hrefs(&["--urlstyle", "negotiated"]);
     assert!(
-      has(&links, "chapter", "Ch1"),
+      has(&links, "up", "Ch1"),
       "negotiated should drop .html → Ch1: {links:?}"
     );
     assert!(
