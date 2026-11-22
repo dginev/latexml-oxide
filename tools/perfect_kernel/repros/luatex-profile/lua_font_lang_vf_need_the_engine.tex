@@ -10,7 +10,7 @@
 %          end the run (fatal "lua-loaded font has no name", "vf.char() outside virtual font")
 % engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
 % preload: [rawstyles,rawclasses,luatex]latexml.sty
-% expect:  0 errors, 13 Warnings (lua:sandbox: font.id tenln, font.define, lang.new, vf.char, tex.finish, the font's
+% expect:  0 errors, 13 Warnings (lua:engine: font.id tenln, font.define, lang.new, vf.char, tex.finish, the font's
 %          resources field (fontawesome5's, texnegar's read), getparameters, frozen, setfont, babel's 4 font.id);
 %          "I[-1] D[false] L[false] V[false] F[false] C[1/1/2] R[nil] P[nil] Z[nil] S[false] AB"
 % status:  RED (Error:lua:interpreter per crashing chunk; past 3 restarts later chunks are not evaluated) -> GREEN

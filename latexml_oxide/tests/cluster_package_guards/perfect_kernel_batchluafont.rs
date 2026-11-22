@@ -76,7 +76,7 @@ fn batchluafont_font_lang_vf_calls_need_the_engine() {
     id("tencircw"),
   ]
   .iter()
-  .map(|what| format!("Warning:lua:sandbox {what} (texlua has no TeX engine fonts or typesetter)"))
+  .map(|what| format!("Warning:lua:engine {what} (texlua has no TeX engine fonts or typesetter)"))
   .collect();
   let warned: Vec<&str> = log
     .lines()

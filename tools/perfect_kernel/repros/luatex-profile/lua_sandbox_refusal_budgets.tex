@@ -1,0 +1,24 @@
+% mechanism: lua_bridge.rs Denials (OXIDIZED_DESIGN_DIVERGENCES #1081): a chunk lists 20 refusals of each severity,
+%   the rest in one summary per severity, so harmless Warnings never push a sandbox-only refusal's Error out.
+% witness: synthetic (review of batch LUAEXEC: 20 os.execute then io.output("../x") listed no Error by name)
+% oracle:  lualatex -no-shell-escape refuses each os.execute and performs each io.output (it does not check
+%   io.output): "[strict:0][programs:30 writes:0]"; the Errors are the sandbox's own record
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
+% expect:  "[strict:40][programs:30 writes:30]"; 42 Errors, 21 Warnings (lua:sandbox): chunk 1, 20 io.output Errors and
+%   "20 more"; chunk 2, 20 os.execute Warnings, 20 io.output Errors, an Error "10 more" and a Warning "10 more"
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\begin{luacode*}
+local n = 0
+for i = 1, 40 do if not pcall(io.output, "../budget_strict.txt") then n = n + 1 end end
+tex.sprint("[strict:" .. n .. "]")
+\end{luacode*}
+\begin{luacode*}
+local programs, writes = 0, 0
+for i = 1, 30 do if os.execute("exit 0") == nil then programs = programs + 1 end end
+for i = 1, 30 do if not pcall(io.output, "../budget_mixed.txt") then writes = writes + 1 end end
+tex.sprint("[programs:" .. programs .. " writes:" .. writes .. "]")
+\end{luacode*}
+\end{document}
