@@ -62,6 +62,24 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     Nasser's 2,400-problem slice split at `subsubsection`: 612,424 links dropped, HTML 343 → 118 MB, −12.9 %
     instructions; the 1,600-subsection book: 37.4 → 24.6 MB, −4.8 %. Guard
     `cluster_xslt_split::split_nav_relations::split_page_navigation_relations`.
+  - **0.8.0-rc2: a large split document's post makes fewer system calls (issue 777).** The heap give-back
+    (`malloc_trim` + `mi_collect`) runs when the resident set has grown by 1/64 of the soft memory fuse, not every 512
+    pages, since each trim walks the whole heap; a split run's XSLT finds and copies each CSS/JS resource once per
+    conversion (with its `@import`s; a failed copy is retried and warned on every page, as before), and the page
+    writers make each output directory once. Nasser's 2,000-problem slice (8,094 pages): `madvise` 198,969 → 29,189,
+    `statx` 282,753 → 15,756, `mkdir` 24,294 → 15, system time 17.3 → 13.1 s; pages byte-identical. Guards
+    `cluster_xslt_split::split_css_links::{split_copies_each_resource_once, css_imports_followed_after_a_resource_copy,
+    failed_css_import_copy_is_retried_per_page}`.
+  - **0.8.0-rc2: the core frees two kinds of discarded math nodes.** The MathFork's copied `_Capture_` cells (one per
+    aligned cell) and the XMHints the math parser folds into padding were unlinked and never freed; core orphans on a
+    100-section generated book fall from 1,402 subtrees to 2, and the live C heap entering post on a 400-section one
+    from 271 to 224 MB. Output is byte-identical. Guards `112_fragment_yield::{mathfork_capture_cells_leave_no_c_heap_residue,
+    folded_math_hints_leave_no_c_heap_residue}`.
+  - **0.8.0-rc2: a streamed conversion warns once per failing formula, as an eager one does
+    (OXIDIZED_DESIGN_DIVERGENCES #1132).** The `ambiguous_math`/`unparsed_math` once-per-distinct-formula set is per
+    conversion, not per math parser; streaming builds one parser per segment, so a formula repeated across segments
+    warned once per segment (Nasser's 600-problem slice: 101 Warnings converted whole, 171 streamed). Guard
+    `perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion`.
   - **0.8.0-rc2: release checks.** Every release build converts `hello.tex` with the binary it ships and
     `resources/` moved aside (`tools/release_smoke.sh`; rc1's macOS and Windows builds ran only `--version`); the
     container images print the binaries' revision and carry `org.opencontainers.image.{title,version,revision,source}`;
