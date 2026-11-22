@@ -684,7 +684,7 @@ fn stage_handoff(xml: &str, opts: &PostOptions) -> Option<StagedHandoff> {
 }
 
 /// [`run_post_processing_logged`] taking the core result by value: a handoff
-/// staged to disk (see [`handoff_needs_file`]) is dropped before post runs, so
+/// staged to disk (see `handoff_needs_file`) is dropped before post runs, so
 /// the core XML is not resident beside the post pipeline — on Nasser's
 /// 2,400-problem book a few hundred MB of the single-invocation peak.
 pub fn run_post_processing_owned_logged(xml: String, opts: &PostOptions) -> PostOutcome {

@@ -17,8 +17,8 @@
 //! folded as FATAL, never as success).
 //!
 //! Env knob: `LATEXML_RENDER_JOBS` (usize; `1` = the serial path). Unset, the
-//! `latexml_oxide` binary renders a split of [`MIN_PAGES_FOR_PARALLEL`] pages
-//! or more on min(available cores, [`AUTO_JOBS_MAX`]) workers; every other
+//! `latexml_oxide` binary renders a split of `MIN_PAGES_FOR_PARALLEL` pages
+//! or more on min(available cores, `AUTO_JOBS_MAX`) workers; every other
 //! embedder (the library, `cortex_worker`) stays serial. The pages are
 //! byte-identical either way; a worker that fails to spawn or dies without its
 //! status report sends the whole range back to the serial render (an Info).
@@ -50,12 +50,12 @@ pub(crate) const AUTO_JOBS_MAX: usize = 8;
 /// in parallel without being asked.
 static AUTO_JOBS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
-/// Let an unset `LATEXML_RENDER_JOBS` pick the fleet size ([`render_jobs`]).
+/// Let an unset `LATEXML_RENDER_JOBS` pick the fleet size (`render_jobs`).
 pub fn enable_auto_jobs() { AUTO_JOBS.store(true, std::sync::atomic::Ordering::Relaxed); }
 
 /// How many page-render worker processes pass B may spawn: an explicit
 /// `LATEXML_RENDER_JOBS` wins (an unparsable or zero value is 1 = serial);
-/// unset, min(available cores, [`AUTO_JOBS_MAX`]) where [`enable_auto_jobs`]
+/// unset, min(available cores, `AUTO_JOBS_MAX`) where [`enable_auto_jobs`]
 /// was called, else 1. Read once per conversion, so no hot-path caching is
 /// needed.
 pub(crate) fn render_jobs() -> usize {
