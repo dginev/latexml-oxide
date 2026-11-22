@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["worker_main"],"struct":["PageJob","PageOpts","RenderManifest"]};
+window.SIDEBAR_ITEMS = {"fn":["enable_auto_jobs","worker_main"],"struct":["PageJob","PageOpts","RenderManifest"]};

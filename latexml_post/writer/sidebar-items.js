@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["OutputFormat"],"fn":["ensure_parent_dir","write_output","write_output_segments"],"struct":["Writer"]};
+window.SIDEBAR_ITEMS = {"enum":["OutputFormat"],"fn":["ensure_parent_dir","made_dir_count","write_output","write_output_segments"],"struct":["MadeDirs","Writer"]};

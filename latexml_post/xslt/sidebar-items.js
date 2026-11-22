@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["XSLT"]};
+window.SIDEBAR_ITEMS = {"fn":["resource_copy_count"],"struct":["XSLT"]};

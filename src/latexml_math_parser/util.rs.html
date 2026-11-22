@@ -2187,386 +2187,399 @@
 <a href=#2187 id=2187 data-nosnippet>2187</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>prev: <span class="prelude-ty">Option</span>&lt;usize&gt; = <span class="prelude-val">None</span>;
 <a href=#2188 id=2188 data-nosnippet>2188</a>  <span class="kw">let </span><span class="kw-2">mut </span>pending_space: f64 = <span class="number">0.0</span>;
 <a href=#2189 id=2189 data-nosnippet>2189</a>  <span class="kw">let </span><span class="kw-2">mut </span>pending_phantom = <span class="bool-val">false</span>;
-<a href=#2190 id=2190 data-nosnippet>2190</a>  <span class="comment">// Save hint nodes that contributed to _space, for possible PUNCT reuse
-<a href=#2191 id=2191 data-nosnippet>2191</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>last_hint_for: Vec&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;&gt; = Vec::new(); <span class="comment">// parallel to prefiltered
-<a href=#2192 id=2192 data-nosnippet>2192</a>  // Perl's `_phantom`, parallel to prefiltered
-<a href=#2193 id=2193 data-nosnippet>2193</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>phantom: Vec&lt;bool&gt; = Vec::new();
-<a href=#2194 id=2194 data-nosnippet>2194</a>
-<a href=#2195 id=2195 data-nosnippet>2195</a>  <span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>nodes {
-<a href=#2196 id=2196 data-nosnippet>2196</a>    <span class="kw">if </span>node.get_type() != <span class="prelude-val">Some</span>(NodeType::ElementNode) {
-<a href=#2197 id=2197 data-nosnippet>2197</a>      <span class="kw">continue</span>;
-<a href=#2198 id=2198 data-nosnippet>2198</a>    }
-<a href=#2199 id=2199 data-nosnippet>2199</a>    <span class="kw">if </span>name_is(<span class="kw-2">&amp;</span>node, <span class="string">"XMHint"</span>) {
-<a href=#2200 id=2200 data-nosnippet>2200</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(width_str) = node.get_attribute(<span class="string">"width"</span>) {
-<a href=#2201 id=2201 data-nosnippet>2201</a>        <span class="kw">let </span>pts = get_xmhint_spacing(<span class="kw-2">&amp;</span>width_str);
-<a href=#2202 id=2202 data-nosnippet>2202</a>        <span class="kw">if </span>pts != <span class="number">0.0 </span>{
-<a href=#2203 id=2203 data-nosnippet>2203</a>          <span class="kw">let </span>ph = node
-<a href=#2204 id=2204 data-nosnippet>2204</a>            .get_attribute(<span class="string">"name"</span>)
-<a href=#2205 id=2205 data-nosnippet>2205</a>            .is_some_and(|name| name.ends_with(<span class="string">"phantom"</span>));
-<a href=#2206 id=2206 data-nosnippet>2206</a>          <span class="kw">match </span>prev {
-<a href=#2207 id=2207 data-nosnippet>2207</a>            <span class="prelude-val">Some</span>(idx) <span class="kw">if </span>get_grammatical_role(<span class="kw-2">&amp;</span>prefiltered[idx]) != <span class="string">"OPEN" </span>=&gt; {
-<a href=#2208 id=2208 data-nosnippet>2208</a>              <span class="kw">let </span>prev = <span class="kw-2">&amp;mut </span>prefiltered[idx];
-<a href=#2209 id=2209 data-nosnippet>2209</a>              <span class="kw">let </span>s: f64 = prev
-<a href=#2210 id=2210 data-nosnippet>2210</a>                .get_attribute(<span class="string">"_space"</span>)
-<a href=#2211 id=2211 data-nosnippet>2211</a>                .and_then(|v| v.parse().ok())
-<a href=#2212 id=2212 data-nosnippet>2212</a>                .unwrap_or(<span class="number">0.0</span>);
-<a href=#2213 id=2213 data-nosnippet>2213</a>              <span class="kw">let _ </span>= prev.set_attribute(<span class="string">"_space"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, s + pts));
-<a href=#2214 id=2214 data-nosnippet>2214</a>              phantom[idx] |= ph;
-<a href=#2215 id=2215 data-nosnippet>2215</a>              <span class="comment">// Save this hint node for potential PUNCT reuse
-<a href=#2216 id=2216 data-nosnippet>2216</a>              </span>last_hint_for[idx] = <span class="prelude-val">Some</span>(node.clone());
-<a href=#2217 id=2217 data-nosnippet>2217</a>            },
-<a href=#2218 id=2218 data-nosnippet>2218</a>            <span class="kw">_ </span>=&gt; {
-<a href=#2219 id=2219 data-nosnippet>2219</a>              pending_space += pts;
-<a href=#2220 id=2220 data-nosnippet>2220</a>              pending_phantom = ph;
-<a href=#2221 id=2221 data-nosnippet>2221</a>            },
-<a href=#2222 id=2222 data-nosnippet>2222</a>          }
-<a href=#2223 id=2223 data-nosnippet>2223</a>        }
-<a href=#2224 id=2224 data-nosnippet>2224</a>      }
-<a href=#2225 id=2225 data-nosnippet>2225</a>      <span class="comment">// Unlink from the XML tree; XMHints are ephemeral
-<a href=#2226 id=2226 data-nosnippet>2226</a>      </span>node.unlink();
-<a href=#2227 id=2227 data-nosnippet>2227</a>    } <span class="kw">else if </span>name_is(<span class="kw-2">&amp;</span>node, <span class="string">"XMTok"</span>)
-<a href=#2228 id=2228 data-nosnippet>2228</a>      &amp;&amp; node.with_attribute(<span class="string">c"role"</span>, |v| v == <span class="string">"APPLYOP"</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>)
-<a href=#2229 id=2229 data-nosnippet>2229</a>    {
-<a href=#2230 id=2230 data-nosnippet>2230</a>      prefiltered.push(node);
-<a href=#2231 id=2231 data-nosnippet>2231</a>      last_hint_for.push(<span class="prelude-val">None</span>);
-<a href=#2232 id=2232 data-nosnippet>2232</a>      phantom.push(<span class="bool-val">false</span>);
-<a href=#2233 id=2233 data-nosnippet>2233</a>    } <span class="kw">else </span>{
-<a href=#2234 id=2234 data-nosnippet>2234</a>      <span class="kw">let </span><span class="kw-2">mut </span>ph = <span class="bool-val">false</span>;
-<a href=#2235 id=2235 data-nosnippet>2235</a>      <span class="kw">if </span>pending_space != <span class="number">0.0 </span>{
-<a href=#2236 id=2236 data-nosnippet>2236</a>        <span class="kw">let _ </span>= node.set_attribute(<span class="string">"lpadding"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:.1}pt"</span>, pending_space));
-<a href=#2237 id=2237 data-nosnippet>2237</a>        ph = pending_phantom;
-<a href=#2238 id=2238 data-nosnippet>2238</a>        pending_space = <span class="number">0.0</span>;
-<a href=#2239 id=2239 data-nosnippet>2239</a>        pending_phantom = <span class="bool-val">false</span>;
-<a href=#2240 id=2240 data-nosnippet>2240</a>      }
-<a href=#2241 id=2241 data-nosnippet>2241</a>      prev = <span class="prelude-val">Some</span>(prefiltered.len());
-<a href=#2242 id=2242 data-nosnippet>2242</a>      prefiltered.push(node);
-<a href=#2243 id=2243 data-nosnippet>2243</a>      last_hint_for.push(<span class="prelude-val">None</span>);
-<a href=#2244 id=2244 data-nosnippet>2244</a>      phantom.push(ph);
-<a href=#2245 id=2245 data-nosnippet>2245</a>    }
-<a href=#2246 id=2246 data-nosnippet>2246</a>  }
-<a href=#2247 id=2247 data-nosnippet>2247</a>
-<a href=#2248 id=2248 data-nosnippet>2248</a>  <span class="comment">// Second pass: convert _space to rpadding (or PUNCT XMHint if above threshold)
-<a href=#2249 id=2249 data-nosnippet>2249</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>filtered: Vec&lt;Node&gt; = Vec::new();
-<a href=#2250 id=2250 data-nosnippet>2250</a>  <span class="kw">for </span>(i, <span class="kw-2">mut </span>node) <span class="kw">in </span>prefiltered.into_iter().enumerate() {
-<a href=#2251 id=2251 data-nosnippet>2251</a>    filtered.push(node.clone());
-<a href=#2252 id=2252 data-nosnippet>2252</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(s_str) = node.get_attribute(<span class="string">"_space"</span>) {
-<a href=#2253 id=2253 data-nosnippet>2253</a>      <span class="kw">let _ </span>= node.remove_attribute(<span class="string">"_space"</span>);
-<a href=#2254 id=2254 data-nosnippet>2254</a>      <span class="kw">let </span>s: f64 = s_str.parse().unwrap_or(<span class="number">0.0</span>);
-<a href=#2255 id=2255 data-nosnippet>2255</a>      <span class="kw">if </span>!phantom[i] &amp;&amp; s &gt;= HINT_PUNCT_THRESHOLD &amp;&amp; get_grammatical_role(<span class="kw-2">&amp;</span>node) != <span class="string">"PUNCT" </span>{
-<a href=#2256 id=2256 data-nosnippet>2256</a>        <span class="comment">// Perl MathParser.pm L487: create virtual PUNCT XMHint
-<a href=#2257 id=2257 data-nosnippet>2257</a>        // Reuse the saved hint node, setting role="PUNCT"
-<a href=#2258 id=2258 data-nosnippet>2258</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">mut </span>hint)) = last_hint_for.get(i).cloned() {
-<a href=#2259 id=2259 data-nosnippet>2259</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"role"</span>, <span class="string">"PUNCT"</span>);
-<a href=#2260 id=2260 data-nosnippet>2260</a>          <span class="comment">// Clean width: round to integer if close, matching Perl format
-<a href=#2261 id=2261 data-nosnippet>2261</a>          </span><span class="kw">let </span>s_rounded = <span class="kw">if </span>(s - s.round()).abs() &lt; <span class="number">0.01 </span>{
-<a href=#2262 id=2262 data-nosnippet>2262</a>            s.round()
-<a href=#2263 id=2263 data-nosnippet>2263</a>          } <span class="kw">else </span>{
-<a href=#2264 id=2264 data-nosnippet>2264</a>            s
-<a href=#2265 id=2265 data-nosnippet>2265</a>          };
-<a href=#2266 id=2266 data-nosnippet>2266</a>          <span class="kw">let </span>width = <span class="macro">format!</span>(<span class="string">"{}pt"</span>, s_rounded);
-<a href=#2267 id=2267 data-nosnippet>2267</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"width"</span>, <span class="kw-2">&amp;</span>width);
-<a href=#2268 id=2268 data-nosnippet>2268</a>          <span class="comment">// Remove extraneous attributes from the reused hint node
-<a href=#2269 id=2269 data-nosnippet>2269</a>          </span><span class="kw">let _ </span>= hint.remove_attribute(<span class="string">"depth"</span>);
-<a href=#2270 id=2270 data-nosnippet>2270</a>          <span class="kw">let _ </span>= hint.remove_attribute(<span class="string">"height"</span>);
-<a href=#2271 id=2271 data-nosnippet>2271</a>          <span class="kw">let </span>quads = <span class="string">"q"</span>.repeat((s / <span class="number">10.0</span>) <span class="kw">as </span>usize);
-<a href=#2272 id=2272 data-nosnippet>2272</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"name"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{quads}uad"</span>));
-<a href=#2273 id=2273 data-nosnippet>2273</a>          filtered.push(hint);
-<a href=#2274 id=2274 data-nosnippet>2274</a>        }
-<a href=#2275 id=2275 data-nosnippet>2275</a>      } <span class="kw">else </span>{
-<a href=#2276 id=2276 data-nosnippet>2276</a>        <span class="kw">let _ </span>= node.set_attribute(<span class="string">"rpadding"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:.1}pt"</span>, s));
-<a href=#2277 id=2277 data-nosnippet>2277</a>      }
-<a href=#2278 id=2278 data-nosnippet>2278</a>    }
-<a href=#2279 id=2279 data-nosnippet>2279</a>  }
-<a href=#2280 id=2280 data-nosnippet>2280</a>  filtered
-<a href=#2281 id=2281 data-nosnippet>2281</a>}
-<a href=#2282 id=2282 data-nosnippet>2282</a>
-<a href=#2283 id=2283 data-nosnippet>2283</a><span class="doccomment">/// Given a list of XML nodes (either libxml nodes, or array representations)
-<a href=#2284 id=2284 data-nosnippet>2284</a>/// return a list of XMRef's referring to those nodes;
-<a href=#2285 id=2285 data-nosnippet>2285</a>/// ensure each source node has an ID (if already instanciated as XML)
-<a href=#2286 id=2286 data-nosnippet>2286</a>/// or _xmkey if still in array rep. since it will get an ID later, and the connection re-made)
-<a href=#2287 id=2287 data-nosnippet>2287</a>/// Note that ltx:XMHint nodes are ephemeral and shouldn't be ref'd!
-<a href=#2288 id=2288 data-nosnippet>2288</a>/// likewise, we avoid creating XMRefs to XMRefs
-<a href=#2289 id=2289 data-nosnippet>2289</a></span><span class="kw">pub fn </span>create_xmrefs(args: <span class="kw-2">&amp;mut </span>[<span class="kw-2">&amp;mut </span>XM], ctxt: ActionContext) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;XM&gt;, Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#2290 id=2290 data-nosnippet>2290</a>  <span class="kw">let </span>nodes = ctxt.nodes;
-<a href=#2291 id=2291 data-nosnippet>2291</a>  <span class="kw">let </span>document = ctxt.document;
-<a href=#2292 id=2292 data-nosnippet>2292</a>  <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::with_capacity(args.len());
-<a href=#2293 id=2293 data-nosnippet>2293</a>  <span class="kw">for </span>arg <span class="kw">in </span>args {
-<a href=#2294 id=2294 data-nosnippet>2294</a>    <span class="kw">match </span>arg {
-<a href=#2295 id=2295 data-nosnippet>2295</a>      XM::Token(props, _meta) =&gt; {
-<a href=#2296 id=2296 data-nosnippet>2296</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
-<a href=#2297 id=2297 data-nosnippet>2297</a>          refs.push(XM::Ref(XProps {
-<a href=#2298 id=2298 data-nosnippet>2298</a>            id: <span class="prelude-val">Some</span>(id.clone()),
-<a href=#2299 id=2299 data-nosnippet>2299</a>            ..XProps::default()
-<a href=#2300 id=2300 data-nosnippet>2300</a>          }));
-<a href=#2301 id=2301 data-nosnippet>2301</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
-<a href=#2302 id=2302 data-nosnippet>2302</a>          <span class="comment">// Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
-<a href=#2303 id=2303 data-nosnippet>2303</a>          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
-<a href=#2304 id=2304 data-nosnippet>2304</a>          </span>refs.push(XM::Ref(XProps {
-<a href=#2305 id=2305 data-nosnippet>2305</a>            xmkey: <span class="prelude-val">Some</span>(existing),
-<a href=#2306 id=2306 data-nosnippet>2306</a>            ..XProps::default()
-<a href=#2307 id=2307 data-nosnippet>2307</a>          }));
-<a href=#2308 id=2308 data-nosnippet>2308</a>        } <span class="kw">else </span>{
-<a href=#2309 id=2309 data-nosnippet>2309</a>          <span class="comment">// Parser-created token without id — use _xmkey for deferred resolution
-<a href=#2310 id=2310 data-nosnippet>2310</a>          </span><span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
-<a href=#2311 id=2311 data-nosnippet>2311</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
-<a href=#2312 id=2312 data-nosnippet>2312</a>          refs.push(XM::Ref(XProps {
-<a href=#2313 id=2313 data-nosnippet>2313</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
-<a href=#2314 id=2314 data-nosnippet>2314</a>            ..XProps::default()
-<a href=#2315 id=2315 data-nosnippet>2315</a>          }));
-<a href=#2316 id=2316 data-nosnippet>2316</a>        }
-<a href=#2317 id=2317 data-nosnippet>2317</a>      },
-<a href=#2318 id=2318 data-nosnippet>2318</a>      XM::Lexeme(lex, <span class="kw">_</span>) =&gt; {
-<a href=#2319 id=2319 data-nosnippet>2319</a>        <span class="comment">// If arg is already XML, it's too late to get automatic ID's.
-<a href=#2320 id=2320 data-nosnippet>2320</a>        // lookup_lex_node now returns Err for malformed lex strings instead
-<a href=#2321 id=2321 data-nosnippet>2321</a>        // of panicking; skip the arg on failure rather than abort the whole
-<a href=#2322 id=2322 data-nosnippet>2322</a>        // ref-building pass.
-<a href=#2323 id=2323 data-nosnippet>2323</a>        </span><span class="kw">let </span>node = <span class="kw">match </span>lookup_lex_node(lex, nodes) {
-<a href=#2324 id=2324 data-nosnippet>2324</a>          <span class="prelude-val">Ok</span>(n) =&gt; n,
-<a href=#2325 id=2325 data-nosnippet>2325</a>          <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#2326 id=2326 data-nosnippet>2326</a>            <span class="comment">// Perl MathParser.pm:151 — Error('expected', 'id', undef,
-<a href=#2327 id=2327 data-nosnippet>2327</a>            //   "Cannot find a node with xml:id='$idref'", ...)
-<a href=#2328 id=2328 data-nosnippet>2328</a>            // We don't always have an idref string at this layer; the
-<a href=#2329 id=2329 data-nosnippet>2329</a>            // lookup error itself carries enough context.
-<a href=#2330 id=2330 data-nosnippet>2330</a>            </span><span class="macro">log_math_error!</span>(
-<a href=#2331 id=2331 data-nosnippet>2331</a>              <span class="string">"expected"</span>,
-<a href=#2332 id=2332 data-nosnippet>2332</a>              <span class="string">"id"</span>,
-<a href=#2333 id=2333 data-nosnippet>2333</a>              <span class="string">"create_xmrefs: skipping lexeme with invalid node lookup: {}"</span>,
-<a href=#2334 id=2334 data-nosnippet>2334</a>              e
-<a href=#2335 id=2335 data-nosnippet>2335</a>            );
-<a href=#2336 id=2336 data-nosnippet>2336</a>            <span class="kw">continue</span>;
-<a href=#2337 id=2337 data-nosnippet>2337</a>          },
-<a href=#2338 id=2338 data-nosnippet>2338</a>        };
-<a href=#2339 id=2339 data-nosnippet>2339</a>
-<a href=#2340 id=2340 data-nosnippet>2340</a>        <span class="comment">// Perl `createXMRefs` (Package.pm L1557-1561): "clone an XMRef
-<a href=#2341 id=2341 data-nosnippet>2341</a>        // rather than create an XMRef to an XMRef" — reuse the target's
-<a href=#2342 id=2342 data-nosnippet>2342</a>        // idref so a content branch never points at a presentation-side
-<a href=#2343 id=2343 data-nosnippet>2343</a>        // reference. Without this branch the ref-to-a-ref shape reaches
-<a href=#2344 id=2344 data-nosnippet>2344</a>        // the output (Perl's whole golden corpus has zero of them).
-<a href=#2345 id=2345 data-nosnippet>2345</a>        </span><span class="kw">if </span>name_is(node, <span class="string">"XMRef"</span>) {
-<a href=#2346 id=2346 data-nosnippet>2346</a>          <span class="comment">// Carry BOTH spellings, as Perl does — `_xmkey` is the deferred
-<a href=#2347 id=2347 data-nosnippet>2347</a>          // form used before ids exist, `idref` the resolved one, and either
-<a href=#2348 id=2348 data-nosnippet>2348</a>          // may be absent. Taking this branch unconditionally matters: on a
-<a href=#2349 id=2349 data-nosnippet>2349</a>          // key-only XMRef, falling through would mint an xml:id ON the ref
-<a href=#2350 id=2350 data-nosnippet>2350</a>          // and reference THAT, which is the ref-to-a-ref this branch exists
-<a href=#2351 id=2351 data-nosnippet>2351</a>          // to prevent.
-<a href=#2352 id=2352 data-nosnippet>2352</a>          </span>refs.push(XM::Ref(XProps {
-<a href=#2353 id=2353 data-nosnippet>2353</a>            id: node.get_attribute(<span class="string">"idref"</span>).map(Cow::Owned),
-<a href=#2354 id=2354 data-nosnippet>2354</a>            xmkey: node.get_attribute(<span class="string">"_xmkey"</span>).map(Cow::Owned),
-<a href=#2355 id=2355 data-nosnippet>2355</a>            ..XProps::default()
-<a href=#2356 id=2356 data-nosnippet>2356</a>          }));
-<a href=#2357 id=2357 data-nosnippet>2357</a>          <span class="kw">continue</span>;
-<a href=#2358 id=2358 data-nosnippet>2358</a>        }
-<a href=#2359 id=2359 data-nosnippet>2359</a>
-<a href=#2360 id=2360 data-nosnippet>2360</a>        <span class="comment">// NS-aware read (xml:id = local "id" in XML_NS; the bare
-<a href=#2361 id=2361 data-nosnippet>2361</a>        // get_attribute("xml:id") form always returns None, which sent
-<a href=#2362 id=2362 data-nosnippet>2362</a>        // every node — id or not — through the generate_id branch).
-<a href=#2363 id=2363 data-nosnippet>2363</a>        </span><span class="kw">match </span>node.get_attribute_ns(<span class="string">"id"</span>, latexml_core::common::xml::XML_NS) {
-<a href=#2364 id=2364 data-nosnippet>2364</a>          <span class="comment">//  already has id, so refer to it.
-<a href=#2365 id=2365 data-nosnippet>2365</a>          </span><span class="prelude-val">Some</span>(id) =&gt; refs.push(XM::Ref(XProps {
-<a href=#2366 id=2366 data-nosnippet>2366</a>            id: <span class="prelude-val">Some</span>(Cow::Owned(id)),
-<a href=#2367 id=2367 data-nosnippet>2367</a>            ..XProps::default()
-<a href=#2368 id=2368 data-nosnippet>2368</a>          })),
-<a href=#2369 id=2369 data-nosnippet>2369</a>          <span class="prelude-val">None </span>=&gt; {
-<a href=#2370 id=2370 data-nosnippet>2370</a>            <span class="comment">// Generate xml:id for this node so we can reference it
-<a href=#2371 id=2371 data-nosnippet>2371</a>            </span>document.generate_id(<span class="kw-2">&amp;mut </span>node.clone(), <span class="string">""</span>)<span class="question-mark">?</span>;
-<a href=#2372 id=2372 data-nosnippet>2372</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = node.get_attribute_ns(<span class="string">"id"</span>, latexml_core::common::xml::XML_NS) {
-<a href=#2373 id=2373 data-nosnippet>2373</a>              refs.push(XM::Ref(XProps {
-<a href=#2374 id=2374 data-nosnippet>2374</a>                id: <span class="prelude-val">Some</span>(Cow::Owned(id)),
-<a href=#2375 id=2375 data-nosnippet>2375</a>                ..XProps::default()
-<a href=#2376 id=2376 data-nosnippet>2376</a>              }));
-<a href=#2377 id=2377 data-nosnippet>2377</a>            }
-<a href=#2378 id=2378 data-nosnippet>2378</a>          },
-<a href=#2379 id=2379 data-nosnippet>2379</a>        }
-<a href=#2380 id=2380 data-nosnippet>2380</a>      },
-<a href=#2381 id=2381 data-nosnippet>2381</a>      XM::Apply(_op, _args, props, _meta) =&gt; {
-<a href=#2382 id=2382 data-nosnippet>2382</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
-<a href=#2383 id=2383 data-nosnippet>2383</a>          refs.push(XM::Ref(XProps {
-<a href=#2384 id=2384 data-nosnippet>2384</a>            id: <span class="prelude-val">Some</span>(id.clone()),
-<a href=#2385 id=2385 data-nosnippet>2385</a>            ..XProps::default()
-<a href=#2386 id=2386 data-nosnippet>2386</a>          }));
-<a href=#2387 id=2387 data-nosnippet>2387</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
-<a href=#2388 id=2388 data-nosnippet>2388</a>          <span class="comment">// PRESERVE an existing _xmkey. Faithful to Perl `createXMRefs`
-<a href=#2389 id=2389 data-nosnippet>2389</a>          // (Package.pm:1527): it `GenerateID`s an XML arg but NEVER clobbers
-<a href=#2390 id=2390 data-nosnippet>2390</a>          // its `_xmkey`, so a node that is ALREADY an arg of an outer
-<a href=#2391 id=2391 data-nosnippet>2391</a>          // package XMDual (via `\lx@xmarg`, e.g. braket `\braket{a|op|c}`)
-<a href=#2392 id=2392 data-nosnippet>2392</a>          // keeps that key while also being referenced by THIS (grammar) dual
-<a href=#2393 id=2393 data-nosnippet>2393</a>          // — both content XMRefs resolve to the same shared node. Overwriting
-<a href=#2394 id=2394 data-nosnippet>2394</a>          // the key (as before) dangled the package's XMRef →
-<a href=#2395 id=2395 data-nosnippet>2395</a>          // `expected:id Cannot find a node` (compound op; witness 2205.06843).
-<a href=#2396 id=2396 data-nosnippet>2396</a>          </span>refs.push(XM::Ref(XProps {
-<a href=#2397 id=2397 data-nosnippet>2397</a>            xmkey: <span class="prelude-val">Some</span>(existing),
+<a href=#2190 id=2190 data-nosnippet>2190</a>  <span class="comment">// The unlinked hints, each marked once reused as a PUNCT
+<a href=#2191 id=2191 data-nosnippet>2191</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>hints: Vec&lt;(Node, bool)&gt; = Vec::new();
+<a href=#2192 id=2192 data-nosnippet>2192</a>  <span class="comment">// Index into `hints` of the hint that contributed to _space, for possible PUNCT reuse
+<a href=#2193 id=2193 data-nosnippet>2193</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>last_hint_for: Vec&lt;<span class="prelude-ty">Option</span>&lt;usize&gt;&gt; = Vec::new(); <span class="comment">// parallel to prefiltered
+<a href=#2194 id=2194 data-nosnippet>2194</a>  // Perl's `_phantom`, parallel to prefiltered
+<a href=#2195 id=2195 data-nosnippet>2195</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>phantom: Vec&lt;bool&gt; = Vec::new();
+<a href=#2196 id=2196 data-nosnippet>2196</a>
+<a href=#2197 id=2197 data-nosnippet>2197</a>  <span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>nodes {
+<a href=#2198 id=2198 data-nosnippet>2198</a>    <span class="kw">if </span>node.get_type() != <span class="prelude-val">Some</span>(NodeType::ElementNode) {
+<a href=#2199 id=2199 data-nosnippet>2199</a>      <span class="kw">continue</span>;
+<a href=#2200 id=2200 data-nosnippet>2200</a>    }
+<a href=#2201 id=2201 data-nosnippet>2201</a>    <span class="kw">if </span>name_is(<span class="kw-2">&amp;</span>node, <span class="string">"XMHint"</span>) {
+<a href=#2202 id=2202 data-nosnippet>2202</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(width_str) = node.get_attribute(<span class="string">"width"</span>) {
+<a href=#2203 id=2203 data-nosnippet>2203</a>        <span class="kw">let </span>pts = get_xmhint_spacing(<span class="kw-2">&amp;</span>width_str);
+<a href=#2204 id=2204 data-nosnippet>2204</a>        <span class="kw">if </span>pts != <span class="number">0.0 </span>{
+<a href=#2205 id=2205 data-nosnippet>2205</a>          <span class="kw">let </span>ph = node
+<a href=#2206 id=2206 data-nosnippet>2206</a>            .get_attribute(<span class="string">"name"</span>)
+<a href=#2207 id=2207 data-nosnippet>2207</a>            .is_some_and(|name| name.ends_with(<span class="string">"phantom"</span>));
+<a href=#2208 id=2208 data-nosnippet>2208</a>          <span class="kw">match </span>prev {
+<a href=#2209 id=2209 data-nosnippet>2209</a>            <span class="prelude-val">Some</span>(idx) <span class="kw">if </span>get_grammatical_role(<span class="kw-2">&amp;</span>prefiltered[idx]) != <span class="string">"OPEN" </span>=&gt; {
+<a href=#2210 id=2210 data-nosnippet>2210</a>              <span class="kw">let </span>prev = <span class="kw-2">&amp;mut </span>prefiltered[idx];
+<a href=#2211 id=2211 data-nosnippet>2211</a>              <span class="kw">let </span>s: f64 = prev
+<a href=#2212 id=2212 data-nosnippet>2212</a>                .get_attribute(<span class="string">"_space"</span>)
+<a href=#2213 id=2213 data-nosnippet>2213</a>                .and_then(|v| v.parse().ok())
+<a href=#2214 id=2214 data-nosnippet>2214</a>                .unwrap_or(<span class="number">0.0</span>);
+<a href=#2215 id=2215 data-nosnippet>2215</a>              <span class="kw">let _ </span>= prev.set_attribute(<span class="string">"_space"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, s + pts));
+<a href=#2216 id=2216 data-nosnippet>2216</a>              phantom[idx] |= ph;
+<a href=#2217 id=2217 data-nosnippet>2217</a>              <span class="comment">// Save this hint node for potential PUNCT reuse
+<a href=#2218 id=2218 data-nosnippet>2218</a>              </span>last_hint_for[idx] = <span class="prelude-val">Some</span>(hints.len());
+<a href=#2219 id=2219 data-nosnippet>2219</a>            },
+<a href=#2220 id=2220 data-nosnippet>2220</a>            <span class="kw">_ </span>=&gt; {
+<a href=#2221 id=2221 data-nosnippet>2221</a>              pending_space += pts;
+<a href=#2222 id=2222 data-nosnippet>2222</a>              pending_phantom = ph;
+<a href=#2223 id=2223 data-nosnippet>2223</a>            },
+<a href=#2224 id=2224 data-nosnippet>2224</a>          }
+<a href=#2225 id=2225 data-nosnippet>2225</a>        }
+<a href=#2226 id=2226 data-nosnippet>2226</a>      }
+<a href=#2227 id=2227 data-nosnippet>2227</a>      <span class="comment">// Unlink from the XML tree; XMHints are ephemeral
+<a href=#2228 id=2228 data-nosnippet>2228</a>      </span>node.unlink();
+<a href=#2229 id=2229 data-nosnippet>2229</a>      hints.push((node, <span class="bool-val">false</span>));
+<a href=#2230 id=2230 data-nosnippet>2230</a>    } <span class="kw">else if </span>name_is(<span class="kw-2">&amp;</span>node, <span class="string">"XMTok"</span>)
+<a href=#2231 id=2231 data-nosnippet>2231</a>      &amp;&amp; node.with_attribute(<span class="string">c"role"</span>, |v| v == <span class="string">"APPLYOP"</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>)
+<a href=#2232 id=2232 data-nosnippet>2232</a>    {
+<a href=#2233 id=2233 data-nosnippet>2233</a>      prefiltered.push(node);
+<a href=#2234 id=2234 data-nosnippet>2234</a>      last_hint_for.push(<span class="prelude-val">None</span>);
+<a href=#2235 id=2235 data-nosnippet>2235</a>      phantom.push(<span class="bool-val">false</span>);
+<a href=#2236 id=2236 data-nosnippet>2236</a>    } <span class="kw">else </span>{
+<a href=#2237 id=2237 data-nosnippet>2237</a>      <span class="kw">let </span><span class="kw-2">mut </span>ph = <span class="bool-val">false</span>;
+<a href=#2238 id=2238 data-nosnippet>2238</a>      <span class="kw">if </span>pending_space != <span class="number">0.0 </span>{
+<a href=#2239 id=2239 data-nosnippet>2239</a>        <span class="kw">let _ </span>= node.set_attribute(<span class="string">"lpadding"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:.1}pt"</span>, pending_space));
+<a href=#2240 id=2240 data-nosnippet>2240</a>        ph = pending_phantom;
+<a href=#2241 id=2241 data-nosnippet>2241</a>        pending_space = <span class="number">0.0</span>;
+<a href=#2242 id=2242 data-nosnippet>2242</a>        pending_phantom = <span class="bool-val">false</span>;
+<a href=#2243 id=2243 data-nosnippet>2243</a>      }
+<a href=#2244 id=2244 data-nosnippet>2244</a>      prev = <span class="prelude-val">Some</span>(prefiltered.len());
+<a href=#2245 id=2245 data-nosnippet>2245</a>      prefiltered.push(node);
+<a href=#2246 id=2246 data-nosnippet>2246</a>      last_hint_for.push(<span class="prelude-val">None</span>);
+<a href=#2247 id=2247 data-nosnippet>2247</a>      phantom.push(ph);
+<a href=#2248 id=2248 data-nosnippet>2248</a>    }
+<a href=#2249 id=2249 data-nosnippet>2249</a>  }
+<a href=#2250 id=2250 data-nosnippet>2250</a>
+<a href=#2251 id=2251 data-nosnippet>2251</a>  <span class="comment">// Second pass: convert _space to rpadding (or PUNCT XMHint if above threshold)
+<a href=#2252 id=2252 data-nosnippet>2252</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>filtered: Vec&lt;Node&gt; = Vec::new();
+<a href=#2253 id=2253 data-nosnippet>2253</a>  <span class="kw">for </span>(i, <span class="kw-2">mut </span>node) <span class="kw">in </span>prefiltered.into_iter().enumerate() {
+<a href=#2254 id=2254 data-nosnippet>2254</a>    filtered.push(node.clone());
+<a href=#2255 id=2255 data-nosnippet>2255</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(s_str) = node.get_attribute(<span class="string">"_space"</span>) {
+<a href=#2256 id=2256 data-nosnippet>2256</a>      <span class="kw">let _ </span>= node.remove_attribute(<span class="string">"_space"</span>);
+<a href=#2257 id=2257 data-nosnippet>2257</a>      <span class="kw">let </span>s: f64 = s_str.parse().unwrap_or(<span class="number">0.0</span>);
+<a href=#2258 id=2258 data-nosnippet>2258</a>      <span class="kw">if </span>!phantom[i] &amp;&amp; s &gt;= HINT_PUNCT_THRESHOLD &amp;&amp; get_grammatical_role(<span class="kw-2">&amp;</span>node) != <span class="string">"PUNCT" </span>{
+<a href=#2259 id=2259 data-nosnippet>2259</a>        <span class="comment">// Perl MathParser.pm L487: create virtual PUNCT XMHint
+<a href=#2260 id=2260 data-nosnippet>2260</a>        // Reuse the saved hint node, setting role="PUNCT"
+<a href=#2261 id=2261 data-nosnippet>2261</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(h)) = last_hint_for.get(i) {
+<a href=#2262 id=2262 data-nosnippet>2262</a>          <span class="kw">let </span>(hint, reused) = <span class="kw-2">&amp;mut </span>hints[h];
+<a href=#2263 id=2263 data-nosnippet>2263</a>          <span class="kw-2">*</span>reused = <span class="bool-val">true</span>;
+<a href=#2264 id=2264 data-nosnippet>2264</a>          <span class="kw">let </span><span class="kw-2">mut </span>hint = hint.clone();
+<a href=#2265 id=2265 data-nosnippet>2265</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"role"</span>, <span class="string">"PUNCT"</span>);
+<a href=#2266 id=2266 data-nosnippet>2266</a>          <span class="comment">// Clean width: round to integer if close, matching Perl format
+<a href=#2267 id=2267 data-nosnippet>2267</a>          </span><span class="kw">let </span>s_rounded = <span class="kw">if </span>(s - s.round()).abs() &lt; <span class="number">0.01 </span>{
+<a href=#2268 id=2268 data-nosnippet>2268</a>            s.round()
+<a href=#2269 id=2269 data-nosnippet>2269</a>          } <span class="kw">else </span>{
+<a href=#2270 id=2270 data-nosnippet>2270</a>            s
+<a href=#2271 id=2271 data-nosnippet>2271</a>          };
+<a href=#2272 id=2272 data-nosnippet>2272</a>          <span class="kw">let </span>width = <span class="macro">format!</span>(<span class="string">"{}pt"</span>, s_rounded);
+<a href=#2273 id=2273 data-nosnippet>2273</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"width"</span>, <span class="kw-2">&amp;</span>width);
+<a href=#2274 id=2274 data-nosnippet>2274</a>          <span class="comment">// Remove extraneous attributes from the reused hint node
+<a href=#2275 id=2275 data-nosnippet>2275</a>          </span><span class="kw">let _ </span>= hint.remove_attribute(<span class="string">"depth"</span>);
+<a href=#2276 id=2276 data-nosnippet>2276</a>          <span class="kw">let _ </span>= hint.remove_attribute(<span class="string">"height"</span>);
+<a href=#2277 id=2277 data-nosnippet>2277</a>          <span class="kw">let </span>quads = <span class="string">"q"</span>.repeat((s / <span class="number">10.0</span>) <span class="kw">as </span>usize);
+<a href=#2278 id=2278 data-nosnippet>2278</a>          <span class="kw">let _ </span>= hint.set_attribute(<span class="string">"name"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{quads}uad"</span>));
+<a href=#2279 id=2279 data-nosnippet>2279</a>          filtered.push(hint);
+<a href=#2280 id=2280 data-nosnippet>2280</a>        }
+<a href=#2281 id=2281 data-nosnippet>2281</a>      } <span class="kw">else </span>{
+<a href=#2282 id=2282 data-nosnippet>2282</a>        <span class="kw">let _ </span>= node.set_attribute(<span class="string">"rpadding"</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{:.1}pt"</span>, s));
+<a href=#2283 id=2283 data-nosnippet>2283</a>      }
+<a href=#2284 id=2284 data-nosnippet>2284</a>    }
+<a href=#2285 id=2285 data-nosnippet>2285</a>  }
+<a href=#2286 id=2286 data-nosnippet>2286</a>  <span class="comment">// A hint that did not become a PUNCT is garbage (Perl drops it with the replaced children); unlinked, it leaked. One
+<a href=#2287 id=2287 data-nosnippet>2287</a>  // with an `xml:id` may be named by an XMRef (Perl MathParser.pm:453-457), so it is not freed.
+<a href=#2288 id=2288 data-nosnippet>2288</a>  </span><span class="kw">for </span>(hint, reused) <span class="kw">in </span>hints {
+<a href=#2289 id=2289 data-nosnippet>2289</a>    <span class="kw">if </span>!reused &amp;&amp; !hint.has_attribute_ns(<span class="string">"id"</span>, latexml_core::common::xml::XML_NS) {
+<a href=#2290 id=2290 data-nosnippet>2290</a>      <span class="kw">crate</span>::data::defer_discard(hint);
+<a href=#2291 id=2291 data-nosnippet>2291</a>    }
+<a href=#2292 id=2292 data-nosnippet>2292</a>  }
+<a href=#2293 id=2293 data-nosnippet>2293</a>  filtered
+<a href=#2294 id=2294 data-nosnippet>2294</a>}
+<a href=#2295 id=2295 data-nosnippet>2295</a>
+<a href=#2296 id=2296 data-nosnippet>2296</a><span class="doccomment">/// Given a list of XML nodes (either libxml nodes, or array representations)
+<a href=#2297 id=2297 data-nosnippet>2297</a>/// return a list of XMRef's referring to those nodes;
+<a href=#2298 id=2298 data-nosnippet>2298</a>/// ensure each source node has an ID (if already instanciated as XML)
+<a href=#2299 id=2299 data-nosnippet>2299</a>/// or _xmkey if still in array rep. since it will get an ID later, and the connection re-made)
+<a href=#2300 id=2300 data-nosnippet>2300</a>/// Note that ltx:XMHint nodes are ephemeral and shouldn't be ref'd!
+<a href=#2301 id=2301 data-nosnippet>2301</a>/// likewise, we avoid creating XMRefs to XMRefs
+<a href=#2302 id=2302 data-nosnippet>2302</a></span><span class="kw">pub fn </span>create_xmrefs(args: <span class="kw-2">&amp;mut </span>[<span class="kw-2">&amp;mut </span>XM], ctxt: ActionContext) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;XM&gt;, Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
+<a href=#2303 id=2303 data-nosnippet>2303</a>  <span class="kw">let </span>nodes = ctxt.nodes;
+<a href=#2304 id=2304 data-nosnippet>2304</a>  <span class="kw">let </span>document = ctxt.document;
+<a href=#2305 id=2305 data-nosnippet>2305</a>  <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::with_capacity(args.len());
+<a href=#2306 id=2306 data-nosnippet>2306</a>  <span class="kw">for </span>arg <span class="kw">in </span>args {
+<a href=#2307 id=2307 data-nosnippet>2307</a>    <span class="kw">match </span>arg {
+<a href=#2308 id=2308 data-nosnippet>2308</a>      XM::Token(props, _meta) =&gt; {
+<a href=#2309 id=2309 data-nosnippet>2309</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
+<a href=#2310 id=2310 data-nosnippet>2310</a>          refs.push(XM::Ref(XProps {
+<a href=#2311 id=2311 data-nosnippet>2311</a>            id: <span class="prelude-val">Some</span>(id.clone()),
+<a href=#2312 id=2312 data-nosnippet>2312</a>            ..XProps::default()
+<a href=#2313 id=2313 data-nosnippet>2313</a>          }));
+<a href=#2314 id=2314 data-nosnippet>2314</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
+<a href=#2315 id=2315 data-nosnippet>2315</a>          <span class="comment">// Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
+<a href=#2316 id=2316 data-nosnippet>2316</a>          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
+<a href=#2317 id=2317 data-nosnippet>2317</a>          </span>refs.push(XM::Ref(XProps {
+<a href=#2318 id=2318 data-nosnippet>2318</a>            xmkey: <span class="prelude-val">Some</span>(existing),
+<a href=#2319 id=2319 data-nosnippet>2319</a>            ..XProps::default()
+<a href=#2320 id=2320 data-nosnippet>2320</a>          }));
+<a href=#2321 id=2321 data-nosnippet>2321</a>        } <span class="kw">else </span>{
+<a href=#2322 id=2322 data-nosnippet>2322</a>          <span class="comment">// Parser-created token without id — use _xmkey for deferred resolution
+<a href=#2323 id=2323 data-nosnippet>2323</a>          </span><span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
+<a href=#2324 id=2324 data-nosnippet>2324</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
+<a href=#2325 id=2325 data-nosnippet>2325</a>          refs.push(XM::Ref(XProps {
+<a href=#2326 id=2326 data-nosnippet>2326</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
+<a href=#2327 id=2327 data-nosnippet>2327</a>            ..XProps::default()
+<a href=#2328 id=2328 data-nosnippet>2328</a>          }));
+<a href=#2329 id=2329 data-nosnippet>2329</a>        }
+<a href=#2330 id=2330 data-nosnippet>2330</a>      },
+<a href=#2331 id=2331 data-nosnippet>2331</a>      XM::Lexeme(lex, <span class="kw">_</span>) =&gt; {
+<a href=#2332 id=2332 data-nosnippet>2332</a>        <span class="comment">// If arg is already XML, it's too late to get automatic ID's.
+<a href=#2333 id=2333 data-nosnippet>2333</a>        // lookup_lex_node now returns Err for malformed lex strings instead
+<a href=#2334 id=2334 data-nosnippet>2334</a>        // of panicking; skip the arg on failure rather than abort the whole
+<a href=#2335 id=2335 data-nosnippet>2335</a>        // ref-building pass.
+<a href=#2336 id=2336 data-nosnippet>2336</a>        </span><span class="kw">let </span>node = <span class="kw">match </span>lookup_lex_node(lex, nodes) {
+<a href=#2337 id=2337 data-nosnippet>2337</a>          <span class="prelude-val">Ok</span>(n) =&gt; n,
+<a href=#2338 id=2338 data-nosnippet>2338</a>          <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#2339 id=2339 data-nosnippet>2339</a>            <span class="comment">// Perl MathParser.pm:151 — Error('expected', 'id', undef,
+<a href=#2340 id=2340 data-nosnippet>2340</a>            //   "Cannot find a node with xml:id='$idref'", ...)
+<a href=#2341 id=2341 data-nosnippet>2341</a>            // We don't always have an idref string at this layer; the
+<a href=#2342 id=2342 data-nosnippet>2342</a>            // lookup error itself carries enough context.
+<a href=#2343 id=2343 data-nosnippet>2343</a>            </span><span class="macro">log_math_error!</span>(
+<a href=#2344 id=2344 data-nosnippet>2344</a>              <span class="string">"expected"</span>,
+<a href=#2345 id=2345 data-nosnippet>2345</a>              <span class="string">"id"</span>,
+<a href=#2346 id=2346 data-nosnippet>2346</a>              <span class="string">"create_xmrefs: skipping lexeme with invalid node lookup: {}"</span>,
+<a href=#2347 id=2347 data-nosnippet>2347</a>              e
+<a href=#2348 id=2348 data-nosnippet>2348</a>            );
+<a href=#2349 id=2349 data-nosnippet>2349</a>            <span class="kw">continue</span>;
+<a href=#2350 id=2350 data-nosnippet>2350</a>          },
+<a href=#2351 id=2351 data-nosnippet>2351</a>        };
+<a href=#2352 id=2352 data-nosnippet>2352</a>
+<a href=#2353 id=2353 data-nosnippet>2353</a>        <span class="comment">// Perl `createXMRefs` (Package.pm L1557-1561): "clone an XMRef
+<a href=#2354 id=2354 data-nosnippet>2354</a>        // rather than create an XMRef to an XMRef" — reuse the target's
+<a href=#2355 id=2355 data-nosnippet>2355</a>        // idref so a content branch never points at a presentation-side
+<a href=#2356 id=2356 data-nosnippet>2356</a>        // reference. Without this branch the ref-to-a-ref shape reaches
+<a href=#2357 id=2357 data-nosnippet>2357</a>        // the output (Perl's whole golden corpus has zero of them).
+<a href=#2358 id=2358 data-nosnippet>2358</a>        </span><span class="kw">if </span>name_is(node, <span class="string">"XMRef"</span>) {
+<a href=#2359 id=2359 data-nosnippet>2359</a>          <span class="comment">// Carry BOTH spellings, as Perl does — `_xmkey` is the deferred
+<a href=#2360 id=2360 data-nosnippet>2360</a>          // form used before ids exist, `idref` the resolved one, and either
+<a href=#2361 id=2361 data-nosnippet>2361</a>          // may be absent. Taking this branch unconditionally matters: on a
+<a href=#2362 id=2362 data-nosnippet>2362</a>          // key-only XMRef, falling through would mint an xml:id ON the ref
+<a href=#2363 id=2363 data-nosnippet>2363</a>          // and reference THAT, which is the ref-to-a-ref this branch exists
+<a href=#2364 id=2364 data-nosnippet>2364</a>          // to prevent.
+<a href=#2365 id=2365 data-nosnippet>2365</a>          </span>refs.push(XM::Ref(XProps {
+<a href=#2366 id=2366 data-nosnippet>2366</a>            id: node.get_attribute(<span class="string">"idref"</span>).map(Cow::Owned),
+<a href=#2367 id=2367 data-nosnippet>2367</a>            xmkey: node.get_attribute(<span class="string">"_xmkey"</span>).map(Cow::Owned),
+<a href=#2368 id=2368 data-nosnippet>2368</a>            ..XProps::default()
+<a href=#2369 id=2369 data-nosnippet>2369</a>          }));
+<a href=#2370 id=2370 data-nosnippet>2370</a>          <span class="kw">continue</span>;
+<a href=#2371 id=2371 data-nosnippet>2371</a>        }
+<a href=#2372 id=2372 data-nosnippet>2372</a>
+<a href=#2373 id=2373 data-nosnippet>2373</a>        <span class="comment">// NS-aware read (xml:id = local "id" in XML_NS; the bare
+<a href=#2374 id=2374 data-nosnippet>2374</a>        // get_attribute("xml:id") form always returns None, which sent
+<a href=#2375 id=2375 data-nosnippet>2375</a>        // every node — id or not — through the generate_id branch).
+<a href=#2376 id=2376 data-nosnippet>2376</a>        </span><span class="kw">match </span>node.get_attribute_ns(<span class="string">"id"</span>, latexml_core::common::xml::XML_NS) {
+<a href=#2377 id=2377 data-nosnippet>2377</a>          <span class="comment">//  already has id, so refer to it.
+<a href=#2378 id=2378 data-nosnippet>2378</a>          </span><span class="prelude-val">Some</span>(id) =&gt; refs.push(XM::Ref(XProps {
+<a href=#2379 id=2379 data-nosnippet>2379</a>            id: <span class="prelude-val">Some</span>(Cow::Owned(id)),
+<a href=#2380 id=2380 data-nosnippet>2380</a>            ..XProps::default()
+<a href=#2381 id=2381 data-nosnippet>2381</a>          })),
+<a href=#2382 id=2382 data-nosnippet>2382</a>          <span class="prelude-val">None </span>=&gt; {
+<a href=#2383 id=2383 data-nosnippet>2383</a>            <span class="comment">// Generate xml:id for this node so we can reference it
+<a href=#2384 id=2384 data-nosnippet>2384</a>            </span>document.generate_id(<span class="kw-2">&amp;mut </span>node.clone(), <span class="string">""</span>)<span class="question-mark">?</span>;
+<a href=#2385 id=2385 data-nosnippet>2385</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = node.get_attribute_ns(<span class="string">"id"</span>, latexml_core::common::xml::XML_NS) {
+<a href=#2386 id=2386 data-nosnippet>2386</a>              refs.push(XM::Ref(XProps {
+<a href=#2387 id=2387 data-nosnippet>2387</a>                id: <span class="prelude-val">Some</span>(Cow::Owned(id)),
+<a href=#2388 id=2388 data-nosnippet>2388</a>                ..XProps::default()
+<a href=#2389 id=2389 data-nosnippet>2389</a>              }));
+<a href=#2390 id=2390 data-nosnippet>2390</a>            }
+<a href=#2391 id=2391 data-nosnippet>2391</a>          },
+<a href=#2392 id=2392 data-nosnippet>2392</a>        }
+<a href=#2393 id=2393 data-nosnippet>2393</a>      },
+<a href=#2394 id=2394 data-nosnippet>2394</a>      XM::Apply(_op, _args, props, _meta) =&gt; {
+<a href=#2395 id=2395 data-nosnippet>2395</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
+<a href=#2396 id=2396 data-nosnippet>2396</a>          refs.push(XM::Ref(XProps {
+<a href=#2397 id=2397 data-nosnippet>2397</a>            id: <span class="prelude-val">Some</span>(id.clone()),
 <a href=#2398 id=2398 data-nosnippet>2398</a>            ..XProps::default()
 <a href=#2399 id=2399 data-nosnippet>2399</a>          }));
-<a href=#2400 id=2400 data-nosnippet>2400</a>        } <span class="kw">else </span>{
-<a href=#2401 id=2401 data-nosnippet>2401</a>          <span class="comment">// not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
-<a href=#2402 id=2402 data-nosnippet>2402</a>          </span><span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
-<a href=#2403 id=2403 data-nosnippet>2403</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
-<a href=#2404 id=2404 data-nosnippet>2404</a>          refs.push(XM::Ref(XProps {
-<a href=#2405 id=2405 data-nosnippet>2405</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
-<a href=#2406 id=2406 data-nosnippet>2406</a>            ..XProps::default()
-<a href=#2407 id=2407 data-nosnippet>2407</a>          }));
-<a href=#2408 id=2408 data-nosnippet>2408</a>        }
-<a href=#2409 id=2409 data-nosnippet>2409</a>      },
-<a href=#2410 id=2410 data-nosnippet>2410</a>      <span class="comment">// clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef:
-<a href=#2411 id=2411 data-nosnippet>2411</a>      // only its `_xmkey` and `idref` (Package.pm:1557-1561), not the role/meaning a parse
-<a href=#2412 id=2412 data-nosnippet>2412</a>      // annotated it with.
-<a href=#2413 id=2413 data-nosnippet>2413</a>      </span>XM::Ref(props) =&gt; {
-<a href=#2414 id=2414 data-nosnippet>2414</a>        refs.push(XM::Ref(XProps {
-<a href=#2415 id=2415 data-nosnippet>2415</a>          id: props.id.clone(),
-<a href=#2416 id=2416 data-nosnippet>2416</a>          xmkey: props.xmkey.clone(),
-<a href=#2417 id=2417 data-nosnippet>2417</a>          ..XProps::default()
-<a href=#2418 id=2418 data-nosnippet>2418</a>        }));
-<a href=#2419 id=2419 data-nosnippet>2419</a>      },
-<a href=#2420 id=2420 data-nosnippet>2420</a>      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, props, <span class="kw">_</span>) | XM::Wrap(<span class="kw">_</span>, props, <span class="kw">_</span>) =&gt; {
-<a href=#2421 id=2421 data-nosnippet>2421</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
-<a href=#2422 id=2422 data-nosnippet>2422</a>          refs.push(XM::Ref(XProps {
-<a href=#2423 id=2423 data-nosnippet>2423</a>            id: <span class="prelude-val">Some</span>(id.clone()),
-<a href=#2424 id=2424 data-nosnippet>2424</a>            ..XProps::default()
-<a href=#2425 id=2425 data-nosnippet>2425</a>          }));
-<a href=#2426 id=2426 data-nosnippet>2426</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
-<a href=#2427 id=2427 data-nosnippet>2427</a>          <span class="comment">// Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
-<a href=#2428 id=2428 data-nosnippet>2428</a>          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
-<a href=#2429 id=2429 data-nosnippet>2429</a>          </span>refs.push(XM::Ref(XProps {
-<a href=#2430 id=2430 data-nosnippet>2430</a>            xmkey: <span class="prelude-val">Some</span>(existing),
-<a href=#2431 id=2431 data-nosnippet>2431</a>            ..XProps::default()
-<a href=#2432 id=2432 data-nosnippet>2432</a>          }));
-<a href=#2433 id=2433 data-nosnippet>2433</a>        } <span class="kw">else </span>{
-<a href=#2434 id=2434 data-nosnippet>2434</a>          <span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
-<a href=#2435 id=2435 data-nosnippet>2435</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
-<a href=#2436 id=2436 data-nosnippet>2436</a>          refs.push(XM::Ref(XProps {
-<a href=#2437 id=2437 data-nosnippet>2437</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
-<a href=#2438 id=2438 data-nosnippet>2438</a>            ..XProps::default()
-<a href=#2439 id=2439 data-nosnippet>2439</a>          }));
-<a href=#2440 id=2440 data-nosnippet>2440</a>        }
-<a href=#2441 id=2441 data-nosnippet>2441</a>      },
-<a href=#2442 id=2442 data-nosnippet>2442</a>      <span class="kw">_ </span>=&gt; {
-<a href=#2443 id=2443 data-nosnippet>2443</a>        <span class="comment">// XMHint's are ephemeral — clone without id
-<a href=#2444 id=2444 data-nosnippet>2444</a>        // Other variants: skip with warning
-<a href=#2445 id=2445 data-nosnippet>2445</a>      </span>},
-<a href=#2446 id=2446 data-nosnippet>2446</a>    }
-<a href=#2447 id=2447 data-nosnippet>2447</a>  }
-<a href=#2448 id=2448 data-nosnippet>2448</a>  <span class="prelude-val">Ok</span>(refs)
-<a href=#2449 id=2449 data-nosnippet>2449</a>}
-<a href=#2450 id=2450 data-nosnippet>2450</a>
-<a href=#2451 id=2451 data-nosnippet>2451</a><span class="doccomment">/// A grammar lexeme `ROLE:text:index`, whitespace removed as Perl does (`s/\s//g`, MathParser.pm:
-<a href=#2452 id=2452 data-nosnippet>2452</a>/// 803-804): a text token holding a newline or an em-space no longer breaks its lexeme, and a colon
-<a href=#2453 id=2453 data-nosnippet>2453</a>/// in the text is the grammar's to allow (`lex_char`), the index being the last `:digits` (57bm;
-<a href=#2454 id=2454 data-nosnippet>2454</a>/// `\text{(OCP): }R(s)`, 2605.11979, 2605.03556) — a text's colon, or a parsed script's, which
-<a href=#2455 id=2455 data-nosnippet>2455</a>/// reaches the formula as one ATOM holding its content (`\sum_{i:a_i&gt;0}x_i`, `ATOM::i&gt;ai0:3`). A text of whitespace only, which Perl's `\S*`
-<a href=#2456 id=2456 data-nosnippet>2456</a>/// matches empty, is the placeholder `␣` (`BLANK_LEXEME_TEXT`) — the grammar's text needs one
-<a href=#2457 id=2457 data-nosnippet>2457</a>/// character.
-<a href=#2458 id=2458 data-nosnippet>2458</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>grammar_lexeme(role: <span class="kw-2">&amp;</span>str, text: <span class="kw-2">&amp;</span>str, idx: usize) -&gt; String {
-<a href=#2459 id=2459 data-nosnippet>2459</a>  <span class="kw">let </span>strip = |s: <span class="kw-2">&amp;</span>str| s.chars().filter(|c| !c.is_whitespace()).collect::&lt;String&gt;();
-<a href=#2460 id=2460 data-nosnippet>2460</a>  <span class="kw">let </span>text = strip(text);
-<a href=#2461 id=2461 data-nosnippet>2461</a>  <span class="kw">let </span>text = <span class="kw">if </span>text.is_empty() {
-<a href=#2462 id=2462 data-nosnippet>2462</a>    BLANK_LEXEME_TEXT.to_string()
-<a href=#2463 id=2463 data-nosnippet>2463</a>  } <span class="kw">else </span>{
-<a href=#2464 id=2464 data-nosnippet>2464</a>    text
-<a href=#2465 id=2465 data-nosnippet>2465</a>  };
-<a href=#2466 id=2466 data-nosnippet>2466</a>  <span class="macro">format!</span>(<span class="string">"{}:{text}:{idx}"</span>, strip(role))
-<a href=#2467 id=2467 data-nosnippet>2467</a>}
-<a href=#2468 id=2468 data-nosnippet>2468</a>
-<a href=#2469 id=2469 data-nosnippet>2469</a><span class="doccomment">/// The lexeme text of a token whose text is whitespace only (`grammar_lexeme`).
-<a href=#2470 id=2470 data-nosnippet>2470</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BLANK_LEXEME_TEXT: <span class="kw-2">&amp;</span>str = <span class="string">"\u{2423}"</span>;
-<a href=#2471 id=2471 data-nosnippet>2471</a>
-<a href=#2472 id=2472 data-nosnippet>2472</a><span class="attr">#[cfg(test)]
-<a href=#2473 id=2473 data-nosnippet>2473</a></span><span class="kw">mod </span>tests {
-<a href=#2474 id=2474 data-nosnippet>2474</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#2475 id=2475 data-nosnippet>2475</a>
-<a href=#2476 id=2476 data-nosnippet>2476</a>  <span class="attr">#[test]
-<a href=#2477 id=2477 data-nosnippet>2477</a>  </span><span class="kw">fn </span>grammar_lexeme_strips_all_whitespace_and_keeps_colons() {
-<a href=#2478 id=2478 data-nosnippet>2478</a>    <span class="macro">assert_eq!</span>(grammar_lexeme(<span class="string">"ATOM"</span>, <span class="string">"(OCP): "</span>, <span class="number">1</span>), <span class="string">"ATOM:(OCP)::1"</span>);
-<a href=#2479 id=2479 data-nosnippet>2479</a>    <span class="macro">assert_eq!</span>(
-<a href=#2480 id=2480 data-nosnippet>2480</a>      grammar_lexeme(<span class="string">"ATOM"</span>, <span class="string">"max x for\nall z"</span>, <span class="number">2</span>),
-<a href=#2481 id=2481 data-nosnippet>2481</a>      <span class="string">"ATOM:maxxforallz:2"
-<a href=#2482 id=2482 data-nosnippet>2482</a>    </span>);
-<a href=#2483 id=2483 data-nosnippet>2483</a>    <span class="macro">assert_eq!</span>(
-<a href=#2484 id=2484 data-nosnippet>2484</a>      grammar_lexeme(<span class="string">"ATOM"</span>, <span class="string">"\u{2003}\u{2003}"</span>, <span class="number">3</span>),
-<a href=#2485 id=2485 data-nosnippet>2485</a>      <span class="string">"ATOM:\u{2423}:3"
-<a href=#2486 id=2486 data-nosnippet>2486</a>    </span>);
-<a href=#2487 id=2487 data-nosnippet>2487</a>    <span class="macro">assert_eq!</span>(
-<a href=#2488 id=2488 data-nosnippet>2488</a>      grammar_lexeme(<span class="string">"OTHER_OPEN"</span>, <span class="string">"\u{27E6}"</span>, <span class="number">4</span>),
-<a href=#2489 id=2489 data-nosnippet>2489</a>      <span class="string">"OTHER_OPEN:\u{27E6}:4"
-<a href=#2490 id=2490 data-nosnippet>2490</a>    </span>);
-<a href=#2491 id=2491 data-nosnippet>2491</a>  }
-<a href=#2492 id=2492 data-nosnippet>2492</a>
-<a href=#2493 id=2493 data-nosnippet>2493</a>  <span class="attr">#[test]
-<a href=#2494 id=2494 data-nosnippet>2494</a>  </span><span class="kw">fn </span>distill_lexeme_dash_separator() {
-<a href=#2495 id=2495 data-nosnippet>2495</a>    <span class="comment">// Dash takes precedence over colon.
-<a href=#2496 id=2496 data-nosnippet>2496</a>    </span><span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"UNKNOWN:italic-x"</span>);
-<a href=#2497 id=2497 data-nosnippet>2497</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"UNKNOWN:italic"</span>);
-<a href=#2498 id=2498 data-nosnippet>2498</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">"-"</span>);
-<a href=#2499 id=2499 data-nosnippet>2499</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"x"</span>);
-<a href=#2500 id=2500 data-nosnippet>2500</a>  }
-<a href=#2501 id=2501 data-nosnippet>2501</a>
-<a href=#2502 id=2502 data-nosnippet>2502</a>  <span class="attr">#[test]
-<a href=#2503 id=2503 data-nosnippet>2503</a>  </span><span class="kw">fn </span>distill_lexeme_colon_only() {
-<a href=#2504 id=2504 data-nosnippet>2504</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"ROLE:foo"</span>);
-<a href=#2505 id=2505 data-nosnippet>2505</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"ROLE"</span>);
-<a href=#2506 id=2506 data-nosnippet>2506</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">":"</span>);
-<a href=#2507 id=2507 data-nosnippet>2507</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"foo"</span>);
-<a href=#2508 id=2508 data-nosnippet>2508</a>  }
-<a href=#2509 id=2509 data-nosnippet>2509</a>
-<a href=#2510 id=2510 data-nosnippet>2510</a>  <span class="attr">#[test]
-<a href=#2511 id=2511 data-nosnippet>2511</a>  </span><span class="kw">fn </span>distill_lexeme_no_separator() {
-<a href=#2512 id=2512 data-nosnippet>2512</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"bare"</span>);
-<a href=#2513 id=2513 data-nosnippet>2513</a>    <span class="macro">assert_eq!</span>(base, <span class="string">""</span>);
-<a href=#2514 id=2514 data-nosnippet>2514</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">""</span>);
-<a href=#2515 id=2515 data-nosnippet>2515</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"bare"</span>);
-<a href=#2516 id=2516 data-nosnippet>2516</a>  }
-<a href=#2517 id=2517 data-nosnippet>2517</a>
-<a href=#2518 id=2518 data-nosnippet>2518</a>  <span class="attr">#[test]
-<a href=#2519 id=2519 data-nosnippet>2519</a>  </span><span class="kw">fn </span>distill_lexeme_empty() {
-<a href=#2520 id=2520 data-nosnippet>2520</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">""</span>);
-<a href=#2521 id=2521 data-nosnippet>2521</a>    <span class="macro">assert_eq!</span>(base, <span class="string">""</span>);
-<a href=#2522 id=2522 data-nosnippet>2522</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">""</span>);
-<a href=#2523 id=2523 data-nosnippet>2523</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">""</span>);
-<a href=#2524 id=2524 data-nosnippet>2524</a>  }
-<a href=#2525 id=2525 data-nosnippet>2525</a>
-<a href=#2526 id=2526 data-nosnippet>2526</a>  <span class="attr">#[test]
-<a href=#2527 id=2527 data-nosnippet>2527</a>  </span><span class="kw">fn </span>distill_lexeme_trailing_dash() {
-<a href=#2528 id=2528 data-nosnippet>2528</a>    <span class="comment">// Edge: last-dash splits after the last hyphen even when the tail is empty.
-<a href=#2529 id=2529 data-nosnippet>2529</a>    </span><span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"foo-"</span>);
-<a href=#2530 id=2530 data-nosnippet>2530</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"foo"</span>);
-<a href=#2531 id=2531 data-nosnippet>2531</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">"-"</span>);
-<a href=#2532 id=2532 data-nosnippet>2532</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">""</span>);
-<a href=#2533 id=2533 data-nosnippet>2533</a>  }
-<a href=#2534 id=2534 data-nosnippet>2534</a>
-<a href=#2535 id=2535 data-nosnippet>2535</a>  <span class="attr">#[test]
-<a href=#2536 id=2536 data-nosnippet>2536</a>  </span><span class="kw">fn </span>get_xmhint_spacing_mu_divides_by_1_8() {
-<a href=#2537 id=2537 data-nosnippet>2537</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"1.8mu"</span>) - <span class="number">1.0</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#2538 id=2538 data-nosnippet>2538</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"3.6mu"</span>) - <span class="number">2.0</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#2539 id=2539 data-nosnippet>2539</a>  }
-<a href=#2540 id=2540 data-nosnippet>2540</a>
-<a href=#2541 id=2541 data-nosnippet>2541</a>  <span class="attr">#[test]
-<a href=#2542 id=2542 data-nosnippet>2542</a>  </span><span class="kw">fn </span>get_xmhint_spacing_pt_passes_through() {
-<a href=#2543 id=2543 data-nosnippet>2543</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"1.667pt"</span>) - <span class="number">1.667</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#2544 id=2544 data-nosnippet>2544</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"10pt"</span>) - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#2545 id=2545 data-nosnippet>2545</a>  }
-<a href=#2546 id=2546 data-nosnippet>2546</a>
-<a href=#2547 id=2547 data-nosnippet>2547</a>  <span class="attr">#[test]
-<a href=#2548 id=2548 data-nosnippet>2548</a>  </span><span class="kw">fn </span>get_xmhint_spacing_em_times_ten() {
-<a href=#2549 id=2549 data-nosnippet>2549</a>    <span class="comment">// em assumes 10pt font.
-<a href=#2550 id=2550 data-nosnippet>2550</a>    </span><span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"0.5em"</span>) - <span class="number">5.0</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#2551 id=2551 data-nosnippet>2551</a>  }
-<a href=#2552 id=2552 data-nosnippet>2552</a>
-<a href=#2553 id=2553 data-nosnippet>2553</a>  <span class="attr">#[test]
-<a href=#2554 id=2554 data-nosnippet>2554</a>  </span><span class="kw">fn </span>get_xmhint_spacing_strips_plus_glue() {
-<a href=#2555 id=2555 data-nosnippet>2555</a>    <span class="comment">// "2.77pt plus 2.77pt" extracts base "2.77pt".
-<a href=#2556 id=2556 data-nosnippet>2556</a>    </span><span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"2.77pt plus 2.77pt"</span>) - <span class="number">2.77</span>).abs() &lt; <span class="number">1e-6</span>);
-<a href=#2557 id=2557 data-nosnippet>2557</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"5pt minus 1pt"</span>) - <span class="number">5.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#2400 id=2400 data-nosnippet>2400</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
+<a href=#2401 id=2401 data-nosnippet>2401</a>          <span class="comment">// PRESERVE an existing _xmkey. Faithful to Perl `createXMRefs`
+<a href=#2402 id=2402 data-nosnippet>2402</a>          // (Package.pm:1527): it `GenerateID`s an XML arg but NEVER clobbers
+<a href=#2403 id=2403 data-nosnippet>2403</a>          // its `_xmkey`, so a node that is ALREADY an arg of an outer
+<a href=#2404 id=2404 data-nosnippet>2404</a>          // package XMDual (via `\lx@xmarg`, e.g. braket `\braket{a|op|c}`)
+<a href=#2405 id=2405 data-nosnippet>2405</a>          // keeps that key while also being referenced by THIS (grammar) dual
+<a href=#2406 id=2406 data-nosnippet>2406</a>          // — both content XMRefs resolve to the same shared node. Overwriting
+<a href=#2407 id=2407 data-nosnippet>2407</a>          // the key (as before) dangled the package's XMRef →
+<a href=#2408 id=2408 data-nosnippet>2408</a>          // `expected:id Cannot find a node` (compound op; witness 2205.06843).
+<a href=#2409 id=2409 data-nosnippet>2409</a>          </span>refs.push(XM::Ref(XProps {
+<a href=#2410 id=2410 data-nosnippet>2410</a>            xmkey: <span class="prelude-val">Some</span>(existing),
+<a href=#2411 id=2411 data-nosnippet>2411</a>            ..XProps::default()
+<a href=#2412 id=2412 data-nosnippet>2412</a>          }));
+<a href=#2413 id=2413 data-nosnippet>2413</a>        } <span class="kw">else </span>{
+<a href=#2414 id=2414 data-nosnippet>2414</a>          <span class="comment">// not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
+<a href=#2415 id=2415 data-nosnippet>2415</a>          </span><span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
+<a href=#2416 id=2416 data-nosnippet>2416</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
+<a href=#2417 id=2417 data-nosnippet>2417</a>          refs.push(XM::Ref(XProps {
+<a href=#2418 id=2418 data-nosnippet>2418</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
+<a href=#2419 id=2419 data-nosnippet>2419</a>            ..XProps::default()
+<a href=#2420 id=2420 data-nosnippet>2420</a>          }));
+<a href=#2421 id=2421 data-nosnippet>2421</a>        }
+<a href=#2422 id=2422 data-nosnippet>2422</a>      },
+<a href=#2423 id=2423 data-nosnippet>2423</a>      <span class="comment">// clone an XMRef (w/o any attributes or id ?) rather than create an XMRef to an XMRef:
+<a href=#2424 id=2424 data-nosnippet>2424</a>      // only its `_xmkey` and `idref` (Package.pm:1557-1561), not the role/meaning a parse
+<a href=#2425 id=2425 data-nosnippet>2425</a>      // annotated it with.
+<a href=#2426 id=2426 data-nosnippet>2426</a>      </span>XM::Ref(props) =&gt; {
+<a href=#2427 id=2427 data-nosnippet>2427</a>        refs.push(XM::Ref(XProps {
+<a href=#2428 id=2428 data-nosnippet>2428</a>          id: props.id.clone(),
+<a href=#2429 id=2429 data-nosnippet>2429</a>          xmkey: props.xmkey.clone(),
+<a href=#2430 id=2430 data-nosnippet>2430</a>          ..XProps::default()
+<a href=#2431 id=2431 data-nosnippet>2431</a>        }));
+<a href=#2432 id=2432 data-nosnippet>2432</a>      },
+<a href=#2433 id=2433 data-nosnippet>2433</a>      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, props, <span class="kw">_</span>) | XM::Wrap(<span class="kw">_</span>, props, <span class="kw">_</span>) =&gt; {
+<a href=#2434 id=2434 data-nosnippet>2434</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = props.id.as_ref() {
+<a href=#2435 id=2435 data-nosnippet>2435</a>          refs.push(XM::Ref(XProps {
+<a href=#2436 id=2436 data-nosnippet>2436</a>            id: <span class="prelude-val">Some</span>(id.clone()),
+<a href=#2437 id=2437 data-nosnippet>2437</a>            ..XProps::default()
+<a href=#2438 id=2438 data-nosnippet>2438</a>          }));
+<a href=#2439 id=2439 data-nosnippet>2439</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(existing) = props.xmkey.clone() {
+<a href=#2440 id=2440 data-nosnippet>2440</a>          <span class="comment">// Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
+<a href=#2441 id=2441 data-nosnippet>2441</a>          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
+<a href=#2442 id=2442 data-nosnippet>2442</a>          </span>refs.push(XM::Ref(XProps {
+<a href=#2443 id=2443 data-nosnippet>2443</a>            xmkey: <span class="prelude-val">Some</span>(existing),
+<a href=#2444 id=2444 data-nosnippet>2444</a>            ..XProps::default()
+<a href=#2445 id=2445 data-nosnippet>2445</a>          }));
+<a href=#2446 id=2446 data-nosnippet>2446</a>        } <span class="kw">else </span>{
+<a href=#2447 id=2447 data-nosnippet>2447</a>          <span class="kw">let </span>key = get_xmarg_id()<span class="question-mark">?</span>.to_string();
+<a href=#2448 id=2448 data-nosnippet>2448</a>          props.xmkey = <span class="prelude-val">Some</span>(Cow::Owned(key.clone()));
+<a href=#2449 id=2449 data-nosnippet>2449</a>          refs.push(XM::Ref(XProps {
+<a href=#2450 id=2450 data-nosnippet>2450</a>            xmkey: <span class="prelude-val">Some</span>(Cow::Owned(key)),
+<a href=#2451 id=2451 data-nosnippet>2451</a>            ..XProps::default()
+<a href=#2452 id=2452 data-nosnippet>2452</a>          }));
+<a href=#2453 id=2453 data-nosnippet>2453</a>        }
+<a href=#2454 id=2454 data-nosnippet>2454</a>      },
+<a href=#2455 id=2455 data-nosnippet>2455</a>      <span class="kw">_ </span>=&gt; {
+<a href=#2456 id=2456 data-nosnippet>2456</a>        <span class="comment">// XMHint's are ephemeral — clone without id
+<a href=#2457 id=2457 data-nosnippet>2457</a>        // Other variants: skip with warning
+<a href=#2458 id=2458 data-nosnippet>2458</a>      </span>},
+<a href=#2459 id=2459 data-nosnippet>2459</a>    }
+<a href=#2460 id=2460 data-nosnippet>2460</a>  }
+<a href=#2461 id=2461 data-nosnippet>2461</a>  <span class="prelude-val">Ok</span>(refs)
+<a href=#2462 id=2462 data-nosnippet>2462</a>}
+<a href=#2463 id=2463 data-nosnippet>2463</a>
+<a href=#2464 id=2464 data-nosnippet>2464</a><span class="doccomment">/// A grammar lexeme `ROLE:text:index`, whitespace removed as Perl does (`s/\s//g`, MathParser.pm:
+<a href=#2465 id=2465 data-nosnippet>2465</a>/// 803-804): a text token holding a newline or an em-space no longer breaks its lexeme, and a colon
+<a href=#2466 id=2466 data-nosnippet>2466</a>/// in the text is the grammar's to allow (`lex_char`), the index being the last `:digits` (57bm;
+<a href=#2467 id=2467 data-nosnippet>2467</a>/// `\text{(OCP): }R(s)`, 2605.11979, 2605.03556) — a text's colon, or a parsed script's, which
+<a href=#2468 id=2468 data-nosnippet>2468</a>/// reaches the formula as one ATOM holding its content (`\sum_{i:a_i&gt;0}x_i`, `ATOM::i&gt;ai0:3`). A text of whitespace only, which Perl's `\S*`
+<a href=#2469 id=2469 data-nosnippet>2469</a>/// matches empty, is the placeholder `␣` (`BLANK_LEXEME_TEXT`) — the grammar's text needs one
+<a href=#2470 id=2470 data-nosnippet>2470</a>/// character.
+<a href=#2471 id=2471 data-nosnippet>2471</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>grammar_lexeme(role: <span class="kw-2">&amp;</span>str, text: <span class="kw-2">&amp;</span>str, idx: usize) -&gt; String {
+<a href=#2472 id=2472 data-nosnippet>2472</a>  <span class="kw">let </span>strip = |s: <span class="kw-2">&amp;</span>str| s.chars().filter(|c| !c.is_whitespace()).collect::&lt;String&gt;();
+<a href=#2473 id=2473 data-nosnippet>2473</a>  <span class="kw">let </span>text = strip(text);
+<a href=#2474 id=2474 data-nosnippet>2474</a>  <span class="kw">let </span>text = <span class="kw">if </span>text.is_empty() {
+<a href=#2475 id=2475 data-nosnippet>2475</a>    BLANK_LEXEME_TEXT.to_string()
+<a href=#2476 id=2476 data-nosnippet>2476</a>  } <span class="kw">else </span>{
+<a href=#2477 id=2477 data-nosnippet>2477</a>    text
+<a href=#2478 id=2478 data-nosnippet>2478</a>  };
+<a href=#2479 id=2479 data-nosnippet>2479</a>  <span class="macro">format!</span>(<span class="string">"{}:{text}:{idx}"</span>, strip(role))
+<a href=#2480 id=2480 data-nosnippet>2480</a>}
+<a href=#2481 id=2481 data-nosnippet>2481</a>
+<a href=#2482 id=2482 data-nosnippet>2482</a><span class="doccomment">/// The lexeme text of a token whose text is whitespace only (`grammar_lexeme`).
+<a href=#2483 id=2483 data-nosnippet>2483</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>BLANK_LEXEME_TEXT: <span class="kw-2">&amp;</span>str = <span class="string">"\u{2423}"</span>;
+<a href=#2484 id=2484 data-nosnippet>2484</a>
+<a href=#2485 id=2485 data-nosnippet>2485</a><span class="attr">#[cfg(test)]
+<a href=#2486 id=2486 data-nosnippet>2486</a></span><span class="kw">mod </span>tests {
+<a href=#2487 id=2487 data-nosnippet>2487</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#2488 id=2488 data-nosnippet>2488</a>
+<a href=#2489 id=2489 data-nosnippet>2489</a>  <span class="attr">#[test]
+<a href=#2490 id=2490 data-nosnippet>2490</a>  </span><span class="kw">fn </span>grammar_lexeme_strips_all_whitespace_and_keeps_colons() {
+<a href=#2491 id=2491 data-nosnippet>2491</a>    <span class="macro">assert_eq!</span>(grammar_lexeme(<span class="string">"ATOM"</span>, <span class="string">"(OCP): "</span>, <span class="number">1</span>), <span class="string">"ATOM:(OCP)::1"</span>);
+<a href=#2492 id=2492 data-nosnippet>2492</a>    <span class="macro">assert_eq!</span>(
+<a href=#2493 id=2493 data-nosnippet>2493</a>      grammar_lexeme(<span class="string">"ATOM"</span>, <span class="string">"max x for\nall z"</span>, <span class="number">2</span>),
+<a href=#2494 id=2494 data-nosnippet>2494</a>      <span class="string">"ATOM:maxxforallz:2"
+<a href=#2495 id=2495 data-nosnippet>2495</a>    </span>);
+<a href=#2496 id=2496 data-nosnippet>2496</a>    <span class="macro">assert_eq!</span>(
+<a href=#2497 id=2497 data-nosnippet>2497</a>      grammar_lexeme(<span class="string">"ATOM"</span>, <span class="string">"\u{2003}\u{2003}"</span>, <span class="number">3</span>),
+<a href=#2498 id=2498 data-nosnippet>2498</a>      <span class="string">"ATOM:\u{2423}:3"
+<a href=#2499 id=2499 data-nosnippet>2499</a>    </span>);
+<a href=#2500 id=2500 data-nosnippet>2500</a>    <span class="macro">assert_eq!</span>(
+<a href=#2501 id=2501 data-nosnippet>2501</a>      grammar_lexeme(<span class="string">"OTHER_OPEN"</span>, <span class="string">"\u{27E6}"</span>, <span class="number">4</span>),
+<a href=#2502 id=2502 data-nosnippet>2502</a>      <span class="string">"OTHER_OPEN:\u{27E6}:4"
+<a href=#2503 id=2503 data-nosnippet>2503</a>    </span>);
+<a href=#2504 id=2504 data-nosnippet>2504</a>  }
+<a href=#2505 id=2505 data-nosnippet>2505</a>
+<a href=#2506 id=2506 data-nosnippet>2506</a>  <span class="attr">#[test]
+<a href=#2507 id=2507 data-nosnippet>2507</a>  </span><span class="kw">fn </span>distill_lexeme_dash_separator() {
+<a href=#2508 id=2508 data-nosnippet>2508</a>    <span class="comment">// Dash takes precedence over colon.
+<a href=#2509 id=2509 data-nosnippet>2509</a>    </span><span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"UNKNOWN:italic-x"</span>);
+<a href=#2510 id=2510 data-nosnippet>2510</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"UNKNOWN:italic"</span>);
+<a href=#2511 id=2511 data-nosnippet>2511</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">"-"</span>);
+<a href=#2512 id=2512 data-nosnippet>2512</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"x"</span>);
+<a href=#2513 id=2513 data-nosnippet>2513</a>  }
+<a href=#2514 id=2514 data-nosnippet>2514</a>
+<a href=#2515 id=2515 data-nosnippet>2515</a>  <span class="attr">#[test]
+<a href=#2516 id=2516 data-nosnippet>2516</a>  </span><span class="kw">fn </span>distill_lexeme_colon_only() {
+<a href=#2517 id=2517 data-nosnippet>2517</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"ROLE:foo"</span>);
+<a href=#2518 id=2518 data-nosnippet>2518</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"ROLE"</span>);
+<a href=#2519 id=2519 data-nosnippet>2519</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">":"</span>);
+<a href=#2520 id=2520 data-nosnippet>2520</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"foo"</span>);
+<a href=#2521 id=2521 data-nosnippet>2521</a>  }
+<a href=#2522 id=2522 data-nosnippet>2522</a>
+<a href=#2523 id=2523 data-nosnippet>2523</a>  <span class="attr">#[test]
+<a href=#2524 id=2524 data-nosnippet>2524</a>  </span><span class="kw">fn </span>distill_lexeme_no_separator() {
+<a href=#2525 id=2525 data-nosnippet>2525</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"bare"</span>);
+<a href=#2526 id=2526 data-nosnippet>2526</a>    <span class="macro">assert_eq!</span>(base, <span class="string">""</span>);
+<a href=#2527 id=2527 data-nosnippet>2527</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">""</span>);
+<a href=#2528 id=2528 data-nosnippet>2528</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">"bare"</span>);
+<a href=#2529 id=2529 data-nosnippet>2529</a>  }
+<a href=#2530 id=2530 data-nosnippet>2530</a>
+<a href=#2531 id=2531 data-nosnippet>2531</a>  <span class="attr">#[test]
+<a href=#2532 id=2532 data-nosnippet>2532</a>  </span><span class="kw">fn </span>distill_lexeme_empty() {
+<a href=#2533 id=2533 data-nosnippet>2533</a>    <span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">""</span>);
+<a href=#2534 id=2534 data-nosnippet>2534</a>    <span class="macro">assert_eq!</span>(base, <span class="string">""</span>);
+<a href=#2535 id=2535 data-nosnippet>2535</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">""</span>);
+<a href=#2536 id=2536 data-nosnippet>2536</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">""</span>);
+<a href=#2537 id=2537 data-nosnippet>2537</a>  }
+<a href=#2538 id=2538 data-nosnippet>2538</a>
+<a href=#2539 id=2539 data-nosnippet>2539</a>  <span class="attr">#[test]
+<a href=#2540 id=2540 data-nosnippet>2540</a>  </span><span class="kw">fn </span>distill_lexeme_trailing_dash() {
+<a href=#2541 id=2541 data-nosnippet>2541</a>    <span class="comment">// Edge: last-dash splits after the last hyphen even when the tail is empty.
+<a href=#2542 id=2542 data-nosnippet>2542</a>    </span><span class="kw">let </span>(base, sep, lex) = distill_lexeme(<span class="string">"foo-"</span>);
+<a href=#2543 id=2543 data-nosnippet>2543</a>    <span class="macro">assert_eq!</span>(base, <span class="string">"foo"</span>);
+<a href=#2544 id=2544 data-nosnippet>2544</a>    <span class="macro">assert_eq!</span>(sep, <span class="string">"-"</span>);
+<a href=#2545 id=2545 data-nosnippet>2545</a>    <span class="macro">assert_eq!</span>(lex, <span class="string">""</span>);
+<a href=#2546 id=2546 data-nosnippet>2546</a>  }
+<a href=#2547 id=2547 data-nosnippet>2547</a>
+<a href=#2548 id=2548 data-nosnippet>2548</a>  <span class="attr">#[test]
+<a href=#2549 id=2549 data-nosnippet>2549</a>  </span><span class="kw">fn </span>get_xmhint_spacing_mu_divides_by_1_8() {
+<a href=#2550 id=2550 data-nosnippet>2550</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"1.8mu"</span>) - <span class="number">1.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#2551 id=2551 data-nosnippet>2551</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"3.6mu"</span>) - <span class="number">2.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#2552 id=2552 data-nosnippet>2552</a>  }
+<a href=#2553 id=2553 data-nosnippet>2553</a>
+<a href=#2554 id=2554 data-nosnippet>2554</a>  <span class="attr">#[test]
+<a href=#2555 id=2555 data-nosnippet>2555</a>  </span><span class="kw">fn </span>get_xmhint_spacing_pt_passes_through() {
+<a href=#2556 id=2556 data-nosnippet>2556</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"1.667pt"</span>) - <span class="number">1.667</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#2557 id=2557 data-nosnippet>2557</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"10pt"</span>) - <span class="number">10.0</span>).abs() &lt; <span class="number">1e-6</span>);
 <a href=#2558 id=2558 data-nosnippet>2558</a>  }
 <a href=#2559 id=2559 data-nosnippet>2559</a>
 <a href=#2560 id=2560 data-nosnippet>2560</a>  <span class="attr">#[test]
-<a href=#2561 id=2561 data-nosnippet>2561</a>  </span><span class="kw">fn </span>get_xmhint_spacing_empty_is_zero() {
-<a href=#2562 id=2562 data-nosnippet>2562</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">""</span>), <span class="number">0.0</span>);
-<a href=#2563 id=2563 data-nosnippet>2563</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"  "</span>), <span class="number">0.0</span>);
+<a href=#2561 id=2561 data-nosnippet>2561</a>  </span><span class="kw">fn </span>get_xmhint_spacing_em_times_ten() {
+<a href=#2562 id=2562 data-nosnippet>2562</a>    <span class="comment">// em assumes 10pt font.
+<a href=#2563 id=2563 data-nosnippet>2563</a>    </span><span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"0.5em"</span>) - <span class="number">5.0</span>).abs() &lt; <span class="number">1e-6</span>);
 <a href=#2564 id=2564 data-nosnippet>2564</a>  }
 <a href=#2565 id=2565 data-nosnippet>2565</a>
 <a href=#2566 id=2566 data-nosnippet>2566</a>  <span class="attr">#[test]
-<a href=#2567 id=2567 data-nosnippet>2567</a>  </span><span class="kw">fn </span>get_xmhint_spacing_unknown_unit_is_zero() {
-<a href=#2568 id=2568 data-nosnippet>2568</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"5cm"</span>), <span class="number">0.0</span>);
-<a href=#2569 id=2569 data-nosnippet>2569</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"garbage"</span>), <span class="number">0.0</span>);
-<a href=#2570 id=2570 data-nosnippet>2570</a>  }
-<a href=#2571 id=2571 data-nosnippet>2571</a>}
+<a href=#2567 id=2567 data-nosnippet>2567</a>  </span><span class="kw">fn </span>get_xmhint_spacing_strips_plus_glue() {
+<a href=#2568 id=2568 data-nosnippet>2568</a>    <span class="comment">// "2.77pt plus 2.77pt" extracts base "2.77pt".
+<a href=#2569 id=2569 data-nosnippet>2569</a>    </span><span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"2.77pt plus 2.77pt"</span>) - <span class="number">2.77</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#2570 id=2570 data-nosnippet>2570</a>    <span class="macro">assert!</span>((get_xmhint_spacing(<span class="string">"5pt minus 1pt"</span>) - <span class="number">5.0</span>).abs() &lt; <span class="number">1e-6</span>);
+<a href=#2571 id=2571 data-nosnippet>2571</a>  }
+<a href=#2572 id=2572 data-nosnippet>2572</a>
+<a href=#2573 id=2573 data-nosnippet>2573</a>  <span class="attr">#[test]
+<a href=#2574 id=2574 data-nosnippet>2574</a>  </span><span class="kw">fn </span>get_xmhint_spacing_empty_is_zero() {
+<a href=#2575 id=2575 data-nosnippet>2575</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">""</span>), <span class="number">0.0</span>);
+<a href=#2576 id=2576 data-nosnippet>2576</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"  "</span>), <span class="number">0.0</span>);
+<a href=#2577 id=2577 data-nosnippet>2577</a>  }
+<a href=#2578 id=2578 data-nosnippet>2578</a>
+<a href=#2579 id=2579 data-nosnippet>2579</a>  <span class="attr">#[test]
+<a href=#2580 id=2580 data-nosnippet>2580</a>  </span><span class="kw">fn </span>get_xmhint_spacing_unknown_unit_is_zero() {
+<a href=#2581 id=2581 data-nosnippet>2581</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"5cm"</span>), <span class="number">0.0</span>);
+<a href=#2582 id=2582 data-nosnippet>2582</a>    <span class="macro">assert_eq!</span>(get_xmhint_spacing(<span class="string">"garbage"</span>), <span class="number">0.0</span>);
+<a href=#2583 id=2583 data-nosnippet>2583</a>  }
+<a href=#2584 id=2584 data-nosnippet>2584</a>}
 </code></pre></div></section></main></body></html>

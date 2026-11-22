@@ -1783,382 +1783,386 @@
 <a href=#1783 id=1783 data-nosnippet>1783</a>    document.append_tree(<span class="kw-2">&amp;mut </span>td, <span class="macro">vec!</span>[node])<span class="question-mark">?</span>;
 <a href=#1784 id=1784 data-nosnippet>1784</a>  }
 <a href=#1785 id=1785 data-nosnippet>1785</a>  document.close_element_at(<span class="kw-2">&amp;mut </span>td)<span class="question-mark">?</span>;
-<a href=#1786 id=1786 data-nosnippet>1786</a>  <span class="prelude-val">Ok</span>(())
-<a href=#1787 id=1787 data-nosnippet>1787</a>}
-<a href=#1788 id=1788 data-nosnippet>1788</a>
-<a href=#1789 id=1789 data-nosnippet>1789</a><span class="doccomment">/// Collect all xml:id values from a subtree by DOM walking.
-<a href=#1790 id=1790 data-nosnippet>1790</a></span><span class="kw">fn </span>collect_xml_ids(node: <span class="kw-2">&amp;</span>Node, ids: <span class="kw-2">&amp;mut </span>Vec&lt;String&gt;) {
-<a href=#1791 id=1791 data-nosnippet>1791</a>  <span class="comment">// Try all possible attribute forms for xml:id
-<a href=#1792 id=1792 data-nosnippet>1792</a>  </span><span class="kw">let </span>id = node
-<a href=#1793 id=1793 data-nosnippet>1793</a>    .get_attribute(<span class="string">"xml:id"</span>)
-<a href=#1794 id=1794 data-nosnippet>1794</a>    .or_else(|| node.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>))
-<a href=#1795 id=1795 data-nosnippet>1795</a>    .or_else(|| {
-<a href=#1796 id=1796 data-nosnippet>1796</a>      <span class="comment">// Fallback: scan attributes for anything named "id" or "xml:id"
-<a href=#1797 id=1797 data-nosnippet>1797</a>      </span>node
-<a href=#1798 id=1798 data-nosnippet>1798</a>        .get_attributes()
-<a href=#1799 id=1799 data-nosnippet>1799</a>        .into_iter()
-<a href=#1800 id=1800 data-nosnippet>1800</a>        .find(|(k, <span class="kw">_</span>)| k == <span class="string">"id" </span>|| k == <span class="string">"xml:id"</span>)
-<a href=#1801 id=1801 data-nosnippet>1801</a>        .map(|(<span class="kw">_</span>, v)| v)
-<a href=#1802 id=1802 data-nosnippet>1802</a>    });
-<a href=#1803 id=1803 data-nosnippet>1803</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = id {
-<a href=#1804 id=1804 data-nosnippet>1804</a>    ids.push(id);
-<a href=#1805 id=1805 data-nosnippet>1805</a>  }
-<a href=#1806 id=1806 data-nosnippet>1806</a>  <span class="kw">for </span>child <span class="kw">in </span>node.get_child_nodes() {
-<a href=#1807 id=1807 data-nosnippet>1807</a>    <span class="kw">if </span>child.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
-<a href=#1808 id=1808 data-nosnippet>1808</a>      collect_xml_ids(<span class="kw-2">&amp;</span>child, ids);
-<a href=#1809 id=1809 data-nosnippet>1809</a>    }
-<a href=#1810 id=1810 data-nosnippet>1810</a>  }
-<a href=#1811 id=1811 data-nosnippet>1811</a>}
-<a href=#1812 id=1812 data-nosnippet>1812</a>
-<a href=#1813 id=1813 data-nosnippet>1813</a><span class="doccomment">/// Collect all XMRef nodes from a subtree by DOM walking.
-<a href=#1814 id=1814 data-nosnippet>1814</a></span><span class="kw">fn </span>collect_xmrefs(node: <span class="kw-2">&amp;</span>Node, refs: <span class="kw-2">&amp;mut </span>Vec&lt;Node&gt;) {
-<a href=#1815 id=1815 data-nosnippet>1815</a>  <span class="kw">if </span>node.get_name() == <span class="string">"XMRef" </span>&amp;&amp; node.has_attribute(<span class="string">"idref"</span>) {
-<a href=#1816 id=1816 data-nosnippet>1816</a>    refs.push(node.clone());
-<a href=#1817 id=1817 data-nosnippet>1817</a>  }
-<a href=#1818 id=1818 data-nosnippet>1818</a>  <span class="kw">for </span>child <span class="kw">in </span>node.get_child_nodes() {
-<a href=#1819 id=1819 data-nosnippet>1819</a>    <span class="kw">if </span>child.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
-<a href=#1820 id=1820 data-nosnippet>1820</a>      collect_xmrefs(<span class="kw-2">&amp;</span>child, refs);
-<a href=#1821 id=1821 data-nosnippet>1821</a>    }
-<a href=#1822 id=1822 data-nosnippet>1822</a>  }
-<a href=#1823 id=1823 data-nosnippet>1823</a>}
-<a href=#1824 id=1824 data-nosnippet>1824</a>
-<a href=#1825 id=1825 data-nosnippet>1825</a><span class="doccomment">/// Fix broken XMRef idrefs in a subtree after append_clone.
-<a href=#1826 id=1826 data-nosnippet>1826</a>/// append_clone's id_map and record_id_with_node can produce inconsistent
-<a href=#1827 id=1827 data-nosnippet>1827</a>/// xml:id/idref pairs. This function scans the subtree for all xml:ids,
-<a href=#1828 id=1828 data-nosnippet>1828</a>/// then updates XMRef idrefs to point to actual existing ids.
-<a href=#1829 id=1829 data-nosnippet>1829</a></span><span class="kw">fn </span>fixup_xmref_idrefs(_document: <span class="kw-2">&amp;mut </span>Document, root: <span class="kw-2">&amp;</span>Node) {
-<a href=#1830 id=1830 data-nosnippet>1830</a>  <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
-<a href=#1831 id=1831 data-nosnippet>1831</a>  <span class="comment">// Collect all xml:ids in the subtree, keyed by their "base" (without suffix variants)
-<a href=#1832 id=1832 data-nosnippet>1832</a>  // Collect xml:ids from the subtree by walking the DOM directly
-<a href=#1833 id=1833 data-nosnippet>1833</a>  // (XPath namespace handling may miss xml:id attributes)
-<a href=#1834 id=1834 data-nosnippet>1834</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>all_ids: Vec&lt;String&gt; = Vec::new();
-<a href=#1835 id=1835 data-nosnippet>1835</a>  collect_xml_ids(root, <span class="kw-2">&amp;mut </span>all_ids);
-<a href=#1836 id=1836 data-nosnippet>1836</a>  <span class="kw">if </span>all_ids.is_empty() {
-<a href=#1837 id=1837 data-nosnippet>1837</a>    <span class="kw">return</span>;
-<a href=#1838 id=1838 data-nosnippet>1838</a>  }
-<a href=#1839 id=1839 data-nosnippet>1839</a>  <span class="comment">// Build a reverse lookup keyed by the trailing numeric segment of the id
-<a href=#1840 id=1840 data-nosnippet>1840</a>  // (the per-equation node sequence number). IDs like
-<a href=#1841 id=1841 data-nosnippet>1841</a>  // `S3.E22.m1.5.mf` get keyed under `.5` so that XMRefs whose idref ended
-<a href=#1842 id=1842 data-nosnippet>1842</a>  // up with a stale `.mf`-or-other suffix can still resolve back to the
-<a href=#1843 id=1843 data-nosnippet>1843</a>  // surviving cloned id by matching on the same node-sequence number.
-<a href=#1844 id=1844 data-nosnippet>1844</a>  // Earlier this used `id.rfind('.')` which always landed in front of
-<a href=#1845 id=1845 data-nosnippet>1845</a>  // `.mf`, collapsing every `.mf` id under one key (last-write-wins).
-<a href=#1846 id=1846 data-nosnippet>1846</a>  // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
-<a href=#1847 id=1847 data-nosnippet>1847</a>  // S3.E22 align/equation cluster (cloned to MathFork main branch).
-<a href=#1848 id=1848 data-nosnippet>1848</a>  </span><span class="kw">static </span>TRAILING_NUM_RE: LazyLock&lt;Regex&gt; =
-<a href=#1849 id=1849 data-nosnippet>1849</a>    LazyLock::new(|| Regex::new(<span class="string">r"\.(\d+)(?:\.[A-Za-z]\w*)?$"</span>).unwrap());
-<a href=#1850 id=1850 data-nosnippet>1850</a>  <span class="kw">let </span>trailing_num_re = <span class="kw-2">&amp;*</span>TRAILING_NUM_RE;
-<a href=#1851 id=1851 data-nosnippet>1851</a>  <span class="kw">let </span><span class="kw-2">mut </span>id_by_suffix: HashMap&lt;String, String&gt; = HashMap::default();
-<a href=#1852 id=1852 data-nosnippet>1852</a>  <span class="kw">for </span>id <span class="kw">in </span><span class="kw-2">&amp;</span>all_ids {
-<a href=#1853 id=1853 data-nosnippet>1853</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = trailing_num_re.captures(id) {
-<a href=#1854 id=1854 data-nosnippet>1854</a>      <span class="comment">// Key is `.NN`, value is the actual id.
-<a href=#1855 id=1855 data-nosnippet>1855</a>      </span><span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">".{}"</span>, caps.get(<span class="number">1</span>).unwrap().as_str());
-<a href=#1856 id=1856 data-nosnippet>1856</a>      id_by_suffix.entry(key).or_insert_with(|| id.clone());
-<a href=#1857 id=1857 data-nosnippet>1857</a>    }
-<a href=#1858 id=1858 data-nosnippet>1858</a>    id_by_suffix.insert(id.clone(), id.clone()); <span class="comment">// exact match
-<a href=#1859 id=1859 data-nosnippet>1859</a>  </span>}
-<a href=#1860 id=1860 data-nosnippet>1860</a>  <span class="comment">// Find all XMRef nodes and fix their idrefs
-<a href=#1861 id=1861 data-nosnippet>1861</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>xmrefs: Vec&lt;Node&gt; = Vec::new();
-<a href=#1862 id=1862 data-nosnippet>1862</a>  collect_xmrefs(root, <span class="kw-2">&amp;mut </span>xmrefs);
-<a href=#1863 id=1863 data-nosnippet>1863</a>  <span class="kw">for </span><span class="kw-2">mut </span>xmref <span class="kw">in </span>xmrefs {
-<a href=#1864 id=1864 data-nosnippet>1864</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(idref) = xmref.get_attribute(<span class="string">"idref"</span>) {
-<a href=#1865 id=1865 data-nosnippet>1865</a>      <span class="comment">// Check if idref points to an existing id in the subtree
-<a href=#1866 id=1866 data-nosnippet>1866</a>      </span><span class="kw">if </span>all_ids.contains(<span class="kw-2">&amp;</span>idref) {
-<a href=#1867 id=1867 data-nosnippet>1867</a>        <span class="kw">continue</span>;
-<a href=#1868 id=1868 data-nosnippet>1868</a>      }
-<a href=#1869 id=1869 data-nosnippet>1869</a>      <span class="comment">// Try to find the matching id by trailing-numeric-segment.
-<a href=#1870 id=1870 data-nosnippet>1870</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = trailing_num_re.captures(<span class="kw-2">&amp;</span>idref) {
-<a href=#1871 id=1871 data-nosnippet>1871</a>        <span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">".{}"</span>, caps.get(<span class="number">1</span>).unwrap().as_str());
-<a href=#1872 id=1872 data-nosnippet>1872</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(actual_id) = id_by_suffix.get(<span class="kw-2">&amp;</span>key) {
-<a href=#1873 id=1873 data-nosnippet>1873</a>          xmref.set_attribute(<span class="string">"idref"</span>, actual_id).ok();
-<a href=#1874 id=1874 data-nosnippet>1874</a>        }
-<a href=#1875 id=1875 data-nosnippet>1875</a>      }
-<a href=#1876 id=1876 data-nosnippet>1876</a>    }
-<a href=#1877 id=1877 data-nosnippet>1877</a>  }
-<a href=#1878 id=1878 data-nosnippet>1878</a>}
-<a href=#1879 id=1879 data-nosnippet>1879</a>
-<a href=#1880 id=1880 data-nosnippet>1880</a><span class="doccomment">/// Perl: equationgroupJoinCols (Base_XMath.pool.ltxml L970-980)
-<a href=#1881 id=1881 data-nosnippet>1881</a>/// Groups every $ncols columns into a MathFork structure within an equation.
-<a href=#1882 id=1882 data-nosnippet>1882</a></span><span class="kw">pub fn </span>equationgroup_join_cols(
-<a href=#1883 id=1883 data-nosnippet>1883</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#1884 id=1884 data-nosnippet>1884</a>  ncols: usize,
-<a href=#1885 id=1885 data-nosnippet>1885</a>  equation: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1886 id=1886 data-nosnippet>1886</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#1887 id=1887 data-nosnippet>1887</a>  <span class="kw">let </span><span class="kw-2">mut </span>col = <span class="number">0usize</span>;
-<a href=#1888 id=1888 data-nosnippet>1888</a>  <span class="kw">let </span><span class="kw-2">mut </span>mainfork: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
-<a href=#1889 id=1889 data-nosnippet>1889</a>  <span class="kw">let </span><span class="kw-2">mut </span>branch: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
-<a href=#1890 id=1890 data-nosnippet>1890</a>  <span class="kw">let </span>cells: Vec&lt;Node&gt; = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(equation));
-<a href=#1891 id=1891 data-nosnippet>1891</a>  <span class="kw">for </span><span class="kw-2">mut </span>cell <span class="kw">in </span>cells {
-<a href=#1892 id=1892 data-nosnippet>1892</a>    <span class="kw">let </span>qname_sym = document::get_node_qname(<span class="kw-2">&amp;</span>cell);
-<a href=#1893 id=1893 data-nosnippet>1893</a>    <span class="kw">if </span>!with(qname_sym, |s| s.ends_with(<span class="string">"_Capture_"</span>)) {
-<a href=#1894 id=1894 data-nosnippet>1894</a>      <span class="kw">continue</span>;
-<a href=#1895 id=1895 data-nosnippet>1895</a>    }
-<a href=#1896 id=1896 data-nosnippet>1896</a>    <span class="kw">if </span>col.is_multiple_of(ncols) {
-<a href=#1897 id=1897 data-nosnippet>1897</a>      <span class="kw">if let </span>(<span class="prelude-val">Some</span>(mf), <span class="prelude-val">Some</span>(br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
-<a href=#1898 id=1898 data-nosnippet>1898</a>        close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
-<a href=#1899 id=1899 data-nosnippet>1899</a>      }
-<a href=#1900 id=1900 data-nosnippet>1900</a>      <span class="kw">let </span>(mf, br) = open_math_fork(document, equation)<span class="question-mark">?</span>;
-<a href=#1901 id=1901 data-nosnippet>1901</a>      mainfork = <span class="prelude-val">Some</span>(mf);
-<a href=#1902 id=1902 data-nosnippet>1902</a>      branch = <span class="prelude-val">Some</span>(br);
-<a href=#1903 id=1903 data-nosnippet>1903</a>    }
-<a href=#1904 id=1904 data-nosnippet>1904</a>    <span class="kw">if let </span>(<span class="prelude-val">Some</span>(mf), <span class="prelude-val">Some</span>(br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
-<a href=#1905 id=1905 data-nosnippet>1905</a>      add_column_to_math_fork(document, mf, br, <span class="kw-2">&amp;mut </span>cell)<span class="question-mark">?</span>;
-<a href=#1906 id=1906 data-nosnippet>1906</a>    }
-<a href=#1907 id=1907 data-nosnippet>1907</a>    col += <span class="number">1</span>;
-<a href=#1908 id=1908 data-nosnippet>1908</a>  }
-<a href=#1909 id=1909 data-nosnippet>1909</a>  <span class="kw">if let </span>(<span class="prelude-val">Some</span>(mf), <span class="prelude-val">Some</span>(br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
-<a href=#1910 id=1910 data-nosnippet>1910</a>    close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
-<a href=#1911 id=1911 data-nosnippet>1911</a>  }
-<a href=#1912 id=1912 data-nosnippet>1912</a>  <span class="prelude-val">Ok</span>(())
-<a href=#1913 id=1913 data-nosnippet>1913</a>}
-<a href=#1914 id=1914 data-nosnippet>1914</a>
-<a href=#1915 id=1915 data-nosnippet>1915</a><span class="doccomment">/// Perl: equationgroupJoinRows (Base_XMath.pool.ltxml L926-963)
-<a href=#1916 id=1916 data-nosnippet>1916</a>/// Combines multiple row equations into a single semantic equation with a MathFork structure.
-<a href=#1917 id=1917 data-nosnippet>1917</a></span><span class="kw">pub fn </span>equationgroup_join_rows(
-<a href=#1918 id=1918 data-nosnippet>1918</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#1919 id=1919 data-nosnippet>1919</a>  equationgroup: <span class="kw-2">&amp;mut </span>Node,
-<a href=#1920 id=1920 data-nosnippet>1920</a>  <span class="kw-2">mut </span>equations: Vec&lt;Node&gt;,
-<a href=#1921 id=1921 data-nosnippet>1921</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#1922 id=1922 data-nosnippet>1922</a>  <span class="kw">if </span>equations.is_empty() {
-<a href=#1923 id=1923 data-nosnippet>1923</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#1924 id=1924 data-nosnippet>1924</a>  }
-<a href=#1925 id=1925 data-nosnippet>1925</a>  <span class="comment">// Create new equation at the position of the first input equation
-<a href=#1926 id=1926 data-nosnippet>1926</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>equation = document.open_element_at(equationgroup, <span class="string">"ltx:equation"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#1927 id=1927 data-nosnippet>1927</a>  <span class="comment">// Move it before the first input equation
-<a href=#1928 id=1928 data-nosnippet>1928</a>  </span>equations[<span class="number">0</span>].add_prev_sibling(<span class="kw-2">&amp;mut </span>equation).ok();
-<a href=#1929 id=1929 data-nosnippet>1929</a>  <span class="comment">// Consolidate labels, id, refnum, tags from the input equations
-<a href=#1930 id=1930 data-nosnippet>1930</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>labels: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
-<a href=#1931 id=1931 data-nosnippet>1931</a>  <span class="kw">let </span><span class="kw-2">mut </span>id: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
-<a href=#1932 id=1932 data-nosnippet>1932</a>  <span class="kw">let </span><span class="kw-2">mut </span>tags: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
-<a href=#1933 id=1933 data-nosnippet>1933</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations.iter() {
-<a href=#1934 id=1934 data-nosnippet>1934</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = eq.get_attribute(<span class="string">"labels"</span>) {
-<a href=#1935 id=1935 data-nosnippet>1935</a>      labels = <span class="prelude-val">Some</span>(<span class="kw">match </span>labels {
-<a href=#1936 id=1936 data-nosnippet>1936</a>        <span class="prelude-val">Some</span>(existing) =&gt; <span class="macro">s!</span>(<span class="string">"{existing} {l}"</span>),
-<a href=#1937 id=1937 data-nosnippet>1937</a>        <span class="prelude-val">None </span>=&gt; l,
-<a href=#1938 id=1938 data-nosnippet>1938</a>      });
-<a href=#1939 id=1939 data-nosnippet>1939</a>    }
-<a href=#1940 id=1940 data-nosnippet>1940</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(eq_id) = eq
-<a href=#1941 id=1941 data-nosnippet>1941</a>      .get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
-<a href=#1942 id=1942 data-nosnippet>1942</a>      .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
-<a href=#1943 id=1943 data-nosnippet>1943</a>    {
-<a href=#1944 id=1944 data-nosnippet>1944</a>      id = <span class="prelude-val">Some</span>(eq_id);
-<a href=#1945 id=1945 data-nosnippet>1945</a>    }
-<a href=#1946 id=1946 data-nosnippet>1946</a>    <span class="kw">let </span>found_tags = document.findnodes(<span class="string">"ltx:tags"</span>, <span class="prelude-val">Some</span>(eq));
-<a href=#1947 id=1947 data-nosnippet>1947</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = found_tags.into_iter().last() {
-<a href=#1948 id=1948 data-nosnippet>1948</a>      tags = <span class="prelude-val">Some</span>(t);
+<a href=#1786 id=1786 data-nosnippet>1786</a>  <span class="comment">// Every child now lives on as its `append_tree` copy in the td (which re-records its ids) and, where taken, its
+<a href=#1787 id=1787 data-nosnippet>1787</a>  // clone in the main branch, so nothing in the detached `_Capture_` survives. Perl drops it by refcount (:892-896);
+<a href=#1788 id=1788 data-nosnippet>1788</a>  // unlinked, it leaked.
+<a href=#1789 id=1789 data-nosnippet>1789</a>  </span>document.discard_subtree(cell.clone());
+<a href=#1790 id=1790 data-nosnippet>1790</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1791 id=1791 data-nosnippet>1791</a>}
+<a href=#1792 id=1792 data-nosnippet>1792</a>
+<a href=#1793 id=1793 data-nosnippet>1793</a><span class="doccomment">/// Collect all xml:id values from a subtree by DOM walking.
+<a href=#1794 id=1794 data-nosnippet>1794</a></span><span class="kw">fn </span>collect_xml_ids(node: <span class="kw-2">&amp;</span>Node, ids: <span class="kw-2">&amp;mut </span>Vec&lt;String&gt;) {
+<a href=#1795 id=1795 data-nosnippet>1795</a>  <span class="comment">// Try all possible attribute forms for xml:id
+<a href=#1796 id=1796 data-nosnippet>1796</a>  </span><span class="kw">let </span>id = node
+<a href=#1797 id=1797 data-nosnippet>1797</a>    .get_attribute(<span class="string">"xml:id"</span>)
+<a href=#1798 id=1798 data-nosnippet>1798</a>    .or_else(|| node.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>))
+<a href=#1799 id=1799 data-nosnippet>1799</a>    .or_else(|| {
+<a href=#1800 id=1800 data-nosnippet>1800</a>      <span class="comment">// Fallback: scan attributes for anything named "id" or "xml:id"
+<a href=#1801 id=1801 data-nosnippet>1801</a>      </span>node
+<a href=#1802 id=1802 data-nosnippet>1802</a>        .get_attributes()
+<a href=#1803 id=1803 data-nosnippet>1803</a>        .into_iter()
+<a href=#1804 id=1804 data-nosnippet>1804</a>        .find(|(k, <span class="kw">_</span>)| k == <span class="string">"id" </span>|| k == <span class="string">"xml:id"</span>)
+<a href=#1805 id=1805 data-nosnippet>1805</a>        .map(|(<span class="kw">_</span>, v)| v)
+<a href=#1806 id=1806 data-nosnippet>1806</a>    });
+<a href=#1807 id=1807 data-nosnippet>1807</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = id {
+<a href=#1808 id=1808 data-nosnippet>1808</a>    ids.push(id);
+<a href=#1809 id=1809 data-nosnippet>1809</a>  }
+<a href=#1810 id=1810 data-nosnippet>1810</a>  <span class="kw">for </span>child <span class="kw">in </span>node.get_child_nodes() {
+<a href=#1811 id=1811 data-nosnippet>1811</a>    <span class="kw">if </span>child.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
+<a href=#1812 id=1812 data-nosnippet>1812</a>      collect_xml_ids(<span class="kw-2">&amp;</span>child, ids);
+<a href=#1813 id=1813 data-nosnippet>1813</a>    }
+<a href=#1814 id=1814 data-nosnippet>1814</a>  }
+<a href=#1815 id=1815 data-nosnippet>1815</a>}
+<a href=#1816 id=1816 data-nosnippet>1816</a>
+<a href=#1817 id=1817 data-nosnippet>1817</a><span class="doccomment">/// Collect all XMRef nodes from a subtree by DOM walking.
+<a href=#1818 id=1818 data-nosnippet>1818</a></span><span class="kw">fn </span>collect_xmrefs(node: <span class="kw-2">&amp;</span>Node, refs: <span class="kw-2">&amp;mut </span>Vec&lt;Node&gt;) {
+<a href=#1819 id=1819 data-nosnippet>1819</a>  <span class="kw">if </span>node.get_name() == <span class="string">"XMRef" </span>&amp;&amp; node.has_attribute(<span class="string">"idref"</span>) {
+<a href=#1820 id=1820 data-nosnippet>1820</a>    refs.push(node.clone());
+<a href=#1821 id=1821 data-nosnippet>1821</a>  }
+<a href=#1822 id=1822 data-nosnippet>1822</a>  <span class="kw">for </span>child <span class="kw">in </span>node.get_child_nodes() {
+<a href=#1823 id=1823 data-nosnippet>1823</a>    <span class="kw">if </span>child.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) {
+<a href=#1824 id=1824 data-nosnippet>1824</a>      collect_xmrefs(<span class="kw-2">&amp;</span>child, refs);
+<a href=#1825 id=1825 data-nosnippet>1825</a>    }
+<a href=#1826 id=1826 data-nosnippet>1826</a>  }
+<a href=#1827 id=1827 data-nosnippet>1827</a>}
+<a href=#1828 id=1828 data-nosnippet>1828</a>
+<a href=#1829 id=1829 data-nosnippet>1829</a><span class="doccomment">/// Fix broken XMRef idrefs in a subtree after append_clone.
+<a href=#1830 id=1830 data-nosnippet>1830</a>/// append_clone's id_map and record_id_with_node can produce inconsistent
+<a href=#1831 id=1831 data-nosnippet>1831</a>/// xml:id/idref pairs. This function scans the subtree for all xml:ids,
+<a href=#1832 id=1832 data-nosnippet>1832</a>/// then updates XMRef idrefs to point to actual existing ids.
+<a href=#1833 id=1833 data-nosnippet>1833</a></span><span class="kw">fn </span>fixup_xmref_idrefs(_document: <span class="kw-2">&amp;mut </span>Document, root: <span class="kw-2">&amp;</span>Node) {
+<a href=#1834 id=1834 data-nosnippet>1834</a>  <span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
+<a href=#1835 id=1835 data-nosnippet>1835</a>  <span class="comment">// Collect all xml:ids in the subtree, keyed by their "base" (without suffix variants)
+<a href=#1836 id=1836 data-nosnippet>1836</a>  // Collect xml:ids from the subtree by walking the DOM directly
+<a href=#1837 id=1837 data-nosnippet>1837</a>  // (XPath namespace handling may miss xml:id attributes)
+<a href=#1838 id=1838 data-nosnippet>1838</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>all_ids: Vec&lt;String&gt; = Vec::new();
+<a href=#1839 id=1839 data-nosnippet>1839</a>  collect_xml_ids(root, <span class="kw-2">&amp;mut </span>all_ids);
+<a href=#1840 id=1840 data-nosnippet>1840</a>  <span class="kw">if </span>all_ids.is_empty() {
+<a href=#1841 id=1841 data-nosnippet>1841</a>    <span class="kw">return</span>;
+<a href=#1842 id=1842 data-nosnippet>1842</a>  }
+<a href=#1843 id=1843 data-nosnippet>1843</a>  <span class="comment">// Build a reverse lookup keyed by the trailing numeric segment of the id
+<a href=#1844 id=1844 data-nosnippet>1844</a>  // (the per-equation node sequence number). IDs like
+<a href=#1845 id=1845 data-nosnippet>1845</a>  // `S3.E22.m1.5.mf` get keyed under `.5` so that XMRefs whose idref ended
+<a href=#1846 id=1846 data-nosnippet>1846</a>  // up with a stale `.mf`-or-other suffix can still resolve back to the
+<a href=#1847 id=1847 data-nosnippet>1847</a>  // surviving cloned id by matching on the same node-sequence number.
+<a href=#1848 id=1848 data-nosnippet>1848</a>  // Earlier this used `id.rfind('.')` which always landed in front of
+<a href=#1849 id=1849 data-nosnippet>1849</a>  // `.mf`, collapsing every `.mf` id under one key (last-write-wins).
+<a href=#1850 id=1850 data-nosnippet>1850</a>  // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
+<a href=#1851 id=1851 data-nosnippet>1851</a>  // S3.E22 align/equation cluster (cloned to MathFork main branch).
+<a href=#1852 id=1852 data-nosnippet>1852</a>  </span><span class="kw">static </span>TRAILING_NUM_RE: LazyLock&lt;Regex&gt; =
+<a href=#1853 id=1853 data-nosnippet>1853</a>    LazyLock::new(|| Regex::new(<span class="string">r"\.(\d+)(?:\.[A-Za-z]\w*)?$"</span>).unwrap());
+<a href=#1854 id=1854 data-nosnippet>1854</a>  <span class="kw">let </span>trailing_num_re = <span class="kw-2">&amp;*</span>TRAILING_NUM_RE;
+<a href=#1855 id=1855 data-nosnippet>1855</a>  <span class="kw">let </span><span class="kw-2">mut </span>id_by_suffix: HashMap&lt;String, String&gt; = HashMap::default();
+<a href=#1856 id=1856 data-nosnippet>1856</a>  <span class="kw">for </span>id <span class="kw">in </span><span class="kw-2">&amp;</span>all_ids {
+<a href=#1857 id=1857 data-nosnippet>1857</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = trailing_num_re.captures(id) {
+<a href=#1858 id=1858 data-nosnippet>1858</a>      <span class="comment">// Key is `.NN`, value is the actual id.
+<a href=#1859 id=1859 data-nosnippet>1859</a>      </span><span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">".{}"</span>, caps.get(<span class="number">1</span>).unwrap().as_str());
+<a href=#1860 id=1860 data-nosnippet>1860</a>      id_by_suffix.entry(key).or_insert_with(|| id.clone());
+<a href=#1861 id=1861 data-nosnippet>1861</a>    }
+<a href=#1862 id=1862 data-nosnippet>1862</a>    id_by_suffix.insert(id.clone(), id.clone()); <span class="comment">// exact match
+<a href=#1863 id=1863 data-nosnippet>1863</a>  </span>}
+<a href=#1864 id=1864 data-nosnippet>1864</a>  <span class="comment">// Find all XMRef nodes and fix their idrefs
+<a href=#1865 id=1865 data-nosnippet>1865</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>xmrefs: Vec&lt;Node&gt; = Vec::new();
+<a href=#1866 id=1866 data-nosnippet>1866</a>  collect_xmrefs(root, <span class="kw-2">&amp;mut </span>xmrefs);
+<a href=#1867 id=1867 data-nosnippet>1867</a>  <span class="kw">for </span><span class="kw-2">mut </span>xmref <span class="kw">in </span>xmrefs {
+<a href=#1868 id=1868 data-nosnippet>1868</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(idref) = xmref.get_attribute(<span class="string">"idref"</span>) {
+<a href=#1869 id=1869 data-nosnippet>1869</a>      <span class="comment">// Check if idref points to an existing id in the subtree
+<a href=#1870 id=1870 data-nosnippet>1870</a>      </span><span class="kw">if </span>all_ids.contains(<span class="kw-2">&amp;</span>idref) {
+<a href=#1871 id=1871 data-nosnippet>1871</a>        <span class="kw">continue</span>;
+<a href=#1872 id=1872 data-nosnippet>1872</a>      }
+<a href=#1873 id=1873 data-nosnippet>1873</a>      <span class="comment">// Try to find the matching id by trailing-numeric-segment.
+<a href=#1874 id=1874 data-nosnippet>1874</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(caps) = trailing_num_re.captures(<span class="kw-2">&amp;</span>idref) {
+<a href=#1875 id=1875 data-nosnippet>1875</a>        <span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">".{}"</span>, caps.get(<span class="number">1</span>).unwrap().as_str());
+<a href=#1876 id=1876 data-nosnippet>1876</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(actual_id) = id_by_suffix.get(<span class="kw-2">&amp;</span>key) {
+<a href=#1877 id=1877 data-nosnippet>1877</a>          xmref.set_attribute(<span class="string">"idref"</span>, actual_id).ok();
+<a href=#1878 id=1878 data-nosnippet>1878</a>        }
+<a href=#1879 id=1879 data-nosnippet>1879</a>      }
+<a href=#1880 id=1880 data-nosnippet>1880</a>    }
+<a href=#1881 id=1881 data-nosnippet>1881</a>  }
+<a href=#1882 id=1882 data-nosnippet>1882</a>}
+<a href=#1883 id=1883 data-nosnippet>1883</a>
+<a href=#1884 id=1884 data-nosnippet>1884</a><span class="doccomment">/// Perl: equationgroupJoinCols (Base_XMath.pool.ltxml L970-980)
+<a href=#1885 id=1885 data-nosnippet>1885</a>/// Groups every $ncols columns into a MathFork structure within an equation.
+<a href=#1886 id=1886 data-nosnippet>1886</a></span><span class="kw">pub fn </span>equationgroup_join_cols(
+<a href=#1887 id=1887 data-nosnippet>1887</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#1888 id=1888 data-nosnippet>1888</a>  ncols: usize,
+<a href=#1889 id=1889 data-nosnippet>1889</a>  equation: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1890 id=1890 data-nosnippet>1890</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1891 id=1891 data-nosnippet>1891</a>  <span class="kw">let </span><span class="kw-2">mut </span>col = <span class="number">0usize</span>;
+<a href=#1892 id=1892 data-nosnippet>1892</a>  <span class="kw">let </span><span class="kw-2">mut </span>mainfork: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
+<a href=#1893 id=1893 data-nosnippet>1893</a>  <span class="kw">let </span><span class="kw-2">mut </span>branch: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
+<a href=#1894 id=1894 data-nosnippet>1894</a>  <span class="kw">let </span>cells: Vec&lt;Node&gt; = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(equation));
+<a href=#1895 id=1895 data-nosnippet>1895</a>  <span class="kw">for </span><span class="kw-2">mut </span>cell <span class="kw">in </span>cells {
+<a href=#1896 id=1896 data-nosnippet>1896</a>    <span class="kw">let </span>qname_sym = document::get_node_qname(<span class="kw-2">&amp;</span>cell);
+<a href=#1897 id=1897 data-nosnippet>1897</a>    <span class="kw">if </span>!with(qname_sym, |s| s.ends_with(<span class="string">"_Capture_"</span>)) {
+<a href=#1898 id=1898 data-nosnippet>1898</a>      <span class="kw">continue</span>;
+<a href=#1899 id=1899 data-nosnippet>1899</a>    }
+<a href=#1900 id=1900 data-nosnippet>1900</a>    <span class="kw">if </span>col.is_multiple_of(ncols) {
+<a href=#1901 id=1901 data-nosnippet>1901</a>      <span class="kw">if let </span>(<span class="prelude-val">Some</span>(mf), <span class="prelude-val">Some</span>(br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
+<a href=#1902 id=1902 data-nosnippet>1902</a>        close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
+<a href=#1903 id=1903 data-nosnippet>1903</a>      }
+<a href=#1904 id=1904 data-nosnippet>1904</a>      <span class="kw">let </span>(mf, br) = open_math_fork(document, equation)<span class="question-mark">?</span>;
+<a href=#1905 id=1905 data-nosnippet>1905</a>      mainfork = <span class="prelude-val">Some</span>(mf);
+<a href=#1906 id=1906 data-nosnippet>1906</a>      branch = <span class="prelude-val">Some</span>(br);
+<a href=#1907 id=1907 data-nosnippet>1907</a>    }
+<a href=#1908 id=1908 data-nosnippet>1908</a>    <span class="kw">if let </span>(<span class="prelude-val">Some</span>(mf), <span class="prelude-val">Some</span>(br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
+<a href=#1909 id=1909 data-nosnippet>1909</a>      add_column_to_math_fork(document, mf, br, <span class="kw-2">&amp;mut </span>cell)<span class="question-mark">?</span>;
+<a href=#1910 id=1910 data-nosnippet>1910</a>    }
+<a href=#1911 id=1911 data-nosnippet>1911</a>    col += <span class="number">1</span>;
+<a href=#1912 id=1912 data-nosnippet>1912</a>  }
+<a href=#1913 id=1913 data-nosnippet>1913</a>  <span class="kw">if let </span>(<span class="prelude-val">Some</span>(mf), <span class="prelude-val">Some</span>(br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
+<a href=#1914 id=1914 data-nosnippet>1914</a>    close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
+<a href=#1915 id=1915 data-nosnippet>1915</a>  }
+<a href=#1916 id=1916 data-nosnippet>1916</a>  <span class="prelude-val">Ok</span>(())
+<a href=#1917 id=1917 data-nosnippet>1917</a>}
+<a href=#1918 id=1918 data-nosnippet>1918</a>
+<a href=#1919 id=1919 data-nosnippet>1919</a><span class="doccomment">/// Perl: equationgroupJoinRows (Base_XMath.pool.ltxml L926-963)
+<a href=#1920 id=1920 data-nosnippet>1920</a>/// Combines multiple row equations into a single semantic equation with a MathFork structure.
+<a href=#1921 id=1921 data-nosnippet>1921</a></span><span class="kw">pub fn </span>equationgroup_join_rows(
+<a href=#1922 id=1922 data-nosnippet>1922</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#1923 id=1923 data-nosnippet>1923</a>  equationgroup: <span class="kw-2">&amp;mut </span>Node,
+<a href=#1924 id=1924 data-nosnippet>1924</a>  <span class="kw-2">mut </span>equations: Vec&lt;Node&gt;,
+<a href=#1925 id=1925 data-nosnippet>1925</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#1926 id=1926 data-nosnippet>1926</a>  <span class="kw">if </span>equations.is_empty() {
+<a href=#1927 id=1927 data-nosnippet>1927</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#1928 id=1928 data-nosnippet>1928</a>  }
+<a href=#1929 id=1929 data-nosnippet>1929</a>  <span class="comment">// Create new equation at the position of the first input equation
+<a href=#1930 id=1930 data-nosnippet>1930</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>equation = document.open_element_at(equationgroup, <span class="string">"ltx:equation"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#1931 id=1931 data-nosnippet>1931</a>  <span class="comment">// Move it before the first input equation
+<a href=#1932 id=1932 data-nosnippet>1932</a>  </span>equations[<span class="number">0</span>].add_prev_sibling(<span class="kw-2">&amp;mut </span>equation).ok();
+<a href=#1933 id=1933 data-nosnippet>1933</a>  <span class="comment">// Consolidate labels, id, refnum, tags from the input equations
+<a href=#1934 id=1934 data-nosnippet>1934</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>labels: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
+<a href=#1935 id=1935 data-nosnippet>1935</a>  <span class="kw">let </span><span class="kw-2">mut </span>id: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
+<a href=#1936 id=1936 data-nosnippet>1936</a>  <span class="kw">let </span><span class="kw-2">mut </span>tags: <span class="prelude-ty">Option</span>&lt;Node&gt; = <span class="prelude-val">None</span>;
+<a href=#1937 id=1937 data-nosnippet>1937</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations.iter() {
+<a href=#1938 id=1938 data-nosnippet>1938</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(l) = eq.get_attribute(<span class="string">"labels"</span>) {
+<a href=#1939 id=1939 data-nosnippet>1939</a>      labels = <span class="prelude-val">Some</span>(<span class="kw">match </span>labels {
+<a href=#1940 id=1940 data-nosnippet>1940</a>        <span class="prelude-val">Some</span>(existing) =&gt; <span class="macro">s!</span>(<span class="string">"{existing} {l}"</span>),
+<a href=#1941 id=1941 data-nosnippet>1941</a>        <span class="prelude-val">None </span>=&gt; l,
+<a href=#1942 id=1942 data-nosnippet>1942</a>      });
+<a href=#1943 id=1943 data-nosnippet>1943</a>    }
+<a href=#1944 id=1944 data-nosnippet>1944</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(eq_id) = eq
+<a href=#1945 id=1945 data-nosnippet>1945</a>      .get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
+<a href=#1946 id=1946 data-nosnippet>1946</a>      .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
+<a href=#1947 id=1947 data-nosnippet>1947</a>    {
+<a href=#1948 id=1948 data-nosnippet>1948</a>      id = <span class="prelude-val">Some</span>(eq_id);
 <a href=#1949 id=1949 data-nosnippet>1949</a>    }
-<a href=#1950 id=1950 data-nosnippet>1950</a>  }
-<a href=#1951 id=1951 data-nosnippet>1951</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>id_str) = id {
-<a href=#1952 id=1952 data-nosnippet>1952</a>    document.unrecord_id(id_str);
-<a href=#1953 id=1953 data-nosnippet>1953</a>  }
-<a href=#1954 id=1954 data-nosnippet>1954</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>l) = labels {
-<a href=#1955 id=1955 data-nosnippet>1955</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>equation, <span class="string">"labels"</span>, l)<span class="question-mark">?</span>;
-<a href=#1956 id=1956 data-nosnippet>1956</a>  }
-<a href=#1957 id=1957 data-nosnippet>1957</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>id_str) = id {
-<a href=#1958 id=1958 data-nosnippet>1958</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>equation, <span class="string">"xml:id"</span>, id_str)<span class="question-mark">?</span>;
-<a href=#1959 id=1959 data-nosnippet>1959</a>  }
-<a href=#1960 id=1960 data-nosnippet>1960</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>t) = tags {
-<a href=#1961 id=1961 data-nosnippet>1961</a>    t.unlink_node();
-<a href=#1962 id=1962 data-nosnippet>1962</a>    equation.add_child(<span class="kw-2">&amp;mut </span>t).ok();
+<a href=#1950 id=1950 data-nosnippet>1950</a>    <span class="kw">let </span>found_tags = document.findnodes(<span class="string">"ltx:tags"</span>, <span class="prelude-val">Some</span>(eq));
+<a href=#1951 id=1951 data-nosnippet>1951</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = found_tags.into_iter().last() {
+<a href=#1952 id=1952 data-nosnippet>1952</a>      tags = <span class="prelude-val">Some</span>(t);
+<a href=#1953 id=1953 data-nosnippet>1953</a>    }
+<a href=#1954 id=1954 data-nosnippet>1954</a>  }
+<a href=#1955 id=1955 data-nosnippet>1955</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>id_str) = id {
+<a href=#1956 id=1956 data-nosnippet>1956</a>    document.unrecord_id(id_str);
+<a href=#1957 id=1957 data-nosnippet>1957</a>  }
+<a href=#1958 id=1958 data-nosnippet>1958</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>l) = labels {
+<a href=#1959 id=1959 data-nosnippet>1959</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>equation, <span class="string">"labels"</span>, l)<span class="question-mark">?</span>;
+<a href=#1960 id=1960 data-nosnippet>1960</a>  }
+<a href=#1961 id=1961 data-nosnippet>1961</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>id_str) = id {
+<a href=#1962 id=1962 data-nosnippet>1962</a>    document.set_attribute(<span class="kw-2">&amp;mut </span>equation, <span class="string">"xml:id"</span>, id_str)<span class="question-mark">?</span>;
 <a href=#1963 id=1963 data-nosnippet>1963</a>  }
-<a href=#1964 id=1964 data-nosnippet>1964</a>  <span class="comment">// Pre-advance the ID counter to skip over cell Math IDs.
-<a href=#1965 id=1965 data-nosnippet>1965</a>  // For multi-row eqnarrays where different rows have different equation IDs,
-<a href=#1966 id=1966 data-nosnippet>1966</a>  // only count cells from the equation that provides the target ID.
-<a href=#1967 id=1967 data-nosnippet>1967</a>  // This prevents inflation from rows that belong to different equation contexts.
-<a href=#1968 id=1968 data-nosnippet>1968</a>  </span><span class="kw">let </span>has_different_ids = equations.len() &gt; <span class="number">1 </span>&amp;&amp; {
-<a href=#1969 id=1969 data-nosnippet>1969</a>    <span class="kw">let </span>ids: Vec&lt;<span class="kw">_</span>&gt; = equations
-<a href=#1970 id=1970 data-nosnippet>1970</a>      .iter()
-<a href=#1971 id=1971 data-nosnippet>1971</a>      .filter_map(|eq| {
-<a href=#1972 id=1972 data-nosnippet>1972</a>        eq.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
-<a href=#1973 id=1973 data-nosnippet>1973</a>          .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
-<a href=#1974 id=1974 data-nosnippet>1974</a>      })
-<a href=#1975 id=1975 data-nosnippet>1975</a>      .collect();
-<a href=#1976 id=1976 data-nosnippet>1976</a>    ids.len() &gt; <span class="number">1 </span>|| (ids.len() == <span class="number">1 </span>&amp;&amp; equations.len() &gt; <span class="number">1</span>)
-<a href=#1977 id=1977 data-nosnippet>1977</a>  };
-<a href=#1978 id=1978 data-nosnippet>1978</a>  <span class="kw">let </span><span class="kw-2">mut </span>cell_count = <span class="number">0</span>;
-<a href=#1979 id=1979 data-nosnippet>1979</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations.iter() {
-<a href=#1980 id=1980 data-nosnippet>1980</a>    <span class="kw">if </span>has_different_ids {
-<a href=#1981 id=1981 data-nosnippet>1981</a>      <span class="comment">// Multi-row with different IDs: only count cells with Math from the target equation
-<a href=#1982 id=1982 data-nosnippet>1982</a>      </span><span class="kw">let </span>eq_id = eq
-<a href=#1983 id=1983 data-nosnippet>1983</a>        .get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
-<a href=#1984 id=1984 data-nosnippet>1984</a>        .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>));
-<a href=#1985 id=1985 data-nosnippet>1985</a>      <span class="kw">if </span>eq_id != id {
-<a href=#1986 id=1986 data-nosnippet>1986</a>        <span class="kw">continue</span>;
-<a href=#1987 id=1987 data-nosnippet>1987</a>      }
-<a href=#1988 id=1988 data-nosnippet>1988</a>      <span class="comment">// Count only cells that contain Math elements (empty cells don't consume IDs)
-<a href=#1989 id=1989 data-nosnippet>1989</a>      </span><span class="kw">let </span>captures = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(eq));
-<a href=#1990 id=1990 data-nosnippet>1990</a>      <span class="kw">for </span>cap <span class="kw">in </span><span class="kw-2">&amp;</span>captures {
-<a href=#1991 id=1991 data-nosnippet>1991</a>        <span class="kw">if </span>!document.findnodes(<span class="string">"ltx:Math"</span>, <span class="prelude-val">Some</span>(cap)).is_empty() {
-<a href=#1992 id=1992 data-nosnippet>1992</a>          cell_count += <span class="number">1</span>;
-<a href=#1993 id=1993 data-nosnippet>1993</a>        }
-<a href=#1994 id=1994 data-nosnippet>1994</a>      }
-<a href=#1995 id=1995 data-nosnippet>1995</a>    } <span class="kw">else </span>{
-<a href=#1996 id=1996 data-nosnippet>1996</a>      <span class="comment">// Single-equation: count all _Capture_ cells (including empty ones)
-<a href=#1997 id=1997 data-nosnippet>1997</a>      </span><span class="kw">let </span>captures = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(eq));
-<a href=#1998 id=1998 data-nosnippet>1998</a>      cell_count += captures.len();
-<a href=#1999 id=1999 data-nosnippet>1999</a>    }
-<a href=#2000 id=2000 data-nosnippet>2000</a>  }
-<a href=#2001 id=2001 data-nosnippet>2001</a>  <span class="kw">if </span>cell_count &gt; <span class="number">0 </span>{
-<a href=#2002 id=2002 data-nosnippet>2002</a>    <span class="kw">let </span>ctrkey = <span class="macro">s!</span>(<span class="string">"_ID_counter_m_"</span>);
-<a href=#2003 id=2003 data-nosnippet>2003</a>    <span class="kw">let </span>current = equation.get_attribute(<span class="kw-2">&amp;</span>ctrkey).unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"0"</span>));
-<a href=#2004 id=2004 data-nosnippet>2004</a>    <span class="kw">let </span>new_val = current.parse::&lt;u32&gt;().unwrap_or(<span class="number">0</span>) + cell_count <span class="kw">as </span>u32;
-<a href=#2005 id=2005 data-nosnippet>2005</a>    equation.set_attribute(<span class="kw-2">&amp;</span>ctrkey, <span class="kw-2">&amp;</span>new_val.to_string())<span class="question-mark">?</span>;
-<a href=#2006 id=2006 data-nosnippet>2006</a>  }
-<a href=#2007 id=2007 data-nosnippet>2007</a>  <span class="comment">// Create MathFork
-<a href=#2008 id=2008 data-nosnippet>2008</a>  </span><span class="kw">let </span>(<span class="kw-2">mut </span>mainfork, <span class="kw-2">mut </span>branch_node) = open_math_fork(document, <span class="kw-2">&amp;mut </span>equation)<span class="question-mark">?</span>;
-<a href=#2009 id=2009 data-nosnippet>2009</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations {
-<a href=#2010 id=2010 data-nosnippet>2010</a>    <span class="kw">let </span><span class="kw-2">mut </span>eq = eq;
-<a href=#2011 id=2011 data-nosnippet>2011</a>    <span class="comment">// D3b: unrecord eq's own xml:id before detaching so idstore doesn't
-<a href=#2012 id=2012 data-nosnippet>2012</a>    // retain a dangling entry pointing to a soon-to-be-dropped node.
-<a href=#2013 id=2013 data-nosnippet>2013</a>    // (Descendant ids remain recorded; append_clone inside
-<a href=#2014 id=2014 data-nosnippet>2014</a>    // add_column_to_math_fork relies on modify_id suffixing for clones
-<a href=#2015 id=2015 data-nosnippet>2015</a>    // of cell children.)
-<a href=#2016 id=2016 data-nosnippet>2016</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(eq_id) = eq
-<a href=#2017 id=2017 data-nosnippet>2017</a>      .get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
-<a href=#2018 id=2018 data-nosnippet>2018</a>      .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
-<a href=#2019 id=2019 data-nosnippet>2019</a>    {
-<a href=#2020 id=2020 data-nosnippet>2020</a>      document.unrecord_id(<span class="kw-2">&amp;</span>eq_id);
-<a href=#2021 id=2021 data-nosnippet>2021</a>    }
-<a href=#2022 id=2022 data-nosnippet>2022</a>    eq.unlink_node();
-<a href=#2023 id=2023 data-nosnippet>2023</a>    <span class="kw">let </span><span class="kw-2">mut </span>tr = document.open_element_at(<span class="kw-2">&amp;mut </span>branch_node, <span class="string">"ltx:tr"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#2024 id=2024 data-nosnippet>2024</a>    <span class="kw">let </span>cells: Vec&lt;Node&gt; = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>eq));
-<a href=#2025 id=2025 data-nosnippet>2025</a>    <span class="comment">// Perl Base_XMath.pool.ltxml:956-957: a row led by a `\lefteqn` is classed `ltx_eqn_lefteqn`. In Perl it never
-<a href=#2026 id=2026 data-nosnippet>2026</a>    // fires: `\lx@add@cssclass` cannot class the `_Capture_` (not in the schema), and `/\blefteqn\b/` misses
-<a href=#2027 id=2027 data-nosnippet>2027</a>    // `ltx_eqn_lefteqn` (`_` is a word character). The cell carries the class now (`\lx@alignment@cell@overprint`,
-<a href=#2028 id=2028 data-nosnippet>2028</a>    // OXIDIZED_DESIGN_DIVERGENCES #556). The class is in the XML only: LaTeXML-block-xhtml.xsl writes the HTML row's
-<a href=#2029 id=2029 data-nosnippet>2029</a>    // own class (:703, :883), so LaTeXML.css's `tr.ltx_eqn_lefteqn + tr` rule never meets it.
-<a href=#2030 id=2030 data-nosnippet>2030</a>    </span><span class="kw">if </span>cells
-<a href=#2031 id=2031 data-nosnippet>2031</a>      .first()
-<a href=#2032 id=2032 data-nosnippet>2032</a>      .and_then(|c| c.get_attribute(<span class="string">"class"</span>))
-<a href=#2033 id=2033 data-nosnippet>2033</a>      .is_some_and(|class| class.split_whitespace().any(|c| c == <span class="string">"ltx_eqn_lefteqn"</span>))
-<a href=#2034 id=2034 data-nosnippet>2034</a>    {
-<a href=#2035 id=2035 data-nosnippet>2035</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>tr, <span class="string">"class"</span>, <span class="string">"ltx_eqn_lefteqn"</span>)<span class="question-mark">?</span>;
-<a href=#2036 id=2036 data-nosnippet>2036</a>    }
-<a href=#2037 id=2037 data-nosnippet>2037</a>    <span class="kw">for </span><span class="kw-2">mut </span>cell <span class="kw">in </span>cells {
-<a href=#2038 id=2038 data-nosnippet>2038</a>      add_column_to_math_fork(document, <span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>tr, <span class="kw-2">&amp;mut </span>cell)<span class="question-mark">?</span>;
-<a href=#2039 id=2039 data-nosnippet>2039</a>    }
-<a href=#2040 id=2040 data-nosnippet>2040</a>    document.close_element_at(<span class="kw-2">&amp;mut </span>tr)<span class="question-mark">?</span>;
-<a href=#2041 id=2041 data-nosnippet>2041</a>  }
-<a href=#2042 id=2042 data-nosnippet>2042</a>  close_math_fork(document, <span class="kw-2">&amp;mut </span>equation, <span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch_node)<span class="question-mark">?</span>;
-<a href=#2043 id=2043 data-nosnippet>2043</a>  document.close_element_at(<span class="kw-2">&amp;mut </span>equation)<span class="question-mark">?</span>;
-<a href=#2044 id=2044 data-nosnippet>2044</a>  <span class="prelude-val">Ok</span>(())
-<a href=#2045 id=2045 data-nosnippet>2045</a>}
-<a href=#2046 id=2046 data-nosnippet>2046</a>
-<a href=#2047 id=2047 data-nosnippet>2047</a><span class="doccomment">/// Perl: addMeaningRec — recursively add meaning to XMTok elements with UNKNOWN role
-<a href=#2048 id=2048 data-nosnippet>2048</a></span><span class="kw">pub fn </span>add_meaning_rec(document: <span class="kw-2">&amp;mut </span>Document, <span class="kw-2">mut </span>node: Node, meaning: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#2049 id=2049 data-nosnippet>2049</a>  <span class="kw">if </span>node.get_type() != <span class="prelude-val">Some</span>(NodeType::ElementNode) {
-<a href=#2050 id=2050 data-nosnippet>2050</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#2051 id=2051 data-nosnippet>2051</a>  }
-<a href=#2052 id=2052 data-nosnippet>2052</a>  <span class="kw">let </span>qname = document::get_node_qname(<span class="kw-2">&amp;</span>node);
-<a href=#2053 id=2053 data-nosnippet>2053</a>  <span class="kw">if </span>qname == <span class="macro">pin!</span>(<span class="string">"ltx:XMArg"</span>) {
-<a href=#2054 id=2054 data-nosnippet>2054</a>    <span class="comment">// DON'T cross through into arguments
-<a href=#2055 id=2055 data-nosnippet>2055</a>  </span>} <span class="kw">else if </span>qname == <span class="macro">pin!</span>(<span class="string">"ltx:XMTok"</span>) {
-<a href=#2056 id=2056 data-nosnippet>2056</a>    <span class="kw">let </span>role = node.get_attribute(<span class="string">"role"</span>).unwrap_or_default();
-<a href=#2057 id=2057 data-nosnippet>2057</a>    <span class="kw">if </span>(role.is_empty() || role == <span class="string">"UNKNOWN"</span>) &amp;&amp; !node.has_attribute(<span class="string">"meaning"</span>) {
-<a href=#2058 id=2058 data-nosnippet>2058</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">"meaning"</span>, meaning)<span class="question-mark">?</span>;
-<a href=#2059 id=2059 data-nosnippet>2059</a>    }
-<a href=#2060 id=2060 data-nosnippet>2060</a>  } <span class="kw">else </span>{
-<a href=#2061 id=2061 data-nosnippet>2061</a>    <span class="kw">for </span>child <span class="kw">in </span>node.get_child_nodes() {
-<a href=#2062 id=2062 data-nosnippet>2062</a>      add_meaning_rec(document, child, meaning)<span class="question-mark">?</span>;
+<a href=#1964 id=1964 data-nosnippet>1964</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>t) = tags {
+<a href=#1965 id=1965 data-nosnippet>1965</a>    t.unlink_node();
+<a href=#1966 id=1966 data-nosnippet>1966</a>    equation.add_child(<span class="kw-2">&amp;mut </span>t).ok();
+<a href=#1967 id=1967 data-nosnippet>1967</a>  }
+<a href=#1968 id=1968 data-nosnippet>1968</a>  <span class="comment">// Pre-advance the ID counter to skip over cell Math IDs.
+<a href=#1969 id=1969 data-nosnippet>1969</a>  // For multi-row eqnarrays where different rows have different equation IDs,
+<a href=#1970 id=1970 data-nosnippet>1970</a>  // only count cells from the equation that provides the target ID.
+<a href=#1971 id=1971 data-nosnippet>1971</a>  // This prevents inflation from rows that belong to different equation contexts.
+<a href=#1972 id=1972 data-nosnippet>1972</a>  </span><span class="kw">let </span>has_different_ids = equations.len() &gt; <span class="number">1 </span>&amp;&amp; {
+<a href=#1973 id=1973 data-nosnippet>1973</a>    <span class="kw">let </span>ids: Vec&lt;<span class="kw">_</span>&gt; = equations
+<a href=#1974 id=1974 data-nosnippet>1974</a>      .iter()
+<a href=#1975 id=1975 data-nosnippet>1975</a>      .filter_map(|eq| {
+<a href=#1976 id=1976 data-nosnippet>1976</a>        eq.get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
+<a href=#1977 id=1977 data-nosnippet>1977</a>          .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
+<a href=#1978 id=1978 data-nosnippet>1978</a>      })
+<a href=#1979 id=1979 data-nosnippet>1979</a>      .collect();
+<a href=#1980 id=1980 data-nosnippet>1980</a>    ids.len() &gt; <span class="number">1 </span>|| (ids.len() == <span class="number">1 </span>&amp;&amp; equations.len() &gt; <span class="number">1</span>)
+<a href=#1981 id=1981 data-nosnippet>1981</a>  };
+<a href=#1982 id=1982 data-nosnippet>1982</a>  <span class="kw">let </span><span class="kw-2">mut </span>cell_count = <span class="number">0</span>;
+<a href=#1983 id=1983 data-nosnippet>1983</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations.iter() {
+<a href=#1984 id=1984 data-nosnippet>1984</a>    <span class="kw">if </span>has_different_ids {
+<a href=#1985 id=1985 data-nosnippet>1985</a>      <span class="comment">// Multi-row with different IDs: only count cells with Math from the target equation
+<a href=#1986 id=1986 data-nosnippet>1986</a>      </span><span class="kw">let </span>eq_id = eq
+<a href=#1987 id=1987 data-nosnippet>1987</a>        .get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
+<a href=#1988 id=1988 data-nosnippet>1988</a>        .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>));
+<a href=#1989 id=1989 data-nosnippet>1989</a>      <span class="kw">if </span>eq_id != id {
+<a href=#1990 id=1990 data-nosnippet>1990</a>        <span class="kw">continue</span>;
+<a href=#1991 id=1991 data-nosnippet>1991</a>      }
+<a href=#1992 id=1992 data-nosnippet>1992</a>      <span class="comment">// Count only cells that contain Math elements (empty cells don't consume IDs)
+<a href=#1993 id=1993 data-nosnippet>1993</a>      </span><span class="kw">let </span>captures = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(eq));
+<a href=#1994 id=1994 data-nosnippet>1994</a>      <span class="kw">for </span>cap <span class="kw">in </span><span class="kw-2">&amp;</span>captures {
+<a href=#1995 id=1995 data-nosnippet>1995</a>        <span class="kw">if </span>!document.findnodes(<span class="string">"ltx:Math"</span>, <span class="prelude-val">Some</span>(cap)).is_empty() {
+<a href=#1996 id=1996 data-nosnippet>1996</a>          cell_count += <span class="number">1</span>;
+<a href=#1997 id=1997 data-nosnippet>1997</a>        }
+<a href=#1998 id=1998 data-nosnippet>1998</a>      }
+<a href=#1999 id=1999 data-nosnippet>1999</a>    } <span class="kw">else </span>{
+<a href=#2000 id=2000 data-nosnippet>2000</a>      <span class="comment">// Single-equation: count all _Capture_ cells (including empty ones)
+<a href=#2001 id=2001 data-nosnippet>2001</a>      </span><span class="kw">let </span>captures = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(eq));
+<a href=#2002 id=2002 data-nosnippet>2002</a>      cell_count += captures.len();
+<a href=#2003 id=2003 data-nosnippet>2003</a>    }
+<a href=#2004 id=2004 data-nosnippet>2004</a>  }
+<a href=#2005 id=2005 data-nosnippet>2005</a>  <span class="kw">if </span>cell_count &gt; <span class="number">0 </span>{
+<a href=#2006 id=2006 data-nosnippet>2006</a>    <span class="kw">let </span>ctrkey = <span class="macro">s!</span>(<span class="string">"_ID_counter_m_"</span>);
+<a href=#2007 id=2007 data-nosnippet>2007</a>    <span class="kw">let </span>current = equation.get_attribute(<span class="kw-2">&amp;</span>ctrkey).unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"0"</span>));
+<a href=#2008 id=2008 data-nosnippet>2008</a>    <span class="kw">let </span>new_val = current.parse::&lt;u32&gt;().unwrap_or(<span class="number">0</span>) + cell_count <span class="kw">as </span>u32;
+<a href=#2009 id=2009 data-nosnippet>2009</a>    equation.set_attribute(<span class="kw-2">&amp;</span>ctrkey, <span class="kw-2">&amp;</span>new_val.to_string())<span class="question-mark">?</span>;
+<a href=#2010 id=2010 data-nosnippet>2010</a>  }
+<a href=#2011 id=2011 data-nosnippet>2011</a>  <span class="comment">// Create MathFork
+<a href=#2012 id=2012 data-nosnippet>2012</a>  </span><span class="kw">let </span>(<span class="kw-2">mut </span>mainfork, <span class="kw-2">mut </span>branch_node) = open_math_fork(document, <span class="kw-2">&amp;mut </span>equation)<span class="question-mark">?</span>;
+<a href=#2013 id=2013 data-nosnippet>2013</a>  <span class="kw">for </span>eq <span class="kw">in </span>equations {
+<a href=#2014 id=2014 data-nosnippet>2014</a>    <span class="kw">let </span><span class="kw-2">mut </span>eq = eq;
+<a href=#2015 id=2015 data-nosnippet>2015</a>    <span class="comment">// D3b: unrecord eq's own xml:id before detaching so idstore doesn't
+<a href=#2016 id=2016 data-nosnippet>2016</a>    // retain a dangling entry pointing to a soon-to-be-dropped node.
+<a href=#2017 id=2017 data-nosnippet>2017</a>    // (Descendant ids remain recorded; append_clone inside
+<a href=#2018 id=2018 data-nosnippet>2018</a>    // add_column_to_math_fork relies on modify_id suffixing for clones
+<a href=#2019 id=2019 data-nosnippet>2019</a>    // of cell children.)
+<a href=#2020 id=2020 data-nosnippet>2020</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(eq_id) = eq
+<a href=#2021 id=2021 data-nosnippet>2021</a>      .get_attribute_ns(<span class="string">"id"</span>, <span class="string">"http://www.w3.org/XML/1998/namespace"</span>)
+<a href=#2022 id=2022 data-nosnippet>2022</a>      .or_else(|| eq.get_attribute(<span class="string">"xml:id"</span>))
+<a href=#2023 id=2023 data-nosnippet>2023</a>    {
+<a href=#2024 id=2024 data-nosnippet>2024</a>      document.unrecord_id(<span class="kw-2">&amp;</span>eq_id);
+<a href=#2025 id=2025 data-nosnippet>2025</a>    }
+<a href=#2026 id=2026 data-nosnippet>2026</a>    eq.unlink_node();
+<a href=#2027 id=2027 data-nosnippet>2027</a>    <span class="kw">let </span><span class="kw-2">mut </span>tr = document.open_element_at(<span class="kw-2">&amp;mut </span>branch_node, <span class="string">"ltx:tr"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#2028 id=2028 data-nosnippet>2028</a>    <span class="kw">let </span>cells: Vec&lt;Node&gt; = document.findnodes(<span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>eq));
+<a href=#2029 id=2029 data-nosnippet>2029</a>    <span class="comment">// Perl Base_XMath.pool.ltxml:956-957: a row led by a `\lefteqn` is classed `ltx_eqn_lefteqn`. In Perl it never
+<a href=#2030 id=2030 data-nosnippet>2030</a>    // fires: `\lx@add@cssclass` cannot class the `_Capture_` (not in the schema), and `/\blefteqn\b/` misses
+<a href=#2031 id=2031 data-nosnippet>2031</a>    // `ltx_eqn_lefteqn` (`_` is a word character). The cell carries the class now (`\lx@alignment@cell@overprint`,
+<a href=#2032 id=2032 data-nosnippet>2032</a>    // OXIDIZED_DESIGN_DIVERGENCES #556). The class is in the XML only: LaTeXML-block-xhtml.xsl writes the HTML row's
+<a href=#2033 id=2033 data-nosnippet>2033</a>    // own class (:703, :883), so LaTeXML.css's `tr.ltx_eqn_lefteqn + tr` rule never meets it.
+<a href=#2034 id=2034 data-nosnippet>2034</a>    </span><span class="kw">if </span>cells
+<a href=#2035 id=2035 data-nosnippet>2035</a>      .first()
+<a href=#2036 id=2036 data-nosnippet>2036</a>      .and_then(|c| c.get_attribute(<span class="string">"class"</span>))
+<a href=#2037 id=2037 data-nosnippet>2037</a>      .is_some_and(|class| class.split_whitespace().any(|c| c == <span class="string">"ltx_eqn_lefteqn"</span>))
+<a href=#2038 id=2038 data-nosnippet>2038</a>    {
+<a href=#2039 id=2039 data-nosnippet>2039</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>tr, <span class="string">"class"</span>, <span class="string">"ltx_eqn_lefteqn"</span>)<span class="question-mark">?</span>;
+<a href=#2040 id=2040 data-nosnippet>2040</a>    }
+<a href=#2041 id=2041 data-nosnippet>2041</a>    <span class="kw">for </span><span class="kw-2">mut </span>cell <span class="kw">in </span>cells {
+<a href=#2042 id=2042 data-nosnippet>2042</a>      add_column_to_math_fork(document, <span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>tr, <span class="kw-2">&amp;mut </span>cell)<span class="question-mark">?</span>;
+<a href=#2043 id=2043 data-nosnippet>2043</a>    }
+<a href=#2044 id=2044 data-nosnippet>2044</a>    document.close_element_at(<span class="kw-2">&amp;mut </span>tr)<span class="question-mark">?</span>;
+<a href=#2045 id=2045 data-nosnippet>2045</a>  }
+<a href=#2046 id=2046 data-nosnippet>2046</a>  close_math_fork(document, <span class="kw-2">&amp;mut </span>equation, <span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch_node)<span class="question-mark">?</span>;
+<a href=#2047 id=2047 data-nosnippet>2047</a>  document.close_element_at(<span class="kw-2">&amp;mut </span>equation)<span class="question-mark">?</span>;
+<a href=#2048 id=2048 data-nosnippet>2048</a>  <span class="prelude-val">Ok</span>(())
+<a href=#2049 id=2049 data-nosnippet>2049</a>}
+<a href=#2050 id=2050 data-nosnippet>2050</a>
+<a href=#2051 id=2051 data-nosnippet>2051</a><span class="doccomment">/// Perl: addMeaningRec — recursively add meaning to XMTok elements with UNKNOWN role
+<a href=#2052 id=2052 data-nosnippet>2052</a></span><span class="kw">pub fn </span>add_meaning_rec(document: <span class="kw-2">&amp;mut </span>Document, <span class="kw-2">mut </span>node: Node, meaning: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#2053 id=2053 data-nosnippet>2053</a>  <span class="kw">if </span>node.get_type() != <span class="prelude-val">Some</span>(NodeType::ElementNode) {
+<a href=#2054 id=2054 data-nosnippet>2054</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#2055 id=2055 data-nosnippet>2055</a>  }
+<a href=#2056 id=2056 data-nosnippet>2056</a>  <span class="kw">let </span>qname = document::get_node_qname(<span class="kw-2">&amp;</span>node);
+<a href=#2057 id=2057 data-nosnippet>2057</a>  <span class="kw">if </span>qname == <span class="macro">pin!</span>(<span class="string">"ltx:XMArg"</span>) {
+<a href=#2058 id=2058 data-nosnippet>2058</a>    <span class="comment">// DON'T cross through into arguments
+<a href=#2059 id=2059 data-nosnippet>2059</a>  </span>} <span class="kw">else if </span>qname == <span class="macro">pin!</span>(<span class="string">"ltx:XMTok"</span>) {
+<a href=#2060 id=2060 data-nosnippet>2060</a>    <span class="kw">let </span>role = node.get_attribute(<span class="string">"role"</span>).unwrap_or_default();
+<a href=#2061 id=2061 data-nosnippet>2061</a>    <span class="kw">if </span>(role.is_empty() || role == <span class="string">"UNKNOWN"</span>) &amp;&amp; !node.has_attribute(<span class="string">"meaning"</span>) {
+<a href=#2062 id=2062 data-nosnippet>2062</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">"meaning"</span>, meaning)<span class="question-mark">?</span>;
 <a href=#2063 id=2063 data-nosnippet>2063</a>    }
-<a href=#2064 id=2064 data-nosnippet>2064</a>  }
-<a href=#2065 id=2065 data-nosnippet>2065</a>  <span class="prelude-val">Ok</span>(())
-<a href=#2066 id=2066 data-nosnippet>2066</a>}
-<a href=#2067 id=2067 data-nosnippet>2067</a>
-<a href=#2068 id=2068 data-nosnippet>2068</a><span class="attr">#[cfg(test)]
-<a href=#2069 id=2069 data-nosnippet>2069</a></span><span class="kw">mod </span>tests {
-<a href=#2070 id=2070 data-nosnippet>2070</a>  <span class="kw">use </span>libxml::parser::Parser <span class="kw">as </span>XmlParser;
+<a href=#2064 id=2064 data-nosnippet>2064</a>  } <span class="kw">else </span>{
+<a href=#2065 id=2065 data-nosnippet>2065</a>    <span class="kw">for </span>child <span class="kw">in </span>node.get_child_nodes() {
+<a href=#2066 id=2066 data-nosnippet>2066</a>      add_meaning_rec(document, child, meaning)<span class="question-mark">?</span>;
+<a href=#2067 id=2067 data-nosnippet>2067</a>    }
+<a href=#2068 id=2068 data-nosnippet>2068</a>  }
+<a href=#2069 id=2069 data-nosnippet>2069</a>  <span class="prelude-val">Ok</span>(())
+<a href=#2070 id=2070 data-nosnippet>2070</a>}
 <a href=#2071 id=2071 data-nosnippet>2071</a>
-<a href=#2072 id=2072 data-nosnippet>2072</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#2073 id=2073 data-nosnippet>2073</a>
-<a href=#2074 id=2074 data-nosnippet>2074</a>  <span class="comment">// See wisdom_libxml_node_doc_lifetime.md — keep the Document alive.
-<a href=#2075 id=2075 data-nosnippet>2075</a>  </span><span class="kw">fn </span>parse(xml: <span class="kw-2">&amp;</span>str) -&gt; libxml::tree::Document {
-<a href=#2076 id=2076 data-nosnippet>2076</a>    XmlParser::default().parse_string(xml).expect(<span class="string">"parse"</span>)
-<a href=#2077 id=2077 data-nosnippet>2077</a>  }
-<a href=#2078 id=2078 data-nosnippet>2078</a>
-<a href=#2079 id=2079 data-nosnippet>2079</a>  <span class="attr">#[test]
-<a href=#2080 id=2080 data-nosnippet>2080</a>  </span><span class="kw">fn </span>first_child_element_returns_first_elem() {
-<a href=#2081 id=2081 data-nosnippet>2081</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;parent&gt;text&lt;a/&gt;&lt;b/&gt;&lt;/parent&gt;"#</span>);
-<a href=#2082 id=2082 data-nosnippet>2082</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
-<a href=#2083 id=2083 data-nosnippet>2083</a>    <span class="kw">let </span>first = first_child_element(<span class="kw-2">&amp;</span>root).expect(<span class="string">"has a child"</span>);
-<a href=#2084 id=2084 data-nosnippet>2084</a>    <span class="macro">assert_eq!</span>(first.get_name(), <span class="string">"a"</span>);
-<a href=#2085 id=2085 data-nosnippet>2085</a>  }
-<a href=#2086 id=2086 data-nosnippet>2086</a>
-<a href=#2087 id=2087 data-nosnippet>2087</a>  <span class="attr">#[test]
-<a href=#2088 id=2088 data-nosnippet>2088</a>  </span><span class="kw">fn </span>first_child_element_none_for_leaf() {
-<a href=#2089 id=2089 data-nosnippet>2089</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;leaf/&gt;"#</span>);
-<a href=#2090 id=2090 data-nosnippet>2090</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
-<a href=#2091 id=2091 data-nosnippet>2091</a>    <span class="macro">assert!</span>(first_child_element(<span class="kw-2">&amp;</span>root).is_none());
-<a href=#2092 id=2092 data-nosnippet>2092</a>  }
-<a href=#2093 id=2093 data-nosnippet>2093</a>
-<a href=#2094 id=2094 data-nosnippet>2094</a>  <span class="attr">#[test]
-<a href=#2095 id=2095 data-nosnippet>2095</a>  </span><span class="kw">fn </span>first_child_element_skips_text_nodes() {
-<a href=#2096 id=2096 data-nosnippet>2096</a>    <span class="comment">// get_child_elements already filters text — so a pure-text leading child
-<a href=#2097 id=2097 data-nosnippet>2097</a>    // is not returned.
-<a href=#2098 id=2098 data-nosnippet>2098</a>    </span><span class="kw">let </span>doc = parse(<span class="string">r#"&lt;p&gt;   &lt;i/&gt;&lt;/p&gt;"#</span>);
-<a href=#2099 id=2099 data-nosnippet>2099</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
-<a href=#2100 id=2100 data-nosnippet>2100</a>    <span class="kw">let </span>first = first_child_element(<span class="kw-2">&amp;</span>root).expect(<span class="string">"has element child"</span>);
-<a href=#2101 id=2101 data-nosnippet>2101</a>    <span class="macro">assert_eq!</span>(first.get_name(), <span class="string">"i"</span>);
-<a href=#2102 id=2102 data-nosnippet>2102</a>  }
-<a href=#2103 id=2103 data-nosnippet>2103</a>
-<a href=#2104 id=2104 data-nosnippet>2104</a>  <span class="attr">#[test]
-<a href=#2105 id=2105 data-nosnippet>2105</a>  </span><span class="kw">fn </span>collect_xml_ids_walks_recursively() {
-<a href=#2106 id=2106 data-nosnippet>2106</a>    <span class="kw">let </span>doc = parse(
-<a href=#2107 id=2107 data-nosnippet>2107</a>      <span class="string">r#"&lt;root xml:id="r"&gt;
-<a href=#2108 id=2108 data-nosnippet>2108</a>           &lt;child xml:id="c1"/&gt;
-<a href=#2109 id=2109 data-nosnippet>2109</a>           &lt;inner&gt;
-<a href=#2110 id=2110 data-nosnippet>2110</a>             &lt;deep xml:id="d1"/&gt;
-<a href=#2111 id=2111 data-nosnippet>2111</a>           &lt;/inner&gt;
-<a href=#2112 id=2112 data-nosnippet>2112</a>           &lt;child xml:id="c2"/&gt;
-<a href=#2113 id=2113 data-nosnippet>2113</a>         &lt;/root&gt;"#</span>,
-<a href=#2114 id=2114 data-nosnippet>2114</a>    );
-<a href=#2115 id=2115 data-nosnippet>2115</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
-<a href=#2116 id=2116 data-nosnippet>2116</a>    <span class="kw">let </span><span class="kw-2">mut </span>ids = Vec::new();
-<a href=#2117 id=2117 data-nosnippet>2117</a>    collect_xml_ids(<span class="kw-2">&amp;</span>root, <span class="kw-2">&amp;mut </span>ids);
-<a href=#2118 id=2118 data-nosnippet>2118</a>    <span class="comment">// Order is DOM order: root first, then depth-first children.
-<a href=#2119 id=2119 data-nosnippet>2119</a>    </span><span class="macro">assert_eq!</span>(ids, <span class="macro">vec!</span>[<span class="string">"r"</span>, <span class="string">"c1"</span>, <span class="string">"d1"</span>, <span class="string">"c2"</span>]);
-<a href=#2120 id=2120 data-nosnippet>2120</a>  }
-<a href=#2121 id=2121 data-nosnippet>2121</a>
-<a href=#2122 id=2122 data-nosnippet>2122</a>  <span class="attr">#[test]
-<a href=#2123 id=2123 data-nosnippet>2123</a>  </span><span class="kw">fn </span>collect_xml_ids_empty_for_no_ids() {
-<a href=#2124 id=2124 data-nosnippet>2124</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;root&gt;&lt;a/&gt;&lt;b&gt;&lt;c/&gt;&lt;/b&gt;&lt;/root&gt;"#</span>);
-<a href=#2125 id=2125 data-nosnippet>2125</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
-<a href=#2126 id=2126 data-nosnippet>2126</a>    <span class="kw">let </span><span class="kw-2">mut </span>ids = Vec::new();
-<a href=#2127 id=2127 data-nosnippet>2127</a>    collect_xml_ids(<span class="kw-2">&amp;</span>root, <span class="kw-2">&amp;mut </span>ids);
-<a href=#2128 id=2128 data-nosnippet>2128</a>    <span class="macro">assert!</span>(ids.is_empty());
-<a href=#2129 id=2129 data-nosnippet>2129</a>  }
-<a href=#2130 id=2130 data-nosnippet>2130</a>
-<a href=#2131 id=2131 data-nosnippet>2131</a>  <span class="attr">#[test]
-<a href=#2132 id=2132 data-nosnippet>2132</a>  </span><span class="kw">fn </span>collect_xmrefs_finds_by_element_name_and_idref() {
-<a href=#2133 id=2133 data-nosnippet>2133</a>    <span class="kw">let </span>doc = parse(
-<a href=#2134 id=2134 data-nosnippet>2134</a>      <span class="string">r#"&lt;root&gt;
-<a href=#2135 id=2135 data-nosnippet>2135</a>           &lt;XMRef idref="a1"/&gt;
-<a href=#2136 id=2136 data-nosnippet>2136</a>           &lt;inner&gt;
-<a href=#2137 id=2137 data-nosnippet>2137</a>             &lt;XMRef idref="b1"/&gt;
-<a href=#2138 id=2138 data-nosnippet>2138</a>             &lt;XMRef/&gt;
-<a href=#2139 id=2139 data-nosnippet>2139</a>             &lt;other idref="c1"/&gt;
-<a href=#2140 id=2140 data-nosnippet>2140</a>           &lt;/inner&gt;
-<a href=#2141 id=2141 data-nosnippet>2141</a>         &lt;/root&gt;"#</span>,
-<a href=#2142 id=2142 data-nosnippet>2142</a>    );
-<a href=#2143 id=2143 data-nosnippet>2143</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
-<a href=#2144 id=2144 data-nosnippet>2144</a>    <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::new();
-<a href=#2145 id=2145 data-nosnippet>2145</a>    collect_xmrefs(<span class="kw-2">&amp;</span>root, <span class="kw-2">&amp;mut </span>refs);
-<a href=#2146 id=2146 data-nosnippet>2146</a>    <span class="comment">// Must have idref attribute AND be named XMRef.
-<a href=#2147 id=2147 data-nosnippet>2147</a>    </span><span class="macro">assert_eq!</span>(refs.len(), <span class="number">2</span>);
-<a href=#2148 id=2148 data-nosnippet>2148</a>    <span class="kw">let </span>idrefs: Vec&lt;String&gt; = refs
-<a href=#2149 id=2149 data-nosnippet>2149</a>      .iter()
-<a href=#2150 id=2150 data-nosnippet>2150</a>      .map(|r| r.get_attribute(<span class="string">"idref"</span>).unwrap())
-<a href=#2151 id=2151 data-nosnippet>2151</a>      .collect();
-<a href=#2152 id=2152 data-nosnippet>2152</a>    <span class="macro">assert_eq!</span>(idrefs, <span class="macro">vec!</span>[<span class="string">"a1"</span>, <span class="string">"b1"</span>]);
-<a href=#2153 id=2153 data-nosnippet>2153</a>  }
-<a href=#2154 id=2154 data-nosnippet>2154</a>
-<a href=#2155 id=2155 data-nosnippet>2155</a>  <span class="attr">#[test]
-<a href=#2156 id=2156 data-nosnippet>2156</a>  </span><span class="kw">fn </span>collect_xmrefs_empty_for_no_matches() {
-<a href=#2157 id=2157 data-nosnippet>2157</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;root&gt;&lt;child/&gt;&lt;/root&gt;"#</span>);
-<a href=#2158 id=2158 data-nosnippet>2158</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
-<a href=#2159 id=2159 data-nosnippet>2159</a>    <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::new();
-<a href=#2160 id=2160 data-nosnippet>2160</a>    collect_xmrefs(<span class="kw-2">&amp;</span>root, <span class="kw-2">&amp;mut </span>refs);
-<a href=#2161 id=2161 data-nosnippet>2161</a>    <span class="macro">assert!</span>(refs.is_empty());
-<a href=#2162 id=2162 data-nosnippet>2162</a>  }
-<a href=#2163 id=2163 data-nosnippet>2163</a>}
+<a href=#2072 id=2072 data-nosnippet>2072</a><span class="attr">#[cfg(test)]
+<a href=#2073 id=2073 data-nosnippet>2073</a></span><span class="kw">mod </span>tests {
+<a href=#2074 id=2074 data-nosnippet>2074</a>  <span class="kw">use </span>libxml::parser::Parser <span class="kw">as </span>XmlParser;
+<a href=#2075 id=2075 data-nosnippet>2075</a>
+<a href=#2076 id=2076 data-nosnippet>2076</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#2077 id=2077 data-nosnippet>2077</a>
+<a href=#2078 id=2078 data-nosnippet>2078</a>  <span class="comment">// See wisdom_libxml_node_doc_lifetime.md — keep the Document alive.
+<a href=#2079 id=2079 data-nosnippet>2079</a>  </span><span class="kw">fn </span>parse(xml: <span class="kw-2">&amp;</span>str) -&gt; libxml::tree::Document {
+<a href=#2080 id=2080 data-nosnippet>2080</a>    XmlParser::default().parse_string(xml).expect(<span class="string">"parse"</span>)
+<a href=#2081 id=2081 data-nosnippet>2081</a>  }
+<a href=#2082 id=2082 data-nosnippet>2082</a>
+<a href=#2083 id=2083 data-nosnippet>2083</a>  <span class="attr">#[test]
+<a href=#2084 id=2084 data-nosnippet>2084</a>  </span><span class="kw">fn </span>first_child_element_returns_first_elem() {
+<a href=#2085 id=2085 data-nosnippet>2085</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;parent&gt;text&lt;a/&gt;&lt;b/&gt;&lt;/parent&gt;"#</span>);
+<a href=#2086 id=2086 data-nosnippet>2086</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
+<a href=#2087 id=2087 data-nosnippet>2087</a>    <span class="kw">let </span>first = first_child_element(<span class="kw-2">&amp;</span>root).expect(<span class="string">"has a child"</span>);
+<a href=#2088 id=2088 data-nosnippet>2088</a>    <span class="macro">assert_eq!</span>(first.get_name(), <span class="string">"a"</span>);
+<a href=#2089 id=2089 data-nosnippet>2089</a>  }
+<a href=#2090 id=2090 data-nosnippet>2090</a>
+<a href=#2091 id=2091 data-nosnippet>2091</a>  <span class="attr">#[test]
+<a href=#2092 id=2092 data-nosnippet>2092</a>  </span><span class="kw">fn </span>first_child_element_none_for_leaf() {
+<a href=#2093 id=2093 data-nosnippet>2093</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;leaf/&gt;"#</span>);
+<a href=#2094 id=2094 data-nosnippet>2094</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
+<a href=#2095 id=2095 data-nosnippet>2095</a>    <span class="macro">assert!</span>(first_child_element(<span class="kw-2">&amp;</span>root).is_none());
+<a href=#2096 id=2096 data-nosnippet>2096</a>  }
+<a href=#2097 id=2097 data-nosnippet>2097</a>
+<a href=#2098 id=2098 data-nosnippet>2098</a>  <span class="attr">#[test]
+<a href=#2099 id=2099 data-nosnippet>2099</a>  </span><span class="kw">fn </span>first_child_element_skips_text_nodes() {
+<a href=#2100 id=2100 data-nosnippet>2100</a>    <span class="comment">// get_child_elements already filters text — so a pure-text leading child
+<a href=#2101 id=2101 data-nosnippet>2101</a>    // is not returned.
+<a href=#2102 id=2102 data-nosnippet>2102</a>    </span><span class="kw">let </span>doc = parse(<span class="string">r#"&lt;p&gt;   &lt;i/&gt;&lt;/p&gt;"#</span>);
+<a href=#2103 id=2103 data-nosnippet>2103</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
+<a href=#2104 id=2104 data-nosnippet>2104</a>    <span class="kw">let </span>first = first_child_element(<span class="kw-2">&amp;</span>root).expect(<span class="string">"has element child"</span>);
+<a href=#2105 id=2105 data-nosnippet>2105</a>    <span class="macro">assert_eq!</span>(first.get_name(), <span class="string">"i"</span>);
+<a href=#2106 id=2106 data-nosnippet>2106</a>  }
+<a href=#2107 id=2107 data-nosnippet>2107</a>
+<a href=#2108 id=2108 data-nosnippet>2108</a>  <span class="attr">#[test]
+<a href=#2109 id=2109 data-nosnippet>2109</a>  </span><span class="kw">fn </span>collect_xml_ids_walks_recursively() {
+<a href=#2110 id=2110 data-nosnippet>2110</a>    <span class="kw">let </span>doc = parse(
+<a href=#2111 id=2111 data-nosnippet>2111</a>      <span class="string">r#"&lt;root xml:id="r"&gt;
+<a href=#2112 id=2112 data-nosnippet>2112</a>           &lt;child xml:id="c1"/&gt;
+<a href=#2113 id=2113 data-nosnippet>2113</a>           &lt;inner&gt;
+<a href=#2114 id=2114 data-nosnippet>2114</a>             &lt;deep xml:id="d1"/&gt;
+<a href=#2115 id=2115 data-nosnippet>2115</a>           &lt;/inner&gt;
+<a href=#2116 id=2116 data-nosnippet>2116</a>           &lt;child xml:id="c2"/&gt;
+<a href=#2117 id=2117 data-nosnippet>2117</a>         &lt;/root&gt;"#</span>,
+<a href=#2118 id=2118 data-nosnippet>2118</a>    );
+<a href=#2119 id=2119 data-nosnippet>2119</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
+<a href=#2120 id=2120 data-nosnippet>2120</a>    <span class="kw">let </span><span class="kw-2">mut </span>ids = Vec::new();
+<a href=#2121 id=2121 data-nosnippet>2121</a>    collect_xml_ids(<span class="kw-2">&amp;</span>root, <span class="kw-2">&amp;mut </span>ids);
+<a href=#2122 id=2122 data-nosnippet>2122</a>    <span class="comment">// Order is DOM order: root first, then depth-first children.
+<a href=#2123 id=2123 data-nosnippet>2123</a>    </span><span class="macro">assert_eq!</span>(ids, <span class="macro">vec!</span>[<span class="string">"r"</span>, <span class="string">"c1"</span>, <span class="string">"d1"</span>, <span class="string">"c2"</span>]);
+<a href=#2124 id=2124 data-nosnippet>2124</a>  }
+<a href=#2125 id=2125 data-nosnippet>2125</a>
+<a href=#2126 id=2126 data-nosnippet>2126</a>  <span class="attr">#[test]
+<a href=#2127 id=2127 data-nosnippet>2127</a>  </span><span class="kw">fn </span>collect_xml_ids_empty_for_no_ids() {
+<a href=#2128 id=2128 data-nosnippet>2128</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;root&gt;&lt;a/&gt;&lt;b&gt;&lt;c/&gt;&lt;/b&gt;&lt;/root&gt;"#</span>);
+<a href=#2129 id=2129 data-nosnippet>2129</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
+<a href=#2130 id=2130 data-nosnippet>2130</a>    <span class="kw">let </span><span class="kw-2">mut </span>ids = Vec::new();
+<a href=#2131 id=2131 data-nosnippet>2131</a>    collect_xml_ids(<span class="kw-2">&amp;</span>root, <span class="kw-2">&amp;mut </span>ids);
+<a href=#2132 id=2132 data-nosnippet>2132</a>    <span class="macro">assert!</span>(ids.is_empty());
+<a href=#2133 id=2133 data-nosnippet>2133</a>  }
+<a href=#2134 id=2134 data-nosnippet>2134</a>
+<a href=#2135 id=2135 data-nosnippet>2135</a>  <span class="attr">#[test]
+<a href=#2136 id=2136 data-nosnippet>2136</a>  </span><span class="kw">fn </span>collect_xmrefs_finds_by_element_name_and_idref() {
+<a href=#2137 id=2137 data-nosnippet>2137</a>    <span class="kw">let </span>doc = parse(
+<a href=#2138 id=2138 data-nosnippet>2138</a>      <span class="string">r#"&lt;root&gt;
+<a href=#2139 id=2139 data-nosnippet>2139</a>           &lt;XMRef idref="a1"/&gt;
+<a href=#2140 id=2140 data-nosnippet>2140</a>           &lt;inner&gt;
+<a href=#2141 id=2141 data-nosnippet>2141</a>             &lt;XMRef idref="b1"/&gt;
+<a href=#2142 id=2142 data-nosnippet>2142</a>             &lt;XMRef/&gt;
+<a href=#2143 id=2143 data-nosnippet>2143</a>             &lt;other idref="c1"/&gt;
+<a href=#2144 id=2144 data-nosnippet>2144</a>           &lt;/inner&gt;
+<a href=#2145 id=2145 data-nosnippet>2145</a>         &lt;/root&gt;"#</span>,
+<a href=#2146 id=2146 data-nosnippet>2146</a>    );
+<a href=#2147 id=2147 data-nosnippet>2147</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
+<a href=#2148 id=2148 data-nosnippet>2148</a>    <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::new();
+<a href=#2149 id=2149 data-nosnippet>2149</a>    collect_xmrefs(<span class="kw-2">&amp;</span>root, <span class="kw-2">&amp;mut </span>refs);
+<a href=#2150 id=2150 data-nosnippet>2150</a>    <span class="comment">// Must have idref attribute AND be named XMRef.
+<a href=#2151 id=2151 data-nosnippet>2151</a>    </span><span class="macro">assert_eq!</span>(refs.len(), <span class="number">2</span>);
+<a href=#2152 id=2152 data-nosnippet>2152</a>    <span class="kw">let </span>idrefs: Vec&lt;String&gt; = refs
+<a href=#2153 id=2153 data-nosnippet>2153</a>      .iter()
+<a href=#2154 id=2154 data-nosnippet>2154</a>      .map(|r| r.get_attribute(<span class="string">"idref"</span>).unwrap())
+<a href=#2155 id=2155 data-nosnippet>2155</a>      .collect();
+<a href=#2156 id=2156 data-nosnippet>2156</a>    <span class="macro">assert_eq!</span>(idrefs, <span class="macro">vec!</span>[<span class="string">"a1"</span>, <span class="string">"b1"</span>]);
+<a href=#2157 id=2157 data-nosnippet>2157</a>  }
+<a href=#2158 id=2158 data-nosnippet>2158</a>
+<a href=#2159 id=2159 data-nosnippet>2159</a>  <span class="attr">#[test]
+<a href=#2160 id=2160 data-nosnippet>2160</a>  </span><span class="kw">fn </span>collect_xmrefs_empty_for_no_matches() {
+<a href=#2161 id=2161 data-nosnippet>2161</a>    <span class="kw">let </span>doc = parse(<span class="string">r#"&lt;root&gt;&lt;child/&gt;&lt;/root&gt;"#</span>);
+<a href=#2162 id=2162 data-nosnippet>2162</a>    <span class="kw">let </span>root = doc.get_root_element().unwrap();
+<a href=#2163 id=2163 data-nosnippet>2163</a>    <span class="kw">let </span><span class="kw-2">mut </span>refs = Vec::new();
+<a href=#2164 id=2164 data-nosnippet>2164</a>    collect_xmrefs(<span class="kw-2">&amp;</span>root, <span class="kw-2">&amp;mut </span>refs);
+<a href=#2165 id=2165 data-nosnippet>2165</a>    <span class="macro">assert!</span>(refs.is_empty());
+<a href=#2166 id=2166 data-nosnippet>2166</a>  }
+<a href=#2167 id=2167 data-nosnippet>2167</a>}
 </code></pre></div></section></main></body></html>
