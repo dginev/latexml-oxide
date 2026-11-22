@@ -654,6 +654,16 @@ impl StagedHandoff {
   pub fn path(&self) -> &str { &self.path }
 }
 
+/// The reserved handoff, kept only when the core serialized into it (`ConversionResponse::handoff_file`). An
+/// unused one is dropped here, removing a file an earlier attempt wrote: a fused eager attempt's salvage, when the
+/// `--streaming` rerun on the same path ends without a document.
+pub fn used_core_handoff(
+  reserved: Option<StagedHandoff>,
+  serialized_to: Option<&str>,
+) -> Option<StagedHandoff> {
+  reserved.filter(|staged| serialized_to == Some(staged.path()))
+}
+
 /// The handoff file a split run's core result is serialized into (`Config::handoff_file`), reserved before the
 /// conversion: when the run would take the streaming split, which parses only files, the document-sized `String`
 /// would exist only to be staged (2 GiB on Nasser's whole book, issue 777). `None` when it would not.
@@ -1969,4 +1979,31 @@ fn finalize_html5(output: String) -> String {
   VOID_SELF_CLOSE_RE
     .replace_all(&output, "<$1$2>")
     .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// An unused reservation removes the file an earlier attempt wrote; a used one keeps it for post.
+  #[test]
+  fn an_unused_core_handoff_is_removed() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dest = dir.path().join("index.html");
+    let dest = dest.to_str();
+    let staged = StagedHandoff::at(dest);
+    let path = staged.path().to_string();
+    std::fs::write(&path, "<document/>\n").expect("written");
+    let kept = used_core_handoff(Some(staged), Some(&path));
+    assert_eq!(kept.as_ref().map(StagedHandoff::path), Some(path.as_str()));
+    assert!(
+      std::path::Path::new(&path).exists(),
+      "a used handoff stays for post"
+    );
+    assert!(used_core_handoff(kept, None).is_none());
+    assert!(
+      !std::path::Path::new(&path).exists(),
+      "an unused handoff is removed"
+    );
+  }
 }

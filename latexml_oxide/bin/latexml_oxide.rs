@@ -1536,12 +1536,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // it; stays empty when post-processing is skipped, keeping that --log
     // byte-identical to before.
     let mut post_log = String::new();
-    // The reserved handoff, when the conversion did serialize into it (an unused one is dropped here).
-    let core_handoff = if response.handoff_file.is_some() {
-      core_handoff
-    } else {
-      None
-    };
+    // `process::exit` skips destructors: an unused reservation is dropped here, before post re-stages to its path.
+    let core_handoff =
+      latexml::post::used_core_handoff(core_handoff, response.handoff_file.as_deref());
     if let Some(xml) = response.result {
       let inferred_format: Option<String> = dest_format
         .clone()
@@ -2150,11 +2147,12 @@ fn is_xml_input(source: &str) -> bool {
 
 /// `process::exit` skips destructors, so an archive's unpacked sources (`--whatsin=archive`, a `TempDir`) are removed
 /// first: each conversion of an arXiv zip left its whole source tree in the temp directory, which filled a per-user
-/// `/tmp` quota over an A/B run. The exits this function does not see — the watchdog's timeout and memory
-/// ceiling, the allocation-failure hook — remove it through its `remove_on_exit` registration.
+/// `/tmp` quota over an A/B run. Then every path still registered with `remove_on_exit` goes, as on the watchdog's
+/// exits (its timeout and memory ceiling, the allocation-failure hook): a core handoff an early exit still holds.
 fn exit_removing(archive_tempdir: &mut Option<tempfile::TempDir>, code: i32) -> ! {
   latexml_core::watchdog::park_if_exiting();
   drop(archive_tempdir.take());
+  latexml_core::watchdog::remove_registered_paths();
   process::exit(code)
 }
 

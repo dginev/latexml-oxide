@@ -240,3 +240,41 @@ fn unwritable_handoff_file_falls_back_to_the_string() {
     .collect();
   assert_eq!(left, ["not-a-dir"], "no handoff file left behind");
 }
+
+/// A handoff whose write fails mid-file (a symlink to `/dev/full`: created, then `ENOSPC` on the first chunk) takes
+/// the same fallback, and the partial file goes: `serialize_to_file`'s removal, which a failed directory never reaches.
+#[test]
+fn handoff_write_error_removes_the_partial_file() {
+  if cfg!(not(target_os = "linux")) || !std::path::Path::new("/dev/full").exists() {
+    eprintln!("SKIP handoff_write_error_removes_the_partial_file: needs Linux's /dev/full");
+    return;
+  }
+  #[cfg(unix)]
+  {
+    let source = "tests/streaming/streaming_gate.tex";
+    let (eager_xml, ..) = convert(source, None);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("handoff.xml");
+    std::os::unix::fs::symlink("/dev/full", &path).expect("symlink");
+    let (result, handoff_file, log, ..) =
+      convert_with_handoff(source, path.to_string_lossy().into_owned());
+    assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+    assert_eq!(latexml::util::test::warning_count(&log), 0, "{log}");
+    assert!(
+      log.lines().any(
+        |l| l.starts_with("Info:serialize:handoff could not serialize")
+          && l.contains("(os error 28)")
+      ),
+      "the write error must be reported:\n{log}"
+    );
+    assert_eq!(handoff_file, None);
+    assert!(
+      result.as_deref() == Some(eager_xml.as_str()),
+      "the String result"
+    );
+    assert!(
+      std::fs::symlink_metadata(&path).is_err(),
+      "the partial file is removed"
+    );
+  }
+}

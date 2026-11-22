@@ -9597,4 +9597,26 @@ mod serializer_escape {
     }
     let _ = std::fs::remove_dir_all(&dir);
   }
+
+  /// A failed write is kept, the first one: nothing more is written or counted after it, and `finish` returns it.
+  #[cfg(target_os = "linux")]
+  #[test]
+  fn file_sink_keeps_the_first_write_error() {
+    let full = std::fs::OpenOptions::new()
+      .write(true)
+      .open("/dev/full")
+      .expect("/dev/full");
+    let mut sink = FileSink::new(full, 4);
+    sink.push_str("<a>");
+    assert_eq!((sink.written, sink.error.is_none()), (0, true), "buffered");
+    sink.push_str("text\n");
+    let first = sink.error.as_ref().map(std::io::Error::raw_os_error);
+    assert_eq!(first, Some(Some(28)), "ENOSPC on the first chunk");
+    assert_eq!(sink.written, 0);
+    sink.push_str("a segment longer than a chunk\n");
+    sink.push_str("</a>\n");
+    assert_eq!(sink.written, 0, "nothing counted after the error");
+    let err = sink.finish().expect_err("the write error");
+    assert_eq!(err.raw_os_error(), Some(28));
+  }
 }

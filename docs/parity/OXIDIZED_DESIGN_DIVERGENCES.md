@@ -23670,9 +23670,12 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
   straight into the handoff file (`post::reserve_core_handoff`, `Config::handoff_file`, `Document::serialize_to_file`,
   byte-identical to `serialize_to_string`), so no document-sized `String` exists: Nasser's whole book died at 1 GiB
   reallocating it to 2 GiB (issue 777). The file sits beside the destination (in "." for a bare `--dest=a.html`), whose
-  directory it creates, and is removed once the pages are spilled. A file it cannot write is reported at Info and the
-  result falls back to the `String`, which post stages or parses from memory (`post::run_post_processing_owned_logged`,
-  also the path of a joined supplement or an archive). A stream that fails on an input under 1 GiB falls back
+  directory it creates, and is removed once the pages are spilled, or as soon as the final attempt did not write it
+  (`post::used_core_handoff`; the CLI's exits remove every registered path). A file it cannot write is reported at
+  Info, its partial file removed, and the result falls back to the `String`, which post stages or parses from memory
+  (`post::run_post_processing_owned_logged`, also the path of a joined supplement or an archive). That fallback
+  serializes a second time, so a `spill:unresolved` Error raised by the failed pass is raised again and
+  `nested_splice_count` counts its splices twice. A stream that fails on an input under 1 GiB falls back
   to the whole-DOM split with an Info. Such a stream fails when a template item arrives after a page was written (an
   `ltx:navigation` from `--input xml`, an `ltx:resource`, a root `ltx:date` or a `<?latexml?>` PI), or when an
   `ltx:resource` sits nested inside content. The DOM split copies these into the pages' templates, each page taking the
