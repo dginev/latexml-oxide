@@ -89,6 +89,12 @@ thread_local! {
   /// `core_interface::initialize_singletons`), so a pooled `--server` /
   /// test-harness thread does not inherit the previous document's count.
   static FORMULA_ORDINAL: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  /// Hashes of the formula token streams that already emitted an `ambiguous_math` /
+  /// `unparsed_math` warning in this CONVERSION (OXIDIZED_DESIGN_DIVERGENCES #1132). Not a
+  /// `MathParser` field for the reason above: streaming builds a parser per segment and per
+  /// `finish_document`, so a per-instance set re-warned in every segment (Nasser FAQ slices
+  /// k600/k1200: 101 Warnings eager, 171 streamed, same XML). Reset by [`reset_conversion_notices`].
+  static WARNED_FORMULAS: RefCell<HashSet<u64>> = RefCell::new(HashSet::new());
 }
 
 /// Advance and return the conversion-wide formula ordinal (1-based).
@@ -418,6 +424,7 @@ thread_local! {
 pub fn reset_conversion_notices() {
   LOSTNODES_NOOP_REPORTED.set(false);
   FORMULA_ORDINAL.set(0);
+  WARNED_FORMULAS.with_borrow_mut(HashSet::clear);
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -610,12 +617,6 @@ pub struct MathParser {
   pub failed_xmath_ids:      Vec<usize>,
   /// Grammar tree count from the last successful parse (for \ltx@count@parses)
   pub last_parsetrees_count: usize,
-  /// Hashes of the distinct formula token streams that have already emitted an `ambiguous_math` /
-  /// `unparsed_math` warning in THIS document. Perl LaTeXML warns once per distinct formula per
-  /// document — a formula repeated N times still warns once. The parser is built per document
-  /// (`core_interface`), so this set's lifetime IS the document scope. Hashed (not stored whole) to
-  /// stay O(8 bytes) per formula under the worker fleet.
-  warned_formulas:           HashSet<u64>,
   /// Set while running the SPECULATIVE first parse of a fence-unbalanced
   /// formula, whose failure is expected and is rescued by the
   /// `balance_null_delimiters` retry. Without it the log would carry an
@@ -743,7 +744,6 @@ impl MathParser {
       // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
       last_parsetrees_count: 0,
-      warned_formulas: HashSet::new(),
       suppress_unparsed_warning: false,
       defer_unparsed_warning: false,
       deferred_unparsed_warning: None,
@@ -2383,13 +2383,13 @@ impl MathParser {
 
   /// The `unparsed_math` warning for a formula the recognizer rejects before its last token: the
   /// grammar has no derivation spanning it (Perl MathParser.pm:891 `not_parsed`). Once per
-  /// distinct formula per document, and not while a retry may still rescue it — the same rule as
+  /// distinct formula per conversion (#1132), and not while a retry may still rescue it — the same rule as
   /// the no-parse warning after enumeration, which this early return skipped.
   fn warn_unspanned(&mut self, input: &str) {
     if self.suppress_unparsed_warning || !self.reports_failures() {
       return;
     }
-    if warn_formula_once(&mut self.warned_formulas, input.trim()) {
+    if warn_formula_once(input.trim()) {
       log_math_warn!(
         "unparsed_math",
         token_type_footprint(input.trim()),
@@ -3014,9 +3014,8 @@ impl MathParser {
       other => other,
     };
     if let Some(category) = diagnostic_category {
-      // Warn once per DISTINCT formula per document (Perl LaTeXML's rule): a formula repeated N
-      // times in one document emits a single warning. Keyed on the exact token stream — true only
-      // the first time this document sees it; repeats are silently skipped.
+      // Warn once per DISTINCT formula per conversion (OXIDIZED_DESIGN_DIVERGENCES #1132; Perl
+      // warns for each): keyed on the exact token stream, true only at its first sighting.
       let message = format!(
         "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique{}) in {:?} for: {}",
         ok_trees + pruned_trees + deduped,
@@ -3032,7 +3031,7 @@ impl MathParser {
       );
       if category == "unparsed_math" && self.defer_unparsed_warning {
         self.deferred_unparsed_warning = Some((input.trim().to_owned(), message));
-      } else if warn_formula_once(&mut self.warned_formulas, input.trim()) {
+      } else if warn_formula_once(input.trim()) {
         log_math_warn!(category, token_type_footprint(input.trim()), message);
       }
     }
@@ -3250,7 +3249,7 @@ impl MathParser {
     if let Some((formula, message)) = self.deferred_unparsed_warning.take() {
       if outer_defer {
         self.deferred_unparsed_warning = Some((formula, message));
-      } else if warn_formula_once(&mut self.warned_formulas, &formula) {
+      } else if warn_formula_once(&formula) {
         log_math_warn!("unparsed_math", token_type_footprint(&formula), message);
       }
     }
@@ -3739,14 +3738,14 @@ const SET_ASIDE: &str = "_setaside";
 /// Perl's deepest `MAX_ABS_DEPTH` retry (MathParser.pm:833, `< 3`).
 const MAX_ABS_DEPTH_RETRY: u8 = 3;
 
-/// Records `formula` in the per-document `seen` set and returns whether this is its FIRST sighting
-/// — the gate for Perl LaTeXML's "warn once per distinct formula per document" rule. The token
-/// stream is hashed (SipHash) so the set stays 8 bytes per distinct formula no matter how long the
-/// formula is; a hash collision at worst suppresses one warning, which is harmless.
-fn warn_formula_once(seen: &mut HashSet<u64>, formula: &str) -> bool {
+/// Records `formula` in the conversion-wide [`WARNED_FORMULAS`] set and returns whether this is its
+/// FIRST sighting: we warn once per distinct lexeme string per conversion, where Perl warns for
+/// every failing formula (MathParser.pm:250-254, :862-897; OXIDIZED_DESIGN_DIVERGENCES #1132).
+/// Hashed (SipHash), 8 bytes per formula; a collision at worst suppresses one warning.
+fn warn_formula_once(formula: &str) -> bool {
   let mut hasher = std::collections::hash_map::DefaultHasher::new();
   formula.hash(&mut hasher);
-  seen.insert(hasher.finish())
+  WARNED_FORMULAS.with_borrow_mut(|seen| seen.insert(hasher.finish()))
 }
 
 /// Structural footprint of a formula's token stream — the `what` field of the `ambiguous_math` /
@@ -4505,28 +4504,25 @@ mod tests {
   }
 
   #[test]
-  fn warns_once_per_distinct_formula_per_document() {
-    // Per-document scope = one `seen` set per document (the parser is built per document).
-    let mut doc = HashSet::new();
+  fn warns_once_per_distinct_formula_per_conversion() {
+    // Conversion scope = the thread-local set, cleared by `reset_conversion_notices`.
+    reset_conversion_notices();
     let f1 = "UNKNOWN:x:1 RELOP:=:2 NUMBER:0:3";
     let f2 = "UNKNOWN:y:1 ADDOP:+:2 UNKNOWN:z:3";
-    assert!(warn_formula_once(&mut doc, f1), "first sighting warns");
+    assert!(warn_formula_once(f1), "first sighting warns");
     assert!(
-      !warn_formula_once(&mut doc, f1),
+      !warn_formula_once(f1),
       "the same formula repeated is suppressed"
     );
+    assert!(!warn_formula_once(f1), "still suppressed on the 3rd repeat");
     assert!(
-      !warn_formula_once(&mut doc, f1),
-      "still suppressed on the 3rd repeat"
-    );
-    assert!(
-      warn_formula_once(&mut doc, f2),
+      warn_formula_once(f2),
       "a DISTINCT formula warns once of its own"
     );
-    assert!(!warn_formula_once(&mut doc, f2));
-    // A new document (fresh set) warns again for the same formula — dedup is document-scoped.
-    let mut other_doc = HashSet::new();
-    assert!(warn_formula_once(&mut other_doc, f1));
+    assert!(!warn_formula_once(f2));
+    // A new conversion (reset) warns again for the same formula.
+    reset_conversion_notices();
+    assert!(warn_formula_once(f1));
   }
 
   /// Pin the message↔classifier coupling for the string-fallback path of
