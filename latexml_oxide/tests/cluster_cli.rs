@@ -5183,6 +5183,9 @@ mod shared_figure_parallel_render {
     found
   }
 
+  /// Each page's file name and content.
+  type Pages = Vec<(String, String)>;
+
   /// The pages of one run of `a.tex` (`LATEXML_RENDER_JOBS=jobs`; the graphics cache off, or in
   /// `cache`; the figure `<fig>.pdf`), the image and hidden files beside them, the run's stderr and
   /// the bytes of `<fig>.svg`.
@@ -5191,7 +5194,7 @@ mod shared_figure_parallel_render {
     jobs: &str,
     cache: Option<&std::path::Path>,
     fig: &str,
-  ) -> (Vec<(String, String)>, Vec<String>, String, Option<Vec<u8>>) {
+  ) -> (Pages, Vec<String>, String, Option<Vec<u8>>) {
     let work = tempfile::tempdir().expect("tempdir");
     std::fs::write(work.path().join("a.tex"), tex).unwrap();
     std::fs::copy(
