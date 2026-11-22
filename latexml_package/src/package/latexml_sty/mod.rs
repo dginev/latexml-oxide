@@ -376,14 +376,10 @@ LoadDefinitions!({
     Let!("\\savepos", "\\pdfsavepos");
     Let!("\\lastxpos", "\\pdflastxpos");
     Let!("\\lastypos", "\\pdflastypos");
-    // `\pdfextension literal` reads `\pdfliteral`'s operands (hologo's mirrored E, accsupp's spans leaked
-    // "iteralq …" text, mfirstuc-manual, hvlogos-doc); another extension's keyword is one token, as before.
+    // `\pdfextension <keyword>` reads `\pdf<keyword>`'s operands (one token was read, so the rest leaked as text:
+    // hologo's mirrored E and accsupp's spans "iteralq …", mfirstuc-manual, hvlogos-doc; xfakebold-doc "olorstackpop").
     DefPrimitive!("\\pdfextension", sub[_args] {
-      if read_keyword(&["literal"])?.is_some() {
-        latexml_engine::pdftex::read_pdfliteral_operands()?;
-      } else {
-        let _ = read_token()?;
-      }
+      latexml_engine::pdftex::read_pdfextension()?;
     });
     DefRegister!("\\prehyphenchar"     => Number::new(0));
     DefRegister!("\\posthyphenchar"    => Number::new(0));

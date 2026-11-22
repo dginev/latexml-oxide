@@ -1,0 +1,27 @@
+% mechanism: pdftex.rs read_pdfextension (OXIDIZED_DESIGN_DIVERGENCES #1081): `\pdfextension <keyword>` reads the
+%   operands pdfTeX's `\pdf<keyword>` reads (LuaTeX manual luatex-modifications.tex:766-907), never through
+%   `\pdf<keyword>`, which luatex85.sty:69-92 defines as `\pdfextension <keyword>`; only `literal` was known, and every
+%   other keyword's first letter was read, the rest of it and its operands leaking as text.
+% witness: TL manual xfakebold/xfakebold-doc (pdfrender's \pdfcolorstack: 59 "olorstack" leaks, "olorstackpop…")
+% oracle:  lualatex -no-shell-escape: 0 errors, no operand text (pdftotext "AB F CDEGHIJK LMN OP Q RSU VWXY Z abc de fg
+%          hij kl": the colour stack moves F)
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no luatex profile) (2026-11-22)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% expect:  0 errors, 0 warnings; the letters only, no operand text
+% status:  RED ("Aolorstack0 push0 gBolorstack0 pop CaveDetmatrix1 0 0 1EestoreF Gbj «»Hnfo /Title (x)Iatalog …")
+%          -> GREEN
+\documentclass{article}
+\usepackage{luatex85}
+\begin{document}
+A\pdfcolorstack0 push{0 g}B\pdfcolorstack0 pop C\pdfsave D\pdfsetmatrix{1 0 0 1}E\pdfrestore F
+G\immediate\pdfobj{}H\pdfinfo{/Title (x)}I\pdfcatalog{/PageMode /UseNone}J\pdfmapline{+cmr10}K
+L\pdfextension lateliteral{0 g}M\pdfextension literal text{0 g}N
+\setbox0\hbox{\pdfextension literal raw{0 g}}O\pdfextension literal origin{0 g}P\pdfcolorstack0 current Q
+\pdfextension linkstate 1 R\pdfextension linkstate 0 S\setbox0\vbox{\pdfstartthread num 1 \pdfendthread}U
+\setbox0\hbox{\pdfthread name{x}}V\pdfextension glyphtounicode{a}{0061}W\pdftrailer{/X 1}X\pdfnames{/Y 2}Y
+\pdfmapfile{+foo.map}Z\pdfrefobj\pdflastobj{} a\pdfdest name{d} fit b\pdfextension fontattr\font{/A 1}c
+\pdfextension includechars\font{abc}d\pdfcatalog{/X 1} openaction goto name{d}e
+\pdfoutline goto name{d} count 0 {Outline}f\pdfextension outline useobjnum 1 {O2}g
+\immediate\pdfannot{/Subtype/Text}h\pdfstartlink attr{/C[1 0 0]} goto name{d}i\pdfendlink j
+\pdfextension obj uncompressed {}k\pdfextension literal shipout direct{0 g}l
+\end{document}

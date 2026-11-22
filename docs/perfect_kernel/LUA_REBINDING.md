@@ -24,7 +24,7 @@ our XML pipeline models.
 | Tier | Meaning | APIs | Fate of the intent |
 |---|---|---|---|
 | **Translate** | the Lua side's *output* re-enters our pipeline | `tex.print`/`sprint`/`write`/`tprint` | retokenized with current catcodes, digested normally |
-| **Mirror** | state our engine genuinely has is served *live* | `tex.count`, `tex.dimen` (reads **and** writes, indexed or `\countdef`'d-name keys), `tex.getcount`/`setcount`/`getdimen`/`setdimen` (incl. `'global'`); `font` as one font, the current one: `font.fonts[font.current()].characters[<code>]` (read-only, `\iffontchar\font`'s answer) | framed `Q`/`A` protocol over the child's pipes; `lua_bridge::service_query` reads/writes the Rust State mid-chunk |
+| **Mirror** | state our engine genuinely has is served *live* | `tex.count`, `tex.dimen` (reads **and** writes, indexed or `\countdef`'d-name keys), `tex.getcount`/`setcount`/`getdimen`/`setdimen` (incl. `'global'`); `font` as one font, the current one: `font.fonts[font.current()].characters[<code>]` (read-only, `\iffontchar\font`'s answer); `font.read_tfm`/`read_vf` are texlua's own file reads | framed `Q`/`A` protocol over the child's pipes; `lua_bridge::service_query` reads/writes the Rust State mid-chunk |
 | **Absorb** | intents with **no XML meaning** are accepted and dropped | `pdf.set*` (backend versions), `tex.primitives()` → `{}`, `texio.*`, `tex.error` | silently no-op — the document proceeds exactly as if the engine honored them |
 
 Outside the tiers, deliberately: **`node.*` / `callback.*`**, and the `font.*`

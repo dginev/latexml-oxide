@@ -296,17 +296,10 @@ if img then
     if type(value) == 'function' then img[name] = denier('img.' .. name, value) end
   end
 end
--- font, lang and vf need the engine's font memory and typesetter, which texlua lacks: font.current, font.id,
--- font.define, lang.new and vf.char crash it and font.read_vf aborts, past any pcall (hologo.sty:1298's
--- \HOLOGO@IfCharExists, TL manuals hvlogos-doc, derivative; babel-bidi-basic.lua:44's font.id('tenln'),
--- lettrine-demo-arabic). font is mirrored as one font, the current one (id 1): its characters answer
--- \iffontchar\font<code> (an integer sent over the query channel, '0'/'1' back; no I/O, no process, no TeX
--- evaluated); font.id answers -1, which is lualatex's answer for a name that is not a font (the LuaTeX manual's
--- luatex-fonts.tex:832; the bridge says whether \<name> is one). Every answer lualatex would give otherwise — a
--- font's id, another font, a field the mirror does not hold, a call that needs the engine's fonts, every lang and vf
--- call — counts a Warning (a 'W' frame, which no pcall swallows); a call is then also a Lua error. A document that
--- replaces font changes only its own answers.
+-- texlua has no engine fonts or typesetter: font mirrors the current font (hologo.sty:1298: hvlogos-doc, derivative);
+-- font.id, lang, vf crashed it (babel-bidi-basic.lua:44: lettrine-demo-arabic); other answers warn (OD #1081).
 local CURRENT_FONT = 1
+local kpse_ready = false
 local function engine_warning(msg)
   if not booting then frame('W', msg .. ' (texlua has no TeX engine fonts or typesetter)') end
 end
@@ -365,9 +358,31 @@ font = {
     end
   end,
 }
+-- read_tfm and read_vf read a TFM or VF through kpathsea, as lualatex does, once the program name is set (texlua
+-- aborts without one); getparameters and frozen answer nil, as in texlua; define, setfont, ... are a Lua error.
+local function after_kpse(what, original)
+  return function(...)
+    if not kpse_ready then return needs_engine(what)() end
+    return original(...)
+  end
+end
+local function answers_nil(what)
+  return function()
+    engine_warning(what .. ' answers nil')
+    return nil
+  end
+end
 if type(engine_font) == 'table' then
   for name, value in pairs(engine_font) do
-    if font[name] == nil and type(value) == 'function' then font[name] = needs_engine('font.' .. name) end
+    if font[name] == nil and type(value) == 'function' then
+      if name == 'read_tfm' or name == 'read_vf' then
+        font[name] = after_kpse('font.' .. name, value)
+      elseif name == 'getparameters' or name == 'frozen' then
+        font[name] = answers_nil('font.' .. name)
+      else
+        font[name] = needs_engine('font.' .. name)
+      end
+    end
   end
 end
 package.loaded.font = font
@@ -453,7 +468,11 @@ print = function() end
 -- resolve (newpax, tkz-elements, ...), and load lualibs, which supplies the
 -- 'file'/'string'/'table' library extensions lualatex gets via luaotfload.
 if kpse and kpse.set_program_name then
-  pcall(kpse.set_program_name, 'luatex')
+  -- kpathsea makes a missing TFM, PK or MF by running mktextfm & co when MKTEX* asks it to: no program runs here.
+  for _, var in ipairs({'MKTEXTFM', 'MKTEXPK', 'MKTEXMF', 'MKTEXTEX', 'MKTEXFMT', 'MKOCP', 'MKOFM'}) do
+    os.setenv(var, '0')
+  end
+  kpse_ready = pcall(kpse.set_program_name, 'luatex')
   local find_file = kpse.find_file
   t_insert(searchers, function(name)
     -- LuaTeX's own kpse loader reads a dotted name as a path (pgf.gd.trees.library).
@@ -762,15 +781,13 @@ fn service_query(payload: &str) -> String {
   let mut it = payload.split_whitespace();
   let op = it.next().unwrap_or("");
   let mut key = it.next().unwrap_or("");
-  // `fontid <name>`: whether `\<name>` is a font identifier (`\font\tenln=line10`), read-only.
+  // `fontid <name>`: whether `\<name>` is a font identifier (`\font\tenln=line10`), read-only; the probe interns no
+  // name (a document's names would stay in the arena for good).
   if let Some(name) = payload.strip_prefix("fontid ") {
-    let font = state::lookup_value(&format!("fontinfo_\\{name}"));
-    return if matches!(font, Some(state::Stored::Font(_))) {
-      "1"
-    } else {
-      "0"
-    }
-    .to_string();
+    let font = latexml_core::common::arena::get(format!("fontinfo_\\{name}")).is_some_and(|key| {
+      state::with_value_sym(key, |font| matches!(font, Some(state::Stored::Font(_))))
+    });
+    return if font { "1" } else { "0" }.to_string();
   }
   // `fontchar <code>`: the prelude's `font` mirror asks whether the current font has a character, read-only.
   if op == "fontchar" {

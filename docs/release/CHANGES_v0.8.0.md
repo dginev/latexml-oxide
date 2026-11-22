@@ -1514,16 +1514,22 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     but not the engine's fonts or typesetter, so `font.current()`, `font.id`, `font.define`, `lang.new`, `vf.char`
     and texlua's `tex.run`/`tex.finish` killed it past any `pcall` (an `Error:lua:interpreter`, and after three
     restarts no later chunk ran). `font` now mirrors one font, the current one, whose `characters` answer as
-    `\iffontchar\font` does; `font.id` answers -1; the calls that need the engine are a Lua error, and every answer
-    that is not lualatex's (a defined font's id, a font field the mirror lacks, those calls) a counted Warning. hologo's
+    `\iffontchar\font` does; `font.id` answers -1; `font.read_tfm` and `font.read_vf` read the font file as lualatex
+    does (no `mktextfm` runs for a missing one); `font.getparameters` and `font.frozen` answer nil, as texlua does;
+    the calls that need the engine are a Lua error, and every answer that is not lualatex's (a defined font's id, a
+    font field the mirror lacks, those calls) a counted Warning. hologo's
     XeTeX and LaTeX logos print the reversed E (Ǝ) and "Hàn Thế Thành" its ế, as lualatex does (12 TeX Live manuals
     under the luatex profile, among them hvlogos-doc, mfirstuc-manual and glossariesbegin, back to 0 errors; babel's
     bidi Lua in lettrine-demo-arabic too, with 4 Warnings for its `font.id` of latex.ltx's line and circle fonts). An interpreter that still ends mid-chunk says how in its Error
     (`signal: 11 (SIGSEGV)`, `exit status: 3`). OXIDIZED_DESIGN_DIVERGENCES #1081; guards
     `perfect_kernel_batchluafont`.
 
-  - **`\pdfextension literal` reads its operands under the luatex profile.** It read one token, so the rest of the
-    keyword and the literal's PDF code leaked as text ("iteralq -1 0 0 1 0 0 cm", accsupp's
-    "iteralpage/Span«/ActualText(…)»BDC" in mfirstuc-manual, glossaries-user, datatool-user and 7 more TeX Live
-    manuals); it now reads `\pdfliteral`'s `[shipout] [direct|page] <general text>`. Guard
-    `perfect_kernel_batchluafont::batchluafont_pdfextension_literal_reads_its_operands`.
+  - **`\pdfextension` reads its operands under the luatex profile.** It read one token, so the rest of the keyword
+    and its operands leaked as text ("iteralq -1 0 0 1 0 0 cm", accsupp's "iteralpage/Span«/ActualText(…)»BDC" in
+    mfirstuc-manual, glossaries-user, datatool-user and 7 more TeX Live manuals; pdfrender's "olorstackpop" 59 times
+    in xfakebold-doc). Every keyword LuaTeX knows (`literal` with its `text`/`raw`/`origin` modes, `colorstack`,
+    `setmatrix`, `obj`, `annot`, `startlink`, `outline`, `dest`, `info`, `catalog`, `mapline`, …) now reads the
+    operands pdfTeX's `\pdf<keyword>` reads; an unknown one is a Warning. pdfTeX's `\pdfcolorstack <n> current` no
+    longer swallows the text after it, `\pdfthread`/`\pdfstartthread` read their thread spec and `\pdfcatalog`'s
+    `openaction` its whole action. Guards `perfect_kernel_batchluafont::{batchluafont_pdfextension_literal_reads_its_operands,
+    batchluafont_pdfextension_keywords_read_their_operands}`.

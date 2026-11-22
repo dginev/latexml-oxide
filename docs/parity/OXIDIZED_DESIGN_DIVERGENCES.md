@@ -21027,20 +21027,30 @@ looked up through a table the document can change; `mplib.new` gets a raw copy (
 sandbox's finder; every `img` function is refused (texlua has no backend: `img.new`, `img.scan`, `img.write`
 crashed it). texlua has LuaTeX's `font`, `lang` and `vf` libraries without the engine's font memory or
 typesetter: `font.current`, `font.id`, `font.define`, `lang.new`, `vf.char` and texlua's own `tex.run`/`tex.finish`
-crashed it (SIGSEGV) and `font.read_vf` aborted, past any `pcall` (hologo.sty:1298-1320 `\HOLOGO@IfCharExists`, TL manuals
+crashed it (SIGSEGV), past any `pcall`, and `font.read_tfm`/`font.read_vf` abort it (SIGABRT, kpathsea's
+`kpse->program_name` assertion) when no kpathsea program name is set, which the prelude sets at boot (hologo.sty:1298-1320 `\HOLOGO@IfCharExists`, TL manuals
 derivative, hvlogos-doc, bxwareki, mfirstuc-manual and 9 more; babel-bidi-basic.lua:44 `font.id('tenln')`,
 lettrine-demo-arabic). The prelude replaces `font` with a pure-Lua mirror of one font, the current one (id 1:
 `font.current()`, `font.max()`, `font.nextid()` 2, `font.each`; `font.current(i)` is absorbed): `font.getfont(1)`,
 `font.getcopy(1)` and `font.fonts[1]` return a table whose `characters[<code>]` asks the bridge `fontchar <code>`
-over the query channel, answered as `\iffontchar\font<code>` is (`etex.rs` `font_has_char`: the font file's coverage,
-true when the file cannot be resolved) — an integer out, `0`/`1` back, no I/O, no process, no TeX evaluated; any
-other id is nil; `font.id(<name>)` is -1, the LuaTeX manual's answer for an undefined name (luatex-fonts.tex:832).
+over the query channel, answered as `\iffontchar\font<code>` is (`etex.rs` `font_has_char`, which may read the
+current font's TFM or OTF through kpathsea, as `\iffontchar` does; a current font whose file cannot be resolved
+answers every code as present, the inherited `\iffontchar` policy) — an integer out, `0`/`1` back, no process, no TeX
+evaluated; `fontid <name>` probes the State without interning the name; any other id is nil; `font.id(<name>)` is -1, the LuaTeX manual's answer for an undefined name (luatex-fonts.tex:832).
 Every answer that is not lualatex's counts a `Warning:lua:sandbox` (a `W` frame, kept through a `pcall`): `font.id`
 of a name the bridge reports as a font (`fontid <name>`: `fontinfo_\<name>` holds one; lualatex answers latex.ltx's
 `\tenln` with its id), another non-negative font id, `font.current(<id>)`, `font.each`, a read of a font or character
-field the mirror does not hold (`resources`, `fullname`: fontawesome5, texnegar); every other `font` function, every
-`lang` and `vf` function and `tex.run`/`tex.finish` are such a Warning and a Lua error (lualatex's `lang.new()`
-succeeds, and its `font.define{}` and `vf.char()` outside a virtual font end the run). hologo's test reads only
+field the mirror does not hold (`resources`, `fullname`: fontawesome5, texnegar), `font.getparameters` and
+`font.frozen` (nil, texlua's answer; lualatex gives the parameters and `false`); `font.define`, `font.setfont`,
+`font.addcharacters`, `font.setexpansion` (a plain Lua error in texlua, `define` a crash), any `font` function texlua
+adds later, every `lang` and `vf` function (`lang.clean`, `lang.hyphenate`, `vf.fontid`, `vf.rule` crash texlua too)
+and `tex.run`/`tex.finish` are such a Warning and a Lua error (lualatex's `lang.new()` succeeds, and its
+`font.define{}` and `vf.char()` outside a virtual font end the run). `font.read_tfm` and `font.read_vf` are texlua's
+own, a TFM or VF read through kpathsea as lualatex reads it (`read_tfm('cmr10',655360).name` is `cmr10`,
+`read_vf('ptmr7t',655360).fonts[1].name` `ptmr8r`); the prelude sets `MKTEXTFM`, `MKTEXPK`, `MKTEXMF`, `MKTEXTEX`,
+`MKTEXFMT`, `MKOCP` and `MKOFM` to 0 before kpathsea initialises, so a missing font runs no `mktextfm` (with
+`MKTEXTFM=1` in the environment, texlua's `read_tfm('ecrm0599',…)` ran mktextfm and METAFONT and wrote into
+`TEXMFVAR`; `kpse.find_file(…,'tfm')` likewise). hologo's test reads only
 `characters` and counts nothing. A document that replaces `font` changes only its own answers. Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
 the null device and `print` a no-op, and `package.loaded.texio`/`pdf`/`status`/`token` are the shims (`node` is
 nil). Frames are authenticated: the bridge sends a 128-bit nonce (SipHash under the standard library's random
@@ -21070,7 +21080,16 @@ inside (`tar`'s check). Other links, and entries whose path would leave the dire
 `Warning:archive:*`, logged and counted when the conversion's report starts (`error::warn_at_session_start`).
 The CLI's own zip unpacking writes a link entry as a plain file. `graphics.rs`
 `copy_to_destination` follows Perl: a source-relative path that would leave `--dest` (a `..`, root or drive
-component) takes the next free `xN.<ext>`. **Witnesses.** TL manuals ijsra (its class's images reached as
+component) takes the next free `xN.<ext>`. Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
+`read_pdfextension`) reads the operands of pdfTeX's `\pdf<keyword>`, with LuaTeX's additions (literal modes
+`text`/`raw`/`origin`, `lateliteral`, `obj … uncompressed`, `outline useobjnum`, `linkstate`; LuaTeX manual
+luatex-modifications.tex:592-907), through the same Rust readers and never through `\pdf<keyword>`, which
+luatex85.sty:69-92 defines as `\pdfextension <keyword>`; it read one token, so the rest leaked as text (xfakebold-doc's
+"olorstackpop", mfirstuc-manual's "iteralpage/Span«…»BDC"). An unknown keyword is a `Warning:unexpected:\pdfextension`
+and stays text, as lualatex's "unexpected use of \pdfextension" leaves it. The pdfTeX readers follow pdftex-syntax.tex
+where Perl pdfTeX.pool does not: `\pdfcolorstack <n> current` reads no text (as `pop`; pdflatex), `\pdfthread` and
+`\pdfstartthread` read a thread spec, `\pdfcatalog … openaction` reads the whole action spec, and the spaces after a
+`\pdfdest` spec are skipped. **Witnesses.** TL manuals ijsra (its class's images reached as
 `../../../tex/latex/…`, written beside `--dest`; now `x1.png`, `x2.png`), newpax (unchanged). **Guards.**
 `cluster_package_guards::perfect_kernel_batchseclua::{batchluaexec_refused_program_answers_as_lualatex,
 batchluaexec_font_current_keeps_the_interpreter,
@@ -21081,10 +21100,13 @@ batchseclua_lua_interpreter_restarts_and_owns_its_pipe, batchseclua_tar_links_st
 batchseclua_lua_frames_are_authenticated, batchseclua_lua_backslash_names_are_refused,
 batchseclua_lua_refusals_are_bounded, batchseclua_lua_interpreter_ends_with_the_timeout}`,
 `cluster_package_guards::perfect_kernel_batchluafont::{batchluafont_hologo_asks_the_current_font_for_its_glyph,
-batchluafont_font_lang_vf_calls_need_the_engine, batchluafont_interpreter_end_says_how}`,
+batchluafont_font_lang_vf_calls_need_the_engine, batchluafont_interpreter_end_says_how,
+batchluafont_font_read_tfm_and_read_vf_pass_through, batchluafont_pdfextension_literal_reads_its_operands,
+batchluafont_pdfextension_keywords_read_their_operands}`,
 `lua_bridge::tests::frame_headers_carry_the_session_nonce` (repros
 `luatex-profile/lua_sandbox_{refused_program_goes_on,no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
-`luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout,font_current_keeps_the_interpreter,font_mirror_hologo,font_lang_vf_need_the_engine}`,
+`luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout,font_current_keeps_the_interpreter,font_mirror_hologo,font_lang_vf_need_the_engine,font_read_tfm_vf}`,
+`luatex-profile/pdfextension_{literal_operands,keywords_luatex85}`,
 `loader/image_copy_outside_source_stays_in_dest`).
 
 ### 1082. A PASJ paper without its class keeps the class's own `\SetRunningHead`, `\FigureFile` and symbols (CLUSTFIX)
