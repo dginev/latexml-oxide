@@ -1,0 +1,21 @@
+% The same unparsable formula in four sections warns once per conversion, streamed as eager: the "warn once per
+% distinct formula" set lived on `MathParser`, and streaming pass 2 builds a parser per segment (and one more in
+% `finish_document`), so each spilled segment warned again (Nasser FAQ slices k600/k1200: 101 Warnings eager, 171
+% streamed, byte-identical XML). Perl warns for every failing formula (MathParser.pm:250-254, :862-897): 4 here.
+% witness: Nasser FAQ slices k600/k1200 (not arXiv); synthetic.
+% oracle:  pdflatex (TL 2025) 0 errors: "1 One", "Here a == b, , ) holds."
+% engines: Perl 4 `Warning:not_parsed`; INT7b eager 1 `Warning:unparsed_math`, streamed
+%          (`LATEXML_SPILL_AT_MIB=0 LATEXML_SOFT_YIELD_MIN_BOXES=1 --streaming`, 6 segments) 4.
+% expect:  0 errors; 1 `Warning:unparsed_math` eager and streamed; streamed XML == eager XML
+% status:  GREEN (STRMWARN: perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion)
+\documentclass{article}
+\begin{document}
+\section{One}
+Here $a = = b ,, )$ holds.
+\section{Two}
+Here $a = = b ,, )$ holds.
+\section{Three}
+Here $a = = b ,, )$ holds.
+\section{Four}
+Here $a = = b ,, )$ holds.
+\end{document}
