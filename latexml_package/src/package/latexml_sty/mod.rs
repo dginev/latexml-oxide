@@ -343,7 +343,8 @@ LoadDefinitions!({
     // `\pdffeedback creationdate` is the job's PDF date string, as pdfTeX's
     // `\pdfcreationdate` (luatex85.sty:62 `\xdef\pdfcreationdate{\pdffeedback
     // creationdate}`; novel-pdfx.sty parses it by its `D:`; novel, TeX Live
-    // class census 2026-09-24). The other queries read 0.
+    // class census 2026-09-24). `colorstackinit` and `ximagebbox` answer as pdfTeX's
+    // primitives; the other queries read their operands (luatex85.sty:56-67) and 0.
     DefMacro!(T_CS!("\\pdffeedback"), None, {
       let keyword = read_keyword(&[
         "lastlink",
@@ -364,8 +365,21 @@ LoadDefinitions!({
         "version",
         "revision",
       ])?;
-      if keyword == Some("creationdate") {
-        return latexml_engine::pdftex::pdf_creation_date();
+      match keyword {
+        Some("creationdate") => return latexml_engine::pdftex::pdf_creation_date(),
+        Some("colorstackinit") => return latexml_engine::pdftex::pdf_colorstack_init(),
+        Some("ximagebbox") => {
+          let image = read_number()?.value_of();
+          let corner = read_number()?.value_of();
+          return Ok(latexml_engine::pdftex::pdf_ximage_bbox(image, corner));
+        },
+        Some("pageref" | "xformname") => {
+          let _ = read_number()?;
+        },
+        Some("fontname" | "fontobjnum" | "fontsize") => {
+          let _ = read_token()?;
+        },
+        _ => {},
       }
       Ok(Tokens!(T_OTHER!("0")))
     });

@@ -138,14 +138,15 @@ fn batchluafont_pdfextension_literal_reads_its_operands() {
 /// `\pdf…` names as it; LuaTeX's additions `lateliteral`, `linkstate`, `obj uncompressed`, `outline useobjnum`), never
 /// through luatex85's own macros: the letters stay and no operand is text, as under lualatex. Base: only `literal`
 /// was known, and "olorstack0 push0 g", "etmatrix1 0 0 1", "nfo /Title (x)", "apline +cmr10", … leaked. Witness TL
-/// manual xfakebold/xfakebold-doc (pdfrender's `\pdfcolorstack`, 59 leaks). Distinct from the literal guard: the
-/// keyword table and each keyword's reader. Repro luatex-profile/pdfextension_keywords_luatex85.
+/// manual xfakebold/xfakebold-doc (pdfrender's `\pdfcolorstack`, 59 leaks; its `\pdfcolorstackinit page direct{…}`,
+/// luatex85's `\pdffeedback colorstackinit`, leaked "page direct1 w"). Distinct from the literal guard: the keyword
+/// table and each keyword's reader. Repro luatex-profile/pdfextension_keywords_luatex85.
 #[test]
 fn batchluafont_pdfextension_keywords_read_their_operands() {
   let (log, xml) = convert_with(repro!("pdfextension_keywords_luatex85"), LUATEX);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
-    xml.contains("<p>AB CDEF\nGHIJK\nLMN\nOP Q\nRSU\nVWXY\nZ abc\nde\nfg\nhij\nkl</p>"),
+    xml.contains("<p>AB CDEF\nGHIJK\nLMN\nOP Q\nRSU\nVWXY\nZ abc\nde\nfg\nhij\nkl\nmnopq</p>"),
     "{xml}"
   );
 }

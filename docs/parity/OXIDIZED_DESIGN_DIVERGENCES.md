@@ -21096,7 +21096,10 @@ component) takes the next free `xN.<ext>`. Under the luatex profile `\pdfextensi
 luatex-modifications.tex:592-907), through the same Rust readers and never through `\pdf<keyword>`, which
 luatex85.sty:69-92 defines as `\pdfextension <keyword>`; it read one token, so the rest leaked as text (xfakebold-doc's
 "olorstackpop", mfirstuc-manual's "iteralpage/Span«…»BDC"). An unknown keyword is a `Warning:unexpected:\pdfextension`
-and stays text, as lualatex's "unexpected use of \pdfextension" leaves it. The pdfTeX readers follow pdftex-syntax.tex
+and stays text, as lualatex's "unexpected use of \pdfextension" leaves it. `\pdffeedback colorstackinit` and
+`ximagebbox` answer as `\pdfcolorstackinit` and `\pdfximagebbox`, and `pageref`/`xformname`/`fontname`/`fontobjnum`/
+`fontsize` read their operand (pdfrender's `\pdfcolorstackinit page direct{…}` leaked "page direct1 w" in
+xfakebold-doc). The pdfTeX readers follow pdftex-syntax.tex
 where Perl pdfTeX.pool does not: `\pdfcolorstack <n> current` reads no text (as `pop`; pdflatex), `\pdfthread` and
 `\pdfstartthread` read a thread spec, `\pdfcatalog … openaction` reads the whole action spec, and the spaces after a
 `\pdfdest` spec are skipped. **Witnesses.** TL manuals ijsra (its class's images reached as

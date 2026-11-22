@@ -1,14 +1,16 @@
 % mechanism: pdftex.rs read_pdfextension (OXIDIZED_DESIGN_DIVERGENCES #1081): `\pdfextension <keyword>` reads the
 %   operands pdfTeX's `\pdf<keyword>` reads (LuaTeX manual luatex-modifications.tex:766-907), never through
 %   `\pdf<keyword>`, which luatex85.sty:69-92 defines as `\pdfextension <keyword>`; only `literal` was known, and every
-%   other keyword's first letter was read, the rest of it and its operands leaking as text.
+%   other keyword's first letter was read, the rest of it and its operands leaking as text. `\pdffeedback` (luatex85's
+%   \pdfcolorstackinit, \pdffontname, \pdfpageref, …) reads its operands too: they leaked ("page direct1 w").
 % witness: TL manual xfakebold/xfakebold-doc (pdfrender's \pdfcolorstack: 59 "olorstack" leaks, "olorstackpop…")
 % oracle:  lualatex -no-shell-escape: 0 errors, no operand text (pdftotext "AB F CDEGHIJK LMN OP Q RSU VWXY Z abc de fg
-%          hij kl": the colour stack moves F)
+%          hij kl mnopq": the colour stack moves F)
 % engines: rust=GREEN perl=n/a (Perl LaTeXML has no luatex profile) (2026-11-22)
 % preload: [rawstyles,rawclasses,luatex]latexml.sty
 % expect:  0 errors, 0 warnings; the letters only, no operand text
-% status:  RED ("Aolorstack0 push0 gBolorstack0 pop CaveDetmatrix1 0 0 1EestoreF Gbj «»Hnfo /Title (x)Iatalog …")
+% status:  RED ("Aolorstack0 push0 gBolorstack0 pop CaveDetmatrix1 0 0 1EestoreF Gbj «»Hnfo /Title (x)Iatalog …",
+%          "mpage direct1 w n…")
 %          -> GREEN
 \documentclass{article}
 \usepackage{luatex85}
@@ -24,4 +26,5 @@ L\pdfextension lateliteral{0 g}M\pdfextension literal text{0 g}N
 \pdfoutline goto name{d} count 0 {Outline}f\pdfextension outline useobjnum 1 {O2}g
 \immediate\pdfannot{/Subtype/Text}h\pdfstartlink attr{/C[1 0 0]} goto name{d}i\pdfendlink j
 \pdfextension obj uncompressed {}k\pdfextension literal shipout direct{0 g}l
+m\count255=\pdfcolorstackinit page direct{1 w}\relax n\edef\x{\pdffontname\font}o\count255=\pdffontobjnum\font\relax p\edef\x{\pdfpageref 1}q
 \end{document}

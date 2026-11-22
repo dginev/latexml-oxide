@@ -450,9 +450,7 @@ LoadDefinitions!({
   // it: the bp value in scaled points, printed in pt as catcode-12 characters, `pt` included (pdftex.web
   // `pdf_ximage_bbox_code` through `conv_toks`). An unknown image, or a corner outside 1-4, gives 0.0pt.
   DefMacro!("\\pdfximagebbox Number Number", sub[(image, corner)] {
-    let bp = ximage_bbox_corner_bp(image.value_of(), corner.value_of());
-    let sp = (bp * 65_781.76).round() as i64;
-    Ok(Tokens::new(Explode!(&Dimension::new(sp).to_string())))
+    Ok(pdf_ximage_bbox(image.value_of(), corner.value_of()))
   });
   // \pdfrefximage object number (h, v, m) — discard the object number
   def_primitive_noop("\\pdfrefximage Number")?;
@@ -628,15 +626,7 @@ LoadDefinitions!({
   // when the primitive does at format time (expl3-code.tex:675). With PDF
   // output the default (the K6 ruling, 2026-09-24) that backend is the one
   // expl3 loads.
-  DefMacro!("\\pdfcolorstackinit", sub[_args] {
-    let _ = read_keyword(&["page"])?;
-    let _ = read_keyword(&["direct"])?;
-    skip_spaces()?;
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
-    let stack = lookup_int("pdfcolorstack_count") + 1;
-    assign_value("pdfcolorstack_count", stack, Some(Scope::Global));
-    Ok(Tokens::new(Explode!(stack.to_string())))
-  });
+  DefMacro!("\\pdfcolorstackinit", sub[_args] { pdf_colorstack_init() });
   // `\pdfrunninglinkoff`/`\pdfrunninglinkon` suspend and resume a link across
   // page breaks; links are not paginated here.
   def_primitive_noop("\\pdfrunninglinkoff")?;
@@ -795,6 +785,26 @@ fn read_pdfliteral_operands(modes: &[&str]) -> Result<()> {
   let _ = read_keyword(&["shipout"])?;
   let _ = read_keyword(modes)?;
   read_general_text()
+}
+
+/// `\pdfcolorstackinit [page] [direct] <general text>`: the number of a new colour stack. LuaTeX's `\pdffeedback
+/// colorstackinit` is the same (luatex85.sty:67; pdfrender's `\pdfcolorstackinit page direct{…}` leaked "page
+/// direct1 w" in xfakebold-doc).
+pub fn pdf_colorstack_init() -> Result<Tokens> {
+  let _ = read_keyword(&["page"])?;
+  let _ = read_keyword(&["direct"])?;
+  skip_spaces()?;
+  let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  let stack = lookup_int("pdfcolorstack_count") + 1;
+  assign_value("pdfcolorstack_count", stack, Some(Scope::Global));
+  Ok(Tokens::new(Explode!(stack.to_string())))
+}
+
+/// `\pdfximagebbox <image> <corner>`: the corner of the image's box, as a dimension (also `\pdffeedback ximagebbox`).
+pub fn pdf_ximage_bbox(image: i64, corner: i64) -> Tokens {
+  let bp = ximage_bbox_corner_bp(image, corner);
+  let sp = (bp * 65_781.76).round() as i64;
+  Tokens::new(Explode!(&Dimension::new(sp).to_string()))
 }
 
 /// A `<general text>`: `<filler> {<balanced text>}`, discarded.
