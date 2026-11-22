@@ -424,8 +424,11 @@ thread_local! {
 pub fn reset_conversion_notices() {
   LOSTNODES_NOOP_REPORTED.set(false);
   FORMULA_ORDINAL.set(0);
-  // A fresh set, not `clear`: a huge paper's set would otherwise keep its capacity for the next one.
-  WARNED_FORMULAS.with_borrow_mut(|seen| *seen = HashSet::new());
+  // Shrunk as well as cleared: a huge paper's set would otherwise keep its capacity for the next one.
+  WARNED_FORMULAS.with_borrow_mut(|seen| {
+    seen.clear();
+    seen.shrink_to_fit();
+  });
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
