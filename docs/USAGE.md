@@ -42,3 +42,6 @@ To get Perl LaTeXML's behaviour — bindings only, a missing package skipped wit
 by OmniBus — pass `--noincludestyles` (or `--preload='[norawstyles,norawclasses]latexml.sty'`); latexml.sty's `iflimit`, `absorblimit` and
 `pushbacklimit` options set those limits, and `iflimit=0,absorblimit=0` lifts the two Perl leaves
 unset (OXIDIZED_DESIGN_DIVERGENCES #1080).
+
+Environment variables (memory, dumps, graphics, the render fleet, TeX Live paths and more) are listed in
+[ENVIRONMENT.md](ENVIRONMENT.md), also the rustdoc page `latexml::environment`.

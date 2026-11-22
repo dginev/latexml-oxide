@@ -6,6 +6,10 @@ extern crate latexml_engine;
 extern crate latexml_package;
 
 pub mod api;
+// Every environment variable latexml-oxide reads or sets. The text is docs/ENVIRONMENT.md, copied beside this file so
+// the crate package (and docs.rs) has it; `cluster_cli::environment_doc` fails when the two differ.
+#[doc = include_str!("ENVIRONMENT.md")]
+pub mod environment {}
 pub mod bib_session;
 #[cfg(feature = "test-utils")]
 pub mod conformance;
