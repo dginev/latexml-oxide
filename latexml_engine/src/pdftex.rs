@@ -636,10 +636,7 @@ LoadDefinitions!({
   // `shipout` (pdfTeX 1.40.25) precedes the spec (pdftex manual §`\pdfliteral`);
   // the general text's `<filler>` is skipped as for the GeneralText parameter.
   DefPrimitive!("\\pdfliteral", sub[_args] {
-    let _ = read_keyword(&["shipout"])?;
-    let _ = read_keyword(&["direct", "page"])?;
-    skip_filler()?;
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    read_pdfliteral_operands()?;
   });
   // \special pdfspecial spec
   // \pdfresettimer
@@ -871,6 +868,16 @@ LoadDefinitions!({
 /// actions are PDF navigation — but every token of the spec must be eaten
 /// so it does not fall into the text. Shared by `\pdfoutline` and
 /// `\pdfstartlink`-style readers.
+/// `\pdfliteral`'s operands: `[shipout] [direct|page] <general text>`, the keywords scanned with expansion. LuaTeX's
+/// `\pdfextension literal` reads the same (`latexml_sty`; luatex85.sty:69 defines `\pdfliteral` as it).
+pub fn read_pdfliteral_operands() -> Result<()> {
+  let _ = read_keyword(&["shipout"])?;
+  let _ = read_keyword(&["direct", "page"])?;
+  skip_filler()?;
+  let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  Ok(())
+}
+
 fn read_action_spec() -> Result<()> {
   let Some(kind) = read_keyword(&["user", "goto", "thread"])? else {
     return Ok(());

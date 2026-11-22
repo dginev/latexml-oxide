@@ -89,3 +89,15 @@ fn batchluafont_interpreter_end_says_how() {
   assert_eq!(error_count(&log), 1, "{log}");
   assert!(xml.contains("AB"), "{xml}");
 }
+
+/// `\pdfextension literal` reads `\pdfliteral`'s operands (`[shipout] [direct|page] <general text>`): the literals
+/// leave no text, as under lualatex. Base: one token was read, leaking "iteralq -1 0 0 1 0 0 cm", accsupp's
+/// "iteralpage/Span«/ActualText(UTF-8)»BDC". Witness TL manual mfirstuc/mfirstuc-manual (accsupp spans), hologo's
+/// mirrored-E fallback (bxwareki). Distinct from the font guards: the `\pdfextension` primitive, no Lua.
+/// Repro luatex-profile/pdfextension_literal_operands.
+#[test]
+fn batchluafont_pdfextension_literal_reads_its_operands() {
+  let (log, xml) = convert_with(repro!("pdfextension_literal_operands"), LUATEX);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("<p>ABC\nD EF</p>"), "{xml}");
+}

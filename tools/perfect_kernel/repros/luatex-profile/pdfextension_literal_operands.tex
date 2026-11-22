@@ -1,0 +1,17 @@
+% mechanism: latexml_sty/mod.rs \pdfextension (luatex profile): `\pdfextension literal` reads \pdfliteral's operands
+%   ([shipout] [direct|page] <general text>, pdftex.rs read_pdfliteral_operands; luatex85.sty:69 defines \pdfliteral
+%   as it); it read one token, so "iteral…" and the literal's PDF code leaked as text.
+% witness: TL manuals mfirstuc/mfirstuc-manual (accsupp's ActualText spans: "iteralpage/Span«…»BDC…"), hologo's
+%   mirrored-E fallback (bxwareki, textcsc-documentation, doc-modeles-factures-belges-assocs before the font mirror)
+% oracle:  lualatex -no-shell-escape: 0 errors; the literals put no text on the page
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no luatex profile) (2026-11-22)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% expect:  0 errors; "ABC D EF"
+% status:  RED ("Aiteralq -1 0 0 1 0 0 cmBiteral page QC iteral direct0 gD iteralpage/Span«…»BDCEiteralpageEMCF")
+%          -> GREEN
+\documentclass{article}
+\usepackage{accsupp}
+\begin{document}
+A\pdfextension literal{q -1 0 0 1 0 0 cm}B\pdfextension literal page {Q}C
+\pdfextension literal direct{0 g}D \BeginAccSupp{ActualText=UTF-8}E\EndAccSupp{}F
+\end{document}

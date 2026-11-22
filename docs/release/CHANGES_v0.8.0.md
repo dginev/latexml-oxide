@@ -1510,3 +1510,9 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     bidi Lua in lettrine-demo-arabic too). An interpreter that still ends mid-chunk says how in its Error
     (`signal: 11 (SIGSEGV)`, `exit status: 3`). OXIDIZED_DESIGN_DIVERGENCES #1081; guards
     `perfect_kernel_batchluafont`.
+
+  - **`\pdfextension literal` reads its operands under the luatex profile.** It read one token, so the rest of the
+    keyword and the literal's PDF code leaked as text ("iteralq -1 0 0 1 0 0 cm", accsupp's
+    "iteralpage/Span«/ActualText(…)»BDC" in mfirstuc-manual, glossaries-user, datatool-user and 9 more TeX Live
+    manuals); it now reads `\pdfliteral`'s `[shipout] [direct|page] <general text>`. Guard
+    `perfect_kernel_batchluafont::batchluafont_pdfextension_literal_reads_its_operands`.
