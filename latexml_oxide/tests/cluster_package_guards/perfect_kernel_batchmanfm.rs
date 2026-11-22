@@ -59,3 +59,33 @@ fn ams_based_class_setauthors_runs_only_the_document_additions() {
   assert!(!xml.contains("BY"), "{xml}");
   assert_eq!(xml.matches("Supported by grant 42.").count(), 1, "{xml}");
 }
+
+/// sectioning-frontmatter/default_email_label_tilde_redefined*: the steps after the frontmatter is placed digest the
+/// default e-mail label (`Email:~`) only for a contact that takes it, as Perl digests a name only for an entry it adds
+/// (Base_Utility.pool.ltxml:408): a document's `\def~{\verb~}` (lineno.tex:20, ulineno.tex:33) meets it neither with no
+/// e-mail nor with one its class names (amsart's "Email address: "). Red (4a74afcbfd): 1 Error each (`\verb illegal in
+/// argument`).
+#[test]
+fn default_email_label_digested_only_where_a_contact_takes_it() {
+  let xml = clean(repro!(
+    "sectioning-frontmatter",
+    "default_email_label_tilde_redefined.tex"
+  ));
+  assert_element(&xml, "title", &[], "<title>T</title>");
+  assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">x</p>"#);
+  let xml = clean(repro!(
+    "sectioning-frontmatter",
+    "default_email_label_tilde_redefined_own_label.tex"
+  ));
+  assert_element(
+    &xml,
+    "contact",
+    &[r#"role="email""#],
+    r#"<contact name="Email address: " role="email"><text font="typewriter" xml:id="id1">a@b.org</text></contact>"#,
+  );
+  assert_eq!(
+    creators(&xml),
+    vec![vec!["A".to_string(), "email=a@b.org".to_string()]],
+    "{xml}"
+  );
+}

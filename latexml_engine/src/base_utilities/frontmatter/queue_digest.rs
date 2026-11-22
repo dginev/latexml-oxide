@@ -991,6 +991,22 @@ pub(in crate::base_utilities) fn get_frontmatter_name(
   Ok(None)
 }
 
+/// The e-mail contact's default label, [`get_frontmatter_name`]`(None, "ltx:contact", "email")`, digested where a
+/// contact the steps after the frontmatter is placed label first takes it, as Perl digests a name only for an entry it
+/// adds (Base_Utility.pool.ltxml:408). A document with no such contact never digests `Email:~`, whose `~` it may have
+/// redefined (lineno.tex:20, ulineno.tex:33 `\def~{\verb~}`).
+#[derive(Default)]
+pub(in crate::base_utilities) struct DefaultEmailName(Option<Option<String>>);
+
+impl DefaultEmailName {
+  pub(in crate::base_utilities) fn get(&mut self) -> Result<Option<String>> {
+    if self.0.is_none() {
+      self.0 = Some(get_frontmatter_name(None, "ltx:contact", "email")?);
+    }
+    Ok(self.0.clone().flatten())
+  }
+}
+
 /// Whether the entry being made is LATE ([`LATE_ENTRY`]): set after `\maketitle` placed the frontmatter, queued after
 /// `\lx@frontmatterhere`'s flush or digested in place after it.
 pub(in crate::base_utilities) fn frontmatter_entry_is_late() -> bool {

@@ -72,7 +72,7 @@ pub(super) fn distribute_address_lists(document: &mut Document) -> Result<()> {
       }
     }
   }
-  let default_name = get_frontmatter_name(None, "ltx:contact", "email")?;
+  let mut default_name = DefaultEmailName::default();
   for (role, name, text, holders) in groups {
     let listed = listed_addresses(&text);
     if listed.len() < 2 {
@@ -158,7 +158,7 @@ pub(super) fn distribute_address_lists(document: &mut Document) -> Result<()> {
     let email_name = if is_email {
       name.clone()
     } else {
-      default_name.clone()
+      default_name.get()?
     };
     for (item, owner) in listed.iter().zip(&owners) {
       let target = match owner {
