@@ -61,6 +61,15 @@ fn fontchar_coverage(
   coverage_for_file(&tfm)
 }
 
+/// `\iffontchar<font><code>`'s answer: the font file's coverage, true when the file cannot be resolved. The Lua
+/// bridge's `font.fonts[id].characters` mirror asks it for the current font (`lua_bridge.rs`, `fontchar` query).
+pub(crate) fn font_has_char(font_tok: &Token, code: i64) -> bool {
+  match u32::try_from(code) {
+    Ok(code) => fontchar_coverage(font_tok).is_none_or(|cov| cov.contains(code)),
+    Err(_) => false,
+  }
+}
+
 LoadDefinitions!({
   // Helpers used by definitions below. Defined first so all defs can refer.
 
@@ -621,14 +630,7 @@ LoadDefinitions!({
   // behaviour. Guards: `perfect_kernel_batch56::iffontchar_reads_tfm_coverage`,
   // `iffontchar_bounds_unicodefonttable_to_font_coverage`.
   DefConditional!("\\iffontchar Token Number", sub[(font, code)] {
-    let code = code.value_of();
-    if code < 0 {
-      return Ok(false);
-    }
-    match fontchar_coverage(&font) {
-      Some(cov) => cov.contains(code as u32),
-      None => true,
-    }
+    font_has_char(&font, code.value_of())
   });
 
   // \ifincsname — eTeX: true while a `\csname…\endcsname` name is being

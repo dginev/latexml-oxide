@@ -1499,3 +1499,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     batchseclua_tar_links_stay_inside_the_source, batchseclua_lua_frames_are_authenticated,
     batchseclua_lua_backslash_names_are_refused, batchseclua_lua_refusals_are_bounded,
     batchseclua_lua_interpreter_ends_with_the_timeout}`.
+
+  - **Document Lua's `font`, `lang` and `vf` no longer crash the Lua interpreter.** texlua has LuaTeX's libraries
+    but not the engine's fonts or typesetter, so `font.current()`, `font.id`, `font.define`, `lang.new`, `vf.char`
+    and texlua's `tex.run`/`tex.finish` killed it past any `pcall` (an `Error:lua:interpreter`, and after three
+    restarts no later chunk ran). `font` now mirrors one font, the current one, whose `characters` answer as
+    `\iffontchar\font` does; `font.id` names no font (-1); the calls that need the engine are a Lua error. hologo's
+    XeTeX and LaTeX logos print the reversed E (Ǝ) and "Hàn Thế Thành" its ế, as lualatex does (12 TeX Live manuals
+    under the luatex profile, among them hvlogos-doc, mfirstuc-manual and glossariesbegin, back to 0 errors; babel's
+    bidi Lua in lettrine-demo-arabic too). An interpreter that still ends mid-chunk says how in its Error
+    (`signal: 11 (SIGSEGV)`, `exit status: 3`). OXIDIZED_DESIGN_DIVERGENCES #1081; guards
+    `perfect_kernel_batchluafont`.

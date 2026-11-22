@@ -24,11 +24,13 @@ our XML pipeline models.
 | Tier | Meaning | APIs | Fate of the intent |
 |---|---|---|---|
 | **Translate** | the Lua side's *output* re-enters our pipeline | `tex.print`/`sprint`/`write`/`tprint` | retokenized with current catcodes, digested normally |
-| **Mirror** | state our engine genuinely has is served *live* | `tex.count`, `tex.dimen` (reads **and** writes, indexed or `\countdef`'d-name keys), `tex.getcount`/`setcount`/`getdimen`/`setdimen` (incl. `'global'`) | framed `Q`/`A` protocol over the child's pipes; `lua_bridge::service_query` reads/writes the Rust State mid-chunk |
+| **Mirror** | state our engine genuinely has is served *live* | `tex.count`, `tex.dimen` (reads **and** writes, indexed or `\countdef`'d-name keys), `tex.getcount`/`setcount`/`getdimen`/`setdimen` (incl. `'global'`); `font` as one font, the current one: `font.fonts[font.current()].characters[<code>]` (read-only, `\iffontchar\font`'s answer) | framed `Q`/`A` protocol over the child's pipes; `lua_bridge::service_query` reads/writes the Rust State mid-chunk |
 | **Absorb** | intents with **no XML meaning** are accepted and dropped | `pdf.set*` (backend versions), `tex.primitives()` → `{}`, `texio.*`, `tex.error` | silently no-op — the document proceeds exactly as if the engine honored them |
 
-Outside the tiers, deliberately: **`node.*` / `font.*` / `callback.*`** — the
-typesetter-internals layer. These *cannot* be mirrored (we have no node lists)
+Outside the tiers, deliberately: **`node.*` / `callback.*`**, and the `font.*`
+calls beyond the one-font mirror (`font.define`, `font.setfont`, …), `lang.*` and
+`vf.*` — the typesetter-internals layer (texlua crashed on several of them, so
+the prelude makes each a plain Lua error; OXIDIZED_DESIGN_DIVERGENCES #1081). These *cannot* be mirrored (we have no node lists)
 and *must not* be absorbed silently (a chunk that builds nodes expects them to
 appear); they error visibly and the chunk degrades to a no-op with an
 `Info:lua` line. If a package's node-layer output matters for content, the

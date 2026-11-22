@@ -21,9 +21,11 @@
 //!   pipe (`tex.count`/`tex.dimen` reads AND writes round-trip to the Rust
 //!   State via framed `Q`/`A` messages, `service_query`);
 //! * **absorb** — intents with no XML-output meaning are accepted and
-//!   dropped (`pdf.set*`, `tex.primitives()`); the node/font/callback layers
-//!   (`node.*`, `font.*`, `callback.*` — LuaTeX typesetter internals) stay
-//!   out of scope and error visibly rather than pretend.
+//!   dropped (`pdf.set*`, `tex.primitives()`); the node/callback layers
+//!   (`node.*`, `callback.*` — LuaTeX typesetter internals) stay out of scope
+//!   and error visibly rather than pretend, as do `lang.*`, `vf.*` and the
+//!   `font.*` calls that need the engine's fonts; `font` mirrors one font,
+//!   the current one, whose characters answer `\iffontchar\font`.
 //!
 //! `require` is rebound through texlua's built-in kpse (plus lualibs, whose
 //! `file`/`string` extensions lualatex gets via luaotfload), so texmf-shipped
@@ -260,6 +262,65 @@ if img then
     if type(value) == 'function' then img[name] = denier('img.' .. name, value) end
   end
 end
+-- font, lang and vf need the engine's font memory and typesetter, which texlua lacks: font.current, font.id,
+-- font.define, lang.new and vf.char crash it and font.read_vf aborts, past any pcall (hologo.sty:1298's
+-- \HOLOGO@IfCharExists, TL manual hvlogos-doc; babel-bidi-basic.lua:44's font.id('tenln'), lettrine-demo-arabic).
+-- font is mirrored as one font, the current one: its characters answer \iffontchar\font<code> (an integer sent
+-- over the query channel, '0'/'1' back; no I/O, no process, no TeX evaluated); a name is undefined (font.id's -1,
+-- the LuaTeX manual's luatex-fonts.tex:832); a call that needs the engine's fonts, and every lang and vf call, is a
+-- plain Lua error.
+-- A document that replaces font changes only its own answers.
+local CURRENT_FONT = 1
+local function needs_engine(what)
+  return function() error(what .. " needs the engine's fonts and typesetter (texlua has neither)", 2) end
+end
+local function font_char(_, code)
+  if type(code) == 'number' and code >= 0 and code <= 0x10FFFF and code == m_floor(code)
+    and query('fontchar ' .. s_format('%d', code)) == '1' then
+    return {}
+  end
+  return nil
+end
+local function getfont(id)
+  if id ~= CURRENT_FONT then return nil end
+  return {characters = setmetatable({}, {__index = font_char})}
+end
+local engine_font = font
+font = {
+  current = function(id) if id == nil then return CURRENT_FONT end end,
+  id = function() return -1 end,
+  getfont = getfont,
+  getcopy = getfont,
+  fonts = setmetatable({}, {__index = function(_, id) return getfont(id) end,
+    __newindex = needs_engine('font.fonts[id] = ...')}),
+  max = function() return CURRENT_FONT end,
+  nextid = function() return CURRENT_FONT + 1 end,
+  each = function()
+    local done = false
+    return function()
+      if done then return nil end
+      done = true
+      return CURRENT_FONT, getfont(CURRENT_FONT)
+    end
+  end,
+}
+if type(engine_font) == 'table' then
+  for name, value in pairs(engine_font) do
+    if font[name] == nil and type(value) == 'function' then font[name] = needs_engine('font.' .. name) end
+  end
+end
+package.loaded.font = font
+for _, lib in ipairs({'lang', 'vf'}) do
+  local shim = {}
+  if type(_G[lib]) == 'table' then
+    for name, value in pairs(_G[lib]) do
+      if type(value) == 'function' then shim[name] = needs_engine(lib .. '.' .. name) end
+    end
+  end
+  _G[lib], package.loaded[lib] = shim, shim
+end
+-- texlua's own tex.run and tex.finish (the engine's main loop and its end) crash it too.
+tex.run, tex.finish = needs_engine('tex.run'), needs_engine('tex.finish')
 if lfs then
   local read_only = {attributes = true, currentdir = true, dir = true, isdir = true, isfile = true,
     readlink = true, shortname = true, symlinkattributes = true}
@@ -640,6 +701,12 @@ fn service_query(payload: &str) -> String {
   let mut it = payload.split_whitespace();
   let op = it.next().unwrap_or("");
   let mut key = it.next().unwrap_or("");
+  // `fontchar <code>`: the prelude's `font` mirror asks whether the current font has a character, read-only.
+  if op == "fontchar" {
+    let code = key.parse::<i64>().unwrap_or(-1);
+    let has = crate::etex::font_has_char(&latexml_core::T_CS!("\\font"), code);
+    return if has { "1" } else { "0" }.to_string();
+  }
   let global = key == "global";
   if global {
     key = it.next().unwrap_or("");
@@ -855,10 +922,19 @@ fn exec_framed(chunk: &str) -> Framed {
       Err(error) => {
         // The interpreter ended (a crash, `os.exit`) or broke the protocol: its output is lost and its state gone.
         // Dropping it kills and reaps the child; the next chunk starts a fresh one, up to MAX_RESTARTS times.
-        slot.proc_ = None;
+        let ended = slot.proc_.take();
         slot.ended += 1;
         let why = match error {
-          FrameError::Io(e) => format!("the texlua interpreter ended ({e})"),
+          FrameError::Io(e) => {
+            // A closed pipe is a child that is ending: say how (`signal: 11 (SIGSEGV)`, `exit status: 0`).
+            let status = ended
+              .and_then(|mut p| p.child.take())
+              .and_then(|child| child.finish(std::time::Duration::from_millis(500)));
+            match status {
+              Some(status) => format!("the texlua interpreter ended ({status})"),
+              None => format!("the texlua interpreter ended ({e})"),
+            }
+          },
           FrameError::Protocol(what) => format!("the texlua interpreter sent {what}"),
         };
         let next = if slot.ended > MAX_RESTARTS {

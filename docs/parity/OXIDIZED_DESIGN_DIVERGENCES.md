@@ -21014,7 +21014,19 @@ Every helper the checks and the frame protocol call (`string.*`, `next`, `type`,
 `read`/`write`/`flush`, `package.searchpath`, `kpse.find_file`, `load`) is a local captured at boot, never a method
 looked up through a table the document can change; `mplib.new` gets a raw copy (`next`) of its options carrying the
 sandbox's finder; every `img` function is refused (texlua has no backend: `img.new`, `img.scan`, `img.write`
-crashed it). Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
+crashed it). texlua has LuaTeX's `font`, `lang` and `vf` libraries without the engine's font memory or
+typesetter: `font.current`, `font.id`, `font.define`, `lang.new`, `vf.char` and texlua's own `tex.run`/`tex.finish`
+crashed it (SIGSEGV) and `font.read_vf` aborted, past any `pcall` (hologo.sty:1298 `\HOLOGO@IfCharExists`, TL manuals
+hvlogos-doc, bxwareki, mfirstuc-manual and 9 more; babel-bidi-basic.lua:44 `font.id('tenln')`,
+lettrine-demo-arabic). The prelude replaces `font` with a pure-Lua mirror of one font, the current one (id 1:
+`font.current()`, `font.max()`, `font.nextid()` 2, `font.each`; `font.current(i)` is absorbed): `font.getfont(1)`,
+`font.getcopy(1)` and `font.fonts[1]` return a table whose `characters[<code>]` asks the bridge `fontchar <code>`
+over the query channel, answered as `\iffontchar\font<code>` is (`etex.rs` `font_has_char`: the font file's coverage,
+true when the file cannot be resolved) — an integer out, `0`/`1` back, no I/O, no process, no TeX evaluated; any
+other id is nil; `font.id(<name>)` is -1, the LuaTeX manual's answer for an undefined name (luatex-fonts.tex:832;
+lualatex answers latex.ltx's `\tenln` with its id); every other `font` function, every `lang` and `vf` function and
+`tex.run`/`tex.finish` raise a plain Lua error (lualatex's `lang.new()` succeeds, and its `font.define{}` and
+`vf.char()` outside a virtual font end the run). A document that replaces `font` changes only its own answers. Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
 the null device and `print` a no-op, and `package.loaded.texio`/`pdf`/`status`/`token` are the shims (`node` is
 nil). Frames are authenticated: the bridge sends a 128-bit nonce (SipHash under the standard library's random
 `RandomState` keys) as the interpreter's first line, the prelude reads it before any other code loads, and every
@@ -21026,7 +21038,8 @@ suppress its OWN refusal records — by exhausting the C stack just before the r
 nest), by reading its own pipe through `/proc/self/fd/1` and winning the race, or by reading its process memory
 (`/proc/self/mem` is readable under `openin_any=a`) for the nonce. None of these lets the refused call take effect;
 a separate protocol channel (a socket pair, which `/proc/self/fd` cannot reopen) would close the pipe route — row R. An
-interpreter that ends or breaks the protocol mid-chunk is `Error:lua:interpreter` (its output and state are lost) and the next chunk
+interpreter that ends or breaks the protocol mid-chunk is `Error:lua:interpreter` (its output and state are lost; an
+ended one's exit status is named when it exits within 500 ms, `watchdog::KillOnExit::finish`) and the next chunk
 starts a fresh one, at most 3 times per conversion. `reset_session` (`Converter::initialize_session`) ends the
 interpreter with its conversion, so a persistent worker's next paper starts with a fresh Lua state in its own
 source directory. The child is registered with the watchdog (`watchdog::kill_on_exit`): the wall-clock and memory
@@ -21050,9 +21063,11 @@ batchseclua_sandbox_helpers_are_held_at_boot, batchseclua_lua_writes_follow_no_s
 batchseclua_lua_interpreter_restarts_and_owns_its_pipe, batchseclua_tar_links_stay_inside_the_source,
 batchseclua_lua_frames_are_authenticated, batchseclua_lua_backslash_names_are_refused,
 batchseclua_lua_refusals_are_bounded, batchseclua_lua_interpreter_ends_with_the_timeout}`,
+`cluster_package_guards::perfect_kernel_batchluafont::{batchluafont_hologo_asks_the_current_font_for_its_glyph,
+batchluafont_font_lang_vf_calls_need_the_engine, batchluafont_interpreter_end_says_how}`,
 `lua_bridge::tests::frame_headers_carry_the_session_nonce` (repros
 `luatex-profile/lua_sandbox_{no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
-`luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout}`,
+`luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout,font_mirror_hologo,font_lang_vf_need_the_engine}`,
 `loader/image_copy_outside_source_stays_in_dest`).
 
 ### 1082. A PASJ paper without its class keeps the class's own `\SetRunningHead`, `\FigureFile` and symbols (CLUSTFIX)
