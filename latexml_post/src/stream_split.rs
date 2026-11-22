@@ -1369,19 +1369,20 @@ fn xml_ns_attr(node: &Node, localname: &str) -> Option<String> {
     .or_else(|| node.get_attribute(&format!("xml:{localname}")))
 }
 
-/// Conservative substring probe for "this serialized fragment may contain an
-/// element with `localname`": matches `<localname` or `<pfx:localname`
-/// followed by a name-boundary character, so `<indexmark` does NOT register
-/// as `<index` (a real document's `\\index` markers would otherwise trigger a
-/// mini-DOM descent per paragraph). Text content cannot introduce `<`
-/// (escaped), so `<`-anchored matches are always element starts;
-/// `:`-anchored matches can over-trigger on text (harmless — descent is
-/// correct, just slower).
 /// Byte-level check for XML NCName characters that may appear in a namespace prefix.
 fn is_xml_ncname_char(b: u8) -> bool {
   b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.') || b >= 0x80
 }
 
+/// Conservative substring probe for "this serialized fragment may contain an
+/// element with `localname`": matches `<localname` or `<pfx:localname`
+/// followed by a name-boundary character, so `<indexmark` does NOT register
+/// as `<index` (a real document's `\\index` markers would otherwise trigger a
+/// mini-DOM descent per paragraph). Text content cannot introduce `<`
+/// (escaped), so `<`-anchored matches are always element starts. A
+/// `:localname` match counts only after `<` and a prefix: text such as
+/// `urn:resource/1` is not escaped, and a false match costs a descent at best
+/// and, for `resource`, a needless whole-DOM failover or a false Warning.
 fn contains_element_probe(outer: &str, localname: &str) -> bool {
   let boundary = |rest: &str| {
     rest

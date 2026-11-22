@@ -795,6 +795,9 @@ pub fn worker_main(manifest_path: &str) -> i32 {
       }
       // Hold this worker to its share of the run's memory budget, and align
       // `heap_trim::step_kb()` with that ceiling instead of the 4.5 GB default.
+      // The share is the worker's HARD (watchdog) ceiling, where the parent's cap
+      // is the soft 3/4 fuse: a `check_timeout` added to the page loop must not
+      // read it as the cooperative fuse.
       if manifest.max_rss_kb > 0 {
         latexml_core::stomach::set_memory_cap(Some(manifest.max_rss_kb.saturating_mul(1024)));
       }
