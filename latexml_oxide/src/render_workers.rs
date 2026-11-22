@@ -187,8 +187,8 @@ pub(crate) struct ParallelResult {
   /// The pages the workers wrote, folded in chunk order — the serial render's page order. For an
   /// abandoned fleet, every page it may have written ([`pages_the_fleet_may_have_written`]).
   pub(crate) written:        Vec<String>,
-  /// A worker failed, so nothing was folded and the document renders serially; a Fatal there
-  /// removes `written` too (#782).
+  /// A worker failed, so nothing was folded and the document renders serially. A page's Fatal
+  /// there removes `written` too (#782); a fuse or timeout stop keeps a partial site.
   pub(crate) abandoned:      bool,
 }
 

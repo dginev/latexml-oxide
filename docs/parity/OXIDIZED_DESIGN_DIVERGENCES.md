@@ -23692,7 +23692,8 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
   document back to the serial render at once: the rest of the fleet is killed, not waited for. That is an Info, and a
   Warning when a signal killed the worker (a crash; its own watchdog's memory exit is code 137, an Info). The workers
   keep their spilled pages for this, and no child log is folded. Their pages stay until the serial render rewrites
-  them; a Fatal there removes every page the fleet may have written (a worker that died unreported, its whole range).
+  them. A page's Fatal there (#782) removes every page the fleet may have written (a worker that died unreported, its
+  whole range); a memory-fuse or timeout stop keeps a partial site.
   Only a timeout still folds a killed fleet as Errors.
 
 Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`/`1`, `LATEXML_POST_STREAM_THRESHOLD`,
