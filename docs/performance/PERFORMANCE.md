@@ -199,19 +199,22 @@ The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, x
 * **Current reality:** fragmented core conversion and the two-pass streaming
   split front-end are implemented. A split run streams by default
   (OXIDIZED_DESIGN_DIVERGENCES #1133, 2026-11-21): the core spills at 512 MiB of
-  growth, and the CLI stages its core result beside the destination and frees it
-  before post takes the streaming split. Pages of 64 or more render on min(cores, 8)
+  growth, and the CLI's core serializes its result straight into a handoff file
+  beside the destination, which post's streaming split reads
+  (`Document::serialize_to_file`; no document-sized `String`: Nasser's whole
+  book died reallocating one to 2 GiB, issue 777). Pages of 64 or more render on min(cores, 8)
   workers. Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`/`1`,
   `LATEXML_POST_STREAM_THRESHOLD`, `LATEXML_RENDER_JOBS=1`. Nasser's
   2,400-problem slice (9,713 pages): peak RSS 3.8-4.9 → 1.35 GB, pages
-  byte-identical. `ConversionResponse.result` still materializes the complete
-  core XML as a `String` before that staging. Pass 2 also clones the
+  byte-identical. Unsplit runs, the library API, `cortex_worker` and the LSP
+  still materialize the complete core XML as a `String`
+  (`ConversionResponse.result`). Pass 2 also clones the
   conversion-global font map and rewrite rules per segment and constructs an
   unused XML scaffold per fragment. (The math grammar is shared since 2026-11-15:
   audit log, PERFA.)
-* **Fix:** add a writer/file-backed conversion API while retaining the current
-  string API as a compatibility wrapper. Hand the CLI's file directly to post.
-  (The split run's staging, above, is the stopgap.) Independently, share immutable pass-2 data, use fragment-local overlays, make
+* **Fix:** the writer-backed serializer exists (`SerializeSink`, the `String`
+  API its wrapper) and the CLI's split runs hand their file to post; an unsplit
+  run's XML or post input could take the same route. Independently, share immutable pass-2 data, use fragment-local overlays, make
   rewrite diagnostics lazy, and construct fragment fields without `Self::new()`.
 * **Boundary:** this attacks very-large-document RSS and segmented pass-2 CPU;
   it is not expected to move ordinary-paper medians. See audit F3/F4.

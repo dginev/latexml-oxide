@@ -409,6 +409,7 @@ impl LatexmlWorker {
       inputencoding:           None,
       streaming:               None,
       source_date_epoch:       bundle_date,
+      handoff_file:            None,
     };
 
     let mut converter = Converter::from_config(opts.clone());

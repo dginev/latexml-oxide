@@ -554,10 +554,12 @@ pub fn note_format_build_failure() {
 }
 
 pub struct ConversionResponse {
-  pub result:      Option<String>,
-  pub log:         String,
-  pub status:      String,
-  pub status_code: usize,
+  pub result:       Option<String>,
+  pub log:          String,
+  pub status:       String,
+  pub status_code:  usize,
+  /// The file the core result was serialized into ([`Config::handoff_file`]); `result` is then `Some("")`.
+  pub handoff_file: Option<String>,
 }
 pub struct Runtime {
   pub status:      String,
@@ -726,10 +728,11 @@ impl Converter {
       drop(_g_bootstrap);
       if !self.ready {
         return ConversionResponse {
-          result:      None,
-          log:         std::mem::take(&mut self.session_log),
-          status:      s!("Initialization failed."),
-          status_code: 3,
+          result:       None,
+          log:          std::mem::take(&mut self.session_log),
+          status:       s!("Initialization failed."),
+          status_code:  3,
+          handoff_file: None,
         };
       }
     }
@@ -830,7 +833,7 @@ impl Converter {
         Ok(dom) => {
           note_rootless_document(&dom);
           let _g = telemetry::phase(Phase::Serialize);
-          dom.serialize_to_string()
+          self.serialize_result(&dom)
         },
         Err(e) => {
           // Same resource-fatal surfacing as the eager DOM arm below.
@@ -849,7 +852,7 @@ impl Converter {
             };
             err().ok();
           }
-          String::new()
+          (String::new(), None)
         },
       };
       // The SHARED tail, not a hand-copy of parts of it: this arm used to
@@ -859,7 +862,7 @@ impl Converter {
       // `--source-map` run emitted `data:sourcepos` tags with NO decoder
       // table in the log. Streaming auto-activates on exactly the large
       // documents where both matter.
-      return self.finish_response(serialized);
+      return self.finish_response(serialized.0, serialized.1);
     }
 
     // Adaptive digestion (single pass): eager, until an RSS-driven yield seam
@@ -884,11 +887,11 @@ impl Converter {
         note_rootless_document(&dom);
         // Pass 1 + pass 2 + finalize already ran; serialize like the
         // `--streaming` branch above.
-        let serialized = {
+        let (serialized, handoff_file) = {
           let _g = telemetry::phase(Phase::Serialize);
-          dom.serialize_to_string()
+          self.serialize_result(&dom)
         };
-        return self.finish_response(serialized);
+        return self.finish_response(serialized, handoff_file);
       },
       Ok(crate::core_interface::AdaptiveOutcome::Eager(d)) => Ok(d),
       Err(e) => Err(e),
@@ -899,7 +902,7 @@ impl Converter {
         // watermark and the CLI reruns this document under --streaming. No
         // salvage (that would digest on), no Fatal line, no status change.
         emit_info("streaming", "restart_watermark", &e.message);
-        return self.finish_response(String::new());
+        return self.finish_response(String::new(), None);
       },
       Err(e) => {
         report_mut!().status_code = 3;
@@ -923,6 +926,7 @@ impl Converter {
     };
     // 2.1 Now, convert to DOM and output, if desired.
     let dom_result: Result<Document>;
+    let mut handoff_file = None;
     let serialized = match self.opts.format {
       OutputFormat::TeX => {
         let untex_result = { digested.untex() };
@@ -930,10 +934,11 @@ impl Converter {
           Ok(tex) => tex,
           Err(e) => {
             return ConversionResponse {
-              result:      None,
-              log:         self.flush_log(),
-              status:      s!("fatal:untex:{:?}", e),
-              status_code: 3,
+              result:       None,
+              log:          self.flush_log(),
+              status:       s!("fatal:untex:{:?}", e),
+              status_code:  3,
+              handoff_file: None,
             };
           },
         }
@@ -954,7 +959,9 @@ impl Converter {
           Ok(dom) => {
             note_rootless_document(&dom);
             let _g = telemetry::phase(Phase::Serialize);
-            dom.serialize_to_string()
+            let serialized;
+            (serialized, handoff_file) = self.serialize_result(&dom);
+            serialized
           },
           Err(e) => {
             // A resource fatal (Timeout target — e.g. a cycle-guard abort
@@ -1050,7 +1057,33 @@ impl Converter {
     // else { $serialized = $result; }                              // Compressed case
 
     // 5.2 Finalize logging and return a response containing the document result, log and status
-    self.finish_response(serialized)
+    self.finish_response(serialized, handoff_file)
+  }
+
+  /// The core result as a `String`, or (with [`Config::handoff_file`]) written to that file: `("", Some(path))`.
+  /// A failed write is reported at Info, as post's own staging failure is, and the result falls back to the
+  /// `String`, which post then stages itself or parses from memory.
+  fn serialize_result(&self, dom: &Document) -> (String, Option<String>) {
+    let Some(path) = self.opts.handoff_file.as_deref() else {
+      return (dom.serialize_to_string(), None);
+    };
+    // The destination's directory may not exist yet (the page writer creates it later).
+    let written = std::path::Path::new(path)
+      .parent()
+      .filter(|dir| !dir.as_os_str().is_empty())
+      .map_or(Ok(()), std::fs::create_dir_all)
+      .and_then(|()| dom.serialize_to_file(std::path::Path::new(path)));
+    match written {
+      Ok(_) => (String::new(), Some(path.to_string())),
+      Err(e) => {
+        emit_info(
+          "serialize",
+          "handoff",
+          &format!("could not serialize the core result to {path} ({e}); serializing in memory"),
+        );
+        (dom.serialize_to_string(), None)
+      },
+    }
   }
 
   /// The SHARED conversion tail: instrumentation flush (ASF stats, the
@@ -1064,7 +1097,11 @@ impl Converter {
   /// counters), so diagnostics raised during serialization itself still reach
   /// the reported verdict — the streaming arm always did this; the eager path
   /// previously froze status before serializing.
-  fn finish_response(&mut self, serialized: String) -> ConversionResponse {
+  fn finish_response(
+    &mut self,
+    serialized: String,
+    handoff_file: Option<String>,
+  ) -> ConversionResponse {
     self.runtime.status = get_status_message();
     self.runtime.status_code = get_status_code();
     // (taken at every conversion's start too, so a count never carries over; a Debug line, as every document has one)
@@ -1120,6 +1157,7 @@ impl Converter {
       log,
       status: self.runtime.status.clone(),
       status_code: self.runtime.status_code,
+      handoff_file,
     }
   }
 
@@ -1143,10 +1181,11 @@ impl Converter {
       Err(e) => {
         if !self.ready {
           return ConversionResponse {
-            result:      None,
-            log:         self.flush_log(),
-            status:      s!("Initialization failed."),
-            status_code: 3,
+            result:       None,
+            log:          self.flush_log(),
+            status:       s!("Initialization failed."),
+            status_code:  3,
+            handoff_file: None,
           };
         }
         report_mut!().status_code = 3;
@@ -1205,6 +1244,7 @@ impl Converter {
       log,
       status: self.runtime.status.clone(),
       status_code: self.runtime.status_code,
+      handoff_file: None,
     }
   }
 

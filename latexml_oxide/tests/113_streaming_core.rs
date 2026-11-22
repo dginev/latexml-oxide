@@ -139,3 +139,104 @@ fn streaming_is_byte_identical_to_eager() {
     );
   }
 }
+
+/// A streamed conversion (budget 3) asked to serialize into `handoff`. Returns (result, handoff_file, log,
+/// spilled segments, nested splices).
+fn convert_with_handoff(
+  source: &str,
+  handoff: String,
+) -> (Option<String>, Option<String>, String, usize, usize) {
+  let source = source.to_string();
+  std::thread::Builder::new()
+    .stack_size(64 * 1024 * 1024)
+    .spawn(move || {
+      latexml::util::test::init_test_rss_cap();
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+      let cfg = Config {
+        format: OutputFormat::XML,
+        streaming: Some(3),
+        extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+        handoff_file: Some(handoff),
+        ..Config::default()
+      };
+      let mut c = Converter::from_config(cfg);
+      c.initialize_session().expect("initialize");
+      let r = c.convert(source);
+      let outcome = (
+        r.result,
+        r.handoff_file,
+        r.log,
+        latexml_core::document::spilled_segment_count(),
+        latexml_core::document::nested_splice_count(),
+      );
+      latexml_core::reset_thread_engine();
+      outcome
+    })
+    .expect("spawn conversion thread")
+    .join()
+    .expect("conversion thread panicked")
+}
+
+/// A split run's core result goes to post through `Config::handoff_file`, serialized there without a `String`
+/// (issue 777: Nasser's whole book died reallocating its 1 GiB core XML to 2 GiB). The file holds
+/// `serialize_to_string`'s bytes, trailing-newline trim included, on a streamed document whose assembly splices
+/// segments nested in other segments (`splice_segment_text`).
+#[test]
+fn streaming_handoff_file_is_byte_identical_to_the_string() {
+  let source = "tests/streaming/streaming_gate.tex";
+  let (eager_xml, ..) = convert(source, None);
+  let dir = tempfile::tempdir().expect("tempdir");
+  // A directory that does not exist yet: the converter creates it, as the page writer would.
+  let path = dir.path().join("site").join("handoff.xml");
+  let (result, handoff_file, log, spills, nested) =
+    convert_with_handoff(source, path.to_string_lossy().into_owned());
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert!(
+    spills > 0 && nested > 0,
+    "the assembly must splice nested segments: {spills} spilled, {nested} nested"
+  );
+  assert_eq!(
+    result.as_deref(),
+    Some(""),
+    "no String result beside the file"
+  );
+  assert_eq!(
+    handoff_file.as_deref(),
+    Some(path.to_string_lossy().as_ref())
+  );
+  let written = std::fs::read_to_string(&path).expect("the handoff file");
+  assert!(
+    written == eager_xml,
+    "the handoff file must hold the String's bytes"
+  );
+}
+
+/// A handoff file that cannot be written (here its directory is a regular file) is reported at Info, as post's own
+/// staging failure is, and the result falls back to the `String`: the same bytes, no error, no file left behind.
+#[test]
+fn unwritable_handoff_file_falls_back_to_the_string() {
+  let source = "tests/streaming/streaming_gate.tex";
+  let (eager_xml, ..) = convert(source, None);
+  let dir = tempfile::tempdir().expect("tempdir");
+  let blocker = dir.path().join("not-a-dir");
+  std::fs::write(&blocker, "").expect("blocker written");
+  let path = blocker.join("handoff.xml");
+  let (result, handoff_file, log, ..) =
+    convert_with_handoff(source, path.to_string_lossy().into_owned());
+  assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
+  assert_eq!(latexml::util::test::warning_count(&log), 0, "{log}");
+  assert!(
+    log.contains("Info:serialize:handoff could not serialize the core result to"),
+    "the failure must be reported:\n{log}"
+  );
+  assert_eq!(handoff_file, None);
+  assert!(
+    result.as_deref() == Some(eager_xml.as_str()),
+    "the String result"
+  );
+  let left: Vec<_> = std::fs::read_dir(dir.path())
+    .expect("readdir")
+    .filter_map(|e| e.ok().map(|e| e.file_name()))
+    .collect();
+  assert_eq!(left, ["not-a-dir"], "no handoff file left behind");
+}

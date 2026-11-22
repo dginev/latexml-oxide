@@ -176,6 +176,9 @@ pub struct Config {
   /// time). ar5iv's archival preload sets the job's clock from it, so `\today` prints the paper's date, never the
   /// conversion's.
   pub source_date_epoch:       Option<i64>,
+  /// Serialize the core result into this file, not a `String` (the CLI's split runs, whose post reads its input
+  /// from a file anyway): the response then names the file in `handoff_file`. `None`: the `String` result.
+  pub handoff_file:            Option<String>,
 }
 /// The front ends' default `\if` runaway ceiling: ten times ar5iv.sty's `iflimit` (48,000,000,
 /// `latexml_contrib/src/ar5iv_sty.rs`, which the arXiv fleet keeps). The counter accumulates over the whole document, so
@@ -208,6 +211,7 @@ impl Default for Config {
       inputencoding:           None,
       streaming:               None,
       source_date_epoch:       None,
+      handoff_file:            None,
     }
   }
 }

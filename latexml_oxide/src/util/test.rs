@@ -1195,10 +1195,11 @@ fn convert_in_process<R: Send + 'static>(
           converter.convert(source)
         },
         Err(e) => crate::converter::ConversionResponse {
-          result:      None,
-          log:         format!("Error:prepare_session:{e}"),
-          status:      String::from("Initialization failed."),
-          status_code: 3,
+          result:       None,
+          log:          format!("Error:prepare_session:{e}"),
+          status:       String::from("Initialization failed."),
+          status_code:  3,
+          handoff_file: None,
         },
       };
       let xml = resp.result.unwrap_or_default();

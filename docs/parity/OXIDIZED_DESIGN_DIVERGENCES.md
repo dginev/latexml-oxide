@@ -23666,9 +23666,13 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
   differences from the eager result (#456, #738, #903); `--streaming=false` does not keep such a run eager.
 - splits through the streaming front-end (`latexml_post::stream_split`) at any size: `post::stream_split_threshold`
   now defaults to 0, where it was 1 GiB. This holds for every caller of `post::run_post_processing_logged` that sets
-  `split: true`; `api.rs`, `cortex_worker` and the LSP pass `split: false`. The CLI hands over the core result by value
-  (`post::run_post_processing_owned_logged`): staged beside the destination (in "." for a bare `--dest=a.html`), whose
-  directory it creates, and removed once the pages are spilled. A stream that fails on an input under 1 GiB falls back
+  `split: true`; `api.rs`, `cortex_worker` and the LSP pass `split: false`. The CLI's core serializes its result
+  straight into the handoff file (`post::reserve_core_handoff`, `Config::handoff_file`, `Document::serialize_to_file`,
+  byte-identical to `serialize_to_string`), so no document-sized `String` exists: Nasser's whole book died at 1 GiB
+  reallocating it to 2 GiB (issue 777). The file sits beside the destination (in "." for a bare `--dest=a.html`), whose
+  directory it creates, and is removed once the pages are spilled. A file it cannot write is reported at Info and the
+  result falls back to the `String`, which post stages or parses from memory (`post::run_post_processing_owned_logged`,
+  also the path of a joined supplement or an archive). A stream that fails on an input under 1 GiB falls back
   to the whole-DOM split with an Info. Such a stream fails when a template item arrives after a page was written (an
   `ltx:navigation` from `--input xml`, an `ltx:resource`, a root `ltx:date` or a `<?latexml?>` PI), or when an
   `ltx:resource` sits nested inside content. The DOM split copies these into the pages' templates, each page taking the
@@ -23698,7 +23702,9 @@ in-memory cases), `::cli_split_streams_by_default_and_unsplit_stays_eager`, and
 `LATEXML_RENDER_WORKER_TEST_ABORT` hook, test-utils builds only: a dead worker and a failed db attach),
 `112_fragment_yield::split_keeps_pages_whose_namespaces_a_navigation_uses` (a late navigation),
 `118_streaming_split_parity::nested_resource_split_falls_back_to_the_whole_dom_split` and
-`::cli_bare_dest_stages_beside_the_destination`.
+`::cli_bare_dest_stages_beside_the_destination`; the handoff file:
+`113_streaming_core::streaming_handoff_file_is_byte_identical_to_the_string` (nested segments),
+`::unwritable_handoff_file_falls_back_to_the_string`, `document::serializer_escape::file_sink_writes_the_trimmed_string`.
 
 ### 1134. A split page links only the related pages something reads (CHAPLINKS)
 
