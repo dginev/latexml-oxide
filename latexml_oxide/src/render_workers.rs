@@ -817,7 +817,7 @@ pub fn worker_main(manifest_path: &str) -> i32 {
           latexml_core::watchdog::kill_pid(std::process::id(), false)
         },
         Some("signal") => std::thread::sleep(std::time::Duration::from_secs(600)),
-        Some(_) => std::process::exit(70),
+        Some(_) => latexml_core::watchdog::exit_now(70),
       }
       // Hold this worker to its share of the run's memory budget, and align
       // `heap_trim::step_kb()` with that ceiling instead of the 4.5 GB default.
@@ -831,7 +831,9 @@ pub fn worker_main(manifest_path: &str) -> i32 {
         .then(|| latexml_core::watchdog::Watchdog::with_limits(0, manifest.max_rss_kb));
       let code = match render_manifest_pages(manifest) {
         #[cfg(feature = "test-utils")]
-        Ok(_) if test_fault().as_deref() == Some("unreported") => std::process::exit(70),
+        Ok(_) if test_fault().as_deref() == Some("unreported") => {
+          latexml_core::watchdog::exit_now(70)
+        },
         Ok((written, discard)) => print_status_report(&written, discard),
         Err(why) => print_setup_failure(&why),
       };

@@ -521,7 +521,8 @@ pub const EXIT_OOM: i32 = 137;
 /// file, and by a `cortex_worker` harness child to record the cause of its
 /// exit for the harness. Set once at startup via `set_pre_exit_hook`; the hook is
 /// invoked exactly once. Zero overhead on the happy path — only the
-/// watchdog firing reads it.
+/// watchdog firing reads it. The process then ends through [`exit_now`], which flushes
+/// nothing: the hook writes, finishes and closes what it leaves before it returns.
 type PreExitHook = Box<dyn FnOnce(i32) + Send + 'static>;
 
 static PRE_EXIT_HOOK: std::sync::OnceLock<std::sync::Mutex<Option<PreExitHook>>> =
@@ -786,7 +787,13 @@ pub fn enter_alloc_failure_hook() {
 
 /// Ends the process now with `code`: `_exit`, without the atexit handlers, destructors and stream
 /// flushes of [`std::process::exit`], any of which can allocate or wait on a lock held by a thread
-/// that will never release it.
+/// that will never release it. Every exit taken while another thread may still run goes through it:
+/// `exit` runs the libraries' destructors under that thread (libxml2's `.fini_array` calls
+/// `xmlCleanupParser`, freeing the catalog, encoding aliases, dict mutexes and global-state key a
+/// running render reads: a render worker's SIGSEGV with ip == fault address in freed heap). What
+/// must land is written first, unbuffered: the stderr line ([`write_stderr_unlocked`]), the log
+/// mirror (a raw descriptor), a pre-exit hook's file. Only a partial line still in stdout's
+/// line buffer is lost.
 pub fn exit_now(code: i32) -> ! {
   #[cfg(unix)]
   // SAFETY: `_exit` takes no pointers and does not return.
@@ -841,7 +848,7 @@ fn claim_exit(code: i32) {
 /// Parks the calling thread once the watchdog has begun to exit, until that exit ends the process. Called before every
 /// exit and result hand-off a timed-out run could race (the binaries' final exits, cortex_worker's results). Bounded: if
 /// the exit has not come within a minute (a pre-exit hook that blocked, or a sweep slower than that, which it then cuts
-/// short) the thread exits itself, with the claimed code.
+/// short) the thread exits itself, with the claimed code, through [`exit_now`]: the watchdog thread still runs.
 pub fn park_if_exiting() {
   let code = EXITING.load(Ordering::Acquire);
   if code != 0 {
@@ -849,7 +856,7 @@ pub fn park_if_exiting() {
     while let Some(left) = deadline.checked_duration_since(Instant::now()) {
       thread::park_timeout(left);
     }
-    std::process::exit(code);
+    exit_now(code);
   }
 }
 
@@ -906,18 +913,13 @@ impl Watchdog {
         run_pre_exit_hook(EXIT_TIMEOUT);
         kill_registered_children();
         remove_registered_paths();
-        // `std::process::exit(124)` instead of `abort()`: the watchdog must
-        // terminate the whole process (the worker thread is presumed wedged
-        // in a tight loop that won't observe a cooperative cancel), but
-        // `abort()` produces a "Aborted (core dumped)" SIGABRT trace from
-        // the shell. `exit(124)` (standard timeout exit code) runs atexit
-        // handlers, flushes stderr, and leaves a clean exit signal the
-        // parent harness can interpret as "paper timed out" without
-        // conflating it with a Rust panic / memory corruption. Witnesses:
-        // 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
-        // q-alg9605003, q-alg9605028 — the 7 "Aborted" rows in the
-        // 2026-05-13 588-paper sweep.
-        std::process::exit(EXIT_TIMEOUT);
+        // Exit 124 (the standard timeout code), not `abort()`: the worker thread is presumed wedged
+        // and won't observe a cancel, and a SIGABRT reads to the harness as a crash ("Aborted (core
+        // dumped)"; witnesses 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
+        // q-alg9605003, q-alg9605028, the 7 "Aborted" rows of the 2026-05-13 588-paper sweep).
+        // Through `exit_now`, as that thread still runs: `exit`'s library destructors would free
+        // libxml2's globals under it.
+        exit_now(EXIT_TIMEOUT);
       }
       if max_rss_kb > 0
         && let Some(rss) = process_rss_kb()
@@ -937,7 +939,7 @@ impl Watchdog {
         run_pre_exit_hook(EXIT_OOM);
         kill_registered_children();
         remove_registered_paths();
-        std::process::exit(EXIT_OOM);
+        exit_now(EXIT_OOM);
       }
       thread::sleep(poll_interval);
     }
@@ -954,6 +956,64 @@ impl Drop for Watchdog {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// A breach ends the process through `_exit`, as its pre-exit work leaves it: no exit handler runs under the threads
+  /// still converting (libxml2's `.fini_array` `xmlCleanupParser` freed the globals a render worker read: its SIGSEGV).
+  /// The child plants two markers only `exit` would act on: a thread-local destructor of the breaching thread (glibc's
+  /// exit handlers) and a line left in stdout's buffer (`std::process::exit`'s flush). Run here, it is the child.
+  #[test]
+  fn a_breach_ends_the_process_without_exit_handlers() {
+    const CHILD: &str = "LATEXML_WATCHDOG_BREACH_CHILD";
+    struct Marker;
+    impl Drop for Marker {
+      fn drop(&mut self) { write_stderr_unlocked(format_args!("exit-handler-ran\n")); }
+    }
+    std::thread_local!(static MARKER: Marker = const { Marker });
+    if let Ok(breach) = std::env::var(CHILD) {
+      MARKER.with(|_| {});
+      use std::io::Write;
+      let _ = std::io::stdout().write_all(b"buffered-stdout");
+      let cancelled = Arc::new(AtomicBool::new(false));
+      match breach.as_str() {
+        "timeout" => Watchdog::run(cancelled, 1, 0),
+        _ => Watchdog::run(cancelled, 0, 1),
+      }
+      unreachable!("the breach exits");
+    }
+    let mut breaches = vec![("timeout", EXIT_TIMEOUT, "Fatal:timeout:wallclock")];
+    if process_rss_kb().is_some() {
+      breaches.push(("rss", EXIT_OOM, "Fatal:oom:rss"));
+    }
+    for (breach, code, line) in breaches {
+      let out = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+          "watchdog::tests::a_breach_ends_the_process_without_exit_handlers",
+          "--exact",
+          "--nocapture",
+          "--test-threads=1",
+        ])
+        .env(CHILD, breach)
+        .output()
+        .unwrap();
+      let (stdout, stderr) = (
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+      );
+      assert_eq!(out.status.code(), Some(code), "{breach}: {stderr}");
+      assert!(
+        stderr.contains(line),
+        "{breach}: the breach's line: {stderr}"
+      );
+      assert!(
+        !stderr.contains("exit-handler-ran"),
+        "{breach}: the thread's destructor ran: exit, not _exit"
+      );
+      assert!(
+        !stdout.contains("buffered-stdout"),
+        "{breach}: stdout was flushed: std::process::exit, not _exit"
+      );
+    }
+  }
 
   /// A registered path is removed by the sweep an exit runs; one whose guard was dropped (its owner removed it, or
   /// keeps it) is not.
