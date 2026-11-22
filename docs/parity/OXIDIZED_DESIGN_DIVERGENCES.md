@@ -21027,7 +21027,10 @@ swallowed when the chunk pcalls the call; the name shown is cut at 256 bytes, an
 severity (64 KiB each), the rest in one summary per severity, so Warnings never push an Error's name out. A chunk
 that fails after a `W` refusal — it used the refused call's `nil`, `io.popen(cmd):read()`, and is lost as under
 lualatex (rc=1, "attempt to index a nil value") — adds `Error:lua:sandbox the chunk failed after the sandbox refused
-<call>: <Lua error>`; any other chunk's Lua error stays the caller's Info.
+<call>: <Lua error>`; any other chunk's Lua error stays the caller's Info. An engine layer texlua lacks, which
+lualatex performs (a font, a language, a typesetter call), is a `G` frame (the prelude's `gap(msg)`, same nonce):
+`Warning:lua:engine <msg>`, with its own 20-entry budget and summary, never a refusal, so a chunk failing after it
+alone stays an Info (row R LUAERRSEV); a chunk with both a `G` and a `W` still escalates.
 Every helper the checks and the frame protocol call (`string.*`, `next`, `type`, the file handles' C
 `read`/`write`/`flush`, `package.searchpath`, `kpse.find_file`, `load`) is a local captured at boot, never a method
 looked up through a table the document can change; `mplib.new` gets a raw copy (`next`) of its options carrying the
@@ -21040,7 +21043,7 @@ nil). Frames are authenticated: the bridge sends a 128-bit nonce (SipHash under 
 `RandomState` keys) as the interpreter's first line, the prelude reads it before any other code loads, and every
 header is `<tag> <nonce> <length>`, built by concatenation (a `%s` format would run a string `__tostring` the
 document set); an error value is shown without `tostring`. The bridge reads a frame header of at most 64 bytes and a
-body of at most 64 MiB, only the tags `D`/`W`/`Q`/`OK`/`ERR` and only with the nonce, so bytes reaching the pipe by any
+body of at most 64 MiB, only the tags `D`/`W`/`G`/`Q`/`OK`/`ERR` and only with the nonce, so bytes reaching the pipe by any
 other route are a broken protocol, so a record cannot be forged. The record itself is best-effort: a chunk can
 suppress its OWN refusal records — by exhausting the C stack just before the record is written (a ~195-deep `pcall`
 nest), by reading its own pipe through `/proc/self/fd/1` and winning the race, or by reading its process memory
@@ -21073,7 +21076,7 @@ batchseclua_sandbox_helpers_are_held_at_boot, batchseclua_lua_writes_follow_no_s
 batchseclua_lua_interpreter_restarts_and_owns_its_pipe, batchseclua_tar_links_stay_inside_the_source,
 batchseclua_lua_frames_are_authenticated, batchseclua_lua_backslash_names_are_refused,
 batchseclua_lua_refusals_are_bounded, batchseclua_lua_interpreter_ends_with_the_timeout}`,
-`lua_bridge::tests::frame_headers_carry_the_session_nonce` (repros
+`lua_bridge::tests::{frame_headers_carry_the_session_nonce, engine_gaps_do_not_escalate}` (repros
 `luatex-profile/lua_sandbox_{refused_program_goes_on,refused_then_failed,refusal_budgets,no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
 `luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout,font_current_keeps_the_interpreter}`,
 `loader/image_copy_outside_source_stays_in_dest`).

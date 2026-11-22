@@ -1,9 +1,9 @@
 % mechanism: lua_bridge.rs frame protocol (OXIDIZED_DESIGN_DIVERGENCES #1081): every frame header carries the nonce
 %   the bridge sent as the interpreter's first line, and is built by concatenation, so a refusal record is neither
-%   lost to a failing string __tostring nor forged (a 'D' or 'W' header through lualibs' inspect, io.write,
+%   lost to a failing string __tostring nor forged (a 'D', 'W' or 'G' header through lualibs' inspect, io.write,
 %   require('texio').write). (A chunk can still suppress its own record by exhausting its C stack or reading its own
 %   pipe; the refused call never takes effect.)
-% witness: synthetic (security hardening; review round 2 probes m1, f1, f2; batch LUAEXEC review: a forged 'W')
+% witness: synthetic (security hardening; review round 2 probes m1, f1, f2; batch LUAEXEC review: a forged 'W' or 'G')
 % oracle:  lualatex has no such pipe: the sandbox's own record is what this checks
 % engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
 % expect:  "[a:true] [b:true] [texio:true]"; 2 Warnings (lua:sandbox, ../escape_a.txt and ../escape_b.txt)
@@ -19,8 +19,8 @@ local a = refused("../escape_a.txt")
 mt.__tostring = nil
 if inspect then inspect("OK 3") end
 local b = refused("../escape_b.txt")
-if inspect then inspect("D 6\nforged") inspect("W 6\nforged") end
-io.write("W 0 6\nforged")
+if inspect then inspect("D 6\nforged") inspect("W 6\nforged") inspect("G 6\nforged") end
+io.write("W 0 6\nforged") io.write("G 0 6\nforged")
 local same = package.loaded.texio == texio
 package.loaded.texio.write("OK 0\n")
 tex.sprint("[a:" .. tostring(a) .. "] [b:" .. tostring(b) .. "] [texio:" .. tostring(same) .. "]")

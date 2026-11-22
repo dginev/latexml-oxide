@@ -540,7 +540,7 @@ fn batchseclua_tar_links_stay_inside_the_source() {
 }
 
 /// The bridge accepts only frames that carry its nonce and builds them without a metamethod: a string `__tostring`
-/// that fails no longer hides a refusal, and a forged `D` or `W` header through lualibs' `inspect` (which held the
+/// that fails no longer hides a refusal, and a forged `D`, `W` or `G` header through lualibs' `inspect` (which held the
 /// original `print`), `io.write` or `require('texio').write` reaches no pipe, so no refusal is invented. Base: the
 /// first refusal unreported and the raw `texio` write a broken frame. Repro luatex-profile/lua_sandbox_frames_authenticated.
 #[test]

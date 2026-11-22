@@ -163,8 +163,8 @@ package.loaded.node = nil
 -- --safer/--nosocket/--shell-escape do not restrict a script, so the prelude
 -- does it before any document chunk runs. A call lualatex refuses too returns
 -- lualatex's values and reports a 'W' frame (a Warning); one only the sandbox
--- refuses reports a 'D' frame (an Error) and raises a Lua error. Neither record
--- can be swallowed by a pcall.
+-- refuses reports a 'D' frame (an Error) and raises a Lua error. No record
+-- (nor an engine gap's 'G') can be swallowed by a pcall.
 -- While the prelude loads lualibs (texmf code, trusted like a format), the
 -- originals still answer; the wrappers it captures refuse once the loop starts.
 local booting = true
@@ -173,6 +173,11 @@ local function deny(what)
   local msg = what .. ' is not allowed (document Lua runs sandboxed: no programs, writes only below the job directory)'
   frame('D', msg)
   error(msg, 3)
+end
+-- An engine layer texlua lacks, which lualatex performs (a font, a language, a typesetter call): a 'G' frame, a
+-- Warning:lua:engine, never a refusal, so a chunk that then fails stays the caller's Info.
+local function gap(msg)
+  if not booting then frame('G', msg) end
 end
 local function denier(what, original)
   return function(...)
@@ -734,11 +739,12 @@ fn service_query(payload: &str) -> String {
 pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<String, String>> {
   let framed = exec_framed(chunk);
   use crate::prelude::*;
+  let failed_after_refusal = framed.failed_after_refusal();
   for refusal in framed.denials.shown {
-    if refusal.error {
-      Error!("lua", "sandbox", refusal.message);
-    } else {
-      Warn!("lua", "sandbox", refusal.message);
+    match refusal.kind {
+      Refused::Sandbox => Error!("lua", "sandbox", refusal.message),
+      Refused::AsLualatex => Warn!("lua", "sandbox", refusal.message),
+      Refused::EngineGap => Warn!("lua", "engine", refusal.message),
     }
   }
   let unlisted =
@@ -749,21 +755,26 @@ pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<Strin
   if framed.denials.warnings.more > 0 {
     Warn!("lua", "sandbox", unlisted(framed.denials.warnings.more));
   }
+  if framed.denials.gaps.more > 0 {
+    Warn!(
+      "lua",
+      "engine",
+      format!(
+        "{} more calls texlua has no engine for in this chunk are not listed",
+        framed.denials.gaps.more
+      )
+    );
+  }
   if let Some(ended) = framed.ended {
     Error!("lua", "interpreter", ended);
-  } else if let (Err(failure), Some(call)) = (&framed.result, &framed.denials.first_warning) {
-    // The chunk used the refused call's nil (`io.popen(cmd):read()`) and is lost, as under lualatex (rc=1): an
-    // Error, where the chunk's own Lua error is the caller's Info.
-    Error!(
-      "lua",
-      "sandbox",
-      format!("the chunk failed after the sandbox refused {call}: {failure}")
-    );
+  } else if let Some(failure) = failed_after_refusal {
+    Error!("lua", "sandbox", failure);
   }
   Ok(framed.result)
 }
 
-/// One chunk's run: its result, the sandbox's refusals ('D' and 'W' frames, OXIDIZED_DESIGN_DIVERGENCES #1081) — returned
+/// One chunk's run: its result, the sandbox's refusals and engine gaps ('D', 'W', 'G' frames,
+/// OXIDIZED_DESIGN_DIVERGENCES #1081) — returned
 /// apart, as a pcall in the chunk can swallow the Lua error, never the record — and the report of an interpreter
 /// that ended during it.
 struct Framed {
@@ -772,18 +783,33 @@ struct Framed {
   ended:   Option<String>,
 }
 
-/// A chunk's refusals in order: the first `MAX_DENIALS` of each severity (within `MAX_DENIAL_BYTES` each) kept, the
-/// rest counted, so a flood of Warnings never hides an Error.
+impl Framed {
+  /// The Error for a chunk whose Lua error followed a call refused with lualatex's values: it used that call's nil
+  /// (`io.popen(cmd):read()`) and is lost, as under lualatex (rc=1). An engine gap alone does not count (lualatex
+  /// performs that call), and any other chunk's Lua error stays the caller's Info.
+  fn failed_after_refusal(&self) -> Option<String> {
+    match (&self.result, &self.denials.first_warning, &self.ended) {
+      (Err(failure), Some(call), None) => Some(format!(
+        "the chunk failed after the sandbox refused {call}: {failure}"
+      )),
+      _ => None,
+    }
+  }
+}
+
+/// A chunk's refusals and engine gaps in order: the first `MAX_DENIALS` of each kind (within `MAX_DENIAL_BYTES` each)
+/// kept, the rest counted, so a flood of Warnings never hides an Error.
 #[derive(Default)]
 struct Denials {
   shown:         Vec<Refusal>,
   errors:        Budget,
   warnings:      Budget,
+  gaps:          Budget,
   /// The first call refused with lualatex's values, named should the chunk then fail.
   first_warning: Option<String>,
 }
 
-/// One severity's share of a chunk's refusal record.
+/// One kind's share of a chunk's refusal record.
 #[derive(Default)]
 struct Budget {
   listed: usize,
@@ -791,30 +817,41 @@ struct Budget {
   more:   usize,
 }
 
-/// One refused call: an Error ('D', only the sandbox refuses it) or a Warning ('W', lualatex refuses it too).
+/// One refused call or engine gap.
 struct Refusal {
-  error:   bool,
+  kind:    Refused,
   message: String,
 }
 
+/// A frame's kind of refusal.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Refused {
+  /// 'D': only the sandbox refuses the call (lualatex would perform it), an `Error:lua:sandbox`.
+  Sandbox,
+  /// 'W': lualatex refuses it too, and the call returned lualatex's values; a `Warning:lua:sandbox`.
+  AsLualatex,
+  /// 'G': an engine layer texlua lacks and lualatex performs; a `Warning:lua:engine`.
+  EngineGap,
+}
+
 impl Denials {
-  fn push(&mut self, error: bool, message: String) {
-    if !error && self.first_warning.is_none() {
+  fn push(&mut self, kind: Refused, message: String) {
+    if kind == Refused::AsLualatex && self.first_warning.is_none() {
       // The prelude's 'W' message is `<call> was not run (…)` or `writing <name> was refused (…)`.
       let call = message
         .rsplit_once(" was ")
         .map_or(message.as_str(), |(call, _)| call);
       self.first_warning = Some(call.to_string());
     }
-    let budget = if error {
-      &mut self.errors
-    } else {
-      &mut self.warnings
+    let budget = match kind {
+      Refused::Sandbox => &mut self.errors,
+      Refused::AsLualatex => &mut self.warnings,
+      Refused::EngineGap => &mut self.gaps,
     };
     if budget.listed < MAX_DENIALS && budget.bytes + message.len() <= MAX_DENIAL_BYTES {
       budget.listed += 1;
       budget.bytes += message.len();
-      self.shown.push(Refusal { error, message });
+      self.shown.push(Refusal { kind, message });
     } else {
       budget.more += 1;
     }
@@ -848,7 +885,8 @@ impl From<std::io::Error> for FrameError {
   fn from(e: std::io::Error) -> Self { FrameError::Io(e) }
 }
 
-/// Sends `chunk` and reads frames up to its final `OK`/`ERR`, servicing `Q`ueries and collecting refusals (`D`, `W`).
+/// Sends `chunk` and reads frames up to its final `OK`/`ERR`, servicing `Q`ueries and collecting refusals (`D`, `W`)
+/// and engine gaps (`G`).
 fn exchange(
   p: &mut LuaProc,
   chunk: &str,
@@ -877,8 +915,9 @@ fn exchange(
       body = body.replace("\r\n", "\n");
     }
     match tag {
-      "D" => denials.push(true, body),
-      "W" => denials.push(false, body),
+      "D" => denials.push(Refused::Sandbox, body),
+      "W" => denials.push(Refused::AsLualatex, body),
+      "G" => denials.push(Refused::EngineGap, body),
       "Q" => {
         let answer = service_query(&body);
         p.stdin
@@ -1086,6 +1125,47 @@ mod tests {
         Ok("R1")
       );
     }
+  }
+
+  /// A chunk's Lua error after a refusal with lualatex's values is an Error naming the call; after an engine gap alone
+  /// (lualatex performs that call: LUAFONT's `font.define`) it is not; with both, the refusal decides. Each kind keeps
+  /// its own budget of `MAX_DENIALS`.
+  #[test]
+  fn engine_gaps_do_not_escalate() {
+    use super::{Denials, Framed, MAX_DENIALS, Refused};
+    let failed = |frames: &[(Refused, &str)]| {
+      let mut denials = Denials::default();
+      for (kind, message) in frames {
+        denials.push(*kind, message.to_string());
+      }
+      Framed {
+        result: Err("attempt to index a nil value".to_string()),
+        denials,
+        ended: None,
+      }
+      .failed_after_refusal()
+    };
+    let gap = (Refused::EngineGap, "font.define needs the TeX engine");
+    let popen = (
+      Refused::AsLualatex,
+      "io.popen \"echo hi\" was not run (document Lua runs no programs)",
+    );
+    assert_eq!(failed(&[gap]), None);
+    assert_eq!(
+      failed(&[gap, popen]).as_deref(),
+      Some(
+        "the chunk failed after the sandbox refused io.popen \"echo hi\": attempt to index a nil value"
+      )
+    );
+    let mut denials = Denials::default();
+    for _ in 0..MAX_DENIALS + 3 {
+      denials.push(Refused::EngineGap, "g".to_string());
+    }
+    denials.push(Refused::Sandbox, "d".to_string());
+    assert_eq!(
+      (denials.shown.len(), denials.gaps.more, denials.errors.more),
+      (MAX_DENIALS + 1, 3, 0)
+    );
   }
 
   #[test]
