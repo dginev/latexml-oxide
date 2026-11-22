@@ -172,26 +172,15 @@ fn spill_gated_node_boxes_stays_bounded() {
   assert_eq!(xml.matches("<picture").count(), 300, "{}", xml.len());
 }
 
-/// Alignment rearrangement leaves no stale `node_boxes` entry for the backstop sweep: the MathFork frees each copied
-/// `_Capture_` cell through `discard_subtree`, which purges its entries (batch CORELEAK; before, ~23 stale entries per
-/// `align` waited for the sweep, 7,203 → 303 here, batch 56it). This document yields only when its RSS crosses the
-/// spill watermark, so the watermark is pinned (`LATEXML_SPILL_AT_MIB`) well below the run's own growth (the mark is
-/// the watermark above the conversion's starting RSS, STRM): derived from `--max-memory` (a third of the fuse, 192 MB
-/// at 768), it sat 7 MB under a 199 MB run, and batch 56kp's 67 MB saving stopped the yield.
-#[test]
-fn align_leaves_no_stale_node_boxes() {
-  let body: String = (0..300)
-    .map(|i| format!("Text {i}.\n\\begin{{align}}a_{{{i}}}&=b+c\\\\d&=e\\end{{align}}\n\n"))
-    .collect();
-  let tex = format!(
-    "\\documentclass{{article}}\n\\usepackage{{amsmath}}\n\\begin{{document}}\n{body}\\end{{document}}\n"
-  );
-  let (stderr, xml) = convert_env_args(&tex, &["--streaming", "--max-memory=768"], &[
+/// Streams `tex` with the spill watermark pinned (`LATEXML_SPILL_AT_MIB`) well below the run's own growth, so it yields:
+/// the mark is the watermark above the conversion's starting RSS (STRM); derived from `--max-memory` (a third of the
+/// fuse, 192 MB at 768), it sat 7 MB under a 199 MB run, and batch 56kp's 67 MB saving stopped the yield. Returns the
+/// log, the XML, the entries every backstop sweep dropped, and the `node_boxes` size at each progress report.
+fn stream_with_node_box_trace(tex: &str) -> (String, String, usize, Vec<usize>) {
+  let (stderr, xml) = convert_env_args(tex, &["--streaming", "--max-memory=768"], &[
     ("LXML_TRACE_NODE_BOXES", "1"),
     ("LATEXML_SPILL_AT_MIB", "16"),
   ]);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   let dropped: usize = stderr
     .lines()
     .filter_map(|line| {
@@ -204,20 +193,59 @@ fn align_leaves_no_stale_node_boxes() {
         .ok()
     })
     .sum();
-  assert_eq!(
-    dropped, 0,
-    "a stale entry was left for the sweep:\n{stderr}"
-  );
   let sizes: Vec<usize> = stderr
     .lines()
     .filter_map(|line| line.rsplit_once("; node_boxes ")?.1.trim().parse().ok())
     .collect();
+  (stderr, xml, dropped, sizes)
+}
+
+/// An `align`'s MathFork cells leave no stale `node_boxes` entry for the backstop sweep: the MathFork frees each copied
+/// `_Capture_` cell through `discard_subtree`, which purges its entries (batch CORELEAK; before, ~23 stale entries per
+/// `align` waited for the sweep, 7,203 → 303 here, batch 56it).
+#[test]
+fn align_leaves_no_stale_node_boxes() {
+  let body: String = (0..300)
+    .map(|i| format!("Text {i}.\n\\begin{{align}}a_{{{i}}}&=b+c\\\\d&=e\\end{{align}}\n\n"))
+    .collect();
+  let tex = format!(
+    "\\documentclass{{article}}\n\\usepackage{{amsmath}}\n\\begin{{document}}\n{body}\\end{{document}}\n"
+  );
+  let (stderr, xml, dropped, sizes) = stream_with_node_box_trace(&tex);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(
+    dropped, 0,
+    "a stale entry was left for the sweep:\n{stderr}"
+  );
   assert!(!sizes.is_empty(), "no streaming progress report:\n{stderr}");
   assert!(
     sizes.iter().all(|&n| n < 1000),
     "node_boxes grew: {sizes:?}"
   );
   assert_eq!(xml.matches("<equation ").count(), 600, "{}", xml.len());
+}
+
+/// The backstop sweep drops the stale `node_boxes` entries the streamed `eqnarray`s still leave (4 per environment,
+/// 1,200 here), which keeps the table bounded: the positive side of `align_leaves_no_stale_node_boxes`, whose
+/// MathFork cells no longer feed the sweep (batch CORELEAK; batch 56it).
+#[test]
+fn eqnarray_stale_node_boxes_are_swept() {
+  let body: String = (0..300)
+    .map(|i| format!("Text {i}.\n\\begin{{eqnarray}}a_{{{i}}}&=&b+c\\\\d&=&e\\end{{eqnarray}}\n\n"))
+    .collect();
+  let tex = format!("\\documentclass{{article}}\n\\begin{{document}}\n{body}\\end{{document}}\n");
+  let (stderr, xml, dropped, sizes) = stream_with_node_box_trace(&tex);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(dropped > 0, "the sweep dropped nothing:\n{stderr}");
+  assert!(!sizes.is_empty(), "no streaming progress report:\n{stderr}");
+  assert!(
+    sizes.iter().all(|&n| n < 1000),
+    "node_boxes grew: {sizes:?}"
+  );
+  assert_eq!(xml.matches("<equation ").count(), 600, "{}", xml.len());
+  assert_eq!(xml.matches("<equationgroup ").count(), 300, "{}", xml.len());
 }
 
 /// A resident glossary block does not make every yield sweep the whole live

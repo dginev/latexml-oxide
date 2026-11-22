@@ -207,7 +207,8 @@ fn mathfork_capture_cells_leave_no_c_heap_residue() {
 }
 
 /// The math parser frees the spacing hints it folds into padding (`filter_hints`); unlinked, every `\,` stayed
-/// allocated for the process lifetime.
+/// allocated for the process lifetime. Measured surplus: 20.2 MB with the hints left unfreed (base, three runs within
+/// 2 KB), 0 B freed, against the 1.5 MiB threshold.
 #[cfg(target_os = "linux")]
 #[test]
 fn folded_math_hints_leave_no_c_heap_residue() {

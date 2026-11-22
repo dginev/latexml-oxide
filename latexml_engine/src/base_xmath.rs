@@ -1783,8 +1783,9 @@ pub fn add_column_to_math_fork(
     document.append_tree(&mut td, vec![node])?;
   }
   document.close_element_at(&mut td)?;
-  // Every child is now copied twice (`append_clone` to the main branch, `append_tree` to the td, which re-records its
-  // ids on the copy), so the detached `_Capture_` is garbage: Perl drops it by refcount (:892-896); unlinked, it leaked.
+  // Every child now lives on as its `append_tree` copy in the td (which re-records its ids) and, where taken, its
+  // clone in the main branch, so nothing in the detached `_Capture_` survives. Perl drops it by refcount (:892-896);
+  // unlinked, it leaked.
   document.discard_subtree(cell.clone());
   Ok(())
 }

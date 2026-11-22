@@ -2187,11 +2187,12 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
   let mut prev: Option<usize> = None;
   let mut pending_space: f64 = 0.0;
   let mut pending_phantom = false;
-  // Save hint nodes that contributed to _space, for possible PUNCT reuse
-  let mut last_hint_for: Vec<Option<Node>> = Vec::new(); // parallel to prefiltered
+  // The unlinked hints, each marked once reused as a PUNCT
+  let mut hints: Vec<(Node, bool)> = Vec::new();
+  // Index into `hints` of the hint that contributed to _space, for possible PUNCT reuse
+  let mut last_hint_for: Vec<Option<usize>> = Vec::new(); // parallel to prefiltered
   // Perl's `_phantom`, parallel to prefiltered
   let mut phantom: Vec<bool> = Vec::new();
-  let mut hints: Vec<Node> = Vec::new();
 
   for mut node in nodes {
     if node.get_type() != Some(NodeType::ElementNode) {
@@ -2214,7 +2215,7 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
               let _ = prev.set_attribute("_space", &format!("{}", s + pts));
               phantom[idx] |= ph;
               // Save this hint node for potential PUNCT reuse
-              last_hint_for[idx] = Some(node.clone());
+              last_hint_for[idx] = Some(hints.len());
             },
             _ => {
               pending_space += pts;
@@ -2225,7 +2226,7 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
       }
       // Unlink from the XML tree; XMHints are ephemeral
       node.unlink();
-      hints.push(node);
+      hints.push((node, false));
     } else if name_is(&node, "XMTok")
       && node.with_attribute(c"role", |v| v == "APPLYOP") == Some(true)
     {
@@ -2257,7 +2258,10 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
       if !phantom[i] && s >= HINT_PUNCT_THRESHOLD && get_grammatical_role(&node) != "PUNCT" {
         // Perl MathParser.pm L487: create virtual PUNCT XMHint
         // Reuse the saved hint node, setting role="PUNCT"
-        if let Some(Some(mut hint)) = last_hint_for.get(i).cloned() {
+        if let Some(&Some(h)) = last_hint_for.get(i) {
+          let (hint, reused) = &mut hints[h];
+          *reused = true;
+          let mut hint = hint.clone();
           let _ = hint.set_attribute("role", "PUNCT");
           // Clean width: round to integer if close, matching Perl format
           let s_rounded = if (s - s.round()).abs() < 0.01 {
@@ -2280,10 +2284,9 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
     }
   }
   // A hint that did not become a PUNCT is garbage (Perl drops it with the replaced children); unlinked, it leaked. One
-  // with an `xml:id` is left alone: an XMRef may still name it (Perl MathParser.pm:454-457 keeps those).
-  for hint in hints {
-    if !filtered.contains(&hint) && !hint.has_attribute_ns("id", latexml_core::common::xml::XML_NS)
-    {
+  // with an `xml:id` may be named by an XMRef (Perl MathParser.pm:453-457), so it is not freed.
+  for (hint, reused) in hints {
+    if !reused && !hint.has_attribute_ns("id", latexml_core::common::xml::XML_NS) {
       crate::data::defer_discard(hint);
     }
   }
