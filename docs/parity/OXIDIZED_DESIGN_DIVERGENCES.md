@@ -21016,25 +21016,73 @@ relative path with no `..` part and no dotfile), decided by the prelude on every
 existing symbolic-link component (`lfs.symlinkattributes`), checked on the name the system opens (on Unix a name
 holding `\` is refused, `\` being a filename character there; on Windows `\` separates, and a `:`, a `\\?\`/`\\.\`
 prefix and a component ending in a dot or a space are refused); reads stay open (`openin_any=a`); chunks load as text
-only. Each refused call is `Error:lua:sandbox` (a `D` frame, raised even when the chunk pcalls it) and a Lua error;
-the name shown is cut at 256 bytes, and a chunk lists 20 refusals (64 KiB), the rest in one summary Error.
+only. A call lualatex refuses too answers as lualatex `-no-shell-escape` does (TL 2025, LuaHBTeX 1.22, measured;
+`shell_escape=f` is also what `\pdfshellescape` and `status.shell_escape`, 0, report, so restricted mode's
+`os.execute()` = 2 would invite a whitelisted call that could not run): `os.execute(cmd)`, `os.exec`, `os.spawn` return
+`nil, "All command execution disabled."`, `io.popen` and `os.kpsepopen` `nil, "all command execution is disabled"`,
+`io.open` of a name `openout_any=p` forbids a lone `nil`; each is `Warning:lua:sandbox` (a `W` frame) and the document
+goes on, as TeX does not err. `os.execute()`, which asks whether a shell exists, returns 0 with no record (it refuses
+nothing; pdftexcmds' `\pdf@shellescape` and imakeidx.sty:54 ask it — the TL manuals biblatex-sbl, biblatex-sbl-ibid,
+derivative, labyrinth, liftarm, polyomino, toptesi/FrontespizioScudo, wheelchart and xassoccnt_doc each erred on it).
+A call only the sandbox refuses — `os.remove`/`rename`/`tmpname`/`tmpdir`/`setenv`, `io.tmpfile`, the `lfs`
+writers, `io.output`/`gzip.open`/`mplib` writes and an `io.open` through a symbolic link or of a `\` name, all of
+which lualatex performs — is `Error:lua:sandbox` (a `D` frame) and a Lua error. A C module, a network library and
+`package.loadlib` stay that Error too, though lualatex `-no-shell-escape` refuses them as well (`luatex-core.lua`
+L195-200 empties `package.loadlib` and drops `package.searchers[3]`/`[4]` when `shellescape ~= 1`; measured:
+`pcall(package.loadlib, './cmod.so', 'f')` is `true` with no value, `pcall(require, 'socket')` `false` and a
+message): no TL manual needs them, so their lualatex values (with a `W` frame) wait past 0.8.0. Neither record is
+swallowed when the chunk pcalls the call; the name shown is cut at 256 bytes, and a chunk lists 20 refusals of each
+severity (64 KiB each), the rest in one summary per severity, so Warnings never push an Error's name out. A chunk
+that fails after a `W` refusal — it used the refused call's `nil`, `io.popen(cmd):read()`, and is lost as under
+lualatex (rc=1, "attempt to index a nil value") — adds `Error:lua:sandbox the chunk failed after the sandbox refused
+<call>: <Lua error>`; any other chunk's Lua error stays the caller's Info. An engine layer texlua lacks, which
+lualatex performs (a font, a language, a typesetter call), is a `G` frame (the prelude's `gap(msg)`, same nonce):
+`Warning:lua:engine <msg>`, with its own 20-entry budget and summary, never a refusal, so a chunk failing after it
+alone stays an Info (row R LUAERRSEV); a chunk with both a `G` and a `W` still escalates.
 Every helper the checks and the frame protocol call (`string.*`, `next`, `type`, the file handles' C
 `read`/`write`/`flush`, `package.searchpath`, `kpse.find_file`, `load`) is a local captured at boot, never a method
 looked up through a table the document can change; `mplib.new` gets a raw copy (`next`) of its options carrying the
 sandbox's finder; every `img` function is refused (texlua has no backend: `img.new`, `img.scan`, `img.write`
-crashed it). Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
+crashed it). texlua has LuaTeX's `font`, `lang` and `vf` libraries without the engine's font memory or
+typesetter: `font.current`, `font.id`, `font.define`, `lang.new`, `vf.char` and texlua's own `tex.run`/`tex.finish`
+crashed it (SIGSEGV), past any `pcall`, and `font.read_tfm`/`font.read_vf` abort it (SIGABRT, kpathsea's
+`kpse->program_name` assertion) when no kpathsea program name is set, which the prelude sets at boot (hologo.sty:1298-1320 `\HOLOGO@IfCharExists`, TL manuals
+derivative, hvlogos-doc, bxwareki, mfirstuc-manual and 9 more; babel-bidi-basic.lua:44 `font.id('tenln')`,
+lettrine-demo-arabic). The prelude replaces `font` with a pure-Lua mirror of one font, the current one (id 1:
+`font.current()`, `font.max()`, `font.nextid()` 2, `font.each`; `font.current(i)` is absorbed): `font.getfont(1)`,
+`font.getcopy(1)` and `font.fonts[1]` return a table whose `characters[<code>]` asks the bridge `fontchar <code>`
+over the query channel, answered as `\iffontchar\font<code>` is (`etex.rs` `font_has_char`, which may read the
+current font's TFM or OTF through kpathsea, as `\iffontchar` does; a current font whose file cannot be resolved
+answers every code as present, the inherited `\iffontchar` policy) — an integer out, `0`/`1` back, no process, no TeX
+evaluated; `fontid <name>` probes the State without interning the name; any other id is nil; `font.id(<name>)` is -1, the LuaTeX manual's answer for an undefined name (luatex-fonts.tex:832).
+Every answer that is not lualatex's counts a `Warning:lua:engine` (a `G` frame, kept through a `pcall`): `font.id`
+of a name the bridge reports as a font (`fontid <name>`: `fontinfo_\<name>` holds one; lualatex answers latex.ltx's
+`\tenln` with its id), another non-negative font id, `font.current(<id>)`, `font.each`, a read of a font or character
+field the mirror does not hold (`resources`, `fullname`: fontawesome5, texnegar), `font.getparameters` and
+`font.frozen` (nil, texlua's answer; lualatex gives the parameters and `false`); `font.define`, `font.setfont`,
+`font.addcharacters`, `font.setexpansion` (a plain Lua error in texlua, `define` a crash), any `font` function texlua
+adds later, every `lang` and `vf` function (`lang.clean`, `lang.hyphenate`, `vf.fontid`, `vf.rule` crash texlua too)
+and `tex.run`/`tex.finish` are such a Warning and a Lua error (lualatex's `lang.new()` succeeds, and its
+`font.define{}` and `vf.char()` outside a virtual font end the run). `font.read_tfm` and `font.read_vf` are texlua's
+own, a TFM or VF read through kpathsea as lualatex reads it (`read_tfm('cmr10',655360).name` is `cmr10`,
+`read_vf('ptmr7t',655360).fonts[1].name` `ptmr8r`); the prelude sets `MKTEXTFM`, `MKTEXPK`, `MKTEXMF`, `MKTEXTEX`,
+`MKTEXFMT`, `MKOCP` and `MKOFM` to 0 before kpathsea initialises, so a missing font runs no `mktextfm` (with
+`MKTEXTFM=1` in the environment, texlua's `read_tfm('ecrm0599',…)` ran mktextfm and METAFONT and wrote into
+`TEXMFVAR`; `kpse.find_file(…,'tfm')` likewise). hologo's test reads only
+`characters` and counts nothing. A document that replaces `font` changes only its own answers. Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
 the null device and `print` a no-op, and `package.loaded.texio`/`pdf`/`status`/`token` are the shims (`node` is
 nil). Frames are authenticated: the bridge sends a 128-bit nonce (SipHash under the standard library's random
 `RandomState` keys) as the interpreter's first line, the prelude reads it before any other code loads, and every
 header is `<tag> <nonce> <length>`, built by concatenation (a `%s` format would run a string `__tostring` the
 document set); an error value is shown without `tostring`. The bridge reads a frame header of at most 64 bytes and a
-body of at most 64 MiB, only the tags `D`/`Q`/`OK`/`ERR` and only with the nonce, so bytes reaching the pipe by any
+body of at most 64 MiB, only the tags `D`/`W`/`G`/`Q`/`OK`/`ERR` and only with the nonce, so bytes reaching the pipe by any
 other route are a broken protocol, so a record cannot be forged. The record itself is best-effort: a chunk can
 suppress its OWN refusal records — by exhausting the C stack just before the record is written (a ~195-deep `pcall`
 nest), by reading its own pipe through `/proc/self/fd/1` and winning the race, or by reading its process memory
 (`/proc/self/mem` is readable under `openin_any=a`) for the nonce. None of these lets the refused call take effect;
 a separate protocol channel (a socket pair, which `/proc/self/fd` cannot reopen) would close the pipe route — row R. An
-interpreter that ends or breaks the protocol mid-chunk is `Error:lua:interpreter` (its output and state are lost) and the next chunk
+interpreter that ends or breaks the protocol mid-chunk is `Error:lua:interpreter` (its output and state are lost; an
+ended one's exit status is named when it exits within 500 ms, `watchdog::KillOnExit::finish`) and the next chunk
 starts a fresh one, at most 3 times per conversion. `reset_session` (`Converter::initialize_session`) ends the
 interpreter with its conversion, so a persistent worker's next paper starts with a fresh Lua state in its own
 source directory. The child is registered with the watchdog (`watchdog::kill_on_exit`): the wall-clock and memory
@@ -21050,17 +21098,37 @@ inside (`tar`'s check). Other links, and entries whose path would leave the dire
 `Warning:archive:*`, logged and counted when the conversion's report starts (`error::warn_at_session_start`).
 The CLI's own zip unpacking writes a link entry as a plain file. `graphics.rs`
 `copy_to_destination` follows Perl: a source-relative path that would leave `--dest` (a `..`, root or drive
-component) takes the next free `xN.<ext>`. **Witnesses.** TL manuals ijsra (its class's images reached as
+component) takes the next free `xN.<ext>`. Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
+`read_pdfextension`) reads the operands of pdfTeX's `\pdf<keyword>`, with LuaTeX's additions (literal modes
+`text`/`raw`/`origin`, `lateliteral`, `obj … uncompressed`, `outline useobjnum`, `linkstate`; LuaTeX manual
+luatex-modifications.tex:592-907), through the same Rust readers and never through `\pdf<keyword>`, which
+luatex85.sty:69-92 defines as `\pdfextension <keyword>`; it read one token, so the rest leaked as text (xfakebold-doc's
+"olorstackpop", mfirstuc-manual's "iteralpage/Span«…»BDC"). An unknown keyword is a `Warning:unexpected:\pdfextension`
+and stays text, as lualatex's "unexpected use of \pdfextension" leaves it. `\pdffeedback colorstackinit` and
+`ximagebbox` answer as `\pdfcolorstackinit` and `\pdfximagebbox`, and `pageref`/`xformname`/`fontname`/`fontobjnum`/
+`fontsize` read their operand (pdfrender's `\pdfcolorstackinit page direct{…}` leaked "page direct1 w" in
+xfakebold-doc). The pdfTeX readers follow pdftex-syntax.tex
+where Perl pdfTeX.pool does not: `\pdfcolorstack <n> current` reads no text (as `pop`; pdflatex), `\pdfthread` and
+`\pdfstartthread` read a thread spec, `\pdfcatalog … openaction` reads the whole action spec, and the spaces after a
+`\pdfdest` spec are skipped. **Witnesses.** TL manuals ijsra (its class's images reached as
 `../../../tex/latex/…`, written beside `--dest`; now `x1.png`, `x2.png`), newpax (unchanged). **Guards.**
-`cluster_package_guards::perfect_kernel_batchseclua::{batchseclua_lua_runs_no_program,
+`cluster_package_guards::perfect_kernel_batchseclua::{batchluaexec_refused_program_answers_as_lualatex,
+batchluaexec_refused_then_failed_is_an_error, batchluaexec_refusal_budget_per_severity,
+batchluaexec_font_current_keeps_the_interpreter,
+batchseclua_lua_runs_no_program,
 batchseclua_lua_writes_stay_in_the_job_directory, batchseclua_image_copy_stays_in_dest,
 batchseclua_sandbox_helpers_are_held_at_boot, batchseclua_lua_writes_follow_no_symlink,
 batchseclua_lua_interpreter_restarts_and_owns_its_pipe, batchseclua_tar_links_stay_inside_the_source,
 batchseclua_lua_frames_are_authenticated, batchseclua_lua_backslash_names_are_refused,
 batchseclua_lua_refusals_are_bounded, batchseclua_lua_interpreter_ends_with_the_timeout}`,
-`lua_bridge::tests::frame_headers_carry_the_session_nonce` (repros
-`luatex-profile/lua_sandbox_{no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
-`luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout}`,
+`cluster_package_guards::perfect_kernel_batchluafont::{batchluafont_hologo_asks_the_current_font_for_its_glyph,
+batchluafont_font_lang_vf_calls_need_the_engine, batchluafont_interpreter_end_says_how,
+batchluafont_font_read_tfm_and_read_vf_pass_through, batchluafont_pdfextension_literal_reads_its_operands,
+batchluafont_pdfextension_keywords_read_their_operands}`,
+`lua_bridge::tests::{frame_headers_carry_the_session_nonce, engine_gaps_do_not_escalate}` (repros
+`luatex-profile/lua_sandbox_{refused_program_goes_on,refused_then_failed,refusal_budgets,no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
+`luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout,font_current_keeps_the_interpreter,font_mirror_hologo,font_lang_vf_need_the_engine,font_read_tfm_vf}`,
+`luatex-profile/pdfextension_{literal_operands,keywords_luatex85}`,
 `loader/image_copy_outside_source_stays_in_dest`).
 
 ### 1082. A PASJ paper without its class keeps the class's own `\SetRunningHead`, `\FigureFile` and symbols (CLUSTFIX)

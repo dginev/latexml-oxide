@@ -1,0 +1,14 @@
+% mechanism: lua_bridge.rs prelude font mirror (OXIDIZED_DESIGN_DIVERGENCES #1081): font.read_tfm and font.read_vf
+%   read a TFM or VF through kpathsea (the prelude sets the program name; texlua aborts without one, and no MKTEX*
+%   program runs), as lualatex does. The base wrapped them as needing the engine (a Warning and a Lua error).
+% witness: reviewer probe on pk/LUAFONT 1578321153e (font.read_tfm('cmr10',655360).name: cmr10 in texlua, lualatex)
+% oracle:  lualatex -no-shell-escape: 0 errors, "T[cmr10] V[ptmr8r]"
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% expect:  0 errors, 0 warnings; "T[cmr10] V[ptmr8r]"
+% status:  RED (T[] V[], a Warning each: "font.read_tfm was not run") -> GREEN
+\documentclass{article}
+\begin{document}
+T[\directlua{tex.print(font.read_tfm("cmr10",655360).name)}]
+V[\directlua{tex.print(font.read_vf("ptmr7t",655360).fonts[1].name)}]
+\end{document}

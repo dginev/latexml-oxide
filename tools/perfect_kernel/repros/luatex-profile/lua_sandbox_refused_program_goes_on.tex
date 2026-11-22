@@ -1,0 +1,16 @@
+% mechanism: lua_bridge.rs prelude sandbox (OXIDIZED_DESIGN_DIVERGENCES #1081): a program call answers as lualatex
+%   --no-shell-escape does (shell_escape=f): os.execute("cmd") returns nil, "All command execution disabled." and
+%   runs nothing; os.execute() (is there a shell?) returns 0, as pdftexcmds' \pdf@shellescape and imakeidx ask it.
+% witness: the TL manuals biblatex-sbl, biblatex-sbl-ibid, derivative, labyrinth, liftarm, polyomino,
+%   toptesi/FrontespizioScudo, wheelchart, xassoccnt_doc (pdftexcmds' tex.write(os.execute()), an Error since SECLUA)
+% oracle:  lualatex -no-shell-escape (TL 2025): "[refused: All command execution disabled.] [0]", no ran.txt
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
+% expect:  "[refused: All command execution disabled.] [0]"; 0 Errors, 1 Warning (lua:sandbox os.execute
+%   "echo ran >ran.txt" was not run); no ran.txt
+% status:  GREEN
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\luaexec{local r, msg = os.execute("echo ran >ran.txt") if r then tex.sprint("[ran]") else tex.sprint("[refused: " .. msg .. "]") end}
+[\luadirect{tex.write(os.execute())}]
+\end{document}

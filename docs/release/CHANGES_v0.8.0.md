@@ -43,6 +43,19 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+  - **0.8.0-rc2: document Lua's refused program call answers as lualatex without shell escape.** `os.execute("…")`,
+    `os.exec` and `os.spawn` return `nil, "All command execution disabled."`, `io.popen` and `os.kpsepopen` `nil,
+    "all command execution is disabled"`, and an `io.open` write `openout_any=p` forbids `nil`, each with a counted
+    `Warning:lua:sandbox` instead of an Error and a Lua error, so the document goes on; `os.execute()` (is there a
+    shell?) returns 0. No program runs. Calls lualatex would perform but the sandbox refuses stay Errors, as do C
+    modules, network libraries and `package.loadlib`; a chunk that then fails on the refused call's `nil`
+    (`io.popen(cmd):read()`) is an Error, and a chunk lists 20 refusals of each severity. Nine TL
+    manuals that erred on pdftexcmds'/imakeidx's `tex.write(os.execute())` (derivative, wheelchart, xassoccnt_doc,
+    …) are clean again. `font.current()`, which crashed texlua (hologo's glyph test in `\hologo{LuaTeX}`), now answers
+    through the `font` mirror (below), so the interpreter keeps its state and no Error is counted.
+    OXIDIZED_DESIGN_DIVERGENCES #1081; guards `perfect_kernel_batchseclua::{batchluaexec_refused_program_answers_as_lualatex,
+    batchluaexec_refused_then_failed_is_an_error, batchluaexec_refusal_budget_per_severity,
+    batchluaexec_font_current_keeps_the_interpreter}`.
   - **The x86_64 Linux release binary's allocator initialises.** The release leg linked with Ubuntu 22.04's mold 1.0.3,
     which left Rust std's `.init_array` entry in a section of its own; DT_INIT_ARRAY covered only that one, so
     mimalloc's constructor never ran and every 64 KiB page came straight from the OS (0.7.6 and 0.8.0-rc1/rc2: 10,094
@@ -1509,10 +1522,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
   - **Untrusted input stays in the job.** Document Lua code could run programs or write files outside the job; it
     is now sandboxed, under TeX's own defaults for untrusted input (no shell escape, paranoid writes, no write through
-    a symbolic link, on Unix no backslash in a written name): a refused call never takes effect, and is reported as
-    an Error on a best-effort basis (the bridge accepts only frames carrying a per-interpreter nonce, so a refusal
+    a symbolic link, on Unix no backslash in a written name): a refused call never takes effect, and is reported (a
+    Warning where lualatex refuses it too, else an Error) on a best-effort basis (the bridge accepts only frames carrying a per-interpreter nonce, so a refusal
     record cannot be forged, but a chunk that exhausts its C stack or reads its own pipe can suppress its own record;
-    a chunk lists at most 20 refusals, then one summary Error); each conversion has its own interpreter with a reduced environment, restarted (with an Error)
+    a chunk lists at most 20 refusals of each severity, then a summary); each conversion has its own interpreter with a reduced environment, restarted (with an Error)
     when it ends mid-chunk and killed by a timeout or memory exit. A tar archive's links are unpacked only when
     they resolve inside the source directory, the others skipped with a counted Warning; the `zip` floor is 9.7.0. An image whose path relative to the source leaves the destination directory is copied under a
     generated `xN` name inside it, as Perl does. Guards
@@ -1522,3 +1535,28 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     batchseclua_tar_links_stay_inside_the_source, batchseclua_lua_frames_are_authenticated,
     batchseclua_lua_backslash_names_are_refused, batchseclua_lua_refusals_are_bounded,
     batchseclua_lua_interpreter_ends_with_the_timeout}`.
+
+  - **Document Lua's `font`, `lang` and `vf` no longer crash the Lua interpreter.** texlua has LuaTeX's libraries
+    but not the engine's fonts or typesetter, so `font.current()`, `font.id`, `font.define`, `lang.new`, `vf.char`
+    and texlua's `tex.run`/`tex.finish` killed it past any `pcall` (an `Error:lua:interpreter`, and after three
+    restarts no later chunk ran). `font` now mirrors one font, the current one, whose `characters` answer as
+    `\iffontchar\font` does; `font.id` answers -1; `font.read_tfm` and `font.read_vf` read the font file as lualatex
+    does (no `mktextfm` runs for a missing one); `font.getparameters` and `font.frozen` answer nil, as texlua does;
+    the calls that need the engine are a Lua error, and every answer that is not lualatex's (a defined font's id, a
+    font field the mirror lacks, those calls) a counted `Warning:lua:engine`. hologo's
+    XeTeX and LaTeX logos print the reversed E (Ǝ) and "Hàn Thế Thành" its ế, as lualatex does (12 TeX Live manuals
+    under the luatex profile, among them hvlogos-doc, mfirstuc-manual and glossariesbegin, back to 0 errors; babel's
+    bidi Lua in lettrine-demo-arabic too, with 4 Warnings for its `font.id` of latex.ltx's line and circle fonts). An interpreter that still ends mid-chunk says how in its Error
+    (`signal: 11 (SIGSEGV)`, `exit status: 3`). OXIDIZED_DESIGN_DIVERGENCES #1081; guards
+    `perfect_kernel_batchluafont`.
+
+  - **`\pdfextension` reads its operands under the luatex profile.** It read one token, so the rest of the keyword
+    and its operands leaked as text ("iteralq -1 0 0 1 0 0 cm", accsupp's "iteralpage/Span«/ActualText(…)»BDC" in
+    mfirstuc-manual, glossaries-user, datatool-user and 7 more TeX Live manuals; pdfrender's "olorstackpop" 59 times
+    in xfakebold-doc). Every keyword LuaTeX knows (`literal` with its `text`/`raw`/`origin` modes, `colorstack`,
+    `setmatrix`, `obj`, `annot`, `startlink`, `outline`, `dest`, `info`, `catalog`, `mapline`, …) now reads the
+    operands pdfTeX's `\pdf<keyword>` reads; an unknown one is a Warning. `\pdffeedback` reads its operands too
+    (`colorstackinit` answers a new stack, as `\pdfcolorstackinit`). pdfTeX's `\pdfcolorstack <n> current` no
+    longer swallows the text after it, `\pdfthread`/`\pdfstartthread` read their thread spec and `\pdfcatalog`'s
+    `openaction` its whole action. Guards `perfect_kernel_batchluafont::{batchluafont_pdfextension_literal_reads_its_operands,
+    batchluafont_pdfextension_keywords_read_their_operands}`.

@@ -1,0 +1,14 @@
+% mechanism: lua_bridge.rs prelude font mirror (OXIDIZED_DESIGN_DIVERGENCES #1081): font.current() segfaulted texlua,
+%   which has no fonts, so the Lua state was lost (an Error:lua:interpreter); font now mirrors one font, the
+%   current one, so font.fonts[font.current()] is a font table and the interpreter keeps its state.
+% witness: TL manual derivative (hologo.sty:1303-1315's glyph test in \hologo{LuaTeX}: font.fonts[font.current()])
+% oracle:  lualatex: "[font] [5]"
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
+% expect:  "[font] [5]"; 0 Errors, 0 Warnings
+% status:  RED ("[] [nil]", Error:lua:interpreter) -> GREEN (LUAEXEC: "[] [5]", font.current a Lua error; LUAFONT:
+%          the font mirror, "[font] [5]")
+\documentclass{article}
+\usepackage{luacode}
+\begin{document}
+\luaexec{n = 5}[\luaexec{local f = font.fonts[font.current()] tex.sprint(f and "font" or "none")}] [\luaexec{tex.sprint(tostring(n))}]
+\end{document}
