@@ -197,7 +197,7 @@ mimalloc = { version = "0.1", default-features = false }
 # heap corruption in 3.3.x (microsoft/mimalloc issues 1287 and 1430, fixed in later 3.x releases this crate does not
 # bundle yet), and a 1502.06095 conversion crashed with a corrupted 3.3.2 free list under load. v2 measured −0.2 to
 # −0.8 % instructions and −1 to −7 % peak RSS, byte-identical output (384 conversions; row R MIMALLOC3).
-libmimalloc-sys = { version = "0.1", default-features = false, features = ["extended", "v2"] }
+libmimalloc-sys = { version = "0.1.49", default-features = false, features = ["extended", "v2"] }
 # Heap-profiling allocator, enabled only under the `dhat-heap` feature (diagnostic).
 dhat = { version = "0.3", optional = true }
 # Alternative allocator for the persistent `cortex_worker` fleet (enable with
