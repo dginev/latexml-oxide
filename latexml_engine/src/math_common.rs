@@ -662,7 +662,6 @@ LoadDefinitions!({
   DefRewrite!(select =>
     "descendant-or-self::ltx:XMTok[text()='\u{FF0F}' and @meaning='not'][following-sibling::*]",
   select_count => 2,
-  local_replace => true,
   replace =>  sub[document, nodes] {
     // TODO: This argument low-level boilerplate is annoying
     // what is a good design pattern to "destructure" a Vec?

@@ -188,7 +188,8 @@ pub fn release_core_state_for_post() {
   // still read after MakeBibliography:
   // - `NOMINAL_FONT_SIZE`: read by `font::defsize()` ← `Font::math_default()`
   //   when MathML presentation sizes negative-space `<mpadded>` widths on
-  //   11pt/12pt documents (`latexml_post/src/mathml/presentation.rs`).
+  //   documents whose nominal font size differs from 10pt
+  //   (`latexml_post/src/mathml/presentation.rs`).
   // - `MAX_ERRORS`: read by `error::note_error_cap()` / `Error!` (e.g. tikz
   //   raises the cap from 100 to 1000).
   let nominal_font_size = state::lookup_float("NOMINAL_FONT_SIZE");

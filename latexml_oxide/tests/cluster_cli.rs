@@ -5414,18 +5414,20 @@ More text.
   /// Regression guard: `release_core_state_for_post()` must preserve
   /// `NOMINAL_FONT_SIZE` across `state::reset_thread_state()`, because MathML
   /// presentation reads `Font::math_default()` (`defsize()`) when sizing
-  /// negative-space `<mpadded>` widths on 11pt/12pt documents.
+  /// negative-space `<mpadded>` widths on documents whose nominal font size
+  /// differs from 10pt (such as `a0poster`, where losing `NOMINAL_FONT_SIZE`
+  /// drops `<mpadded width="1.556em">` to `0.371em`).
   #[test]
-  fn split_preserves_11pt_nominal_font_size_for_mpadded_widths() {
+  fn split_preserves_nominal_font_size_for_mpadded_widths() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let src = dir.path().join("math11.tex");
+    let src = dir.path().join("poster.tex");
     let unsplit_out = dir.path().join("unsplit.html");
     let split_dir = dir.path().join("split");
-    let split_out = split_dir.join("math11.html");
+    let split_out = split_dir.join("poster.html");
     std::fs::create_dir_all(&split_dir).unwrap();
     std::fs::write(
       &src,
-      r"\documentclass[11pt]{article}
+      r"\documentclass{a0poster}
 \usepackage{amsmath}
 \begin{document}
 \section{One}
@@ -5473,7 +5475,11 @@ Text.
     let split_mpadded = extract_mpadded(&split_s1_html);
     assert_eq!(
       split_mpadded, unsplit_mpadded,
-      "split run (with core release) must keep 11pt mpadded width identical to unsplit"
+      "split run (with core release) must keep non-10pt mpadded width identical to unsplit"
+    );
+    assert!(
+      split_mpadded.contains("width=\"1.556em\""),
+      "expected a0poster nominal-font-size mpadded width 1.556em (not 10pt fallback 0.371em), got {split_mpadded}"
     );
   }
 
