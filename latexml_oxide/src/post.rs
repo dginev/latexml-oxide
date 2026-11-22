@@ -725,7 +725,7 @@ fn run_post_processing_impl(
   // A conversion entry point: the arena's overflow count starts at zero, as in `Converter::convert`.
   latexml_core::common::arena::take_overflow_interns();
   // An in-memory handoff past the parse ceiling, or bound for the streaming
-  // split, parses from a staged file (removed when `_staged` drops); a staging
+  // split, parses from a staged file (dropped, and so removed, once the front-end has read it); a staging
   // failure falls through to the memory parse, whose own error reporting then
   // names the real problem.
   let staged = match input {

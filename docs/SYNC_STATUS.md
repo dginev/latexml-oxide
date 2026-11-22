@@ -980,6 +980,16 @@ Rules that keep this file honest and mergeable:
     `drawn`; (b) `malloc_trim(0)` after Split as its own lever (C-free 954 MB vs 8 MB streaming at n1600, C-live 29 MB
     both); (c) with `--input xml`, Split's copies drop a nav's prefixed namespace and a page redeclaring the default
     namespace comes out `<default:section xmlns:default=…>` (base too, cosmetic, foreign XML only); 3
+  - MIMALLOC3 — back to mimalloc 3.x once `libmimalloc-sys` bundles a release with the 3.3.x heap-corruption fixes
+    (≥ 3.5.3; microsoft/mimalloc issues 1287, 1430): 0.8.0-rc2 builds the bundled 2.3.2 (`latexml_oxide/Cargo.toml`
+    `v2` feature). Witness: 1502.06095 crashed twice under full-width A/B load (mimalloc's small free list holding a
+    Token-shaped value; an indirect call through a corrupted pointer), ~0.3 % of loaded runs, 0 of ~370 quiet runs and 0
+    ASan reports on the system allocator; the fleet's only unexplained SIGSEGV in run 397 is 2212.05990 (never
+    reproduced). Re-measure 3.x against 2.3.2 (instructions, peak RSS, a loaded 1502.06095 loop) before switching; 2
+  - STREAMPROBE — the streamed split's `contains_element_probe` (`stream_split.rs` ~1393) takes `:resource` in page text
+    (`ex:resource`) for a prefixed element, so such a page falls back to the whole-DOM split with a misleading Info (≥ 1
+    GiB: a false Warn); match only after `<` and a valid prefix. And a stream doomed by a late template still spills
+    every page before failing over (`Splitter::run`, ~150/~604): stop at the first late template; 1
   - SPLITDOMNS — the whole-DOM split (`latexml_post/src/split.rs`) loses a page's non-`ltx` namespaces: xy-pic's svg
     inside math raises `malformed:namespace` Warnings (1502.06095: 344, 1609.07593: 1,377 under `--splitat=section`)
     and 2606.28974 loses an `aria-hidden`; the streamed split, the default for split runs since OXIDIZED_DESIGN_DIVERGENCES

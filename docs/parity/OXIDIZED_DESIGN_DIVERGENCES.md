@@ -23671,7 +23671,9 @@ splits (`--splitat`/`--splitpath`/`--split`) instead:
   directory it creates, and removed once the pages are spilled. A stream that fails on an input under 1 GiB falls back
   to the whole-DOM split with an Info. Such a stream fails when a template item arrives after a page was written (an
   `ltx:navigation` from `--input xml`, an `ltx:resource`, a root `ltx:date` or a `<?latexml?>` PI), or when an
-  `ltx:resource` sits nested inside content. The DOM split copies these into the pages' templates. Above 1 GiB the
+  `ltx:resource` sits nested inside content. The DOM split copies these into the pages' templates, each page taking the
+  `ltx:resource`s and PIs still in the document when it is pulled out (Perl `Post/Split.pm:111-115`, `:132`; `Post.pm:770-771`),
+  so a nested one reaches only the pages after it. Above 1 GiB the
   stream keeps its Warn.
 - renders 64 or more pages on min(available cores, 8) worker processes (`render_workers::render_jobs`,
   `enable_auto_jobs`). Each worker's watchdog holds it to its share of the fuse headroom (`RenderManifest::max_rss_kb`).

@@ -312,6 +312,7 @@ fn split_keeps_pages_whose_namespaces_a_navigation_uses() {
       "{page} must carry both navigations' content, in order:\n{xml}"
     );
   }
+}
 
 /// The C heap two more conversions of `source` leave past two of the prose control (the per-thread floor).
 #[cfg(target_os = "linux")]

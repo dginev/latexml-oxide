@@ -55,6 +55,11 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     holds 29 MB of C heap at page 1024 instead of 818 MB, the whole conversion takes ~8 % fewer cycles, and every page
     is byte-identical. Guards `112_fragment_yield::split_pages_leave_no_c_heap_residue` and
     `::split_keeps_pages_whose_namespaces_a_navigation_uses` (in the CI asan job).
+  - **0.8.0-rc2: the allocator is mimalloc 2.3.2, not 3.3.2.** The `libmimalloc-sys` crate bundles both, and its
+    3.3.2 has upstream reports of intermittent heap corruption (microsoft/mimalloc issues 1287 and 1430, fixed only in
+    later 3.x releases the crate does not bundle yet); one of our conversions crashed on a corrupted 3.3.2 free list
+    under heavy load. On Nasser's slices, a 1,600-section book and 30 papers, 2.3.2 runs 0.2-0.8 % fewer instructions
+    with 1-7 % lower peak memory, and every output is byte-identical. `cortex_worker` uses the same allocator.
   - **0.8.0-rc2: a split run streams and renders in parallel by default (issue 777).** With `--splitat`, the core
     spills at 512 MiB of growth, post splits through the streaming front-end with the core result staged to disk and
     freed, and 64 or more pages render on min(cores, 8) worker processes. Each worker is held to its share of
