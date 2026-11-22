@@ -578,6 +578,11 @@ impl ObjectDB {
         // One bad row must not poison the whole file (review finding #4):
         // warn with the key and skip; the on-disk row stays as it was.
         match db.decode_entry(&key, &props) {
+          // A readonly attach never writes back, so it keeps no as-stored copy: a render worker's db
+          // would otherwise hold its JSON twice (Nasser k2400, 45 MB db).
+          Ok(entry) if options.readonly => {
+            db.objects.insert(key, entry);
+          },
           Ok(entry) => {
             db.objects.insert(key.clone(), entry);
             baseline.insert(key, props);
@@ -1021,6 +1026,10 @@ mod tests {
       ..Default::default()
     })
     .expect("attach readonly");
+    assert!(
+      reloaded.external.as_ref().is_some_and(|e| e.baseline.is_empty()),
+      "a readonly attach keeps no as-stored copy"
+    );
     let entry = reloaded.lookup("doc1#s1").expect("entry survives");
     assert_eq!(entry.get_string("type"), Some("ltx:section"));
     assert!(matches!(entry.get_value("pageid"), Some(Value::Int(3))));
