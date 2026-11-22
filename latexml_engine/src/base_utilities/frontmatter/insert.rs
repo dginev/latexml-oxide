@@ -479,7 +479,7 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
   let claimed: HashSet<String> = net_content_words(&claimed_text).into_iter().collect();
   let mut written: Vec<String> = resolver::addresses_in(&claimed_text);
   let claimed_folded = resolver::base_letters(&claimed_text).to_lowercase();
-  let email_name = get_frontmatter_name(None, "ltx:contact", "email")?;
+  let mut default_email_name = DefaultEmailName::default();
   for mut note in notes {
     let store = note.get_attribute("_net").unwrap_or_default();
     // (and the words of the class's own code in the store, frontmatter_stores.rs `net_class_text`, as a multiset: each
@@ -557,6 +557,10 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
     let creator = note.get_parent();
     // (the addresses, the note's creator's e-mail contacts where the note stands)
     if let Some(creator) = creator.as_ref() {
+      let email_name = match addresses.is_empty() {
+        true => None,
+        false => default_email_name.get()?,
+      };
       let saved = document.get_node().clone();
       document.set_node(creator);
       for address in &addresses {
@@ -2032,7 +2036,7 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
   // never depends on another line — user ruling 2026-11-05, "Sole author": `* Corresponding author, E-mail: qz@a.org`
   // under `Ann Able$^{a}$` is Ann's beside an orphan `$^{b}$ Univ B, City` too, rev107c2 finding 2)
   let sole_author = authors.len() == 1 && !nameless_creator_holds_names(document);
-  let default_name = get_frontmatter_name(None, "ltx:contact", "email")?;
+  let mut default_name = DefaultEmailName::default();
   let names: Vec<String> = authors
     .iter()
     .map(|author| {
@@ -2512,7 +2516,7 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
                 && c.get_content().trim() == text.as_str()
             }) {
               if only.is_some() {
-                carry_printed_label(template, held, default_name.as_deref());
+                carry_printed_label(template, held, default_name.get()?.as_deref());
               }
               continue;
             }
@@ -2590,7 +2594,7 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
     if let Some(held) = held.clone()
       && only.is_some()
     {
-      carry_printed_label(&placed, held, default_name.as_deref());
+      carry_printed_label(&placed, held, default_name.get()?.as_deref());
     }
     if held.is_some() || on_block.contains(&text) {
       if let Some(parent) = placed.get_parent() {
@@ -2792,7 +2796,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
     .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(&name.get_content()))))
     .collect();
   let spells = |local: &str| spelled_owner(&keys, &s!("{local}@x.org")).is_some();
-  let default_name = get_frontmatter_name(None, "ltx:contact", "email")?;
+  let mut default_name = DefaultEmailName::default();
   // (the marks the authors' names show or request, as the Link step reads them: a line's mark no name answers stays
   // printed, `LINE_MARK_SHOWN`)
   let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
@@ -2980,7 +2984,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
         None if cut.start == 0 && printed_lines == 1 && entry_name != role_name => {
           entry_name.clone()
         },
-        None => default_name.clone(),
+        None => default_name.get()?,
       };
       // (the marks leading each address — the line's opening one, `$**$ email: cx@…, c\_dee@…` (gr-qc0207058), or one
       // before each, `$^1$a@x, $^2$b@y` (1706.04764, 2505.11901) — or following each, its key on the Link step's
@@ -3006,13 +3010,10 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
         // `Email: x@y (Corresponding Author)`, 2503.14354; `(* corresponding author)`, 2210.14319 — [`role_tag`])
         let (name, mark) = match &cut.role_tag {
           Some((phrase, tag_mark)) if n == last => (
-            Some(s!(
-              "{phrase}, {}",
-              name
-                .clone()
-                .or_else(|| default_name.clone())
-                .unwrap_or_default()
-            )),
+            Some(s!("{phrase}, {}", match name.clone() {
+              Some(name) => name,
+              None => default_name.get()?.unwrap_or_default(),
+            })),
             mark.or_else(|| tag_mark.clone()),
           ),
           _ => (name.clone(), mark),
@@ -3976,7 +3977,7 @@ fn correspondence_phrase(label: &str) -> Option<usize> {
 /// finding 1).
 fn write_role_notes(document: &mut Document) -> Result<()> {
   let contacts = document.findnodes("//ltx:creator/ltx:contact[@role='email'][@name]", None);
-  let default_name = get_frontmatter_name(None, "ltx:contact", "email")?;
+  let mut default_name = DefaultEmailName::default();
   for mut contact in contacts {
     let name = contact.get_attribute("name").unwrap_or_default();
     let Some(end) = correspondence_phrase(&name) else {
@@ -4012,12 +4013,12 @@ fn write_role_notes(document: &mut Document) -> Result<()> {
     }
     let remainder = name[end..]
       .trim_start_matches(|c: char| c.is_whitespace() || ",;:-\u{2013}\u{2014}".contains(c));
-    match (remainder.chars().any(char::is_alphanumeric), &default_name) {
-      (true, _) => document.set_attribute(&mut contact, "name", remainder)?,
-      (false, Some(default)) => document.set_attribute(&mut contact, "name", default)?,
-      (false, None) => {
-        contact.remove_attribute("name").ok();
-      },
+    if remainder.chars().any(char::is_alphanumeric) {
+      document.set_attribute(&mut contact, "name", remainder)?;
+    } else if let Some(default) = default_name.get()? {
+      document.set_attribute(&mut contact, "name", &default)?;
+    } else {
+      contact.remove_attribute("name").ok();
     }
     if same_phrase {
       continue;

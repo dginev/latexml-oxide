@@ -128,7 +128,7 @@ fn aa_notes_read_as_aa_prints_them() {
       r#"<pubnote role="journal">Astronomy &amp; Astrophysics</pubnote>"#.to_string(),
       r#"<pubnote role="note">Research Note</pubnote>"#.to_string(),
       r#"<pubnote role="dedication">To the memory of B. Baker</pubnote>"#.to_string(),
-      r#"<pubnote name="DOI: " role="doi">10.1051/x</pubnote>"#.to_string(),
+      r#"<pubnote name="DOI: " role="doi">10.1051/x</pubnote>"#.to_string(),
     ],
     "{xml}"
   );

@@ -1,0 +1,10 @@
+% The default e-mail label, `\lx@contact@email@name` = `Email:~` (Perl Base_Utility.pool.ltxml:783), is digested only
+% where a contact takes it, as Perl digests a name only for an entry it adds: a document's `\def~{\verb~}` (lineno.tex:20,
+% ulineno.tex:33) never meets it in a document with no e-mail.
+% witness: lineno/lineno (5 errors), lineno/ulineno (1) (TL doc, manual sweep)
+% oracle:  pdflatex 0 errors; "T", "x"
+% engines: Perl 0 errors; rust 4a74afcbfd = 1 error (`\verb illegal in argument`, the label digested after absorb)
+% expect:  0 errors, 0 warnings; <ltx:title>T</ltx:title>, <ltx:p>x</ltx:p>
+% status:  RED (4a74afcbfd) -> GREEN (MANFM)
+% preload: ar5iv.sty
+\documentclass{article}\title{T}\def~{\verb~}\begin{document}\maketitle x\end{document}

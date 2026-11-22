@@ -1047,11 +1047,13 @@ impl ClassReaders {
       };
       T_CS!(&s!("\\lx@date@{role}@name"))
     };
+    // Its characters only: the label's `\lx@nobreakspace` (OXIDIZED_DESIGN_DIVERGENCES #1136) prints no letter.
     let Some(word) = parameterless_body(&default).map(|body| {
       alphanumerics(
         &body
           .unlist_ref()
           .iter()
+          .filter(|t| !t.get_catcode().is_active_or_cs())
           .map(Token::to_string)
           .collect::<String>(),
       )

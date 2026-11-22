@@ -149,6 +149,16 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     container images print the binaries' revision and carry `org.opencontainers.image.{title,version,revision,source}`;
     the release page folds its generated pull-request list into `<details>` (`tools/release_notes_details.sh`) and its
     links point at the tag's files.
+  - **0.8.0-rc2: two frontmatter Errors of the TeX Live manual sweep.** The ams bindings run only what was added to
+    `\@setauthors` after the class's load ended, so a class built on amsart keeps its own setter unrun: ijmart.cls's,
+    whose `\if\authors\@empty\relax\else` has no `\fi`, ran off its argument with the names emptied (ijmart/ijmsample:
+    2 Errors → 0, output unchanged). The default e-mail label (`Email:~`) is digested only where a contact takes it,
+    so a document's `\def~{\verb~}` no longer meets it with no e-mail (lineno/ulineno 1 Error → 0). LaTeXML's own
+    default labels ("Affiliation:", "Email:", "Received", "Keywords:" …) end in `\lx@nobreakspace` instead of `~`, as
+    article.cls spells its labels with `\nobreakspace`, so that `\def~` no longer reaches the label a contact or date
+    takes (lineno/lineno 5 Errors → 0, its names "Affiliation:\verb~~" → "Affiliation: "); where a class makes `~` a
+    plain space (aa, elsart under babel-french) the names now end in a no-break space, as everywhere else. Guards
+    `perfect_kernel_batchmanfm::*`.
   - **Regressions from the per-paper check of the November run (#954, #958, #960, and the follow-up integration).** Every paper that converted with
     no Error on 2026-11-05 (run 372) and erred in the November run was classified (pdflatex, Perl, a bisect); the
     clusters our changes caused are fixed:

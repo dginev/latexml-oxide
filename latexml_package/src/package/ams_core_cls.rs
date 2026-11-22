@@ -104,9 +104,30 @@ LoadDefinitions!({
   // names, contributors and addresses, so it starts empty and runs with none of them: what else it prints is a note.
   // amsart.cls:836 (amsproc.cls:773, amsbook.cls:615): `\@setthanks` prints the stored `\thankses`, empty here (the
   // binding's `\thanks` is a note), which a document's `\@setauthors` calls as the class's ends (2606.04416).
+  // A class built on these (ijmart.cls:229) has its own, which runs nothing more: what the document added runs
+  // (`\lx@ams@setauthors@class`, kept where each class's load ends).
   RawTeX!(r"\let\@setauthors\@empty
 \def\@setthanks{\def\thanks##1{\par##1\@addpunct.}\thankses}
+\AddToHook{class/after}{\global\let\lx@ams@setauthors@class\@setauthors}
 \def\lx@ams@setauthors{\ifx\@empty\authors\else
-  \lx@frontmatter@footnotes{\let\authors\@empty\let\contribs\@empty\let\@setaddresses\relax\@setauthors}\fi}");
+  \lx@frontmatter@footnotes{\let\authors\@empty\let\contribs\@empty\let\@setaddresses\relax
+    \lx@ams@setauthors@added}\fi}");
+  // (`\@setauthors` past the class's, kept at its end; the whole of it where the document replaced it. ijmart.cls:240's
+  // `\if\authors\@empty\relax\else` has no `\fi`, harmless only while `\authors` holds the names: ijmsample, TL doc)
+  DefMacro!("\\lx@ams@setauthors@added", sub[_args] {
+    let body = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
+      Some(Stored::Expandable(d)) if d.get_parameters().is_none_or(|p| p.get_parameters().is_empty()) => match d.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => Some(body.unlist_ref().to_vec()),
+        _ => None,
+      },
+      _ => None,
+    };
+    let current = body(r"\@setauthors");
+    let class = body(r"\lx@ams@setauthors@class");
+    Ok(match current.as_ref().zip(class.as_ref()).and_then(|(current, class)| current.strip_prefix(class.as_slice())) {
+      Some(added) => Tokens::new(added.to_vec()),
+      None => Tokens!(T_CS!(r"\@setauthors")),
+    })
+  });
   AddToMacro!("\\lx@maketitle@body", "\\lx@ams@setauthors");
 });

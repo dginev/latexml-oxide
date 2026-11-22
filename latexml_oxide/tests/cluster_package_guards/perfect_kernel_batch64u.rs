@@ -39,8 +39,8 @@ fn l_aa_documentstyle_is_the_aa_class() {
   );
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>J. Greiner</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Max-Planck-Institut für extraterrestrische Physik, Garching</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>R. Egger</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Universität Bonn</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>J. Greiner</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Max-Planck-Institut für extraterrestrische Physik, Garching</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>R. Egger</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Universität Bonn</contact>\n  </creator>",
   ]);
   assert_element(
     &xml,
@@ -83,7 +83,7 @@ fn l_aa_thesaurus_ends_at_par() {
   assert_eq!(warning_count(&log), 0, "{log}");
   assert_element(&xml, "title", &[], "<title>A young remnant</title>");
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>J. Greiner</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">MPE Garching</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>J. Greiner</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">MPE Garching</contact>\n  </creator>",
   ]);
   assert!(!xml.contains("<classification"), "{xml}");
   assert!(

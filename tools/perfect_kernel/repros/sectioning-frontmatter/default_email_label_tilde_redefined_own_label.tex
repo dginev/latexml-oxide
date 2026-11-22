@@ -1,0 +1,9 @@
+% An e-mail whose class names it (amsart's `\email`, "Email address: ") beside a document's `\def~{\verb~}`: no step
+% after the frontmatter is placed needs the default label (`Email:~`), so it is not digested.
+% witness: lineno/lineno, lineno/ulineno (TL doc, manual sweep): the e-mail sibling
+% oracle:  pdflatex 0 errors; "T", "A", "Email address: a@b.org", "x"
+% engines: Perl 0 errors, contact name "Email address: "; rust 4a74afcbfd = 1 error (`\verb illegal in argument`)
+% expect:  0 errors, 0 warnings; author "A" with the e-mail contact a@b.org named "Email address: "
+% status:  RED (4a74afcbfd) -> GREEN (MANFM)
+% preload: ar5iv.sty
+\documentclass{amsart}\def~{\verb~}\begin{document}\title{T}\author{A}\email{a@b.org}\maketitle x\end{document}
