@@ -807,6 +807,9 @@ pub fn exit_now(code: i32) -> ! {
 /// Writes `args` to standard error in one `write(2)`, formatted into a stack buffer (cut at 1 KiB).
 /// Unlike `eprintln!` it neither allocates nor takes the standard library's stderr lock. That makes
 /// it safe in an allocation-failure hook, and for the watchdog when a stuck thread holds that lock.
+/// It opens a fresh line when a progress note left stderr mid-line, as the logger's records do: a
+/// `Fatal:timeout:wallclock` glued onto `(Processing definitions …l3backend-pdftex.def... )` escaped
+/// every `^Fatal:` count.
 pub fn write_stderr_unlocked(args: std::fmt::Arguments) {
   struct StackLine {
     bytes: [u8; 1024],
@@ -821,7 +824,14 @@ pub fn write_stderr_unlocked(args: std::fmt::Arguments) {
     }
   }
   let mut line = StackLine { bytes: [0; 1024], len: 0 };
+  if !crate::util::logger::stderr_at_line_start() {
+    line.bytes[0] = b'\n';
+    line.len = 1;
+  }
   let _ = std::fmt::write(&mut line, args);
+  if line.len > 0 {
+    crate::util::logger::set_stderr_at_line_start(line.bytes[line.len - 1] == b'\n');
+  }
   #[cfg(unix)]
   // SAFETY: a write of `len` initialized bytes from a stack buffer to the standard error descriptor.
   unsafe {

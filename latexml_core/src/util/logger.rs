@@ -186,6 +186,15 @@ fn write_fd(_fd: i32, _bytes: &[u8]) {}
 /// check-write-set happens as one critical section holding the stderr lock.
 static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
 
+/// Whether stderr sits at the start of a line ([`STDERR_AT_LINE_START`]): read without the stderr lock by
+/// [`crate::watchdog::write_stderr_unlocked`], which must not wait on a stuck thread.
+pub fn stderr_at_line_start() -> bool { STDERR_AT_LINE_START.load(Ordering::Acquire) }
+
+/// Records where a write that bypassed the logger (`watchdog::write_stderr_unlocked`) left stderr's cursor.
+pub fn set_stderr_at_line_start(at_line_start: bool) {
+  STDERR_AT_LINE_START.store(at_line_start, Ordering::Release);
+}
+
 /// Perl `print STDERR _freshline(\*STDERR), $text`: a direct STDERR write at any verbosity, on a fresh line. One write
 /// under the (reentrant) stderr lock, so a capture buffer shared by a test's threads never splits a line.
 pub fn stderr_fresh_line(text: &str) {
