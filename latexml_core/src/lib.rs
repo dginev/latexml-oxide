@@ -184,16 +184,7 @@ pub fn reset_thread_engine() {
 ///    engine afterward (see the `THREAD-LIFECYCLE CONTRACT` on
 ///    [`reset_thread_engine`]).
 pub fn release_core_state_for_post() {
-  // Snapshot the two STATE values that post-processing and diagnostics can
-  // still read after MakeBibliography:
-  // - `NOMINAL_FONT_SIZE`: read by `font::defsize()` ← `Font::math_default()`
-  //   when MathML presentation sizes negative-space `<mpadded>` widths on
-  //   documents whose nominal font size differs from 10pt
-  //   (`latexml_post/src/mathml/presentation.rs`).
-  // - `MAX_ERRORS`: read by `error::note_error_cap()` / `Error!` (e.g. tikz
-  //   raises the cap from 100 to 1000).
-  let nominal_font_size = state::lookup_float("NOMINAL_FONT_SIZE");
-  let max_errors = state::try_lookup_int("MAX_ERRORS");
+  let post_values = PostStateValues::capture();
   preserve_arena_keyed_reports_across(|| {
     common::local_assignments::initialize_localized();
     gullet::initialize_gullet();
@@ -204,11 +195,45 @@ pub fn release_core_state_for_post() {
     binding::content::reset_fontmap_key_memo();
     reset_conversion_state();
   });
-  if let Some(sz) = nominal_font_size {
-    state::assign_value("NOMINAL_FONT_SIZE", sz, Some(state::Scope::Global));
+  post_values.restore();
+}
+
+/// The STATE values the render phases still read once the engine's state is
+/// released ([`release_core_state_for_post`]) or, in a page-render worker
+/// process, never built:
+/// - `NOMINAL_FONT_SIZE`: `font::defsize()` ← `Font::math_default()`, the
+///   MathML presentation's negative-space `<mpadded>` widths on documents whose
+///   nominal font size differs from 10pt (a0poster's 25pt, 11pt/12pt classes;
+///   `latexml_post/src/mathml/presentation.rs`);
+/// - `MAX_ERRORS`: the error cap, `error::note_error_cap()` / `Error!` (tikz
+///   raises it from 100 to 1000).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct PostStateValues {
+  pub nominal_font_size: Option<f64>,
+  pub max_errors:        Option<i64>,
+}
+
+impl PostStateValues {
+  /// Read the values from this thread's STATE.
+  pub fn capture() -> Self {
+    PostStateValues {
+      nominal_font_size: state::lookup_float("NOMINAL_FONT_SIZE").map(|f| f.0),
+      max_errors:        state::try_lookup_int("MAX_ERRORS"),
+    }
   }
-  if let Some(max) = max_errors {
-    state::assign_value("MAX_ERRORS", max, Some(state::Scope::Global));
+
+  /// Assign the captured values globally in this thread's STATE.
+  pub fn restore(self) {
+    if let Some(sz) = self.nominal_font_size {
+      state::assign_value(
+        "NOMINAL_FONT_SIZE",
+        common::float::Float(sz),
+        Some(state::Scope::Global),
+      );
+    }
+    if let Some(max) = self.max_errors {
+      state::assign_value("MAX_ERRORS", max, Some(state::Scope::Global));
+    }
   }
 }
 

@@ -5483,6 +5483,82 @@ Text.
     );
   }
 
+  /// The page-render workers are fresh processes: the parent's `NOMINAL_FONT_SIZE` reaches them through
+  /// the render manifest, so an `a0poster` page (25pt) sizes its `\!` `<mpadded>` as the serial render
+  /// does (1.556em, not the 10pt default's 0.371em), and every page is the serial one.
+  #[test]
+  fn render_workers_keep_the_nominal_font_size() {
+    let mut tex = String::from("\\documentclass{a0poster}\n\\begin{document}\n");
+    for i in 1..=70 {
+      tex.push_str(&format!("\\section{{S{i}}}\n$Q\\!\\kappa_{{G}}$\n\n"));
+    }
+    tex.push_str("\\end{document}\n");
+    let run = |jobs: &str| {
+      let work = tempfile::tempdir().expect("tempdir");
+      std::fs::write(work.path().join("a.tex"), &tex).unwrap();
+      let out = Command::new(binary())
+        .args([
+          "a.tex",
+          "--format=html5",
+          "--nodefaultresources",
+          "--pmml",
+          "--noinvisibletimes",
+          "--splitat=section",
+          "--dest=a.html",
+        ])
+        .env("LATEXML_RENDER_JOBS", jobs)
+        .current_dir(work.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+      assert!(out.status.success(), "stderr:\n{stderr}");
+      let mut pages: Vec<(String, String)> = std::fs::read_dir(work.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "html"))
+        .map(|path| {
+          let name = path.file_name().unwrap().to_string_lossy().into_owned();
+          (name, std::fs::read_to_string(&path).unwrap())
+        })
+        .collect();
+      pages.sort();
+      (pages, stderr)
+    };
+    let (serial, serial_err) = run("1");
+    let (parallel, stderr) = run("8");
+    assert!(
+      stderr.contains("parallel page render engaged: "),
+      "the worker path must engage:\n{stderr}"
+    );
+    for err in [&serial_err, &stderr] {
+      let verdict = err
+        .lines()
+        .rfind(|line| line.starts_with("Conversion complete:"));
+      assert_eq!(
+        verdict,
+        Some("Conversion complete: No obvious problems"),
+        "a0poster must convert cleanly:\n{err}"
+      );
+    }
+    let mpadded = "<mpadded style=\"width:1.556em;\" width=\"1.556em\">";
+    for (run, pages) in [("serial", &serial), ("parallel", &parallel)] {
+      for (name, page) in pages.iter().filter(|(name, _)| name.starts_with('S')) {
+        assert!(
+          page.contains(mpadded),
+          "{run} {name} lacks {mpadded}:\n{page}"
+        );
+      }
+    }
+    assert_eq!(serial.len(), parallel.len());
+    assert!(serial.len() > 70, "{} pages", serial.len());
+    for ((name, serial_page), (_, parallel_page)) in serial.iter().zip(&parallel) {
+      assert_eq!(
+        serial_page, parallel_page,
+        "{name} differs between the serial and parallel render"
+      );
+    }
+  }
+
   /// Regression guard: default `Rewrite::Replace` (without `local_replace`) must
   /// detach following siblings before running the closure (Perl `Rewrite.pm:124-134`),
   /// keeping `acmart` teaser-after-abstract ordering unchanged.

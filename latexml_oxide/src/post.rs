@@ -1534,6 +1534,7 @@ fn run_post_processing_inner(
         destination_directory: p.destination_directory.clone(),
       })
       .collect();
+    let post_values = latexml_core::PostStateValues::capture();
     let manifest = crate::render_workers::RenderManifest {
       // Filled in by `parallel_render` once the db is saved.
       dbfile: std::path::PathBuf::new(),
@@ -1562,6 +1563,8 @@ fn run_post_processing_inner(
       pages: Vec::new(),
       // Filled in by `parallel_render` once the fleet is sized.
       max_rss_kb: 0,
+      nominal_font_size: post_values.nominal_font_size,
+      max_errors: post_values.max_errors,
     };
     let t_pages = audit_start("render_pages");
     let outcome = crate::render_workers::parallel_render(
