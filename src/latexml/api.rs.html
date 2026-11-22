@@ -327,18 +327,19 @@
 <a href=#327 id=327 data-nosnippet>327</a>  <span class="attr">#[test]
 <a href=#328 id=328 data-nosnippet>328</a>  </span><span class="kw">fn </span>core_failure_preserves_conversion_log() {
 <a href=#329 id=329 data-nosnippet>329</a>    <span class="kw">let </span>response = ConversionResponse {
-<a href=#330 id=330 data-nosnippet>330</a>      result:      <span class="prelude-val">None</span>,
-<a href=#331 id=331 data-nosnippet>331</a>      log:         <span class="string">"Fatal:foo:bar detailed diagnostic"</span>.to_string(),
-<a href=#332 id=332 data-nosnippet>332</a>      status:      <span class="string">"Fatal"</span>.to_string(),
-<a href=#333 id=333 data-nosnippet>333</a>      status_code: <span class="number">3</span>,
-<a href=#334 id=334 data-nosnippet>334</a>    };
-<a href=#335 id=335 data-nosnippet>335</a>    <span class="kw">let </span>err = core_result_xml(response, <span class="string">"conversion failed before post-processing"</span>)
-<a href=#336 id=336 data-nosnippet>336</a>      .expect_err(<span class="string">"missing XML is an Err"</span>);
-<a href=#337 id=337 data-nosnippet>337</a>    <span class="macro">assert!</span>(
-<a href=#338 id=338 data-nosnippet>338</a>      err.contains(<span class="string">"conversion failed before post-processing"</span>),
-<a href=#339 id=339 data-nosnippet>339</a>      <span class="string">"{err}"
-<a href=#340 id=340 data-nosnippet>340</a>    </span>);
-<a href=#341 id=341 data-nosnippet>341</a>    <span class="macro">assert!</span>(err.contains(<span class="string">"Fatal:foo:bar detailed diagnostic"</span>), <span class="string">"{err}"</span>);
-<a href=#342 id=342 data-nosnippet>342</a>  }
-<a href=#343 id=343 data-nosnippet>343</a>}
+<a href=#330 id=330 data-nosnippet>330</a>      result:       <span class="prelude-val">None</span>,
+<a href=#331 id=331 data-nosnippet>331</a>      log:          <span class="string">"Fatal:foo:bar detailed diagnostic"</span>.to_string(),
+<a href=#332 id=332 data-nosnippet>332</a>      status:       <span class="string">"Fatal"</span>.to_string(),
+<a href=#333 id=333 data-nosnippet>333</a>      status_code:  <span class="number">3</span>,
+<a href=#334 id=334 data-nosnippet>334</a>      handoff_file: <span class="prelude-val">None</span>,
+<a href=#335 id=335 data-nosnippet>335</a>    };
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="kw">let </span>err = core_result_xml(response, <span class="string">"conversion failed before post-processing"</span>)
+<a href=#337 id=337 data-nosnippet>337</a>      .expect_err(<span class="string">"missing XML is an Err"</span>);
+<a href=#338 id=338 data-nosnippet>338</a>    <span class="macro">assert!</span>(
+<a href=#339 id=339 data-nosnippet>339</a>      err.contains(<span class="string">"conversion failed before post-processing"</span>),
+<a href=#340 id=340 data-nosnippet>340</a>      <span class="string">"{err}"
+<a href=#341 id=341 data-nosnippet>341</a>    </span>);
+<a href=#342 id=342 data-nosnippet>342</a>    <span class="macro">assert!</span>(err.contains(<span class="string">"Fatal:foo:bar detailed diagnostic"</span>), <span class="string">"{err}"</span>);
+<a href=#343 id=343 data-nosnippet>343</a>  }
+<a href=#344 id=344 data-nosnippet>344</a>}
 </code></pre></div></section></main></body></html>
