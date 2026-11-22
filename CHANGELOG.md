@@ -8,7 +8,7 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 ### Coverage
 
 - **98 % of arXiv converts without an error.** Of arXiv's 2,962,950 LaTeX articles, the production run of November
-  2026 converts 98.1 % with no Error or Fatal, up from 86.3 % under 0.7.6 (run 306, September 2026) and 93.4 % in
+  2026 (run 397) converts 98.1 % with no Error or Fatal, up from 86.3 % under 0.7.6 (run 306, September 2026) and 93.4 % in
   October (run 336). The release is regression-tested against the entire arXiv corpus: each paper's result is
   compared with the previous full run. latexml-oxide converts the ar5iv Lab and arXiv's HTML Papers.
 - **TeX Live's package manuals convert clean.** The perfect-kernel campaign (2026-08-31 to 11-13) took the LaTeX
@@ -74,6 +74,9 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 ### Upgrading from 0.7.6
 
 - Raw loading is the default; `--noincludestyles` restores Perl LaTeXML's behaviour.
+- Bindings that now read the real package source can surface conflicts TeX itself has and 0.7.x hid: for example
+  `fancybox` loaded after `fancyvrb` redefines `\VerbatimEnvironment`, so every fancyvrb environment runs to the end
+  of the file, as in pdflatex. Load `fancybox` first, or drop it if its boxes are unused.
 - PDF output mode is the default: `\ifpdf` follows `\pdfoutput`, which is 1 unless the source's figures are EPS/PS
   only (OXIDIZED_DESIGN_DIVERGENCES #285).
 - A failing XSLT stylesheet is a Fatal (exit 1, no output); a repeated single-valued option keeps its last value; a
