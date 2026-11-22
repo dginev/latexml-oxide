@@ -1038,6 +1038,95 @@ mod split_css_links {
       );
     }
   }
+
+  /// `my.css`, which `@import`s `base.css`.
+  fn write_importing_css(dir: &Path) {
+    std::fs::write(dir.join("my.css"), "@import \"base.css\";\n.x{color:red}\n").unwrap();
+    std::fs::write(dir.join("base.css"), ".y{color:blue}\n").unwrap();
+  }
+
+  /// One CSS file requested by both routes: `\lxRequireResource` (an `<ltx:resource>`, copied without
+  /// its `@import`s) runs first, then `--css` (which follows them). The once-per-conversion cache must
+  /// not let the first request stand in for the second, or `base.css` is silently never copied.
+  #[test]
+  fn css_imports_followed_after_a_resource_copy() {
+    const DOC: &str = "\\documentclass{book}\n\\usepackage{latexml}\n\\lxRequireResource{my.css}\n\
+                       \\begin{document}\n\\chapter{One}\nText one.\n\\section{Sec A}\nAlpha.\n\
+                       \\chapter{Two}\nText two.\n\\end{document}\n";
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("doc.tex"), DOC).unwrap();
+    write_importing_css(work.path());
+    let out = run(work.path(), &[
+      "--css=my.css",
+      "--splitat=section",
+      "--format=html5",
+      "--dest=out/index.html",
+      "doc.tex",
+    ]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{stderr}");
+    assert_eq!(stderr.matches("Warning:").count(), 0, "{stderr}");
+    assert_eq!(stderr.matches("Error:").count(), 0, "{stderr}");
+    for css in ["my.css", "base.css"] {
+      assert_eq!(
+        std::fs::read_to_string(work.path().join("out").join(css)).ok(),
+        std::fs::read_to_string(work.path().join(css)).ok(),
+        "{css} not copied: {stderr}"
+      );
+    }
+  }
+
+  /// A `--css` file whose `@import` target cannot be copied (the destination is a directory) is
+  /// retried, with its Warning, on every page, as a failed copy of the file itself is.
+  #[test]
+  fn failed_css_import_copy_is_retried_per_page() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let src = tempfile::tempdir().expect("tempdir");
+    write_importing_css(src.path());
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::create_dir(dir.path().join("base.css")).unwrap();
+    let dest = dir.path().join("index.html").to_string_lossy().into_owned();
+    let mut xml = String::from(
+      "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><title>T</title>",
+    );
+    for n in 1..=2 {
+      xml.push_str(&format!(
+        "<section xml:id=\"S{n}\"><title>Sec {n}</title><para><p>text {n}</p></para></section>"
+      ));
+    }
+    xml.push_str("</document>");
+    let css = ["my.css".to_string()];
+    let search = [src.path().to_string_lossy().into_owned()];
+    latexml_core::common::error::initialize_report();
+    let out = latexml::post::run_post_processing_logged(&xml, &latexml::post::PostOptions {
+      destination: Some(&dest),
+      source_directory: Some(&search[0]),
+      search_paths: &search,
+      split: true,
+      split_xpath: Some("//ltx:section".to_string()),
+      css_files: &css,
+      ..super::xslt_failure_is_fatal::post_options("LaTeXML-html5.xsl")
+    });
+    latexml_core::common::error::initialize_report();
+    // The root page and two sections: one Warning each, and no Error.
+    assert_eq!(
+      out.log.matches("Warning:").count(),
+      3,
+      "a Warning per page: {}",
+      out.log
+    );
+    assert_eq!(
+      out.log.matches("Couldn't copy @import").count(),
+      3,
+      "{}",
+      out.log
+    );
+    assert_eq!(out.log.matches("Error:").count(), 0, "{}", out.log);
+    assert_eq!(
+      std::fs::read_to_string(dir.path().join("my.css")).unwrap(),
+      "@import \"base.css\";\n.x{color:red}\n"
+    );
+  }
 }
 
 mod split_nav_relations {

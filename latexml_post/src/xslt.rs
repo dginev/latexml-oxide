@@ -353,11 +353,15 @@ pub struct XSLT {
   resource_directory: Option<String>,
   /// Search paths for finding resources.
   searchpaths:        Vec<String>,
-  /// The resources this processor already put in place, as (source, type, destination): a split run
-  /// asks for the same CSS/JS on every page, and the search (~35 `statx` a page) and the copy are made
-  /// once per conversion (Nasser's 71,476-page document, #777 FAQ).
-  copied:             RefCell<HashSet<(String, Option<String>, String)>>,
+  /// The resources this processor already put in place, as (source, type, destination, whether its
+  /// `@import`s were followed too): a split run asks for the same CSS/JS on every page, and the search
+  /// (~35 `statx` a page) and the copy are made once per conversion (Nasser's 71,476-page document, #777
+  /// FAQ).
+  copied:             RefCell<HashSet<ResourceKey>>,
 }
+
+/// A placed resource: (source, type, destination, `@import`s followed).
+type ResourceKey = (String, Option<String>, String, bool);
 
 std::thread_local! {
   static RESOURCE_COPIES: Cell<usize> = const { Cell::new(0) };
@@ -495,15 +499,22 @@ impl XSLT {
         let _ = fs::create_dir_all(parent);
       }
     };
-    let key = (
+    let follows = imports.is_some() && info.is_some_and(|i| i.extension == "css");
+    let mut key = (
       src.to_string(),
       resource_type.map(str::to_string),
       dest.clone(),
+      true,
     );
-    if self.copied.borrow().contains(&key) {
+    // A copy whose imports were followed also serves a request that does not follow them.
+    let done = self.copied.borrow().contains(&key) || {
+      key.3 = follows;
+      self.copied.borrow().contains(&key)
+    };
+    if done {
       return relative_to_destination(doc, dest);
     }
-    // A failed write warns and is retried on the next page, as before.
+    // A failed write (of the file or of an `@import`) warns and is retried on the next page, as before.
     let mut placed = true;
 
     match find_resource_file(src, info, &search_paths) {
@@ -539,9 +550,9 @@ impl XSLT {
           }
         }
         if let Some(seen) = imports
-          && info.is_some_and(|i| i.extension == "css")
+          && follows
         {
-          copy_css_imports(Path::new(&path), Path::new(&dest), seen);
+          placed &= copy_css_imports(Path::new(&path), Path::new(&dest), seen);
         }
       },
       None => {
@@ -659,15 +670,17 @@ fn same_file(a: impl AsRef<Path>, b: impl AsRef<Path>) -> bool {
 /// recreated under the destination — copied, and (if itself a `.css`) recursed
 /// into. Remote (`http(s)://`, `//`, `data:`, any `scheme://`) and absolute
 /// (`/…`) targets are left untouched. `seen` (keyed on the absolute source
-/// path) guards against import cycles and redundant copies.
-fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) {
+/// path) guards against import cycles and redundant copies. Returns false when an import target was
+/// missing or could not be copied (each warned), so the caller retries it on the next page.
+fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) -> bool {
   let content = match fs::read_to_string(src) {
     Ok(c) => c,
-    Err(_) => return,
+    Err(_) => return true,
   };
   let (Some(src_dir), Some(dest_dir)) = (src.parent(), dest.parent()) else {
-    return;
+    return true;
   };
+  let mut placed = true;
   for target in parse_css_imports(&content) {
     let t = target.trim();
     // Skip remote / non-copyable targets — only local relative paths are ours.
@@ -693,6 +706,7 @@ fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) {
         t,
         src.display()
       );
+      placed = false;
       continue;
     }
     if !same_file(&import_src, &import_dest) {
@@ -708,6 +722,7 @@ fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) {
           import_dest.display(),
           e
         );
+        placed = false;
         continue;
       }
     }
@@ -717,9 +732,10 @@ fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) {
       .and_then(|e| e.to_str())
       .is_some_and(|e| e.eq_ignore_ascii_case("css"))
     {
-      copy_css_imports(&import_src, &import_dest, seen);
+      placed &= copy_css_imports(&import_src, &import_dest, seen);
     }
   }
+  placed
 }
 
 impl Processor for XSLT {
