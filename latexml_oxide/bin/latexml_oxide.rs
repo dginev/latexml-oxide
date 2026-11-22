@@ -562,6 +562,20 @@ fn custom_alloc_error_hook(layout: Layout) {
   latexml_core::watchdog::exit_now(137);
 }
 
+/// Under `panic = "abort"` (the maxperf distribution build) a panic ends the process without unwinding, so no
+/// guard removes the paths the run registered (`watchdog::remove_on_exit`: the post handoff beside the pages, the
+/// page-spill directory) and no guard stops a render worker: the panic hook does, as the exits that skip destructors
+/// do. An unwinding build leaves them to their guards, since a caught panic (a per-page `catch_unwind`) continues.
+fn install_panic_sweep(aborts: bool) {
+  if aborts {
+    let report = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+      report(info);
+      latexml_core::watchdog::try_remove_registered_paths();
+    }));
+  }
+}
+
 /// Read back which side of a `--opt`/`--noopt` boolean pair clap kept, or `None`
 /// if neither flag was given.
 ///
@@ -786,6 +800,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   }
   // This binary serves the worker mode above, so a big split may spawn it.
   latexml::render_workers::enable_auto_jobs();
+  install_panic_sweep(cfg!(panic = "abort"));
 
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees don't overflow the OS-default 8 MB main-thread
@@ -2346,6 +2361,24 @@ mod input_failure_tests {
       )]),
       ("invalid".to_string(), "no_viable_tex".to_string())
     );
+  }
+}
+
+#[cfg(test)]
+mod panic_sweep_tests {
+  /// The hook an aborting build installs removes the run's registered paths (a test build unwinds, so the hook is
+  /// installed by hand and the panic caught by its thread's join).
+  #[test]
+  fn an_aborting_panic_removes_the_registered_paths() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let handoff = dir.path().join("latexml-post-handoff-1.xml");
+    std::fs::write(&handoff, "<document/>").expect("handoff written");
+    let _guard = latexml_core::watchdog::remove_on_exit(&handoff);
+    super::install_panic_sweep(true);
+    let joined = std::thread::spawn(|| panic!("post")).join();
+    let _ = std::panic::take_hook();
+    assert!(joined.is_err());
+    assert!(!handoff.exists(), "the handoff survived the panic");
   }
 }
 
