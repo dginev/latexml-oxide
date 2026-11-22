@@ -62,6 +62,17 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
       (1.0 GB serial). The pages are 3× smaller (the unread head links dropped, OXIDIZED_DESIGN_DIVERGENCES #1134).
     - His whole book (115,519 pages): rc2 1,609 s at 4.3 GB; 0.7.6 stops after 99 s at its memory fuse
       (`Fatal:Timeout:MemoryBudget`, 6.5 GB, `--max-memory=8192`) with 730 partial pages.
+    - Against TeX, same host and tree: TeX Live 2025 as last updated 2026-02-26 (formats 2026.2.26), pdfTeX
+      1.40.28, LuaHBTeX 1.22.0, LaTeX2e 2025-11-01 patch level 0, L3 programming layer 2025-11-06; latexml-oxide
+      read the same tree. The 32 papers of `docs/performance/PERFORMANCE.md` P13, one core, best of 3, the three
+      tools interleaved; CPU time (user + sys) per paper: latexml-oxide median 0.48 s (mean 1.55), one pdflatex pass
+      0.40 s (1.19), a full build (pdflatex, bibtex where the `.aux` names a `.bib`, pdflatex ×2) 1.20 s (3.60).
+      Ratios per paper: X/P1 median 1.12, geomean 1.14 (0.99 without P13's two outliers); X/full build 0.39 / 0.38.
+      pdflatex's own times matched the 2026-11-15 run within 0.5 %, so the conditions match: 31 of the 32 papers
+      got faster (median 0.934×; the int/perf release-profile binary then, the maxperf release build now).
+    - lualatex on the whole book (one run per pass, on one core): pass 1 1,134 s, pass 2 2,389 s, 67,424 PDF pages,
+      0.95 GB peak, 98 TeX errors in each pass (it continued past them); latexml-oxide 1,609 s at 4.3 GB for 115,519
+      HTML pages, post-processing included, no errors.
     - Not in the timings: the one-time format build for a TeX tree the release's embedded dumps were not built from
       (~9 s, OXIDIZED_DESIGN_DIVERGENCES #449). Loaded 56 conversions at a time, the paper gain is 1.2×.
   - **0.8.0-rc2: Split frees each page once it is copied (#965; issue 777).** `Split::process_pages` frees a page's

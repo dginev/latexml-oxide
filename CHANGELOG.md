@@ -57,7 +57,12 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
     papers that 0.7.6 failed on now convert;
   - a 9,700-page book split at `subsubsection` converts 2.3× faster in 1.7× less memory (1.8× faster in 4.9× less
     with serial rendering);
-  - the whole 115,519-page book converts in 27 minutes, where 0.7.6 stopped at its memory ceiling (#777).
+  - the whole 115,519-page book converts in 27 minutes, where 0.7.6 stopped at its memory ceiling (#777);
+  - for reference, against TeX on the same machine (TeX Live 2025: pdfTeX 1.40.28, LuaHBTeX 1.22.0, LaTeX2e
+    2025-11-01): a typical arXiv paper's HTML takes about as long as one pdflatex pass (1.14× geometric mean over 32
+    papers, 0.99× without two math-heavy outliers) and 0.38× a full pdflatex, bibtex, pdflatex ×2 build; the
+    115,519-page book takes 27 minutes against 59 for lualatex's two passes (the second settles its contents and
+    references).
 - **Large split documents stream by default.** A `--splitat` run streams its core and its split, writes the core
   result straight to disk, renders 64 or more pages on up to 8 worker processes within `--max-memory`, and keeps
   only the head links the navigation reads. Overrides: `LATEXML_POST_STREAM_SPLIT=0`, `LATEXML_RENDER_JOBS=1`.

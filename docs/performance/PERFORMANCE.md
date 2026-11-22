@@ -365,6 +365,10 @@ DG 2026-11-15: recorded as avenues to explore, not work items. The speed at int/
 - One pdflatex pass takes 0.40 s (mean 1.20 s); a full pdflatex + bibtex + 2× pdflatex build takes 1.23 s (mean 3.64 s).
 - Per paper, that is X/P1 median 1.24 (geomean 1.22) and X/full build 0.41.
 - Without the two known outliers the geomean is 1.05: 2106.09072 (row R MATHTAIL) and 2308.04512.
+- **rc2 (2026-11-22)**, the maxperf release build of `aba719d08b5`, same set and protocol (core 40): X median 0.48 s CPU
+  (mean 1.55); X/P1 median 1.12, geomean 1.14 (0.99 without the outliers); X/full build 0.39 / 0.38. pdflatex's times
+  matched within 0.5 %; X fell 0.934× per paper (31 of 32 faster). TeX Live 2025 (updated 2026-02-26): pdfTeX 1.40.28,
+  LaTeX2e 2025-11-01. Data: `pdfcmp2/res/rows.tsv` in the session scratch (not kept).
 
 **Where the time goes** (`perf stat -e instructions:u`, release binary):
 - **Fixed cost is already lower than pdflatex's.** A trivial article costs 0.97 G instructions (~122 ms) against pdflatex's 1.35 G (~137 ms). With amsmath, amssymb, graphicx and hyperref it is 1.18 G against 2.28 G.
