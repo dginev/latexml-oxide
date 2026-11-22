@@ -2685,9 +2685,17 @@ impl Processor for Graphics {
                           break 'svg None;
                         },
                       };
-                      if let Some(EnlargedRaster { pixels, scale }) =
-                        svg_enlarged_raster(&String::from_utf8_lossy(&bytes))
-                      {
+                      // A browser refuses an SVG that is not UTF-8.
+                      let Ok(text) = std::str::from_utf8(&bytes) else {
+                        Warn!(
+                          "shell",
+                          "svg",
+                          "Graphics: the vector render of {} is not UTF-8; using a raster",
+                          source
+                        );
+                        break 'svg None;
+                      };
+                      if let Some(EnlargedRaster { pixels, scale }) = svg_enlarged_raster(text) {
                         Info!(
                           "shell",
                           "svg",
