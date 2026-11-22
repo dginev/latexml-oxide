@@ -304,6 +304,9 @@ pub struct PostDocument {
   pub parent_document:         Option<Box<PostDocument>>,
   /// ID of document we were split from.
   pub split_from_id:           Option<String>,
+  /// The id of the page this one was split out of (Perl `$$doc{parent_id}`, set by `Split`
+  /// from the page entry's `upid`); `Scan` files the page's root under it.
+  pub parent_id:               Option<String>,
   /// Whether to validate the document.
   pub validate:                bool,
   /// Simple key-value cache (replaces Perl's DB_File tied hash).
@@ -460,6 +463,7 @@ impl PostDocument {
       processing_instructions: Vec::new(),
       parent_document: None,
       split_from_id: None,
+      parent_id: None,
       validate: options.validate,
       cache: HashMap::default(),
       nocache: options.nocache,
@@ -590,7 +594,9 @@ impl PostDocument {
   /// Port of Perl `Post::Document::newDocument`.
   /// The element is imported into a fresh XML document.
   /// Resources, processing instructions, and class attributes are copied from the parent.
-  pub fn new_document(&self, root: Node, destination: &str) -> Self {
+  /// `parent_id` is Perl's `parent_id` option (Split.pm:132-133). Perl's Element-root default
+  /// (Post.pm:833-834, `ancestor::*[@id]`) is not ported: Split has unlinked the page by then.
+  pub fn new_document(&self, root: Node, destination: &str, parent_id: Option<String>) -> Self {
     use libxml::tree::Document as XmlDocument;
     // Create a fresh XML document that owns a deep copy of `root`'s
     // subtree as its root element.
@@ -642,6 +648,7 @@ impl PostDocument {
       ..PostDocumentOptions::default()
     };
     let mut subdoc = Self::new_internal(new_xml_doc, opts);
+    subdoc.parent_id = parent_id;
 
     // Copy namespaces
     subdoc.namespaces = self.namespaces.clone();
@@ -2635,6 +2642,7 @@ mod tests {
       let page = doc.new_document(
         doc.find_node_by_id(id).unwrap().clone(),
         &format!("{id}.html"),
+        None,
       );
       let xml = page.to_xml_string();
       assert!(

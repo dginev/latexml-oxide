@@ -57,6 +57,7 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `block-model` | schema content models: what a container admits, and where an inadmissible child goes (quote → `para`/`logical-block`/`sectional-block`, OXIDIZED_DESIGN #271; `Meta.class` out of math text, #272) |
 | `expl3` | l3 kernel behaviour under raw load: regex, keys, hooks, `\mode_if_math`, file boundaries |
 | `streaming` | streaming-mode bookkeeping (yields, spills, `node_boxes` sweeps); run with `--streaming`, as `repros.sh` runs eager only |
+| `split-navigation` | a split site's page tree: the parent Scan files each page under (Split's `upid`), hence its up/prev/next and title chain; run with `--splitat=section --format=html5`, as `repros.sh` writes XML only |
 | `kernel-alignment` | kernel `\halign`/`\noalign` behaviour: periodic and non-periodic templates, `\omit`, `\noalign` placement and brace hacks, `\everycr`, longtable page breaks, ragged rows |
 | `alignment-ledger` | the per-cell ledger: the hidden `$` pairing and brace groups in a cell, `\\`/`\arraycr` read inside a cell, `&` reached through `\expandafter` |
 | `alignment-bindings` | package-level tables (nicematrix `\CodeBefore`/`\CodeAfter`/cell nodes, tabularray, ltablex, listings in a `p` column) |

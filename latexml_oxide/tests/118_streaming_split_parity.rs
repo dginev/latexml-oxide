@@ -540,3 +540,297 @@ fn nested_resource_split_falls_back_to_the_whole_dom_split() {
     );
   }
 }
+
+/// The page Split extracted each page from is the parent Scan files it under (Perl Split.pm:132-133
+/// `parent_id => $$entry{upid}`, Scan.pm:99), in the streamed split and the whole-DOM one alike.
+/// `\@addtoreset{chapter}{part}` renumbers Part B's chapters `Ch1a`, `Ch2a` while their sections keep
+/// `Ch1.S1`, `Ch2.S1a`: the id-prefix guess filed them under Part A's `Ch1`, and every chapter
+/// under the site root rather than its part. Expected values are Perl 0.8.8's head links (less the
+/// sibling relations OXIDIZED_DESIGN_DIVERGENCES #1134 drops), titles and nav anchors.
+/// Witness: issue 777's book, 9,262 of 115,519 pages navigating into the wrong part.
+#[test]
+fn split_pages_navigate_under_the_parent_split_gave_them() {
+  type Page = (
+    &'static str,
+    &'static str,
+    &'static [(&'static str, &'static str)],
+    &'static [(&'static str, &'static str, &'static str)],
+  );
+  const B1: &str = "In Chapter 1 Book1 ‣ Part II B";
+  const PERF: &str = "In Chapter 2 Perf ‣ Part I A";
+  const EXPECTED: &[Page] = &[
+    (
+      "Ch1.S1.html",
+      "1.1 X1 ‣ Chapter 1 Book1 ‣ Part II B",
+      &[
+        ("up", "Ch1a.html"),
+        ("up up", "Pt2.html"),
+        ("start", "renum.html"),
+        ("prev", "Ch1a.html"),
+        ("next", "Ch1.S2.html"),
+      ],
+      &[
+        ("up", "Ch1a.html", "In Part II B"),
+        ("prev", "Ch1a.html", "In Part II B"),
+        ("next", "Ch1.S2.html", B1),
+      ],
+    ),
+    (
+      "Ch1.S2.html",
+      "1.2 X2 ‣ Chapter 1 Book1 ‣ Part II B",
+      &[
+        ("up", "Ch1a.html"),
+        ("up up", "Pt2.html"),
+        ("start", "renum.html"),
+        ("prev", "Ch1.S1.html"),
+        ("next", "Ch1.S3.html"),
+      ],
+      &[
+        ("up", "Ch1a.html", "In Part II B"),
+        ("prev", "Ch1.S1.html", B1),
+        ("next", "Ch1.S3.html", B1),
+      ],
+    ),
+    (
+      "Ch1.S3.html",
+      "1.3 X3 ‣ Chapter 1 Book1 ‣ Part II B",
+      &[
+        ("up", "Ch1a.html"),
+        ("up up", "Pt2.html"),
+        ("start", "renum.html"),
+        ("prev", "Ch1.S2.html"),
+        ("next", "Ch2a.html"),
+      ],
+      &[
+        ("up", "Ch1a.html", "In Part II B"),
+        ("prev", "Ch1.S2.html", B1),
+        ("next", "Ch2a.html", "In Part II B"),
+      ],
+    ),
+    (
+      "Ch1.html",
+      "Chapter 1 Intro ‣ Part I A",
+      &[
+        ("up", "Pt1.html"),
+        ("start", "renum.html"),
+        ("prev", "Pt1.html"),
+        ("next", "Ch2.html"),
+      ],
+      &[
+        ("up", "Pt1.html", ""),
+        ("prev", "Pt1.html", ""),
+        ("next", "Ch2.html", "In Part I A"),
+      ],
+    ),
+    (
+      "Ch1a.html",
+      "Chapter 1 Book1 ‣ Part II B",
+      &[
+        ("up", "Pt2.html"),
+        ("start", "renum.html"),
+        ("prev", "Pt2.html"),
+        ("next", "Ch1.S1.html"),
+      ],
+      &[
+        ("up", "Pt2.html", ""),
+        ("prev", "Pt2.html", ""),
+        ("next", "Ch1.S1.html", B1),
+      ],
+    ),
+    (
+      "Ch2.S1.html",
+      "2.1 PS one ‣ Chapter 2 Perf ‣ Part I A",
+      &[
+        ("up", "Ch2.html"),
+        ("up up", "Pt1.html"),
+        ("start", "renum.html"),
+        ("prev", "Ch2.html"),
+        ("next", "Ch2.S2.html"),
+      ],
+      &[
+        ("up", "Ch2.html", "In Part I A"),
+        ("prev", "Ch2.html", "In Part I A"),
+        ("next", "Ch2.S2.html", PERF),
+      ],
+    ),
+    (
+      "Ch2.S1a.html",
+      "2.1 Y1 ‣ Chapter 2 Book2 ‣ Part II B",
+      &[
+        ("up", "Ch2a.html"),
+        ("up up", "Pt2.html"),
+        ("start", "renum.html"),
+        ("prev", "Ch2a.html"),
+      ],
+      &[
+        ("up", "Ch2a.html", "In Part II B"),
+        ("prev", "Ch2a.html", "In Part II B"),
+      ],
+    ),
+    (
+      "Ch2.S2.html",
+      "2.2 PS two ‣ Chapter 2 Perf ‣ Part I A",
+      &[
+        ("up", "Ch2.html"),
+        ("up up", "Pt1.html"),
+        ("start", "renum.html"),
+        ("prev", "Ch2.S1.html"),
+        ("next", "Pt2.html"),
+      ],
+      &[
+        ("up", "Ch2.html", "In Part I A"),
+        ("prev", "Ch2.S1.html", PERF),
+        ("next", "Pt2.html", ""),
+      ],
+    ),
+    (
+      "Ch2.html",
+      "Chapter 2 Perf ‣ Part I A",
+      &[
+        ("up", "Pt1.html"),
+        ("start", "renum.html"),
+        ("prev", "Ch1.html"),
+        ("next", "Ch2.S1.html"),
+      ],
+      &[
+        ("up", "Pt1.html", ""),
+        ("prev", "Ch1.html", "In Part I A"),
+        ("next", "Ch2.S1.html", PERF),
+      ],
+    ),
+    (
+      "Ch2a.html",
+      "Chapter 2 Book2 ‣ Part II B",
+      &[
+        ("up", "Pt2.html"),
+        ("start", "renum.html"),
+        ("prev", "Ch1.S3.html"),
+        ("next", "Ch2.S1a.html"),
+      ],
+      &[
+        ("up", "Pt2.html", ""),
+        ("prev", "Ch1.S3.html", B1),
+        ("next", "Ch2.S1a.html", "In Chapter 2 Book2 ‣ Part II B"),
+      ],
+    ),
+    (
+      "Pt1.html",
+      "Part I A",
+      &[
+        ("start", "renum.html"),
+        ("prev", "renum.html"),
+        ("next", "Ch1.html"),
+      ],
+      &[
+        ("prev", "renum.html", ""),
+        ("next", "Ch1.html", "In Part I A"),
+      ],
+    ),
+    (
+      "Pt2.html",
+      "Part II B",
+      &[
+        ("start", "renum.html"),
+        ("prev", "Ch2.S2.html"),
+        ("next", "Ch1a.html"),
+      ],
+      &[
+        ("prev", "Ch2.S2.html", PERF),
+        ("next", "Ch1a.html", "In Part II B"),
+      ],
+    ),
+    (
+      "renum.html",
+      "Untitled Document",
+      &[("next", "Pt1.html")],
+      &[("next", "Pt1.html", "")],
+    ),
+  ];
+  // The value of `name="…"` in `tag`, if any.
+  fn attr<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
+    let at = tag.find(&format!(" {name}=\""))? + name.len() + 3;
+    Some(&tag[at..at + tag[at..].find('"')?])
+  }
+  // Every `<open …>` tag of the page.
+  fn tags<'a>(html: &'a str, open: &'a str) -> impl Iterator<Item = &'a str> {
+    html
+      .match_indices(open)
+      .filter_map(|(at, _)| Some(&html[at..at + html[at..].find('>')?]))
+  }
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let tex = "\\documentclass{book}\\makeatletter\\@addtoreset{chapter}{part}\\makeatother\n\
+             \\begin{document}\\part{A}\\chapter{Intro}x\\chapter{Perf}\\section{PS one}a\\section{PS two}b\n\
+             \\part{B}\\chapter{Book1}\\section{X1}x\\section{X2}x\\section{X3}x\\chapter{Book2}\\section{Y1}y\n\
+             \\end{document}\n";
+  let run = |stream: Option<&str>| {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("renum.tex"), tex).unwrap();
+    let mut cmd = std::process::Command::new(bin);
+    cmd
+      .args([
+        "renum.tex",
+        "--format=html5",
+        "--splitat=section",
+        "--dest=renum.html",
+      ])
+      .env_remove("LATEXML_POST_STREAM_SPLIT")
+      .current_dir(work.path());
+    if let Some(v) = stream {
+      cmd.env("LATEXML_POST_STREAM_SPLIT", v);
+    }
+    let out = cmd.output().expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr).into_owned();
+    assert!(
+      out.status.success() && stderr.contains("Conversion complete: No obvious problems"),
+      "stderr:\n{stderr}"
+    );
+    assert_eq!(
+      stderr.contains("streaming split engaged"),
+      stream.is_none(),
+      "{stderr}"
+    );
+    let mut tree = collect_tree(work.path());
+    tree.retain(|name, _| name.ends_with(".html"));
+    tree
+  };
+  let streamed = run(None);
+  let dom = run(Some("0"));
+  for (label, tree) in [("streamed", &streamed), ("whole-DOM", &dom)] {
+    assert_eq!(
+      tree.keys().map(String::as_str).collect::<Vec<_>>(),
+      EXPECTED.iter().map(|page| page.0).collect::<Vec<_>>(),
+      "{label} split"
+    );
+    for &(page, title, head, anchors) in EXPECTED {
+      let html = std::str::from_utf8(&tree[page]).unwrap();
+      let got_title = html
+        .split_once("<title>")
+        .and_then(|(_, rest)| rest.split_once("</title>"))
+        .map(|(title, _)| title);
+      assert_eq!(got_title, Some(title), "{label} {page} title");
+      let got_head: Vec<_> = tags(html, "<link ")
+        .filter_map(|tag| Some((attr(tag, "rel")?, attr(tag, "href")?)))
+        .filter(|(rel, _)| *rel != "stylesheet")
+        .collect();
+      assert_eq!(got_head, head, "{label} {page} head links");
+      let mut got_anchors = Vec::new();
+      for tag in tags(html, "<a ").filter(|tag| attr(tag, "class") == Some("ltx_ref")) {
+        let (Some(rel), Some(href)) = (attr(tag, "rel"), attr(tag, "href")) else {
+          continue;
+        };
+        let anchor = (rel, href, attr(tag, "title").unwrap_or(""));
+        if !got_anchors.contains(&anchor) {
+          got_anchors.push(anchor);
+        }
+      }
+      assert_eq!(
+        got_anchors, anchors,
+        "{label} {page} header/footer navigation"
+      );
+    }
+  }
+  assert_eq!(
+    streamed, dom,
+    "the streamed split must match the whole-DOM split"
+  );
+}

@@ -100,6 +100,9 @@ pub struct StreamedSplitPage {
   /// The page's destination pathname (`Split::get_page_name` result; the
   /// original `--dest` for the root page).
   pub destination: String,
+  /// The id of the enclosing page (Perl Split's `upid`, the `parent_id` Scan files the page
+  /// under); `None` for the root page.
+  pub parent_id:   Option<String>,
 }
 
 /// Result of a successful streaming split.
@@ -165,11 +168,19 @@ pub fn stream_split(
   let n = splitter.metas.len();
   Info!("split", "result", " [Split into {} pages]", n);
   let Splitter { metas, latexml_pis, .. } = splitter;
+  let mut parent_ids = vec![None; metas.len()];
+  for meta in &metas {
+    for &child in &meta.children {
+      parent_ids[child] = meta.xml_id.clone();
+    }
+  }
   let pages = metas
     .into_iter()
-    .map(|m| StreamedSplitPage {
-      path:        m.file,
+    .zip(parent_ids)
+    .map(|(m, parent_id)| StreamedSplitPage {
+      path: m.file,
       destination: m.name,
+      parent_id,
     })
     .collect();
   Ok(Some(StreamSplitOutcome { pages, latexml_pis }))

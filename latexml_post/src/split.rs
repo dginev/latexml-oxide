@@ -285,7 +285,7 @@ impl Split {
         let mut child_docs = self.process_pages(doc, &mut entry.children, nav_holders);
 
         // Create sub-document from the extracted page
-        let subdoc = doc.new_document(page.clone(), &entry.name);
+        let subdoc = doc.new_document(page.clone(), &entry.name, entry.upid.clone());
         // The page now lives in its copy; free the source subtree (Perl's GC does at
         // the last reference). Left unlinked, every page leaked: the whole source DOM
         // stayed live through post, 818 MB of C heap by page 1024 of a 1,600-subsection

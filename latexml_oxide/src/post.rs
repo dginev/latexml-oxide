@@ -574,9 +574,10 @@ fn try_streaming_front(
   // `run_phase(docs, Scan)` + the driver's spill loop, ONE page resident at a
   // time. The order is semantic, not cosmetic: SITE_ROOT is taken from the
   // first page scanned (the root page), an ancestor must be in the DB before
-  // its descendants (Scan's parent inference falls back to SITE_ROOT
-  // otherwise), and each parent's `children` list follows scan order — all
-  // three feed CrossRef's navigation.
+  // its descendants (Scan files a page under its Split parent's entry, the
+  // page's `parent_id`, and lists it among that entry's `children`), and each
+  // parent's `children` list follows scan order — all three feed CrossRef's
+  // navigation.
   telemetry::phase_enter(Phase::PostScan);
   let mut scanner = latexml_post::scan::Scan::new(ObjectDB::new());
   let mut spilled: Vec<SpilledPage> = Vec::with_capacity(outcome.pages.len());
@@ -603,6 +604,7 @@ fn try_streaming_front(
       Ok(mut d) => {
         d.destination = Some(page.destination.clone());
         d.destination_directory = destination_directory_of(&page.destination);
+        d.parent_id = page.parent_id.clone();
         d
       },
       Err(e) => {
