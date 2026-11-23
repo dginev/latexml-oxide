@@ -329,6 +329,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "turing.sty",
   "uai2025.cls",
   "usenix.sty",
+  "vgtc.cls",
   "vmsta.cls",
   "wacv.sty",
   "webofc.cls",

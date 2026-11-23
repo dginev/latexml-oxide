@@ -31,7 +31,7 @@ still loaded. A class with no binding is read raw under `INCLUDE_CLASSES` (the s
 `localrawclasses`; off under `norawclasses`), else it falls back to OmniBus. A compiled binding is never displaced by
 raw mode.
 
-## Classes (227)
+## Classes (228)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -241,6 +241,7 @@ raw mode.
 | `uiucthesis` | `.cls` | contributed, raw + overrides |  |
 | `uspatent` | `.cls` | contributed, raw + overrides |  |
 | `ut-thesis` | `.cls` | contributed |  |
+| `vgtc` | `.cls` | contributed |  |
 | `vmsta` | `.cls` | contributed |  |
 | `webofc` | `.cls` | contributed |  |
 | `WileyASNA-v1` | `.cls` | contributed |  |

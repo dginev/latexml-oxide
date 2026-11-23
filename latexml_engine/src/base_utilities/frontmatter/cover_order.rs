@@ -72,7 +72,7 @@ pub fn place_teasers_after_head(
   Ok(())
 }
 
-/// The root children a class's own title page printed ([`DEPOSIT_PROVENANCE`]) that are, or hold, a float it set in
+/// The root children a class's own title page printed (`DEPOSIT_PROVENANCE`) that are, or hold, a float it set in
 /// place ([`IN_PLACE_FLOAT`](crate::latex_constructs::IN_PLACE_FLOAT)): the teaser a class's `\@maketitle` prints
 /// under its head (vgtc.cls:801-850, vgtc_cls.rs; 2609.25700).
 pub fn deposit_in_place_floats(root: &Node) -> Vec<Node> {
