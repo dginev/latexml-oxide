@@ -131,7 +131,7 @@ LoadDefinitions!({
     s!("magnify=1.2"),
     s!("zoomout=1.2"),
     s!("tokenlimit=999999999"),
-    s!("iflimit={}", latexml_core::common::RUNAWAY_IF_LIMIT),
+    s!("iflimit={}", common::RUNAWAY_IF_LIMIT),
     s!("absorblimit=1299999"),
     s!("pushbacklimit=5000000"),
   ])?;
