@@ -21027,7 +21027,9 @@ swallowed when the chunk pcalls the call; the name shown is cut at 256 bytes, an
 severity (64 KiB each), the rest in one summary per severity, so Warnings never push an Error's name out. A chunk
 that fails after a `W` refusal — it used the refused call's `nil`, `io.popen(cmd):read()`, and is lost as under
 lualatex (rc=1, "attempt to index a nil value") — adds `Error:lua:sandbox the chunk failed after the sandbox refused
-<call>: <Lua error>`; any other chunk's Lua error stays the caller's Info. An engine layer texlua lacks, which
+<call>: <Lua error>`, unless the chunk also has a `D` refusal, already an Error for it (a `D` call raises the Lua error)
+(`os.execute('exit 0') os.remove('f')`: one Error, the `os.remove` refusal); any other chunk's Lua error stays the
+caller's Info. An engine layer texlua lacks, which
 lualatex performs (a font, a language, a typesetter call), is a `G` frame (the prelude's `gap(msg)`, same nonce):
 `Warning:lua:engine <msg>`, with its own 20-entry budget and summary, never a refusal, so a chunk failing after it
 alone stays an Info (row R LUAERRSEV); a chunk with both a `G` and a `W` still escalates.
@@ -21058,9 +21060,12 @@ and `tex.run`/`tex.finish` are such a Warning and a Lua error (lualatex's `lang.
 `font.define{}` and `vf.char()` outside a virtual font end the run). `font.read_tfm` and `font.read_vf` are texlua's
 own, a TFM or VF read through kpathsea as lualatex reads it (`read_tfm('cmr10',655360).name` is `cmr10`,
 `read_vf('ptmr7t',655360).fonts[1].name` `ptmr8r`); the prelude sets `MKTEXTFM`, `MKTEXPK`, `MKTEXMF`, `MKTEXTEX`,
-`MKTEXFMT`, `MKOCP` and `MKOFM` to 0 before kpathsea initialises, so a missing font runs no `mktextfm` (with
-`MKTEXTFM=1` in the environment, texlua's `read_tfm('ecrm0599',…)` ran mktextfm and METAFONT and wrote into
-`TEXMFVAR`; `kpse.find_file(…,'tfm')` likewise). hologo's test reads only
+`MKTEXFMT`, `MKOCP` and `MKOFM` to 0 before kpathsea initialises, so kpathsea ignores a `texmf.cnf` that enables
+them and a missing font runs no `mktextfm` (the child's environment never carries `MKTEX*`, its allowlist below; the way
+in is a `texmf.cnf`, one an operator's `TEXMFCNF` reaches included: with `MKTEXTFM = 1` there,
+`kpse.find_file(…,'tfm',true)` and `kpse.lookup(…,{mktexok=true})` ran mktextfm and METAFONT, writing into
+`TEXMFVAR`). This is stricter than lualatex, which may run mktextfm for a missing TFM: fail-safe by choice. hologo's
+test reads only
 `characters` and counts nothing. A document that replaces `font` changes only its own answers. Before lualibs loads, `io.stdout`/`io.output()` are stderr (the null device), `io.stdin`/`io.input()`
 the null device and `print` a no-op, and `package.loaded.texio`/`pdf`/`status`/`token` are the shims (`node` is
 nil). Frames are authenticated: the bridge sends a 128-bit nonce (SipHash under the standard library's random
@@ -21099,7 +21104,13 @@ luatex85.sty:69-92 defines as `\pdfextension <keyword>`; it read one token, so t
 and stays text, as lualatex's "unexpected use of \pdfextension" leaves it. `\pdffeedback colorstackinit` and
 `ximagebbox` answer as `\pdfcolorstackinit` and `\pdfximagebbox`, and `pageref`/`xformname`/`fontname`/`fontobjnum`/
 `fontsize` read their operand (pdfrender's `\pdfcolorstackinit page direct{…}` leaked "page direct1 w" in
-xfakebold-doc). The pdfTeX readers follow pdftex-syntax.tex
+xfakebold-doc). A font operand (`includechars`, `fontattr`, `\pdffeedback fontname`/`fontobjnum`/`fontsize`, and
+pdfTeX's `\pdfincludechars`, `\pdffontname`, `\pdffontobjnum`, `\pdffontsize`, which Perl pdfTeX.pool:97-100 reads
+as one `Token`) is read as tex.web §577 `scan_font_ident` reads it, the `FontToken` parameter's reader
+(`tex_fonts.rs` `read_font_ident`): past spaces, with expansion, `\textfont`/`\scriptfont`/`\scriptscriptfont` with
+their family number. luatex85.sty:87-88 defines `\pdfincludechars` and `\pdffontattr` as `\pdfextension
+includechars ` with a trailing space, which one token read as the font (4 Errors for
+`\pdfincludechars\font{abc}\pdffontattr\font{/A 1}`; lualatex 0). The pdfTeX readers follow pdftex-syntax.tex
 where Perl pdfTeX.pool does not: `\pdfcolorstack <n> current` reads no text (as `pop`; pdflatex), `\pdfthread` and
 `\pdfstartthread` read a thread spec, `\pdfcatalog … openaction` reads the whole action spec, and the spaces after a
 `\pdfdest` spec are skipped. **Witnesses.** TL manuals ijsra (its class's images reached as

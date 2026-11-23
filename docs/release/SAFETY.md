@@ -55,9 +55,12 @@ see that section below.
   mid-chunk is an `Error` (its output is lost); the next chunk starts a fresh one, up to 3 times per conversion.
   Each conversion gets its own interpreter, in its source directory, with an environment reduced to the texmf
   search, library path, locale, date and temp-dir variables; a timeout or memory exit kills it. Not covered: a link
-  created between the check and the write by another process; kpathsea's own `mktex*` font generation, which a
-  lookup may start as it does under TeX; and reads, which stay open as under TeX (`openin_any=a`), so a chunk can
-  read any file the user can, its own process memory (and so the nonce) included.
+  created between the check and the write by another process; and reads, which stay open as under TeX
+  (`openin_any=a`), so a chunk can read any file the user can, its own process memory (and so the nonce) included.
+  kpathsea's own font generation (`mktextfm` and METAFONT) never runs: the interpreter's environment carries no
+  `MKTEX*` variable, and the prelude sets them all to 0 so that kpathsea ignores a `texmf.cnf` that enables them (one
+  an operator's `TEXMFCNF` reaches included). This is stricter than lualatex, which may run `mktextfm` for a missing
+  TFM: fail-safe by choice.
 - **Archive sources unpack inside their directory.** A `.tar`/`.tar.gz` symbolic link is made only when its target,
   resolved through the links already there, stays inside the extraction directory, a hard link only to a file
   inside it; other links, and entries whose path would leave the directory, are skipped with a counted `Warning`.

@@ -1,0 +1,16 @@
+% mechanism: pdftex.rs `\pdfincludechars`, `\pdffontname`, `\pdffontobjnum`, `\pdffontsize` (OXIDIZED_DESIGN_DIVERGENCES
+%   #1081): the font operand is tex.web §577 scan_font_ident's (tex_fonts.rs read_font_ident: past spaces, with
+%   expansion, `\textfont`/`\scriptfont`/`\scriptscriptfont` with their family number). Perl pdfTeX.pool:97-100 reads
+%   one Token, so `\textfont 1 {abc}` left "1" as the text and typeset "abc". The pdfTeX sibling of the luatex
+%   profile's `\pdfextension includechars` (pdfextension_keywords_luatex85.tex).
+% witness: synthetic (pk/LUAFONT round 3, the read_font_ident siblings)
+% oracle:  pdflatex -no-shell-escape: 0 errors, "C1C2C3C4C5"
+% engines: rust=GREEN perl=RED (the one-token read, pdfTeX.pool:97-100; not run) (2026-11-22)
+% expect:  0 errors, 0 warnings; "C1C2C3C4C5"
+% status:  RED ("C1C2 abcC3C4C5", f5b3d961d7b) -> GREEN
+\documentclass{article}
+\begin{document}
+\textfont1=\font
+C1\pdfincludechars \font{abc}C2\pdfincludechars\textfont 1 {abc}C3\edef\y{\pdffontname \textfont1}C4%
+\edef\y{\pdffontsize\font}C5
+\end{document}
