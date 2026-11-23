@@ -101,3 +101,19 @@ fn varioref_alone_and_cleveref_alone_unchanged() {
     r#"<p><ref labelref="LABEL:s:one" show="creftypecap~creflabel"/> and <ref labelref="LABEL:s:one" show="creftype~creflabel"/>.</p>"#,
   );
 }
+
+/// varioref's page-less range stubs (`\vpagerefrange`, `\reftextlabelrange`, `\reftextpagerange`) stay bare `\ref`s
+/// under cleveref (pdflatex: "on this page" / "1 to 3"; no type names), as before the batch (INT081C byte-identical).
+#[test]
+fn varioref_range_stubs_stay_refs_under_cleveref() {
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{varioref}\n\\usepackage{cleveref}\n\\begin{document}\n\
+     \\section{One}\\label{s:one}\n\\section{Two}\\label{s:two}\n\\section{Three}\\label{s:three}\n\
+     A[\\vpagerefrange{s:one}{s:three}] B[\\reftextlabelrange{s:one}{s:three}] C[\\reftextpagerange{s:one}{s:three}]\n\
+     \\end{document}\n",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let range = r#"<ref labelref="LABEL:s:one"/>–<ref labelref="LABEL:s:three"/>"#;
+  assert_element(&xml, "p", &[], &format!("<p>A[{range}] B[{range}] C[{range}]</p>"));
+}

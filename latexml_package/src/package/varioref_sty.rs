@@ -22,8 +22,10 @@ LoadDefinitions!({
   DefMacro!("\\vpageref OptionalMatch:* [] [] Semiverbatim", "\\ref{#4}", locked => true);
   DefMacro!("\\vrefrange OptionalMatch:* [] Semiverbatim Semiverbatim",
     "\\reftextlabelrange{#3}{#4}", locked => true);
+  // The range stubs spell `\ref`, not `\vref` (Perl's L24-45): under cleveref `\vref` is `\cref` (OD #1144) and would
+  // add type names the PDF does not print ("1 to 3", not "section 1–section 3").
   DefMacro!("\\vpagerefrange OptionalMatch:* [] Semiverbatim Semiverbatim",
-    "\\vref{#3}--\\vref{#4}", locked => true);
+    "\\ref{#3}--\\ref{#4}", locked => true);
 
   DefMacro!("\\vrefpagenum DefToken Semiverbatim", "\\def#1{\\ref{#2}}",
     locked => true);
@@ -52,8 +54,8 @@ LoadDefinitions!({
   // comes from its per-language `\extras<lang>` table (:100-790), which the binding lacks.
   DefMacro!("\\reftextfaraway Semiverbatim", "");
 
-  DefMacro!("\\reftextpagerange Semiverbatim Semiverbatim", "\\vref{#1}--\\vref{#2}");
-  DefMacro!("\\reftextlabelrange Semiverbatim Semiverbatim", "\\vref{#1}--\\vref{#2}");
+  DefMacro!("\\reftextpagerange Semiverbatim Semiverbatim", "\\ref{#1}--\\ref{#2}");
+  DefMacro!("\\reftextlabelrange Semiverbatim Semiverbatim", "\\ref{#1}--\\ref{#2}");
 
   def_macro_noop("\\reftextvario{}{}")?;
 
