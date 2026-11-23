@@ -403,19 +403,16 @@ fn input_definitions_impl(
     .then(|| routed_copy_request(trimmed, options.extension.as_deref()))
     .flatten();
   // (a module the format holds reads the tree's file, whichever copy the request found: [`format_module_path`])
-  let format_module = options
-    .format_module
-    .filter(|module| format_holds(module))
-    .map(|module| {
-      (
-        module,
-        s!(
-          "{}.{}",
-          file_stem(trimmed),
-          options.extension.as_deref().unwrap_or_default()
-        ),
-      )
-    });
+  let format_module = options.format_module.filter(format_holds).map(|module| {
+    (
+      module,
+      s!(
+        "{}.{}",
+        file_stem(trimmed),
+        options.extension.as_deref().unwrap_or_default()
+      ),
+    )
+  });
   let _substituted = routed_copy.as_ref().map(|_| {
     let ext = options.extension.as_deref().unwrap_or_default();
     SubstitutedRead::enter(s!("{}.{ext}", file_stem(trimmed)))
