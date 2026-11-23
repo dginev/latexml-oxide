@@ -2122,9 +2122,14 @@ impl MathParser {
       self.kept_phantoms = Some((leading, trailing));
       return Ok(Some(result));
     }
-    Ok(Some(self.wrap_presentation(
-      result, leading, trailing, mathnode, document,
-    )?))
+    // The dual takes the item's slot, and the item's grammatical role: a dual's role is its content branch's
+    // (MathParser.pm:851-853), here an XMRef with none, read as an ATOM (math0004098 `\raisebox{…}{$\searrow\vphantom…$}`).
+    let role = crate::data::get_grammatical_role(&result);
+    let mut dual = self.wrap_presentation(result, leading, trailing, mathnode, document)?;
+    if role != "ATOM" {
+      dual.set_attribute("role", &role)?;
+    }
+    Ok(Some(dual))
   }
 
   /// A phantom's invisible argument, given the kludge's structure where it holds several items (`in_phantom`); one item

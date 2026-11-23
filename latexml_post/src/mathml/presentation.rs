@@ -2547,9 +2547,29 @@ fn op_base_is_mo(node: &NodeData) -> bool {
         Some(child) => cur = child,
         None => return false,
       }
+    } else if tag == "m:mrow"
+      && let [child] = children
+        .iter()
+        .filter(|c| !is_drawn_phantom(c))
+        .collect::<Vec<_>>()[..]
+    {
+      // An operator beside an edge phantom (`\mathop{\vphantom{X}\sum}`, the parser's XMWrap dual) is still that
+      // operator; before the phantom was drawn it was the bare `<mo>`.
+      cur = child;
     } else {
       return false;
     }
+  }
+}
+
+/// A phantom as presentation draws it: `<mphantom>`, or the `<mpadded>` of `\hphantom`/`\vphantom` around one.
+fn is_drawn_phantom(node: &NodeData) -> bool {
+  match node {
+    NodeData::Element { tag, children, .. } => {
+      tag == "m:mphantom"
+        || (tag == "m:mpadded" && matches!(&children[..], [only] if is_drawn_phantom(only)))
+    },
+    _ => false,
   }
 }
 

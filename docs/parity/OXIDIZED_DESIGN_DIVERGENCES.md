@@ -24088,7 +24088,10 @@ between items is never parsed, its ids would orphan the formula's references, te
 the parse otherwise replaces by its item), holds the hints beside its one parsed item (`<XMArg>a<XMHint>x</XMHint></XMArg>`,
 `document::item_beside_phantoms`); content MathML, OpenMath, `text=` and a parent's grammar (a script's argument is
 lexed as its item; the tree keeps the `XMArg`, semantics/tree.rs) read the list as that item. An XMWrap, which its item
-replaces, gets `<XMDual><XMRef/><XMWrap>phantoms, item, phantoms</XMWrap></XMDual>`; a slot of phantoms alone is
+replaces, gets `<XMDual><XMRef/><XMWrap>phantoms, item, phantoms</XMWrap></XMDual>` with the item's grammatical
+role, which a dual otherwise reads from its content branch (MathParser.pm:851-853), an XMRef of none, so an atom (math0004098
+`\raisebox{-12pt}{$\searrow\vphantom{…}$}` read `V _ 2 * searrow`); presentation reads an `<mrow>` of an operator and
+drawn phantoms as that operator (no `⁡` after `\mathop{\vphantom{X}\sum}`). A slot of phantoms alone is
 `<XMDual><XMTok meaning="absent"/>phantom</XMDual>`, whose content branch is the absent token. The kept hints take no
 XMDual, XMRef or extra id (an XMDual for every edge phantom, PHANTOM round 3, cost +1.12 % instructions:u on
 quant-ph0001103 and shifted the formula's ids). `\mathstrut` is latex.ltx:15602's `\vphantom(` (`\lx@mathstrut`,
@@ -24107,9 +24110,10 @@ and ≈1.1M more in HTML, which is the post-processing of the six MathML nodes t
 math-phantom/phantom_between_items_keeps_only_its_width). **Why**: witness 2603.21852 (EML.tex:63 `$\sqrt{\phantom{x}}$`,
 an x-wide empty radical). **Guards** `perfect_kernel_batchphantom::{phantom_alone_in_a_slot_is_its_presentation,
 phantom_at_a_list_edge_keeps_its_place, phantom_alone_is_a_formula, phantom_is_presentation_only_in_the_core,
-phantom_beside_a_quad_is_padding, phantom_of_several_items_is_kludged, mathstrut_is_a_vphantom_of_a_parenthesis}` (repros
-math-phantom/phantom_is_a_box_of_its_content, control twin phantom_is_a_box_of_its_content_control,
-phantom_beside_a_quad_is_padding, mathstrut_is_a_vphantom_of_a_parenthesis).
+phantom_beside_a_quad_is_padding, phantom_of_several_items_is_kludged, mathstrut_is_a_vphantom_of_a_parenthesis,
+wrapped_item_beside_a_phantom_keeps_its_role}` (repros math-phantom/phantom_is_a_box_of_its_content, control twin
+phantom_is_a_box_of_its_content_control, phantom_beside_a_quad_is_padding, mathstrut_is_a_vphantom_of_a_parenthesis,
+wrapped_item_beside_a_phantom_keeps_its_role).
 
 ### 1142. The format's own modules are read from the format's tree, not a paper's copy (LTXOWN)
 

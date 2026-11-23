@@ -1,0 +1,21 @@
+% witness: math0004098 (datawafi.tex:266, `\mathcal{V}_{2}\raisebox{-12pt}{$\searrow\vphantom{\raisebox{-2pt}{$\searrow$}}$\hskip-8pt}`)
+% oracle:  pdflatex 0 errors; each formula reads as its item without the phantom: a relation, an arrow, a binary
+%          operator, a sum over x
+% engines: rust INT081C = A `a = b`, B `x to y`, C `a + b`, D `f * sum@(x)`, E `V _ 2 searrow absent` (the phantoms
+%          lost); PHANTOM round 4 = an XMDual of no role in the item's slot, read as an atom: A `a * = * b`,
+%          B `x * to * y`, C `a * + * b`, D `f * sum * x`, E `V _ 2 * searrow`; Perl 0.8.8 = INT081C
+% expect:  `text=` as INT081C, the phantom drawn beside its item (`<mphantom>`), no invisible times around the item
+% status:  RED (PHANTOM round 4) -> GREEN (PHANTOM round 5)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+A $a \raisebox{1pt}{$=\phantom{x}$} b$
+
+B $x \mbox{$\to\vphantom{X}$} y$
+
+C $a \mathbin{+\phantom{x}} b$
+
+D $f\mathop{\vphantom{X}\sum} x$
+
+E $\mathcal{V}_{2}\raisebox{-12pt}{$\searrow\vphantom{\raisebox{-2pt}{$\searrow$}}$\hskip-8pt}$
+\end{document}

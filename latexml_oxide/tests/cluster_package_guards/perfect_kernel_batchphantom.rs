@@ -12,9 +12,12 @@ const REPRO: &str = include_str!(
 );
 
 /// The repro converted to HTML by the binary in a directory of its own, free of errors and warnings.
-fn html() -> String {
+fn html() -> String { html_of(REPRO) }
+
+/// `source` converted to HTML as `html` does.
+fn html_of(source: &str) -> String {
   let workdir = tempfile::tempdir().expect("create tempdir");
-  std::fs::write(workdir.path().join("t.tex"), REPRO).expect("write t.tex");
+  std::fs::write(workdir.path().join("t.tex"), source).expect("write t.tex");
   let output = std::process::Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
     .args([
       "t.tex",
@@ -231,4 +234,59 @@ fn mathstrut_is_a_vphantom_of_a_parenthesis() {
     };
     assert_element(&xml, "Math", &[&format!("xml:id=\"{id}\"")], expected);
   }
+}
+
+const WRAPPED_ITEM: &str = include_str!(
+  "../../../tools/perfect_kernel/repros/math-phantom/wrapped_item_beside_a_phantom_keeps_its_role.tex"
+);
+
+/// An XMWrap's item beside an edge phantom (`wrap_presentation`, an XMDual whose content is an XMRef) keeps the item's
+/// grammatical role on the dual: a relation (A), a binary operator (C), a sum (D) and the arrow of witness math0004098
+/// (E) read as INT081C, the phantom drawn beside the item. Distinct from the guards above: the XMWrap path, where the
+/// dual stands in its parent's list. Red (PHANTOM round 4): a dual read as an atom, `a * = * b`, `a * + * b`,
+/// `f * sum * x`, `V _ 2 * searrow`, an invisible times around the item and `∑⁡x`.
+#[test]
+fn wrapped_item_beside_a_phantom_keeps_its_role() {
+  let (log, xml) = convert_with(WRAPPED_ITEM, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (id, expected) in [
+    (
+      "p1.m1",
+      r#"<Math mode="inline" tex="a\raisebox{1.0pt}{$=\phantom{x}$}b" text="a = b" xml:id="p1.m1"><XMath xml:id="p1.m1.2"><XMApp xml:id="p1.m1.2.1"><XMDual role="RELOP" yoffset="1.0pt" xml:id="p1.m1.2.1.1"><XMRef idref="p1.m1.1" xml:id="p1.m1.2.1.1.1"/><XMWrap xml:id="p1.m1.2.1.1.2"><XMTok meaning="equals" role="RELOP" xml:id="p1.m1.1">=</XMTok><XMHint depth="0.0pt" height="4.3pt" name="phantom" width="5.7pt" xml:id="p1.m1.2.1.1.2.1"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMHint></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"#,
+    ),
+    (
+      "p3.m1",
+      r#"<Math mode="inline" tex="a\mathbin{+\phantom{x}}b" text="a + b" xml:id="p3.m1"><XMath xml:id="p3.m1.2"><XMApp xml:id="p3.m1.2.1"><XMDual role="ADDOP" xml:id="p3.m1.2.1.1"><XMRef idref="p3.m1.1" xml:id="p3.m1.2.1.1.1"/><XMWrap xml:id="p3.m1.2.1.1.2"><XMTok meaning="plus" role="ADDOP" xml:id="p3.m1.1">+</XMTok><XMHint depth="0.0pt" height="4.3pt" name="phantom" width="5.7pt" xml:id="p3.m1.2.1.1.2.1"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMHint></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math>"#,
+    ),
+    (
+      "p4.m1",
+      r#"<Math mode="inline" tex="f\mathop{\vphantom{X}\sum}x" text="f * sum@(x)" xml:id="p4.m1"><XMath xml:id="p4.m1.2"><XMApp xml:id="p4.m1.2.1"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok><XMApp xml:id="p4.m1.2.1.3"><XMDual role="SUMOP" scriptpos="post" xml:id="p4.m1.2.1.3.1"><XMRef idref="p4.m1.1" xml:id="p4.m1.2.1.3.1.1"/><XMWrap xml:id="p4.m1.2.1.3.1.2"><XMHint depth="0.0pt" height="6.8pt" name="vphantom" xml:id="p4.m1.2.1.3.1.2.1"><XMTok font="italic" role="UNKNOWN">X</XMTok></XMHint><XMTok mathstyle="text" meaning="sum" role="SUMOP" scriptpos="post" xml:id="p4.m1.1">∑</XMTok></XMWrap></XMDual><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp></XMApp></XMath></Math>"#,
+    ),
+    (
+      "p5.m1",
+      r#"<Math mode="inline" tex="\mathcal{V}_{2}\raisebox{-12.0pt}{$\searrow\vphantom{\raisebox{-2.0pt}{$\searrow$}}$\hskip-8.0pt}" text="V _ 2 searrow absent" xml:id="p5.m1"><XMath xml:id="p5.m1.2"><XMApp xml:id="p5.m1.2.1"><XMDual role="ARROW" yoffset="-12.0pt" xml:id="p5.m1.2.1.1"><XMRef idref="p5.m1.1" xml:id="p5.m1.2.1.1.1"/><XMWrap xml:id="p5.m1.2.1.1.2"><XMTok name="searrow" role="ARROW" xml:id="p5.m1.1">↘</XMTok><XMHint depth="3.9pt" height="4.9pt" name="vphantom" xml:id="p5.m1.2.1.1.2.1"><XMTok name="searrow" role="ARROW" yoffset="-2.0pt">↘</XMTok></XMHint></XMWrap></XMDual><XMApp xml:id="p5.m1.2.1.2"><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="caligraphic" role="UNKNOWN">V</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp><XMTok meaning="absent"/></XMApp></XMath></Math>"#,
+    ),
+  ] {
+    assert_element(&xml, "Math", &[&format!("xml:id=\"{id}\"")], expected);
+  }
+  let html = html_of(WRAPPED_ITEM);
+  assert_math(
+    &html,
+    "p1.m1",
+    r"a\raisebox{1.0pt}{$=\phantom{x}$}b",
+    "<mrow><mi>a</mi><mpadded voffset=\"1.0pt\"><mo>=</mo><mphantom><mi>x</mi></mphantom></mpadded><mi>b</mi></mrow>",
+  );
+  assert_math(
+    &html,
+    "p3.m1",
+    r"a\mathbin{+\phantom{x}}b",
+    "<mrow><mi>a</mi><mrow><mo>+</mo><mphantom><mi>x</mi></mphantom></mrow><mi>b</mi></mrow>",
+  );
+  assert_math(
+    &html,
+    "p4.m1",
+    r"f\mathop{\vphantom{X}\sum}x",
+    "<mrow><mi>f</mi><mo>\u{2062}</mo><mrow><mrow><mpadded style=\"width:0pt;\" width=\"0pt\"><mphantom><mi>X</mi>\
+     </mphantom></mpadded><mo>∑</mo></mrow><mi>x</mi></mrow></mrow>",
+  );
 }
