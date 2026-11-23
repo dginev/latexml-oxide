@@ -4897,8 +4897,9 @@ NN:\ifnonatbib YES\else NO\fi; \@ifpackageloaded{natbib}{natbib}{none}.
   );
 }
 
-/// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): 48M,
-/// which finite pgfplots/mhchem papers need (2609.07725 counts 39M conditionals, 2609.10563 19M; 2605.27177 converts).
+/// 62w: the ar5iv profile's `iflimit` reaches the engine (ar5iv_sty.rs → latexml.sty's keyval, `set_if_limit`): the
+/// front ends' 480M since DG 2026-11-23 (was 48M), which finite pgfplots/mhchem papers need (2609.07725 counts 39M
+/// conditionals, 2609.10563 19M; 2605.27177 converts; 2302.07562 passes 48M and converts in 128 s).
 /// Read on the conversion thread before its engine is released.
 #[test]
 fn ar5iv_profile_sets_its_runaway_limits() {
@@ -4909,7 +4910,7 @@ fn ar5iv_profile_sets_its_runaway_limits() {
   );
   assert_eq!(
     (error_count(&log), warning_count(&log), limit),
-    (0, 0, 48_000_000),
+    (0, 0, latexml_core::common::RUNAWAY_IF_LIMIT),
     "{log}"
   );
 }
