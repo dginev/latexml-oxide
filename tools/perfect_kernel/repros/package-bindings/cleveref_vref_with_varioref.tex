@@ -1,0 +1,17 @@
+% mechanism: with varioref loaded, cleveref.sty:2378-2604 redefines `\vref`/`\Vref` (hyperref's starred form, :2572-2596)
+%   on its raw `\@cref` and varioref's page internals (`\vref@pagenum`, `\vref@label`, `\vref@err`, `\is@pos@number`,
+%   varioref.sty:814-946), which neither the cleveref binding nor the page-less varioref binding (Perl's) provides.
+%   Fixed: the cleveref binding defines them as its page-less `\Cref`/`\cref` (OXIDIZED_DESIGN #1144).
+% witness: 1602.00476, 2409.11413, 2505.14566 (GA1d A/B; reach: varioref + cleveref, 21 of 35,942 census papers)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, two runs) 0 `!`, no Warning: Section 1 and Section 1.
+% engines: perl 8 errors, "??" (KNOWN_PERL_ERRORS #1318); rust INT081C 6 errors, 6 warnings, "??"; VREFCLEV 0, 0
+% expect:  0 errors, 0 warnings; both references as Section 1
+% status:  GREEN (VREFCLEV; guard perfect_kernel_batchvrefclev::cleveref_vref_with_varioref)
+\documentclass{article}
+\usepackage{varioref}
+\usepackage{hyperref}
+\usepackage[capitalise]{cleveref}
+\begin{document}
+\section{One}\label{s:one}
+\Vref{s:one} and \vref{s:one}.
+\end{document}

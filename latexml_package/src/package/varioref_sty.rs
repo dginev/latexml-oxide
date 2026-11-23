@@ -8,7 +8,9 @@ LoadDefinitions!({
   // so later packages (cleveref, revtex, etc.) or user \renewcommand
   // calls can't silently override these stubs — the tests for whether
   // varioref is loaded already read true once these are defined, so a
-  // quiet override would leave the references broken.
+  // quiet override would leave the references broken. The cleveref binding,
+  // loaded after, gives `\vref` and `\vrefrange` its own page-less forms
+  // (cleveref.sty:2573-2604; OXIDIZED_DESIGN #1144).
   // The real macros read optionals Perl's signatures lack: `\vref*[text]{l}`,
   // `\vpageref*[here][far]{l}`, `\vrefrange[here]{a}{b}`,
   // `\vpagerefrange*[here]{a}{b}` (varioref.sty:803-966); Perl leaves the `[…]`

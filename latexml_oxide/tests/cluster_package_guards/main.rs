@@ -804,6 +804,8 @@ mod perfect_kernel_batchunc;
 mod perfect_kernel_batchups1;
 /// VARW: a varwidth box measures its widest line (algxpar-doc, 2401.12710); KNOWN_PERL_ERRORS #1234.
 mod perfect_kernel_batchvarw;
+/// VREFCLEV: after varioref, cleveref's `\vref` family are the binding's page-less `\cref` forms (OD #1144).
+mod perfect_kernel_batchvrefclev;
 mod perfect_kernel_batchw3ra;
 mod perfect_kernel_batchw3rb;
 mod perfect_kernel_batchw3rc;

@@ -24012,3 +24012,21 @@ titlesec_format_ends_at_a_startsection_redefinition, titlesec_format_ends_at_sec
 `titlesec_keeps_the_command_where_sectsty_does_not_work` (memoir). RED (row R TITLESECRED):
 titlesec_titleclass_takes_the_command_back_red, titlesec_release_in_a_group_red,
 titlesec_release_through_an_indirect_body_red, sectsty_under_amsart_keeps_titlesec_red.
+
+### 1144. After varioref, cleveref's `\vref` family are the binding's page-less `\cref` forms (VREFCLEV)
+
+**Perl behavior**: cleveref.sty.ltxml reads cleveref.sty raw and replaces only `\cref` and its kin. With varioref
+loaded, cleveref.sty:2378-2604 redefines `\vref`, `\Vref`, `\vrefrange`, `\Vrefrange`, `\fullref` and `\Fullref` (with
+hyperref, starred) on its raw `\@cref` and varioref's page internals (`\vref@pagenum`, `\is@pos@number`, `\vref@label`,
+`\vref@err`, `\c@vrcnt`; varioref.sty:803-946), which varioref.sty.ltxml, page-less, lacks; its lock keeps `\vref` only:
+each `\Vref`/`\fullref` errs and prints "??" (KNOWN_PERL_ERRORS #1318).
+**Rust behavior**: the cleveref binding, when varioref is loaded, defines the six as its `\cref`, `\Cref`, `\crefrange`
+and `\Crefrange` (a label list too), `\vref`/`\vrefrange` under varioref's locks. The page text varioref adds ("on the
+next page") is dropped, as the varioref binding drops it from its own `\vref`; `\vpageref` stays the varioref
+binding's `\ref`. varioref's internals stay undefined: nothing the bindings run reaches them (zref-vario and citehack
+define their own).
+**Why**: the references cleveref prints (pdflatex "Section 1 and Section 1" on the label's page). 1602.00476 (6 E → 0,
+9 "??"), 2409.11413 (73 E → 19, the rest pgfplots'), 2505.14566 (26 E → 0); reach 1,430 of 8,868 post-2012 papers
+loading varioref also load cleveref, 105 of them calling the family.
+**Guards** `perfect_kernel_batchvrefclev::{cleveref_vref_with_varioref, varioref_alone_and_cleveref_alone_unchanged}`
+(repros package-bindings/cleveref_vref_with_varioref, cleveref_vref_family_with_varioref).
