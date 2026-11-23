@@ -523,6 +523,8 @@ mod perfect_kernel_batchio3b;
 mod perfect_kernel_batchkb1;
 mod perfect_kernel_batchkb2;
 mod perfect_kernel_batchkey1;
+/// LISTINLINE: an inline listing runs the `\lst@Init`/`\lst@DeInit` bracket (2411.07667); realboxes' colour internals.
+mod perfect_kernel_batchlistinline;
 /// LLNCSMARKS: llncs's own `\@fnsymbol` (⋆ ⋆⋆ …), its title block's marks and the body's `\fnsymbol`; OD #1060.
 mod perfect_kernel_batchllncs;
 mod perfect_kernel_batchlo1;

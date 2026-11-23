@@ -22387,3 +22387,19 @@ Fixed in Rust: the labels end in `\lx@nobreakspace` (OXIDIZED_DESIGN_DIVERGENCES
 `\fnum@figure` with `\nobreakspace`. Witness lineno/lineno (TL doc, lineno.tex:20). Repros
 sectioning-frontmatter/default_{affiliation_label_tilde_redefined,email_label_tilde_redefined_used,date_keywords_labels_tilde_redefined};
 guard `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`.
+
+## 1313. Perl's `\lstinline` never runs `\lst@Init`/`\lst@DeInit`, so a hook a document adds to them is lost
+
+listings.sty.ltxml:54-68 `\lstinline` reads and outputs the body inside its own group; it never runs the
+`\lst@Init\relax` … `\lst@DeInit\egroup` bracket listings.sty:1941-1989 puts around every inline listing, so material
+a document adds to either is dropped (or, as `\egroup`, never closes what it should). Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{listings}
+\makeatletter\g@addto@macro\lst@DeInit{!}\makeatother
+\begin{document}A \lstinline|x| B\end{document}
+```
+
+pdflatex prints "A x! B"; Perl drops the "!". Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1139): the binding runs the
+bracket. Witness 2411.07667 (realboxes' `\Colorbox{…}\bgroup\appto\lst@DeInit{\egroup}`, which Perl only escapes
+because its `\xpretocmd` fails); guard `perfect_kernel_batchlistinline::lstinline_runs_the_init_deinit_bracket`.

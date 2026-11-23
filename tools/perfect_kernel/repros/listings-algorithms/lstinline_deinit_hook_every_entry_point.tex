@@ -1,0 +1,18 @@
+% witness: 2411.07667 (the `\lst@DeInit` hook of lstinline_deinit_hook_closes_a_colorbox.tex)
+% oracle:  pdflatex 0 errors: "A p.q B r . s C int t ; D u.v E w.x end." (pdftotext) — every inline entry point (a `|` delimiter,
+%          a `{…}` group, `[language=C]` options, `\lstMakeShortInline` `"`, `\lstinline` called directly with the
+%          hook appended) ends with listings.sty's `\lst@DeInit\egroup` (:1959, :1966, :1989)
+% engines: rust rc2 = Error:unexpected cascade, text after "A" lost; perl = `\lst@DeInit` never runs
+% expect:  0 errors, 0 warnings; the five texts in order, each the inline `<text class="ltx_lstlisting">`
+% status:  RED (rc2) -> GREEN (LISTINLINE)
+\documentclass{article}
+\usepackage{xcolor,listings,xpatch,realboxes}
+\makeatletter
+\DeclareRobustCommand{\myinline}{\lstinline}
+\xpretocmd\myinline{\Colorbox{yellow}\bgroup\appto\lst@DeInit{\egroup}}{}{}
+\newcommand\myshort{\Colorbox{yellow}\bgroup\appto\lst@DeInit{\egroup}}
+\makeatother
+\lstMakeShortInline"
+\begin{document}
+A \myinline|p.q| B \myinline{r.s} C \myinline[language=C]|int t;| D \myshort"u.v" E \myshort\lstinline!w.x! end.
+\end{document}
