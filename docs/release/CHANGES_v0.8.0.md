@@ -406,13 +406,13 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     loses the body): the bibliography now ends it as its heading would, and an abstract the bibliography closed, or the
     document's end where body structure follows it, keeps its first paragraph (an abstract-only document keeps all of
     it), the rest moved back to the body with one Warning counting the moved
-    words (hep-th0110297, 1108.5171, math0006149, 1408.0340; ~30 run-397 papers, each 1-11 Errors to 0;
+    words (hep-th0110297, 1108.5171, math0006149, 1408.0340; ~30 November-run papers, each 1-11 Errors to 0;
     OXIDIZED_DESIGN_DIVERGENCES #1101). svjour's `\abstract{…}` (and the 2003 svmult's) is a group read where it
     stands, as the classes define it, so one left open no longer reads to the end of the input (astro-ph0702187 12 → 0 Errors,
     math0701897 48 → 0; KNOWN_PERL_ERRORS #1293). A style's `\endabstract` paired with its own `\beginabstract` is its
     own (nanosymp.sty, cond-mat0105361), where the kernel lock kept the list open over the paper. Guards
     `cluster_package_guards::perfect_kernel_batchabsfix::*`.
-  - **Run 397's misplaced elements, as DG ruled 2026-11-19.** An undefined BibTeX macro (`month = june`; ~190
+  - **The November run's misplaced elements.** An undefined BibTeX macro (`month = june`; ~190
     papers) is a Warning, as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1096). A theorem or proof in an abstract (83 of
     the 86 papers sampled) is dissolved into it: its title a run-in bold text, its paragraphs, lists and equations in the abstract,
     its id kept (1908.02189, 0804.0728; #1097); an abstract still open at `\end{document}` (math0006149) keeps its
@@ -420,7 +420,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     bold heading and the entries as a description (1410.5511; #1098). A bibliography inside a float or a heading
     argument floats out after it (cond-mat0108156, hep-ph0004227; #1099). Guards `perfect_kernel_batchplacefix::*`.
 
-  - **Run-397 loop Fatals of one class: a binding that called another user-level command by name.** apacite's citation
+  - **November-run loop Fatals of one class: a binding that called another user-level command by name.** apacite's citation
     forms called natbib's `\citep`/`\citet` by name, and agujournal2018.cls's `\let\cite\shortcite \let\citep\cite
     \let\citet\citeA` made each call itself: a 180 s timeout (1909.02387, 2212.08776; ~28 papers). They now call
     natbib's private copies, as do apacite's `natbibemu` `\cite`, nmbib's `\citeall` and slashed's `\slashed` (the
@@ -457,7 +457,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `is_readable_file`; `pathname` and `dump_paths` share one ambient `kpsewhich -var-value=SELFAUTOPARENT` probe
     (`3 → 2` subprocesses).
 
-  - **Four more run-397 Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
+  - **Four more November-run Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
     `\end{equation*}` as amsmath.sty:2950-2951 makes them, so a mixed pair (`\[ … \end{equation*}`) no longer errs
     (math0306159, math0401181, math0508341), and a `\tag` in `\[` is printed (2008.12392; OXIDIZED_DESIGN_DIVERGENCES
     #1091). etoolbox's `\robustify` of a command that is a macro in LaTeX and a native binding here (`\ref`, `\uline`,
