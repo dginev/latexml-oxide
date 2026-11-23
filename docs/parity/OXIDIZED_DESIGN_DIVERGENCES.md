@@ -24022,7 +24022,6 @@ utf8_c1_declared_and_byte_line_keep_their_text, utf8_declared_before_inputenc_ke
 bbl_abstract_c1_is_stored_data}` (repros unicode-catcodes/utf8_inputenc_control_characters_err,
 utf8_c1_declared_and_byte_line, utf8_declared_before_inputenc_keeps_meaning,
 index-bib/biblatex_bbl_abstract_c1_is_stored_data).
-
 ### 1138. A pgf path closes an auto-opened `\put` picture instead of nesting an `svg:svg` in it (PICNEST)
 
 **Perl behavior**: pgfsys-latexml.def.ltxml:392-398 (`\lxSVG@begingroup@`) opens an `svg:svg` when the current node is
@@ -24144,6 +24143,73 @@ critical issues on TeX Live 2025". Ten witnesses from Fatal to non-Fatal: 1511.0
 (2 E, fnpct), 1207.4642 (288 E, shipped pgf 2.10) and 1211.6751 (5 E, shipped xtemplate/xfrac/pgf) keep their own.
 **Guards** `perfect_kernel_batchltxown::{a_shipped_babel_3_9l_is_not_read, shipped_expl3_xparse_l3keys2e_are_not_read,
 a_copy_identical_to_the_trees_is_read_silently}` (repros loader/format_modules/babel_copy, expl3_copy).
+
+### 1143. A titlesec format applies only while titlesec holds the command (TITLESEC)
+
+**Perl behavior**: titlesec.sty.ltxml:42-57 keeps a `\titleformat` by the command's name (`\format@title@<sec>`), so it
+applies whatever defines the command later. **pdflatex (titlesec.sty)**: titlesec's load makes `\section`…
+`\subparagraph` its own (titlesec.sty:1640-1677 `\titleclass`); a later definition with `\@startsection` (a document's
+or class's `\renewcommand\section{\@startsection…}`; sectsty.sty:298-362 at sectsty's load, under article/report/book
+and scrartcl/scrreprt/scrbook only, any other class getting its PackageError) is LaTeX's heading again, which
+titlesec's formats never reach, and a `\titleformat` after it stores a format nothing reads. An extension of the
+command (`\preto`, `\g@addto@macro`) is no new definition: titlesec keeps it.
+**Rust behavior**: the formats apply while titlesec holds the command (`titlesec_sty.rs` `titlesec_holds`): it holds
+from its load (a definition before it, kept as `\lx@titlesec@claimed@<sec>`, is titlesec's) until a later definition
+whose body calls `\@startsection` (behind the kernel's lock, `\lx@dropped@<sec>`; a record holding the claimed body or
+the binding's with tokens added, the lock's `extended_refused_definition`, is an extension and does not count) or
+sectsty's load under one of its classes (the flag `titlesec_released@<sec>`; `\@ifclassloaded` as the loader answers
+it, so under every class whose binding loads article (amsart, acmart, IEEEtran, mnras, revtex4-2, emulateapj, asmejour,
+subfiles) sectsty still releases where pdflatex errs and keeps titlesec's format). A hand-written redefinition that
+copies the claimed body with tokens added is still taken for titlesec's (tokens cannot tell it from `\preto`'s record;
+output as before the batch). Only a body that calls `\@startsection`
+releases (not `\renewcommand\section{\mysection}`), a release is global, and `\titleclass` does not re-take a released
+command: row R TITLESECRED. The check runs when the heading is set (`\lx@titlesec@ifholds`, wrapping the font, the
+after-code and `\format@title@<sec>`, which composes the kernel's title when released) and at `\titleformat` (nothing
+stored once released). `\lx@titleformat` reads its arguments in a macro, as titlesec.sty:685-699's
+`\ttl@format@i`/`\ttl@format@ii`, and hands them to the primitive `\lx@titleformat@define`.
+**Why**: a two-argument `\titleformat{\section}{…}` takes the next line's `\titleformat` as its label; set in a group
+at the heading, it read `}` as its command and ended in the Fatal "Expansion of '\format@title@@}' has unbalanced {}"
+(1910.11159, 2005.02481; 2005.06700 with sectsty). These papers redefine the command with `\@startsection`, so LaTeX
+never sets that label: 0 errors each, words (the A/B's count, tag-stripped XML) 92 → 19429, 106 → 28005,
+4680 → 10865 (pdflatex 0/2/0). The `}` read as an
+argument where a format still holds is tex.web §395, row R READARG395 (repro
+sectioning-frontmatter/titleformat_at_a_group_end_red). KNOWN_PERL_ERRORS #1317. **Guard**
+`perfect_kernel_batchtitlesec::titlesec_formats_end_where_latex_takes_the_command` (repros sectioning-frontmatter/
+titlesec_format_ends_at_a_startsection_redefinition, titlesec_format_ends_at_sectsty),
+`titlesec_keeps_an_extended_command` (titlesec_format_holds_through_an_extension),
+`titlesec_keeps_the_command_where_sectsty_does_not_work` (memoir). RED (row R TITLESECRED):
+titlesec_titleclass_takes_the_command_back_red, titlesec_release_in_a_group_red,
+titlesec_release_through_an_indirect_body_red, sectsty_under_amsart_keeps_titlesec_red.
+
+### 1144. After varioref, cleveref's `\vref` family are the binding's page-less `\cref` forms (VREFCLEV)
+
+**Perl behavior**: cleveref.sty.ltxml reads cleveref.sty raw and replaces only `\cref` and its kin. With varioref
+loaded, cleveref.sty:2378-2604 redefines `\vref`, `\Vref`, `\vrefrange`, `\Vrefrange`, `\fullref` and `\Fullref` (with
+hyperref, starred) on its raw `\@cref` and varioref's page internals (`\vref@pagenum`, `\is@pos@number`, `\vref@label`,
+`\vref@err`, `\c@vrcnt`; varioref.sty:803-946), which varioref.sty.ltxml, page-less, lacks; its lock keeps `\vref` only:
+each `\Vref`/`\fullref` errs and prints "??" (KNOWN_PERL_ERRORS #1318).
+**Rust behavior**: the cleveref binding, when varioref is loaded, defines the six as its `\cref`, `\Cref`, `\crefrange`
+and `\Crefrange` (a label list too), `\vref`/`\vrefrange` under varioref's locks. The page text varioref adds ("on the
+next page") is dropped, as the varioref binding drops it from its own `\vref`; `\vpageref` stays the varioref
+binding's `\ref`. varioref's internals stay undefined: nothing the bindings run reaches them (zref-vario and citehack
+define their own).
+**Why**: the references cleveref prints (pdflatex "Section 1 and Section 1" on the label's page). 1602.00476 (6 E → 0,
+9 "??"), 2409.11413 (73 E → 19, the rest pgfplots'), 2505.14566 (26 E → 0); reach 1,430 of 8,868 post-2012 papers
+loading varioref also load cleveref, 105 of them calling the family.
+**Guards** `perfect_kernel_batchvrefclev::{cleveref_vref_with_varioref, varioref_alone_and_cleveref_alone_unchanged}`
+(repros package-bindings/cleveref_vref_with_varioref, cleveref_vref_family_with_varioref).
+
+### 1145. A text `\vphantom` is a zero-width strut (VPHANTOMWIDTH)
+
+**Perl behavior**: math_common.pool.ltxml `\vphantom` in text writes `<ltx:text class='ltx_phantom'>`, the same element
+as `\phantom`/`\hphantom`; the XSLT (`LaTeXML-inline-xhtml.xsl`, `contains(@class,'ltx_phantom')`) hides it with
+`visibility:hidden`, so the HTML box keeps the argument's width.
+**pdflatex**: latex.ltx:15613-15617 `\finph@nt` gives a `\vphantom` box its argument's height and depth and no width.
+**Rust behavior** (DG ruling 2026-11-23): the text box carries `class='ltx_phantom ltx_vphantom'`, and LaTeXML.css
+(and ar5iv-css) set `.ltx_phantom.ltx_vphantom { display:inline-block; width:0; white-space:nowrap; overflow:clip }`:
+TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hidden`, keeps the baseline).
+`\phantom` and `\hphantom` are unchanged. **Guards** `perfect_kernel_batch61::hphantom_in_plain_tex_loads_no_latex`
+(harvmac's `\refs` struts), `perfect_kernel_batchregfixb::*`, `perfect_kernel_batchfms1::field_prov_phantom_kept`.
 
 ### 1147. `\backmatter` closes the open part and chapter (BACKMATTERPART)
 

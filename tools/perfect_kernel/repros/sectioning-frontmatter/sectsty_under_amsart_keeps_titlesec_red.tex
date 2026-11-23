@@ -1,0 +1,16 @@
+% sectsty redefines nothing under amsart (sectsty.sty:298-362 test \@ifclassloaded{article|report|book|scr*}),
+% raising its PackageError; titlesec keeps \section. The amsart binding loads article as its base
+% (ams_core_cls.rs LoadClass article, as Perl's ams_core.cls.ltxml), so \@ifclassloaded{article} holds here.
+% oracle:  pdflatex 1 error (sectsty's): "[1] Intro" (italic)
+% engines: rust (TITLESEC-rel round 0 and 1) 0 errors, "1. Intro" (the kernel's title); INT081C-rel 0 errors, the
+%          title as expected; perl not run
+% expect:  1 error; title "[1] Intro", italic
+% status:  RED (moves: row R TITLESECRED)
+\documentclass{amsart}
+\usepackage{titlesec}
+\usepackage{sectsty}
+\titleformat{\section}{\itshape}{[\thesection]}{1em}{}
+\begin{document}
+\section{Intro}
+A.
+\end{document}

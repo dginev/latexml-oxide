@@ -1,0 +1,16 @@
+% A \@startsection redefinition inside a group is undone at the group's end: titlesec holds \section again.
+% oracle:  pdflatex 0 errors: "[1] Intro" (italic)
+% engines: rust (TITLESEC-rel round 0 and 1) "1 Intro": the lock keeps \lx@dropped@section globally (state.rs
+%          install_definition, Scope::Global); perl not run
+% expect:  0 errors; title "[1] Intro", italic
+% status:  RED (moves: row R TITLESECRED)
+\documentclass{article}
+\usepackage{titlesec}
+\makeatletter
+{\renewcommand\section{\@startsection{section}{1}{\z@}{-3.5ex}{2.3ex}{\normalfont\Large\bfseries}}}
+\makeatother
+\titleformat{\section}{\itshape}{[\thesection]}{1em}{}
+\begin{document}
+\section{Intro}
+A.
+\end{document}

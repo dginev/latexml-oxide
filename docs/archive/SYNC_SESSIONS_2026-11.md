@@ -2636,3 +2636,15 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   (6 placeholder-only changes), +491 phantom-only formulas. Cost accepted by DG: quant-ph0001103 +0.85 % XML / +1.21 %
   HTML instructions:u (46 script phantoms), math0001084 +0.23 % / +0.43 %, controls ≈0. Guards
   `perfect_kernel_batchphantom::*`. Residual: row R PHANTOMLEX.
+
+## v0.8.0 rc3 bundle — rows fixed (2026-11-23)
+- TITLESEC395 (titlesec half) — fixed by TITLESEC (OD #1143, KNOWN_PERL_ERRORS #1317): a titlesec format applies only
+  while titlesec holds the command; a later `\@startsection` definition or sectsty's load under its classes gives it
+  back; a `\preto` extension keeps the hold. 1910.11159, 2005.02481, 2005.06700: Fatal → 0 errors. Guards
+  `perfect_kernel_batchtitlesec::*`. The §395 half is row R READARG395; residuals TITLESECRED.
+- CNTE's cleveref + varioref part — fixed by VREFCLEV (OD #1144, KNOWN_PERL_ERRORS #1318): after varioref, cleveref's
+  `\vref` family are the binding's page-less `\cref` forms; varioref's range stubs spell `\ref`. 1602.00476 6 → 0,
+  2505.14566 26 → 0, 2409.11413 73 → 19 Errors; A/B 135 papers, Errors 347 → 103. Guards `perfect_kernel_batchvrefclev::*`.
+  2606.11484's new Fatal is row R ROBUSTIFYCELL.
+- VPHANTOMWIDTH — fixed (DG 2026-11-23, OD #1145): a text `\vphantom` is a zero-width strut (`ltx_vphantom`, LaTeXML.css
+  and ar5iv-css).

@@ -22485,7 +22485,6 @@ size as `print_scaled` writes it (OXIDIZED_DESIGN_DIVERGENCES #1081). Repros bac
 luatex-profile/pdfextension_optional_space_font_feedback, the null font's Error
 backend-persona/pdffont_invalid_font_identifier; guard
 `perfect_kernel_batchpdfprim::batchpdfprim_pdftex_operand_readers`.
-
 ## 1313. Perl's `\lstinline` never runs `\lst@Init`/`\lst@DeInit`, so a hook a document adds to them is lost
 
 listings.sty.ltxml:54-68 `\lstinline` reads and outputs the body inside its own group; it never runs the
@@ -22501,7 +22500,6 @@ a document adds to either is dropped (or, as `\egroup`, never closes what it sho
 pdflatex prints "A x! B"; Perl drops the "!". Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1139): the binding runs the
 bracket. Witness 2411.07667 (realboxes' `\Colorbox{…}\bgroup\appto\lst@DeInit{\egroup}`, which Perl only escapes
 because its `\xpretocmd` fails); guard `perfect_kernel_batchlistinline::lstinline_runs_the_init_deinit_bracket`.
-
 ## 1315. Perl's `\DeclareFixedFont` defines its command as `\relax`, so the fixed font is never selected
 
 latex_constructs.pool.ltxml:2714 `DefPrimitive('\DeclareFixedFont{}{}{}{}{}{}', sub { DefMacroI($_[1], undef,
@@ -22538,6 +22536,43 @@ latex.ltx:15602 makes it `\vphantom(`: `$\sqrt{\mathstrut a}$` gives `<msqrt><mi
 (OXIDIZED_DESIGN_DIVERGENCES #1141): the hint keeps its argument and renders `<mphantom>`, `\mathstrut` is `\vphantom(`;
 guards `perfect_kernel_batchphantom::{phantom_alone_in_a_slot_is_its_presentation,
 mathstrut_is_a_vphantom_of_a_parenthesis}`.
+
+## 1317. Perl's titlesec formats outlive a later `\@startsection` definition of their command
+
+titlesec.sty.ltxml:42-57 stores a `\titleformat` under the command's name, so it applies after a later
+`\renewcommand\section{\@startsection…}` or sectsty's load (sectsty.sty:298-362), where LaTeX's heading no longer runs
+titlesec's code. Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{titlesec}
+\titleformat{\section}{\itshape}{[\thesection]}{1em}{}
+\makeatletter\renewcommand\section{\@startsection{section}{1}{\z@}{1ex}{1ex}{\bfseries}}\makeatother
+\begin{document}\section{Intro}A.\end{document}
+```
+
+pdflatex sets "1 Intro" (bold, no brackets, 0 errors); Perl (same host) gives `<title font="italic">[1] Intro</title>`,
+titlesec's format; ours `<title><tag close=" ">1</tag>Intro</title>` (the `\@startsection` style's `\bfseries` is not
+carried, as for any `\@startsection` heading). With a two-argument `\titleformat`
+whose label is the next line's `\titleformat`, Perl ends in the Fatal "Expansion of '\format@title@@}' has unbalanced {}"
+(1910.11159, 2005.02481; 2005.06700 with sectsty), where pdflatex never sets that label. Fixed in Rust
+(OXIDIZED_DESIGN_DIVERGENCES #1143); guard `perfect_kernel_batchtitlesec::titlesec_formats_end_where_latex_takes_the_command`.
+
+## 1318. Perl's cleveref after varioref runs cleveref's varioref code on internals the varioref binding lacks
+
+cleveref.sty.ltxml reads cleveref.sty raw; after varioref, cleveref.sty:2378-2604 redefines `\Vref`, `\vrefrange`,
+`\fullref` and kin on its raw `\@cref` (which reads the `.aux` labels LaTeXML never writes) and varioref's page
+internals (`\vref@pagenum`, `\is@pos@number`, `\vref@label`, `\vref@err`, `\c@vrcnt`; varioref.sty:803-946), which
+varioref.sty.ltxml does not define. Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{varioref}\usepackage{hyperref}\usepackage[capitalise]{cleveref}
+\begin{document}\section{One}\label{s:one}\Vref{s:one} and \vref{s:one}.\end{document}
+```
+
+pdflatex prints "Section 1 and Section 1"; Perl (same host) raises 8 Errors (5 undefined, 2 "Expected a relational
+token", 1 `<variable>`) and prints "??" with the undefined names' ERROR elements, and `\vref` (locked) prints "1".
+Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1144); witnesses 1602.00476, 2409.11413, 2505.14566; guard
+`perfect_kernel_batchvrefclev::cleveref_vref_with_varioref`.
 
 ## 1320. Perl nests the back matter inside the last `\part`
 

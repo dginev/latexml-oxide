@@ -1,0 +1,17 @@
+% \titleclass{\section}{straight} after a \@startsection redefinition makes \section titlesec's again
+% (titlesec.sty:133-139 \ttl@class redefines it), so the later \titleformat applies.
+% oracle:  pdflatex 0 errors: "[1] Intro" (italic)
+% engines: rust (TITLESEC-rel round 0 and 1) "1 Intro" (the kernel's title: the release is not undone); perl not run
+% expect:  0 errors; title "[1] Intro", italic
+% status:  RED (moves: row R TITLESECRED)
+\documentclass{article}
+\usepackage{titlesec}
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}{-3.5ex}{2.3ex}{\normalfont\Large\bfseries}}
+\makeatother
+\titleclass{\section}{straight}
+\titleformat{\section}{\itshape}{[\thesection]}{1em}{}
+\begin{document}
+\section{Intro}
+A.
+\end{document}
