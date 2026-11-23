@@ -113,7 +113,7 @@ Rules that keep this file honest and mergeable:
     (RAWCOPERNICUS); 0801.1806 (iaus.cls raw) warns `\end{document}` inside a group (level 1) and drops its `[Author
     (year)]` bibliography labels — check against the PDF (RAWIAUS); from the RAWDEF study: codedoc (a TL manual)
     Fatal:Mouth:Recursion, 2309.07511's ctex a new Error (the fandol fontset unavailable), circularglyphs' TikZ text on
-    a path lost, 2312.09266's background.sty notice moved; 3
+    a path lost, 2312.09266's background.sty notice moved. Root-caused 2026-11-23: none of it reaches the fleet (`--preload=ar5iv.sty` already loads raw; rc2 ar5iv = default counts). RAWIAUS labels: faithful — iaus.cls:1221 `\@biblabel` is empty and the PDF prints none (drop it); its group warning and stray "n" are MTARG (v0.8.0: the title-page deposit and replay break a `\@maketitle` that takes an argument; ~1,665 iaus.cls papers). RAWCOPERNICUS: faithful too — copernicus.cls:493 discards `\received` etc. without the logo file, but FIDELITY_CHARTER §2 keeps authored text: a raw setter that discards its argument should hand it to the frontmatter under OmniBus's date roles (`title_page_check.rs` ~:440; HARD, ~411 copernicus papers). 1502.07025: a gain (11 → 37,878 words) whose 147 Errors are YTABMATRIX; 3
   - SVA — SV-A: \csname via \ifincsname; 3
   - TBLR — tabularray first-token, \g__tblr_table_count_int, tblr-only \hline REDs; 1
   - QA05 — Kernel-version switch + \@ifundefined per year (QA05/QA06); 1
@@ -179,7 +179,7 @@ Rules that keep this file honest and mergeable:
   - LLGL — llncs `\institute` legend line glued into the last institute (revP23c l5); 1
   - AFNR — two identical `\affiliation{…\footnote{…}}` write two pubnotes, no Warning (`aastex6_footnote_in_repeated_affiliation_doubled_red`; AAS1); 1
   - AAGR — AAS1's guard: a repeated affiliation content that must NOT be reused (`\stepcounter`/`\footnotemark`, A A B A) (revAAS1 NIT); 1
-  - LOOP2302 — 2302.07562 loops (`Fatal:Timeout:IfLimit` at 48M conditionals) on int169b and int170a alike; 3
+  - LOOP2302 — 2302.07562 loops (`Fatal:Timeout:IfLimit` at 48M conditionals) on int169b and int170a alike. DG 2026-11-23: raise ar5iv's IfLimit to the CLI's 480M — not a loop: the counter is cumulative per document (`conditional.rs` ~:192, Perl `$LaTeXML::IF_LIMIT`) and 2302.07562 inputs 59 pgfplots files of ~100 KB; rc2 still `Fatal:Timeout:IfLimit` at 125 s; 3
   - CSSPORT — The ar5iv-css port: PR #54 merged 2026-11-05; the mirror of latexml-oxide's later `LaTeXML.css` fixes in ar5iv-css #55, #56 (#841's aligned columns), #57 (#844's verbatim, display runs, ORCID), open; 3
   - MHCHEM — a semantic mhchem binding (DG 2026-11-13: deferred, planned; Perl ships none; stage 1 merged as #850, its rest MHCHEM-BM; #837 prescripts and #838 arrow heads fixed the raw path's isotopes and `<=>`): option (a) of study `agent_reports/2026-11-13_MHCHEM0_report.md` —
     a thin binding over mhchem's output layer (`\__mhchem_output_coreFive:nnnnnnn`, mhchem.sty:2774; amounts, `+`, arrows, bonds), keeping its parser:
@@ -424,7 +424,7 @@ Rules that keep this file honest and mergeable:
   - NOTCANCEL — DONE (fix/not-cancel-move): math_common's `\not` rewrite MOVES its operand on both paths (Perl `appendChild`, `math_common.pool.ltxml:341/:354`) and gives the cancel `XMApp` the `\not`'s box and font (Perl `_box`): nested `\not` at any depth `≠`, `$\not\frac{\not\sqrt{a\not=b}}{c}$` 70 %, `\not\not=` `≠`, `\not\not\in` `∉`; the double registration stays, its second pass idle; arXiv 1009.4552, 1611.10101, 2001.07246, 1701.02906, 2209.02767 (A/B 5 of 314 changed, all toward Perl); guards `perfect_kernel_batchnotcancel::*`; 0
   - NOTRES — NOTCANCEL's residuals (revNOTCANCEL; no witness, pre-existing): `Document::insert_math_token` returns the parent (`document.rs:3046`) where Perl returns the new token (`Document.pm:673`) — a `\not` carrying an `xml:id` would hand it to the cancel `XMApp` (census the 3 callers that use the value first: `tbox.rs:253`, `document.rs:1728/:1734`, `math_common.rs:686`); `sideset_wrap` (`amsmath_sty.rs:3777-3784`, Perl `appendChild`) and `base_xmath.rs:1783` (its comment says "Move" but it calls `append_tree`) copy where Perl moves; Replace never frees the node it discards (WISDOM #79 — a future free must skip nodes the callback re-attached, `rewrite.rs:694`); math RED rows (parked): `\not\left(x\right)` unparsed (Perl `delimited-(̸)`), `\overset{\not}{…}` / `\mathop{\not}…` leave `／` unrewritten, `\not\xhookrightarrow` keeps `font="italic"`; 3
   - LEAD805 — #805's rest (closed 2026-11-15; PR 883 fixed the rule fillers): box/char fillers keep an `ltx:text class="ltx_leader"` wrapper (target: the class on the box's own element, no wrapper), and a vertical-box leader lands inside the next paragraph (REDs `leaders_vertical_box_starts_no_paragraph_red`, `leaders_box_filler_repeats_red`) — post-cutoff; the brucemiller 2882 patch offer waits with the UP items for BM's confirmation (DG 2026-11-15); 3
-  - LXOOM — a libxml2 out-of-memory under `--max-memory=8192` aborts the process: 1111.1264 SIGABRTs on base and int/perf alike ("failed to create element td", then every XPath fails; 8 vs 18-19 Errors only because PERFE's walks replaced most XPath calls; no XML written) — it should end in a clean MemoryBudget Fatal (`Stomach:MemoryBudget`, stomach.rs:546) (combined A/B INTPERF5 vs MAIN884, 999/1000 identical) — post-cutoff; 3
+  - LXOOM — a libxml2 out-of-memory under `--max-memory=8192` aborts the process: 1111.1264 SIGABRTs on base and int/perf alike ("failed to create element td", then every XPath fails; 8 vs 18-19 Errors only because PERFE's walks replaced most XPath calls; no XML written) — it should end in a clean MemoryBudget Fatal (`Stomach:MemoryBudget`, stomach.rs:546) (combined A/B INTPERF5 vs MAIN884, 999/1000 identical) — post-cutoff. 2026-11-23: not reproducible within 180 s (wall-clock Fatal at fragment 2048, RSS 4.4 GB rising). Deferred, decided by difficulty (DG 2026-11-23); 3
   - DTDENT — XML input carrying a DTD/internal entities (`--whatsin=xml` / `is_xml_input`, `latexml_oxide/bin/latexml_oxide.rs:1175`): the entity's content is silently dropped from the HTML ("see  and …", no Warning; Perl XML::LibXML expands by default; revPERFD, base too) — DG 2026-11-15: expand at parse (libxml2 substitute-entities), so post never sees entity refs or a DTD; the PERFE walk's XPath fallback for DTD documents and revPERFE's (b)/(c) edges then go away — post-cutoff; 1
   - XMLATTR — serialization keys attributes by local name (first qname, last value; PERFG's R6 kept it exactly): `xml:lang="en" lang="de"` serializes as `xml:lang="de"` (en lost, wrong qname), the same for `id` + `xml:id`; `_a` + `xml:_a` leaks `xml:_a="2"` (the bookkeeping strip removes one attribute per local name) (revPERFG, pre-existing) — post-cutoff; 3
   - XMAPPNS — namespace-less math elements in core's live DOM: PERFK's round-trip inventory found 12,054 elements (XMApp, presumably from the math parser) in 31/50 papers that land in the ltx namespace only via the serialize→reparse, so an `ltx:XMApp` query on the live DOM misses them (latent; root-cause first; I802R's no-namespace XMTok RED `math-parse/unparsed_script_token_outside_ltx_namespace_red` is the same family); 3
@@ -468,7 +468,7 @@ Rules that keep this file honest and mergeable:
   - TITLESEC395 — (INTERIM397g) Fatal `Expansion of '\format@title@@}' has unbalanced {}` (1910.11159, 2005.02481,
     2005.06700; Perl the same, pdflatex clean): `read_arg` (`gullet.rs` ~:4048-4080, Perl Gullet.pm:732-744) accepts a
     `}` where TeX raises "Argument of \x has an extra }" and drops the call (tex.web §395). Fix: §395's recovery (EASY
-    code, MED risk: every argument read; corpus A/B). Post-release; 3
+    code, MED risk: every argument read; corpus A/B). Post-release. rc2 2026-11-23: still `Fatal:Stomach:Misdefined` on all three witnesses (Perl the same, pdflatex 0/2/0). Batch B1 (DG 2026-11-23, yes): `read_arg` (`gullet.rs` ~:4048) raises tex.web §395's "Argument of \x has an extra }", puts the `}` back and takes the `\par` path (`abandon_argument_at_par`); and a `\titleformat` stops applying once the document redefines that command with `\@startsection`, as in TeX (titlesec's own `\section` only; Perl shares the leak, titlesec.sty.ltxml:42-57). Every argument read goes through `read_arg`: census + corpus A/B; 3
   - HYPERFAMILY — (INTERIM397g, OD #588) one family member's first use defines its whole family (`\phantomsection` then
     `\providecommand\nameref` is skipped) — arXiv's hyperref build behaves the same; the `ar5iv_sty.rs` comment "what
     pdflatex without the package sees" overclaims for the family's other names. Doc fix. With the provided anchor layer
@@ -495,7 +495,7 @@ Rules that keep this file honest and mergeable:
     math0404207); 3
   - LTXUTILH-OTHER — (LOOPFIX) shipped-ltxutil papers whose Fatal has another root: "Package loading depth exceeded
     500" (1408.3933, 1410.2241, 1511.02101, 1511.05750, 1602.08358), unexpected `\fi`/`\par` (1207.4642, 1211.3724,
-    1211.6751, 1304.5586), `\errmessage` (1601.02763); 3
+    1211.6751, 1304.5586), `\errmessage` (1601.02763). rc2 2026-11-23: all ten still Fatal, and TL 2025 pdflatex is Fatal on every one run: shipped babel 3.9l inputs `switch.def`, TL 2025's stub of which inputs `babel.def` back (1408.3933, 1410.2241, 1511.02101, 1511.05750, 1602.08358, 1601.02763); shipped 2012 expl3 (`l3names.sty:48`) against the TL 2025 kernel (1207.4642, 1211.3724, 1211.6751, 1304.5586). DG 2026-11-23: older arXiv papers must convert even where TL 2025 fails — a strategy per family (binding over the stale shipped copy, a legacy-TL dump, …), study first; 3
   - ONLINECITE — (LOOPFIX review) `revtex4_support_sty.rs:430` `\onlinecite` → `\citealp` by user-level name, where
     revtex4-2.cls:7069 `\let\onlinecite\rev@citealp` (the OD #1100 class; no loop witness yet). Post-release; 1
   - CYCLE-WINDOW — `cycle_guard.rs` `MAX_WINDOW = 10`: a loop of 11+ tokens is not caught as a fast Fatal and runs to
@@ -539,7 +539,7 @@ Rules that keep this file honest and mergeable:
     Fatal:Timeout:PushbackLimit; IDCYCLE, loud, no witness): record each counter's id-within and walk it in
     `define_counter_ids`; 3
   - XSLTDEPTH — libxslt's recursion cap 1000 (`latexml_post/src/xslt.rs:30`, Perl's `max_depth(1000)`) fails post on
-    deeply nested XML (0905.4216, 1909.06819: `post/convert`); 3
+    deeply nested XML (0905.4216, 1909.06819: `post/convert`). rc2 2026-11-23: both still `Fatal:post:convert`. 0905.4216 is Rust-only — a control space `\ ` inside `{pspicture}` makes an `<ltx:text>` that the next `\psline` nests a new `<picture>` in (Perl flat); 1909.06819 SHARED (`\put` in a tikz `\foreach` nests per `\put`, ours adds a `<p>` per level). Batch PICNEST; do not raise the depth cap; 3
   - CLUSTFIXR — run 397's Error clusters' leftovers (#921-#923): `\documentstyle[PASJadd]{PASJ95}`'s `\draft`
     (PASJadd.sty:46; astro-ph0003107, astro-ph0002344; ~10 census papers): a small PASJadd binding or the shipped files
     read raw; pasj00's `\Published{}` (pasj00.cls:113; 0712.0877, astro-ph0701328) → `\lx@add@date[role=published]` with
@@ -565,7 +565,7 @@ Rules that keep this file honest and mergeable:
   - CRASH397L — run-397 crashes left to root-cause (the same on every binary compared then; recheck on rc2): stack
     overflows 2209.08800, 2403.08513 (rc=134; since #924 an unbounded argument expansion is a Fatal); recursion
     2411.07443 (listings), 2411.07667 (`\collect@box`); math0012097's endless "Ignoring redefinition of \title" at
-    CRclassif3.tex:40 (~3 GB stderr); 2101.07941's wall clock (LOOPFIX); 3
+    CRclassif3.tex:40 (~3 GB stderr); 2101.07941's wall clock (LOOPFIX). rc2 2026-11-23: 2209.08800, 2403.08513 and math0012097 convert clean (math0012097 because `amsp2.sty` is now skipped as a missing file; recheck if raw loading under `\documentstyle` returns). Left: 2411.07667 (Rust-only: the listings binding never runs `\lst@DeInit` after an inline listing — batch LISTINLINE), 2411.07443 (`\@listings@inline` nested 98 deep in the first `lstlisting`, Perl the same, unexplained), 2101.07941 (wall clock; deferred by difficulty, DG 2026-11-23); 3
   - PLACEB4 — (PLACEFIX, OD #1099) a block-local reference list (elsarticle CPC program summary in the abstract
     2503.17910; IEEE CSM sidebars 2402.17043, 2502.16577; hep-ex0405026's minipage) stays in place as DG ruled but keeps
     its "`<ltx:bibliography>` isn't allowed" Error: the schema allows a `biblist` only in back matter. Ruled design
@@ -891,7 +891,7 @@ Rules that keep this file honest and mergeable:
   - TBLRADJ — a `tblr` inside `adjustbox` inside `table*` (2502.02871), untraced; 3
   - STARTALIGNGRP — `\start@align` under a document's renewed `{alignat}` ended by its own `\math@cr\black@\totwidth@
     \egroup\egroup` (eqndefns-left: 2601.10843, 2602.04048): Fatal Recursion → 3 Errors, still an empty document; open
-    the alignment in a group a plain `\egroup` closes (repro alignment/start_align_under_redressed_alignat); 3
+    the alignment in a group a plain `\egroup` closes (repro alignment/start_align_under_redressed_alignat). rc2 2026-11-23: no longer Fatal, but 2601.10843 keeps 1,328 of pdflatex's 15,212 words (63 Errors). Deferred, decided by difficulty (DG 2026-11-23); 3
   - GATHERCAP — `\lx@ams@gather@close` scans 8 tokens, not items: `…\black@\totwidth@ \noalign{\vskip 4pt}\egroup $$`
     overflows into the raw cascade (6 Errors), `\iftag@\fi` before the `\egroup` gives a false Warning (synthetic; every
     TL and corpus form is `\math@cr \black@\totwidth@ \egroup`): scan balanced items, skip `\black@<arg>`, empty
@@ -1203,7 +1203,7 @@ Rules that keep this file honest and mergeable:
   - TIKZCDHANG — a tikz-cd diagram whose cell has `\hspace{1em}\rar[mapsto]` loops under calc after an earlier cell's
     calc error (1611.01788 thesis.tex:5400/:5434; both the Nov 17 binary and the release candidate; pdflatex is fatal
     there too, 8 errors): find the loop site (`perf record` at 20 s), then end in a bounded Error. The wall-clock Fatal
-    leaves no XML and no log, so the paper's 56k words are lost — a salvage question too; 5
+    leaves no XML and no log, so the paper's 56k words are lost — a salvage question too. rc2 2026-11-23: still the wall clock at 180 s (59 Errors before it). Deferred, decided by difficulty (DG 2026-11-23); 5
   - BACKMATTERPART (after 0.8.0, needs DG's ruling; TeX fidelity, offer upstream) — LaTeXML nests `\backmatter` (the
     bibliography and index after it) inside the last `ltx:part`, while in TeX `\backmatter` belongs to no part. Since
     SPLITPARENT matches Perl's Split → Scan parents, a split `\part` book's Bibliography/Index footer buttons appear only
@@ -1302,6 +1302,7 @@ Rules that keep this file honest and mergeable:
   - ISSUE143 — issue #143: Rust stable once `#[thread_local]` stabilizes; blocked upstream; 1
   - ISSUE80 — issue #80: space XMHints as elided arguments (math, parked); 3
   - ISSUE47 — issue #47: accurate LaTeX linting (feature, long-term; with issue 92's diagnostics); 5
+  - YTABMATRIX — (RAWDEFR root cause, 2026-11-23) ytableau's `\ydiagram` inside a pgf matrix cell (`tikzcd`, `\matrix[matrix of math nodes]`) closes `svg:g` while the `\vtop` capture block is still open (ytableau.sty:190-206 `\vtop{\iffalse}\fi` … `\iffalse{\fi}` around an inner `\halign`): `\begin{tikzcd} \ydiagram{1} & B \end{tikzcd}` gives 2 Errors on rc2, pdflatex clean; a plain node, a tabular cell, `\vcenter` are clean. Witness 1502.07025 (123 × `svg:g isn't allowed in <ltx:equation>`). Start from `pgfsys_latexml_def.rs`'s matrix cell build; 3
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
