@@ -2880,6 +2880,12 @@ LoadDefinitions!({
     // frame/background preamble constructors skip the box frame/bg. Set BEFORE
     // reading the arg, matching Perl `listings.sty.ltxml:61`.
     assign_value("LISTINGS_INLINE", Stored::Bool(true), None);
+    // listings.sty:1941-1953: `\lst@Init\relax` runs before the body is read and `\lst@DeInit\egroup` ends it
+    // (:1959, :1966, :1989), so a hook a document adds to either runs where TeX runs it — realboxes'
+    // `\Colorbox{…}\bgroup\appto\lst@DeInit{\egroup}` closes its collected box there (witness 2411.07667).
+    Ok(Tokens::new(vec![T_CS!("\\lst@Init"), T_CS!("\\relax"), T_CS!("\\lx@lstinline@")]))
+  });
+  DefMacro!("\\lx@lstinline@", sub[_args] {
     // Read opening delimiter under NORMAL catcodes — so `{`/`}` keep
     // BEGIN/END catcodes and the standard "closing brace" pairing works
     // for `\lstinline{a_word}`-style invocations. Perl reads `$init`
@@ -2938,6 +2944,7 @@ LoadDefinitions!({
     if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
       result.extend(post.unlist());
     }
+    result.push(T_CS!("\\lst@DeInit"));
     result.push(T_CS!("\\lx@hidden@egroup")); // balance bgroup, align-neutral (see above)
     Ok(Tokens::new(result))
   });
@@ -3011,7 +3018,8 @@ LoadDefinitions!({
         let _ = &kv; // lstActivate placeholder
         // Perl #2824: mark inline (local to the bgroup) so frame/bg are skipped.
         assign_value("LISTINGS_INLINE", Stored::Bool(true), None);
-        let mut result = Vec::new();
+        // The `\lst@Init`/`\lst@DeInit` bracket, as `\lx@lstinline` (the lines are already read).
+        let mut result = vec![T_CS!("\\lst@Init"), T_CS!("\\relax")];
         if let Some(Stored::Tokens(pre)) = lookup_value("LISTINGS_PREAMBLE_BEFORE") {
           result.extend(pre.unlist());
         }
@@ -3019,6 +3027,7 @@ LoadDefinitions!({
         if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
           result.extend(post.unlist());
         }
+        result.push(T_CS!("\\lst@DeInit"));
         result.push(T_CS!("\\lx@hidden@egroup")); // balance bgroup, align-neutral (as \lx@lstinline)
         let mut end_tokens = vec![T_CS!("\\end"), T_BEGIN!()];
         end_tokens.extend(ExplodeText!("lstinline"));

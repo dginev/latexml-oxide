@@ -54,6 +54,44 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     Warning and the stray "n" are gone; 0801.1806 also loses a `<pagination role="newpage"/>` after its frontmatter,
     from the deposit's `\newpage`, which pdflatex runs before the title page (iaus.cls:842, 869). Guard
     `perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group`.
+  - **An inline listing runs listings.sty's `\lst@Init`/`\lst@DeInit` bracket.** listings.sty wraps every
+    `\lstinline` in `\lst@Init\relax` … `\lst@DeInit\egroup` (listings.sty:1941-1989), and packages hook both:
+    realboxes' `\Colorbox{…}\bgroup` before an inline listing closes its box in an `\lst@DeInit` hook, which never
+    ran, so each listing nested a group deeper until the stack overflowed. realboxes' `\Colorbox`/`\Fcolorbox` also
+    reach xcolor's `\color@box`/`\color@fb@x`, now bound. OXIDIZED_DESIGN_DIVERGENCES #1139, KNOWN_PERL_ERRORS #1313;
+    guards `perfect_kernel_batchlistinline::*`. The realboxes background colour is still lost (a known residual).
+  - **Drawings TeX lays out flat stay flat.** A control space `\ ` between pstricks objects opened a text box the
+    next object nested in, and a pgf path nested an `svg:svg` in an auto-opened `\put` picture, so long figures nested
+    hundreds deep and the post-processor's XSLT stopped (`Fatal:post:convert`). In a picture the explicit space is
+    kept only after a box or text, where TeX keeps it, and a path closes the auto-opened `\put` chain
+    (OXIDIZED_DESIGN_DIVERGENCES #47, #1138); guards `pstricks_drawing::{a_control_space_between_objects_keeps_the_picture_flat,
+    a_control_space_after_text_in_a_put_is_kept}`, `perfect_kernel_batch54::a_put_in_a_tikzpicture_closes_before_the_next_path`.
+  - **The ar5iv profile's conditional limit is the front ends' 480M.** The `\if` count accumulates over the whole
+    document, so a long finite pgfplots paper passed ar5iv's 48M without any loop; `--preload=ar5iv.sty` now passes
+    the same `RUNAWAY_IF_LIMIT` as the command line (OXIDIZED_DESIGN_DIVERGENCES #1080).
+  - **A titlesec format applies only while titlesec holds the command.** A document that redefines `\section` with
+    `\@startsection` after loading titlesec, or loads sectsty after it under article/report/book or the KOMA classes,
+    gets LaTeX's heading back, as in pdflatex; the format used to keep applying and could read the brace that ends
+    its argument (`Fatal:Stomach:Misdefined`). An extension by `\preto` keeps titlesec's hold. sectsty under another
+    class raises its own PackageError. OXIDIZED_DESIGN_DIVERGENCES #1143, KNOWN_PERL_ERRORS #1317; guards
+    `perfect_kernel_batchtitlesec::*`.
+  - **After varioref, cleveref's `\vref` family prints cleveref's references.** cleveref redefines `\vref`, `\Vref`,
+    `\vrefrange`, `\Vrefrange`, `\fullref` and `\Fullref` on varioref's page internals, which the page-less varioref
+    binding does not provide, so each call raised six Errors and printed "??"; they are now the binding's `\cref`
+    forms (page text dropped, as varioref's). OXIDIZED_DESIGN_DIVERGENCES #1144, KNOWN_PERL_ERRORS #1318; guards
+    `perfect_kernel_batchvrefclev::*`.
+  - **A text `\vphantom` is a zero-width strut**, as in TeX: it carries `ltx_vphantom`, and LaTeXML.css gives it its
+    argument's height and depth and no width (OXIDIZED_DESIGN_DIVERGENCES #1145; also in ar5iv-css).
+  - **Interrupting the first conversion no longer leaves the format in a degraded state** (issue 988). When no format
+    dump matches the user's TeX tree, the first conversion builds one into a per-user cache; Ctrl+C (and SIGTERM or
+    SIGHUP on Unix, Ctrl+Break or closing the console on Windows) during that build now cancels it: the build's
+    attempt record and partial dump are removed and the process exits with status 130, so the next conversion builds
+    again. Before, two interrupts marked the format failed for a day, and every conversion then loaded it from the
+    engine's own definitions. A process that ignores these signals (`nohup`, a background job) keeps them ignored. The
+    degraded-mode warning now says why no dump was built and which file to remove to retry, and the no-dump fallback no
+    longer prints thousands of blank lines over it (the blank line LaTeX writes before each error it drops).
+    OXIDIZED_DESIGN_DIVERGENCES #1148; guards `format_dumps::tests::an_interrupted_build_is_undone`,
+    `dump_gate_init::nodump_latex_branch_converts_healthily`.
 
 ### 0.8.0-rc2
 

@@ -1,0 +1,23 @@
+% mechanism: without hyperref, cleveref.sty:2597-2603 redefines all six of varioref's reference commands (`\vref`,
+%   `\Vref`, `\vrefrange`, `\Vrefrange`, `\fullref`, `\Fullref`) on its varioref code; the cleveref binding's page-less
+%   forms are its `\cref`, `\Cref`, `\crefrange`, `\Crefrange` (a label list too). `\vpageref` stays the varioref
+%   binding's (Perl's `\ref`).
+% witness: 1602.00476 (`\fullref`), 2505.14566 (`\Vref{a,b}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, two runs) 0 `!`, no Warning: Section 1; section 1; figs. 1 and 2;
+%   sections 1 to 3 on the current page; Sections 1 to 3 on this page; section 2 on page 1; Section 2 on page 1;
+%   on the current page. (page texts are page-layout relative: dropped, as by the varioref binding)
+% engines: rust INT081C 6 errors, 10 warnings; VREFCLEV 0, 0
+% expect:  0 errors, 0 warnings; Section 1; section 1; figs. 1 and 2; sections 1 to 3; Sections 1 to 3; section 2;
+%   Section 2; 1.
+% status:  GREEN (VREFCLEV; guard perfect_kernel_batchvrefclev::cleveref_vref_with_varioref)
+\documentclass{article}
+\usepackage{varioref}
+\usepackage{cleveref}
+\begin{document}
+\section{One}\label{s:one}
+\section{Two}\label{s:two}
+\section{Three}\label{s:three}
+\begin{figure}\caption{F}\label{f:a}\end{figure}
+\begin{figure}\caption{G}\label{f:b}\end{figure}
+\Vref{s:one}; \vref{s:one}; \vref{f:a,f:b}; \vrefrange{s:one}{s:three}; \Vrefrange{s:one}{s:three}; \fullref{s:two}; \Fullref{s:two}; \vpageref{s:one}.
+\end{document}

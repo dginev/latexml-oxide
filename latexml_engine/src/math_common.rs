@@ -1238,7 +1238,9 @@ LoadDefinitions!({
   DefConstructor!(
     "\\vphantom{}",
     "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'/>)\
-      (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
+      (<ltx:text class='ltx_phantom ltx_vphantom'>#1</ltx:text>)",
+    // `ltx_vphantom` lets LaTeXML.css give the text box TeX's zero width (DG 2026-11-23, VPHANTOMWIDTH, OD #1145);
+    // Perl writes `ltx_phantom` alone and its box keeps the argument's width (math_common.pool.ltxml:684-687).
     // Not `enter_horizontal`, as `\phantom` above.
     properties => { stored_map!("isSpace" => true) },
     // latex.ltx:15613-15617 `\finph@nt`: a `\vphantom` box has its argument's height and depth and no width (`\ifh@`

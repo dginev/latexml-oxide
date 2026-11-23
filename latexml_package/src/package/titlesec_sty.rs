@@ -32,8 +32,78 @@ fn has_parameter_reference(tokens: &[Token]) -> bool {
   false
 }
 
+/// `\lx@titlesec@ifholds{<sec>}{<held>}{<released>}`, a heading part decided when the heading is set.
+fn held_by_titlesec(sec: &str, held: Vec<Token>, released: Vec<Token>) -> Tokens {
+  let mut tokens = vec![T_CS!("\\lx@titlesec@ifholds"), T_BEGIN!()];
+  tokens.extend(Explode!(sec));
+  tokens.push(T_END!());
+  for part in [held, released] {
+    tokens.push(T_BEGIN!());
+    tokens.extend(part);
+    tokens.push(T_END!());
+  }
+  Tokens::new(tokens)
+}
+
+/// The sectioning commands titlesec takes over at its load (titlesec.sty:1640-1677 `\titleclass`).
+const TITLESEC_CLASSED: [&str; 5] = [
+  "section",
+  "subsection",
+  "subsubsection",
+  "paragraph",
+  "subparagraph",
+];
+
+/// Whether `\<sec>` is still titlesec's: a later definition of it whose body calls `\@startsection` (a document's or
+/// class's `\renewcommand\section{\@startsection…}`, kept as `\lx@dropped@<sec>` behind the kernel's lock; sectsty's
+/// load under its classes, sectsty.sty:298-362) is LaTeX's own heading, which titlesec's formats never reach. Witnesses 1910.11159,
+/// 2005.02481 (a format whose label is the next `\titleformat`), 2005.06700 (sectsty); Perl keeps the formats
+/// (KNOWN_PERL_ERRORS #1317).
+fn titlesec_holds(sec: &str) -> bool {
+  if !TITLESEC_CLASSED.contains(&sec) {
+    return true;
+  }
+  if lookup_bool(&s!("titlesec_released@{sec}")) {
+    return false;
+  }
+  let Some(Stored::Expandable(now)) = lookup_meaning(&T_CS!(s!("\\lx@dropped@{sec}"))) else {
+    return true;
+  };
+  let Some(ExpansionBody::Tokens(body)) = now.get_expansion() else {
+    return true;
+  };
+  let body = body.unlist_ref();
+  // (a definition titlesec's own load replaced, `\lx@titlesec@claimed@<sec>`, does not count, nor does that record or
+  // the binding with tokens added, as `\preto`/`\g@addto@macro` leave it: state.rs `extended_refused_definition`)
+  let extends = |held: Option<Stored>| match held {
+    Some(Stored::Expandable(c)) => {
+      Rc::ptr_eq(&c, &now)
+        || matches!(c.get_expansion(), Some(ExpansionBody::Tokens(held))
+          if !held.is_empty() && body.len() > held.unlist_ref().len()
+            && body.windows(held.unlist_ref().len()).any(|w| w == held.unlist_ref()))
+    },
+    _ => false,
+  };
+  extends(lookup_meaning(&T_CS!(s!("\\lx@titlesec@claimed@{sec}"))))
+    || extends(lookup_meaning(&T_CS!(s!("\\{sec}"))))
+    || !body.contains(&T_CS!("\\@startsection"))
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // titlesec's load makes the standard sectioning commands its own (titlesec.sty:1640-1677), whatever defined them
+  // before; a later `\@startsection` definition takes them back (`titlesec_holds`).
+  for sec in TITLESEC_CLASSED {
+    assign_value(&s!("titlesec_released@{sec}"), false, Some(Scope::Global));
+    if let Some(dropped) = lookup_meaning(&T_CS!(s!("\\lx@dropped@{sec}"))) {
+      assign_meaning(&T_CS!(s!("\\lx@titlesec@claimed@{sec}")), dropped, Some(Scope::Global));
+    }
+  }
+  // `\lx@titlesec@ifholds{<sec>}{<titlesec's>}{<LaTeX's>}`: the part of a heading titlesec formats, while it holds
+  // the command (`titlesec_holds`).
+  DefMacro!("\\lx@titlesec@ifholds{}{}{}", sub[(sec, held, released)] {
+    Ok(if titlesec_holds(&sec.to_string()) { held } else { released })
+  });
   // Perl: titlesec.sty.ltxml — stubbed since no styling was implemented,
   // but the star + non-star forms actually DO dynamic-macro work in Perl.
   // This cycle brings those to parity.
@@ -53,6 +123,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@titleformat@star {}{}", sub[(cmd, format)] {
     let cs_str = cmd.to_string();
     let sec = cs_str.strip_prefix('\\').unwrap_or(&cs_str).to_string();
+    // (titlesec stores a format for a command it no longer holds, which nothing reads)
+    if !titlesec_holds(&sec) {
+      return Ok(Tokens!());
+    }
     let extracted = matches!(
       sec.as_str(),
       "section" | "subsection" | "subsubsection" | "paragraph" | "subparagraph"
@@ -107,7 +181,7 @@ LoadDefinitions!({
       font_body.push(T_OTHER!(&cls));
     }
     font_body.extend(format.unlist());
-    def_macro(T_CS!(&s!("\\format@title@font@{sec}")), None, Tokens::new(font_body), None)?;
+    def_macro(T_CS!(&s!("\\format@title@font@{sec}")), None, held_by_titlesec(&sec, font_body, vec![]), None)?;
   });
 
   // Perl L42-57: \titleformat{cmd}[shape]{format}{label}{sep}{before}[after]
@@ -117,10 +191,27 @@ LoadDefinitions!({
   //   \format@title@font@<sec>        := <format> [\@ADDCLASS <class>]
   //   \format@title@<sec>   ( 1 arg ) := <format> {<label>} \hspace{<sep>} <before>{#1}
   //                                      (a display/frame label on a line of its own; below)
-  DefPrimitive!("\\lx@titleformat {} [] {}{}{}{}[]",
+  // The arguments are a macro's, as titlesec.sty:685-699 `\ttl@format@i`/`\ttl@format@ii` read them (a `}` for the
+  // command, `{\titleformat}`, is tex.web §395's extra `}`: row R READARG395; 1910.11159, 2005.02481).
+  DefMacro!("\\lx@titleformat {} [] {}{}{}{}[]", sub[(cmd, shape, format, label, sep, before, after)] {
+    let mut tokens = vec![T_CS!("\\lx@titleformat@define")];
+    for arg in [Some(cmd), shape, Some(format), Some(label), Some(sep), Some(before), after] {
+      tokens.push(T_BEGIN!());
+      tokens.extend(arg.map(Tokens::unlist).unwrap_or_default());
+      tokens.push(T_END!());
+    }
+    Ok(Tokens::new(tokens))
+  });
+  DefPrimitive!("\\lx@titleformat@define {}{}{}{}{}{}{}",
     sub[(cmd, shape, format, label, sep, before, after)] {
     let cs_str = cmd.to_string();
     let sec = cs_str.strip_prefix('\\').unwrap_or(&cs_str);
+    // (titlesec stores a format for a command it no longer holds, which nothing reads)
+    if !titlesec_holds(sec) {
+      return Ok(vec![]);
+    }
+    let shape = (!shape.is_empty()).then_some(shape);
+    let after = Some(after);
     let shape_str = shape.as_ref().map(|s| s.to_string()).unwrap_or_default();
     let class = titlesec_shape_class(&shape_str);
     let label = label.unlist();
@@ -152,7 +243,7 @@ LoadDefinitions!({
     // A later `\titleformat*` keeps this shape (and a shape without a class clears an earlier one).
     assign_value(&s!("titlesec_shape_class@{sec}"), class.unwrap_or("").to_string(), None);
     assign_value(&s!("titlesec_formatted@{sec}"), true, None);
-    def_macro(T_CS!(&font_target), None, Tokens::new(font_body), None)?;
+    def_macro(T_CS!(&font_target), None, held_by_titlesec(sec, font_body, vec![]), None)?;
 
     // \format@title@<sec>   (1 arg body)
     let body_target = s!("\\format@title@{sec}");
@@ -229,7 +320,7 @@ LoadDefinitions!({
       // `perfect_kernel_batch78a::titlesec_after_code_closes_an_unnumbered_title`).
       // (An `explicit` after-code naming the title, `#1`, has no title to name there.)
       let after_alone = if has_parameter_reference(&after) { Tokens!() } else { Tokens::new(after.clone()) };
-      def_macro(T_CS!(&after_target), None, after_alone, None)?;
+      def_macro(T_CS!(&after_target), None, held_by_titlesec(sec, after_alone.unlist(), vec![]), None)?;
       body.extend(after);
     }
     if shape_str == "runin" {
@@ -242,8 +333,14 @@ LoadDefinitions!({
     // `{\lx@format@title@font@@{<sec>}…}` (`\lx@titlesec@title`).
     let inner_target = s!("\\format@title@@{sec}");
     def_macro(T_CS!(&inner_target), convert_latex_args(1, None)?, Tokens::new(body), None)?;
+    // A command titlesec no longer holds is LaTeX's heading, composed as the kernel composes it (`\lx@@format@title@@`).
+    let latex_title = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@@compose@title{{\\lx@fnum@@{{{sec}}}}}{{#1}}"
+    ))).unlist();
+    let titlesec_title =
+      vec![T_CS!("\\lx@titlesec@title"), T_CS!(&inner_target), T_BEGIN!(), T_PARAM!(), T_OTHER!("1"), T_END!()];
     def_macro(T_CS!(&body_target), convert_latex_args(1, None)?,
-      Tokens!(T_CS!("\\lx@titlesec@title"), T_CS!(&inner_target), T_BEGIN!(), T_PARAM!(), T_OTHER!("1"), T_END!()),
+      held_by_titlesec(sec, titlesec_title, latex_title),
       None)?;
   });
   // `\lx@titlesec@title <body>{<title>}`: `<body>{<title>}` without the kernel's leading

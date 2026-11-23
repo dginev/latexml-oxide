@@ -1,0 +1,13 @@
+% witness: 2411.07667 (the safe twins of lstinline_deinit_hook_closes_a_colorbox.tex: no hook on `\lst@DeInit`)
+% oracle:  pdflatex 0 errors: "Text a.b mid. A int x; B." then the display listing "y = 1;"
+% engines: rust rc2 = 0 errors, the inline code elements and the listing; perl = the same
+% expect:  0 errors, 0 warnings; XML byte-identical to rc2 (the Init/DeInit bracket adds nothing without a hook)
+% status:  GREEN (rc2) -> GREEN (LISTINLINE)
+\documentclass{article}
+\usepackage{listings}
+\begin{document}
+Text \lstinline|a.b| mid. A \lstinline[language=C]|int x;| B.
+\begin{lstlisting}
+y = 1;
+\end{lstlisting}
+\end{document}

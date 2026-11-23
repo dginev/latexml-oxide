@@ -1,0 +1,16 @@
+% sectsty redefines \section…\subparagraph only under article/report/book (sectsty.sty:298-326) and the KOMA classes
+% (:340-362); under any other class it raises its PackageError (:277-297) and titlesec keeps the command.
+% oracle:  pdflatex 2 errors (sectsty's "doesn't work with this document class"; memoir's \parttitlefont "already
+%          defined", sectsty's \newcommand, which the binding's \DefMacro does not raise): "[0.1] Intro"
+% engines: rust (TITLESEC-rel, round 0) 0 errors, "0.1 Intro" (the kernel's title); INT081C-rel 0 errors, the title as
+%          expected; perl not run
+% expect:  1 error (sectsty's); title "[0.1] Intro", italic
+% status:  GREEN (TITLESEC round 1; guard perfect_kernel_batchtitlesec::titlesec_keeps_the_command_where_sectsty_does_not_work)
+\documentclass{memoir}
+\usepackage{titlesec}
+\usepackage{sectsty}
+\titleformat{\section}{\itshape}{[\thesection]}{1em}{}
+\begin{document}
+\section{Intro}
+A.
+\end{document}

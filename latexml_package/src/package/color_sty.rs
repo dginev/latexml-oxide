@@ -619,6 +619,9 @@ LoadDefinitions!({
     "\\colorbox[]{}{}",
     "\\leavevmode\\hbox{\\ifx.#1.\\pagecolor{#2}\\else\\pagecolor[#1]{#2}\\fi#3}"
   );
+  // color.sty:158 (xcolor.sty:821) `\color@box{[model]}{spec}`, the internal realboxes' `\Colorbox` calls
+  // (realboxes.sty:268-270; witness 2411.07667): the user-level `\colorbox` it stands for.
+  DefMacro!("\\color@box{}{}", "\\colorbox#1{#2}");
 
   // \fcolorbox[model]{framespec}{bgspec}{text} — the two color names are read
   // undigested and expanded to strings (batch 56at, the xcolor twin; Perl
