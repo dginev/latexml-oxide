@@ -1,0 +1,19 @@
+% sectsty redefines \section…\subparagraph with \@startsection (sectsty.sty:310-326): loaded after titlesec, it ends
+% titlesec's hold on them, and a later \titleformat sets nothing.
+% witness: 2005.06700 (titlesec, sectsty, then \titleformat on \section/\subsection)
+% oracle:  pdflatex 0 errors: "1 Intro" / "1.1 Next"
+% engines: rust (INT081C-rel) Fatal "Expansion of '\format@title@font@{\subsubsection}…' has unbalanced {}"; perl
+%          not run (its titlesec binding keeps formats by name, titlesec.sty.ltxml:42-57)
+% expect:  0 errors; titles "1 Intro", "1.1 Next" (no titlesec label)
+% status:  GREEN (TITLESEC; guard perfect_kernel_batchtitlesec::titlesec_formats_end_where_latex_takes_the_command)
+\documentclass{article}
+\usepackage{titlesec}
+\usepackage{sectsty}
+\titleformat{\section}{\Large\bfseries}{[\thesection]}{1em}{}
+\titleformat{\subsection}{\titleformat}{\subsubsection}{\Large\bfseries}{}
+\begin{document}
+\section{Intro}
+A.
+\subsection{Next}
+B.
+\end{document}

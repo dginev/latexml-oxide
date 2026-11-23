@@ -19,6 +19,11 @@ LoadDefinitions!({
   DefMacro!("\\chaptertitlefont{}", "\\gdef\\format@title@font@part{#1}");
 
   DefMacro!("\\nohang", None);
+  // sectsty.sty:310-326 redefines `\section`…`\subparagraph` with `\@startsection`, ending a titlesec loaded before
+  // it (titlesec_sty.rs `titlesec_holds`; 2005.06700).
+  for sec in ["section", "subsection", "subsubsection", "paragraph", "subparagraph"] {
+    assign_value(&s!("titlesec_released@{sec}"), true, Some(Scope::Global));
+  }
 
   DefMacro!("\\allsectionsfont{}",
     "\\partfont{#1}\\chapterfont{#1}\\sectionfont{#1}\\subsectionfont{#1}\\subsubsectionfont{#1}\\paragraphfont{#1}\\subparagraphfont{#1}\\minisecfont{#1}");

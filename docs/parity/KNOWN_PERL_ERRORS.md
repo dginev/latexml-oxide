@@ -22403,3 +22403,22 @@ a document adds to either is dropped (or, as `\egroup`, never closes what it sho
 pdflatex prints "A x! B"; Perl drops the "!". Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1139): the binding runs the
 bracket. Witness 2411.07667 (realboxes' `\Colorbox{…}\bgroup\appto\lst@DeInit{\egroup}`, which Perl only escapes
 because its `\xpretocmd` fails); guard `perfect_kernel_batchlistinline::lstinline_runs_the_init_deinit_bracket`.
+## 1317. Perl's titlesec formats outlive a later `\@startsection` definition of their command
+
+titlesec.sty.ltxml:42-57 stores a `\titleformat` under the command's name, so it applies after a later
+`\renewcommand\section{\@startsection…}` or sectsty's load (sectsty.sty:310-326), where LaTeX's heading no longer runs
+titlesec's code. Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{titlesec}
+\titleformat{\section}{\itshape}{[\thesection]}{1em}{}
+\makeatletter\renewcommand\section{\@startsection{section}{1}{\z@}{1ex}{1ex}{\bfseries}}\makeatother
+\begin{document}\section{Intro}A.\end{document}
+```
+
+pdflatex sets "1 Intro" (bold, no brackets, 0 errors); Perl (same host) gives `<title font="italic">[1] Intro</title>`,
+titlesec's format; ours `<title><tag close=" ">1</tag>Intro</title>` (the `\@startsection` style's `\bfseries` is not
+carried, as for any `\@startsection` heading). With a two-argument `\titleformat`
+whose label is the next line's `\titleformat`, Perl ends in the Fatal "Expansion of '\format@title@@}' has unbalanced {}"
+(1910.11159, 2005.02481; 2005.06700 with sectsty), where pdflatex never sets that label. Fixed in Rust
+(OXIDIZED_DESIGN_DIVERGENCES #1143); guard `perfect_kernel_batchtitlesec::titlesec_formats_end_where_latex_takes_the_command`.

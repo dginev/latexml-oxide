@@ -1,0 +1,18 @@
+% \titleformat at a group's end: its command argument is a `}`, tex.web §395 in titlesec's \ttl@format@i /
+% \ttl@format@s (titlesec.sty:672, :685): "Argument of … has an extra }" and "Paragraph ended before … was complete",
+% the call dropped. The binding reads them in macros (\lx@titleformat, \lx@titleformat@star), as titlesec does; the
+% extra-} recovery is the tex.web §395 study (row R READARG395).
+% witness: 1910.11159, 2005.02481 (the label `\titleformat` set in a group)
+% oracle:  pdflatex 4 errors, paragraphs Aa / b / Cc / d
+% engines: rust (INT081C-rel) Fatal "Expansion of '\format@title@@}' has unbalanced {}"; perl the same Fatal;
+%          rust (TITLESEC-rel, the macro reading `}` as the command) 0 errors, 1 Warning (open group), "Aad"
+% expect:  4 errors, paragraphs Aa / b / Cc / d
+% status:  RED
+% moves:   row R READARG395
+\documentclass{article}
+\usepackage{titlesec}
+\begin{document}
+A{a\titleformat}b
+
+C{c\titleformat*}d
+\end{document}

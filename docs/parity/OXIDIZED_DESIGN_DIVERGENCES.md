@@ -23978,3 +23978,26 @@ background colour is still lost, the collected box being digested before `\color
 guard `perfect_kernel_batchlistinline::realboxes_colorbox_and_fcolorbox_call_the_color_internals`). `\lst@Init` runs
 before the delimiter is read, where TeX reads it first (listings.sty:1951-1952); only a hook that changes the
 delimiter's catcode could tell.
+
+### 1143. A titlesec format applies only while titlesec holds the command (TITLESEC)
+
+**Perl behavior**: titlesec.sty.ltxml:42-57 keeps a `\titleformat` by the command's name (`\format@title@<sec>`), so it
+applies whatever defines the command later. **pdflatex (titlesec.sty)**: titlesec's load makes `\section`…
+`\subparagraph` its own (titlesec.sty:1640-1677 `\titleclass`); a later definition with `\@startsection` (a document's
+or class's `\renewcommand\section{\@startsection…}`, sectsty.sty:310-326 at sectsty's load) is LaTeX's heading again,
+which titlesec's formats never reach, and a `\titleformat` after it stores a format nothing reads.
+**Rust behavior**: the formats apply while titlesec holds the command (`titlesec_sty.rs` `titlesec_holds`): it holds
+from its load (a definition before it, kept as `\lx@titlesec@claimed@<sec>`, is titlesec's) until a later definition
+calling `\@startsection` (behind the kernel's lock, `\lx@dropped@<sec>`) or sectsty's load (the flag
+`titlesec_released@<sec>`). The check runs when the heading is set (`\lx@titlesec@ifholds`, wrapping the font, the
+after-code and `\format@title@<sec>`, which composes the kernel's title when released) and at `\titleformat` (nothing
+stored once released). `\lx@titleformat` reads its arguments in a macro, as titlesec.sty:685-699's
+`\ttl@format@i`/`\ttl@format@ii`, and hands them to the primitive `\lx@titleformat@define`.
+**Why**: a two-argument `\titleformat{\section}{…}` takes the next line's `\titleformat` as its label; set in a group
+at the heading, it read `}` as its command and ended in the Fatal "Expansion of '\format@title@@}' has unbalanced {}"
+(1910.11159, 2005.02481; 2005.06700 with sectsty). These papers redefine the command with `\@startsection`, so LaTeX
+never sets that label: 0 errors each, words 107 → 19164, 123 → 27416, 3876 → 9273 (pdflatex 0/2/0). The `}` read as an
+argument where a format still holds is tex.web §395, row R READARG395 (repro
+sectioning-frontmatter/titleformat_at_a_group_end_red). KNOWN_PERL_ERRORS #1317. **Guard**
+`perfect_kernel_batchtitlesec::titlesec_formats_end_where_latex_takes_the_command` (repros sectioning-frontmatter/
+titlesec_format_ends_at_a_startsection_redefinition, titlesec_format_ends_at_sectsty).

@@ -796,6 +796,9 @@ mod perfect_kernel_batchst3;
 /// STRMWARN: a streamed conversion warns once per failing formula, as the eager one does (OD #1132).
 mod perfect_kernel_batchstrmwarn;
 mod perfect_kernel_batchta1;
+/// TITLESEC: a titlesec format applies only while titlesec holds the command; a later `\@startsection` definition or
+/// sectsty's load gives it back to LaTeX (OD #1143, KPE #1317).
+mod perfect_kernel_batchtitlesec;
 mod perfect_kernel_batchunc;
 /// UPS1: the upstream LaTeXML master commits since #2833 (frames padded as TeX draws them, #2820).
 mod perfect_kernel_batchups1;
