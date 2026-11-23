@@ -4,7 +4,8 @@
 % oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Bob Beta", "Figure 1: First teaser",
 %   "Figure 2: Second teaser", "Abstract", "Keywords", "Introduction", "See Figure 1 and Figure 2."
 % engines: perl 0.8.8: teasers before the title (KNOWN_PERL_ERRORS #1319); rust INT081C: teasers after the keywords
-% expect:  0 errors, 0 warnings; title, creators, figure (T1), figure (T2), abstract, keywords; refs resolve to 1 and 2
+% expect:  0 errors, 0 warnings; title, creators, one continued titlepage holding figure (T1) and figure (T2), abstract,
+%   keywords; refs resolve to 1 and 2
 % status:  GREEN (ACMTEASER)
 \documentclass[sigconf,nonacm]{acmart}
 \begin{document}

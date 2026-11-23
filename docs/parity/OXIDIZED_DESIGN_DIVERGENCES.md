@@ -984,7 +984,7 @@ figures in the witness now resolve.
 (`latexml_package/src/package/acmart_cls.rs`) is digested and constructed **in
 place** as a normal `<ltx:figure class="ltx_teaserfigure">`, then a
 hook at the document's close moves the finished node to acmart's PDF top-matter
-position (title, authors, teaser, abstract; #1146). Perl's binding
+position (title, authors, teaser, abstract), inside a continued titlepage (#1146). Perl's binding
 (acmart.cls.ltxml:165-171) builds the same figure and leaves it where it is
 written (KNOWN_PERL_ERRORS #1319).
 
@@ -24264,10 +24264,19 @@ teasers in source order, abstract, keywords. Under sigchi-a (`\if@ACM@sigchiamod
 subtitle or creator (title or subtitle under sigchi-a). It replaces the binding's abstract-anchored `DefRewrite` (#56),
 which left the teaser after the keywords: `\maketitle`'s flush puts a float written before it behind the frontmatter,
 and the rewrite's follower detach re-appended the keywords after the moved teaser. A teaser acmart never prints (no
-`\maketitle`, or written after it) joins the same place, its content kept (FIDELITY_CHARTER). A figure among the
-frontmatter elements is outside LaTeXML-structure.rnc's `document_model` order (frontmatter, then body), as Perl's
-teaser-first output is; the HTML renders it in place, its `\ref`s resolved.
-**Why**: DG ruling 2026-11-23 (row R ACMTEASER): the PDF's order. Witness 2606.22880 (teaser `\ref`-ed 6+ times).
+`\maketitle`, or written after it) joins the same place, its content kept (FIDELITY_CHARTER). The moved teasers, all
+of them consecutive, share one `<ltx:titlepage class="ltx_titlepage_continued">` (`wrap_as_continued_titlepage`,
+cover_order.rs, the late abstract's cover wrapper): the top-matter box `\maketitle` prints them in, and frontmatter
+(the abstract, keywords; under sigchi-a the creators) may follow a titlepage but no body figure (LaTeXML-structure.rnc
+`document_model`: frontmatter, then body). Every path wraps, sigchi-a's and the no-`\maketitle` one included: each
+lands the teasers among the frontmatter. The figures keep their `xml:id`, number, labels, `inlist` and caption; the
+HTML shows the title beside the continued titlepage (LaTeXML-structure-xhtml.xsl, the `ltx:title` template), the
+teasers once, in place, listed in a list of figures and `\ref`-ed across a split. This supersedes the 2026-07-13 rule of
+no frontmatter markup over the teaser. Scope (DG 2026-11-23): `ltx_teaserfigure` marks only a figure a class names a
+teaser; other title-block figures (CVPR's `\twocolumn[…]`, vgtc/egpubl `\teaser`, `\captionof`) are a separate v0.8.1
+spine.
+**Why**: DG rulings 2026-11-23 (row R ACMTEASER): the PDF's order, and the wrapper. Witness 2606.22880 (teaser
+`\ref`-ed 6+ times).
 **Guards** `perfect_kernel_batchacmteaser::acmart_teaserfigure_stands_where_maketitle_prints_it` (repros
 class-bindings/acmart_teaserfigure_after_authors, acmart_teaserfigure_sigchia_after_title,
 acmart_teaserfigure_without_maketitle), `cluster_cli::split_release_core_after_bib::acmart_teaser_before_abstract_and_keywords`.

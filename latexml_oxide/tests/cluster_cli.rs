@@ -5724,7 +5724,8 @@ Text.
   }
 
   /// The CLI's XML of an acmart teaser written before `\maketitle`: after the authors, before the abstract and
-  /// keywords, as acmart.cls:2240 `\@mkteasers` prints it (OXIDIZED_DESIGN_DIVERGENCES #1146). It pinned the
+  /// keywords, as acmart.cls:2240 `\@mkteasers` prints it, inside a continued title page, `\maketitle`'s top-matter
+  /// box (OXIDIZED_DESIGN_DIVERGENCES #1146). It pinned the
   /// abstract < keywords < teaser order of the binding's former `Rewrite::Replace` rule, whose follower detach
   /// (Perl `Rewrite.pm:124-134`) `rewrite.rs`'s own tests keep guarding.
   #[test]
@@ -5768,10 +5769,18 @@ Body.
     let abs_pos = xml.find("<abstract").expect("abstract");
     let kw_pos = xml.find("<keywords").expect("keywords");
     let creator_pos = xml.find("<creator").expect("creator");
+    let wrap_pos = xml
+      .find(r#"<titlepage class="ltx_titlepage_continued">"#)
+      .expect("continued titlepage");
+    let wrap_end = xml.find("</titlepage>").expect("titlepage end");
     let teaser_pos = xml.find("ltx_teaserfigure").expect("teaser");
     assert!(
-      creator_pos < teaser_pos && teaser_pos < abs_pos && abs_pos < kw_pos,
-      "expected creator < teaser < abstract < keywords (acmart's \\maketitle order):\n{xml}"
+      creator_pos < wrap_pos
+        && wrap_pos < teaser_pos
+        && teaser_pos < wrap_end
+        && wrap_end < abs_pos
+        && abs_pos < kw_pos,
+      "expected creator < [titlepage: teaser] < abstract < keywords (acmart's \\maketitle order):\n{xml}"
     );
   }
 }

@@ -4,7 +4,7 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::{
   engine::{
-    base_utilities::MARK_FROM_COUNTER,
+    base_utilities::{MARK_FROM_COUNTER, wrap_as_continued_titlepage},
     latex_constructs::{after_float, before_xfloat},
   },
   float_description::{define_float_description, float_description_tokens},
@@ -423,9 +423,10 @@ yysep={,},notesep={, }}}
   // Float environments
   //
   // teaserfigure: acmart.cls:2201-2203 collects the body into `\@teaserfigures`, and `\maketitle` prints it by
-  // `\@mktitle\@mkauthors\@mkteasers` (:2240, :2899) ahead of the abstract, CCS concepts and keywords (:2331-2346).
-  // Digested in place as a float (Perl acmart.cls.ltxml:165-171), so its caption, number and label resolve as any
-  // figure's (2606.22880's is `\ref`-ed 6+ times); the close below only moves it.
+  // `\@mktitle\@mkauthors\@mkteasers` (:2240, :2899) in its top-matter box, ahead of the abstract, CCS concepts and
+  // keywords (:2331-2346). Digested in place as a float (Perl acmart.cls.ltxml:165-171), so its caption, number and label
+  // resolve as any figure's (2606.22880's is `\ref`-ed 6+ times); the close below moves it into that box, a continued
+  // title page (DG 2026-11-23, superseding 2026-07-13's "no frontmatter markup over the figure").
   DefEnvironment!("{teaserfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_teaserfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",
     // A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
@@ -435,7 +436,8 @@ yysep={,},notesep={, }}}
     mode => "internal_vertical"
   );
   // The teasers, in source order, after the authors as `\@mkteasers` prints them (sigchi-a: after the title, its
-  // authors following, :2240-2242), wherever written (Perl: ahead of the title) (OXIDIZED_DESIGN_DIVERGENCES #1146).
+  // authors following, :2240-2242), wherever written (Perl: ahead of the title), in one continued title page: frontmatter
+  // may follow it, as no body figure (OXIDIZED_DESIGN_DIVERGENCES #1146).
   Tag!("ltx:document", after_close => sub[document, root] {
     let teasers = document.findnodes("descendant::ltx:figure[contains(@class,'ltx_teaserfigure')]", Some(root));
     let head = if x_equals(&T_CS!("\\if@ACM@sigchiamode"), &T_CS!("\\iftrue")) {
@@ -443,12 +445,13 @@ yysep={,},notesep={, }}}
     } else {
       "ltx:title | ltx:subtitle | ltx:creator"
     };
-    if let Some(mut tail) = document.findnodes(head, Some(root)).pop() {
-      for mut teaser in teasers {
+    if let (Some(mut tail), false) = (document.findnodes(head, Some(root)).pop(), teasers.is_empty()) {
+      for mut teaser in teasers.iter().cloned() {
         teaser.unlink();
         tail.add_next_sibling(&mut teaser)?;
         tail = teaser;
       }
+      wrap_as_continued_titlepage(document, root, &teasers)?;
     }
   });
 

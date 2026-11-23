@@ -22,6 +22,18 @@ pub const CONTINUED_TITLEPAGE: &str = "ltx_titlepage_continued";
 /// as the PDF prints it (QA91, [`wrap_text_before_title`]): like [`CONTINUED_TITLEPAGE`], it stands for no title.
 pub const BEFORE_TITLEPAGE: &str = "ltx_titlepage_before";
 
+/// Move `run` (consecutive root children) into a new [`CONTINUED_TITLEPAGE`] `<titlepage>` in place: what the title
+/// block printed after the title, before the abstract (a late abstract's cover lines; acmart's teasers, acmart_cls.rs).
+pub fn wrap_as_continued_titlepage(
+  document: &mut Document,
+  root: &Node,
+  run: &[Node],
+) -> Result<Node> {
+  let mut titlepage = wrap_as_titlepage(document, root, run)?;
+  document.add_class(&mut titlepage, CONTINUED_TITLEPAGE)?;
+  Ok(titlepage)
+}
+
 /// A top-level `<titlepage>` standing for the document's title, which the HTML shows in place of `<ltx:title>` and its
 /// creators (LaTeXML-structure-xhtml.xsl, the `ltx:title` template): neither [`CONTINUED_TITLEPAGE`] nor
 /// [`BEFORE_TITLEPAGE`].
@@ -383,9 +395,7 @@ fn place_later_abstract(document: &mut Document, bound: Option<&Node>, own: &Nod
       return Ok(false);
     }
   }
-  let mut titlepage = wrap_as_titlepage(document, &root, &cover)?;
-  document.add_class(&mut titlepage, CONTINUED_TITLEPAGE)?;
-  let mut tail = titlepage;
+  let mut tail = wrap_as_continued_titlepage(document, &root, &cover)?;
   for mut node in kids[first..run_end].iter().cloned() {
     node.unlink();
     tail.add_next_sibling(&mut node)?;
@@ -590,10 +600,8 @@ pub(in crate::base_utilities) fn place_abstract_after_cover(
     }
   }
   assign_value("lx_late_abstract_placed", true, Some(Scope::Global));
-  let mut titlepage = wrap_as_titlepage(document, &root, &cover)?;
   // (it follows the title block, which printed the title: the structured title stays displayed beside it)
-  document.add_class(&mut titlepage, CONTINUED_TITLEPAGE)?;
-  let mut tail = titlepage;
+  let mut tail = wrap_as_continued_titlepage(document, &root, &cover)?;
   // (what the title page printed before the cover keeps its place ahead of it: of a late run, an abstract `\maketitle`
   // placed — set before it)
   for mut node in kids[first..run_end]
