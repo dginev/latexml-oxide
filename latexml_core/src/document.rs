@@ -616,7 +616,7 @@ pub(crate) const SPILL_PLACEHOLDER: &str = "_spilled_";
 /// The placeholder attribute of a spilled run that prints nothing ([`prints_nothing`]).
 const SPILLED_INKLESS: &str = "inkless";
 
-/// Is `node` the placeholder of a spilled run that prints nothing ([`prints_nothing`])? Content-free to the frontmatter's
+/// Is `node` the placeholder of a spilled run that prints nothing (`prints_nothing`)? Content-free to the frontmatter's
 /// cover reading as the run is (titlepage_layout.rs `node_is_content_free`), so a late abstract follows a cover holding
 /// article's `\newpage\null` (`\@maketitle`) at a small fragment budget as in the eager build
 /// (OXIDIZED_DESIGN_DIVERGENCES #903, #1149).
