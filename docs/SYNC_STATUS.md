@@ -1269,6 +1269,15 @@ Rules that keep this file honest and mergeable:
     (:34774: `struct`, page/name/num order) and `\pdfdest struct <n>`; `\pdffontattr` on the pdfTeX path (:35375); "Color
     stack action is missing" as an Error; `lastximagepages` before `lastximage`; a non-font operand of `read_font_ident`
     ("Missing font identifier" + back up, as TeX); 1
+  - WINEXIT (after 0.8.0, Windows) — `watchdog::exit_now` is `_exit` on Unix only; on Windows it is
+    `std::process::exit`, which runs thread-local destructors and flushes stdout, the hazard `_exit` avoids on Unix
+    (libxml2's `.fini_array` under a running render thread, ELF-specific). A breach under a stuck thread could hang a
+    Windows run. `TerminateProcess(GetCurrentProcess(), code)` is the equivalent (windows-sys, at the OS boundary);
+    guard `watchdog::tests::a_breach_ends_the_process_without_exit_handlers` checks the destructor only on Unix; 1
+  - WINCRASHSEV (after 0.8.0, Windows) — a render worker that crashes on Windows ends with an exit code (an NTSTATUS such
+    as 0xC0000005), which the parent reports as an `Info` ("exited (code N)"), where a Unix signal death is a `Warning`.
+    Treat NTSTATUS crash codes (>= 0xC0000000) as a crash Warning; guard `120_midscale_streaming` expects the Warning
+    on Unix only; 1
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)

@@ -325,7 +325,8 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
       .rev()
       .find(|l| !l.trim().is_empty())
       .unwrap_or("");
-    let verdict = if label == "signal" {
+    // Only a Unix signal death is a Warning: on Windows the test fault ends worker 0 with an exit code, an Info.
+    let verdict = if label == "signal" && cfg!(unix) {
       "Conversion complete: 2 warnings"
     } else {
       "Conversion complete: 1 warning"
@@ -365,7 +366,7 @@ fn midscale_render_fleet_defaults_on_and_falls_back_to_serial() {
                (signal 9) without a Status:conversion line"
             )
             .count(),
-          usize::from(label == "signal"),
+          usize::from(label == "signal" && cfg!(unix)),
           "{label}: only a signal death is a Warning:\n{stderr}"
         );
         assert!(!stderr.contains("Error:"), "{label}: no Error:\n{stderr}");

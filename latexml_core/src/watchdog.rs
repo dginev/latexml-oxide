@@ -1051,14 +1051,19 @@ mod tests {
         stderr.contains(line),
         "{breach}: the breach's line: {stderr}"
       );
-      assert!(
-        !stderr.contains("exit-handler-ran"),
-        "{breach}: the thread's destructor ran: exit, not _exit"
-      );
-      assert!(
-        !stdout.contains("buffered-stdout"),
-        "{breach}: stdout was flushed: std::process::exit, not _exit"
-      );
+      // `exit_now` is `_exit` on Unix only; elsewhere it is `std::process::exit`, which runs the thread-local
+      // destructors and flushes stdout by design (the hazard it avoids, libxml2's `.fini_array` under a running
+      // render thread, is ELF's). On Windows the breach's code and line are what this guard holds.
+      if cfg!(unix) {
+        assert!(
+          !stderr.contains("exit-handler-ran"),
+          "{breach}: the thread's destructor ran: exit, not _exit"
+        );
+        assert!(
+          !stdout.contains("buffered-stdout"),
+          "{breach}: stdout was flushed: std::process::exit, not _exit"
+        );
+      }
     }
   }
 
