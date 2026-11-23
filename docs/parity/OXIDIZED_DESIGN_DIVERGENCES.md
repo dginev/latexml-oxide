@@ -24096,3 +24096,25 @@ critical issues on TeX Live 2025". Ten witnesses from Fatal to non-Fatal: 1511.0
 (2 E, fnpct), 1207.4642 (288 E, shipped pgf 2.10) and 1211.6751 (5 E, shipped xtemplate/xfrac/pgf) keep their own.
 **Guards** `perfect_kernel_batchltxown::{a_shipped_babel_3_9l_is_not_read, shipped_expl3_xparse_l3keys2e_are_not_read,
 a_copy_identical_to_the_trees_is_read_silently}` (repros loader/format_modules/babel_copy, expl3_copy).
+
+### 1147. `\backmatter` closes the open part and chapter (BACKMATTERPART)
+
+**Rule** (DG ruling 2026-11-23). The back matter belongs to no part: `\backmatter` closes the open `ltx:part`,
+`ltx:chapter` and `ltx:appendix` where a new `\part` would (`find_insertion_point("ltx:part")`), so the back-matter
+chapters, the bibliography and the index are the parts' siblings.
+- Perl: book.cls.ltxml:121 (amsbook.cls.ltxml:56; svmult.cls.ltxml inherits book's) a no-op, so they nest in the last part
+  (KNOWN_PERL_ERRORS #1320); split, `bib.html`'s title ended "‣ Part II …" and only that part's pages carried the
+  Bibliography/Index buttons (KEPT_RELATIONS, #1134).
+- TeX: book.cls:292-299 `\backmatter` is `\cleardoublepage\@mainmatterfalse`; the running heads leave the part and the
+  contents list the back matter after it.
+- Implementation: sect04.rs `\lx@begin@backmatter` (a no-op where a part cannot be opened, inside a float or a
+  minipage), called after a `\par` by the `\backmatter` of book_cls.rs, amsbook_cls.rs and svmult_cls.rs (svmult and
+  svmono). A class read raw (memoir, scrbook) keeps its own `\backmatter`, which does not close. `\frontmatter` and
+  `\mainmatter` need nothing: the next `\part` or `\chapter` closes the front matter.
+- Upstream: offered to Perl as a patch.
+
+**Guards**: `perfect_kernel_batchbackmatter::{book_backmatter_closes_the_last_part,
+amsbook_backmatter_closes_the_appendix_and_part}`, `cluster_xslt_split::split_nav_relations::
+split_backmatter_pages_belong_to_no_part`; repros `sectioning-frontmatter/{book_backmatter_closes_the_last_part,
+book_backmatter_without_parts_closes_the_chapter, book_appendix_then_backmatter_closes_the_part,
+amsbook_backmatter_closes_the_appendix_and_part, svmono_backmatter_closes_the_last_part}`.

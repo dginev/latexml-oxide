@@ -1,0 +1,18 @@
+% witness: row R BACKMATTERPART, the twin without \part (DG ruling 2026-11-23)
+% oracle:  pdflatex 0 errors; "Chapter 1 x", "Chapter 2 y", "Afterword" (unnumbered), "Bibliography"
+% engines: rust INT081C and perl = the same structure (a back-matter chapter or bibliography closes the chapter)
+% expect:  0 errors, 0 warnings; document > [chapter x, chapter y, chapter Afterword, bibliography]
+% status:  GREEN (INT081C) -> GREEN (BACKMATTER)
+\documentclass{book}
+\begin{document}
+\chapter{x}
+X.
+\chapter{y}
+Y \cite{k}.
+\backmatter
+\chapter{Afterword}
+W.
+\begin{thebibliography}{9}
+\bibitem{k} K. Ref.
+\end{thebibliography}
+\end{document}

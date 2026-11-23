@@ -59,6 +59,14 @@ pub(crate) fn load() -> Result<()> {
 
   // not locked since sometimes redefined as partition?
   DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}");
+  // The back matter belongs to no part (book.cls:292-299 `\backmatter`; DG ruling 2026-11-23): a binding's `\backmatter`
+  // closes the open part and chapter where a new `\part` would. Perl's leaves them open (KNOWN_PERL_ERRORS #1320).
+  DefConstructor!("\\lx@begin@backmatter", sub[document] {
+    if document.is_openable("ltx:part") {
+      let point = document.find_insertion_point("ltx:part", None)?;
+      document.set_node(&point);
+    }
+  });
   DefMacro!("\\section", "\\@startsection{section}{1}{}{}{}{}", locked=>true);
   DefMacro!("\\subsection", "\\@startsection{subsection}{2}{}{}{}{}", locked => true);
   DefMacro!(

@@ -1,0 +1,26 @@
+% witness: row R BACKMATTERPART (DG ruling 2026-11-23); book.cls:296-299 `\backmatter` belongs to no part:
+%          after it the book's running heads leave Part II ("AFTERWORD", then the unnumbered Bibliography and Index)
+% oracle:  pdflatex 0 errors; TOC "I A 3 / 1 x 5 / II B 7 / 2 y 9 / Afterword 11", then Bibliography p.13, Index p.14
+% engines: rust INT081C and perl = the afterword, bibliography and index inside the last ltx:part ("Part II")
+% expect:  0 errors, 0 warnings; document > [part A > chapter x, part B > chapter y, chapter Afterword,
+%          bibliography, index]
+% status:  RED (INT081C) -> GREEN (BACKMATTER)
+\documentclass{book}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+\tableofcontents
+\part{A}
+\chapter{x}
+X\index{ex}.
+\part{B}
+\chapter{y}
+Y \cite{k}.
+\backmatter
+\chapter{Afterword}
+W.
+\begin{thebibliography}{9}
+\bibitem{k} K. Ref.
+\end{thebibliography}
+\printindex
+\end{document}

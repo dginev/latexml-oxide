@@ -1300,6 +1300,58 @@ mod split_nav_relations {
       r#"<link rel="bibliography" href="bib.html" title="Bibliography">"#,
     ]);
   }
+
+  /// The back matter belongs to no part (OXIDIZED_DESIGN_DIVERGENCES #1147, row R BACKMATTERPART): split at
+  /// `chapter`, the bibliography is a page of the root, so its title has no "‣ Part II B", its `up` is the root (no
+  /// link, as a part page's), and the first part's chapter links it too. Red (INT081C, Perl the same): "Bibliography ‣
+  /// Part II B", `up` Pt2.html, Ch1.html without the `bibliography` link (KEPT_RELATIONS, #1134). Repro
+  /// sectioning-frontmatter/book_backmatter_closes_the_last_part.
+  #[test]
+  fn split_backmatter_pages_belong_to_no_part() {
+    const DOC: &str = "\\documentclass{book}\n\\begin{document}\n\\part{A}\n\\chapter{x}\nX \\cite{k}.\n\
+                       \\part{B}\n\\chapter{y}\nY.\n\\backmatter\n\\begin{thebibliography}{9}\n\
+                       \\bibitem{k} K. Ref.\n\\end{thebibliography}\n\\end{document}\n";
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("index.tex"), DOC).unwrap();
+    let out = run(work.path(), &[
+      "index.tex",
+      "--splitat",
+      "chapter",
+      "--format",
+      "html5",
+      "--dest",
+      "index.html",
+    ]);
+    assert!(
+      out.status.success(),
+      "conversion failed (status {:?}):\n{}",
+      out.status.code(),
+      String::from_utf8_lossy(&out.stderr)
+    );
+    let read = |name: &str| {
+      std::fs::read_to_string(work.path().join(name)).unwrap_or_else(|e| panic!("read {name}: {e}"))
+    };
+    let bib = read("bib.html");
+    assert!(bib.contains("<title>Bibliography</title>"), "{bib}");
+    assert_eq!(head_links(&bib), [
+      r#"<link rel="start" href="index.html" title="">"#,
+      "<link rel=\"prev\" href=\"Ch2.html\" title=\"Chapter 2 y \u{2023} Part II B\">",
+    ]);
+    assert_eq!(head_links(&read("Ch1.html")), [
+      r#"<link rel="up" href="Pt1.html" title="Part I A">"#,
+      r#"<link rel="start" href="index.html" title="">"#,
+      r#"<link rel="prev" href="Pt1.html" title="Part I A">"#,
+      r#"<link rel="next" href="Pt2.html" title="Part II B">"#,
+      r#"<link rel="bibliography" href="bib.html" title="Bibliography">"#,
+    ]);
+    assert_eq!(head_links(&read("Ch2.html")), [
+      r#"<link rel="up" href="Pt2.html" title="Part II B">"#,
+      r#"<link rel="start" href="index.html" title="">"#,
+      r#"<link rel="prev" href="Pt2.html" title="Part II B">"#,
+      r#"<link rel="next" href="bib.html" title="Bibliography">"#,
+      r#"<link rel="bibliography" href="bib.html" title="Bibliography">"#,
+    ]);
+  }
 }
 
 mod toc_math_ref {
