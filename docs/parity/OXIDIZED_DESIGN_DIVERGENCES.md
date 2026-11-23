@@ -10168,7 +10168,8 @@ frame, so `{\thm …}`, `{\quote …}`, `\begingroup\rem …\endgroup` and `\beg
 `\X` opens no group, latex.ltx:15346-15355; `\begin`'s group is closed by any `\endgroup`) swallow the rest of the
 document (KPE #583).
 **Rust behavior**: stomach.rs `close_environment_frame` ends the environment first, in the shape of tex.web §1064
-`off_save`: a bare `\X` frame back-inputs the closer and inserts `\endX`; a `\begin{X}` frame met by `\endgroup` runs
+`off_save`: a bare `\X` frame back-inputs the closer and inserts the binding's own `\endX` (`\lx@env@bare@end@X`, so a
+document's redefined `\endX` does not decide it: 1907.13475); a `\begin{X}` frame met by `\endgroup` runs
 `\end{X}` in the `\endgroup`'s place. The diagnostic follows the kind of group the environment's begin code leaves open
 (DefEnvironment `tex_group` = none | semi_simple | box, tex.web §269): none → Info; semi_simple → Error for `}` (§1069
 `extra_right_brace`) and for `\endgroup` against a `\begin{X}` frame (`\begin`'s own group stays open), Info for a bare

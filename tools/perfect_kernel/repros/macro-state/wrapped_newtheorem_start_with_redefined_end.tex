@@ -1,0 +1,33 @@
+% mechanism: `\begin{remark}` runs the document's wrapper of the saved start (`\let\lutzremark=\remark`), so the theorem's
+%   frame is the bare start's; its end was recorded as `\endremark` by name, and the document's `\def\endremark{…}`
+%   closed nothing at `\end`'s `\endgroup`. The frame now records the binding's own end (`\lx@env@bare@end@remark`).
+% witness: 1907.13475
+% oracle:  pdflatex 0 errors; "Remark 1. Body text. After." … "Remark 4. Bare text. After bare."
+% engines: perl: 1 error, the brace closing the bare `\remark` (KPE #583); its `\begin{remark}` runs the constructor, not
+%   the wrapper (KPE #1187); rust INT081G: 4 errors, "After." and the rest of the document inside the first theorem
+% expect:  0 errors, 0 warnings; five theorems (one nested), each paragraph after its theorem a sibling of it
+% status:  GREEN (REGTAILA)
+\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{remark}{Remark}
+\let\lutzremark=\remark
+\def\remark{\lutzremark\normalfont}
+\def\endremark{\vspace{1ex}}
+\newtheorem{lemma}{Lemma}
+\let\oldlemma=\lemma \let\oldendlemma=\endlemma
+\def\lemma{\oldlemma\itshape}
+\def\endlemma{\oldendlemma\par}
+\newtheorem{claim}{Claim}
+\def\endclaim{\relax}
+\begin{document}
+\begin{remark}Body text.\end{remark}
+After.
+\begin{remark}\begin{remark}Inner.\end{remark}Outer.\end{remark}
+Mid.
+\begin{lemma}Lemma text.\end{lemma}
+After lemma.
+\begin{claim}Claim text.\end{claim}
+After claim.
+{\remark Bare text.}
+After bare.
+\end{document}
