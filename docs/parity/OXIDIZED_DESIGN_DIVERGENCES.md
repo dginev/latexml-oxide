@@ -24087,8 +24087,8 @@ formula's references, tests/math/sampler.tex `+\phantom{g(x)}+`) and returns the
 `<XMDual><XMTok meaning="absent"/>phantom</XMDual>`. Content MathML and OpenMath read the content branch, so they keep
 ignoring phantoms. The presentation writes `<mphantom>content</mphantom>` (MathML Core §3.3.7), `\hphantom` inside
 `<mpadded height="0pt" depth="0pt">`, `\vphantom` inside `<mpadded width="0pt">` (§3.3.6; a unit, which the XSLT's
-size styling reads), sized by the browser's font, chosen over an `<mspace>` of our metrics. A Math holding a phantom box
-is math (`has_real_math`). An empty `\phantom{}` and text mode (`ltx_phantom`) are unchanged.
+size styling reads), sized by the browser's font, chosen over an `<mspace>` of our metrics. A Math holding a phantom of math
+tokens is math (`has_real_math`). An empty `\phantom{}` and text mode (`ltx_phantom`) are unchanged.
 **Residual**: a phantom between two items stays their spacing, as in Perl: `a\phantom{x}b`'s width is right, but a
 `\vphantom` there (`\left(\vphantom{\int}x\right)`, `a\vphantom{\frac12}b`) adds no height (catalog repro
 math-phantom/phantom_between_items_keeps_only_its_width). **Why**: witness 2603.21852 (EML.tex:63 `$\sqrt{\phantom{x}}$`,
