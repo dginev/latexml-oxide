@@ -1,0 +1,12 @@
+% witness: 1511.02101 (and 1408.3933, 1410.2241, 1511.05750, 1602.08358, 1601.02763): babel.sty + babel.def 3.9l shipped
+% oracle:  pdflatex TL 2025 fails: babel.sty's `\input switch.def` reads TL's proxy (`\input babel.def`), which finds
+%          this copy, whose own `\input switch.def` loops: "TeX capacity exceeded [text input levels=15]"
+% engines: rust INT081C = Fatal:Stomach:Recursion ("Package loading depth exceeded 500"); perl not run
+% expect:  0 errors, 1 warning (shipped_copy:babel.sty: the format holds babel, the tree's babel.sty is read, and it
+%          reads no babel.def; OXIDIZED_DESIGN_DIVERGENCES #1142); <p>Hello world.</p>, no copy's marker defined
+% status:  GREEN (LTXOWN)
+\documentclass{article}
+\usepackage[english]{babel}
+\begin{document}
+Hello world.\ifdefined\paperbabelsty\ COPY\fi\ifdefined\paperbabeldef\ COPYDEF\fi
+\end{document}

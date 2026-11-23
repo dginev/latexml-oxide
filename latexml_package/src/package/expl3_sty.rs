@@ -156,8 +156,10 @@ LoadDefinitions!({
     assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
   }
 
+  // (the format holds expl3 since 2020: a paper's expl3.sty is not read, the tree's is; OXIDIZED_DESIGN_DIVERGENCES #1142)
   let loaded = with_expl_syntax_restored(|| Ok(input_definitions("expl3", NewDefault!(InputDefinitionOptions,
-    noltxml => true, extension => Some(Cow::Borrowed("sty"))))));
+    noltxml => true, extension => Some(Cow::Borrowed("sty")),
+    format_module => Some(FormatModule { marker: "\\c__kernel_expl_date_tl", tree_dir: "l3kernel" })))));
 
   if raw_load_will_run {
     assign_value("SUPPRESS_UNDEFINED_ERRORS", false, None);

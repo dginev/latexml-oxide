@@ -1,0 +1,7 @@
+% babel 3.9l's version test (babel.def:59-66 as 1511.02101 ships it), cut down
+\ProvidesFile{babel.def}[2014/09/25 3.9l Babel common definitions]
+\def\bbl@tempa{3.9l}%
+\ifx\bbl@version\bbl@tempa\else
+  \input switch.def\relax
+\fi
+\def\paperbabeldef{}

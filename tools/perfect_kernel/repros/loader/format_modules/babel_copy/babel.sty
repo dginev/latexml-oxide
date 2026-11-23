@@ -1,0 +1,8 @@
+% babel 3.9l's version test (babel.sty:51-57 as 1511.02101 ships it), cut down
+\ProvidesPackage{babel}[2014/09/25 3.9l The Babel package]
+\def\bbl@tempa{3.9l}%
+\ifx\bbl@version\bbl@tempa\else
+  \input switch.def\relax
+\fi
+\input babel.def\relax
+\def\paperbabelsty{}

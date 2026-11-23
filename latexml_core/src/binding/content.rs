@@ -112,6 +112,21 @@ pub struct InputDefinitionOptions {
   /// `\@classoptionslist` only at the first class load, `\documentclass`
   /// (latex.ltx:18716-18718; KPE #304).
   pub nested_class:     bool,
+  /// The binding's own raw file is a module the LaTeX format holds: while the format holds it, the read takes the TeX
+  /// tree's file, not a paper's copy (`format_module_path`).
+  pub format_module:    Option<FormatModule>,
+}
+
+/// A module the LaTeX format holds (OXIDIZED_DESIGN_DIVERGENCES #1142): `marker` is a control sequence the format
+/// defines while it does (`\bbl@version` from babel's hyphen.cfg, `\c__kernel_expl_date_tl` from expl3-code.tex),
+/// `tree_dir` the module's directory in the TeX tree (`babel`, `l3kernel`), which finds the tree's file past a copy in
+/// the current directory (kpathsea's `.` comes first).
+#[derive(Clone, Copy, Debug)]
+pub struct FormatModule {
+  /// The control sequence the format's dump defines for the module.
+  pub marker:   &'static str,
+  /// The module's directory under the tree's `tex/` (kpathsea matches it as a path suffix).
+  pub tree_dir: &'static str,
 }
 impl Default for InputDefinitionOptions {
   fn default() -> Self {
@@ -131,6 +146,7 @@ impl Default for InputDefinitionOptions {
       at_letter:        true,
       searchpaths_only: false,
       nested_class:     false,
+      format_module:    None,
     }
   }
 }
@@ -386,6 +402,17 @@ fn input_definitions_impl(
   let routed_copy = (options.noltxml && requested_by_binding && !options.reread && !real_file)
     .then(|| routed_copy_request(trimmed, options.extension.as_deref()))
     .flatten();
+  // (a module the format holds reads the tree's file, whichever copy the request found: [`format_module_path`])
+  let format_module = options.format_module.filter(format_holds).map(|module| {
+    (
+      module,
+      s!(
+        "{}.{}",
+        file_stem(trimmed),
+        options.extension.as_deref().unwrap_or_default()
+      ),
+    )
+  });
   let _substituted = routed_copy.as_ref().map(|_| {
     let ext = options.extension.as_deref().unwrap_or_default();
     SubstitutedRead::enter(s!("{}.{ext}", file_stem(trimmed)))
@@ -1437,6 +1464,12 @@ fn input_definitions_impl(
       None
     };
 
+    let found_raw = match &format_module {
+      Some((module, file)) => {
+        found_raw.map(|path| format_module_path(&filename, file, path, module))
+      },
+      None => found_raw,
+    };
     if let Some(file) = found_raw {
       is_found_raw = true;
       // The raw load itself sets `<filename>_raw_loaded` via
@@ -2830,6 +2863,64 @@ fn shipped_with_paper(path: &str) -> bool {
       |p: &str| std::fs::canonicalize(p).unwrap_or_else(|_| Path::new(p).to_path_buf());
     !dir.is_empty() && canonical(path).starts_with(canonical(&dir))
   }
+}
+
+/// Does the LaTeX format hold `module` — is its marker a definition of the format's own layer (the dump, or a raw
+/// format file read for it), not one a file or the document made? Recorded once held, so a later read of another
+/// file of the module still sees it after the tree's file redefines the marker (babel.sty:481 `\bbl@version`).
+fn format_holds(module: &FormatModule) -> bool {
+  use crate::definition::origin::DefinitionOrigin;
+  let key = s!("format_module:{}", module.marker);
+  if lookup_bool(&key) {
+    return true;
+  }
+  let held = lookup_definition(&T_CS!(module.marker))
+    .ok()
+    .flatten()
+    .is_some_and(|defn| {
+      matches!(
+        defn.get_origin(),
+        DefinitionOrigin::LatexDump | DefinitionOrigin::Format | DefinitionOrigin::Plain
+      )
+    });
+  if held {
+    assign_value(&key, true, Some(Scope::Global));
+  }
+  held
+}
+
+/// The file the raw read of `request` takes when it reads `file`, a module the format holds, and found `path`
+/// (OXIDIZED_DESIGN_DIVERGENCES #1142; DG ruling 2026-11-23): `path` when it is the TeX tree's, or a copy byte-identical
+/// to the tree's; else the tree's, the copy — `\usepackage{dir/babel}`'s, or a renamed one a declaration routed here
+/// ([`routed_copy_request`]) — skipped with a Warning. An older babel or expl3 a paper ships fights the one in the
+/// format: babel 3.9l's `\ifx\bbl@version\bbl@tempa\else\input switch.def` meets TL's switch.def, now `\input
+/// babel.def`, which finds the copy again (1408.3933, 1410.2241, 1511.02101, 1511.05750, 1602.08358, 1601.02763); expl3
+/// 2012's l3bootstrap.sty:201-241 re-wraps the file stack expl3.ltx:180-186 wraps (1207.4642, 1211.3724, 1211.6751,
+/// 1304.5586). A tree without the file leaves the copy.
+fn format_module_path(request: &str, file: &str, path: String, module: &FormatModule) -> String {
+  if !shipped_with_paper(&path) {
+    return path;
+  }
+  // (by the module's directory: kpathsea's `.`, first in TEXINPUTS, would find a copy in the current directory)
+  let Some(tree) = pathname::kpsewhich(&[&s!("{}/{file}", module.tree_dir)])
+    .filter(|tree| !shipped_with_paper(tree))
+  else {
+    return path;
+  };
+  let copy = crate::binding::virtual_files::vfs_read(&path)
+    .map(String::into_bytes)
+    .or_else(|| std::fs::read(&path).ok());
+  if copy.is_some_and(|copy| std::fs::read(&tree).is_ok_and(|text| text == copy)) {
+    return path;
+  }
+  Warn!(
+    "shipped_copy",
+    request,
+    s!(
+      "The paper's copy of {file}, a module the LaTeX format holds, is not read; the format's own is"
+    )
+  );
+  tree
 }
 
 /// "A shipped file that `\Provides` a bound name loads that binding" (OXIDIZED_DESIGN_DIVERGENCES #731, the
