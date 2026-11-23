@@ -2627,3 +2627,12 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   `ltx_noindent`, a ragged-right bibliography its `ltx_align_left`), controls byte-identical. Guards
   `perfect_kernel_batchbackmatter::*`, `cluster_xslt_split::split_nav_relations::split_backmatter_pages_belong_to_no_part`.
   Residuals: row R BACKMATTERRAW, AMSBACKNAME.
+- PHANTOMBOX — fixed (DG ruling 2026-11-23, math named exception; OD #1141, KNOWN_PERL_ERRORS #1316): a math
+  `\phantom`/`\vphantom`/`\hphantom` is a box of its content, drawn as `<mphantom>` where it stands
+  (2603.21852 `$\sqrt{\phantom{x}}$` no longer gives an empty `<mphantom>`); edge phantoms stay `XMHint`s beside the
+  parsed item of a kept list (no XMDual), an `XMWrap`'s dual takes its item's grammatical role, a slot of phantoms alone is
+  `XMDual(absent, phantom)`, a failed parse keeps edge phantoms as padding; `\mathstrut` is latex.ltx:15602
+  `\vphantom(`. A/B popPHANTOM (199): E/F/W identical, 112 changed, 0 worse, 120,188 formulas' `text=` unchanged
+  (6 placeholder-only changes), +491 phantom-only formulas. Cost accepted by DG: quant-ph0001103 +0.85 % XML / +1.21 %
+  HTML instructions:u (46 script phantoms), math0001084 +0.23 % / +0.43 %, controls ≈0. Guards
+  `perfect_kernel_batchphantom::*`. Residual: row R PHANTOMLEX.

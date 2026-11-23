@@ -514,7 +514,16 @@ Rules that keep this file honest and mergeable:
   - BABELINPUT — (LTXOWN review, pre-existing) `\input babel.def` in a LaTeX document with no copy raises 9 Errors
     (`\bbl@trace`, `\bbl@ifshorthand`, `\bbl@bidimode` …) where pdflatex has 0; and aa.cls with
     `\usepackage[english]{babel}` (1004.1914) gets no document `xml:lang` where a plain article gets `en`; 1
-  - PHANTOMBOX — (DG 2026-11-23, math named exception) `\phantom` in math loses its box in MathML: 2603.21852 `$\sqrt{\phantom{x}}$` gives `<msqrt><mphantom/></msqrt>` (the `absent` placeholder); matrix `\phantom{-}1` alignment, `x^{\phantom{2}}`, `\frac{\phantom{x}}{y}`, `\sqrt{a\phantom{x}}` and `\vphantom` struts lose it too. Perl the same: `\phantom` is an `XMHint` with sizes (math_common.pool.ltxml:645-653), the parser turns hints into padding, and MathML.pm:1229's space walk renders padding only between two siblings. Ruling: emit `<mphantom>content</mphantom>` (`\hphantom`/`\vphantom` through `<mpadded>`), the hint keeping its content so the parser still treats it as space; KNOWN_PERL_ERRORS entry; 3
+  - PHANTOMLEX (after PHANTOM; synthetic, no corpus witness) — a dual over an `XMWrap` beside an edge phantom is lexed
+    by its whole text, phantom glyph included (`get_token_meaning`, latexml_math_parser/src/data.rs:347), so rules keyed
+    on lexeme text fail where base parses: `$\mbox{$|\phantom{x}$} x \mbox{$|\phantom{x}$} = 1$` (base
+    `absolute-value@(x) = 1`), `\mathopen{\langle\vphantom{X}} a, b \mathclose{\rangle\vphantom{X}}`,
+    `\mathopen{[\vphantom{X}} a, b \mathclose{)\vphantom{X}}`, `\int f \mbox{$d\phantom{x}$}x` — kludged, content
+    kept. Fix: lex a phantom dual as its item (as `item_beside_phantoms` does for an XMArg), covering OPEN/CLOSE
+    pairing, VERTBAR, XDIFF, EXPECTATION. Also: `op_base_is_mo` descends a single-child `<mrow>` with no phantom (Perl
+    never descends an mrow); `\mathop{\vphantom{X}\nabla} f` gains an `lspace` TeX does not set and
+    `\mathop{\vphantom{X}f}` renders `<mi>f</mi>⁡` (base `<mo>`); guard row for repro line B
+    (`\mbox{$\to\vphantom{X}$}`). Probes `/home/deyan/.claude/jobs/356a0c47/tmp/rv5/`; 3
   - PICKILLGLUE — (PICNEST review, OD #47) in a picture the explicit-space keep (`document.rs` `open_text`) decides by
     the previous sibling, where TeX decides by the next item: a drawing object kills the glue before it (latex.ltx
     `\@killglue` :16785-16805, pstricks.tex:1564 `\pst@killglue`). So `\put(0,40){word\line(1,0){10}\ more}` drops the
