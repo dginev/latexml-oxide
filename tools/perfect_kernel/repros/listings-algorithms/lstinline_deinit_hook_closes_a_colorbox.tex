@@ -8,6 +8,8 @@
 %          undefined `\xpretocmd` (no xpatch binding): the patch never applies and no box opens
 % expect:  0 errors, 0 warnings; "x.a", "y.b", "z.c" in order, each the inline `<text class="ltx_lstlisting">`
 % status:  RED (rc2) -> GREEN (LISTINLINE: listings_sty.rs `\lx@lstinline` brackets the body with Init/DeInit)
+% residual: the `\Colorbox{yellow}` background is lost (the collected box is digested before `\colorbox` sets its
+%          colour; row R REALBOXBG); this repro asserts the text and group balance only
 \documentclass{article}
 \usepackage{xcolor,listings,xpatch,realboxes}
 \makeatletter
