@@ -54,6 +54,21 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     Warning and the stray "n" are gone; 0801.1806 also loses a `<pagination role="newpage"/>` after its frontmatter,
     from the deposit's `\newpage`, which pdflatex runs before the title page (iaus.cls:842, 869). Guard
     `perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group`.
+  - **An inline listing runs listings.sty's `\lst@Init`/`\lst@DeInit` bracket.** listings.sty wraps every
+    `\lstinline` in `\lst@Init\relax` … `\lst@DeInit\egroup` (listings.sty:1941-1989), and packages hook both:
+    realboxes' `\Colorbox{…}\bgroup` before an inline listing closes its box in an `\lst@DeInit` hook, which never
+    ran, so each listing nested a group deeper until the stack overflowed. realboxes' `\Colorbox`/`\Fcolorbox` also
+    reach xcolor's `\color@box`/`\color@fb@x`, now bound. OXIDIZED_DESIGN_DIVERGENCES #1139, KNOWN_PERL_ERRORS #1313;
+    guards `perfect_kernel_batchlistinline::*`. The realboxes background colour is still lost (a known residual).
+  - **Drawings TeX lays out flat stay flat.** A control space `\ ` between pstricks objects opened a text box the
+    next object nested in, and a pgf path nested an `svg:svg` in an auto-opened `\put` picture, so long figures nested
+    hundreds deep and the post-processor's XSLT stopped (`Fatal:post:convert`). In a picture the explicit space is
+    kept only after a box or text, where TeX keeps it, and a path closes the auto-opened `\put` chain
+    (OXIDIZED_DESIGN_DIVERGENCES #47, #1138); guards `pstricks_drawing::{a_control_space_between_objects_keeps_the_picture_flat,
+    a_control_space_after_text_in_a_put_is_kept}`, `perfect_kernel_batch54::a_put_in_a_tikzpicture_closes_before_the_next_path`.
+  - **The ar5iv profile's conditional limit is the front ends' 480M.** The `\if` count accumulates over the whole
+    document, so a long finite pgfplots paper passed ar5iv's 48M without any loop; `--preload=ar5iv.sty` now passes
+    the same `RUNAWAY_IF_LIMIT` as the command line (OXIDIZED_DESIGN_DIVERGENCES #1080).
 
 ### 0.8.0-rc2
 
