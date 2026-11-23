@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (563 items on 2026-11-23 on `int/towards_v0_8_1`: 559 open, weight 1086, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (564 items on 2026-11-23 on `int/towards_v0_8_1`: 560 open, weight 1089, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -1250,11 +1250,13 @@ Rules that keep this file honest and mergeable:
     calc error (1611.01788 thesis.tex:5400/:5434; both the Nov 17 binary and the release candidate; pdflatex is fatal
     there too, 8 errors): find the loop site (`perf record` at 20 s), then end in a bounded Error. The wall-clock Fatal
     leaves no XML and no log, so the paper's 56k words are lost — a salvage question too. rc2 2026-11-23: still the wall clock at 180 s (59 Errors before it). Deferred, decided by difficulty (DG 2026-11-23); 5
-  - BACKMATTERPART (after 0.8.0, needs DG's ruling; TeX fidelity, offer upstream) — LaTeXML nests `\backmatter` (the
-    bibliography and index after it) inside the last `ltx:part`, while in TeX `\backmatter` belongs to no part. Since
-    SPLITPARENT matches Perl's Split → Scan parents, a split `\part` book's Bibliography/Index footer buttons appear only
-    on the last part's pages (KEPT_RELATIONS, OD #1134) and `bib.html`'s title ends "‣ Part II …"; identical in Perl.
-    Fix in the XML nesting (close the part at `\backmatter`) or in the relation walk; 1
+  - BACKMATTERRAW (after BACKMATTERPART) — memoir (its runtime binding reads memoir.cls raw) and scrbook keep their own
+    `\backmatter`, so their back matter still nests inside the last `ltx:part`; a document's `\renewcommand\backmatter`
+    loses the close too (as Perl). Trigger: `\documentclass{scrbook}\begin{document}\part{A}\chapter{x}\backmatter
+    \chapter{B}\end{document}`. Fix: call `\lx@begin@backmatter` from those classes' `\backmatter`; 3
+  - AMSBACKNAME (cosmetic) — amsbook's `\backmatter` does `\let\chaptername\relax`, so pdflatex prints "B Afterword"
+    for an appendix after it; we print "Appendix B Afterword". Trigger: repro
+    `sectioning-frontmatter/amsbook_backmatter_closes_the_appendix_and_part.tex`; 1
   - SCANINDEXXML (after 0.8.0, multi-document sites) — Rust's Scan parent fallback (`scan.rs` after `doc.parent_id`)
     lacks Perl's second guess, an `index.xml` in a containing directory (`Scan.pm:117-124`). Split's pages no longer
     use the fallback; 1

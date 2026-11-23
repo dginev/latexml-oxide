@@ -2619,4 +2619,11 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   1511.02101, 1511.05750, 1602.08358, 1601.02763, 1207.4642, 1211.3724, 1211.6751, 1304.5586: Fatal → converted, five
   error-free. Reach (2010-17 papers shipping one of the five, 207 + 40 controls): Fatal records 91 → 6, 0 papers worse,
   controls byte-identical. Guards `perfect_kernel_batchltxown::*`. Residuals: row R L3EXP, FMTOWNEDIT, BABELINPUT.
-
+- BACKMATTERPART — fixed (DG ruling 2026-11-23, OD #1147, KNOWN_PERL_ERRORS #1320): the book, amsbook, svmult and
+  svmono `\backmatter` close the open part, chapter and appendix (`\lx@begin@backmatter` after a `\par`, standing for
+  TeX's `\cleardoublepage`; a no-op inside a float or minipage), so the bibliography, index and back chapters are
+  siblings of the parts and a split book's back-matter pages belong to no part. A/B (53 `\backmatter` papers + 20
+  controls): words and E/F/W identical, 30 changed (back matter leaves the last part; a `\par` now stamps
+  `ltx_noindent`, a ragged-right bibliography its `ltx_align_left`), controls byte-identical. Guards
+  `perfect_kernel_batchbackmatter::*`, `cluster_xslt_split::split_nav_relations::split_backmatter_pages_belong_to_no_part`.
+  Residuals: row R BACKMATTERRAW, AMSBACKNAME.
