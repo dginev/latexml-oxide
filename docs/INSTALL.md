@@ -9,9 +9,11 @@ each a single, fully self-contained executable.
 
 Basic documents using built-in bindings convert without TeX Live; for raw `.sty`/`.cls` packages, `expl3`, and TeX fonts, install a working TeX distribution (**TeX Live or MiKTeX**) at runtime.
 A few external tools are called as subprocesses, mainly to convert graphics files.
-The binaries embed TeX format dumps for the TeX Live releases they were built with; with any
-other TeX tree (a Linux distribution's TeX Live, or one updated since), the first conversion
-builds the formats once (about 10 s) into a per-user cache.
+The binaries embed precompiled formats for TeX Live 2022–2026. One is used when no TeX is
+installed, or when your tree's kernel files (`latex.ltx`, `expl3-code.tex`) are identical to
+those of the TeX Live snapshot it was built from. On any other tree (often the case for a Linux
+distribution's TeX Live, MiKTeX, or a TeX Live at a different update level), the first conversion
+builds the formats once (about 10 s) into a per-user cache, and later conversions reuse them.
 
 The steps below use a version variable — set it to the release you want:
 ```
