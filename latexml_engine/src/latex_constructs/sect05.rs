@@ -1452,56 +1452,17 @@ pub(crate) fn load() -> Result<()> {
     // prints the title block here, which `\lx@text@before@title` reads)
     let prints = note_title_page_print()? && !fm_class_prints_title_at_setters();
     AssignValue!("lx_maketitle_prints_title" => prints, Some(Scope::Global));
-    // Both deposits null the title fields, so a `{titlepage}` either lays out
-    // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
-    AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
     // Which title-page runs are kept, for the off-table stores no kept run typeset (`\lx@store@untypeset`,
     // frontmatter_stores.rs).
     AssignValue!("lx_title_page_deposit_kept" => false, Some(Scope::Global));
     AssignValue!("lx_title_page_replay_kept" => false, Some(Scope::Global));
-    // Speculative like the class-body replay below — it runs with the title fields emptied, outside the class's own
-    // `\maketitle`, and Perl never runs it — so its diagnostics are held the same way, and a deposit that raises an
-    // error is dropped with them: eptcs.cls:114-130's `\@maketitle` prints `\publicationstatus` and
-    // `\copyrightholders`, which its `\maketitle` (:73-89) provides just before calling it, so alone it raised
-    // "undefined" for page furniture (1309.1271, 1405.5596, 1109.2657).
-    let hold = util::logger::DiagnosticsHold::begin();
-    // (what an `\insert` in it sets, after it: tex_inserts.rs)
-    AssignValue!("lx_deposit_inserts" => Stored::VecDigested(Vec::new()), Some(Scope::Global));
     // (a field emptied for printing still gives its value where the title page reads a number from it, in both runs)
     let _operands = OperandValues(set_operand_values(
       crate::frontmatter_stores::deposit_operand_values()?,
     ));
-    let deposit = digest(title_page_deposit_tokens(&[]));
-    AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
-    let mut inserts = take_deposit_inserts();
-    let deposit = match deposit {
-      Ok(deposit) => deposit,
-      Err(err) => {
-        hold.commit();
-        return Err(err);
-      },
-    };
     let mut out = Vec::new();
-    let errors = hold.errors_raised();
-    if errors > 0 {
-      hold.discard();
-      inserts.clear();
-      Info!(
-        "ignore",
-        "\\@maketitle",
-        s!("The \\@maketitle deposit was dropped: with its title fields in the frontmatter it raised {errors} error(s)")
-      );
-    } else {
-      hold.commit();
-      // (what its `\insert`s set is kept after it, an empty title page or not: a store it prints there is typeset,
-      // `hand_untypeset_stores`)
-      if typesets_content(&deposit) || inserts.iter().any(typesets_content) {
-        AssignValue!("lx_title_page_deposit_kept" => true, Some(Scope::Global));
-      }
-      if typesets_content(&deposit) {
-        out.push(deposit);
-      }
-    }
+    let mut inserts = Vec::new();
+    run_title_page_deposit(title_page_deposit_tokens(&[]), &mut out, &mut inserts)?;
     // A class that redefined `\maketitle` ITSELF (ryethesis.cls:282, wsemclassic,
     // exam-n, coverpage — the body lays out degree/program/university fields the
     // frontmatter API never sees) had its body dropped by the lock; the dropped
@@ -1511,8 +1472,9 @@ pub(crate) fn load() -> Result<()> {
     // relaxed (ukbill.cls:497 typesets `\textbf{\title}` where `\@title` was meant;
     // memoir's two-argument `\title` ate the deposit's braces — "Attempt to close
     // boxing group", immigration-bill), `\@maketitle` relaxed
-    // (no second deposit), not re-entrant, kept only when it
-    // typesets something. Argument-free bodies only: a `\maketitle[#1]` would
+    // (no second deposit; one taking arguments stays live, `maketitle_left_to_replay`),
+    // not re-entrant, kept only when it
+    // typesets something. Argument-free bodies only (or a plain `[<options>]`): a `\maketitle#1` would
     // read the kernel's own continuation as its argument. A body that builds
     // only a shipout picture or boxes yields nothing and is dropped. Surpass
     // (Perl drops the class body, State.pm:502-517); OXIDIZED_DESIGN #265.
@@ -1530,6 +1492,13 @@ pub(crate) fn load() -> Result<()> {
     // kernel `\maketitle` (locked), whose deposit must not run the body twice.
     // (`\maketitle` itself is NOT redefined here — it is locked, and the lock
     // would record that redefinition as the dropped body.)
+    // (an `\@maketitle` left to the replay, as it was before the replay: the class's `\maketitle` may relax it after
+    // running it, iaus.cls:847 `\global\let\@maketitle\relax`)
+    let left_to_replay = maketitle_left_to_replay();
+    if left_to_replay {
+      Let!("\\lx@saved@maketitle", "\\@maketitle");
+    }
+    let mut replay_erred = false;
     if let Some(replay) = title_page_replay_tokens(&[]) {
       AssignValue!("lx_depositing_class_maketitle" => true, Some(Scope::Global));
       AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
@@ -1566,6 +1535,7 @@ pub(crate) fn load() -> Result<()> {
         // Its errors go, with the stubs standing in for them. The groups an error left open stay: a class
         // may leave one open on purpose (oegatb.cls:160-176 `spacing`, closed by its `\AtEndDocument`).
         hold.discard();
+        replay_erred = true;
         Info!(
           "ignore",
           "\\maketitle",
@@ -1584,6 +1554,16 @@ pub(crate) fn load() -> Result<()> {
           out.push(body);
         }
       }
+    }
+    // (a deposit left to the replay is made after all when the replay was dropped for an error, which may have
+    // come before the class's `\maketitle` called it: `\@maketitle` as it was before the replay, given `{}` for its
+    // arguments. Not after a replay that typeset nothing: a class `\maketitle` that never calls it prints none of it.)
+    if left_to_replay && replay_erred {
+      run_title_page_deposit(
+        title_page_fallback_deposit_tokens(),
+        &mut out,
+        &mut inserts,
+      )?;
     }
     // (the kept title page, between the marks of its provenance)
     if !out.is_empty() {
@@ -5172,6 +5152,57 @@ fn dropped_maketitle_takes_options() -> bool {
   }
 }
 
+/// How the class's `\@maketitle` takes parameters (`\def\@maketitle#1{…}`, iaus.cls:824-868, 0801.1806).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MaketitleParameters {
+  /// None: `\@maketitle` alone runs it.
+  None,
+  /// The `{}` the title-page deposit gives it: one per undelimited mandatory parameter (an optional one reads none).
+  Braces(usize),
+  /// A delimited one, which no argument the deposit supplies can end.
+  Delimited,
+}
+
+/// The parameters of the class's `\@maketitle` ([`MaketitleParameters`]).
+fn maketitle_parameters() -> MaketitleParameters { parameters_of(&T_CS!("\\@maketitle")) }
+
+/// The parameters of a macro read as an `\@maketitle`'s ([`MaketitleParameters`]).
+fn parameters_of(cs: &Token) -> MaketitleParameters {
+  let Some(Stored::Expandable(d)) = lookup_meaning(cs) else {
+    return MaketitleParameters::None;
+  };
+  let Some(params) = d.get_parameters() else {
+    return MaketitleParameters::None;
+  };
+  let params = params.get_parameters();
+  if params.is_empty() {
+    return MaketitleParameters::None;
+  }
+  let mut braces = 0;
+  for p in params.iter() {
+    if p.name == pin!("Plain") {
+      braces += 1;
+    } else if p.name != pin!("Optional") {
+      return MaketitleParameters::Delimited;
+    }
+  }
+  MaketitleParameters::Braces(braces)
+}
+
+/// Is an `\@maketitle` that takes parameters left to the replay of the class's `\maketitle`, which calls it with the
+/// class's own arguments (iaus.cls:824-868 `\@maketitle{n}`, 0801.1806)? The replay then leaves it live (relaxed, its
+/// argument "n" was typeset) and the deposit does not run it first; the deposit runs it only where nothing replays
+/// it, or after a replay dropped for an error.
+fn maketitle_left_to_replay() -> bool {
+  maketitle_parameters() != MaketitleParameters::None && replays_class_maketitle()
+}
+
+/// Does the title-page deposit run the class's `\@maketitle` (ahead of the replay)? Not LaTeX's own (the kernel's
+/// marker alone: nothing to deposit, as `\@empty`), nor one left to the replay ([`maketitle_left_to_replay`]).
+pub(crate) fn title_page_deposits() -> bool {
+  !maketitle_is_kernels() && !maketitle_left_to_replay()
+}
+
 /// Gives back the operand values set before the title-page deposit (`gullet::set_operand_values`).
 struct OperandValues(Vec<(Token, Tokens)>);
 impl Drop for OperandValues {
@@ -5186,21 +5217,57 @@ const TITLE_PAGE_FIELDS: &str = r"\let\@title\@empty\let\@author\@empty\let\@dat
 /// kernel's fields and the stores the frontmatter carries read as empty. `inject`: definitions made just before
 /// `\@maketitle` runs — a speculative run's sentinel values (frontmatter_stores.rs `before_title_page_runs`).
 pub(crate) fn title_page_deposit_tokens(inject: &[Token]) -> Tokens {
-  // (LaTeX's own, the kernel's marker alone: nothing to deposit, as `\@empty`)
-  if maketitle_is_kernels() {
+  if !title_page_deposits() {
     return Tokens::default();
   }
-  let mut tokens = mouth::tokenize_internal(TeXString::assembled(s!(
-    r"\ifx\@maketitle\@empty\else{{{TITLE_PAGE_FIELDS}\let\and\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
-  )))
-  .unlist();
+  deposit_tokens(inject)
+}
+
+/// The deposit a replay left `\@maketitle` to ([`maketitle_left_to_replay`]) makes after all when that replay is
+/// dropped for an error: the `\@maketitle` saved before the replay (`\lx@saved@maketitle`), which a class's
+/// `\maketitle` may have relaxed after running it (iaus.cls:847), restored in the deposit's group.
+fn title_page_fallback_deposit_tokens() -> Tokens { deposit_tokens_of(&[], true) }
+
+/// [`title_page_deposit_tokens`], made: `\@maketitle` given an `{}` per undelimited mandatory parameter, as nothing
+/// supplies its arguments here — without them it read the deposit's closing brace, leaving its group open to
+/// `\end{document}` (0801.1806). One with a delimited parameter is not deposited.
+fn deposit_tokens(inject: &[Token]) -> Tokens { deposit_tokens_of(inject, false) }
+
+/// [`deposit_tokens`] of `\@maketitle`, or (`saved`) of its meaning saved before the replay, restored in the group.
+fn deposit_tokens_of(inject: &[Token], saved: bool) -> Tokens {
+  let maketitle = if saved {
+    T_CS!("\\lx@saved@maketitle")
+  } else {
+    T_CS!("\\@maketitle")
+  };
+  let braces = match parameters_of(&maketitle) {
+    MaketitleParameters::None => 0,
+    MaketitleParameters::Braces(n) => n,
+    MaketitleParameters::Delimited => return Tokens::default(),
+  };
+  let mut tokens = vec![T_CS!("\\ifx"), maketitle];
+  tokens.extend(mouth::tokenize_internal(r"\@empty\else{").unlist());
+  if saved {
+    tokens.extend([T_CS!("\\let"), T_CS!("\\@maketitle"), maketitle]);
+  }
+  tokens.extend(
+    mouth::tokenize_internal(TeXString::assembled(s!(
+      r"{TITLE_PAGE_FIELDS}\let\and\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
+    )))
+    .unlist(),
+  );
   tokens.extend_from_slice(inject);
-  tokens.extend(mouth::tokenize_internal(r"\@maketitle}\fi").unlist());
+  tokens.push(T_CS!("\\@maketitle"));
+  for _ in 0..braces {
+    tokens.extend([T_BEGIN!(), T_END!()]);
+  }
+  tokens.extend(mouth::tokenize_internal(r"}\fi").unlist());
   Tokens::new(tokens)
 }
 
 /// The replay of the class's own refused `\maketitle` (`\lx@dropped@maketitle`, `\lx@deposit@maketitle`), in a group
-/// with the fields read as the deposit reads them, `\thanks` gobbled and `\@maketitle` relaxed (no second deposit),
+/// with the fields read as the deposit reads them, `\thanks` gobbled and `\@maketitle` relaxed (no second deposit;
+/// one left to the replay stays live, [`maketitle_left_to_replay`]),
 /// with the options the kernel `\maketitle` read for a `\maketitle[<options>]` body (`\lx@maketitle@withopt`). A call
 /// of the kernel's `\maketitle` from the body (`\let\@origmaketitle\maketitle` … `\def\maketitle{…\@origmaketitle}`)
 /// runs LaTeX's `\maketitle` there, whose `\@maketitle` the deposit already printed: its `\lx@maketitle@body` is
@@ -5212,28 +5279,16 @@ pub(crate) fn title_page_deposit_tokens(inject: &[Token]) -> Tokens {
 /// defined here (`body_vocabulary_is_defined`), or while a replay runs (not re-entrant). `inject`: as
 /// [`title_page_deposit_tokens`].
 pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
-  if lookup_bool("lx_depositing_class_maketitle") {
+  if !replays_class_maketitle() {
     return None;
   }
-  let argless = match lookup_meaning(&T_CS!("\\lx@dropped@maketitle")) {
-    Some(Stored::Expandable(ref d)) => {
-      (d.get_parameters()
-        .is_none_or(|p| p.get_parameters().is_empty())
-        || dropped_maketitle_takes_options())
-        && match d.get_expansion() {
-          Some(ExpansionBody::Tokens(body)) => {
-            body_vocabulary_is_defined(body.unlist_ref(), "\\maketitle")
-          },
-          _ => false,
-        }
-    },
-    _ => false,
+  let maketitle = if maketitle_left_to_replay() {
+    ""
+  } else {
+    r"\let\@maketitle\relax"
   };
-  if !argless {
-    return None;
-  }
   let mut replay = mouth::tokenize_internal(TeXString::assembled(s!(
-    r"{{{TITLE_PAGE_FIELDS}\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\let\lx@maketitle@body\@empty\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
+    r"{{{TITLE_PAGE_FIELDS}\let\thanks\@gobble\let\and\relax{maketitle}\let\lx@maketitle@body\@empty\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
   )))
   .unlist();
   replay.extend_from_slice(inject);
@@ -5394,9 +5449,27 @@ pub(crate) fn title_page_mark(definition: &Rc<dyn Definition>) -> Option<char> {
   })
 }
 
-/// Does [`title_page_print_tokens`] run the class's own refused `\maketitle` ([`title_page_replay_tokens`])?
+/// Is the class's own refused `\maketitle` replayed ([`title_page_replay_tokens`], and so run by
+/// [`title_page_print_tokens`])? Not while a replay runs (not re-entrant), nor a body that takes arguments other than
+/// a plain `[<options>]`, nor one whose vocabulary is not defined here (`body_vocabulary_is_defined`).
 pub(crate) fn replays_class_maketitle() -> bool {
-  !lookup_bool("lx_depositing_class_maketitle") && title_page_replay_tokens(&[]).is_some()
+  if lookup_bool("lx_depositing_class_maketitle") {
+    return false;
+  }
+  match lookup_meaning(&T_CS!("\\lx@dropped@maketitle")) {
+    Some(Stored::Expandable(ref d)) => {
+      (d.get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+        || dropped_maketitle_takes_options())
+        && match d.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => {
+            body_vocabulary_is_defined(body.unlist_ref(), "\\maketitle")
+          },
+          _ => false,
+        }
+    },
+    _ => false,
+  }
 }
 
 /// What a speculative title-page run ([`title_page_probe_run`], [`checks_run`]) gave.
@@ -5676,6 +5749,60 @@ fn speculative_run_read(
     Some(texts) if undone => Ok(texts),
     _ => Err(SpeculativeRun::Unavailable),
   })
+}
+
+/// Runs a title-page deposit (`tokens`, [`title_page_deposit_tokens`]) as `\lx@deposit@maketitle` keeps it: what it
+/// typesets onto `out` and what its `\insert`s set onto `inserts`, or nothing when it raises an error.
+fn run_title_page_deposit(
+  tokens: Tokens,
+  out: &mut Vec<Digested>,
+  inserts: &mut Vec<Digested>,
+) -> Result<()> {
+  // Both deposits null the title fields, so a `{titlepage}` either lays out
+  // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
+  AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
+  // Speculative like the class-body replay — it runs with the title fields emptied, outside the class's own
+  // `\maketitle`, and Perl never runs it — so its diagnostics are held the same way, and a deposit that raises an
+  // error is dropped with them: eptcs.cls:114-130's `\@maketitle` prints `\publicationstatus` and
+  // `\copyrightholders`, which its `\maketitle` (:73-89) provides just before calling it, so alone it raised
+  // "undefined" for page furniture (1309.1271, 1405.5596, 1109.2657).
+  let hold = util::logger::DiagnosticsHold::begin();
+  // (what an `\insert` in it sets, after it: tex_inserts.rs)
+  AssignValue!("lx_deposit_inserts" => Stored::VecDigested(Vec::new()), Some(Scope::Global));
+  let deposit = digest(tokens);
+  AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
+  let mut deposit_inserts = take_deposit_inserts();
+  let deposit = match deposit {
+    Ok(deposit) => deposit,
+    Err(err) => {
+      hold.commit();
+      return Err(err);
+    },
+  };
+  let errors = hold.errors_raised();
+  if errors > 0 {
+    hold.discard();
+    deposit_inserts.clear();
+    Info!(
+      "ignore",
+      "\\@maketitle",
+      s!(
+        "The \\@maketitle deposit was dropped: with its title fields in the frontmatter it raised {errors} error(s)"
+      )
+    );
+  } else {
+    hold.commit();
+    // (what its `\insert`s set is kept after it, an empty title page or not: a store it prints there is typeset,
+    // `hand_untypeset_stores`)
+    if typesets_content(&deposit) || deposit_inserts.iter().any(typesets_content) {
+      AssignValue!("lx_title_page_deposit_kept" => true, Some(Scope::Global));
+    }
+    if typesets_content(&deposit) {
+      out.push(deposit);
+    }
+  }
+  inserts.extend(deposit_inserts);
+  Ok(())
 }
 
 /// The material the `\insert`s of a title-page run set (`lx_deposit_inserts`, tex_inserts.rs), taken from the state.
