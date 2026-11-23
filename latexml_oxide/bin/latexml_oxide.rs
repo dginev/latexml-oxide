@@ -801,6 +801,8 @@ fn main() -> Result<(), Box<dyn Error>> {
   // This binary serves the worker mode above, so a big split may spawn it.
   latexml::render_workers::enable_auto_jobs();
   install_panic_sweep(cfg!(panic = "abort"));
+  // A Ctrl+C during the first run's format build cancels the build rather than failing it (issue 988).
+  latexml::format_dumps::cancel_builds_on_interrupt();
 
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees don't overflow the OS-default 8 MB main-thread
