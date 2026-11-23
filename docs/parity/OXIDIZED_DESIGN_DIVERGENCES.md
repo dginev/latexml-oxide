@@ -10971,7 +10971,7 @@ alias cycles of OD #1100; 2609.30372's document-level `\let\H@refstepcounter\ref
 deadline, as before. The ring holds `MAX_WINDOW × REPEAT` = 3,200 items, so the gullet's duty window widened with it,
 2,048 of every 16,384 tokens to 4,096 of every 32,768 (still 1/8). A scan stops at a period's first mismatch; the
 periods a uniform tail rules out are skipped, so a long run of one token costs 32 compares a check, not `W²·REPEAT/2`.
-Cost (`instructions:u`, best of 3, vs INT081C): 2302.07562 (pgfplots) +0.04 %, 2606.20784 (tikz) −0.01 %, 2412.14534
+Cost (`instructions:u`, best of 3, vs INT081C): 2302.07562 (pgfplots) +0.03 %, 2606.20784 (tikz) −0.01 %, 2412.14534
 (siunitx, mhchem) +0.12 %, 1810.02898 −0.04 %; no change on the 498-paper READARG population.
 
 **Guards**: `perfect_kernel_batch65f::repeated_file_text_is_no_expansion_loop` (also: a two-token expansion loop and a
