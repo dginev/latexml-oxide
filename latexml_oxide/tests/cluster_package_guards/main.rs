@@ -599,6 +599,8 @@ mod perfect_kernel_batchnext397;
 mod perfect_kernel_batchnl1;
 /// NOTCANCEL: math_common's `\not` rewrite moves its operand (Perl appendChild), so one pass rewrites every nested `\not`.
 mod perfect_kernel_batchnotcancel;
+/// NULLDELIM: TeX's null delimiter prints nothing — the fence retry's empty token leaves the parsed tree (OXIDIZED_DESIGN_MATH #22).
+mod perfect_kernel_batchnulldelim;
 /// OC1: an author call parts at the `\and` its spelling hides (a macro, a wrapper, a `\csname`), the reading cutting
 /// the rehearsed block at its `Sep(And)` events, on each class route (Option C's P1, green before OC1).
 mod perfect_kernel_batchoc1;

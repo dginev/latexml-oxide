@@ -1679,11 +1679,9 @@
                             </XMWrap>
                           </XMApp>
                         </XMDual>
-                        <XMTok role="CLOSE"/>
                       </XMWrap>
                     </XMDual>
                   </XMApp>
-                  <XMTok role="CLOSE"/>
                 </XMWrap>
               </XMApp>
             </XMDual>
@@ -1723,7 +1721,6 @@
                       </XMWrap>
                     </XMDual>
                   </XMApp>
-                  <XMTok role="CLOSE"/>
                 </XMWrap>
               </XMApp>
             </XMDual>

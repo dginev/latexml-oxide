@@ -189,12 +189,19 @@ pub fn warn_degraded_no_dump() {
     let year = detect_ambient_texlive_year()
       .map(|y| y.to_string())
       .unwrap_or_else(|| "unknown".into());
+    // Where a dump for this tree could not be built (`latexml::format_dumps`), the reason says so and how to retry
+    // (issue 988): an installed binary has no `tools/` to run.
+    let remedy = match format_build_failure() {
+      Some(reason) => format!("No format dump could be built for this TeX tree: {reason}."),
+      None => String::from(
+        "Build the dump with `tools/make_formats.sh` before canvas/parity runs. (Set LATEXML_NODUMP=1 to silence \
+         this if the raw path is intentional.)"
+      ),
+    };
     eprintln!(
       "[latexml-oxide] WARNING: no precompiled kernel dump found (TL{year}); \
        running in DEGRADED raw-load mode. Conversions will show many spurious \
-       errors (expl3 catcode/group cascades). Build the dump with \
-       `tools/make_formats.sh` before canvas/parity runs. (Set \
-       LATEXML_NODUMP=1 to silence this if the raw path is intentional.)"
+       errors (expl3 catcode/group cascades). {remedy}"
     );
   });
 }

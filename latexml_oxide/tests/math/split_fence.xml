@@ -33,7 +33,6 @@
                         <XMTok font="italic" role="UNKNOWN">a</XMTok>
                         <XMTok font="italic" role="UNKNOWN">b</XMTok>
                       </XMApp>
-                      <XMTok role="CLOSE"/>
                     </XMWrap>
                   </XMDual>
                 </XMApp>
@@ -70,7 +69,6 @@
                             <XMTok font="italic" role="UNKNOWN">a</XMTok>
                             <XMTok font="italic" role="UNKNOWN">b</XMTok>
                           </XMApp>
-                          <XMTok role="CLOSE"/>
                         </XMWrap>
                       </XMDual>
                     </XMApp>
@@ -97,7 +95,6 @@
                       <XMRef idref="S0.E1.m2.2"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok role="OPEN"/>
                       <XMApp xml:id="S0.E1.m2.2">
                         <XMTok meaning="plus" role="ADDOP">+</XMTok>
                         <XMApp>
@@ -127,7 +124,6 @@
                           <XMRef idref="S0.E1.m1.2"/>
                         </XMApp>
                         <XMWrap>
-                          <XMTok role="OPEN"/>
                           <XMApp xml:id="S0.E1.m1.2">
                             <XMTok meaning="plus" role="ADDOP">+</XMTok>
                             <XMApp>

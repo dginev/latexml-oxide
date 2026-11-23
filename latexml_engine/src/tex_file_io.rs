@@ -207,6 +207,11 @@ LoadDefinitions!({
       if target.ends_with(".aux") {
         crate::latex_constructs::read_back_aux_text(&text)?;
       }
+    } else if diagnostics_ignored() {
+      // A scope that drops its diagnostics whole (Perl `IGNORE_ERRORS`) — a trial digested again where it is used,
+      // the muted no-dump expl3 reload — drops what it writes to the terminal and the log too: the blank line
+      // LaTeX's `\GenericError` writes ahead of each error (`\immediate\write\@unused{}`) printed 2,415 empty lines
+      // over the reload's 5,015 dropped errors, scrolling away why the run had no dump (issue 988; OD #1148).
     } else if port < 0 {
       NoteLog!(tokens.untex());
     } else {

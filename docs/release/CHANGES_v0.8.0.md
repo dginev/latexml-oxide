@@ -82,6 +82,23 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `perfect_kernel_batchvrefclev::*`.
   - **A text `\vphantom` is a zero-width strut**, as in TeX: it carries `ltx_vphantom`, and LaTeXML.css gives it its
     argument's height and depth and no width (OXIDIZED_DESIGN_DIVERGENCES #1145; also in ar5iv-css).
+  - **Interrupting the first conversion no longer leaves the format in a degraded state** (issue 988). When no format
+    dump matches the user's TeX tree, the first conversion builds one into a per-user cache; Ctrl+C (and SIGTERM or
+    SIGHUP on Unix, Ctrl+Break or closing the console on Windows) during that build now cancels it: the build's
+    attempt record and partial dump are removed and the process exits with status 130, so the next conversion builds
+    again. Before, two interrupts marked the format failed for a day, and every conversion then loaded it from the
+    engine's own definitions. A process that ignores these signals (`nohup`, a background job) keeps them ignored. The
+    degraded-mode warning now says why no dump was built and which file to remove to retry, and the no-dump fallback no
+    longer prints thousands of blank lines over it (the blank line LaTeX writes before each error it drops).
+    OXIDIZED_DESIGN_DIVERGENCES #1148; guards `format_dumps::tests::an_interrupted_build_is_undone`,
+    `dump_gate_init::nodump_latex_branch_converts_healthily`.
+  - **A null delimiter no longer prints the word "CLOSE" or "OPEN".** `\left( … \right.` and `\left. … \right)` — the
+    usual way to split a formula across lines — and an unbalanced `(a+b` drew the fence parser's stand-in token as
+    the literal word (since 0.7.5): the retry that re-supplies TeX's null delimiter left an empty fence token in the
+    formula, and the MathML failsafe named it by its role. The token now leaves the parsed tree once the formula
+    parses, as Perl draws it (`<mo>(</mo><mi>a</mi>`); formula readings and Content MathML are unchanged. In a
+    sample of 635 arXiv papers, 370 carried 3,625 such words (25 of 100 random papers), now none.
+    OXIDIZED_DESIGN_MATH #22; guards `perfect_kernel_batchnulldelim::*`.
 
 ### 0.8.0-rc2
 
