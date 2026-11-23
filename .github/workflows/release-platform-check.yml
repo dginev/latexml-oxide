@@ -1,0 +1,72 @@
+name: release platform check
+
+# Runs tools/render_platform_check.sh on a PUBLISHED release's macOS and
+# Windows binaries: a generated split document converted with the automatic
+# page-render fleet, serially (LATEXML_RENDER_JOBS=1), and again over the fleet
+# run's own output. The fleet is otherwise exercised only by Linux runs and CI
+# tests (SYNC_STATUS row R, RENDERPLATFORMS); run this on every release
+# candidate before the final tag (docs/release/RELEASING.md).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to check (default: the newest published release, prereleases included)'
+        required: false
+  pull_request:
+    paths:
+      - '.github/workflows/release-platform-check.yml'
+      - 'tools/render_platform_check.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: render fleet (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-15,       target: aarch64-apple-darwin,   ext: tar.gz, exe: latexml_oxide }
+          - { runner: macos-15-intel, target: x86_64-apple-darwin,    ext: tar.gz, exe: latexml_oxide }
+          - { runner: windows-latest, target: x86_64-pc-windows-msvc, ext: zip,    exe: latexml_oxide.exe }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG_INPUT: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download and verify the release binary
+        id: bin
+        run: |
+          tag="${TAG_INPUT:-$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 1 --json tagName -q '.[0].tagName')}"
+          asset="latexml-oxide-${tag}-${{ matrix.target }}.${{ matrix.ext }}"
+          echo "release $tag, asset $asset"
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$asset" --pattern "$asset.sha256" --dir dl
+          cd dl
+          if command -v sha256sum > /dev/null; then sha256sum -c "$asset.sha256"; else shasum -a 256 -c "$asset.sha256"; fi
+          case "$asset" in
+            *.zip) if command -v unzip > /dev/null; then unzip -q "$asset"; else 7z x -y "$asset" > /dev/null; fi ;;
+            *) tar -xzf "$asset" ;;
+          esac
+          bin=$(find "$PWD" -name '${{ matrix.exe }}' -type f | head -1)
+          [ -n "$bin" ] || { echo "::error::${{ matrix.exe }} not found in $asset"; exit 1; }
+          chmod +x "$bin"
+          "$bin" --version
+          echo "path=$bin" >> "$GITHUB_OUTPUT"
+
+      - name: Split document, fleet vs serial
+        run: bash tools/render_platform_check.sh "${{ steps.bin.outputs.path }}" "$RUNNER_TEMP/rpc"
+
+      - name: Keep the logs and sites
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: render-platform-check-${{ matrix.target }}
+          path: ${{ runner.temp }}/rpc
+          retention-days: 7
