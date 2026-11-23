@@ -1,0 +1,22 @@
+% mechanism: pdftex.rs read_object_spec, read_dest_spec, read_action_spec, pdf_font_feedback on LuaTeX's
+%   `\pdfextension`/`\pdffeedback` path: one optional space after obj/annot `reserveobjnum`, a dest type and
+%   `newwindow`; `\pdffeedback fontsize` is the font's size ("10.0pt", was a bare 0), `fontname`/`fontobjnum` a number.
+%   The pdfTeX twins: backend-persona/pdftex_operands_optional_space.tex, pdffont_feedback_numbers.tex.
+% witness: synthetic (row R PDFOPTSPACE, PDFFONTFEEDBACK)
+% oracle:  lualatex -no-shell-escape: 0 errors, pdftotext "ABCDE FG10.0ptIJKLM N" (line 1-3). Line 4 has no oracle:
+%          LuaTeX's \pdffeedback has no `lastximage…` keywords (lualatex typesets "lastximagepages"); ours answers 0,
+%          and the keyword list must not read `lastximage` out of `lastximagepages`
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no luatex profile) (2026-11-23)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% expect:  0 errors, 0 warnings; <p>ABCDE FG10.0ptIJKLM N\nO0 P</p>
+% status:  RED ("A B C D …", "G0I", "O0pages P") -> GREEN (pk/PDFPRIM)
+\documentclass{article}
+\begin{document}
+\textfont1=\font
+A\pdfextension obj reserveobjnum B\pdfextension annot reserveobjnum C\pdfextension dest name{d} fit D%
+\pdfextension startlink goto file{x.pdf} name{d} newwindow E\pdfextension endlink F%
+G\edef\y{\pdffeedback fontsize\textfont 1}\y I%
+\count255=\pdffeedback fontobjnum\font\relax\ifnum\count255>0 J\fi K%
+\ifnum\pdffeedback fontname\font>0 L\fi M\pdfextension colorstack 0 pop N
+O\pdffeedback lastximagepages P
+\end{document}

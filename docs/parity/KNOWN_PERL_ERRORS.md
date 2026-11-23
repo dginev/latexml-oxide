@@ -22463,3 +22463,23 @@ Fixed in Rust: the labels end in `\lx@nobreakspace` (OXIDIZED_DESIGN_DIVERGENCES
 `\fnum@figure` with `\nobreakspace`. Witness lineno/lineno (TL doc, lineno.tex:20). Repros
 sectioning-frontmatter/default_{affiliation_label_tilde_redefined,email_label_tilde_redefined_used,date_keywords_labels_tilde_redefined};
 guard `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`.
+
+## 1312. pdfTeX's `\pdffontname`, `\pdffontobjnum` and `\pdffontsize` expand to nothing
+
+pdfTeX.pool.ltxml:97-99 defines the three font queries as macros of one `Token` with an empty expansion; pdfTeX expands
+them to the font's PDF resource number, its object number and its size with `pt` (pdftex.web §1563, the `convert`
+cases at :11359-11369), so a number or a dimension is missing where a package reads one. Minimal trigger:
+
+```tex
+\documentclass{article}\begin{document}\count255=\pdffontobjnum\font\relax\the\count255
+\dimen0=\pdffontsize\font\relax\the\dimen0\end{document}
+```
+
+pdflatex prints 1 and 10.0pt; Perl (same host) warns "Missing number, treated as zero" and "Missing number
+(Dimension), treated as zero" and prints 0 and 0.0pt (Rust before the fix: the same). Reach: pdfbase.sty:520-526 keys a
+form font by `\pdffontobjnum\font`; microtype-pdftex.def:254 sets `\fontdimen6` from `\pdffontsize`. Fixed in Rust:
+`pdftex.rs` `pdf_font_feedback`, shared with LuaTeX's `\pdffeedback fontname`/`fontobjnum`/`fontsize` (which answered
+0), answers one positive number per TFM file for both numbers (pdfTeX shares a font's object among its sizes) and the
+size as `print_scaled` writes it (OXIDIZED_DESIGN_DIVERGENCES #1081). Repros backend-persona/pdffont_feedback_numbers,
+luatex-profile/pdfextension_optional_space_font_feedback; guard
+`perfect_kernel_batchpdfprim::batchpdfprim_pdftex_operand_readers`.

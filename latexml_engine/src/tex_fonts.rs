@@ -119,13 +119,18 @@ LoadDefinitions!({
     } else {
       cs_str
     };
+    // tex.web §1261: the null font's name is "nullfont" (the recovery of a missing font identifier, §577).
     let key = s!("fontinfo_{}", lookup_cs);
     // Same pattern for the font-name read — we only need the owned name
     // String, never the Rc<Font>.
-    let name = with_value(&key, |v| match v {
-      Some(Stored::Font(f)) => f.name.as_ref().map(|n| n.to_string()),
-      _ => None,
-    });
+    let name = if is_null_font(token) {
+      Some(s!("nullfont"))
+    } else {
+      with_value(&key, |v| match v {
+        Some(Stored::Font(f)) => f.name.as_ref().map(|n| n.to_string()),
+        _ => None,
+      })
+    };
     Tokens::new(Explode!(name.unwrap_or_else(|| s!("fontname not available"))))
   });
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
@@ -734,12 +739,16 @@ pub fn read_font_ident() -> Result<Token> {
       T_CS!("\\lx@default@font")
     },
   };
-  if let Some(font_type) = token.with_str(|ts| match ts {
-    "\\textfont" => Some("textfont"),
-    "\\scriptscriptfont" => Some("scriptscriptfont"),
-    "\\scriptfont" => Some("scriptfont"),
-    _ => None,
-  }) {
+  // By meaning, as tex.web's `cur_cmd`: expl3's `\tex_font:D`, `\tex_textfont:D` are `\font`, `\textfont`.
+  let ranges = [
+    ("\\textfont", "textfont"),
+    ("\\scriptscriptfont", "scriptscriptfont"),
+    ("\\scriptfont", "scriptfont"),
+  ];
+  if let Some((_, font_type)) = ranges
+    .into_iter()
+    .find(|(cs, _)| token.defined_as(&T_CS!(*cs)))
+  {
     // Perl: $token = LookupValue($type . 'font_' . $fam->valueOf).
     // with_value avoids the Stored envelope clone; Token is Copy.
     let fam = read_number()?.value_of();
@@ -748,13 +757,50 @@ pub fn read_font_ident() -> Result<Token> {
       Some(Stored::Token(t)) => *t,
       _ => token,
     }))
-  } else if token.with_str(|ts| ts == "\\font") {
+  } else if token.defined_as(&T_CS!("\\font")) {
     // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font'),
     // the current font's identifier here (`current_font_identifier`).
     current_font_identifier()
-  } else {
+  } else if is_font_identifier(token) {
     Ok(token)
+  } else {
+    // tex.web §577: "Missing font identifier", `back_error`, and the null font (Perl takes any token).
+    Error!(
+      "expected",
+      "font identifier",
+      s!(
+        "Missing font identifier: {} is not a font",
+        token.stringify()
+      )
+    );
+    unread_one(token);
+    Ok(T_CS!("\\nullfont"))
   }
+}
+
+/// A `<fontdef token>` (tex.web §577 `set_font`): an identifier `\font` made, or `\nullfont`, or a `\let` of one.
+fn is_font_identifier(token: Token) -> bool {
+  matches!(lookup_meaning(&token), Some(Stored::Primitive(p))
+    if p.font_id.is_some() || p.cs == T_CS!("\\nullfont"))
+}
+
+/// Whether `token` selects TeX's `null_font` (pdftex.web §1563: "invalid font identifier" for the pdfTeX font queries).
+pub fn is_null_font(token: Token) -> bool {
+  matches!(lookup_meaning(&token), Some(Stored::Primitive(p)) if p.cs == T_CS!("\\nullfont"))
+}
+
+/// The TFM name and the size in sp of the font `token` selects (tex.web `font_name[f]`, `font_size[f]`): its shared
+/// key's `at`, else Perl's nominal size.
+pub fn font_name_and_size(token: Token) -> (String, i64) {
+  let key = font_state_key("", token);
+  let key = key.strip_prefix('_').unwrap_or(&key);
+  let key = key.strip_prefix("fontinfo_").unwrap_or(key);
+  if let Some((name, at)) = key.rsplit_once(" at ")
+    && let Some(sp) = at.strip_suffix("sp").and_then(|sp| sp.parse().ok())
+  {
+    return (name.to_string(), sp);
+  }
+  (key.to_string(), (font::defsize() * 65536.0).round() as i64)
 }
 
 /// The font identifier of the current font: what `\the\font` yields and what

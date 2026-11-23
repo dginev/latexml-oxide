@@ -335,24 +335,25 @@ LoadDefinitions!({
         "lastannot",
         "lastobj",
         "lastxform",
-        "lastximage",
         "lastximagepages",
+        "lastximage",
       ])?;
       Vec::new()
     });
     // `\pdffeedback creationdate` is the job's PDF date string, as pdfTeX's
     // `\pdfcreationdate` (luatex85.sty:62 `\xdef\pdfcreationdate{\pdffeedback
     // creationdate}`; novel-pdfx.sty parses it by its `D:`; novel, TeX Live
-    // class census 2026-09-24). `colorstackinit` and `ximagebbox` answer as pdfTeX's
-    // primitives; the other queries read their operands (luatex85.sty:56-67) and 0.
+    // class census 2026-09-24). `colorstackinit`, `ximagebbox` and the font queries answer as
+    // pdfTeX's primitives; the other queries read their operands (luatex85.sty:56-67) and 0.
+    // A keyword that is a prefix of another comes after it (`lastximage` read "pages" as text).
     DefMacro!(T_CS!("\\pdffeedback"), None, {
       let keyword = read_keyword(&[
         "lastlink",
         "lastannot",
         "lastobj",
         "lastxform",
-        "lastximage",
         "lastximagepages",
+        "lastximage",
         "retval",
         "colorstackinit",
         "creationdate",
@@ -376,8 +377,8 @@ LoadDefinitions!({
         Some("pageref" | "xformname") => {
           let _ = read_number()?;
         },
-        Some("fontname" | "fontobjnum" | "fontsize") => {
-          let _ = latexml_engine::read_font_ident()?;
+        Some(kind @ ("fontname" | "fontobjnum" | "fontsize")) => {
+          return latexml_engine::pdftex::pdf_font_feedback(kind);
         },
         _ => {},
       }

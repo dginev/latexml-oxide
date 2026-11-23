@@ -1,0 +1,12 @@
+% mechanism: tex_fonts.rs read_font_ident (tex.web §577 `scan_font_ident`): an operand that is no font identifier is
+%   "Missing font identifier"; the token is read again and the null font stands in (`\fontname` "nullfont", its
+%   `\fontdimen2` 0.0pt). Perl's FontDef/Token readers take any token.
+% witness: synthetic (row R PDFOPTSPACE, the read_font_ident sibling)
+% oracle:  pdflatex -no-shell-escape: 2 "! Missing font identifier.", pdftotext "A0.0ptxBnullfont3C"
+% engines: rust=GREEN perl=RED (no error; the operand is taken as the font) (2026-11-23)
+% expect:  2 errors, 0 warnings; <p>A0.0ptxBnullfont3C</p>
+% status:  RED (0 errors, "A0.0ptBfontname not availableC") -> GREEN (pk/PDFPRIM)
+\documentclass{article}
+\begin{document}
+A\the\fontdimen2 xB\fontname 3C
+\end{document}

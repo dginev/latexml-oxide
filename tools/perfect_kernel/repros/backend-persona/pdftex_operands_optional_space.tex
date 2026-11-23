@@ -1,0 +1,25 @@
+% mechanism: pdftex.rs read_object_spec, read_dest_spec, read_action_spec (pdftex.web `scan_action`), `\pdffontattr`:
+%   pdftex.web's <Scan an optional space> after obj/annot `reserveobjnum`, after a dest type, after
+%   `newwindow`/`nonewwindow`; `\pdfdest struct <n>`, `goto struct …`; `\pdffontattr <font> <general text>`; the colour
+%   stack's four actions. The safe twin of pdfcolorstack_action_missing.tex.
+% witness: synthetic (row R PDFOPTSPACE, advisor 2026-11-22: `A\pdf_object_new:n{foo}B` gave "A B"; `\DocumentMetadata`
+%          tagging makes 23 such calls under pdflatex)
+% oracle:  pdflatex -no-shell-escape: 0 errors, pdftotext "ABCDEFGHIJ KLMNOPQ R STUV"
+% engines: rust=GREEN perl=RED (pdfTeX.pool.ltxml:156-171 keeps the space; no \pdfdest, \pdfstartlink or \pdffontattr
+%          reader) (2026-11-23)
+% expect:  0 errors, 0 warnings; <p>ABCDEFGHIJ KLMNOPQ R STUV</p>
+% status:  RED ("A B C D …", "\pdffontattr" undefined) -> GREEN (pk/PDFPRIM)
+\documentclass{article}
+\begin{document}
+\textfont1=\font
+A\pdfobj reserveobjnum B\pdfannot reserveobjnum C\pdfdest name{d} fit D%
+\pdfdest num 5 xyz E\pdfdest struct 1 name{e} fitbh F%
+\pdfstartlink goto file{x.pdf} name{d} newwindow G\pdfendlink H%
+\pdfstartlink goto file{x.pdf} page 2 {/Fit} nonewwindow I\pdfendlink J%
+\pdfstartlink user{/S/URI} K\pdfendlink L%
+\pdfstartlink goto struct num 1 name{d}M\pdfendlink N%
+\pdffontattr\font{/A 1}O\pdffontattr\textfont 1 {/A 1}P%
+\pdfcolorstack0 push{0 g}Q\pdfcolorstack0 pop R\pdfcolorstack0 current S%
+\pdfstartlink goto file{x.pdf} struct{s} name{d}T\pdfendlink U%
+\pdfdest name{f} fitr width 1pt height 2pt V
+\end{document}
