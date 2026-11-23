@@ -238,6 +238,13 @@ fn continuation_sign_after_amsmath_s_empty_ord_is_binary() {
     ("S0.E19.m2", "absent - d"),
     // a sign taking no operand, which no continuation reading parses, is the prefix sign it was (cond-mat/0505096)
     ("S0.E21.m1", "fragments@(+, complex * conj)"),
+    // the first atom of a `\left.`'s list, or after a `\bigl.` (an Open), is unary in TeX (tex.web §728; 0910.4696,
+    // 2003.01925); a `\big(` in the cell before opens no list of this one
+    ("S0.E23.m1", "delimited-)@(+ c + d)"),
+    ("S0.E23.m2", "delimited-)@(+ c + d)"),
+    ("S0.E25.m1", "delimited-)@(absent + c)"),
+    ("S0.E25.m2", "delimited-)@(absent + c)"),
+    ("S0.E26.m1", "+ c"),
   ] {
     assert!(
       xml.contains(&format!("text=\"{text}\" xml:id=\"{id}\"")),
@@ -280,6 +287,23 @@ fn continuation_sign_after_amsmath_s_empty_ord_is_binary() {
     ("S0.Ex3Xa.m2", "\\displaystyle+c", binary("+", "c")),
     ("S0.E19.m1", "\\displaystyle+c", binary("+", "c")),
     ("S0.E19.m2", "\\displaystyle-d", binary("−", "d")),
+    (
+      "S0.E23.m1",
+      "\\displaystyle\\quad\\left.+c+d\\right)",
+      format!(
+        "<mrow><mrow>{}<mo>+</mo><mi>d</mi></mrow><mo>)</mo></mrow>",
+        unary("+", "c")
+      ),
+    ),
+    (
+      "S0.E25.m1",
+      "\\displaystyle+c\\big)",
+      format!(
+        r#"<mrow>{}<mo maxsize="1.200em" minsize="1.200em">)</mo></mrow>"#,
+        binary("+", "c")
+      ),
+    ),
+    ("S0.E26.m1", "\\displaystyle\\bigl.+c", unary("+", "c")),
   ] {
     assert_math(&html, id, tex, &body);
   }
@@ -307,5 +331,17 @@ fn continuation_sign_after_amsmath_s_empty_ord_is_binary() {
       binary("+", "c")
     )),
     "{html}"
+  );
+  // a continuation sign no stream parses warns under the ADDOP it is, not the lexer's internal `CELLADDOP`: CorTeX
+  // groups the warnings by these names
+  let (log, _) = super::perfect_kernel_batch46::convert(
+    "\\documentclass{article}\\usepackage{amsmath}\\begin{document}\\begin{align} a &= b \\\\ &- ! \\end{align}\\end{document}",
+    true,
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 1, "{log}");
+  assert!(
+    log.contains("Warning:unparsed_math:ADDOP_POSTFIX "),
+    "{log}"
   );
 }

@@ -3844,8 +3844,12 @@ fn token_type_footprint(tokens: &str) -> String {
   let mut out = String::new();
   let mut truncated = false;
   for token in tokens.split_whitespace() {
-    // (an EXPECTATION keys as the OPFUNCTION it is, `semantics::lexeme_category`: stable CorTeX buckets)
-    let ty = lexeme_category(token.split(':').next().unwrap_or(token));
+    // (an EXPECTATION keys as the OPFUNCTION it is, `semantics::lexeme_category`: stable CorTeX buckets; a
+    // continuation cell's sign as the ADDOP it is, `util::continues_the_cell_before`)
+    let ty = match lexeme_category(token.split(':').next().unwrap_or(token)) {
+      "CELLADDOP" => "ADDOP",
+      ty => ty,
+    };
     // First type always lands (a lone >budget type is backstopped by CorTeX's 200-char cap); every
     // subsequent one must fit the budget WITH its separator, else we stop and mark `_cntd`.
     if !out.is_empty() && out.len() + 1 + ty.len() > BUDGET {

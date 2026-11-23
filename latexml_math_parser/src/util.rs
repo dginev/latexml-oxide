@@ -56,8 +56,12 @@ pub fn node_to_grammar_lexemes_from(
     }
   }
   // amsmath sets an empty Ord before a right-hand alignment cell (`\displaystyle{{}##}`): a sign opening a cell that
-  // continues the one before it is binary there, lexed `CELLADDOP` — its left operand absent (issue 991).
+  // continues the one before it is binary there, lexed `CELLADDOP` — its left operand absent (issue 991); not as the
+  // first atom of a `\left.`'s list (`AFTER_NULL_DELIMITER`).
   if lexemes.first().is_some_and(|l| l.starts_with("ADDOP:"))
+    && !nodes
+      .first()
+      .is_some_and(|sign| sign.has_attribute(AFTER_NULL_DELIMITER))
     && continues_the_cell_before(mathnode, &nodes)
   {
     lexemes[0] = lexemes[0].replacen("ADDOP:", "CELLADDOP:", 1);
@@ -1388,7 +1392,7 @@ fn continues_an_open_integral(mathnode: &Node) -> bool {
 /// of an empty left cell and that cell), lexed as `nodes` and opening with a sign, continue the cell before it? amsmath sets an empty Ord before the cells its alignment marks `_ord_cells`
 /// (`\displaystyle{{}##}`: the right cell of each pair, amsmath.sty:2347-2354 `\align@preamble`, :1483-1486
 /// `{aligned}`, :2424-2425 `{split}`; every line of a `{multline}`, :2580), which makes the sign binary in TeX; Perl's
-/// templates drop it (KNOWN_PERL_ERRORS #1319). User ruling 2026-11-23: the cell continues when the left cell of its pair
+/// templates drop it (KNOWN_PERL_ERRORS #1321). User ruling 2026-11-23: the cell continues when the left cell of its pair
 /// is empty and the formula has no relation of its own (`&+c`; `&-\Delta u=f` starts a statement), or the left cell ends
 /// in an operand (`a=b&+c`), not a relation or an operator (`B=&-C`); a multline's line after the first always does.
 /// Issue 991; 1308.2969, 2512.12866, 2306.10612, 1612.06544.
@@ -2329,6 +2333,12 @@ fn punct_followed_by_wide_space(node: &Node) -> bool {
   }
 }
 
+/// Marks a list's first node when only hints precede it and one is a null delimiter (`\lx@delimiterdot`'s XMHint, with
+/// no width or name) that is no Close (`\bigr.`): the first atom of a `\left.`'s list, or one after a `\bigl.`. A Bin
+/// there is an Ord (tex.web §728: after a left delimiter or an Open), amsmath's `{}` before the cell notwithstanding
+/// (`&\quad\left. + c\right)`, 0910.4696, 2003.01925; `continues_the_cell_before`). Internal, never serialized.
+pub(crate) const AFTER_NULL_DELIMITER: &str = "_after_null_delimiter";
+
 /// Filter XMHint nodes from a list of child nodes, transferring their spacing
 /// info to adjacent tokens as `lpadding`/`rpadding` attributes (Perl MathParser.pm
 /// `filter_hints` L417-491). XMHints are also unlinked from the XML tree so they won't be
@@ -2353,12 +2363,18 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
   let mut last_hint_for: Vec<Option<usize>> = Vec::new(); // parallel to prefiltered
   // Perl's `_phantom`, parallel to prefiltered
   let mut phantom: Vec<bool> = Vec::new();
+  // (a null delimiter before the list's first node, `AFTER_NULL_DELIMITER`)
+  let mut null_delimiter_first = false;
 
   for mut node in nodes {
     if node.get_type() != Some(NodeType::ElementNode) {
       continue;
     }
     if name_is(&node, "XMHint") {
+      null_delimiter_first |= prefiltered.is_empty()
+        && node.get_attribute("width").is_none()
+        && node.get_attribute("name").is_none()
+        && node.get_attribute("role").as_deref() != Some("CLOSE");
       if let Some(width_str) = node.get_attribute("width") {
         let pts = get_xmhint_spacing(&width_str);
         if pts != 0.0 {
@@ -2394,6 +2410,9 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
       last_hint_for.push(None);
       phantom.push(false);
     } else {
+      if null_delimiter_first && prefiltered.is_empty() {
+        let _ = node.set_attribute(AFTER_NULL_DELIMITER, "1");
+      }
       let mut ph = false;
       if pending_space != 0.0 {
         let _ = node.set_attribute("lpadding", &format!("{:.1}pt", pending_space));

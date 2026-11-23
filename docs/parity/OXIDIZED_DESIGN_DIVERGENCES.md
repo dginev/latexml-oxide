@@ -24131,7 +24131,7 @@ empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_
   (:2424-2425), and before every `{multline}` line (:2580; mathtools' `{multlined}`, mathtools.sty:652):
   `$\displaystyle{{}##}$`. A `+`, `-`, `\pm` or `\mp` opening such a cell is a binary operator (`&+ c`, `&\quad - d`:
   \medmuskip on both sides). `{gather}` and `{eqnarray}` cells have no `{}`: their sign is unary.
-- Perl: its templates drop the `{}` (amsmath.sty.ltxml:221, :461, :588; KNOWN_PERL_ERRORS #1319), so the sign is a
+- Perl: its templates drop the `{}` (amsmath.sty.ltxml:221, :461, :588; KNOWN_PERL_ERRORS #1321), so the sign is a
   prefix: `plus(c)`, `<mrow><mo>+</mo><mi>c</mi></mrow>`, set tight by MathJax and Chrome; `&\quad - d` loses the
   `\quad`, which the spacing walk applies only between two neighbours of a row.
 - Ours: the bindings mark the `{}`-prefixed columns on the alignment with an internal attribute, `_ord_cells` (`odd` on
@@ -24148,10 +24148,17 @@ empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_
 - The gate (user ruling 2026-11-23): the cell continues when the left cell of its pair is empty and the cell has no
   top-level relation of its own (`&+ c`; `&-\Delta u = f` starts a statement and stays unary), or the left cell ends
   in an operand (`a = b &+ c`); a left cell ending in a relation or an operator keeps the sign unary (`B =& - C`); a
-  multline line after the first always continues, its first line never does. In TeX all of these are binary; the
-  unary readings keep the statement a reader sees.
+  multline line after the first always continues, its first line never does. In TeX all of these are binary (but the
+  first atom of a `\left.`'s list, below); the unary readings keep the statement a reader sees.
+- Not a continuation in TeX either: a sign that is the first atom of a `\left.`'s list (`&\quad\left. + c + d\right)`,
+  0910.4696, 2003.01925) or follows a `\bigl.` is unary — a Bin after a left delimiter or an Open is an Ord (tex.web
+  §728), and amsmath's `{}` is outside that list (pdflatex: `${}\left.+c\right)$` sets the `+` tight). `filter_hints`
+  marks a list's first node after a null delimiter (`util::AFTER_NULL_DELIMITER`, an internal attribute) before it
+  unlinks the hint, and the lexer leaves that sign an ADDOP. A `\big(` opened in the cell before is no list of the cell:
+  `&+ c\big)` is binary. The unparsed-math warning keys the sign as the `ADDOP` it is (`unparsed_math:ADDOP_POSTFIX`).
 - Not covered: a lone `&+` (a one-token cell takes no grammar parse) stays an `<mo>`; a leading `&\quad g` with no
-  operator still loses its `\quad` (the same row-edge rule).
+  operator still loses its `\quad` (the same row-edge rule); a `\big.` before the sign (an Ord in TeX, so binary) leaves
+  the same bare null-delimiter hint as `\left.` and reads unary.
 
 **Guard**: `perfect_kernel_batchfix991::continuation_sign_after_amsmath_s_empty_ord_is_binary`
 (`tools/perfect_kernel/repros/math-parse/continuation_sign_is_binary.tex`), with the readings in the goldens
