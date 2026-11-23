@@ -87,7 +87,8 @@ fn lstinline_runs_the_init_deinit_bracket() {
 
 /// boxes-groups/realboxes_colorbox_and_fcolorbox_call_the_color_internals: realboxes' `\Colorbox` and `\Fcolorbox`
 /// call xcolor's `\color@box`/`\color@fb@x` (realboxes.sty:264-279), bound as the user-level boxes. Before: an
-/// undefined-macro Error each, the colour names spilled as text.
+/// undefined-macro Error each, the colour names spilled as text. Known residual, not asserted: the background colour
+/// is lost, since the collected box is digested before `\colorbox` sets its colour (row R REALBOXBG).
 #[test]
 fn realboxes_colorbox_and_fcolorbox_call_the_color_internals() {
   if let Some(missing) = RAW[..2].iter().find(|p| !kpse_has(p)) {

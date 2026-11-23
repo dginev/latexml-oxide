@@ -23914,4 +23914,9 @@ IndexNotation.tex:148-156) closes its collected box (collectbox.sty:66-75) in th
 listing nested a group deeper, `Fatal:Stomach:Recursion` at the 200-deep stack (2411.07667: 7 Errors, 2 Fatals,
 3604 words → 0 Errors, 10904 words). **Guards** `perfect_kernel_batchlistinline::lstinline_runs_the_init_deinit_bracket`
 (repros listings-algorithms/lstinline_deinit_hook_closes_a_colorbox, lstinline_deinit_hook_every_entry_point,
-lstinline_plain_shapes_stay).
+lstinline_plain_shapes_stay). The same batch binds color.sty:158 `\color@box` and xcolor.sty:821/824 `\color@fb@x` as
+`\colorbox`/`\fcolorbox` (Perl defines neither), so realboxes' `\Colorbox`/`\Fcolorbox` keep their text; their
+background colour is still lost, the collected box being digested before `\colorbox` applies it (row R REALBOXBG;
+guard `perfect_kernel_batchlistinline::realboxes_colorbox_and_fcolorbox_call_the_color_internals`). `\lst@Init` runs
+before the delimiter is read, where TeX reads it first (listings.sty:1951-1952); only a hook that changes the
+delimiter's catcode could tell.
