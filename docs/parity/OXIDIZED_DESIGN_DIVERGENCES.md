@@ -6501,6 +6501,20 @@ diagnostics are written as before, and a Fatal still propagates after a commit. 
 drop is noted as `Info:ignore:\maketitle`. The 10 deposit repros are unchanged.
 Guards `class_maketitle_replay_that_errors_is_dropped`, `error.rs`
 `diagnostics_hold_commits_or_discards_lines_and_counts_together`.
+An `\@maketitle` that takes an argument, under a replayed class `\maketitle`, is left to the replay, which leaves it
+live instead of `\relax` (iaus.cls:824-868: `\maketitle` → `\m@ketitleone[n]` → `\@maketitle{n}`; iaus.cls is loaded
+by ~1,665 arXiv papers, 0801.1806). Deposited as `{…\@maketitle}`, it read the closing brace as its argument, so the
+group stayed open to `\end{document}` (Warning "open groups"). Our reader returns a lone `}` as an argument, as Perl's
+does (Gullet.pm:732-744), where TeX raises "Argument of … has an extra }" (tex.web:8069-8080). Relaxed in the replay,
+it left the class's argument "n" in the text. Now the class's own call supplies the argument, with the fields emptied
+as the deposit had them. Where nothing replays it (a document's `\def\@maketitle#1{…}` under article), or the replay
+is dropped for an error, the deposit runs it with an `{}` per undelimited mandatory parameter (an optional one reads
+none; one with a delimited parameter is not deposited). After a dropped replay it runs `\@maketitle` as it was before
+the replay (`\lx@saved@maketitle`, restored in the deposit's group), as pdflatex ran it before the class switched it
+off (iaus.cls:847 `\global\let\@maketitle\relax`). A replay that typeset nothing gets no deposit: its class
+`\maketitle` may never call `\@maketitle`, and pdflatex then prints none of it. The deposit, the replay and the store
+check read one predicate (sect05.rs `maketitle_left_to_replay`). Guard
+`perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group`.
 A K11-rerouted store (`frontmatter_stores.rs`) is nulled in the deposit, so a class default the document never replaced would reach neither the frontmatter nor the body. lion-msc.cls:196-203 is the witness: a default affiliation and address that `\@maketitle` prints. The kernel `\maketitle` therefore hands each unset, non-blank default to its frontmatter setter first (`\lx@store@defaults` in `\lx@maketitle@body`, batch 56ip). It runs only at `\maketitle`, where pdflatex prints the default. A setter the document does call replaces the default, and a second `\maketitle` finds the store set. The list of rerouted stores accumulates across a raw class and a raw class it `\LoadClass`es. Guard `class_census::k11_class_default_store`.
 A K11 store that annotates a creator (an affiliation, address, e-mail, ORCID) or makes one (an
 editor, a speaker) is read once, at `\maketitle`, where the author list exists (`harvest_stores`;

@@ -1,0 +1,17 @@
+% mechanism: an `\@maketitle` whose parameter is delimited (`\def\@maketitle#1.{…}`) is left to the replay of the
+%   class's `\maketitle`; when that replay is dropped (here it raises an error, its title read as empty), the deposit
+%   made after it skips a delimited `\@maketitle` (no argument the deposit supplies can end it), so its text is lost
+% witness: synthetic (MTARG review round 2, S2); the delimited sibling of 0801.1806's `\@maketitle{n}` (iaus.cls:824-868)
+% oracle:  pdflatex 0 errors: "T A Subtitle Written Here Hi" (side file mtargdelim.cls)
+% engines: rust 0.8.0-rc2: the subtitle kept; MTARG: the subtitle lost, 0 Warnings: only an Info
+%          `frontmatter:class_text` counts it, as the class's own text
+% expect:  0 errors 0 Warnings; the title once; "A Subtitle Written Here" in the title page; the body paragraph "Hi"
+% status:  RED (MTARG)
+% moves:   row R MTARGDELIM
+% preload: ar5iv.sty
+\documentclass{mtargdelim}
+\title{T}
+\begin{document}
+\maketitle
+Hi
+\end{document}
