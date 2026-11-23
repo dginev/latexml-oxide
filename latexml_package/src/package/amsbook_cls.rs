@@ -58,10 +58,11 @@ LoadDefinitions!({
   ams_support_sty::amsart_class_internals()?;
 
   // Frontmatter/mainmatter/backmatter — Perl L46-56 (no-ops); amsbook.cls:944-948 switches the
-  // page numbering, which `\thepage` shows (roman, then arabic).
+  // page numbering, which `\thepage` shows (roman, then arabic). amsbook.cls:946-948 `\backmatter` keeps
+  // the chapters numbered, but its matter belongs to no part, as book's (OXIDIZED_DESIGN_DIVERGENCES #1147).
   DefMacro!("\\frontmatter", "\\pagenumbering{roman}");
   DefMacro!("\\mainmatter", "\\pagenumbering{arabic}");
-  def_primitive_noop("\\backmatter")?;
+  DefMacro!("\\backmatter", "\\par\\lx@begin@backmatter");
 
   // List formatting — Perl L58-72
   DefMacro!("\\@listI", "\\leftmargin\\leftmargini\\parsep 4.5\\p@ plus2\\p@ minus\\p@\\topsep 8.5\\p@ plus3\\p@ minus4\\p@\\itemsep4.5\\p@ plus2\\p@ minus\\p@");

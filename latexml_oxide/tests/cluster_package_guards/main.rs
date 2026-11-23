@@ -421,6 +421,7 @@ mod perfect_kernel_batchabsfix;
 mod perfect_kernel_batchalgo397;
 mod perfect_kernel_batchamsppt;
 mod perfect_kernel_batchaut1;
+mod perfect_kernel_batchbackmatter;
 mod perfect_kernel_batchbc1;
 /// BLOCKPLACE: a note its binding declares printed under the names sits there, before the abstract; OD #1074.
 mod perfect_kernel_batchblockplace;

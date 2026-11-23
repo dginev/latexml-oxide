@@ -1,0 +1,22 @@
+% witness: row R BACKMATTERPART (DG ruling 2026-11-23); amsbook.cls:946-948 `\backmatter` (a `\cleardoublepage`)
+%          after an `\appendix` in a `\part`: amsbook binding's own `\backmatter` (no book.cls path)
+% oracle:  pdflatex 0 errors; "Part 1 A", "Chapter 1 x", "Appendix A App", "B Afterword", "Bibliography" (the
+%          back matter's chapters still step the appendix counter; `\let\chaptername\relax` drops only the word)
+% engines: rust INT081C and perl = the afterword (ltx:appendix B) and the bibliography inside ltx:part A
+% expect:  0 errors, 0 warnings; document > [part A > (chapter x, appendix App), appendix B Afterword, bibliography]
+% status:  RED (INT081C) -> GREEN (BACKMATTER)
+\documentclass{amsbook}
+\begin{document}
+\part{A}
+\chapter{x}
+X \cite{k}.
+\appendix
+\chapter{App}
+Z.
+\backmatter
+\chapter{Afterword}
+W.
+\begin{thebibliography}{9}
+\bibitem{k} K. Ref.
+\end{thebibliography}
+\end{document}

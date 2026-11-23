@@ -24392,3 +24392,53 @@ assigns the core's `no_number_sections` (as book.cls's `\frontmatter` does), so 
 reference shows its target's title. KNOWN_PERL_ERRORS #1330; to be asked of Bruce Miller (DG 2026-11-24).
 
 **Guard**: `perfect_kernel_batchcliwire::nonumbersections_unnumbers_the_sections`.
+
+**Perl behavior**: `InputDefinitions('babel', noltxml => 1)` (babel.sty.ltxml, babel.def.ltxml, expl3.sty.ltxml,
+xparse.sty.ltxml, l3keys2e.sty.ltxml) finds the file by `FindFile`, the document's directory first (Package.pm:2109-2139),
+so a paper's shipped copy is read.
+**pdflatex (TL 2025)**: reads the copy too, and fails on an old one. babel 3.9l's babel.sty:52-57 / babel.def:63-66
+`\ifx\bbl@version\bbl@tempa\else\input switch.def\fi` reads TL's switch.def, now `\let\bbl@onlyswitch\@empty \input
+babel.def`, which finds the copy again: "TeX capacity exceeded [text input levels=15]". expl3 of 2012's l3bootstrap.sty
+:201-241 wraps `\@pushfilename`/`\@popfilename` over expl3.ltx:180-186's own wrap and resets `\l__expl_status_stack_tl`
+(:233-234): "Missing number", then input stack overflow.
+**Rust behavior**: the five bindings name their module (`InputDefinitionOptions::format_module`: a marker the format
+defines, `\bbl@version` or `\c__kernel_expl_date_tl`, and the module's tree directory). While the format holds it —
+the marker is a definition of the dump or a raw format file, not of a file or the document (`format_holds`) — the
+binding's raw read takes the tree's file (`format_module_path`: kpathsea by `<dir>/<file>`, past a copy in the current
+directory) in place of any copy the request found: the bare name's, `\usepackage{dir/babel}`'s, or a renamed copy a
+declaration routes there (#1118). Each skipped copy is one `Warning:shipped_copy:<file>` ("a module the LaTeX format
+holds, is not read; the format's own is"); a copy byte-identical to the tree's is read silently. The set is closed (DG
+ruling 2026-11-23): other stale shipped packages (pgf 2.10, movie15, xtemplate) stay honest Errors. Where the format
+does not hold the module (`LATEXML_NODUMP`, whose expl3 is the binding's own reload; a legacy-TL dump whose format lacks
+`\c__kernel_expl_date_tl`, before expl3 joined the format in 2020) the copy is read, as its era read it. babel's marker
+is different: every era's hyphen.cfg defines `\bbl@version` (babel 3.9's own version test relies on it), so under a
+legacy dump the gate still holds and that era's tree babel is read, silently where the copy is the era's own. A copy the
+author edited is replaced like a stale one, loudly (the Warning and the Errors of what it defined; row R FMTOWNEDIT).
+**Why**: DG ruling 2026-11-23, "we want to successfully convert older papers when part of arXiv, even if they encounter
+critical issues on TeX Live 2025". Ten witnesses from Fatal to non-Fatal: 1511.02101, 1602.08358, 1601.02763,
+1211.3724, 1304.5586 error-free; 1408.3933 (9 E, `Extra \endcsname`), 1410.2241 (6 E, shipped movie15), 1511.05750
+(2 E, fnpct), 1207.4642 (288 E, shipped pgf 2.10) and 1211.6751 (5 E, shipped xtemplate/xfrac/pgf) keep their own.
+**Guards** `perfect_kernel_batchltxown::{a_shipped_babel_3_9l_is_not_read, shipped_expl3_xparse_l3keys2e_are_not_read,
+a_copy_identical_to_the_trees_is_read_silently}` (repros loader/format_modules/babel_copy, expl3_copy).
+
+### 1147. `\backmatter` closes the open part and chapter (BACKMATTERPART)
+
+**Rule** (DG ruling 2026-11-23). The back matter belongs to no part: `\backmatter` closes the open `ltx:part`,
+`ltx:chapter` and `ltx:appendix` where a new `\part` would (`find_insertion_point("ltx:part")`), so the back-matter
+chapters, the bibliography and the index are the parts' siblings.
+- Perl: book.cls.ltxml:121 (amsbook.cls.ltxml:56; svmult.cls.ltxml inherits book's) a no-op, so they nest in the last part
+  (KNOWN_PERL_ERRORS #1320); split, `bib.html`'s title ended "‣ Part II …" and only that part's pages carried the
+  Bibliography/Index buttons (KEPT_RELATIONS, #1134).
+- TeX: book.cls:292-299 `\backmatter` is `\cleardoublepage\@mainmatterfalse`; the running heads leave the part and the
+  contents list the back matter after it.
+- Implementation: sect04.rs `\lx@begin@backmatter` (a no-op where a part cannot be opened, inside a float or a
+  minipage), called after a `\par` by the `\backmatter` of book_cls.rs, amsbook_cls.rs and svmult_cls.rs (svmult and
+  svmono). A class read raw (memoir, scrbook) keeps its own `\backmatter`, which does not close. `\frontmatter` and
+  `\mainmatter` need nothing: the next `\part` or `\chapter` closes the front matter.
+- Upstream: offered to Perl as a patch.
+
+**Guards**: `perfect_kernel_batchbackmatter::{book_backmatter_closes_the_last_part,
+amsbook_backmatter_closes_the_appendix_and_part}`, `cluster_xslt_split::split_nav_relations::
+split_backmatter_pages_belong_to_no_part`; repros `sectioning-frontmatter/{book_backmatter_closes_the_last_part,
+book_backmatter_without_parts_closes_the_chapter, book_appendix_then_backmatter_closes_the_part,
+amsbook_backmatter_closes_the_appendix_and_part, svmono_backmatter_closes_the_last_part}`.
