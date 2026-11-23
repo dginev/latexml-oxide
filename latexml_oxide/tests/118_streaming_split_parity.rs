@@ -345,7 +345,10 @@ fn cli_split_streams_by_default_and_unsplit_stays_eager() {
   // The core serialized its result into the handoff file itself: no document-sized String was built only to be
   // written there (issue 777).
   assert!(
-    streamed_log.contains("staged to site/latexml-post-handoff-")
+    // The path is the platform's (`site\latexml-post-handoff-…` on Windows).
+    streamed_log
+      .replace('\\', "/")
+      .contains("staged to site/latexml-post-handoff-")
       && streamed_log.contains(".xml by the core serializer")
       && !streamed_log.contains("could not"),
     "the split run's core result must reach post through the file:\n{streamed_log}"
@@ -409,7 +412,10 @@ fn cli_bare_dest_stages_beside_the_destination() {
     "stderr:\n{stderr}"
   );
   assert!(
-    stderr.contains("staged to ./latexml-post-handoff-")
+    // The path is the platform's (`.\latexml-post-handoff-…` on Windows).
+    stderr
+      .replace('\\', "/")
+      .contains("staged to ./latexml-post-handoff-")
       && stderr.contains("streaming split engaged"),
     "the handoff must be staged in the destination's directory and streamed:\n{stderr}"
   );

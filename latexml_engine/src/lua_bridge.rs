@@ -1104,8 +1104,13 @@ fn exec_framed(chunk: &str) -> Framed {
             let status = ended
               .and_then(|mut p| p.child.take())
               .and_then(|child| child.finish(std::time::Duration::from_millis(500)));
+            // The code is spelled the same on every platform (`ExitStatus`'s Display says "exit code: 3" on
+            // Windows, "exit status: 3" on Unix); a Unix signal keeps Display's "signal: 11 (SIGSEGV)".
             match status {
-              Some(status) => format!("the texlua interpreter ended ({status})"),
+              Some(status) => match status.code() {
+                Some(code) => format!("the texlua interpreter ended (exit status: {code})"),
+                None => format!("the texlua interpreter ended ({status})"),
+              },
               None => format!("the texlua interpreter ended ({e})"),
             }
           },
