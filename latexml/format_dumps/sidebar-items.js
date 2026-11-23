@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["ensure_format_dumps"]};
+window.SIDEBAR_ITEMS = {"fn":["cancel_builds_on_interrupt","ensure_format_dumps"]};
