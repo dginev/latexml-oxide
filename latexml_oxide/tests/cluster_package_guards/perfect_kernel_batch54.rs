@@ -864,9 +864,52 @@ fn a_put_in_a_tikzpicture_closes_before_the_next_path() {
   assert_eq!(xml.matches("<svg:svg").count(), 2, "{xml}");
   assert_eq!(xml.matches("<svg:path").count(), 6, "{xml}");
   assert_eq!(xml.matches("<svg:foreignObject").count(), 6, "{xml}");
-  for label in ["a1", "a2", "a3", "b1", "b2", "b3"] {
-    assert!(xml.contains(&format!("tex=\"{label}\"")), "{label}: {xml}");
-  }
+  // In order: each path (bare, or in its colour group) then its `\put`, all
+  // children of the outer `svg:g`; the labels in source order.
+  let (path, group, fo) = ("svg:path", "svg:g", "svg:foreignObject");
+  assert_eq!(
+    outer_group_children(&xml),
+    [[path, fo, path, fo, path, fo], [
+      group, fo, group, fo, group, fo
+    ]],
+    "{xml}"
+  );
+  let labels: Vec<&str> = xml
+    .split("<Math ")
+    .skip(1)
+    .filter_map(|m| m.split("tex=\"").nth(1)?.split('"').next())
+    .collect();
+  assert_eq!(labels, ["a1", "a2", "a3", "b1", "b2", "b3"], "{xml}");
+}
+
+/// The element names of the direct children of the outer `svg:g` (the first
+/// one in each `svg:svg`), in document order.
+fn outer_group_children(xml: &str) -> Vec<Vec<&str>> {
+  xml
+    .split("<svg:svg")
+    .skip(1)
+    .map(|svg| {
+      let group = &svg[svg.find("<svg:g").unwrap_or(0)..];
+      let (mut depth, mut children) = (0, vec![]);
+      for tag in group.split('<').skip(1) {
+        let head = tag.split('>').next().unwrap_or("");
+        if head.starts_with('/') {
+          depth -= 1;
+          if depth == 0 {
+            break;
+          }
+        } else {
+          if depth == 1 {
+            children.push(head.split([' ', '/']).next().unwrap_or(""));
+          }
+          if !head.ends_with('/') {
+            depth += 1;
+          }
+        }
+      }
+      children
+    })
+    .collect()
 }
 
 /// End-to-end hobby curve: the raw `hobby.code.tex` load (stub retired) plus
