@@ -833,6 +833,42 @@ fn pgf_bare_path_inside_phantom_stays_in_its_box() {
   assert_eq!(xml.matches("<svg:svg").count(), 2, "{xml}");
 }
 
+/// A `\put` in a tikzpicture auto-opens an `ltx:picture` (in an auto-opened
+/// `ltx:p` and `svg:foreignObject`); the next path closes that chain back to
+/// the `svg:g` and is its sibling, as a `\put` is a zero-size box. rc2 opened
+/// an `svg:svg` in the picture instead, one level per `\put` (1909.06819: 214
+/// deep, `Fatal:post:convert`). The `[blue]` path goes through the group
+/// opener (Perl nests there, DIVERGENCES #1138), the bare one through the path
+/// emitter (Perl flat). The phantom guard above keeps its own `svg:svg`.
+#[test]
+fn a_put_in_a_tikzpicture_closes_before_the_next_path() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/tikz_put_closes_before_next_path.tex"
+  );
+  let (stderr, xml) = convert(tex, false);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let (mut depth, mut max_depth) = (0, 0);
+  for tag in xml.split('<').skip(1) {
+    if tag.starts_with("/picture>") {
+      depth -= 1;
+    } else if tag.starts_with("picture ") && !tag.split('>').next().unwrap_or("").ends_with('/') {
+      depth += 1;
+      max_depth = max_depth.max(depth);
+    }
+  }
+  assert_eq!(max_depth, 2, "{xml}");
+  // Two outer pictures, each with one `svg:svg`, three paths and three `\put`
+  // pictures, every one in its own foreignObject.
+  assert_eq!(xml.matches("<picture ").count(), 8, "{xml}");
+  assert_eq!(xml.matches("<svg:svg").count(), 2, "{xml}");
+  assert_eq!(xml.matches("<svg:path").count(), 6, "{xml}");
+  assert_eq!(xml.matches("<svg:foreignObject").count(), 6, "{xml}");
+  for label in ["a1", "a2", "a3", "b1", "b2", "b3"] {
+    assert!(xml.contains(&format!("tex=\"{label}\"")), "{label}: {xml}");
+  }
+}
+
 /// End-to-end hobby curve: the raw `hobby.code.tex` load (stub retired) plus
 /// l3fp's comparison chain-detect (`\__fp_parse_compare_auxi:NNNNNNN`,
 /// expl3-code.tex:17662 — the backquote of a detokenized backslash must

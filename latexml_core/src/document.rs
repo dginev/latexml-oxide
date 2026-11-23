@@ -3374,6 +3374,8 @@ impl Document {
         // too): an `{algorithmic}` set in `\ttfamily` (WileyNJDv5.cls:6953 `\algrenewcommand\ALG@beginalgorithmic
         // {\ttfamily}`) put the space before its first `\item` straight into the `ltx:listing`, whose model is
         // `listingline*` (2608.15322, 2602.03247, 2607.19926: schema-invalid).
+        // Nor in the `ltx:picture`/`ltx:g` drawing model, as in Perl: a `\ ` between `\psline`s opened an
+        // `ltx:text` in which the next object auto-opened a picture, 403 deep (0905.4216 `\PutGrid`).
         let explicit_space = node_type == Some(NodeType::ElementNode)
           && !text.is_empty()
           && can_contain_node_somehow(&self.node, "#PCDATA").is_some()
@@ -3383,7 +3385,7 @@ impl Document {
                 .is_some_and(|n| n.to_string() == "space")
             }))
           && !arena::with(get_node_qname(&self.node), |qname| {
-            qname.starts_with("svg:")
+            qname.starts_with("svg:") || qname == "ltx:picture" || qname == "ltx:g"
           });
         if !explicit_space {
           return Ok(None);

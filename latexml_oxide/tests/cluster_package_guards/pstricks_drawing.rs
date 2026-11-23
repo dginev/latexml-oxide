@@ -362,3 +362,51 @@ fn pstricks_macro_colour_keys_in_tabularx_cells() {
         </tr>"##,
   );
 }
+
+/// A control space `\ ` between objects is whitespace where the drawing model
+/// takes no text, dropped as Perl drops it (Document.pm:747-749): the lines
+/// stay siblings in ONE picture, as without the spaces. rc2 kept it as an
+/// `ltx:text` (the DIVERGENCES #47 keep), and each next object auto-opened a
+/// picture inside it: 403 deep in 0905.4216 (`\PutGrid`), whose XSLT then
+/// failed (`Fatal:post:convert`). The origin form puts the body in an
+/// `ltx:g`, the second element the keep must skip.
+#[test]
+fn a_control_space_between_objects_keeps_the_picture_flat() {
+  if !check_requirements(loads::PSTRICKS) {
+    return;
+  }
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/pspicture_control_space_stays_flat.tex"
+  );
+  let flat = r##"<picture fill="none" height="85.36pt" stroke="none" unitlength="28.45pt" width="85.36pt" xml:id="p1.pic1">
+      <line fill="none" points="0,0 39.37,39.37" stroke="black" stroke-width="0.8"/>
+      <line fill="none" points="0,0 39.37,78.74" stroke="black" stroke-width="0.8"/>
+      <line fill="none" points="0,0 39.37,118.11" stroke="black" stroke-width="0.8"/>
+    </picture>"##;
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(&xml, "picture", &[], flat);
+  assert_eq!(xml.matches("<picture").count(), 1, "{xml}");
+  // The safe twin, without the control spaces, is the same picture.
+  let (stderr, xml) = convert(&tex.replace("\\ ", "").replace(" \\\n", "\n"), true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_element(&xml, "picture", &[], flat);
+  // Under an origin the objects sit in the picture's `ltx:g`.
+  let (stderr, xml) = convert(&tex.replace("(0,0)(3,3)", "(-1,-1)(3,3)"), true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "picture",
+    &[],
+    r##"<picture fill="none" height="113.81pt" origin-x="-28.45pt" origin-y="-28.45pt" stroke="none" unitlength="28.45pt" width="113.81pt" xml:id="p1.pic1">
+      <g transform="translate(39.37,39.37)">
+        <line fill="none" points="0,0 39.37,39.37" stroke="black" stroke-width="0.8"/>
+        <line fill="none" points="0,0 39.37,78.74" stroke="black" stroke-width="0.8"/>
+        <line fill="none" points="0,0 39.37,118.11" stroke="black" stroke-width="0.8"/>
+      </g>
+    </picture>"##,
+  );
+  assert_eq!(xml.matches("<picture").count(), 1, "{xml}");
+}
