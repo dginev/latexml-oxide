@@ -1,0 +1,16 @@
+% witness: 1909.06819 (1909.06819.tex:351-356: `\draw …[blue]; \put(-18,-50){$…$}` in a nested `\foreach`; 214 deep,
+%          `Fatal:post:convert` XSLT depth)
+% oracle:  pdflatex 0 errors (each `\put` a zero-size box beside the paths); perl 0 errors: the bare-path picture flat,
+%          the [blue] one nested (pgfsys-latexml.def.ltxml:392-398 opens an `svg:svg` in the `\put`'s picture)
+% engines: rust 0.8.0-rc2: 0 errors, both nested `picture>svg:svg>…>foreignObject>p>picture` per `\put`
+%          (`ensure_svg_context` guards the path emitters and the group opener alike)
+% expect:  0 errors, every path a sibling in the outer `svg:g`, each `\put` closed in its own foreignObject:
+%          `ltx:picture` depth 2
+% status:  RED (0.8.0-rc2) -> GREEN (PICNEST, DIVERGENCES #1138: the auto-opened chain up to the `svg:g` is closed)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}\foreach\x in {1,2,3}{\draw (0,0) -- (\x,1); \put(-18,-50){$a\x$}}\end{tikzpicture}
+
+\begin{tikzpicture}\foreach\x in {1,2,3}{\draw (0,0) -- (\x,1)[blue]; \put(-18,-50){$b\x$}}\end{tikzpicture}
+\end{document}

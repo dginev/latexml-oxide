@@ -124,11 +124,27 @@ fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
 /// allowed in ltx:block`). The same guard on the path emitters closes that
 /// gap — pmdraw manual (`vertices top phantom`, pmdraw.sty:56-66
 /// `\phantom{\draw …}`): 64 errors → 0. The opened `svg:svg` is not closed
-/// by the caller (`_autoclose`).
+/// by the caller (`_autoclose`). An AUTO-opened chain up to an `svg:` group (a
+/// `\put`'s picture, `ltx:p`, foreignObject) is closed instead, as Perl's
+/// comment says ("move up to parent svg:g", :394) and its bare-path insertion
+/// does: a `\put` is a zero-size box beside the next path (1909.06819: 214
+/// deep, `Fatal:post:convert`; DIVERGENCES #1138).
 fn ensure_svg_context(document: &mut Document) -> Result<()> {
   let current = document.get_node().clone();
   let qname = document::get_node_qname(&current);
   if with(qname, |s| s.starts_with("ltx:")) {
+    let mut node = current;
+    while node.has_attribute("_autoopened") && document::can_auto_close(&node) {
+      let Some(parent) = node.get_parent() else {
+        break;
+      };
+      if with(document::get_node_qname(&parent), |s| {
+        s.starts_with("svg:") && s != "svg:foreignObject"
+      }) {
+        return document.close_to_node(&parent, false);
+      }
+      node = parent;
+    }
     document.open_element(
       "svg:svg",
       Some(string_map!(

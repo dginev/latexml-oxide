@@ -2602,4 +2602,14 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   `\lst@Init\relax … \lst@DeInit` bracket (OD #1139, KNOWN_PERL_ERRORS #1313), and realboxes reaches `\color@box` /
   `\color@fb@x`; 7 Errors and 2 Fatals → 0 Errors, 3,604 → 10,904 words. Guards
   `perfect_kernel_batchlistinline::*`. Residuals: row R REALBOXBG, LSTDISPLAYINIT, LSTTEXRECON.
+- XSLTDEPTH — fixed by PICNEST (no change to the XSLT depth cap): in a picture the #47 explicit-space keep holds only
+  after a box or inline content, so a `\ ` between `\psline`s no longer opens an `ltx:text` the next object nests in
+  (0905.4216: depth 403 → 27); a pgf path closes an auto-opened `\put` chain instead of nesting an `svg:svg`
+  (OD #1138; 1909.06819: 214 → 24). Both lose `Fatal:post:convert`; math0406190, cs0608104 and 0801.0882 keep their
+  spaces. Guards `pstricks_drawing::{a_control_space_between_objects_keeps_the_picture_flat,
+  a_control_space_after_text_in_a_put_is_kept}`, `perfect_kernel_batch54::a_put_in_a_tikzpicture_closes_before_the_next_path`.
+  Residual: row R PICKILLGLUE.
+- PDFPRIM — merged (round 1 SHIP): pdfTeX operand readers per pdftex.web, the missing-type and value checks as Errors
+  with recovery, `\DeclareFixedFont` a font identifier (OD #1081, KNOWN_PERL_ERRORS #1312, #1315). Residuals: row R
+  PDFLASTOBJ, FIXFONTTEX, TEXTFONTUNSET, FONTNAMENFSS, PDFPRIMUNDEF.
 
