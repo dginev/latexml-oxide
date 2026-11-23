@@ -258,16 +258,12 @@ pub(crate) fn load() -> Result<()> {
   // expl3.sty's `\ProvidesExplPackage{expl3}{\ExplFileDate}…` stored unexpanded
   // read as the year alone, "too old" for ctex, xparse and l3keys2e.
   DefPrimitive!("\\ProvidesClass{}[]", sub[(class, version_opt)] {
-    let ver_cs = T_CS!(s!("\\ver@{class}.cls"));
-    let version = protected_xdef_options(version_opt.unwrap_or_default())?;
-    DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
+    provides_file(class, version_opt, "cls")?;
   });
 
   // Note that these, like LaTeX, define macros like \var@mypkg.sty to give the version info.
   DefMacro!("\\ProvidesPackage{}[]", sub[(package, version_opt)] {
-    let ver_cs = T_CS!(s!("\\ver@{package}.sty"));
-    let version = protected_xdef_options(version_opt.unwrap_or_default())?;
-    DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
+    provides_file(package, version_opt, "sty")?;
   });
 
   DefMacro!("\\ProvidesFile{}[]", sub[(file, version_opt)] {
@@ -5684,4 +5680,35 @@ fn take_deposit_inserts() -> Vec<Digested> {
     Some(Stored::VecDigested(inserts)) => inserts,
     _ => Vec::new(),
   }
+}
+
+/// `\ProvidesPackage`/`\ProvidesClass` (latex.ltx:18471-18486): the version is recorded under the REQUESTED name,
+/// `\ver@\@currname.\@currext` (`content::provides_request`), not the declared one, and a declared name other than the
+/// request is LaTeX's warning: `\usepackage{mywrap}` whose file declares `{foonobinding}` leaves
+/// `\@ifpackageloaded{foonobinding}` false. Perl records the declared name (latex_constructs.pool.ltxml:841-850,
+/// KNOWN_PERL_ERRORS #1307); with no request at all, so do we.
+fn provides_file(declared: Tokens, version_opt: Option<Tokens>, default_ext: &str) -> Result<()> {
+  let declared = do_expand(declared)?.to_string();
+  let version = protected_xdef_options(version_opt.unwrap_or_default())?;
+  let ver_cs = match provides_request() {
+    Some((request, ext)) => {
+      if declared != request {
+        let kind = match ext.as_str() {
+          "cls" => "document class",
+          "sty" => "package",
+          _ => "file",
+        };
+        Warn!(
+          "latex",
+          "provides",
+          s!("You have requested {kind} `{request}', but the {kind} provides `{declared}'")
+        );
+      }
+      let name = request.rsplit(['/', '\\']).next().unwrap_or(&request);
+      T_CS!(s!("\\ver@{name}.{ext}"))
+    },
+    None => T_CS!(s!("\\ver@{declared}.{default_ext}")),
+  };
+  DefMacro!(ver_cs, None, version, scope => Some(Scope::Global));
+  Ok(())
 }

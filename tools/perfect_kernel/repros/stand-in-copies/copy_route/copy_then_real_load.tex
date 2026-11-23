@@ -1,0 +1,23 @@
+% A renamed copy of tikz-cd.sty records its version under its own name, so tikz-cd is not loaded after it, and the
+% document's `\usepackage{tikz-cd}` reads the real file over it (row R COPYTHENREAL). Known red: a true copy keeps
+% the binding's patches, and the fresh load that would fix it re-ran bindings over misdeclared files (no paper in the
+% 454-paper census has the shape; OXIDIZED_DESIGN_DIVERGENCES #1118).
+% witness: none (synthetic)
+% oracle:  pdflatex 0 errors; "COPY BEFORE-NO AFTER-YES", the diagram A -> B; LaTeX Warning "You have requested
+%          package `mytcdcopy', but the package provides `tikz-cd'"
+% engines: rust INT7b, COPYROUTE r1 = 0 errors, "BEFORE-YES" (the binding marked loaded by the copy's read, the real
+%          load a no-op)
+% expect:  0 errors, 1 warning (LaTeX's); "COPY BEFORE-NO AFTER-YES", the diagram drawn
+% status:  RED (INT7b, COPYROUTE)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mytcdcopy}
+\makeatletter
+\@ifpackageloaded{tikz-cd}{\def\before{BEFORE-YES}}{\def\before{BEFORE-NO}}
+\usepackage{tikz-cd}
+\@ifpackageloaded{tikz-cd}{\def\after{AFTER-YES}}{\def\after{AFTER-NO}}
+\makeatother
+\begin{document}
+\copyonly{} \before{} \after
+\begin{tikzcd} A \arrow[r] & B \end{tikzcd}
+\end{document}

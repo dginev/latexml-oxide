@@ -1,0 +1,21 @@
+% `\ProvidesPackage`/`\ProvidesClass` record the version under the REQUESTED name (latex.ltx:18471-18486
+% `\@pr@videpackage`, `\ver@\@currname.\@currext`), and a declared name other than the request is LaTeX's warning
+% (KNOWN_PERL_ERRORS #1307: Perl records the declared name).
+% witness: none (the advisor's COPYROUTE probe)
+% oracle:  pdflatex 0 errors; "WRAP FOO-NO WRAP-YES FC-NO MA-YES [2020/01/01 v1 wrap] [2020/01/01 v2 art]"; LaTeX
+%          Warnings "You have requested document class `myart', but the document class provides `fooclass'" and
+%          "You have requested package `mywrap', but the package provides `foonobinding'"
+% engines: rust INT7b = 0 warnings, "FOO-YES", `\ver@mywrap.sty` = `\fmtversion`; Perl the same
+% expect:  0 errors, 2 warnings (LaTeX's); the pdflatex text
+% status:  RED (INT7b) -> GREEN (COPYROUTE)
+% preload: ar5iv.sty
+\documentclass{myart}
+\usepackage{mywrap}
+\makeatletter
+\edef\res{\@ifpackageloaded{foonobinding}{FOO-YES}{FOO-NO} \@ifpackageloaded{mywrap}{WRAP-YES}{WRAP-NO}
+ \@ifclassloaded{fooclass}{FC-YES}{FC-NO} \@ifclassloaded{myart}{MA-YES}{MA-NO}
+ [\csname ver@mywrap.sty\endcsname] [\csname ver@myart.cls\endcsname]}
+\makeatother
+\begin{document}
+\wrapmacro{} \res
+\end{document}

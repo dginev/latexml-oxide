@@ -46,7 +46,7 @@ fn renamed_copy_is_read_once_as_its_bindings_file() {
   let (_, xml) = convert(
     repro!("provides_route", "smfart_renamed_copy_read_once.tex"),
     &[("smfcopy.cls", repro!("provides_route", "smfcopy.cls"))],
-    (0, 0),
+    (0, 1),
   );
   first_paragraph(&xml, "SMF-COPY-MACRO Text ok.");
 }
@@ -59,7 +59,7 @@ fn copy_routed_to_a_loaded_binding_is_read() {
   let (_, xml) = convert(
     repro!("provides_route", "copy_of_a_loaded_binding_is_read.tex"),
     &[("picscopy.sty", repro!("provides_route", "picscopy.sty"))],
-    (0, 0),
+    (0, 1),
   );
   first_paragraph(&xml, "PICTURE-MACRO");
 }
@@ -79,7 +79,7 @@ fn renamed_class_reads_its_own_package() {
       ("imscopy.sty", repro!("provides_route", "imscopy.sty")),
       ("imsart.sty", repro!("provides_route", "imsart.sty")),
     ],
-    (0, 0),
+    (0, 1),
   );
   first_paragraph(&xml, "IMS-COPY-PACKAGE");
 }
@@ -96,7 +96,7 @@ fn titlesec_copy_format_passes_the_title() {
       "titlesec_copy.sty",
       repro!("provides_route", "titlesec_copy.sty"),
     )],
-    (0, 0),
+    (0, 1),
   );
   assert_element(
     &xml,
@@ -174,7 +174,7 @@ fn fancyhdr_copy_finds_the_fields() {
         repro!("beyond_original", "sub/fancyhdr.sty"),
       ),
     ],
-    (0, 0),
+    (0, 1),
   );
   first_paragraph(&xml, "FANCY-COPY-MACRO");
 }
@@ -192,7 +192,8 @@ fn picture_after(xml: &str, text: &str) {
 /// binding stands for and loads it (`\ProvidesPackage{tikz-cd}\RequirePackage{tikz-cd}`, the pgfplots one that
 /// `\pgfplotsset`s) is not that file's copy (`content::loads_file`): the binding reads TeX Live's file, the wrapper after
 /// it. Red: 4 Errors each (`\usetikzlibrary`, `{tikzcd}`, `\arrow`; `{axis}`), the diagram and the plot lost: the wrapper
-/// read as the file, its `\RequirePackage` hit the binding still loading. Reviewer's REGFIXQ probes A and C.
+/// read as the file, its `\RequirePackage` hit the binding still loading. Two Warnings, LaTeX's "You have requested
+/// package …" (KNOWN_PERL_ERRORS #1307). Reviewer's REGFIXQ probes A and C.
 #[test]
 fn wrapper_is_read_after_the_file_it_loads() {
   let (log, xml) = convert(
@@ -201,7 +202,7 @@ fn wrapper_is_read_after_the_file_it_loads() {
       ("mytikzcd.sty", repro!("provides_route", "mytikzcd.sty")),
       ("mypgfplots.sty", repro!("provides_route", "mypgfplots.sty")),
     ],
-    (0, 0),
+    (0, 2),
   );
   for (copy, binding) in [("mytikzcd", "tikz-cd"), ("mypgfplots", "pgfplots")] {
     assert!(
@@ -230,7 +231,7 @@ fn misdeclared_file_is_not_read_as_the_file() {
       "mytcdmacros.sty",
       repro!("provides_route", "mytcdmacros.sty"),
     )],
-    (0, 0),
+    (0, 1),
   );
   assert!(!log.contains("is read as tikz-cd.sty"), "{log}");
   picture_after(&xml, "MYTCD");
@@ -246,7 +247,7 @@ fn misdeclared_file_sharing_a_load_is_not_the_file() {
   let (log, xml) = convert(
     repro!("provides_route", "misdeclared_file_shares_a_load.tex"),
     &[("mytkmacros.sty", repro!("provides_route", "mytkmacros.sty"))],
-    (0, 0),
+    (0, 1),
   );
   assert!(!log.contains("is read as tikz-cd.sty"), "{log}");
   picture_after(&xml, "MYTCD");
@@ -261,7 +262,7 @@ fn misdeclared_pgfplots_sharing_a_load_is_not_the_file() {
   let (log, xml) = convert(
     repro!("provides_route", "misdeclared_pgfplots_shares_a_load.tex"),
     &[("mygxplots.sty", repro!("provides_route", "mygxplots.sty"))],
-    (0, 0),
+    (0, 1),
   );
   assert!(!log.contains("is read as pgfplots.sty"), "{log}");
   picture_after(&xml, "MYPGF");
@@ -279,7 +280,7 @@ fn class_wrapper_is_read_after_the_class() {
   let (_, xml) = convert(
     repro!("provides_route", "class_wrapper_loads_the_class.tex"),
     &[("mysmf.cls", repro!("provides_route", "mysmf.cls"))],
-    (0, 0),
+    (0, 1),
   );
   assert!(
     xml.contains("<title><tag close=\" \"> 1</tag>Intro</title>"),
@@ -303,7 +304,7 @@ fn exact_tikzcd_copy_is_read_as_the_file() {
       "tikzcd_exact.sty",
       repro!("provides_route", "tikzcd_exact.sty"),
     )],
-    (0, 0),
+    (0, 1),
   );
   assert!(
     log.contains("The paper's tikzcd_exact.sty is read as tikz-cd.sty"),

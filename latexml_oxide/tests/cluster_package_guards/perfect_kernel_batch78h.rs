@@ -35,7 +35,7 @@ fn routed_copy_supplies_only_declared_text_names() {
     &[("aascopy.cls", repro!("aascopy.cls"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
       "Info:fallback:aascopy The paper's aascopy.cls declares itself aastex: loading the aastex.cls binding\n"
@@ -138,7 +138,7 @@ fn routed_copy_text_name_check_fails_closed() {
     &[("aasrobust.cls", repro!("aasrobust.cls"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   for (name, refused) in [
     ("abstractname", "\\par"),
     ("pra", "\\begin"),
@@ -207,7 +207,7 @@ fn standard_class_derivative_newcommands_only_declared_text_names() {
     &[("stdderiv.cls", repro!("stdderiv.cls"))],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains("Ignoring redefinition (\\newcommand) of T_CS[\\fnum@table]"),
     "{log}"

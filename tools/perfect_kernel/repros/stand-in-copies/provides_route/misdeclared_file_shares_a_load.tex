@@ -3,9 +3,10 @@
 % (`\usetikzlibrary{cd}`, tikzlibrarycd.code.tex: `\tikzcd`, `\arrow`, ...), of which the file defines none
 % (`reads_as_the_file`).
 % witness: none (reviewer's REGFIXQ2 probe p1)
-% oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B
+% oracle:  pdflatex 0 errors; "MYTCD", the diagram A -> B; LaTeX Warning "You have requested package
+%          `mytkmacros', but the package provides `tikz-cd'"
 % engines: rust INT6A = 0 errors; REGFIXQ2 = 3 errors, no picture: the file was read as tikz-cd.sty (both load tikz)
-% expect:  0 errors, 0 warnings; the diagram drawn
+% expect:  0 errors, 1 warning (LaTeX's, COPYROUTE); the diagram drawn
 % status:  RED (REGFIXQ2) -> GREEN (REGFIXQ3)
 % preload: ar5iv.sty
 \documentclass{article}

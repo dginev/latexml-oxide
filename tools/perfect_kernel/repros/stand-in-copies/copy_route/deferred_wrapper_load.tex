@@ -1,0 +1,19 @@
+% An author's wrapper declaring itself csquotes that defers its `\RequirePackage{csquotes}` (and a `\renewcommand` of
+% `\mkcitation`) to `\AtEndOfPackage` is not read in csquotes.sty's place (`content::loads_file`): the binding reads
+% TeX Live's file, the wrapper after it, as TeX reads them (OXIDIZED_DESIGN_DIVERGENCES #1118).
+% witness: none (synthetic; the COPYROUTE re-review's w7)
+% oracle:  pdflatex 0 errors; "CSQ-Y MY-Y “inline” [CIT:Doe] “x”"; LaTeX Warning "You have requested package
+%          `mycsqend', but the package provides `csquotes'"
+% engines: rust INT7b = 0 errors; COPYROUTE r1 = 26 errors (`\textquote` undefined: the wrapper read in the binding's
+%          place, its deferred request run after the binding was marked loaded)
+% expect:  0 errors, 1 warning (LaTeX's); the quote "“inline” [CIT:Doe]"
+% status:  GREEN (guard perfect_kernel_batchcopyroute::deferred_wrapper_load_reads_the_file)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mycsqend}
+\makeatletter
+\edef\r{\@ifpackageloaded{csquotes}{CSQ-Y}{CSQ-N} \@ifpackageloaded{mycsqend}{MY-Y}{MY-N}}
+\makeatother
+\begin{document}
+\r{} \textquote[Doe]{inline} \enquote{x}
+\end{document}

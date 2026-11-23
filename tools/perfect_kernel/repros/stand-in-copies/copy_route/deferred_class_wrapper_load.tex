@@ -1,0 +1,17 @@
+% A class wrapper declaring itself smfart that defers its `\LoadClass{smfart}` (and a `\renewcommand` of `\smaller`)
+% to `\AtEndOfClass` is not read in smfart.cls's place (`content::loads_file`): smfart_cls.rs reads TeX Live's class,
+% the wrapper after it (OXIDIZED_DESIGN_DIVERGENCES #1118).
+% witness: none (synthetic; the COPYROUTE re-review's finding 1, the class form)
+% oracle:  pdflatex 0 errors; "1. Intro", "Text SMALLER end.", the equation "(1)" on the left; LaTeX Warning "You have
+%          requested document class `mysmfend', but the document class provides `smfart'"
+% engines: rust INT7b = 0 errors; COPYROUTE r1 = 0 errors, the section unnumbered (`sectionx1`; the wrapper read in
+%          the class's place, its deferred `\LoadClass` a repeat)
+% expect:  0 errors, 1 warning (LaTeX's); section 1 numbered, "Text SMALLER end.", the equation `ltx_leqno`
+% status:  GREEN (guard perfect_kernel_batchcopyroute::deferred_class_wrapper_load_reads_the_class)
+% preload: ar5iv.sty
+\documentclass[a4paper]{mysmfend}
+\begin{document}
+\section{Intro}
+Text \smaller{} end.
+\begin{equation}a=b\end{equation}
+\end{document}

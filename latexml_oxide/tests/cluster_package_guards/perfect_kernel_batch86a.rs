@@ -161,11 +161,12 @@ fn imsart_keyword_blocks_in_the_box() {
 /// myimsart.sty), read after the imsart.cls binding: the keyword markup stays locked until the class's end, so the copy's
 /// blocks are refused as imsart.sty's are. Distinct from the two guards above: the copy is read by the stand-in route
 /// (content.rs `read_stand_in_copy`) after the binding's own raw read; a lock released after that read lost both
-/// elements. No Warning: the binding's raw read of imsart.sty reads the copy's own myimsart.sty, which the copy loads
+/// elements. One Warning, LaTeX's "You have requested document class `myimsart', but the document class provides
+/// `imsart'": the binding's raw read of imsart.sty reads the copy's own myimsart.sty, which the copy loads
 /// (OXIDIZED_DESIGN_DIVERGENCES #1118; REGFIXQ, where it requested an imsart.sty neither the paper nor TeX Live ships).
 #[test]
 fn imsart_renamed_copy_keyword_blocks() {
-  assert_keyword_elements_warned(repro!("imsart_renamed_copy_keyword_blocks.tex"), 0, &[
+  assert_keyword_elements_warned(repro!("imsart_renamed_copy_keyword_blocks.tex"), 1, &[
     (
       "<keywords name=\"Keywords and phrases:\u{a0}\">",
       "Shewhart test, Change detection",

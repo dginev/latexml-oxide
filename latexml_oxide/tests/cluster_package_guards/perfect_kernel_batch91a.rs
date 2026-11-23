@@ -32,10 +32,18 @@ macro_rules! repro {
   };
 }
 
-/// Checks a conversion's log has no Error and no Warning, and returns the creators of its XML.
+/// The repros' `just.cls` declares `\ProvidesClass{cpc-hepnp}`: LaTeX's "You have requested document class `just', but
+/// the document class provides `cpc-hepnp'".
+const JUST_WARNINGS: usize = 1;
+
+/// Checks a conversion's log has no Error and `warnings` Warnings, and returns the creators of its XML.
 #[track_caller]
-fn clean_creators(log: &str, xml: &str) -> Vec<Vec<String>> {
-  assert_eq!((error_count(log), warning_count(log)), (0, 0), "{log}");
+fn creators_warned(log: &str, xml: &str, warnings: usize) -> Vec<Vec<String>> {
+  assert_eq!(
+    (error_count(log), warning_count(log)),
+    (0, warnings),
+    "{log}"
+  );
   creators(xml)
 }
 
@@ -53,7 +61,7 @@ fn owned(expected: &[&[&str]]) -> Vec<Vec<String>> {
 fn just_unmarked_address_is_its_author_s_affiliation() {
   let (log, xml) = convert_with(repro!("just_unmarked_address.tex"), Some(PRELOAD));
   assert_eq!(
-    clean_creators(&log, &xml),
+    creators_warned(&log, &xml, JUST_WARNINGS),
     owned(&[&[
       "Ann Able",
       "email=ann@x.org",
@@ -78,12 +86,20 @@ fn just_unmarked_address_under_several_names_is_every_name_s() {
     &["Cy Cole", address],
   ]);
   let (log, xml) = convert_with(tex, Some(PRELOAD));
-  assert_eq!(clean_creators(&log, &xml), want, "{xml}");
+  assert_eq!(creators_warned(&log, &xml, JUST_WARNINGS), want, "{xml}");
   assert!(!xml.contains("<p>Center for Theory"), "{xml}");
   let (log, eager) = cli_conversion(tex, false);
-  assert_eq!(clean_creators(&log, &eager), want, "{eager}");
+  assert_eq!(
+    creators_warned(&log, &eager, JUST_WARNINGS),
+    want,
+    "{eager}"
+  );
   let (log, streamed) = cli_conversion(tex, true);
-  assert_eq!(clean_creators(&log, &streamed), want, "{streamed}");
+  assert_eq!(
+    creators_warned(&log, &streamed, JUST_WARNINGS),
+    want,
+    "{streamed}"
+  );
   assert_eq!(eager, streamed);
 }
 
@@ -94,7 +110,7 @@ fn just_unmarked_address_under_several_names_is_every_name_s() {
 fn just_emails_after_maketitle_is_the_author_s_e_mail() {
   let (log, xml) = convert_with(repro!("just_emails_after_maketitle.tex"), Some(PRELOAD));
   assert_eq!(
-    clean_creators(&log, &xml),
+    creators_warned(&log, &xml, JUST_WARNINGS),
     owned(&[&[
       "Ann Able",
       "affiliation=Center for Theory, Univ A, Town, Country",

@@ -1,0 +1,19 @@
+% An author's wrapper declaring itself csquotes whose `\RequirePackage{csquotes}` sits in a macro the preamble calls
+% later (`\loadquotes`) is not read in csquotes.sty's place (`content::loads_file`): the binding reads TeX Live's file,
+% the wrapper after it (OXIDIZED_DESIGN_DIVERGENCES #1118).
+% witness: none (synthetic; the COPYROUTE re-review's finding 1, the macro form)
+% oracle:  pdflatex 0 errors; "CSQ-Y MY-Y “inline” [CIT:Doe] “x”"; LaTeX Warning "You have requested package
+%          `mycsqlater', but the package provides `csquotes'"
+% engines: rust INT7b = 0 errors; COPYROUTE r1 = 26 errors (`\textquote` undefined)
+% expect:  0 errors, 1 warning (LaTeX's); the quote "“inline” [CIT:Doe]"
+% status:  GREEN (guard perfect_kernel_batchcopyroute::deferred_wrapper_load_reads_the_file)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mycsqlater}
+\loadquotes
+\makeatletter
+\edef\r{\@ifpackageloaded{csquotes}{CSQ-Y}{CSQ-N} \@ifpackageloaded{mycsqlater}{MY-Y}{MY-N}}
+\makeatother
+\begin{document}
+\r{} \textquote[Doe]{inline} \enquote{x}
+\end{document}

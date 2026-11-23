@@ -1,0 +1,19 @@
+% An author's wrapper declaring itself csquotes that defers `\RequirePackageWithOptions{csquotes}` to
+% `\AtEndOfPackage`: neither the text test (`content::loads_file` sees no `\RequirePackage{csquotes}`) nor rule W
+% (`SubstitutedRead`, closed when the deferred request runs) catches it, so the wrapper is read in the binding's place
+% and the real file never read. Known red, no guard (OXIDIZED_DESIGN_DIVERGENCES #1118 residual; row R COPYTHENREAL).
+% witness: none (synthetic; the COPYROUTE re-review's finding 1, the form both tests miss)
+% oracle:  pdflatex 0 errors; "CSQ-Y MY-Y “inline” [CIT:Doe] “x”"; LaTeX Warning "You have requested package
+%          `mycsqendopt', but the package provides `csquotes'"
+% engines: rust INT7b = 26 errors, COPYROUTE r2 = 26 errors (`\textquote`, `\enquote` undefined)
+% expect:  0 errors, 1 warning (LaTeX's); the quote "“inline” [CIT:Doe]"
+% status:  RED (INT7b, COPYROUTE)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mycsqendopt}
+\makeatletter
+\edef\r{\@ifpackageloaded{csquotes}{CSQ-Y}{CSQ-N} \@ifpackageloaded{mycsqendopt}{MY-Y}{MY-N}}
+\makeatother
+\begin{document}
+\r{} \textquote[Doe]{inline} \enquote{x}
+\end{document}

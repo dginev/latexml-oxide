@@ -18,10 +18,15 @@ macro_rules! repro {
   };
 }
 
-/// Convert `tex` with the paper's `files`: 0 errors, 0 warnings, and its first paragraph is `p`. Returns the log.
-fn convert_to_paragraph(tex: &str, files: &[(&str, &str)], p: &str) -> String {
+/// Convert `tex` with the paper's `files`: 0 errors, `warnings` warnings, and its first paragraph is `p`. Returns the
+/// log.
+fn convert_to_paragraph(tex: &str, files: &[(&str, &str)], warnings: usize, p: &str) -> String {
   let (log, xml) = convert_files_with(tex, files, Some(PRELOAD));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, warnings),
+    "{log}"
+  );
   assert_element(
     &xml,
     "p",
@@ -43,6 +48,7 @@ fn svjour3_reads_no_older_svjour_copy() {
       ("svjour.cls", repro!("svjour.cls")),
       ("svjour3.cls", repro!("svjour3.cls")),
     ],
+    0,
     "Body: no svjour.",
   );
   assert!(
@@ -61,6 +67,7 @@ fn emulateapj_reads_no_shipped_sty_copy() {
   let log = convert_to_paragraph(
     repro!("emulateapj_reads_no_shipped_sty_copy.tex"),
     &[("emulateapj.sty", repro!("emulateapj.sty"))],
+    0,
     "Text: no emulateapj.sty.",
   );
   assert!(!log.contains("emulateapj.sty declares itself"), "{log}");
@@ -78,7 +85,7 @@ fn svjour2_copy_declaring_svjour_is_read() {
     &[("svjour2.cls", repro!("svjour2.cls"))],
     Some(PRELOAD),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(log.contains("svjour2.cls declares itself svjour"), "{log}");
   assert_element(
     &xml,
@@ -97,7 +104,7 @@ fn svjour2_vec_reads_the_requested_class() {
     &[("svjour2.cls", repro!("svjour2_vec.cls"))],
     Some(PRELOAD),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(log.contains("svjour2.cls declares itself svjour"), "{log}");
   assert!(
     xml.contains("<XMTok font=\"bold\" role=\"UNKNOWN\">v</XMTok>"),
@@ -110,12 +117,16 @@ fn svjour2_vec_reads_the_requested_class() {
 }
 
 /// A JHEP3.cls copy declaring `\ProvidesClass{JHEP}` is the paper's requested class file: read, as before the code
-/// reuse (the JHEP3 binding records JHEP as a file it is built on, never loaded by it).
+/// reuse (the JHEP3 binding records JHEP as a file it is built on, never loaded by it). Its declaration records
+/// `\ver@JHEP3.cls`, so `\@ifclassloaded{JHEP}` is false, as in pdflatex ("JLOADED" until COPYROUTE: KNOWN_PERL_ERRORS
+/// #1307).
 #[test]
 fn jhep3_copy_declaring_jhep_is_read() {
   convert_to_paragraph(
     repro!("jhep3_copy_declaring_jhep_is_read.tex"),
     &[("JHEP3.cls", repro!("JHEP3_declares_jhep.cls"))],
-    "Body JLOADED COPYREAD.",
+    // (LaTeX's "You have requested document class `JHEP3', but the document class provides `JHEP'")
+    1,
+    "Body JNOT COPYREAD.",
   );
 }

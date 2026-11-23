@@ -445,6 +445,9 @@ mod perfect_kernel_batchclustfix2;
 mod perfect_kernel_batchclustfix3;
 /// CMPJ1: cmpj's `\refaddr` marks resolve as TeX's second run (`cmpj_sty.rs`).
 mod perfect_kernel_batchcmpj1;
+/// COPYROUTE: a paper's copy of a bound file read where the binding reads it, its own request for the file the real one;
+/// `\Provides…` records the requested name.
+mod perfect_kernel_batchcopyroute;
 mod perfect_kernel_batchcr10a;
 mod perfect_kernel_batchcr10b;
 mod perfect_kernel_batchcr10c;

@@ -1,10 +1,11 @@
 % A shipped class wrapper `\ProvidesClass{smfart}\LoadClass{smfart}` is not a copy of smfart.cls: the binding reads
 % TeX Live's class, the wrapper is read after it (`routed_copy_request`, `loads_file`'s `\LoadClass`).
 % witness: none (reviewer's REGFIXQ probe F)
-% oracle:  pdflatex 0 errors; "1. Intro", the equation numbered on the left "(1)"
+% oracle:  pdflatex 0 errors; "1. Intro", the equation numbered on the left "(1)"; LaTeX Warning "You have requested
+%          document class `mysmf', but the document class provides `smfart'"
 % engines: rust INT6A = 0 errors; REGFIXQ r1 = 0 errors but the section unnumbered, `ltx_leqno` gone: the wrapper was
 %          read as smfart.cls, its `\LoadClass{smfart}` a repeat
-% expect:  0 errors, 0 warnings; section 1 numbered, the equation `ltx_leqno`
+% expect:  0 errors, 1 warning (LaTeX's, COPYROUTE); section 1 numbered, the equation `ltx_leqno`
 % status:  RED (REGFIXQ) -> GREEN (REGFIXQ2)
 % preload: ar5iv.sty
 \documentclass{mysmf}

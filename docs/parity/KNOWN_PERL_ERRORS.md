@@ -22350,6 +22350,33 @@ pdflatex URI `http://x.org/~y`; Perl href `http://x.org/ y` (Rust REGFIXN2 `http
 2605.19761, 2605.28243, 2605.29955. Repro package-bindings/hyperref_href_babel_tilde_in_footnote; guard
 `perfect_kernel_batchregfixv::href_tilde_in_a_footnote_under_babel`.
 
+## 1307. `\ProvidesPackage`/`\ProvidesClass` record the declared name, not the requested one
+
+latex.ltx:18471-18486 `\ProvidesPackage` stores the version under the REQUESTED file, `\ver@\@currname.\@currext` (and
+`\ver@\@currpkg@reqd`), and warns "You have requested package `<request>', but the package provides `<declared>'" when
+the two differ (`\ProvidesClass` is the same macro, "document class"). Perl's `\ProvidesPackage`/`\ProvidesClass`
+(latex_constructs.pool.ltxml:841-850) define `\ver@<declared>.sty`/`.cls` and warn nothing, so a file that declares
+another name marks that name loaded. Minimal trigger, with `mywrap.sty` = `\ProvidesPackage{foonobinding}[2020/01/01 v1]`:
+
+```tex
+\documentclass{article}
+\usepackage{mywrap}
+\makeatletter
+\edef\res{\@ifpackageloaded{foonobinding}{FOO-YES}{FOO-NO} \@ifpackageloaded{mywrap}{WRAP-YES}{WRAP-NO}}
+\makeatother
+\begin{document}\res\end{document}
+```
+
+pdflatex `FOO-NO WRAP-YES` and the warning; Perl `FOO-YES WRAP-YES`, no warning. The wrong mark makes a later
+`\usepackage{foonobinding}` a no-op where LaTeX reads the file. Fixed in Rust (`sect05.rs` `provides_file`,
+`content::provides_request`; the warning a Warning, maintainer ruling 2026-11-21): where our loader reads a
+`.sty`/`.cls` without making it the request (a binding's raw read of another file, a copy read in a binding's place),
+the request is the file read; an `\input` of a `.sty` answers the request of the load around it, as in TeX (outer.sty's
+`\input{inner.sty}` records inner's version under `\ver@outer.sty`); a binding's own `\ProvidesPackage` (outside any
+raw read) and a declaration with no request (a preamble `\input{foo.sty}`, OXIDIZED_DESIGN_DIVERGENCES #1131) keep
+Perl's declared name. Repro stand-in-copies/copy_route/requested_name; guard
+`perfect_kernel_batchcopyroute::provides_records_the_requested_name`.
+
 ## 1310. A display in a `p{}` cell renders its rows side by side
 
 In an inline context the XSLT writes a display's table as spans, its tbodies classless spans, which `LaTeXML.css`

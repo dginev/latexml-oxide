@@ -1,0 +1,5 @@
+%% An author's wrapper declaring itself csquotes that defers a load with its own options to its end.
+\ProvidesPackage{csquotes}[2020/01/01 wrapper]
+\AtEndOfPackage{\RequirePackageWithOptions{csquotes}%
+  \renewcommand*{\mkcitation}[1]{ [CIT:#1]}}
+\endinput

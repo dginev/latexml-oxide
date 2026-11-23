@@ -47,7 +47,7 @@ fn renamed_cvpr_and_iccv_copies_keep_their_hooks() {
     let (log, xml) = convert_files_with(tex, &[("cvprcopy.sty", &copy)], Some("ar5iv.sty"));
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 0),
+      (0, 1),
       "{declared}: {log}"
     );
     assert_element(

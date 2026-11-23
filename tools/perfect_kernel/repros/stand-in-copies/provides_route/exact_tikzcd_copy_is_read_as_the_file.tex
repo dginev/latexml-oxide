@@ -1,6 +1,7 @@
 % witness: REGFIXQ3 review S2 (the one-level library extension had no guard); 1201.4414, 1512.05388 take this path
-% oracle:  pdflatex 0 errors; the diagram "A → B" after "COPY"
-% expect:  0 errors, 0 warnings; Info "The paper's tikzcd_exact.sty is read as tikz-cd.sty"; the diagram
+% oracle:  pdflatex 0 errors; the diagram "A → B" after "COPY"; LaTeX Warning "You have requested package
+%          `tikzcd_exact', but the package provides `tikz-cd'"
+% expect:  0 errors, 1 warning (LaTeX's, COPYROUTE); Info "The paper's tikzcd_exact.sty is read as tikz-cd.sty"; the diagram
 % mechanism: neither tikzcd_exact.sty nor TeX Live's tikz-cd.sty defines a name, so both are compared by the names of the
 %          library their `\usetikzlibrary{cd}` reads (tikzlibrarycd.code.tex; content.rs `names_read_as`), and the copy
 %          is read where the tikz-cd binding reads its file; without the extension it would be read after it
