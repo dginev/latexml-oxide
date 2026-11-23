@@ -60,6 +60,36 @@ zero. Report progress as "X of Y remain", never as "fixed" by cluster coverage.
 - Docs current: `release/CHANGES_v0.8.1.md`, row R, OD entries, `README.md` indexes.
 - A reviewer's SHIP on the branch diff, then DG's go.
 
+## Method: isolate, test, then fix faithfully (DG 2026-11-23)
+
+Every problem of TeX interpretation is worked the same way:
+
+1. **Reproduce** on the current binary, same host, verbose; judge by the `Status:conversion` code and ANSI-stripped
+   logs, never by grepping for success.
+2. **Isolate with a minimal `.tex`** (the `min-repro` skill, `tools/bisect_repro.sh`): shrink the paper to the
+   smallest input that still fails, and keep a control twin that differs by one construct, so the culprit token is
+   pinned. The repro counts only if same-host pdflatex runs it with 0 `!` and the expected text (or the expected `!`
+   for an error case). It lives under `tools/perfect_kernel/repros/<family>/` with the standard header: mechanism,
+   witness, oracle, engines, expect, status.
+3. **Classify the origin before any fix** (the `canvas-triage` skill): Rust-only, parity with Perl, or Perl and TeX
+   disagreeing. Parity is never absolution; it decides where the record goes.
+4. **Write the red test first**: the repro becomes a row in an existing table-driven guard, red at the base with the
+   failing line recorded. Assert whole elements or goldens and exact Error/Warning counts, with safe twins on the
+   other side of every boundary. Only distinct hard cases become guards; confirming probes are reported, not added.
+5. **Fix faithfully, at the general mechanism**, on two axes at once:
+   - **Perl LaTeXML's architecture**: the same pipeline (Mouth → Gullet → Stomach → Document → Post), the same data
+     model and interfaces, definitions in the files and order Perl uses them, one name with one meaning across Perl,
+     the Rust macros and Rhai, and a binding defining a macro where its real definer does. No new abstraction
+     without a stated reason the existing primitive cannot answer the question.
+   - **TeX's engine algorithms**: where Perl approximates, implement what tex.web does (cite the §), and what
+     latex.ltx and the package's own source do (file:line). Compute a value when TeX computes it, mirror TeX's
+     irregular readers only where TeX has them, and take numerics from tex.web.
+   - A divergence from Perl is recorded in OD and offered to Perl; a Perl-origin bug goes to KNOWN_PERL_ERRORS.
+     The rule the source already has beats a special case; a third patch of one shape becomes a shared mechanism,
+     decided with DG after cataloguing its cases.
+6. **Green, then widen**: the guard green for the right reason, safe twins byte-identical, every witness named in
+   the touched comments reconverted, and a reach-complete A/B when output moves.
+
 ## Standards
 
 ### Fidelity
