@@ -5172,6 +5172,13 @@ fn dropped_maketitle_takes_options() -> bool {
   }
 }
 
+/// Is `cs` a macro with a parameter list (`\def\@maketitle#1{…}`)? The title-page deposit and replay run only
+/// argument-free bodies: a parameter would read the kernel's own continuation as its argument.
+fn takes_parameters(cs: &Token) -> bool {
+  matches!(lookup_meaning(cs), Some(Stored::Expandable(ref d))
+    if d.get_parameters().is_some_and(|p| !p.get_parameters().is_empty()))
+}
+
 /// Gives back the operand values set before the title-page deposit (`gullet::set_operand_values`).
 struct OperandValues(Vec<(Token, Tokens)>);
 impl Drop for OperandValues {
@@ -5186,8 +5193,9 @@ const TITLE_PAGE_FIELDS: &str = r"\let\@title\@empty\let\@author\@empty\let\@dat
 /// kernel's fields and the stores the frontmatter carries read as empty. `inject`: definitions made just before
 /// `\@maketitle` runs — a speculative run's sentinel values (frontmatter_stores.rs `before_title_page_runs`).
 pub(crate) fn title_page_deposit_tokens(inject: &[Token]) -> Tokens {
-  // (LaTeX's own, the kernel's marker alone: nothing to deposit, as `\@empty`)
-  if maketitle_is_kernels() {
+  // (LaTeX's own, the kernel's marker alone: nothing to deposit, as `\@empty`; one taking arguments would read the
+  // deposit's closing brace, leaving its group open: the class's own call supplies them in the replay, 0801.1806)
+  if maketitle_is_kernels() || takes_parameters(&T_CS!("\\@maketitle")) {
     return Tokens::default();
   }
   let mut tokens = mouth::tokenize_internal(TeXString::assembled(s!(
@@ -5200,7 +5208,8 @@ pub(crate) fn title_page_deposit_tokens(inject: &[Token]) -> Tokens {
 }
 
 /// The replay of the class's own refused `\maketitle` (`\lx@dropped@maketitle`, `\lx@deposit@maketitle`), in a group
-/// with the fields read as the deposit reads them, `\thanks` gobbled and `\@maketitle` relaxed (no second deposit),
+/// with the fields read as the deposit reads them, `\thanks` gobbled and `\@maketitle` relaxed (no second deposit;
+/// one taking arguments, which the deposit skipped, stays live),
 /// with the options the kernel `\maketitle` read for a `\maketitle[<options>]` body (`\lx@maketitle@withopt`). A call
 /// of the kernel's `\maketitle` from the body (`\let\@origmaketitle\maketitle` … `\def\maketitle{…\@origmaketitle}`)
 /// runs LaTeX's `\maketitle` there, whose `\@maketitle` the deposit already printed: its `\lx@maketitle@body` is
@@ -5217,9 +5226,7 @@ pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
   }
   let argless = match lookup_meaning(&T_CS!("\\lx@dropped@maketitle")) {
     Some(Stored::Expandable(ref d)) => {
-      (d.get_parameters()
-        .is_none_or(|p| p.get_parameters().is_empty())
-        || dropped_maketitle_takes_options())
+      (!takes_parameters(&T_CS!("\\lx@dropped@maketitle")) || dropped_maketitle_takes_options())
         && match d.get_expansion() {
           Some(ExpansionBody::Tokens(body)) => {
             body_vocabulary_is_defined(body.unlist_ref(), "\\maketitle")
@@ -5232,8 +5239,15 @@ pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
   if !argless {
     return None;
   }
+  // (an `\@maketitle` taking arguments stays live: the deposit skipped it and the class's own call supplies them —
+  // iaus.cls:824-868 `\@maketitle{n}`, which relaxed printed a stray "n", 0801.1806)
+  let maketitle = if takes_parameters(&T_CS!("\\@maketitle")) {
+    ""
+  } else {
+    r"\let\@maketitle\relax"
+  };
   let mut replay = mouth::tokenize_internal(TeXString::assembled(s!(
-    r"{{{TITLE_PAGE_FIELDS}\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\let\lx@maketitle@body\@empty\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
+    r"{{{TITLE_PAGE_FIELDS}\let\thanks\@gobble\let\and\relax{maketitle}\let\lx@maketitle@body\@empty\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
   )))
   .unlist();
   replay.extend_from_slice(inject);

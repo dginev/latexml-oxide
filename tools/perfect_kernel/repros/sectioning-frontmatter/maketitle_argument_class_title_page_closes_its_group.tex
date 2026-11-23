@@ -1,0 +1,15 @@
+% mechanism: an `\@maketitle` that takes an argument is not deposited (it would read the deposit's closing brace as its
+%   argument); the class's own `\maketitle`, replayed, calls it with its argument, so it stays live there
+% witness: 0801.1806 (iaus.cls:824-868 `\maketitle` -> `\m@ketitleone[n]` -> `\@maketitle{n}`)
+% oracle:  pdflatex 0 errors: "T Hi" (side file mtarg.cls)
+% engines: rust 0.8.0-rc2: Warning "Attempt to end document with open groups" and `<p>nHi</p>` (the replay relaxed
+%          `\@maketitle`, so its argument "n" was typeset); Perl drops the class's `\maketitle` and never deposits
+% expect:  0 errors 0 Warnings; the title once; the body paragraph exactly "Hi"
+% status:  RED (0.8.0-rc2) -> GREEN (perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group)
+% preload: ar5iv.sty
+\documentclass{mtarg}
+\title{T}
+\begin{document}
+\maketitle
+Hi
+\end{document}

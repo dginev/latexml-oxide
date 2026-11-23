@@ -564,6 +564,8 @@ mod perfect_kernel_batchmem1;
 /// MLN1: names led by their marks read as names (`names_led_by_marks`); OD #1019.
 mod perfect_kernel_batchmln1;
 mod perfect_kernel_batchmml2;
+/// MTARG: an `\@maketitle` taking an argument is not deposited, and stays live in the replay (0801.1806, iaus.cls).
+mod perfect_kernel_batchmtarg;
 /// MTREDUCE: the kernel asks only whether the class's `\maketitle` runs; a package's prints its binding's marks.
 mod perfect_kernel_batchmtreduce;
 mod perfect_kernel_batchn1;

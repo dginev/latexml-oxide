@@ -43,6 +43,15 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
+### After 0.8.0-rc2
+
+  - **A class whose `\@maketitle` takes an argument no longer leaves a group open or prints a stray letter.** The
+    title-page deposit read its closing brace as that argument, so `\end{document}` warned of open groups, and the
+    replay of the class's `\maketitle` printed the argument as text (iaus.cls's "n"; ~1,665 arXiv papers, 0801.1806).
+    Such an `\@maketitle` is no longer deposited and stays live in the replay (OXIDIZED_DESIGN_DIVERGENCES #265). In
+    60 iaus.cls papers the Warning and the stray "n" are gone, with no other change. Guard
+    `perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group`.
+
 ### 0.8.0-rc2
 
   - **0.8.0-rc2: a display in a table cell, `\parbox`, minipage or note lays out its rows as outside (issue 972).**
