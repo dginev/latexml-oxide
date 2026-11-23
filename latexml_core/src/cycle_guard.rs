@@ -23,7 +23,7 @@
 //! Cost: detection is throttled to once per `CHECK_EVERY` pushes. Each period's
 //! scan stops at its first mismatch, so a non-periodic stream costs about
 //! `MAX_WINDOW` compares per check; the windows a uniform tail rules out are
-//! skipped unscanned ([`CycleGuard::detect`]), so a long run of one item, which
+//! skipped unscanned (`CycleGuard::detect`), so a long run of one item, which
 //! matches every period to the end, costs `MAX_WINDOW` compares too, not
 //! `MAX_WINDOW^2 * REPEAT / 2`. Callers further gate activation on an
 //! already-high item count so normal conversions pay nothing.

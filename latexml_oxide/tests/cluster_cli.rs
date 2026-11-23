@@ -5779,14 +5779,15 @@ mod watchdog_fatal_line_start {
 
   /// The watchdog's `Fatal:timeout:wallclock` opens a line of its own, also when it lands while a progress note
   /// (`(Processing definitions …l3backend-pdftex.def... )`, written without a newline) holds stderr mid-line: glued
-  /// onto it, the Fatal escaped every `^Fatal:` count. Exit 124, the timeout's code.
+  /// onto it, the Fatal escaped every `^Fatal:` count. Exit 124, the timeout's code. The loop tests the count it
+  /// moves, so it reads as progress to the cycle guard and runs to the deadline (`\iftrue` read as a cycle, OD #538).
   #[test]
   fn a_timeout_fatal_starts_its_line() {
     let work = tempfile::tempdir().expect("tempdir");
     std::fs::write(
       work.path().join("slow.tex"),
       "\\documentclass{article}\n\\begin{document}\nHello.\n\\count255=0\n\
-       \\loop\\advance\\count255 by 1 \\iftrue\\repeat\n\\end{document}\n",
+       \\loop\\advance\\count255 by 1 \\ifnum\\count255>0 \\repeat\n\\end{document}\n",
     )
     .unwrap();
     let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))

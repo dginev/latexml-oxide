@@ -10967,12 +10967,14 @@ warm-up), so at 32 it read as a cycle; every numeric register value the gullet s
 The stomach's span history takes the values read for each box the same way, which also ends a false Fatal at the old
 window: `\loop abcdefghi\advance\n1 \ifnum\n<6000 \repeat` was "a window of 9 box(es)". A loop that only re-expands (the
 alias cycles of OD #1100; 2609.30372's document-level `\let\H@refstepcounter\refstepcounter`, a 20-token window, 180 s →
-5 s, pdflatex finishes it) reads no changing value and still trips; an infinite loop that moves a counter runs to the
-deadline, as before. The ring holds `MAX_WINDOW × REPEAT` = 3,200 items, so the gullet's duty window widened with it,
-2,048 of every 16,384 tokens to 4,096 of every 32,768 (still 1/8). A scan stops at a period's first mismatch; the
-periods a uniform tail rules out are skipped, so a long run of one token costs 32 compares a check, not `W²·REPEAT/2`.
-Cost (`instructions:u`, best of 3, vs INT081C): 2302.07562 (pgfplots) +0.03 %, 2606.20784 (tikz) −0.01 %, 2412.14534
-(siunitx, mhchem) +0.12 %, 1810.02898 −0.04 %; no change on the 498-paper READARG population.
+5 s, pdflatex finishes it) reads no changing value and still trips, as does one that moves a counter it never reads
+(`\loop\advance\count255 by 1 \iftrue\repeat`, which `cluster_cli`'s watchdog test used as its endless loop; it now
+tests the count, `\ifnum\count255>0`); an infinite loop that reads its moving counter runs to the deadline, as before.
+The ring holds `MAX_WINDOW × REPEAT` = 3,200 items, so the gullet's duty window widened with it, 2,048 of every 16,384
+tokens to 4,096 of every 32,768 (still 1/8). A scan stops at a period's first mismatch; the periods a uniform tail rules
+out are skipped, so a long run of one token costs 32 compares a check, not `W²·REPEAT/2`. Cost (`instructions:u`, best
+of 3, vs INT081C): 2302.07562 (pgfplots) +0.03 %, 2606.20784 (tikz) −0.01 %, 2412.14534 (siunitx, mhchem) +0.12 %,
+1810.02898 −0.04 %; no change on the 498-paper READARG population.
 
 **Guards**: `perfect_kernel_batch65f::repeated_file_text_is_no_expansion_loop` (also: a two-token expansion loop and a
 `\scantokens` self-recursion past the floor still trip), `perfect_kernel_batch65f::self_input_stops_at_the_text_input_level_limit`,
