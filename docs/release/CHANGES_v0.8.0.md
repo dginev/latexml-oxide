@@ -97,8 +97,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     (Core §3.2.5.1, and MathML 3) skips an empty grouping element as space-like when it decides an operator's form, so
     MathJax set the `=` as a prefix operator, without its left space (Chrome kept it infix). The placeholder is now
     `<mphantom><mi>&#x2060;</mi></mphantom>`, an invisible U+2060 WORD JOINER identifier that no renderer skips; the
-    same placeholder fills an empty `\frac`/`\sqrt` argument and an empty-symbol siunitx unit
-    (OXIDIZED_DESIGN_DIVERGENCES #1150). Guard `perfect_kernel_batchfix991::absent_operand_is_a_phantom_word_joiner`.
+    same placeholder fills an empty `\frac`/`\sqrt` argument and an empty-symbol siunitx unit. An empty box beside an
+    operator — `$\mbox{}=b$`, `$\hbox{}=b$`, `$\text{}=b$`, `$\strut=b$`, `$a=\strut$`, `$\makebox[0pt]{}=b$` — was an
+    empty `<mrow>` with the same effect, and `$\mbox{}-b$`, `$a+\mbox{}$` lost their binary-operator space; it is now
+    the same placeholder, as TeX sets it a zero-width ordinary atom (OXIDIZED_DESIGN_DIVERGENCES #1150). Guards
+    `perfect_kernel_batchfix991::{absent_operand_is_a_phantom_word_joiner,
+    empty_box_beside_an_operator_is_a_phantom_word_joiner}`.
 
 ### 0.8.0-rc2
 

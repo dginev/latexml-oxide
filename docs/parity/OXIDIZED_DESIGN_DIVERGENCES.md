@@ -24077,10 +24077,12 @@ TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hi
 is not tested, as its timing would make the test flaky; it was checked by hand (Ctrl+C during a first run's build
 leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).
 
-### 1150. An absent operand is a phantom U+2060 identifier, which no renderer skips as space-like (issue 991)
+### 1150. An absent operand, and an empty box beside an operator, is a phantom U+2060 identifier, which no renderer skips as space-like (issue 991)
 
 - Perl: an `absent` token (XMath's missing operand: the LHS of an `align` continuation cell `& = b`, a prefix
-  relation, `\frac{a}{}`, `\sqrt{}`) is an empty `<m:mi/>` (MathML.pm:1475 `DefMathML("Token:?:absent", …)`).
+  relation, `\frac{a}{}`, `\sqrt{}`) is an empty `<m:mi/>` (`LaTeXML/lib/LaTeXML/Post/MathML.pm:1475`
+  `DefMathML("Token:?:absent", …)`); an empty box (`\mbox{}`, `\hbox{}`, `\text{}`, `\strut`, `\makebox[0pt]{}`: an
+  empty `XMText`) an empty `<m:mrow/>` (MathML.pm:499 `pmml_row` of no items).
 - Ours (presentation.rs `invisible_operand`): `<m:mphantom><m:mi>&#x2060;</m:mi></m:mphantom>`, also for an
   empty-symbol unit (#114). An empty `mi` claims an identifier with no text, so it is never materialized
   (`document.rs` `debug_assert!`, task #264); the slot was an empty `mphantom` until now. MathML Core §3.2.5.1 decides an
@@ -24093,8 +24095,18 @@ leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).
   math meaning (unlike U+2061-2064); it bypasses the token styling (no `mathvariant`, no Plane-1 mapping). MathJax
   3.2.2 on `<mrow>[slot]<mo>=</mo><mi>b</mi></mrow>`: the empty `mphantom` gives form prefix and no left space, the
   new slot form infix and 0.278em (`space="4"`), as `a=b`, the slot 0em wide.
+- An empty box is TeX's zero-width Ord atom, and its empty `<m:mrow>` is space-like the same way (`$\mbox{}=b$`:
+  MathJax 3.2.2 form prefix, no left space; `$a=\strut$` postfix), so beside an operator it gets the same placeholder
+  (`fill_empty_operands`, a pass before the spacing walk; an `mpadded` keeps its width around it). The walk then
+  reads it as the Ord it is: `$\mbox{}-b$` and `$a+\mbox{}$` keep their binary space, as in TeX (the empty row had
+  made the walk zero it as if unary). In a script or a fraction slot the empty `<m:mrow>` stays: no operator's form
+  depends on it. `\strut`'s height and depth do not reach the XMath (its zero-width rule is dropped), so the
+  placeholder has none to keep.
+- Known third-party effect: MathJax's speech-rule-engine voices the U+2060 as "word joiner" where the slot is not
+  beside a relation (`\frac{a}{}`); the character is kept in every slot (DG 2026-11-23).
 
-**Guards**: `perfect_kernel_batchfix991::absent_operand_is_a_phantom_word_joiner`
-(`tools/perfect_kernel/repros/math-parse/absent_operand_is_not_space_like.tex`), with the slot counted in
+**Guards**: `perfect_kernel_batchfix991::{absent_operand_is_a_phantom_word_joiner,
+empty_box_beside_an_operator_is_a_phantom_word_joiner}`
+(`tools/perfect_kernel/repros/math-parse/{absent_operand,empty_box}_is_not_space_like.tex`), with the slot counted in
 `90_latexmlpost::alignrows_operand_slot_keeps_relop_infix` (issue #312) and the empty unit in
 `06_cluster_regressions::cluster_siunitx_empty_unit_renders_invisible`.

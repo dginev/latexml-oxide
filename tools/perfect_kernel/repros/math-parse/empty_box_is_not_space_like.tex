@@ -1,0 +1,16 @@
+% witness: issue 991 (an empty box beside a relation: MathJax sets the `=` as a PREFIX operator, no left space)
+% oracle:  pdflatex 0 errors; an empty `\mbox{}`/`\hbox{}`/`\text{}`/`\strut`/`\makebox[0pt]{}` is a zero-width Ord
+%          atom, so `\mbox{}=b` has \thickmuskip before the `=`, `\mbox{}-b` and `a+\mbox{}` a binary operator
+% engines: rust 8851f75996e an empty `<mrow></mrow>` (`\makebox[0pt]{}`: an empty `<mpadded>`) beside the `<mo>`:
+%          space-like by MathML Core §3.2.5.1, so MathJax 3.2.2 makes `=` prefix with no left space, and the spacing
+%          walk zeroes `−`'s right space as if unary; Perl 0.8.8 the same empty `<m:mrow/>` (MathML.pm:497-498)
+% expect:  0 errors; each empty box beside an operator is `<mphantom><mi>U+2060</mi></mphantom>` (inside the
+%          `mpadded` for `\makebox[0pt]{}`); in a script or a fraction slot, or beside an invisible operator
+%          (spaced alike in every form), it stays the empty `<mrow>`
+% status:  RED (8851f75996e) -> GREEN (FIX991B, OXIDIZED_DESIGN_DIVERGENCES #1150)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+$\mbox{}=b$, $\hbox{}=b$, $\text{}=b$, $\strut=b$, $a=\strut$, $\makebox[0pt]{}=b$, $\mbox{}-b$, $a+\mbox{}$,
+$\mbox{}\mbox{}=b$, $x^{\mbox{}}=b$, $\frac{\mbox{}}{b}$, $\mbox{}x$.
+\end{document}

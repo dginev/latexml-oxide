@@ -460,6 +460,7 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
   } else {
     pmml_row(results)
   };
+  fill_empty_operands(&mut result);
   // Adjust spacing to match TeX rules (Perl's adjust_spacing)
   adjust_spacing(&mut result);
   // Clean up internal _role/_lspace/_rspace before serialization
@@ -735,10 +736,10 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
   //
   // `<msub>` / `<msup>` require a base; for "floating" scripts (e.g.
   // `{}^c`, `_d`) the base is structurally absent. We materialize
-  // the missing base as `<m:mrow></m:mrow>` — not `<m:mi></m:mi>`.
-  // Same rationale as the `absent` case below: `<mi>` is a semantic
-  // claim ("here is an identifier") that's false when empty; `<mrow>`
-  // is presentational scaffolding with no semantic content. Task #264.
+  // the missing base as `<m:mrow></m:mrow>`: an empty `<mi>` claims an
+  // identifier with no text (task #264). Unlike an absent operand's slot
+  // (`invisible_operand`, issue 991), a script base is no row child, so
+  // its space-likeness turns no operator prefix.
   if role.contains("SUBSCRIPT") || role.contains("SUPERSCRIPT") {
     let is_sub = role.contains("SUB");
     let tag = if is_sub { "m:msub" } else { "m:msup" };
@@ -1134,6 +1135,72 @@ fn invisible_operand() -> NodeData {
       attributes: None,
       children:   vec![NodeData::Text(INVISIBLE_OPERAND_TEXT.to_string())],
     }],
+  }
+}
+
+/// An empty box beside an operator (`\mbox{}=b`, `a=\strut`, `\makebox[0pt]{}=b`, `\mbox{}-b`: an empty `XMText`, an
+/// empty `<m:mrow>` as in Perl, MathML.pm:499) is TeX's zero-width Ord atom, so it gets the absent operand's
+/// placeholder: emptied, it is space-like and turns the operator prefix or postfix (issue 991), and the spacing walk
+/// reads `−` as unary. Rows only: in a script or fraction slot the empty `<m:mrow>` stays. OXIDIZED_DESIGN #1150.
+fn fill_empty_operands(node: &mut NodeData) {
+  let NodeData::Element { tag, children, .. } = node else {
+    return;
+  };
+  if is_mrow_like(tag) {
+    let beside_operator = |i: usize| {
+      let left = children[..i].iter().rev().find(|c| !is_space_like(c));
+      let right = children[i + 1..].iter().find(|c| !is_space_like(c));
+      left.is_some_and(is_embellished_operator) || right.is_some_and(is_embellished_operator)
+    };
+    let empty: Vec<usize> = (0..children.len())
+      .filter(|&i| is_empty_box(&children[i]) && beside_operator(i))
+      .collect();
+    for i in empty {
+      match &mut children[i] {
+        NodeData::Element {
+          tag,
+          attributes,
+          children: inner,
+        } if tag != "m:mrow" || attributes.as_ref().is_some_and(|a| !a.is_empty()) => {
+          // An `mpadded` (`\makebox[0pt]{}`) keeps its extent around the placeholder.
+          *inner = vec![invisible_operand()];
+        },
+        slot => *slot = invisible_operand(),
+      }
+    }
+  }
+  for child in children.iter_mut() {
+    fill_empty_operands(child);
+  }
+}
+
+/// A grouping element whose children all are such, an empty one vacuously: what an empty `XMText` becomes.
+fn is_empty_box(node: &NodeData) -> bool {
+  matches!(node, NodeData::Element { tag, children, .. }
+    if matches!(tag.as_str(), "m:mrow" | "m:mpadded" | "m:mstyle") && children.iter().all(is_empty_box))
+}
+
+/// MathML Core §3.2.5.1: an `mtext`, an `mspace`, or a grouping element whose in-flow children all are space-like.
+fn is_space_like(node: &NodeData) -> bool {
+  match node {
+    NodeData::Element { tag, children, .. } => match tag.as_str() {
+      "m:mtext" | "m:mspace" => true,
+      "m:mrow" | "m:mpadded" | "m:mstyle" | "m:mphantom" => children.iter().all(is_space_like),
+      _ => false,
+    },
+    _ => false,
+  }
+}
+
+/// A visible `mo`, or a script element whose base is one (MathML Core's embellished operator, in the cases we emit).
+/// An invisible operator (`\text{}A`'s U+200B, an invisible times) is spaced the same in every form.
+fn is_embellished_operator(node: &NodeData) -> bool {
+  match node {
+    NodeData::Element { tag, .. } if tag == "m:mo" => !is_node_text_invisible_op(node),
+    NodeData::Element { tag, children, .. } if is_embellisher_tag(tag) => {
+      children.first().is_some_and(is_embellished_operator)
+    },
+    _ => false,
   }
 }
 

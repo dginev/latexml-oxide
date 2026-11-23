@@ -81,8 +81,8 @@ MathML the operand SLOT is what makes the operator infix (form is inferred from
 position — first child of its `<mrow>` ⇒ prefix — and the form selects the
 operator-dictionary spacing). Dropping it made `<mo>=</mo>` the first child of
 every continuation row, diverging from Perl, which keeps the slot
-(`MathML.pm:1474` renders `absent` as an empty `<m:mi/>`). Reported as issue
-**#312**. Guard: `90_latexmlpost.rs::alignrows_operand_slot_keeps_relop_infix`.
+(`LaTeXML/lib/LaTeXML/Post/MathML.pm:1475` renders `absent` as an empty
+`<m:mi/>`). Reported as issue **#312**. Guard: `90_latexmlpost.rs::alignrows_operand_slot_keeps_relop_infix`.
 
 What DID land from this item: the placeholder is not Perl's empty `<m:mi/>`
 — an empty `<mi>` asserts "here is an identifier" about content that has none,
