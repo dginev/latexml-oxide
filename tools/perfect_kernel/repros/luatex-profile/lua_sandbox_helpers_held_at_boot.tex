@@ -2,10 +2,11 @@
 %   at boot (string.*, the file handles' C write/read), never a method a document can replace; mplib.new gets a raw
 %   copy of its options carrying the sandbox's file finder.
 % witness: synthetic (security hardening, adversarial review of SECLUA round 0)
-% oracle:  lualatex (openout_any=p): the three writes below are refused whatever the chunk replaced
-% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-18)
-% expect:  "[mp:done] [find:refused] [hidden:false]"; 3 Errors (lua:sandbox: the mplib write, ../, os.execute);
-%          nothing written outside the job directory
+% oracle:  lualatex: io.open("../…") is refused whatever the chunk replaced, os.execute runs nothing
+%   (-no-shell-escape); mplib's write is not checked (the sandbox's refusal, an Error, is stricter)
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
+% expect:  "[mp:done] [find:refused] [hidden:nil]"; 1 Error (lua:sandbox: the mplib write), 2 Warnings
+%          (lua:sandbox: ../, os.execute "exit 3"); nothing written outside the job directory
 % status:  GREEN
 \documentclass{article}
 \usepackage{luacode}
@@ -17,16 +18,16 @@ mp:finish()
 tex.sprint("[mp:done]")
 local find = string.find
 string.find = function(s, p, ...) if p == "[wa+]" then return nil end return find(s, p, ...) end
-local ok = pcall(io.open, "../find_escape.txt", "w")
+local f = io.open("../find_escape.txt", "w")
 string.find = find
-tex.sprint(" [find:" .. (ok and "opened" or "refused") .. "]")
+tex.sprint(" [find:" .. (f and "opened" or "refused") .. "]")
 local mt = getmetatable(io.stderr)
 local write = mt.write
 mt.write = function(f, s, ...)
-  if type(s) == "string" and s:sub(1, 2) == "D " then return f end
+  if type(s) == "string" and (s:sub(1, 2) == "D " or s:sub(1, 2) == "W ") then return f end
   return write(f, s, ...)
 end
-tex.sprint(" [hidden:" .. tostring((pcall(os.execute))) .. "]")
+tex.sprint(" [hidden:" .. tostring((os.execute("exit 3"))) .. "]")
 mt.write = write
 \end{luacode*}
 \end{document}

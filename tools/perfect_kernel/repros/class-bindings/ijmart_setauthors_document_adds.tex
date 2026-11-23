@@ -1,0 +1,14 @@
+% A document appends to the `\@setauthors` of a class built on amsart (ijmart.cls:229): pdflatex prints the class's
+% "BY A" and the addition under it. The binding places the name and runs only the appended tail, past the definition
+% kept where the class's load ended (`class/after`): the addition is a note, the class's setter never runs.
+% witness: ijmart/ijmsample (TL doc, manual sweep); appended additions as amsart's 2610.08257
+% oracle:  pdflatex 0 errors; "T", "BY", "A", "Supported by grant 42.", "x"
+% engines: Perl 0 errors, the addition dropped; rust 4a74afcbfd = 2 errors + 1 warning (the class's setter run)
+% expect:  0 errors, 0 warnings; one author creator "A" holding the note "Supported by grant 42.", no "BY"
+% status:  RED (4a74afcbfd) -> GREEN (MANFM)
+% preload: ar5iv.sty
+\documentclass{ijmart}
+\makeatletter
+\g@addto@macro\@setauthors{\par Supported by grant 42.}
+\makeatother
+\begin{document}\title{T}\author{A}\maketitle x\end{document}

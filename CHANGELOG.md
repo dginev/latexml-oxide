@@ -8,8 +8,8 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 ### Coverage
 
 - **98 % of arXiv converts without an error.** Of arXiv's 2,962,950 LaTeX articles, the production run of November
-  2026 (run 397) converts 98.1 % with no Error or Fatal, up from 86.3 % under 0.7.6 (run 306, September 2026) and 93.4 % in
-  October (run 336). The release is regression-tested against the entire arXiv corpus: each paper's result is
+  2026 converts 98.1 % with no Error or Fatal, up from 86.3 % under 0.7.6 (September 2026) and 93.4 % in
+  October. The release is regression-tested against the entire arXiv corpus: each paper's result is
   compared with the previous full run. latexml-oxide converts the ar5iv Lab and arXiv's HTML Papers.
 - **TeX Live's package manuals convert clean.** The perfect-kernel campaign (2026-08-31 to 11-13) took the LaTeX
   kernel to fidelity under raw interpretation of the packages' own sources: of the 1,602 TeX Live manuals that
@@ -46,31 +46,33 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - **Untrusted input stays inside the job.** Document Lua runs sandboxed under TeX's own defaults for untrusted input
   (no programs; writes only below the job directory), each conversion with its own interpreter; archives unpack only
   inside the source directory and image copies only inside the destination; child processes end with their conversion.
+  A program call lualatex also refuses without shell escape gets lualatex's answer (`nil` and its message) and a
+  counted Warning, so the document goes on; a call only the sandbox refuses stays an Error.
   The limits, and the advice to convert fully untrusted sources in a container or VM:
   [`docs/release/SAFETY.md`](docs/release/SAFETY.md).
 
 ### Speed, output and platforms
 
 - **Faster than 0.7.6, in less memory.** Measured against the 0.7.6 release binary on the same machine:
-  - a typical arXiv paper converts 1.3× faster (median of 94 papers on the production HTML recipe, one core each;
-    about a fifth of the gain is the Linux binary's allocator now initialising, the rest is code), and 6 of 100
-    papers that 0.7.6 failed on now convert;
-  - a 9,700-page book split at `subsubsection` converts 2.3× faster in 1.7× less memory (1.8× faster in 4.9× less
-    with serial rendering);
-  - the whole 115,519-page book converts in 27 minutes, where 0.7.6 stopped at its memory ceiling (#777);
-  - for reference, against TeX on the same machine (TeX Live 2025: pdfTeX 1.40.28, LuaHBTeX 1.22.0, LaTeX2e
-    2025-11-01): a typical arXiv paper's HTML takes about as long as one pdflatex pass (1.14× geometric mean over 32
-    papers, 0.99× without two math-heavy outliers) and 0.38× a full pdflatex, bibtex, pdflatex ×2 build; the
-    115,519-page book takes 27 minutes against 59 for lualatex's two passes (the second settles its contents and
-    references).
+  - papers: a typical arXiv paper converts 1.3× faster (median of 94 papers on the production HTML recipe, one core
+    each; about a fifth of the gain is the Linux binary's allocator now initialising, the rest is code), and all 6 of
+    the 100 papers that 0.7.6 failed on now convert; the November performance pass cut a median 10.4 % of the
+    instructions typical papers execute, with byte-identical output, and math post-processing is linear in the
+    number of formulas;
+  - split books: a 9,700-page book split at `subsubsection` converts 2.3× faster in 1.7× less memory (1.8× faster in
+    4.9× less with serial rendering); the whole 115,519-page book converts in 26 minutes, where 0.7.6 stopped at its
+    memory ceiling (#777); splitting a document frees each page once copied, so a 1,600-subsection book's
+    post-processing holds 29 MB of C heap instead of 818 MB (#777);
+  - memory: a large book's peak memory fell from 6.7 to 4.3 GB, and a conversion that outgrows its memory allowance
+    restarts in streaming mode instead of failing.
+
+  Against TeX Live 2025 on the same machine (pdfTeX 1.40.28, LuaHBTeX 1.22.0, LaTeX2e 2025-11-01), a paper's HTML
+  costs about one pdflatex pass (1.14×, the geometric mean over 32 papers; 0.99× without two math-heavy outliers) and
+  0.38× a full pdflatex + bibtex + 2× pdflatex build; the 115,519-page book takes 26 min against 59 for lualatex's two
+  passes.
 - **Large split documents stream by default.** A `--splitat` run streams its core and its split, writes the core
   result straight to disk, renders 64 or more pages on up to 8 worker processes within `--max-memory`, and keeps
   only the head links the navigation reads. Overrides: `LATEXML_POST_STREAM_SPLIT=0`, `LATEXML_RENDER_JOBS=1`.
-- **Faster and lighter.** The November performance pass cut a median 10.4 % of the instructions typical papers
-  execute, with byte-identical output; a large book's peak memory fell from 6.7 to 4.3 GB; math post-processing is
-  linear in the number of formulas; splitting a document frees each page once copied, so a 1,600-subsection book's
-  post-processing holds 29 MB of C heap instead of 818 MB (#777); and a conversion that outgrows its memory allowance
-  restarts in streaming mode instead of failing.
 - **EPUB 3, UnicodeMath output, and Perl-compatible command lines.** `--format=epub` writes an EPUB 3 container;
   `--unicodemath` adds `<annotation encoding="application/x-unicodemath">` (or standalone output with `--nopmml`, and
   `latexmlmath_oxide --unicodemath`); a repeated option keeps its last value, `--xsltparameter` takes `name:value`,
@@ -78,8 +80,9 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - **Builds and converts without TeX Live.** Building on a host without `libkpathsea` or `kpsewhich` works out of the
   box, and basic documents using built-in bindings convert cleanly without a TeX installation.
 - **Better pages in browsers.** MathML Core fixes for aligned columns, slashes, prescripts and arrows; equation
-  numbers beside their formulas; box sizes as CSS custom properties; long verbatim lines wrap on phones; the
-  stylesheets synced with upstream LaTeXML and ar5iv-css 0.9.5.
+  numbers beside their formulas; box sizes as CSS custom properties; long verbatim lines wrap on phones; displays in
+  table cells, `\parbox`, minipages and notes line up their rows (#972); the stylesheets synced with upstream LaTeXML
+  and ar5iv-css 0.9.5.
 - **Windows.** The full test suite passes on Windows and runs on every release tag, and conversions use the linked
   libkpathsea instead of falling back to a `kpsewhich` subprocess (about 270 ms a file lookup). Windows binaries ship
   unsigned in 0.8.0; a Microsoft Store package is planned for 0.8.x.
@@ -89,8 +92,9 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 ### Upgrading from 0.7.6
 
 - The first conversion with a new release, or after a TeX Live update that changes the LaTeX kernel, builds that
-  tree's format once (about 10 s) and caches it in `~/.cache/latexml-oxide/formats/`; a format built from another
-  tree is never used (OXIDIZED_DESIGN_DIVERGENCES #449).
+  tree's format once (about 11 s) and caches it in `~/.cache/latexml-oxide/formats/`; a format built from another
+  tree is never used (OXIDIZED_DESIGN_DIVERGENCES #449). It says so on stderr: `[format_dumps] no latex dump matches
+  this TeX tree; building one into <dir> (once for this tree; later conversions reuse it)`.
 - Raw loading is the default; `--noincludestyles` restores Perl LaTeXML's behaviour.
 - Bindings that now read the real package source can surface conflicts TeX itself has and 0.7.x hid: for example
   `fancybox` loaded after `fancyvrb` redefines `\VerbatimEnvironment`, so every fancyvrb environment runs to the end
@@ -111,7 +115,14 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
   in the log.
 - Rust library: `AssignRegister!` takes `(cs, value[, scope[, parameters]])`; `PostOptions::nodefaultresources` is
   now `default_resources` (inverted); the prelude exports `LazyLock` in place of `Lazy`; the `test-utils` feature is
-  no longer a default; `HtmlOptions` is `#[non_exhaustive]`.
+  no longer a default; `HtmlOptions` is `#[non_exhaustive]`; `PostDocument::new_document` takes the parent page's id
+  as a third argument; `post::run_post_processing_logged` with `split: true` stages the core result in the
+  destination and streams; `Config` and `ConversionResponse` gain a public `handoff_file` field.
+- A `latexml_oxide --splitat` run now streams and renders on up to min(cores, 8) worker processes, staging its core
+  XML in the destination; `LATEXML_POST_STREAM_SPLIT=0` and `LATEXML_RENDER_JOBS=1` restore 0.7.6's whole-document
+  split and serial render. Every environment variable: [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md).
+- Under `ulimit -v`, set `MALLOC_ARENA_MAX=2` and `MIMALLOC_ARENA_RESERVE=128MiB`
+  ([`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)).
 
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 

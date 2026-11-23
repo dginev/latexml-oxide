@@ -21,17 +21,20 @@
 //!   pipe (`tex.count`/`tex.dimen` reads AND writes round-trip to the Rust
 //!   State via framed `Q`/`A` messages, `service_query`);
 //! * **absorb** — intents with no XML-output meaning are accepted and
-//!   dropped (`pdf.set*`, `tex.primitives()`); the node/font/callback layers
-//!   (`node.*`, `font.*`, `callback.*` — LuaTeX typesetter internals) stay
-//!   out of scope and error visibly rather than pretend.
+//!   dropped (`pdf.set*`, `tex.primitives()`); the node/callback layers
+//!   (`node.*`, `callback.*` — LuaTeX typesetter internals) stay out of scope
+//!   and error visibly rather than pretend, as do `lang.*`, `vf.*` and the
+//!   `font.*` calls that need the engine's fonts; `font` mirrors one font,
+//!   the current one, whose characters answer `\iffontchar\font`.
 //!
 //! `require` is rebound through texlua's built-in kpse (plus lualibs, whose
 //! `file`/`string` extensions lualatex gets via luaotfload), so texmf-shipped
 //! Lua modules (newpax, tkz-elements, …) resolve.
 //!
 //! Document Lua is untrusted input: the prelude sandboxes it to TeX's defaults
-//! (`shell_escape=f`, `openout_any=p`) before any chunk runs, each refusal an
-//! `Error:lua:sandbox` (OXIDIZED_DESIGN_DIVERGENCES #1081).
+//! (`shell_escape=f`, `openout_any=p`) before any chunk runs. A call lualatex
+//! refuses too gets lualatex's values and a `Warning:lua:sandbox`; one only the
+//! sandbox refuses, an `Error:lua:sandbox` (OXIDIZED_DESIGN_DIVERGENCES #1081).
 //!
 //! Process shape: one `texlua` child per conversion thread, spawned on first
 //! use with a prelude that loops over length-framed requests on stdin and
@@ -160,16 +163,23 @@ package.loaded.node = nil
 -- with no '..' part and no dotfile), checked on every path component and through
 -- no symbolic link; reads stay open (openin_any=a). texlua's
 -- --safer/--nosocket/--shell-escape do not restrict a script, so the prelude
--- does it before any document chunk runs. A denied call reports a 'D' frame (an
--- Error a pcall cannot swallow) and raises a Lua error.
+-- does it before any document chunk runs. A call lualatex refuses too returns
+-- lualatex's values and reports a 'W' frame (a Warning); one only the sandbox
+-- refuses reports a 'D' frame (an Error) and raises a Lua error. No record
+-- (nor an engine gap's 'G') can be swallowed by a pcall.
 -- While the prelude loads lualibs (texmf code, trusted like a format), the
--- originals still answer; the wrappers it captures deny once the loop starts.
+-- originals still answer; the wrappers it captures refuse once the loop starts.
 local booting = true
 local function deny(what)
   if booting then error(what .. ' is not allowed', 3) end
   local msg = what .. ' is not allowed (document Lua runs sandboxed: no programs, writes only below the job directory)'
   frame('D', msg)
   error(msg, 3)
+end
+-- An engine layer texlua lacks, which lualatex performs (a font, a language, a typesetter call): a 'G' frame, a
+-- Warning:lua:engine, never a refusal, so a chunk that then fails stays the caller's Info.
+local function gap(msg)
+  if not booting then frame('G', msg) end
 end
 local function denier(what, original)
   return function(...)
@@ -186,39 +196,70 @@ end
 local symlinkattributes = lfs and lfs.symlinkattributes
 -- kpse_out_name_ok under openout_any=p, decided here rather than by texlua's
 -- kpse.out_name_ok, which follows the host's texmf.cnf (openout_any=a there
--- allows anything) and checks only the last component for a dotfile.
+-- allows anything) and checks only the last component for a dotfile. A name
+-- refused only by the sandbox's stricter checks, which lualatex would write,
+-- returns false, true.
 local function out_name_ok(name)
   if type(name) ~= 'string' or name == '' or s_find(name, '\0', 1, true) then return false end
-  local path = name
+  local path, strict = name, false
   if CRLF then
     -- Windows: '\' separates too; a ':' is a drive or an alternate data stream; '\\?\' and '\\.\' are device paths.
     if s_find(name, '^[\\/][\\/][%?%.][\\/]') or s_find(name, ':', 1, true) then return false end
     path = s_gsub(name, '\\', '/')
   elseif s_find(name, '\\', 1, true) then
     -- Unix: '\' is a filename character; the name checked must be the name the system opens.
-    return false
+    strict = true
   end
   if s_sub(path, 1, 1) == '/' then return false end
   local prefix = nil
   for part in s_gmatch(path, '[^/]+') do
     if part == '..' or (s_sub(part, 1, 1) == '.' and part ~= '.' and part ~= '.tex') then return false end
     -- (Windows drops a component's trailing dots and spaces: 'a.' opens 'a')
-    if CRLF and part ~= '.' and s_find(part, '[%. ]$') then return false end
+    if CRLF and part ~= '.' and s_find(part, '[%. ]$') then strict = true end
     -- No component may be a symbolic link: one made by the source tree could point anywhere.
     prefix = prefix and (prefix .. '/' .. part) or part
-    if symlinkattributes and symlinkattributes(prefix, 'mode') == 'link' then return false end
+    if not strict and symlinkattributes and symlinkattributes(prefix, 'mode') == 'link' then strict = true end
   end
+  if strict then return false, true end
   return true
 end
 local function writes(mode) return type(mode) == 'string' and s_find(mode, '[wa+]') ~= nil end
-for _, name in ipairs({'execute', 'exec', 'spawn', 'kpsepopen', 'remove', 'rename', 'tmpname', 'tmpdir', 'setenv'}) do
+-- A program call answers as lualatex --no-shell-escape does (shell_escape=f, which \pdfshellescape and
+-- status.shell_escape also read; measured on TL 2025): nil and its message, and os.execute() asks whether a shell
+-- exists, 0 (pdftexcmds' \pdf@shellescape, imakeidx: TL manuals derivative, wheelchart, xassoccnt_doc).
+local function no_program(what, original, message)
+  return function(...)
+    if booting and original then return original(...) end
+    local command = ...
+    if what == 'os.execute' and command == nil then return 0 end
+    if type(command) == 'string' then command = '"' .. shown(command) .. '"' else command = shown(command) end
+    frame('W', what .. ' ' .. command .. ' was not run (document Lua runs no programs, as lualatex without shell escape)')
+    return nil, message
+  end
+end
+for _, name in ipairs({'execute', 'exec', 'spawn'}) do
+  os[name] = no_program('os.' .. name, os[name], 'All command execution disabled.')
+end
+os.kpsepopen = no_program('os.kpsepopen', os.kpsepopen, 'all command execution is disabled')
+io.popen = no_program('io.popen', io.popen, 'all command execution is disabled')
+for _, name in ipairs({'remove', 'rename', 'tmpname', 'tmpdir', 'setenv'}) do
   os[name] = denier('os.' .. name, os[name])
 end
-io.popen = denier('io.popen', io.popen)
 io.tmpfile = denier('io.tmpfile', io.tmpfile)
 local io_open, io_output, io_input = io.open, io.output, io.input
+-- lualatex's io.open answers a write openout_any=p forbids with a lone nil; a name only the sandbox refuses (a
+-- symbolic link, a '\' name) and io.output and gzip.open, which lualatex does not check, are denied.
 io.open = function(name, mode)
-  if writes(mode) and not out_name_ok(name) then deny('writing ' .. shown(name)) end
+  if writes(mode) then
+    local ok, strict = out_name_ok(name)
+    if strict then deny('writing ' .. shown(name)) end
+    if not ok then
+      if not booting then
+        frame('W', 'writing ' .. shown(name) .. ' was refused (document Lua writes only below the job directory, as lualatex under openout_any=p)')
+      end
+      return nil
+    end
+  end
   return io_open(name, mode)
 end
 io.output = function(file)
@@ -260,6 +301,107 @@ if img then
     if type(value) == 'function' then img[name] = denier('img.' .. name, value) end
   end
 end
+-- texlua has no engine fonts or typesetter: font mirrors the current font (hologo.sty:1298: hvlogos-doc, derivative);
+-- font.id, lang, vf crashed it (babel-bidi-basic.lua:44: lettrine-demo-arabic); other answers warn (OD #1081).
+local CURRENT_FONT = 1
+local kpse_ready = false
+local function engine_warning(msg)
+  gap(msg .. ' (texlua has no TeX engine fonts or typesetter)')
+end
+local function needs_engine(what)
+  return function()
+    engine_warning(what .. ' was not run')
+    error(what .. " needs the engine's fonts and typesetter (texlua has neither)", 2)
+  end
+end
+-- A table whose fields beyond the mirrored ones read nil, each read a Warning.
+local function partial(what, fields)
+  return setmetatable(fields, {__index = function(_, key)
+    engine_warning(what .. ' has no field ' .. shown(key) .. ' here')
+    return nil
+  end})
+end
+local function font_char(_, code)
+  if type(code) == 'number' and code >= 0 and code <= 0x10FFFF and code == m_floor(code)
+    and query('fontchar ' .. s_format('%d', code)) == '1' then
+    return partial('a character of the current font', {})
+  end
+  return nil
+end
+local function getfont(id)
+  if id == CURRENT_FONT then
+    return partial('the current font', {characters = setmetatable({}, {__index = font_char})})
+  end
+  if type(id) == 'number' and id >= 0 then engine_warning('font ' .. s_format('%.14g', id) .. ' is not known') end
+  return nil
+end
+local engine_font = font
+font = {
+  current = function(id)
+    if id == nil then return CURRENT_FONT end
+    engine_warning('font.current(id) was not run')
+  end,
+  id = function(name)
+    if type(name) == 'string' and query('fontid ' .. name) == '1' then
+      engine_warning('font.id("' .. shown(name) .. '") names a font whose id is not known; it answers -1')
+    end
+    return -1
+  end,
+  getfont = getfont,
+  getcopy = getfont,
+  fonts = setmetatable({}, {__index = function(_, id) return getfont(id) end,
+    __newindex = needs_engine('font.fonts[id] = ...')}),
+  max = function() return CURRENT_FONT end,
+  nextid = function() return CURRENT_FONT + 1 end,
+  each = function()
+    engine_warning('font.each lists only the current font')
+    local done = false
+    return function()
+      if done then return nil end
+      done = true
+      return CURRENT_FONT, getfont(CURRENT_FONT)
+    end
+  end,
+}
+-- read_tfm and read_vf read a TFM or VF through kpathsea, as lualatex does, once the program name is set (texlua
+-- aborts without one); getparameters and frozen answer nil, as in texlua; define, setfont, ... are a Lua error.
+local function after_kpse(what, original)
+  return function(...)
+    if not kpse_ready then return needs_engine(what)() end
+    return original(...)
+  end
+end
+local function answers_nil(what)
+  return function()
+    engine_warning(what .. ' answers nil')
+    return nil
+  end
+end
+if type(engine_font) == 'table' then
+  for name, value in pairs(engine_font) do
+    if font[name] == nil and type(value) == 'function' then
+      if name == 'read_tfm' or name == 'read_vf' then
+        font[name] = after_kpse('font.' .. name, value)
+      elseif name == 'getparameters' or name == 'frozen' then
+        font[name] = answers_nil('font.' .. name)
+      else
+        font[name] = needs_engine('font.' .. name)
+      end
+    end
+  end
+end
+package.loaded.font = font
+for _, lib in ipairs({'lang', 'vf'}) do
+  local shim = {}
+  if type(_G[lib]) == 'table' then
+    for name, value in pairs(_G[lib]) do
+      if type(value) == 'function' then shim[name] = needs_engine(lib .. '.' .. name) end
+    end
+  end
+  _G[lib], package.loaded[lib] = shim, shim
+end
+-- texlua's own tex.run and tex.finish (the engine's main loop and its end) crash it too.
+tex.run, tex.finish = needs_engine('tex.run'), needs_engine('tex.finish')
 if lfs then
   local read_only = {attributes = true, currentdir = true, dir = true, isdir = true, isfile = true,
     readlink = true, shortname = true, symlinkattributes = true}
@@ -267,6 +409,8 @@ if lfs then
     if type(value) == 'function' and not read_only[name] then lfs[name] = denier('lfs.' .. name, value) end
   end
 end
+-- lualatex without shell escape refuses native code too (luatex-core.lua L195-200: an empty loadlib, no C
+-- searchers); its values for it are not given yet, so these stay Errors (OXIDIZED_DESIGN_DIVERGENCES #1081).
 package.loadlib = denier('package.loadlib', package.loadlib)
 local c_path = package.cpath
 package.cpath = ''
@@ -331,7 +475,12 @@ print = function() end
 -- resolve (newpax, tkz-elements, ...), and load lualibs, which supplies the
 -- 'file'/'string'/'table' library extensions lualatex gets via luaotfload.
 if kpse and kpse.set_program_name then
-  pcall(kpse.set_program_name, 'luatex')
+  -- kpathsea runs mktextfm & co for a missing TFM, PK or MF when a texmf.cnf's MKTEX* asks it to; 0 here overrides
+  -- that file: no program runs (stricter than lualatex, fail-safe).
+  for _, var in ipairs({'MKTEXTFM', 'MKTEXPK', 'MKTEXMF', 'MKTEXTEX', 'MKTEXFMT', 'MKOCP', 'MKOFM'}) do
+    os.setenv(var, '0')
+  end
+  kpse_ready = pcall(kpse.set_program_name, 'luatex')
   local find_file = kpse.find_file
   t_insert(searchers, function(name)
     -- LuaTeX's own kpse loader reads a dotted name as a path (pgf.gd.trees.library).
@@ -402,7 +551,8 @@ struct LuaSlot {
 const MAX_RESTARTS: u32 = 3;
 /// The longest frame the bridge reads: a length past it is a broken protocol, not output.
 const MAX_FRAME: usize = 64 << 20;
-/// The refusals a chunk reports one by one, by count and by bytes; the rest are counted in one summary Error.
+/// The refusals of each severity a chunk reports one by one, by count and by bytes; the rest are counted in a summary
+/// per severity.
 const MAX_DENIALS: usize = 20;
 const MAX_DENIAL_BYTES: usize = 64 << 10;
 
@@ -640,6 +790,20 @@ fn service_query(payload: &str) -> String {
   let mut it = payload.split_whitespace();
   let op = it.next().unwrap_or("");
   let mut key = it.next().unwrap_or("");
+  // `fontid <name>`: whether `\<name>` is a font identifier (`\font\tenln=line10`), read-only; the probe interns no
+  // name (a document's names would stay in the arena for good).
+  if let Some(name) = payload.strip_prefix("fontid ") {
+    let font = latexml_core::common::arena::get(format!("fontinfo_\\{name}")).is_some_and(|key| {
+      state::with_value_sym(key, |font| matches!(font, Some(state::Stored::Font(_))))
+    });
+    return if font { "1" } else { "0" }.to_string();
+  }
+  // `fontchar <code>`: the prelude's `font` mirror asks whether the current font has a character, read-only.
+  if op == "fontchar" {
+    let code = key.parse::<i64>().unwrap_or(-1);
+    let has = crate::etex::font_has_char(&latexml_core::T_CS!("\\font"), code);
+    return if has { "1" } else { "0" }.to_string();
+  }
   let global = key == "global";
   if global {
     key = it.next().unwrap_or("");
@@ -682,32 +846,48 @@ fn service_query(payload: &str) -> String {
 /// current catcodes by the caller); `Err(msg)` is a load/runtime Lua error or
 /// bridge unavailability ("texlua not available" — callers degrade to a no-op
 /// expansion, matching what the document would get from a TeX engine without
-/// Lua). Each call the sandbox refused, and an interpreter that ended mid-chunk
-/// (its output lost), is raised as an `Error` (the outer `Err`, should that
-/// Error escalate to a Fatal).
+/// Lua). Each call the sandbox refused is a `Warning` where lualatex refuses it too and an `Error` otherwise; a
+/// chunk that fails after such a `Warning`, and an interpreter that ended mid-chunk (its output lost), are an `Error`
+/// (the outer `Err`, should one escalate to a Fatal).
 pub fn lua_exec(chunk: &str) -> latexml_core::common::error::Result<Result<String, String>> {
   let framed = exec_framed(chunk);
   use crate::prelude::*;
-  for denial in framed.denials.shown {
-    Error!("lua", "sandbox", denial);
+  let failed_after_refusal = framed.failed_after_refusal();
+  for refusal in framed.denials.shown {
+    match refusal.kind {
+      Refused::Sandbox => Error!("lua", "sandbox", refusal.message),
+      Refused::AsLualatex => Warn!("lua", "sandbox", refusal.message),
+      Refused::EngineGap => Warn!("lua", "engine", refusal.message),
+    }
   }
-  if framed.denials.more > 0 {
-    Error!(
+  let unlisted =
+    |n: usize| format!("{n} more calls the sandbox refused in this chunk are not listed");
+  if framed.denials.errors.more > 0 {
+    Error!("lua", "sandbox", unlisted(framed.denials.errors.more));
+  }
+  if framed.denials.warnings.more > 0 {
+    Warn!("lua", "sandbox", unlisted(framed.denials.warnings.more));
+  }
+  if framed.denials.gaps.more > 0 {
+    Warn!(
       "lua",
-      "sandbox",
+      "engine",
       format!(
-        "{} more calls the sandbox refused in this chunk are not listed",
-        framed.denials.more
+        "{} more calls texlua has no engine for in this chunk are not listed",
+        framed.denials.gaps.more
       )
     );
   }
   if let Some(ended) = framed.ended {
     Error!("lua", "interpreter", ended);
+  } else if let Some(failure) = failed_after_refusal {
+    Error!("lua", "sandbox", failure);
   }
   Ok(framed.result)
 }
 
-/// One chunk's run: its result, the sandbox's refusals ('D' frames, OXIDIZED_DESIGN_DIVERGENCES #1081) — returned
+/// One chunk's run: its result, the sandbox's refusals and engine gaps ('D', 'W', 'G' frames,
+/// OXIDIZED_DESIGN_DIVERGENCES #1081) — returned
 /// apart, as a pcall in the chunk can swallow the Lua error, never the record — and the report of an interpreter
 /// that ended during it.
 struct Framed {
@@ -716,21 +896,79 @@ struct Framed {
   ended:   Option<String>,
 }
 
-/// A chunk's refusals: the first `MAX_DENIALS` (within `MAX_DENIAL_BYTES`) kept, the rest counted.
+impl Framed {
+  /// The Error for a chunk whose Lua error followed a call refused with lualatex's values: it used that call's nil
+  /// (`io.popen(cmd):read()`) and is lost, as under lualatex (rc=1). An engine gap alone does not count (lualatex
+  /// performs that call), nor a chunk whose 'D' refusal is already its Error (a 'D' call raises the Lua error); any
+  /// other chunk's Lua error stays the caller's Info.
+  fn failed_after_refusal(&self) -> Option<String> {
+    let refused_as_error = self.denials.errors.listed + self.denials.errors.more > 0;
+    match (&self.result, &self.denials.first_warning, &self.ended) {
+      (Err(failure), Some(call), None) if !refused_as_error => Some(format!(
+        "the chunk failed after the sandbox refused {call}: {failure}"
+      )),
+      _ => None,
+    }
+  }
+}
+
+/// A chunk's refusals and engine gaps in order: the first `MAX_DENIALS` of each kind (within `MAX_DENIAL_BYTES` each)
+/// kept, the rest counted, so a flood of Warnings never hides an Error.
 #[derive(Default)]
 struct Denials {
-  shown: Vec<String>,
-  bytes: usize,
-  more:  usize,
+  shown:         Vec<Refusal>,
+  errors:        Budget,
+  warnings:      Budget,
+  gaps:          Budget,
+  /// The first call refused with lualatex's values, named should the chunk then fail.
+  first_warning: Option<String>,
+}
+
+/// One kind's share of a chunk's refusal record.
+#[derive(Default)]
+struct Budget {
+  listed: usize,
+  bytes:  usize,
+  more:   usize,
+}
+
+/// One refused call or engine gap.
+struct Refusal {
+  kind:    Refused,
+  message: String,
+}
+
+/// A frame's kind of refusal.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Refused {
+  /// 'D': only the sandbox refuses the call (lualatex would perform it), an `Error:lua:sandbox`.
+  Sandbox,
+  /// 'W': lualatex refuses it too, and the call returned lualatex's values; a `Warning:lua:sandbox`.
+  AsLualatex,
+  /// 'G': an engine layer texlua lacks and lualatex performs; a `Warning:lua:engine`.
+  EngineGap,
 }
 
 impl Denials {
-  fn push(&mut self, denial: String) {
-    if self.shown.len() < MAX_DENIALS && self.bytes + denial.len() <= MAX_DENIAL_BYTES {
-      self.bytes += denial.len();
-      self.shown.push(denial);
+  fn push(&mut self, kind: Refused, message: String) {
+    if kind == Refused::AsLualatex && self.first_warning.is_none() {
+      // The prelude's 'W' message is `<call> was not run (…)` or `writing <name> was refused (…)`.
+      let call = message
+        .rsplit_once(" was ")
+        .map_or(message.as_str(), |(call, _)| call);
+      self.first_warning = Some(call.to_string());
+    }
+    let budget = match kind {
+      Refused::Sandbox => &mut self.errors,
+      Refused::AsLualatex => &mut self.warnings,
+      Refused::EngineGap => &mut self.gaps,
+    };
+    if budget.listed < MAX_DENIALS && budget.bytes + message.len() <= MAX_DENIAL_BYTES {
+      budget.listed += 1;
+      budget.bytes += message.len();
+      self.shown.push(Refusal { kind, message });
     } else {
-      self.more += 1;
+      budget.more += 1;
     }
   }
 }
@@ -762,7 +1000,8 @@ impl From<std::io::Error> for FrameError {
   fn from(e: std::io::Error) -> Self { FrameError::Io(e) }
 }
 
-/// Sends `chunk` and reads frames up to its final `OK`/`ERR`, servicing `Q`ueries and collecting `D`enials.
+/// Sends `chunk` and reads frames up to its final `OK`/`ERR`, servicing `Q`ueries and collecting refusals (`D`, `W`)
+/// and engine gaps (`G`).
 fn exchange(
   p: &mut LuaProc,
   chunk: &str,
@@ -791,7 +1030,9 @@ fn exchange(
       body = body.replace("\r\n", "\n");
     }
     match tag {
-      "D" => denials.push(body),
+      "D" => denials.push(Refused::Sandbox, body),
+      "W" => denials.push(Refused::AsLualatex, body),
+      "G" => denials.push(Refused::EngineGap, body),
       "Q" => {
         let answer = service_query(&body);
         p.stdin
@@ -855,10 +1096,19 @@ fn exec_framed(chunk: &str) -> Framed {
       Err(error) => {
         // The interpreter ended (a crash, `os.exit`) or broke the protocol: its output is lost and its state gone.
         // Dropping it kills and reaps the child; the next chunk starts a fresh one, up to MAX_RESTARTS times.
-        slot.proc_ = None;
+        let ended = slot.proc_.take();
         slot.ended += 1;
         let why = match error {
-          FrameError::Io(e) => format!("the texlua interpreter ended ({e})"),
+          FrameError::Io(e) => {
+            // A closed pipe is a child that is ending: say how (`signal: 11 (SIGSEGV)`, `exit status: 0`).
+            let status = ended
+              .and_then(|mut p| p.child.take())
+              .and_then(|child| child.finish(std::time::Duration::from_millis(500)));
+            match status {
+              Some(status) => format!("the texlua interpreter ended ({status})"),
+              None => format!("the texlua interpreter ended ({e})"),
+            }
+          },
           FrameError::Protocol(what) => format!("the texlua interpreter sent {what}"),
         };
         let next = if slot.ended > MAX_RESTARTS {
@@ -999,6 +1249,49 @@ mod tests {
         Ok("R1")
       );
     }
+  }
+
+  /// A chunk's Lua error after a refusal with lualatex's values is an Error naming the call; after an engine gap alone
+  /// (lualatex performs that call: LUAFONT's `font.define`) it is not; with both, the refusal decides. Each kind keeps
+  /// its own budget of `MAX_DENIALS`.
+  #[test]
+  fn engine_gaps_do_not_escalate() {
+    use super::{Denials, Framed, MAX_DENIALS, Refused};
+    let failed = |frames: &[(Refused, &str)]| {
+      let mut denials = Denials::default();
+      for (kind, message) in frames {
+        denials.push(*kind, message.to_string());
+      }
+      Framed {
+        result: Err("attempt to index a nil value".to_string()),
+        denials,
+        ended: None,
+      }
+      .failed_after_refusal()
+    };
+    let gap = (Refused::EngineGap, "font.define needs the TeX engine");
+    let popen = (
+      Refused::AsLualatex,
+      "io.popen \"echo hi\" was not run (document Lua runs no programs)",
+    );
+    let remove = (Refused::Sandbox, "os.remove is not allowed");
+    assert_eq!(failed(&[gap]), None);
+    assert_eq!(failed(&[popen, remove]), None);
+    assert_eq!(
+      failed(&[gap, popen]).as_deref(),
+      Some(
+        "the chunk failed after the sandbox refused io.popen \"echo hi\": attempt to index a nil value"
+      )
+    );
+    let mut denials = Denials::default();
+    for _ in 0..MAX_DENIALS + 3 {
+      denials.push(Refused::EngineGap, "g".to_string());
+    }
+    denials.push(Refused::Sandbox, "d".to_string());
+    assert_eq!(
+      (denials.shown.len(), denials.gaps.more, denials.errors.more),
+      (MAX_DENIALS + 1, 3, 0)
+    );
   }
 
   #[test]

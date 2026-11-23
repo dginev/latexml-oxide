@@ -38,19 +38,29 @@ see that section below.
   chunks run in `texlua` under TeX's own defaults for untrusted input, set by the bridge's prelude before any
   document chunk: `shell_escape=f` (no program runs, no C module or network library loads) and `openout_any=p`
   (writes only to a relative path below the job directory, no `..`, no dotfile, no symbolic link on the way; on
-  Unix no `\` in the name). A refused call never takes effect. Its `Error` is reported on a best-effort basis: the
+  Unix no `\` in the name). A refused call never takes effect. A call lualatex refuses too returns what lualatex
+  `-no-shell-escape` returns (`os.execute("…")`: `nil, "All command execution disabled."`; `io.popen`: `nil, "all
+  command execution is disabled"`; a forbidden `io.open` write: `nil`; `os.execute()`: 0, no shell) and is a
+  `Warning`; one only the sandbox refuses (lualatex would perform it) is an `Error` and a Lua error. A C module, a
+  network library and `package.loadlib` are that `Error` too, though lualatex refuses them as well (its
+  `luatex-core.lua` empties `package.loadlib` and drops the C searchers without shell escape): no manual needs them,
+  so they keep the stricter answer. A chunk that fails after a refusal (it used the refused call's `nil`) is an
+  `Error`, as lualatex stops with an error there. The record is reported on a best-effort basis: the
   checks use functions held before any document code runs, and the bridge accepts only frames carrying a nonce the
   interpreter read before any other code loaded, so a refusal record cannot be forged and a chunk's
   `print`/`io.write`/`texio.write` reach the null device; but a chunk can suppress its OWN record (exhausting its C
   stack just before the record is written, or reading its own pipe through `/proc/self/fd`), so the record is
   evidence, not a guarantee — the guarantee is that the call was refused. A chunk lists at
-  most 20 refusals, the rest in one summary `Error`. An interpreter that ends or sends anything but a frame
+  most 20 refusals of each severity, the rest in one summary per severity. An interpreter that ends or sends anything but a frame
   mid-chunk is an `Error` (its output is lost); the next chunk starts a fresh one, up to 3 times per conversion.
   Each conversion gets its own interpreter, in its source directory, with an environment reduced to the texmf
   search, library path, locale, date and temp-dir variables; a timeout or memory exit kills it. Not covered: a link
-  created between the check and the write by another process; kpathsea's own `mktex*` font generation, which a
-  lookup may start as it does under TeX; and reads, which stay open as under TeX (`openin_any=a`), so a chunk can
-  read any file the user can, its own process memory (and so the nonce) included.
+  created between the check and the write by another process; and reads, which stay open as under TeX
+  (`openin_any=a`), so a chunk can read any file the user can, its own process memory (and so the nonce) included.
+  kpathsea's own font generation (`mktextfm` and METAFONT) never runs: the interpreter's environment carries no
+  `MKTEX*` variable, and the prelude sets them all to 0 so that kpathsea ignores a `texmf.cnf` that enables them (one
+  an operator's `TEXMFCNF` reaches included). This is stricter than lualatex, which may run `mktextfm` for a missing
+  TFM: fail-safe by choice.
 - **Archive sources unpack inside their directory.** A `.tar`/`.tar.gz` symbolic link is made only when its target,
   resolved through the links already there, stays inside the extraction directory, a hard link only to a file
   inside it; other links, and entries whose path would leave the directory, are skipped with a counted `Warning`.

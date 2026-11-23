@@ -3,7 +3,7 @@
 The release summary is the `## [0.8.0]` section of [`CHANGELOG.md`](../../CHANGELOG.md). This file keeps every entry
 the release's pull requests wrote, with its guard tests and design references (`OXIDIZED_DESIGN_DIVERGENCES #N` is
 [`docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md`](../parity/OXIDIZED_DESIGN_DIVERGENCES.md)). A fix that lands between
-the release candidates and 0.8.0 adds its entry at the top of the list below.
+the release candidates and 0.8.0 adds its entry to the current candidate's group at the top of the list below.
 
 ## The perfect-kernel campaign (2026-08-31 to 2026-11-13)
 
@@ -43,38 +43,76 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
-  - **The x86_64 Linux release binary's allocator initialises.** The release leg linked with Ubuntu 22.04's mold 1.0.3,
-    which left Rust std's `.init_array` entry in a section of its own; DT_INIT_ARRAY covered only that one, so
-    mimalloc's constructor never ran and every 64 KiB page came straight from the OS (0.7.6 and 0.8.0-rc1/rc2: 10,094
-    mmap / 19,395 munmap calls on a small document against 96 / 22). The jammy legs now link with the default ld, and
-    `tools/release_alloc_check.sh` fails a Linux release whose binary skips a constructor or whose mimalloc prints no
-    statistics. Output is unchanged; system time falls, most of all where syscalls are slow (WSL 1).
-  - **0.8.0-rc2: speed against 0.7.6 (the basis of the CHANGELOG's figures).** The 0.7.6 x86_64 Linux release
-    binary against the rc2 candidate built as the release job builds it (`maxperf`, `runtime-bindings`), on one
-    host (Threadripper 9980X, TeX Live 2025), each conversion pinned to one core, best of 2, interleaved:
-    - 100 arXiv papers on the production HTML recipe (`--preload=ar5iv.sty --format=html5 --pmml --mathtex`): on the
-      94 both convert, wall time 1.31× median (p10-p90 1.11-1.42×), 1.30× in aggregate (194.5 → 149.2 s), 1.24×
-      fewer instructions, 1.10× lower peak RSS; 0.7.6 failed 6 (four Fatals, one memory kill, one digestion loop),
-      rc2 none. About a fifth of the gain is the allocator (#969: system time 14.3 → 4.5 s); the instruction ratio
-      equals the user-time ratio.
-    - Nasser's 2,400-problem slice (`--splitat=subsubsection --format=html5`, 9,713 pages): 151.9 → 65.5 s with the
-      default 8 render workers (2.3×), 85.5 s serial (1.8×); peak memory of the whole process tree 4.9 → 2.9 GB
-      (1.0 GB serial). The pages are 3× smaller (the unread head links dropped, OXIDIZED_DESIGN_DIVERGENCES #1134).
-    - His whole book (115,519 pages): rc2 1,609 s at 4.3 GB; 0.7.6 stops after 99 s at its memory fuse
-      (`Fatal:Timeout:MemoryBudget`, 6.5 GB, `--max-memory=8192`) with 730 partial pages.
-    - Against TeX, same host and tree: TeX Live 2025 as last updated 2026-02-26 (formats 2026.2.26), pdfTeX
-      1.40.28, LuaHBTeX 1.22.0, LaTeX2e 2025-11-01 patch level 0, L3 programming layer 2025-11-06; latexml-oxide
-      read the same tree. The 32 papers of `docs/performance/PERFORMANCE.md` P13, one core, best of 3, the three
-      tools interleaved; CPU time (user + sys) per paper: latexml-oxide median 0.48 s (mean 1.55), one pdflatex pass
-      0.40 s (1.19), a full build (pdflatex, bibtex where the `.aux` names a `.bib`, pdflatex ×2) 1.20 s (3.60).
-      Ratios per paper: X/P1 median 1.12, geomean 1.14 (0.99 without P13's two outliers); X/full build 0.39 / 0.38.
-      pdflatex's own times matched the 2026-11-15 run within 0.5 %, so the conditions match: 31 of the 32 papers
-      got faster (median 0.934×; the int/perf release-profile binary then, the maxperf release build now).
-    - lualatex on the whole book (one run per pass, on one core): pass 1 1,134 s, pass 2 2,389 s, 67,424 PDF pages,
-      0.95 GB peak, 98 TeX errors in each pass (it continued past them); latexml-oxide 1,609 s at 4.3 GB for 115,519
-      HTML pages, post-processing included, no errors.
-    - Not in the timings: the one-time format build for a TeX tree the release's embedded dumps were not built from
-      (~9 s, OXIDIZED_DESIGN_DIVERGENCES #449). Loaded 56 conversions at a time, the paper gain is 1.2×.
+### 0.8.0-rc2
+
+  - **0.8.0-rc2: a display in a table cell, `\parbox`, minipage or note lays out its rows as outside (issue 972).**
+    The XSLT writes such a display as `<span>`s that LaTeXML.css did not style, so an `aligned` display's rows ran
+    side by side; they are now CSS table row groups and cells (also in ar5iv-css). Perl's CSS has the same defect
+    (KNOWN_PERL_ERRORS #1310); residuals in OXIDIZED_DESIGN_DIVERGENCES #1135. Guard
+    `latexml_post::xslt::witnessed_css_delta::equation_rows_in_inline_context_delta_stays_present`.
+  - **0.8.0-rc2: a split page navigates under the page it was split from, as in Perl.** Scan filed each page under
+    a parent guessed from its id prefix; Perl passes the parent Split computed (`Split.pm:132-133`
+    `parent_id => $$entry{upid}`, `Scan.pm:99`), and both of our split paths now do. Under
+    `\@addtoreset{chapter}{part}` Part II's chapters are `Ch1a`, `Ch2a` while their sections keep `Ch1.S1`, so
+    those sections went up into Part I's `Ch1`, with its title chain and prev/next (9,262 of the 115,519 pages of
+    issue 777's book). In every split document with `\part`, as in Perl: a chapter goes up to its part and carries
+    it in its title (`Chapter 1 Intro ‣ Part I A`), where it went up to the root page (or, under an untitled root,
+    had no `up`); the root page's `\tableofcontents` nests the chapters under their parts; and because LaTeXML
+    nests `\backmatter` inside the last `ltx:part`, the Bibliography and Index footer buttons appear only on that
+    part's pages (a known limitation, as in Perl; tracked for after 0.8.0), and `bib.html`'s title ends in that
+    part. A split without parts and an unsplit document are
+    byte-identical. `PostDocument::new_document` takes the parent page's id as a third argument. Guard
+    `118_streaming_split_parity::split_pages_navigate_under_the_parent_split_gave_them`.
+  - **0.8.0-rc2: document Lua's refused program call answers as lualatex without shell escape.** `os.execute("…")`,
+    `os.exec` and `os.spawn` return `nil, "All command execution disabled."`, `io.popen` and `os.kpsepopen` `nil,
+    "all command execution is disabled"`, and an `io.open` write that `openout_any=p` forbids returns `nil`, each with a counted
+    `Warning:lua:sandbox` instead of an Error and a Lua error, so the document goes on; `os.execute()` (is there a
+    shell?) returns 0. No program runs. Calls lualatex would perform but the sandbox refuses stay Errors, as do C
+    modules, network libraries and `package.loadlib`; a chunk that then fails on the refused call's `nil`
+    (`io.popen(cmd):read()`) is an Error, and a chunk lists at most 20 refusals of each severity. Nine TL
+    manuals that erred on pdftexcmds'/imakeidx's `tex.write(os.execute())` (derivative, wheelchart, xassoccnt_doc,
+    …) are clean again. `font.current()`, which crashed texlua (hologo's glyph test in `\hologo{XeTeX}`), now answers
+    through the `font` mirror (the next entry), so the interpreter keeps its state and no Error is counted.
+    OXIDIZED_DESIGN_DIVERGENCES #1081; guards `perfect_kernel_batchseclua::{batchluaexec_refused_program_answers_as_lualatex,
+    batchluaexec_refused_then_failed_is_an_error, batchluaexec_refusal_budget_per_severity,
+    batchluaexec_font_current_keeps_the_interpreter}`.
+  - **0.8.0-rc2: document Lua's `font`, `lang` and `vf` no longer crash the Lua interpreter.** texlua has LuaTeX's libraries
+    but not the engine's fonts or typesetter, so `font.current()`, `font.id`, `font.define`, `lang.new`, `vf.char`
+    and texlua's `tex.run`/`tex.finish` killed it past any `pcall` (an `Error:lua:interpreter`, and after three
+    restarts no later chunk ran). `font` now mirrors one font, the current one, whose `characters` answer as
+    `\iffontchar\font` does; `font.id` answers -1; `font.read_tfm` and `font.read_vf` read the font file as lualatex
+    does (no `mktextfm` runs for a missing one); `font.getparameters` and `font.frozen` answer nil, as texlua does;
+    the calls that need the engine are a Lua error, and every answer that is not lualatex's (a defined font's id, a
+    font field the mirror lacks, those calls) a counted `Warning:lua:engine`. hologo's
+    XeTeX and XeLaTeX logos print the reversed E (Ǝ) and "Hàn Thế Thành" its ế, as lualatex does (12 TeX Live manuals
+    under the luatex profile, among them hvlogos-doc, mfirstuc-manual and glossariesbegin, back to 0 errors; babel's
+    bidi Lua in lettrine-demo-arabic too, with 4 Warnings for its `font.id` of latex.ltx's line and circle fonts). An interpreter that still ends mid-chunk says how in its Error
+    (`signal: 11 (SIGSEGV)`, `exit status: 3`). OXIDIZED_DESIGN_DIVERGENCES #1081; guards
+    `perfect_kernel_batchluafont`.
+  - **0.8.0-rc2: `\pdfextension` reads its operands under the luatex profile.** It read one token, so the rest of the keyword
+    and its operands leaked as text ("iteralq -1 0 0 1 0 0 cm", accsupp's "iteralpage/Span«/ActualText(…)»BDC" in
+    mfirstuc-manual, glossaries-user, datatool-user and 7 more TeX Live manuals; pdfrender's "olorstackpop" 59 times
+    in xfakebold-doc). Every keyword LuaTeX knows (`literal` with its `text`/`raw`/`origin` modes, `colorstack`,
+    `setmatrix`, `obj`, `annot`, `startlink`, `outline`, `dest`, `info`, `catalog`, `mapline`, …) now reads the
+    operands pdfTeX's `\pdf<keyword>` reads; an unknown one is an Error, as in lualatex. `\pdffeedback` reads its operands too
+    (`colorstackinit` answers a new stack, as `\pdfcolorstackinit`). pdfTeX's `\pdfcolorstack <n> current` no
+    longer swallows the text after it, `\pdfthread`/`\pdfstartthread` read their thread spec and `\pdfcatalog`'s
+    `openaction` its whole action. A font operand (`\pdfincludechars`, `\pdffontattr`, `\pdffontname`, …) is read as
+    TeX reads a font identifier, past spaces and with `\textfont<n>`'s family number: luatex85's
+    `\pdfincludechars\font{…}` took the space after the keyword for the font (2 Errors each). Guards
+    `perfect_kernel_batchluafont::{batchluafont_pdfextension_literal_reads_its_operands,
+    batchluafont_pdfextension_keywords_read_their_operands}`.
+  - **0.8.0-rc2: two frontmatter Errors of the TeX Live manual sweep.** The ams bindings run only what was added to
+    `\@setauthors` after the class's load ended, so a class built on amsart keeps its own setter unrun: ijmart.cls's,
+    whose `\if\authors\@empty\relax\else` has no `\fi`, ran off its argument with the names emptied (ijmart/ijmsample:
+    2 Errors → 0, output unchanged). The default e-mail label (`Email:~`) is digested only where a contact takes it,
+    so a document's `\def~{\verb~}` no longer meets it with no e-mail (lineno/ulineno 1 Error → 0). LaTeXML's own
+    default labels ("Affiliation:", "Email:", "Received", "Keywords:" …) end in `\lx@nobreakspace` instead of `~`, as
+    article.cls spells its labels with `\nobreakspace`, so that `\def~` no longer reaches the label a contact or date
+    takes (lineno/lineno 5 Errors → 0, its names "Affiliation:\verb~~" → "Affiliation: ", the last character U+00A0). Where the document's `~`
+    digests to a plain space (every babel document, and aa) these names ended in an ASCII space, as in Perl, and now
+    end in a no-break space (U+00A0), as everywhere else and as TeX's `\nobreak\ ` prints; it renders the same. Guards
+    `perfect_kernel_batchmanfm::*`.
   - **0.8.0-rc2: Split frees each page once it is copied (#965; issue 777).** `Split::process_pages` frees a page's
     source subtree after copying it into its own document (`PostDocument::discard_subtree`); a page holding an
     `ltx:navigation` stays, since the navigation may use its namespaces. A 1,600-subsection book split by subsection
@@ -83,27 +121,32 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `::split_keeps_pages_whose_namespaces_a_navigation_uses` (in the CI asan job).
   - **0.8.0-rc2: parallel page rendering is safe and sized from measurement (issue 777).**
     - Render workers install shared CSS/JS and every converted figure atomically: a private staged file, then a rename. Before, workers rendering pages that share a figure raced, and some pages silently switched to a PNG; the shared SVG could be deleted while pages still pointed at it.
-    - The fleet's memory budget no longer takes 3/4 of `--max-memory` twice. Each worker is sized from its measured peak (64 MiB + 6 × the render database), so Nasser's 2,400-problem slice keeps 7 workers at `--max-memory=3700` instead of losing one and re-rendering serially.
+    - The fleet's memory budget no longer takes 3/4 of `--max-memory` twice. Each worker is sized from its measured peak (64 MiB + 6 × the render database), so issue 777's 2,400-problem slice keeps 7 workers at `--max-memory=3700` instead of losing one and re-rendering serially.
     - A worker's death stops the rest of the fleet at once, and a worker killed by a signal is a counted Warning. A stop after an abandoned fleet leaves exactly the pages it reports.
     - `--streaming=false` keeps a split run's core eager, as `--help` says.
     - An aborting panic removes the run's staging files.
     - A stream that must fall back to the whole-DOM split stops at once.
     - The streamed split no longer mistakes `x:resource` in text for an element.
+  - **0.8.0-rc2: a timeout or memory breach no longer runs library destructors under a running thread (#973; issue
+    777).** The watchdog ended the process with `exit` while the conversion or render thread still ran, so libxml2's
+    destructor (`xmlCleanupParser`) could free state a running render read (a render worker's SIGSEGV in freed heap,
+    under load). A wall-clock or memory breach now ends through `_exit`, with its exit code (124, 137), after the
+    stderr line (written unbuffered), the pre-exit hook, the child kills and the removal of staging files; the
+    end-of-run exits, taken after every thread is joined, are unchanged. A breach after the normal end has claimed
+    the process stands down, so it no longer overwrites a result being written. Guard
+    `watchdog::tests::a_breach_ends_the_process_without_exit_handlers`.
   - **0.8.0-rc2: a split run's core result goes straight to disk (issue 777).** The core serializes its XML into
     the file post's streamed split reads (`Document::serialize_to_file`) instead of building it as one string first;
-    the output is byte-identical. Nasser's whole book (28,076 problems, 2.73 GB of core XML) had stopped with an
-    allocation failure after the core; it now converts in one run: 115,519 pages in 1,609 s, peak RSS 4.3 GB, against
-    3,523 s for lualatex's two passes on the same machine.
-  - **0.8.0-rc2: the allocator is mimalloc 2.3.2, not 3.3.2.** The `libmimalloc-sys` crate bundles both, and its
-    3.3.2 has upstream reports of intermittent heap corruption (microsoft/mimalloc issues 1287 and 1430, fixed only in
-    later 3.x releases the crate does not bundle yet); one of our conversions crashed on a corrupted 3.3.2 free list
-    under heavy load. On Nasser's slices, a 1,600-section book and 30 papers, 2.3.2 runs 0.2-0.8 % fewer instructions
-    with 1-7 % lower peak memory, and every output is byte-identical. `cortex_worker` uses the same allocator.
+    the output is byte-identical. Issue 777's whole book (28,076 problems, 2.73 GB of core XML) had stopped with an
+    allocation failure after the core; it now converts in one run: 115,519 pages in 1,549 s (on main at
+    `4a5aae128b2`), peak RSS 4.3 GB, against 3,523 s for lualatex's two passes on the same machine.
   - **0.8.0-rc2: a split run streams and renders in parallel by default (issue 777).** With `--splitat`, the core
     spills at 512 MiB of growth, post splits through the streaming front-end with the core result staged to disk and
     freed, and 64 or more pages render on min(cores, 8) worker processes. Each worker is held to its share of
-    `--max-memory`, and a failed worker sends the whole document back to the serial render. Nasser's 2,400-problem slice
-    (9,713 pages): the same pages and Warnings, and peak RSS 3.8-4.9 → 1.35 GB. Unsplit conversions and
+    `--max-memory`, and a failed worker sends the whole document back to the serial render. Issue 777's
+    2,400-problem slice (9,713 pages): the same pages and Warnings, and peak RSS 3.8-4.9 GB (the eager split) →
+    1.35 GB rendering serially, as measured when this landed (the release's figures are in the speed entry). Unsplit
+    conversions and
     `cortex_worker` are unchanged; the library's `post::run_post_processing_logged` with `split: true` now stages
     and streams too. Overrides: `LATEXML_SPILL_AT_MIB`, `LATEXML_POST_STREAM_SPLIT=0`,
     `LATEXML_RENDER_JOBS=1` (OXIDIZED_DESIGN_DIVERGENCES #1133).
@@ -111,14 +154,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     #1134).** Each split page keeps `up`/`start`/`prev`/`next` and the `bibliography`/`index`/`glossary` links the
     navigation reads, and drops Perl's `<link rel="chapter">`/`"section"`/`"subsection"`/…/`"sidebar"`, one per sibling
     of every ancestor (`CrossRef.pm:105-130`), which only duplicated the navigation TOC. Page bodies are byte-identical.
-    Nasser's 2,400-problem slice split at `subsubsection`: 612,424 links dropped, HTML 343 → 118 MB, −12.9 %
+    Issue 777's 2,400-problem slice split at `subsubsection`: 612,424 links dropped, HTML 343 → 118 MB, −12.9 %
     instructions; the 1,600-subsection book: 37.4 → 24.6 MB, −4.8 %. Guard
     `cluster_xslt_split::split_nav_relations::split_page_navigation_relations`.
   - **0.8.0-rc2: a large split document's post makes fewer system calls (issue 777).** The heap give-back
     (`malloc_trim` + `mi_collect`) runs when the resident set has grown by 1/64 of the soft memory fuse, not every 512
     pages, since each trim walks the whole heap; a split run's XSLT finds and copies each CSS/JS resource once per
     conversion (with its `@import`s; a failed copy is retried and warned on every page, as before), and the page
-    writers make each output directory once. Nasser's 2,000-problem slice (8,094 pages): `madvise` 198,969 → 29,189,
+    writers make each output directory once. Issue 777's 2,000-problem slice (8,094 pages): `madvise` 198,969 → 29,189,
     `statx` 282,753 → 15,756, `mkdir` 24,294 → 15, system time 17.3 → 13.1 s; pages byte-identical. Guards
     `cluster_xslt_split::split_css_links::{split_copies_each_resource_once, css_imports_followed_after_a_resource_copy,
     failed_css_import_copy_is_retried_per_page}`.
@@ -130,27 +173,63 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
   - **0.8.0-rc2: a streamed conversion warns once per failing formula, as an eager one does
     (OXIDIZED_DESIGN_DIVERGENCES #1132).** The `ambiguous_math`/`unparsed_math` once-per-distinct-formula set is per
     conversion, not per math parser; streaming builds one parser per segment, so a formula repeated across segments
-    warned once per segment (Nasser's 600-problem slice: 101 Warnings converted whole, 171 streamed). Guard
+    warned once per segment (issue 777's 600-problem slice: 101 Warnings converted whole, 171 streamed). Guard
     `perfect_kernel_batchstrmwarn::a_streamed_formula_warns_once_per_conversion`.
-  - **0.8.0-rc2: a split page navigates under the page it was split from, as in Perl.** Scan filed each page under
-    a parent guessed from its id prefix; Perl passes the parent Split computed (`Split.pm:132-133`
-    `parent_id => $$entry{upid}`, `Scan.pm:99`), and both of our split paths now do. Under
-    `\@addtoreset{chapter}{part}` Part II's chapters are `Ch1a`, `Ch2a` while their sections keep `Ch1.S1`, so
-    those sections went up into Part I's `Ch1`, with its title chain and prev/next (9,262 of the 115,519 pages of
-    issue 777's book). In every split document with `\part`, as in Perl: a chapter goes up to its part and carries
-    it in its title (`Chapter 1 Intro ‣ Part I A`), where it went up to the root page (or, under an untitled root,
-    had no `up`); the root page's `\tableofcontents` nests the chapters under their parts; and because LaTeXML
-    nests `\backmatter` inside the last `ltx:part`, the Bibliography and Index footer buttons appear only on that
-    part's pages, and `bib.html`'s title ends in that part. A split without parts and an unsplit document are
-    byte-identical. `PostDocument::new_document` takes the parent page's id as a third argument. Guard
-    `118_streaming_split_parity::split_pages_navigate_under_the_parent_split_gave_them`.
   - **0.8.0-rc2: release checks.** Every release build converts `hello.tex` with the binary it ships and
     `resources/` moved aside (`tools/release_smoke.sh`; rc1's macOS and Windows builds ran only `--version`); the
     container images print the binaries' revision and carry `org.opencontainers.image.{title,version,revision,source}`;
     the release page folds its generated pull-request list into `<details>` (`tools/release_notes_details.sh`) and its
     links point at the tag's files.
+  - **0.8.0-rc2: the x86_64 Linux release binary's allocator initialises.** The release leg linked with Ubuntu 22.04's mold 1.0.3,
+    which left Rust std's `.init_array` entry in a section of its own; DT_INIT_ARRAY covered only that one, so
+    mimalloc's constructor never ran and every 64 KiB page came straight from the OS (0.7.6 and 0.8.0-rc1: 10,094
+    mmap / 19,395 munmap calls on a small document against 96 / 22). The jammy legs now link with the default ld, and
+    `tools/release_alloc_check.sh` fails a Linux release whose binary skips a constructor or whose mimalloc prints no
+    statistics. Output is unchanged; system time falls, most of all where syscalls are slow (WSL 1).
+  - **0.8.0-rc2: the allocator is mimalloc 2.3.2, not 3.3.2.** The `libmimalloc-sys` crate bundles both, and its
+    3.3.2 has upstream reports of intermittent heap corruption (microsoft/mimalloc issues 1287 and 1430, fixed only in
+    later 3.x releases the crate does not bundle yet); one of our conversions crashed on a corrupted 3.3.2 free list
+    under heavy load. On issue 777's slices, a 1,600-section book and 30 papers, 2.3.2 runs 0.2-0.8 % fewer instructions
+    with 1-7 % lower peak memory, and every output is byte-identical. `cortex_worker` uses the same allocator.
+  - **0.8.0-rc2: `cortex_worker`'s children run with `MALLOC_ARENA_MAX=2` and `MIMALLOC_ARENA_RESERVE=128MiB` (#977)**,
+    so allocator reservations no longer hit `--child-mem-limit-mb` as `oom:alloc_failed` or a bare XSLT failure.
+    Under that address-space limit, one glibc arena per allocating graphics thread and mimalloc's 1 GiB arenas filled
+    the cap at a resident set of 0.3-0.6 GB. The `latexml_oxide` command sets no address-space limit and is unaffected.
+  - **0.8.0-rc2: [`docs/ENVIRONMENT.md`](../ENVIRONMENT.md) lists every environment variable latexml-oxide reads or
+    sets (#978)**, with its values, default and effect, on GitHub and in rustdoc (`latexml::environment`).
+  - **0.8.0-rc2: speed against 0.7.6 (the basis of the CHANGELOG's figures).** The 0.7.6 x86_64 Linux release
+    binary against the rc2 candidate built as the release job builds it (`maxperf`, `runtime-bindings`), on one
+    host (Threadripper 9980X, TeX Live 2025), each conversion pinned to one core, best of 2, interleaved:
+    - 100 arXiv papers on the production HTML recipe (`--preload=ar5iv.sty --format=html5 --pmml --mathtex`): on the
+      94 both convert, wall time 1.31× median (p10-p90 1.11-1.42×), 1.30× in aggregate (194.5 → 149.2 s), 1.24×
+      fewer instructions, 1.10× lower peak RSS; 0.7.6 failed 6 (four Fatals, one memory kill, one digestion loop),
+      rc2 none. About a fifth of the gain is the allocator (#969: system time 14.3 → 4.5 s); the instruction ratio
+      equals the user-time ratio.
+    - Issue 777's 2,400-problem slice (`--splitat=subsubsection --format=html5`, 9,713 pages): 151.9 → 65.5 s with the
+      default 8 render workers (2.3×), 85.5 s serial (1.8×); peak memory of the whole process tree 4.9 → 2.9 GB
+      (1.0 GB serial). The pages are 3× smaller (the unread head links dropped, OXIDIZED_DESIGN_DIVERGENCES #1134).
+    - Issue 777's whole book (115,519 pages): 1,549 s (26 min) at 4.3 GB peak, 0 errors, on main at `4a5aae128b2`
+      (with #973 and #974; the split-navigation fix #979 since then costs +0.25 % instructions on the whole book,
+      `perf stat -e instructions:u`); 0.7.6 stops after 99 s at its memory fuse
+      (`Fatal:Timeout:MemoryBudget`, 6.5 GB, `--max-memory=8192`) with 730 partial pages.
+    - Against TeX, same host and tree: TeX Live 2025 as last updated 2026-02-26 (formats 2026.2.26), pdfTeX
+      1.40.28, LuaHBTeX 1.22.0, LaTeX2e 2025-11-01 patch level 0, L3 programming layer 2025-11-06; latexml-oxide
+      read the same tree. The 32 papers of `docs/performance/PERFORMANCE.md` P13, one core, best of 3, the three
+      tools interleaved; CPU time (user + sys) per paper: latexml-oxide median 0.48 s (mean 1.55), one pdflatex pass
+      0.40 s (1.19), a full build (pdflatex, bibtex where the `.aux` names a `.bib`, pdflatex ×2) 1.20 s (3.60).
+      Ratios per paper: X/P1 median 1.12, geomean 1.14 (0.99 without P13's two outliers); X/full build 0.39 / 0.38.
+      pdflatex's own times matched the 2026-11-15 run within 0.5 %, so the conditions match: 31 of the 32 papers
+      got faster (median 0.934×; the int/perf release-profile binary then, the maxperf release build now).
+    - lualatex on the whole book (one run per pass, on one core): pass 1 1,134 s, pass 2 2,389 s, 67,424 PDF pages,
+      0.95 GB peak, 98 TeX errors in each pass (it continued past them); latexml-oxide 1,549 s at 4.3 GB for 115,519
+      HTML pages, post-processing included, no errors.
+    - Not in the timings: the one-time format build for a TeX tree the release's embedded dumps were not built from
+      (about 11 s, OXIDIZED_DESIGN_DIVERGENCES #449). Loaded 56 conversions at a time, the paper gain is 1.2×.
+
+### Earlier entries
+
   - **Regressions from the per-paper check of the November run (#954, #958, #960, and the follow-up integration).** Every paper that converted with
-    no Error on 2026-11-05 (run 372) and erred in the November run was classified (pdflatex, Perl, a bisect); the
+    no Error on 2026-11-05 and erred in the November run was classified (pdflatex, Perl, a bisect); the
     clusters our changes caused are fixed:
     - `$$ $$` inside amsmath's `\[ … \]` closes and reopens `{equation*}`, not `{equation}`, as TeX's `$$` ends one
       display and opens the next (tex.web §1193-1197; KNOWN_PERL_ERRORS #1295, OXIDIZED_DESIGN_DIVERGENCES #1091;
@@ -327,13 +406,13 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     loses the body): the bibliography now ends it as its heading would, and an abstract the bibliography closed, or the
     document's end where body structure follows it, keeps its first paragraph (an abstract-only document keeps all of
     it), the rest moved back to the body with one Warning counting the moved
-    words (hep-th0110297, 1108.5171, math0006149, 1408.0340; ~30 run-397 papers, each 1-11 Errors to 0;
+    words (hep-th0110297, 1108.5171, math0006149, 1408.0340; ~30 November-run papers, each 1-11 Errors to 0;
     OXIDIZED_DESIGN_DIVERGENCES #1101). svjour's `\abstract{…}` (and the 2003 svmult's) is a group read where it
     stands, as the classes define it, so one left open no longer reads to the end of the input (astro-ph0702187 12 → 0 Errors,
     math0701897 48 → 0; KNOWN_PERL_ERRORS #1293). A style's `\endabstract` paired with its own `\beginabstract` is its
     own (nanosymp.sty, cond-mat0105361), where the kernel lock kept the list open over the paper. Guards
     `cluster_package_guards::perfect_kernel_batchabsfix::*`.
-  - **Run 397's misplaced elements, as DG ruled 2026-11-19.** An undefined BibTeX macro (`month = june`; ~190
+  - **The November run's misplaced elements.** An undefined BibTeX macro (`month = june`; ~190
     papers) is a Warning, as bibtex has it (OXIDIZED_DESIGN_DIVERGENCES #1096). A theorem or proof in an abstract (83 of
     the 86 papers sampled) is dissolved into it: its title a run-in bold text, its paragraphs, lists and equations in the abstract,
     its id kept (1908.02189, 0804.0728; #1097); an abstract still open at `\end{document}` (math0006149) keeps its
@@ -341,7 +420,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     bold heading and the entries as a description (1410.5511; #1098). A bibliography inside a float or a heading
     argument floats out after it (cond-mat0108156, hep-ph0004227; #1099). Guards `perfect_kernel_batchplacefix::*`.
 
-  - **Run-397 loop Fatals of one class: a binding that called another user-level command by name.** apacite's citation
+  - **November-run loop Fatals of one class: a binding that called another user-level command by name.** apacite's citation
     forms called natbib's `\citep`/`\citet` by name, and agujournal2018.cls's `\let\cite\shortcite \let\citep\cite
     \let\citet\citeA` made each call itself: a 180 s timeout (1909.02387, 2212.08776; ~28 papers). They now call
     natbib's private copies, as do apacite's `natbibemu` `\cite`, nmbib's `\citeall` and slashed's `\slashed` (the
@@ -378,7 +457,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `is_readable_file`; `pathname` and `dump_paths` share one ambient `kpsewhich -var-value=SELFAUTOPARENT` probe
     (`3 → 2` subprocesses).
 
-  - **Four more run-397 Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
+  - **Four more November-run Error roots where TeX is clean.** Under amsmath, `\[`/`\]` are `\begin{equation*}`/
     `\end{equation*}` as amsmath.sty:2950-2951 makes them, so a mixed pair (`\[ … \end{equation*}`) no longer errs
     (math0306159, math0401181, math0508341), and a `\tag` in `\[` is printed (2008.12392; OXIDIZED_DESIGN_DIVERGENCES
     #1091). etoolbox's `\robustify` of a command that is a macro in LaTeX and a native binding here (`\ref`, `\uline`,
@@ -475,7 +554,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `30_script_bindings::{rhai_hooks_port_perls_stomach_methods_and_values, a_rhai_failure_names_its_function_calls,
     a_failing_preloaded_binding_is_logged, a_rhai_diagnostic_names_its_binding_file}`.
 
-  - **Three crashes of run 397 fixed.** A box width stated through a register read with arguments
+  - **Three crashes of the November run fixed.** A box width stated through a register read with arguments
     (`\makebox[1.5\fontcharwd\font`m]{…}`) in a figure of subfigure panels no longer panics: the panel-grid
     rule skips such registers, and pgfmath errs on one in a coordinate, as TeX does (2105.01581). An
     alignment whose own cell's malformed math closes the math around it (nested `\ooalign` in a tikz label,
@@ -1498,10 +1577,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
   - **Untrusted input stays in the job.** Document Lua code could run programs or write files outside the job; it
     is now sandboxed, under TeX's own defaults for untrusted input (no shell escape, paranoid writes, no write through
-    a symbolic link, on Unix no backslash in a written name): a refused call never takes effect, and is reported as
-    an Error on a best-effort basis (the bridge accepts only frames carrying a per-interpreter nonce, so a refusal
+    a symbolic link, on Unix no backslash in a written name): a refused call never takes effect, and is reported (a
+    Warning where lualatex refuses it too, else an Error) on a best-effort basis (the bridge accepts only frames carrying a per-interpreter nonce, so a refusal
     record cannot be forged, but a chunk that exhausts its C stack or reads its own pipe can suppress its own record;
-    a chunk lists at most 20 refusals, then one summary Error); each conversion has its own interpreter with a reduced environment, restarted (with an Error)
+    a chunk lists at most 20 refusals of each severity, then a summary); each conversion has its own interpreter with a reduced environment, restarted (with an Error)
     when it ends mid-chunk and killed by a timeout or memory exit. A tar archive's links are unpacked only when
     they resolve inside the source directory, the others skipped with a counted Warning; the `zip` floor is 9.7.0. An image whose path relative to the source leaves the destination directory is copied under a
     generated `xN` name inside it, as Perl does. Guards

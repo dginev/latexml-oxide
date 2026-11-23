@@ -1,0 +1,15 @@
+% mechanism: lua_bridge.rs prelude font mirror (OXIDIZED_DESIGN_DIVERGENCES #1081): texlua has no engine fonts, so
+%   font.current() crashed it past any pcall; font now mirrors one font, the current one, whose characters answer
+%   \iffontchar\font<code> over the query channel. hologo.sty:1298 \HOLOGO@IfCharExists (its luatex branch
+%   `font.fonts[font.current()].characters[<code>]`, asked at :1380 with "018E and at :2102 with "1EBF).
+% witness: TL manuals (lualatex profile) bxwareki, glossaries/glossariesbegin, glossaries/glossary2glossaries,
+%   hvlogos/hvlogos-doc, mfirstuc/mfirstuc-manual, simplebnf/simplebnf-doc, sourcecodepro, textcsc/textcsc-documentation,
+%   tidyres/tidyres-doc, xfakebold/xfakebold-doc, zennote, modeles-factures-belges-assocs/doc-modeles-factures-belges-assocs
+%   (Error:lua:interpreter "unexpected end of file" since #911)
+% oracle:  lualatex -no-shell-escape: 0 errors, "A XƎTEX B" (U+018E)
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% expect:  0 errors; the logo holds U+018E; no "iteralq" text
+% status:  RED (Error:lua:interpreter, the reversed E drawn by \pdfextension literal: "iteralq -1 0 0 1 0 0 cm")
+%          -> GREEN
+\documentclass{article}\usepackage{hologo}\begin{document}A \hologo{XeTeX} B\end{document}

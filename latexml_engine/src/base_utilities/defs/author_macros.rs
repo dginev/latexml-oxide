@@ -669,42 +669,60 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     Ok(Tokens::new(affiliation_calls(attr, None, None, stuff, true, true)?))
   });
 
-  DefMacro!("\\lx@date@received@name", "Received~");
-  DefMacro!("\\lx@date@revised@name", "Revised~");
-  DefMacro!("\\lx@date@accepted@name", "Accepted~");
-  DefMacro!("\\lx@date@draft@name", "Drafted~");
-  DefMacro!("\\lx@date@posted@name", "Posted~");
+  // The labels LaTeXML invents (Perl Base_Utility.pool.ltxml:755-788 `Affiliation:~`) are spelled with `\lx@nobreakspace`
+  // (:53-55), as article.cls:457 spells `\fnum@figure` with `\nobreakspace`: a document's `\def~` (lineno.tex:20
+  // `\def~{\verb~}`) does not reach them (OXIDIZED_DESIGN_DIVERGENCES #1136).
+  DefMacro!("\\lx@date@received@name", "Received\\lx@nobreakspace");
+  DefMacro!("\\lx@date@revised@name", "Revised\\lx@nobreakspace");
+  DefMacro!("\\lx@date@accepted@name", "Accepted\\lx@nobreakspace");
+  DefMacro!("\\lx@date@draft@name", "Drafted\\lx@nobreakspace");
+  DefMacro!("\\lx@date@posted@name", "Posted\\lx@nobreakspace");
   DefMacro!("\\lx@date@copyright@name", "\u{A9} ");
 
-  DefMacro!("\\lx@pubnote@type@name", "Publication type:~");
-  DefMacro!("\\lx@pubnote@note@name", "Note:~");
-  DefMacro!("\\lx@pubnote@pubid@name", "PubID:~");
-  DefMacro!("\\lx@pubnote@doi@name", "DOI:~");
-  DefMacro!("\\lx@pubnote@isbn@name", "ISBN:~");
-  DefMacro!("\\lx@pubnote@arxiv@name", "arXiv:~");
-  DefMacro!("\\lx@pubnote@preprint@name", "Preprint:~");
-  DefMacro!("\\lx@pubnote@journal@name", "Journal:~");
-  DefMacro!("\\lx@pubnote@conference@name", "Conference:~");
-  DefMacro!("\\lx@pubnote@issue@name", "Issue:~");
-  DefMacro!("\\lx@pubnote@volume@name", "Volume:~");
-  DefMacro!("\\lx@pubnote@dedication@name", "Dedication:~");
+  DefMacro!(
+    "\\lx@pubnote@type@name",
+    "Publication type:\\lx@nobreakspace"
+  );
+  DefMacro!("\\lx@pubnote@note@name", "Note:\\lx@nobreakspace");
+  DefMacro!("\\lx@pubnote@pubid@name", "PubID:\\lx@nobreakspace");
+  DefMacro!("\\lx@pubnote@doi@name", "DOI:\\lx@nobreakspace");
+  DefMacro!("\\lx@pubnote@isbn@name", "ISBN:\\lx@nobreakspace");
+  DefMacro!("\\lx@pubnote@arxiv@name", "arXiv:\\lx@nobreakspace");
+  DefMacro!("\\lx@pubnote@preprint@name", "Preprint:\\lx@nobreakspace");
+  DefMacro!("\\lx@pubnote@journal@name", "Journal:\\lx@nobreakspace");
+  DefMacro!(
+    "\\lx@pubnote@conference@name",
+    "Conference:\\lx@nobreakspace"
+  );
+  DefMacro!("\\lx@pubnote@issue@name", "Issue:\\lx@nobreakspace");
+  DefMacro!("\\lx@pubnote@volume@name", "Volume:\\lx@nobreakspace");
+  DefMacro!(
+    "\\lx@pubnote@dedication@name",
+    "Dedication:\\lx@nobreakspace"
+  );
   // Empty: LaTeX sets a `\thanks` as a marked footnote with no label (latex.ltx `\thanks`/`\@thanks`; pdflatex "∗ X"),
   // so the note has none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921; Perl
   // "Thanks:~"). A class that prints one sets it here (resphilosophica_cls.rs "Acknowledgments").
   DefMacro!("\\lx@pubnote@thanks@name", "");
 
   DefMacro!("\\lx@abstract@name", "Abstract");
-  DefMacro!("\\lx@keywords@name", "Keywords:~");
-  DefMacro!("\\lx@classification@name", "Classification:~");
+  DefMacro!("\\lx@keywords@name", "Keywords:\\lx@nobreakspace");
+  DefMacro!(
+    "\\lx@classification@name",
+    "Classification:\\lx@nobreakspace"
+  );
 
-  DefMacro!("\\lx@contact@affiliation@name", "Affiliation:~");
+  DefMacro!(
+    "\\lx@contact@affiliation@name",
+    "Affiliation:\\lx@nobreakspace"
+  );
   DefMacro!(
     "\\lx@contact@altaffiliation@name",
-    "Alternate Affiliation:~"
+    "Alternate Affiliation:\\lx@nobreakspace"
   );
-  DefMacro!("\\lx@contact@address@name", "Address:~");
-  DefMacro!("\\lx@contact@email@name", "Email:~");
-  DefMacro!("\\lx@contact@url@name", "URL:~");
+  DefMacro!("\\lx@contact@address@name", "Address:\\lx@nobreakspace");
+  DefMacro!("\\lx@contact@email@name", "Email:\\lx@nobreakspace");
+  DefMacro!("\\lx@contact@url@name", "URL:\\lx@nobreakspace");
   // Empty: an ORCID contact renders the iD glyph (\lx@orcidlogo), which already
   // identifies itself — so it carries no textual "OrcID:" label (get_frontmatter_name
   // maps an empty per-role default to no label at all).
@@ -712,9 +730,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // A row of an author block appended to `\@author` (`\lx@author@tail`): printed as the class typeset it,
   // with no label.
   DefMacro!("\\lx@contact@authorblock@name", "");
-  DefMacro!("\\lx@contact@note@name", "Note:~");
-  DefMacro!("\\lx@contact@thanks@name", "Thanks:~");
-  DefMacro!("\\lx@contact@correspondent@name", "Corresponding author:~");
+  DefMacro!("\\lx@contact@note@name", "Note:\\lx@nobreakspace");
+  DefMacro!("\\lx@contact@thanks@name", "Thanks:\\lx@nobreakspace");
+  DefMacro!(
+    "\\lx@contact@correspondent@name",
+    "Corresponding author:\\lx@nobreakspace"
+  );
 
   //======================================================================
   // This is called by afterOpen (by default on <ltx:document>) to

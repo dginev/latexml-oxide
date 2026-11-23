@@ -204,10 +204,11 @@ LoadDefinitions!({
   DefMacro!("\\pdfcreationdate", sub[_args] { pdf_creation_date() });
   def_macro_noop("\\pdfpageref Number")?;
   def_macro_noop("\\pdfxformname Number")?;
-  def_macro_noop("\\pdffontname Token")?;
-  def_macro_noop("\\pdffontobjnum Token")?;
-  def_macro_noop("\\pdffontsize Token")?;
-  def_macro_noop("\\pdfincludechars Token {}")?;
+  // A font identifier (tex.web §577 `scan_font_ident`), not one token: `\pdfincludechars \textfont1{…}`.
+  def_macro_noop("\\pdffontname FontToken")?;
+  def_macro_noop("\\pdffontobjnum FontToken")?;
+  def_macro_noop("\\pdffontsize FontToken")?;
+  def_macro_noop("\\pdfincludechars FontToken GeneralText")?;
   def_macro_noop("\\leftmarginkern Number")?;
   def_macro_noop("\\rightmarginkern Number")?;
   // pdfTeX escape primitives — real implementations, output format verified
@@ -450,9 +451,7 @@ LoadDefinitions!({
   // it: the bp value in scaled points, printed in pt as catcode-12 characters, `pt` included (pdftex.web
   // `pdf_ximage_bbox_code` through `conv_toks`). An unknown image, or a corner outside 1-4, gives 0.0pt.
   DefMacro!("\\pdfximagebbox Number Number", sub[(image, corner)] {
-    let bp = ximage_bbox_corner_bp(image.value_of(), corner.value_of());
-    let sp = (bp * 65_781.76).round() as i64;
-    Ok(Tokens::new(Explode!(&Dimension::new(sp).to_string())))
+    Ok(pdf_ximage_bbox(image.value_of(), corner.value_of()))
   });
   // \pdfrefximage object number (h, v, m) — discard the object number
   def_primitive_noop("\\pdfrefximage Number")?;
@@ -509,36 +508,11 @@ LoadDefinitions!({
   // comments them, KPE #162). Guards:
   // `perfect_kernel_batch54::pdfoutline_and_pdfdest_consume_their_specs`.
   DefParameterType!(OutlineSpecification, reader => reader!(_args, _extra, {
-    if read_keyword(&["attr"])?.is_some() {
-      skip_spaces()?;
-      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
-    }
-    read_action_spec()?;
-    if read_keyword(&["count"])?.is_some() {
-      let _ = read_number()?;
-    }
-    skip_spaces()?;
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    read_outline_spec(false)?;
   }), optional => true);
   def_primitive_noop("\\pdfoutline OutlineSpecification")?;
   DefParameterType!(DestSpecification, reader => reader!(_args, _extra, {
-    if read_keyword(&["num"])?.is_some() {
-      let _ = read_number()?;
-    } else if read_keyword(&["name"])?.is_some() {
-      skip_spaces()?;
-      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
-    }
-    if read_keyword(&["xyz"])?.is_some() {
-      if read_keyword(&["zoom"])?.is_some() {
-        let _ = read_number()?;
-      }
-    } else if read_keyword(&["fitr"])?.is_some() {
-      while read_keyword(&["width", "height", "depth"])?.is_some() {
-        let _ = read_dimension()?;
-      }
-    } else {
-      let _ = read_keyword(&["fitbh", "fitbv", "fitb", "fith", "fitv", "fit"])?;
-    }
+    read_dest_spec()?;
   }), optional => true);
   def_primitive_noop("\\pdfdest DestSpecification")?;
   // \pdfstartlink [rule spec] [attr spec] action spec (h, m), pdfTeX manual §8.12, the rule spec any of
@@ -546,65 +520,25 @@ LoadDefinitions!({
   // (Perl pdfTeX.pool:176) `attr {…} goto name {…}` fell into the text — AAAI papers, which may not load hyperref,
   // write their links so (2609.00161: a label's `_` in `goto name {impact.eq:iws_objective}`).
   DefParameterType!(LinkSpecification, reader => reader!(_args, _extra, {
-    while read_keyword(&["width", "height", "depth"])?.is_some() {
-      let _ = read_dimension()?;
-    }
-    if read_keyword(&["attr"])?.is_some() {
-      skip_filler()?;
-      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
-    }
-    read_action_spec()?;
+    read_link_spec()?;
   }), optional => true);
   def_primitive_noop("\\pdfstartlink LinkSpecification")?;
-  // \pdfthread thread spec (h, v, m)
-  // \pdfstartthread thread spec (v, m)
-  // \pdfendthread (v, m)
   // \pdfsavepos (h, v, m)
 
   // See lxRDFa for ideas how this info might be used!
   def_macro_noop("\\pdfinfo{}")?;
 
   // Ugh, what a mess of ugly syntax....
+  // `\pdfcatalog <general text> [openaction <action spec>]` (pdftex-syntax.tex:483): the action spec is read whole, as
+  // `\pdfstartlink`'s (Perl pdfTeX.pool reads `openaction` and `user`/`goto` only, leaving the rest as text).
   DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {
-    if let Some(_key) = read_keyword(&["openaction"])?
-      && let Some(_action) = read_keyword(&["user", "goto"])? {
-        // etc....
-      } }), optional => true);
+    read_open_action()?;
+  }), optional => true);
 
   // Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
-  // Reads and discards pdfTeX's object/annotation type spec (pdftex manual
-  // syntax, pdftex.tex:4224-4246):
-  //   reserveobjnum | [useobjnum <n>] [stream [attr <text>]] [file] <text>
-  // The keywords follow one another: l3backend-pdftex.def:274-302 writes
-  // `\pdfobj useobjnum <n> stream attr {…} file {…}` for pdfmanagement's
-  // PDF/A colour profile, which met `stream` where it wanted `{` when the
-  // reader took `useobjnum` and `stream` as alternatives and knew no `file`
-  // (tuda-ci DEMOs ×4, sweep #121, once PDF output was the default; Perl's
-  // reader, pdfTeX.pool:156-171, has the same `elsif`). Then
-  // the `annot type spec`'s optional `rule spec` — `(width|height|depth)
-  // dimension [rule spec]`, the same loop as `RuleSpecification` (tex_box.rs)
-  // — which Perl pdfTeX.pool:156-171 omits: pdfmarginpar.sty:142
-  // `\expandafter\pdfannot\pdfmarginpar@rulespec{…}` with a `width=`/`height=`
-  // key passes `width 4cm height 0.5cm {…}` and the reader met `w` where it
-  // wanted `{` ("Expected opening '{'", pdfmarginpar doc; KNOWN_PERL_ERRORS
-  // #151). Then consumes the trailing general-text spec.
+  // pdfTeX's object/annotation type spec, read and discarded (`read_object_spec`).
   DefParameterType!(OpenAnnotSpecification, reader => reader!(_args, _extra, {
-    if read_keyword(&["reserveobjnum"])?.is_some() {
-      return Ok(ArgWrap::None);
-    }
-    if read_keyword(&["useobjnum"])?.is_some() {
-      let _ = read_number()?;
-    }
-    if read_keyword(&["stream"])?.is_some() && read_keyword(&["attr"])?.is_some() {
-      skip_filler()?;
-      let _ = read_balanced_text(ExpansionLevel::Off, true)?;
-    }
-    let _ = read_keyword(&["file"])?;
-    while read_keyword(&["width", "height", "depth"])?.is_some() {
-      let _ = read_dimension()?;
-    }
-    skip_filler()?;
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    read_object_spec(false)?;
   }), optional => true);
 
   // \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
@@ -636,10 +570,7 @@ LoadDefinitions!({
   // `shipout` (pdfTeX 1.40.25) precedes the spec (pdftex manual §`\pdfliteral`);
   // the general text's `<filler>` is skipped as for the GeneralText parameter.
   DefPrimitive!("\\pdfliteral", sub[_args] {
-    let _ = read_keyword(&["shipout"])?;
-    let _ = read_keyword(&["direct", "page"])?;
-    skip_filler()?;
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    read_pdfliteral_operands(&["direct", "page"])?;
   });
   // \special pdfspecial spec
   // \pdfresettimer
@@ -665,8 +596,10 @@ LoadDefinitions!({
   // Witnesses (zref-savepos): 2503.15628, 2503.18497, 2504.03449,
   // 2504.03565, 2504.05447, 2504.05890.
   def_primitive_noop("\\pdfsavepos")?;
-  // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
-  def_primitive_noop("\\pdfstartthread")?;
+  // \pdfthread (h, v, m) and \pdfstartthread (v, m) read a thread spec (pdftex-syntax.tex:623, :635): as bare no-ops
+  // their `num 1`/`name {…}` fell into the text; \pdfendthread (v, m) reads nothing.
+  DefPrimitive!("\\pdfthread", sub[_args] { read_thread_spec()?; });
+  DefPrimitive!("\\pdfstartthread", sub[_args] { read_thread_spec()?; });
   def_primitive_noop("\\pdfendthread")?;
   // \pdfinterwordspaceon / \pdfinterwordspaceoff / \pdffakespace (pdfTeX 1.40.15): fake interword spaces in the PDF's
   // text layer, for copy and paste; nothing to do in XML. dgruyter.sty:1226 `\pdfinterwordspaceon` (2205.10368; Perl's
@@ -682,26 +615,10 @@ LoadDefinitions!({
   // https://tex.stackexchange.com/questions/13771/let-a-control-sequence-to-a-redefined-primitive
   DefMacro!("\\pdfprimitive DefToken", "#1"); // we can just ignore the advanced effects for now.
 
-  // \pdfcolorstack stack_num {set|push|pop|current} [general_text]
-  //
-  // Perl pdfTeX.pool L210: reads stack-number + action keyword, then
-  // consumes a trailing general-text spec UNLESS the action was `pop`
-  // (which has no spec, just pops the top of the stack). All values
-  // are discarded — our engine doesn't emit PDF colorstack operations.
-  //
-  // Using OptionalMatch for each keyword matches the Perl signature.
-  // GeneralText is the balanced-group reader.
-  DefPrimitive!(
-    "\\pdfcolorstack Number OptionalMatch:set OptionalMatch:push OptionalMatch:pop OptionalMatch:current",
-    sub[(_number, _set, _push, pop, _current)] {
-      // If action was `pop`, there's no trailing general-text spec.
-      // Otherwise read and discard the general-text argument.
-      if pop.is_none() {
-        skip_spaces()?;
-        let _ = read_balanced_text(ExpansionLevel::Off, true)?;
-      }
-    }
-  );
+  // \pdfcolorstack <stack number> set|push <general text> | pop | current: the operands are discarded, no PDF colour
+  // operator is written. `current` reads no text, as `pop` (pdflatex: `\pdfcolorstack0 current Q` prints Q; Perl
+  // pdfTeX.pool L210 reads a text after every action but `pop`).
+  DefPrimitive!("\\pdfcolorstack", sub[_args] { read_colorstack_operands()?; });
   // pdfTeX manual §8.13 `\pdfcolorstackinit [page] [direct] {<general text>}`
   // expands to the number of a new colour stack (0 is the default page stack).
   // No PDF colour operators are written here, but expl3's pdftex backend keeps
@@ -710,15 +627,7 @@ LoadDefinitions!({
   // when the primitive does at format time (expl3-code.tex:675). With PDF
   // output the default (the K6 ruling, 2026-09-24) that backend is the one
   // expl3 loads.
-  DefMacro!("\\pdfcolorstackinit", sub[_args] {
-    let _ = read_keyword(&["page"])?;
-    let _ = read_keyword(&["direct"])?;
-    skip_spaces()?;
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
-    let stack = lookup_int("pdfcolorstack_count") + 1;
-    assign_value("pdfcolorstack_count", stack, Some(Scope::Global));
-    Ok(Tokens::new(Explode!(stack.to_string())))
-  });
+  DefMacro!("\\pdfcolorstackinit", sub[_args] { pdf_colorstack_init() });
   // `\pdfrunninglinkoff`/`\pdfrunninglinkon` suspend and resume a link across
   // page breaks; links are not paginated here.
   def_primitive_noop("\\pdfrunninglinkoff")?;
@@ -871,6 +780,228 @@ LoadDefinitions!({
 /// actions are PDF navigation — but every token of the spec must be eaten
 /// so it does not fall into the text. Shared by `\pdfoutline` and
 /// `\pdfstartlink`-style readers.
+/// `\pdfliteral`'s operands: `[shipout] [<mode>] <general text>`, the keywords scanned with expansion; pdfTeX's modes
+/// are `direct` and `page`, LuaTeX's add `raw`, `text` and `origin`.
+fn read_pdfliteral_operands(modes: &[&str]) -> Result<()> {
+  let _ = read_keyword(&["shipout"])?;
+  let _ = read_keyword(modes)?;
+  read_general_text()
+}
+
+/// `\pdfcolorstackinit [page] [direct] <general text>`: the number of a new colour stack. LuaTeX's `\pdffeedback
+/// colorstackinit` is the same (luatex85.sty:67; pdfrender's `\pdfcolorstackinit page direct{…}` leaked "page
+/// direct1 w" in xfakebold-doc).
+pub fn pdf_colorstack_init() -> Result<Tokens> {
+  let _ = read_keyword(&["page"])?;
+  let _ = read_keyword(&["direct"])?;
+  skip_spaces()?;
+  let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  let stack = lookup_int("pdfcolorstack_count") + 1;
+  assign_value("pdfcolorstack_count", stack, Some(Scope::Global));
+  Ok(Tokens::new(Explode!(stack.to_string())))
+}
+
+/// `\pdfximagebbox <image> <corner>`: the corner of the image's box, as a dimension (also `\pdffeedback ximagebbox`).
+pub fn pdf_ximage_bbox(image: i64, corner: i64) -> Tokens {
+  let bp = ximage_bbox_corner_bp(image, corner);
+  let sp = (bp * 65_781.76).round() as i64;
+  Tokens::new(Explode!(&Dimension::new(sp).to_string()))
+}
+
+/// A `<general text>`: `<filler> {<balanced text>}`, discarded.
+fn read_general_text() -> Result<()> {
+  skip_filler()?;
+  let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  Ok(())
+}
+
+/// `<rule spec>`: any of `width`/`height`/`depth <dimen>`.
+fn read_rule_spec() -> Result<()> {
+  while read_keyword(&["width", "height", "depth"])?.is_some() {
+    let _ = read_dimension()?;
+  }
+  Ok(())
+}
+
+fn read_colorstack_operands() -> Result<()> {
+  let _ = read_number()?;
+  if let Some("set" | "push") = read_keyword(&["set", "push", "pop", "current"])? {
+    read_general_text()?;
+  }
+  Ok(())
+}
+
+/// `\pdfobj`'s and `\pdfannot`'s spec (pdftex-syntax.tex `object type spec`, `annot type spec`), read as one:
+/// `reserveobjnum | [useobjnum <n>] [stream [attr <text>]] [file] [<rule spec>] <general text>`. The keywords follow
+/// one another: l3backend-pdftex.def:274-302 writes `\pdfobj useobjnum <n> stream attr {…} file {…}` for
+/// pdfmanagement's PDF/A colour profile (tuda-ci DEMOs ×4, sweep #121; Perl's reader, pdfTeX.pool:156-171, takes
+/// `useobjnum` and `stream` as alternatives and knows no `file`). The rule spec, which Perl omits, is
+/// pdfmarginpar.sty:142 `\expandafter\pdfannot\pdfmarginpar@rulespec{…}` (`width 4cm height 0.5cm {…}`, pdfmarginpar
+/// doc; KNOWN_PERL_ERRORS #151). LuaTeX's `obj` adds `uncompressed` after `useobjnum`.
+fn read_object_spec(luatex: bool) -> Result<()> {
+  if read_keyword(&["reserveobjnum"])?.is_some() {
+    return Ok(());
+  }
+  if read_keyword(&["useobjnum"])?.is_some() {
+    let _ = read_number()?;
+  }
+  if luatex {
+    let _ = read_keyword(&["uncompressed"])?;
+  }
+  if read_keyword(&["stream"])?.is_some() && read_keyword(&["attr"])?.is_some() {
+    read_general_text()?;
+  }
+  let _ = read_keyword(&["file"])?;
+  read_rule_spec()?;
+  read_general_text()
+}
+
+/// `\pdfoutline [attr <text>] <action spec> [count <n>] <general text>`; LuaTeX's `outline` may name an object
+/// (`useobjnum <n>`) in place of the action spec.
+fn read_outline_spec(luatex: bool) -> Result<()> {
+  if read_keyword(&["attr"])?.is_some() {
+    read_general_text()?;
+  }
+  if luatex && read_keyword(&["useobjnum"])?.is_some() {
+    let _ = read_number()?;
+  } else {
+    read_action_spec()?;
+  }
+  if read_keyword(&["count"])?.is_some() {
+    let _ = read_number()?;
+  }
+  read_general_text()
+}
+
+/// `\pdfdest <numid|nameid> <dest type>`; the spaces after it are skipped, as pdfTeX and LuaTeX do (`X\pdfdest name{d}
+/// fit Y` sets no glue).
+fn read_dest_spec() -> Result<()> {
+  read_id_spec()?;
+  if read_keyword(&["xyz"])?.is_some() {
+    if read_keyword(&["zoom"])?.is_some() {
+      let _ = read_number()?;
+    }
+  } else if read_keyword(&["fitr"])?.is_some() {
+    read_rule_spec()?;
+  } else {
+    let _ = read_keyword(&["fitbh", "fitbv", "fitb", "fith", "fitv", "fit"])?;
+  }
+  skip_spaces()
+}
+
+/// `\pdfstartlink [<rule spec>] [attr <text>] <action spec>`.
+fn read_link_spec() -> Result<()> {
+  read_rule_spec()?;
+  if read_keyword(&["attr"])?.is_some() {
+    read_general_text()?;
+  }
+  read_action_spec()
+}
+
+/// A thread spec, `[<rule spec>] [attr <text>] <numid|nameid>` (`\pdfthread`, `\pdfstartthread`).
+fn read_thread_spec() -> Result<()> {
+  read_rule_spec()?;
+  if read_keyword(&["attr"])?.is_some() {
+    read_general_text()?;
+  }
+  read_id_spec()
+}
+
+/// `num <n> | name <general text>`.
+fn read_id_spec() -> Result<()> {
+  if read_keyword(&["num"])?.is_some() {
+    let _ = read_number()?;
+  } else if read_keyword(&["name"])?.is_some() {
+    read_general_text()?;
+  }
+  Ok(())
+}
+
+fn read_open_action() -> Result<()> {
+  if read_keyword(&["openaction"])?.is_some() {
+    read_action_spec()?;
+  }
+  Ok(())
+}
+
+/// LuaTeX's `\pdfextension <keyword> <operands>` (LuaTeX manual, luatex-modifications.tex:592-907; luatex85.sty:69-92
+/// defines pdfTeX's `\pdf<keyword>` as it): each keyword's operands are read as `\pdf<keyword>`'s, with LuaTeX's
+/// additions (literal modes `raw`/`text`/`origin`, `lateliteral`, `obj … uncompressed`, `outline useobjnum`,
+/// `linkstate`; luatex-modifications.tex:611, :635). Read here, never through `\pdf<keyword>`, which luatex85 makes
+/// `\pdfextension <keyword>` again. An unknown keyword is an Error and stays text, as lualatex's (extensions.c:312
+/// `tex_error("unexpected use of \pdfextension")`). xfakebold-doc
+/// (pdfrender's `\pdfcolorstack`) leaked "olorstackpop" text when only `literal` was known.
+pub fn read_pdfextension() -> Result<()> {
+  const KEYWORDS: &[&str] = &[
+    "literal",
+    "lateliteral",
+    "colorstack",
+    "setmatrix",
+    "save",
+    "restore",
+    "obj",
+    "refobj",
+    "annot",
+    "startlink",
+    "endlink",
+    "outline",
+    "dest",
+    "thread",
+    "startthread",
+    "endthread",
+    "info",
+    "catalog",
+    "names",
+    "includechars",
+    "fontattr",
+    "mapfile",
+    "mapline",
+    "trailer",
+    "glyphtounicode",
+    "linkstate",
+  ];
+  match read_keyword(KEYWORDS)? {
+    Some("literal" | "lateliteral") => {
+      read_pdfliteral_operands(&["direct", "page", "text", "raw", "origin"])?
+    },
+    Some("colorstack") => read_colorstack_operands()?,
+    Some("setmatrix" | "info" | "names" | "trailer" | "mapfile" | "mapline") => {
+      read_general_text()?
+    },
+    Some("glyphtounicode") => {
+      read_general_text()?;
+      read_general_text()?;
+    },
+    // `<font> <general text>` (pdftex-syntax.tex:405, :511), the font by `scan_font_ident`, past the space that
+    // luatex85.sty:87-88 leaves after the keyword (`\pdfincludechars\font{…}` read the space as the font).
+    Some("includechars" | "fontattr") => {
+      let _ = crate::tex_fonts::read_font_ident()?;
+      read_general_text()?;
+    },
+    Some("obj" | "annot") => read_object_spec(true)?,
+    Some("refobj" | "linkstate") => {
+      let _ = read_number()?;
+    },
+    Some("startlink") => read_link_spec()?,
+    Some("outline") => read_outline_spec(true)?,
+    Some("dest") => read_dest_spec()?,
+    Some("thread" | "startthread") => read_thread_spec()?,
+    Some("catalog") => {
+      read_general_text()?;
+      read_open_action()?;
+    },
+    // save, restore, endlink, endthread
+    Some(_) => {},
+    // lualatex errs ("! unexpected use of \pdfextension") and the keyword is read again as text.
+    None => Error!(
+      "unexpected",
+      "\\pdfextension",
+      "unexpected use of \\pdfextension: not a LuaTeX extension keyword"
+    ),
+  }
+  Ok(())
+}
+
 fn read_action_spec() -> Result<()> {
   let Some(kind) = read_keyword(&["user", "goto", "thread"])? else {
     return Ok(());

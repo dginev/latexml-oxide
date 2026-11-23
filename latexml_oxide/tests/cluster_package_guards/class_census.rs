@@ -515,11 +515,11 @@ fn k11_class_default_store() {
   // lion-msc `\RequirePackage{datetime}`: the one expected diagnostic.
   assert_eq!(warning_count(&stderr), 1, "{stderr}");
   assert!(
-    xml.contains(r##"<contact name="Affiliation: " role="affiliation"><text color="#000000">Huygens-Kamerlingh Onnes Laboratory, Leiden University</text></contact>"##),
+    xml.contains(r##"<contact name="Affiliation: " role="affiliation"><text color="#000000">Huygens-Kamerlingh Onnes Laboratory, Leiden University</text></contact>"##),
     "{xml}"
   );
   assert!(
-    xml.contains(r##"<contact name="Address: " role="address"><text color="#000000">P.O. Box 9500, 2300 RA Leiden, The Netherlands</text></contact>"##),
+    xml.contains(r##"<contact name="Address: " role="address"><text color="#000000">P.O. Box 9500, 2300 RA Leiden, The Netherlands</text></contact>"##),
     "{xml}"
   );
 }

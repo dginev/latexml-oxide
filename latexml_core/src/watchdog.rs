@@ -592,6 +592,25 @@ pub fn kill_on_exit(child: std::process::Child) -> KillOnExit {
   KillOnExit(id)
 }
 
+impl KillOnExit {
+  /// Ends the child and says how it ended: its own exit status when it exits within `grace` (a child whose pipe
+  /// closed is ending), `None` when it is still running then (the guard's drop kills it) or is already gone.
+  pub fn finish(self, grace: Duration) -> Option<std::process::ExitStatus> {
+    let deadline = Instant::now() + grace;
+    loop {
+      let status = {
+        let mut children = children();
+        let (_, child) = children.iter_mut().find(|(id, _)| *id == self.0)?;
+        child.try_wait().ok().flatten()
+      };
+      if status.is_some() || Instant::now() >= deadline {
+        return status;
+      }
+      thread::sleep(Duration::from_millis(5));
+    }
+  }
+}
+
 impl Drop for KillOnExit {
   fn drop(&mut self) {
     let child = {

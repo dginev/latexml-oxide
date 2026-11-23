@@ -43,7 +43,7 @@ fn a_class_a_binding_reads_raw_reroutes_its_stores() {
     &xml,
     "creator",
     &[],
-    r#"<creator role="author"><personname>Ann Able</personname><contact name="Email: " role="email">ann@example.org</contact><contact name="Affiliation: " role="affiliation">First University</contact></creator>"#,
+    r#"<creator role="author"><personname>Ann Able</personname><contact name="Email: " role="email">ann@example.org</contact><contact name="Affiliation: " role="affiliation">First University</contact></creator>"#,
   );
 }
 

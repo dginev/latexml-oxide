@@ -48,12 +48,12 @@ fn rows(rows: &[&[&str]]) -> Vec<Vec<String>> {
 
 #[test]
 fn an_institute_list_cut_at_the_kernel_and_by_meaning() {
-  // (OmniBus's contact names end in a no-break space, aa's in a space)
+  // (OmniBus's and aa's contact names end in a no-break space, `\lx@nobreakspace`: OD #1136)
   let omni = |name: &str, role: &str, text: &str| {
     format!("<contact name=\"{name}:\u{a0}\" role=\"{role}\">{text}</contact>")
   };
   let aa = |name: &str, role: &str, text: &str| {
-    format!("<contact name=\"{name}: \" role=\"{role}\">{text}</contact>")
+    format!("<contact name=\"{name}:\u{a0}\" role=\"{role}\">{text}</contact>")
   };
   // (llncs's names end in a no-break space: "Affiliation:~", `\emailname~`)
   let llncs = |name: &str, role: &str, text: &str| {
@@ -209,7 +209,7 @@ fn a_kernel_and_inside_parentheses_cut_where_it_stands() {
     format!("<contact name=\"{name}:\u{a0}\" role=\"{role}\">{text}</contact>")
   };
   let aa = |name: &str, role: &str, text: &str| {
-    format!("<contact name=\"{name}: \" role=\"{role}\">{text}</contact>")
+    format!("<contact name=\"{name}:\u{a0}\" role=\"{role}\">{text}</contact>")
   };
   let three = rows(&[
     &["Ann Able", "affiliation=Univ A (North", "email=ann@a.org"],
