@@ -24099,7 +24099,7 @@ size styling reads), sized by the browser's font, chosen over an `<mspace>` of o
 tokens is math (`has_real_math`). A list that fails to parse keeps the phantoms as padding, their widths with the other
 edge hints' (Perl's output; astro-ph0111392 `\phantom{{}={}}\quad{}+…\biggr]` lpadding 17.8pt). An empty `\phantom{}`
 and text mode (`ltx_phantom`) are unchanged. **Cost** (instructions:u, best of 3 vs INT081C, XML / HTML): math0001084
-+0.22 % / +0.47 %, 1806.07769 (no phantom) +0.04 % / +0.04 %, quant-ph0001103 +0.85 % / +1.22 %: its 46 script phantoms
++0.23 % / +0.43 %, 1806.07769 (no phantom) +0.02 % / +0.05 %, quant-ph0001103 +0.85 % / +1.21 %: its 46 script phantoms
 (`\hus`, `x_{\mathrm H\vphantom{\overline{\mathrm H}}}`) cost ≈1.0M each in XML (the argument's XML and its copies)
 and ≈1.1M more in HTML, which is the post-processing of the six MathML nodes the phantom draws, as any formula's.
 **Residual**: a phantom between two items stays their spacing, as in Perl: `a\phantom{x}b`'s width is right, but a
