@@ -22505,3 +22505,28 @@ latexmlc doc.tex --navigationtoc=bogus --dest=out.html
 exits 0 with `Status:conversion:0` and writes the raw, unstyled LaTeXML XML (no post-processing) into `out.html`;
 the croak is only in the log. Rust rejects a bad value as a usage error before converting (exit 2;
 OXIDIZED_DESIGN_DIVERGENCES #1158). To be offered upstream.
+
+
+## 1320. Perl nests the back matter inside the last `\part`
+
+book.cls.ltxml:121 `DefPrimitive('\backmatter', undef)` (amsbook.cls.ltxml:56 alike; svmult.cls.ltxml inherits it) closes
+nothing, so the back-matter chapters, the bibliography (`BACKMATTER_ELEMENT` `ltx:chapter`,
+latex_constructs.pool.ltxml:3938-3947 `adjustBackmatterElement`) and the index are inserted inside the open
+`ltx:part`. In TeX `\backmatter` (book.cls:292-299) belongs to no part: the running heads leave the part, and the
+contents list the back-matter chapters after it. Minimal trigger:
+
+```tex
+\documentclass{book}
+\begin{document}
+\part{A}\chapter{x}X.
+\part{B}\chapter{y}Y.
+\backmatter
+\chapter{Afterword}W.
+\begin{thebibliography}{9}\bibitem{k} K.\end{thebibliography}
+\end{document}
+```
+
+Perl (same host, `latexmlc --nocomments`): `<part xml:id="Pt2">` holds `Ch2`, "Chapter 3 Afterword" and the
+`ltx:bibliography`; split, `bib.html`'s title is "Bibliography ‣ Part II B" and only Part II's pages link it. Fixed in
+Rust (OXIDIZED_DESIGN_DIVERGENCES #1147): the bindings' `\backmatter` closes the part and chapter. Guard
+`perfect_kernel_batchbackmatter::book_backmatter_closes_the_last_part`.

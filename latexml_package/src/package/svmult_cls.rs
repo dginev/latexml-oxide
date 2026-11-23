@@ -63,13 +63,13 @@ LoadDefinitions!({
   // numbering (".2", 1801.05601; KNOWN_PERL_ERRORS #1026). Guard
   // `perfect_kernel_batch78c::svmult_maketitle_numbers_the_contribution`.
   if svmono {
-    DefMacro!("\\backmatter", "\\@mainmatterfalse");
+    DefMacro!("\\backmatter", "\\par\\lx@begin@backmatter\\@mainmatterfalse");
   } else {
     // (the book appendix numbers its sections in the appendix chapter, :728, whatever `\thesection` was before)
     Let!("\\lx@svmult@book@appendix", "\\appendix");
     DefMacro!("\\lx@svmult@bppendix", "\\lx@svmult@book@appendix\\def\\thesection{\\thechapter.\\@arabic\\c@section}");
     DefMacro!("\\appendix", "\\par");
-    DefMacro!("\\backmatter", "\\let\\appendix\\lx@svmult@bppendix");
+    DefMacro!("\\backmatter", "\\par\\lx@begin@backmatter\\let\\appendix\\lx@svmult@bppendix");
   }
   RequirePackage!("sv_support");
   // `\vec` (KNOWN_PERL_ERRORS #1143: Perl's binding ignores the options and keeps the kernel's arrow accent): svmult.cls

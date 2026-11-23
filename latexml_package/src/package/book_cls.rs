@@ -283,7 +283,13 @@ LoadDefinitions!({
     "\\mainmatter",
     "\\lx@book@mainmatter\\@mainmattertrue\\pagenumbering{arabic}"
   );
-  DefMacro!("\\backmatter", "\\lx@book@backmatter\\@mainmatterfalse");
+  // The back matter leaves the open part and chapter (sect04.rs `\lx@begin@backmatter`, OXIDIZED_DESIGN_DIVERGENCES
+  // #1147); `\cleardoublepage` (book.cls:293-297) ends the paragraph first. Guard
+  // `perfect_kernel_batchbackmatter::book_backmatter_closes_the_last_part`.
+  DefMacro!(
+    "\\backmatter",
+    "\\par\\lx@begin@backmatter\\lx@book@backmatter\\@mainmatterfalse"
+  );
 
   DefPrimitive!("\\tiny",         None, font => {size => 5 });
   DefPrimitive!("\\scriptsize",   None, font => {size => 7 });
