@@ -2886,8 +2886,8 @@ literal word "nothing" appears next to every number. Same-host Perl is byte-iden
 (SHARED-FAILURE).
 
 **Divergence** (surpass-Perl, user-approved 2026-08-15): in `presentation.rs::pmml_token_inner`,
-an empty-content token carrying `class="ltx_unit"` renders as an empty `<m:mphantom>` — the same
-invisible placeholder used for `meaning="absent"` — instead of falling through to the
+an empty-content token carrying `class="ltx_unit"` renders as the invisible placeholder used for
+`meaning="absent"` (`<m:mphantom>` around a U+2060 `<m:mi>`, #1150) instead of falling through to the
 `meaning`→`name`→`role` text fallback. Only empty UNIT tokens are affected (a non-empty unit
 keeps its symbol; a non-unit empty token keeps the existing fallback), so no currently-passing
 paper changes shape. A unit whose symbol produces nothing is exactly the case where the fallback
@@ -24076,3 +24076,25 @@ TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hi
 `dump_gate_init::nodump_latex_branch_converts_healthily` (no run of more than two blank lines). The interrupt itself
 is not tested, as its timing would make the test flaky; it was checked by hand (Ctrl+C during a first run's build
 leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).
+
+### 1150. An absent operand is a phantom U+2060 identifier, which no renderer skips as space-like (issue 991)
+
+- Perl: an `absent` token (XMath's missing operand: the LHS of an `align` continuation cell `& = b`, a prefix
+  relation, `\frac{a}{}`, `\sqrt{}`) is an empty `<m:mi/>` (MathML.pm:1475 `DefMathML("Token:?:absent", …)`).
+- Ours (presentation.rs `invisible_operand`): `<m:mphantom><m:mi>&#x2060;</m:mi></m:mphantom>`, also for an
+  empty-symbol unit (#114). An empty `mi` claims an identifier with no text, so it is never materialized
+  (`document.rs` `debug_assert!`, task #264); the slot was an empty `mphantom` until now. MathML Core §3.2.5.1 decides an
+  `<mo>`'s form ignoring its space-like siblings, and a grouping element whose in-flow children are all space-like
+  is space-like, an empty one vacuously (MathML 3 has the same rule): after an empty `mphantom`, `=` is first, so
+  prefix. MathJax 3.2.2 follows the rule and set the `=` with no left space (issue 991); Chrome counts only
+  `mtext`/`mspace` as space-like, so it kept the infix. An `mi` is never space-like (Core, MathML 3, MathJax),
+  so the operator stays infix, and the `mphantom` keeps the slot invisible. U+2060 WORD JOINER is zero-width and
+  default-ignorable, not White_Space (Unicode, JS `\s`/`trim()`, Python, Rust), a no-break (UAX #14 WJ), and has no
+  math meaning (unlike U+2061-2064); it bypasses the token styling (no `mathvariant`, no Plane-1 mapping). MathJax
+  3.2.2 on `<mrow>[slot]<mo>=</mo><mi>b</mi></mrow>`: the empty `mphantom` gives form prefix and no left space, the
+  new slot form infix and 0.278em (`space="4"`), as `a=b`, the slot 0em wide.
+
+**Guards**: `perfect_kernel_batchfix991::absent_operand_is_a_phantom_word_joiner`
+(`tools/perfect_kernel/repros/math-parse/absent_operand_is_not_space_like.tex`), with the slot counted in
+`90_latexmlpost::alignrows_operand_slot_keeps_relop_infix` (issue #312) and the empty unit in
+`06_cluster_regressions::cluster_siunitx_empty_unit_renders_invisible`.

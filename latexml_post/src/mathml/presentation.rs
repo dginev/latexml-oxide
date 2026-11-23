@@ -1112,6 +1112,31 @@ fn is_core_k_glyph(text: &str, role: &str) -> bool {
   !text.chars().all(is_format_char) && operator_dictionary::opdict_category(text, role) == "K"
 }
 
+/// The text of the invisible operand: U+2060 WORD JOINER — zero-width, default-ignorable, not
+/// White_Space anywhere (Unicode, JS `\s`/`trim()`, Python, Rust), no line break (UAX #14 WJ),
+/// and no math meaning (unlike the invisible operators U+2061-2064). Issue 991.
+const INVISIBLE_OPERAND_TEXT: &str = "\u{2060}";
+
+/// The placeholder for an operand that is not there (an `absent` token, an empty-symbol unit):
+/// `<m:mphantom><m:mi>&#x2060;</m:mi></m:mphantom>`, where Perl writes an empty `<m:mi/>`
+/// (`MathML.pm:1475`). MathML Core §3.2.5.1 decides an `<mo>`'s form ignoring space-like
+/// siblings, and an EMPTY `mphantom` is space-like (a grouping element whose children all are,
+/// vacuously), so after one `=` is a PREFIX operator — MathJax renders it so (issue 991). An
+/// `mi` is never space-like, so the slot keeps the operator infix (issue #312); the `mphantom`
+/// keeps it invisible, and the `mi` is never empty (the `debug_assert!` in `document.rs`).
+/// OXIDIZED_DESIGN #1150.
+fn invisible_operand() -> NodeData {
+  NodeData::Element {
+    tag:        "m:mphantom".to_string(),
+    attributes: None,
+    children:   vec![NodeData::Element {
+      tag:        "m:mi".to_string(),
+      attributes: None,
+      children:   vec![NodeData::Text(INVISIBLE_OPERAND_TEXT.to_string())],
+    }],
+  }
+}
+
 /// `role_override` mirrors Perl's `pmml_mo($op, role => 'OPERATOR')` call
 /// (MathML.pm L634): the caller forces the operator dictionary to a specific
 /// role (`OPERATOR` → PREFIX form) rather than the node's stored role. When set,
@@ -1131,39 +1156,9 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node, role_override: Option<&str>
 
   // Handle special meanings
   if meaning.as_deref() == Some("absent") {
-    // "absent" is an XMath placeholder for a structurally-missing operand
-    // (e.g. the LHS of a continuation row `& = ...` in `align*` whose
-    // LHS is inherited from the previous row, or a prefix operator
-    // applied with no left argument). At the MathML Presentation
-    // layer we materialize it as an EMPTY `<m:mphantom/>` — deliberately NOT
-    // the `<m:mi/>` Perl uses (`MathML.pm:1474`). `<m:mi>` is a semantic
-    // assertion ("here is an identifier") with no defined meaning when empty:
-    // renderers vary, screen readers announce "blank", indexers ingest a
-    // content-free token. That antipattern is enforced against downstream by a
-    // `debug_assert!` in `latexml_post/src/document.rs`, which refuses to
-    // materialize an empty `<m:mi>` by any route. Task #264.
-    //
-    // `<m:mphantom>` rather than a bare `<m:mrow>` because it says exactly what
-    // this node is: content that occupies layout space but is not rendered.
-    // A bare `<m:mrow>` is merely "a group", leaving a reader (human or AT) to
-    // infer why an empty one is there; `mphantom`'s whole definition is
-    // "invisible placeholder", which is precisely the operand slot's job.
-    // Measured equivalent in rendering: an inline `= q` is 35.58px in Chrome
-    // with an empty `mphantom`, an empty `mrow`, an empty `mi`, or no slot at
-    // all — so the choice is free at the pixel level and decided on clarity.
-    //
-    // What matters for rendering is only that the slot EXISTS: MathML infers
-    // an `<mo>`'s form from its position, so a sibling — of either element —
-    // keeps the operator infix. Dropping the slot is what broke issue #312;
-    // see `pmml_infix`. Because our placeholder differs from Perl's, the
-    // `tests/post/alignrows` guard asserts the STRUCTURE (the operator is not
-    // its `<mrow>`'s first child) rather than diffing against a Perl golden —
-    // a diff budget cannot tell "different placeholder" from "no placeholder".
-    return NodeData::Element {
-      tag:        "m:mphantom".to_string(),
-      attributes: None,
-      children:   vec![],
-    };
+    // "absent" is XMath's placeholder for a structurally missing operand: the LHS of an
+    // `align` continuation cell `& = …`, a prefix relation, `\frac{a}{}`, `\sqrt{}`.
+    return invisible_operand();
   }
 
   // Determine tag based on role
@@ -1181,17 +1176,13 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node, role_override: Option<&str>
     // content but `meaning`=<unit name>. The general fallback below turns that
     // into a visible `<m:mi>nothing</m:mi>` (Perl renders the same, in red —
     // SHARED-FAILURE). A unit whose symbol produces nothing must render
-    // INVISIBLY: emit an empty `<m:mphantom>` — the same invisible placeholder
-    // used for `absent` above — never the unit name. OXIDIZED_DESIGN #114.
+    // INVISIBLY: the same invisible placeholder used for `absent` above, never the
+    // unit name. OXIDIZED_DESIGN #114.
     if node
       .get_attribute("class")
       .is_some_and(|c| c.split_whitespace().any(|w| w == "ltx_unit"))
     {
-      return NodeData::Element {
-        tag:        "m:mphantom".to_string(),
-        attributes: None,
-        children:   vec![],
-      };
+      return invisible_operand();
     }
     if let Some(default) = default_token_content(&role) {
       text = default.to_string();
@@ -1822,14 +1813,11 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   // 0.7.5-rc1 as "the alignment is all off around `=`", and visible in both
   // native MathML and MathJax.
   //
-  // Keeping the slot costs nothing in accessibility, because `pmml_token`
-  // renders an `absent` token as an EMPTY `<m:mphantom/>` — presentational
-  // grouping with no semantic claim, zero-width and unannounced. That is a
-  // strict improvement on Perl, which emits an empty `<m:mi/>` here
-  // (`MathML.pm:1474` `DefMathML("Token:?:absent", …)`): same spacing, but
-  // without asserting "here is an identifier" for content that has none.
-  // (Task #264 proposed suppressing the placeholder; that is what regressed the
-  // #312 spacing, so the item is closed in the other direction.)
+  // The slot must not be space-like, or MathML skips it when it infers the form:
+  // `pmml_token` renders `absent` through `invisible_operand` (an `<m:mphantom>` holding a
+  // U+2060 `<m:mi>`), where an empty `mphantom` left `=` prefix in MathJax (issue 991).
+  // Perl's slot is an empty `<m:mi/>` (`MathML.pm:1475`). Task #264 proposed suppressing
+  // the placeholder; that is what regressed #312, so it is closed in the other direction.
   match args {
     [] => pmml(doc, op),
     // One operand is rendered PREFIX. Port of Perl `pmml_infix` L632-635:

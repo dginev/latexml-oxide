@@ -48,6 +48,6 @@
               <XMTok font="italic" role="UNKNOWN">x</XMTok>
             </XMApp>
           </XMApp>
-        </XMath><m:math alttext="=-x" display="inline"><m:mrow><m:mphantom/><m:mo>=</m:mo><m:mrow><m:mo>−</m:mo><m:mi>x</m:mi></m:mrow></m:mrow></m:math></Math>.</p>
+        </XMath><m:math alttext="=-x" display="inline"><m:mrow><m:mphantom><m:mi>⁠</m:mi></m:mphantom><m:mo>=</m:mo><m:mrow><m:mo>−</m:mo><m:mi>x</m:mi></m:mrow></m:mrow></m:math></Math>.</p>
   </para>
 </document>

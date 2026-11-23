@@ -84,11 +84,12 @@ every continuation row, diverging from Perl, which keeps the slot
 (`MathML.pm:1474` renders `absent` as an empty `<m:mi/>`). Reported as issue
 **#312**. Guard: `90_latexmlpost.rs::alignrows_operand_slot_keeps_relop_infix`.
 
-What DID land from this item: the placeholder is an empty `<m:mphantom/>`
-rather than Perl's `<m:mi/>` — an empty `<mi>` asserts "here is an identifier"
-about content that has none, and `document.rs` carries a `debug_assert!`
-refusing to materialize one. `mphantom` is chosen over a bare `mrow` because
-its definition is precisely "occupies space, renders invisibly".
+What DID land from this item: the placeholder is not Perl's empty `<m:mi/>`
+— an empty `<mi>` asserts "here is an identifier" about content that has none,
+and `document.rs` carries a `debug_assert!` refusing to materialize one. It is
+`<m:mphantom><m:mi>&#x2060;</m:mi></m:mphantom>`: an empty `mphantom` is
+space-like, which made the `=` after it prefix in MathJax (issue 991,
+OXIDIZED_DESIGN_DIVERGENCES #1150).
 
 **Still open:** the `intent=":continuation"` tagging, which is the part that
 actually expresses "the LHS is the prior row" without touching layout. That is

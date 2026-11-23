@@ -92,6 +92,13 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     longer prints thousands of blank lines over it (the blank line LaTeX writes before each error it drops).
     OXIDIZED_DESIGN_DIVERGENCES #1148; guards `format_dumps::tests::an_interrupted_build_is_undone`,
     `dump_gate_init::nodump_latex_branch_converts_healthily`.
+  - **MathJax spaces the `=` of an `align` continuation cell as an infix relation again** (issue 991). A cell like
+    `& = b` starts with an invisible placeholder for its missing left operand, which was an empty `<mphantom>`; MathML
+    (Core §3.2.5.1, and MathML 3) skips an empty grouping element as space-like when it decides an operator's form, so
+    MathJax set the `=` as a prefix operator, without its left space (Chrome kept it infix). The placeholder is now
+    `<mphantom><mi>&#x2060;</mi></mphantom>`, an invisible U+2060 WORD JOINER identifier that no renderer skips; the
+    same placeholder fills an empty `\frac`/`\sqrt` argument and an empty-symbol siunitx unit
+    (OXIDIZED_DESIGN_DIVERGENCES #1150). Guard `perfect_kernel_batchfix991::absent_operand_is_a_phantom_word_joiner`.
 
 ### 0.8.0-rc2
 
