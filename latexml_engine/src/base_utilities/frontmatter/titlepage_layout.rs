@@ -34,9 +34,9 @@ pub(in crate::base_utilities) fn wrap_as_titlepage(
   Ok(titlepage)
 }
 
-/// The layout children of a title page as the schema's `titlepage_model`
-/// (`Block.class*`) — and `ltx:para` — hold them: a `center`'s `logical-block`
-/// and a `para` become `block`s (#244's demotion, content first, rename after).
+/// The layout children of a title page as `ltx:para` and the schema's `titlepage_model`
+/// (`Block.class*`; a logical-block too since SCHEMA_EXTENSIONS S14) hold them: a `center`'s
+/// `logical-block` and a `para` become `block`s (#244's demotion, content first, rename after).
 /// Shared by `wrap_as_titlepage` and `demote_stranded_titlepage`.
 pub(in crate::base_utilities) fn normalize_titlepage_layout_children(
   document: &mut Document,
