@@ -610,6 +610,19 @@ settings.
    > automated gate is the launch/signature smoke. If you have an Intel Mac,
    > a periodic spot-check of a real conversion there is worthwhile.
 
+7. **Check the page-render fleet on the published macOS and Windows binaries.**
+   After an RC is published, dispatch `release-platform-check.yml` (`gh workflow
+   run release-platform-check.yml -f tag=X.Y.Z-rcN`; with no `tag` it checks the
+   newest published release). On `macos-15`, `macos-15-intel` and `windows-latest`
+   it downloads the release asset, verifies its checksum and runs
+   `tools/render_platform_check.sh`. The script converts an 80-section split
+   document three ways: with the automatic fleet, serially (`LATEXML_RENDER_JOBS=1`),
+   and with the fleet again over the first run's output, so `writer::Staged`
+   renames land on existing files. It requires byte-identical sites, an engaged
+   fleet, no abandoned fleet and no Error. The fleet otherwise runs only in Linux
+   measurements and in CI tests. If a platform fails, default the fleet to serial
+   there before the final tag.
+
 ## Failure recovery
 
 * **Workflow fails before publishing.** Fix the underlying issue,

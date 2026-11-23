@@ -995,11 +995,13 @@ Rules that keep this file honest and mergeable:
     the serial fallback re-renders the whole document: ~+2.7 GB of disk on issue 777's whole book. Freeing a finished
     worker's pages needs a fallback that re-renders only the failed ranges (`render_workers.rs` `parallel_render`'s
     fold); 1
-  - RENDERPLATFORMS (verify before 0.8.0 final) — the automatic render fleet is on in the `latexml_oxide` binary on
-    every platform but measured only on Linux: macOS has no RSS reading (a worker's watchdog share is not enforced),
-    and Windows' process spawning and `writer::Staged` renames onto existing files have run only in CI tests. Run a
-    split document on the macOS and Windows rc2 binaries against `LATEXML_RENDER_JOBS=1`; if either misbehaves,
-    default the fleet to serial there; 2
+  - RENDERPLATFORMS — DONE for 0.8.0-rc2 (2026-11-23, `release-platform-check.yml` run 45119655890): an 80-section
+    split document (`tools/render_platform_check.sh`) was converted on the published macOS arm64, macOS Intel and
+    Windows binaries three ways: with the automatic fleet (3/4/4 workers over 82 pages), serially, and with the fleet
+    again over its own output (Windows' `writer::Staged` renames onto existing files). All runs exited 0 with no
+    Error, the sites were byte-identical (84 files) and no spill or handoff file was left. Re-run the workflow on
+    every later RC. The fleet stays the default on every platform. Residual, unchanged: macOS has no RSS reading, so
+    a worker's watchdog memory share is not enforced there; 0
   - PANICSWEEP-MAXPERF (verify) — the abort-panic hook that removes the run's registered paths (`install_panic_sweep`,
     `bin/latexml_oxide.rs`) is guarded only through its wiring (test builds unwind; the test runs the hook in a child
     process): one maxperf build with a test-utils post panic, check no `latexml-post-handoff-*` stays; 1
