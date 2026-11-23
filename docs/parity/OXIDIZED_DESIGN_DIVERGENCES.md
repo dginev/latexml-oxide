@@ -779,6 +779,10 @@ typewriter space is dropped there too, as in Perl; the rendered node is
 unchanged (its foreignObject content is a left-aligned block, where a
 leading space collapses). Guard:
 `perfect_kernel_batch56::a_typewriter_space_opens_no_foreign_object`.
+Nor in the `ltx:picture`/`ltx:g` drawing model (PICNEST), as in Perl: a `\ `
+between `\psline`s opened an `ltx:text` in which the next object auto-opened
+a picture, 403 deep in 0905.4216 (`\PutGrid`), whose XSLT then failed. Guard:
+`pstricks_drawing::a_control_space_between_objects_keeps_the_picture_flat`.
 
 ### 48. → #993 (Author heuristic splits font-wrapped name lists; affiliation "and" preserved)
 
@@ -23897,6 +23901,24 @@ it, and as a CSS table it put the `\intertext` row in its first column (a footno
 **Guards**: `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`; the names pinned with a space in
 `perfect_kernel_batch{64u,68u,68x,90a,92g,hg1,p21c,p22,p22b}`, `class_census::k11_class_default_store` and
 `tests/babel/elsart_keyword_brace_form.xml` now end in U+00A0.
+### 1138. A pgf path closes an auto-opened `\put` picture instead of nesting an `svg:svg` in it (PICNEST)
+
+**Perl behavior**: pgfsys-latexml.def.ltxml:392-398 (`\lxSVG@begingroup@`) opens an `svg:svg` when the current node is
+an `ltx:` one under an `svg:g`. A `\put` in a tikzpicture auto-opens an `ltx:picture` (in an auto-opened
+`svg:foreignObject`) that stays current, so the next coloured or dashed path's group opens its `svg:svg` inside that
+picture, and every later `\put` and path one level deeper; a bare path's `svg:path` insertion auto-closes the chain
+instead (Document.pm `find_insertion_point`), flat.
+**pdflatex**: `\put` is a zero-size box (latex.ltx:16784-16792 `\hb@xt@\z@`); each one and each path sit side by side.
+**Rust behavior**: `ensure_svg_context` (pgfsys_latexml_def.rs), the guard both the group opener and the path emitters
+take, first walks up from the current node: when it and every node up to an `svg:` group (not a foreignObject) were
+auto-opened and can auto-close, it closes to that group, as the path insertion does in Perl; only a node a construct
+opened (a `\phantom`'s or a node label's box) still gets its own `svg:svg`.
+**Why**: the nesting is not TeX's layout, and it fails the post-processing: 1909.06819 (`\draw …[blue];
+\put(-18,-50){…}` in a nested `\foreach`) nested 214 deep, and libxslt's depth cap (1000, Perl XSLT.pm:48) ended
+it in `Fatal:post:convert`; now siblings, depth 24. **Guard**
+`perfect_kernel_batch54::a_put_in_a_tikzpicture_closes_before_the_next_path` (repro
+graphics-tikz/tikz_put_closes_before_next_path).
+
 ### 1139. An inline listing runs listings.sty's `\lst@Init\relax` … `\lst@DeInit` bracket (LISTINLINE)
 
 **Perl behavior**: listings.sty.ltxml:54-68 `\lstinline` opens a group, reads and outputs the body and closes the group;
