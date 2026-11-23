@@ -545,8 +545,9 @@ mod perfect_kernel_batchloopfix;
 /// LOSTF (OD ruling 13): three frontmatter content regressions — fcs's corresponding mark, vmsta's name parts, the pazh/astl
 /// title code's marks; OD #905, #802, #941.
 mod perfect_kernel_batchlostf;
-/// LUAFONT: document Lua's `font`, `lang` and `vf` never crash the texlua child; `font` mirrors the current font (OD #1081).
+/// LTXOWN: a paper's copy of a format-owned module (babel, expl3, xparse, l3keys2e) yields to the tree's file (OD #1142).
 mod perfect_kernel_batchltxown;
+/// LUAFONT: document Lua's `font`, `lang` and `vf` never crash the texlua child; `font` mirrors the current font (OD #1081).
 mod perfect_kernel_batchluafont;
 mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;

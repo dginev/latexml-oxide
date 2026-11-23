@@ -2612,4 +2612,11 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
 - PDFPRIM — merged (round 1 SHIP): pdfTeX operand readers per pdftex.web, the missing-type and value checks as Errors
   with recovery, `\DeclareFixedFont` a font identifier (OD #1081, KNOWN_PERL_ERRORS #1312, #1315). Residuals: row R
   PDFLASTOBJ, FIXFONTTEX, TEXTFONTUNSET, FONTNAMENFSS, PDFPRIMUNDEF.
+- LTXUTILH-OTHER (renamed FMTOWN: none of the ten ships ltxutil; they are snapshot bundles) — fixed by LTXOWN (OD
+  #1142, DG ruling 2026-11-23): a paper's babel.sty, babel.def, expl3.sty, xparse.sty or l3keys2e.sty is not read
+  while the format holds the module (`\bbl@version`, `\c__kernel_expl_date_tl`); the tree's file is, with one
+  `Warning:shipped_copy:<file>`; a byte-identical copy is silent; NODUMP reads the copy. 1408.3933, 1410.2241,
+  1511.02101, 1511.05750, 1602.08358, 1601.02763, 1207.4642, 1211.3724, 1211.6751, 1304.5586: Fatal → converted, five
+  error-free. Reach (2010-17 papers shipping one of the five, 207 + 40 controls): Fatal records 91 → 6, 0 papers worse,
+  controls byte-identical. Guards `perfect_kernel_batchltxown::*`. Residuals: row R L3EXP, FMTOWNEDIT, BABELINPUT.
 

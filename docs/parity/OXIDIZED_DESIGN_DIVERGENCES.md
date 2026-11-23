@@ -24071,8 +24071,11 @@ directory) in place of any copy the request found: the bare name's, `\usepackage
 declaration routes there (#1118). Each skipped copy is one `Warning:shipped_copy:<file>` ("a module the LaTeX format
 holds, is not read; the format's own is"); a copy byte-identical to the tree's is read silently. The set is closed (DG
 ruling 2026-11-23): other stale shipped packages (pgf 2.10, movie15, xtemplate) stay honest Errors. Where the format
-does not hold the module (`LATEXML_NODUMP`, whose expl3 is the binding's own reload; a legacy-TL dump of the paper's
-era) the copy is read, as its era read it.
+does not hold the module (`LATEXML_NODUMP`, whose expl3 is the binding's own reload; a legacy-TL dump whose format lacks
+`\c__kernel_expl_date_tl`, before expl3 joined the format in 2020) the copy is read, as its era read it. babel's marker
+is different: every era's hyphen.cfg defines `\bbl@version` (babel 3.9's own version test relies on it), so under a
+legacy dump the gate still holds and that era's tree babel is read, silently where the copy is the era's own. A copy the
+author edited is replaced like a stale one, loudly (the Warning and the Errors of what it defined; row R FMTOWNEDIT).
 **Why**: DG ruling 2026-11-23, "we want to successfully convert older papers when part of arXiv, even if they encounter
 critical issues on TeX Live 2025". Ten witnesses from Fatal to non-Fatal: 1511.02101, 1602.08358, 1601.02763,
 1211.3724, 1304.5586 error-free; 1408.3933 (9 E, `Extra \endcsname`), 1410.2241 (6 E, shipped movie15), 1511.05750
