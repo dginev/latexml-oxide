@@ -3371,7 +3371,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/tex_character.rs", 10),
   ("latexml_engine/src/tex_debugging.rs", 19),
   ("latexml_engine/src/tex_file_io.rs", 4),
-  ("latexml_engine/src/tex_fonts.rs", 16),
+  // (PDFPRIM, 16 -> 12: `read_font_ident` tells `\font` and the family ranges by meaning, `defined_as`)
+  ("latexml_engine/src/tex_fonts.rs", 12),
   ("latexml_engine/src/tex_inserts.rs", 4),
   ("latexml_engine/src/tex_job.rs", 2),
   ("latexml_engine/src/tex_logic.rs", 5),

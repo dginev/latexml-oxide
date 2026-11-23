@@ -1,0 +1,14 @@
+% mechanism: pdftex.rs read_id_spec, read_action_spec: no `num`/`name` (nor `page` in an action) is pdftex.web's
+%   "identifier type missing" (`pdf_error`, which stops pdfTeX; an Error here): `\pdfdest`, `\pdfthread`, a `goto`
+%   action (which then reads its general text) and a `struct` with no identifier. One Error each, the dest type not
+%   also missing. Safe twin: pdftex_operands_optional_space.tex.
+% witness: synthetic (row R PDFOPTSPACE, reviewer round 1)
+% oracle:  pdflatex -no-shell-escape, each call alone: "! pdfTeX error (ext1): identifier type missing." (fatal, no PDF)
+% engines: rust=GREEN perl=RED (no \pdfdest/\pdfthread reader; the operands are text) (2026-11-23)
+% expect:  4 errors, 0 warnings; <p>ABd fit CxDEFG</p>
+% status:  RED (0 errors) -> GREEN (pk/PDFPRIM)
+\documentclass{article}
+\begin{document}
+A\pdfstartlink goto {/Fit}B\pdfendlink\pdfdest {d} fit C\pdfthread {x}D\pdfendthread E%
+\pdfstartlink goto struct page 1 {/Fit}F\pdfendlink G
+\end{document}

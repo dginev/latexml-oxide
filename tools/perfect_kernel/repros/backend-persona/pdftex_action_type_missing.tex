@@ -1,0 +1,12 @@
+% mechanism: pdftex.rs read_action_spec: no `user`/`goto`/`thread` is pdftex.web's "action type missing" (`scan_action`,
+%   `pdf_error`, which stops pdfTeX; an Error here, nothing more read): `\pdfstartlink`, `\pdfoutline`, `\pdfcatalog …
+%   openaction`. Safe twin: pdftex_operands_optional_space.tex.
+% witness: synthetic (row R PDFOPTSPACE, reviewer round 1)
+% oracle:  pdflatex -no-shell-escape, each call alone: "! pdfTeX error (ext1): action type missing." (fatal, no PDF)
+% engines: rust=GREEN perl=RED (no \pdfstartlink reader; \pdfoutline's spec is text) (2026-11-23)
+% expect:  3 errors, 0 warnings; <p>AxBCtDExF</p>
+% status:  RED (0 errors) -> GREEN (pk/PDFPRIM)
+\documentclass{article}
+\begin{document}
+A\pdfstartlink {x}B\pdfendlink C\pdfoutline count 0 {t}D\pdfcatalog{} openaction {x}E\relax F
+\end{document}

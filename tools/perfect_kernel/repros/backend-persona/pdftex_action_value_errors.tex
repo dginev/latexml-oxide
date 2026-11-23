@@ -1,0 +1,17 @@
+% mechanism: pdftex.rs read_action_spec, read_id_spec, read_dest_spec: pdftex.web's other `pdf_error`s in the same
+%   readers, Errors here (pdfTeX stops): "num identifier must be positive", "struct identifier must be positive",
+%   "page number must be positive", "only GoTo action can be used with `page'"/"`struct'", "`goto' option cannot be
+%   used with both `file' and `num'", "`newwindow'/`nonewwindow' must be used with `goto' and `file' option". The
+%   operands are read on as the well-formed spec's. Safe twin: pdftex_operands_optional_space.tex.
+% witness: synthetic (row R PDFOPTSPACE, reviewer round 1 sibling)
+% oracle:  pdflatex -no-shell-escape, each call alone: the message named above (fatal, no PDF)
+% engines: rust=GREEN perl=RED (no \pdfdest/\pdfstartlink reader) (2026-11-23)
+% expect:  7 errors, 0 warnings; <p>ABCDEFGHIJKLMN</p>
+% status:  RED (0 errors) -> GREEN (pk/PDFPRIM)
+\documentclass{article}
+\begin{document}
+A\pdfdest num 0 fit B\pdfdest struct 0 name{d} fit C%
+\pdfstartlink goto page 0 {/Fit}D\pdfendlink E\pdfstartlink thread page 1 {/Fit}F\pdfendlink G%
+\pdfstartlink thread struct name{s} name{d}H\pdfendlink I\pdfstartlink goto file{x.pdf} num 1 J\pdfendlink K%
+\pdfstartlink goto name{d} newwindow L\pdfendlink M\relax N
+\end{document}

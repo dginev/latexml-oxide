@@ -22464,6 +22464,28 @@ Fixed in Rust: the labels end in `\lx@nobreakspace` (OXIDIZED_DESIGN_DIVERGENCES
 sectioning-frontmatter/default_{affiliation_label_tilde_redefined,email_label_tilde_redefined_used,date_keywords_labels_tilde_redefined};
 guard `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`.
 
+## 1312. pdfTeX's `\pdffontname`, `\pdffontobjnum` and `\pdffontsize` expand to nothing
+
+pdfTeX.pool.ltxml:97-99 defines the three font queries as macros of one `Token` with an empty expansion; pdfTeX expands
+them to the font's PDF resource number, its object number and its size with `pt` (pdftex.web §1563, the `convert`
+cases at :11359-11369), so a number or a dimension is missing where a package reads one. Minimal trigger:
+
+```tex
+\documentclass{article}\begin{document}\count255=\pdffontobjnum\font\relax\the\count255
+\dimen0=\pdffontsize\font\relax\the\dimen0\end{document}
+```
+
+pdflatex prints 1 and 10.0pt; Perl (same host) warns "Missing number, treated as zero" and "Missing number
+(Dimension), treated as zero" and prints 0 and 0.0pt (Rust before the fix: the same). Reach: pdfbase.sty:520-526 keys a
+form font by `\pdffontobjnum\font`; microtype-pdftex.def:254 sets `\fontdimen6` from `\pdffontsize`. Fixed in Rust:
+`pdftex.rs` `pdf_font_feedback`, shared with LuaTeX's `\pdffeedback fontname`/`fontobjnum`/`fontsize` (which answered
+0), answers one positive number per TFM file for both numbers (pdfTeX shares a font's object among its sizes), counted
+in the order the fonts are first queried, not pdfTeX's internal font number for `\pdffontname` (article's cmr10: pdflatex 32, Rust 1), and the
+size as `print_scaled` writes it (OXIDIZED_DESIGN_DIVERGENCES #1081). Repros backend-persona/pdffont_feedback_numbers,
+luatex-profile/pdfextension_optional_space_font_feedback, the null font's Error
+backend-persona/pdffont_invalid_font_identifier; guard
+`perfect_kernel_batchpdfprim::batchpdfprim_pdftex_operand_readers`.
+
 ## 1313. Perl's `\lstinline` never runs `\lst@Init`/`\lst@DeInit`, so a hook a document adds to them is lost
 
 listings.sty.ltxml:54-68 `\lstinline` reads and outputs the body inside its own group; it never runs the
@@ -22479,3 +22501,20 @@ a document adds to either is dropped (or, as `\egroup`, never closes what it sho
 pdflatex prints "A x! B"; Perl drops the "!". Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1139): the binding runs the
 bracket. Witness 2411.07667 (realboxes' `\Colorbox{…}\bgroup\appto\lst@DeInit{\egroup}`, which Perl only escapes
 because its `\xpretocmd` fails); guard `perfect_kernel_batchlistinline::lstinline_runs_the_init_deinit_bracket`.
+
+## 1315. Perl's `\DeclareFixedFont` defines its command as `\relax`, so the fixed font is never selected
+
+latex_constructs.pool.ltxml:2714 `DefPrimitive('\DeclareFixedFont{}{}{}{}{}{}', sub { DefMacroI($_[1], undef,
+T_CS('\relax')) })`; latex.ltx:10307-10315 selects the font with `\usefont` at the given size and `\global\let`s the
+command to `\the\font`, a font identifier. Minimal trigger:
+
+```tex
+\documentclass{article}\DeclareFixedFont{\df}{OT1}{cmr}{bx}{n}{14pt}
+\begin{document}A {\df big} B \fontname\df.\end{document}
+```
+
+pdflatex sets "big" bold at 14pt and prints the font's name; Perl (same host) gives `<p>A big B fontname not
+available.</p>`, the style lost, and `\fontdimen`/`\hyphenchar` on `\df` raise "Missing font identifier". Witness
+1905.00282 (`\bigsf`, a 1.5cm sans-bold title, lost its size and weight). Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
+#1081): `sect08.rs` follows latex.ltx; repro and guard `perfect_kernel_batchpdfprim::batchpdfprim_pdftex_operand_readers`.
+

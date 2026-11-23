@@ -204,11 +204,16 @@ LoadDefinitions!({
   DefMacro!("\\pdfcreationdate", sub[_args] { pdf_creation_date() });
   def_macro_noop("\\pdfpageref Number")?;
   def_macro_noop("\\pdfxformname Number")?;
-  // A font identifier (tex.web §577 `scan_font_ident`), not one token: `\pdfincludechars \textfont1{…}`.
-  def_macro_noop("\\pdffontname FontToken")?;
-  def_macro_noop("\\pdffontobjnum FontToken")?;
-  def_macro_noop("\\pdffontsize FontToken")?;
-  def_macro_noop("\\pdfincludechars FontToken GeneralText")?;
+  // A font identifier (tex.web §577 `scan_font_ident`), not one token: `\pdfincludechars \textfont1{…}`. The font
+  // queries answer a number and a size, not Perl's nothing (pdfTeX.pool:97-99; `pdf_font_feedback`).
+  DefMacro!("\\pdffontname", sub[_args] { pdf_font_feedback("fontname") });
+  DefMacro!("\\pdffontobjnum", sub[_args] { pdf_font_feedback("fontobjnum") });
+  DefMacro!("\\pdffontsize", sub[_args] { pdf_font_feedback("fontsize") });
+  DefMacro!("\\pdfincludechars", sub[_args] {
+    read_pdf_font_ident()?;
+    read_general_text()?;
+    Tokens::new(Vec::new())
+  });
   def_macro_noop("\\leftmarginkern Number")?;
   def_macro_noop("\\rightmarginkern Number")?;
   // pdfTeX escape primitives — real implementations, output format verified
@@ -508,11 +513,11 @@ LoadDefinitions!({
   // comments them, KPE #162). Guards:
   // `perfect_kernel_batch54::pdfoutline_and_pdfdest_consume_their_specs`.
   DefParameterType!(OutlineSpecification, reader => reader!(_args, _extra, {
-    read_outline_spec(false)?;
+    read_outline_spec("\\pdfoutline", false)?;
   }), optional => true);
   def_primitive_noop("\\pdfoutline OutlineSpecification")?;
   DefParameterType!(DestSpecification, reader => reader!(_args, _extra, {
-    read_dest_spec()?;
+    read_dest_spec("\\pdfdest")?;
   }), optional => true);
   def_primitive_noop("\\pdfdest DestSpecification")?;
   // \pdfstartlink [rule spec] [attr spec] action spec (h, m), pdfTeX manual §8.12, the rule spec any of
@@ -520,7 +525,7 @@ LoadDefinitions!({
   // (Perl pdfTeX.pool:176) `attr {…} goto name {…}` fell into the text — AAAI papers, which may not load hyperref,
   // write their links so (2609.00161: a label's `_` in `goto name {impact.eq:iws_objective}`).
   DefParameterType!(LinkSpecification, reader => reader!(_args, _extra, {
-    read_link_spec()?;
+    read_link_spec("\\pdfstartlink")?;
   }), optional => true);
   def_primitive_noop("\\pdfstartlink LinkSpecification")?;
   // \pdfsavepos (h, v, m)
@@ -532,7 +537,7 @@ LoadDefinitions!({
   // `\pdfcatalog <general text> [openaction <action spec>]` (pdftex-syntax.tex:483): the action spec is read whole, as
   // `\pdfstartlink`'s (Perl pdfTeX.pool reads `openaction` and `user`/`goto` only, leaving the rest as text).
   DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {
-    read_open_action()?;
+    read_open_action("\\pdfcatalog")?;
   }), optional => true);
 
   // Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
@@ -556,7 +561,11 @@ LoadDefinitions!({
   def_macro_noop("\\pdftrailerid{}")?;
   def_macro_noop("\\pdfmapfile{}")?;
   def_macro_noop("\\pdfmapline{}")?;
-  // \pdffontattr font general text
+  // \pdffontattr font general text (pdftex.web §1561 [Implement \pdffontattr]); the attributes are PDF-only.
+  DefPrimitive!("\\pdffontattr", sub[_args] {
+    read_pdf_font_ident()?;
+    read_general_text()?;
+  });
   // \pdffontexpand font expand spec
   // \vadjust [ pre spec ] filler { vertical mode material } (h, m)
   def_macro_noop("\\quitvmode")?;
@@ -598,8 +607,8 @@ LoadDefinitions!({
   def_primitive_noop("\\pdfsavepos")?;
   // \pdfthread (h, v, m) and \pdfstartthread (v, m) read a thread spec (pdftex-syntax.tex:623, :635): as bare no-ops
   // their `num 1`/`name {…}` fell into the text; \pdfendthread (v, m) reads nothing.
-  DefPrimitive!("\\pdfthread", sub[_args] { read_thread_spec()?; });
-  DefPrimitive!("\\pdfstartthread", sub[_args] { read_thread_spec()?; });
+  DefPrimitive!("\\pdfthread", sub[_args] { read_thread_spec("\\pdfthread")?; });
+  DefPrimitive!("\\pdfstartthread", sub[_args] { read_thread_spec("\\pdfstartthread")?; });
   def_primitive_noop("\\pdfendthread")?;
   // \pdfinterwordspaceon / \pdfinterwordspaceoff / \pdffakespace (pdfTeX 1.40.15): fake interword spaces in the PDF's
   // text layer, for copy and paste; nothing to do in XML. dgruyter.sty:1226 `\pdfinterwordspaceon` (2205.10368; Perl's
@@ -767,19 +776,6 @@ LoadDefinitions!({
   DefRegister!("\\automatichyphenmode" => Number::new(0));
 });
 
-/// MD5 (RFC 1321), digest as UPPERCASE hex — the format pdfTeX's
-/// `\pdfmdfivesum` prints (verified against live pdfTeX TL2025). Inline
-/// implementation: 64-entry sine table generated exactly as the RFC defines
-/// it (`floor(2^32 · |sin(i+1)|)`), guarded below by the RFC's own test
-/// vectors.
-/// Consume a pdfTeX `action spec` (pdfTeX manual §8.11, and the grammar
-/// quoted above): `user <general text>` | `goto <goto-action spec>` |
-/// `thread <thread-action spec>`. The goto form is `[file <text>] num N` |
-/// `[file <text>] name <text> [newwindow|nonewwindow]` | `[file <text>]
-/// [page N] <general text> [newwindow|nonewwindow]`. Nothing is kept — the
-/// actions are PDF navigation — but every token of the spec must be eaten
-/// so it does not fall into the text. Shared by `\pdfoutline` and
-/// `\pdfstartlink`-style readers.
 /// `\pdfliteral`'s operands: `[shipout] [<mode>] <general text>`, the keywords scanned with expansion; pdfTeX's modes
 /// are `direct` and `page`, LuaTeX's add `raw`, `text` and `origin`.
 fn read_pdfliteral_operands(modes: &[&str]) -> Result<()> {
@@ -825,8 +821,73 @@ fn read_rule_spec() -> Result<()> {
 
 fn read_colorstack_operands() -> Result<()> {
   let _ = read_number()?;
-  if let Some("set" | "push") = read_keyword(&["set", "push", "pop", "current"])? {
-    read_general_text()?;
+  match read_keyword(&["set", "push", "pop", "current"])? {
+    Some("set" | "push") => read_general_text()?,
+    Some(_) => {},
+    // pdftex.web [Implement \pdfcolorstack]: the command is ignored and what follows is read again.
+    None => Error!(
+      "expected",
+      "\\pdfcolorstack",
+      "Color stack action is missing; expected set, push, pop or current"
+    ),
+  }
+  Ok(())
+}
+
+/// `\pdffontname`/`\pdffontobjnum`/`\pdffontsize <font>` and LuaTeX's `\pdffeedback fontname`…: the font's PDF
+/// resource and object numbers, one number per TFM file as pdfTeX shares a font's object among its sizes, and its size
+/// with `pt` (pdftex.web §1563, :11359-11369). The null font is pdfTeX's "invalid font identifier".
+pub fn pdf_font_feedback(kind: &str) -> Result<Tokens> {
+  let Some(font) = read_pdf_font_ident()? else {
+    return Ok(Tokens::new(Explode!(if kind == "fontsize" {
+      "0.0pt"
+    } else {
+      "0"
+    })));
+  };
+  let (name, size) = crate::tex_fonts::font_name_and_size(font);
+  if kind == "fontsize" {
+    return Ok(Tokens::new(Explode!(&Dimension::new(size).to_string())));
+  }
+  let key = s!("pdfTeX:font_num_{name}");
+  let number = match lookup_value(&key) {
+    Some(Stored::Number(n)) => n.value_of(),
+    _ => {
+      let next = lookup_int("pdfTeX:font_count") + 1;
+      assign_value("pdfTeX:font_count", next, Some(Scope::Global));
+      assign_value(&key, Stored::Number(Number::new(next)), Some(Scope::Global));
+      next
+    },
+  };
+  Ok(Tokens::new(Explode!(number.to_string())))
+}
+
+/// A pdfTeX font operand (`scan_font_ident`): the null font is pdfTeX's "invalid font identifier" (pdftex.web :11014,
+/// :35340, :35381), an Error here where pdfTeX stops; `None` then.
+fn read_pdf_font_ident() -> Result<Option<Token>> {
+  let font = crate::tex_fonts::read_font_ident()?;
+  if crate::tex_fonts::is_null_font(font) {
+    Error!(
+      "invalid",
+      "\\nullfont",
+      "pdfTeX error (font): invalid font identifier"
+    );
+    return Ok(None);
+  }
+  Ok(Some(font))
+}
+
+/// pdftex.web `pdf_error("ext1", …)`, which stops pdfTeX (`succumb`, :15627): an Error here, the operand read on as far
+/// as it goes, since the annotation it spoils is PDF-only.
+fn pdf_ext_error(cs: &str, message: &str) -> Result<()> {
+  Error!("expected", cs, s!("pdfTeX error (ext1): {message}"));
+  Ok(())
+}
+
+/// An identifier or page number, which pdfTeX requires positive ("num identifier must be positive", …).
+fn read_positive(cs: &str, what: &str) -> Result<()> {
+  if read_number()?.value_of() <= 0 {
+    pdf_ext_error(cs, &s!("{what} must be positive"))?;
   }
   Ok(())
 }
@@ -840,7 +901,8 @@ fn read_colorstack_operands() -> Result<()> {
 /// doc; KNOWN_PERL_ERRORS #151). LuaTeX's `obj` adds `uncompressed` after `useobjnum`.
 fn read_object_spec(luatex: bool) -> Result<()> {
   if read_keyword(&["reserveobjnum"])?.is_some() {
-    return Ok(());
+    // pdftex.web [Implement \pdfobj], [Implement \pdfannot]: <Scan an optional space> (`A\pdf_object_new:n{x}B` is "AB").
+    return skip_one_space(true);
   }
   if read_keyword(&["useobjnum"])?.is_some() {
     let _ = read_number()?;
@@ -858,14 +920,14 @@ fn read_object_spec(luatex: bool) -> Result<()> {
 
 /// `\pdfoutline [attr <text>] <action spec> [count <n>] <general text>`; LuaTeX's `outline` may name an object
 /// (`useobjnum <n>`) in place of the action spec.
-fn read_outline_spec(luatex: bool) -> Result<()> {
+fn read_outline_spec(cs: &str, luatex: bool) -> Result<()> {
   if read_keyword(&["attr"])?.is_some() {
     read_general_text()?;
   }
   if luatex && read_keyword(&["useobjnum"])?.is_some() {
     let _ = read_number()?;
   } else {
-    read_action_spec()?;
+    read_action_spec(cs)?;
   }
   if read_keyword(&["count"])?.is_some() {
     let _ = read_number()?;
@@ -873,53 +935,67 @@ fn read_outline_spec(luatex: bool) -> Result<()> {
   read_general_text()
 }
 
-/// `\pdfdest <numid|nameid> <dest type>`; the spaces after it are skipped, as pdfTeX and LuaTeX do (`X\pdfdest name{d}
-/// fit Y` sets no glue).
-fn read_dest_spec() -> Result<()> {
-  read_id_spec()?;
-  if read_keyword(&["xyz"])?.is_some() {
-    if read_keyword(&["zoom"])?.is_some() {
-      let _ = read_number()?;
-    }
-  } else if read_keyword(&["fitr"])?.is_some() {
-    read_rule_spec()?;
-  } else {
-    let _ = read_keyword(&["fitbh", "fitbv", "fitb", "fith", "fitv", "fit"])?;
+/// `\pdfdest [struct <n>] <numid|nameid> <dest type>`, then one optional space, as pdfTeX and LuaTeX read it
+/// (pdftex.web [Implement \pdfdest]; `X\pdfdest name{d} fit Y` sets no glue); `fitr`'s rule spec follows the space.
+/// A missing identifier or type is pdfTeX's "identifier type missing", "destination type missing"; one Error, as
+/// pdfTeX stops at the first.
+fn read_dest_spec(cs: &str) -> Result<()> {
+  if read_keyword(&["struct"])?.is_some() {
+    read_positive(cs, "struct identifier")?;
   }
-  skip_spaces()
-}
-
-/// `\pdfstartlink [<rule spec>] [attr <text>] <action spec>`.
-fn read_link_spec() -> Result<()> {
-  read_rule_spec()?;
-  if read_keyword(&["attr"])?.is_some() {
-    read_general_text()?;
+  let identified = read_id_spec(cs)?;
+  let kind = read_keyword(&[
+    "xyz", "fitbh", "fitbv", "fitb", "fith", "fitv", "fitr", "fit",
+  ])?;
+  if kind.is_none() && identified {
+    pdf_ext_error(cs, "destination type missing")?;
   }
-  read_action_spec()
-}
-
-/// A thread spec, `[<rule spec>] [attr <text>] <numid|nameid>` (`\pdfthread`, `\pdfstartthread`).
-fn read_thread_spec() -> Result<()> {
-  read_rule_spec()?;
-  if read_keyword(&["attr"])?.is_some() {
-    read_general_text()?;
-  }
-  read_id_spec()
-}
-
-/// `num <n> | name <general text>`.
-fn read_id_spec() -> Result<()> {
-  if read_keyword(&["num"])?.is_some() {
+  if kind == Some("xyz") && read_keyword(&["zoom"])?.is_some() {
     let _ = read_number()?;
-  } else if read_keyword(&["name"])?.is_some() {
-    read_general_text()?;
+  }
+  skip_one_space(true)?;
+  if kind == Some("fitr") {
+    read_rule_spec()?;
   }
   Ok(())
 }
 
-fn read_open_action() -> Result<()> {
+/// `\pdfstartlink [<rule spec>] [attr <text>] <action spec>`.
+fn read_link_spec(cs: &str) -> Result<()> {
+  read_rule_spec()?;
+  if read_keyword(&["attr"])?.is_some() {
+    read_general_text()?;
+  }
+  read_action_spec(cs)
+}
+
+/// A thread spec, `[<rule spec>] [attr <text>] <numid|nameid>` (`\pdfthread`, `\pdfstartthread`).
+fn read_thread_spec(cs: &str) -> Result<()> {
+  read_rule_spec()?;
+  if read_keyword(&["attr"])?.is_some() {
+    read_general_text()?;
+  }
+  read_id_spec(cs)?;
+  Ok(())
+}
+
+/// `num <n> | name <general text>` (pdftex.web `scan_thread_id`, [Implement \pdfdest]); neither is pdfTeX's
+/// "identifier type missing", and `false`.
+fn read_id_spec(cs: &str) -> Result<bool> {
+  if read_keyword(&["num"])?.is_some() {
+    read_positive(cs, "num identifier")?;
+  } else if read_keyword(&["name"])?.is_some() {
+    read_general_text()?;
+  } else {
+    pdf_ext_error(cs, "identifier type missing")?;
+    return Ok(false);
+  }
+  Ok(true)
+}
+
+fn read_open_action(cs: &str) -> Result<()> {
   if read_keyword(&["openaction"])?.is_some() {
-    read_action_spec()?;
+    read_action_spec(cs)?;
   }
   Ok(())
 }
@@ -975,20 +1051,20 @@ pub fn read_pdfextension() -> Result<()> {
     // `<font> <general text>` (pdftex-syntax.tex:405, :511), the font by `scan_font_ident`, past the space that
     // luatex85.sty:87-88 leaves after the keyword (`\pdfincludechars\font{…}` read the space as the font).
     Some("includechars" | "fontattr") => {
-      let _ = crate::tex_fonts::read_font_ident()?;
+      read_pdf_font_ident()?;
       read_general_text()?;
     },
     Some("obj" | "annot") => read_object_spec(true)?,
     Some("refobj" | "linkstate") => {
       let _ = read_number()?;
     },
-    Some("startlink") => read_link_spec()?,
-    Some("outline") => read_outline_spec(true)?,
-    Some("dest") => read_dest_spec()?,
-    Some("thread" | "startthread") => read_thread_spec()?,
+    Some("startlink") => read_link_spec("\\pdfextension")?,
+    Some("outline") => read_outline_spec("\\pdfextension", true)?,
+    Some("dest") => read_dest_spec("\\pdfextension")?,
+    Some("thread" | "startthread") => read_thread_spec("\\pdfextension")?,
     Some("catalog") => {
       read_general_text()?;
-      read_open_action()?;
+      read_open_action("\\pdfextension")?;
     },
     // save, restore, endlink, endthread
     Some(_) => {},
@@ -1002,35 +1078,74 @@ pub fn read_pdfextension() -> Result<()> {
   Ok(())
 }
 
-fn read_action_spec() -> Result<()> {
+/// pdftex.web `scan_action`: `user <general text>` | `goto`/`thread` `[file <text>] [struct <text>|name <text>|num
+/// <n>] (page <n> <text> | name <text> | num <n>) [newwindow|nonewwindow]`, the window keyword with one optional space.
+/// No type is pdfTeX's "action type missing", no identifier its "identifier type missing" (Errors; a `goto` then reads
+/// a general text, the manual's form); its other `pdf_error`s are Errors too.
+fn read_action_spec(cs: &str) -> Result<()> {
   let Some(kind) = read_keyword(&["user", "goto", "thread"])? else {
+    pdf_ext_error(cs, "action type missing")?;
     return Ok(());
   };
-  skip_spaces()?;
   if kind == "user" {
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
-    return Ok(());
+    return read_general_text();
   }
-  if read_keyword(&["file"])?.is_some() {
-    skip_spaces()?;
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+  let file = read_keyword(&["file"])?.is_some();
+  if file {
+    read_general_text()?;
   }
-  if read_keyword(&["num"])?.is_some() {
-    let _ = read_number()?;
-  } else if read_keyword(&["name"])?.is_some() {
-    skip_spaces()?;
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
-  } else if kind == "goto" {
-    if read_keyword(&["page"])?.is_some() {
-      let _ = read_number()?;
+  let goto = kind == "goto";
+  if read_keyword(&["struct"])?.is_some() {
+    if !goto {
+      pdf_ext_error(cs, "only GoTo action can be used with `struct'")?;
     }
-    skip_spaces()?;
-    let _ = read_balanced_text(ExpansionLevel::Off, true)?;
+    if file || read_keyword(&["name"])?.is_some() {
+      read_general_text()?;
+    } else if read_keyword(&["num"])?.is_some() {
+      read_positive(cs, "num identifier")?;
+    } else {
+      pdf_ext_error(cs, "identifier type missing")?;
+    }
   }
-  let _ = read_keyword(&["newwindow", "nonewwindow"])?;
+  if read_keyword(&["page"])?.is_some() {
+    if !goto {
+      pdf_ext_error(cs, "only GoTo action can be used with `page'")?;
+    }
+    read_positive(cs, "page number")?;
+    read_general_text()?;
+  } else if read_keyword(&["name"])?.is_some() {
+    read_general_text()?;
+  } else if read_keyword(&["num"])?.is_some() {
+    if goto && file {
+      pdf_ext_error(
+        cs,
+        "`goto' option cannot be used with both `file' and `num'",
+      )?;
+    }
+    read_positive(cs, "num identifier")?;
+  } else {
+    pdf_ext_error(cs, "identifier type missing")?;
+    if goto {
+      read_general_text()?;
+    }
+  }
+  if read_keyword(&["newwindow", "nonewwindow"])?.is_some() {
+    if !(goto && file) {
+      pdf_ext_error(
+        cs,
+        "`newwindow'/`nonewwindow' must be used with `goto' and `file' option",
+      )?;
+    }
+    skip_one_space(true)?;
+  }
   Ok(())
 }
 
+/// MD5 (RFC 1321), digest as UPPERCASE hex — the format pdfTeX's
+/// `\pdfmdfivesum` prints (verified against live pdfTeX TL2025). Inline
+/// implementation: 64-entry sine table generated exactly as the RFC defines
+/// it (`floor(2^32 · |sin(i+1)|)`), guarded below by the RFC's own test
+/// vectors.
 fn md5_hex_upper(data: &[u8]) -> String {
   const S: [u32; 64] = [
     7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, //

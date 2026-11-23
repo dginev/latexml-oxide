@@ -665,6 +665,9 @@ mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
 mod perfect_kernel_batchpc3;
+/// PDFPRIM: pdfTeX's operand readers — optional spaces, `scan_action`, the font queries, the missing colour stack action and
+/// font identifier.
+mod perfect_kernel_batchpdfprim;
 /// PLACEFIX: run 397's placement rulings — a BibTeX month macro warns, a theorem in an abstract dissolves, a nomenclature
 /// keeps its box, a bibliography floats out of a float or heading (OD #1096-#1099).
 mod perfect_kernel_batchplacefix;
