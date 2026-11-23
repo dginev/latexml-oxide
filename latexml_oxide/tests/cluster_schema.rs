@@ -85,7 +85,8 @@ fn rect_line_cap_is_square() {
 /// A zero-size box in an SVG context (quantikz's empty cells) still gets a
 /// sized `svg:foreignObject`: Perl TeX_Box.pool.ltxml:409-424 sets width and
 /// height whenever the whatsit exists; a nonzero guard left 3,010 of them
-/// sizeless (32 manuals) against the schema's required attributes.
+/// sizeless (32 manuals) against the schema's required attributes. The cell's `{\phantom{H}}` is a formula of its
+/// invisible box (batch PHANTOM, OXIDIZED_DESIGN_DIVERGENCES #1141; was its width as spaces).
 #[test]
 fn empty_node_foreign_object_is_sized() {
   let (log, xml) = convert(
@@ -96,7 +97,7 @@ fn empty_node_foreign_object_is_sized() {
     &xml,
     "svg:foreignObject",
     &[],
-    r##"<svg:foreignObject height="0" overflow="visible" style="--ltx-fo-width:0.91em;--ltx-fo-height:0em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 0)" width="12.63"><text font="nullfont">  </text></svg:foreignObject>"##,
+    r##"<svg:foreignObject height="0" overflow="visible" style="--ltx-fo-width:0.91em;--ltx-fo-height:0em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 0)" width="12.63"><Math mode="inline" tex="{\phantom{H}}" text="absent" xml:id="p1.pic1.m1"><XMath><XMDual><XMTok meaning="absent"/><XMHint depth="0.0pt" height="6.8pt" name="phantom" width="9.1pt"><XMTok font="italic" role="UNKNOWN">H</XMTok></XMHint></XMDual></XMath></Math></svg:foreignObject>"##,
   );
   assert_valid(&xml);
 }

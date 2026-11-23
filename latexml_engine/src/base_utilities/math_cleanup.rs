@@ -176,7 +176,10 @@ fn has_real_math(mathnode: &Node) -> bool {
       let alone = children.len() == 1;
       children.iter().any(|child| {
         document::with_node_qname(child, |qname| match qname {
-          "ltx:XMText" | "ltx:XMHint" => false,
+          "ltx:XMText" => false,
+          // A phantom's hint holds its argument, a box of it (`$\phantom{x}$`; OXIDIZED_DESIGN_DIVERGENCES #1141), real
+          // math when the argument is: a strut of text alone (cryptocode's `\vphantom{\rule…}`) is not.
+          "ltx:XMHint" => document::is_phantom_box(child) && holds_math_token(child),
           "ltx:XMTok" => {
             !(alone
               && matches!(
@@ -187,6 +190,18 @@ fn has_real_math(mathnode: &Node) -> bool {
           other => other.starts_with("ltx:"),
         })
       })
+    })
+}
+
+/// Does `node` hold a math token outside an `ltx:XMText`?
+fn holds_math_token(node: &Node) -> bool {
+  node
+    .get_child_elements()
+    .iter()
+    .any(|child| match child.get_name().as_str() {
+      "XMTok" => true,
+      "XMText" => false,
+      _ => holds_math_token(child),
     })
 }
 

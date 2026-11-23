@@ -1,0 +1,24 @@
+% control twin of phantom_is_a_box_of_its_content.tex: the same shapes with visible content
+% oracle:  pdflatex 0 errors
+% expect:  unchanged by the phantom fix
+% status:  GREEN (control)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+A $\sqrt{x}$
+
+B $x$
+
+D $\sqrt{a\,x}$
+
+E $\begin{pmatrix}{-}1 & -1\\ -1 & {-}1\end{pmatrix}$
+
+F $x^{2}y$
+
+G $\frac{x}{y}$
+
+H ${}^{a}b$
+
+J $a\,b$
+\end{document}

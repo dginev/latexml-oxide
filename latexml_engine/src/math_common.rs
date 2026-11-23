@@ -1127,9 +1127,13 @@ LoadDefinitions!({
   );
 
   // Perl: DefConstructor('\phantom{}', "?#isMath(...)(...)", properties => {isSpace=>1}, afterDigest => ...)
+  // In math the hint keeps its argument: TeX's phantom is a box of its content (latex.ltx `\finph@nt`), rendered
+  // `<mphantom>` where it stands (Perl's sizes alone left `\sqrt{\phantom{x}}` empty; witness 2603.21852;
+  // OXIDIZED_DESIGN_DIVERGENCES #1141, KNOWN_PERL_ERRORS #1316). The parser still reads it as space.
   DefConstructor!(
     "\\phantom{}",
-    "?#isMath(<ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'/>)\
+    "?#isMath(<ltx:XMHint width='#width' height='#height' depth='#depth' name='phantom'>\
+      <ltx:XMArg>#1</ltx:XMArg></ltx:XMHint>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
     // TeX starts the paragraph here (latex.ltx:15617 `\leavevmode@ifvmode\box\tw@`), as `\lx@text@hphantom` does; not
     // declared: a paragraph holding only this `isSpace` whatsit would be dropped (repack_paragraph, Perl
@@ -1206,7 +1210,7 @@ LoadDefinitions!({
   def_macro_noop("\\lx@hphantom@empty")?;
   DefConstructor!(
     "\\lx@math@hphantom{}",
-    "<ltx:XMHint width='#width' name='hphantom'/>",
+    "<ltx:XMHint width='#width' name='hphantom'><ltx:XMArg>#1</ltx:XMArg></ltx:XMHint>",
     alias => "\\hphantom",
     properties => { stored_map!("isSpace" => true) },
     after_digest => sub[whatsit] {
@@ -1237,7 +1241,7 @@ LoadDefinitions!({
 
   DefConstructor!(
     "\\vphantom{}",
-    "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'/>)\
+    "?#isMath(<ltx:XMHint height='#height' depth='#depth' name='vphantom'><ltx:XMArg>#1</ltx:XMArg></ltx:XMHint>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
     // Not `enter_horizontal`, as `\phantom` above.
     properties => { stored_map!("isSpace" => true) },

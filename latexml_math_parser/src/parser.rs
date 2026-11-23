@@ -15,7 +15,7 @@ use latexml_core::{
     error::{Result, note_begin, note_end, note_progress},
     xml::{name_is, *},
   },
-  document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname},
+  document::{Document, get_node_qname, is_phantom_box, sym_can_have_attribute, with_node_qname},
   fatal, map, pin, s, state, static_map, sym_map,
 };
 use libxml::tree::{Node, NodeType};
@@ -598,6 +598,46 @@ impl MathGrammar {
       builder: Rc::new(builder),
     })
   }
+}
+
+/// An `absent` token: an empty slot (Perl MathParser.pm:683 `Absent()`).
+fn is_absent(node: &Node) -> bool {
+  get_node_qname(node) == pin!("ltx:XMTok")
+    && node.get_attribute("meaning").as_deref() == Some("absent")
+}
+
+/// The phantoms among the hints before a list's first item and after its last (all of them when the list holds only
+/// hints): `(leading, trailing)`, in order. `filter_hints` folds a hint into its neighbour's padding,
+/// which MathML spaces only between siblings, so a phantom there was lost (`\phantom{-}1` in a matrix cell,
+/// `\sqrt{a\phantom{x}}`, `\vphantom{\int}a`; witness 2603.21852).
+fn edge_phantoms(mathnode: &Node) -> (Vec<Node>, Vec<Node>) {
+  let items = element_nodes(mathnode);
+  let is_hint = |node: &Node| get_node_qname(node) == pin!("ltx:XMHint");
+  if !items.iter().any(is_phantom_box) {
+    return (Vec::new(), Vec::new());
+  }
+  let first = items
+    .iter()
+    .position(|node| !is_hint(node))
+    .unwrap_or(items.len());
+  let last = items
+    .iter()
+    .rposition(|node| !is_hint(node))
+    .map_or(items.len(), |last| last + 1);
+  let take = |range: &[Node]| -> Vec<Node> {
+    range
+      .iter()
+      .filter(|node| is_phantom_box(node))
+      .cloned()
+      .collect()
+  };
+  let leading = take(&items[..first]);
+  let trailing = if last > first {
+    take(&items[last..])
+  } else {
+    Vec::new()
+  };
+  (leading, trailing)
 }
 
 pub struct MathParser {
@@ -1946,6 +1986,77 @@ impl MathParser {
     document: &mut Document,
     rule: &str,
   ) -> Result<Option<Node>> {
+    // The phantoms at the list's edges are set aside, as its trailing punctuation is below, and come back in the
+    // result's presentation (`wrap_presentation`); those between items stay spacing (`filter_hints`).
+    let (leading, trailing) = edge_phantoms(mathnode);
+    for phantom in leading.iter().chain(&trailing) {
+      self.parse_phantom(phantom, document)?;
+    }
+    for mut phantom in leading.iter().chain(&trailing).cloned() {
+      phantom.unlink();
+    }
+    let result = self.parse_single_list(mathnode, document, rule);
+    if leading.is_empty() && trailing.is_empty() {
+      return result;
+    }
+    match result? {
+      // A slot holding only phantoms: absent content, the phantoms its presentation (`\sqrt{\phantom{x}}`).
+      Some(result) if leading.is_empty() || trailing.is_empty() => {
+        if is_absent(&result) && result.get_parent().is_none() {
+          let mut phantoms = leading;
+          phantoms.extend(trailing);
+          return Ok(Some(
+            self.dual_of_absent(result, phantoms, mathnode, document)?,
+          ));
+        }
+        Ok(Some(self.wrap_presentation(
+          result, leading, trailing, mathnode, document,
+        )?))
+      },
+      Some(result) => Ok(Some(
+        self.wrap_presentation(result, leading, trailing, mathnode, document)?,
+      )),
+      None => {
+        // Parse failed: the phantoms go back where they stood, as the punctuation does.
+        let first = mathnode.get_first_child();
+        for mut p in leading {
+          match &first {
+            Some(f) => {
+              let mut f = f.clone();
+              f.add_prev_sibling(&mut p).ok();
+            },
+            None => {
+              mathnode.add_child(&mut p).ok();
+            },
+          }
+        }
+        for mut p in trailing {
+          mathnode.add_child(&mut p).ok();
+        }
+        Ok(None)
+      },
+    }
+  }
+
+  /// A phantom's invisible argument, parsed as an XMWrap's (Perl MathParser.pm:387 STRICT = 0): its failure neither
+  /// warns nor marks the formula unparsed. Only an edge phantom's: one between items is dropped (`filter_hints`), and
+  /// its parse's ids with it would orphan the formula's references (tests/math/sampler.tex `+\phantom{g(x)}+`).
+  fn parse_phantom(&mut self, phantom: &Node, document: &mut Document) -> Result<()> {
+    let outer_strict = std::mem::replace(&mut self.strict, false);
+    let outer_unparsed = self.unparsed;
+    let parsed = self.parse_children(phantom, document);
+    self.strict = outer_strict;
+    self.unparsed = outer_unparsed;
+    parsed
+  }
+
+  /// `parse_single` on a list whose edge phantoms are set aside.
+  fn parse_single_list(
+    &mut self,
+    mathnode: &mut Node,
+    document: &mut Document,
+    rule: &str,
+  ) -> Result<Option<Node>> {
     let mut idx = 0;
     let mut content_nodes = filter_hints(mathnode.get_child_nodes());
     let expectation_operators = expectation_operators(&content_nodes, document);
@@ -2251,8 +2362,45 @@ impl MathParser {
   /// branch only, matching Perl's `if (@punct) { $result = ['ltx:XMDual', ...] }`.
   fn wrap_with_punct(
     &self,
-    mut result: Node,
+    result: Node,
     punct_nodes: Vec<Node>,
+    mathnode: &mut Node,
+    document: &mut Document,
+  ) -> Result<Node> {
+    self.wrap_presentation(result, Vec::new(), punct_nodes, mathnode, document)
+  }
+
+  /// `<XMDual><XMRef/><XMWrap>…</XMWrap></XMDual>` over `result`, which is absent content: an empty slot's
+  /// phantoms are its presentation alone (no second, empty `<mphantom/>` for the absent token).
+  fn dual_of_absent(
+    &self,
+    mut absent: Node,
+    phantoms: Vec<Node>,
+    mathnode: &mut Node,
+    document: &mut Document,
+  ) -> Result<Node> {
+    let mut dual = document.open_element_at(mathnode, "ltx:XMDual", None, None)?;
+    dual.add_child(&mut absent).ok();
+    if let [phantom] = &phantoms[..] {
+      dual.add_child(&mut phantom.clone()).ok();
+    } else {
+      let mut xmwrap = document.open_element_at(&mut dual, "ltx:XMWrap", None, None)?;
+      for mut p in phantoms {
+        xmwrap.add_child(&mut p).ok();
+      }
+      document.close_element_at(&mut xmwrap)?;
+    }
+    document.close_element_at(&mut dual)?;
+    Ok(dual)
+  }
+
+  /// Wrap `result` in an XMDual whose presentation branch adds `before` and `after` around it: the set-aside
+  /// punctuation (Perl MathParser.pm:696-699) and edge phantoms.
+  fn wrap_presentation(
+    &self,
+    mut result: Node,
+    before: Vec<Node>,
+    after: Vec<Node>,
     mathnode: &mut Node,
     document: &mut Document,
   ) -> Result<Node> {
@@ -2273,10 +2421,13 @@ impl MathParser {
     };
     let mut xmref = document.open_element_at(&mut dual, "ltx:XMRef", ref_attrs, None)?;
     document.close_element_at(&mut xmref)?;
-    // Presentation branch: XMWrap containing result + trailing punct
+    // Presentation branch: XMWrap containing the leading phantoms, result, trailing punct and phantoms
     let mut xmwrap = document.open_element_at(&mut dual, "ltx:XMWrap", None, None)?;
+    for mut p in before {
+      xmwrap.add_child(&mut p).ok();
+    }
     xmwrap.add_child(&mut result).ok();
-    for mut p in punct_nodes {
+    for mut p in after {
       xmwrap.add_child(&mut p).ok();
     }
     document.close_element_at(&mut xmwrap)?;
@@ -3938,7 +4089,7 @@ fn textrec_array(node: &Node, document: &Document) -> String {
 pub fn p_get_value(node: &Node) -> String {
   let node_type = node.get_type();
   if node_type == Some(NodeType::ElementNode) {
-    let x = node.get_content();
+    let x = visible_content(node);
     if !x.is_empty() {
       // get content, or fall back to name
       x
@@ -3948,6 +4099,23 @@ pub fn p_get_value(node: &Node) -> String {
   } else {
     node.get_content()
   }
+}
+
+/// `node`'s text content but a phantom's (an XMText's formula: `\hbox{$a_{\hphantom{b}}$}` reads "a"; OXIDIZED_DESIGN_DIVERGENCES
+/// #1141).
+fn visible_content(node: &Node) -> String {
+  fn walk(node: &Node, out: &mut String) {
+    for child in node.get_child_nodes() {
+      match child.get_type() {
+        Some(NodeType::ElementNode) if !is_phantom_box(&child) => walk(&child, out),
+        Some(NodeType::TextNode | NodeType::CDataSectionNode) => out.push_str(&child.get_content()),
+        _ => {},
+      }
+    }
+  }
+  let mut out = String::new();
+  walk(node, &mut out);
+  out
 }
 
 //================================================================================

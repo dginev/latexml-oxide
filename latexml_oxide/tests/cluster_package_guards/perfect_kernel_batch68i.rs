@@ -106,11 +106,13 @@ fn amsopn_internals() {
     &[r#"name="coim""#],
     r#"<XMTok name="coim" role="OPFUNCTION" scriptpos="post">coim</XMTok>"#,
   );
+  // The `\\vphantom{p}` after the overlined lim is a box of its own in the presentation (batch PHANTOM,
+  // OXIDIZED_DESIGN_DIVERGENCES #1141): the operator is an XMDual whose content is the overlined lim, as before.
   assert_element(
     &xml,
-    "XMApp",
+    "XMDual",
     &[r#"role="BIGOP""#],
-    r#"<XMApp role="BIGOP" scriptpos="post1" xml:id="p1.m2.1.1.1.2"><XMTok name="overline" role="OVERACCENT" stretchy="true">¯</XMTok><XMTok role="OPFUNCTION" scriptpos="post">lim</XMTok></XMApp>"#,
+    r#"<XMDual role="BIGOP" scriptpos="post1" xml:id="p1.m2.2.1.1.2"><XMRef idref="p1.m2.1" xml:id="p1.m2.2.1.1.2.1"/><XMWrap xml:id="p1.m2.2.1.1.2.2"><XMApp xml:id="p1.m2.1"><XMTok name="overline" role="OVERACCENT" stretchy="true">¯</XMTok><XMTok role="OPFUNCTION" scriptpos="post">lim</XMTok></XMApp><XMHint depth="1.9pt" height="4.3pt" name="vphantom" xml:id="p1.m2.2.1.1.2.2.1"><XMTok font="italic" role="UNKNOWN">p</XMTok></XMHint></XMWrap></XMDual>"#,
   );
 }
 

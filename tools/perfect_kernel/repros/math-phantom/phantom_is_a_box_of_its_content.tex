@@ -1,0 +1,33 @@
+% witness: 2603.21852 (EML.tex:63, $\sqrt{\phantom{x}}$)
+% oracle:  pdflatex 0 errors; every phantom takes its argument's box, invisible
+% engines: rust rc2 / INT081C = the box lost: <msqrt><mphantom/></msqrt>, a bare $\phantom{x}$ an empty <math>,
+%          a cell's leading \phantom{-} and a script's \phantom{2} gone; Perl 0.8.8 = <msqrt><mi></mi></msqrt>, the same
+% expect:  <mphantom>x</mphantom> where the phantom stands; \hphantom inside <mpadded height="0" depth="0">,
+%          \vphantom inside <mpadded width="0"> (DG ruling 2026-11-23)
+% status:  RED (INT081C) -> GREEN (PHANTOM); J (spacing between items), K (an empty phantom, text mode) unchanged
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+A $\sqrt{\phantom{x}}$
+
+B $\phantom{x}$
+
+C $\sqrt{\hphantom{x}}$
+
+D $\sqrt{a\phantom{x}}$
+
+E $\begin{pmatrix}\phantom{-}1 & -1\\ -1 & \phantom{-}1\end{pmatrix}$
+
+F $x^{\phantom{2}}y$
+
+G $\frac{\phantom{x}}{y}$
+
+H ${}^{\phantom{a}}b$
+
+I $\vphantom{\int}a$
+
+J $a\phantom{x}b$
+
+K $\phantom{}x$ and text {\phantom{text}}
+\end{document}

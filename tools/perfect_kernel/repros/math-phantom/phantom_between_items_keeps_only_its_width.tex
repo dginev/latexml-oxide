@@ -1,0 +1,11 @@
+% witness: none yet (the idiom of a strut inside a fence)
+% oracle:  pdflatex 0 errors; the strut makes the fence as tall as an integral, the phantom between a and b its height
+% engines: rust PHANTOM = a phantom between two items is their spacing only (filter_hints padding): the fence keeps
+%          x's height, the vphantom is gone; Perl 0.8.8 = the same
+% expect:  <mpadded width="0pt"><mphantom>…</mphantom></mpadded> where the strut stands
+% status:  RED (catalog; OXIDIZED_DESIGN_DIVERGENCES #1141 leaves the between-items phantom as spacing)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+$\left(\vphantom{\int}x\right)$ and $a\vphantom{\frac{1}{2}}b$
+\end{document}

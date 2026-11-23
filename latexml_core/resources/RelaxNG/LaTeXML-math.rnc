@@ -211,7 +211,8 @@ XMHint_attributes =
   ID.attributes
 
 ## Content model for \elementref{XMHint}.
-XMHint_model = empty
+## A phantom's hint holds its argument (OXIDIZED_DESIGN_DIVERGENCES #1141).
+XMHint_model = XMath.class*
 
 #======================================================================
 

@@ -303,8 +303,11 @@ The attributes are a subset of those for \elementref{XMTok}.</a:documentation>
     <ref name="ID.attributes"/>
   </define>
   <define name="XMHint_model">
-    <a:documentation>Content model for \elementref{XMHint}.</a:documentation>
-    <empty/>
+    <a:documentation>Content model for \elementref{XMHint}.
+A phantom's hint holds its argument (OXIDIZED_DESIGN_DIVERGENCES #1141).</a:documentation>
+    <zeroOrMore>
+      <ref name="XMath.class"/>
+    </zeroOrMore>
   </define>
   <!-- ====================================================================== -->
   <define name="XMText">

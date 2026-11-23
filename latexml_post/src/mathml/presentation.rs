@@ -1535,7 +1535,10 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node, role_override: Option<&str>
 /// Convert an XMHint to MathML.
 ///
 /// Port of Hint handler.
-fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
+fn pmml_hint(doc: &PostDocument, node: &Node) -> NodeData {
+  if latexml_core::document::is_phantom_box(node) {
+    return pmml_phantom(doc, node);
+  }
   // Perl `Hint:?:?` (MathML.pm L1479-1483): the width is normalized through
   // getXMHintSpacing to em (so `\qquad` → width="2em", not the raw "20pt");
   // zero-width hints still MUST return a node, marked `_ignorable` so
@@ -1555,6 +1558,33 @@ fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
     tag:        "m:mspace".to_string(),
     attributes: Some(attrs),
     children:   vec![],
+  }
+}
+
+/// A phantom's hint holding its argument (math_common.rs; OXIDIZED_DESIGN_DIVERGENCES #1141): TeX's invisible box of
+/// it (latex.ltx `\finph@nt`), `<mphantom>` (MathML Core §3.3.7) sized by the browser's font; `\hphantom` drops the
+/// height and depth, `\vphantom` the width, through `<mpadded>` (§3.3.6).
+fn pmml_phantom(doc: &PostDocument, node: &Node) -> NodeData {
+  let content: Vec<NodeData> = element_children_iter(node).map(|c| pmml(doc, &c)).collect();
+  let phantom = NodeData::Element {
+    tag:        "m:mphantom".to_string(),
+    attributes: None,
+    children:   vec![pmml_row(content)],
+  };
+  // With a unit: the XSLT's styling of a size reads its unit (LaTeXML-common.xsl `f:adddim` knows pt and px; a bare `0` gave NaN).
+  let zero = || "0pt".to_string();
+  let padded = match node.get_attribute("name").as_deref() {
+    Some("hphantom") => HashMap::from_iter([
+      ("height".to_string(), zero()),
+      ("depth".to_string(), zero()),
+    ]),
+    Some("vphantom") => HashMap::from_iter([("width".to_string(), zero())]),
+    _ => return phantom,
+  };
+  NodeData::Element {
+    tag:        "m:mpadded".to_string(),
+    attributes: Some(padded),
+    children:   vec![phantom],
   }
 }
 

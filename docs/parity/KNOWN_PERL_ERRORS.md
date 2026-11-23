@@ -22518,6 +22518,23 @@ available.</p>`, the style lost, and `\fontdimen`/`\hyphenchar` on `\df` raise "
 1905.00282 (`\bigsf`, a 1.5cm sans-bold title, lost its size and weight). Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
 #1081): `sect08.rs` follows latex.ltx; repro and guard `perfect_kernel_batchpdfprim::batchpdfprim_pdftex_operand_readers`.
 
+## 1316. Perl's math `\phantom` keeps only its size, so a phantom alone in a slot or at a row's edge renders as nothing
+
+math_common.pool.ltxml:645-690 makes a math `\phantom`/`\hphantom`/`\vphantom` an empty `XMHint` with the argument's
+size; MathParser.pm:417-491 `filter_hints` turns it into a neighbour's padding, which Post/MathML.pm:1229-1260 spaces only
+between siblings. Minimal trigger:
+
+```tex
+\documentclass{article}
+\begin{document}
+$\sqrt{\phantom{x}}$ and $\phantom{x}$
+\end{document}
+```
+
+pdflatex sets an empty radical as wide as an x, and an x-wide blank; Perl (same host) gives
+`<msqrt><mi></mi></msqrt>` and no formula for the second (TeX_Math.pool.ltxml:197-201 unwraps a Math of hints to
+spaces). Witness 2603.21852. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1141): the hint keeps its argument and renders
+`<mphantom>`; guard `perfect_kernel_batchphantom::phantom_alone_in_a_slot_is_its_presentation`.
 
 ## 1320. Perl nests the back matter inside the last `\part`
 

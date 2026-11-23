@@ -24067,6 +24067,35 @@ guard `perfect_kernel_batchlistinline::realboxes_colorbox_and_fcolorbox_call_the
 before the delimiter is read, where TeX reads it first (listings.sty:1951-1952); only a hook that changes the
 delimiter's catcode could tell.
 
+### 1141. A math phantom is a box of its content: `<mphantom>` where it stands (PHANTOM)
+
+**Perl behavior**: math_common.pool.ltxml:645-690 `\phantom`, `\hphantom`, `\vphantom` in math are an empty `XMHint`
+carrying only the argument's width, height and depth ("# !?!?!?!"); MathParser.pm:417-491 `filter_hints` folds a hint's
+width into its neighbour's `lpadding`/`rpadding`, which Post/MathML.pm:1229-1260 spaces only between two siblings. A
+phantom alone in a slot, or at a row's edge, is lost: `\sqrt{\phantom{x}}` → `<msqrt><mi></mi></msqrt>`, `$\phantom{x}$`
+no formula at all (TeX_Math.pool.ltxml:197-201 unwraps a Math of hints to spaces), a matrix cell's `\phantom{-}1` an
+unaligned `1`, `\vphantom{\int}a` no strut (KNOWN_PERL_ERRORS #1316).
+**pdflatex (TL 2025)**: latex.ltx `\finph@nt` sets the argument in a box and shows it invisibly: `\phantom` keeps its
+width, height and depth, `\hphantom` zeroes height and depth, `\vphantom` zeroes width.
+**Rust behavior** (DG ruling 2026-11-23; the math park's named exception): the hint keeps its argument
+(`<ltx:XMHint …><ltx:XMArg>#1</ltx:XMArg></ltx:XMHint>`, math_common.rs; schema `XMHint_model = XMath.class*`, in
+LaTeXML-math.rnc/.rng and LaTeXML.model). `parse_single` sets aside the phantoms before a list's first item and after
+its last, as it does trailing punctuation, parses their arguments as an XMWrap's (not strict: an invisible box's failure
+neither warns nor marks the formula unparsed; a phantom between items is never parsed, its ids would orphan the
+formula's references, tests/math/sampler.tex `+\phantom{g(x)}+`) and returns them in the result's presentation:
+`<XMDual><XMRef/><XMWrap>phantoms, result, phantoms</XMWrap></XMDual>`; a slot of phantoms alone is
+`<XMDual><XMTok meaning="absent"/>phantom</XMDual>`. Content MathML and OpenMath read the content branch, so they keep
+ignoring phantoms. The presentation writes `<mphantom>content</mphantom>` (MathML Core §3.3.7), `\hphantom` inside
+`<mpadded height="0pt" depth="0pt">`, `\vphantom` inside `<mpadded width="0pt">` (§3.3.6; a unit, which the XSLT's
+size styling reads), sized by the browser's font, chosen over an `<mspace>` of our metrics. A Math holding a phantom box
+is math (`has_real_math`). An empty `\phantom{}` and text mode (`ltx_phantom`) are unchanged.
+**Residual**: a phantom between two items stays their spacing, as in Perl: `a\phantom{x}b`'s width is right, but a
+`\vphantom` there (`\left(\vphantom{\int}x\right)`, `a\vphantom{\frac12}b`) adds no height (catalog repro
+math-phantom/phantom_between_items_keeps_only_its_width). **Why**: witness 2603.21852 (EML.tex:63 `$\sqrt{\phantom{x}}$`,
+an x-wide empty radical). **Guards** `perfect_kernel_batchphantom::{phantom_alone_in_a_slot_is_its_presentation,
+phantom_at_a_list_edge_keeps_its_place, phantom_alone_is_a_formula, phantom_is_presentation_only_in_the_core}` (repro
+math-phantom/phantom_is_a_box_of_its_content, control twin phantom_is_a_box_of_its_content_control).
+
 ### 1142. The format's own modules are read from the format's tree, not a paper's copy (LTXOWN)
 
 **Perl behavior**: `InputDefinitions('babel', noltxml => 1)` (babel.sty.ltxml, babel.def.ltxml, expl3.sty.ltxml,

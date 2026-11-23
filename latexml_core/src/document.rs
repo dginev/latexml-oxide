@@ -86,6 +86,24 @@ pub static FONT_ELEMENT_NAME: &str = "ltx:text";
 pub static MATH_TOKEN_NAME: &str = "ltx:XMTok";
 pub static MATH_HINT_NAME: &str = "ltx:XMHint";
 
+/// Is `node` a phantom's hint holding its argument (`\phantom`, `\hphantom`, `\vphantom` in math, math_common.rs): a
+/// box of its content, not spacing (OXIDIZED_DESIGN_DIVERGENCES #1141)? An empty argument (`\phantom{}`) makes none:
+/// an empty `XMArg` before the parse, an `absent` token after it.
+pub fn is_phantom_box(node: &Node) -> bool {
+  node.get_name() == "XMHint"
+    && node
+      .get_attribute("name")
+      .is_some_and(|name| name.ends_with("phantom"))
+    && node
+      .get_child_elements()
+      .iter()
+      .any(|child| match child.get_name().as_str() {
+        "XMArg" => child.get_first_element_child().is_some(),
+        "XMTok" => child.get_attribute("meaning").as_deref() != Some("absent"),
+        _ => true,
+      })
+}
+
 /// How [`Document::close_element`] and its variants treat open descendants that do not
 /// auto-close.
 #[derive(Clone, Copy)]

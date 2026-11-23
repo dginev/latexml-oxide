@@ -673,6 +673,7 @@ mod perfect_kernel_batchpc3;
 /// PDFPRIM: pdfTeX's operand readers — optional spaces, `scan_action`, the font queries, the missing colour stack action and
 /// font identifier.
 mod perfect_kernel_batchpdfprim;
+mod perfect_kernel_batchphantom;
 /// PLACEFIX: run 397's placement rulings — a BibTeX month macro warns, a theorem in an abstract dissolves, a nomenclature
 /// keeps its box, a bibliography floats out of a float or heading (OD #1096-#1099).
 mod perfect_kernel_batchplacefix;
