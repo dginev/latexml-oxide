@@ -1,0 +1,30 @@
+% mechanism: a two-column `figure*[h]` (which LaTeX floats to the next page top) holding a `\captionof` in a minipage is
+%   no cover: the wrapper's in-place mark stays on the wrapper's figure, not copied by `collapse_float` to the author's
+%   float, which stays in the body after the abstract (OXIDIZED_DESIGN #1149; witnesses 2510.09001 acl `figure*`,
+%   2609.21948 ieeeconf `figure*[h]`, 2510.17095 `[h]`).
+% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Abstract", "1 Introduction",
+%   "See Figure 1.", then "Figure 1: A floated wide caption." on page 2
+% engines: rust INT081F: title, creator, abstract, figure, section; TITLEFIG round 1: the figure in a continued
+%   titlepage ahead of the abstract
+% expect:  0 errors, 0 warnings; no titlepage; the figure in the body after the abstract
+% status:  GREEN (TITLEFIG round 2)
+\documentclass[twocolumn]{article}
+\usepackage{caption}
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\maketitle
+\begin{figure*}[h]
+  \centering
+  \begin{minipage}{.45\linewidth}
+    \rule{2cm}{1cm}
+    \captionof{figure}{A floated wide caption.}\label{fig:float}
+  \end{minipage}
+\end{figure*}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Introduction}
+See Figure~\ref{fig:float}.
+\clearpage
+\end{document}

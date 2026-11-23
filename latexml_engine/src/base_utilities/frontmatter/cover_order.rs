@@ -22,7 +22,7 @@ pub const CONTINUED_TITLEPAGE: &str = "ltx_titlepage_continued";
 /// [`IN_PLACE_FLOAT`](crate::latex_constructs::IN_PLACE_FLOAT), or float.sty's `[H]`, which does not float): in the title
 /// block, the cover (OXIDIZED_DESIGN_DIVERGENCES #1149: the CVPR `\twocolumn[{\maketitle … \captionof{figure}…}]`
 /// teaser, 2303.05007; egpubl's `\teaser`, 2510.22712). A float that floats stays in the body.
-pub(in crate::base_utilities) fn is_in_place_float(node: &Node) -> bool {
+pub fn is_in_place_float(node: &Node) -> bool {
   use crate::latex_constructs::IN_PLACE_FLOAT;
   let q = document::get_node_qname(node);
   PANEL_FLOATS.iter().any(|float| q == pin_static(float))
@@ -46,6 +46,44 @@ pub fn wrap_as_continued_titlepage(
   let mut titlepage = wrap_as_titlepage(document, root, run)?;
   document.add_class(&mut titlepage, CONTINUED_TITLEPAGE)?;
   Ok(titlepage)
+}
+
+/// A class's teasers, the figures its title page prints under the head and above the abstract, moved in source order
+/// after the last node `head` selects from the root (the title, subtitle, creators) into one [`CONTINUED_TITLEPAGE`],
+/// which frontmatter may follow, unlike a body figure (OXIDIZED_DESIGN_DIVERGENCES #1146, #1149: acmart's
+/// `{teaserfigure}`, vgtc's `\teaser`). Without a head nothing moves.
+pub fn place_teasers_after_head(
+  document: &mut Document,
+  root: &Node,
+  head: &str,
+  teasers: &[Node],
+) -> Result<()> {
+  if let (Some(mut tail), false) = (
+    document.findnodes(head, Some(root)).pop(),
+    teasers.is_empty(),
+  ) {
+    for mut teaser in teasers.iter().cloned() {
+      teaser.unlink();
+      tail.add_next_sibling(&mut teaser)?;
+      tail = teaser;
+    }
+    wrap_as_continued_titlepage(document, root, teasers)?;
+  }
+  Ok(())
+}
+
+/// The root children a class's own title page printed ([`DEPOSIT_PROVENANCE`]) that are, or hold, a float it set in
+/// place ([`IN_PLACE_FLOAT`](crate::latex_constructs::IN_PLACE_FLOAT)): the teaser a class's `\@maketitle` prints
+/// under its head (vgtc.cls:801-850, vgtc_cls.rs; 2609.25700).
+pub fn deposit_in_place_floats(root: &Node) -> Vec<Node> {
+  fn holds(node: &Node) -> bool {
+    is_in_place_float(node) || node.get_child_elements().iter().any(holds)
+  }
+  root
+    .get_child_elements()
+    .into_iter()
+    .filter(|kid| kid.has_attribute(DEPOSIT_PROVENANCE) && holds(kid))
+    .collect()
 }
 
 /// A top-level `<titlepage>` standing for the document's title, which the HTML shows in place of `<ltx:title>` and its

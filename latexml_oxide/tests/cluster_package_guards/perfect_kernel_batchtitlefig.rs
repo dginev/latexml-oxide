@@ -1,7 +1,8 @@
 //! Guards for TITLEFIG: a float LaTeX prints in place inside the title block — `\captionof` (caption.sty, capt-of),
 //! float.sty's `[H]`, a class's teaser — is the cover: between `\maketitle` and a late abstract it joins the continued
 //! title page (`ltx_titlepage_continued`), ahead of the abstract, as the PDF prints it; a float that floats stays in the
-//! body (DG 2026-11-23, OXIDIZED_DESIGN_DIVERGENCES #1149).
+//! body, a `\captionof` it holds included (round 2: `collapse_float` keeps the wrapper's in-place mark off it); vgtc's
+//! teaser joins it from the class's own `\@maketitle` (vgtc_cls.rs) (DG 2026-11-23, OXIDIZED_DESIGN_DIVERGENCES #1149).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{convert_with, error_count, rng_error_count, warning_count};
@@ -115,6 +116,21 @@ fn rows() -> Vec<(
         false,
       )),
     ),
+    // vgtc's own `\@maketitle` prints the teaser above the abstract its `\maketitle` prints from its store: the binding
+    // names the deposit's in-place figure and sets it after the authors (vgtc_cls.rs; 2609.25700)
+    (
+      "titlefig_class_maketitle_teaser_before_store_abstract",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlefig_class_maketitle_teaser_before_store_abstract.tex"
+      ),
+      vec![TITLE, AUTHOR, COVER, ABSTRACT, SECTION],
+      Some(cover_with(
+        r#"<figure align="center" class="ltx_minipage ltx_teaserfigure" inlist="lof" labels="LABEL:fig:teaser" vattach="middle" width="345.0pt" xml:id="S0.F1">"#,
+        r#"<rule align="center" height="28.5pt" width="113.8pt"/>"#,
+        "The teaser.",
+        false,
+      )),
+    ),
     // a later late abstract (`place_later_abstract`): the figure between the two abstracts is its cover
     (
       "titlefig_inplace_figure_between_two_abstracts",
@@ -147,6 +163,37 @@ fn rows() -> Vec<(
         AUTHOR,
         ABSTRACT,
         r#"<figure inlist="lof" labels="LABEL:fig:float" placement="t" xml:id="S0.F1">"#,
+        SECTION,
+      ],
+      None,
+    ),
+    // a floating figure holding a `\captionof` minipage: `collapse_float` folds the wrapper's figure in without its
+    // in-place mark, the author's `[t]` decides (2312.04564, 2401.16468, 2510.26800)
+    (
+      "titlefig_floating_figure_minipage_captionof_stays",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlefig_floating_figure_minipage_captionof_stays.tex"
+      ),
+      vec![
+        TITLE,
+        AUTHOR,
+        ABSTRACT,
+        r#"<figure class="ltx_minipage" inlist="lof" labels="LABEL:fig:float" placement="t" vattach="middle" width="155.3pt" xml:id="S0.F1">"#,
+        SECTION,
+      ],
+      None,
+    ),
+    // the same in a two-column `figure*[h]` (2510.09001 acl, 2609.21948 ieeeconf, 2510.17095)
+    (
+      "titlefig_floating_figure_star_captionof_stays",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlefig_floating_figure_star_captionof_stays.tex"
+      ),
+      vec![
+        TITLE,
+        AUTHOR,
+        ABSTRACT,
+        r#"<figure align="center" class="ltx_minipage" inlist="lof" labels="LABEL:fig:float" placement="h" vattach="middle" width="155.3pt" xml:id="S0.F1">"#,
         SECTION,
       ],
       None,

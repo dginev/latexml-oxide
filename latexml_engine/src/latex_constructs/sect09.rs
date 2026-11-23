@@ -429,18 +429,15 @@ pub(crate) fn load() -> Result<()> {
     }
   });
 
-  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1149): the float around the current point is set where it stands, not
-  // floated — `\captionof`'s wrapper (caption.sty:391 `\caption@of` only sets the type), a class's title-page figure
-  // (egpubl's `\teaser`) — so the title-page reading takes one printed in the title block for cover
-  // (`IN_PLACE_FLOAT`, cover_order.rs).
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1149): the float just opened is set where it stands, not floated —
+  // `\captionof`'s wrapper (caption.sty:391 `\caption@of` only sets the type), a class's title-page figure (egpubl's
+  // `\teaser`) — so the title-page reading takes one printed in the title block for cover (`IN_PLACE_FLOAT`,
+  // cover_order.rs). Only that float: an enclosing one floats as its `placement` says (2510.09001, 2609.21948).
   DefConstructor!("\\lx@float@inplace", sub[document, _args] {
-    let mut node = document.get_element();
-    while let Some(mut n) = node {
-      if with(document::get_node_qname(&n), |q| PANEL_FLOATS.contains(&q)) {
-        document.set_attribute(&mut n, IN_PLACE_FLOAT, "true")?;
-        break;
-      }
-      node = n.get_parent().filter(|p| p.get_type() == Some(NodeType::ElementNode));
+    if let Some(mut node) = document.get_element()
+      && with(document::get_node_qname(&node), |q| PANEL_FLOATS.contains(&q))
+    {
+      document.set_attribute(&mut node, IN_PLACE_FLOAT, "true")?;
     }
   }, sizer => 0);
 

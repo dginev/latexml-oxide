@@ -627,7 +627,8 @@ pub fn is_spilled_inkless(node: &Node) -> bool {
 /// Does `node` print nothing: a page break, or a subtree of paragraphs, lines, breaks and `ltx:text` that can paint
 /// nothing (none of `framed`, `framecolor`, `backgroundcolor`, `class`, `cssstyle`), holding no text but whitespace? The
 /// frontmatter's reading of a content-free node (titlepage_layout.rs `node_is_content_free`,
-/// `subtree_elements_all_invisible`), for a run spilled out of its reach.
+/// `subtree_elements_all_invisible`), for a run spilled out of its reach. (The attribute list is `text_is_ink_free`'s,
+/// titlepage_layout.rs: change both together.)
 fn prints_nothing(node: &Node) -> bool {
   match node.get_type() {
     Some(NodeType::TextNode) => node.get_content().trim().is_empty(),

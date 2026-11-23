@@ -327,6 +327,7 @@ pub mod uiucthesis_cls;
 pub mod underscore_ltx_sty;
 pub mod unicode_math_sty;
 pub mod versonotes_sty;
+pub mod vgtc_cls;
 pub mod ws_procl_sty;
 pub mod ws_rv_har_sty;
 pub mod xecjk_sty;
@@ -760,6 +761,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("doclicense", "sty", doclicense_sty::load_definitions),
   ("cimart", "cls", cimart_cls::load_definitions),
   ("cimento", "cls", cimento_cls::load_definitions),
+  ("vgtc", "cls", vgtc_cls::load_definitions),
   ("vmsta", "cls", vmsta_cls::load_definitions),
   ("webofc", "cls", webofc_cls::load_definitions),
   ("entics", "cls", entics_cls::load_definitions),

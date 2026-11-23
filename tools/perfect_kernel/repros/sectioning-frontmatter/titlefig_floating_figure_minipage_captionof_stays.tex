@@ -1,0 +1,29 @@
+% mechanism: a float that floats (`[t]`) holding a `\captionof` in a minipage is no cover: caption.sty's wrapper marks
+%   its own figure in place (`\lx@float@inplace`), which `collapse_float` folds into the author's figure without that
+%   mark, so the figure's own placement decides and it stays in the body after the abstract (OXIDIZED_DESIGN #1149;
+%   witnesses 2312.04564, 2401.16468, 2510.26800).
+% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Abstract", "1 Introduction",
+%   "See Figure 1.", then "Figure 1: A floated minipage caption." on page 2
+% engines: rust INT081F: title, creator, abstract, figure, section; TITLEFIG round 1: the figure in a continued
+%   titlepage ahead of the abstract (the wrapper's mark copied to the outer float)
+% expect:  0 errors, 0 warnings; no titlepage; the figure in the body after the abstract
+% status:  GREEN (TITLEFIG round 2)
+\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\maketitle
+\begin{figure}[t]
+  \begin{minipage}{.45\linewidth}
+    \rule{2cm}{1cm}
+    \captionof{figure}{A floated minipage caption.}\label{fig:float}
+  \end{minipage}
+\end{figure}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Introduction}
+See Figure~\ref{fig:float}.
+\clearpage
+\end{document}

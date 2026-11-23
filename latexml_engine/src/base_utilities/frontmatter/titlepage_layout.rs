@@ -220,7 +220,8 @@ fn subtree_elements_all_invisible(node: &Node) -> bool {
   })
 }
 
-/// An `ltx:text` with none of the attributes that can paint without content.
+/// An `ltx:text` with none of the attributes that can paint without content. (The list is core `prints_nothing`'s,
+/// document.rs, the streamed build's reading of a spilled run: change both together.)
 fn text_is_ink_free(text: &Node) -> bool {
   ![
     "framed",

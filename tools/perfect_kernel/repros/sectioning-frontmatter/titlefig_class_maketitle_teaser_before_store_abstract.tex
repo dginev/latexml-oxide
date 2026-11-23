@@ -1,31 +1,41 @@
-% mechanism: a class's own `\@maketitle` (vgtc.cls:799-850, mimicked here) prints its teaser, a `\def\@captype{figure}`
-%   minipage, under the authors and ABOVE the abstract it prints from its store; the deposit's figure is in place
-%   (`IN_PLACE_FLOAT`), but the abstract is no late one: the frontmatter places it with the head, ahead of the deposit,
-%   and where the class printed it relative to the figure is not read (the store fail-safe, `from_the_title_page`).
-%   Witness 2609.25700 (vgtc, 18 of a 30k census sample). Deferred: row R TITLEFIG.
-% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Figure 1: The teaser.",
-%   "Abstract—Abstract text.", "1 Introduction"
-% engines: rust INT081F and TITLEFIG: title, creator, abstract, figure.ltx_minipage, para "Abstract—"
-% expect:  0 errors, 0 warnings; title, creator, titlepage.ltx_titlepage_continued > figure, abstract
-% status:  RED (catalog, no guard)
-\documentclass{article}
-\makeatletter
-% vgtc.cls's \@maketitle (:799-850): the teaser, a minipage set with \def\@captype{figure}, under the authors and
-% above the abstract, all in the title block.
-\newcommand{\teaser}[1]{\gdef\my@teaser{#1}}
-\renewcommand{\abstract}[1]{\gdef\my@abstract{#1}}
+% mechanism: vgtc's own `\@maketitle` (vgtc.cls:801-850, abridged into the stand-in below) prints its teaser, a
+%   `\def\@captype{figure}` minipage, under the authors, and its `\maketitle` then the abstract from its store
+%   (:768-770, :915-920). The abstract is the frontmatter's, placed with the head; the vgtc binding (vgtc_cls.rs) names
+%   the deposit's in-place figure `ltx_teaserfigure` and sets it after the authors in a continued title page, before
+%   the abstract (OXIDIZED_DESIGN_DIVERGENCES #1149). Witness 2609.25700 (vgtc, 18 of a 30k census sample).
+% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Figure 1: The teaser.", "Abstract",
+%   "Abstract text.", "1 Introduction"
+% engines: rust INT081F and TITLEFIG round 1: title, creator, abstract, figure.ltx_minipage; TITLEFIG round 2: title,
+%   creator, titlepage.ltx_titlepage_continued > figure.ltx_teaserfigure, abstract
+% expect:  0 errors, 0 warnings; title, creator, titlepage.ltx_titlepage_continued > figure.ltx_teaserfigure, abstract
+% status:  GREEN (TITLEFIG round 2)
+\begin{filecontents*}[overwrite]{vgtc.cls}
+\ProvidesClass{vgtc}
+\LoadClass{article}
+\newcommand{\vgtc@empty}{}
+\newcommand{\vgtc@teaser}{}
+\newcommand{\teaser}[1]{\renewcommand{\vgtc@teaser}{\begin{minipage}{\linewidth}#1\end{minipage}}}
+\newcommand{\vgtc@abstxt}{}
+\let\origabstract\abstract
+\let\endorigabstract\endabstract
+\renewcommand{\abstract}[1]{\renewcommand{\vgtc@abstxt}{#1}}
 \renewcommand{\@maketitle}{%
   \begin{center}%
     {\LARGE\@title\par}%
-    \vspace{1em}%
+    \vspace{1\baselineskip}%
     \begin{tabular}[t]{c}\@author\end{tabular}\par
-    \vspace{1em}%
-    {\begingroup\def\@captype{figure}%
-     \begin{minipage}{.8\linewidth}\my@teaser\end{minipage}%
-     \endgroup\par}%
-  \end{center}\par
-  {\small\textbf{Abstract}---\my@abstract\par}}
-\makeatother
+    \ifx\vgtc@teaser\vgtc@empty\else
+      {\begingroup\def\@captype{figure}\vgtc@teaser\endgroup\par}%
+    \fi
+  \end{center}\par}
+\let\vgtc@origmaketitle\maketitle
+\renewcommand{\maketitle}{%
+  \vgtc@origmaketitle
+  \ifx\vgtc@abstxt\vgtc@empty\else
+    \begingroup\begin{origabstract}\vgtc@abstxt\end{origabstract}\endgroup\par
+  \fi}
+\end{filecontents*}
+\documentclass{vgtc}
 \title{Teaser Title}
 \author{Ann Alpha}
 \abstract{Abstract text.}

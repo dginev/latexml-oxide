@@ -8247,7 +8247,9 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
   let attrs = inner.get_attributes();
   for (name, value) in &attrs {
     // get_attributes() may return the key as "id" (local name) or "xml:id" (prefixed)
-    if name == "xml:id" || name == "id" {
+    // (nor the inner's `IN_PLACE_FLOAT`: a `\captionof` wrapper in an author's float says nothing of where the float
+    // is set, which its own `placement` decides — 2510.09001's `figure*`, 2609.21948's `figure*[h]`)
+    if name == "xml:id" || name == "id" || name == IN_PLACE_FLOAT {
       continue;
     }
     // (nor its panel grid's markup, `annotate_panel_grid`: the float's own is made of its panels, the inner's among

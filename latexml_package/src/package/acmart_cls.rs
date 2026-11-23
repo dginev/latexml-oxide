@@ -4,7 +4,7 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::{
   engine::{
-    base_utilities::{MARK_FROM_COUNTER, wrap_as_continued_titlepage},
+    base_utilities::{MARK_FROM_COUNTER, place_teasers_after_head},
     latex_constructs::{after_float, before_xfloat},
   },
   float_description::{define_float_description, float_description_tokens},
@@ -445,14 +445,7 @@ yysep={,},notesep={, }}}
     } else {
       "ltx:title | ltx:subtitle | ltx:creator"
     };
-    if let (Some(mut tail), false) = (document.findnodes(head, Some(root)).pop(), teasers.is_empty()) {
-      for mut teaser in teasers.iter().cloned() {
-        teaser.unlink();
-        tail.add_next_sibling(&mut teaser)?;
-        tail = teaser;
-      }
-      wrap_as_continued_titlepage(document, root, &teasers)?;
-    }
+    place_teasers_after_head(document, root, head, &teasers)?;
   });
 
   DefEnvironment!("{marginfigure}[]",

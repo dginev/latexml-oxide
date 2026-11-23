@@ -373,8 +373,9 @@ struct Cli {
   /// `\nomenclature` / `\glossary` entry of a list the document never prints
   /// is typeset at a fragment yield where the normal path typesets nothing
   /// (OXIDIZED_DESIGN_DIVERGENCES #738); and a late abstract whose cover has a
-  /// root child other than a page break spilled at a small fragment budget
-  /// keeps its slot, ahead of that cover (OXIDIZED_DESIGN_DIVERGENCES #903). Off by default;
+  /// root child spilled at a small fragment budget, other than one that prints
+  /// nothing (a page break, an empty paragraph), keeps its slot, ahead of that
+  /// cover (OXIDIZED_DESIGN_DIVERGENCES #903). Off by default;
   /// also AUTO-activates when the projected memory need of a large source
   /// exceeds the --max-memory ceiling, i.e. only where the normal path is
   /// certain to exhaust memory anyway.
