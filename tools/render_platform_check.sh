@@ -41,23 +41,28 @@ convert() { # <label> <dest dir> [env assignment]
   local rc=0
   env "$@" "$bin" --splitat=section --format=html5 --dest="$dest/index.html" --log="$label.log" split.tex \
     > "$label.stdout" 2> "$label.stderr" || rc=$?
-  local plain errors fatals
-  plain=$(sed 's/\x1b\[[0-9;]*m//g' "$label.log")
-  errors=$(printf '%s\n' "$plain" | grep -c '^Error:' || true)
-  fatals=$(printf '%s\n' "$plain" | grep -c '^Fatal:' || true)
+  # Strip ANSI into a file once and grep the FILE: `producer | grep -q` under
+  # pipefail fails whenever grep's early exit SIGPIPEs the producer (a
+  # false "did not engage" on macOS arm64, run 45119817997).
+  sed 's/\x1b\[[0-9;]*m//g' "$label.log" > "$label.plain"
+  local errors fatals
+  errors=$(grep -c '^Error:' "$label.plain" || true)
+  fatals=$(grep -c '^Fatal:' "$label.plain" || true)
   echo "$label: exit $rc, $errors error(s), $fatals fatal(s), $(find "$dest" -name '*.html' | wc -l | tr -d ' ') page(s)"
   if [ "$rc" -ne 0 ] || [ "$errors" -ne 0 ] || [ "$fatals" -ne 0 ]; then
     echo "::error::$label: the conversion failed"
     tail -20 "$label.stderr"
     fail=1
   fi
-  if printf '%s\n' "$plain" | grep -q 'parallel render abandoned'; then
-    echo "::error::$label: $(printf '%s\n' "$plain" | grep 'parallel render abandoned' | head -1)"
+  if grep -q 'parallel render abandoned' "$label.plain"; then
+    echo "::error::$label: $(grep -m1 'parallel render abandoned' "$label.plain")"
     fail=1
   fi
-  printf '%s\n' "$plain" | grep 'parallel page render engaged' | head -1 | sed "s/^/$label: /" || true
+  if grep -q 'parallel page render engaged' "$label.plain"; then
+    echo "$label: $(grep -m1 'parallel page render engaged' "$label.plain")"
+  fi
 }
-engaged() { sed 's/\x1b\[[0-9;]*m//g' "$1.log" | grep -q 'parallel page render engaged'; }
+engaged() { grep -q 'parallel page render engaged' "$1.plain"; }
 
 convert fleet site-fleet
 convert serial site-serial LATEXML_RENDER_JOBS=1
@@ -75,9 +80,9 @@ else
   fail=1
 fi
 
-leftovers=$(find . -name '.latexml-spill*' -o -name '*latexml-post-handoff*' | head -5)
-if [ -n "$leftovers" ]; then
-  echo "::error::spill or handoff files left behind: $leftovers"
+find . -name '.latexml-spill*' -o -name '*latexml-post-handoff*' > leftovers.txt
+if [ -s leftovers.txt ]; then
+  echo "::error::spill or handoff files left behind: $(head -5 leftovers.txt | tr '\n' ' ')"
   fail=1
 fi
 
