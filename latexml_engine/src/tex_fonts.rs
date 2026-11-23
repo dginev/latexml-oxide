@@ -740,15 +740,16 @@ pub fn read_font_ident() -> Result<Token> {
     },
   };
   // By meaning, as tex.web's `cur_cmd`: expl3's `\tex_font:D`, `\tex_textfont:D` are `\font`, `\textfont`.
-  let ranges = [
-    ("\\textfont", "textfont"),
-    ("\\scriptscriptfont", "scriptscriptfont"),
-    ("\\scriptfont", "scriptfont"),
-  ];
-  if let Some((_, font_type)) = ranges
-    .into_iter()
-    .find(|(cs, _)| token.defined_as(&T_CS!(*cs)))
-  {
+  let font_type = if token.defined_as(&T_CS!("\\textfont")) {
+    Some("textfont")
+  } else if token.defined_as(&T_CS!("\\scriptscriptfont")) {
+    Some("scriptscriptfont")
+  } else if token.defined_as(&T_CS!("\\scriptfont")) {
+    Some("scriptfont")
+  } else {
+    None
+  };
+  if let Some(font_type) = font_type {
     // Perl: $token = LookupValue($type . 'font_' . $fam->valueOf).
     // with_value avoids the Stored envelope clone; Token is Copy.
     let fam = read_number()?.value_of();
@@ -780,14 +781,12 @@ pub fn read_font_ident() -> Result<Token> {
 
 /// A `<fontdef token>` (tex.web §577 `set_font`): an identifier `\font` made, or `\nullfont`, or a `\let` of one.
 fn is_font_identifier(token: Token) -> bool {
-  matches!(lookup_meaning(&token), Some(Stored::Primitive(p))
-    if p.font_id.is_some() || p.cs == T_CS!("\\nullfont"))
+  is_null_font(token)
+    || matches!(lookup_meaning(&token), Some(Stored::Primitive(p)) if p.font_id.is_some())
 }
 
 /// Whether `token` selects TeX's `null_font` (pdftex.web §1563: "invalid font identifier" for the pdfTeX font queries).
-pub fn is_null_font(token: Token) -> bool {
-  matches!(lookup_meaning(&token), Some(Stored::Primitive(p)) if p.cs == T_CS!("\\nullfont"))
-}
+pub fn is_null_font(token: Token) -> bool { token.defined_as(&T_CS!("\\nullfont")) }
 
 /// The TFM name and the size in sp of the font `token` selects (tex.web `font_name[f]`, `font_size[f]`): its shared
 /// key's `at`, else Perl's nominal size.
