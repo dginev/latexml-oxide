@@ -1079,6 +1079,16 @@ Rules that keep this file honest and mergeable:
   - FMTCACHE-PRUNE (post-0.8.0) — the per-user format cache (`~/.cache/latexml-oxide/formats/<version>-<executable>-
     <tree>/`, ~4 MB an entry, OXIDIZED_DESIGN_DIVERGENCES #449) is never pruned: a developer host holds 1,843 entries
     (7 GB). Drop entries whose executable hash no longer exists, or keep the newest few per tree; 1
+  - DUMPTRIM (post-0.8.0, DG 2026-11-23) — embed one TeX Live year's formats instead of the 5-year window (2022–2026,
+    `parity/DUMP_DESIGN.md` "Distribution"). An embedded format is used only with no TeX tree, or on a tree whose
+    `latex.ltx` + `expl3-code.tex` (or `plain.tex`) match its `# source` stamps (DUMP_DESIGN "Tree match",
+    OXIDIZED_DESIGN_DIVERGENCES #449); every other tree builds its own once. Measured with the 0.8.0-rc2 Linux binary:
+    neither an official-installer TL 2025 last updated 2025-11 nor Ubuntu's `texlive-base 2025.20260124` matched the
+    embedded TL2025 (both differ in both files) — first conversion 8.5 s including the build, 0.13 s cached. A year
+    costs ~0.55 MB gzipped (latex 534 KB + plain 16 KB) and one pinned-TL container per release. Keep the newest
+    frozen year (the no-TeX case); check whether the container image's tree matches an embedded year, else have the
+    image build its format at image build time; before dropping all of them, measure the `LATEXML_NODUMP` branch
+    (quality, start-up) as the no-TeX fallback. Touches CLAUDE.md's self-contained-binary rule and `INSTALL.md`; 2
   - MIMALLOC3 — back to mimalloc 3.x once `libmimalloc-sys` bundles a release with the 3.3.x heap-corruption fixes
     (≥ 3.5.3; microsoft/mimalloc issues 1287, 1430): 0.8.0-rc2 builds the bundled 2.3.2 (`latexml_oxide/Cargo.toml`
     `v2` feature). Witness: 1502.06095 crashed twice under full-width A/B load (mimalloc's small free list holding a
