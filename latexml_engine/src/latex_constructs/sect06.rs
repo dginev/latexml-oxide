@@ -208,7 +208,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl: setupAligningContext saves [node, node.lastChild] to ALIGNING_NODE.
   // applyAligningContext then only applies class to children AFTER the saved lastChild.
   // `\centering`/`\raggedright`/`\raggedleft` are MACROS in latex.ltx
-  // (`\def\centering{\let\\\@centercr …}`, :16419-16433) — expandable — over
+  // (`\DeclareRobustCommand\centering{\let\\\@centercr …}`, :15409-15423) — expandable — over
   // constructor cores. That matters for expl3's V-type expansion:
   // `\__exp_eval_register:N` (expl3-code.tex:2507-2517) tells a register
   // from a macro with `\exp_after:wN\if_meaning:w\exp_not:N #1 #1`, so a
@@ -218,9 +218,12 @@ pub(crate) fn load() -> Result<()> {
   // \the" (bfh-ci letter, SFSesim, makelabels ×2, scrlttr2copy; Perl's
   // constructors fail identically, pool:1237-1240).
   // Each lets `\\` be the kernel's newline first, as latex.ltx's `\let\\\@centercr` (`{center}` above; hep-ph9607435).
-  DefMacro!("\\centering", "\\let\\\\\\@normalcr\\lx@do@centering");
-  DefMacro!("\\raggedright", "\\let\\\\\\@normalcr\\lx@do@raggedright");
-  DefMacro!("\\raggedleft", "\\let\\\\\\@normalcr\\lx@do@raggedleft");
+  // Robust, as latex.ltx's `\DeclareRobustCommand`s (TL 2025 :15409-15423): an alignment cell's peek for `\omit`
+  // (tex.web §785/§791, "non-blank non-call token") stops at the `\protect`, so siunitx's `S` cell collector reads
+  // `\centering` whole, not its `\let` and then the `\\` that ends the row (2110.03080, 2203.16677).
+  DefMacro!("\\centering", "\\let\\\\\\@normalcr\\lx@do@centering", robust => true);
+  DefMacro!("\\raggedright", "\\let\\\\\\@normalcr\\lx@do@raggedright", robust => true);
+  DefMacro!("\\raggedleft", "\\let\\\\\\@normalcr\\lx@do@raggedleft", robust => true);
   // Each reverts to the user's macro, as Perl's constructors of that name (pool:1237-1240; 1312.5886, 2008.09739,
   // 2107.14385).
   DefConstructor!("\\lx@do@centering", sub[doc,_args] {

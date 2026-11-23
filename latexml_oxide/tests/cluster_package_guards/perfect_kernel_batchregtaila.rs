@@ -68,3 +68,57 @@ fn wrapped_newtheorem_start_with_redefined_end() {
     "{xml}"
   );
 }
+
+/// siunitx `S` cells led by `\centering`/`\raggedleft` (and a `>{\centering\arraybackslash}S` prefix): latex.ltx's
+/// three are robust, so the cell's peek for `\omit` stops at `\protect` and siunitx reads the command whole; a leading
+/// control sequence is peeled and the number after it parsed (Perl `CC_CS`). Red (INT081G): 8 errors, the cells split
+/// at the `\\` the `\let` names (2110.03080, 2203.16677). Repro package-bindings/siunitx_s_cell_with_centering.
+#[test]
+fn siunitx_s_cell_with_centering() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/siunitx_s_cell_with_centering.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let math = Regex::new(r#"(?s)<Math [^>]*tex="([^"]*)".*?</Math>"#).unwrap();
+  let flat = math.replace_all(&xml, "[$1]");
+  let cell = Regex::new(r"(?s)<td\b[^>]*>(.*?)</td>").unwrap();
+  let tables: Vec<Vec<String>> = Regex::new(r"(?s)<tabular\b.*?</tabular>")
+    .unwrap()
+    .find_iter(&flat)
+    .map(|table| {
+      cell
+        .captures_iter(table.as_str())
+        .map(|c| c[1].to_string())
+        .collect()
+    })
+    .collect();
+  let bold = |text: &str| format!(r#"<text font="bold">{text}</text>"#);
+  assert_eq!(
+    tables,
+    [
+      vec![
+        bold("Data"),
+        r#"<text align="center" font="bold">Total</text>"#.to_string(),
+        bold("Min."),
+        "A".to_string(),
+        r"[83\,635]".to_string(),
+        "[12]".to_string(),
+      ],
+      vec!["[1.5]".to_string(), "[12]".to_string()],
+      vec![
+        "x".to_string(),
+        "[3.1]".to_string(),
+        "y".to_string(),
+        "Text".to_string(),
+      ],
+      vec!["Head".to_string(), "[2.5]".to_string()],
+      vec!["[7.25]".to_string(), "[8]".to_string()],
+      vec!["Total".to_string(), "[12]".to_string()],
+      vec!["[12]".to_string()],
+    ],
+    "{xml}"
+  );
+  assert!(flat.contains("</tabular>\nAfter.</p>"), "{xml}");
+}

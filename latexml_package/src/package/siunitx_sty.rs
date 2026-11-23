@@ -3787,9 +3787,10 @@ LoadDefinitions!({
     loop {
       match tokens.first().map(|t| t.get_catcode()) {
         // SPACE, or (parsing AND a leading CS that is NOT an
-        // input-comparator/protect-token/symbol) → peel into `pre`.
+        // input-comparator/protect-token/symbol) → peel into `pre`. A control sequence's catcode is CS (Perl's
+        // `CC_CS`), not ESCAPE: a cell's leading `\centering`/`\bfseries` is peeled, its number parsed.
         Some(Catcode::SPACE) => { pre.push(tokens.remove(0)); },
-        Some(Catcode::ESCAPE) if doparse
+        Some(Catcode::CS) if doparse
           && !six_token_matches_keys(&tokens[0], &[
             six_pin!("input-comparators"),
             six_pin!("input-protect-tokens"),

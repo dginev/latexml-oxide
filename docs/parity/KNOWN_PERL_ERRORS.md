@@ -5866,15 +5866,18 @@ tikz-shields). Rust tracks brace depth for the `{` delimiter only. Guard:
 
 ## 139. `\centering`/`\raggedright`/`\raggedleft` are constructors, so expl3 V-expansion `\the`s them (Rust fixes)
 
-latex.ltx:16419-16433 defines the three as macros; the bindings (pool:1237-1240,
-Rust likewise) are non-expandable constructors, and expl3's
+latex.ltx:15409-15423 (TL 2025) defines the three as robust macros (`\DeclareRobustCommand`); the bindings
+(pool:1237-1240, Rust likewise) are non-expandable constructors, and expl3's
 `\__exp_eval_register:N` (expl3-code.tex:2507-2517 `\exp_after:wN\if_meaning:w
 \exp_not:N #1 #1`) then takes a `\let\raggedsignature=\centering` (DIN.lco:130)
 for a register and applies `\tex_the:D` — scrlttr2.cls:5095 `\closing`'s
 `\tl_if_in:nVTF {…} \raggedsignature`: "You can't use \raggedsignature after
 \the" (bfh-ci letter, SFSesim, makelabels ×2, scrlttr2copy). Rust: the three
-are macros over `\lx@do@…` constructors. Guard:
-`perfect_kernel_batch54::centering_is_expandable_for_expl3_v_expansion`.
+are robust macros over `\lx@do@…` constructors: an alignment cell's peek for `\omit` (tex.web §785/§791) stops at
+their `\protect`, so a siunitx `S` cell reads `\centering` whole (a plain macro left `\let\\\@normalcr` there, whose
+`\\` the cell's read ended the row at: 2110.03080, 2203.16677). Guards:
+`perfect_kernel_batch54::centering_is_expandable_for_expl3_v_expansion`,
+`perfect_kernel_batchregtaila::siunitx_s_cell_with_centering`.
 
 ## 140. `\index` re-tokenizes an UnTeX string that glues a control word to a following non-letter (Rust fixes)
 

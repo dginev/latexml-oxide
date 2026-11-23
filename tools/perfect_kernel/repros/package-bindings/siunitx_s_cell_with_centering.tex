@@ -1,0 +1,51 @@
+% mechanism: an alignment cell's peek for `\omit` (tex.web §785/§791) expands calls; latex.ltx's `\centering`,
+%   `\raggedright`, `\raggedleft` are robust (`\DeclareRobustCommand`, :15409-15423), so the peek stops at `\protect`.
+%   Ours were plain macros: the peek left `\let\\\@normalcr…`, and siunitx's `S` cell read expanded the `\\` that is
+%   the `\let`'s target, ending the row mid-`\let`. Also: a leading control sequence of an `S` cell is peeled before
+%   the number parse (Perl `CC_CS`; the Rust guard tested ESCAPE and never fired), so `\centering 12` is a number.
+% witness: 2110.03080, 2203.16677
+% oracle:  pdflatex 0 errors; "Data Total Min. / A 83 635 12", "1.5 / 12", "x 3.1 / y Text", "Head / 2.5", "7.25 / 8",
+%   "Total / 12", "12 After."
+% engines: perl: 0 errors, the numbers math; rust INT081G: 8 errors, `\centering` cells split into empty cells and breaks
+% expect:  0 errors, 0 warnings; every number a formula, "Total"/"Text"/"Head" text, "After." outside the last table
+% status:  GREEN (REGTAILA)
+\documentclass{article}
+\usepackage{siunitx}
+\usepackage{array}
+\newcommand\hd[1]{\centering #1}
+\begin{document}
+T1: \begin{tabular}{|l|S[table-format=6.0]|S|}
+\textbf{Data} & \centering\textbf{Total} & \textbf{Min.} \\
+A & 83635 & 12 \\
+\end{tabular}
+
+T2: \begin{tabular}{S}
+1.5 \\
+\centering 12
+\end{tabular}
+
+T3: \begin{tabular}{lS}
+x & \raggedleft 3.1 \\
+y & {Text} \\
+\end{tabular}
+
+T4: \begin{tabular}{S}
+\multicolumn{1}{c}{\centering Head} \\
+2.5 \\
+\end{tabular}
+
+T5: \begin{tabular}{>{\centering\arraybackslash}S}
+7.25 \\
+8 \\
+\end{tabular}
+
+T7: \begin{tabular}{S}
+\centering Total \tabularnewline
+12 \\
+\end{tabular}
+
+T9: \begin{tabular}{S}
+12\relax \\
+\end{tabular}
+After.
+\end{document}

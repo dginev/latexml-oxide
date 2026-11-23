@@ -382,7 +382,8 @@ fn the_lstlisting_counter_waits_for_begin_document() {
 /// `\end` is latex.ltx:15365-15380's front, `\end ` its body: any `\protect` but the typesetting one puts `\protect` before
 /// `\end ` (a `\typeout` prints it, a `\protected@edef` keeps it), and one that expands away reaches the body, no loop. A
 /// siunitx `S` cell's read, in that regime, still ends at a last row's `\end{tabular}` (2505.21533: E 1 → 113 otherwise;
-/// 2105.06936).
+/// 2105.06936). The cell's leading `\bfseries` is peeled and `2.5` read as a number, as Perl and pdflatex (no bold font)
+/// do (REGTAILA; it was text, the peel never fired).
 #[test]
 fn end_tests_the_typeset_protect() {
   let (log, xml) = convert_with(
@@ -406,7 +407,7 @@ fn end_tests_the_typeset_protect() {
     &xml,
     "tabular",
     &[],
-    r##"<tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left"><Math mode="inline" tex="1.5" text="1.5" xml:id="p3.m1"><XMath><XMTok meaning="1.5" role="NUMBER">1.5</XMTok></XMath></Math></td></tr><tr><td align="left">b</td><td align="left"><text font="bold">2.5</text></td></tr></tbody></tabular>"##,
+    r##"<tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">a</td><td align="left"><Math mode="inline" tex="1.5" text="1.5" xml:id="p3.m1"><XMath><XMTok meaning="1.5" role="NUMBER">1.5</XMTok></XMath></Math></td></tr><tr><td align="left" thead="row">b</td><td align="left"><Math mode="inline" tex="2.5" text="2.5" xml:id="p3.m2"><XMath><XMTok meaning="2.5" role="NUMBER">2.5</XMTok></XMath></Math></td></tr></tbody></tabular>"##,
   );
 }
 
