@@ -904,7 +904,7 @@ vs.
                               <XMTok meaning=".1" role="NUMBER">.1</XMTok>
                             </XMath>
                           </Math></text></XMText>
-                      <XMHint name="hphantom" width="28.7pt">
+                      <XMHint name="hphantom" width="20.5pt">
                         <XMArg>
                           <XMTok role="UNKNOWN">×</XMTok>
                           <XMApp>
@@ -986,7 +986,7 @@ vs.
                               <XMTok meaning=".1" role="NUMBER">.1</XMTok>
                             </XMath>
                           </Math></text></XMText>
-                      <XMHint name="hphantom" width="28.7pt">
+                      <XMHint name="hphantom" width="20.5pt">
                         <XMArg>
                           <XMTok color="#0000FF" role="UNKNOWN">×</XMTok>
                           <XMApp color="#0000FF">

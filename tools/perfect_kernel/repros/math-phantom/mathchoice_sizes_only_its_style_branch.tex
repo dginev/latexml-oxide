@@ -1,0 +1,16 @@
+% mechanism: `\mathchoice` keeps only the current style's branch (tex.web §731 mlist_to_hlist, choice_node); its box
+%   was the sum of all four branches, so tensor.sty's `\mathpalette` made xy nodes 3x as wide (diagram overflow).
+% witness: 1504.04186
+% oracle:  pdflatex 0 errors; "T:0.0pt. D:22.86108pt. X:5.71527pt. S:24.35419pt. P:11.43054pt."
+% engines: perl: no sizer either (TeX_Math.pool.ltxml:934), the sum; rust INT081G: T 22.86108pt, X 22.86108pt, P 39.84726pt
+% expect:  0 errors, 0 warnings; the five widths as pdflatex
+% status:  GREEN (REGTAILA)
+\documentclass{article}
+\begin{document}
+\newdimen\w \def\pal#1#2{#1#2}
+\setbox0\hbox{$\mathchoice{xxxx}{}{}{}$}\w=\wd0 T:\the\w.
+\setbox0\hbox{$\displaystyle\mathchoice{xxxx}{}{}{}$}\w=\wd0 D:\the\w.
+\setbox0\hbox{$\mathchoice{x}{x}{x}{x}$}\w=\wd0 X:\the\w.
+\setbox0\hbox{$x^{\mathchoice{}{}{xxxx}{}}$}\w=\wd0 S:\the\w.
+\setbox0\hbox{$\mathpalette\pal{xx}$}\w=\wd0 P:\the\w.
+\end{document}

@@ -22619,3 +22619,19 @@ Perl (same host, `latexmlc --nocomments`): `<part xml:id="Pt2">` holds `Ch2`, "C
 `ltx:bibliography`; split, `bib.html`'s title is "Bibliography ‣ Part II B" and only Part II's pages link it. Fixed in
 Rust (OXIDIZED_DESIGN_DIVERGENCES #1147): the bindings' `\backmatter` closes the part and chapter. Guard
 `perfect_kernel_batchbackmatter::book_backmatter_closes_the_last_part`.
+
+## 1321. Perl sizes `\mathchoice` as the sum of its four branches
+
+TeX_Math.pool.ltxml:934-942 digests all four arguments (as TeX does) but gives the constructor no sizer, so its box is
+measured with every branch in it; TeX keeps only the current style's (tex.web §731). Minimal trigger:
+
+```tex
+\documentclass{article}
+\begin{document}
+\setbox0\hbox{$\mathchoice{x}{x}{x}{x}$}\the\wd0
+\end{document}
+```
+
+pdflatex: 5.71527pt; Perl (same host): 22.86108pt. Latent in Perl's own bindings (its xy binding never measures a node);
+an xy-pic node or a numprint phantom holding one is too wide. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1152). Guard
+`perfect_kernel_batchregtaila::mathchoice_sizes_only_its_style_branch`.

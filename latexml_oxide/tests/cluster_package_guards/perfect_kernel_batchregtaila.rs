@@ -122,3 +122,49 @@ fn siunitx_s_cell_with_centering() {
   );
   assert!(flat.contains("</tabular>\nAfter.</p>"), "{xml}");
 }
+
+/// `\mathchoice` has the size of the current style's branch only (tex.web §731): in text, display and script style,
+/// four equal branches, and `\mathpalette`. Red (INT081G): every branch summed, so an xy node holding one was too wide
+/// for its diagram (1504.04186, tensor.sty's `\mathpalette`; 2 errors). Repro
+/// math-phantom/mathchoice_sizes_only_its_style_branch.
+#[test]
+fn mathchoice_sizes_only_its_style_branch() {
+  let (log, xml) = convert_files_with(
+    repro!("math-phantom/mathchoice_sizes_only_its_style_branch.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let widths: Vec<&str> = Regex::new(r"[TDXSP]:[0-9.]+pt\.")
+    .unwrap()
+    .find_iter(&xml)
+    .map(|m| m.as_str())
+    .collect();
+  assert_eq!(
+    widths,
+    [
+      "T:0.0pt.",
+      "D:22.86108pt.",
+      "X:5.71527pt.",
+      "S:24.35419pt.",
+      "P:11.43054pt."
+    ],
+    "{xml}"
+  );
+  // the xy node of a wide display branch in text style (root-causer's repro): 0 errors
+  let (log, _) = convert_files_with(
+    r"\documentclass{article}
+\usepackage[all]{xy}
+\begin{document}
+\[
+\xymatrix{
+\mathchoice{X}{XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX}{X}{X} \ar[d] \\ C
+}
+\]
+\end{document}
+",
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+}

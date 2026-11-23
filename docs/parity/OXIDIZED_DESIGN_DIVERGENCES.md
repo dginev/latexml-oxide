@@ -24409,3 +24409,16 @@ class_maketitle_teaser_before_store_abstract}`),
 `perfect_kernel_batch61::class_bindings_2609_clusters` (egpubl's teaser before the abstract),
 `114_streaming_cluster_regressions_b::streaming_matches_eager_on_cluster_regressions_shard1` (the titlepic fixture's
 cover, streamed at fragment budget 3, as eager).
+
+### 1152. `\mathchoice` has the size of its current style's branch only (Perl: the sum of the four)
+
+**Perl behavior**: TeX_Math.pool.ltxml:934-942 defines `\mathchoice` with no sizer, so its box is measured as all four
+digested branches side by side (KNOWN_PERL_ERRORS #1321). Perl's xy binding never measures one, so the defect is latent
+there.
+**Rust behavior**: tex_math.rs `\mathchoice` sizes the branch its `mathstyle` property chooses, as tex.web §731
+(mlist_to_hlist replaces the choice node by that branch's list): `\wd` of `$\mathchoice{x}{x}{x}{x}$` is 5.71527pt, as
+pdflatex, not 22.86108pt.
+**Why**: xy-pic measures its nodes, and tensor.sty's `\mathpalette` made 1504.04186's node 480pt against 153pt in TeX, an
+overflowing diagram (2 errors → 0); numprint's exponent phantoms shrink to TeX's width (`tests/babel/numprints.xml`
+28.7pt → 20.5pt). **Guard** `perfect_kernel_batchregtaila::mathchoice_sizes_only_its_style_branch` (repro
+`math-phantom/mathchoice_sizes_only_its_style_branch`).
