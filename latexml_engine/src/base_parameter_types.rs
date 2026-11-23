@@ -1154,6 +1154,7 @@ LoadDefinitions!({
       let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
       DefMacro!(T_CS!("\\textbackslash"), None, T_OTHER!("\\"), scope => Some(Scope::Local));
       url_string_messages()?;
+      url_safe_actives()?;
       // Having prepared, read in the argument, expanding as we go
       let arg = read_balanced(ExpansionLevel::Partial,false,false)?;
       end_semiverbatim()?;
@@ -1162,13 +1163,14 @@ LoadDefinitions!({
       // non-expandable primitive such as `\def`) must become literal characters,
       // NOT be handed to digestion — digesting `\def` executes it, consumes the
       // following tokens and truncates the URL (#723, reporter xworld21).
-      // Recatcode surviving CS tokens to `other`; everything else is untouched. A robust command's `\protect` is
-      // dropped (OD #1112).
-      use latexml_core::token::Catcode;
+      // Recatcode surviving CS tokens to `other`, and active characters with an unexpandable meaning (babel-german's
+      // `"` dispatcher, babel_support_sty.rs), which the URL string prints as their character, as `\url`'s reader does;
+      // everything else is untouched. A robust command's `\protect` is dropped (OD #1112).
+      use latexml_core::token::Catcode::{ACTIVE, CS};
       Tokens::new(
         arg.unlist().into_iter()
           .filter(|t| *t != T_CS!("\\protect"))
-          .map(|t| if t.get_catcode() == Catcode::CS { t.as_other() } else { t })
+          .map(|t| if matches!(t.get_catcode(), CS | ACTIVE) { t.as_other() } else { t })
           .collect(),
       )
     },

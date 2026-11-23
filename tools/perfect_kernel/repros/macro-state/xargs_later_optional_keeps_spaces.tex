@@ -1,0 +1,24 @@
+% witness: row R XARGSSPACE (KNOWN_PERL_ERRORS #1304's separate note); the `\ry` cases of
+%   sectioning-frontmatter/hyperref_pdfinfo_gobbles_testopt_and_let
+% oracle:  pdflatex 0 errors; "Sie Sij Sik end." "Yqz next Yqr Zaec x Zmnc y Zap w" "Uad b Uad c Uav d."
+% engines: rust INT7b and Perl "SieSij Sik end." "Yqznext Yqr Zaecx Zmncy Zap w" "Uadb Uad c Uav d." (a later optional's
+%   peek drops the spaces before a token that is no `[`)
+% expect:  0 errors, 0 warnings; pdflatex's three lines
+% mechanism: xargs_sty.rs `XArgsReadOptional`, the optional arguments of a command `\xargs@read` reads (one after its
+%   first is optional, xargs.sty:205-212): `\xargs@ifnextchar` (:64-87) puts the spaces back where no `[` follows
+% status:  RED (INT7b) -> GREEN (ENCURL)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xargs}
+\newcommandx\xb[2][2=z]{Y#1#2}
+\newcommandx\xc[3][1=a,3=c]{Z#1#2#3}
+\newcommandx\xu[2][2=d,usedefault]{U#1#2}
+\DeclareRobustCommandx\ry[2][2=e]{S#1#2}
+\begin{document}
+\ry{i} \ry{i}[j] \ry{i}  [k] end.
+
+\xb{q} next \xb{q}
+[r] \xc{e} x \xc [m] {n} y \xc{p}[] w
+
+\xu{a} b \xu{a}[] c \xu{a}[v] d.
+\end{document}

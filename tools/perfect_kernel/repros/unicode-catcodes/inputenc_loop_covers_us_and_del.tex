@@ -1,0 +1,15 @@
+% witness: row R INPENCLOOP (KNOWN_PERL_ERRORS #1309)
+% oracle:  pdflatex 3 errors: "Keyboard character used is undefined in inputencoding `latin1'" (^^_, ^^?) and "Text line
+%   contains an invalid character" (^^@, latex.ltx:22189); "ABCD"
+% engines: rust INT7b 1 error (^^@, inputenc's); ^^_ and ^^? printed as OT1's "Ø" and "¨" ("AØB¨CD"); Perl as INT7b
+%   (inputenc.sty.ltxml:48-51)
+% expect:  3 Errors (inputenc's, for ^^_, ^^? and ^^@), 0 warnings; "ABCD"
+% mechanism: inputenc_sty.rs `set_input_encoding` activates inputenc.sty:82-85's ranges, 1-8, 11, 14-31, 127-255, and
+%   0 (as Perl: an error where latex.ltx's invalid `^^@` errs; the engine's catcode for it is 12)
+% status:  RED (INT7b) -> GREEN (ENCURL)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[latin1]{inputenc}
+\begin{document}
+A^^_B^^?C^^@D
+\end{document}

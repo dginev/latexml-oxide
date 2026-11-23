@@ -1,0 +1,18 @@
+% witness: row R C1UTF8 (C1 controls, the residue of cp1252 punctuation re-encoded as UTF-8); sibling C0 controls
+% oracle:  pdflatex 9 errors "Unicode character … (U+0092) not set up for use with LaTeX" (U+0092, U+0085, U+0093,
+%   U+0094, U+0080, ^^A, ^^K, ^^Z, ^^_); "Its a test and quoted." "AB" "CDEFG."
+% engines: rust INT7b 0 errors: the C1 controls printed into the text, the C0 ones as OT1 glyphs ("CΔDﬀEæFØG")
+% expect:  9 Errors (the 9 above), 0 warnings; the characters dropped
+% mechanism: utf8_def.rs makes 1-8, 11, 14-31 (utf8.def:164-170) and U+0080-U+009F (no `\u8:` name, utf8.def:122-128)
+%   active, each raising `\UTFviii@undefined@err`'s error
+% status:  RED (INT7b) -> GREEN (ENCURL)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\begin{document}
+Its a test and quoted.
+
+\textbf{AB}
+
+C^^AD^^KE^^ZF^^_G.
+\end{document}

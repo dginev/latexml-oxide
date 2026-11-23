@@ -1,0 +1,17 @@
+% witness: row R C1UTF8 (siblings: a declared C1 character, a C1 byte of a non-UTF-8 line, a comment)
+% oracle:  pdflatex 4 errors: "Unicode character (U+0093)", "(U+0094)" and "Invalid UTF-8 byte "93", ""94"
+% engines: rust INT7b 0 errors, the C1 controls in the text (the declared U+0092 too)
+% expect:  2 Errors (U+0093, U+0094), 0 warnings, Info:misdefined for the byte line, which keeps its bytes as text
+%   (OXIDIZED_DESIGN_DIVERGENCES #481); "Itâ€™s declared, not."
+% mechanism: `\DeclareUnicodeCharacter{0092}` replaces the error's meaning; the mouth reads a C1 byte of a
+%   byte-decoded line as other (mouth.rs), as #481 keeps an invalid UTF-8 byte
+% status:  RED (INT7b) -> GREEN (ENCURL)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\DeclareUnicodeCharacter{0092}{'}
+\begin{document}
+ItÂ’s declared, Â“notÂ”. % comment Â…
+
+Byte line: “q” café.
+\end{document}

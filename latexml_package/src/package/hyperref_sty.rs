@@ -2008,6 +2008,7 @@ pub fn define_hyper_urls(href: bool, url: bool) -> Result<()> {
     let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
     DefMacro!(T_CS!("\\textbackslash"), None, T_OTHER!("\\"), scope => Some(Scope::Local));
     url_string_messages()?;
+    url_safe_actives()?;
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
         read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!

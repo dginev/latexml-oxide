@@ -1,0 +1,17 @@
+% witness: row R SAFEACTIVES (sibling: babel's own `\active@char` shorthands, raw spanish.ldf; slovak and dutch alike)
+% oracle:  pdflatex 0 errors; every URI "http://x.org/a:b;c!d?e"o-f'g"
+% engines: rust INT7b = 7 Errors and a warning, the footnote's href "http://x.org/a:b;c!d?e.\setbox\z@\hbox8…" (spanish's
+%   `"` expanding under the typeset `\protect`, `\if@safe@actives` false); slovak and dutch
+%   "…e\lxaccentumlaut{o}\penalty\@M\hskip\z@skip-f'g"
+% expect:  0 errors, 0 warnings; four hrefs "http://x.org/a:b;c!d?e"o-f'g"
+% mechanism: hyperref.sty:4627 `\Hy@safe@activestrue` (:362) in both URL readers: babel.def:1394-1400 `\active@char"`
+%   is `\normal@char"`, the character, under `\if@safe@actives`
+% status:  RED (INT7b) -> GREEN (ENCURL)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[spanish]{babel}
+\usepackage{hyperref}
+\begin{document}
+A\footnote{\href{http://x.org/a:b;c!d?e"o-f'g}{s} and \url{http://x.org/a:b;c!d?e"o-f'g}.}
+B \href{http://x.org/a:b;c!d?e"o-f'g}{t} \url{http://x.org/a:b;c!d?e"o-f'g}.
+\end{document}

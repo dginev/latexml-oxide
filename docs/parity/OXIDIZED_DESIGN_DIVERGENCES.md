@@ -19,7 +19,7 @@
 > port-bug fix (→ SYNC "Rust Error Fixes"), a gap or residual list (→ SYNC row R), a math-parse divergence (→ `docs/math/OXIDIZED_DESIGN_MATH.md`).
 > A WORKAROUND entry must name the principled mechanism that would replace it and open a SYNC row for it. Entry shape: rule · Perl ref · TeX
 > source:line · sub-rules as bullets · witnesses · guards · upstream status; no batch history (git keeps it); about 60 lines at most. OD
-> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1135** (2026-11-21; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
+> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1138** (2026-11-23; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -1309,8 +1309,11 @@ test file.)*
 
 **Amended by #74 (every field's content is data).** Since #74 a `%`, `&`, `#` in ANY field is inert where the entry is
 read, so this entry's `%` story is one case of #74's rule, and its reading of a `%` in a `title` as "genuine parity"
-is superseded there. These three fields are still read Verbatim (`bibtex.rs:2543`), so their markup is not digested;
-`ltx:bib-extract` carries the stored text.
+is superseded there. These three fields are still read Verbatim (`bibtex.rs`), as a macro's argument that is never
+digested (`\bib@field@default@abstract Verbatim` → `\bib@field@extract{abstract}`, Perl's L346 idiom), so their
+markup is not digested and a character that errs only where typeset (utf8.def's C1 controls, #1137) raises nothing;
+`ltx:bib-extract` carries the stored text. Guard `perfect_kernel_batchencurl::bbl_abstract_c1_is_stored_data`
+(arXiv 2302.06923, 2304.01940).
 
 **Perl behaviour.** `BibTeX.pool.ltxml` L708-709/716-717/732-733 route these three
 fields to `\bib@@field{ltx:bib-extract}[role=...]`, whose value is `Digested` —
@@ -1326,8 +1329,8 @@ abstract on every entry, 52 entries): same-host `latexmlc` emits **101 errors
 plus a `too_many_errors` Fatal and produces no output at all**. Perl's own
 `\bib@field@default@abstract` cannot survive its own input.
 
-**Rust behaviour.** The same three fields become `DefConstructor`s taking a
-`Verbatim` argument (`bibtex.rs`). `Verbatim` calls
+**Rust behaviour.** The same three fields become `DefMacro`s taking a
+`Verbatim` argument (`bibtex.rs`), which they drop for `\bib@field@extract{<field>}`. `Verbatim` calls
 `begin_semiverbatim(Some(&['%', '\\']))` (`base_parameter_types.rs` L457-469),
 so `%` and `\` are neutralized for the field's duration and the content cannot
 break out of it. The value is then recovered from the entry's stored field via
@@ -23927,3 +23930,29 @@ it, and as a CSS table it put the `\intertext` row in its first column (a footno
 **Guards**: `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`; the names pinned with a space in
 `perfect_kernel_batch{64u,68u,68x,90a,92g,hg1,p21c,p22,p22b}`, `class_census::k11_class_default_store` and
 `tests/babel/elsart_keyword_brace_form.xml` now end in U+00A0.
+
+### 1137. A control character after `[utf8]{inputenc}` is utf8.def's error, dropped (ENCURL)
+
+**Perl behavior**: utf8.def.ltxml:23-26 makes 0-8, 11, 14-30 and 128-255 other, so a C0 control prints as the font's
+glyph (OT1: `^^A` is Δ, `^^Z` æ) and a C1 control (U+0080-U+009F) goes into the text.
+**pdflatex (TL 2025)**: utf8.def:164-170 makes 1-8, 11 and 14-31 `\UTFviii@undefined@err`, and U+0080-U+009F have no
+`\u8:` name (:122-128): each errs "Unicode character … (U+0085) not set up for use with LaTeX" and is dropped.
+**Rust behavior**: utf8_def.rs makes those code points active, each a protected `\@latex@error` with that message,
+one Error per character, as pdflatex (the format's `\UTFviii@undefined@err` gobbles until the `\everyjob`,
+latex.ltx:22230-22237, which the engine does not run). A declaration made before or after inputenc keeps its meaning:
+`\DeclareUnicodeCharacter` also records utf8.def:207-221's `\u8:<character>`, which the activated character reads
+(utf8.def:93-108), so utf8.def's reload does not clear it; in a `\csname` a C1 character is itself (utf8.def:55-60). A
+C0 declaration (no `\u8:` name in TeX) survives in pdflatex because `[utf8]` never reloads utf8.def
+(inputenc.sty:76, the format's `\inputencodingname` is utf8); ours reloads, and the record keeps it too, also after a
+switch from another encoding, where pdflatex's reload errs on it. A C1
+byte of a line that is not UTF-8 stays an invalid byte, its Latin-1 character with the Info (#481): the mouth reads it
+as other (mouth.rs). Not under the pdfTeX byte mouth, and not without inputenc, where the dump's catcode table keeps
+the controls other (row R). A field the bibliography only stores (`abstract`, `keywords`, `contents`: biblatex.sty:7871
+`\blx@bbl@fielddef`, a `.bst` drops them) is never digested (#73), so its control raises nothing, as in pdflatex.
+**Why**: the controls are no content (cp1252 punctuation re-encoded as UTF-8, U+0092 for `’`), and pdflatex errs on
+each. **Guards** `perfect_kernel_batchencurl::{utf8_control_character_errs_and_is_dropped,
+utf8_c1_declared_and_byte_line_keep_their_text, utf8_declared_before_inputenc_keeps_its_meaning,
+bbl_abstract_c1_is_stored_data}` (repros unicode-catcodes/utf8_inputenc_control_characters_err,
+utf8_c1_declared_and_byte_line, utf8_declared_before_inputenc_keeps_meaning,
+index-bib/biblatex_bbl_abstract_c1_is_stored_data).
+
