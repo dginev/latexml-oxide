@@ -786,13 +786,20 @@ words join it (`\put(90,120){\small $\Longrightarrow$ \ State-sum …}`
 prints "⟹ State-sum", math0406190; `\psframebox{…}\white \ \ 1`, cs0608104;
 0801.0882). At the start of a box or after a shape (`ltx:line`, `ltx:rect`,
 …) it is dropped, as Perl drops every one there (Document.pm:747-749): a
-`\ ` between `\psline`s, glue between zero-size boxes in TeX, opened an
-`ltx:text` in which the next object auto-opened a picture, 403 deep in
-0905.4216 (`\PutGrid`), whose XSLT then failed. A leading `\ `
-(`\put(0,40){\ \textbf{i}}`) is dropped too, as in Perl, though pdflatex
-shifts the box by it. A shape drawn after a kept space nests in its
-`ltx:text`, as after a letter (`find_insertion_point` auto-opens before it
-auto-closes, in Perl too). Guards:
+`\ ` between `\psline`s opened an `ltx:text` in which the next object
+auto-opened a picture, 403 deep in 0905.4216 (`\PutGrid`), whose XSLT then
+failed. TeX has no such glue either: a drawing object removes the glue before
+it (LaTeX's `\@killglue` in `\put`/`\multiput`, latex.ltx:16785-16805;
+pstricks' `\pst@killglue`, pstricks.tex:1564, pst-code-pspicture.tex:162).
+The rule decides by the previous sibling where TeX decides by the next item,
+so two shapes differ from TeX (row R PICKILLGLUE): a `\ ` after a shape and
+before text (`word\line(1,0){10}\ more`) is dropped where TeX keeps it, and a
+`\ ` after a drawing `ltx:g` and before another object
+(`\rput{\psline…}\ \rput…`) is kept, so the next object nests in it, where
+TeX kills it. A leading `\ ` (`\put(0,40){\ \textbf{i}}`) is dropped too, as
+in Perl, though pdflatex shifts the box by it. A shape drawn after a kept
+space nests in its `ltx:text`, as after a letter (`find_insertion_point`
+auto-opens before it auto-closes, in Perl too). Guards:
 `pstricks_drawing::{a_control_space_between_objects_keeps_the_picture_flat,
 a_control_space_after_text_in_a_put_is_kept}`.
 

@@ -415,8 +415,8 @@ fn a_control_space_between_objects_keeps_the_picture_flat() {
 /// The same keep AFTER inline content is text, as a letter there would be:
 /// `\put(0,20){\emph{u}\ v}` prints "u v", and so the `\ ` opens the
 /// `ltx:text` the next words join (math0406190 `$\Longrightarrow$ \
-/// State-sum`, cs0608104 `\psframebox{…}\white \ \ 1`, 0801.0882). Round 0
-/// of PICNEST dropped it with the drawing case above ("⟹State-sum"). A
+/// State-sum`, cs0608104 `\psframebox{…}\white \ \ 1`, 0801.0882), where
+/// dropping it with the drawing case above merged "⟹State-sum". A
 /// leading `\ ` is dropped, as in Perl (Document.pm:747-749) and as before a
 /// drawing object. After a box (an `ltx:g`: cs0608104's `\psframebox`) it is
 /// kept as well.
