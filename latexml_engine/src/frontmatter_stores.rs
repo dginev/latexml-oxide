@@ -5746,8 +5746,8 @@ fn decide_unset_nulls(rerouted: &[String]) -> Result<()> {
         && lookup_meaning(&T_CS!(&s!("\\{}", store_of(name)))).is_none()
     })
     .collect();
-  // (a deposit runs unless `\@maketitle` is the kernel's, or empty)
-  let deposits = !crate::latex_constructs::maketitle_is_kernels()
+  // (a deposit runs unless `\@maketitle` is the kernel's, left to the replay, or empty)
+  let deposits = crate::latex_constructs::title_page_deposits()
     && match lookup_meaning(&T_CS!("\\@maketitle")) {
       Some(Stored::Expandable(d)) => {
         matches!(d.get_expansion(), Some(ExpansionBody::Tokens(t)) if !t.is_empty())

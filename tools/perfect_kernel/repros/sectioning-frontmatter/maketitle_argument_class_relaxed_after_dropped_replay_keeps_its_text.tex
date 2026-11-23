@@ -1,0 +1,18 @@
+% mechanism: an `\@maketitle` that takes an argument is left to the replay of the class's `\maketitle`; that replay
+%   raises an error (its title read as empty) and is dropped, after it switched `\@maketitle` off globally
+%   (iaus.cls:847 `\global\let\@maketitle\relax`). The deposit made after it runs `\@maketitle` as it was before the
+%   replay, as pdflatex ran it before the class relaxed it (class options `empty`, `gdef`: `\@empty`, `\gdef…{}`)
+% witness: 0801.1806 (iaus.cls:824-868 `\maketitle` -> `\@maketitle{n}`, :847 `\global\let\@maketitle\relax`)
+% oracle:  pdflatex 0 errors: "T A Subtitle Written Here Hi" (side file mtargvar.cls; same for `[empty]`, `[gdef]`)
+% engines: rust 0.8.0-rc2: the subtitle kept, Warning "Attempt to end document with open groups"; MTARG round 1: the
+%          subtitle lost, 0 errors 0 Warnings (the deposit after the dropped replay read the relaxed `\@maketitle`);
+%          Perl drops the class's `\maketitle` and never deposits
+% expect:  0 errors 0 Warnings; the title once; "A Subtitle Written Here" in the title page; the body paragraph "Hi"
+% status:  RED (MTARG round 1) -> GREEN (perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group)
+% preload: ar5iv.sty
+\documentclass[relax]{mtargvar}
+\title{T}
+\begin{document}
+\maketitle
+Hi
+\end{document}

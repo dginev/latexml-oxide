@@ -9982,8 +9982,8 @@ mod sect05;
 pub use sect05::note_title_page_part;
 pub(crate) use sect05::{
   SpeculativeRun, assigned_parts_holding, class_author_reader_body, is_latex_maketitle,
-  keep_class_author_reader, maketitle_is_kernels, own_maketitle, replay_class_begin_code,
-  replays_class_maketitle, speculative_word_run, tail_reads_ahead, title_page_deposit_tokens,
+  keep_class_author_reader, own_maketitle, replay_class_begin_code, replays_class_maketitle,
+  speculative_word_run, tail_reads_ahead, title_page_deposit_tokens, title_page_deposits,
   title_page_mark, title_page_print_tokens, title_page_probe_run, title_page_reading,
   title_page_replay_tokens,
 };

@@ -1,0 +1,15 @@
+% mechanism: a document's `\@maketitle` that takes only an optional argument, under article's `\maketitle` (the
+%   kernel's: nothing replays it), is deposited as it is: an optional argument never reads the deposit's closing brace
+% witness: 0801.1806 (the class shape: maketitle_argument_class_title_page_closes_its_group.tex)
+% oracle:  pdflatex 0 errors: "The Title Ann Author A Subtitle Written Here Hi"
+% engines: rust 0.8.0-rc2: as expected; MTARG round 0: the subtitle lost (not deposited); Perl never deposits
+% expect:  0 errors 0 Warnings; the title once; "A Subtitle Written Here" in the title page; the body paragraph "Hi"
+% status:  RED (MTARG round 0) -> GREEN (perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter\renewcommand\@maketitle[1][]{\begin{center}{\LARGE\@title\par}\@author\par\textit{A Subtitle Written Here}\end{center}}\makeatother
+\title{The Title}\author{Ann Author}
+\begin{document}
+\maketitle
+Hi
+\end{document}

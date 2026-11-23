@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (550 items on 2026-11-23: 546 open, weight 1054, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (551 items on 2026-11-23: 547 open, weight 1057, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -113,7 +113,17 @@ Rules that keep this file honest and mergeable:
     (RAWCOPERNICUS); 0801.1806 (iaus.cls raw) warns `\end{document}` inside a group (level 1) and drops its `[Author
     (year)]` bibliography labels — check against the PDF (RAWIAUS); from the RAWDEF study: codedoc (a TL manual)
     Fatal:Mouth:Recursion, 2309.07511's ctex a new Error (the fandol fontset unavailable), circularglyphs' TikZ text on
-    a path lost, 2312.09266's background.sty notice moved. Root-caused 2026-11-23: none of it reaches the fleet (`--preload=ar5iv.sty` already loads raw; rc2 ar5iv = default counts). RAWIAUS labels: faithful — iaus.cls:1221 `\@biblabel` is empty and the PDF prints none (drop it); its group warning and stray "n" are MTARG (v0.8.0: the title-page deposit and replay break a `\@maketitle` that takes an argument; ~1,665 iaus.cls papers). RAWCOPERNICUS: faithful too — copernicus.cls:493 discards `\received` etc. without the logo file, but FIDELITY_CHARTER §2 keeps authored text: a raw setter that discards its argument should hand it to the frontmatter under OmniBus's date roles (`title_page_check.rs` ~:440; HARD, ~411 copernicus papers). 1502.07025: a gain (11 → 37,878 words) whose 147 Errors are YTABMATRIX; 3
+    a path lost, 2312.09266's background.sty notice moved. Root-caused 2026-11-23: none of it reaches the fleet (`--preload=ar5iv.sty` already loads raw; rc2 ar5iv = default counts). RAWIAUS labels: faithful — iaus.cls:1221 `\@biblabel` is empty and the PDF prints none (drop it); its group warning and stray "n" are fixed by MTARG (v0.8.0, OD #265: the deposit and replay of an argument-taking `\@maketitle`; ~1,665 iaus.cls papers, 0801.1806 0 Errors / 4 Warnings). RAWCOPERNICUS: faithful too — copernicus.cls:493 discards `\received` etc. without the logo file, but FIDELITY_CHARTER §2 keeps authored text: a raw setter that discards its argument should hand it to the frontmatter under OmniBus's date roles (`title_page_check.rs` ~:440; HARD, ~411 copernicus papers). 1502.07025: a gain (11 → 37,878 words) whose 147 Errors are YTABMATRIX; 3
+  - MTARGDELIM — (MTARG reviews, synthetic, no arXiv witness) residual shapes of an argument-taking class `\@maketitle`
+    (OD #265), each losing title-page text that only an Info `frontmatter:class_text` counts, where the ruling wants a
+    Warning: (a) a delimited `\@maketitle` (`\def\@maketitle#1.{…}`) whose replayed `\maketitle` is dropped for an
+    error gets no deposit (repro `sectioning-frontmatter/maketitle_delimited_argument_class_keeps_its_text_red.tex`);
+    (b) a class `\maketitle` that calls `\@maketitle` only when `\@title` is set replays on emptied fields, typesets
+    nothing and is kept, so no deposit runs (fix: decide from the speculative run on the real fields,
+    `note_title_page_print`, whether it called `\@maketitle`); (c) an `\@latex@error` inside `\@maketitle` on an empty
+    title errs again in the fallback. Also: a second `\maketitle` prints nothing where pdflatex repeats the title page,
+    and `\lx@saved@maketitle` stays defined after `\maketitle` (harmless). rc2 kept (a)-(c)'s text with the open-group
+    Warning; 3
   - SVA — SV-A: \csname via \ifincsname; 3
   - TBLR — tabularray first-token, \g__tblr_table_count_int, tblr-only \hline REDs; 1
   - QA05 — Kernel-version switch + \@ifundefined per year (QA05/QA06); 1
