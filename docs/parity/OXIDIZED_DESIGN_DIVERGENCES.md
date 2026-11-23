@@ -6354,14 +6354,14 @@ after a page break or stranded after the body. **TeX.** article.cls:236-252 `\@m
 - *One pass*: `frontmatter/place.rs:1012 place_frontmatter` (formerly #247, absorbing #242 #245 #246's anchors);
   `:925 mark_preamble_residue`, `:941 close_auto_closable_to_root`.
 - *Text before the title*: `place.rs:1139 hold_text_before_title`, `:1147 wrap_text_before_title`; an abstract printed
-  ahead of title-page text follows that text in a continued `<titlepage>` (formerly #903; `field_ink.rs:303`).
+  ahead of title-page text follows that text in a continued `<titlepage>` (formerly #903; `cover_order.rs:27 wrap_as_continued_titlepage`).
 - *Content-free*: a leading pagination, empty box or markers-only paragraph is no content (formerly #242, #245, #258;
-  `titlepage_layout.rs`); `cover_order.rs:629 is_body_prose`.
+  `titlepage_layout.rs`); `cover_order.rs:637 is_body_prose`.
 - *Title-page layout*: an abstract-only fallback wraps the layout as `<titlepage>` (formerly #246); a `{titlepage}` built
   after body content is a layout paragraph, or unwrapped around the floats it holds (`field_ink.rs:22
   demote_stranded_titlepage`; formerly #257; #1146); a hand-typeset
   title duplicating `\title{}` is dropped (`titlepage_layout.rs`; formerly #146).
-- *Field ink*: `field_ink.rs:819 lift_marked_field_ink`, `:935 settle_field_marks` (formerly #715).
+- *Field ink*: `field_ink.rs:824 lift_marked_field_ink`, `:940 settle_field_marks` (formerly #715).
 - *Bodies*: a table of contents inside a frontmatter container goes after it (formerly #753); a body left open at
   `\end{document}` ends there (formerly #754); a heading inside an abstract ends it (formerly #755).
 - *Without a title* (formerly #434): a unit with authors and no title renders its author block in place, from its first
@@ -24282,9 +24282,11 @@ logical-block holding one (marked `ltx_titlepage`), stands in the body where it 
 keeps insertBlock's candidate order (TeX_Box.pool.ltxml:449-519) in a titlepage as in the body: a `center` holding a
 logo figure and the cover lines is a logical-block, not a figure whose panels are the lines (2204.08560), and a box of
 paragraphs there is Perl's logical-block, not #244's `<block>` demotion, which dropped each `<para>`'s `align`
-(1007.1771, 1507.04352, hep-ph9609212). Every path wraps, sigchi-a's and the no-`\maketitle` one included: each
-lands the teasers among the frontmatter. The figures keep their `xml:id`, number, labels, `inlist` and caption; the
-HTML shows the title beside the continued titlepage (LaTeXML-structure-xhtml.xsl, the `ltx:title` template), the
+(1007.1771, 1507.04352, hep-ph9609212). Every path with a title wraps, sigchi-a's and the no-`\maketitle` one included: each
+lands the teasers among the frontmatter (with no `\title` the hook has no anchor and the teaser stays where it was
+written, as on the base). The figures keep their `xml:id`, number, labels, `inlist` and caption; the
+HTML shows the title beside the continued titlepage (LaTeXML-structure-xhtml.xsl, the `ltx:title` template; under
+sigchi-a it prints the authors with the title, `div.ltx_authors`, so the wrapper follows them there as on the main path), the
 teasers once, in place, listed in a list of figures and `\ref`-ed across a split. This supersedes the 2026-07-13 rule of
 no frontmatter markup over the teaser. Scope (DG 2026-11-23): `ltx_teaserfigure` marks only a figure a class names a
 teaser; other title-block figures (CVPR's `\twocolumn[…]`, vgtc/egpubl `\teaser`, `\captionof`) are a separate v0.8.1
