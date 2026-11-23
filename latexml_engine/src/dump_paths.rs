@@ -192,7 +192,7 @@ pub fn warn_degraded_no_dump() {
     // Where a dump for this tree could not be built (`latexml::format_dumps`), the reason says so and how to retry
     // (issue 988): an installed binary has no `tools/` to run.
     let remedy = match format_build_failure() {
-      Some(reason) => format!("{reason}."),
+      Some(reason) => format!("No format dump could be built for this TeX tree: {reason}."),
       None => String::from(
         "Build the dump with `tools/make_formats.sh` before canvas/parity runs. (Set LATEXML_NODUMP=1 to silence \
          this if the raw path is intentional.)"

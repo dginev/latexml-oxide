@@ -801,8 +801,6 @@ fn main() -> Result<(), Box<dyn Error>> {
   // This binary serves the worker mode above, so a big split may spawn it.
   latexml::render_workers::enable_auto_jobs();
   install_panic_sweep(cfg!(panic = "abort"));
-  // A Ctrl+C during the first run's format build cancels the build rather than failing it (issue 988).
-  latexml::format_dumps::cancel_builds_on_interrupt();
 
   // Run all work on a worker thread with a 256 MB stack so deeply
   // nested math trees don't overflow the OS-default 8 MB main-thread
@@ -1010,6 +1008,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     latexml::lsp_server::run_lsp_server(cli.timeout, max_memory)?;
     process::exit(0);
   }
+  // A Ctrl+C during the first run's format build cancels the build rather than failing it (issue 988). After the
+  // server's dispatch: the LSP server keeps its own signals (its forked children are ended by SIGTERM).
+  latexml::format_dumps::cancel_builds_on_interrupt();
 
   // Ordered supplementary top-level sources joined onto the main output
   // (populated by CLI multi-file input below, or by directory auto-detection).

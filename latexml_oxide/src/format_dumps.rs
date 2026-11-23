@@ -78,25 +78,32 @@ struct InFlight {
 /// format again, where an interrupted build used to count towards marking it [`FAILED`], so two
 /// interrupts left every conversion for a day on the engine's own definitions. The interrupts are
 /// Ctrl+C and, on Unix, SIGTERM and SIGHUP (on Windows, Ctrl+Break and closing the console). For a
-/// front end its user interrupts (the `latexml_oxide` CLI); an embedder that handles signals itself
-/// leaves it off. The handler is installed when the process starts its first build, so a process
-/// that builds nothing keeps its default interrupt; one that builds exits with status 130 on an
-/// interrupt from then on.
+/// front end its user interrupts (the `latexml_oxide` CLI's conversions); an embedder that handles
+/// signals itself leaves it off. The handler is installed when the process starts its first build,
+/// so a process that builds nothing keeps its default interrupt; one that builds exits with status
+/// 130 on an interrupt from then on. A process that ignores or handles any of these signals
+/// already (`nohup`, a shell's background job) keeps them as they are, and an interrupted build
+/// there counts as before.
 pub fn cancel_builds_on_interrupt() { CANCEL_ON_INTERRUPT.store(true, Ordering::Release); }
 
 /// Installs, once per process, the interrupt handler [`cancel_builds_on_interrupt`] asks for.
 fn install_interrupt_handler() {
   static INSTALLED: Once = Once::new();
   INSTALLED.call_once(|| {
-    let installed = ctrlc::set_handler(|| {
-      if cancel_in_flight_build() {
+    // `try_`: a signal the process already ignores or handles stays so (ctrlc's `MultipleHandlers`).
+    let installed = ctrlc::try_set_handler(|| {
+      // The record stays locked until the process ends, so the build cannot record an outcome after
+      // its undo (`set_in_flight` waits).
+      let mut slot = IN_FLIGHT.lock().unwrap_or_else(PoisonError::into_inner);
+      if let Some(build) = slot.take() {
+        undo(build);
         eprintln!(
           "\n[format_dumps] interrupted: the format build was cancelled; the next conversion builds it again"
         );
       }
       std::process::exit(INTERRUPTED);
     });
-    if let Err(e) = installed {
+    if let Err(e @ ctrlc::Error::System(_)) = installed {
       eprintln!(
         "[format_dumps] cannot take the interrupt ({e}): a build interrupted now counts as one that failed"
       );
@@ -104,16 +111,20 @@ fn install_interrupt_handler() {
   });
 }
 
-/// Undoes the format build this process is running, if any: its attempt note goes back to what it
-/// held before the build and its partial dump is removed. Whether a build was running.
+/// Undoes the format build this process is running, if any (the interrupt handler's undo, without
+/// its exit). Whether a build was running.
+#[cfg(test)]
 fn cancel_in_flight_build() -> bool {
-  let Some(build) = IN_FLIGHT
+  let build = IN_FLIGHT
     .lock()
     .unwrap_or_else(PoisonError::into_inner)
-    .take()
-  else {
-    return false;
-  };
+    .take();
+  build.map(undo).is_some()
+}
+
+/// Undoes a format build: its attempt note goes back to what it held before the build and its
+/// partial dump is removed.
+fn undo(build: InFlight) {
   match build.before {
     Some(before) => {
       let _ = std::fs::write(&build.attempts, before);
@@ -124,7 +135,6 @@ fn cancel_in_flight_build() -> bool {
   }
   // (On Windows a file the build still has open stays; the next build removes it, `remove_partial_dumps`.)
   let _ = std::fs::remove_file(&build.partial);
-  true
 }
 
 /// Records the build this process starts or ends ([`IN_FLIGHT`]).
@@ -274,19 +284,21 @@ fn attempt(
   if failed >= MAX_ATTEMPTS {
     return Err(mark_failed(dir, kind, &last_reason));
   }
-  let before = attempts_text(dir, kind);
-  note_attempt(
+  // What an interrupt undoes, recorded before the note it undoes is written.
+  set_in_flight(Some(InFlight {
+    attempts: kind_file(dir, ATTEMPTS, kind),
+    before:   attempts_text(dir, kind),
+    partial:  partial_dump(dir, kind, year),
+  }));
+  if let Err(reason) = note_attempt(
     dir,
     kind,
     failed + 1,
     &format!("the {kind} format build died with its process"),
-  )?;
-  // What an interrupt undoes, recorded before the build is announced.
-  set_in_flight(Some(InFlight {
-    attempts: kind_file(dir, ATTEMPTS, kind),
-    before,
-    partial: partial_dump(dir, kind, year),
-  }));
+  ) {
+    set_in_flight(None);
+    return Err(reason);
+  }
   if CANCEL_ON_INTERRUPT.load(Ordering::Acquire) {
     install_interrupt_handler();
   }

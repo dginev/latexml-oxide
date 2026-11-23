@@ -23924,9 +23924,13 @@ it, and as a CSS table it put the `\intertext` row in its first column (a footno
   to what it held before the build and the partial dump is removed, then the process exits with status 130. The
   interrupts are Ctrl+C, SIGTERM and SIGHUP on Unix, and Ctrl+C, Ctrl+Break and closing the console on Windows (the
   `ctrlc` crate, `termination`). The handler is installed when the first build starts, so a process that builds
-  nothing keeps its default interrupt. Embedders (`cortex_worker`, the LSP server) keep their own signal handling and
-  count an interrupted build as before. The DEGRADED banner (`dump_paths::warn_degraded_no_dump`) now names the
-  failure and the mark to remove instead of `tools/make_formats.sh`, which an installed binary does not have.
+  nothing keeps its default interrupt; a process that already ignores or handles one of these signals (`nohup`, a
+  shell's background job) keeps them (`ctrlc::try_set_handler`). The handler keeps the build's record locked until the
+  process ends, so the build cannot record an outcome after the undo, and the record is set before the attempt note
+  is written. Embedders (`cortex_worker`, and the CLI's own `--server` LSP mode, whose forked children are ended by
+  SIGTERM) keep their own signal handling and count an interrupted build as before. The DEGRADED banner
+  (`dump_paths::warn_degraded_no_dump`) now says why no dump was built (once the format is marked failed, that names
+  the mark to remove) instead of pointing to `tools/make_formats.sh`, which an installed binary does not have.
 - Ours, `\write` (tex_file_io.rs): inside a scope that drops its diagnostics whole (Perl `IGNORE_ERRORS`: a trial
   digested again where it is used, the muted no-dump expl3 reload of OD #1027), a write to the terminal or the log
   writes nothing; a write to an open file is unchanged. LaTeX's `\GenericError` writes a blank line ahead of each
