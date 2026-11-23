@@ -738,8 +738,8 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
   // `{}^c`, `_d`) the base is structurally absent. We materialize
   // the missing base as `<m:mrow></m:mrow>`: an empty `<mi>` claims an
   // identifier with no text (task #264). Unlike an absent operand's slot
-  // (`invisible_operand`, issue 991), a script base is no row child, so
-  // its space-likeness turns no operator prefix.
+  // (`invisible_operand`, issue 991), a script base is no row child, so no
+  // operator is spaced against it.
   if role.contains("SUBSCRIPT") || role.contains("SUPERSCRIPT") {
     let is_sub = role.contains("SUB");
     let tag = if is_sub { "m:msub" } else { "m:msup" };
@@ -1120,12 +1120,10 @@ const INVISIBLE_OPERAND_TEXT: &str = "\u{2060}";
 
 /// The placeholder for an operand that is not there (an `absent` token, an empty-symbol unit):
 /// `<m:mphantom><m:mi>&#x2060;</m:mi></m:mphantom>`, where Perl writes an empty `<m:mi/>`
-/// (`MathML.pm:1475`). MathML Core §3.2.5.1 decides an `<mo>`'s form ignoring space-like
-/// siblings, and an EMPTY `mphantom` is space-like (a grouping element whose children all are,
-/// vacuously), so after one `=` is a PREFIX operator — MathJax renders it so (issue 991). An
-/// `mi` is never space-like, so the slot keeps the operator infix (issue #312); the `mphantom`
-/// keeps it invisible, and the `mi` is never empty (the `debug_assert!` in `document.rs`).
-/// OXIDIZED_DESIGN #1150.
+/// (`MathML.pm:1475`). The `mi` is an Ord atom, as amsmath's `{}` before an align cell is
+/// (`\displaystyle{{}##}`): MathJax spaces an operator by the class of the atom before it, and an
+/// EMPTY `mphantom` has none, so the `=` after it got no space (issue 991). The `mphantom` keeps
+/// it invisible; the `mi` is never empty (the `debug_assert!` in `document.rs`). OXIDIZED_DESIGN #1150.
 fn invisible_operand() -> NodeData {
   NodeData::Element {
     tag:        "m:mphantom".to_string(),
@@ -1140,8 +1138,8 @@ fn invisible_operand() -> NodeData {
 
 /// An empty box beside an operator (`\mbox{}=b`, `a=\strut`, `\makebox[0pt]{}=b`, `\mbox{}-b`: an empty `XMText`, an
 /// empty `<m:mrow>` as in Perl, MathML.pm:499) is TeX's zero-width Ord atom, so it gets the absent operand's
-/// placeholder: emptied, it is space-like and turns the operator prefix or postfix (issue 991), and the spacing walk
-/// reads `−` as unary. Rows only: in a script or fraction slot the empty `<m:mrow>` stays. A box sized anywhere
+/// placeholder: empty, it has no class in MathJax, which sets the operator with no space on its side (issue 991), and
+/// the spacing walk reads `−` as unary. Rows only: in a script or fraction slot the empty `<m:mrow>` stays. A box sized anywhere
 /// inside (`\makebox[0pt]{}`, `\mbox{\makebox[1cm]{}\makebox[1cm]{}}`) keeps it all, the placeholder added as its
 /// last child. OXIDIZED_DESIGN #1150.
 fn fill_empty_operands(node: &mut NodeData) {
@@ -1882,21 +1880,17 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   // `args` is matched UNFILTERED — XMath's `absent` placeholders keep their
   // slot. They exist to satisfy the content-arm contract (every binary
   // application has 2 operands), and it is tempting to drop them so no empty box
-  // reaches the output — but in Presentation MathML an operand slot is what
-  // makes the operator INFIX.
+  // reaches the output — but the slot is the atom the operator is spaced against.
   //
-  // MathML infers an `<mo>`'s form from its position: first child of its
-  // `<mrow>` ⇒ prefix, last ⇒ postfix, otherwise infix — and the form selects
-  // the operator-dictionary spacing. Dropping the absent LHS of a continuation
-  // row (`& = RHS` in an `align`, whose LHS is inherited from the row above)
-  // makes `<mo>=</mo>` the first child, so renderers give it *prefix* spacing
-  // and the `=` column stops lining up. That is issue #312 — reported against
-  // 0.7.5-rc1 as "the alignment is all off around `=`", and visible in both
-  // native MathML and MathJax.
+  // Dropping the absent LHS of a continuation row (`& = RHS` in an `align`, whose
+  // LHS is inherited from the row above) makes `<mo>=</mo>` the first child of its
+  // `<mrow>`: MathJax spaces an operator by the TeX class of the atom before it, so
+  // the `=` got no left space and the `=` column stopped lining up. That is issue
+  // #312 — reported against 0.7.5-rc1 as "the alignment is all off around `=`".
   //
-  // The slot must not be space-like, or MathML skips it when it infers the form:
-  // `pmml_token` renders `absent` through `invisible_operand` (an `<m:mphantom>` holding a
-  // U+2060 `<m:mi>`), where an empty `mphantom` left `=` prefix in MathJax (issue 991).
+  // The slot must be an atom, too: `pmml_token` renders `absent` through `invisible_operand`
+  // (an `<m:mphantom>` holding a U+2060 `<m:mi>`, an Ord), where an empty `mphantom`, which
+  // has no TeX class in MathJax, left the `=` without its space (issue 991).
   // Perl's slot is an empty `<m:mi/>` (`MathML.pm:1475`). Task #264 proposed suppressing
   // the placeholder; that is what regressed #312, so it is closed in the other direction.
   match args {

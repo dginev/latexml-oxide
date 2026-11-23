@@ -24077,7 +24077,7 @@ TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hi
 is not tested, as its timing would make the test flaky; it was checked by hand (Ctrl+C during a first run's build
 leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).
 
-### 1150. An absent operand, and an empty box beside an operator, is a phantom U+2060 identifier, which no renderer skips as space-like (issue 991)
+### 1150. An absent operand, and an empty box beside an operator, is a phantom U+2060 identifier, an Ord atom to MathJax (issue 991)
 
 - Perl: an `absent` token (XMath's missing operand: the LHS of an `align` continuation cell `& = b`, a prefix
   relation, `\frac{a}{}`, `\sqrt{}`) is an empty `<m:mi/>` (`LaTeXML/lib/LaTeXML/Post/MathML.pm:1475`
@@ -24085,32 +24085,41 @@ leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).
   empty `XMText`) an empty `<m:mrow/>` (MathML.pm:499 `pmml_row` of no items).
 - Ours (presentation.rs `invisible_operand`): `<m:mphantom><m:mi>&#x2060;</m:mi></m:mphantom>`, also for an
   empty-symbol unit (#114). An empty `mi` claims an identifier with no text, so it is never materialized
-  (`document.rs` `debug_assert!`, task #264); the slot was an empty `mphantom` until now. MathML Core §3.2.5.1 decides an
-  `<mo>`'s form ignoring its space-like siblings, and a grouping element whose in-flow children are all space-like
-  is space-like, an empty one vacuously (MathML 3 has the same rule): after an empty `mphantom`, `=` is first, so
-  prefix. MathJax 3.2.2 follows the rule and set the `=` with no left space (issue 991); Chrome counts only
-  `mtext`/`mspace` as space-like, so it kept the infix. An `mi` is never space-like (Core, MathML 3, MathJax),
-  so the operator stays infix, and the `mphantom` keeps the slot invisible. U+2060 WORD JOINER is zero-width and
-  default-ignorable, not White_Space (Unicode, JS `\s`/`trim()`, Python, Rust), a no-break (UAX #14 WJ), and has no
-  math meaning (unlike U+2061-2064); it bypasses the token styling (no `mathvariant`, no Plane-1 mapping). MathJax
-  3.2.2 on `<mrow>[slot]<mo>=</mo><mi>b</mi></mrow>`: the empty `mphantom` gives form prefix and no left space, the
-  new slot form infix and 0.278em (`space="4"`), as `a=b`, the slot 0em wide.
-- An empty box is TeX's zero-width Ord atom, and its empty `<m:mrow>` is space-like the same way (`$\mbox{}=b$`:
-  MathJax 3.2.2 form prefix, no left space; `$a=\strut$` postfix), so beside an operator it gets the same placeholder
+  (`document.rs` `debug_assert!`, task #264); the slot was an empty `mphantom` until now, and MathJax set the `=`
+  after it with no left space (issue 991). MathJax spaces an operator by the TeX class of the atom before it and adds
+  none when there is no atom (class NONE: `texSpacing`, `mathjax-full/js/core/MmlTree/MmlNode.js:332-337`); an empty
+  `mphantom` or `mrow` has no class and passes the class before it through (`AbstractMmlLayoutNode.setTeXclass`,
+  MmlNode.js:665-669; `MmlMrow.setTeXclass`, `MmlNodes/mrow.js:175-215`), none at a row's start. The slot's `mi` is
+  an Ord atom, which is what amsmath sets before an align cell (`\displaystyle{{}##}`, amsmath.sty:1486). On
+  `<mrow>[slot]<mo>=</mo><mi>b</mi></mrow>` (MathJax 3.2.2 and 4.1.3) the empty `mphantom` gives 3.359ex, with or
+  without `form="infix"` on the `mo`; the new slot 3.988ex, as Perl's empty `<mi/>`, the slot 0em wide. MathML Core
+  makes no difference here: an empty grouping element is space-like (§3.2.5.1), so the inferred form of `=` after it
+  is prefix, but `=` has no prefix entry and the dictionary lookup falls back to infix (§3.2.4.2), so Chrome spaces
+  it the same either way. U+2060 WORD JOINER is zero-width and default-ignorable, not White_Space (Unicode, JS
+  `\s`/`trim()`, Python, Rust), a no-break (UAX #14 WJ), and has no math meaning (unlike U+2061-2064); it bypasses
+  the token styling (no `mathvariant`, no Plane-1 mapping).
+- An empty box is TeX's zero-width Ord atom, but its empty `<m:mrow>` has no class in MathJax either (`$\mbox{}=b$`:
+  no space before the `=`; `$a=\strut$`: none after it), so beside an operator it gets the same placeholder
   (`fill_empty_operands`, a pass before the spacing walk). A box with a size or a style anywhere in it keeps all of
   it, the placeholder added as its last child: `\makebox[0pt]{}` is `<m:mpadded width="0pt">[slot]</m:mpadded>`,
   `$\mbox{\makebox[1cm]{}\makebox[1cm]{}}=b$` keeps both 1cm `mpadded`s and `$\raisebox{1ex}{…}=b$` its `voffset`
   beside the slot. Otherwise the slot replaces the box and takes its internal spacing: after `$\mbox{}\,=b$` the `=`
   has the thin space plus \thickmuskip (lspace 0.448em), as in TeX. The walk then reads it as the Ord it is:
   `$\mbox{}-b$` and `$a+\mbox{}$` keep their binary space, as in TeX (the empty row had made the walk zero it as if
-  unary). In a script or a fraction slot the empty `<m:mrow>` stays: no operator's form
-  depends on it. `\strut`'s height and depth do not reach the XMath (its zero-width rule is dropped), so the
-  placeholder has none to keep.
+  unary). In a script or a fraction slot the empty `<m:mrow>` stays: no operator is spaced against it.
+  `\strut`'s height and depth do not reach the XMath (its zero-width rule is dropped), so the placeholder has none
+  to keep.
+- Where the XSLT takes an element's string value, a formula's slot would put its U+2060 in plain text: a note's mark
+  is its tag's string value (2509.25166's mn2e marks `$*\dagger$`). `f:plain-text` (LaTeXML-common.xsl) drops it at
+  every such site: the note and creator marks, a contact's address, a CV name, the creation date, TEI's item label.
+  The Rust strings need nothing: a title's text (page `<title>`, TOC, ref tooltip) is UnicodeMath from the XMath,
+  taken before the MathML exists, and no Rust pass after the MathML takes a string value.
 - Known third-party effect: MathJax's speech-rule-engine voices the U+2060 as "word joiner" where the slot is not
   beside a relation (`\frac{a}{}`); the character is kept in every slot (DG 2026-11-23).
 
 **Guards**: `perfect_kernel_batchfix991::{absent_operand_is_a_phantom_word_joiner,
-empty_box_beside_an_operator_is_a_phantom_word_joiner}`
-(`tools/perfect_kernel/repros/math-parse/{absent_operand,empty_box}_is_not_space_like.tex`), with the slot counted in
+empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_word_joiner_in_a_string_value}`
+(`tools/perfect_kernel/repros/math-parse/{absent_operand,empty_box}_is_an_ord_atom.tex`,
+`absent_operand_in_a_string_value.tex`), with the slot counted in
 `90_latexmlpost::alignrows_operand_slot_keeps_relop_infix` (issue #312) and the empty unit in
 `06_cluster_regressions::cluster_siunitx_empty_unit_renders_invisible`.

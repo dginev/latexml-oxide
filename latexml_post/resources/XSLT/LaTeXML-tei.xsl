@@ -8,8 +8,9 @@
     xmlns:m     ="http://www.w3.org/1998/Math/MathML"
     xmlns:svg   ="http://www.w3.org/2000/svg"
     xmlns:xlink ="http://www.w3.org/1999/xlink"
-    extension-element-prefixes="str"
-    exclude-result-prefixes="ltx str m svg xlink">
+    xmlns:f     ="http://dlmf.nist.gov/LaTeXML/functions"
+    extension-element-prefixes="str f"
+    exclude-result-prefixes="ltx str m svg xlink f">
 
   <!-- Possibly useful validator:
        https://teibyexample.org/tools/TBEvalidator.htm
@@ -585,7 +586,7 @@
 
   <xsl:template match="ltx:item">
     <xsl:if test="ltx:tags/ltx:tag[not(@role)]">
-      <label><xsl:value-of select="ltx:tags/ltx:tag[not(@role)]"/></label>
+      <label><xsl:value-of select="f:plain-text(ltx:tags/ltx:tag[not(@role)])"/></label>
     </xsl:if>
     <item>
       <xsl:apply-templates select="@xml:id" mode="copy-attribute"/>
