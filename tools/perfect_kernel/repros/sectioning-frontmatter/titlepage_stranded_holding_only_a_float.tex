@@ -1,0 +1,17 @@
+% mechanism: a `{titlepage}` built after body content began is stranded (the schema admits `ltx:titlepage` only in the
+%   front group); `demote_stranded_titlepage` unwraps one holding a float `ltx:para` cannot hold: the float stands in
+%   the body where it stood (OXIDIZED_DESIGN_DIVERGENCES #1146)
+% witness: hep-ph9605217 (rub5.tex:258-269: a titlepage at the document's end holding only two figures)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: page 1 "Body text.", page 2 "X", "Figure 1: c"
+% engines: perl 0.8.8: an empty `<titlepage/>` after the body, the figure after it (autoClose), schema-invalid; rust
+%   INT081C: the figure in the body, the empty titlepage pruned; ACMTEASER rounds 2-3: the figure inside a stranded
+%   titlepage, schema-invalid
+% expect:  0 errors, 0 warnings; the body paragraph, then the figure, no titlepage; valid
+% status:  GREEN (ACMTEASER round 4). Guard perfect_kernel_batchacmteaser::a_stranded_titlepage_holding_a_float_is_unwrapped
+\documentclass{article}
+\begin{document}
+Body text.
+\begin{titlepage}
+\begin{figure}[htb]X\caption{c}\end{figure}
+\end{titlepage}
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: a stranded `{titlepage}` (built after body content began) holding cover lines around a float: each run of
+%   lines becomes a `para.ltx_titlepage` as the stranded titlepage's demotion makes it, the float stands between them
+%   in the body (`demote_stranded_titlepage`'s unwrap, OXIDIZED_DESIGN_DIVERGENCES #1146)
+% witness: synthetic (ACMTEASER round 4; the mixed sibling of hep-ph9605217)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: page 1 "Body text.", page 2 "Line one. Line two.", then "X",
+%   "Figure 1: c" (the float set below the lines)
+% engines: perl 0.8.8: a stranded titlepage holding "Line one.", the figure after it (autoClose), "Line two." a body
+%   paragraph, schema-invalid; rust INT081C: the same without the titlepage (a `para.ltx_titlepage`); ACMTEASER rounds
+%   2-3: all three inside a stranded titlepage, schema-invalid
+% expect:  0 errors, 0 warnings; para.ltx_titlepage "Line one.", the figure, para.ltx_titlepage "Line two."; valid
+% status:  GREEN (ACMTEASER round 4). Guard perfect_kernel_batchacmteaser::a_stranded_titlepage_holding_a_float_is_unwrapped
+\documentclass{article}
+\begin{document}
+Body text.
+\begin{titlepage}
+Line one.
+\begin{figure}[htb]X\caption{c}\end{figure}
+Line two.
+\end{titlepage}
+\end{document}

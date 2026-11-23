@@ -13,8 +13,12 @@ use super::*;
 /// demoted in place to an `ltx:para` carrying `class="ltx_titlepage"` — the same
 /// text in the same order, no wrapper the schema forbids (OXIDIZED_DESIGN #257;
 /// chemexec_de/en, stanli, l2picfaq, pst-calendar-doc, classicthesis in sweep s110).
-/// A titlepage in its proper leading position, or one whose children `ltx:para`
-/// cannot hold (a `\maketitle` unwound inside it), is left alone.
+/// One holding a float the body admits but `ltx:para` does not (a figure, or a centred
+/// cover holding one: SCHEMA_EXTENSIONS S14 keeps it in the titlepage) is unwrapped:
+/// each run of the other children becomes such a paragraph and the float stands in
+/// the body where it stood (hep-ph9605217: two figures in a titlepage at the end).
+/// A titlepage in its proper leading position, or one holding what the body does not
+/// admit (a `\maketitle` unwound inside it), is left alone.
 pub fn demote_stranded_titlepage(document: &mut Document) -> Result<()> {
   let Some(root) = document.get_document().get_root_element() else {
     return Ok(());
@@ -39,38 +43,93 @@ pub fn demote_stranded_titlepage(document: &mut Document) -> Result<()> {
     return Ok(());
   }
   let titlepage = kids[pos].clone();
-  // The same child normalization `wrap_as_titlepage` applies: a `center`'s
-  // `logical-block` and a `para` become `block`s (#244's demotion), which
-  // `ltx:para` — like `ltx:titlepage` — admits. Only when every such child
-  // SURVIVES the demotion (`subtree_is_block_demotable`: no float/figure
-  // inside — stanli's cover holds `\begin{figure}`s in its `center`); else the
-  // titlepage is left as Perl leaves it, nothing touched.
-  let children: Vec<Node> = titlepage
-    .get_child_nodes()
-    .into_iter()
-    .filter(|c| c.get_type() == Some(NodeType::ElementNode))
-    .collect();
-  // Decide BEFORE mutating: every layout child must survive the demotion, and
-  // every child — as it will be after it (`logical-block`/`para` → `block`) —
-  // must be something `ltx:para` holds. Otherwise nothing is touched.
-  let layout = |q: SymStr| q == pin_static("ltx:logical-block") || q == pin_static("ltx:para");
-  let demotable = children
+  // Decide BEFORE mutating. A child `ltx:para` holds once normalized (a `center`'s
+  // `logical-block` or a `para` becomes a `block`, #244's demotion, when no float is
+  // inside — stanli's cover holds `\begin{figure}`s in its `center`), or one the body
+  // holds as is (`document.body.class`: the float, the undemotable `logical-block`).
+  // Anything else (front matter) and the titlepage is left as Perl leaves it.
+  let all_held = titlepage_children(&titlepage)
     .iter()
-    .all(|c| !layout(document::get_node_qname(c)) || subtree_is_block_demotable(c));
-  let holdable = children.iter().all(|c| {
-    let q = document::get_node_qname(c);
-    layout(q) || document::can_contain_qsym(pin_static("ltx:para"), q)
-  });
-  if !(demotable && holdable) {
+    .all(para_holds_demoted);
+  if !all_held
+    && !titlepage_children(&titlepage).iter().all(|c| {
+      para_holds_demoted(c)
+        || document::can_contain_qsym(
+          pin_static("ltx:sectional-block"),
+          document::get_node_qname(c),
+        )
+    })
+  {
     return Ok(());
   }
   // A demoted cover no longer stands in for the document's `<ltx:title>`, which the HTML then displays: the class's
   // own printing `\title` run on it would be a second copy (OXIDIZED_DESIGN #629).
   drop_cover_title_ink(document, &titlepage);
-  normalize_titlepage_layout_children(document, &titlepage)?;
-  let mut para = document.rename_node(titlepage, "ltx:para", true)?;
-  document.add_class(&mut para, "ltx_titlepage")?;
+  if all_held {
+    normalize_titlepage_layout_children(document, &titlepage)?;
+    let mut para = document.rename_node(titlepage, "ltx:para", true)?;
+    document.add_class(&mut para, "ltx_titlepage")?;
+    return Ok(());
+  }
+  // Unwrapped (OXIDIZED_DESIGN #1146): each run of held children goes into a new
+  // `para.ltx_titlepage`, the rest stand where they are, then the titlepage dissolves.
+  let mut paras: Vec<Node> = Vec::new();
+  let mut open: Option<Node> = None;
+  for mut child in titlepage_children(&titlepage) {
+    if para_holds_demoted(&child) {
+      let mut para = match open.take() {
+        Some(para) => para,
+        None => {
+          let mut para = document.insert_element_before(&child, "para", None)?;
+          if let Some(ns) = titlepage.get_namespace() {
+            let _ = para.set_namespace(&ns);
+          }
+          paras.push(para.clone());
+          para
+        },
+      };
+      child.unlink();
+      para.add_child(&mut child)?;
+      open = Some(para);
+    } else {
+      open = None;
+      if is_titlepage_layout_qname(document::get_node_qname(&child)) {
+        document.add_class(&mut child, "ltx_titlepage")?;
+      }
+    }
+  }
+  document.unwrap_nodes(titlepage)?;
+  for mut para in paras {
+    normalize_titlepage_layout_children(document, &para)?;
+    document.add_class(&mut para, "ltx_titlepage")?;
+    document.generate_id(&mut para, "p")?;
+  }
   Ok(())
+}
+
+/// A titlepage's element children, in order.
+fn titlepage_children(titlepage: &Node) -> Vec<Node> {
+  titlepage
+    .get_child_nodes()
+    .into_iter()
+    .filter(|c| c.get_type() == Some(NodeType::ElementNode))
+    .collect()
+}
+
+/// The layout wrappers `normalize_titlepage_layout_children` demotes to `ltx:block`.
+fn is_titlepage_layout_qname(q: SymStr) -> bool {
+  q == pin_static("ltx:logical-block") || q == pin_static("ltx:para")
+}
+
+/// Does `ltx:para` hold this titlepage child once it is normalized? A layout wrapper only when its content survives
+/// the demotion to `ltx:block` (`subtree_is_block_demotable`); any other child as it is.
+fn para_holds_demoted(child: &Node) -> bool {
+  let q = document::get_node_qname(child);
+  if is_titlepage_layout_qname(q) {
+    subtree_is_block_demotable(child)
+  } else {
+    document::can_contain_qsym(pin_static("ltx:para"), q)
+  }
 }
 
 /// The marks around the class's own printing `\title` run on a cover (sect05.rs `\lx@cover@title@begin`/`@end`,

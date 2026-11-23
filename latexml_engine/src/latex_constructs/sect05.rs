@@ -2010,7 +2010,8 @@ pub(crate) fn load() -> Result<()> {
       // titlepage settles behind the frontmatter here, at construction time.
       place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter)?;
       // Built after body content began → a hand-typeset layout paragraph, not
-      // the schema's leading titlepage (56fw, OXIDIZED_DESIGN #257).
+      // the schema's leading titlepage (56fw, OXIDIZED_DESIGN #257); unwrapped
+      // around a float it holds (hep-ph9605217, #1146).
       demote_stranded_titlepage(doc)?;
     },
     // NOT locked: report/book define `{titlepage}` with `\newenvironment`, so

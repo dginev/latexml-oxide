@@ -1,0 +1,24 @@
+% mechanism: a stranded `{titlepage}` whose `center` holds a float and the cover lines: the `center` is insertBlock's
+%   `ltx:logical-block`, which #244's demotion to `ltx:block` cannot take (a figure inside), so the unwrap leaves it
+%   standing in the body, marked `ltx_titlepage` (`demote_stranded_titlepage`, OXIDIZED_DESIGN_DIVERGENCES #1146)
+% witness: synthetic (ACMTEASER round 4); stanli (sweep s110: its cover's `center` holds `\begin{figure}`s), the
+%   stranded twin of titlepage_center_holding_a_float_is_no_figure (2204.08560)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: page 1 "Body text.", page 2 "X", "Univ", a rule, "Title"
+% engines: perl 0.8.8 and rust INT081C/ACMTEASER rounds 1-3: a stranded titlepage holding the logical-block,
+%   schema-invalid
+% expect:  0 errors, 0 warnings; logical-block.ltx_titlepage (figure, para of the lines) in the body; valid
+% status:  GREEN (ACMTEASER round 4). Guard perfect_kernel_batchacmteaser::a_stranded_titlepage_holding_a_float_is_unwrapped
+\documentclass{article}
+\begin{document}
+Body text.
+\begin{titlepage}
+\begin{center}
+\begin{figure}[ht]X\end{figure}
+Univ
+
+\rule{\linewidth}{1pt}
+
+Title
+\end{center}
+\end{titlepage}
+\end{document}

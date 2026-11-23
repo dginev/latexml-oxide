@@ -240,3 +240,82 @@ fn a_centred_cover_holding_a_float_is_a_logical_block() {
     assert_eq!(n, 0, "schema-invalid\n{xml}");
   }
 }
+
+/// sectioning-frontmatter/titlepage_stranded_*: a `{titlepage}` built after body content began, holding a float
+/// `ltx:para` cannot hold, is unwrapped (`demote_stranded_titlepage`): each run of its other children becomes a
+/// `para.ltx_titlepage`, the float stands in the body where it stood, a centred cover too holding one (a logical-block
+/// #244's demotion cannot take) stands marked `ltx_titlepage`; valid. The rows: only a float (hep-ph9605217), lines
+/// around a float (runs on both sides), the centred cover (stanli). Before (ACMTEASER rounds 2-3, SCHEMA_EXTENSIONS S14
+/// keeping the floats in the titlepage): a stranded titlepage, schema-invalid.
+#[test]
+fn a_stranded_titlepage_holding_a_float_is_unwrapped() {
+  const BODY: &str = r#"<para xml:id="p1">
+    <p>Body text.</p>
+  </para>
+"#;
+  let rows: &[(&str, &str)] = &[
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlepage_stranded_holding_only_a_float.tex"
+      ),
+      r#"  <figure inlist="lof" placement="htb" xml:id="S0.F1">
+    <tags>
+      <tag>Figure 1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">Figure 1</tag>
+    </tags>
+    <p>X</p>
+    <toccaption><tag close=" ">1</tag>c</toccaption>
+    <caption><tag close=": ">Figure 1</tag>c</caption>
+  </figure>
+</document>"#,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlepage_stranded_text_around_a_float.tex"
+      ),
+      r#"  <para class="ltx_titlepage" xml:id="p2">
+    <p>Line one.</p>
+  </para>
+  <figure inlist="lof" placement="htb" xml:id="S0.F1">
+    <tags>
+      <tag>Figure 1</tag>
+      <tag role="refnum">1</tag>
+      <tag role="typerefnum">Figure 1</tag>
+    </tags>
+    <p>X</p>
+    <toccaption><tag close=" ">1</tag>c</toccaption>
+    <caption><tag close=": ">Figure 1</tag>c</caption>
+  </figure>
+  <para class="ltx_titlepage" xml:id="p3">
+    <p>Line two.</p>
+  </para>
+</document>"#,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlepage_stranded_centred_cover_holding_a_float.tex"
+      ),
+      r#"  <logical-block class="ltx_titlepage">
+    <figure align="center" placement="ht" xml:id="fig1">
+      <p>X</p>
+    </figure>
+    <para xml:id="p2">
+      <p align="center">Univ</p>
+      <rule align="center" height="1.0pt" width="345.0pt"/>
+      <p align="center">Title</p>
+    </para>
+  </logical-block>
+</document>"#,
+    ),
+  ];
+  for (tex, rest) in rows {
+    let (log, xml) = convert_with(tex, None);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let at = xml.find(r#"<para xml:id="p1">"#).expect("body paragraph");
+    assert_eq!(xml[at..].trim_end(), format!("{BODY}{rest}"), "{xml}");
+    if let Some(n) = rng_error_count(&xml) {
+      assert_eq!(n, 0, "schema-invalid\n{xml}");
+    }
+  }
+}
