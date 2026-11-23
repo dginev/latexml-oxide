@@ -9593,18 +9593,16 @@ fn put_parbox_in_picture_is_inline_block_not_block() {
 /// Batch 56er (OXIDIZED_DESIGN #244): a box-forming construct (`\begin{center}`/
 /// minipage/`\parbox`) whose body auto-opens a `<para>` (a genuine block — here a
 /// centered `tabular` — sits mid-content), placed in a Block.model container
-/// (titlepage/quote/figure/abstract/inline-block), was renamed in place by
-/// `insert_block` to a schema-invalid `<logical-block>` (Block.model has no Para.class;
-/// LaTeXML-structure.rnc:585 etc.). Fix: when the context holds `<block>` but not the
-/// Para.class element, emit `<block>` and recursively demote — rename descendant
-/// logical-block/sectional-block → block (KEEPING the minipage `width`), unwrap
-/// descendant `<para>`. In place, no reorder (ltx_para/block/logical-block are all
-/// `display:block`). SHARED with Perl (TeX_Box.pool.ltxml:512), surpass like #240/#243.
-/// Witnesses: webquiz, tabularcalc, short-math-guide, heria (~12 s105 docs). Since 57f a
-/// minipage there starts the titlepage's paragraph (latex.ltx `\@iiiminipage` `\leavevmode`) and
-/// is an `<inline-logical-block>` in it; the demotion is exercised by the `{center}` body.
+/// (quote/figure/abstract/inline-block), was renamed in place by `insert_block` to a
+/// schema-invalid `<logical-block>` (Block.model has no Para.class); it is demoted to
+/// `<block>` (the figure case: `para_class_minipage_in_figure_demotes_keeping_its_width`).
+/// A titlepage admits the `<logical-block>` since SCHEMA_EXTENSIONS S14 (DG 2026-11-23,
+/// OXIDIZED_DESIGN #1146), so there the `{center}` body is Perl's logical-block, valid,
+/// each paragraph keeping its centring (the demotion dropped the `<para>`'s `align`: the
+/// centred "Abstract" line lost it). Witnesses of the demotion: webquiz, tabularcalc,
+/// short-math-guide, heria; of the titlepage case 1007.1771, 1507.04352, hep-ph9609212.
 #[test]
-fn para_class_box_in_titlepage_demotes_to_block_not_logical_block() {
+fn para_class_box_in_titlepage_is_a_logical_block() {
   let tex = "\\documentclass{article}\n\\begin{document}\n\\begin{titlepage}\n\
                \\begin{center}\n\
                \\noindent\\textbf{Abstract}\\par\nGiven a list of numbers:\n\
@@ -9612,23 +9610,15 @@ fn para_class_box_in_titlepage_demotes_to_block_not_logical_block() {
                Other effects are possible.\n\\end{center}\n\\end{titlepage}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // No Para.class element may survive under the <titlepage> (Block.model): the
-  // center capture is demoted to <block>, not left as <logical-block>.
-  assert!(
-    !xml.contains("<logical-block"),
-    "Para.class box must demote to <block>, not emit a schema-invalid <logical-block>:\n{xml}"
-  );
   latexml::util::test::assert_element(
     &xml,
     "titlepage",
     &[],
-    r#"<titlepage><block><p><text font="bold">Abstract</text></p><p align="center">Given a list of numbers:</p><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="center" border="b l r t"><Math mode="inline" tex="x" text="x" xml:id="m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></td><td align="center" border="b r t">1</td></tr></tbody></tabular><p align="center">Other effects are possible.</p></block></titlepage>"#,
+    r#"<titlepage><logical-block><para align="center" class="ltx_noindent" xml:id="p1"><p><text font="bold">Abstract</text></p></para><para xml:id="p2"><p align="center">Given a list of numbers:</p><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="center" border="b l r t"><Math mode="inline" tex="x" text="x" xml:id="m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></td><td align="center" border="b r t">1</td></tr></tbody></tabular><p align="center">Other effects are possible.</p></para></logical-block></titlepage>"#,
   );
-  // Content preserved (recall): the abstract text and the tabular survive the demotion.
-  assert!(
-    xml.contains("Abstract") && xml.contains("<tabular") && xml.contains("Other effects"),
-    "the box body (text + tabular) must be preserved through the demotion:\n{xml}"
-  );
+  if let Some(n) = latexml::util::test::rng_error_count(&xml) {
+    assert_eq!(n, 0, "schema-invalid\n{xml}");
+  }
 }
 
 /// The 56er demotion keeps a minipage's `width` and class (OXIDIZED_DESIGN #244): in a figure a

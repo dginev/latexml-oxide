@@ -6009,7 +6009,9 @@ container holding a Para.model-only element `<block>` can't take — a `<float>`
 sectioning unit (stanli, webquiz's TOC branch) — rather than stranding it as a fresh error.
 Sibling of #240's climb (which reorders content out of a `<para>`) and #243's inline
 demotion; this is the in-place BLOCK demotion. SHARED Perl bug, surpass on the
-schema-validity axis.
+schema-validity axis. A titlepage holds a `<logical-block>` since SCHEMA_EXTENSIONS S14 (#1146, DG 2026-11-23),
+so there Perl's logical-block stands, valid, its paragraphs keeping their `align` (the demotion's unwrapped `<para>`
+dropped it: 1007.1771, 1507.04352, hep-ph9609212).
 **Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19). Render-safe:
 `.ltx_para`/`.ltx_block`/`.ltx_logical-block` are all `display:block` (LaTeXML.css:205)
 with no distinguishing layout; the demotion preserves child order and attributes, dropping
@@ -6019,7 +6021,7 @@ pinoutikz, msc, listparskip, heria-proposal, fepslatex, kaytannollista, l2tabufr
 partially improved (l2tabu 2→1, webquiz 2→1, suanpan-l3 2→1 — residuals are separate
 clusters); stanli unchanged (float content, correctly skipped — no regression). Also fixes
 the `caption_in_inline_parbox` sibling (heria, inline-block context).
-**Guard**: `para_class_box_in_titlepage_demotes_to_block_not_logical_block`.
+**Guards**: `para_class_minipage_in_figure_demotes_keeping_its_width`, `para_class_box_in_titlepage_is_a_logical_block`.
 **Upstream**: not filed.
 
 ### 245. → #262 (Leading content-free nodes relocate past the frontmatter at `\end{document}` (Perl: frontmatter schema-invalid after a pagebreak))
@@ -24268,13 +24270,14 @@ and the rewrite's follower detach re-appended the keywords after the moved tease
 of them consecutive, share one `<ltx:titlepage class="ltx_titlepage_continued">` (`wrap_as_continued_titlepage`,
 cover_order.rs, the late abstract's cover wrapper): the top-matter box `\maketitle` prints them in, and frontmatter
 (the abstract, keywords; under sigchi-a the creators) may follow a titlepage but no body figure (LaTeXML-structure.rnc
-`document_model`: frontmatter, then body), and a titlepage admits a figure, table or float (SCHEMA_EXTENSIONS S14, DG
-2026-11-23; not offered upstream for now), so the output is schema-valid. The widening also keeps a float written
-inside `\begin{titlepage}` there, with the cover text after it (Perl's `autoClose` ends the titlepage at the float and
-sends that text to the body; hep-th0010274, 2403.02669, hep-ph9605217). Open: a `center` holding a float and cover
-lines in a titlepage now becomes insertBlock's `ltx:figure` candidate (TeX_Box.pool.ltxml:449-519; a titlepage admits a
-figure, not a logical-block), its lines figure panels (2204.08560; repro
-sectioning-frontmatter/titlepage_center_holding_a_float_is_no_figure, RED). Every path wraps, sigchi-a's and the no-`\maketitle` one included: each
+`document_model`: frontmatter, then body), and a titlepage admits a figure, table, float or logical-block
+(SCHEMA_EXTENSIONS S14, DG 2026-11-23; not offered upstream for now), so the output is schema-valid. The widening also
+keeps a float written inside `\begin{titlepage}` there, with the cover text after it (Perl's `autoClose` ends the
+titlepage at the float and sends that text to the body; hep-th0010274, 2403.02669, hep-ph9605217). The logical-block
+keeps insertBlock's candidate order (TeX_Box.pool.ltxml:449-519) in a titlepage as in the body: a `center` holding a
+logo figure and the cover lines is a logical-block, not a figure whose panels are the lines (2204.08560), and a box of
+paragraphs there is Perl's logical-block, not #244's `<block>` demotion, which dropped each `<para>`'s `align`
+(1007.1771, 1507.04352, hep-ph9609212). Every path wraps, sigchi-a's and the no-`\maketitle` one included: each
 lands the teasers among the frontmatter. The figures keep their `xml:id`, number, labels, `inlist` and caption; the
 HTML shows the title beside the continued titlepage (LaTeXML-structure-xhtml.xsl, the `ltx:title` template), the
 teasers once, in place, listed in a list of figures and `\ref`-ed across a split. This supersedes the 2026-07-13 rule of
@@ -24285,7 +24288,10 @@ spine.
 `\ref`-ed 6+ times).
 **Guards** `perfect_kernel_batchacmteaser::acmart_teaserfigure_stands_where_maketitle_prints_it` (repros
 class-bindings/acmart_teaserfigure_after_authors, acmart_teaserfigure_sigchia_after_title,
-acmart_teaserfigure_without_maketitle), `cluster_cli::split_release_core_after_bib::acmart_teaser_before_abstract_and_keywords`.
+acmart_teaserfigure_without_maketitle), `cluster_cli::split_release_core_after_bib::acmart_teaser_before_abstract_and_keywords`;
+`perfect_kernel_batchacmteaser::{a_float_in_a_titlepage_stays_in_it, a_centred_cover_holding_a_float_is_a_logical_block}`
+(repros sectioning-frontmatter/titlepage_env_keeps_its_float, titlepage_center_holding_a_float_is_no_figure),
+`perfect_kernel_batch56::para_class_box_in_titlepage_is_a_logical_block`.
 
 ### 1147. `\backmatter` closes the open part and chapter (BACKMATTERPART)
 

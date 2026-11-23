@@ -586,9 +586,11 @@ element titlepage { titlepage_attributes, titlepage_model }
 titlepage_attributes = Sectional.attributes
 
 ## Content model for \elementref{titlepage}.
-## (latexml-oxide) figure|table|float added: a float the title block prints (acmart's teaserfigure in
-## \maketitle's top-matter box), so frontmatter may follow it (SCHEMA_EXTENSIONS S14).
-titlepage_model = (FrontMatter.class | SectionalFrontMatter.class | Block.class | figure | table | float)*
+## (latexml-oxide) figure|table|float|logical-block added: a float the title block prints (acmart's teaserfigure
+## in \maketitle's top-matter box), so frontmatter may follow it; and the logical-block insertBlock picks for a
+## box of paragraphs (a centred cover, its logo figure), as in the body (SCHEMA_EXTENSIONS S14).
+titlepage_model =
+  (FrontMatter.class | SectionalFrontMatter.class | Block.class | logical-block | figure | table | float)*
 
 #======================================================================
 # Table(s) of Contents

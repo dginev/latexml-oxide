@@ -206,3 +206,37 @@ fn a_float_in_a_titlepage_stays_in_it() {
     assert_eq!(n, 0, "schema-invalid\n{xml}");
   }
 }
+
+/// sectioning-frontmatter/titlepage_center_holding_a_float_is_no_figure (2204.08560's thesis cover): a `center` in a
+/// titlepage holding a float and the cover lines is insertBlock's `ltx:logical-block`, the logo figure and a paragraph
+/// of the lines in it, as in the body (TeX_Box.pool.ltxml:449-519, the first candidate holding every node that the
+/// titlepage admits: SCHEMA_EXTENSIONS S14 admits it beside the floats, DG 2026-11-23), and valid. Before (S14 with
+/// figures only): an `ltx:figure` took the capture and the cover lines became its panels.
+#[test]
+fn a_centred_cover_holding_a_float_is_a_logical_block() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlepage_center_holding_a_float_is_no_figure.tex"
+    ),
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let at = xml.find("<titlepage").expect("titlepage");
+  let end = at + xml[at..].find("</titlepage>").expect("closed") + "</titlepage>".len();
+  let expected = r#"<titlepage>
+    <logical-block>
+      <figure align="center" placement="ht" xml:id="fig1">
+        <p>X</p>
+      </figure>
+      <para xml:id="p1">
+        <p align="center">Univ</p>
+        <rule align="center" height="1.0pt" width="345.0pt"/>
+        <p align="center">Title</p>
+      </para>
+    </logical-block>
+  </titlepage>"#;
+  assert_eq!(&xml[at..end], expected, "{xml}");
+  if let Some(n) = rng_error_count(&xml) {
+    assert_eq!(n, 0, "schema-invalid\n{xml}");
+  }
+}

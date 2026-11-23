@@ -644,8 +644,9 @@ pub(super) fn insert_block_as(
     // holds `<block>` but not `final_tag`, emit a schema-valid `<block>` and recursively
     // demote the Para.model content (surpass #244) — a box-forming construct
     // (`\begin{center}`/minipage/`\parbox`) whose body auto-opened a `<para>` when a
-    // genuine block sat mid-content, placed in a Block.model container (titlepage,
-    // quote, figure, abstract, inline-block). Demotion is IN PLACE (no reorder; render:
+    // genuine block sat mid-content, placed in a Block.model container (quote, figure,
+    // abstract, inline-block; a titlepage holds the logical-block, SCHEMA_EXTENSIONS
+    // S14). Demotion is IN PLACE (no reorder; render:
     // ltx_para/block/logical-block all `display:block`, only a redundant `<para>`
     // grouping + its auto-`xml:id` drop). The #240 `ltx:para` climb above already moved
     // the capture to an ancestor that holds `final_tag`, so this branch is false there

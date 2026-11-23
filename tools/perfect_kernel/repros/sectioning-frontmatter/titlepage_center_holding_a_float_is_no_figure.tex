@@ -1,13 +1,13 @@
 % mechanism: a `center` in a titlepage holding a float and cover lines is captured by insertBlock (Perl
 %   TeX_Box.pool.ltxml:449-519, block_insertion.rs): its candidates are block, logical-block, sectional-block, figure, the
-%   first that holds every node AND is allowed in the context. Since SCHEMA_EXTENSIONS S14 a titlepage admits a figure
-%   but still no logical-block, so the capture becomes an `ltx:figure` and the cover lines its panels
+%   first that holds every node AND is allowed in the context. A titlepage admits the logical-block beside the floats
+%   (SCHEMA_EXTENSIONS S14, DG 2026-11-23), so the capture is the logical-block, as in the body
 % witness: 2204.08560 (a thesis cover: logo figure, university, title, author lines in one `center`)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "X", "Univ", a rule, "Title" on the title page; "Body."
-% engines: rust INT081C and ACMTEASER commit 1: titlepage > logical-block > (figure, para); ACMTEASER S14 commit: the
-%   whole capture a `figure class="ltx_panels_gallery"`; perl not run
-% expect:  0 errors, 0 warnings; the cover lines are no figure panels (titlepage > logical-block > figure, para)
-% status:  RED (ACMTEASER S14; options in the ACMTEASER round-2 report). No guard
+% engines: rust INT081C and ACMTEASER commit 1: titlepage > logical-block > (figure, para), schema-invalid; ACMTEASER
+%   S14 with figures only: the whole capture a `figure class="ltx_panels_gallery"`; perl not run
+% expect:  0 errors, 0 warnings; the cover lines are no figure panels (titlepage > logical-block > figure, para); valid
+% status:  GREEN (ACMTEASER round 3). Guard perfect_kernel_batchacmteaser::a_centred_cover_holding_a_float_is_a_logical_block
 \documentclass{article}
 \begin{document}
 \begin{titlepage}
