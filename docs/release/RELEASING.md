@@ -38,7 +38,7 @@ tag X.Y.Z  →  release.yml ─┬─→ GitHub Release (public)
 
 | # | Target | How | Doc |
 |---|---|---|---|
-| 1 | **GitHub Release** (15 assets) | tag push → `release.yml` | this file |
+| 1 | **GitHub Release** (17 assets) | tag push → `release.yml` | this file |
 | 2 | **Container images** (ghcr.io) | **automatic**: `release.yml`'s `containers` job calls `docker.yml` once the Release publishes | "Container images (GHCR)" below |
 | 3 | **Homebrew tap** | manual: `dginev/homebrew-tap` → `./update-formula.sh X.Y.Z`, commit, push | that repo's README |
 | 4 | **crates.io** (8 crates) | manual: `cargo publish --workspace` | [`CRATES_IO_PUBLISH.md`](CRATES_IO_PUBLISH.md) |
@@ -126,7 +126,7 @@ pulling a binary — has to be **published** so its assets are fetchable. Publis
 the draft, but **keep `prerelease: true`**:
 
 ```bash
-gh release edit X.Y.Z-rcN --prerelease --latest=false
+gh release edit X.Y.Z-rcN --draft=false --prerelease --latest=false
 ```
 
 A published prerelease is fully downloadable — by tag URL, by
@@ -577,8 +577,8 @@ settings.
     git push origin X.Y.Z
     ```
 
-5. **Watch the workflow.** `Release` on the Actions tab. It runs ten
-   jobs: `dumps` (TL-window generation) → `notices` (assembles THIRD-PARTY-NOTICES
+5. **Watch the workflow.** `Release` on the Actions tab. It runs eleven
+   jobs: `prepare` → `dumps` (TL-window generation) → `notices` (assembles THIRD-PARTY-NOTICES
    once, handed to every leg) → `build-macos` (Apple Silicon, `macos-15`) ‖
    `build-macos-intel` (Intel, `macos-15-intel`) ‖ `build-linux-arm64`
    (`ubuntu-22.04-arm`) ‖ `build-windows` (`windows-latest`) ‖ `windows-ci` (the
@@ -586,13 +586,16 @@ settings.
    `require_guards: true`: 3 required shards + 8 `perfect_kernel_*` guard shards,
    every one must pass) ‖ `ci` (the full `CI.yml` suite on Linux and macOS,
    `full: true`) → `release` (Linux x86_64 tarball + `.deb`, then collects every
-   other leg's artifacts and attaches all **15** assets) → `containers` (final
+   other leg's artifacts and attaches all **17** assets) → `containers` (final
    tags only; see "Container images (GHCR)"). The Intel-macOS leg's fat-LTO `maxperf` build on the
    slower `macos-15-intel` runner is the long pole (up to ~120 min budget).
 
-6. **Nothing — it auto-publishes.** The workflow publishes a **public**
-   Release directly (`release.yml` `draft: false`), so a tag push is the last
-   manual step. This is safe because every asset is gated in-CI before publish:
+6. **A final tag auto-publishes; an RC stays a draft.** For a bare `X.Y.Z` tag
+   the workflow publishes a **public** Release directly (`release.yml` sets
+   `draft: false` for a tag without a `-`), so a tag push is the last manual
+   step. An `X.Y.Z-rcN` tag publishes a **draft** prerelease, which stays
+   unpublished until the manual publish in "Publishing an RC for external
+   download" above. This is safe because every asset is gated in-CI before publish:
    static-linkage checks (`ldd`/`otool`/`dumpbin`), the size budget, a code-signature
    + `--version` launch smoke on both macOS legs, and on all five legs a real
    conversion of `hello.tex` by the shipped binary with `resources/` moved aside

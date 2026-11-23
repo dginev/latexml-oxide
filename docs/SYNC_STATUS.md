@@ -55,7 +55,7 @@ Rules that keep this file honest and mergeable:
   `7c2b9ef3b76` (#965: Split frees its pages, release checks; #966: the version); its tag was cut and its release
   run cancelled (unused), and it is re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
   CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT, mimalloc 2.3.2) and SERSTREAM (the core result serialized to
-  disk; Nasser's whole book converts, 1,609 s against lualatex's 3,523 s for two passes). Main stays the release line until 0.8.0
+  disk; issue 777's whole book converts, 1,549 s on main 4a5aae128b2 against lualatex's 3,523 s for two passes). Main stays the release line until 0.8.0
   final; the reviewed post-release branches (COPYROUTE, ENCURL) merge after it. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.
 - **Where it stood (2026-11-18):** the frontmatter campaign merged as PR #895 (`aeda3db4e47`, 2026-11-17; DG's 39-paper
   showcase review in runs 389–392, a 300-paper acceptance A/B, and a performance audit whose XSLT-key cost was cut to
@@ -983,16 +983,16 @@ Rules that keep this file honest and mergeable:
     namespace comes out `<default:section xmlns:default=…>` (base too, cosmetic, foreign XML only); 3
   - SERSTREAMUNSPLIT — an unsplit run and `--nopost` output still build the whole core XML as one String
     (`Document::serialize_to_string`, `converter.rs` `serialize_result`); the same sink (`serialize_to_file`) could write
-    them to `--dest` or to post's file input. Witness: any unsplit document past ~1 GiB of core XML (Nasser's whole
+    them to `--dest` or to post's file input. Witness: any unsplit document past ~1 GiB of core XML (issue 777's whole
     book unsplit); 2
   - RENDERFLEETBIG (post-0.8.0) — a render worker decodes the whole render database at attach: its peak is ~42 MB +
-    4.85 × the db (measured on Nasser k600/k2400; the estimate is `64 MiB + 6 × db`, `render_workers.rs`
-    `worker_estimate_bytes`). On Nasser's whole book (115,519 pages, db ≈ 600 MB) one worker needs ~3.7 GB, so under
+    4.85 × the db (measured on issue 777's k600/k2400 slices; the estimate is `64 MiB + 6 × db`, `render_workers.rs`
+    `worker_estimate_bytes`). On issue 777's whole book (115,519 pages, db ≈ 600 MB) one worker needs ~3.7 GB, so under
     `--max-memory=8192` with the parent at ~4.3 GB the fleet affords 0 workers and the pages render serially. Lever:
     attach the db lazily (point lookups per page), so a worker's footprint follows its page range; an `ObjectDB`
     redesign — measure k2400 and the whole book before and after; 2
   - SPILLKEEP (post-0.8.0) — render workers keep their spilled pages (`remove_spilled: false`) until post ends, since
-    the serial fallback re-renders the whole document: ~+2.7 GB of disk on Nasser's whole book. Freeing a finished
+    the serial fallback re-renders the whole document: ~+2.7 GB of disk on issue 777's whole book. Freeing a finished
     worker's pages needs a fallback that re-renders only the failed ranges (`render_workers.rs` `parallel_render`'s
     fold); 1
   - RENDERPLATFORMS (verify before 0.8.0 final) — the automatic render fleet is on in the `latexml_oxide` binary on
@@ -1011,7 +1011,7 @@ Rules that keep this file honest and mergeable:
     directory output (the cache's `STALE_TMP_AGE` sweep reclaims the cache's; zips skip dotfiles): the parent could
     sweep a dead worker's temps after abandoning the fleet. Also ImageMagick's PNG `date:*` chunks make raster bytes
     differ run to run; 1
-  - SPILLSEG (post-0.8.0) — output can depend on where the streaming core spills: Nasser's 2,400-problem slice at
+  - SPILLSEG (post-0.8.0) — output can depend on where the streaming core spills: issue 777's 2,400-problem slice at
     `--max-memory=3700` (RSS ≈ the 925 MB watermark) wraps `\date` in an extra `<span id="id2" class="ltx_text">` when
     pass 1 stages 7 segments instead of 5; pinning `LATEXML_SPILL_AT_MIB` makes two builds agree. Find the yield-point
     dependence (an id counter or a frame crossing a segment boundary); 2
@@ -1082,7 +1082,7 @@ Rules that keep this file honest and mergeable:
     `v2` feature). Witness: 1502.06095 crashed twice under full-width A/B load (mimalloc's small free list holding a
     Token-shaped value; an indirect call through a corrupted pointer), ~0.3 % of loaded runs, 0 of ~370 quiet runs and 0
     ASan reports on the system allocator; the fleet's only unexplained SIGSEGV in run 397 is 2212.05990 (never
-    reproduced). A render worker's later SIGSEGV on 2.3.2 (Nasser's 2,400-problem slice under load; ip in
+    reproduced). A render worker's later SIGSEGV on 2.3.2 (issue 777's 2,400-problem slice under load; ip in
     the glibc heap) is a different class, fixed by the watchdog ending through `_exit` (#973); the 1502.06095 crash in
     mimalloc's own heap during digestion stays unexplained. Re-measure 3.x against 2.3.2 (instructions, peak RSS, a
     loaded 1502.06095 loop) before switching; 2
