@@ -262,13 +262,6 @@ fn ams_gather_bindings() -> Result<()> {
   ams_rearrangeable_bindings(template, attrs, false)
 }
 
-/// The columns whose amsmath template sets an empty Ord before the cell (`\displaystyle{{}##}`): the right cell of
-/// each pair in the align family (amsmath.sty:2347-2354 `\align@preamble`), `{aligned}`/`{alignedat}` (:1483-1486) and
-/// `{split}` (:2424-2425) — `"odd"`; every line of a `{multline}` (:2580) or mathtools' `{multlined}` — `"all"`. A
-/// leading sign there is binary in TeX; the math parser reads it so where the cell continues the one before it
-/// (`latexml_math_parser::util`, `continues_the_cell_before`; issue 991). Internal: never serialized.
-const ORD_CELLS: &str = "_ord_cells";
-
 /// Perl: \@ams@align@bindings — repeated pairs of columns
 fn ams_align_bindings() -> Result<()> {
   use latexml_core::alignment::{cell::Cell, template::TemplateConfig};
@@ -305,7 +298,13 @@ fn ams_align_bindings() -> Result<()> {
   let mut attrs = HashMap::default();
   attrs.insert(String::from("class"), String::from("ltx_eqn_align"));
   attrs.insert(String::from("colsep"), String::from("0pt"));
-  attrs.insert(String::from(ORD_CELLS), String::from("odd"));
+  // `_ord_cells` (internal, never serialized): the columns whose amsmath template sets an empty Ord before the cell
+  // (`\displaystyle{{}##}`) — the right cell of each pair in the align family (amsmath.sty:2347-2354
+  // `\align@preamble`), `{aligned}`/`{alignedat}` (:1483-1486) and `{split}` (:2424-2425), `"odd"`; every line of a
+  // `{multline}` (:2580) or mathtools' `{multlined}`, `"all"`. A leading sign there is binary in TeX; the math parser
+  // reads it so where the cell continues the one before it (`latexml_math_parser::util`, `continues_the_cell_before`;
+  // issue 991).
+  attrs.insert(String::from("_ord_cells"), String::from("odd"));
   // align is multi-column: redirect `\label` to preserve labels= on
   // label-only cells (Rust workaround for skippable cells). See
   // ams_rearrangeable_bindings.
@@ -350,7 +349,7 @@ fn ams_aligned_bindings() -> Result<()> {
   let mut attrs = HashMap::default();
   attrs.insert(String::from("name"), String::from("aligned"));
   attrs.insert(String::from("colsep"), String::from("0pt"));
-  attrs.insert(String::from(ORD_CELLS), String::from("odd"));
+  attrs.insert(String::from("_ord_cells"), String::from("odd"));
   ams_alignment_bindings(template, attrs);
   // Perl: DefMacro('\lx@alignment@row@before', '');
   // Perl: DefMacro('\lx@alignment@row@after',  '');
@@ -1493,7 +1492,7 @@ LoadDefinitions!({
     if let Some(name_arg) = kv.get_value("name") {
       let name = name_arg.to_attribute();
       if matches!(name.as_str(), "multline" | "multlined") {
-        attrs.insert(String::from(ORD_CELLS), String::from("all"));
+        attrs.insert(String::from("_ord_cells"), String::from("all"));
       }
       attrs.insert(String::from("name"), name);
     }
@@ -3108,8 +3107,8 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
   // Rename equation → equationgroup
   let mut eqgroup = document.rename_node(equation.clone(), "ltx:equationgroup", false)?;
   // (its cells keep the empty Ord the `{aligned}` template set before them)
-  if let Some(ord_cells) = array.get_attribute(ORD_CELLS) {
-    eqgroup.set_attribute(ORD_CELLS, &ord_cells)?;
+  if let Some(ord_cells) = array.get_attribute("_ord_cells") {
+    eqgroup.set_attribute("_ord_cells", &ord_cells)?;
   }
   // `xml:id` is stored namespaced (local name "id"); `get_attribute("xml:id")`
   // always returns None (libxml `xmlGetProp` matches the literal name). Read it
