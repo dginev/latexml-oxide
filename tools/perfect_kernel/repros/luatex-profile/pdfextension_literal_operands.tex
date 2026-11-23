@@ -1,14 +1,14 @@
 % mechanism: pdftex.rs read_pdfextension (luatex profile): `\pdfextension literal` reads \pdfliteral's operands with
 %   LuaTeX's modes ([shipout] [direct|page|text|raw|origin] <general text>; luatex85.sty:69 defines \pdfliteral as it);
-%   it read one token, so "iteral…" and the literal's PDF code leaked as text. A keyword LuaTeX does not know is a
-%   Warning and stays text, as lualatex's "unexpected use of \pdfextension" leaves it.
+%   it read one token, so "iteral…" and the literal's PDF code leaked as text. A keyword LuaTeX does not know is an
+%   Error and stays text, as lualatex's "! unexpected use of \pdfextension".
 % witness: TL manuals mfirstuc/mfirstuc-manual (accsupp's ActualText spans: "iteralpage/Span«…»BDC…"), hologo's
 %   mirrored-E fallback (bxwareki, textcsc-documentation, doc-modeles-factures-belges-assocs before the font mirror)
 % oracle:  lualatex -no-shell-escape: the literals put no text on the page; 1 error (! unexpected use of \pdfextension),
 %          and \showbox of line 2 holds "G", "bogus H", "I" and the two literals (text, origin)
 % engines: rust=GREEN perl=n/a (Perl LaTeXML has no luatex profile) (2026-11-22)
 % preload: [rawstyles,rawclasses,luatex]latexml.sty
-% expect:  0 errors, 1 warning (unexpected:\pdfextension); "ABC D EF" and "Gbogus HI"
+% expect:  1 error (unexpected:\pdfextension), 0 warnings, as lualatex; "ABC D EF" and "Gbogus HI"
 % status:  RED ("Aiteralq -1 0 0 1 0 0 cmBiteral page QC iteral direct0 gD iteralpage/Span«…»BDCEiteralpageEMCF")
 %          -> GREEN
 \documentclass{article}

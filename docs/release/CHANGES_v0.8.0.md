@@ -1555,7 +1555,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     mfirstuc-manual, glossaries-user, datatool-user and 7 more TeX Live manuals; pdfrender's "olorstackpop" 59 times
     in xfakebold-doc). Every keyword LuaTeX knows (`literal` with its `text`/`raw`/`origin` modes, `colorstack`,
     `setmatrix`, `obj`, `annot`, `startlink`, `outline`, `dest`, `info`, `catalog`, `mapline`, …) now reads the
-    operands pdfTeX's `\pdf<keyword>` reads; an unknown one is a Warning. `\pdffeedback` reads its operands too
+    operands pdfTeX's `\pdf<keyword>` reads; an unknown one is an Error, as in lualatex. `\pdffeedback` reads its operands too
     (`colorstackinit` answers a new stack, as `\pdfcolorstackinit`). pdfTeX's `\pdfcolorstack <n> current` no
     longer swallows the text after it, `\pdfthread`/`\pdfstartthread` read their thread spec and `\pdfcatalog`'s
     `openaction` its whole action. A font operand (`\pdfincludechars`, `\pdffontattr`, `\pdffontname`, …) is read as

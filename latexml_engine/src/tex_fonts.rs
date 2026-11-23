@@ -715,10 +715,6 @@ fn install_font_def(
   Ok(())
 }
 
-/// The font identifier of the current font: what `\the\font` yields and what
-/// the `<font>` `\font` denotes in `\fontdimen`, `\hyphenchar`, `\fontname`
-/// (tex.web §577 `scan_font_ident`, §465: `cur_font`).
-///
 /// tex.web §577 `scan_font_ident`: `<font>` = `<fontdef token>` | `\font` | `<font range><4-bit number>`, after the
 /// next non-blank non-call token. The identifier is read WITH expansion, so `\fontdimen8 \ifx#1\displaystyle
 /// \textfont\else…\fi 3` selects `\textfont` and the conditional completes. Perl reads it unexpanded
@@ -761,6 +757,10 @@ pub fn read_font_ident() -> Result<Token> {
   }
 }
 
+/// The font identifier of the current font: what `\the\font` yields and what
+/// the `<font>` `\font` denotes in `\fontdimen`, `\hyphenchar`, `\fontname`
+/// (tex.web §577 `scan_font_ident`, §465: `cur_font`).
+///
 /// Perl remembers only the last `\font`-defined identifier invoked
 /// (`current_FontDef`, FontDef.pm:42, "HACK") and otherwise answers the
 /// default `\lx@default@font` (TeX_Macro.pool.ltxml:272,

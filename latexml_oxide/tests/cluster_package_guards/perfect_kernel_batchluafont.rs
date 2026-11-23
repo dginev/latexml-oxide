@@ -117,7 +117,7 @@ fn batchluafont_interpreter_end_says_how() {
 
 /// `\pdfextension literal` reads `\pdfliteral`'s operands with LuaTeX's modes (`[shipout]
 /// [direct|page|text|raw|origin] <general text>`): the literals leave no text, as under lualatex. A keyword LuaTeX does
-/// not know is a Warning and stays text, as lualatex's "unexpected use of \pdfextension" leaves it. Base: one token
+/// not know is an Error and stays text, as lualatex's "! unexpected use of \pdfextension". Base: one token
 /// was read, leaking "iteralq -1 0 0 1 0 0 cm", accsupp's "iteralpage/Span«/ActualText(UTF-8)»BDC", and `text{0 g}`
 /// was `Error:expected:{`. Witness TL manual mfirstuc/mfirstuc-manual (accsupp spans), hologo's mirrored-E fallback
 /// (bxwareki). Distinct from the keyword guard: one keyword's modes, and the unknown keyword.
@@ -125,9 +125,9 @@ fn batchluafont_interpreter_end_says_how() {
 #[test]
 fn batchluafont_pdfextension_literal_reads_its_operands() {
   let (log, xml) = convert_with(repro!("pdfextension_literal_operands"), LUATEX);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert!(
-    log.contains("Warning:unexpected:\\pdfextension unexpected use of \\pdfextension"),
+    log.contains("Error:unexpected:\\pdfextension unexpected use of \\pdfextension"),
     "{log}"
   );
   assert!(xml.contains("<p>ABC\nD EF</p>"), "{xml}");

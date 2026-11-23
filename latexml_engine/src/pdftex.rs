@@ -928,7 +928,8 @@ fn read_open_action() -> Result<()> {
 /// defines pdfTeX's `\pdf<keyword>` as it): each keyword's operands are read as `\pdf<keyword>`'s, with LuaTeX's
 /// additions (literal modes `raw`/`text`/`origin`, `lateliteral`, `obj … uncompressed`, `outline useobjnum`,
 /// `linkstate`; luatex-modifications.tex:611, :635). Read here, never through `\pdf<keyword>`, which luatex85 makes
-/// `\pdfextension <keyword>` again. An unknown keyword is a Warning and stays text, as in lualatex. xfakebold-doc
+/// `\pdfextension <keyword>` again. An unknown keyword is an Error and stays text, as lualatex's (extensions.c:312
+/// `tex_error("unexpected use of \pdfextension")`). xfakebold-doc
 /// (pdfrender's `\pdfcolorstack`) leaked "olorstackpop" text when only `literal` was known.
 pub fn read_pdfextension() -> Result<()> {
   const KEYWORDS: &[&str] = &[
@@ -991,8 +992,8 @@ pub fn read_pdfextension() -> Result<()> {
     },
     // save, restore, endlink, endthread
     Some(_) => {},
-    // lualatex: "unexpected use of \pdfextension", and the keyword is read again as text.
-    None => Warn!(
+    // lualatex errs ("! unexpected use of \pdfextension") and the keyword is read again as text.
+    None => Error!(
       "unexpected",
       "\\pdfextension",
       "unexpected use of \\pdfextension: not a LuaTeX extension keyword"

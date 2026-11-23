@@ -21108,8 +21108,8 @@ component) takes the next free `xN.<ext>`. Under the luatex profile `\pdfextensi
 `text`/`raw`/`origin`, `lateliteral`, `obj … uncompressed`, `outline useobjnum`, `linkstate`; LuaTeX manual
 luatex-modifications.tex:592-907), through the same Rust readers and never through `\pdf<keyword>`, which
 luatex85.sty:69-92 defines as `\pdfextension <keyword>`; it read one token, so the rest leaked as text (xfakebold-doc's
-"olorstackpop", mfirstuc-manual's "iteralpage/Span«…»BDC"). An unknown keyword is a `Warning:unexpected:\pdfextension`
-and stays text, as lualatex's "unexpected use of \pdfextension" leaves it. `\pdffeedback colorstackinit` and
+"olorstackpop", mfirstuc-manual's "iteralpage/Span«…»BDC"). An unknown keyword is an `Error:unexpected:\pdfextension`
+and stays text, as lualatex errs ("! unexpected use of \pdfextension", extensions.c:312) and leaves it. `\pdffeedback colorstackinit` and
 `ximagebbox` answer as `\pdfcolorstackinit` and `\pdfximagebbox`, and `pageref`/`xformname`/`fontname`/`fontobjnum`/
 `fontsize` read their operand (pdfrender's `\pdfcolorstackinit page direct{…}` leaked "page direct1 w" in
 xfakebold-doc). A font operand (`includechars`, `fontattr`, `\pdffeedback fontname`/`fontobjnum`/`fontsize`, and
@@ -21121,7 +21121,10 @@ includechars ` with a trailing space, which one token read as the font (4 Errors
 `\pdfincludechars\font{abc}\pdffontattr\font{/A 1}`; lualatex 0). The pdfTeX readers follow pdftex-syntax.tex
 where Perl pdfTeX.pool does not: `\pdfcolorstack <n> current` reads no text (as `pop`; pdflatex), `\pdfthread` and
 `\pdfstartthread` read a thread spec, `\pdfcatalog … openaction` reads the whole action spec, and the spaces after a
-`\pdfdest` spec are skipped. **Witnesses.** TL manuals ijsra (its class's images reached as
+`\pdfdest` spec are skipped. `\pdfthread` is new relative to Perl, which only names it in a comment
+(pdfTeX.pool.ltxml:181-182); it is pdfTeX's primitive (pdftex.web `new_annot_whatsit`, `scan_thread_id`), and the latex
+dump gains the one entry it implies: expl3's `\tex_pdfthread:D`, an alias of it, as pdflatex's own format holds. These
+pdfTeX-side readings are offered to Perl as a patch. **Witnesses.** TL manuals ijsra (its class's images reached as
 `../../../tex/latex/…`, written beside `--dest`; now `x1.png`, `x2.png`), newpax (unchanged). **Guards.**
 `cluster_package_guards::perfect_kernel_batchseclua::{batchluaexec_refused_program_answers_as_lualatex,
 batchluaexec_refused_then_failed_is_an_error, batchluaexec_refusal_budget_per_severity,
