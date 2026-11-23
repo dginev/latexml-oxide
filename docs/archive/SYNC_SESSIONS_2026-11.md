@@ -2585,3 +2585,18 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
 
 - QA85 — DONE by #874 (`f59dbc1cac4`): `parity/ORGANIZATION.md` covers all eight workspace crates (checked 2026-11-23).
 - FMTCACHE — folded into FMTCACHE-PRUNE (the same task, listed twice).
+
+## v0.8.0 rc3 bundle — rows fixed (2026-11-23)
+
+- LOOP2302 — fixed (DG 2026-11-23): not a loop; ar5iv.sty's `iflimit` is the front ends' `RUNAWAY_IF_LIMIT` (480M, was
+  48M; the count accumulates per document). 2302.07562 (59 pgfplots inputs) hit `IfLimit` at 120 s and converts in
+  128 s with 0 errors. Guard `perfect_kernel_batch61::ar5iv_profile_sets_its_runaway_limits`; OD #1080.
+- XSLTDEPTH — fixed by PICNEST (no change to the XSLT depth cap): in a picture the #47 explicit-space keep holds only
+  after a box or inline content (0905.4216: depth 403 → 27); a pgf path closes an auto-opened `\put` chain (OD #1138;
+  1909.06819: 214 → 24). Both lose `Fatal:post:convert`; math0406190, cs0608104 and 0801.0882 keep their spaces. Guards
+  `pstricks_drawing::{a_control_space_between_objects_keeps_the_picture_flat, a_control_space_after_text_in_a_put_is_kept}`,
+  `perfect_kernel_batch54::a_put_in_a_tikzpicture_closes_before_the_next_path`. Residual: row R PICKILLGLUE.
+- CRASH397L's 2411.07667 — fixed by LISTINLINE: an inline listing runs listings.sty's `\lst@Init\relax … \lst@DeInit`
+  bracket (OD #1139, KNOWN_PERL_ERRORS #1313), and realboxes reaches `\color@box`/`\color@fb@x`; 7 Errors and 2
+  Fatals → 0 Errors. Guards `perfect_kernel_batchlistinline::*`. Residuals: row R REALBOXBG, LSTDISPLAYINIT, LSTTEXRECON.
+

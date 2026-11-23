@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (551 items on 2026-11-23: 547 open, weight 1057, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (554 items on 2026-11-23: 550 open, weight 1071, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -189,7 +189,6 @@ Rules that keep this file honest and mergeable:
   - LLGL — llncs `\institute` legend line glued into the last institute (revP23c l5); 1
   - AFNR — two identical `\affiliation{…\footnote{…}}` write two pubnotes, no Warning (`aastex6_footnote_in_repeated_affiliation_doubled_red`; AAS1); 1
   - AAGR — AAS1's guard: a repeated affiliation content that must NOT be reused (`\stepcounter`/`\footnotemark`, A A B A) (revAAS1 NIT); 1
-  - LOOP2302 — 2302.07562 loops (`Fatal:Timeout:IfLimit` at 48M conditionals) on int169b and int170a alike. DG 2026-11-23: raise ar5iv's IfLimit to the CLI's 480M — not a loop: the counter is cumulative per document (`conditional.rs` ~:192, Perl `$LaTeXML::IF_LIMIT`) and 2302.07562 inputs 59 pgfplots files of ~100 KB; rc2 still `Fatal:Timeout:IfLimit` at 125 s; 3
   - CSSPORT — The ar5iv-css port: PR #54 merged 2026-11-05; the mirror of latexml-oxide's later `LaTeXML.css` fixes in ar5iv-css #55, #56 (#841's aligned columns), #57 (#844's verbatim, display runs, ORCID), open; 3
   - MHCHEM — a semantic mhchem binding (DG 2026-11-13: deferred, planned; Perl ships none; stage 1 merged as #850, its rest MHCHEM-BM; #837 prescripts and #838 arrow heads fixed the raw path's isotopes and `<=>`): option (a) of study `agent_reports/2026-11-13_MHCHEM0_report.md` —
     a thin binding over mhchem's output layer (`\__mhchem_output_coreFive:nnnnnnn`, mhchem.sty:2774; amounts, `+`, arrows, bonds), keeping its parser:
@@ -548,8 +547,6 @@ Rules that keep this file honest and mergeable:
     two-counter id cycle (`\numberwithin{section}{equation}` where the class nests equation ids in section's →
     Fatal:Timeout:PushbackLimit; IDCYCLE, loud, no witness): record each counter's id-within and walk it in
     `define_counter_ids`; 3
-  - XSLTDEPTH — libxslt's recursion cap 1000 (`latexml_post/src/xslt.rs:30`, Perl's `max_depth(1000)`) fails post on
-    deeply nested XML (0905.4216, 1909.06819: `post/convert`). rc2 2026-11-23: both still `Fatal:post:convert`. 0905.4216 is Rust-only — a control space `\ ` inside `{pspicture}` makes an `<ltx:text>` that the next `\psline` nests a new `<picture>` in (Perl flat); 1909.06819 SHARED (`\put` in a tikz `\foreach` nests per `\put`, ours adds a `<p>` per level). Batch PICNEST; do not raise the depth cap; 3
   - CLUSTFIXR — run 397's Error clusters' leftovers (#921-#923): `\documentstyle[PASJadd]{PASJ95}`'s `\draft`
     (PASJadd.sty:46; astro-ph0003107, astro-ph0002344; ~10 census papers): a small PASJadd binding or the shipped files
     read raw; pasj00's `\Published{}` (pasj00.cls:113; 0712.0877, astro-ph0701328) → `\lx@add@date[role=published]` with
@@ -575,7 +572,24 @@ Rules that keep this file honest and mergeable:
   - CRASH397L — run-397 crashes left to root-cause (the same on every binary compared then; recheck on rc2): stack
     overflows 2209.08800, 2403.08513 (rc=134; since #924 an unbounded argument expansion is a Fatal); recursion
     2411.07443 (listings), 2411.07667 (`\collect@box`); math0012097's endless "Ignoring redefinition of \title" at
-    CRclassif3.tex:40 (~3 GB stderr); 2101.07941's wall clock (LOOPFIX). rc2 2026-11-23: 2209.08800, 2403.08513 and math0012097 convert clean (math0012097 because `amsp2.sty` is now skipped as a missing file; recheck if raw loading under `\documentstyle` returns). Left: 2411.07667 (Rust-only: the listings binding never runs `\lst@DeInit` after an inline listing — batch LISTINLINE), 2411.07443 (`\@listings@inline` nested 98 deep in the first `lstlisting`, Perl the same, unexplained), 2101.07941 (wall clock; deferred by difficulty, DG 2026-11-23); 3
+    CRclassif3.tex:40 (~3 GB stderr); 2101.07941's wall clock (LOOPFIX). rc2 2026-11-23: 2209.08800, 2403.08513 and math0012097 convert clean (math0012097 because `amsp2.sty` is now skipped as a missing file; recheck if raw loading under `\documentstyle` returns). 2411.07667 fixed by LISTINLINE (an inline listing runs `\lst@Init`/`\lst@DeInit`, OD #1139). Left: 2411.07443 (`\@listings@inline` nested 98 deep in the first `lstlisting`, Perl the same, unexplained), 2101.07941 (wall clock; deferred by difficulty, DG 2026-11-23); 3
+  - REALBOXBG — (LISTINLINE review) realboxes' `\Colorbox`/`\Fcolorbox` keep their text but lose the background colour:
+    collectbox digests the box before `\colorbox` (bound as `\color@box`, color.sty:158) sets the colour, so
+    `\Colorbox{yellow}{x}` gives a plain `<text>` (2411.07667's ~390 `\myinline` boxes); a constructor around the
+    collected box would carry `backgroundcolor`. Silent (no Warning); guard comments name it; 3
+  - LSTDISPLAYINIT — (LISTINLINE) display listings (`lstlisting`, `\lstinputlisting`, `\lstnewenvironment`) never run
+    listings.sty's `\lst@Init`/`\lst@DeInit`: `\g@addto@macro\lst@DeInit{!}` then `\begin{lstlisting}x\end{lstlisting}`,
+    pdflatex prints "!" after the listing, we drop it; touches every display listing (own A/B); no arXiv witness; 3
+  - LSTTEXRECON — (LISTINLINE review, pre-existing) an `\lstinline` in math reconstructs `tex=` from binding internals
+    (`\mbox{\lstinline{{\lst@@@set@language…\@listingGroup{ltx_lst_identifier}…}}}`) where BM's rule is the author's
+    user-level macros; 3
+  - PICKILLGLUE — (PICNEST review, OD #47) in a picture the explicit-space keep (`document.rs` `open_text`) decides by
+    the previous sibling, where TeX decides by the next item: a drawing object kills the glue before it (latex.ltx
+    `\@killglue` :16785-16805, pstricks.tex:1564 `\pst@killglue`). So `\put(0,40){word\line(1,0){10}\ more}` drops the
+    space TeX keeps, and `\rput(1,1){\psline(0,0)(1,1)}\ \rput(2,1){…}` keeps one TeX kills, nesting the next object
+    (depth +2 per item, as on the base). Fix: drawing objects remove a trailing whitespace-only text before they insert
+    (`\@killglue` in the bindings or at insertion), and the keep goes back to "always text"; RED repros for both
+    shapes. No corpus witness in ~2,700 pstricks/tikz papers; 3
   - PLACEB4 — (PLACEFIX, OD #1099) a block-local reference list (elsarticle CPC program summary in the abstract
     2503.17910; IEEE CSM sidebars 2402.17043, 2502.16577; hep-ex0405026's minipage) stays in place as DG ruled but keeps
     its "`<ltx:bibliography>` isn't allowed" Error: the schema allows a `biblist` only in back matter. Ruled design
