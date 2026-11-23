@@ -2665,3 +2665,16 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   (2403.02669, hep-th0010274 now valid; 2204.08560 back to base; 8 centred covers keep `align` as Perl's
   logical-block). Guards `perfect_kernel_batchacmteaser::*`. Residuals: row R TITLEFIG, TITLEPAGEALIGN,
   TITLEPAGEUNWRAPIDS, COMPILESCHEMA.
+- TITLEFIG — fixed (DG rulings 2026-11-23; OD #1149, #903, #1146, SCHEMA_EXTENSIONS S14): a float LaTeX prints in
+  place inside the title block — `\captionof` (caption.sty `\@captionof@`/`\@scaptionof`, a caption outside any float),
+  float.sty `[H]`, egpubl's teaser, the CVPR `\twocolumn[{\maketitle…}]` idiom, `\@maketitle` patches — carries the
+  internal `_inplace` mark (`IN_PLACE_FLOAT`, set by `\lx@float@inplace` on the current float only; `collapse_float`
+  does not copy it to a floating outer float) and joins the continued title page ahead of the abstract
+  (`is_in_place_float`, `settle_float_paragraph`); `forget_title_page_skip` drops the title page's trailing glue once a
+  cover moves behind the abstract (2207.12397 20pt → 5pt, kept by DG); the streamed build reads a spilled inkless run
+  as the eager one (`is_spilled_inkless`). vgtc gets a small binding (`vgtc_cls.rs`: the class read raw, its teaser
+  named `ltx_teaserfigure` and moved after the authors through `place_teasers_after_head`, shared with acmart). A/B
+  vs `INT081F` on 945 papers: 133 changed, 0 worse, E/F/W/words identical, jing on changed papers 24 → 10; witnesses
+  2303.05007, 2312.02238, 2510.22712, 2609.35408, 2609.25700; floating `\captionof` holders 2510.09001, 2609.21948 stay
+  in the body. Guards `perfect_kernel_batchtitlefig::*`. Residuals: row R TITLEFIGTRUEFLOAT, TITLEFIGHNOFLOAT,
+  TITLEFIGPANELS, TITLEFIGSTREAM.

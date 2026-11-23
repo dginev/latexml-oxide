@@ -1,7 +1,7 @@
 //! Guards for TITLEFIG: a float LaTeX prints in place inside the title block — `\captionof` (caption.sty, capt-of),
 //! float.sty's `[H]`, a class's teaser — is the cover: between `\maketitle` and a late abstract it joins the continued
 //! title page (`ltx_titlepage_continued`), ahead of the abstract, as the PDF prints it; a float that floats stays in the
-//! body, a `\captionof` it holds included (round 2: `collapse_float` keeps the wrapper's in-place mark off it); vgtc's
+//! body, a `\captionof` it holds included (`collapse_float` keeps the wrapper's in-place mark off it); vgtc's
 //! teaser joins it from the class's own `\@maketitle` (vgtc_cls.rs) (DG 2026-11-23, OXIDIZED_DESIGN_DIVERGENCES #1149).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).

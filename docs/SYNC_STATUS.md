@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (570 items on 2026-11-23 on `int/towards_v0_8_1`: 566 open, weight 1109, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (573 items on 2026-11-23 on `int/towards_v0_8_1`: 569 open, weight 1112, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -1291,16 +1291,19 @@ Rules that keep this file honest and mergeable:
     calc error (1611.01788 thesis.tex:5400/:5434; both the Nov 17 binary and the release candidate; pdflatex is fatal
     there too, 8 errors): find the loop site (`perf record` at 20 s), then end in a bounded Error. The wall-clock Fatal
     leaves no XML and no log, so the paper's 56k words are lost — a salvage question too. rc2 2026-11-23: still the wall clock at 180 s (59 Errors before it). Deferred, decided by difficulty (DG 2026-11-23); 5
-  - TITLEFIG (v0.8.1 spine, DG ruling 2026-11-23) — a figure printed inside the title block joins the continued title
-    page (`ltx_titlepage_continued`, `titlepage_model` widened to admit figure | table | float by ACMTEASER, a
-    SCHEMA_EXTENSIONS row): `\captionof`, `[H]`, a class's `\teaser` (vgtc 2609.25700, egpubl 2510.22712), the CVPR
-    `\twocolumn[…figure…]` idiom, `\@maketitle` patches (2609.35408); true floats stay in the body; `ltx_teaserfigure`
-    only where the class names it a teaser; reverses the egpubl after-abstract pin (`perfect_kernel_batch61`); not
-    offered upstream for now. Reach: 247 of a 30k census sample (0.83 %; 2.21 % of 2026 papers). A/B ~250 papers.
-    Also: a teaser written inside an existing `{titlepage}` or continued cover would be moved out and could leave it
-    empty; a centre written directly in a leading `{titlepage}` now gives flat `p align=center` (no logical-block) —
-    check against 2204.08560 when designing. Code: `cover_order.rs` (refuses a region holding a float, :302, :494),
-    `titlepage_layout.rs`; 5
+  - TITLEFIGTRUEFLOAT (after TITLEFIG) — one true float in the cover region blocks the whole move: `\maketitle`, two
+    `\captionof{figure}` teasers in a `center`, a `\begin{figure}[t]…\end{figure}`, then `{abstract}` — the PDF prints
+    both teasers before the abstract, ours leaves them after it (as base). Options: let a true float pass after the
+    abstract as notes do, or keep the fail-safe (`cover_order.rs` refuses a region holding a float); 3
+  - TITLEFIGHNOFLOAT (synthetic) — `is_in_place_float` reads `[H]` from `placement` even when float.sty is not loaded,
+    where LaTeX errors and the float floats; 1
+  - TITLEFIGPANELS (shape, pre-existing) — a teaser whose panels are `\subcaptionbox`es (2007.15591, vgtc) stays a
+    paragraph of four figures (now inside the continued title page, as a `block`), not one panelled teaser figure; a
+    subfigure.sty `\captionof{subfigure}` minipage then `\captionof{figure}` inside `\twocolumn[{\maketitle\begin{center}…}]`
+    is not moved to the cover (base, TITLEFIG rounds 1 and 2 alike); 3
+  - TITLEFIGSTREAM (suspected) — the acmart and vgtc close hooks look only at root children
+    (`deposit_in_place_floats`, `place_teasers_after_head`); under `--streaming` with a small fragment budget a spilled
+    deposit would leave the teaser after the abstract (base order). Confirm with a small-budget `--streaming` run; 1
   - BACKMATTERRAW (after BACKMATTERPART) — memoir (its runtime binding reads memoir.cls raw) and scrbook keep their own
     `\backmatter`, so their back matter still nests inside the last `ltx:part`; a document's `\renewcommand\backmatter`
     loses the close too (as Perl). Trigger: `\documentclass{scrbook}\begin{document}\part{A}\chapter{x}\backmatter
