@@ -2585,3 +2585,21 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
 
 - QA85 — DONE by #874 (`f59dbc1cac4`): `parity/ORGANIZATION.md` covers all eight workspace crates (checked 2026-11-23).
 - FMTCACHE — folded into FMTCACHE-PRUNE (the same task, listed twice).
+
+## `int/towards_v0_8_1` — rows fixed (2026-11-23)
+
+- COPYROUTE — fixed (8e24acfa245, 88e5e386f1c): the content test, `loads_file` included, decides the provides route;
+  rule W reads X's real file for a request made during a substituted read; `\Provides…` records `\ver@` under the
+  requested name and warns LaTeX's mismatch (KNOWN_PERL_ERRORS #1307; OD #1118, #1131). Guards
+  `perfect_kernel_batchcopyroute::*`. Residuals: row R COPYTHENREAL, COPYSMALL.
+- ENCURL — fixed (65b1d3ecce7, 897ecb5f836, a5376bd0f0e): a bibliography's stored abstract/keywords/contents is never
+  digested; a Unicode declaration before inputenc keeps its meaning; a control character after `[utf8]{inputenc}` is
+  utf8.def's error (OD #1137).
+- LOOP2302 — fixed (DG 2026-11-23): not a loop; ar5iv.sty's `iflimit` is the front ends' `RUNAWAY_IF_LIMIT` (480M, was
+  48M; the count accumulates per document). 2302.07562 (59 pgfplots inputs) hit `IfLimit` at 120 s and converts in
+  128 s with 0 errors. Guard `perfect_kernel_batch61::ar5iv_profile_sets_its_runaway_limits`; OD #1080.
+- CRASH397L's 2411.07667 — fixed by LISTINLINE (6f27f890ad1): an inline listing runs listings.sty's
+  `\lst@Init\relax … \lst@DeInit` bracket (OD #1139, KNOWN_PERL_ERRORS #1313), and realboxes reaches `\color@box` /
+  `\color@fb@x`; 7 Errors and 2 Fatals → 0 Errors, 3,604 → 10,904 words. Guards
+  `perfect_kernel_batchlistinline::*`. Residuals: row R REALBOXBG, LSTDISPLAYINIT, LSTTEXRECON.
+

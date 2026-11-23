@@ -57,7 +57,7 @@ Rules that keep this file honest and mergeable:
   run cancelled (unused), and it is re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
   CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT, mimalloc 2.3.2) and SERSTREAM (the core result serialized to
   disk; issue 777's whole book converts, 1,549 s on main 4a5aae128b2 against lualatex's 3,523 s for two passes). Main stays the release line until 0.8.0
-  final; the reviewed post-release branches (COPYROUTE, ENCURL) merge after it. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.
+  final; the reviewed post-release branches (COPYROUTE, ENCURL) are on `int/towards_v0_8_1`. The ar5iv sync of the run's bundles (every month, then a cache flush) is running.
 - **Where it stood (2026-11-18):** the frontmatter campaign merged as PR #895 (`aeda3db4e47`, 2026-11-17; DG's 39-paper
   showcase review in runs 389–392, a 300-paper acceptance A/B, and a performance audit whose XSLT-key cost was cut to
   median −0.08 % / p90 +0.46 % vs main, the residual row R XSLTKEYc). **Cutoff = `aeda3db4e47`** (DG 2026-11-17): the
@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (550 items on 2026-11-23: 546 open, weight 1054, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (554 items on 2026-11-23 on `int/towards_v0_8_1`: 550 open, weight 1069, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -179,7 +179,6 @@ Rules that keep this file honest and mergeable:
   - LLGL — llncs `\institute` legend line glued into the last institute (revP23c l5); 1
   - AFNR — two identical `\affiliation{…\footnote{…}}` write two pubnotes, no Warning (`aastex6_footnote_in_repeated_affiliation_doubled_red`; AAS1); 1
   - AAGR — AAS1's guard: a repeated affiliation content that must NOT be reused (`\stepcounter`/`\footnotemark`, A A B A) (revAAS1 NIT); 1
-  - LOOP2302 — 2302.07562 loops (`Fatal:Timeout:IfLimit` at 48M conditionals) on int169b and int170a alike. DG 2026-11-23: raise ar5iv's IfLimit to the CLI's 480M — not a loop: the counter is cumulative per document (`conditional.rs` ~:192, Perl `$LaTeXML::IF_LIMIT`) and 2302.07562 inputs 59 pgfplots files of ~100 KB; rc2 still `Fatal:Timeout:IfLimit` at 125 s; 3
   - CSSPORT — The ar5iv-css port: PR #54 merged 2026-11-05; the mirror of latexml-oxide's later `LaTeXML.css` fixes in ar5iv-css #55, #56 (#841's aligned columns), #57 (#844's verbatim, display runs, ORCID), open; 3
   - MHCHEM — a semantic mhchem binding (DG 2026-11-13: deferred, planned; Perl ships none; stage 1 merged as #850, its rest MHCHEM-BM; #837 prescripts and #838 arrow heads fixed the raw path's isotopes and `<=>`): option (a) of study `agent_reports/2026-11-13_MHCHEM0_report.md` —
     a thin binding over mhchem's output layer (`\__mhchem_output_coreFive:nnnnnnn`, mhchem.sty:2774; amounts, `+`, arrows, bonds), keeping its parser:
@@ -565,7 +564,17 @@ Rules that keep this file honest and mergeable:
   - CRASH397L — run-397 crashes left to root-cause (the same on every binary compared then; recheck on rc2): stack
     overflows 2209.08800, 2403.08513 (rc=134; since #924 an unbounded argument expansion is a Fatal); recursion
     2411.07443 (listings), 2411.07667 (`\collect@box`); math0012097's endless "Ignoring redefinition of \title" at
-    CRclassif3.tex:40 (~3 GB stderr); 2101.07941's wall clock (LOOPFIX). rc2 2026-11-23: 2209.08800, 2403.08513 and math0012097 convert clean (math0012097 because `amsp2.sty` is now skipped as a missing file; recheck if raw loading under `\documentstyle` returns). Left: 2411.07667 (Rust-only: the listings binding never runs `\lst@DeInit` after an inline listing — batch LISTINLINE), 2411.07443 (`\@listings@inline` nested 98 deep in the first `lstlisting`, Perl the same, unexplained), 2101.07941 (wall clock; deferred by difficulty, DG 2026-11-23); 3
+    CRclassif3.tex:40 (~3 GB stderr); 2101.07941's wall clock (LOOPFIX). rc2 2026-11-23: 2209.08800, 2403.08513 and math0012097 convert clean (math0012097 because `amsp2.sty` is now skipped as a missing file; recheck if raw loading under `\documentstyle` returns). 2411.07667 fixed on `int/towards_v0_8_1` by LISTINLINE (an inline listing runs `\lst@Init`/`\lst@DeInit`, OD #1139). Left: 2411.07443 (`\@listings@inline` nested 98 deep in the first `lstlisting`, Perl the same, unexplained), 2101.07941 (wall clock; deferred by difficulty, DG 2026-11-23); 3
+  - REALBOXBG — (LISTINLINE review) realboxes' `\Colorbox`/`\Fcolorbox` keep their text but lose the background colour:
+    collectbox digests the box before `\colorbox` (bound as `\color@box`, color.sty:158) sets the colour, so
+    `\Colorbox{yellow}{x}` gives a plain `<text>` (2411.07667's ~390 `\myinline` boxes); a constructor around the
+    collected box would carry `backgroundcolor`. Silent (no Warning); guard comments name it; 3
+  - LSTDISPLAYINIT — (LISTINLINE) display listings (`lstlisting`, `\lstinputlisting`, `\lstnewenvironment`) never run
+    listings.sty's `\lst@Init`/`\lst@DeInit`: `\g@addto@macro\lst@DeInit{!}` then `\begin{lstlisting}x\end{lstlisting}`,
+    pdflatex prints "!" after the listing, we drop it; touches every display listing (own A/B); no arXiv witness; 3
+  - LSTTEXRECON — (LISTINLINE review, pre-existing) an `\lstinline` in math reconstructs `tex=` from binding internals
+    (`\mbox{\lstinline{{\lst@@@set@language…\@listingGroup{ltx_lst_identifier}…}}}`) where BM's rule is the author's
+    user-level macros; 3
   - PLACEB4 — (PLACEFIX, OD #1099) a block-local reference list (elsarticle CPC program summary in the abstract
     2503.17910; IEEE CSM sidebars 2402.17043, 2502.16577; hep-ex0405026's minipage) stays in place as DG ruled but keeps
     its "`<ltx:bibliography>` isn't allowed" Error: the schema allows a `biblist` only in back matter. Ruled design
@@ -849,16 +858,13 @@ Rules that keep this file honest and mergeable:
     Dimension too large), 1310.2513 (extraipa), 1701.06055 (`\RIfM@`), 2406.05605 (`\enquote` in a `.bbl`),
     `\ifCLASSINFOpdf` (2105.10205, 2502.09129; before Oct 8), circuits' wall clock (2506.09686), astro-ph0012068,
     `\rcite` recursion (cond-mat9505034), 2402.13372 (flaky?); Theorems.sty's `\newtheorem{\theoremcommand}` (2); 5
-  - COPYROUTE — (post-0.8.0 first, DG 2026-11-21) REGFIXQ's copy tests read the shipped file's text before TeX reads
-    it (content.rs `loads_file`, `reads_as_the_file`, `names_read_as`; OD #1118); replace them by rules on the executed
-    path (advisor study): P the copy read where the binding reads its file (exists), W a request for X during that read
-    reads X's real file, M a substituted read does not mark X loaded (precedent content.rs `_unmarks_itself`).
-    `\ProvidesPackage`/`\ProvidesClass` record `\ver@` under the requested name (latex.ltx:18471-18486; ours and Perl's
-    the declared one, sect05.rs:260-271, latex_constructs.pool.ltxml:841-850 — a KNOWN_PERL_ERRORS entry) and warn
-    "You have requested … but the package provides …" as a Warning (DG). Guards to add: `\ProvidesClass{smfart}
-    \LoadClassWithOptions{smfart}` (3 Errors now), `\IfFileExists{X.sty}{\RequirePackage{X}}{}`, an author file of four
-    names or fewer sharing one (COPYSMALL: `{tikz-cd}` with `\def\ar`, `{tcolorbox}` renewing `\arraystretch`), a copy
-    then a real `\usepackage{X}`; 5
+  - COPYTHENREAL — (COPYROUTE residual, OD #1118) a deferred request of a form `loads_file` misses runs after rule W's
+    scope, so the real file is never read: `\AtEndOfPackage{\RequirePackageWithOptions{csquotes}}` in a copy (26 Errors,
+    base the same); a true copy followed by the real request leaves the real load a no-op (TeX reads the file over the
+    copy). Fix: keep the request pending until `\begin{document}`; 3
+  - COPYSMALL — (COPYROUTE residual, OD #1118) an author's file of four names or fewer passes on one shared name, so
+    `\ProvidesPackage{tikz-cd}` with `\def\ar{…}`, or a `{tcolorbox}` file renewing `\arraystretch`, is read as the real
+    file and the document's later real load is a no-op; 3
   - SHIPPEDPKGSCAN — dependency scans still made before a copy is read: `shipped_class.rs` `require_shipped_packages`
     (~213, it chooses the binding's defaults) and `require_package`'s after a raw read (content.rs ~4215, a near no-op
     by the executed-set gate ~4828). Perl never scans a file it reads (Package.pm:2696, :2732); sn-jnl and optica follow

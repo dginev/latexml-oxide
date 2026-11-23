@@ -23429,13 +23429,14 @@ Perl's `latexml` leaves `INCLUDE_STYLES` and `INCLUDE_CLASSES` at 0 unless `--in
 L55-57): a package without a binding is skipped with a missing_file warning, a class without one is served by
 OmniBus. `$LaTeXML::IF_LIMIT` and `$LaTeXML::ABSORB_LIMIT` are unset unless latexml.sty's `iflimit`/`absorblimit`
 sets them (latexml.sty.ltxml:97-108). The arXiv fleet has always run with `--preload=ar5iv.sty`, which passes
-`rawstyles`, `rawclasses`, `tokenlimit=999999999`, `iflimit=48000000`, `absorblimit=1299999` and
-`pushbacklimit=5000000` (`ar5iv_sty.rs`).
+`rawstyles`, `rawclasses`, `tokenlimit=999999999`, `iflimit` (48,000,000 until DG 2026-11-23, now the front ends'
+480,000,000), `absorblimit=1299999` and `pushbacklimit=5000000` (`ar5iv_sty.rs`).
 
 **Rust (DG 2026-11-18).** `latexml_oxide`, the library API (`api::library_config`), cortex's generic profile and the
 LSP pass `Config.include_styles = Some(true)`, `Config.absorb_limit` = ar5iv's 1,299,999 and `Config.if_limit` = ten
-times ar5iv's (480,000,000: the `\if` count accumulates over the whole document, and at ar5iv's 48,000,000 the TeX Live
-manual tkz-grapheur-doc-fr lost its last picture and section while the unlimited default converted it; DG 2026-11-18)
+times ar5iv's then 48,000,000 (480,000,000: the `\if` count accumulates over the whole document, and at 48,000,000 the TeX Live
+manual tkz-grapheur-doc-fr lost its last picture and section while the unlimited default converted it; DG 2026-11-18;
+ar5iv.sty passes the same constant since DG 2026-11-23, after 2302.07562 hit `IfLimit` at 120 s and converts in 128 s)
 (`common::RUNAWAY_IF_LIMIT`, `RUNAWAY_ABSORB_LIMIT`), applied when the session starts and before the preloads
 (`Converter::initialize_session`), so a latexml.sty option still wins. A binding still outranks a raw file
 (`content.rs` `require_package` / `input_definitions_impl` for packages, `content.rs` `load_class` for classes). The other two limits were already the front ends': the

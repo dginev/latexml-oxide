@@ -66,6 +66,9 @@ LoadDefinitions!({
   // IfLimit papers per full pass, so the fleet time is negligible. 2609.30783 (a
   // memory runaway in lirseg) now ends at the box-list memory budget
   // (`Fatal:Stomach:MemoryBudget`, which rides the memory cap; was `IfLimit`).
+  // **Raised 48M → 480M, the front ends' `RUNAWAY_IF_LIMIT` (DG 2026-11-23)**: the count accumulates over the
+  // whole document, so a long finite one passes 48M: 2302.07562 (59 pgfplots inputs) hit `IfLimit` at 120 s and
+  // converts in 128 s with 0 errors. A runaway now ends at the 180 s timeout or the memory budget.
   //
   // pushbacklimit RAISED 650000 → 5000000 (the binary's own default,
   // latexml_oxide.rs, and TeX's `main_memory`, one word per token,
@@ -128,7 +131,7 @@ LoadDefinitions!({
     s!("magnify=1.2"),
     s!("zoomout=1.2"),
     s!("tokenlimit=999999999"),
-    s!("iflimit=48000000"),
+    s!("iflimit={}", latexml_core::common::RUNAWAY_IF_LIMIT),
     s!("absorblimit=1299999"),
     s!("pushbacklimit=5000000"),
   ])?;
