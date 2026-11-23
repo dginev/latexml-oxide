@@ -546,6 +546,7 @@ mod perfect_kernel_batchloopfix;
 /// title code's marks; OD #905, #802, #941.
 mod perfect_kernel_batchlostf;
 /// LUAFONT: document Lua's `font`, `lang` and `vf` never crash the texlua child; `font` mirrors the current font (OD #1081).
+mod perfect_kernel_batchltxown;
 mod perfect_kernel_batchluafont;
 mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;

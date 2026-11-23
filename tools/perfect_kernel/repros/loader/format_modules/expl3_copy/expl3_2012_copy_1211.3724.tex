@@ -1,0 +1,14 @@
+% witness: 1211.3724 (and 1207.4642, 1211.6751, 1304.5586): expl3.sty (l3bootstrap.sty) and xparse.sty of 2012 shipped
+% oracle:  pdflatex TL 2025 fails: the copy's `\@pushfilename`/`\@popfilename` wrap over expl3.ltx:180-186's, its pop
+%          read without `\s__expl_stop`: "Missing number", then input stack overflow
+% engines: rust INT081C = Errors from the copy's wrap; perl not run
+% expect:  0 errors, 3 warnings (shipped_copy: xparse.sty, expl3.sty, l3keys2e.sty: the format holds expl3, the tree's
+%          files are read, OXIDIZED_DESIGN_DIVERGENCES #1142); <p>Hello world.</p>, no copy's marker defined
+% status:  GREEN (LTXOWN)
+\documentclass{article}
+\usepackage{xparse}
+\usepackage{l3keys2e}
+\NewDocumentCommand\greet{m}{Hello #1.}
+\begin{document}
+\greet{world}\ifdefined\paperxparse\ XPARSE\fi\ifdefined\paperexpl\ EXPL\fi\ifdefined\paperlkeys\ KEYS\fi
+\end{document}

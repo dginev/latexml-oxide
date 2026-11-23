@@ -14,5 +14,6 @@ LoadDefinitions!({
   // `\ExplSyntaxOff` does not fully restore (spaces left IGNORE broke paragraphs), so the load restores the values
   // they had before it.
   let _ = expl3_sty::with_expl_syntax_restored(|| Ok(input_definitions("xparse",
-    NewDefault!(InputDefinitionOptions, noltxml => true, extension => Some(Cow::Borrowed("sty"))))));
+    NewDefault!(InputDefinitionOptions, noltxml => true, extension => Some(Cow::Borrowed("sty")),
+      format_module => Some(FormatModule { marker: "\\c__kernel_expl_date_tl", tree_dir: "xparse" })))));
 });

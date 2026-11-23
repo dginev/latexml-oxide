@@ -1,0 +1,23 @@
+% expl3 of 2012: l3bootstrap.sty:201-241 (as 1211.3724 ships it) re-wraps the file stack the format wraps already
+\ProvidesPackage{expl3}[2012/11/21 v4325 L3 programming layer]
+\edef\@pushfilename{%
+  \edef\expandafter\noexpand\csname\detokenize{l__expl_status_stack_tl}\endcsname{%
+    \noexpand\ifodd\expandafter\noexpand\csname\detokenize{l__kernel_expl_bool}\endcsname 1%
+    \noexpand\else 0\noexpand\fi
+    \expandafter\noexpand\csname\detokenize{l__expl_status_stack_tl}\endcsname}%
+  \ExplSyntaxOff
+  \unexpanded\expandafter{\@pushfilename}}
+\edef\@popfilename{%
+  \unexpanded\expandafter{\@popfilename}%
+  \noexpand\if a\expandafter\noexpand\csname\detokenize{l__expl_status_stack_tl}\endcsname a%
+    \ExplSyntaxOff
+  \noexpand\else
+    \noexpand\expandafter\expandafter\noexpand\csname\detokenize{__expl_status_pop:w}\endcsname
+    \expandafter\noexpand\csname\detokenize{l__expl_status_stack_tl}\endcsname\noexpand\@nil
+  \noexpand\fi}
+\@namedef{\detokenize{l__expl_status_stack_tl}}{0}
+\expandafter\edef\csname\detokenize{__expl_status_pop:w}\endcsname#1#2\@nil{%
+  \def\expandafter\noexpand\csname\detokenize{l__expl_status_stack_tl}\endcsname{#2}%
+  \noexpand\ifodd#1\space\noexpand\expandafter\noexpand\ExplSyntaxOn
+  \noexpand\else\noexpand\expandafter\ExplSyntaxOff\noexpand\fi}
+\def\paperexpl{}

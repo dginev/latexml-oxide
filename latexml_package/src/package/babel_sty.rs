@@ -52,7 +52,9 @@ LoadDefinitions!({
   // (aastex62 + lipsum + blindtext, no explicit babel options).
   RawTeX!(r"\providecommand\bbl@main@language{english}");
 
-  InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // (the format holds babel: a paper's babel.sty is not read, the tree's is; OXIDIZED_DESIGN_DIVERGENCES #1142)
+  InputDefinitions!("babel", noltxml => true, extension => Some(Cow::Borrowed("sty")),
+    format_module => Some(FormatModule { marker: "\\bbl@version", tree_dir: "babel" }));
 
   // Sets DOCUMENT_LANGUAGE and force-sets \bbl@main@language from
   // \opt@babel.sty so babel's `\AtBeginDocument{\selectlanguage{\bbl@main
