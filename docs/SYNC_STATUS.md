@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (551 items on 2026-11-23: 547 open, weight 1057, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (555 items on 2026-11-23: 551 open, weight 1078, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -189,7 +189,6 @@ Rules that keep this file honest and mergeable:
   - LLGL — llncs `\institute` legend line glued into the last institute (revP23c l5); 1
   - AFNR — two identical `\affiliation{…\footnote{…}}` write two pubnotes, no Warning (`aastex6_footnote_in_repeated_affiliation_doubled_red`; AAS1); 1
   - AAGR — AAS1's guard: a repeated affiliation content that must NOT be reused (`\stepcounter`/`\footnotemark`, A A B A) (revAAS1 NIT); 1
-  - LOOP2302 — 2302.07562 loops (`Fatal:Timeout:IfLimit` at 48M conditionals) on int169b and int170a alike. DG 2026-11-23: raise ar5iv's IfLimit to the CLI's 480M — not a loop: the counter is cumulative per document (`conditional.rs` ~:192, Perl `$LaTeXML::IF_LIMIT`) and 2302.07562 inputs 59 pgfplots files of ~100 KB; rc2 still `Fatal:Timeout:IfLimit` at 125 s; 3
   - CSSPORT — The ar5iv-css port: PR #54 merged 2026-11-05; the mirror of latexml-oxide's later `LaTeXML.css` fixes in ar5iv-css #55, #56 (#841's aligned columns), #57 (#844's verbatim, display runs, ORCID), open; 3
   - MHCHEM — a semantic mhchem binding (DG 2026-11-13: deferred, planned; Perl ships none; stage 1 merged as #850, its rest MHCHEM-BM; #837 prescripts and #838 arrow heads fixed the raw path's isotopes and `<=>`): option (a) of study `agent_reports/2026-11-13_MHCHEM0_report.md` —
     a thin binding over mhchem's output layer (`\__mhchem_output_coreFive:nnnnnnn`, mhchem.sty:2774; amounts, `+`, arrows, bonds), keeping its parser:
@@ -318,7 +317,7 @@ Rules that keep this file honest and mergeable:
   - KPEDUP — KNOWN_PERL_ERRORS numbers 80-86 are used twice (`parity/KNOWN_PERL_ERRORS.md`: entries 80-86 once from `pdfcol.sty` (80) and again from `\define@cmdkey` (80)), a pre-existing registry defect `next_entry_numbers.sh` surfaced (#846's body): renumber the later set to free numbers and carry every inbound `KPE #8x` reference; 1
   - BEAMSLIDE — beamer's faithful Perl frame model (`ltx:slide` in `ltx:slidesequence`, Perl `beamer.cls.ltxml`) in place of the document-top frontmatter fallback for `\titlepage`/`\maketitle` in a frame (`beamer_cls.rs` `\titlepage`; P12's follow-up, `perfect_kernel/archive/PLANS_DONE_PHASE56_2026-09-27.md`; witnesses beamerthemecelestia demos, beamerthemeNord, beamertheme-simpleplus); 5
   - IEEO — IEEEtran preprocessing residuals (P4cR2): a refmark inside a font switch (`ieee_nested_block_bold_refmark_spliced_red`), a mark after a box (`ieee_nested_block_mark_after_box_spliced_red`), marks after `\\[2pt]`/`\newline` (`ieee_nested_block_after_spaced_break_spliced_red`) (revP4cR2b); an inner block inside a group stays nested (`ieee_nested_affiliation_block_in_group_red`); the ordinal content-check false pair (`ieee_ordinal_floor_line_names_unnumbered`, 2 W); the Cut gives an unmatched address in an inline marked list to the last entry's author; two sibling blocks after one names block reach the last author only (revP4cR2 q14); a block inside the outer's `\thanks` read as an affiliation (q1); 1
-  - CNTE — counter readers' leniency where pdflatex errs: `\newcounter{foo}[nosuch]`, `\setcounter{chapter}` in article, `\addtocounter{zzz}` (pdflatex 4 `!`; ours 0 E 5 W) (revGA1d); `\bibitem` does not step enumiv (`bibitem_steps_the_list_counter_red`); cleveref + varioref internals (`cleveref_vref_with_varioref_red`, ~1,680 papers, errs on the base) (GA1d); 3
+  - CNTE — counter readers' leniency where pdflatex errs: `\newcounter{foo}[nosuch]`, `\setcounter{chapter}` in article, `\addtocounter{zzz}` (pdflatex 4 `!`; ours 0 E 5 W) (revGA1d); `\bibitem` does not step enumiv (`bibitem_steps_the_list_counter_red`); cleveref + varioref FIXED by VREFCLEV (OD #1144); 3
   - EBN — EB1's nits: the calc Warning's wording when calc is not loaded; the ifpdf Error row's message; the DTL1 row's whole `<para>`; one jing process per row; 1
   - MENC — `<m:menclose>` still emitted for `\cancel`/`\boxed` (MathML Core removed it; no mechanical replacement: a rendering + golden change on its own branch; deferred by DG 2026-07-30); 3
   - CI — CI under 30 minutes on `main` (workflow edits, a PR tier) and CIPERF's rest (DG 2026-11-12): TC0's test-cost levers (in-process for the non-CLI spawns, eager = streaming checked once per repro, batch68d's per-name `kpsewhich` loops, the long-pole tests, table-driven guards); CITLIMAGE (DG 2026-11-18: held after the numbers) — the Linux shards and asan in `ghcr.io/tkw1536/texlive-docker:<year>` instead of apt's Ubuntu TeX Live: a healthy apt install takes 76-210 s per shard, the image ~4-6 min (scheme-full with docs and sources, ~17 GB; a job-level `container:` runs out of disk, release-dumps.yml:150-171), a speedup only with a slim tag; if apt stalls persist after #907/#915, cache the `.deb`s in actions/cache first; 5
@@ -475,10 +474,26 @@ Rules that keep this file honest and mergeable:
     now 0, output unchanged. Fix: add pdflatex's e-TeX/pdfTeX primitive names to `LATEX_PRIMITIVE_COMMANDS`
     (`etoolbox_sty.rs`, `\meaning`-checked), and keep the Error for a `DefMath` whose LaTeX meaning is `\mathchar"…`
     (fontmath.ltx), unless amsmath made it a macro. Post-release; 1
-  - TITLESEC395 — (INTERIM397g) Fatal `Expansion of '\format@title@@}' has unbalanced {}` (1910.11159, 2005.02481,
-    2005.06700; Perl the same, pdflatex clean): `read_arg` (`gullet.rs` ~:4048-4080, Perl Gullet.pm:732-744) accepts a
-    `}` where TeX raises "Argument of \x has an extra }" and drops the call (tex.web §395). Fix: §395's recovery (EASY
-    code, MED risk: every argument read; corpus A/B). Post-release. rc2 2026-11-23: still `Fatal:Stomach:Misdefined` on all three witnesses (Perl the same, pdflatex 0/2/0). Batch B1 (DG 2026-11-23, yes): `read_arg` (`gullet.rs` ~:4048) raises tex.web §395's "Argument of \x has an extra }", puts the `}` back and takes the `\par` path (`abandon_argument_at_par`); and a `\titleformat` stops applying once the document redefines that command with `\@startsection`, as in TeX (titlesec's own `\section` only; Perl shares the leak, titlesec.sty.ltxml:42-57). Every argument read goes through `read_arg`: census + corpus A/B; 3
+  - TITLESECRED — (TITLESEC reviews, OD #1143) titlesec's hold on `\section`…`\subparagraph` misses: `\titleclass` after a
+    release does not take the command back (titlesec.sty:133-139); a release inside a group outlives it (the lock's
+    `\lx@dropped@<sec>` is global); only a body naming `\@startsection` releases (`\renewcommand\section{\mysection}`, a
+    `\let` restore and `\secdef` bodies do not; pre-existing); a hand-written redefinition copying the claimed body with
+    tokens added still counts as titlesec's (needs provenance from the lock, not token containment); and sectsty under a
+    class whose binding loads article (amsart, acmart, IEEEtran, mnras, revtex4-2, emulateapj, asmejour, subfiles)
+    releases where pdflatex errs. RED repros in sectioning-frontmatter/ (`titlesec_*_red`, `sectsty_under_amsart_keeps_titlesec_red`); 3
+  - READARG395 — (study, DG 2026-11-23) tex.web §395 ("Argument of \x has an extra }", `\par` inserted, the call
+    ended) for a `}` read as a macro argument. Branch `pk/READARG` (382885e58aa, cb5d679984b, c3cc7f3ba48; OD #1140, KPE
+    #1314 reserved). `A{a\x}b` with `\def\x#1{[#1]}`: pdflatex 2 errors ("Aa" / "b"), Perl and ours 0 ("Aa[]b"). Blockers
+    found: 9 guards (batch77r nine-arguments and siunitx, batch66h caption and svjour3, pgfkeys `closing_brace_is_not_a_list`,
+    batchregfixj `\@firstoffive`, batch56 noligs `<`, batchp26, batche0 pin) and cs0308004 (33 → 101 Errors + Fatal via
+    fancyvrb's `\FancyVerbGetVerb`): each a binding that puts a macro before a `}` where TeX's code does not. Audit the
+    bindings' token shapes (box family: `\@begin@tempboxa` ends with `\color@endgroup`, latex.ltx:16085-16147; ours
+    `\relax` as Perl, TL 2025's `\endgraf\@endpefalse\endgroup`), then enable §395. Constructors' `{}` arguments too
+    (READARGCTOR: `A{a\emph}b`, pdflatex 2 errors, ours 0). Repro `sectioning-frontmatter/titleformat_at_a_group_end_red.tex`; 5
+  - ROBUSTIFYCELL — (VREFCLEV review, Perl the same) etoolbox's `\robustify` (any `\etb@resrvdb` meaning scan) inside an
+    alignment cell garbles the input from that row on: "Paragraph ended before \etb@resrvdb" (pdflatex 0 `!`); 2606.11484
+    (eczhandbook.cls:285 in a tabularx) Fatals after it, which VREFCLEV's `\fullref` → `\cref` path exposed (5,927 words
+    on the base from error recovery; TL 2025 pdflatex Fatal too, a TL 2023-only source); 3
   - HYPERFAMILY — (INTERIM397g, OD #588) one family member's first use defines its whole family (`\phantomsection` then
     `\providecommand\nameref` is skipped) — arXiv's hyperref build behaves the same; the `ar5iv_sty.rs` comment "what
     pdflatex without the package sees" overclaims for the family's other names. Doc fix. With the provided anchor layer
@@ -548,8 +563,6 @@ Rules that keep this file honest and mergeable:
     two-counter id cycle (`\numberwithin{section}{equation}` where the class nests equation ids in section's →
     Fatal:Timeout:PushbackLimit; IDCYCLE, loud, no witness): record each counter's id-within and walk it in
     `define_counter_ids`; 3
-  - XSLTDEPTH — libxslt's recursion cap 1000 (`latexml_post/src/xslt.rs:30`, Perl's `max_depth(1000)`) fails post on
-    deeply nested XML (0905.4216, 1909.06819: `post/convert`). rc2 2026-11-23: both still `Fatal:post:convert`. 0905.4216 is Rust-only — a control space `\ ` inside `{pspicture}` makes an `<ltx:text>` that the next `\psline` nests a new `<picture>` in (Perl flat); 1909.06819 SHARED (`\put` in a tikz `\foreach` nests per `\put`, ours adds a `<p>` per level). Batch PICNEST; do not raise the depth cap; 3
   - CLUSTFIXR — run 397's Error clusters' leftovers (#921-#923): `\documentstyle[PASJadd]{PASJ95}`'s `\draft`
     (PASJadd.sty:46; astro-ph0003107, astro-ph0002344; ~10 census papers): a small PASJadd binding or the shipped files
     read raw; pasj00's `\Published{}` (pasj00.cls:113; 0712.0877, astro-ph0701328) → `\lx@add@date[role=published]` with
@@ -575,7 +588,24 @@ Rules that keep this file honest and mergeable:
   - CRASH397L — run-397 crashes left to root-cause (the same on every binary compared then; recheck on rc2): stack
     overflows 2209.08800, 2403.08513 (rc=134; since #924 an unbounded argument expansion is a Fatal); recursion
     2411.07443 (listings), 2411.07667 (`\collect@box`); math0012097's endless "Ignoring redefinition of \title" at
-    CRclassif3.tex:40 (~3 GB stderr); 2101.07941's wall clock (LOOPFIX). rc2 2026-11-23: 2209.08800, 2403.08513 and math0012097 convert clean (math0012097 because `amsp2.sty` is now skipped as a missing file; recheck if raw loading under `\documentstyle` returns). Left: 2411.07667 (Rust-only: the listings binding never runs `\lst@DeInit` after an inline listing — batch LISTINLINE), 2411.07443 (`\@listings@inline` nested 98 deep in the first `lstlisting`, Perl the same, unexplained), 2101.07941 (wall clock; deferred by difficulty, DG 2026-11-23); 3
+    CRclassif3.tex:40 (~3 GB stderr); 2101.07941's wall clock (LOOPFIX). rc2 2026-11-23: 2209.08800, 2403.08513 and math0012097 convert clean (math0012097 because `amsp2.sty` is now skipped as a missing file; recheck if raw loading under `\documentstyle` returns). 2411.07667 fixed by LISTINLINE (an inline listing runs `\lst@Init`/`\lst@DeInit`, OD #1139). Left: 2411.07443 (`\@listings@inline` nested 98 deep in the first `lstlisting`, Perl the same, unexplained), 2101.07941 (wall clock; deferred by difficulty, DG 2026-11-23); 3
+  - REALBOXBG — (LISTINLINE review) realboxes' `\Colorbox`/`\Fcolorbox` keep their text but lose the background colour:
+    collectbox digests the box before `\colorbox` (bound as `\color@box`, color.sty:158) sets the colour, so
+    `\Colorbox{yellow}{x}` gives a plain `<text>` (2411.07667's ~390 `\myinline` boxes); a constructor around the
+    collected box would carry `backgroundcolor`. Silent (no Warning); guard comments name it; 3
+  - LSTDISPLAYINIT — (LISTINLINE) display listings (`lstlisting`, `\lstinputlisting`, `\lstnewenvironment`) never run
+    listings.sty's `\lst@Init`/`\lst@DeInit`: `\g@addto@macro\lst@DeInit{!}` then `\begin{lstlisting}x\end{lstlisting}`,
+    pdflatex prints "!" after the listing, we drop it; touches every display listing (own A/B); no arXiv witness; 3
+  - LSTTEXRECON — (LISTINLINE review, pre-existing) an `\lstinline` in math reconstructs `tex=` from binding internals
+    (`\mbox{\lstinline{{\lst@@@set@language…\@listingGroup{ltx_lst_identifier}…}}}`) where BM's rule is the author's
+    user-level macros; 3
+  - PICKILLGLUE — (PICNEST review, OD #47) in a picture the explicit-space keep (`document.rs` `open_text`) decides by
+    the previous sibling, where TeX decides by the next item: a drawing object kills the glue before it (latex.ltx
+    `\@killglue` :16785-16805, pstricks.tex:1564 `\pst@killglue`). So `\put(0,40){word\line(1,0){10}\ more}` drops the
+    space TeX keeps, and `\rput(1,1){\psline(0,0)(1,1)}\ \rput(2,1){…}` keeps one TeX kills, nesting the next object
+    (depth +2 per item, as on the base). Fix: drawing objects remove a trailing whitespace-only text before they insert
+    (`\@killglue` in the bindings or at insertion), and the keep goes back to "always text"; RED repros for both
+    shapes. No corpus witness in ~2,700 pstricks/tikz papers; 3
   - PLACEB4 — (PLACEFIX, OD #1099) a block-local reference list (elsarticle CPC program summary in the abstract
     2503.17910; IEEE CSM sidebars 2402.17043, 2502.16577; hep-ex0405026's minipage) stays in place as DG ruled but keeps
     its "`<ltx:bibliography>` isn't allowed" Error: the schema allows a `biblist` only in back matter. Ruled design
@@ -1182,8 +1212,6 @@ Rules that keep this file honest and mergeable:
     (2408.03605, Perl too); 3
   - LASTBOXROW — `\lastbox` takes a whole alignment, not its last row (tex.web §1080; rows §799, §810): easytable's
     per-cell peel collapses into one cell holding the whole table, so its rules don't line up; 3
-  - VPHANTOMWIDTH — a text-mode `\vphantom` keeps its argument's width in HTML (`visibility:hidden`,
-    LaTeXML-inline-xhtml.xsl:57-75, as Perl), where TeX's is zero width; needs a ruling and an ar5iv-css mirror; 1
   - FUPA — after rc1 (DG 2026-11-20): the loader follow-ups of #945 and #947. A user `.rhai` for a name reached on the
     provides route (PROVROUTE: the paper ships `mylipics.cls` with `\ProvidesClass{lipics-v2021}`) still has the
     renamed copy read after it (`loading_for_a_provides_route`, `content.rs`, never asks `state::local_binding_file`);

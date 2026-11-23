@@ -3374,6 +3374,14 @@ impl Document {
         // too): an `{algorithmic}` set in `\ttfamily` (WileyNJDv5.cls:6953 `\algrenewcommand\ALG@beginalgorithmic
         // {\ttfamily}`) put the space before its first `\item` straight into the `ltx:listing`, whose model is
         // `listingline*` (2608.15322, 2602.03247, 2607.19926: schema-invalid).
+        // In the `ltx:picture`/`ltx:g` drawing model only after a box or inline content, where it is text as a
+        // letter would be (`$x$\ label`, `\psframebox{…}\ \ 1`: math0406190, cs0608104, 0801.0882); at the start or
+        // after a shape it is dropped, as in Perl (Document.pm:747-749): a `\ ` between `\psline`s opened an
+        // `ltx:text` the next one nested a picture in, 403 deep (0905.4216 `\PutGrid`).
+        let drawing = |node: &Node| {
+          let qname = get_node_qname(node);
+          qname == arena::pin("ltx:picture") || qname == arena::pin("ltx:g")
+        };
         let explicit_space = node_type == Some(NodeType::ElementNode)
           && !text.is_empty()
           && can_contain_node_somehow(&self.node, "#PCDATA").is_some()
@@ -3384,7 +3392,12 @@ impl Document {
             }))
           && !arena::with(get_node_qname(&self.node), |qname| {
             qname.starts_with("svg:")
-          });
+          })
+          && (!drawing(&self.node)
+            || self.node.get_last_element_child().is_some_and(|prev| {
+              drawing(&prev)
+                || can_contain_qsym(arena::pin(FONT_ELEMENT_NAME), get_node_qname(&prev))
+            }));
         if !explicit_space {
           return Ok(None);
         }

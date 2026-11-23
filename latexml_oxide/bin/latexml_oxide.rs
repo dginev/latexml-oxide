@@ -1008,6 +1008,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     latexml::lsp_server::run_lsp_server(cli.timeout, max_memory)?;
     process::exit(0);
   }
+  // A Ctrl+C during the first run's format build cancels the build rather than failing it (issue 988). After the
+  // server's dispatch: the LSP server keeps its own signals (its forked children are ended by SIGTERM).
+  latexml::format_dumps::cancel_builds_on_interrupt();
 
   // Ordered supplementary top-level sources joined onto the main output
   // (populated by CLI multi-file input below, or by directory auto-detection).

@@ -779,6 +779,29 @@ typewriter space is dropped there too, as in Perl; the rendered node is
 unchanged (its foreignObject content is a left-aligned block, where a
 leading space collapses). Guard:
 `perfect_kernel_batch56::a_typewriter_space_opens_no_foreign_object`.
+In the `ltx:picture`/`ltx:g` drawing model (PICNEST) it is kept only after
+a box or inline content (the last child an `ltx:g`, or an element an
+`ltx:text` holds): there it is text, as a letter would be, and the next
+words join it (`\put(90,120){\small $\Longrightarrow$ \ State-sum …}`
+prints "⟹ State-sum", math0406190; `\psframebox{…}\white \ \ 1`, cs0608104;
+0801.0882). At the start of a box or after a shape (`ltx:line`, `ltx:rect`,
+…) it is dropped, as Perl drops every one there (Document.pm:747-749): a
+`\ ` between `\psline`s opened an `ltx:text` in which the next object
+auto-opened a picture, 403 deep in 0905.4216 (`\PutGrid`), whose XSLT then
+failed. TeX has no such glue either: a drawing object removes the glue before
+it (LaTeX's `\@killglue` in `\put`/`\multiput`, latex.ltx:16785-16805;
+pstricks' `\pst@killglue`, pstricks.tex:1564, pst-code-pspicture.tex:162).
+The rule decides by the previous sibling where TeX decides by the next item,
+so two shapes differ from TeX (row R PICKILLGLUE): a `\ ` after a shape and
+before text (`word\line(1,0){10}\ more`) is dropped where TeX keeps it, and a
+`\ ` after a drawing `ltx:g` and before another object
+(`\rput{\psline…}\ \rput…`) is kept, so the next object nests in it, where
+TeX kills it. A leading `\ ` (`\put(0,40){\ \textbf{i}}`) is dropped too, as
+in Perl, though pdflatex shifts the box by it. A shape drawn after a kept
+space nests in its `ltx:text`, as after a letter (`find_insertion_point`
+auto-opens before it auto-closes, in Perl too). Guards:
+`pstricks_drawing::{a_control_space_between_objects_keeps_the_picture_flat,
+a_control_space_after_text_in_a_put_is_kept}`.
 
 ### 48. → #993 (Author heuristic splits font-wrapped name lists; affiliation "and" preserved)
 
@@ -23440,13 +23463,14 @@ Perl's `latexml` leaves `INCLUDE_STYLES` and `INCLUDE_CLASSES` at 0 unless `--in
 L55-57): a package without a binding is skipped with a missing_file warning, a class without one is served by
 OmniBus. `$LaTeXML::IF_LIMIT` and `$LaTeXML::ABSORB_LIMIT` are unset unless latexml.sty's `iflimit`/`absorblimit`
 sets them (latexml.sty.ltxml:97-108). The arXiv fleet has always run with `--preload=ar5iv.sty`, which passes
-`rawstyles`, `rawclasses`, `tokenlimit=999999999`, `iflimit=48000000`, `absorblimit=1299999` and
-`pushbacklimit=5000000` (`ar5iv_sty.rs`).
+`rawstyles`, `rawclasses`, `tokenlimit=999999999`, `iflimit` (48,000,000 until DG 2026-11-23, now the front ends'
+480,000,000), `absorblimit=1299999` and `pushbacklimit=5000000` (`ar5iv_sty.rs`).
 
 **Rust (DG 2026-11-18).** `latexml_oxide`, the library API (`api::library_config`), cortex's generic profile and the
 LSP pass `Config.include_styles = Some(true)`, `Config.absorb_limit` = ar5iv's 1,299,999 and `Config.if_limit` = ten
-times ar5iv's (480,000,000: the `\if` count accumulates over the whole document, and at ar5iv's 48,000,000 the TeX Live
-manual tkz-grapheur-doc-fr lost its last picture and section while the unlimited default converted it; DG 2026-11-18)
+times ar5iv's then 48,000,000 (480,000,000: the `\if` count accumulates over the whole document, and at 48,000,000 the TeX Live
+manual tkz-grapheur-doc-fr lost its last picture and section while the unlimited default converted it; DG 2026-11-18;
+ar5iv.sty passes the same constant since DG 2026-11-23, after 2302.07562 hit `IfLimit` at 120 s and converts in 128 s)
 (`common::RUNAWAY_IF_LIMIT`, `RUNAWAY_ABSORB_LIMIT`), applied when the session starts and before the preloads
 (`Converter::initialize_session`), so a latexml.sty option still wins. A binding still outranks a raw file
 (`content.rs` `require_package` / `input_definitions_impl` for packages, `content.rs` `load_class` for classes). The other two limits were already the front ends': the
@@ -23911,3 +23935,144 @@ it, and as a CSS table it put the `\intertext` row in its first column (a footno
 **Guards**: `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`; the names pinned with a space in
 `perfect_kernel_batch{64u,68u,68x,90a,92g,hg1,p21c,p22,p22b}`, `class_census::k11_class_default_store` and
 `tests/babel/elsart_keyword_brace_form.xml` now end in U+00A0.
+### 1138. A pgf path closes an auto-opened `\put` picture instead of nesting an `svg:svg` in it (PICNEST)
+
+**Perl behavior**: pgfsys-latexml.def.ltxml:392-398 (`\lxSVG@begingroup@`) opens an `svg:svg` when the current node is
+an `ltx:` one under an `svg:g`. A `\put` in a tikzpicture auto-opens an `ltx:picture` (in an auto-opened
+`svg:foreignObject`) that stays current, so the next coloured or dashed path's group opens its `svg:svg` inside that
+picture, and every later `\put` and path one level deeper; a bare path's `svg:path` insertion auto-closes the chain
+instead (Document.pm `find_insertion_point`), flat.
+**pdflatex**: `\put` is a zero-size box (latex.ltx:16784-16792 `\hb@xt@\z@`); each one and each path sit side by side.
+**Rust behavior**: `ensure_svg_context` (pgfsys_latexml_def.rs), the guard both the group opener and the path emitters
+take, first walks up from the current node: when it and every node up to an `svg:` group (not a foreignObject) were
+auto-opened and can auto-close, it closes to that group, as the path insertion does in Perl. What still gets its own
+`svg:svg` is an element a command opened inside a label (`\phantom`, `\textbf`, a nested `\tikz`), not the label itself:
+a label's auto-opened foreignObject holding `\put(0,0){X}` and followed by a pgf path is closed by the walk, the
+structure Perl's bare-path insertion gives, no content lost.
+**Why**: the nesting is not TeX's layout, and it fails the post-processing: 1909.06819 (`\draw …[blue];
+\put(-18,-50){…}` in a nested `\foreach`) nested 214 deep, and libxslt's depth cap (1000, Perl XSLT.pm:48) ended
+it in `Fatal:post:convert`; now siblings, depth 24. **Guard**
+`perfect_kernel_batch54::a_put_in_a_tikzpicture_closes_before_the_next_path` (repro
+graphics-tikz/tikz_put_closes_before_next_path).
+
+### 1139. An inline listing runs listings.sty's `\lst@Init\relax` … `\lst@DeInit` bracket (LISTINLINE)
+
+**Perl behavior**: listings.sty.ltxml:54-68 `\lstinline` opens a group, reads and outputs the body and closes the group;
+it defines neither `\lst@Init` nor `\lst@DeInit` and never runs them (KNOWN_PERL_ERRORS #1313).
+**pdflatex (TL 2025)**: listings.sty:1941-1953 `\lstinline` is `\leavevmode\bgroup` … `\lst@Init\relax` before the body
+is read, and every ending (:1959 `\lst@InlineM`, :1966 `\lst@InlineJ`, :1989 `\lst@InlineGJEnd`) is
+`\lst@DeInit\egroup`, so a hook a document adds to `\lst@DeInit` (or `\lst@Init`) runs inside each inline listing.
+**Rust behavior**: listings_sty.rs `\lx@lstinline` reads the options, opens the group and returns `\lst@Init\relax`
+before `\lx@lstinline@` reads the body, which ends `\lst@DeInit\lx@hidden@egroup`; the binding's own
+`\lst@Init#1{\begingroup}`/`\lst@DeInit{\endgroup}` pair adds no markup. Every inline entry point takes it: a `|`
+or `{…}` delimiter, `[options]`, `\lstMakeShortInline`, and the binding's `\begin{lstinline}` (Init after its lines
+are read). Display listings (`lstlisting`, `\lstinputlisting`, `\lstnewenvironment`) do not run the bracket yet.
+**Why**: realboxes' `\Colorbox{…}\bgroup\appto\lst@DeInit{\egroup}` before `\lstinline` (2411.07667
+IndexNotation.tex:148-156) closes its collected box (collectbox.sty:66-75) in that `\egroup`; without it each
+listing nested a group deeper, `Fatal:Stomach:Recursion` at the 200-deep stack (2411.07667: 7 Errors, 2 Fatals,
+3604 words → 0 Errors, 10904 words). **Guards** `perfect_kernel_batchlistinline::lstinline_runs_the_init_deinit_bracket`
+(repros listings-algorithms/lstinline_deinit_hook_closes_a_colorbox, lstinline_deinit_hook_every_entry_point,
+lstinline_plain_shapes_stay). The same batch binds color.sty:158 `\color@box` and xcolor.sty:821/824 `\color@fb@x` as
+`\colorbox`/`\fcolorbox` (Perl defines neither), so realboxes' `\Colorbox`/`\Fcolorbox` keep their text; their
+background colour is still lost, the collected box being digested before `\colorbox` applies it (row R REALBOXBG;
+guard `perfect_kernel_batchlistinline::realboxes_colorbox_and_fcolorbox_call_the_color_internals`). `\lst@Init` runs
+before the delimiter is read, where TeX reads it first (listings.sty:1951-1952); only a hook that changes the
+delimiter's catcode could tell.
+
+### 1143. A titlesec format applies only while titlesec holds the command (TITLESEC)
+
+**Perl behavior**: titlesec.sty.ltxml:42-57 keeps a `\titleformat` by the command's name (`\format@title@<sec>`), so it
+applies whatever defines the command later. **pdflatex (titlesec.sty)**: titlesec's load makes `\section`…
+`\subparagraph` its own (titlesec.sty:1640-1677 `\titleclass`); a later definition with `\@startsection` (a document's
+or class's `\renewcommand\section{\@startsection…}`; sectsty.sty:298-362 at sectsty's load, under article/report/book
+and scrartcl/scrreprt/scrbook only, any other class getting its PackageError) is LaTeX's heading again, which
+titlesec's formats never reach, and a `\titleformat` after it stores a format nothing reads. An extension of the
+command (`\preto`, `\g@addto@macro`) is no new definition: titlesec keeps it.
+**Rust behavior**: the formats apply while titlesec holds the command (`titlesec_sty.rs` `titlesec_holds`): it holds
+from its load (a definition before it, kept as `\lx@titlesec@claimed@<sec>`, is titlesec's) until a later definition
+whose body calls `\@startsection` (behind the kernel's lock, `\lx@dropped@<sec>`; a record holding the claimed body or
+the binding's with tokens added, the lock's `extended_refused_definition`, is an extension and does not count) or
+sectsty's load under one of its classes (the flag `titlesec_released@<sec>`; `\@ifclassloaded` as the loader answers
+it, so under every class whose binding loads article (amsart, acmart, IEEEtran, mnras, revtex4-2, emulateapj, asmejour,
+subfiles) sectsty still releases where pdflatex errs and keeps titlesec's format). A hand-written redefinition that
+copies the claimed body with tokens added is still taken for titlesec's (tokens cannot tell it from `\preto`'s record;
+output as before the batch). Only a body that calls `\@startsection`
+releases (not `\renewcommand\section{\mysection}`), a release is global, and `\titleclass` does not re-take a released
+command: row R TITLESECRED. The check runs when the heading is set (`\lx@titlesec@ifholds`, wrapping the font, the
+after-code and `\format@title@<sec>`, which composes the kernel's title when released) and at `\titleformat` (nothing
+stored once released). `\lx@titleformat` reads its arguments in a macro, as titlesec.sty:685-699's
+`\ttl@format@i`/`\ttl@format@ii`, and hands them to the primitive `\lx@titleformat@define`.
+**Why**: a two-argument `\titleformat{\section}{…}` takes the next line's `\titleformat` as its label; set in a group
+at the heading, it read `}` as its command and ended in the Fatal "Expansion of '\format@title@@}' has unbalanced {}"
+(1910.11159, 2005.02481; 2005.06700 with sectsty). These papers redefine the command with `\@startsection`, so LaTeX
+never sets that label: 0 errors each, words (the A/B's count, tag-stripped XML) 92 → 19429, 106 → 28005,
+4680 → 10865 (pdflatex 0/2/0). The `}` read as an
+argument where a format still holds is tex.web §395, row R READARG395 (repro
+sectioning-frontmatter/titleformat_at_a_group_end_red). KNOWN_PERL_ERRORS #1317. **Guard**
+`perfect_kernel_batchtitlesec::titlesec_formats_end_where_latex_takes_the_command` (repros sectioning-frontmatter/
+titlesec_format_ends_at_a_startsection_redefinition, titlesec_format_ends_at_sectsty),
+`titlesec_keeps_an_extended_command` (titlesec_format_holds_through_an_extension),
+`titlesec_keeps_the_command_where_sectsty_does_not_work` (memoir). RED (row R TITLESECRED):
+titlesec_titleclass_takes_the_command_back_red, titlesec_release_in_a_group_red,
+titlesec_release_through_an_indirect_body_red, sectsty_under_amsart_keeps_titlesec_red.
+
+### 1144. After varioref, cleveref's `\vref` family are the binding's page-less `\cref` forms (VREFCLEV)
+
+**Perl behavior**: cleveref.sty.ltxml reads cleveref.sty raw and replaces only `\cref` and its kin. With varioref
+loaded, cleveref.sty:2378-2604 redefines `\vref`, `\Vref`, `\vrefrange`, `\Vrefrange`, `\fullref` and `\Fullref` (with
+hyperref, starred) on its raw `\@cref` and varioref's page internals (`\vref@pagenum`, `\is@pos@number`, `\vref@label`,
+`\vref@err`, `\c@vrcnt`; varioref.sty:803-946), which varioref.sty.ltxml, page-less, lacks; its lock keeps `\vref` only:
+each `\Vref`/`\fullref` errs and prints "??" (KNOWN_PERL_ERRORS #1318).
+**Rust behavior**: the cleveref binding, when varioref is loaded, defines the six as its `\cref`, `\Cref`, `\crefrange`
+and `\Crefrange` (a label list too), `\vref`/`\vrefrange` under varioref's locks. The page text varioref adds ("on the
+next page") is dropped, as the varioref binding drops it from its own `\vref`; `\vpageref` stays the varioref
+binding's `\ref`. varioref's internals stay undefined: nothing the bindings run reaches them (zref-vario and citehack
+define their own).
+**Why**: the references cleveref prints (pdflatex "Section 1 and Section 1" on the label's page). 1602.00476 (6 E → 0,
+9 "??"), 2409.11413 (73 E → 19, the rest pgfplots'), 2505.14566 (26 E → 0); reach 1,430 of 8,868 post-2012 papers
+loading varioref also load cleveref, 105 of them calling the family.
+**Guards** `perfect_kernel_batchvrefclev::{cleveref_vref_with_varioref, varioref_alone_and_cleveref_alone_unchanged}`
+(repros package-bindings/cleveref_vref_with_varioref, cleveref_vref_family_with_varioref).
+
+### 1145. A text `\vphantom` is a zero-width strut (VPHANTOMWIDTH)
+
+**Perl behavior**: math_common.pool.ltxml `\vphantom` in text writes `<ltx:text class='ltx_phantom'>`, the same element
+as `\phantom`/`\hphantom`; the XSLT (`LaTeXML-inline-xhtml.xsl`, `contains(@class,'ltx_phantom')`) hides it with
+`visibility:hidden`, so the HTML box keeps the argument's width.
+**pdflatex**: latex.ltx:15613-15617 `\finph@nt` gives a `\vphantom` box its argument's height and depth and no width.
+**Rust behavior** (DG ruling 2026-11-23): the text box carries `class='ltx_phantom ltx_vphantom'`, and LaTeXML.css
+(and ar5iv-css) set `.ltx_phantom.ltx_vphantom { display:inline-block; width:0; white-space:nowrap; overflow:clip }`:
+TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hidden`, keeps the baseline).
+`\phantom` and `\hphantom` are unchanged. **Guards** `perfect_kernel_batch61::hphantom_in_plain_tex_loads_no_latex`
+(harvmac's `\refs` struts), `perfect_kernel_batchregfixb::*`, `perfect_kernel_batchfms1::field_prov_phantom_kept`.
+
+
+### 1148. An interrupted format build is a cancellation, not a failure; `\write` in a scope that drops its diagnostics writes nothing (issue 988)
+
+- Perl: no format cache (dumps ship with the install), and `\write` to the terminal or log is `Note`/`NoteLog`
+  whatever `$LaTeXML::IGNORE_ERRORS` says (TeX_FileIO.pool.ltxml `\write`).
+- Ours, the cache (format_dumps.rs, OD #449): a build counts towards marking its format failed (`.attempts.<kind>`,
+  written before the build so a build that dies with its process is counted); two in a row mark it `.failed.<kind>`
+  and every conversion then loads the format from the engine's definitions for a day (`FAILED_LAPSE`). An interrupt
+  was such a death, so two Ctrl+C during a first run left the user in that degraded mode. The CLI now asks
+  (`format_dumps::cancel_builds_on_interrupt`) that an interrupt during a build undo it: the attempt note goes back
+  to what it held before the build and the partial dump is removed, then the process exits with status 130. The
+  interrupts are Ctrl+C, SIGTERM and SIGHUP on Unix, and Ctrl+C, Ctrl+Break and closing the console on Windows (the
+  `ctrlc` crate, `termination`). The handler is installed when the first build starts, so a process that builds
+  nothing keeps its default interrupt; a process that already ignores or handles one of these signals (`nohup`, a
+  shell's background job) keeps them (`ctrlc::try_set_handler`). The handler keeps the build's record locked until the
+  process ends, so the build cannot record an outcome after the undo, and the record is set before the attempt note
+  is written. Embedders (`cortex_worker`, and the CLI's own `--server` LSP mode, whose forked children are ended by
+  SIGTERM) keep their own signal handling and count an interrupted build as before. The DEGRADED banner
+  (`dump_paths::warn_degraded_no_dump`) now says why no dump was built (once the format is marked failed, that names
+  the mark to remove) instead of pointing to `tools/make_formats.sh`, which an installed binary does not have.
+- Ours, `\write` (tex_file_io.rs): inside a scope that drops its diagnostics whole (Perl `IGNORE_ERRORS`: a trial
+  digested again where it is used, the muted no-dump expl3 reload of OD #1027), a write to the terminal or the log
+  writes nothing; a write to an open file is unchanged. LaTeX's `\GenericError` writes a blank line ahead of each
+  error (`\immediate\write\@unused{}`), so the reload's 5,015 dropped errors (TL 2025) printed 2,415 empty lines on
+  the terminal, scrolling away why the run had no dump.
+
+**Guards**: `format_dumps::tests::an_interrupted_build_is_undone`;
+`dump_gate_init::nodump_latex_branch_converts_healthily` (no run of more than two blank lines). The interrupt itself
+is not tested, as its timing would make the test flaky; it was checked by hand (Ctrl+C during a first run's build
+leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).

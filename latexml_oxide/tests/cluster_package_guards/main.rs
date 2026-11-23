@@ -523,6 +523,8 @@ mod perfect_kernel_batchio3b;
 mod perfect_kernel_batchkb1;
 mod perfect_kernel_batchkb2;
 mod perfect_kernel_batchkey1;
+/// LISTINLINE: an inline listing runs the `\lst@Init`/`\lst@DeInit` bracket (2411.07667); realboxes' colour internals.
+mod perfect_kernel_batchlistinline;
 /// LLNCSMARKS: llncs's own `\@fnsymbol` (⋆ ⋆⋆ …), its title block's marks and the body's `\fnsymbol`; OD #1060.
 mod perfect_kernel_batchllncs;
 mod perfect_kernel_batchlo1;
@@ -796,11 +798,16 @@ mod perfect_kernel_batchst3;
 /// STRMWARN: a streamed conversion warns once per failing formula, as the eager one does (OD #1132).
 mod perfect_kernel_batchstrmwarn;
 mod perfect_kernel_batchta1;
+/// TITLESEC: a titlesec format applies only while titlesec holds the command; a later `\@startsection` definition or
+/// sectsty's load gives it back to LaTeX (OD #1143, KPE #1317).
+mod perfect_kernel_batchtitlesec;
 mod perfect_kernel_batchunc;
 /// UPS1: the upstream LaTeXML master commits since #2833 (frames padded as TeX draws them, #2820).
 mod perfect_kernel_batchups1;
 /// VARW: a varwidth box measures its widest line (algxpar-doc, 2401.12710); KNOWN_PERL_ERRORS #1234.
 mod perfect_kernel_batchvarw;
+/// VREFCLEV: after varioref, cleveref's `\vref` family are the binding's page-less `\cref` forms (OD #1144).
+mod perfect_kernel_batchvrefclev;
 mod perfect_kernel_batchw3ra;
 mod perfect_kernel_batchw3rb;
 mod perfect_kernel_batchw3rc;

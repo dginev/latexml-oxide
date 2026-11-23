@@ -1,0 +1,29 @@
+% titlesec makes \section…\subparagraph its own at its load (titlesec.sty:1640-1677); a later definition with
+% \@startsection is LaTeX's heading again, which titlesec's \titleformat never reaches. Here \section is redefined
+% after its format (whose label is the next line's \titleformat, read as titlesec reads a two-argument call), \paragraph
+% before titlesec's load (titlesec takes it back), \subsection not at all.
+% witness: 1910.11159, 2005.02481 (the same preamble shape)
+% oracle:  pdflatex 0 errors: "1 Intro" / "1.1. Kept B." (italic run-in) / "[1.1.0.1] Para C."
+% engines: rust (INT081C-rel) Fatal "Expansion of '\format@title@@}' has unbalanced {}"; perl the same Fatal
+% expect:  0 errors; titles "1 Intro" (kernel), "1.1. Kept" and "[1.1.0.1] Para" (titlesec, italic run-in)
+% status:  GREEN (TITLESEC; guard perfect_kernel_batchtitlesec::titlesec_formats_end_where_latex_takes_the_command)
+\documentclass{article}
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}{1ex}{-1em}{\normalfont\bfseries}}
+\usepackage{titlesec}
+\titleformat{\section}{\LARGE\bfseries}
+\titleformat{\subsubsection}{\large\bfseries}
+
+\renewcommand\section{\@startsection{section}{1}{\z@}{-3.5ex}{2.3ex}{\normalfont\Large\bfseries}}
+\titleformat{\subsection}[runin]{\itshape}{\thesubsection.}{1em}{}
+\titleformat{\paragraph}[runin]{\itshape}{[\theparagraph]}{1em}{}
+\setcounter{secnumdepth}{4}
+\makeatother
+\begin{document}
+\section{Intro}
+A.
+\subsection{Kept}
+B.
+\paragraph{Para}
+C.
+\end{document}

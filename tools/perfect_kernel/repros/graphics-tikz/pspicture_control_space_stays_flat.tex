@@ -1,0 +1,15 @@
+% witness: 0905.4216 (Figure3.tex `\PutGrid`: `\ ` between `\psline`s; 403-deep XML, `Fatal:post:convert` XSLT depth)
+% oracle:  latex (pstricks is dvips-only) 0 errors; perl 0 errors, the three `<line>`s siblings in one `<picture>`
+%          (Document.pm:747-749 drops whitespace where the node cannot hold #PCDATA)
+% engines: rust 0.8.0-rc2: 0 errors, picture depth 4: the explicit-space keep of `Document::open_text`
+%          (DIVERGENCES #47) put each `\ ` in an `<ltx:text>`, and the next `<line>` auto-opened a `<picture>` in it
+% expect:  0 errors, the three `<line>`s siblings in ONE `<picture>`, picture depth 1
+% status:  RED (0.8.0-rc2) -> GREEN (PICNEST: in `ltx:picture`/`ltx:g` the keep holds only after a box or inline
+%          content, not at the start or after a shape; picture_control_space_after_text_kept for the kept side)
+\documentclass{article}
+\usepackage{pstricks}
+\begin{document}
+\begin{pspicture}(0,0)(3,3)
+\ \psline(0,0)(1,1) \ \psline(0,0)(1,2) \ \psline(0,0)(1,3) \
+\end{pspicture}
+\end{document}
