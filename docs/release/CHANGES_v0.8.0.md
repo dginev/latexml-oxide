@@ -1558,5 +1558,8 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     operands pdfTeX's `\pdf<keyword>` reads; an unknown one is a Warning. `\pdffeedback` reads its operands too
     (`colorstackinit` answers a new stack, as `\pdfcolorstackinit`). pdfTeX's `\pdfcolorstack <n> current` no
     longer swallows the text after it, `\pdfthread`/`\pdfstartthread` read their thread spec and `\pdfcatalog`'s
-    `openaction` its whole action. Guards `perfect_kernel_batchluafont::{batchluafont_pdfextension_literal_reads_its_operands,
+    `openaction` its whole action. A font operand (`\pdfincludechars`, `\pdffontattr`, `\pdffontname`, …) is read as
+    TeX reads a font identifier, past spaces and with `\textfont<n>`'s family number: luatex85's
+    `\pdfincludechars\font{…}` took the space after the keyword for the font (2 Errors each). Guards
+    `perfect_kernel_batchluafont::{batchluafont_pdfextension_literal_reads_its_operands,
     batchluafont_pdfextension_keywords_read_their_operands}`.

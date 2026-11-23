@@ -204,10 +204,11 @@ LoadDefinitions!({
   DefMacro!("\\pdfcreationdate", sub[_args] { pdf_creation_date() });
   def_macro_noop("\\pdfpageref Number")?;
   def_macro_noop("\\pdfxformname Number")?;
-  def_macro_noop("\\pdffontname Token")?;
-  def_macro_noop("\\pdffontobjnum Token")?;
-  def_macro_noop("\\pdffontsize Token")?;
-  def_macro_noop("\\pdfincludechars Token {}")?;
+  // A font identifier (tex.web §577 `scan_font_ident`), not one token: `\pdfincludechars \textfont1{…}`.
+  def_macro_noop("\\pdffontname FontToken")?;
+  def_macro_noop("\\pdffontobjnum FontToken")?;
+  def_macro_noop("\\pdffontsize FontToken")?;
+  def_macro_noop("\\pdfincludechars FontToken GeneralText")?;
   def_macro_noop("\\leftmarginkern Number")?;
   def_macro_noop("\\rightmarginkern Number")?;
   // pdfTeX escape primitives — real implementations, output format verified
@@ -528,7 +529,7 @@ LoadDefinitions!({
   def_macro_noop("\\pdfinfo{}")?;
 
   // Ugh, what a mess of ugly syntax....
-  // `\pdfcatalog <general text> [openaction <action spec>]` (pdftex-syntax.tex:360): the action spec is read whole, as
+  // `\pdfcatalog <general text> [openaction <action spec>]` (pdftex-syntax.tex:483): the action spec is read whole, as
   // `\pdfstartlink`'s (Perl pdfTeX.pool reads `openaction` and `user`/`goto` only, leaving the rest as text).
   DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {
     read_open_action()?;
@@ -595,7 +596,7 @@ LoadDefinitions!({
   // Witnesses (zref-savepos): 2503.15628, 2503.18497, 2504.03449,
   // 2504.03565, 2504.05447, 2504.05890.
   def_primitive_noop("\\pdfsavepos")?;
-  // \pdfthread (h, v, m) and \pdfstartthread (v, m) read a thread spec (pdftex-syntax.tex:465, :474): as bare no-ops
+  // \pdfthread (h, v, m) and \pdfstartthread (v, m) read a thread spec (pdftex-syntax.tex:623, :635): as bare no-ops
   // their `num 1`/`name {…}` fell into the text; \pdfendthread (v, m) reads nothing.
   DefPrimitive!("\\pdfthread", sub[_args] { read_thread_spec()?; });
   DefPrimitive!("\\pdfstartthread", sub[_args] { read_thread_spec()?; });
@@ -970,9 +971,10 @@ pub fn read_pdfextension() -> Result<()> {
       read_general_text()?;
       read_general_text()?;
     },
-    // `<font> <general text>` (pdftex-syntax.tex:302, :381; lualatex wants a font identifier for `fontattr` too).
+    // `<font> <general text>` (pdftex-syntax.tex:405, :511), the font by `scan_font_ident`, past the space that
+    // luatex85.sty:87-88 leaves after the keyword (`\pdfincludechars\font{…}` read the space as the font).
     Some("includechars" | "fontattr") => {
-      let _ = read_token()?;
+      let _ = crate::tex_fonts::read_font_ident()?;
       read_general_text()?;
     },
     Some("obj" | "annot") => read_object_spec(true)?,

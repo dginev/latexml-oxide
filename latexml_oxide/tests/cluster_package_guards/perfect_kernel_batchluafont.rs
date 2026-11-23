@@ -140,13 +140,18 @@ fn batchluafont_pdfextension_literal_reads_its_operands() {
 /// was known, and "olorstack0 push0 g", "etmatrix1 0 0 1", "nfo /Title (x)", "apline +cmr10", … leaked. Witness TL
 /// manual xfakebold/xfakebold-doc (pdfrender's `\pdfcolorstack`, 59 leaks; its `\pdfcolorstackinit page direct{…}`,
 /// luatex85's `\pdffeedback colorstackinit`, leaked "page direct1 w"). Distinct from the literal guard: the keyword
-/// table and each keyword's reader. Repro luatex-profile/pdfextension_keywords_luatex85.
+/// table and each keyword's reader. A font operand is read as tex.web §577 `scan_font_ident` (`read_font_ident`):
+/// luatex85.sty:87-88's `\pdfincludechars`/`\pdffontattr` leave a space after the keyword, which one token read as
+/// the font (f5b3d961d7b: 8 Errors, "rstabcu/A 1vwx"); `\textfont 1` and `\pdffeedback fontname \font` likewise.
+/// Repro luatex-profile/pdfextension_keywords_luatex85.
 #[test]
 fn batchluafont_pdfextension_keywords_read_their_operands() {
   let (log, xml) = convert_with(repro!("pdfextension_keywords_luatex85"), LUATEX);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
-    xml.contains("<p>AB CDEF\nGHIJK\nLMN\nOP Q\nRSU\nVWXY\nZ abc\nde\nfg\nhij\nkl\nmnopq</p>"),
+    xml.contains(
+      "<p>AB CDEF\nGHIJK\nLMN\nOP Q\nRSU\nVWXY\nZ abc\nde\nfg\nhij\nkl\nmnopq\nrstuvwxy</p>"
+    ),
     "{xml}"
   );
 }
@@ -163,4 +168,43 @@ fn batchluafont_font_read_tfm_and_read_vf_pass_through() {
   let (log, xml) = convert_with(repro!("lua_font_read_tfm_vf"), LUATEX);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(xml.contains("<p>T[cmr10]\nV[ptmr8r]</p>"), "{xml}");
+}
+
+/// pdfTeX's own `\pdfincludechars`, `\pdffontname` and `\pdffontsize` read their font as tex.web §577
+/// `scan_font_ident` (`read_font_ident`), not as one token (Perl pdfTeX.pool:97-100): `\pdfincludechars\textfont 1
+/// {abc}` left the family number as its text and typeset "abc" (f5b3d961d7b: "C1C2 abcC3C4C5"). Distinct from the
+/// keyword guard: the pdfTeX profile's macros, not `\pdfextension`. Repro luatex-profile/pdfincludechars_font_identifier.
+#[test]
+fn batchluafont_pdfincludechars_reads_a_font_identifier() {
+  let (log, xml) = convert_with(repro!("pdfincludechars_font_identifier"), None);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(">C1C2C3C4C5</p>"), "{xml}");
+}
+
+/// A chunk that fails on a `D` refusal after a `W` one is one Error, the `D` refusal's: `os.execute('exit 0')
+/// os.remove(…)` no longer adds "the chunk failed after the sandbox refused os.execute …", which named the wrong cause
+/// (f5b3d961d7b: 2 Errors). Distinct from `batchluaexec_refused_then_failed_is_an_error` (a `W` alone, which
+/// escalates): the `D`-and-`W` chunk. Repro luatex-profile/lua_sandbox_refused_then_denied.
+#[test]
+fn batchluafont_denied_chunk_is_one_error() {
+  if !texlua_present() {
+    return;
+  }
+  let (log, xml) = convert_with(repro!("lua_sandbox_refused_then_denied"), LUATEX);
+  let sandbox: Vec<&str> = log
+    .lines()
+    .filter(|line| line.contains(":lua:sandbox "))
+    .collect();
+  assert_eq!(
+    sandbox,
+    [
+      "Warning:lua:sandbox os.execute \"exit 0\" was not run (document Lua runs no programs, as lualatex without \
+       shell escape)",
+      "Error:lua:sandbox os.remove is not allowed (document Lua runs sandboxed: no programs, writes only below the \
+       job directory)",
+    ],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 1), "{log}");
+  assert!(xml.contains("<p>A[]\nB[alive]</p>"), "{xml}");
 }

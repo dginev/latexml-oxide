@@ -49,6 +49,7 @@ mod tex_character; // Perl: TeX_Character.pool.ltxml
 mod tex_debugging; // Perl: TeX_Debugging.pool.ltxml
 mod tex_file_io; // Perl: TeX_FileIO.pool.ltxml
 mod tex_fonts; // Perl: TeX_Fonts.pool.ltxml
+pub use tex_fonts::read_font_ident;
 mod tex_glue; // Perl: TeX_Glue.pool.ltxml
 mod tex_hyphenation; // Perl: TeX_Hyphenation.pool.ltxml
 mod tex_inserts; // Perl: TeX_Inserts.pool.ltxml

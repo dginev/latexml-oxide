@@ -1,0 +1,16 @@
+% mechanism: lua_bridge.rs Framed::failed_after_refusal (OXIDIZED_DESIGN_DIVERGENCES #1081): a chunk that fails on a
+%   'D' refusal (os.remove, an Error) after a 'W' one (os.execute, a Warning) is one Error, the 'D' refusal's; the
+%   "chunk failed after the sandbox refused os.execute" escalation is for a chunk with no Error of its own.
+% witness: synthetic (pk/LUAFONT review: one failure counted twice, the second naming the wrong cause)
+% oracle:  lualatex -no-shell-escape (TL 2025): 0 errors, "A[] B[alive]" (lualatex allows os.remove; the sandbox
+%   refuses it, the counted divergence)
+% engines: rust=GREEN perl=n/a (Perl LaTeXML has no Lua bridge) (2026-11-22)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% expect:  1 Error (os.remove is not allowed), 1 Warning (os.execute "exit 0" was not run); "A[] B[alive]"
+% status:  RED (2 Errors: also "the chunk failed after the sandbox refused os.execute "exit 0": … os.remove is not
+%   allowed", f5b3d961d7b) -> GREEN
+\documentclass{article}
+\begin{document}
+A[\directlua{os.execute('exit 0') os.remove('lua_sandbox_absent_file.txt')}]
+B[\directlua{tex.sprint("alive")}]
+\end{document}

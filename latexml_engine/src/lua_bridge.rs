@@ -475,7 +475,8 @@ print = function() end
 -- resolve (newpax, tkz-elements, ...), and load lualibs, which supplies the
 -- 'file'/'string'/'table' library extensions lualatex gets via luaotfload.
 if kpse and kpse.set_program_name then
-  -- kpathsea makes a missing TFM, PK or MF by running mktextfm & co when MKTEX* asks it to: no program runs here.
+  -- kpathsea runs mktextfm & co for a missing TFM, PK or MF when a texmf.cnf's MKTEX* asks it to; 0 here overrides
+  -- that file: no program runs (stricter than lualatex, fail-safe).
   for _, var in ipairs({'MKTEXTFM', 'MKTEXPK', 'MKTEXMF', 'MKTEXTEX', 'MKTEXFMT', 'MKOCP', 'MKOFM'}) do
     os.setenv(var, '0')
   end
@@ -898,10 +899,12 @@ struct Framed {
 impl Framed {
   /// The Error for a chunk whose Lua error followed a call refused with lualatex's values: it used that call's nil
   /// (`io.popen(cmd):read()`) and is lost, as under lualatex (rc=1). An engine gap alone does not count (lualatex
-  /// performs that call), and any other chunk's Lua error stays the caller's Info.
+  /// performs that call), nor a chunk whose 'D' refusal is already its Error (a 'D' call raises the Lua error); any
+  /// other chunk's Lua error stays the caller's Info.
   fn failed_after_refusal(&self) -> Option<String> {
+    let refused_as_error = self.denials.errors.listed + self.denials.errors.more > 0;
     match (&self.result, &self.denials.first_warning, &self.ended) {
-      (Err(failure), Some(call), None) => Some(format!(
+      (Err(failure), Some(call), None) if !refused_as_error => Some(format!(
         "the chunk failed after the sandbox refused {call}: {failure}"
       )),
       _ => None,
@@ -1271,7 +1274,9 @@ mod tests {
       Refused::AsLualatex,
       "io.popen \"echo hi\" was not run (document Lua runs no programs)",
     );
+    let remove = (Refused::Sandbox, "os.remove is not allowed");
     assert_eq!(failed(&[gap]), None);
+    assert_eq!(failed(&[popen, remove]), None);
     assert_eq!(
       failed(&[gap, popen]).as_deref(),
       Some(

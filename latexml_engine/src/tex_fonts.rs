@@ -22,45 +22,7 @@ LoadDefinitions!({
   // #  <font range> = \textfont | \scriptfont | \scriptscriptfont
   // Perl: FontDef param type — for \textfont/\scriptfont/\scriptscriptfont, reads family
   // number and looks up the stored font CS token.  For \font, returns current_FontDef.
-  DefParameterType!(FontToken, sub[_inner, _extra] {
-    // tex.web §577 `scan_font_ident` gets the next non-blank non-call token: the
-    // identifier is read WITH expansion, so `\fontdimen8 \ifx#1\displaystyle
-    // \textfont\else…\fi 3` selects `\textfont` and the conditional completes.
-    // Perl reads it unexpanded (TeX_Fonts.pool.ltxml), which took `\ifx` as the
-    // font and orphaned its `\else`/`\fi` (arXiv 2605.21425: a `\mathpalette`
-    // underline macro, 1000 "not in a conditional", Fatal).
-    // \textfont/\scriptfont/\scriptscriptfont/\font require a following token; on
-    // input-exhaustion emit the parity "file ended" error and fall back to the
-    // default font CS (which flows through the `else` arm below) rather than panic.
-    let token = match read_x_non_space()? {
-      Some(token) => token,
-      None => {
-        Error!("expected", "\\font", "input ended while scanning use of \\font");
-        T_CS!("\\lx@default@font")
-      },
-    };
-    if let Some(font_type) = token.with_str(|ts| {
-      if ts.starts_with("\\textfont") && ts == "\\textfont" { Some("textfont") }
-      else if ts.starts_with("\\scriptscriptfont") && ts == "\\scriptscriptfont" { Some("scriptscriptfont") }
-      else if ts.starts_with("\\scriptfont") && ts == "\\scriptfont" { Some("scriptfont") }
-      else { None }
-    }) {
-      // Perl: $token = LookupValue($type . 'font_' . $fam->valueOf).
-      // with_value avoids the Stored envelope clone; Token is Copy.
-      let fam = read_number()?.value_of();
-      let key = s!("{font_type}_{fam}");
-      with_value(&key, |v| match v {
-        Some(Stored::Token(t)) => *t,
-        _ => token,
-      })
-    } else if token.with_str(|ts| ts == "\\font") {
-      // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font'),
-      // the current font's identifier here (`current_font_identifier`).
-      current_font_identifier()?
-    } else {
-      token
-    }
-  });
+  DefParameterType!(FontToken, sub[_inner, _extra] { read_font_ident()? });
 
   // Perl TeX_Fonts.pool.ltxml L77-78: default skew/hyphen registers
   // before \font.
@@ -757,6 +719,48 @@ fn install_font_def(
 /// the `<font>` `\font` denotes in `\fontdimen`, `\hyphenchar`, `\fontname`
 /// (tex.web §577 `scan_font_ident`, §465: `cur_font`).
 ///
+/// tex.web §577 `scan_font_ident`: `<font>` = `<fontdef token>` | `\font` | `<font range><4-bit number>`, after the
+/// next non-blank non-call token. The identifier is read WITH expansion, so `\fontdimen8 \ifx#1\displaystyle
+/// \textfont\else…\fi 3` selects `\textfont` and the conditional completes. Perl reads it unexpanded
+/// (TeX_Fonts.pool.ltxml FontDef), which took `\ifx` as the font and orphaned its `\else`/`\fi` (arXiv 2605.21425: a
+/// `\mathpalette` underline macro, 1000 "not in a conditional", Fatal). The `FontToken` parameter, and LuaTeX's
+/// `\pdfextension includechars`/`fontattr` and `\pdffeedback fontname`… (luatex85.sty:64-66, :87-88).
+pub fn read_font_ident() -> Result<Token> {
+  // On input exhaustion: the parity "file ended" error and the default font CS, rather than a panic.
+  let token = match read_x_non_space()? {
+    Some(token) => token,
+    None => {
+      Error!(
+        "expected",
+        "\\font",
+        "input ended while scanning use of \\font"
+      );
+      T_CS!("\\lx@default@font")
+    },
+  };
+  if let Some(font_type) = token.with_str(|ts| match ts {
+    "\\textfont" => Some("textfont"),
+    "\\scriptscriptfont" => Some("scriptscriptfont"),
+    "\\scriptfont" => Some("scriptfont"),
+    _ => None,
+  }) {
+    // Perl: $token = LookupValue($type . 'font_' . $fam->valueOf).
+    // with_value avoids the Stored envelope clone; Token is Copy.
+    let fam = read_number()?.value_of();
+    let key = s!("{font_type}_{fam}");
+    Ok(with_value(&key, |v| match v {
+      Some(Stored::Token(t)) => *t,
+      _ => token,
+    }))
+  } else if token.with_str(|ts| ts == "\\font") {
+    // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font'),
+    // the current font's identifier here (`current_font_identifier`).
+    current_font_identifier()
+  } else {
+    Ok(token)
+  }
+}
+
 /// Perl remembers only the last `\font`-defined identifier invoked
 /// (`current_FontDef`, FontDef.pm:42, "HACK") and otherwise answers the
 /// default `\lx@default@font` (TeX_Macro.pool.ltxml:272,

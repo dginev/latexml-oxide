@@ -377,7 +377,7 @@ LoadDefinitions!({
           let _ = read_number()?;
         },
         Some("fontname" | "fontobjnum" | "fontsize") => {
-          let _ = read_token()?;
+          let _ = latexml_engine::read_font_ident()?;
         },
         _ => {},
       }
