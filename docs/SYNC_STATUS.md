@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (566 items on 2026-11-23 on `int/towards_v0_8_1`: 562 open, weight 1101, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (568 items on 2026-11-23 on `int/towards_v0_8_1`: 564 open, weight 1103, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -564,8 +564,20 @@ Rules that keep this file honest and mergeable:
     pdftex.web :17651, :35413); LuaTeX's `\pdffeedback version` answers 0 where lualatex gives 140; 1
   - ONLINECITE — (LOOPFIX review) `revtex4_support_sty.rs:430` `\onlinecite` → `\citealp` by user-level name, where
     revtex4-2.cls:7069 `\let\onlinecite\rev@citealp` (the OD #1100 class; no loop witness yet). Post-release; 1
-  - CYCLE-WINDOW — `cycle_guard.rs` `MAX_WINDOW = 10`: a loop of 11+ tokens is not caught as a fast Fatal and runs to
-    the 180 s wall clock (the apacite loop before LOOPFIX); raise it (DG call). Post-release; 3
+  - CYCLESTOMACHDRAIN (after CYCLEWIN; synthetic) — the stomach's cycle guard has no backlog gate (it passes 0 to
+    `CycleGuard::push`), so a finite recursion printing a fixed string per pushed-back item into one long paragraph
+    reads as a cycle: `\def\eat#1{\ifx#1\relax\else abcdefghijkl\expandafter\eat\fi}` over a 60,000-token `\edef`
+    is `Fatal:Stomach:Recursion` window 12 (base clean at window 10; the 9-letter variant Fatals on base too); pdflatex
+    clean. Repro `expansion-primitives/cycle_guard_box_drain_period_twelve.tex`. Fix: pass the gullet's pushback length
+    as the stomach guard's backlog so the same span gate applies; 3
+  - CYCLEREFILL2 (pre-existing, base fails the same) — at window 2 `span_checks`' one-check floor looks back 256 reads but
+    only 200 are certified repetition, so a period-2 list refilled in chunks of 240+ tokens (`\def\x#1{}`, a chunk of
+    150 `\x a`, loaded 3,000 times) is a false `Fatal:Timeout:Recursion` window 2 (pdflatex clean; window 3 is clean).
+    Fix: `detect` requires `max(w·REPEAT, CHECK_EVERY + 1)` repeated items. Probes
+    `/home/deyan/.claude/jobs/356a0c47/tmp/rv2/src/refill2.tex`; 1
+  - HYPREFSTEP (post-release) — 2609.30372's `\AtBeginDocument{\let\H@refstepcounter\refstepcounter}` loops under
+    our hyperref binding's `\refstepcounter` dispatch (OD #1100 class); pdflatex finishes the paper (21 pages). Since
+    CYCLEWIN a 5 s cycle Fatal instead of the 180 s wall clock; 1
   - TOKLIMFLOOR — a token budget below the 20G default never takes effect: `--token-limit` (`latexml_oxide.rs:734-736`)
     and latexml.sty's `tokenlimit` (`latexml_sty/mod.rs:730-731`) set it, then every file open (`mouth.rs:694`,
     `core_interface.rs:1276`) runs `scale_token_limit_to_source` (`gullet.rs:793-807`), which lifts any limit to at

@@ -10982,10 +10982,12 @@ sample with the previous check's, 256 reads earlier, with `MAX_WINDOW` as the to
 pushed-back item a period lowers the backlog by 256/p a check, so at 32 every such period of 8 tokens or more read as a
 cycle: `\def\eat#1{\ifx#1\relax\else\expandafter\eat\fi}` over a 30,000-token `\edef` past the floor, a 9-token window
 (pdflatex: "Start done."). The tolerance is now the detected period `w`, across the repeated span: the newest sample
-against the one ⌊w·REPEAT/256⌋ checks earlier, at least one (`span_checks`). A cycle's backlog swings by less than `w`
+against the one ⌊w·REPEAT/256⌋ checks earlier, at least one (`span_checks`). A cycle's backlog swings by at most `w`
 inside a period and holds level or grows; data eaten one item a period falls over that span by more than `2w` for every
 `w` up to `MAX_WINDOW` (a compile-time assert), so by more than `w` after the swing. The sample must lie inside the
-span: one up to 255 reads before it can predate a refill of the pushback (2410.02434, a pgfplots list of
+span (it does for every `w` from 3 up; for `w` = 2 the one-check floor reaches 256 reads, past the 200
+certified, so a period-2 list refilled in chunks of 240+ tokens is still a false Fatal, as on the base — row R
+CYCLEREFILL2): one up to 255 reads before it can predate a refill of the pushback (2410.02434, a pgfplots list of
 `\pgfpl@@{nan}` read in chunks, a 6-token window, read as a cycle at ⌈w·REPEAT/256⌉). The register values folded into the
 fingerprints are cleared at each conversion (`initialize_gullet`, `cycle_guard::reset_value_salt`), so a reused
 `cortex_worker` thread fingerprints a document as a fresh one does. The stomach's box guard has no backlog: such a

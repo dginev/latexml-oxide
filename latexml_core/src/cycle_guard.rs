@@ -210,7 +210,7 @@ impl CycleGuard {
 
   /// True when the backlog fell across the repeated span of a period-`w` window: the newest sample sits more than
   /// `w` below the one taken [`span_checks`]`(w)` checks earlier (the post-reset baseline at the first checks). A
-  /// cycle's backlog swings by less than `w` inside a period and holds level or grows across periods; a recursion
+  /// cycle's backlog swings by at most `w` inside a period and holds level or grows across periods; a recursion
   /// eating one pushed-back item a period lowers it by more than `2 * w` over the span (a compile-time assert), so
   /// by more than `w` after the swing, whatever its period (`\eat#1` over a 30,000-token list, a 9-token window,
   /// falls by 28 a check: a per-check tolerance of `MAX_WINDOW` read it as a cycle).

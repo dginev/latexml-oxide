@@ -2648,3 +2648,11 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   2606.11484's new Fatal is row R ROBUSTIFYCELL.
 - VPHANTOMWIDTH — fixed (DG 2026-11-23, OD #1145): a text `\vphantom` is a zero-width strut (`ltx_vphantom`, LaTeXML.css
   and ar5iv-css).
+- CYCLE-WINDOW — fixed by CYCLEWIN (DG ruling 2026-11-23, OD #538): `cycle_guard.rs` `MAX_WINDOW` 32 (ring 3,200; gullet
+  duty window 4,096 of every 32,768 tokens), a uniform-tail skip in `detect()`, scanned register values folded into the
+  gullet fingerprint and the stomach span (a loop whose counter moves is no period; a finite `\loop` counter warm-up no
+  longer trips), the backlog-drain tolerance the detected period across the repeated span (floor lookback,
+  `span_checks`; 2410.02434), the folded values reset per conversion. 2609.30372 180 s → 5 s cycle Fatal,
+  astro-ph0608348 25 s → 4 s; READARG 498 papers 0 changed; cost ≤ +0.12 % instructions:u. Guards
+  `perfect_kernel_batchcyclewin::*`, `cycle_guard` unit tests. Residuals: row R CYCLESTOMACHDRAIN, CYCLEREFILL2,
+  HYPREFSTEP.
