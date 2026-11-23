@@ -75,7 +75,7 @@ struct InFlight {
 /// Makes an interrupt that ends this process while it builds a format dump a cancellation, not a
 /// failed build (issue 988): the build's attempt note goes back to what it held before the build,
 /// its partial dump is removed, and the process exits with status 130. The next process builds the
-/// format again, where an interrupted build used to count towards marking it [`FAILED`], so two
+/// format again, where an interrupted build used to count towards marking it failed (`.failed.<kind>`), so two
 /// interrupts left every conversion for a day on the engine's own definitions. The interrupts are
 /// Ctrl+C and, on Unix, SIGTERM and SIGHUP (on Windows, Ctrl+Break and closing the console). For a
 /// front end its user interrupts (the `latexml_oxide` CLI's conversions); an embedder that handles
