@@ -10923,8 +10923,8 @@ The class-option cues (`pdftex`, `dvips`, …) and a document's own `\pdfoutput`
 
 ### 538. The gullet's cycle guard fingerprints a token read from a file with its source position; a file level past TeX's `max_in_open` is a Fatal (Rust-only guard; Perl has neither)
 
-The gullet's cycle guard (`cycle_guard.rs`, `gullet.rs` `read_internal_token_checked`) reports a window of up to ten
-tokens repeated 100 times, past its activation floor, as `Fatal:Timeout:Recursion`. It fingerprinted every token read,
+The gullet's cycle guard (`cycle_guard.rs`, `gullet.rs` `read_internal_token_checked`) reports a window of up to 32
+tokens (ten before CYCLEWIN, below) repeated 100 times, past its activation floor, as `Fatal:Timeout:Recursion`. It fingerprinted every token read,
 including the Mouth's own input, and its backlog gate takes a level pushback as a loop's. So finite file text with a
 short period was a loop: 1009.1698's gnuplot label file holds 626 lines of `\color{black}%`, read as one argument with
 the pushback empty ("a window of 8 token(s) repeated 100+ times").
@@ -10956,8 +10956,31 @@ of 6 review runs, and `\loop\hbox{x}\iftrue\repeat` the watchdog alone in 5 of 6
 retryable (pk/65g `exit_report.rs` `retryable`); a cooperative Fatal logged before it appears only in the partial log.
 A cooperative deadline set a grace before the watchdog's would settle the race (task #205).
 
+**Window 32 (CYCLEWIN, DG 2026-11-23).** `MAX_WINDOW` was 10, so a loop through a dozen-odd macros ran to the 180 s
+deadline (the apacite/natbib name-call loop before LOOPFIX, 1909.02387, 2212.08776, OD #1100); the stomach's box guard
+shares the window and went on to the box-list cap. It is 32 now: a 15-token ring of macros stops in 0.6 s (was
+`Fatal:Timeout:Convert` at 180 s), an 11-box `\def\x{abcdefghijk\x}` in 0.14 s (was `Fatal:Stomach:MemoryBudget` at
+2.67M boxes); a 40-token period still runs to the deadline. A finite counter loop re-reads the same tokens each period
+with a new register value (`\loop\advance\n by 1 \ifnum\n<2500000 \repeat`, ~25 tokens, this entry's own fixture
+warm-up), so at 32 it read as a cycle; every numeric register value the gullet scans (`gullet.rs` `register_value_from`,
+`cycle_guard::note_value`) is now folded into the next token's fingerprint, and a loop whose counters move is no period.
+The stomach's span history takes the values read for each box the same way, which also ends a false Fatal at the old
+window: `\loop abcdefghi\advance\n1 \ifnum\n<6000 \repeat` was "a window of 9 box(es)". A loop that only re-expands (the
+alias cycles of OD #1100; 2609.30372's document-level `\let\H@refstepcounter\refstepcounter`, a 20-token window, 180 s →
+5 s, pdflatex finishes it) reads no changing value and still trips; an infinite loop that moves a counter runs to the
+deadline, as before. The ring holds `MAX_WINDOW × REPEAT` = 3,200 items, so the gullet's duty window widened with it,
+2,048 of every 16,384 tokens to 4,096 of every 32,768 (still 1/8). A scan stops at a period's first mismatch; the
+periods a uniform tail rules out are skipped, so a long run of one token costs 32 compares a check, not `W²·REPEAT/2`.
+Cost (`instructions:u`, best of 3, vs INT081C): 2302.07562 (pgfplots) +0.04 %, 2606.20784 (tikz) −0.01 %, 2412.14534
+(siunitx, mhchem) +0.12 %, 1810.02898 −0.04 %; no change on the 498-paper READARG population.
+
 **Guards**: `perfect_kernel_batch65f::repeated_file_text_is_no_expansion_loop` (also: a two-token expansion loop and a
-`\scantokens` self-recursion past the floor still trip), `perfect_kernel_batch65f::self_input_stops_at_the_text_input_level_limit`.
+`\scantokens` self-recursion past the floor still trip), `perfect_kernel_batch65f::self_input_stops_at_the_text_input_level_limit`,
+`perfect_kernel_batchcyclewin::{a_fifteen_token_expansion_loop_is_a_cycle_fatal, an_eleven_box_digestion_loop_is_a_cycle_fatal,
+a_finite_counter_loop_of_boxes_is_no_cycle}` (repros `expansion-primitives/cycle_guard_long_period`,
+`cycle_guard_box_period_eleven`, `cycle_guard_counter_loop_boxes`; the bound,
+`cycle_guard_period_past_window`, is catalog only), `cycle_guard::tests::{detects_period_up_to_max_window,
+a_uniform_tail_does_not_hide_a_longer_period, ignores_period_over_max_window, a_moving_count_breaks_the_span_period}`.
 
 
 ### 540. Misplaced alignment commands: the first in a group is an Error, the rest of that group its cascade, Warnings (TeX: an error each; Perl: silenced by `\let`s to `\relax`)

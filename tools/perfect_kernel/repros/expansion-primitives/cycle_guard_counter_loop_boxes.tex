@@ -1,0 +1,12 @@
+% witness: synthetic; a finite counter \loop printing the same letters (picture/table generators), its spans repeat
+% oracle:  pdflatex 0 errors, "done"
+% engines: rust INT081C = Fatal:Stomach:Recursion "Infinite digestion loop: a window of 9 box(es) repeated 100+ times
+%          from input that repeats every 9 box(es)" on the first loop (the second, 11 boxes, was past the window of 10)
+% expect:  0 errors; "done" (the register values read for each box are in its span, so a moving \n breaks the period)
+% status:  RED (INT081C) -> GREEN (CYCLEWIN)
+\documentclass{article}
+\begin{document}
+\newcount\n \loop abcdefghi\advance\n1 \ifnum\n<6000 \repeat
+\n=0 \loop abcdefghijk\advance\n1 \ifnum\n<6000 \repeat
+done
+\end{document}

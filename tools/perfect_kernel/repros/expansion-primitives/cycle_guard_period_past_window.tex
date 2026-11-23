@@ -1,0 +1,12 @@
+% witness: synthetic bound of the gullet cycle guard: forty macros in a ring, a 40-token period (> MAX_WINDOW = 32)
+% oracle:  pdflatex loops with no capacity error (killed by `timeout 20`, 0 `!` lines)
+% engines: rust INT081C and CYCLEWIN = Fatal:Timeout:Convert "Conversion timed out!" at the 180 s deadline
+% expect:  documents the bound: a period past MAX_WINDOW is no cycle Fatal (catalog only, no guard: 180 s)
+% status:  RED (by design)
+\documentclass{article}
+\begin{document}
+start
+\def\lpaa{\lpab}\def\lpab{\lpac}\def\lpac{\lpad}\def\lpad{\lpae}\def\lpae{\lpaf}\def\lpaf{\lpag}\def\lpag{\lpah}\def\lpah{\lpai}\def\lpai{\lpaj}\def\lpaj{\lpak}\def\lpak{\lpal}\def\lpal{\lpam}\def\lpam{\lpan}\def\lpan{\lpao}\def\lpao{\lpap}\def\lpap{\lpaq}\def\lpaq{\lpar}\def\lpar{\lpas}\def\lpas{\lpat}\def\lpat{\lpau}\def\lpau{\lpav}\def\lpav{\lpaw}\def\lpaw{\lpax}\def\lpax{\lpay}\def\lpay{\lpaz}\def\lpaz{\lpba}\def\lpba{\lpbb}\def\lpbb{\lpbc}\def\lpbc{\lpbd}\def\lpbd{\lpbe}\def\lpbe{\lpbf}\def\lpbf{\lpbg}\def\lpbg{\lpbh}\def\lpbh{\lpbi}\def\lpbi{\lpbj}\def\lpbj{\lpbk}\def\lpbk{\lpbl}\def\lpbl{\lpbm}\def\lpbm{\lpbn}\def\lpbn{\lpaa}%
+\lpaa
+done
+\end{document}

@@ -1,0 +1,14 @@
+% witness: the apacite/natbib name-call loop before LOOPFIX (1909.02387, 2212.08776), synthetic shape:
+%          fifteen macros each expanding to the next, the last to the first (a 15-token period, no growth)
+% oracle:  pdflatex loops with no capacity error (killed by `timeout 20`, 0 `!` lines)
+% engines: rust INT081C = Fatal:Timeout:Convert "Conversion timed out!" at the 180 s deadline
+%          (the gullet cycle guard looked for periods up to 10)
+% expect:  Fatal:Timeout:Recursion "Infinite expansion loop: a window of 15 token(s) repeated 100+ times", in < 1 s
+% status:  RED (INT081C) -> GREEN (CYCLEWIN, MAX_WINDOW 32)
+\documentclass{article}
+\begin{document}
+start
+\def\lpaa{\lpab}\def\lpab{\lpac}\def\lpac{\lpad}\def\lpad{\lpae}\def\lpae{\lpaf}\def\lpaf{\lpag}\def\lpag{\lpah}\def\lpah{\lpai}\def\lpai{\lpaj}\def\lpaj{\lpak}\def\lpak{\lpal}\def\lpal{\lpam}\def\lpam{\lpan}\def\lpan{\lpao}\def\lpao{\lpaa}%
+\lpaa
+done
+\end{document}

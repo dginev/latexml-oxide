@@ -1499,7 +1499,7 @@ enum CheckedRead {
 /// floor): fingerprint + scan only [`CYCLE_GUARD_DUTY_ON`] of every
 /// [`CYCLE_GUARD_DUTY_PERIOD`] tokens. A genuine infinite expansion loop is
 /// *persistent*, so scanning periodic windows still detects it — worst case
-/// one duty period plus a ring fill later (~17k tokens), four orders of
+/// one duty period plus a ring fill later (~36k tokens), four orders of
 /// magnitude before the 1G `token_limit` backstop — while a legitimately
 /// huge healthy stream (pgfplots data plots routinely read 200M+ tokens, past
 /// even the raised graphics floor) stops paying a per-token fingerprint tax
@@ -1507,12 +1507,15 @@ enum CheckedRead {
 /// self-time on witness 2405.14114 before duty-cycling). The ring is reset at
 /// each ON-window start so a window never straddles an OFF gap (no cross-gap
 /// phase artifacts). The ON width covers the ring capacity
-/// (`MAX_WINDOW × REPEAT = 1000`) plus detection cadence (`CHECK_EVERY`) for
+/// (`MAX_WINDOW × REPEAT = 3200`) plus detection cadence (`CHECK_EVERY`) for
 /// every period, so any loop already running at an ON-window start is caught
-/// within that same window. Bursts that end on their own inside an OFF window
-/// are, by definition, not infinite loops — the guard's only target.
-const CYCLE_GUARD_DUTY_PERIOD: usize = 16_384; // power of two (masked below)
-const CYCLE_GUARD_DUTY_ON: usize = 2_048;
+/// within that same window; both widths doubled with `MAX_WINDOW` 10 → 32, so
+/// the fingerprinted share stays 1/8. Bursts that end on their own inside an
+/// OFF window are, by definition, not infinite loops — the guard's only target.
+const CYCLE_GUARD_DUTY_PERIOD: usize = 32_768; // power of two (masked below)
+const CYCLE_GUARD_DUTY_ON: usize = 4_096;
+const _: () =
+  assert!(CYCLE_GUARD_DUTY_ON > crate::cycle_guard::MAX_WINDOW * crate::cycle_guard::REPEAT + 256);
 
 /// Per-token combined step for all FOUR reader loops (`read_token`,
 /// `read_x_token`, `read_balanced`, `read_next_conditional`): resource
@@ -1735,7 +1738,13 @@ fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
           // (repro expansion-primitives/cycle_guard_repeated_file_input.tex). A loop that re-reads the same text
           // through a new Mouth reads it at the same places every period, and is still one (a nesting one, as
           // `\def\x{\scantokens{\x}}`, stops first at TeX's input-level limit, `mark_everyeof_mouth`).
-          let mut fp = token.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+          //
+          // The register values read since the last token ([`crate::cycle_guard::note_value`]) go in too: a counter
+          // loop re-reads the same tokens with a new `\n` each period (`\loop … \ifnum\n<N \repeat`, ~25 tokens), and
+          // is finite.
+          let mut fp = token.cycle_fingerprint()
+            ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15)
+            ^ crate::cycle_guard::take_value_salt().wrapping_mul(0x94D0_49BB_1331_11EB);
           if !expanded {
             let (line, column) = rt.mouth.last_token_start();
             fp ^= (((line as u64) << 32) ^ column as u64).wrapping_mul(0xBF58_476D_1CE4_E5B9);
@@ -4386,11 +4395,16 @@ fn register_value_from(
         }
         if register_type == value_type {
           let args = defn.read_arguments()?;
-          Ok(Scanned::Value(defn.value_of(args)))
+          let value = defn.value_of(args);
+          crate::cycle_guard::note_value(value.as_ref());
+          Ok(Scanned::Value(value))
         } else if coerce {
           // Try type coercion per Perl's %RegisterCoercionTypes
           Ok(match coerce_register(value_type, register_type, &defn)? {
-            Some(coerced) => Scanned::Value(Some(coerced)),
+            Some(coerced) => {
+              crate::cycle_guard::note_value(Some(&coerced));
+              Scanned::Value(Some(coerced))
+            },
             None => Scanned::Declined(token),
           })
         } else {

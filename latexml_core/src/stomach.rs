@@ -2495,9 +2495,12 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested, progress: usize) {
     // window keeps its uniform-run exemption (a finite `\loop` printing one
     // letter). Excluding content-free boxes instead blinded the guard to that
     // runaway and to 2508.07407's cloud loop; mixing the span into the box
-    // fingerprint defeated the uniform-run exemption. DIVERGENCES #326.
-    st.cycle_spans
-      .push(progress.saturating_sub(st.cycle_progress));
+    // fingerprint defeated the uniform-run exemption. DIVERGENCES #326. A span carries the register values read
+    // for its box, so a finite counter `\loop` printing the same letters is no cycle either (OD #538).
+    st.cycle_spans.push(
+      progress.saturating_sub(st.cycle_progress),
+      crate::cycle_guard::take_span_salt(),
+    );
     st.cycle_progress = progress;
     let fp = d.cycle_fingerprint();
     if let Some(period) = st.cycle_guard.push(fp, 0)

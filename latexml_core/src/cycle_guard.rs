@@ -20,18 +20,60 @@
 //! independent** — the cycle need not align to any buffer boundary. The
 //! smallest matching period is reported.
 //!
-//! Cost: detection is throttled to once per `CHECK_EVERY` pushes and is
-//! `O(MAX_WINDOW^2 * REPEAT)` per check (~5.4k u64 compares for the defaults),
-//! i.e. a few amortized compares per push. Callers further gate activation on
-//! an already-high item count so normal conversions pay nothing.
+//! Cost: detection is throttled to once per `CHECK_EVERY` pushes. Each period's
+//! scan stops at its first mismatch, so a non-periodic stream costs about
+//! `MAX_WINDOW` compares per check; the windows a uniform tail rules out are
+//! skipped unscanned ([`CycleGuard::detect`]), so a long run of one item, which
+//! matches every period to the end, costs `MAX_WINDOW` compares too, not
+//! `MAX_WINDOW^2 * REPEAT / 2`. Callers further gate activation on an
+//! already-high item count so normal conversions pay nothing.
 
-/// Largest cycle period (in items) we look for.
-pub const MAX_WINDOW: usize = 10;
+use std::cell::Cell;
+
+use crate::{common::numeric_ops::NumericOps, definition::register::RegisterValue};
+
+thread_local! {
+  /// The numeric register values read since the gullet last fingerprinted a token, and since the stomach last
+  /// recorded a box's span, each folded together.
+  static VALUE_SALT: (Cell<u64>, Cell<u64>) = const { (Cell::new(0), Cell::new(0)) };
+}
+
+/// Fold a register value just read (`\ifnum\n<…`, `\advance\n`) into the next token's fingerprint: a loop
+/// whose tokens repeat but whose counters move is making progress, so it is no cycle. A token-list or pair value
+/// is no number and is skipped.
+#[inline]
+pub fn note_value(value: Option<&RegisterValue>) {
+  let v = match value {
+    Some(RegisterValue::Number(n)) => n.value_of(),
+    Some(RegisterValue::Dimension(d)) => d.value_of(),
+    Some(RegisterValue::MuDimension(d)) => d.value_of(),
+    Some(RegisterValue::Glue(g)) => g.value_of(),
+    Some(RegisterValue::MuGlue(g)) => g.value_of(),
+    _ => return,
+  };
+  VALUE_SALT.with(|(token, span)| {
+    token.set(token.get().rotate_left(7) ^ v as u64);
+    span.set(span.get().rotate_left(7) ^ v as u64);
+  });
+}
+
+/// The values folded by [`note_value`] since the gullet's last call, cleared.
+#[inline]
+pub fn take_value_salt() -> u64 { VALUE_SALT.with(|(token, _)| token.replace(0)) }
+
+/// The values folded by [`note_value`] since the stomach's last call ([`SpanHistory::push`]), cleared.
+#[inline]
+pub fn take_span_salt() -> u64 { VALUE_SALT.with(|(_, span)| span.replace(0)) }
+
+/// Largest cycle period (in items) we look for. 32 catches a loop through a
+/// dozen-odd macros with their arguments (apacite's `\citeA`/natbib name-call
+/// loop, 1909.02387, 2212.08776, ran to the 180 s wall clock at 10).
+pub const MAX_WINDOW: usize = 32;
 /// How many consecutive repetitions of a window constitute "infinite".
 ///
 /// Stays at 100 (not thousands): the gullet fingerprints only a
-/// `CYCLE_GUARD_DUTY_ON` = 2 048-token window per duty period, so
-/// `MAX_WINDOW * REPEAT` must fit inside it. Finite constructs that emit a
+/// `CYCLE_GUARD_DUTY_ON` = 4 096-token window per duty period, so
+/// `MAX_WINDOW * REPEAT` (plus one `CHECK_EVERY`) must fit inside it. Finite constructs that emit a
 /// short window thousands of times (`\prg_replicate:nn {10000} {…}`,
 /// maze manual) are told apart by the backlog gate in [`CycleGuard::push`],
 /// not by a larger count.
@@ -166,8 +208,14 @@ impl CycleGuard {
   }
 
   fn detect(&self) -> Option<usize> {
+    // The uniform tail, up to MAX_WINDOW: a period `w` no longer than it has a
+    // uniform window, which the UNIFORM-run rule below rejects (periodic or not).
+    let first = self.at_from_end(0);
+    let uniform = (1..MAX_WINDOW)
+      .find(|&k| self.at_from_end(k) != first)
+      .unwrap_or(MAX_WINDOW);
     // Smallest period first, so a 2-cycle reports period 2, not 4/6/…
-    for w in 1..=MAX_WINDOW {
+    for w in uniform + 1..=MAX_WINDOW {
       let need = w * REPEAT;
       if self.len < need {
         // Larger windows need even more history; the loop is monotone in `w`.
@@ -193,11 +241,9 @@ impl CycleGuard {
         // self-recursion error before any guard. Note a uniform stream
         // matches EVERY w, so rejecting uniform windows here rejects the
         // whole stream (each larger window is uniform too) — by design.
-        let first = self.at_from_end(0);
-        let has_distinct = (1..w).any(|k| self.at_from_end(k) != first);
-        if has_distinct {
-          return Some(w);
-        }
+        // Every `w` scanned here exceeds the uniform tail, so its window holds
+        // two distinct items.
+        return Some(w);
       }
     }
     None
@@ -241,10 +287,12 @@ impl SpanHistory {
     self.len = 0;
   }
 
-  /// Record the span of the newest box.
+  /// Record the span of the newest box, with the register values read for it ([`take_span_salt`]): a counter loop
+  /// reads the same input each period but a new count, so its spans do not repeat.
   #[inline]
-  pub fn push(&mut self, span: usize) {
-    self.buf[self.head] = u32::try_from(span).unwrap_or(u32::MAX);
+  pub fn push(&mut self, span: usize, salt: u64) {
+    let salt = (salt.wrapping_mul(0x9E37_79B9_7F4A_7C15) >> 32) as u32;
+    self.buf[self.head] = u32::try_from(span).unwrap_or(u32::MAX) ^ salt;
     self.head = (self.head + 1) % SPAN_CAP;
     self.len = (self.len + 1).min(SPAN_CAP);
   }
@@ -272,7 +320,7 @@ mod tests {
   fn spans(stream: impl IntoIterator<Item = usize>) -> SpanHistory {
     let mut h = SpanHistory::default();
     for s in stream {
-      h.push(s);
+      h.push(s, 0);
     }
     h
   }
@@ -309,6 +357,16 @@ mod tests {
     }));
     assert_eq!(h.input_period(6), None);
     assert_eq!(h.input_period(1), None);
+  }
+
+  #[test]
+  fn a_moving_count_breaks_the_span_period() {
+    // The same input every box, but a counter read once per 11-box period that moves (a finite `\loop`).
+    let mut h = SpanHistory::default();
+    for i in 0..1500u64 {
+      h.push(1, if i % 11 == 10 { i / 11 } else { 0 });
+    }
+    assert_eq!(h.input_period(11), None);
   }
 
   #[test]
@@ -383,6 +441,26 @@ mod tests {
   }
 
   #[test]
+  fn detects_period_up_to_max_window() {
+    // A loop through fifteen macros, and one of exactly MAX_WINDOW items.
+    for p in [15, MAX_WINDOW] {
+      let s: Vec<u64> = (0..3 * p * REPEAT).map(|i| (i % p) as u64).collect();
+      assert_eq!(run(&s), Some(p));
+    }
+  }
+
+  #[test]
+  fn a_uniform_tail_does_not_hide_a_longer_period() {
+    // A period-12 window whose tail is four equal fingerprints: the
+    // uniform-tail skip must stop below 12.
+    // The first check that holds 12 * REPEAT items ends at item 1279, the
+    // last of the four 9s (1279 % 12 = 7).
+    let pattern: [u64; 12] = [1, 2, 3, 4, 9, 9, 9, 9, 5, 6, 7, 8];
+    let s: Vec<u64> = (0..20 * REPEAT).map(|i| pattern[i % 12]).collect();
+    assert_eq!(run(&s), Some(12));
+  }
+
+  #[test]
   fn ignores_non_cycle() {
     // Strictly increasing — never periodic.
     let s: Vec<u64> = (0..(50 * REPEAT) as u64).collect();
@@ -398,8 +476,9 @@ mod tests {
 
   #[test]
   fn ignores_period_over_max_window() {
-    // Period 11 (> MAX_WINDOW) repeated many times must NOT fire.
-    let s: Vec<u64> = (0..11 * 3 * REPEAT).map(|i| (i % 11) as u64).collect();
+    // A period past MAX_WINDOW repeated many times must NOT fire.
+    let p = MAX_WINDOW + 1;
+    let s: Vec<u64> = (0..p * 3 * REPEAT).map(|i| (i % p) as u64).collect();
     assert_eq!(run(&s), None);
   }
 

@@ -1391,7 +1391,7 @@ One-line outcomes; detail in `git log` + commit messages.
 - **Codehigh LuaTeX O(n²) parser timeout — FIXED (Batch 54k, `86e764fda4`, 2026-09-02).**
   Degraded unsupported codehigh LuaTeX tokenizer path to plain verbatim, eliminating multi-minute timeouts across documentation sweeps.
 - **One-Borrow Gullet Checkpoint & Duty-Cycled Cycle Guard — FIXED (2026-07-29).**
-  Merged 3 RefCell borrows into 1 in gullet token reading; duty-cycled active cycle guard (2,048 of every 16,384 tokens) cut 2405.14114 by −10.1%.
+  Merged 3 RefCell borrows into 1 in gullet token reading; duty-cycled active cycle guard (2,048 of every 16,384 tokens; 4,096 of every 32,768 since `MAX_WINDOW` 32, OD #538) cut 2405.14114 by −10.1%.
 - **CrossRef O(n²) → O(n) on 40k split docs — FIXED (`4ec2587993`, 2026-07-06).**
   Restored page-node walk in `fill_in_frags` and memoized sibling index in `fill_in_relations`; dropped CrossRef on 40,201-page split doc from 40m47s to 6.1s (18.6× whole-run speedup).
 - **`build` phase quadratic — FIXED (`335b6b83`, ~20×).** `math0605199`

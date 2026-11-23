@@ -1,0 +1,12 @@
+% witness: synthetic; the stomach's box-cycle guard shares cycle_guard.rs's MAX_WINDOW
+% oracle:  pdflatex "! TeX capacity exceeded, sorry [main memory size=5000000]" in 0.1 s
+% engines: rust INT081C = Fatal:Stomach:MemoryBudget "Box-list runaway: 2666578 accumulated boxes exceeded the hard
+%          cap" (an 11-box period, past the window of 10)
+% expect:  Fatal:Stomach:Recursion "Infinite digestion loop: a window of 11 box(es) repeated 100+ times …"
+% status:  RED (INT081C) -> GREEN (CYCLEWIN, MAX_WINDOW 32)
+\documentclass{article}
+\begin{document}
+start
+\def\x{abcdefghijk\x}\x
+done
+\end{document}
