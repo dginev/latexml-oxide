@@ -422,23 +422,10 @@ yysep={,},notesep={, }}}
   //======================================================================
   // Float environments
   //
-  // teaserfigure — real acmart DEFERS the teaser: `\newenvironment{teaserfigure}
-  // {\Collect@Body\@saveteaser}{}` (cls L2202) stashes the body into
-  // `\@teaserfigures`, and `\maketitle` renders it via `\@mkteasers` (cls L2240,
-  // L2899) as the last part of the top-matter box — so in the PDF the teaser
-  // appears AFTER the title+authors and BEFORE the abstract, not where the
-  // environment is written (typically before `\maketitle`). Perl LaTeXML has no
-  // teaserfigure binding at all, so any handling here is beyond-Perl.
-  //
-  // We DIGEST + CONSTRUCT the teaser in place (below) so `\label`/`\ref`,
-  // `\caption` numbering, `xml:id` and `inlist` all resolve exactly as for a
-  // normal float — the teaser in arXiv 2606.22880 is `\ref`-ed 6+ times, so the
-  // figure node must own the label. The prior inline result merely landed in the
-  // wrong PLACE (first `<document>` child, ahead of the title, because the env is
-  // written before `\maketitle`). The `\lx@relocate@teaser` DOCUMENT_REWRITE rule
-  // registered just below moves the finished node to just before the abstract
-  // (user-directed 2026-07-13 — timing/position of `\maketitle`, no frontmatter
-  // markup added over the figure).
+  // teaserfigure: acmart.cls:2201-2203 collects the body into `\@teaserfigures`, and `\maketitle` prints it by
+  // `\@mktitle\@mkauthors\@mkteasers` (:2240, :2899) ahead of the abstract, CCS concepts and keywords (:2331-2346).
+  // Digested in place as a float (Perl acmart.cls.ltxml:165-171), so its caption, number and label resolve as any
+  // figure's (2606.22880's is `\ref`-ed 6+ times); the close below only moves it.
   DefEnvironment!("{teaserfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_teaserfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",
     // A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
@@ -447,33 +434,23 @@ yysep={,},notesep={, }}}
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
-  // Relocate the constructed teaser to acmart's top-matter position: immediately
-  // before the abstract (PDF order: title, authors, teaser, abstract). Runs as a
-  // post-construction DOM rewrite so the figure keeps its id/label/number — only
-  // its position changes.
-  //
-  // We anchor on the ABSTRACT, not the teaser: the rewrite `replace` engine
-  // unbinds the matched node AND every FOLLOWING sibling (re-appending them after
-  // the closure), so matching the teaser — the first `<document>` child — would
-  // detach the whole frontmatter and leave the teaser stuck at the front. The
-  // abstract's PRECEDING siblings (the teaser, title, creators) stay bound, so we
-  // move the still-bound teaser to just before the re-attached abstract. The
-  // xpath predicate gates the rule to teaser-bearing documents only, so a plain
-  // acmart abstract is untouched.
-  DefRewrite!(
-    xpath => "//ltx:abstract[//ltx:figure[contains(@class,'ltx_teaserfigure')]]",
-    replace => sub[document, nodes] {
-      let abs = nodes.pop().unwrap();
-      // Re-attach the abstract at its original parent (the rewrite engine set the
-      // current node to that parent before calling us).
-      document.get_node_mut().add_child(abs)?;
-      // Move the still-bound teaser to just before the abstract.
-      let teasers =
-        document.findnodes("//ltx:figure[contains(@class,'ltx_teaserfigure')]", None);
-      if let Some(mut teaser) = teasers.into_iter().next() {
-        abs.add_prev_sibling(&mut teaser)?;
+  // The teasers, in source order, after the authors as `\@mkteasers` prints them (sigchi-a: after the title, its
+  // authors following, :2240-2242), wherever written (Perl: ahead of the title) (OXIDIZED_DESIGN_DIVERGENCES #1146).
+  Tag!("ltx:document", after_close => sub[document, root] {
+    let teasers = document.findnodes("descendant::ltx:figure[contains(@class,'ltx_teaserfigure')]", Some(root));
+    let head = if x_equals(&T_CS!("\\if@ACM@sigchiamode"), &T_CS!("\\iftrue")) {
+      "ltx:title | ltx:subtitle"
+    } else {
+      "ltx:title | ltx:subtitle | ltx:creator"
+    };
+    if let Some(mut tail) = document.findnodes(head, Some(root)).pop() {
+      for mut teaser in teasers {
+        teaser.unlink();
+        tail.add_next_sibling(&mut teaser)?;
+        tail = teaser;
       }
-    });
+    }
+  });
 
   DefEnvironment!("{marginfigure}[]",
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_marginfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",

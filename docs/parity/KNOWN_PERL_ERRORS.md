@@ -22574,6 +22574,25 @@ token", 1 `<variable>`) and prints "??" with the undefined names' ERROR elements
 Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1144); witnesses 1602.00476, 2409.11413, 2505.14566; guard
 `perfect_kernel_batchvrefclev::cleveref_vref_with_varioref`.
 
+## 1319. Perl's acmart `teaserfigure` stands where it is written, ahead of the title
+
+acmart.cls.ltxml:165-171 builds the teaser as a figure at its source position; acmart.cls:2201-2203 only stores the
+body, and `\maketitle` prints it after the authors and before the abstract (:2240 `\@mkteasers`, :2331). Minimal
+trigger:
+
+```tex
+\documentclass[sigconf,nonacm]{acmart}
+\begin{document}\title{T}\author{A}\affiliation{\institution{U}\country{X}}
+\begin{abstract}Abs.\end{abstract}
+\begin{teaserfigure}\caption{Teaser}\end{teaserfigure}
+\maketitle
+\end{document}
+```
+
+pdflatex prints T, A, "Figure 1: Teaser", the abstract; Perl 0.8.8 (same host, `--nocomments`) gives the figure first,
+then the title, creator and abstract. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1146); witness 2606.22880; guard
+`perfect_kernel_batchacmteaser::acmart_teaserfigure_stands_where_maketitle_prints_it`.
+
 ## 1320. Perl nests the back matter inside the last `\part`
 
 book.cls.ltxml:121 `DefPrimitive('\backmatter', undef)` (amsbook.cls.ltxml:56 alike; svmult.cls.ltxml inherits it) closes

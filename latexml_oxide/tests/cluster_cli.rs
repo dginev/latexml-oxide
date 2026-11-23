@@ -5723,11 +5723,12 @@ Text.
     }
   }
 
-  /// Regression guard: default `Rewrite::Replace` (without `local_replace`) must
-  /// detach following siblings before running the closure (Perl `Rewrite.pm:124-134`),
-  /// keeping `acmart` teaser-after-abstract ordering unchanged.
+  /// The CLI's XML of an acmart teaser written before `\maketitle`: after the authors, before the abstract and
+  /// keywords, as acmart.cls:2240 `\@mkteasers` prints it (OXIDIZED_DESIGN_DIVERGENCES #1146). It pinned the
+  /// abstract < keywords < teaser order of the binding's former `Rewrite::Replace` rule, whose follower detach
+  /// (Perl `Rewrite.pm:124-134`) `rewrite.rs`'s own tests keep guarding.
   #[test]
-  fn acmart_teaser_after_abstract_keeps_perl_replace_follower_detach_order() {
+  fn acmart_teaser_before_abstract_and_keywords() {
     let dir = tempfile::tempdir().expect("tempdir");
     let src = dir.path().join("acm.tex");
     let out = dir.path().join("acm.xml");
@@ -5766,10 +5767,11 @@ Body.
     let xml = std::fs::read_to_string(&out).unwrap();
     let abs_pos = xml.find("<abstract").expect("abstract");
     let kw_pos = xml.find("<keywords").expect("keywords");
+    let creator_pos = xml.find("<creator").expect("creator");
     let teaser_pos = xml.find("ltx_teaserfigure").expect("teaser");
     assert!(
-      abs_pos < kw_pos && kw_pos < teaser_pos,
-      "expected abstract < keywords < teaser (Perl Replace follower-detach semantics):\n{xml}"
+      creator_pos < teaser_pos && teaser_pos < abs_pos && abs_pos < kw_pos,
+      "expected creator < teaser < abstract < keywords (acmart's \\maketitle order):\n{xml}"
     );
   }
 }

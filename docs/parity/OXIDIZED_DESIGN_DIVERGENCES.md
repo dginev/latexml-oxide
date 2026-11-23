@@ -983,10 +983,10 @@ figures in the witness now resolve.
 **Decision:** the acmart `teaserfigure` environment
 (`latexml_package/src/package/acmart_cls.rs`) is digested and constructed **in
 place** as a normal `<ltx:figure class="ltx_teaserfigure">`, then a
-`DOCUMENT_REWRITE` rule moves the finished node to immediately **before the
-abstract** — matching acmart's PDF top-matter order (title, authors, teaser,
-abstract). Perl LaTeXML has **no** `teaserfigure` binding at all, so this is a
-beyond-Perl behavior throughout.
+hook at the document's close moves the finished node to acmart's PDF top-matter
+position (title, authors, teaser, abstract; #1146). Perl's binding
+(acmart.cls.ltxml:165-171) builds the same figure and leaves it where it is
+written (KNOWN_PERL_ERRORS #1319).
 
 **The shared bug.** Real `acmart.cls` defers the teaser:
 `\newenvironment{teaserfigure}{\Collect@Body\@saveteaser}{}` (cls L2202) stashes
@@ -1009,16 +1009,10 @@ digestion**. Deferring the *digestion* to `\maketitle` (e.g. via the frontmatter
 caption number, `xml:id`, `inlist` all correct) and only its **position** is
 changed, post-construction.
 
-**The relocation** is a `DefRewrite` anchored on the **abstract**, not the
-teaser: the rewrite `replace` engine unbinds the matched node *and every
-following sibling*, so matching the teaser (the first child) would detach the
-whole frontmatter. Anchoring on the abstract keeps the teaser (a *preceding*
-sibling) bound, and the still-bound teaser is moved to just before the
-re-attached abstract. The xpath predicate
-`//ltx:abstract[//ltx:figure[contains(@class,'ltx_teaserfigure')]]` gates the
-rule to teaser-bearing documents, so a plain acmart abstract is untouched.
-Verified: 2606.22880's teaser now renders between the authors and the abstract,
-its `\ref`s read "Figure 1", and a teaser-free acmart document is unchanged.
+**The relocation** is #1146's: a `DefRewrite` anchored on the abstract left the
+teaser after the abstract and keywords (the rewrite's follower detach re-appended
+them after it), since `\maketitle`'s flush already puts a float written before it
+behind the frontmatter.
 
 ---
 
@@ -24256,6 +24250,27 @@ as `\phantom`/`\hphantom`; the XSLT (`LaTeXML-inline-xhtml.xsl`, `contains(@clas
 TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hidden`, keeps the baseline).
 `\phantom` and `\hphantom` are unchanged. **Guards** `perfect_kernel_batch61::hphantom_in_plain_tex_loads_no_latex`
 (harvmac's `\refs` struts), `perfect_kernel_batchregfixb::*`, `perfect_kernel_batchfms1::field_prov_phantom_kept`.
+
+### 1146. acmart's `teaserfigure` stands after the authors, before the abstract, as `\maketitle` prints it (ACMTEASER)
+
+**Perl behavior**: acmart.cls.ltxml:165-171 builds `<ltx:figure class="ltx_teaserfigure">` where the environment is
+written, typically before `\maketitle`, so the teaser is the document's first child, ahead of the title
+(KNOWN_PERL_ERRORS #1319).
+**pdflatex (TL 2025)**: acmart.cls:2201-2203 only stores the body in `\@teaserfigures`; `\maketitle` prints
+`\@mktitle\@mkauthors\@mkteasers` (:2240), then the abstract, CCS concepts and keywords (:2331-2346): title, authors,
+teasers in source order, abstract, keywords. Under sigchi-a (`\if@ACM@sigchiamode`) the authors follow the teasers.
+**Rust behavior**: the figure is still digested in place (caption, number, label and `xml:id` as any float's); an
+`ltx:document` close hook in acmart_cls.rs moves every teaser, in source order, after the last top-level title,
+subtitle or creator (title or subtitle under sigchi-a). It replaces the binding's abstract-anchored `DefRewrite` (#56),
+which left the teaser after the keywords: `\maketitle`'s flush puts a float written before it behind the frontmatter,
+and the rewrite's follower detach re-appended the keywords after the moved teaser. A teaser acmart never prints (no
+`\maketitle`, or written after it) joins the same place, its content kept (FIDELITY_CHARTER). A figure among the
+frontmatter elements is outside LaTeXML-structure.rnc's `document_model` order (frontmatter, then body), as Perl's
+teaser-first output is; the HTML renders it in place, its `\ref`s resolved.
+**Why**: DG ruling 2026-11-23 (row R ACMTEASER): the PDF's order. Witness 2606.22880 (teaser `\ref`-ed 6+ times).
+**Guards** `perfect_kernel_batchacmteaser::acmart_teaserfigure_stands_where_maketitle_prints_it` (repros
+class-bindings/acmart_teaserfigure_after_authors, acmart_teaserfigure_sigchia_after_title,
+acmart_teaserfigure_without_maketitle), `cluster_cli::split_release_core_after_bib::acmart_teaser_before_abstract_and_keywords`.
 
 ### 1147. `\backmatter` closes the open part and chapter (BACKMATTERPART)
 

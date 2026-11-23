@@ -1,0 +1,22 @@
+% mechanism: acmart.cls:2240-2242 under sigchi-a (`\if@ACM@sigchiamode`): `\@mktitle\@mkteasers`, then the authors
+%   after `\@printtopmatter`: the teaser prints between the title and the authors.
+% oracle:  pdflatex 0 errors; pdftotext order: "Chi Title", "Figure 1: Chi teaser", "Ann Alpha", "Abstract"
+% engines: perl 0.8.8: teaser before the title (KNOWN_PERL_ERRORS #1319); rust INT081C: teaser after the abstract
+% expect:  0 errors, 0 warnings; title, figure, creator, abstract
+% status:  GREEN (ACMTEASER)
+\documentclass[sigchi-a,nonacm]{acmart}
+\begin{document}
+\title{Chi Title}
+\author{Ann Alpha}
+\affiliation{\institution{Uni A}\country{X}}
+\begin{abstract}
+The abstract text.
+\end{abstract}
+\begin{teaserfigure}
+\centering\rule{2cm}{1cm}
+\caption{Chi teaser}\label{fig:t1}
+\end{teaserfigure}
+\maketitle
+\section{Introduction}
+See Figure~\ref{fig:t1}.
+\end{document}

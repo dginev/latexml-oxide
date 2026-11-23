@@ -1,0 +1,31 @@
+% mechanism: acmart.cls:2201-2203 `teaserfigure` collects its body into `\@teaserfigures`; `\maketitle` (:2240) runs
+%   `\@mktitle\@mkauthors\@mkteasers` and only then the abstract (:2331), CCS concepts and keywords: the teasers print
+%   after the authors and before the abstract, in the order they were written, wherever the environments stand.
+% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Bob Beta", "Figure 1: First teaser",
+%   "Figure 2: Second teaser", "Abstract", "Keywords", "Introduction", "See Figure 1 and Figure 2."
+% engines: perl 0.8.8: teasers before the title (KNOWN_PERL_ERRORS #1319); rust INT081C: teasers after the keywords
+% expect:  0 errors, 0 warnings; title, creators, figure (T1), figure (T2), abstract, keywords; refs resolve to 1 and 2
+% status:  GREEN (ACMTEASER)
+\documentclass[sigconf,nonacm]{acmart}
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\affiliation{\institution{Uni A}\country{X}}
+\author{Bob Beta}
+\affiliation{\institution{Uni B}\country{Y}}
+\begin{abstract}
+The abstract text.
+\end{abstract}
+\keywords{kw one, kw two}
+\begin{teaserfigure}
+\centering\rule{2cm}{1cm}
+\caption{First teaser}\label{fig:t1}
+\end{teaserfigure}
+\begin{teaserfigure}
+\centering\rule{2cm}{1cm}
+\caption{Second teaser}\label{fig:t2}
+\end{teaserfigure}
+\maketitle
+\section{Introduction}
+See Figure~\ref{fig:t1} and Figure~\ref{fig:t2}.
+\end{document}

@@ -1,0 +1,27 @@
+% mechanism: acmart.cls:2201-2203 a teaserfigure only stores its body; without `\maketitle` (or after it) nothing prints
+%   it. The frontmatter is kept (FIDELITY_CHARTER: content over the PDF), so the teasers join it after the authors, in
+%   source order, the one written inside the section too.
+% oracle:  pdflatex 0 errors; the PDF prints "Introduction", "See Figure ??." and no title, teaser or abstract
+% engines: perl 0.8.8: the first teaser before the title, the second in the section; rust INT081C: the first after the
+%   abstract, the second in the section
+% expect:  0 errors, 0 warnings; title, creator, figure (Lost teaser), figure (Late teaser), abstract, section
+% status:  GREEN (ACMTEASER)
+\documentclass[sigconf,nonacm]{acmart}
+\begin{document}
+\title{No Make Title}
+\author{Ann Alpha}
+\affiliation{\institution{Uni A}\country{X}}
+\begin{abstract}
+The abstract text.
+\end{abstract}
+\begin{teaserfigure}
+\centering\rule{2cm}{1cm}
+\caption{Lost teaser}\label{fig:t1}
+\end{teaserfigure}
+\section{Introduction}
+See Figure~\ref{fig:t1}.
+\begin{teaserfigure}
+\centering\rule{2cm}{1cm}
+\caption{Late teaser}\label{fig:t2}
+\end{teaserfigure}
+\end{document}
