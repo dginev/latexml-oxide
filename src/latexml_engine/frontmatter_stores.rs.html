@@ -5746,8 +5746,8 @@
 <a href=#5746 id=5746 data-nosnippet>5746</a>        &amp;&amp; lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\{}"</span>, store_of(name)))).is_none()
 <a href=#5747 id=5747 data-nosnippet>5747</a>    })
 <a href=#5748 id=5748 data-nosnippet>5748</a>    .collect();
-<a href=#5749 id=5749 data-nosnippet>5749</a>  <span class="comment">// (a deposit runs unless `\@maketitle` is the kernel's, or empty)
-<a href=#5750 id=5750 data-nosnippet>5750</a>  </span><span class="kw">let </span>deposits = !<span class="kw">crate</span>::latex_constructs::maketitle_is_kernels()
+<a href=#5749 id=5749 data-nosnippet>5749</a>  <span class="comment">// (a deposit runs unless `\@maketitle` is the kernel's, left to the replay, or empty)
+<a href=#5750 id=5750 data-nosnippet>5750</a>  </span><span class="kw">let </span>deposits = <span class="kw">crate</span>::latex_constructs::title_page_deposits()
 <a href=#5751 id=5751 data-nosnippet>5751</a>    &amp;&amp; <span class="kw">match </span>lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@maketitle"</span>)) {
 <a href=#5752 id=5752 data-nosnippet>5752</a>      <span class="prelude-val">Some</span>(Stored::Expandable(d)) =&gt; {
 <a href=#5753 id=5753 data-nosnippet>5753</a>        <span class="macro">matches!</span>(d.get_expansion(), <span class="prelude-val">Some</span>(ExpansionBody::Tokens(t)) <span class="kw">if </span>!t.is_empty())
