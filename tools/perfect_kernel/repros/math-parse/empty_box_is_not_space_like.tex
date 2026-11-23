@@ -3,14 +3,18 @@
 %          atom, so `\mbox{}=b` has \thickmuskip before the `=`, `\mbox{}-b` and `a+\mbox{}` a binary operator
 % engines: rust 8851f75996e an empty `<mrow></mrow>` (`\makebox[0pt]{}`: an empty `<mpadded>`) beside the `<mo>`:
 %          space-like by MathML Core §3.2.5.1, so MathJax 3.2.2 makes `=` prefix with no left space, and the spacing
-%          walk zeroes `−`'s right space as if unary; Perl 0.8.8 the same empty `<m:mrow/>` (MathML.pm:497-498)
+%          walk zeroes `−`'s right space as if unary; Perl 0.8.8 the same empty `<m:mrow/>` (MathML.pm:499, `pmml_row`)
 % expect:  0 errors; each empty box beside an operator is `<mphantom><mi>U+2060</mi></mphantom>` (inside the
 %          `mpadded` for `\makebox[0pt]{}`); in a script or a fraction slot, or beside an invisible operator
-%          (spaced alike in every form), it stays the empty `<mrow>`
-% status:  RED (8851f75996e) -> GREEN (FIX991B, OXIDIZED_DESIGN_DIVERGENCES #1150)
+%          (spaced alike in every form), it stays the empty `<mrow>`; a box holding sized empty boxes
+%          (`\mbox{\makebox[1cm]{}\makebox[1cm]{}}`, `\raisebox{1ex}{…}`) keeps every `mpadded` and its attributes,
+%          the placeholder added beside them; `\mbox{}\,=b` is the bare placeholder and the `=` gets the
+%          thin space plus \thickmuskip (lspace 0.448em; b1fd8d00277 wrapped it in a row and lost the `\,`)
+% status:  RED (8851f75996e; the last three b1fd8d00277) -> GREEN (FIX991C, OXIDIZED_DESIGN_DIVERGENCES #1150)
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}
 $\mbox{}=b$, $\hbox{}=b$, $\text{}=b$, $\strut=b$, $a=\strut$, $\makebox[0pt]{}=b$, $\mbox{}-b$, $a+\mbox{}$,
-$\mbox{}\mbox{}=b$, $x^{\mbox{}}=b$, $\frac{\mbox{}}{b}$, $\mbox{}x$.
+$\mbox{}\mbox{}=b$, $x^{\mbox{}}=b$, $\frac{\mbox{}}{b}$, $\mbox{}x$,
+$\mbox{\makebox[1cm]{}\makebox[1cm]{}}=b$, $\raisebox{1ex}{\makebox[1cm]{}\makebox[1cm]{}}=b$, $\mbox{}\,=b$.
 \end{document}

@@ -1141,7 +1141,9 @@ fn invisible_operand() -> NodeData {
 /// An empty box beside an operator (`\mbox{}=b`, `a=\strut`, `\makebox[0pt]{}=b`, `\mbox{}-b`: an empty `XMText`, an
 /// empty `<m:mrow>` as in Perl, MathML.pm:499) is TeX's zero-width Ord atom, so it gets the absent operand's
 /// placeholder: emptied, it is space-like and turns the operator prefix or postfix (issue 991), and the spacing walk
-/// reads `−` as unary. Rows only: in a script or fraction slot the empty `<m:mrow>` stays. OXIDIZED_DESIGN #1150.
+/// reads `−` as unary. Rows only: in a script or fraction slot the empty `<m:mrow>` stays. A box sized anywhere
+/// inside (`\makebox[0pt]{}`, `\mbox{\makebox[1cm]{}\makebox[1cm]{}}`) keeps it all, the placeholder added as its
+/// last child. OXIDIZED_DESIGN #1150.
 fn fill_empty_operands(node: &mut NodeData) {
   let NodeData::Element { tag, children, .. } = node else {
     return;
@@ -1156,16 +1158,21 @@ fn fill_empty_operands(node: &mut NodeData) {
       .filter(|&i| is_empty_box(&children[i]) && beside_operator(i))
       .collect();
     for i in empty {
-      match &mut children[i] {
-        NodeData::Element {
-          tag,
-          attributes,
-          children: inner,
-        } if tag != "m:mrow" || attributes.as_ref().is_some_and(|a| !a.is_empty()) => {
-          // An `mpadded` (`\makebox[0pt]{}`) keeps its extent around the placeholder.
-          *inner = vec![invisible_operand()];
-        },
-        slot => *slot = invisible_operand(),
+      let slot = &mut children[i];
+      if has_output_attributes(slot) {
+        if let NodeData::Element { children: inner, .. } = slot {
+          inner.push(invisible_operand());
+        }
+      } else {
+        // Only internal attributes (`\mbox{}\,`'s `_rpadding`): kept on the placeholder for the spacing walk.
+        let internal = match slot {
+          NodeData::Element { attributes, .. } => attributes.take(),
+          _ => None,
+        };
+        *slot = invisible_operand();
+        if let NodeData::Element { attributes, .. } = slot {
+          *attributes = internal;
+        }
       }
     }
   }
@@ -1178,6 +1185,13 @@ fn fill_empty_operands(node: &mut NodeData) {
 fn is_empty_box(node: &NodeData) -> bool {
   matches!(node, NodeData::Element { tag, children, .. }
     if matches!(tag.as_str(), "m:mrow" | "m:mpadded" | "m:mstyle") && children.iter().all(is_empty_box))
+}
+
+/// An attribute that reaches the output (not an internal `_role`, `_rpadding`, …) on `node` or any descendant.
+fn has_output_attributes(node: &NodeData) -> bool {
+  matches!(node, NodeData::Element { attributes, children, .. }
+    if attributes.as_ref().is_some_and(|a| a.keys().any(|k| !k.starts_with('_')))
+      || children.iter().any(has_output_attributes))
 }
 
 /// MathML Core §3.2.5.1: an `mtext`, an `mspace`, or a grouping element whose in-flow children all are space-like.

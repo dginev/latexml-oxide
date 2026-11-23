@@ -69,12 +69,15 @@ fn assert_math(html: &str, id: &str, tex: &str, body: &str) {
 /// was an empty `<mrow>` (an empty `<mpadded>`): space-like, so the `=` beside it took the prefix (postfix) form, and
 /// the spacing walk zeroed `−`'s and `+`'s operator space as if unary. In TeX the box is a zero-width Ord atom: beside
 /// an operator it is the absent operand's placeholder; in a script or a fraction slot, or beside an invisible operator
-/// (spaced alike in every form), it stays the empty `<mrow>`.
-/// Red on 8851f75996e: `<mrow></mrow>` (`<mpadded …></mpadded>`) in the first nine.
+/// (spaced alike in every form), it stays the empty `<mrow>`. A box of sized empty boxes keeps each `mpadded` with
+/// its attributes, the placeholder added beside them (b1fd8d00277 dropped them: the `=` lost 2cm of offset); the
+/// `\,` after an empty box moves onto the placeholder, so the `=` gets TeX's thin + thick space (wrapped and lost before).
+/// Red on 8851f75996e: `<mrow></mrow>` (`<mpadded …></mpadded>`) in the first nine; on b1fd8d00277 the last three.
 #[test]
 fn empty_box_beside_an_operator_is_a_phantom_word_joiner() {
   let ph = "<mphantom><mi>\u{2060}</mi></mphantom>";
   let strut = "\\hbox{\\vrule height=8.39996pt,depth=3.60004pt,width=0.0pt}";
+  let cm = r#"<mpadded style="width:28.5pt;" width="28.5pt"></mpadded>"#;
   let (stderr, html) = convert_html(include_str!(
     "../../../tools/perfect_kernel/repros/math-parse/empty_box_is_not_space_like.tex"
   ));
@@ -123,6 +126,23 @@ fn empty_box_beside_an_operator_is_a_phantom_word_joiner() {
       "p1.m12",
       "\\mbox{}x".to_string(),
       "<mrow><mrow></mrow><mo>\u{2062}</mo><mi>x</mi></mrow>".to_string(),
+    ),
+    (
+      "p1.m13",
+      "\\mbox{\\makebox[28.45274pt]{}\\makebox[28.45274pt]{}}=b".to_string(),
+      format!("<mrow><mrow>{cm}{cm}{ph}</mrow><mo>=</mo><mi>b</mi></mrow>"),
+    ),
+    (
+      "p1.m14",
+      "\\raisebox{4.30554pt}{\\makebox[28.45274pt]{}\\makebox[28.45274pt]{}}=b".to_string(),
+      format!(
+        r#"<mrow><mpadded voffset="4.3pt">{cm}{cm}{ph}</mpadded><mo>=</mo><mi>b</mi></mrow>"#
+      ),
+    ),
+    (
+      "p1.m15",
+      "\\mbox{}\\,=b".to_string(),
+      format!(r#"<mrow>{ph}<mo lspace="0.448em">=</mo><mi>b</mi></mrow>"#),
     ),
   ] {
     assert_math(&html, id, &tex, &body);

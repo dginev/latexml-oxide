@@ -24097,9 +24097,13 @@ leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).
   new slot form infix and 0.278em (`space="4"`), as `a=b`, the slot 0em wide.
 - An empty box is TeX's zero-width Ord atom, and its empty `<m:mrow>` is space-like the same way (`$\mbox{}=b$`:
   MathJax 3.2.2 form prefix, no left space; `$a=\strut$` postfix), so beside an operator it gets the same placeholder
-  (`fill_empty_operands`, a pass before the spacing walk; an `mpadded` keeps its width around it). The walk then
-  reads it as the Ord it is: `$\mbox{}-b$` and `$a+\mbox{}$` keep their binary space, as in TeX (the empty row had
-  made the walk zero it as if unary). In a script or a fraction slot the empty `<m:mrow>` stays: no operator's form
+  (`fill_empty_operands`, a pass before the spacing walk). A box with a size or a style anywhere in it keeps all of
+  it, the placeholder added as its last child: `\makebox[0pt]{}` is `<m:mpadded width="0pt">[slot]</m:mpadded>`,
+  `$\mbox{\makebox[1cm]{}\makebox[1cm]{}}=b$` keeps both 1cm `mpadded`s and `$\raisebox{1ex}{…}=b$` its `voffset`
+  beside the slot. Otherwise the slot replaces the box and takes its internal spacing: after `$\mbox{}\,=b$` the `=`
+  has the thin space plus \thickmuskip (lspace 0.448em), as in TeX. The walk then reads it as the Ord it is:
+  `$\mbox{}-b$` and `$a+\mbox{}$` keep their binary space, as in TeX (the empty row had made the walk zero it as if
+  unary). In a script or a fraction slot the empty `<m:mrow>` stays: no operator's form
   depends on it. `\strut`'s height and depth do not reach the XMath (its zero-width rule is dropped), so the
   placeholder has none to keep.
 - Known third-party effect: MathJax's speech-rule-engine voices the U+2060 as "word joiner" where the slot is not

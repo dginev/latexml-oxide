@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (555 items on 2026-11-23: 551 open, weight 1078, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (559 items on 2026-11-23: 555 open, weight 1086, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -1341,6 +1341,19 @@ Rules that keep this file honest and mergeable:
   - ISSUE80 — issue #80: space XMHints as elided arguments (math, parked); 3
   - ISSUE47 — issue #47: accurate LaTeX linting (feature, long-term; with issue 92's diagnostics); 5
   - YTABMATRIX — (RAWDEFR root cause, 2026-11-23) ytableau's `\ydiagram` inside a pgf matrix cell (`tikzcd`, `\matrix[matrix of math nodes]`) closes `svg:g` while the `\vtop` capture block is still open (ytableau.sty:190-206 `\vtop{\iffalse}\fi` … `\iffalse{\fi}` around an inner `\halign`): `\begin{tikzcd} \ydiagram{1} & B \end{tikzcd}` gives 2 Errors on rc2, pdflatex clean; a plain node, a tabular cell, `\vcenter` are clean. Witness 1502.07025 (123 × `svg:g isn't allowed in <ltx:equation>`). Start from `pgfsys_latexml_def.rs`'s matrix cell build; 3
+  - EMPTYBOXSPACE — (issue 991 review, pre-existing) an author space after an empty box that stays an empty `<m:mrow>`
+    is lost: `$\mbox{}\,x$` (beside an invisible times) has no space where TeX sets the thin space, as the spacing walk
+    skips an empty row's `_rpadding`. Beside a visible operator (`$\mbox{}\,=b$`, `$\mbox{}\,-b$`) the box is the
+    absent operand's placeholder and keeps it (OD #1150); 1
+  - BOXTEXTSPACELIKE — (issue 991 review, pre-existing) a box holding only space is a whitespace `<m:mtext>`:
+    `$\mbox{\hspace{1cm}}=b$` loses its 1cm, and the mtext of it and of `$\mbox{ }=b$` is space-like (MathML Core
+    §3.2.5.1), so the `=` after it is prefix — issue 991's mechanism outside `fill_empty_operands`. Renderers differ:
+    MathJax 3 counts any non-empty `mtext` as space-like, MathJax master and the 2026 Core draft only whitespace-only
+    ones; 3
+  - TEXTPHANTOM — (issue 991 review, pre-existing) `$\text{\phantom{XX}}=b$` is `<m:mtext class="ltx_phantom">XX</m:mtext>`,
+    which renders a visible "XX" where TeX leaves blank space; 1
+  - EMPTYGROUPUNARY — (issue 991 review, pre-existing; math parked) `${}-b$` drops the `{}` and makes the `−` unary (no
+    space); TeX's empty group is an Ord atom, so the `−` is a binary operator with \medmuskip on each side; 3
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
