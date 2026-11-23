@@ -6354,9 +6354,9 @@ after a page break or stranded after the body. **TeX.** article.cls:236-252 `\@m
 - *One pass*: `frontmatter/place.rs:1012 place_frontmatter` (formerly #247, absorbing #242 #245 #246's anchors);
   `:925 mark_preamble_residue`, `:941 close_auto_closable_to_root`.
 - *Text before the title*: `place.rs:1139 hold_text_before_title`, `:1147 wrap_text_before_title`; an abstract printed
-  ahead of title-page text follows that text in a continued `<titlepage>` (formerly #903; `cover_order.rs:27 wrap_as_continued_titlepage`).
+  ahead of title-page text follows that text in a continued `<titlepage>` (formerly #903; `cover_order.rs:43 wrap_as_continued_titlepage`; an in-place float there is cover, #1149).
 - *Content-free*: a leading pagination, empty box or markers-only paragraph is no content (formerly #242, #245, #258;
-  `titlepage_layout.rs`); `cover_order.rs:637 is_body_prose`.
+  `titlepage_layout.rs`); `cover_order.rs:655 is_body_prose`.
 - *Title-page layout*: an abstract-only fallback wraps the layout as `<titlepage>` (formerly #246); a `{titlepage}` built
   after body content is a layout paragraph, or unwrapped around the floats it holds (`field_ink.rs:22
   demote_stranded_titlepage`; formerly #257; #1146); a hand-typeset
@@ -24289,8 +24289,8 @@ HTML shows the title beside the continued titlepage (LaTeXML-structure-xhtml.xsl
 sigchi-a it prints the authors with the title, `div.ltx_authors`, so the wrapper follows them there as on the main path), the
 teasers once, in place, listed in a list of figures and `\ref`-ed across a split. This supersedes the 2026-07-13 rule of
 no frontmatter markup over the teaser. Scope (DG 2026-11-23): `ltx_teaserfigure` marks only a figure a class names a
-teaser; other title-block figures (CVPR's `\twocolumn[…]`, vgtc/egpubl `\teaser`, `\captionof`) are a separate v0.8.1
-spine.
+teaser; other title-block figures (CVPR's `\twocolumn[…]`, egpubl's `\teaser`, `\captionof`, `[H]`) join the cover as
+LaTeX prints them in place (#1149).
 **Why**: DG rulings 2026-11-23 (row R ACMTEASER): the PDF's order, and the wrapper. Witness 2606.22880 (teaser
 `\ref`-ed 6+ times).
 **Guards** `perfect_kernel_batchacmteaser::acmart_teaserfigure_stands_where_maketitle_prints_it` (repros
@@ -24324,3 +24324,35 @@ amsbook_backmatter_closes_the_appendix_and_part}`, `cluster_xslt_split::split_na
 split_backmatter_pages_belong_to_no_part`; repros `sectioning-frontmatter/{book_backmatter_closes_the_last_part,
 book_backmatter_without_parts_closes_the_chapter, book_appendix_then_backmatter_closes_the_part,
 amsbook_backmatter_closes_the_appendix_and_part, svmono_backmatter_closes_the_last_part}`.
+
+### 1149. A float LaTeX prints in place inside the title block joins the continued title page (TITLEFIG)
+
+**Rule** (DG ruling 2026-11-23). A float set where it is written, not floated, between `\maketitle` and an abstract
+written after it is cover: it joins the continued title page (`ltx_titlepage_continued`, #262's late-abstract cover)
+ahead of the abstract, in the PDF's order. A float that floats stays in the body.
+- Perl: no cover reading; the frontmatter (title, authors, abstract) is emitted first and the figure follows the
+  abstract (the schema's `document_model` puts frontmatter before any body figure).
+- TeX: `\captionof` (caption.sty:391 `\caption@of` only sets the type; capt-of.sty `\def\@captype{#1}\caption`), a
+  caption in a box, float.sty's `[H]`, and a class's `\@maketitle` figure (egpubl.cls:766-774 `\def\@captype{figure}`)
+  are typeset in place; `\twocolumn[{\maketitle … \captionof{figure}…}]` (the CVPR/ICCV idiom) prints the teaser under
+  the authors, above the abstract.
+- Implementation: in-place floats carry the internal `_inplace` (`IN_PLACE_FLOAT`, cover_order.rs:23, stripped from
+  the output): set by `\lx@float@inplace` (sect09.rs; called by caption_sty.rs's `\@captionof@` and `\@scaptionof`
+  wrappers and by egpubl_cls.rs's teaser) and by the float a caption outside any float makes (sect09.rs `\@@caption`).
+  `is_in_place_float` (cover_order.rs:28; also `placement` holding `H`) is read by `place_abstract_after_cover` and
+  `place_later_abstract` as cover beside the title-page layout, so the region is no longer refused. In the title page
+  a paragraph of nothing but float-boxes gives way to its floats (`normalize_titlepage_layout_children` calls
+  `settle_float_paragraph`), a real figure as in the body (2609.35408's `\@maketitle` patch: before,
+  `block > p > inline-logical-block > figure`, which the HTML degraded to `<span class="ltx_figure">`).
+  `ltx_teaserfigure` stays only where a class names the figure a teaser (egpubl's `\teaser`; acmart's, #1146).
+- Not reached: a class whose own title page prints the abstract from its store after the figure (vgtc.cls:799-850,
+  2609.25700): the abstract is no late one, and where the class printed it is not read (#262's store fail-safe); RED
+  catalog repro `sectioning-frontmatter/titlefig_class_maketitle_teaser_before_store_abstract`.
+- Upstream: not offered for now (DG 2026-11-23).
+
+**Witnesses** 2303.05007, 2312.02238 (CVPR idiom), 2510.22712 (egpubl), 2609.35408 (`\@maketitle` patch), 2112.02205
+(an `\@maketitle` patch under an affiliation block), 2406.14201 (`[H]` in `\@maketitle`). **Guards**
+`perfect_kernel_batchtitlefig::an_in_place_figure_in_the_title_block_joins_the_continued_title_page` (repros
+`sectioning-frontmatter/titlefig_{cvpr_twocolumn_captionof, capt_of_caption_in_center, float_here_after_maketitle,
+maketitle_patch_minipage_captionof, inplace_figure_between_two_abstracts, true_float_after_maketitle_stays}`),
+`perfect_kernel_batch61::class_bindings_2609_clusters` (egpubl's teaser before the abstract).

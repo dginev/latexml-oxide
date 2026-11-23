@@ -1,0 +1,24 @@
+% mechanism: a float that floats (`[t]`) is no cover: LaTeX sets it at a page top, after the abstract here, so the
+%   late abstract keeps its place ahead of it (`place_abstract_after_cover` refuses the region; OXIDIZED_DESIGN #1149).
+% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Abstract", "1 Introduction",
+%   "See Figure 1.", then page 2 "Figure 1: A floated figure."
+% engines: rust INT081F and TITLEFIG alike: title, creator, abstract, figure, section
+% expect:  0 errors, 0 warnings; no titlepage; the figure in the body after the abstract
+% status:  GREEN (TITLEFIG)
+\documentclass{article}
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\maketitle
+\begin{figure}[t]
+  \centering
+  \rule{4cm}{1cm}
+  \caption{A floated figure.}\label{fig:float}
+\end{figure}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Introduction}
+See Figure~\ref{fig:float}.
+\clearpage
+\end{document}

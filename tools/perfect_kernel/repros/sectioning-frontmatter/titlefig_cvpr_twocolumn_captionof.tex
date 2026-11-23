@@ -1,0 +1,30 @@
+% mechanism: a float LaTeX prints in place (`\captionof`, caption.sty:391 `\caption@of` only sets the type) between
+%   `\maketitle` and a late abstract is the cover (`cover_order.rs` `is_in_place_float`, `\lx@float@inplace`): the
+%   continued title page holds it, ahead of the abstract, as the PDF prints it (OXIDIZED_DESIGN_DIVERGENCES #1149). The
+%   CVPR/ICCV teaser idiom (2303.05007, 2312.02238; 101 of a 30k census sample).
+% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Figure 1: The teaser.", "Abstract",
+%   "1 Introduction", "See Figure 1."
+% engines: rust INT081F: the abstract, then the figure; TITLEFIG: the figure in the continued title page, then the abstract
+% expect:  0 errors, 0 warnings; title, creator, titlepage.ltx_titlepage_continued > figure, abstract, section
+% status:  GREEN (TITLEFIG)
+\documentclass[twocolumn]{article}
+\usepackage{caption}
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\twocolumn[{%
+\renewcommand\twocolumn[1][]{#1}%
+\maketitle
+\begin{center}
+  \captionsetup{type=figure}
+  \rule{4cm}{1cm}
+  \captionof{figure}{The teaser.}
+  \label{fig:teaser}
+\end{center}%
+}]
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Introduction}
+See Figure~\ref{fig:teaser}.
+\end{document}

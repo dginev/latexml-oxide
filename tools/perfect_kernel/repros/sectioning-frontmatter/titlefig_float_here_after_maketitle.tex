@@ -1,0 +1,24 @@
+% mechanism: float.sty's `[H]` does not float: printed where written, between `\maketitle` and a late abstract it is
+%   the cover (`is_in_place_float` reads `placement="H"`; OXIDIZED_DESIGN_DIVERGENCES #1149).
+% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Figure 1: The teaser.", "Abstract",
+%   "1 Introduction"
+% engines: rust INT081F: the abstract, then the figure; TITLEFIG: the figure in the continued title page, then the abstract
+% expect:  0 errors, 0 warnings; title, creator, titlepage.ltx_titlepage_continued > figure[placement=H], abstract
+% status:  GREEN (TITLEFIG)
+\documentclass{article}
+\usepackage{float}
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\maketitle
+\begin{figure}[H]
+  \centering
+  \rule{4cm}{1cm}
+  \caption{The teaser.}\label{fig:teaser}
+\end{figure}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Introduction}
+See Figure~\ref{fig:teaser}.
+\end{document}

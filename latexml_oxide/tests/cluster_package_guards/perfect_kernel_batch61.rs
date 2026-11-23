@@ -4412,12 +4412,16 @@ Body, see Figure~\ref{fig:teaser}.
       ),
     ],
   );
-  // title, author, abstract (top matter, which the schema keeps ahead of every figure), teaser; no teaser note
+  // title, author, the teaser in the continued title page, abstract: the PDF's order (egpubl.cls:766-774 prints it in
+  // `\@maketitle`, before the abstract written after `\maketitle`; TITLEFIG, OXIDIZED_DESIGN_DIVERGENCES #1149, was
+  // after the abstract); no teaser note
   let order: Vec<usize> = [
     "<title>",
     "<creator ",
-    "<abstract ",
+    "<titlepage class=\"ltx_titlepage_continued\"",
     "<figure class=\"ltx_teaserfigure\"",
+    "</titlepage>",
+    "<abstract ",
   ]
   .iter()
   .map(|tag| {

@@ -343,6 +343,8 @@ pub(crate) fn load() -> Result<()> {
           attrs.insert("inlist".to_string(), inlist);
         }
       }
+      // (a float a caption makes in a box is set where the box stands: `IN_PLACE_FLOAT`)
+      attrs.insert(IN_PLACE_FLOAT.to_string(), "true".to_string());
       document.open_element(float_tag, Some(attrs), None)?;
       if let Some(Stored::Digested(tags)) = props.get("float_tags") {
         document.absorb(tags, None)?;
@@ -426,6 +428,21 @@ pub(crate) fn load() -> Result<()> {
       assign_value("lx@unplaced@toccaption", Stored::Digested(body), Some(Scope::Global));
     }
   });
+
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1149): the float around the current point is set where it stands, not
+  // floated — `\captionof`'s wrapper (caption.sty:391 `\caption@of` only sets the type), a class's title-page figure
+  // (egpubl's `\teaser`) — so the title-page reading takes one printed in the title block for cover
+  // (`IN_PLACE_FLOAT`, cover_order.rs).
+  DefConstructor!("\\lx@float@inplace", sub[document, _args] {
+    let mut node = document.get_element();
+    while let Some(mut n) = node {
+      if with(document::get_node_qname(&n), |q| PANEL_FLOATS.contains(&q)) {
+        document.set_attribute(&mut n, IN_PLACE_FLOAT, "true")?;
+        break;
+      }
+      node = n.get_parent().filter(|p| p.get_type() == Some(NodeType::ElementNode));
+    }
+  }, sizer => 0);
 
   // Perl: latex_constructs.pool.ltxml L3450-3458
   // Uses beforeFloat('figure') / afterFloat — sets LAST_FLOATTYPE, rescues counters.

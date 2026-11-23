@@ -1,0 +1,26 @@
+% mechanism: a later late abstract (`place_later_abstract`) reads the region since the one before it as a cover too:
+%   an in-place float there is cover, so the second abstract follows it (OXIDIZED_DESIGN_DIVERGENCES #1149).
+% oracle:  pdflatex 0 errors; pdftotext order: "Abstract", "First abstract.", "Figure 1: Between.", "Abstract",
+%   "Second abstract."
+% engines: rust INT081F: both abstracts, then the figure; TITLEFIG: abstract, titlepage > figure, abstract
+% expect:  0 errors, 0 warnings; title, creator, abstract, titlepage.ltx_titlepage_continued > figure, abstract
+% status:  GREEN (TITLEFIG)
+\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\maketitle
+\begin{abstract}
+First abstract.
+\end{abstract}
+\begin{center}
+\rule{2cm}{1cm}
+\captionof{figure}{Between.}\label{fig:b}
+\end{center}
+\begin{abstract}
+Second abstract.
+\end{abstract}
+\section{Introduction}
+See Figure~\ref{fig:b}.
+\end{document}

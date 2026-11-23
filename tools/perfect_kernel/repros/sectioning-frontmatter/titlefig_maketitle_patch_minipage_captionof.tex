@@ -1,0 +1,34 @@
+% mechanism: a document's `\g@addto@macro\@maketitle{\noindent\begin{minipage}…\captionof{figure}…}` prints the figure
+%   in the title block: the cover paragraph of nothing but that box gives way to its float in the continued title page
+%   (`normalize_titlepage_layout_children` calls `settle_float_paragraph`), a real figure as in the body, not a
+%   `block > p > inline-logical-block > figure` the HTML degraded to `<span class="ltx_figure">` (2609.35408;
+%   OXIDIZED_DESIGN_DIVERGENCES #1149).
+% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Figure 1: The teaser.", "Abstract",
+%   "1 Introduction"
+% engines: rust INT081F: titlepage > block > p > inline-logical-block > figure; TITLEFIG: titlepage > figure.ltx_minipage
+% expect:  0 errors, 0 warnings; title, creator, titlepage.ltx_titlepage_continued > figure.ltx_minipage, abstract
+% status:  GREEN (TITLEFIG)
+\documentclass{article}
+\usepackage{caption}
+\makeatletter
+\g@addto@macro\@maketitle{%
+  \par
+  \noindent
+  \begin{minipage}{\textwidth}
+    \centering
+    \rule{4cm}{1cm}
+    \captionof{figure}{The teaser.}
+    \label{fig:teaser}
+  \end{minipage}
+  \par\vspace{1em}}
+\makeatother
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\maketitle
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Introduction}
+See Figure~\ref{fig:teaser}.
+\end{document}

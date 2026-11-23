@@ -1,0 +1,25 @@
+% mechanism: a `\captionof{table}` in a paragraph and a `\captionof{figure}` in a center, both between `\maketitle`
+%   and a late abstract: the image line, the table and the figure are the cover, in source order (OXIDIZED #1149).
+% oracle:  pdflatex 0 errors; pdftotext order: "Table 1: The teaser table.", "Figure 1: Second.", "Abstract"
+% engines: rust INT081F: the abstract, then the rule line, table and figure; TITLEFIG: titlepage (block, table,
+%   figure), then the abstract
+% expect:  0 errors, 0 warnings; catalog repro (same marker path as titlefig_cvpr_twocolumn_captionof), no guard
+% status:  GREEN (TITLEFIG; catalog, no guard)
+\documentclass{article}
+\usepackage{caption}
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\maketitle
+\noindent\rule{4cm}{1cm}\captionof{table}{The teaser table.}\label{tab:teaser}
+
+\begin{center}
+\rule{2cm}{1cm}
+\captionof{figure}{Second.}\label{fig:two}
+\end{center}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Introduction}
+See Table~\ref{tab:teaser} and Figure~\ref{fig:two}.
+\end{document}

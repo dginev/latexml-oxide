@@ -869,6 +869,8 @@ LoadDefinitions!({
     out.push(T_BEGIN!());
     out.extend(wrapper.iter().cloned());
     out.push(T_END!());
+    // (not floated: printed where it stands, OXIDIZED_DESIGN_DIVERGENCES #1149)
+    out.push(T_CS!("\\lx@float@inplace"));
     out.push(T_CS!("\\@caption@"));
     for arg in [&ty, &opt, &text] {
       out.push(T_BEGIN!());
@@ -915,7 +917,7 @@ LoadDefinitions!({
     };
     out.extend([T_CS!("\\begin"), T_BEGIN!()]);
     out.extend(env.iter().cloned());
-    out.extend([T_END!(), T_CS!("\\@scaption"), T_BEGIN!()]);
+    out.extend([T_END!(), T_CS!("\\lx@float@inplace"), T_CS!("\\@scaption"), T_BEGIN!()]);
     out.extend(text.unlist());
     out.extend([T_END!(), T_CS!("\\end"), T_BEGIN!()]);
     out.extend(env);

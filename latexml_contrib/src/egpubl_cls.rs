@@ -23,14 +23,15 @@ LoadDefinitions!({
   // ltx:note frontmatter entries with role markers.
   // egpubl.cls:699-703, 766-774: `\teaser{…}` stores its body, which `\@maketitle` sets under the title block with
   // `\def\@captype{figure}`: a figure where `\maketitle` stands (class `ltx_teaserfigure`, as acmart's {teaserfigure}),
-  // whose `\caption` and `\label` number and anchor it (2609.00732 `\ref{fig:teaser}`). The PDF sets it before the
-  // abstract; the schema keeps the abstract, top matter, ahead of every figure, so it follows the abstract here.
+  // whose `\caption` and `\label` number and anchor it (2609.00732 `\ref{fig:teaser}`). Set in place, not floated: in
+  // the continued title page, before an abstract written after `\maketitle`, as the PDF (2510.22712; OXIDIZED_DESIGN
+  // #1149).
   DefMacro!("\\teaser{}", "\\gdef\\lx@egpubl@teaser{#1}");
   RawTeX!(r"\let\lx@egpubl@teaser\@empty");
   DefMacro!(
     "\\lx@egpubl@maketeaser",
     r"\ifx\lx@egpubl@teaser\@empty\else
-\begin{figure}\lx@add@cssclass{ltx_teaserfigure}\lx@egpubl@teaser\end{figure}\global\let\lx@egpubl@teaser\@empty\fi"
+\begin{figure}\lx@add@cssclass{ltx_teaserfigure}\lx@float@inplace\lx@egpubl@teaser\end{figure}\global\let\lx@egpubl@teaser\@empty\fi"
   );
   AddToMacro!("\\lx@maketitle@body", "\\lx@egpubl@maketeaser");
   // ORCID id → kernel `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable

@@ -37,11 +37,19 @@ pub(in crate::base_utilities) fn wrap_as_titlepage(
 /// The layout children of a title page as `ltx:para` and the schema's `titlepage_model`
 /// (`Block.class*`; a logical-block too since SCHEMA_EXTENSIONS S14) hold them: a `center`'s
 /// `logical-block` and a `para` become `block`s (#244's demotion, content first, rename after).
+/// A paragraph of nothing but float-boxes gives way to its floats first, as in the body
+/// (`settle_float_paragraph`), which the title page holds (S14): a `\captionof` in a
+/// `\noindent` minipage that `\@maketitle` prints (2609.35408; OXIDIZED_DESIGN_DIVERGENCES #1149).
 /// Shared by `wrap_as_titlepage` and `demote_stranded_titlepage`.
 pub(in crate::base_utilities) fn normalize_titlepage_layout_children(
   document: &mut Document,
   titlepage: &Node,
 ) -> Result<()> {
+  for child in titlepage.get_child_elements() {
+    if document::get_node_qname(&child) == pin_static("ltx:para") {
+      crate::latex_constructs::settle_float_paragraph(document, &child)?;
+    }
+  }
   for child in titlepage.get_child_nodes() {
     if child.get_type() != Some(NodeType::ElementNode) {
       continue;

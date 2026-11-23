@@ -18,6 +18,22 @@ const DEPOSIT_BEGIN: &str = "ltx:_TitlePageDeposit_Capture_";
 /// beside it (`settle_cover_title_ink`).
 pub const CONTINUED_TITLEPAGE: &str = "ltx_titlepage_continued";
 
+/// A float set where it stands, not floated (`\lx@float@inplace`: `\captionof`'s wrapper, a class's title-page figure;
+/// the float a caption makes in a box, sect09.rs): what LaTeX prints in place. Internal, stripped from the output.
+pub const IN_PLACE_FLOAT: &str = "_inplace";
+
+/// A float LaTeX prints where it stands ([`IN_PLACE_FLOAT`], or float.sty's `[H]`, which does not float): in the title
+/// block, the cover (OXIDIZED_DESIGN_DIVERGENCES #1149: the CVPR `\twocolumn[{\maketitle … \captionof{figure}…}]`
+/// teaser, 2303.05007; egpubl's `\teaser`, 2510.22712). A float that floats stays in the body.
+pub(in crate::base_utilities) fn is_in_place_float(node: &Node) -> bool {
+  let q = document::get_node_qname(node);
+  PANEL_FLOATS.iter().any(|float| q == pin_static(float))
+    && (node.has_attribute(IN_PLACE_FLOAT)
+      || node
+        .get_attribute("placement")
+        .is_some_and(|p| p.contains('H')))
+}
+
 /// The class of a `<titlepage>` holding the body text a document set before `\maketitle`, kept ahead of the title block
 /// as the PDF prints it (QA91, [`wrap_text_before_title`]): like [`CONTINUED_TITLEPAGE`], it stands for no title.
 pub const BEFORE_TITLEPAGE: &str = "ltx_titlepage_before";
@@ -311,9 +327,9 @@ fn place_linked_late_abstract(document: &mut Document, marker: &Node) -> Result<
 /// material). The later abstracts are carried along so that late abstracts keep their source order: each then scans
 /// from its new place, right after the one before it (review probe o2d: three late abstracts, each behind its own
 /// cover line), and no late abstract stands in the region a later scan crosses — one that did would refuse the move.
-/// Anything else there — a sectional unit, a float, a list, a TOC, body prose — and the move is refused: the run stays
-/// right after the abstract before it (r3 review probes q1–q4, q10), and a markerless one, which no marker places,
-/// right after the one before it (q9). The cover lines become a `<titlepage>` of their own, continued like the first
+/// Anything else there — a sectional unit, a float that floats, a list, a TOC, body prose — and the move is refused: the
+/// run stays right after the abstract before it (r3 review probes q1–q4, q10), and a markerless one, which no marker
+/// places, right after the one before it (q9). The cover lines become a `<titlepage>` of their own, continued like the first
 /// late abstract's ([`CONTINUED_TITLEPAGE`]): a `<para>` is no frontmatter, and the abstract after it would be invalid
 /// (`\maketitle`, `\noindent\hrulefill`, `{abstract}`, `\noindent\hrulefill`, `{abstract}`: the simples-matrices,
 /// annee-scolaire and paresse manuals, 1006.5288's shape). Returns whether it moved anything.
@@ -366,8 +382,9 @@ fn place_later_abstract(document: &mut Document, bound: Option<&Node>, own: &Nod
       || kid.has_attribute(DEPOSIT_INSERT)
     {
       passed.push(kid.clone());
-    } else if is_titlepage_layout(kid)
-      && (kid.has_attribute(DEPOSIT_PROVENANCE) || !is_body_prose(kid))
+    } else if is_in_place_float(kid)
+      || (is_titlepage_layout(kid)
+        && (kid.has_attribute(DEPOSIT_PROVENANCE) || !is_body_prose(kid)))
     {
       cover.push(kid.clone());
     } else {
@@ -496,13 +513,13 @@ fn keep_late_abstracts_in_source_order(document: &mut Document) -> Result<()> {
 /// every abstract in print. The root children between the placed run of frontmatter that begins with that abstract and
 /// `bound` (a root child, exclusive; `None`: to the end) are read as OXIDIZED_DESIGN #246 reads a cover:
 /// - title-page layout ([`is_titlepage_layout`]: a paragraph, a display block) that the class's title page printed
-///   ([`DEPOSIT_PROVENANCE`]) or that is no running body prose ([`is_body_prose`]) is the cover, wrapped as
-///   `<ltx:titlepage>` in its order;
+///   ([`DEPOSIT_PROVENANCE`]) or that is no running body prose ([`is_body_prose`]), and a float LaTeX prints in place
+///   ([`is_in_place_float`]), is the cover, wrapped as `<ltx:titlepage>` in its order;
 /// - a content-free node (a pagebreak), preamble residue, a root note (a footnote's text, out of the flow) and what an
 ///   `\insert` in the class's title page set ([`DEPOSIT_INSERT`]: page-foot material) are passed over and follow the
 ///   abstract;
-/// - anything else — a sectional unit, a TOC, a float, body prose — keeps today's placement: the region is not the
-///   cover.
+/// - anything else — a sectional unit, a TOC, a float that floats, body prose — keeps today's placement: the region is
+///   not the cover.
 ///
 /// With a cover, the abstract and the frontmatter after it in its run (keywords, classification, a title `\thanks`
 /// pubnote) move behind the `<titlepage>`, save an abstract queued before `\maketitle`'s flush
@@ -569,10 +586,11 @@ pub(in crate::base_utilities) fn place_abstract_after_cover(
       || kid.has_attribute(DEPOSIT_INSERT)
     {
       passed.push(kid.clone());
-    } else if is_titlepage_layout(kid)
-      && (kid.has_attribute(DEPOSIT_PROVENANCE)
-        || open_cover.is_some_and(|begin| begin < at)
-        || !is_body_prose(kid))
+    } else if is_in_place_float(kid)
+      || (is_titlepage_layout(kid)
+        && (kid.has_attribute(DEPOSIT_PROVENANCE)
+          || open_cover.is_some_and(|begin| begin < at)
+          || !is_body_prose(kid)))
     {
       cover.push(kid.clone());
     } else {

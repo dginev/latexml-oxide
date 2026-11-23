@@ -1,0 +1,23 @@
+% mechanism: capt-of's `\captionof` is `\def\@captype{#1}\caption`: a caption outside any float makes its own float
+%   (sect09.rs `\@@caption`), set in place (`IN_PLACE_FLOAT`), so between `\maketitle` and a late abstract it is the
+%   cover (OXIDIZED_DESIGN_DIVERGENCES #1149); also vgtc's `\def\@captype{figure}` teaser minipage (2609.25700).
+% oracle:  pdflatex 0 errors; pdftotext order: "Teaser Title", "Ann Alpha", "Figure 1: Capt-of teaser.", "Abstract"
+% engines: rust INT081F: the abstract, then the figure; TITLEFIG: the figure in the continued title page, then the abstract
+% expect:  0 errors, 0 warnings; title, creator, titlepage.ltx_titlepage_continued > figure, abstract
+% status:  GREEN (TITLEFIG)
+\documentclass{article}
+\usepackage{capt-of}
+\begin{document}
+\title{Teaser Title}
+\author{Ann Alpha}
+\maketitle
+\begin{center}
+\rule{2cm}{1cm}
+\captionof{figure}{Capt-of teaser.}\label{fig:c}
+\end{center}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Introduction}
+See Figure~\ref{fig:c}.
+\end{document}
