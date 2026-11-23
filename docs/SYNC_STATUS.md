@@ -1257,6 +1257,18 @@ Rules that keep this file honest and mergeable:
     token, so a `\textfont1`-style font identifier leaks the "1"; add a font-identifier reader; 1
   - PDFCOLORSTACKNOACT (after 0.8.0) — `\pdfcolorstack<n>` with no action: TeX errors, we read nothing and say nothing;
     add the Error; 1
+  - PDFFONTFEEDBACK (after 0.8.0) — pdfTeX's `\pdffontname`/`\pdffontobjnum`/`\pdffontsize` expand to nothing (as Perl,
+    pdfTeX.pool:97-100), so `\count255=\pdffontobjnum\font\relax` gives "Missing number" where pdflatex gives a number;
+    one shared answer for both these and `\pdffeedback fontname`/`fontobjnum`/`fontsize`, which answer 0 (lualatex
+    typesets "10.0pt" for `fontsize`; a bare 0 is no dimension): an integer for name and objnum, the font's size with
+    `pt` for size (pdftex.web:11359-11369). Reach: microtype-pdftex.def:254 if ever raw-loaded, pdfbase.sty:520-526; 1
+  - PDFOPTSPACE (after 0.8.0, advisor 2026-11-22) — one optional-space helper (`skip_one_space(true)`, gullet.rs) at
+    pdftex.web's four sites: obj `reserveobjnum` (:34321), annot `reserveobjnum` (:34900), dest, `newwindow`/`nonewwindow`
+    (`A\pdf_object_new:n{foo}B` gives "A B", pdflatex "AB"; ordinary documents make 0 such calls, `\DocumentMetadata`
+    tagging 23 in pdflatex, 0 here as our tagpdf stubs that path); `read_action_spec` (pdftex.rs) to `scan_action`
+    (:34774: `struct`, page/name/num order) and `\pdfdest struct <n>`; `\pdffontattr` on the pdfTeX path (:35375); "Color
+    stack action is missing" as an Error; `lastximagepages` before `lastximage`; a non-font operand of `read_font_ident`
+    ("Missing font identifier" + back up, as TeX); 1
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
