@@ -22533,8 +22533,11 @@ $\sqrt{\phantom{x}}$ and $\phantom{x}$
 
 pdflatex sets an empty radical as wide as an x, and an x-wide blank; Perl (same host) gives
 `<msqrt><mi></mi></msqrt>` and no formula for the second (TeX_Math.pool.ltxml:197-201 unwraps a Math of hints to
-spaces). Witness 2603.21852. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1141): the hint keeps its argument and renders
-`<mphantom>`; guard `perfect_kernel_batchphantom::phantom_alone_in_a_slot_is_its_presentation`.
+spaces). Witness 2603.21852. `\mathstrut` (math_common.pool.ltxml:690) is an empty hint of no size at all, where
+latex.ltx:15602 makes it `\vphantom(`: `$\sqrt{\mathstrut a}$` gives `<msqrt><mi>a</mi></msqrt>`. Fixed in Rust
+(OXIDIZED_DESIGN_DIVERGENCES #1141): the hint keeps its argument and renders `<mphantom>`, `\mathstrut` is `\vphantom(`;
+guards `perfect_kernel_batchphantom::{phantom_alone_in_a_slot_is_its_presentation,
+mathstrut_is_a_vphantom_of_a_parenthesis}`.
 
 ## 1320. Perl nests the back matter inside the last `\part`
 
