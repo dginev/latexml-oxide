@@ -2580,3 +2580,8 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
 - (5b) **The BM Q&A work** (DG 2026-11-11: "I approve your plan, let us proceed with full speed ahead"; BM's answers of 2026-11-05): done in int161a — QA45 (ML1, OD #180), QA54 fix (b) (PI1, KPE #1222), QA30 (BU1, KPE #1223), QA10 (DTL1a+b, OD #1004, KPE #1221); 2026-11-12 — QA41's audit, QA89 (OD #1005); QA60 site 8 (SR1) parked after DG's "author's group" ruling (SR4/SR5 after the merge).
 - (6) **The close:** DOCS, SWEEP (#186, row 0's G1-G5 on the final head), CORTEX (runs 373/374 at int169a's push) and CIPERF (the CI config only; DG 2026-11-11: "once we merge we will start working on public issues and PRs, and start running CI instantly"; study `agent_reports/2026-11-11_TC0_report.md`) done in bundles int170a-int171a; left CORTEX2 (the reruns on the pushed final head), GOAL's verdict, MPR (DG confirms).
 - **Pushed bundles:** int154a → int171a, each chain's figures in its "Bundle <label>" entry of [`archive/SYNC_SESSIONS_2026-11.md`](SYNC_SESSIONS_2026-11.md); the last, int171a (`ad465256df`): gates 8103/8103, A/B 28,354 → 81 changed (1 worse ruled post-merge: LEGAB; 2 fixed by FIX171), E 45,692 → 45,686, F 171 = 171.
+
+## Row R tidy-up 2026-11-23 (closed lines)
+
+- QA85 — DONE by #874 (`f59dbc1cac4`): `parity/ORGANIZATION.md` covers all eight workspace crates (checked 2026-11-23).
+- FMTCACHE — folded into FMTCACHE-PRUNE (the same task, listed twice).
