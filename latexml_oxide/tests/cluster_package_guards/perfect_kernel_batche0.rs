@@ -3340,7 +3340,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (MTREDUCE -2: both moved with AAAI's notes to their binding, latexml_contrib aaai_sty.rs, DG 2026-11-17)
   // (SETCOPY, 266 -> 269: `HiddenRefusal` saves and restores `\lx@dropped@<name>`, a meaning read, which the
   // pattern counts)
-  // (MTARG, 269 -> 270: `takes_parameters` reads a macro's meaning, its parameter list, which the pattern counts)
+  // (MTARG, 269 -> 270: `maketitle_parameters` reads `\@maketitle`'s meaning, its parameter list, which the pattern
+  // counts)
   ("latexml_engine/src/latex_constructs/sect05.rs", 270),
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),
   ("latexml_engine/src/latex_constructs/sect07.rs", 29),
