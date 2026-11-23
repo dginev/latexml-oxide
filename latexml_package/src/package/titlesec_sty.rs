@@ -54,9 +54,9 @@ const TITLESEC_CLASSED: [&str; 5] = [
   "subparagraph",
 ];
 
-/// Whether `\<sec>` is still titlesec's: a later definition of it that calls `\@startsection` (a document's or
+/// Whether `\<sec>` is still titlesec's: a later definition of it whose body calls `\@startsection` (a document's or
 /// class's `\renewcommand\section{\@startsection…}`, kept as `\lx@dropped@<sec>` behind the kernel's lock; sectsty's
-/// load, sectsty.sty:310-326) is LaTeX's own heading, which titlesec's formats never reach. Witnesses 1910.11159,
+/// load under its classes, sectsty.sty:298-362) is LaTeX's own heading, which titlesec's formats never reach. Witnesses 1910.11159,
 /// 2005.02481 (a format whose label is the next `\titleformat`), 2005.06700 (sectsty); Perl keeps the formats
 /// (KNOWN_PERL_ERRORS #1317).
 fn titlesec_holds(sec: &str) -> bool {
@@ -69,11 +69,24 @@ fn titlesec_holds(sec: &str) -> bool {
   let Some(Stored::Expandable(now)) = lookup_meaning(&T_CS!(s!("\\lx@dropped@{sec}"))) else {
     return true;
   };
-  // (a definition titlesec's own load replaced, `\lx@titlesec@claimed@<sec>`, does not count)
-  let claimed = lookup_meaning(&T_CS!(s!("\\lx@titlesec@claimed@{sec}")));
-  matches!(claimed, Some(Stored::Expandable(ref c)) if Rc::ptr_eq(c, &now))
-    || !matches!(now.get_expansion(), Some(ExpansionBody::Tokens(body))
-      if body.unlist_ref().contains(&T_CS!("\\@startsection")))
+  let Some(ExpansionBody::Tokens(body)) = now.get_expansion() else {
+    return true;
+  };
+  let body = body.unlist_ref();
+  // (a definition titlesec's own load replaced, `\lx@titlesec@claimed@<sec>`, does not count, nor does that record or
+  // the binding extended at an end by `\preto`/`\g@addto@macro`: state.rs `extended_refused_definition`)
+  let extends = |held: Option<Stored>| match held {
+    Some(Stored::Expandable(c)) => {
+      Rc::ptr_eq(&c, &now)
+        || matches!(c.get_expansion(), Some(ExpansionBody::Tokens(held))
+          if !held.is_empty() && body.len() > held.unlist_ref().len()
+            && body.windows(held.unlist_ref().len()).any(|w| w == held.unlist_ref()))
+    },
+    _ => false,
+  };
+  extends(lookup_meaning(&T_CS!(s!("\\lx@titlesec@claimed@{sec}"))))
+    || extends(lookup_meaning(&T_CS!(s!("\\{sec}"))))
+    || !body.contains(&T_CS!("\\@startsection"))
 }
 
 #[rustfmt::skip]

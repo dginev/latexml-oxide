@@ -19,10 +19,15 @@ LoadDefinitions!({
   DefMacro!("\\chaptertitlefont{}", "\\gdef\\format@title@font@part{#1}");
 
   DefMacro!("\\nohang", None);
-  // sectsty.sty:310-326 redefines `\section`…`\subparagraph` with `\@startsection`, ending a titlesec loaded before
-  // it (titlesec_sty.rs `titlesec_holds`; 2005.06700).
-  for sec in ["section", "subsection", "subsubsection", "paragraph", "subparagraph"] {
-    assign_value(&s!("titlesec_released@{sec}"), true, Some(Scope::Global));
+  // Under article/report/book and scrartcl/scrreprt/scrbook, sectsty.sty:298-362 redefines `\section`…`\subparagraph`
+  // with `\@startsection`, ending a titlesec loaded before it (titlesec_sty.rs `titlesec_holds`; 2005.06700); under
+  // any other class it raises its PackageError (:277-297) and redefines nothing.
+  if ["article", "report", "book", "scrartcl", "scrreprt", "scrbook"].into_iter().any(class_loaded) {
+    for sec in ["section", "subsection", "subsubsection", "paragraph", "subparagraph"] {
+      assign_value(&s!("titlesec_released@{sec}"), true, Some(Scope::Global));
+    }
+  } else {
+    RawTeX!(r"\PackageError{sectsty}{The sectsty package doesn't work with\MessageBreak this document class}{The sectsty package only works with the following classes:\MessageBreak the standard LaTeX document classes\MessageBreak article, report, and book; and\MessageBreak the KOMA-Script classes\MessageBreak scrartcl, scrbook, and scrreprt.}");
   }
 
   DefMacro!("\\allsectionsfont{}",

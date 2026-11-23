@@ -22406,7 +22406,7 @@ because its `\xpretocmd` fails); guard `perfect_kernel_batchlistinline::lstinlin
 ## 1317. Perl's titlesec formats outlive a later `\@startsection` definition of their command
 
 titlesec.sty.ltxml:42-57 stores a `\titleformat` under the command's name, so it applies after a later
-`\renewcommand\section{\@startsection…}` or sectsty's load (sectsty.sty:310-326), where LaTeX's heading no longer runs
+`\renewcommand\section{\@startsection…}` or sectsty's load (sectsty.sty:298-362), where LaTeX's heading no longer runs
 titlesec's code. Minimal trigger:
 
 ```tex

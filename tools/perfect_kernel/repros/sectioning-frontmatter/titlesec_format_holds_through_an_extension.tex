@@ -1,0 +1,24 @@
+% etoolbox's \preto (and \g@addto@macro, \pretocmd) EXTENDS the command titlesec holds; it is no new \@startsection
+% definition, and titlesec keeps it. The kernel's lock keeps the extension as a new record (state.rs
+% extended_refused_definition): of the class's definition titlesec claimed at its load (\section), or of the binding's
+% own (\subsection, never redefined).
+% oracle:  pdflatex 0 errors: "[1] Intro" / "[1.1] Next" (italic)
+% engines: rust (TITLESEC-rel, round 0) "1 Intro" / "1.1 Next" (the kernel's titles); INT081C-rel as expected; perl not run
+% expect:  0 errors; titles "[1] Intro", "[1.1] Next", italic
+% status:  GREEN (TITLESEC round 1; guard perfect_kernel_batchtitlesec::titlesec_keeps_an_extended_command)
+\documentclass{article}
+\makeatletter
+\renewcommand\section{\@startsection{section}{1}{\z@}{-3.5ex}{2.3ex}{\normalfont\Large\bfseries}}
+\makeatother
+\usepackage{titlesec}
+\usepackage{etoolbox}
+\preto\section{\relax}
+\preto\subsection{\relax}
+\titleformat{\section}{\itshape}{[\thesection]}{1em}{}
+\titleformat{\subsection}{\itshape}{[\thesubsection]}{1em}{}
+\begin{document}
+\section{Intro}
+A.
+\subsection{Next}
+B.
+\end{document}
