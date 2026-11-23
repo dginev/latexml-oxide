@@ -110,6 +110,13 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `perfect_kernel_batchfix991::{absent_operand_is_a_phantom_word_joiner,
     empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_word_joiner_in_a_string_value,
     continuation_sign_after_amsmath_s_empty_ord_is_binary}`.
+  - **A null delimiter no longer prints the word "CLOSE" or "OPEN".** `\left( … \right.` and `\left. … \right)` — the
+    usual way to split a formula across lines — and an unbalanced `(a+b` drew the fence parser's stand-in token as
+    the literal word (since 0.7.5): the retry that re-supplies TeX's null delimiter left an empty fence token in the
+    formula, and the MathML failsafe named it by its role. The token now leaves the parsed tree once the formula
+    parses, as Perl draws it (`<mo>(</mo><mi>a</mi>`); formula readings and Content MathML are unchanged. In a
+    sample of 635 arXiv papers, 370 carried 3,625 such words (25 of 100 random papers), now none.
+    OXIDIZED_DESIGN_MATH #22; guards `perfect_kernel_batchnulldelim::*`.
 
 ### 0.8.0-rc2
 

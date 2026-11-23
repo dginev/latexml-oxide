@@ -2121,9 +2121,12 @@ impl MathParser {
       let mut parse_outcome = parse_outcome;
       // The typed stream before its null delimiters, while the letter retry may still want it.
       let mut unbalanced = None;
+      // Whether the stream holds null delimiters `balance_null_delimiters` supplied.
+      let mut null_delimiters = false;
       if matches!(parse_outcome, Ok(None) | Err(_)) && !too_big {
         let lexed = expectations.then(|| lexemes.clone());
         if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? {
+          null_delimiters = true;
           unbalanced = lexed;
           self.suppress_unparsed_warning = expectations || cell_sign;
           let attempt = if expectations || cell_sign {
@@ -2249,6 +2252,18 @@ impl MathParser {
         document.append_tree(mathnode, vec![new_xml_tree.clone()])?;
         // Resolve _xmkey references: match XMRef[@_xmkey] to elements with same _xmkey
         resolve_xmkeys(mathnode, document)?;
+        // TeX's null delimiter prints nothing: the stand-ins `balance_null_delimiters` supplied leave the tree once the
+        // parse has used them, as Perl's XMath has no token for `\right.` (TeX_Math.pool.ltxml:728, an XMHint).
+        if null_delimiters {
+          let xpath = format!("descendant::*[@{NULL_DELIMITER}]");
+          for null in document.findnodes(&xpath, Some(mathnode)) {
+            document.unrecord_node_ids(&null);
+            if let Some(id) = null.get_attribute_ns("id", XML_NS) {
+              crate::data::record_replacement(&id, crate::data::LOST_WITHOUT_REPLACEMENT);
+            }
+            crate::data::defer_discard(null);
+          }
+        }
         // Detect orphaned IDs: any pre-snapshot ID that no longer resolves
         // in the document idstore. Record each as a LOSTNODE with an empty
         // replacement (sentinel — the top-level cleanup interprets empty
@@ -2393,7 +2408,9 @@ impl MathParser {
   /// `( … )` ambiguous with a dangling reading and inflate the parse forest on
   /// the ~99 % of math that is balanced — we re-supply the delimiter that TeX
   /// says is there. The synthesized `XMTok` carries the fence `role` but **empty
-  /// text**, so it renders as nothing, which is exactly `\right.`'s semantics.
+  /// text**, marked `NULL_DELIMITER`: `parse_single` drops it from the parsed tree,
+  /// which then holds no token for the `.`, as Perl's XMath does (kept, the post's
+  /// empty-token failsafe drew it as `<mo>CLOSE</mo>`, Perl MathML.pm:708-714).
   ///
   /// Balanced input is untouched: the scan finds no imbalance and returns.
   ///
@@ -2416,6 +2433,7 @@ impl MathParser {
     let mut synth = |role: &str, text: &str, nodes: &mut Vec<Node>| -> Result<String> {
       let mut tok = document.open_element_at(mathnode, "ltx:XMTok", None, None)?;
       document.set_attribute(&mut tok, "role", role)?;
+      tok.set_attribute(NULL_DELIMITER, "1")?;
       document.close_element_at(&mut tok)?;
       tok.unlink();
       nodes.push(tok);
@@ -3789,6 +3807,10 @@ fn textrec(
 
 /// Marks a punctuation mark `parse_single` set aside (see `MathParser::punctuation`).
 const SET_ASIDE: &str = "_setaside";
+
+/// Marks a fence token `balance_null_delimiters` supplied for TeX's null delimiter; `parse_single` drops it from the
+/// parsed tree.
+const NULL_DELIMITER: &str = "_nulldelimiter";
 
 /// Perl's deepest `MAX_ABS_DEPTH` retry (MathParser.pm:833, `< 3`).
 const MAX_ABS_DEPTH_RETRY: u8 = 3;
