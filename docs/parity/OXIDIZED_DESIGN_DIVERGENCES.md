@@ -21115,16 +21115,19 @@ luatex85.sty:69-92 defines as `\pdfextension <keyword>`; it read one token, so t
 and stays text, as lualatex errs ("! unexpected use of \pdfextension", extensions.c:312) and leaves it. `\pdffeedback colorstackinit` and
 `ximagebbox` answer as `\pdfcolorstackinit` and `\pdfximagebbox`, `fontname`/`fontobjnum`/`fontsize` as pdfTeX's font
 queries (below), and `pageref`/`xformname` read their operand (pdfrender's `\pdfcolorstackinit page direct{…}` leaked "page direct1 w" in
-xfakebold-doc). A font operand (`includechars`, `fontattr`, `\pdffeedback fontname`/`fontobjnum`/`fontsize`, and
+xfakebold-doc); LuaTeX's `\pdffeedback` has no `lastxform`/`lastximage`/`lastximagepages` (luatex85.sty:32-36 lets
+those to `\lastsaved…`), so an unknown keyword gives nothing and stays text, as lualatex leaves "Olastximagepages P". A font operand (`includechars`, `fontattr`, `\pdffeedback fontname`/`fontobjnum`/`fontsize`, and
 pdfTeX's `\pdfincludechars`, `\pdffontname`, `\pdffontobjnum`, `\pdffontsize`, which Perl pdfTeX.pool:97-100 reads
 as one `Token`) is read as tex.web §577 `scan_font_ident` reads it, the `FontToken` parameter's reader
 (`tex_fonts.rs` `read_font_ident`): past spaces, with expansion, `\textfont`/`\scriptfont`/`\scriptscriptfont` with
 their family number; any other token that is no font identifier is TeX's "Missing font identifier" (an Error), read
 again, the null font standing in (`\fontname` "nullfont"; Perl takes the token as the font). The font queries answer
 as pdfTeX's (pdftex.web §1563, :11359-11369), not Perl's nothing (KNOWN_PERL_ERRORS #1312): `fontname` and
-`fontobjnum` one positive number per TFM file, pdfTeX sharing a font's object among its sizes, `fontsize` the size
-with `pt` ("10.0pt"; LuaTeX's `\pdffeedback` answered 0, no dimension); the null font is pdfTeX's "invalid font
-identifier", an Error where pdfTeX stops. luatex85.sty:87-88 defines `\pdfincludechars` and `\pdffontattr` as `\pdfextension
+`fontobjnum` one positive number per TFM file, pdfTeX sharing a font's object among its sizes, counted in the order
+the fonts are first queried (pdfTeX's `\pdffontname` is its internal font number: article's cmr10 is 32 in pdflatex, 1 here), `fontsize`
+the size with `pt` ("10.0pt"; LuaTeX's `\pdffeedback` answered 0, no dimension); the null font is pdfTeX's "invalid
+font identifier" for the queries, `\pdffontattr` and `\pdfincludechars` (pdftex.web :11014, :35381, :35340), an Error
+where pdfTeX stops. luatex85.sty:87-88 defines `\pdfincludechars` and `\pdffontattr` as `\pdfextension
 includechars ` with a trailing space, which one token read as the font (4 Errors for
 `\pdfincludechars\font{abc}\pdffontattr\font{/A 1}`; lualatex 0). The pdfTeX readers follow pdftex-syntax.tex
 where Perl pdfTeX.pool does not: `\pdfcolorstack <n> current` reads no text (as `pop`; pdflatex), `\pdfthread` and
@@ -21133,9 +21136,22 @@ where Perl pdfTeX.pool does not: `\pdfcolorstack <n> current` reads no text (as 
 space after `\pdfobj`/`\pdfannot reserveobjnum`, after a `\pdfdest` type (before `fitr`'s rule spec) and after
 `newwindow`/`nonewwindow` (`A\pdf_object_new:n{x}B` is "AB", not "A B"), `scan_action`'s order (`file`, `struct`,
 then `page <n> <text>` | `name` | `num`), `\pdfdest struct <n>`, and `\pdfcolorstack <n>` with no action is
-pdfTeX's "Color stack action is missing" (an Error; the command is ignored, as under lualatex). `\pdfthread` is new relative to Perl, which only names it in a comment
+pdfTeX's "Color stack action is missing" (an Error; the command is ignored, as under lualatex). `struct` is read on
+LuaTeX's path too, as lualatex accepts it. pdfTeX's other `pdf_error`s in these readers stop pdfTeX (pdftex.web :15627,
+`succumb`); here each is an Error, not a Fatal that would lose the document over a PDF-only annotation, and the
+operands are read on: "action type missing" (nothing more read), "identifier type missing" (`\pdfdest`, `\pdfthread`,
+`\pdfstartthread`, a `goto` or `thread` action, `goto struct`; a `goto` then reads its general text), "destination
+type missing" (not also after a missing identifier, as pdfTeX stops at the first), the positive identifier and page
+checks, `struct` or `page` in a non-`goto` action, `goto file … num`, and `newwindow` without `goto … file`.
+`\DeclareFixedFont` is latex.ltx's (:10307-10315: `\usefont` at the size, `\the\font` let globally to the command),
+not Perl's `\relax` (latex_constructs.pool.ltxml:2714), which is no font identifier: the command is one, read by
+`\fontname` through the identifier's `font_id` as every `\let` alias is (`\fontname\df` is "cmr12"; a `\let` of
+`\tenln` printed "fontname not available"), `\fontdimen`, `\hyphenchar`, `\skewchar`, and it switches the font
+(0706.2748's 8 pt `\mytabfont` tables are set at 80 %, a `\textit` in them at the document's size, as in its PDF).
+`\pdfthread` is new relative to Perl, which only names it in a comment
 (pdfTeX.pool.ltxml:181-182); it is pdfTeX's primitive (pdftex.web `new_annot_whatsit`, `scan_thread_id`), and the latex
-dump gains the one entry it implies: expl3's `\tex_pdfthread:D`, an alias of it, as pdflatex's own format holds. These
+dump gains the entries they imply: expl3's `\tex_pdfthread:D` and `\tex_pdffontattr:D`, aliases of `\pdfthread` and
+`\pdffontattr`, as pdflatex's own format holds. These
 pdfTeX-side readings are offered to Perl as a patch. **Witnesses.** TL manuals ijsra (its class's images reached as
 `../../../tex/latex/…`, written beside `--dest`; now `x1.png`, `x2.png`), newpax (unchanged). **Guards.**
 `cluster_package_guards::perfect_kernel_batchseclua::{batchluaexec_refused_program_answers_as_lualatex,
@@ -21152,8 +21168,9 @@ batchluafont_font_lang_vf_calls_need_the_engine, batchluafont_interpreter_end_sa
 batchluafont_font_read_tfm_and_read_vf_pass_through, batchluafont_pdfextension_literal_reads_its_operands,
 batchluafont_pdfextension_keywords_read_their_operands}`,
 `cluster_package_guards::perfect_kernel_batchpdfprim::batchpdfprim_pdftex_operand_readers` (repros
-`backend-persona/{pdftex_operands_optional_space,pdfcolorstack_action_missing,pdffont_feedback_numbers}`,
-`fonts-nfss/missing_font_identifier`, `luatex-profile/pdfextension_optional_space_font_feedback`),
+`backend-persona/{pdftex_operands_optional_space,pdfcolorstack_action_missing,pdffont_feedback_numbers,pdfdest_destination_type_missing,pdftex_identifier_type_missing,pdftex_action_type_missing,pdftex_action_value_errors,pdffont_invalid_font_identifier}`,
+`fonts-nfss/{missing_font_identifier,declarefixedfont_font_identifier}`,
+`luatex-profile/pdfextension_optional_space_font_feedback`),
 `lua_bridge::tests::{frame_headers_carry_the_session_nonce, engine_gaps_do_not_escalate}` (repros
 `luatex-profile/lua_sandbox_{refused_program_goes_on,refused_then_failed,refusal_budgets,no_programs,paranoid_writes,helpers_held_at_boot,no_symlink_writes,frames_authenticated,backslash_names,many_refusals}`,
 `luatex-profile/lua_{interpreter_restarts,spinning_chunk_ends_with_timeout,font_current_keeps_the_interpreter,font_mirror_hologo,font_lang_vf_need_the_engine,font_read_tfm_vf}`,

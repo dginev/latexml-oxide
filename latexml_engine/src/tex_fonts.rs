@@ -115,12 +115,13 @@ LoadDefinitions!({
     // Determine which font CS to look up
     let lookup_cs = if cs_str == "\\font" {
       // The current font (Perl: current_FontDef, else \lx@default@font).
-      current_font_identifier()?.to_string()
+      current_font_identifier()?
     } else {
-      cs_str
+      token
     };
-    // tex.web §1261: the null font's name is "nullfont" (the recovery of a missing font identifier, §577).
-    let key = s!("fontinfo_{}", lookup_cs);
+    // The identifier's own fontinfo, which a `\let` alias shares (Perl's FontDef `fontID`; `\DeclareFixedFont`'s
+    // `\let#1\the\font`). tex.web §1261: the null font's name is "nullfont" (the recovery of a missing font identifier).
+    let key = s!("fontinfo_{}", font_identifier_cs(lookup_cs));
     // Same pattern for the font-name read — we only need the owned name
     // String, never the Rc<Font>.
     let name = if is_null_font(token) {
@@ -566,7 +567,17 @@ fn font_parameters_key(token: Token) -> String { font_state_key("fontdimen", tok
 /// describes — Perl keeps all three in the one fontinfo hash of the font
 /// (TeX_Fonts.pool.ltxml:104-107).
 pub(crate) fn font_state_key(kind: &str, token: Token) -> String {
-  let canonical_cs = lookup_meaning(&token)
+  let canonical_cs = font_identifier_cs(token);
+  with_value(&s!("font_shared_key_{canonical_cs}"), |value| match value {
+    Some(Stored::String(shared_key)) => with(*shared_key, |sk| s!("{kind}_{sk}")),
+    _ => s!("{kind}_{canonical_cs}"),
+  })
+}
+
+/// The identifier `\font` made that `token` selects, through its `font_id`, which a `\let` alias shares (Perl's FontDef
+/// `fontID`); else `token` itself.
+fn font_identifier_cs(token: Token) -> String {
+  lookup_meaning(&token)
     .and_then(|meaning| match meaning {
       Stored::Primitive(primitive) => primitive.font_id,
       _ => None,
@@ -579,11 +590,7 @@ pub(crate) fn font_state_key(kind: &str, token: Token) -> String {
           .to_string()
       })
     })
-    .unwrap_or_else(|| token.to_string());
-  with_value(&s!("font_shared_key_{canonical_cs}"), |value| match value {
-    Some(Stored::String(shared_key)) => with(*shared_key, |sk| s!("{kind}_{sk}")),
-    _ => s!("{kind}_{canonical_cs}"),
-  })
+    .unwrap_or_else(|| token.to_string())
 }
 
 /// Install `cs` as a font identifier selecting `props` — Perl's `FontDef`

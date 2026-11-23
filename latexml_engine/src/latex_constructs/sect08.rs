@@ -1019,13 +1019,23 @@ pub(crate) fn load() -> Result<()> {
     DefPrimitive!(cs, None, None, font => font);
   });
 
-  // Perl latex_constructs.pool.ltxml L2764: defines the new CS as \relax.
-  // Without a body, papers like 0706.2748 (`\DeclareFixedFont{\mytabfont}...`)
-  // hit "T_CS[\mytabfont] is not defined" when later invoked.
-  DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", sub[(cs, _enc, _fam, _ser, _sh, _sz)] {
-    // latex.ltx:10313 `\let#1\the\font`: the command is the argument's first non-space token.
+  // latex.ltx:10307-10315: the command is the font `\usefont` selects at the size, `\the\font` let to it globally, so
+  // `\fontname\df` is "cmr12" and `\df` switches to it (Perl latex_constructs.pool.ltxml:2714 lets it be `\relax`, which
+  // is no font identifier; 0706.2748 `\DeclareFixedFont{\mytabfont}`). The command is the argument's first non-space
+  // token (`defined_cs`).
+  RawTeX!(
+    r"\def\lx@declare@fixed@font#1#2#3#4#5#6{\begingroup\math@fontsfalse\every@math@size{}\fontsize{#6}\z@
+      \usefont{#2}{#3}{#4}{#5}\global\expandafter\let\expandafter#1\the\font\endgroup}"
+  );
+  DefPrimitive!("\\DeclareFixedFont{}{}{}{}{}{}", sub[(cs, enc, fam, ser, sh, sz)] {
     if let Some((cs_tok, _)) = defined_cs(&cs)? {
-      def_macro(cs_tok, None, Tokens!(T_CS!("\\relax")), None)?;
+      let mut call = vec![T_CS!("\\lx@declare@fixed@font"), cs_tok];
+      for arg in [enc, fam, ser, sh, sz] {
+        call.push(T_BEGIN!());
+        call.extend(arg.unlist());
+        call.push(T_END!());
+      }
+      unread(Tokens::new(call));
     }
   });
   def_primitive_noop("\\DeclareErrorFont{}{}{}{}{}")?;

@@ -1,0 +1,15 @@
+% mechanism: pdftex.rs read_pdf_font_ident: the null font is pdftex.web's "invalid font identifier" (:11014 the font
+%   queries, :35340 \pdfincludechars, :35381 \pdffontattr; `pdf_error`, which stops pdfTeX; an Error here, a query
+%   answering 0/0.0pt). A non-font operand is first TeX's "Missing font identifier" (tex.web §577), then the null
+%   font's Error, pdfTeX's order. Safe twin: pdffont_feedback_numbers.tex.
+% witness: synthetic (row R PDFFONTFEEDBACK, reviewer round 1)
+% oracle:  pdflatex -no-shell-escape, each call alone: "! pdfTeX error (font): invalid font identifier." (fatal, no
+%          PDF); `\pdffontsize x` first "! Missing font identifier."
+% engines: rust=GREEN perl=RED (\pdffontsize expands to nothing: "Missing number"; no \pdffontattr) (2026-11-23)
+% expect:  5 errors, 0 warnings; <p>A0.0ptB0.0ptxCDE</p>
+% status:  RED (\pdffontattr, \pdfincludechars: 0 errors) -> GREEN (pk/PDFPRIM)
+\documentclass{article}
+\begin{document}
+A\edef\y{\pdffontsize\nullfont}\y B\edef\y{\pdffontsize x}\y C\pdffontattr\nullfont{/A 1}D%
+\pdfincludechars\nullfont{abc}E
+\end{document}

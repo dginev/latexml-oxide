@@ -1,0 +1,12 @@
+% mechanism: pdftex.rs read_dest_spec: a `\pdfdest` identifier with no dest type is pdftex.web's "destination type
+%   missing" (`pdf_error`, which stops pdfTeX; an Error here, the PDF-only destination dropped and its optional space
+%   read as after a type). Safe twin: pdftex_operands_optional_space.tex.
+% witness: synthetic (row R PDFOPTSPACE, reviewer round 1)
+% oracle:  pdflatex -no-shell-escape: "! pdfTeX error (ext1): destination type missing." (fatal, no PDF)
+% engines: rust=GREEN perl=RED (pdfTeX.pool.ltxml: no \pdfdest reader, "name{d}" is text) (2026-11-23)
+% expect:  1 error, 0 warnings; <p>AB</p>
+% status:  RED (0 errors) -> GREEN (pk/PDFPRIM)
+\documentclass{article}
+\begin{document}
+A\pdfdest name{d} B
+\end{document}

@@ -1,0 +1,13 @@
+% mechanism: sect08.rs \DeclareFixedFont as latex.ltx:10307-10315: `\usefont` at the size, `\the\font` let globally to
+%   the command, so it is a font identifier (`\fontname`, `\fontdimen`, `\hyphenchar`, `\skewchar`) and a font switch.
+%   Perl's `\relax` (latex_constructs.pool.ltxml:2714) is no font: "Missing font identifier" under read_font_ident.
+% witness: 0706.2748 (`\DeclareFixedFont{\mytabfont}`); synthetic (reviewer round 1)
+% oracle:  pdflatex -no-shell-escape: 0 errors, pdftotext "Acmr12B11.74988ptC45D-1ExF"
+% engines: rust=GREEN perl=RED ("fontname not available", the \relax as the font) (2026-11-23)
+% expect:  0 errors, 0 warnings; <p>Acmr12B11.74988ptC45D-1E<text fontsize="120%">x</text>F</p>
+% status:  RED (4 "Missing font identifier", "nullfont") -> GREEN (pk/PDFPRIM)
+\documentclass{article}
+\DeclareFixedFont{\df}{OT1}{cmr}{m}{n}{12pt}
+\begin{document}
+A\fontname\df B\the\fontdimen6\df C\the\hyphenchar\df D\the\skewchar\df E{\df x}F
+\end{document}

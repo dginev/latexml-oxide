@@ -344,16 +344,14 @@ LoadDefinitions!({
     // `\pdfcreationdate` (luatex85.sty:62 `\xdef\pdfcreationdate{\pdffeedback
     // creationdate}`; novel-pdfx.sty parses it by its `D:`; novel, TeX Live
     // class census 2026-09-24). `colorstackinit`, `ximagebbox` and the font queries answer as
-    // pdfTeX's primitives; the other queries read their operands (luatex85.sty:56-67) and 0.
-    // A keyword that is a prefix of another comes after it (`lastximage` read "pages" as text).
+    // pdfTeX's primitives; the other queries read their operands (luatex85.sty:56-67) and 0. LuaTeX has no
+    // `lastxform`/`lastximage`/`lastximagepages` (luatex85.sty:32-36 lets them to `\lastsaved…`): an unknown keyword
+    // gives nothing and stays text, as lualatex leaves "Olastximagepages P".
     DefMacro!(T_CS!("\\pdffeedback"), None, {
       let keyword = read_keyword(&[
         "lastlink",
         "lastannot",
         "lastobj",
-        "lastxform",
-        "lastximagepages",
-        "lastximage",
         "retval",
         "colorstackinit",
         "creationdate",
@@ -380,6 +378,7 @@ LoadDefinitions!({
         Some(kind @ ("fontname" | "fontobjnum" | "fontsize")) => {
           return latexml_engine::pdftex::pdf_font_feedback(kind);
         },
+        None => return Ok(Tokens::new(Vec::new())),
         _ => {},
       }
       Ok(Tokens!(T_OTHER!("0")))

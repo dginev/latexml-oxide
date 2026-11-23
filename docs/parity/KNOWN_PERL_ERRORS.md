@@ -22479,7 +22479,9 @@ pdflatex prints 1 and 10.0pt; Perl (same host) warns "Missing number, treated as
 (Dimension), treated as zero" and prints 0 and 0.0pt (Rust before the fix: the same). Reach: pdfbase.sty:520-526 keys a
 form font by `\pdffontobjnum\font`; microtype-pdftex.def:254 sets `\fontdimen6` from `\pdffontsize`. Fixed in Rust:
 `pdftex.rs` `pdf_font_feedback`, shared with LuaTeX's `\pdffeedback fontname`/`fontobjnum`/`fontsize` (which answered
-0), answers one positive number per TFM file for both numbers (pdfTeX shares a font's object among its sizes) and the
+0), answers one positive number per TFM file for both numbers (pdfTeX shares a font's object among its sizes), counted
+in the order the fonts are first queried, not pdfTeX's internal font number for `\pdffontname` (article's cmr10: pdflatex 32, Rust 1), and the
 size as `print_scaled` writes it (OXIDIZED_DESIGN_DIVERGENCES #1081). Repros backend-persona/pdffont_feedback_numbers,
-luatex-profile/pdfextension_optional_space_font_feedback; guard
+luatex-profile/pdfextension_optional_space_font_feedback, the null font's Error
+backend-persona/pdffont_invalid_font_identifier; guard
 `perfect_kernel_batchpdfprim::batchpdfprim_pdftex_operand_readers`.

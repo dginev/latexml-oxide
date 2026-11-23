@@ -1,4 +1,5 @@
-% mechanism: pdftex.rs pdf_font_feedback: `\pdffontname`/`\pdffontobjnum` expand to a number, one per TFM file (pdfTeX
+% mechanism: pdftex.rs pdf_font_feedback (and `\pdfincludechars` of a real font, the twin of
+%   pdffont_invalid_font_identifier.tex): `\pdffontname`/`\pdffontobjnum` expand to a number, one per TFM file (pdfTeX
 %   shares a font's object among its sizes), `\pdffontsize` to the font's size with `pt` (pdftex.web §1563,
 %   :11359-11369). Perl expands them to nothing (pdfTeX.pool.ltxml:97-99; KNOWN_PERL_ERRORS), so a number was missing.
 % witness: synthetic (row R PDFFONTFEEDBACK; reach pdfbase.sty:520-526 `\pdffontobjnum\font`, microtype-pdftex.def:254
@@ -12,5 +13,6 @@
 \font\x=cmr10 at 12pt
 A\count255=\pdffontobjnum\font\relax B\edef\y{\pdffontsize\x}\y C\edef\z{\pdffontsize\font}\z D%
 \count255=\pdffontname\x\relax\ifnum\count255>0 E\fi F\ifnum\pdffontobjnum\font=\pdffontobjnum\x X\else G\fi H%
-\ifnum\pdffontname\font=\pdffontname\font I\fi J\fontdimen6\x=\pdffontsize\x\relax\the\fontdimen6\x K
+\ifnum\pdffontname\font=\pdffontname\font I\fi J\fontdimen6\x=\pdffontsize\x\relax\the\fontdimen6\x K%
+\pdfincludechars\x{abc}
 \end{document}
