@@ -3,5 +3,5 @@
 % `\@maketitle` that takes an argument. No code of the class is copied.
 \NeedsTeXFormat{LaTeX2e}\ProvidesClass{mtarg}
 \input{size10.clo}
-\def\@maketitle#1{\par{\centering\@title\par}}
+\def\@maketitle#1{\par{\centering\@title\par}\textit{A Subtitle Written Here}\par}
 \newcommand\maketitle{\par\begingroup\@maketitle{n}\endgroup}

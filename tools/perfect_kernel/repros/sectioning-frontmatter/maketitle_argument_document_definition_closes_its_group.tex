@@ -1,14 +1,16 @@
-% mechanism: a document's `\@maketitle` that takes an argument is not deposited (it would read the deposit's closing
-%   brace as its argument); article's `\maketitle` is the kernel's here, so nothing replays it
+% mechanism: a document's `\@maketitle` that takes an argument, under article's `\maketitle` (the kernel's: nothing
+%   replays it), is deposited with an empty argument, so it cannot read the deposit's closing brace as its argument
 % witness: 0801.1806 (the class shape: maketitle_argument_class_title_page_closes_its_group.tex)
-% oracle:  pdflatex 0 errors: "Hi" (article's `\maketitle` hands `\thispagestyle` to the argument; the page prints none of it)
-% engines: rust 0.8.0-rc2: Warning "Attempt to end document with open groups"; Perl never deposits
-% expect:  0 errors 0 Warnings; the title once; the body paragraph exactly "Hi"
-% status:  RED (0.8.0-rc2) -> GREEN (perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group)
+% oracle:  pdflatex 0 errors: "The Title Ann Author A Subtitle Written Here Hi" (article's `\maketitle` hands `\fi` to
+%          the argument; the log notes "(\end occurred when \iffalse on line 15 was incomplete)")
+% engines: rust 0.8.0-rc2: the subtitle kept, Warning "Attempt to end document with open groups"; MTARG round 0: the
+%          subtitle lost (not deposited); Perl never deposits
+% expect:  0 errors 0 Warnings; the title once; "A Subtitle Written Here" in the title page; the body paragraph "Hi"
+% status:  RED (0.8.0-rc2, MTARG round 0) -> GREEN (perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group)
 % preload: ar5iv.sty
 \documentclass{article}
-\makeatletter\def\@maketitle#1{}\makeatother
-\title{T}
+\makeatletter\def\@maketitle#1{\begin{center}{\LARGE\@title\par}\@author\par\textit{A Subtitle Written Here}\end{center}}\makeatother
+\title{The Title}\author{Ann Author}
 \begin{document}
 \maketitle
 Hi
