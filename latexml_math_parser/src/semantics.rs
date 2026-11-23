@@ -10961,6 +10961,23 @@ pub fn prefix_relop_apply(
   )))
 }
 
+/// A sign opening an alignment cell that continues the one before it (`CELLADDOP`, `util::continues_the_cell_before`):
+/// binary, as amsmath's empty Ord before the cell makes it in TeX — applied to an absent left operand, as a leading
+/// relation is (`prefix_relop_apply`); its lexeme an `ADDOP` again (issue 991).
+pub fn continuation_sign_apply(
+  rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  pragmatics: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  if let Some(Some(XM::Lexeme(lexeme, _))) = args.first_mut()
+    && let Some(rest) = lexeme.strip_prefix("CELLADDOP:")
+  {
+    *lexeme = Rc::from(format!("ADDOP:{rest}"));
+  }
+  prefix_relop_apply(rule_id, args, pragmatics, ctxt)
+}
+
 pub fn prefix_arrow_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,

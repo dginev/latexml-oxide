@@ -86,7 +86,7 @@
           <tag role="refnum">1</tag>
         </tags>
         <MathFork>
-          <Math tex="\displaystyle\quad\left.+c+d\right)." text="delimited-)@(+ c + d)" xml:id="S0.E1.m2">
+          <Math tex="\displaystyle\quad\left.+c+d\right)." text="delimited-)@(absent + c + d)" xml:id="S0.E1.m2">
             <XMath>
               <XMDual>
                 <XMRef idref="S0.E1.m2.1"/>
@@ -99,11 +99,9 @@
                     <XMWrap>
                       <XMTok role="OPEN"/>
                       <XMApp xml:id="S0.E1.m2.2">
-                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMApp>
-                          <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP">+</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                        </XMApp>
+                        <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP">+</XMTok>
+                        <XMTok meaning="absent"/>
+                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
                         <XMTok font="italic" role="UNKNOWN">d</XMTok>
                       </XMApp>
                       <XMTok role="CLOSE" stretchy="true">)</XMTok>
@@ -116,7 +114,7 @@
           </Math>
           <MathBranch>
             <td/>
-            <td align="left"><Math mode="inline" tex="\displaystyle\quad\left.+c+d\right)." text="delimited-)@(+ c + d)" xml:id="S0.E1.m1">
+            <td align="left"><Math mode="inline" tex="\displaystyle\quad\left.+c+d\right)." text="delimited-)@(absent + c + d)" xml:id="S0.E1.m1">
                 <XMath>
                   <XMDual>
                     <XMRef idref="S0.E1.m1.1"/>
@@ -129,11 +127,9 @@
                         <XMWrap>
                           <XMTok role="OPEN"/>
                           <XMApp xml:id="S0.E1.m1.2">
-                            <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                            <XMApp>
-                              <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP">+</XMTok>
-                              <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                            </XMApp>
+                            <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP">+</XMTok>
+                            <XMTok meaning="absent"/>
+                            <XMTok font="italic" role="UNKNOWN">c</XMTok>
                             <XMTok font="italic" role="UNKNOWN">d</XMTok>
                           </XMApp>
                           <XMTok role="CLOSE" stretchy="true">)</XMTok>

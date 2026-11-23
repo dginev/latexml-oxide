@@ -101,9 +101,15 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     `$\hbox{}=b$`, `$\text{}=b$`, `$\strut=b$`, `$a=\strut$`, `$\makebox[0pt]{}=b$` — was an empty `<mrow>` with the
     same effect, and `$\mbox{}-b$`, `$a+\mbox{}$` lost their binary-operator space; it is now the same placeholder, as
     TeX sets it a zero-width ordinary atom. A note's mark taken as plain text from a formula (2509.25166) leaves the
-    U+2060 out (OXIDIZED_DESIGN_DIVERGENCES #1150). Guards
+    U+2060 out (OXIDIZED_DESIGN_DIVERGENCES #1150). A `+`, `-`, `\pm` or `\mp` opening a cell that continues the one
+    before it (`&+ c`, `&\quad - d` in `align`, `aligned`, `split`, `alignat`; a `multline` line after the first) was
+    a prefix sign, set tight and losing a leading `\quad`; amsmath's `{}` before the cell makes it binary, and it now
+    reads `plus(absent, c)` with the placeholder before it, the `\quad` kept. A cell with a relation of its own
+    (`&-\Delta u = f`) or after a left cell ending in a relation (`B =& -C`) keeps its prefix sign
+    (OXIDIZED_DESIGN_DIVERGENCES #1151). Guards
     `perfect_kernel_batchfix991::{absent_operand_is_a_phantom_word_joiner,
-    empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_word_joiner_in_a_string_value}`.
+    empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_word_joiner_in_a_string_value,
+    continuation_sign_after_amsmath_s_empty_ord_is_binary}`.
 
 ### 0.8.0-rc2
 

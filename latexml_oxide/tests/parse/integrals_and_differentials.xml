@@ -12331,10 +12331,11 @@
         </equation>
         <equation xml:id="S11.Ex9">
           <MathFork>
-            <Math tex="\displaystyle\quad+c\,dn" text="+ c * d * n" xml:id="S11.Ex9.m2">
+            <Math tex="\displaystyle\quad+c\,dn" text="absent + c * d * n" xml:id="S11.Ex9.m2">
               <XMath>
                 <XMApp>
                   <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP">+</XMTok>
+                  <XMTok meaning="absent"/>
                   <XMApp>
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
                     <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">c</XMTok>
@@ -12346,10 +12347,11 @@
             </Math>
             <MathBranch>
               <td/>
-              <td align="left"><Math mode="inline" tex="\displaystyle\quad+c\,dn" text="+ c * d * n" xml:id="S11.Ex9.m1">
+              <td align="left"><Math mode="inline" tex="\displaystyle\quad+c\,dn" text="absent + c * d * n" xml:id="S11.Ex9.m1">
                   <XMath>
                     <XMApp>
                       <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP">+</XMTok>
+                      <XMTok meaning="absent"/>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
                         <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">c</XMTok>

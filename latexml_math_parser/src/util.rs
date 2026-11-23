@@ -55,6 +55,13 @@ pub fn node_to_grammar_lexemes_from(
       }
     }
   }
+  // amsmath sets an empty Ord before a right-hand alignment cell (`\displaystyle{{}##}`): a sign opening a cell that
+  // continues the one before it is binary there, lexed `CELLADDOP` — its left operand absent (issue 991).
+  if lexemes.first().is_some_and(|l| l.starts_with("ADDOP:"))
+    && continues_the_cell_before(mathnode, &nodes)
+  {
+    lexemes[0] = lexemes[0].replacen("ADDOP:", "CELLADDOP:", 1);
+  }
   if lexemes.iter().any(|l| l.starts_with("XDIFF")) {
     let levels = operand_levels(&nodes, true);
     // (whether an earlier row left an integral open is asked only of a `d` the formula's own walk leaves open at its
@@ -1375,6 +1382,159 @@ fn continues_an_open_integral(mathnode: &Node) -> bool {
     }
   }
   open > 0
+}
+
+/// Does the formula `mathnode` (a cell's XMArg, the XMath of a cell's Math, or of the row formula a MathFork composes
+/// of an empty left cell and that cell), lexed as `nodes` and opening with a sign, continue the cell before it? amsmath sets an empty Ord before the cells its alignment marks `_ord_cells`
+/// (`\displaystyle{{}##}`: the right cell of each pair, amsmath.sty:2347-2354 `\align@preamble`, :1483-1486
+/// `{aligned}`, :2424-2425 `{split}`; every line of a `{multline}`, :2580), which makes the sign binary in TeX; Perl's
+/// templates drop it (KNOWN_PERL_ERRORS #1319). User ruling 2026-11-23: the cell continues when the left cell of its pair
+/// is empty and the formula has no relation of its own (`&+c`; `&-\Delta u=f` starts a statement), or the left cell ends
+/// in an operand (`a=b&+c`), not a relation or an operator (`B=&-C`); a multline's line after the first always does.
+/// Issue 991; 1308.2969, 2512.12866, 2306.10612, 1612.06544.
+fn continues_the_cell_before(mathnode: &Node, nodes: &[Node]) -> bool {
+  let parent = mathnode.get_parent();
+  let (cells, at, rule) = if name_is(mathnode, "XMArg")
+    && let Some(cell) = parent.clone().filter(|cell| name_is(cell, "XMCell"))
+  {
+    // an XMArray's cell (`{aligned}`, `{split}`, `{multline}`): XMArray/XMRow/XMCell/XMArg
+    let Some(row) = cell.get_parent() else {
+      return false;
+    };
+    let Some(rule) = row
+      .get_parent()
+      .filter(|array| name_is(array, "XMArray"))
+      .and_then(|array| array.get_attribute("_ord_cells"))
+    else {
+      return false;
+    };
+    if rule == "all" {
+      return previous_element(&row, "XMRow").is_some();
+    }
+    let cells = element_children(&row, "XMCell");
+    let Some(at) = cells.iter().position(|candidate| *candidate == cell) else {
+      return false;
+    };
+    (cells, at, rule)
+  } else {
+    // an equationgroup's cell (`{align}`): MathBranch[/tr]/td/Math/XMath — a lifted `\[\begin{aligned}…\]`'s
+    // keeps the XMArg its XMCell had (`rearrange_lone_ams_aligned`) —, or the row's formula its MathFork composes
+    let xmath = if name_is(mathnode, "XMArg") {
+      parent
+    } else {
+      Some(mathnode.clone())
+    };
+    let Some(holder) = xmath
+      .filter(|xmath| name_is(xmath, "XMath"))
+      .and_then(|xmath| xmath.get_parent())
+      .filter(|math| name_is(math, "Math"))
+      .and_then(|math| math.get_parent())
+    else {
+      return false;
+    };
+    let fork = name_is(&holder, "MathFork");
+    let (row, td) = if fork {
+      // (its column pair's cells: the first cell row of its branch)
+      let Some(branch) = element_children(&holder, "MathBranch").into_iter().next() else {
+        return false;
+      };
+      let row = element_children(&branch, "tr")
+        .into_iter()
+        .next()
+        .unwrap_or(branch);
+      let tds = element_children(&row, "td");
+      // (a formula opening with the left cell's sign is that cell's own: the sign starts the row)
+      if tds.len() < 2 || last_item(&tds[0]).is_some() {
+        return false;
+      }
+      let td = tds[1].clone();
+      (row, td)
+    } else if name_is(&holder, "td")
+      && let Some(row) = holder.get_parent()
+    {
+      (row, holder)
+    } else {
+      return false;
+    };
+    let branch = if name_is(&row, "tr") {
+      row.get_parent()
+    } else {
+      Some(row.clone())
+    };
+    let Some(rule) = branch
+      .filter(|branch| name_is(branch, "MathBranch"))
+      .and_then(|branch| ancestor_named(&branch, "equationgroup"))
+      .and_then(|group| group.get_attribute("_ord_cells"))
+    else {
+      return false;
+    };
+    let cells = element_children(&row, "td");
+    let Some(at) = cells.iter().position(|candidate| *candidate == td) else {
+      return false;
+    };
+    (cells, at, rule)
+  };
+  if rule != "odd" || at % 2 == 0 {
+    return false;
+  }
+  match last_item(&cells[at - 1]) {
+    // an empty left cell: a continuation, unless the formula is a statement of its own
+    None => {
+      let levels = operand_levels(nodes, true);
+      !(0..nodes.len()).any(|k| {
+        levels.levels[k] == 0 && matches!(levels.roles[k].as_str(), "RELOP" | "METARELOP" | "ARROW")
+      })
+    },
+    Some(last) => ends_an_operand(&last),
+  }
+}
+
+/// The last item of a cell or a formula as it reads — a token, or a node with no reading inside (an array, a text) —
+/// through its applications' last arguments and its duals' presentation; none when it holds nothing but hints.
+fn last_item(node: &Node) -> Option<Node> {
+  let item = node
+    .get_child_elements()
+    .into_iter()
+    .rev()
+    .find(|child| !name_is(child, "XMHint"))?;
+  let item = resolve_xmref(&item).unwrap_or(item);
+  if ["Math", "XMath", "XMArg", "XMWrap", "XMApp"]
+    .iter()
+    .any(|name| name_is(&item, name))
+  {
+    last_item(&item)
+  } else if name_is(&item, "XMDual") {
+    let presentation = item.get_child_elements().into_iter().nth(1)?;
+    let presentation = resolve_xmref(&presentation).unwrap_or(presentation);
+    if name_is(&presentation, "XMTok") {
+      Some(presentation)
+    } else {
+      last_item(&presentation)
+    }
+  } else {
+    Some(item)
+  }
+}
+
+/// Does a cell's last item (`last_item`) end an operand — not an absent one, a relation, an operator or an opening?
+fn ends_an_operand(item: &Node) -> bool {
+  !(name_is(item, "XMTok")
+    && (item.get_attribute("meaning").as_deref() == Some("absent")
+      || matches!(
+        item.get_attribute("role").as_deref(),
+        Some(
+          "RELOP"
+            | "METARELOP"
+            | "ARROW"
+            | "ADDOP"
+            | "MULOP"
+            | "BINOP"
+            | "OPEN"
+            | "PUNCT"
+            | "PERIOD"
+            | "MODIFIEROP"
+        )
+      )))
 }
 
 /// The child elements of `node` named `name`.

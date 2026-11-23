@@ -2017,6 +2017,31 @@ impl MathParser {
       let expectations = lexemes
         .iter()
         .any(|lexeme| lexeme.starts_with("EXPECTATION:"));
+      // Does it open with a sign read as continuing the cell before it, which a prefix retry (below) may read again —
+      // one that takes no operand after it (the sign's other readings: an item, a decorated or compound operator)?
+      let cell_sign = lexemes
+        .first()
+        .is_some_and(|lexeme| lexeme.starts_with("CELLADDOP:"))
+        && lexemes.get(1).is_none_or(|next| {
+          matches!(
+            next.split(':').next(),
+            Some(
+              "PUNCT"
+                | "PERIOD"
+                | "RELOP"
+                | "METARELOP"
+                | "ARROW"
+                | "CLOSE"
+                | "ADDOP"
+                | "MULOP"
+                | "BINOP"
+                | "MODIFIER"
+                | "MODIFIEROP"
+                | "start_POSTSUBSCRIPT"
+                | "start_POSTSUPERSCRIPT"
+            )
+          )
+        });
       // Skip the full grammar parse for a pathologically huge formula —
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
@@ -2064,7 +2089,7 @@ impl MathParser {
           // rescue, so keep this attempt's expected failure out of the log —
           // and keep the lexemes, which the retry needs. Balanced formulae (the
           // overwhelming majority) hand theirs over and pay no copy.
-          let retryable = Self::fence_imbalance(&lexemes).is_some() || expectations;
+          let retryable = Self::fence_imbalance(&lexemes).is_some() || expectations || cell_sign;
           self.suppress_unparsed_warning = retryable;
           let attempt = if retryable {
             lexemes.clone()
@@ -2100,8 +2125,8 @@ impl MathParser {
         let lexed = expectations.then(|| lexemes.clone());
         if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? {
           unbalanced = lexed;
-          self.suppress_unparsed_warning = expectations;
-          let attempt = if expectations {
+          self.suppress_unparsed_warning = expectations || cell_sign;
+          let attempt = if expectations || cell_sign {
             lexemes.clone()
           } else {
             std::mem::take(&mut lexemes)
@@ -2115,6 +2140,32 @@ impl MathParser {
             other => other,
           };
         }
+      }
+      // A cell whose sign takes no operand and that no stream parses as a continuation (`CELLADDOP`,
+      // `util::continues_the_cell_before`) is parsed again with the prefix sign it was lexed as: `&+\quad\text{c.c.}`,
+      // the sign a list's item (cond-mat/0505096). A sign before an operand has no other reading to retry.
+      if matches!(parse_outcome, Ok(None) | Err(_)) && cell_sign && !too_big {
+        let mut attempt = if expectations {
+          lexemes.clone()
+        } else {
+          std::mem::take(&mut lexemes)
+        };
+        // (after the fence retry's null delimiter, when one was supplied)
+        if let Some(sign) = attempt
+          .iter_mut()
+          .find(|lexeme| lexeme.starts_with("CELLADDOP:"))
+        {
+          *sign = sign.replacen("CELLADDOP:", "ADDOP:", 1);
+        }
+        self.suppress_unparsed_warning = expectations;
+        let out = self.parse_lexemes(attempt, &nodes, document);
+        self.suppress_unparsed_warning = false;
+        parse_outcome = match out {
+          Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
+            return Err(e);
+          },
+          other => other,
+        };
       }
       // A formula with an expectation or probability no typed stream parses — one before a big operator in a
       // trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`, `\nabla\log\mathbb{E}\sum_i X_i`,

@@ -1,0 +1,28 @@
+% witness: issue 991 (MathJax and Chrome set the `+` of an `align` continuation cell `&+ c` unary and tight); 1308.2969,
+%          2512.12866, 2306.10612, 1612.06544
+% oracle:  pdflatex 0 errors; amsmath's right-hand cells (`{align}`, `{alignat}`, `{aligned}`, `{split}`) and every
+%          `{multline}` line are `$\displaystyle{{}#}$`: the empty Ord makes a leading `+`/`-`/`\pm`/`\mp` binary
+%          (\medmuskip on both sides); `{gather}` and `{eqnarray}` cells have no `{}`, their sign is unary
+% engines: rust bc12e3e8991 every leading sign a prefix: `<mrow><mo>+</mo><mi>c</mi></mrow>`, tight, and
+%          `&\quad - d` loses the `\quad`; Perl 0.8.8 the same (its templates drop the `{}`, amsmath.sty.ltxml:221/461/588)
+% expect:  0 errors; a sign opening a cell that continues the one before it (an empty left cell and no relation of its
+%          own, or a left cell ending in an operand; a multline line after the first) is binary, its left operand the
+%          absent placeholder: `plus(absent, c)`, `<mrow><mphantom><mi>U+2060</mi></mphantom><mo>+</mo>…`, the `\quad`
+%          the `−`'s lspace; `B =& -C`, `&-\Delta u = f`, the first multline line, gather and eqnarray stay unary;
+%          `&= b`, `&\times c` unchanged; a sign taking no operand (`& + \ \ {\rm complex\ conj.}`, cond-mat/0505096)
+%          reads as before, a fragment
+% status:  RED (bc12e3e8991) -> GREEN (FIX991, OXIDIZED_DESIGN_DIVERGENCES #1151)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{align} a &= b \\ &+ c \\ &\pm c \\ &\mp c \\ &\quad - d \\ &\times c \\ &+ c - d \end{align}
+\begin{align*} a &= b \\ &- c \end{align*}
+\begin{align} -a &= b \\ a = b &+ c \\ B =& - C \\ &-\Delta u = f \end{align}
+\begin{gather} a = b \\ + c \end{gather}
+\begin{eqnarray} a &=& b \\ && +g \end{eqnarray}
+\[\begin{aligned} a&=b\\ &+c\end{aligned}\]
+\begin{equation}\begin{split} a&=b\\ &- c\end{split}\end{equation}
+\begin{multline} -a + b \\ + c \end{multline}
+\begin{alignat}{2} a &= b &\quad& -1<x<0 \\ &+ c && -d \end{alignat}
+\begin{align} a &= b \\ & + \ \ {\rm complex\  conj.} \end{align}
+\end{document}

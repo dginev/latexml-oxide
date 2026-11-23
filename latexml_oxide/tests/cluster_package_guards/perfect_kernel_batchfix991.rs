@@ -190,3 +190,122 @@ fn absent_operand_leaves_no_word_joiner_in_a_string_value() {
   assert!(html.contains("<title>On =𝑏</title>"), "{html}");
   assert!(html.contains("title=\"1 Title =𝑏 ‣ On =𝑏\""), "{html}");
 }
+
+/// Issue 991, the continuation sign: amsmath sets an empty Ord before every right-hand cell of `{align}`/`{alignat}`/
+/// `{aligned}`/`{split}` and every `{multline}` line (`\displaystyle{{}##}`, amsmath.sty:2347-2354, :1483-1486,
+/// :2424-2425, :2580), so TeX sets the sign opening such a cell binary. Under the user's ruling of 2026-11-23 it is read
+/// so where the cell continues the one before it — an empty left cell and no relation of its own, or a left cell ending
+/// in an operand; a multline line after the first —: `plus(absent, c)`, the placeholder before the `<mo>`, the leading
+/// `\quad` the `−`'s lspace. A left cell ending in a relation (`B =& -C`), a cell with its own relation (`&-\Delta u =
+/// f`), the first multline line, gather and eqnarray cells (no `{}`) stay unary; `&= b`, `&\times c` were already
+/// binary. The lexer paths: an `{align}` cell and its row's MathFork formula, a lifted `\[\begin{aligned}…\]` cell, an
+/// XMArray cell (`{split}`), a multline line; and the prefix retry of a sign taking no operand (`& + \ \ {\rm complex\
+/// conj.}`, cond-mat/0505096, an extra unparsed Warning without it). Red on bc12e3e8991: every one of these signs a
+/// prefix (`+ c`).
+#[test]
+fn continuation_sign_after_amsmath_s_empty_ord_is_binary() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/math-parse/continuation_sign_is_binary.tex");
+  // the parser's reading of each cell and row formula
+  let (log, xml) = super::perfect_kernel_batch46::convert(tex, true);
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  for (id, text) in [
+    ("S0.E1.m2", "absent = b"),
+    ("S0.E2.m1", "absent + c"),
+    ("S0.E2.m2", "absent + c"),
+    ("S0.E3.m1", "absent plus-or-minus c"),
+    ("S0.E4.m1", "absent minus-or-plus c"),
+    ("S0.E5.m1", "absent - d"),
+    ("S0.E6.m1", "absent * c"),
+    ("S0.E7.m1", "(absent + c) - d"),
+    ("S0.Ex2.m1", "absent - c"),
+    ("S0.E8.m1", "- a"),
+    ("S0.E8.m3", "- a = b"),
+    ("S0.E9.m2", "absent + c"),
+    ("S0.E9.m3", "a = b + c"),
+    ("S0.E10.m1", "B = absent"),
+    ("S0.E10.m2", "- C"),
+    ("S0.E11.m1", "- Delta * u = f"),
+    ("S0.E11.m2", "- Delta * u = f"),
+    ("S0.E13.m1", "+ c"),
+    ("S0.E15.m1", "+ g"),
+    ("S0.Ex3Xa.m2", "absent + c"),
+    ("S0.E16.m1", "a = b - c"),
+    ("S0.E17.m1", "(- a) + b + c"),
+    ("S0.E18.m3", "- 1 &lt; x &lt; 0"),
+    ("S0.E19.m1", "absent + c"),
+    ("S0.E19.m2", "absent - d"),
+    // a sign taking no operand, which no continuation reading parses, is the prefix sign it was (cond-mat/0505096)
+    ("S0.E21.m1", "fragments@(+, complex * conj)"),
+  ] {
+    assert!(
+      xml.contains(&format!("text=\"{text}\" xml:id=\"{id}\"")),
+      "{id}: {text}\n{xml}"
+    );
+  }
+  // the presentation of each cell
+  let (stderr, html) = convert_html(tex);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  let ph = "<mphantom><mi>\u{2060}</mi></mphantom>";
+  let binary =
+    |op: &str, operand: &str| format!("<mrow>{ph}<mo>{op}</mo><mi>{operand}</mi></mrow>");
+  let unary = |op: &str, operand: &str| format!("<mrow><mo>{op}</mo><mi>{operand}</mi></mrow>");
+  for (id, tex, body) in [
+    ("S0.E1.m2", "\\displaystyle=b", binary("=", "b")),
+    ("S0.E2.m1", "\\displaystyle+c", binary("+", "c")),
+    ("S0.E3.m1", "\\displaystyle\\pm c", binary("±", "c")),
+    ("S0.E4.m1", "\\displaystyle\\mp c", binary("∓", "c")),
+    (
+      "S0.E5.m1",
+      "\\displaystyle\\quad-d",
+      format!(r#"<mrow>{ph}<mo lspace="1.222em">−</mo><mi>d</mi></mrow>"#),
+    ),
+    (
+      "S0.E6.m1",
+      "\\displaystyle\\times c",
+      format!(r#"<mrow>{ph}<mo lspace="0.222em" rspace="0.222em">×</mo><mi>c</mi></mrow>"#),
+    ),
+    (
+      "S0.E7.m1",
+      "\\displaystyle+c-d",
+      format!("<mrow>{}<mo>−</mo><mi>d</mi></mrow>", binary("+", "c")),
+    ),
+    ("S0.Ex2.m1", "\\displaystyle-c", binary("−", "c")),
+    ("S0.E8.m1", "\\displaystyle-a", unary("−", "a")),
+    ("S0.E9.m2", "\\displaystyle+c", binary("+", "c")),
+    ("S0.E10.m2", "\\displaystyle-C", unary("−", "C")),
+    ("S0.E15.m1", "\\displaystyle+g", unary("+", "g")),
+    ("S0.Ex3Xa.m2", "\\displaystyle+c", binary("+", "c")),
+    ("S0.E19.m1", "\\displaystyle+c", binary("+", "c")),
+    ("S0.E19.m2", "\\displaystyle-d", binary("−", "d")),
+  ] {
+    assert_math(&html, id, tex, &body);
+  }
+  // a gather line stays unary; a split's continuation cell and a multline's second line are binary, its first unary
+  latexml::util::test::assert_element(
+    &html,
+    "math",
+    &["id=\"S0.E13.m1\""],
+    &format!(
+      r#"<math id="S0.E13.m1" class="ltx_Math" alttext="\displaystyle+c" display="block">{}</math>"#,
+      unary("+", "c")
+    ),
+  );
+  assert!(
+    html.contains(&format!(
+      r#"<mtd></mtd><mtd class="ltx_align_left" columnalign="left">{}</mtd>"#,
+      binary("−", "c")
+    )),
+    "{html}"
+  );
+  assert!(
+    html.contains(&format!(
+      r#"<mtd class="ltx_align_left" columnalign="left"><mrow>{}<mo>+</mo><mi>b</mi></mrow></mtd></mtr><mtr><mtd class="ltx_align_right" columnalign="right">{}</mtd>"#,
+      unary("−", "a"),
+      binary("+", "c")
+    )),
+    "{html}"
+  );
+}

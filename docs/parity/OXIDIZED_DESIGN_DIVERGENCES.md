@@ -24123,3 +24123,39 @@ empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_
 `absent_operand_in_a_string_value.tex`), with the slot counted in
 `90_latexmlpost::alignrows_operand_slot_keeps_relop_infix` (issue #312) and the empty unit in
 `06_cluster_regressions::cluster_siunitx_empty_unit_renders_invisible`.
+
+### 1151. A sign opening an amsmath alignment cell that continues the cell before it is binary (issue 991)
+
+- TeX: amsmath sets an empty Ord before the right cell of each column pair of `{align}`, `{flalign}`, `{alignat}`
+  (`\align@preamble`, amsmath.sty:2347-2354), `{aligned}`/`{alignedat}` (`\start@aligned`, :1483-1486) and `{split}`
+  (:2424-2425), and before every `{multline}` line (:2580; mathtools' `{multlined}`, mathtools.sty:652):
+  `$\displaystyle{{}##}$`. A `+`, `-`, `\pm` or `\mp` opening such a cell is a binary operator (`&+ c`, `&\quad - d`:
+  \medmuskip on both sides). `{gather}` and `{eqnarray}` cells have no `{}`: their sign is unary.
+- Perl: its templates drop the `{}` (amsmath.sty.ltxml:221, :461, :588; KNOWN_PERL_ERRORS #1319), so the sign is a
+  prefix: `plus(c)`, `<mrow><mo>+</mo><mi>c</mi></mrow>`, set tight by MathJax and Chrome; `&\quad - d` loses the
+  `\quad`, which the spacing walk applies only between two neighbours of a row.
+- Ours: the bindings mark the `{}`-prefixed columns on the alignment with an internal attribute, `_ord_cells` (`odd` on
+  the align family's equationgroup and the aligned/split XMArray, `all` on a multline's; the lift of a lone
+  `\[\begin{aligned}…\]` copies it), never serialized. The lexer (`util::continues_the_cell_before`) renames a cell's
+  leading ADDOP `CELLADDOP` where the cell continues the one before it, and the grammar applies it to an absent left
+  operand (`expression += cell_addop term`, `continuation_sign_apply`): `plus(absent, c)`, presented with the
+  placeholder of #1150, `<mrow><mphantom><mi>&#x2060;</mi></mphantom><mo>+</mo><mi>c</mi></mrow>`; the `\quad` becomes
+  the `−`'s lspace (1.222em). The same reading as a leading relation (`&= b`) and MulOp (`&\times c`) already had.
+  The row formula a MathFork composes of an empty left cell and the cell reads the same. Every ADDOP takes it (`\oplus`,
+  `\cup`, `\cap`, `\wedge` are `\mathbin` as well). A cell whose sign takes no operand (`&+\quad\text{c.c.}`,
+  cond-mat/0505096) and that no stream parses as a continuation is parsed again with the prefix sign
+  (`parser.rs`, `cell_sign`).
+- The gate (user ruling 2026-11-23): the cell continues when the left cell of its pair is empty and the cell has no
+  top-level relation of its own (`&+ c`; `&-\Delta u = f` starts a statement and stays unary), or the left cell ends
+  in an operand (`a = b &+ c`); a left cell ending in a relation or an operator keeps the sign unary (`B =& - C`); a
+  multline line after the first always continues, its first line never does. In TeX all of these are binary; the
+  unary readings keep the statement a reader sees.
+- Not covered: a lone `&+` (a one-token cell takes no grammar parse) stays an `<mo>`; a leading `&\quad g` with no
+  operator still loses its `\quad` (the same row-edge rule).
+
+**Guard**: `perfect_kernel_batchfix991::continuation_sign_after_amsmath_s_empty_ord_is_binary`
+(`tools/perfect_kernel/repros/math-parse/continuation_sign_is_binary.tex`), with the readings in the goldens
+`alignment/split`, `ams/amsdisplay`, `ams/mathtools`, `structure/amsarticle`, `math/split_fence`,
+`parse/continuation_row_with_its_own_side`, `parse/integrals_and_differentials`. Witnesses: 1308.2969, 2512.12866,
+2306.10612, 1612.06544. A/B over 301 papers with continuation cells: 1,919 formulas in 257 papers changed, each a sign
+turned binary; errors, fatals and warnings unchanged.
