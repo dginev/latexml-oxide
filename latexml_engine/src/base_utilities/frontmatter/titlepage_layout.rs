@@ -136,7 +136,8 @@ pub(in crate::base_utilities) fn node_precedes(a: &Node, b: &Node) -> bool {
   false
 }
 
-/// A `<ltx:pagination>` (self-closing pagebreak) or a truly empty `<ltx:para>`/
+/// A `<ltx:pagination>` (self-closing pagebreak; in a streamed build, the placeholder of a spilled run that prints
+/// nothing, `is_spilled_inkless`) or a truly empty `<ltx:para>`/
 /// `<ltx:p>`/`<ltx:break>` wrapper — a node with no visible content. "Empty" means no
 /// text AND no *visible* element descendant: a `<graphics>`/`<rule>`/`<svg>`/
 /// `<tabular>`/`<text>`/image inside an otherwise text-empty para (a logo- or
@@ -144,7 +145,8 @@ pub(in crate::base_utilities) fn node_precedes(a: &Node, b: &Node) -> bool {
 /// and must block the hoist — only nested empty `<para>`/`<p>`/`<break>` wrappers are
 /// transparent. See `place_frontmatter`.
 pub(in crate::base_utilities) fn node_is_content_free(node: &Node) -> bool {
-  let is_pagination = with(document::get_node_qname(node), |q| q == "ltx:pagination");
+  let is_pagination = with(document::get_node_qname(node), |q| q == "ltx:pagination")
+    || document::is_spilled_inkless(node);
   if is_pagination {
     return true;
   }
@@ -209,6 +211,8 @@ fn subtree_elements_all_invisible(node: &Node) -> bool {
     c.get_type() != Some(NodeType::ElementNode)
       // An undefined-command marker is diagnostic ink (`text_outside_error_markers`).
       || is_undefined_command_marker(c)
+      // (a streamed build's placeholder of a spilled run that prints nothing)
+      || document::is_spilled_inkless(c)
       || ((with(document::get_node_qname(c), |q| {
         matches!(q, "ltx:para" | "ltx:p" | "ltx:break")
       }) || (document::get_node_qname(c) == pin_static("ltx:text") && text_is_ink_free(c)))

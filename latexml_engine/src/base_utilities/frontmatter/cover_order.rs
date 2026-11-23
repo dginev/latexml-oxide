@@ -18,14 +18,12 @@ const DEPOSIT_BEGIN: &str = "ltx:_TitlePageDeposit_Capture_";
 /// beside it (`settle_cover_title_ink`).
 pub const CONTINUED_TITLEPAGE: &str = "ltx_titlepage_continued";
 
-/// A float set where it stands, not floated (`\lx@float@inplace`: `\captionof`'s wrapper, a class's title-page figure;
-/// the float a caption makes in a box, sect09.rs): what LaTeX prints in place. Internal, stripped from the output.
-pub const IN_PLACE_FLOAT: &str = "_inplace";
-
-/// A float LaTeX prints where it stands ([`IN_PLACE_FLOAT`], or float.sty's `[H]`, which does not float): in the title
+/// A float LaTeX prints where it stands (the kernel's
+/// [`IN_PLACE_FLOAT`](crate::latex_constructs::IN_PLACE_FLOAT), or float.sty's `[H]`, which does not float): in the title
 /// block, the cover (OXIDIZED_DESIGN_DIVERGENCES #1149: the CVPR `\twocolumn[{\maketitle … \captionof{figure}…}]`
 /// teaser, 2303.05007; egpubl's `\teaser`, 2510.22712). A float that floats stays in the body.
 pub(in crate::base_utilities) fn is_in_place_float(node: &Node) -> bool {
+  use crate::latex_constructs::IN_PLACE_FLOAT;
   let q = document::get_node_qname(node);
   PANEL_FLOATS.iter().any(|float| q == pin_static(float))
     && (node.has_attribute(IN_PLACE_FLOAT)
@@ -419,6 +417,7 @@ fn place_later_abstract(document: &mut Document, bound: Option<&Node>, own: &Nod
     tail = node;
   }
   move_content_free_after(&passed, tail)?;
+  forget_title_page_skip(&root)?;
   Ok(true)
 }
 
@@ -632,7 +631,20 @@ pub(in crate::base_utilities) fn place_abstract_after_cover(
     tail = node;
   }
   move_content_free_after(&passed, tail)?;
+  forget_title_page_skip(&root)?;
   Ok(true)
+}
+
+/// The glue the title page set after its last paragraph, waiting for the next one (`SKIP_AFTER_PARA`, tex_paragraph.rs):
+/// the cover now stands behind the abstract, so the paragraph after it does not follow that glue (a `\@maketitle`'s
+/// closing `\vskip`, the titlepic fixture `frontmatter_titlepic_teaser_figure`, as the streamed build, which moves the
+/// abstract once the body is built).
+fn forget_title_page_skip(root: &Node) -> Result<()> {
+  let mut root = root.clone();
+  if root.has_attribute(crate::tex_paragraph::SKIP_AFTER_PARA) {
+    root.remove_attribute(crate::tex_paragraph::SKIP_AFTER_PARA)?;
+  }
+  Ok(())
 }
 
 /// Of the run that follows a late abstract behind its cover, an entry printed before the cover, which keeps its place

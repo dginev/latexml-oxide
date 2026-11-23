@@ -6354,9 +6354,9 @@ after a page break or stranded after the body. **TeX.** article.cls:236-252 `\@m
 - *One pass*: `frontmatter/place.rs:1012 place_frontmatter` (formerly #247, absorbing #242 #245 #246's anchors);
   `:925 mark_preamble_residue`, `:941 close_auto_closable_to_root`.
 - *Text before the title*: `place.rs:1139 hold_text_before_title`, `:1147 wrap_text_before_title`; an abstract printed
-  ahead of title-page text follows that text in a continued `<titlepage>` (formerly #903; `cover_order.rs:43 wrap_as_continued_titlepage`; an in-place float there is cover, #1149).
+  ahead of title-page text follows that text in a continued `<titlepage>` (formerly #903; `cover_order.rs:41 wrap_as_continued_titlepage`; an in-place float there is cover, #1149).
 - *Content-free*: a leading pagination, empty box or markers-only paragraph is no content (formerly #242, #245, #258;
-  `titlepage_layout.rs`); `cover_order.rs:655 is_body_prose`.
+  `titlepage_layout.rs`); `cover_order.rs:667 is_body_prose`.
 - *Title-page layout*: an abstract-only fallback wraps the layout as `<titlepage>` (formerly #246); a `{titlepage}` built
   after body content is a layout paragraph, or unwrapped around the floats it holds (`field_ink.rs:22
   demote_stranded_titlepage`; formerly #257; #1146); a hand-typeset
@@ -24336,15 +24336,23 @@ ahead of the abstract, in the PDF's order. A float that floats stays in the body
   caption in a box, float.sty's `[H]`, and a class's `\@maketitle` figure (egpubl.cls:766-774 `\def\@captype{figure}`)
   are typeset in place; `\twocolumn[{\maketitle … \captionof{figure}…}]` (the CVPR/ICCV idiom) prints the teaser under
   the authors, above the abstract.
-- Implementation: in-place floats carry the internal `_inplace` (`IN_PLACE_FLOAT`, cover_order.rs:23, stripped from
-  the output): set by `\lx@float@inplace` (sect09.rs; called by caption_sty.rs's `\@captionof@` and `\@scaptionof`
+- Implementation: in-place floats carry the internal `_inplace` (`IN_PLACE_FLOAT`, latex_constructs/mod.rs:1902,
+  stripped from the output): set by `\lx@float@inplace` (sect09.rs; called by caption_sty.rs's `\@captionof@` and `\@scaptionof`
   wrappers and by egpubl_cls.rs's teaser) and by the float a caption outside any float makes (sect09.rs `\@@caption`).
-  `is_in_place_float` (cover_order.rs:28; also `placement` holding `H`) is read by `place_abstract_after_cover` and
+  `is_in_place_float` (cover_order.rs:25; also `placement` holding `H`) is read by `place_abstract_after_cover` and
   `place_later_abstract` as cover beside the title-page layout, so the region is no longer refused. In the title page
   a paragraph of nothing but float-boxes gives way to its floats (`normalize_titlepage_layout_children` calls
   `settle_float_paragraph`), a real figure as in the body (2609.35408's `\@maketitle` patch: before,
   `block > p > inline-logical-block > figure`, which the HTML degraded to `<span class="ltx_figure">`).
   `ltx_teaserfigure` stays only where a class names the figure a teaser (egpubl's `\teaser`; acmart's, #1146).
+  Once the cover is behind the abstract, the glue the title page left after its last paragraph is no paragraph's
+  skip (`forget_title_page_skip`, cover_order.rs:642): the paragraph after the abstract does not take it as
+  `--ltx-skip-before`, as in the streamed build, which moves the abstract after the body is built.
+- Streaming: a spilled run that prints nothing (a `\newpage`'s pagination, article's `\null` paragraph in
+  `\@maketitle`) leaves a placeholder marked inkless (core document.rs:623 `is_spilled_inkless`), which
+  `node_is_content_free` reads as the run, so at a small fragment budget the cover reads as in the eager build (the
+  `frontmatter_titlepic_teaser_figure` sweep fixture); #903's streaming divergence is left for a spilled root child
+  that prints.
 - Not reached: a class whose own title page prints the abstract from its store after the figure (vgtc.cls:799-850,
   2609.25700): the abstract is no late one, and where the class printed it is not read (#262's store fail-safe); RED
   catalog repro `sectioning-frontmatter/titlefig_class_maketitle_teaser_before_store_abstract`.
@@ -24355,4 +24363,6 @@ ahead of the abstract, in the PDF's order. A float that floats stays in the body
 `perfect_kernel_batchtitlefig::an_in_place_figure_in_the_title_block_joins_the_continued_title_page` (repros
 `sectioning-frontmatter/titlefig_{cvpr_twocolumn_captionof, capt_of_caption_in_center, float_here_after_maketitle,
 maketitle_patch_minipage_captionof, inplace_figure_between_two_abstracts, true_float_after_maketitle_stays}`),
-`perfect_kernel_batch61::class_bindings_2609_clusters` (egpubl's teaser before the abstract).
+`perfect_kernel_batch61::class_bindings_2609_clusters` (egpubl's teaser before the abstract),
+`114_streaming_cluster_regressions_b::streaming_matches_eager_on_cluster_regressions_shard1` (the titlepic fixture's
+cover, streamed at fragment budget 3, as eager).

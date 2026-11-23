@@ -612,6 +612,47 @@ const ROOT_SPILLABLE: &[&str] = &[
 /// The placeholder element left in the live DOM where a spilled run sat.
 /// Never serialized: `serialize_into` splices the processed segment instead.
 pub(crate) const SPILL_PLACEHOLDER: &str = "_spilled_";
+
+/// The placeholder attribute of a spilled run that prints nothing ([`prints_nothing`]).
+const SPILLED_INKLESS: &str = "inkless";
+
+/// Is `node` the placeholder of a spilled run that prints nothing ([`prints_nothing`])? Content-free to the frontmatter's
+/// cover reading as the run is (titlepage_layout.rs `node_is_content_free`), so a late abstract follows a cover holding
+/// article's `\newpage\null` (`\@maketitle`) at a small fragment budget as in the eager build
+/// (OXIDIZED_DESIGN_DIVERGENCES #903, #1149).
+pub fn is_spilled_inkless(node: &Node) -> bool {
+  node.get_name() == SPILL_PLACEHOLDER && node.has_attribute(SPILLED_INKLESS)
+}
+
+/// Does `node` print nothing: a page break, or a subtree of paragraphs, lines, breaks and `ltx:text` that can paint
+/// nothing (none of `framed`, `framecolor`, `backgroundcolor`, `class`, `cssstyle`), holding no text but whitespace? The
+/// frontmatter's reading of a content-free node (titlepage_layout.rs `node_is_content_free`,
+/// `subtree_elements_all_invisible`), for a run spilled out of its reach.
+fn prints_nothing(node: &Node) -> bool {
+  match node.get_type() {
+    Some(NodeType::TextNode) => node.get_content().trim().is_empty(),
+    Some(NodeType::ElementNode) => {
+      let q = get_node_qname(node);
+      if q == pin!("ltx:pagination") {
+        return true;
+      }
+      let ink_free_text = q == pin!("ltx:text")
+        && ![
+          "framed",
+          "framecolor",
+          "backgroundcolor",
+          "class",
+          "cssstyle",
+        ]
+        .iter()
+        .any(|attr| node.has_attribute(attr));
+      (ink_free_text || q == pin!("ltx:para") || q == pin!("ltx:p") || q == pin!("ltx:break"))
+        && node.get_child_nodes().iter().all(prints_nothing)
+    },
+    _ => true,
+  }
+}
+
 impl Object for Document {
   fn get_locator(&self) -> Option<Locator> {
     self
@@ -5844,6 +5885,11 @@ impl Document {
         if let Some(last) = chunk.last() {
           placeholder
             .set_attribute("last", &arena::to_string(get_node_qname(last)))
+            .map_err(|e| spill_error(s!("cannot mark the placeholder: {e}")))?;
+        }
+        if chunk.iter().all(prints_nothing) {
+          placeholder
+            .set_attribute(SPILLED_INKLESS, "1")
             .map_err(|e| spill_error(s!("cannot mark the placeholder: {e}")))?;
         }
         chunk

@@ -1895,6 +1895,12 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
   Ok(())
 }
 
+/// A float set where it stands, not floated (`\lx@float@inplace`: `\captionof`'s wrapper, a class's title-page figure;
+/// the float a caption makes outside any float, sect09.rs): what LaTeX prints in place, which the title-page reading
+/// takes for cover (`is_in_place_float`, cover_order.rs; OXIDIZED_DESIGN_DIVERGENCES #1149). Internal, stripped from the
+/// output.
+pub const IN_PLACE_FLOAT: &str = "_inplace";
+
 /// The bookkeeping attribute holding the footnote counter value a note stands for (`footnote_pairing`).
 pub const FOOTNOTE_VALUE: &str = "_fnvalue";
 
