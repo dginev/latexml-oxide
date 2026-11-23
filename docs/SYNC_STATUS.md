@@ -49,6 +49,7 @@ Rules that keep this file honest and mergeable:
 ## The task list — start here (row R, the post-merge worklist)
 
 - **The campaign (DG 2026-11-14), in order:** (1) finish latexml-oxide's open PRs and issues and ALL the Bruce Q&A residuals (the QA lines below); (2) a cutoff commit — output-changing merges freeze; (3) rerun the 2605/2606 cortex sandboxes and review regressions against runs 375/376; (4) reconvert the whole arXiv corpus in cortex (ARXIV); (5) sync to ar5iv.
+- **The goal now (DG 2026-11-23): [`GOAL_v_0_8_1.md`](GOAL_v_0_8_1.md).** Two timelines: v0.8.0 final on `main` by 2026-11-28 (small reviewed fixes only: regressions, crashes, rc2 tester reports); everything else in this list lands on `int/towards_v0_8_1` for v0.8.1. Each task ends fixed, ruled or moved (the goal page defines each).
 - **Where it stands (2026-11-21):** the full arXiv run on the cutoff is run 397 (November 2026, 98.1 % of 2,962,950
   error-free); its regressions were classified and the clusters our changes caused fixed (#954-#964), the residue in
   row R. **0.8.0-rc1** is published as a prerelease (tag `f7f8120f349`, merged to main as #919); **0.8.0-rc2** is main
