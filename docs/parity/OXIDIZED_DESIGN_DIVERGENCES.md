@@ -24046,3 +24046,33 @@ TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hi
 `\phantom` and `\hphantom` are unchanged. **Guards** `perfect_kernel_batch61::hphantom_in_plain_tex_loads_no_latex`
 (harvmac's `\refs` struts), `perfect_kernel_batchregfixb::*`, `perfect_kernel_batchfms1::field_prov_phantom_kept`.
 
+
+### 1148. An interrupted format build is a cancellation, not a failure; `\write` in a scope that drops its diagnostics writes nothing (issue 988)
+
+- Perl: no format cache (dumps ship with the install), and `\write` to the terminal or log is `Note`/`NoteLog`
+  whatever `$LaTeXML::IGNORE_ERRORS` says (TeX_FileIO.pool.ltxml `\write`).
+- Ours, the cache (format_dumps.rs, OD #449): a build counts towards marking its format failed (`.attempts.<kind>`,
+  written before the build so a build that dies with its process is counted); two in a row mark it `.failed.<kind>`
+  and every conversion then loads the format from the engine's definitions for a day (`FAILED_LAPSE`). An interrupt
+  was such a death, so two Ctrl+C during a first run left the user in that degraded mode. The CLI now asks
+  (`format_dumps::cancel_builds_on_interrupt`) that an interrupt during a build undo it: the attempt note goes back
+  to what it held before the build and the partial dump is removed, then the process exits with status 130. The
+  interrupts are Ctrl+C, SIGTERM and SIGHUP on Unix, and Ctrl+C, Ctrl+Break and closing the console on Windows (the
+  `ctrlc` crate, `termination`). The handler is installed when the first build starts, so a process that builds
+  nothing keeps its default interrupt; a process that already ignores or handles one of these signals (`nohup`, a
+  shell's background job) keeps them (`ctrlc::try_set_handler`). The handler keeps the build's record locked until the
+  process ends, so the build cannot record an outcome after the undo, and the record is set before the attempt note
+  is written. Embedders (`cortex_worker`, and the CLI's own `--server` LSP mode, whose forked children are ended by
+  SIGTERM) keep their own signal handling and count an interrupted build as before. The DEGRADED banner
+  (`dump_paths::warn_degraded_no_dump`) now says why no dump was built (once the format is marked failed, that names
+  the mark to remove) instead of pointing to `tools/make_formats.sh`, which an installed binary does not have.
+- Ours, `\write` (tex_file_io.rs): inside a scope that drops its diagnostics whole (Perl `IGNORE_ERRORS`: a trial
+  digested again where it is used, the muted no-dump expl3 reload of OD #1027), a write to the terminal or the log
+  writes nothing; a write to an open file is unchanged. LaTeX's `\GenericError` writes a blank line ahead of each
+  error (`\immediate\write\@unused{}`), so the reload's 5,015 dropped errors (TL 2025) printed 2,415 empty lines on
+  the terminal, scrolling away why the run had no dump.
+
+**Guards**: `format_dumps::tests::an_interrupted_build_is_undone`;
+`dump_gate_init::nodump_latex_branch_converts_healthily` (no run of more than two blank lines). The interrupt itself
+is not tested, as its timing would make the test flaky; it was checked by hand (Ctrl+C during a first run's build
+leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).

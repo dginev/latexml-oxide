@@ -288,6 +288,21 @@ fn nodump_latex_branch_converts_healthily() {
     ),
     "{stderr}"
   );
+  // What the muted reload's dropped error reports write to the terminal is dropped with them: the blank
+  // line LaTeX's `\GenericError` writes ahead of each error ran to 2,415 empty lines on TL 2025,
+  // scrolling away why a run had no dump (issue 988).
+  let longest_blank_run = stderr
+    .lines()
+    .scan(0, |run, line| {
+      *run = if line.trim().is_empty() { *run + 1 } else { 0 };
+      Some(*run)
+    })
+    .max()
+    .unwrap_or(0);
+  assert!(
+    longest_blank_run <= 2,
+    "{longest_blank_run} blank lines in a row:\n{stderr}"
+  );
   assert_element(
     &xml,
     "para",
