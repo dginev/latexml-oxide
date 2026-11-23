@@ -245,6 +245,8 @@ fn continuation_sign_after_amsmath_s_empty_ord_is_binary() {
     ("S0.E25.m1", "delimited-)@(absent + c)"),
     ("S0.E25.m2", "delimited-)@(absent + c)"),
     ("S0.E26.m1", "+ c"),
+    // a phantom after the `\left.` is a box, an Ord: the sign after it is binary (2003.01925)
+    ("S0.E27.m1", "delimited-)@(absent - c)"),
   ] {
     assert!(
       xml.contains(&format!("text=\"{text}\" xml:id=\"{id}\"")),

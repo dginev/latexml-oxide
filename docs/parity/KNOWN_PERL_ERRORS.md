@@ -22440,7 +22440,7 @@ token", 1 `<variable>`) and prints "??" with the undefined names' ERROR elements
 Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1144); witnesses 1602.00476, 2409.11413, 2505.14566; guard
 `perfect_kernel_batchvrefclev::cleveref_vref_with_varioref`.
 
-## 1321. Perl's amsmath templates drop the empty Ord before a right-hand alignment cell
+## 1322. Perl's amsmath templates drop the empty Ord before a right-hand alignment cell
 
 amsmath.sty sets `$\displaystyle{{}##}$` for the right cell of each `{align}`/`{alignat}`/`{flalign}` pair
 (amsmath.sty:2347-2354), of `{aligned}`/`{alignedat}` (:1483-1486) and `{split}` (:2424-2425), and every `{multline}`

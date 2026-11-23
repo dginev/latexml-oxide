@@ -13,7 +13,8 @@
 %          reads as before, a fragment; a sign that is the first atom of a `\left.`'s list (`&\quad\left. + c + d\right)`,
 %          0910.4696, 2003.01925) or follows a `\bigl.` stays unary (tex.web §728: a Bin after a left delimiter or an Open
 %          is an Ord; pdflatex: no \medmuskip around the `+` of `${}\left.+c\right)$` and `${}\bigl.+c$`), a `\big(`
-%          opened in the cell before is no fence of the cell (`&+ c \big)` binary)
+%          opened in the cell before is no fence of the cell (`&+ c \big)` binary), nor is a sign after `\left.\vphantom{X}`
+%          (the phantom box is an Ord: \medmuskip both sides, 2003.01925)
 % status:  RED (bc12e3e8991) -> GREEN (FIX991, OXIDIZED_DESIGN_DIVERGENCES #1151); the `\left.` rows RED (eb9e1ff62bf,
 %          `plus(absent, c, d)`) -> GREEN
 \documentclass{article}
@@ -29,5 +30,5 @@
 \begin{multline} -a + b \\ + c \end{multline}
 \begin{alignat}{2} a &= b &\quad& -1<x<0 \\ &+ c && -d \end{alignat}
 \begin{align} a &= b \\ & + \ \ {\rm complex\  conj.} \end{align}
-\begin{align} a &= \left( b \right. \\ &\quad\left. + c + d \right) \\ &= \big( b \\ &+ c \big) \\ &\bigl. + c \end{align}
+\begin{align} a &= \left( b \right. \\ &\quad\left. + c + d \right) \\ &= \big( b \\ &+ c \big) \\ &\bigl. + c \\ &\left. \vphantom{X} - c \right) \end{align}
 \end{document}
