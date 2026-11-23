@@ -1,0 +1,33 @@
+% witness: 2606.13010 (a fence split across an align break); 1501.07594 (230 leaked words, one in a section
+%          title's tooltip `Q(1,S CLOSE)`), 2602.05799 (219), 1007.4418 (166, the abstract): 370 of the A/B's 635
+%          papers, 25 of its 100 random controls (a bare unbalanced `$(a+b$` takes the same retry)
+% oracle:  pdflatex 0 errors; each null delimiter prints nothing: "(a + b", "a)", "[a, b", "(a|b", the split H
+% engines: rust RC3A = the fence retry's empty <XMTok role="CLOSE"/> (`OPEN` at the front) drawn as
+%          <mo>CLOSE</mo> / <mo>OPEN</mo> in the HTML (A-I and both align cells); Perl 0.8.8 = no token for the
+%          null delimiter, `<mrow><mo>(</mo>…</mrow>` (A-I unparsed)
+% expect:  no OPEN/CLOSE text in any <math>; every written delimiter kept; controls J-M as Perl
+% status:  RED (RC3A) -> GREEN (NULLDELIM)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\section*{Leaking}
+A $\left( a+b\right.$.
+B $\left( a\right.$.
+C $\left( f(x)\right.$.
+D $\left( \frac{a}{b}\right.$.
+E $y=\left( a\right.$.
+F $\left. a \right)$.
+G $\left[ a,b \right.$.
+H $\left. a,b \right]$.
+I $\left( a \middle| b \right.$.
+\begin{align}
+  H & = \frac{\hbar}{2} \left( a + b \right. \nonumber \\
+    & \quad \left. + c + d \right).
+\end{align}
+\section*{Controls}
+J $\left[ x \right.$.
+K $\left| x\right.$.
+L $f(x)=\left\{ \begin{array}{ll} 1 & x>0\\ 0 & x\le 0\end{array}\right.$.
+M $\left( a+b \right)$.
+\end{document}

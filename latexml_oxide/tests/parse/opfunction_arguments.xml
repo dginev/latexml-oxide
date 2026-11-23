@@ -4104,7 +4104,6 @@
                       <XMTok font="italic" role="UNKNOWN">X</XMTok>
                       <XMTok font="italic" fontsize="70%" role="UNKNOWN">T</XMTok>
                     </XMApp>
-                    <XMTok role="CLOSE"/>
                   </XMWrap>
                 </XMApp>
               </XMDual>
@@ -4175,7 +4174,6 @@
                       </XMApp>
                     </XMDual>
                   </XMApp>
-                  <XMTok role="CLOSE"/>
                 </XMWrap>
               </XMDual>
             </XMApp>
@@ -4238,7 +4236,6 @@
                           </XMDual>
                         </XMApp>
                       </XMApp>
-                      <XMTok role="CLOSE"/>
                     </XMWrap>
                   </XMDual>
                 </XMApp>
@@ -4270,7 +4267,6 @@
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="false">(</XMTok>
-                        <XMTok role="CLOSE"/>
                       </XMWrap>
                     </XMDual>
                   </XMApp>
@@ -4286,7 +4282,6 @@
                 <XMRef idref="S7.p4.m49.1"/>
               </XMApp>
               <XMWrap>
-                <XMTok role="OPEN"/>
                 <XMApp xml:id="S7.p4.m49.1">
                   <XMTok meaning="plus" role="ADDOP">+</XMTok>
                   <XMApp>

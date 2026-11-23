@@ -452,10 +452,16 @@ formula degrades to unstructured markup.
 unmatched `OPEN`, same bare `CLOSE` — so this is purely a parser difference. When
 the grammar returns **zero** derivations, `parser.rs::balance_null_delimiters`
 re-supplies the delimiter TeX says is there and retries once. The synthesized
-`XMTok` carries the fence `role` but empty text, so it renders as nothing, which
-is exactly `\right.`'s meaning; `tex=` reversions stay verbatim
+`XMTok` carries the fence `role`, empty text and the internal `_nulldelimiter`
+mark; once the parse has used it, `parse_single` drops it from the tree, so the
+`XMWrap` holds only the delimiters the author wrote, as Perl's XMath does, and
+`\right.` prints nothing; `tex=` reversions stay verbatim
 (`\left(a+b\right.`). The cells then parse through the *existing* open/close
-fence semantics as `delimited-(@(…)` / `delimited-)@(…)`.
+fence semantics as `delimited-(@(…)` / `delimited-)@(…)`. Kept in the tree, the
+empty token reached the post's empty-token failsafe (Perl MathML.pm:708-714,
+`name || meaning || role`) and the HTML read `<mo>CLOSE</mo>` / `<mo>OPEN</mo>`
+(0.8.0-rc2/RC3A; guards `perfect_kernel_batchnulldelim::{null_delimiter_leaves_no_token,
+null_delimiter_draws_nothing}`, repro `tools/perfect_kernel/repros/math-parse/null_delimiter_draws_nothing.tex`).
 
 **Why this is safe rather than a parity break.** It is gated on total parse
 failure, so no formula that already parses can be re-read — the repair is
