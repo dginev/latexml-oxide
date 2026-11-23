@@ -779,10 +779,22 @@ typewriter space is dropped there too, as in Perl; the rendered node is
 unchanged (its foreignObject content is a left-aligned block, where a
 leading space collapses). Guard:
 `perfect_kernel_batch56::a_typewriter_space_opens_no_foreign_object`.
-Nor in the `ltx:picture`/`ltx:g` drawing model (PICNEST), as in Perl: a `\ `
-between `\psline`s opened an `ltx:text` in which the next object auto-opened
-a picture, 403 deep in 0905.4216 (`\PutGrid`), whose XSLT then failed. Guard:
-`pstricks_drawing::a_control_space_between_objects_keeps_the_picture_flat`.
+In the `ltx:picture`/`ltx:g` drawing model (PICNEST) it is kept only after
+a box or inline content (the last child an `ltx:g`, or an element an
+`ltx:text` holds): there it is text, as a letter would be, and the next
+words join it (`\put(90,120){\small $\Longrightarrow$ \ State-sum …}`
+prints "⟹ State-sum", math0406190; `\psframebox{…}\white \ \ 1`, cs0608104;
+0801.0882). At the start of a box or after a shape (`ltx:line`, `ltx:rect`,
+…) it is dropped, as Perl drops every one there (Document.pm:747-749): a
+`\ ` between `\psline`s, glue between zero-size boxes in TeX, opened an
+`ltx:text` in which the next object auto-opened a picture, 403 deep in
+0905.4216 (`\PutGrid`), whose XSLT then failed. A leading `\ `
+(`\put(0,40){\ \textbf{i}}`) is dropped too, as in Perl, though pdflatex
+shifts the box by it. A shape drawn after a kept space nests in its
+`ltx:text`, as after a letter (`find_insertion_point` auto-opens before it
+auto-closes, in Perl too). Guards:
+`pstricks_drawing::{a_control_space_between_objects_keeps_the_picture_flat,
+a_control_space_after_text_in_a_put_is_kept}`.
 
 ### 48. → #993 (Author heuristic splits font-wrapped name lists; affiliation "and" preserved)
 
@@ -23911,8 +23923,10 @@ instead (Document.pm `find_insertion_point`), flat.
 **pdflatex**: `\put` is a zero-size box (latex.ltx:16784-16792 `\hb@xt@\z@`); each one and each path sit side by side.
 **Rust behavior**: `ensure_svg_context` (pgfsys_latexml_def.rs), the guard both the group opener and the path emitters
 take, first walks up from the current node: when it and every node up to an `svg:` group (not a foreignObject) were
-auto-opened and can auto-close, it closes to that group, as the path insertion does in Perl; only a node a construct
-opened (a `\phantom`'s or a node label's box) still gets its own `svg:svg`.
+auto-opened and can auto-close, it closes to that group, as the path insertion does in Perl. What still gets its own
+`svg:svg` is an element a command opened inside a label (`\phantom`, `\textbf`, a nested `\tikz`), not the label itself:
+a label's auto-opened foreignObject holding `\put(0,0){X}` and followed by a pgf path is closed by the walk, the
+structure Perl's bare-path insertion gives, no content lost.
 **Why**: the nesting is not TeX's layout, and it fails the post-processing: 1909.06819 (`\draw …[blue];
 \put(-18,-50){…}` in a nested `\foreach`) nested 214 deep, and libxslt's depth cap (1000, Perl XSLT.pm:48) ended
 it in `Fatal:post:convert`; now siblings, depth 24. **Guard**

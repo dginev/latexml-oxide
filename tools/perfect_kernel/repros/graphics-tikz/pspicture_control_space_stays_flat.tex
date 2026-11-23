@@ -4,7 +4,8 @@
 % engines: rust 0.8.0-rc2: 0 errors, picture depth 4: the explicit-space keep of `Document::open_text`
 %          (DIVERGENCES #47) put each `\ ` in an `<ltx:text>`, and the next `<line>` auto-opened a `<picture>` in it
 % expect:  0 errors, the three `<line>`s siblings in ONE `<picture>`, picture depth 1
-% status:  RED (0.8.0-rc2) -> GREEN (PICNEST: the keep does not apply in `ltx:picture`/`ltx:g`, as not in `svg:`)
+% status:  RED (0.8.0-rc2) -> GREEN (PICNEST: in `ltx:picture`/`ltx:g` the keep holds only after a box or inline
+%          content, not at the start or after a shape; picture_control_space_after_text_kept for the kept side)
 \documentclass{article}
 \usepackage{pstricks}
 \begin{document}

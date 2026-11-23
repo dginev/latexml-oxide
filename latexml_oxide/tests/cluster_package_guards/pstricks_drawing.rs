@@ -369,7 +369,7 @@ fn pstricks_macro_colour_keys_in_tabularx_cells() {
 /// `ltx:text` (the DIVERGENCES #47 keep), and each next object auto-opened a
 /// picture inside it: 403 deep in 0905.4216 (`\PutGrid`), whose XSLT then
 /// failed (`Fatal:post:convert`). The origin form puts the body in an
-/// `ltx:g`, the second element the keep must skip.
+/// `ltx:g`, where the same rule holds.
 #[test]
 fn a_control_space_between_objects_keeps_the_picture_flat() {
   if !check_requirements(loads::PSTRICKS) {
@@ -391,6 +391,7 @@ fn a_control_space_between_objects_keeps_the_picture_flat() {
   // The safe twin, without the control spaces, is the same picture.
   let (stderr, xml) = convert(&tex.replace("\\ ", "").replace(" \\\n", "\n"), true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_element(&xml, "picture", &[], flat);
   // Under an origin the objects sit in the picture's `ltx:g`.
   let (stderr, xml) = convert(&tex.replace("(0,0)(3,3)", "(-1,-1)(3,3)"), true);
@@ -409,4 +410,95 @@ fn a_control_space_between_objects_keeps_the_picture_flat() {
     </picture>"##,
   );
   assert_eq!(xml.matches("<picture").count(), 1, "{xml}");
+}
+
+/// The same keep AFTER inline content is text, as a letter there would be:
+/// `\put(0,20){\emph{u}\ v}` prints "u v", and so the `\ ` opens the
+/// `ltx:text` the next words join (math0406190 `$\Longrightarrow$ \
+/// State-sum`, cs0608104 `\psframebox{…}\white \ \ 1`, 0801.0882). Round 0
+/// of PICNEST dropped it with the drawing case above ("⟹State-sum"). A
+/// leading `\ ` is dropped, as in Perl (Document.pm:747-749) and as before a
+/// drawing object. After a box (an `ltx:g`: cs0608104's `\psframebox`) it is
+/// kept as well.
+#[test]
+fn a_control_space_after_text_in_a_put_is_kept() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/picture_control_space_after_text_kept.tex"
+  );
+  let (stderr, xml) = convert(tex, false);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "picture",
+    &[],
+    r##"<picture fill="none" height="60.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="p1.pic1">
+      <g innerdepth="0.0pt" innerheight="6.9pt" innerwidth="6.5pt" transform="translate(0,55.35)">
+        <text font="bold">i</text>
+      </g>
+      <g innerdepth="2.2pt" innerheight="4.3pt" innerwidth="16.2pt" transform="translate(0,41.51)">
+        <Math mode="inline" tex="x" text="x" xml:id="p1.pic1.m1">
+          <XMath>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          </XMath>
+        </Math>
+        <text font="typewriter"> y</text>
+      </g>
+      <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="14.0pt" transform="translate(0,27.67)">
+        <emph font="italic">u</emph>
+        <text> v</text>
+      </g>
+      <g innerdepth="1.9pt" innerheight="4.3pt" innerwidth="14.3pt" transform="translate(0,13.84)">
+        <Math mode="inline" tex="x" text="x" xml:id="p1.pic1.m2">
+          <XMath>
+            <XMTok font="italic" role="UNKNOWN">x</XMTok>
+          </XMath>
+        </Math>
+        <text> <Math mode="inline" tex="y" text="y" xml:id="p1.pic1.m3">
+            <XMath>
+              <XMTok font="italic" role="UNKNOWN">y</XMTok>
+            </XMath>
+          </Math></text>
+      </g>
+      <g innerdepth="0.0pt" innerheight="6.3pt" innerwidth="31.4pt" transform="translate(0,0)">
+        <Math mode="inline" tex="\alpha" text="alpha" xml:id="p1.pic1.m4">
+          <XMath>
+            <XMTok font="italic" fontsize="90%" name="alpha" role="UNKNOWN">α</XMTok>
+          </XMath>
+        </Math>
+        <text fontsize="90%"> label</text>
+      </g>
+    </picture>"##,
+  );
+  if !check_requirements(loads::PSTRICKS) {
+    return;
+  }
+  let tex = r"\documentclass{article}
+\usepackage{pstricks}
+\begin{document}
+\begin{pspicture}(0,0)(3,3)
+\rput(1,1){\psframebox{$a$}\ \ 1}
+\end{pspicture}
+\end{document}
+";
+  let (stderr, xml) = convert(tex, true);
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(
+    &xml,
+    "picture",
+    &[],
+    r##"<picture fill="none" height="85.36pt" stroke="none" unitlength="28.45pt" width="85.36pt" xml:id="p1.pic1">
+      <g transform="translate(39.37,39.37)">
+        <g framed="true">
+          <Math mode="inline" tex="a" text="a" xml:id="p1.pic1.m1">
+            <XMath>
+              <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            </XMath>
+          </Math>
+        </g>
+        <text>  1</text>
+      </g>
+    </picture>"##,
+  );
 }

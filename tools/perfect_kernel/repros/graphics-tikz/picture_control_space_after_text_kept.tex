@@ -1,0 +1,20 @@
+% witness: math0406190 (m4-24.tex:10114 `\put(90,120){\small $\Longrightarrow$ \ State-sum …}`), cs0608104
+%          (hra.tex:4207 `\rnode{n1}{1\ \ \psframebox{…}\white \ \ 1}`), 0801.0882; 0905.4216 for the dropped side
+% oracle:  pdflatex 0 errors: "i", "x y", "u v", "x y", "α label" (each `\ ` a glue item in the `\put` box's hlist)
+%          perl: every `\ ` dropped (Document.pm:747-749: `ltx:g` cannot hold #PCDATA): "xy", "uv", "αlabel"
+% engines: rust 0.8.0-rc2: all kept, the leading one as `<text> <text font="bold">i</text></text>`;
+%          PICNEST round 0: all dropped, as Perl ("⟹State-sum" in math0406190)
+% expect:  0 errors; a `\ ` (or a typewriter space) after inline content in an `ltx:g`/`ltx:picture` kept as text;
+%          the leading one dropped, as Perl and as between drawing objects (pspicture_control_space_stays_flat)
+% status:  RED (PICNEST round 0) -> GREEN (PICNEST round 1: kept after inline content, DIVERGENCES #47)
+\documentclass{article}
+\begin{document}
+\setlength{\unitlength}{1pt}
+\begin{picture}(100,60)
+\put(0,40){\ \textbf{i}}
+\put(0,30){{\ttfamily $x$ y}}
+\put(0,20){\emph{u}\ v}
+\put(0,10){$x$\ $y$}
+\put(0,0){\small $\alpha$ \ label}
+\end{picture}
+\end{document}
