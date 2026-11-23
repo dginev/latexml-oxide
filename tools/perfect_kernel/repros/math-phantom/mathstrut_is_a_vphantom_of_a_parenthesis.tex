@@ -1,0 +1,13 @@
+% witness: none (DG ruling 2026-11-23: `\mathstrut` is TeX's `\vphantom(`, latex.ltx:15602, plain.tex:1034)
+% oracle:  pdflatex 0 errors; the radicals over a and b reach a parenthesis' height and depth; C an empty radical as tall
+% engines: rust PHANTOM round 3 = an empty `XMHint name="mathstrut"` (no box); Perl 0.8.8 = the same empty hint
+% expect:  each `\mathstrut` a zero-width phantom of `(`: `<mpadded width="0pt"><mphantom><mo>(</mo></mphantom></mpadded>`,
+%          beside a and b in their radicals (A), alone in a radical (B); alttext keeps `\mathstrut`
+% status:  RED (PHANTOM round 3) -> GREEN (PHANTOM round 4)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+A $\sqrt{\mathstrut a}\sqrt{\mathstrut b}$
+
+B $\sqrt{\mathstrut}$
+\end{document}

@@ -2360,7 +2360,9 @@ fn add_child_guard_xmarg(
   receiver: &mut Node,
   incoming: &mut Node,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-  if name_is(incoming, "XMArg") {
+  // Not a slot that keeps its edge phantoms beside its item (parser.rs `parse_single`): it is the item's list.
+  if name_is(incoming, "XMArg") && latexml_core::document::item_beside_phantoms(incoming).is_none()
+  {
     let mut to_reparent = element_nodes(incoming);
     for incoming_child in to_reparent.iter_mut() {
       incoming_child.unlink();

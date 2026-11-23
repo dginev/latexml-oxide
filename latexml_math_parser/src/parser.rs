@@ -15,7 +15,10 @@ use latexml_core::{
     error::{Result, note_begin, note_end, note_progress},
     xml::{name_is, *},
   },
-  document::{Document, get_node_qname, is_phantom_box, sym_can_have_attribute, with_node_qname},
+  document::{
+    Document, get_node_qname, is_phantom_box, item_beside_phantoms, sym_can_have_attribute,
+    with_node_qname,
+  },
   fatal, map, pin, s, state, static_map, sym_map,
 };
 use libxml::tree::{Node, NodeType};
@@ -749,6 +752,8 @@ pub struct MathParser {
   /// Set while a phantom's argument is parsed (`parse_phantom`): its lists take `parse_kludge`'s structure, not the
   /// grammar's.
   in_phantom:                bool,
+  /// The edge phantoms `parse_single` kept for `parse_rec` to put back beside the parsed item of a list that stays.
+  kept_phantoms:             Option<(Vec<Node>, Vec<Node>)>,
   // xnode: Option<Node>,
 }
 /// Perl `is_genuinely_unparsed` (MathParser.pm:997-1027): an unparsed fragment — an XMWrap or
@@ -762,7 +767,10 @@ fn is_genuinely_unparsed(node: &Node, document: &Document) -> bool {
 
 fn genuinely_unparsed_rec(node: &Node, document: &Document, refs: &mut Vec<String>) -> bool {
   let tag = get_node_qname(node);
-  if tag == pin!("ltx:XMWrap") || tag == pin!("ltx:XMArg") || node.has_attribute("_unparsed") {
+  if let Some(item) = item_beside_phantoms(node) {
+    genuinely_unparsed_rec(&item, document, refs)
+  } else if tag == pin!("ltx:XMWrap") || tag == pin!("ltx:XMArg") || node.has_attribute("_unparsed")
+  {
     true
   } else if tag == pin!("ltx:XMTok") || tag == pin!("ltx:XMText") || tag == pin!("ltx:XMHint") {
     false
@@ -863,6 +871,7 @@ impl MathParser {
       strict: false,
       unparsed: false,
       in_phantom: false,
+      kept_phantoms: None,
       // xnode: None,
     }
   }
@@ -1702,14 +1711,17 @@ impl MathParser {
       match self.parse_single(&mut node, document, &rule)? {
         Some(mut result) => {
           *self.passed.entry_sym(tag).or_insert(0) += 1;
-          if tag == pin!("ltx:XMath") {
-            // Replace the content of XMath with parsed result. The `[N]`
+          let kept_phantoms = self.kept_phantoms.take();
+          if tag == pin!("ltx:XMath") || kept_phantoms.is_some() {
+            // Replace the content of XMath (or of an XMArg keeping its edge phantoms) with parsed result. The `[N]`
             // progress markers count CONVERSION-wide, not per parser
             // instance: streaming pass 2 builds a fresh `MathParser` per
             // staged fragment, and a per-instance counter restarted the
             // bracket sequence at `[1]` in every fragment — useless for
             // judging global progress on a 500k-formula document.
-            note_progress(&s!("[{}]", next_formula_ordinal()));
+            if tag == pin!("ltx:XMath") {
+              note_progress(&s!("[{}]", next_formula_ordinal()));
+            }
             // Unrecord the old content's ids BEFORE the copy below, so the
             // copy's freshly recorded entries (same id strings) survive.
             for el_node in element_nodes(&node) {
@@ -1738,6 +1750,16 @@ impl MathParser {
               // children); free it too — disjoint from the frees above (a
               // detached root has no parent, old children had one).
               crate::data::defer_discard(root);
+            }
+            if let Some((leading, trailing)) = kept_phantoms {
+              for mut phantom in leading {
+                result.add_prev_sibling(&mut phantom).ok();
+              }
+              let mut anchor = result.clone();
+              for mut phantom in trailing {
+                anchor.add_next_sibling(&mut phantom).ok();
+                anchor = phantom;
+              }
             }
           } else {
             // Replace the whole node for XMArg, XMWrap; preserve some attributes
@@ -2060,8 +2082,8 @@ impl MathParser {
     document: &mut Document,
     rule: &str,
   ) -> Result<Option<Node>> {
-    // The phantoms at the list's edges are set aside, as its trailing punctuation is below, and come back in the
-    // result's presentation (`wrap_presentation`); those between items stay spacing (`filter_hints`).
+    // The phantoms at the list's edges are set aside, as its trailing punctuation is below, and come back beside the
+    // result (below); those between items stay spacing (`filter_hints`).
     let edges = EdgePhantoms::of(mathnode);
     if edges.is_empty() {
       return self.parse_single_list(mathnode, document, rule, &[]);
@@ -2090,6 +2112,15 @@ impl MathParser {
       return Ok(Some(
         self.dual_of_absent(result, phantoms, mathnode, document)?,
       ));
+    }
+    // A list that stays, an XMath or an XMArg (`parse_rec` puts the item back in it), keeps them where they stood: hints
+    // beside its item (`item_beside_phantoms`), which presentation draws and content, text and a parent's grammar read
+    // past. No XMDual, XMRef or extra id: a dual cost +1.1 % instructions on quant-ph0001103 (46 `x_{\mathrm
+    // H\vphantom{…}}`). An XMWrap, which its item replaces, gets the dual.
+    let tag = get_node_qname(mathnode);
+    if tag == pin!("ltx:XMath") || tag == pin!("ltx:XMArg") {
+      self.kept_phantoms = Some((leading, trailing));
+      return Ok(Some(result));
     }
     Ok(Some(self.wrap_presentation(
       result, leading, trailing, mathnode, document,
@@ -3932,6 +3963,8 @@ fn textrec(
       .map(|child| textrec(&child, None, None, document))
       .collect::<Vec<_>>()
       .join("@")
+  } else if let Some(item) = item_beside_phantoms(&node) {
+    textrec(&item, outer_bp_opt, outer_name_opt, document)
   } else if tag == pin!("ltx:XMArg") {
     let args = element_nodes(&node);
     if args.is_empty() {

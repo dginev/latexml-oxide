@@ -104,6 +104,21 @@ pub fn is_phantom_box(node: &Node) -> bool {
       })
 }
 
+/// The parsed item of a list (an `XMath`, or an `XMArg` slot) that keeps its edge phantoms beside it (the math parser's
+/// `parse_single`; OXIDIZED_DESIGN_DIVERGENCES #1141): its one element child but hints, when one of them is a phantom
+/// box. Content, OpenMath and text read the list as that item; presentation draws the row.
+pub fn item_beside_phantoms(node: &Node) -> Option<Node> {
+  let children = node.get_child_elements();
+  if !children.iter().any(is_phantom_box) {
+    return None;
+  }
+  let mut items = children
+    .into_iter()
+    .filter(|child| child.get_name() != "XMHint");
+  let item = items.next()?;
+  items.next().is_none().then_some(item)
+}
+
 /// How [`Document::close_element`] and its variants treat open descendants that do not
 /// auto-close.
 #[derive(Clone, Copy)]

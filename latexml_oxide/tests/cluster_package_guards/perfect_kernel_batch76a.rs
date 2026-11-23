@@ -46,7 +46,7 @@ fn number_td(row: u32, n: u32) -> String {
 /// #1141.)
 fn math_statement_td(row: u32, var: &str, n: u32) -> String {
   format!(
-    r#"<td align="left" xml:id="S0.Ex{row}.2"><Math mode="inline" tex="\displaystyle\vphantom{{\rule[1.93748pt]{{0.0pt}}{{0.0pt}}}}{var}\leftarrow {n}" text="{var} leftarrow {n}" xml:id="S0.Ex{row}.m2"><XMath xml:id="S0.Ex{row}.m2.2"><XMDual xml:id="S0.Ex{row}.m2.2.1"><XMRef idref="S0.Ex{row}.m2.1" xml:id="S0.Ex{row}.m2.2.1.1"/><XMWrap xml:id="S0.Ex{row}.m2.2.1.2"><XMHint depth="0.0pt" height="1.9pt" name="vphantom" xml:id="S0.Ex{row}.m2.2.1.2.1"><XMText xml:id="S0.Ex{row}.m2.2.1.2.1.1"><rule height="0.0pt" width="0.0pt" yoffset="1.9pt"/></XMText></XMHint><XMApp xml:id="S0.Ex{row}.m2.1"><XMTok fontsize="90%" name="leftarrow" role="ARROW">←</XMTok><XMTok font="italic" fontsize="90%" role="UNKNOWN">{var}</XMTok><XMTok fontsize="90%" meaning="{n}" role="NUMBER">{n}</XMTok></XMApp></XMWrap></XMDual></XMath></Math></td>"#
+    r#"<td align="left" xml:id="S0.Ex{row}.2"><Math mode="inline" tex="\displaystyle\vphantom{{\rule[1.93748pt]{{0.0pt}}{{0.0pt}}}}{var}\leftarrow {n}" text="{var} leftarrow {n}" xml:id="S0.Ex{row}.m2"><XMath xml:id="S0.Ex{row}.m2.1"><XMHint depth="0.0pt" height="1.9pt" name="vphantom" xml:id="S0.Ex{row}.m2.1.1"><XMText xml:id="S0.Ex{row}.m2.1.1.1"><rule height="0.0pt" width="0.0pt" yoffset="1.9pt"/></XMText></XMHint><XMApp xml:id="S0.Ex{row}.m2.1.2"><XMTok fontsize="90%" name="leftarrow" role="ARROW">←</XMTok><XMTok font="italic" fontsize="90%" role="UNKNOWN">{var}</XMTok><XMTok fontsize="90%" meaning="{n}" role="NUMBER">{n}</XMTok></XMApp></XMath></Math></td>"#
   )
 }
 

@@ -1804,12 +1804,23 @@ fn node_to_grammar_lexemes_ctx(
       // XMArg is a transparent wrapper (e.g. from \lx@post@subscript).
       // Recurse into its children so the grammar can parse them individually.
       // E.g. _{ij} should emit UNKNOWN:i + UNKNOWN:j, not ATOM:ij.
-      let arg_children = filter_hints(node.get_child_nodes());
+      // A slot that kept its edge phantoms beside its parsed item (parser.rs `parse_single`; a script's) lexes as that
+      // item, but stands in the parse as itself, so the phantoms stay beside the item in the script built from it.
+      let kept = latexml_core::document::item_beside_phantoms(&node);
+      let arg_children = match &kept {
+        Some(item) => vec![item.clone()],
+        None => filter_hints(node.get_child_nodes()),
+      };
       let (mut inner_lexes, mut inner_nodes) =
         node_to_grammar_lexemes_ctx(&node, arg_children, idx, false);
-      for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
-        lexemes.push(inner_lex);
-        nodes.push(inner_node);
+      if kept.is_some() && inner_lexes.len() == 1 {
+        lexemes.append(&mut inner_lexes);
+        nodes.push(node);
+      } else {
+        for (inner_lex, inner_node) in inner_lexes.drain(..).zip(inner_nodes.drain(..)) {
+          lexemes.push(inner_lex);
+          nodes.push(inner_node);
+        }
       }
     } else {
       let mut role = get_grammatical_role(&node);

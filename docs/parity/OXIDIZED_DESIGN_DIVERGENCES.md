@@ -24084,23 +24084,32 @@ its last, as it does trailing punctuation (`filter_hints_beside`: of no width, s
 stays padding, never a PUNCT), gives an argument of several items the kludge's structure, not the grammar's
 (`in_phantom`; an invisible box's structure only spaces it; it neither warns nor marks the formula unparsed; a phantom
 between items is never parsed, its ids would orphan the formula's references, tests/math/sampler.tex
-`+\phantom{g(x)}+`) and returns them in the result's presentation:
-`<XMDual><XMRef/><XMWrap>phantoms, result, phantoms</XMWrap></XMDual>`; a slot of phantoms alone is
-`<XMDual><XMTok meaning="absent"/>phantom</XMDual>`. Content MathML and OpenMath read the content branch, so they keep
-ignoring phantoms. The presentation writes `<mphantom>content</mphantom>` (MathML Core §3.3.7), `\hphantom` inside
+`+\phantom{g(x)}+`) and puts them back where they stood: a list that stays, the `XMath` or a slot's `XMArg` (which
+the parse otherwise replaces by its item), holds the hints beside its one parsed item (`<XMArg>a<XMHint>x</XMHint></XMArg>`,
+`document::item_beside_phantoms`); content MathML, OpenMath, `text=` and a parent's grammar (a script's argument is
+lexed as its item; the tree keeps the `XMArg`, semantics/tree.rs) read the list as that item. An XMWrap, which its item
+replaces, gets `<XMDual><XMRef/><XMWrap>phantoms, item, phantoms</XMWrap></XMDual>`; a slot of phantoms alone is
+`<XMDual><XMTok meaning="absent"/>phantom</XMDual>`, whose content branch is the absent token. The kept hints take no
+XMDual, XMRef or extra id (an XMDual for every edge phantom, PHANTOM round 3, cost +1.12 % instructions:u on
+quant-ph0001103 and shifted the formula's ids). `\mathstrut` is latex.ltx:15602's `\vphantom(` (`\lx@mathstrut`,
+reverting to `\mathstrut`; Perl math_common.pool.ltxml:690 an empty hint; nothing in text, as in Perl). The
+presentation writes `<mphantom>content</mphantom>` (MathML Core §3.3.7), `\hphantom` inside
 `<mpadded height="0pt" depth="0pt">`, `\vphantom` inside `<mpadded width="0pt">` (§3.3.6; a unit, which the XSLT's
 size styling reads), sized by the browser's font, chosen over an `<mspace>` of our metrics. A Math holding a phantom of math
 tokens is math (`has_real_math`). A list that fails to parse keeps the phantoms as padding, their widths with the other
 edge hints' (Perl's output; astro-ph0111392 `\phantom{{}={}}\quad{}+…\biggr]` lpadding 17.8pt). An empty `\phantom{}`
-and text mode (`ltx_phantom`) are unchanged. **Cost**: building the argument's XML, also for a phantom between items
-that is then dropped: +0.51 % instructions:u on math0001084, +1.14 % on quant-ph0001103 (best of 3 vs INT081C).
+and text mode (`ltx_phantom`) are unchanged. **Cost** (instructions:u, best of 3 vs INT081C, XML / HTML): math0001084
++0.22 % / +0.47 %, 1806.07769 (no phantom) +0.04 % / +0.04 %, quant-ph0001103 +0.85 % / +1.22 %: its 46 script phantoms
+(`\hus`, `x_{\mathrm H\vphantom{\overline{\mathrm H}}}`) cost ≈1.0M each in XML (the argument's XML and its copies)
+and ≈1.1M more in HTML, which is the post-processing of the six MathML nodes the phantom draws, as any formula's.
 **Residual**: a phantom between two items stays their spacing, as in Perl: `a\phantom{x}b`'s width is right, but a
 `\vphantom` there (`\left(\vphantom{\int}x\right)`, `a\vphantom{\frac12}b`) adds no height (catalog repro
 math-phantom/phantom_between_items_keeps_only_its_width). **Why**: witness 2603.21852 (EML.tex:63 `$\sqrt{\phantom{x}}$`,
 an x-wide empty radical). **Guards** `perfect_kernel_batchphantom::{phantom_alone_in_a_slot_is_its_presentation,
 phantom_at_a_list_edge_keeps_its_place, phantom_alone_is_a_formula, phantom_is_presentation_only_in_the_core,
-phantom_beside_a_quad_is_padding, phantom_of_several_items_is_kludged}` (repros math-phantom/phantom_is_a_box_of_its_content,
-control twin phantom_is_a_box_of_its_content_control, phantom_beside_a_quad_is_padding).
+phantom_beside_a_quad_is_padding, phantom_of_several_items_is_kludged, mathstrut_is_a_vphantom_of_a_parenthesis}` (repros
+math-phantom/phantom_is_a_box_of_its_content, control twin phantom_is_a_box_of_its_content_control,
+phantom_beside_a_quad_is_padding, mathstrut_is_a_vphantom_of_a_parenthesis).
 
 ### 1142. The format's own modules are read from the format's tree, not a paper's copy (LTXOWN)
 

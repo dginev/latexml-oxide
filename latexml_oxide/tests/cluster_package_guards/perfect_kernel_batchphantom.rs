@@ -140,8 +140,9 @@ fn phantom_alone_is_a_formula() {
   );
 }
 
-/// The core: content keeps ignoring the phantom (the XMDual's content branch is `absent`, or the item it stands by),
-/// the presentation branch holds the hint with its parsed argument.
+/// The core: content keeps ignoring the phantom. A slot of a phantom alone is an XMDual whose content branch is
+/// `absent`; a slot with an item keeps its `XMArg`, the hint (with its parsed argument) beside the item, no XMDual,
+/// XMRef or shifted id (PHANTOM round 4, `item_beside_phantoms`; round 3 wrapped it in an XMDual).
 #[test]
 fn phantom_is_presentation_only_in_the_core() {
   let (log, xml) = convert_with(REPRO, Some("ar5iv.sty"));
@@ -156,7 +157,7 @@ fn phantom_is_presentation_only_in_the_core() {
     &xml,
     "Math",
     &["xml:id=\"p4.m1\""],
-    r#"<Math mode="inline" tex="\sqrt{a\phantom{x}}" text="square-root@(a)" xml:id="p4.m1"><XMath xml:id="p4.m1.2"><XMApp xml:id="p4.m1.2.1"><XMTok meaning="square-root"/><XMDual xml:id="p4.m1.2.1.2"><XMRef idref="p4.m1.1" xml:id="p4.m1.2.1.2.1"/><XMWrap xml:id="p4.m1.2.1.2.2"><XMTok font="italic" role="UNKNOWN" xml:id="p4.m1.1">a</XMTok><XMHint depth="0.0pt" height="4.3pt" name="phantom" width="5.7pt" xml:id="p4.m1.2.1.2.2.1"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMHint></XMWrap></XMDual></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="\sqrt{a\phantom{x}}" text="square-root@(a)" xml:id="p4.m1"><XMath xml:id="p4.m1.1"><XMApp xml:id="p4.m1.1.1"><XMTok meaning="square-root"/><XMArg xml:id="p4.m1.1.1.2"><XMTok font="italic" role="UNKNOWN">a</XMTok><XMHint depth="0.0pt" height="4.3pt" name="phantom" width="5.7pt" xml:id="p4.m1.1.1.2.2"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMHint></XMArg></XMApp></XMath></Math>"#,
   );
 }
 
@@ -188,7 +189,7 @@ fn phantom_beside_a_quad_is_padding() {
     &xml,
     "Math",
     &["xml:id=\"p3.m1\""],
-    r#"<Math mode="inline" tex="a\quad\phantom{x}" text="a" xml:id="p3.m1"><XMath xml:id="p3.m1.2"><XMDual xml:id="p3.m1.2.1"><XMRef idref="p3.m1.1" xml:id="p3.m1.2.1.1"/><XMWrap xml:id="p3.m1.2.1.2"><XMTok font="italic" role="UNKNOWN" rpadding="10.0pt" xml:id="p3.m1.1">a</XMTok><XMHint depth="0.0pt" height="4.3pt" name="phantom" width="5.7pt" xml:id="p3.m1.2.1.2.1"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMHint></XMWrap></XMDual></XMath></Math>"#,
+    r#"<Math mode="inline" tex="a\quad\phantom{x}" text="a" xml:id="p3.m1"><XMath xml:id="p3.m1.1"><XMTok font="italic" role="UNKNOWN" rpadding="10.0pt">a</XMTok><XMHint depth="0.0pt" height="4.3pt" name="phantom" width="5.7pt" xml:id="p3.m1.1.2"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMHint></XMath></Math>"#,
   );
 }
 
@@ -202,6 +203,32 @@ fn phantom_of_several_items_is_kludged() {
     &xml,
     "Math",
     &["xml:id=\"p4.m1\""],
-    r#"<Math mode="inline" tex="\sqrt{a\phantom{x+(y)^{2}}}" text="square-root@(a)" xml:id="p4.m1"><XMath xml:id="p4.m1.2"><XMApp xml:id="p4.m1.2.1"><XMTok meaning="square-root"/><XMDual xml:id="p4.m1.2.1.2"><XMRef idref="p4.m1.1" xml:id="p4.m1.2.1.2.1"/><XMWrap xml:id="p4.m1.2.1.2.2"><XMTok font="italic" role="UNKNOWN" xml:id="p4.m1.1">a</XMTok><XMHint depth="2.5pt" height="8.1pt" name="phantom" width="31.0pt" xml:id="p4.m1.2.1.2.2.1"><XMArg xml:id="p4.m1.2.1.2.2.1.1"><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp xml:id="p4.m1.2.1.2.2.1.1.3"><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMWrap xml:id="p4.m1.2.1.2.2.1.1.3.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMArg></XMHint></XMWrap></XMDual></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="\sqrt{a\phantom{x+(y)^{2}}}" text="square-root@(a)" xml:id="p4.m1"><XMath xml:id="p4.m1.1"><XMApp xml:id="p4.m1.1.1"><XMTok meaning="square-root"/><XMArg xml:id="p4.m1.1.1.2"><XMTok font="italic" role="UNKNOWN">a</XMTok><XMHint depth="2.5pt" height="8.1pt" name="phantom" width="31.0pt" xml:id="p4.m1.1.1.2.2"><XMArg xml:id="p4.m1.1.1.2.2.1"><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp xml:id="p4.m1.1.1.2.2.1.3"><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMWrap xml:id="p4.m1.1.1.2.2.1.3.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMArg></XMHint></XMArg></XMApp></XMath></Math>"#,
   );
+}
+
+/// `\mathstrut` is TeX's `\vphantom(` (latex.ltx:15602, plain.tex:1034; DG ruling 2026-11-23): a zero-width phantom of
+/// a parenthesis beside a radicand (A) and alone in a radical (B, `dual_of_absent`), its alttext still `\mathstrut`.
+/// Distinct from the guards above: a macro reaching the phantom through `\lx@mathstrut`, not `\vphantom` itself. Red
+/// (PHANTOM round 3): an empty `XMHint name="mathstrut"`, `<msqrt><mi>a</mi></msqrt>`.
+#[test]
+fn mathstrut_is_a_vphantom_of_a_parenthesis() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/math-phantom/mathstrut_is_a_vphantom_of_a_parenthesis.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for id in ["p1.m1", "p2.m1"] {
+    let expected = match id {
+      "p1.m1" => {
+        r#"<Math mode="inline" tex="\sqrt{\mathstrut a}\sqrt{\mathstrut b}" text="square-root@(a) * square-root@(b)" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMApp xml:id="p1.m1.1.1"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMApp xml:id="p1.m1.1.1.2"><XMTok meaning="square-root"/><XMArg xml:id="p1.m1.1.1.2.2"><XMHint depth="2.5pt" height="7.5pt" name="vphantom" xml:id="p1.m1.1.1.2.2.1"><XMTok role="OPEN" stretchy="false">(</XMTok></XMHint><XMTok font="italic" role="UNKNOWN">a</XMTok></XMArg></XMApp><XMApp xml:id="p1.m1.1.1.3"><XMTok meaning="square-root"/><XMArg xml:id="p1.m1.1.1.3.2"><XMHint depth="2.5pt" height="7.5pt" name="vphantom" xml:id="p1.m1.1.1.3.2.1"><XMTok role="OPEN" stretchy="false">(</XMTok></XMHint><XMTok font="italic" role="UNKNOWN">b</XMTok></XMArg></XMApp></XMApp></XMath></Math>"#
+      },
+      _ => {
+        r#"<Math mode="inline" tex="\sqrt{\mathstrut}" text="square-root@(absent)" xml:id="p2.m1"><XMath xml:id="p2.m1.1"><XMApp xml:id="p2.m1.1.1"><XMTok meaning="square-root"/><XMDual xml:id="p2.m1.1.1.2"><XMTok meaning="absent"/><XMHint depth="2.5pt" height="7.5pt" name="vphantom" xml:id="p2.m1.1.1.2.2"><XMTok role="OPEN" stretchy="false">(</XMTok></XMHint></XMDual></XMApp></XMath></Math>"#
+      },
+    };
+    assert_element(&xml, "Math", &[&format!("xml:id=\"{id}\"")], expected);
+  }
 }

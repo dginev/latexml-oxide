@@ -246,6 +246,10 @@ fn cmml_exit(node: &Node) {
 ///
 /// Port of `cmml_contents`.
 fn cmml_contents(doc: &PostDocument, node: &Node) -> NodeData {
+  // A list keeps its edge phantoms beside its item (OXIDIZED_DESIGN_DIVERGENCES #1141): the item is its content.
+  if let Some(item) = latexml_core::document::item_beside_phantoms(node) {
+    return cmml(doc, &item);
+  }
   let children = element_children(node);
   if children.is_empty() {
     cmml_error("missing-subexpression")

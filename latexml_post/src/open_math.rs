@@ -4,6 +4,7 @@
 //! Converts XMath nodes into OpenMath XML representation.
 //! Uses a converter table (DefOpenMath) for dispatching Token/Apply conversion.
 
+use latexml_core::document::item_beside_phantoms;
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -57,7 +58,10 @@ impl Processor for OpenMath {
 impl MathProcessor for OpenMath {
   fn convert_node(&self, doc: &PostDocument, xmath: &Node) -> Option<MathConversion> {
     let children = element_children(xmath);
-    let xml = if children.len() == 1 {
+    // A formula keeps its edge phantoms beside its item (OXIDIZED_DESIGN_DIVERGENCES #1141): the item is its content.
+    let xml = if let Some(item) = item_beside_phantoms(xmath) {
+      om_expr(doc, &item)
+    } else if children.len() == 1 {
       om_expr(doc, &children[0])
     } else {
       om_unparsed(doc, &children)
@@ -190,7 +194,9 @@ fn om_expr_aux(doc: &PostDocument, node: &Node) -> NodeData {
   match tag.as_str() {
     "ltx:XMWrap" | "ltx:XMArg" => {
       let children = element_children(node);
-      if children.len() == 1 {
+      if let Some(item) = item_beside_phantoms(node) {
+        om_expr(doc, &item)
+      } else if children.len() == 1 {
         om_expr(doc, &children[0])
       } else {
         om_unparsed(doc, &children)

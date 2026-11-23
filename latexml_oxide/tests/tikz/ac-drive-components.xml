@@ -55,15 +55,10 @@
                       <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 81.12 59.87)">
                         <svg:foreignObject height="5.96" overflow="visible" style="--ltx-fo-width:0.33em;--ltx-fo-height:0.43em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 5.96)" width="4.61"><Math mode="inline" tex="\vphantom{+}-" text="-" xml:id="p1.pic1.pic1.m2">
                             <XMath>
-                              <XMDual>
-                                <XMRef idref="p1.pic1.pic1.m2.1"/>
-                                <XMWrap>
-                                  <XMHint depth="0.8pt" height="5.8pt" name="vphantom">
-                                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                                  </XMHint>
-                                  <XMTok meaning="minus" role="ADDOP" xml:id="p1.pic1.pic1.m2.1">-</XMTok>
-                                </XMWrap>
-                              </XMDual>
+                              <XMHint depth="0.8pt" height="5.8pt" name="vphantom">
+                                <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                              </XMHint>
+                              <XMTok meaning="minus" role="ADDOP">-</XMTok>
                             </XMath>
                           </Math></svg:foreignObject>
                       </svg:g>
