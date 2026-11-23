@@ -1492,6 +1492,13 @@ pub(crate) fn load() -> Result<()> {
     // kernel `\maketitle` (locked), whose deposit must not run the body twice.
     // (`\maketitle` itself is NOT redefined here — it is locked, and the lock
     // would record that redefinition as the dropped body.)
+    // (an `\@maketitle` left to the replay, as it was before the replay: the class's `\maketitle` may relax it after
+    // running it, iaus.cls:847 `\global\let\@maketitle\relax`)
+    let left_to_replay = maketitle_left_to_replay();
+    if left_to_replay {
+      Let!("\\lx@saved@maketitle", "\\@maketitle");
+    }
+    let mut replay_erred = false;
     if let Some(replay) = title_page_replay_tokens(&[]) {
       AssignValue!("lx_depositing_class_maketitle" => true, Some(Scope::Global));
       AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
@@ -1528,6 +1535,7 @@ pub(crate) fn load() -> Result<()> {
         // Its errors go, with the stubs standing in for them. The groups an error left open stay: a class
         // may leave one open on purpose (oegatb.cls:160-176 `spacing`, closed by its `\AtEndDocument`).
         hold.discard();
+        replay_erred = true;
         Info!(
           "ignore",
           "\\maketitle",
@@ -1547,13 +1555,15 @@ pub(crate) fn load() -> Result<()> {
         }
       }
     }
-    // (a deposit left to the replay is made after all when the replay was not kept: `\@maketitle` given `{}` for
-    // its arguments, as nothing replayed supplies them)
-    if !lookup_bool("lx_title_page_replay_kept") {
-      let fallback = title_page_fallback_deposit_tokens();
-      if !fallback.is_empty() {
-        run_title_page_deposit(fallback, &mut out, &mut inserts)?;
-      }
+    // (a deposit left to the replay is made after all when the replay was dropped for an error, which may have
+    // come before the class's `\maketitle` called it: `\@maketitle` as it was before the replay, given `{}` for its
+    // arguments. Not after a replay that typeset nothing: a class `\maketitle` that never calls it prints none of it.)
+    if left_to_replay && replay_erred {
+      run_title_page_deposit(
+        title_page_fallback_deposit_tokens(),
+        &mut out,
+        &mut inserts,
+      )?;
     }
     // (the kept title page, between the marks of its provenance)
     if !out.is_empty() {
@@ -5154,8 +5164,11 @@ enum MaketitleParameters {
 }
 
 /// The parameters of the class's `\@maketitle` ([`MaketitleParameters`]).
-fn maketitle_parameters() -> MaketitleParameters {
-  let Some(Stored::Expandable(d)) = lookup_meaning(&T_CS!("\\@maketitle")) else {
+fn maketitle_parameters() -> MaketitleParameters { parameters_of(&T_CS!("\\@maketitle")) }
+
+/// The parameters of a macro read as an `\@maketitle`'s ([`MaketitleParameters`]).
+fn parameters_of(cs: &Token) -> MaketitleParameters {
+  let Some(Stored::Expandable(d)) = lookup_meaning(cs) else {
     return MaketitleParameters::None;
   };
   let Some(params) = d.get_parameters() else {
@@ -5179,7 +5192,7 @@ fn maketitle_parameters() -> MaketitleParameters {
 /// Is an `\@maketitle` that takes parameters left to the replay of the class's `\maketitle`, which calls it with the
 /// class's own arguments (iaus.cls:824-868 `\@maketitle{n}`, 0801.1806)? The replay then leaves it live (relaxed, its
 /// argument "n" was typeset) and the deposit does not run it first; the deposit runs it only where nothing replays
-/// it, or after a replay that was not kept.
+/// it, or after a replay dropped for an error.
 fn maketitle_left_to_replay() -> bool {
   maketitle_parameters() != MaketitleParameters::None && replays_class_maketitle()
 }
@@ -5210,29 +5223,39 @@ pub(crate) fn title_page_deposit_tokens(inject: &[Token]) -> Tokens {
   deposit_tokens(inject)
 }
 
-/// The deposit a replay left `\@maketitle` to ([`maketitle_left_to_replay`]) makes after all when that replay is not
-/// kept (it raised an error, or typeset nothing).
-fn title_page_fallback_deposit_tokens() -> Tokens {
-  if maketitle_left_to_replay() {
-    deposit_tokens(&[])
-  } else {
-    Tokens::default()
-  }
-}
+/// The deposit a replay left `\@maketitle` to ([`maketitle_left_to_replay`]) makes after all when that replay is
+/// dropped for an error: the `\@maketitle` saved before the replay (`\lx@saved@maketitle`), which a class's
+/// `\maketitle` may have relaxed after running it (iaus.cls:847), restored in the deposit's group.
+fn title_page_fallback_deposit_tokens() -> Tokens { deposit_tokens_of(&[], true) }
 
 /// [`title_page_deposit_tokens`], made: `\@maketitle` given an `{}` per undelimited mandatory parameter, as nothing
 /// supplies its arguments here — without them it read the deposit's closing brace, leaving its group open to
 /// `\end{document}` (0801.1806). One with a delimited parameter is not deposited.
-fn deposit_tokens(inject: &[Token]) -> Tokens {
-  let braces = match maketitle_parameters() {
+fn deposit_tokens(inject: &[Token]) -> Tokens { deposit_tokens_of(inject, false) }
+
+/// [`deposit_tokens`] of `\@maketitle`, or (`saved`) of its meaning saved before the replay, restored in the group.
+fn deposit_tokens_of(inject: &[Token], saved: bool) -> Tokens {
+  let maketitle = if saved {
+    T_CS!("\\lx@saved@maketitle")
+  } else {
+    T_CS!("\\@maketitle")
+  };
+  let braces = match parameters_of(&maketitle) {
     MaketitleParameters::None => 0,
     MaketitleParameters::Braces(n) => n,
     MaketitleParameters::Delimited => return Tokens::default(),
   };
-  let mut tokens = mouth::tokenize_internal(TeXString::assembled(s!(
-    r"\ifx\@maketitle\@empty\else{{{TITLE_PAGE_FIELDS}\let\and\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
-  )))
-  .unlist();
+  let mut tokens = vec![T_CS!("\\ifx"), maketitle];
+  tokens.extend(mouth::tokenize_internal(r"\@empty\else{").unlist());
+  if saved {
+    tokens.extend([T_CS!("\\let"), T_CS!("\\@maketitle"), maketitle]);
+  }
+  tokens.extend(
+    mouth::tokenize_internal(TeXString::assembled(s!(
+      r"{TITLE_PAGE_FIELDS}\let\and\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
+    )))
+    .unlist(),
+  );
   tokens.extend_from_slice(inject);
   tokens.push(T_CS!("\\@maketitle"));
   for _ in 0..braces {

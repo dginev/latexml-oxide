@@ -2,7 +2,7 @@
 //! wrapped it as `{…\@maketitle}`, so it read the closing brace as its argument and left the group open at
 //! `\end{document}`; the replay of the class's `\maketitle` relaxed it, and its argument (`\@maketitle{n}`) was
 //! typeset as a stray "n". Now the replay that runs it leaves it live and the deposit leaves it to that replay; where
-//! nothing replays it, or the replay is dropped, the deposit gives it an `{}` per mandatory argument (sect05.rs
+//! nothing replays it, or the replay is dropped for an error, the deposit gives it an `{}` per mandatory argument (sect05.rs
 //! `maketitle_left_to_replay`).
 
 use latexml::util::test::{error_count, warning_count};
@@ -54,13 +54,23 @@ type File<'a> = (&'a str, &'a str);
 ///   an `{}` argument;
 /// - "optional": a document's `\renewcommand\@maketitle[1][]{…}` (no replay): deposited as it is;
 /// - "dropped": the class shape whose replay raises an error (its title read as empty) and is dropped: the deposit is
-///   made after it, with an `{}` argument.
+///   made after it, with an `{}` argument;
+/// - "relax", "empty", "gdef": "dropped" whose replay then switches `\@maketitle` off globally (iaus.cls:847
+///   `\global\let\@maketitle\relax`; `\@empty`; `\gdef…{}`): the deposit after it runs the `\@maketitle` saved
+///   before the replay, as pdflatex ran it before the class relaxed it.
+///
+/// Then "bare": a class `\maketitle` that never calls the argument-taking `\@maketitle` and typesets nothing of its
+/// own: no deposit after that replay, so the subtitle pdflatex does not print is not invented.
 #[test]
 fn an_argument_taking_maketitle_closes_its_group() {
   let class = [("mtarg.cls", repro!("mtarg.cls"))];
   let class_err = [("mtargerr.cls", repro!("mtargerr.cls"))];
+  let class_var = [("mtargvar.cls", repro!("mtargvar.cls"))];
+  let relaxed = repro!("maketitle_argument_class_relaxed_after_dropped_replay_keeps_its_text.tex");
+  let emptied = relaxed.replace("[relax]{mtargvar}", "[empty]{mtargvar}");
+  let gdefed = relaxed.replace("[relax]{mtargvar}", "[gdef]{mtargvar}");
   // (name, source, side files, title, the subtitle paragraph's attributes before its id)
-  let rows: [(&str, &str, &[File], &str, &str); 4] = [
+  let rows: [(&str, &str, &[File], &str, &str); 7] = [
     (
       "class",
       repro!("maketitle_argument_class_title_page_closes_its_group.tex"),
@@ -89,6 +99,9 @@ fn an_argument_taking_maketitle_closes_its_group() {
       "T",
       "",
     ),
+    ("relax", relaxed, &class_var, "T", ""),
+    ("empty", emptied.as_str(), &class_var, "T", ""),
+    ("gdef", gdefed.as_str(), &class_var, "T", ""),
   ];
   for (name, tex, files, title, align) in rows {
     let (log, xml) = convert_to(tex, files, "t.xml");
@@ -146,4 +159,27 @@ fn an_argument_taking_maketitle_closes_its_group() {
       "{name}: {html}"
     );
   }
+
+  let tex = repro!("maketitle_argument_class_never_called_prints_none_of_it.tex");
+  let (log, xml) = convert_to(tex, &class_var, "t.xml");
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, 0),
+    "bare: {log}"
+  );
+  assert!(xml.contains("<title>T</title>"), "bare: {xml}");
+  assert!(!xml.contains("Subtitle"), "bare: {xml}");
+  assert_eq!(xml.matches("<p ").count(), 1, "bare: {xml}");
+  assert!(xml.contains(r#"<p xml:id="p1.1">Hi</p>"#), "bare: {xml}");
+  let (log, html) = convert_to(tex, &class_var, "t.html");
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, 0),
+    "bare: {log}"
+  );
+  assert!(!html.contains("Subtitle"), "bare: {html}");
+  assert!(
+    html.contains(r#"<p id="p1.1" class="ltx_p">Hi</p>"#),
+    "bare: {html}"
+  );
 }

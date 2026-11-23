@@ -6482,8 +6482,11 @@ group stayed open to `\end{document}` (Warning "open groups"). Our reader return
 does (Gullet.pm:732-744), where TeX raises "Argument of … has an extra }" (tex.web:8069-8080). Relaxed in the replay,
 it left the class's argument "n" in the text. Now the class's own call supplies the argument, with the fields emptied
 as the deposit had them. Where nothing replays it (a document's `\def\@maketitle#1{…}` under article), or the replay
-is dropped (an error, or nothing typeset), the deposit runs it with an `{}` per undelimited mandatory parameter (an
-optional one reads none; one with a delimited parameter is not deposited). The deposit, the replay and the store
+is dropped for an error, the deposit runs it with an `{}` per undelimited mandatory parameter (an optional one reads
+none; one with a delimited parameter is not deposited). After a dropped replay it runs `\@maketitle` as it was before
+the replay (`\lx@saved@maketitle`, restored in the deposit's group), as pdflatex ran it before the class switched it
+off (iaus.cls:847 `\global\let\@maketitle\relax`). A replay that typeset nothing gets no deposit: its class
+`\maketitle` may never call `\@maketitle`, and pdflatex then prints none of it. The deposit, the replay and the store
 check read one predicate (sect05.rs `maketitle_left_to_replay`). Guard
 `perfect_kernel_batchmtarg::an_argument_taking_maketitle_closes_its_group`.
 A K11-rerouted store (`frontmatter_stores.rs`) is nulled in the deposit, so a class default the document never replaced would reach neither the frontmatter nor the body. lion-msc.cls:196-203 is the witness: a default affiliation and address that `\@maketitle` prints. The kernel `\maketitle` therefore hands each unset, non-blank default to its frontmatter setter first (`\lx@store@defaults` in `\lx@maketitle@body`, batch 56ip). It runs only at `\maketitle`, where pdflatex prints the default. A setter the document does call replaces the default, and a second `\maketitle` finds the store set. The list of rerouted stores accumulates across a raw class and a raw class it `\LoadClass`es. Guard `class_census::k11_class_default_store`.
