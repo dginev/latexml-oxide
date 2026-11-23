@@ -1361,6 +1361,10 @@ LoadDefinitions!({
     Ok(())
   });
 
+  // xcolor.sty:824 `\color@fb@x{[model]}{frame}{[bgmodel]}{bg}`, the internal realboxes' `\Fcolorbox` calls
+  // (realboxes.sty:277-279): the user-level `\fcolorbox` below it stands for.
+  DefMacro!("\\color@fb@x{}{}{}{}", "\\fcolorbox#1{#2}#3{#4}");
+
   // \fcolorbox — xcolor version with ParseXColor.
   // Perl xcolor.sty.ltxml has `mode=>'internal_vertical', enterHorizontal=>1`; the box is an
   // `\hbox` (xcolor.sty:827-829 `\color@b@x`), so its body is restricted horizontal: in

@@ -23956,3 +23956,21 @@ bbl_abstract_c1_is_stored_data}` (repros unicode-catcodes/utf8_inputenc_control_
 utf8_c1_declared_and_byte_line, utf8_declared_before_inputenc_keeps_meaning,
 index-bib/biblatex_bbl_abstract_c1_is_stored_data).
 
+### 1139. An inline listing runs listings.sty's `\lst@Init\relax` … `\lst@DeInit` bracket (LISTINLINE)
+
+**Perl behavior**: listings.sty.ltxml:54-68 `\lstinline` opens a group, reads and outputs the body and closes the group;
+it defines neither `\lst@Init` nor `\lst@DeInit` and never runs them (KNOWN_PERL_ERRORS #1313).
+**pdflatex (TL 2025)**: listings.sty:1941-1953 `\lstinline` is `\leavevmode\bgroup` … `\lst@Init\relax` before the body
+is read, and every ending (:1959 `\lst@InlineM`, :1966 `\lst@InlineJ`, :1989 `\lst@InlineGJEnd`) is
+`\lst@DeInit\egroup`, so a hook a document adds to `\lst@DeInit` (or `\lst@Init`) runs inside each inline listing.
+**Rust behavior**: listings_sty.rs `\lx@lstinline` reads the options, opens the group and returns `\lst@Init\relax`
+before `\lx@lstinline@` reads the body, which ends `\lst@DeInit\lx@hidden@egroup`; the binding's own
+`\lst@Init#1{\begingroup}`/`\lst@DeInit{\endgroup}` pair adds no markup. Every inline entry point takes it: a `|`
+or `{…}` delimiter, `[options]`, `\lstMakeShortInline`, and the binding's `\begin{lstinline}` (Init after its lines
+are read). Display listings (`lstlisting`, `\lstinputlisting`, `\lstnewenvironment`) do not run the bracket yet.
+**Why**: realboxes' `\Colorbox{…}\bgroup\appto\lst@DeInit{\egroup}` before `\lstinline` (2411.07667
+IndexNotation.tex:148-156) closes its collected box (collectbox.sty:66-75) in that `\egroup`; without it each
+listing nested a group deeper, `Fatal:Stomach:Recursion` at the 200-deep stack (2411.07667: 7 Errors, 2 Fatals,
+3604 words → 0 Errors, 10904 words). **Guards** `perfect_kernel_batchlistinline::lstinline_runs_the_init_deinit_bracket`
+(repros listings-algorithms/lstinline_deinit_hook_closes_a_colorbox, lstinline_deinit_hook_every_entry_point,
+lstinline_plain_shapes_stay).

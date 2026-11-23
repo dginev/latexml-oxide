@@ -1,0 +1,19 @@
+% witness: 2411.07667 (IndexNotation.tex:148-156: `\xpretocmd` puts realboxes' `\Colorbox{…}\bgroup` and
+%          `\appto\lst@DeInit{\egroup}` before an inline listing; collectbox.sty:66-75 collects the box until that
+%          `\egroup`)
+% oracle:  pdflatex 0 errors: "A x.a and y.b and z.c end." — listings.sty:1941-1953 `\lstinline` runs `\lst@Init\relax`
+%          before the body, and :1959/:1966/:1989 end it with `\lst@DeInit\egroup`
+% engines: rust rc2 = 6 × Error:unexpected:\collect@box, only "A" kept (the binding never ran `\lst@DeInit`, each
+%          listing nested a group deeper; 2411.07667 reached Fatal:Stomach:Recursion); perl = 1 Error,
+%          undefined `\xpretocmd` (no xpatch binding): the patch never applies and no box opens
+% expect:  0 errors, 0 warnings; "x.a", "y.b", "z.c" in order, each the inline `<text class="ltx_lstlisting">`
+% status:  RED (rc2) -> GREEN (LISTINLINE: listings_sty.rs `\lx@lstinline` brackets the body with Init/DeInit)
+\documentclass{article}
+\usepackage{xcolor,listings,xpatch,realboxes}
+\makeatletter
+\DeclareRobustCommand{\myinline}{\lstinline}
+\xpretocmd\myinline{\Colorbox{yellow}\bgroup\appto\lst@DeInit{\egroup}}{}{}
+\makeatother
+\begin{document}
+A \myinline|x.a| and \myinline|y.b| and \myinline|z.c| end.
+\end{document}
