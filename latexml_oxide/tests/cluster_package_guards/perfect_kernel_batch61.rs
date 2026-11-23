@@ -2531,7 +2531,7 @@ fn hphantom_in_plain_tex_loads_no_latex() {
     &xml,
     "para",
     &[],
-    r#"<para><p>Text [<text class="ltx_phantom">[1]</text>1<text class="ltx_phantom"/>].</p></para>"#,
+    r#"<para><p>Text [<text class="ltx_phantom ltx_vphantom">[1]</text>1<text class="ltx_phantom ltx_vphantom"/>].</p></para>"#,
   );
 }
 

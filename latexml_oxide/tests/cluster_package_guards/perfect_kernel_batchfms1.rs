@@ -648,7 +648,7 @@ fn field_prov_phantom_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">About<text class=\"ltx_phantom\"> Foo Bar</text></p>\n    </block>\n    <block xml:id=\"p2\">\n      <p align=\"center\">About<text class=\"ltx_phantom\"> Foo Bar</text></p>\n    </block>\n    <block xml:id=\"p3\">\n      <p align=\"center\"><text class=\"ltx_phantom\">About Foo Bar</text></p>\n    </block>\n  </titlepage>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">About<text class=\"ltx_phantom\"> Foo Bar</text></p>\n    </block>\n    <block xml:id=\"p2\">\n      <p align=\"center\">About<text class=\"ltx_phantom ltx_vphantom\"> Foo Bar</text></p>\n    </block>\n    <block xml:id=\"p3\">\n      <p align=\"center\"><text class=\"ltx_phantom\">About Foo Bar</text></p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }

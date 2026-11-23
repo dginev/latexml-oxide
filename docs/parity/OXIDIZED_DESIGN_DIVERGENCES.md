@@ -23993,7 +23993,10 @@ from its load (a definition before it, kept as `\lx@titlesec@claimed@<sec>`, is 
 whose body calls `\@startsection` (behind the kernel's lock, `\lx@dropped@<sec>`; a record holding the claimed body or
 the binding's with tokens added, the lock's `extended_refused_definition`, is an extension and does not count) or
 sectsty's load under one of its classes (the flag `titlesec_released@<sec>`; `\@ifclassloaded` as the loader answers
-it, so under amsart, whose binding loads article, sectsty still releases). Only a body that calls `\@startsection`
+it, so under every class whose binding loads article (amsart, acmart, IEEEtran, mnras, revtex4-2, emulateapj, asmejour,
+subfiles) sectsty still releases where pdflatex errs and keeps titlesec's format). A hand-written redefinition that
+copies the claimed body with tokens added is still taken for titlesec's (tokens cannot tell it from `\preto`'s record;
+output as before the batch). Only a body that calls `\@startsection`
 releases (not `\renewcommand\section{\mysection}`), a release is global, and `\titleclass` does not re-take a released
 command: row R TITLESECRED. The check runs when the heading is set (`\lx@titlesec@ifholds`, wrapping the font, the
 after-code and `\format@title@<sec>`, which composes the kernel's title when released) and at `\titleformat` (nothing
@@ -24030,3 +24033,16 @@ define their own).
 loading varioref also load cleveref, 105 of them calling the family.
 **Guards** `perfect_kernel_batchvrefclev::{cleveref_vref_with_varioref, varioref_alone_and_cleveref_alone_unchanged}`
 (repros package-bindings/cleveref_vref_with_varioref, cleveref_vref_family_with_varioref).
+
+### 1145. A text `\vphantom` is a zero-width strut (VPHANTOMWIDTH)
+
+**Perl behavior**: math_common.pool.ltxml `\vphantom` in text writes `<ltx:text class='ltx_phantom'>`, the same element
+as `\phantom`/`\hphantom`; the XSLT (`LaTeXML-inline-xhtml.xsl`, `contains(@class,'ltx_phantom')`) hides it with
+`visibility:hidden`, so the HTML box keeps the argument's width.
+**pdflatex**: latex.ltx:15613-15617 `\finph@nt` gives a `\vphantom` box its argument's height and depth and no width.
+**Rust behavior** (DG ruling 2026-11-23): the text box carries `class='ltx_phantom ltx_vphantom'`, and LaTeXML.css
+(and ar5iv-css) set `.ltx_phantom.ltx_vphantom { display:inline-block; width:0; white-space:nowrap; overflow:clip }`:
+TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hidden`, keeps the baseline).
+`\phantom` and `\hphantom` are unchanged. **Guards** `perfect_kernel_batch61::hphantom_in_plain_tex_loads_no_latex`
+(harvmac's `\refs` struts), `perfect_kernel_batchregfixb::*`, `perfect_kernel_batchfms1::field_prov_phantom_kept`.
+

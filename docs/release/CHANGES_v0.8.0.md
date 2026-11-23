@@ -69,6 +69,19 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
   - **The ar5iv profile's conditional limit is the front ends' 480M.** The `\if` count accumulates over the whole
     document, so a long finite pgfplots paper passed ar5iv's 48M without any loop; `--preload=ar5iv.sty` now passes
     the same `RUNAWAY_IF_LIMIT` as the command line (OXIDIZED_DESIGN_DIVERGENCES #1080).
+  - **A titlesec format applies only while titlesec holds the command.** A document that redefines `\section` with
+    `\@startsection` after loading titlesec, or loads sectsty after it under article/report/book or the KOMA classes,
+    gets LaTeX's heading back, as in pdflatex; the format used to keep applying and could read the brace that ends
+    its argument (`Fatal:Stomach:Misdefined`). An extension by `\preto` keeps titlesec's hold. sectsty under another
+    class raises its own PackageError. OXIDIZED_DESIGN_DIVERGENCES #1143, KNOWN_PERL_ERRORS #1317; guards
+    `perfect_kernel_batchtitlesec::*`.
+  - **After varioref, cleveref's `\vref` family prints cleveref's references.** cleveref redefines `\vref`, `\Vref`,
+    `\vrefrange`, `\Vrefrange`, `\fullref` and `\Fullref` on varioref's page internals, which the page-less varioref
+    binding does not provide, so each call raised six Errors and printed "??"; they are now the binding's `\cref`
+    forms (page text dropped, as varioref's). OXIDIZED_DESIGN_DIVERGENCES #1144, KNOWN_PERL_ERRORS #1318; guards
+    `perfect_kernel_batchvrefclev::*`.
+  - **A text `\vphantom` is a zero-width strut**, as in TeX: it carries `ltx_vphantom`, and LaTeXML.css gives it its
+    argument's height and depth and no width (OXIDIZED_DESIGN_DIVERGENCES #1145; also in ar5iv-css).
 
 ### 0.8.0-rc2
 

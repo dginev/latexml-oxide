@@ -2599,4 +2599,14 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
 - CRASH397L's 2411.07667 — fixed by LISTINLINE: an inline listing runs listings.sty's `\lst@Init\relax … \lst@DeInit`
   bracket (OD #1139, KNOWN_PERL_ERRORS #1313), and realboxes reaches `\color@box`/`\color@fb@x`; 7 Errors and 2
   Fatals → 0 Errors. Guards `perfect_kernel_batchlistinline::*`. Residuals: row R REALBOXBG, LSTDISPLAYINIT, LSTTEXRECON.
+- TITLESEC395 (titlesec half) — fixed by TITLESEC (OD #1143, KNOWN_PERL_ERRORS #1317): a titlesec format applies only
+  while titlesec holds the command; a later `\@startsection` definition or sectsty's load under its classes gives it
+  back; a `\preto` extension keeps the hold. 1910.11159, 2005.02481, 2005.06700: Fatal → 0 errors. Guards
+  `perfect_kernel_batchtitlesec::*`. The §395 half is row R READARG395; residuals TITLESECRED.
+- CNTE's cleveref + varioref part — fixed by VREFCLEV (OD #1144, KNOWN_PERL_ERRORS #1318): after varioref, cleveref's
+  `\vref` family are the binding's page-less `\cref` forms; varioref's range stubs spell `\ref`. 1602.00476 6 → 0,
+  2505.14566 26 → 0, 2409.11413 73 → 19 Errors; A/B 135 papers, Errors 347 → 103. Guards `perfect_kernel_batchvrefclev::*`.
+  2606.11484's new Fatal is row R ROBUSTIFYCELL.
+- VPHANTOMWIDTH — fixed (DG 2026-11-23, OD #1145): a text `\vphantom` is a zero-width strut (`ltx_vphantom`, LaTeXML.css
+  and ar5iv-css).
 

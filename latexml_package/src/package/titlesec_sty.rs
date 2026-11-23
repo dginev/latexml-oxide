@@ -74,7 +74,7 @@ fn titlesec_holds(sec: &str) -> bool {
   };
   let body = body.unlist_ref();
   // (a definition titlesec's own load replaced, `\lx@titlesec@claimed@<sec>`, does not count, nor does that record or
-  // the binding extended at an end by `\preto`/`\g@addto@macro`: state.rs `extended_refused_definition`)
+  // the binding with tokens added, as `\preto`/`\g@addto@macro` leave it: state.rs `extended_refused_definition`)
   let extends = |held: Option<Stored>| match held {
     Some(Stored::Expandable(c)) => {
       Rc::ptr_eq(&c, &now)
