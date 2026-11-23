@@ -80,7 +80,11 @@ fn easytable_easybmat_lastbox_peel() {
   };
   let phantoms: Vec<String> = xml
     .match_indices(r##"<text class="ltx_phantom ltx_vphantom""##)
-    .filter_map(|(at, _)| xml_element(&xml[at..], "text", &[r##"class="ltx_phantom ltx_vphantom""##]))
+    .filter_map(|(at, _)| {
+      xml_element(&xml[at..], "text", &[
+        r##"class="ltx_phantom ltx_vphantom""##,
+      ])
+    })
     .collect();
   assert_eq!(
     phantoms,

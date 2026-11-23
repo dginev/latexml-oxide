@@ -115,5 +115,10 @@ fn varioref_range_stubs_stay_refs_under_cleveref() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let range = r#"<ref labelref="LABEL:s:one"/>–<ref labelref="LABEL:s:three"/>"#;
-  assert_element(&xml, "p", &[], &format!("<p>A[{range}] B[{range}] C[{range}]</p>"));
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    &format!("<p>A[{range}] B[{range}] C[{range}]</p>"),
+  );
 }
