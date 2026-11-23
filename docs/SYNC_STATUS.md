@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (568 items on 2026-11-23 on `int/towards_v0_8_1`: 564 open, weight 1103, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (570 items on 2026-11-23 on `int/towards_v0_8_1`: 566 open, weight 1109, 59 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -1114,9 +1114,15 @@ Rules that keep this file honest and mergeable:
     `ancestor-or-self::ltx:tr`, which also matches an enclosing tabular's row, so an `equation`+`aligned` in a tabular
     cell prints its tag on every row. Minimal: `\begin{tabular}{|p{3in}|}{\begin{equation}\begin{aligned} x &= 1\\
     y &= 2\end{aligned}\end{equation}}\\\end{tabular}`; test only for a row inside the equation's own MathFork; 1
-  - ACMTEASER (post-0.8.0, fidelity, needs a ruling) — acmart's `teaserfigure`: pdflatex prints title, authors, teaser,
-    abstract, keywords; ours (`acmart_cls.rs` ~455-476, Perl's Replace semantics) puts the teaser after the keywords,
-    Perl LaTeXML before the title. A binding change with an OD entry and an A/B over the acmart papers; 1
+  - TITLEPAGEALIGN (after ACMTEASER) — a cover `wrap_as_titlepage` synthesizes still demotes a centred `logical-block`
+    to `block` (`normalize_titlepage_layout_children`, #244), so its paragraphs lose `align`, while a real
+    `{titlepage}` now keeps the logical-block (S14). Make the synthesized path keep it; needs its own A/B; 3
+  - TITLEPAGEUNWRAPIDS (synthetic) — unwrapping a stranded `{titlepage}` around a float (`field_ink.rs:22
+    demote_stranded_titlepage`) drops the titlepage's own `xml:id`/`labels` (the plain demotion keeps them on the
+    renamed paragraph); no construct seen that labels a titlepage (`\label` inside attaches to the document); 1
+  - COMPILESCHEMA (tooling) — `tools/compileschema.sh` stage 2 (`--dump-model`) reloads the committed `LaTeXML.model`
+    instead of compiling the `.rng`, so a schema change does not reach the model (S14's model line was hand-edited).
+    Check: widen any `.rnc`, run the script, `--dump-model` shows the element unchanged; 3
   - TEMPSWEEP (after the v0.8.0 tag, DG 2026-11-22) — an abandoned render fleet leaves pid-tagged staging temps in the
     output: the stop-at-first-death loop (`render_workers.rs:682`, `kill_pid(pid, false)`) SIGKILLs the other workers mid-
     graphics, so they never remove their registered paths and their mutool/pdftocairo/gs children survive. Probe: a
@@ -1291,7 +1297,10 @@ Rules that keep this file honest and mergeable:
     `\twocolumn[…figure…]` idiom, `\@maketitle` patches (2609.35408); true floats stay in the body; `ltx_teaserfigure`
     only where the class names it a teaser; reverses the egpubl after-abstract pin (`perfect_kernel_batch61`); not
     offered upstream for now. Reach: 247 of a 30k census sample (0.83 %; 2.21 % of 2026 papers). A/B ~250 papers.
-    Code: `cover_order.rs` (refuses a region holding a float, :302, :494), `titlepage_layout.rs`; 5
+    Also: a teaser written inside an existing `{titlepage}` or continued cover would be moved out and could leave it
+    empty; a centre written directly in a leading `{titlepage}` now gives flat `p align=center` (no logical-block) —
+    check against 2204.08560 when designing. Code: `cover_order.rs` (refuses a region holding a float, :302, :494),
+    `titlepage_layout.rs`; 5
   - BACKMATTERRAW (after BACKMATTERPART) — memoir (its runtime binding reads memoir.cls raw) and scrbook keep their own
     `\backmatter`, so their back matter still nests inside the last `ltx:part`; a document's `\renewcommand\backmatter`
     loses the close too (as Perl). Trigger: `\documentclass{scrbook}\begin{document}\part{A}\chapter{x}\backmatter

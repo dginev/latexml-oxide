@@ -2656,3 +2656,12 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   astro-ph0608348 25 s → 4 s; READARG 498 papers 0 changed; cost ≤ +0.12 % instructions:u. Guards
   `perfect_kernel_batchcyclewin::*`, `cycle_guard` unit tests. Residuals: row R CYCLESTOMACHDRAIN, CYCLEREFILL2,
   HYPREFSTEP.
+- ACMTEASER — fixed (DG rulings 2026-11-23; OD #1146, KNOWN_PERL_ERRORS #1319, SCHEMA_EXTENSIONS S14): acmart's
+  `teaserfigure` stands after the title and authors, before the abstract and keywords (acmart.cls:2240; under sigchi-a
+  after the title), all teasers in one continued `<titlepage>` (`wrap_as_continued_titlepage`); `titlepage_model`
+  admits `logical-block | figure | table | float` (insertBlock picks logical-block before figure, as in the body); a
+  stranded `{titlepage}` holding a float is unwrapped around it. A/B: 56 of 89 acmart teaser papers changed, 0 worse,
+  words/E/F/W identical; all 902 `{titlepage}` papers of the 30k census: 11 changed, 0 worse, jing errors 16 → 14
+  (2403.02669, hep-th0010274 now valid; 2204.08560 back to base; 8 centred covers keep `align` as Perl's
+  logical-block). Guards `perfect_kernel_batchacmteaser::*`. Residuals: row R TITLEFIG, TITLEPAGEALIGN,
+  TITLEPAGEUNWRAPIDS, COMPILESCHEMA.
