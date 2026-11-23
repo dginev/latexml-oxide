@@ -2180,13 +2180,20 @@ fn punct_followed_by_wide_space(node: &Node) -> bool {
 /// gathered/split row's content branch the nodes are XMRefs, and Perl's `,\quad` there became
 /// two punctuations, leaving the formula unparsed (KNOWN_PERL_ERRORS #365, OXIDIZED_DESIGN
 /// #349; golden tests/parse/aligned_content_branch.tex#content_branch_reads_its_delimiters).
-pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
+pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> { filter_hints_beside(nodes, &[]) }
+
+/// [`filter_hints`] with the phantoms set `aside` (a list's edge phantoms, kept as boxes in its presentation;
+/// OXIDIZED_DESIGN_DIVERGENCES #1141): unlinked, not freed, and of no width, but still a phantom where they stand, so a
+/// `\quad` beside one stays padding, never a PUNCT (`a\quad\phantom{x}`, as before the phantom kept its box).
+pub(crate) fn filter_hints_beside(nodes: Vec<Node>, aside: &[Node]) -> Vec<Node> {
   const HINT_PUNCT_THRESHOLD: f64 = 10.0;
   let mut prefiltered: Vec<Node> = Vec::new();
   // Perl's `$prev`: the last kept node that is not an APPLYOP.
   let mut prev: Option<usize> = None;
   let mut pending_space: f64 = 0.0;
   let mut pending_phantom = false;
+  // A phantom set aside is pending, which adds no space to be taken by the next node
+  let mut pending_aside = false;
   // The unlinked hints, each marked once reused as a PUNCT
   let mut hints: Vec<(Node, bool)> = Vec::new();
   // Index into `hints` of the hint that contributed to _space, for possible PUNCT reuse
@@ -2201,7 +2208,15 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
     if name_is(&node, "XMHint") {
       if let Some(width_str) = node.get_attribute("width") {
         let pts = get_xmhint_spacing(&width_str);
-        if pts != 0.0 {
+        if pts != 0.0 && aside.contains(&node) {
+          match prev {
+            Some(idx) if get_grammatical_role(&prefiltered[idx]) != "OPEN" => phantom[idx] = true,
+            _ => {
+              pending_phantom = true;
+              pending_aside = true;
+            },
+          }
+        } else if pts != 0.0 {
           let ph = node
             .get_attribute("name")
             .is_some_and(|name| name.ends_with("phantom"));
@@ -2226,7 +2241,9 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
       }
       // Unlink from the XML tree; XMHints are ephemeral
       node.unlink();
-      hints.push((node, false));
+      if !aside.contains(&node) {
+        hints.push((node, false));
+      }
     } else if name_is(&node, "XMTok")
       && node.with_attribute(c"role", |v| v == "APPLYOP") == Some(true)
     {
@@ -2239,6 +2256,8 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
         let _ = node.set_attribute("lpadding", &format!("{:.1}pt", pending_space));
         ph = pending_phantom;
         pending_space = 0.0;
+        pending_phantom = false;
+      } else if std::mem::take(&mut pending_aside) {
         pending_phantom = false;
       }
       prev = Some(prefiltered.len());

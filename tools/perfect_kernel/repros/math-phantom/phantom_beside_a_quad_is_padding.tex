@@ -1,0 +1,20 @@
+% witness: astro-ph0111392 (art3.tex:909, an align row `& \phantom{{} = {}} \quad {} + \frac{…} … \biggr]`)
+% oracle:  pdflatex 0 errors; the row starts a phantom `=` and a quad in
+% engines: rust INT081C = A, B unparsed (the lone `\biggr]`), the phantom and the quad one padding (A lpadding 17.8pt,
+%          B rpadding 15.7pt); C parsed, a with rpadding 15.7pt; PHANTOM round 2 = A lpadding 7.8pt (the quad lost),
+%          B and C a PUNCT quad; Perl 0.8.8 = INT081C
+% expect:  A and B as INT081C (a failed parse keeps the phantoms as padding); C the quad a's padding, never a PUNCT;
+%          D the phantom's several items in the kludge's structure (its fence wrapped, its script attached), no grammar
+% status:  RED (PHANTOM round 2) -> GREEN (PHANTOM round 3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+A $\phantom{{}={}}\quad{}+c\biggr]$
+
+B $c\biggr]\quad\phantom{x}$
+
+C $a\quad\phantom{x}$
+
+D $\sqrt{a\phantom{x+(y)^2}}$
+\end{document}

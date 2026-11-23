@@ -159,3 +159,49 @@ fn phantom_is_presentation_only_in_the_core() {
     r#"<Math mode="inline" tex="\sqrt{a\phantom{x}}" text="square-root@(a)" xml:id="p4.m1"><XMath xml:id="p4.m1.2"><XMApp xml:id="p4.m1.2.1"><XMTok meaning="square-root"/><XMDual xml:id="p4.m1.2.1.2"><XMRef idref="p4.m1.1" xml:id="p4.m1.2.1.2.1"/><XMWrap xml:id="p4.m1.2.1.2.2"><XMTok font="italic" role="UNKNOWN" xml:id="p4.m1.1">a</XMTok><XMHint depth="0.0pt" height="4.3pt" name="phantom" width="5.7pt" xml:id="p4.m1.2.1.2.2.1"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMHint></XMWrap></XMDual></XMApp></XMath></Math>"#,
   );
 }
+
+const BESIDE_A_QUAD: &str = include_str!(
+  "../../../tools/perfect_kernel/repros/math-phantom/phantom_beside_a_quad_is_padding.tex"
+);
+
+/// A phantom beside a `\quad` (`filter_hints_beside`), witness astro-ph0111392: a failed parse keeps the phantoms as
+/// padding, the quad's width with theirs (A lpadding 17.8pt, B rpadding 15.7pt, as INT081C); a parsed one keeps the
+/// quad its neighbour's padding, never a PUNCT (C). Red (PHANTOM round 2): A 7.8pt, B and C a PUNCT quad. The two
+/// warnings are A's and B's unparsed math (the lone `\biggr]`).
+#[test]
+fn phantom_beside_a_quad_is_padding() {
+  let (log, xml) = convert_with(BESIDE_A_QUAD, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_element(
+    &xml,
+    "Math",
+    &["xml:id=\"p1.m1\""],
+    r#"<Math class="ltx_math_unparsed" mode="inline" tex="\phantom{{}={}}\quad{}+c\biggr]" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMTok lpadding="17.8pt" meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok fontsize="210%" role="CLOSE" stretchy="false">]</XMTok></XMath></Math>"#,
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &["xml:id=\"p2.m1\""],
+    r#"<Math class="ltx_math_unparsed" mode="inline" tex="c\biggr]\quad\phantom{x}" xml:id="p2.m1"><XMath xml:id="p2.m1.1"><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok fontsize="210%" role="CLOSE" rpadding="15.7pt" stretchy="false">]</XMTok></XMath></Math>"#,
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &["xml:id=\"p3.m1\""],
+    r#"<Math mode="inline" tex="a\quad\phantom{x}" text="a" xml:id="p3.m1"><XMath xml:id="p3.m1.2"><XMDual xml:id="p3.m1.2.1"><XMRef idref="p3.m1.1" xml:id="p3.m1.2.1.1"/><XMWrap xml:id="p3.m1.2.1.2"><XMTok font="italic" role="UNKNOWN" rpadding="10.0pt" xml:id="p3.m1.1">a</XMTok><XMHint depth="0.0pt" height="4.3pt" name="phantom" width="5.7pt" xml:id="p3.m1.2.1.2.1"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMHint></XMWrap></XMDual></XMath></Math>"#,
+  );
+}
+
+/// A phantom of several items takes the kludge's structure (`in_phantom`: its fence wrapped, its script attached), not
+/// the grammar's, and the formula stays parsed. Distinct from the guards above: their phantoms hold one item.
+#[test]
+fn phantom_of_several_items_is_kludged() {
+  let (log, xml) = convert_with(BESIDE_A_QUAD, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_element(
+    &xml,
+    "Math",
+    &["xml:id=\"p4.m1\""],
+    r#"<Math mode="inline" tex="\sqrt{a\phantom{x+(y)^{2}}}" text="square-root@(a)" xml:id="p4.m1"><XMath xml:id="p4.m1.2"><XMApp xml:id="p4.m1.2.1"><XMTok meaning="square-root"/><XMDual xml:id="p4.m1.2.1.2"><XMRef idref="p4.m1.1" xml:id="p4.m1.2.1.2.1"/><XMWrap xml:id="p4.m1.2.1.2.2"><XMTok font="italic" role="UNKNOWN" xml:id="p4.m1.1">a</XMTok><XMHint depth="2.5pt" height="8.1pt" name="phantom" width="31.0pt" xml:id="p4.m1.2.1.2.2.1"><XMArg xml:id="p4.m1.2.1.2.2.1.1"><XMTok font="italic" role="UNKNOWN">x</XMTok><XMTok meaning="plus" role="ADDOP">+</XMTok><XMApp xml:id="p4.m1.2.1.2.2.1.1.3"><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMWrap xml:id="p4.m1.2.1.2.2.1.1.3.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMArg></XMHint></XMWrap></XMDual></XMApp></XMath></Math>"#,
+  );
+}

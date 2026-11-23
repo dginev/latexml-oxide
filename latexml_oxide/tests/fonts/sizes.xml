@@ -450,14 +450,14 @@
             <XMDual>
               <XMTok meaning="absent"/>
               <XMHint depth="2.5pt" height="7.5pt" name="phantom" width="18.6pt">
-                <XMApp>
+                <XMArg>
                   <XMTok font="italic" role="UNKNOWN">g</XMTok>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">(</XMTok>
                     <XMTok font="italic" role="UNKNOWN">x</XMTok>
                     <XMTok role="CLOSE" stretchy="false">)</XMTok>
                   </XMWrap>
-                </XMApp>
+                </XMArg>
               </XMHint>
             </XMDual>
           </XMath>

@@ -905,8 +905,7 @@ vs.
                             </XMath>
                           </Math></text></XMText>
                       <XMHint name="hphantom" width="28.7pt">
-                        <XMApp>
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMArg>
                           <XMTok role="UNKNOWN">×</XMTok>
                           <XMApp>
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
@@ -921,7 +920,7 @@ vs.
                                   </XMath>
                                 </Math></text></XMText>
                           </XMApp>
-                        </XMApp>
+                        </XMArg>
                       </XMHint>
                     </XMWrap>
                   </XMDual>
@@ -988,10 +987,9 @@ vs.
                             </XMath>
                           </Math></text></XMText>
                       <XMHint name="hphantom" width="28.7pt">
-                        <XMApp color="#0000FF">
-                          <XMTok color="#000000" meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok role="UNKNOWN">×</XMTok>
-                          <XMApp>
+                        <XMArg>
+                          <XMTok color="#0000FF" role="UNKNOWN">×</XMTok>
+                          <XMApp color="#0000FF">
                             <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
                             <XMTok meaning="10" role="NUMBER">10</XMTok>
                             <XMText><text align="right" fontsize="70%" width="2.3pt"><Math mode="inline" tex="\scriptstyle 0" text="0" xml:id="S3.p4.m11.m3">
@@ -1004,7 +1002,7 @@ vs.
                                   </XMath>
                                 </Math></text></XMText>
                           </XMApp>
-                        </XMApp>
+                        </XMArg>
                       </XMHint>
                     </XMWrap>
                   </XMDual>

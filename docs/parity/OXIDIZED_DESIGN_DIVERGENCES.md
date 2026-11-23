@@ -24080,21 +24080,27 @@ width, height and depth, `\hphantom` zeroes height and depth, `\vphantom` zeroes
 **Rust behavior** (DG ruling 2026-11-23; the math park's named exception): the hint keeps its argument
 (`<ltx:XMHint …><ltx:XMArg>#1</ltx:XMArg></ltx:XMHint>`, math_common.rs; schema `XMHint_model = XMath.class*`, in
 LaTeXML-math.rnc/.rng and LaTeXML.model). `parse_single` sets aside the phantoms before a list's first item and after
-its last, as it does trailing punctuation, parses their arguments as an XMWrap's (not strict: an invisible box's failure
-neither warns nor marks the formula unparsed; a phantom between items is never parsed, its ids would orphan the
-formula's references, tests/math/sampler.tex `+\phantom{g(x)}+`) and returns them in the result's presentation:
+its last, as it does trailing punctuation (`filter_hints_beside`: of no width, still a phantom, so a `\quad` beside one
+stays padding, never a PUNCT), gives an argument of several items the kludge's structure, not the grammar's
+(`in_phantom`; an invisible box's structure only spaces it; it neither warns nor marks the formula unparsed; a phantom
+between items is never parsed, its ids would orphan the formula's references, tests/math/sampler.tex
+`+\phantom{g(x)}+`) and returns them in the result's presentation:
 `<XMDual><XMRef/><XMWrap>phantoms, result, phantoms</XMWrap></XMDual>`; a slot of phantoms alone is
 `<XMDual><XMTok meaning="absent"/>phantom</XMDual>`. Content MathML and OpenMath read the content branch, so they keep
 ignoring phantoms. The presentation writes `<mphantom>content</mphantom>` (MathML Core §3.3.7), `\hphantom` inside
 `<mpadded height="0pt" depth="0pt">`, `\vphantom` inside `<mpadded width="0pt">` (§3.3.6; a unit, which the XSLT's
 size styling reads), sized by the browser's font, chosen over an `<mspace>` of our metrics. A Math holding a phantom of math
-tokens is math (`has_real_math`). An empty `\phantom{}` and text mode (`ltx_phantom`) are unchanged.
+tokens is math (`has_real_math`). A list that fails to parse keeps the phantoms as padding, their widths with the other
+edge hints' (Perl's output; astro-ph0111392 `\phantom{{}={}}\quad{}+…\biggr]` lpadding 17.8pt). An empty `\phantom{}`
+and text mode (`ltx_phantom`) are unchanged. **Cost**: building the argument's XML, also for a phantom between items
+that is then dropped: +0.51 % instructions:u on math0001084, +1.14 % on quant-ph0001103 (best of 3 vs INT081C).
 **Residual**: a phantom between two items stays their spacing, as in Perl: `a\phantom{x}b`'s width is right, but a
 `\vphantom` there (`\left(\vphantom{\int}x\right)`, `a\vphantom{\frac12}b`) adds no height (catalog repro
 math-phantom/phantom_between_items_keeps_only_its_width). **Why**: witness 2603.21852 (EML.tex:63 `$\sqrt{\phantom{x}}$`,
 an x-wide empty radical). **Guards** `perfect_kernel_batchphantom::{phantom_alone_in_a_slot_is_its_presentation,
-phantom_at_a_list_edge_keeps_its_place, phantom_alone_is_a_formula, phantom_is_presentation_only_in_the_core}` (repro
-math-phantom/phantom_is_a_box_of_its_content, control twin phantom_is_a_box_of_its_content_control).
+phantom_at_a_list_edge_keeps_its_place, phantom_alone_is_a_formula, phantom_is_presentation_only_in_the_core,
+phantom_beside_a_quad_is_padding, phantom_of_several_items_is_kludged}` (repros math-phantom/phantom_is_a_box_of_its_content,
+control twin phantom_is_a_box_of_its_content_control, phantom_beside_a_quad_is_padding).
 
 ### 1142. The format's own modules are read from the format's tree, not a paper's copy (LTXOWN)
 

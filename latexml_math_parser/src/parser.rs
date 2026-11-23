@@ -29,7 +29,7 @@ use crate::{
   grammar::builder::init_grammar,
   pragmatics::ValidationPragmatics,
   semantics::*,
-  util::{filter_hints, node_to_grammar_lexemes_from},
+  util::{filter_hints, filter_hints_beside, get_xmhint_spacing, node_to_grammar_lexemes_from},
 };
 
 /// A formula's distinct parse trees in arrival order — what `Vec::contains` then `push` keeps,
@@ -600,6 +600,15 @@ impl MathGrammar {
   }
 }
 
+/// Does `node` list more than one item (its hints aside)?
+fn holds_several_items(node: &Node) -> bool {
+  element_nodes(node)
+    .iter()
+    .filter(|item| get_node_qname(item) != pin!("ltx:XMHint"))
+    .nth(1)
+    .is_some()
+}
+
 /// An `absent` token: an empty slot (Perl MathParser.pm:683 `Absent()`).
 fn is_absent(node: &Node) -> bool {
   get_node_qname(node) == pin!("ltx:XMTok")
@@ -607,37 +616,93 @@ fn is_absent(node: &Node) -> bool {
 }
 
 /// The phantoms among the hints before a list's first item and after its last (all of them when the list holds only
-/// hints): `(leading, trailing)`, in order. `filter_hints` folds a hint into its neighbour's padding,
-/// which MathML spaces only between siblings, so a phantom there was lost (`\phantom{-}1` in a matrix cell,
-/// `\sqrt{a\phantom{x}}`, `\vphantom{\int}a`; witness 2603.21852).
-fn edge_phantoms(mathnode: &Node) -> (Vec<Node>, Vec<Node>) {
-  let items = element_nodes(mathnode);
-  let is_hint = |node: &Node| get_node_qname(node) == pin!("ltx:XMHint");
-  if !items.iter().any(is_phantom_box) {
-    return (Vec::new(), Vec::new());
-  }
-  let first = items
-    .iter()
-    .position(|node| !is_hint(node))
-    .unwrap_or(items.len());
-  let last = items
-    .iter()
-    .rposition(|node| !is_hint(node))
-    .map_or(items.len(), |last| last + 1);
-  let take = |range: &[Node]| -> Vec<Node> {
-    range
+/// hints), in order. `filter_hints` folds a hint into its neighbour's padding, which MathML spaces only between
+/// siblings, so a phantom there was lost (`\phantom{-}1` in a matrix cell, `\sqrt{a\phantom{x}}`, `\vphantom{\int}a`;
+/// witness 2603.21852).
+#[derive(Default)]
+struct EdgePhantoms {
+  leading:        Vec<Node>,
+  trailing:       Vec<Node>,
+  /// The widths, in points, of every hint before the first item and after the last: the padding `filter_hints` gives
+  /// those items with the phantoms still among the hints, which a failed parse keeps (astro-ph0111392).
+  leading_width:  f64,
+  trailing_width: f64,
+}
+
+impl EdgePhantoms {
+  fn of(mathnode: &Node) -> Self {
+    let items = element_nodes(mathnode);
+    let is_hint = |node: &Node| get_node_qname(node) == pin!("ltx:XMHint");
+    if !items.iter().any(is_phantom_box) {
+      return Self::default();
+    }
+    let first = items
       .iter()
-      .filter(|node| is_phantom_box(node))
-      .cloned()
-      .collect()
-  };
-  let leading = take(&items[..first]);
-  let trailing = if last > first {
-    take(&items[last..])
-  } else {
-    Vec::new()
-  };
-  (leading, trailing)
+      .position(|node| !is_hint(node))
+      .unwrap_or(items.len());
+    let last = items
+      .iter()
+      .rposition(|node| !is_hint(node))
+      .map_or(items.len(), |last| last + 1);
+    let phantoms = |range: &[Node]| -> Vec<Node> {
+      range
+        .iter()
+        .filter(|node| is_phantom_box(node))
+        .cloned()
+        .collect()
+    };
+    // Summed in order, as `filter_hints` does.
+    let width = |range: &[Node]| -> f64 {
+      range
+        .iter()
+        .filter_map(|node| node.get_attribute("width"))
+        .fold(0.0, |sum, width| sum + get_xmhint_spacing(&width))
+    };
+    let (trailing, trailing_width) = if last > first {
+      (phantoms(&items[last..]), width(&items[last..]))
+    } else {
+      (Vec::new(), 0.0)
+    };
+    Self {
+      leading: phantoms(&items[..first]),
+      trailing,
+      leading_width: width(&items[..first]),
+      trailing_width,
+    }
+  }
+
+  fn is_empty(&self) -> bool { self.leading.is_empty() && self.trailing.is_empty() }
+
+  /// After a failed parse, the phantoms are spacing again, as `filter_hints` makes them: their widths join the other
+  /// edge hints' in the first item's `lpadding` and the last's `rpadding` (Perl MathParser.pm:456-487, which reads the
+  /// same hints again when `parse_kludge` filters them), and the phantoms are dropped.
+  fn fold_into_padding(self, mathnode: &Node) {
+    let items: Vec<Node> = element_nodes(mathnode)
+      .into_iter()
+      .filter(|node| {
+        !(get_node_qname(node) == pin!("ltx:XMTok")
+          && node.get_attribute("role").as_deref() == Some("APPLYOP"))
+      })
+      .collect();
+    if !self.leading.is_empty()
+      && self.leading_width != 0.0
+      && let Some(mut first) = items.first().cloned()
+    {
+      let _ = first.set_attribute("lpadding", &format!("{:.1}pt", self.leading_width));
+    }
+    if !self.trailing.is_empty()
+      && self.trailing_width != 0.0
+      && let Some(mut last) = items.last().cloned()
+      && crate::data::get_grammatical_role(&last) != "OPEN"
+    {
+      let _ = last.set_attribute("rpadding", &format!("{:.1}pt", self.trailing_width));
+    }
+    for phantom in self.leading.into_iter().chain(self.trailing) {
+      if !phantom.has_attribute_ns("id", XML_NS) {
+        crate::data::defer_discard(phantom);
+      }
+    }
+  }
 }
 
 pub struct MathParser {
@@ -681,6 +746,9 @@ pub struct MathParser {
   /// Perl `$LaTeXML::MathParser::UNPARSED` (MathParser.pm:254, :691): set when any parse inside
   /// the current formula fails; `parse` then flags the formula by `is_genuinely_unparsed`.
   unparsed:                  bool,
+  /// Set while a phantom's argument is parsed (`parse_phantom`): its lists take `parse_kludge`'s structure, not the
+  /// grammar's.
+  in_phantom:                bool,
   // xnode: Option<Node>,
 }
 /// Perl `is_genuinely_unparsed` (MathParser.pm:997-1027): an unparsed fragment — an XMWrap or
@@ -794,6 +862,7 @@ impl MathParser {
       second_chance_budget: None,
       strict: false,
       unparsed: false,
+      in_phantom: false,
       // xnode: None,
     }
   }
@@ -1624,6 +1693,11 @@ impl MathParser {
     if rule == "kludge" {
       self.parse_kludge(&mut node, document)?;
       Ok(None)
+    } else if self.in_phantom && tag != pin!("ltx:XMath") && holds_several_items(&node) {
+      // Invisible: its structure only spaces it inside, so the grammar's parse is not worth its cost. The kludge's
+      // brackets and scripts stand in, as Perl's for any failed list (MathParser.pm:373), without counting a failure.
+      self.parse_kludge(&mut node, document)?;
+      Ok(None)
     } else {
       match self.parse_single(&mut node, document, &rule)? {
         Some(mut result) => {
@@ -1988,77 +2062,65 @@ impl MathParser {
   ) -> Result<Option<Node>> {
     // The phantoms at the list's edges are set aside, as its trailing punctuation is below, and come back in the
     // result's presentation (`wrap_presentation`); those between items stay spacing (`filter_hints`).
-    let (leading, trailing) = edge_phantoms(mathnode);
-    for phantom in leading.iter().chain(&trailing) {
+    let edges = EdgePhantoms::of(mathnode);
+    if edges.is_empty() {
+      return self.parse_single_list(mathnode, document, rule, &[]);
+    }
+    for phantom in edges.leading.iter().chain(&edges.trailing) {
       self.parse_phantom(phantom, document)?;
     }
-    for mut phantom in leading.iter().chain(&trailing).cloned() {
-      phantom.unlink();
+    let aside: Vec<Node> = edges
+      .leading
+      .iter()
+      .chain(&edges.trailing)
+      .cloned()
+      .collect();
+    let Some(result) = self.parse_single_list(mathnode, document, rule, &aside)? else {
+      edges.fold_into_padding(mathnode);
+      return Ok(None);
+    };
+    let EdgePhantoms { leading, trailing, .. } = edges;
+    // A slot holding only phantoms: absent content, the phantoms its presentation (`\sqrt{\phantom{x}}`).
+    if (leading.is_empty() || trailing.is_empty())
+      && is_absent(&result)
+      && result.get_parent().is_none()
+    {
+      let mut phantoms = leading;
+      phantoms.extend(trailing);
+      return Ok(Some(
+        self.dual_of_absent(result, phantoms, mathnode, document)?,
+      ));
     }
-    let result = self.parse_single_list(mathnode, document, rule);
-    if leading.is_empty() && trailing.is_empty() {
-      return result;
-    }
-    match result? {
-      // A slot holding only phantoms: absent content, the phantoms its presentation (`\sqrt{\phantom{x}}`).
-      Some(result) if leading.is_empty() || trailing.is_empty() => {
-        if is_absent(&result) && result.get_parent().is_none() {
-          let mut phantoms = leading;
-          phantoms.extend(trailing);
-          return Ok(Some(
-            self.dual_of_absent(result, phantoms, mathnode, document)?,
-          ));
-        }
-        Ok(Some(self.wrap_presentation(
-          result, leading, trailing, mathnode, document,
-        )?))
-      },
-      Some(result) => Ok(Some(
-        self.wrap_presentation(result, leading, trailing, mathnode, document)?,
-      )),
-      None => {
-        // Parse failed: the phantoms go back where they stood, as the punctuation does.
-        let first = mathnode.get_first_child();
-        for mut p in leading {
-          match &first {
-            Some(f) => {
-              let mut f = f.clone();
-              f.add_prev_sibling(&mut p).ok();
-            },
-            None => {
-              mathnode.add_child(&mut p).ok();
-            },
-          }
-        }
-        for mut p in trailing {
-          mathnode.add_child(&mut p).ok();
-        }
-        Ok(None)
-      },
-    }
+    Ok(Some(self.wrap_presentation(
+      result, leading, trailing, mathnode, document,
+    )?))
   }
 
-  /// A phantom's invisible argument, parsed as an XMWrap's (Perl MathParser.pm:387 STRICT = 0): its failure neither
-  /// warns nor marks the formula unparsed. Only an edge phantom's: one between items is dropped (`filter_hints`), and
-  /// its parse's ids with it would orphan the formula's references (tests/math/sampler.tex `+\phantom{g(x)}+`).
+  /// A phantom's invisible argument, given the kludge's structure where it holds several items (`in_phantom`); one item
+  /// is itself. It neither warns nor marks the formula unparsed (as an XMWrap's, Perl MathParser.pm:387 STRICT = 0).
+  /// Only an edge phantom's: one between items is dropped (`filter_hints`), and its parse's ids with it would orphan the
+  /// formula's references (tests/math/sampler.tex `+\phantom{g(x)}+`).
   fn parse_phantom(&mut self, phantom: &Node, document: &mut Document) -> Result<()> {
     let outer_strict = std::mem::replace(&mut self.strict, false);
     let outer_unparsed = self.unparsed;
+    let outer_in_phantom = std::mem::replace(&mut self.in_phantom, true);
     let parsed = self.parse_children(phantom, document);
     self.strict = outer_strict;
     self.unparsed = outer_unparsed;
+    self.in_phantom = outer_in_phantom;
     parsed
   }
 
-  /// `parse_single` on a list whose edge phantoms are set aside.
+  /// `parse_single` on a list whose edge phantoms are set `aside` (`filter_hints_beside`).
   fn parse_single_list(
     &mut self,
     mathnode: &mut Node,
     document: &mut Document,
     rule: &str,
+    aside: &[Node],
   ) -> Result<Option<Node>> {
     let mut idx = 0;
-    let mut content_nodes = filter_hints(mathnode.get_child_nodes());
+    let mut content_nodes = filter_hints_beside(mathnode.get_child_nodes(), aside);
     let expectation_operators = expectation_operators(&content_nodes, document);
 
     // Extract trailing PUNCT/PERIOD nodes if rule ends with ',' (Perl: $rule =~ s/,$// )

@@ -12021,7 +12021,8 @@ fn text_mode_defmath_constructor_is_reported() {
 /// 57n: `\hphantom` opens with `\protect`, as Perl's `\protect\ifmmode` (math_common.pool.ltxml:655),
 /// so the look-ahead at an alignment row's start (tex.web §785) stops there and `\ifmmode` is read
 /// after the template's `$`: the phantom stays math, its argument math (witness 2605.21158). At the row's start it is a
-/// box of its argument before `y` (batch PHANTOM, OXIDIZED_DESIGN_DIVERGENCES #1141; was `y`'s `lpadding="13.3pt"`).
+/// box of its argument before `y` (batch PHANTOM, OXIDIZED_DESIGN_DIVERGENCES #1141; was `y`'s `lpadding="13.3pt"`), its
+/// `(\hat{x})` in the kludge's structure (no id for the grammar's `XMApp`, so the formula's is `.2`).
 #[test]
 fn hphantom_at_an_align_row_start_stays_in_math() {
   let (stderr, xml) = convert_with(
@@ -12035,7 +12036,7 @@ fn hphantom_at_an_align_row_start_stays_in_math() {
   for element in [
     r#"<Math tex="\displaystyle\hphantom{(\hat{x})}y=1." text="y = 1" xml:id="S0.E2.m3">"#,
     r#"<XMHint name="hphantom" width="13.3pt">"#,
-    r#"<XMApp xml:id="S0.E2.m3.3">"#,
+    r#"<XMApp xml:id="S0.E2.m3.2">"#,
   ] {
     assert!(xml.contains(element), "missing {element}\n{xml}");
   }
