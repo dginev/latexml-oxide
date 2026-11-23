@@ -27,11 +27,11 @@ fn lastbox_halign_is_a_box() {
     &[
       para(
         "p1",
-        r##"<para xml:id="p1"><p>[h]<inline-block vattach="bottom"><p><text class="ltx_phantom"><tabular><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">a</td></tr></tabular></text></p></inline-block>One.</p></para>"##,
+        r##"<para xml:id="p1"><p>[h]<inline-block vattach="bottom"><p><text class="ltx_phantom ltx_vphantom"><tabular><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">a</td></tr></tabular></text></p></inline-block>One.</p></para>"##,
       ),
       para(
         "p2",
-        r##"<para xml:id="p2"><p><inline-block><p><text class="ltx_phantom"><tabular vattach="bottom"><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">b</td></tr></tabular></text></p></inline-block>Two.</p></para>"##,
+        r##"<para xml:id="p2"><p><inline-block><p><text class="ltx_phantom ltx_vphantom"><tabular vattach="bottom"><tr><td align="left" class="ltx_nopad_l ltx_nopad_r">b</td></tr></tabular></text></p></inline-block>Two.</p></para>"##,
       ),
       para(
         "p3",
@@ -40,7 +40,7 @@ fn lastbox_halign_is_a_box() {
       para("p4", r##"<para xml:id="p4"><p>Three.</p></para>"##),
       para(
         "p5",
-        r##"<para xml:id="p5"><p><Math mode="inline" tex="\left(\vbox{\vphantom{\halign{#\cr d\cr}}}\right)" text="Array[[[d]]]" xml:id="p5.m1"><XMath><XMDual><XMRef idref="p5.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="true">(</XMTok><XMArray class="ltx_phantom" vattach="bottom" xml:id="p5.m1.1"><XMRow><XMCell align="left" class="ltx_nopad_l ltx_nopad_r"><XMText>d</XMText></XMCell></XMRow></XMArray><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual></XMath></Math> Four.</p></para>"##,
+        r##"<para xml:id="p5"><p><Math mode="inline" tex="\left(\vbox{\vphantom{\halign{#\cr d\cr}}}\right)" text="Array[[[d]]]" xml:id="p5.m1"><XMath><XMDual><XMRef idref="p5.m1.1"/><XMWrap><XMTok role="OPEN" stretchy="true">(</XMTok><XMArray class="ltx_phantom ltx_vphantom" vattach="bottom" xml:id="p5.m1.1"><XMRow><XMCell align="left" class="ltx_nopad_l ltx_nopad_r"><XMText>d</XMText></XMCell></XMRow></XMArray><XMTok role="CLOSE" stretchy="true">)</XMTok></XMWrap></XMDual></XMath></Math> Four.</p></para>"##,
       ),
       para(
         "p6",
@@ -79,17 +79,21 @@ fn easytable_easybmat_lastbox_peel() {
     )
   };
   let phantoms: Vec<String> = xml
-    .match_indices(r##"<text class="ltx_phantom""##)
-    .filter_map(|(at, _)| xml_element(&xml[at..], "text", &[r##"class="ltx_phantom""##]))
+    .match_indices(r##"<text class="ltx_phantom ltx_vphantom""##)
+    .filter_map(|(at, _)| {
+      xml_element(&xml[at..], "text", &[
+        r##"class="ltx_phantom ltx_vphantom""##,
+      ])
+    })
     .collect();
   assert_eq!(
     phantoms,
     [
       format!(
-        r##"<text class="ltx_phantom"><tabular vattach="bottom"><tr>{cell}a</td>{cell}b</td></tr><tr>{cell}c</td>{cell}d</td></tr></tabular></text>"##
+        r##"<text class="ltx_phantom ltx_vphantom"><tabular vattach="bottom"><tr>{cell}a</td>{cell}b</td></tr><tr>{cell}c</td>{cell}d</td></tr></tabular></text>"##
       ),
       format!(
-        r##"<text class="ltx_phantom"><tabular vattach="bottom"><tr>{}{}</tr><tr>{}{}</tr></tabular></text>"##,
+        r##"<text class="ltx_phantom ltx_vphantom"><tabular vattach="bottom"><tr>{}{}</tr><tr>{}{}</tr></tabular></text>"##,
         math("e"),
         math("f"),
         math("g"),

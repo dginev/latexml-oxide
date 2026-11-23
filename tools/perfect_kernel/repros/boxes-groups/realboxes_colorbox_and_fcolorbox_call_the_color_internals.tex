@@ -1,0 +1,14 @@
+% witness: 2411.07667 (IndexNotation.tex:148-156, `\Colorbox{yellow}\bgroup … \egroup` around inline listings)
+% oracle:  pdflatex 0 errors: "A x B y C z end." — realboxes.sty:264-279 `\Colorbox`/`\Fcolorbox` collect the box
+%          and call xcolor's internals `\color@box` (xcolor.sty:821, color.sty:158) and `\color@fb@x` (:824-826)
+% engines: rust rc2 = Error:undefined `\color@box` and `\color@fb@x`, the colour lost; perl = Error:undefined
+%          `\Colorbox` and `\Fcolorbox` (realboxes is not loaded)
+% expect:  0 errors, 0 warnings; x, y, z kept in order, y and z framed red. Residual (not guarded): the yellow
+%          background is lost — the collected box is digested before `\colorbox` sets its colour
+% status:  RED (rc2) -> GREEN for the errors and content (LISTINLINE: color_sty.rs / xcolor_sty.rs bind the internals as
+%          the user-level boxes); the background stays RED
+\documentclass{article}
+\usepackage{xcolor,realboxes}
+\begin{document}
+A \Colorbox{yellow}{x} B \Fcolorbox{red}{yellow}{y} C \Fcolorbox{red}[rgb]{1,1,0}\bgroup z\egroup{} end.
+\end{document}

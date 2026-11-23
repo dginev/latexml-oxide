@@ -180,10 +180,11 @@ pub struct Config {
   /// from a file anyway): the response then names the file in `handoff_file`. `None`: the `String` result.
   pub handoff_file:            Option<String>,
 }
-/// The front ends' default `\if` runaway ceiling: ten times ar5iv.sty's `iflimit` (48,000,000,
-/// `latexml_contrib/src/ar5iv_sty.rs`, which the arXiv fleet keeps). The counter accumulates over the whole document, so
-/// a long pgf-heavy manual passes 48M without any runaway (tkz-grapheur-doc-fr lost its last section at 48M; DG
-/// 2026-11-18: "Raise plain default 10×"); the token budget and the timeout still bound a true runaway.
+/// The front ends' default `\if` runaway ceiling, which ar5iv.sty's `iflimit` also passes (`latexml_contrib/src/
+/// ar5iv_sty.rs`, the arXiv fleet's profile). The counter accumulates over the whole document, so a long pgf-heavy
+/// document passes the former 48M without any runaway (tkz-grapheur-doc-fr lost its last section at 48M, DG
+/// 2026-11-18: "Raise plain default 10×"; 2302.07562 converts in 128 s, DG 2026-11-23 raised ar5iv's to match); the
+/// token budget and the timeout still bound a true runaway.
 pub const RUNAWAY_IF_LIMIT: i64 = 480_000_000;
 /// ar5iv.sty's `absorblimit`, the front ends' default ceiling on absorbed boxes.
 pub const RUNAWAY_ABSORB_LIMIT: i64 = 1_299_999;

@@ -794,6 +794,14 @@ cite                 { font-style: normal; }
     transform: scaleY(-1); }
 
 /* .ltx_phantom handled in xslt */
+/* A text \vphantom is a strut: its argument's height and depth, no width (latex.ltx:15613-15617 `\finph@nt`;
+   DG 2026-11-23). overflow:clip keeps the baseline (hidden would move it to the bottom edge); one \hbox, no wrap. */
+.ltx_phantom.ltx_vphantom {
+  display: inline-block;
+  width: 0;
+  white-space: nowrap;
+  overflow: clip;
+}
 
 .ltx_minipage {
   align-self: normal;

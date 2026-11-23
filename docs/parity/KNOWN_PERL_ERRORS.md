@@ -22387,3 +22387,55 @@ Fixed in Rust: the labels end in `\lx@nobreakspace` (OXIDIZED_DESIGN_DIVERGENCES
 `\fnum@figure` with `\nobreakspace`. Witness lineno/lineno (TL doc, lineno.tex:20). Repros
 sectioning-frontmatter/default_{affiliation_label_tilde_redefined,email_label_tilde_redefined_used,date_keywords_labels_tilde_redefined};
 guard `perfect_kernel_batchmanfm::default_labels_survive_a_redefined_tilde`.
+
+## 1313. Perl's `\lstinline` never runs `\lst@Init`/`\lst@DeInit`, so a hook a document adds to them is lost
+
+listings.sty.ltxml:54-68 `\lstinline` reads and outputs the body inside its own group; it never runs the
+`\lst@Init\relax` … `\lst@DeInit\egroup` bracket listings.sty:1941-1989 puts around every inline listing, so material
+a document adds to either is dropped (or, as `\egroup`, never closes what it should). Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{listings}
+\makeatletter\g@addto@macro\lst@DeInit{!}\makeatother
+\begin{document}A \lstinline|x| B\end{document}
+```
+
+pdflatex prints "A x! B"; Perl drops the "!". Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1139): the binding runs the
+bracket. Witness 2411.07667 (realboxes' `\Colorbox{…}\bgroup\appto\lst@DeInit{\egroup}`, which Perl only escapes
+because its `\xpretocmd` fails); guard `perfect_kernel_batchlistinline::lstinline_runs_the_init_deinit_bracket`.
+## 1317. Perl's titlesec formats outlive a later `\@startsection` definition of their command
+
+titlesec.sty.ltxml:42-57 stores a `\titleformat` under the command's name, so it applies after a later
+`\renewcommand\section{\@startsection…}` or sectsty's load (sectsty.sty:298-362), where LaTeX's heading no longer runs
+titlesec's code. Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{titlesec}
+\titleformat{\section}{\itshape}{[\thesection]}{1em}{}
+\makeatletter\renewcommand\section{\@startsection{section}{1}{\z@}{1ex}{1ex}{\bfseries}}\makeatother
+\begin{document}\section{Intro}A.\end{document}
+```
+
+pdflatex sets "1 Intro" (bold, no brackets, 0 errors); Perl (same host) gives `<title font="italic">[1] Intro</title>`,
+titlesec's format; ours `<title><tag close=" ">1</tag>Intro</title>` (the `\@startsection` style's `\bfseries` is not
+carried, as for any `\@startsection` heading). With a two-argument `\titleformat`
+whose label is the next line's `\titleformat`, Perl ends in the Fatal "Expansion of '\format@title@@}' has unbalanced {}"
+(1910.11159, 2005.02481; 2005.06700 with sectsty), where pdflatex never sets that label. Fixed in Rust
+(OXIDIZED_DESIGN_DIVERGENCES #1143); guard `perfect_kernel_batchtitlesec::titlesec_formats_end_where_latex_takes_the_command`.
+
+## 1318. Perl's cleveref after varioref runs cleveref's varioref code on internals the varioref binding lacks
+
+cleveref.sty.ltxml reads cleveref.sty raw; after varioref, cleveref.sty:2378-2604 redefines `\Vref`, `\vrefrange`,
+`\fullref` and kin on its raw `\@cref` (which reads the `.aux` labels LaTeXML never writes) and varioref's page
+internals (`\vref@pagenum`, `\is@pos@number`, `\vref@label`, `\vref@err`, `\c@vrcnt`; varioref.sty:803-946), which
+varioref.sty.ltxml does not define. Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{varioref}\usepackage{hyperref}\usepackage[capitalise]{cleveref}
+\begin{document}\section{One}\label{s:one}\Vref{s:one} and \vref{s:one}.\end{document}
+```
+
+pdflatex prints "Section 1 and Section 1"; Perl (same host) raises 8 Errors (5 undefined, 2 "Expected a relational
+token", 1 `<variable>`) and prints "??" with the undefined names' ERROR elements, and `\vref` (locked) prints "1".
+Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1144); witnesses 1602.00476, 2409.11413, 2505.14566; guard
+`perfect_kernel_batchvrefclev::cleveref_vref_with_varioref`.

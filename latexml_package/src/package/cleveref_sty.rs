@@ -341,6 +341,29 @@ LoadDefinitions!({
   DefMacro!("\\Crefrange OptionalMatch:* Semiverbatim Semiverbatim",
     "\\lx@cref#1{creftypepluralcap~creflabel}{#2}\\crefrangeconjunction\\lx@cref#1{creflabel}{#3}");
 
+  // After varioref, cleveref.sty:2378-2604 redefines `\vref`, `\Vref`, `\vrefrange`, `\Vrefrange`, `\fullref` and
+  // `\Fullref` as its reference and varioref's page text (`\cref@vref`, :2448-2460), built on its raw `\@cref` and
+  // varioref's page internals (`\vref@pagenum`, `\is@pos@number`, `\vref@label`, `\vref@err`; varioref.sty:814-946):
+  // 6 Errors and "??" a call. Page-less, as the varioref binding is (its `\vref` is `\ref`), they are this binding's
+  // `\cref`, `\Cref`, `\crefrange` and `\Crefrange`, under varioref's locks. Perl errs the same (KNOWN_PERL_ERRORS
+  // #1318). 1602.00476, 2409.11413, 2505.14566; guard `perfect_kernel_batchvrefclev::cleveref_vref_with_varioref`.
+  if package_loaded("varioref") {
+    DefMacro!("\\vref OptionalMatch:* Semiverbatim", sub[args] {
+      let starred = !args[0].is_none();
+      let label_tokens = args.into_iter().nth(1).and_then(|a| a.owned_tokens()).unwrap_or_default();
+      Ok(cref_multi(starred, label_tokens, true, false, CREF_LABEL)?)
+    }, locked => true);
+    DefMacro!("\\Vref OptionalMatch:* Semiverbatim", sub[args] {
+      let starred = !args[0].is_none();
+      let label_tokens = args.into_iter().nth(1).and_then(|a| a.owned_tokens()).unwrap_or_default();
+      Ok(cref_multi(starred, label_tokens, true, true, CREF_LABEL)?)
+    });
+    DefMacro!("\\vrefrange OptionalMatch:* Semiverbatim Semiverbatim", "\\crefrange#1{#2}{#3}", locked => true);
+    DefMacro!("\\Vrefrange OptionalMatch:* Semiverbatim Semiverbatim", "\\Crefrange#1{#2}{#3}");
+    DefMacro!("\\fullref OptionalMatch:* Semiverbatim", "\\cref#1{#2}");
+    DefMacro!("\\Fullref OptionalMatch:* Semiverbatim", "\\Cref#1{#2}");
+  }
+
   // Page refs (same as regular refs for now)
   DefMacro!("\\cpageref OptionalMatch:* Semiverbatim", sub[args] {
     let starred = !args[0].is_none();
