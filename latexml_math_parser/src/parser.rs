@@ -2382,7 +2382,7 @@ impl MathParser {
     let mut synth = |role: &str, text: &str, nodes: &mut Vec<Node>| -> Result<String> {
       let mut tok = document.open_element_at(mathnode, "ltx:XMTok", None, None)?;
       document.set_attribute(&mut tok, "role", role)?;
-      tok.set_attribute(NULL_DELIMITER, "1").ok();
+      tok.set_attribute(NULL_DELIMITER, "1")?;
       document.close_element_at(&mut tok)?;
       tok.unlink();
       nodes.push(tok);

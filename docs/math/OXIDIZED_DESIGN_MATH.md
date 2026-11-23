@@ -451,7 +451,7 @@ formula degrades to unstructured markup.
 **Rust.** The XMath we build is byte-identical to Perl's — same `XMWrap` with an
 unmatched `OPEN`, same bare `CLOSE` — so this is purely a parser difference. When
 the grammar returns **zero** derivations, `parser.rs::balance_null_delimiters`
-re-supplies the delimiter TeX says is there and retries once. The synthesized
+re-supplies the delimiter TeX says is there, at the formula's edge rather than where the `.` stood (row R NULLDELIMPOS) and retries once. The synthesized
 `XMTok` carries the fence `role`, empty text and the internal `_nulldelimiter`
 mark; once the parse has used it, `parse_single` drops it from the tree, so the
 `XMWrap` holds only the delimiters the author wrote, as Perl's XMath does, and

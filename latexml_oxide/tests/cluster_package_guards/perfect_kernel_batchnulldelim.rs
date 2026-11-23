@@ -1,5 +1,5 @@
 //! Red/green guards for batch NULLDELIM: TeX's null delimiter (`\left( a\right.`, `\left. a\right)`) prints nothing.
-//! The parser's fence retry (`balance_null_delimiters`, OXIDIZED_DESIGN #67) re-supplies it as an empty fence token
+//! The parser's fence retry (`balance_null_delimiters`, OXIDIZED_DESIGN_MATH #22) re-supplies it as an empty fence token
 //! so the formula parses; that token is the parser's scaffolding and leaves the tree once the parse has used it, as
 //! Perl's XMath has no token for the `.` (TeX_Math.pool.ltxml `\lx@delimiterdot` is an XMHint). Kept, it was drawn
 //! as `<mo>CLOSE</mo>` (`OPEN`) by the empty-token failsafe (Perl MathML.pm:708-714). Repro
