@@ -1,0 +1,18 @@
+% mechanism: a float written inside `\begin{titlepage}` prints on the title page (latex.ltx `titlepage`); the schema
+%   admits it there (SCHEMA_EXTENSIONS S14), so the builder keeps it and the cover text after it inside the titlepage
+% witness: synthetic (ACMTEASER round 2); census: 2 of 687 titlepage+float papers in the 30k sample (2204.08560,
+%   hep-ph9605217)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: page 1 "Cover text. More cover.", "Figure 1: In cover";
+%   page 2 "See 1."
+% engines: perl 0.8.8 (autoClose) and rust INT081C: the titlepage ends at the figure, "More cover." joins the body
+% expect:  0 errors, 0 warnings; titlepage holding "Cover text.", the figure, "More cover."; the ref resolves to 1
+% status:  GREEN (ACMTEASER). Guard perfect_kernel_batchacmteaser::a_float_in_a_titlepage_stays_in_it
+\documentclass{article}
+\begin{document}
+\begin{titlepage}
+Cover text.
+\begin{figure}[h]\centering X\caption{In cover}\label{f}\end{figure}
+More cover.
+\end{titlepage}
+See \ref{f}.
+\end{document}

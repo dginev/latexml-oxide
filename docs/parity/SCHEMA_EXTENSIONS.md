@@ -12,11 +12,11 @@ sets. The compiled model is what the document builder consults (`latexml_core/sr
 OD entry changes the schema. Every change widens the schema: nothing is removed, and no element is added. A change
 edits all three forms, `.rnc` → `.rng` → `LaTeXML.model` (`tools/compileschema.sh`).
 
-**Counts.** There are 13 differences:
+**Counts.** There are 14 differences:
 
 | Kind | Count | Rows |
 |---|---|---|
-| Permissive nesting | 6 | S1–S6 |
+| Permissive nesting | 7 | S1–S6, S14 |
 | Changed model (a parent reference replaced by a wider one) | 1 | S7 |
 | New attribute: an existing attribute group on more elements | 3 | S8, S9, S13 |
 | New attribute: a new attribute name | 3 groups, 7 names | S10–S12 |
@@ -39,6 +39,7 @@ edits all three forms, `.rnc` → `.rng` → `LaTeXML.model` (`tools/compilesche
 | S11 | `Panel.attributes` in `Common.attributes` (`LaTeXML-common.rnc:87,185`) | — | `panelwidth` (decimal), `panelspan` (nonNegativeInteger) on every element | new attribute | OD #887 | `annotate_panel_grid` (`latex_constructs/mod.rs`), on each panel of a float of two or more | Needs a proposal (below). |
 | S12 | `PanelGrid.attributes` on figure, table, float (`LaTeXML-para.rnc:146,172,195`; `LaTeXML-common.rnc:194`) | — | `panelrows`, `panelcols` (nonNegativeInteger), `panelline`, `panelfill` (decimal) | new attribute | OD #887 | as S11, on the float | Needs a proposal (below). |
 | S13 | `note_attributes` (`LaTeXML-meta.rnc:27`) | `Common.attributes, Labelled.attributes` | `+ IDREF.attributes` (adds `idref`) | existing group, one more element | OD #1059 | the copies of a frontmatter note several creators carry (`relocate::one_note`: `relocate_annotations`, the kernel's `relocate_footnote`, the Link step): each later copy's `idref` names the first's `xml:id` | A note copied onto several carriers names the copy it repeats, as `ltx:ref` names its target: one note, many places. |
+| S14 | `titlepage_model` (`LaTeXML-structure.rnc:591`) | `(FrontMatter.class \| SectionalFrontMatter.class \| Block.class)*` | `+ figure, table, float` | nesting | OD #1146 | acmart's `teaserfigure`, moved into the continued titlepage `\maketitle`'s top-matter box prints it in (`acmart_cls.rs`, `wrap_as_continued_titlepage`); a float written inside `\begin{titlepage}` (the builder now keeps it there with the cover text after it: Perl's `autoClose` used to end the titlepage at the float; open: insertBlock then picks `ltx:figure` for a `center` holding a float, OD #1146) | A title page admits the floats it prints, as a figure admits a table; frontmatter may then follow them (`document_model`), which no body figure allows. Not offered upstream for now (DG 2026-11-23). |
 
 ## The new attributes
 
@@ -97,7 +98,8 @@ the float model admits. These seven names are the only new vocabulary in our sch
    `\verb` in a TikZ node is a schema error (`<ltx:p> isn't allowed in <svg:g>`).
 5. **Labelled front matter and pictures** (S8, S9, S6). These are existing groups on more elements.
 
-S3 is an asymmetry fix that needs no argument. S10 is not proposed: it is removed when it becomes internal.
+S3 is an asymmetry fix that needs no argument. S10 is not proposed: it is removed when it becomes internal. S14 is not offered
+upstream for now (DG 2026-11-23).
 
 ## Not schema changes
 

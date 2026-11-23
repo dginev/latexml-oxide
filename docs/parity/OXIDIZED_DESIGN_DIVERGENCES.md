@@ -24268,7 +24268,13 @@ and the rewrite's follower detach re-appended the keywords after the moved tease
 of them consecutive, share one `<ltx:titlepage class="ltx_titlepage_continued">` (`wrap_as_continued_titlepage`,
 cover_order.rs, the late abstract's cover wrapper): the top-matter box `\maketitle` prints them in, and frontmatter
 (the abstract, keywords; under sigchi-a the creators) may follow a titlepage but no body figure (LaTeXML-structure.rnc
-`document_model`: frontmatter, then body). Every path wraps, sigchi-a's and the no-`\maketitle` one included: each
+`document_model`: frontmatter, then body), and a titlepage admits a figure, table or float (SCHEMA_EXTENSIONS S14, DG
+2026-11-23; not offered upstream for now), so the output is schema-valid. The widening also keeps a float written
+inside `\begin{titlepage}` there, with the cover text after it (Perl's `autoClose` ends the titlepage at the float and
+sends that text to the body; hep-th0010274, 2403.02669, hep-ph9605217). Open: a `center` holding a float and cover
+lines in a titlepage now becomes insertBlock's `ltx:figure` candidate (TeX_Box.pool.ltxml:449-519; a titlepage admits a
+figure, not a logical-block), its lines figure panels (2204.08560; repro
+sectioning-frontmatter/titlepage_center_holding_a_float_is_no_figure, RED). Every path wraps, sigchi-a's and the no-`\maketitle` one included: each
 lands the teasers among the frontmatter. The figures keep their `xml:id`, number, labels, `inlist` and caption; the
 HTML shows the title beside the continued titlepage (LaTeXML-structure-xhtml.xsl, the `ltx:title` template), the
 teasers once, in place, listed in a list of figures and `\ref`-ed across a split. This supersedes the 2026-07-13 rule of

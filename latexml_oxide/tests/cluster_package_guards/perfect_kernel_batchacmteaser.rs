@@ -5,7 +5,7 @@
 //! KNOWN_PERL_ERRORS #1319: Perl leaves it ahead of the title).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use latexml::util::test::{convert_with, error_count, warning_count};
+use latexml::util::test::{convert_with, error_count, rng_error_count, warning_count};
 
 /// The opening tag of every element directly under `<document>` but its `<resource>`s (the pretty-printer indents
 /// those by two spaces).
@@ -134,8 +134,8 @@ const ROWS: &[(&str, &str, &[&str], &str)] = &[
 ];
 
 /// class-bindings/acmart_teaserfigure_*: each converts with 0 Errors and 0 Warnings, its top-level elements exactly in
-/// acmart's printed order, every teaser once, inside the one continued title page whole, and the body's `\ref`s naming
-/// the teasers' labels.
+/// acmart's printed order, every teaser once, inside the one continued title page whole, the body's `\ref`s naming
+/// the teasers' labels, and the document valid against the RelaxNG schema.
 #[test]
 fn acmart_teaserfigure_stands_where_maketitle_prints_it() {
   for (name, tex, order, wrapper) in ROWS {
@@ -164,5 +164,45 @@ fn acmart_teaserfigure_stands_where_maketitle_prints_it() {
       xml.contains(r#"labelref="LABEL:fig:t1"/>"#),
       "{name}:\n{xml}"
     );
+    // (a titlepage admits a figure: SCHEMA_EXTENSIONS S14; skipped visibly without jing)
+    if let Some(n) = rng_error_count(&xml) {
+      assert_eq!(n, 0, "{name}: schema-invalid\n{xml}");
+    }
+  }
+}
+
+/// sectioning-frontmatter/titlepage_env_keeps_its_float: the other path SCHEMA_EXTENSIONS S14 opens, the builder's
+/// (the model's `canContain`, not a close hook's move): a float written inside `\begin{titlepage}` stays in it, with
+/// the cover text after it, as the title page prints them; valid against the schema. Before: the titlepage ended at
+/// the figure (Perl's `autoClose`) and "More cover." joined the body.
+#[test]
+fn a_float_in_a_titlepage_stays_in_it() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlepage_env_keeps_its_float.tex"
+    ),
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let at = xml.find("<titlepage").expect("titlepage");
+  let end = at + xml[at..].find("</titlepage>").expect("closed") + "</titlepage>".len();
+  let expected = r#"<titlepage>
+    <p>Cover text.</p>
+    <figure inlist="lof" labels="LABEL:f" placement="h" xml:id="S0.F1">
+      <tags>
+        <tag>Figure 1</tag>
+        <tag role="refnum">1</tag>
+        <tag role="typerefnum">Figure 1</tag>
+      </tags>
+      <p>X</p>
+      <toccaption><tag close=" ">1</tag>In cover</toccaption>
+      <caption><tag close=": ">Figure 1</tag>In cover</caption>
+    </figure>
+    <p>More cover.</p>
+  </titlepage>"#;
+  assert_eq!(&xml[at..end], expected, "{xml}");
+  assert!(xml.contains(r#"<ref labelref="LABEL:f"/>"#), "{xml}");
+  if let Some(n) = rng_error_count(&xml) {
+    assert_eq!(n, 0, "schema-invalid\n{xml}");
   }
 }

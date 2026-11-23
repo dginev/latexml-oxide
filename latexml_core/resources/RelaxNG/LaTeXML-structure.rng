@@ -1063,12 +1063,17 @@ Commonly useful values are specified, but is open-ended to support extension.</a
     <ref name="Sectional.attributes"/>
   </define>
   <define name="titlepage_model">
-    <a:documentation>Content model for \elementref{titlepage}.</a:documentation>
+    <a:documentation>Content model for \elementref{titlepage}.
+(latexml-oxide) figure|table|float added: a float the title block prints (acmart's teaserfigure in
+\maketitle's top-matter box), so frontmatter may follow it (SCHEMA_EXTENSIONS S14).</a:documentation>
     <zeroOrMore>
       <choice>
         <ref name="FrontMatter.class"/>
         <ref name="SectionalFrontMatter.class"/>
         <ref name="Block.class"/>
+        <ref name="figure"/>
+        <ref name="table"/>
+        <ref name="float"/>
       </choice>
     </zeroOrMore>
   </define>
