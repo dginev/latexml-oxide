@@ -114,11 +114,12 @@ fn collect_tree(root: &Path) -> std::collections::BTreeMap<String, Vec<u8>> {
       if path.is_dir() {
         stack.push(path);
       } else {
+        // The key is the relative path with `/` on every platform (Windows yields `site\a.html`).
         let rel = path
           .strip_prefix(root)
           .expect("under root")
           .to_string_lossy()
-          .into_owned();
+          .replace('\\', "/");
         out.insert(rel, std::fs::read(&path).expect("readable file"));
       }
     }
