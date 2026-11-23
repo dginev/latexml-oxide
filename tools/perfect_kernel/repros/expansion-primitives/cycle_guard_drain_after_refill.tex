@@ -1,0 +1,19 @@
+% witness: 2410.02434 (a pgfplots list of \pgfpl@@{nan} read in chunks: run 1, Fatal:TooManyErrors 'PGF Math' at
+%          the same point on every binary), synthetic shape: a list of 200 \x{nan} expanded into the pushback and
+%          eaten, 2,000 times, past the guard's 20M-token activation
+% oracle:  pdflatex 0 `!` lines, "Start done."
+% engines: rust INT081C, CYCLEWIN r1 = 0 errors; a CYCLEWIN r2 draft that compared the backlog with a sample up to 255
+%          reads before the repeated span (⌈w·REPEAT/256⌉ checks) = Fatal:Timeout:Recursion "a window of 6 token(s)":
+%          that sample predates the refill
+% expect:  0 errors; "Start done."
+% status:  GREEN (CYCLEWIN r2: the sample lies inside the span, ⌊w·REPEAT/256⌋ checks back)
+\documentclass{article}
+\newcount\n
+\def\burn{\n=0 \loop\advance\n by 1 \ifnum\n<2000000 \repeat}
+\def\x#1{}
+\def\chunk{\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}\x{nan}}
+\def\go{\advance\n by 1 \ifnum\n<2000 \chunk\expandafter\go\fi}
+\begin{document}
+\burn
+Start \n=0 \go done.
+\end{document}

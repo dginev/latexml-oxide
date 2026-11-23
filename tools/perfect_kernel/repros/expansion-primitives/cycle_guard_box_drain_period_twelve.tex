@@ -1,0 +1,15 @@
+% witness: synthetic (CYCLEWIN review S1): a finite recursion printing twelve letters per item of a pre-built
+%          60,000-token list, one paragraph of 720,000 letters
+% oracle:  pdflatex 0 `!` lines, "Start abcdefghijkl... done."
+% engines: rust INT081C = 0 errors; CYCLEWIN = Fatal:Stomach:Recursion "Infinite digestion loop: a window of 12
+%          box(es) repeated 100+ times from input that repeats every 12 box(es)" (the stomach's guard has no backlog
+%          gate; the 9-letter variant Fatals on INT081C too)
+% expect:  0 errors; the 720,000 letters typeset
+% status:  RED (catalog only, row R CYCLESTOMACHDRAIN; no guard)
+\documentclass{article}
+\def\eat#1{\ifx#1\relax\else abcdefghijkl\expandafter\eat\fi}
+\def\A{aaaaaaaaaa}\edef\B{\A\A\A\A\A\A\A\A\A\A}\edef\C{\B\B\B\B\B\B\B\B\B\B}
+\edef\D{\C\C\C\C\C\C\C\C\C\C}\edef\E{\D\D\D\D\D\D}
+\begin{document}
+Start \expandafter\eat\E\relax done.
+\end{document}

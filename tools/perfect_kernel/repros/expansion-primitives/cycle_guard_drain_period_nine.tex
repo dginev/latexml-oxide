@@ -1,0 +1,18 @@
+% witness: synthetic (CYCLEWIN review B1): a finite recursion eating one item of a pre-built 30,000-token list per
+%          period, past the guard's 20M-token activation (the \loop burn); a 9-token window
+% oracle:  pdflatex 0 `!` lines, "Start done."
+% engines: rust INT081C = 0 errors; CYCLEWIN round 1 (c03cf2ec1d6) = Fatal:Timeout:Recursion "Infinite expansion
+%          loop: a window of 9 token(s) repeated 100+ times" (the backlog-drain tolerance was MAX_WINDOW = 32 between
+%          two checks, and the list falls by 256/9 = 28 a check)
+% expect:  0 errors; "Start done."
+% status:  RED (CYCLEWIN r1) -> GREEN (CYCLEWIN r2, the drain tolerance is the period, across the repeated span)
+\documentclass{article}
+\newcount\n
+\def\burn{\n=0 \loop\advance\n by 1 \ifnum\n<2000000 \repeat}
+\def\eat#1{\ifx#1\relax\else\expandafter\eat\fi}
+\def\A{aaaaaaaaaa}\edef\B{\A\A\A\A\A\A\A\A\A\A}\edef\C{\B\B\B\B\B\B\B\B\B\B}
+\edef\D{\C\C\C\C\C\C\C\C\C\C}\edef\E{\D\D\D}
+\begin{document}
+\burn
+Start \expandafter\eat\E\relax done.
+\end{document}

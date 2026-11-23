@@ -65,6 +65,15 @@ pub fn take_value_salt() -> u64 { VALUE_SALT.with(|(token, _)| token.replace(0))
 #[inline]
 pub fn take_span_salt() -> u64 { VALUE_SALT.with(|(_, span)| span.replace(0)) }
 
+/// Clear both halves of the folded values, at the start of a conversion: a reused thread (cortex_worker) must
+/// fingerprint the same document the same way.
+pub fn reset_value_salt() {
+  VALUE_SALT.with(|(token, span)| {
+    token.set(0);
+    span.set(0);
+  });
+}
+
 /// Largest cycle period (in items) we look for. 32 catches a loop through a
 /// dozen-odd macros with their arguments (apacite's `\citeA`/natbib name-call
 /// loop, 1909.02387, 2212.08776, ran to the 180 s wall clock at 10).
@@ -87,6 +96,25 @@ const CHECK_EVERY: usize = 256;
 /// samples are kept — enough to cover the largest window
 /// (`MAX_WINDOW * REPEAT` items) plus one.
 const BACKLOG_SAMPLES: usize = CAP / CHECK_EVERY + 2;
+// `CycleGuard::backlog_drained` looks `span_checks(w)` samples back, and needs data eaten one item a period to fall
+// by more than twice the period over that span (the period, plus a swing inside a period).
+const _: () = assert!(
+  span_checks(MAX_WINDOW) < BACKLOG_SAMPLES && {
+    let mut w = 2;
+    while w <= MAX_WINDOW && CHECK_EVERY * span_checks(w) / w > 2 * w {
+      w += 1;
+    }
+    w > MAX_WINDOW
+  }
+);
+
+/// The checks that fit inside a window of `w` items repeated [`REPEAT`] times, at least one:
+/// ⌊`w · REPEAT / CHECK_EVERY`⌋. A sample further back may predate the repetition: a refill of the backlog just
+/// before it (2410.02434's pgfplots list of `\pgfpl@@{nan}`, read in chunks).
+const fn span_checks(w: usize) -> usize {
+  let checks = w * REPEAT / CHECK_EVERY;
+  if checks == 0 { 1 } else { checks }
+}
 /// Sentinel for a backlog sample not yet taken since the last reset.
 const UNFILLED: usize = usize::MAX;
 
@@ -175,20 +203,23 @@ impl CycleGuard {
       self.since = 0;
       self.backlog[self.backlog_head] = backlog;
       self.backlog_head = (self.backlog_head + 1) % BACKLOG_SAMPLES;
-      return self.detect().filter(|_| !self.backlog_drained());
+      return self.detect().filter(|&w| !self.backlog_drained(w));
     }
     None
   }
 
-  /// True when the backlog is falling: the newest sample sits more than
-  /// `MAX_WINDOW` below the previous one (a cycle's backlog oscillates by at
-  /// most its period between samples; consumed data drops by `CHECK_EVERY`).
-  /// The previous sample is the last check point, or the post-reset baseline
-  /// when this is the first check.
-  fn backlog_drained(&self) -> bool {
-    let newest = self.backlog[(self.backlog_head + BACKLOG_SAMPLES - 1) % BACKLOG_SAMPLES];
-    let prev = self.backlog[(self.backlog_head + BACKLOG_SAMPLES - 2) % BACKLOG_SAMPLES];
-    prev != UNFILLED && newest + MAX_WINDOW < prev
+  /// True when the backlog fell across the repeated span of a period-`w` window: the newest sample sits more than
+  /// `w` below the one taken [`span_checks`]`(w)` checks earlier (the post-reset baseline at the first checks). A
+  /// cycle's backlog swings by less than `w` inside a period and holds level or grows across periods; a recursion
+  /// eating one pushed-back item a period lowers it by more than `2 * w` over the span (a compile-time assert), so
+  /// by more than `w` after the swing, whatever its period (`\eat#1` over a 30,000-token list, a 9-token window,
+  /// falls by 28 a check: a per-check tolerance of `MAX_WINDOW` read it as a cycle).
+  fn backlog_drained(&self, w: usize) -> bool {
+    let sample = |back: usize| {
+      self.backlog[(self.backlog_head + BACKLOG_SAMPLES - 1 - back) % BACKLOG_SAMPLES]
+    };
+    let older = sample(span_checks(w));
+    older != UNFILLED && sample(0) + w < older
   }
 
   /// The backlog samples, oldest first (for the `LATEXML_DEBUG_FATAL` trace).
@@ -316,6 +347,7 @@ impl SpanHistory {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::common::number::Number;
 
   fn spans(stream: impl IntoIterator<Item = usize>) -> SpanHistory {
     let mut h = SpanHistory::default();
@@ -370,6 +402,13 @@ mod tests {
   }
 
   #[test]
+  fn a_conversion_starts_with_no_folded_values() {
+    note_value(Some(&RegisterValue::Number(Number(7))));
+    reset_value_salt();
+    assert_eq!((take_value_salt(), take_span_salt()), (0, 0));
+  }
+
+  #[test]
   fn an_input_period_past_the_ring_is_not_seen() {
     // Eight repetitions must fit the ring: period 160 over 1024 spans is not.
     let h = spans((0..2000).map(|i| if i % 160 == 0 { 9 } else { 3 }));
@@ -397,6 +436,46 @@ mod tests {
     let n = 9 * REPEAT;
     let hit = (0..n).find_map(|i| g.push((i % 2) as u64, n - i));
     assert_eq!(hit, None);
+  }
+
+  /// A period-`p` stream whose backlog falls by `fall` each period. Each period re-pushes a body of `p - 1` items and
+  /// reads it back, so the backlog swings by `p - 1` inside a period, as an `\eat#1` recursion's does.
+  fn run_with_backlog(p: usize, fall: usize) -> Option<usize> {
+    let mut g = CycleGuard::new();
+    (0..20 * MAX_WINDOW * REPEAT).find_map(|i| {
+      let backlog = 1_000_000 - fall * (i / p) + (p - 1 - i % p);
+      g.push(1 + (i % p) as u64, backlog)
+    })
+  }
+
+  #[test]
+  fn a_period_consuming_one_pushed_back_item_is_data() {
+    // `\def\eat#1{\ifx#1\relax\else\expandafter\eat\fi}` over a 30,000-token list: one item a period, a 9-token
+    // (eat8) or 14-token (eat13) window, whose backlog falls by fewer items a check (256/9 = 28) than MAX_WINDOW.
+    for p in [9, 14, 20, MAX_WINDOW] {
+      assert_eq!(run_with_backlog(p, 1), None, "period {p}");
+    }
+  }
+
+  #[test]
+  fn data_eaten_after_a_refill_is_data() {
+    // 2410.02434: a pgfplots list of `\pgfpl@@{nan}` (a 6-token window), refilled into the pushback in chunks and
+    // eaten a token a read. The sample to compare lies inside the repetition, never before the refill, at any phase.
+    for noise in (2000usize..2256).step_by(8) {
+      let mut g = CycleGuard::new();
+      let hit = (0..noise + 3000).find_map(|i| match i.checked_sub(noise) {
+        None => g.push(10_000 + i as u64, 500),
+        Some(k) => g.push(1 + (k % 6) as u64, 5_000 - k),
+      });
+      assert_eq!(hit, None, "{noise} reads before the refill");
+    }
+  }
+
+  #[test]
+  fn a_period_with_a_level_backlog_fires() {
+    for p in [9, 14, 20, MAX_WINDOW] {
+      assert_eq!(run_with_backlog(p, 0), Some(p), "period {p}");
+    }
   }
 
   #[test]

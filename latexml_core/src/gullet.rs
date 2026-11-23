@@ -833,6 +833,7 @@ pub fn initialize_gullet() {
   // thread-local singleton reused across conversions in the test harness).
   gullet.progress = 0;
   gullet.cycle_guard.reset();
+  crate::cycle_guard::reset_value_salt();
   // Reset the Cluster F expansion-depth counter + re-read its env limit
   // (independent thread-locals, no GULLET borrow — safe to call here).
   reset_expand_depth();

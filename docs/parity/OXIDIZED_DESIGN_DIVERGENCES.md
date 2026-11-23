@@ -10976,13 +10976,32 @@ out are skipped, so a long run of one token costs 32 compares a check, not `W²�
 of 3, vs INT081C): 2302.07562 (pgfplots) +0.03 %, 2606.20784 (tikz) −0.01 %, 2412.14534 (siunitx, mhchem) +0.12 %,
 1810.02898 −0.04 %; no change on the 498-paper READARG population.
 
+**The backlog gate spans the window (CYCLEWIN).** A periodic stream whose pushback falls is pre-built data being
+consumed, not a loop (`CycleGuard::push`; the maze manual's `\prg_replicate:nn`). The gate compared the newest backlog
+sample with the previous check's, 256 reads earlier, with `MAX_WINDOW` as the tolerance. A recursion that eats one
+pushed-back item a period lowers the backlog by 256/p a check, so at 32 every such period of 8 tokens or more read as a
+cycle: `\def\eat#1{\ifx#1\relax\else\expandafter\eat\fi}` over a 30,000-token `\edef` past the floor, a 9-token window
+(pdflatex: "Start done."). The tolerance is now the detected period `w`, across the repeated span: the newest sample
+against the one ⌊w·REPEAT/256⌋ checks earlier, at least one (`span_checks`). A cycle's backlog swings by less than `w`
+inside a period and holds level or grows; data eaten one item a period falls over that span by more than `2w` for every
+`w` up to `MAX_WINDOW` (a compile-time assert), so by more than `w` after the swing. The sample must lie inside the
+span: one up to 255 reads before it can predate a refill of the pushback (2410.02434, a pgfplots list of
+`\pgfpl@@{nan}` read in chunks, a 6-token window, read as a cycle at ⌈w·REPEAT/256⌉). The register values folded into the
+fingerprints are cleared at each conversion (`initialize_gullet`, `cycle_guard::reset_value_salt`), so a reused
+`cortex_worker` thread fingerprints a document as a fresh one does. The stomach's box guard has no backlog: such a
+recursion printing twelve letters an item, 720,000 letters in one paragraph, is a `Fatal:Stomach:Recursion` (repro
+`cycle_guard_box_drain_period_twelve`, catalog only; nine letters Fatal at window 10 too).
+
 **Guards**: `perfect_kernel_batch65f::repeated_file_text_is_no_expansion_loop` (also: a two-token expansion loop and a
 `\scantokens` self-recursion past the floor still trip), `perfect_kernel_batch65f::self_input_stops_at_the_text_input_level_limit`,
 `perfect_kernel_batchcyclewin::{a_fifteen_token_expansion_loop_is_a_cycle_fatal, an_eleven_box_digestion_loop_is_a_cycle_fatal,
-a_finite_counter_loop_of_boxes_is_no_cycle}` (repros `expansion-primitives/cycle_guard_long_period`,
-`cycle_guard_box_period_eleven`, `cycle_guard_counter_loop_boxes`; the bound,
+a_finite_counter_loop_of_boxes_is_no_cycle, a_recursion_eating_pushed_back_data_is_no_cycle}` (repros
+`expansion-primitives/cycle_guard_long_period`, `cycle_guard_box_period_eleven`, `cycle_guard_counter_loop_boxes`,
+`cycle_guard_drain_period_nine`, `cycle_guard_drain_period_fourteen`, `cycle_guard_drain_after_refill`; the bound,
 `cycle_guard_period_past_window`, is catalog only), `cycle_guard::tests::{detects_period_up_to_max_window,
-a_uniform_tail_does_not_hide_a_longer_period, ignores_period_over_max_window, a_moving_count_breaks_the_span_period}`.
+a_uniform_tail_does_not_hide_a_longer_period, ignores_period_over_max_window, a_moving_count_breaks_the_span_period,
+a_period_consuming_one_pushed_back_item_is_data, data_eaten_after_a_refill_is_data, a_period_with_a_level_backlog_fires,
+a_conversion_starts_with_no_folded_values}`.
 
 
 ### 540. Misplaced alignment commands: the first in a group is an Error, the rest of that group its cascade, Warnings (TeX: an error each; Perl: silenced by `\let`s to `\relax`)

@@ -71,3 +71,30 @@ fn a_finite_counter_loop_of_boxes_is_no_cycle() {
   );
   assert_element(&xml, "p", &[], &format!("<p xml:id=\"p1.1\">{text}</p>"));
 }
+
+/// CYCLEWIN review B1: `\def\eat#1{\ifx#1\relax\else\expandafter\eat\fi}` over a 30,000-token `\edef`, past the
+/// activation floor, re-reads a 9-token (and, with five `\relax` more, a 14-token) window while it eats the pushed-back
+/// list one item a period. The list falls by 256/9 items a check, under the round-1 drain tolerance of `MAX_WINDOW`
+/// (32), so it read as a cycle Fatal; the tolerance is now the period, over the whole repeated span. Repros
+/// expansion-primitives/cycle_guard_drain_period_{nine,fourteen}. The third fixture refills the pushback in chunks
+/// (2410.02434's pgfplots list of `\pgfpl@@{nan}`), where a sample before the repeated span predates the refill.
+/// Distinct: the gullet's backlog-drain gate for a period that consumes data.
+#[test]
+fn a_recursion_eating_pushed_back_data_is_no_cycle() {
+  for tex in [
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/cycle_guard_drain_period_nine.tex"
+    ),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/cycle_guard_drain_period_fourteen.tex"
+    ),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/cycle_guard_drain_after_refill.tex"
+    ),
+  ] {
+    let (log, xml) = latexml::util::test::convert_files_with(tex, &[], Some("ar5iv.sty"));
+    assert_eq!(error_count(&log), 0, "{log}");
+    assert_eq!(warning_count(&log), 0, "{log}");
+    assert_element(&xml, "p", &[], "<p xml:id=\"p1.1\">Start done.</p>");
+  }
+}
