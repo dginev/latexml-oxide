@@ -137,7 +137,7 @@ guard, not as a site patch.
 
 ## Status log
 
-Rows through 2026-09-24 are in [`archive/KERNEL_CAPABILITIES_STATUS_LOG_2026-09-24.md`](archive/KERNEL_CAPABILITIES_STATUS_LOG_2026-09-24.md).
+Rows through 2026-09-24 are in [`archive/KERNEL_CAPABILITIES_STATUS_LOG_2026-09-24.md`](KERNEL_CAPABILITIES_STATUS_LOG_2026-09-24.md).
 
 | Date | Row | Event |
 |---|---|---|

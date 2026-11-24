@@ -17,88 +17,88 @@ citations are why the file is kept.
 
 ## Design & mission logs (referenced from live docs / code)
 
-- `OD_FRONTMATTER_RECORDS_2026-11-15.md` — the former texts of the 133 frontmatter OD entries that OD rationalization PR D (ruling 10, DG 2026-11-14) rewrote into eleven pipeline primaries (#980 #981 #993 #459 #920 #911 #805 #954 #262 #767 #460); verbatim, many describing deleted code. Cited from those primaries for the witness ids, figures and guard names.
-- `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md` — `expected:id` XMRef study; Class B + distribute-extend fixed; residual in `../parity/DEFERRED_FAMILIES.md`. Cited by document.rs, parser.rs, amsmath_sty.rs, 06_cluster_math.rs, three cluster_regressions fixtures.
-- `EXPL3_CATCODE_GAP_2026-06-08.md` — expl3 catcode-clobber study, closed; dead ends kept; latent residual in `../parity/DEFERRED_FAMILIES.md`. Cited by expl3_sty.rs, sect08.rs, `../parity/WISDOM.md`.
-- `AR5IV_DIAGNOSTICS_2026-08-14.md` — the ar5iv 100-issue sweep (2026-07-18/20); residuals in `../SYNC_STATUS.md` (ar5iv tracker residuals).
-- `CODE_REVIEW_2026-08-03.md` — review of #480-#487; its defect findings landed (#487, #488, 56fc), its approach-level recommendations (a mid-scale CI fixture, never re-tagging a release) are not tracked live; lessons in WISDOM #89 and PERFORMANCE P8.
-- `MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md` — measured and-node counts per ambiguity pattern; open levers in `../performance/PERFORMANCE.md` P3.
-- `MALFORMED_CLOSE_NUMBERED_2026-06-10.md` — cited by `latexml_oxide/src/util/test.rs`; lesson in WISDOM #90.
-- `known_crashes/` — resolved crash records: `1804.01117_xint_stack_overflow_2026-06-20.md`, `kbordermatrix_halign_math/`, `blkarray_halign_math/`. Cited by sect10.rs, blkarray_sty.rs, arraycr_halign.tex, blkarray.tex, KNOWN_PERL_ERRORS, STABILITY_WITNESSES, WISDOM.
+- [`OD_FRONTMATTER_RECORDS_2026-11-15.md`](OD_FRONTMATTER_RECORDS_2026-11-15.md) — the former texts of the 133 frontmatter OD entries that OD rationalization PR D (ruling 10, DG 2026-11-14) rewrote into eleven pipeline primaries (#980 #981 #993 #459 #920 #911 #805 #954 #262 #767 #460); verbatim, many describing deleted code. Cited from those primaries for the witness ids, figures and guard names.
+- [`EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](EXPECTED_ID_XMREF_DESIGN_2026-06-08.md) — `expected:id` XMRef study; Class B + distribute-extend fixed; residual in `../parity/DEFERRED_FAMILIES.md`. Cited by document.rs, parser.rs, amsmath_sty.rs, 06_cluster_math.rs, three cluster_regressions fixtures.
+- [`EXPL3_CATCODE_GAP_2026-06-08.md`](EXPL3_CATCODE_GAP_2026-06-08.md) — expl3 catcode-clobber study, closed; dead ends kept; latent residual in `../parity/DEFERRED_FAMILIES.md`. Cited by expl3_sty.rs, sect08.rs, `../parity/WISDOM.md`.
+- [`AR5IV_DIAGNOSTICS_2026-08-14.md`](AR5IV_DIAGNOSTICS_2026-08-14.md) — the ar5iv 100-issue sweep (2026-07-18/20); residuals in `../SYNC_STATUS.md` (ar5iv tracker residuals).
+- [`CODE_REVIEW_2026-08-03.md`](CODE_REVIEW_2026-08-03.md) — review of #480-#487; its defect findings landed (#487, #488, 56fc), its approach-level recommendations (a mid-scale CI fixture, never re-tagging a release) are not tracked live; lessons in WISDOM #89 and PERFORMANCE P8.
+- [`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md) — measured and-node counts per ambiguity pattern; open levers in `../performance/PERFORMANCE.md` P3.
+- [`MALFORMED_CLOSE_NUMBERED_2026-06-10.md`](MALFORMED_CLOSE_NUMBERED_2026-06-10.md) — cited by `latexml_oxide/src/util/test.rs`; lesson in WISDOM #90.
+- `known_crashes/` — resolved crash records: [`1804.01117_xint_stack_overflow_2026-06-20.md`](known_crashes/1804.01117_xint_stack_overflow_2026-06-20.md), `kbordermatrix_halign_math/`, `blkarray_halign_math/`. Cited by sect10.rs, blkarray_sty.rs, arraycr_halign.tex, blkarray.tex, KNOWN_PERL_ERRORS, STABILITY_WITNESSES, WISDOM.
 
-- `PERFECT_KERNEL_2026-11-13.md` — the perfect-kernel brief, quality axes, scope, goal bar and close status; goal
+- [`PERFECT_KERNEL_2026-11-13.md`](PERFECT_KERNEL_2026-11-13.md) — the perfect-kernel brief, quality axes, scope, goal bar and close status; goal
   met 2026-11-13, merged into main `6df4632fb1`. Live residual in `../SYNC_STATUS.md` row R; the rows' detail stays
   in `../perfect_kernel/`. Cited by `beamer_cls.rs`, `tools/perfect_kernel/{scoreboard.py,*.tsv}`, `.claude/agents/`.
 
-- `PERL_LOADFORMAT_AUDIT.md` — strict-`LoadFormat` dump-parity audit; mission
+- [`PERL_LOADFORMAT_AUDIT.md`](PERL_LOADFORMAT_AUDIT.md) — strict-`LoadFormat` dump-parity audit; mission
   complete (zero-error `--init`, dumps match Perl). Cited by `CLAUDE.md`,
   `dump_writer.rs`, `../parity/{DUMP_DESIGN,ORGANIZATION}.md`.
-- `DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md` — close reading of Perl `Core/Dumper.pm`
+- [`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) — close reading of Perl `Core/Dumper.pm`
   + the on-disk record format; the v3 structured-Parameter encoding it specifies is
   the live format. Cited by `dump_{reader,writer}.rs`, `../parity/DUMP_DESIGN.md`, `../parity/WISDOM.md`.
-- `BIBTEX_PORT_PLAN_2026-06-20.md` — the BibTeX port plan (Phases 1–8 shipped;
+- [`BIBTEX_PORT_PLAN_2026-06-20.md`](BIBTEX_PORT_PLAN_2026-06-20.md) — the BibTeX port plan (Phases 1–8 shipped;
   live residuals in `../SYNC_STATUS.md`). Cited by `bibtex.rs`.
-- `frontmatter_api_refactor.md` — design/decisions log for the upstream PR #2767
+- [`frontmatter_api_refactor.md`](frontmatter_api_refactor.md) — design/decisions log for the upstream PR #2767
   frontmatter-API port (landed). Cited by `../parity/OXIDIZED_DESIGN_DIVERGENCES.md`.
-- **The frontmatter series, archived 2026-11-08** (superseded by the one engine, `../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`): `AUTHOR_MARKUP_PIPELINE_2026-11-03.md` (the old two-branch `\lx@add@authors` unification worklist, 2026-08-16 →), `AUTHOR_BLOCK_LABELING_DESIGN_2026-10-28.md` (a data-driven labelling proposal, never built; cited by `../parity/DEFERRED_FAMILIES.md`), `FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md` (the architecture audit whose item 9 became the one engine), `FRONTMATTER_PERF_AUDIT_2026-10-31.md` (the pipeline perf study; levers in `../performance/PERFORMANCE.md` P9-P11), `FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md` (the digested refactor's history: the 2026-10-29 spelling inventory, Stages 1-8, and the plan's own superseded parts — the original Z0-Z23 order, the waves, the 2026-11-01 Stages 0-7; its live sections moved into the plan).
-- `UPSTREAM_SYNC_2767_to_2833_2026-06-26.md` — per-PR catalog for the "translate
+- **The frontmatter series, archived 2026-11-08** (superseded by the one engine, `../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`): [`AUTHOR_MARKUP_PIPELINE_2026-11-03.md`](AUTHOR_MARKUP_PIPELINE_2026-11-03.md) (the old two-branch `\lx@add@authors` unification worklist, 2026-08-16 →), [`AUTHOR_BLOCK_LABELING_DESIGN_2026-10-28.md`](AUTHOR_BLOCK_LABELING_DESIGN_2026-10-28.md) (a data-driven labelling proposal, never built; cited by `../parity/DEFERRED_FAMILIES.md`), [`FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md`](FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md) (the architecture audit whose item 9 became the one engine), [`FRONTMATTER_PERF_AUDIT_2026-10-31.md`](FRONTMATTER_PERF_AUDIT_2026-10-31.md) (the pipeline perf study; levers in `../performance/PERFORMANCE.md` P9-P11), [`FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`](FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md) (the digested refactor's history: the 2026-10-29 spelling inventory, Stages 1-8, and the plan's own superseded parts — the original Z0-Z23 order, the waves, the 2026-11-01 Stages 0-7; its live sections moved into the plan).
+- [`UPSTREAM_SYNC_2767_to_2833_2026-06-26.md`](UPSTREAM_SYNC_2767_to_2833_2026-06-26.md) — per-PR catalog for the "translate
   upstream PRs since #2767" mission (U1–U11, all landed via PR #271).
-- `MATHML_POST_LINE_AUDIT_2026-07-05.md` — exhaustive MathML-post line audit
+- [`MATHML_POST_LINE_AUDIT_2026-07-05.md`](MATHML_POST_LINE_AUDIT_2026-07-05.md) — exhaustive MathML-post line audit
   (every `MathML.pm` sub + 197 `DefMathML` regs vs Rust); sweep complete, open
   feature-gaps tracked in SYNC_STATUS.
-- `MATH_AMBIGUITY_AUDIT_2026-05-21.md` — original math-ambiguity sweep; its live
-  claims are superseded by `MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`. Cited
+- [`MATH_AMBIGUITY_AUDIT_2026-05-21.md`](MATH_AMBIGUITY_AUDIT_2026-05-21.md) — original math-ambiguity sweep; its live
+  claims are superseded by [`MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md). Cited
   by the math-parser sources.
-- `XMLID_ACCESSOR_AUDIT_2026-06-08.md` — the libxml `xml:id`/`xml:lang`
+- [`XMLID_ACCESSOR_AUDIT_2026-06-08.md`](XMLID_ACCESSOR_AUDIT_2026-06-08.md) — the libxml `xml:id`/`xml:lang`
   string-accessor footgun; active bugs fixed, broad migration deliberately NOT done.
   Cited by `document.rs`, `../parity/WISDOM.md` (#60).
-- `MEMORY_GUARD_HARDENING_2026-06-09.md` — canvas OOM-cluster root cause + the
+- [`MEMORY_GUARD_HARDENING_2026-06-09.md`](MEMORY_GUARD_HARDENING_2026-06-09.md) — canvas OOM-cluster root cause + the
   layered runaway-guard architecture (resolved). Cited by `../performance/CORTEX_WORKER_HARNESS.md`.
-- `POOL_PARITY_AUDIT.md` — `InnerPool!` invocation audit (completed). Cited by
+- [`POOL_PARITY_AUDIT.md`](POOL_PARITY_AUDIT.md) — `InnerPool!` invocation audit (completed). Cited by
   `latexml_engine/src/lib.rs`.
-- `PORTABILITY_MACOS_PROBE_2026-06-07.md` — Phase-0 macOS dependency probe (#217,
+- [`PORTABILITY_MACOS_PROBE_2026-06-07.md`](PORTABILITY_MACOS_PROBE_2026-06-07.md) — Phase-0 macOS dependency probe (#217,
   resolved; macOS now a gating CI job). Cited by `xslt.rs`, `../release/RELEASE_CRITERIA.md`.
-- `ARXIV_FORK_AUDIT_2026-07-03.md` — due-diligence survey of the arXiv/LaTeXML
+- [`ARXIV_FORK_AUDIT_2026-07-03.md`](ARXIV_FORK_AUDIT_2026-07-03.md) — due-diligence survey of the arXiv/LaTeXML
   velocity fork (items 1–4 landed). Cited by `../SYNC_STATUS.md`.
-- `SANDBOX_TRIAGE_2026-05-21.md` — the 10k-sandbox triage workflow reference;
+- [`SANDBOX_TRIAGE_2026-05-21.md`](SANDBOX_TRIAGE_2026-05-21.md) — the 10k-sandbox triage workflow reference;
   judgement now lives in the `canvas-triage` skill. Cited by engine/package sources.
-- `SCRIPT_BINDINGS_LOG_2026-06.md` — historical Rhai script-bindings progress log,
+- [`SCRIPT_BINDINGS_LOG_2026-06.md`](SCRIPT_BINDINGS_LOG_2026-06.md) — historical Rhai script-bindings progress log,
   split from `../parity/script_bindings_plan.md` (the live surface reference).
-- `STARTUP_COST_ANALYSIS_2026-06-21.md` — ~161 ms startup decomposition + the
+- [`STARTUP_COST_ANALYSIS_2026-06-21.md`](STARTUP_COST_ANALYSIS_2026-06-21.md) — ~161 ms startup decomposition + the
   DECLINED dump-parse lever; outcome carried by `../performance/PERFORMANCE.md`.
-- `STREAMING_CORE_DESIGN_2026-07-29.md` — fragmented single-document core
+- [`STREAMING_CORE_DESIGN_2026-07-29.md`](STREAMING_CORE_DESIGN_2026-07-29.md) — fragmented single-document core
   conversion (bounded live DOM + disk-backed segments + pass-2 assembly);
   IMPLEMENTED, guard `113_streaming_core.rs`. Residuals ranked in
   `../performance/PERFORMANCE_AUDIT_2026-09-03.md`. Cited by `latexml_oxide.rs`,
   `sxml/mod.rs`, `../performance/{BEYOND_PERL_LEVERS,PERFORMANCE_AUDIT_2026-09-03}.md`.
-- `STREAMING_POST_DESIGN_2026-07-06.md` — two-pass streaming split for very large
+- [`STREAMING_POST_DESIGN_2026-07-06.md`](STREAMING_POST_DESIGN_2026-07-06.md) — two-pass streaming split for very large
   file inputs (Scan/ObjectDB); IMPLEMENTED, byte-identical guard
   `118_streaming_split_parity.rs`. Cited by `stream_split.rs`, `render_workers.rs`,
   `object_db.rs`, `../performance/{MULTIDOC_JOIN,BEYOND_PERL_LEVERS,PERFORMANCE_AUDIT_2026-09-03}.md`.
-- `ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md` — very-large single-doc (#361)
+- [`ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md`](ISSUE_361_MEMORY_TIME_PROFILE_2026-07-24.md) — very-large single-doc (#361)
   RAM+time diagnosis; M1/M2/M4 landed (9.05→5.99 GB), M3 (stream boxes→DOM)
   reverted as a dead-end. Superseded by `../performance/PERFORMANCE_AUDIT_2026-09-03.md`.
-- `CODEX_KNOWLEDGE_MIGRATION_2026-09-03.md` — Claude→Codex knowledge migration
+- [`CODEX_KNOWLEDGE_MIGRATION_2026-09-03.md`](CODEX_KNOWLEDGE_MIGRATION_2026-09-03.md) — Claude→Codex knowledge migration
   (root `AGENTS.md` + ten `.agents/skills/latexml-*` workflows); durable layer
   implemented, only the user-run `/import` remains.
 
 ## `--server` editor LSP (landed PR #243, deprioritized — not stale)
 
-- `LSP_SERVER.md` — design/status of the warm-preamble + fork-body server. Cited
+- [`LSP_SERVER.md`](LSP_SERVER.md) — design/status of the warm-preamble + fork-body server. Cited
   by `../README.md`, `../release/SAFETY.md`.
-- `LSP_MULTIFILE_PLAN.md` — the multi-file project-root + overlay model (landed).
+- [`LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md) — the multi-file project-root + overlay model (landed).
   Cited by `lsp_server/{project,overlay}.rs`.
 
 ## Session logs (completed "Landed this session" narratives)
 
-- `SYNC_SESSIONS_2026-06.md`, `SYNC_SESSIONS_2026-07.md`, `SYNC_SESSIONS_2026-08.md`
+- [`SYNC_SESSIONS_2026-06.md`](SYNC_SESSIONS_2026-06.md), [`SYNC_SESSIONS_2026-07.md`](SYNC_SESSIONS_2026-07.md), [`SYNC_SESSIONS_2026-08.md`](SYNC_SESSIONS_2026-08.md)
   — completed worklist entries lifted out of the live `../SYNC_STATUS.md`
   (the `-08` file holds the 2026-07-09 … 07-27 landings, lifted 2026-08-14).
   Cited by SYNC_STATUS.
-- `SYNC_SESSIONS_2026-09.md`, `SYNC_SESSIONS_2026-10.md` — the same for September and for 2026-10-04's compaction: the
+- [`SYNC_SESSIONS_2026-09.md`](SYNC_SESSIONS_2026-09.md), [`SYNC_SESSIONS_2026-10.md`](SYNC_SESSIONS_2026-10.md) — the same for September and for 2026-10-04's compaction: the
   cortex sandbox validation (61r), the stop and resumption of the full arXiv run 329 (62a-62c) and the run-329 cluster
   batches 62d-62f; their open residuals stay in SYNC_STATUS "Run-329 and sandbox open residuals".
-- `SYNC_SESSIONS_2026-11.md` — two moves, both verbatim. (1) DOC1, 2026-11-08: the frontmatter series' landed rows
+- [`SYNC_SESSIONS_2026-11.md`](SYNC_SESSIONS_2026-11.md) — two moves, both verbatim. (1) DOC1, 2026-11-08: the frontmatter series' landed rows
   from SYNC_STATUS's "Silent-loss inventory" (batches 77d-108b, the S2b families, Z1-Z14, the bundle rows
   int117a-int145b), from `../perfect_kernel/OPEN_ROWS.md`, and `../perfect_kernel/KERNEL_CAPABILITIES.md`'s K23 design
   record. (2) SYNC1, 2026-11-09, section "Moved from SYNC_STATUS by the 2026-11-09 compaction (SYNC1)": the closed
@@ -107,17 +107,17 @@ citations are why the file is kept.
   row, under the same title, in SYNC_STATUS or (since SYNC1b) `../perfect_kernel/SILENT_LOSS_INVENTORY.md`.
   Later moves add their own `## Moved from SYNC_STATUS by …` sections (SYNC3 2026-11-12; DOCSPM 2026-11-14: the pre-merge
   table, the road's conclusions and the done WIN1 section with its TL 2026 install recipe).
-- `GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md` — the Gemini engineering review; P1/P5/P6/P7 landed, P3/P4 settled, the
+- [`GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md`](GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md) — the Gemini engineering review; P1/P5/P6/P7 landed, P3/P4 settled, the
   open ideas lifted into `../performance/BEYOND_PERL_LEVERS.md`.
-- `round19_iteration_log.md` — pre-Round-25 sprint narratives. Cited by `CHANGELOG.md`.
-- `TRANSLATION_GAPS.md` — 2026-03 Perl→Rust function-gap snapshot (substantially
+- [`round19_iteration_log.md`](round19_iteration_log.md) — pre-Round-25 sprint narratives. Cited by `CHANGELOG.md`.
+- [`TRANSLATION_GAPS.md`](TRANSLATION_GAPS.md) — 2026-03 Perl→Rust function-gap snapshot (substantially
   resolved). Cited by `CHANGELOG.md`.
-- `BABEL_TIMEOUT_BISECT.md` — 2026-04 babel/dump timeout bisection. Cited by
+- [`BABEL_TIMEOUT_BISECT.md`](BABEL_TIMEOUT_BISECT.md) — 2026-04 babel/dump timeout bisection. Cited by
   `../parity/OXIDIZED_DESIGN_DIVERGENCES.md`.
-- `sandbox_failures_SYNC_STATUS.md` — 2026-04 181-paper sandbox worksheet
+- [`sandbox_failures_SYNC_STATUS.md`](sandbox_failures_SYNC_STATUS.md) — 2026-04 181-paper sandbox worksheet
   (superseded by `../SYNC_STATUS.md`). Cited by `binding/content.rs`.
 
 ## Raw data
 
 - `sandbox_failure_181_triage.tsv`, `sandbox_failure_181.txt` — Round-18 181-paper
-  triage rows, backing `sandbox_failures_SYNC_STATUS.md` / `frontmatter_api_refactor.md`.
+  triage rows, backing [`sandbox_failures_SYNC_STATUS.md`](sandbox_failures_SYNC_STATUS.md) / [`frontmatter_api_refactor.md`](frontmatter_api_refactor.md).

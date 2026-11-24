@@ -61,7 +61,7 @@ current Perl LaTeXML: 1 BOTH CLEAN, 29 OUT-OF-SCOPE (Perl=Rust both
 >0), 4 OUT-OF-SCOPE? (Perl-capped at MAX_ERRORS=101), 1
 PERL_REGRESSION (`hep-th0005268` R=21 vs P=26),
 **0 REAL_REGRESSION**. Per
-[staged 100k protocol](feedback_staged_100k_protocol.md), the zero-
+staged 100k protocol (a maintainer memory note, `feedback_staged_100k_protocol.md`, not in the repo), the zero-
 regression gate is cleared. Triage TSV at
 `~/data/stage01_non_ok_parity.tsv`.
 
@@ -80,7 +80,7 @@ stage 1's 99.65%). Triage of all 26 non-OK papers via
 | **REAL_REGRESSION** | **0** | Stage 2 cleared the zero-regression gate |
 
 Rust supersedes Perl on 4 more papers (now 17+ total in
-[project_rust_supersedes_perl.md](feedback_no_speculative_bindings.md)).
+`project_rust_supersedes_perl.md` (a maintainer memory note, not in the repo)).
 Triage TSV at `~/data/stage02_non_ok_parity.tsv`.
 
 **math0107222 fix (commit `2cbc6274fc`)**: PiCTeX `\setdots` was
