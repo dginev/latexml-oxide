@@ -228,7 +228,7 @@ AUDITED = {
         "-- e.g. MiKTeX -- not a build-time one, so it does not avoid the static "
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
-    "libxml": (("0.3.21", "0.3.22", "0.3.23", "0.3.24", "0.3.25"),
+    "libxml": (("0.3.21", "0.3.22", "0.3.23", "0.3.24", "0.3.25", "0.3.26"),
         "Binds libxml2 -- (c) Daniel Veillard, MIT -- whom the crate's own 'MIT' "
         "field does not name as holder. Linked via pkg-config + rustc-link-lib "
         "rather than compiled here, and STATIC on every release leg "
@@ -252,7 +252,11 @@ AUDITED = {
         "0.3.24 -> 0.3.25 diffed 2026-11-23 (registry sources): build.rs and src/wrapper.h "
         "byte-identical, no C source, Rust-only changes (cached wrappers of nodes libxml2 "
         "frees read as Node::null(), linking refusals return errors), license field 'MIT' "
-        "unchanged."
+        "unchanged. 0.3.25 -> 0.3.26 diffed 2026-11-24 (registry sources): src/wrapper.h "
+        "byte-identical; build.rs still link-only (bindgen only: __max_align_t opaque too, the "
+        "unused -DPKG-CONFIG define dropped), zero cc::Build, no C source; Rust-only changes "
+        "(NUL-byte and length errors instead of panics, try_from_* schema constructors, "
+        "Document::copy_node), license field 'MIT' unchanged."
     ),
     "libxslt": ("0.1.5",
         "Binds libxslt/libexslt -- (c) Daniel Veillard, MIT -- same shape as libxml "
