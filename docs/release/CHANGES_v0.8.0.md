@@ -43,7 +43,7 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ## Changes
 
-### After 0.8.0-rc2
+### 0.8.0-rc3
 
   - **Security: `cortex_worker` never loads a runtime `.rhai` binding.** A worker built with `--features cortex`
     alone keeps the default `runtime-bindings`, so a `<pkg>.sty.rhai` shipped inside an arXiv source loaded on
