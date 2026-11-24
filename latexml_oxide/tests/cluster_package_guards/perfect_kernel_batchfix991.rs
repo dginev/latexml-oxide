@@ -247,6 +247,11 @@ fn continuation_sign_after_amsmath_s_empty_ord_is_binary() {
     ("S0.E26.m1", "+ c"),
     // a phantom after the `\left.` is a box, an Ord: the sign after it is binary (2003.01925)
     ("S0.E27.m1", "delimited-)@(absent - c)"),
+    // a bare `\big.` is an `\hbox`, an Ord: the sign after it is binary (2003.06694, 1612.08225); after a `\bigm.` (a
+    // Rel) unary
+    ("S0.E29.m1", "absent + c"),
+    ("S0.E30.m1", "absent - c"),
+    ("S0.E31.m1", "+ c"),
   ] {
     assert!(
       xml.contains(&format!("text=\"{text}\" xml:id=\"{id}\"")),
@@ -306,6 +311,9 @@ fn continuation_sign_after_amsmath_s_empty_ord_is_binary() {
       ),
     ),
     ("S0.E26.m1", "\\displaystyle\\bigl.+c", unary("+", "c")),
+    ("S0.E29.m1", "\\displaystyle\\big.+c", binary("+", "c")),
+    ("S0.E30.m1", "\\displaystyle\\Big.-c", binary("−", "c")),
+    ("S0.E31.m1", "\\displaystyle\\bigm.+c", unary("+", "c")),
   ] {
     assert_math(&html, id, tex, &body);
   }
@@ -334,16 +342,22 @@ fn continuation_sign_after_amsmath_s_empty_ord_is_binary() {
     )),
     "{html}"
   );
-  // a continuation sign no stream parses warns under the ADDOP it is, not the lexer's internal `CELLADDOP`: CorTeX
-  // groups the warnings by these names
+  // a continuation sign no stream parses warns under the ADDOP it is, not the lexer's internal `CELLADDOP`, in its key
+  // (CorTeX groups the warnings by these names) and in its token list; a sign before a `\left.` and one after it show
+  // alike and warn once (1612.08225)
   let (log, _) = super::perfect_kernel_batch46::convert(
-    "\\documentclass{article}\\usepackage{amsmath}\\begin{document}\\begin{align} a &= b \\\\ &- ! \\end{align}\\end{document}",
+    "\\documentclass{article}\\usepackage{amsmath}\\begin{document}\\begin{align} a &= b \\\\ &- ! \\\\ &- \\left. ! \\right) \\\\ &\\left. - ! \\right) \\end{align}\\end{document}",
     true,
   );
   assert_eq!(error_count(&log), 0, "{log}");
-  assert_eq!(warning_count(&log), 1, "{log}");
+  assert_eq!(warning_count(&log), 2, "{log}");
   assert!(
-    log.contains("Warning:unparsed_math:ADDOP_POSTFIX "),
+    log.contains("Warning:unparsed_math:ADDOP_POSTFIX Unparsed math: no parse spans all input tokens for: ADDOP:minus:1 POSTFIX:factorial:2\n"),
     "{log}"
   );
+  assert!(
+    log.contains("Warning:unparsed_math:OPEN_ADDOP_POSTFIX_CLOSE Unparsed math: no parse spans all input tokens for: OPEN:(:4 ADDOP:minus:1 POSTFIX:factorial:2 CLOSE:):3\n"),
+    "{log}"
+  );
+  assert!(!log.contains("CELLADDOP"), "{log}");
 }

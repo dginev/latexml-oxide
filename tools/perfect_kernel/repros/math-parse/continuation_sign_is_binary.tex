@@ -14,9 +14,11 @@
 %          0910.4696, 2003.01925) or follows a `\bigl.` stays unary (tex.web §728: a Bin after a left delimiter or an Open
 %          is an Ord; pdflatex: no \medmuskip around the `+` of `${}\left.+c\right)$` and `${}\bigl.+c$`), a `\big(`
 %          opened in the cell before is no fence of the cell (`&+ c \big)` binary), nor is a sign after `\left.\vphantom{X}`
-%          (the phantom box is an Ord: \medmuskip both sides, 2003.01925)
+%          (the phantom box is an Ord: \medmuskip both sides, 2003.01925); a bare `\big.`/`\Big.` is an \hbox, an Ord,
+%          so the sign after it is binary (`&\big. + c`, 2003.06694, 1612.08225; pdflatex: ${}\big.+c$ as wide as
+%          ${}\big.{}+c$), and after a `\bigm.` (a Rel) unary
 % status:  RED (bc12e3e8991) -> GREEN (FIX991, OXIDIZED_DESIGN_DIVERGENCES #1151); the `\left.` rows RED (eb9e1ff62bf,
-%          `plus(absent, c, d)`) -> GREEN
+%          `plus(absent, c, d)`) -> GREEN; the `\big.`/`\Big.` rows RED (04b44b2dcd7, `+ c`) -> GREEN
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}
@@ -31,4 +33,5 @@
 \begin{alignat}{2} a &= b &\quad& -1<x<0 \\ &+ c && -d \end{alignat}
 \begin{align} a &= b \\ & + \ \ {\rm complex\  conj.} \end{align}
 \begin{align} a &= \left( b \right. \\ &\quad\left. + c + d \right) \\ &= \big( b \\ &+ c \big) \\ &\bigl. + c \\ &\left. \vphantom{X} - c \right) \end{align}
+\begin{align} a &= b \\ &\big. + c \\ &\Big. - c \\ &\bigm. + c \end{align}
 \end{document}

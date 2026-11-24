@@ -105,8 +105,8 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     before it (`&+ c`, `&\quad - d` in `align`, `aligned`, `split`, `alignat`; a `multline` line after the first) was
     a prefix sign, set tight and losing a leading `\quad`; amsmath's `{}` before the cell makes it binary, and it now
     reads `plus(absent, c)` with the placeholder before it, the `\quad` kept. A cell with a relation of its own
-    (`&-\Delta u = f`) or after a left cell ending in a relation (`B =& -C`) keeps its prefix sign
-    (OXIDIZED_DESIGN_DIVERGENCES #1151). Guards
+    (`&-\Delta u = f`) or after a left cell ending in a relation (`B =& -C`) keeps its prefix sign (a sign right after
+    `\left.` or `\bigl.` stays a prefix sign, as in TeX) (OXIDIZED_DESIGN_DIVERGENCES #1151). Guards
     `perfect_kernel_batchfix991::{absent_operand_is_a_phantom_word_joiner,
     empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_word_joiner_in_a_string_value,
     continuation_sign_after_amsmath_s_empty_ord_is_binary}`.

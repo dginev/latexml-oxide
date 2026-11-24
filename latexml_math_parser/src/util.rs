@@ -2333,12 +2333,15 @@ fn punct_followed_by_wide_space(node: &Node) -> bool {
   }
 }
 
-/// Marks a list's first node when only hints precede it and one is a null delimiter (`\lx@delimiterdot`'s XMHint, with
-/// no width or name) that is no Close (`\bigr.`), with no phantom box (an Ord) after it: the first atom of a `\left.`'s
-/// list, or one after a `\bigl.`. A Bin
-/// there is an Ord (tex.web §728: after a left delimiter or an Open), amsmath's `{}` before the cell notwithstanding
-/// (`&\quad\left. + c\right)`, 0910.4696, 2003.01925; `continues_the_cell_before`). Internal, never serialized.
+/// Marks a list's first node when only hints precede it and one is a null delimiter that opens it, with no phantom box
+/// (an Ord) after it: the first atom of a `\left.`'s list (its hint carries `LEFT_DELIMITER`), or one after a `\bigl.`
+/// (an Open) or a `\bigm.` (a Rel). A Bin there is an Ord (tex.web §728), amsmath's `{}` before the cell
+/// notwithstanding (`&\quad\left. + c\right)`, 0910.4696, 2003.01925; `continues_the_cell_before`); a bare `\big.` is
+/// an `\hbox`, an Ord, and the sign after it binary (2003.06694, 1612.08225). Internal, never serialized.
 pub(crate) const AFTER_NULL_DELIMITER: &str = "_after_null_delimiter";
+
+/// The `\left` null delimiter's hint (`\lx@delim@left`, tex_math.rs).
+const LEFT_DELIMITER: &str = "_left_delimiter";
 
 /// Filter XMHint nodes from a list of child nodes, transferring their spacing
 /// info to adjacent tokens as `lpadding`/`rpadding` attributes (Perl MathParser.pm
@@ -2380,9 +2383,11 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
         // (a phantom is a box, an Ord atom: the sign after `\left.\vphantom{X}` is binary, 2003.01925)
         null_delimiter_first = false;
       } else if prefiltered.is_empty()
-        && name.is_none()
-        && node.get_attribute("width").is_none()
-        && node.get_attribute("role").as_deref() != Some("CLOSE")
+        && (node.has_attribute(LEFT_DELIMITER)
+          || matches!(
+            node.get_attribute("role").as_deref(),
+            Some("OPEN" | "MIDDLE")
+          ))
       {
         null_delimiter_first = true;
       }

@@ -23774,7 +23774,8 @@ before the copy, as its result chooses the binding's defaults. **Guard**:
 **Rule** (maintainer ruling 2026-11-21). Perl warns for every failing formula: `parse` resets `$WARNED` per formula
 (MathParser.pm:250-254) and `failureReport` warns each time (:862-897), so a formula repeated N times warns N times.
 Ours emits an `ambiguous_math` / `unparsed_math` Warning once per distinct lexeme string per conversion
-(parser.rs `warn_formula_once`, a SipHash set). The set is the thread-local `WARNED_FORMULAS`, cleared per conversion
+(parser.rs `warn_formula_once`, a SipHash set), the string as the Warning shows it (`shown_lexemes`: a continuation
+cell's `CELLADDOP` as `ADDOP`, #1151). The set is the thread-local `WARNED_FORMULAS`, cleared per conversion
 by `reset_conversion_notices` (from `core_interface::initialize_singletons`), as `FORMULA_ORDINAL` and
 `LOSTNODES_NOOP_REPORTED` are. It is not a `MathParser` field: streaming pass 2 builds a parser per segment and
 `finish_document` one more, so a per-parser set warned once per segment (the Nasser FAQ slices k600/k1200: 101
@@ -24152,13 +24153,20 @@ empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_
   first atom of a `\left.`'s list, below); the unary readings keep the statement a reader sees.
 - Not a continuation in TeX either: a sign that is the first atom of a `\left.`'s list (`&\quad\left. + c + d\right)`,
   0910.4696, 2003.01925) or follows a `\bigl.` is unary — a Bin after a left delimiter or an Open is an Ord (tex.web
-  §728), and amsmath's `{}` is outside that list (pdflatex: `${}\left.+c\right)$` sets the `+` tight). `filter_hints`
-  marks a list's first node after a null delimiter (`util::AFTER_NULL_DELIMITER`, an internal attribute) before it
-  unlinks the hint, and the lexer leaves that sign an ADDOP. A `\big(` opened in the cell before is no list of the cell:
-  `&+ c\big)` is binary, and so is a sign after `\left.\vphantom{X}` (the phantom is a box, an Ord; 2003.01925). The unparsed-math warning keys the sign as the `ADDOP` it is (`unparsed_math:ADDOP_POSTFIX`).
+  §728), and amsmath's `{}` is outside that list (pdflatex: `${}\left.+c\right)$` sets the `+` tight); after a `\bigm.`
+  (a Rel) too. `filter_hints` marks a list's first node after a null delimiter that opens it
+  (`util::AFTER_NULL_DELIMITER`, an internal attribute) before it unlinks the hint, and the lexer leaves that sign an
+  ADDOP. The evidence is positive: the `\left` constructor's null hint carries the internal `_left_delimiter`
+  (tex_math.rs), `\bigl.`'s and `\bigm.`'s the role `OPEN`/`MIDDLE`; a bare `\big.`/`\Big.`/`\bigg.`/`\Bigg.` leaves
+  the same `<XMHint/>` but is an `\hbox`, an Ord, so its sign stays binary (`&\big. +\pi^2 l…`, 2003.06694; `&\Big. +
+  \bla…`, 1612.08225; pdflatex: `${}\big.+c$` as wide as `${}\big.{}+c$`). A `\big(` opened in the cell before is no
+  list of the cell: `&+ c\big)` is binary, and so is a sign after `\left.\vphantom{X}` (the phantom is a box, an Ord;
+  2003.01925). The unparsed-math warning keys the sign as the `ADDOP` it is (`unparsed_math:ADDOP_POSTFIX`), in its
+  token list too, and two formulas that then show alike warn once (`&+ \left. X\right\}` and `&\left. + X\right\}`,
+  1612.08225).
 - Not covered: a lone `&+` (a one-token cell takes no grammar parse) stays an `<mo>`; a leading `&\quad g` with no
-  operator still loses its `\quad` (the same row-edge rule); a `\big.` before the sign (an Ord in TeX, so binary) leaves
-  the same bare null-delimiter hint as `\left.` and reads unary.
+  operator still loses its `\quad` (the same row-edge rule); `&\left.{} + j\right)` reads unary (TeX: binary, the `{}`
+  an Ord that leaves no node); `&\left.\right. + c` likely reads unary (TeX: binary, `\left.\right.` an Inner).
 
 **Guard**: `perfect_kernel_batchfix991::continuation_sign_after_amsmath_s_empty_ord_is_binary`
 (`tools/perfect_kernel/repros/math-parse/continuation_sign_is_binary.tex`), with the readings in the goldens
