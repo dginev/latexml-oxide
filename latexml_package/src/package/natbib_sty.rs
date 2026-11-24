@@ -1587,7 +1587,8 @@ LoadDefinitions!({
         // natbib.sty:811-813 hands a label with no `(year)` to `\NAT@apalk#1, #2, #3\@nil` (:1005-1012): an apalike
         // `\bibitem[Maes, 1995a]` is author "Maes" and year "1995a", cited "(Maes, 1995a)" and "Maes (1995a)". Perl
         // took the trailing digits as the year, leaving "Maes, " (KNOWN_PERL_ERRORS #1332): "(Maes,, 1995)".
-        // Witness 2505.11584; guard `natbib_apalike::natbib_apalike_label_splits_at_comma`.
+        // Witnesses 2505.11584, 2605.20003, 2605.02429; guard
+        // `perfect_kernel_batchnatbib::natbib_apalike_label_splits_at_comma`.
         author_toks = apa_authors;
         year_toks = apa_year;
         rest_idx = exp_tokens.len();
