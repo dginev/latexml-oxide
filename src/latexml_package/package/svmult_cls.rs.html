@@ -63,13 +63,13 @@
 <a href=#63 id=63 data-nosnippet>63</a>  // numbering (".2", 1801.05601; KNOWN_PERL_ERRORS #1026). Guard
 <a href=#64 id=64 data-nosnippet>64</a>  // `perfect_kernel_batch78c::svmult_maketitle_numbers_the_contribution`.
 <a href=#65 id=65 data-nosnippet>65</a>  </span><span class="kw">if </span>svmono {
-<a href=#66 id=66 data-nosnippet>66</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\backmatter"</span>, <span class="string">"\\@mainmatterfalse"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\backmatter"</span>, <span class="string">"\\par\\lx@begin@backmatter\\@mainmatterfalse"</span>);
 <a href=#67 id=67 data-nosnippet>67</a>  } <span class="kw">else </span>{
 <a href=#68 id=68 data-nosnippet>68</a>    <span class="comment">// (the book appendix numbers its sections in the appendix chapter, :728, whatever `\thesection` was before)
 <a href=#69 id=69 data-nosnippet>69</a>    </span><span class="macro">Let!</span>(<span class="string">"\\lx@svmult@book@appendix"</span>, <span class="string">"\\appendix"</span>);
 <a href=#70 id=70 data-nosnippet>70</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\lx@svmult@bppendix"</span>, <span class="string">"\\lx@svmult@book@appendix\\def\\thesection{\\thechapter.\\@arabic\\c@section}"</span>);
 <a href=#71 id=71 data-nosnippet>71</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\appendix"</span>, <span class="string">"\\par"</span>);
-<a href=#72 id=72 data-nosnippet>72</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\backmatter"</span>, <span class="string">"\\let\\appendix\\lx@svmult@bppendix"</span>);
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\backmatter"</span>, <span class="string">"\\par\\lx@begin@backmatter\\let\\appendix\\lx@svmult@bppendix"</span>);
 <a href=#73 id=73 data-nosnippet>73</a>  }
 <a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">RequirePackage!</span>(<span class="string">"sv_support"</span>);
 <a href=#75 id=75 data-nosnippet>75</a>  <span class="comment">// `\vec` (KNOWN_PERL_ERRORS #1143: Perl's binding ignores the options and keeps the kernel's arrow accent): svmult.cls

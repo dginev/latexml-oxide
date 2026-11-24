@@ -58,40 +58,41 @@
 <a href=#58 id=58 data-nosnippet>58</a>  </span>ams_support_sty::amsart_class_internals()<span class="question-mark">?</span>;
 <a href=#59 id=59 data-nosnippet>59</a>
 <a href=#60 id=60 data-nosnippet>60</a>  <span class="comment">// Frontmatter/mainmatter/backmatter — Perl L46-56 (no-ops); amsbook.cls:944-948 switches the
-<a href=#61 id=61 data-nosnippet>61</a>  // page numbering, which `\thepage` shows (roman, then arabic).
-<a href=#62 id=62 data-nosnippet>62</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\frontmatter"</span>, <span class="string">"\\pagenumbering{roman}"</span>);
-<a href=#63 id=63 data-nosnippet>63</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\mainmatter"</span>, <span class="string">"\\pagenumbering{arabic}"</span>);
-<a href=#64 id=64 data-nosnippet>64</a>  def_primitive_noop(<span class="string">"\\backmatter"</span>)<span class="question-mark">?</span>;
-<a href=#65 id=65 data-nosnippet>65</a>
-<a href=#66 id=66 data-nosnippet>66</a>  <span class="comment">// List formatting — Perl L58-72
-<a href=#67 id=67 data-nosnippet>67</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@listI"</span>, <span class="string">"\\leftmargin\\leftmargini\\parsep 4.5\\p@ plus2\\p@ minus\\p@\\topsep 8.5\\p@ plus3\\p@ minus4\\p@\\itemsep4.5\\p@ plus2\\p@ minus\\p@"</span>);
-<a href=#68 id=68 data-nosnippet>68</a>  <span class="macro">Let!</span>(<span class="string">"\\@listi"</span>, <span class="string">"\\@listI"</span>);
-<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listii"</span>, <span class="string">"\\leftmargin\\leftmarginii\\labelwidth\\leftmarginii\\advance\\labelwidth-\\labelsep\\topsep 4\\p@ plus2\\p@ minus\\p@\\parsep 2\\p@ plus\\p@ minus\\p@\\itemsep\\parsep"</span>);
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listiii"</span>, <span class="string">"\\leftmargin\\leftmarginiii\\labelwidth\\leftmarginiii\\advance\\labelwidth-\\labelsep\\topsep 2\\p@ plus\\p@ minus\\p@\\parsep\\z@\\partopsep\\p@ plus\\z@ minus\\p@\\itemsep\\topsep"</span>);
-<a href=#71 id=71 data-nosnippet>71</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listiv"</span>, <span class="string">"\\leftmargin\\leftmarginiv\\labelwidth\\leftmarginiv\\advance\\labelwidth-\\labelsep"</span>);
-<a href=#72 id=72 data-nosnippet>72</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listv"</span>, <span class="string">"\\leftmargin\\leftmarginv\\labelwidth\\leftmarginv\\advance\\labelwidth-\\labelsep"</span>);
-<a href=#73 id=73 data-nosnippet>73</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listvi"</span>, <span class="string">"\\leftmargin\\leftmarginvi\\labelwidth\\leftmarginvi\\advance\\labelwidth-\\labelsep"</span>);
-<a href=#74 id=74 data-nosnippet>74</a>
-<a href=#75 id=75 data-nosnippet>75</a>  <span class="comment">// Perl L64-66: description end alias and \upn = \textup
-<a href=#76 id=76 data-nosnippet>76</a>  </span><span class="macro">Let!</span>(<span class="string">"\\enddescription"</span>, <span class="string">"\\endlist"</span>);
-<a href=#77 id=77 data-nosnippet>77</a>  <span class="macro">Let!</span>(<span class="string">"\\upn"</span>, <span class="string">"\\textup"</span>);
-<a href=#78 id=78 data-nosnippet>78</a>
-<a href=#79 id=79 data-nosnippet>79</a>  <span class="comment">// amsbook.cls:303-313: the running-head mark builder the class's
-<a href=#80 id=80 data-nosnippet>80</a>  // `\ps@headings` gives `\chaptermark`/`\sectionmark`/`\partmark`
-<a href=#81 id=81 data-nosnippet>81</a>  // (`\@secmark\markboth\chapterrunhead{}`), and the section number it reads.
-<a href=#82 id=82 data-nosnippet>82</a>  // Marks have no XML form (`\@mkboth` is `\@gobbletwo`), but a class may call
-<a href=#83 id=83 data-nosnippet>83</a>  // its marks: my-thesis.cls:153-160 `\pagestyle{headings}\chaptermark{}` (TeX
-<a href=#84 id=84 data-nosnippet>84</a>  // Live class census 2026-09-24).
-<a href=#85 id=85 data-nosnippet>85</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\long\def\@nilgobble#1\@nil{}
-<a href=#86 id=86 data-nosnippet>86</a>\let\@secnumber\@empty
-<a href=#87 id=87 data-nosnippet>87</a>\def\@secmark#1#2#3#4{%
-<a href=#88 id=88 data-nosnippet>88</a>  \begingroup \let\protect\@unexpandable@protect
-<a href=#89 id=89 data-nosnippet>89</a>  \edef\@tempa{\endgroup \toks@{\protect#2{#3}{\@secnumber}}}%
-<a href=#90 id=90 data-nosnippet>90</a>  \@tempa
-<a href=#91 id=91 data-nosnippet>91</a>  \toks@\@xp{\the\toks@{#4}}%
-<a href=#92 id=92 data-nosnippet>92</a>  \afterassignment\@nilgobble\@temptokena\@themark{}\@nil
-<a href=#93 id=93 data-nosnippet>93</a>  \edef\@tempa{\@nx\@mkboth{%
-<a href=#94 id=94 data-nosnippet>94</a>    \ifx\markright#1\the\@temptokena\else\the\toks@\fi}{\the\toks@}}%
-<a href=#95 id=95 data-nosnippet>95</a>  \@tempa}"</span>);
-<a href=#96 id=96 data-nosnippet>96</a>});
+<a href=#61 id=61 data-nosnippet>61</a>  // page numbering, which `\thepage` shows (roman, then arabic). amsbook.cls:946-948 `\backmatter` keeps
+<a href=#62 id=62 data-nosnippet>62</a>  // the chapters numbered, but its matter belongs to no part, as book's (OXIDIZED_DESIGN_DIVERGENCES #1147).
+<a href=#63 id=63 data-nosnippet>63</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\frontmatter"</span>, <span class="string">"\\pagenumbering{roman}"</span>);
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\mainmatter"</span>, <span class="string">"\\pagenumbering{arabic}"</span>);
+<a href=#65 id=65 data-nosnippet>65</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\backmatter"</span>, <span class="string">"\\par\\lx@begin@backmatter"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="comment">// List formatting — Perl L58-72
+<a href=#68 id=68 data-nosnippet>68</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@listI"</span>, <span class="string">"\\leftmargin\\leftmargini\\parsep 4.5\\p@ plus2\\p@ minus\\p@\\topsep 8.5\\p@ plus3\\p@ minus4\\p@\\itemsep4.5\\p@ plus2\\p@ minus\\p@"</span>);
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">Let!</span>(<span class="string">"\\@listi"</span>, <span class="string">"\\@listI"</span>);
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listii"</span>, <span class="string">"\\leftmargin\\leftmarginii\\labelwidth\\leftmarginii\\advance\\labelwidth-\\labelsep\\topsep 4\\p@ plus2\\p@ minus\\p@\\parsep 2\\p@ plus\\p@ minus\\p@\\itemsep\\parsep"</span>);
+<a href=#71 id=71 data-nosnippet>71</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listiii"</span>, <span class="string">"\\leftmargin\\leftmarginiii\\labelwidth\\leftmarginiii\\advance\\labelwidth-\\labelsep\\topsep 2\\p@ plus\\p@ minus\\p@\\parsep\\z@\\partopsep\\p@ plus\\z@ minus\\p@\\itemsep\\topsep"</span>);
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listiv"</span>, <span class="string">"\\leftmargin\\leftmarginiv\\labelwidth\\leftmarginiv\\advance\\labelwidth-\\labelsep"</span>);
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listv"</span>, <span class="string">"\\leftmargin\\leftmarginv\\labelwidth\\leftmarginv\\advance\\labelwidth-\\labelsep"</span>);
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@listvi"</span>, <span class="string">"\\leftmargin\\leftmarginvi\\labelwidth\\leftmarginvi\\advance\\labelwidth-\\labelsep"</span>);
+<a href=#75 id=75 data-nosnippet>75</a>
+<a href=#76 id=76 data-nosnippet>76</a>  <span class="comment">// Perl L64-66: description end alias and \upn = \textup
+<a href=#77 id=77 data-nosnippet>77</a>  </span><span class="macro">Let!</span>(<span class="string">"\\enddescription"</span>, <span class="string">"\\endlist"</span>);
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">Let!</span>(<span class="string">"\\upn"</span>, <span class="string">"\\textup"</span>);
+<a href=#79 id=79 data-nosnippet>79</a>
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="comment">// amsbook.cls:303-313: the running-head mark builder the class's
+<a href=#81 id=81 data-nosnippet>81</a>  // `\ps@headings` gives `\chaptermark`/`\sectionmark`/`\partmark`
+<a href=#82 id=82 data-nosnippet>82</a>  // (`\@secmark\markboth\chapterrunhead{}`), and the section number it reads.
+<a href=#83 id=83 data-nosnippet>83</a>  // Marks have no XML form (`\@mkboth` is `\@gobbletwo`), but a class may call
+<a href=#84 id=84 data-nosnippet>84</a>  // its marks: my-thesis.cls:153-160 `\pagestyle{headings}\chaptermark{}` (TeX
+<a href=#85 id=85 data-nosnippet>85</a>  // Live class census 2026-09-24).
+<a href=#86 id=86 data-nosnippet>86</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\long\def\@nilgobble#1\@nil{}
+<a href=#87 id=87 data-nosnippet>87</a>\let\@secnumber\@empty
+<a href=#88 id=88 data-nosnippet>88</a>\def\@secmark#1#2#3#4{%
+<a href=#89 id=89 data-nosnippet>89</a>  \begingroup \let\protect\@unexpandable@protect
+<a href=#90 id=90 data-nosnippet>90</a>  \edef\@tempa{\endgroup \toks@{\protect#2{#3}{\@secnumber}}}%
+<a href=#91 id=91 data-nosnippet>91</a>  \@tempa
+<a href=#92 id=92 data-nosnippet>92</a>  \toks@\@xp{\the\toks@{#4}}%
+<a href=#93 id=93 data-nosnippet>93</a>  \afterassignment\@nilgobble\@temptokena\@themark{}\@nil
+<a href=#94 id=94 data-nosnippet>94</a>  \edef\@tempa{\@nx\@mkboth{%
+<a href=#95 id=95 data-nosnippet>95</a>    \ifx\markright#1\the\@temptokena\else\the\toks@\fi}{\the\toks@}}%
+<a href=#96 id=96 data-nosnippet>96</a>  \@tempa}"</span>);
+<a href=#97 id=97 data-nosnippet>97</a>});
 </code></pre></div></section></main></body></html>
