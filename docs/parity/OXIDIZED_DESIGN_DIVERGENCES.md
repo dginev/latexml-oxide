@@ -24484,3 +24484,21 @@ with a height at `\footnotesize`, and going by it set a `\parbox` paragraph on o
 `math-phantom/{phantom_height_among_siblings, xy_phantom_object_circle_1210_5701}`); repinned to the phantom's height:
 `cluster_schema::empty_node_foreign_object_is_sized` (quantikz's `{\phantom{H}}`), `box_primitives::tikz_align_line_padding`
 (c2/c3, pdflatex's +1.5pt), `86_tikz` `ac-drive-components.xml` (circuitikz's `\vphantom{+}-` label).
+
+### 1156. sidecap's `SCfigure`/`SCtable` are the kernel's figure and table floats, not the `\figure` in force (REGTAILD)
+
+**Perl behavior**: sidecap.sty.ltxml maps `\SCfigure[][]` to `\figure[#2]` (and `SCtable`, the starred forms, alike).
+Perl's `{figure}`/`{table}` are locked (latex_constructs.pool.ltxml:3409-3437), so a class's `\def\figure` never takes
+effect and the call stays the kernel's float.
+**pdflatex**: sidecap.sty:177-182 `\SC@float[<vpos>]{figure}` (`\SC@dblfloat` for the starred) builds the float with
+`\@float{figure}[<placement>]` (:225, `\SC@zfloat`) and never calls `\figure`; the first optional is the caption's
+relative width, the second the placement.
+**Rust behavior**: the kernel's `{figure}`/`{table}` are not locked against a raw class, so `\figure[#2]` ran the
+class's own: solarphysics.cls:1714-1726 boxes the body (`\setbox\figtabbox\vbox\bgroup`), "<ltx:caption> isn't allowed
+in <ltx:block>" and an `ltx:float` with the figure inside a block. sidecap_sty.rs defines the four environments as the
+kernel's floats (`before_xfloat`, `after_float`, the `^^` float-up template), the second optional the placement.
+
+**Witnesses** 2006.04669 (solarphysics, 3 → 0 Errors), 1510.03282 (6 → 0), 1511.05217 (6 → 0), 2202.13838 (24 → 0,
+9 `ltx:float` → 8 `ltx:figure` + 1 `ltx:table`); 1302.0875, 2408.08435 unchanged. **Guard**
+`perfect_kernel_batchregtaild::sidecap_float_is_the_kernel_float` (repro
+`package-bindings/sidecap_float_over_a_class_figure`).

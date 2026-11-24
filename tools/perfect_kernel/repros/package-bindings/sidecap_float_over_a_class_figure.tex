@@ -1,0 +1,34 @@
+% witness: solarphysics.cls:1714-1726 redefines `\figure` (boxes the body; 2006.04669: `Error:malformed:ltx:toccaption`,
+%          `ltx:caption` in `ltx:block`); sidecap users 1510.03282, 1511.05217, 2202.13838
+% oracle:  pdflatex 0 errors, "Figure 1: A side caption.", "Table 1: A side table.", "Figure 2: A wide one.", "See 1 and 1"
+%          (sidecap.sty:177-182 `\SC@float`, :225 `\@float{figure}`: never the class's `\figure`)
+% engines: rust INT081I `ltx:float` for SCfigure and SCtable (the preamble's `\figure`), no error; perl `ltx:figure` (its `{figure}` is locked,
+%          latex_constructs.pool.ltxml:3409, so `\figure[#2]` stays the kernel's)
+% expect:  0 errors, 0 warnings; figure F1 placement h, table T1, figure F2, each with its caption
+% status:  RED (INT081I) -> GREEN (REGTAILD); guard perfect_kernel_batchregtaild::sidecap_float_is_the_kernel_float
+\documentclass{article}
+\usepackage{sidecap}
+\makeatletter
+\def\figure{\@ifnextchar[\f@g{\f@g[tbp]}}
+\def\f@g[#1]{\@float{figure}[#1]\setbox\@tempboxa\vbox\bgroup}
+\def\endfigure{\egroup\unvbox\@tempboxa\end@float}
+\def\table{\@ifnextchar[\t@b{\t@b[tbp]}}
+\def\t@b[#1]{\@float{table}[#1]\setbox\@tempboxa\vbox\bgroup}
+\def\endtable{\egroup\unvbox\@tempboxa\end@float}
+\makeatother
+\begin{document}
+Text.
+\begin{SCfigure}[0.5][h]
+\rule{2cm}{1cm}
+\caption{A side caption.}\label{f1}
+\end{SCfigure}
+\begin{SCtable}
+\begin{tabular}{c}x\end{tabular}
+\caption{A side table.}\label{t1}
+\end{SCtable}
+\begin{SCfigure*}
+\rule{2cm}{1cm}
+\caption{A wide one.}
+\end{SCfigure*}
+See \ref{f1} and \ref{t1}.
+\end{document}

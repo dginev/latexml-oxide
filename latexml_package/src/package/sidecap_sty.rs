@@ -1,4 +1,7 @@
-use crate::prelude::*;
+use crate::{
+  engine::latex_constructs::{after_float, before_xfloat},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -6,14 +9,40 @@ LoadDefinitions!({
   // First draft stub; ignore sidecaption-ness and just make a regular table/figure
   RequirePackage!("ifthen");
 
-  DefMacro!("\\SCtable[][]", "\\table[#2]");
-  DefMacro!("\\endSCtable", "\\endtable");
-  DefMacro!("\\csname SCtable*\\endcsname[][]", "\\csname table*\\endcsname[#2]");
-  DefMacro!("\\csname endSCtable*\\endcsname", "\\csname endtable*\\endcsname");
-  DefMacro!("\\SCfigure[][]", "\\figure[#2]");
-  DefMacro!("\\endSCfigure", "\\endfigure");
-  DefMacro!("\\csname SCfigure*\\endcsname[][]", "\\csname figure*\\endcsname[#2]");
-  DefMacro!("\\csname endSCfigure*\\endcsname", "\\csname endfigure*\\endcsname");
+  // sidecap.sty:177-182 `\SC@float[<vpos>]{figure}`/`\SC@dblfloat`: the figure or table float itself, built by
+  // `\@float{figure}[<placement>]` (:225-226, `\SC@zfloat`), never through `\figure`; the first optional is the
+  // caption's relative width, the second the placement. Perl's `\SCfigure[][]` is `\figure[#2]`, the class's own
+  // where a class redefined it: solarphysics.cls:1714 boxes the body, "<ltx:caption> isn't allowed in <ltx:block>"
+  // (2006.04669; 1510.03282, 1511.05217, 2202.13838). OXIDIZED_DESIGN_DIVERGENCES #1156; guard
+  // `perfect_kernel_batchregtaild::sidecap_float_is_the_kernel_float`.
+  DefEnvironment!("{SCfigure}[][]",
+    "^^<ltx:figure xml:id='#id' inlist='#inlist' ?#2(placement='#2')>#tags#body</ltx:figure>",
+    properties => { stored_map!("layout" => "vertical") },
+    tex_group => { TexGroup::Box },
+    before_digest => { before_xfloat("figure", false)?; },
+    after_digest => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
+  DefEnvironment!("{SCfigure*}[][]",
+    "^^<ltx:figure xml:id='#id' inlist='#inlist' ?#2(placement='#2')>#tags#body</ltx:figure>",
+    properties => { stored_map!("layout" => "vertical") },
+    tex_group => { TexGroup::Box },
+    before_digest => { before_xfloat("figure", true)?; },
+    after_digest => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
+  DefEnvironment!("{SCtable}[][]",
+    "^^<ltx:table xml:id='#id' inlist='#inlist' ?#2(placement='#2')>#tags#body</ltx:table>",
+    properties => { stored_map!("layout" => "vertical") },
+    tex_group => { TexGroup::Box },
+    before_digest => { before_xfloat("table", false)?; },
+    after_digest => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
+  DefEnvironment!("{SCtable*}[][]",
+    "^^<ltx:table xml:id='#id' inlist='#inlist' ?#2(placement='#2')>#tags#body</ltx:table>",
+    properties => { stored_map!("layout" => "vertical") },
+    tex_group => { TexGroup::Box },
+    before_digest => { before_xfloat("table", true)?; },
+    after_digest => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
 
   // \sidecaptionvpos{<float type>}{<t|c|b>} — real sidecap.sty:
   // `\newcommand*\sidecaptionvpos[2]` — configures the vertical alignment of a
