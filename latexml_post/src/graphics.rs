@@ -2296,6 +2296,8 @@ fn read_postscript_bounding_box(source: &str) -> Option<(f64, f64)> {
 impl Processor for Graphics {
   fn get_name(&self) -> &str { &self.name }
 
+  fn resource_prefix(&self) -> Option<&str> { self.names.prefix.as_deref() }
+
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
     doc.findnodes("//ltx:graphics[not(@imagesrc)]")
   }
