@@ -181,7 +181,7 @@ fn quiet_keeps_errors_and_the_verdict_on_stderr() {
     assert!(heads[0].starts_with(ERROR), "{}", r.stderr);
     assert_eq!(heads[1], verdict, "{}", r.stderr);
     assert!(
-      r.stderr.contains("\tat undefined_macro.tex; line 12"),
+      r.stderr.contains("\tat undefined_macro.tex; line 14"),
       "the Error keeps its location line:\n{}",
       r.stderr
     );
