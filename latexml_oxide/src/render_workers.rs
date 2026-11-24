@@ -20,8 +20,8 @@
 //! `latexml_oxide` binary renders a split of `MIN_PAGES_FOR_PARALLEL` pages
 //! or more on min(available cores, `AUTO_JOBS_MAX`) workers; every other
 //! embedder (the library, `cortex_worker`) stays serial. The pages are
-//! byte-identical either way, but for the generated image names of a worker after
-//! the first, `x<i>_N`, as it cannot see the others' (issue 995); a worker that fails to spawn, cannot set up, or
+//! byte-identical either way (a worker names the images of the pages before its range
+//! first, so its generated names are the serial render's, issue 995); a worker that fails to spawn, cannot set up, or
 //! dies without its status report sends the whole document back to the serial
 //! render at once, stopping the rest of the fleet (an Info; a Warning for a
 //! worker killed by a signal, a crash).
@@ -176,10 +176,10 @@ pub struct RenderManifest {
   /// holds none (MathML's `<mpadded>` widths read `NOMINAL_FONT_SIZE`).
   #[serde(default)]
   pub post_values:               latexml_core::PostStateValues,
-  /// The prefix of the image names this worker generates (Perl's `resource_prefix`); `None` is `x`. Each worker after
-  /// the first has its own, as it cannot see the names the others hand out (issue 995).
+  /// The pages before this worker's range, whose images it names without rendering them, so that it hands out the
+  /// generated names a serial render would (`Graphics::reserve_names`, issue 995).
   #[serde(default)]
-  pub resource_prefix:           Option<String>,
+  pub prior_pages:               Vec<PageJob>,
 }
 
 /// The parent-side result of a parallel render in which workers were actually
@@ -567,7 +567,7 @@ pub(crate) fn parallel_render(
     ranges.push(chunk.iter().filter_map(|p| p.destination.clone()).collect());
     let mut m = manifest.clone();
     m.pages = chunk.to_vec();
-    m.resource_prefix = (i > 0).then(|| format!("x{i}_"));
+    m.prior_pages = pages[..i * chunk_size].to_vec();
     let mpath = spill_dir.join(format!("render-manifest-{i}.json"));
     let write_result = serde_json::to_string(&m)
       .map_err(|e| e.to_string())
@@ -920,6 +920,31 @@ pub fn worker_main(manifest_path: &str) -> i32 {
 #[cfg(feature = "test-utils")]
 fn test_fault() -> Option<String> { std::env::var("LATEXML_RENDER_WORKER_TEST_ABORT").ok() }
 
+/// Name the images of the pages before this worker's range, in page order, as the serial render does before it
+/// reaches them (`Graphics::reserve_names`). A page with no `graphics` element is not parsed.
+fn reserve_prior_names(graphics: &mut latexml_post::graphics::Graphics, m: &RenderManifest) {
+  for job in &m.prior_pages {
+    let Ok(bytes) = std::fs::read(&job.path) else {
+      continue;
+    };
+    if !bytes.windows(b"graphics".len()).any(|w| w == b"graphics") {
+      continue;
+    }
+    drop(bytes);
+    let path = job.path.to_string_lossy();
+    // The worker that renders the page reports its parse failure.
+    if let Ok(mut page) =
+      latexml_post::document::PostDocument::new_from_file(&path, m.page_opts.clone().into())
+    {
+      page.destination.clone_from(&job.destination);
+      page
+        .destination_directory
+        .clone_from(&job.destination_directory);
+      graphics.reserve_names(&page);
+    }
+  }
+}
+
 /// Rebuild the pass-B processor set from the manifest — the EXACT construction
 /// the parent's `run_post_processing_inner` performs (same MathML
 /// primary/secondary parallel model, same XSLT wiring, same error paths) —
@@ -959,12 +984,10 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
     crossref.set_navigation_toc(navtoc);
   }
   let graphics = m.graphicimages.then(|| {
-    let graphics = latexml_post::graphics::Graphics::new(None, true)
+    let mut graphics = latexml_post::graphics::Graphics::new(None, true)
       .with_svg_threshold_kb(m.graphics_svg_threshold_kb);
-    match m.resource_prefix.as_deref() {
-      Some(prefix) => graphics.with_resource_prefix(prefix),
-      None => graphics,
-    }
+    reserve_prior_names(&mut graphics, &m);
+    graphics
   });
   let post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();

@@ -1584,7 +1584,7 @@ fn run_post_processing_inner(
       max_rss_kb: 0,
       post_values: latexml_core::PostStateValues::capture(),
       // Set per worker by `parallel_render`.
-      resource_prefix: None,
+      prior_pages: Vec::new(),
     };
     let t_pages = audit_start("render_pages");
     let outcome = crate::render_workers::parallel_render(

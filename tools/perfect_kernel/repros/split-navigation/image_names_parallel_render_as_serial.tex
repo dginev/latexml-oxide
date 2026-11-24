@@ -1,0 +1,87 @@
+% mechanism: latexml_oxide render_workers.rs reserve_prior_names + latexml_post graphics.rs Graphics::reserve_names:
+%   a page-render worker names the images of the pages before its range (writing nothing) before it renders its own,
+%   so a generated xN is the serial render's whatever the fleet size (render_workers.rs: serial and parallel pages
+%   are byte-identical; OXIDIZED_DESIGN_DIVERGENCES #1157).
+% witness: issue 995 review (round 1's x<i>_N prefix: LATEXML_RENDER_JOBS=1 gave x1..x3.png, =2 six files, =4 twelve)
+% layout:  src/index.tex (this file), img/{a,b,c}.png (distinct); cwd src/
+% oracle:  pdflatex 0 errors: 72 sections, one image each
+% engines: rust=GREEN perl=n/a (Perl renders pages serially)
+% expect:  --split --splitat=section --dest=<out>/index.html with LATEXML_RENDER_JOBS=1, 2 and 4: the same output,
+%          x1.png (b), x2.png (c), x3.png (a); S40 shows x1.png; 0 errors
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\section{S1} Text 1. \includegraphics{../img/b.png}
+\section{S2} Text 2. \includegraphics{../img/c.png}
+\section{S3} Text 3. \includegraphics{../img/a.png}
+\section{S4} Text 4. \includegraphics{../img/b.png}
+\section{S5} Text 5. \includegraphics{../img/c.png}
+\section{S6} Text 6. \includegraphics{../img/a.png}
+\section{S7} Text 7. \includegraphics{../img/b.png}
+\section{S8} Text 8. \includegraphics{../img/c.png}
+\section{S9} Text 9. \includegraphics{../img/a.png}
+\section{S10} Text 10. \includegraphics{../img/b.png}
+\section{S11} Text 11. \includegraphics{../img/c.png}
+\section{S12} Text 12. \includegraphics{../img/a.png}
+\section{S13} Text 13. \includegraphics{../img/b.png}
+\section{S14} Text 14. \includegraphics{../img/c.png}
+\section{S15} Text 15. \includegraphics{../img/a.png}
+\section{S16} Text 16. \includegraphics{../img/b.png}
+\section{S17} Text 17. \includegraphics{../img/c.png}
+\section{S18} Text 18. \includegraphics{../img/a.png}
+\section{S19} Text 19. \includegraphics{../img/b.png}
+\section{S20} Text 20. \includegraphics{../img/c.png}
+\section{S21} Text 21. \includegraphics{../img/a.png}
+\section{S22} Text 22. \includegraphics{../img/b.png}
+\section{S23} Text 23. \includegraphics{../img/c.png}
+\section{S24} Text 24. \includegraphics{../img/a.png}
+\section{S25} Text 25. \includegraphics{../img/b.png}
+\section{S26} Text 26. \includegraphics{../img/c.png}
+\section{S27} Text 27. \includegraphics{../img/a.png}
+\section{S28} Text 28. \includegraphics{../img/b.png}
+\section{S29} Text 29. \includegraphics{../img/c.png}
+\section{S30} Text 30. \includegraphics{../img/a.png}
+\section{S31} Text 31. \includegraphics{../img/b.png}
+\section{S32} Text 32. \includegraphics{../img/c.png}
+\section{S33} Text 33. \includegraphics{../img/a.png}
+\section{S34} Text 34. \includegraphics{../img/b.png}
+\section{S35} Text 35. \includegraphics{../img/c.png}
+\section{S36} Text 36. \includegraphics{../img/a.png}
+\section{S37} Text 37. \includegraphics{../img/b.png}
+\section{S38} Text 38. \includegraphics{../img/c.png}
+\section{S39} Text 39. \includegraphics{../img/a.png}
+\section{S40} Text 40. \includegraphics{../img/b.png}
+\section{S41} Text 41. \includegraphics{../img/c.png}
+\section{S42} Text 42. \includegraphics{../img/a.png}
+\section{S43} Text 43. \includegraphics{../img/b.png}
+\section{S44} Text 44. \includegraphics{../img/c.png}
+\section{S45} Text 45. \includegraphics{../img/a.png}
+\section{S46} Text 46. \includegraphics{../img/b.png}
+\section{S47} Text 47. \includegraphics{../img/c.png}
+\section{S48} Text 48. \includegraphics{../img/a.png}
+\section{S49} Text 49. \includegraphics{../img/b.png}
+\section{S50} Text 50. \includegraphics{../img/c.png}
+\section{S51} Text 51. \includegraphics{../img/a.png}
+\section{S52} Text 52. \includegraphics{../img/b.png}
+\section{S53} Text 53. \includegraphics{../img/c.png}
+\section{S54} Text 54. \includegraphics{../img/a.png}
+\section{S55} Text 55. \includegraphics{../img/b.png}
+\section{S56} Text 56. \includegraphics{../img/c.png}
+\section{S57} Text 57. \includegraphics{../img/a.png}
+\section{S58} Text 58. \includegraphics{../img/b.png}
+\section{S59} Text 59. \includegraphics{../img/c.png}
+\section{S60} Text 60. \includegraphics{../img/a.png}
+\section{S61} Text 61. \includegraphics{../img/b.png}
+\section{S62} Text 62. \includegraphics{../img/c.png}
+\section{S63} Text 63. \includegraphics{../img/a.png}
+\section{S64} Text 64. \includegraphics{../img/b.png}
+\section{S65} Text 65. \includegraphics{../img/c.png}
+\section{S66} Text 66. \includegraphics{../img/a.png}
+\section{S67} Text 67. \includegraphics{../img/b.png}
+\section{S68} Text 68. \includegraphics{../img/c.png}
+\section{S69} Text 69. \includegraphics{../img/a.png}
+\section{S70} Text 70. \includegraphics{../img/b.png}
+\section{S71} Text 71. \includegraphics{../img/c.png}
+\section{S72} Text 72. \includegraphics{../img/a.png}
+\end{document}

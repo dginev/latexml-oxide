@@ -21139,10 +21139,15 @@ through the links already there, stays inside the extraction directory (zip 9.7'
 inside (`tar`'s check). Other links, and entries whose path would leave the directory, are skipped with a
 `Warning:archive:*`, logged and counted when the conversion's report starts (`error::warn_at_session_start`).
 The CLI's own zip unpacking writes a link entry as a plain file. `graphics.rs`
-`copy_to_destination` follows Perl: the source-relative path, taken from the destination directory, is kept only when
+`copy_destination` follows Perl: the source-relative path, taken from the destination directory, is kept only when
 it stays in the site directory (`--sitedirectory`, else `--dest`'s directory; lexically, Perl's
 `pathname_is_contained`), else the image takes the next free `xN.<ext>` (issue 995: `--sitedirectory` was ignored,
-OD #1157). Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
+OD #1157). The copy is written at that lexical absolute path, as Perl's `pathname_copy` canonicalizes before it writes
+(`Util/Pathname.pm` L264-266): joined raw, the system resolved `out/../children` through a linked `out` and wrote
+outside both directories. Beyond Perl, which writes through a link, a path whose real directory (links resolved) lies
+in neither the real site directory nor the real destination directory takes an `xN` name too (`really_contained`:
+`out/sub` → `/elsewhere` in the site; Perl 0.8.8 writes `/elsewhere/d.png`). Guard
+`perfect_kernel_batchfix995::batchfix995_linked_destination_writes_nothing_outside_the_site_directory`. Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
 `read_pdfextension`) reads the operands of pdfTeX's `\pdf<keyword>`, with LuaTeX's additions (literal modes
 `text`/`raw`/`origin`, `lateliteral`, `obj … uncompressed`, `outline useobjnum`, `linkstate`; LuaTeX manual
 luatex-modifications.tex:592-907), through the same Rust readers and never through `\pdf<keyword>`, which
@@ -24184,25 +24189,34 @@ unary (the base's reading), every one a sign opening a `\left.`'s list.
 directory, it stays in the site directory (`pathname_is_contained`), else `generateResourcePathname` (`Post.pm`
 L192-200) names it `xN` from a counter in the document cache that every split page shares (L687-690);
 `Post::Document::new_internal` (L698-706) is Fatal when the destination lies outside `--sitedirectory`.
-**Rust.** Faithful now. The copy checked containment against `--dest` alone, so `--sitedirectory=..` still copied
-`../children/child_1/images/A.svg` to `x1.svg`; and the counter and the claimed names were locals of one page's
-`Graphics::process`, so under `--split` every page restarted at `x1` and a later page's image overwrote an earlier
-page's (issue 995: Chapter One showed child_2's figure), as did two converted sources sharing a stem (`a/plot.eps`,
-`b/plot.eps` → one `plot.png`). `Graphics` now holds a `ResourceNames` for the run: the counter, the names claimed
-and the copies made (keyed by destination directory, content and options, Perl's cached destination). The Fatal is
-Perl's, `Fatal:unexpected:<dir> The destination directory (<dir>) must be within the siteDirectory (<site>)`, raised
-before anything is written. Divergences: (1) the containment test refuses the base's own parent, which Perl's regex
-lets through (KNOWN_PERL_ERRORS #1329); (2) the parallel page render (64+ pages, `render_workers.rs`) gives each
-worker after the first Perl's `resource_prefix` `x<i>_`, as it cannot see the names the others hand out: those
-pages' generated names differ from a serial render's (`x1_1.svg`), their content does not. Not covered: in that
-parallel render, two converted sources sharing a stem (`a/plot.eps`, `b/plot.eps`) on pages of different workers
-still both write `plot.png` (a converted image keeps its stem, a Rust readability choice, so a figure every page
-shares stays one `fig.svg`); two documents converted into one directory restart at `x1` (Perl reads the previous
-run's names from `LaTeXML.cache` in the destination; we keep no such cache); and a page only sees the sources of the
-pages before it, so a converted `plot.png` can still take the name of an author's `plot.png` referenced on a later
-page when the destination is the source directory.
+**Rust.** Faithful except (1)-(2) below. The copy checked containment against `--dest` alone, so `--sitedirectory=..`
+still copied `../children/child_1/images/A.svg` to `x1.svg`; and the counter and the claimed names were locals of one
+page's `Graphics::process`, so under `--split` every page restarted at `x1` and a later page's image overwrote an
+earlier page's (issue 995: Chapter One showed child_2's figure), as did two converted sources sharing a stem
+(`a/plot.eps`, `b/plot.eps` → one `plot.png`). `Graphics` now holds a `ResourceNames` for the run: the counter, the
+names claimed, the copies made (keyed by destination directory, content and options, Perl's cached destination) and
+the conversions planned with their outcomes (keyed by destination directory, content, page and options: a later page
+points at the converted image, Perl's `cacheLookup`, L249-260; a failed one is tried again, as Perl's is). A page
+names its conversions first, then its copies, in node order. The parallel page render (64+ pages, `render_workers.rs`)
+names as the serial render does: each worker first names the images of the pages before its range without rendering
+them (`Graphics::reserve_names`; a page with no `graphics` element is not parsed), so its pages are byte-identical to a
+serial render's; a conversion an earlier worker's page planned is run again into the same file (its outcome is that
+worker's), and one that fails is reported by each worker that meets it. The Fatal is Perl's,
+`Fatal:unexpected:<dir> The destination directory (<dir>) must be within the siteDirectory (<site>)`, raised before
+anything is written; the process exits 1 (Perl's `die`: 255). Divergences: (1) the containment test refuses the
+base's own parent, which Perl's regex lets through (KNOWN_PERL_ERRORS #1329); (2) a copy is never written through a
+link that leaves the site and destination directories (OD #1081). Not covered: two documents converted into one
+directory restart at `x1` (Perl reads the previous run's names from `LaTeXML.cache` in the destination; we keep no
+such cache); and a page only sees the sources of the pages before it, so a converted `plot.png` can still take the
+name of an author's `plot.png` referenced on a later page when the destination is the source directory.
 **Guards**: `cluster_package_guards::perfect_kernel_batchfix995::{batchfix995_sitedirectory_keeps_the_relative_image_path,
 batchfix995_destination_outside_the_site_directory_is_fatal, batchfix995_split_pages_share_the_generated_names,
-batchfix995_split_pages_keep_converted_stems_apart, batchfix995_parallel_render_workers_generate_disjoint_names}`
+batchfix995_split_pages_keep_converted_stems_apart, batchfix995_split_pages_reuse_a_converted_image,
+batchfix995_parallel_render_names_images_as_the_serial_render,
+batchfix995_linked_destination_writes_nothing_outside_the_site_directory}`
 (`tools/perfect_kernel/repros/loader/image_subimport_sitedirectory.tex`,
-`tools/perfect_kernel/repros/split-navigation/image_names_shared_across_split_pages.tex`); `pathname::tests::is_contained_is_underneath_only`.
+`tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex`,
+`tools/perfect_kernel/repros/split-navigation/image_names_shared_across_split_pages.tex`,
+`tools/perfect_kernel/repros/split-navigation/converted_image_reused_across_split_pages.tex`,
+`tools/perfect_kernel/repros/split-navigation/image_names_parallel_render_as_serial.tex`);
+`pathname::tests::is_contained_is_underneath_only`.

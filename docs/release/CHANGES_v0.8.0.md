@@ -124,10 +124,10 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     default without it, so the output stays self-contained. A destination outside `--sitedirectory` is Perl's Fatal.
     Under `--split`, every page restarted the generated names at `x1`, so a later chapter's image replaced an earlier
     chapter's (the first chapter showed the second's figure); converted images sharing a file name on different pages
-    (`a/plot.eps`, `b/plot.eps`) likewise shared one `plot.png`. A run now hands out each name once. In the parallel
-    render of 64 pages or more, the second and later workers name their images `x<i>_N`; there, converted images
-    sharing a file name on pages of different workers still share one file. Two documents converted into one directory
-    still restart at `x1`. OXIDIZED_DESIGN_DIVERGENCES #1081, #1157, KNOWN_PERL_ERRORS #1329; guards
+    (`a/plot.eps`, `b/plot.eps`) likewise shared one `plot.png`. A run now hands out each name once, and a converted
+    (or turned, cropped) image is made once and shown by every page that uses it; the parallel render of 64 pages or
+    more names images exactly as the serial one. A copy is never written through a symbolic link out of the site
+    directory. Two documents converted into one directory still restart at `x1`. OXIDIZED_DESIGN_DIVERGENCES #1081, #1157, KNOWN_PERL_ERRORS #1329; guards
     `perfect_kernel_batchfix995::*`.
 
 ### 0.8.0-rc2
