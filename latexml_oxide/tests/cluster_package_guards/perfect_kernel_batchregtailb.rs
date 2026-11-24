@@ -1,0 +1,29 @@
+//! Red/green guards for batch REGTAILB (row R REGTAIL: papers an old build converted cleanly that later erred or
+//! went Fatal): a braced file name, amsgen's `\RIfM@`, breqn's load-time script catcodes, tipa's accented letter in a
+//! formula, a list label that is the author's own `\fnum@<counter>`.
+use latexml::util::test::{assert_element, convert_with};
+
+use super::perfect_kernel_batch46::{error_count, warning_count};
+
+/// loader/braced_file_name_group: a file name that is one braced group loses one brace level, as latex.ltx's
+/// `\@firstofone#1` reads it (`\set@curr@file`, `\@kernel@make@file@csname`), through every file-name reader:
+/// `\include` (with `\includeonly`), `\input`, `\IfFileExists`, `\InputIfFileExists` (2406.05605's dukedissertation
+/// `\include{{./Chapter1/introduction}}`, 2408.05715, 2309.07288). Red (INT081G): the included file silently dropped
+/// ("No file {./tfbone}.tex.") and `Error:missing_file:{./tfbtwo}`.
+#[test]
+fn braced_file_name_group_is_read_without_its_braces() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/braced_file_name_group_2406_05605.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!log.contains("No file"), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    "<p xml:id=\"p1.1\">One.\nTwo.\n yes Three.</p>",
+  );
+}

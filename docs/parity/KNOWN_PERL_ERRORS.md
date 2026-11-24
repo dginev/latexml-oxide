@@ -22616,3 +22616,24 @@ Perl (same host, `latexmlc --nocomments`): `<part xml:id="Pt2">` holds `Ch2`, "C
 `ltx:bibliography`; split, `bib.html`'s title is "Bibliography ‣ Part II B" and only Part II's pages link it. Fixed in
 Rust (OXIDIZED_DESIGN_DIVERGENCES #1147): the bindings' `\backmatter` closes the part and chapter. Guard
 `perfect_kernel_batchbackmatter::book_backmatter_closes_the_last_part`.
+
+## 1323. Perl keeps the braces of a braced file name
+
+latex_constructs.pool.ltxml:4233 `\lx@latex@input` (`Input(Expand($_[1]))`) and :4246-4252 `\include` (`ToString($path)`)
+take the argument as written, so `\include{{./x}}` asks for a file named `{./x}`. latex.ltx reads every file name
+through `\@firstofone#1` (:9654 `\set@curr@file`, :19745-19747 `\@kernel@make@file@csname`), which strips the braces
+of a leading group; Duke's dissertation template writes `\include{{./Chapter1/introduction}}`. Minimal trigger
+(`x.tex` beside it):
+
+```tex
+\documentclass{article}
+\begin{document}
+\include{{./x}} \input{{./x}}
+\end{document}
+```
+
+pdflatex reads `x.tex` twice; Perl 0.8.8 (same host) gives two `Error:missing_file:{./x}`; the Rust port gave one
+silent "No file {./x}.tex." (the chapter dropped) and one `missing_file`. Fixed in Rust:
+`gullet::expand_as_file_name`, read by `\input`, `\include`, `\includeonly`, `\IfFileExists`, `\InputIfFileExists` and
+catchfile. Witnesses 2406.05605, 2408.05715, 2309.07288; guard
+`perfect_kernel_batchregtailb::braced_file_name_group_is_read_without_its_braces`.

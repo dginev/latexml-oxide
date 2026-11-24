@@ -1,0 +1,25 @@
+% mechanism: a file name that is one braced group, `\include{{./x}}`: latex.ltx:19745-19747 `\@kernel@make@file@csname`
+%   (and :9654 `\set@curr@file`) read the name as `\@firstofone#1`, so a leading group loses one brace level; every
+%   file-name reader goes through it (`\input`'s `\@iinput`, `\include`, `\includeonly`, `\IfFileExists`,
+%   `\InputIfFileExists`). Ours kept the braces: "No file {./x}.tex." (the chapter silently dropped) and
+%   "Error:missing_file:{./x}"
+% witness: 2406.05605 (dukedissertation template, `\include{{./Chapter1/introduction}}`), 2408.05715, 2309.07288
+% oracle:  pdflatex 0 `!`; "One. Two. yes Three."
+% engines: rust INT081G 1 error (the include a silent "No file", the input missing_file); perl 2 errors (missing_file)
+% expect:  0 errors, 0 warnings; <p>One.</p> <p>Two. yes Three.</p>
+% status:  RED (INT081G) -> GREEN (REGTAILB)
+\documentclass{article}
+\begin{filecontents*}{tfbone.tex}
+One.
+\end{filecontents*}
+\begin{filecontents*}{tfbtwo.tex}
+Two.
+\end{filecontents*}
+\begin{filecontents*}{tfbthree.tex}
+Three.
+\end{filecontents*}
+\includeonly{{./tfbone}}
+\begin{document}
+\include{{./tfbone}}
+\input{{./tfbtwo}} \IfFileExists{{./tfbtwo}}{yes}{no} \InputIfFileExists{{./tfbthree}}{}{}
+\end{document}

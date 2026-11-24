@@ -3751,6 +3751,24 @@ pub fn expand_as_csname_text<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   do_expand(tokens)
 }
 
+/// A file name as latex.ltx reads one (`\set@curr@file`, `\@kernel@make@file@csname`, latex.ltx:9654, :19745-19747):
+/// `\@firstofone#1` strips the braces of a leading group (`\include{{./x}}` reads `./x.tex`; 2406.05605), then the
+/// name is expanded within `\csname` ([`expand_as_csname_text`]).
+pub fn expand_as_file_name<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
+  let mut tokens = tokens.into().unlist();
+  if tokens.first().is_some_and(|t| t.group_step() == 1) {
+    let mut depth = 0;
+    if let Some(close) = tokens.iter().position(|t| {
+      depth += t.group_step();
+      depth == 0
+    }) {
+      tokens.remove(close);
+      tokens.remove(0);
+    }
+  }
+  expand_as_csname_text(tokens)
+}
+
 fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   CSNAME_DEPTH.set(CSNAME_DEPTH.get() + 1);
   let _csname_scope = CsnameScope;

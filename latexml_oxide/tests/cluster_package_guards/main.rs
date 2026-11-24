@@ -785,6 +785,9 @@ mod perfect_kernel_batchregfixx;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;
+/// REGTAILB: a braced file name (`\include{{./x}}`), amsgen's `\RIfM@`, breqn's load-time `^`/`_` catcodes, tipa's
+/// accented letter in a formula, a list label that is the author's own `\fnum@<counter>`.
+mod perfect_kernel_batchregtailb;
 /// RG1: a `\par` in a text group opened mid-paragraph keeps the paragraph, as Perl's open-brace box.
 mod perfect_kernel_batchrg1;
 /// RHAIHOOK: a Rhai hook body takes Perl's arguments (`|stomach, whatsit|`, `properties: |stomach, x|`).

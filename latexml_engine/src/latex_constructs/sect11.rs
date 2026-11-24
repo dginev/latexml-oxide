@@ -1273,10 +1273,11 @@ pub(crate) fn load() -> Result<()> {
   // Input, now
   // The file name is expanded as `\set@curr@file` (latex.ltx) does it, inside a
   // `\csname` (`\ifincsname` true): underscore's first-aid `_` stays `_` there
-  // (arXiv 2606.31852 `\input{sections/logic_T}`).
+  // (arXiv 2606.31852 `\input{sections/logic_T}`), a leading group's braces stripped as `\@firstofone` strips them
+  // (`gullet::expand_as_file_name`; `\input{{./x}}`, 2406.05605).
   // It runs latex.ltx's file hooks around the file (`content::input_content_with_file_hooks`; 2110.08325).
   DefPrimitive!("\\ltx@input {}", sub[(arg)] {
-    let name = ::latexml_core::gullet::expand_as_csname_text(arg)?.to_string();
+    let name = ::latexml_core::gullet::expand_as_file_name(arg)?.to_string();
     input(&name, InputOptions { file_hooks: true, ..InputOptions::default() })?;
   });
   DefMacro!("\\input", "\\@ifnextchar\\bgroup\\@iinput\\@@input");
@@ -1315,7 +1316,9 @@ pub(crate) fn load() -> Result<()> {
     // `perfect_kernel_batch56::include_strips_a_tex_extension`.
     // The name's surrounding blanks are no part of it (`\include{ dir/x}` reads `dir/x.tex` in pdflatex; was a silent
     // "No file  dir/x.tex", the chapter dropped; KNOWN_PERL_ERRORS #1151).
-    let expanded = ::latexml_core::gullet::expand_as_csname_text(path)?.to_string();
+    // A braced name, `\include{{./Chapter1/introduction}}`, is read without its braces (`gullet::expand_as_file_name`;
+    // was "No file {./Chapter1/introduction}.tex." and the chapter dropped: 2406.05605, 2408.05715, 2309.07288).
+    let expanded = ::latexml_core::gullet::expand_as_file_name(path)?.to_string();
     let expanded = expanded.trim();
     let path_str = expanded.strip_suffix(".tex").unwrap_or(expanded).to_string();
     // Check if \includeonly restricts inclusion
@@ -1372,14 +1375,34 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@usehook{}", sub[(hook)] { Tokens::new(hook_use_tokens(&hook.to_string(), false)) });
   DefMacro!("\\lx@useonetimehook{}", sub[(hook)] { Tokens::new(hook_use_tokens(&hook.to_string(), true)) });
 
+  // The name text with the braces of a leading group removed, as `\@firstofone` removes them
+  // (`gullet::expand_as_file_name`, for a name read as text).
+  fn strip_leading_group(name: &str) -> Cow<'_, str> {
+    let Some(rest) = name.strip_prefix('{') else {
+      return name.into();
+    };
+    let mut depth = 1usize;
+    for (at, c) in rest.char_indices() {
+      match c {
+        '{' => depth += 1,
+        '}' => depth -= 1,
+        _ => {},
+      }
+      if depth == 0 {
+        return s!("{}{}", &rest[..at], &rest[at + 1..]).into();
+      }
+    }
+    name.into()
+  }
   // Perl L4303-4311: \includeonly — restrict which files \include loads
   DefPrimitive!("\\includeonly{}", sub[(paths)] {
     let paths_str = Expand!(paths).to_string();
     let mut map = rustc_hash::FxHashMap::default();
     for part in paths_str.split(',') {
-      // latex.ltx:9565-9575: each entry is `\@strip@tex@ext`ed too.
-      let trimmed = part.trim();
-      let trimmed = trimmed.strip_suffix(".tex").unwrap_or(trimmed).to_string();
+      // latex.ltx:9565-9575: each entry is `\@strip@tex@ext`ed too, its name read as `\set@curr@file` reads it, a
+      // leading group's braces stripped (`\includeonly{{./x}}`, as `\include{{./x}}`: 2406.05605).
+      let trimmed = strip_leading_group(part.trim());
+      let trimmed = trimmed.strip_suffix(".tex").unwrap_or(&trimmed).to_string();
       if !trimmed.is_empty() {
         map.insert(trimmed, "1".to_string());
       }

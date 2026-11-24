@@ -75,7 +75,7 @@ LoadDefinitions!({
   // `\set@curr@file` does, then file-substituted — so `\jobname.runs` names
   // the job's file (makron.sty:61, arXiv 1611.01359).
   DefPrimitive!("\\CatchFile@CheckFileExists{}", sub[(path)] {
-    let name = expand_as_csname_text(path)?.to_string();
+    let name = expand_as_file_name(path)?.to_string();
     let name = substitute_file_request(&name).unwrap_or(name);
     match find_file(&name, None) {
       Some(found) => {
