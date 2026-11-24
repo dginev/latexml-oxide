@@ -16,11 +16,12 @@
 //! a kept name (a copy's relative path, a converted image's stem) another source owns falls back to a generated `xN`,
 //! where Perl overwrote it (issue 995); and a stored name is written only when the request could have been given it
 //! ([`Checks`]). Each [`resolve`] is one `IMMEDIATE` transaction, so processes naming into one folder at once through
-//! the file never hand out one name to two sources; a store in memory in place of its file (it could not be opened, or
-//! the transaction failed and runs again there) skips the names whose files hold other bytes than the request writes
-//! ([`Checks::on_disk`]), so a rerun takes its own files again. One that could not copy the file's entries does not
-//! know a file's owner: a file of another document holding the same bytes is taken as the request's own (OD #1157
-//! (10)).
+//! the file never hand out one name to two sources. A name new to the store is never given over a file in the folder
+//! the request may not write ([`Checks::on_disk`]): with the store on its file (a new one too, made where a cache was
+//! deleted) any file it does not own; in memory in place of its file (it could not be opened, or the transaction
+//! failed and runs again there) a file holding other bytes than the request writes, so a rerun takes its own files
+//! again. One that could not copy the file's entries does not know a file's owner: a file of another document holding
+//! the same bytes is taken as the request's own (OD #1157 (10)).
 
 use std::collections::HashMap;
 
@@ -93,7 +94,7 @@ pub struct Resolved {
   pub allocated: bool,
 }
 
-/// Whether a file of the name exists in the destination directory holding other bytes than the request writes.
+/// Whether a file of the name exists in the destination directory that the request may not write ([`Checks::on_disk`]).
 pub type OnDisk<'a> = &'a dyn Fn(&Request, &ResourceName) -> bool;
 
 /// What the caller knows of the destination directory.
@@ -106,9 +107,9 @@ pub struct Checks<'a> {
   /// takes and the source holds the request's bytes: another source's kept path or stem a request may share. Only a
   /// relative path to a regular file is read.
   pub vouch:   &'a dyn Fn(&Request, &ResourceName, &str) -> bool,
-  /// Whether a file of the name exists in the destination directory holding other bytes than the request writes,
-  /// asked only in a transaction on a store in memory in place of its file (it may not know the names earlier runs
-  /// handed out); `None` otherwise.
+  /// Whether a file of the name exists in the destination directory that the request may not write, asked of a name
+  /// the store does not know: the store may not know every file earlier runs wrote (a deleted cache, an unusable one).
+  /// `None` for a store in memory from the start (`--nocache`), whose names restart and overwrite as Perl's do.
   pub on_disk: Option<OnDisk<'a>>,
   /// The cache file a Warning names.
   pub cache:   &'a str,
@@ -225,10 +226,10 @@ fn place(
   let Some(name) = proposed else {
     return Ok(None);
   };
-  // A store in memory does not know an earlier run's stems: a file of the name holding other bytes is another source's.
-  let stem = matches!(r.proposal, Proposal::Stem(_));
+  // A kept path or a stem the store does not know may be a file of another document's (issue 995 review: an unusable
+  // cache, and a second document's `figs/a.png` written over the first's).
   let taken = claimed(conn, &name, Some(&r.owner))?
-    || (stem && checks.on_disk.is_some_and(|on_disk| on_disk(r, &name)));
+    || checks.on_disk.is_some_and(|on_disk| on_disk(r, &name));
   if taken {
     return Ok(None);
   }
@@ -318,19 +319,35 @@ fn shareable_name(r: &Request, dest: &str) -> bool {
       .all(|part| !part.is_empty() && (part == ".." || !part.starts_with('.')))
 }
 
-/// The next `<prefix>N` no source owns (Perl `generateResourcePathname`, which skips none), and whose file, when the
-/// store fell back to memory, holds no other bytes.
+/// The next `<prefix>N` no source owns (Perl `generateResourcePathname`, which skips none) and whose file the request
+/// may write ([`Checks::on_disk`]). A counter that is no count, or has no next, is reported and counted again from 0.
 fn generate(
   conn: &Connection,
   checks: &Checks,
   r: &Request,
   counter: &str,
 ) -> rusqlite::Result<Resolved> {
-  let mut n: u64 = kv_get(conn, counter)?
-    .and_then(|n| n.parse().ok())
-    .unwrap_or(0);
+  // A planted `u64::MAX` wrapped to `x0` (issue 995 review, round 7).
+  let unusable = |value: &str| {
+    (checks.warn)(format!(
+      "The cache {} holds {value} for {counter}, no count with a next one; names are counted again from {}1",
+      checks.cache, checks.prefix
+    ))
+  };
+  let stored = kv_get(conn, counter)?;
+  let mut n: u64 = match stored.as_deref().map(str::parse) {
+    None => 0,
+    Some(Ok(n)) => n,
+    Some(Err(_)) => {
+      unusable(stored.as_deref().unwrap_or_default());
+      0
+    },
+  };
   let name = loop {
-    n += 1;
+    n = n.checked_add(1).unwrap_or_else(|| {
+      unusable(&n.to_string());
+      1
+    });
     let name = name_of(
       &with_ext(&format!("{}{n}", checks.prefix), &r.ext),
       r.svg_alt,
@@ -566,25 +583,66 @@ mod tests {
     ]]);
   }
 
-  /// A store that fell back to memory skips a generated name or a stem whose file holds other bytes, and takes one
-  /// holding the request's own: `x1.png` holds `a/plot.pdf`'s render, `plot.png` and `x2.png` other images.
+  /// A store that fell back to memory skips a generated name, a stem or a kept path whose file holds other bytes, and
+  /// takes one holding the request's own: `x1.png` holds `a/plot.pdf`'s render, `plot.png`, `x2.png` and
+  /// `figs/k.png` other images (issue 995 review, round 7: a kept path was not asked, and a second document's
+  /// `figs/a.png` was written over the first's).
   #[test]
   fn a_store_in_memory_skips_files_on_disk() {
     let on_disk = |r: &Request, name: &ResourceName| match name.dest.as_str() {
       "x1.png" => r.identity != "a",
-      "plot.png" | "x2.png" => true,
+      "plot.png" | "x2.png" | "figs/k.png" => true,
       _ => false,
     };
     let pages = [vec![
       convert("a/plot.pdf", "a", Some("plot"), false),
       copy("../b.png", "b", None, "png"),
+      copy("figs/k.png", "k", Some("figs/k.png"), "png"),
+      copy("figs/m.png", "m", Some("figs/m.png"), "png"),
     ]];
     let names = DocCache::new(true)
       .with_store(None, |store| {
         store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| true, Some(&on_disk)), &pages))
       })
       .unwrap();
-    assert_eq!(dests(&names), [vec!["x1.png", "x3.png"]]);
+    assert_eq!(dests(&names), [vec![
+      "x1.png",
+      "x3.png",
+      "x4.png",
+      "figs/m.png"
+    ]]);
+  }
+
+  /// A counter planted with no next count (`u64::MAX`, which wrapped to `x0`) or with none at all is reported and
+  /// counted again from `x1`, past the files the on-disk check finds (`x1.png` here).
+  #[test]
+  fn a_counter_with_no_next_counts_again() {
+    for planted in [u64::MAX.to_string(), "seven".to_string()] {
+      let warnings = std::cell::RefCell::new(Vec::new());
+      let warn = |w: String| warnings.borrow_mut().push(w);
+      let on_disk = |_: &Request, name: &ResourceName| name.dest == "x1.png";
+      let pages = [vec![copy("../b.png", "b", None, "png")]];
+      let names = DocCache::new(false)
+        .with_store(None, |store| {
+          store.immediate(|tx, _| {
+            kv_put(tx, &counter_key("x"), Some(&planted))?;
+            let checks = Checks {
+              warn: &warn,
+              ..checks(&|_, _, _| true, Some(&on_disk))
+            };
+            let names = resolve(tx, &checks, &pages)?;
+            Ok((names, kv_get(tx, &counter_key("x"))?))
+          })
+        })
+        .unwrap();
+      assert_eq!(
+        (dests(&names.0), names.1.as_deref(), warnings.into_inner()),
+        (vec![vec!["x2.png".to_string()]], Some("2"), vec![format!(
+          "The cache {CACHE_FILE} holds {planted} for _max__x_counter_, no count with a next one; names are \
+           counted again from x1"
+        )])
+      );
+    }
   }
 
   /// Two processes allocating into one cache file at once never hand out one name twice.

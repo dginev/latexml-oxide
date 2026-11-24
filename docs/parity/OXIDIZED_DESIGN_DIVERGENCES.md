@@ -24251,17 +24251,23 @@ cache is written only by Perl; a stored `_source_` is read only when its file na
 is a relative path to a regular file (a link followed to one), an absolute path, a device or a FIFO (whose read would
 not end) reported once the same way;
 (10) a store that cannot be used, at opening, in a read or in a transaction (the file locked past the 10 s timeout,
-read-only, corrupt), is reported (`I/O:cache`, once) and the rest of the run is in memory, from a copy of the file's
+read-only, corrupt, or not a regular file: a symbolic link is never followed, as SQLite would make or write the file it
+leads to, and SQLite opens the `-wal`/`-shm` side files `O_NOFOLLOW`), is reported (`I/O:cache`, once) and the rest of the run is in memory, from a copy of the file's
 entries (SQLite's backup in one step that waits on no lock; none when the file is locked against readers, or when the
 statement fails on the copy too, as on a broken file, the Warning then saying the earlier entries are lost), where Perl's tie is Fatal (Post.pm L1537-1546); a statement
 that fails in memory is an Error (`internal:cache`) and stores nothing; the transaction runs again there, its Warnings
-emitted once it returns, and, told it is in memory, skips a generated name or a stem whose file
+emitted once it returns, and, told it is in memory, skips a generated name, a stem or a copy's kept path whose file
 in the destination holds other bytes than the image writes (a copy: its source's; a render: the graphics cache's entry
 for it), so a rerun of an unchanged document takes its own files again, while an edited, cropped or turned image, or
 a render the graphics cache does not hold (`LATEXML_GRAPHICS_CACHE_OFF`), takes a new name. A store that could not
 copy the file's entries (it could not be opened or read) does not know whose a file is: a file of another document
 holding the same bytes is taken as the image's own, so an edit of that other document's image, run with a usable
-cache, shows on this page too (owners are kept only in the file); `--nocache` (Perl's
+cache, shows on this page too (owners are kept only in the file). A store on its file gives a name it has not
+stored over no file in the destination it does not own (a cache deleted, or emptied to 0 bytes, a new store, beside
+other documents' images; the files of a `--nocache` run; an author's, converting in place), but a copy's kept path
+that is its own source (in place), where Perl's `generateResourcePathname` overwrites what the folder holds; a counter
+with no next count (`u64::MAX`, which wrapped to `x0`, or no number) is reported (`unexpected:cache`) and counted again
+from `x1`, past those files. `--nocache` (Perl's
 option, in memory from the start) skips nothing: its names restart at `x1` each run and overwrite, as Perl's do; (11) Perl's `--whatsout=math` unlinks
 `LaTeXML.cache` relative to the working directory after packing (`Util/Pack.pm` L343), which misses a cache in another
 destination directory; not ported: a math-only run keeps its cache, as every run does. The run closes the cache when post ends (checkpointed, no
@@ -24279,7 +24285,9 @@ batchfix995_linked_destination_writes_nothing_outside_the_site_directory, batchf
 batchfix995_a_corrupt_cache_entry_decides_no_file, batchfix995_a_read_only_cache_overwrites_no_image,
 batchfix995_a_locked_cache_waits_less_than_the_conversion, batchfix995_a_planted_source_is_never_read_for_ever,
 batchfix995_a_rerun_beside_an_unusable_cache_is_idempotent, batchfix995_nocache_writes_no_cache_and_names_the_split_book,
-batchfix995_another_documents_file_is_never_shared, batchfix995_a_broken_cache_file_is_a_warning}`
+batchfix995_another_documents_file_is_never_shared, batchfix995_a_broken_cache_file_is_a_warning,
+batchfix995_a_linked_cache_is_never_followed, batchfix995_an_unusable_cache_overwrites_no_kept_path,
+batchfix995_a_deleted_cache_overwrites_no_other_documents_image}`
 (`tools/perfect_kernel/repros/loader/image_subimport_sitedirectory.tex`,
 `tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex`,
 `tools/perfect_kernel/repros/loader/image_names_two_documents_one_folder.tex`,
@@ -24287,16 +24295,19 @@ batchfix995_another_documents_file_is_never_shared, batchfix995_a_broken_cache_f
 `tools/perfect_kernel/repros/loader/image_names_corrupt_cache_entry.tex`,
 `tools/perfect_kernel/repros/loader/image_names_cache_unusable.tex`,
 `tools/perfect_kernel/repros/loader/image_same_bytes_two_documents.tex`,
+`tools/perfect_kernel/repros/loader/image_kept_path_cache_unusable.tex`,
+`tools/perfect_kernel/repros/loader/image_names_cache_deleted.tex`,
 `tools/perfect_kernel/repros/split-navigation/image_names_shared_across_split_pages.tex`,
 `tools/perfect_kernel/repros/split-navigation/converted_image_reused_across_split_pages.tex`,
 `tools/perfect_kernel/repros/split-navigation/image_names_parallel_render_as_serial.tex`,
 `tools/perfect_kernel/repros/split-navigation/image_names_title_images_in_navigation.tex`);
 `resource_cache::tests::{names_follow_the_page_order_and_never_clash, an_edited_source_keeps_its_names,
 a_shared_file_is_left_when_its_owner_changes, another_documents_file_is_never_shared, a_planted_name_is_ignored,
-a_store_in_memory_skips_files_on_disk, concurrent_tables_on_one_file_never_share_a_name}`,
+a_store_in_memory_skips_files_on_disk, a_counter_with_no_next_counts_again,
+concurrent_tables_on_one_file_never_share_a_name}`,
 `sqlite_store::tests::{another_version_is_left_alone, simultaneous_opens_of_a_new_file_all_use_it,
 a_failed_transaction_runs_again_told_it_is_in_memory, a_failure_in_memory_gives_nothing,
-a_file_locked_against_readers_falls_back_without_its_entries}`,
+a_file_locked_against_readers_falls_back_without_its_entries, a_link_is_never_followed}`,
 `graphics::tests::process_coalesces_only_matching_conversion_options` (two widths, one file), `pack::tests` (the side files),
 `pathname::tests::is_contained_is_underneath_only`.
 

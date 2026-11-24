@@ -1492,23 +1492,42 @@ impl Graphics {
     let vouch = |r: &Request, name: &ResourceName, source: &str| {
       Self::vouch(r, name, source, dirs, &cache_file, &warn, &digests)
     };
-    // A file of the name holding what `r` writes is the one an earlier run wrote for it: a rerun takes it again.
-    let on_disk = |r: &Request, name: &ResourceName| {
+    // The file a name writes is at its lexical path, as a copy is written (`copy_target`).
+    let file = |part: &str| PathBuf::from(Self::copy_target(&dirs.dest_dir, part));
+    let present = |part: &str| std::fs::symlink_metadata(file(part)).is_ok();
+    // A store on its file knows the files it named: any other in the folder is not `r`'s (a document's whose cache was
+    // deleted; an author's, converting in place), but a copy's kept path that is its source (in place).
+    let not_owned = |r: &Request, name: &ResourceName| {
       std::iter::once(&name.dest).chain(&name.alt).any(|part| {
-        let path = Path::new(&dirs.dest_dir).join(part);
-        path.exists() && !Self::holds_output(r, &path, part == &name.dest, dirs, policy, &digests)
+        present(part) && !(r.copy && part == &name.dest && Self::is_source(r, part, dirs))
+      })
+    };
+    // A store in memory in place of its file does not: a file of the name holding what `r` writes is the one an
+    // earlier run wrote for it, which a rerun takes again.
+    let holds_other = |r: &Request, name: &ResourceName| {
+      std::iter::once(&name.dest).chain(&name.alt).any(|part| {
+        present(part)
+          && !Self::holds_output(r, &file(part), part == &name.dest, dirs, policy, &digests)
       })
     };
     let names = cache.with_store(dirs.cache_dir.as_deref(), |store| {
+      let on_file = store.wants_file();
       // Whether the store runs in memory is known only inside the transaction: a file that fails in it is
       // replaced by memory, and the names are planned again there.
       store.immediate(|tx, fell_back| {
         warnings.borrow_mut().clear();
+        let on_disk: Option<crate::resource_cache::OnDisk> = if fell_back {
+          Some(&holds_other)
+        } else if on_file {
+          Some(&not_owned)
+        } else {
+          None
+        };
         let checks = crate::resource_cache::Checks {
           prefix,
           usable: &usable,
           vouch: &vouch,
-          on_disk: fell_back.then_some(&on_disk as crate::resource_cache::OnDisk),
+          on_disk,
           cache: &cache_file,
           warn: &warn,
         };
@@ -1520,6 +1539,19 @@ impl Graphics {
     }
     // A transaction that failed in memory too (reported, an Error) names nothing: each page asks again as it renders.
     names.unwrap_or_default()
+  }
+
+  /// Whether `part` in the destination directory is `r`'s source itself (a copy's kept path, converting in place).
+  fn is_source(r: &Request, part: &str, dirs: &PageDirs) -> bool {
+    let (target, source) = (
+      Self::copy_target(&dirs.dest_dir, part),
+      Self::copy_target(&dirs.dest_dir, &r.source),
+    );
+    target == source
+      || matches!(
+        (Path::new(&target).canonicalize(), Path::new(&source).canonicalize()),
+        (Ok(target), Ok(source)) if target == source
+      )
   }
 
   /// Whether the file at `path` holds what `r` writes there: a copy its source's bytes; a render (`raster`, else the

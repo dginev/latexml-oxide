@@ -10,7 +10,8 @@
 % expect:  a.html x1.svg (child_1 A); b.html x2.svg, x3.svg (child_2 A, B), one Warning:I/O:cache, under 40 s;
 %          a.html still child_1's A; 0 errors. A garbage cache file and the split book of
 %          split-navigation/image_names_shared_across_split_pages converted twice: the same files and names
-%          (round 5: x5.svg.. beside x1.svg.. on the rerun)
+%          (round 5: x5.svg.. beside x1.svg.. on the rerun). The cache a symbolic link to parent/../outside.db:
+%          never followed, the same names and one Warning, no outside.db made (round 7: made, no Warning)
 % status:  GREEN
 \documentclass{book}
 \usepackage{import}

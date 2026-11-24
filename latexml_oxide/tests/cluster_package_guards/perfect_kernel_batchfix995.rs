@@ -30,6 +30,10 @@ const CORRUPT: &str =
   include_str!("../../../tools/perfect_kernel/repros/loader/image_names_corrupt_cache_entry.tex");
 const SAME_BYTES: &str =
   include_str!("../../../tools/perfect_kernel/repros/loader/image_same_bytes_two_documents.tex");
+const KEPT_UNUSABLE: &str =
+  include_str!("../../../tools/perfect_kernel/repros/loader/image_kept_path_cache_unusable.tex");
+const DELETED: &str =
+  include_str!("../../../tools/perfect_kernel/repros/loader/image_names_cache_deleted.tex");
 #[cfg(unix)]
 const LINKED: &str = include_str!(
   "../../../tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex"
@@ -1064,7 +1068,7 @@ fn batchfix995_a_locked_cache_waits_less_than_the_conversion() {
 
 /// A cache file of our schema version whose table is gone (a broken file SQLite's backup copies as it is): the run
 /// goes on in memory with one cache Warning and no Error (round 7: the copy failed too, `Error:internal:cache`), and
-/// `b.html` still gets names of its own. `SqliteStore::fall_back`.
+/// `b.html` still gets names of its own. `SqliteStore::attempt`, `SqliteStore::copy`.
 #[test]
 fn batchfix995_a_broken_cache_file_is_a_warning() {
   unusable_cache(|cache| {
@@ -1074,6 +1078,157 @@ fn batchfix995_a_broken_cache_file_is_a_warning() {
       .unwrap();
     Some(Box::new(|| {}))
   });
+}
+
+/// `LaTeXML-oxide.cache` a symbolic link to a file out of the folder (not there yet): never followed, one Warning, the
+/// run in memory, and nothing made out of the folder (round 7: SQLite made `outside.db` through the link, no
+/// Warning). `SqliteStore::open_file`.
+#[cfg(unix)]
+#[test]
+fn batchfix995_a_linked_cache_is_never_followed() {
+  unusable_cache(|cache| {
+    let outside = cache.parent().unwrap().parent().unwrap().join("outside.db");
+    std::fs::remove_file(cache).unwrap();
+    std::os::unix::fs::symlink(&outside, cache).unwrap();
+    Some(Box::new(move || {
+      assert!(!outside.exists(), "a database made through the link");
+    }))
+  });
+}
+
+/// Run `doc.tex` in `dir` into `dest`; the ANSI-stripped stderr.
+fn run_doc(dir: &Path, doc: &str, dest: &str) -> String {
+  let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+    .args([
+      "--nocomments",
+      "--timeout=110",
+      &format!("--dest={dest}"),
+      &format!("{doc}.tex"),
+    ])
+    .current_dir(dir)
+    .output()
+    .expect("spawn latexml_oxide");
+  String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "")
+}
+
+/// One `Warning:I/O:cache` and no Error.
+fn one_cache_warning(log: &str) {
+  let warnings: Vec<&str> = log.lines().filter(|l| l.starts_with("Warning:")).collect();
+  assert_eq!((error_count(log), warnings.len()), (0, 1), "{log}");
+  assert!(warnings[0].starts_with("Warning:I/O:cache"), "{log}");
+}
+
+/// Two documents into one folder, each keeping `figs/a.png` (other bytes), the cache unusable (a directory of its
+/// name) before the second: it takes `x1.png` rather than writing over the first's `figs/a.png` (round 7: the on-disk
+/// check asked of stems and generated names only, and `p1.html` showed `p2`'s picture); the first, run again beside
+/// the unusable cache, takes its own file again; converting in place, a kept path that is the source itself stays,
+/// with no copy. `resource_cache::place`, `Graphics::resolve_names`. Repro loader/image_kept_path_cache_unusable.
+#[test]
+fn batchfix995_an_unusable_cache_overwrites_no_kept_path() {
+  let root = tempfile::tempdir().unwrap();
+  for (doc, w) in [("p1", 3), ("p2", 5)] {
+    let dir = root.path().join(doc);
+    std::fs::create_dir_all(dir.join("figs")).unwrap();
+    std::fs::write(dir.join(format!("{doc}.tex")), KEPT_UNUSABLE).unwrap();
+    std::fs::write(dir.join("figs/a.png"), png(w, 2)).unwrap();
+  }
+  let (p1, p2, out) = (
+    root.path().join("p1"),
+    root.path().join("p2"),
+    root.path().join("out"),
+  );
+  let unusable = |dir: &Path| {
+    let cache = dir.join("LaTeXML-oxide.cache");
+    let _ = std::fs::remove_file(&cache);
+    std::fs::create_dir_all(&cache).unwrap();
+  };
+  let shows = |page: &Path, url: &str, w: u32| {
+    assert_eq!(images_of(page), vec![(
+      url.to_string(),
+      format!("png {} bytes", png(w, 2).len())
+    )]);
+  };
+  let log = run_doc(&p1, "p1", "../out/p1.html");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  unusable(&out);
+  one_cache_warning(&run_doc(&p2, "p2", "../out/p2.html"));
+  shows(&out.join("p2.html"), "x1.png", 5);
+  shows(&out.join("p1.html"), "figs/a.png", 3);
+  one_cache_warning(&run_doc(&p1, "p1", "../out/p1.html"));
+  shows(&out.join("p1.html"), "figs/a.png", 3);
+  assert_eq!(
+    (
+      images_in(&out),
+      std::fs::read(out.join("figs/a.png")).unwrap()
+    ),
+    (vec!["x1.png".to_string()], png(3, 2))
+  );
+  unusable(&p2);
+  one_cache_warning(&run_doc(&p2, "p2", "p2.html"));
+  shows(&p2.join("p2.html"), "figs/a.png", 5);
+  assert_eq!(images_in(&p2), Vec::<String>::new());
+}
+
+/// Three documents into one folder (`x1.png`..`x3.png`; `d1`'s and `d2`'s images the same bytes), then the cache
+/// deleted, or emptied to 0 bytes and a fourth document keeping its path run first: `d2` takes `x4.png`, no name whose
+/// file the new store does not own, not even `x1.png` holding its bytes (round 7: `x1.png`, and once `d2`'s image was
+/// edited and `d2` run again, `d1.html` showed it). An empty file is a new store, no Warning: SQLite leaves one between
+/// opening a new file and its schema. `Graphics::resolve_names` (`not_owned`). Repro loader/image_names_cache_deleted.
+#[test]
+fn batchfix995_a_deleted_cache_overwrites_no_other_documents_image() {
+  for emptied in [false, true] {
+    let root = tempfile::tempdir().unwrap();
+    let p = root.path().join("p");
+    for dir in ["p/figs", "c1", "c2", "c3"] {
+      std::fs::create_dir_all(root.path().join(dir)).unwrap();
+    }
+    let line = "D1 \\includegraphics{../c1/a.png}";
+    for (doc, image) in [
+      ("d1", "D1 \\includegraphics{../c1/a.png}"),
+      ("d2", "D2 \\includegraphics{../c2/b.png}"),
+      ("d3", "D3 \\includegraphics{../c3/c.png}"),
+      ("k", "K \\includegraphics{figs/k.png}"),
+    ] {
+      std::fs::write(p.join(format!("{doc}.tex")), DELETED.replace(line, image)).unwrap();
+    }
+    std::fs::write(root.path().join("c1/a.png"), png(3, 2)).unwrap();
+    std::fs::write(root.path().join("c2/b.png"), png(3, 2)).unwrap();
+    std::fs::write(root.path().join("c3/c.png"), png(4, 2)).unwrap();
+    std::fs::write(p.join("figs/k.png"), png(6, 2)).unwrap();
+    let out = root.path().join("out");
+    let run = |doc: &str| {
+      let log = run_doc(&p, doc, &format!("../out/{doc}.html"));
+      assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    };
+    let shown = |doc: &str| images_of(&out.join(format!("{doc}.html")));
+    let image =
+      |url: &str, w: u32| vec![(url.to_string(), format!("png {} bytes", png(w, 2).len()))];
+    for doc in ["d1", "d2", "d3"] {
+      run(doc);
+    }
+    assert_eq!(
+      (shown("d1"), shown("d2"), shown("d3")),
+      (image("x1.png", 3), image("x2.png", 3), image("x3.png", 4))
+    );
+    let cache = out.join("LaTeXML-oxide.cache");
+    if emptied {
+      std::fs::write(&cache, b"").unwrap();
+      run("k");
+      assert_eq!(shown("k"), image("figs/k.png", 6));
+    } else {
+      std::fs::remove_file(&cache).unwrap();
+    }
+    run("d2");
+    assert_eq!(shown("d2"), image("x4.png", 3), "emptied: {emptied}");
+    std::fs::write(root.path().join("c2/b.png"), png(7, 2)).unwrap();
+    run("d2");
+    assert_eq!(
+      (shown("d1"), shown("d2"), shown("d3")),
+      (image("x1.png", 3), image("x4.png", 7), image("x3.png", 4)),
+      "emptied: {emptied}"
+    );
+    assert_eq!(std::fs::read(out.join("x2.png")).unwrap(), png(3, 2));
+  }
 }
 
 /// A planted `_source_` that is a device, or a path out of the destination: the conversion ends promptly (round 4

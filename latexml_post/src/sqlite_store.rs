@@ -51,8 +51,16 @@ impl SqliteStore {
     SqliteStore { conn, file, schema, fell_back }
   }
 
-  /// [`Self::open_once`], again after a pause while another process holds the file, up to [`BUSY_TIMEOUT`].
+  /// [`Self::open_once`], again after a pause while another process holds the file, up to [`BUSY_TIMEOUT`]. A link is
+  /// never followed (SQLite would make or write the file it leads to, out of the folder), nor anything else not a
+  /// regular file opened (a FIFO, a device, a directory). The side files cannot be redirected: SQLite names them after
+  /// the file and opens them with `O_NOFOLLOW` (`unixOpen`), so a planted `-wal` or `-shm` link fails the open.
   fn open_file(file: &Path, schema: &str, version: i32) -> Result<Connection, String> {
+    match std::fs::symlink_metadata(file).map(|meta| meta.file_type()) {
+      Ok(kind) if kind.is_symlink() => return Err("a symbolic link, never followed".to_string()),
+      Ok(kind) if !kind.is_file() => return Err("not a regular file".to_string()),
+      _ => {},
+    }
     let start = std::time::Instant::now();
     // A pause that grows, and differs between processes, so they do not meet again.
     let mut pause = std::time::Duration::from_micros(500 + u64::from(std::process::id() % 1000));
@@ -134,10 +142,13 @@ impl SqliteStore {
   /// Whether a file was asked for and could not be used, so the store may not know what earlier runs stored there.
   pub fn fell_back(&self) -> bool { self.fell_back }
 
+  /// Whether a file was asked for: the store runs on it, or in memory in its place.
+  pub fn wants_file(&self) -> bool { self.file.is_some() || self.fell_back }
+
   /// Run `f` in one `IMMEDIATE` transaction, committed when it succeeds. A file that fails is reported (Warning) and
-  /// replaced by memory (`fall_back`), where `f` runs again: `f` is told whether the store runs in memory in place of
-  /// its file ([`Self::fell_back`]), and defers its own side effects (a Warning) until the call returns. A transaction
-  /// that fails in a fresh store in memory is reported (Error) and gives `None`.
+  /// replaced by memory (`attempt`, from `copy`), where `f` runs again: `f` is told whether the store runs in memory
+  /// in place of its file ([`Self::fell_back`]), and defers its own side effects (a Warning) until the call returns. A
+  /// transaction that fails in a fresh store in memory is reported (Error) and gives `None`.
   pub fn immediate<T>(
     &mut self,
     mut f: impl FnMut(&Transaction, bool) -> rusqlite::Result<T>,
@@ -419,6 +430,36 @@ mod tests {
       (Some(1), Some(vec![1]), (1, 0), true)
     );
     assert!(took < std::time::Duration::from_secs(16), "{took:?}");
+  }
+
+  /// A cache file that is a link is never followed (issue 995 review, round 7: SQLite made the database the link led
+  /// to, out of the folder, with no Warning), nor a directory opened: the store runs in memory. A planted `-wal` link
+  /// beside a new file is not followed either (SQLite opens the side files `O_NOFOLLOW`): nothing is made out of the
+  /// folder, and the store keeps its entries.
+  #[cfg(unix)]
+  #[test]
+  fn a_link_is_never_followed() {
+    let dir = tempfile::tempdir().unwrap();
+    let outside = dir.path().join("outside");
+    std::fs::create_dir(&outside).unwrap();
+    let file = dir.path().join("c.db");
+    std::os::unix::fs::symlink(outside.join("o.db"), &file).unwrap();
+    let store = SqliteStore::open(Some(&file), SCHEMA, 1);
+    assert_eq!((store.file(), store.fell_back()), (None, true));
+    let folder = dir.path().join("d.db");
+    std::fs::create_dir(&folder).unwrap();
+    let store = SqliteStore::open(Some(&folder), SCHEMA, 1);
+    assert_eq!((store.file(), store.fell_back()), (None, true));
+    let file = dir.path().join("e.db");
+    std::os::unix::fs::symlink(outside.join("w"), dir.path().join("e.db-wal")).unwrap();
+    let mut store = SqliteStore::open(Some(&file), SCHEMA, 1);
+    store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", []));
+    assert_eq!(
+      store.read(|conn| conn.query_row("SELECT count(*) FROM t", [], |row| row.get::<_, i64>(0))),
+      Some(1)
+    );
+    drop(store);
+    assert_eq!(std::fs::read_dir(&outside).unwrap().count(), 0);
   }
 
   /// A transaction that fails on the file (here a read-only file) runs again in memory, and is told so: a caller
