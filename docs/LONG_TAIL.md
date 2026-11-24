@@ -17,9 +17,11 @@ Rules:
 4. **Closing:** a closed task moves, in conclusion form, to the month's `archive/SYNC_SESSIONS_YYYY-MM.md`.
 5. **Parked work:** branch `pk/REGTAILD` (amsthm's `[\relax]` parent counter, sidecap's `SCfigure` running the
    class's `\figure`, mathtools' robust paired delimiters; REGTAIL papers 2208.14960, 2309.00854, 2409.18804,
-   1510.03282, 1511.05217, 2006.04669, 2202.13838, 2408.12455) is finished and unmerged, for v0.8.2.
+   1510.03282, 1511.05217, 2006.04669, 2202.13838, 2408.12455) is finished and unmerged, for v0.8.2: origin
+   `pk/REGTAILD` at `b0f34364ecb` (on `int/towards_v0_8_1` `35a85b96669`), gates green (8786 tests), A/B 502 papers:
+   E 7031 → 5071, 11 changed, 0 worse; OD #1156 and KPE #1328 reserved; guards `perfect_kernel_batchregtaild::*`.
 
-**The long-tail list** (206 items on 2026-11-23: weight 312, 12 without a weight — counted as the `  - ID`
+**The long-tail list** (207 items on 2026-11-23: weight 313, 12 without a weight — counted as the `  - ID`
 bullets below; moved from row R by DG's ruling of 2026-11-23, in row R's order):
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -525,3 +527,7 @@ bullets below; moved from row R by DG's ruling of 2026-11-23, in row R's order):
     `$\colorbox{red}{}=b$` loses TeX's 6pt red box and its `tex=` reads `\hbox{\pagecolor{red}}`; `$\fbox{}=b$` is 0 wide
     where TeX's is 2\fboxsep + 2\fboxrule ≈ 6.8pt; 3
   - CELLLONESIGN — an amsmath cell that is only a sign (`&+ \\`) takes no grammar parse and stays a bare `<mo>`; 1
+  - FIGLOCK (after REGTAILD, synthetic) — our kernel `{figure}`/`{table}` are not locked as Perl's are
+    (latex_constructs.pool.ltxml:3409), so a binding macro that expands to `\figure[…]` runs a raw class's own
+    `\figure` (`\def\figure{\@float{figure}\setbox0\vbox\bgroup}`); only sidecap did (fixed on `pk/REGTAILD`). Options:
+    lock `\figure`/`\table` as Perl does (A/B over raw classes) or audit the bindings; 1
