@@ -94,6 +94,11 @@ required-features = ["cortex"]
 name = "cortex_worker_exit_reports"
 required-features = ["cortex"]
 
+# cortex_worker never loads a runtime `.rhai` binding shipped in a source; the CLI still does.
+[[test]]
+name = "cortex_worker_untrusted_bindings"
+required-features = ["cortex"]
+
 [features]
 default = ["runtime-bindings"]
 # Enable building the cortex_worker binary (ZMQ-based CorTeX dispatcher client).

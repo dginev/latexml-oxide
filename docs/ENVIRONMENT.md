@@ -83,7 +83,7 @@ Without an address-space limit neither is needed. The fleet sets both for its ch
 |---|---|---|---|
 | `LATEXML_TELEMETRY_OUT` | file | none | Append one JSON line of timings and counts per conversion; the same as `--telemetry-out`. |
 | `LATEXML_SOURCE_MAP` | presence | off | The same as `--source-map`: `data-sourcepos` attributes in the output. |
-| `LATEXML_DISABLE_SHELL_ESCAPE` | presence | allowed | Rhai bindings may not run external commands (builds with runtime bindings). |
+| `LATEXML_DISABLE_SHELL_ESCAPE` | presence | allowed | Rhai bindings may not run external commands (builds with runtime bindings). `cortex_worker` sets it, and loads no runtime binding at all. |
 | `SOURCE_DATE_EPOCH` | Unix seconds | the clock | Fixes `\today`, `\time` and the log banner's time (UTC), and the member times of `--format=zip`/EPUB output, for reproducible builds. |
 | `NO_COLOR` | presence | colour on a terminal | No colour codes on stderr. |
 | `TMPDIR` (`TMP`/`TEMP` on Windows) | directory | the system default | Scratch files and temporary caches. |
@@ -132,7 +132,9 @@ document their variables in their headers.
 | `MALLOC_CONF`, `_RJEM_MALLOC_CONF` | `background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0` | Prompt return of freed memory in jemalloc builds. |
 | `LATEXML_RSS_CAP_BYTES` | `--max-rss-mb`, else `--child-mem-limit-mb` − 256 MiB | The per-child memory fuse. |
 
-These replace any value of the same name in the worker's own environment. The Docker entrypoint reads `WORKERS` and
+These replace any value of the same name in the worker's own environment. The worker also sets
+`LATEXML_DISABLE_SHELL_ESCAPE=1` in its own environment at start, so it and every child refuse a binding's external
+command; it loads no runtime `.rhai` binding in any build. The Docker entrypoint reads `WORKERS` and
 `PROFILE` (`ar5iv` or `generic`).
 
 ## Diagnosing and measuring (dev)
