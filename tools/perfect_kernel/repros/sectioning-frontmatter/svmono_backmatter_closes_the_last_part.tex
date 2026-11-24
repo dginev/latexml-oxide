@@ -1,0 +1,18 @@
+% witness: row R BACKMATTERPART (DG ruling 2026-11-23); svmono.cls:418 `\backmatter` (svmult binding's svmono
+%          branch, svmult_cls.rs), Springer monographs with parts (1704.03069 is svmono)
+% oracle:  harness limit: svmono.cls is not in TL 2025 (the binding stands in); book.cls's structure applies
+% engines: rust INT081C = the afterword inside ltx:part B
+% expect:  0 errors, 0 warnings; document > [part A > chapter x, part B > chapter y, chapter Afterword]
+% status:  RED (INT081C) -> GREEN (BACKMATTER), catalog only (same constructor as the book guard)
+\documentclass{svmono}
+\begin{document}
+\part{A}
+\chapter{x}
+X.
+\part{B}
+\chapter{y}
+Y.
+\backmatter
+\chapter{Afterword}
+W.
+\end{document}

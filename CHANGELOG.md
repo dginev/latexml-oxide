@@ -121,6 +121,11 @@ The highlights since 0.7.6 (2026-08-23). Every change, with its guard tests and 
 - A `latexml_oxide --splitat` run now streams and renders on up to min(cores, 8) worker processes, staging its core
   XML in the destination; `LATEXML_POST_STREAM_SPLIT=0` and `LATEXML_RENDER_JOBS=1` restore 0.7.6's whole-document
   split and serial render. Every environment variable: [`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md).
+- A conversion into a folder keeps `LaTeXML-oxide.cache` there, so a reconversion gives its images the same names
+  (issue 995); `--nocache` keeps none. The parallel render's private database is now named `LaTeXML-render.db`.
+- `--format=html` is HTML5 and `--format=xhtml` is XHTML, as in latexmlc; `-q` hides Info and Warnings on stderr, but
+  never Errors, Fatals or the final verdict; the log keeps everything.
+- The cortex worker never loads a runtime `.rhai` binding shipped in a source, whatever its build features.
 - Under `ulimit -v`, set `MALLOC_ARENA_MAX=2` and `MIMALLOC_ARENA_RESERVE=128MiB`
   ([`docs/ENVIRONMENT.md`](docs/ENVIRONMENT.md)).
 

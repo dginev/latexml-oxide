@@ -24392,3 +24392,49 @@ assigns the core's `no_number_sections` (as book.cls's `\frontmatter` does), so 
 reference shows its target's title. KNOWN_PERL_ERRORS #1330; to be asked of Bruce Miller (DG 2026-11-24).
 
 **Guard**: `perfect_kernel_batchcliwire::nonumbersections_unnumbers_the_sections`.
+
+### 1147. `\backmatter` closes the open part and chapter (BACKMATTERPART)
+
+**Rule** (DG ruling 2026-11-23). The back matter belongs to no part: `\backmatter` closes the open `ltx:part`,
+`ltx:chapter` and `ltx:appendix` where a new `\part` would (`find_insertion_point("ltx:part")`), so the back-matter
+chapters, the bibliography and the index are the parts' siblings.
+- Perl: book.cls.ltxml:121 (amsbook.cls.ltxml:56; svmult.cls.ltxml inherits book's) a no-op, so they nest in the last part
+  (KNOWN_PERL_ERRORS #1320); split, `bib.html`'s title ended "‣ Part II …" and only that part's pages carried the
+  Bibliography/Index buttons (KEPT_RELATIONS, #1134).
+- TeX: book.cls:292-299 `\backmatter` is `\cleardoublepage\@mainmatterfalse`; the running heads leave the part and the
+  contents list the back matter after it.
+- Implementation: sect04.rs `\lx@begin@backmatter` (a no-op where a part cannot be opened, inside a float or a
+  minipage), called after a `\par` by the `\backmatter` of book_cls.rs, amsbook_cls.rs and svmult_cls.rs (svmult and
+  svmono). A class read raw (memoir, scrbook) keeps its own `\backmatter`, which does not close. `\frontmatter` and
+  `\mainmatter` need nothing: the next `\part` or `\chapter` closes the front matter.
+- Upstream: offered to Perl as a patch.
+
+**Guards**: `perfect_kernel_batchbackmatter::{book_backmatter_closes_the_last_part,
+amsbook_backmatter_closes_the_appendix_and_part}`, `cluster_xslt_split::split_nav_relations::
+split_backmatter_pages_belong_to_no_part`; repros `sectioning-frontmatter/{book_backmatter_closes_the_last_part,
+book_backmatter_without_parts_closes_the_chapter, book_appendix_then_backmatter_closes_the_part,
+amsbook_backmatter_closes_the_appendix_and_part, svmono_backmatter_closes_the_last_part}`.
+
+### 1161. An apalike natbib label `[Author, Year]` splits at its first `, `, as `\NAT@apalk` (NATBIB)
+
+**Perl behavior**: `\lx@NAT@parselabel` (natbib.sty.ltxml:564-581) splits a label with no `(year)` at its trailing digit
+tokens: `\bibitem[Maes, 1995]` is author "Maes, " and year "1995" ("(Maes,, 1995)", "Maes, (1995)"), `[Maes, 1995a]` is
+all author; `\citename{Jones et al., }1990` keeps the name's `, ` in the author. KNOWN_PERL_ERRORS #1332.
+**pdflatex**: natbib.sty:811-813 `\NAT@bare` calls `\NAT@apalk<label>, , \@nil`, and `\NAT@apalk#1, #2, #3\@nil#4`
+(:1005-1012) takes `#1` as the author and `#2` as the year, a delimited-parameter match: the first `, ` outside braces,
+a braced piece losing its braces; an empty `#2` makes the label the number (`\NAT@stdbsttrue`). `\citename#1#2`
+(:1029) calls `\NAT@apalk#1#2, \@nil`.
+**Rust behavior**: `nat_apalk` (natbib_sty.rs) is that match; a bare label with no `(` and a nonempty `#2`, and a
+`\citename` label, take its author and year. The `(year)` split matches its `(` and `)` outside braces too, as
+`\NAT@bare#1(#2)` does (Perl took a braced `(`: `[{Group (EBCTCG)} et~al., 2011]` had the year "EBCTCG",
+2605.20003). A label with no `, <year>` keeps the earlier paths: numbers/super mode's number (#2 empty), else Perl's
+trailing-digit split. A label read whole has no full authors (as Perl; the Rust port gave the whole label, so `\citet*`
+printed "Maes, 1995 (1995)"). Names with three or more authors before the year (`[Smith, Jones, and Lee, 2001]`) split
+as natbib does: author "Smith", year "Jones".
+
+**Witness** 2505.11584 (apalike.bst: 37 citations "(Maes,, 1995)"), 2605.20003 (a braced `(`), 2605.02429 (a braced
+`(` in numbers mode: the label spilled into the entry). **Guards**
+`perfect_kernel_batchnatbib::{natbib_apalike_label_splits_at_comma, natbib_citename_label_splits_at_comma}` (repros
+`index-bib/natbib_{apalike,citename}_label_splits_at_comma`); repinned: `perfect_kernel_batch70a::
+natbib_entry_constructor_is_binding_private` (author "Batselier et al.", no full authors),
+`perfect_kernel_batch56::apacite_old_bbl_keeps_its_declared_italics` (no full authors).

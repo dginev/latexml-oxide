@@ -421,6 +421,7 @@ mod perfect_kernel_batchabsfix;
 mod perfect_kernel_batchalgo397;
 mod perfect_kernel_batchamsppt;
 mod perfect_kernel_batchaut1;
+mod perfect_kernel_batchbackmatter;
 mod perfect_kernel_batchbc1;
 /// BLOCKPLACE: a note its binding declares printed under the names sits there, before the abstract; OD #1074.
 mod perfect_kernel_batchblockplace;
@@ -582,6 +583,8 @@ mod perfect_kernel_batchn1;
 mod perfect_kernel_batchn2;
 mod perfect_kernel_batchn2r2;
 mod perfect_kernel_batchn2r3;
+/// NATBIB: natbib's apalike label `[Maes, 1995]` split at its first `, ` (`\NAT@apalk`), not at its trailing digits.
+mod perfect_kernel_batchnatbib;
 mod perfect_kernel_batchne1;
 mod perfect_kernel_batchne2;
 mod perfect_kernel_batchne3;

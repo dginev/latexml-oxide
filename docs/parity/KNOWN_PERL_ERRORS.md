@@ -22505,3 +22505,49 @@ latexmlc doc.tex --navigationtoc=bogus --dest=out.html
 exits 0 with `Status:conversion:0` and writes the raw, unstyled LaTeXML XML (no post-processing) into `out.html`;
 the croak is only in the log. Rust rejects a bad value as a usage error before converting (exit 2;
 OXIDIZED_DESIGN_DIVERGENCES #1158). To be offered upstream.
+
+## 1320. Perl nests the back matter inside the last `\part`
+
+book.cls.ltxml:121 `DefPrimitive('\backmatter', undef)` (amsbook.cls.ltxml:56 alike; svmult.cls.ltxml inherits it) closes
+nothing, so the back-matter chapters, the bibliography (`BACKMATTER_ELEMENT` `ltx:chapter`,
+latex_constructs.pool.ltxml:3935-3947 `adjustBackmatterElement`) and the index are inserted inside the open
+`ltx:part`. In TeX `\backmatter` (book.cls:292-299) belongs to no part: the running heads leave the part, and the
+contents list the back-matter chapters after it. Minimal trigger:
+
+```tex
+\documentclass{book}
+\begin{document}
+\part{A}\chapter{x}X.
+\part{B}\chapter{y}Y.
+\backmatter
+\chapter{Afterword}W.
+\begin{thebibliography}{9}\bibitem{k} K.\end{thebibliography}
+\end{document}
+```
+
+Perl (same host, `latexmlc --nocomments`): `<part xml:id="Pt2">` holds `Ch2`, "Chapter 3 Afterword" and the
+`ltx:bibliography`; split, `bib.html`'s title is "Bibliography ‣ Part II B" and only Part II's pages link it. Fixed in
+Rust (OXIDIZED_DESIGN_DIVERGENCES #1147): the bindings' `\backmatter` closes the part and chapter. Guard
+`perfect_kernel_batchbackmatter::book_backmatter_closes_the_last_part`.
+
+## 1332. Perl splits an apalike natbib label at its trailing digits: "(Maes,, 1995)"
+
+natbib.sty:811-813 `\NAT@bare` hands a `\bibitem` label with no `(year)` to `\NAT@apalk#1, #2, #3\@nil#4`
+(:1005-1012), which splits it at its first `, ` (comma, space; outside braces): `[Maes, 1995a]` is author "Maes" and
+year "1995a"; `\citename{Jones et al., }1990` (:1029) goes the same way. Perl's binding (natbib.sty.ltxml:576-581, its
+`#pop(@arg)` commented out) takes the label's trailing digit tokens as the year instead, so the author keeps the `, `
+and a year with a suffix stays in the author. Its `(year)` split also takes a `(` inside braces, which `\NAT@bare#1(#2)`
+does not match (`[{Group (EBCTCG)} et~al., 2011]`: year "EBCTCG"). The unbalanced split also shifts the fields: the
+key is lost and printed as the full authors (`<tag role="fullauthors">g</tag><tag role="key"/>`), which in numbers
+mode spills label text into the entry (2605.02429). Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{natbib}\begin{document}See \citep{maes} and \citet{maes}.
+\begin{thebibliography}{1}\bibitem[Maes, 1995]{maes} P.~Maes. A title. 1995.\end{thebibliography}\end{document}
+```
+
+pdflatex (2 passes) prints "(Maes, 1995)" and "Maes (1995)"; Perl (same host) and the Rust port before the fix
+"(Maes,, 1995)" and "Maes, (1995)"; `[Maes, 1995a]` gave "(Maes, 1995a, )". Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
+#1161). Witnesses 2505.11584 (apalike.bst, 37 citations), 2605.20003 (a braced `(`), 2605.02429 (a braced `(` in
+numbers mode: the label spilled into the entry); guards
+`perfect_kernel_batchnatbib::{natbib_apalike_label_splits_at_comma, natbib_citename_label_splits_at_comma}`.

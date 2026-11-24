@@ -1,0 +1,18 @@
+% witness: row R BACKMATTERPART, the `\appendix` + `\backmatter` sibling (DG ruling 2026-11-23)
+% oracle:  pdflatex 0 errors; "Part I A", "Chapter 1 x", "Appendix A App", "Bibliography"
+% engines: rust INT081C and perl = the appendix and the bibliography inside ltx:part A
+% expect:  0 errors, 0 warnings; document > [part A > (chapter x, appendix App), bibliography]
+% status:  RED (INT081C) -> GREEN (BACKMATTER)
+\documentclass{book}
+\begin{document}
+\part{A}
+\chapter{x}
+X \cite{k}.
+\appendix
+\chapter{App}
+Z.
+\backmatter
+\begin{thebibliography}{9}
+\bibitem{k} K. Ref.
+\end{thebibliography}
+\end{document}
