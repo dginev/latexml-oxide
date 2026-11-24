@@ -5875,8 +5875,10 @@ mod docs_tree {
   //! relative, or an absolute `github.com/dginev/latexml-oxide/{blob,tree}/main/` URL (the README's
   //! form, since crates.io renders it too); a link to a directory reaches its `README.md`, or, without
   //! one, every page GitHub lists in it.
-  use std::collections::{BTreeSet, VecDeque};
-  use std::path::{Component, Path, PathBuf};
+  use std::{
+    collections::{BTreeSet, VecDeque},
+    path::{Component, Path, PathBuf},
+  };
 
   const MAIN_URLS: [&str; 2] = [
     "https://github.com/dginev/latexml-oxide/blob/main/",
@@ -5947,7 +5949,11 @@ mod docs_tree {
   fn pages_reached(root: &Path, target: &Path) -> Vec<PathBuf> {
     let full = root.join(target);
     if full.is_file() {
-      return if target.extension().is_some_and(|e| e == "md") { vec![target.to_path_buf()] } else { vec![] };
+      return if target.extension().is_some_and(|e| e == "md") {
+        vec![target.to_path_buf()]
+      } else {
+        vec![]
+      };
     }
     if !full.is_dir() {
       return vec![];
@@ -5971,7 +5977,10 @@ mod docs_tree {
     let mut pages = BTreeSet::new();
     let mut dirs = vec![PathBuf::from("docs")];
     while let Some(dir) = dirs.pop() {
-      for entry in std::fs::read_dir(root.join(&dir)).expect("read docs/").flatten() {
+      for entry in std::fs::read_dir(root.join(&dir))
+        .expect("read docs/")
+        .flatten()
+      {
         let rel = dir.join(entry.file_name());
         if entry.path().is_dir() {
           dirs.push(rel);
@@ -5989,9 +5998,13 @@ mod docs_tree {
     let mut seen = BTreeSet::from([PathBuf::from("README.md")]);
     let mut queue = VecDeque::from([PathBuf::from("README.md")]);
     while let Some(page) = queue.pop_front() {
-      let Ok(text) = std::fs::read_to_string(root.join(&page)) else { continue };
+      let Ok(text) = std::fs::read_to_string(root.join(&page)) else {
+        continue;
+      };
       for link in link_targets(&text) {
-        let Some(target) = local_path(&page, link) else { continue };
+        let Some(target) = local_path(&page, link) else {
+          continue;
+        };
         for reached in pages_reached(&root, &target) {
           if seen.insert(reached.clone()) {
             queue.push_back(reached);
@@ -5999,7 +6012,10 @@ mod docs_tree {
         }
       }
     }
-    let unreachable: Vec<_> = docs_pages(&root).into_iter().filter(|p| !seen.contains(p)).collect();
+    let unreachable: Vec<_> = docs_pages(&root)
+      .into_iter()
+      .filter(|p| !seen.contains(p))
+      .collect();
     assert!(
       unreachable.is_empty(),
       "pages no link chain from README.md reaches — link each from docs/README.md or from the index of \
@@ -6025,6 +6041,10 @@ mod docs_tree {
         }
       }
     }
-    assert!(missing.is_empty(), "links to pages that do not exist:\n{}", missing.join("\n"));
+    assert!(
+      missing.is_empty(),
+      "links to pages that do not exist:\n{}",
+      missing.join("\n")
+    );
   }
 }
