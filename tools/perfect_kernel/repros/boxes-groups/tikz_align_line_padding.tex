@@ -7,7 +7,8 @@
 %   c3 the same with a space after the phantom; c4 "Optimal" / "   layered" (three control spaces before "layered")
 % rows:    c1-c3 GREEN 59y (the phantom ends the peel as content: both lines at x=0, the phantom kept; c1's picture
 %            width 52.08 is pdflatex's, c2/c3's 54.73/59.34 are Rust's — pdflatex 58.07/62.69 from `$v_1:$`'s width;
-%            heights are Rust's in every row: 30.98 for pdflatex's 25.61pt)
+%            heights are Rust's in every row: c1 30.98 for pdflatex's 25.61pt, c2/c3 33.05 for 27.11pt — the phantom's
+%            depth, 1.5pt, in its line since REGTAILC, OXIDIZED_DESIGN_DIVERGENCES #1155)
 %          c4 RED (control spaces are glue in TeX, the line's content; LaTeXML's padding model takes a cell's leading
 %            space as padding, applied per column at its widest cell's — both lines move 20.76pt; Perl-origin,
 %            Alignment.pm:567-568, 659; per-cell padding needs a ruling; witnesses 2605.02838 `{\large \qquad 1}`,

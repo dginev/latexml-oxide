@@ -2040,6 +2040,14 @@ impl Font {
     Ok((w.value_of(), h.value_of(), d.value_of()))
   }
 
+  /// Whether `bx` carries a nonzero `height` or `depth` property, as a phantom's `after_digest` sets them.
+  fn declares_height_or_depth(bx: &Digested) -> bool {
+    ["height", "depth"].iter().any(|key| {
+      bx.get_property(key)
+        .is_some_and(|v| matches!(&*v, Stored::Dimension(d) if d.value_of() != 0))
+    })
+  }
+
   /// Perl: Font.pm sub computeBoxesSize_words (L705-746)
   /// Compute a list of sizes of space-delimited "words" within a NON-vertical list.
   /// Returns Vec of [prevspace, wd, ht, dp] where prevspace=-1 means line break.
@@ -2071,14 +2079,13 @@ impl Font {
           prevspace = -1.0;
         }
       }
-      // Perl L723-728: isSpace (but not isVerticalSpace) — word boundary. Glue and kerns have no height or depth; a
-      // space-like box that has some (`\phantom`, `\vphantom`, `\mathstrut`: latex.ltx `\finph@nt` boxes) is a box TeX
-      // sets in the word, so it falls to the word below (Perl kept its width alone: KNOWN_PERL_ERRORS #1327; xy's
-      // `*[o]{\phantom{s}}` circle, 1210.5701).
+      // Perl L723-728: isSpace (but not isVerticalSpace) — word boundary. A space-like box declaring a height or depth
+      // (`\phantom`, `\vphantom`, `\mathstrut`: latex.ltx `\finph@nt` boxes) is a box TeX sets in the word, so it falls
+      // to the word below (Perl kept its width alone: KNOWN_PERL_ERRORS #1327; xy's `*[o]{\phantom{s}}` circle,
+      // 1210.5701). An interword space's measured size is no declaration: glue has none.
       else if bx.get_property_bool("isSpace")
         && !bx.get_property_bool("isVerticalSpace")
-        && h == 0
-        && d == 0
+        && !Self::declares_height_or_depth(bx)
       {
         if wd != 0.0 || ht != 0 || dp != 0 || prevspace < 0.0 {
           words.push([prevspace, wd, ht as f64, dp as f64]);

@@ -24437,12 +24437,16 @@ since K6's figure cue); 2503.21203; counter-witness 1012.0815. **Guards**
 #1327.
 **pdflatex**: latex.ltx:15613-15617 `\finph@nt` sets `\box\tw@`, a box with the argument's height and depth
 (`\ifv@`) and width (`\ifh@`), in the list like any box: no breakpoint, its height and depth in the line's.
-**Rust behavior**: `Font::compute_boxes_size_words` (font.rs) takes an `isSpace` box as space only when it has no height
-and no depth (glue, kerns, `\hphantom`); one that has some falls to the word's boxes. `\hphantom`'s
+**Rust behavior**: `Font::compute_boxes_size_words` (font.rs) takes an `isSpace` box as space only when it declares no
+height and no depth (`declares_height_or_depth`: a nonzero `height`/`depth` property, as the phantoms' `after_digest`
+sets); one that declares some falls to the word's boxes. A measured size is no declaration: an interword space measures
+with a height at `\footnotesize`, and going by it set a `\parbox` paragraph on one line. `\hphantom`'s
 `hphantom_size` (math_common.rs) gives it its argument's width alone, as `vphantom_size` (#1145, KPE #433) gives
 `\vphantom` no width. The math parser still reads every phantom as space (the `isSpace` property is unchanged).
 
 **Witness** 1210.5701 (xy.tex:940 boxes an object `$\objectstyle{#1}$`; `*[o]{\phantom{s}}`'s circle had no height:
 "Dimension too large", 101 errors and TooManyErrors). **Guards**
 `perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}` (repros
-`math-phantom/{phantom_height_among_siblings, xy_phantom_object_circle_1210_5701}`).
+`math-phantom/{phantom_height_among_siblings, xy_phantom_object_circle_1210_5701}`); repinned to the phantom's height:
+`cluster_schema::empty_node_foreign_object_is_sized` (quantikz's `{\phantom{H}}`), `box_primitives::tikz_align_line_padding`
+(c2/c3, pdflatex's +1.5pt), `86_tikz` `ac-drive-components.xml` (circuitikz's `\vphantom{+}-` label).
