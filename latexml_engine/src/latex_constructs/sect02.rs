@@ -55,12 +55,12 @@ pub(crate) fn load() -> Result<()> {
   // But more complicated due to id, at begin/end document and so forth.
   // AND, lower-level so that we can cope with common errors at document end.
   DefConstructor!(T_CS!("\\begin{document}"), None, sub[document, _args, props] {
-    let id = prop_str!(props,"id");
+    // Perl `ToString($props{id})`: the expanded `\thedocument@ID` (after_digest), a token list.
+    let id = props.get("id").map(|id| id.to_string()).unwrap_or_default();
     // Already (auto) created?
     match document.findnode("/ltx:document", None) { Some(mut docel) => {
-      if id != pin!("") {
-        let id_s = with(id, |s| s.to_string());
-        document.set_attribute(&mut docel, "xml:id", &id_s)?;
+      if !id.is_empty() {
+        document.set_attribute(&mut docel, "xml:id", &id)?;
       }
       // The document was opened by the PREAMBLE: whatever it holds now was built
       // before `\begin{document}` — an undefined command's `<ERROR>` and its
@@ -73,7 +73,7 @@ pub(crate) fn load() -> Result<()> {
       // the first body words continue it, as in TeX.
       mark_preamble_residue(&docel);
     } _ => {
-      let props = with(id, |id_str| string_map!("xml:id" => id_str));
+      let props = string_map!("xml:id" => id.as_str());
       document.open_element("ltx:document", Some(props), None)?;
     }}
   },

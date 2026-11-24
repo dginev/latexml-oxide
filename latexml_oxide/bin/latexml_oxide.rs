@@ -43,16 +43,76 @@ fn xslt_parameter_arg(param: &str) -> Result<String, String> {
   }
 }
 
-/// Accepted `--format` values (case-insensitive, normalized to lowercase).
-/// Matches `post::default_stylesheet` plus `xml`; Perl `Config.pm` L550
-/// similarly rejects an unrecognized target format.
+/// Accepted `--format` values (case-insensitive, normalized to lowercase; `html`
+/// is `html5`, Perl `Config.pm` L436). Matches `post::default_stylesheet` plus
+/// `xml`; Perl `Config.pm` L550 similarly rejects an unrecognized target format.
 fn format_arg(raw: &str) -> Result<String, String> {
   let lower = raw.to_ascii_lowercase();
   match lower.as_str() {
-    "html5" | "html" | "xhtml" | "xml" | "epub" | "epub3" => Ok(lower),
+    "html" => Ok("html5".to_string()),
+    "html5" | "xhtml" | "xml" | "epub" | "epub3" => Ok(lower),
     _ => Err(format!(
       "unrecognized format '{raw}' (expected one of: html5, html, xhtml, xml, epub, epub3)"
     )),
+  }
+}
+
+/// Perl `Config.pm` `_checkOptionValue` (L604-609): the first choice `value` is a prefix of, else a usage error
+/// naming the choices (Perl croaks).
+fn check_option_value(option: &str, value: &str, choices: &[&str]) -> Result<String, String> {
+  choices
+    .iter()
+    .find(|choice| !value.is_empty() && choice.starts_with(value))
+    .map(|choice| choice.to_string())
+    .ok_or_else(|| {
+      format!(
+        "Value for {option}, {value}, doesn't match {}",
+        choices.join(", ")
+      )
+    })
+}
+
+/// The sectioning levels `--splitat` names (Perl's `splitancestors` keys, Config.pm L496-501), shallowest first.
+const SPLIT_LEVELS: [&str; 5] = ["part", "chapter", "section", "subsection", "subsubsection"];
+
+/// `--splitat` of a splitting run: a level, or a prefix of one, the shallowest (Config.pm L509
+/// `_checkOptionValue`, whose hash order leaves `sub` to chance). Any other element name still splits at
+/// it, with the Warning returned beside it: Perl refuses it, and `--splitpath` is its form.
+fn resolve_splitat(value: &str) -> (&str, Option<String>) {
+  match check_option_value("--splitat", value, &SPLIT_LEVELS) {
+    Ok(level) => (
+      SPLIT_LEVELS
+        .iter()
+        .find(|l| **l == level)
+        .copied()
+        .unwrap_or(value),
+      None,
+    ),
+    Err(message) => (
+      value,
+      Some(format!(
+        "{message}; splitting at //ltx:{value} (--splitpath='//ltx:{value}' says so)"
+      )),
+    ),
+  }
+}
+
+/// `--splitnaming`: a naming strategy, or a prefix of one (Config.pm L507).
+fn splitnaming_arg(raw: &str) -> Result<String, String> {
+  check_option_value("--splitnaming", raw, &[
+    "id",
+    "idrelative",
+    "label",
+    "labelrelative",
+  ])
+}
+
+/// `--navigationtoc`: lowercased, one of `navtocstyles` (Config.pm L472-480); `none` asks for none.
+fn navigationtoc_arg(raw: &str) -> Result<String, String> {
+  let lower = raw.to_lowercase();
+  match lower.as_str() {
+    "context" | "normal" | "none" => Ok(lower),
+    _ => Err(format!("{raw} is not a recognized style of navigation TOC")),
   }
 }
 
@@ -151,8 +211,8 @@ struct Cli {
   #[arg(long, alias = "nocontentmathml", overrides_with = "cmml")]
   nocmml: bool,
 
-  /// Keep the intermediate XMath in the output alongside MathML.
-  #[arg(long, alias = "xmath", overrides_with = "noxmath")]
+  /// Keep the intermediate XMath in the output alongside MathML (also --keepXMath, Perl's spelling).
+  #[arg(long, aliases = ["xmath", "keepXMath"], overrides_with = "noxmath")]
   #[arg(name = "keepXMath")]
   keep_xmath: bool,
 
@@ -203,8 +263,12 @@ struct Cli {
   /// worst supported (script, fraktur, double-struck), and to the simpler
   /// variant: `\mathbf{\mathcal{E}}` becomes the plain script codepoint rather
   /// than a bold-script one no font has. Implies --plane1.
-  #[arg(long)]
+  #[arg(long, overrides_with = "nohackplane1")]
   hackplane1: bool,
+
+  /// Undo --hackplane1 (the default). If both are given, the last one wins (Perl `hackplane1!`).
+  #[arg(long, overrides_with = "hackplane1")]
+  nohackplane1: bool,
 
   /// Suppress the built-in CSS/JS resources.
   #[arg(long, overrides_with = "defaultresources")]
@@ -393,8 +457,9 @@ struct Cli {
   #[arg(long, value_name = "N")]
   token_limit: Option<usize>,
 
-  /// Navigation table-of-contents style: context or none.
-  #[arg(long, alias = "navtoc", value_name = "STYLE")]
+  /// Navigation table-of-contents style of a split site: context, normal or
+  /// none (the default; case-insensitive).
+  #[arg(long, alias = "navtoc", value_name = "STYLE", value_parser = navigationtoc_arg)]
   navigationtoc: Option<String>,
 
   /// Cross-reference URL style for the serving environment: `server` (strip a
@@ -462,12 +527,13 @@ struct Cli {
   #[arg(long, overrides_with = "split")]
   nosplit: bool,
 
-  /// Level to split at: part, chapter, section, subsection, ... (default:
-  /// section).
+  /// Level to split at: part, chapter, section, subsection or subsubsection,
+  /// or a prefix of one (default: section).
   #[arg(long, value_name = "LEVEL")]
   splitat: Option<String>,
 
-  /// Naming strategy for split files: id, idrelative, label, labelrelative
+  /// Naming strategy for split files: id, idrelative, label or labelrelative,
+  /// or a prefix of one (default: id).
   #[arg(long, value_name = "STRATEGY")]
   splitnaming: Option<String>,
 
@@ -476,13 +542,13 @@ struct Cli {
   splitpath: Option<String>,
 
   // === Verbosity ===
-  /// Increase output verbosity
-  #[arg(short = 'v', long)]
-  verbose: bool,
+  /// Increase output verbosity (repeatable: each -v counts, as in Perl; -v shows Debug lines)
+  #[arg(short = 'v', long, action = clap::ArgAction::Count)]
+  verbose: u8,
 
-  /// Suppress most output
-  #[arg(short = 'q', long)]
-  quiet: bool,
+  /// Suppress most output (repeatable; each -q undoes one -v)
+  #[arg(short = 'q', long, action = clap::ArgAction::Count)]
+  quiet: u8,
 
   /// Enable a named debug feature, e.g. --debug frontmatter (repeatable).
   /// Prints that feature's debugging output only (--verbose prints the rest).
@@ -635,6 +701,7 @@ struct ResolvedOptions {
   unicodemath:       bool,
   noinvisibletimes:  bool,
   plane1:            bool,
+  hackplane1:        bool,
   default_resources: bool,
   graphicimages:     bool,
 }
@@ -666,7 +733,9 @@ impl ResolvedOptions {
       noinvisibletimes:  chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
       // Perl `MathML.pm` L70: `--hackplane1` forces plane1 on; otherwise the
       // pair is last-wins over a default-on.
-      plane1:            cli.hackplane1 || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
+      plane1:            chosen_by_clap(cli.hackplane1, cli.nohackplane1) == Some(true)
+        || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
+      hackplane1:        chosen_by_clap(cli.hackplane1, cli.nohackplane1).unwrap_or(false),
       default_resources: chosen_by_clap(cli.defaultresources, cli.nodefaultresources)
         .unwrap_or(true),
       graphicimages:     chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
@@ -712,45 +781,14 @@ fn resolve_max_memory(explicit: Option<u64>) -> u64 {
   }
 }
 
-/// Streaming activation (user policy 2026-07-29: flag + auto-when-doomed).
-///
-/// Forced by `--streaming`; otherwise auto-enabled only when the PROJECTED
-/// peak of the eager path exceeds the memory ceiling — measured ~1.84 GB of
-/// peak RSS per MB of math-heavy source on the 131 MB witness
-/// (`docs/archive/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
-/// documents that today would die at the ceiling with certainty. An explicit
-/// `--streaming=false` (or `LATEXML_STREAMING=false`) suppresses BOTH, and the
-/// eager run's switch to streaming at the spill watermark too — the
-/// escape hatch for a caller who would rather have the eager path's Fatal
-/// than a fragmented conversion, and the only way to A/B the two paths on a
-/// document large enough for auto to fire. The returned
-/// budget is the pass-1 fragment yield threshold in BOXES: an eighth of the
-/// ceiling at the measured ~2.4 KB per retained box. The bite must leave REAL
-/// headroom under the RSS fuse (75% of the ceiling): a fragment's live cost
-/// is boxes + the DOM built from them (~1.4×), yields only fire at legal
-/// seams (a large alignment digests un-yieldingly past any knob), and
-/// per-run bookkeeping (FragmentIndex, spine) creeps monotonically — on the
-/// 131 MB witness at a 48 GB ceiling, a quarter-bite steadied at ~33 GB and
-/// the ~5 GB creep then walked it into the 37.7 GB fuse.
-/// Perl Core.pm L48: DOCUMENTID value. Applied to a fresh session (the first
-/// one and a streaming restart's).
-fn apply_document_id(docid: Option<&str>) {
-  if let Some(docid) = docid {
-    latexml_core::state::assign_value(
-      "DOCUMENTID",
-      latexml_core::common::store::Stored::String(latexml_core::common::arena::pin(docid)),
-      Some(latexml_core::state::Scope::Global),
-    );
-  }
-}
-
 /// `--token-limit`: 0 disables (as documented), matching the LATEXML_TOKEN_LIMIT
 /// env convention (`Some(0) => None` at the gullet initializer); passing a
-/// literal `Some(0)` would instead fatal on the first token. A fresh session's
-/// gullet starts from the default, so a streaming restart re-applies it.
+/// literal `Some(0)` would instead fatal on the first token. Like the env var, the
+/// value is kept as given, never raised to the source's size. A fresh session's
+/// gullet starts from the default, so a streaming restart and a supplement re-apply it.
 fn apply_token_limit(limit: Option<usize>) {
   if let Some(limit) = limit {
-    latexml_core::gullet::set_token_limit((limit != 0).then_some(limit));
+    latexml_core::gullet::fix_token_limit((limit != 0).then_some(limit));
   }
 }
 
@@ -893,6 +931,19 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // rightmost-wins value once, up front. The rest of `real_main` reads `resolved`
   // rather than re-deciding at each site.
   let resolved = ResolvedOptions::from_cli(&cli);
+  // Perl checks `--splitnaming` only when it splits, and croaks on an unknown one (Config.pm L496-507).
+  let split_naming = match cli
+    .splitnaming
+    .as_deref()
+    .filter(|_| resolved.split_enabled)
+    .map(splitnaming_arg)
+    .transpose()
+  {
+    Ok(naming) => naming,
+    Err(message) => <Cli as clap::CommandFactory>::command()
+      .error(clap::error::ErrorKind::ValueValidation, message)
+      .exit(),
+  };
 
   // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
   // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
@@ -958,13 +1009,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   };
 
   // Initialize logger with verbosity level
-  let verbosity: i32 = if cli.quiet {
-    -1
-  } else if cli.verbose {
-    1
-  } else {
-    0
-  };
+  // Perl Config.pm L53-54: each --verbose adds one, each --quiet takes one away.
+  let verbosity = i32::from(cli.verbose) - i32::from(cli.quiet);
   let log_level = match verbosity {
     v if v < 0 => log::LevelFilter::Warn,
     0 => log::LevelFilter::Info,
@@ -1251,9 +1297,15 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // file's extension (Perl-style: the input analog of `--format` for output),
   // covering a core document under a name `is_xml_input` doesn't recognise (#655).
   let xml_input = is_xml_input(&source) || cli.whatsin.as_deref() == Some("xml");
+  // Perl checks `--splitat` only when it splits (Config.pm L496-510).
+  let mut splitat_warning = None;
   let split_xpath = if resolved.split_enabled {
     cli.splitpath.clone().or_else(|| {
-      let splitat = cli.splitat.as_deref().unwrap_or("section");
+      let (splitat, warning) = cli
+        .splitat
+        .as_deref()
+        .map_or(("section", None), resolve_splitat);
+      splitat_warning = warning;
       Some(make_splitpaths(splitat))
     })
   } else {
@@ -1322,6 +1374,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     handoff_file: core_handoff
       .as_ref()
       .map(|staged| staged.path().to_string()),
+    // Perl Core.pm L48: in State before Base_Schema defines `\thedocument@ID` from it.
+    documentid: cli.documentid.clone(),
   };
   let mut converter = Converter::from_config(opts.clone());
   // Skip engine init for already-converted XML input: post-processing is pure
@@ -1341,8 +1395,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
   // Per-document state a fresh converter session resets — factored so the main
   // document and each joined supplement (see the multi-document branch below)
-  // apply it identically. DOCUMENTID is intentionally excluded: it names the
-  // main document's root, and supplements get their own prefixed id space.
+  // apply it identically.
   fn apply_document_state(nobibtex: bool, number_sections: Option<bool>) {
     if nobibtex {
       // BIB_CONFIG = ['bbl'] — skip BibTeX, use the pre-existing `.bbl` file.
@@ -1365,7 +1418,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     }
   }
   apply_document_state(cli.nobibtex, resolved.number_sections);
-  apply_document_id(cli.documentid.as_deref());
 
   if cli.init.is_some() {
     // Init mode: process file and dump state
@@ -1402,6 +1454,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         "unlimited",
         "--max-memory=0: memory limiting disabled entirely (cooperative guard + hard watchdog); a runaway conversion may exhaust host RAM"
       );
+    }
+    if let Some(warning) = &splitat_warning {
+      latexml_core::Warn!("unexpected", "splitat", warning.clone());
     }
     if cli.timeout > 0 {
       latexml_core::stomach::set_timeout(cli.timeout);
@@ -1478,7 +1533,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             // The fresh session starts from an empty State: re-apply every
             // per-document knob the first session received.
             apply_document_state(cli.nobibtex, resolved.number_sections);
-            apply_document_id(cli.documentid.as_deref());
             apply_token_limit(cli.token_limit);
             emit_info(
               "streaming",
@@ -1506,10 +1560,15 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         Some(main_xml) if !main_xml.is_empty() => {
           let mut supp_xmls: Vec<String> = Vec::new();
           let mut status_max = main_resp.status_code;
+          // DOCUMENTID names the main document's root; supplements get their own prefixed id space.
+          let supp_opts = Config {
+            documentid: None,
+            ..opts.clone()
+          };
           for supp in &supplement_sources {
-            let mut sconv = Converter::from_config(opts.clone());
+            let mut sconv = Converter::from_config(supp_opts.clone());
             sconv.note_main_source(supp);
-            if sconv.prepare_session(&opts).is_err() {
+            if sconv.prepare_session(&supp_opts).is_err() {
               eprintln!(
                 "Warning: could not prepare a session for supplement '{}'; skipping",
                 supp
@@ -1519,6 +1578,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             // A fresh session reset thread-local state — re-apply the shared
             // per-document flags before converting this supplement.
             apply_document_state(cli.nobibtex, resolved.number_sections);
+            apply_token_limit(cli.token_limit);
             let r = sconv.convert(supp.clone());
             status_max = status_max.max(r.status_code);
             match r.result {
@@ -1618,12 +1678,18 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // `sourceDirectory`; when omitted, Post derives it from the source
         // filename (Post.pm:727-729). Mirror that: honour `--sourcedirectory`
         // if given, else fall back to the source file's own directory.
-        let source_dir = cli.sourcedirectory.clone().unwrap_or_else(|| {
-          Path::new(&source_for_post)
-            .parent()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_else(|| ".".to_string())
-        });
+        // Made absolute, which is ours: Perl's `pathname_canonical` (Config.pm L395-397, Pathname.pm:108-130)
+        // only collapses `.`/`..`; so a relative value never leaks into the output paths computed from it.
+        let source_dir = cli
+          .sourcedirectory
+          .as_deref()
+          .map(absolute_path)
+          .unwrap_or_else(|| {
+            Path::new(&source_for_post)
+              .parent()
+              .map(|p| p.to_string_lossy().to_string())
+              .unwrap_or_else(|| ".".to_string())
+          });
 
         // `--whatsout=archive` (or a `.zip` destination) bundles into a
         // zip. When `--dest` is omitted, Perl LaTeXML.pm:185-187 invents
@@ -1713,7 +1779,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           mathtex: resolved.mathtex,
           unicodemath: resolved.unicodemath,
           plane1: resolved.plane1,
-          hackplane1: cli.hackplane1,
+          hackplane1: resolved.hackplane1,
           // Perl `--urlstyle` (Config.pm L482 defaults to `server`; we default
           // to `file` — no trailing-index stripping, safest for local `file://`
           // viewing — OXIDIZED_DESIGN #134). clap already restricted the value to
@@ -1723,11 +1789,18 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             .as_deref()
             .and_then(latexml_post::crossref::UrlStyle::from_cli)
             .unwrap_or(latexml_post::crossref::UrlStyle::File),
-          navigationtoc: cli.navigationtoc.as_deref(),
+          // Config.pm L478: `none` asks for no navigation TOC.
+          navigationtoc: cli.navigationtoc.as_deref().filter(|n| *n != "none"),
+          // Config.pm L436 `is_html`: an `html*` format serializes as HTML, any other as XML.
+          is_html: Some(
+            inferred_format
+              .as_deref()
+              .is_some_and(|f| f.starts_with("html")),
+          ),
           schemadocs: cli.schemadocs,
           split: split_enabled,
           split_xpath,
-          split_naming: cli.splitnaming.as_deref(),
+          split_naming: split_naming.as_deref(),
           xslt_parameters: &cli.xslt_parameters,
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
           graphicimages: resolved.graphicimages,
@@ -2186,6 +2259,11 @@ fn exit_removing(archive_tempdir: &mut Option<tempfile::TempDir>, code: i32) -> 
   drop(archive_tempdir.take());
   latexml_core::watchdog::remove_registered_paths();
   process::exit(code)
+}
+
+/// `dir` made absolute against the working directory, its `.`/`..` kept (no symlink is resolved).
+fn absolute_path(dir: &str) -> String {
+  std::path::absolute(dir).map_or_else(|_| dir.to_string(), |p| p.to_string_lossy().into_owned())
 }
 
 /// Perl latexmlc's default log (bin/latexmlc L103-120): `<name>.latexml.log` in the
@@ -2744,6 +2822,15 @@ mod boolean_flag_last_wins_tests {
 
     // --hackplane1 forces plane1 on even against a later --noplane1 (Perl MathML.pm L70).
     assert!(ResolvedOptions::from_cli(&cli(&["--noplane1", "--hackplane1"])).plane1);
+  }
+
+  /// Each --verbose adds one and each --quiet takes one away (Perl Config.pm L53-54), `-vv` included.
+  #[test]
+  fn verbose_and_quiet_are_counted() {
+    let c = cli(&["-vv"]);
+    assert_eq!((c.verbose, c.quiet), (2, 0));
+    let c = cli(&["-v", "--quiet", "--verbose", "-q", "-q"]);
+    assert_eq!((c.verbose, c.quiet), (2, 3));
   }
 
   /// #530: a value option or flag given twice keeps its last value (GetOpt::Long), and is not a

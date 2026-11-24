@@ -160,6 +160,9 @@ pub struct RenderManifest {
   /// The resolved stylesheet/resource search paths the parent's `XSLT::new`
   /// received.
   pub searchpaths:               Vec<String>,
+  /// Run the SVG processor before MathML (the parent's `svg`).
+  pub svg:                       bool,
+  /// Serialize the pages as HTML (Perl `is_html`).
   pub is_html_out:               bool,
   pub schemadocs:                bool,
   /// [`latexml_post::extract::Whatsout`] as its canonical CLI tag
@@ -175,6 +178,10 @@ pub struct RenderManifest {
   /// holds none (MathML's `<mpadded>` widths read `NOMINAL_FONT_SIZE`).
   #[serde(default)]
   pub post_values:               latexml_core::PostStateValues,
+  /// The parent's stderr verbosity (`LevelFilter` name: `WARN` under `--quiet`, `DEBUG` under `--verbose`). The
+  /// worker logs at it, never below `Info`, so its folded log is the serial render's.
+  #[serde(default)]
+  pub log_level:                 String,
 }
 
 /// The parent-side result of a parallel render in which workers were actually
@@ -739,7 +746,7 @@ pub(crate) fn parallel_render(
           // The child's stderr was piped, so nothing reached the live
           // stderr yet — forward it now, then fold the same text + counts
           // into the captured log and the REPORT tally.
-          eprint!("{}", report.log);
+          eprint!("{}", stderr_share(&report.log));
         }
         replay_captured(CapturedDiagnostics {
           log:    report.log,
@@ -827,6 +834,47 @@ fn print_status_report(written: &[String], discard: bool) -> i32 {
   if status < 3 { 0 } else { 1 }
 }
 
+/// The lines of a worker's log the parent's stderr shows: its records at the parent's verbosity (`--quiet` hides
+/// `Info`, only `--verbose` shows `Debug`), each with its continuation lines; `Error`/`Fatal` always.
+fn stderr_share(log: &str) -> String {
+  stderr_share_at(log, latexml_core::util::logger::stderr_admits)
+}
+
+/// [`stderr_share`] at the verbosity `admits`. A line that opens no record is either a progress note (an `Info`)
+/// or an unindented continuation of a multi-line message, which the log cannot tell apart: it is shown when either
+/// would be, so a shown record keeps every line (a note after it may show under `--quiet`).
+fn stderr_share_at(log: &str, admits: impl Fn(log::Level) -> bool) -> String {
+  use log::Level;
+  let mut shown = String::with_capacity(log.len());
+  let mut admitted = true;
+  let mut record_admitted = false;
+  for line in log.split_inclusive('\n') {
+    let level = [
+      ("Error:", Level::Error),
+      ("Fatal:", Level::Error),
+      ("Warning:", Level::Warn),
+      ("Info:", Level::Info),
+      ("Debug:", Level::Debug),
+      ("Trace:", Level::Trace),
+    ]
+    .into_iter()
+    .find_map(|(head, level)| line.starts_with(head).then_some(level));
+    match level {
+      Some(level) => {
+        admitted = level == Level::Error || admits(level);
+        record_admitted = admitted;
+      },
+      // An indented line (`\tat …`, a blank line) goes with the line before it.
+      None if line.starts_with(char::is_whitespace) => {},
+      None => admitted = record_admitted || admits(Level::Info),
+    }
+    if admitted {
+      shown.push_str(line);
+    }
+  }
+  shown
+}
+
 /// A worker that could not set up (its manifest or db unreadable) has rendered
 /// nothing and its failure is not the document's: no status report, so the
 /// parent renders serially, and this line names why (an Info there).
@@ -879,6 +927,8 @@ pub fn worker_main(manifest_path: &str) -> i32 {
         latexml_core::stomach::set_memory_cap(Some(manifest.max_rss_kb.saturating_mul(1024)));
       }
       manifest.post_values.restore();
+      let level = manifest.log_level.parse().unwrap_or(log::LevelFilter::Info);
+      latexml_core::util::logger::init(level.max(log::LevelFilter::Info)).ok();
       let watchdog_kb = manifest.max_rss_kb;
       #[cfg(feature = "test-utils")]
       let watchdog_kb = if test_fault().as_deref() == Some("rss") {
@@ -960,7 +1010,7 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
   // Same chain as the in-process renderer (`post.rs`): SVG on the live page
   // DOM before MathML/XSLT for the HTML formats (Perl `LaTeXML.pm` order).
-  if m.is_html_out {
+  if m.svg {
     processors.push(Box::new(latexml_post::svg::SVG::new()));
   }
   let math_formats = crate::post::MathFormats {
@@ -1048,6 +1098,19 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// Under `--quiet` a Warning keeps its unindented continuation lines (a multi-line message); the notes after an
+  /// Info record stay hidden. The default verbosity shows every line.
+  #[test]
+  fn stderr_share_keeps_a_records_continuation_lines() {
+    let log = "note before\nInfo:a:x one\nMathML[Presentation] S1.html processing\nWarning:b:y first line\nsecond \
+               line\n\tat loc\nInfo:c:z two\n\tIn here\npost-processing\nError:d:w bad\n";
+    assert_eq!(
+      stderr_share_at(log, |level| level <= log::Level::Warn),
+      "Warning:b:y first line\nsecond line\n\tat loc\nError:d:w bad\n"
+    );
+    assert_eq!(stderr_share_at(log, |level| level <= log::Level::Info), log);
+  }
 
   #[test]
   fn child_report_parses_status_lines_and_keeps_log() {

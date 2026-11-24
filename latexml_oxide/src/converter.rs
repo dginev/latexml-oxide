@@ -598,19 +598,22 @@ pub struct Converter {
 
 impl Converter {
   pub fn from_config(opts: Config) -> Converter {
+    // Every field named (no `..Default`): a new option fails to compile until it is wired.
     let core = Core::new(CoreOptions {
-      verbosity: Some(opts.verbosity),
+      model:            None,
+      verbosity:        Some(opts.verbosity),
       include_comments: opts.include_comments.or(Some(false)),
-      strict: opts.strict,
-      include_styles: opts.include_styles,
-      preload: opts.preload.clone(),
-      search_paths: opts.search_paths.clone(),
-      nomathparse: opts.nomathparse,
-      source_map: opts.source_map,
+      strict:           opts.strict,
+      include_styles:   opts.include_styles,
+      preload:          opts.preload.clone(),
+      search_paths:     opts.search_paths.clone(),
+      nomathparse:      opts.nomathparse,
+      source_map:       opts.source_map,
       // Perl Core.pm L60-61: seed State PERL_INPUT_ENCODING from --inputencoding
       // (the Mouth reads it per-line to decode source bytes). `None` ⇒ utf-8.
-      input_encoding: opts.inputencoding.clone(),
-      ..CoreOptions::default()
+      input_encoding:   opts.inputencoding.clone(),
+      documentid:       opts.documentid.clone(),
+      graphics_paths:   None,
     });
     Converter {
       runtime: Runtime {
