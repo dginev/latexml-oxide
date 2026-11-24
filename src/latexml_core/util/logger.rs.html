@@ -53,8 +53,8 @@
 <a href=#53 id=53 data-nosnippet>53</a></span><span class="attr">#[inline]
 <a href=#54 id=54 data-nosnippet>54</a></span><span class="kw">pub fn </span>debug_all() -&gt; bool { DEBUG_ALL.load(Ordering::Relaxed) }
 <a href=#55 id=55 data-nosnippet>55</a>
-<a href=#56 id=56 data-nosnippet>56</a><span class="doccomment">/// The current STDERR verbosity (see [`STDERR_LEVEL`]).
-<a href=#57 id=57 data-nosnippet>57</a></span><span class="kw">fn </span>stderr_level() -&gt; LevelFilter {
+<a href=#56 id=56 data-nosnippet>56</a><span class="doccomment">/// The current STDERR verbosity (`STDERR_LEVEL`): `--quiet` `Warn`, the default `Info`, `--verbose` `Debug`.
+<a href=#57 id=57 data-nosnippet>57</a></span><span class="kw">pub fn </span>stderr_level() -&gt; LevelFilter {
 <a href=#58 id=58 data-nosnippet>58</a>  <span class="kw">match </span>STDERR_LEVEL.load(Ordering::Relaxed) {
 <a href=#59 id=59 data-nosnippet>59</a>    <span class="number">0 </span>=&gt; LevelFilter::Off,
 <a href=#60 id=60 data-nosnippet>60</a>    <span class="number">1 </span>=&gt; LevelFilter::Error,

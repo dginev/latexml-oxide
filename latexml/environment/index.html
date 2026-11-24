@@ -22,9 +22,9 @@ conversion starts.</p>
 <li>A number that does not parse falls back to the default, except <code>LATEXML_MAX_MEMORY</code>, which is a command-line error.</li>
 </ul>
 <h3 id="running-conversions-user"><a class="doc-anchor" href="#running-conversions-user">§</a>Running conversions (user)</h3><h4 id="memory-and-limits"><a class="doc-anchor" href="#memory-and-limits">§</a>Memory and limits</h4><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
-<tr><td><code>LATEXML_MAX_MEMORY</code></td><td>MiB; <code>0</code> = no ceiling</td><td>90 % of available RAM, at most 64 GiB, at least 2048 MiB</td><td>The one memory knob of <code>latexml_oxide</code>, the same as <code>--max-memory</code>. The watchdog stops the run above it; the cooperative fuse sits at 3/4 of it; streaming spills at a third of the fuse.</td></tr>
-<tr><td><code>LATEXML_STREAMING</code></td><td><code>true</code> / <code>false</code></td><td>unset = automatic</td><td>The same as <code>--streaming</code>. <code>true</code> streams from the start; <code>false</code> never streams. <code>1</code> is rejected.</td></tr>
-<tr><td><code>LATEXML_TOKEN_LIMIT</code></td><td>tokens; <code>0</code> disables</td><td>20,000,000,000, raised to 1000 × the source size</td><td>Runaway-expansion backstop (a Fatal). <code>--token-limit</code> wins. Setting it at all turns off the scaling with source size.</td></tr>
+<tr><td><code>LATEXML_MAX_MEMORY</code></td><td>MiB; <code>0</code> = no ceiling</td><td>90 % of available RAM, at most 64 GiB, at least 2048 MiB</td><td><code>latexml_oxide</code> only (not <code>cortex_worker</code>). The one memory knob of <code>latexml_oxide</code>, the same as <code>--max-memory</code>. The watchdog stops the run above it; the cooperative fuse sits at 3/4 of it; streaming spills at a third of the fuse.</td></tr>
+<tr><td><code>LATEXML_STREAMING</code></td><td><code>true</code> / <code>false</code></td><td>unset = automatic</td><td><code>latexml_oxide</code> only (not <code>cortex_worker</code>). The same as <code>--streaming</code>. <code>true</code> streams from the start; <code>false</code> never streams. <code>1</code> is rejected.</td></tr>
+<tr><td><code>LATEXML_TOKEN_LIMIT</code></td><td>tokens; <code>0</code> disables</td><td>20,000,000,000, raised to 1000 × the source size</td><td>Runaway-expansion backstop (a Fatal). <code>--token-limit</code> wins. Setting either at all turns off the scaling with source size.</td></tr>
 <tr><td><code>LATEXML_EXPAND_DEPTH_LIMIT</code></td><td>integer; <code>0</code> disables</td><td>12,000</td><td>Nested expansion depth before <code>Fatal:Timeout:Recursion</code>.</td></tr>
 <tr><td><code>LATEXML_MAX_GRAMMAR_LEXEMES</code></td><td>integer; <code>0</code> or <code>none</code> disables</td><td>12,000</td><td>Formulas longer than this skip the grammar parser for the simpler fallback parser.</td></tr>
 </tbody></table>
@@ -60,8 +60,8 @@ reservation by about half without changing memory use, speed or output:</p>
 <tr><td><code>LATEXML_SVG_CONVERT_TIMEOUT_SECS</code></td><td>seconds &gt; 0</td><td>15</td><td>Time limit for one mutool or pdftocairo SVG conversion.</td></tr>
 </tbody></table>
 </div><h4 id="output-logging-and-safety"><a class="doc-anchor" href="#output-logging-and-safety">§</a>Output, logging and safety</h4><div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
-<tr><td><code>LATEXML_TELEMETRY_OUT</code></td><td>file</td><td>none</td><td>Append one JSON line of timings and counts per conversion; the same as <code>--telemetry-out</code>.</td></tr>
-<tr><td><code>LATEXML_SOURCE_MAP</code></td><td>presence</td><td>off</td><td>The same as <code>--source-map</code>: <code>data-sourcepos</code> attributes in the output.</td></tr>
+<tr><td><code>LATEXML_TELEMETRY_OUT</code></td><td>file</td><td>none</td><td><code>latexml_oxide</code> only. Append one JSON line of timings and counts per conversion; the same as <code>--telemetry-out</code>.</td></tr>
+<tr><td><code>LATEXML_SOURCE_MAP</code></td><td>presence</td><td>off</td><td><code>latexml_oxide</code> only. The same as <code>--source-map</code>: <code>data-sourcepos</code> attributes in the output.</td></tr>
 <tr><td><code>LATEXML_DISABLE_SHELL_ESCAPE</code></td><td>presence</td><td>allowed</td><td>Rhai bindings may not run external commands (builds with runtime bindings).</td></tr>
 <tr><td><code>SOURCE_DATE_EPOCH</code></td><td>Unix seconds</td><td>the clock</td><td>Fixes <code>\today</code>, <code>\time</code> and the log banner’s time (UTC), and the member times of <code>--format=zip</code>/EPUB output, for reproducible builds.</td></tr>
 <tr><td><code>NO_COLOR</code></td><td>presence</td><td>colour on a terminal</td><td>No colour codes on stderr.</td></tr>
@@ -98,10 +98,17 @@ document their variables in their headers.</p>
 <tr><td><code>TMPDIR</code>, <code>MAGICK_TEMPORARY_PATH</code>, <code>MAGICK_TMPDIR</code></td><td>a fresh directory per worker slot</td><td>Scratch space emptied between spawns.</td></tr>
 <tr><td><code>MALLOC_ARENA_MAX</code>, <code>MIMALLOC_ARENA_RESERVE</code></td><td><code>2</code>, <code>128MiB</code></td><td>The children run under an address-space limit (<code>--child-mem-limit-mb</code>); see “Under an address-space limit”.</td></tr>
 <tr><td><code>MALLOC_CONF</code>, <code>_RJEM_MALLOC_CONF</code></td><td><code>background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0</code></td><td>Prompt return of freed memory in jemalloc builds.</td></tr>
-<tr><td><code>LATEXML_RSS_CAP_BYTES</code></td><td><code>--max-rss-mb</code>, else <code>--child-mem-limit-mb</code> − 256 MiB</td><td>The per-child memory fuse.</td></tr>
+<tr><td><code>LATEXML_RSS_CAP_BYTES</code></td><td><code>--child-mem-limit-mb</code> − 256 MiB, else (<code>--child-mem-limit-mb=0</code>) <code>--max-rss-mb</code></td><td>The per-child memory fuse.</td></tr>
 </tbody></table>
 </div>
-<p>These replace any value of the same name in the worker’s own environment. The Docker entrypoint reads <code>WORKERS</code> and
+<p>These replace any value of the same name in the worker’s own environment. The worker itself reads:</p>
+<div class="table"><table><thead><tr><th>Variable</th><th>Values</th><th>Default</th><th>Effect</th></tr></thead><tbody>
+<tr><td><code>CORTEX_WORKER_THROTTLE_SECS</code></td><td>seconds</td><td>60</td><td>How long an idle worker sleeps before asking the dispatcher for work again.</td></tr>
+<tr><td><code>CORTEX_WORKER_IO_TIMEOUT_SECS</code></td><td>seconds &gt; 0</td><td>120</td><td>How long a worker waits on a dead or wedged dispatcher before giving up that exchange.</td></tr>
+<tr><td><code>CORTEX_HARNESS_RAM_HEADROOM_PCT</code></td><td>percent, 10-100</td><td>85</td><td>pericortex’s worker-count clamp to RAM; <code>cortex_worker</code> never calls it, so it has no effect there (<code>--workers</code> and the memory governor size the fleet).</td></tr>
+</tbody></table>
+</div>
+<p>The Docker entrypoint reads <code>WORKERS</code> and
 <code>PROFILE</code> (<code>ar5iv</code> or <code>generic</code>).</p>
 <h3 id="diagnosing-and-measuring-dev"><a class="doc-anchor" href="#diagnosing-and-measuring-dev">§</a>Diagnosing and measuring (dev)</h3>
 <p>These switch on traces, audits or alternative code paths. They are for developers; output and speed may change.</p>
