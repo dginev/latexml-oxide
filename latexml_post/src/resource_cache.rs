@@ -15,7 +15,8 @@
 //! where Perl overwrote it (issue 995); and a stored name is written only when the request could have been given it
 //! ([`Checks`]). Each [`resolve`] is one `IMMEDIATE` transaction, so processes naming into one folder at once through
 //! the file never hand out one name to two sources; a store in memory in place of its file (it could not be opened, or
-//! the transaction failed and runs again there) skips the names whose files exist ([`Checks::on_disk`]).
+//! the transaction failed and runs again there) skips the names whose files hold other bytes than the request writes
+//! ([`Checks::on_disk`]), so a rerun takes its own files again.
 
 use std::collections::HashMap;
 
@@ -59,6 +60,19 @@ pub struct Request {
   pub svg_alt:  bool,
   /// A copy (named after the conversions of its page when it cannot keep its path) or a conversion.
   pub copy:     bool,
+  /// What the destination file will hold ([`Checks::on_disk`]).
+  pub output:   Output,
+}
+
+/// What a resource's file will hold, so that a store in memory tells the file an earlier run wrote for it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Output {
+  /// The source's bytes (a copy).
+  Source,
+  /// The source's page (`None`: the default) rendered, as the graphics cache keeps it.
+  Render(Option<u32>),
+  /// Known only once made (a cropped or turned image).
+  Made,
 }
 
 /// A resource's destination, relative to the destination directory, and its vector render's when it may have one.
@@ -76,6 +90,9 @@ pub struct Resolved {
   pub allocated: bool,
 }
 
+/// Whether a file of the name exists in the destination directory holding other bytes than the request writes.
+pub type OnDisk<'a> = &'a dyn Fn(&Request, &ResourceName) -> bool;
+
 /// What the caller knows of the destination directory.
 pub struct Checks<'a> {
   /// Perl's `resource_prefix` (`x` unless set).
@@ -86,9 +103,10 @@ pub struct Checks<'a> {
   /// takes and the source holds the request's bytes: another source's kept path or stem a request may share. Only a
   /// relative path to a regular file is read.
   pub vouch:   &'a dyn Fn(&Request, &ResourceName, &str) -> bool,
-  /// Whether a file of the name exists in the destination directory, asked only in a transaction on a store in memory
-  /// in place of its file (it does not know the names earlier runs handed out); `None` otherwise.
-  pub on_disk: Option<&'a dyn Fn(&ResourceName) -> bool>,
+  /// Whether a file of the name exists in the destination directory holding other bytes than the request writes,
+  /// asked only in a transaction on a store in memory in place of its file (it does not know the names earlier runs
+  /// handed out); `None` otherwise.
+  pub on_disk: Option<OnDisk<'a>>,
   /// The cache file a Warning names.
   pub cache:   &'a str,
 }
@@ -201,10 +219,10 @@ fn place(
   let Some(name) = proposed else {
     return Ok(None);
   };
-  // A store in memory does not know an earlier run's stems: a file of the name is another source's.
+  // A store in memory does not know an earlier run's stems: a file of the name holding other bytes is another source's.
   let stem = matches!(r.proposal, Proposal::Stem(_));
   let taken = claimed(conn, &name, Some(&r.owner))?
-    || (stem && checks.on_disk.is_some_and(|on_disk| on_disk(&name)));
+    || (stem && checks.on_disk.is_some_and(|on_disk| on_disk(r, &name)));
   if taken {
     return Ok(None);
   }
@@ -300,8 +318,8 @@ fn shareable_name(r: &Request, dest: &str) -> bool {
       .all(|part| !part.is_empty() && (part == ".." || !part.starts_with('.')))
 }
 
-/// The next `<prefix>N` no source owns (Perl `generateResourcePathname`, which skips none), and no file holds when the
-/// store fell back to memory.
+/// The next `<prefix>N` no source owns (Perl `generateResourcePathname`, which skips none), and whose file, when the
+/// store fell back to memory, holds no other bytes.
 fn generate(
   conn: &Connection,
   checks: &Checks,
@@ -317,7 +335,7 @@ fn generate(
       &with_ext(&format!("{}{n}", checks.prefix), &r.ext),
       r.svg_alt,
     );
-    if !claimed(conn, &name, None)? && !checks.on_disk.is_some_and(|on_disk| on_disk(&name)) {
+    if !claimed(conn, &name, None)? && !checks.on_disk.is_some_and(|on_disk| on_disk(r, &name)) {
       break name;
     }
   };
@@ -362,7 +380,7 @@ mod tests {
 
   fn checks<'a>(
     vouch: &'a dyn Fn(&Request, &ResourceName, &str) -> bool,
-    on_disk: Option<&'a dyn Fn(&ResourceName) -> bool>,
+    on_disk: Option<OnDisk<'a>>,
   ) -> Checks<'a> {
     Checks {
       prefix: "x",
@@ -393,6 +411,7 @@ mod tests {
       ext:      ext.to_string(),
       svg_alt:  false,
       copy:     true,
+      output:   Output::Source,
     }
   }
 
@@ -409,6 +428,7 @@ mod tests {
       ext: "png".to_string(),
       svg_alt,
       copy: false,
+      output: Output::Render(None),
     }
   }
 
@@ -523,10 +543,15 @@ mod tests {
     ]]);
   }
 
-  /// A store that fell back to memory skips a generated name or a stem whose file exists in the destination.
+  /// A store that fell back to memory skips a generated name or a stem whose file holds other bytes, and takes one
+  /// holding the request's own: `x1.png` holds `a/plot.pdf`'s render, `plot.png` and `x2.png` other images.
   #[test]
   fn a_store_in_memory_skips_files_on_disk() {
-    let on_disk = |name: &ResourceName| ["x1.png", "plot.png"].contains(&name.dest.as_str());
+    let on_disk = |r: &Request, name: &ResourceName| match name.dest.as_str() {
+      "x1.png" => r.identity != "a",
+      "plot.png" | "x2.png" => true,
+      _ => false,
+    };
     let pages = [vec![
       convert("a/plot.pdf", "a", Some("plot"), false),
       copy("../b.png", "b", None, "png"),
@@ -534,7 +559,7 @@ mod tests {
     let names = DocCache::new(true).with_store(None, |store| {
       store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| true, Some(&on_disk)), &pages))
     });
-    assert_eq!(dests(&names), [vec!["x2.png", "x3.png"]]);
+    assert_eq!(dests(&names), [vec!["x1.png", "x3.png"]]);
   }
 
   /// Two processes allocating into one cache file at once never hand out one name twice.

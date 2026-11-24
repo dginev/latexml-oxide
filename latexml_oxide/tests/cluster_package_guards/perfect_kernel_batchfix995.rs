@@ -1091,3 +1091,128 @@ fn batchfix995_a_planted_source_is_never_read_for_ever() {
   assert!(!src.join("evil.png").exists() && !src.join("evil2.png").exists());
   assert_eq!(std::fs::read(root.path().join("outside.png")).unwrap(), b);
 }
+
+/// Convert the split `parent/index.tex` with `extra` options and the graphics cache in `graphics`; the stderr.
+fn convert_split(root: &Path, extra: &[&str], graphics: &Path, jobs: &str) -> String {
+  let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+    .args([
+      "--split",
+      "--splitat=chapter",
+      "--dest=index.html",
+      "--timestamp=0",
+    ])
+    .args(extra)
+    .args(["--nocomments", "--timeout=110", "index.tex"])
+    .current_dir(root.join("parent"))
+    .env("LATEXML_GRAPHICS_CACHE_DIR", graphics)
+    .env("LATEXML_RENDER_JOBS", jobs)
+    .output()
+    .expect("spawn latexml_oxide");
+  String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "")
+}
+
+/// A cache file that is not a database (Warning, the run in memory): a rerun of the unchanged split book takes the
+/// names it wrote before, whose files hold what it writes again: the same files, no `x5.svg` (round 5 skipped every
+/// existing name: `x5.svg`.. beside `x1.svg`.., each rerun a new set). The EPS stems only with Ghostscript.
+/// `Graphics::resolve_names` (`holds_other`), `resource_cache::Checks::on_disk`; repro
+/// loader/image_names_cache_unusable.
+#[test]
+fn batchfix995_a_rerun_beside_an_unusable_cache_is_idempotent() {
+  let root = tempfile::tempdir().unwrap();
+  let eps = ghostscript_present();
+  let main = if eps {
+    SPLIT.to_string()
+  } else {
+    eprintln!(
+      "SKIP (the EPS part) batchfix995_a_rerun_beside_an_unusable_cache_is_idempotent: no Ghostscript"
+    );
+    SPLIT
+      .lines()
+      .filter(|line| !line.contains("plot"))
+      .collect::<Vec<_>>()
+      .join("\n")
+  };
+  layout(root.path(), &main);
+  let parent = root.path().join("parent");
+  if eps {
+    plots(&parent);
+  }
+  let garbage = "not a database, but long enough to be read as one\n".repeat(40);
+  std::fs::write(parent.join("LaTeXML-oxide.cache"), garbage).unwrap();
+  let graphics = root.path().join("graphics");
+  let images = || {
+    tree(&parent)
+      .into_iter()
+      .filter(|(name, _)| name.ends_with(".png") || name.ends_with(".svg"))
+      .collect::<Vec<_>>()
+  };
+  let mut runs = Vec::new();
+  for _ in 0..2 {
+    let log = convert_split(root.path(), &[], &graphics, "1");
+    let warnings: Vec<&str> = log.lines().filter(|l| l.starts_with("Warning:")).collect();
+    assert_eq!((error_count(&log), warnings.len()), (0, 1), "{log}");
+    assert!(warnings[0].starts_with("Warning:I/O:cache"), "{log}");
+    runs.push((
+      images(),
+      images_of(&parent.join("Ch1.html")),
+      images_of(&parent.join("Ch2.html")),
+    ));
+  }
+  fn names(set: &[(String, Vec<u8>)]) -> Vec<&str> { set.iter().map(|(n, _)| n.as_str()).collect() }
+  let expected: &[&str] = if eps {
+    &["plot.png", "x1.svg", "x2.png", "x3.svg", "x4.svg"]
+  } else {
+    &["x1.svg", "x2.svg", "x3.svg"]
+  };
+  assert_eq!(
+    (names(&runs[0].0), names(&runs[1].0)),
+    (expected.to_vec(), expected.to_vec())
+  );
+  assert!(runs[0] == runs[1], "the rerun changed a page or a file");
+}
+
+/// `--nocache` writes no `LaTeXML-oxide.cache` and the split book is named in the run alone, at every job count alike:
+/// Chapter One shows child_1's `A` as `x1.svg`, Chapter Two child_2's as `x2.svg` and `x3.svg` (issue 995 fixed by the
+/// run's plan; Perl's `nocache`, `Post.pm` L678). `latexml_oxide` `--cache`/`--nocache`.
+#[test]
+fn batchfix995_nocache_writes_no_cache_and_names_the_split_book() {
+  let main = SPLIT
+    .lines()
+    .filter(|line| !line.contains("plot"))
+    .collect::<Vec<_>>()
+    .join("\n");
+  let mut trees = Vec::new();
+  for jobs in ["1", "4"] {
+    let root = tempfile::tempdir().unwrap();
+    layout(root.path(), &main);
+    let parent = root.path().join("parent");
+    let log = convert_split(
+      root.path(),
+      &["--nocache"],
+      &root.path().join("graphics"),
+      jobs,
+    );
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert!(!parent.join("LaTeXML-oxide.cache").exists());
+    assert_eq!(
+      images_of(&parent.join("Ch1.html")),
+      pairs(&[("x1.svg", "child_1/images/A")])
+    );
+    assert_eq!(
+      images_of(&parent.join("Ch2.html")),
+      pairs(&[
+        ("x2.svg", "child_2/images/A"),
+        ("x3.svg", "child_2/images/B")
+      ])
+    );
+    trees.push(tree(&parent));
+  }
+  let differ: Vec<&str> = trees[0]
+    .iter()
+    .zip(&trees[1])
+    .filter(|(one, four)| one != four)
+    .map(|(one, _)| one.0.as_str())
+    .filter(|name| !name.ends_with(".latexml.log"))
+    .collect();
+  assert_eq!((trees[0].len(), differ), (trees[1].len(), vec![]));
+}

@@ -17,7 +17,7 @@ use rustc_hash::FxHashMap as HashMap;
 use crate::{
   document::{DocCache, PostDocument},
   processor::{ProcessResult, Processor},
-  resource_cache::{Proposal, Request, ResourceName},
+  resource_cache::{Output, Proposal, Request, ResourceName},
 };
 
 thread_local! {
@@ -1075,7 +1075,13 @@ impl Graphics {
         .filter(|p| p.dirs.dest_dir == *dir)
         .map(|p| p.requests.clone())
         .collect();
-      let resolved = Self::resolve_names(&first.cache, &first.dirs, &prefix, &pages);
+      let resolved = Self::resolve_names(
+        &first.cache,
+        &first.dirs,
+        &prefix,
+        &pages,
+        self.cache_policy,
+      );
       for (requests, resolved) in pages.iter().zip(resolved) {
         for (request, resolved) in requests.iter().zip(resolved) {
           names
@@ -1248,6 +1254,11 @@ impl Graphics {
           ext: dest_type,
           svg_alt,
           copy: false,
+          output: if transform {
+            Output::Made
+          } else {
+            Output::Render(page)
+          },
         };
         descs.push(NodeDesc::Convert(Box::new(ConvertDesc {
           source,
@@ -1276,6 +1287,7 @@ impl Graphics {
           ext,
           svg_alt: false,
           copy: true,
+          output: Output::Source,
         };
         descs.push(NodeDesc::Copy {
           source,
@@ -1294,6 +1306,7 @@ impl Graphics {
     descs: &[NodeDesc],
     dirs: &PageDirs,
     names: &mut ResourceNames,
+    policy: crate::graphics_cache::CachePolicy,
   ) -> Vec<Option<ResourceName>> {
     let mut out: Vec<Option<ResourceName>> = descs
       .iter()
@@ -1318,7 +1331,7 @@ impl Graphics {
     let planning = names.planning;
     let prefix = names.prefix.clone().unwrap_or_else(|| "x".to_string());
     let cache = names.cache.clone().unwrap_or_else(|| doc.cache().clone());
-    let resolved = Self::resolve_names(&cache, dirs, &prefix, &[requests])
+    let resolved = Self::resolve_names(&cache, dirs, &prefix, &[requests], policy)
       .into_iter()
       .next()
       .unwrap_or_default();
@@ -1347,7 +1360,7 @@ impl Graphics {
     names: &mut ResourceNames,
   ) -> PagePlan {
     let descs = self.describe(doc, nodes, dirs, names);
-    let resolved = Self::names_for(doc, &descs, dirs, names);
+    let resolved = Self::names_for(doc, &descs, dirs, names, self.cache_policy);
     let dest_dir = &dirs.dest_dir;
     let mut plans: Vec<Plan> = Vec::with_capacity(nodes.len());
     let mut convert_jobs: Vec<ConvertJob> = Vec::new();
@@ -1459,6 +1472,7 @@ impl Graphics {
     dirs: &PageDirs,
     prefix: &str,
     pages: &[Vec<Request>],
+    policy: crate::graphics_cache::CachePolicy,
   ) -> Vec<Vec<crate::resource_cache::Resolved>> {
     let cache_file = Path::new(&dirs.dest_dir)
       .join(crate::document::CACHE_FILE)
@@ -1470,10 +1484,12 @@ impl Graphics {
     let vouch = |r: &Request, name: &ResourceName, source: &str| {
       Self::vouch(r, name, source, dirs, &cache_file, &reported)
     };
-    let on_disk = |name: &ResourceName| {
-      std::iter::once(&name.dest)
-        .chain(&name.alt)
-        .any(|part| Path::new(&dirs.dest_dir).join(part).exists())
+    // A file of the name holding what `r` writes is the one an earlier run wrote for it: a rerun takes it again.
+    let on_disk = |r: &Request, name: &ResourceName| {
+      std::iter::once(&name.dest).chain(&name.alt).any(|part| {
+        let path = Path::new(&dirs.dest_dir).join(part);
+        path.exists() && !Self::holds_output(r, &path, part == &name.dest, dirs, policy)
+      })
     };
     cache.with_store(dirs.cache_dir.as_deref(), |store| {
       // Whether the store runs in memory is known only inside the transaction: a file that fails in it is
@@ -1483,12 +1499,53 @@ impl Graphics {
           prefix,
           usable: &usable,
           vouch: &vouch,
-          on_disk: fell_back.then_some(&on_disk as &dyn Fn(&ResourceName) -> bool),
+          on_disk: fell_back.then_some(&on_disk as crate::resource_cache::OnDisk),
           cache: &cache_file,
         };
         crate::resource_cache::resolve(tx, &checks, pages)
       })
     })
+  }
+
+  /// Whether the file at `path` holds what `r` writes there: a copy its source's bytes; a render (`raster`, else the
+  /// vector `.svg` beside it) the graphics cache's entry for its source. A cropped or turned image is never known.
+  fn holds_output(
+    r: &Request,
+    path: &Path,
+    raster: bool,
+    dirs: &PageDirs,
+    policy: crate::graphics_cache::CachePolicy,
+  ) -> bool {
+    use latexml_core::util::pathname::absolute;
+    let digest =
+      |path: &Path| Self::digest_file_content(&path.to_string_lossy()).map(|d| d.content());
+    let Some(held) = digest(path) else {
+      return false;
+    };
+    let hex = |d: [u8; 32]| d.iter().map(|b| format!("{b:02x}")).collect::<String>();
+    let source = absolute(&Path::new(&dirs.dest_dir).join(&r.source).to_string_lossy());
+    match r.output {
+      Output::Source => hex(held) == r.identity,
+      Output::Render(page) => {
+        let key = crate::graphics_cache::RenderKey {
+          page,
+          density: if raster {
+            Self::raster_density_for_source(&source)
+          } else {
+            0
+          },
+          ext: if raster {
+            ext_from_path(&path.to_string_lossy())
+          } else {
+            "svg"
+          },
+        };
+        crate::graphics_cache::cached_output(policy, &source, key)
+          .and_then(|cached| digest(&cached))
+          .is_some_and(|cached| cached == held)
+      },
+      Output::Made => false,
+    }
   }
 
   /// Whether `name`, stored for the source at `source` (relative to the destination directory), is the name that
@@ -3559,6 +3616,7 @@ mod tests {
       ext:      ext.to_string(),
       svg_alt:  false,
       copy:     false,
+      output:   Output::Render(None),
     }
   }
 

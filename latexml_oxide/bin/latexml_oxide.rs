@@ -215,6 +215,17 @@ struct Cli {
   #[arg(long, overrides_with = "nodefaultresources")]
   defaultresources: bool,
 
+  /// Keep no `LaTeXML-oxide.cache` in the destination directory: the generated image names restart at `x1` each run
+  /// (Perl's `nocache`, `Post.pm` L678).
+  #[arg(long, overrides_with = "cache")]
+  nocache: bool,
+
+  /// Keep the image names of the destination directory in its `LaTeXML-oxide.cache` (the default, as Perl's
+  /// `LaTeXML.cache`), so a rerun or another document converted into it keeps them. If both are given, the last one
+  /// on the command line wins.
+  #[arg(long, overrides_with = "nocache")]
+  cache: bool,
+
   /// Omit source comments from the output.
   #[arg(long, overrides_with = "comments")]
   nocomments: bool,
@@ -1738,7 +1749,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             .filter(|t| !t.is_empty() && *t != "0"),
           icon: cli.icon.as_deref(),
           whatsout: whatsout_mode,
-          nocache: false,
+          nocache: chosen_by_clap(cli.cache, cli.nocache) == Some(false),
         };
         // Drop dead core TeX state right after `MakeBibliography` (before
         // `parallel_render` sizes the worker fleet and before render phases)
@@ -2687,6 +2698,9 @@ mod boolean_flag_last_wins_tests {
 
     let c = cli(&["--comments", "--nocomments"]);
     assert_eq!(chosen_by_clap(c.comments, c.nocomments), Some(false));
+
+    let c = cli(&["--nocache", "--cache"]);
+    assert_eq!(chosen_by_clap(c.cache, c.nocache), Some(true));
     let c = cli(&["--nocomments", "--comments"]);
     assert_eq!(chosen_by_clap(c.comments, c.nocomments), Some(true));
 

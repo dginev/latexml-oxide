@@ -24198,7 +24198,7 @@ lies outside `--sitedirectory`. Packages leave the cache out (`Pack/Zip.pm` `ARC
 destination directory, the SQLite table `kv(key, value)` with Perl's keys and values, in the file `LaTeXML-oxide.cache`
 there (`sqlite_store.rs`: WAL, `synchronous=OFF`, a 10 s busy timeout, inside a conversion's default `--timeout=60`, a `user_version` gate; opened at the first lookup,
 the directory made first as Perl's `checkDestination` makes it, L941-949; opening retried while another process holds
-a new file, whose turn to WAL SQLite refuses at once rather than wait), in memory under `nocache` (the cortex worker, whose every paper gets a fresh directory, and the LSP) or without a
+a new file, whose turn to WAL SQLite refuses at once rather than wait), in memory under `nocache` (`latexml_oxide --nocache`; the cortex worker, whose every paper gets a fresh directory, and the LSP) or without a
 destination directory. Every page of a run shares the run's `DocCache` (`PostDocumentOptions::cache`); a render
 worker opens its own on the same file. `resource_cache.rs` names images over it: every name goes through it (a copy's
 kept path, a converted image's stem, a generated `xN` from Perl's counter key). A name's owner is its source (its path
@@ -24243,7 +24243,10 @@ link followed to one), an absolute path, a device or a FIFO (whose read would no
 (10) a store that cannot be used, at opening or in a transaction (the file locked past the 10 s timeout, read-only,
 corrupt), is reported (`I/O:cache`) and the rest of the run is in memory, where Perl's tie is Fatal (Post.pm
 L1537-1546); the transaction runs again there and, told it is in memory, skips a generated name or a stem whose file
-exists in the destination; (11) Perl's `--whatsout=math` unlinks
+in the destination holds other bytes than the image writes (a copy: its source's; a render: the graphics cache's entry
+for it), so a rerun of an unchanged document takes its own files again, while an edited, cropped or turned image, or
+a render the graphics cache does not hold (`LATEXML_GRAPHICS_CACHE_OFF`), takes a new name; `--nocache` (Perl's
+option, in memory from the start) skips nothing: its names restart at `x1` each run and overwrite, as Perl's do; (11) Perl's `--whatsout=math` unlinks
 `LaTeXML.cache` relative to the working directory after packing (`Util/Pack.pm` L343), which misses a cache in another
 destination directory; not ported: a math-only run keeps its cache, as every run does. The run closes the cache when post ends (checkpointed, no
 `-wal`/`-shm` left), before anything is packed, and packages skip it and its side files by name (`pack.rs`
@@ -24258,7 +24261,8 @@ batchfix995_concurrent_documents_in_one_folder_never_share_a_name,
 batchfix995_packages_leave_the_cache_out_when_a_worker_is_killed,
 batchfix995_linked_destination_writes_nothing_outside_the_site_directory, batchfix995_an_edited_image_keeps_its_name,
 batchfix995_a_corrupt_cache_entry_decides_no_file, batchfix995_a_read_only_cache_overwrites_no_image,
-batchfix995_a_locked_cache_waits_less_than_the_conversion, batchfix995_a_planted_source_is_never_read_for_ever}`
+batchfix995_a_locked_cache_waits_less_than_the_conversion, batchfix995_a_planted_source_is_never_read_for_ever,
+batchfix995_a_rerun_beside_an_unusable_cache_is_idempotent, batchfix995_nocache_writes_no_cache_and_names_the_split_book}`
 (`tools/perfect_kernel/repros/loader/image_subimport_sitedirectory.tex`,
 `tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex`,
 `tools/perfect_kernel/repros/loader/image_names_two_documents_one_folder.tex`,

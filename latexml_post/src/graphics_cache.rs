@@ -401,6 +401,16 @@ fn lookup_digest(
   Some(CacheHit { dims })
 }
 
+/// The cache's entry for `(source, key)` when `policy` consults the cache and it holds one: what a conversion of the
+/// source installs.
+pub fn cached_output(policy: CachePolicy, source: &str, key: RenderKey) -> Option<PathBuf> {
+  if policy == CachePolicy::Bypass || disabled() {
+    return None;
+  }
+  let cached = cache_path(&cache_root()?, &hash_key(Path::new(source), key)?, key.ext);
+  cached.exists().then_some(cached)
+}
+
 /// Insert `dest` (and optionally its dimensions) into the cache under
 /// `(source, key)`. Idempotent and best-effort: any I/O failure leaves
 /// the cache unchanged.
