@@ -24601,7 +24601,8 @@ trailing-digit split. A label read whole has no full authors (as Perl; the Rust 
 printed "Maes, 1995 (1995)"). Names with three or more authors before the year (`[Smith, Jones, and Lee, 2001]`) split
 as natbib does: author "Smith", year "Jones".
 
-**Witness** 2505.11584 (apalike.bst: 37 citations "(Maes,, 1995)"), 2605.20003 (a braced `(`). **Guards**
+**Witness** 2505.11584 (apalike.bst: 37 citations "(Maes,, 1995)"), 2605.20003 (a braced `(`), 2605.02429 (a braced
+`(` in numbers mode: the label spilled into the entry). **Guards**
 `perfect_kernel_batchnatbib::{natbib_apalike_label_splits_at_comma, natbib_citename_label_splits_at_comma}` (repros
 `index-bib/natbib_{apalike,citename}_label_splits_at_comma`); repinned: `perfect_kernel_batch70a::
 natbib_entry_constructor_is_binding_private` (author "Batselier et al.", no full authors),
