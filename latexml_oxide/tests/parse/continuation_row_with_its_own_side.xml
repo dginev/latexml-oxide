@@ -396,10 +396,11 @@
       </equation>
       <equation xml:id="S0.Ex2">
         <MathFork>
-          <Math tex="\displaystyle\quad+b(t)\,dt" text="+ b@(t) * differential-d@(t)" xml:id="S0.Ex2.m3">
+          <Math tex="\displaystyle\quad+b(t)\,dt" text="absent + b@(t) * differential-d@(t)" xml:id="S0.Ex2.m3">
             <XMath>
               <XMApp>
                 <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP">+</XMTok>
+                <XMTok meaning="absent"/>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMApp>
@@ -423,10 +424,11 @@
           </Math>
           <MathBranch>
             <td/>
-            <td align="left"><Math mode="inline" tex="\displaystyle\quad+b(t)\,dt" text="+ b@(t) * differential-d@(t)" xml:id="S0.Ex2.m1">
+            <td align="left"><Math mode="inline" tex="\displaystyle\quad+b(t)\,dt" text="absent + b@(t) * differential-d@(t)" xml:id="S0.Ex2.m1">
                 <XMath>
                   <XMApp>
                     <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP">+</XMTok>
+                    <XMTok meaning="absent"/>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMApp>
@@ -451,10 +453,11 @@
           </MathBranch>
         </MathFork>
         <MathFork>
-          <Math tex="\displaystyle+e\,dy" text="+ e * d * y" xml:id="S0.Ex2.m4">
+          <Math tex="\displaystyle+e\,dy" text="absent + e * d * y" xml:id="S0.Ex2.m4">
             <XMath>
               <XMApp>
                 <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                <XMTok meaning="absent"/>
                 <XMApp>
                   <XMTok meaning="times" role="MULOP">⁢</XMTok>
                   <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">e</XMTok>
@@ -466,10 +469,11 @@
           </Math>
           <MathBranch>
             <td/>
-            <td align="left"><Math mode="inline" tex="\displaystyle+e\,dy" text="+ e * d * y" xml:id="S0.Ex2.m2">
+            <td align="left"><Math mode="inline" tex="\displaystyle+e\,dy" text="absent + e * d * y" xml:id="S0.Ex2.m2">
                 <XMath>
                   <XMApp>
                     <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                    <XMTok meaning="absent"/>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">e</XMTok>

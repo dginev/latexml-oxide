@@ -2886,8 +2886,8 @@ literal word "nothing" appears next to every number. Same-host Perl is byte-iden
 (SHARED-FAILURE).
 
 **Divergence** (surpass-Perl, user-approved 2026-08-15): in `presentation.rs::pmml_token_inner`,
-an empty-content token carrying `class="ltx_unit"` renders as an empty `<m:mphantom>` — the same
-invisible placeholder used for `meaning="absent"` — instead of falling through to the
+an empty-content token carrying `class="ltx_unit"` renders as the invisible placeholder used for
+`meaning="absent"` (`<m:mphantom>` around a U+2060 `<m:mi>`, #1150) instead of falling through to the
 `meaning`→`name`→`role` text fallback. Only empty UNIT tokens are affected (a non-empty unit
 keeps its symbol; a non-unit empty token keeps the existing fallback), so no currently-passing
 paper changes shape. A unit whose symbol produces nothing is exactly the case where the fallback
@@ -23774,7 +23774,8 @@ before the copy, as its result chooses the binding's defaults. **Guard**:
 **Rule** (maintainer ruling 2026-11-21). Perl warns for every failing formula: `parse` resets `$WARNED` per formula
 (MathParser.pm:250-254) and `failureReport` warns each time (:862-897), so a formula repeated N times warns N times.
 Ours emits an `ambiguous_math` / `unparsed_math` Warning once per distinct lexeme string per conversion
-(parser.rs `warn_formula_once`, a SipHash set). The set is the thread-local `WARNED_FORMULAS`, cleared per conversion
+(parser.rs `warn_formula_once`, a SipHash set), the string as the Warning shows it (`shown_lexemes`: a continuation
+cell's `CELLADDOP` as `ADDOP`, #1151). The set is the thread-local `WARNED_FORMULAS`, cleared per conversion
 by `reset_conversion_notices` (from `core_interface::initialize_singletons`), as `FORMULA_ORDINAL` and
 `LOSTNODES_NOOP_REPORTED` are. It is not a `MathParser` field: streaming pass 2 builds a parser per segment and
 `finish_document` one more, so a per-parser set warned once per segment (the Nasser FAQ slices k600/k1200: 101
@@ -24076,3 +24077,101 @@ TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hi
 `dump_gate_init::nodump_latex_branch_converts_healthily` (no run of more than two blank lines). The interrupt itself
 is not tested, as its timing would make the test flaky; it was checked by hand (Ctrl+C during a first run's build
 leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).
+
+### 1150. An absent operand, and an empty box beside an operator, is a phantom U+2060 identifier, an Ord atom to MathJax (issue 991)
+
+- Perl: an `absent` token (XMath's missing operand: the LHS of an `align` continuation cell `& = b`, a prefix
+  relation, `\frac{a}{}`, `\sqrt{}`) is an empty `<m:mi/>` (`LaTeXML/lib/LaTeXML/Post/MathML.pm:1475`
+  `DefMathML("Token:?:absent", …)`); an empty box (`\mbox{}`, `\hbox{}`, `\text{}`, `\strut`, `\makebox[0pt]{}`: an
+  empty `XMText`) an empty `<m:mrow/>` (MathML.pm:499 `pmml_row` of no items).
+- Ours (presentation.rs `invisible_operand`): `<m:mphantom><m:mi>&#x2060;</m:mi></m:mphantom>`, also for an
+  empty-symbol unit (#114). An empty `mi` claims an identifier with no text, so it is never materialized
+  (`document.rs` `debug_assert!`, task #264); the slot was an empty `mphantom` until now, and MathJax set the `=`
+  after it with no left space (issue 991). MathJax spaces an operator by the TeX class of the atom before it and adds
+  none when there is no atom (class NONE: `texSpacing`, `mathjax-full/js/core/MmlTree/MmlNode.js:332-337`); an empty
+  `mphantom` or `mrow` has no class and passes the class before it through (`AbstractMmlLayoutNode.setTeXclass`,
+  MmlNode.js:665-669; `MmlMrow.setTeXclass`, `MmlNodes/mrow.js:175-215`), none at a row's start. The slot's `mi` is
+  an Ord atom, which is what amsmath sets before an align cell (`\displaystyle{{}##}`, amsmath.sty:1486). On
+  `<mrow>[slot]<mo>=</mo><mi>b</mi></mrow>` (MathJax 3.2.2 and 4.1.3) the empty `mphantom` gives 3.359ex, with or
+  without `form="infix"` on the `mo`; the new slot 3.988ex, as Perl's empty `<mi/>`, the slot 0em wide. MathML Core
+  makes no difference here: an empty grouping element is space-like (§3.2.5.1), so the inferred form of `=` after it
+  is prefix, but `=` has no prefix entry and the dictionary lookup falls back to infix (§3.2.4.2), so Chrome spaces
+  it the same either way. U+2060 WORD JOINER is zero-width and default-ignorable, not White_Space (Unicode, JS
+  `\s`/`trim()`, Python, Rust), a no-break (UAX #14 WJ), and has no math meaning (unlike U+2061-2064); it bypasses
+  the token styling (no `mathvariant`, no Plane-1 mapping).
+- An empty box is TeX's zero-width Ord atom, but its empty `<m:mrow>` has no class in MathJax either (`$\mbox{}=b$`:
+  no space before the `=`; `$a=\strut$`: none after it), so beside an operator it gets the same placeholder
+  (`fill_empty_operands`, a pass before the spacing walk). A box with a size or a style anywhere in it keeps all of
+  it, the placeholder added as its last child: `\makebox[0pt]{}` is `<m:mpadded width="0pt">[slot]</m:mpadded>`,
+  `$\mbox{\makebox[1cm]{}\makebox[1cm]{}}=b$` keeps both 1cm `mpadded`s and `$\raisebox{1ex}{…}=b$` its `voffset`
+  beside the slot. Otherwise the slot replaces the box and takes its internal spacing: after `$\mbox{}\,=b$` the `=`
+  has the thin space plus \thickmuskip (lspace 0.448em), as in TeX. The walk then reads it as the Ord it is:
+  `$\mbox{}-b$` and `$a+\mbox{}$` keep their binary space, as in TeX (the empty row had made the walk zero it as if
+  unary). In a script or a fraction slot the empty `<m:mrow>` stays: no operator is spaced against it.
+  `\strut`'s height and depth do not reach the XMath (its zero-width rule is dropped), so the placeholder has none
+  to keep.
+- Where the XSLT takes an element's string value, a formula's slot would put its U+2060 in plain text: a note's mark
+  is its tag's string value (2509.25166's mn2e marks `$*\dagger$`). `f:plain-text` (LaTeXML-common.xsl) drops it at
+  every such site: the note and creator marks, a contact's address, a CV name, the creation date, TEI's item label.
+  The Rust strings need nothing: a title's text (page `<title>`, TOC, ref tooltip) is UnicodeMath from the XMath,
+  taken before the MathML exists, and no Rust pass after the MathML takes a string value.
+- Known third-party effect: MathJax's speech-rule-engine voices the U+2060 as "word joiner" where the slot is not
+  beside a relation (`\frac{a}{}`); the character is kept in every slot (DG 2026-11-23).
+
+**Guards**: `perfect_kernel_batchfix991::{absent_operand_is_a_phantom_word_joiner,
+empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_word_joiner_in_a_string_value}`
+(`tools/perfect_kernel/repros/math-parse/{absent_operand,empty_box}_is_an_ord_atom.tex`,
+`absent_operand_in_a_string_value.tex`), with the slot counted in
+`90_latexmlpost::alignrows_operand_slot_keeps_relop_infix` (issue #312) and the empty unit in
+`06_cluster_regressions::cluster_siunitx_empty_unit_renders_invisible`.
+
+### 1151. A sign opening an amsmath alignment cell that continues the cell before it is binary (issue 991)
+
+- TeX: amsmath sets an empty Ord before the right cell of each column pair of `{align}`, `{flalign}`, `{alignat}`
+  (`\align@preamble`, amsmath.sty:2347-2354), `{aligned}`/`{alignedat}` (`\start@aligned`, :1483-1486) and `{split}`
+  (:2424-2425), and before every `{multline}` line (:2580; mathtools' `{multlined}`, mathtools.sty:652):
+  `$\displaystyle{{}##}$`. A `+`, `-`, `\pm` or `\mp` opening such a cell is a binary operator (`&+ c`, `&\quad - d`:
+  \medmuskip on both sides). `{gather}` and `{eqnarray}` cells have no `{}`: their sign is unary.
+- Perl: its templates drop the `{}` (amsmath.sty.ltxml:221, :461, :588; KNOWN_PERL_ERRORS #1322), so the sign is a
+  prefix: `plus(c)`, `<mrow><mo>+</mo><mi>c</mi></mrow>`, set tight by MathJax and Chrome; `&\quad - d` loses the
+  `\quad`, which the spacing walk applies only between two neighbours of a row.
+- Ours: the bindings mark the `{}`-prefixed columns on the alignment with an internal attribute, `_ord_cells` (`odd` on
+  the align family's equationgroup and the aligned/split XMArray, `all` on a multline's; the lift of a lone
+  `\[\begin{aligned}…\]` copies it), never serialized. The lexer (`util::continues_the_cell_before`) renames a cell's
+  leading ADDOP `CELLADDOP` where the cell continues the one before it, and the grammar applies it to an absent left
+  operand (`expression += cell_addop term`, `continuation_sign_apply`): `plus(absent, c)`, presented with the
+  placeholder of #1150, `<mrow><mphantom><mi>&#x2060;</mi></mphantom><mo>+</mo><mi>c</mi></mrow>`; the `\quad` becomes
+  the `−`'s lspace (1.222em). The same reading as a leading relation (`&= b`) and MulOp (`&\times c`) already had.
+  The row formula a MathFork composes of an empty left cell and the cell reads the same. Every ADDOP takes it (`\oplus`,
+  `\cup`, `\cap`, `\wedge` are `\mathbin` as well). A cell whose sign takes no operand (`&+\quad\text{c.c.}`,
+  cond-mat/0505096) and that no stream parses as a continuation is parsed again with the prefix sign
+  (`parser.rs`, `cell_sign`).
+- The gate (user ruling 2026-11-23): the cell continues when the left cell of its pair is empty and the cell has no
+  top-level relation of its own (`&+ c`; `&-\Delta u = f` starts a statement and stays unary), or the left cell ends
+  in an operand (`a = b &+ c`); a left cell ending in a relation or an operator keeps the sign unary (`B =& - C`); a
+  multline line after the first always continues, its first line never does. In TeX all of these are binary (but the
+  first atom of a `\left.`'s list, below); the unary readings keep the statement a reader sees.
+- Not a continuation in TeX either: a sign that is the first atom of a `\left.`'s list (`&\quad\left. + c + d\right)`,
+  0910.4696, 2003.01925) or follows a `\bigl.` is unary — a Bin after a left delimiter or an Open is an Ord (tex.web
+  §728), and amsmath's `{}` is outside that list (pdflatex: `${}\left.+c\right)$` sets the `+` tight); after a `\bigm.`
+  (a Rel) too. `filter_hints` marks a list's first node after a null delimiter that opens it
+  (`util::AFTER_NULL_DELIMITER`, an internal attribute) before it unlinks the hint, and the lexer leaves that sign an
+  ADDOP. The evidence is positive: the `\left` constructor's null hint carries the internal `_left_delimiter`
+  (tex_math.rs), `\bigl.`'s and `\bigm.`'s the role `OPEN`/`MIDDLE`; a bare `\big.`/`\Big.`/`\bigg.`/`\Bigg.` leaves
+  the same `<XMHint/>` but is an `\hbox`, an Ord, so its sign stays binary (`&\big. +\pi^2 l…`, 2003.06694; `&\Big. +
+  \bla…`, 1612.08225; pdflatex: `${}\big.+c$` as wide as `${}\big.{}+c$`). A `\big(` opened in the cell before is no
+  list of the cell: `&+ c\big)` is binary, and so is a sign after `\left.\vphantom{X}` (the phantom is a box, an Ord;
+  2003.01925). The unparsed-math warning keys the sign as the `ADDOP` it is (`unparsed_math:ADDOP_POSTFIX`), in its
+  token list too, and two formulas that then show alike warn once (`&+ \left. X\right\}` and `&\left. + X\right\}`,
+  1612.08225).
+- Not covered: a lone `&+` (a one-token cell takes no grammar parse) stays an `<mo>`; a leading `&\quad g` with no
+  operator still loses its `\quad` (the same row-edge rule); `&\left.{} + j\right)` reads unary (TeX: binary, the `{}`
+  an Ord that leaves no node); `&\left.\right. + c` likely reads unary (TeX: binary, `\left.\right.` an Inner).
+
+**Guard**: `perfect_kernel_batchfix991::continuation_sign_after_amsmath_s_empty_ord_is_binary`
+(`tools/perfect_kernel/repros/math-parse/continuation_sign_is_binary.tex`), with the readings in the goldens
+`alignment/split`, `ams/amsdisplay`, `ams/mathtools`, `structure/amsarticle`, `math/split_fence`,
+`parse/continuation_row_with_its_own_side`, `parse/integrals_and_differentials`. Witnesses: 1308.2969, 2512.12866,
+2306.10612, 1612.06544. A/B over 301 papers with continuation cells: 1,919 formulas in 257 papers changed, each a sign
+turned binary; errors, fatals and warnings unchanged. The `\left.` exception then returned 63 of them in 17 papers to
+unary (the base's reading), every one a sign opening a `\left.`'s list.

@@ -124,10 +124,11 @@ fn null_delimiter_draws_nothing() {
       r"\displaystyle=\frac{\hbar}{2}\left(a+b\right.",
       &format!(
         concat!(
-          r#"<mrow><mphantom></mphantom><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac>"#,
+          // (the absent operand's placeholder, an Ord atom: issue 991, `perfect_kernel_batchfix991`)
+          r#"<mrow><mphantom><mi>{}</mi></mphantom><mo>=</mo><mrow><mstyle displaystyle="true"><mfrac>"#,
           r#"<mi mathvariant="normal">ℏ</mi><mn>2</mn></mfrac></mstyle><mo>{}</mo><mrow><mo>(</mo>{}</mrow></mrow></mrow>"#
         ),
-        '\u{2062}', a_plus_b
+        '\u{2060}', '\u{2062}', a_plus_b
       ),
     ),
     inline(

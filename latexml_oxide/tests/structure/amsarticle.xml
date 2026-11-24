@@ -383,6 +383,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
                       <XMTok meaning="minus" role="ADDOP" xml:id="S2.E2.m1.8">-</XMTok>
                       <XMApp>
                         <XMTok lpadding="10.0pt" meaning="plus" role="ADDOP" xml:id="S2.E2.m1.9">+</XMTok>
+                        <XMTok meaning="absent"/>
                         <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.10">e</XMTok>
                       </XMApp>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S2.E2.m1.11">f</XMTok>
@@ -461,10 +462,8 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
                   <XMCell align="right">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                      <XMApp>
-                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.8">i</XMTok>
-                      </XMApp>
+                      <XMTok meaning="absent"/>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.8">i</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.9">j</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.10">k</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S2.E3.m1.11">l</XMTok>

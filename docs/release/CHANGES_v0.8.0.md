@@ -92,6 +92,24 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     longer prints thousands of blank lines over it (the blank line LaTeX writes before each error it drops).
     OXIDIZED_DESIGN_DIVERGENCES #1148; guards `format_dumps::tests::an_interrupted_build_is_undone`,
     `dump_gate_init::nodump_latex_branch_converts_healthily`.
+  - **MathJax spaces the `=` of an `align` continuation cell as a relation again** (issue 991). A cell like `& = b`
+    starts with an invisible placeholder for its missing left operand, which was an empty `<mphantom>`; MathJax spaces
+    an operator by the TeX class of the atom before it, an empty `<mphantom>` has none, so the `=` lost its left space
+    (Chrome kept it). The placeholder is now `<mphantom><mi>&#x2060;</mi></mphantom>`, an invisible U+2060 WORD JOINER
+    identifier, an ordinary atom as amsmath's own `{}` before the cell is; the same placeholder fills an empty
+    `\frac`/`\sqrt` argument and an empty-symbol siunitx unit. An empty box beside an operator — `$\mbox{}=b$`,
+    `$\hbox{}=b$`, `$\text{}=b$`, `$\strut=b$`, `$a=\strut$`, `$\makebox[0pt]{}=b$` — was an empty `<mrow>` with the
+    same effect, and `$\mbox{}-b$`, `$a+\mbox{}$` lost their binary-operator space; it is now the same placeholder, as
+    TeX sets it a zero-width ordinary atom. A note's mark taken as plain text from a formula (2509.25166) leaves the
+    U+2060 out (OXIDIZED_DESIGN_DIVERGENCES #1150). A `+`, `-`, `\pm` or `\mp` opening a cell that continues the one
+    before it (`&+ c`, `&\quad - d` in `align`, `aligned`, `split`, `alignat`; a `multline` line after the first) was
+    a prefix sign, set tight and losing a leading `\quad`; amsmath's `{}` before the cell makes it binary, and it now
+    reads `plus(absent, c)` with the placeholder before it, the `\quad` kept. A cell with a relation of its own
+    (`&-\Delta u = f`) or after a left cell ending in a relation (`B =& -C`) keeps its prefix sign (a sign right after
+    `\left.` or `\bigl.` stays a prefix sign, as in TeX) (OXIDIZED_DESIGN_DIVERGENCES #1151). Guards
+    `perfect_kernel_batchfix991::{absent_operand_is_a_phantom_word_joiner,
+    empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_word_joiner_in_a_string_value,
+    continuation_sign_after_amsmath_s_empty_ord_is_binary}`.
   - **A null delimiter no longer prints the word "CLOSE" or "OPEN".** `\left( … \right.` and `\left. … \right)` — the
     usual way to split a formula across lines — and an unbalanced `(a+b` drew the fence parser's stand-in token as
     the literal word (since 0.7.5): the retry that re-supplies TeX's null delimiter left an empty fence token in the

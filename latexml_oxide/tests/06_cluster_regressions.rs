@@ -945,8 +945,9 @@ fn cluster_siunitx_empty_unit_renders_invisible() {
   );
   // It renders as an invisible placeholder instead, and the quantity 5 stays.
   assert!(
-    post.contains("mphantom") && post.contains(">5<"),
-    "empty unit must be an <m:mphantom> and the quantity 5 must still render:\n{post}"
+    post.contains("<m:mphantom class=\"ltx_unit\"><m:mi>\u{2060}</m:mi></m:mphantom>")
+      && post.contains(">5<"),
+    "empty unit must be the invisible placeholder and the quantity 5 must still render:\n{post}"
   );
 }
 /// An UNBOUND journal class (`sn-jnl`, `wlpeerj`, `sagej`, Wiley, …) falls back

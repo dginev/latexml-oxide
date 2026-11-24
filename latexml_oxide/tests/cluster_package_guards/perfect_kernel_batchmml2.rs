@@ -129,7 +129,7 @@ fn core_k_operators_have_no_operator_space() {
     (
       "S0.E1.m2",
       "\\displaystyle=b+",
-      format!("<mrow><mphantom></mphantom><mo>=</mo><mrow><mi>b</mi>{k}+</mo></mrow></mrow>"),
+      format!("<mrow><mphantom><mi>\u{2060}</mi></mphantom><mo>=</mo><mrow><mi>b</mi>{k}+</mo></mrow></mrow>"),
     ),
   ];
   for (repro, rows) in [

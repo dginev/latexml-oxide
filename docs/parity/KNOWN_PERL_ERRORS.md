@@ -22439,3 +22439,21 @@ pdflatex prints "Section 1 and Section 1"; Perl (same host) raises 8 Errors (5 u
 token", 1 `<variable>`) and prints "??" with the undefined names' ERROR elements, and `\vref` (locked) prints "1".
 Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1144); witnesses 1602.00476, 2409.11413, 2505.14566; guard
 `perfect_kernel_batchvrefclev::cleveref_vref_with_varioref`.
+
+## 1322. Perl's amsmath templates drop the empty Ord before a right-hand alignment cell
+
+amsmath.sty sets `$\displaystyle{{}##}$` for the right cell of each `{align}`/`{alignat}`/`{flalign}` pair
+(amsmath.sty:2347-2354), of `{aligned}`/`{alignedat}` (:1483-1486) and `{split}` (:2424-2425), and every `{multline}`
+line (:2580); amsmath.sty.ltxml:221, :461, :588 have `\displaystyle` alone. A sign opening such a cell is binary in
+TeX and a prefix in Perl. Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{amsmath}
+\begin{document}\begin{align} a &= b \\ &+ c \end{align}\end{document}
+```
+
+pdflatex sets "+c" with \medmuskip on both sides of the `+`; Perl 0.8.8 (same host) reads `plus(c)` and emits
+`<mrow><mo>+</mo><mi>c</mi></mrow>`, which MathJax and Chrome set tight. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
+#1151): the bindings mark the columns and the parser reads the sign binary where the cell continues the one before it;
+guard
+`perfect_kernel_batchfix991::continuation_sign_after_amsmath_s_empty_ord_is_binary`.

@@ -1,0 +1,18 @@
+% witness: 2509.25166 (mn2e's `\thefootnote` is `\mbox{{$\fnsymbol{footnote}$}}`; its `$*\dagger$` marks have an absent operand)
+% oracle:  pdflatex 0 errors; the footnote mark prints `=1`, the title `On =b`, the section `1 Title =b`
+% engines: rust 9d5f3e45fe3 the note mark the XSLT takes as the tag's string value carries the U+2060 of the absent
+%          operand's MathML slot (`<sup class="ltx_note_mark">… =1</sup>` with U+2060 before `=1`); the page title,
+%          the TOC and the ref tooltip are clean (their text is UnicodeMath, taken before the MathML exists); Perl 0.8.8
+%          an empty `<m:mi/>`, no character to leak
+% expect:  0 errors; no U+2060 anywhere outside a `<math>` element (LaTeXML-common.xsl `f:plain-text`)
+% status:  RED (9d5f3e45fe3) -> GREEN (FIX991D, OXIDIZED_DESIGN_DIVERGENCES #1150)
+\documentclass{article}
+\renewcommand{\thefootnote}{\ensuremath{=1}}
+\title{On $=b$}
+\author{A. Author}
+\begin{document}
+\maketitle
+\tableofcontents
+\section{Title $=b$}\label{s}
+Text\footnote{Note.} and \ref{s}.
+\end{document}

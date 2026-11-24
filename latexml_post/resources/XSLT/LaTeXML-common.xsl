@@ -87,7 +87,7 @@
     <xsl:if test="//ltx:date[@role='creation' or @role='conversion'][1]">
       <xsl:comment>
         <xsl:text>Document created on </xsl:text>
-        <xsl:value-of select="translate(//ltx:date/node(),'-','‐')"/>
+        <xsl:value-of select="translate(f:plain-text(//ltx:date/node()),'-','‐')"/>
         <xsl:text>.</xsl:text>
       </xsl:comment>
       <xsl:text>&#x0A;</xsl:text>
@@ -153,6 +153,14 @@
   <func:function name="f:url">
     <xsl:param name="url"/>
     <func:result><xsl:value-of select="$url"/></func:result>
+  </func:function>
+
+  <!-- The string value of $node as plain text (a note's mark from its tag, an address), for every place that takes the
+       text of an element that may hold a formula: without the U+2060 of an absent operand's MathML slot (latexml-oxide
+       OXIDIZED_DESIGN_DIVERGENCES #1150, issue 991), there for the renderer's spacing (2509.25166's footnote marks). -->
+  <func:function name="f:plain-text">
+    <xsl:param name="node"/>
+    <func:result select="translate(string($node),'&#x2060;','')"/>
   </func:function>
 
   <func:function name="f:class-pref">

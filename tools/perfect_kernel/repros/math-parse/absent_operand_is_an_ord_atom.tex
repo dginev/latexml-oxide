@@ -1,0 +1,19 @@
+% witness: issue 991 (MathJax sets the `=` of an `align` continuation cell with no space before it)
+% oracle:  pdflatex 0 errors; `& = b` in `align` sets `{}=b` (amsmath's even cell is `$\displaystyle{{}#}$`, an empty
+%          Ord atom): \thickmuskip before the `=`; `\frac{a}{}`, `\sqrt{}` set an empty box
+% engines: rust 108cb6dc9dd an EMPTY `<mphantom></mphantom>` before the `<mo>`: no TeX class in MathJax 3.2.2, which
+%          passes the class before it through (none at a row's start), so the `=` gets no left space (`=b` 3.359ex
+%          wide, with or without `form="infix"`); Perl 0.8.8 an empty `<m:mi/>` (MathML.pm:1475), an Ord atom (3.988ex)
+% expect:  0 errors; every absent operand is `<mphantom><mi>U+2060</mi></mphantom>`, an Ord atom to MathJax (`=b`
+%          3.988ex wide, as Perl's), invisible and never an empty `mi`
+% status:  RED (108cb6dc9dd) -> GREEN (FIX991, OXIDIZED_DESIGN_DIVERGENCES #1150)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{align}
+a &= b \\
+c &= d
+\end{align}
+\[\begin{aligned} x &\le y \\ &= z \end{aligned}\]
+Prefix $=b$, fractions $\frac{a}{}$ and $\frac{}{b}$, root $\sqrt{}$.
+\end{document}
