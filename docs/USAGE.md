@@ -18,7 +18,7 @@ $ latexml_oxide paper.tex --unicodemath --destination=paper.html
 $ latexmlmath_oxide 'a^2+b^2=c^2'
 ```
 
-`--format` takes `html5`, `html`, `xhtml`, `xml`, or `epub` (a zipped EPUB 3) — inferred from the
+`--format` takes `html5` (or `html`), `xhtml`, `xml`, or `epub` (a zipped EPUB 3) — inferred from the
 `--destination` extension when omitted. `--help` lists every option.
 Working from a checkout instead of an installed binary? Prefix with
 `cargo run --bin latexml_oxide --`.
@@ -37,7 +37,7 @@ shipped beside a source loads with it ([`release/SAFETY.md`](release/SAFETY.md))
 
 **Packages and classes without a LaTeXML binding are read raw** from the TeX tree (and the document's directory), as
 pdflatex reads them; a binding always wins. The runaway limits are 480,000,000 conditionals (ten times ar5iv's, as the count accumulates over a long document) and 1,299,999
-absorbed boxes, a 5,000,000-token pushback, and a token budget of 20G raised with the source size (`--token-limit`).
+absorbed boxes, a 5,000,000-token pushback, and a token budget of 20G raised with the source size (`--token-limit` sets one, kept as given).
 To get Perl LaTeXML's behaviour — bindings only, a missing package skipped with a warning, an unknown class served
 by OmniBus — pass `--noincludestyles` (or `--preload='[norawstyles,norawclasses]latexml.sty'`); latexml.sty's `iflimit`, `absorblimit` and
 `pushbacklimit` options set those limits, and `iflimit=0,absorblimit=0` lifts the two Perl leaves

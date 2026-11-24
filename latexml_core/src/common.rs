@@ -179,6 +179,10 @@ pub struct Config {
   /// Serialize the core result into this file, not a `String` (the CLI's split runs, whose post reads its input
   /// from a file anyway): the response then names the file in `handoff_file`. `None`: the `String` result.
   pub handoff_file:            Option<String>,
+  /// The document's id (`--documentid`; Perl Config.pm L159, Core.pm L48 State `DOCUMENTID`): the root's `xml:id`
+  /// and the prefix of every other id. In State before the pools load, as Base_Schema reads it to define
+  /// `\thedocument@ID`.
+  pub documentid:              Option<String>,
 }
 /// The front ends' default `\if` runaway ceiling, which ar5iv.sty's `iflimit` also passes (`latexml_contrib/src/
 /// ar5iv_sty.rs`, the arXiv fleet's profile). The counter accumulates over the whole document, so a long pgf-heavy
@@ -213,6 +217,7 @@ impl Default for Config {
       streaming:               None,
       source_date_epoch:       None,
       handoff_file:            None,
+      documentid:              None,
     }
   }
 }

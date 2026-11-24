@@ -146,6 +146,7 @@ pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> crate::post::PostO
     unicodemath:               false,
     url_style:                 latexml_post::crossref::UrlStyle::File,
     navigationtoc:             None,
+    is_html:                   Some(true),
     schemadocs:                false,
     split:                     false,
     split_xpath:               None,
@@ -207,6 +208,7 @@ pub(crate) fn make_config(uri: &str) -> Config {
     // An editor buffer is no dated source bundle: ar5iv keeps Perl's empty `\today`.
     source_date_epoch:       None,
     handoff_file:            None,
+    documentid:              None,
   }
 }
 

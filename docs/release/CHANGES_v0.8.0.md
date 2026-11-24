@@ -51,6 +51,20 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     document return errors instead of panicking or truncating. No C code changed (the vendored-native audit lists
     both versions).
 
+  - **Command-line options do what latexmlc's do.** `--documentid` names the document and prefixes its ids (it had
+    no effect; latexml.sty's `\lxDocumentID` now names the root too). `--format=html` is html5, and `--format=xhtml`
+    writes well-formed XHTML with LaTeXML-xhtml.xsl. Output is serialized as HTML by the format, not the stylesheet's
+    name: a custom `--stylesheet` writing `.xml` keeps its XML, and one writing `.html` is serialized as HTML and gets
+    the SVG step, as in Perl; a stylesheet whose name contains "html" now writes XML to stdout when neither `--dest`
+    nor `--format` is given, as Perl's does. `--token-limit` below the default holds instead of being raised with the source's size.
+    `--quiet` and `--verbose` reach a split run's parallel render workers, and `-v`/`-q` count when repeated.
+    `--splitat` and `--splitnaming` take a prefix (`--splitat=sec`, `--splitnaming=labelrel`); both are checked
+    only when splitting, and a level outside Perl's list still splits there with a Warning naming `--splitpath`.
+    `--navigationtoc` is case-insensitive and `none` means none. An unknown `--splitnaming` or `--navigationtoc` is a
+    usage error. `--keepXMath` and `--nohackplane1` parse; a relative `--sourcedirectory` no longer leaks into the
+    output paths. `cortex_worker` refuses `--input`/`--output` without `--standalone` and an unknown `--profile`.
+    `--nonumbersections` keeps its documented meaning (unnumbered sections). OXIDIZED_DESIGN_DIVERGENCES #1158-#1160;
+    guards `perfect_kernel_batchcliwire`.
   - **A class whose `\@maketitle` takes an argument no longer leaves a group open or prints a stray letter.** The
     title-page deposit read its closing brace as that argument, so `\end{document}` warned of open groups, and the
     replay of the class's `\maketitle` printed the argument as text (iaus.cls's "n"; ~1,665 arXiv papers, 0801.1806).

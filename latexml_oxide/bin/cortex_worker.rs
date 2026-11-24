@@ -102,16 +102,16 @@ struct Cli {
   #[arg(long)]
   standalone: bool,
 
-  /// Input ZIP file (standalone mode only)
-  #[arg(long)]
+  /// Input ZIP file (requires --standalone: without it the worker would join the dispatcher)
+  #[arg(long, requires = "standalone")]
   input: Option<String>,
 
-  /// Output ZIP file (standalone mode only, default: stdout)
-  #[arg(long)]
+  /// Output ZIP file (requires --standalone; default: stdout)
+  #[arg(long, requires = "standalone")]
   output: Option<String>,
 
   /// Conversion profile: ar5iv, generic
-  #[arg(long, default_value = "ar5iv")]
+  #[arg(long, default_value = "ar5iv", value_parser = ["ar5iv", "generic"])]
   profile: String,
 
   /// Additional packages to preload
@@ -119,7 +119,7 @@ struct Cli {
   preload: Vec<String>,
 
   /// Additional search paths (repeatable). Mirrors Perl LaTeXML's --path.
-  /// Each entry is prepended to the per-job source-dir search path so
+  /// Each entry is searched after the per-job source directory, so
   /// e.g. `--path=ar5iv-bindings/originals` makes raw .tex files in
   /// the ar5iv repo available to InputDefinitions.
   #[arg(long = "path")]
@@ -230,8 +230,8 @@ struct Cli {
   /// thread-local that is never reset mid-process — it assumes a short-lived,
   /// one-conversion-per-process model) by process replacement, without failing a
   /// paper, while keeping startup amortized for the common case of light papers. In
-  /// harness mode it auto-sets to **25% of `--child-mem-limit-mb`** (= 2048 MiB at the
-  /// 8 GiB default — the validated value: a fresh worker keeps the *full* ceiling for any
+  /// harness mode it auto-sets to **25% of `--child-mem-limit-mb`** (= 1408 MiB at the
+  /// 5632 MiB default — the validated value: a fresh worker keeps the *full* ceiling for any
   /// single — even aberrant — paper, then retires once it has consumed a quarter of it). This
   /// keeps the fleet's aggregate RSS clear of the mem-pressure governor floor on a full-corpus
   /// sweep (~125 GB vs ~188 GB at 50%), so the governor does not shed workers and produce
@@ -377,9 +377,6 @@ impl LatexmlWorker {
     let source_dir = tempdir.path().to_string_lossy().to_string();
 
     // 2. Set up the converter with the profile
-    let mut preloads = vec!["TeX.pool".to_string()];
-    preloads.extend(self.profile.preloads.iter().cloned());
-
     // Source dir first (per-job temp), then user --path entries.
     let mut search_paths = vec![source_dir.clone()];
     search_paths.extend(self.search_paths.iter().cloned());
@@ -410,6 +407,7 @@ impl LatexmlWorker {
       streaming:               None,
       source_date_epoch:       bundle_date,
       handoff_file:            None,
+      documentid:              None,
     };
 
     let mut converter = Converter::from_config(opts.clone());
@@ -518,6 +516,7 @@ impl LatexmlWorker {
       unicodemath:               false,
       url_style:                 latexml_post::crossref::UrlStyle::File,
       navigationtoc:             None,
+      is_html:                   Some(true),
       split:                     false,
       split_xpath:               None,
       split_naming:              None,
@@ -1925,7 +1924,8 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   // paper, then retires once it has consumed a quarter of it. `--allocation-limit-mb` overrides;
   // 0 disables.
   //
-  // Why 25% (=2048 MiB at the default 8 GiB ceiling) and not 50%: a full-corpus 10k sweep at the
+  // Why 25% (=1408 MiB at the default 5632 MiB ceiling; measured at the then 8 GiB one, =2048 MiB) and not
+  // 50%: a full-corpus 10k sweep at the
   // CPU-optimal 72 workers (see docs/performance/CORTEX_WORKER_HARNESS.md) peaks ~125 GB aggregate RSS at 25%
   // vs ~188 GB at 50% on a 247 GiB box — and the 50% peak drops MemAvailable below the
   // mem-pressure governor's floor, triggering ~25 worker sheds whose re-leased tasks can exhaust
@@ -2213,31 +2213,23 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     return run_harness(&cli);
   }
 
-  let profile = match cli.profile.as_str() {
-    "ar5iv" => ConversionProfile::ar5iv(
+  // clap admits only `ar5iv` and `generic`.
+  let profile = if cli.profile == "generic" {
+    ConversionProfile::generic(
       &cli.preload,
       cli.timeout,
       cli.max_rss_mb,
       cli.no_pmml,
       cli.no_mathtex,
-    ),
-    "generic" => ConversionProfile::generic(
+    )
+  } else {
+    ConversionProfile::ar5iv(
       &cli.preload,
       cli.timeout,
       cli.max_rss_mb,
       cli.no_pmml,
       cli.no_mathtex,
-    ),
-    other => {
-      eprintln!("Unknown profile '{}', using ar5iv", other);
-      ConversionProfile::ar5iv(
-        &cli.preload,
-        cli.timeout,
-        cli.max_rss_mb,
-        cli.no_pmml,
-        cli.no_mathtex,
-      )
-    },
+    )
   };
 
   let hostname = hostname::get()
@@ -2364,6 +2356,42 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   }
 
   Ok(())
+}
+
+#[cfg(test)]
+mod cli_tests {
+  use clap::Parser;
+
+  use super::Cli;
+
+  /// `--input`/`--output` need `--standalone`: without it the worker would ignore them and lease tasks from the
+  /// dispatcher on localhost. A profile is `ar5iv` or `generic`, never a silent fallback.
+  #[test]
+  fn standalone_files_and_the_profile_are_checked() {
+    let parse = |args: &[&str]| {
+      Cli::try_parse_from(std::iter::once("cortex_worker").chain(args.iter().copied()))
+    };
+    for args in [&["--input", "a.zip"][..], &["--output", "b.zip"], &[
+      "--profile",
+      "bogus",
+    ]] {
+      assert!(parse(args).is_err(), "{args:?}");
+    }
+    let cli = parse(&[
+      "--standalone",
+      "--input",
+      "a.zip",
+      "--output",
+      "b.zip",
+      "--profile",
+      "generic",
+    ])
+    .unwrap();
+    assert_eq!(
+      (cli.input.as_deref(), cli.profile.as_str()),
+      (Some("a.zip"), "generic")
+    );
+  }
 }
 
 #[cfg(test)]

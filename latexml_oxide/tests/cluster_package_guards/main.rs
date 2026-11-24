@@ -435,6 +435,8 @@ mod perfect_kernel_batchcl6;
 mod perfect_kernel_batchcl7;
 mod perfect_kernel_batchcl8;
 mod perfect_kernel_batchcl9;
+/// CLIWIRE: the CLI options as latexmlc applies them; OD #1158.
+mod perfect_kernel_batchcliwire;
 /// CLUSTFIX: run-397 binding gaps — pasj00 without its class, the 1998 aipproc, `\cite*` under the lock, elsart's switches.
 mod perfect_kernel_batchclustfix;
 /// CLUSTFIX2: run-397 binding gaps — ar5iv's `\href` anchor layer, pasj00's `\timeform` without its class, psfig's

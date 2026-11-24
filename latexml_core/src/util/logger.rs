@@ -53,8 +53,8 @@ static DEBUG_ALL: AtomicBool = AtomicBool::new(false);
 #[inline]
 pub fn debug_all() -> bool { DEBUG_ALL.load(Ordering::Relaxed) }
 
-/// The current STDERR verbosity (see [`STDERR_LEVEL`]).
-fn stderr_level() -> LevelFilter {
+/// The current STDERR verbosity (`STDERR_LEVEL`): `--quiet` `Warn`, the default `Info`, `--verbose` `Debug`.
+pub fn stderr_level() -> LevelFilter {
   match STDERR_LEVEL.load(Ordering::Relaxed) {
     0 => LevelFilter::Off,
     1 => LevelFilter::Error,
