@@ -69,3 +69,34 @@ fn breqn_resets_script_catcodes_at_load() {
      role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></p>",
   );
 }
+
+/// fonts-nfss/tipa_accent_letter_in_math_is_a_box: t3enc.def's accent sets its letter in an `\hbox` (:270, :284), so
+/// a formula in the letter is a formula of its own inside the enclosing one (1310.2513's `\sliding{$g_4$}` in
+/// `$\gst(K)$`). Red (INT081G): "Script _ can only appear in math mode". The one Warning: tipx's slot 9 has no
+/// combining mark, the letter is printed without it.
+#[test]
+fn tipa_accent_letter_in_math_is_a_box() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/tipa_accent_letter_in_math_is_a_box_1310_2513.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("has no combining mark for the accent in slot 9"),
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "Math",
+    &[],
+    "<Math mode=\"inline\" tex=\"\\hbox{$g_{4}$}(K)\" text=\"g _ 4 * K\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.2\"><XMApp \
+     xml:id=\"p1.m1.2.1\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMApp xml:id=\"p1.m1.2.1.2\"><XMTok \
+     role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok><XMTok fontsize=\"70%\" \
+     meaning=\"4\" role=\"NUMBER\">4</XMTok></XMApp><XMDual xml:id=\"p1.m1.2.1.3\"><XMRef idref=\"p1.m1.1\" \
+     xml:id=\"p1.m1.2.1.3.1\"/><XMWrap xml:id=\"p1.m1.2.1.3.2\"><XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok><XMTok \
+     font=\"italic\" role=\"UNKNOWN\" xml:id=\"p1.m1.1\">K</XMTok><XMTok role=\"CLOSE\" \
+     stretchy=\"false\">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>",
+  );
+}

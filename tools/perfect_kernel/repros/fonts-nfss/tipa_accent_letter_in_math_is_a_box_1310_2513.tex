@@ -1,0 +1,15 @@
+% mechanism: t3enc.def:268-294 `\upper@accent`/`\lower@accent` set the accented letter in an `\hbox{#5}`, so in a
+%   formula the letter is text and its own `$…$` a formula of its own. t3enc_def.rs's `a` form composed the accent
+%   in the current mode: a `$` in the letter closed the enclosing formula ("Script _ can only appear in math mode").
+% witness: 1310.2513 (`\def\gst{\sliding{$g_4$}}`, `$\gst(K)$`; extraipa.sty:47 `\sliding` = `\tipxloweraccent`)
+% oracle:  pdflatex 0 `!`; "The genus g4(K) is here." (the sliding mark under g4)
+% engines: rust INT081G 1 error (Script _); perl 3 errors (`\sliding` undefined, then "Attempt to end mode math")
+% expect:  0 errors, 1 warning (tipx's slot 9 has no combining mark: printed without it); the `g_4` formula an
+%   `\hbox` inside the enclosing formula
+% status:  RED (INT081G) -> GREEN (REGTAILB)
+\documentclass{article}
+\usepackage{extraipa}
+\def\gst{\sliding{$g_4$}}
+\begin{document}
+The genus $\gst(K)$ is here.
+\end{document}

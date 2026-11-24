@@ -107,7 +107,7 @@ LoadDefinitions!({
     let value = lookup_string(MARK_KEY);
     assign_value(MARK_KEY, String::new(), Some(Scope::Global));
     let letter = letter.unlist();
-    match value.split_once('\t') {
+    let mut tokens = match value.split_once('\t') {
       Some((mark, standalone)) => {
         let mut tokens = vec![
           T_CS!("\\lx@applyaccent"), T_CS!("\\lx@tipa@accent@apply"),
@@ -115,10 +115,18 @@ LoadDefinitions!({
         ];
         tokens.extend(letter);
         tokens.push(T_END!());
-        Tokens::new(tokens)
+        tokens
       },
-      None => Tokens::new(letter),
+      None => letter,
+    };
+    // t3enc.def:270, :284 set the letter in an `\hbox`, so in math it is text, its own `$…$` a formula of its own
+    // (extraipa.sty:47 `\sliding{$g_4$}` in a formula closed the formula: 1310.2513).
+    if lookup_bool("IN_MATH") {
+      tokens.insert(0, T_BEGIN!());
+      tokens.insert(0, T_CS!("\\hbox"));
+      tokens.push(T_END!());
     }
+    Tokens::new(tokens)
   }, protected => true);
 
   // t3enc.def:268-294: the `a` form's accent is slot #4 of the font #2 selects; the `b` form's is material, set raw.
