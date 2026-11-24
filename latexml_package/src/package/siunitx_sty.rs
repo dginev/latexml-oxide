@@ -269,6 +269,85 @@ fn six_apply_locale(locale: &str) -> bool {
   true
 }
 
+/// siunitx.sty:8532-8592: the font keys each deprecated `detect-*` key sets (`detect-italic`, v2 only, sets none).
+fn six_detect_meta(key: &str) -> Option<&'static [(&'static str, &'static str)]> {
+  Some(match key {
+    "detect-all" => &[
+      ("number-mode", "match"),
+      ("reset-math-version", "false"),
+      ("reset-text-family", "false"),
+      ("reset-text-series", "false"),
+      ("reset-text-shape", "false"),
+      ("text-family-to-math", "true"),
+      ("text-series-to-math", "true"),
+    ],
+    "detect-family" => &[
+      ("reset-text-family", "false"),
+      ("text-family-to-math", "true"),
+    ],
+    "detect-mode" => &[("number-mode", "match")],
+    "detect-none" => &[
+      ("number-mode", "math"),
+      ("reset-math-version", "true"),
+      ("reset-text-family", "true"),
+      ("reset-text-series", "true"),
+      ("text-family-to-math", "false"),
+      ("text-series-to-math", "false"),
+    ],
+    "detect-shape" => &[("reset-text-shape", "false")],
+    "detect-weight" => &[
+      ("reset-text-series", "false"),
+      ("text-series-to-math", "true"),
+    ],
+    _ => return None,
+  })
+}
+
+/// Which of the surrounding text font's series (`s`), family (`f`) and shape (`h`) a number takes: siunitx.sty:5180-5193
+/// `\siunitx_print_math:n` (a bold series is `\mathversion{bold}` under `text-series-to-math`), :5262-5272 (a sans or
+/// typewriter family is `\mathsf`/`\mathtt` under `text-family-to-math`), :5355-5370 `\siunitx_print_text:n` (in text,
+/// each `reset-text-*` false keeps that axis); `number-mode = match` prints in text outside math (:5157-5162).
+fn six_number_font_flags() -> String {
+  let mode = six_get_choice_sym(six_pin!("number-mode"));
+  let in_text = mode == "text" || (mode == "match" && !lookup_bool("IN_MATH"));
+  let mut flags = String::new();
+  if in_text {
+    for (key, axis) in [
+      (six_pin!("reset-text-series"), 's'),
+      (six_pin!("reset-text-family"), 'f'),
+      (six_pin!("reset-text-shape"), 'h'),
+    ] {
+      if !six_get_bool_sym(key) {
+        flags.push(axis);
+      }
+    }
+  } else {
+    if six_get_bool_sym(six_pin!("text-series-to-math")) {
+      flags.push('s');
+    }
+    if six_get_bool_sym(six_pin!("text-family-to-math")) {
+      flags.push('f');
+    }
+  }
+  flags
+}
+
+/// A formatted number under `\lx@six@font`, which gives it the surrounding text's font axes the detection keys keep
+/// (`six_number_font_flags`); unchanged under siunitx's defaults, which reset them all.
+fn six_font_number(number: Tokens) -> Tokens {
+  let flags = six_number_font_flags();
+  if flags.is_empty() || number.is_empty() {
+    return number;
+  }
+  let mut tks = vec![T_CS!("\\lx@six@font"), T_BEGIN!()];
+  tks.extend(ExplodeText!(&flags));
+  tks.push(T_END!());
+  tks.push(T_BEGIN!());
+  tks.extend(number.unlist());
+  tks.push(T_END!());
+  Tokens::new(tks)
+}
+
 /// Perl: six_setup — assign all keyvals to SIX_key state values
 fn six_setup(kv: &KeyVals) {
   for (key, value) in kv.get_pairs() {
@@ -288,6 +367,22 @@ fn six_setup(kv: &KeyVals) {
         );
       }
       continue;
+    }
+    // siunitx.sty:8532-8592: v3 keeps v2's `detect-*` as deprecated metas of its font keys, the value unread
+    // (`detect-weight=false` sets them too).
+    if let Some(settings) = six_detect_meta(&key_str) {
+      for (k, v) in settings {
+        assign_value(&format!("SIX_{k}"), Stored::from(*v), None);
+      }
+      continue;
+    }
+    // siunitx.sty:5085-5086 `mode .meta:n = { number-mode = #1 , unit-mode = #1 }`.
+    if key_str == "mode" {
+      assign_value(
+        "SIX_number-mode",
+        Stored::from(value.to_string().trim().to_string()),
+        None,
+      );
     }
     // siunitx.sty:2202-2204 `uncertainty-mode`, and its v2 alias table (:8676-
     // 8689: `separate-uncertainty = true` is `uncertainty-mode = separate`, `false`
@@ -366,6 +461,12 @@ fn six_begin_processing_for_units(kv: Option<&KeyVals>, units: Option<&Tokens>) 
   if let Some(kv) = kv {
     six_setup(kv);
   }
+  six_protect_input_tokens();
+}
+
+/// Perl siunitx.sty.ltxml:98-100 (`six_begin_processing`): each `input-protect-tokens` control sequence is let to a
+/// character of its own name, so the parser reads it whole.
+fn six_protect_input_tokens() {
   // Perl L98-100: `Let($token, T_OTHER($name))` — make each input-protect
   // CS *let-equal to a non-expandable character token* of its own name, so a
   // later `Expand($expr)` in `\num` leaves the CS in place (instead of
@@ -3037,11 +3138,9 @@ LoadDefinitions!({
     "add-arc-degree-zero", "add-arc-minute-zero", "add-arc-second-zero",
     "angle-symbol-over-decimal",
     "sticky-per", "prefixes-as-symbols",
-    // siunitx-v2.sty:393-437: the two meta choices (default `true`) that set
-    // the five `detect-*` keys above at once; fonts are modelled structurally,
-    // so accepted and ignored like them. Missing from Perl's list too (an
-    // Info there, a Warn here): `\sisetup{detect-all}` warned in 34 papers of
-    // arXiv 2605 (2605.00471) and 2 of 2606.
+    // siunitx-v2.sty:393-437: the two meta choices that set the five `detect-*` keys above at once; in v3 all seven
+    // set the font keys (`six_detect_meta`). Missing from Perl's list (an Info there, a Warn here):
+    // `\sisetup{detect-all}` warned in 34 papers of arXiv 2605 (2605.00471) and 2 of 2606.
     "detect-all", "detect-none",
   ] {
     DefKeyVal!("SIX", key, "", "true");
@@ -3088,7 +3187,7 @@ LoadDefinitions!({
     // The rest of Perl's `\sisetup` defaults block (L1493-1632), mirrored
     // verbatim below. Perl sets these without registering them; we register
     // so our own defaults pass — and any document that sets them — is quiet.
-    "math-rm", "math-sf", "math-tt", "mode",
+    "math-rm", "math-sf", "math-tt", "mode", "number-mode", "unit-mode",
     "text-rm", "text-sf", "text-tt",
     "forbid-literal-units", "multi-part-units",
     "table-unit-alignment", "table-align-comparator", "table-align-exponent",
@@ -3108,8 +3207,9 @@ LoadDefinitions!({
     // unit-font-command}`.
     "reset-text-family", "unit-font-command",
     // siunitx.sty:5095-5114, the rest of v3's font-matching keys (`\l__siunitx_
-    // print_*`), and :931 `round-pad`, which only acts when rounding (the
-    // rounding keys above are accepted without rounding, as in Perl).
+    // print_*`; the series, family and shape ones read by `six_number_font_flags`),
+    // and :931 `round-pad`, which only acts when rounding (the rounding keys above
+    // are accepted without rounding, as in Perl).
     "reset-text-series", "reset-text-shape", "reset-math-version",
     "text-series-to-math", "text-family-to-math", "propagate-math-font",
     "text-font-command", "text-superscript-command", "text-subscript-command",
@@ -3464,12 +3564,57 @@ LoadDefinitions!({
   // Top-level macros: \num, \si, \SI, etc.
   //======================================================================
 
+  // `six_font_number`'s wrapper, met in the number's math: the axes its flags keep, read from the text font the math
+  // began in (`savedfont`; siunitx reads `\f@series`, `\f@family`, `\f@shape`), go on the number through a bounded
+  // constructor that reverts to the number alone. Witness 2402.01753 (`detect-weight, mode=text`, bold table cells).
+  DefMacro!("\\lx@six@font{}{}", sub[(flags, number)] {
+    let text_font = match lookup_value("savedfont") {
+      Some(Stored::Font(font)) if lookup_bool("IN_MATH") => font,
+      _ => lookup_font().unwrap_or_default(),
+    };
+    let flags = flags.to_string();
+    let mut font = Font::default();
+    // siunitx.sty:5175-5179: series `b`, `bx` print in the `bold` math version, the rest in `normal`
+    if flags.contains('s') && text_font.series.as_deref() == Some("bold") {
+      font.series = Some("bold".into());
+    }
+    // A digit in math takes the default family and shape unless a family is set, then the math font's italic shape
+    // unless one is set (`Font::specialize`): a family goes with a shape, upright as `\mathsf`'s.
+    if flags.contains('f')
+      && let Some(family @ ("sansserif" | "typewriter")) = text_font.family.as_deref()
+    {
+      font.family = Some(family.to_string().into());
+      font.shape = Some("upright".into());
+    }
+    if flags.contains('h')
+      && let Some(shape @ ("italic" | "slanted" | "smallcaps")) = text_font.shape.as_deref()
+    {
+      font.shape = Some(shape.to_string().into());
+      font.family.get_or_insert_with(|| text_font.family.clone().unwrap_or("serif".into()));
+    }
+    if font == Font::default() {
+      return Ok(number);
+    }
+    assign_value("lx@six@font", Stored::Font(Rc::new(font)), Some(Scope::Local));
+    Ok(Tokens::new([T_CS!("\\lx@six@font@set"), T_BEGIN!()].into_iter()
+      .chain(number.unlist())
+      .chain([T_END!()])
+      .collect()))
+  });
+  DefConstructor!("\\lx@six@font@set{}", "#1", bounded => true, reversion => "#1",
+    font => sub[_f] {
+      Ok(match lookup_value("lx@six@font") {
+        Some(Stored::Font(font)) => (*font).clone(),
+        _ => Font::default(),
+      })
+    });
+
   // \num[options]{number}
   DefMacro!("\\num OptionalKeyVals:SIX {}", sub[(kv, number_arg)] {
     let number_tokens = number_arg;
     six_begin_processing(kv.as_ref());
     let parsed = six_parse_number(&number_tokens);
-    let formatted = six_format_number(&parsed, 0);
+    let formatted = six_font_number(six_format_number(&parsed, 0));
     let result = six_wrap(formatted);
     six_end_processing();
     Ok(result)
@@ -3645,7 +3790,7 @@ LoadDefinitions!({
     let number = number_arg;
     let units = units_arg;
     six_begin_processing_for_units(kv.as_ref(), Some(&units));
-    let fnumber = six_format_number(&six_parse_number(&number), 0);
+    let fnumber = six_font_number(six_format_number(&six_parse_number(&number), 0));
     six_enable_unit_macros(true);
     // An empty pre-unit, `\SI{7}[]{\metre}`, prints nothing (siunitx's `\IfNoValueF` sees a value,
     // but its unit is empty).
@@ -3779,6 +3924,10 @@ LoadDefinitions!({
   // column under scrartcl; KPE #178).
   DefMacro!("\\lx@SI@column@parse", sub[_args] {
     use latexml_core::token::Catcode;
+    // The prep's unit macros made `\pm` the picometre abbreviation (siunitx.sty:8279 `\pm` = `\pico\metre`, a unit
+    // only inside a unit argument): the number's protected tokens are themselves again, so `1.2 \pm 0.3` and `\pm 0.5`
+    // parse as in `\num` (pdflatex "1.2(3)", "±0.5"; Perl's and ours printed "p m"/nothing, KPE #1326).
+    six_protect_input_tokens();
     let mut tokens: Vec<Token> = read_si_cell()?.unlist();
     let doparse = six_get_bool_sym(six_pin!("parse-numbers"));
     let mut color = six_get_tokens_sym(six_pin!("color"));
@@ -3818,7 +3967,7 @@ LoadDefinitions!({
       let mut toks = six_apply_mathligatures(tokens);
       let parsed = six_postprocess(six_match_number(&mut toks));
       let res = match parsed {
-        Some(num) => six_format_number(&SixParseResult::Parsed(num), 0),
+        Some(num) => six_font_number(six_format_number(&SixParseResult::Parsed(num), 0)),
         None => Tokens!(),
       };
       (res, toks)
@@ -4092,13 +4241,8 @@ LoadDefinitions!({
 % parse-numbers    = true,
 % parse-units      = true,
 % product-units    = repeat,
-% otherwise
+% otherwise (Perl sets the five detect-* keys here, unread; they set the font keys below, siunitx.sty:5574-5582)
   bracket-numbers  ,
-  detect-family    ,
-  detect-italic    ,
-  detect-mode      ,
-  detect-shape     ,
-  detect-weight    ,
   multi-part-units ,
   parse-numbers    ,
   parse-units      ,
@@ -4106,6 +4250,12 @@ LoadDefinitions!({
   number-angle-product=,
   number-angle-separator=,
   arc-separator=,
+  reset-math-version  = true,
+  reset-text-shape    = true,
+  reset-text-series   = true,
+  reset-text-family   = true,
+  text-family-to-math = false,
+  text-series-to-math = false,
 }"#);
 
   //======================================================================

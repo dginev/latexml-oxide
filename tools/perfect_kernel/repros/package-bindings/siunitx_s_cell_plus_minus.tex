@@ -1,0 +1,22 @@
+% mechanism: an `S` column's prep enables siunitx's unit macros for the cell (Perl siunitx.sty.ltxml:1401-1405), where
+%   `\pm` is the picometre abbreviation (siunitx.sty:8279); the number parse met the unit, not the sign, so the `±` was
+%   lost. The cell's parse now lets the `input-protect-tokens` be themselves again, as `\num` reads them.
+% witness: none (reviewer probe; reach in the REGTAILA report)
+% oracle:  pdflatex 0 errors; "1.2(3)", "±0.5", "1.2(3)", "4.5(6)", "∓0.5", "1.2(3)"; "1.2 ± 0.3"; "A 1.2(3) B ±0.5 m"
+% engines: perl: "1.2 p m 0.3", "p m 0.5", 8 Warnings (KPE #1326); rust INT081G: 0 errors, "1.2" and "0.3" apart,
+%   "0.5" unsigned
+% expect:  0 errors, 0 warnings; every cell one formula with pdflatex's reading
+% status:  GREEN (REGTAILA)
+\documentclass{article}
+\usepackage{siunitx}
+\begin{document}
+\begin{tabular}{SS}
+1.2 \pm 0.3 & \pm 0.5 \\
+1.2(3) & 4.5 +- 0.6 \\
+\mp 0.5 & 1.2\pm0.3 \\
+\end{tabular}
+\begin{tabular}{S[separate-uncertainty]}
+1.2 \pm 0.3 \\
+\end{tabular}
+A \num{1.2 \pm 0.3} B \SI{\pm 0.5}{m}
+\end{document}

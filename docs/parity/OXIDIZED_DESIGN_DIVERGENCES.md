@@ -6996,7 +6996,7 @@ HANDLED" (:302-306), so v3 documents lost settings that change the printed numbe
 - The v3 names of v2 keys are routed to them (`print-zero-exponent`, `print-zero-integer`,
   `drop-uncertainty`, `bracket-ambiguous-numbers`).
 - The font-matching keys (`reset-text-series`, `text-series-to-math`, `propagate-math-font`, …)
-  are accepted and ignored, as `reset-text-family` already was.
+  are accepted; the series, family and shape ones act on a number (#1153), the rest are ignored.
 
 Keys that siunitx v3 itself removed or never had (`load-configurations`, `obeybold`, …) still
 warn: pdflatex warns or errors on them too. The uncertainty conversions are Perl's, ported
@@ -24422,3 +24422,22 @@ pdflatex, not 22.86108pt.
 overflowing diagram (2 errors → 0); numprint's exponent phantoms shrink to TeX's width (`tests/babel/numprints.xml`
 28.7pt → 20.5pt). **Guard** `perfect_kernel_batchregtaila::mathchoice_sizes_only_its_style_branch` (repro
 `math-phantom/mathchoice_sizes_only_its_style_branch`).
+
+### 1153. siunitx's font keys carry the text's series, family and shape onto a number (Perl: never)
+
+**Perl behavior**: siunitx.sty.ltxml:1610-1624 sets `detect-family`, `detect-mode`, `detect-shape`, `detect-weight`
+(and `detect-italic`) on by default and never reads them: a number is always upright medium roman, so under
+`\sisetup{detect-weight}` a `\bfseries` table cell or `{\bfseries\num{2.5}}` loses its bold.
+**Rust behavior**: siunitx v3's own keys, siunitx_sty.rs `six_number_font_flags` / `\lx@six@font`: in math (the default
+`mode`) `text-series-to-math` makes a bold text series a bold number (siunitx.sty:5180-5193, `\mathversion{bold}`) and
+`text-family-to-math` a sans or typewriter family its alphabet (:5262-5272); printed in text (`mode=text`, or `match`
+outside math) each `reset-text-*` false keeps its axis (:5355-5370). The deprecated `detect-*` keys set them, value unread
+(:8532-8592: `detect-weight=false` sets them too). The text font is the one the number's math began in (`savedfont`),
+set on the number by a bounded constructor that reverts to the number, so `tex=` is unchanged. siunitx's defaults
+(:5574-5582) reset every axis: no number changes without a key. Applied to `\num`, `\tablenum`, the number of `\SI`/`\qty`
+(not its unit, as pdflatex) and `S` cells; `\numlist`, `\numrange`, `\SIlist`, `\SIrange`, `\ang` and `\unit` alone are
+not (pdflatex bolds only the first item of a list or range, and a lone unit).
+**Why**: bold best results in `S` tables are the common use (2402.01753, `detect-weight, mode=text`: 8 bold numbers;
+41 of 1,311 siunitx papers in a 30k census sample set `detect-weight`/`detect-all` and bold a cell). **Guard**
+`perfect_kernel_batchregtaila::siunitx_detect_keys_carry_the_text_font_onto_a_number` (repro
+`package-bindings/siunitx_detect_font_onto_number`).

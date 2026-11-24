@@ -67,6 +67,12 @@ fn wrapped_newtheorem_start_with_redefined_end() {
     format!(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML">{expected}</document>"#),
     "{xml}"
   );
+  // the brace ending the bare start names the end as the document knows it, not its private alias
+  assert!(
+    log.contains(r"} ends the group around environment \lutzremark: inserting \endremark")
+      && !log.contains("lx@env@bare@end"),
+    "{log}"
+  );
 }
 
 /// siunitx `S` cells led by `\centering`/`\raggedleft` (and a `>{\centering\arraybackslash}S` prefix): latex.ltx's
@@ -167,4 +173,98 @@ fn mathchoice_sizes_only_its_style_branch() {
     None,
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+}
+
+/// Every formula of a document as `tex` followed by its tokens, each `text/font` (no `/` without a font).
+fn formulas_with_fonts(xml: &str) -> Vec<String> {
+  let token = Regex::new(r#"<XMTok\b([^>]*)>([^<]*)</XMTok>"#).unwrap();
+  let font = Regex::new(r#"\bfont="([^"]*)""#).unwrap();
+  Regex::new(r#"(?s)<Math [^>]*tex="([^"]*)".*?</Math>"#)
+    .unwrap()
+    .captures_iter(xml)
+    .map(|math| {
+      let tokens: Vec<String> = token
+        .captures_iter(&math[0])
+        .map(|t| match font.captures(&t[1]) {
+          Some(f) => format!("{}/{}", &t[2], &f[1]),
+          None => t[2].to_string(),
+        })
+        .collect();
+      format!("[{}] {}", &math[1], tokens.join(" "))
+    })
+    .collect()
+}
+
+/// siunitx v3's font keys on a number: `text-series-to-math`/`text-family-to-math` in math, `reset-text-*` false in
+/// text (`mode=text`, or `match` outside math), each set by a deprecated `detect-*` key; in `\num`, `\SI` (the number,
+/// not its unit), inline math, and `S` cells led by a font switch. The defaults reset every axis (A, row a's first
+/// cell). Red (INT081G): no number in a font, and an `S` cell led by `\bfseries` text (2402.01753, `detect-weight,
+/// mode=text`). Repro package-bindings/siunitx_detect_font_onto_number.
+#[test]
+fn siunitx_detect_keys_carry_the_text_font_onto_a_number() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/siunitx_detect_font_onto_number.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    formulas_with_fonts(&xml),
+    [
+      "[2.5] 2.5",
+      "[3.5] 3.5/bold",
+      "[4.5] 4.5/bold",
+      r"[1.5\text{\,}\mathrm{m}] 1.5/bold m",
+      "[7.5] 7.5/sansserif italic",
+      "[5.5] 5.5",
+      "[9.5] 9.5/bold",
+      "[6.5] 6.5",
+      "[8.5] 8.5/italic",
+      "[2.5] 2.5",
+      "[2.5] 2.5/bold",
+      "[2.5] 2.5/italic",
+      "[1.5] 1.5",
+      "[1.5] 1.5/sansserif",
+      "[1.5] 1.5/sansserif",
+    ],
+    "{xml}"
+  );
+}
+
+/// An `S` cell's `\pm`: the column's unit macros make it the picometre, and the number parse lets it be the sign
+/// again, as `\num` does: a compact uncertainty `1.2(3)` (with or without spaces), a signed `±0.5`, `∓0.5`, `+-`, a
+/// `separate-uncertainty` column, and `\num`/`\SI` beside. Red (INT081G): "1.2" and "0.3" apart, an unsigned "0.5"
+/// (Perl "p m", KPE #1326). Repro package-bindings/siunitx_s_cell_plus_minus.
+#[test]
+fn siunitx_s_cell_plus_minus_is_the_sign() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/siunitx_s_cell_plus_minus.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let math = Regex::new(r#"(?s)<Math [^>]*tex="([^"]*)" text="([^"]*)".*?</Math>"#).unwrap();
+  let flat = math.replace_all(&xml, "[$1|$2]");
+  let cells: Vec<String> = Regex::new(r"(?s)<td\b[^>]*>(.*?)</td>")
+    .unwrap()
+    .captures_iter(&flat)
+    .map(|c| c[1].to_string())
+    .collect();
+  assert_eq!(
+    cells,
+    [
+      "[1.2(3)|1.2 * 3]",
+      r"[\pm 0.5|±0.5]",
+      "[1.2(3)|1.2 * 3]",
+      "[4.5(6)|4.5 * 6]",
+      r"[\mp 0.5|∓0.5]",
+      "[1.2(3)|1.2 * 3]",
+      r"[1.2\pm 0.3|1.2 plus-or-minus 0.3]",
+    ],
+    "{xml}"
+  );
+  assert!(
+    flat.contains(r"A [1.2(3)|1.2 * 3] B [\pm 0.5\text{\,}\mathrm{m}|±0.5 * m]"),
+    "{xml}"
+  );
 }

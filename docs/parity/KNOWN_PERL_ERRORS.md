@@ -22635,3 +22635,26 @@ measured with every branch in it; TeX keeps only the current style's (tex.web §
 pdflatex: 5.71527pt; Perl (same host): 22.86108pt. Latent in Perl's own bindings (its xy binding never measures a node);
 an xy-pic node or a numprint phantom holding one is too wide. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1152). Guard
 `perfect_kernel_batchregtaila::mathchoice_sizes_only_its_style_branch`.
+
+## 1326. Perl's siunitx `S` cell reads `\pm` as the picometre
+
+siunitx.sty.ltxml:1401-1405 `\lx@si@column@prep` enables the unit macros for every `S` and `s` cell, and siunitx's
+abbreviation `\pm` is `\pico\metre` (siunitx.sty:8279, a unit only inside a unit argument); the number parse meets the
+unit, not the uncertainty sign. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage{siunitx}
+\begin{document}
+\begin{tabular}{S}
+1.2 \pm 0.3 \\
+\pm 0.5 \\
+\end{tabular}
+\end{document}
+```
+
+pdflatex: "1.2(3)", "±0.5"; Perl (same host): "1.2 p m 0.3" (only "1.2" a formula) and "p m 0.5", with a Warning
+`\mathrm should only appear in math mode` per letter. Fixed in Rust:
+`\lx@SI@column@parse` lets the `input-protect-tokens` be themselves again before reading the cell, as `\num` does
+(siunitx_sty.rs `six_protect_input_tokens`). Guard `perfect_kernel_batchregtaila::siunitx_s_cell_plus_minus_is_the_sign`
+(repro `package-bindings/siunitx_s_cell_plus_minus`).
