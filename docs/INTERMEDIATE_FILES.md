@@ -13,6 +13,7 @@ turn off a cache are described in [ENVIRONMENT.md](https://github.com/dginev/lat
 
 | File | Where | What it holds |
 |---|---|---|
+| `LaTeXML-oxide.cache` (and, while a run has it open, `-wal`/`-shm`) | the destination directory | The names given to the document's images (Perl latexmlpost's `LaTeXML.cache`, as SQLite), so a reconversion reuses them and documents converted into one folder never share a name. Not written under `--nocache`, for a `.zip` or EPUB destination, nor by `cortex_worker` or the editor server; deleting it only means names are given afresh, past the files already in the folder. |
 | `graphics/<aa>/<hash>.<ext>`, its `.dims` sidecar, `.prune.lock` | `$XDG_CACHE_HOME/latexml-oxide/` (`LATEXML_GRAPHICS_CACHE_DIR` moves it) | Converted images keyed by their content, reused by later conversions. Capped at `LATEXML_GRAPHICS_CACHE_MAX_MB` (2048 MiB); `LATEXML_GRAPHICS_CACHE_OFF=1` turns it off. |
 | `formats/<version>-<executable>-…/` with `.lock`, `.partial`, `.attempts.*`, `.failed.*` files | `$LATEXML_FORMAT_CACHE`, else `$XDG_CACHE_HOME/latexml-oxide/`, else `$TMPDIR` | Format dumps built for a TeX Live tree that the binary has no embedded dump for. One set per binary build; not pruned. |
 | `latexml-oxide-dumps-<hash>-<uid>/<kind>.<year>.dump.txt` | `$TMPDIR` | The binary's embedded dumps, unpacked once so concurrent processes share them. Not pruned. |
@@ -26,7 +27,7 @@ turn off a cache are described in [ENVIRONMENT.md](https://github.com/dginev/lat
 | `.latexml-spill-<pid>-<seq>/segment-*.xml` | the source directory, else `$TMPDIR` when that is not writable | A very large document is converted in streaming mode. |
 | `.latexml-writable-<pid>` | the source directory | Checks that the directory is writable; removed at once. |
 | `latexml-post-handoff-<pid>.xml` | beside the destination, else `$TMPDIR` | The core result, handed to post-processing. |
-| `.latexml-post-pages-XXXXXX/` (`page-*.xml`, and for a parallel render `render.db`, `render-manifest-<n>.json`) | beside the destination, else `$TMPDIR` | Post-processing: the pages of a split document, and the shared data of parallel render workers. |
+| `.latexml-post-pages-XXXXXX/` (`page-*.xml`, and for a parallel render `LaTeXML-render.db`, `render-manifest-<n>.json`) | beside the destination, else `$TMPDIR` | Post-processing: the pages of a split document, and the shared data of parallel render workers. |
 | `.<stem>.tmp.<pid>.<seq>.<ext>` | the destination directory | Every output file is written under this name, then renamed into place. |
 | `.<stem>.<pid>-<seq>.mutool_svg/`, `.mutool.png`, `.pdftocairo.png`, Ghostscript and `ps2pdf` temporaries, `.<stem>.<n>.fonts.eps` | the destination directory | Converting a PDF, PostScript or EPS image. ImageMagick and Ghostscript also keep their own temporaries in `$TMPDIR`. |
 | `.tmpXXXXXX/` (`mimetype`, `META-INF/`, `OPS/`, …) | `$TMPDIR` | Assembling a `.zip` or EPUB destination. |

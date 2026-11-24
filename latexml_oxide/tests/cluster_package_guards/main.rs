@@ -479,6 +479,8 @@ mod perfect_kernel_batchfb2a;
 mod perfect_kernel_batchfb2b2;
 mod perfect_kernel_batchfb2b3;
 mod perfect_kernel_batchfix991;
+/// FIX995: an image copy honours `--sitedirectory`; generated image names are shared by every page of a run (issue 995).
+mod perfect_kernel_batchfix995;
 /// FMRG: the red/green suite of frontmatter mark association — every witness and reviewer probe of the shared-note
 /// campaign against its pdflatex oracle (DG 2026-11-16).
 mod perfect_kernel_batchfmmarks;

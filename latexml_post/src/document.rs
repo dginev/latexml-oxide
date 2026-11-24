@@ -309,8 +309,8 @@ pub struct PostDocument {
   pub parent_id:               Option<String>,
   /// Whether to validate the document.
   pub validate:                bool,
-  /// Simple key-value cache (replaces Perl's DB_File tied hash).
-  cache:                       HashMap<String, String>,
+  /// Perl's document cache (its DB_File tied hash, `LaTeXML.cache`): [`DocCache`], shared by every page of a run.
+  cache:                       DocCache,
   /// Whether caching is disabled.
   pub nocache:                 bool,
   /// XMath subtrees queued for deferred unlink. Parallel-format
@@ -465,7 +465,9 @@ impl PostDocument {
       split_from_id: None,
       parent_id: None,
       validate: options.validate,
-      cache: HashMap::default(),
+      cache: options
+        .cache
+        .unwrap_or_else(|| DocCache::new(options.nocache)),
       nocache: options.nocache,
       pending_xmath_unlinks: Vec::new(),
       nav_memo: None,
@@ -645,6 +647,9 @@ impl PostDocument {
       source: self.source.clone(),
       source_directory: self.source_directory.clone(),
       searchpaths: Some(self.searchpaths.clone()),
+      // The parent's cache, as Perl's `new_internal` clones it (`Post.pm` L687-690).
+      nocache: self.nocache,
+      cache: Some(self.cache.clone()),
       ..PostDocumentOptions::default()
     };
     let mut subdoc = Self::new_internal(new_xml_doc, opts);
@@ -2185,16 +2190,140 @@ impl PostDocument {
   // ======================================================================
   // Cache support
 
-  /// Look up a value in the persistent cache.
-  pub fn cache_lookup(&self, key: &str) -> Option<String> { self.cache.get(key).cloned() }
+  /// Look up a value in the persistent cache (Perl `cacheLookup`, `Post.pm` L1517-1521).
+  pub fn cache_lookup(&self, key: &str) -> Option<String> {
+    self
+      .cache
+      .lookup(self.destination_directory.as_deref(), key)
+  }
 
-  /// Store a value in the persistent cache.
+  /// Store a value in the persistent cache (Perl `cacheStore`, `Post.pm` L1523-1531).
   pub fn cache_store(&mut self, key: &str, value: &str) {
-    self.cache.insert(key.to_string(), value.to_string());
+    self
+      .cache
+      .store(self.destination_directory.as_deref(), key, Some(value));
   }
 
   /// Remove a value from the persistent cache.
-  pub fn cache_remove(&mut self, key: &str) { self.cache.remove(key); }
+  pub fn cache_remove(&mut self, key: &str) {
+    self
+      .cache
+      .store(self.destination_directory.as_deref(), key, None);
+  }
+
+  /// The document's cache, shared by the pages of a run.
+  pub fn cache(&self) -> &DocCache { &self.cache }
+}
+
+/// The cache's file name in a destination directory: Perl's `LaTeXML.cache` (`Post.pm` L1537) is a DB_File, which a
+/// Perl run into the same directory keeps reading, so ours, SQLite, has a name of its own.
+pub const CACHE_FILE: &str = "LaTeXML-oxide.cache";
+
+/// Whether `basename` is the cache file or one of its SQLite side files, which no package carries.
+pub fn is_cache_file(basename: &str) -> bool {
+  basename
+    .strip_prefix(CACHE_FILE)
+    .is_some_and(|rest| matches!(rest, "" | "-wal" | "-shm" | "-journal"))
+}
+
+/// Perl's document cache (`Post.pm` L1510-1548): a key-value store per destination directory, persisted there as
+/// [`CACHE_FILE`] (`kv(key, value)`, Perl's keys and values) unless `nocache` (Perl's option, `Post.pm` L678; the
+/// cortex worker, whose every paper gets a fresh directory) or the document has no destination directory (the API):
+/// then in memory. Opened lazily, at the first lookup; every page of a run shares one ([`PostDocumentOptions::cache`])
+/// as Perl's split pages share their parent's (`new_internal` clones it, L687-690).
+#[derive(Clone, Default)]
+pub struct DocCache(std::rc::Rc<std::cell::RefCell<DocCacheStores>>);
+
+#[derive(Default)]
+struct DocCacheStores {
+  nocache: bool,
+  /// Destination directory (`""`: none) → its store.
+  stores:  HashMap<String, crate::sqlite_store::SqliteStore>,
+}
+
+const DOC_CACHE_SCHEMA: &str =
+  "CREATE TABLE IF NOT EXISTS kv(key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;";
+
+impl std::fmt::Debug for DocCache {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("DocCache") }
+}
+
+impl DocCache {
+  /// A cache of its own; `nocache` keeps it in memory.
+  pub fn new(nocache: bool) -> Self {
+    DocCache(std::rc::Rc::new(std::cell::RefCell::new(DocCacheStores {
+      nocache,
+      stores: HashMap::default(),
+    })))
+  }
+
+  /// Run `f` on the store of `dir` (opened now when it is the first use).
+  pub fn with_store<T>(
+    &self,
+    dir: Option<&str>,
+    f: impl FnOnce(&mut crate::sqlite_store::SqliteStore) -> T,
+  ) -> T {
+    let mut inner = self.0.borrow_mut();
+    let persist = !inner.nocache;
+    // One store per directory however it is spelled (`out`, `./out`).
+    let key = dir.map_or_else(String::new, latexml_core::util::pathname::absolute);
+    let store = inner.stores.entry(key).or_insert_with(|| {
+      let file = dir.filter(|_| persist).map(|dir| {
+        // Perl's `checkDestination` makes the directory (`Post.pm` L941-949): the cache is opened before any page
+        // is written into a new `--dest` directory.
+        let _ = std::fs::create_dir_all(dir);
+        Path::new(dir).join(CACHE_FILE)
+      });
+      crate::sqlite_store::SqliteStore::open(file.as_deref(), DOC_CACHE_SCHEMA, 1)
+    });
+    f(store)
+  }
+
+  /// The value under `key` in `dir`'s store.
+  pub fn lookup(&self, dir: Option<&str>, key: &str) -> Option<String> {
+    self.with_store(dir, |store| store.read(|conn| kv_get(conn, key)).flatten())
+  }
+
+  /// Store `value` under `key` in `dir`'s store (remove it for `None`), in a transaction of its own.
+  pub fn store(&self, dir: Option<&str>, key: &str, value: Option<&str>) {
+    self.with_store(dir, |store| store.immediate(|tx, _| kv_put(tx, key, value)));
+  }
+
+  /// Close every store (Perl's `closeCache`, `Post.pm` L1543-1548): its database checkpointed, no side file left for
+  /// a package to pick up.
+  pub fn close(&self) { self.0.borrow_mut().stores.clear(); }
+
+  /// Close the stores that run on their file, reopened at their next use: before other processes open it (the render
+  /// workers), the file checkpointed and no handle held across. A store in memory keeps its entries.
+  pub fn close_files(&self) {
+    self
+      .0
+      .borrow_mut()
+      .stores
+      .retain(|_, store| store.file().is_none());
+  }
+}
+
+/// The value under `key`.
+pub fn kv_get(conn: &rusqlite::Connection, key: &str) -> rusqlite::Result<Option<String>> {
+  use rusqlite::OptionalExtension;
+  conn
+    .prepare_cached("SELECT value FROM kv WHERE key = ?1")?
+    .query_row([key], |row| row.get(0))
+    .optional()
+}
+
+/// Store `value` under `key` (remove it for `None`).
+pub fn kv_put(conn: &rusqlite::Connection, key: &str, value: Option<&str>) -> rusqlite::Result<()> {
+  match value {
+    Some(value) => conn
+      .prepare_cached("INSERT OR REPLACE INTO kv(key, value) VALUES (?1, ?2)")?
+      .execute([key, value]),
+    None => conn
+      .prepare_cached("DELETE FROM kv WHERE key = ?1")?
+      .execute([key]),
+  }
+  .map(drop)
 }
 
 // ======================================================================
@@ -2211,6 +2340,8 @@ pub struct PostDocumentOptions {
   pub searchpaths:           Option<Vec<String>>,
   pub validate:              bool,
   pub nocache:               bool,
+  /// The run's cache, shared by every page made with these options ([`DocCache`]); `None`: one of its own.
+  pub cache:                 Option<DocCache>,
 }
 
 /// Recursive representation for building XML nodes.

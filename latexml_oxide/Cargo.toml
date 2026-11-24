@@ -237,6 +237,9 @@ latexml = { path = ".", features = ["test-utils"] }
 # pipeline (which required a Unix userland and silently vacuous-passed when
 # xmllint was missing). LCS-based, so counts match GNU diff's `<`/`>` lines.
 similar = "3"
+# Plants a corrupt entry in a destination's `LaTeXML-oxide.cache` (perfect_kernel_batchfix995); the spec latexml_post
+# builds, so nothing is compiled twice.
+rusqlite = { version = "0.43.0", features = ["bundled"] }
 
 # Metadata for `cargo deb` (https://github.com/kornelski/cargo-deb).
 # Drives `tools/make_release.sh` step 6: `cargo deb --no-build --profile maxperf -p latexml`.

@@ -1,0 +1,19 @@
+% mechanism: latexml_post graphics.rs copy_destination / copy_file (Perl Post/Graphics.pm L292-300, Util/Pathname.pm
+%   L264-266 pathname_copy canonicalizes before it writes; OXIDIZED_DESIGN_DIVERGENCES #1081): a copy is written at
+%   its lexical path, and a link inside the site directory never carries it out of the site and destination
+%   directories (a generated xN instead).
+% witness: issue 995 review (the #911 SECLUA invariant: an image copy never leaves the site directory)
+% layout:  site/src/index.tex (this file), site/children/c.{png,svg}, site/src/sub/d.{png,svg};
+%          site/out -> elsewhere/deep/out (symbolic link), elsewhere/deep/out/sub -> outside (symbolic link);
+%          cwd site/src; --sitedirectory=<abs>/site --dest=<abs>/site/out/index.html
+% oracle:  pdflatex 0 errors with PNGs: two images
+% engines: rust=GREEN perl=RED (2026-11-24, Perl 0.8.8: src sub/d.png, written through the link as outside/d.png)
+% expect:  ../children/c (the source itself, nothing written), x1 (sub/d, in elsewhere/deep/out);
+%          nothing in elsewhere/deep/children or outside/; 0 errors
+%          (round 1: elsewhere/deep/children/c written, ../children resolved through the link)
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+Hi \includegraphics{../children/c} and \includegraphics{sub/d}
+\end{document}

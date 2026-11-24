@@ -86,34 +86,6 @@ pub trait Processor {
   ) -> Option<PathBuf> {
     None
   }
-
-  /// Auto-generate a unique resource pathname using a counter from the doc cache.
-  fn generate_resource_pathname(
-    &self,
-    doc: &mut PostDocument,
-    _node: &Node,
-    _source: Option<&str>,
-    type_ext: Option<&str>,
-  ) -> PathBuf {
-    let subdir = self.resource_directory().unwrap_or("");
-    let prefix = self.resource_prefix().unwrap_or("x");
-    let counter_key = format!("_max_{}_{}_counter_", subdir, prefix);
-    let n = doc
-      .cache_lookup(&counter_key)
-      .and_then(|v| v.parse::<u32>().ok())
-      .unwrap_or(0)
-      + 1;
-    doc.cache_store(&counter_key, &n.to_string());
-    let name = format!("{}{}", prefix, n);
-    let mut path = PathBuf::from(subdir);
-    let filename = if let Some(ext) = type_ext {
-      format!("{}.{}", name, ext)
-    } else {
-      name
-    };
-    path.push(filename);
-    path
-  }
 }
 
 /// Information about a document class or package extracted from processing instructions.

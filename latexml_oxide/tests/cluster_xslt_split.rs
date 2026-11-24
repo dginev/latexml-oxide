@@ -479,6 +479,7 @@ mod xslt_failure_is_fatal {
       timestamp:                 None,
       icon:                      None,
       whatsout:                  latexml_post::extract::Whatsout::default(),
+      nocache:                   false,
     }
   }
 
