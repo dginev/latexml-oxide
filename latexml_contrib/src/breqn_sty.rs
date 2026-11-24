@@ -12,6 +12,11 @@ use latexml_package::{
 // undefined), 1606.07330 (`{dsuspend}`), 1201.6197, 1607.06055, 1706.02708, 1811.11912 (`{dseries}`), 2008.13194
 // (`\eqinterlinepenalty`, `\setkeys{breqn}`), 1805.03313 (`\eqlinespacing`, `\eqlineskip`, `\intereqskip`).
 LoadDefinitions!({
+  // breqn.sty:41 (and :54 after flexisym) sets `^` and `_` to their kernel catcodes 7 and 8 for the rest of the
+  // preamble: a package that left them active, gb4e's `\automath` (gb4e.sty:139-147, :168), no longer reads them in
+  // the packages loaded after (tikz's `_` ran into the PushbackLimit, 2402.13372). From `\begin{document}` mathstyle's
+  // catcodes below apply.
+  RawTeX!(r"\catcode`\^=7\relax \catcode`\_=8\relax");
   // breqn.sty:47-48 `\RequirePackage{amsmath}` and `{graphicx}`, :56 `{keyval,calc}`: a document can rely on them
   // (OXIDIZED_DESIGN #317).
   RequirePackage!("amsmath");

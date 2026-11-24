@@ -45,3 +45,27 @@ fn amsgen_defines_rifm() {
      font=\"italic\" role=\"UNKNOWN\">m</XMTok></XMath></Math></p>",
   );
 }
+
+/// loader/breqn_resets_script_catcodes_at_load: breqn.sty:41 sets `^`/`_` to 7/8 at load, so gb4e's active
+/// `\automath` scripts are off for tikz loaded after (2402.13372). Red (INT081G): "13/13", then tikz looped to
+/// `Fatal:Timeout:PushbackLimit` with 227k Warnings. The one Warning is the binding's "breqn.sty is minimally stubbed".
+/// Distinct from `perfect_kernel_batch63::breqn_text_underscore` (the body's catcode 12 from `\begin{document}`).
+#[test]
+fn breqn_resets_script_catcodes_at_load() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/breqn_resets_script_catcodes_at_load_2402_13372.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    "<p xml:id=\"p1.1\">8/7, 12 <Math mode=\"inline\" tex=\"x_{1}\" text=\"x _ 1\" xml:id=\"p1.m1\"><XMath \
+     xml:id=\"p1.m1.1\"><XMApp xml:id=\"p1.m1.1.1\"><XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok \
+     font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok fontsize=\"70%\" meaning=\"1\" \
+     role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></p>",
+  );
+}

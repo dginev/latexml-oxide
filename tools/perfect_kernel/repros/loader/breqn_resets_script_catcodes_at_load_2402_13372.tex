@@ -1,0 +1,16 @@
+% mechanism: breqn.sty:41 (and :54 after flexisym) sets `^` and `_` to catcodes 7 and 8 at load, so gb4e's
+%   `\automath` (gb4e.sty:139-147, :168: both active) is off for the packages loaded after; breqn_sty.rs never did,
+%   and tikz read gb4e's active `_` until the PushbackLimit (Fatal, 227k Warnings)
+% witness: 2402.13372 (gb4e, amsmath, breqn, tikz)
+% oracle:  pdflatex 0 `!`; "8/7, 12 x1" (the catcodes after breqn, in the body); from `\begin{document}` mathstyle's 12
+% engines: rust INT081G "13/13", 1 error + Fatal:Timeout:PushbackLimit; perl 0 errors (breqn raw: "8/7")
+% expect:  0 errors, 1 warning (breqn.sty is a stub); <p>8/7, 12 x1</p> with `$x_1$` a subscript
+% status:  RED (INT081G) -> GREEN (REGTAILB)
+\documentclass{article}
+\usepackage{gb4e}
+\usepackage{breqn}
+\edef\afterbreqn{\the\catcode`\_/\the\catcode`\^}
+\usepackage{tikz}
+\begin{document}
+\afterbreqn, \the\catcode`\_\ $x_1$
+\end{document}
