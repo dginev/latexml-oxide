@@ -979,9 +979,10 @@ pub(super) fn make_engine() -> Engine {
      -> std::result::Result<Dynamic, Box<EvalAltResult>> {
       // Allowed by default (Perl `.ltxml` runs `system()` freely), but BLOCKABLE
       // via `LATEXML_DISABLE_SHELL_ESCAPE` — the opt-out an untrusted-input
-      // deployment (e.g. `cortex_worker`) sets, since a `.rhai` beside the
-      // source auto-loads (converter.rs `rhai_dispatch`) and could otherwise
-      // shell out. See SAFETY.md.
+      // deployment sets, since a `.rhai` beside the source auto-loads
+      // (converter.rs `rhai_dispatch`) and could otherwise shell out.
+      // `cortex_worker` loads no runtime binding at all (it calls
+      // `converter::forbid_runtime_bindings` first). See SAFETY.md.
       if std::env::var_os("LATEXML_DISABLE_SHELL_ESCAPE").is_some() {
         return Err(rhai_err(format!(
           "Command '{}': external commands from bindings are disabled \

@@ -3,7 +3,7 @@
 
 Use after a callgrind capture:
 
-    cargo build --profile bench --bin cortex_worker --features cortex
+    cargo build --profile bench --bin cortex_worker --no-default-features --features cortex
     LATEXML_GRAPHICS_CACHE_OFF=1 valgrind --tool=callgrind \
         --callgrind-out-file=/tmp/callgrind.out --dump-instr=no \
         ./target/release/cortex_worker --standalone --input <zip> --output /tmp/cg.zip

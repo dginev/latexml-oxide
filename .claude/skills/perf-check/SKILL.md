@@ -18,7 +18,7 @@ description: >
 | `release` | `cargo build --release` | **Sandbox sweeps + Perl-parity measurement.** Strong-optimized, thin-LTO. |
 | `bench` | `cargo build --profile bench` | **Wall-time benchmarks and profiling** (`perf`, flamegraph, callgrind). Inherits `release` but keeps `debug = "full"` and symbols. Built-in cargo profile, so the binary lands in **`target/release/`**, not `target/bench/`. |
 | `maxperf` | `cargo build --profile maxperf` | **Distribution artifact.** Fat-LTO, CGU=1, `panic=abort`. Slowest build; smallest+fastest binary. |
-| `maxperf-cortex` | `cargo build --profile maxperf-cortex --bin cortex_worker --features cortex` | **Fleet worker artifact.** `maxperf` for the cortex worker. |
+| `maxperf-cortex` | `cargo build --profile maxperf-cortex --bin cortex_worker --no-default-features --features cortex` | **Fleet worker artifact.** `maxperf` for the cortex worker. |
 
 Distribution recipe (what `tools/make_release.sh` uses): `cargo build
 --no-default-features --features runtime-bindings --profile maxperf --bin
