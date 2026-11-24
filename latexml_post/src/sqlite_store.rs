@@ -21,8 +21,9 @@ pub struct SqliteStore {
   fell_back: bool,
 }
 
-/// How long a process waits for others holding the file, opening it or writing.
-const BUSY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
+/// How long a process waits for others holding the file, opening it or writing (as `object_db`): well inside a
+/// conversion's default `--timeout=60`, after which the run goes on in memory.
+const BUSY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 impl SqliteStore {
   /// Open `file` (`None`: in memory) with `schema` (its statements idempotent) at schema `version`. A file that
@@ -110,9 +111,13 @@ impl SqliteStore {
   pub fn fell_back(&self) -> bool { self.fell_back }
 
   /// Run `f` in one `IMMEDIATE` transaction, committed when it succeeds. A store that fails is reported (Warning)
-  /// and replaced by an empty in-memory one, where `f` runs again.
-  pub fn immediate<T>(&mut self, mut f: impl FnMut(&Transaction) -> rusqlite::Result<T>) -> T {
-    match Self::run(&mut self.conn, &mut f) {
+  /// and replaced by an empty in-memory one, where `f` runs again. `f` is told whether the store runs in memory in
+  /// place of its file ([`Self::fell_back`]), as it is on that second run.
+  pub fn immediate<T>(
+    &mut self,
+    mut f: impl FnMut(&Transaction, bool) -> rusqlite::Result<T>,
+  ) -> T {
+    match Self::run(&mut self.conn, self.fell_back, &mut f) {
       Ok(value) => value,
       Err(e) => {
         Warn!(
@@ -128,17 +133,18 @@ impl SqliteStore {
         self.conn = Self::in_memory(self.schema);
         self.fell_back |= self.file.is_some();
         self.file = None;
-        Self::run(&mut self.conn, &mut f).expect("an in-memory SQLite transaction")
+        Self::run(&mut self.conn, self.fell_back, &mut f).expect("an in-memory SQLite transaction")
       },
     }
   }
 
   fn run<T>(
     conn: &mut Connection,
-    f: &mut impl FnMut(&Transaction) -> rusqlite::Result<T>,
+    fell_back: bool,
+    f: &mut impl FnMut(&Transaction, bool) -> rusqlite::Result<T>,
   ) -> rusqlite::Result<T> {
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    let value = f(&tx)?;
+    let value = f(&tx, fell_back)?;
     tx.commit()?;
     Ok(value)
   }
@@ -184,7 +190,7 @@ mod tests {
     let mut store = SqliteStore::open(Some(&not_sqlite), SCHEMA, 1);
     assert_eq!(store.file(), None);
     assert_eq!(
-      store.immediate(|tx| tx.execute("INSERT INTO t(v) VALUES (1)", [])),
+      store.immediate(|tx, _| tx.execute("INSERT INTO t(v) VALUES (1)", [])),
       1
     );
     assert!(
@@ -246,5 +252,33 @@ mod tests {
         .collect();
       assert_eq!(outcomes, vec!["FILE"; 16]);
     }
+  }
+
+  /// A transaction that fails on the file (here a read-only file) runs again in memory, and is told so: a caller
+  /// deciding by the store's state before the call missed the change (issue 995 review: a read-only cache, and a
+  /// second document's image written over the first's `x1.png`).
+  #[cfg(unix)]
+  #[test]
+  fn a_failed_transaction_runs_again_told_it_is_in_memory() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("c.db");
+    drop(SqliteStore::open(Some(&file), SCHEMA, 1));
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o444)).unwrap();
+    if std::fs::OpenOptions::new().write(true).open(&file).is_ok() {
+      eprintln!("SKIP: a read-only file is writable here (root)");
+      return;
+    }
+    let mut store = SqliteStore::open(Some(&file), SCHEMA, 1);
+    assert_eq!(store.file(), Some(file.as_path()));
+    let mut told = Vec::new();
+    store.immediate(|tx, fell_back| {
+      told.push(fell_back);
+      tx.execute("INSERT INTO t(v) VALUES (1)", [])
+    });
+    assert_eq!(
+      (told, store.file(), store.fell_back()),
+      (vec![false, true], None, true)
+    );
   }
 }

@@ -920,3 +920,174 @@ fn batchfix995_a_corrupt_cache_entry_decides_no_file() {
   );
   assert!(!src.join(".hidden").exists());
 }
+
+/// `a.tex` and `b.tex` converted into one folder, `b.tex` meeting the cache `hold` makes unusable (Warning, then the
+/// run in memory): `b.html` takes names whose files do not exist (`x2.svg`, `x3.svg`) and `a.html` keeps its image.
+/// Repro loader/image_names_cache_unusable.
+fn unusable_cache(hold: impl FnOnce(&Path) -> Option<Box<dyn FnOnce()>>) {
+  let root = tempfile::tempdir().unwrap();
+  layout(root.path(), "");
+  let parent = root.path().join("parent");
+  std::fs::write(parent.join("a.tex"), TWO_DOCS).unwrap();
+  std::fs::write(parent.join("b.tex"), TWO_DOCS.replace("child_1", "child_2")).unwrap();
+  let run = |doc: &str| {
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--nocomments",
+        "--timeout=60",
+        &format!("--dest={doc}.html"),
+        &format!("{doc}.tex"),
+      ])
+      .current_dir(&parent)
+      .output()
+      .expect("spawn latexml_oxide");
+    String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "")
+  };
+  let log = run("a");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let a = pairs(&[("x1.svg", "child_1/images/A")]);
+  assert_eq!(images_of(&parent.join("a.html")), a);
+  let Some(release) = hold(&parent.join("LaTeXML-oxide.cache")) else {
+    return;
+  };
+  let start = std::time::Instant::now();
+  let log = run("b");
+  let took = start.elapsed();
+  release();
+  let warnings: Vec<&str> = log.lines().filter(|l| l.starts_with("Warning:")).collect();
+  assert_eq!((error_count(&log), warnings.len()), (0, 1), "{log}");
+  assert!(warnings[0].starts_with("Warning:I/O:cache"), "{log}");
+  assert!(took < std::time::Duration::from_secs(40), "{took:?}");
+  assert_eq!(
+    images_of(&parent.join("b.html")),
+    pairs(&[
+      ("x2.svg", "child_2/images/A"),
+      ("x3.svg", "child_2/images/B")
+    ])
+  );
+  assert_eq!(images_of(&parent.join("a.html")), a);
+}
+
+/// The cache made read-only between the two documents: `b.tex`'s transaction fails and runs again in memory, which
+/// skips the names whose files exist (round 4 decided the skip before the transaction: both pages showed `x1.svg`,
+/// holding `b`'s image). `SqliteStore::immediate`, `Graphics::resolve_names`.
+#[cfg(unix)]
+#[test]
+fn batchfix995_a_read_only_cache_overwrites_no_image() {
+  use std::os::unix::fs::PermissionsExt;
+  unusable_cache(|cache| {
+    std::fs::set_permissions(cache, std::fs::Permissions::from_mode(0o444)).unwrap();
+    if std::fs::OpenOptions::new().write(true).open(cache).is_ok() {
+      eprintln!("SKIP: a read-only file is writable here (root)");
+      return None;
+    }
+    Some(Box::new(|| {}))
+  });
+}
+
+/// Another process holds the cache (`BEGIN EXCLUSIVE`) for the whole of `b.tex`'s run: it waits 10 s, warns and goes
+/// on in memory, well inside `--timeout=60` (round 4 waited 120 s: `Fatal:timeout:wallclock`). `sqlite_store.rs`
+/// `BUSY_TIMEOUT`.
+#[test]
+fn batchfix995_a_locked_cache_waits_less_than_the_conversion() {
+  unusable_cache(|cache| {
+    let conn = rusqlite::Connection::open(cache).unwrap();
+    conn
+      .execute_batch("BEGIN EXCLUSIVE; INSERT OR REPLACE INTO kv VALUES('_held_', '1');")
+      .unwrap();
+    Some(Box::new(move || conn.execute_batch("COMMIT").unwrap()))
+  });
+}
+
+/// A planted `_source_` that is a device, or a path out of the destination: the conversion ends promptly (round 4
+/// hashed `/dev/zero` for ever), reports the device once, and writes nothing out of the folder; a planted entry of
+/// an image's own is reported once. `Graphics::vouch`, `resource_cache::place`.
+#[cfg(unix)]
+#[test]
+fn batchfix995_a_planted_source_is_never_read_for_ever() {
+  let root = tempfile::tempdir().unwrap();
+  let src = root.path().join("src");
+  std::fs::create_dir_all(src.join("figs")).unwrap();
+  std::fs::write(
+    src.join("p.tex"),
+    "\\documentclass{article}\\usepackage{graphicx}\\begin{document}\n\
+     Fig \\includegraphics{figs/a.png} \\includegraphics{figs/b.png}\n\\end{document}\n",
+  )
+  .unwrap();
+  let (a, b) = (png(4, 4), png(4, 5));
+  std::fs::write(src.join("figs/a.png"), a).unwrap();
+  std::fs::write(src.join("figs/b.png"), &b).unwrap();
+  let run = || {
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(["--nocomments", "--timeout=60", "--dest=p.html", "p.tex"])
+      .current_dir(&src)
+      .output()
+      .expect("spawn latexml_oxide");
+    String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "")
+  };
+  let digest = |file: &Path| {
+    latexml_post::graphics_cache::SourceDigest::of_file(file)
+      .unwrap()
+      .content()
+      .iter()
+      .map(|b| format!("{b:02x}"))
+      .collect::<String>()
+  };
+  {
+    // Each image's bytes said to be in a file another source owns, whose source is a device or outside the folder.
+    let conn = rusqlite::Connection::open(src.join("LaTeXML-oxide.cache")).unwrap();
+    conn
+      .execute_batch(
+        "CREATE TABLE kv(key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID; PRAGMA user_version = 1;",
+      )
+      .unwrap();
+    for (image, name, source) in [
+      ("figs/a.png", "evil.png", "/dev/zero"),
+      ("figs/b.png", "evil2.png", "../outside.png"),
+    ] {
+      let h = digest(&src.join(image));
+      for (key, value) in [
+        (format!("_content_copy|{h}|"), name.to_string()),
+        (format!("_owner_{name}"), "copy|other".to_string()),
+        (format!("_holds_{name}"), format!("copy|{h}")),
+        (format!("_source_{name}"), source.to_string()),
+      ] {
+        conn
+          .execute("INSERT OR REPLACE INTO kv VALUES(?1, ?2)", [&key, &value])
+          .unwrap();
+      }
+    }
+    // And `a.png`'s own entry a page, its kept path another source's: looked up again for a generated name, the
+    // entry is reported once (round 4: twice).
+    let key = format!(
+      "LaTeXML::Post::Graphics:figs/a.png.png||{}",
+      digest(&src.join("figs/a.png"))
+    );
+    for (key, value) in [
+      (key.as_str(), "p.html||"),
+      ("_owner_figs/a.png", "copy|zzz"),
+    ] {
+      conn
+        .execute("INSERT OR REPLACE INTO kv VALUES(?1, ?2)", [key, value])
+        .unwrap();
+    }
+  }
+  std::fs::write(root.path().join("outside.png"), &b).unwrap();
+  let start = std::time::Instant::now();
+  let log = run();
+  assert!(start.elapsed() < std::time::Duration::from_secs(40));
+  let warnings: Vec<&str> = log.lines().filter(|l| l.starts_with("Warning:")).collect();
+  assert_eq!((error_count(&log), warnings.len()), (0, 2), "{log}");
+  assert!(
+    warnings[0].contains(" names p.html for figs/a.png"),
+    "{log}"
+  );
+  assert!(warnings[1].contains("the source /dev/zero"), "{log}");
+  let urls: Vec<String> = images_of(&src.join("p.html"))
+    .into_iter()
+    .map(|(url, _)| url)
+    .collect();
+  assert_eq!(urls, ["x1.png", "figs/b.png"]);
+  assert!(!src.join("evil.png").exists() && !src.join("evil2.png").exists());
+  assert_eq!(std::fs::read(root.path().join("outside.png")).unwrap(), b);
+}

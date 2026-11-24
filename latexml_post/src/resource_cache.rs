@@ -14,7 +14,8 @@
 //! a kept name (a copy's relative path, a converted image's stem) another source owns falls back to a generated `xN`,
 //! where Perl overwrote it (issue 995); and a stored name is written only when the request could have been given it
 //! ([`Checks`]). Each [`resolve`] is one `IMMEDIATE` transaction, so processes naming into one folder at once through
-//! the file never hand out one name to two sources; a store that fell back to memory skips the names whose files exist.
+//! the file never hand out one name to two sources; a store in memory in place of its file (it could not be opened, or
+//! the transaction failed and runs again there) skips the names whose files exist ([`Checks::on_disk`]).
 
 use std::collections::HashMap;
 
@@ -82,10 +83,11 @@ pub struct Checks<'a> {
   /// Whether a name may be written: a copy's kept path outside this run's site directory may not.
   pub usable:  &'a dyn Fn(&ResourceName) -> bool,
   /// Whether `name`, owned by the source at `source` (relative to the destination directory), is the name that source
-  /// takes and the source holds the request's bytes: another source's kept path or stem a request may share.
+  /// takes and the source holds the request's bytes: another source's kept path or stem a request may share. Only a
+  /// relative path to a regular file is read.
   pub vouch:   &'a dyn Fn(&Request, &ResourceName, &str) -> bool,
-  /// Whether a file of the name exists in the destination directory, asked only of a store that fell back to memory
-  /// (it no longer knows the names earlier runs handed out); `None` otherwise.
+  /// Whether a file of the name exists in the destination directory, asked only in a transaction on a store in memory
+  /// in place of its file (it does not know the names earlier runs handed out); `None` otherwise.
   pub on_disk: Option<&'a dyn Fn(&ResourceName) -> bool>,
   /// The cache file a Warning names.
   pub cache:   &'a str,
@@ -115,7 +117,7 @@ pub fn resolve(
     // Copies keeping their path.
     for (i, r) in page.iter().enumerate() {
       if let (true, Proposal::Kept(rel)) = (r.copy, &r.proposal) {
-        names[i] = place(conn, checks, &now, r, Some(name_of(rel, false)))?;
+        names[i] = place(conn, checks, &now, r, Some(name_of(rel, false)), true)?;
       }
     }
     // Conversions, then the copies left.
@@ -128,7 +130,10 @@ pub fn resolve(
           Proposal::Stem(stem) if !copies => Some(name_of(&with_ext(stem, &r.ext), r.svg_alt)),
           _ => None,
         };
-        names[i] = match place(conn, checks, &now, r, proposed)? {
+        // A copy whose kept path is taken looks its stored names up again (a copy since may share its bytes), its
+        // corrupt ones reported already.
+        let warn = !matches!((r.copy, &r.proposal), (true, Proposal::Kept(_)));
+        names[i] = match place(conn, checks, &now, r, proposed, warn)? {
           Some(found) => Some(found),
           None => Some(generate(conn, checks, r, &counter)?),
         };
@@ -157,13 +162,14 @@ fn name_of(dest: &str, svg_alt: bool) -> ResourceName {
 }
 
 /// The name stored under the request's key, its source's or its content's, else `proposed` when no other source
-/// owns it, else `None`.
+/// owns it, else `None`. A stored name no request could have is reported when `warn`.
 fn place(
   conn: &Connection,
   checks: &Checks,
   now: &HashMap<&str, &str>,
   r: &Request,
   proposed: Option<ResourceName>,
+  warn: bool,
 ) -> rusqlite::Result<Option<Resolved>> {
   // Perl's value, `dest|w|h`.
   let by_key =
@@ -171,14 +177,18 @@ fn place(
   let by_owner = kv_get(conn, &format!("_name_{}", r.owner))?;
   let by_content = kv_get(conn, &format!("_content_{}", r.content))?;
   // The first two are names this source was given: one no request could have is a corrupt or planted entry.
-  for (dest, warn, keyed) in [
+  let mut tried: Vec<String> = Vec::new();
+  for (dest, given, keyed) in [
     (by_key, true, true),
     (by_owner, true, false),
     (by_content, false, false),
   ] {
-    let Some(dest) = dest else { continue };
+    let Some(dest) = dest.filter(|dest| !tried.contains(dest)) else {
+      continue;
+    };
+    tried.push(dest.clone());
     let name = name_of(&dest, r.svg_alt);
-    let Some(own) = reusable(conn, checks, now, r, &name, warn)? else {
+    let Some(own) = reusable(conn, checks, now, r, &name, warn && given)? else {
       continue;
     };
     if own {
@@ -366,7 +376,7 @@ mod tests {
   /// Name `pages` in `cache`'s store of `dir`, in one transaction, every shared name vouched for.
   fn resolve_in(cache: &DocCache, dir: Option<&str>, pages: &[Vec<Request>]) -> Vec<Vec<Resolved>> {
     cache.with_store(dir, |store| {
-      store.immediate(|tx| resolve(tx, &checks(&|_, _, _| true, None), pages))
+      store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| true, None), pages))
     })
   }
 
@@ -482,7 +492,7 @@ mod tests {
       convert("b/fig.pdf", "X", Some("fig"), false),
     ]];
     let names = unvouched.with_store(None, |store| {
-      store.immediate(|tx| resolve(tx, &checks(&|_, _, _| false, None), &pages))
+      store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| false, None), &pages))
     });
     assert_eq!(dests(&names), [vec!["plot.png", "fig.png"]]);
   }
@@ -500,7 +510,7 @@ mod tests {
       copy("../d.png", "D", None, "png"),
     ]];
     cache.with_store(None, |store| {
-      store.immediate(|tx| {
+      store.immediate(|tx, _| {
         kv_put(tx, "c:a.png|A", Some("Ch1.html||"))?;
         kv_put(tx, "c:../b.png|B", Some(".hidden/evil.png||"))?;
         kv_put(tx, "c:../c.png|C", Some("x7.png||"))?;
@@ -522,7 +532,7 @@ mod tests {
       copy("../b.png", "b", None, "png"),
     ]];
     let names = DocCache::new(true).with_store(None, |store| {
-      store.immediate(|tx| resolve(tx, &checks(&|_, _, _| true, Some(&on_disk)), &pages))
+      store.immediate(|tx, _| resolve(tx, &checks(&|_, _, _| true, Some(&on_disk)), &pages))
     });
     assert_eq!(dests(&names), [vec!["x2.png", "x3.png"]]);
   }

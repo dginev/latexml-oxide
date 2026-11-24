@@ -1460,47 +1460,82 @@ impl Graphics {
     prefix: &str,
     pages: &[Vec<Request>],
   ) -> Vec<Vec<crate::resource_cache::Resolved>> {
+    let cache_file = Path::new(&dirs.dest_dir)
+      .join(crate::document::CACHE_FILE)
+      .display()
+      .to_string();
     let usable =
       |name: &ResourceName| Self::kept_path(&name.dest, &dirs.dest_dir, &dirs.site_dir).is_some();
-    let vouch = |r: &Request, name: &ResourceName, source: &str| Self::vouch(r, name, source, dirs);
+    let reported = std::cell::Cell::new(false);
+    let vouch = |r: &Request, name: &ResourceName, source: &str| {
+      Self::vouch(r, name, source, dirs, &cache_file, &reported)
+    };
     let on_disk = |name: &ResourceName| {
       std::iter::once(&name.dest)
         .chain(&name.alt)
         .any(|part| Path::new(&dirs.dest_dir).join(part).exists())
     };
-    let cache_file = Path::new(&dirs.dest_dir)
-      .join(crate::document::CACHE_FILE)
-      .display()
-      .to_string();
     cache.with_store(dirs.cache_dir.as_deref(), |store| {
-      let checks = crate::resource_cache::Checks {
-        prefix,
-        usable: &usable,
-        vouch: &vouch,
-        on_disk: store
-          .fell_back()
-          .then_some(&on_disk as &dyn Fn(&ResourceName) -> bool),
-        cache: &cache_file,
-      };
-      store.immediate(|tx| crate::resource_cache::resolve(tx, &checks, pages))
+      // Whether the store runs in memory is known only inside the transaction: a file that fails in it is
+      // replaced by memory, and the names are planned again there.
+      store.immediate(|tx, fell_back| {
+        let checks = crate::resource_cache::Checks {
+          prefix,
+          usable: &usable,
+          vouch: &vouch,
+          on_disk: fell_back.then_some(&on_disk as &dyn Fn(&ResourceName) -> bool),
+          cache: &cache_file,
+        };
+        crate::resource_cache::resolve(tx, &checks, pages)
+      })
     })
   }
 
   /// Whether `name`, stored for the source at `source` (relative to the destination directory), is the name that
-  /// source takes (its kept path, or its stem) and the source holds `r`'s bytes, so `r` may share its file.
-  fn vouch(r: &Request, name: &ResourceName, source: &str, dirs: &PageDirs) -> bool {
+  /// source takes (its kept path, or its stem) and the source holds `r`'s bytes, so `r` may share its file. Only a
+  /// relative path to a regular file (a link followed to one) is read: an absolute path, which no run stores, or a
+  /// device or a FIFO, whose read may never end, is reported once (Warning).
+  fn vouch(
+    r: &Request,
+    name: &ResourceName,
+    source: &str,
+    dirs: &PageDirs,
+    cache_file: &str,
+    reported: &std::cell::Cell<bool>,
+  ) -> bool {
     use latexml_core::util::pathname::{absolute, relative};
     if source.is_empty() {
       return false;
     }
-    let abs = absolute(&Path::new(&dirs.dest_dir).join(source).to_string_lossy());
-    let same_bytes = Self::digest_file_content(&abs).is_some_and(|d| {
-      d.content()
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>()
-        == r.identity
+    let relative_path = Path::new(source).components().all(|part| {
+      matches!(
+        part,
+        std::path::Component::Normal(_) | std::path::Component::ParentDir
+      )
     });
+    let abs = absolute(&Path::new(&dirs.dest_dir).join(source).to_string_lossy());
+    let regular = std::fs::metadata(&abs).map(|meta| meta.is_file());
+    if !relative_path || matches!(regular, Ok(false)) {
+      if !reported.replace(true) {
+        Warn!(
+          "unexpected",
+          "cache",
+          "The cache {} gives {} the source {}, not a file relative to the destination; it is ignored",
+          cache_file,
+          name.dest,
+          source
+        );
+      }
+      return false;
+    }
+    let same_bytes = regular.is_ok()
+      && Self::digest_file_content(&abs).is_some_and(|d| {
+        d.content()
+          .iter()
+          .map(|b| format!("{b:02x}"))
+          .collect::<String>()
+          == r.identity
+      });
     same_bytes
       && if r.copy {
         relative(&abs, &absolute(&dirs.source_dir)) == name.dest
@@ -3537,7 +3572,7 @@ mod tests {
       cache:   crate::document::CACHE_FILE,
     };
     DocCache::new(true).with_store(None, |store| {
-      store.immediate(|tx| crate::resource_cache::resolve(tx, &checks, &pages))
+      store.immediate(|tx, _| crate::resource_cache::resolve(tx, &checks, &pages))
     })[0]
       .iter()
       .map(|r| r.name.dest.clone())

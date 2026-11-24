@@ -2284,7 +2284,7 @@ impl DocCache {
 
   /// Store `value` under `key` in `dir`'s store (remove it for `None`), in a transaction of its own.
   pub fn store(&self, dir: Option<&str>, key: &str, value: Option<&str>) {
-    self.with_store(dir, |store| store.immediate(|tx| kv_put(tx, key, value)));
+    self.with_store(dir, |store| store.immediate(|tx, _| kv_put(tx, key, value)));
   }
 
   /// Close every store (Perl's `closeCache`, `Post.pm` L1543-1548): its database checkpointed, no side file left for
