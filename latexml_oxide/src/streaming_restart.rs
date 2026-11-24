@@ -73,6 +73,26 @@ pub fn note_restart_signal(signal: RestartSignal) {
   stomach::note_streaming_restart_signal(signal);
 }
 
+/// Streaming activation (user policy 2026-07-29: flag + auto-when-doomed).
+///
+/// Forced by `--streaming`; otherwise auto-enabled only when the PROJECTED
+/// peak of the eager path exceeds the memory ceiling — measured ~1.84 GB of
+/// peak RSS per MB of math-heavy source on the 131 MB witness
+/// (`docs/archive/STREAMING_CORE_DESIGN_2026-07-29.md` §1), i.e. only for
+/// documents that today would die at the ceiling with certainty. An explicit
+/// `--streaming=false` (or `LATEXML_STREAMING=false`) suppresses BOTH, and the
+/// eager run's switch to streaming at the spill watermark too — the
+/// escape hatch for a caller who would rather have the eager path's Fatal
+/// than a fragmented conversion, and the only way to A/B the two paths on a
+/// document large enough for auto to fire. The returned
+/// budget is the pass-1 fragment yield threshold in BOXES: an eighth of the
+/// ceiling at the measured ~2.4 KB per retained box. The bite must leave REAL
+/// headroom under the RSS fuse (75% of the ceiling): a fragment's live cost
+/// is boxes + the DOM built from them (~1.4×), yields only fire at legal
+/// seams (a large alignment digests un-yieldingly past any knob), and
+/// per-run bookkeeping (FragmentIndex, spine) creeps monotonically — on the
+/// 131 MB witness at a 48 GB ceiling, a quarter-bite steadied at ~33 GB and
+/// the ~5 GB creep then walked it into the 37.7 GB fuse.
 pub fn resolve_streaming(
   requested: Option<bool>,
   max_memory_mib: u64,

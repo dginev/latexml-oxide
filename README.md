@@ -66,21 +66,12 @@ Start with the [Rhai guide](https://github.com/dginev/latexml-oxide/blob/main/do
 
 ## Documentation
 
-| Topic | Where |
-|---|---|
-| All internal docs, by theme | [docs/README.md](https://github.com/dginev/latexml-oxide/blob/main/docs/README.md) |
-| Installing (per platform, Docker, system dependencies, crates.io, as a library) | [docs/INSTALL.md](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md) |
-| Usage and the command line | [docs/USAGE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/USAGE.md) |
-| Environment variables: every one we read or set, its values, default and effect | [docs/ENVIRONMENT.md](https://github.com/dginev/latexml-oxide/blob/main/docs/ENVIRONMENT.md) · [rustdoc](https://dginev.github.io/latexml-oxide/latexml/environment/index.html) |
-| Building from source, build profiles, development tips, Cargo features | [docs/BUILDING.md](https://github.com/dginev/latexml-oxide/blob/main/docs/BUILDING.md) |
-| Supported packages and classes (ported, beyond Perl, contributed, raw) | [docs/SUPPORTED_PACKAGES.md](https://github.com/dginev/latexml-oxide/blob/main/docs/SUPPORTED_PACKAGES.md) |
-| Writing a Rhai binding | [docs/parity/RHAI_BINDINGS_GUIDE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md), [worked examples](https://github.com/dginev/latexml-oxide/tree/main/docs/examples) |
-| Rhai API reference · Perl \| Rust \| Rhai cheat sheet | [interface](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/interface/index.html) · [cheat sheet](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/cheatsheet/index.html) |
-| Rust API (rustdoc) | [dginev.github.io/latexml-oxide/latexml/](https://dginev.github.io/latexml-oxide/latexml/) |
-| Changes per release | [CHANGELOG.md](https://github.com/dginev/latexml-oxide/blob/main/CHANGELOG.md) |
-| How and where we differ from Perl LaTeXML | [OXIDIZED_DESIGN](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/OXIDIZED_DESIGN.md), [divergences](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md), [known Perl errors](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/KNOWN_PERL_ERRORS.md), [fidelity charter](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/FIDELITY_CHARTER.md) |
-| Performance | [docs/performance/PERFORMANCE.md](https://github.com/dginev/latexml-oxide/blob/main/docs/performance/PERFORMANCE.md) |
-| Releases and licensing | [RELEASING](https://github.com/dginev/latexml-oxide/blob/main/docs/release/RELEASING.md), [THIRD-PARTY-NOTICES](https://github.com/dginev/latexml-oxide/blob/main/THIRD-PARTY-NOTICES), [LICENSE_INVENTORY](https://github.com/dginev/latexml-oxide/blob/main/docs/release/LICENSE_INVENTORY.md) |
+[Installing](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md) · [Usage](https://github.com/dginev/latexml-oxide/blob/main/docs/USAGE.md) · [Changes](https://github.com/dginev/latexml-oxide/blob/main/CHANGELOG.md) ·
+[Rust API](https://dginev.github.io/latexml-oxide/latexml/)
+
+Everything else (environment variables, the files a conversion writes, building from source, supported packages,
+Rhai bindings, how we differ from Perl LaTeXML, performance, releases and licensing) is indexed by theme in
+[docs/README.md](https://github.com/dginev/latexml-oxide/blob/main/docs/README.md).
 
 ## License
 

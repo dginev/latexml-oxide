@@ -90,6 +90,7 @@ fn post_opts<'a>(dest: &'a str, src_dir: &'a str) -> PostOptions<'a> {
     unicodemath:               false,
     url_style:                 latexml_post::crossref::UrlStyle::File,
     navigationtoc:             None,
+    is_html:                   None,
     schemadocs:                false,
     split:                     true,
     split_xpath:               Some(SPLIT_XPATH.to_string()),

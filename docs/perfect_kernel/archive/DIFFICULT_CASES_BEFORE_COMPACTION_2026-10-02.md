@@ -59,7 +59,7 @@ LuaTeX-manual semantics (job-persistent state, `tex.print`/`tex.sprint`
 re-entering the input with current catcodes), and the luacode.sty binding
 maps `\luadirect`/`\luaexec`/`\luastring*`/`{luacode}`(`*`) onto it.
 The strategy question — native emulation vs rebinding into our XML model —
-is settled in [`LUA_REBINDING.md`](LUA_REBINDING.md) (2026-08-31): texlua has
+is settled in [`LUA_REBINDING.md`](../LUA_REBINDING.md) (2026-08-31): texlua has
 no engine, so every `tex.*` touchpoint is our shim by construction; shims are
 tiered translate / mirror / absorb. `tex.count`/`tex.dimen` reads AND writes
 now mirror the live Rust State over the pipe (no more stub zeros); `require`

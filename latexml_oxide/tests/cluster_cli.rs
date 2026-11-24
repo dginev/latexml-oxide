@@ -5850,3 +5850,201 @@ mod environment_doc {
     );
   }
 }
+
+mod intermediate_files_doc {
+  /// The rustdoc page `latexml::intermediate_files` includes `latexml_oxide/src/INTERMEDIATE_FILES.md`, a copy of
+  /// `docs/INTERMEDIATE_FILES.md` kept inside the crate for its package. The two must not drift.
+  #[test]
+  fn the_crate_copy_matches_docs() {
+    let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let docs = std::fs::read_to_string(crate_dir.join("../docs/INTERMEDIATE_FILES.md"))
+      .expect("docs/INTERMEDIATE_FILES.md");
+    let copy = std::fs::read_to_string(crate_dir.join("src/INTERMEDIATE_FILES.md"))
+      .expect("src/INTERMEDIATE_FILES.md");
+    assert!(
+      docs == copy,
+      "latexml_oxide/src/INTERMEDIATE_FILES.md differs from docs/INTERMEDIATE_FILES.md: \
+       cp docs/INTERMEDIATE_FILES.md latexml_oxide/src/INTERMEDIATE_FILES.md"
+    );
+  }
+}
+
+mod docs_tree {
+  //! The documentation is one tree rooted at the repository's `README.md`: every page under `docs/` is
+  //! reachable from it by following links, and no link points at a page that is not there. A link is
+  //! relative, or an absolute `github.com/dginev/latexml-oxide/{blob,tree}/main/` URL (the README's
+  //! form, since crates.io renders it too); a link to a directory reaches its `README.md`, or, without
+  //! one, every page GitHub lists in it.
+  use std::{
+    collections::{BTreeSet, VecDeque},
+    path::{Component, Path, PathBuf},
+  };
+
+  const MAIN_URLS: [&str; 2] = [
+    "https://github.com/dginev/latexml-oxide/blob/main/",
+    "https://github.com/dginev/latexml-oxide/tree/main/",
+  ];
+
+  fn repo_root() -> PathBuf { Path::new(env!("CARGO_MANIFEST_DIR")).join("..") }
+
+  /// `a/b/../c` → `a/c`, without touching the filesystem; `None` when the path climbs out of the
+  /// repository.
+  fn normalize(path: &Path) -> Option<PathBuf> {
+    let mut out = PathBuf::new();
+    for c in path.components() {
+      match c {
+        Component::CurDir => {},
+        Component::ParentDir => {
+          if !out.pop() {
+            return None;
+          }
+        },
+        Component::Normal(part) => out.push(part),
+        Component::RootDir | Component::Prefix(_) => return None,
+      }
+    }
+    Some(out)
+  }
+
+  /// The targets of the markdown links `[text](target)` in `text`, outside fenced code blocks.
+  fn link_targets(text: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut in_fence = false;
+    for line in text.lines() {
+      if line.trim_start().starts_with("```") {
+        in_fence = !in_fence;
+        continue;
+      }
+      if in_fence {
+        continue;
+      }
+      let mut rest = line;
+      while let Some(i) = rest.find("](") {
+        let after = &rest[i + 2..];
+        let Some(j) = after.find(')') else { break };
+        out.push(&after[..j]);
+        rest = &after[j + 1..];
+      }
+    }
+    out
+  }
+
+  /// The repository-relative path a link in `from` names, when it names a path in this repository.
+  fn local_path(from: &Path, link: &str) -> Option<PathBuf> {
+    let link = link.split('#').next().unwrap_or("");
+    if link.is_empty() || link.contains(char::is_whitespace) {
+      return None;
+    }
+    if let Some(rest) = MAIN_URLS.iter().find_map(|url| link.strip_prefix(url)) {
+      return normalize(Path::new(rest));
+    }
+    if link.contains(':') {
+      return None;
+    }
+    normalize(&from.parent().unwrap_or(Path::new("")).join(link))
+  }
+
+  /// The pages a link reaches: the page itself, a directory's `README.md`, or the pages listed in a
+  /// directory without one.
+  fn pages_reached(root: &Path, target: &Path) -> Vec<PathBuf> {
+    let full = root.join(target);
+    if full.is_file() {
+      return if target.extension().is_some_and(|e| e == "md") {
+        vec![target.to_path_buf()]
+      } else {
+        vec![]
+      };
+    }
+    if !full.is_dir() {
+      return vec![];
+    }
+    let readme = target.join("README.md");
+    if root.join(&readme).is_file() {
+      return vec![readme];
+    }
+    let mut pages: Vec<PathBuf> = std::fs::read_dir(&full)
+      .into_iter()
+      .flatten()
+      .flatten()
+      .map(|e| target.join(e.file_name()))
+      .filter(|p| p.extension().is_some_and(|e| e == "md") && root.join(p).is_file())
+      .collect();
+    pages.sort();
+    pages
+  }
+
+  fn docs_pages(root: &Path) -> BTreeSet<PathBuf> {
+    let mut pages = BTreeSet::new();
+    let mut dirs = vec![PathBuf::from("docs")];
+    while let Some(dir) = dirs.pop() {
+      for entry in std::fs::read_dir(root.join(&dir))
+        .expect("read docs/")
+        .flatten()
+      {
+        let rel = dir.join(entry.file_name());
+        if entry.path().is_dir() {
+          dirs.push(rel);
+        } else if rel.extension().is_some_and(|e| e == "md") {
+          pages.insert(rel);
+        }
+      }
+    }
+    pages
+  }
+
+  #[test]
+  fn every_doc_is_reachable_from_the_readme() {
+    let root = repo_root();
+    let mut seen = BTreeSet::from([PathBuf::from("README.md")]);
+    let mut queue = VecDeque::from([PathBuf::from("README.md")]);
+    while let Some(page) = queue.pop_front() {
+      let Ok(text) = std::fs::read_to_string(root.join(&page)) else {
+        continue;
+      };
+      for link in link_targets(&text) {
+        let Some(target) = local_path(&page, link) else {
+          continue;
+        };
+        for reached in pages_reached(&root, &target) {
+          if seen.insert(reached.clone()) {
+            queue.push_back(reached);
+          }
+        }
+      }
+    }
+    let unreachable: Vec<_> = docs_pages(&root)
+      .into_iter()
+      .filter(|p| !seen.contains(p))
+      .collect();
+    assert!(
+      unreachable.is_empty(),
+      "pages no link chain from README.md reaches — link each from docs/README.md or from the index of \
+       its directory (docs/archive/README.md for an archived page):\n{unreachable:#?}"
+    );
+  }
+
+  #[test]
+  fn no_doc_links_to_a_missing_page() {
+    let root = repo_root();
+    let mut missing = Vec::new();
+    for page in std::iter::once(PathBuf::from("README.md")).chain(docs_pages(&root)) {
+      let text = std::fs::read_to_string(root.join(&page)).expect("read a page");
+      for link in link_targets(&text) {
+        let path_part = link.split('#').next().unwrap_or("");
+        if !(path_part.ends_with(".md") || path_part.ends_with('/')) {
+          continue;
+        }
+        if let Some(target) = local_path(&page, link)
+          && !root.join(&target).exists()
+        {
+          missing.push(format!("{}: {link}", page.display()));
+        }
+      }
+    }
+    assert!(
+      missing.is_empty(),
+      "links to pages that do not exist:\n{}",
+      missing.join("\n")
+    );
+  }
+}
