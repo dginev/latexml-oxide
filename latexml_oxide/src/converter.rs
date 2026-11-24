@@ -174,7 +174,8 @@ pub struct CompileRoute {
   pub plain_tex: bool,
   /// A latex+dvips document by its class options.
   pub dvi:       bool,
-  /// A pdflatex document by its class options (`pdftex`).
+  /// A pdflatex document by its class options (`pdftex`), or one whose text only PDF output reads
+  /// (`begins_document_in_pdf_branch`).
   pub pdf:       bool,
   /// What the figures the source includes say of its output mode (`figure_output_cue`).
   pub figures:   state::FigureOutputCue,
@@ -215,6 +216,7 @@ fn compile_route(source: &str) -> CompileRoute {
     },
   };
   let mut code = uncommented_code(&text);
+  let pdf_only = begins_document_in_pdf_branch(&code);
   let figures = figure_output_cue(&code, dir.as_deref());
   let mut latex = has_latex_cue(&code);
   // A main file naming no class: the files it inputs (not in `\iffalse … \fi`), breadth first, a few levels deep,
@@ -273,16 +275,67 @@ fn compile_route(source: &str) -> CompileRoute {
         .is_some_and(|(options, _)| options.split(',').any(|o| driver(o.trim())))
     })
   };
-  let dvi = !PDFOUTPUT_ONE.is_match(&code) && class_option(&|o| DVI_DRIVER_OPTIONS.contains(&o));
+  let dvi = !pdf_only
+    && !PDFOUTPUT_ONE.is_match(&code)
+    && class_option(&|o| DVI_DRIVER_OPTIONS.contains(&o));
   // the `pdftex` driver option: a pdflatex document whatever PostScript it also ships (MDPI templates' `logo-*.eps`
   // beside PNG figures, 2210.04612: expl3's backend check, expl3-code.tex:8036-8041, errs under DVI output)
-  let pdf = !dvi && class_option(&|o| o == "pdftex");
+  let pdf = pdf_only || (!dvi && class_option(&|o| o == "pdftex"));
   CompileRoute {
     plain_tex: !latex,
     dvi,
     pdf,
     figures,
   }
+}
+
+/// Whether the main file's code `code` opens `\begin{document}` inside the true branch of an `\ifpdf` (ifpdf.sty,
+/// iftex.sty) or IEEEtran's `\ifCLASSINFOpdf` that is still open there: DVI output skips the whole text, so the
+/// document is a pdflatex one whatever its figures say (DG 2026-11-23, OXIDIZED_DESIGN_DIVERGENCES #1154).
+/// 2105.10205 and 2502.09129 deleted the IEEEtran template's `\else…\fi` and name every figure `X.eps`; pdflatex
+/// ends them with "(\end occurred when \iftrue … incomplete)". Conservative: the switch stands at brace depth 0, not
+/// after a control word (`\newif\ifpdf`, `\let\ifpdf`), and no other conditional token (`\if…`, `\else`, `\or`,
+/// `\fi`) and no second `\begin{document}` follows it; 1012.0815's `\ifCLASSINFOpdf … \else` stays a DVI one.
+fn begins_document_in_pdf_branch(code: &str) -> bool {
+  static BEGIN_DOCUMENT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\begin\s*\{\s*document\s*\}").unwrap());
+  static PDF_SWITCH: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\if(?:pdf|CLASSINFOpdf)(?:[^A-Za-z@]|$)").unwrap());
+  static CONDITIONAL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\(?:if[A-Za-z@]*|unless|else|or|fi)(?:[^A-Za-z@]|$)").unwrap());
+  static AFTER_CONTROL_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\[A-Za-z@]+\s*$").unwrap());
+  let Some(begin) = BEGIN_DOCUMENT.find(code) else {
+    return false;
+  };
+  let preamble = &code[..begin.start()];
+  let Some(switch) = PDF_SWITCH.find_iter(preamble).last() else {
+    return false;
+  };
+  // The opener's own name ends where its delimiter starts.
+  let opened = &preamble[switch.start() + 1..];
+  let name_end = opened
+    .find(|c: char| !(c.is_ascii_alphabetic() || c == '@'))
+    .map_or(preamble.len(), |at| switch.start() + 1 + at);
+  // Braces outside control symbols (`\{` is a character).
+  let depth = |text: &str| {
+    let (mut depth, mut escaped) = (0i64, false);
+    for c in text.chars() {
+      match c {
+        _ if escaped => escaped = false,
+        '\\' => escaped = true,
+        '{' => depth += 1,
+        '}' => depth -= 1,
+        _ => {},
+      }
+    }
+    depth
+  };
+  depth(&preamble[..switch.start()]) == 0
+    && !AFTER_CONTROL_WORD.is_match(&preamble[..switch.start()])
+    && depth(&preamble[name_end..]) == 0
+    && !CONDITIONAL.is_match(&preamble[name_end..])
+    && !BEGIN_DOCUMENT.is_match(&code[begin.end()..])
 }
 
 /// The output mode the figures a source includes call for (the K6 ruling's figure cue, OXIDIZED_DESIGN_DIVERGENCES
@@ -1477,6 +1530,28 @@ mod tests {
     assert_eq!(route_of("Hello.\n\\bye\n"), PLAIN_TEX);
     assert_eq!(route_of("\\documentclass{article}\n"), LATEX_PDF);
     assert_eq!(route_of("\\documentstyle{article}\n"), LATEX_PDF);
+    // `\begin{document}` in an open `\ifpdf`/`\ifCLASSINFOpdf` true branch (2105.10205, 2502.09129): PDF, over a DVI
+    // driver option; not with the branch closed, after its `\else` (1012.0815), inside a group or a definition, after
+    // `\newif`, past another conditional, or with a second `\begin{document}`.
+    let ieee = "\\documentclass[journal]{IEEEtran}\n\\ifCLASSINFOpdf\n\\hyphenation{}\n\\begin{document}\nA\n";
+    assert_eq!(route_of(ieee), LATEX_PDF_OPTION);
+    assert_eq!(
+      route_of("\\documentclass[dvips]{article}\\usepackage{ifpdf}\\ifpdf %\n\\begin{document}"),
+      LATEX_PDF_OPTION
+    );
+    for not_open in [
+      "\\documentclass{IEEEtran}\\ifCLASSINFOpdf\\else\\fi\\begin{document}",
+      "\\documentclass{IEEEtran}\\ifCLASSINFOpdf\\else\n\\begin{document}",
+      "\\documentclass{IEEEtran}\\ifCLASSINFOpdf\\ifx\\a\\b\\fi\\begin{document}",
+      "\\documentclass{article}\\def\\x{\\ifpdf}\\begin{document}",
+      "\\documentclass{article}{\\ifpdf}\\begin{document}",
+      "\\documentclass{article}\\newif\\ifpdf\n\\begin{document}",
+      "\\documentclass{article}\\ifpdfx\\begin{document}",
+      "\\documentclass{article}% \\ifpdf\n\\begin{document}",
+      "\\documentclass{article}\\ifpdf\\begin{document}A\\fi\\begin{document}B",
+    ] {
+      assert_eq!(route_of(not_open), LATEX_PDF, "{not_open}");
+    }
     // CR-only (old Mac) and CRLF line ends: a comment line does not swallow the class.
     assert_eq!(
       route_of("% Mac file\r\\documentclass{article}\r"),

@@ -199,6 +199,18 @@ pub fn augment_delimiter_properties(document: &mut Document, role: &str) -> Resu
 /// the font) and primitives here: `\accent` performs them between its number and its character (tex.web §1123).
 const NFSS_ASSIGNMENTS: [&str; 2] = ["\\lx@fontencoding", "\\selectfont"];
 
+/// latex.ltx:15613-15617 `\finph@nt`: an `\hphantom` box has its argument's width and no height or depth (`\ifv@` is
+/// false); Perl gave it the argument's height and depth too (math_common.pool.ltxml:661-663, KNOWN_PERL_ERRORS #1327).
+fn hphantom_size(whatsit: &mut Whatsit) -> Result<()> {
+  if let Some(arg) = whatsit.get_arg_mut(1) {
+    let (w, ..) = arg.get_size(None)?;
+    whatsit.set_property("width", Stored::Dimension(w));
+    whatsit.set_property("height", Stored::Dimension(Dimension::default()));
+    whatsit.set_property("depth", Stored::Dimension(Dimension::default()));
+  }
+  Ok(())
+}
+
 /// latex.ltx:15613-15617 `\finph@nt`: a `\vphantom` box has its argument's height and depth and no width (`\ifh@` is
 /// false); Perl gave it the argument's width too (math_common.pool.ltxml:684-687, KNOWN_PERL_ERRORS #433).
 fn vphantom_size(whatsit: &mut Whatsit) -> Result<()> {
@@ -1225,14 +1237,7 @@ LoadDefinitions!({
     "<ltx:XMHint width='#width' name='hphantom'><ltx:XMArg>#1</ltx:XMArg></ltx:XMHint>",
     alias => "\\hphantom",
     properties => { stored_map!("isSpace" => true) },
-    after_digest => sub[whatsit] {
-      if let Some(arg) = whatsit.get_arg_mut(1) {
-        let (w, h, d, _, _, _) = arg.get_size(None)?;
-        whatsit.set_property("width", Stored::Dimension(w));
-        whatsit.set_property("height", Stored::Dimension(h));
-        whatsit.set_property("depth", Stored::Dimension(d));
-      }
-    });
+    after_digest => sub[whatsit] { hphantom_size(whatsit)?; });
   DefConstructor!(
     "\\lx@text@hphantom{}",
     "<ltx:text class='ltx_phantom'>#1</ltx:text>",
@@ -1242,14 +1247,7 @@ LoadDefinitions!({
     mode => "restricted_horizontal",
     enter_horizontal => true,
     properties => { stored_map!("isSpace" => true) },
-    after_digest => sub[whatsit] {
-      if let Some(arg) = whatsit.get_arg_mut(1) {
-        let (w, h, d, _, _, _) = arg.get_size(None)?;
-        whatsit.set_property("width", Stored::Dimension(w));
-        whatsit.set_property("height", Stored::Dimension(h));
-        whatsit.set_property("depth", Stored::Dimension(d));
-      }
-    });
+    after_digest => sub[whatsit] { hphantom_size(whatsit)?; });
 
   DefConstructor!(
     "\\vphantom{}",

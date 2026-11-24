@@ -24442,3 +24442,45 @@ there; in the default math mode it stays medium), `\SIlist`/`\SIrange` and `\ang
 41 of 1,311 siunitx papers in a 30k census sample set `detect-weight`/`detect-all` and bold a cell). **Guard**
 `perfect_kernel_batchregtaila::siunitx_detect_keys_carry_the_text_font_onto_a_number` (repro
 `package-bindings/siunitx_detect_font_onto_number`).
+
+### 1154. A main file whose `\begin{document}` sits in an open `\ifpdf`/`\ifCLASSINFOpdf` true branch is a pdflatex document (REGTAILC)
+
+**Perl behavior**: always PDF mode (`\pdfoutput` unset; #537 lists its cues), so the question does not arise.
+**pdflatex**: such a file typesets its whole text and ends with "(\end occurred when \iftrue on line N was
+incomplete)", a warning; under latex+dvips the switch is false and TeX skips the document.
+**Rust behavior** (DG ruling 2026-11-23): `converter.rs::begins_document_in_pdf_branch` reads the main file's code
+(comments, `filecontents` and what follows `\endinput` dropped) and sets the compile route's `pdf` cue, over the
+included figures' DVI cue (#537) and a DVI driver class option, when the last `\ifpdf` (ifpdf.sty, iftex.sty) or
+`\ifCLASSINFOpdf` (IEEEtran.cls:552-557) before `\begin{document}` stands at brace depth 0, not after a control word
+(`\newif\ifpdf`, `\let\ifpdf`), with no conditional token (`\if…`, `\unless`, `\else`, `\or`, `\fi`) between it and
+`\begin{document}`, and the file opens one document. A latexml.sty `pdfoutput`/`nopdfoutput` option still decides
+over it (#1046). The template's closed `\ifCLASSINFOpdf … \else … \fi` keeps the figures' cue; 1012.0815's
+`\ifCLASSINFOpdf … \else` left open at `\begin{document}` stays latex+dvips. Reach: 1 of the 2,543 census papers that
+use `\ifpdf`/`\ifCLASSINFOpdf` (2503.21203, an unclosed `\ifpdf` around `\hypersetup`), beside the two witnesses.
+
+**Witnesses** 2105.10205, 2502.09129 (IEEEtran, `\else…\fi` deleted, EPS figures: `Fatal:Document:Malformed`, no text,
+since K6's figure cue); 2503.21203; counter-witness 1012.0815. **Guards**
+`perfect_kernel_batchregtailc::unclosed_pdf_switch_around_the_document_is_pdflatex` (repro
+`backend-persona/ifclassinfopdf_unclosed_around_document_2105_10205`), `converter::tests::compile_route_of_main_sources`.
+
+### 1155. A space-like box with height is a box in its word; `\hphantom` has no height (REGTAILC)
+
+**Perl behavior**: Font.pm:773 `split_words` takes every `isSpace` box as inter-word space, its width alone, so
+`\phantom`, `\vphantom` and `\mathstrut` give a list beside other material no height or depth (`\hbox{$a\phantom{l}$}`
+4.30554pt high); `\hphantom` keeps its argument's height and depth (math_common.pool.ltxml:657-677). KNOWN_PERL_ERRORS
+#1327.
+**pdflatex**: latex.ltx:15613-15617 `\finph@nt` sets `\box\tw@`, a box with the argument's height and depth
+(`\ifv@`) and width (`\ifh@`), in the list like any box: no breakpoint, its height and depth in the line's.
+**Rust behavior**: `Font::compute_boxes_size_words` (font.rs) takes an `isSpace` box as space only when it declares no
+height and no depth (`declares_height_or_depth`: a nonzero `height`/`depth` property, as the phantoms' `after_digest`
+sets); one that declares some falls to the word's boxes. A measured size is no declaration: an interword space measures
+with a height at `\footnotesize`, and going by it set a `\parbox` paragraph on one line. `\hphantom`'s
+`hphantom_size` (math_common.rs) gives it its argument's width alone, as `vphantom_size` (#1145, KPE #433) gives
+`\vphantom` no width. The math parser still reads every phantom as space (the `isSpace` property is unchanged).
+
+**Witness** 1210.5701 (xy.tex:940 boxes an object `$\objectstyle{#1}$`; `*[o]{\phantom{s}}`'s circle had no height:
+"Dimension too large", 101 errors and TooManyErrors), 2503.14426 (xy, 15 errors). **Guards**
+`perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}` (repros
+`math-phantom/{phantom_height_among_siblings, xy_phantom_object_circle_1210_5701}`); repinned to the phantom's height:
+`cluster_schema::empty_node_foreign_object_is_sized` (quantikz's `{\phantom{H}}`), `box_primitives::tikz_align_line_padding`
+(c2/c3, pdflatex's +1.5pt), `86_tikz` `ac-drive-components.xml` (circuitikz's `\vphantom{+}-` label).

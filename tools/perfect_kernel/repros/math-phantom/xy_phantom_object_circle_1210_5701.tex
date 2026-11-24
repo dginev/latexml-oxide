@@ -1,0 +1,14 @@
+% witness: 1210.5701 (xy objects `*[o]{\phantom{s}}`, circled invisible vertices; REGTAIL: clean on an old build,
+%          then 101 errors and TooManyErrors)
+% oracle:  pdflatex 0 errors
+% engines: rust INT081G = 2 "Dimension too large" (the phantom's box had no height, xy's circle radius divided by it);
+%          Perl 0.8.8 = 0 errors (its phantom sizes are as wrong, phantom_height_among_siblings; its box of the
+%          object measures otherwise), 1 on 1210.5701
+% expect:  0 errors, 0 warnings; one inline formula holding the picture
+% status:  RED (INT081G) -> GREEN (REGTAILC)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[all]{xy}
+\begin{document}
+$\xy (0,0)*[o]{\phantom{s}}="a"; (0,10)*[o]{\phantom{s}}="b"; {\ar@{-} "a";"b"}; \endxy$
+\end{document}

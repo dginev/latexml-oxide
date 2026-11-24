@@ -2696,3 +2696,11 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   number (OD #1153; 2402.01753's bold numbers 2 → 8); an S cell's `\pm` is the ± again, not the picometre (KPE #1326;
   2410.02392 +1,129 words). A/B 664 papers vs INT081G: E 7799 → 7773, F 15 = 15, 51 changed, 0 worse. Guards
   `perfect_kernel_batchregtaila::*`. Residuals: row R SIXFONTLIST, SIXFAMILYRESET, ESCAPECAT, ENDITEMIZEREDEF.
+- REGTAILC — fixed (row R REGTAIL, DG ruling 2026-11-23): a main file whose `\begin{document}` sits inside an unclosed
+  `\ifpdf`/`\ifCLASSINFOpdf` true branch is a pdflatex document, over the `.eps` figure cue and a DVI driver class option
+  (`converter.rs::begins_document_in_pdf_branch`, OD #1154; 2105.10205, 2502.09129 Fatal with no text → 9.4k / 23.4k
+  words; counter-witness 1012.0815 stays latex+dvips); a phantom among siblings keeps the height and depth it declares
+  and `\hphantom` is width-only (latex.ltx:15613-15617 `\finph@nt`; `Font::compute_boxes_size_words`; OD #1155, KPE
+  #1327; 1210.5701 E101 F1 → 0, 2503.14426 15 → 0 errors; xy `*[o]{\phantom{s}}`). A/B: 100 IEEEtran + 60 `\ifpdf`
+  papers byte-identical; 388 phantom/xy/REGTAIL papers 27 changed, 0 worse (17 geometry-only, toward pdflatex); 30
+  random controls identical. Guards `perfect_kernel_batchregtailc::*`. Residuals: row R ROUTESCAN, BOXSIZEPARBOX.
