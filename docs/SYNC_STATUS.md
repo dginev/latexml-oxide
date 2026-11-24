@@ -1022,6 +1022,19 @@ Rules that keep this file honest and mergeable:
     best-effort LRU touch, generation-tagged blob names against the prune race; no connection in a `static`/`thread_local!`
     (a pool per post session, opened after any fork); the format-dump cache stays files + `flock` (no `rusqlite` in
     `latexml_core`; recommendation, DG to confirm); one open layer shared with `ObjectDB` (with RENDERDBRO); 5
+  - AR5IVBUGS — latexml-oxide defects the 2026-11-24 ar5iv issue audits found. Each was seen in ar5iv's cached
+    0.7.6 HTML, so re-check it on main before fixing. Every one is silent, against the every-loss-counted rule:
+    (a) nicematrix `\Block[fill=[RGB]{243,240,255}]{3-3}{…}`: an option with nested brackets leaks `]{3-3}` into the math, and
+    the block gets no span or fill (2405.21060 `structure/efficient.tex:83`; ar5iv #497, #516); `\Block` without options spans
+    correctly; (b) fontawesome5 icons are empty `fas fa-*` spans and no FontAwesome CSS is loaded, so they are invisible
+    (2401.00905 Table 1; ar5iv #512); `fontawesome5_sty.rs:34-35` leaves out Perl's CDN `RequireResource`; (c) emulateapj's
+    `\tablecomments` inside a plain `table` is dropped (1310.5776 `ms.tex:646`; ar5iv #637); (d) blkarray `block`
+    delimiters are lost: `\begin{block}{c (cccccc)}` renders without its parentheses (1811.10792 `A5.Ex17.m1`; ar5iv #638),
+    and the brackets are dropped too (2310.17416; ar5iv #473); (e) framed's `\MakeFramed`/`\endMakeFramed`/`\FrameRestore`
+    are no-ops (`framed_sty.rs:332-334`), so an author's framed or shaded environment loses its box (2003.04755 `formal`;
+    ar5iv #269); (f) titletoc's `\printcontents` prints nothing (2310.11511; ar5iv #429). Leads from Gemini's study,
+    unverified: ACL/COLM parenthetical citations rendering bare, 1908.05686 losing 36 % of its words at 0 errors, empty
+    `{forest}`/`tcolorbox` figures (`/home/deyan/data/ar5iv_triage/master_open_witnesses.tsv`); 4
 
 ---
 
