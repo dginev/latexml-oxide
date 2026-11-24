@@ -272,7 +272,7 @@ a Rhai error. Because a `.rhai` beside an untrusted source **auto-loads** (the
 "Reachable without a flag" note above), a bundled binding could otherwise run
 arbitrary commands: **any untrusted-input deployment that ships `--features
 runtime-bindings` MUST set `LATEXML_DISABLE_SHELL_ESCAPE`, or build without the
-feature.** (`cortex_worker` does both of its own accord, above.) The command runs to completion (no artificial per-call timeout, like
+feature.** (`cortex_worker` sets the variable and forbids runtime bindings at start, of its own accord, above.) The command runs to completion (no artificial per-call timeout, like
 `system()`); the overall conversion wall-time is the outer bound.
 
 ---

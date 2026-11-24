@@ -65,6 +65,11 @@ fn cortex_worker_never_loads_a_runtime_binding_shipped_in_the_source() {
     !html.contains("PROBE-LOADED"),
     "the binding's macro reached the HTML:\n{html}"
   );
+  // Positively: `probe` resolves as in a build without runtime bindings (the documented outcome).
+  assert!(
+    log.contains("Warning:missing_file:probe") && log.contains("Error:undefined:\\probe"),
+    "cortex_worker did not reach `\\usepackage{{probe}}` as a build without runtime bindings would:\n{log}"
+  );
 }
 
 /// The CLI keeps runtime bindings: the same source, unpacked, loads `probe.sty.rhai` and runs its command.
