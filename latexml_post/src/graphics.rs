@@ -5344,6 +5344,7 @@ endobj
     .unwrap();
     let shared = dir.join("fig.svg");
     let stop = AtomicBool::new(false);
+    let mut renders: Vec<String> = Vec::new();
     std::thread::scope(|s| {
       s.spawn(|| {
         while !stop.load(Ordering::Relaxed) {
@@ -5366,10 +5367,19 @@ endobj
           Graphics::new(None, true).with_cache_policy(crate::graphics_cache::CachePolicy::Bypass);
         let nodes = graphics.to_process(&doc);
         let out = graphics.process(doc, nodes).expect("graphics process")[0].to_xml_string();
-        if !out.contains(r#" imagesrc="fig.svg" "#) {
+        // A vector render, whatever its name: since issue 995 a destination holding other bytes
+        // (the sibling's) is never written over, so the figure may be named `x1.svg` instead.
+        let src = out
+          .split(r#" imagesrc=""#)
+          .nth(1)
+          .and_then(|rest| rest.split('"').next())
+          .unwrap_or_default()
+          .to_string();
+        if !src.ends_with(".svg") {
           stop.store(true, Ordering::Relaxed);
           panic!("round {round}: the figure left its vector render:\n{out}");
         }
+        renders.push(src);
       }
       stop.store(true, Ordering::Relaxed);
     });
@@ -5377,7 +5387,12 @@ endobj
       .unwrap()
       .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
       // The cache file, `LaTeXML-oxide.cache`, closed with its document.
-      .filter(|name| name != "fig.pdf" && name != "fig.svg" && name != "LaTeXML-oxide.cache")
+      .filter(|name| {
+        name != "fig.pdf"
+          && name != "fig.svg"
+          && name != "LaTeXML-oxide.cache"
+          && !renders.contains(name)
+      })
       .collect();
     left.sort();
     assert!(
