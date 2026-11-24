@@ -790,8 +790,16 @@ Rules that keep this file honest and mergeable:
     (`perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes`: conversions 1 and 2 of the test
     completed, the 3rd died while digesting `l3backend-pdftex.def`; libxml 0.3.27). Both trees hold #1000 (rustix in
     place of raw syscalls) as well as libxml 0.3.26, so either may be the cause. 0 of 400 standalone repeats of the
-    achemso test. Next: valgrind memcheck on both tests, then a loaded nextest loop with `ulimit -c unlimited` and
-    `LATEXML_SIGSEGV_TRACE=1` (the tracer in `latexml_oxide/src/util/test.rs`); 3
+    achemso test. Kernel records (`journalctl -k`): the achemso fault reads through an empty-Vec pointer (8) with a
+    non-zero length in `invoke_token`'s `result.clear()` (`latexml_core/src/stomach.rs:4390`), a state the function
+    cannot reach, and the streaming one returns to 0x15e, so a live stack slot was overwritten on the one running
+    thread. Not reproduced: valgrind memcheck on both tests (0 errors, 4 runs), 160 `malloc.perturb` stress runs, 18
+    traced full-suite loops. Not seen in production: sandbox run 413 (rc3 candidate `d8e0d3c253`, built with its
+    gated lock: libxml 0.3.27, #1000; 30,079 papers) had 0 crash fatals, 0 crash-signal worker exits and 0 kernel
+    segfaults, and 0 papers worse than run 411 (DG lifted the rc3 block on it, 2026-11-24). The same wild-jump
+    form hit an experimental mimalloc build on 1502.06095 on 2026-11-21, before both changes. Open leads: a kernel
+    core dump under load (a single flipped bit would mean hardware), CPU boost on/off, and whether nextest's
+    256 MiB thread stacks matter; 3
   - SPLITDOMNS — the whole-DOM split (`latexml_post/src/split.rs`) loses a page's non-`ltx` namespaces: xy-pic's svg
     inside math raises `malformed:namespace` Warnings (1502.06095: 344, 1609.07593: 1,377 under `--splitat=section`)
     and 2606.28974 loses an `aria-hidden`; the streamed split, the default for split runs since OXIDIZED_DESIGN_DIVERGENCES
