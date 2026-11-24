@@ -100,3 +100,31 @@ fn tipa_accent_letter_in_math_is_a_box() {
      stretchy=\"false\">)</XMTok></XMWrap></XMDual></XMApp></XMath></Math>",
   );
 }
+
+/// lists/list_label_is_the_authors_fnum: a list labelled by the author's own `\fnum@figcaption` keeps that meaning
+/// for the label (`counter::dialect::define_item_fnum`), both for the list's label and an `\item[\fnum@figcaption]`
+/// (cond-mat9505034; KNOWN_PERL_ERRORS #1325). Red (INT081G): `Fatal:Timeout:Recursion`; Perl 1 Error. The explicit
+/// item's "Fig. :" is Perl's `\let\the<counter>\@empty` for a tagged item (latex_constructs.pool.ltxml:1390).
+#[test]
+fn list_label_is_the_authors_fnum() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/lists/list_label_is_the_authors_fnum_cond_mat9505034.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "itemize",
+    &[],
+    "<itemize xml:id=\"p1.1\"><item xml:id=\"S0.I1.i1\"><tags><tag><text font=\"bold\" xml:id=\"S0.I1.i1.1\">Fig. \
+     1:</text></tag><tag role=\"refnum\">1</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p xml:id=\"S0.I1.i1.p1.1\">Total \
+     magnetization.</p></para></item><item xml:id=\"S0.I1.ix1\"><tags><tag><text font=\"bold\" \
+     xml:id=\"S0.I1.ix1.1\">Fig. :</text></tag><tag role=\"typerefnum\">item <text font=\"bold\" \
+     xml:id=\"S0.I1.ix1.2\">Fig. :</text></tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p \
+     xml:id=\"S0.I1.ix1.p1.1\">Explicit.</p></para></item><item xml:id=\"S0.I1.i2\"><tags><tag><text font=\"bold\" \
+     xml:id=\"S0.I1.i2.1\">Fig. 2:</text></tag><tag role=\"refnum\">2</tag></tags><para xml:id=\"S0.I1.i2.p1\"><p \
+     xml:id=\"S0.I1.i2.p1.1\">Third.</p></para></item></itemize>",
+  );
+}

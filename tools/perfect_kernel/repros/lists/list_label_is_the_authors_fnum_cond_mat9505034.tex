@@ -1,0 +1,25 @@
+% mechanism: LaTeXML names an item's label `\fnum@<counter>` for its tags (Perl latex_constructs.pool.ltxml:1650
+%   `\def\fnum@<\@listctr>{#1}`, :1391 for `\item[…]`); a list whose label IS the author's `\fnum@<counter>`
+%   (`\list{\fnum@figcaption}{\usecounter{figcaption}}`) made it expand into itself. LaTeX typesets the label with
+%   `\fnum@` untouched (latex.ltx `\@item`): the author's meaning is kept as `\lx@author@fnum@<counter>`
+% witness: cond-mat9505034 (its figure captions as a list)
+% oracle:  pdflatex 0 `!`; "Fig. 1: Total magnetization. Fig. 1: Explicit. Fig. 2: Third."
+% engines: rust INT081G Fatal:Timeout:Recursion; perl 1 error ("expands into itself"), then a Fatal timeout at the
+%   `\item[\fnum@figcaption]`
+% expect:  0 errors, 0 warnings; the items tagged "Fig. 1:", "Fig. :" (an `\item[…]` blanks `\the<counter>`, Perl's
+%   :1390), "Fig. 2:"
+% status:  RED (INT081G) -> GREEN (REGTAILB)
+\documentclass{article}
+\makeatletter
+\newcounter{figcaption}
+\def\thefigcaption{\arabic{figcaption}}
+\def\fnum@figcaption{{\bfseries Fig. \thefigcaption:}}
+\def\figcaption{\par\list{\fnum@figcaption}{\usecounter{figcaption}}}
+\def\endfigcaption{\endlist}
+\begin{document}
+\begin{figcaption}
+\item Total magnetization.
+\item[\fnum@figcaption] Explicit.
+\item Third.
+\end{figcaption}
+\end{document}

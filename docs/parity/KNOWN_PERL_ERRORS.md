@@ -22653,3 +22653,22 @@ so a document or package calling the AMS math test finds it undefined and its `\
 pdflatex prints "t m"; Perl 0.8.8 (same host): 5 errors (`\RIfM@` undefined, two stray `\else`, two stray `\fi`).
 Fixed in Rust: amsgen_sty.rs defines both names. Witness 1701.06055 (its `\QED` box: 101 errors and a Fatal); guard
 `perfect_kernel_batchregtailb::amsgen_defines_rifm`.
+
+## 1325. Perl's list label that is the author's own `\fnum@<counter>` expands into itself
+
+latex_constructs.pool.ltxml:1650 `\list` defines `\fnum@<\@listctr>` as the list's label `#1` for the item tags (and
+:1391 an `\item[…]`'s as `\makelabel{<tag>}`). When the label is the author's own `\fnum@<counter>`, as in a list of
+figure captions, the new definition calls itself. LaTeX typesets the label with `\fnum@` untouched (latex.ltx `\@item`).
+Minimal trigger:
+
+```tex
+\documentclass{article}
+\makeatletter\newcounter{fc}\def\fnum@fc{{\bfseries Fig. \thefc:}}
+\def\fc{\list{\fnum@fc}{\usecounter{fc}}}\def\endfc{\endlist}\makeatother
+\begin{document}\begin{fc}\item Text.\end{fc}\end{document}
+```
+
+pdflatex prints "Fig. 1: Text."; Perl 0.8.8 (same host): `Error:recursion:\fnum@fc ... expands into itself!` (and an
+`\item[\fnum@fc]` runs to the timeout); the Rust port looped to `Fatal:Timeout:Recursion`. Fixed in Rust:
+`counter::dialect::define_item_fnum` keeps the author's meaning as `\lx@author@fnum@<counter>` and the label calls it.
+Witness cond-mat9505034; guard `perfect_kernel_batchregtailb::list_label_is_the_authors_fnum`.

@@ -918,9 +918,20 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@trivlist@hook", "");
   DefMacro!(
     "\\@trivlist",
-    r"\lx@trivlist@setup\lx@list\expandafter\def\csname fnum@\@listctr\endcsname{\@itemlabel}",
+    r"\lx@trivlist@setup\lx@list\lx@list@fnum",
     locked => true
   );
+  // `\def\fnum@<\@listctr>{\@itemlabel}`; a label that is the author's own `\fnum@<\@listctr>` calls the author's
+  // meaning (`define_item_fnum`: cond-mat9505034's `\list{\fnum@figcaption}{\usecounter{figcaption}}` expanded
+  // into itself, a Fatal).
+  DefMacro!("\\lx@list@fnum", sub[_args] {
+    let counter = Expand!(T_CS!("\\@listctr")).to_string();
+    let label = match lookup_definition(&T_CS!("\\@itemlabel"))?.as_ref().and_then(|d| d.get_expansion()) {
+      Some(ExpansionBody::Tokens(body)) if label_calls_fnum(&counter, body.unlist_ref()) => body.clone().unlist(),
+      _ => vec![T_CS!("\\@itemlabel")],
+    };
+    Tokens::new(define_item_fnum(&counter, label))
+  });
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",

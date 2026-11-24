@@ -1591,6 +1591,43 @@ fn prints_something(cs: &str) -> Result<bool> {
   })
 }
 
+/// The `\fnum@<counter>` an item's tag defines as `label` (Perl latex_constructs.pool.ltxml:1391, :1650): when the
+/// label is the author's own `\fnum@<counter>` (`\list{\fnum@figcaption}{\usecounter{figcaption}}`), whose label TeX
+/// typesets with `\fnum@` untouched (latex.ltx `\@item`), the author's meaning is kept as `\lx@author@fnum@<counter>`
+/// and the label calls that, so the new `\fnum@<counter>` no longer expands into itself (Perl: one Error; we looped to
+/// a Fatal: cond-mat9505034). KNOWN_PERL_ERRORS #1325. The returned tokens make the definition.
+pub fn define_item_fnum(counter: &str, label: Vec<Token>) -> Vec<Token> {
+  let fnum = T_CS!(s!("\\fnum@{counter}"));
+  let mut tokens = Vec::new();
+  let label = if label_calls_fnum(counter, &label) {
+    let author = T_CS!(s!("\\lx@author@fnum@{counter}"));
+    // (an `\item[\fnum@<counter>]` in such a list finds the list's `\fnum@<counter>` calling the kept meaning already)
+    let calls_author = lookup_definition(&fnum)
+      .ok()
+      .flatten()
+      .is_some_and(|defn| matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body)) if body.unlist_ref().contains(&author)));
+    if !calls_author {
+      tokens.extend([T_CS!("\\let"), author, fnum]);
+    }
+    label
+      .into_iter()
+      .map(|t| if t == fnum { author } else { t })
+      .collect()
+  } else {
+    label
+  };
+  tokens.extend([T_CS!("\\def"), fnum, T_BEGIN!()]);
+  tokens.extend(label);
+  tokens.push(T_END!());
+  tokens
+}
+
+/// Whether an item label calls `\fnum@<counter>` itself ([`define_item_fnum`]).
+pub fn label_calls_fnum(counter: &str, label: &[Token]) -> bool {
+  let fnum = T_CS!(s!("\\fnum@{counter}"));
+  label.contains(&fnum)
+}
+
 /// Create id, and tags for an itemize type \item
 pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>> {
   let counter = lookup_string("itemcounter");
@@ -1674,18 +1711,14 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
       T_CS!("\\let"),
       T_CS!(s!("\\the{counter}")),
       T_CS!("\\@empty"),
-      T_CS!("\\def"),
-      T_CS!(s!("\\fnum@{counter}")),
-      T_BEGIN!(),
-      formatter,
-      T_BEGIN!(),
     ]);
     // TODO: Another iffy clone...
     let reverted_tag = (*tag).clone().revert();
-    tag_tokens.extend(reverted_tag.clone());
+    let mut label = vec![formatter, T_BEGIN!()];
+    label.extend(reverted_tag.clone());
+    label.push(T_END!());
+    tag_tokens.extend(define_item_fnum(&counter, label));
     tag_tokens.extend(vec![
-      T_END!(),
-      T_END!(),
       T_CS!("\\def"),
       T_CS!(s!("\\typerefnum@{counter}")),
       T_BEGIN!(),
