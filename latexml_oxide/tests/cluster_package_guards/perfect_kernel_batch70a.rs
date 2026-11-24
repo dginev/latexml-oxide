@@ -68,7 +68,7 @@ fn physics_loads_xparse() {
 
 /// package-bindings/natbib_citeref_bibitem: the natbib binding's entry constructor is `\lx@NAT@lbibitem`, so
 /// citeref.sty:96's own `\@@lbibitem[#1]#2#3\par` no longer takes it over: the entry is one bibitem with its text
-/// (2309.05436; KNOWN_PERL_ERRORS #918).
+/// (2309.05436; KNOWN_PERL_ERRORS #918). Its apalike label splits at its first `, ` (KNOWN_PERL_ERRORS #1332).
 #[test]
 fn natbib_entry_constructor_is_binding_private() {
   assert_elements(
@@ -80,7 +80,7 @@ fn natbib_entry_constructor_is_binding_private() {
     &[(
       "bibitem",
       "bib.bib1",
-      r##"<bibitem key="a" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2017</tag><tag role="authors">Batselier et al., </tag><tag role="fullauthors">Batselier et al., 2017</tag><tag role="refnum">Batselier et al.,  (2017)</tag><tag role="key">a</tag></tags><bibblock>Batselier, K. (2017).</bibblock></bibitem>"##,
+      r##"<bibitem key="a" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="year">2017</tag><tag role="authors">Batselier et al.</tag><tag role="refnum">Batselier et al. (2017)</tag><tag role="key">a</tag></tags><bibblock>Batselier, K. (2017).</bibblock></bibitem>"##,
     )],
   );
 }

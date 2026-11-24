@@ -22752,3 +22752,25 @@ pdflatex prints "6.94444pt 7.5pt"; Perl 0.8.8 (same host) and the Rust port befo
 Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1155): a space-like box with height or depth is sized in its word, and
 `\hphantom` has its argument's width alone. Witnesses 1210.5701 (xy's `*[o]{\phantom{s}}`: "Dimension too large"), 2503.14426;
 guards `perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}`.
+
+## 1332. Perl splits an apalike natbib label at its trailing digits: "(Maes,, 1995)"
+
+natbib.sty:811-813 `\NAT@bare` hands a `\bibitem` label with no `(year)` to `\NAT@apalk#1, #2, #3\@nil#4`
+(:1005-1012), which splits it at its first `, ` (comma, space; outside braces): `[Maes, 1995a]` is author "Maes" and
+year "1995a"; `\citename{Jones et al., }1990` (:1029) goes the same way. Perl's binding (natbib.sty.ltxml:576-581, its
+`#pop(@arg)` commented out) takes the label's trailing digit tokens as the year instead, so the author keeps the `, `
+and a year with a suffix stays in the author. Its `(year)` split also takes a `(` inside braces, which `\NAT@bare#1(#2)`
+does not match (`[{Group (EBCTCG)} et~al., 2011]`: year "EBCTCG"). The unbalanced split also shifts the fields: the
+key is lost and printed as the full authors (`<tag role="fullauthors">g</tag><tag role="key"/>`), which in numbers
+mode spills label text into the entry (2605.02429). Minimal trigger:
+
+```tex
+\documentclass{article}\usepackage{natbib}\begin{document}See \citep{maes} and \citet{maes}.
+\begin{thebibliography}{1}\bibitem[Maes, 1995]{maes} P.~Maes. A title. 1995.\end{thebibliography}\end{document}
+```
+
+pdflatex (2 passes) prints "(Maes, 1995)" and "Maes (1995)"; Perl (same host) and the Rust port before the fix
+"(Maes,, 1995)" and "Maes, (1995)"; `[Maes, 1995a]` gave "(Maes, 1995a, )". Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
+#1161). Witnesses 2505.11584 (apalike.bst, 37 citations), 2605.20003 (a braced `(`), 2605.02429 (a braced `(` in
+numbers mode: the label spilled into the entry); guards
+`perfect_kernel_batchnatbib::{natbib_apalike_label_splits_at_comma, natbib_citename_label_splits_at_comma}`.

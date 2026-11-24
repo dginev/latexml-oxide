@@ -1,0 +1,17 @@
+% witness: NATBIB (natbib's own `\bibitem[\protect\citename{Jones et al., }1990]` form, natbib.sty:1029, and an
+%          apalike label in numbers mode; sibling of 2505.11584)
+% oracle:  pdflatex 0 errors (2 passes): "A [1], Maes [1]; Maes; 1995. B [2], Jones et al. [2]; Jones et al.; 1990."
+%          (\citename#1#2 hands "#1#2, " to \NAT@apalk, which splits at the first ", ")
+% engines: Perl and rust MAIN999 "Maes, [1]", "Maes,", "Jones et al., [2]", "Jones et al.,"
+% expect:  0 errors, 0 warnings; the pdflatex text
+% status:  RED (MAIN999) -> GREEN (NATBIB)
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+A \citep{maes}, \citet{maes}; \citeauthor{maes}; \citeyear{maes}. B \citep{cn}, \citet{cn}; \citeauthor{cn};
+\citeyear{cn}.
+\begin{thebibliography}{9}
+\bibitem[Maes, 1995]{maes} P.~Maes. A title. 1995.
+\bibitem[\protect\citename{Jones et al., }1990]{cn} A.~Jones. Citename. 1990.
+\end{thebibliography}
+\end{document}

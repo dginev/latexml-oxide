@@ -27,7 +27,7 @@ macro_rules! repro {
 
 /// `tex` converted to HTML by the binary in a directory of its own, as a paper is (the citation and `\ref` text are the
 /// post-processor's): its HTML, the conversion free of errors and warnings.
-fn html_of(tex: &str) -> String {
+pub(super) fn html_of(tex: &str) -> String {
   let workdir = tempfile::tempdir().expect("create tempdir");
   std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
   let output = std::process::Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
