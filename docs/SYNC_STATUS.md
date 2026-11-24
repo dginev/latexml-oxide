@@ -71,7 +71,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (370 items on 2026-11-24 on `int/towards_v0_8_1`: 370 open, weight 816, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (383 items on 2026-11-24 on `int/towards_v0_8_1`: 383 open, weight 855, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -935,6 +935,63 @@ Rules that keep this file honest and mergeable:
     Measure reach first; 3
   - CELLLEADSPACE — a leading `&\quad g` with no operator after it still loses its `\quad`: an author space is applied
     only between two row neighbours (`presentation.rs` `adjust_pair`); 1
+  *Folded 2026-11-24 (CLIAUDIT, CACHEAUDIT): the command-line options audit (every option traced to its algorithm; the easy fixes are the CLI-wiring PR) and the post-processing cache audit (SQLite only for small keyed metadata shared across processes or runs — the resource cache, `LaTeXML-oxide.cache`, in the issue 995 PR; blob caches stay content-addressed files; memos stay maps):*
+
+  - GFXHARDLINK — (DG 2026-11-24: the first v0.8.1 item) the graphics cache delivers its entries into destinations by
+    hard link (`latexml_post/src/graphics_cache.rs`), so editing an output image in place rewrites the cache entry and
+    every other document's copy (probed: an append to `out1/fig.svg` changed `out2` and was served to `out3`; 4,368 of
+    11,534 live entries on the dev host had more than one link; the fleet's tmpfs `/tmp` copies, so it is not exposed).
+    Deliver by copy (reflink where the filesystem has it), and prune to a 90 % low-water mark so an insert stops walking
+    the whole cache every time (20-29 ms per insert on a 2 GB cache; GCACHECHURN); 3
+  - CORTEXRSS — (fleet-facing, check first) `cortex_worker --max-rss-mb` does not move the cooperative memory fuse or the
+    streaming watermark: `resolve_rss_cap` (`stomach.rs:397-404`) keeps the 4.5 GB default unless `LATEXML_RSS_CAP_BYTES`
+    is set, which only the harness sets, on its children (`--child-mem-limit-mb` − 256 MiB, else `--max-rss-mb`); a
+    standalone or pool worker ignores the flag. `--allocation-limit-mb`'s help (`cortex_worker.rs:232`) and comment
+    (:1929) state a 2048 MiB default the code does not use. cortex runs eager first and restarts streaming only on a
+    memory stop, where the CLI streams from the start when the source projects over the fuse
+    (`streaming_restart.rs:76`); 3
+  - CONFIGPREP — (CLI audit, advisor; DG 2026-11-24) one `prepare()` porting `Config.pm` `_prepare_options` in
+    `latexml_oxide/src/config.rs`, used by the CLI, cortex_worker, the server, `api.rs` and the render children through
+    one serialized post plan; output byte-identical; 5
+  - OPTGUARDS — (same) exhaustive option transfers (no `..Default::default()` between option structs) and a
+    `cluster_cli` effect table with one row per `--long` option or a named exemption; 3
+  - OPTPREFIX — (same) Getopt::Long's unique-prefix abbreviations (`--destin` for `--destination`) through clap's
+    `infer_long_args`; 1
+  - OPTMISSING — Perl options we reject (probe 2026-11-24: `latexml_oxide --<name>` → "unexpected argument", 49 names
+    with negations), by group. Post toggles: `--crossref`, `--scan`, `--index`, `--permutedindex`, `--splitindex`,
+    `--splitbibliography`, `--validate`, `--omitdoctype`, `--graphicsmap`, `--svg`, `--pictureimages`, `--mathimages`,
+    `--mathsvg`, `--mathimagemagnification`, `--linelength`, `--parallelmath`, `--openmath`/`--om`. Input and output:
+    `--bibliography`, `--tex`, `--box`, `--output` (Perl's alias of `--dest`), `--parse=<grammar>`, `--profile`
+    (latexmlc's presets), `--VERSION`. Persistent object DB: `--dbfile`, `--prescan` (on demand, DG 2026-11-24).
+    latexmls's daemon options (`--mode`, `--port`, `--address`, `--expire`, `--autoflush`, `--cache_key`, `--base`):
+    out of scope (our server is the LSP), say so in the docs. Decide per group: wire, alias, or reject with a pointer; 5
+  - CLIFORMATS — `--format`: the core's `OutputFormat::TeX`/`Box` (`converter.rs:983-1006`) is unreachable from the
+    CLI (Perl's `--tex`/`--box`; a `.tex`/`.box` `--dest` makes Perl infer the format, where we write XML into
+    `o.tex`); html4 and jats (their sheets are embedded, `xslt.rs:1006-1015`); `--xml` and `--format` are not
+    last-wins; 3
+  - CLIPOSTDEF — an explicit `--post` turns pMML on for non-HTML formats (latexmlpost's default, not latexmlc's), and
+    `--split` implies post (Perl's splitxml writes the split XML without post): align with Perl or record each in OD
+    (OD #1093's math-format model stays, DG 2026-11-24); 1
+  - CLIPATHPI — `--path`: we never emit `<?latexml searchpaths?>` (`INCLUDE_PATH_PIS` set at `state.rs:912`, never read)
+    and post's `PostDocument` gets only the source directory, so post-time lookups (graphics, bibliographies) ignore
+    `--path`, which Perl passes on; 3
+  - LSPOPTS — `--server` (the LSP) silently ignores every other option (`--preload`, `--path`, `--nocomments`, …):
+    honour the conversion options in the server's per-document settings, or reject them as a usage error; 3
+  - CORTEXPOOL — `cortex_worker --pool-size` threads are pericortex `thread::spawn` threads (≈2 MiB stack, not the
+    256 MiB of `cortex_worker.rs:~1855`, and without its 5M pushback thread-local, :~1858); `--limit` counts per
+    thread (N × limit tasks per process); `--path` is appended after the source directory though its help says
+    prepended (`cortex_worker.rs:384-385`), and post gets no search paths. The fleet runs pool 1, so no fleet effect; 3
+  - CLINITS — small CLI items: `--source` silently wins over positionals (warn); several positionals join into one
+    document (Rust-only; document it); telemetry's `timeout_s` is always 0 (`telemetry.rs:143`, `set_timeout_s` never
+    called) and its `git_sha` (from `latexml_core/build.rs`) can differ from `--version`'s revision;
+    `resolve_max_memory` runs three times (its Debug line twice under `-v`); `--inputencoding` survives `utf8.def`
+    here (`utf8_def.rs:297-300`) where Perl's resets it (low impact); 3
+  - RENDERDBRO — (DG 2026-11-24: v0.8.1, measured first) write the parallel render's ObjectDB snapshot
+    (`LaTeXML-render.db` after the issue 995 PR; `render_workers.rs:~504`) with `journal_mode=OFF` and open it
+    `immutable=1` in the workers, with the planned lazy read-only attach; it stays a file separate from
+    `LaTeXML-oxide.cache` (a per-run read-only snapshot in the private spill directory vs a persistent read-write
+    name table in the destination; Perl keeps ObjectDB and `LaTeXML.cache` apart too); 3
+
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)
