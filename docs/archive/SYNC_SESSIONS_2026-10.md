@@ -7089,7 +7089,7 @@ enclosing section ("2 After Target") — verified 77t (quality ledger rank 19 ha
 
 Open items from the cortex reruns of sandboxes 2605/2606 (61r) and from mining run 329 (62a-62f). The fixed narratives
 (61r's validation, the stop of run 329 and the 62a-62f fixes with their numbers, witnesses and guards) are archived in
-[`archive/SYNC_SESSIONS_2026-10.md`](archive/SYNC_SESSIONS_2026-10.md); first-error and Fatal cluster tables of run 329
+[`archive/SYNC_SESSIONS_2026-10.md`](SYNC_SESSIONS_2026-10.md); first-error and Fatal cluster tables of run 329
 in `~/data/pk_agents/main/scratch_g/run329/clusters62c/`.
 
 From 61r (sandboxes 2605/2606): a tabular
