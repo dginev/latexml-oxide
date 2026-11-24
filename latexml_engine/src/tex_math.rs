@@ -1456,6 +1456,20 @@ LoadDefinitions!({
         .map(|f| f.get_mathstyle().map(|s| s.to_string()).unwrap_or_default())
         .unwrap_or_default();
       Ok(stored_map!("mathstyle" => mathstyle))
+    },
+    // Only the current style's branch has a size: mlist_to_hlist replaces the choice node by it (tex.web §731).
+    // Summing the four made tensor.sty's `\mathpalette` nodes 3x as wide in an xy diagram (1504.04186).
+    sizer => sub[whatsit] {
+      let branch = match whatsit.get_property_string("mathstyle").as_str() {
+        "display" => 1,
+        "text" => 2,
+        "script" => 3,
+        _ => 4,
+      };
+      match whatsit.get_arg(branch) {
+        Some(choice) => choice.compute_size(Default::default()),
+        None => Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0))),
+      }
     }
   );
   // THIS IS WRONG!!!!

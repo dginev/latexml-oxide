@@ -1141,6 +1141,12 @@ fn close_environment_frame(closer: Token, semi_simple: bool) -> Result<bool> {
   let environment = lookup_token_sym(crate::pin!("groupInitiator"))
     .map(|t| t.to_string())
     .unwrap_or_default();
+  // A bare frame's end is the binding's `\endX` under its private alias (dialect.rs `def_environment`); the
+  // messages name it as the document knows it.
+  let shown_end = bare
+    .then(|| lookup_token("lx@env@bare@end@shown"))
+    .flatten()
+    .unwrap_or(end);
   assign_frame_value_sym(crate::pin!("lx@env@ended@by@group"), true);
   let kind = if is_value_bound("lx@env@tex@group", Some(0)) {
     TexGroup::from_name(&lookup_string("lx@env@tex@group")).unwrap_or(TexGroup::None)
@@ -1169,14 +1175,14 @@ fn close_environment_frame(closer: Token, semi_simple: bool) -> Result<bool> {
     Error!(
       "unexpected",
       closer,
-      s!("Environment {environment} opened a TeX group of its own: ending it with {end}"),
+      s!("Environment {environment} opened a TeX group of its own: ending it with {shown_end}"),
       tex
     );
   } else {
     Info!(
       "unexpected",
       closer,
-      s!("ends the group around environment {environment}: inserting {end}")
+      s!("ends the group around environment {environment}: inserting {shown_end}")
     );
   }
   // A bare `\X` frame normally re-reads the closer for the enclosing group;

@@ -69,7 +69,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (579 items on 2026-11-23 on `int/towards_v0_8_1`: 575 open, weight 1121, 60 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (583 items on 2026-11-23 on `int/towards_v0_8_1`: 579 open, weight 1127, 60 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -943,8 +943,8 @@ Rules that keep this file honest and mergeable:
     Dimension too large), 1310.2513 (extraipa), 1701.06055 (`\RIfM@`), 2406.05605 (`\enquote` in a `.bbl`),
     `\ifCLASSINFOpdf` (2105.10205, 2502.09129; before Oct 8 — DG 2026-11-23: an unclosed `\ifpdf`/`\ifCLASSINFOpdf` around
     `\begin{document}` routes to pdflatex, to fix), circuits' wall clock (2506.09686), astro-ph0012068,
-    `\rcite` recursion (cond-mat9505034), 2402.13372 (flaky?); Theorems.sty's `\newtheorem{\theoremcommand}` (2) Re-tallied on INT081G (2026-11-23): 190 of 192 still err, E 6321 → 5996, 0 worse; REGTAILB fixed 7
-    (2406.05605, 2408.05715, 2309.07288, 1701.06055, 2402.13372, 1310.2513, cond-mat9505034; archive). Traced, open:
+    `\rcite` recursion (cond-mat9505034), 2402.13372 (flaky?); Theorems.sty's `\newtheorem{\theoremcommand}` (2) Re-tallied on INT081G (2026-11-23): 190 of 192 still err, E 6321 → 5996, 0 worse; REGTAILA fixed 5 (1907.13475,
+    2110.03080, 2203.16677, 2410.11591, 1504.04186) and REGTAILB 7 (2406.05605, 2408.05715, 2309.07288, 1701.06055, 2402.13372, 1310.2513, cond-mat9505034; archive). Traced, open:
     `\endgroup` later in the log (0708.3763, 2012.08010, 1908.02166, 2006.02670, 2307.08421, 2307.12529, 2604.21274),
     `expected:<dimen>` (1210.5701, 2410.03560, 2412.03297, 2604.08953, 2609.20331; 1809.00682 is pdflatex-faithful),
     `\phantom` loses its height among siblings (`font.rs:2075` counts an isSpace box by width only; 1210.5701's xy
@@ -1330,6 +1330,20 @@ Rules that keep this file honest and mergeable:
     `\item[(\theenumi)] B\label{y}` prints "()" and "See ." where TeX prints "(1)" and "See 1."; `\item[\fnum@fc]` gives
     "Fig. :" (TeX "Fig. 1:"); a nested list reusing the counter labels its inner item "Fig. 0:" (TeX "Fig. 1:"). Keep
     Perl's design or blank only when the tag does not mention the counter; 3
+  - SIXFONTLIST (after REGTAILA) — siunitx's `detect-*` font is not yet carried onto `\SIlist`/`\SIrange`/`\ang`
+    numbers (pdflatex bolds every one under detect-weight), `\numlist`/`\numrange` (pdflatex bolds 1 and 3 of
+    `\numlist{1;2;3}`, 4 of `\numrange{4}{5}`), or the unit of `\SI`/`\qty` under `mode=text` (pdflatex bolds the "m");
+    `\boldmath \num{6.5}` is bold where `reset-math-version=true` sets it medium (siunitx.sty:5208-5226); the ± and
+    parentheses of an uncertainty are not bolded (pdflatex SFBX/CMBSY). Probes `tmp/rev2REGTAILA/p/d2.tex`, `d3.tex`; 3
+  - SIXFAMILYRESET (after REGTAILA, markup only) — with `detect-shape` but not `detect-family`, `\lx@six@font`'s shape
+    branch keeps the text family that siunitx resets to `\familydefault` in text mode (siunitx.sty:5355-5370):
+    `{\sffamily\itshape\num[detect-shape,mode=text]{8.5}}` is `sansserif italic` where pdflatex prints CMTI10. Take the
+    family only under `'f'`; 1
+  - ESCAPECAT — no token carries `Catcode::ESCAPE`, so tests on it are dead: `siunitx_sty.rs:488` never adds Perl's
+    `T_SPACE` after a matched control sequence (siunitx.sty.ltxml:207; fix with a `\num` A/B, `tex=` spacing moves);
+    `amsmath_sty.rs:1105`/`:1114` redundant, `tex_character.rs:232`, `latexml_sty/mod.rs:199` unreachable arms; 1
+  - ENDITEMIZEREDEF — `\def\enditemize{\par After list.}` silently drops "After list." (the locked itemize ignores the
+    redefinition, Info only), against counting every lost word; 1
   - BACKMATTERRAW (after BACKMATTERPART) — memoir (its runtime binding reads memoir.cls raw) and scrbook keep their own
     `\backmatter`, so their back matter still nests inside the last `ltx:part`; a document's `\renewcommand\backmatter`
     loses the close too (as Perl). Trigger: `\documentclass{scrbook}\begin{document}\part{A}\chapter{x}\backmatter

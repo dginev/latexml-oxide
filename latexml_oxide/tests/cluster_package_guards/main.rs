@@ -785,6 +785,9 @@ mod perfect_kernel_batchregfixx;
 /// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
 /// block, OmniBus's `\orcid` one ORCID call; OD #941.
 mod perfect_kernel_batchregrehearse;
+/// REGTAILA: a wrapped `\newtheorem` start ends with the binding's own end; siunitx `S` cells led by a robust
+/// `\centering`; `\mathchoice` sized by its style's branch.
+mod perfect_kernel_batchregtaila;
 /// REGTAILB: a braced file name (`\include{{./x}}`), amsgen's `\RIfM@`, breqn's load-time `^`/`_` catcodes, tipa's
 /// accented letter in a formula, a list label that is the author's own `\fnum@<counter>`.
 mod perfect_kernel_batchregtailb;

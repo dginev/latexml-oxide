@@ -1971,11 +1971,15 @@ pub fn def_environment(
   // The bare `\X` opens no TeX group (latex.ltx:15346-15355: only `\begin`
   // does), so this frame is LaTeXML's alone; a `}` or `\endgroup` of an
   // enclosing group meeting it ends the environment by its `\endX` first
-  // (stomach.rs `close_environment_frame`).
-  let bare_frame_end = T_CS!(s!("\\end{}", &name));
+  // (stomach.rs `close_environment_frame`): the binding's own, under a private name, since a document's `\endX`
+  // (`\def\endremark{\vspace{1ex}}` beside a wrapped `\remark`, 1907.13475) closes nothing.
+  let bare_frame_end = T_CS!(s!("\\lx@env@bare@end@{}", &name));
+  let bare_end_alias = bare_frame_end;
+  let bare_frame_shown_end = T_CS!(s!("\\end{}", &name));
   before_digest_bare.push(before_digest_simple!({
     bgroup();
     assign_frame_value_sym(crate::pin!("lx@env@bare@end"), bare_frame_end);
+    assign_frame_value_sym(crate::pin!("lx@env@bare@end@shown"), bare_frame_shown_end);
     let kind = environment_tex_group(&tex_group_key, tex_group);
     if kind != TexGroup::None {
       assign_frame_value_sym(crate::pin!("lx@env@tex@group"), kind.as_str());
@@ -2082,8 +2086,9 @@ pub fn def_environment(
   };
 
   // Perl Package.pm lines 1970-1975: \endFOO has beforeDigestEnd + afterDigest + endMode
+  let end_cs = T_CS!(end_name);
   let end_name_constructor = Constructor {
-    cs: T_CS!(end_name),
+    cs: end_cs,
     paramlist: None,
     replacement: None,
     before_digest: before_digest_end_clone,
@@ -2091,6 +2096,7 @@ pub fn def_environment(
     ..Constructor::default()
   };
   install_definition(Rc::new(end_name_constructor), options.scope);
+  let_i(&bare_end_alias, &end_cs, options.scope);
 
   if options.locked {
     assign_value(

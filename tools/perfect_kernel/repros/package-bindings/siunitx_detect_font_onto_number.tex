@@ -1,0 +1,23 @@
+% mechanism: siunitx v3 prints a number in the surrounding text's font axes its keys keep (siunitx.sty:5180-5193 a bold
+%   series is `\mathversion{bold}` under `text-series-to-math`; :5262-5272 a sans/typewriter family is `\mathsf`/
+%   `\mathtt` under `text-family-to-math`; :5355-5370 in text each `reset-text-*` false keeps its axis; `mode=match`
+%   prints in text outside math). The deprecated `detect-*` keys set them (:8532-8592). The binding ignored them all, so
+%   a bold `S` cell or `{\bfseries\num{…}}` under `detect-weight` lost its bold; the defaults reset every axis.
+% witness: 2402.01753 (`detect-weight, mode=text`, bold best results in `S` cells)
+% oracle:  pdflatex 0 errors; A 2.5 CMR, B 3.5 CMBX, C 4.5 CMBX, D 1.5 CMBX "m" CMR, E 7.5 CMSSI, F 5.5 CMR, G 9.5 CMBX,
+%   H 6.5 CMR, I 8.5 CMTI; row a: 2.5 CMR, 2.5 CMBX, 2.5 CMTI; row b: 1.5 CMR, 1.5 CMSS, 1.5 CMSS
+% engines: perl: 0 errors, no number bold (detect-* unread); rust INT081G: 0 errors, no number in a font, row a's cells text
+% expect:  0 errors, 0 warnings; each number a formula whose token carries exactly the font pdflatex prints
+% status:  GREEN (REGTAILA)
+\documentclass{article}
+\usepackage{siunitx}
+\begin{document}
+A {\bfseries\num{2.5}} B {\bfseries\num[detect-weight]{3.5}} C {\bfseries\num[detect-weight, mode=text]{4.5}}
+D \textbf{\SI[detect-weight]{1.5}{m}} E {\sffamily\itshape\num[detect-all]{7.5}} F {\ttfamily\num[detect-weight]{5.5}}
+G {\bfseries $\num[detect-weight]{9.5}$} H {\itshape\num[detect-shape]{6.5}} I {\itshape\num[detect-shape, mode=text]{8.5}}
+
+\begin{tabular}{lSS[detect-weight=true, detect-family=true]S[detect-all]}
+a & \bfseries 2.5 & \bfseries 2.5 & \itshape 2.5 \\
+b & 1.5 & \sffamily 1.5 & \sffamily 1.5 \\
+\end{tabular}
+\end{document}

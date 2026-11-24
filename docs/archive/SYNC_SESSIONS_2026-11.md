@@ -2687,3 +2687,12 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   0 E, 170 → 53k words), 2408.05715, 2309.07288, 1701.06055, 2402.13372, 1310.2513, cond-mat9505034. A/B 540 papers vs
   INT081G: E 7452 → 7035, F 19 → 13, 12 changed, 0 worse; 40 random `\input`/`\include` papers byte-identical. Guards
   `perfect_kernel_batchregtailb::*`. Residuals: row R FILENAMESPACE, FNUMINDIRECT, ITEMTHEBLANK.
+- REGTAILA — fixed (row R REGTAIL, 2026-11-23): a wrapped `\newtheorem` start with a redefined `\endX` ends with the
+  binding's own end (`\lx@env@bare@end@X`; the author's `\endX` still runs first) — later text no longer nests in the
+  theorem (1907.13475); `\centering`/`\raggedright`/`\raggedleft` are robust as in latex.ltx since 2019-10 (:15409-15423),
+  so a siunitx `S` cell reads `\centering` whole (2110.03080, 2203.16677; KPE #139), and an S cell's leading control
+  sequence is peeled (Perl's `CC_CS`); `\mathchoice` has the size of its current style's branch only (tex.web §731; OD
+  #1152, KPE #1321; 1504.04186's xy overflow); siunitx's `detect-*` keys carry the text's series/family/shape onto a
+  number (OD #1153; 2402.01753's bold numbers 2 → 8); an S cell's `\pm` is the ± again, not the picometre (KPE #1326;
+  2410.02392 +1,129 words). A/B 664 papers vs INT081G: E 7799 → 7773, F 15 = 15, 51 changed, 0 worse. Guards
+  `perfect_kernel_batchregtaila::*`. Residuals: row R SIXFONTLIST, SIXFAMILYRESET, ESCAPECAT, ENDITEMIZEREDEF.

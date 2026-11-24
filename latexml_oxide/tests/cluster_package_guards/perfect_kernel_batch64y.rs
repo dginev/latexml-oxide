@@ -320,17 +320,26 @@ fn ntheorem_bare_proof_has_no_endmark() {
   );
 }
 
-/// `{\thm …\let\endthm\relax}`: the recovery inserts `\endthm` once; it no longer closes the frame, so the closer meets
-/// the frame again and gets the Error — exactly one, no loop.
+/// `{\thm …\let\endthm\relax}`: the recovery inserts the binding's own end (`\lx@env@bare@end@thm`), which a
+/// redefined `\endthm` does not reach, so the brace ends the theorem as in pdflatex (0 errors), "After." outside it.
+/// Was (64y): it inserted `\endthm` (`\relax`), the closer met the frame again, one Error (REGTAILA).
 #[test]
 fn redefined_end_recovers_once() {
-  let (log, _xml) = convert(include_str!(
+  let (log, xml) = convert(include_str!(
     "../../../tools/perfect_kernel/repros/boxes-groups/bare_theorem_end_redefined_recovers_once.tex"
   ));
-  assert_eq!(error_count(&log), 1, "{log}");
-  assert!(
-    log.contains("Error:unexpected:} Attempt to close a group that switched to mode horizontal"),
-    "{log}"
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="Thmthm1.p1""#],
+    r#"<para xml:id="Thmthm1.p1"><p xml:id="Thmthm1.p1.1"><text font="italic" xml:id="Thmthm1.p1.1.1">Thm text</text></p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"xml:id="p2""#],
+    r#"<para xml:id="p2"><p xml:id="p2.1">After.</p></para>"#,
   );
 }
 

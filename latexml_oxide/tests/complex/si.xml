@@ -6731,10 +6731,14 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
               </Math></td>
           </tr>
           <tr>
-            <td align="left"><text color="#BF0040">975,31</text></td>
+            <td align="left"><Math mode="inline" tex="975.31" text="975.31" xml:id="S3.T10.m2">
+                <XMath>
+                  <XMTok color="#BF0040" meaning="975.31" role="NUMBER">975.31</XMTok>
+                </XMath>
+              </Math></td>
           </tr>
           <tr>
-            <td align="left" border="bb"><Math mode="inline" tex="44.268" text="44.268" xml:id="S3.T10.m2">
+            <td align="left" border="bb"><Math mode="inline" tex="44.268" text="44.268" xml:id="S3.T10.m3">
                 <XMath>
                   <XMTok color="#FF8000" meaning="44.268" role="NUMBER">44.268</XMTok>
                 </XMath>

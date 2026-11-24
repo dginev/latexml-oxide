@@ -6996,7 +6996,7 @@ HANDLED" (:302-306), so v3 documents lost settings that change the printed numbe
 - The v3 names of v2 keys are routed to them (`print-zero-exponent`, `print-zero-integer`,
   `drop-uncertainty`, `bracket-ambiguous-numbers`).
 - The font-matching keys (`reset-text-series`, `text-series-to-math`, `propagate-math-font`, …)
-  are accepted and ignored, as `reset-text-family` already was.
+  are accepted; the series, family and shape ones act on a number (#1153), the rest are ignored.
 
 Keys that siunitx v3 itself removed or never had (`load-configurations`, `obeybold`, …) still
 warn: pdflatex warns or errors on them too. The uncertainty conversions are Perl's, ported
@@ -10168,7 +10168,8 @@ frame, so `{\thm …}`, `{\quote …}`, `\begingroup\rem …\endgroup` and `\beg
 `\X` opens no group, latex.ltx:15346-15355; `\begin`'s group is closed by any `\endgroup`) swallow the rest of the
 document (KPE #583).
 **Rust behavior**: stomach.rs `close_environment_frame` ends the environment first, in the shape of tex.web §1064
-`off_save`: a bare `\X` frame back-inputs the closer and inserts `\endX`; a `\begin{X}` frame met by `\endgroup` runs
+`off_save`: a bare `\X` frame back-inputs the closer and inserts the binding's own `\endX` (`\lx@env@bare@end@X`, so a
+document's redefined `\endX` does not decide it: 1907.13475); a `\begin{X}` frame met by `\endgroup` runs
 `\end{X}` in the `\endgroup`'s place. The diagnostic follows the kind of group the environment's begin code leaves open
 (DefEnvironment `tex_group` = none | semi_simple | box, tex.web §269): none → Info; semi_simple → Error for `}` (§1069
 `extra_right_brace`) and for `\endgroup` against a `\begin{X}` frame (`\begin`'s own group stays open), Info for a bare
@@ -24408,3 +24409,36 @@ class_maketitle_teaser_before_store_abstract}`),
 `perfect_kernel_batch61::class_bindings_2609_clusters` (egpubl's teaser before the abstract),
 `114_streaming_cluster_regressions_b::streaming_matches_eager_on_cluster_regressions_shard1` (the titlepic fixture's
 cover, streamed at fragment budget 3, as eager).
+
+### 1152. `\mathchoice` has the size of its current style's branch only (Perl: the sum of the four)
+
+**Perl behavior**: TeX_Math.pool.ltxml:934-942 defines `\mathchoice` with no sizer, so its box is measured as all four
+digested branches side by side (KNOWN_PERL_ERRORS #1321). Perl's xy binding never measures one, so the defect is latent
+there.
+**Rust behavior**: tex_math.rs `\mathchoice` sizes the branch its `mathstyle` property chooses, as tex.web §731
+(mlist_to_hlist replaces the choice node by that branch's list): `\wd` of `$\mathchoice{x}{x}{x}{x}$` is 5.71527pt, as
+pdflatex, not 22.86108pt.
+**Why**: xy-pic measures its nodes, and tensor.sty's `\mathpalette` made 1504.04186's node 480pt against 153pt in TeX, an
+overflowing diagram (2 errors → 0); numprint's exponent phantoms shrink to TeX's width (`tests/babel/numprints.xml`
+28.7pt → 20.5pt). **Guard** `perfect_kernel_batchregtaila::mathchoice_sizes_only_its_style_branch` (repro
+`math-phantom/mathchoice_sizes_only_its_style_branch`).
+
+### 1153. siunitx's font keys carry the text's series, family and shape onto a number (Perl: never)
+
+**Perl behavior**: siunitx.sty.ltxml:1610-1624 sets `detect-family`, `detect-mode`, `detect-shape`, `detect-weight`
+(and `detect-italic`) on by default and never reads them: a number is always upright medium roman, so under
+`\sisetup{detect-weight}` a `\bfseries` table cell or `{\bfseries\num{2.5}}` loses its bold.
+**Rust behavior**: siunitx v3's own keys, siunitx_sty.rs `six_number_font_flags` / `\lx@six@font`: in math (the default
+`mode`) `text-series-to-math` makes a bold text series a bold number (siunitx.sty:5180-5193, `\mathversion{bold}`) and
+`text-family-to-math` a sans or typewriter family its alphabet (:5262-5272); printed in text (`mode=text`, or `match`
+outside math) each `reset-text-*` false keeps its axis (:5355-5370). The deprecated `detect-*` keys set them, value unread
+(:8532-8592: `detect-weight=false` sets them too). The text font is the one the number's math began in (`savedfont`),
+set on the number by a bounded constructor that reverts to the number, so `tex=` is unchanged. siunitx's defaults
+(:5574-5582) reset every axis: no number changes without a key. Applied to `\num`, `\tablenum`, the number of `\SI`/`\qty`
+and `S` cells. Not yet applied (row R SIXFONTLIST): the unit of `\SI`/`\qty` under `mode=text` (pdflatex bolds the "m"
+there; in the default math mode it stays medium), `\SIlist`/`\SIrange` and `\ang` (pdflatex bolds every number),
+`\numlist`/`\numrange` (pdflatex bolds some items: 1 and 3 of `\numlist{1;2;3}`, 4 of `\numrange{4}{5}`).
+**Why**: bold best results in `S` tables are the common use (2402.01753, `detect-weight, mode=text`: 8 bold numbers;
+41 of 1,311 siunitx papers in a 30k census sample set `detect-weight`/`detect-all` and bold a cell). **Guard**
+`perfect_kernel_batchregtaila::siunitx_detect_keys_carry_the_text_font_onto_a_number` (repro
+`package-bindings/siunitx_detect_font_onto_number`).

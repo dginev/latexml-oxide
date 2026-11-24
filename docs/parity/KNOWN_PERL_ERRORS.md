@@ -5866,15 +5866,18 @@ tikz-shields). Rust tracks brace depth for the `{` delimiter only. Guard:
 
 ## 139. `\centering`/`\raggedright`/`\raggedleft` are constructors, so expl3 V-expansion `\the`s them (Rust fixes)
 
-latex.ltx:16419-16433 defines the three as macros; the bindings (pool:1237-1240,
-Rust likewise) are non-expandable constructors, and expl3's
+latex.ltx:15409-15423 (TL 2025) defines the three as robust macros (`\DeclareRobustCommand`); the bindings
+(pool:1237-1240, Rust likewise) are non-expandable constructors, and expl3's
 `\__exp_eval_register:N` (expl3-code.tex:2507-2517 `\exp_after:wN\if_meaning:w
 \exp_not:N #1 #1`) then takes a `\let\raggedsignature=\centering` (DIN.lco:130)
 for a register and applies `\tex_the:D` — scrlttr2.cls:5095 `\closing`'s
 `\tl_if_in:nVTF {…} \raggedsignature`: "You can't use \raggedsignature after
 \the" (bfh-ci letter, SFSesim, makelabels ×2, scrlttr2copy). Rust: the three
-are macros over `\lx@do@…` constructors. Guard:
-`perfect_kernel_batch54::centering_is_expandable_for_expl3_v_expansion`.
+are robust macros over `\lx@do@…` constructors: an alignment cell's peek for `\omit` (tex.web §785/§791) stops at
+their `\protect`, so a siunitx `S` cell reads `\centering` whole (a plain macro left `\let\\\@normalcr` there, whose
+`\\` the cell's read ended the row at: 2110.03080, 2203.16677). Guards:
+`perfect_kernel_batch54::centering_is_expandable_for_expl3_v_expansion`,
+`perfect_kernel_batchregtaila::siunitx_s_cell_with_centering`.
 
 ## 140. `\index` re-tokenizes an UnTeX string that glues a control word to a following non-letter (Rust fixes)
 
@@ -22617,6 +22620,22 @@ Perl (same host, `latexmlc --nocomments`): `<part xml:id="Pt2">` holds `Ch2`, "C
 Rust (OXIDIZED_DESIGN_DIVERGENCES #1147): the bindings' `\backmatter` closes the part and chapter. Guard
 `perfect_kernel_batchbackmatter::book_backmatter_closes_the_last_part`.
 
+## 1321. Perl sizes `\mathchoice` as the sum of its four branches
+
+TeX_Math.pool.ltxml:934-942 digests all four arguments (as TeX does) but gives the constructor no sizer, so its box is
+measured with every branch in it; TeX keeps only the current style's (tex.web §731). Minimal trigger:
+
+```tex
+\documentclass{article}
+\begin{document}
+\setbox0\hbox{$\mathchoice{x}{x}{x}{x}$}\the\wd0
+\end{document}
+```
+
+pdflatex: 5.71527pt; Perl (same host): 22.86108pt. Latent in Perl's own bindings (its xy binding never measures a node);
+an xy-pic node or a numprint phantom holding one is too wide. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1152). Guard
+`perfect_kernel_batchregtaila::mathchoice_sizes_only_its_style_branch`.
+
 ## 1323. Perl keeps the braces of a braced file name
 
 latex_constructs.pool.ltxml:4233 `\lx@latex@input` (`Input(Expand($_[1]))`) and :4246-4252 `\include` (`ToString($path)`)
@@ -22672,3 +22691,26 @@ pdflatex prints "Fig. 1: Text."; Perl 0.8.8 (same host): `Error:recursion:\fnum@
 `\item[\fnum@fc]` runs to the timeout); the Rust port looped to `Fatal:Timeout:Recursion`. Fixed in Rust:
 `counter::dialect::define_item_fnum` keeps the author's meaning as `\lx@author@fnum@<counter>` and the label calls it.
 Witness cond-mat9505034; guard `perfect_kernel_batchregtailb::list_label_is_the_authors_fnum`.
+
+## 1326. Perl's siunitx `S` cell reads `\pm` as the picometre
+
+siunitx.sty.ltxml:1401-1405 `\lx@si@column@prep` enables the unit macros for every `S` and `s` cell, and siunitx's
+abbreviation `\pm` is `\pico\metre` (siunitx.sty:8279, a unit only inside a unit argument); the number parse meets the
+unit, not the uncertainty sign. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage{siunitx}
+\begin{document}
+\begin{tabular}{S}
+1.2 \pm 0.3 \\
+\pm 0.5 \\
+\end{tabular}
+\end{document}
+```
+
+pdflatex: "1.2(3)", "±0.5"; Perl (same host): "1.2 p m 0.3" (only "1.2" a formula) and "p m 0.5", with a Warning
+`\mathrm should only appear in math mode` per letter. Fixed in Rust:
+`\lx@SI@column@parse` lets the `input-protect-tokens` be themselves again before reading the cell, as `\num` does
+(siunitx_sty.rs `six_protect_input_tokens`). Guard `perfect_kernel_batchregtaila::siunitx_s_cell_plus_minus_is_the_sign`
+(repro `package-bindings/siunitx_s_cell_plus_minus`).
