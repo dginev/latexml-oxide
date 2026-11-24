@@ -80,10 +80,11 @@ struct InFlight {
 /// Ctrl+C and, on Unix, SIGTERM and SIGHUP (on Windows, Ctrl+Break and closing the console). For a
 /// front end its user interrupts (the `latexml_oxide` CLI's conversions); an embedder that handles
 /// signals itself leaves it off. The handler is installed when the process starts its first build,
-/// so a process that builds nothing keeps its default interrupt; one that builds exits with status
-/// 130 on an interrupt from then on. A process that ignores or handles any of these signals
-/// already (`nohup`, a shell's background job) keeps them as they are, and an interrupted build
-/// there counts as before.
+/// so a process that builds nothing keeps its default interrupt. One that builds keeps the handler
+/// to its end: a later SIGTERM or SIGHUP ends it with status 130, not by the signal, since neither
+/// ctrlc nor a safe `signal`/`sigaction` can put the default action back. A process that ignores or
+/// handles any of these signals already (`nohup`, a shell's background job) keeps them as they are,
+/// and an interrupted build there counts as before.
 pub fn cancel_builds_on_interrupt() { CANCEL_ON_INTERRUPT.store(true, Ordering::Release); }
 
 /// Installs, once per process, the interrupt handler [`cancel_builds_on_interrupt`] asks for.
@@ -97,18 +98,27 @@ fn install_interrupt_handler() {
       let mut slot = IN_FLIGHT.lock().unwrap_or_else(PoisonError::into_inner);
       if let Some(build) = slot.take() {
         undo(build);
-        eprintln!(
+        note(format_args!(
           "\n[format_dumps] interrupted: the format build was cancelled; the next conversion builds it again"
-        );
+        ));
       }
-      std::process::exit(INTERRUPTED);
+      // `_exit`: the build's thread still runs, and `exit` would run libxml2's destructor under it (#973). The
+      // note above is written (stderr is unbuffered) and the undo is on disk.
+      latexml_core::watchdog::exit_now(INTERRUPTED);
     });
     if let Err(e @ ctrlc::Error::System(_)) = installed {
-      eprintln!(
+      note(format_args!(
         "[format_dumps] cannot take the interrupt ({e}): a build interrupted now counts as one that failed"
-      );
+      ));
     }
   });
+}
+
+/// A line on stderr, unless the console is silenced (`--quiet`: Perl prints nothing there below verbosity 0).
+fn note(args: std::fmt::Arguments) {
+  if latexml_core::util::logger::stderr_shows_info() {
+    eprintln!("{args}");
+  }
 }
 
 /// Undoes the format build this process is running, if any (the interrupt handler's undo, without
@@ -145,10 +155,10 @@ fn set_in_flight(build: Option<InFlight>) {
 /// Ensures each format has a dump built from this process's TeX tree, building any that has none
 /// into the cache. Once per process, before the first session loads a format; nothing to do without
 /// a TeX tree, under `LATEXML_NODUMP`, or while a format is being built (`--init`, or the thread
-/// building one here). A format that cannot be built is reported once, on stderr (and as a warning
-/// in each conversion's log, `converter::note_format_build_failure`), and loads from the engine's
-/// definitions. A build changes the process's working directory while it runs (see `build`), so it
-/// belongs before the process converts anything.
+/// building one here). A format that cannot be built is reported once, on stderr unless `--quiet`
+/// silences it (and as a warning in each conversion's log, `converter::note_format_build_failure`),
+/// and loads from the engine's definitions. A build changes the process's working directory while
+/// it runs (see `build`), so it belongs before the process converts anything.
 pub fn ensure_format_dumps() {
   if dump_paths::building_format() {
     return;
@@ -156,9 +166,9 @@ pub fn ensure_format_dumps() {
   static ENSURED: OnceLock<()> = OnceLock::new();
   ENSURED.get_or_init(|| {
     if let Err(reason) = ensure() {
-      eprintln!(
+      note(format_args!(
         "[format_dumps] {reason}: the format loads from the engine's own definitions instead of a dump"
-      );
+      ));
       dump_paths::set_format_build_failure(reason);
     }
   });
@@ -284,31 +294,37 @@ fn attempt(
   if failed >= MAX_ATTEMPTS {
     return Err(mark_failed(dir, kind, &last_reason));
   }
-  // What an interrupt undoes, recorded before the note it undoes is written.
-  set_in_flight(Some(InFlight {
-    attempts: kind_file(dir, ATTEMPTS, kind),
-    before:   attempts_text(dir, kind),
-    partial:  partial_dump(dir, kind, year),
-  }));
-  if let Err(reason) = note_attempt(
-    dir,
-    kind,
-    failed + 1,
-    &format!("the {kind} format build died with its process"),
-  ) {
-    set_in_flight(None);
-    return Err(reason);
-  }
+  // Installed before the build leaves anything to undo, so an interrupt always finds what it left.
   if CANCEL_ON_INTERRUPT.load(Ordering::Acquire) {
     install_interrupt_handler();
   }
-  eprintln!(
+  {
+    // What an interrupt undoes is recorded and its note written under one lock: an interrupt
+    // meanwhile waits, then undoes both (it could otherwise undo before the note was written).
+    let mut slot = IN_FLIGHT.lock().unwrap_or_else(PoisonError::into_inner);
+    *slot = Some(InFlight {
+      attempts: kind_file(dir, ATTEMPTS, kind),
+      before:   attempts_text(dir, kind),
+      partial:  partial_dump(dir, kind, year),
+    });
+    if let Err(reason) = note_attempt(
+      dir,
+      kind,
+      failed + 1,
+      &format!("the {kind} format build died with its process"),
+    ) {
+      *slot = None;
+      return Err(reason);
+    }
+  }
+  note(format_args!(
     "[format_dumps] no {kind} dump matches this TeX tree; building one into {} (once for this tree; later \
      conversions reuse it)",
     dir.display()
-  );
+  ));
   let built = build(kind, year, dir);
-  // The build has ended: what follows records its outcome, which an interrupt no longer undoes.
+  // The build has ended (a published dump cleared the record as it was published, `publish`): what
+  // follows records its outcome, which an interrupt no longer undoes.
   set_in_flight(None);
   let built = built.and_then(|()| {
     if use_cached(kind) {
@@ -559,21 +575,32 @@ fn build(kind: &'static str, year: u32, dir: &Path) -> Result<(), String> {
     .map_err(|_| format!("the {kind} format build panicked"))
     .and_then(|built| built)
     .and_then(|()| returned.map_err(|e| format!("cannot return to {}: {e}", previous.display())))
-    .and_then(|()| {
-      publish_read_only(&partial)
-        .map_err(|e| format!("cannot set the {kind} dump's permissions: {e}"))?;
-      std::fs::rename(&partial, &dest)
-        .map_err(|e| format!("cannot move the {kind} dump to {}: {e}", dest.display()))
-    });
+    .and_then(|()| publish(kind, &partial, &dest));
   if built.is_err() {
     let _ = std::fs::remove_file(&partial);
   }
   built
 }
 
+/// Publishes the finished `kind` dump at `partial` as `dest`. The build's [`IN_FLIGHT`] record is
+/// cleared under the same lock as the rename: an interrupt in between would put the attempt note
+/// from before the build back beside the finished dump; one now waits, and finds nothing to undo.
+fn publish(kind: &str, partial: &Path, dest: &Path) -> Result<(), String> {
+  publish_read_only(partial)
+    .map_err(|e| format!("cannot set the {kind} dump's permissions: {e}"))?;
+  let mut slot = IN_FLIGHT.lock().unwrap_or_else(PoisonError::into_inner);
+  std::fs::rename(partial, dest)
+    .map_err(|e| format!("cannot move the {kind} dump to {}: {e}", dest.display()))?;
+  *slot = None;
+  Ok(())
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// The tests share the process's [`IN_FLIGHT`] record: one at a time under `cargo test`.
+  static SERIAL: Mutex<()> = Mutex::new(());
 
   /// An interrupted build is undone (issue 988): its attempt note goes back to what it held before
   /// the build (none, or the count of earlier builds that did not succeed) and its partial dump is
@@ -581,6 +608,7 @@ mod tests {
   /// towards marking it failed.
   #[test]
   fn an_interrupted_build_is_undone() {
+    let _serial = SERIAL.lock().unwrap_or_else(PoisonError::into_inner);
     let dir = tempfile::tempdir().expect("create tempdir");
     let dir = dir.path();
     for before in [None, Some("1\tbuilding the latex format logged 3 error(s)")] {
@@ -608,5 +636,38 @@ mod tests {
       assert!(!partial.exists(), "the partial dump stayed");
       assert!(!cancel_in_flight_build(), "a build is undone once");
     }
+  }
+
+  /// A published dump is no longer the build's to undo: an interrupt after the rename used to put
+  /// the attempt note from before the build back beside the finished dump (CLIHARD 1b).
+  #[test]
+  fn a_published_build_is_not_undone() {
+    let _serial = SERIAL.lock().unwrap_or_else(PoisonError::into_inner);
+    let dir = tempfile::tempdir().expect("create tempdir");
+    let dir = dir.path();
+    let before = "1\tbuilding the latex format logged 3 error(s)";
+    std::fs::write(kind_file(dir, ATTEMPTS, "latex"), before).expect("write the earlier note");
+    note_attempt(
+      dir,
+      "latex",
+      2,
+      "the latex format build died with its process",
+    )
+    .expect("note the attempt");
+    let partial = partial_dump(dir, "latex", 2025);
+    std::fs::write(&partial, "a dump").expect("write the dump");
+    set_in_flight(Some(InFlight {
+      attempts: kind_file(dir, ATTEMPTS, "latex"),
+      before:   Some(before.to_string()),
+      partial:  partial.clone(),
+    }));
+    let dest = dir.join(dump_paths::dump_filename("latex", 2025));
+    publish("latex", &partial, &dest).expect("publish");
+    assert!(!cancel_in_flight_build(), "the published build was undone");
+    assert_eq!(
+      attempts_text(dir, "latex").as_deref(),
+      Some("2\tthe latex format build died with its process")
+    );
+    assert!(dest.is_file());
   }
 }

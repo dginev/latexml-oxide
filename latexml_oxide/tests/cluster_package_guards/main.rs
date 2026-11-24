@@ -435,6 +435,8 @@ mod perfect_kernel_batchcl6;
 mod perfect_kernel_batchcl7;
 mod perfect_kernel_batchcl8;
 mod perfect_kernel_batchcl9;
+/// CLIHARD: the front end's early warnings reach the log; `-q` prints nothing on stderr (Perl `_printline`).
+mod perfect_kernel_batchclihard;
 /// CLIWIRE: the CLI options as latexmlc applies them; OD #1158.
 mod perfect_kernel_batchcliwire;
 /// CLUSTFIX: run-397 binding gaps — pasj00 without its class, the 1998 aipproc, `\cite*` under the lock, elsart's switches.

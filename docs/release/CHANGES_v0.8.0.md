@@ -45,6 +45,25 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### After 0.8.0-rc2
 
+  - **`-q` prints nothing on stderr, as Perl's `--quiet` does.** Below verbosity 0 latexmlc prints nothing on
+    stderr, Errors included (Common/Error.pm `_printline`); `-q` showed Warnings, Errors, "Log written to" and the
+    verdict. Now `-q` and `-qq` print nothing there, the split render's workers included; the `.latexml.log` keeps
+    everything, and the exit status and an archive's `status` are unchanged. Guards
+    `perfect_kernel_batchclihard::quiet_prints_nothing_on_stderr`, `quiet_mode_keeps_error_and_fatal_in_the_log`,
+    `perfect_kernel_batchcliwire::quiet_silences_the_render_workers`.
+  - **The command line's own warnings reach the log.** The Warnings for `--max-memory=0` and for a `--splitat` level
+    outside Perl's list were raised after the session had begun its report and before its log was open, so they
+    reached stderr and the status but not `<name>.latexml.log` or the log packed into a `.zip`. They are now held
+    for the session, as an archive's are, and logged once: by the session in a `.tex` run, by post-processing for an
+    XML input (`--whatsin=xml`), which has no session. Guard
+    `perfect_kernel_batchclihard::early_option_warnings_reach_the_log`.
+  - **An interrupted format build is undone in every window** (issue 988, after #990). The interrupt handler is
+    installed before the build writes anything, the attempt note is written and the finished dump published under
+    the lock the handler takes, so an interrupt can no longer undo ahead of the note or put the old note back beside
+    a published dump; and the handler ends the process with `_exit`, not running libxml2's destructor under the
+    still-running build thread (#973). A process that built a format still exits with status 130 on a later SIGTERM
+    or SIGHUP rather than by the signal. OXIDIZED_DESIGN_DIVERGENCES #1148; guard
+    `format_dumps::tests::a_published_build_is_not_undone`.
   - **Security: `cortex_worker` never loads a runtime `.rhai` binding.** A worker built with `--features cortex`
     alone keeps the default `runtime-bindings`, so a `<pkg>.sty.rhai` shipped inside an arXiv source loaded on
     `\usepackage{pkg}` and its `Command(..).output()` ran any program. The worker now forbids runtime bindings

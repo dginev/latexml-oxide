@@ -338,6 +338,8 @@ pub fn run_post_processing_from_file_logged(path: &str, opts: &PostOptions) -> P
 
 fn run_post_processing_impl_logged(input: PostInput, opts: &PostOptions) -> PostOutcome {
   latexml_core::util::logger::bind_log();
+  // An XML input has no core session to log what the front end held for it (`warn_at_session_start`).
+  latexml_core::common::error::log_session_warnings();
   let mut pages = Vec::new();
   let html = run_post_processing_impl(input, opts, &mut pages);
   let log = latexml_core::util::logger::flush_log();
@@ -788,6 +790,7 @@ fn stage_handoff(xml: &str, opts: &PostOptions) -> Option<StagedHandoff> {
 pub fn run_post_processing_owned_logged(xml: String, opts: &PostOptions) -> PostOutcome {
   // Bound first: the staging Info belongs to the post log.
   latexml_core::util::logger::bind_log();
+  latexml_core::common::error::log_session_warnings();
   latexml_core::common::arena::take_overflow_interns();
   let staged = if handoff_needs_file(&xml, opts) {
     stage_handoff(&xml, opts)
@@ -815,6 +818,7 @@ pub fn run_post_processing_owned_logged(xml: String, opts: &PostOptions) -> Post
 /// `LATEXML_POST_STREAM_THRESHOLD` above its size) is read back and post-processed as that `String` would be.
 pub fn run_post_processing_staged_logged(staged: StagedHandoff, opts: &PostOptions) -> PostOutcome {
   latexml_core::util::logger::bind_log();
+  latexml_core::common::error::log_session_warnings();
   latexml_core::common::arena::take_overflow_interns();
   let len = std::fs::metadata(&staged.path).map_or(0, |m| m.len());
   let mut pages = Vec::new();

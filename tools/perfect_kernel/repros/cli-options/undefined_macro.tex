@@ -1,0 +1,10 @@
+% witness: CLI review 2026-11-24 (CLIHARD): -q printed the Error, "Log written to" and the verdict on stderr
+% oracle:  pdflatex: "! Undefined control sequence." (the one error the shape is for); "Hello world."
+% engines: Perl 0.8.8 latexmlc same host: --quiet prints nothing on stderr (Common/Error.pm _printline,
+%          $VERBOSITY >= 0), exit 0, the .latexml.log keeps Error:undefined:\undefinedmacro and Status:conversion:2
+% expect:  -q / -qq: empty stderr; the log holds the one Error; exit 0; a .zip's status is Status:conversion:2
+% status:  RED (c53f1ad424a) -> GREEN (CLIHARD)
+\documentclass{article}
+\begin{document}
+Hello \undefinedmacro{} world.
+\end{document}

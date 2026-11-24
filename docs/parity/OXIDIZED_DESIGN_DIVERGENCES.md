@@ -24061,9 +24061,15 @@ TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hi
   interrupts are Ctrl+C, SIGTERM and SIGHUP on Unix, and Ctrl+C, Ctrl+Break and closing the console on Windows (the
   `ctrlc` crate, `termination`). The handler is installed when the first build starts, so a process that builds
   nothing keeps its default interrupt; a process that already ignores or handles one of these signals (`nohup`, a
-  shell's background job) keeps them (`ctrlc::try_set_handler`). The handler keeps the build's record locked until the
-  process ends, so the build cannot record an outcome after the undo, and the record is set before the attempt note
-  is written. Embedders (`cortex_worker`, and the CLI's own `--server` LSP mode, whose forked children are ended by
+  shell's background job) keeps them (`ctrlc::try_set_handler`). The handler is installed before the build writes
+  anything; the record is set and the attempt note written under one lock, and the finished dump is published
+  (`format_dumps::publish`, its rename) and the record cleared under it too, so an interrupt in either window waits
+  and then undoes both or nothing (before, it could undo ahead of the note, or put the old note back beside a
+  published dump). The handler keeps the record locked until the process ends, so the build cannot record an outcome
+  after the undo, and ends it with `watchdog::exit_now` (`_exit`): the build's thread still runs, and `exit` would run
+  libxml2's destructor under it (#973). The handler stays installed after the build, so a later SIGTERM or SIGHUP
+  ends the process with status 130 rather than by the signal: ctrlc 3.5 cannot uninstall it, and restoring the
+  default action needs an `unsafe` `sigaction`. Under `--quiet` its notes are not printed. Embedders (`cortex_worker`, and the CLI's own `--server` LSP mode, whose forked children are ended by
   SIGTERM) keep their own signal handling and count an interrupted build as before. The DEGRADED banner
   (`dump_paths::warn_degraded_no_dump`) now says why no dump was built (once the format is marked failed, that names
   the mark to remove) instead of pointing to `tools/make_formats.sh`, which an installed binary does not have.
@@ -24073,7 +24079,7 @@ TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hi
   error (`\immediate\write\@unused{}`), so the reload's 5,015 dropped errors (TL 2025) printed 2,415 empty lines on
   the terminal, scrolling away why the run had no dump.
 
-**Guards**: `format_dumps::tests::an_interrupted_build_is_undone`;
+**Guards**: `format_dumps::tests::{an_interrupted_build_is_undone, a_published_build_is_not_undone}`;
 `dump_gate_init::nodump_latex_branch_converts_healthily` (no run of more than two blank lines). The interrupt itself
 is not tested, as its timing would make the test flaky; it was checked by hand (Ctrl+C during a first run's build
 leaves no `.attempts`, `.failed` or `.partial` file, and exits with status 130).
@@ -24197,7 +24203,9 @@ latexmlc 0.8.8 on the same host (CLI audit 2026-11-24):
   `tokenlimit=999999999`, 20 times below the scaled default).
 - `--verbose`/`--quiet` count (Config.pm L53-54), and the parallel page render's workers take the parent's
   verbosity, logging at no less than Info: their records reach the log whole, as the serial render's do, and the
-  console shows them through the parent's gate (`render_workers::stderr_share`). A worker line that opens no record
+  console shows them through the parent's gate (`render_workers::stderr_share`). Below verbosity 0 nothing is
+  printed on stderr, Errors, the verdict and "Log written to" included, as in Perl (Common/Error.pm `_printline`
+  and `NoteSTDERR`: `$VERBOSITY >= 0`); the log keeps its Info floor (CLIHARD; `-q` showed Warnings and Errors). A worker line that opens no record
   (a progress note, or an unindented line of a multi-line message) is shown when its record or a note would be.
 - `--splitat` takes a prefix of `part, chapter, section, subsection, subsubsection`, the shallowest (`_checkOptionValue`,
   Config.pm L604-609, whose hash order leaves `sub` to chance), and is checked only when splitting; another element
@@ -24213,7 +24221,8 @@ latexmlc 0.8.8 on the same host (CLI audit 2026-11-24):
   localhost), and `--profile` is `ar5iv` or `generic`.
 
 **Guards**: `perfect_kernel_batchcliwire` (repros `tools/perfect_kernel/repros/cli-options/`), the binaries' unit tests
-`verbose_and_quiet_are_counted` and `cli_tests::standalone_files_and_the_profile_are_checked`.
+`verbose_and_quiet_are_counted` and `cli_tests::standalone_files_and_the_profile_are_checked`;
+`perfect_kernel_batchclihard::quiet_prints_nothing_on_stderr`.
 
 ### 1159. `latexml_oxide` defaults to a 60-second timeout and no timestamp (Perl: 600 s, the conversion's time) (CLIWIRE)
 

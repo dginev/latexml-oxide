@@ -178,7 +178,7 @@ pub struct RenderManifest {
   /// holds none (MathML's `<mpadded>` widths read `NOMINAL_FONT_SIZE`).
   #[serde(default)]
   pub post_values:               latexml_core::PostStateValues,
-  /// The parent's stderr verbosity (`LevelFilter` name: `WARN` under `--quiet`, `DEBUG` under `--verbose`). The
+  /// The parent's stderr verbosity (`LevelFilter` name: `OFF` under `--quiet`, `DEBUG` under `--verbose`). The
   /// worker logs at it, never below `Info`, so its folded log is the serial render's.
   #[serde(default)]
   pub log_level:                 String,
@@ -835,7 +835,7 @@ fn print_status_report(written: &[String], discard: bool) -> i32 {
 }
 
 /// The lines of a worker's log the parent's stderr shows: its records at the parent's verbosity (`--quiet` hides
-/// `Info`, only `--verbose` shows `Debug`), each with its continuation lines; `Error`/`Fatal` always.
+/// every one, `Error`/`Fatal` included; only `--verbose` shows `Debug`), each with its continuation lines.
 fn stderr_share(log: &str) -> String {
   stderr_share_at(log, latexml_core::util::logger::stderr_admits)
 }
@@ -861,7 +861,7 @@ fn stderr_share_at(log: &str, admits: impl Fn(log::Level) -> bool) -> String {
     .find_map(|(head, level)| line.starts_with(head).then_some(level));
     match level {
       Some(level) => {
-        admitted = level == Level::Error || admits(level);
+        admitted = admits(level);
         record_admitted = admitted;
       },
       // An indented line (`\tat …`, a blank line) goes with the line before it.
@@ -1099,8 +1099,8 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
 mod tests {
   use super::*;
 
-  /// Under `--quiet` a Warning keeps its unindented continuation lines (a multi-line message); the notes after an
-  /// Info record stay hidden. The default verbosity shows every line.
+  /// At the `Warn` level a Warning keeps its unindented continuation lines (a multi-line message); the notes after an
+  /// Info record stay hidden. The default verbosity shows every line, `--quiet` none (Perl `$VERBOSITY < 0`).
   #[test]
   fn stderr_share_keeps_a_records_continuation_lines() {
     let log = "note before\nInfo:a:x one\nMathML[Presentation] S1.html processing\nWarning:b:y first line\nsecond \
@@ -1110,6 +1110,7 @@ mod tests {
       "Warning:b:y first line\nsecond line\n\tat loc\nError:d:w bad\n"
     );
     assert_eq!(stderr_share_at(log, |level| level <= log::Level::Info), log);
+    assert_eq!(stderr_share_at(log, |_| false), "");
   }
 
   #[test]

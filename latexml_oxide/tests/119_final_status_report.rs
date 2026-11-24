@@ -220,16 +220,13 @@ fn raw_log_warnings_register_in_the_final_verdict() {
   );
 }
 
-/// Error and Fatal messages are the success-rate signal — they must reach the
-/// log AND stderr at ANY verbosity (user directive 2026-08-02). The quietest CLI
-/// mapping sets the STDERR level to `Warn`, and the logger always echoes
-/// `Error`/`Fatal` records to stderr regardless of the console level
-/// (`logger.rs`: `level <= Error || stderr_admits(level)`); this pins that
-/// contract — if someone dropped the always-emit-errors clause, the Fatal line or
-/// the verdict would vanish and this test names it. (`-q` is a plain bool flag —
-/// quietest mode.)
+/// Error and Fatal messages are the success-rate signal: they reach the log at
+/// any verbosity (user directive 2026-08-02). Under `-q` stderr shows nothing,
+/// Errors, the Fatal and the verdict included, as Perl's latexmlc (`_printline`
+/// and `NoteSTDERR` print at `$VERBOSITY >= 0`; DG ruling 2026-11-24, CLIHARD);
+/// the exit status and the default `.latexml.log` say it.
 #[test]
-fn quiet_mode_still_reports_error_and_fatal() {
+fn quiet_mode_keeps_error_and_fatal_in_the_log() {
   let workdir = tempfile::tempdir().expect("tempdir");
   let tex = fatal_fixture(workdir.path());
   let (stderr, code) = run(
@@ -237,20 +234,12 @@ fn quiet_mode_still_reports_error_and_fatal() {
     workdir.path(),
   );
   assert_eq!(code, 1, "a fatal conversion must exit 1 even at -q");
-  assert!(
-    stderr.contains("Fatal:TooManyErrors"),
-    "the Fatal line must print at any verbosity — stderr tail:\n{}",
-    stderr.lines().rev().take(6).collect::<Vec<_>>().join("\n")
-  );
-  assert!(
-    stderr.contains("Error:undefined:"),
-    "Error lines must print at any verbosity"
-  );
-  let (_, very_last) = last_lines(&stderr);
-  assert!(
-    very_last.contains("Conversion failed"),
-    "the failure verdict stays the last line at -q, got: {very_last}"
-  );
+  assert_eq!(stderr, "", "-q prints nothing on stderr");
+  let log =
+    std::fs::read_to_string(workdir.path().join("toomany.latexml.log")).expect("the default log");
+  assert!(log.contains("Fatal:TooManyErrors"), "{log}");
+  assert!(log.contains("Error:undefined:"), "{log}");
+  assert_eq!(log.lines().last(), Some("Status:conversion:3"), "{log}");
 }
 
 /// Perl latexmlc parity (bin/latexmlc L103-120, reported on the rc5 witness
