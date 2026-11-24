@@ -1041,6 +1041,17 @@ Rules that keep this file honest and mergeable:
     (b) A `(year)` label with no closing `)` at depth 0 repeats the year text as the full authors (`rest_idx` stays after the
     `(`); Perl writes no full authors there. Read from the code, not probed. (c) `[{Maes}(1995)]` keeps its braces on the
     author and year, where TeX strips them; nothing visible; 1
+  - SVGCOLLAPSE — (DG 2026-11-24: performance, "keep or improve rc2's speed") `collapse_svg_group`
+    (`latexml_engine/src/tex_box.rs:525`, `Tag!("svg:g", after_close)` :1202) is quadratic in the depth of a transient
+    `svg:g` chain. On arXiv 2605.19500 it makes 46.8 M node moves through a chain 9,642 deep (the final XML is 34 deep),
+    about 46.5 M of them in Step 3 (`add_next_sibling` of every already-hoisted trailing group at every level), plus
+    per-child attribute `HashMap`s. That cost is inside rc2's 916 G too, so fixing it can beat rc2 on heavy TikZ papers.
+    Design (Gemini Neon's sketch, GEMINI.md 2026-11-24 13:21; check it against the code first): collapse once at the
+    outermost `svg:g` close; the 11 COLLAPSIBLE keys as a bitmask read once per node; a post-order pass whose hoisted
+    leading and trailing runs move in O(1) while the masks allow, materialized in the DOM once. Verify the premise that
+    nothing between an inner and the outermost close reads the closed groups (`record_svg_ids` at the `svg:svg` close,
+    the `svg:foreignObject` cleanup at :1400). Bar: byte-identical output on every pgf/TikZ witness, plus the
+    instructions:u gain on 2605.19500 and a heavy-picture population; 3
 
 ---
 
