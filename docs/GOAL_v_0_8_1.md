@@ -1,6 +1,8 @@
 # Goal: towards v0.8.1
 
-**The assignment (DG 2026-11-23).** Solve all planned tasks in [`SYNC_STATUS.md`](SYNC_STATUS.md). Land the work
+**The assignment (DG 2026-11-23).** Solve all planned tasks in [`SYNC_STATUS.md`](SYNC_STATUS.md). The arXiv long tail —
+tasks affecting fewer than 200 articles, or synthetic-only — is out of scope: it lives in [`LONG_TAIL.md`](LONG_TAIL.md)
+for v0.8.2 and later (DG 2026-11-23). Land the work
 on the integration branch `int/towards_v0_8_1`. Then work through the open user-reported issues and pull requests.
 Work carefully and honestly: every claim backed by a run, every miss named.
 

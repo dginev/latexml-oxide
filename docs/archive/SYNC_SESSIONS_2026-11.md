@@ -2704,3 +2704,24 @@ Verbatim from `docs/SYNC_STATUS.md` row R when it became the post-merge worklist
   #1327; 1210.5701 E101 F1 → 0, 2503.14426 15 → 0 errors; xy `*[o]{\phantom{s}}`). A/B: 100 IEEEtran + 60 `\ifpdf`
   papers byte-identical; 388 phantom/xy/REGTAIL papers 27 changed, 0 worse (17 geometry-only, toward pdflatex); 30
   random controls identical. Guards `perfect_kernel_batchregtailc::*`. Residuals: row R ROUTESCAN, BOXSIZEPARBOX.
+- Done items lifted out of row R on 2026-11-23 (the long-tail split), verbatim:
+  - NOTCANCEL — DONE (fix/not-cancel-move): math_common's `\not` rewrite MOVES its operand on both paths (Perl `appendChild`, `math_common.pool.ltxml:341/:354`) and gives the cancel `XMApp` the `\not`'s box and font (Perl `_box`): nested `\not` at any depth `≠`, `$\not\frac{\not\sqrt{a\not=b}}{c}$` 70 %, `\not\not=` `≠`, `\not\not\in` `∉`; the double registration stays, its second pass idle; arXiv 1009.4552, 1611.10101, 2001.07246, 1701.02906, 2209.02767 (A/B 5 of 314 changed, all toward Perl); guards `perfect_kernel_batchnotcancel::*`; 0
+  - REGFIX — DONE (int/regfix): the cutoff 999af99497d (fleet rebuilt, dumps on the distro TL) reran 2605 (run 377: F 8, E 881 vs
+    run 375 9/875) and 2606 (run 378: F 13, E 873 vs run 376 15/863); no new Fatal, 27 papers newly in Error, all from PRs merged
+    2026-11-14/15 (`agent_reports/report_CUTSBX_2026-11-16.md`). Fixed: (A, 17; F, 1) bindings define what their files define
+    (`\@enhook`, `\TPT@defaults`, `\ps@opening`, the acmart/elsarticle/REVTeX/amsaddr/icml lists) and print the lists their classes
+    print with the title page (`\lx@frontmatter@footnotes`, OD #1036; KNOWN_PERL_ERRORS #1283); pdfcomment's soulpos registers;
+    (D, 1) cleveref's first-aid `\ltx@label` repair gated on v0.21.4, amsmath's `\ltx@label` reset at begindocument/end (OD #1048;
+    2605.07565's silent key corruption); (B, 6) #866's rehearsal: a title-code command (klmm `\instref`) assigns in its own run
+    (mouth-depth aware), a paper's macro around it still declares the rest, declarations replay under the author markup, OmniBus's
+    `\orcid` bound (2606.13132's iD restored); (C, 1) the preamble walk moves a binding's lock to `\lx@onlypreamble@<name>` and back
+    (2606.22730's body `\renewcommand{\doi}`, OD #226); (E, 1) mhchem declines to its own output when a macro expands to a math shift.
+    Guards perfect_kernel_batchreg{bind,rehearse,chem}, error_boundary (REGLOCK rows).
+  - MUTOOLTMP — DONE (fix/mutool-page-svg): mutool's `%d` is its OUTPUT page counter, so every `\includegraphics[page=N≥2]` vector PDF fell to pdftocairo (a different intrinsic size from page 1) and left `.<stem>.<nanos>.mutool_svg1.svg` in the destination, hidden by the graphics cache on hits; the temp now lives in a private directory beside `dest`, and SVG cache keys are salted (`SVG_KEY_VERSION`) — guards `graphics::tests::vector_svg_of_page_two_is_page_two`, `graphics_cache::tests::svg_keys_are_salted_and_png_keys_are_not`; WISDOM #104; witnesses 2305.12780, 1906.10268, 2406.07459, 2406.14311, 1709.02311, 2512.04096 (its `.pdf_tex` overlay layers now align); 0
+  - RENDERPLATFORMS — DONE for 0.8.0-rc2 (2026-11-23, `release-platform-check.yml` run 45119655890): an 80-section
+    split document (`tools/render_platform_check.sh`) was converted on the published macOS arm64, macOS Intel and
+    Windows binaries three ways: with the automatic fleet (3/4/4 workers over 82 pages), serially, and with the fleet
+    again over its own output (Windows' `writer::Staged` renames onto existing files). All runs exited 0 with no
+    Error, the sites were byte-identical (84 files) and no spill or handoff file was left. Re-run the workflow on
+    every later RC. The fleet stays the default on every platform. Residual, unchanged: macOS has no RSS reading, so
+    a worker's watchdog memory share is not enforced there; 0
