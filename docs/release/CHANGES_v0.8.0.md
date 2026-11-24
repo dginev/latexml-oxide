@@ -45,12 +45,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### 0.8.0-rc3
 
-  - **natbib reads an apalike label `[Author, Year]` as author and year.** A numbers-mode label such as
-    `\bibitem[LIGO Scientific Collaboration, 2019]{x}` was split at the wrong comma: the year read "LIGO Scientific
-    Collaboration" and the label text spilled into the entry, printing ",," in citations (2,312 times in a 267-paper
-    A/B; 123 papers changed, all for the better). It now splits at the first ", ", as natbib's `\NAT@apalk` does, and
-    `\citename` does the same; the `(year)` split ignores a `(` inside braces. OXIDIZED_DESIGN_DIVERGENCES #1161,
-    KNOWN_PERL_ERRORS #1332; witness 2605.02429; residuals in row R NATBIBRES.
+  - **natbib reads an apalike label `[Author, Year]` as author and year.** A bare `\bibitem[Maes, 1995]{m}` label
+    printed "(Maes,, 1995)" and "Maes, (1995)", where pdflatex prints "(Maes, 1995)" and "Maes (1995)": the label is now
+    split at its first ", " outside braces, as natbib's `\NAT@apalk` does, and `\citename` the same way; the `(year)`
+    split ignores a `(` inside braces, which had given a numbers-mode label the year "LIGO Scientific Collaboration"
+    and spilled label text into the entry (2605.02429). A/B on 267 papers: 123 changed, all inside the bibitem tags
+    but that spill; Errors 118/118, Fatals 1/1; citations with ",," 2,312 → 0, "Name, (" 3,415 → 0, ", )" 140 → 0.
+    Witnesses 2505.11584 (37 "(Maes,, 1995)" → 0), 2605.20003, 2605.02429. OXIDIZED_DESIGN_DIVERGENCES #1161,
+    KNOWN_PERL_ERRORS #1332; residuals in row R NATBIBRES.
   - **`\backmatter` closes the open part and chapter.** In book, amsbook, svmult and svmono the back matter belongs to no
     part (book.cls:292-299), so the bibliography and index no longer nest in the last `ltx:part`: a split book's
     Bibliography/Index buttons appear on every page and `bib.html`'s title no longer ends "‣ Part II …". A/B on 73
