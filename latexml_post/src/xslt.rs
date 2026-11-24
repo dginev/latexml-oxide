@@ -153,28 +153,16 @@ mod max_depth_tests {
   fn with_fd2_captured<T>(f: impl FnOnce() -> T) -> (T, Option<String>) {
     use std::{
       io::{Read, Seek},
-      os::fd::AsRawFd,
+      os::fd::OwnedFd,
     };
-    /// Points fd 2 back at its saved copy when dropped — on a panic in `f` too.
-    struct Restore(std::ffi::c_int);
+    /// Points fd 2 back at its saved copy when dropped — on a panic in `f` too; the copy closes after.
+    struct Restore(OwnedFd);
     impl Drop for Restore {
-      fn drop(&mut self) {
-        // SAFETY: `self.0` is the `dup(2)` taken below, still open.
-        unsafe {
-          libc::dup2(self.0, 2);
-          libc::close(self.0);
-        }
-      }
+      fn drop(&mut self) { let _ = rustix::stdio::dup2_stderr(&self.0); }
     }
     let mut sink = tempfile::tempfile().expect("tempfile");
-    // SAFETY: plain descriptor calls on fd 2 and descriptors this function owns.
-    let saved = unsafe { libc::dup(2) };
-    assert!(saved >= 0, "dup(2)");
-    let restore = Restore(saved);
-    assert!(
-      unsafe { libc::dup2(sink.as_raw_fd(), 2) } >= 0,
-      "dup2 onto fd 2"
-    );
+    let restore = Restore(rustix::io::dup(std::io::stderr()).expect("dup(2)"));
+    rustix::stdio::dup2_stderr(&sink).expect("dup2 onto fd 2");
     let out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
     drop(restore);
     let mut text = String::new();
