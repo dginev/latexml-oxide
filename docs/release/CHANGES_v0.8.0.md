@@ -51,11 +51,14 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     (`converter::forbid_runtime_bindings`) before anything else, whatever its build features, so such a file is
     ignored as in a build without the feature, in the worker and in every child it spawns. The `latexml_oxide` CLI, the library and the LSP still load runtime bindings. Guards
     `cortex_worker_untrusted_bindings` (`--features cortex`) and `forbid_runtime_bindings`; docs/release/SAFETY.md.
-  - **rust-libxml 0.3.26** (from 0.3.24; both releases 2026-11-23): a wrapper of a node libxml2 freed reads as a null
-    node instead of pointing into freed memory, linking calls refuse a link that would double-free or loop, a
-    document's drop neutralises its wrappers, and strings with a NUL byte, over-long text and namespaces of another
-    document return errors instead of panicking or truncating. No C code changed (the vendored-native audit lists
-    both versions).
+  - **rust-libxml 0.3.27** (from 0.3.24; 0.3.25 and 0.3.26 2026-11-23, 0.3.27 2026-11-24): a wrapper of a node libxml2
+    freed reads as a null node instead of pointing into freed memory, linking calls refuse a link that would double-free
+    or loop, a document's drop neutralises its wrappers, and strings with a NUL byte, over-long text and namespaces of
+    another document return errors instead of panicking or truncating. 0.3.25's loop refusal walked from the insertion
+    point to the top of the tree on every link, which made a paper whose TikZ pictures nest groups deeply 2.1x slower
+    (arXiv 2605.19500, rc2's source: 916.6 G instructions before the refusal, 1,966 G with 0.3.26, 918 G with 0.3.27);
+    0.3.27 refuses the same links at about rc2's cost. No C code changed (the vendored-native audit lists every
+    version).
 
   - **Command-line options do what latexmlc's do.** `--documentid` names the document and prefixes its ids (it had
     no effect; latexml.sty's `\lxDocumentID` now names the root too). `--format=html` is html5, and `--format=xhtml`
