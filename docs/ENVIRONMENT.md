@@ -138,7 +138,9 @@ These replace any value of the same name in the worker's own environment. The wo
 |---|---|---|---|
 | `CORTEX_WORKER_THROTTLE_SECS` | seconds | 60 | How long an idle worker sleeps before asking the dispatcher for work again. |
 | `CORTEX_WORKER_IO_TIMEOUT_SECS` | seconds > 0 | 120 | How long a worker waits on a dead or wedged dispatcher before giving up that exchange. |
-| `CORTEX_HARNESS_RAM_HEADROOM_PCT` | percent, 10-100 | 85 | pericortex's worker-count clamp to RAM; `cortex_worker` never calls it, so it has no effect there (`--workers` and the memory governor size the fleet). | The Docker entrypoint reads `WORKERS` and
+| `CORTEX_HARNESS_RAM_HEADROOM_PCT` | percent, 10-100 | 85 | pericortex's worker-count clamp to RAM; `cortex_worker` never calls it, so it has no effect there (`--workers` and the memory governor size the fleet). |
+
+The Docker entrypoint reads `WORKERS` and
 `PROFILE` (`ar5iv` or `generic`).
 
 ## Diagnosing and measuring (dev)
