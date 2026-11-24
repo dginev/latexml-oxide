@@ -21,7 +21,7 @@ Rules:
    `pk/REGTAILD` at `b0f34364ecb` (on `int/towards_v0_8_1` `35a85b96669`), gates green (8786 tests), A/B 502 papers:
    E 7031 → 5071, 11 changed, 0 worse; OD #1156 and KPE #1328 reserved; guards `perfect_kernel_batchregtaild::*`.
 
-**The long-tail list** (207 items on 2026-11-23: weight 313, 12 without a weight — counted as the `  - ID`
+**The long-tail list** (221 items on 2026-11-24: weight 338, 15 without a weight — counted as the `  - ID`
 bullets below; moved from row R by DG's ruling of 2026-11-23, in row R's order):
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -531,3 +531,36 @@ bullets below; moved from row R by DG's ruling of 2026-11-23, in row R's order):
     (latex_constructs.pool.ltxml:3409), so a binding macro that expands to `\figure[…]` runs a raw class's own
     `\figure` (`\def\figure{\@float{figure}\setbox0\vbox\bgroup}`); only sidecap did (fixed on `pk/REGTAILD`). Options:
     lock `\figure`/`\table` as Perl does (A/B over raw classes) or audit the bindings; 1
+  - FNT1 — 2108.12618: each author split into two creators (nowfnt). Reach (census 2026-11-24): 1 of the 30k sample ≈ 93 papers; 3
+  - PSTL — pstool's `\pstool{f}{\psfrag…}` fragment uncounted (1608.03745; `reversion/psfrag_pstool_fragment_uncounted_red`). Reach (census 2026-11-24): 2 of the 30k sample ≈ 186 papers; 1
+  - P5BN — a framed collaboration call with its own note (`\fnref`/`\footnote`) a nameless creator or the collaboration's creator holding it (`elsarticle_author_framed_collaboration_with_a_note_red`; 2301.12970). Reach (census 2026-11-24): 2 of the 30k sample ≈ 186 papers; 1
+  - AMSTEX-ENUM — (LOOPFIX) inlined-AmS-TeX papers past the `\sum@` loop hit `malformed:ltx:enumerate` (#PCDATA, Math
+    and text in an `enumerate`) from amsppt `\roster`/`\item` (math0612243, math0112238, math0303294, math0404149,
+    math0404221, math0404272, math0405116, math0406482 TooManyErrors; 0705.4126, math0112286, math0211398, math0405158,
+    math0404207). Reach (census 2026-11-24): 1 of the 30k sample ≈ 93 papers; 3
+  - L3EXP — (LTXOWN) a 2015 paper shipping l3experimental (l3regex.sty, l3str.sty, l3str-convert.sty,
+    l3tl-analysis.sty) is Fatal (Timeout:Recursion or TooManyErrors in l3str*.sty): 1412.8552, 1503.01348, 1510.04725,
+    1510.01841, 1511.02193 (all better after LTXOWN, e.g. 1412.8552 1001 → 69 Errors). Not format-held, so outside
+    DG's closed set (OD #1142); the paper-era legacy dump is the tool. Reach (census 2026-11-24): 0 of the 30k sample ≈ 0 papers; 3
+  - REALBOXBG — (LISTINLINE review) realboxes' `\Colorbox`/`\Fcolorbox` keep their text but lose the background colour:
+    collectbox digests the box before `\colorbox` (bound as `\color@box`, color.sty:158) sets the colour, so
+    `\Colorbox{yellow}{x}` gives a plain `<text>` (2411.07667's ~390 `\myinline` boxes); a constructor around the
+    collected box would carry `backgroundcolor`. Silent (no Warning); guard comments name it. Reach (census 2026-11-24): 0 of the 30k sample ≈ 0 papers; 3
+  - SPCONF-NAMEPLUS — spconf `\nameplus` leaves `<sup>1</sup>` in the affiliation; 1309.1501 (its doubled mark). Reach (census 2026-11-24): 0 of the 30k sample ≈ 0 papers.
+  - SPCONF-EMAIL — spconf `\email` needs an after-authors `\maketitle` hook; 2405.13379's e-mails stay a note (the note now sits under the names, `\lx@names@note`, af9dc7b87af). Reach (census 2026-11-24): 2 of the 30k sample ≈ 186 papers.
+  - NOMTHOOK — article with no `\maketitle`: we print † where pdflatex prints 2 (pre-existing; ≤ 56 papers); RED pinned. Reach (census 2026-11-24): 2 of the 30k sample ≈ 186 papers.
+  - SUBCAPLIST — subcaption's `\subcaptionlistentry` and `\subcaptiontext` (subcaption.sty:253-254) are unbound (undefined control sequences; 2404.12080, 2503.09244 use the first): bind them faithfully — enter the sub-type (running `\caption@subtypehook`) and `\captionlistentry[sub\@captype]` / `\captiontext` under `\@captype` = `sub<type>` (WINSUITEb; minimal: `\begin{figure}\begin{minipage}{.3\textwidth}\subcaptionlistentry{x}\end{minipage}\caption{F}\end{figure}`). Reach (census 2026-11-24): 0 of the 30k sample ≈ 0 papers; 1
+  - LMCSQED — the lmcs binding's `\qEd` is `\ensuremath{\square}` (`lmcs_cls.rs` ~149), where LMCS.cls:551-553 draws its own
+    box: a paper that redefines `\square` (1305.0576's ldiagxy.tex:207, a delimited diagram macro) breaks every `\qEd`
+    display (217 errors, more since `\[` is `{equation*}`; 0 with `\qEd` overridden). Give `\qEd` the class's box under
+    an internal name; repro `tmp/END399/T3W/repros/1305.0576/qEd_square.tex` (tier 3 A/B, pre-existing; 1202.6352). Reach (census 2026-11-24): 1 of the 30k sample ≈ 93 papers; 1
+  - TIKZCDHANG — a tikz-cd diagram whose cell has `\hspace{1em}\rar[mapsto]` loops under calc after an earlier cell's
+    calc error (1611.01788 thesis.tex:5400/:5434; both the Nov 17 binary and the release candidate; pdflatex is fatal
+    there too, 8 errors): find the loop site (`perf record` at 20 s), then end in a bounded Error. The wall-clock Fatal
+    leaves no XML and no log, so the paper's 56k words are lost — a salvage question too. rc2 2026-11-23: still the wall clock at 180 s (59 Errors before it). Deferred, decided by difficulty (DG 2026-11-23). Reach (census 2026-11-24): 1 of the 30k sample ≈ 93 papers; 5
+  - TITLEFIGPANELS (shape, pre-existing) — a teaser whose panels are `\subcaptionbox`es (2007.15591, vgtc) stays a
+    paragraph of four figures (now inside the continued title page, as a `block`), not one panelled teaser figure; a
+    subfigure.sty `\captionof{subfigure}` minipage then `\captionof{figure}` inside `\twocolumn[{\maketitle\begin{center}…}]`
+    is not moved to the cover (base, TITLEFIG rounds 1 and 2 alike). Reach (census 2026-11-24): 1 of the 30k sample ≈ 93 papers; 3
+  - IJMEMAILCOLON (after 0.8.0, nit) — an ijmart e-mail contact gets `name="e-mail:: "`: the class's `\emailaddrname`
+    already ends in ":" and the binding appends ": ". Reach (census 2026-11-24): 1 of the 30k sample ≈ 93 papers; 1
