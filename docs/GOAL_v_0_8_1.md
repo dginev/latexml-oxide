@@ -15,7 +15,7 @@ branch, and the standards every change meets. The standards distill DG's standin
 |---|---|---|
 | **When** | 2026-11-30 | after v0.8.0; no date |
 | **Branch** | `main` (the release line until the tag) | `int/towards_v0_8_1`, cut from `main` |
-| **What** | Small reviewed fixes only: regressions, crashes and Fatals, bugs rc2 testers report, release docs | Everything else — most of the work: the row R tasks, the reviewed post-release branches, redesigns |
+| **What** | Small reviewed fixes only: regressions, crashes and Fatals, bugs rc2 and rc3 testers report, release docs | Everything else — most of the work: the row R tasks, the reviewed post-release branches, redesigns |
 | **Not allowed** | Redesigns, new CLI options or Cargo features, output changes without a reach-sized A/B | Nothing extra beyond the standards below |
 | **Landing** | One PR per change; a user-reported issue gets its own PR | Batches merge into the branch; the branch reaches `main` as one PR |
 

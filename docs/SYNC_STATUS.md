@@ -54,7 +54,7 @@ Rules that keep this file honest and mergeable:
   error-free); its regressions were classified and the clusters our changes caused fixed (#954-#964), the residue in
   row R. **0.8.0-rc1** is published as a prerelease (tag `f7f8120f349`, merged to main as #919). **0.8.0-rc2** is
   tag `f219a9e9d68` (#981), published as a prerelease on 2026-11-23 (release run 45107500545, 17 assets). **0.8.0-rc3**
-  is cut from main on 2026-11-24: #987-#1002 (issue 995's resource cache, the CLI options, the CLI hardening, the
+  is cut from main on 2026-11-24: #987-#1003 (issue 995's resource cache, the CLI options, the CLI hardening, the
   cortex worker's runtime-binding refusal, the `unsafe` ratchet) and rust-libxml 0.3.27, which removes 0.3.25's
   2.1x slowdown on deeply nested TikZ pictures. rc2 was re-issued on the large-document perf work (DG 2026-11-21): #970 (STRMWARN,
   CORELEAK, POSTPERF, CHAPLINKS, ALLOCTRIM, BIGSPLIT, mimalloc 2.3.2) and SERSTREAM (the core result serialized to
