@@ -48,10 +48,18 @@ contains an embedded NUL), or if libxml2 returns NULL.</p>
     &amp;mut self,
     new_sibling: &amp;mut <a class="struct" href="struct.Node.html" title="struct latexml_engine::prelude::Node">Node</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Add a previous sibling</p>
+<p>libxml2 before 2.13 merges a text <code>new_sibling</code> into an adjacent text node and frees it, and an attribute
+<code>new_sibling</code> replaces (frees) the attribute of the same name, which may be this one. A freed node’s wrappers
+read as <code>Node::null()</code> afterwards.</p>
+<p>A node without a parent takes no sibling, and an attribute’s siblings are attributes.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.add_next_sibling" class="method"><h4 class="code-header">pub fn <a href="#method.add_next_sibling" class="fn">add_next_sibling</a>(
     &amp;mut self,
     new_sibling: &amp;mut <a class="struct" href="struct.Node.html" title="struct latexml_engine::prelude::Node">Node</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Add a next sibling</p>
+<p>libxml2 before 2.13 merges a text <code>new_sibling</code> into an adjacent text node and frees it, and an attribute
+<code>new_sibling</code> replaces (frees) the attribute of the same name, which may be this one. A freed node’s wrappers
+read as <code>Node::null()</code> afterwards.</p>
+<p>A node without a parent takes no sibling, and an attribute’s siblings are attributes.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.is_text_node" class="method"><h4 class="code-header">pub fn <a href="#method.is_text_node" class="fn">is_text_node</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>Returns true if it is a text node</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.is_element_node" class="method"><h4 class="code-header">pub fn <a href="#method.is_element_node" class="fn">is_element_node</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>Checks if the given node is an Element</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.is_null" class="method"><h4 class="code-header">pub fn <a href="#method.is_null" class="fn">is_null</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>Checks if the underlying libxml2 pointer is <code>NULL</code></p>
@@ -66,6 +74,9 @@ contains an embedded NUL), or if libxml2 returns NULL.</p>
     &amp;mut self,
     content: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Sets the text content of this <code>Node</code></p>
+<p>The content of an element, attribute or document fragment replaces its children, which libxml2 frees: their
+wrappers, and those of their descendants, read as <code>Node::null()</code> afterwards. An entity reference is left alone,
+as libxml2 2.13 and later do: its child is the entity’s declaration.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.get_property" class="method"><h4 class="code-header">pub fn <a href="#method.get_property" class="fn">get_property</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</h4></section></summary><div class="docblock"><p>Returns the value of property <code>name</code></p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.with_property" class="method"><h4 class="code-header">pub fn <a href="#method.with_property" class="fn">with_property</a>&lt;R&gt;(
     &amp;self,
@@ -93,25 +104,32 @@ stack. A longer value, or one of any other shape (an entity reference in the val
     name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
     value: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Sets the value of property <code>name</code> to <code>value</code></p>
+<p>The new value of an existing attribute replaces its value nodes, which libxml2 frees: their wrappers read as
+<code>Node::null()</code> afterwards.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.set_property_ns" class="method"><h4 class="code-header">pub fn <a href="#method.set_property_ns" class="fn">set_property_ns</a>(
     &amp;mut self,
     name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
     value: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
     ns: &amp;<a class="struct" href="struct.Namespace.html" title="struct latexml_engine::prelude::Namespace">Namespace</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Sets a namespaced attribute</p>
+<p>The new value of an existing attribute replaces its value nodes, which libxml2 frees: their wrappers read as
+<code>Node::null()</code> afterwards.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.remove_property" class="method"><h4 class="code-header">pub fn <a href="#method.remove_property" class="fn">remove_property</a>(
     &amp;mut self,
     name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Removes the property of given <code>name</code></p>
+<p>libxml2 frees the attribute: its wrappers, from <code>get_property_node</code> and the like, read as <code>Node::null()</code> afterwards.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.remove_property_ns" class="method"><h4 class="code-header">pub fn <a href="#method.remove_property_ns" class="fn">remove_property_ns</a>(
     &amp;mut self,
     name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
     ns: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Removes the property of given <code>name</code> and namespace (<code>ns</code>)</p>
+<p>libxml2 frees the attribute: its wrappers, from <code>get_property_node</code> and the like, read as <code>Node::null()</code> afterwards.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.remove_property_no_ns" class="method"><h4 class="code-header">pub fn <a href="#method.remove_property_no_ns" class="fn">remove_property_no_ns</a>(
     &amp;mut self,
     name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Removes the property of given <code>name</code> with no namespace</p>
+<p>libxml2 frees the attribute: its wrappers, from <code>get_property_node</code> and the like, read as <code>Node::null()</code> afterwards.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.get_attribute" class="method"><h4 class="code-header">pub fn <a href="#method.get_attribute" class="fn">get_attribute</a>(&amp;self, name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</h4></section></summary><div class="docblock"><p>Alias for get_property</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.with_attribute" class="method"><h4 class="code-header">pub fn <a href="#method.with_attribute" class="fn">with_attribute</a>&lt;R&gt;(
     &amp;self,
@@ -172,24 +190,38 @@ a linkable symbol on MSVC).</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.lookup_namespace_uri" class="method"><h4 class="code-header">pub fn <a href="#method.lookup_namespace_uri" class="fn">lookup_namespace_uri</a>(&amp;self, prefix: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</h4></section></summary><div class="docblock"><p>Looks up the uri of a namespace from its prefix, basedo around a given <code>Node</code></p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.recursively_remove_namespaces" class="method"><h4 class="code-header">pub fn <a href="#method.recursively_remove_namespaces" class="fn">recursively_remove_namespaces</a>(
     &amp;mut self,
-) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Removes the namespaces of this <code>Node</code> and it’s children!</p>
+) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Removes the namespaces of this <code>Node</code> and its descendants: their own, their attributes’, and every namespace
+declaration among them. The document keeps the declarations until it is freed, so a <code>Namespace</code> handed out for
+one never dangles (#235). An entity reference’s children belong to the entity’s declaration and are left alone.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.get_class_names" class="method"><h4 class="code-header">pub fn <a href="#method.get_class_names" class="fn">get_class_names</a>(&amp;self) -&gt; <a class="struct" href="https://doc.rust-lang.org/nightly/std/collections/hash/set/struct.HashSet.html" title="struct std::collections::hash::set::HashSet">HashSet</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</h4></section></summary><div class="docblock"><p>Get a set of class names from this node’s attributes</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.add_child" class="method"><h4 class="code-header">pub fn <a href="#method.add_child" class="fn">add_child</a>(&amp;mut self, child: &amp;mut <a class="struct" href="struct.Node.html" title="struct latexml_engine::prelude::Node">Node</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;</h4></section></summary><div class="docblock"><p>Creates a new <code>Node</code> as child to the self <code>Node</code></p>
+<p>libxml2 merges a text <code>child</code> into an adjacent text node and frees it, as it frees a <code>child</code> added to a text
+node, after appending its content. An attribute <code>child</code> replaces (frees) the attribute of the same name. A freed
+node’s wrappers read as <code>Node::null()</code> afterwards: here, <code>child</code>’s, when it was merged.</p>
+<p>A linked <code>child</code> is moved: it is unlinked first, as libxml2 does since 2.13 (before, <code>xmlAddChild</code> left it in its
+old parent’s children too), unless it is this node’s last child already, which libxml2 leaves in place. An
+attribute <code>child</code> is added to an element only, as libxml2 required before 2.13; since, it adds one to any node,
+at a field that a document’s or a DTD’s own data overlays. An entity reference takes no child: its child is its
+entity’s declaration, which libxml2 would link the new one after, among the DTD’s children.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.new_child" class="method"><h4 class="code-header">pub fn <a href="#method.new_child" class="fn">new_child</a>(
     &amp;mut self,
     ns: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="struct.Namespace.html" title="struct latexml_engine::prelude::Namespace">Namespace</a>&gt;,
     name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="struct.Node.html" title="struct latexml_engine::prelude::Node">Node</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Creates a new <code>Node</code> as child to the self <code>Node</code></p>
+<p>Returns <code>Err</code> if this node is not an element, a document or a fragment, which libxml2 makes no child under.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.add_text_child" class="method"><h4 class="code-header">pub fn <a href="#method.add_text_child" class="fn">add_text_child</a>(
     &amp;mut self,
     ns: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="struct.Namespace.html" title="struct latexml_engine::prelude::Namespace">Namespace</a>&gt;,
     name: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
     content: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="struct" href="struct.Node.html" title="struct latexml_engine::prelude::Node">Node</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Adds a new text child, to this <code>Node</code></p>
+<p>Returns <code>Err</code> if this node is not an element, a document or a fragment, which libxml2 makes no child under.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.append_text" class="method"><h4 class="code-header">pub fn <a href="#method.append_text" class="fn">append_text</a>(
     &amp;mut self,
     content: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>,
 ) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/nightly/core/error/trait.Error.html" title="trait core::error::Error">Error</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> + <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;</h4></section></summary><div class="docblock"><p>Append text to this <code>Node</code></p>
+<p>An entity reference is left alone, as libxml2 2.13 and later do: its content is its entity’s declaration’s, which
+libxml2 before 2.13 appended to (#235).</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.unlink_node" class="method"><h4 class="code-header">pub fn <a href="#method.unlink_node" class="fn">unlink_node</a>(&amp;mut self)</h4></section></summary><div class="docblock"><p>Unbinds the Node from its siblings and Parent, but not from the Document it belongs to.</p>
 <p>At the libxml2 level, <code>xmlUnlinkNode</code> severs <code>parent</code>/<code>prev</code>/<code>next</code>
 links but <strong>leaves <code>node-&gt;doc</code> set</strong> — the source document is
@@ -213,6 +245,11 @@ topology, so it never reaches a parent==NULL subtree.</li>
 </ul>
 <p>In short: an unlinked node that is <em>neither</em> re-attached <em>nor</em>
 marked <code>set_rust_owned</code> is a leak until process exit.</p>
+<p>A document’s own node (an HTML one too) is no node of a tree: it is left alone.
+A DTD is the exception: its document’s entity references point into it,
+so the document keeps it, frees it with itself, and refuses to link it
+again ([<code>Document::remove_internal_subset</code>] unlinks it the same way). A
+declaration in a DTD stays there: its DTD frees it.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.unlink" class="method"><h4 class="code-header">pub fn <a href="#method.unlink" class="fn">unlink</a>(&amp;mut self)</h4></section></summary><div class="docblock"><p>Alias for <code>unlink_node</code></p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.unbind_node" class="method"><h4 class="code-header">pub fn <a href="#method.unbind_node" class="fn">unbind_node</a>(&amp;mut self)</h4></section></summary><div class="docblock"><p>Alias for <code>unlink_node</code></p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.unbind" class="method"><h4 class="code-header">pub fn <a href="#method.unbind" class="fn">unbind</a>(&amp;mut self)</h4></section></summary><div class="docblock"><p>Alias for <code>unlink_node</code></p>
@@ -224,6 +261,9 @@ are detached from any document tree.</p>
 last <code>Node</code> clone drops, regardless of whether <code>node-&gt;doc</code> is still
 set. The flag is sticky and propagates to every clone (they share
 the same <code>_Node</code>), so transferring ownership once is sufficient.</p>
+<p>The free neutralizes every cached wrapper into the subtree first, as
+<a href="struct.Node.html#method.free_subtree" title="method latexml_engine::prelude::Node::free_subtree"><code>free_subtree</code></a> does: a descendant handed out
+earlier reads as <code>Node::null()</code> afterwards, not as freed memory.</p>
 <p>Use this on a subtree that has been:</p>
 <ol>
 <li>detached from its parent via <code>unlink_node</code>, AND</li>
@@ -236,18 +276,15 @@ they remain attributed to <code>node-&gt;doc</code> for safety, and <code>xmlFre
 reclaims them only if they’re still reachable from the doc root.
 A subtree that has been unlinked but not re-attached and not marked
 rust-owned will leak until process exit.</p>
-<h5 id="safety-preconditions"><a class="doc-anchor" href="#safety-preconditions">§</a>Safety preconditions</h5>
-<p>Calling this on a node that is still <code>Linked</code> (part of a document
-tree) is <strong>undefined behavior</strong>: the node’s later free will leave
-dangling pointers in its former parent / siblings / ID table. The
-wrapper cannot cheaply verify this, so the caller must guarantee
-it. In debug builds we panic if the precondition is obviously
-violated.</p>
+<h5 id="panics"><a class="doc-anchor" href="#panics">§</a>Panics</h5>
+<p>On a node that is still <code>Linked</code> (part of a document tree): its
+later free would leave dangling pointers in its former parent,
+siblings and ID table. (Before 0.3.25, only debug builds checked.)</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.is_rust_owned" class="method"><h4 class="code-header">pub fn <a href="#method.is_rust_owned" class="fn">is_rust_owned</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>Returns whether the C allocation is owned by the Rust wrapper.
 See <code>set_rust_owned</code>.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.as_readonly" class="method"><h4 class="code-header">pub fn <a href="#method.as_readonly" class="fn">as_readonly</a>(&amp;self) -&gt; RoNode</h4></section></summary><div class="docblock"><p>This node as a <code>RoNode</code>. Adds nothing to the wrapper cache.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.node_from_readonly" class="method"><h4 class="code-header">pub fn <a href="#method.node_from_readonly" class="fn">node_from_readonly</a>(&amp;self, node: RoNode) -&gt; <a class="struct" href="struct.Node.html" title="struct latexml_engine::prelude::Node">Node</a></h4></section></summary><div class="docblock"><p>[<code>Document::node_from_readonly</code>] on this node’s document.</p>
-<h5 id="panics"><a class="doc-anchor" href="#panics">§</a>Panics</h5>
+<h5 id="panics-1"><a class="doc-anchor" href="#panics-1">§</a>Panics</h5>
 <p>If this node is null or its document was dropped.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.free_subtree" class="method"><h4 class="code-header">pub fn <a href="#method.free_subtree" class="fn">free_subtree</a>(self)</h4></section></summary><div class="docblock"><p>Detach this node and free its entire C subtree IMMEDIATELY.</p>
 <p>This is the discard operation <code>unlink_node</code> alone does not provide: an
@@ -263,16 +300,21 @@ is nulled — clones held anywhere become inert (<code>Drop</code> is a no-op, t
 null-guarded accessors return their empty defaults) — and the
 bookkeeping entries are cleared, so a future allocation reusing one of
 the freed addresses cannot collide with a stale wrapper. Attribute
-nodes are neutralized along with elements and texts; namespace
-declarations and attribute values are owned by their nodes and freed by
-<code>xmlFreeNode</code> itself.</p>
+nodes are neutralized along with elements and texts; attribute values
+are owned by their nodes and freed by <code>xmlFreeNode</code> itself, while the
+document keeps the namespace declarations, which a <code>Namespace</code> may
+point at, until it is freed. An entity reference’s children belong to
+the entity’s declaration, which <code>xmlFreeNode</code> leaves alone, and so does
+the neutralizing. (Since 0.3.25, dropping the last wrapper of a
+rust-owned node neutralizes the same way before its <code>xmlFreeNode</code>.)</p>
 <p>Documents (and document-fragment shells) are refused — tearing a whole
-document down belongs to <code>Document</code>’s <code>Drop</code>.</p>
+document down belongs to <code>Document</code>’s <code>Drop</code>. A DTD is only unlinked:
+its document’s entity references point into it, so the document keeps
+it, and frees it with itself. A declaration in a DTD (of an element, an
+attribute or an entity) is left alone: its DTD frees it.</p>
 <h5 id="safety-contract-mirrors-c-xmlfreenode"><a class="doc-anchor" href="#safety-contract-mirrors-c-xmlfreenode">§</a>Safety contract (mirrors C <code>xmlFreeNode</code>)</h5>
-<p>The subtree must be garbage to the caller. Wrappers created in an
-earlier bookkeeping epoch (re-wrapped after an unlink cleared their
-entry) cannot be found and neutralized here; using one after this call
-is undefined behavior, exactly as using a freed <code>xmlNodePtr</code> in C.</p>
+<p>The subtree must be garbage to the caller. Every <code>Node</code> into it is
+neutralized, but a <code>RoNode</code> into it is a bare pointer, and dangles.</p>
 </div></details><details class="toggle method-toggle" open><summary><section id="method.set_linked" class="method"><h4 class="code-header">pub fn <a href="#method.set_linked" class="fn">set_linked</a>(&amp;self)</h4></section></summary><div class="docblock"><p>internal helper to ensure the node is marked as linked/imported/adopted in the main document tree.</p>
 <p>Transitions from <code>Unlinked</code> to <code>Linked</code>. If the node is already
 <code>RustOwned</code>, this is a no-op in release builds and a debug-assert
