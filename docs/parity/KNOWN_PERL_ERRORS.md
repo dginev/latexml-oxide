@@ -22457,3 +22457,17 @@ pdflatex sets "+c" with \medmuskip on both sides of the `+`; Perl 0.8.8 (same ho
 #1151): the bindings mark the columns and the parser reads the sign binary where the cell continues the one before it;
 guard
 `perfect_kernel_batchfix991::continuation_sign_after_amsmath_s_empty_ord_is_binary`.
+
+## 1329. Perl's `pathname_is_contained` counts the base's parent as contained
+
+`Util/Pathname.pm` L179-186 tests the relative path against `^\.\.(?:/|SEP)`, so a bare `..` (the pathname is the
+base's parent) passes as underneath it. `Post::Document::new_internal` (`Post.pm` L698-706) then accepts a destination
+directory that contains the site directory. Minimal trigger, in a directory holding `t.tex` and an empty `sub/`:
+
+```sh
+latexmlc --format=html5 --sitedirectory=sub --dest=index.html t.tex
+```
+
+Perl 0.8.8 (same host) converts and writes `index.html` beside `sub/`; `--sitedirectory=../children` (a sibling) is
+Fatal ("The destination directory (.) must be within the siteDirectory"). Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES
+#1157): `pathname::is_contained` refuses `..` too; guard `pathname::tests::is_contained_is_underneath_only`.

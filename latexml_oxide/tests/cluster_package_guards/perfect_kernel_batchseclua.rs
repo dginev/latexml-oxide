@@ -1,7 +1,8 @@
 //! Red/green guards for batch SECLUA: untrusted input stays in the job. Document Lua runs sandboxed (the
 //! `lua_bridge.rs` prelude: TeX's `shell_escape=f`, `openout_any=p`): a call lualatex refuses too returns lualatex's
 //! values with a Warning (batch LUAEXEC), one only the sandbox refuses is an Error; an image copy never leaves
-//! `--dest` (`graphics.rs` `copy_to_destination`, Perl `Post/Graphics.pm` L292-300).
+//! the site directory, `--dest`'s unless `--sitedirectory` names one (`graphics.rs` `copy_to_destination`, Perl
+//! `Post/Graphics.pm` L292-300; `perfect_kernel_batchfix995`).
 //! OXIDIZED_DESIGN_DIVERGENCES #1081. The Lua guards self-skip without a host `texlua`.
 use std::{
   path::{Path, PathBuf},

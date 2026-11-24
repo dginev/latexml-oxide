@@ -20,7 +20,8 @@
 //! `latexml_oxide` binary renders a split of `MIN_PAGES_FOR_PARALLEL` pages
 //! or more on min(available cores, `AUTO_JOBS_MAX`) workers; every other
 //! embedder (the library, `cortex_worker`) stays serial. The pages are
-//! byte-identical either way; a worker that fails to spawn, cannot set up, or
+//! byte-identical either way, but for the generated image names of a worker after
+//! the first, `x<i>_N`, as it cannot see the others' (issue 995); a worker that fails to spawn, cannot set up, or
 //! dies without its status report sends the whole document back to the serial
 //! render at once, stopping the rest of the fleet (an Info; a Warning for a
 //! worker killed by a signal, a crash).
@@ -175,6 +176,10 @@ pub struct RenderManifest {
   /// holds none (MathML's `<mpadded>` widths read `NOMINAL_FONT_SIZE`).
   #[serde(default)]
   pub post_values:               latexml_core::PostStateValues,
+  /// The prefix of the image names this worker generates (Perl's `resource_prefix`); `None` is `x`. Each worker after
+  /// the first has its own, as it cannot see the names the others hand out (issue 995).
+  #[serde(default)]
+  pub resource_prefix:           Option<String>,
 }
 
 /// The parent-side result of a parallel render in which workers were actually
@@ -562,6 +567,7 @@ pub(crate) fn parallel_render(
     ranges.push(chunk.iter().filter_map(|p| p.destination.clone()).collect());
     let mut m = manifest.clone();
     m.pages = chunk.to_vec();
+    m.resource_prefix = (i > 0).then(|| format!("x{i}_"));
     let mpath = spill_dir.join(format!("render-manifest-{i}.json"));
     let write_result = serde_json::to_string(&m)
       .map_err(|e| e.to_string())
@@ -953,8 +959,12 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
     crossref.set_navigation_toc(navtoc);
   }
   let graphics = m.graphicimages.then(|| {
-    latexml_post::graphics::Graphics::new(None, true)
-      .with_svg_threshold_kb(m.graphics_svg_threshold_kb)
+    let graphics = latexml_post::graphics::Graphics::new(None, true)
+      .with_svg_threshold_kb(m.graphics_svg_threshold_kb);
+    match m.resource_prefix.as_deref() {
+      Some(prefix) => graphics.with_resource_prefix(prefix),
+      None => graphics,
+    }
   });
   let post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();

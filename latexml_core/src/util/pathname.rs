@@ -1267,6 +1267,15 @@ pub fn relative(pathname: &str, base: &str) -> String {
   abs2rel(Path::new(&canonical_pathname), Path::new(&canonical_base))
 }
 
+/// `pathname` relative to `base` when it lies underneath it (both made absolute against the cwd first), else `None`.
+/// Port of Perl's `pathname_is_contained` (`Util/Pathname.pm` L179-186); a result that stays absolute (no common
+/// root: another Windows drive) is not contained either.
+pub fn is_contained(pathname: &str, base: &str) -> Option<String> {
+  let rel = canonical(&relative(&absolute(pathname), &absolute(base)));
+  let outside = rel == ".." || rel.starts_with("../") || Path::new(&rel).is_absolute();
+  (!outside).then_some(rel)
+}
+
 /// Find all matching files (like pathname_findall).
 /// Port of Perl's pathname_findall($pathname, %options).
 pub fn findall(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
@@ -1432,6 +1441,26 @@ mod tests {
   /// absolute path here, which surfaced as a `/mnt/g/…` graphic URL (issue
   /// #698) and would do the same for any resource relativized against the
   /// source directory (e.g. `xslt.rs`).
+  /// `pathname_is_contained`: underneath, the base itself, a `..` escape, the base's parent (which Perl's regex lets
+  /// through, KNOWN_PERL_ERRORS #1329).
+  #[test]
+  fn is_contained_is_underneath_only() {
+    let abs = |p: &str| {
+      if cfg!(windows) {
+        format!("C:{p}")
+      } else {
+        p.to_string()
+      }
+    };
+    assert_eq!(
+      is_contained(&abs("/s/out/x/../img.svg"), &abs("/s")).as_deref(),
+      Some("out/img.svg")
+    );
+    assert!(is_contained(&abs("/s"), &abs("/s")).is_some());
+    assert_eq!(is_contained(&abs("/s/../c/A.svg"), &abs("/s")), None);
+    assert_eq!(is_contained(&abs("/p"), &abs("/p/sub")), None);
+  }
+
   #[test]
   fn relative_emits_dotdot_for_non_descendant() {
     // A bare `/x` is not absolute on Windows (no drive), so prefix one there to

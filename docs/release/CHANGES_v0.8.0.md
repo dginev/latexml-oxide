@@ -117,6 +117,18 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     parses, as Perl draws it (`<mo>(</mo><mi>a</mi>`); formula readings and Content MathML are unchanged. In a
     sample of 635 arXiv papers, 370 carried 3,625 such words (25 of 100 random papers), now none.
     OXIDIZED_DESIGN_MATH #22; guards `perfect_kernel_batchnulldelim::*`.
+  - **An image outside the main file's directory keeps its place under `--sitedirectory`, and split pages no longer
+    overwrite each other's images** (issue 995). With `\subimport*{../children/child_1}{index.tex}` and
+    `--sitedirectory=..`, each image is now linked where it is (`../children/child_1/images/A.svg`) and nothing is
+    copied, as in Perl; the option was ignored and every image copied as `x1.svg`, `x2.svg`, …, which remains the
+    default without it, so the output stays self-contained. A destination outside `--sitedirectory` is Perl's Fatal.
+    Under `--split`, every page restarted the generated names at `x1`, so a later chapter's image replaced an earlier
+    chapter's (the first chapter showed the second's figure); converted images sharing a file name on different pages
+    (`a/plot.eps`, `b/plot.eps`) likewise shared one `plot.png`. A run now hands out each name once. In the parallel
+    render of 64 pages or more, the second and later workers name their images `x<i>_N`; there, converted images
+    sharing a file name on pages of different workers still share one file. Two documents converted into one directory
+    still restart at `x1`. OXIDIZED_DESIGN_DIVERGENCES #1081, #1157, KNOWN_PERL_ERRORS #1329; guards
+    `perfect_kernel_batchfix995::*`.
 
 ### 0.8.0-rc2
 

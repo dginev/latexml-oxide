@@ -21040,7 +21040,7 @@ bindings_start_the_paragraph, rhai_constructor_entering_horizontal_keeps_the_spa
 `rhai-bindings/constructor_opening_the_paragraph_keeps_the_space`, formerly `imperative_constructor_drops_space_red`,
 whose note blamed the imperative `\lxb`).
 
-### 1081. Untrusted input stays in the job: document Lua is sandboxed; an image copy never leaves `--dest` (SECLUA)
+### 1081. Untrusted input stays in the job: document Lua is sandboxed; an image copy never leaves the site directory (SECLUA)
 
 **Perl.** No Lua bridge. `Post/Graphics.pm` L292-300 copies an image to its source-relative path only when
 `pathname_is_contained` places it under the site directory, else under `generateResourcePathname`'s `xN` name.
@@ -21139,8 +21139,10 @@ through the links already there, stays inside the extraction directory (zip 9.7'
 inside (`tar`'s check). Other links, and entries whose path would leave the directory, are skipped with a
 `Warning:archive:*`, logged and counted when the conversion's report starts (`error::warn_at_session_start`).
 The CLI's own zip unpacking writes a link entry as a plain file. `graphics.rs`
-`copy_to_destination` follows Perl: a source-relative path that would leave `--dest` (a `..`, root or drive
-component) takes the next free `xN.<ext>`. Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
+`copy_to_destination` follows Perl: the source-relative path, taken from the destination directory, is kept only when
+it stays in the site directory (`--sitedirectory`, else `--dest`'s directory; lexically, Perl's
+`pathname_is_contained`), else the image takes the next free `xN.<ext>` (issue 995: `--sitedirectory` was ignored,
+OD #1157). Under the luatex profile `\pdfextension <keyword>` (`pdftex.rs`
 `read_pdfextension`) reads the operands of pdfTeX's `\pdf<keyword>`, with LuaTeX's additions (literal modes
 `text`/`raw`/`origin`, `lateliteral`, `obj … uncompressed`, `outline useobjnum`, `linkstate`; LuaTeX manual
 luatex-modifications.tex:592-907), through the same Rust readers and never through `\pdf<keyword>`, which
@@ -24175,3 +24177,32 @@ empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_
 2306.10612, 1612.06544. A/B over 301 papers with continuation cells: 1,919 formulas in 257 papers changed, each a sign
 turned binary; errors, fatals and warnings unchanged. The `\left.` exception then returned 63 of them in 17 papers to
 unary (the base's reading), every one a sign opening a `\left.`'s list.
+
+### 1157. An image keeps its path inside `--sitedirectory`; generated image names are shared by every page of a run (issue 995)
+
+**Perl.** `Post/Graphics.pm` L292-300 keeps an image's source-relative path when, taken from the destination
+directory, it stays in the site directory (`pathname_is_contained`), else `generateResourcePathname` (`Post.pm`
+L192-200) names it `xN` from a counter in the document cache that every split page shares (L687-690);
+`Post::Document::new_internal` (L698-706) is Fatal when the destination lies outside `--sitedirectory`.
+**Rust.** Faithful now. The copy checked containment against `--dest` alone, so `--sitedirectory=..` still copied
+`../children/child_1/images/A.svg` to `x1.svg`; and the counter and the claimed names were locals of one page's
+`Graphics::process`, so under `--split` every page restarted at `x1` and a later page's image overwrote an earlier
+page's (issue 995: Chapter One showed child_2's figure), as did two converted sources sharing a stem (`a/plot.eps`,
+`b/plot.eps` → one `plot.png`). `Graphics` now holds a `ResourceNames` for the run: the counter, the names claimed
+and the copies made (keyed by destination directory, content and options, Perl's cached destination). The Fatal is
+Perl's, `Fatal:unexpected:<dir> The destination directory (<dir>) must be within the siteDirectory (<site>)`, raised
+before anything is written. Divergences: (1) the containment test refuses the base's own parent, which Perl's regex
+lets through (KNOWN_PERL_ERRORS #1329); (2) the parallel page render (64+ pages, `render_workers.rs`) gives each
+worker after the first Perl's `resource_prefix` `x<i>_`, as it cannot see the names the others hand out: those
+pages' generated names differ from a serial render's (`x1_1.svg`), their content does not. Not covered: in that
+parallel render, two converted sources sharing a stem (`a/plot.eps`, `b/plot.eps`) on pages of different workers
+still both write `plot.png` (a converted image keeps its stem, a Rust readability choice, so a figure every page
+shares stays one `fig.svg`); two documents converted into one directory restart at `x1` (Perl reads the previous
+run's names from `LaTeXML.cache` in the destination; we keep no such cache); and a page only sees the sources of the
+pages before it, so a converted `plot.png` can still take the name of an author's `plot.png` referenced on a later
+page when the destination is the source directory.
+**Guards**: `cluster_package_guards::perfect_kernel_batchfix995::{batchfix995_sitedirectory_keeps_the_relative_image_path,
+batchfix995_destination_outside_the_site_directory_is_fatal, batchfix995_split_pages_share_the_generated_names,
+batchfix995_split_pages_keep_converted_stems_apart, batchfix995_parallel_render_workers_generate_disjoint_names}`
+(`tools/perfect_kernel/repros/loader/image_subimport_sitedirectory.tex`,
+`tools/perfect_kernel/repros/split-navigation/image_names_shared_across_split_pages.tex`); `pathname::tests::is_contained_is_underneath_only`.

@@ -1,0 +1,24 @@
+% mechanism: latexml_post graphics.rs copy_to_destination (Perl Post/Graphics.pm L292-300, Post.pm L698-706;
+%   OXIDIZED_DESIGN_DIVERGENCES #1081): an image whose source-relative path, taken from the destination, stays in
+%   the site directory keeps that path and is not copied when it is the source itself; outside it, a generated xN
+%   name inside --dest. The site directory is --sitedirectory, else the destination's; a destination outside
+%   --sitedirectory is Fatal.
+% witness: issue 995 (parent/index.tex \subimport*-ing ../children/child_N, each with images/A.svg)
+% layout:  parent/index.tex (this file); children/child_1/index.tex = \includegraphics{images/A};
+%          children/child_2/index.tex = \includegraphics{images/A}\par\includegraphics{images/B};
+%          children/child_{1,2}/images/A.svg, children/child_2/images/B.svg (distinct text); cwd parent/
+% oracle:  pdflatex 0 errors with PNGs in place of the SVGs (pdflatex reads no SVG): three images
+% engines: rust=GREEN perl=GREEN (2026-11-24; Perl without Image::Magick: 3 imagesize Warnings)
+% expect:  --dest=index.html: x1.svg, x2.svg, x3.svg (child_1 A, child_2 A, child_2 B), 0 errors;
+%          --sitedirectory=.. --dest=index.html: ../children/child_1/images/A.svg, ../children/child_2/images/A.svg,
+%          ../children/child_2/images/B.svg, nothing copied;
+%          --sitedirectory=../children --dest=index.html: Fatal:unexpected:. The destination directory (.) must be
+%          within the siteDirectory (../children), nothing written
+% status:  GREEN
+\documentclass{article}
+\usepackage{import}
+\usepackage{graphicx}
+\begin{document}
+\subimport*{../children/child_1/}{index.tex}
+\subimport*{../children/child_2/}{index.tex}
+\end{document}

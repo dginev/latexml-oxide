@@ -162,6 +162,47 @@ impl Default for TypeProperties {
   }
 }
 
+/// A page's copy key: the source's content (or path) and its graphicx options.
+#[derive(PartialEq, Eq, Hash)]
+enum CopyKey {
+  Hashed([u8; 32], String),
+  Pathy(String, String),
+}
+
+/// The resource names one run has handed out, kept across its pages as Perl keeps them in the document cache every
+/// split page shares (`Post.pm` L687-690): `generateResourcePathname`'s counter (L192-200) and the images already
+/// placed (`Post/Graphics.pm` L249-260 reuses a cached destination). Per page, Ch1 and Ch2 each wrote `x1.svg`
+/// (issue 995).
+#[derive(Default)]
+struct ResourceNames {
+  /// Perl's `resource_prefix` (`x` unless set).
+  prefix:  Option<String>,
+  counter: u32,
+  /// Destination (relative to its directory) → the source that claimed it.
+  claimed: HashMap<String, String>,
+  /// (destination directory, copy key) → the copied image's destination.
+  copies:  HashMap<(String, CopyKey), String>,
+}
+
+impl ResourceNames {
+  /// The next `<prefix>N` name whose `<prefix>N.<ext>` no other source claimed, claimed for `source`.
+  fn generate(&mut self, source: &str, ext: &str) -> String {
+    loop {
+      self.counter += 1;
+      let name = format!("{}{}", self.prefix.as_deref().unwrap_or("x"), self.counter);
+      let file = if ext.is_empty() {
+        name.clone()
+      } else {
+        format!("{name}.{ext}")
+      };
+      if let std::collections::hash_map::Entry::Vacant(slot) = self.claimed.entry(file) {
+        slot.insert(source.to_string());
+        return name;
+      }
+    }
+  }
+}
+
 /// Graphics post-processor.
 ///
 /// Port of `LaTeXML::Post::Graphics`.
@@ -186,6 +227,7 @@ pub struct Graphics {
   /// so a caller can guarantee its conversions actually run — see
   /// [`crate::graphics_cache::CachePolicy`] and `with_cache_policy`.
   cache_policy:     crate::graphics_cache::CachePolicy,
+  names:            ResourceNames,
 }
 
 impl Graphics {
@@ -279,7 +321,16 @@ impl Graphics {
       background: "#FFFFFF".to_string(),
       svg_threshold_kb: 0,
       cache_policy: crate::graphics_cache::CachePolicy::default(),
+      names: ResourceNames::default(),
     }
+  }
+
+  /// Name generated resources `<prefix>N` instead of `xN` (Perl's `resource_prefix`, `Post.pm` L195): a page-render
+  /// worker after the first takes its own, as it cannot see the names the other workers hand out.
+  #[must_use]
+  pub fn with_resource_prefix(mut self, prefix: &str) -> Self {
+    self.names.prefix = Some(prefix.to_string());
+    self
   }
 
   /// Choose whether conversions may be served from the shared,
@@ -693,10 +744,10 @@ impl Graphics {
   /// file: `figures/mock1/plot.pdf` and `figures/jackpot/plot.pdf` would both
   /// claim `plot.png`, and the first write would silently replace one figure
   /// with the other. When the stem-based destination is already claimed by
-  /// another source (`used_dests`), or this source already produced a job
+  /// another source (`ResourceNames::claimed`), or this source already produced a job
   /// (`page=`/subsequent), fall back to a unique `xN` — mirroring Perl's
   /// `generateResourcePathname` (`Graphics.pm` L299/L319), which never collapses
-  /// distinct sources. `used_dests` keys on the full `stem.ext`, so `plot.png`
+  /// distinct sources. `claimed` keys on the full `stem.ext`, so `plot.png`
   /// and `plot.svg` (different *primary* output files) don't count as a
   /// collision. The `xN` fallback is likewise registered and skips any already
   /// claimed name, so a source literally named `xN` and a generated `xN` can't
@@ -709,32 +760,23 @@ impl Graphics {
     dest_type: &str,
     has_page: bool,
     prior_source_jobs: u32,
-    used_dests: &mut HashMap<String, String>,
-    resource_counter: &mut u32,
+    names: &mut ResourceNames,
   ) -> String {
     let stem = Path::new(source)
       .file_stem()
       .and_then(|s| s.to_str())
       .unwrap_or("image");
     let stem_dest = format!("{}.{}", stem, dest_type);
-    let stem_taken = used_dests
+    let stem_taken = names
+      .claimed
       .get(&stem_dest)
       .is_some_and(|owner| owner != source);
     if has_page || prior_source_jobs > 0 || stem_taken {
-      // Advance to a counter name whose output file isn't already claimed by
-      // another source, and register it — else a real source named `xK` (which
-      // took the stem branch) could be silently overwritten by this fallback.
-      loop {
-        *resource_counter += 1;
-        let name = format!("x{}", resource_counter);
-        let dest = format!("{}.{}", name, dest_type);
-        if let std::collections::hash_map::Entry::Vacant(slot) = used_dests.entry(dest) {
-          slot.insert(source.to_string());
-          return name;
-        }
-      }
+      // A counter name whose output file no other source claimed, registered — else a real source named `xK`
+      // (which took the stem branch) could be silently overwritten by this fallback.
+      names.generate(source, dest_type)
     } else {
-      used_dests.insert(stem_dest, source.to_string());
+      names.claimed.insert(stem_dest, source.to_string());
       stem.to_string()
     }
   }
@@ -900,38 +942,27 @@ impl Graphics {
     source: &str,
     source_dir: &str,
     dest_dir: &str,
-    used_dests: &mut HashMap<String, String>,
-    resource_counter: &mut u32,
+    site_dir: &str,
+    names: &mut ResourceNames,
   ) -> Option<String> {
     // Relativize like Perl's pathname_relative (→ File::Spec->abs2rel): a
     // source OUTSIDE source_dir comes back as `../…`, never the raw absolute
     // path. A bare `strip_prefix` used to leak the absolute path for a graphic
     // reached through `\subimport*{../A/child/}` (issue #698 class).
     let mut rel = latexml_core::util::pathname::relative(source, source_dir);
-    // Perl `Post/Graphics.pm` L298-300: a path that would leave the destination
-    // (`..`, a root or drive) takes a generated `xN` name instead (OXIDIZED_DESIGN_DIVERGENCES #1081).
-    let contained = Path::new(&rel).components().all(|part| {
-      matches!(
-        part,
-        std::path::Component::Normal(_) | std::path::Component::CurDir
-      )
-    });
-    if !contained {
+    // Perl `Post/Graphics.pm` L292-300: the same relative path from the destination, kept only inside the site
+    // directory (`--sitedirectory`, else `--dest`'s), else a generated `xN` (OXIDIZED_DESIGN_DIVERGENCES #1081, issue 995).
+    let target = PathBuf::from(dest_dir).join(&rel);
+    if latexml_core::util::pathname::is_contained(&target.to_string_lossy(), site_dir).is_none() {
       let ext = Path::new(source)
         .extension()
         .map(|ext| ext.to_string_lossy().into_owned())
         .unwrap_or_default();
-      rel = loop {
-        *resource_counter += 1;
-        let name = if ext.is_empty() {
-          format!("x{resource_counter}")
-        } else {
-          format!("x{resource_counter}.{ext}")
-        };
-        if let std::collections::hash_map::Entry::Vacant(slot) = used_dests.entry(name.clone()) {
-          slot.insert(source.to_string());
-          break name;
-        }
+      let name = names.generate(source, &ext);
+      rel = if ext.is_empty() {
+        name
+      } else {
+        format!("{name}.{ext}")
       };
     }
     let rel_path = Path::new(&rel);
@@ -2283,6 +2314,8 @@ impl Processor for Graphics {
     }
 
     let dest_dir = doc.get_destination_directory().unwrap_or(".").to_string();
+    // Perl `Post.pm` L698-706: the site directory defaults to the destination's.
+    let site_dir = doc.get_site_directory().unwrap_or(&dest_dir).to_string();
     // Read DPI/magnify/zoomout from processing instructions (set by latexml.sty)
     let dpi = self
       .get_parameter(&doc, "DPI")
@@ -2296,8 +2329,8 @@ impl Processor for Graphics {
     let n_to_process = nodes.len();
     latexml_core::telemetry::set_graphics_assets(n_to_process as u32);
 
-    // Counter for generating unique resource names (like Perl's generateResourcePathname)
-    let mut resource_counter: u32 = 0;
+    // The run's resource names, handed back below: every page allocates from one sequence (issue 995).
+    let mut names = std::mem::take(&mut self.names);
 
     // Two-phase plan so the slow per-image `convert` subprocess and
     // `read_image_dimensions` calls can run in parallel without touching
@@ -2373,19 +2406,10 @@ impl Processor for Graphics {
       Pathy(String, Option<u32>, String),
     }
     let mut convert_job_ids: HashMap<JobKey, usize> = HashMap::default();
-    // Plan::Copy uses the same (hash, options) dedup so byte-identical
+    // Plan::Copy uses the same (hash, options) dedup (`ResourceNames::copies`) so byte-identical
     // raster sources point at one output. A raster whose pixels change
     // (crop, turn) is a Plan::Convert job with its own file.
-    #[derive(Hash, Eq, PartialEq)]
-    enum CopyKey {
-      Hashed([u8; 32], String),
-      Pathy(String, String),
-    }
-    let mut copy_dedup: HashMap<CopyKey, String> = HashMap::default();
     let mut convert_source_counts: HashMap<String, u32> = HashMap::default();
-    // Maps a stem-based destination file (`stem.ext`) to the source that claimed
-    // it, so two different sources sharing a basename don't collide (#6922).
-    let mut used_dests: HashMap<String, String> = HashMap::default();
     // Every source first, so a generated `xN` name (or a converted `fig.eps`'s
     // `fig.png`) never lands on a file another node copies — an author's own
     // `x1.png`, which a crop's output would otherwise overwrite.
@@ -2394,7 +2418,8 @@ impl Processor for Graphics {
       .map(|node| self.find_graphic_file(&doc, node, &search_paths))
       .collect();
     for source in sources.iter().flatten() {
-      used_dests
+      names
+        .claimed
         .entry(latexml_core::util::pathname::relative(source, &source_dir))
         .or_insert_with(|| source.clone());
     }
@@ -2470,8 +2495,7 @@ impl Processor for Graphics {
             &dest_type,
             has_page || transform,
             prior_source_jobs,
-            &mut used_dests,
-            &mut resource_counter,
+            &mut names,
           );
           convert_source_counts.insert(source.clone(), prior_source_jobs + 1);
           // Vector-SVG path: opt-in for small PDFs only. We prepare an
@@ -2959,21 +2983,17 @@ impl Processor for Graphics {
             Some(d) => CopyKey::Hashed(d.content(), options.clone()),
             None => CopyKey::Pathy(source.clone(), options.clone()),
           };
-          let rel = if let Some(existing) = copy_dedup.get(&key) {
+          let key = (dest_dir.clone(), key);
+          let rel = if let Some(existing) = names.copies.get(&key) {
             existing.clone()
           } else {
-            let rel_opt = Self::copy_to_destination(
-              source,
-              &source_dir,
-              &dest_dir,
-              &mut used_dests,
-              &mut resource_counter,
-            );
+            let rel_opt =
+              Self::copy_to_destination(source, &source_dir, &dest_dir, &site_dir, &mut names);
             // If the copy itself failed, still emit a RELATIVE URL (abs2rel),
             // never the raw absolute source path (issue #698 class).
             let rel = rel_opt
               .unwrap_or_else(|| latexml_core::util::pathname::relative(source, &source_dir));
-            copy_dedup.insert(key, rel.clone());
+            names.copies.insert(key, rel.clone());
             rel
           };
           let raw_dims = Self::read_source_dimensions(source);
@@ -3074,6 +3094,7 @@ impl Processor for Graphics {
       doc.get_destination().unwrap_or("?"),
       n_to_process
     );
+    self.names = names;
     Ok(vec![doc])
   }
 }
@@ -3097,10 +3118,9 @@ mod tests {
   /// falls back to a unique `xN`.
   #[test]
   fn convert_dest_names_avoid_basename_collision() {
-    let mut used: HashMap<String, String> = HashMap::default();
-    let mut ctr: u32 = 0;
-    let a = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used, &mut ctr);
-    let b = Graphics::assign_dest_name("figs/b/plot.pdf", "png", false, 0, &mut used, &mut ctr);
+    let mut used = ResourceNames::default();
+    let a = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used);
+    let b = Graphics::assign_dest_name("figs/b/plot.pdf", "png", false, 0, &mut used);
     assert_eq!(a, "plot", "first source keeps the readable stem");
     assert_ne!(
       a, b,
@@ -3112,15 +3132,15 @@ mod tests {
     );
 
     // A distinct stem is unaffected — keeps its readable name.
-    let c = Graphics::assign_dest_name("figs/c/other.pdf", "png", false, 0, &mut used, &mut ctr);
+    let c = Graphics::assign_dest_name("figs/c/other.pdf", "png", false, 0, &mut used);
     assert_eq!(c, "other");
 
     // Same stem but a DIFFERENT output extension is a different file, not a collision.
-    let d = Graphics::assign_dest_name("figs/d/plot.eps", "svg", false, 0, &mut used, &mut ctr);
+    let d = Graphics::assign_dest_name("figs/d/plot.eps", "svg", false, 0, &mut used);
     assert_eq!(d, "plot", "plot.svg does not collide with plot.png");
 
     // A second job of the SAME source (e.g. `page=`) is still unique.
-    let e = Graphics::assign_dest_name("figs/a/plot.pdf", "png", true, 1, &mut used, &mut ctr);
+    let e = Graphics::assign_dest_name("figs/a/plot.pdf", "png", true, 1, &mut used);
     assert!(
       e.starts_with('x'),
       "a second job of one source stays unique, got {e}"
@@ -3130,19 +3150,17 @@ mod tests {
     // guard). In the real caller a repeat reference is deduped upstream by content
     // hash, and any genuine second job carries `prior_source_jobs > 0`; this pins
     // the guard's own contract directly.
-    let mut used2: HashMap<String, String> = HashMap::default();
-    let mut ctr2: u32 = 0;
-    let f1 = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used2, &mut ctr2);
-    let f2 = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used2, &mut ctr2);
+    let mut used2 = ResourceNames::default();
+    let f1 = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used2);
+    let f2 = Graphics::assign_dest_name("figs/a/plot.pdf", "png", false, 0, &mut used2);
     assert_eq!(f1, "plot");
     assert_eq!(f2, "plot", "the same source is not a self-collision");
 
     // Three distinct sources sharing a stem → three distinct outputs.
-    let mut u3: HashMap<String, String> = HashMap::default();
-    let mut c3: u32 = 0;
+    let mut u3 = ResourceNames::default();
     let g: Vec<String> = ["m1/chi2.pdf", "m3/chi2.pdf", "jk/chi2.pdf"]
       .iter()
-      .map(|s| Graphics::assign_dest_name(s, "png", false, 0, &mut u3, &mut c3))
+      .map(|s| Graphics::assign_dest_name(s, "png", false, 0, &mut u3))
       .collect();
     assert_eq!(g[0], "chi2");
     assert_eq!(
@@ -3159,11 +3177,10 @@ mod tests {
   /// fresh name rather than overwrite the generated `x1.png`.
   #[test]
   fn generated_xn_survives_a_later_literal_xn_source() {
-    let mut used: HashMap<String, String> = HashMap::default();
-    let mut ctr: u32 = 0;
-    let base = Graphics::assign_dest_name("figs/b/plot.pdf", "png", false, 0, &mut used, &mut ctr);
-    let coll = Graphics::assign_dest_name("figs/c/plot.pdf", "png", false, 0, &mut used, &mut ctr);
-    let lit = Graphics::assign_dest_name("figs/a/x1.pdf", "png", false, 0, &mut used, &mut ctr);
+    let mut used = ResourceNames::default();
+    let base = Graphics::assign_dest_name("figs/b/plot.pdf", "png", false, 0, &mut used);
+    let coll = Graphics::assign_dest_name("figs/c/plot.pdf", "png", false, 0, &mut used);
+    let lit = Graphics::assign_dest_name("figs/a/x1.pdf", "png", false, 0, &mut used);
     assert_eq!(base, "plot");
     assert_eq!(coll, "x1", "the colliding source takes the generated x1");
     assert_ne!(

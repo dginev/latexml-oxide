@@ -911,6 +911,24 @@ fn run_post_processing_inner(
   // falls back to the destination's directory (document.rs, Perl Config.pm L466).
   if let Some(site_dir) = site_directory {
     doc_opts.site_directory = Some(site_dir.to_string());
+    // Perl `Post.pm` L698-706 (`Post::Document::new_internal`): the destination must lie within the site directory.
+    if let Some(dest) = destination {
+      let dest_dir = std::path::Path::new(dest)
+        .parent()
+        .map(|dir| dir.to_string_lossy().into_owned())
+        .filter(|dir| !dir.is_empty())
+        .unwrap_or_else(|| ".".to_string());
+      if latexml_core::util::pathname::is_contained(&dest_dir, site_dir).is_none() {
+        emit_fatal(
+          "unexpected",
+          &dest_dir,
+          &format!(
+            "The destination directory ({dest_dir}) must be within the siteDirectory ({site_dir})"
+          ),
+        );
+        return String::new();
+      }
+    }
   }
   // `raw_xml` holds the in-memory serialization — `Some` only for `Xml` input.
   // `File` input streams from disk and never holds it, so `raw_xml` is `None`
@@ -1565,6 +1583,8 @@ fn run_post_processing_inner(
       // Filled in by `parallel_render` once the fleet is sized.
       max_rss_kb: 0,
       post_values: latexml_core::PostStateValues::capture(),
+      // Set per worker by `parallel_render`.
+      resource_prefix: None,
     };
     let t_pages = audit_start("render_pages");
     let outcome = crate::render_workers::parallel_render(
