@@ -781,7 +781,10 @@ Rules that keep this file honest and mergeable:
     ASan reports on the system allocator; the fleet's only unexplained SIGSEGV in run 397 is 2212.05990 (never
     reproduced). A render worker's later SIGSEGV on 2.3.2 (issue 777's 2,400-problem slice under load; ip in
     the glibc heap) is a different class, fixed by the watchdog ending through `_exit` (#973); the 1502.06095 crash in
-    mimalloc's own heap during digestion stays unexplained. Re-measure 3.x against 2.3.2 (instructions, peak RSS, a
+    mimalloc's own heap during digestion stays unexplained. Another witness (2026-11-24, gates LIBXML027b on
+    `ee0484cb1ac`, nextest `-j 64`): `perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes`
+    took a SIGSEGV while loading packages (bigintcalc.sty), before any document tree; 0 of 400 repeats, 32 at a time, on
+    the same build. Re-measure 3.x against 2.3.2 (instructions, peak RSS, a
     loaded 1502.06095 loop) before switching; 2
   - SPLITDOMNS — the whole-DOM split (`latexml_post/src/split.rs`) loses a page's non-`ltx` namespaces: xy-pic's svg
     inside math raises `malformed:namespace` Warnings (1502.06095: 344, 1609.07593: 1,377 under `--splitat=section`)
