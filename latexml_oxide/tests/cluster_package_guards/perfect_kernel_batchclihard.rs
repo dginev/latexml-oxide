@@ -304,6 +304,14 @@ fn quiet_hides_the_format_build_progress() {
     1,
     "{loud}"
   );
+  // The default run's stderr is main's, byte for byte: the two "Format dump complete" lines (ini_tex's and the front
+  // end's) end it back to back, with no blank line a fresh-line `Note` would insert after the logger's open
+  // `( … )` progress (the round-3 review's blocker: one extra empty line).
+  let tail: Vec<&str> = loud.trim_end_matches('\n').lines().rev().take(2).collect();
+  assert!(
+    tail.len() == 2 && tail.iter().all(|l| l.starts_with("Format dump complete: ")),
+    "the default run must end with the two 'Format dump complete' lines, adjacent:\n{loud}"
+  );
   let quiet_dest = dir.path().join("quiet.dump.txt");
   let quiet = init(true, &format!("--dest={}", quiet_dest.display()));
   assert_eq!(quiet, "", "-q prints nothing");

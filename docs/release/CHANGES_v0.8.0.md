@@ -49,7 +49,8 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     records (with their continuation lines), the final verdict and the notes about output not produced ("Log not
     written") on stderr; Warnings, the split render's forwarded Warnings, the format build's progress and notes such
     as "Log written to" are hidden. Perl's `--quiet` prints nothing at all; ours keeps the
-    success-rate signal on stderr at every verbosity (OXIDIZED_DESIGN_DIVERGENCES #1158). The `.latexml.log` keeps
+    success-rate signal on stderr at every verbosity (OXIDIZED_DESIGN_DIVERGENCES #1158); as on main, `--init` and an
+    XML input under `--nopost` print no verdict at any verbosity. The `.latexml.log` keeps
     everything, and the exit status and an archive's `status` are unchanged. Guards
     `perfect_kernel_batchclihard::quiet_keeps_errors_and_the_verdict_on_stderr`, `quiet_hides_the_format_build_progress`,
     `quiet_mode_still_reports_error_and_fatal`, `perfect_kernel_batchcliwire::quiet_silences_the_render_workers`.
@@ -64,8 +65,8 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
     handler is installed before the build writes anything, the attempt note is written and the finished dump
     published under the lock the handler takes, so an interrupt can no longer undo ahead of the note or put the old
     note back beside a published dump (an interrupt just after publishing leaves this build's note beside the dump,
-    which is harmless: a dump that matches its tree is never rebuilt); and the handler ends the process with `_exit`, not running libxml2's destructor under the
-    still-running build thread (#973). A process that built a format still exits with status 130 on a later SIGTERM
+    which is harmless: a dump that matches its tree is never rebuilt); and the handler ends the process with
+    `_exit`, not running libxml2's destructor under the still-running build thread (#973). A process that built a format still exits with status 130 on a later SIGTERM
     or SIGHUP rather than by the signal. OXIDIZED_DESIGN_DIVERGENCES #1148; guard
     `format_dumps::tests::a_published_build_is_not_undone`.
   - **Security: `cortex_worker` never loads a runtime `.rhai` binding.** A worker built with `--features cortex`

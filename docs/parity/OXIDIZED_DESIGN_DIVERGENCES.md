@@ -24225,9 +24225,10 @@ latexmlc 0.8.8 on the same host (CLI audit 2026-11-24):
 Warnings and the front end's notes ("Output written to", "Log written to", "Format dump complete", the format build's
 notes and `[ini_tex]` progress) are hidden, while every `Error:`/`Fatal:` record, with its continuation lines, and the
 final verdict (`Conversion complete…`/`Conversion failed…`, and a failed input's status line) still print: a run
-without post-processing, whose own verdict is a muted Info note, prints the front end's. A note about output that was
-not produced (a skipped supplement, "Log not written") prints too. The render workers' records pass the same gate. The log keeps everything at its Info floor, and the exit status and a
-zip's `status` are unchanged.
+without post-processing, whose own verdict is a muted Info note, prints the front end's (as on main, `--init` and an
+XML input under `--nopost` print no verdict at any verbosity). A note about output that was not produced (a skipped
+supplement, "Log not written") prints too. The render workers' records pass the same gate. Without `-q`, stderr is
+main's byte for byte. The log keeps everything at its Info floor, and the exit status and a zip's `status` are unchanged.
 
 **Guards**: `perfect_kernel_batchcliwire` (repros `tools/perfect_kernel/repros/cli-options/`), the binaries' unit tests
 `verbose_and_quiet_are_counted` and `cli_tests::standalone_files_and_the_profile_are_checked`;

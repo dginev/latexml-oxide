@@ -1443,7 +1443,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // Init mode: process file and dump state
     match latexml::ini_tex::dump_format(&mut converter, &source, target.as_deref()) {
       Ok(count) => {
-        latexml_core::NoteSTDERR!(format!("Format dump complete: {count} entries written"))
+        // main's plain line (no fresh-line logic: the logger never saw the `[ini_tex]` lines), hidden under `-q`.
+        if latexml_core::util::logger::stderr_shows_info() {
+          eprintln!("Format dump complete: {count} entries written");
+        }
       },
       Err(e) => {
         eprintln!("Format dump failed: {}", e);
@@ -1888,7 +1891,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             );
             post_log.push_str(&latexml_core::util::logger::flush_log());
             written?;
-            latexml_core::NoteSTDERR!(format!("Output written to {epub_dest}"));
+            if latexml_core::util::logger::stderr_shows_info() {
+              eprintln!("Output written to {epub_dest}");
+            }
           }
         } else if let Some(zip_dest) = zip_dest {
           // whatsout=archive: pack the full document + resources into a ZIP.
@@ -1933,7 +1938,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             telemetry_json: None,
             source_date_epoch,
           })?;
-          latexml_core::NoteSTDERR!(format!("Output written to {zip_dest}"));
+          if latexml_core::util::logger::stderr_shows_info() {
+            eprintln!("Output written to {zip_dest}");
+          }
         } else if !(output.is_empty() && post.status_code >= 3) {
           // A post-processing Fatal leaves no output, and nothing is written (#782).
           latexml_post::writer::write_output(&output, target.as_deref())?;
@@ -2002,7 +2009,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           Some(log_path),
         )?;
       }
-      latexml_core::NoteSTDERR!(format!("Log written to {log_path}"));
+      if latexml_core::util::logger::stderr_shows_info() {
+        eprintln!("Log written to {log_path}");
+      }
     }
   }
 
