@@ -71,7 +71,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (385 items on 2026-11-24 on `int/towards_v0_8_1`: 385 open, weight 865, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (386 items on 2026-11-24 on `int/towards_v0_8_1`: 386 open, weight 868, 43 without a weight — counted as the `  - ID` bullets from here to "Silent-loss inventory", a trailing `; N` the weight; the arXiv long tail — items under 200 articles or synthetic-only — is in [`LONG_TAIL.md`](LONG_TAIL.md), v0.8.2+; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
@@ -781,11 +781,17 @@ Rules that keep this file honest and mergeable:
     ASan reports on the system allocator; the fleet's only unexplained SIGSEGV in run 397 is 2212.05990 (never
     reproduced). A render worker's later SIGSEGV on 2.3.2 (issue 777's 2,400-problem slice under load; ip in
     the glibc heap) is a different class, fixed by the watchdog ending through `_exit` (#973); the 1502.06095 crash in
-    mimalloc's own heap during digestion stays unexplained. Another witness (2026-11-24, gates LIBXML027b on
-    `ee0484cb1ac`, nextest `-j 64`): `perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes`
-    took a SIGSEGV while loading packages (bigintcalc.sty), before any document tree; 0 of 400 repeats, 32 at a time, on
-    the same build. Re-measure 3.x against 2.3.2 (instructions, peak RSS, a
+    mimalloc's own heap during digestion stays unexplained. Re-measure 3.x against 2.3.2 (instructions, peak RSS, a
     loaded 1502.06095 loop) before switching; 2
+  - SEGVTEST — test processes, which run on glibc (`#[global_allocator]` is set only in the `bin/*.rs`), took a SIGSEGV
+    twice in a full nextest run (`-j 64`), both on 2026-11-24: 0 in the 471 gate runs before rust-libxml 0.3.25 arrived
+    (2026-11-23 18:10), 2 in the 49 since. Witnesses: gates UNSAFE3 (`114_streaming_complex
+    streaming_matches_eager_on_complex`, many conversions in one process, libxml 0.3.26) and LIBXML027b on `ee0484cb1ac`
+    (`perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes`: conversions 1 and 2 of the test
+    completed, the 3rd died while digesting `l3backend-pdftex.def`; libxml 0.3.27). Both trees hold #1000 (rustix in
+    place of raw syscalls) as well as libxml 0.3.26, so either may be the cause. 0 of 400 standalone repeats of the
+    achemso test. Next: valgrind memcheck on both tests, then a loaded nextest loop with `ulimit -c unlimited` and
+    `LATEXML_SIGSEGV_TRACE=1` (the tracer in `latexml_oxide/src/util/test.rs`); 3
   - SPLITDOMNS — the whole-DOM split (`latexml_post/src/split.rs`) loses a page's non-`ltx` namespaces: xy-pic's svg
     inside math raises `malformed:namespace` Warnings (1502.06095: 344, 1609.07593: 1,377 under `--splitat=section`)
     and 2606.28974 loses an `aria-hidden`; the streamed split, the default for split runs since OXIDIZED_DESIGN_DIVERGENCES
