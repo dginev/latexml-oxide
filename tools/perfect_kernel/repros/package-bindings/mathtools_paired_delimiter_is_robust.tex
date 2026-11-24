@@ -1,0 +1,16 @@
+% witness: 2408.12455 common.sty:46 `\expandafter \csname squarep \endcsname #1{#2}` (24 errors: "Extra \middle")
+% oracle:  pdflatex 0 errors, "[a|b] and [c]; {x | y}; E z; [a|b], x, {u | v}" (mathtools.sty:905/:983
+%          `\DeclareRobustCommand{#1}`: the body is `\squarep␣`)
+% engines: rust INT081I 1 error ("Extra \middle"), brackets lost; perl 0 errors, brackets lost (KNOWN_PERL_ERRORS #1328)
+% expect:  0 errors; every delimiter pair present
+% status:  RED (INT081I) -> GREEN (REGTAILD); guard perfect_kernel_batchregtaild::paired_delimiter_is_robust
+\documentclass{article}
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\squarep}{[}{]}
+\DeclarePairedDelimiterX{\setp}[2]{\{}{\}}{#1 \;\delimsize\vert\; #2}
+\DeclarePairedDelimiterXPP{\expectp}[1]{E}{[}{]}{}{#1}
+\begin{document}
+$\csname squarep \endcsname*{a \middle| b}$ and $\csname squarep \endcsname{c}$;
+$\csname setp \endcsname*{x}{y}$; $\csname expectp \endcsname[\big]{z}$;
+$\squarep*{a\middle|b}$, $\squarep[\big]{x}$, $\setp{u}{v}$.
+\end{document}

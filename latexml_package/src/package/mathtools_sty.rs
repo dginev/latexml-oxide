@@ -860,6 +860,13 @@ LoadDefinitions!({
   // 3.6 — Paired delimiters
   //======================================================================
 
+  // The paired-delimiter commands are robust (mathtools.sty:905, :983 `\DeclareRobustCommand{#1}`): the body is
+  // `\cmd␣`, which a document may call by name — 2408.12455's common.sty `\csname squarep \endcsname #1{#2}`, where
+  // Perl's plain `\squarep` (mathtools.sty.ltxml:663-708) leaves `\relax`, the brackets lost. KNOWN_PERL_ERRORS #1328;
+  // guard `perfect_kernel_batchregtaild::paired_delimiter_is_robust`.
+  fn robust_options() -> Option<ExpandableOptions> {
+    Some(ExpandableOptions { robust: true, ..ExpandableOptions::default() })
+  }
   // \DeclarePairedDelimiter\cmd{left}{right}
   // Perl: creates \cmd with star/optional-size/plain variants via wrapper macros:
   //   \cmd*{x}      → \left<ldel> x \right<rdel>
@@ -928,7 +935,7 @@ LoadDefinitions!({
       T_BEGIN!(), T_CS!(&star_cs_name), T_END!(),
       T_BEGIN!(), T_CS!(&nostar_cs_name), T_END!(),
     ]);
-    def_macro(cs, None, dispatch_toks, None)?;
+    def_macro(cs, None, dispatch_toks, robust_options())?;
   });
 
   // \DeclarePairedDelimiterX\cmd[nargs]{left}{right}{body} and the XPP form with pre- and postcode, as mathtools.sty
@@ -993,7 +1000,7 @@ LoadDefinitions!({
         toks.push(T_END!());
         toks.push(T_CS!(&inner_cs_name));
         Ok(Tokens::new(toks))
-      }))), None)?;
+      }))), robust_options())?;
     Ok(())
   }
   DefPrimitive!("\\DeclarePairedDelimiterX DefToken [Number] {} {} {}", sub[(cs, nargs, ldel, rdel, body)] {

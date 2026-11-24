@@ -2,6 +2,7 @@
 //! amsthm a `\relax` counter argument names no counter; sidecap's floats are the kernel's figure and table; mathtools'
 //! paired delimiters are robust commands. Repros under `tools/perfect_kernel/repros/package-bindings/`.
 use latexml::util::test::{assert_element, convert_with, xml_element};
+use regex::Regex;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -107,5 +108,38 @@ fn sidecap_float_is_the_kernel_float() {
        <caption><tag close=\": \">Table 1</tag>A side table.</caption></table>",
       tags("Table 1", "1")
     ),
+  );
+}
+
+/// mathtools.sty:905/:983 `\DeclareRobustCommand{#1}`: a paired delimiter's body is `\cmd␣`, which 2408.12455's
+/// common.sty calls by name (`\csname squarep \endcsname #1{#2}`; 24 "Extra \middle" Errors, brackets lost — Perl
+/// loses them too, KNOWN_PERL_ERRORS #1328), for `\DeclarePairedDelimiter`, `…X` and `…XPP`. The direct calls
+/// (`\squarep*{a\middle|b}`, `\squarep[\big]{x}`) read the same.
+#[test]
+fn paired_delimiter_is_robust() {
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/mathtools_paired_delimiter_is_robust.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let math = Regex::new(r#"<Math mode="inline" tex="([^"]*)" text="([^"]*)""#).unwrap();
+  let read: Vec<(&str, &str)> = math
+    .captures_iter(&xml)
+    .map(|c| (c.get(1).unwrap().as_str(), c.get(2).unwrap().as_str()))
+    .collect();
+  assert_eq!(
+    read,
+    [
+      (r"\left[a\middle|b\right]", "list@(a, b)"),
+      ("[c]", "delimited-[]@(c)"),
+      (r"\left\{x\;\middle|\;y\right\}", "conditional-set@(x, y)"),
+      (r"E\bigl[z\bigr]", "E@(delimited-[]@(z))"),
+      (r"\left[a\middle|b\right]", "list@(a, b)"),
+      (r"\bigl[x\bigr]", "delimited-[]@(x)"),
+      (r"\{u\;|\;v\}", "conditional-set@(u, v)"),
+    ],
+    "{xml}"
   );
 }

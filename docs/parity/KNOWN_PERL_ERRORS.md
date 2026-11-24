@@ -22734,3 +22734,24 @@ pdflatex prints "6.94444pt 7.5pt"; Perl 0.8.8 (same host) and the Rust port befo
 Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1155): a space-like box with height or depth is sized in its word, and
 `\hphantom` has its argument's width alone. Witnesses 1210.5701 (xy's `*[o]{\phantom{s}}`: "Dimension too large"), 2503.14426;
 guards `perfect_kernel_batchregtailc::{phantom_keeps_its_height_among_siblings, xy_circled_phantom_object_converts}`.
+
+## 1328. Perl's mathtools paired delimiters are not robust: `\csname cmd \endcsname` is `\relax`
+
+mathtools.sty:905/:983 defines each `\DeclarePairedDelimiter`, `\DeclarePairedDelimiterX` and
+`\DeclarePairedDelimiterXPP` command with `\DeclareRobustCommand`, so its body is `\cmd␣` and a document may call that
+name; mathtools.sty.ltxml:663-708 defines `\cmd` alone. Minimal trigger:
+
+```tex
+\documentclass{article}
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\squarep}{[}{]}
+\begin{document}
+$\csname squarep \endcsname*{a \middle| b}$ and $\csname squarep \endcsname{c}$
+\end{document}
+```
+
+pdflatex prints "[a|b] and [c]"; Perl (same host): "*a|b and c", the brackets lost and the formula unparsed (the Rust
+port the same, with "Extra \middle"). Fixed in Rust: mathtools_sty.rs defines the three forms robust (`robust => true`:
+the body under `\cmd␣`, `\cmd` its `\protect` wrapper). Witness 2408.12455 (common.sty `\expandafter \csname squarep
+\endcsname #1{#2}`: 24 → 0 Errors); guard `perfect_kernel_batchregtaild::paired_delimiter_is_robust` (repro
+`package-bindings/mathtools_paired_delimiter_is_robust`).
