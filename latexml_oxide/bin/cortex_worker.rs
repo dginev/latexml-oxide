@@ -1821,6 +1821,9 @@ fn custom_alloc_error_hook(layout: Layout) {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
+  // The worker converts untrusted arXiv sources: a `<pkg>.sty.rhai` shipped in one never loads, in any build
+  // (SAFETY.md, "Runtime bindings"). Every child it spawns re-executes this `main`, so the switch holds there too.
+  latexml::converter::forbid_runtime_bindings();
   set_alloc_error_hook(custom_alloc_error_hook);
   // Capture panic location + full backtrace for every panic (the conversion
   // catch_unwind only sees the bare payload otherwise). Process-wide, so it also

@@ -45,6 +45,12 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### After 0.8.0-rc2
 
+  - **Security: `cortex_worker` never loads a runtime `.rhai` binding.** A worker built with `--features cortex`
+    alone keeps the default `runtime-bindings`, so a `<pkg>.sty.rhai` shipped inside an arXiv source loaded on
+    `\usepackage{pkg}` and its `Command(..).output()` ran any program. The worker now forbids runtime bindings
+    (`converter::forbid_runtime_bindings`) before anything else, whatever its build features, so such a file is
+    ignored as in a build without the feature, in the worker and in every child it spawns. The `latexml_oxide` CLI, the library and the LSP still load runtime bindings. Guards
+    `cortex_worker_untrusted_bindings` (`--features cortex`) and `forbid_runtime_bindings`; docs/release/SAFETY.md.
   - **rust-libxml 0.3.26** (from 0.3.24; both releases 2026-11-23): a wrapper of a node libxml2 freed reads as a null
     node instead of pointing into freed memory, linking calls refuse a link that would double-free or loop, a
     document's drop neutralises its wrappers, and strings with a NUL byte, over-long text and namespaces of another
