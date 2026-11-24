@@ -557,6 +557,7 @@ fn post_in(xml: &str, stylesheet: &str, source_directory: Option<&str>) -> Strin
     timestamp: None,
     icon: None,
     whatsout: latexml_post::extract::Whatsout::default(),
+    nocache: false,
   };
   let out = latexml::post::run_post_processing(xml, &opts);
   let log = latexml_core::util::logger::flush_log();

@@ -191,6 +191,7 @@ pub fn convert_and_post_pmml_clean(source: &str) -> String {
     timestamp:                 None,
     icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::default(),
+    nocache:                   false,
   };
   let out = latexml::post::run_post_processing(&xml, &opts);
   let log = latexml_core::util::logger::flush_log();
@@ -237,6 +238,7 @@ pub fn convert_and_post_pmml_contrib_clean(source: &str) -> String {
     timestamp:                 None,
     icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::default(),
+    nocache:                   false,
   };
   let out = latexml::post::run_post_processing(&xml, &opts);
   let log = latexml_core::util::logger::flush_log();
@@ -307,6 +309,7 @@ pub fn post_with(xml: &str, navigationtoc: Option<&str>) -> String {
     timestamp: None,
     icon: None,
     whatsout: latexml_post::extract::Whatsout::default(),
+    nocache: false,
   };
   latexml::post::run_post_processing(xml, &opts)
 }

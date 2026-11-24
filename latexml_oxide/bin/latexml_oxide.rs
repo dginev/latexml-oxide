@@ -1738,6 +1738,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             .filter(|t| !t.is_empty() && *t != "0"),
           icon: cli.icon.as_deref(),
           whatsout: whatsout_mode,
+          nocache: false,
         };
         // Drop dead core TeX state right after `MakeBibliography` (before
         // `parallel_render` sizes the worker fleet and before render phases)

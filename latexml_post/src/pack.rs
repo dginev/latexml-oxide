@@ -261,6 +261,10 @@ fn is_excluded_archive_entry(basename: &str) -> bool {
   if basename.starts_with('.') || basename.ends_with('~') {
     return true;
   }
+  // Our cache (`LaTeXML-oxide.cache`) and its SQLite side files, which a killed process leaves.
+  if crate::document::is_cache_file(basename) {
+    return true;
+  }
   // Suffix test on the lowercase extension (Perl anchors `$`, i.e. the
   // final extension). `rsplit('.')` yields the extension before any dot.
   match basename.rsplit_once('.') {
@@ -368,6 +372,10 @@ mod tests {
     std::fs::write(p.join("paper.tex"), b"\\documentclass{article}").unwrap();
     std::fs::write(p.join("refs.bib"), b"@book{x}").unwrap();
     std::fs::write(p.join("LaTeXML.cache"), b"cache").unwrap();
+    std::fs::write(p.join("LaTeXML-oxide.cache"), b"cache").unwrap();
+    std::fs::write(p.join("LaTeXML-oxide.cache-wal"), b"wal").unwrap();
+    std::fs::write(p.join("LaTeXML-oxide.cache-shm"), b"shm").unwrap();
+    std::fs::write(p.join("LaTeXML-oxide.cache-journal"), b"journal").unwrap();
     std::fs::write(p.join(".hidden"), b"secret").unwrap();
     std::fs::write(p.join("backup~"), b"old").unwrap();
     // The HTML is added separately by pack_archive; a stray copy in
@@ -408,6 +416,10 @@ mod tests {
       "paper.tex",
       "refs.bib",
       "LaTeXML.cache",
+      "LaTeXML-oxide.cache",
+      "LaTeXML-oxide.cache-wal",
+      "LaTeXML-oxide.cache-shm",
+      "LaTeXML-oxide.cache-journal",
       ".hidden",
       "backup~",
     ] {

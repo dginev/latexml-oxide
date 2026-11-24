@@ -1,10 +1,11 @@
 //! Red/green guards for issue 995: an image reached outside the source directory (`\subimport*{../children/…}`).
 //! `--sitedirectory` keeps its source-relative path when that stays in the site directory and a destination outside it
 //! is Fatal (Perl `Post/Graphics.pm` L292-300, `Post.pm` L698-706); a generated `xN` name and a converted image's
-//! stem are handed out once per run, not once per split page (Perl's document cache, `Post.pm` L192-200, L687-690).
-//! A copy is written at its lexical path, never through a link out of the site directory; a converted image is reused
-//! by every page; the parallel page render names images as the serial one does.
-//! `graphics.rs` `ResourceNames`, `copy_destination`, `reserve_names`; OXIDIZED_DESIGN_DIVERGENCES #1081, #1157.
+//! stem are handed out once per destination directory from Perl's resource cache (`Post.pm` L192-200, L1517-1548:
+//! `LaTeXML-oxide.cache`), named for every page before any is rendered, so the serial and the parallel render agree, a
+//! rerun keeps the names and a second document continues them. A copy is written at its lexical path, never through a
+//! link out of the site directory; a converted image is reused by every page.
+//! `graphics.rs` `Graphics::plan_names`, `resource_cache.rs`; OXIDIZED_DESIGN_DIVERGENCES #1081, #1157.
 use std::{path::Path, process::Command};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -16,6 +17,12 @@ const SPLIT: &str = include_str!(
 );
 const REUSE: &str = include_str!(
   "../../../tools/perfect_kernel/repros/split-navigation/converted_image_reused_across_split_pages.tex"
+);
+const NAV: &str = include_str!(
+  "../../../tools/perfect_kernel/repros/split-navigation/image_names_title_images_in_navigation.tex"
+);
+const TWO_DOCS: &str = include_str!(
+  "../../../tools/perfect_kernel/repros/loader/image_names_two_documents_one_folder.tex"
 );
 #[cfg(unix)]
 const LINKED: &str = include_str!(
@@ -265,64 +272,293 @@ fn batchfix995_split_pages_keep_converted_stems_apart() {
   );
 }
 
-/// The parallel page render (64+ pages) names every image as the serial render does: a worker names the images of
-/// the pages before its range first (`Graphics::reserve_names`). Round 1 gave a worker after the first `x<i>_N`, so the
-/// names followed the fleet size (2 workers: S70 `x1_2.svg`); before it both workers wrote `x1.svg`, section 1
-/// showing child_2's `A`. S40 reuses S1's copy across the worker boundary. `LATEXML_RENDER_JOBS` 1, 2 and 4.
-#[test]
-fn batchfix995_parallel_render_names_images_as_the_serial_render() {
-  let mut tex =
-    String::from("\\documentclass{article}\n\\usepackage{graphicx}\n\\begin{document}\n");
-  for i in 1..=70 {
-    let body = match i {
-      1 => "\\includegraphics{../children/child_1/images/A}",
-      40 => {
-        "\\includegraphics{../children/child_1/images/A}\n\\includegraphics{../children/child_2/images/B}"
-      },
-      70 => "\\includegraphics{../children/child_2/images/A}",
-      _ => "fine",
-    };
-    tex.push_str(&format!("\\section{{S{i}}}\n{body}\n\n"));
+/// The tree a run wrote below `dir`: each file's path and bytes.
+fn tree(dir: &Path) -> Vec<(String, Vec<u8>)> {
+  fn walk(root: &Path, dir: &Path, out: &mut Vec<(String, Vec<u8>)>) {
+    for entry in std::fs::read_dir(dir).unwrap().flatten() {
+      let path = entry.path();
+      if path.is_dir() {
+        walk(root, &path, out);
+      } else {
+        let name = path
+          .strip_prefix(root)
+          .unwrap()
+          .to_string_lossy()
+          .into_owned();
+        out.push((name, std::fs::read(&path).unwrap()));
+      }
+    }
   }
-  tex.push_str("\\end{document}\n");
-  for jobs in ["1", "2", "4"] {
-    let root = tempfile::tempdir().unwrap();
-    layout(root.path(), &tex);
-    let parent = root.path().join("parent");
-    let log = convert(
-      root.path(),
-      &["--splitat=section", "--dest=index.html"],
-      Some(jobs),
-    );
+  let mut out = Vec::new();
+  walk(dir, dir, &mut out);
+  out.sort();
+  out
+}
+
+/// The sources a page's images show (each `img` file matched by its bytes; `?url` when none matches).
+fn shown(page: &Path, sources: &[(String, Vec<u8>)]) -> Vec<String> {
+  let html = std::fs::read_to_string(page).unwrap();
+  regex::Regex::new(r#"<img src="([^"]+)""#)
+    .unwrap()
+    .captures_iter(&html)
+    .map(|cap| cap[1].to_string())
+    .filter(|url| !url.starts_with("data:"))
+    .map(|url| {
+      let bytes = std::fs::read(page.parent().unwrap().join(&url)).unwrap_or_default();
+      sources
+        .iter()
+        .find(|(_, source)| *source == bytes)
+        .map_or(format!("?{url}"), |(name, _)| name.clone())
+    })
+    .collect()
+}
+
+/// 72 sections, an image in each title (which CrossRef copies into the neighbours' navigation) and one in each body:
+/// at `LATEXML_RENDER_JOBS` 1, 2 and 4 the trees are byte-identical, `LaTeXML-oxide.cache` included, and every page shows
+/// its own two images; a rerun into the same destination at another job count changes nothing (round 2, which had
+/// each worker replay the pages before its range, missed the navigation copies: 13 pages showed another section's
+/// image). The names are the page order's: S<k> shows `x(2k-1).png` and `x(2k).png`. Repro
+/// split-navigation/image_names_title_images_in_navigation.
+#[test]
+fn batchfix995_every_job_count_names_images_alike() {
+  let root = tempfile::tempdir().unwrap();
+  let (src, img) = (root.path().join("src"), root.path().join("img"));
+  std::fs::create_dir_all(&src).unwrap();
+  std::fs::create_dir_all(&img).unwrap();
+  std::fs::write(src.join("index.tex"), NAV).unwrap();
+  let mut sources = Vec::new();
+  for k in 1..=72u32 {
+    for (kind, h) in [("t", 1), ("b", 2)] {
+      let name = format!("{kind}{k}.png");
+      std::fs::write(img.join(&name), png(k, h)).unwrap();
+      sources.push((name, png(k, h)));
+    }
+  }
+  let run = |out: &str, jobs: &str| {
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--nocomments",
+        "--timeout=110",
+        "--splitat=section",
+        &format!("--dest={out}/index.html"),
+        "index.tex",
+      ])
+      .env("LATEXML_RENDER_JOBS", jobs)
+      .current_dir(&src)
+      .output()
+      .expect("spawn latexml_oxide");
+    let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     if jobs != "1" {
       assert!(
         log.contains(&format!("parallel page render engaged: {jobs} worker(s)")),
         "{log}"
       );
     }
+    src.join(out)
+  };
+  let serial = run("o1", "1");
+  for k in 1..=72u32 {
+    let shown = shown(&serial.join(format!("S{k}.html")), &sources);
+    for own in [format!("t{k}.png"), format!("b{k}.png")] {
+      assert!(shown.contains(&own), "S{k} shows {shown:?}");
+    }
+    assert!(
+      !shown.iter().any(|s| s.starts_with('?')),
+      "S{k} shows {shown:?}"
+    );
+  }
+  let html = std::fs::read_to_string(serial.join("S40.html")).unwrap();
+  assert!(html.contains("src=\"x79.png\"") && html.contains("src=\"x80.png\""));
+  let reference = tree(&serial);
+  assert!(
+    reference
+      .iter()
+      .any(|(name, _)| name == "LaTeXML-oxide.cache")
+  );
+  assert!(
+    !reference
+      .iter()
+      .any(|(name, _)| name.starts_with("LaTeXML-oxide.cache-"))
+  );
+  for jobs in ["2", "4"] {
+    assert!(
+      tree(&run(&format!("o{jobs}"), jobs)) == reference,
+      "jobs {jobs}"
+    );
+  }
+  // A rerun into the serial run's destination, on four workers.
+  assert!(tree(&run("o1", "4")) == reference, "the rerun");
+}
+
+/// Documents converted into one folder: `a.tex` (child_1) names its image `x1.svg`, then `b.tex` (child_2) continues
+/// with `x2.svg` and `x3.svg` (base: both `x1.svg`, `a.html` showing child_2's image). child_1's image changed, `a.tex`
+/// again takes `x4.svg` for it, leaving `b.html` right. Perl's `LaTeXML-oxide.cache` counter (`Post.pm` L192-200), the key
+/// carrying the content digest in place of Perl's timestamp check. Repro loader/image_names_two_documents_one_folder.
+#[test]
+fn batchfix995_documents_in_one_folder_keep_their_own_images() {
+  let root = tempfile::tempdir().unwrap();
+  layout(root.path(), "");
+  let parent = root.path().join("parent");
+  std::fs::write(parent.join("a.tex"), TWO_DOCS).unwrap();
+  std::fs::write(parent.join("b.tex"), TWO_DOCS.replace("child_1", "child_2")).unwrap();
+  let run = |doc: &str| {
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--nocomments",
+        "--timeout=110",
+        &format!("--dest={doc}.html"),
+        &format!("{doc}.tex"),
+      ])
+      .current_dir(&parent)
+      .output()
+      .expect("spawn latexml_oxide");
+    let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  };
+  run("a");
+  run("b");
+  assert_eq!(
+    images_of(&parent.join("a.html")),
+    pairs(&[("x1.svg", "child_1/images/A")])
+  );
+  let b = pairs(&[
+    ("x2.svg", "child_2/images/A"),
+    ("x3.svg", "child_2/images/B"),
+  ]);
+  assert_eq!(images_of(&parent.join("b.html")), b);
+  std::fs::write(
+    root.path().join("children/child_1/images/A.svg"),
+    svg("child_1/images/A changed"),
+  )
+  .unwrap();
+  run("a");
+  assert_eq!(
+    images_of(&parent.join("a.html")),
+    pairs(&[("x4.svg", "child_1/images/A changed")])
+  );
+  assert_eq!(images_of(&parent.join("b.html")), b);
+}
+
+/// Eight documents converted into one folder at once, each with two images of its own: every name is handed out
+/// once (each allocation one `IMMEDIATE` transaction on `LaTeXML-oxide.cache`), so every page shows its own images, and no
+/// SQLite side file is left. `resource_cache.rs`.
+#[test]
+fn batchfix995_concurrent_documents_in_one_folder_never_share_a_name() {
+  let root = tempfile::tempdir().unwrap();
+  let parent = root.path().join("parent");
+  std::fs::create_dir_all(&parent).unwrap();
+  for doc in 0..8 {
+    let dir = root.path().join(format!("children/c{doc}"));
+    std::fs::create_dir_all(&dir).unwrap();
+    for image in ["A", "B"] {
+      std::fs::write(
+        dir.join(format!("{image}.svg")),
+        svg(&format!("c{doc}/{image}")),
+      )
+      .unwrap();
+    }
+    std::fs::write(
+      parent.join(format!("d{doc}.tex")),
+      format!(
+        "\\documentclass{{article}}\n\\usepackage{{graphicx}}\n\\begin{{document}}\n\
+         \\includegraphics{{../children/c{doc}/A}}\n\\includegraphics{{../children/c{doc}/B}}\n\\end{{document}}\n"
+      ),
+    )
+    .unwrap();
+  }
+  let children: Vec<_> = (0..8)
+    .map(|doc| {
+      Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args([
+          "--nocomments",
+          "--timeout=110",
+          &format!("--dest=d{doc}.html"),
+          &format!("d{doc}.tex"),
+        ])
+        .current_dir(&parent)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("spawn latexml_oxide")
+    })
+    .collect();
+  for child in children {
+    let output = child.wait_with_output().unwrap();
+    let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  }
+  let mut urls = Vec::new();
+  for doc in 0..8 {
+    let shown = images_of(&parent.join(format!("d{doc}.html")));
     assert_eq!(
-      images_of(&parent.join("S1.html")),
-      pairs(&[("x1.svg", "child_1/images/A")]),
-      "jobs {jobs}"
+      shown
+        .iter()
+        .map(|(_, text)| text.as_str())
+        .collect::<Vec<_>>(),
+      [format!("c{doc}/A"), format!("c{doc}/B")],
+      "d{doc}"
+    );
+    urls.extend(shown.into_iter().map(|(url, _)| url));
+  }
+  urls.sort();
+  urls.dedup();
+  assert_eq!(urls.len(), 16, "{urls:?}");
+  assert_eq!(images_in(&parent).len(), 16);
+  let side_files: Vec<String> = std::fs::read_dir(&parent)
+    .unwrap()
+    .flatten()
+    .map(|entry| entry.file_name().to_string_lossy().into_owned())
+    .filter(|name| name.starts_with("LaTeXML-oxide.cache-"))
+    .collect();
+  assert!(side_files.is_empty(), "{side_files:?}");
+}
+
+/// `LaTeXML-oxide.cache` and its SQLite side files stay out of a `.zip` destination and an EPUB (as Perl keeps its
+/// `LaTeXML.cache` out: `Pack/Zip.pm` `ARCHIVE_EXT_EXCLUDE`, `Manifest/Epub.pm` L205), also when a render worker is
+/// killed (`LATEXML_RENDER_WORKER_TEST_ABORT=signal`: the fleet is abandoned, the serial render redoes the pages, a
+/// Warning): workers only look names up, the parent closes the cache before packing, and a side file left by a killed
+/// process is excluded by name (`pack::tests`). Every image is packed.
+#[test]
+fn batchfix995_packages_leave_the_cache_out_when_a_worker_is_killed() {
+  let root = tempfile::tempdir().unwrap();
+  let (src, img) = (root.path().join("src"), root.path().join("img"));
+  std::fs::create_dir_all(&src).unwrap();
+  std::fs::create_dir_all(&img).unwrap();
+  std::fs::write(src.join("index.tex"), NAV).unwrap();
+  for k in 1..=72u32 {
+    std::fs::write(img.join(format!("t{k}.png")), png(k, 1)).unwrap();
+    std::fs::write(img.join(format!("b{k}.png")), png(k, 2)).unwrap();
+  }
+  for dest in ["t.zip", "t.epub"] {
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--nocomments",
+        "--timeout=110",
+        "--splitat=section",
+        &format!("--dest={dest}"),
+        "index.tex",
+      ])
+      .env("LATEXML_RENDER_JOBS", "2")
+      .env("LATEXML_RENDER_WORKER_TEST_ABORT", "signal")
+      .current_dir(&src)
+      .output()
+      .expect("spawn latexml_oxide");
+    let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+    assert_eq!(error_count(&log), 0, "{log}");
+    let archive = zip::ZipArchive::new(std::fs::File::open(src.join(dest)).unwrap()).unwrap();
+    let names: Vec<String> = archive
+      .file_names()
+      .filter_map(|name| name.ok().map(String::from))
+      .collect();
+    assert!(
+      !names.iter().any(|n| n.contains("LaTeXML-oxide.cache")),
+      "{dest}: {names:?}"
     );
     assert_eq!(
-      images_of(&parent.join("S40.html")),
-      pairs(&[
-        ("x1.svg", "child_1/images/A"),
-        ("x2.svg", "child_2/images/B")
-      ]),
-      "jobs {jobs}"
-    );
-    assert_eq!(
-      images_of(&parent.join("S70.html")),
-      pairs(&[("x3.svg", "child_2/images/A")]),
-      "jobs {jobs}"
-    );
-    assert_eq!(
-      images_in(&parent),
-      ["x1.svg", "x2.svg", "x3.svg"],
-      "jobs {jobs}"
+      names.iter().filter(|n| n.ends_with(".png")).count(),
+      144,
+      "{dest}: {names:?}"
     );
   }
 }

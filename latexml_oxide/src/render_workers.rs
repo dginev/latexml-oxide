@@ -20,8 +20,8 @@
 //! `latexml_oxide` binary renders a split of `MIN_PAGES_FOR_PARALLEL` pages
 //! or more on min(available cores, `AUTO_JOBS_MAX`) workers; every other
 //! embedder (the library, `cortex_worker`) stays serial. The pages are
-//! byte-identical either way (a worker names the images of the pages before its range
-//! first, so its generated names are the serial render's, issue 995); a worker that fails to spawn, cannot set up, or
+//! byte-identical either way (the parent names every page's images before the render and
+//! the workers look the names up, issue 995); a worker that fails to spawn, cannot set up, or
 //! dies without its status report sends the whole document back to the serial
 //! render at once, stopping the rest of the fleet (an Info; a Warning for a
 //! worker killed by a signal, a crash).
@@ -114,6 +114,7 @@ impl From<PageOpts> for latexml_post::document::PostDocumentOptions {
       searchpaths:           o.searchpaths,
       validate:              o.validate,
       nocache:               o.nocache,
+      cache:                 None,
     }
   }
 }
@@ -130,7 +131,7 @@ pub struct PageJob {
 
 /// Everything a page-render worker needs to rebuild the pass-B processor set
 /// exactly as the parent would have, plus its page range. Written as
-/// `render-manifest-{i}.json` beside the saved `render.db`.
+/// `render-manifest-{i}.json` beside the saved `LaTeXML-render.db`.
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct RenderManifest {
   /// The saved ObjectDB (SQLite, attached readonly by each worker).
@@ -176,10 +177,11 @@ pub struct RenderManifest {
   /// holds none (MathML's `<mpadded>` widths read `NOMINAL_FONT_SIZE`).
   #[serde(default)]
   pub post_values:               latexml_core::PostStateValues,
-  /// The pages before this worker's range, whose images it names without rendering them, so that it hands out the
-  /// generated names a serial render would (`Graphics::reserve_names`, issue 995).
+  /// The names the parent gave every page's images before the render (`Graphics::plan_names`): (destination
+  /// directory, key, destination, vector render). A worker looks them up, so a page's names never depend on which
+  /// worker renders it (issue 995).
   #[serde(default)]
-  pub prior_pages:               Vec<PageJob>,
+  pub resource_names:            Vec<(String, String, String, Option<String>)>,
 }
 
 /// The parent-side result of a parallel render in which workers were actually
@@ -506,7 +508,7 @@ pub(crate) fn parallel_render(
       return None;
     },
   };
-  let dbfile = spill_dir.join("render.db");
+  let dbfile = spill_dir.join("LaTeXML-render.db");
   if let Err(e) = db.save_as(&dbfile) {
     Info!(
       "post",
@@ -567,7 +569,6 @@ pub(crate) fn parallel_render(
     ranges.push(chunk.iter().filter_map(|p| p.destination.clone()).collect());
     let mut m = manifest.clone();
     m.pages = chunk.to_vec();
-    m.prior_pages = pages[..i * chunk_size].to_vec();
     let mpath = spill_dir.join(format!("render-manifest-{i}.json"));
     let write_result = serde_json::to_string(&m)
       .map_err(|e| e.to_string())
@@ -920,31 +921,6 @@ pub fn worker_main(manifest_path: &str) -> i32 {
 #[cfg(feature = "test-utils")]
 fn test_fault() -> Option<String> { std::env::var("LATEXML_RENDER_WORKER_TEST_ABORT").ok() }
 
-/// Name the images of the pages before this worker's range, in page order, as the serial render does before it
-/// reaches them (`Graphics::reserve_names`). A page with no `graphics` element is not parsed.
-fn reserve_prior_names(graphics: &mut latexml_post::graphics::Graphics, m: &RenderManifest) {
-  for job in &m.prior_pages {
-    let Ok(bytes) = std::fs::read(&job.path) else {
-      continue;
-    };
-    if !bytes.windows(b"graphics".len()).any(|w| w == b"graphics") {
-      continue;
-    }
-    drop(bytes);
-    let path = job.path.to_string_lossy();
-    // The worker that renders the page reports its parse failure.
-    if let Ok(mut page) =
-      latexml_post::document::PostDocument::new_from_file(&path, m.page_opts.clone().into())
-    {
-      page.destination.clone_from(&job.destination);
-      page
-        .destination_directory
-        .clone_from(&job.destination_directory);
-      graphics.reserve_names(&page);
-    }
-  }
-}
-
 /// Rebuild the pass-B processor set from the manifest — the EXACT construction
 /// the parent's `run_post_processing_inner` performs (same MathML
 /// primary/secondary parallel model, same XSLT wiring, same error paths) —
@@ -983,11 +959,15 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
   if let Some(navtoc) = m.navigation_toc.as_deref() {
     crossref.set_navigation_toc(navtoc);
   }
+  // The worker's own handle on the destination's cache (Perl's document cache), shared by its pages and Graphics.
+  let mut page_opts: latexml_post::document::PostDocumentOptions = m.page_opts.clone().into();
+  let cache = latexml_post::document::DocCache::new(page_opts.nocache);
+  page_opts.cache = Some(cache.clone());
   let graphics = m.graphicimages.then(|| {
-    let mut graphics = latexml_post::graphics::Graphics::new(None, true)
-      .with_svg_threshold_kb(m.graphics_svg_threshold_kb);
-    reserve_prior_names(&mut graphics, &m);
-    graphics
+    latexml_post::graphics::Graphics::new(None, true)
+      .with_svg_threshold_kb(m.graphics_svg_threshold_kb)
+      .with_planned_names(m.resource_names.clone())
+      .with_doc_cache(cache.clone())
   });
   let post = latexml_post::Post::new();
   let mut processors: Vec<Box<dyn Processor>> = Vec::new();
@@ -1024,10 +1004,10 @@ fn render_manifest_pages(m: RenderManifest) -> Result<(Vec<String>, bool), Strin
     }
   }
   let ctx = crate::post::PageRenderCtx {
-    page_opts:      m.page_opts.clone().into(),
-    is_html_out:    m.is_html_out,
-    schemadocs:     m.schemadocs,
-    whatsout:       latexml_post::extract::Whatsout::from_cli(&m.whatsout).unwrap_or_default(),
+    page_opts,
+    is_html_out: m.is_html_out,
+    schemadocs: m.schemadocs,
+    whatsout: latexml_post::extract::Whatsout::from_cli(&m.whatsout).unwrap_or_default(),
     remove_spilled: false,
   };
   let mut procs = crate::post::PageProcessors {
@@ -1126,10 +1106,11 @@ mod tests {
 
   #[test]
   fn child_report_parses_a_setup_failure() {
-    let r = parse_child_report("Status:setup-failed:cannot attach the render db /d/render.db\n");
+    let r =
+      parse_child_report("Status:setup-failed:cannot attach the render db /d/LaTeXML-render.db\n");
     assert_eq!(
       r.setup_failed.as_deref(),
-      Some("cannot attach the render db /d/render.db")
+      Some("cannot attach the render db /d/LaTeXML-render.db")
     );
     assert_eq!(r.status, None);
     assert!(r.log.is_empty());

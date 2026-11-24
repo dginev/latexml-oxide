@@ -115,6 +115,9 @@ pub struct PostOptions<'a> {
   /// via `get_math`. Applied to each `PostDocument` in the final
   /// serialization loop.
   pub whatsout:                  latexml_post::extract::Whatsout,
+  /// Keep the destination's cache (Perl's document cache, `LaTeXML-oxide.cache`) in memory, writing no file (Perl's
+  /// `nocache`, `Post.pm` L678): the cortex worker, whose every paper gets a fresh directory that is packed.
+  pub nocache:                   bool,
 }
 
 impl Default for PostOptions<'_> {
@@ -148,6 +151,7 @@ impl Default for PostOptions<'_> {
       timestamp:                 None,
       icon:                      None,
       whatsout:                  latexml_post::extract::Whatsout::Document,
+      nocache:                   false,
     }
   }
 }
@@ -513,10 +517,10 @@ fn try_streaming_front(
   path: &str,
   split_xpath: &str,
   split_naming: Option<&str>,
-  destination: Option<&str>,
   page_opts: &PostDocumentOptions,
   spill_dir: &std::path::Path,
   dom_fallback: bool,
+  mut graphics: Option<&mut latexml_post::graphics::Graphics>,
 ) -> Result<Option<PostFront>, ()> {
   let naming = resolve_split_naming(split_naming);
   telemetry::phase_enter(Phase::Split);
@@ -524,7 +528,8 @@ fn try_streaming_front(
     path,
     split_xpath,
     naming,
-    destination,
+    // The run's `--dest`, as `run_post_processing_inner` set it on the page options.
+    page_opts.destination.as_deref(),
     spill_dir,
     dom_fallback,
   );
@@ -652,6 +657,11 @@ fn try_streaming_front(
         "Scan placeholder tracking diverged from XPath probe on {}",
         page.destination
       );
+      if let Some(graphics) = graphics.as_deref_mut()
+        && outcome.pages.len() > 1
+      {
+        graphics.plan_names(&d);
+      }
       let (needs_index, needs_bib) = scan_placeholders;
       spilled.push(SpilledPage {
         needs_index,
@@ -894,9 +904,18 @@ fn run_post_processing_inner(
     timestamp,
     icon,
     whatsout,
+    nocache,
   } = *opts;
 
-  let mut doc_opts = PostDocumentOptions::default();
+  // Perl's document cache, shared by the document and every page of it (`Post.pm` L687-690), closed (its side files
+  // checkpointed away) when post ends, before anything is packed.
+  let run_cache = latexml_post::document::DocCache::new(nocache);
+  let _close_cache = CloseCache(run_cache.clone());
+  let mut doc_opts = PostDocumentOptions {
+    nocache,
+    cache: Some(run_cache.clone()),
+    ..Default::default()
+  };
   if let Some(dest) = destination {
     doc_opts.destination = Some(dest.to_string());
   }
@@ -986,6 +1005,15 @@ fn run_post_processing_inner(
   // whole-DOM parse of a 2.68 GB core XML needs ~30+ GB and OOM'd a 31 GB
   // host before Split ran (laptop UAT 2026-07-31). Everything downstream of
   // this block is shared between the two front-ends.
+  // Phase 5: Graphics (Perl `graphicimages!` → `dographics`, default on).
+  // `--nographicimages` skips the phase wholesale, leaving the raw
+  // `<ltx:graphics>` references in the output untouched. Made here: the pages of a split name their images as they
+  // are spilled (`Graphics::plan_names`, issue 995).
+  let mut graphics_proc = graphicimages.then(|| {
+    latexml_post::graphics::Graphics::new(None, true)
+      .with_svg_threshold_kb(graphics_svg_threshold_kb)
+      .with_doc_cache(run_cache.clone())
+  });
   let file_len = |path: &str| std::fs::metadata(path).map(|m| m.len()).ok();
   let streamed: Option<PostFront> = if let PostInput::File(path) = input
     && let Some(len) = file_len(path)
@@ -996,10 +1024,10 @@ fn run_post_processing_inner(
       path,
       xpath,
       split_naming,
-      destination,
       &page_opts,
       page_spill.path(),
       len < STREAM_SPLIT_DOM_FALLBACK_LIMIT,
+      graphics_proc.as_mut(),
     ) {
       Ok(front) => front,
       Err(()) => return fallback(),
@@ -1184,6 +1212,11 @@ fn run_post_processing_inner(
         post_error("post", &format!("cannot stage page {i} to disk: {e}"));
         return fallback();
       }
+      if let Some(graphics) = graphics_proc.as_mut()
+        && !keep_resident
+      {
+        graphics.plan_names(&d);
+      }
       let (needs_index, needs_bib) = page_placeholder_probes(&d);
       let destination = d.get_destination().map(String::from);
       let destination_directory = d.get_destination_directory().map(String::from);
@@ -1253,14 +1286,6 @@ fn run_post_processing_inner(
     }
     crossref
   };
-
-  // Phase 5: Graphics (Perl `graphicimages!` → `dographics`, default on).
-  // `--nographicimages` skips the phase wholesale, leaving the raw
-  // `<ltx:graphics>` references in the output untouched.
-  let graphics_proc = graphicimages.then(|| {
-    latexml_post::graphics::Graphics::new(None, true)
-      .with_svg_threshold_kb(graphics_svg_threshold_kb)
-  });
 
   // Phase 3: SVG + MathML + XSLT
   let post = latexml_post::Post::new();
@@ -1541,6 +1566,14 @@ fn run_post_processing_inner(
   // SQLite file and each worker attaches it readonly; the workers run the
   // identical `render_spilled_page` pipeline over contiguous page ranges and
   // the parent folds their diagnostics deterministically, in chunk order.
+  // Every page's images are named before any page is rendered, in page order (as the pages were spilled, then those
+  // MakeIndex and MakeBibliography rewrote), and stored in the resource cache (Perl's document cache,
+  // `LaTeXML-oxide.cache`): the serial render and every render worker look the names up, so they are the same whichever
+  // process renders a page, and CrossRef's copies of other pages' titles into a page's navigation meet the names of
+  // the pages they come from (issue 995). One unsplit page names its images as it renders, as Perl does.
+  if let Some(gfx) = graphics_proc.as_mut() {
+    plan_rewritten_pages(&spilled_pages, &page_opts, gfx);
+  }
   // The pages an abandoned fleet may have written: a page's Fatal in the serial render removes them
   // too, and a stop removes those it did not rewrite.
   let mut fleet_pages: Vec<String> = Vec::new();
@@ -1583,8 +1616,10 @@ fn run_post_processing_inner(
       // Filled in by `parallel_render` once the fleet is sized.
       max_rss_kb: 0,
       post_values: latexml_core::PostStateValues::capture(),
-      // Set per worker by `parallel_render`.
-      prior_pages: Vec::new(),
+      resource_names: graphics_proc
+        .as_ref()
+        .map(latexml_post::graphics::Graphics::planned_names)
+        .unwrap_or_default(),
     };
     let t_pages = audit_start("render_pages");
     let outcome = crate::render_workers::parallel_render(
@@ -1951,6 +1986,40 @@ struct SpilledPage {
   /// what re-parsing `path` would give (a clean parse reparses to the same tree, and Scan only adds the root's
   /// `xml:id`), and [`as_reparsed`] gives it the wrapper state of a fresh parse.
   resident:              Option<PostDocument>,
+}
+
+/// Closes the run's cache when post ends, whichever way it returns.
+struct CloseCache(latexml_post::document::DocCache);
+
+impl Drop for CloseCache {
+  fn drop(&mut self) { self.0.close(); }
+}
+
+/// Name the images MakeIndex and MakeBibliography may have added to the pages they rewrote (the pages were planned
+/// when spilled), then store the names of every planned page ([`Graphics::commit_names`]). A page that cannot be
+/// re-read is reported by its render.
+///
+/// [`Graphics::commit_names`]: latexml_post::graphics::Graphics::commit_names
+fn plan_rewritten_pages(
+  pages: &[SpilledPage],
+  opts: &PostDocumentOptions,
+  graphics: &mut latexml_post::graphics::Graphics,
+) {
+  if !graphics.planned() {
+    return;
+  }
+  for page_meta in pages.iter().filter(|p| p.needs_index || p.needs_bib) {
+    let Ok(mut page) = PostDocument::new_from_file(&page_meta.path.to_string_lossy(), opts.clone())
+    else {
+      continue;
+    };
+    page.destination.clone_from(&page_meta.destination);
+    page
+      .destination_directory
+      .clone_from(&page_meta.destination_directory);
+    graphics.plan_names(&page);
+  }
+  graphics.commit_names();
 }
 
 /// Whether libxml2 parsed `doc` without errors: a recovered tree (say, adjacent text nodes around a dropped

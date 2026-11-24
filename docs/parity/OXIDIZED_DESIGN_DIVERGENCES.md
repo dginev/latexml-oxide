@@ -21139,7 +21139,7 @@ through the links already there, stays inside the extraction directory (zip 9.7'
 inside (`tar`'s check). Other links, and entries whose path would leave the directory, are skipped with a
 `Warning:archive:*`, logged and counted when the conversion's report starts (`error::warn_at_session_start`).
 The CLI's own zip unpacking writes a link entry as a plain file. `graphics.rs`
-`copy_destination` follows Perl: the source-relative path, taken from the destination directory, is kept only when
+`kept_path` follows Perl: the source-relative path, taken from the destination directory, is kept only when
 it stays in the site directory (`--sitedirectory`, else `--dest`'s directory; lexically, Perl's
 `pathname_is_contained`), else the image takes the next free `xN.<ext>` (issue 995: `--sitedirectory` was ignored,
 OD #1157). The copy is written at that lexical absolute path, as Perl's `pathname_copy` canonicalizes before it writes
@@ -24183,40 +24183,71 @@ empty_box_beside_an_operator_is_a_phantom_word_joiner, absent_operand_leaves_no_
 turned binary; errors, fatals and warnings unchanged. The `\left.` exception then returned 63 of them in 17 papers to
 unary (the base's reading), every one a sign opening a `\left.`'s list.
 
-### 1157. An image keeps its path inside `--sitedirectory`; generated image names are shared by every page of a run (issue 995)
+### 1157. An image keeps its path inside `--sitedirectory`; image names come from Perl's document cache, persisted as `LaTeXML-oxide.cache` (issue 995)
 
 **Perl.** `Post/Graphics.pm` L292-300 keeps an image's source-relative path when, taken from the destination
 directory, it stays in the site directory (`pathname_is_contained`), else `generateResourcePathname` (`Post.pm`
-L192-200) names it `xN` from a counter in the document cache that every split page shares (L687-690);
-`Post::Document::new_internal` (L698-706) is Fatal when the destination lies outside `--sitedirectory`.
-**Rust.** Faithful except (1)-(2) below. The copy checked containment against `--dest` alone, so `--sitedirectory=..`
-still copied `../children/child_1/images/A.svg` to `x1.svg`; and the counter and the claimed names were locals of one
-page's `Graphics::process`, so under `--split` every page restarted at `x1` and a later page's image overwrote an
-earlier page's (issue 995: Chapter One showed child_2's figure), as did two converted sources sharing a stem
-(`a/plot.eps`, `b/plot.eps` → one `plot.png`). `Graphics` now holds a `ResourceNames` for the run: the counter, the
-names claimed, the copies made (keyed by destination directory, content and options, Perl's cached destination) and
-the conversions planned with their outcomes (keyed by destination directory, content, page and options: a later page
-points at the converted image, Perl's `cacheLookup`, L249-260; a failed one is tried again, as Perl's is). A page
-names its conversions first, then its copies, in node order. The parallel page render (64+ pages, `render_workers.rs`)
-names as the serial render does: each worker first names the images of the pages before its range without rendering
-them (`Graphics::reserve_names`; a page with no `graphics` element is not parsed), so its pages are byte-identical to a
-serial render's; a conversion an earlier worker's page planned is run again into the same file (its outcome is that
-worker's), and one that fails is reported by each worker that meets it. The Fatal is Perl's,
+L192-200) names it `xN` from the counter `_max_<subdir>_<prefix>_counter_` in the document cache, which every split
+page shares (`new_internal` clones it, L687-690) and which is persisted as `LaTeXML.cache` in the destination directory
+(`openCache`, a DB_File, L1517-1548; `nocache`, L678). `transformGraphic` stores each image under
+`ref($self):reldir/name.srctype.type|transform` as `"dest|w|h"` and reuses it on a later lookup while the source is no
+newer than the destination (L245-262, L331). `Post::Document::new_internal` (L698-706) is Fatal when the destination
+lies outside `--sitedirectory`. Packages leave the cache out (`Pack/Zip.pm` `ARCHIVE_EXT_EXCLUDE` `.cache`,
+`Manifest/Epub.pm` L205).
+**Rust.** `PostDocument::cache_lookup`/`cache_store` are backed by `document.rs` `DocCache`: one key-value store per
+destination directory, the SQLite table `kv(key, value)` with Perl's keys and values, in the file `LaTeXML-oxide.cache`
+there (`sqlite_store.rs`: WAL, `synchronous=OFF`, a busy timeout, a `user_version` gate; opened at the first lookup),
+in memory under `nocache` (the cortex worker, whose every paper gets a fresh directory, and the LSP) or without a
+destination directory. Every page of a run shares the run's `DocCache` (`PostDocumentOptions::cache`); a render
+worker opens its own on the same file. `resource_cache.rs` names images over it: every name goes through it (a copy's
+kept path, a converted image's stem, a generated `xN` from Perl's counter key), and two entry kinds of ours,
+`_content_<content>` (one content, one file) and `_file_<name>` (what a file holds), make a name another file already
+claimed fall back to the next free `xN` (the claim covers the `.svg` a vector render may take beside a raster), so
+neither split pages (Chapter One showed child_2's figure), nor two converted sources sharing a stem (`a/plot.eps`,
+`b/plot.eps`; witness 2401.00054, `Figures/ch2/qz.pdf` and `Figures/ch5/qz.pdf`), nor a converted `plot.png` and an
+author's `plot.png` overwrite each other. The names are planned before any page is rendered: each page of a split as it
+is spilled (`Graphics::plan_names`), the pages MakeIndex and MakeBibliography rewrote again after them (`post.rs`
+`plan_rewritten_pages`), all stored by `Graphics::commit_names` in one `IMMEDIATE` transaction; within a page the
+copies that keep their path come first, then the conversions, then the copies with generated names, each in node
+order. The serial render and the parallel one (64+ pages, `render_workers.rs`, the plan handed to every worker in the
+manifest) only look the names up, so their trees are byte-identical whatever the worker count, and CrossRef's copies
+of other pages' titles into a page's navigation meet the names of the pages they come from. A name still missing at
+render time is named then, with a Warning (`unexpected:resource_name`) when the run had planned (none is known to
+occur); an unsplit page, and a library caller, name as they render, as Perl does. Within a process a converted image
+is reused by every later page (Perl's `cacheLookup`), a failed one is tried again, as Perl's is. The Fatal is Perl's,
 `Fatal:unexpected:<dir> The destination directory (<dir>) must be within the siteDirectory (<site>)`, raised before
 anything is written; the process exits 1 (Perl's `die`: 255). Divergences: (1) the containment test refuses the
 base's own parent, which Perl's regex lets through (KNOWN_PERL_ERRORS #1329); (2) a copy is never written through a
-link that leaves the site and destination directories (OD #1081). Not covered: two documents converted into one
-directory restart at `x1` (Perl reads the previous run's names from `LaTeXML.cache` in the destination; we keep no
-such cache); and a page only sees the sources of the pages before it, so a converted `plot.png` can still take the
-name of an author's `plot.png` referenced on a later page when the destination is the source directory.
+link that leaves the site and destination directories (OD #1081); (3) the file is SQLite, named `LaTeXML-oxide.cache`
+so that a Perl run's DB_File `LaTeXML.cache` in the same directory is never touched; every allocation is one
+`IMMEDIATE` transaction, so runs writing into one folder at once never hand out one name twice (their numbering then
+follows which run commits first); a file that is not ours, or of another schema version, is left alone (a Warning;
+the run's entries stay in memory); (4) the key carries the source's content digest instead of Perl's timestamp check,
+so a changed image is a new key and takes a new name; (5) an entry stores the name only (`dest||`): Perl's width and
+height let it skip the conversion, which the content-addressed graphics cache (`graphics_cache.rs`) serves here;
+(6) an image first met in another page's navigation is numbered at its own page, where Perl's serial
+CrossRef-then-Graphics numbered it at the first page whose navigation showed it; (7) a converted image keeps its stem
+when free (`plot.png`, witness 2606.30620), where Perl generates `xN` for every conversion (`Post/Graphics.pm`
+L318-319); (8) a stored name this run's site directory does not allow (a kept `../children/…` path, rerun without
+`--sitedirectory`) is not reused, where Perl reuses it. The run closes the cache when post ends (checkpointed, no
+`-wal`/`-shm` left), before anything is packed, and packages skip it and its side files by name (`pack.rs`
+`is_excluded_archive_entry`, the EPUB manifest; a killed process's side files included). The parallel render's
+ObjectDB snapshot is a separate file, `LaTeXML-render.db` in the private spill directory (a read-only per-run
+snapshot; Perl keeps ObjectDB and `LaTeXML.cache` apart too).
 **Guards**: `cluster_package_guards::perfect_kernel_batchfix995::{batchfix995_sitedirectory_keeps_the_relative_image_path,
 batchfix995_destination_outside_the_site_directory_is_fatal, batchfix995_split_pages_share_the_generated_names,
 batchfix995_split_pages_keep_converted_stems_apart, batchfix995_split_pages_reuse_a_converted_image,
-batchfix995_parallel_render_names_images_as_the_serial_render,
+batchfix995_every_job_count_names_images_alike, batchfix995_documents_in_one_folder_keep_their_own_images,
+batchfix995_concurrent_documents_in_one_folder_never_share_a_name,
+batchfix995_packages_leave_the_cache_out_when_a_worker_is_killed,
 batchfix995_linked_destination_writes_nothing_outside_the_site_directory}`
 (`tools/perfect_kernel/repros/loader/image_subimport_sitedirectory.tex`,
 `tools/perfect_kernel/repros/loader/image_copy_through_linked_destination.tex`,
+`tools/perfect_kernel/repros/loader/image_names_two_documents_one_folder.tex`,
 `tools/perfect_kernel/repros/split-navigation/image_names_shared_across_split_pages.tex`,
 `tools/perfect_kernel/repros/split-navigation/converted_image_reused_across_split_pages.tex`,
-`tools/perfect_kernel/repros/split-navigation/image_names_parallel_render_as_serial.tex`);
+`tools/perfect_kernel/repros/split-navigation/image_names_parallel_render_as_serial.tex`,
+`tools/perfect_kernel/repros/split-navigation/image_names_title_images_in_navigation.tex`);
+`resource_cache::tests::{names_follow_the_page_order_and_never_clash, concurrent_tables_on_one_file_never_share_a_name}`,
+`sqlite_store::tests::another_version_is_left_alone`, `pack::tests` (the side files),
 `pathname::tests::is_contained_is_underneath_only`.

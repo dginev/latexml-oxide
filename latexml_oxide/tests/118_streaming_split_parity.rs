@@ -100,6 +100,7 @@ fn post_opts<'a>(dest: &'a str, src_dir: &'a str) -> PostOptions<'a> {
     timestamp:                 None,
     icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::default(),
+    nocache:                   false,
   }
 }
 

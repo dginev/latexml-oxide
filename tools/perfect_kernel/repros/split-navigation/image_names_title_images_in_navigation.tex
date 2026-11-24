@@ -1,0 +1,90 @@
+% mechanism: latexml_oxide post.rs plan_image_names + latexml_post graphics.rs Graphics::plan_names, resource_cache.rs
+%   (Perl's document cache, Post.pm L192-200, Post/Graphics.pm L245-262, persisted as LaTeXML.cache): every page's
+%   images are named before any page is rendered, in page order; the serial render and every render worker look the
+%   names up, so CrossRef's copies of other pages' title images into a page's navigation show the right picture.
+% witness: issue 995 review round 2 (a worker replaying the earlier pages missed the title images CrossRef copies into
+%   navigation: 13 of 72 pages showed the wrong picture at LATEXML_RENDER_JOBS=2 and 4)
+% layout:  src/index.tex (this file), img/t1..t72.png and img/b1..b72.png (all distinct); cwd src/
+% oracle:  pdflatex 0 errors: 72 sections, an image in each title and one in each body
+% engines: rust=GREEN perl=n/a (Perl renders pages serially)
+% expect:  --splitat=section --dest=<out>/index.html at LATEXML_RENDER_JOBS=1, 2 and 4: byte-identical trees
+%          (LaTeXML.cache included); S<k> shows t<k> and b<k> as x(2k-1).png and x(2k).png; a rerun into the same
+%          destination at another job count leaves the tree unchanged; 0 errors
+%          (round 2: at 2 and 4 jobs 13 pages showed another section's image)
+% status:  GREEN
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\section{S1 \includegraphics[height=1em]{../img/t1.png}} Text 1. \includegraphics{../img/b1.png}
+\section{S2 \includegraphics[height=1em]{../img/t2.png}} Text 2. \includegraphics{../img/b2.png}
+\section{S3 \includegraphics[height=1em]{../img/t3.png}} Text 3. \includegraphics{../img/b3.png}
+\section{S4 \includegraphics[height=1em]{../img/t4.png}} Text 4. \includegraphics{../img/b4.png}
+\section{S5 \includegraphics[height=1em]{../img/t5.png}} Text 5. \includegraphics{../img/b5.png}
+\section{S6 \includegraphics[height=1em]{../img/t6.png}} Text 6. \includegraphics{../img/b6.png}
+\section{S7 \includegraphics[height=1em]{../img/t7.png}} Text 7. \includegraphics{../img/b7.png}
+\section{S8 \includegraphics[height=1em]{../img/t8.png}} Text 8. \includegraphics{../img/b8.png}
+\section{S9 \includegraphics[height=1em]{../img/t9.png}} Text 9. \includegraphics{../img/b9.png}
+\section{S10 \includegraphics[height=1em]{../img/t10.png}} Text 10. \includegraphics{../img/b10.png}
+\section{S11 \includegraphics[height=1em]{../img/t11.png}} Text 11. \includegraphics{../img/b11.png}
+\section{S12 \includegraphics[height=1em]{../img/t12.png}} Text 12. \includegraphics{../img/b12.png}
+\section{S13 \includegraphics[height=1em]{../img/t13.png}} Text 13. \includegraphics{../img/b13.png}
+\section{S14 \includegraphics[height=1em]{../img/t14.png}} Text 14. \includegraphics{../img/b14.png}
+\section{S15 \includegraphics[height=1em]{../img/t15.png}} Text 15. \includegraphics{../img/b15.png}
+\section{S16 \includegraphics[height=1em]{../img/t16.png}} Text 16. \includegraphics{../img/b16.png}
+\section{S17 \includegraphics[height=1em]{../img/t17.png}} Text 17. \includegraphics{../img/b17.png}
+\section{S18 \includegraphics[height=1em]{../img/t18.png}} Text 18. \includegraphics{../img/b18.png}
+\section{S19 \includegraphics[height=1em]{../img/t19.png}} Text 19. \includegraphics{../img/b19.png}
+\section{S20 \includegraphics[height=1em]{../img/t20.png}} Text 20. \includegraphics{../img/b20.png}
+\section{S21 \includegraphics[height=1em]{../img/t21.png}} Text 21. \includegraphics{../img/b21.png}
+\section{S22 \includegraphics[height=1em]{../img/t22.png}} Text 22. \includegraphics{../img/b22.png}
+\section{S23 \includegraphics[height=1em]{../img/t23.png}} Text 23. \includegraphics{../img/b23.png}
+\section{S24 \includegraphics[height=1em]{../img/t24.png}} Text 24. \includegraphics{../img/b24.png}
+\section{S25 \includegraphics[height=1em]{../img/t25.png}} Text 25. \includegraphics{../img/b25.png}
+\section{S26 \includegraphics[height=1em]{../img/t26.png}} Text 26. \includegraphics{../img/b26.png}
+\section{S27 \includegraphics[height=1em]{../img/t27.png}} Text 27. \includegraphics{../img/b27.png}
+\section{S28 \includegraphics[height=1em]{../img/t28.png}} Text 28. \includegraphics{../img/b28.png}
+\section{S29 \includegraphics[height=1em]{../img/t29.png}} Text 29. \includegraphics{../img/b29.png}
+\section{S30 \includegraphics[height=1em]{../img/t30.png}} Text 30. \includegraphics{../img/b30.png}
+\section{S31 \includegraphics[height=1em]{../img/t31.png}} Text 31. \includegraphics{../img/b31.png}
+\section{S32 \includegraphics[height=1em]{../img/t32.png}} Text 32. \includegraphics{../img/b32.png}
+\section{S33 \includegraphics[height=1em]{../img/t33.png}} Text 33. \includegraphics{../img/b33.png}
+\section{S34 \includegraphics[height=1em]{../img/t34.png}} Text 34. \includegraphics{../img/b34.png}
+\section{S35 \includegraphics[height=1em]{../img/t35.png}} Text 35. \includegraphics{../img/b35.png}
+\section{S36 \includegraphics[height=1em]{../img/t36.png}} Text 36. \includegraphics{../img/b36.png}
+\section{S37 \includegraphics[height=1em]{../img/t37.png}} Text 37. \includegraphics{../img/b37.png}
+\section{S38 \includegraphics[height=1em]{../img/t38.png}} Text 38. \includegraphics{../img/b38.png}
+\section{S39 \includegraphics[height=1em]{../img/t39.png}} Text 39. \includegraphics{../img/b39.png}
+\section{S40 \includegraphics[height=1em]{../img/t40.png}} Text 40. \includegraphics{../img/b40.png}
+\section{S41 \includegraphics[height=1em]{../img/t41.png}} Text 41. \includegraphics{../img/b41.png}
+\section{S42 \includegraphics[height=1em]{../img/t42.png}} Text 42. \includegraphics{../img/b42.png}
+\section{S43 \includegraphics[height=1em]{../img/t43.png}} Text 43. \includegraphics{../img/b43.png}
+\section{S44 \includegraphics[height=1em]{../img/t44.png}} Text 44. \includegraphics{../img/b44.png}
+\section{S45 \includegraphics[height=1em]{../img/t45.png}} Text 45. \includegraphics{../img/b45.png}
+\section{S46 \includegraphics[height=1em]{../img/t46.png}} Text 46. \includegraphics{../img/b46.png}
+\section{S47 \includegraphics[height=1em]{../img/t47.png}} Text 47. \includegraphics{../img/b47.png}
+\section{S48 \includegraphics[height=1em]{../img/t48.png}} Text 48. \includegraphics{../img/b48.png}
+\section{S49 \includegraphics[height=1em]{../img/t49.png}} Text 49. \includegraphics{../img/b49.png}
+\section{S50 \includegraphics[height=1em]{../img/t50.png}} Text 50. \includegraphics{../img/b50.png}
+\section{S51 \includegraphics[height=1em]{../img/t51.png}} Text 51. \includegraphics{../img/b51.png}
+\section{S52 \includegraphics[height=1em]{../img/t52.png}} Text 52. \includegraphics{../img/b52.png}
+\section{S53 \includegraphics[height=1em]{../img/t53.png}} Text 53. \includegraphics{../img/b53.png}
+\section{S54 \includegraphics[height=1em]{../img/t54.png}} Text 54. \includegraphics{../img/b54.png}
+\section{S55 \includegraphics[height=1em]{../img/t55.png}} Text 55. \includegraphics{../img/b55.png}
+\section{S56 \includegraphics[height=1em]{../img/t56.png}} Text 56. \includegraphics{../img/b56.png}
+\section{S57 \includegraphics[height=1em]{../img/t57.png}} Text 57. \includegraphics{../img/b57.png}
+\section{S58 \includegraphics[height=1em]{../img/t58.png}} Text 58. \includegraphics{../img/b58.png}
+\section{S59 \includegraphics[height=1em]{../img/t59.png}} Text 59. \includegraphics{../img/b59.png}
+\section{S60 \includegraphics[height=1em]{../img/t60.png}} Text 60. \includegraphics{../img/b60.png}
+\section{S61 \includegraphics[height=1em]{../img/t61.png}} Text 61. \includegraphics{../img/b61.png}
+\section{S62 \includegraphics[height=1em]{../img/t62.png}} Text 62. \includegraphics{../img/b62.png}
+\section{S63 \includegraphics[height=1em]{../img/t63.png}} Text 63. \includegraphics{../img/b63.png}
+\section{S64 \includegraphics[height=1em]{../img/t64.png}} Text 64. \includegraphics{../img/b64.png}
+\section{S65 \includegraphics[height=1em]{../img/t65.png}} Text 65. \includegraphics{../img/b65.png}
+\section{S66 \includegraphics[height=1em]{../img/t66.png}} Text 66. \includegraphics{../img/b66.png}
+\section{S67 \includegraphics[height=1em]{../img/t67.png}} Text 67. \includegraphics{../img/b67.png}
+\section{S68 \includegraphics[height=1em]{../img/t68.png}} Text 68. \includegraphics{../img/b68.png}
+\section{S69 \includegraphics[height=1em]{../img/t69.png}} Text 69. \includegraphics{../img/b69.png}
+\section{S70 \includegraphics[height=1em]{../img/t70.png}} Text 70. \includegraphics{../img/b70.png}
+\section{S71 \includegraphics[height=1em]{../img/t71.png}} Text 71. \includegraphics{../img/b71.png}
+\section{S72 \includegraphics[height=1em]{../img/t72.png}} Text 72. \includegraphics{../img/b72.png}
+\end{document}

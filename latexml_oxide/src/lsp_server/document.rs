@@ -156,6 +156,8 @@ pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> crate::post::PostO
     timestamp:                 None,
     icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::Document,
+    // No destination, no file: the cache stays in memory.
+    nocache:                   true,
   })
 }
 

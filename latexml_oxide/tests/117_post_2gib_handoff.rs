@@ -60,6 +60,7 @@ fn post_opts() -> PostOptions<'static> {
     timestamp:                 None,
     icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::default(),
+    nocache:                   false,
   }
 }
 

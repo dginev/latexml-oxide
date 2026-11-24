@@ -2008,6 +2008,7 @@ fn post_xml(tex: &str) -> String {
     timestamp:                 None,
     icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::default(),
+    nocache:                   false,
   };
   let out = latexml::post::run_post_processing(&xml, &opts);
   let log = latexml_core::util::logger::flush_log();

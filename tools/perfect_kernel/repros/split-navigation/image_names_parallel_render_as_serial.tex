@@ -1,7 +1,7 @@
-% mechanism: latexml_oxide render_workers.rs reserve_prior_names + latexml_post graphics.rs Graphics::reserve_names:
-%   a page-render worker names the images of the pages before its range (writing nothing) before it renders its own,
-%   so a generated xN is the serial render's whatever the fleet size (render_workers.rs: serial and parallel pages
-%   are byte-identical; OXIDIZED_DESIGN_DIVERGENCES #1157).
+% mechanism: latexml_oxide post.rs plan_image_names + latexml_post graphics.rs Graphics::plan_names, resource_cache.rs:
+%   the parent names every page's images before any page is rendered and the render workers look the names up, so a
+%   generated xN is the serial render's whatever the fleet size (render_workers.rs: serial and parallel pages are
+%   byte-identical; OXIDIZED_DESIGN_DIVERGENCES #1157).
 % witness: issue 995 review (round 1's x<i>_N prefix: LATEXML_RENDER_JOBS=1 gave x1..x3.png, =2 six files, =4 twelve)
 % layout:  src/index.tex (this file), img/{a,b,c}.png (distinct); cwd src/
 % oracle:  pdflatex 0 errors: 72 sections, one image each

@@ -199,6 +199,7 @@ pub(super) fn page_of(xml: &str) -> String {
     timestamp:                 None,
     icon:                      None,
     whatsout:                  latexml_post::extract::Whatsout::Document,
+    nocache:                   false,
   };
   latexml::post::run_post_processing_logged(xml, &options).html
 }

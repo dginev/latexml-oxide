@@ -18,6 +18,8 @@
 //! listed below.
 //!
 //! - **Disable flag** (Perl: `nocache`) → env `LATEXML_GRAPHICS_CACHE_OFF`.
+//! - **Names** (Perl: `key → dest`) → the document cache, `LaTeXML-oxide.cache` in the destination directory
+//!   ([`crate::document::DocCache`], [`crate::resource_cache`]); this cache holds the converted bytes only.
 //! - **Re-use across runs** (Perl: one .cache per dest dir) → global XDG cache, shared across all
 //!   conversions on the host. This is a strict superset of the Perl behaviour: cross-paper sharing,
 //!   plus reproducible content-keying instead of path-keying.
