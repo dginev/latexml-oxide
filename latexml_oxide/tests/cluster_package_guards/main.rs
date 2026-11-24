@@ -788,6 +788,9 @@ mod perfect_kernel_batchregrehearse;
 /// REGTAILB: a braced file name (`\include{{./x}}`), amsgen's `\RIfM@`, breqn's load-time `^`/`_` catcodes, tipa's
 /// accented letter in a formula, a list label that is the author's own `\fnum@<counter>`.
 mod perfect_kernel_batchregtailb;
+/// REGTAILC: a document only PDF output reads (`\begin{document}` in an open `\ifCLASSINFOpdf`/`\ifpdf` branch) is a
+/// pdflatex one.
+mod perfect_kernel_batchregtailc;
 /// RG1: a `\par` in a text group opened mid-paragraph keeps the paragraph, as Perl's open-brace box.
 mod perfect_kernel_batchrg1;
 /// RHAIHOOK: a Rhai hook body takes Perl's arguments (`|stomach, whatsit|`, `properties: |stomach, x|`).

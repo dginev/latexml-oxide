@@ -1,0 +1,19 @@
+% witness: 2105.10205, 2502.09129 (the IEEEtran template's `\ifCLASSINFOpdf … \else … \fi` with its `\else…\fi`
+%          deleted, so the whole document sits in the true branch; every figure named `X.eps`)
+% oracle:  pdflatex 0 errors, "(\end occurred when \iftrue on line 4 was incomplete)"; title, body and figure typeset
+%          (side files fig.eps, fig-eps-converted-to.pdf — the guard writes them)
+% engines: rust INT081G = the EPS figure is the DVI cue, `\pdfoutput=0`, the switch false: TeX skips the document,
+%          `Fatal:Document:Malformed` after "\fi \iffalse"; Perl 0.8.8 = PDF (its default): 0 errors, 1 Warning
+%          (38 errors on 2105.10205)
+% expect:  0 errors, 1 Warning (the unclosed conditional at `\end{document}`); "Body text survives." and the figure
+% status:  RED (INT081G) -> GREEN (REGTAILC)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\usepackage{graphicx}
+% IEEEtran template residue: the \else/\fi were deleted
+\ifCLASSINFOpdf
+\begin{document}
+\title{T}\author{A}\maketitle
+Body text survives.
+\begin{figure}\includegraphics[width=\linewidth]{fig.eps}\caption{C}\end{figure}
+\end{document}

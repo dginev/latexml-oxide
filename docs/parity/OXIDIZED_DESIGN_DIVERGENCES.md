@@ -24408,3 +24408,24 @@ class_maketitle_teaser_before_store_abstract}`),
 `perfect_kernel_batch61::class_bindings_2609_clusters` (egpubl's teaser before the abstract),
 `114_streaming_cluster_regressions_b::streaming_matches_eager_on_cluster_regressions_shard1` (the titlepic fixture's
 cover, streamed at fragment budget 3, as eager).
+
+### 1154. A main file whose `\begin{document}` sits in an open `\ifpdf`/`\ifCLASSINFOpdf` true branch is a pdflatex document (REGTAILC)
+
+**Perl behavior**: always PDF mode (`\pdfoutput` unset; #537 lists its cues), so the question does not arise.
+**pdflatex**: such a file typesets its whole text and ends with "(\end occurred when \iftrue on line N was
+incomplete)", a warning; under latex+dvips the switch is false and TeX skips the document.
+**Rust behavior** (DG ruling 2026-11-23): `converter.rs::begins_document_in_pdf_branch` reads the main file's code
+(comments, `filecontents` and what follows `\endinput` dropped) and sets the compile route's `pdf` cue, over the
+included figures' DVI cue (#537) and a DVI driver class option, when the last `\ifpdf` (ifpdf.sty, iftex.sty) or
+`\ifCLASSINFOpdf` (IEEEtran.cls:552-557) before `\begin{document}` stands at brace depth 0, not after a control word
+(`\newif\ifpdf`, `\let\ifpdf`), with no conditional token (`\if…`, `\unless`, `\else`, `\or`, `\fi`) between it and
+`\begin{document}`, and the file opens one document. A latexml.sty `pdfoutput`/`nopdfoutput` option still decides
+over it (#1046). The template's closed `\ifCLASSINFOpdf … \else … \fi` keeps the figures' cue; 1012.0815's
+`\ifCLASSINFOpdf … \else` left open at `\begin{document}` stays latex+dvips. Reach: 1 of the 2,543 census papers that
+use `\ifpdf`/`\ifCLASSINFOpdf` (2503.21203, an unclosed `\ifpdf` around `\hypersetup`), beside the two witnesses.
+
+**Witnesses** 2105.10205, 2502.09129 (IEEEtran, `\else…\fi` deleted, EPS figures: `Fatal:Document:Malformed`, no text,
+since K6's figure cue); 2503.21203; counter-witness 1012.0815. **Guards**
+`perfect_kernel_batchregtailc::unclosed_pdf_switch_around_the_document_is_pdflatex` (repro
+`backend-persona/ifclassinfopdf_unclosed_around_document_2105_10205`), `converter::tests::compile_route_of_main_sources`.
+
