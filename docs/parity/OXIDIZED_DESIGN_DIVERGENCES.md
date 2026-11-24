@@ -24223,14 +24223,15 @@ latexmlc 0.8.8 on the same host (CLI audit 2026-11-24):
 `$VERBOSITY >= 0`); ours keeps Errors, Fatals and the verdict on stderr at every verbosity (DG 2026-08-02, reaffirmed
 2026-11-24): the success-rate signal is never silent. Below verbosity 0 the console level is `Error`: Info records,
 Warnings and the front end's notes ("Output written to", "Log written to", "Format dump complete", the format build's
-notes, a skipped supplement) are hidden, while every `Error:`/`Fatal:` record, with its continuation lines, and the
-final verdict (`Conversion complete…`/`Conversion failed…`, and a failed input's status line) still print; the
-render workers' records pass the same gate. The log keeps everything at its Info floor, and the exit status and a
+notes and `[ini_tex]` progress) are hidden, while every `Error:`/`Fatal:` record, with its continuation lines, and the
+final verdict (`Conversion complete…`/`Conversion failed…`, and a failed input's status line) still print: a run
+without post-processing, whose own verdict is a muted Info note, prints the front end's. A note about output that was
+not produced (a skipped supplement, "Log not written") prints too. The render workers' records pass the same gate. The log keeps everything at its Info floor, and the exit status and a
 zip's `status` are unchanged.
 
 **Guards**: `perfect_kernel_batchcliwire` (repros `tools/perfect_kernel/repros/cli-options/`), the binaries' unit tests
 `verbose_and_quiet_are_counted` and `cli_tests::standalone_files_and_the_profile_are_checked`;
-`perfect_kernel_batchclihard::quiet_keeps_errors_and_the_verdict_on_stderr`,
+`perfect_kernel_batchclihard::{quiet_keeps_errors_and_the_verdict_on_stderr, quiet_hides_the_format_build_progress}`,
 `119_final_status_report::quiet_mode_still_reports_error_and_fatal`,
 `render_workers::tests::stderr_share_keeps_a_records_continuation_lines`.
 

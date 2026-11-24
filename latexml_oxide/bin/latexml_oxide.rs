@@ -1579,9 +1579,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             let mut sconv = Converter::from_config(supp_opts.clone());
             sconv.note_main_source(supp);
             if sconv.prepare_session(&supp_opts).is_err() {
-              latexml_core::NoteSTDERR!(format!(
-                "Warning: could not prepare a session for supplement '{supp}'; skipping"
-              ));
+              // Plain stderr, under `--quiet` too: it reports output that was not produced.
+              eprintln!("Warning: could not prepare a session for supplement '{supp}'; skipping");
               continue;
             }
             // A fresh session reset thread-local state — re-apply the shared
@@ -1592,9 +1591,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             status_max = status_max.max(r.status_code);
             match r.result {
               Some(x) if !x.is_empty() => supp_xmls.push(x),
-              _ => latexml_core::NoteSTDERR!(format!(
-                "Warning: supplement '{supp}' produced no output; skipping"
-              )),
+              _ => eprintln!("Warning: supplement '{supp}' produced no output; skipping"),
             }
           }
           match latexml::multidoc::join_core_documents(main_xml, &supp_xmls) {
@@ -1958,7 +1955,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       && let Some(ref log_path) = cli_log
       && external_log.is_none()
     {
-      latexml_core::NoteSTDERR!(format!("Log not written: '{log_path}' exists and is kept"));
+      // Plain stderr, under `--quiet` too: it reports output that was not produced.
+      eprintln!("Log not written: '{log_path}' exists and is kept");
     }
     if let Some(ref log_path) = external_log
       && (is_epub || !is_archive_out)
@@ -2034,9 +2032,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // masqueraded as a successful site (131 MB witness UAT 2026-08-01:
   // truncated at Ch6, 1,572 plausible pages, silent exit 1). Also printed for
   // a non-post fatal, where repeating the verdict as the final line is cheap
-  // emphasis. Printed under `--quiet` too, as Errors are (OXIDIZED_DESIGN_DIVERGENCES #1158). Guard:
+  // emphasis. Printed under `--quiet` too, as Errors are (OXIDIZED_DESIGN_DIVERGENCES #1158): there the
+  // core's verdict is a muted Info note, so a core run prints this one instead. Guard:
   // 119_final_status_report.
-  if post_ran || final_status_code >= 3 {
+  let core_verdict_muted =
+    cli.init.is_none() && !xml_input && !latexml_core::util::logger::stderr_shows_info();
+  if post_ran || final_status_code >= 3 || core_verdict_muted {
     eprintln!(
       "{}",
       latexml_core::common::error::conversion_verdict(final_status_code)

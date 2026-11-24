@@ -6,7 +6,9 @@
 %          Ours (OD #1158, DG 2026-08-02 / 2026-11-24): -q keeps the Error and the verdict on stderr
 % expect:  -q / -qq: stderr holds the Error record and the verdict, no Warning:expected:ids, Info or "Log written to";
 %          the log holds the Error and the Warning; exit 0; a .zip's status is Status:conversion:2
-% status:  RED (3533a021fa5: empty stderr) -> GREEN (CLIHARD round 2)
+%          to XML (no post): the Error and the core's verdict "Conversion complete: 1 error; 1 undefined macro[...]"
+% status:  RED (3533a021fa5: empty stderr) -> GREEN (CLIHARD round 2); RED (8739436de83: -q to XML, no verdict)
+%          -> GREEN (CLIHARD round 3)
 \documentclass{article}
 \begin{document}
 Hello \undefinedmacro{} world, see Section~\ref{sec:nowhere}.
