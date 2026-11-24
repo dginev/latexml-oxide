@@ -36,11 +36,12 @@ fn stderr_use_color() -> bool {
 ///
 /// Perl LaTeXML separates the two: the log file (`$LOG`) receives every message
 /// while it is open, but STDERR prints only when `$USE_STDERR && $VERBOSITY >= 0`
-/// (`Common/Error.pm` `_printline`). `--quiet` lowers THIS (to `Off`: nothing on
-/// STDERR, Errors included) without lowering what the log keeps — so `(Loading …)`
+/// (`Common/Error.pm` `_printline`). `--quiet` lowers THIS (to `Error`: Info and
+/// Warnings off the console) without lowering what the log keeps — so `(Loading …)`
 /// progress notes and `Info:` records still reach `.latexml.log`, which is what
 /// BookML's makefile dependency tracking reads (issue #763). `--verbose` raises it
-/// (to `Debug`).
+/// (to `Debug`). Unlike Perl, `Error`/`Fatal` reach STDERR at every verbosity
+/// (DG 2026-08-02, OXIDIZED_DESIGN_DIVERGENCES #1158).
 ///
 /// Stored as the `LevelFilter` discriminant (`Off`=0 … `Trace`=5). Process-global
 /// like `max_level`: one shared stderr descriptor across `cortex_worker`'s pool.
@@ -54,7 +55,7 @@ static DEBUG_ALL: AtomicBool = AtomicBool::new(false);
 #[inline]
 pub fn debug_all() -> bool { DEBUG_ALL.load(Ordering::Relaxed) }
 
-/// The current STDERR verbosity (`STDERR_LEVEL`): `--quiet` `Off`, the default `Info`, `--verbose` `Debug`.
+/// The current STDERR verbosity (`STDERR_LEVEL`): `--quiet` `Error`, the default `Info`, `--verbose` `Debug`.
 pub fn stderr_level() -> LevelFilter {
   match STDERR_LEVEL.load(Ordering::Relaxed) {
     0 => LevelFilter::Off,
@@ -66,8 +67,9 @@ pub fn stderr_level() -> LevelFilter {
   }
 }
 
-/// Does the current STDERR verbosity admit a record of `level`? Under `--quiet`
-/// (`Off`) none is, `Error`/`Fatal` included, as in Perl (`$VERBOSITY >= 0`).
+/// Does the current STDERR verbosity admit a record of `level`? `Error`/`Fatal`
+/// are handled unconditionally by the caller (the project's deliberate
+/// always-emit-errors divergence); this governs the verbosity-gated levels.
 pub fn stderr_admits(level: Level) -> bool { level.to_level_filter() <= stderr_level() }
 
 /// Whether STDERR currently shows `Info`-level progress notes — Perl
@@ -551,12 +553,15 @@ fn write_record(level: Level, painted_message: String) {
   //
   // The LOG_BUFFER append above is the log-file record (Perl `$LOG`, always,
   // subject only to the Info floor). The STDERR echo is gated on the decoupled
-  // console verbosity, so `--quiet` (`Off`, Perl's `$VERBOSITY < 0`) silences
-  // the console, `Error`/`Fatal` included, without touching the log (issue #763;
-  // `Common/Error.pm` `_printline`). Every other level admits `Error`, the
-  // level Fatal records are emitted at.
+  // console verbosity so `--quiet` reduces the console without touching the log
+  // (issue #763) — EXCEPT `Error`/`Fatal`, which always reach STDERR (the
+  // project's deliberate always-emit-errors divergence, since cortex aggregates
+  // success rates from `Error:`/`Fatal:` lines; Perl prints nothing below
+  // `$VERBOSITY` 0, `_printline`; OXIDIZED_DESIGN_DIVERGENCES #1158). `Error` is
+  // the lowest `Level` value and Fatal records are emitted at `Level::Error`, so
+  // `<= Error` captures both.
   // A `Debug` record that got here is wanted (`--verbose` or its feature); it prints at Perl's `$VERBOSITY >= 0`.
-  let to_stderr = stderr_admits(level.min(Level::Info));
+  let to_stderr = level <= Level::Error || stderr_admits(level.min(Level::Info));
   if to_stderr {
     let text = if stderr_use_color() {
       painted_message
@@ -989,7 +994,7 @@ pub fn settled_empty_held_tags() { EMPTY_HELD_TAGS.set(0); }
 
 /// initialize the logger at a given STDERR verbosity `level`
 ///
-/// `level` is the **console** verbosity (`--quiet` ⇒ `Off`, default ⇒ `Info`,
+/// `level` is the **console** verbosity (`--quiet` ⇒ `Error`, default ⇒ `Info`,
 /// `--verbose` ⇒ `Debug`, which also admits un-featured `Debug` records; a `--debug`
 /// feature raises only the `max_level` floor, [`crate::common::error::enable_debug_feature`]). Perl decouples this from the log-file floor:
 /// the `.latexml.log` keeps a minimum of `Info` regardless of `--quiet`, while

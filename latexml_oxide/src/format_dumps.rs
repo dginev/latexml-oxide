@@ -98,7 +98,7 @@ fn install_interrupt_handler() {
       let mut slot = IN_FLIGHT.lock().unwrap_or_else(PoisonError::into_inner);
       if let Some(build) = slot.take() {
         undo(build);
-        note(format_args!(
+        note(log::Level::Info, format_args!(
           "\n[format_dumps] interrupted: the format build was cancelled; the next conversion builds it again"
         ));
       }
@@ -107,16 +107,17 @@ fn install_interrupt_handler() {
       latexml_core::watchdog::exit_now(INTERRUPTED);
     });
     if let Err(e @ ctrlc::Error::System(_)) = installed {
-      note(format_args!(
+      note(log::Level::Warn, format_args!(
         "[format_dumps] cannot take the interrupt ({e}): a build interrupted now counts as one that failed"
       ));
     }
   });
 }
 
-/// A line on stderr, unless the console is silenced (`--quiet`: Perl prints nothing there below verbosity 0).
-fn note(args: std::fmt::Arguments) {
-  if latexml_core::util::logger::stderr_shows_info() {
+/// A line of `level` on stderr, as a logged record of it would print: `--quiet` hides an Info or Warning note,
+/// never an Error (OXIDIZED_DESIGN_DIVERGENCES #1158).
+fn note(level: log::Level, args: std::fmt::Arguments) {
+  if level <= log::Level::Error || latexml_core::util::logger::stderr_admits(level) {
     eprintln!("{args}");
   }
 }
@@ -155,9 +156,9 @@ fn set_in_flight(build: Option<InFlight>) {
 /// Ensures each format has a dump built from this process's TeX tree, building any that has none
 /// into the cache. Once per process, before the first session loads a format; nothing to do without
 /// a TeX tree, under `LATEXML_NODUMP`, or while a format is being built (`--init`, or the thread
-/// building one here). A format that cannot be built is reported once, on stderr unless `--quiet`
-/// silences it (and as a warning in each conversion's log, `converter::note_format_build_failure`),
-/// and loads from the engine's definitions. A build changes the process's working directory while
+/// building one here). A format that cannot be built is reported once, as a Warning on stderr (not
+/// under `--quiet`) and in each conversion's log (`converter::note_format_build_failure`), and
+/// loads from the engine's definitions. A build changes the process's working directory while
 /// it runs (see `build`), so it belongs before the process converts anything.
 pub fn ensure_format_dumps() {
   if dump_paths::building_format() {
@@ -166,7 +167,8 @@ pub fn ensure_format_dumps() {
   static ENSURED: OnceLock<()> = OnceLock::new();
   ENSURED.get_or_init(|| {
     if let Err(reason) = ensure() {
-      note(format_args!(
+      // A Warning, as each conversion logs it (`converter::note_format_build_failure`).
+      note(log::Level::Warn, format_args!(
         "[format_dumps] {reason}: the format loads from the engine's own definitions instead of a dump"
       ));
       dump_paths::set_format_build_failure(reason);
@@ -317,11 +319,14 @@ fn attempt(
       return Err(reason);
     }
   }
-  note(format_args!(
-    "[format_dumps] no {kind} dump matches this TeX tree; building one into {} (once for this tree; later \
+  note(
+    log::Level::Info,
+    format_args!(
+      "[format_dumps] no {kind} dump matches this TeX tree; building one into {} (once for this tree; later \
      conversions reuse it)",
-    dir.display()
-  ));
+      dir.display()
+    ),
+  );
   let built = build(kind, year, dir);
   // The build has ended (a published dump cleared the record as it was published, `publish`): what
   // follows records its outcome, which an interrupt no longer undoes.

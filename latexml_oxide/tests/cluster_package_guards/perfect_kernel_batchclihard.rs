@@ -1,6 +1,6 @@
 //! CLIHARD: the `latexml_oxide` front end's own messages. A warning the command line raises before the session is
-//! logged as well as shown, in a `.tex` run and an XML input's alike; `-q` prints nothing on stderr, as Perl's
-//! latexmlc (Common/Error.pm `_printline`: `$VERBOSITY >= 0`), while the log keeps everything. These spawn the binary.
+//! logged as well as shown, in a `.tex` run and an XML input's alike; `-q` hides Info and Warnings on stderr but keeps
+//! the Errors and the verdict (OD #1158), while the log keeps everything. These spawn the binary.
 
 use std::{
   io::Read,
@@ -78,8 +78,9 @@ fn assert_early_warnings(text: &str, what: &str) {
 /// `--max-memory=0` and a `--splitat` outside Perl's list warn before the session starts. Their warnings reached
 /// stderr and the status (`Status:conversion:1`) but no log: the report had been reset for the session and the log
 /// was not yet bound. Held for the session now (`warn_at_session_start`), each is logged once: by the session's
-/// report reset in a `.tex` run, by post-processing in an XML input's, which has no session. Red (c53f1ad424a): 0 in
-/// the `.latexml.log` and in each zip's log.
+/// report reset in a `.tex` run, by post-processing in an XML input's, which has no session, and by the front end
+/// into `--log` for an XML input not post-processed. Red (c53f1ad424a): 0 in the `.latexml.log` and in each zip's log;
+/// red (3533a021fa5): 0 in the `--nopost` run's `out.log`.
 #[test]
 fn early_option_warnings_reach_the_log() {
   let early = ["--max-memory=0", "--split", "--splitat=paragraph"];
@@ -121,29 +122,112 @@ fn early_option_warnings_reach_the_log() {
   assert_early_warnings(&r.stderr, "stderr");
   assert_early_warnings(&r.member("x.zip", "core.latexml.log"), "the zip's log");
   assert_eq!(r.member("x.zip", "status"), "Status:conversion:1");
+
+  // An XML input not post-processed: no session and no post-processing to log it, the front end does into `--log`.
+  let core = run_in(staged("sections.tex"), &["sections.tex", "--dest=core.xml"]);
+  assert_eq!(core.code, Some(0), "{}", core.stderr);
+  let r = run_in(core.dir, &[
+    "--max-memory=0",
+    "core.xml",
+    "--whatsin=xml",
+    "--format=xml",
+    "--nopost",
+    "--log=out.log",
+    "--dest=o.xml",
+  ]);
+  assert_eq!(r.code, Some(0), "{}", r.stderr);
+  for (text, what) in [(r.stderr.clone(), "stderr"), (r.file("out.log"), "out.log")] {
+    assert_eq!(
+      (count(&text, MEMORY), count(&text, "Warning:")),
+      (1, 1),
+      "{what}:\n{text}"
+    );
+  }
+  assert_eq!(
+    r.file("out.log").lines().last(),
+    Some("Status:conversion:1")
+  );
 }
 
-/// `-q` prints nothing on stderr, Errors included, as Perl's latexmlc `--quiet` (same host, 0.8.8: no byte);
-/// `-qq` the same. The log keeps the Error and the status, and the exit status is the default run's. Red
-/// (c53f1ad424a): the Error, "Log written to" and the verdict on stderr. Repro cli-options/undefined_macro.tex.
+/// `-q` and `-qq` hide Info and Warnings on stderr but keep the Error record (with its continuation lines) and the
+/// final verdict (OD #1158; DG 2026-08-02, reaffirmed 2026-11-24: the success-rate signal is never silent; Perl's
+/// `--quiet` prints nothing, Common/Error.pm `_printline`). The log keeps the Info, the Warning and the Error, and the
+/// exit status and a zip's `status` are the default run's. Red (3533a021fa5): empty stderr. Repro
+/// cli-options/undefined_macro.tex (an undefined macro, a missing `\ref` target).
 #[test]
-fn quiet_prints_nothing_on_stderr() {
+fn quiet_keeps_errors_and_the_verdict_on_stderr() {
   const ERROR: &str = "Error:undefined:\\undefinedmacro";
+  const WARNING: &str = "Warning:expected:ids Missing Target for Label: LABEL:sec:nowhere";
+  const VERDICT: &str =
+    "Conversion complete: 1 warning; 1 error; 1 undefined macro[\\undefinedmacro]";
+  // The lines that open something: a record or a note, not a record's indented continuation.
+  let heads = |text: &str| -> Vec<String> {
+    text
+      .lines()
+      .filter(|l| !l.is_empty() && !l.starts_with(char::is_whitespace))
+      .map(String::from)
+      .collect()
+  };
+  let quiet_stderr = |r: &Run| {
+    let heads = heads(&r.stderr);
+    assert_eq!(
+      heads.len(),
+      2,
+      "the Error and the verdict alone:\n{}",
+      r.stderr
+    );
+    assert!(heads[0].starts_with(ERROR), "{}", r.stderr);
+    assert_eq!(heads[1], VERDICT, "{}", r.stderr);
+    assert!(
+      r.stderr.contains("\tat undefined_macro.tex; line 12"),
+      "the Error keeps its location line:\n{}",
+      r.stderr
+    );
+  };
+
   let loud = run_in(staged("undefined_macro.tex"), &[
     "undefined_macro.tex",
     "--dest=u.html",
   ]);
   assert_eq!(loud.code, Some(0), "{}", loud.stderr);
-  assert_eq!(count(&loud.stderr, ERROR), 1, "{}", loud.stderr);
+  assert_eq!(
+    (
+      count(&loud.stderr, ERROR),
+      count(&loud.stderr, WARNING),
+      count(&loud.stderr, "Log written to u")
+    ),
+    (1, 1, 1),
+    "{}",
+    loud.stderr
+  );
+  assert!(count(&loud.stderr, "Info:") > 0, "{}", loud.stderr);
+  assert_eq!(
+    heads(&loud.stderr).last().map(String::as_str),
+    Some(VERDICT)
+  );
 
   let r = run_in(staged("undefined_macro.tex"), &[
     "-q",
     "undefined_macro.tex",
     "--dest=u.html",
   ]);
-  assert_eq!((r.code, r.stderr.as_str()), (Some(0), ""));
+  assert_eq!(r.code, Some(0), "{}", r.stderr);
+  quiet_stderr(&r);
   let log = r.file("undefined_macro.latexml.log");
-  assert_eq!((count(&log, "Error:"), count(&log, ERROR)), (1, 1), "{log}");
+  assert_eq!(
+    (
+      count(&log, "Error:"),
+      count(&log, ERROR),
+      count(&log, "Warning:"),
+      count(&log, WARNING)
+    ),
+    (1, 1, 1, 1),
+    "{log}"
+  );
+  assert!(
+    count(&log, "Info:") > 0,
+    "the log keeps its Info floor:\n{log}"
+  );
   assert_eq!(log.lines().last(), Some("Status:conversion:2"), "{log}");
 
   let r = run_in(staged("undefined_macro.tex"), &[
@@ -151,10 +235,9 @@ fn quiet_prints_nothing_on_stderr() {
     "undefined_macro.tex",
     "--dest=u.zip",
   ]);
-  assert_eq!((r.code, r.stderr.as_str()), (Some(0), ""));
+  assert_eq!(r.code, Some(0), "{}", r.stderr);
+  quiet_stderr(&r);
   assert_eq!(r.member("u.zip", "status"), "Status:conversion:2");
-  assert_eq!(
-    count(&r.member("u.zip", "undefined_macro.latexml.log"), ERROR),
-    1
-  );
+  let log = r.member("u.zip", "undefined_macro.latexml.log");
+  assert_eq!((count(&log, ERROR), count(&log, WARNING)), (1, 1), "{log}");
 }

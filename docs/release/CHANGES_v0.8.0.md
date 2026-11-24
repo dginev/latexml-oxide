@@ -45,17 +45,19 @@ usenix, versonotes, wacv, wrapstuff, ws-rv-har, xeCJK, xkeymask.
 
 ### After 0.8.0-rc2
 
-  - **`-q` prints nothing on stderr, as Perl's `--quiet` does.** Below verbosity 0 latexmlc prints nothing on
-    stderr, Errors included (Common/Error.pm `_printline`); `-q` showed Warnings, Errors, "Log written to" and the
-    verdict. Now `-q` and `-qq` print nothing there, the split render's workers included; the `.latexml.log` keeps
+  - **`-q` hides Info and Warnings on stderr, never Errors.** `-q` and `-qq` now show only the `Error:`/`Fatal:`
+    records (with their continuation lines) and the final verdict on stderr; Warnings, the split render's forwarded
+    Warnings and notes such as "Log written to" are hidden. Perl's `--quiet` prints nothing at all; ours keeps the
+    success-rate signal on stderr at every verbosity (OXIDIZED_DESIGN_DIVERGENCES #1158). The `.latexml.log` keeps
     everything, and the exit status and an archive's `status` are unchanged. Guards
-    `perfect_kernel_batchclihard::quiet_prints_nothing_on_stderr`, `quiet_mode_keeps_error_and_fatal_in_the_log`,
-    `perfect_kernel_batchcliwire::quiet_silences_the_render_workers`.
+    `perfect_kernel_batchclihard::quiet_keeps_errors_and_the_verdict_on_stderr`,
+    `quiet_mode_still_reports_error_and_fatal`, `perfect_kernel_batchcliwire::quiet_silences_the_render_workers`.
   - **The command line's own warnings reach the log.** The Warnings for `--max-memory=0` and for a `--splitat` level
     outside Perl's list were raised after the session had begun its report and before its log was open, so they
     reached stderr and the status but not `<name>.latexml.log` or the log packed into a `.zip`. They are now held
     for the session, as an archive's are, and logged once: by the session in a `.tex` run, by post-processing for an
-    XML input (`--whatsin=xml`), which has no session. Guard
+    XML input (`--whatsin=xml`), which has no session, and into the `--log` file when that input is not
+    post-processed (`--nopost`). Guard
     `perfect_kernel_batchclihard::early_option_warnings_reach_the_log`.
   - **An interrupted format build is undone in every window** (issue 988, after #990). The interrupt handler is
     installed before the build writes anything, the attempt note is written and the finished dump published under

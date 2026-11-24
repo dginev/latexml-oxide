@@ -1,10 +1,13 @@
-% witness: CLI review 2026-11-24 (CLIHARD): -q printed the Error, "Log written to" and the verdict on stderr
-% oracle:  pdflatex: "! Undefined control sequence." (the one error the shape is for); "Hello world."
+% witness: CLI review 2026-11-24 (CLIHARD): -q printed Warnings and "Log written to" (round 1 made it print nothing)
+% oracle:  pdflatex: "! Undefined control sequence." (the one error the shape is for); "LaTeX Warning: Reference
+%          `sec:nowhere' on page 1 undefined"; "Hello world, see Section ??."
 % engines: Perl 0.8.8 latexmlc same host: --quiet prints nothing on stderr (Common/Error.pm _printline,
-%          $VERBOSITY >= 0), exit 0, the .latexml.log keeps Error:undefined:\undefinedmacro and Status:conversion:2
-% expect:  -q / -qq: empty stderr; the log holds the one Error; exit 0; a .zip's status is Status:conversion:2
-% status:  RED (c53f1ad424a) -> GREEN (CLIHARD)
+%          $VERBOSITY >= 0), exit 0, the .latexml.log keeps Error:undefined:\undefinedmacro and Status:conversion:2.
+%          Ours (OD #1158, DG 2026-08-02 / 2026-11-24): -q keeps the Error and the verdict on stderr
+% expect:  -q / -qq: stderr holds the Error record and the verdict, no Warning:expected:ids, Info or "Log written to";
+%          the log holds the Error and the Warning; exit 0; a .zip's status is Status:conversion:2
+% status:  RED (3533a021fa5: empty stderr) -> GREEN (CLIHARD round 2)
 \documentclass{article}
 \begin{document}
-Hello \undefinedmacro{} world.
+Hello \undefinedmacro{} world, see Section~\ref{sec:nowhere}.
 \end{document}

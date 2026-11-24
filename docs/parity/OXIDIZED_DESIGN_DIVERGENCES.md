@@ -24069,7 +24069,8 @@ TeX's zero width, the argument's height and depth kept (`overflow:clip`, not `hi
   after the undo, and ends it with `watchdog::exit_now` (`_exit`): the build's thread still runs, and `exit` would run
   libxml2's destructor under it (#973). The handler stays installed after the build, so a later SIGTERM or SIGHUP
   ends the process with status 130 rather than by the signal: ctrlc 3.5 cannot uninstall it, and restoring the
-  default action needs an `unsafe` `sigaction`. Under `--quiet` its notes are not printed. Embedders (`cortex_worker`, and the CLI's own `--server` LSP mode, whose forked children are ended by
+  default action needs an `unsafe` `sigaction`. Under `--quiet` its notes (Info and Warnings) are not printed
+  (#1158). Embedders (`cortex_worker`, and the CLI's own `--server` LSP mode, whose forked children are ended by
   SIGTERM) keep their own signal handling and count an interrupted build as before. The DEGRADED banner
   (`dump_paths::warn_degraded_no_dump`) now says why no dump was built (once the format is marked failed, that names
   the mark to remove) instead of pointing to `tools/make_formats.sh`, which an installed binary does not have.
@@ -24203,9 +24204,7 @@ latexmlc 0.8.8 on the same host (CLI audit 2026-11-24):
   `tokenlimit=999999999`, 20 times below the scaled default).
 - `--verbose`/`--quiet` count (Config.pm L53-54), and the parallel page render's workers take the parent's
   verbosity, logging at no less than Info: their records reach the log whole, as the serial render's do, and the
-  console shows them through the parent's gate (`render_workers::stderr_share`). Below verbosity 0 nothing is
-  printed on stderr, Errors, the verdict and "Log written to" included, as in Perl (Common/Error.pm `_printline`
-  and `NoteSTDERR`: `$VERBOSITY >= 0`); the log keeps its Info floor (CLIHARD; `-q` showed Warnings and Errors). A worker line that opens no record
+  console shows them through the parent's gate (`render_workers::stderr_share`). A worker line that opens no record
   (a progress note, or an unindented line of a multi-line message) is shown when its record or a note would be.
 - `--splitat` takes a prefix of `part, chapter, section, subsection, subsubsection`, the shallowest (`_checkOptionValue`,
   Config.pm L604-609, whose hash order leaves `sub` to chance), and is checked only when splitting; another element
@@ -24220,9 +24219,20 @@ latexmlc 0.8.8 on the same host (CLI audit 2026-11-24):
 - `cortex_worker`: `--input`/`--output` require `--standalone` (without it the worker joined the dispatcher on
   localhost), and `--profile` is `ar5iv` or `generic`.
 
+**`--quiet` keeps the Errors on stderr.** Perl's `--quiet` prints nothing on stderr (Error.pm `_printline`,
+`$VERBOSITY >= 0`); ours keeps Errors, Fatals and the verdict on stderr at every verbosity (DG 2026-08-02, reaffirmed
+2026-11-24): the success-rate signal is never silent. Below verbosity 0 the console level is `Error`: Info records,
+Warnings and the front end's notes ("Output written to", "Log written to", "Format dump complete", the format build's
+notes, a skipped supplement) are hidden, while every `Error:`/`Fatal:` record, with its continuation lines, and the
+final verdict (`Conversion complete…`/`Conversion failed…`, and a failed input's status line) still print; the
+render workers' records pass the same gate. The log keeps everything at its Info floor, and the exit status and a
+zip's `status` are unchanged.
+
 **Guards**: `perfect_kernel_batchcliwire` (repros `tools/perfect_kernel/repros/cli-options/`), the binaries' unit tests
 `verbose_and_quiet_are_counted` and `cli_tests::standalone_files_and_the_profile_are_checked`;
-`perfect_kernel_batchclihard::quiet_prints_nothing_on_stderr`.
+`perfect_kernel_batchclihard::quiet_keeps_errors_and_the_verdict_on_stderr`,
+`119_final_status_report::quiet_mode_still_reports_error_and_fatal`,
+`render_workers::tests::stderr_share_keeps_a_records_continuation_lines`.
 
 ### 1159. `latexml_oxide` defaults to a 60-second timeout and no timestamp (Perl: 600 s, the conversion's time) (CLIWIRE)
 

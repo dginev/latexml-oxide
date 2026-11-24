@@ -189,9 +189,10 @@ fn token_limit_below_the_default_holds() {
 }
 
 /// `--quiet` reaches the parallel page render: the workers still log their records whole (the log's `Info:` and
-/// `Warning:` lines are the default run's, 259 and 1 here), while the console shows none of them, as Perl's
-/// `--quiet` shows nothing (CLIHARD; it showed their Warnings). The Warning is the worker's: Graphics runs in the
-/// render children, and the missing image is on page S60 (80 pages, 4 workers).
+/// `Warning:` lines are the default run's, 259 and 1 here), while the console shows no Info or Warning, only the
+/// verdict; a worker's Error would still print (OD #1158, `render_workers::stderr_share`, its unit test). The Warning
+/// is the worker's: Graphics runs in the render children, and the missing image is on page S60 (80 pages, 4
+/// workers).
 #[test]
 fn quiet_silences_the_render_workers() {
   let mut tex =
@@ -230,7 +231,8 @@ fn quiet_silences_the_render_workers() {
   assert_eq!(warnings(&log), [MISSING]);
   assert_eq!(warnings(&loud_log), [MISSING]);
   assert_eq!(warnings(&loud_run.stderr), [MISSING], "{}", loud_run.stderr);
-  assert_eq!(r.stderr, "");
+  let shown: Vec<&str> = r.stderr.lines().filter(|l| !l.is_empty()).collect();
+  assert_eq!(shown, ["Conversion complete: 1 warning"], "{}", r.stderr);
 }
 
 /// `--splitat` and `--splitnaming` take a prefix of their values (Config.pm `_checkOptionValue`): `sec` splits

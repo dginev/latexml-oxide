@@ -546,7 +546,8 @@ struct Cli {
   #[arg(short = 'v', long, action = clap::ArgAction::Count)]
   verbose: u8,
 
-  /// Print nothing on stderr, Errors included; the log keeps everything (each -q undoes one -v, as in Perl)
+  /// Hide Info and Warnings on stderr; Errors, Fatals and the verdict still print, the log keeps everything (each -q
+  /// undoes one -v, as in Perl)
   #[arg(short = 'q', long, action = clap::ArgAction::Count)]
   quiet: u8,
 
@@ -1010,10 +1011,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
   // Initialize logger with verbosity level
   // Perl Config.pm L53-54: each --verbose adds one, each --quiet takes one away. Below 0 Perl prints nothing on
-  // stderr, Errors included (Common/Error.pm `_printline`, `NoteSTDERR`: `$VERBOSITY >= 0`); the log keeps its floor.
+  // stderr (Common/Error.pm `_printline`: `$VERBOSITY >= 0`); ours keeps Errors, Fatals and the verdict there, the
+  // success-rate signal (DG 2026-08-02, OXIDIZED_DESIGN_DIVERGENCES #1158). The log keeps its Info floor.
   let verbosity = i32::from(cli.verbose) - i32::from(cli.quiet);
   let log_level = match verbosity {
-    v if v < 0 => log::LevelFilter::Off,
+    v if v < 0 => log::LevelFilter::Error,
     0 => log::LevelFilter::Info,
     _ => log::LevelFilter::Debug,
   };
@@ -1946,8 +1948,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       }
     }
 
-    // A held warning no log took (an XML input not post-processed) still reaches stderr and the status.
+    // A held warning no log took (an XML input not post-processed) reaches stderr, the status and the `--log` file.
+    latexml_core::util::logger::bind_log();
     latexml_core::common::error::log_session_warnings();
+    post_log.push_str(&latexml_core::util::logger::flush_log());
     // --log: write conversion log to file (skip if already packed into
     // the ZIP by the archive output stage).
     if is_epub
@@ -2030,12 +2034,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // masqueraded as a successful site (131 MB witness UAT 2026-08-01:
   // truncated at Ch6, 1,572 plausible pages, silent exit 1). Also printed for
   // a non-post fatal, where repeating the verdict as the final line is cheap
-  // emphasis. Guard: 119_final_status_report.
-  // Perl's `Note`: not under `--quiet`, the exit status says it.
+  // emphasis. Printed under `--quiet` too, as Errors are (OXIDIZED_DESIGN_DIVERGENCES #1158). Guard:
+  // 119_final_status_report.
   if post_ran || final_status_code >= 3 {
-    latexml_core::NoteSTDERR!(latexml_core::common::error::conversion_verdict(
-      final_status_code
-    ));
+    eprintln!(
+      "{}",
+      latexml_core::common::error::conversion_verdict(final_status_code)
+    );
   }
   if final_status_code >= 3 {
     write_telemetry_record(
@@ -2361,8 +2366,9 @@ fn fatal_before_conversion(
       eprintln!("Failed to write log '{log_path}': {e}");
     }
   }
-  latexml_core::NoteSTDERR!(verdict);
-  latexml_core::NoteSTDERR!(status);
+  // The Fatal's verdict, printed under `--quiet` too (OXIDIZED_DESIGN_DIVERGENCES #1158).
+  eprintln!("{verdict}");
+  eprintln!("{status}");
   exit_removing(archive_tempdir, 1)
 }
 

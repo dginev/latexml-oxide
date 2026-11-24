@@ -4598,8 +4598,9 @@ mod debug_feature_scope {
       "FRONT lines without and with --verbose"
     );
     // `--quiet`: the feature's lines reach the log only (Perl `_printlines`: STDERR needs `$VERBOSITY >= 0`), as does
-    // "Log written to" (Perl `NoteSTDERR`, CLIHARD); the undeclared-feature report is a plain STDERR print
-    // (`CheckDebuggable`, Common/Error.pm L489-490), so it is all STDERR shows.
+    // "Log written to" (an Info note); nothing errs and no post-processing runs, so no Error or verdict prints
+    // (OD #1158). The undeclared-feature report is a plain STDERR print (`CheckDebuggable`, Common/Error.pm L489-490),
+    // so it is all STDERR shows.
     let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .args([
         "--quiet",
